@@ -1,0 +1,8 @@
+{
+  "name": "triplit",
+  "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
+  "packageManager": "yarn@3.4.1"
+}
