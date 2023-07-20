@@ -1,0 +1,22 @@
+diff --git a/main.d.ts b/main.d.ts
+index 86532b7201c1adb652edb226daca0f09a3a2b35f..3a9ee9369babb439b845e9294570620783da9e81 100644
+--- a/main.d.ts
++++ b/main.d.ts
+@@ -14,4 +14,5 @@ export * from "./database/types";
+ export * from "./helpers/namedTupleToObject";
+ export * from "./storage/InMemoryTupleStorage";
+ export * from "./storage/types";
++export * from "./helpers/compareTuple";
+ //# sourceMappingURL=../src/main.d.ts.map
+\ No newline at end of file
+diff --git a/main.js b/main.js
+index c0cc1999201fdf94fe67a216cb467257d3ad7667..a42c57f0f7af0fae8c28d4eddfc3a0fe5d2c6f20 100644
+--- a/main.js
++++ b/main.js
+@@ -29,4 +29,5 @@ __exportStar(require("./database/types"), exports);
+ __exportStar(require("./helpers/namedTupleToObject"), exports);
+ __exportStar(require("./storage/InMemoryTupleStorage"), exports);
+ __exportStar(require("./storage/types"), exports);
++__exportStar(require("./helpers/compareTuple"), exports);
+ //# sourceMappingURL=../src/main.js.map
+\ No newline at end of file

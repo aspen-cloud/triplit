@@ -1,0 +1,32 @@
+diff --git a/storage/IndexedDbTupleStorage.js b/storage/IndexedDbTupleStorage.js
+index e70827a269c14dfb9381786035f6e7836bd3368d..bb48e8d6d0e2c5f2fc4e675c8dc2ab74c64add37 100644
+--- a/storage/IndexedDbTupleStorage.js
++++ b/storage/IndexedDbTupleStorage.js
+@@ -18,6 +18,18 @@ class IndexedDbTupleStorage {
+         const db = await this.db;
+         const tx = db.transaction(storeName, "readonly");
+         const index = tx.store; // primary key
++
++        let results = [];
++
++        // If no args, faster to just get all keys and values
++        if(!args) {
++            const keys = (await index.getAllKeys()).map((key) => (0, codec_1.decodeTuple)(key));
++            const values = await index.getAll();
++            results = keys.map((key, i) => ({ key, value: values[i] }));
++            await tx.done;
++            return results;
++        }
++
+         const lower = (args === null || args === void 0 ? void 0 : args.gt) || (args === null || args === void 0 ? void 0 : args.gte);
+         const lowerEq = Boolean(args === null || args === void 0 ? void 0 : args.gte);
+         const upper = (args === null || args === void 0 ? void 0 : args.lt) || (args === null || args === void 0 ? void 0 : args.lte);
+@@ -41,7 +53,7 @@ class IndexedDbTupleStorage {
+         }
+         const direction = (args === null || args === void 0 ? void 0 : args.reverse) ? "prev" : "next";
+         const limit = (args === null || args === void 0 ? void 0 : args.limit) || Infinity;
+-        let results = [];
++
+         for await (const cursor of index.iterate(range, direction)) {
+             results.push({
+                 key: (0, codec_1.decodeTuple)(cursor.key),

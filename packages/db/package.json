@@ -1,0 +1,38 @@
+{
+  "name": "@triplit/db",
+  "type": "module",
+  "private": true,
+  "main": "dist/index.js",
+  "typings": "dist/index.d.ts",
+  "scripts": {
+    "build": "yarn build:code && yarn build:types",
+    "build:code": "esbuild --bundle --minify --platform=browser --target=esnext --outdir=dist src/index.ts",
+    "build:types": "tsc --noEmit false --emitDeclarationOnly --declaration --outDir dist",
+    "lint": "tsc",
+    "test": "vitest",
+    "bench": "vitest bench",
+    "coverage": "vitest --coverage"
+  },
+  "files": [
+    "/dist"
+  ],
+  "devDependencies": {
+    "@vitest/coverage-c8": "^0.29.2",
+    "esbuild": "^0.17.19",
+    "rxdb": "^14.14.2",
+    "rxjs": "^7.8.1",
+    "tinybench": "^2.5.0",
+    "typescript": "^4.9.3",
+    "vitest": "^0.32.2"
+  },
+  "dependencies": {
+    "@sinclair/typebox": "^0.27.4",
+    "idb": "^7.1.1",
+    "nanoid": "^4.0.1",
+    "pino": "^8.11.0",
+    "sorted-btree": "^1.8.1",
+    "tinybench": "^2.5.0",
+    "tuple-database": "^2.2.0",
+    "zod": "^3.20.6"
+  }
+}

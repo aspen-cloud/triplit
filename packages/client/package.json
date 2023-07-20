@@ -1,0 +1,39 @@
+{
+  "name": "@triplit/client",
+  "packageManager": "yarn@3.4.1",
+  "version": "0.0.27",
+  "main": "dist/index.js",
+  "typings": "dist/index.d.ts",
+  "type": "module",
+  "bin": {
+    "triplit": "./dist/cli.cjs"
+  },
+  "scripts": {
+    "build": "yarn build:code && yarn build:cli && yarn build:types",
+    "build:cli": "esbuild --bundle --platform=node --target=node14 --outfile=dist/cli.cjs cli/index.ts",
+    "build:code": "node build.cjs",
+    "build:types": "tsc --noEmit false --emitDeclarationOnly --declaration --isolatedModules false --outFile dist/index.d.ts && node post-build-types.cjs",
+    "lint": "yarn lint:code && yarn lint:cli",
+    "lint:code": "tsc",
+    "lint:cli": "cd ./cli && tsc",
+    "prepack": "node prepack.cjs",
+    "publish-pkg": "yarn npm publish --access ßpublic"
+  },
+  "files": [
+    "/dist"
+  ],
+  "dependencies": {
+    "@triplit/db": "workspace:^",
+    "node-fetch": "^3.3.1",
+    "yargs": "^17.7.2"
+  },
+  "devDependencies": {
+    "@types/node": "^20.4.0",
+    "@types/yargs": "^17",
+    "esbuild": "^0.17.19",
+    "typescript": "^5.0.2"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

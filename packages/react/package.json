@@ -1,0 +1,28 @@
+{
+  "name": "@triplit/react",
+  "packageManager": "yarn@3.4.1",
+  "version": "0.0.27",
+  "main": "dist/index.js",
+  "typings": "dist/index.d.ts",
+  "type": "module",
+  "scripts": {
+    "build": "yarn build:code && yarn build:types",
+    "build:code": "node build.cjs",
+    "build:types": "tsc --noEmit false --emitDeclarationOnly --declaration --baseUrl . --outDir dist",
+    "lint": "tsc",
+    "publish-pkg": "yarn npm publish --access public"
+  },
+  "files": [
+    "/dist"
+  ],
+  "dependencies": {
+    "@triplit/client": "workspace:^"
+  },
+  "devDependencies": {
+    "@types/react": "^18.2.0",
+    "typescript": "^5.0.2"
+  },
+  "peerDependencies": {
+    "react": "*"
+  }
+}

@@ -1,0 +1,183 @@
+diff --git a/database/sync/TupleDatabaseClient.js b/database/sync/TupleDatabaseClient.js
+index 2618ff8e5b785e8599495e82afa5c903a3d54db5..fe337b679157e67f348e39b88a34ab9237a86704 100644
+--- a/database/sync/TupleDatabaseClient.js
++++ b/database/sync/TupleDatabaseClient.js
+@@ -41,7 +41,7 @@ class TupleDatabaseClient {
+     scan(args = {}, txId) {
+         const storageScanArgs = (0, subspaceHelpers_1.normalizeSubspaceScanArgs)(this.subspacePrefix, args);
+         const pairs = this.db.scan(storageScanArgs, txId);
+-        const result = (0, subspaceHelpers_1.removePrefixFromTupleValuePairs)(this.subspacePrefix, pairs);
++        const result = this.subspacePrefix.length ? (0, subspaceHelpers_1.removePrefixFromTupleValuePairs)(this.subspacePrefix, pairs) : pairs;
+         return result;
+     }
+     subscribe(args, callback) {
+diff --git a/helpers/sortedList.js b/helpers/sortedList.js
+index 157addcddfa75dbbaeb7866ee7383945890d54f7..1b0bc90cb8a9f30ed0459d3359ca54eeac402424 100644
+--- a/helpers/sortedList.js
++++ b/helpers/sortedList.js
+@@ -41,89 +41,104 @@ function scan(list, args, cmp) {
+         throw new Error("Invalid bounds.");
+     }
+     // Start at lower bound.
+-    let i;
+-    if (args.reverse) {
++    // let i;
++    let li;
++    let ui
++    // let indexSearch = performance.now();
++
++    // if (args.reverse) {
+         if (end === undefined) {
+-            i = list.length - 1;
++            ui = list.length - 1;
+         }
+         else {
+             const result = (0, binarySearch_1.binarySearch)(list, end, cmp);
+             if (result.found === undefined) {
+-                i = result.closest - 1; // i could be -1!
++                ui = result.closest - 1; // i could be -1!
+             }
+             else {
+                 if (args.lt)
+-                    i = result.found - 1;
++                    ui = result.found - 1;
+                 else
+-                    i = result.found;
++                    ui = result.found;
+             }
+         }
+-    }
+-    else {
++    // }
++    // else {
+         if (start === undefined) {
+-            i = 0;
++            li = 0;
+         }
+         else {
+             const result = (0, binarySearch_1.binarySearch)(list, start, cmp);
+             if (result.found === undefined) {
+-                i = result.closest;
++                li = result.closest;
+             }
+             else {
+                 if (args.gt)
+-                    i = result.found + 1;
++                    li = result.found + 1;
+                 else
+-                    i = result.found;
++                    li = result.found;
+             }
+         }
+-    }
+-    const results = [];
+-    while (true) {
+-        // End of array.
+-        if (i >= list.length || i < 0) {
+-            break;
+-        }
+-        if (args.limit && results.length >= args.limit) {
+-            // Limit condition.
+-            break;
+-        }
+-        if (args.reverse) {
+-            // Lower bound condition.
+-            const item = list[i];
+-            if (args.gt) {
+-                const dir = cmp(args.gt, item);
+-                if (dir >= 0) {
+-                    break;
+-                }
+-            }
+-            if (args.gte) {
+-                const dir = cmp(args.gte, item);
+-                if (dir > 0) {
+-                    break;
+-                }
+-            }
+-            results.push(item);
+-            i -= 1;
+-        }
+-        else {
+-            // Upper bound condition.
+-            const item = list[i];
+-            if (args.lt) {
+-                const dir = cmp(item, args.lt);
+-                if (dir >= 0) {
+-                    break;
+-                }
+-            }
+-            if (args.lte) {
+-                const dir = cmp(item, args.lte);
+-                if (dir > 0) {
+-                    break;
+-                }
+-            }
+-            results.push(item);
+-            i += 1;
+-        }
+-    }
+-    return results;
++    // }
++    // console.log(`index search on ${list.length} elements took`, performance.now() - indexSearch, 'ms')
++
++    // const results = [];
++    // let scanStart = performance.now();
++    // let i = li;
++    // while (true) {
++    //     // End of array.
++    //     if (i >= list.length || i < 0) {
++    //         break;
++    //     }
++    //     if (args.limit && results.length >= args.limit) {
++    //         // Limit condition.
++    //         break;
++    //     }
++    //     if (args.reverse) {
++    //         // Lower bound condition.
++    //         const item = list[i];
++    //         if (args.gt) {
++    //             const dir = cmp(args.gt, item);
++    //             if (dir >= 0) {
++    //                 break;
++    //             }
++    //         }
++    //         if (args.gte) {
++    //             const dir = cmp(args.gte, item);
++    //             if (dir > 0) {
++    //                 break;
++    //             }
++    //         }
++    //         results.push(item);
++    //         i -= 1;
++    //     }
++    //     else {
++    //         // Upper bound condition.
++    //         const item = list[i];
++    //         if (args.lt) {
++    //             const dir = cmp(item, args.lt);
++    //             if (dir >= 0) {
++    //                 break;
++    //             }
++    //         }
++    //         if (args.lte) {
++    //             const dir = cmp(item, args.lte);
++    //             if (dir > 0) {
++    //                 break;
++    //             }
++    //         }
++    //         results.push(item);
++    //         i += 1;
++    //     }
++    // }
++    // console.log(`scan of ${results.length} elements took`, performance.now() - scanStart, 'ms')
++
++    // const bulkReadStart = performance.now();
++    const resultsSlice = list.slice(li, ui+1);
++    // console.log(`slice of ${resultsSlice.length} elements took`, performance.now() - bulkReadStart, 'ms')
++
++    return resultsSlice;
++    // return results;
+ }
+ exports.scan = scan;
+ //# sourceMappingURL=../../src/helpers/sortedList.js.map
