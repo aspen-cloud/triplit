@@ -567,7 +567,7 @@ const testScores = [
     date: '2023-05-24',
   },
 ];
-describe('ORDER & LIMIT', () => {
+describe('ORDER & LIMIT & Pagination', () => {
   const db = new DB({
     source: storage,
     schema: {
@@ -632,6 +632,102 @@ describe('ORDER & LIMIT', () => {
       return previousScore >= currentScore;
     });
     expect(areAllScoresDescending).toBeTruthy();
+  });
+
+  it('can paginate DESC', async () => {
+    const firstPageResults = await db.fetch(
+      CollectionQueryBuilder('TestScores')
+        .order(['score', 'DESC'])
+        .limit(5)
+        .build()
+    );
+    expect(firstPageResults.size).toBe(5);
+    const areAllScoresDescending = Array.from(firstPageResults.values()).every(
+      (result, i, arr) => {
+        if (i === 0) return true;
+        const previousScore = arr[i - 1].score[0];
+        const currentScore = result.score[0];
+        return previousScore >= currentScore;
+      }
+    );
+    expect(areAllScoresDescending).toBeTruthy();
+
+    const lastDoc = [...firstPageResults.entries()][4];
+
+    const secondPageResults = await db.fetch(
+      CollectionQueryBuilder('TestScores')
+        .order(['score', 'DESC'])
+        .limit(5)
+        .after([lastDoc[1].score[0], lastDoc[0]])
+        .build()
+    );
+
+    console.log(
+      [...firstPageResults.values(), ...secondPageResults.values()].map(
+        (r) => r.score[0]
+      )
+    );
+
+    const areAllScoresDescendingAfterSecondPage = [
+      ...firstPageResults.values(),
+      ...secondPageResults.values(),
+    ].every((result, i, arr) => {
+      if (i === 0) return true;
+      const previousScore = arr[i - 1].score[0];
+      const currentScore = result.score[0];
+      return previousScore >= currentScore;
+    });
+
+    expect(secondPageResults.size).toBe(5);
+    expect(areAllScoresDescendingAfterSecondPage).toBeTruthy();
+  });
+
+  it('can paginate ASC', async () => {
+    const firstPageResults = await db.fetch(
+      CollectionQueryBuilder('TestScores')
+        .order(['score', 'ASC'])
+        .limit(5)
+        .build()
+    );
+    expect(firstPageResults.size).toBe(5);
+    const areAllScoresAscending = Array.from(firstPageResults.values()).every(
+      (result, i, arr) => {
+        if (i === 0) return true;
+        const previousScore = arr[i - 1].score[0];
+        const currentScore = result.score[0];
+        return previousScore <= currentScore;
+      }
+    );
+    expect(areAllScoresAscending).toBeTruthy();
+
+    const lastDoc = [...firstPageResults.entries()][4];
+
+    const secondPageResults = await db.fetch(
+      CollectionQueryBuilder('TestScores')
+        .order(['score', 'ASC'])
+        .limit(5)
+        .after([lastDoc[1].score[0], lastDoc[0]])
+        .build()
+    );
+
+    console.log(
+      [...firstPageResults.values(), ...secondPageResults.values()].map(
+        (r) => r.score[0]
+      )
+    );
+
+    const areAllScoresAscendingAfterSecondPage = [
+      ...firstPageResults.values(),
+      ...secondPageResults.values(),
+    ].every((result, i, arr) => {
+      if (i === 0) return true;
+      const previousScore = arr[i - 1].score[0];
+      const currentScore = result.score[0];
+      return previousScore <= currentScore;
+    });
+
+    expect(secondPageResults.size).toBe(5);
+    expect(areAllScoresAscendingAfterSecondPage).toBeTruthy();
   });
 });
 

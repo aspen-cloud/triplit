@@ -24,7 +24,7 @@ import MultiTupleStore, {
 } from './multi-tuple-store';
 import { Clock } from './clocks/clock';
 import { MemoryClock } from './clocks/memory-clock';
-import { entityToResultReducer } from './query';
+import { entityToResultReducer, ValueCursor } from './query';
 
 export type StoreSchema<M extends Models<any, any> | undefined> =
   M extends Models<any, any>
@@ -266,6 +266,19 @@ export class TripleStoreOperator implements TripleStoreApi {
     direction?: 'ASC' | 'DESC' | undefined
   ): Promise<TripleRow[]> {
     return findByCollection(this.tupleOperator, collection, direction);
+  }
+
+  async findValuesInRange(
+    attribute: Attribute,
+    constraints:
+      | {
+          greaterThan?: any;
+          lessThan?: any;
+          direction?: 'ASC' | 'DESC';
+        }
+      | undefined
+  ) {
+    return findValuesInRange(this.tupleOperator, attribute, constraints);
   }
 
   async findByEAV(
@@ -642,6 +655,19 @@ export class TripleStore implements TripleStoreApi {
     return findByCollection(this.tupleStore, collection, direction);
   }
 
+  async findValuesInRange(
+    attribute: Attribute,
+    constraints:
+      | {
+          greaterThan?: any;
+          lessThan?: any;
+          direction?: 'ASC' | 'DESC';
+        }
+      | undefined
+  ) {
+    return findValuesInRange(this.tupleStore, attribute, constraints);
+  }
+
   findByEAV(
     [entityId, attribute, value]: [
       entityId?: string | undefined,
@@ -930,6 +956,7 @@ async function scanToTriples(
   tx: MultiTupleStoreOrTransaction,
   ...scanParams: Parameters<MultiTupleStoreOrTransaction['scan']>
 ) {
+  // console.log(scanParams);
   // @ts-ignore
   return (await tx.scan(...scanParams)).map(indexToTriple);
 }
@@ -983,6 +1010,30 @@ function findByAVE(
     lt: [[...(attribute ?? []), ...(value ? [] : [MAX])], value ?? MAX, MAX],
     reverse: direction === 'DESC',
   });
+}
+
+function findValuesInRange(
+  tx: MultiTupleStoreOrTransaction,
+  attribute: Attribute,
+  {
+    greaterThan,
+    lessThan,
+    direction,
+  }: {
+    greaterThan?: ValueCursor;
+    lessThan?: ValueCursor;
+    direction?: 'ASC' | 'DESC';
+  } = {}
+) {
+  const scanArgs = {
+    prefix: ['AVE'],
+    // @ts-ignore
+    gt: [attribute].concat(greaterThan ?? [MIN, MIN]),
+    // @ts-ignore
+    lt: [attribute].concat(lessThan ?? [MAX, MAX]),
+    reverse: direction === 'DESC',
+  };
+  return scanToTriples(tx, scanArgs);
 }
 
 function findByVAE(

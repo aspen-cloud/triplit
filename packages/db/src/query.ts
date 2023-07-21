@@ -1,5 +1,5 @@
 import { Model, Models, TypeFromModel, updateEntityAtPath } from './schema';
-import { TripleRow } from './triple-store';
+import { EntityId, TripleRow } from './triple-store';
 
 type Path = string;
 type Value = any;
@@ -21,6 +21,8 @@ export type WhereFilter<M extends Model<any> | undefined> =
 
 type QueryWhere<M extends Model<any> | undefined> = WhereFilter<M>[];
 
+export type ValueCursor = [value: Value, entityId: EntityId];
+
 export interface Query<M extends Model<any> | undefined> {
   where: QueryWhere<M>;
   select: (M extends Model<any> ? keyof M['properties'] : Path)[];
@@ -29,6 +31,7 @@ export interface Query<M extends Model<any> | undefined> {
     direction: 'ASC' | 'DESC'
   ];
   limit?: number;
+  after?: ValueCursor;
 }
 
 export function entityToResultReducer<M extends Models<any, any>[string]>(

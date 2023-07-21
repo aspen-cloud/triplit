@@ -72,11 +72,17 @@ export async function fetch<Q extends CollectionQuery<any>>(
   const limit = query.limit;
   const where = query.where;
   const select = query.select;
-
   const resultOrder = await (order
-    ? tx.findByAVE(
-        [[query.collectionName, ...(order[0] as string).split('.')]],
-        order[1]
+    ? tx.findValuesInRange(
+        [query.collectionName, ...(order[0] as string).split('.')],
+        {
+          direction: order[1],
+          ...(query.after
+            ? order[1] === 'DESC'
+              ? { lessThan: query.after }
+              : { greaterThan: query.after }
+            : {}),
+        }
       )
     : tx.findByAVE([['_collection'], query.collectionName]));
 
