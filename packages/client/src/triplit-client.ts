@@ -370,9 +370,12 @@ export class TriplitClient<M extends Models<any, any> | undefined = undefined> {
       migrations: options?.db?.migrations,
       sources: {
         //@ts-ignore
-        cache: options?.db?.storage?.cache ?? new IndexedDbStorage(),
+        cache:
+          options?.db?.storage?.cache ?? new IndexedDbStorage('triplit-cache'),
         //@ts-ignore
-        outbox: options?.db?.storage?.outbox ?? new IndexedDbStorage(),
+        outbox:
+          options?.db?.storage?.outbox ??
+          new IndexedDbStorage('triplit-outbox'),
       },
     });
 
