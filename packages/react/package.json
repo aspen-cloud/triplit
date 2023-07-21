@@ -10,7 +10,7 @@
     "build:code": "node build.cjs",
     "build:types": "tsc --noEmit false --emitDeclarationOnly --declaration --baseUrl . --outDir dist",
     "lint": "tsc",
-    "publish-pkg": "yarn npm publish --access public"
+    "publish-pkg": "node ../../scripts/npm-check-version-and-publish.js"
   },
   "files": [
     "/dist"
