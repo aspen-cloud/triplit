@@ -9,14 +9,12 @@
     "triplit": "./dist/cli.cjs"
   },
   "scripts": {
-    "build": "yarn build:code && yarn build:cli && yarn build:types",
+    "build": "yarn build:code && yarn build:cli",
     "build:cli": "esbuild --bundle --platform=node --target=node14 --outfile=dist/cli.cjs cli/index.ts",
-    "build:code": "node build.cjs",
-    "build:types": "tsc --noEmit false --emitDeclarationOnly --declaration --isolatedModules false --outFile dist/index.d.ts && node post-build-types.cjs",
+    "build:code": "tsc --noEmit false --declaration --baseUrl . --paths null --outDir dist",
     "lint": "yarn lint:code && yarn lint:cli",
     "lint:code": "tsc",
     "lint:cli": "cd ./cli && tsc",
-    "prepack": "node prepack.cjs",
     "publish-pkg": "node ../../scripts/npm-check-version-and-publish.js"
   },
   "files": [
