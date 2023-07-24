@@ -113,6 +113,9 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
     doc: any,
     id?: string
   ) {
+    if (id && !isValidExternalId(id)) {
+      throw new Error(`Invalid ID: ${id} cannot include ${ID_SEPARATOR}`);
+    }
     await Document.insert(
       this.storeTx,
       appendCollectionToId(collectionName, id ?? nanoid()),
@@ -376,6 +379,9 @@ export default class DB<M extends Models<any, any> | undefined> {
     id?: string,
     storeScope?: { read: string[]; write: string[] }
   ) {
+    if (id && !isValidExternalId(id)) {
+      throw new Error(`Invalid ID: ${id} cannot include ${ID_SEPARATOR}`);
+    }
     await this.ensureMigrated;
     await this.tripleStore.transact(async (tx) => {
       await Document.insert(
@@ -619,6 +625,10 @@ function transformTripleAttribute(
 
 const ID_SEPARATOR = '#';
 
+function isValidExternalId(id: string) {
+  return !String(id).includes(ID_SEPARATOR);
+}
+
 export function appendCollectionToId(collectionName: string, id: string) {
   return `${collectionName}${ID_SEPARATOR}${id}`;
 }
@@ -626,7 +636,9 @@ export function appendCollectionToId(collectionName: string, id: string) {
 export function stripCollectionFromId(id: string): string {
   const parts = id.split(ID_SEPARATOR);
   if (parts.length !== 2) {
-    throw new Error(`Malformed ID: ${id}`);
+    throw new Error(
+      `Malformed ID: ${id} should only include one separator(${ID_SEPARATOR})`
+    );
   }
   return parts[1];
 }

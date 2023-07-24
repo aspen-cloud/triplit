@@ -13,14 +13,15 @@ import { classes, students, departments } from './sample_data/school';
 import { timestampedObjectToPlainObject } from '../src/schema';
 import MemoryBTree from '../src/storage/memory-btree';
 import exp from 'constants';
+import { stripCollectionFromId } from '../src/db';
 
 // const storage = new InMemoryTupleStorage();
 const storage = new MemoryBTree();
 
 describe('Database API', () => {
   let db: DB<any>;
-  beforeAll(async () => {
-    db = new DB({ source: new InMemoryTupleStorage() });
+  beforeEach(async () => {
+    db = new DB({});
     for (const student of students) {
       await db.insert('Student', student, student.id);
     }
@@ -33,6 +34,24 @@ describe('Database API', () => {
     for (const rapper of RAPPERS_AND_PRODUCERS) {
       await db.insert('Rapper', rapper, rapper.id);
     }
+  });
+  it('can furnish the client id', async () => {
+    expect(await db.getClientId()).toBeTruthy();
+  });
+
+  it('will throw an error if the provided entity id has a # sign in it', async () => {
+    expect(
+      async () => await db.insert('Student', { name: 'John Doe' }, 'John#Doe')
+    ).rejects.toThrowError();
+    expect(
+      db.transact((tx) =>
+        tx.insert('Student', { name: 'John Doe' }, 'John#Doe')
+      )
+    ).rejects.toThrowError();
+  });
+
+  it('will throw an error when it parses an ID with a # in it', async () => {
+    expect(() => stripCollectionFromId('Student#john#1')).toThrowError();
   });
 
   it('can lookup entity by Id', async () => {
@@ -870,7 +889,7 @@ describe('database transactions', () => {
   // beforeEach(() => {
   //   storage.data = [];
   // });
-  it('can commit a transaction', async () => {
+  it('can implicitly commit a transaction', async () => {
     const db = new DB({
       source: new InMemoryTupleStorage(),
       schema: {
@@ -925,7 +944,56 @@ describe('database transactions', () => {
     ).toBe(0);
     // expect(() => tx.collection('TestScores').query().fetch()).toThrowError();
   });
-
+  it("can't commit inside the transaction callback", async () => {
+    const db = new DB({});
+    expect(
+      db.transact(async (tx) => {
+        tx.commit();
+      })
+    ).rejects.toThrowError();
+  });
+  it('can fetch by id in a transaction', async () => {
+    const db = new DB({});
+    await db.transact(async (tx) => {
+      await tx.insert(
+        'TestScores',
+        {
+          score: 80,
+          date: '2023-04-16',
+        },
+        '1'
+      );
+      const result = await tx.fetchById('TestScores', '1');
+      expect(result.score[0]).toBe(80);
+    });
+    expect((await db.fetchById('TestScores', '1')).score[0]).toBe(80);
+  });
+  it('can update an entity in a transaction', async () => {
+    const db = new DB({
+      schema: {
+        TestScores: S.Schema({
+          score: S.number(),
+          date: S.string(),
+        }),
+      },
+    });
+    await db.insert(
+      'TestScores',
+      {
+        score: 80,
+        date: '2023-04-16',
+      },
+      'score-1'
+    );
+    await db.transact(async (tx) => {
+      expect((await db.fetchById('TestScores', 'score-1')).score[0]).toBe(80);
+      await tx.update('TestScores', 'score-1', async (entity) => {
+        await entity.attribute(['score']).set(100);
+      });
+      expect((await tx.fetchById('TestScores', 'score-1')).score[0]).toBe(100);
+    });
+    expect((await db.fetchById('TestScores', 'score-1')).score[0]).toBe(100);
+  });
   it('awaits firing subscription until transaction is committed', async () => {
     const db = new DB({
       source: new InMemoryTupleStorage(),
