@@ -1,5 +1,16 @@
 # @triplit/react
 
+## 0.0.28
+
+### Patch Changes
+
+- 5011219: - add string comparison operations
+  - add fetchById method
+  - support cursor pagination
+  - performance improvements and bug fixes
+- Updated dependencies [5011219]
+  - @triplit/client@0.0.28
+
 ## 0.0.27
 
 ### Patch Changes
