@@ -27,7 +27,11 @@ function getPublishedVersion() {
     return semver.maxSatisfying(publishedVersions, '*'); // gets the highest version using semver
   } catch (e) {
     // Catch 404 which has no published version
-    if (e.output[1].toString('utf-8').includes('404 (Not Found)')) {
+    if (
+      e.output[1]
+        .toString('utf-8')
+        .includes('The remote server failed to provide the requested resource')
+    ) {
       return undefined;
     }
     throw e;
