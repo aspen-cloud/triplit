@@ -221,14 +221,14 @@ function entitySatisfiesAllFilters<Q extends CollectionQuery<any>>(
         }
         const maybeValue = path
           .split('.')
-          .reduce((acc, curr) => acc[curr], entity);
-
+          .reduce((acc, curr) => acc && acc[curr], entity);
+        if (!maybeValue) console.warn(`${path} not found in ${entity}`);
         if (
           maybeValue &&
           (!(maybeValue instanceof Array) || maybeValue.length > 2)
         ) {
           throw new Error(
-            `Received an unexpected value (${maybeValue}) for path ${path} in entity ${entity} interpreted as ${dataType}. This is likely caused by a missing or inccorect schema.`
+            `Received an unexpected value (${maybeValue}) for path ${path} in entity ${entity} interpreted as ${dataType}. This is likely caused by a missing or incorrect schema, or because a filter path was provided that does not lead to a leaf attribute in the entity`
           );
         }
         const [value, _ts] = maybeValue ?? [undefined, undefined];
@@ -396,11 +396,13 @@ function filterToLatestEntityAttribute(triples: TripleRow[]) {
   const latest = new Map<string, TripleRow>();
   for (const triple of triples) {
     const key = stringifyEA(triple.id, triple.attribute);
-    if (
-      !latest.has(key) ||
-      timestampCompare(latest.get(key)!.timestamp, triple.timestamp) < 0
-    ) {
+    if (!latest.has(key)) {
       latest.set(key, triple);
+      continue;
+    }
+    if (timestampCompare(latest.get(key)!.timestamp, triple.timestamp) < 0) {
+      latest.set(key, triple);
+      continue;
     }
   }
   return [...latest.values()];

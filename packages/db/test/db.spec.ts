@@ -166,6 +166,55 @@ describe('Database API', () => {
     expect(results.size).toBe(students.length);
   });
 
+  it('throws an error when filtering with an unimplmented operator', async () => {
+    await expect(
+      db.fetch(
+        CollectionQueryBuilder('Rapper')
+          .where([['name', 'not a real operator', 'Boi-1da']])
+          .build()
+      )
+    ).rejects.toThrowError();
+  });
+
+  it('supports filtering on one attribute with multiple operators', async () => {
+    const results = await db.fetch(
+      CollectionQueryBuilder('Rapper')
+        .where([
+          and([
+            ['id', '<', 5],
+            ['id', '>=', 2],
+          ]),
+        ])
+        .build()
+    );
+    const ids = [...results.values()].map((r) => r.id[0]);
+    expect(Math.max(...ids)).toBe(4);
+    expect(Math.min(...ids)).toBe(2);
+    expect(results.size).toBe(3);
+  });
+
+  it('throws an error when a non-terminal object path is provided', async () => {
+    await db.insert('Rapper', {
+      id: 7,
+      name: 'Jay-Z',
+      album: { name: 'The Blueprint', released: '2001' },
+    });
+    await expect(
+      db.fetch(
+        CollectionQueryBuilder('Rapper')
+          .where([['album', '=', 'The Blueprint']])
+          .build()
+      )
+    ).rejects.toThrowError();
+    await expect(
+      db.fetch(
+        CollectionQueryBuilder('Rapper')
+          .where([['album.name', '=', 'The Blueprint']])
+          .build()
+      )
+    ).resolves.not.toThrowError();
+  });
+
   it.todo('supports compound queries', async () => {
     const twoHundredLevelClasses = db
       .collection('Class')
@@ -479,6 +528,92 @@ describe('subscriptions', () => {
       await db.update('students', '1', async (entity) => {
         await entity.attribute(['dorm']).set('Battell');
       });
+
+      await unsubscribe();
+    });
+  });
+
+  it('handles order and limit', async () => {
+    return new Promise<void>(async (resolve, reject) => {
+      let i = 0;
+      let LIMIT = 2;
+      const assertions = [
+        (data) => {
+          expect(data.size).toBe(LIMIT);
+          expect([...data.values()].map((r) => r.major[0])).toEqual([
+            'Biology',
+            'Biology',
+          ]);
+        },
+        (data) => {
+          try {
+            expect(data.size).toBe(LIMIT);
+            expect([...data.values()].map((r) => r.major[0])).toEqual([
+              'Astronomy',
+              'Biology',
+            ]);
+            resolve();
+          } catch (e) {
+            reject(e);
+          }
+        },
+      ];
+
+      const unsubscribe = db.subscribe(
+        CollectionQueryBuilder('students')
+          .limit(2)
+          .order(['major', 'ASC'])
+          .build(),
+        (students) => {
+          assertions[i](students);
+          i++;
+        }
+      );
+
+      await db.insert(
+        'students',
+        { id: 6, name: 'Frank', major: 'Astronomy', dorm: 'Allen' },
+        '6'
+      );
+
+      await unsubscribe();
+    });
+  });
+
+  it('can subscribe to just triples', async () => {
+    return new Promise<void>(async (resolve, reject) => {
+      let i = 0;
+      let LIMIT = 2;
+      const assertions = [
+        (data) => {
+          expect(data).toHaveLength(LIMIT * 5);
+        },
+        (data) => {
+          try {
+            expect(data).toHaveLength(5);
+            resolve();
+          } catch (e) {
+            reject(e);
+          }
+        },
+      ];
+
+      const unsubscribe = db.subscribeTriples(
+        CollectionQueryBuilder('students')
+          .limit(2)
+          .order(['major', 'ASC'])
+          .build(),
+        (students) => {
+          assertions[i](students);
+          i++;
+        }
+      );
+
+      await db.insert(
+        'students',
+        { id: 6, name: 'Frank', major: 'Astronomy', dorm: 'Allen' },
+        '6'
+      );
 
       await unsubscribe();
     });
