@@ -131,7 +131,7 @@ export async function fetch<Q extends CollectionQuery<any>>(
   if (includeTriples) {
     return {
       results,
-      triples: resultTriples,
+      triples: filterToLatestEntityAttribute(resultTriples),
     };
   }
   return results;
