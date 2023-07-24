@@ -329,7 +329,7 @@ function subscribeResultsAndTriples<Q extends CollectionQuery<any>>(
           query.schema ? initialize(query.schema) : {}
         );
         const isInCollection =
-          !entityObj['_collection'] ||
+          entityObj['_collection'] &&
           entityObj['_collection'][0] === query.collectionName;
         const isInResult =
           isInCollection &&
