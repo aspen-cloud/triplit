@@ -10,3 +10,5 @@ node_modules
 !.yarn/sdks
 !.yarn/versions
 
+# build artifacts
+dist

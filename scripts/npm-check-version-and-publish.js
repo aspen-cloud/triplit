@@ -1,23 +1,39 @@
-const execSync = require("child_process").execSync;
+const execSync = require('child_process').execSync;
 const callerPath = process.cwd();
-const packageJson = require(callerPath + "/package.json");
-const semver = require("semver");
+const packageJson = require(callerPath + '/package.json');
+const semver = require('semver');
 
-const publishedVersionsString = execSync(
-  `yarn npm info ${packageJson.name} --fields versions`,
-  {
-    encoding: "utf-8",
-  }
-).trim();
-const publishedVersions = publishedVersionsString
-  .match(/'([^']+)'/g)
-  .map((version) => version.replace(/'/g, "")); // extracts versions and removes quotes
-const publishedVersion = semver.maxSatisfying(publishedVersions, "*"); // gets the highest version using semver
+const publishedVersion = getPublishedVersion();
 const currentVersion = packageJson.version;
 
-if (semver.gt(currentVersion, publishedVersion)) {
-  console.log("New version detected. Publishing...");
-  execSync("yarn npm publish --access public", { stdio: "inherit" });
+if (!publishedVersion || semver.gt(currentVersion, publishedVersion)) {
+  console.log('New version detected. Publishing...');
+  execSync('yarn npm publish --access public', { stdio: 'inherit' });
 } else {
-  console.log("Current version is already published. Skipping publish...");
+  console.log('Current version is already published. Skipping publish...');
+}
+
+function getPublishedVersion() {
+  try {
+    const publishedVersionsString = execSync(
+      `yarn npm info ${packageJson.name} --fields versions`,
+      {
+        encoding: 'utf-8',
+      }
+    ).trim();
+    const publishedVersions = publishedVersionsString
+      .match(/'([^']+)'/g)
+      .map((version) => version.replace(/'/g, '')); // extracts versions and removes quotes
+    return semver.maxSatisfying(publishedVersions, '*'); // gets the highest version using semver
+  } catch (e) {
+    // Catch 404 which has no published version
+    if (
+      e.output[1]
+        .toString('utf-8')
+        .includes('The remote server failed to provide the requested resource')
+    ) {
+      return undefined;
+    }
+    throw e;
+  }
 }

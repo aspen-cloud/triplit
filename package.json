@@ -5,8 +5,9 @@
     "packages/*"
   ],
   "scripts": {
-    "build:packages": "yarn workspace @triplit/db run build && yarn workspace @triplit/client run build && yarn workspace @triplit/react run build",
-    "release:packages": "yarn build:packages && yarn workspace @triplit/client run publish-pkg && yarn workspace @triplit/react run publish-pkg && yarn changeset tag",
+    "build:packages": "yarn workspaces foreach --all run lint",
+    "release:packages": "yarn build:packages && yarn workspaces foreach --all run publish-pkg && yarn tag:packages",
+    "tag:packages": "git pull --tags -f && yarn changeset tag",
     "lint": "yarn workspaces foreach --all run lint",
     "version": "yarn changeset version && yarn install --mode update-lockfile",
     "changeset": "changeset"

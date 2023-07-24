@@ -1,19 +1,20 @@
 {
   "name": "@triplit/db",
   "type": "module",
-  "private": true,
+  "version": "0.0.27",
   "main": "dist/index.js",
   "typings": "dist/index.d.ts",
   "scripts": {
     "build": "yarn build:code && yarn build:types",
-    "build:code": "esbuild --bundle --minify --platform=browser --target=esnext --outdir=dist src/index.ts",
+    "build:code": "esbuild --bundle --format=esm --platform=browser --target=esnext --outdir=dist src/index.ts",
     "build:types": "tsc --noEmit false --emitDeclarationOnly --declaration --outDir dist",
     "lint": "tsc",
     "test": "vitest",
     "test-coverage": "vitest --coverage",
     "test-coverage-ui": "vitest --ui --coverage",
     "bench": "vitest bench",
-    "coverage": "vitest --coverage"
+    "coverage": "vitest --coverage",
+    "publish-pkg": "node ../../scripts/npm-check-version-and-publish.js"
   },
   "files": [
     "/dist"

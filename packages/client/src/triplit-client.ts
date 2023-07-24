@@ -6,27 +6,24 @@ import {
   Builder,
   toBuilder,
   CachedIndexedDbStorage as IndexedDbStorage,
-} from '@triplit/db';
-import { Query } from '@triplit/db/src/query';
-import { TripleRow } from '@triplit/db/src/triple-store';
-import {
+  Query,
+  TripleRow,
+  Schema,
   JSONTypeFromModel,
   Model,
   Models,
   TimestampedObject,
-  timestampedObjectToPlainObject,
   UnTimestampedObject,
-} from '@triplit/db/src/schema';
-import {
   CollectionNameFromModels,
   DBTransaction,
   ModelFromModels,
-} from '@triplit/db/src/db';
-import { Mutation } from '@triplit/db/src/mutation';
-import { FetchResult } from '@triplit/db/src/collection-query';
-import { Timestamp, timestampCompare } from '@triplit/db/src/timestamp';
-import { DurableClock } from '@triplit/db/src/clocks/durable-clock';
-import { IsAny } from '@triplit/db/src/utility-types';
+  Mutation,
+  FetchResult,
+  Timestamp,
+  timestampCompare,
+  DurableClock,
+  IsAny,
+} from '@triplit/db';
 
 export { IndexedDbStorage, MemoryStorage };
 type Storage = IndexedDbStorage | MemoryStorage;
@@ -445,7 +442,7 @@ export class TriplitClient<M extends Models<any, any> | undefined = undefined> {
         const jsonResults = new Map(
           Array.from(localResults.entries()).map(([key, val]) => [
             key,
-            timestampedObjectToPlainObject(val),
+            Schema.timestampedObjectToPlainObject(val),
           ])
         );
         // @ts-ignore TS not accepting conditional type

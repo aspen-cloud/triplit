@@ -6,9 +6,7 @@
   "typings": "dist/index.d.ts",
   "type": "module",
   "scripts": {
-    "build": "yarn build:code && yarn build:types",
-    "build:code": "node build.cjs",
-    "build:types": "tsc --noEmit false --emitDeclarationOnly --declaration --baseUrl . --outDir dist",
+    "build": "tsc --noEmit false --declaration --baseUrl . --paths null --outDir dist",
     "lint": "tsc",
     "publish-pkg": "node ../../scripts/npm-check-version-and-publish.js"
   },
