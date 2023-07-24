@@ -5,7 +5,7 @@
     "packages/*"
   ],
   "scripts": {
-    "build:packages": "yarn workspaces foreach --all run lint",
+    "build:packages": "yarn workspaces foreach --all run build",
     "release:packages": "yarn build:packages && yarn workspaces foreach --all run publish-pkg && yarn tag:packages",
     "tag:packages": "git pull --tags -f && yarn changeset tag",
     "lint": "yarn workspaces foreach --all run lint",
