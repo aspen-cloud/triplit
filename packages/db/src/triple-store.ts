@@ -108,9 +108,9 @@ function indexToTriple(index: TupleIndex): TripleRow {
     case 'AVE':
       [, a, v, e, t] = index.key as AVEIndex['key'];
       break;
-    case 'VAE':
-      [, v, a, e, t] = index.key as VAEIndex['key'];
-      break;
+    // case 'VAE':
+    //   [, v, a, e, t] = index.key as VAEIndex['key'];
+    //   break;
     case 'clientTimestamp':
       [, , t, e, a, v] = index.key as ClientTimestampIndex['key'];
       break;
@@ -145,10 +145,6 @@ export interface TripleStoreApi {
   setValue(...triple: EAV): void;
 
   // Read methods
-  scanToTriples(
-    ...scanParams: Parameters<TupleRootTransactionApi<TupleIndex>['scan']>
-  ): Promise<TripleRow[]>;
-
   findByCollection(
     collection: string,
     direction?: 'ASC' | 'DESC'
@@ -178,14 +174,14 @@ export interface TripleStoreApi {
     direction?: 'ASC' | 'DESC'
   ): Promise<TripleRow[]>;
 
-  findByVAE(
-    [value, attribute, entityId]: [
-      value?: Value,
-      attribute?: Attribute,
-      entityId?: EntityId
-    ],
-    direction?: 'ASC' | 'DESC'
-  ): Promise<TripleRow[]>;
+  // findByVAE(
+  //   [value, attribute, entityId]: [
+  //     value?: Value,
+  //     attribute?: Attribute,
+  //     entityId?: EntityId
+  //   ],
+  //   direction?: 'ASC' | 'DESC'
+  // ): Promise<TripleRow[]>;
 
   findByEntity(id?: EntityId): Promise<TripleRow[]>;
 
@@ -196,7 +192,7 @@ export interface TripleStoreApi {
 
   findByAttribute(attribute: Attribute): Promise<TripleRow[]>;
 
-  findByValue(value: Value): Promise<TripleRow[]>;
+  // findByValue(value: Value): Promise<TripleRow[]>;
 
   // metadata operations
   readMetadataTuples(entityId: string, attribute?: Attribute): Promise<EAV[]>;
@@ -205,7 +201,6 @@ export interface TripleStoreApi {
     deletes: [entityId: string, attribute?: Attribute][]
   ): Promise<void>;
   readSchema(): Promise<StoreSchema<Models<any, any>> | undefined>;
-  findByValue(value: Value): Promise<TripleRow[]>;
 }
 
 type MetadataListener = (changes: {
@@ -301,16 +296,16 @@ export class TripleStoreOperator implements TripleStoreApi {
   ): Promise<TripleRow[]> {
     return findByAVE(this.tupleOperator, tupleArgs, direction);
   }
-  findByVAE(
-    tupleArgs: [
-      value?: Value | undefined,
-      attribute?: Attribute | undefined,
-      entityId?: string | undefined
-    ],
-    direction?: 'ASC' | 'DESC' | undefined
-  ): Promise<TripleRow[]> {
-    return findByVAE(this.tupleOperator, tupleArgs, direction);
-  }
+  // findByVAE(
+  //   tupleArgs: [
+  //     value?: Value | undefined,
+  //     attribute?: Attribute | undefined,
+  //     entityId?: string | undefined
+  //   ],
+  //   direction?: 'ASC' | 'DESC' | undefined
+  // ): Promise<TripleRow[]> {
+  //   return findByVAE(this.tupleOperator, tupleArgs, direction);
+  // }
   async findByEntity(id?: string | undefined): Promise<TripleRow[]> {
     return findByEntity(this.tupleOperator, id);
   }
@@ -323,9 +318,9 @@ export class TripleStoreOperator implements TripleStoreApi {
   async findByAttribute(attribute: Attribute): Promise<TripleRow[]> {
     return findByAttribute(this.tupleOperator, attribute);
   }
-  async findByValue(value: Value): Promise<TripleRow[]> {
-    return findByValue(this.tupleOperator, value);
-  }
+  // async findByValue(value: Value): Promise<TripleRow[]> {
+  //   return findByValue(this.tupleOperator, value);
+  // }
 
   getEntity(entityId: string) {
     return getEntity(this.tupleOperator, entityId);
@@ -442,12 +437,6 @@ export class TripleStoreOperator implements TripleStoreApi {
         value,
       ]);
     }
-  }
-
-  async scanToTriples(
-    ...scanParams: Parameters<TupleRootTransactionApi<TupleIndex>['scan']>
-  ) {
-    return (await this.tupleOperator.scan(...scanParams)).map(indexToTriple);
   }
 
   async readMetadataTuples(entityId: string, attribute?: Attribute) {
@@ -688,16 +677,16 @@ export class TripleStore implements TripleStoreApi {
   ): Promise<TripleRow[]> {
     return findByAVE(this.tupleStore, [attribute, value, entityId], direction);
   }
-  findByVAE(
-    [value, attribute, entityId]: [
-      value?: Value | undefined,
-      attribute?: Attribute | undefined,
-      entityId?: string | undefined
-    ],
-    direction?: 'ASC' | 'DESC' | undefined
-  ): Promise<TripleRow[]> {
-    return findByVAE(this.tupleStore, [value, attribute, entityId], direction);
-  }
+  // findByVAE(
+  //   [value, attribute, entityId]: [
+  //     value?: Value | undefined,
+  //     attribute?: Attribute | undefined,
+  //     entityId?: string | undefined
+  //   ],
+  //   direction?: 'ASC' | 'DESC' | undefined
+  // ): Promise<TripleRow[]> {
+  //   return findByVAE(this.tupleStore, [value, attribute, entityId], direction);
+  // }
   findByEntity(id?: string | undefined): Promise<TripleRow[]> {
     return findByEntity(this.tupleStore, id);
   }
@@ -710,9 +699,9 @@ export class TripleStore implements TripleStoreApi {
   findByAttribute(attribute: Attribute): Promise<TripleRow[]> {
     return findByAttribute(this.tupleStore, attribute);
   }
-  findByValue(value: Value): Promise<TripleRow[]> {
-    return findByValue(this.tupleStore, value);
-  }
+  // findByValue(value: Value): Promise<TripleRow[]> {
+  //   return findByValue(this.tupleStore, value);
+  // }
 
   getEntity(entityId: string) {
     return getEntity(this.tupleStore, entityId);
@@ -861,16 +850,6 @@ export class TripleStore implements TripleStoreApi {
     });
   }
 
-  getStoresMap() {
-    if (this.storageScope.length === 0) return this.stores;
-    return Object.fromEntries(
-      this.storageScope.map((storageKey) => [
-        storageKey,
-        this.stores[storageKey],
-      ])
-    );
-  }
-
   async readMetadataTuples(entityId: string, attribute?: Attribute) {
     return (
       await this.tupleStore.scan({
@@ -908,12 +887,6 @@ export class TripleStore implements TripleStoreApi {
     // At some point we probably want to validate the we extract (ie has expected props)
     if (!schemaTriples.length) return undefined;
     return triplesToSchema(schemaTriples);
-  }
-
-  async scanToTriples(
-    ...scanParams: Parameters<TupleRootTransactionApi<TupleIndex>['scan']>
-  ) {
-    return (await this.tupleStore.scan(...scanParams)).map(indexToTriple);
   }
 
   async clear() {
@@ -1036,23 +1009,23 @@ function findValuesInRange(
   return scanToTriples(tx, scanArgs);
 }
 
-function findByVAE(
-  tx: MultiTupleStoreOrTransaction,
-  [value, attribute, entityId]: [
-    value?: Value,
-    attribute?: Attribute,
-    entityId?: EntityId
-  ] = [],
-  direction?: 'ASC' | 'DESC'
-) {
-  return scanToTriples(tx, {
-    prefix: ['VAE'],
-    gte: [value ?? MIN, attribute ?? MIN, entityId ?? MIN],
-    // @ts-ignore
-    lt: [value ?? MAX, [...(attribute ?? []), MAX], MAX],
-    reverse: direction === 'DESC',
-  });
-}
+// function findByVAE(
+//   tx: MultiTupleStoreOrTransaction,
+//   [value, attribute, entityId]: [
+//     value?: Value,
+//     attribute?: Attribute,
+//     entityId?: EntityId
+//   ] = [],
+//   direction?: 'ASC' | 'DESC'
+// ) {
+//   return scanToTriples(tx, {
+//     prefix: ['VAE'],
+//     gte: [value ?? MIN, attribute ?? MIN, entityId ?? MIN],
+//     // @ts-ignore
+//     lt: [value ?? MAX, [...(attribute ?? []), MAX], MAX],
+//     reverse: direction === 'DESC',
+//   });
+// }
 
 async function findByEntity(
   tx: MultiTupleStoreOrTransaction,
@@ -1076,12 +1049,12 @@ async function findByAttribute(
   return findByAVE(tx, [attribute]);
 }
 
-async function findByValue(
-  tx: MultiTupleStoreOrTransaction,
-  value: Value
-): Promise<TripleRow[]> {
-  return findByVAE(tx, [value]);
-}
+// async function findByValue(
+//   tx: MultiTupleStoreOrTransaction,
+//   value: Value
+// ): Promise<TripleRow[]> {
+//   return findByVAE(tx, [value]);
+// }
 
 // [tenantId, 'metadata', '_schema'] prefix
 function mapStaticTupleToEAV(tuple: { key: any[]; value: any }): EAV {
