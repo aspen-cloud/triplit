@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { TripleStore } from '../src/triple-store';
 import * as S from '../src/schema';
 import MemoryBTree from '../src/storage/memory-btree';
-import { MemoryStorage } from '../src';
+import { IndexedDbStorage, MemoryStorage } from '../src';
 
 // const storage = new InMemoryTupleStorage();
 const storage = new MemoryBTree();
@@ -208,6 +208,16 @@ describe('schema triple-store', () => {
     expect(afterSchema?.collections).not.toHaveProperty('Task');
     expect(afterSchema?.collections).toHaveProperty('Student');
   });
+  it('should allow the deletion of metadatatriples', async () => {
+    const schemaDb = new TripleStore({
+      storage: new InMemoryTupleStorage(),
+      tenantId: 'TEST',
+      schema: { collections: { Task: TaskSchema }, version: 0 },
+    });
+    expect(await schemaDb.readSchema()).toBeTruthy();
+    await schemaDb.deleteMetadataTuples([['_schema']]);
+    expect(await schemaDb.readSchema()).toBeFalsy();
+  });
 
   it('should allow inserting valid triples', () => {
     const db = new TripleStore({
@@ -323,6 +333,216 @@ describe('supports transactions', () => {
       await tx.cancel();
     });
     expect(await store.findByEntity('id')).toHaveLength(0);
+  });
+});
+
+describe('search/scan functionality', async () => {
+  let store: TripleStore;
+  beforeEach(async () => {
+    store = new TripleStore({
+      storage: new MemoryStorage(),
+      tenantId: 'TEST',
+    });
+    await store.transact(async (tx) => {
+      await tx.insertTriples([
+        {
+          id: 'cats#1',
+          attribute: ['height'],
+          value: 4,
+          timestamp: [1, 'A'],
+          expired: false,
+        },
+        {
+          id: 'cats#2',
+          attribute: ['height'],
+          value: 8,
+          timestamp: [2, 'A'],
+          expired: false,
+        },
+        {
+          id: 'dogs#1',
+          attribute: ['height'],
+          value: 8,
+          timestamp: [1, 'B'],
+          expired: false,
+        },
+        {
+          id: 'dogs#2',
+          attribute: ['ears'],
+          value: 'round',
+          timestamp: [2, 'B'],
+          expired: false,
+        },
+      ]);
+    });
+  });
+  it('can find by attribute', async () => {
+    await store.transact(async (tx) => {
+      expect(
+        (await tx.findByAttribute(['height'])).map(
+          ({ id, attribute }) => attribute[0]
+        )
+      ).toStrictEqual(['height', 'height', 'height']);
+    });
+    expect(
+      (await store.findByAttribute(['ears'])).map(
+        ({ attribute }) => attribute[0]
+      )
+    ).toStrictEqual(['ears']);
+  });
+  it('can find by clientId', async () => {
+    await store.transact(async (tx) => {
+      expect(
+        (await tx.findByClientTimestamp('A', 'gt', undefined)).map(
+          ({ timestamp }) => timestamp[1]
+        )
+      ).toStrictEqual(['A', 'A']);
+    });
+    expect(
+      (await store.findByClientTimestamp('B', 'gt', undefined)).map(
+        ({ timestamp }) => timestamp[1]
+      )
+    ).toStrictEqual(['B', 'B']);
+  });
+  it('can find by the max timestamp', async () => {
+    await store.transact(async (tx) => {
+      expect(await tx.findMaxTimestamp('A')).toStrictEqual([2, 'A']);
+    });
+    expect(await store.findMaxTimestamp('B')).toStrictEqual([2, 'B']);
+  });
+  it('can find by collection', async () => {
+    await store.transact(async (tx) => {
+      expect(
+        (await tx.findByCollection('cats')).map(({ id }) => id)
+      ).toMatchObject(['cats#1', 'cats#2']);
+    });
+    expect(
+      (await store.findByCollection('dogs')).map(({ id }) => id)
+    ).toMatchObject(['dogs#1', 'dogs#2']);
+    expect(await store.findByCollection('fish')).toHaveLength(0);
+  });
+  it('can find values in a range', async () => {
+    await store.transact(async (tx) => {
+      expect(
+        await tx.findValuesInRange(['height'], { greaterThan: 5, lessThan: 10 })
+      ).toHaveLength(2);
+    });
+    expect(
+      await store.findValuesInRange(['height'], {
+        greaterThan: -1,
+        lessThan: 5,
+      })
+    ).toHaveLength(1);
+    expect(
+      await store.findValuesInRange(['ears'], {
+        greaterThan: 'flat',
+      })
+    ).toHaveLength(1);
+    expect(
+      await store.findValuesInRange(['tail'], {
+        greaterThan: 'flat',
+      })
+    ).toHaveLength(0);
+  });
+  it('can find by Entity Attribute and EAV', async () => {
+    await store.transact(async (tx) => {
+      expect(
+        (await tx.findByEAV(['cats#2', ['height']])).map(({ id }) => id)
+      ).toMatchObject(['cats#2']);
+    });
+    expect(
+      (await store.findByEntityAttribute('dogs#1', ['height'])).map(
+        ({ id }) => id
+      )
+    ).toMatchObject(['dogs#1']);
+    expect(
+      (await store.findByEAV(['dogs#1', ['height']])).map(({ id }) => id)
+    ).toMatchObject(['dogs#1']);
+    expect(
+      await store.findByEntityAttribute('dogs#2', ['height'])
+    ).toHaveLength(0);
+  });
+});
+
+describe('Deleting triples', () => {
+  let store: TripleStore;
+  beforeEach(async () => {
+    store = new TripleStore({
+      storage: new MemoryStorage(),
+      tenantId: 'TEST',
+    });
+    await store.transact(async (tx) => {
+      await tx.insertTriples([
+        {
+          id: 'cats#1',
+          attribute: ['height'],
+          value: 4,
+          timestamp: [1, 'A'],
+          expired: false,
+        },
+        {
+          id: 'cats#2',
+          attribute: ['height'],
+          value: 8,
+          timestamp: [2, 'A'],
+          expired: false,
+        },
+        {
+          id: 'dogs#1',
+          attribute: ['height'],
+          value: 8,
+          timestamp: [1, 'B'],
+          expired: false,
+        },
+        {
+          id: 'dogs#2',
+          attribute: ['ears'],
+          value: 'round',
+          timestamp: [2, 'B'],
+          expired: false,
+        },
+      ]);
+    });
+  });
+  it('can delete a triple', async () => {
+    const cats1 = await store.findByEntity('cats#1');
+    expect(cats1).toHaveLength(1);
+    await store.deleteTriple(cats1[0]);
+    const cats1AfterDelete = await store.findByEntity('cats#1');
+    expect(cats1AfterDelete).toHaveLength(0);
+    await store.transact(async (tx) => {
+      const cats2 = await tx.findByEntity('cats#2');
+      expect(cats2).toHaveLength(1);
+      await tx.deleteTriple(cats2[0]);
+      const cats2AfterDelete = await tx.findByEntity('cats#2');
+      expect(cats2AfterDelete).toHaveLength(0);
+    });
+  });
+  it('can delete multiple triples', async () => {
+    const cats = await store.findByCollection('cats');
+    expect(cats).toHaveLength(2);
+    await store.deleteTriples(cats);
+    const catsAfterDelete = await store.findByCollection('cats');
+    expect(catsAfterDelete).toHaveLength(0);
+  });
+});
+
+describe('mutating triple values from the store', () => {
+  it('can set the value of a triple', async () => {
+    const store = new TripleStore({
+      storage: new MemoryStorage(),
+      tenantId: 'TEST',
+    });
+    await store.insertTriple({
+      id: 'id',
+      attribute: ['attr'],
+      value: 'value',
+      timestamp: [1, 'A'],
+      expired: false,
+    });
+    expect((await store.findByEntity('id'))[0].value).toBe('value');
+    await store.setValue('id', ['attr'], 'new-value');
+    expect((await store.findByEntity('id'))[0].value).toBe('new-value');
   });
 });
 
