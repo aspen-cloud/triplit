@@ -8,6 +8,7 @@ import {
   or,
   Schema as S,
   CollectionQueryBuilder,
+  queryResultToJson,
 } from '../src';
 import { classes, students, departments } from './sample_data/school';
 import { timestampedObjectToPlainObject } from '../src/schema';
@@ -272,6 +273,13 @@ describe('Database API', () => {
     expect(stats.get('Student')).toBe(students.length);
     expect(stats.get('Class')).toBe(classes.length);
     expect(stats.get('Department')).toBe(departments.length);
+  });
+  it('can convert query results to JSON', async () => {
+    const results = await db.fetch(
+      CollectionQueryBuilder('Class').select(['name', 'level']).build()
+    );
+    const json = queryResultToJson(results);
+    expect(json).toBeTypeOf('object');
   });
 });
 
