@@ -3,7 +3,7 @@ import { EntityId, TripleRow } from './triple-store';
 
 type Path = string;
 type Value = any;
-export type Operator = '=' | '<' | '>' | '<=' | '>=' | '!=' | 'like';
+export type Operator = '=' | '<' | '>' | '<=' | '>=' | '!=' | 'like' | 'nlike';
 
 export type FilterStatement<M extends Model<any> | undefined> = [
   M extends Model<any> ? keyof M['properties'] : Path,

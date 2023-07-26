@@ -172,6 +172,23 @@ describe('Database API', () => {
     expect(Biggie.size).toBe(1);
   });
 
+  it('support basic queries with the "nlike" operator', async () => {
+    const Biggie = await db.fetch(
+      CollectionQueryBuilder('Rapper')
+        .where([['name', 'nlike', '%B.I.G%.']])
+        .build()
+    );
+    expect(Biggie.size).toBe(RAPPERS_AND_PRODUCERS.length - 1);
+    const artistsWithoutQuotesInTheirName = await db.fetch(
+      CollectionQueryBuilder('Rapper')
+        .where([['name', 'nlike', "%'%'%"]])
+        .build()
+    );
+    expect(artistsWithoutQuotesInTheirName.size).toBe(
+      RAPPERS_AND_PRODUCERS.length - 2
+    );
+  });
+
   const RAPPERS_AND_PRODUCERS = [
     { name: 'Ty Dolla $ign', id: 1 },
     { name: 'Boi-1da', id: 2 },

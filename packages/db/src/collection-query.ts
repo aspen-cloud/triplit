@@ -272,6 +272,8 @@ function isOperatorSatisfied(op: Operator, value: any, filterValue: any) {
     //TODO: move regex initialization outside of the scan loop to improve performance
     case 'like':
       return ilike(value, filterValue);
+    case 'nlike':
+      return !ilike(value, filterValue);
     default:
       throw new Error(`Unknown operator ${op}`);
   }
