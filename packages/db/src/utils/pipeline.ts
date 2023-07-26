@@ -58,11 +58,8 @@ export class Pipeline<T> {
 
   async toArray(): Promise<T[]> {
     let result = [];
-    itemLoop: for (
-      let i = 0;
-      i < Math.min(this.source.length ?? Infinity, this.limit);
-      i++
-    ) {
+    const limit = Math.min(this.source.length ?? Infinity, this.limit);
+    itemLoop: for (let i = 0; i < this.source.length; i++) {
       let item = this.source[i];
       stageLoop: for (const stage of this.stages) {
         const [stageType, func] = stage;
@@ -79,6 +76,9 @@ export class Pipeline<T> {
         }
       }
       result.push(item);
+      if (result.length >= limit) {
+        break itemLoop;
+      }
     }
     return result;
   }
