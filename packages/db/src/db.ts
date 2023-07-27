@@ -385,7 +385,7 @@ export default class DB<M extends Models<any, any> | undefined> {
 
   async fetch(query: CollectionQuery<ModelFromModels<M>>, scope?: string[]) {
     await this.ensureMigrated;
-    // TODO: need to unfuck collectionquery typing
+    // TODO: need to fix collectionquery typing
     const schema = await this.getCollectionSchema(
       query.collectionName as CollectionNameFromModels<M>
     );

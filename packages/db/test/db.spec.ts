@@ -2,7 +2,6 @@ import { InMemoryTupleStorage } from 'tuple-database';
 import { describe, expect, it, beforeEach, beforeAll, vi } from 'vitest';
 import {
   and,
-  CollectionQuery,
   Migration,
   DB,
   or,
@@ -526,6 +525,30 @@ describe('subscriptions', () => {
       (data) => expect(data.size).toBe(3),
     ];
     const unsubscribe = db.subscribe(
+      CollectionQueryBuilder('students')
+        .select(['name', 'major'])
+        .where([['dorm', '=', 'Battell']])
+        .build(),
+      (students) => {
+        assertions[i](students);
+        i++;
+      }
+    );
+
+    await db.update('students', '1', async (entity) => {
+      await entity.attribute(['dorm']).set('Battell');
+    });
+
+    await unsubscribe();
+  });
+
+  it('can subscribe to Triples', async () => {
+    let i = 0;
+    const assertions = [
+      (data) => expect(data.length).toBe(10),
+      (data) => expect(data.length).toBe(5),
+    ];
+    const unsubscribe = db.subscribeTriples(
       CollectionQueryBuilder('students')
         .select(['name', 'major'])
         .where([['dorm', '=', 'Battell']])
