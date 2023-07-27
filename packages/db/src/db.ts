@@ -6,7 +6,7 @@ import {
   TripleStore,
   TripleStoreTransaction,
 } from './triple-store';
-import { Model, Models, TObject, TypeFromModel } from './schema';
+import { Model, Models, TypeFromModel } from './schema';
 import * as Document from './document';
 import { nanoid } from 'nanoid';
 import { AsyncTupleStorageApi } from 'tuple-database';
@@ -18,7 +18,7 @@ import CollectionQueryBuilder, {
   subscribeTriples,
 } from './collection-query';
 import { Mutation } from './mutation';
-import { FilterStatement, Query, QueryWhere, WhereFilter } from './query';
+import { FilterStatement, Query, QueryWhere } from './query';
 import { MemoryStorage } from '.';
 import { Clock } from './clocks/clock';
 
@@ -373,9 +373,8 @@ export default class DB<M extends Models<any, any> | undefined> {
     }, storeScope);
   }
 
-  private replaceVariablesInQuery<M extends Model<any>>(
-    query: CollectionQuery<ModelFromModels<M>>,
-    schema?: M
+  private replaceVariablesInQuery(
+    query: CollectionQuery<ModelFromModels<M>>
   ): CollectionQuery<ModelFromModels<M>> {
     query.where = replaceVariablesInFilterStatements(
       query.where,
@@ -391,7 +390,7 @@ export default class DB<M extends Models<any, any> | undefined> {
       query.collectionName as CollectionNameFromModels<M>
     );
 
-    this.replaceVariablesInQuery(query, schema);
+    this.replaceVariablesInQuery(query);
 
     return await fetch(
       scope ? this.tripleStore.setStorageScope(scope) : this.tripleStore,
@@ -477,7 +476,7 @@ export default class DB<M extends Models<any, any> | undefined> {
       const schema = await this.getCollectionSchema(
         query.collectionName as CollectionNameFromModels<M>
       );
-      this.replaceVariablesInQuery(query, schema);
+      this.replaceVariablesInQuery(query);
 
       const unsub = subscribeTriples(
         scope ? this.tripleStore.setStorageScope(scope) : this.tripleStore,
@@ -686,7 +685,7 @@ export function stripCollectionFromId(id: string): string {
   return parts[1];
 }
 
-function replaceVariablesInFilterStatements<M extends Model<any>>(
+function replaceVariablesInFilterStatements<M extends Model<any> | undefined>(
   statements: QueryWhere<M>,
   variables: Record<string, any>
 ): QueryWhere<M> {

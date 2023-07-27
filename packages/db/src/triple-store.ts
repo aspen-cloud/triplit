@@ -2,7 +2,6 @@ import {
   AsyncTupleDatabaseClient,
   AsyncTupleStorageApi,
   MAX,
-  TupleRootTransactionApi,
   MIN,
   WriteOps,
   KeyValuePair,
