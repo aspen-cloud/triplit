@@ -315,6 +315,7 @@ export type QueryResults<CQ extends CollectionQuery<any>> =
 interface DBOptions<M extends Models<any, any> | undefined> {
   schema?: M;
   migrations?: Migration[];
+  variables?: Record<string, any>;
   storage?: {
     cache?: Storage;
     outbox?: Storage;
@@ -365,6 +366,7 @@ export class TriplitClient<M extends Models<any, any> | undefined = undefined> {
       clock: new DurableClock('cache'),
       schema: options?.db?.schema,
       migrations: options?.db?.migrations,
+      variables: options?.db?.variables,
       sources: {
         //@ts-ignore
         cache:

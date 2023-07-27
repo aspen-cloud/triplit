@@ -1293,3 +1293,81 @@ describe('migrations', () => {
     });
   });
 });
+
+describe('DB Variables', () => {
+  const storage = new InMemoryTupleStorage();
+  const db = new DB({
+    source: storage,
+    variables: {
+      DEPARTMENT: 'math',
+    },
+  });
+
+  beforeAll(async () => {
+    await db.transact(async (tx) => {
+      for (const cls of classes) {
+        await tx.insert('classes', cls);
+      }
+    });
+  });
+
+  it('can use variables in simple query', async () => {
+    const query = db
+      .query('classes')
+      .where([['department', '=', '$DEPARTMENT']])
+      .build();
+    const result = await db.fetch(query);
+    expect(
+      [...result.values()].every((r) => r.department[0] === 'math')
+    ).toBeTruthy();
+  });
+
+  it('can use variables in query with simple grouped filter', async () => {
+    const query = db
+      .query('classes')
+      .where([{ mod: 'and', filters: [['department', '=', '$DEPARTMENT']] }])
+      .build();
+    const result = await db.fetch(query);
+    expect(
+      [...result.values()].every((r) => r.department[0] === 'math')
+    ).toBeTruthy();
+  });
+
+  it('can use variables in query deeply nested grouped filter', async () => {
+    const query = db
+      .query('classes')
+      .where([
+        {
+          mod: 'and',
+          filters: [
+            {
+              mod: 'and',
+              filters: [
+                { mod: 'and', filters: [['department', '=', '$DEPARTMENT']] },
+              ],
+            },
+          ],
+        },
+      ])
+      .build();
+    const result = await db.fetch(query);
+    expect(
+      [...result.values()].every((r) => r.department[0] === 'math')
+    ).toBeTruthy();
+  });
+
+  it('works in a transaction', async () => {
+    const query = db
+      .query('classes')
+      .where([{ mod: 'and', filters: [['department', '=', '$DEPARTMENT']] }])
+      .build();
+    await db.transact(async (tx) => {
+      const result = await tx.fetch(query);
+      expect(
+        [...result.values()].every((r) => r.department[0] === 'math')
+      ).toBeTruthy();
+    });
+  });
+
+  it.todo('supports updating variables with active subscriptions');
+});

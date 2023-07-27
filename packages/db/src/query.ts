@@ -12,14 +12,14 @@ export type FilterStatement<M extends Model<any> | undefined> = [
 ];
 export type FilterGroup<M extends Model<any> | undefined> = {
   mod: 'or' | 'and';
-  filters: FilterStatement<M>[];
+  filters: WhereFilter<M>[];
 };
 
 export type WhereFilter<M extends Model<any> | undefined> =
   | FilterStatement<M>
   | FilterGroup<M>;
 
-type QueryWhere<M extends Model<any> | undefined> = WhereFilter<M>[];
+export type QueryWhere<M extends Model<any> | undefined> = WhereFilter<M>[];
 
 export type ValueCursor = [value: Value, entityId: EntityId];
 

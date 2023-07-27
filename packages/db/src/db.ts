@@ -6,7 +6,7 @@ import {
   TripleStore,
   TripleStoreTransaction,
 } from './triple-store';
-import { Model, Models, TypeFromModel } from './schema';
+import { Model, Models, TObject, TypeFromModel } from './schema';
 import * as Document from './document';
 import { nanoid } from 'nanoid';
 import { AsyncTupleStorageApi } from 'tuple-database';
@@ -18,7 +18,7 @@ import CollectionQueryBuilder, {
   subscribeTriples,
 } from './collection-query';
 import { Mutation } from './mutation';
-import { Query } from './query';
+import { FilterStatement, Query, QueryWhere, WhereFilter } from './query';
 import { MemoryStorage } from '.';
 import { Clock } from './clocks/clock';
 
@@ -73,6 +73,7 @@ interface DBConfig<M extends Models<any, any> | undefined> {
   sources?: Record<string, StorageSource>;
   tenantId?: string;
   clock?: Clock;
+  variables?: Record<string, any>;
 }
 
 const DEFAULT_STORE_KEY = 'default';
@@ -90,7 +91,10 @@ export type CollectionNameFromModels<M extends Models<any, any> | undefined> =
   M extends Models<any, any> ? keyof M : M extends undefined ? string : never;
 
 export class DBTransaction<M extends Models<any, any> | undefined> {
-  constructor(readonly storeTx: TripleStoreTransaction) {}
+  constructor(
+    readonly storeTx: TripleStoreTransaction,
+    readonly variables?: Record<string, any>
+  ) {}
 
   // get schema() {
   //   return this.storeTx.schema?.collections;
@@ -143,7 +147,18 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
     await updater(mutation);
   }
 
+  private replaceVariablesInQuery<M extends Model<any>>(
+    query: CollectionQuery<ModelFromModels<M>>
+  ): CollectionQuery<ModelFromModels<M>> {
+    query.where = replaceVariablesInFilterStatements(
+      query.where,
+      this.variables ?? {}
+    );
+    return query;
+  }
+
   async fetch(query: CollectionQuery<ModelFromModels<M>>) {
+    this.replaceVariablesInQuery(query);
     return fetch(this.storeTx, query);
   }
 
@@ -268,6 +283,7 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
 export default class DB<M extends Models<any, any> | undefined> {
   tripleStore: TripleStore;
   ensureMigrated: Promise<void>;
+  variables: Record<string, any>;
 
   constructor({
     schema,
@@ -276,7 +292,9 @@ export default class DB<M extends Models<any, any> | undefined> {
     tenantId,
     migrations,
     clock,
+    variables,
   }: DBConfig<M> = {}) {
+    this.variables = variables ?? {};
     // If only one source is provided, use the default key
     const sourcesMap = sources ?? {
       [DEFAULT_STORE_KEY]: source ?? new MemoryStorage(),
@@ -332,7 +350,13 @@ export default class DB<M extends Models<any, any> | undefined> {
     const collections = await this.getSchema();
     if (!collections) return undefined;
     // TODO: i think we need some stuff in the triple store...
-    return collections[collectionName] as ModelFromModels<M, CN>;
+    const collectionSchema = collections[collectionName] as ModelFromModels<
+      M,
+      CN
+    >;
+    return {
+      ...collectionSchema,
+    };
   }
 
   static ABORT_TRANSACTION = Symbol('abort transaction');
@@ -343,10 +367,21 @@ export default class DB<M extends Models<any, any> | undefined> {
   ) {
     await this.ensureMigrated;
     await this.tripleStore.transact(async (tripTx) => {
-      const tx = new DBTransaction<M>(tripTx);
+      const tx = new DBTransaction<M>(tripTx, this.variables);
       return await callback(tx);
       // await tx.commit();
     }, storeScope);
+  }
+
+  private replaceVariablesInQuery<M extends Model<any>>(
+    query: CollectionQuery<ModelFromModels<M>>,
+    schema?: M
+  ): CollectionQuery<ModelFromModels<M>> {
+    query.where = replaceVariablesInFilterStatements(
+      query.where,
+      this.variables
+    );
+    return query;
   }
 
   async fetch(query: CollectionQuery<ModelFromModels<M>>, scope?: string[]) {
@@ -355,6 +390,9 @@ export default class DB<M extends Models<any, any> | undefined> {
     const schema = await this.getCollectionSchema(
       query.collectionName as CollectionNameFromModels<M>
     );
+
+    this.replaceVariablesInQuery(query, schema);
+
     return await fetch(
       scope ? this.tripleStore.setStorageScope(scope) : this.tripleStore,
       query,
@@ -383,6 +421,13 @@ export default class DB<M extends Models<any, any> | undefined> {
       throw new Error(`Invalid ID: ${id} cannot include ${ID_SEPARATOR}`);
     }
     await this.ensureMigrated;
+    const schema = await this.getCollectionSchema(
+      collectionName as CollectionNameFromModels<M>
+    );
+
+    if (schema?.rules?.write) {
+    }
+
     await this.tripleStore.transact(async (tx) => {
       await Document.insert(
         tx,
@@ -404,6 +449,7 @@ export default class DB<M extends Models<any, any> | undefined> {
       const schema = await this.getCollectionSchema(
         query.collectionName as CollectionNameFromModels<M>
       );
+      this.replaceVariablesInQuery(query);
 
       const unsub = subscribe(
         scope ? this.tripleStore.setStorageScope(scope) : this.tripleStore,
@@ -431,6 +477,7 @@ export default class DB<M extends Models<any, any> | undefined> {
       const schema = await this.getCollectionSchema(
         query.collectionName as CollectionNameFromModels<M>
       );
+      this.replaceVariablesInQuery(query, schema);
 
       const unsub = subscribeTriples(
         scope ? this.tripleStore.setStorageScope(scope) : this.tripleStore,
@@ -487,29 +534,25 @@ export default class DB<M extends Models<any, any> | undefined> {
   }
 
   async createCollection(params: CreateCollectionOperation[1]) {
-    await this.tripleStore.transact(async (tripTx) => {
-      const tx = new DBTransaction(tripTx);
+    await this.transact(async (tx) => {
       await tx.createCollection(params);
     });
   }
 
   async dropCollection(params: DropCollectionOperation[1]) {
-    await this.tripleStore.transact(async (tripTx) => {
-      const tx = new DBTransaction(tripTx);
+    await this.transact(async (tx) => {
       await tx.dropCollection(params);
     });
   }
 
   async renameAttribute(params: RenameAttributeOperation[1]) {
-    await this.tripleStore.transact(async (tripTx) => {
-      const tx = new DBTransaction(tripTx);
+    await this.transact(async (tx) => {
       await tx.renameAttribute(params);
     });
   }
 
   async addAttribute(params: AddAttributeOperation[1]) {
-    await this.tripleStore.transact(async (tripTx) => {
-      const tx = new DBTransaction(tripTx);
+    await this.transact(async (tx) => {
       await tx.addAttribute(params);
     });
   }
@@ -641,4 +684,25 @@ export function stripCollectionFromId(id: string): string {
     );
   }
   return parts[1];
+}
+
+function replaceVariablesInFilterStatements<M extends Model<any>>(
+  statements: QueryWhere<M>,
+  variables: Record<string, any>
+): QueryWhere<M> {
+  return statements.map((filter) => {
+    if (!(filter instanceof Array)) {
+      filter.filters = replaceVariablesInFilterStatements(
+        filter.filters,
+        variables
+      );
+      return filter;
+    }
+    if (typeof filter[2] !== 'string' || !filter[2].startsWith('$'))
+      return filter;
+    const varValue = variables[filter[2].slice(1)];
+    if (!varValue)
+      throw new Error(`Could not find a variable named ${filter[2]}`);
+    return [filter[0], filter[1], varValue] as FilterStatement<M>;
+  });
 }
