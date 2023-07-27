@@ -1,0 +1,36 @@
+name: Test Coverage
+on:
+  push:
+    branches: [main]
+
+# Only install and test in the db for now
+defaults:
+  run:
+    working-directory: packages/db
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Install modules
+        run: yarn --prefer-offline
+
+      - name: Run unit tests with coverage
+        run: |
+          SUMMARY="$(yarn test-ci | tail -2 | head -1)"
+          TOKENS=($SUMMARY)
+          echo "COVERAGE=$(echo ${TOKENS[2]})" >> $GITHUB_ENV
+
+      - name: Create Coverage Badge
+        uses: schneegans/dynamic-badges-action@v1.1.0
+        with:
+          auth: ${{ secrets.GIST_SECRET }}
+          gistID: f5f2c109373b081a8d894d8289f135e3
+          filename: triplit_coverage.json
+          label: coverage
+          message: ${{ env.COVERAGE }}
+          namedLogo: vitest
+          color: blue
+          logoColor: yellow

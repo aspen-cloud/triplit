@@ -12,6 +12,7 @@
     "test": "vitest",
     "test-coverage": "vitest --coverage",
     "test-coverage-ui": "vitest --ui --coverage",
+    "test-ci": "vitest run --coverage.enabled --coverage.reporter='text-summary'",
     "bench": "vitest bench",
     "coverage": "vitest --coverage",
     "publish-pkg": "node ../../scripts/npm-check-version-and-publish.js"
