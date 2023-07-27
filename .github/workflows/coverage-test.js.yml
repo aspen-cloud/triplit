@@ -15,7 +15,7 @@ jobs:
       - uses: actions/checkout@v3
 
       - name: Install modules
-        run: yarn --prefer-offline
+        run: yarn install
 
       - name: Run unit tests with coverage
         run: |
