@@ -1,7 +1,6 @@
 # Triplit DB
 
-<!-- ![npm badge](https://img.shields.io/npm/v/@triplit/db) -->
-
+![npm badge](https://img.shields.io/npm/v/@triplit/db)
 ![build badge](https://github.com/aspen-cloud/triplit/actions/workflows/build-db.yml/badge.svg)
 ![coverage badge](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/pbohlman/f5f2c109373b081a8d894d8289f135e3/raw/triplit_coverage.json)
 
