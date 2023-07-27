@@ -1,8 +1,14 @@
 # Triplit DB
 
 ![npm badge](https://img.shields.io/npm/v/@triplit/db)
+![types badge](https://img.shields.io/npm/types/@triplit/db)
 ![build badge](https://github.com/aspen-cloud/triplit/actions/workflows/build-db.yml/badge.svg)
 ![coverage badge](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/pbohlman/f5f2c109373b081a8d894d8289f135e3/raw/triplit_coverage.json)
+![twitter badge](https://img.shields.io/badge/twitter-%40triplit__dev-1DA1F2)
+
+<!-- add these when the repo goes public -->
+<!-- ![build badge](https://img.shields.io/github/actions/workflow/status/aspen-cloud/triplit/build-db?label=build) -->
+<!-- ![license badge](https://img.shields.io/github/license/aspen-cloud/triplit) -->
 
 Triplit DB is the embedded database that powers [Triplit](https://triplit.dev/), a complete solution to data persistence, state management, and realtime synchronization for web applications that want to go _fast_.
 
