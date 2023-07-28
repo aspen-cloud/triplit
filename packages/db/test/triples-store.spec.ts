@@ -930,4 +930,52 @@ describe('timestamp index', () => {
     expect(await store.findMaxTimestamp('A')).toEqual([4, 'A']);
     expect(await store.findMaxTimestamp('B')).toEqual([5, 'B']);
   });
+  it('equal to queries', async () => {
+    const store = new TripleStore({ storage, tenantId: 'TEST' });
+    await store.insertTriple({
+      id: 'id',
+      attribute: ['attr'],
+      value: 'value',
+      timestamp: [1, 'A'],
+      expired: false,
+    });
+    await store.insertTriple({
+      id: 'id',
+      attribute: ['attr'],
+      value: 'value',
+      timestamp: [1, 'B'],
+      expired: false,
+    });
+    await store.insertTriple({
+      id: 'id',
+      attribute: ['attr'],
+      value: 'value',
+      timestamp: [2, 'A'],
+      expired: false,
+    });
+    await store.insertTriple({
+      id: 'id',
+      attribute: ['attr2'],
+      value: 'value',
+      timestamp: [2, 'A'],
+      expired: false,
+    });
+    await store.insertTriple({
+      id: 'id',
+      attribute: ['attr'],
+      value: 'value',
+      timestamp: [3, 'A'],
+      expired: false,
+    });
+
+    expect(
+      await store.findByClientTimestamp('A', 'eq', undefined)
+    ).toHaveLength(0);
+    expect(await store.findByClientTimestamp('A', 'eq', [1, 'A'])).toHaveLength(
+      1
+    );
+    expect(await store.findByClientTimestamp('A', 'eq', [2, 'A'])).toHaveLength(
+      2
+    );
+  });
 });

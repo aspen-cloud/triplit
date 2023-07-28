@@ -14,6 +14,7 @@ import {
   TupleToObject,
   RemoveTupleValuePairPrefix,
 } from 'tuple-database/database/typeHelpers';
+import { DBScanFailureError } from './errors';
 
 export type StorageScope = {
   read?: string[];
@@ -122,13 +123,13 @@ export default class MultiTupleStore<TupleSchema extends KeyValuePair> {
     });
   }
 
-  async autoTransact(
-    callback: (tx: MultiTupleTransaction<TupleSchema>) => Promise<void>,
+  async autoTransact<T>(
+    callback: (tx: MultiTupleTransaction<TupleSchema>) => Promise<T>,
     scope: StorageScope | undefined
   ) {
     try {
       // @ts-ignore
-      await transactionalReadWriteAsync()(callback)(
+      return await transactionalReadWriteAsync()(callback)(
         // @ts-ignore
         scope
           ? new MultiTupleStore({ storage: this.storage, storageScope: scope })
@@ -222,8 +223,8 @@ function mergeMultipleSortedArrays<T>(
       }
     }
     if (candidateList == null) {
-      throw new Error(
-        'Could not find candidate item while sorting arrays. This should never happen.'
+      throw new DBScanFailureError(
+        'While merging scan results, could not select a result set to take from. This should never happen.'
       );
     }
     result[itemCount++] = arrays[candidateList][pointers[candidateList]++];

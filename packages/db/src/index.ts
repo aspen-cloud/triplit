@@ -43,3 +43,4 @@ export type { CollectionQuery, FetchResult } from './collection-query';
 export { default as Builder } from './utils/builder';
 export type { toBuilder } from './utils/builder';
 export type { IsAny } from './utility-types';
+export * from './errors';

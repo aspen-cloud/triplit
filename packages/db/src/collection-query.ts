@@ -25,6 +25,7 @@ import {
 } from './triple-store';
 import { Pipeline } from './utils/pipeline';
 import { appendCollectionToId, stripCollectionFromId } from './db';
+import { InvalidFilterError } from './errors';
 
 export default function CollectionQueryBuilder<
   M extends Model<any> | undefined
@@ -239,7 +240,8 @@ function entitySatisfiesAllFilters<Q extends CollectionQuery<any>>(
           maybeValue &&
           (!(maybeValue instanceof Array) || maybeValue.length > 2)
         ) {
-          throw new Error(
+          throw new InvalidFilterError(
+            [path, op, filterValue],
             `Received an unexpected value (${maybeValue}) for path ${path} in entity ${entity} interpreted as ${dataType}. This is likely caused by a missing or incorrect schema, or because a filter path was provided that does not lead to a leaf attribute in the entity`
           );
         }
@@ -287,7 +289,7 @@ function isOperatorSatisfied(op: Operator, value: any, filterValue: any) {
     case 'nlike':
       return !ilike(value, filterValue);
     default:
-      throw new Error(`Unknown operator ${op}`);
+      throw new InvalidFilterError(`The operator ${op} is not recognized.`);
   }
 }
 

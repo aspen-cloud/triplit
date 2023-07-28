@@ -9,6 +9,13 @@ import {
   TypeGuard,
 } from '@sinclair/typebox';
 import { Value, ValuePointer } from '@sinclair/typebox/value';
+import {
+  InvalidSchemaPathError,
+  InvalidSchemaType,
+  InvalidSetTypeError,
+  InvalidTypeError,
+  SchemaPathDoesNotExistError,
+} from './errors';
 import { timestampCompare } from './timestamp';
 import { Attribute, EAV } from './triple-store';
 import { TuplePrefix } from './utility-types';
@@ -57,11 +64,14 @@ export function Set<T extends ValidSetDataTypes>(
   type: ReturnType<typeof Register<T>>
 ) {
   if (!type.items?.length)
-    throw new Error('Invalid type for set, register tuple must contain data');
+    throw new InvalidTypeError(
+      "Could not infer the type of this set. Make sure you're passing a valid register type."
+    );
   const keyType = type.items[0];
   const setOptions = {
     'x-crdt-type': 'Set',
   };
+
   if (TypeGuard.TString(keyType))
     return Type.Record(keyType, Register(Type.Boolean()), {
       ...setOptions,
@@ -73,7 +83,7 @@ export function Set<T extends ValidSetDataTypes>(
       'x-serialized-type': 'set_number',
     });
 
-  throw new Error('Invalid type for set, must be number or string');
+  throw new InvalidSetTypeError((keyType as typeof keyType).type);
 }
 
 export type RegisterType = ReturnType<
@@ -120,13 +130,11 @@ export function getSchemaFromPath<M extends TSchema>(
       }
     } else if (TypeGuard.TObject(scope)) {
       if (!scope.properties[part]) {
-        throw new Error(
-          `Path ${path.slice(0, i + 1).join('.')} does not exist in model.`
-        );
+        throw new SchemaPathDoesNotExistError(path as string[]);
       }
       scope = scope.properties[part] as M;
     } else {
-      throw new Error('Bad path to schema');
+      throw new InvalidSchemaPathError(path as string[]);
     }
   }
   return scope;
@@ -226,7 +234,7 @@ function attributeDefinitionToSchema(schemaItem: AttributeDefinition) {
   if (type === 'number') return number();
   if (type === 'set_string') return Set(string());
   if (type === 'set_number') return Set(number());
-  throw new Error(`Invalid type: ${type}`);
+  throw new InvalidSchemaType(type);
 }
 
 export function triplesToSchema(triples: TuplePrefix<EAV>[]) {

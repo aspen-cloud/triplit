@@ -7,7 +7,6 @@ import {
   toBuilder,
   CachedIndexedDbStorage as IndexedDbStorage,
   Query,
-  TripleRow,
   JSONTypeFromModel,
   Model,
   Models,
@@ -16,10 +15,9 @@ import {
   ModelFromModels,
   Mutation,
   FetchResult,
-  Timestamp,
-  timestampCompare,
   DurableClock,
 } from '@triplit/db';
+import { Subject } from 'rxjs';
 
 export { IndexedDbStorage, MemoryStorage };
 type Storage = IndexedDbStorage | MemoryStorage;
@@ -57,6 +55,9 @@ function throttle(callback: () => void, delay: number) {
   };
 }
 
+const txCommits$ = new Subject<string>();
+const txFailures$ = new Subject<{ txId: string; error: unknown }>();
+
 class SyncEngine {
   // @ts-ignore
   private conn: WebSocket;
@@ -68,11 +69,6 @@ class SyncEngine {
   private reconnectTimeoutDelay = 250;
   private reconnectTimeout: any;
 
-  onTriplesMessage?: (triples: TripleRow[]) => void;
-
-  private latestAware?: Timestamp;
-  private latestSent?: Timestamp;
-
   private db: DB<any>;
   private syncOptions: SyncOptions;
 
@@ -83,6 +79,25 @@ class SyncEngine {
       this.syncOptions.server
     }`;
     this.db = db;
+    txCommits$.subscribe((txId) => {
+      const callbacks = this.commitCallbacks.get(txId);
+      if (callbacks) {
+        for (const callback of callbacks) {
+          callback();
+        }
+        this.commitCallbacks.delete(txId);
+        this.failureCallbacks.delete(txId);
+      }
+    });
+    txFailures$.subscribe(({ txId, error }) => {
+      const callbacks = this.failureCallbacks.get(txId);
+      if (callbacks) {
+        for (const callback of callbacks) {
+          callback(error);
+        }
+      }
+    });
+    this.initialize();
   }
 
   private async getWsURI() {
@@ -97,7 +112,7 @@ class SyncEngine {
     return `${isSecure ? 'wss' : 'ws'}://${server}?${wsOptions.toString()}`;
   }
 
-  initialize() {
+  private initialize() {
     this.connect();
 
     // On network connection / disconnection, connect / disconnect ws
@@ -123,13 +138,25 @@ class SyncEngine {
     };
   }
 
-  async signalOutboxTriples() {
-    const maxTimestamp = await this.db.tripleStore
-      .setStorageScope(['outbox'])
-      .findMaxTimestamp(await this.db.getClientId());
-    if (maxTimestamp) {
-      this.sendMessage('TRIPLES_PENDING', { timestamp: maxTimestamp });
-    }
+  private commitCallbacks: Map<string, Set<() => void>> = new Map();
+  private failureCallbacks: Map<string, Set<(e: unknown) => void>> = new Map();
+
+  onTxCommit(txId: string, callback: () => void) {
+    this.commitCallbacks.has(txId)
+      ? this.commitCallbacks.get(txId)?.add(callback)
+      : this.commitCallbacks.set(txId, new Set([callback]));
+    return () => this.commitCallbacks.get(txId)?.delete(callback);
+  }
+
+  onTxFailure(txId: string, callback: (e: unknown) => void) {
+    this.failureCallbacks.has(txId)
+      ? this.failureCallbacks.get(txId)?.add(callback)
+      : this.failureCallbacks.set(txId, new Set([callback]));
+    return () => this.failureCallbacks.get(txId)?.delete(callback);
+  }
+
+  private async signalOutboxTriples() {
+    this.sendMessage('TRIPLES_PENDING', {});
   }
 
   private get isOpen() {
@@ -154,7 +181,7 @@ class SyncEngine {
     this.conn.onmessage = async (evt) => {
       const message = JSON.parse(evt.data);
       if (message.type === 'ERROR') {
-        this.handleErrorMessage(message);
+        await this.handleErrorMessage(message);
       }
       // TODO: I think we need some initialization handling because that should (?) include triples this client has authored
       if (message.type === 'TRIPLES') {
@@ -166,11 +193,9 @@ class SyncEngine {
           .insertTriples(triples);
       }
 
-      if (message.type === 'TRIPLES_REQUEST') {
+      if (message.type === 'TRIPLES_ACK') {
         const { payload } = message;
-        const {
-          after: latestSyncedTimestamp,
-        }: { after: Timestamp | undefined } = payload;
+        const { txIds } = payload;
         await this.db.tripleStore.transact(async (tx) => {
           const outboxOperator = tx.withScope({
             read: ['outbox'],
@@ -180,52 +205,38 @@ class SyncEngine {
             read: ['cache'],
             write: ['cache'],
           });
-          // move all outbox triples before timestamp to cache
-          const triplesToEvict = latestSyncedTimestamp
-            ? await outboxOperator.findByClientTimestamp(
-                await this.db.getClientId(),
-                'lte',
-                latestSyncedTimestamp
-              )
-            : [];
-          if (triplesToEvict.length > 0) {
-            // TODO We should delete "older", irrelevant triples from the cache
-            await cacheOperator.insertTriples(triplesToEvict);
-            await outboxOperator.deleteTriples(triplesToEvict);
+          // move all commited outbox triples to cache
+          for (const clientTxId of txIds) {
+            const timestamp = JSON.parse(clientTxId);
+            const triplesToEvict = await outboxOperator.findByClientTimestamp(
+              await this.db.getClientId(),
+              'eq',
+              timestamp
+            );
+            if (triplesToEvict.length > 0) {
+              await cacheOperator.insertTriples(triplesToEvict);
+              await outboxOperator.deleteTriples(triplesToEvict);
+            }
           }
 
-          // Keep track of the latestAware timestamp because we might need it to rollback last sent
-          this.latestAware =
-            timestampCompare(latestSyncedTimestamp, this.latestAware) > 0
-              ? latestSyncedTimestamp
-              : this.latestAware;
-
-          // if we've already sent these triples, return early and dont send
-          // TODO: should think through if this is safe or should be refactored
-          if (
-            this.latestSent &&
-            timestampCompare(latestSyncedTimestamp, this.latestSent) === -1
-          ) {
-            // ignore message because we've already sent these triples
-            return;
-          }
-
-          // send all triples in storage after timestamp
-          const triplesToSend = await outboxOperator.findByClientTimestamp(
-            await this.db.getClientId(),
-            'gt',
-            latestSyncedTimestamp
-          );
+          // For now just flush outbox
+          const triplesToSend = await outboxOperator.findByEntity();
           if (triplesToSend.length > 0) {
             this.sendMessage('TRIPLES', { triples: triplesToSend });
-            const latestMessageTimestamp =
-              triplesToSend[triplesToSend.length - 1].timestamp;
-            this.latestSent =
-              timestampCompare(latestMessageTimestamp, this.latestSent) > 0
-                ? latestMessageTimestamp
-                : this.latestSent;
           }
         });
+        for (const txId of txIds) {
+          txCommits$.next(txId);
+        }
+      }
+
+      if (message.type === 'TRIPLES_REQUEST') {
+        const triplesToSend = await this.db.tripleStore
+          .setStorageScope(['outbox'])
+          .findByEntity();
+        if (triplesToSend.length > 0) {
+          this.sendMessage('TRIPLES', { triples: triplesToSend });
+        }
       }
     };
     this.conn.onopen = (ev) => {
@@ -238,12 +249,14 @@ class SyncEngine {
       }
     };
     this.conn.onclose = (ev) => {
-      // In case messages failed to send, reset latestSent to latestAware
-      this.latestSent = this.latestAware;
       if (ev.reason) {
-        const { type } = JSON.parse(ev.reason);
+        const { type, retry } = JSON.parse(ev.reason);
         if (type === 'MIGRATION_REQUIRED') {
-          console.error('MIGRATION_REQUIRED');
+          console.error(
+            'The server has closed the connection because the client schema is out of date. Please update your client schema.'
+          );
+        }
+        if (!retry) {
           // early return to prevent reconnect
           return;
         }
@@ -267,26 +280,52 @@ class SyncEngine {
     };
   }
 
-  private handleErrorMessage(message: any) {
-    const { code, metadata } = message.payload;
-    switch (code) {
-      case 'TRIPLES_INSERT_FAILED':
-      default:
-        this.rollbackTriples(metadata?.triples ?? []);
+  private async handleErrorMessage(message: any) {
+    console.error(message);
+    const { name, metadata } = message.payload;
+    switch (name) {
+      case 'MalformedMessagePayloadError':
+      case 'UnrecognizedMessageTypeError':
+        console.warn(
+          'You sent a malformed message to the server. This might occur if your client is not up to date with the server. Please ensure your client is updated.'
+        );
+        // TODO: If the message that fails is a triple insert, we should handle that specifically depending on the case
+        break;
+      case 'TriplesInsertError':
+        const failures = metadata?.failures ?? [];
+        for (const failure of failures) {
+          const { txId, error } = failure;
+          txFailures$.next({ txId, error });
+        }
     }
   }
 
-  private rollbackTriples(triples: TripleRow[]) {
-    this.db.tripleStore.setStorageScope(['outbox']).deleteTriples(triples);
-    this.rollbackListeners.forEach((listener) => listener());
+  async retry(txId: string) {
+    const timestamp = JSON.parse(txId);
+    const triplesToSend = await this.db.tripleStore
+      .setStorageScope(['outbox'])
+      .findByClientTimestamp(await this.db.getClientId(), 'eq', timestamp);
+    if (triplesToSend.length > 0)
+      this.sendMessage('TRIPLES', { triples: triplesToSend });
   }
 
-  private rollbackListeners: Set<() => void> = new Set();
-  addRollbackListener(listener: () => void) {
-    this.rollbackListeners.add(listener);
-  }
-  removeRollbackListener(listener: () => void) {
-    this.rollbackListeners.delete(listener);
+  async rollback(txIds: string | string[]) {
+    const txIdList = Array.isArray(txIds) ? txIds : [txIds];
+    await this.db.transact(async (tx) => {
+      const scopedTx = tx.storeTx.withScope({
+        read: ['outbox'],
+        write: ['outbox'],
+      });
+      for (const txId of txIdList) {
+        const timestamp = JSON.parse(txId);
+        const triples = await scopedTx.findByClientTimestamp(
+          await this.db.getClientId(),
+          'eq',
+          timestamp
+        );
+        await scopedTx.deleteTriples(triples);
+      }
+    });
   }
 
   private disconnect() {
@@ -346,7 +385,7 @@ function parseScope(query: ClientQuery<any>) {
 
 export class TriplitClient<M extends Models<any, any> | undefined = undefined> {
   db: DB<M>;
-  private syncEngine?: SyncEngine;
+  syncEngine?: SyncEngine;
 
   constructor(options?: { db?: DBOptions<M>; sync?: SyncOptions }) {
     this.db = new DB({
@@ -367,12 +406,11 @@ export class TriplitClient<M extends Models<any, any> | undefined = undefined> {
 
     if (!!options?.sync) {
       this.syncEngine = new SyncEngine(options?.sync, this.db);
-      this.syncEngine.initialize();
     }
   }
 
   async transact(callback: (tx: DBTransaction<M>) => Promise<void>) {
-    await this.db.transact(callback, {
+    return this.db.transact(callback, {
       read: ['outbox', 'cache'],
       write: ['outbox'],
     });
@@ -416,14 +454,6 @@ export class TriplitClient<M extends Models<any, any> | undefined = undefined> {
     callback: (results: FetchResult<CQ>) => void
   ) {
     const scope = parseScope(query);
-    const rollbackListener = async () => {
-      const results = await this.db.fetch(query, scope);
-      // @ts-ignore TODO: fix this along with other issues with fetch()
-      callback(results);
-    };
-    if (this.syncEngine) {
-      this.syncEngine.addRollbackListener(rollbackListener);
-    }
     const unsubscribeLocal = this.db.subscribe(
       query,
       (localResults) => {
@@ -446,8 +476,6 @@ export class TriplitClient<M extends Models<any, any> | undefined = undefined> {
     return () => {
       unsubscribeLocal();
       unsubscribeRemote && unsubscribeRemote();
-      this.syncEngine &&
-        this.syncEngine.removeRollbackListener(rollbackListener);
     };
   }
 }

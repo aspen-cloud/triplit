@@ -24,6 +24,13 @@ import MultiTupleStore, {
 import { Clock } from './clocks/clock';
 import { MemoryClock } from './clocks/memory-clock';
 import { entityToResultReducer, ValueCursor } from './query';
+import {
+  IndexNotFoundError,
+  InvalidTimestampIndexScanError,
+  ModelNotFoundError,
+  NoSchemaRegisteredError,
+  ValueSchemaMismatchError,
+} from './errors';
 
 export type StoreSchema<M extends Models<any, any> | undefined> =
   M extends Models<any, any>
@@ -114,7 +121,7 @@ function indexToTriple(index: TupleIndex): TripleRow {
       [, , t, e, a, v] = index.key as ClientTimestampIndex['key'];
       break;
     default:
-      throw new Error('unsupported index');
+      throw new IndexNotFoundError(indexType);
   }
   return {
     id: e,
@@ -212,7 +219,9 @@ export class TripleStoreOperator implements TripleStoreApi {
   private txMetadataListeners: Set<MetadataListener> = new Set();
 
   schema?: StoreSchema<Models<any, any>>;
-  clock: Clock;
+  readonly clock: Clock;
+
+  assignedTimestamp?: Timestamp;
 
   constructor({
     tupleOperator,
@@ -246,6 +255,13 @@ export class TripleStoreOperator implements TripleStoreApi {
 
   async readSchema() {
     return this.schema;
+  }
+
+  async getTransactionTimestamp() {
+    if (!this.assignedTimestamp) {
+      this.assignedTimestamp = await this.clock.getNextTimestamp();
+    }
+    return this.assignedTimestamp;
   }
 
   private async readSchemaFromStorage() {
@@ -352,7 +368,7 @@ export class TripleStoreOperator implements TripleStoreApi {
 
   findByClientTimestamp(
     clientId: string,
-    scanDirection: 'lt' | 'lte' | 'gt' | 'gte',
+    scanDirection: 'lt' | 'lte' | 'gt' | 'gte' | 'eq',
     timestamp: Timestamp | undefined
   ) {
     return findByClientTimestamp(
@@ -478,21 +494,21 @@ export class TripleStoreOperator implements TripleStoreApi {
   }
 
   async setValue(id: EntityId, attribute: Attribute, value: Value) {
-    const newTimestamp = await this.clock.getNextTimestamp();
+    const timestamp = await this.getTransactionTimestamp();
     const existingTriples = await this.findByEntityAttribute(id, attribute);
     const olderTriples = existingTriples.filter(
       ({ timestamp, expired }) =>
-        timestampCompare(timestamp, newTimestamp) == -1 && !expired
+        timestampCompare(timestamp, timestamp) == -1 && !expired
     );
 
     await this.deleteTriples(olderTriples);
 
     const newerTriples = existingTriples.filter(
-      ({ timestamp }) => timestampCompare(timestamp, newTimestamp) == 1
+      ({ timestamp }) => timestampCompare(timestamp, timestamp) == 1
     );
     if (newerTriples.length === 0) {
       await this.insertTriples([
-        { id, attribute, value, timestamp: newTimestamp, expired: false },
+        { id, attribute, value, timestamp, expired: false },
       ]);
     }
   }
@@ -716,7 +732,7 @@ export class TripleStore implements TripleStoreApi {
 
   findByClientTimestamp(
     clientId: string,
-    scanDirection: 'lt' | 'lte' | 'gt' | 'gte',
+    scanDirection: 'lt' | 'lte' | 'gt' | 'gte' | 'eq',
     timestamp: Timestamp | undefined
   ) {
     return findByClientTimestamp(
@@ -733,7 +749,7 @@ export class TripleStore implements TripleStoreApi {
   ) {
     // const schema = await this.readSchema();
     const schema = await this.readSchema();
-    await this.tupleStore.autoTransact(async (tupleTx) => {
+    const tx = await this.tupleStore.autoTransact(async (tupleTx) => {
       const tx = new TripleStoreTransaction({
         tupleTx: tupleTx,
         clock: this.clock,
@@ -743,24 +759,12 @@ export class TripleStore implements TripleStoreApi {
         await callback(tx);
       } catch (e) {
         throw e;
-        // console.error(e);
       }
+      return tx;
     }, scope);
-    // const tx = new TripleStoreTransaction({
-    //   tupleTx: this.tupleStore.transact(scope),
-    //   clock: new ClientClock({
-    //     clientId: this.tenantId,
-    //     tick: this.clock.tick,
-    //   }),
-    //   schema: this.schema,
-    // });
-    // try {
-    //   await callback(tx);
-    //   await tx.commit();
-    // } catch (e) {
-    //   await tx.cancel();
-    //   throw e;
-    // }
+    return tx.assignedTimestamp
+      ? JSON.stringify(tx.assignedTimestamp)
+      : undefined;
   }
 
   setStorageScope(storageKeys: (keyof typeof this.stores)[]) {
@@ -817,6 +821,7 @@ export class TripleStore implements TripleStoreApi {
   // Including this as a way to capture any change to the store
   // We need this to have outbox scoped data updates since we directly delete data now
   // This might actually be a use case for tombstones
+  // This also handles rolling back on outbox deletes
   onWrite(
     callback: (writes: { inserts: TripleRow[]; deletes: TripleRow[] }) => void
   ) {
@@ -899,7 +904,9 @@ function validateTriple(
   value: Value
 ) {
   if (schema == undefined) {
-    throw new Error('Cannot validate triples. No schema was registered.');
+    throw new NoSchemaRegisteredError(
+      'Unable to run triple validation due to missing schema. This is unexpected and likely a bug.'
+    );
   }
   const [modelName, ...path] = attribute;
 
@@ -908,19 +915,17 @@ function validateTriple(
 
   const model = schema[modelName];
   if (!model) {
-    throw new Error(
-      `${modelName} does not match any registered models (${Object.keys(
-        schema
-      ).join(', ')})`
-    );
+    throw new ModelNotFoundError(modelName as string, Object.keys(schema));
   }
 
   // Leaf values are an array [value, timestamp], so check value
   const clockedSchema = getSchemaFromPath(model, path);
   const valueSchema = clockedSchema.items[0];
   if (!SchemaValue.Check(valueSchema, value))
-    throw new Error(
-      `Value ${value} does not match schema for ${attribute.join('.')}`
+    throw new ValueSchemaMismatchError(
+      modelName as string,
+      attribute as string[],
+      value
     );
 }
 
@@ -1065,7 +1070,7 @@ function mapStaticTupleToEAV(tuple: { key: any[]; value: any }): EAV {
 async function findByClientTimestamp(
   tx: MultiTupleStoreOrTransaction,
   clientId: string,
-  scanDirection: 'lt' | 'lte' | 'gt' | 'gte',
+  scanDirection: 'lt' | 'lte' | 'gt' | 'gte' | 'eq',
   timestamp: Timestamp | undefined
 ) {
   const indexPrefix = ['clientTimestamp', clientId];
@@ -1095,7 +1100,17 @@ async function findByClientTimestamp(
       gte: [[...(timestamp ?? [])]],
     });
   }
-  throw new Error('Cannot scan with direction ' + scanDirection);
+  if (scanDirection === 'eq') {
+    if (!timestamp) return [];
+    return await scanToTriples(tx, {
+      prefix: indexPrefix,
+      gte: [timestamp],
+      lt: [[...timestamp, MAX]],
+    });
+  }
+  throw new InvalidTimestampIndexScanError(
+    `Cannot perfom a scan with direction ${scanDirection}.`
+  );
 }
 
 async function getEntity(tx: MultiTupleStoreOrTransaction, entityId: string) {

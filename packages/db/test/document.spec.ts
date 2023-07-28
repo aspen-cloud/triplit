@@ -23,7 +23,7 @@ describe.skip('Document API', () => {
         { name: 'c', count: 3 },
       ],
     };
-    Document.insert(store, 'TEST', testObject, clock);
+    Document.insert(store, 'TEST', testObject);
     expect(Document.get(store, 'TEST')).toEqual(testObject);
   });
 

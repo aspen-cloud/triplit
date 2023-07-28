@@ -24,7 +24,13 @@ import CollectionQueryBuilder, {
 } from './collection-query';
 import { Mutation } from './mutation';
 import { FilterStatement, Query, QueryWhere } from './query';
-import { MemoryStorage } from '.';
+import MemoryStorage from './storage/memory-btree';
+import {
+  InvalidEntityIdError,
+  InvalidInternalEntityIdError,
+  InvalidMigrationOperationError,
+  SessionVariableNotFoundError,
+} from './errors';
 import { Clock } from './clocks/clock';
 
 type AttributeType =
@@ -122,14 +128,14 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
     doc: any,
     id?: string
   ) {
-    if (id && !isValidExternalId(id)) {
-      throw new Error(`Invalid ID: ${id} cannot include ${ID_SEPARATOR}`);
+    if (id) {
+      const validationError = validateExternalId(id);
+      if (validationError) throw validationError;
     }
     await Document.insert(
       this.storeTx,
       appendCollectionToId(collectionName, id ?? nanoid()),
       doc,
-      this.storeTx.clock,
       collectionName
     );
   }
@@ -374,7 +380,7 @@ export default class DB<M extends Models<any, any> | undefined> {
     storeScope?: { read: string[]; write: string[] }
   ) {
     await this.ensureMigrated;
-    await this.tripleStore.transact(async (tripTx) => {
+    return await this.tripleStore.transact(async (tripTx) => {
       const tx = new DBTransaction<M>(tripTx, this.variables);
       return await callback(tx);
       // await tx.commit();
@@ -427,8 +433,9 @@ export default class DB<M extends Models<any, any> | undefined> {
     id?: string,
     storeScope?: { read: string[]; write: string[] }
   ) {
-    if (id && !isValidExternalId(id)) {
-      throw new Error(`Invalid ID: ${id} cannot include ${ID_SEPARATOR}`);
+    if (id) {
+      const validationError = validateExternalId(id);
+      if (validationError) throw validationError;
     }
     await this.ensureMigrated;
     const schema = await this.getCollectionSchema(
@@ -438,15 +445,15 @@ export default class DB<M extends Models<any, any> | undefined> {
     if (schema?.rules?.write) {
     }
 
-    await this.tripleStore.transact(async (tx) => {
+    const timestamp = await this.tripleStore.transact(async (tx) => {
       await Document.insert(
         tx,
         appendCollectionToId(collectionName, id ?? nanoid()),
         doc,
-        tx.clock,
         collectionName
       );
     }, storeScope);
+    return timestamp;
   }
 
   subscribe<Q extends CollectionQuery<ModelFromModels<M>>>(
@@ -596,7 +603,9 @@ export default class DB<M extends Models<any, any> | undefined> {
             await tx.dropAttribute(operation[1]);
             break;
           default:
-            throw new Error(`Operation Not Implemented: ${operation[0]}`);
+            throw new InvalidMigrationOperationError(
+              `The operation ${operation[0]} is not recognized.`
+            );
         }
       }
     });
@@ -679,8 +688,11 @@ function transformTripleAttribute(
 
 const ID_SEPARATOR = '#';
 
-function isValidExternalId(id: string) {
-  return !String(id).includes(ID_SEPARATOR);
+function validateExternalId(id: string): Error | undefined {
+  if (String(id).includes(ID_SEPARATOR)) {
+    return new InvalidEntityIdError(id, `Id cannot include ${ID_SEPARATOR}.`);
+  }
+  return;
 }
 
 export function appendCollectionToId(collectionName: string, id: string) {
@@ -690,7 +702,7 @@ export function appendCollectionToId(collectionName: string, id: string) {
 export function stripCollectionFromId(id: string): string {
   const parts = id.split(ID_SEPARATOR);
   if (parts.length !== 2) {
-    throw new Error(
+    throw new InvalidInternalEntityIdError(
       `Malformed ID: ${id} should only include one separator(${ID_SEPARATOR})`
     );
   }
@@ -712,8 +724,7 @@ function replaceVariablesInFilterStatements<M extends Model<any> | undefined>(
     if (typeof filter[2] !== 'string' || !filter[2].startsWith('$'))
       return filter;
     const varValue = variables[filter[2].slice(1)];
-    if (!varValue)
-      throw new Error(`Could not find a variable named ${filter[2]}`);
+    if (!varValue) throw new SessionVariableNotFoundError(filter[2]);
     return [filter[0], filter[1], varValue] as FilterStatement<M>;
   });
 }

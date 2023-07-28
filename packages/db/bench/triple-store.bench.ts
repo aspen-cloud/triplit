@@ -64,7 +64,7 @@ describe.only('array performance', () => {
   bench(
     'deconstructed updates',
     async () => {
-      Document.insert(store, docId, doc, clock);
+      Document.insert(store, docId, doc);
       let i = doc.text.length;
       for (const char of newText) {
         store.insertTriple({
@@ -121,13 +121,7 @@ function testStore(store: TripleStore) {
   try {
     for (const doc of RANDOM_DOCS) {
       store.transact(async (tx) => {
-        await Document.insert(
-          tx,
-          doc.id.toString(),
-          doc,
-          tx.clock,
-          COLLECTION_NAME
-        );
+        await Document.insert(tx, doc.id.toString(), doc, COLLECTION_NAME);
       });
     }
     for (const idToDelete of RANDOM_DOC_IDS_TO_DELETE) {

@@ -1,4 +1,3 @@
-import { Clock } from './clocks/clock';
 import { TripleRow, TripleStoreTransaction } from './triple-store';
 import { objectToTuples } from './utils';
 
@@ -7,9 +6,9 @@ export async function insert(
   store: TripleStoreTransaction,
   id: string,
   document: Record<string, any>,
-  clock: Clock,
   collectionName?: string
 ) {
+  const timestamp = await store.getTransactionTimestamp();
   const extendedTuples = objectToTuples(document);
 
   const avRows = extendedTuples.map((pathVal) => {
@@ -23,7 +22,6 @@ export async function insert(
       value: pathVal.at(-1) as string | number | null,
     };
   });
-  const timestamp = await clock.getNextTimestamp();
   const triples: TripleRow[] = avRows.map<TripleRow>(
     ({ attribute, value }) => ({
       id,

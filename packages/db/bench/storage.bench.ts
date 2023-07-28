@@ -24,7 +24,7 @@ function testStore(store: TripleStore) {
   try {
     for (const doc of RANDOM_DOCS) {
       store.transact((tx) => {
-        Document.insert(tx, doc.id, doc, tx.clock, COLLECTION_NAME);
+        Document.insert(tx, doc.id, doc, COLLECTION_NAME);
       });
     }
     for (const idToDelete of RANDOM_DOC_IDS_TO_DELETE) {

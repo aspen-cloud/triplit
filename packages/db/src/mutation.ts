@@ -8,6 +8,7 @@ import * as RegisterCRDT from './crdt/register';
 import * as SetCRDT from './crdt/set';
 import { getSchemaFromPath, Model, RegisterType, SetType } from './schema';
 import { Static } from '@sinclair/typebox';
+import { InvalidMutationError } from './errors';
 
 // A convenience wrapper for the data needed to perform a write
 export interface MutationTransaction {
@@ -70,9 +71,14 @@ export class Mutation<M extends Model<any> | undefined> {
     const fullAttribute = [this.tx.collection!, ...(attribute as string[])];
     this.tx.attribute = fullAttribute;
 
-    if (!this.tx.entity) throw new Error('Must select an entity to update');
+    if (!this.tx.entity)
+      throw new InvalidMutationError(
+        'There is no selected entity for this mutation. Use .entity() to select an entity.'
+      );
     if (!this.tx.attribute?.length)
-      throw new Error('Must select an attribute to update');
+      throw new InvalidMutationError(
+        'There is no selected attribute for this mutation. Use .attribute() to select an attribute. Ensure attribute is a non empty array.'
+      );
     if (this.schema) {
       const pathSchema = getSchemaFromPath(this.schema, attribute as string[]);
       if (pathSchema['x-crdt-type'] === 'Register')
@@ -81,7 +87,9 @@ export class Mutation<M extends Model<any> | undefined> {
       if (pathSchema['x-crdt-type'] === 'Set')
         // @ts-ignore
         return new MutationSet(this.tx as UpdateMutationTransaction);
-      throw new Error('Invalid update type');
+      throw new InvalidMutationError(
+        `The type (${pathSchema['x-serialized-type']}) of this attribute (${attribute}) does not support updates.`
+      );
     }
     // @ts-ignore
     return new MutationRegister(this.tx as UpdateMutationTransaction);
