@@ -8,12 +8,9 @@ import {
   CachedIndexedDbStorage as IndexedDbStorage,
   Query,
   TripleRow,
-  Schema,
   JSONTypeFromModel,
   Model,
   Models,
-  TimestampedObject,
-  UnTimestampedObject,
   CollectionNameFromModels,
   DBTransaction,
   ModelFromModels,
@@ -22,7 +19,6 @@ import {
   Timestamp,
   timestampCompare,
   DurableClock,
-  IsAny,
 } from '@triplit/db';
 
 export { IndexedDbStorage, MemoryStorage };
@@ -303,15 +299,6 @@ class SyncEngine {
   }
 }
 
-export type QueryResults<CQ extends CollectionQuery<any>> =
-  FetchResult<CQ> extends Map<string, infer O>
-    ? IsAny<O> extends true
-      ? Map<string, any>
-      : O extends TimestampedObject
-      ? Map<string, UnTimestampedObject<O>>
-      : Map<string, never>
-    : never;
-
 interface DBOptions<M extends Models<any, any> | undefined> {
   schema?: M;
   migrations?: Migration[];
@@ -426,7 +413,7 @@ export class TriplitClient<M extends Models<any, any> | undefined = undefined> {
 
   subscribe<CQ extends ClientQuery<ModelFromModels<M>>>(
     query: CQ,
-    callback: (results: QueryResults<CQ>) => void
+    callback: (results: FetchResult<CQ>) => void
   ) {
     const scope = parseScope(query);
     const rollbackListener = async () => {
@@ -440,15 +427,7 @@ export class TriplitClient<M extends Models<any, any> | undefined = undefined> {
     const unsubscribeLocal = this.db.subscribe(
       query,
       (localResults) => {
-        // TODO have this happen cleanly in the database level
-        const jsonResults = new Map(
-          Array.from(localResults.entries()).map(([key, val]) => [
-            key,
-            Schema.timestampedObjectToPlainObject(val),
-          ])
-        );
-        // @ts-ignore TS not accepting conditional type
-        callback(jsonResults);
+        callback(localResults);
       },
       scope
     );

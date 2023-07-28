@@ -10,9 +10,7 @@ import {
   queryResultToJson,
 } from '../src';
 import { classes, students, departments } from './sample_data/school';
-import { timestampedObjectToPlainObject } from '../src/schema';
 import MemoryBTree from '../src/storage/memory-btree';
-import exp from 'constants';
 import { stripCollectionFromId } from '../src/db';
 
 // const storage = new InMemoryTupleStorage();
@@ -223,7 +221,7 @@ describe('Database API', () => {
         ])
         .build()
     );
-    const ids = [...results.values()].map((r) => r.id[0]);
+    const ids = [...results.values()].map((r) => r.id);
     expect(Math.max(...ids)).toBe(4);
     expect(Math.min(...ids)).toBe(2);
     expect(results.size).toBe(3);
@@ -400,9 +398,7 @@ describe('Register operations', () => {
     expect(oldQueryResult).toHaveLength(0);
     expect(newQueryResult).toHaveLength(1);
     expect(newQueryResult.get('1')).toBeTruthy();
-    expect(timestampedObjectToPlainObject(newQueryResult.get('1')).name).toBe(
-      NEW_NAME
-    );
+    expect(newQueryResult.get('1').name).toBe(NEW_NAME);
   });
 });
 
@@ -488,10 +484,10 @@ describe('subscriptions', () => {
     return new Promise<void>(async (resolve, reject) => {
       let i = 0;
       const assertions = [
-        (data) => expect(data.get('1').major[0]).toBe('Computer Science'),
+        (data) => expect(data.get('1').major).toBe('Computer Science'),
         (data) => {
           try {
-            expect(data.get('1').major[0]).toBe('Math');
+            expect(data.get('1').major).toBe('Math');
             resolve();
           } catch (e) {
             reject(e);
@@ -583,7 +579,7 @@ describe('subscriptions', () => {
 
       const unsubscribe = db.subscribe(
         CollectionQueryBuilder('students')
-          .select(['name', 'dorm', 'grade'])
+          .select(['name', 'dorm'])
           .where([['dorm', '=', 'Allen']])
           .build(),
         (students) => {
@@ -607,7 +603,7 @@ describe('subscriptions', () => {
       const assertions = [
         (data) => {
           expect(data.size).toBe(LIMIT);
-          expect([...data.values()].map((r) => r.major[0])).toEqual([
+          expect([...data.values()].map((r) => r.major)).toEqual([
             'Biology',
             'Biology',
           ]);
@@ -615,7 +611,7 @@ describe('subscriptions', () => {
         (data) => {
           try {
             expect(data.size).toBe(LIMIT);
-            expect([...data.values()].map((r) => r.major[0])).toEqual([
+            expect([...data.values()].map((r) => r.major)).toEqual([
               'Astronomy',
               'Biology',
             ]);
@@ -794,8 +790,8 @@ describe('ORDER & LIMIT & Pagination', () => {
       descendingScoresResults.values()
     ).every((result, i, arr) => {
       if (i === 0) return true;
-      const previousScore = arr[i - 1].score[0];
-      const currentScore = result.score[0];
+      const previousScore = arr[i - 1].score;
+      const currentScore = result.score;
       return previousScore >= currentScore;
     });
     expect(areAllScoresDescending).toBeTruthy();
@@ -810,8 +806,8 @@ describe('ORDER & LIMIT & Pagination', () => {
       descendingScoresResults.values()
     ).every((result, i, arr) => {
       if (i === 0) return true;
-      const previousScore = arr[i - 1].score[0];
-      const currentScore = result.score[0];
+      const previousScore = arr[i - 1].score;
+      const currentScore = result.score;
       return previousScore <= currentScore;
     });
     expect(areAllScoresDescending).toBeTruthy();
@@ -829,8 +825,8 @@ describe('ORDER & LIMIT & Pagination', () => {
       descendingScoresResults.values()
     ).every((result, i, arr) => {
       if (i === 0) return true;
-      const previousScore = arr[i - 1].score[0];
-      const currentScore = result.score[0];
+      const previousScore = arr[i - 1].score;
+      const currentScore = result.score;
       return previousScore >= currentScore;
     });
     expect(areAllScoresDescending).toBeTruthy();
@@ -847,8 +843,8 @@ describe('ORDER & LIMIT & Pagination', () => {
     const areAllScoresDescending = Array.from(firstPageResults.values()).every(
       (result, i, arr) => {
         if (i === 0) return true;
-        const previousScore = arr[i - 1].score[0];
-        const currentScore = result.score[0];
+        const previousScore = arr[i - 1].score;
+        const currentScore = result.score;
         return previousScore >= currentScore;
       }
     );
@@ -860,14 +856,8 @@ describe('ORDER & LIMIT & Pagination', () => {
       CollectionQueryBuilder('TestScores')
         .order(['score', 'DESC'])
         .limit(5)
-        .after([lastDoc[1].score[0], lastDoc[0]])
+        .after([lastDoc[1].score, lastDoc])
         .build()
-    );
-
-    console.log(
-      [...firstPageResults.values(), ...secondPageResults.values()].map(
-        (r) => r.score[0]
-      )
     );
 
     const areAllScoresDescendingAfterSecondPage = [
@@ -875,8 +865,8 @@ describe('ORDER & LIMIT & Pagination', () => {
       ...secondPageResults.values(),
     ].every((result, i, arr) => {
       if (i === 0) return true;
-      const previousScore = arr[i - 1].score[0];
-      const currentScore = result.score[0];
+      const previousScore = arr[i - 1].score;
+      const currentScore = result.score;
       return previousScore >= currentScore;
     });
 
@@ -895,8 +885,8 @@ describe('ORDER & LIMIT & Pagination', () => {
     const areAllScoresAscending = Array.from(firstPageResults.values()).every(
       (result, i, arr) => {
         if (i === 0) return true;
-        const previousScore = arr[i - 1].score[0];
-        const currentScore = result.score[0];
+        const previousScore = arr[i - 1].score;
+        const currentScore = result.score;
         return previousScore <= currentScore;
       }
     );
@@ -908,14 +898,8 @@ describe('ORDER & LIMIT & Pagination', () => {
       CollectionQueryBuilder('TestScores')
         .order(['score', 'ASC'])
         .limit(5)
-        .after([lastDoc[1].score[0], lastDoc[0]])
+        .after([lastDoc[1].score, lastDoc])
         .build()
-    );
-
-    console.log(
-      [...firstPageResults.values(), ...secondPageResults.values()].map(
-        (r) => r.score[0]
-      )
     );
 
     const areAllScoresAscendingAfterSecondPage = [
@@ -923,8 +907,8 @@ describe('ORDER & LIMIT & Pagination', () => {
       ...secondPageResults.values(),
     ].every((result, i, arr) => {
       if (i === 0) return true;
-      const previousScore = arr[i - 1].score[0];
-      const currentScore = result.score[0];
+      const previousScore = arr[i - 1].score;
+      const currentScore = result.score;
       return previousScore <= currentScore;
     });
 
@@ -1012,9 +996,9 @@ describe('database transactions', () => {
         '1'
       );
       const result = await tx.fetchById('TestScores', '1');
-      expect(result.score[0]).toBe(80);
+      expect(result.score).toBe(80);
     });
-    expect((await db.fetchById('TestScores', '1')).score[0]).toBe(80);
+    expect((await db.fetchById('TestScores', '1'))?.score).toBe(80);
   });
   it('can update an entity in a transaction', async () => {
     const db = new DB({
@@ -1034,13 +1018,13 @@ describe('database transactions', () => {
       'score-1'
     );
     await db.transact(async (tx) => {
-      expect((await db.fetchById('TestScores', 'score-1')).score[0]).toBe(80);
+      expect((await db.fetchById('TestScores', 'score-1')).score).toBe(80);
       await tx.update('TestScores', 'score-1', async (entity) => {
         await entity.attribute(['score']).set(100);
       });
-      expect((await tx.fetchById('TestScores', 'score-1')).score[0]).toBe(100);
+      expect((await tx.fetchById('TestScores', 'score-1')).score).toBe(100);
     });
-    expect((await db.fetchById('TestScores', 'score-1')).score[0]).toBe(100);
+    expect((await db.fetchById('TestScores', 'score-1')).score).toBe(100);
   });
   it('awaits firing subscription until transaction is committed', async () => {
     const db = new DB({
@@ -1127,7 +1111,7 @@ describe('schema changes', async () => {
       .build();
     const result = await db.fetch(query);
     expect(result).toHaveLength(1);
-    expect(result.get('1').studentId[0]).toEqual(1);
+    expect(result.get('1').studentId).toEqual(1);
   });
 
   it('can add an attribute', async () => {
@@ -1341,7 +1325,7 @@ describe('DB Variables', () => {
       .build();
     const result = await db.fetch(query);
     expect(
-      [...result.values()].every((r) => r.department[0] === 'math')
+      [...result.values()].every((r) => r.department === 'math')
     ).toBeTruthy();
   });
 
@@ -1352,7 +1336,7 @@ describe('DB Variables', () => {
       .build();
     const result = await db.fetch(query);
     expect(
-      [...result.values()].every((r) => r.department[0] === 'math')
+      [...result.values()].every((r) => r.department === 'math')
     ).toBeTruthy();
   });
 
@@ -1375,7 +1359,7 @@ describe('DB Variables', () => {
       .build();
     const result = await db.fetch(query);
     expect(
-      [...result.values()].every((r) => r.department[0] === 'math')
+      [...result.values()].every((r) => r.department === 'math')
     ).toBeTruthy();
   });
 
@@ -1387,7 +1371,7 @@ describe('DB Variables', () => {
     await db.transact(async (tx) => {
       const result = await tx.fetch(query);
       expect(
-        [...result.values()].every((r) => r.department[0] === 'math')
+        [...result.values()].every((r) => r.department === 'math')
       ).toBeTruthy();
     });
   });

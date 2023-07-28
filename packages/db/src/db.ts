@@ -6,7 +6,12 @@ import {
   TripleStore,
   TripleStoreTransaction,
 } from './triple-store';
-import { Model, Models, TypeFromModel } from './schema';
+import {
+  Model,
+  Models,
+  timestampedObjectToPlainObject,
+  TypeFromModel,
+} from './schema';
 import * as Document from './document';
 import { nanoid } from 'nanoid';
 import { AsyncTupleStorageApi } from 'tuple-database';
@@ -169,7 +174,10 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
     const entity = await this.storeTx.getEntity(
       appendCollectionToId(collectionName, id)
     );
-    return entity as TypeFromModel<Schema> | null;
+    if (!entity) return null;
+    return timestampedObjectToPlainObject(
+      entity
+    ) as TypeFromModel<Schema> | null;
   }
 
   async createCollection(params: CreateCollectionOperation[1]) {
@@ -407,7 +415,10 @@ export default class DB<M extends Models<any, any> | undefined> {
     const entity = await this.tripleStore.getEntity(
       appendCollectionToId(collectionName, id)
     );
-    return entity as TypeFromModel<Schema> | null;
+    if (!entity) return null;
+    return timestampedObjectToPlainObject(
+      entity
+    ) as TypeFromModel<Schema> | null;
   }
 
   async insert(

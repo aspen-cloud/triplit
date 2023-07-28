@@ -7,7 +7,14 @@ import {
   FilterGroup,
   entityToResultReducer,
 } from './query';
-import { getSchemaFromPath, initialize, Model, TypeFromModel } from './schema';
+import {
+  getSchemaFromPath,
+  initialize,
+  Model,
+  timestampedObjectToPlainObject,
+  TypeFromModel,
+  UnTimestampedObject,
+} from './schema';
 import { Timestamp, timestampCompare } from './timestamp';
 import {
   Attribute,
@@ -40,7 +47,7 @@ export type CollectionQuery<M extends Model<any> | undefined> = Query<M> & {
 export type FetchResult<C extends CollectionQuery<any>> =
   C extends CollectionQuery<infer M>
     ? M extends Model<any>
-      ? Map<string, TypeFromModel<M>>
+      ? Map<string, UnTimestampedObject<TypeFromModel<M>>>
       : M extends undefined
       ? Map<string, any>
       : never
@@ -134,7 +141,12 @@ export async function fetch<Q extends CollectionQuery<any>>(
       triples: filterToLatestEntityAttribute(resultTriples),
     };
   }
-  return results;
+  return new Map(
+    [...results].map(([id, entity]) => [
+      id,
+      timestampedObjectToPlainObject(entity),
+    ])
+  ) as FetchResult<Q>;
 }
 
 function doesEntityObjMatchWhere<Q extends CollectionQuery<any>>(
@@ -312,7 +324,15 @@ function subscribeResultsAndTriples<Q extends CollectionQuery<any>>(
       includeTriples: true,
       schema,
     });
-    subscriptionCallback([results, triples]);
+    subscriptionCallback([
+      new Map(
+        [...results].map(([id, entity]) => [
+          id,
+          timestampedObjectToPlainObject(entity),
+        ])
+      ) as FetchResult<Q>,
+      triples,
+    ]);
 
     const unsub = tripleStore.onWrite(async ({ inserts, deletes }) => {
       let nextResult = new Map(results);
@@ -364,7 +384,15 @@ function subscribeResultsAndTriples<Q extends CollectionQuery<any>>(
       }
       results = nextResult as FetchResult<Q>;
       // console.timeEnd('query recalculation');
-      subscriptionCallback([results, matchedTriples]);
+      subscriptionCallback([
+        new Map(
+          [...results].map(([id, entity]) => [
+            id,
+            timestampedObjectToPlainObject(entity),
+          ])
+        ) as FetchResult<Q>,
+        matchedTriples,
+      ]);
     });
     return unsub;
   };
