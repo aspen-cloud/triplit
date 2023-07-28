@@ -381,7 +381,7 @@ export default class DB<M extends Models<any, any> | undefined> {
     }, storeScope);
   }
 
-  private replaceVariablesInQuery(
+  private replaceVariablesInQuery<M extends Model<any>>(
     query: CollectionQuery<ModelFromModels<M>>
   ): CollectionQuery<ModelFromModels<M>> {
     query.where = replaceVariablesInFilterStatements(
@@ -459,6 +459,7 @@ export default class DB<M extends Models<any, any> | undefined> {
       const schema = await this.getCollectionSchema(
         query.collectionName as CollectionNameFromModels<M>
       );
+      // @ts-ignore TODO: fix this excessively deep / infinite type error
       this.replaceVariablesInQuery(query);
 
       const unsub = subscribe(
