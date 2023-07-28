@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import {
-  QueryResults,
+  FetchResult,
   TriplitClient,
   ClientQuery,
   toBuilder,
@@ -10,7 +10,7 @@ export function useQuery<CQ extends ClientQuery<any>>(
   client: TriplitClient<any>,
   query: toBuilder<CQ>
 ) {
-  const [results, setResults] = useState<QueryResults<CQ> | undefined>(
+  const [results, setResults] = useState<FetchResult<CQ> | undefined>(
     undefined
   );
   const [fetchingLocal, setFetchingLocal] = useState(false);
