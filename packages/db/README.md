@@ -73,7 +73,7 @@ Triplit DB has support for
    By default your DB will be stored ephemerally and not persist through page refreshes. To add persistent storage, initialize the `TriplitDB` with the IndexedDB storage engine. This will store your data in the browser’s IndexedDB database and persist through refreshes.
 
    ```tsx
-   import { TriplitDB, IndexedDBStorage } from '@triplit/db';
+   import TriplitDB, { IndexedDBStorage } from '@triplit/db';
 
    const db = new TriplitDB({
      schema: todoSchema,
