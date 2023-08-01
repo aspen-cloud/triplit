@@ -37,7 +37,7 @@ export function triplesToObject<T>(triples: TuplePrefix<EAV>[]) {
         acc[curr] = v;
         return acc;
       }
-      if (!acc[curr]) acc[curr] = {};
+      if (!acc[curr]) acc[curr] = typeof a[i + 1] === 'number' ? [] : {};
       return acc[curr];
     }, result[e]);
   }

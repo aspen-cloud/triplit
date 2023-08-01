@@ -154,7 +154,7 @@ export async function fetch<Q extends CollectionQuery<any>>(
   ) as FetchResult<Q>;
 }
 
-function doesEntityObjMatchWhere<Q extends CollectionQuery<any>>(
+export function doesEntityObjMatchWhere<Q extends CollectionQuery<any>>(
   entityObj: any,
   where: Q['where'],
   schema?: Q['schema']
@@ -224,7 +224,6 @@ function entitySatisfiesAllFilters<Q extends CollectionQuery<any>>(
     groupedFilters.size === 0 ||
     [...groupedFilters.entries()].every(([path, filters]) => {
       const dataType = schema && getSchemaFromPath(schema, path.split('.'));
-
       return filters.every(([op, filterValue]) => {
         if (dataType && dataType['x-crdt-type'] === 'Set') {
           const pointer = '/' + path.replace('.', '/');

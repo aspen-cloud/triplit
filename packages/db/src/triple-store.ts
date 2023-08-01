@@ -11,7 +11,7 @@ import {
 import {
   Models,
   getSchemaFromPath,
-  triplesToSchema,
+  tuplesToSchema,
   schemaToTriples,
 } from './schema';
 import { Timestamp, timestampCompare } from './timestamp';
@@ -268,7 +268,7 @@ export class TripleStoreOperator implements TripleStoreApi {
     const schemaTriples = await this.readMetadataTuples('_schema');
     // At some point we probably want to validate the we extract (ie has expected props)
     if (!schemaTriples.length) return undefined;
-    return triplesToSchema(schemaTriples);
+    return tuplesToSchema(schemaTriples);
   }
 
   async findByCollection(
@@ -890,7 +890,7 @@ export class TripleStore implements TripleStoreApi {
     const schemaTriples = await this.readMetadataTuples('_schema');
     // At some point we probably want to validate the we extract (ie has expected props)
     if (!schemaTriples.length) return undefined;
-    return triplesToSchema(schemaTriples);
+    return tuplesToSchema(schemaTriples);
   }
 
   async clear() {

@@ -19,6 +19,7 @@ import { nanoid } from 'nanoid';
 import { AsyncTupleStorageApi } from 'tuple-database';
 import CollectionQueryBuilder, {
   CollectionQuery,
+  doesEntityObjMatchWhere,
   fetch,
   FetchResult,
   subscribe,
@@ -33,6 +34,8 @@ import {
   SessionVariableNotFoundError,
 } from './errors';
 import { Clock } from './clocks/clock';
+
+type Reference = `ref:${string}`;
 import { ValuePointer } from '@sinclair/typebox/value';
 
 type AttributeType =
@@ -40,14 +43,31 @@ type AttributeType =
   | 'number'
   | 'boolean'
   | 'set_string'
-  | 'set_number';
+  | 'set_number'
+  | Reference;
+
 type CollectionAttribute = {
   type: AttributeType;
 };
 
+interface Rule<M extends Model<any>> {
+  filter: WhereFilter<M>;
+  description?: string;
+}
+
+export interface CollectionRules {
+  read?: Rule<any>[];
+  insert?: Rule<any>[];
+  update?: Rule<any>[];
+}
+
 type CreateCollectionOperation = [
   'create_collection',
-  { name: string; attributes: { [path: string]: CollectionAttribute } }
+  {
+    name: string;
+    attributes: { [path: string]: CollectionAttribute };
+    rules: CollectionRules;
+  }
 ];
 type DropCollectionOperation = ['drop_collection', { name: string }];
 type AddAttributeOperation = [
@@ -103,6 +123,19 @@ export type ModelFromModels<
 export type CollectionNameFromModels<M extends Models<any, any> | undefined> =
   M extends Models<any, any> ? keyof M : M extends undefined ? string : never;
 
+function ruleToTuple(
+  collectionName: string,
+  ruleType: keyof CollectionRules,
+  index: number,
+  rule: Rule<any>
+) {
+  return Object.entries(rule).map<EAV>(([key, value]) => [
+    '_schema',
+    ['collections', collectionName, 'rules', ruleType, index, key],
+    value,
+  ]);
+}
+
 export class DBTransaction<M extends Models<any, any> | undefined> {
   constructor(
     readonly storeTx: TripleStoreTransaction,
@@ -112,6 +145,34 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
   // get schema() {
   //   return this.storeTx.schema?.collections;
   // }
+
+  async getCollectionSchema<CN extends CollectionNameFromModels<M>>(
+    collectionName: CN
+  ) {
+    const { collections } = await this.getSchema();
+    if (!collections) return undefined;
+    // TODO: i think we need some stuff in the triple store...
+    const collectionSchema = collections[collectionName] as ModelFromModels<
+      M,
+      CN
+    >;
+    return {
+      ...collectionSchema,
+    };
+  }
+
+  private addReadRulesToQuery<M extends Model<any>>(
+    query: CollectionQuery<ModelFromModels<M>>,
+    schema: M
+  ) {
+    if (schema?.rules?.read) {
+      const updatedWhere = [
+        ...query.where,
+        ...schema.rules.read.flatMap((rule) => rule.filter),
+      ];
+      query.where = updatedWhere;
+    }
+  }
 
   async getSchema() {
     return this.storeTx.readSchema();
@@ -257,31 +318,63 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
   }
 
   async fetch(query: CollectionQuery<ModelFromModels<M>>) {
+    const schema = await this.getCollectionSchema(
+      query.collectionName as CollectionNameFromModels<M>
+    );
+    if (schema) {
+      this.addReadRulesToQuery(query, schema);
+    }
     this.replaceVariablesInQuery(query);
-    return fetch(this.storeTx, query);
+    return fetch(this.storeTx, query, { schema, includeTriples: false });
   }
 
   async fetchById<Schema extends Model<any>>(
     collectionName: string,
     id: string
   ) {
+    const schema = await this.getCollectionSchema(collectionName);
+    const readRules = schema?.rules?.read;
     const entity = await this.storeTx.getEntity(
       appendCollectionToId(collectionName, id)
     );
     if (!entity) return null;
+    if (entity && readRules) {
+      const whereFilter = readRules.flatMap((rule) => rule.filter);
+      const query = { where: whereFilter };
+      this.replaceVariablesInQuery(query);
+      if (doesEntityObjMatchWhere(entity, query.where, schema)) {
+        return entity;
+      }
+      return null;
+    }
     return timestampedObjectToPlainObject(
       entity
     ) as TypeFromModel<Schema> | null;
   }
 
   async createCollection(params: CreateCollectionOperation[1]) {
-    const { name: collectionName, attributes } = params;
-    const updates = Object.entries(attributes).map<EAV>(([path, attribute]) => [
-      '_schema',
-      ['collections', collectionName, 'attributes', path, 'type'],
-      attribute.type,
+    const { name: collectionName, attributes, rules } = params;
+    const attributeTuples = Object.entries(attributes).map<EAV>(
+      ([path, attribute]) => [
+        '_schema',
+        ['collections', collectionName, 'attributes', path, 'type'],
+        attribute.type,
+      ]
+    );
+    const ruleTuples = !rules
+      ? []
+      : (['read', 'write', 'update'] as (keyof CollectionRules)[]).flatMap(
+          (ruleType) =>
+            rules[ruleType] != undefined
+              ? rules[ruleType]!.flatMap((rule, i) =>
+                  ruleToTuple(collectionName, ruleType, i, rule)
+                )
+              : []
+        );
+    await this.storeTx.updateMetadataTuples([
+      ...attributeTuples,
+      ...ruleTuples,
     ]);
-    await this.storeTx.updateMetadataTuples(updates);
   }
 
   async dropCollection(params: DropCollectionOperation[1]) {
@@ -463,6 +556,19 @@ export default class DB<M extends Models<any, any> | undefined> {
 
   static ABORT_TRANSACTION = Symbol('abort transaction');
 
+  private addReadRulesToQuery<M extends Model<any>>(
+    query: CollectionQuery<ModelFromModels<M>>,
+    schema: M
+  ) {
+    if (schema?.rules?.read) {
+      const updatedWhere = [
+        ...query.where,
+        ...schema.rules.read.flatMap((rule) => rule.filter),
+      ];
+      query.where = updatedWhere;
+    }
+  }
+
   async transact(
     callback: (tx: DBTransaction<M>) => Promise<void>,
     storeScope?: { read: string[]; write: string[] }
@@ -491,7 +597,9 @@ export default class DB<M extends Models<any, any> | undefined> {
     const schema = await this.getCollectionSchema(
       query.collectionName as CollectionNameFromModels<M>
     );
-
+    if (schema) {
+      this.addReadRulesToQuery(query, schema);
+    }
     this.replaceVariablesInQuery(query);
 
     return await fetch(
@@ -506,10 +614,21 @@ export default class DB<M extends Models<any, any> | undefined> {
     collectionName: string,
     id: string
   ) {
+    const schema = await this.getCollectionSchema(collectionName);
+    const readRules = schema?.rules?.read;
     const entity = await this.tripleStore.getEntity(
       appendCollectionToId(collectionName, id)
     );
     if (!entity) return null;
+    if (entity && readRules) {
+      const whereFilter = readRules.flatMap((rule) => rule.filter);
+      const query = { where: whereFilter };
+      this.replaceVariablesInQuery(query);
+      if (doesEntityObjMatchWhere(entity, query.where, schema)) {
+        return entity;
+      }
+      return null;
+    }
     return timestampedObjectToPlainObject(
       entity
     ) as TypeFromModel<Schema> | null;
@@ -526,12 +645,12 @@ export default class DB<M extends Models<any, any> | undefined> {
       if (validationError) throw validationError;
     }
     await this.ensureMigrated;
-    const schema = await this.getCollectionSchema(
-      collectionName as CollectionNameFromModels<M>
-    );
+    // const schema = await this.getCollectionSchema(
+    //   collectionName as CollectionNameFromModels<M>
+    // );
 
-    if (schema?.rules?.write) {
-    }
+    // if (schema?.rules?.write) {
+    // }
 
     const timestamp = await this.tripleStore.transact(async (tx) => {
       await Document.insert(
@@ -554,7 +673,9 @@ export default class DB<M extends Models<any, any> | undefined> {
       const schema = await this.getCollectionSchema(
         query.collectionName as CollectionNameFromModels<M>
       );
-      // @ts-ignore TODO: fix this excessively deep / infinite type error
+      if (schema) {
+        this.addReadRulesToQuery(query, schema);
+      }
       this.replaceVariablesInQuery(query);
 
       const unsub = subscribe(
@@ -583,7 +704,10 @@ export default class DB<M extends Models<any, any> | undefined> {
       const schema = await this.getCollectionSchema(
         query.collectionName as CollectionNameFromModels<M>
       );
-      this.replaceVariablesInQuery(query);
+      if (schema) {
+        this.addReadRulesToQuery(query, schema);
+      }
+      this.replaceVariablesInQuery(query, schema);
 
       const unsub = subscribeTriples(
         scope ? this.tripleStore.setStorageScope(scope) : this.tripleStore,

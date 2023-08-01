@@ -16,6 +16,7 @@ import {
   InvalidTypeError,
   SchemaPathDoesNotExistError,
 } from './errors';
+import { CollectionRules } from './db';
 import { timestampCompare } from './timestamp';
 import { Attribute, EAV } from './triple-store';
 import { TuplePrefix } from './utility-types';
@@ -199,6 +200,7 @@ export interface CollectionDefinition {
   attributes: {
     [path: string]: AttributeDefinition;
   };
+  rules: CollectionRules;
 }
 
 export interface CollectionsDefinition {
@@ -221,6 +223,7 @@ function collectionsDefinitionToSchema(
       config[path] = attributeDefinitionToSchema(attrDef);
     }
     result[collectionName] = Schema(config);
+    result[collectionName].rules = definition.rules;
   }
 
   return result;
@@ -236,7 +239,7 @@ function attributeDefinitionToSchema(schemaItem: AttributeDefinition) {
   throw new InvalidSchemaType(type);
 }
 
-export function triplesToSchema(triples: TuplePrefix<EAV>[]) {
+export function tuplesToSchema(triples: TuplePrefix<EAV>[]) {
   const schemaData = triplesToObject<{
     _schema?: SchemaDefinition;
   }>(triples);
@@ -248,7 +251,7 @@ export function triplesToSchema(triples: TuplePrefix<EAV>[]) {
 export function schemaToTriples(schema: Models<any, any>): EAV[] {
   const collections: CollectionsDefinition = {};
   for (const [collectionName, model] of Object.entries(schema)) {
-    const collection: CollectionDefinition = { attributes: {} };
+    const collection: CollectionDefinition = { attributes: {}, rules: {} };
     for (const path of Object.keys(model.properties)) {
       const pathSchema = getSchemaFromPath(model, [path]);
       collection.attributes[path] = {

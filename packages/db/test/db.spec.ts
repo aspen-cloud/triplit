@@ -1425,12 +1425,15 @@ describe('migrations', () => {
 
 describe('DB Variables', () => {
   const storage = new InMemoryTupleStorage();
+  const DEPARTMENT = 'dep-1';
   const db = new DB({
     source: storage,
     variables: {
-      DEPARTMENT: 'math',
+      DEPARTMENT,
     },
   });
+
+  const classesInDep = classes.filter((c) => c.department === DEPARTMENT);
 
   beforeAll(async () => {
     await db.transact(async (tx) => {
@@ -1446,8 +1449,9 @@ describe('DB Variables', () => {
       .where([['department', '=', '$DEPARTMENT']])
       .build();
     const result = await db.fetch(query);
+    expect(result).toHaveLength(classesInDep.length);
     expect(
-      [...result.values()].every((r) => r.department === 'math')
+      [...result.values()].every((r) => r.department[0] === DEPARTMENT)
     ).toBeTruthy();
   });
 
@@ -1457,8 +1461,9 @@ describe('DB Variables', () => {
       .where([{ mod: 'and', filters: [['department', '=', '$DEPARTMENT']] }])
       .build();
     const result = await db.fetch(query);
+    expect(result).toHaveLength(classesInDep.length);
     expect(
-      [...result.values()].every((r) => r.department === 'math')
+      [...result.values()].every((r) => r.department[0] === DEPARTMENT)
     ).toBeTruthy();
   });
 
@@ -1480,8 +1485,9 @@ describe('DB Variables', () => {
       ])
       .build();
     const result = await db.fetch(query);
+    expect(result).toHaveLength(classesInDep.length);
     expect(
-      [...result.values()].every((r) => r.department === 'math')
+      [...result.values()].every((r) => r.department[0] === DEPARTMENT)
     ).toBeTruthy();
   });
 
@@ -1492,11 +1498,173 @@ describe('DB Variables', () => {
       .build();
     await db.transact(async (tx) => {
       const result = await tx.fetch(query);
+      expect(result).toHaveLength(classesInDep.length);
       expect(
-        [...result.values()].every((r) => r.department === 'math')
+        [...result.values()].every((r) => r.department[0] === DEPARTMENT)
       ).toBeTruthy();
     });
   });
 
   it.todo('supports updating variables with active subscriptions');
+});
+
+describe.only('Rules', () => {
+  describe('Read', () => {
+    const storage = new InMemoryTupleStorage();
+    const USER_ID = 'student-2';
+    const db = new DB({
+      // schema: {
+      //   classes: S.Schema({
+      //     id: S.string(),
+      //     name: S.string(),
+      //     level: S.number(),
+      //     department: S.string(),
+      //     enrolled_students: S.Set(S.string()),
+      //   })
+      // },
+      // rules: {
+      //   classes: {}
+      // }
+      source: storage,
+      variables: {
+        user_id: USER_ID,
+      },
+    });
+
+    // const classesInDep = classes.filter((c) => c.department === DEPARTMENT);
+
+    beforeAll(async () => {
+      await db.createCollection({
+        name: 'classes',
+        attributes: {
+          id: { type: 'string' },
+          name: { type: 'string' },
+          level: { type: 'number' },
+          department: { type: 'string' },
+          enrolled_students: { type: 'set_string' },
+        },
+        rules: {
+          read: [
+            {
+              description: "Students can only view classes they're enrolled in",
+              filter: [['enrolled_students', '=', '$user_id']],
+            },
+          ],
+        },
+      });
+
+      await db.transact(async (tx) => {
+        for (const cls of classes) {
+          await tx.insert(
+            'classes',
+            {
+              ...cls,
+              enrolled_students: new Set(cls.enrolled_students),
+            },
+            cls.id
+          );
+        }
+      });
+    });
+
+    it('filters results in fetch', async () => {
+      const results = await db.fetch(db.query('classes').build());
+      const classesWithStudent2 = classes.filter((cls) =>
+        cls.enrolled_students.includes(USER_ID)
+      );
+      expect(results).toHaveLength(classesWithStudent2.length);
+    });
+
+    it('filters results in fetchById', async () => {
+      const nonEnrolledClass = await db.fetchById('classes', 'class-2');
+      expect(nonEnrolledClass).toBeNull();
+      const enrolledClass = await db.fetchById('classes', 'class-1');
+      expect(enrolledClass).not.toBeNull();
+    });
+
+    it.only('works in a transaction', async () => {
+      await db.transact(async (tx) => {
+        const results = await tx.fetch(db.query('classes').build());
+        const classesWithStudent2 = classes.filter((cls) =>
+          cls.enrolled_students.includes(USER_ID)
+        );
+        expect(results).toHaveLength(classesWithStudent2.length);
+        const nonEnrolledClass = await tx.fetchById('classes', 'class-2');
+        expect(nonEnrolledClass).toBeNull();
+        const enrolledClass = await tx.fetchById('classes', 'class-1');
+        expect(enrolledClass).not.toBeNull();
+      });
+    });
+
+    it('filters results in subscriptions', async () => {
+      return new Promise<void>((resolve, reject) => {
+        const classesWithStudent = classes.filter((cls) =>
+          cls.enrolled_students.includes(USER_ID)
+        );
+        let callbackNum = 0;
+        const assertionSteps = [
+          {
+            check: (results: Map<string, any>) => {
+              expect(results).toHaveLength(classesWithStudent.length);
+            },
+          },
+          {
+            update: async () => {
+              const classId = `class-5`;
+              db.insert('classes', {
+                id: classId,
+                name: 'Another class for student 2',
+                level: 300,
+                department: 'dep-2',
+                enrolled_students: new Set([
+                  'student-1',
+                  'student-3',
+                  USER_ID,
+                  'student-5',
+                ]),
+              });
+            },
+            check: (results: Map<string, any>) => {
+              expect(results).toHaveLength(classesWithStudent.length + 1);
+            },
+          },
+          {
+            update: async () => {
+              const classId = `class-6`;
+              db.insert('classes', {
+                id: classId,
+                name: 'NOT A class for student 2',
+                level: 200,
+                department: 'dep-3',
+                enrolled_students: new Set([
+                  'student-1',
+                  'student-3',
+                  'student-5',
+                ]),
+              });
+            },
+            check: (results: Map<string, any>) => {
+              expect(results).toHaveLength(classesWithStudent.length + 1);
+            },
+          },
+        ];
+        db.subscribe(db.query('classes').build(), (results) => {
+          assertionSteps[callbackNum].check(results);
+          callbackNum++;
+          if (
+            assertionSteps[callbackNum] &&
+            assertionSteps[callbackNum].update
+          ) {
+            // @ts-ignore
+            assertionSteps[callbackNum].update();
+          }
+          if (callbackNum >= assertionSteps.length) {
+            resolve();
+          }
+        });
+      });
+    });
+  });
+  describe.todo('Insert', () => {});
+  describe.todo('Update', () => {});
 });
