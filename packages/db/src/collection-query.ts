@@ -371,9 +371,8 @@ function subscribeResultsAndTriples<Q extends CollectionQuery<any>>(
           satisfiesOrder =
             order[1] === 'ASC'
               ? entityValue <= valueRange[1]
-              : entityValue >= valueRange[0];
+              : entityValue >= valueRange[1];
         }
-
         if (isInResult && satisfiesOrder) {
           nextResult.set(entity, entityObj);
           matchedTriples.push(...entityTriples);
