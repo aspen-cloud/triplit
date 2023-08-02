@@ -23,8 +23,8 @@ export { IndexedDbStorage, MemoryStorage };
 type Storage = IndexedDbStorage | MemoryStorage;
 
 interface SyncOptions {
-  server: string;
-  apiKey: string;
+  server?: string;
+  apiKey?: string;
   secure?: boolean;
 }
 
@@ -61,8 +61,6 @@ const txFailures$ = new Subject<{ txId: string; error: unknown }>();
 class SyncEngine {
   // @ts-ignore
   private conn: WebSocket;
-  // @ts-ignore
-  private httpUri: string;
 
   private queries: Set<RemoteQueryParams> = new Set();
 
@@ -75,9 +73,6 @@ class SyncEngine {
   constructor(options: SyncOptions, db: DB<any>) {
     this.syncOptions = options;
     this.syncOptions.secure = options.secure ?? true;
-    this.httpUri = `${this.syncOptions.secure ? 'https' : 'http'}://${
-      this.syncOptions.server
-    }`;
     this.db = db;
     txCommits$.subscribe((txId) => {
       const callbacks = this.commitCallbacks.get(txId);
@@ -100,8 +95,27 @@ class SyncEngine {
     this.initialize();
   }
 
+  get token() {
+    return this.syncOptions.apiKey;
+  }
+
+  // @ts-ignore
+  private get httpUri() {
+    return this.syncOptions.server
+      ? `${this.syncOptions.secure ? 'https' : 'http'}://${
+          this.syncOptions.server
+        }`
+      : undefined;
+  }
+
   private async getWsURI() {
     const { secure: isSecure, apiKey, server } = this.syncOptions;
+    if (!server || !apiKey) {
+      console.warn(
+        'Both a server and apiKey are required to sync. Skipping sync connection.'
+      );
+      return undefined;
+    }
     const wsOptions = new URLSearchParams();
     const schemaVersion = (await this.db.getSchema(true))?.version;
     if (schemaVersion) {
@@ -118,8 +132,13 @@ class SyncEngine {
     // On network connection / disconnection, connect / disconnect ws
     const connectionHandler = this.connect.bind(this);
     window.addEventListener('online', connectionHandler);
-    const disconnectHandler = this.disconnect.bind(this);
-    window.addEventListener('offline', disconnectHandler);
+    const disconnectHandler = this.closeConnection.bind(this);
+    window.addEventListener('offline', () =>
+      disconnectHandler(
+        1000,
+        JSON.stringify({ type: 'NETWORK_OFFLINE', retry: false })
+      )
+    );
 
     const throttledSignal = throttle(() => this.signalOutboxTriples(), 100);
 
@@ -172,18 +191,19 @@ class SyncEngine {
     this.conn.send(JSON.stringify({ type, payload }));
   }
 
-  private async connect() {
-    console.log('connecting');
-    if (this.conn) this.conn.close();
-    // this.conn = new WebSocket(this.wsUri, ['Bearer', this.apiKey]);
+  async connect() {
+    this.closeConnection(
+      1000,
+      JSON.stringify({ type: 'CONNECTION_OVERRIDE', retry: false })
+    );
     const wsUri = await this.getWsURI();
+    if (!wsUri) return;
     this.conn = new WebSocket(wsUri);
     this.conn.onmessage = async (evt) => {
       const message = JSON.parse(evt.data);
       if (message.type === 'ERROR') {
         await this.handleErrorMessage(message);
       }
-      // TODO: I think we need some initialization handling because that should (?) include triples this client has authored
       if (message.type === 'TRIPLES') {
         const { payload } = message;
         const triples = payload.triples;
@@ -280,6 +300,34 @@ class SyncEngine {
     };
   }
 
+  updateConnection(options: Partial<SyncOptions>) {
+    this.disconnect();
+    this.syncOptions = { ...this.syncOptions, ...options };
+    this.connect();
+  }
+
+  disconnect() {
+    this.closeConnection(
+      1000,
+      JSON.stringify({ type: 'MANUAL_DISCONNECT', retry: false })
+    );
+  }
+
+  get connectionStatus() {
+    switch (this.conn?.readyState) {
+      case this.conn?.OPEN:
+        return 'OPEN';
+      case this.conn?.CLOSING:
+        return 'CLOSING';
+      case this.conn?.CLOSED:
+        return 'CLOSED';
+      case this.conn?.CONNECTING:
+        return 'CONNECTING';
+      default:
+        return 'UNKNOWN'; // Will hit this if you've never initialized a connection
+    }
+  }
+
   private async handleErrorMessage(message: any) {
     console.error(message);
     const { name, metadata } = message.payload;
@@ -328,8 +376,11 @@ class SyncEngine {
     });
   }
 
-  private disconnect() {
-    this.conn.close();
+  private closeConnection(
+    code?: number | undefined,
+    reason?: string | undefined
+  ) {
+    if (this.conn) this.conn.close(code, reason);
   }
 
   private resetReconnectTimeout() {
@@ -385,7 +436,7 @@ function parseScope(query: ClientQuery<any>) {
 
 export class TriplitClient<M extends Models<any, any> | undefined = undefined> {
   db: DB<M>;
-  syncEngine?: SyncEngine;
+  syncEngine: SyncEngine;
 
   constructor(options?: { db?: DBOptions<M>; sync?: SyncOptions }) {
     this.db = new DB({
@@ -404,9 +455,7 @@ export class TriplitClient<M extends Models<any, any> | undefined = undefined> {
       },
     });
 
-    if (!!options?.sync) {
-      this.syncEngine = new SyncEngine(options?.sync, this.db);
-    }
+    this.syncEngine = new SyncEngine(options?.sync ?? {}, this.db);
   }
 
   async transact(callback: (tx: DBTransaction<M>) => Promise<void>) {
@@ -463,16 +512,15 @@ export class TriplitClient<M extends Models<any, any> | undefined = undefined> {
     );
     const { select, where, collectionName, order, limit } = query;
     // TODO: do we need to pass along params arg from local query subscription?
-    let unsubscribeRemote =
-      !!this.syncEngine && scope.includes('cache')
-        ? this.syncEngine.subscribeToQuery({
-            collection: collectionName,
-            select,
-            where,
-            order,
-            limit,
-          })
-        : undefined;
+    let unsubscribeRemote = scope.includes('cache')
+      ? this.syncEngine.subscribeToQuery({
+          collection: collectionName,
+          select,
+          where,
+          order,
+          limit,
+        })
+      : undefined;
     return () => {
       unsubscribeLocal();
       unsubscribeRemote && unsubscribeRemote();
