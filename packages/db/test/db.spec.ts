@@ -12,6 +12,7 @@ import {
 import { classes, students, departments } from './sample_data/school';
 import MemoryBTree from '../src/storage/memory-btree';
 import { stripCollectionFromId } from '../src/db';
+import { testSubscription } from './utils/test-subscription';
 
 // const storage = new InMemoryTupleStorage();
 const storage = new MemoryBTree();
@@ -683,7 +684,7 @@ describe('subscriptions', () => {
   });
 });
 
-const testScores = [
+const TEST_SCORES = [
   {
     score: 80,
     date: '2023-04-16',
@@ -765,6 +766,7 @@ const testScores = [
     date: '2023-05-24',
   },
 ];
+
 describe('ORDER & LIMIT & Pagination', () => {
   const db = new DB({
     source: storage,
@@ -775,8 +777,9 @@ describe('ORDER & LIMIT & Pagination', () => {
       }),
     },
   });
-  beforeAll(async () => {
-    for (const result of testScores) {
+  beforeEach(async () => {
+    storage.wipe();
+    for (const result of TEST_SCORES) {
       await db.insert('TestScores', result);
     }
   });
@@ -785,7 +788,7 @@ describe('ORDER & LIMIT & Pagination', () => {
     const descendingScoresResults = await db.fetch(
       CollectionQueryBuilder('TestScores').order(['score', 'DESC']).build()
     );
-    expect(descendingScoresResults.size).toBe(testScores.length);
+    expect(descendingScoresResults.size).toBe(TEST_SCORES.length);
     const areAllScoresDescending = Array.from(
       descendingScoresResults.values()
     ).every((result, i, arr) => {
@@ -801,7 +804,7 @@ describe('ORDER & LIMIT & Pagination', () => {
     const descendingScoresResults = await db.fetch(
       CollectionQueryBuilder('TestScores').order(['score', 'ASC']).build()
     );
-    expect(descendingScoresResults.size).toBe(testScores.length);
+    expect(descendingScoresResults.size).toBe(TEST_SCORES.length);
     const areAllScoresDescending = Array.from(
       descendingScoresResults.values()
     ).every((result, i, arr) => {
@@ -914,6 +917,88 @@ describe('ORDER & LIMIT & Pagination', () => {
 
     expect(secondPageResults.size).toBe(5);
     expect(areAllScoresAscendingAfterSecondPage).toBeTruthy();
+  });
+
+  it('can pull in more results to satisfy limit in subscription when current result no longer satisfies filter', async () => {
+    const LIMIT = 5;
+
+    await testSubscription(
+      db,
+      db
+        .query('TestScores')
+        .where([['score', '>', 10]])
+        .order(['score', 'DESC'])
+        .limit(LIMIT)
+        .build(),
+      [
+        {
+          check: (results) => {
+            expect(results).toHaveLength(LIMIT);
+          },
+        },
+        {
+          action: async (results) => {
+            const idFromResults = [...results.keys()][0];
+            await db.transact(async (tx) => {
+              await tx.update('TestScores', idFromResults, async (entity) => {
+                await entity.attribute(['score']).set(0);
+              });
+            });
+          },
+          check: (results) => {
+            expect(results.size).toBe(LIMIT);
+            expect(
+              [...results.values()].map((result) => result.score).includes(0)
+            ).toBeFalsy();
+          },
+        },
+        {
+          action: async (results) => {
+            const firstResult = [...results][0];
+            await db.transact(async (tx) => {
+              await tx.update('TestScores', firstResult[0], async (entity) => {
+                await entity.attribute(['score']).set(firstResult[1].score + 1);
+              });
+            });
+          },
+          check: (results) => {
+            expect(results).toHaveLength(LIMIT);
+          },
+        },
+      ]
+    );
+  });
+
+  it('can pull in more results to satisfy limit in subscription when current result no longer satisfies order', async () => {
+    const LIMIT = 5;
+
+    await testSubscription(
+      db,
+      db.query('TestScores').order(['score', 'DESC']).limit(LIMIT).build(),
+      [
+        {
+          check: (results) => {
+            expect(results.size).toBe(LIMIT);
+          },
+        },
+        {
+          action: async (results) => {
+            const idFromResults = [...results.keys()][0];
+            await db.transact(async (tx) => {
+              await tx.update('TestScores', idFromResults, async (entity) => {
+                await entity.attribute(['score']).set(0);
+              });
+            });
+          },
+          check: (results) => {
+            expect(results.size).toBe(LIMIT);
+            expect(
+              [...results.values()].map((result) => result.score).includes(0)
+            ).toBeFalsy();
+          },
+        },
+      ]
+    );
   });
 });
 

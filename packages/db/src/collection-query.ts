@@ -358,7 +358,23 @@ function subscribeResultsAndTriples<Q extends CollectionQuery<any>>(
         const isInResult =
           isInCollection &&
           doesEntityObjMatchWhere(entityObj, query.where ?? [], schema);
-        if (isInResult) {
+
+        let satisfiesOrder = true;
+
+        if (order) {
+          const allValues = [...nextResult.values()];
+          const valueRange = [
+            allValues.at(0)[order[0]][0],
+            allValues.at(-1)[order[0]][0],
+          ];
+          const entityValue = entityObj[order[0]][0];
+          satisfiesOrder =
+            order[1] === 'ASC'
+              ? entityValue <= valueRange[1]
+              : entityValue >= valueRange[0];
+        }
+
+        if (isInResult && satisfiesOrder) {
           nextResult.set(entity, entityObj);
           matchedTriples.push(...entityTriples);
         } else {
@@ -372,6 +388,23 @@ function subscribeResultsAndTriples<Q extends CollectionQuery<any>>(
       if (order || limit) {
         const entries = [...nextResult];
 
+        if (limit && entries.length < limit) {
+          const lastResultEntry = entries[entries.length - 1];
+          const backFillQUery = {
+            ...query,
+            limit: limit - entries.length,
+            after: [
+              lastResultEntry[1][order![0]][0],
+              appendCollectionToId(query.collectionName, lastResultEntry[0]),
+            ],
+          };
+          const backFilledResults = await fetch(tripleStore, backFillQUery, {
+            schema,
+            includeTriples: true,
+          });
+          entries.push(...backFilledResults.results);
+        }
+
         if (order) {
           const [prop, dir] = order;
           entries.sort(([_aId, a], [_bId, b]) => {
@@ -382,6 +415,7 @@ function subscribeResultsAndTriples<Q extends CollectionQuery<any>>(
             return dir === 'ASC' ? direction : direction * -1;
           });
         }
+
         nextResult = new Map(entries.slice(0, limit));
       }
       results = nextResult as FetchResult<Q>;
