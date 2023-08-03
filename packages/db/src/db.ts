@@ -12,6 +12,7 @@ import {
   Model,
   Models,
   timestampedObjectToPlainObject,
+  objectToTimestampedObject,
   TypeFromModel,
 } from './schema';
 import * as Document from './document';
@@ -57,8 +58,9 @@ interface Rule<M extends Model<any>> {
 
 export interface CollectionRules {
   read?: Rule<any>[];
-  insert?: Rule<any>[];
-  update?: Rule<any>[];
+  write?: Rule<any>[];
+  // insert?: Rule<any>[];
+  // update?: Rule<any>[];
 }
 
 type CreateCollectionOperation = [
@@ -149,7 +151,7 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
   async getCollectionSchema<CN extends CollectionNameFromModels<M>>(
     collectionName: CN
   ) {
-    const { collections } = await this.getSchema();
+    const { collections } = (await this.getSchema()) ?? {};
     if (!collections) return undefined;
     // TODO: i think we need some stuff in the triple store...
     const collectionSchema = collections[collectionName] as ModelFromModels<
@@ -194,6 +196,26 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
     if (id) {
       const validationError = validateExternalId(id);
       if (validationError) throw validationError;
+    }
+    const schema = await this.getCollectionSchema(collectionName);
+
+    if (schema?.rules?.write) {
+      const filters = schema.rules.write.flatMap((r) => r.filter);
+      const query = { where: filters } as CollectionQuery<ModelFromModels<M>>;
+      this.replaceVariablesInQuery(query);
+      // TODO there is probably a better way to to this
+      // rather than converting to timestamped object check to
+      // validate the where filter
+      const timestampDoc = objectToTimestampedObject(doc);
+      const satisfiedRule = doesEntityObjMatchWhere(
+        timestampDoc,
+        query.where,
+        schema
+      );
+      if (!satisfiedRule) {
+        // TODO add better error that uses rule description
+        throw new Error(`Entity does not match write rules`);
+      }
     }
     await Document.insert(
       this.storeTx,
@@ -611,7 +633,7 @@ export default class DB<M extends Models<any, any> | undefined> {
 
   // TODO: we could probably infer a type here
   async fetchById<Schema extends Model<any>>(
-    collectionName: string,
+    collectionName: CollectionNameFromModels<M>,
     id: string
   ) {
     const schema = await this.getCollectionSchema(collectionName);
@@ -635,7 +657,7 @@ export default class DB<M extends Models<any, any> | undefined> {
   }
 
   async insert(
-    collectionName: string,
+    collectionName: CollectionNameFromModels<M>,
     doc: any,
     id?: string,
     storeScope?: { read: string[]; write: string[] }
@@ -645,12 +667,26 @@ export default class DB<M extends Models<any, any> | undefined> {
       if (validationError) throw validationError;
     }
     await this.ensureMigrated;
-    // const schema = await this.getCollectionSchema(
-    //   collectionName as CollectionNameFromModels<M>
-    // );
+    const schema = await this.getCollectionSchema(collectionName);
 
-    // if (schema?.rules?.write) {
-    // }
+    if (schema?.rules?.write) {
+      const filters = schema.rules.write.flatMap((r) => r.filter);
+      const query = { where: filters } as CollectionQuery<ModelFromModels<M>>;
+      this.replaceVariablesInQuery(query);
+      // TODO there is probably a better way to to this
+      // rather than converting to timestamped object check to
+      // validate the where filter
+      const timestampDoc = objectToTimestampedObject(doc);
+      const satisfiedRule = doesEntityObjMatchWhere(
+        timestampDoc,
+        query.where,
+        schema
+      );
+      if (!satisfiedRule) {
+        // TODO add better error that uses rule description
+        throw new Error(`Entity does not match write rules`);
+      }
+    }
 
     const timestamp = await this.tripleStore.transact(async (tx) => {
       await Document.insert(

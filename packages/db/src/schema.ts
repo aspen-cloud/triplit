@@ -17,7 +17,7 @@ import {
   SchemaPathDoesNotExistError,
 } from './errors';
 import { CollectionRules } from './db';
-import { timestampCompare } from './timestamp';
+import { Timestamp, timestampCompare } from './timestamp';
 import { Attribute, EAV } from './triple-store';
 import { TuplePrefix } from './utility-types';
 import { objectToTuples, triplesToObject } from './utils';
@@ -174,9 +174,23 @@ export type UnTimestampedObject<T extends TimestampedObject> = {
   [k in keyof T]: T[k] extends TimestampedObject
     ? UnTimestampedObject<T[k]>
     : T[k] extends [value: infer V, timestamp: TimestampType]
-    ? V
+    ? Vj
     : never;
 };
+
+export function objectToTimestampedObject(
+  obj: any,
+  ts: Timestamp = [0, '']
+): TimestampedObject {
+  const entries = Object.entries(obj).map(([key, val]) => {
+    if (typeof val === 'object' && val != null && !(val instanceof Array)) {
+      return [key, objectToTimestampedObject(val)];
+    }
+    return [key, [val, ts]];
+  });
+  const result = Object.fromEntries(entries);
+  return result;
+}
 
 export function timestampedObjectToPlainObject<O extends TimestampedObject>(
   obj: O

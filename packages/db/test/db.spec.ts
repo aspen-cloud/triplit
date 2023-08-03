@@ -1508,7 +1508,7 @@ describe('DB Variables', () => {
   it.todo('supports updating variables with active subscriptions');
 });
 
-describe.only('Rules', () => {
+describe('Rules', () => {
   describe('Read', () => {
     const storage = new InMemoryTupleStorage();
     const USER_ID = 'student-2';
@@ -1582,7 +1582,7 @@ describe.only('Rules', () => {
       expect(enrolledClass).not.toBeNull();
     });
 
-    it.only('works in a transaction', async () => {
+    it('works in a transaction', async () => {
       await db.transact(async (tx) => {
         const results = await tx.fetch(db.query('classes').build());
         const classesWithStudent2 = classes.filter((cls) =>
@@ -1665,6 +1665,84 @@ describe.only('Rules', () => {
       });
     });
   });
-  describe.todo('Insert', () => {});
+  describe('Insert', () => {
+    let db;
+    const USER_ID = 'the-user-id';
+    beforeAll(async () => {
+      db = new DB({
+        schema: {
+          games: S.Schema({
+            id: S.string(),
+            turn: S.string(), // "white" | "black"
+            moves: S.Set(S.string()),
+          }),
+        },
+        variables: {
+          user_id: USER_ID,
+        },
+      });
+
+      await db.createCollection({
+        name: 'posts',
+        attributes: {
+          id: { type: 'string' },
+          author_id: { type: 'string' },
+        },
+        rules: {
+          write: [
+            {
+              description: 'Users can only post posts they authored',
+              filter: [['author_id', '=', '$user_id']],
+            },
+          ],
+        },
+      });
+    });
+
+    describe('insert single', () => {
+      it('can insert an entity that matches the filter', async () => {
+        expect(
+          db.insert('posts', { id: 'post-1', author_id: USER_ID }, 'post-1')
+        ).resolves.not.toThrowError();
+      });
+
+      it("throws an error when inserting a obj that doesn't match filter", async () => {
+        expect(
+          db.insert(
+            'posts',
+            { id: 'post-1', author_id: 'Not-the-current-user' },
+            'post-2'
+          )
+        ).rejects.toThrowError();
+      });
+    });
+
+    describe('insert in transactino', () => {
+      it('can insert an entity that matches the filter', async () => {
+        expect(
+          db.transact(async (tx) => {
+            await tx.insert(
+              'posts',
+              { id: 'post-1', author_id: USER_ID },
+              'post-1'
+            );
+          })
+        ).resolves.not.toThrowError();
+      });
+
+      it("throws an error when inserting a obj that doesn't match filter", async () => {
+        expect(
+          db.transact(async (tx) => {
+            await tx.insert(
+              'posts',
+              { id: 'post-1', author_id: 'Not-the-current-user' },
+              'post-2'
+            );
+          })
+        ).rejects.toThrowError();
+      });
+    });
+  });
+
   describe.todo('Update', () => {});
 });
