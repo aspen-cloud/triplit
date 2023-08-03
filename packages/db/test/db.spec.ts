@@ -684,6 +684,41 @@ describe('subscriptions', () => {
   });
 });
 
+// the onWrite hook for a subscription runs on EVERY transaction (even if its not relevant), should test subscritions can handle irrelevant transactions
+it.only('safely handles multiple subscriptions', async () => {
+  // Should error out if there is a problem (couldnt quite get an assertion that it errors out to work)
+  const db = new DB({ source: new InMemoryTupleStorage() });
+  const query1 = db
+    .query('students')
+    .where([['major', '=', 'Computer Science']])
+    .order(['name', 'ASC'])
+    .limit(2)
+    .build();
+  const query2 = db
+    .query('bands')
+    .where([['genre', '=', 'Rock']])
+    .order(['founded', 'ASC'])
+    .limit(2)
+    .build();
+  db.subscribe(query1, () => {});
+  db.subscribe(query2, () => {});
+  await db.insert('students', { name: 'Alice', major: 'Computer Science' }, 1);
+  await db.insert('students', { name: 'Bill', major: 'Biology' }, 2);
+  await db.insert('students', { name: 'Cam', major: 'Computer Science' }, 3);
+
+  await db.insert(
+    'bands',
+    { name: 'The Beatles', genre: 'Rock', founded: 1960 },
+    1
+  );
+  await db.insert('bands', { name: 'NWA', genre: 'Hip Hop', founded: 1986 }, 2);
+  await db.insert(
+    'bands',
+    { name: 'The Who', genre: 'Rock', founded: 1964 },
+    3
+  );
+});
+
 const TEST_SCORES = [
   {
     score: 80,

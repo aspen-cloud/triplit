@@ -24,7 +24,11 @@ import {
   TripleStoreTransaction,
 } from './triple-store';
 import { Pipeline } from './utils/pipeline';
-import { appendCollectionToId, stripCollectionFromId } from './db';
+import {
+  appendCollectionToId,
+  splitIdParts,
+  stripCollectionFromId,
+} from './db';
 import { InvalidFilterError } from './errors';
 
 export default function CollectionQueryBuilder<
@@ -339,10 +343,18 @@ function subscribeResultsAndTriples<Q extends CollectionQuery<any>>(
     const unsub = tripleStore.onWrite(async ({ inserts, deletes }) => {
       let nextResult = new Map(results);
       const matchedTriples = [];
-      const updatedEntities = new Set<string>(
-        [...inserts, ...deletes].map(({ id }) => stripCollectionFromId(id))
+      const updatedEntitiesForQuery = new Set<string>(
+        [...inserts, ...deletes]
+          .map(({ id }) => splitIdParts(id))
+          .filter(
+            ([collectionName, _id]) => collectionName === query.collectionName
+          )
+          .map(([_collectionName, id]) => id)
       );
-      for (const entity of updatedEntities) {
+      // Early return prevents processing if no relevant entities were updated
+      // While a query is always scoped to a single collection this is safe
+      if (!updatedEntitiesForQuery.size) return;
+      for (const entity of updatedEntitiesForQuery) {
         const entityTriples = filterToLatestEntityAttribute(
           await tripleStore.findByEntity(
             appendCollectionToId(query.collectionName, entity)
@@ -361,7 +373,7 @@ function subscribeResultsAndTriples<Q extends CollectionQuery<any>>(
 
         let satisfiesOrder = true;
 
-        if (order) {
+        if (order && nextResult.size > 0) {
           const allValues = [...nextResult.values()];
           const valueRange = [
             allValues.at(0)[order[0]][0],

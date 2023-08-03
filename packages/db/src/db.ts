@@ -699,14 +699,19 @@ export function appendCollectionToId(collectionName: string, id: string) {
   return `${collectionName}${ID_SEPARATOR}${id}`;
 }
 
-export function stripCollectionFromId(id: string): string {
+export function splitIdParts(id: string): [collectionName: string, id: string] {
   const parts = id.split(ID_SEPARATOR);
   if (parts.length !== 2) {
     throw new InvalidInternalEntityIdError(
       `Malformed ID: ${id} should only include one separator(${ID_SEPARATOR})`
     );
   }
-  return parts[1];
+  return [parts[0], parts[1]];
+}
+
+export function stripCollectionFromId(id: string): string {
+  const [_collection, entityId] = splitIdParts(id);
+  return entityId;
 }
 
 function replaceVariablesInFilterStatements<M extends Model<any> | undefined>(
