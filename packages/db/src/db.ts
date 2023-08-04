@@ -24,7 +24,6 @@ import CollectionQueryBuilder, {
   subscribe,
   subscribeTriples,
 } from './collection-query';
-import { Mutation } from './mutation';
 import { FilterStatement, Query, QueryWhere } from './query';
 import MemoryStorage from './storage/memory-btree';
 import {
@@ -143,14 +142,17 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
     );
   }
 
-  async update(
-    collectionName: CollectionNameFromModels<M>,
+  async update<CN extends CollectionNameFromModels<M>>(
+    collectionName: CN,
     entityId: string,
-    updater: (entity: JSONTypeFromModel<Model<any>>) => Promise<void>
+    updater: (
+      entity: JSONTypeFromModel<ModelFromModels<M, CN>>
+    ) => Promise<void>
   ) {
-    const schema = (await this.getSchema())?.collections[collectionName];
-    // const schema = await this.schema
-    // const fullEntityId = appendCollectionToId(collectionName, entityId);
+    const schema = (await this.getSchema())?.collections[collectionName] as
+      | ModelFromModels<M, CN>
+      | undefined;
+
     const entity = await this.fetchById(collectionName, entityId);
 
     if (!entity) {
@@ -158,8 +160,12 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
         `Entity ${entityId} not found in collection ${collectionName}`
       );
     }
-    const changes = new Map();
-    const updateProxy = this.createUpdateProxy(changes, entity, schema);
+    const changes = new Map<string, any>();
+    const updateProxy = this.createUpdateProxy<typeof schema>(
+      changes,
+      entity,
+      schema
+    );
     await updater(updateProxy);
     const fullEntityId = appendCollectionToId(collectionName, entityId);
     for (let [path, value] of changes) {
@@ -171,7 +177,7 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
     }
   }
 
-  private createUpdateProxy<M extends Model<any>>(
+  private createUpdateProxy<M extends Model<any> | undefined>(
     changeTracker: Map<string, any>,
     entityObj: JSONTypeFromModel<M>,
     schema?: M,
@@ -605,7 +611,6 @@ export default class DB<M extends Models<any, any> | undefined> {
     storeScope?: { read: string[]; write: string[] }
   ) {
     await this.ensureMigrated;
-    // const schema = await this.getCollectionSchema(collectionName);
     await this.transact(async (tx) => {
       await tx.update(collectionName, entityId, updater);
     }, storeScope);

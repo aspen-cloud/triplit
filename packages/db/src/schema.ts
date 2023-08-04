@@ -160,9 +160,8 @@ export function updateEntityAtPath(
 
 export type TypeFromModel<T extends TSchema> = Static<T>;
 
-export type JSONTypeFromModel<T extends Model<any>> = UnTimestampedObject<
-  Static<T>
->;
+export type JSONTypeFromModel<T extends Model<any> | undefined> =
+  T extends Model<any> ? UnTimestampedObject<Static<T>> : any;
 
 export type TimestampedObject = {
   [key: string | number]:

@@ -33,7 +33,6 @@ export type {
   TimestampedObject,
   UnTimestampedObject,
 } from './schema';
-export type { Mutation } from './mutation';
 export { timestampCompare } from './timestamp';
 export type { Timestamp } from './timestamp';
 export { DurableClock } from './clocks/durable-clock';
