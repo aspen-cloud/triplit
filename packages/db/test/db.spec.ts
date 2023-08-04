@@ -385,8 +385,9 @@ describe('Register operations', () => {
 
     const NEW_NAME = 'Dr. Zoidberg';
 
-    await db.update('employees', 1, async (entity) => {
-      await entity.attribute(['name']).set(NEW_NAME);
+    await db.update('employees', '1', async (entity) => {
+      entity.name = NEW_NAME;
+      expect(entity.name).toBe(NEW_NAME);
     });
 
     const postUpdateQuery = CollectionQueryBuilder('employees')
@@ -437,7 +438,7 @@ describe('Set operations', () => {
     expect(preUpdateLookup).toHaveLength(0);
 
     await db.update('companies', 1, async (entity) => {
-      await entity.attribute(['employees']).add(7);
+      await entity.employees.add(7);
     });
     const postUpdateLookup = await db.fetch(setQuery);
 
@@ -456,7 +457,8 @@ describe('Set operations', () => {
     expect(preUpdateLookup.get('1')).toBeTruthy();
 
     await db.update('companies', 1, async (entity) => {
-      await entity.attribute(['employees']).remove(2);
+      await entity.employees.remove(2);
+      expect(entity.employees.has(2)).toBeFalsy();
     });
 
     const postUpdateLookup = await db.fetch(setQuery);
@@ -508,7 +510,7 @@ describe('subscriptions', () => {
       );
       setTimeout(async () => {
         await db.update('students', 1, async (entity) => {
-          await entity.attribute(['major']).set('Math');
+          entity.major = 'Math';
         });
         await unsubscribe();
       }, 20);
@@ -533,7 +535,7 @@ describe('subscriptions', () => {
     );
 
     await db.update('students', '1', async (entity) => {
-      await entity.attribute(['dorm']).set('Battell');
+      entity.dorm = 'Battell';
     });
 
     await unsubscribe();
@@ -557,7 +559,7 @@ describe('subscriptions', () => {
     );
 
     await db.update('students', '1', async (entity) => {
-      await entity.attribute(['dorm']).set('Battell');
+      entity.dorm = 'Battell';
     });
 
     await unsubscribe();
@@ -590,7 +592,7 @@ describe('subscriptions', () => {
       );
 
       await db.update('students', '1', async (entity) => {
-        await entity.attribute(['dorm']).set('Battell');
+        entity.dorm = 'Battell';
       });
 
       await unsubscribe();
@@ -976,7 +978,7 @@ describe('ORDER & LIMIT & Pagination', () => {
             const idFromResults = [...results.keys()][0];
             await db.transact(async (tx) => {
               await tx.update('TestScores', idFromResults, async (entity) => {
-                await entity.attribute(['score']).set(0);
+                entity.score = 0;
               });
             });
           },
@@ -992,7 +994,7 @@ describe('ORDER & LIMIT & Pagination', () => {
             const firstResult = [...results][0];
             await db.transact(async (tx) => {
               await tx.update('TestScores', firstResult[0], async (entity) => {
-                await entity.attribute(['score']).set(firstResult[1].score + 1);
+                entity.score = firstResult[1].score + 1;
               });
             });
           },
@@ -1021,7 +1023,7 @@ describe('ORDER & LIMIT & Pagination', () => {
             const idFromResults = [...results.keys()][0];
             await db.transact(async (tx) => {
               await tx.update('TestScores', idFromResults, async (entity) => {
-                await entity.attribute(['score']).set(0);
+                entity.score = 0;
               });
             });
           },
@@ -1138,13 +1140,13 @@ describe('database transactions', () => {
       'score-1'
     );
     await db.transact(async (tx) => {
-      expect((await db.fetchById('TestScores', 'score-1')).score).toBe(80);
+      expect((await db.fetchById('TestScores', 'score-1'))!.score).toBe(80);
       await tx.update('TestScores', 'score-1', async (entity) => {
-        await entity.attribute(['score']).set(100);
+        entity.score = 100;
       });
-      expect((await tx.fetchById('TestScores', 'score-1')).score).toBe(100);
+      expect((await tx.fetchById('TestScores', 'score-1'))!.score).toBe(100);
     });
-    expect((await db.fetchById('TestScores', 'score-1')).score).toBe(100);
+    expect((await db.fetchById('TestScores', 'score-1'))!.score).toBe(100);
   });
   it('awaits firing subscription until transaction is committed', async () => {
     const db = new DB({

@@ -7,6 +7,8 @@ import {
   TripleStoreTransaction,
 } from './triple-store';
 import {
+  getSchemaFromPath,
+  JSONTypeFromModel,
   Model,
   Models,
   timestampedObjectToPlainObject,
@@ -32,6 +34,7 @@ import {
   SessionVariableNotFoundError,
 } from './errors';
 import { Clock } from './clocks/clock';
+import { ValuePointer } from '@sinclair/typebox/value';
 
 type AttributeType =
   | 'string'
@@ -143,19 +146,98 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
   async update(
     collectionName: CollectionNameFromModels<M>,
     entityId: string,
-    updater: (mutation: Mutation<ModelFromModels<M>>) => Promise<void>
+    updater: (entity: JSONTypeFromModel<Model<any>>) => Promise<void>
   ) {
-    // TODO: i think we need to pass generics to triple store
-    const schema = (await this.getSchema())?.collections as ModelFromModels<M>;
-    const mutation = new Mutation<ModelFromModels<M>>(
-      {
-        transactor: this.storeTx,
-        collection: collectionName as string,
-      },
-      schema && schema[collectionName]
-    ).entity(appendCollectionToId(collectionName, entityId));
+    const schema = (await this.getSchema())?.collections[collectionName];
+    // const schema = await this.schema
+    // const fullEntityId = appendCollectionToId(collectionName, entityId);
+    const entity = await this.fetchById(collectionName, entityId);
 
-    await updater(mutation);
+    if (!entity) {
+      throw new Error(
+        `Entity ${entityId} not found in collection ${collectionName}`
+      );
+    }
+    const changes = new Map();
+    const updateProxy = this.createUpdateProxy(changes, entity, schema);
+    await updater(updateProxy);
+    const fullEntityId = appendCollectionToId(collectionName, entityId);
+    for (let [path, value] of changes) {
+      await this.storeTx.setValue(
+        fullEntityId,
+        [collectionName, ...path.slice(1).split('/')],
+        value
+      );
+    }
+  }
+
+  private createUpdateProxy<M extends Model<any>>(
+    changeTracker: Map<string, any>,
+    entityObj: JSONTypeFromModel<M>,
+    schema?: M,
+    prefix: string = ''
+  ): JSONTypeFromModel<M> {
+    return new Proxy(entityObj, {
+      set: (_target, prop, value) => {
+        const propPointer = [prefix, prop].join('/');
+        if (!schema) {
+          changeTracker.set(propPointer, value);
+          return true;
+        }
+        const propSchema = getSchemaFromPath(
+          schema,
+          propPointer.slice(1).split('/')
+        );
+        if (!propSchema) {
+          // TODO use correct Triplit Error
+          throw new Error(
+            `Cannot set unrecognized property ${propPointer} to ${value}`
+          );
+        }
+        changeTracker.set(propPointer, value);
+        return true;
+      },
+      get: (_target, prop) => {
+        const propPointer = [prefix, prop].join('/');
+        const propValue = ValuePointer.Get(entityObj, propPointer);
+        if (propValue === undefined) return changeTracker.get(propPointer);
+        const propSchema =
+          schema && getSchemaFromPath(schema, propPointer.slice(1).split('/'));
+        if (
+          typeof propValue === 'object' &&
+          (!propSchema || propSchema['x-crdt-type'] !== 'Set') &&
+          propValue !== null
+        ) {
+          return this.createUpdateProxy(
+            changeTracker,
+            propValue,
+            schema,
+            propPointer
+          );
+        }
+        if (propSchema) {
+          if (propSchema['x-crdt-type'] === 'Set') {
+            return {
+              add: (value: any) => {
+                changeTracker.set([propPointer, value].join('/'), true);
+              },
+              remove: (value: any) => {
+                changeTracker.set([propPointer, value].join('/'), false);
+              },
+              has: (value: any) => {
+                const valuePointer = [propPointer, value].join('/');
+                return changeTracker.has(valuePointer)
+                  ? changeTracker.get(valuePointer)
+                  : propValue[value];
+              },
+            };
+          }
+        }
+        return changeTracker.has(propPointer)
+          ? changeTracker.get(propPointer)
+          : propValue;
+      },
+    });
   }
 
   private replaceVariablesInQuery<M extends Model<any>>(
@@ -517,21 +599,15 @@ export default class DB<M extends Models<any, any> | undefined> {
   async update<CN extends CollectionNameFromModels<M>>(
     collectionName: CN,
     entityId: string,
-    updater: (mutation: Mutation<ModelFromModels<M, CN>>) => Promise<void>,
+    updater: (
+      entity: JSONTypeFromModel<ModelFromModels<M, CN>>
+    ) => Promise<void>,
     storeScope?: { read: string[]; write: string[] }
   ) {
     await this.ensureMigrated;
-    const schema = await this.getCollectionSchema(collectionName);
-    return this.tripleStore.transact(async (tx) => {
-      const mutation = new Mutation<ModelFromModels<M, CN>>(
-        {
-          transactor: tx,
-          collection: collectionName as string,
-        },
-        schema
-      ).entity(appendCollectionToId(collectionName, entityId));
-
-      await updater(mutation);
+    // const schema = await this.getCollectionSchema(collectionName);
+    await this.transact(async (tx) => {
+      await tx.update(collectionName, entityId, updater);
     }, storeScope);
   }
 
