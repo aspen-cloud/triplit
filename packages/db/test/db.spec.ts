@@ -685,7 +685,7 @@ describe('subscriptions', () => {
 });
 
 // the onWrite hook for a subscription runs on EVERY transaction (even if its not relevant), should test subscritions can handle irrelevant transactions
-it.only('safely handles multiple subscriptions', async () => {
+it('safely handles multiple subscriptions', async () => {
   // Should error out if there is a problem (couldnt quite get an assertion that it errors out to work)
   const db = new DB({ source: new InMemoryTupleStorage() });
   const query1 = db
