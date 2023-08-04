@@ -490,7 +490,9 @@ export class TriplitClient<M extends Models<any, any> | undefined = undefined> {
   update<CN extends CollectionNameFromModels<M>>(
     collectionName: CN,
     entityId: string,
-    updater: (mutation: Mutation<ModelFromModels<M, CN>>) => Promise<void>
+    updater: (
+      entity: JSONTypeFromModel<ModelFromModels<M, CN>>
+    ) => Promise<void>
   ) {
     return this.db.update(collectionName, entityId, updater, {
       read: ['outbox', 'cache'],
