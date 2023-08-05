@@ -30,6 +30,7 @@ import {
   ModelNotFoundError,
   NoSchemaRegisteredError,
   ValueSchemaMismatchError,
+  WriteRuleError,
 } from './errors';
 
 export type StoreSchema<M extends Models<any, any> | undefined> =
@@ -60,11 +61,6 @@ export type TripleRow = {
 };
 
 export type TripleMetadata = { expired: Expired };
-
-export type EntIndex = {
-  key: ['Entity', EntityId];
-  value: any;
-};
 
 export type EAVIndex = {
   key: ['EAV', EntityId, Attribute, Value, Timestamp];
@@ -421,7 +417,6 @@ export class TripleStoreOperator implements TripleStoreApi {
 
     const metadata = { expired };
 
-    await updateEntityIndex(tx, tripleInput);
     // TODO add check for existing entity/attribute pair
     tx.set(['EAV', id, attribute, value, timestamp], metadata);
     tx.set(['AVE', attribute, value, id, timestamp], metadata);
@@ -440,6 +435,7 @@ export class TripleStoreOperator implements TripleStoreApi {
     const tx = this.tupleOperator;
     for (const triple of triples) {
       const { id: id, attribute, value, timestamp } = triple;
+      tx.remove(['Entity', id]);
       tx.remove(['EAV', id, attribute, value, timestamp]);
       tx.remove(['AVE', attribute, value, id, timestamp]);
       tx.remove(['VAE', value, attribute, id, timestamp]);
@@ -512,15 +508,6 @@ export class TripleStoreOperator implements TripleStoreApi {
       ]);
     }
   }
-}
-
-async function updateEntityIndex(
-  tx: ScopedMultiTupleOperator<TupleIndex>,
-  triple: TripleRow
-) {
-  const existingEntity = await getEntity(tx, triple.id);
-  const updatedEntity = entityToResultReducer(existingEntity ?? {}, triple);
-  tx.set(['Entity', triple.id], updatedEntity);
 }
 
 export class TripleStoreTransaction extends TripleStoreOperator {
@@ -749,15 +736,21 @@ export class TripleStore implements TripleStoreApi {
   ) {
     // const schema = await this.readSchema();
     const schema = await this.readSchema();
+    let isCanceled = false;
     const tx = await this.tupleStore.autoTransact(async (tupleTx) => {
       const tx = new TripleStoreTransaction({
         tupleTx: tupleTx,
         clock: this.clock,
         schema,
       });
+      if (isCanceled) return tx;
       try {
         await callback(tx);
       } catch (e) {
+        if (e instanceof WriteRuleError) {
+          isCanceled = true;
+          await tx.cancel();
+        }
         throw e;
       }
       return tx;
@@ -1114,25 +1107,22 @@ async function findByClientTimestamp(
 }
 
 async function getEntity(tx: MultiTupleStoreOrTransaction, entityId: string) {
-  const res = await tx.scan({
-    prefix: ['Entity'],
-    limit: 1,
-    gte: [entityId],
-  });
-  if (res.length === 0 || res[0].key[1] !== entityId) return null;
-  return res[0].value;
+  const triples = await findByEntity(tx, entityId);
+  if (triples.length === 0) return null;
+  return triples.reduce(entityToResultReducer, {});
 }
 
 async function getEntities(
   tx: MultiTupleStoreOrTransaction,
   collectionName: string
 ) {
-  const res = await tx.scan({
-    prefix: ['Entity'],
-    gte: [collectionName],
-    lt: [collectionName + MAX],
-  });
-  return new Map(res.map((r) => [r.key[1], r.value]));
+  const triples = await findByCollection(tx, collectionName);
+  return triples.reduce((acc, triple) => {
+    const { id } = triple;
+    const entityObj = acc.get(id) ?? {};
+    acc.set(id, entityToResultReducer(entityObj, triple));
+    return acc;
+  }, new Map());
 }
 
 async function findMaxTimestamp(

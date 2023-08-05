@@ -33,6 +33,7 @@ import {
   InvalidInternalEntityIdError,
   InvalidMigrationOperationError,
   SessionVariableNotFoundError,
+  WriteRuleError,
 } from './errors';
 import { Clock } from './clocks/clock';
 
@@ -51,7 +52,7 @@ type CollectionAttribute = {
   type: AttributeType;
 };
 
-interface Rule<M extends Model<any>> {
+export interface Rule<M extends Model<any>> {
   filter: WhereFilter<M>;
   description?: string;
 }
@@ -257,6 +258,21 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
         [collectionName, ...path.slice(1).split('/')],
         value
       );
+    }
+    if (schema?.rules?.write) {
+      const updatedEntity = await this.fetchById(collectionName, entityId);
+      const filters = schema.rules.write.flatMap((r) => r.filter);
+      const query = { where: filters } as CollectionQuery<ModelFromModels<M>>;
+      this.replaceVariablesInQuery(query);
+      const satisfiedRule = doesEntityObjMatchWhere(
+        objectToTimestampedObject(updatedEntity),
+        query.where,
+        schema
+      );
+      if (!satisfiedRule) {
+        // TODO add better error that uses rule description
+        throw new WriteRuleError(`Entity does not match write rules`);
+      }
     }
   }
 
@@ -598,8 +614,13 @@ export default class DB<M extends Models<any, any> | undefined> {
     await this.ensureMigrated;
     return await this.tripleStore.transact(async (tripTx) => {
       const tx = new DBTransaction<M>(tripTx, this.variables);
-      return await callback(tx);
-      // await tx.commit();
+      try {
+        await callback(tx);
+      } catch (e) {
+        console.error(e);
+        await tx.cancel();
+        throw e;
+      }
     }, storeScope);
   }
 
@@ -743,7 +764,7 @@ export default class DB<M extends Models<any, any> | undefined> {
       if (schema) {
         this.addReadRulesToQuery(query, schema);
       }
-      this.replaceVariablesInQuery(query, schema);
+      this.replaceVariablesInQuery(query);
 
       const unsub = subscribeTriples(
         scope ? this.tripleStore.setStorageScope(scope) : this.tripleStore,

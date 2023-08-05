@@ -202,3 +202,12 @@ export class InvalidMigrationOperationError extends TriplitError {
     this.status = STATUS_CODES['Bad Request'];
   }
 }
+
+export class WriteRuleError extends TriplitError {
+  constructor(...args: any[]) {
+    super(...args);
+    this.name = 'RuleError';
+    this.message = `Write failed because it didn't pass a Rule.`;
+    this.status = STATUS_CODES.Unauthorized;
+  }
+}

@@ -8,6 +8,7 @@ import {
   Schema as S,
   CollectionQueryBuilder,
   queryResultToJson,
+  WriteRuleError,
 } from '../src';
 import { classes, students, departments } from './sample_data/school';
 import MemoryBTree from '../src/storage/memory-btree';
@@ -1070,7 +1071,7 @@ describe('database transactions', () => {
     ).toBe(1);
     // expect(() => tx.collection('TestScores').query().fetch()).toThrowError();
   });
-  it('can rollback a transaction', async () => {
+  it('can rollback an insert transaction', async () => {
     const db = new DB({
       source: new InMemoryTupleStorage(),
       schema: {
@@ -1097,6 +1098,35 @@ describe('database transactions', () => {
       (await db.fetch(CollectionQueryBuilder('TestScores').build())).size
     ).toBe(0);
     // expect(() => tx.collection('TestScores').query().fetch()).toThrowError();
+  });
+  it('can rollback an update transaction', async () => {
+    const db = new DB({
+      source: new InMemoryTupleStorage(),
+      schema: {
+        TestScores: S.Schema({
+          score: S.number(),
+          date: S.string(),
+        }),
+      },
+    });
+    const DOC_ID = 'my-score';
+    await db.insert(
+      'TestScores',
+      {
+        score: 80,
+        date: '2023-04-16',
+      },
+      DOC_ID
+    );
+    await db.transact(async (tx) => {
+      await tx.update('TestScores', DOC_ID, async (entity) => {
+        entity.score = 999;
+      });
+      expect((await db.fetchById('TestScores', DOC_ID))?.score).toBe(80);
+      expect((await tx.fetchById('TestScores', DOC_ID))?.score).toBe(999);
+      await tx.cancel();
+    });
+    expect((await db.fetchById('TestScores', DOC_ID))?.score).toBe(80);
   });
   it("can't commit inside the transaction callback", async () => {
     const db = new DB({});
@@ -1451,7 +1481,7 @@ describe('DB Variables', () => {
     const result = await db.fetch(query);
     expect(result).toHaveLength(classesInDep.length);
     expect(
-      [...result.values()].every((r) => r.department[0] === DEPARTMENT)
+      [...result.values()].every((r) => r.department === DEPARTMENT)
     ).toBeTruthy();
   });
 
@@ -1463,7 +1493,7 @@ describe('DB Variables', () => {
     const result = await db.fetch(query);
     expect(result).toHaveLength(classesInDep.length);
     expect(
-      [...result.values()].every((r) => r.department[0] === DEPARTMENT)
+      [...result.values()].every((r) => r.department === DEPARTMENT)
     ).toBeTruthy();
   });
 
@@ -1487,7 +1517,7 @@ describe('DB Variables', () => {
     const result = await db.fetch(query);
     expect(result).toHaveLength(classesInDep.length);
     expect(
-      [...result.values()].every((r) => r.department[0] === DEPARTMENT)
+      [...result.values()].every((r) => r.department === DEPARTMENT)
     ).toBeTruthy();
   });
 
@@ -1500,7 +1530,7 @@ describe('DB Variables', () => {
       const result = await tx.fetch(query);
       expect(result).toHaveLength(classesInDep.length);
       expect(
-        [...result.values()].every((r) => r.department[0] === DEPARTMENT)
+        [...result.values()].every((r) => r.department === DEPARTMENT)
       ).toBeTruthy();
     });
   });
@@ -1513,25 +1543,11 @@ describe('Rules', () => {
     const storage = new InMemoryTupleStorage();
     const USER_ID = 'student-2';
     const db = new DB({
-      // schema: {
-      //   classes: S.Schema({
-      //     id: S.string(),
-      //     name: S.string(),
-      //     level: S.number(),
-      //     department: S.string(),
-      //     enrolled_students: S.Set(S.string()),
-      //   })
-      // },
-      // rules: {
-      //   classes: {}
-      // }
       source: storage,
       variables: {
         user_id: USER_ID,
       },
     });
-
-    // const classesInDep = classes.filter((c) => c.department === DEPARTMENT);
 
     beforeAll(async () => {
       await db.createCollection({
@@ -1670,13 +1686,7 @@ describe('Rules', () => {
     const USER_ID = 'the-user-id';
     beforeAll(async () => {
       db = new DB({
-        schema: {
-          games: S.Schema({
-            id: S.string(),
-            turn: S.string(), // "white" | "black"
-            moves: S.Set(S.string()),
-          }),
-        },
+        storage: new MemoryBTree(),
         variables: {
           user_id: USER_ID,
         },
@@ -1717,7 +1727,7 @@ describe('Rules', () => {
       });
     });
 
-    describe('insert in transactino', () => {
+    describe('insert in transaction', () => {
       it('can insert an entity that matches the filter', async () => {
         expect(
           db.transact(async (tx) => {
@@ -1744,5 +1754,85 @@ describe('Rules', () => {
     });
   });
 
-  describe.todo('Update', () => {});
+  describe('Update', () => {
+    let db: DB<any>;
+    const USER_ID = 'the-user-id';
+    const POST_ID = 'post-1';
+    beforeAll(async () => {
+      db = new DB({
+        storage: new MemoryBTree(),
+        variables: {
+          user_id: USER_ID,
+        },
+      });
+
+      await db.createCollection({
+        name: 'posts',
+        attributes: {
+          id: { type: 'string' },
+          author_id: { type: 'string' },
+          content: { type: 'string' },
+        },
+        rules: {
+          write: [
+            {
+              description: 'Users can only post posts they authored',
+              filter: [['author_id', '=', '$user_id']],
+            },
+          ],
+        },
+      });
+
+      await db.insert(
+        'posts',
+        { id: POST_ID, author_id: USER_ID, content: 'before' },
+        POST_ID
+      );
+    });
+
+    describe('update single', () => {
+      it('can update an entity that passes filter', async () => {
+        await expect(
+          db.update('posts', POST_ID, async (entity) => {
+            entity.content = 'after';
+          })
+        ).resolves.not.toThrowError();
+      });
+
+      it("throws an error when updating an obj that doesn't match filter", async () => {
+        await expect(
+          db.update('posts', POST_ID, async (entity) => {
+            entity.author_id = 'not me';
+          })
+        ).rejects.toThrowError(WriteRuleError);
+        const post = await db.fetchById('posts', POST_ID);
+        expect(post.author_id).not.toBe('not me');
+      });
+    });
+
+    describe('update in transaction', () => {
+      it('can update an entity that passes the filter', async () => {
+        const post = await db.fetchById('posts', POST_ID);
+        await expect(
+          db.transact(async (tx) => {
+            await tx.update('posts', POST_ID, async (entity) => {
+              entity.content = 'after';
+            });
+          })
+        ).resolves.not.toThrowError();
+      });
+
+      it("throws an error when updating a obj that doesn't match filter", async () => {
+        await expect(
+          db.transact(async (tx) => {
+            await tx.update('posts', POST_ID, async (entity) => {
+              entity.author_id = 'not me';
+            });
+          })
+        ).rejects.toThrowError(WriteRuleError);
+        const post = await db.fetchById('posts', POST_ID);
+        expect(post!.author_id).not.toBe('not me');
+      });
+    });
+  });
 });
