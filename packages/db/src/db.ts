@@ -26,7 +26,7 @@ import CollectionQueryBuilder, {
   subscribe,
   subscribeTriples,
 } from './collection-query';
-import { FilterStatement, Query, QueryWhere } from './query';
+import { FilterStatement, Query, QueryWhere, WhereFilter } from './query';
 import MemoryStorage from './storage/memory-btree';
 import {
   InvalidEntityIdError,
@@ -366,10 +366,7 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
     return fetch(this.storeTx, query, { schema, includeTriples: false });
   }
 
-  async fetchById<Schema extends Model<any>>(
-    collectionName: string,
-    id: string
-  ) {
+  async fetchById(collectionName: CollectionNameFromModels<M>, id: string) {
     const schema = await this.getCollectionSchema(collectionName);
     const readRules = schema?.rules?.read;
     const entity = await this.storeTx.getEntity(
@@ -379,15 +376,21 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
     if (entity && readRules) {
       const whereFilter = readRules.flatMap((rule) => rule.filter);
       const query = { where: whereFilter };
+      /**
+       * TODO we should just make this operate directly on where filters
+       * e.g.
+       * query.where = this.replaceVariablesInWhere(query.where)
+       */
+      // @ts-ignore
       this.replaceVariablesInQuery(query);
       if (doesEntityObjMatchWhere(entity, query.where, schema)) {
         return entity;
       }
       return null;
     }
-    return timestampedObjectToPlainObject(
-      entity
-    ) as TypeFromModel<Schema> | null;
+    return timestampedObjectToPlainObject(entity) as TypeFromModel<
+      M[typeof collectionName]
+    >;
   }
 
   async createCollection(params: CreateCollectionOperation[1]) {
@@ -666,6 +669,8 @@ export default class DB<M extends Models<any, any> | undefined> {
     if (entity && readRules) {
       const whereFilter = readRules.flatMap((rule) => rule.filter);
       const query = { where: whereFilter };
+      // TODO see other comment about replaceVariablesInQuery on how to improve
+      // @ts-ignore
       this.replaceVariablesInQuery(query);
       if (doesEntityObjMatchWhere(entity, query.where, schema)) {
         return entity;
@@ -731,6 +736,8 @@ export default class DB<M extends Models<any, any> | undefined> {
         query.collectionName as CollectionNameFromModels<M>
       );
       if (schema) {
+        // TODO see other comment about replaceVariablesInQuery on how to improve
+        // @ts-ignore
         this.addReadRulesToQuery(query, schema);
       }
       this.replaceVariablesInQuery(query);

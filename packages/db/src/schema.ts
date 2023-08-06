@@ -2,6 +2,7 @@ import {
   Static,
   TBoolean,
   TNumber,
+  TObject,
   TSchema,
   TString,
   TUnsafe,
@@ -17,7 +18,7 @@ import {
   SchemaPathDoesNotExistError,
 } from './errors';
 import { CollectionRules } from './db';
-import { Timestamp, timestampCompare } from './timestamp';
+import { timestampCompare } from './timestamp';
 import { Attribute, EAV } from './triple-store';
 import { TuplePrefix } from './utility-types';
 import { objectToTuples, triplesToObject } from './utils';
@@ -101,8 +102,14 @@ export interface SchemaConfig {
   // [key: keyof any]: DataType; // TODO add tighter type here instead of TSchema
 }
 
-export function Schema<Config extends SchemaConfig>(config: Config) {
-  return Type.Object(config);
+export function Schema<
+  Config extends SchemaConfig & { rules?: CollectionRules }
+>(
+  config: Config
+): TObject<Omit<Config, 'rules'>> & { rules?: CollectionRules } {
+  const { rules, ...schema } = config;
+  const typeObj = Type.Object(schema);
+  return Object.assign(typeObj, { rules });
 }
 
 export type Model<T extends SchemaConfig> = ReturnType<typeof Schema<T>>;
@@ -174,13 +181,13 @@ export type UnTimestampedObject<T extends TimestampedObject> = {
   [k in keyof T]: T[k] extends TimestampedObject
     ? UnTimestampedObject<T[k]>
     : T[k] extends [value: infer V, timestamp: TimestampType]
-    ? Vj
+    ? V
     : never;
 };
 
 export function objectToTimestampedObject(
   obj: any,
-  ts: Timestamp = [0, '']
+  ts: TimestampType = [0, '']
 ): TimestampedObject {
   const entries = Object.entries(obj).map(([key, val]) => {
     if (typeof val === 'object' && val != null && !(val instanceof Array)) {
