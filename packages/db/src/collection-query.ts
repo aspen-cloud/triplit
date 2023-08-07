@@ -130,11 +130,16 @@ export async function fetch<Q extends CollectionQuery<any>>(
       const [entId, entity] = result;
       const selectedEntity = select.reduce<any>((acc, selectPath) => {
         const pathParts = (selectPath as string).split('.');
-        let scope = acc;
+        const leafMostPart = pathParts.pop()!;
+        let selectScope = acc;
+        let entityScope = entity;
         for (const pathPart of pathParts) {
-          scope[pathPart] = entity[selectPath];
-          scope = scope[pathPart];
+          selectScope[pathPart] = selectScope[pathPart] ?? {};
+          selectScope = selectScope[pathPart];
+          entityScope = entity[pathPart];
         }
+        selectScope[leafMostPart] = entityScope[leafMostPart];
+
         return acc;
       }, {});
       results.set(entId, selectedEntity);

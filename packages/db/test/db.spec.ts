@@ -1836,3 +1836,104 @@ describe('Rules', () => {
     });
   });
 });
+
+describe('Nested Properties', () => {
+  describe('Schemaless', () => {
+    let db;
+    const ENTITY_ID = 'business-1';
+    beforeAll(async () => {
+      db = new DB();
+    });
+
+    it('can insert an entity with nested properties', async () => {
+      await db.insert(
+        'Businesses',
+        {
+          name: 'My Business',
+          address: {
+            street: '123 Main St',
+            city: 'San Francisco',
+            state: 'CA',
+          },
+        },
+        ENTITY_ID
+      );
+    });
+
+    it('can query based on nested property', async () => {
+      const positiveResults = await db.fetch(
+        db
+          .query('Businesses')
+          .where([['address.city', '=', 'San Francisco']])
+          .build()
+      );
+      expect(positiveResults).toHaveLength(1);
+
+      const negativeResults = await db.fetch(
+        db
+          .query('Businesses')
+          .where([['address.state', '=', 'TX']])
+          .build()
+      );
+      expect(negativeResults).toHaveLength(0);
+    });
+
+    it('can select specific nested properties', async () => {
+      const results = await db.fetch(
+        db.query('Businesses').select(['address.city', 'address.state']).build()
+      );
+      console.log('results', results);
+      expect(results).toHaveLength(1);
+      const result = results.get(ENTITY_ID);
+      expect(result).toHaveProperty('address.city');
+      expect(result).toHaveProperty('address.state');
+      expect(result).not.toHaveProperty('address.street');
+    });
+  });
+  describe.todo('Schemafull', async () => {
+    let db;
+    beforeAll(async () => {
+      db = new DB({
+        schema: {
+          Businesses: S.Schema({
+            name: S.string(),
+            address: S.Record({
+              street: S.string(),
+              city: S.string(),
+              state: S.string(),
+            }),
+          }),
+        },
+      });
+    });
+
+    it('can insert an entity with nested properties', async () => {
+      await db.insert('Businesses', {
+        name: 'My Business',
+        address: {
+          street: '123 Main St',
+          city: 'San Francisco',
+          state: 'CA',
+        },
+      });
+    });
+
+    it('can query based on nested property', async () => {
+      const positiveResults = await db.fetch(
+        db
+          .query('Businesses')
+          .where([['address.city', '=', 'San Francisco']])
+          .build()
+      );
+      expect(positiveResults).toHaveLength(1);
+
+      const negativeResults = await db.fetch(
+        db
+          .query('Businesses')
+          .where([['address.state', '=', 'TX']])
+          .build()
+      );
+      expect(negativeResults).toHaveLength(0);
+    });
+  });
+});
