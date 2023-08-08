@@ -13,11 +13,11 @@ import {
   CollectionNameFromModels,
   DBTransaction,
   ModelFromModels,
-  Mutation,
   FetchResult,
   DurableClock,
 } from '@triplit/db';
 import { Subject } from 'rxjs';
+import { getUserId } from './token';
 
 export { IndexedDbStorage, MemoryStorage };
 type Storage = IndexedDbStorage | MemoryStorage;
@@ -26,6 +26,11 @@ interface SyncOptions {
   server?: string;
   apiKey?: string;
   secure?: boolean;
+}
+
+interface AuthOptions {
+  claimsPath?: string;
+  token?: string;
 }
 
 interface RemoteQueryParams extends Query<any> {
@@ -437,8 +442,14 @@ function parseScope(query: ClientQuery<any>) {
 export class TriplitClient<M extends Models<any, any> | undefined = undefined> {
   db: DB<M>;
   syncEngine: SyncEngine;
+  authOptions: AuthOptions;
 
-  constructor(options?: { db?: DBOptions<M>; sync?: SyncOptions }) {
+  constructor(options?: {
+    db?: DBOptions<M>;
+    sync?: Omit<SyncOptions, 'apiKey'>;
+    auth?: AuthOptions;
+  }) {
+    this.authOptions = options?.auth ?? {};
     this.db = new DB({
       clock: new DurableClock('cache'),
       schema: options?.db?.schema,
@@ -454,6 +465,16 @@ export class TriplitClient<M extends Models<any, any> | undefined = undefined> {
           new IndexedDbStorage('triplit-outbox'),
       },
     });
+
+    const syncOptions: SyncOptions = options?.sync ?? {};
+    if (this.authOptions.token) {
+      syncOptions.apiKey = this.authOptions.token;
+      const userId = getUserId(
+        this.authOptions.token,
+        this.authOptions.claimsPath
+      );
+      this.db.updateVariables({ SESSION_USER_ID: userId });
+    }
 
     this.syncEngine = new SyncEngine(options?.sync ?? {}, this.db);
   }
@@ -527,5 +548,15 @@ export class TriplitClient<M extends Models<any, any> | undefined = undefined> {
       unsubscribeLocal();
       unsubscribeRemote && unsubscribeRemote();
     };
+  }
+
+  updateAuthOptions(options: Partial<AuthOptions>) {
+    this.authOptions = { ...this.authOptions, ...options };
+    if (options.hasOwnProperty('token')) {
+      const { claimsPath, token } = this.authOptions;
+      this.syncEngine.updateConnection({ apiKey: token });
+      const userId = token ? getUserId(token, claimsPath) : undefined;
+      this.db.updateVariables({ SESSION_USER_ID: userId });
+    }
   }
 }
