@@ -9,6 +9,7 @@ import {
   CollectionQueryBuilder,
   queryResultToJson,
   WriteRuleError,
+  ValueSchemaMismatchError,
 } from '../src';
 import { classes, students, departments } from './sample_data/school';
 import MemoryBTree from '../src/storage/memory-btree';
@@ -1882,7 +1883,6 @@ describe('Nested Properties', () => {
       const results = await db.fetch(
         db.query('Businesses').select(['address.city', 'address.state']).build()
       );
-      console.log('results', results);
       expect(results).toHaveLength(1);
       const result = results.get(ENTITY_ID);
       expect(result).toHaveProperty('address.city');
@@ -1890,7 +1890,7 @@ describe('Nested Properties', () => {
       expect(result).not.toHaveProperty('address.street');
     });
   });
-  describe.todo('Schemafull', async () => {
+  describe('Schemafull', async () => {
     let db;
     beforeAll(async () => {
       db = new DB({
@@ -1916,6 +1916,19 @@ describe('Nested Properties', () => {
           state: 'CA',
         },
       });
+    });
+
+    it('rejects inserts of malformed objects', async () => {
+      await expect(
+        db.insert('Businesses', {
+          name: 'My Business',
+          address: {
+            street: 59,
+            count: 'San Francisco',
+            state: 'CA',
+          },
+        })
+      ).rejects.toThrowError(ValueSchemaMismatchError);
     });
 
     it('can query based on nested property', async () => {

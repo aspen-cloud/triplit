@@ -56,10 +56,14 @@ export function Register<
   });
 }
 
-// NOTE: Calling this Object conflicts with the global Object type
 export function Record(schema: SchemaConfig) {
-  return Type.Object(schema);
+  // @ts-ignore
+  return Type.Object(schema, {
+    'x-serialized-type': 'record',
+  });
 }
+
+export type RecordType = ReturnType<typeof Record>;
 
 export type ValidSetDataTypes = TNumber | TString;
 export function Set<T extends ValidSetDataTypes>(
@@ -93,7 +97,7 @@ export type RegisterType = ReturnType<
 >;
 export type SetType = ReturnType<typeof Set>;
 
-type DataType = RegisterType | SetType;
+type DataType = RegisterType | SetType | RecordType;
 
 // type SchemaConfig = Record<string, SchemaConfig | RegisterType<any>>;
 export interface SchemaConfig {
@@ -257,6 +261,7 @@ function attributeDefinitionToSchema(schemaItem: AttributeDefinition) {
   if (type === 'number') return number();
   if (type === 'set_string') return Set(string());
   if (type === 'set_number') return Set(number());
+  if (type === 'record') return Record({});
   throw new InvalidSchemaType(type);
 }
 

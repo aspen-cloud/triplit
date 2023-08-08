@@ -46,6 +46,7 @@ type AttributeType =
   | 'boolean'
   | 'set_string'
   | 'set_number'
+  | 'record'
   | Reference;
 
 type CollectionAttribute = {
