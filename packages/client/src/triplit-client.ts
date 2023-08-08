@@ -28,6 +28,7 @@ interface SyncOptions {
   secure?: boolean;
 }
 
+// Not totally sold on passing in the token here, but it felt awkward to have it in the sync options since its also relevant to the database
 interface AuthOptions {
   claimsPath?: string;
   token?: string;
