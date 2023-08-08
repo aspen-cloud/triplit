@@ -655,7 +655,6 @@ export default class DB<M extends Models<any, any> | undefined> {
       fetchQuery = this.addReadRulesToQuery(fetchQuery, schema);
     }
     fetchQuery = this.replaceVariablesInQuery(fetchQuery);
-    console.log(fetchQuery);
     return await fetch(
       scope ? this.tripleStore.setStorageScope(scope) : this.tripleStore,
       fetchQuery,
