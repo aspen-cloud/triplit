@@ -16,7 +16,7 @@ TriplitDB is the embedded database that powers [Triplit](https://triplit.dev/), 
 
 ### Goal
 
-TriplitDB is designed to an run in any JS environment (browser, node, deno, React Native, etc) and provide expressive, fast, and live updating queries while maintaining consistency with many writers over a network.
+TriplitDB is designed to run in any JS environment (browser, node, deno, React Native, etc) and provide expressive, fast, and live updating queries while maintaining consistency with many writers over a network.
 
 ### Features
 
@@ -119,6 +119,8 @@ For more information and examples of TriplitDB in action, please refer to the of
 
 We’re actively developing TriplitDB for use in the various parts of our fullstack product, [Triplit](https://www.triplit.dev), that provides a hosted syncing and storage service and a client library with wrappers for various front end frameworks.
 
-If you are interested in helping us test Triplit or use it in a project, sign up [here](https://www.triplit.dev/waitlist) so we can get in touch with you. You can also contact us directly at [hello@aspen.cloud](mailto:hello@aspen.cloud).
+If you're interested in helping us test Triplit or use it in a project, sign up [here](https://www.triplit.dev/waitlist) so we can get in touch with you.
 
-To stay updated, follow us on [Twitter](https://twitter.com/triplit_dev) and checkout our [roadmap](https://www.triplit.dev/roadmap).
+The best way to get in touch is to join our [Discord](https://discord.gg/MRhJXkWV)! We're here to answer questions, help developers get started with Triplit and preview new features.
+
+You can follow us on [Twitter/X](https://twitter.com/triplit_dev) to see our latest announcements, and check out our [Roadmap](https://www.triplit.dev/roadmap) to see everything we have planned.
