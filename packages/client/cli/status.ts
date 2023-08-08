@@ -30,7 +30,7 @@ export async function readRemoteMigrationStatus(token: string): Promise<{
 }> {
   try {
     const payload = parseJWT(token);
-    const projectId = payload['triplit-metadata']['x-triplit-project-id'];
+    const projectId = payload?.['x-triplit-project-id'];
     if (!projectId) {
       return {
         data: undefined,

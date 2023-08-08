@@ -11,7 +11,7 @@ async function applyMigration(
   token: string
 ) {
   const payload = parseJWT(token);
-  const projectId = payload['triplit-metadata']['x-triplit-project-id'];
+  const projectId = payload?.['x-triplit-project-id'];
   if (!projectId) {
     throw new Error('Could not find project ID in token');
   }
