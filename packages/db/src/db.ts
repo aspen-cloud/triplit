@@ -29,6 +29,7 @@ import CollectionQueryBuilder, {
 import { FilterStatement, Query, QueryWhere, WhereFilter } from './query';
 import MemoryStorage from './storage/memory-btree';
 import {
+  EntityNotFoundError,
   InvalidEntityIdError,
   InvalidInternalEntityIdError,
   InvalidMigrationOperationError,
@@ -54,7 +55,7 @@ type CollectionAttribute = {
 };
 
 export interface Rule<M extends Model<any>> {
-  filter: WhereFilter<M>;
+  filter: QueryWhere<M>;
   description?: string;
 }
 
@@ -165,17 +166,18 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
     };
   }
 
-  private addReadRulesToQuery<M extends Model<any>>(
+  private addReadRulesToQuery(
     query: CollectionQuery<ModelFromModels<M>>,
     schema: M
-  ) {
+  ): CollectionQuery<ModelFromModels<M>> {
     if (schema?.rules?.read) {
       const updatedWhere = [
         ...query.where,
         ...schema.rules.read.flatMap((rule) => rule.filter),
       ];
-      query.where = updatedWhere;
+      return { ...query, where: updatedWhere };
     }
+    return query;
   }
 
   async getSchema() {
@@ -201,10 +203,10 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
     }
     const schema = await this.getCollectionSchema(collectionName);
 
-    if (schema?.rules?.write) {
+    if (schema?.rules?.write?.length) {
       const filters = schema.rules.write.flatMap((r) => r.filter);
-      const query = { where: filters } as CollectionQuery<ModelFromModels<M>>;
-      this.replaceVariablesInQuery(query);
+      let query = { where: filters } as CollectionQuery<ModelFromModels<M>>;
+      query = this.replaceVariablesInQuery(query);
       // TODO there is probably a better way to to this
       // rather than converting to timestamped object check to
       // validate the where filter
@@ -216,7 +218,7 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
       );
       if (!satisfiedRule) {
         // TODO add better error that uses rule description
-        throw new Error(`Entity does not match write rules`);
+        throw new WriteRuleError(`Insert does not match write rules`);
       }
     }
     await Document.insert(
@@ -241,8 +243,10 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
     const entity = await this.fetchById(collectionName, entityId);
 
     if (!entity) {
-      throw new Error(
-        `Entity ${entityId} not found in collection ${collectionName}`
+      throw new EntityNotFoundError(
+        entityId,
+        collectionName,
+        "Cannot perform an update on an entity that doesn't exist"
       );
     }
     const changes = new Map<string, any>();
@@ -260,11 +264,11 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
         value
       );
     }
-    if (schema?.rules?.write) {
+    if (schema?.rules?.write?.length) {
       const updatedEntity = await this.fetchById(collectionName, entityId);
       const filters = schema.rules.write.flatMap((r) => r.filter);
-      const query = { where: filters } as CollectionQuery<ModelFromModels<M>>;
-      this.replaceVariablesInQuery(query);
+      let query = { where: filters } as CollectionQuery<ModelFromModels<M>>;
+      query = this.replaceVariablesInQuery(query);
       const satisfiedRule = doesEntityObjMatchWhere(
         objectToTimestampedObject(updatedEntity),
         query.where,
@@ -272,7 +276,7 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
       );
       if (!satisfiedRule) {
         // TODO add better error that uses rule description
-        throw new WriteRuleError(`Entity does not match write rules`);
+        throw new WriteRuleError(`Update does not match write rules`);
       }
     }
   }
@@ -346,25 +350,24 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
     });
   }
 
-  private replaceVariablesInQuery<M extends Model<any>>(
+  private replaceVariablesInQuery(
     query: CollectionQuery<ModelFromModels<M>>
   ): CollectionQuery<ModelFromModels<M>> {
-    query.where = replaceVariablesInFilterStatements(
-      query.where,
-      this.variables ?? {}
-    );
-    return query;
+    const variables = { ...(this.variables ?? {}), ...(query.vars ?? {}) };
+    const where = replaceVariablesInFilterStatements(query.where, variables);
+    return { ...query, where };
   }
 
   async fetch(query: CollectionQuery<ModelFromModels<M>>) {
+    let fetchQuery = query;
     const schema = await this.getCollectionSchema(
-      query.collectionName as CollectionNameFromModels<M>
+      fetchQuery.collectionName as CollectionNameFromModels<M>
     );
     if (schema) {
-      this.addReadRulesToQuery(query, schema);
+      fetchQuery = this.addReadRulesToQuery(fetchQuery, schema);
     }
-    this.replaceVariablesInQuery(query);
-    return fetch(this.storeTx, query, { schema, includeTriples: false });
+    fetchQuery = this.replaceVariablesInQuery(fetchQuery);
+    return fetch(this.storeTx, fetchQuery, { schema, includeTriples: false });
   }
 
   async fetchById(collectionName: CollectionNameFromModels<M>, id: string) {
@@ -376,14 +379,14 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
     if (!entity) return null;
     if (entity && readRules) {
       const whereFilter = readRules.flatMap((rule) => rule.filter);
-      const query = { where: whereFilter };
+      let query = { where: whereFilter };
       /**
        * TODO we should just make this operate directly on where filters
        * e.g.
        * query.where = this.replaceVariablesInWhere(query.where)
        */
       // @ts-ignore
-      this.replaceVariablesInQuery(query);
+      query = this.replaceVariablesInQuery(query);
       if (doesEntityObjMatchWhere(entity, query.where, schema)) {
         return entity;
       }
@@ -598,17 +601,18 @@ export default class DB<M extends Models<any, any> | undefined> {
 
   static ABORT_TRANSACTION = Symbol('abort transaction');
 
-  private addReadRulesToQuery<M extends Model<any>>(
+  private addReadRulesToQuery(
     query: CollectionQuery<ModelFromModels<M>>,
     schema: M
-  ) {
+  ): CollectionQuery<ModelFromModels<M>> {
     if (schema?.rules?.read) {
       const updatedWhere = [
         ...query.where,
         ...schema.rules.read.flatMap((rule) => rule.filter),
       ];
-      query.where = updatedWhere;
+      return { ...query, where: updatedWhere };
     }
+    return query;
   }
 
   async transact(
@@ -628,30 +632,33 @@ export default class DB<M extends Models<any, any> | undefined> {
     }, storeScope);
   }
 
-  private replaceVariablesInQuery<M extends Model<any>>(
+  updateVariables(variables: Record<string, any>) {
+    this.variables = { ...this.variables, ...variables };
+  }
+
+  private replaceVariablesInQuery(
     query: CollectionQuery<ModelFromModels<M>>
   ): CollectionQuery<ModelFromModels<M>> {
-    query.where = replaceVariablesInFilterStatements(
-      query.where,
-      this.variables
-    );
-    return query;
+    const variables = { ...(this.variables ?? {}), ...(query.vars ?? {}) };
+    const where = replaceVariablesInFilterStatements(query.where, variables);
+    return { ...query, where };
   }
 
   async fetch(query: CollectionQuery<ModelFromModels<M>>, scope?: string[]) {
     await this.ensureMigrated;
     // TODO: need to fix collectionquery typing
+    let fetchQuery = query;
     const schema = await this.getCollectionSchema(
-      query.collectionName as CollectionNameFromModels<M>
+      fetchQuery.collectionName as CollectionNameFromModels<M>
     );
     if (schema) {
-      this.addReadRulesToQuery(query, schema);
+      fetchQuery = this.addReadRulesToQuery(fetchQuery, schema);
     }
-    this.replaceVariablesInQuery(query);
-
+    fetchQuery = this.replaceVariablesInQuery(fetchQuery);
+    console.log(fetchQuery);
     return await fetch(
       scope ? this.tripleStore.setStorageScope(scope) : this.tripleStore,
-      query,
+      fetchQuery,
       { schema, includeTriples: false }
     );
   }
@@ -669,10 +676,10 @@ export default class DB<M extends Models<any, any> | undefined> {
     if (!entity) return null;
     if (entity && readRules) {
       const whereFilter = readRules.flatMap((rule) => rule.filter);
-      const query = { where: whereFilter };
+      let query = { where: whereFilter };
       // TODO see other comment about replaceVariablesInQuery on how to improve
       // @ts-ignore
-      this.replaceVariablesInQuery(query);
+      query = this.replaceVariablesInQuery(query);
       if (doesEntityObjMatchWhere(entity, query.where, schema)) {
         return entity;
       }
@@ -696,10 +703,10 @@ export default class DB<M extends Models<any, any> | undefined> {
     await this.ensureMigrated;
     const schema = await this.getCollectionSchema(collectionName);
 
-    if (schema?.rules?.write) {
+    if (schema?.rules?.write?.length) {
       const filters = schema.rules.write.flatMap((r) => r.filter);
-      const query = { where: filters } as CollectionQuery<ModelFromModels<M>>;
-      this.replaceVariablesInQuery(query);
+      let query = { where: filters } as CollectionQuery<ModelFromModels<M>>;
+      query = this.replaceVariablesInQuery(query);
       // TODO there is probably a better way to to this
       // rather than converting to timestamped object check to
       // validate the where filter
@@ -711,7 +718,7 @@ export default class DB<M extends Models<any, any> | undefined> {
       );
       if (!satisfiedRule) {
         // TODO add better error that uses rule description
-        throw new Error(`Entity does not match write rules`);
+        throw new WriteRuleError(`Insert does not match write rules`);
       }
     }
 
@@ -732,20 +739,21 @@ export default class DB<M extends Models<any, any> | undefined> {
     scope?: string[]
   ) {
     const startSubscription = async () => {
+      let subscriptionQuery = query;
       // TODO: get rid of this "as" here
       const schema = await this.getCollectionSchema(
-        query.collectionName as CollectionNameFromModels<M>
+        subscriptionQuery.collectionName as CollectionNameFromModels<M>
       );
       if (schema) {
         // TODO see other comment about replaceVariablesInQuery on how to improve
         // @ts-ignore
-        this.addReadRulesToQuery(query, schema);
+        subscriptionQuery = this.addReadRulesToQuery(subscriptionQuery, schema);
       }
-      this.replaceVariablesInQuery(query);
+      subscriptionQuery = this.replaceVariablesInQuery(subscriptionQuery);
 
       const unsub = subscribe(
         scope ? this.tripleStore.setStorageScope(scope) : this.tripleStore,
-        query,
+        subscriptionQuery,
         callback,
         schema
       );
@@ -766,17 +774,18 @@ export default class DB<M extends Models<any, any> | undefined> {
     scope?: string[]
   ) {
     const startSubscription = async () => {
+      let subscriptionQuery = query;
       const schema = await this.getCollectionSchema(
-        query.collectionName as CollectionNameFromModels<M>
+        subscriptionQuery.collectionName as CollectionNameFromModels<M>
       );
       if (schema) {
-        this.addReadRulesToQuery(query, schema);
+        subscriptionQuery = this.addReadRulesToQuery(subscriptionQuery, schema);
       }
-      this.replaceVariablesInQuery(query);
+      subscriptionQuery = this.replaceVariablesInQuery(subscriptionQuery);
 
       const unsub = subscribeTriples(
         scope ? this.tripleStore.setStorageScope(scope) : this.tripleStore,
-        query,
+        subscriptionQuery,
         callback,
         schema
       );

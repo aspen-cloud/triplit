@@ -32,6 +32,7 @@ export interface Query<M extends Model<any> | undefined> {
   ];
   limit?: number;
   after?: ValueCursor;
+  vars?: Record<string, any>;
 }
 
 export function entityToResultReducer<M extends Models<any, any>[string]>(

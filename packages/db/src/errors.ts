@@ -76,6 +76,15 @@ export class IndexNotFoundError extends TriplitError {
   }
 }
 
+export class EntityNotFoundError extends TriplitError {
+  constructor(entityId: string, collectionName: string, ...args: any[]) {
+    super(...args);
+    this.name = 'EntityNotFoundError';
+    this.message = `Could not find entity with id ${entityId} in collection ${collectionName}.`;
+    this.status = STATUS_CODES['Not Found'];
+  }
+}
+
 // Query Errors
 export class InvalidFilterError extends TriplitError {
   constructor(...args: any[]) {
@@ -90,7 +99,7 @@ export class SessionVariableNotFoundError extends TriplitError {
   constructor(variableName: string, ...args: any[]) {
     super(...args);
     this.name = 'SessionVariableNotFoundError';
-    this.message = `${variableName} is not a valid session variable.`;
+    this.message = `${variableName} could not be found in the provided variables for this query.`;
     this.status = STATUS_CODES['Bad Request'];
   }
 }

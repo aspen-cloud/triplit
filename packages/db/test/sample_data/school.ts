@@ -33,6 +33,13 @@ export const classes = [
     department: 'dep-2',
     enrolled_students: ['student-2', 'student-3', 'student-4'],
   },
+  {
+    id: 'class-5',
+    name: 'Linear Algebra',
+    level: 300,
+    department: 'dep-1',
+    enrolled_students: ['student-6'],
+  },
 ];
 export const students = [
   { id: 'student-1', name: 'John James' },
@@ -40,4 +47,5 @@ export const students = [
   { id: 'student-3', name: 'Marry Anne' },
   { id: 'student-4', name: 'Charlie Reynolds' },
   { id: 'student-5', name: 'Leslie Blake' },
+  { id: 'student-6', name: 'Dylan Smith' },
 ];

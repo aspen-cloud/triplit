@@ -41,6 +41,7 @@ export default function CollectionQueryBuilder<
     ...params,
     where: params?.where ?? [],
     select: params?.select ?? [],
+    vars: params?.vars ?? {},
   });
 }
 

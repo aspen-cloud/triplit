@@ -1536,6 +1536,35 @@ describe('DB Variables', () => {
     });
   });
 
+  it('can update global variables', async () => {
+    const query = db
+      .query('classes')
+      .where([['department', '=', '$DEPARTMENT']])
+      .build();
+    const preUpdateResult = await db.fetch(query);
+    expect(preUpdateResult.size).toBe(3);
+
+    db.updateVariables({ DEPARTMENT: 'dep-2' });
+
+    const postUpdateResult = await db.fetch(query);
+    expect(postUpdateResult.size).toBe(2);
+  });
+
+  it('can provide variables via a query', async () => {
+    const query = db
+      .query('classes')
+      .where([['department', '=', '$DEPARTMENT']]);
+
+    const builtQuery1 = query.vars({ DEPARTMENT: 'dep-1' }).build();
+    const builtQuery2 = query.vars({ DEPARTMENT: 'dep-2' }).build();
+
+    const result1 = await db.fetch(builtQuery1);
+    const result2 = await db.fetch(builtQuery2);
+
+    expect(result1.size).toBe(3);
+    expect(result2.size).toBe(2);
+  });
+
   it.todo('supports updating variables with active subscriptions');
 });
 
