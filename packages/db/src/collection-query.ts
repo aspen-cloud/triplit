@@ -390,6 +390,7 @@ function subscribeResultsAndTriples<Q extends CollectionQuery<any>>(
               ? entityValue <= valueRange[1]
               : entityValue >= valueRange[1];
         }
+
         if (isInResult && satisfiesOrder) {
           nextResult.set(entity, entityObj);
           matchedTriples.push(...entityTriples);
@@ -404,17 +405,23 @@ function subscribeResultsAndTriples<Q extends CollectionQuery<any>>(
       if (order || limit) {
         const entries = [...nextResult];
 
+        // If we have removed data from the result set we need to backfill
         if (limit && entries.length < limit) {
-          const lastResultEntry = entries[entries.length - 1];
-          const backFillQUery = {
+          const lastResultEntry = entries.at(entries.length - 1);
+          const backFillQuery = {
             ...query,
             limit: limit - entries.length,
-            after: [
-              lastResultEntry[1][order![0]][0],
-              appendCollectionToId(query.collectionName, lastResultEntry[0]),
-            ],
+            after: lastResultEntry
+              ? [
+                  lastResultEntry[1][order![0]][0],
+                  appendCollectionToId(
+                    query.collectionName,
+                    lastResultEntry[0]
+                  ),
+                ]
+              : undefined,
           };
-          const backFilledResults = await fetch(tripleStore, backFillQUery, {
+          const backFilledResults = await fetch(tripleStore, backFillQuery, {
             schema,
             includeTriples: true,
           });
@@ -434,6 +441,7 @@ function subscribeResultsAndTriples<Q extends CollectionQuery<any>>(
 
         nextResult = new Map(entries.slice(0, limit));
       }
+
       results = nextResult as FetchResult<Q>;
       // console.timeEnd('query recalculation');
       subscriptionCallback([

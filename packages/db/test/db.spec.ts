@@ -601,6 +601,51 @@ describe('subscriptions', () => {
     });
   });
 
+  it('data properly backfills with order and limit', () => {
+    return new Promise<void>(async (resolve, reject) => {
+      let i = 0;
+      const assertions = [
+        (data) => expect(data.size).toBe(2), // initial data
+        (data) => expect(data.size).toBe(2), // backfills after delete
+        (data) => expect(data.size).toBe(1), // cant backfill, no more matching data
+        (data) => {
+          try {
+            expect(data.size).toBe(0); // handles down to zero
+            resolve();
+          } catch (e) {
+            reject(e);
+          }
+        },
+      ];
+
+      const unsubscribe = db.subscribe(
+        CollectionQueryBuilder('students')
+          .limit(2)
+          .order(['major', 'ASC'])
+          .where([['dorm', '=', 'Allen']])
+          .build(),
+        (students) => {
+          assertions[i](students);
+          i++;
+        }
+      );
+
+      await db.update('students', '1', async (entity) => {
+        entity.dorm = 'Battell';
+      });
+
+      await db.update('students', '4', async (entity) => {
+        entity.dorm = 'Battell';
+      });
+
+      await db.update('students', '5', async (entity) => {
+        entity.dorm = 'Battell';
+      });
+
+      await unsubscribe();
+    });
+  });
+
   it('handles order and limit', async () => {
     return new Promise<void>(async (resolve, reject) => {
       let i = 0;
