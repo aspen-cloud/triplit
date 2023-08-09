@@ -32,6 +32,7 @@ import {
   ValueSchemaMismatchError,
   WriteRuleError,
 } from './errors';
+import { TuplePrefix } from './utility-types';
 
 export type StoreSchema<M extends Models<any, any> | undefined> =
   M extends Models<any, any>
@@ -278,8 +279,8 @@ export class TripleStoreOperator implements TripleStoreApi {
     attribute: Attribute,
     constraints:
       | {
-          greaterThan?: any;
-          lessThan?: any;
+          greaterThan?: ValueCursor;
+          lessThan?: ValueCursor;
           direction?: 'ASC' | 'DESC';
         }
       | undefined
@@ -650,8 +651,8 @@ export class TripleStore implements TripleStoreApi {
     attribute: Attribute,
     constraints:
       | {
-          greaterThan?: any;
-          lessThan?: any;
+          greaterThan?: ValueCursor;
+          lessThan?: ValueCursor;
           direction?: 'ASC' | 'DESC';
         }
       | undefined
@@ -982,6 +983,30 @@ function findByAVE(
   });
 }
 
+/**
+ * When scanning for triples greater than some value, we need to ensure the rest of
+ * the tuple is filled in properly to avoid the timestamp causing edge values to sneak in
+ *
+ * For example:
+ * prefix: ['AVE']
+ * gt: [['height'], 5, 'John']
+ *
+ * This is equivalent to gt: [['height'], 5, 'John', MIN] because we arent including the timestamp part of the index
+ * Thus we would include ['John', ['height'], 5] in our result set, which is not expected for gt
+ *
+ * This should ensure when we pass in a gt value that isnt full, we fill it in with the appropriate min/max values
+ * In the example above it should be [['height'], 5, 'John', MAX]
+ *
+ * Note: I think the same would be true for lte
+ */
+function gtScanArg(prefix: any[], gt: any[] | undefined) {
+  if (!gt) return undefined;
+  const expectedLength =
+    (prefix[0] === 'clientTimestamp' ? 6 : 5) - prefix.length;
+  const fillLength = expectedLength - gt.length;
+  return [...gt, ...new Array(fillLength).fill(MAX)];
+}
+
 function findValuesInRange(
   tx: MultiTupleStoreOrTransaction,
   attribute: Attribute,
@@ -995,12 +1020,11 @@ function findValuesInRange(
     direction?: 'ASC' | 'DESC';
   } = {}
 ) {
+  const prefix = ['AVE', attribute];
   const scanArgs = {
-    prefix: ['AVE'],
-    // @ts-ignore
-    gt: [attribute].concat(greaterThan ?? [MIN, MIN]),
-    // @ts-ignore
-    lt: [attribute].concat(lessThan ?? [MAX, MAX]),
+    prefix,
+    gt: gtScanArg(prefix, greaterThan),
+    lt: lessThan,
     reverse: direction === 'DESC',
   };
   return scanToTriples(tx, scanArgs);
@@ -1128,7 +1152,7 @@ async function getEntities(
 async function findMaxTimestamp(
   tx: MultiTupleStoreOrTransaction,
   clientId: string
-) {
+): Promise<Timestamp | undefined> {
   const res = (await tx.scan({
     prefix: ['clientTimestamp', clientId],
     reverse: true,

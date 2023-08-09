@@ -1,6 +1,10 @@
 import { InMemoryTupleStorage } from 'tuple-database';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { TripleStore } from '../src/triple-store';
+import {
+  TripleRow,
+  TripleStore,
+  TripleStoreTransaction,
+} from '../src/triple-store';
 import * as S from '../src/schema';
 import MemoryBTree from '../src/storage/memory-btree';
 import { IndexedDbStorage, MemoryStorage } from '../src';
@@ -12,6 +16,19 @@ beforeEach(() => {
   // storage.data = [];
   storage.wipe();
 });
+
+// Helper function to test both methods on both store and transaction
+async function testStoreAndTx(
+  store: TripleStore,
+  callback: (
+    operator: TripleStore | TripleStoreTransaction
+  ) => Promise<void> | void
+) {
+  await callback(store);
+  await store.transact(async (tx) => {
+    await callback(tx);
+  });
+}
 
 describe('triple updates', () => {
   const store = new TripleStore({ storage: storage, tenantId: 'TEST' });
@@ -336,47 +353,48 @@ describe('supports transactions', () => {
   });
 });
 
+// TODO: IMO this could be broken up into smaller units (like "timestamp index" below)
 describe('search/scan functionality', async () => {
-  let store: TripleStore;
+  const storage = new MemoryStorage();
+  const store = new TripleStore({
+    storage,
+    tenantId: 'TEST',
+  });
+  const defaultData: TripleRow[] = [
+    {
+      id: 'cats#1',
+      attribute: ['height'],
+      value: 4,
+      timestamp: [1, 'A'],
+      expired: false,
+    },
+    {
+      id: 'cats#2',
+      attribute: ['height'],
+      value: 8,
+      timestamp: [2, 'A'],
+      expired: false,
+    },
+    {
+      id: 'dogs#1',
+      attribute: ['height'],
+      value: 8,
+      timestamp: [1, 'B'],
+      expired: false,
+    },
+    {
+      id: 'dogs#2',
+      attribute: ['ears'],
+      value: 'round',
+      timestamp: [2, 'B'],
+      expired: false,
+    },
+  ];
   beforeEach(async () => {
-    store = new TripleStore({
-      storage: new MemoryStorage(),
-      tenantId: 'TEST',
-    });
-    await store.transact(async (tx) => {
-      await tx.insertTriples([
-        {
-          id: 'cats#1',
-          attribute: ['height'],
-          value: 4,
-          timestamp: [1, 'A'],
-          expired: false,
-        },
-        {
-          id: 'cats#2',
-          attribute: ['height'],
-          value: 8,
-          timestamp: [2, 'A'],
-          expired: false,
-        },
-        {
-          id: 'dogs#1',
-          attribute: ['height'],
-          value: 8,
-          timestamp: [1, 'B'],
-          expired: false,
-        },
-        {
-          id: 'dogs#2',
-          attribute: ['ears'],
-          value: 'round',
-          timestamp: [2, 'B'],
-          expired: false,
-        },
-      ]);
-    });
+    storage.wipe();
   });
   it('can find by attribute', async () => {
+    await store.insertTriples(defaultData);
     await store.transact(async (tx) => {
       expect(
         (await tx.findByAttribute(['height'])).map(
@@ -390,27 +408,8 @@ describe('search/scan functionality', async () => {
       )
     ).toStrictEqual(['ears']);
   });
-  it('can find by clientId', async () => {
-    await store.transact(async (tx) => {
-      expect(
-        (await tx.findByClientTimestamp('A', 'gt', undefined)).map(
-          ({ timestamp }) => timestamp[1]
-        )
-      ).toStrictEqual(['A', 'A']);
-    });
-    expect(
-      (await store.findByClientTimestamp('B', 'gt', undefined)).map(
-        ({ timestamp }) => timestamp[1]
-      )
-    ).toStrictEqual(['B', 'B']);
-  });
-  it('can find by the max timestamp', async () => {
-    await store.transact(async (tx) => {
-      expect(await tx.findMaxTimestamp('A')).toStrictEqual([2, 'A']);
-    });
-    expect(await store.findMaxTimestamp('B')).toStrictEqual([2, 'B']);
-  });
   it('can find by collection', async () => {
+    await store.insertTriples(defaultData);
     await store.transact(async (tx) => {
       expect(
         (await tx.findByCollection('cats')).map(({ id }) => id)
@@ -421,30 +420,83 @@ describe('search/scan functionality', async () => {
     ).toMatchObject(['dogs#1', 'dogs#2']);
     expect(await store.findByCollection('fish')).toHaveLength(0);
   });
-  it('can find values in a range', async () => {
-    await store.transact(async (tx) => {
-      expect(
-        await tx.findValuesInRange(['height'], { greaterThan: 5, lessThan: 10 })
-      ).toHaveLength(2);
+  it('can find values in a range with cursor', async () => {
+    const data: TripleRow[] = [
+      {
+        id: 'cats#1',
+        attribute: ['cats', 'height'],
+        value: 8,
+        timestamp: [1, 'A'],
+        expired: false,
+      },
+      {
+        // cursor min
+        id: 'cats#2',
+        attribute: ['cats', 'height'],
+        value: 6,
+        timestamp: [2, 'A'],
+        expired: false,
+      },
+      {
+        id: 'cats#3',
+        attribute: ['cats', 'height'],
+        value: 7,
+        timestamp: [3, 'A'],
+        expired: false,
+      },
+      {
+        // cursor max
+        id: 'cats#4',
+        attribute: ['cats', 'height'],
+        value: 8,
+        timestamp: [4, 'A'],
+        expired: false,
+      },
+      {
+        id: 'cats#5',
+        attribute: ['cats', 'height'],
+        value: 6,
+        timestamp: [5, 'A'],
+        expired: false,
+      },
+      {
+        id: 'dogs#1',
+        attribute: ['dogs', 'height'],
+        value: 6,
+        timestamp: [1, 'B'],
+        expired: false,
+      },
+    ];
+    await store.insertTriples(data);
+    await testStoreAndTx(store, async (op) => {
+      const gtRes = await op.findValuesInRange(['cats', 'height'], {
+        greaterThan: [6, 'cats#2'],
+      });
+      expect(gtRes).toHaveLength(4);
+
+      const ltRes = await op.findValuesInRange(['cats', 'height'], {
+        lessThan: [8, 'cats#4'],
+      });
+      expect(ltRes).toHaveLength(4);
+
+      const rangeRes = await op.findValuesInRange(['cats', 'height'], {
+        greaterThan: [6, 'cats#2'],
+        lessThan: [8, 'cats#4'],
+      });
+      expect(rangeRes).toHaveLength(3);
+
+      const outOfRangeGT = await op.findValuesInRange(['cats', 'height'], {
+        greaterThan: [8, 'cats#4'],
+      });
+      expect(outOfRangeGT).toHaveLength(0);
+      const outOfRangeLT = await op.findValuesInRange(['cats', 'height'], {
+        lessThan: [6, 'cats#2'],
+      });
+      expect(outOfRangeLT).toHaveLength(0);
     });
-    expect(
-      await store.findValuesInRange(['height'], {
-        greaterThan: -1,
-        lessThan: 5,
-      })
-    ).toHaveLength(1);
-    expect(
-      await store.findValuesInRange(['ears'], {
-        greaterThan: 'flat',
-      })
-    ).toHaveLength(1);
-    expect(
-      await store.findValuesInRange(['tail'], {
-        greaterThan: 'flat',
-      })
-    ).toHaveLength(0);
   });
   it('can find by Entity Attribute and EAV', async () => {
+    await store.insertTriples(defaultData);
     await store.transact(async (tx) => {
       expect(
         (await tx.findByEAV(['cats#2', ['height']])).map(({ id }) => id)
@@ -929,6 +981,7 @@ describe('timestamp index', () => {
 
     expect(await store.findMaxTimestamp('A')).toEqual([4, 'A']);
     expect(await store.findMaxTimestamp('B')).toEqual([5, 'B']);
+    expect(await store.findMaxTimestamp('C')).toEqual(undefined);
   });
   it('equal to queries', async () => {
     const store = new TripleStore({ storage, tenantId: 'TEST' });
