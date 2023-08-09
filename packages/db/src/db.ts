@@ -808,7 +808,7 @@ export default class DB<M extends Models<any, any> | undefined> {
     storeScope?: { read: string[]; write: string[] }
   ) {
     await this.ensureMigrated;
-    await this.transact(async (tx) => {
+    return await this.transact(async (tx) => {
       await tx.update(collectionName, entityId, updater);
     }, storeScope);
   }
