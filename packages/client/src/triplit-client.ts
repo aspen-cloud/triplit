@@ -396,7 +396,7 @@ class SyncEngine {
 }
 
 interface DBOptions<M extends Models<any, any> | undefined> {
-  schema?: M;
+  schema?: { collections: M; version?: number };
   migrations?: Migration[];
   variables?: Record<string, any>;
   storage?: {

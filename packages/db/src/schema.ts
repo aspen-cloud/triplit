@@ -19,7 +19,7 @@ import {
 } from './errors';
 import { CollectionRules } from './db';
 import { timestampCompare } from './timestamp';
-import { Attribute, EAV } from './triple-store';
+import { Attribute, EAV, StoreSchema } from './triple-store';
 import { TuplePrefix } from './utility-types';
 import { objectToTuples, triplesToObject } from './utils';
 
@@ -274,9 +274,9 @@ export function tuplesToSchema(triples: TuplePrefix<EAV>[]) {
   return { version, collections: collectionsDefinitionToSchema(collections) };
 }
 
-export function schemaToTriples(schema: Models<any, any>): EAV[] {
+export function schemaToTriples(schema: StoreSchema<Models<any, any>>): EAV[] {
   const collections: CollectionsDefinition = {};
-  for (const [collectionName, model] of Object.entries(schema)) {
+  for (const [collectionName, model] of Object.entries(schema.collections)) {
     const collection: CollectionDefinition = { attributes: {}, rules: {} };
     for (const path of Object.keys(model.properties)) {
       const pathSchema = getSchemaFromPath(model, [path]);
@@ -286,7 +286,7 @@ export function schemaToTriples(schema: Models<any, any>): EAV[] {
     }
     collections[collectionName] = collection;
   }
-  const schemaData: SchemaDefinition = { version: 0, collections };
+  const schemaData: SchemaDefinition = { version: schema.version, collections };
   const tuples = objectToTuples(schemaData);
   return tuples.map((tuple) => {
     const value = tuple.pop();

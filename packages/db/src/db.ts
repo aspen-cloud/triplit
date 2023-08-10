@@ -105,7 +105,7 @@ export type Migration = {
 type StorageSource = AsyncTupleStorageApi;
 
 interface DBConfig<M extends Models<any, any> | undefined> {
-  schema?: M;
+  schema?: { collections: M; version?: number };
   migrations?: Migration[];
   source?: StorageSource;
   sources?: Record<string, StorageSource>;
@@ -546,8 +546,9 @@ export default class DB<M extends Models<any, any> | undefined> {
       throw new Error('Cannot provide both schema and migrations');
 
     // If a schema is provided, assume using schema but no migrations (keep at version 0)
+
     const tripleStoreSchema = schema
-      ? { version: 0, collections: schema }
+      ? { version: schema.version ?? 0, collections: schema.collections }
       : undefined;
 
     this.tripleStore = new TripleStore({

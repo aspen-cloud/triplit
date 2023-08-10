@@ -635,7 +635,7 @@ export class TripleStore implements TripleStoreApi {
   private async overrideSchema(schema: StoreSchema<Models<any, any>>) {
     await this.transact(async (tx) => {
       await tx.deleteMetadataTuples([['_schema']]);
-      await tx.updateMetadataTuples(schemaToTriples(schema.collections));
+      await tx.updateMetadataTuples(schemaToTriples(schema));
     });
     this.schema = schema;
   }
