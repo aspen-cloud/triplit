@@ -26,7 +26,7 @@ import CollectionQueryBuilder, {
   subscribe,
   subscribeTriples,
 } from './collection-query';
-import { FilterStatement, Query, QueryWhere, WhereFilter } from './query';
+import { FilterStatement, Query, QueryWhere } from './query';
 import MemoryStorage from './storage/memory-btree';
 import {
   EntityNotFoundError,
