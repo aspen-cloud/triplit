@@ -760,7 +760,7 @@ export default class DB<M extends Models<any, any> | undefined> {
 
   subscribeTriples<Q extends CollectionQuery<ModelFromModels<M>>>(
     query: Q,
-    callback: (results: TripleRow[]) => void,
+    callback: (results: TripleRow[], error: any) => void,
     scope?: string[]
   ) {
     const startSubscription = async () => {

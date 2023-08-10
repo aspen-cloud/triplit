@@ -348,26 +348,49 @@ function subscribeResultsAndTriples<Q extends CollectionQuery<any>>(
   tripleStore: TripleStore,
   query: Q,
   subscriptionCallback: (
-    args: [results: FetchResult<Q>, newTriples: TripleRow[]]
+    args: [results: FetchResult<Q>, newTriples: TripleRow[]],
+    error: any
   ) => void,
   schema?: Q['schema']
 ) {
   const order = query.order;
   const limit = query.limit;
   const asyncUnSub = async () => {
-    let { results, triples } = await fetch(tripleStore, query, {
-      includeTriples: true,
-      schema,
-    });
-    subscriptionCallback([
-      new Map(
-        [...results].map(([id, entity]) => [
-          id,
-          timestampedObjectToPlainObject(entity),
-        ])
-      ) as FetchResult<Q>,
-      triples,
-    ]);
+    let results: FetchResult<Q> = new Map() as FetchResult<Q>;
+    let triples: TripleRow[] = [];
+    try {
+      const fetchResult = await fetch(tripleStore, query, {
+        includeTriples: true,
+        schema,
+      });
+      results = fetchResult.results;
+      triples = fetchResult.triples;
+      subscriptionCallback(
+        [
+          new Map(
+            [...results].map(([id, entity]) => [
+              id,
+              timestampedObjectToPlainObject(entity),
+            ])
+          ) as FetchResult<Q>,
+          triples,
+        ],
+        undefined
+      );
+    } catch (e) {
+      subscriptionCallback(
+        [
+          new Map(
+            [...results].map(([id, entity]) => [
+              id,
+              timestampedObjectToPlainObject(entity),
+            ])
+          ) as FetchResult<Q>,
+          triples,
+        ],
+        e
+      );
+    }
 
     const unsub = tripleStore.onWrite(async ({ inserts, deletes }) => {
       let nextResult = new Map(results);
@@ -468,15 +491,18 @@ function subscribeResultsAndTriples<Q extends CollectionQuery<any>>(
 
       results = nextResult as FetchResult<Q>;
       // console.timeEnd('query recalculation');
-      subscriptionCallback([
-        new Map(
-          [...results].map(([id, entity]) => [
-            id,
-            timestampedObjectToPlainObject(entity),
-          ])
-        ) as FetchResult<Q>,
-        matchedTriples,
-      ]);
+      subscriptionCallback(
+        [
+          new Map(
+            [...results].map(([id, entity]) => [
+              id,
+              timestampedObjectToPlainObject(entity),
+            ])
+          ) as FetchResult<Q>,
+          matchedTriples,
+        ],
+        undefined
+      );
     });
     return unsub;
   };
@@ -529,14 +555,14 @@ function stringifyEA(entity: EntityId, attribute: Attribute) {
 export function subscribeTriples<Q extends CollectionQuery<any>>(
   tripleStore: TripleStore,
   query: Q,
-  subscriptionCallback: (results: TripleRow[]) => void,
+  subscriptionCallback: (results: TripleRow[], error: any) => void,
   schema?: Q['schema']
 ) {
   return subscribeResultsAndTriples(
     tripleStore,
     query,
-    ([_results, triples]) => {
-      subscriptionCallback(triples);
+    ([_results, triples], error) => {
+      subscriptionCallback(triples, error);
     },
     schema
   );
