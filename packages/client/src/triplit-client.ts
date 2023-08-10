@@ -424,12 +424,10 @@ export type ClientQuery<M extends Model<any> | undefined> =
 
 function ClientQueryBuilder<M extends Model<any> | undefined>(
   collectionName: string,
-  schema?: M,
   params?: Query<M> & { syncStatus?: SyncStatus }
 ) {
   return Builder<ClientQuery<M>>({
     collectionName,
-    schema,
     ...params,
     where: params?.where ?? [],
     select: params?.select ?? [],

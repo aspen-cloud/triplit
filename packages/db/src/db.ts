@@ -447,16 +447,7 @@ export default class DB<M extends Models<any, any> | undefined> {
     collectionName: CN,
     params?: Query<ModelFromModels<M, CN>>
   ) {
-    return CollectionQueryBuilder(
-      collectionName as string,
-      // I think TS is mad that we're not passing the generic type down to the schema
-      // this.schema is of type Models<any, any>, collection query is expecting us to use the generic type M
-      // Passing down the generic touched a lot of things, so we're just ignoring the error for now
-      // TODO: ...pretty sure this doesnt exist anymore...can it be removed?
-      // @ts-ignore
-      this.schema && this.schema[collectionName],
-      params
-    );
+    return CollectionQueryBuilder(collectionName as string, params);
   }
 
   async createCollection(params: CreateCollectionOperation[1]) {

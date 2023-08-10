@@ -19,10 +19,10 @@ export { DB };
 export type {
   Migration,
   CollectionNameFromModels,
-  DBTransaction,
   ModelFromModels,
   CollectionRules,
 } from './db';
+export type { DBTransaction } from './db-transaction';
 export { queryResultToJson, or, and } from './query';
 export type { Query } from './query';
 export type { TripleRow } from './triple-store';

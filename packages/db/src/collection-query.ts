@@ -33,11 +33,10 @@ import {
 
 export default function CollectionQueryBuilder<
   M extends Model<any> | undefined
->(collectionName: string, schema?: M, params?: Query<M>) {
+>(collectionName: string, params?: Query<M>) {
   // TODO fixup ts so that select/where are actually optional
   return Builder<CollectionQuery<M>>({
     collectionName,
-    schema,
     ...params,
     where: params?.where ?? [],
     select: params?.select ?? [],
@@ -47,7 +46,6 @@ export default function CollectionQueryBuilder<
 
 export type CollectionQuery<M extends Model<any> | undefined> = Query<M> & {
   collectionName: string;
-  schema?: M;
 };
 
 export type FetchResult<C extends CollectionQuery<any>> =
@@ -163,20 +161,20 @@ export async function fetch<Q extends CollectionQuery<any>>(
 export function doesEntityObjMatchWhere<Q extends CollectionQuery<any>>(
   entityObj: any,
   where: Q['where'],
-  schema?: Q['schema']
+  schema?: CollectionQuerySchema<Q>
 ) {
   const basicStatements = where.filter(
-    (statement): statement is FilterStatement<Q['schema']> =>
+    (statement): statement is FilterStatement<Model<any>> =>
       statement instanceof Array
   );
 
   const orStatements = where.filter(
-    (statement): statement is FilterGroup<Q['schema']> =>
+    (statement): statement is FilterGroup<Model<any>> =>
       'mod' in statement && statement.mod === 'or'
   );
 
   const andStatements = where.filter(
-    (statement): statement is FilterGroup<Q['schema']> =>
+    (statement): statement is FilterGroup<Model<any>> =>
       'mod' in statement && statement.mod === 'and'
   );
   const matchesBasicFilters = entitySatisfiesAllFilters(
@@ -208,10 +206,10 @@ export function doesEntityObjMatchWhere<Q extends CollectionQuery<any>>(
  * @param filters Simple statements (not AND or OR)
  * @returns boolean
  */
-function entitySatisfiesAllFilters<Q extends CollectionQuery<any>>(
+function entitySatisfiesAllFilters(
   entity: any,
-  filters: FilterStatement<Q['schema']>[],
-  schema?: Q['schema']
+  filters: FilterStatement<Model<any>>[],
+  schema?: Model<any>
 ): boolean {
   const groupedFilters: Map<string, [Operator, any][]> = filters.reduce(
     (groups, statement) => {
@@ -344,12 +342,15 @@ async function getCollectionEntitiesAndTriples(
   }, new Map());
 }
 
+type CollectionQuerySchema<Q extends CollectionQuery<any>> =
+  Q extends CollectionQuery<infer M> ? M : never;
+
 function subscribeSingleEntity<Q extends CollectionQuery<any>>(
   tripleStore: TripleStore,
   query: Q,
   onResults: (args: [results: FetchResult<Q>, newTriples: TripleRow[]]) => void,
   onError?: (error: any) => void,
-  schema?: Q['schema']
+  schema?: CollectionQuerySchema<Q>
 ) {
   const asyncUnSub = async () => {
     const { collectionName, entityId } = query;
@@ -409,7 +410,7 @@ function subscribeResultsAndTriples<Q extends CollectionQuery<any>>(
   query: Q,
   onResults: (args: [results: FetchResult<Q>, newTriples: TripleRow[]]) => void,
   onError?: (error: any) => void,
-  schema?: Q['schema']
+  schema?: Model<any>
 ) {
   const order = query.order;
   const limit = query.limit;
@@ -456,7 +457,7 @@ function subscribeResultsAndTriples<Q extends CollectionQuery<any>>(
             );
             const entityObj = entityTriples.reduce(
               entityToResultReducer,
-              query.schema ? initialize(query.schema) : {}
+              schema ? initialize(schema) : {}
             );
             const isInCollection =
               entityObj['_collection'] &&
@@ -575,7 +576,7 @@ export function subscribe<Q extends CollectionQuery<any>>(
   query: Q,
   onResults: (results: FetchResult<Q>) => void,
   onError?: (error: any) => void,
-  schema?: Q['schema']
+  schema?: CollectionQuerySchema<Q>
 ) {
   if (query.entityId) {
     return subscribeSingleEntity(
@@ -625,7 +626,7 @@ export function subscribeTriples<Q extends CollectionQuery<any>>(
   query: Q,
   onResults: (results: TripleRow[]) => void,
   onError?: (error: any) => void,
-  schema?: Q['schema']
+  schema?: CollectionQuerySchema<Q>
 ) {
   if (query.entityId) {
     return subscribeSingleEntity(
