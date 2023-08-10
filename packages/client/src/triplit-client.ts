@@ -68,7 +68,7 @@ class SyncEngine {
   // @ts-ignore
   private conn: WebSocket;
 
-  private queries: Set<RemoteQueryParams> = new Set();
+  private queries: Map<string, RemoteQueryParams> = new Map();
 
   private reconnectTimeoutDelay = 250;
   private reconnectTimeout: any;
@@ -154,12 +154,13 @@ class SyncEngine {
     });
   }
 
-  subscribeToQuery(params: RemoteQueryParams) {
-    this.sendMessage('CONNECT_QUERY', params);
-    this.queries.add(params);
+  subscribe(params: RemoteQueryParams) {
+    let id = Date.now().toString(36) + Math.random().toString(36).slice(2); // unique enough id
+    this.sendMessage('CONNECT_QUERY', { id, params });
+    this.queries.set(id, params);
     return () => {
-      this.sendMessage('DISCONNECT_QUERY', params);
-      this.queries.delete(params);
+      this.sendMessage('DISCONNECT_QUERY', { id });
+      this.queries.delete(id);
     };
   }
 
@@ -270,8 +271,8 @@ class SyncEngine {
       this.resetReconnectTimeout();
 
       // Reconnect any queries
-      for (const query of this.queries) {
-        this.sendMessage('CONNECT_QUERY', query);
+      for (const [id, params] of this.queries) {
+        this.sendMessage('CONNECT_QUERY', { id, params });
       }
     };
     this.conn.onclose = (ev) => {
@@ -537,7 +538,7 @@ export class TriplitClient<M extends Models<any, any> | undefined = undefined> {
     const { select, where, collectionName, order, limit } = query;
     // TODO: do we need to pass along params arg from local query subscription?
     let unsubscribeRemote = scope.includes('cache')
-      ? this.syncEngine.subscribeToQuery({
+      ? this.syncEngine.subscribe({
           collection: collectionName,
           select,
           where,
