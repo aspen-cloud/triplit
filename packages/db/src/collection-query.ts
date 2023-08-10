@@ -231,34 +231,58 @@ function entitySatisfiesAllFilters<Q extends CollectionQuery<any>>(
     [...groupedFilters.entries()].every(([path, filters]) => {
       const dataType = schema && getSchemaFromPath(schema, path.split('.'));
       return filters.every(([op, filterValue]) => {
+        // If we have a schema handle specific cases
         if (dataType && dataType['x-crdt-type'] === 'Set') {
-          const pointer = '/' + path.replace('.', '/');
-          const value: Record<string, [boolean, Timestamp]> = ValuePointer.Get(
-            entity,
-            pointer
-          );
-          return Object.entries(value)
-            .filter(([_v, [inSet, _ts]]) => inSet)
-            .some(([v]) => isOperatorSatisfied(op, v, filterValue));
+          return satisfiesSetFilter(entity, path, op, filterValue);
         }
-        const maybeValue = path
-          .split('.')
-          .reduce((acc, curr) => acc && acc[curr], entity);
-        if (!maybeValue) console.warn(`${path} not found in ${entity}`);
-        if (
-          maybeValue &&
-          (!(maybeValue instanceof Array) || maybeValue.length > 2)
-        ) {
-          throw new InvalidFilterError(
-            [path, op, filterValue],
-            `Received an unexpected value (${maybeValue}) for path ${path} in entity ${entity} interpreted as ${dataType}. This is likely caused by a missing or incorrect schema, or because a filter path was provided that does not lead to a leaf attribute in the entity`
-          );
-        }
-        const [value, _ts] = maybeValue ?? [undefined, undefined];
-        return isOperatorSatisfied(op, value, filterValue);
+        // Use register as default
+        return satisfiesRegisterFilter(entity, path, op, filterValue);
       });
     })
   );
+}
+
+// TODO: handle possible errors with sets
+function satisfiesSetFilter(
+  entity: any,
+  path: string,
+  op: Operator,
+  filterValue: any
+) {
+  const pointer = '/' + path.replace('.', '/');
+  const value: Record<string, [boolean, Timestamp]> = ValuePointer.Get(
+    entity,
+    pointer
+  );
+  return Object.entries(value)
+    .filter(([_v, [inSet, _ts]]) => inSet)
+    .some(([v]) => isOperatorSatisfied(op, v, filterValue));
+}
+
+function satisfiesRegisterFilter(
+  entity: any,
+  path: string,
+  op: Operator,
+  filterValue: any
+) {
+  const maybeValue = path
+    .split('.')
+    .reduce((acc, curr) => acc && acc[curr], entity);
+  if (!maybeValue) console.warn(`${path} not found in ${entity}`);
+
+  // maybeValue is expected to be of shape [value, timestamp]
+  // this may happen if a schema is expected but not there and we're reading a value that cant be parsed, the schema is incorrect somehow, or if the provided path is incorrect
+  if (maybeValue && (!(maybeValue instanceof Array) || maybeValue.length > 2)) {
+    throw new InvalidFilterError(
+      `Received an unexpected value at path '${path}' in entity ${JSON.stringify(
+        entity
+      )} which could not be interpreted as a register when reading filter ${JSON.stringify(
+        [path, op, filterValue]
+      )}. This is likely caused by (1) the database not properly loading its schema and attempting to interpret a value that is not a regsiter as a register, (2) a schemaless database attempting to interpret a value that is not properly formatted as a register, or (3) a query with a path that does not lead to a leaf attribute in the entity.`
+    );
+  }
+  const [value, _ts] = maybeValue ?? [undefined, undefined];
+  return isOperatorSatisfied(op, value, filterValue);
 }
 
 function ilike(text: string, pattern: string): boolean {
