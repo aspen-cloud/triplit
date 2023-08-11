@@ -68,7 +68,7 @@ class SyncEngine {
   // @ts-ignore
   private conn: WebSocket;
 
-  private queries: Map<string, RemoteQueryParams> = new Map();
+  private queries: Map<string, { params: RemoteQueryParams }> = new Map();
 
   private reconnectTimeoutDelay = 250;
   private reconnectTimeout: any;
@@ -157,11 +157,15 @@ class SyncEngine {
   subscribe(params: RemoteQueryParams) {
     let id = Date.now().toString(36) + Math.random().toString(36).slice(2); // unique enough id
     this.sendMessage('CONNECT_QUERY', { id, params });
-    this.queries.set(id, params);
+    this.queries.set(id, { params });
     return () => {
-      this.sendMessage('DISCONNECT_QUERY', { id });
-      this.queries.delete(id);
+      this.disconnectQuery(id);
     };
+  }
+
+  disconnectQuery(id: string) {
+    this.sendMessage('DISCONNECT_QUERY', { id });
+    this.queries.delete(id);
   }
 
   private commitCallbacks: Map<string, Set<() => void>> = new Map();
@@ -271,8 +275,8 @@ class SyncEngine {
       this.resetReconnectTimeout();
 
       // Reconnect any queries
-      for (const [id, params] of this.queries) {
-        this.sendMessage('CONNECT_QUERY', { id, params });
+      for (const [id, queryInfo] of this.queries) {
+        this.sendMessage('CONNECT_QUERY', { id, params: queryInfo.params });
       }
     };
     this.conn.onclose = (ev) => {
@@ -336,9 +340,8 @@ class SyncEngine {
   }
 
   private async handleErrorMessage(message: any) {
-    console.error(message);
-    const { name, metadata } = message.payload;
-    switch (name) {
+    const { error, metadata } = message.payload;
+    switch (error.name) {
       case 'MalformedMessagePayloadError':
       case 'UnrecognizedMessageTypeError':
         console.warn(
@@ -352,6 +355,11 @@ class SyncEngine {
           const { txId, error } = failure;
           txFailures$.next({ txId, error });
         }
+      // On a remote read error, default to disconnecting the query
+      // You will still send triples, but you wont receive updates
+      case 'QuerySyncError':
+        const queryKey = metadata?.queryKey;
+        if (queryKey) this.disconnectQuery(queryKey);
     }
   }
 
