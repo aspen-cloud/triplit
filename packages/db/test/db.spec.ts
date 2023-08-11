@@ -1263,9 +1263,9 @@ describe('schema changes', async () => {
       },
     });
     const schema = await db.getSchema();
-    expect(schema).toHaveProperty('students');
-    expect(schema.students.properties).toHaveProperty('id');
-    expect(schema.students.properties).toHaveProperty('name');
+    expect(schema?.collections).toHaveProperty('students');
+    expect(schema?.collections.students.properties).toHaveProperty('id');
+    expect(schema?.collections.students.properties).toHaveProperty('name');
   });
 
   it('can drop a collection definition from the schema', async () => {
@@ -1277,10 +1277,10 @@ describe('schema changes', async () => {
     };
     const db = new DB({ source: new InMemoryTupleStorage(), schema: schema });
     const dbSchemaBefore = await db.getSchema();
-    expect(dbSchemaBefore).toHaveProperty('students');
+    expect(dbSchemaBefore?.collections).toHaveProperty('students');
     await db.dropCollection({ name: 'students' });
     const dbSchemaAfter = await db.getSchema();
-    expect(dbSchemaAfter).not.toHaveProperty('students');
+    expect(dbSchemaAfter?.collections).not.toHaveProperty('students');
 
     // TODO: test data is actually dropped if we decide it should be
   });
@@ -1301,8 +1301,10 @@ describe('schema changes', async () => {
     });
     const dbSchema = await db.getSchema();
     expect(dbSchema).toHaveProperty('students');
-    expect(dbSchema?.students.properties).toHaveProperty('studentId');
-    expect(dbSchema?.students.properties).toHaveProperty('name');
+    expect(dbSchema?.collections.students.properties).toHaveProperty(
+      'studentId'
+    );
+    expect(dbSchema?.collections.students.properties).toHaveProperty('name');
     const query = db
       .query('students')
       .where([['studentId', '=', 1]])
@@ -1328,8 +1330,8 @@ describe('schema changes', async () => {
     });
     const dbSchema = await db.getSchema();
     expect(dbSchema).toHaveProperty('students');
-    expect(dbSchema.students.properties).toHaveProperty('age');
-    expect(dbSchema.students.properties).toHaveProperty('name');
+    expect(dbSchema?.collections.students.properties).toHaveProperty('age');
+    expect(dbSchema?.collections.students.properties).toHaveProperty('name');
   });
 
   it('can drop an attribute', async () => {
@@ -1344,8 +1346,8 @@ describe('schema changes', async () => {
     await db.dropAttribute({ collection: 'students', path: 'id' });
     const dbSchema = await db.getSchema();
     expect(dbSchema).toHaveProperty('students');
-    expect(dbSchema.students.properties).not.toHaveProperty('id');
-    expect(dbSchema.students.properties).toHaveProperty('name');
+    expect(dbSchema?.collections.students.properties).not.toHaveProperty('id');
+    expect(dbSchema?.collections.students.properties).toHaveProperty('name');
 
     // TODO: test data is actually dropped if we decide it should be
   });
@@ -1391,9 +1393,9 @@ describe('migrations', () => {
   it('initializing a DB with migrations sets the schema', async () => {
     const db = new DB({ migrations });
     const dbSchema = await db.getSchema();
-    expect(dbSchema).toHaveProperty('students');
-    expect(dbSchema).toHaveProperty('classes');
-    expect((await db.tripleStore.readSchema())?.version).toEqual(2);
+    expect(dbSchema?.collections).toHaveProperty('students');
+    expect(dbSchema?.collections).toHaveProperty('classes');
+    expect(dbSchema?.version).toEqual(2);
   });
   it('will stop migrating on an error and rollback changes', async () => {
     const migrationsCopy = JSON.parse(
@@ -1407,10 +1409,9 @@ describe('migrations', () => {
     ]);
     const db = new DB({ migrations: migrationsCopy });
     const dbSchema = await db.getSchema();
-    expect(dbSchema).toHaveProperty('students');
-    expect(dbSchema).not.toHaveProperty('classes');
-    const tripleStoreVersion = (await db.tripleStore.readSchema())?.version;
-    expect(tripleStoreVersion).toEqual(1);
+    expect(dbSchema?.collections).toHaveProperty('students');
+    expect(dbSchema?.collections).not.toHaveProperty('classes');
+    expect(dbSchema?.version).toEqual(1);
   });
 
   it('will only run migrations if version and parent pointer match', async () => {
@@ -1447,9 +1448,9 @@ describe('migrations', () => {
     const dbUnlinked = new DB({ migrations: migrationsUnlinked });
     const dbAll = new DB({ migrations: migrationsAll });
 
-    const dbLinkedSchema = await dbLinked.getSchema(true);
-    const dbUnlinkedSchema = await dbUnlinked.getSchema(true);
-    const dbAllSchema = await dbAll.getSchema(true);
+    const dbLinkedSchema = await dbLinked.getSchema();
+    const dbUnlinkedSchema = await dbUnlinked.getSchema();
+    const dbAllSchema = await dbAll.getSchema();
     expect(dbLinkedSchema?.version).toEqual(4);
     expect(dbUnlinkedSchema?.version).toEqual(2);
     expect(dbAllSchema?.version).toEqual(4);
@@ -1458,22 +1459,22 @@ describe('migrations', () => {
     const unlinkedMigration = { parent: 3, version: 5, up: [], down: [] };
 
     await dbAll.migrate([unlinkedMigration], 'up');
-    const dbAllSchemaAfter = await dbAll.tripleStore.readSchema();
+    const dbAllSchemaAfter = await dbAll.getSchema();
     expect(dbAllSchemaAfter?.version).toEqual(4);
 
     await dbAll.migrate([linkedMigration], 'up');
-    const dbAllSchemaAfter2 = await dbAll.tripleStore.readSchema();
+    const dbAllSchemaAfter2 = await dbAll.getSchema();
     expect(dbAllSchemaAfter2?.version).toEqual(5);
 
     // TODO: I think this would fail because migration would be applied since we dont actually store the migrations that were applied
     // dbAll.migrate([unlinkedMigration], 'down');
     // expect(dbAll.tripleStore.schema?.version).toEqual(5);
     await dbAll.migrate([linkedMigration], 'down');
-    const dbAllSchemaAfter3 = await dbAll.tripleStore.readSchema();
+    const dbAllSchemaAfter3 = await dbAll.getSchema();
     expect(dbAllSchemaAfter3?.version).toEqual(4);
 
     await dbAll.migrate([unlinkedMigration], 'down');
-    const dbAllSchemaAfter4 = await dbAll.tripleStore.readSchema();
+    const dbAllSchemaAfter4 = await dbAll.getSchema();
     expect(dbAllSchemaAfter4?.version).toEqual(4);
   });
 

@@ -568,27 +568,17 @@ export default class DB<M extends Models<any, any> | undefined> {
     return ts[1];
   }
 
-  async getSchema(full: true): Promise<StoreSchema<M>>;
-  async getSchema(
-    full?: false
-  ): Promise<
-    M extends Models<any, any>
-      ? StoreSchema<M>['collections']
-      : M extends undefined
-      ? undefined
-      : never
-  >;
-  async getSchema(full: boolean = false) {
+  async getSchema() {
     await this.ensureMigrated;
-    const tripleStoreSchema = await this.tripleStore.readSchema();
-    if (full) return tripleStoreSchema;
-    return tripleStoreSchema?.collections;
+    // TODO: add schema definition to triple store, so we can return StoreSchema<M>
+    // Or make StoreSchema<M> compatible with StoreSchema<Models<any, any>>
+    return await this.tripleStore.readSchema();
   }
 
   async getCollectionSchema<CN extends CollectionNameFromModels<M>>(
     collectionName: CN
   ) {
-    const collections = await this.getSchema();
+    const collections = (await this.getSchema())?.collections;
     if (!collections) return undefined;
     // TODO: i think we need some stuff in the triple store...
     const collectionSchema = collections[collectionName] as ModelFromModels<

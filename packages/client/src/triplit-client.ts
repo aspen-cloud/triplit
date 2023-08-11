@@ -123,7 +123,7 @@ class SyncEngine {
       return undefined;
     }
     const wsOptions = new URLSearchParams();
-    const schemaVersion = (await this.db.getSchema(true))?.version;
+    const schemaVersion = (await this.db.getSchema())?.version;
     if (schemaVersion) {
       wsOptions.set('version', schemaVersion.toString());
     }
