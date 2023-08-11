@@ -725,7 +725,8 @@ export default class DB<M extends Models<any, any> | undefined> {
 
   subscribe<Q extends CollectionQuery<ModelFromModels<M>>>(
     query: Q,
-    callback: (results: FetchResult<Q>, error: any) => void,
+    onResults: (results: FetchResult<Q>) => void,
+    onError?: (error: any) => void,
     scope?: string[]
   ) {
     const startSubscription = async () => {
@@ -744,7 +745,8 @@ export default class DB<M extends Models<any, any> | undefined> {
       const unsub = subscribe(
         scope ? this.tripleStore.setStorageScope(scope) : this.tripleStore,
         subscriptionQuery,
-        callback,
+        onResults,
+        onError,
         schema
       );
       return unsub;
@@ -760,7 +762,8 @@ export default class DB<M extends Models<any, any> | undefined> {
 
   subscribeTriples<Q extends CollectionQuery<ModelFromModels<M>>>(
     query: Q,
-    callback: (results: TripleRow[], error: any) => void,
+    onResults: (results: TripleRow[]) => void,
+    onError?: (error: any) => void,
     scope?: string[]
   ) {
     const startSubscription = async () => {
@@ -776,7 +779,8 @@ export default class DB<M extends Models<any, any> | undefined> {
       const unsub = subscribeTriples(
         scope ? this.tripleStore.setStorageScope(scope) : this.tripleStore,
         subscriptionQuery,
-        callback,
+        onResults,
+        onError,
         schema
       );
       return unsub;

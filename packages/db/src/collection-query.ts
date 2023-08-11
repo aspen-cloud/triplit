@@ -347,10 +347,8 @@ async function getCollectionEntitiesAndTriples(
 function subscribeResultsAndTriples<Q extends CollectionQuery<any>>(
   tripleStore: TripleStore,
   query: Q,
-  subscriptionCallback: (
-    args: [results: FetchResult<Q>, newTriples: TripleRow[]],
-    error: any
-  ) => void,
+  onResults: (args: [results: FetchResult<Q>, newTriples: TripleRow[]]) => void,
+  onError?: (error: any) => void,
   schema?: Q['schema']
 ) {
   const order = query.order;
@@ -365,18 +363,15 @@ function subscribeResultsAndTriples<Q extends CollectionQuery<any>>(
       });
       results = fetchResult.results;
       triples = fetchResult.triples;
-      subscriptionCallback(
-        [
-          new Map(
-            [...results].map(([id, entity]) => [
-              id,
-              timestampedObjectToPlainObject(entity),
-            ])
-          ) as FetchResult<Q>,
-          triples,
-        ],
-        undefined
-      );
+      onResults([
+        new Map(
+          [...results].map(([id, entity]) => [
+            id,
+            timestampedObjectToPlainObject(entity),
+          ])
+        ) as FetchResult<Q>,
+        triples,
+      ]);
       const unsub = tripleStore.onWrite(async ({ inserts, deletes }) => {
         try {
           let nextResult = new Map(results);
@@ -487,47 +482,22 @@ function subscribeResultsAndTriples<Q extends CollectionQuery<any>>(
           results = nextResult as FetchResult<Q>;
           triples = matchedTriples;
           // console.timeEnd('query recalculation');
-          subscriptionCallback(
-            [
-              new Map(
-                [...results].map(([id, entity]) => [
-                  id,
-                  timestampedObjectToPlainObject(entity),
-                ])
-              ) as FetchResult<Q>,
-              triples,
-            ],
-            undefined
-          );
+          onResults([
+            new Map(
+              [...results].map(([id, entity]) => [
+                id,
+                timestampedObjectToPlainObject(entity),
+              ])
+            ) as FetchResult<Q>,
+            triples,
+          ]);
         } catch (e) {
-          subscriptionCallback(
-            [
-              new Map(
-                [...results].map(([id, entity]) => [
-                  id,
-                  timestampedObjectToPlainObject(entity),
-                ])
-              ) as FetchResult<Q>,
-              triples,
-            ],
-            e
-          );
+          onError && onError(e);
         }
       });
       return unsub;
     } catch (e) {
-      subscriptionCallback(
-        [
-          new Map(
-            [...results].map(([id, entity]) => [
-              id,
-              timestampedObjectToPlainObject(entity),
-            ])
-          ) as FetchResult<Q>,
-          triples,
-        ],
-        e
-      );
+      onError && onError(e);
     }
     return () => {};
   };
@@ -543,15 +513,17 @@ function subscribeResultsAndTriples<Q extends CollectionQuery<any>>(
 export function subscribe<Q extends CollectionQuery<any>>(
   tripleStore: TripleStore,
   query: Q,
-  subscriptionCallback: (results: FetchResult<Q>, error: any) => void,
+  onResults: (results: FetchResult<Q>) => void,
+  onError?: (error: any) => void,
   schema?: Q['schema']
 ) {
   return subscribeResultsAndTriples(
     tripleStore,
     query,
-    ([results], error) => {
-      subscriptionCallback(results, error);
+    ([results]) => {
+      onResults(results);
     },
+    onError,
     schema
   );
 }
@@ -580,15 +552,17 @@ function stringifyEA(entity: EntityId, attribute: Attribute) {
 export function subscribeTriples<Q extends CollectionQuery<any>>(
   tripleStore: TripleStore,
   query: Q,
-  subscriptionCallback: (results: TripleRow[], error: any) => void,
+  onResults: (results: TripleRow[]) => void,
+  onError?: (error: any) => void,
   schema?: Q['schema']
 ) {
   return subscribeResultsAndTriples(
     tripleStore,
     query,
-    ([_results, triples], error) => {
-      subscriptionCallback(triples, error);
+    ([_results, triples]) => {
+      onResults(triples);
     },
+    onError,
     schema
   );
 }

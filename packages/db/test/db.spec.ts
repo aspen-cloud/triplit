@@ -10,6 +10,7 @@ import {
   queryResultToJson,
   WriteRuleError,
   ValueSchemaMismatchError,
+  InvalidFilterError,
 } from '../src';
 import { classes, students, departments } from './sample_data/school';
 import MemoryBTree from '../src/storage/memory-btree';
@@ -2050,5 +2051,57 @@ describe('Nested Properties', () => {
       );
       expect(negativeResults).toHaveLength(0);
     });
+  });
+});
+
+it('throws an error if a register filter is malformed', async () => {
+  const db = new DB({
+    schema: {
+      collections: {
+        Classes: S.Schema({
+          name: S.string(),
+          students: S.Set(S.string()),
+        }),
+      },
+    },
+  });
+  const query = db
+    .query('Classes')
+    .where([['students', '=', 'student-1']])
+    .build();
+  await db.insert('Classes', {
+    name: 'Class 1',
+    students: new Set(['student-1', 'student-2']),
+  });
+  await expect(db.fetch(query)).resolves.not.toThrowError();
+  // Delete schema to allow malformed filter
+  await db.tripleStore.deleteMetadataTuples([['_schema']]);
+  await expect(db.fetch(query)).rejects.toThrowError(InvalidFilterError);
+});
+
+describe('subscription errors', () => {
+  it.todo('passes query errors to the callback', async () => {});
+  it('handles errors in callback', () => {
+    const db = new DB({
+      schema: {
+        collections: {
+          Classes: S.Schema({
+            name: S.string(),
+            students: S.Set(S.string()),
+          }),
+        },
+      },
+    });
+    const query = db.query('Classes').build();
+    db.subscribe(
+      query,
+      (data) => {
+        throw new Error('Test Error');
+      },
+      (error) => {
+        expect(error).toBeInstanceOf(Error);
+        expect(error.message).toBe('Test Error');
+      }
+    );
   });
 });

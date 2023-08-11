@@ -525,10 +525,16 @@ export class TriplitClient<M extends Models<any, any> | undefined = undefined> {
 
   subscribe<CQ extends ClientQuery<ModelFromModels<M>>>(
     query: CQ,
-    callback: (results: FetchResult<CQ>, error: any) => void
+    onResults: (results: FetchResult<CQ>) => void,
+    onError?: (error: any) => void
   ) {
     const scope = parseScope(query);
-    const unsubscribeLocal = this.db.subscribe(query, callback, scope);
+    const unsubscribeLocal = this.db.subscribe(
+      query,
+      onResults,
+      onError,
+      scope
+    );
     const { select, where, collectionName, order, limit, after, vars } = query;
 
     // TODO: refactor args to make sure we include everything

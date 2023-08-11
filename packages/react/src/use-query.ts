@@ -23,11 +23,18 @@ export function useQuery<CQ extends ClientQuery<any>>(
   useEffect(() => {
     setResults(undefined);
     setFetchingLocal(true);
-    const unsubscribe = client.subscribe(builtQuery, (localResults, error) => {
-      setFetchingLocal(false);
-      setResults(localResults);
-      setError(error);
-    });
+    const unsubscribe = client.subscribe(
+      builtQuery,
+      (localResults) => {
+        setFetchingLocal(false);
+        setError(undefined);
+        setResults(localResults);
+      },
+      (error) => {
+        setFetchingLocal(false);
+        setError(error);
+      }
+    );
 
     return () => {
       unsubscribe();
