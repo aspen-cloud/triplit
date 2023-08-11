@@ -417,7 +417,10 @@ describe('Set operations', () => {
   let db: DB<typeof schema>;
   beforeEach(async () => {
     storage.data = [];
-    db = new DB({ source: new InMemoryTupleStorage(), schema });
+    db = new DB({
+      source: new InMemoryTupleStorage(),
+      schema: { collections: schema },
+    });
     await db.insert(
       'companies',
       { id: 1, name: 'Planet Express', employees: new Set([1, 2, 3]) },
@@ -855,10 +858,12 @@ describe('ORDER & LIMIT & Pagination', () => {
   const db = new DB({
     source: storage,
     schema: {
-      TestScores: S.Schema({
-        score: S.number(),
-        date: S.string(),
-      }),
+      collections: {
+        TestScores: S.Schema({
+          score: S.number(),
+          date: S.string(),
+        }),
+      },
     },
   });
   beforeEach(async () => {
@@ -1094,10 +1099,12 @@ describe('database transactions', () => {
     const db = new DB({
       source: new InMemoryTupleStorage(),
       schema: {
-        TestScores: S.Schema({
-          score: S.number(),
-          date: S.string(),
-        }),
+        collections: {
+          TestScores: S.Schema({
+            score: S.number(),
+            date: S.string(),
+          }),
+        },
       },
     });
     await db.transact(async (tx) => {
@@ -1121,10 +1128,12 @@ describe('database transactions', () => {
     const db = new DB({
       source: new InMemoryTupleStorage(),
       schema: {
-        TestScores: S.Schema({
-          score: S.number(),
-          date: S.string(),
-        }),
+        collections: {
+          TestScores: S.Schema({
+            score: S.number(),
+            date: S.string(),
+          }),
+        },
       },
     });
     await db.transact(async (tx) => {
@@ -1149,10 +1158,12 @@ describe('database transactions', () => {
     const db = new DB({
       source: new InMemoryTupleStorage(),
       schema: {
-        TestScores: S.Schema({
-          score: S.number(),
-          date: S.string(),
-        }),
+        collections: {
+          TestScores: S.Schema({
+            score: S.number(),
+            date: S.string(),
+          }),
+        },
       },
     });
     const DOC_ID = 'my-score';
@@ -1201,10 +1212,12 @@ describe('database transactions', () => {
   it('can update an entity in a transaction', async () => {
     const db = new DB({
       schema: {
-        TestScores: S.Schema({
-          score: S.number(),
-          date: S.string(),
-        }),
+        collections: {
+          TestScores: S.Schema({
+            score: S.number(),
+            date: S.string(),
+          }),
+        },
       },
     });
     await db.insert(
@@ -1228,10 +1241,12 @@ describe('database transactions', () => {
     const db = new DB({
       source: new InMemoryTupleStorage(),
       schema: {
-        TestScores: S.Schema({
-          score: S.number(),
-          date: S.string(),
-        }),
+        collections: {
+          TestScores: S.Schema({
+            score: S.number(),
+            date: S.string(),
+          }),
+        },
       },
     });
     const insertSpy = vi.fn();
@@ -1270,10 +1285,12 @@ describe('schema changes', async () => {
 
   it('can drop a collection definition from the schema', async () => {
     const schema = {
-      students: S.Schema({
-        id: S.number(),
-        name: S.string(),
-      }),
+      collections: {
+        students: S.Schema({
+          id: S.number(),
+          name: S.string(),
+        }),
+      },
     };
     const db = new DB({ source: new InMemoryTupleStorage(), schema: schema });
     const dbSchemaBefore = await db.getSchema();
@@ -1287,10 +1304,12 @@ describe('schema changes', async () => {
 
   it('can rename an attribute', async () => {
     const schema = {
-      students: S.Schema({
-        id: S.number(),
-        name: S.string(),
-      }),
+      collections: {
+        students: S.Schema({
+          id: S.number(),
+          name: S.string(),
+        }),
+      },
     };
     const db = new DB({ source: new InMemoryTupleStorage(), schema: schema });
     await db.insert('students', { id: 1, name: 'Alice' }, 1);
@@ -1300,7 +1319,7 @@ describe('schema changes', async () => {
       newPath: 'studentId',
     });
     const dbSchema = await db.getSchema();
-    expect(dbSchema).toHaveProperty('students');
+    expect(dbSchema?.collections).toHaveProperty('students');
     expect(dbSchema?.collections.students.properties).toHaveProperty(
       'studentId'
     );
@@ -1316,10 +1335,12 @@ describe('schema changes', async () => {
 
   it('can add an attribute', async () => {
     const schema = {
-      students: S.Schema({
-        id: S.number(),
-        name: S.string(),
-      }),
+      collections: {
+        students: S.Schema({
+          id: S.number(),
+          name: S.string(),
+        }),
+      },
     };
     const db = new DB({ source: new InMemoryTupleStorage(), schema: schema });
     await db.insert('students', { id: 1, name: 'Alice' }, 1);
@@ -1329,23 +1350,25 @@ describe('schema changes', async () => {
       attribute: { type: 'number' },
     });
     const dbSchema = await db.getSchema();
-    expect(dbSchema).toHaveProperty('students');
+    expect(dbSchema?.collections).toHaveProperty('students');
     expect(dbSchema?.collections.students.properties).toHaveProperty('age');
     expect(dbSchema?.collections.students.properties).toHaveProperty('name');
   });
 
   it('can drop an attribute', async () => {
     const schema = {
-      students: S.Schema({
-        id: S.number(),
-        name: S.string(),
-      }),
+      collections: {
+        students: S.Schema({
+          id: S.number(),
+          name: S.string(),
+        }),
+      },
     };
     const db = new DB({ source: new InMemoryTupleStorage(), schema: schema });
     await db.insert('students', { id: 1, name: 'Alice' }, 1);
     await db.dropAttribute({ collection: 'students', path: 'id' });
     const dbSchema = await db.getSchema();
-    expect(dbSchema).toHaveProperty('students');
+    expect(dbSchema?.collections).toHaveProperty('students');
     expect(dbSchema?.collections.students.properties).not.toHaveProperty('id');
     expect(dbSchema?.collections.students.properties).toHaveProperty('name');
 
@@ -1482,10 +1505,12 @@ describe('migrations', () => {
     it('clear() removes all data from the database', async () => {
       // Schema provides us with metadata to delete
       const schema = {
-        students: S.Schema({
-          id: S.number(),
-          name: S.string(),
-        }),
+        collections: {
+          students: S.Schema({
+            id: S.number(),
+            name: S.string(),
+          }),
+        },
       };
       const storage = new InMemoryTupleStorage();
       const db = new DB({ source: storage, schema: schema });
@@ -1970,14 +1995,16 @@ describe('Nested Properties', () => {
     beforeAll(async () => {
       db = new DB({
         schema: {
-          Businesses: S.Schema({
-            name: S.string(),
-            address: S.Record({
-              street: S.string(),
-              city: S.string(),
-              state: S.string(),
+          collections: {
+            Businesses: S.Schema({
+              name: S.string(),
+              address: S.Record({
+                street: S.string(),
+                city: S.string(),
+                state: S.string(),
+              }),
             }),
-          }),
+          },
         },
       });
     });
