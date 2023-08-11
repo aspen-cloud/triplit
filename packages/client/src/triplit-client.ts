@@ -525,18 +525,13 @@ export class TriplitClient<M extends Models<any, any> | undefined = undefined> {
 
   subscribe<CQ extends ClientQuery<ModelFromModels<M>>>(
     query: CQ,
-    callback: (results: FetchResult<CQ>) => void
+    callback: (results: FetchResult<CQ>, error: any) => void
   ) {
     const scope = parseScope(query);
-    const unsubscribeLocal = this.db.subscribe(
-      query,
-      (localResults) => {
-        callback(localResults);
-      },
-      scope
-    );
-    const { select, where, collectionName, order, limit } = query;
-    // TODO: do we need to pass along params arg from local query subscription?
+    const unsubscribeLocal = this.db.subscribe(query, callback, scope);
+    const { select, where, collectionName, order, limit, after, vars } = query;
+
+    // TODO: refactor args to make sure we include everything
     let unsubscribeRemote = scope.includes('cache')
       ? this.syncEngine.subscribe({
           collection: collectionName,
@@ -544,6 +539,8 @@ export class TriplitClient<M extends Models<any, any> | undefined = undefined> {
           where,
           order,
           limit,
+          after,
+          vars,
         })
       : undefined;
     return () => {

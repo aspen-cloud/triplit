@@ -377,6 +377,144 @@ function subscribeResultsAndTriples<Q extends CollectionQuery<any>>(
         ],
         undefined
       );
+      const unsub = tripleStore.onWrite(async ({ inserts, deletes }) => {
+        try {
+          let nextResult = new Map(results);
+          const matchedTriples = [];
+          const updatedEntitiesForQuery = new Set<string>(
+            [...inserts, ...deletes]
+              .map(({ id }) => splitIdParts(id))
+              .filter(
+                ([collectionName, _id]) =>
+                  collectionName === query.collectionName
+              )
+              .map(([_collectionName, id]) => id)
+          );
+          // Early return prevents processing if no relevant entities were updated
+          // While a query is always scoped to a single collection this is safe
+          if (!updatedEntitiesForQuery.size) return;
+          for (const entity of updatedEntitiesForQuery) {
+            const entityTriples = filterToLatestEntityAttribute(
+              await tripleStore.findByEntity(
+                appendCollectionToId(query.collectionName, entity)
+              )
+            );
+            const entityObj = entityTriples.reduce(
+              entityToResultReducer,
+              query.schema ? initialize(query.schema) : {}
+            );
+            const isInCollection =
+              entityObj['_collection'] &&
+              entityObj['_collection'][0] === query.collectionName;
+            const isInResult =
+              isInCollection &&
+              doesEntityObjMatchWhere(entityObj, query.where ?? [], schema);
+
+            let satisfiesOrder = true;
+
+            if (order && nextResult.size > 0) {
+              const allValues = [...nextResult.values()];
+              const valueRange = [
+                allValues.at(0)[order[0]][0],
+                allValues.at(-1)[order[0]][0],
+              ];
+              const entityValue = entityObj[order[0]][0];
+              satisfiesOrder =
+                order[1] === 'ASC'
+                  ? entityValue <= valueRange[1]
+                  : entityValue >= valueRange[1];
+            }
+
+            if (isInResult && satisfiesOrder) {
+              nextResult.set(entity, entityObj);
+              matchedTriples.push(...entityTriples);
+            } else {
+              if (nextResult.has(entity)) {
+                nextResult.delete(entity);
+                matchedTriples.push(...entityTriples);
+              }
+            }
+          }
+
+          if (order || limit) {
+            const entries = [...nextResult];
+
+            // If we have removed data from the result set we need to backfill
+            if (limit && entries.length < limit) {
+              const lastResultEntry = entries.at(entries.length - 1);
+              const backFillQuery = {
+                ...query,
+                limit: limit - entries.length,
+                after: lastResultEntry
+                  ? [
+                      lastResultEntry[1][order![0]][0],
+                      appendCollectionToId(
+                        query.collectionName,
+                        lastResultEntry[0]
+                      ),
+                    ]
+                  : undefined,
+              };
+              const backFilledResults = await fetch(
+                tripleStore,
+                backFillQuery,
+                {
+                  schema,
+                  includeTriples: true,
+                }
+              );
+              entries.push(...backFilledResults.results);
+            }
+
+            if (order) {
+              const [prop, dir] = order;
+              entries.sort(([_aId, a], [_bId, b]) => {
+                // TODO support multi-level props probably using TypeBox json pointer
+                const direction =
+                  a[prop][0] < b[prop][0]
+                    ? -1
+                    : a[prop][0] == b[prop][0]
+                    ? 0
+                    : 1;
+
+                return dir === 'ASC' ? direction : direction * -1;
+              });
+            }
+
+            nextResult = new Map(entries.slice(0, limit));
+          }
+
+          results = nextResult as FetchResult<Q>;
+          triples = matchedTriples;
+          // console.timeEnd('query recalculation');
+          subscriptionCallback(
+            [
+              new Map(
+                [...results].map(([id, entity]) => [
+                  id,
+                  timestampedObjectToPlainObject(entity),
+                ])
+              ) as FetchResult<Q>,
+              triples,
+            ],
+            undefined
+          );
+        } catch (e) {
+          subscriptionCallback(
+            [
+              new Map(
+                [...results].map(([id, entity]) => [
+                  id,
+                  timestampedObjectToPlainObject(entity),
+                ])
+              ) as FetchResult<Q>,
+              triples,
+            ],
+            e
+          );
+        }
+      });
+      return unsub;
     } catch (e) {
       subscriptionCallback(
         [
@@ -391,120 +529,7 @@ function subscribeResultsAndTriples<Q extends CollectionQuery<any>>(
         e
       );
     }
-
-    const unsub = tripleStore.onWrite(async ({ inserts, deletes }) => {
-      let nextResult = new Map(results);
-      const matchedTriples = [];
-      const updatedEntitiesForQuery = new Set<string>(
-        [...inserts, ...deletes]
-          .map(({ id }) => splitIdParts(id))
-          .filter(
-            ([collectionName, _id]) => collectionName === query.collectionName
-          )
-          .map(([_collectionName, id]) => id)
-      );
-      // Early return prevents processing if no relevant entities were updated
-      // While a query is always scoped to a single collection this is safe
-      if (!updatedEntitiesForQuery.size) return;
-      for (const entity of updatedEntitiesForQuery) {
-        const entityTriples = filterToLatestEntityAttribute(
-          await tripleStore.findByEntity(
-            appendCollectionToId(query.collectionName, entity)
-          )
-        );
-        const entityObj = entityTriples.reduce(
-          entityToResultReducer,
-          query.schema ? initialize(query.schema) : {}
-        );
-        const isInCollection =
-          entityObj['_collection'] &&
-          entityObj['_collection'][0] === query.collectionName;
-        const isInResult =
-          isInCollection &&
-          doesEntityObjMatchWhere(entityObj, query.where ?? [], schema);
-
-        let satisfiesOrder = true;
-
-        if (order && nextResult.size > 0) {
-          const allValues = [...nextResult.values()];
-          const valueRange = [
-            allValues.at(0)[order[0]][0],
-            allValues.at(-1)[order[0]][0],
-          ];
-          const entityValue = entityObj[order[0]][0];
-          satisfiesOrder =
-            order[1] === 'ASC'
-              ? entityValue <= valueRange[1]
-              : entityValue >= valueRange[1];
-        }
-
-        if (isInResult && satisfiesOrder) {
-          nextResult.set(entity, entityObj);
-          matchedTriples.push(...entityTriples);
-        } else {
-          if (nextResult.has(entity)) {
-            nextResult.delete(entity);
-            matchedTriples.push(...entityTriples);
-          }
-        }
-      }
-
-      if (order || limit) {
-        const entries = [...nextResult];
-
-        // If we have removed data from the result set we need to backfill
-        if (limit && entries.length < limit) {
-          const lastResultEntry = entries.at(entries.length - 1);
-          const backFillQuery = {
-            ...query,
-            limit: limit - entries.length,
-            after: lastResultEntry
-              ? [
-                  lastResultEntry[1][order![0]][0],
-                  appendCollectionToId(
-                    query.collectionName,
-                    lastResultEntry[0]
-                  ),
-                ]
-              : undefined,
-          };
-          const backFilledResults = await fetch(tripleStore, backFillQuery, {
-            schema,
-            includeTriples: true,
-          });
-          entries.push(...backFilledResults.results);
-        }
-
-        if (order) {
-          const [prop, dir] = order;
-          entries.sort(([_aId, a], [_bId, b]) => {
-            // TODO support multi-level props probably using TypeBox json pointer
-            const direction =
-              a[prop][0] < b[prop][0] ? -1 : a[prop][0] == b[prop][0] ? 0 : 1;
-
-            return dir === 'ASC' ? direction : direction * -1;
-          });
-        }
-
-        nextResult = new Map(entries.slice(0, limit));
-      }
-
-      results = nextResult as FetchResult<Q>;
-      // console.timeEnd('query recalculation');
-      subscriptionCallback(
-        [
-          new Map(
-            [...results].map(([id, entity]) => [
-              id,
-              timestampedObjectToPlainObject(entity),
-            ])
-          ) as FetchResult<Q>,
-          matchedTriples,
-        ],
-        undefined
-      );
-    });
-    return unsub;
+    return () => {};
   };
 
   const unsubPromise = asyncUnSub();
@@ -518,14 +543,14 @@ function subscribeResultsAndTriples<Q extends CollectionQuery<any>>(
 export function subscribe<Q extends CollectionQuery<any>>(
   tripleStore: TripleStore,
   query: Q,
-  subscriptionCallback: (results: FetchResult<Q>) => void,
+  subscriptionCallback: (results: FetchResult<Q>, error: any) => void,
   schema?: Q['schema']
 ) {
   return subscribeResultsAndTriples(
     tripleStore,
     query,
-    ([results]) => {
-      subscriptionCallback(results);
+    ([results], error) => {
+      subscriptionCallback(results, error);
     },
     schema
   );

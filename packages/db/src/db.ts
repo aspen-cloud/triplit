@@ -725,7 +725,7 @@ export default class DB<M extends Models<any, any> | undefined> {
 
   subscribe<Q extends CollectionQuery<ModelFromModels<M>>>(
     query: Q,
-    callback: (results: FetchResult<Q>) => void,
+    callback: (results: FetchResult<Q>, error: any) => void,
     scope?: string[]
   ) {
     const startSubscription = async () => {

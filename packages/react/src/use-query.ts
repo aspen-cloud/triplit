@@ -14,6 +14,7 @@ export function useQuery<CQ extends ClientQuery<any>>(
     undefined
   );
   const [fetchingLocal, setFetchingLocal] = useState(false);
+  const [error, setError] = useState<any>(undefined);
   // const [fetchingRemote, setFetchingRemote] = useState(false);
 
   const builtQuery = query.build();
@@ -22,9 +23,10 @@ export function useQuery<CQ extends ClientQuery<any>>(
   useEffect(() => {
     setResults(undefined);
     setFetchingLocal(true);
-    const unsubscribe = client.subscribe(builtQuery, (localResults) => {
+    const unsubscribe = client.subscribe(builtQuery, (localResults, error) => {
       setFetchingLocal(false);
       setResults(localResults);
+      setError(error);
     });
 
     return () => {
@@ -36,6 +38,6 @@ export function useQuery<CQ extends ClientQuery<any>>(
     fetchingLocal,
     // fetchingRemote,
     results,
-    error: null,
+    error,
   };
 }
