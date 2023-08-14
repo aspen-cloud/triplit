@@ -1,4 +1,4 @@
-import { Model, Models, TypeFromModel, updateEntityAtPath } from './schema';
+import { Model, TypeFromModel, updateEntityAtPath } from './schema';
 import { EntityId, TripleRow } from './triple-store';
 
 type Path = string;
@@ -36,7 +36,7 @@ export interface Query<M extends Model<any> | undefined> {
   vars?: Record<string, any>;
 }
 
-export function entityToResultReducer<M extends Models<any, any>[string]>(
+export function entityToResultReducer<M extends Model<any>>(
   entity: TypeFromModel<M>,
   triple: TripleRow
 ) {

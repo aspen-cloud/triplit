@@ -168,16 +168,20 @@ describe('triple inserts', () => {
 });
 
 describe('schema triple-store', () => {
-  const TaskSchema = S.Schema({
-    description: S.string(),
-    status: S.string(), //S.Enum(['todo', 'in_progress', 'complete']),
-    assignees: S.Set(S.string()),
-  });
-  const StudentSchema = S.Schema({
-    name: S.string(),
-    age: S.number(),
-    classes: S.Set(S.string()),
-  });
+  const TaskSchema = {
+    attributes: S.Schema({
+      description: S.string(),
+      status: S.string(), //S.Enum(['todo', 'in_progress', 'complete']),
+      assignees: S.Set(S.string()),
+    }),
+  };
+  const StudentSchema = {
+    attributes: S.Schema({
+      name: S.string(),
+      age: S.number(),
+      classes: S.Set(S.string()),
+    }),
+  };
 
   beforeEach(() => {
     // storage.data = [];

@@ -32,7 +32,6 @@ import {
   ValueSchemaMismatchError,
   WriteRuleError,
 } from './errors';
-import { TuplePrefix } from './utility-types';
 
 export type StoreSchema<M extends Models<any, any> | undefined> =
   M extends Models<any, any>
@@ -913,7 +912,7 @@ function validateTriple(
   }
 
   // Leaf values are an array [value, timestamp], so check value
-  const clockedSchema = getSchemaFromPath(model, path);
+  const clockedSchema = getSchemaFromPath(model.attributes, path);
   const valueSchema = clockedSchema.items[0];
   if (!SchemaValue.Check(valueSchema, value))
     throw new ValueSchemaMismatchError(

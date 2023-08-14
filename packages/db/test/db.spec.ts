@@ -409,11 +409,13 @@ describe('Register operations', () => {
 
 describe('Set operations', () => {
   const schema = {
-    companies: S.Schema({
-      id: S.number(),
-      name: S.string(),
-      employees: S.Set(S.number()),
-    }),
+    companies: {
+      attributes: S.Schema({
+        id: S.number(),
+        name: S.string(),
+        employees: S.Set(S.number()),
+      }),
+    },
   };
   let db: DB<typeof schema>;
   beforeEach(async () => {
@@ -435,7 +437,10 @@ describe('Set operations', () => {
   });
 
   it('can add to set', async () => {
-    const setQuery = CollectionQueryBuilder('companies', schema.companies)
+    const setQuery = CollectionQueryBuilder(
+      'companies',
+      schema.companies.attributes
+    )
       .select(['id'])
       .where([['employees', '=', 7]])
       .build();
@@ -453,7 +458,10 @@ describe('Set operations', () => {
   });
 
   it('can remove from set', async () => {
-    const setQuery = CollectionQueryBuilder('companies', schema.companies)
+    const setQuery = CollectionQueryBuilder(
+      'companies',
+      schema.companies.attributes
+    )
       .select(['id'])
       .where([['employees', '=', 2]])
       .build();
@@ -1001,10 +1009,12 @@ describe('ORDER & LIMIT & Pagination', () => {
     source: storage,
     schema: {
       collections: {
-        TestScores: S.Schema({
-          score: S.number(),
-          date: S.string(),
-        }),
+        TestScores: {
+          attributes: S.Schema({
+            score: S.number(),
+            date: S.string(),
+          }),
+        },
       },
     },
   });
@@ -1242,10 +1252,12 @@ describe('database transactions', () => {
       source: new InMemoryTupleStorage(),
       schema: {
         collections: {
-          TestScores: S.Schema({
-            score: S.number(),
-            date: S.string(),
-          }),
+          TestScores: {
+            attributes: S.Schema({
+              score: S.number(),
+              date: S.string(),
+            }),
+          },
         },
       },
     });
@@ -1271,10 +1283,12 @@ describe('database transactions', () => {
       source: new InMemoryTupleStorage(),
       schema: {
         collections: {
-          TestScores: S.Schema({
-            score: S.number(),
-            date: S.string(),
-          }),
+          TestScores: {
+            attributes: S.Schema({
+              score: S.number(),
+              date: S.string(),
+            }),
+          },
         },
       },
     });
@@ -1301,10 +1315,12 @@ describe('database transactions', () => {
       source: new InMemoryTupleStorage(),
       schema: {
         collections: {
-          TestScores: S.Schema({
-            score: S.number(),
-            date: S.string(),
-          }),
+          TestScores: {
+            attributes: S.Schema({
+              score: S.number(),
+              date: S.string(),
+            }),
+          },
         },
       },
     });
@@ -1355,10 +1371,12 @@ describe('database transactions', () => {
     const db = new DB({
       schema: {
         collections: {
-          TestScores: S.Schema({
-            score: S.number(),
-            date: S.string(),
-          }),
+          TestScores: {
+            attributes: S.Schema({
+              score: S.number(),
+              date: S.string(),
+            }),
+          },
         },
       },
     });
@@ -1384,10 +1402,12 @@ describe('database transactions', () => {
       source: new InMemoryTupleStorage(),
       schema: {
         collections: {
-          TestScores: S.Schema({
-            score: S.number(),
-            date: S.string(),
-          }),
+          TestScores: {
+            attributes: S.Schema({
+              score: S.number(),
+              date: S.string(),
+            }),
+          },
         },
       },
     });
@@ -1421,17 +1441,23 @@ describe('schema changes', async () => {
     });
     const schema = await db.getSchema();
     expect(schema?.collections).toHaveProperty('students');
-    expect(schema?.collections.students.properties).toHaveProperty('id');
-    expect(schema?.collections.students.properties).toHaveProperty('name');
+    expect(schema?.collections.students.attributes.properties).toHaveProperty(
+      'id'
+    );
+    expect(schema?.collections.students.attributes.properties).toHaveProperty(
+      'name'
+    );
   });
 
   it('can drop a collection definition from the schema', async () => {
     const schema = {
       collections: {
-        students: S.Schema({
-          id: S.number(),
-          name: S.string(),
-        }),
+        students: {
+          attributes: S.Schema({
+            id: S.number(),
+            name: S.string(),
+          }),
+        },
       },
     };
     const db = new DB({ source: new InMemoryTupleStorage(), schema: schema });
@@ -1447,10 +1473,12 @@ describe('schema changes', async () => {
   it('can rename an attribute', async () => {
     const schema = {
       collections: {
-        students: S.Schema({
-          id: S.number(),
-          name: S.string(),
-        }),
+        students: {
+          attributes: S.Schema({
+            id: S.number(),
+            name: S.string(),
+          }),
+        },
       },
     };
     const db = new DB({ source: new InMemoryTupleStorage(), schema: schema });
@@ -1462,10 +1490,12 @@ describe('schema changes', async () => {
     });
     const dbSchema = await db.getSchema();
     expect(dbSchema?.collections).toHaveProperty('students');
-    expect(dbSchema?.collections.students.properties).toHaveProperty(
+    expect(dbSchema?.collections.students.attributes.properties).toHaveProperty(
       'studentId'
     );
-    expect(dbSchema?.collections.students.properties).toHaveProperty('name');
+    expect(dbSchema?.collections.students.attributes.properties).toHaveProperty(
+      'name'
+    );
     const query = db
       .query('students')
       .where([['studentId', '=', 1]])
@@ -1478,10 +1508,12 @@ describe('schema changes', async () => {
   it('can add an attribute', async () => {
     const schema = {
       collections: {
-        students: S.Schema({
-          id: S.number(),
-          name: S.string(),
-        }),
+        students: {
+          attributes: S.Schema({
+            id: S.number(),
+            name: S.string(),
+          }),
+        },
       },
     };
     const db = new DB({ source: new InMemoryTupleStorage(), schema: schema });
@@ -1493,17 +1525,23 @@ describe('schema changes', async () => {
     });
     const dbSchema = await db.getSchema();
     expect(dbSchema?.collections).toHaveProperty('students');
-    expect(dbSchema?.collections.students.properties).toHaveProperty('age');
-    expect(dbSchema?.collections.students.properties).toHaveProperty('name');
+    expect(dbSchema?.collections.students.attributes.properties).toHaveProperty(
+      'age'
+    );
+    expect(dbSchema?.collections.students.attributes.properties).toHaveProperty(
+      'name'
+    );
   });
 
   it('can drop an attribute', async () => {
     const schema = {
       collections: {
-        students: S.Schema({
-          id: S.number(),
-          name: S.string(),
-        }),
+        students: {
+          attributes: S.Schema({
+            id: S.number(),
+            name: S.string(),
+          }),
+        },
       },
     };
     const db = new DB({ source: new InMemoryTupleStorage(), schema: schema });
@@ -1511,8 +1549,12 @@ describe('schema changes', async () => {
     await db.dropAttribute({ collection: 'students', path: 'id' });
     const dbSchema = await db.getSchema();
     expect(dbSchema?.collections).toHaveProperty('students');
-    expect(dbSchema?.collections.students.properties).not.toHaveProperty('id');
-    expect(dbSchema?.collections.students.properties).toHaveProperty('name');
+    expect(
+      dbSchema?.collections.students.attributes.properties
+    ).not.toHaveProperty('id');
+    expect(dbSchema?.collections.students.attributes.properties).toHaveProperty(
+      'name'
+    );
 
     // TODO: test data is actually dropped if we decide it should be
   });
@@ -1648,10 +1690,12 @@ describe('migrations', () => {
       // Schema provides us with metadata to delete
       const schema = {
         collections: {
-          students: S.Schema({
-            id: S.number(),
-            name: S.string(),
-          }),
+          students: {
+            attributes: S.Schema({
+              id: S.number(),
+              name: S.string(),
+            }),
+          },
         },
       };
       const storage = new InMemoryTupleStorage();
@@ -1925,7 +1969,7 @@ describe('Rules', () => {
     });
   });
   describe('Insert', () => {
-    let db;
+    let db: DB<undefined>;
     const USER_ID = 'the-user-id';
     beforeAll(async () => {
       db = new DB({
@@ -1954,6 +1998,7 @@ describe('Rules', () => {
 
     describe('insert single', () => {
       it('can insert an entity that matches the filter', async () => {
+        console.log(await db.getSchema());
         expect(
           db.insert('posts', { id: 'post-1', author_id: USER_ID }, 'post-1')
         ).resolves.not.toThrowError();
@@ -2138,14 +2183,16 @@ describe('Nested Properties', () => {
       db = new DB({
         schema: {
           collections: {
-            Businesses: S.Schema({
-              name: S.string(),
-              address: S.Record({
-                street: S.string(),
-                city: S.string(),
-                state: S.string(),
+            Businesses: {
+              attributes: S.Schema({
+                name: S.string(),
+                address: S.Record({
+                  street: S.string(),
+                  city: S.string(),
+                  state: S.string(),
+                }),
               }),
-            }),
+            },
           },
         },
       });
@@ -2199,10 +2246,12 @@ it('throws an error if a register filter is malformed', async () => {
   const db = new DB({
     schema: {
       collections: {
-        Classes: S.Schema({
-          name: S.string(),
-          students: S.Set(S.string()),
-        }),
+        Classes: {
+          attributes: S.Schema({
+            name: S.string(),
+            students: S.Set(S.string()),
+          }),
+        },
       },
     },
   });
@@ -2226,10 +2275,12 @@ describe('subscription errors', () => {
     const db = new DB({
       schema: {
         collections: {
-          Classes: S.Schema({
-            name: S.string(),
-            students: S.Set(S.string()),
-          }),
+          Classes: {
+            attributes: S.Schema({
+              name: S.string(),
+              students: S.Set(S.string()),
+            }),
+          },
         },
       },
     });

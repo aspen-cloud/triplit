@@ -405,7 +405,8 @@ class SyncEngine {
 }
 
 interface DBOptions<M extends Models<any, any> | undefined> {
-  schema?: { collections: M; version?: number };
+  // TODO: can probably pull in a type from @triplit/db
+  schema?: { collections: NonNullable<M>; version?: number };
   migrations?: Migration[];
   variables?: Record<string, any>;
   storage?: {
@@ -518,12 +519,10 @@ export class TriplitClient<M extends Models<any, any> | undefined = undefined> {
     });
   }
 
-  update<CN extends CollectionNameFromModels<M>>(
-    collectionName: CN,
+  update(
+    collectionName: CollectionNameFromModels<M>,
     entityId: string,
-    updater: (
-      entity: JSONTypeFromModel<ModelFromModels<M, CN>>
-    ) => Promise<void>
+    updater: (entity: JSONTypeFromModel<ModelFromModels<M>>) => Promise<void>
   ) {
     return this.db.update(collectionName, entityId, updater, {
       read: ['outbox', 'cache'],

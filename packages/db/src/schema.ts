@@ -56,14 +56,13 @@ export function Register<
   });
 }
 
-export function Record(schema: SchemaConfig) {
-  // @ts-ignore
+// Cant use ReturnType because of issues with cyclic reference
+export type RecordType = TObject<SchemaConfig>;
+export function Record(schema: SchemaConfig): RecordType {
   return Type.Object(schema, {
     'x-serialized-type': 'record',
   });
 }
-
-export type RecordType = ReturnType<typeof Record>;
 
 export type ValidSetDataTypes = TNumber | TString;
 export function Set<T extends ValidSetDataTypes>(
@@ -100,28 +99,23 @@ export type SetType = ReturnType<typeof Set>;
 type DataType = RegisterType | SetType | RecordType;
 
 // type SchemaConfig = Record<string, SchemaConfig | RegisterType<any>>;
-export interface SchemaConfig {
-  [x: string]: DataType;
-  [x: symbol]: DataType;
-  // [key: keyof any]: DataType; // TODO add tighter type here instead of TSchema
-}
+export type SchemaConfig = Record<keyof any, DataType>;
 
-export function Schema<
-  Config extends SchemaConfig & { rules?: CollectionRules }
->(
-  config: Config
-): TObject<Omit<Config, 'rules'>> & { rules?: CollectionRules } {
-  const { rules, ...schema } = config;
-  const typeObj = Type.Object(schema);
-  return Object.assign(typeObj, { rules });
+export function Schema<Config extends SchemaConfig>(config: Config) {
+  return Type.Object(config);
 }
 
 export type Model<T extends SchemaConfig> = ReturnType<typeof Schema<T>>;
 
+export type Collection<T extends SchemaConfig> = {
+  attributes: Model<T>;
+  rules?: CollectionRules<Model<T>>;
+};
+
 export type Models<
   CollectionName extends string,
   T extends SchemaConfig
-> = Record<CollectionName, Model<T>>;
+> = Record<CollectionName, Collection<T>>;
 
 export function getSchemaFromPath<M extends TSchema>(
   model: M,
@@ -225,7 +219,7 @@ export interface CollectionDefinition {
   attributes: {
     [path: string]: AttributeDefinition;
   };
-  rules: CollectionRules;
+  rules?: CollectionRules<any>;
 }
 
 export interface CollectionsDefinition {
@@ -247,8 +241,10 @@ function collectionsDefinitionToSchema(
     for (const [path, attrDef] of attrs) {
       config[path] = attributeDefinitionToSchema(attrDef);
     }
-    result[collectionName] = Schema(config);
-    result[collectionName].rules = definition.rules;
+    result[collectionName] = {
+      attributes: Schema(config),
+      rules: definition.rules,
+    };
   }
 
   return result;
@@ -274,12 +270,13 @@ export function tuplesToSchema(triples: TuplePrefix<EAV>[]) {
   return { version, collections: collectionsDefinitionToSchema(collections) };
 }
 
+// TODO: probably want to handle rules
 export function schemaToTriples(schema: StoreSchema<Models<any, any>>): EAV[] {
   const collections: CollectionsDefinition = {};
   for (const [collectionName, model] of Object.entries(schema.collections)) {
     const collection: CollectionDefinition = { attributes: {}, rules: {} };
-    for (const path of Object.keys(model.properties)) {
-      const pathSchema = getSchemaFromPath(model, [path]);
+    for (const path of Object.keys(model.attributes.properties)) {
+      const pathSchema = getSchemaFromPath(model.attributes, [path]);
       collection.attributes[path] = {
         type: pathSchema['x-serialized-type'],
       };

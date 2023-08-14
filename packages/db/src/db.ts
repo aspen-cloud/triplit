@@ -1,7 +1,6 @@
 import {
   AttributeItem,
   EAV,
-  StoreSchema,
   TripleRow,
   TripleStore,
   TripleStoreTransaction,
@@ -59,11 +58,11 @@ export interface Rule<M extends Model<any>> {
   description?: string;
 }
 
-export interface CollectionRules {
-  read?: Rule<any>[];
-  write?: Rule<any>[];
-  // insert?: Rule<any>[];
-  // update?: Rule<any>[];
+export interface CollectionRules<M extends Model<any>> {
+  read?: Rule<M>[];
+  write?: Rule<M>[];
+  // insert?: Rule<M>[];
+  // update?: Rule<M>[];
 }
 
 type CreateCollectionOperation = [
@@ -71,7 +70,7 @@ type CreateCollectionOperation = [
   {
     name: string;
     attributes: { [path: string]: CollectionAttribute };
-    rules: CollectionRules;
+    rules?: CollectionRules<any>;
   }
 ];
 type DropCollectionOperation = ['drop_collection', { name: string }];
@@ -105,7 +104,7 @@ export type Migration = {
 type StorageSource = AsyncTupleStorageApi;
 
 interface DBConfig<M extends Models<any, any> | undefined> {
-  schema?: { collections: M; version?: number };
+  schema?: { collections: NonNullable<M>; version?: number };
   migrations?: Migration[];
   source?: StorageSource;
   sources?: Record<string, StorageSource>;
@@ -116,11 +115,20 @@ interface DBConfig<M extends Models<any, any> | undefined> {
 
 const DEFAULT_STORE_KEY = 'default';
 
-export type ModelFromModels<
+type CollectionFromModels<
   M extends Models<any, any> | undefined,
-  CN extends CollectionNameFromModels<M> = any
+  CN extends CollectionNameFromModels<M> = CollectionNameFromModels<M>
 > = M extends Models<any, any>
   ? M[CN]
+  : M extends undefined
+  ? undefined
+  : never;
+
+export type ModelFromModels<
+  M extends Models<any, any> | undefined,
+  CN extends CollectionNameFromModels<M> = CollectionNameFromModels<M>
+> = M extends Models<any, any>
+  ? M[CN]['attributes']
   : M extends undefined
   ? undefined
   : never;
@@ -130,7 +138,7 @@ export type CollectionNameFromModels<M extends Models<any, any> | undefined> =
 
 function ruleToTuple(
   collectionName: string,
-  ruleType: keyof CollectionRules,
+  ruleType: keyof CollectionRules<any>,
   index: number,
   rule: Rule<any>
 ) {
@@ -157,10 +165,9 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
     const { collections } = (await this.getSchema()) ?? {};
     if (!collections) return undefined;
     // TODO: i think we need some stuff in the triple store...
-    const collectionSchema = collections[collectionName] as ModelFromModels<
-      M,
-      CN
-    >;
+    const collectionSchema = collections[
+      collectionName
+    ] as CollectionFromModels<M, CN>;
     return {
       ...collectionSchema,
     };
@@ -168,13 +175,14 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
 
   private addReadRulesToQuery(
     query: CollectionQuery<ModelFromModels<M>>,
-    schema: M
+    collection: CollectionFromModels<M>
   ): CollectionQuery<ModelFromModels<M>> {
-    if (schema?.rules?.read) {
+    if (collection?.rules?.read) {
       const updatedWhere = [
         ...query.where,
-        ...schema.rules.read.flatMap((rule) => rule.filter),
+        ...collection.rules.read.flatMap((rule) => rule.filter),
       ];
+      // @ts-ignore I think we need to pass the schema type to where we read from storage
       return { ...query, where: updatedWhere };
     }
     return query;
@@ -201,10 +209,10 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
       const validationError = validateExternalId(id);
       if (validationError) throw validationError;
     }
-    const schema = await this.getCollectionSchema(collectionName);
+    const collection = await this.getCollectionSchema(collectionName);
 
-    if (schema?.rules?.write?.length) {
-      const filters = schema.rules.write.flatMap((r) => r.filter);
+    if (collection?.rules?.write?.length) {
+      const filters = collection.rules.write.flatMap((r) => r.filter);
       let query = { where: filters } as CollectionQuery<ModelFromModels<M>>;
       query = this.replaceVariablesInQuery(query);
       // TODO there is probably a better way to to this
@@ -214,7 +222,7 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
       const satisfiedRule = doesEntityObjMatchWhere(
         timestampDoc,
         query.where,
-        schema
+        collection.attributes
       );
       if (!satisfiedRule) {
         // TODO add better error that uses rule description
@@ -236,9 +244,9 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
       entity: JSONTypeFromModel<ModelFromModels<M, CN>>
     ) => Promise<void>
   ) {
-    const schema = (await this.getSchema())?.collections[collectionName] as
-      | ModelFromModels<M, CN>
-      | undefined;
+    const collection = (await this.getSchema())?.collections[
+      collectionName
+    ] as CollectionFromModels<M, CN>;
 
     const entity = await this.fetchById(collectionName, entityId);
 
@@ -250,10 +258,11 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
       );
     }
     const changes = new Map<string, any>();
-    const updateProxy = this.createUpdateProxy<typeof schema>(
+    const collectionSchema = collection?.attributes;
+    const updateProxy = this.createUpdateProxy<typeof collectionSchema>(
       changes,
       entity,
-      schema
+      collectionSchema
     );
     await updater(updateProxy);
     const fullEntityId = appendCollectionToId(collectionName, entityId);
@@ -264,15 +273,15 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
         value
       );
     }
-    if (schema?.rules?.write?.length) {
+    if (collection?.rules?.write?.length) {
       const updatedEntity = await this.fetchById(collectionName, entityId);
-      const filters = schema.rules.write.flatMap((r) => r.filter);
+      const filters = collection.rules.write.flatMap((r) => r.filter);
       let query = { where: filters } as CollectionQuery<ModelFromModels<M>>;
       query = this.replaceVariablesInQuery(query);
       const satisfiedRule = doesEntityObjMatchWhere(
         objectToTimestampedObject(updatedEntity),
         query.where,
-        schema
+        collectionSchema
       );
       if (!satisfiedRule) {
         // TODO add better error that uses rule description
@@ -360,19 +369,22 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
 
   async fetch(query: CollectionQuery<ModelFromModels<M>>) {
     let fetchQuery = query;
-    const schema = await this.getCollectionSchema(
+    const collection = await this.getCollectionSchema(
       fetchQuery.collectionName as CollectionNameFromModels<M>
     );
-    if (schema) {
-      fetchQuery = this.addReadRulesToQuery(fetchQuery, schema);
+    if (collection) {
+      fetchQuery = this.addReadRulesToQuery(fetchQuery, collection);
     }
     fetchQuery = this.replaceVariablesInQuery(fetchQuery);
-    return fetch(this.storeTx, fetchQuery, { schema, includeTriples: false });
+    return fetch(this.storeTx, fetchQuery, {
+      schema: collection?.attributes,
+      includeTriples: false,
+    });
   }
 
   async fetchById(collectionName: CollectionNameFromModels<M>, id: string) {
-    const schema = await this.getCollectionSchema(collectionName);
-    const readRules = schema?.rules?.read;
+    const collection = await this.getCollectionSchema(collectionName);
+    const readRules = collection?.rules?.read;
     const entity = await this.storeTx.getEntity(
       appendCollectionToId(collectionName, id)
     );
@@ -387,7 +399,8 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
        */
       // @ts-ignore
       query = this.replaceVariablesInQuery(query);
-      if (doesEntityObjMatchWhere(entity, query.where, schema)) {
+      const collectionSchema = collection.attributes;
+      if (doesEntityObjMatchWhere(entity, query.where, collectionSchema)) {
         return entity;
       }
       return null;
@@ -408,7 +421,7 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
     );
     const ruleTuples = !rules
       ? []
-      : (['read', 'write', 'update'] as (keyof CollectionRules)[]).flatMap(
+      : (['read', 'write', 'update'] as (keyof CollectionRules<any>)[]).flatMap(
           (ruleType) =>
             rules[ruleType] != undefined
               ? rules[ruleType]!.flatMap((rule, i) =>
@@ -581,10 +594,9 @@ export default class DB<M extends Models<any, any> | undefined> {
     const collections = (await this.getSchema())?.collections;
     if (!collections) return undefined;
     // TODO: i think we need some stuff in the triple store...
-    const collectionSchema = collections[collectionName] as ModelFromModels<
-      M,
-      CN
-    >;
+    const collectionSchema = collections[
+      collectionName
+    ] as CollectionFromModels<M, CN>;
     return {
       ...collectionSchema,
     };
@@ -594,13 +606,14 @@ export default class DB<M extends Models<any, any> | undefined> {
 
   private addReadRulesToQuery(
     query: CollectionQuery<ModelFromModels<M>>,
-    schema: M
+    collection: CollectionFromModels<M>
   ): CollectionQuery<ModelFromModels<M>> {
-    if (schema?.rules?.read) {
+    if (collection?.rules?.read) {
       const updatedWhere = [
         ...query.where,
-        ...schema.rules.read.flatMap((rule) => rule.filter),
+        ...collection.rules.read.flatMap((rule) => rule.filter),
       ];
+      // @ts-ignore I think we need to pass the schema type to where we read from storage
       return { ...query, where: updatedWhere };
     }
     return query;
@@ -639,17 +652,17 @@ export default class DB<M extends Models<any, any> | undefined> {
     await this.ensureMigrated;
     // TODO: need to fix collectionquery typing
     let fetchQuery = query;
-    const schema = await this.getCollectionSchema(
+    const collection = await this.getCollectionSchema(
       fetchQuery.collectionName as CollectionNameFromModels<M>
     );
-    if (schema) {
-      fetchQuery = this.addReadRulesToQuery(fetchQuery, schema);
+    if (collection) {
+      fetchQuery = this.addReadRulesToQuery(fetchQuery, collection);
     }
     fetchQuery = this.replaceVariablesInQuery(fetchQuery);
     return await fetch(
       scope ? this.tripleStore.setStorageScope(scope) : this.tripleStore,
       fetchQuery,
-      { schema, includeTriples: false }
+      { schema: collection?.attributes, includeTriples: false }
     );
   }
 
@@ -658,8 +671,8 @@ export default class DB<M extends Models<any, any> | undefined> {
     collectionName: CollectionNameFromModels<M>,
     id: string
   ) {
-    const schema = await this.getCollectionSchema(collectionName);
-    const readRules = schema?.rules?.read;
+    const collection = await this.getCollectionSchema(collectionName);
+    const readRules = collection?.rules?.read;
     const entity = await this.tripleStore.getEntity(
       appendCollectionToId(collectionName, id)
     );
@@ -670,7 +683,8 @@ export default class DB<M extends Models<any, any> | undefined> {
       // TODO see other comment about replaceVariablesInQuery on how to improve
       // @ts-ignore
       query = this.replaceVariablesInQuery(query);
-      if (doesEntityObjMatchWhere(entity, query.where, schema)) {
+      const collectionSchema = collection.attributes;
+      if (doesEntityObjMatchWhere(entity, query.where, collectionSchema)) {
         return entity;
       }
       return null;
@@ -691,10 +705,10 @@ export default class DB<M extends Models<any, any> | undefined> {
       if (validationError) throw validationError;
     }
     await this.ensureMigrated;
-    const schema = await this.getCollectionSchema(collectionName);
+    const collection = await this.getCollectionSchema(collectionName);
 
-    if (schema?.rules?.write?.length) {
-      const filters = schema.rules.write.flatMap((r) => r.filter);
+    if (collection?.rules?.write?.length) {
+      const filters = collection.rules.write.flatMap((r) => r.filter);
       let query = { where: filters } as CollectionQuery<ModelFromModels<M>>;
       query = this.replaceVariablesInQuery(query);
       // TODO there is probably a better way to to this
@@ -704,7 +718,7 @@ export default class DB<M extends Models<any, any> | undefined> {
       const satisfiedRule = doesEntityObjMatchWhere(
         timestampDoc,
         query.where,
-        schema
+        collection.attributes
       );
       if (!satisfiedRule) {
         // TODO add better error that uses rule description
@@ -732,14 +746,18 @@ export default class DB<M extends Models<any, any> | undefined> {
     const startSubscription = async () => {
       let subscriptionQuery = query;
       // TODO: get rid of this "as" here
-      const schema = await this.getCollectionSchema(
+      const collection = await this.getCollectionSchema(
         subscriptionQuery.collectionName as CollectionNameFromModels<M>
       );
-      if (schema) {
+      if (collection) {
         // TODO see other comment about replaceVariablesInQuery on how to improve
         // @ts-ignore
-        subscriptionQuery = this.addReadRulesToQuery(subscriptionQuery, schema);
+        subscriptionQuery = this.addReadRulesToQuery(
+          subscriptionQuery,
+          collection
+        );
       }
+      // @ts-ignore
       subscriptionQuery = this.replaceVariablesInQuery(subscriptionQuery);
 
       const unsub = subscribe(
@@ -747,7 +765,8 @@ export default class DB<M extends Models<any, any> | undefined> {
         subscriptionQuery,
         onResults,
         onError,
-        schema
+        // @ts-ignore
+        collection?.attributes
       );
       return unsub;
     };
@@ -768,12 +787,17 @@ export default class DB<M extends Models<any, any> | undefined> {
   ) {
     const startSubscription = async () => {
       let subscriptionQuery = query;
-      const schema = await this.getCollectionSchema(
+      const collection = await this.getCollectionSchema(
         subscriptionQuery.collectionName as CollectionNameFromModels<M>
       );
-      if (schema) {
-        subscriptionQuery = this.addReadRulesToQuery(subscriptionQuery, schema);
+      if (collection) {
+        // @ts-ignore
+        subscriptionQuery = this.addReadRulesToQuery(
+          subscriptionQuery,
+          collection
+        );
       }
+      // @ts-ignore
       subscriptionQuery = this.replaceVariablesInQuery(subscriptionQuery);
 
       const unsub = subscribeTriples(
@@ -781,7 +805,8 @@ export default class DB<M extends Models<any, any> | undefined> {
         subscriptionQuery,
         onResults,
         onError,
-        schema
+        //@ts-ignore
+        collection?.attributes
       );
       return unsub;
     };

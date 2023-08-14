@@ -21,6 +21,7 @@ export type {
   CollectionNameFromModels,
   DBTransaction,
   ModelFromModels,
+  CollectionRules,
 } from './db';
 export { queryResultToJson, or, and } from './query';
 export type { Query } from './query';

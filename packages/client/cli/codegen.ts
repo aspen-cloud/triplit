@@ -1,11 +1,13 @@
 import process from 'process';
 import path from 'path';
 import fs from 'fs';
+import { format } from 'prettier';
 import {
   DB,
   Migration,
   AttributeDefinition,
   CollectionsDefinition,
+  CollectionDefinition,
 } from '@triplit/db';
 import { triplesToObject } from '@triplit/db/src/utils';
 
@@ -51,7 +53,7 @@ export async function codegen(version?: number) {
  * You should not edit this file directly instead run migrations to update.
  */ 
 
-import { Migration } from '@triplit/db';
+import { Migration, CollectionRules } from '@triplit/db';
 ${migrationImports
   .map((m) => `import ${m.name} from './migrations/${m.file}';`)
   .join('\n')}
@@ -64,7 +66,10 @@ export type Schema = typeof schema;
       `.trim() + '\n';
 
   fs.mkdirSync(path.dirname(fileName), { recursive: true });
-  fs.writeFile(fileName, fileContent, 'utf8', (err) => {
+
+  //use prettier as a fallback for formatting
+  const formatted = format(fileContent, { parser: 'typescript' });
+  fs.writeFile(fileName, formatted, 'utf8', (err) => {
     if (err) throw err;
     console.log(`New schema has been saved at ${fileName}`);
   });
@@ -79,15 +84,44 @@ export function collectionsDefinitionToFileContent(
   let result = '{\n';
   for (let collectionKey in collectionsDefinition) {
     result += indent;
-    result += `${collectionKey}: S.Schema({\n`;
-    const { attributes } = collectionsDefinition[collectionKey];
-    for (const path in attributes) {
-      const itemInfo = attributes[path];
-      result += generateAttributeSchema([path], itemInfo, indent + indentation);
-    }
-    result += indent + '}),\n';
+    result += `${collectionKey}: {\n`;
+    const { attributes, rules } = collectionsDefinition[collectionKey];
+    result += generateAttributesSection(attributes, indent + indentation);
+    result += generateRulesSection(rules, indent + indentation);
+    result += indent + '},\n';
   }
   return result + indent.slice(0, -2) + '}';
+}
+
+function generateAttributesSection(
+  attributes: CollectionDefinition['attributes'],
+  indent: string
+) {
+  let result = '';
+  result += indent + 'attributes: S.Schema({\n';
+  for (const path in attributes) {
+    const itemInfo = attributes[path];
+    result += generateAttributeSchema([path], itemInfo, indent + indentation);
+  }
+  result += indent + '}),\n';
+  return result;
+}
+
+function generateRulesSection(
+  rules: CollectionDefinition['rules'],
+  indent: string
+) {
+  let result = '';
+  if (rules) {
+    result +=
+      indent +
+      `rules: ${JSON.stringify(rules, null, 2)
+        .split('\n')
+        .join(`\n${indent}`)}`;
+    result += ' as CollectionRules<any>,\n';
+  }
+
+  return result;
 }
 
 function generateAttributeSchema(
