@@ -32,6 +32,7 @@ export interface Query<M extends Model<any> | undefined> {
   ];
   limit?: number;
   after?: ValueCursor;
+  entityId?: string;
   vars?: Record<string, any>;
 }
 

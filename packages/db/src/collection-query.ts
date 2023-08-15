@@ -344,6 +344,66 @@ async function getCollectionEntitiesAndTriples(
   }, new Map());
 }
 
+function subscribeSingleEntity<Q extends CollectionQuery<any>>(
+  tripleStore: TripleStore,
+  query: Q,
+  onResults: (args: [results: FetchResult<Q>, newTriples: TripleRow[]]) => void,
+  onError?: (error: any) => void,
+  schema?: Q['schema']
+) {
+  const asyncUnSub = async () => {
+    const { collectionName, entityId } = query;
+    let entity: any;
+    let triples: TripleRow[] = [];
+    try {
+      if (!entityId) return;
+      const compoundId = appendCollectionToId(collectionName, entityId);
+      triples = await tripleStore.findByEntity(compoundId);
+      entity =
+        triples.length === 0 ? null : triples.reduce(entityToResultReducer, {});
+
+      const results = new Map(
+        entity ? [[entityId, timestampedObjectToPlainObject(entity)]] : []
+      ) as FetchResult<Q>;
+
+      onResults([results, triples]);
+      const unsub = tripleStore.onWrite(async ({ inserts, deletes }) => {
+        try {
+          triples = [...inserts, ...deletes].filter(
+            ({ id }) => id === compoundId
+          );
+
+          // Early return prevents processing if no relevant entities were updated
+          if (triples.length === 0) return;
+
+          entity = triples.reduce(entityToResultReducer, entity);
+
+          if (doesEntityObjMatchWhere(entity, query.where ?? [], schema)) {
+            results.set(entityId, timestampedObjectToPlainObject(entity));
+          } else {
+            results.delete(entityId);
+          }
+
+          onResults([results, triples]);
+        } catch (e) {
+          onError && onError(e);
+        }
+      });
+      return unsub;
+    } catch (e) {
+      onError && onError(e);
+    }
+    return () => {};
+  };
+
+  const unsubPromise = asyncUnSub();
+
+  return async () => {
+    const unsub = await unsubPromise;
+    unsub();
+  };
+}
+
 function subscribeResultsAndTriples<Q extends CollectionQuery<any>>(
   tripleStore: TripleStore,
   query: Q,
@@ -517,6 +577,17 @@ export function subscribe<Q extends CollectionQuery<any>>(
   onError?: (error: any) => void,
   schema?: Q['schema']
 ) {
+  if (query.entityId) {
+    return subscribeSingleEntity(
+      tripleStore,
+      query,
+      ([results]) => {
+        onResults(results);
+      },
+      onError,
+      schema
+    );
+  }
   return subscribeResultsAndTriples(
     tripleStore,
     query,
@@ -556,6 +627,17 @@ export function subscribeTriples<Q extends CollectionQuery<any>>(
   onError?: (error: any) => void,
   schema?: Q['schema']
 ) {
+  if (query.entityId) {
+    return subscribeSingleEntity(
+      tripleStore,
+      query,
+      ([_results, triples]) => {
+        onResults(triples);
+      },
+      onError,
+      schema
+    );
+  }
   return subscribeResultsAndTriples(
     tripleStore,
     query,

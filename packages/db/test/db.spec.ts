@@ -737,6 +737,147 @@ describe('subscriptions', () => {
   });
 });
 
+describe('single entity subscriptions', async () => {
+  const storage = new InMemoryTupleStorage();
+  const db = new DB({
+    source: storage,
+    schema: {
+      collections: {
+        students: S.Schema({
+          id: S.string(),
+          name: S.string(),
+          major: S.string(),
+          dorm: S.string(),
+        }),
+      },
+    },
+  });
+  const defaultData = [
+    { id: '1', name: 'Alice', major: 'Computer Science', dorm: 'Allen' },
+    { id: '2', name: 'Bob', major: 'Biology', dorm: 'Battell' },
+    { id: '3', name: 'Charlie', major: 'Computer Science', dorm: 'Battell' },
+    { id: '4', name: 'David', major: 'Math', dorm: 'Allen' },
+    { id: '5', name: 'Emily', major: 'Biology', dorm: 'Allen' },
+  ];
+  beforeEach(async () => {
+    await db.clear();
+  });
+  // 3) update other entities and not have it fire
+
+  it('can subscribe to an entity', async () => {
+    await Promise.all(
+      defaultData.map((doc) => db.insert('students', doc, doc.id))
+    );
+    await testSubscription(db, db.query('students').entityId('3').build(), [
+      {
+        check: (results) => {
+          const entity = results.get('3');
+          expect(entity).toBeDefined();
+          expect(results.size).toBe(1);
+          expect(entity.id).toBe('3');
+        },
+      },
+      {
+        action: async (results) => {
+          await db.transact(async (tx) => {
+            await tx.update('students', '3', async (entity) => {
+              entity.major = 'sociology';
+            });
+          });
+        },
+        check: (results) => {
+          expect(results.get('3').major).toBe('sociology');
+        },
+      },
+    ]);
+  });
+  it("can should return nothing if the entity doesn't exist, and then update when it is inserted", async () => {
+    await Promise.all(
+      defaultData.map((doc) => db.insert('students', doc, doc.id))
+    );
+    await testSubscription(db, db.query('students').entityId('6').build(), [
+      {
+        check: (results) => {
+          const entity = results.get('6');
+          expect(entity).toBeFalsy();
+          expect(results.size).toBe(0);
+        },
+      },
+      {
+        action: async (results) => {
+          await db.transact(async (tx) => {
+            await tx.insert(
+              'students',
+              {
+                id: '6',
+                name: 'Helen',
+                major: 'Virtual Reality',
+                dorm: 'Painter',
+              },
+              '6'
+            );
+          });
+        },
+        check: (results) => {
+          const entity = results.get('6');
+          expect(entity).toBeDefined();
+          expect(results.size).toBe(1);
+          expect(entity.id).toBe('6');
+        },
+      },
+    ]);
+  });
+  it('should only fire updates when the entity in question is affected', async () => {
+    await Promise.all(
+      defaultData.map((doc) => db.insert('students', doc, doc.id))
+    );
+    await new Promise<void>(async (resolve) => {
+      const spy = vi.fn();
+      db.subscribe(db.query('students').entityId('3').build(), spy);
+      setTimeout(() => {
+        expect(spy).toHaveBeenCalledOnce();
+        resolve();
+      }, 50);
+    });
+    await new Promise<void>(async (resolve) => {
+      const spy = vi.fn();
+      db.subscribe(db.query('students').entityId('3').build(), spy);
+      await db.transact(async (tx) => {
+        await tx.update('students', '1', async (entity) => {
+          entity.major = 'sociology';
+        });
+      });
+      await db.transact(async (tx) => {
+        await tx.update('students', '2', async (entity) => {
+          entity.major = 'sociology';
+        });
+      });
+      setTimeout(() => {
+        expect(spy).toHaveBeenCalledOnce();
+        resolve();
+      }, 50);
+    });
+    await new Promise<void>(async (resolve) => {
+      const spy = vi.fn();
+      db.subscribe(db.query('students').entityId('3').build(), spy);
+      await db.transact(async (tx) => {
+        await tx.update('students', '1', async (entity) => {
+          entity.major = 'sociology';
+        });
+      });
+      await db.transact(async (tx) => {
+        await tx.update('students', '3', async (entity) => {
+          entity.major = 'sociology';
+        });
+      });
+      setTimeout(() => {
+        expect(spy).toHaveBeenCalledTimes(2);
+        resolve();
+      }, 50);
+    });
+  });
+});
+
 // the onWrite hook for a subscription runs on EVERY transaction (even if its not relevant), should test subscritions can handle irrelevant transactions
 it('safely handles multiple subscriptions', async () => {
   // Should error out if there is a problem (couldnt quite get an assertion that it errors out to work)

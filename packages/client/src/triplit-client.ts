@@ -543,7 +543,16 @@ export class TriplitClient<M extends Models<any, any> | undefined = undefined> {
       onError,
       scope
     );
-    const { select, where, collectionName, order, limit, after, vars } = query;
+    const {
+      select,
+      where,
+      collectionName,
+      order,
+      limit,
+      after,
+      vars,
+      entityId,
+    } = query;
 
     // TODO: refactor args to make sure we include everything
     let unsubscribeRemote = scope.includes('cache')
@@ -555,6 +564,7 @@ export class TriplitClient<M extends Models<any, any> | undefined = undefined> {
           limit,
           after,
           vars,
+          entityId,
         })
       : undefined;
     return () => {
