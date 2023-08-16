@@ -29,7 +29,7 @@ import {
   splitIdParts,
   stripCollectionFromId,
 } from './db';
-import { InvalidFilterError } from './errors';
+import { EntityIdMissingError, InvalidFilterError } from './errors';
 
 export default function CollectionQueryBuilder<
   M extends Model<any> | undefined
@@ -356,7 +356,7 @@ function subscribeSingleEntity<Q extends CollectionQuery<any>>(
     let entity: any;
     let triples: TripleRow[] = [];
     try {
-      if (!entityId) return;
+      if (!entityId) throw new EntityIdMissingError();
       const compoundId = appendCollectionToId(collectionName, entityId);
       triples = await tripleStore.findByEntity(compoundId);
       entity =

@@ -104,6 +104,15 @@ export class SessionVariableNotFoundError extends TriplitError {
   }
 }
 
+export class EntityIdMissingError extends TriplitError {
+  constructor(...args: any[]) {
+    super(...args);
+    this.name = 'EntityIdMissingError';
+    this.message = `The query engine expected an entity id to be present on a query but found none. Please ensure that the entity id provided to the query is defined.`;
+    this.status = STATUS_CODES['Bad Request'];
+  }
+}
+
 // Mutation Errors
 export class InvalidMutationError extends TriplitError {
   constructor(...args: any[]) {
