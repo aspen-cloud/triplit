@@ -5,7 +5,7 @@ import {
   TripleStore,
   TripleStoreTransaction,
 } from '../src/triple-store';
-import * as S from '../src/schema';
+import { Schema as S } from '../src/schema';
 import MemoryBTree from '../src/storage/memory-btree';
 import { IndexedDbStorage, MemoryStorage } from '../src';
 

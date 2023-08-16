@@ -2,16 +2,17 @@
   "name": "@triplit/client",
   "packageManager": "yarn@3.4.1",
   "version": "0.0.29",
+  "source": "src/index.ts",
   "main": "dist/index.js",
-  "typings": "dist/index.d.ts",
-  "type": "module",
+  "module": "dist/module.js",
+  "types": "dist/index.d.ts",
   "bin": {
     "triplit": "./dist/cli.cjs"
   },
   "scripts": {
     "build": "yarn build:code && yarn build:cli",
     "build:cli": "esbuild --bundle --platform=node --target=node14 --outfile=dist/cli.cjs cli/index.ts",
-    "build:code": "tsc --noEmit false --declaration --baseUrl . --paths null --outDir dist",
+    "build:code": "parcel build . --no-cache",
     "lint": "yarn lint:code && yarn lint:cli",
     "lint:code": "tsc",
     "lint:cli": "cd ./cli && tsc",
@@ -28,10 +29,13 @@
     "yargs": "^17.7.2"
   },
   "devDependencies": {
+    "@parcel/config-default": "^2.9.3",
+    "@parcel/transformer-typescript-tsc": "^2.9.3",
     "@types/node": "^20.4.0",
     "@types/prettier": "^2",
     "@types/yargs": "^17",
     "esbuild": "^0.17.19",
+    "parcel": "^2.9.3",
     "typescript": "^5.0.2"
   },
   "engines": {

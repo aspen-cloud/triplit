@@ -1,5 +1,5 @@
 import { ValuePointer } from '@sinclair/typebox/value';
-import Builder from './utils/builder';
+import Builder, { toBuilder } from './utils/builder';
 import {
   Query,
   Operator,
@@ -33,7 +33,7 @@ import {
 
 export default function CollectionQueryBuilder<
   M extends Model<any> | undefined
->(collectionName: string, params?: Query<M>) {
+>(collectionName: string, params?: Query<M>): toBuilder<CollectionQuery<M>> {
   // TODO fixup ts so that select/where are actually optional
   return Builder<CollectionQuery<M>>({
     collectionName,

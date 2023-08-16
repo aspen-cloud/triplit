@@ -12,3 +12,6 @@ node_modules
 
 # build artifacts
 dist
+
+# parcel
+.parcel-cache

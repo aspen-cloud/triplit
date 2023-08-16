@@ -30,6 +30,7 @@ import {
   appendCollectionToId,
   validateExternalId,
 } from './db-helpers';
+import { toBuilder } from './utils/builder';
 
 type AttributeType =
   | 'string'
@@ -211,10 +212,10 @@ export default class DB<M extends Models<any, any> | undefined> {
 
   static ABORT_TRANSACTION = Symbol('abort transaction');
 
-  private addReadRulesToQuery(
-    query: CollectionQuery<ModelFromModels<M>>,
+  private addReadRulesToQuery<Q extends CollectionQuery<ModelFromModels<M>>>(
+    query: Q,
     collection: CollectionFromModels<M>
-  ): CollectionQuery<ModelFromModels<M>> {
+  ): Q {
     if (collection?.rules?.read) {
       const updatedWhere = [
         ...query.where,
@@ -247,16 +248,16 @@ export default class DB<M extends Models<any, any> | undefined> {
     this.variables = { ...this.variables, ...variables };
   }
 
-  private replaceVariablesInQuery(
-    query: CollectionQuery<ModelFromModels<M>>
-  ): CollectionQuery<ModelFromModels<M>> {
+  private replaceVariablesInQuery<
+    Q extends CollectionQuery<ModelFromModels<M>>
+  >(query: Q): Q {
     const variables = { ...(this.variables ?? {}), ...(query.vars ?? {}) };
     const where = replaceVariablesInFilterStatements(query.where, variables);
     return { ...query, where };
   }
 
-  async fetch(
-    query: CollectionQuery<ModelFromModels<M>>,
+  async fetch<Q extends CollectionQuery<ModelFromModels<M>>>(
+    query: Q,
     { scope, skipRules = false }: { scope?: string[]; skipRules?: boolean } = {}
   ) {
     await this.ensureMigrated;
@@ -446,7 +447,7 @@ export default class DB<M extends Models<any, any> | undefined> {
   query<CN extends CollectionNameFromModels<M>>(
     collectionName: CN,
     params?: Query<ModelFromModels<M, CN>>
-  ) {
+  ): toBuilder<CollectionQuery<ModelFromModels<M, CN>>> {
     return CollectionQueryBuilder(collectionName as string, params);
   }
 

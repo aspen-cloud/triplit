@@ -1,13 +1,13 @@
 {
   "name": "@triplit/db",
-  "type": "module",
   "version": "0.0.29",
   "main": "dist/index.js",
+  "module": "dist/module.js",
   "typings": "dist/index.d.ts",
+  "types": "dist/index.d.ts",
+  "source": "src/index.ts",
   "scripts": {
-    "build": "yarn build:code && yarn build:types",
-    "build:code": "esbuild --bundle --format=esm --platform=browser --target=esnext --outdir=dist src/index.ts",
-    "build:types": "tsc --noEmit false --emitDeclarationOnly --declaration --outDir dist",
+    "build": "parcel build . --no-cache",
     "lint": "tsc",
     "test": "vitest",
     "test-coverage": "vitest --coverage",
@@ -21,12 +21,14 @@
     "/dist"
   ],
   "devDependencies": {
+    "@parcel/config-default": "^2.9.3",
+    "@parcel/transformer-typescript-tsc": "^2.9.3",
     "@stryker-mutator/core": "^7.1.1",
     "@stryker-mutator/vitest-runner": "^7.1.1",
     "@vitest/coverage-c8": "^0.29.2",
     "@vitest/coverage-v8": "^0.33.0",
     "@vitest/ui": "^0.33.0",
-    "esbuild": "^0.17.19",
+    "parcel": "^2.9.3",
     "rxdb": "^14.14.2",
     "rxjs": "^7.8.1",
     "tinybench": "^2.5.0",

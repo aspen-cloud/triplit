@@ -14,6 +14,7 @@ import {
   CollectionQuery,
   doesEntityObjMatchWhere,
   fetch,
+  FetchResult,
 } from './collection-query';
 import { EntityNotFoundError, WriteRuleError } from './errors';
 import { ValuePointer } from '@sinclair/typebox/value';
@@ -59,10 +60,10 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
     };
   }
 
-  private addReadRulesToQuery(
-    query: CollectionQuery<ModelFromModels<M>>,
+  private addReadRulesToQuery<Q extends CollectionQuery<ModelFromModels<M>>>(
+    query: Q,
     collection: CollectionFromModels<M>
-  ): CollectionQuery<ModelFromModels<M>> {
+  ): Q {
     if (collection?.rules?.read) {
       const updatedWhere = [
         ...query.where,
@@ -245,15 +246,17 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
     });
   }
 
-  private replaceVariablesInQuery(
-    query: CollectionQuery<ModelFromModels<M>>
-  ): CollectionQuery<ModelFromModels<M>> {
+  private replaceVariablesInQuery<
+    Q extends CollectionQuery<ModelFromModels<M>>
+  >(query: Q): Q {
     const variables = { ...(this.variables ?? {}), ...(query.vars ?? {}) };
     const where = replaceVariablesInFilterStatements(query.where, variables);
     return { ...query, where };
   }
 
-  async fetch(query: CollectionQuery<ModelFromModels<M>>) {
+  async fetch<Q extends CollectionQuery<ModelFromModels<M>>>(
+    query: Q
+  ): Promise<FetchResult<Q>> {
     let fetchQuery = query;
     const collection = await this.getCollectionSchema(
       fetchQuery.collectionName as CollectionNameFromModels<M>

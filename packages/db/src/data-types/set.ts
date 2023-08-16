@@ -1,7 +1,10 @@
 // @ts-nocheck
 import { DataType } from './base';
-import { Set as SetStructure } from '../schema';
+import { Schema as S } from '../schema';
 import { Attribute } from '../triple-store';
+
+// Something weird is going on here with vitest? Sometimes undefined
+const SetStructure = S?.Set;
 
 const SetType: DataType<Set<any>, ReturnType<typeof SetStructure>> = {
   fromJSON(val: Set<string>) {
@@ -13,7 +16,7 @@ const SetType: DataType<Set<any>, ReturnType<typeof SetStructure>> = {
   toJSON() {
     throw new Error('Function not implemented.');
   },
-  internalStructure: SetStructure,
+  internalStructure: () => SetStructure,
   operations: {
     add: (value: any) => {
       const attributeValuePairs = [[[value], true] as [Attribute, boolean]];

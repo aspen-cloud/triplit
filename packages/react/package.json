@@ -2,11 +2,12 @@
   "name": "@triplit/react",
   "packageManager": "yarn@3.4.1",
   "version": "0.0.29",
+  "source": "src/index.ts",
   "main": "dist/index.js",
-  "typings": "dist/index.d.ts",
-  "type": "module",
+  "module": "dist/module.js",
+  "types": "dist/index.d.ts",
   "scripts": {
-    "build": "tsc --noEmit false --declaration --baseUrl . --paths null --outDir dist",
+    "build": "parcel build . --no-cache",
     "lint": "tsc",
     "publish-pkg": "node ../../scripts/npm-check-version-and-publish.js"
   },
@@ -17,7 +18,10 @@
     "@triplit/client": "workspace:^"
   },
   "devDependencies": {
+    "@parcel/config-default": "^2.9.3",
+    "@parcel/transformer-typescript-tsc": "^2.9.3",
     "@types/react": "^18.2.0",
+    "parcel": "^2.9.3",
     "typescript": "^5.0.2"
   },
   "peerDependencies": {

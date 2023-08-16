@@ -17,30 +17,15 @@ import {
   InvalidTypeError,
   SchemaPathDoesNotExistError,
 } from './errors';
-import { CollectionRules } from './db';
+import type { CollectionRules } from './db';
 import { timestampCompare } from './timestamp';
-import { Attribute, EAV, StoreSchema } from './triple-store';
+import type { Attribute, EAV, StoreSchema } from './triple-store';
 import { TuplePrefix } from './utility-types';
 import { objectToTuples, triplesToObject } from './utils';
 
 // We infer TObject as a return type of some funcitons and this causes issues with consuming packages
 // Using solution 3.1 described in this comment as a fix: https://github.com/microsoft/TypeScript/issues/47663#issuecomment-1519138189
-export type { TObject } from '@sinclair/typebox';
-
-export const string = () => Register(Type.String());
-export const number = () => Register(Type.Number());
-export const Boolean = () => Register(Type.Boolean());
-
-// const StringEnum = TypeSystem.Type<
-//   string,
-//   { values: string[]; type: 'string' }
-// >('StringEnum', (options, value) => {
-//   return typeof value === 'string' && options.values.includes(value);
-// });
-
-// // TODO: Add support for enums
-// const Enum = (values: string[]) =>
-//   Register(Type.Union(values.map((value) => Type.Literal(value))));
+export type { TObject };
 
 export const Timestamp = Type.Readonly(
   Type.Tuple([Type.Number(), Type.String()])
@@ -56,56 +41,73 @@ export function Register<
   });
 }
 
+export module Schema {
+  export const string = () => Register(Type.String());
+  export const number = () => Register(Type.Number());
+  export const Boolean = () => Register(Type.Boolean());
+
+  // const StringEnum = TypeSystem.Type<
+  //   string,
+  //   { values: string[]; type: 'string' }
+  // >('StringEnum', (options, value) => {
+  //   return typeof value === 'string' && options.values.includes(value);
+  // });
+
+  // // TODO: Add support for enums
+  // const Enum = (values: string[]) =>
+  //   Register(Type.Union(values.map((value) => Type.Literal(value))));
+
+  export function Record(schema: SchemaConfig): RecordType {
+    return Type.Object(schema, {
+      'x-serialized-type': 'record',
+    });
+  }
+  type ValidSetDataTypes = TNumber | TString;
+  export function Set<T extends ValidSetDataTypes>(
+    type: ReturnType<typeof Register<T>>
+  ) {
+    if (!type.items?.length)
+      throw new InvalidTypeError(
+        "Could not infer the type of this set. Make sure you're passing a valid register type."
+      );
+    const keyType = type.items[0];
+    const setOptions = {
+      'x-crdt-type': 'Set',
+    };
+
+    if (TypeGuard.TString(keyType))
+      return Type.Record(keyType, Register(Type.Boolean()), {
+        ...setOptions,
+        'x-serialized-type': 'set_string',
+      });
+    if (TypeGuard.TNumber(keyType))
+      return Type.Record(keyType, Register(Type.Boolean()), {
+        ...setOptions,
+        'x-serialized-type': 'set_number',
+      });
+
+    throw new InvalidSetTypeError((keyType as typeof keyType).type);
+  }
+
+  export function Schema<Config extends SchemaConfig>(config: Config) {
+    return Type.Object(config);
+  }
+}
+
 // Cant use ReturnType because of issues with cyclic reference
 export type RecordType = TObject<SchemaConfig>;
-export function Record(schema: SchemaConfig): RecordType {
-  return Type.Object(schema, {
-    'x-serialized-type': 'record',
-  });
-}
-
-export type ValidSetDataTypes = TNumber | TString;
-export function Set<T extends ValidSetDataTypes>(
-  type: ReturnType<typeof Register<T>>
-) {
-  if (!type.items?.length)
-    throw new InvalidTypeError(
-      "Could not infer the type of this set. Make sure you're passing a valid register type."
-    );
-  const keyType = type.items[0];
-  const setOptions = {
-    'x-crdt-type': 'Set',
-  };
-
-  if (TypeGuard.TString(keyType))
-    return Type.Record(keyType, Register(Type.Boolean()), {
-      ...setOptions,
-      'x-serialized-type': 'set_string',
-    });
-  if (TypeGuard.TNumber(keyType))
-    return Type.Record(keyType, Register(Type.Boolean()), {
-      ...setOptions,
-      'x-serialized-type': 'set_number',
-    });
-
-  throw new InvalidSetTypeError((keyType as typeof keyType).type);
-}
 
 export type RegisterType = ReturnType<
   typeof Register<TNumber | TBoolean | TString>
 >;
-export type SetType = ReturnType<typeof Set>;
+export type SetType = ReturnType<typeof Schema.Set>;
 
 type DataType = RegisterType | SetType | RecordType;
 
 // type SchemaConfig = Record<string, SchemaConfig | RegisterType<any>>;
 export type SchemaConfig = Record<keyof any, DataType>;
 
-export function Schema<Config extends SchemaConfig>(config: Config) {
-  return Type.Object(config);
-}
-
-export type Model<T extends SchemaConfig> = ReturnType<typeof Schema<T>>;
+export type Model<T extends SchemaConfig> = ReturnType<typeof Schema.Schema<T>>;
 
 export type Collection<T extends SchemaConfig> = {
   attributes: Model<T>;
@@ -242,7 +244,7 @@ function collectionsDefinitionToSchema(
       config[path] = attributeDefinitionToSchema(attrDef);
     }
     result[collectionName] = {
-      attributes: Schema(config),
+      attributes: Schema.Schema(config),
       rules: definition.rules,
     };
   }
@@ -252,12 +254,12 @@ function collectionsDefinitionToSchema(
 
 function attributeDefinitionToSchema(schemaItem: AttributeDefinition) {
   const { type } = schemaItem;
-  if (type === 'string') return string();
-  if (type === 'boolean') return Boolean();
-  if (type === 'number') return number();
-  if (type === 'set_string') return Set(string());
-  if (type === 'set_number') return Set(number());
-  if (type === 'record') return Record({});
+  if (type === 'string') return Schema.string();
+  if (type === 'boolean') return Schema.Boolean();
+  if (type === 'number') return Schema.number();
+  if (type === 'set_string') return Schema.Set(Schema.string());
+  if (type === 'set_number') return Schema.Set(Schema.number());
+  if (type === 'record') return Schema.Record({});
   throw new InvalidSchemaType(type);
 }
 

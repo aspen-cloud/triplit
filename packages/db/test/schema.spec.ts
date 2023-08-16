@@ -1,5 +1,5 @@
 import { describe, expect, it, beforeEach, beforeAll, vi } from 'vitest';
-import * as S from '../src/schema';
+import { Schema as S, getSchemaFromPath } from '../src/schema';
 
 describe('Schema', () => {
   const StudentSchema = S.Schema({
@@ -8,12 +8,8 @@ describe('Schema', () => {
     graduationYear: S.number(),
   });
   it('should prevent an invalid accession in a schema', () => {
-    expect(() =>
-      S.getSchemaFromPath(StudentSchema, ['grade', 'foo'])
-    ).toThrow();
-    expect(() =>
-      S.getSchemaFromPath(S.Register(S.string()), ['name'])
-    ).toThrow();
+    expect(() => getSchemaFromPath(StudentSchema, ['grade', 'foo'])).toThrow();
+    expect(() => getSchemaFromPath(S.string(), ['name'])).toThrow();
   });
   it('should only allow strings and numbers as set types', () => {
     expect(() => S.Set(S.number())).not.toThrowError();
