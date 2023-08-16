@@ -24,12 +24,12 @@ import {
   TripleStoreTransaction,
 } from './triple-store';
 import { Pipeline } from './utils/pipeline';
+import { EntityIdMissingError, InvalidFilterError } from './errors';
 import {
+  stripCollectionFromId,
   appendCollectionToId,
   splitIdParts,
-  stripCollectionFromId,
-} from './db';
-import { EntityIdMissingError, InvalidFilterError } from './errors';
+} from './db-helpers';
 
 export default function CollectionQueryBuilder<
   M extends Model<any> | undefined
