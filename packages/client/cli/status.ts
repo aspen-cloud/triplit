@@ -38,7 +38,7 @@ export async function readRemoteMigrationStatus(token: string): Promise<{
       };
     }
     const res = await request(
-      `https://${projectId}.triplit.io/migration/status`,
+      `http://${projectId}.localhost:8787/migration/status`,
       {
         method: 'GET',
         headers: {

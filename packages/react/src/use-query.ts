@@ -17,10 +17,11 @@ export function useQuery<CQ extends ClientQuery<any>>(
   const [error, setError] = useState<any>(undefined);
   // const [fetchingRemote, setFetchingRemote] = useState(false);
 
-  const builtQuery = query.build();
-  const stringifiedQuery = JSON.stringify(builtQuery);
+  const builtQuery = query && query.build();
+  const stringifiedQuery = builtQuery && JSON.stringify(builtQuery);
 
   useEffect(() => {
+    if (!client) return;
     setResults(undefined);
     setFetchingLocal(true);
     const unsubscribe = client.subscribe(

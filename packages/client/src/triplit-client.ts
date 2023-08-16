@@ -505,7 +505,7 @@ export class TriplitClient<M extends Models<any, any> | undefined = undefined> {
   fetch(clientQueryBuilder: toBuilder<ClientQuery<ModelFromModels<M>>>) {
     const query = clientQueryBuilder.build();
     const scope = parseScope(query);
-    return this.db.fetch(query, scope);
+    return this.db.fetch(query, { scope });
   }
 
   insert(
@@ -536,12 +536,10 @@ export class TriplitClient<M extends Models<any, any> | undefined = undefined> {
     onError?: (error: any) => void
   ) {
     const scope = parseScope(query);
-    const unsubscribeLocal = this.db.subscribe(
-      query,
-      onResults,
-      onError,
-      scope
-    );
+    const unsubscribeLocal = this.db.subscribe(query, onResults, onError, {
+      scope,
+      skipRules: true,
+    });
     const {
       select,
       where,

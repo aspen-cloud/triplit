@@ -15,14 +15,17 @@ async function applyMigration(
   if (!projectId) {
     throw new Error('Could not find project ID in token');
   }
-  const res = await request(`https://${projectId}.triplit.io/migration/apply`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      authorization: `Bearer ${token}`,
-    },
-    body: JSON.stringify({ migration, direction }),
-  });
+  const res = await request(
+    `http://${projectId}.localhost:8787/migration/apply`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ migration, direction }),
+    }
+  );
   if (!res.ok) {
     throw new Error(
       `Error applying ${direction} migration ${migration.version}`

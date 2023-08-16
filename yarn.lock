@@ -2104,6 +2104,7 @@ __metadata:
     typescript: ^5.0.2
   peerDependencies:
     react: "*"
+    react-dom: "*"
   languageName: unknown
   linkType: soft
 

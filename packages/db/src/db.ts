@@ -648,14 +648,17 @@ export default class DB<M extends Models<any, any> | undefined> {
     return { ...query, where };
   }
 
-  async fetch(query: CollectionQuery<ModelFromModels<M>>, scope?: string[]) {
+  async fetch(
+    query: CollectionQuery<ModelFromModels<M>>,
+    { scope, skipRules = false }: { scope?: string[]; skipRules?: boolean } = {}
+  ) {
     await this.ensureMigrated;
     // TODO: need to fix collectionquery typing
     let fetchQuery = query;
     const collection = await this.getCollectionSchema(
       fetchQuery.collectionName as CollectionNameFromModels<M>
     );
-    if (collection) {
+    if (collection && !skipRules) {
       fetchQuery = this.addReadRulesToQuery(fetchQuery, collection);
     }
     fetchQuery = this.replaceVariablesInQuery(fetchQuery);
@@ -741,7 +744,7 @@ export default class DB<M extends Models<any, any> | undefined> {
     query: Q,
     onResults: (results: FetchResult<Q>) => void,
     onError?: (error: any) => void,
-    scope?: string[]
+    { scope, skipRules = false }: { scope?: string[]; skipRules?: boolean } = {}
   ) {
     const startSubscription = async () => {
       let subscriptionQuery = query;
@@ -749,7 +752,7 @@ export default class DB<M extends Models<any, any> | undefined> {
       const collection = await this.getCollectionSchema(
         subscriptionQuery.collectionName as CollectionNameFromModels<M>
       );
-      if (collection) {
+      if (collection && !skipRules) {
         // TODO see other comment about replaceVariablesInQuery on how to improve
         // @ts-ignore
         subscriptionQuery = this.addReadRulesToQuery(
@@ -783,14 +786,14 @@ export default class DB<M extends Models<any, any> | undefined> {
     query: Q,
     onResults: (results: TripleRow[]) => void,
     onError?: (error: any) => void,
-    scope?: string[]
+    { scope, skipRules = false }: { scope?: string[]; skipRules?: boolean } = {}
   ) {
     const startSubscription = async () => {
       let subscriptionQuery = query;
       const collection = await this.getCollectionSchema(
         subscriptionQuery.collectionName as CollectionNameFromModels<M>
       );
-      if (collection) {
+      if (collection && !skipRules) {
         // @ts-ignore
         subscriptionQuery = this.addReadRulesToQuery(
           subscriptionQuery,
