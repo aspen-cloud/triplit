@@ -751,12 +751,14 @@ describe('single entity subscriptions', async () => {
     source: storage,
     schema: {
       collections: {
-        students: S.Schema({
-          id: S.string(),
-          name: S.string(),
-          major: S.string(),
-          dorm: S.string(),
-        }),
+        students: {
+          attributes: S.Schema({
+            id: S.string(),
+            name: S.string(),
+            major: S.string(),
+            dorm: S.string(),
+          }),
+        },
       },
     },
   });
