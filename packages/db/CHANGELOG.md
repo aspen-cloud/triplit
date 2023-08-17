@@ -1,5 +1,11 @@
 # @triplit/db
 
+## 0.0.31
+
+### Patch Changes
+
+- 3145915: downgrade nanoid version
+
 ## 0.0.30
 
 ### Patch Changes
