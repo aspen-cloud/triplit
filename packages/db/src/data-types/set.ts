@@ -3,8 +3,9 @@ import { DataType } from './base';
 import { Schema as S } from '../schema';
 import { Attribute } from '../triple-store';
 
-// Something weird is going on here with vitest? Sometimes undefined
-const SetStructure = S?.Set;
+// Something weird is going on here?
+// Possibly a circular reference? Sometimes S is undefined
+const SetStructure = S.Set;
 
 const SetType: DataType<Set<any>, ReturnType<typeof SetStructure>> = {
   fromJSON(val: Set<string>) {

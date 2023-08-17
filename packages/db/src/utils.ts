@@ -1,6 +1,12 @@
-import SetType from './data-types/set';
 import { EAV } from './triple-store';
 import { TuplePrefix } from './utility-types';
+
+function setToJSON(val: Set<string>) {
+  // NOTE: Previously this returned an object from entries, but that loses some information as all keys are converted to strings
+  // This caused query issues down the line when queries expecting numbers were searching over strings and failing
+
+  return new Map(Array.from(val).map((item) => [item, true]));
+}
 
 // TODO: add tests for Document.insert (notably for insert Set<number> or a non-string Set)
 export function objectToTuples(
@@ -17,7 +23,7 @@ export function objectToTuples(
     );
   }
   if (object instanceof Set) {
-    const normalizedObj = SetType.fromJSON(object);
+    const normalizedObj = setToJSON(object);
     return objectToTuples(normalizedObj, prefix);
   }
   if (object instanceof Array) {
