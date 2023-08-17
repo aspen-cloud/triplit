@@ -507,6 +507,13 @@ export class TriplitClient<M extends Models<any, any> | undefined = undefined> {
     return this.db.fetch(query, { scope });
   }
 
+  fetchOne<CN extends CollectionNameFromModels<M>>(
+    collectionName: CN,
+    id: string
+  ) {
+    return this.db.fetchById(collectionName, id);
+  }
+
   insert(
     collectionName: CollectionNameFromModels<M>,
     object: JSONTypeFromModel<M[typeof collectionName]>,
