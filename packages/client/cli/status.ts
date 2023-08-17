@@ -1,3 +1,4 @@
+import { RemoteAccessOptions } from './utils/remote';
 import { request } from './utils/request';
 import { parseJWT } from './utils/token';
 
@@ -8,11 +9,15 @@ interface MigrationStatus {
 
 export type StatusCommandArgs = {
   token: string;
+  origin?: string;
 };
 
 export async function statusCommand(args: StatusCommandArgs) {
   console.info('Getting migration status from remote...');
-  const { data: status, error } = await readRemoteMigrationStatus(args.token);
+  const { data: status, error } = await readRemoteMigrationStatus({
+    token: args.token,
+    originOverride: args.origin,
+  });
   if (error) {
     console.error(error);
     return;
@@ -24,11 +29,14 @@ export async function statusCommand(args: StatusCommandArgs) {
   console.log(status);
 }
 
-export async function readRemoteMigrationStatus(token: string): Promise<{
+export async function readRemoteMigrationStatus(
+  options: RemoteAccessOptions
+): Promise<{
   data?: MigrationStatus;
   error?: any;
 }> {
   try {
+    const { token, originOverride } = options;
     const payload = parseJWT(token);
     const projectId = payload?.['x-triplit-project-id'];
     if (!projectId) {
@@ -37,15 +45,13 @@ export async function readRemoteMigrationStatus(token: string): Promise<{
         error: 'Could not find project ID in token',
       };
     }
-    const res = await request(
-      `http://${projectId}.localhost:8787/migration/status`,
-      {
-        method: 'GET',
-        headers: {
-          authorization: `Bearer ${token}`,
-        },
-      }
-    );
+    const origin = originOverride || `https://${projectId}.triplit.io`;
+    const res = await request(`${origin}/migration/status`, {
+      method: 'GET',
+      headers: {
+        authorization: `Bearer ${token}`,
+      },
+    });
     if (!res.ok) {
       return {
         data: undefined,

@@ -2,30 +2,30 @@ import { Migration } from '@triplit/db';
 import { codegen } from './codegen';
 import { readMigrations } from './migrations';
 import { readRemoteMigrationStatus } from './status';
+import { RemoteAccessOptions } from './utils/remote';
 import { request } from './utils/request';
 import { parseJWT } from './utils/token';
 
 async function applyMigration(
   migration: Migration,
   direction: 'up' | 'down',
-  token: string
+  remoteOptions: RemoteAccessOptions
 ) {
+  const { token, originOverride } = remoteOptions;
   const payload = parseJWT(token);
   const projectId = payload?.['x-triplit-project-id'];
   if (!projectId) {
     throw new Error('Could not find project ID in token');
   }
-  const res = await request(
-    `http://${projectId}.localhost:8787/migration/apply`,
-    {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({ migration, direction }),
-    }
-  );
+  const origin = originOverride || `https://${projectId}.triplit.io`;
+  const res = await request(`${origin}/migration/apply`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ migration, direction }),
+  });
   if (!res.ok) {
     throw new Error(
       `Error applying ${direction} migration ${migration.version}`
@@ -36,12 +36,17 @@ async function applyMigration(
 export type UpCommandArgs = {
   version?: number;
   token: string;
+  origin?: string;
 };
 
 export async function upCommand(args: UpCommandArgs) {
+  const remoteOptions = {
+    token: args.token,
+    originOverride: args.origin,
+  };
   // Get migration version from remote
   const { data, error } = await readRemoteMigrationStatusWithCmdMessages(
-    args.token
+    remoteOptions
   );
   if (error) {
     console.error(error);
@@ -70,7 +75,7 @@ export async function upCommand(args: UpCommandArgs) {
     } else {
       for (const migration of migrations) {
         console.log('applying up migration with version', migration.version);
-        await applyMigration(migration, 'up', args.token);
+        await applyMigration(migration, 'up', remoteOptions);
         currentVersion = migration.version;
       }
     }
@@ -82,12 +87,17 @@ export async function upCommand(args: UpCommandArgs) {
 export type DownCommandArgs = {
   version: number;
   token: string;
+  origin?: string;
 };
 
 export async function downCommand(args: DownCommandArgs) {
+  const remoteOptions = {
+    token: args.token,
+    originOverride: args.origin,
+  };
   // Get migration version from remote
   const { data, error } = await readRemoteMigrationStatusWithCmdMessages(
-    args.token
+    remoteOptions
   );
   if (error) {
     console.error(error);
@@ -114,7 +124,7 @@ export async function downCommand(args: DownCommandArgs) {
     } else {
       for (const migration of migrations) {
         console.log('applying down migration with version', migration.version);
-        await applyMigration(migration, 'down', args.token);
+        await applyMigration(migration, 'down', remoteOptions);
         currentVersion = migration.parent;
       }
     }
@@ -123,9 +133,11 @@ export async function downCommand(args: DownCommandArgs) {
   }
 }
 
-async function readRemoteMigrationStatusWithCmdMessages(token: string) {
+async function readRemoteMigrationStatusWithCmdMessages(
+  options: RemoteAccessOptions
+) {
   try {
-    const { data, error } = await readRemoteMigrationStatus(token);
+    const { data, error } = await readRemoteMigrationStatus(options);
     if (error) {
       return { data: undefined, error };
     }

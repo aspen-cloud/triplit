@@ -36,6 +36,7 @@ yargs(hideBin(process.argv))
     'Get current migration status',
     (yargs) => {
       yargs.option('token', tokenOption);
+      yargs.option('origin', { type: 'string', hidden: true });
       return yargs;
     },
     statusCommand
@@ -51,6 +52,7 @@ yargs(hideBin(process.argv))
           describe: 'The version to migrate up to',
         });
         yargs.option('token', tokenOption);
+        yargs.option('origin', { type: 'string', hidden: true });
       },
       upCommand
     );
@@ -64,6 +66,7 @@ yargs(hideBin(process.argv))
           describe: 'The version to migrate down to',
         });
         yargs.option('token', tokenOption);
+        yargs.option('origin', { type: 'string', hidden: true });
       },
       downCommand
     );
