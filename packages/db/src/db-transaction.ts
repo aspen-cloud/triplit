@@ -1,12 +1,13 @@
 import { AttributeItem, EAV, TripleStoreTransaction } from './triple-store';
 import {
   getSchemaFromPath,
-  JSONTypeFromModel,
+  ProxyTypeFromModel,
   Model,
   Models,
   timestampedObjectToPlainObject,
   objectToTimestampedObject,
   TypeFromModel,
+  SetProxy,
 } from './schema';
 import * as Document from './document';
 import { nanoid } from 'nanoid';
@@ -128,7 +129,7 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
     collectionName: CN,
     entityId: string,
     updater: (
-      entity: JSONTypeFromModel<ModelFromModels<M, CN>>
+      entity: ProxyTypeFromModel<ModelFromModels<M, CN>>
     ) => Promise<void>
   ) {
     const collection = (await this.getSchema())?.collections[
@@ -179,10 +180,10 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
 
   private createUpdateProxy<M extends Model<any> | undefined>(
     changeTracker: Map<string, any>,
-    entityObj: JSONTypeFromModel<M>,
+    entityObj: ProxyTypeFromModel<M>,
     schema?: M,
     prefix: string = ''
-  ): JSONTypeFromModel<M> {
+  ): ProxyTypeFromModel<M> {
     return new Proxy(entityObj, {
       set: (_target, prop, value) => {
         const propPointer = [prefix, prop].join('/');
@@ -236,7 +237,7 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
                   ? changeTracker.get(valuePointer)
                   : propValue[value];
               },
-            };
+            } as SetProxy<any>;
           }
         }
         return changeTracker.has(propPointer)

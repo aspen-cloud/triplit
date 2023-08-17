@@ -35,6 +35,7 @@ export type {
   CollectionDefinition,
   CollectionsDefinition,
   JSONTypeFromModel,
+  ProxyTypeFromModel,
   Model,
   Models,
   TimestampedObject,

@@ -1,6 +1,6 @@
 import { EAV, TripleRow, TripleStore } from './triple-store';
 import {
-  JSONTypeFromModel,
+  ProxyTypeFromModel,
   Model,
   Models,
   timestampedObjectToPlainObject,
@@ -434,7 +434,7 @@ export default class DB<M extends Models<any, any> | undefined> {
     collectionName: CN,
     entityId: string,
     updater: (
-      entity: JSONTypeFromModel<ModelFromModels<M, CN>>
+      entity: ProxyTypeFromModel<ModelFromModels<M, CN>>
     ) => Promise<void>,
     storeScope?: { read: string[]; write: string[] }
   ) {

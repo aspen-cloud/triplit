@@ -8,6 +8,7 @@ import {
   CachedIndexedDbStorage as IndexedDbStorage,
   Query,
   JSONTypeFromModel,
+  ProxyTypeFromModel,
   Model,
   Models,
   CollectionNameFromModels,
@@ -517,10 +518,12 @@ export class TriplitClient<M extends Models<any, any> | undefined = undefined> {
     });
   }
 
-  update(
-    collectionName: CollectionNameFromModels<M>,
+  update<CN extends CollectionNameFromModels<M>>(
+    collectionName: CN,
     entityId: string,
-    updater: (entity: JSONTypeFromModel<ModelFromModels<M>>) => Promise<void>
+    updater: (
+      entity: ProxyTypeFromModel<ModelFromModels<M, CN>>
+    ) => Promise<void>
   ) {
     return this.db.update(collectionName, entityId, updater, {
       read: ['outbox', 'cache'],

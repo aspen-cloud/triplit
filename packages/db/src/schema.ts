@@ -3,9 +3,10 @@ import {
   TBoolean,
   TNumber,
   TObject,
+  TRecord,
   TSchema,
   TString,
-  TUnsafe,
+  TTuple,
   Type,
   TypeGuard,
 } from '@sinclair/typebox';
@@ -30,21 +31,42 @@ export type { TObject };
 export const Timestamp = Type.Readonly(
   Type.Tuple([Type.Number(), Type.String()])
 );
-export type TimestampType = Static<typeof Timestamp>;
+type TimestampType = Static<typeof Timestamp>;
 
-export function Register<
-  T extends TNumber | TBoolean | TString | TUnsafe<string>
->(type: T) {
+// Register
+type RegisterBaseType = TNumber | TBoolean | TString;
+type RegisterTypeFromBaseType<T extends RegisterBaseType> = TTuple<
+  [T, typeof Timestamp]
+> & {
+  'x-crdt-type': 'Register';
+  'x-serialized-type': T['type'];
+};
+
+export function Register<T extends RegisterBaseType>(type: T) {
   return Type.Tuple([type, Timestamp], {
     'x-serialized-type': type.type,
     'x-crdt-type': 'Register',
-  });
+  }) as RegisterTypeFromBaseType<T>;
 }
 
-export module Schema {
-  export const string = () => Register(Type.String());
-  export const number = () => Register(Type.Number());
-  export const Boolean = () => Register(Type.Boolean());
+type ValidSetDataTypes = TNumber | TString;
+type SetTypeFromValidTypes<T extends ValidSetDataTypes> = TRecord<
+  T,
+  ReturnType<typeof Register<TBoolean>>
+> & {
+  'x-crdt-type': 'Set';
+  'x-serialized-type': T extends TNumber
+    ? 'set_number'
+    : T extends TString
+    ? 'set_string'
+    : never;
+};
+
+// Could also use a namespace or module, but this worked best with our type generation
+export class Schema {
+  static string = () => Register(Type.String());
+  static number = () => Register(Type.Number());
+  static Boolean = () => Register(Type.Boolean());
 
   // const StringEnum = TypeSystem.Type<
   //   string,
@@ -57,15 +79,15 @@ export module Schema {
   // const Enum = (values: string[]) =>
   //   Register(Type.Union(values.map((value) => Type.Literal(value))));
 
-  export function Record(schema: SchemaConfig): RecordType {
+  static Record(schema: SchemaConfig): RecordType {
     return Type.Object(schema, {
       'x-serialized-type': 'record',
     });
   }
-  type ValidSetDataTypes = TNumber | TString;
-  export function Set<T extends ValidSetDataTypes>(
+
+  static Set<T extends ValidSetDataTypes>(
     type: ReturnType<typeof Register<T>>
-  ) {
+  ): SetTypeFromValidTypes<T> {
     if (!type.items?.length)
       throw new InvalidTypeError(
         "Could not infer the type of this set. Make sure you're passing a valid register type."
@@ -79,17 +101,17 @@ export module Schema {
       return Type.Record(keyType, Register(Type.Boolean()), {
         ...setOptions,
         'x-serialized-type': 'set_string',
-      });
+      }) as SetTypeFromValidTypes<T>;
     if (TypeGuard.TNumber(keyType))
       return Type.Record(keyType, Register(Type.Boolean()), {
         ...setOptions,
         'x-serialized-type': 'set_number',
-      });
+      }) as SetTypeFromValidTypes<T>;
 
     throw new InvalidSetTypeError((keyType as typeof keyType).type);
   }
 
-  export function Schema<Config extends SchemaConfig>(config: Config) {
+  static Schema<Config extends SchemaConfig>(config: Config) {
     return Type.Object(config);
   }
 }
@@ -165,6 +187,41 @@ export function updateEntityAtPath(
   }
   ValuePointer.Set(entity, pointer, [value, timestamp]);
 }
+
+type ValueSerializedSchemaType = 'string' | 'number' | 'boolean';
+type SetSerializedSchemaType = 'set_string' | 'set_number';
+type SerializedSchemaType = ValueSerializedSchemaType | SetSerializedSchemaType;
+
+export interface SetProxy<T> {
+  add: (value: T) => void;
+  remove: (value: T) => void;
+  has: (value: T) => boolean;
+}
+
+type ProxyType<
+  T extends TSchema & {
+    'x-serialized-type': SerializedSchemaType;
+  }
+> = T['x-serialized-type'] extends 'set_string'
+  ? SetProxy<string>
+  : T['x-serialized-type'] extends 'set_number'
+  ? SetProxy<number>
+  : Static<T> extends [infer U, TimestampType]
+  ? U
+  : never;
+
+export type ProxySchema<T extends ReturnType<typeof Schema.Schema>> = {
+  [k in keyof T['properties']]: k extends string
+    ? ProxyType<
+        // @ts-ignore
+        T['properties'][k]
+      >
+    : never;
+};
+
+// Pull out the proxy type from a model by checking the x-serialized-type
+export type ProxyTypeFromModel<T extends Model<any> | undefined> =
+  T extends Model<any> ? ProxySchema<T> : any;
 
 export type TypeFromModel<T extends TSchema> = Static<T>;
 
