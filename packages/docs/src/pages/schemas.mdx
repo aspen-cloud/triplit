@@ -1,0 +1,243 @@
+import { Callout } from 'nextra-theme-docs';
+
+# Schemas
+
+Some drivers like the lanes of the road, while others like off-roading. Triplit supports both.
+
+## Schemaful vs Schemaless
+
+Providing a schema to Triplit is optional, **but it is recommended** in order to
+take advantage of all the features provided by Triplit.
+
+Limitations of schemaless mode include:
+
+- You are limited to exclusively using registers to store your data.
+- If you use Typescript, you will not get type checking for your results.
+
+## Defining your schema
+
+A schema object defines your collections and the attributes on those collections. Schemas are defined in Javascript on your client using methods provided by the `@triplit/client` package. The following datatypes are supported:
+
+- string
+- number
+- boolean
+- Set\<string\>
+- Set\<number\>
+
+The following schema defines a collection called `todos` with four attributes:
+
+```typescript
+import { Schema as S, TriplitClient } from '@triplit/client';
+
+const schema = {
+  todos: S.Schema({
+    id: S.string(),
+    text: S.string(),
+    complete: S.Boolean(),
+    tags: S.Set(S.string()),
+  }),
+};
+
+const client = new TriplitClient({
+  db: {
+    schema,
+  },
+});
+```
+
+Passing a schema to the client constructor will override any schema currently stored in your cache. You may also manage your schema with migrations, as explained in the [Migrations](#migrations) section.
+
+## Migrations
+
+<Callout emoji="⚠️">
+  Migration support is currently in alpha. The process for managing migrations
+  may change. Please report any issues you encounter.
+</Callout>
+
+The `@triplit/client` package also provides a CLI tool for generating migrations.
+
+_The rest of this page will assume you use yarn as your package manager._
+
+A `--token` flag is required by all commands that contact the server.
+
+Additional details about the CLI tool can be found by running `yarn triplit --help`.
+
+### Checking the current server status
+
+```bash
+yarn triplit status --token=<secret_token>
+```
+
+This command returns the current schema status of your remote database. If the database is schemaful, this will include the current migration version.
+
+### Creating migrations
+
+```bash
+yarn triplit create some_migration_name
+```
+
+This command creates a new file inside your app's directory at `triplit/migrations` for you to define a migration. It will not run any migrations.
+
+Migration files are written in JSON and contain the following fields:
+
+`up`: A set of operations to apply to the server to migrate up.
+
+`down`: A set of operations to apply to the server to migrate down.
+
+`version`: A version indicator for the migration. This field should not be modified by the user.
+
+`parent`: The version of the previous migration. This field should not be modified by the user.
+
+A migration creating a collection called `todos` would look like this:
+
+```json
+{
+  "up": [
+    [
+      "create_collection",
+      {
+        "name": "todos",
+        "attributes": {
+          "text": {
+            "type": "string"
+          },
+          "complete": {
+            "type": "boolean"
+          }
+        }
+      }
+    ]
+  ],
+  "down": [
+    [
+      "drop_collection",
+      {
+        "name": "todos"
+      }
+    ]
+  ],
+  "version": 1685494192864,
+  "parent": 0
+}
+```
+
+### Migration operations
+
+Migration operations are defined as tuples of the operation name and the arguments to the operation.
+Migrations support the following operations:
+
+#### create_collection
+
+Creates a collection with attributes.
+
+```json
+[
+  "create_collection",
+  {
+    "name": "todos",
+    "attributes": {
+      "text": {
+        "type": "string"
+      },
+      "complete": {
+        "type": "boolean"
+      },
+      "tags": {
+        "type": "set_string"
+      }
+    }
+  }
+]
+```
+
+#### drop_collection
+
+Drops a collection.
+
+```json
+[
+  "drop_collection",
+  {
+    "name": "todos"
+  }
+]
+```
+
+#### add_attribute
+
+Adds an attribute to a collection.
+
+```json
+[
+  "add_attribute",
+  {
+    "collection": "todos",
+    "path": "deleted",
+    "attribute": {
+      "type": "boolean"
+    }
+  }
+]
+```
+
+#### drop_attribute
+
+Drops an attribute from a collection.
+
+```json
+[
+  "drop_attribute",
+  {
+    "collection": "todos",
+    "path": "deleted"
+  }
+]
+```
+
+#### rename_attribute
+
+Renames an attribute on a collection.
+
+```json
+[
+  "rename_attribute",
+  {
+    "collection": "todos",
+    "path": "deleted",
+    "newPath": "archived"
+  }
+]
+```
+
+### Running migrations
+
+```bash
+yarn triplit migrate up --token=<secret_token>
+```
+
+This command applies all up migrations to your server and generates a type definition for your schema. You may optionally provide a version to migrate to.
+
+Migrate down to a specific migration:
+
+```bash
+yarn triplit migrate down 1685494192864 --token=<secret_token>
+```
+
+This command applies all down migrations to your server until you reach the specified verison and generates a type definition for your schema. You may optionally provide a version to migrate to.
+
+### Generated schema
+
+When applying migrations to the server, Triplit will generate a schema for you at `triplit/schema.ts`.
+
+To apply migrations to your client database, they must be passed to your client on instantiation.
+
+```typescript
+import { TriplitClient } from '@triplit/client';
+import { Schema, migrations } from './triplit/schema';
+
+const client = new TriplitClient<Schema>({
+  db: {
+    migrations,
+  },
+});
+```

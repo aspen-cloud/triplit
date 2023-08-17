@@ -1,0 +1,49 @@
+# Storage
+
+That's a lot of trunk space!
+
+## Overview
+
+Triplit keeps your data in two storage areas, an 'outbox' and a 'cache'. The outbox is a queue of data that is waiting to be sent to the server. The cache is a local copy of the data that has been sent to the server.
+
+If you are offline or do not have syncing enabled, then the data will remain in the outbox so you can sync that data at a later time should you decide to.
+
+## MemoryStorage
+
+If you would only like to store data ephemerally, you can use the memory storage engine. This will store your data in memory and will not persist across page refreshes.
+
+If you use memory storage for your outbox, data may be lost if the user refreshes the page before the data is sent to the server.
+
+If no storage options are provided this is the default.
+
+```typescript
+import { TriplitClient, MemoryStorage } from '@triplit/client';
+
+const client = new TriplitClient({
+  db: {
+    storage: {
+      outbox: new MemoryStorage(),
+      cache: new MemoryStorage(),
+    },
+  },
+});
+```
+
+## IndexedDBStorage
+
+If you would like to persist data between refreshes in the browser you can use the IndexedDB storage engine. This will store your data in the browser's IndexedDB database.
+
+To improve performance, data is also cached in memory.
+
+```typescript
+import { TriplitClient, IndexedDBStorage } from '@triplit/client';
+
+const client = new TriplitClient({
+  db: {
+    storage: {
+      outbox: new IndexedDBStorage('my-app-outbox'),
+      cache: new IndexedDBStorage('my-app-cache'),
+    },
+  },
+});
+```

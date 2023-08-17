@@ -1,0 +1,142 @@
+import { Callout } from 'nextra-theme-docs';
+
+# Queries
+
+I've got a query for ya. How fast does this baby go?
+
+## Defining queries
+
+Data in Triplit is organized into collections, so to define a query you must first specify which collection you want to query.
+
+For example, if you want to query the `users` collection, you would do the following:
+
+```typescript
+const query = client.query('users');
+```
+
+<Callout emoji="⚠️">
+  Relationships and joins are not yet supported in Triplit, but are on the
+  [roadmap](/roadmap).
+</Callout>
+
+## Selecting fields
+
+To specify which fields you want to return, you can use the `select` method. This method accepts a list of field names as arguments.
+
+```typescript
+const query = client.query('users').select(['id', 'name', 'email', 'dob']);
+```
+
+## Filtering
+
+To filter results based on conditions, you can use the `where` method. This method accepts a list of clauses as arguments. A clause is a tuple that takes the form `[field, operator, value]`.
+
+For example the following query will return all registered users.
+
+```typescript
+const query = client
+  .query('users')
+  .select(['id', 'name', 'email', 'dob'])
+  .where([[['is_registered', '=', true]]]);
+```
+
+By default all clauses are joined with a logical AND, but you may use `or` and `and` methods within the clause array to specify how clauses should be logically grouped and joined.
+
+For example the following query will return all registered users who are either an admin or an owner.
+
+```typescript
+import { or } from '@triplit/client';
+
+const query = client
+  .query('users')
+  .select(['id', 'name', 'email', 'dob'])
+  .where([
+    [
+      ['is_registered', '=', true],
+      or([
+        ['role', '=', 'admin'],
+        ['role', '=', 'owner'],
+      ]),
+    ],
+  ]);
+```
+
+### Operators
+
+Triplit currently supports `=`, `!=`, `>`, `>=`, `<`, `<=`, `like` and `nlike` operators in `where` statements.
+
+You can use the `like` operator in a where clause to do simple filtering with string similarity. A `like` expression is true if the supplied field matches the supplied filter pattern.
+
+An underscore (`_`) in a pattern stands for (matches) any single character; a percent sign (`%`) matches any sequence of zero or more characters.
+
+For example:
+
+```typescript
+['triplit', 'like', 'triplit']    true
+['triplit', 'like', 'tri%']       true
+['triplit', 'like', 'tr_pl_t']    true
+['triplit', 'like', 'trip']       false
+```
+
+## Order
+
+To order the results of a query, you can use the `order` method. This method accepts a single order clause as arguments. A clause is a tuple that takes the form `[field, direction]`.
+
+For example the following query will return all users ordered by their creation date in descending order.
+
+```typescript
+const query = client
+  .query('users')
+  .select(['id', 'name', 'email', 'dob'])
+  .order(['created_at', 'DESC']);
+```
+
+<Callout emoji="⚠️">
+  Ordering by multiple fields is not supported by Triplit, but is on the
+  [roadmap](/roadmap).
+</Callout>
+
+## Limit
+
+Many times you will want to limit the number of results returned by a query. To do this, you can use the `limit` method.
+
+For example, the following query will return the 10 most recently created users.
+
+```typescript
+const query = client
+  .query('users')
+  .select(['id', 'name', 'email', 'dob'])
+  .order(['created_at', 'DESC'])
+  .limit(10);
+```
+
+## Sync state
+
+Triplit's client [storage](/docs/storage) is split into two areas - an outbox for unsynced updates and a cache for synced updates. Sometimes you may want to indicate that to a user that data has not yet been saved to the server. To do this, you can use the `syncStatus` method. This method accepts a single sync state (`pending`, `confirmed`, `all`) as an argument.
+
+For example, a messaging app could use two queries to build message sent indicators. In [React](/docs/getting-started#react):
+
+```tsx
+const allMessagesQuery = client.query('messages').order(['createdAt', 'ASC']);
+
+const pendingMessagesQuery = client
+  .query('messages')
+  .select(['id'])
+  .syncStatus('pending');
+
+function Messages() {
+  const { results: allMessages } = useQuery(client, allMessagesQuery);
+  const { results: pendingMessages } = useQuery(client, pendingMessagesQuery);
+
+  return (
+    <div>
+      {allMessages.entries().map(([id, message]) => (
+        <div>
+          <p>{message.text}</p>
+          <p>{pendingMessages.has(id) ? 'Sending...' : 'Sent'}</p>
+        </div>
+      ))}
+    </div>
+  );
+}
+```

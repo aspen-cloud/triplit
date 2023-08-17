@@ -1,0 +1,10 @@
+{
+  "index": "Welcome",
+  "getting-started": "Getting started",
+  "queries": "Queries",
+  "mutations": "Mutations",
+  "schemas": "Schemas",
+  "storage": "Storage",
+  "client-options": "Client options",
+  "whats-next": "What's next"
+}

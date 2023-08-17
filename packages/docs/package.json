@@ -1,0 +1,22 @@
+{
+  "name": "docs",
+  "packageManager": "yarn@3.4.1",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "export": "next export"
+  },
+  "dependencies": {
+    "next": "^13.4.16",
+    "nextra": "^2.11.0",
+    "nextra-theme-docs": "^2.11.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18",
+    "@types/react-dom": "^18"
+  }
+}
