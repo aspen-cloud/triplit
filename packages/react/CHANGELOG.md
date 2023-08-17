@@ -1,5 +1,20 @@
 # @triplit/react
 
+## 0.0.30
+
+### Patch Changes
+
+- 33a1201: Add handlers for remote transaction status: onTxCommit() and onTxFailure()
+  Add helper methods for managing cache: retry() and rollback()
+- 30aadee: - Pass errors to useQuery hook
+  - Add useEntity hook
+- 1a8f596: - Update dependencies
+- Updated dependencies [33a1201]
+- Updated dependencies [eff6593]
+- Updated dependencies [1a8f596]
+- Updated dependencies [30aadee]
+  - @triplit/client@0.0.30
+
 ## 0.0.28
 
 ### Patch Changes

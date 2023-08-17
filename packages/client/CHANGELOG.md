@@ -1,5 +1,21 @@
 # @triplit/client
 
+## 0.0.30
+
+### Patch Changes
+
+- 33a1201: Add handlers for remote transaction status: onTxCommit() and onTxFailure()
+  Add helper methods for managing cache: retry() and rollback()
+- eff6593: - Add helper methods on sync engine for managing connection
+- 1a8f596: - Update dependencies
+- 30aadee: - add rules and variables for authenticationa and authorization
+  - Auto disconnect query on syncing error
+  - Upgrade update api to immer style updates
+- Updated dependencies [1a8f596]
+- Updated dependencies [33a1201]
+- Updated dependencies [30aadee]
+  - @triplit/db@0.0.30
+
 ## 0.0.28
 
 ### Patch Changes
