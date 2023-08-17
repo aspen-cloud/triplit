@@ -136,16 +136,18 @@ class SyncEngine {
   private initialize() {
     this.connect();
 
-    // On network connection / disconnection, connect / disconnect ws
-    const connectionHandler = this.connect.bind(this);
-    window.addEventListener('online', connectionHandler);
-    const disconnectHandler = this.closeConnection.bind(this);
-    window.addEventListener('offline', () =>
-      disconnectHandler(
-        1000,
-        JSON.stringify({ type: 'NETWORK_OFFLINE', retry: false })
-      )
-    );
+    // Browser: on network connection / disconnection, connect / disconnect ws
+    if (typeof window !== 'undefined') {
+      const connectionHandler = this.connect.bind(this);
+      window.addEventListener('online', connectionHandler);
+      const disconnectHandler = this.closeConnection.bind(this);
+      window.addEventListener('offline', () =>
+        disconnectHandler(
+          1000,
+          JSON.stringify({ type: 'NETWORK_OFFLINE', retry: false })
+        )
+      );
+    }
 
     const throttledSignal = throttle(() => this.signalOutboxTriples(), 100);
 
