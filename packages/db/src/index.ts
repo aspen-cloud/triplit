@@ -28,7 +28,7 @@ export type { DBTransaction } from './db-transaction';
 export { queryResultToJson, or, and } from './query';
 export type { Query } from './query';
 export type { TripleRow } from './triple-store';
-export { Schema } from './schema';
+export { Schema, tuplesToSchema } from './schema';
 export type { TObject, TypeFromModel } from './schema';
 export type {
   AttributeDefinition,
