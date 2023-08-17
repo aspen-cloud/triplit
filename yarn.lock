@@ -3176,7 +3176,7 @@ __metadata:
     "@vitest/coverage-v8": ^0.33.0
     "@vitest/ui": ^0.33.0
     idb: ^7.1.1
-    nanoid: ^4.0.1
+    nanoid: ^3.0.0
     parcel: ^2.9.3
     pino: ^8.11.0
     rxdb: ^14.14.2
@@ -7360,21 +7360,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"nanoid@npm:^3.3.6":
+"nanoid@npm:^3.0.0, nanoid@npm:^3.3.6":
   version: 3.3.6
   resolution: "nanoid@npm:3.3.6"
   bin:
     nanoid: bin/nanoid.cjs
   checksum: 7d0eda657002738aa5206107bd0580aead6c95c460ef1bdd0b1a87a9c7ae6277ac2e9b945306aaa5b32c6dcb7feaf462d0f552e7f8b5718abfc6ead5c94a71b3
-  languageName: node
-  linkType: hard
-
-"nanoid@npm:^4.0.1":
-  version: 4.0.2
-  resolution: "nanoid@npm:4.0.2"
-  bin:
-    nanoid: bin/nanoid.js
-  checksum: 747c399cea4664dd0be1d0ec498ffd1ef8f1f5221676fc8b577e3f46f66d9afcddb9595d63d19a2e78d0bc6cc33984f65e66bf1682c850b9e26288883d96b53f
   languageName: node
   linkType: hard
 
