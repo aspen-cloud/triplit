@@ -4,7 +4,7 @@ import Bench from 'tinybench';
 import DB from '../src/db';
 import { RxDBQueryBuilderPlugin } from 'rxdb/plugins/query-builder';
 import { MemoryStorage } from '../src';
-import MemoryBTree from '../src/storage/memory-btree';
+import { MemoryBTree } from '../src/storage/memory-btree';
 import { fetch } from '../src/collection-query';
 addRxPlugin(RxDBQueryBuilderPlugin);
 

@@ -12,8 +12,8 @@ import { IndexedDbTupleStorage as IndexedDbStorage } from 'tuple-database/storag
 export { IndexedDbStorage };
 import { BrowserTupleStorage as BrowserLocalStorage } from 'tuple-database/storage/BrowserTupleStorage';
 export { BrowserLocalStorage };
-export { default as MemoryStorage } from './storage/memory-btree';
-export { default as CachedIndexedDbStorage } from './storage/cached-indexed-db';
+export { MemoryBTree } from './storage/memory-btree';
+export { CachedIndexedDbStorage } from './storage/cached-indexed-db';
 
 import DB from './db';
 export default DB;

@@ -6,7 +6,7 @@ import {
   TripleStoreTransaction,
 } from '../src/triple-store';
 import { Schema as S } from '../src/schema';
-import MemoryBTree from '../src/storage/memory-btree';
+import { MemoryBTree } from '../src/storage/memory-btree';
 import { IndexedDbStorage, MemoryStorage } from '../src';
 
 // const storage = new InMemoryTupleStorage();

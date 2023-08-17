@@ -1,6 +1,6 @@
 import {
   DB,
-  MemoryStorage,
+  MemoryBTree as MemoryStorage,
   Migration,
   CollectionQuery,
   Builder,

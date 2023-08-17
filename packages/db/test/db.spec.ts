@@ -13,7 +13,7 @@ import {
   InvalidFilterError,
 } from '../src';
 import { classes, students, departments } from './sample_data/school';
-import MemoryBTree from '../src/storage/memory-btree';
+import { MemoryBTree } from '../src/storage/memory-btree';
 import { stripCollectionFromId } from '../src/db';
 import { testSubscription } from './utils/test-subscription';
 

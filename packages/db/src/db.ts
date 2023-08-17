@@ -19,7 +19,7 @@ import CollectionQueryBuilder, {
   subscribeTriples,
 } from './collection-query';
 import { Query, QueryWhere } from './query';
-import MemoryStorage from './storage/memory-btree';
+import { MemoryBTree as MemoryStorage } from './storage/memory-btree';
 import { InvalidMigrationOperationError, WriteRuleError } from './errors';
 import { Clock } from './clocks/clock';
 
