@@ -7,7 +7,7 @@
   "types": "dist/index.d.ts",
   "source": "src/index.ts",
   "scripts": {
-    "build": "parcel build . --no-cache",
+    "build": "parcel build . --no-cache --no-optimize",
     "lint": "tsc",
     "test": "vitest",
     "test-coverage": "vitest --coverage",

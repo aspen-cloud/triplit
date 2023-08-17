@@ -10,10 +10,10 @@
     "noUnusedParameters": true,
     "noImplicitReturns": true,
     "skipLibCheck": true,
-    "useDefineForClassFields": true,
-    "baseUrl": ".",
-    "paths": {
-      "@triplit/*": ["./packages/*/src"]
-    }
+    "useDefineForClassFields": true
+    // "baseUrl": ".",
+    // "paths": {
+    //   "@triplit/*": ["./packages/*/src"]
+    // }
   }
 }

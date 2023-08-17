@@ -1,5 +1,4 @@
 import {
-  compareTuple,
   KeyValuePair,
   MAX,
   MIN,
@@ -8,6 +7,7 @@ import {
   TupleStorageApi,
   WriteOps,
 } from 'tuple-database';
+import { compareTuple } from 'tuple-database/helpers/compareTuple';
 import BTree from 'sorted-btree';
 
 // Hack for https://github.com/qwertie/btree-typescript/issues/36

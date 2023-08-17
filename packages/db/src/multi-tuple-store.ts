@@ -1,6 +1,5 @@
 import {
   Callback,
-  compareTuple,
   KeyValuePair,
   ScanArgs,
   Tuple,
@@ -9,6 +8,7 @@ import {
   Unsubscribe,
   transactionalReadWriteAsync,
 } from 'tuple-database';
+import { compareTuple } from 'tuple-database/helpers/compareTuple';
 import {
   TuplePrefix,
   TupleToObject,

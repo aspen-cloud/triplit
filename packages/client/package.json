@@ -12,7 +12,7 @@
   "scripts": {
     "build": "yarn build:code && yarn build:cli",
     "build:cli": "esbuild --bundle --platform=node --target=node14 --outfile=dist/cli.cjs cli/index.ts",
-    "build:code": "parcel build . --no-cache",
+    "build:code": "parcel build . --no-cache --no-optimize",
     "lint": "yarn lint:code && yarn lint:cli",
     "lint:code": "tsc",
     "lint:cli": "cd ./cli && tsc",

@@ -1,12 +1,14 @@
-import { TriplitClient } from '@triplit/client';
-import { CollectionNameFromModels, Model } from '@triplit/db';
+import {
+  TriplitClient,
+  Models,
+  CollectionNameFromModels,
+} from '@triplit/client';
 import { useQuery } from './use-query';
 
-export function useEntity<M extends Model<any>>(
-  client: TriplitClient<any>,
-  collectionName: CollectionNameFromModels<M>,
-  id: string
-) {
+export function useEntity<
+  M extends Models<any, any> | undefined,
+  CN extends CollectionNameFromModels<M>
+>(client: TriplitClient<M>, collectionName: CN, id: string) {
   const { fetchingLocal, results, error } = useQuery(
     client,
     client.query(collectionName).entityId(id)

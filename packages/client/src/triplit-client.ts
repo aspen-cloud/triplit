@@ -19,7 +19,8 @@ import {
 } from '@triplit/db';
 import { Subject } from 'rxjs';
 import { getUserId } from './token';
-
+// @ts-ignore temp parcel hack...
+const s = new MemoryStorage();
 export { IndexedDbStorage, MemoryStorage };
 type Storage = IndexedDbStorage | MemoryStorage;
 
