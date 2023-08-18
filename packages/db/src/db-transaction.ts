@@ -6,8 +6,8 @@ import {
   Models,
   timestampedObjectToPlainObject,
   objectToTimestampedObject,
-  TypeFromModel,
   SetProxy,
+  JSONTypeFromModel,
 } from './schema';
 import * as Document from './document';
 import { nanoid } from 'nanoid';
@@ -272,7 +272,10 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
     });
   }
 
-  async fetchById(collectionName: CollectionNameFromModels<M>, id: string) {
+  async fetchById<
+    CN extends CollectionNameFromModels<M>,
+    Schema extends ModelFromModels<M, CN>
+  >(collectionName: CN, id: string) {
     const collection = await this.getCollectionSchema(collectionName);
     const readRules = collection?.rules?.read;
     const entity = await this.storeTx.getEntity(
@@ -291,13 +294,11 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
       query = this.replaceVariablesInQuery(query);
       const collectionSchema = collection.attributes;
       if (doesEntityObjMatchWhere(entity, query.where, collectionSchema)) {
-        return entity;
+        return entity as JSONTypeFromModel<Schema>;
       }
       return null;
     }
-    return timestampedObjectToPlainObject(entity) as TypeFromModel<
-      M[typeof collectionName]
-    >;
+    return timestampedObjectToPlainObject(entity) as JSONTypeFromModel<Schema>;
   }
 
   async createCollection(params: CreateCollectionOperation[1]) {

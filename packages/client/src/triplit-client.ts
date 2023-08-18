@@ -504,7 +504,10 @@ export class TriplitClient<M extends Models<any, any> | undefined = undefined> {
     return ClientQueryBuilder<ModelFromModels<M, CN>>(collectionName as string);
   }
 
-  fetch(clientQueryBuilder: toBuilder<ClientQuery<ModelFromModels<M>>>) {
+  fetch<
+    CN extends CollectionNameFromModels<M>,
+    CQ extends ClientQuery<ModelFromModels<M, CN>>
+  >(clientQueryBuilder: toBuilder<CQ>) {
     const query = clientQueryBuilder.build();
     const scope = parseScope(query);
     return this.db.fetch(query, { scope });
