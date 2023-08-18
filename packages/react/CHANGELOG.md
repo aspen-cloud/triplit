@@ -1,5 +1,14 @@
 # @triplit/react
 
+## 0.0.32
+
+### Patch Changes
+
+- ba38c67: - fixup builds and typescript support
+  - improve support for next.js
+- Updated dependencies [ba38c67]
+  - @triplit/client@0.0.32
+
 ## 0.0.31
 
 ### Patch Changes
