@@ -1,5 +1,13 @@
 # @triplit/client
 
+## 0.0.36
+
+### Patch Changes
+
+- 6df3de6: Update CLI to support HTTPS
+- Updated dependencies [6df3de6]
+  - @triplit/db@0.0.36
+
 ## 0.0.32
 
 ### Patch Changes
