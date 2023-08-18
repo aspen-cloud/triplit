@@ -6,17 +6,11 @@
  */
 
 // TODO: note this somewhere - cannot export directly from external pkg with parcel
-import { SQLiteTupleStorage } from 'tuple-database/storage/SQLiteTupleStorage';
-SQLiteTupleStorage;
-export { SQLiteTupleStorage as SqliteStorage };
-import { IndexedDbTupleStorage } from 'tuple-database/storage/IndexedDbTupleStorage';
-IndexedDbTupleStorage;
-export { IndexedDbTupleStorage as IndexedDbStorage };
-import { BrowserTupleStorage as BrowserLocalStorage } from 'tuple-database/storage/BrowserTupleStorage';
-BrowserLocalStorage;
-export { BrowserLocalStorage };
-export { MemoryBTree } from './storage/memory-btree';
-export { CachedIndexedDbStorage } from './storage/cached-indexed-db';
+export { SQLiteTupleStorage as SqliteStorage } from 'tuple-database/storage/SQLiteTupleStorage';
+export { IndexedDbTupleStorage as IndexedDbStorage } from 'tuple-database/storage/IndexedDbTupleStorage';
+export { BrowserTupleStorage as BrowserLocalStorage } from 'tuple-database/storage/BrowserTupleStorage';
+export { default as MemoryStorage } from './storage/memory-btree';
+export { default as CachedIndexedDbStorage } from './storage/cached-indexed-db';
 
 import DB from './db';
 export default DB;

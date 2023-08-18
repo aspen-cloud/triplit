@@ -2,7 +2,7 @@ import { InMemoryTupleStorage } from 'tuple-database';
 import { describe, bench, beforeEach } from 'vitest';
 import * as Document from '../src/document';
 import { TripleStore } from '../src/triple-store';
-import { MemoryBTree } from '../src/storage/memory-btree';
+import MemoryBTree from '../src/storage/memory-btree';
 import { nanoid } from 'nanoid';
 import { MemoryClock } from '../src/clocks/memory-clock';
 

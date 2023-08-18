@@ -1,6 +1,4 @@
-import { Schema } from '@triplit/db';
-Schema;
-export { Schema };
+export { Schema } from '@triplit/db';
 export type {
   FetchResult,
   CollectionQuery,
