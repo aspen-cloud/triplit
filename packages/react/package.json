@@ -1,7 +1,7 @@
 {
   "name": "@triplit/react",
   "packageManager": "yarn@3.4.1",
-  "version": "0.0.30",
+  "version": "0.0.31",
   "source": "src/index.ts",
   "main": "dist/index.js",
   "module": "dist/module.js",
