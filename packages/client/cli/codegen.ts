@@ -9,7 +9,7 @@ import {
   CollectionsDefinition,
   CollectionDefinition,
 } from '@triplit/db';
-import { triplesToObject } from '@triplit/db/src/utils';
+import { triplesToObject } from 'packages/db/src/utils';
 
 interface MigrationFile {
   filename: string;

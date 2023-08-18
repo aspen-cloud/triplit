@@ -2308,6 +2308,21 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@parcel/packager-js@patch:@parcel/packager-js@npm%3A2.9.3#./.yarn/patches/@parcel-packager-js-npm-2.9.3-27b52dc79e.patch::locator=triplit%40workspace%3A.":
+  version: 2.9.3
+  resolution: "@parcel/packager-js@patch:@parcel/packager-js@npm%3A2.9.3#./.yarn/patches/@parcel-packager-js-npm-2.9.3-27b52dc79e.patch::version=2.9.3&hash=ef546f&locator=triplit%40workspace%3A."
+  dependencies:
+    "@parcel/diagnostic": 2.9.3
+    "@parcel/hash": 2.9.3
+    "@parcel/plugin": 2.9.3
+    "@parcel/source-map": ^2.1.1
+    "@parcel/utils": 2.9.3
+    globals: ^13.2.0
+    nullthrows: ^1.1.1
+  checksum: f99ecea303b78d577dd24beacef83b5f98b548929e7c4bc524c8d24f630b73668bc081c86e8ed73ba8b35f3a1a59edfac297e64edf4ffb8a4dbcfbd7b5c1e280
+  languageName: node
+  linkType: hard
+
 "@parcel/packager-raw@npm:2.9.3":
   version: 2.9.3
   resolution: "@parcel/packager-raw@npm:2.9.3"

@@ -24,6 +24,7 @@
   },
   "packageManager": "yarn@3.4.1",
   "resolutions": {
-    "tuple-database@^2.2.0": "patch:tuple-database@patch%3Atuple-database@npm%253A2.2.0%23./.yarn/patches/tuple-database-npm-2.2.0-131af7737b.patch%3A%3Aversion=2.2.0&hash=a2c0f3&locator=%2540triplit%2540workspace%253A.#./.yarn/patches/tuple-database-patch-021b29bc0c.patch"
+    "tuple-database@^2.2.0": "patch:tuple-database@patch%3Atuple-database@npm%253A2.2.0%23./.yarn/patches/tuple-database-npm-2.2.0-131af7737b.patch%3A%3Aversion=2.2.0&hash=a2c0f3&locator=%2540triplit%2540workspace%253A.#./.yarn/patches/tuple-database-patch-021b29bc0c.patch",
+    "@parcel/packager-js@2.9.3": "patch:@parcel/packager-js@npm%3A2.9.3#./.yarn/patches/@parcel-packager-js-npm-2.9.3-27b52dc79e.patch"
   }
 }
