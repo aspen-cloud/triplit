@@ -29,7 +29,7 @@ Inside your project directory, install the Triplit client package `@triplit/clie
 
 ## Setting up your client
 
-The Triplit client sets up your local cache and network connections for syncing. The specifics of your local cache and syncing can be configured by passing in options to the client, which are described in the [client options reference](/docs/client-options). For now, we will not pass in any options which will set up an in-memory local cache with no schema and no syncing.
+A Triplit client instance will set up a local cache for your data and (if turned on) will set up the required network connections for syncing. The specifics of your local cache and syncing can be configured by passing in options to the client, which are described in the [client options reference](/client-options). For now we will not pass in any options, which will set up an in-memory local cache with no schema and no syncing.
 
 ```typescript
 import { TriplitClient } from '@triplit/client';
@@ -54,42 +54,6 @@ const unsubscribe = client.subscribe(completeTodoIdsQuery, (data) => {
 });
 ```
 
-## React
+## Framework support
 
-If you are using React, you can use the hooks provided by `@triplit/react`:
-
-<Tabs items={['npm', 'pnpm', 'yarn']}>
-
-  <Tab>
-    ```bash copy
-    npm i @triplit/react
-    ```
-  </Tab>
-    <Tab>
-    ```bash copy
-    pnpm add @triplit/react
-    ```
-  </Tab>
-  <Tab>
-    ```bash copy
-    yarn add @triplit/react
-    ```
-  </Tab>
-</Tabs>
-
-The `useQuery` hook subscribes to the provided query inside your react component and returns the results of the query as a Map with entity ids as keys and entities as values. The hook will automatically unsubscribe from the query when the component unmounts.
-
-```tsx
-import { useQuery } from '@triplit/react';
-
-const client = // setup client
-const query = // define query
-
-function App() {
-  const { results } = useQuery(client, query);
-
-  return <div>
-    {results.entries().forEach(item => <div>{item.text}</div>)}
-  </div>
-}
-```
+If you are using a framework like React, Vue (coming soon), or Svelte (coming soon), you can use the Triplit framework bindings to make it easier to work with Triplit in your framework. See [frameworks](/frameworks) for more information.

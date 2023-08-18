@@ -8,7 +8,7 @@ I've got a query for ya. How fast does this baby go?
 
 Data in Triplit is organized into collections, so to define a query you must first specify which collection you want to query.
 
-For example, if you want to query the `users` collection, you would do the following:
+For example, if you want to query the `users` collection, you would write the following:
 
 ```typescript
 const query = client.query('users');
@@ -16,7 +16,7 @@ const query = client.query('users');
 
 <Callout emoji="⚠️">
   Relationships and joins are not yet supported in Triplit, but are on the
-  [roadmap](/roadmap).
+  [roadmap](https://triplit.dev/roadmap).
 </Callout>
 
 ## Selecting fields
@@ -93,7 +93,7 @@ const query = client
 
 <Callout emoji="⚠️">
   Ordering by multiple fields is not supported by Triplit, but is on the
-  [roadmap](/roadmap).
+  [roadmap](https://triplit.dev/roadmap).
 </Callout>
 
 ## Limit
@@ -110,11 +110,34 @@ const query = client
   .limit(10);
 ```
 
+## Variables
+
+You may pass variables to a query by using the `variables` method.
+
+For example, you may define a query that queries for restaurants that are open by cuisine:
+
+```typescript
+const baseQuery = client.query('restaurants').where([
+  [
+    ['is_open', '=', true],
+    ['cuisine', '=', '$cuisine'],
+  ],
+]);
+const openItalianRestaurantsQuery = baseQuery.variables({ cuisine: 'italian' });
+const openMexicanRestaurantsQuery = baseQuery.variables({ cuisine: 'mexican' });
+```
+
+This can help prevent writing the same query multiple times with different values.
+
+Certain variables are used internally by Triplit to aid with authorization and other features. These include:
+
+- `$SESSION_USER_ID`
+
 ## Sync state
 
-Triplit's client [storage](/docs/storage) is split into two areas - an outbox for unsynced updates and a cache for synced updates. Sometimes you may want to indicate that to a user that data has not yet been saved to the server. To do this, you can use the `syncStatus` method. This method accepts a single sync state (`pending`, `confirmed`, `all`) as an argument.
+Triplit's client [storage](/storage) is split into two areas - an outbox for unsynced updates and a cache for synced updates. Sometimes you may want to indicate that to a user that data has not yet been saved to the server. To do this, you can use the `syncStatus` method. This method accepts a single sync state (`pending`, `confirmed`, `all`) as an argument.
 
-For example, a messaging app could use two queries to build message sent indicators. In [React](/docs/getting-started#react):
+For example, a messaging app could use two queries to build message sent indicators. In [React](/frameworks/react):
 
 ```tsx
 const allMessagesQuery = client.query('messages').order(['createdAt', 'ASC']);

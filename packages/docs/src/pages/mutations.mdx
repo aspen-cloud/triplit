@@ -10,7 +10,7 @@ The trilpit client provides two methods for mutating data: `insert` and `update`
 
 ### Insert
 
-Insert inserts a new record into a collection. For example:
+`insert()` inserts a new record into a collection. For example:
 
 ```typescript
 await client.insert('employee', { name: 'Philip Fry' }, 1);
@@ -20,22 +20,22 @@ Providing an id is optional. If no id is provided, one will be generated for you
 
 ### Update
 
-Update updates an existing record in a collection. For example:
+`update()` updates an existing record in a collection. For example:
 
 ```typescript
-await client.update('employee', 1, (mutation) => {
-  mutation.attribute(['name']).set('Philip J. Fry');
+await client.update('employee', 1, async (entity) => {
+  entity.name = 'Philip J. Fry';
 });
 ```
 
 If possible, `update` will look at the schema you have provided to provide proper methods for interacting with you data. If no schema is provided, all fields are treated as registers.
 
-Registers have the following API:
-`set(value: any)`
+Registers are treated as values and can be assigned to in the updater function.
 
 Sets have the following API:
 `add(value: any)`
 `remove(value: any)`
+`has(value: any)`
 
 ## Transactions
 
@@ -92,3 +92,7 @@ client.syncEngine.onTxFailure(txId, (e) => {
 ```
 
 Tripit's API attempts to give you the flexibility to handle errors in various ways. For example, you could choose to retry a transaction a certain number of times before rolling it back. Or you could choose to retry a transaction only if it failed due to a network error.
+
+## Deletes
+
+Presently deletes should be handled by users by setting a deleted flag on the entity. The Triplit team is presently evaluating support for deletion.

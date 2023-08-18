@@ -1,0 +1,41 @@
+import { Tabs, Tab } from 'nextra-theme-docs';
+
+# React
+
+If you are using React, you can use the hooks provided by `@triplit/react`:
+
+<Tabs items={['npm', 'pnpm', 'yarn']}>
+
+  <Tab>
+    ```bash copy
+    npm i @triplit/react
+    ```
+  </Tab>
+    <Tab>
+    ```bash copy
+    pnpm add @triplit/react
+    ```
+  </Tab>
+  <Tab>
+    ```bash copy
+    yarn add @triplit/react
+    ```
+  </Tab>
+</Tabs>
+
+The `useQuery` hook subscribes to the provided query inside your react component and returns the results of the query as a Map with entity ids as keys and entities as values. The hook will automatically unsubscribe from the query when the component unmounts.
+
+```tsx
+import { useQuery } from '@triplit/react';
+
+const client = // setup client
+const query = // define query
+
+function App() {
+  const { results } = useQuery(client, query);
+
+  return <div>
+    {results.entries().forEach(item => <div>{item.text}</div>)}
+  </div>
+}
+```

@@ -12,7 +12,7 @@ take advantage of all the features provided by Triplit.
 Limitations of schemaless mode include:
 
 - You are limited to exclusively using registers to store your data.
-- If you use Typescript, you will not get type checking for your results.
+- If you use Typescript, you will not get type checking for your queries and results.
 
 ## Defining your schema
 
@@ -24,28 +24,43 @@ A schema object defines your collections and the attributes on those collections
 - Set\<string\>
 - Set\<number\>
 
-The following schema defines a collection called `todos` with four attributes:
+Schema values may also be deeply nested
+
+The following schema defines a collection called `todos` with four attributes and a collection called `users` with two attributes (one of which is nested):
 
 ```typescript
 import { Schema as S, TriplitClient } from '@triplit/client';
 
-const schema = {
-  todos: S.Schema({
-    id: S.string(),
-    text: S.string(),
-    complete: S.Boolean(),
-    tags: S.Set(S.string()),
-  }),
+const collections = {
+  todos: {
+    attributes: S.Schema({
+      id: S.string(),
+      text: S.string(),
+      complete: S.Boolean(),
+      tags: S.Set(S.string()),
+    }),
+  },
+  users: {
+    attributes: S.Schema({
+      name: S.string(),
+      address: S.Record({
+        street: S.string(),
+        city: S.string(),
+        state: S.string(),
+        zip: S.string(),
+      }),
+    }),
+  },
 };
 
 const client = new TriplitClient({
   db: {
-    schema,
+    schema: { collections },
   },
 });
 ```
 
-Passing a schema to the client constructor will override any schema currently stored in your cache. You may also manage your schema with migrations, as explained in the [Migrations](#migrations) section.
+Passing a schema to the client constructor will override any schema currently stored in your cache. You may also manage your schema with migrations, as explained in the [Migrations](#migrations) section. Using migrations is recommended for production applications that maintain state locally or use syncing.
 
 ## Migrations
 

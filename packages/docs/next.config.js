@@ -5,4 +5,11 @@ const withNextra = require('nextra')({
 
 module.exports = withNextra({
   basePath: '/docs',
+  redirects: () => [
+    {
+      source: '/frameworks',
+      destination: '/frameworks/react',
+      permanent: false,
+    },
+  ],
 });
