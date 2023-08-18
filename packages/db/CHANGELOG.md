@@ -1,5 +1,12 @@
 # @triplit/db
 
+## 0.0.32
+
+### Patch Changes
+
+- ba38c67: - fixup builds and typescript support
+  - improve support for next.js
+
 ## 0.0.31
 
 ### Patch Changes
