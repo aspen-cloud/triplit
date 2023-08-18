@@ -12,7 +12,9 @@
   "scripts": {
     "build": "yarn build:code && yarn build:cli",
     "build:cli": "esbuild --bundle --platform=node --target=node14 --outfile=dist/cli.cjs cli/index.ts",
-    "build:code": "parcel build . --no-cache --no-optimize",
+    "build:code": "yarn build:setup && parcel build . --no-cache && yarn build:cleanup",
+    "build:setup": "mv tsconfig.json tsconfig.tmp.json && mv tsconfig.build.json tsconfig.json",
+    "build:cleanup": "mv tsconfig.json tsconfig.build.json && mv tsconfig.tmp.json tsconfig.json",
     "lint": "yarn lint:code && yarn lint:cli",
     "lint:code": "tsc",
     "lint:cli": "cd ./cli && tsc",

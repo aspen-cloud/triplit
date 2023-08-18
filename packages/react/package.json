@@ -7,7 +7,9 @@
   "module": "dist/module.js",
   "types": "dist/index.d.ts",
   "scripts": {
-    "build": "parcel build . --no-cache",
+    "build": "yarn build:setup && parcel build . --no-cache && yarn build:cleanup",
+    "build:setup": "mv tsconfig.json tsconfig.tmp.json && mv tsconfig.build.json tsconfig.json",
+    "build:cleanup": "mv tsconfig.json tsconfig.build.json && mv tsconfig.tmp.json tsconfig.json",
     "lint": "tsc",
     "publish-pkg": "node ../../scripts/npm-check-version-and-publish.js"
   },
