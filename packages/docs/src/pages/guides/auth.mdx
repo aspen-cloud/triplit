@@ -1,0 +1,24 @@
+# Authentication and Authorization
+
+## Authentication
+
+Many apps require a way to authenticate users. Triplit is configured to look for certain [variables](/queries#variables) to determine who is making a request. This information is then used to inform the [authorization](#authorization) process.
+
+Authentication itself should be handled by an authentication service outside of Triplit. This could be a third-party service like [Auth0](https://auth0.com/), [Firebase Auth](https://firebase.google.com/products/auth), [AWS Cognito](https://aws.amazon.com/cognito/), [Supabse Auth](https://supabase.com/docs/guides/auth), etc or a custom service built by your team. The authentication service should provide a way to generate a token with Triplit specific claims that can be used to identify the user.
+
+A token must have the following claims:
+
+- `x-triplit-user-id`: The user's unique identifier
+- `x-triplit-project-id`: The project's unique identifier
+
+With these claims, Triplit can assign the special variable `$SESSION_USER_ID` in its queries, which can be used to filter data based on the user making the request.
+
+## Authorization
+
+Now that Triplit knows who
+
+Triplit allows you to define rules on your collections that determine who can read and write data. These rules are defined in the `rules` property of your collection's schema.
+
+Rules are defined as [filter clauses](/queries#filtering) that are applied to a query's result. For example, a write rule `[['author', '=', '$SESSION_USER_ID']]` on a collection `todos` would only allow users to assign themselves as the author of a todo.
+
+Rules can be defined with [migrations](/schemas#migrations) or in your project's [Dashboard](https://www.triplit.dev/dashboard) (coming soon).
