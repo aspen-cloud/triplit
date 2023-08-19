@@ -23,19 +23,41 @@ If you are using React, you can use the hooks provided by `@triplit/react`:
   </Tab>
 </Tabs>
 
+## useQuery
+
 The `useQuery` hook subscribes to the provided query inside your react component and returns the results of the query as a Map with entity ids as keys and entities as values. The hook will automatically unsubscribe from the query when the component unmounts.
 
 ```tsx
 import { useQuery } from '@triplit/react';
 
-const client = // setup client
-const query = // define query
+const client = new TriplitClient();
+const query = client.query('todos');
 
 function App() {
   const { results } = useQuery(client, query);
 
-  return <div>
-    {results.entries().forEach(item => <div>{item.text}</div>)}
-  </div>
+  return (
+    <div>
+      {results.entries().forEach((item) => (
+        <div>{item.text}</div>
+      ))}
+    </div>
+  );
+}
+```
+
+## useEntity
+
+The `useEntity` hook subscribes to the provided entity inside your react component and returns the entity. The hook will automatically unsubscribe from updates to the entity when the component unmounts.
+
+```tsx
+import { useEntity } from '@triplit/react';
+
+const client = new TriplitClient();
+
+function App() {
+  const { results: entity } = useEntity(client, 'todos', '1');
+
+  return <div>{entity.text}</div>;
 }
 ```

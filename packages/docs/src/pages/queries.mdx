@@ -163,3 +163,9 @@ function Messages() {
   );
 }
 ```
+
+## Syncing
+
+If syncing is enabled in your Triplit client, subscribing to a query will pull in updates from the server and resolve conflicts automatically.
+
+If a query fails on the server then syncing for that query will stop, but the syncing of other queries will not be impacted. Although you will not recieve updates from the server, updates that you make via mutations will be sent.
