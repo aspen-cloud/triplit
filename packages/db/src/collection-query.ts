@@ -466,22 +466,24 @@ function subscribeResultsAndTriples<Q extends CollectionQuery<any>>(
               isInCollection &&
               doesEntityObjMatchWhere(entityObj, query.where ?? [], schema);
 
-            let satisfiesOrder = true;
-
-            if (order && nextResult.size > 0) {
+            // Check if the result stays within the current range of the query based on the limit
+            // If it doesnt, we'll remove and might add it back when we backfill
+            let satisfiesLimitRange = true;
+            if (order && limit && nextResult.size >= limit) {
               const allValues = [...nextResult.values()];
               const valueRange = [
                 allValues.at(0)[order[0]][0],
                 allValues.at(-1)[order[0]][0],
               ];
               const entityValue = entityObj[order[0]][0];
-              satisfiesOrder =
+              satisfiesLimitRange =
                 order[1] === 'ASC'
                   ? entityValue <= valueRange[1]
                   : entityValue >= valueRange[1];
             }
 
-            if (isInResult && satisfiesOrder) {
+            // Add to result or prune as needed
+            if (isInResult && satisfiesLimitRange) {
               nextResult.set(entity, entityObj);
               matchedTriples.push(...entityTriples);
             } else {

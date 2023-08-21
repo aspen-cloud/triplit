@@ -705,6 +705,86 @@ describe('subscriptions', () => {
     });
   });
 
+  it('maintains order in subscription', async () => {
+    const db = new DB({ source: new InMemoryTupleStorage() });
+    return new Promise<void>(async (resolve, reject) => {
+      let i = 0;
+      const assertions = [
+        (data) => expect(Array.from(data.keys())).toEqual([]),
+        (data) => expect(Array.from(data.keys())).toEqual(['1']),
+        (data) => expect(Array.from(data.keys())).toEqual(['2', '1']),
+        (data) => expect(Array.from(data.keys())).toEqual(['2', '1', '3']),
+        (data) => expect(Array.from(data.keys())).toEqual(['2', '1', '4', '3']),
+        (data) => expect(Array.from(data.keys())).toEqual(['2', '4', '1', '3']),
+        (data) => expect(Array.from(data.keys())).toEqual(['2', '1', '3']),
+        (data) => expect(Array.from(data.keys())).toEqual(['2', '1']),
+        (data) => expect(Array.from(data.keys())).toEqual(['1']),
+        (data) => expect(Array.from(data.keys())).toEqual([]),
+      ];
+
+      const unsubscribe = db.subscribe(
+        CollectionQueryBuilder('students')
+          .where([['deleted', '=', false]])
+          .order(['age', 'ASC'])
+          .build(),
+        (students) => {
+          try {
+            assertions[i](students);
+            i++;
+            if (i === assertions.length) {
+              resolve();
+            }
+          } catch (e) {
+            reject(e);
+          }
+        }
+      );
+
+      // Add to result set (at beginning, end, inbetween)
+      await db.insert(
+        'students',
+        { id: 1, name: 'Alice', age: 30, deleted: false },
+        '1'
+      );
+      await db.insert(
+        'students',
+        { id: 2, name: 'Bob', age: 21, deleted: false },
+        '2'
+      );
+      await db.insert(
+        'students',
+        { id: 3, name: 'Charlie', age: 35, deleted: false },
+        '3'
+      );
+      await db.insert(
+        'students',
+        { id: 4, name: 'Alice', age: 32, deleted: false },
+        '4'
+      );
+
+      // reorder
+      await db.update('students', '4', async (entity) => {
+        entity.age = 29;
+      });
+
+      // remove from result set (at beginning, end, inbetween)
+      await db.update('students', '4', async (entity) => {
+        entity.deleted = true;
+      });
+      await db.update('students', '3', async (entity) => {
+        entity.deleted = true;
+      });
+      await db.update('students', '2', async (entity) => {
+        entity.deleted = true;
+      });
+      await db.update('students', '1', async (entity) => {
+        entity.deleted = true;
+      });
+
+      await unsubscribe();
+    });
+  });
+
   it('can subscribe to just triples', async () => {
     return new Promise<void>(async (resolve, reject) => {
       let i = 0;
