@@ -15,8 +15,6 @@ With these claims, Triplit can assign the special variable `$SESSION_USER_ID` in
 
 ## Authorization
 
-Now that Triplit knows who
-
 Triplit allows you to define rules on your collections that determine who can read and write data. These rules are defined in the `rules` property of your collection's schema.
 
 Rules are defined as [filter clauses](/queries#filtering) that are applied to a query's result. For example, a write rule `[['author', '=', '$SESSION_USER_ID']]` on a collection `todos` would only allow users to assign themselves as the author of a todo.
