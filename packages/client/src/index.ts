@@ -6,5 +6,6 @@ export type {
   CollectionNameFromModels,
   Model,
   Models,
+  Migration,
 } from '@triplit/db';
 export * from './triplit-client';
