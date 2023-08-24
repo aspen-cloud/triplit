@@ -129,6 +129,11 @@ export type ModelFromModels<
 export type CollectionNameFromModels<M extends Models<any, any> | undefined> =
   M extends Models<any, any> ? keyof M : M extends undefined ? string : never;
 
+export interface DBFetchOptions {
+  skipRules?: boolean;
+  scope?: string[];
+}
+
 export function ruleToTuple(
   collectionName: string,
   ruleType: keyof CollectionRules<any>,
@@ -251,7 +256,7 @@ export default class DB<M extends Models<any, any> | undefined> {
 
   async fetch<Q extends CollectionQuery<ModelFromModels<M>>>(
     query: Q,
-    { scope, skipRules = false }: { scope?: string[]; skipRules?: boolean } = {}
+    { scope, skipRules = false }: DBFetchOptions = {}
   ) {
     await this.ensureMigrated;
     // TODO: need to fix collectionquery typing
@@ -274,13 +279,19 @@ export default class DB<M extends Models<any, any> | undefined> {
   async fetchById<
     CN extends CollectionNameFromModels<M>,
     Schema extends ModelFromModels<M, CN>
-  >(collectionName: CN, id: string) {
+  >(
+    collectionName: CN,
+    id: string,
+    { skipRules = false }: DBFetchOptions = {}
+  ) {
     let entity = await this.tripleStore.getEntity(
       appendCollectionToId(collectionName, id)
     );
     if (!entity) return null;
-    entity = await applyRulesToEntity(this, collectionName, entity);
-    if (!entity) return null;
+    if (!skipRules) {
+      entity = await applyRulesToEntity(this, collectionName, entity);
+      if (!entity) return null;
+    }
     return timestampedObjectToPlainObject(entity) as JSONTypeFromModel<Schema>;
   }
 

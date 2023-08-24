@@ -30,6 +30,7 @@ import {
   RenameAttributeOperation,
   AddAttributeOperation,
   DropAttributeOperation,
+  DBFetchOptions,
 } from './db';
 import {
   validateExternalId,
@@ -249,13 +250,14 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
   }
 
   async fetch<Q extends CollectionQuery<ModelFromModels<M>>>(
-    query: Q
+    query: Q,
+    { skipRules = false }: DBFetchOptions = {}
   ): Promise<FetchResult<Q>> {
     let fetchQuery = query;
     const collection = await this.getCollectionSchema(
       fetchQuery.collectionName as CollectionNameFromModels<M>
     );
-    if (collection) {
+    if (collection && !skipRules) {
       fetchQuery = this.addReadRulesToQuery(fetchQuery, collection);
     }
     fetchQuery = replaceVariablesInQuery(this, fetchQuery);
@@ -268,13 +270,19 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
   async fetchById<
     CN extends CollectionNameFromModels<M>,
     Schema extends ModelFromModels<M, CN>
-  >(collectionName: CN, id: string) {
+  >(
+    collectionName: CN,
+    id: string,
+    { skipRules = false }: DBFetchOptions = {}
+  ) {
     let entity = await this.storeTx.getEntity(
       appendCollectionToId(collectionName, id)
     );
     if (!entity) return null;
-    entity = await applyRulesToEntity(this, collectionName, entity);
-    if (!entity) return null;
+    if (!skipRules) {
+      entity = await applyRulesToEntity(this, collectionName, entity);
+      if (!entity) return null;
+    }
     return timestampedObjectToPlainObject(entity) as JSONTypeFromModel<Schema>;
   }
 

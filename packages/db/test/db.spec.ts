@@ -11,6 +11,7 @@ import {
   WriteRuleError,
   ValueSchemaMismatchError,
   InvalidFilterError,
+  DBTransaction,
 } from '../src';
 import { classes, students, departments } from './sample_data/school';
 import MemoryBTree from '../src/storage/memory-btree';
@@ -19,6 +20,18 @@ import { testSubscription } from './utils/test-subscription';
 
 // const storage = new InMemoryTupleStorage();
 const storage = new MemoryBTree();
+
+async function testDBAndTransaction(
+  db: DB<any>,
+  test: (db: DB<any> | DBTransaction<any>) => void | Promise<void>,
+  scope: { db: boolean; tx: boolean } = { db: true, tx: true }
+) {
+  if (scope.db) await test(db);
+  if (scope.tx)
+    await db.transact(async (tx) => {
+      await test(tx);
+    });
+}
 
 describe('Database API', () => {
   let db: DB<any>;
@@ -1952,31 +1965,43 @@ describe('Rules', () => {
       });
     });
 
-    it('filters results in fetch', async () => {
-      const results = await db.fetch(db.query('classes').build());
-      const classesWithStudent2 = classes.filter((cls) =>
-        cls.enrolled_students.includes(USER_ID)
-      );
-      expect(results).toHaveLength(classesWithStudent2.length);
-    });
-
-    it('filters results in fetchById', async () => {
-      const nonEnrolledClass = await db.fetchById('classes', 'class-2');
-      expect(nonEnrolledClass).toBeNull();
-      const enrolledClass = await db.fetchById('classes', 'class-1');
-      expect(enrolledClass).not.toBeNull();
-    });
-
-    it('works in a transaction', async () => {
-      await db.transact(async (tx) => {
-        const results = await tx.fetch(db.query('classes').build());
+    it('fetch: filters results based on rules', async () => {
+      const query = db.query('classes').build();
+      await testDBAndTransaction(db, async (db) => {
+        const results = await db.fetch(query);
         const classesWithStudent2 = classes.filter((cls) =>
           cls.enrolled_students.includes(USER_ID)
         );
         expect(results).toHaveLength(classesWithStudent2.length);
-        const nonEnrolledClass = await tx.fetchById('classes', 'class-2');
+      });
+    });
+
+    it('fetch: doesnt filter rules if skipRules is set', async () => {
+      const query = db.query('classes').build();
+      await testDBAndTransaction(db, async (db) => {
+        const results = await db.fetch(query, { skipRules: true });
+        expect(results).toHaveLength(classes.length);
+      });
+    });
+
+    it('fetchOne: filters results based on rules', async () => {
+      await testDBAndTransaction(db, async (db) => {
+        const nonEnrolledClass = await db.fetchById('classes', 'class-2');
         expect(nonEnrolledClass).toBeNull();
-        const enrolledClass = await tx.fetchById('classes', 'class-1');
+        const enrolledClass = await db.fetchById('classes', 'class-1');
+        expect(enrolledClass).not.toBeNull();
+      });
+    });
+
+    it('fetchOne: doesnt filter rules if skipRules is set', async () => {
+      await testDBAndTransaction(db, async (db) => {
+        const nonEnrolledClass = await db.fetchById('classes', 'class-2', {
+          skipRules: true,
+        });
+        expect(nonEnrolledClass).not.toBeNull();
+        const enrolledClass = await db.fetchById('classes', 'class-1', {
+          skipRules: true,
+        });
         expect(enrolledClass).not.toBeNull();
       });
     });
