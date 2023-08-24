@@ -34,8 +34,9 @@ import {
 import {
   validateExternalId,
   appendCollectionToId,
-  replaceVariablesInFilterStatements,
   transformTripleAttribute,
+  replaceVariablesInQuery,
+  applyRulesToEntity,
 } from './db-helpers';
 
 export class DBTransaction<M extends Models<any, any> | undefined> {
@@ -102,7 +103,7 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
     if (collection?.rules?.write?.length) {
       const filters = collection.rules.write.flatMap((r) => r.filter);
       let query = { where: filters } as CollectionQuery<ModelFromModels<M>>;
-      query = this.replaceVariablesInQuery(query);
+      query = replaceVariablesInQuery(this, query);
       // TODO there is probably a better way to to this
       // rather than converting to timestamped object check to
       // validate the where filter
@@ -165,7 +166,7 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
       const updatedEntity = await this.fetchById(collectionName, entityId);
       const filters = collection.rules.write.flatMap((r) => r.filter);
       let query = { where: filters } as CollectionQuery<ModelFromModels<M>>;
-      query = this.replaceVariablesInQuery(query);
+      query = replaceVariablesInQuery(this, query);
       const satisfiedRule = doesEntityObjMatchWhere(
         objectToTimestampedObject(updatedEntity),
         query.where,
@@ -247,14 +248,6 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
     });
   }
 
-  private replaceVariablesInQuery<
-    Q extends CollectionQuery<ModelFromModels<M>>
-  >(query: Q): Q {
-    const variables = { ...(this.variables ?? {}), ...(query.vars ?? {}) };
-    const where = replaceVariablesInFilterStatements(query.where, variables);
-    return { ...query, where };
-  }
-
   async fetch<Q extends CollectionQuery<ModelFromModels<M>>>(
     query: Q
   ): Promise<FetchResult<Q>> {
@@ -265,7 +258,7 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
     if (collection) {
       fetchQuery = this.addReadRulesToQuery(fetchQuery, collection);
     }
-    fetchQuery = this.replaceVariablesInQuery(fetchQuery);
+    fetchQuery = replaceVariablesInQuery(this, fetchQuery);
     return fetch(this.storeTx, fetchQuery, {
       schema: collection?.attributes,
       includeTriples: false,
@@ -276,28 +269,12 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
     CN extends CollectionNameFromModels<M>,
     Schema extends ModelFromModels<M, CN>
   >(collectionName: CN, id: string) {
-    const collection = await this.getCollectionSchema(collectionName);
-    const readRules = collection?.rules?.read;
-    const entity = await this.storeTx.getEntity(
+    let entity = await this.storeTx.getEntity(
       appendCollectionToId(collectionName, id)
     );
     if (!entity) return null;
-    if (entity && readRules) {
-      const whereFilter = readRules.flatMap((rule) => rule.filter);
-      let query = { where: whereFilter };
-      /**
-       * TODO we should just make this operate directly on where filters
-       * e.g.
-       * query.where = this.replaceVariablesInWhere(query.where)
-       */
-      // @ts-ignore
-      query = this.replaceVariablesInQuery(query);
-      const collectionSchema = collection.attributes;
-      if (doesEntityObjMatchWhere(entity, query.where, collectionSchema)) {
-        return entity as JSONTypeFromModel<Schema>;
-      }
-      return null;
-    }
+    entity = await applyRulesToEntity(this, collectionName, entity);
+    if (!entity) return null;
     return timestampedObjectToPlainObject(entity) as JSONTypeFromModel<Schema>;
   }
 
