@@ -19,6 +19,7 @@ import {
 } from '@triplit/db';
 import { Subject } from 'rxjs';
 import { getUserId } from './token';
+import { ConnectionStatus, friendlyReadyState } from './websocket';
 export { IndexedDbStorage, MemoryStorage };
 type Storage = IndexedDbStorage | MemoryStorage;
 
@@ -75,6 +76,10 @@ class SyncEngine {
 
   private db: DB<any>;
   private syncOptions: SyncOptions;
+
+  private connectionChangeHandlers: Set<
+    (status: ConnectionStatus | undefined) => void
+  > = new Set();
 
   constructor(options: SyncOptions, db: DB<any>) {
     this.syncOptions = options;
@@ -311,6 +316,13 @@ class SyncEngine {
       // on error, close the connection and attempt to reconnect
       this.conn.close();
     };
+
+    // NOTE: this comes from proxy in websocket.ts
+    this.conn.onconnectionchange = (state) => {
+      for (const handler of this.connectionChangeHandlers) {
+        handler(state);
+      }
+    };
   }
 
   updateConnection(options: Partial<SyncOptions>) {
@@ -327,18 +339,7 @@ class SyncEngine {
   }
 
   get connectionStatus() {
-    switch (this.conn?.readyState) {
-      case this.conn?.OPEN:
-        return 'OPEN';
-      case this.conn?.CLOSING:
-        return 'CLOSING';
-      case this.conn?.CLOSED:
-        return 'CLOSED';
-      case this.conn?.CONNECTING:
-        return 'CONNECTING';
-      default:
-        return 'UNKNOWN'; // Will hit this if you've never initialized a connection
-    }
+    return this.conn ? friendlyReadyState(this.conn) : undefined;
   }
 
   private async handleErrorMessage(message: any) {
@@ -391,6 +392,13 @@ class SyncEngine {
         await scopedTx.deleteTriples(triples);
       }
     });
+  }
+
+  onConnectionStatusChange(
+    callback: (status: ConnectionStatus | undefined) => void
+  ) {
+    this.connectionChangeHandlers.add(callback);
+    return () => this.connectionChangeHandlers.delete(callback);
   }
 
   private closeConnection(
