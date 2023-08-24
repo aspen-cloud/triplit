@@ -35,7 +35,7 @@ interface AuthOptions {
   token?: string;
 }
 
-interface RemoteQueryParams extends Query<any> {
+interface RemoteQueryParams extends CollectionQuery<any> {
   collection: string;
 }
 
@@ -69,7 +69,7 @@ class SyncEngine {
   // @ts-ignore
   private conn: WebSocket;
 
-  private queries: Map<string, { params: RemoteQueryParams }> = new Map();
+  private queries: Map<string, { params: CollectionQuery<any> }> = new Map();
 
   private reconnectTimeoutDelay = 250;
   private reconnectTimeout: any;
@@ -161,7 +161,7 @@ class SyncEngine {
     });
   }
 
-  subscribe(params: RemoteQueryParams) {
+  subscribe(params: CollectionQuery<any>) {
     let id = Date.now().toString(36) + Math.random().toString(36).slice(2); // unique enough id
     this.sendMessage('CONNECT_QUERY', { id, params });
     this.queries.set(id, { params });
@@ -560,30 +560,11 @@ export class TriplitClient<M extends Models<any, any> | undefined = undefined> {
       scope,
       skipRules: true,
     });
-    const {
-      select,
-      where,
-      collectionName,
-      order,
-      limit,
-      after,
-      vars,
-      entityId,
-    } = query;
 
-    // TODO: refactor args to make sure we include everything
     let unsubscribeRemote = scope.includes('cache')
-      ? this.syncEngine.subscribe({
-          collection: collectionName,
-          select,
-          where,
-          order,
-          limit,
-          after,
-          vars,
-          entityId,
-        })
+      ? this.syncEngine.subscribe(query)
       : undefined;
+
     return () => {
       unsubscribeLocal();
       unsubscribeRemote && unsubscribeRemote();
