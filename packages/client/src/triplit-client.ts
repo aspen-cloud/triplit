@@ -35,10 +35,6 @@ interface AuthOptions {
   token?: string;
 }
 
-interface RemoteQueryParams extends CollectionQuery<any> {
-  collection: string;
-}
-
 function throttle(callback: () => void, delay: number) {
   let wait = false;
   let refire = false;

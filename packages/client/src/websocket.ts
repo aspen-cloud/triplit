@@ -22,9 +22,12 @@ export function friendlyReadyState(conn: WebSocket): ConnectionStatus {
 }
 
 // Add any changes to the WebSocket type here (ex more event handlers)
-var WebSocketProxy = new Proxy(window.WebSocket, {
+var WebSocketProxy = new Proxy(WebSocket, {
   construct: function (target, args) {
-    const instance = new target(...args);
+    const instance = new target(
+      // @ts-ignore
+      ...args
+    );
 
     function dispatchConnectionChangeEvent() {
       instance.dispatchEvent(new Event('connectionchange'));
