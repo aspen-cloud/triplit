@@ -227,7 +227,6 @@ export default class DB<M extends Models<any, any> | undefined> {
         ...query.where,
         ...collection.rules.read.flatMap((rule) => rule.filter),
       ];
-      // @ts-ignore I think we need to pass the schema type to where we read from storage
       return { ...query, where: updatedWhere };
     }
     return query;
