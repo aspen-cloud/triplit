@@ -6,6 +6,7 @@ import {
   FilterStatement,
   FilterGroup,
   entityToResultReducer,
+  constructEntity,
 } from './query';
 import {
   getSchemaFromPath,
@@ -79,9 +80,23 @@ export async function fetch<Q extends CollectionQuery<any>>(
   query: Q,
   { includeTriples = false, schema }: FetchOptions = {}
 ) {
+  const where = query.where;
+  if (query.entityId) {
+    const storeId = appendCollectionToId(query.collectionName, query.entityId);
+    const triples = await tx.findByEntity(storeId);
+    const entity = constructEntity(triples, storeId);
+    if (!entity || !doesEntityObjMatchWhere(entity, where, schema)) {
+      const results = new Map() as FetchResult<Q>;
+      return includeTriples ? { results, triples } : results;
+    }
+    const results = new Map([
+      [query.entityId, timestampedObjectToPlainObject(entity)],
+    ]) as FetchResult<Q>;
+    return includeTriples ? { results, triples } : results;
+  }
+
   const order = query.order;
   const limit = query.limit;
-  const where = query.where;
   const select = query.select;
   const resultOrder = await (order
     ? tx.findValuesInRange(
@@ -97,6 +112,7 @@ export async function fetch<Q extends CollectionQuery<any>>(
       )
     : tx.findByAVE([['_collection'], query.collectionName]));
 
+  // look into refactoring with constructEntities()
   const allEntities = await (includeTriples
     ? getCollectionEntitiesAndTriples(tx, query.collectionName)
     : tx.getEntities(query.collectionName));

@@ -50,6 +50,20 @@ export function entityToResultReducer<M extends Model<any>>(
   return entity;
 }
 
+export function constructEntities(triples: TripleRow[]) {
+  return triples.reduce((acc, triple) => {
+    const { id } = triple;
+    const entityObj = acc.get(id) ?? {};
+    acc.set(id, entityToResultReducer(entityObj, triple));
+    return acc;
+  }, new Map());
+}
+
+export function constructEntity(triples: TripleRow[], id: string) {
+  const entities = constructEntities(triples);
+  return entities.get(id);
+}
+
 export function queryResultToJson(
   results: Map<string, Record<string, Set<any>>>
 ) {

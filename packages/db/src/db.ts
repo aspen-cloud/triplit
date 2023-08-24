@@ -257,9 +257,8 @@ export default class DB<M extends Models<any, any> | undefined> {
   async fetch<Q extends CollectionQuery<ModelFromModels<M>>>(
     query: Q,
     { scope, skipRules = false }: DBFetchOptions = {}
-  ) {
+  ): Promise<FetchResult<Q>> {
     await this.ensureMigrated;
-    // TODO: need to fix collectionquery typing
     let fetchQuery = query;
     const collection = await this.getCollectionSchema(
       fetchQuery.collectionName as CollectionNameFromModels<M>
@@ -276,23 +275,15 @@ export default class DB<M extends Models<any, any> | undefined> {
   }
 
   // TODO: we could probably infer a type here
-  async fetchById<
-    CN extends CollectionNameFromModels<M>,
-    Schema extends ModelFromModels<M, CN>
-  >(
+  async fetchById<CN extends CollectionNameFromModels<M>>(
     collectionName: CN,
     id: string,
     { skipRules = false }: DBFetchOptions = {}
   ) {
-    let entity = await this.tripleStore.getEntity(
-      appendCollectionToId(collectionName, id)
-    );
-    if (!entity) return null;
-    if (!skipRules) {
-      entity = await applyRulesToEntity(this, collectionName, entity);
-      if (!entity) return null;
-    }
-    return timestampedObjectToPlainObject(entity) as JSONTypeFromModel<Schema>;
+    await this.ensureMigrated;
+    const query = this.query(collectionName).entityId(id).build();
+    const result = await this.fetch(query, { skipRules });
+    return result.has(id) ? result.get(id) : null;
   }
 
   async insert(

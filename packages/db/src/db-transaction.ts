@@ -4,14 +4,12 @@ import {
   ProxyTypeFromModel,
   Model,
   Models,
-  timestampedObjectToPlainObject,
   objectToTimestampedObject,
   SetProxy,
-  JSONTypeFromModel,
 } from './schema';
 import * as Document from './document';
 import { nanoid } from 'nanoid';
-import {
+import CollectionQueryBuilder, {
   CollectionQuery,
   doesEntityObjMatchWhere,
   fetch,
@@ -37,8 +35,9 @@ import {
   appendCollectionToId,
   transformTripleAttribute,
   replaceVariablesInQuery,
-  applyRulesToEntity,
 } from './db-helpers';
+import { Query } from './query';
+import { toBuilder } from './utils/builder';
 
 export class DBTransaction<M extends Models<any, any> | undefined> {
   constructor(
@@ -267,23 +266,22 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
     });
   }
 
-  async fetchById<
-    CN extends CollectionNameFromModels<M>,
-    Schema extends ModelFromModels<M, CN>
-  >(
+  // maybe make it public? Keeping private bc its only used internally
+  private query<CN extends CollectionNameFromModels<M>>(
+    collectionName: CN,
+    params?: Query<ModelFromModels<M, CN>>
+  ): toBuilder<CollectionQuery<ModelFromModels<M, CN>>> {
+    return CollectionQueryBuilder(collectionName as string, params);
+  }
+
+  async fetchById<CN extends CollectionNameFromModels<M>>(
     collectionName: CN,
     id: string,
     { skipRules = false }: DBFetchOptions = {}
   ) {
-    let entity = await this.storeTx.getEntity(
-      appendCollectionToId(collectionName, id)
-    );
-    if (!entity) return null;
-    if (!skipRules) {
-      entity = await applyRulesToEntity(this, collectionName, entity);
-      if (!entity) return null;
-    }
-    return timestampedObjectToPlainObject(entity) as JSONTypeFromModel<Schema>;
+    const query = this.query(collectionName).entityId(id).build();
+    const result = await this.fetch(query, { skipRules });
+    return result.has(id) ? result.get(id) : null;
   }
 
   async createCollection(params: CreateCollectionOperation[1]) {
