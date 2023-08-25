@@ -64,6 +64,7 @@ export function constructEntity(triples: TripleRow[], id: string) {
   return entities.get(id);
 }
 
+// This is deprecated
 export function queryResultToJson(
   results: Map<string, Record<string, Set<any>>>
 ) {

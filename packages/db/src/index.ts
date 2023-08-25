@@ -22,10 +22,21 @@ export type {
   CollectionRules,
 } from './db';
 export type { DBTransaction } from './db-transaction';
-export { queryResultToJson, or, and } from './query';
+export {
+  queryResultToJson,
+  or,
+  and,
+  constructEntity,
+  constructEntities,
+} from './query';
 export type { Query } from './query';
+export { stripCollectionFromId } from './db-helpers';
 export type { TripleRow } from './triple-store';
-export { Schema, tuplesToSchema } from './schema';
+export {
+  Schema,
+  tuplesToSchema,
+  timestampedObjectToPlainObject,
+} from './schema';
 export type { TObject, TypeFromModel } from './schema';
 export type {
   AttributeDefinition,

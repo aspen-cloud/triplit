@@ -3,9 +3,7 @@ import {
   ProxyTypeFromModel,
   Model,
   Models,
-  timestampedObjectToPlainObject,
   objectToTimestampedObject,
-  JSONTypeFromModel,
 } from './schema';
 import * as Document from './document';
 import { nanoid } from 'nanoid';
@@ -29,7 +27,6 @@ import {
   appendCollectionToId,
   validateExternalId,
   replaceVariablesInQuery,
-  applyRulesToEntity,
 } from './db-helpers';
 import { toBuilder } from './utils/builder';
 
@@ -104,6 +101,11 @@ interface DBConfig<M extends Models<any, any> | undefined> {
   tenantId?: string;
   clock?: Clock;
   variables?: Record<string, any>;
+}
+
+interface FetchOptions {
+  scope?: string[];
+  skipRules?: boolean;
 }
 
 const DEFAULT_STORE_KEY = 'default';
@@ -255,22 +257,52 @@ export default class DB<M extends Models<any, any> | undefined> {
 
   async fetch<Q extends CollectionQuery<ModelFromModels<M>>>(
     query: Q,
-    { scope, skipRules = false }: DBFetchOptions = {}
-  ): Promise<FetchResult<Q>> {
+    { scope, skipRules = false }: FetchOptions = {}
+  ) {
     await this.ensureMigrated;
-    let fetchQuery = query;
-    const collection = await this.getCollectionSchema(
-      fetchQuery.collectionName as CollectionNameFromModels<M>
-    );
-    if (collection && !skipRules) {
-      fetchQuery = this.addReadRulesToQuery(fetchQuery, collection);
-    }
-    fetchQuery = replaceVariablesInQuery(this, fetchQuery);
+    const { query: fetchQuery, collection } = await this.prepareQuery(query, {
+      scope,
+      skipRules,
+    });
     return await fetch(
       scope ? this.tripleStore.setStorageScope(scope) : this.tripleStore,
       fetchQuery,
       { schema: collection?.attributes, includeTriples: false }
     );
+  }
+
+  async fetchTriples<Q extends CollectionQuery<ModelFromModels<M>>>(
+    query: Q,
+    { scope, skipRules = false }: FetchOptions = {}
+  ) {
+    await this.ensureMigrated;
+    const { query: fetchQuery, collection } = await this.prepareQuery(query, {
+      scope,
+      skipRules,
+    });
+    return (
+      await fetch(
+        scope ? this.tripleStore.setStorageScope(scope) : this.tripleStore,
+        fetchQuery,
+        { schema: collection?.attributes, includeTriples: true }
+      )
+    ).triples;
+  }
+
+  private async prepareQuery<Q extends CollectionQuery<ModelFromModels<M>>>(
+    query: Q,
+    options: FetchOptions
+  ) {
+    await this.ensureMigrated;
+    let fetchQuery = query;
+    const collection = await this.getCollectionSchema(
+      fetchQuery.collectionName as CollectionNameFromModels<M>
+    );
+    if (collection && !options.skipRules) {
+      fetchQuery = this.addReadRulesToQuery(fetchQuery, collection);
+    }
+    fetchQuery = replaceVariablesInQuery(this, fetchQuery);
+    return { query: fetchQuery, collection };
   }
 
   // TODO: we could probably infer a type here

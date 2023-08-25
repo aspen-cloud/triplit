@@ -16,10 +16,20 @@ import {
   ModelFromModels,
   FetchResult,
   DurableClock,
+  TriplitError,
+  constructEntities,
+  timestampedObjectToPlainObject,
+  stripCollectionFromId,
 } from '@triplit/db';
 import { Subject } from 'rxjs';
 import { getUserId } from './token';
 import { ConnectionStatus, friendlyReadyState } from './websocket';
+import {
+  MissingConnectionInformationError,
+  RemoteFetchFailedError,
+  RemoteSyncFailedError,
+  UnrecognizedFetchPolicyError,
+} from './errors';
 export { IndexedDbStorage, MemoryStorage };
 type Storage = IndexedDbStorage | MemoryStorage;
 
@@ -408,6 +418,67 @@ class SyncEngine {
     clearTimeout(this.reconnectTimeout);
     this.reconnectTimeoutDelay = 250;
   }
+
+  async syncQuery(query: ClientQuery<any>) {
+    try {
+      const triples = await this.getRemoteTriples(query);
+      await this.db.tripleStore
+        .setStorageScope(['cache'])
+        .insertTriples(triples);
+    } catch (e) {
+      if (e instanceof TriplitError) throw e;
+      throw new RemoteSyncFailedError(query, 'An unknown error occurred.');
+    }
+  }
+
+  async fetchQuery<CQ extends ClientQuery<any>>(query: CQ) {
+    try {
+      // Simpler to serialize triples and reconstruct entities on the client
+      // TODO: set up a method that handles this (triples --> friendly entity)
+      const triples = await this.getRemoteTriples(query);
+      const entities = constructEntities(triples);
+      return new Map(
+        [...entities].map(([id, entity]) => [
+          stripCollectionFromId(id),
+          timestampedObjectToPlainObject(entity),
+        ])
+      ) as FetchResult<CQ>;
+    } catch (e) {
+      if (e instanceof TriplitError) throw e;
+      throw new RemoteFetchFailedError(query, 'An unknown error occurred.');
+    }
+  }
+
+  private async getRemoteTriples(query: ClientQuery<any>) {
+    const res = await this.fetchFromServer(`/queryTriples`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ query }),
+    });
+    if (!res.ok) {
+      // TODO: add more context
+      throw new RemoteFetchFailedError(query, res.statusText);
+    }
+    return await res.json();
+  }
+
+  private fetchFromServer(
+    path: string,
+    init?: RequestInit | undefined
+  ): Promise<Response> {
+    if (!this.httpUri || !this.token) {
+      const messages = [];
+      if (!this.httpUri) messages.push('No server specified.');
+      if (!this.token) messages.push('No token specified.');
+      throw new MissingConnectionInformationError(messages.join(' '));
+    }
+    return fetch(`${this.httpUri}${path}`, {
+      ...init,
+      headers: { Authorization: `Bearer ${this.token}`, ...init?.headers },
+    });
+  }
 }
 
 interface DBOptions<M extends Models<any, any> | undefined> {
@@ -431,8 +502,8 @@ export type ClientQuery<M extends Model<any> | undefined> =
 function ClientQueryBuilder<M extends Model<any> | undefined>(
   collectionName: string,
   params?: Query<M> & { syncStatus?: SyncStatus }
-) {
-  return Builder<ClientQuery<M>>({
+): ClientQueryBuilder<ClientQuery<M>> {
+  return Builder<ClientQuery<M>, Omit<ClientQuery<M>, 'collectionName'>>({
     collectionName,
     ...params,
     where: params?.where ?? [],
@@ -440,6 +511,11 @@ function ClientQueryBuilder<M extends Model<any> | undefined>(
     syncStatus: params?.syncStatus ?? 'all',
   });
 }
+
+export type ClientQueryBuilder<CQ extends ClientQuery<any>> = toBuilder<
+  CQ,
+  Omit<CQ, 'collectionName'>
+>;
 
 function parseScope(query: ClientQuery<any>) {
   const { syncStatus } = query;
@@ -453,6 +529,21 @@ function parseScope(query: ClientQuery<any>) {
       return ['outbox'];
   }
 }
+
+type LocalFetchOptions = {
+  policy: 'local';
+};
+type RemoteFetchOptions = {
+  policy: 'remote';
+};
+type LocalAndRemoteFetchOptions = {
+  policy: 'local-and-remote';
+  timeout?: number;
+};
+export type FetchOptions =
+  | LocalFetchOptions
+  | RemoteFetchOptions
+  | LocalAndRemoteFetchOptions;
 
 export class TriplitClient<M extends Models<any, any> | undefined = undefined> {
   db: DB<M>;
@@ -506,21 +597,63 @@ export class TriplitClient<M extends Models<any, any> | undefined = undefined> {
     return ClientQueryBuilder<ModelFromModels<M, CN>>(collectionName as string);
   }
 
-  fetch<
+  async fetch<
     CN extends CollectionNameFromModels<M>,
     CQ extends ClientQuery<ModelFromModels<M, CN>>
-  >(clientQueryBuilder: toBuilder<CQ>) {
+  >(clientQueryBuilder: ClientQueryBuilder<CQ>, options?: FetchOptions) {
     const query = clientQueryBuilder.build();
+    // default policy is local-and-remote and no timeout
+    const opts = options ?? { policy: 'local-and-remote' };
+
+    // local: fetch directly from db without backfill
+    if (opts.policy === 'local') {
+      return this.fetchLocal(query);
+    }
+
+    // remote: just query remote (will not sync data)
+    if (opts.policy === 'remote') {
+      return this.syncEngine.fetchQuery(query);
+    }
+
+    // local-and-remote: backfill db and query db, with timeout to determine how long to wait for remote, if no timeout it will wait for remote
+    if (opts.policy === 'local-and-remote') {
+      const hasTimeout = opts?.timeout != undefined;
+      if (hasTimeout) {
+        const timeout = opts.timeout!;
+        await Promise.race([
+          this.syncEngine.syncQuery(query),
+          new Promise((res) => setTimeout(res, timeout)),
+        ]).catch((e) => {
+          if (e instanceof TriplitError) {
+            console.warn(e.toJSON());
+          } else {
+            console.warn(e);
+          }
+        });
+      } else {
+        await this.syncEngine.syncQuery(query);
+      }
+      return this.fetchLocal(query);
+    }
+
+    throw new UnrecognizedFetchPolicyError((opts as FetchOptions).policy);
+  }
+
+  private fetchLocal<
+    CN extends CollectionNameFromModels<M>,
+    CQ extends ClientQuery<ModelFromModels<M, CN>>
+  >(query: CQ) {
     const scope = parseScope(query);
     return this.db.fetch(query, { scope });
   }
 
   async fetchOne<CN extends CollectionNameFromModels<M>>(
     collectionName: CN,
-    id: string
+    id: string,
+    options?: FetchOptions
   ) {
     const query = this.query(collectionName).entityId(id);
-    const results = await this.fetch(query);
+    const results = await this.fetch(query, options);
     // TODO: fixup some type loss here..
     return results.get(id);
   }

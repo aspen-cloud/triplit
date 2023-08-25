@@ -3,12 +3,12 @@ import {
   FetchResult,
   TriplitClient,
   ClientQuery,
-  toBuilder,
+  ClientQueryBuilder,
 } from '@triplit/client';
 
 export function useQuery<CQ extends ClientQuery<any>>(
   client: TriplitClient<any>,
-  query: toBuilder<CQ>
+  query: ClientQueryBuilder<CQ>
 ) {
   const [results, setResults] = useState<FetchResult<CQ> | undefined>(
     undefined
