@@ -374,10 +374,15 @@ function subscribeSingleEntity<Q extends CollectionQuery<any>>(
     let triples: TripleRow[] = [];
     try {
       if (!entityId) throw new EntityIdMissingError();
-      const compoundId = appendCollectionToId(collectionName, entityId);
-      triples = await tripleStore.findByEntity(compoundId);
-      entity =
-        triples.length === 0 ? null : triples.reduce(entityToResultReducer, {});
+      const storeId = appendCollectionToId(collectionName, entityId);
+      const fetchResult = await fetch(tripleStore, query, {
+        includeTriples: true,
+        schema,
+      });
+      entity = fetchResult.results.has(entityId)
+        ? fetchResult.results.get(entityId)
+        : null;
+      triples = fetchResult.triples;
 
       const results = new Map(
         entity ? [[entityId, timestampedObjectToPlainObject(entity)]] : []
@@ -386,16 +391,34 @@ function subscribeSingleEntity<Q extends CollectionQuery<any>>(
       onResults([results, triples]);
       const unsub = tripleStore.onWrite(async ({ inserts, deletes }) => {
         try {
-          triples = [...inserts, ...deletes].filter(
-            ({ id }) => id === compoundId
-          );
+          const entityInserts = inserts.filter(({ id }) => id === storeId);
+          const entityDeletes = deletes.filter(({ id }) => id === storeId);
+          const changed = entityInserts.length > 0 || entityDeletes.length > 0;
 
           // Early return prevents processing if no relevant entities were updated
-          if (triples.length === 0) return;
+          if (!changed) return;
 
-          entity = triples.reduce(entityToResultReducer, entity);
+          // if we have deletes, need to re-fetch the entity
+          if (entityDeletes.length) {
+            const fetchResult = await fetch(tripleStore, query, {
+              includeTriples: true,
+              schema,
+            });
+            entity = fetchResult.results.has(entityId)
+              ? fetchResult.results.get(entityId)
+              : null;
+            triples = fetchResult.triples;
+          } else {
+            entity = entityInserts.reduce(entityToResultReducer, entity);
+            triples = filterToLatestEntityAttribute(
+              triples.concat(entityInserts)
+            );
+          }
 
-          if (doesEntityObjMatchWhere(entity, query.where ?? [], schema)) {
+          if (
+            entity &&
+            doesEntityObjMatchWhere(entity, query.where ?? [], schema)
+          ) {
             results.set(entityId, timestampedObjectToPlainObject(entity));
           } else {
             results.delete(entityId);

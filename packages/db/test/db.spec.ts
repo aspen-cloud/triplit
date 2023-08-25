@@ -894,7 +894,7 @@ describe('single entity subscriptions', async () => {
       },
     ]);
   });
-  it("can should return nothing if the entity doesn't exist, and then update when it is inserted", async () => {
+  it("can should return nothing if the entity doesn't exist, and then update when it is inserted and deleted", async () => {
     await Promise.all(
       defaultData.map((doc) => db.insert('students', doc, doc.id))
     );
@@ -902,7 +902,7 @@ describe('single entity subscriptions', async () => {
       {
         check: (results) => {
           const entity = results.get('6');
-          expect(entity).toBeFalsy();
+          expect(entity).not.toBeDefined();
           expect(results.size).toBe(0);
         },
       },
@@ -926,6 +926,16 @@ describe('single entity subscriptions', async () => {
           expect(entity).toBeDefined();
           expect(results.size).toBe(1);
           expect(entity.id).toBe('6');
+        },
+      },
+      {
+        action: async () => {
+          const allTriples = await db.tripleStore.findByEntity();
+          await db.tripleStore.deleteTriples(allTriples);
+        },
+        check: (results) => {
+          const entity = results.get('6');
+          expect(entity).not.toBeDefined();
         },
       },
     ]);
