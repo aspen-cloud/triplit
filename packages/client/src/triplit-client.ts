@@ -401,9 +401,11 @@ class SyncEngine {
   }
 
   onConnectionStatusChange(
-    callback: (status: ConnectionStatus | undefined) => void
+    callback: (status: ConnectionStatus | undefined) => void,
+    runImmediately: boolean = false
   ) {
     this.connectionChangeHandlers.add(callback);
+    if (runImmediately) callback(this.connectionStatus);
     return () => this.connectionChangeHandlers.delete(callback);
   }
 
