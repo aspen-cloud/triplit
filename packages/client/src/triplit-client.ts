@@ -427,6 +427,7 @@ class SyncEngine {
         .insertTriples(triples);
     } catch (e) {
       if (e instanceof TriplitError) throw e;
+      if (e instanceof Error) throw new RemoteSyncFailedError(query, e.message);
       throw new RemoteSyncFailedError(query, 'An unknown error occurred.');
     }
   }
@@ -445,6 +446,8 @@ class SyncEngine {
       ) as FetchResult<CQ>;
     } catch (e) {
       if (e instanceof TriplitError) throw e;
+      if (e instanceof Error)
+        throw new RemoteFetchFailedError(query, e.message);
       throw new RemoteFetchFailedError(query, 'An unknown error occurred.');
     }
   }
@@ -490,6 +493,7 @@ interface DBOptions<M extends Models<any, any> | undefined> {
     cache?: Storage;
     outbox?: Storage;
   };
+  clientId?: string;
 }
 
 type SyncStatus = 'pending' | 'confirmed' | 'all';
@@ -545,19 +549,21 @@ export type FetchOptions =
   | RemoteFetchOptions
   | LocalAndRemoteFetchOptions;
 
+export interface ClientOptions<M extends Models<any, any> | undefined> {
+  db?: DBOptions<M>;
+  sync?: Omit<SyncOptions, 'apiKey'>;
+  auth?: AuthOptions;
+}
+
 export class TriplitClient<M extends Models<any, any> | undefined = undefined> {
   db: DB<M>;
   syncEngine: SyncEngine;
   authOptions: AuthOptions;
 
-  constructor(options?: {
-    db?: DBOptions<M>;
-    sync?: Omit<SyncOptions, 'apiKey'>;
-    auth?: AuthOptions;
-  }) {
+  constructor(options?: ClientOptions<M>) {
     this.authOptions = options?.auth ?? {};
     this.db = new DB({
-      clock: new DurableClock('cache'),
+      clock: new DurableClock('cache', options?.db?.clientId),
       schema: options?.db?.schema,
       migrations: options?.db?.migrations,
       variables: options?.db?.variables,
@@ -600,8 +606,7 @@ export class TriplitClient<M extends Models<any, any> | undefined = undefined> {
   async fetch<
     CN extends CollectionNameFromModels<M>,
     CQ extends ClientQuery<ModelFromModels<M, CN>>
-  >(clientQueryBuilder: ClientQueryBuilder<CQ>, options?: FetchOptions) {
-    const query = clientQueryBuilder.build();
+  >(query: CQ, options?: FetchOptions) {
     // default policy is local-and-remote and no timeout
     const opts = options ?? { policy: 'local-and-remote' };
 
@@ -652,7 +657,7 @@ export class TriplitClient<M extends Models<any, any> | undefined = undefined> {
     id: string,
     options?: FetchOptions
   ) {
-    const query = this.query(collectionName).entityId(id);
+    const query = this.query(collectionName).entityId(id).build();
     const results = await this.fetch(query, options);
     // TODO: fixup some type loss here..
     return results.get(id);

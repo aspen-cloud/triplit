@@ -13,9 +13,11 @@ export class DurableClock implements Clock {
   private clockReady: Promise<void>;
   private readyCallbacks?: [() => void, (reason?: any) => void];
   private assigned?: boolean;
+  private clientId: string;
 
-  constructor(clockScope: string) {
+  constructor(clockScope: string, clientId?: string) {
     this.scope = clockScope;
+    this.clientId = clientId || nanoid();
     this.clockReady = new Promise(async (res, rej) => {
       // Await for clock.start to be called
       // This is admitedly a bit of an odd pattern
@@ -33,7 +35,7 @@ export class DurableClock implements Clock {
       // Initialize in memory clock with current stored clock or create a new one
       const clockTuples = await this.scopedStore.readMetadataTuples('clock');
       if (clockTuples.length === 0) {
-        this.clock = [0, nanoid()];
+        this.clock = [0, this.clientId];
         await this.scopedStore.updateMetadataTuples([
           ['clock', ['tick'], this.clock[0]],
           ['clock', ['clientId'], this.clock[1]],
