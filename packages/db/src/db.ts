@@ -374,7 +374,6 @@ export default class DB<M extends Models<any, any> | undefined> {
       );
       if (collection && !skipRules) {
         // TODO see other comment about replaceVariablesInQuery on how to improve
-        // @ts-ignore
         subscriptionQuery = this.addReadRulesToQuery(
           subscriptionQuery,
           collection

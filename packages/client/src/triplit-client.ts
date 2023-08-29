@@ -557,6 +557,9 @@ export interface ClientOptions<M extends Models<any, any> | undefined> {
   auth?: AuthOptions;
 }
 
+// default policy is local-and-remote and no timeout
+const DEFAULT_FETCH_OPTIONS: FetchOptions = { policy: 'local-and-remote' };
+
 export class TriplitClient<M extends Models<any, any> | undefined = undefined> {
   db: DB<M>;
   syncEngine: SyncEngine;
@@ -609,8 +612,7 @@ export class TriplitClient<M extends Models<any, any> | undefined = undefined> {
     CN extends CollectionNameFromModels<M>,
     CQ extends ClientQuery<ModelFromModels<M, CN>>
   >(query: CQ, options?: FetchOptions) {
-    // default policy is local-and-remote and no timeout
-    const opts = options ?? { policy: 'local-and-remote' };
+    const opts = options ?? DEFAULT_FETCH_OPTIONS;
 
     // local: fetch directly from db without backfill
     if (opts.policy === 'local') {
@@ -651,7 +653,7 @@ export class TriplitClient<M extends Models<any, any> | undefined = undefined> {
     CQ extends ClientQuery<ModelFromModels<M, CN>>
   >(query: CQ) {
     const scope = parseScope(query);
-    return this.db.fetch(query, { scope });
+    return this.db.fetch(query, { scope, skipRules: true });
   }
 
   async fetchOne<CN extends CollectionNameFromModels<M>>(
@@ -689,25 +691,120 @@ export class TriplitClient<M extends Models<any, any> | undefined = undefined> {
     });
   }
 
+  // TODO: refactor so some logic is shared across policies (ex starting a local and remote sub is verbose and repetitive)
   subscribe<CQ extends ClientQuery<ModelFromModels<M>>>(
     query: CQ,
     onResults: (results: FetchResult<CQ>) => void,
-    onError?: (error: any) => void
+    onError?: (error: any) => void,
+    options?: FetchOptions
   ) {
+    const opts = options ?? DEFAULT_FETCH_OPTIONS;
+
     const scope = parseScope(query);
-    const unsubscribeLocal = this.db.subscribe(query, onResults, onError, {
-      scope,
-      skipRules: true,
-    });
 
-    let unsubscribeRemote = scope.includes('cache')
-      ? this.syncEngine.subscribe(query)
-      : undefined;
+    // local: subscribe exclusively to the local database, no listeners to remote will be set up
+    if (opts.policy === 'local') {
+      try {
+        return this.db.subscribe(query, onResults, onError, {
+          scope,
+          skipRules: true,
+        });
+      } catch (e) {
+        if (onError) onError(e);
+        else console.warn(e);
+        return () => {};
+      }
+    }
 
-    return () => {
-      unsubscribeLocal();
-      unsubscribeRemote && unsubscribeRemote();
-    };
+    // remote: fetch remote data, then subscribe to local changes (equivalent to local-and-remote with no timeout)
+    if (opts.policy === 'remote') {
+      let cancel = false;
+      let unsubscribeLocal = () => {};
+      let unsubscribeRemote = () => {};
+      this.syncEngine
+        .syncQuery(query)
+        .then(() => {
+          if (!cancel) {
+            unsubscribeLocal = this.db.subscribe(query, onResults, onError, {
+              scope,
+              skipRules: true,
+            });
+            if (scope.includes('cache'))
+              unsubscribeRemote = this.syncEngine.subscribe(query);
+          }
+        })
+        .catch((e) => {
+          if (onError) onError(e);
+          else console.warn(e);
+        });
+
+      return () => {
+        cancel = true;
+        unsubscribeLocal();
+        unsubscribeRemote();
+      };
+    }
+
+    // local-and-remote: fetch remote data, then subscribe to local changes (optionally include a timeout to determine how long to wait for remote)
+    if (opts.policy === 'local-and-remote') {
+      const hasTimeout = opts?.timeout != undefined;
+      let cancel = false;
+      let unsubscribeLocal = () => {};
+      let unsubscribeRemote = () => {};
+      if (hasTimeout) {
+        const timeout = opts.timeout!;
+        Promise.race([
+          this.syncEngine.syncQuery(query),
+          new Promise((res) => setTimeout(res, timeout)),
+        ])
+          .catch((e) => {
+            // If the remote fetch cannot complete, treat it as a timeout and continue with local fetch
+            if (e instanceof TriplitError) {
+              console.warn(e.toJSON());
+            } else {
+              console.warn(e);
+            }
+          })
+          .then(() => {
+            if (!cancel) {
+              unsubscribeLocal = this.db.subscribe(query, onResults, onError, {
+                scope,
+                skipRules: true,
+              });
+              if (scope.includes('cache'))
+                unsubscribeRemote = this.syncEngine.subscribe(query);
+            }
+          })
+          .catch((e) => {
+            if (onError) onError(e);
+            else console.warn(e);
+          });
+      } else {
+        this.syncEngine
+          .syncQuery(query)
+          .then(() => {
+            if (!cancel) {
+              unsubscribeLocal = this.db.subscribe(query, onResults, onError, {
+                scope,
+                skipRules: true,
+              });
+              if (scope.includes('cache'))
+                unsubscribeRemote = this.syncEngine.subscribe(query);
+            }
+          })
+          .catch((e) => {
+            if (onError) onError(e);
+            else console.warn(e);
+          });
+      }
+
+      return () => {
+        cancel = true;
+        unsubscribeLocal();
+        unsubscribeRemote();
+      };
+    }
+    return () => {};
   }
 
   updateAuthOptions(options: Partial<AuthOptions>) {
