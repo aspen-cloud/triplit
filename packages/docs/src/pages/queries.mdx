@@ -164,8 +164,14 @@ function Messages() {
 }
 ```
 
-## Syncing
+## Entity id
 
-If syncing is enabled in your Triplit client, subscribing to a query will pull in updates from the server and resolve conflicts automatically.
+Setting `entityId` on your query will return exclusively the requested entity if it exists.
 
-If a query fails on the server then syncing for that query will stop, but the syncing of other queries will not be impacted. Although you will not recieve updates from the server, updates that you make via mutations will be sent.
+For example, the following query will return just the user with id `abc`, if it exists.
+
+```typescript
+const query = client.query('users').entityId('abc');
+```
+
+As a convenience, Triplit provides a method [fetchOne](/fetching#fetch) to fetch an entity by its id. It is recommended to use `fetchOne` instead of `entityId`.

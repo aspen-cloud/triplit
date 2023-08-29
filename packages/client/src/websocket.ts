@@ -13,7 +13,7 @@ export function friendlyReadyState(conn: WebSocket): ConnectionStatus {
     case conn.OPEN:
       return 'OPEN';
     case conn.CLOSING:
-      return 'CLOSING';
+      return 'CLOSING'; // I'm not sure 'CLOSING' will ever be a state we see with connection change events
     case conn.CLOSED:
     // Default to closed... this shouldnt happen and probably indicates something is wrong
     default:

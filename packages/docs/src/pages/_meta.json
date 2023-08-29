@@ -1,10 +1,12 @@
 {
   "index": "Welcome",
   "getting-started": "Getting started",
+  "fetching": "Fetching",
   "queries": "Queries",
   "mutations": "Mutations",
   "schemas": "Schemas",
   "storage": "Storage",
+  "sync-engine": "Sync",
   "client-options": "Client options",
   "whats-next": "What's next",
   "frameworks": "Frameworks",

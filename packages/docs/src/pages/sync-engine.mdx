@@ -1,0 +1,26 @@
+# Sync Engine
+
+Triplit is most powerful when it is used to sync data across multiple devices and users. The sync engine is responsible for managing the connection to the server and syncing data between your local database and remote database.
+
+To turn on syncing, set the proper [client options](/client-options).
+
+## Connecting and disconnecting
+
+Instantiating a client will automatically connect to the server. If the connection is unexpectedly lost, the client will automatically reconnect.
+
+You may also manually manage the state connection to the server by calling `client.syncEngine.connect()` and `client.syncEngine.disconnect()`.
+
+The connection parameters used in the client constructor can be updated by calling `client.syncEngine.updateConnection(params)`. If necessary, this will disconnect and reconnect to the server with the new parameters. Updating the `auth.token` parameter will also automatically update the sync connection (see [auth options](/client-options#auth-options) for more information).
+
+## Connection status
+
+The connection status is available at `client.syncEngine.connectionStatus`.
+
+You may also listen to changes in the connection status by adding a listener to `client.syncEngine.onConnectionStatusChange(callback, runImmediately)`. If the optional parameter `runImmediately` is set to `true`, the callback will be run immediately with the current connection status.
+
+```typescript
+client.syncEngine.onConnectionStatusChange((status) => {
+  if (status === 'OPEN') console.log('Connected to server');
+  if (status === 'CLOSED') console.log('Disconnected from server');
+}, true);
+```

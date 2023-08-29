@@ -1,0 +1,120 @@
+import { Callout } from 'nextra-theme-docs';
+
+# Fetching
+
+## Fetch
+
+Data can be fetched with a single request. The Triplit Client provides two methods `fetch` and `fetchOne` which will make a single request to your database. How that request interacts with the local database and remote database can be configured by setting proper [options](#fetch-options).
+
+`fetch()` executes the specified query and returns a Map with entity ids as keys and the associated entities as values. For example:
+
+```typescript
+await client.insert('employees', { name: 'Philip J. Fry' }, 'Fry');
+await client.insert('employees', { name: 'Turanga Leela' }, 'Leela');
+
+const query = client.query('employees').build();
+const result = await client.fetch(query, options); // Map<string, { name: string }>
+```
+
+`fetchOne()` queries for a single entity by its id and returns the entity if it is found or `undefined` if it is not. For example:
+
+```typescript
+await client.insert('employees', { name: 'Philip J. Fry' }, 'Fry');
+await client.insert('employees', { name: 'Turanga Leela' }, 'Leela');
+
+const fry = await client.fetchOne('employees', 'Fry', options); // { name: 'Philip J. Fry' }
+const leela = await client.fetchOne('employees', 'Leela', options); // { name: 'Turanga Leela' }
+const bender = await client.fetchOne('employees', 'Bender', options); // undefined
+```
+
+`fetchOne` is equivalent to building a query with the [entityId](/queries#entity-id) parameter and pulling out the proper result from the result set.
+
+## Fetch options
+
+Because a Triplit Client may be dealing with two databases (your local database and remote database), the exact nature of how you would like to query those is customizable.
+
+If no options are provided, queries will be fulfilled with the options `{ policy: 'local-and-remote' }`.
+
+### Policy
+
+The `policy` option determines how you interact with your local and remote databases.
+
+<Callout type="info" emoji="ℹ️">
+  This is distinct from the [syncState](/queries#sync-state) parameter on a
+  query, which indicates how you wish to query your local database.
+</Callout>
+
+#### Local
+
+A `local` policy will fetch data directly from the local database and will never go to the network.
+
+```typescript
+const query = client.query('employees').build();
+
+// fetch from local database
+const result = await client.fetch(query, { policy: 'local' });
+```
+
+#### Remote
+
+A `remote` policy will fetch data directly from the remote database and will not update the local database with results. Results using this policy will also not include any data from the local database - notably any data that has been updated locally but not yet synced.
+
+```typescript
+const query = client.query('employees').build();
+
+// fetch from remote database
+const result = await client.fetch(query, { policy: 'remote' });
+```
+
+#### Local and remote
+
+A `local-and-remote` policy will fetch data from the remote database and will update the local database with results.
+
+In order to tune response times there is a `timeout` option included with this policy.
+
+If `timeout` is specifcied (including `{timeout: 0}`), the client will wait this amount of time for the remote database to respond before fulfilling the query with data from the local database. If the remote database responds with an error it will not throw.
+
+If `timeout` is not specified, the client will wait for the remote database's response. If the remote database responds with an error it will throw.
+
+```typescript
+const query = client.query('employees').build();
+
+// fetch from remote database and update local database
+try {
+  const result = await client.fetch(query, { policy: 'local-and-remote' });
+} catch (e) {
+  // will pick up remote error
+}
+
+// fetch from remote database, but return current local results if remote database does not respond within 1 second
+try {
+  const result = await client.fetch(query, {
+    policy: 'local-and-remote',
+    timeout: 1000,
+  });
+} catch (e) {
+  // will pick up local error
+}
+```
+
+## Subscribe
+
+Alternatively, you may subscribe to a query. Subscibing to a query will provide continual updates to the query result based on the state of your local database.
+
+If syncing is enabled, subscribing to a query will keep your local database in sync with the remote database.
+
+Starting a subscription is as simple as defining a query and a callback to run when data has updated:
+
+```typescript
+const unsubscribe = client.subscribe(
+  query,
+  (results) => {
+    // handle results
+  },
+  (error) => {
+    // handle error
+  }
+);
+```
+
+If a subscription query fails on the server then syncing for that query will stop. However, the subscription will remain active and updates to the local database will still be available. As well, the syncing of other queries will not be impacted. Although you will not recieve updates from the server, updates that you make via [mutations](/mutations) will be sent.
