@@ -383,9 +383,8 @@ function subscribeSingleEntity<Q extends CollectionQuery<any>>(
         ? fetchResult.results.get(entityId)
         : null;
       triples = fetchResult.triples;
-
       const results = new Map(
-        entity ? [[entityId, timestampedObjectToPlainObject(entity)]] : []
+        entity ? [[entityId, entity]] : []
       ) as FetchResult<Q>;
 
       onResults([results, triples]);
@@ -625,6 +624,7 @@ export function subscribe<Q extends CollectionQuery<any>>(
       query,
       ([results]) => {
         onResults(results);
+        console.log('single entity results', results);
       },
       onError,
       schema
