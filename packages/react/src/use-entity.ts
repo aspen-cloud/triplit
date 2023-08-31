@@ -2,7 +2,7 @@ import {
   TriplitClient,
   Models,
   CollectionNameFromModels,
-  FetchOptions,
+  SubscriptionOptions,
 } from '@triplit/client';
 import { useQuery } from './use-query';
 
@@ -13,15 +13,15 @@ export function useEntity<
   client: TriplitClient<M>,
   collectionName: CN,
   id: string,
-  options?: FetchOptions
+  options?: SubscriptionOptions
 ) {
-  const { fetchingLocal, results, error } = useQuery(
+  const { fetching, results, error } = useQuery(
     client,
     client.query(collectionName).entityId(id),
     options
   );
   return {
-    fetchingLocal,
+    fetching,
     results: results ? results.get(id) : undefined,
     error,
   };
