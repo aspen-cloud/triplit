@@ -15,9 +15,8 @@ export function useQuery<CQ extends ClientQuery<any>>(
   const [results, setResults] = useState<FetchResult<CQ> | undefined>(
     undefined
   );
-  const [fetchingLocal, setFetchingLocal] = useState(false);
+  const [fetching, setFetching] = useState(true);
   const [error, setError] = useState<any>(undefined);
-  // const [fetchingRemote, setFetchingRemote] = useState(false);
 
   const builtQuery = query && query.build();
   const stringifiedQuery = builtQuery && JSON.stringify(builtQuery);
@@ -25,16 +24,16 @@ export function useQuery<CQ extends ClientQuery<any>>(
   useEffect(() => {
     if (!client) return;
     setResults(undefined);
-    setFetchingLocal(true);
+    setFetching(true);
     const unsubscribe = client.subscribe(
       builtQuery,
       (localResults) => {
-        setFetchingLocal(false);
+        setFetching(false);
         setError(undefined);
         setResults(localResults);
       },
       (error) => {
-        setFetchingLocal(false);
+        setFetching(false);
         setError(error);
       },
       options
@@ -46,8 +45,7 @@ export function useQuery<CQ extends ClientQuery<any>>(
   }, [stringifiedQuery, client]);
 
   return {
-    fetchingLocal,
-    // fetchingRemote,
+    fetching,
     results,
     error,
   };
