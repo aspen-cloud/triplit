@@ -33,7 +33,7 @@ const bender = await client.fetchOne('employees', 'Bender', options); // undefin
 
 Because a Triplit Client may be dealing with two databases (your local database and remote database), the exact nature of how you would like to query those is customizable.
 
-If no options are provided, queries will be fulfilled with the options `{ policy: 'local-and-remote' }`.
+If no options are provided, queries will be fulfilled with the options `{ policy: 'local-first' }`.
 
 ### Policy
 
@@ -44,58 +44,13 @@ The `policy` option determines how you interact with your local and remote datab
   query, which indicates how you wish to query your local database.
 </Callout>
 
-#### Local
+The following policy types are valid:
 
-A `local` policy will fetch data directly from the local database and will never go to the network.
-
-```typescript
-const query = client.query('employees').build();
-
-// fetch from local database
-const result = await client.fetch(query, { policy: 'local' });
-```
-
-#### Remote
-
-A `remote` policy will fetch data directly from the remote database and will not update the local database with results. Results using this policy will also not include any data from the local database - notably any data that has been updated locally but not yet synced.
-
-```typescript
-const query = client.query('employees').build();
-
-// fetch from remote database
-const result = await client.fetch(query, { policy: 'remote' });
-```
-
-#### Local and remote
-
-A `local-and-remote` policy will fetch data from the remote database and will update the local database with results.
-
-In order to tune response times there is a `timeout` option included with this policy.
-
-If `timeout` is specifcied (including `{timeout: 0}`), the client will wait this amount of time for the remote database to respond before fulfilling the query with data from the local database. If the remote database responds with an error it will not throw.
-
-If `timeout` is not specified, the client will wait for the remote database's response. If the remote database responds with an error it will throw.
-
-```typescript
-const query = client.query('employees').build();
-
-// fetch from remote database and update local database
-try {
-  const result = await client.fetch(query, { policy: 'local-and-remote' });
-} catch (e) {
-  // will pick up remote error
-}
-
-// fetch from remote database, but return current local results if remote database does not respond within 1 second
-try {
-  const result = await client.fetch(query, {
-    policy: 'local-and-remote',
-    timeout: 1000,
-  });
-} catch (e) {
-  // will pick up local error
-}
-```
+- `local-first`: (default) This policy will fetch data directly from the local database, however if is determined that the query cannot be fulfilled it will fetch data from the remote database. If the remote database fails to fulfill the query, the cached data is used.
+- `local-only`: This policy will fetch data directly from the local database and will never go to the network.
+- `remote-first`: This policy will fetch data from the remote database and update the local database with those results before querying the local database.
+- `remote-only`: This policy will fetch data directly from the remote database and will not update the local database with results. Results using this policy will also not include any data from the local database - notably any data that has been updated locally but not yet synced. This policy is not avaialble on subscriptions.
+- `local-and-remote`: This policy will fetch data from the local database and will fetch results from the remote database in the background and update the local database with those results. Optionally you may provide a `timeout` parameter, which informs Triplit to wait `timeout` milliseconds for the remote result to update the local database.
 
 ## Subscribe
 

@@ -536,19 +536,33 @@ function parseScope(query: ClientQuery<any>) {
   }
 }
 
-type LocalFetchOptions = {
-  policy: 'local';
+type LocalFirstFetchOptions = {
+  policy: 'local-first';
 };
-type RemoteFetchOptions = {
-  policy: 'remote';
+type LocalOnlyFetchOptions = {
+  policy: 'local-only';
+};
+type RemoteFirstFetchOptions = {
+  policy: 'remote-first';
+};
+type RemoteOnlyFetchOptions = {
+  policy: 'remote-only';
 };
 type LocalAndRemoteFetchOptions = {
   policy: 'local-and-remote';
   timeout?: number;
 };
 export type FetchOptions =
-  | LocalFetchOptions
-  | RemoteFetchOptions
+  | LocalFirstFetchOptions
+  | LocalOnlyFetchOptions
+  | RemoteFirstFetchOptions
+  | RemoteOnlyFetchOptions
+  | LocalAndRemoteFetchOptions;
+
+export type SubscriptionOptions =
+  | LocalFirstFetchOptions
+  | LocalOnlyFetchOptions
+  | RemoteFirstFetchOptions
   | LocalAndRemoteFetchOptions;
 
 export interface ClientOptions<M extends Models<any, any> | undefined> {
@@ -558,7 +572,9 @@ export interface ClientOptions<M extends Models<any, any> | undefined> {
 }
 
 // default policy is local-and-remote and no timeout
-const DEFAULT_FETCH_OPTIONS: FetchOptions = { policy: 'local-and-remote' };
+const DEFAULT_FETCH_OPTIONS = {
+  policy: 'local-first',
+} as const;
 
 export class TriplitClient<M extends Models<any, any> | undefined = undefined> {
   db: DB<M>;
@@ -613,35 +629,40 @@ export class TriplitClient<M extends Models<any, any> | undefined = undefined> {
     CQ extends ClientQuery<ModelFromModels<M, CN>>
   >(query: CQ, options?: FetchOptions) {
     const opts = options ?? DEFAULT_FETCH_OPTIONS;
-
-    // local: fetch directly from db without backfill
-    if (opts.policy === 'local') {
+    if (opts.policy === 'local-only') {
       return this.fetchLocal(query);
     }
 
-    // remote: just query remote (will not sync data)
-    if (opts.policy === 'remote') {
+    if (opts.policy === 'local-first') {
+      const localResults = await this.fetchLocal(query);
+      if (localResults.size > 0) return localResults;
+      try {
+        await this.syncEngine.syncQuery(query);
+      } catch (e) {
+        warnError(e);
+      }
+      return this.fetchLocal(query);
+    }
+
+    if (opts.policy === 'remote-first') {
+      try {
+        await this.syncEngine.syncQuery(query);
+      } catch (e) {
+        warnError(e);
+      }
+      return this.fetchLocal(query);
+    }
+
+    if (opts.policy === 'remote-only') {
       return this.syncEngine.fetchQuery(query);
     }
 
-    // local-and-remote: backfill db and query db, with timeout to determine how long to wait for remote, if no timeout it will wait for remote
     if (opts.policy === 'local-and-remote') {
-      const hasTimeout = opts?.timeout != undefined;
-      if (hasTimeout) {
-        const timeout = opts.timeout!;
-        await Promise.race([
-          this.syncEngine.syncQuery(query),
-          new Promise((res) => setTimeout(res, timeout)),
-        ]).catch((e) => {
-          if (e instanceof TriplitError) {
-            console.warn(e.toJSON());
-          } else {
-            console.warn(e);
-          }
-        });
-      } else {
-        await this.syncEngine.syncQuery(query);
-      }
+      const timeout = opts.timeout ?? 0;
+      await Promise.race([
+        this.syncEngine.syncQuery(query),
+        new Promise((res) => setTimeout(res, timeout)),
+      ]).catch(warnError);
       return this.fetchLocal(query);
     }
 
@@ -696,14 +717,13 @@ export class TriplitClient<M extends Models<any, any> | undefined = undefined> {
     query: CQ,
     onResults: (results: FetchResult<CQ>) => void,
     onError?: (error: any) => void,
-    options?: FetchOptions
+    options?: SubscriptionOptions
   ) {
     const opts = options ?? DEFAULT_FETCH_OPTIONS;
 
     const scope = parseScope(query);
 
-    // local: subscribe exclusively to the local database, no listeners to remote will be set up
-    if (opts.policy === 'local') {
+    if (opts.policy === 'local-only') {
       try {
         return this.db.subscribe(query, onResults, onError, {
           scope,
@@ -711,18 +731,66 @@ export class TriplitClient<M extends Models<any, any> | undefined = undefined> {
         });
       } catch (e) {
         if (onError) onError(e);
-        else console.warn(e);
+        else warnError(e);
         return () => {};
       }
     }
 
-    // remote: fetch remote data, then subscribe to local changes (equivalent to local-and-remote with no timeout)
-    if (opts.policy === 'remote') {
+    if (opts.policy === 'local-first') {
+      let cancel = false;
+      let unsubscribeLocal = () => {};
+      let unsubscribeRemote = () => {};
+      // check cache first, if there are results, subscribe to local changes
+      // size zero is a poor proxy
+      this.fetchLocal(query).then((res) => {
+        if (res.size > 0) {
+          if (!cancel) {
+            unsubscribeLocal = this.db.subscribe(query, onResults, onError, {
+              scope,
+              skipRules: true,
+            });
+            if (scope.includes('cache'))
+              unsubscribeRemote = this.syncEngine.subscribe(query);
+          }
+        } else {
+          this.syncEngine
+            .syncQuery(query)
+            .catch(warnError)
+            .then(() => {
+              if (!cancel) {
+                unsubscribeLocal = this.db.subscribe(
+                  query,
+                  onResults,
+                  onError,
+                  {
+                    scope,
+                    skipRules: true,
+                  }
+                );
+                if (scope.includes('cache'))
+                  unsubscribeRemote = this.syncEngine.subscribe(query);
+              }
+            })
+            .catch((e) => {
+              if (onError) onError(e);
+              else warnError(e);
+            });
+        }
+      });
+      return () => {
+        cancel = true;
+        unsubscribeLocal();
+        unsubscribeRemote();
+      };
+    }
+
+    if (opts.policy === 'remote-first') {
       let cancel = false;
       let unsubscribeLocal = () => {};
       let unsubscribeRemote = () => {};
       this.syncEngine
         .syncQuery(query)
+        .catch(warnError)
         .then(() => {
           if (!cancel) {
             unsubscribeLocal = this.db.subscribe(query, onResults, onError, {
@@ -735,7 +803,7 @@ export class TriplitClient<M extends Models<any, any> | undefined = undefined> {
         })
         .catch((e) => {
           if (onError) onError(e);
-          else console.warn(e);
+          else warnError(e);
         });
 
       return () => {
@@ -745,58 +813,30 @@ export class TriplitClient<M extends Models<any, any> | undefined = undefined> {
       };
     }
 
-    // local-and-remote: fetch remote data, then subscribe to local changes (optionally include a timeout to determine how long to wait for remote)
     if (opts.policy === 'local-and-remote') {
-      const hasTimeout = opts?.timeout != undefined;
       let cancel = false;
       let unsubscribeLocal = () => {};
       let unsubscribeRemote = () => {};
-      if (hasTimeout) {
-        const timeout = opts.timeout!;
-        Promise.race([
-          this.syncEngine.syncQuery(query),
-          new Promise((res) => setTimeout(res, timeout)),
-        ])
-          .catch((e) => {
-            // If the remote fetch cannot complete, treat it as a timeout and continue with local fetch
-            if (e instanceof TriplitError) {
-              console.warn(e.toJSON());
-            } else {
-              console.warn(e);
-            }
-          })
-          .then(() => {
-            if (!cancel) {
-              unsubscribeLocal = this.db.subscribe(query, onResults, onError, {
-                scope,
-                skipRules: true,
-              });
-              if (scope.includes('cache'))
-                unsubscribeRemote = this.syncEngine.subscribe(query);
-            }
-          })
-          .catch((e) => {
-            if (onError) onError(e);
-            else console.warn(e);
-          });
-      } else {
-        this.syncEngine
-          .syncQuery(query)
-          .then(() => {
-            if (!cancel) {
-              unsubscribeLocal = this.db.subscribe(query, onResults, onError, {
-                scope,
-                skipRules: true,
-              });
-              if (scope.includes('cache'))
-                unsubscribeRemote = this.syncEngine.subscribe(query);
-            }
-          })
-          .catch((e) => {
-            if (onError) onError(e);
-            else console.warn(e);
-          });
-      }
+      const timeout = opts.timeout || 0;
+      Promise.race([
+        this.syncEngine.syncQuery(query),
+        new Promise((res) => setTimeout(res, timeout)),
+      ])
+        .catch(warnError)
+        .then(() => {
+          if (!cancel) {
+            unsubscribeLocal = this.db.subscribe(query, onResults, onError, {
+              scope,
+              skipRules: true,
+            });
+            if (scope.includes('cache'))
+              unsubscribeRemote = this.syncEngine.subscribe(query);
+          }
+        })
+        .catch((e) => {
+          if (onError) onError(e);
+          else warnError(e);
+        });
 
       return () => {
         cancel = true;
@@ -804,7 +844,9 @@ export class TriplitClient<M extends Models<any, any> | undefined = undefined> {
         unsubscribeRemote();
       };
     }
-    return () => {};
+    throw new UnrecognizedFetchPolicyError(
+      (opts as SubscriptionOptions).policy
+    );
   }
 
   updateAuthOptions(options: Partial<AuthOptions>) {
@@ -815,5 +857,13 @@ export class TriplitClient<M extends Models<any, any> | undefined = undefined> {
       const userId = token ? getUserId(token, claimsPath) : undefined;
       this.db.updateVariables({ SESSION_USER_ID: userId });
     }
+  }
+}
+
+function warnError(e: any) {
+  if (e instanceof TriplitError) {
+    console.warn(e.toJSON());
+  } else {
+    console.warn(e);
   }
 }
