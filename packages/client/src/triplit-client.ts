@@ -569,6 +569,10 @@ export interface ClientOptions<M extends Models<any, any> | undefined> {
   db?: DBOptions<M>;
   sync?: Omit<SyncOptions, 'apiKey'>;
   auth?: AuthOptions;
+  defaultFetchOptions?: {
+    fetch?: FetchOptions;
+    subscription?: SubscriptionOptions;
+  };
 }
 
 // default policy is local-and-remote and no timeout
@@ -580,6 +584,11 @@ export class TriplitClient<M extends Models<any, any> | undefined = undefined> {
   db: DB<M>;
   syncEngine: SyncEngine;
   authOptions: AuthOptions;
+
+  private defaultFetchOptions: {
+    fetch: FetchOptions;
+    subscription: SubscriptionOptions;
+  };
 
   constructor(options?: ClientOptions<M>) {
     this.authOptions = options?.auth ?? {};
@@ -598,6 +607,12 @@ export class TriplitClient<M extends Models<any, any> | undefined = undefined> {
           new IndexedDbStorage('triplit-outbox'),
       },
     });
+
+    this.defaultFetchOptions = {
+      fetch: DEFAULT_FETCH_OPTIONS,
+      subscription: DEFAULT_FETCH_OPTIONS,
+      ...options?.defaultFetchOptions,
+    };
 
     const syncOptions: SyncOptions = options?.sync ?? {};
     if (this.authOptions.token) {
@@ -628,7 +643,7 @@ export class TriplitClient<M extends Models<any, any> | undefined = undefined> {
     CN extends CollectionNameFromModels<M>,
     CQ extends ClientQuery<ModelFromModels<M, CN>>
   >(query: CQ, options?: FetchOptions) {
-    const opts = options ?? DEFAULT_FETCH_OPTIONS;
+    const opts = options ?? this.defaultFetchOptions.fetch;
     if (opts.policy === 'local-only') {
       return this.fetchLocal(query);
     }
@@ -719,7 +734,7 @@ export class TriplitClient<M extends Models<any, any> | undefined = undefined> {
     onError?: (error: any) => void,
     options?: SubscriptionOptions
   ) {
-    const opts = options ?? DEFAULT_FETCH_OPTIONS;
+    const opts = options ?? this.defaultFetchOptions.subscription;
 
     const scope = parseScope(query);
 
