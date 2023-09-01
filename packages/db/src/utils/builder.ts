@@ -1,22 +1,66 @@
-export type toBuilder<T extends {}, B extends {} = T> = {
-  [k in keyof Required<B>]: (value: B[k]) => toBuilder<T, B>;
-} & { build: () => T };
+import { FilterStatement, WhereFilter, QueryWhere, Query } from '../query';
+import { Model } from '../schema';
 
-// TODO: add allowed methods to the builder to throw runtime errors
-// when calling non-defined methods (i.e. query paramters for collectionQuery)
-// T is the return object, B is what is exposed in the builder (should be a subset of T)
-export default function Builder<T extends Object, B extends Object = T>(
-  initial: T
-): toBuilder<T, B> {
+export type toBuilder<
+  Data extends {},
+  ProtectedField extends keyof Data,
+  CustomInputs extends {
+    [key in keyof Omit<Required<Data>, ProtectedField>]: any;
+  }
+> = {
+  [k in keyof Omit<Required<Data>, ProtectedField>]: (
+    value: CustomInputs[k] extends undefined ? Data[k] : CustomInputs[k]
+  ) => toBuilder<Data, ProtectedField, CustomInputs>;
+} & { build: () => Data };
+
+export default function Builder<
+  Data extends Object,
+  ProtectedField extends keyof Data,
+  CustomInputs extends {
+    [key in keyof Omit<Partial<Data>, ProtectedField>]: any;
+  }
+>(
+  initial: Data,
+  {
+    inputTransformers,
+    protectedFields,
+  }: {
+    inputTransformers?: {
+      //@ts-ignore
+      [key in keyof CustomInputs]: (...input: CustomInputs[key]) => Data[key];
+    };
+    protectedFields?: ProtectedField[];
+  } = { protectedFields: [] }
+): toBuilder<Data, ProtectedField, CustomInputs> {
   const data = initial;
-  return new Proxy({} as toBuilder<T, B>, {
+  return new Proxy({} as toBuilder<Data, ProtectedField, CustomInputs>, {
     get: (_target, name) => {
       if (name === 'build') {
         return () => data;
       }
-      return (newVal: any) => {
-        return Builder({ ...data, [name]: newVal });
+      if (protectedFields?.includes(name as ProtectedField)) {
+        throw new Error(`Cannot edit protected field: ${String(name)}`);
+      }
+
+      return (...args: any[]) => {
+        let value = args[0];
+        if (
+          inputTransformers &&
+          inputTransformers[name as keyof typeof inputTransformers]
+        ) {
+          // @ts-ignore
+          value = inputTransformers[name as keyof CustomInputs](...args);
+        }
+        return Builder(
+          { ...data, [name]: value },
+          { protectedFields, inputTransformers }
+        );
       };
     },
   });
 }
+
+export type QueryBuilderInputs<M extends Model<any> | undefined> = {
+  where: FilterStatement<M> | WhereFilter<M>[] | [QueryWhere<M>];
+  order: NonNullable<Query<M>['order']> | [Query<M>['order']];
+};

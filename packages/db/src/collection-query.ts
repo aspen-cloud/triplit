@@ -1,5 +1,5 @@
 import { ValuePointer } from '@sinclair/typebox/value';
-import Builder, { toBuilder } from './utils/builder';
+import Builder, { QueryBuilderInputs, toBuilder } from './utils/builder';
 import {
   Query,
   Operator,
@@ -7,6 +7,9 @@ import {
   FilterGroup,
   entityToResultReducer,
   constructEntity,
+  WhereFilter,
+  QueryWhere,
+  QUERY_INPUT_TRANSFORMERS,
 } from './query';
 import {
   getSchemaFromPath,
@@ -34,15 +37,21 @@ import {
 
 export default function CollectionQueryBuilder<
   M extends Model<any> | undefined
->(collectionName: string, params?: Query<M>): toBuilder<CollectionQuery<M>> {
+>(collectionName: string, params?: Query<M>) {
   // TODO fixup ts so that select/where are actually optional
-  return Builder<CollectionQuery<M>>({
-    collectionName,
-    ...params,
-    where: params?.where ?? [],
-    select: params?.select ?? [],
-    vars: params?.vars ?? {},
-  });
+  return Builder<CollectionQuery<M>, 'collectionName', QueryBuilderInputs<M>>(
+    {
+      collectionName,
+      ...params,
+      where: params?.where ?? [],
+      select: params?.select ?? [],
+      vars: params?.vars ?? {},
+    },
+    {
+      protectedFields: ['collectionName'],
+      inputTransformers: QUERY_INPUT_TRANSFORMERS<Query<M>, M>(),
+    }
+  );
 }
 
 export type CollectionQuery<M extends Model<any> | undefined> = Query<M> & {

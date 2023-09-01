@@ -28,6 +28,7 @@ export {
   and,
   constructEntity,
   constructEntities,
+  QUERY_INPUT_TRANSFORMERS,
 } from './query';
 export type { Query } from './query';
 export { stripCollectionFromId } from './db-helpers';

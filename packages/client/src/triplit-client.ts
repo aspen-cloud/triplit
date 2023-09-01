@@ -20,6 +20,7 @@ import {
   constructEntities,
   timestampedObjectToPlainObject,
   stripCollectionFromId,
+  QUERY_INPUT_TRANSFORMERS,
 } from '@triplit/db';
 import { Subject } from 'rxjs';
 import { getUserId } from './token';
@@ -30,6 +31,12 @@ import {
   RemoteSyncFailedError,
   UnrecognizedFetchPolicyError,
 } from './errors';
+import {
+  FilterStatement,
+  WhereFilter,
+  QueryWhere,
+} from 'packages/db/src/query';
+import { QueryBuilderInputs } from 'packages/db/src/utils/builder';
 export { IndexedDbStorage, MemoryStorage };
 type Storage = IndexedDbStorage | MemoryStorage;
 
@@ -508,19 +515,24 @@ export type ClientQuery<M extends Model<any> | undefined> =
 function ClientQueryBuilder<M extends Model<any> | undefined>(
   collectionName: string,
   params?: Query<M> & { syncStatus?: SyncStatus }
-): ClientQueryBuilder<ClientQuery<M>> {
-  return Builder<ClientQuery<M>, Omit<ClientQuery<M>, 'collectionName'>>({
-    collectionName,
-    ...params,
-    where: params?.where ?? [],
-    select: params?.select ?? [],
-    syncStatus: params?.syncStatus ?? 'all',
-  });
+) {
+  return Builder<ClientQuery<M>, 'collectionName', QueryBuilderInputs<M>>(
+    {
+      collectionName,
+      ...params,
+      where: params?.where ?? [],
+      select: params?.select ?? [],
+      syncStatus: params?.syncStatus ?? 'all',
+    },
+    {
+      protectedFields: ['collectionName'],
+      inputTransformers: QUERY_INPUT_TRANSFORMERS<Query<M>, M>(),
+    }
+  );
 }
 
-export type ClientQueryBuilder<CQ extends ClientQuery<any>> = toBuilder<
-  CQ,
-  Omit<CQ, 'collectionName'>
+export type ClientQueryBuilder<CQ extends ClientQuery<any>> = ReturnType<
+  typeof ClientQueryBuilder<CQ extends ClientQuery<infer M> ? M : any>
 >;
 
 function parseScope(query: ClientQuery<any>) {

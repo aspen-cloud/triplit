@@ -91,3 +91,49 @@ export function or<M extends Model<any> | undefined>(where: QueryWhere<M>) {
 export function and<M extends Model<any> | undefined>(where: QueryWhere<M>) {
   return { mod: 'and' as const, filters: where };
 }
+
+export const QUERY_INPUT_TRANSFORMERS = <
+  Q extends Query<any>,
+  M extends Q extends Query<infer Model> ? Model : any
+>() => ({
+  where: (
+    ...args: FilterStatement<M> | WhereFilter<M>[] | [QueryWhere<M>]
+  ): QueryWhere<M> => {
+    if (typeof args[0] === 'string') {
+      /**
+       * E.g. where("id", "=", "123")
+       */
+      return [args as FilterStatement<M>];
+    } else if (
+      args.length === 1 &&
+      args[0] instanceof Array &&
+      args[0].every((filter) => typeof filter === 'object')
+    ) {
+      /**
+       *  E.g. where([["id", "=", "123"], ["name", "=", "foo"]])
+       */
+      return args[0] as QueryWhere<M>;
+    } else if (args.every((arg) => typeof arg === 'object')) {
+      /**
+       * E.g. where(["id", "=", "123"], ["name", "=", "foo"]);
+       */
+      return args as QueryWhere<M>;
+    } else {
+      throw new Error('Where clause of query is not formatted correctly');
+    }
+  },
+  order: (
+    ...args: NonNullable<Query<M>['order']> | [Query<M>['order']]
+  ): Query<M>['order'] => {
+    if (args.length === 1 && args[0] instanceof Array) {
+      return args[0] as Required<Query<M>['order']>;
+    } else if (
+      args.length === 2 &&
+      args.every((arg) => typeof arg === 'string')
+    ) {
+      return args as Required<Query<M>['order']>;
+    } else {
+      throw new Error('Order clause of query is not formatted correctly');
+    }
+  },
+});

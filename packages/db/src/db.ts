@@ -456,7 +456,7 @@ export default class DB<M extends Models<any, any> | undefined> {
   query<CN extends CollectionNameFromModels<M>>(
     collectionName: CN,
     params?: Query<ModelFromModels<M, CN>>
-  ): toBuilder<CollectionQuery<ModelFromModels<M, CN>>> {
+  ) {
     return CollectionQueryBuilder(collectionName as string, params);
   }
 
