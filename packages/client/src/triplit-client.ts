@@ -751,49 +751,18 @@ export class TriplitClient<M extends Models<any, any> | undefined = undefined> {
       }
     }
 
+    // Hit cache first, then backfill with remote
+    // If we introduce staleness maybe could add that here (sync remote before subscribing if stale)
     if (opts.policy === 'local-first') {
-      let cancel = false;
       let unsubscribeLocal = () => {};
       let unsubscribeRemote = () => {};
-      // check cache first, if there are results, subscribe to local changes
-      // size zero is a poor proxy
-      this.fetchLocal(query).then((res) => {
-        if (res.size > 0) {
-          if (!cancel) {
-            unsubscribeLocal = this.db.subscribe(query, onResults, onError, {
-              scope,
-              skipRules: true,
-            });
-            if (scope.includes('cache'))
-              unsubscribeRemote = this.syncEngine.subscribe(query);
-          }
-        } else {
-          this.syncEngine
-            .syncQuery(query)
-            .catch(warnError)
-            .then(() => {
-              if (!cancel) {
-                unsubscribeLocal = this.db.subscribe(
-                  query,
-                  onResults,
-                  onError,
-                  {
-                    scope,
-                    skipRules: true,
-                  }
-                );
-                if (scope.includes('cache'))
-                  unsubscribeRemote = this.syncEngine.subscribe(query);
-              }
-            })
-            .catch((e) => {
-              if (onError) onError(e);
-              else warnError(e);
-            });
-        }
+      unsubscribeLocal = this.db.subscribe(query, onResults, onError, {
+        scope,
+        skipRules: true,
       });
+      if (scope.includes('cache'))
+        unsubscribeRemote = this.syncEngine.subscribe(query);
       return () => {
-        cancel = true;
         unsubscribeLocal();
         unsubscribeRemote();
       };
