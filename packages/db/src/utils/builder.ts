@@ -1,6 +1,3 @@
-import { FilterStatement, WhereFilter, QueryWhere, Query } from '../query';
-import { Model } from '../schema';
-
 export type toBuilder<
   Data extends {},
   ProtectedField extends keyof Data,
@@ -59,8 +56,3 @@ export default function Builder<
     },
   });
 }
-
-export type QueryBuilderInputs<M extends Model<any> | undefined> = {
-  where: FilterStatement<M> | WhereFilter<M>[] | [QueryWhere<M>];
-  order: NonNullable<Query<M>['order']> | [Query<M>['order']];
-};

@@ -72,6 +72,15 @@ export interface FetchOptions {
   schema?: Model<any>;
 }
 
+/**
+ * Fetch
+ * @summary This function is used to fetch entities from the database. It can be used to fetch a single entity or a collection of entities.
+ * @description This function tries to consult TripleStore indexes to efficiently fetch entities. If the query is not supported by the indexes, it will fall back to scanning the entire database.
+ * This can happen for queries that use multiple order clauses, LIKE filters, etc.
+ * @param tx
+ * @param query
+ * @param options
+ */
 export async function fetch<Q extends CollectionQuery<any>>(
   tx: TripleStoreTransaction | TripleStore,
   query: Q,
@@ -109,11 +118,11 @@ export async function fetch<Q extends CollectionQuery<any>>(
   const select = query.select;
   const resultOrder = await (order
     ? tx.findValuesInRange(
-        [query.collectionName, ...(order[0] as string).split('.')],
+        [query.collectionName, ...(order[0][0] as string).split('.')],
         {
-          direction: order[1],
-          ...(query.after
-            ? order[1] === 'DESC'
+          direction: order[0][1],
+          ...(query.after && (!order || order.length <= 1)
+            ? order[0][1] === 'DESC'
               ? { lessThan: query.after }
               : { greaterThan: query.after }
             : {}),
@@ -126,8 +135,10 @@ export async function fetch<Q extends CollectionQuery<any>>(
     ? getCollectionEntitiesAndTriples(tx, query.collectionName)
     : tx.getEntities(query.collectionName));
 
+  let entityCount = 0;
+  let previousOrderVal;
   const resultTriples: TripleRow[] = [];
-  const entities = await new Pipeline(resultOrder)
+  let entities = await new Pipeline(resultOrder)
     .map(async ({ id }) => {
       const entityEntry = allEntities.get(id);
       const externalId = stripCollectionFromId(id);
@@ -144,14 +155,40 @@ export async function fetch<Q extends CollectionQuery<any>>(
       resultTriples.push(...triples);
       return [id, entity] as [string, any];
     })
-    .take(limit ?? Infinity)
+    .take(limit && (!order || order.length <= 1) ? limit : Infinity)
+    .takeWhile(async ([, entity]) => {
+      if (!order || order.length <= 1) return true;
+      entityCount++;
+      let orderVal = entity[order![0][0]][0];
+      // keep going if we have the same order value
+      if (orderVal === previousOrderVal) return true;
+      previousOrderVal = orderVal;
+      if (entityCount > limit!) return false;
+      return true;
+    })
     .toArray();
 
-  const results = new Map(entities);
+  if (order && order.length > 1) {
+    entities.sort(([_aId, a], [_bId, b]) => {
+      for (const [prop, dir] of order) {
+        const direction =
+          a[prop][0] < b[prop][0] ? -1 : a[prop][0] == b[prop][0] ? 0 : 1;
+        if (direction !== 0) return dir === 'ASC' ? direction : direction * -1;
+      }
+      return 0;
+    });
+    let startIndex = 0;
+    if (query.after) {
+      let afterIndex = entities.findIndex(
+        ([id]) => id === stripCollectionFromId(query.after![1])
+      );
+      if (afterIndex !== -1) startIndex = afterIndex + 1;
+    }
+    if (limit) entities = entities.slice(startIndex, startIndex + limit);
+  }
 
   if (select && select.length > 0) {
-    for (const result of results) {
-      const [entId, entity] = result;
+    entities = entities.map(([entId, entity]) => {
       const selectedEntity = select.reduce<any>((acc, selectPath) => {
         const pathParts = (selectPath as string).split('.');
         const leafMostPart = pathParts.pop()!;
@@ -166,20 +203,18 @@ export async function fetch<Q extends CollectionQuery<any>>(
 
         return acc;
       }, {});
-      results.set(entId, selectedEntity);
-    }
+      return [entId, selectedEntity];
+    });
   }
+
   if (includeTriples) {
     return {
-      results,
+      results: new Map(entities),
       triples: filterToLatestEntityAttribute(resultTriples),
     };
   }
   return new Map(
-    [...results].map(([id, entity]) => [
-      id,
-      timestampedObjectToPlainObject(entity),
-    ])
+    entities.map(([id, entity]) => [id, timestampedObjectToPlainObject(entity)])
   ) as FetchResult<Q>;
 }
 
@@ -519,12 +554,12 @@ function subscribeResultsAndTriples<Q extends CollectionQuery<any>>(
             if (order && limit && nextResult.size >= limit) {
               const allValues = [...nextResult.values()];
               const valueRange = [
-                allValues.at(0)[order[0]][0],
-                allValues.at(-1)[order[0]][0],
+                allValues.at(0)[order[0][0]][0],
+                allValues.at(-1)[order[0][0]][0],
               ];
-              const entityValue = entityObj[order[0]][0];
+              const entityValue = entityObj[order[0][0]][0];
               satisfiesLimitRange =
-                order[1] === 'ASC'
+                order[0][1] === 'ASC'
                   ? entityValue <= valueRange[1]
                   : entityValue >= valueRange[1];
             }
@@ -552,7 +587,7 @@ function subscribeResultsAndTriples<Q extends CollectionQuery<any>>(
                 limit: limit - entries.length,
                 after: lastResultEntry
                   ? [
-                      lastResultEntry[1][order![0]][0],
+                      lastResultEntry[1][order![0][0]][0],
                       appendCollectionToId(
                         query.collectionName,
                         lastResultEntry[0]
@@ -572,17 +607,21 @@ function subscribeResultsAndTriples<Q extends CollectionQuery<any>>(
             }
 
             if (order) {
-              const [prop, dir] = order;
+              // const [prop, dir] = order;
               entries.sort(([_aId, a], [_bId, b]) => {
-                // TODO support multi-level props probably using TypeBox json pointer
-                const direction =
-                  a[prop][0] < b[prop][0]
-                    ? -1
-                    : a[prop][0] == b[prop][0]
-                    ? 0
-                    : 1;
+                for (const [prop, dir] of order) {
+                  // TODO support multi-level props probably using TypeBox json pointer
+                  const direction =
+                    a[prop][0] < b[prop][0]
+                      ? -1
+                      : a[prop][0] == b[prop][0]
+                      ? 0
+                      : 1;
 
-                return dir === 'ASC' ? direction : direction * -1;
+                  if (direction !== 0)
+                    return dir === 'ASC' ? direction : direction * -1;
+                }
+                return 0;
               });
             }
 

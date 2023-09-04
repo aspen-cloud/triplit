@@ -2,13 +2,13 @@ import { Model, TypeFromModel, updateEntityAtPath } from './schema';
 import { EntityId, TripleRow } from './triple-store';
 
 type Path = string;
-type Value = any;
+type Value = number | string | null;
 export type Operator = '=' | '<' | '>' | '<=' | '>=' | '!=' | 'like' | 'nlike';
 
-export type FilterStatement<M extends Model<any> | undefined> = [
+export type FilterStatement<M extends Model<any> | undefined, V = Value> = [
   M extends Model<any> ? keyof M['properties'] : Path,
   Operator,
-  Value
+  V
 ];
 export type FilterGroup<M extends Model<any> | undefined> = {
   mod: 'or' | 'and';
@@ -23,13 +23,18 @@ export type QueryWhere<M extends Model<any> | undefined> = WhereFilter<M>[];
 
 export type ValueCursor = [value: Value, entityId: EntityId];
 
+export type QueryOrder<M extends Model<any>> = [
+  property: M extends Model<any> ? keyof M['properties'] : Path,
+  direction: 'ASC' | 'DESC'
+];
+
 export interface Query<M extends Model<any> | undefined> {
   where: QueryWhere<M>;
   select: (M extends Model<any> ? keyof M['properties'] : Path)[];
   order?: [
     property: M extends Model<any> ? keyof M['properties'] : Path,
     direction: 'ASC' | 'DESC'
-  ];
+  ][];
   limit?: number;
   after?: ValueCursor;
   entityId?: string;
@@ -123,17 +128,42 @@ export const QUERY_INPUT_TRANSFORMERS = <
     }
   },
   order: (
-    ...args: NonNullable<Query<M>['order']> | [Query<M>['order']]
+    ...args:
+      | NonNullable<Query<M>['order']>
+      | QueryOrder<M>[]
+      | [NonNullable<Query<M>['order']>]
   ): Query<M>['order'] => {
-    if (args.length === 1 && args[0] instanceof Array) {
-      return args[0] as Required<Query<M>['order']>;
-    } else if (
-      args.length === 2 &&
-      args.every((arg) => typeof arg === 'string')
-    ) {
-      return args as Required<Query<M>['order']>;
-    } else {
-      throw new Error('Order clause of query is not formatted correctly');
+    /**
+     * E.g. order("id", "ASC")
+     */
+    if (args.length === 2 && args.every((arg) => typeof arg === 'string')) {
+      return [args];
     }
+    /**
+     * E.g. order(["id", "ASC"], ["name", "DESC"])
+     */
+    if (args.every((arg) => arg instanceof Array)) {
+      return args as NonNullable<Query<M>['order']>;
+    }
+    /**
+     * E.g. order([["id", "ASC"], ["name", "DESC"]])
+     */
+    if (
+      args.length === 1 &&
+      args[0] instanceof Array &&
+      args[0].every((arg) => arg instanceof Array)
+    ) {
+      return args[0] as NonNullable<Query<M>['order']>;
+    }
+
+    throw new Error('Order clause of query is not formatted correctly');
   },
 });
+
+export type QueryBuilderInputs<M extends Model<any> | undefined> = {
+  where:
+    | FilterStatement<M, string | Date | number | null>
+    | WhereFilter<M>[]
+    | [QueryWhere<M>];
+  order: NonNullable<Query<M>['order']> | [Query<M>['order']];
+};

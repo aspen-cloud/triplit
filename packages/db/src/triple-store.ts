@@ -982,30 +982,6 @@ function findByAVE(
   });
 }
 
-/**
- * When scanning for triples greater than some value, we need to ensure the rest of
- * the tuple is filled in properly to avoid the timestamp causing edge values to sneak in
- *
- * For example:
- * prefix: ['AVE']
- * gt: [['height'], 5, 'John']
- *
- * This is equivalent to gt: [['height'], 5, 'John', MIN] because we arent including the timestamp part of the index
- * Thus we would include ['John', ['height'], 5] in our result set, which is not expected for gt
- *
- * This should ensure when we pass in a gt value that isnt full, we fill it in with the appropriate min/max values
- * In the example above it should be [['height'], 5, 'John', MAX]
- *
- * Note: I think the same would be true for lte
- */
-function gtScanArg(prefix: any[], gt: any[] | undefined) {
-  if (!gt) return undefined;
-  const expectedLength =
-    (prefix[0] === 'clientTimestamp' ? 6 : 5) - prefix.length;
-  const fillLength = expectedLength - gt.length;
-  return [...gt, ...new Array(fillLength).fill(MAX)];
-}
-
 function findValuesInRange(
   tx: MultiTupleStoreOrTransaction,
   attribute: Attribute,
@@ -1020,10 +996,17 @@ function findValuesInRange(
   } = {}
 ) {
   const prefix = ['AVE', attribute];
+  const TUPLE_LENGTH = 5;
   const scanArgs = {
     prefix,
-    gt: gtScanArg(prefix, greaterThan),
-    lt: lessThan,
+    gt: greaterThan && [
+      ...greaterThan,
+      ...new Array(TUPLE_LENGTH - prefix.length - greaterThan.length).fill(MAX),
+    ],
+    lt: lessThan && [
+      ...lessThan,
+      ...new Array(TUPLE_LENGTH - prefix.length - lessThan.length).fill(MIN),
+    ],
     reverse: direction === 'DESC',
   };
   return scanToTriples(tx, scanArgs);

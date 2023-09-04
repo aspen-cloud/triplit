@@ -4,19 +4,23 @@ type FilterFunc<I> = (item: I, index: number) => Promise<boolean>;
 export class Pipeline<T> {
   limit = Infinity;
   stages: (['map', MapFunc<any, any>] | ['filter', FilterFunc<any>])[];
+  takeWhileFilter?: FilterFunc<T>;
   constructor(
     // readonly source: Iterable<T>,
     readonly source: Array<T>, // TODO add iterator/generator suppr
     {
       stages,
       limit,
+      takeWhile,
     }: {
       stages?: (['map', MapFunc<any, any>] | ['filter', FilterFunc<any>])[];
       limit?: number;
+      takeWhile?: FilterFunc<T>;
     } = {}
   ) {
     this.stages = stages ?? [];
     this.limit = limit ?? Infinity;
+    this.takeWhileFilter = takeWhile;
   }
 
   map<O>(mapFunc: MapFunc<T, O>) {
@@ -42,6 +46,14 @@ export class Pipeline<T> {
     });
   }
 
+  takeWhile(filterFunc: FilterFunc<T>) {
+    return new Pipeline<T>(this.source, {
+      takeWhile: filterFunc,
+      stages: this.stages,
+      limit: this.limit,
+    });
+  }
+
   filter(filterFunc: FilterFunc<T>) {
     return new Pipeline<T>(this.source, {
       stages: this.stages.concat([['filter', filterFunc]]),
@@ -55,6 +67,20 @@ export class Pipeline<T> {
       limit,
     });
   }
+
+  // takeWhile(fn: FilterFunc<T>) {
+  //   return new Pipeline<T>(this.source, {
+  //     stages: this.stages.concat([
+  //       [
+  //         'filter',
+  //         async (item, i) => {
+  //           return fn(item, i) && i < this.limit;
+  //         },
+  //       ],
+  //     ]),
+  //     limit: this.limit,
+  //   });
+  // }
 
   async toArray(): Promise<T[]> {
     let result = [];
@@ -75,7 +101,11 @@ export class Pipeline<T> {
           }
         }
       }
+      if (this.takeWhileFilter && !this.takeWhileFilter(item, i)) {
+        break itemLoop;
+      }
       result.push(item);
+
       if (result.length >= limit) {
         break itemLoop;
       }

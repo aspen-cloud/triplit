@@ -118,9 +118,7 @@ describe('Database API', () => {
 
   it('supports basic queries with the "like" operator', async () => {
     const studentsNamedJohn = await db.fetch(
-      CollectionQueryBuilder('Student')
-        .where([['name', 'like', 'John%']])
-        .build()
+      CollectionQueryBuilder('Student').where(['name', 'like', 'John%']).build()
     );
     expect(studentsNamedJohn.size).toBe(
       students.filter((s) => s.name.startsWith('John')).length
@@ -450,12 +448,10 @@ describe('Set operations', () => {
   });
 
   it('can add to set', async () => {
-    const setQuery = CollectionQueryBuilder(
-      'companies',
-      schema.companies.attributes
-    )
+    const setQuery = db
+      .query('companies')
       .select(['id'])
-      .where([['employees', '=', 7]])
+      .where('employees', '=', 7)
       .build();
 
     const preUpdateLookup = await db.fetch(setQuery);
@@ -646,7 +642,8 @@ describe('subscriptions', () => {
       const unsubscribe = db.subscribe(
         CollectionQueryBuilder('students')
           .limit(2)
-          .order(['major', 'ASC'])
+          // .order(['major', 'ASC'])
+          .order('major', 'ASCasdf')
           .where([['dorm', '=', 'Allen']])
           .build(),
         (students) => {
@@ -1162,6 +1159,31 @@ describe('ORDER & LIMIT & Pagination', () => {
     expect(areAllScoresDescending).toBeTruthy();
   });
 
+  it('order by multiple properties', async () => {
+    const descendingScoresResults = await db.fetch(
+      CollectionQueryBuilder('TestScores')
+        .order(['score', 'ASC'], ['date', 'DESC'])
+        .build()
+    );
+    expect(descendingScoresResults.size).toBe(TEST_SCORES.length);
+    const areAllScoresDescending = Array.from(
+      descendingScoresResults.values()
+    ).every((result, i, arr) => {
+      if (i === 0) return true;
+      const previous = arr[i - 1];
+      const current = result;
+      const hasCorrectOrder =
+        previous.score < current.score ||
+        (previous.score === current.score && previous.date >= current.date);
+      if (!hasCorrectOrder) {
+        console.log({ previous, current });
+        return false;
+      }
+      return true;
+    });
+    expect(areAllScoresDescending).toBeTruthy();
+  });
+
   it('limit', async () => {
     const descendingScoresResults = await db.fetch(
       CollectionQueryBuilder('TestScores')
@@ -1265,7 +1287,7 @@ describe('ORDER & LIMIT & Pagination', () => {
     expect(areAllScoresAscendingAfterSecondPage).toBeTruthy();
   });
 
-  it('can pull in more results to satisfy limit in subscription when current result no longer satisfies filter', async () => {
+  it('can pull in more results to satisfy limit in subscription when current result no longer satisfies FILTER', async () => {
     const LIMIT = 5;
 
     await testSubscription(
@@ -1273,7 +1295,7 @@ describe('ORDER & LIMIT & Pagination', () => {
       db
         .query('TestScores')
         .where([['score', '>', 10]])
-        .order(['score', 'DESC'])
+        .order(['score', 'DESC'], ['date', 'DESC'])
         .limit(LIMIT)
         .build(),
       [
@@ -1309,18 +1331,35 @@ describe('ORDER & LIMIT & Pagination', () => {
           },
           check: (results) => {
             expect(results).toHaveLength(LIMIT);
+            expect(
+              [...results.values()].every((result, i, resultValues) => {
+                if (i === 0) return true;
+                const previous = resultValues[i - 1];
+                const current = result;
+                const hasCorrectOrder =
+                  previous.score > current.score ||
+                  (previous.score === current.score &&
+                    previous.date >= current.date);
+                if (!hasCorrectOrder) console.log({ previous, current });
+                return hasCorrectOrder;
+              })
+            ).toBeTruthy();
           },
         },
       ]
     );
   });
 
-  it('can pull in more results to satisfy limit in subscription when current result no longer satisfies order', async () => {
+  it('can pull in more results to satisfy limit in subscription when current result no longer satisfies ORDER', async () => {
     const LIMIT = 5;
 
     await testSubscription(
       db,
-      db.query('TestScores').order(['score', 'DESC']).limit(LIMIT).build(),
+      db
+        .query('TestScores')
+        .order(['score', 'DESC'], ['date', 'DESC'])
+        .limit(LIMIT)
+        .build(),
       [
         {
           check: (results) => {
@@ -1345,6 +1384,29 @@ describe('ORDER & LIMIT & Pagination', () => {
         },
       ]
     );
+  });
+
+  it('can handle secondary sorts on values with runs of equal primary values', async () => {
+    const db = new DB();
+    for (let i = 0; i < 20; i++) {
+      await db.insert(
+        'cars',
+        {
+          year: 2000 + i,
+          make: 'Volvo',
+        },
+        i.toString()
+      );
+    }
+
+    const results = await db.fetch(
+      db.query('cars').order(['make', 'ASC'], ['year', 'DESC']).limit(5).build()
+    );
+
+    expect(results).toHaveLength(5);
+    expect([...results.values()].map((r) => r.year)).toEqual([
+      2019, 2018, 2017, 2016, 2015,
+    ]);
   });
 });
 
