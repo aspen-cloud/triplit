@@ -17,6 +17,7 @@ import { classes, students, departments } from './sample_data/school';
 import MemoryBTree from '../src/storage/memory-btree';
 import { stripCollectionFromId } from '../src/db';
 import { testSubscription } from './utils/test-subscription';
+import { everyFilterStatement, mapFilterStatements } from '../src/db-helpers';
 
 // const storage = new InMemoryTupleStorage();
 const storage = new MemoryBTree();
@@ -422,9 +423,9 @@ describe('Set operations', () => {
   const schema = {
     companies: {
       attributes: S.Schema({
-        id: S.number(),
-        name: S.string(),
-        employees: S.Set(S.number()),
+        id: S.Number(),
+        name: S.String(),
+        employees: S.Set(S.Number()),
       }),
     },
   };
@@ -487,6 +488,100 @@ describe('Set operations', () => {
     const postUpdateLookup = await db.fetch(setQuery);
 
     expect(postUpdateLookup).toHaveLength(0);
+  });
+});
+
+describe('date operations', () => {
+  const storage = new InMemoryTupleStorage();
+  const schema = {
+    collections: {
+      students: {
+        attributes: S.Schema({
+          id: S.String(),
+          name: S.String(),
+          birthday: S.Date(),
+        }),
+      },
+    },
+  };
+  const db = new DB({
+    source: storage,
+    schema,
+  });
+  const defaultData = [
+    { id: '1', name: 'Alice', birthday: new Date(1995, 0, 1) },
+    { id: '2', name: 'Bob', birthday: new Date(2000, 0, 31) },
+    { id: '3', name: 'Charlie', birthday: new Date(1990, 11, 31) },
+  ];
+
+  beforeAll(async () => {
+    await Promise.all(
+      defaultData.map((doc) => db.insert('students', doc, doc.id))
+    );
+  });
+
+  it('can fetch dates', async () => {
+    const student = await db.fetchById('students', '1');
+    expect(student.birthday).toBeInstanceOf(Date);
+  });
+  it('can filter with equal dates', async () => {
+    const query = db
+      .query('students')
+      .where([
+        or([
+          ['birthday', '=', new Date(2000, 0, 31)],
+          ['birthday', '=', new Date(1990, 11, 31)],
+        ]),
+      ])
+      .order(['birthday', 'ASC'])
+      .build();
+    db.fetch(query).then((results) => {
+      expect(results.size).toBe(2);
+      expect([...results.values()].map((r) => r.id)).toEqual(['3', '2']);
+    });
+  });
+  it('can filter with not equal dates', async () => {
+    const query = db
+      .query('students')
+      .where([['birthday', '!=', new Date(2000, 0, 31)]])
+      .order(['birthday', 'DESC'])
+      .build();
+    db.fetch(query).then((results) => {
+      expect(results.size).toBe(2);
+      expect([...results.values()].map((r) => r.id)).toEqual(['1', '3']);
+    });
+  });
+  it('can filter with greater or less than dates', async () => {
+    const query = db
+      .query('students')
+      .where([
+        and([
+          ['birthday', '<', new Date(2000, 0, 31)],
+          ['birthday', '>', new Date(1990, 11, 31)],
+        ]),
+      ])
+      .order(['birthday', 'ASC'])
+      .build();
+    db.fetch(query).then((results) => {
+      expect(results.size).toBe(1);
+      expect([...results.values()].map((r) => r.id)).toEqual(['1']);
+    });
+  });
+  it('can filter with greater/less than or equal to dates', async () => {
+    const query = db
+      .query('students')
+      .where([
+        and([
+          ['birthday', '<=', new Date(2000, 0, 31)],
+          ['birthday', '>=', new Date(1990, 11, 31)],
+        ]),
+      ])
+      .order(['birthday', 'ASC'])
+      .build();
+    db.fetch(query).then((results) => {
+      expect(results.size).toBe(3);
+      expect([...results.values()].map((r) => r.id)).toEqual(['3', '1', '2']);
+    });
   });
 });
 
@@ -843,10 +938,10 @@ describe('single entity subscriptions', async () => {
       collections: {
         students: {
           attributes: S.Schema({
-            id: S.string(),
-            name: S.string(),
-            major: S.string(),
-            dorm: S.string(),
+            id: S.String(),
+            name: S.String(),
+            major: S.String(),
+            dorm: S.String(),
           }),
         },
       },
@@ -1113,8 +1208,8 @@ describe('ORDER & LIMIT & Pagination', () => {
       collections: {
         TestScores: {
           attributes: S.Schema({
-            score: S.number(),
-            date: S.string(),
+            score: S.Number(),
+            date: S.String(),
           }),
         },
       },
@@ -1421,8 +1516,8 @@ describe('database transactions', () => {
         collections: {
           TestScores: {
             attributes: S.Schema({
-              score: S.number(),
-              date: S.string(),
+              score: S.Number(),
+              date: S.String(),
             }),
           },
         },
@@ -1452,8 +1547,8 @@ describe('database transactions', () => {
         collections: {
           TestScores: {
             attributes: S.Schema({
-              score: S.number(),
-              date: S.string(),
+              score: S.Number(),
+              date: S.String(),
             }),
           },
         },
@@ -1484,8 +1579,8 @@ describe('database transactions', () => {
         collections: {
           TestScores: {
             attributes: S.Schema({
-              score: S.number(),
-              date: S.string(),
+              score: S.Number(),
+              date: S.String(),
             }),
           },
         },
@@ -1540,8 +1635,8 @@ describe('database transactions', () => {
         collections: {
           TestScores: {
             attributes: S.Schema({
-              score: S.number(),
-              date: S.string(),
+              score: S.Number(),
+              date: S.String(),
             }),
           },
         },
@@ -1571,8 +1666,8 @@ describe('database transactions', () => {
         collections: {
           TestScores: {
             attributes: S.Schema({
-              score: S.number(),
-              date: S.string(),
+              score: S.Number(),
+              date: S.String(),
             }),
           },
         },
@@ -1621,8 +1716,8 @@ describe('schema changes', async () => {
       collections: {
         students: {
           attributes: S.Schema({
-            id: S.number(),
-            name: S.string(),
+            id: S.Number(),
+            name: S.String(),
           }),
         },
       },
@@ -1642,8 +1737,8 @@ describe('schema changes', async () => {
       collections: {
         students: {
           attributes: S.Schema({
-            id: S.number(),
-            name: S.string(),
+            id: S.Number(),
+            name: S.String(),
           }),
         },
       },
@@ -1677,8 +1772,8 @@ describe('schema changes', async () => {
       collections: {
         students: {
           attributes: S.Schema({
-            id: S.number(),
-            name: S.string(),
+            id: S.Number(),
+            name: S.String(),
           }),
         },
       },
@@ -1705,8 +1800,8 @@ describe('schema changes', async () => {
       collections: {
         students: {
           attributes: S.Schema({
-            id: S.number(),
-            name: S.string(),
+            id: S.Number(),
+            name: S.String(),
           }),
         },
       },
@@ -1859,8 +1954,8 @@ describe('migrations', () => {
         collections: {
           students: {
             attributes: S.Schema({
-              id: S.number(),
-              name: S.string(),
+              id: S.Number(),
+              name: S.String(),
             }),
           },
         },
@@ -2364,11 +2459,11 @@ describe('Nested Properties', () => {
           collections: {
             Businesses: {
               attributes: S.Schema({
-                name: S.string(),
+                name: S.String(),
                 address: S.Record({
-                  street: S.string(),
-                  city: S.string(),
-                  state: S.string(),
+                  street: S.String(),
+                  city: S.String(),
+                  state: S.String(),
                 }),
               }),
             },
@@ -2427,8 +2522,8 @@ it('throws an error if a register filter is malformed', async () => {
       collections: {
         Classes: {
           attributes: S.Schema({
-            name: S.string(),
-            students: S.Set(S.string()),
+            name: S.String(),
+            students: S.Set(S.String()),
           }),
         },
       },
@@ -2456,8 +2551,8 @@ describe('subscription errors', () => {
         collections: {
           Classes: {
             attributes: S.Schema({
-              name: S.string(),
-              students: S.Set(S.string()),
+              name: S.String(),
+              students: S.Set(S.String()),
             }),
           },
         },

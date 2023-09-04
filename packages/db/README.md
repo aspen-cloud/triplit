@@ -52,10 +52,10 @@ TriplitDB has support for
 
    const todoSchema = S.Schema({
      todos: {
-       text: S.string(),
-       created_at: S.string(),
-       complete: S.boolean(),
-       tags: S.Set(S.string())
+       text: S.String(),
+       created_at: S.String(),
+       complete: S.Boolean(),
+       tags: S.Set(S.String())
      }
    })
    ```

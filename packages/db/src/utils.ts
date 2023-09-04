@@ -16,6 +16,8 @@ export function objectToTuples(
   if (object == null || typeof object !== 'object') {
     return [[...prefix, object as string | number | null]];
   }
+  if (object instanceof Date)
+    return [[...prefix, object.toISOString() as string]];
   // Maybe we support Maps in the future, for now this is secretly a helper for Sets
   if (object instanceof Map) {
     return [...object.entries()].flatMap(([key, val]) =>

@@ -79,6 +79,31 @@ export function replaceVariablesInQuery<
   return { ...query, where };
 }
 
+export function mapFilterStatements<M extends Model<any> | undefined>(
+  statements: QueryWhere<M>,
+  mapFunction: (statement: FilterStatement<M>) => FilterStatement<M>
+): QueryWhere<M> {
+  return statements.map((filter) => {
+    if (!(filter instanceof Array)) {
+      filter.filters = mapFilterStatements(filter.filters, mapFunction);
+      return filter;
+    }
+    return mapFunction(filter);
+  });
+}
+
+export function everyFilterStatement(
+  statements: QueryWhere<any>,
+  everyFunction: (statement: FilterStatement<any>) => boolean
+): boolean {
+  return statements.every((filter) => {
+    if (!(filter instanceof Array)) {
+      return everyFilterStatement(filter.filters, everyFunction);
+    }
+    return everyFunction(filter);
+  });
+}
+
 export async function applyRulesToEntity<
   M extends Models<any, any> | undefined,
   CN extends CollectionNameFromModels<M>

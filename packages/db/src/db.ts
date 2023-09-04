@@ -27,6 +27,7 @@ import {
   appendCollectionToId,
   validateExternalId,
   replaceVariablesInQuery,
+  mapFilterStatements,
 } from './db-helpers';
 import { toBuilder } from './utils/builder';
 
@@ -302,6 +303,14 @@ export default class DB<M extends Models<any, any> | undefined> {
       fetchQuery = this.addReadRulesToQuery(fetchQuery, collection);
     }
     fetchQuery = replaceVariablesInQuery(this, fetchQuery);
+    fetchQuery.where = mapFilterStatements(
+      fetchQuery.where,
+      ([prop, op, val]) => [
+        prop,
+        op,
+        val instanceof Date ? val.toISOString() : val,
+      ]
+    );
     return { query: fetchQuery, collection };
   }
 

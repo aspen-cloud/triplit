@@ -142,10 +142,11 @@ function generateAttributeSchema(
 
 function schemaItemToString(schemaItem: AttributeDefinition) {
   const { type } = schemaItem;
-  if (type === 'string') return 'S.string()';
+  if (type === 'string') return 'S.String()';
   if (type === 'boolean') return 'S.Boolean()';
-  if (type === 'number') return 'S.number()';
-  if (type === 'set_string') return 'S.Set(S.string())';
-  if (type === 'set_number') return 'S.Set(S.number())';
+  if (type === 'number') return 'S.Number()';
+  if (type === 'date') return 'S.Date()';
+  if (type === 'set_string') return 'S.Set(S.String())';
+  if (type === 'set_number') return 'S.Set(S.Number())';
   throw new Error(`Invalid type: ${type}`);
 }

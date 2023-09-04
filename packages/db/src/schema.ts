@@ -1,6 +1,8 @@
 import {
+  FormatRegistry,
   Static,
   TBoolean,
+  TDate,
   TNumber,
   TObject,
   TRecord,
@@ -23,6 +25,7 @@ import { timestampCompare } from './timestamp';
 import type { Attribute, EAV, StoreSchema } from './triple-store';
 import { TuplePrefix } from './utility-types';
 import { objectToTuples, triplesToObject } from './utils';
+import { fullFormats } from 'ajv-formats/dist/formats';
 
 // We infer TObject as a return type of some funcitons and this causes issues with consuming packages
 // Using solution 3.1 described in this comment as a fix: https://github.com/microsoft/TypeScript/issues/47663#issuecomment-1519138189
@@ -34,7 +37,7 @@ export const Timestamp = Type.Readonly(
 type TimestampType = Static<typeof Timestamp>;
 
 // Register
-type RegisterBaseType = TNumber | TBoolean | TString;
+type RegisterBaseType = TNumber | TBoolean | TString | TDate;
 type RegisterTypeFromBaseType<T extends RegisterBaseType> = TTuple<
   [T, typeof Timestamp]
 > & {
@@ -42,9 +45,12 @@ type RegisterTypeFromBaseType<T extends RegisterBaseType> = TTuple<
   'x-serialized-type': T['type'];
 };
 
-export function Register<T extends RegisterBaseType>(type: T) {
+export function Register<T extends RegisterBaseType>(
+  type: T,
+  typeOverride?: string
+) {
   return Type.Tuple([type, Timestamp], {
-    'x-serialized-type': type.type,
+    'x-serialized-type': typeOverride || type.type,
     'x-crdt-type': 'Register',
   }) as RegisterTypeFromBaseType<T>;
 }
@@ -63,10 +69,12 @@ type SetTypeFromValidTypes<T extends ValidSetDataTypes> = TRecord<
 };
 
 // Could also use a namespace or module, but this worked best with our type generation
+FormatRegistry.Set('date-time', fullFormats['date-time'].validate);
 export class Schema {
-  static string = () => Register(Type.String());
-  static number = () => Register(Type.Number());
+  static String = () => Register(Type.String());
+  static Number = () => Register(Type.Number());
   static Boolean = () => Register(Type.Boolean());
+  static Date = () => Register(Type.String({ format: 'date-time' }), 'date');
 
   // const StringEnum = TypeSystem.Type<
   //   string,
@@ -120,7 +128,7 @@ export class Schema {
 export type RecordType = TObject<SchemaConfig>;
 
 export type RegisterType = ReturnType<
-  typeof Register<TNumber | TBoolean | TString>
+  typeof Register<TNumber | TBoolean | TString | TDate>
 >;
 export type SetType = ReturnType<typeof Schema.Set>;
 
@@ -188,7 +196,7 @@ export function updateEntityAtPath(
   ValuePointer.Set(entity, pointer, [value, timestamp]);
 }
 
-type ValueSerializedSchemaType = 'string' | 'number' | 'boolean';
+type ValueSerializedSchemaType = 'string' | 'number' | 'boolean' | 'date';
 type SetSerializedSchemaType = 'set_string' | 'set_number';
 type SerializedSchemaType = ValueSerializedSchemaType | SetSerializedSchemaType;
 
@@ -311,11 +319,12 @@ function collectionsDefinitionToSchema(
 
 function attributeDefinitionToSchema(schemaItem: AttributeDefinition) {
   const { type } = schemaItem;
-  if (type === 'string') return Schema.string();
+  if (type === 'string') return Schema.String();
   if (type === 'boolean') return Schema.Boolean();
-  if (type === 'number') return Schema.number();
-  if (type === 'set_string') return Schema.Set(Schema.string());
-  if (type === 'set_number') return Schema.Set(Schema.number());
+  if (type === 'number') return Schema.Number();
+  if (type === 'date') return Schema.Date();
+  if (type === 'set_string') return Schema.Set(Schema.String());
+  if (type === 'set_number') return Schema.Set(Schema.Number());
   if (type === 'record') return Schema.Record({});
   throw new InvalidSchemaType(type);
 }

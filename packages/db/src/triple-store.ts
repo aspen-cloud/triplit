@@ -43,7 +43,7 @@ export type StoreSchema<M extends Models<any, any> | undefined> =
     ? undefined
     : never;
 
-export type Value = number | string | boolean | null;
+export type Value = number | string | boolean | Date | null;
 export type EntityId = string;
 export type AttributeItem = string | number;
 export type Attribute = AttributeItem[];

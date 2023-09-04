@@ -107,8 +107,15 @@ export async function fetch<Q extends CollectionQuery<any>>(
       const results = new Map() as FetchResult<Q>;
       return includeTriples ? { results, triples } : results;
     }
+    let untimestampedEntity = timestampedObjectToPlainObject(entity);
+    if (schema) {
+      untimestampedEntity = deserializeDatesInEntity(
+        untimestampedEntity,
+        schema
+      );
+    }
     const results = new Map([
-      [query.entityId, timestampedObjectToPlainObject(entity)],
+      [query.entityId, untimestampedEntity],
     ]) as FetchResult<Q>;
     return includeTriples ? { results, triples } : results;
   }
@@ -213,9 +220,33 @@ export async function fetch<Q extends CollectionQuery<any>>(
       triples: filterToLatestEntityAttribute(resultTriples),
     };
   }
+
   return new Map(
-    entities.map(([id, entity]) => [id, timestampedObjectToPlainObject(entity)])
+    schema
+      ? entities.map(([id, entity]) => [
+          id,
+          deserializeDatesInEntity(
+            timestampedObjectToPlainObject(entity),
+            schema
+          ),
+        ])
+      : entities.map(([id, entity]) => [
+          id,
+          timestampedObjectToPlainObject(entity),
+        ])
   ) as FetchResult<Q>;
+}
+
+function deserializeDatesInEntity(entity: any, schema: Model<any>) {
+  return Object.entries(entity).reduce((acc, [key, value]) => {
+    const dataType = schema?.properties?.[key]?.['x-serialized-type'];
+    if (dataType === 'date') {
+      acc[key] = new Date(value);
+    } else {
+      acc[key] = value;
+    }
+    return acc;
+  }, {} as any);
 }
 
 export function doesEntityObjMatchWhere<Q extends CollectionQuery<any>>(
