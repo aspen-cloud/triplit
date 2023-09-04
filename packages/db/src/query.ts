@@ -23,7 +23,7 @@ export type QueryWhere<M extends Model<any> | undefined> = WhereFilter<M>[];
 
 export type ValueCursor = [value: Value, entityId: EntityId];
 
-export type QueryOrder<M extends Model<any>> = [
+export type QueryOrder<M extends Model<any> | undefined> = [
   property: M extends Model<any> ? keyof M['properties'] : Path,
   direction: 'ASC' | 'DESC'
 ];

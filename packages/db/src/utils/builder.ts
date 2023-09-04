@@ -6,7 +6,7 @@ export type toBuilder<
   }
 > = {
   [k in keyof Omit<Required<Data>, ProtectedField>]: (
-    value: CustomInputs[k] extends undefined ? Data[k] : CustomInputs[k]
+    ...args: CustomInputs[k] extends undefined ? [Data[k]] : CustomInputs[k]
   ) => toBuilder<Data, ProtectedField, CustomInputs>;
 } & { build: () => Data };
 

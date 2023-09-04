@@ -34,7 +34,7 @@
     "rxdb": "^14.14.2",
     "rxjs": "^7.8.1",
     "tinybench": "^2.5.0",
-    "typescript": "^4.9.3",
+    "typescript": "^5.2.2",
     "vitest": "^0.32.2"
   },
   "dependencies": {

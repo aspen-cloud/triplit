@@ -4,7 +4,6 @@ import {
   Migration,
   CollectionQuery,
   Builder,
-  toBuilder,
   CachedIndexedDbStorage as IndexedDbStorage,
   Query,
   JSONTypeFromModel,
@@ -31,12 +30,7 @@ import {
   RemoteSyncFailedError,
   UnrecognizedFetchPolicyError,
 } from './errors';
-import {
-  FilterStatement,
-  WhereFilter,
-  QueryWhere,
-} from 'packages/db/src/query';
-import { QueryBuilderInputs } from 'packages/db/src/utils/builder';
+import { QueryBuilderInputs } from 'packages/db/src/query';
 export { IndexedDbStorage, MemoryStorage };
 type Storage = IndexedDbStorage | MemoryStorage;
 
