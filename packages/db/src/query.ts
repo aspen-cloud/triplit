@@ -133,6 +133,7 @@ export const QUERY_INPUT_TRANSFORMERS = <
       | QueryOrder<M>[]
       | [NonNullable<Query<M>['order']>]
   ): Query<M>['order'] => {
+    if (!args[0]) return undefined;
     /**
      * E.g. order("id", "ASC")
      */
