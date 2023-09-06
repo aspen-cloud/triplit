@@ -21,12 +21,13 @@ A schema object defines your collections and the attributes on those collections
 - string
 - number
 - boolean
+- Date
 - Set\<string\>
 - Set\<number\>
 
 Schema values may also be deeply nested
 
-The following schema defines a collection called `todos` with four attributes and a collection called `users` with two attributes (one of which is nested):
+The following schema defines a collection called `todos` with five attributes and a collection called `users` with two attributes (one of which is nested):
 
 ```typescript
 import { Schema as S, TriplitClient } from '@triplit/client';
@@ -34,10 +35,11 @@ import { Schema as S, TriplitClient } from '@triplit/client';
 const collections = {
   todos: {
     attributes: S.Schema({
-      id: S.string(),
-      text: S.string(),
+      id: S.String(),
+      text: S.String(),
       complete: S.Boolean(),
-      tags: S.Set(S.string()),
+      created_at: S.Date()
+      tags: S.Set(S.String()),
     }),
   },
   users: {
@@ -61,6 +63,23 @@ const client = new TriplitClient({
 ```
 
 Passing a schema to the client constructor will override any schema currently stored in your cache. You may also manage your schema with migrations, as explained in the [Migrations](#migrations) section. Using migrations is recommended for production applications that maintain state locally or use syncing.
+
+### Schema options
+
+You can indicate an attribute is nullable by passing the `{ nullable: true }` option to its constructor. In the example collection below, `deleted_at` is a nullable attribute.
+
+```typescript
+  todos: {
+    attributes: S.Schema({
+      id: S.String(),
+      text: S.String(),
+      complete: S.Boolean(),
+      created_at: S.Date()
+      deleted_at: S.Date({ nullable: true })
+      tags: S.Set(S.String()),
+    }),
+  },
+```
 
 ## Migrations
 
