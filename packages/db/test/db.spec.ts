@@ -2588,6 +2588,131 @@ describe('Nested Properties', () => {
   });
 });
 
+describe('Nullable properties in a schema', () => {
+  const schema = {
+    collections: {
+      Todos: {
+        attributes: S.Schema({
+          text: S.String(),
+          created_at: S.Date(),
+          deleted_at: S.Date({ nullable: true }),
+        }),
+      },
+    },
+  };
+  it('can create a database with a schema with nullable properties', async () => {
+    expect(
+      () =>
+        new DB({
+          schema,
+        })
+    ).not.toThrowError();
+  });
+  it('can insert with nullable properties', async () => {
+    const db = new DB({
+      schema,
+    });
+    expect(
+      async () =>
+        await db.insert(
+          'Todos',
+          {
+            text: 'Do something',
+            created_at: new Date(),
+            deleted_at: null,
+          },
+          'todo-1'
+        )
+    ).not.toThrowError();
+    await db.insert(
+      'Todos',
+      {
+        text: 'Do something',
+        created_at: new Date(),
+        deleted_at: null,
+      },
+      'todo-1'
+    );
+    const result = await db.fetchById('Todos', 'todo-1');
+    expect(result).toHaveProperty('deleted_at');
+    expect(result.deleted_at).toBeNull();
+  });
+  it("can't insert with a non-nullable property set to null", async () => {
+    const db = new DB({
+      schema,
+    });
+    expect(
+      async () =>
+        await db.insert(
+          'Todos',
+          {
+            text: 'Do something',
+            created_at: new Date(),
+            deleted_at: null,
+          },
+          'todo-1'
+        )
+    ).not.toThrowError();
+    await expect(
+      db.insert(
+        'Todos',
+        {
+          text: 'Do something',
+          created_at: null,
+          deleted_at: null,
+        },
+        'todo-1'
+      )
+    ).rejects.toThrowError(ValueSchemaMismatchError);
+  });
+  it('can update with nullable properties', async () => {
+    const db = new DB({
+      schema,
+    });
+    await db.insert(
+      'Todos',
+      {
+        text: 'Do something',
+        created_at: new Date(),
+        deleted_at: null,
+      },
+      'todo-1'
+    );
+    await db.update('Todos', 'todo-1', async (entity) => {
+      entity.deleted_at = new Date();
+    });
+    let result = await db.fetchById('Todos', 'todo-1');
+    expect(result).toHaveProperty('deleted_at');
+    expect(result.deleted_at).not.toBeNull();
+    await db.update('Todos', 'todo-1', async (entity) => {
+      entity.deleted_at = null;
+    });
+    result = await db.fetchById('Todos', 'todo-1');
+    expect(result).toHaveProperty('deleted_at');
+    expect(result.deleted_at).toBeNull();
+  });
+  it("can't update with a non-nullable property set to null", async () => {
+    const db = new DB({
+      schema,
+    });
+    await db.insert(
+      'Todos',
+      {
+        text: 'Do something',
+        created_at: new Date(),
+        deleted_at: null,
+      },
+      'todo-1'
+    );
+    await expect(
+      async () =>
+        await db.update('Todos', 'todo-1', async (entity) => {
+          entity.created_at = null;
+        })
+    ).rejects.toThrowError(ValueSchemaMismatchError);
+  });
+});
+
 it('throws an error if a register filter is malformed', async () => {
   const db = new DB({
     schema: {

@@ -240,7 +240,7 @@ export async function fetch<Q extends CollectionQuery<any>>(
 function deserializeDatesInEntity(entity: any, schema: Model<any>) {
   return Object.entries(entity).reduce((acc, [key, value]) => {
     const dataType = schema?.properties?.[key]?.['x-serialized-type'];
-    if (dataType === 'date') {
+    if (dataType === 'date' && value) {
       acc[key] = new Date(value);
     } else {
       acc[key] = value;

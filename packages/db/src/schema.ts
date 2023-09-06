@@ -38,6 +38,7 @@ type TimestampType = Static<typeof Timestamp>;
 
 // Register
 type RegisterBaseType = TNumber | TBoolean | TString | TDate;
+
 type RegisterTypeFromBaseType<T extends RegisterBaseType> = TTuple<
   [T, typeof Timestamp]
 > & {
@@ -45,13 +46,21 @@ type RegisterTypeFromBaseType<T extends RegisterBaseType> = TTuple<
   'x-serialized-type': T['type'];
 };
 
+type UserTypeOptions = { nullable?: boolean };
+
+const Nullable = <T extends RegisterBaseType>(type: T) =>
+  Type.Union([type, Type.Null()]);
+
 export function Register<T extends RegisterBaseType>(
   type: T,
+  options?: UserTypeOptions,
   typeOverride?: string
 ) {
-  return Type.Tuple([type, Timestamp], {
+  const { nullable } = options || {};
+  return Type.Tuple([nullable ? Nullable(type) : type, Timestamp], {
     'x-serialized-type': typeOverride || type.type,
     'x-crdt-type': 'Register',
+    'x-nullable': !!nullable,
   }) as RegisterTypeFromBaseType<T>;
 }
 
@@ -71,10 +80,14 @@ type SetTypeFromValidTypes<T extends ValidSetDataTypes> = TRecord<
 // Could also use a namespace or module, but this worked best with our type generation
 FormatRegistry.Set('date-time', fullFormats['date-time'].validate);
 export class Schema {
-  static String = () => Register(Type.String());
-  static Number = () => Register(Type.Number());
-  static Boolean = () => Register(Type.Boolean());
-  static Date = () => Register(Type.String({ format: 'date-time' }), 'date');
+  static String = (options?: UserTypeOptions) =>
+    Register(Type.String(), options);
+  static Number = (options?: UserTypeOptions) =>
+    Register(Type.Number(), options);
+  static Boolean = (options?: UserTypeOptions) =>
+    Register(Type.Boolean(options), options);
+  static Date = (options?: UserTypeOptions) =>
+    Register(Type.String({ format: 'date-time' }), options, 'date');
 
   // const StringEnum = TypeSystem.Type<
   //   string,
@@ -202,7 +215,10 @@ export function updateEntityAtPath(
 
 type ValueSerializedSchemaType = 'string' | 'number' | 'boolean' | 'date';
 type SetSerializedSchemaType = 'set_string' | 'set_number';
-type SerializedSchemaType = ValueSerializedSchemaType | SetSerializedSchemaType;
+type SerializedSchemaType =
+  | ValueSerializedSchemaType
+  | SetSerializedSchemaType
+  | 'record';
 
 export interface SetProxy<T> {
   add: (value: T) => void;
@@ -283,7 +299,8 @@ export function timestampedObjectToPlainObject<O extends TimestampedObject>(
 }
 
 export interface AttributeDefinition {
-  type: string;
+  type: SerializedSchemaType;
+  options: UserTypeOptions;
 }
 
 export interface CollectionDefinition {
@@ -322,11 +339,11 @@ function collectionsDefinitionToSchema(
 }
 
 function attributeDefinitionToSchema(schemaItem: AttributeDefinition) {
-  const { type } = schemaItem;
-  if (type === 'string') return Schema.String();
-  if (type === 'boolean') return Schema.Boolean();
-  if (type === 'number') return Schema.Number();
-  if (type === 'date') return Schema.Date();
+  const { type, options } = schemaItem;
+  if (type === 'string') return Schema.String(options);
+  if (type === 'boolean') return Schema.Boolean(options);
+  if (type === 'number') return Schema.Number(options);
+  if (type === 'date') return Schema.Date(options);
   if (type === 'set_string') return Schema.Set(Schema.String());
   if (type === 'set_number') return Schema.Set(Schema.Number());
   if (type === 'record') return Schema.Record({});
@@ -351,6 +368,7 @@ export function schemaToTriples(schema: StoreSchema<Models<any, any>>): EAV[] {
       const pathSchema = getSchemaFromPath(model.attributes, [path]);
       collection.attributes[path] = {
         type: pathSchema['x-serialized-type'],
+        options: { nullable: pathSchema['x-nullable'] },
       };
     }
     collections[collectionName] = collection;

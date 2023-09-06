@@ -155,6 +155,7 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
     await updater(updateProxy);
     const fullEntityId = appendCollectionToId(collectionName, entityId);
     for (let [path, value] of changes) {
+      value = value instanceof Date ? value.toISOString() : value;
       await this.storeTx.setValue(
         fullEntityId,
         [collectionName, ...path.slice(1).split('/')],
