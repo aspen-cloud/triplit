@@ -26,6 +26,7 @@ import { MemoryClock } from './clocks/memory-clock';
 import { entityToResultReducer, ValueCursor } from './query';
 import {
   IndexNotFoundError,
+  InvalidSchemaPathError,
   InvalidTimestampIndexScanError,
   ModelNotFoundError,
   NoSchemaRegisteredError,
@@ -911,9 +912,19 @@ function validateTriple(
     throw new ModelNotFoundError(modelName as string, Object.keys(schema));
   }
 
-  // Leaf values are an array [value, timestamp], so check value
   const clockedSchema = getSchemaFromPath(model.attributes, path);
+
+  // We expect you to set values at leaf nodes
+  // Our leafs should be registers, so use that as check
+  const isLeaf = clockedSchema['x-crdt-type'] === 'Register';
+  if (!isLeaf)
+    throw new InvalidSchemaPathError(
+      path as string[],
+      'Cannot set the value of a non leaf node in the schema. For example, you may be attempting to set a value on a record type.'
+    );
+
   const valueSchema = clockedSchema.items[0];
+  // Leaf values are an array [value, timestamp], so check value
   if (!SchemaValue.Check(valueSchema, value))
     throw new ValueSchemaMismatchError(
       modelName as string,

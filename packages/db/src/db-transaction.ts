@@ -217,7 +217,7 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
         ) {
           return this.createUpdateProxy(
             changeTracker,
-            propValue,
+            entityObj,
             schema,
             propPointer
           );

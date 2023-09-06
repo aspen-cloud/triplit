@@ -157,6 +157,7 @@ export function getSchemaFromPath<M extends TSchema>(
   for (let i = 0; i < path.length; i++) {
     const part = path[i];
     // Currently only Sets use Type.Record
+    // Handle sets
     if (TypeGuard.TRecord(scope)) {
       for (const [pattern, valueSchema] of Object.entries(
         scope.patternProperties
@@ -166,12 +167,15 @@ export function getSchemaFromPath<M extends TSchema>(
           return valueSchema as M;
         }
       }
-    } else if (TypeGuard.TObject(scope)) {
+    }
+    // Handle records and registers
+    else if (TypeGuard.TObject(scope)) {
       if (!scope.properties[part]) {
         throw new SchemaPathDoesNotExistError(path as string[]);
       }
       scope = scope.properties[part] as M;
     } else {
+      // TODO: this error could be more specific, in this case the schema object has an unexpected shape so we cant read it
       throw new InvalidSchemaPathError(path as string[]);
     }
   }

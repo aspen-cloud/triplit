@@ -12,6 +12,7 @@ import {
   ValueSchemaMismatchError,
   InvalidFilterError,
   DBTransaction,
+  InvalidSchemaPathError,
 } from '../src';
 import { classes, students, departments } from './sample_data/school';
 import MemoryBTree from '../src/storage/memory-btree';
@@ -1270,11 +1271,7 @@ describe('ORDER & LIMIT & Pagination', () => {
       const hasCorrectOrder =
         previous.score < current.score ||
         (previous.score === current.score && previous.date >= current.date);
-      if (!hasCorrectOrder) {
-        console.log({ previous, current });
-        return false;
-      }
-      return true;
+      return hasCorrectOrder;
     });
     expect(areAllScoresDescending).toBeTruthy();
   });
@@ -1435,7 +1432,6 @@ describe('ORDER & LIMIT & Pagination', () => {
                   previous.score > current.score ||
                   (previous.score === current.score &&
                     previous.date >= current.date);
-                if (!hasCorrectOrder) console.log({ previous, current });
                 return hasCorrectOrder;
               })
             ).toBeTruthy();
@@ -2272,7 +2268,6 @@ describe('Rules', () => {
 
     describe('insert single', () => {
       it('can insert an entity that matches the filter', async () => {
-        console.log(await db.getSchema());
         expect(
           db.insert('posts', { id: 'post-1', author_id: USER_ID }, 'post-1')
         ).resolves.not.toThrowError();
@@ -2399,30 +2394,66 @@ describe('Rules', () => {
   });
 });
 
+// When updating tests, please keep the deep nesting in the test data
 describe('Nested Properties', () => {
   describe('Schemaless', () => {
-    let db;
+    let db: DB<undefined>;
     const ENTITY_ID = 'business-1';
-    beforeAll(async () => {
+    beforeEach(async () => {
       db = new DB();
     });
 
-    it('can insert an entity with nested properties', async () => {
-      await db.insert(
-        'Businesses',
-        {
-          name: 'My Business',
-          address: {
-            street: '123 Main St',
-            city: 'San Francisco',
-            state: 'CA',
+    const defaultData = {
+      [ENTITY_ID]: {
+        name: 'My Business',
+        address: {
+          street: {
+            number: '123',
+            name: 'Main St',
           },
+          city: 'San Francisco',
+          state: 'CA',
         },
-        ENTITY_ID
-      );
+      },
+    };
+
+    it('can insert an entity with nested properties', async () => {
+      for (const [id, data] of Object.entries(defaultData)) {
+        await db.insert('Businesses', data, id);
+      }
+
+      const query = db.query('Businesses').entityId(ENTITY_ID).build();
+      const result = (await db.fetch(query)).get(ENTITY_ID);
+      expect(result.address.street.number).toBe('123');
+      expect(result.address.street.name).toBe('Main St');
+      expect(result.address.city).toBe('San Francisco');
+      expect(result.address.state).toBe('CA');
+    });
+
+    it('can update nested properties', async () => {
+      for (const [id, data] of Object.entries(defaultData)) {
+        await db.insert('Businesses', data, id);
+      }
+
+      const query = db.query('Businesses').entityId(ENTITY_ID).build();
+      const preUpdateLookup = (await db.fetch(query)).get(ENTITY_ID);
+      expect(preUpdateLookup.address.street.number).toBe('123');
+      expect(preUpdateLookup.address.street.name).toBe('Main St');
+
+      await db.update('Businesses', ENTITY_ID, async (entity) => {
+        entity.address.street.number = '456';
+      });
+
+      const postUpdateLookup = (await db.fetch(query)).get(ENTITY_ID);
+      expect(postUpdateLookup.address.street.number).toBe('456');
+      expect(postUpdateLookup.address.street.name).toBe('Main St');
     });
 
     it('can query based on nested property', async () => {
+      for (const [id, data] of Object.entries(defaultData)) {
+        await db.insert('Businesses', data, id);
+      }
+
       const positiveResults = await db.fetch(
         db
           .query('Businesses')
@@ -2441,6 +2472,10 @@ describe('Nested Properties', () => {
     });
 
     it('can select specific nested properties', async () => {
+      for (const [id, data] of Object.entries(defaultData)) {
+        await db.insert('Businesses', data, id);
+      }
+
       const results = await db.fetch(
         db.query('Businesses').select(['address.city', 'address.state']).build()
       );
@@ -2453,7 +2488,7 @@ describe('Nested Properties', () => {
   });
   describe('Schemafull', async () => {
     let db;
-    beforeAll(async () => {
+    beforeEach(async () => {
       db = new DB({
         schema: {
           collections: {
@@ -2461,7 +2496,10 @@ describe('Nested Properties', () => {
               attributes: S.Schema({
                 name: S.String(),
                 address: S.Record({
-                  street: S.String(),
+                  street: S.Record({
+                    number: S.String(),
+                    name: S.String(),
+                  }),
                   city: S.String(),
                   state: S.String(),
                 }),
@@ -2471,16 +2509,32 @@ describe('Nested Properties', () => {
         },
       });
     });
-
-    it('can insert an entity with nested properties', async () => {
-      await db.insert('Businesses', {
+    const ENTITY_ID = 'business-1';
+    const defaultData = {
+      [ENTITY_ID]: {
         name: 'My Business',
         address: {
-          street: '123 Main St',
+          street: {
+            number: '123',
+            name: 'Main St',
+          },
           city: 'San Francisco',
           state: 'CA',
         },
-      });
+      },
+    };
+
+    it('can insert an entity with nested properties', async () => {
+      for (const [id, data] of Object.entries(defaultData)) {
+        await db.insert('Businesses', data, id);
+      }
+
+      const query = db.query('Businesses').entityId(ENTITY_ID).build();
+      const result = (await db.fetch(query)).get(ENTITY_ID);
+      expect(result.address.street.number).toBe('123');
+      expect(result.address.street.name).toBe('Main St');
+      expect(result.address.city).toBe('San Francisco');
+      expect(result.address.state).toBe('CA');
     });
 
     it('rejects inserts of malformed objects', async () => {
@@ -2488,8 +2542,22 @@ describe('Nested Properties', () => {
         db.insert('Businesses', {
           name: 'My Business',
           address: {
-            street: 59,
-            count: 'San Francisco',
+            street: 59, // expects record
+            city: 'San Francisco',
+            state: 'CA',
+          },
+        })
+      ).rejects.toThrowError(InvalidSchemaPathError);
+
+      await expect(
+        db.insert('Businesses', {
+          name: 'My Business',
+          address: {
+            street: {
+              number: 123, // expects string
+              name: 'Main St',
+            },
+            city: 'San Francisco',
             state: 'CA',
           },
         })
@@ -2497,6 +2565,10 @@ describe('Nested Properties', () => {
     });
 
     it('can query based on nested property', async () => {
+      for (const [id, data] of Object.entries(defaultData)) {
+        await db.insert('Businesses', data, id);
+      }
+
       const positiveResults = await db.fetch(
         db
           .query('Businesses')
