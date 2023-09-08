@@ -6,6 +6,7 @@ import {
   objectToTimestampedObject,
   UserTypeOptions,
   Collection,
+  AttributeDefinition,
 } from './schema';
 import * as Document from './document';
 import { nanoid } from 'nanoid';
@@ -61,30 +62,41 @@ export type CreateCollectionOperation = [
   'create_collection',
   {
     name: string;
-    attributes: { [path: string]: CollectionAttribute };
+    attributes: { [path: string]: AttributeDefinition };
     rules?: CollectionRules<any>;
   }
 ];
 export type DropCollectionOperation = ['drop_collection', { name: string }];
 export type AddAttributeOperation = [
   'add_attribute',
-  { collection: string; path: string; attribute: CollectionAttribute }
+  { collection: string; path: string[]; attribute: AttributeDefinition }
 ];
 export type DropAttributeOperation = [
   'drop_attribute',
-  { collection: string; path: string }
+  { collection: string; path: string[] }
 ];
 // TODO: rename path should be string[] not string
 export type RenameAttributeOperation = [
   'rename_attribute',
-  { collection: string; path: string; newPath: string }
+  { collection: string; path: string[]; newPath: string[] }
+];
+// TODO: possibly merge with rename_attribute?
+export type AlterAttributeOptionOperation = [
+  'alter_attribute_option',
+  { collection: string; path: string[] } & UserTypeOptions
+];
+export type DropAttributeOptionOperation = [
+  'drop_attribute_option',
+  { collection: string; path: string[]; option: string }
 ];
 type DBOperation =
   | CreateCollectionOperation
   | DropCollectionOperation
   | AddAttributeOperation
   | DropAttributeOperation
-  | RenameAttributeOperation;
+  | RenameAttributeOperation
+  | AlterAttributeOptionOperation
+  | DropAttributeOptionOperation;
 
 export type Migration = {
   up: DBOperation[];
@@ -548,6 +560,12 @@ export default class DB<M extends Models<any, any> | undefined> {
             break;
           case 'drop_attribute':
             await tx.dropAttribute(operation[1]);
+            break;
+          case 'alter_attribute_option':
+            await tx.alterAttributeOption(operation[1]);
+            break;
+          case 'drop_attribute_option':
+            await tx.dropAttributeOption(operation[1]);
             break;
           default:
             throw new InvalidMigrationOperationError(

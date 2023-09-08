@@ -260,10 +260,10 @@ export function updateEntityAtPath(
 
 type ValueSerializedSchemaType = 'string' | 'number' | 'boolean' | 'date';
 type SetSerializedSchemaType = 'set_string' | 'set_number';
-type SerializedSchemaType =
+type TerminalSerializedSchemaType =
   | ValueSerializedSchemaType
-  | SetSerializedSchemaType
-  | 'record';
+  | SetSerializedSchemaType;
+type SerializedSchemaType = TerminalSerializedSchemaType | 'record';
 
 export interface SetProxy<T> {
   add: (value: T) => void;
@@ -343,10 +343,12 @@ export function timestampedObjectToPlainObject<O extends TimestampedObject>(
   return result;
 }
 
-export interface AttributeDefinition {
-  type: SerializedSchemaType;
-  options: UserTypeOptions;
-}
+export type AttributeDefinition =
+  | {
+      type: TerminalSerializedSchemaType;
+      options?: UserTypeOptions;
+    }
+  | { type: 'record'; properties: Record<string, AttributeDefinition> };
 
 export interface CollectionDefinition {
   attributes: {
@@ -384,14 +386,22 @@ function collectionsDefinitionToSchema(
 }
 
 function attributeDefinitionToSchema(schemaItem: AttributeDefinition) {
-  const { type, options } = schemaItem;
-  if (type === 'string') return Schema.String(options);
-  if (type === 'boolean') return Schema.Boolean(options);
-  if (type === 'number') return Schema.Number(options);
-  if (type === 'date') return Schema.Date(options);
+  const { type } = schemaItem;
+  if (type === 'string') return Schema.String(schemaItem.options);
+  if (type === 'boolean') return Schema.Boolean(schemaItem.options);
+  if (type === 'number') return Schema.Number(schemaItem.options);
+  if (type === 'date') return Schema.Date(schemaItem.options);
   if (type === 'set_string') return Schema.Set(Schema.String());
   if (type === 'set_number') return Schema.Set(Schema.Number());
-  if (type === 'record') return Schema.Record({});
+  if (type === 'record') {
+    const recordSchema: any = Object.fromEntries(
+      Object.entries(schemaItem.properties).map(([path, attrDef]) => [
+        path,
+        attributeDefinitionToSchema(attrDef),
+      ])
+    );
+    return Schema.Record(recordSchema);
+  }
   throw new InvalidSchemaType(type);
 }
 
@@ -405,13 +415,34 @@ export function tuplesToSchema(triples: TuplePrefix<EAV>[]) {
 }
 
 // TODO: probably want to handle rules
-export function schemaToTriples(schema: StoreSchema<Models<any, any>>): EAV[] {
+export function schemaToJSON(
+  schema: StoreSchema<Models<any, any>>
+): SchemaDefinition {
   const collections: CollectionsDefinition = {};
   for (const [collectionName, model] of Object.entries(schema.collections)) {
-    const collection: CollectionDefinition = { attributes: {}, rules: {} };
-    for (const path of Object.keys(model.attributes.properties)) {
-      const pathSchema = getSchemaFromPath(model.attributes, [path]);
-      collection.attributes[path] = {
+    const collection: CollectionDefinition = {
+      attributes: attributesSchemaToJSON(model.attributes),
+      rules: {},
+    };
+    collections[collectionName] = collection;
+  }
+  return { version: schema.version, collections };
+}
+
+function attributesSchemaToJSON(schema: TObject<any>) {
+  const attributes: Record<string, AttributeDefinition> = {};
+  for (const path of Object.keys(schema.properties)) {
+    const pathSchema = getSchemaFromPath(schema, [path]);
+    // recursively expand record types
+    if (pathSchema['x-serialized-type'] === 'record') {
+      attributes[path] = {
+        type: pathSchema['x-serialized-type'],
+        properties: attributesSchemaToJSON(pathSchema),
+      };
+    }
+    // handle other leaf types
+    else {
+      attributes[path] = {
         type: pathSchema['x-serialized-type'],
         options: {
           nullable: pathSchema['x-nullable'],
@@ -421,9 +452,12 @@ export function schemaToTriples(schema: StoreSchema<Models<any, any>>): EAV[] {
         },
       };
     }
-    collections[collectionName] = collection;
   }
-  const schemaData: SchemaDefinition = { version: schema.version, collections };
+  return attributes;
+}
+
+export function schemaToTriples(schema: StoreSchema<Models<any, any>>): EAV[] {
+  const schemaData = schemaToJSON(schema);
   const tuples = objectToTuples(schemaData);
   return tuples.map((tuple) => {
     const value = tuple.pop();

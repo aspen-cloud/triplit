@@ -1778,7 +1778,7 @@ describe('schema changes', async () => {
     await db.insert('students', { id: 1, name: 'Alice' }, 1);
     await db.addAttribute({
       collection: 'students',
-      path: 'age',
+      path: ['age'],
       attribute: { type: 'number' },
     });
     const dbSchema = await db.getSchema();
@@ -1790,6 +1790,8 @@ describe('schema changes', async () => {
       'name'
     );
   });
+
+  it.todo('can add a nested attribute');
 
   it('can drop an attribute', async () => {
     const schema = {
@@ -1804,7 +1806,7 @@ describe('schema changes', async () => {
     };
     const db = new DB({ source: new InMemoryTupleStorage(), schema: schema });
     await db.insert('students', { id: 1, name: 'Alice' }, 1);
-    await db.dropAttribute({ collection: 'students', path: 'id' });
+    await db.dropAttribute({ collection: 'students', path: ['id'] });
     const dbSchema = await db.getSchema();
     expect(dbSchema?.collections).toHaveProperty('students');
     expect(
@@ -1816,6 +1818,10 @@ describe('schema changes', async () => {
 
     // TODO: test data is actually dropped if we decide it should be
   });
+
+  it.todo('can update attribute options');
+
+  it.todo('can drop an attribute option');
 });
 
 describe('migrations', () => {

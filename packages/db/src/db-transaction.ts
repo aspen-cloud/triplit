@@ -6,6 +6,8 @@ import {
   Models,
   objectToTimestampedObject,
   SetProxy,
+  schemaToTriples,
+  AttributeDefinition,
 } from './schema';
 import * as Document from './document';
 import { nanoid } from 'nanoid';
@@ -29,6 +31,8 @@ import {
   AddAttributeOperation,
   DropAttributeOperation,
   DBFetchOptions,
+  AlterAttributeOptionOperation,
+  DropAttributeOptionOperation,
 } from './db';
 import {
   validateExternalId,
@@ -287,12 +291,14 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
 
   async createCollection(params: CreateCollectionOperation[1]) {
     const { name: collectionName, attributes, rules } = params;
-    const attributeTuples = Object.entries(attributes).map<EAV>(
-      ([path, attribute]) => [
-        '_schema',
-        ['collections', collectionName, 'attributes', path, 'type'],
-        attribute.type,
-      ]
+    const attributeTuples = Object.entries(attributes).flatMap<EAV>(
+      ([path, attribute]) =>
+        attributeToTuples(attribute, [
+          'collections',
+          collectionName,
+          'attributes',
+          path,
+        ]).map((av) => ['_schema', ...av] as EAV)
     );
     const ruleTuples = !rules
       ? []
@@ -329,13 +335,14 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
     // this.storeTx.deleteTriples(currentTriples);
   }
 
+  // TODO: deprecate until we need to support it (cant be auto-generated right now)
   async renameAttribute(params: RenameAttributeOperation[1]) {
     const { collection: collectionName, path, newPath } = params;
     // Update schema if there is schema
     if (await this.getSchema()) {
       const existingAttributeInfo = await this.storeTx.readMetadataTuples(
         '_schema',
-        ['collections', collectionName, 'attributes', path]
+        ['collections', collectionName, 'attributes', ...path]
       );
       // Delete old attribute tuples
       const deletes = existingAttributeInfo.map<[string, AttributeItem[]]>(
@@ -345,7 +352,7 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
       const updates = existingAttributeInfo.map<EAV>((eav) => {
         const attr = [...eav[1]];
         // ['collections', collectionName, 'attributes'] is prefix
-        attr.splice(3, 1, newPath); // Logic may change if path and new path arent strings
+        attr.splice(3, 1, ...newPath); // Logic may change if path and new path arent strings
         return [eav[0], attr, eav[2]];
       });
       await this.storeTx.deleteMetadataTuples(deletes);
@@ -354,8 +361,8 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
     // Update data in place
     // For each storage scope, find all triples with the attribute and update them
     for (const storageKey of Object.keys(this.storeTx.tupleTx.store.storage)) {
-      const attribute = [collectionName, path];
-      const newAttribute = [collectionName, newPath];
+      const attribute = [collectionName, ...path];
+      const newAttribute = [collectionName, ...newPath];
       const scopedTx = this.storeTx.withScope({
         read: [storageKey],
         write: [storageKey],
@@ -375,13 +382,13 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
     const { collection: collectionName, path, attribute } = params;
     // Update schema if there is schema
     if (await this.getSchema()) {
-      const updates: EAV[] = Object.entries(attribute).map(([key, value]) => {
-        return [
-          '_schema',
-          ['collections', collectionName, 'attributes', path, key],
-          value,
-        ];
-      });
+      const fullPath = interleaveValue(path, 'properties');
+      const updates = attributeToTuples(attribute, [
+        'collections',
+        collectionName,
+        'attributes',
+        ...fullPath,
+      ]).map((av) => ['_schema', ...av] as EAV);
       await this.storeTx.updateMetadataTuples(updates);
     }
   }
@@ -390,9 +397,10 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
     const { collection: collectionName, path } = params;
     // Update schema if there is schema
     if (await this.getSchema()) {
+      const fullPath = interleaveValue(path, 'properties');
       const existingAttributeInfo = await this.storeTx.readMetadataTuples(
         '_schema',
-        ['collections', collectionName, 'attributes', path]
+        ['collections', collectionName, 'attributes', ...fullPath]
       );
       // Delete old attribute tuples
       const deletes = existingAttributeInfo.map<[string, AttributeItem[]]>(
@@ -406,4 +414,99 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
     // const currentTriples = this.storeTx.findByAttribute(attribute);
     // this.storeTx.deleteTriples(currentTriples);
   }
+
+  async alterAttributeOption(params: AlterAttributeOptionOperation[1]) {
+    const { collection: collectionName, path, ...options } = params;
+    // Update schema if there is schema
+    if (await this.getSchema()) {
+      const deletes: [string, AttributeItem[]][] = [];
+      const updates: EAV[] = [];
+      for (const key of Object.keys(options)) {
+        const fullPath = interleaveValue(path, 'properties');
+        deletes.push([
+          '_schema',
+          [
+            'collections',
+            collectionName,
+            'attributes',
+            ...fullPath,
+            'options',
+            key,
+          ],
+        ]);
+      }
+      for (const [key, value] of Object.entries(options)) {
+        const fullPath = interleaveValue(path, 'properties');
+        updates.push([
+          '_schema',
+          [
+            'collections',
+            collectionName,
+            'attributes',
+            ...fullPath,
+            'options',
+            key,
+          ],
+          // @ts-ignore TODO: determine if it should be many triples, should be json serializable though (to be safe)
+          value,
+        ]);
+      }
+      await this.storeTx.deleteMetadataTuples(deletes);
+      await this.storeTx.updateMetadataTuples(updates);
+    }
+  }
+
+  async dropAttributeOption(params: DropAttributeOptionOperation[1]) {
+    const { collection: collectionName, path, option } = params;
+    // Update schema if there is schema
+    if (await this.getSchema()) {
+      const deletes: [string, AttributeItem[]][] = [];
+      const fullPath = interleaveValue(path, 'properties');
+      deletes.push([
+        '_schema',
+        [
+          'collections',
+          collectionName,
+          'attributes',
+          ...fullPath,
+          'options',
+          option,
+        ],
+      ]);
+      await this.storeTx.deleteMetadataTuples(deletes);
+    }
+  }
+}
+
+function interleaveValue<T, U>(arr: T[], value: U): (T | U)[] {
+  const result = [];
+  for (let i = 0; i < arr.length; i++) {
+    result.push(arr[i]);
+    if (i !== arr.length - 1) {
+      result.push(value);
+    }
+  }
+  return result;
+}
+
+function attributeToTuples(
+  attribute: AttributeDefinition,
+  prefix: string[] = []
+): [string[], any][] {
+  // return objectToTuples(json) as EAV[];
+  // check known types
+  if (attribute.type === 'record') {
+    return [
+      [[...prefix, 'type'], 'record'],
+      ...Object.entries(attribute.properties).flatMap(([key, value]) =>
+        attributeToTuples(value, [...prefix, 'properties', key])
+      ),
+    ];
+  }
+  return [
+    [[...prefix, 'type'], attribute.type],
+    ...Object.entries(attribute.options ?? {}).map(
+      ([key, value]) => [[...prefix, 'options', key], value] as [string[], any]
+    ),
+  ];
 }

@@ -20,6 +20,12 @@ export type {
   CollectionNameFromModels,
   ModelFromModels,
   CollectionRules,
+  CreateCollectionOperation,
+  DropCollectionOperation,
+  AddAttributeOperation,
+  DropAttributeOperation,
+  AlterAttributeOptionOperation,
+  DropAttributeOptionOperation,
 } from './db';
 export type { DBTransaction } from './db-transaction';
 export {
@@ -36,6 +42,7 @@ export type { TripleRow } from './triple-store';
 export {
   Schema,
   tuplesToSchema,
+  schemaToJSON,
   timestampedObjectToPlainObject,
 } from './schema';
 export type { TObject, TypeFromModel } from './schema';
