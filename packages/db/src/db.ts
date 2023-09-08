@@ -18,7 +18,12 @@ import CollectionQueryBuilder, {
 } from './collection-query';
 import { Query, QueryWhere } from './query';
 import MemoryStorage from './storage/memory-btree';
-import { InvalidMigrationOperationError, WriteRuleError } from './errors';
+import {
+  InvalidMigrationOperationError,
+  InvalidSchemaDefaultError,
+  InvalidSchemaDefaultFunctionError,
+  WriteRuleError,
+} from './errors';
 import { Clock } from './clocks/clock';
 
 type Reference = `ref:${string}`;
@@ -29,7 +34,6 @@ import {
   replaceVariablesInQuery,
   mapFilterStatements,
 } from './db-helpers';
-import { toBuilder } from './utils/builder';
 
 type AttributeType =
   | 'string'
@@ -326,6 +330,24 @@ export default class DB<M extends Models<any, any> | undefined> {
     return result.has(id) ? result.get(id) : null;
   }
 
+  private getDefaultValuesForCollection(collection) {
+    return Object.entries(collection?.attributes?.properties).reduce(
+      (prev, [attribute, definition]) => {
+        let attributeDefault = definition['x-default-value'];
+        if (attributeDefault === undefined) {
+          // no default object
+          return prev;
+        }
+        const { value, function: func } = attributeDefault;
+        if (attributeDefault.value !== undefined) prev[attribute] = value;
+        else if (func === 'uuid') prev[attribute] = nanoid();
+        else if (func === 'now') prev[attribute] = new Date().toISOString();
+        return prev;
+      },
+      {} as Record<string, any>
+    );
+  }
+
   async insert(
     collectionName: CollectionNameFromModels<M>,
     doc: any,
@@ -338,7 +360,10 @@ export default class DB<M extends Models<any, any> | undefined> {
     }
     await this.ensureMigrated;
     const collection = await this.getCollectionSchema(collectionName);
-
+    if (collection) {
+      const collectionDefaults = this.getDefaultValuesForCollection(collection);
+      doc = { ...collectionDefaults, ...doc };
+    }
     if (collection?.rules?.write?.length) {
       const filters = collection.rules.write.flatMap((r) => r.filter);
       let query = { where: filters } as CollectionQuery<ModelFromModels<M>>;

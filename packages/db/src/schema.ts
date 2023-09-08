@@ -14,6 +14,7 @@ import {
 } from '@sinclair/typebox';
 import { Value, ValuePointer } from '@sinclair/typebox/value';
 import {
+  InvalidSchemaDefaultError,
   InvalidSchemaPathError,
   InvalidSchemaType,
   InvalidSetTypeError,
@@ -46,21 +47,48 @@ type RegisterTypeFromBaseType<T extends RegisterBaseType> = TTuple<
   'x-serialized-type': T['type'];
 };
 
-type UserTypeOptions = { nullable?: boolean };
-
 const Nullable = <T extends RegisterBaseType>(type: T) =>
   Type.Union([type, Type.Null()]);
+
+const UserTypeOptionsSchema = Type.Object({
+  nullable: Type.Optional(Type.Boolean()),
+  defaultValue: Type.Optional(
+    Type.Union([
+      Type.Object({
+        value: Type.Union([
+          Type.String(),
+          Type.Number(),
+          Type.Boolean(),
+          Type.Null(),
+        ]),
+      }),
+      Type.Object({
+        function: Type.Union([Type.Literal('uuid'), Type.Literal('now')]),
+      }),
+    ])
+  ),
+});
+
+type UserTypeOptions = Static<typeof UserTypeOptionsSchema>;
+
+function userTypeOptionsAreValid(options: UserTypeOptions) {
+  return Value.Check(UserTypeOptionsSchema, options);
+}
 
 export function Register<T extends RegisterBaseType>(
   type: T,
   options?: UserTypeOptions,
   typeOverride?: string
 ) {
-  const { nullable } = options || {};
+  if (options && !userTypeOptionsAreValid(options)) {
+    throw new InvalidSchemaDefaultError(options);
+  }
+  const { nullable, defaultValue } = options || {};
   return Type.Tuple([nullable ? Nullable(type) : type, Timestamp], {
     'x-serialized-type': typeOverride || type.type,
     'x-crdt-type': 'Register',
     'x-nullable': !!nullable,
+    'x-default-value': defaultValue,
   }) as RegisterTypeFromBaseType<T>;
 }
 
@@ -368,7 +396,10 @@ export function schemaToTriples(schema: StoreSchema<Models<any, any>>): EAV[] {
       const pathSchema = getSchemaFromPath(model.attributes, [path]);
       collection.attributes[path] = {
         type: pathSchema['x-serialized-type'],
-        options: { nullable: pathSchema['x-nullable'] },
+        options: {
+          nullable: pathSchema['x-nullable'],
+          defaultValue: pathSchema['x-default-value'],
+        },
       };
     }
     collections[collectionName] = collection;

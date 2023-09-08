@@ -2740,6 +2740,85 @@ it('throws an error if a register filter is malformed', async () => {
   await expect(db.fetch(query)).rejects.toThrowError(InvalidFilterError);
 });
 
+describe('default values in a schema', () => {
+  const schema = {
+    collections: {
+      Todos: {
+        attributes: S.Schema({
+          text: S.String(),
+          created_at: S.Date(),
+          completed: S.Boolean({ defaultValue: { value: false } }),
+        }),
+      },
+    },
+  };
+  it('can create a database with a schema with default values', async () => {
+    expect(
+      () =>
+        new DB({
+          schema,
+        })
+    ).not.toThrowError();
+  });
+  it('can insert an entity with default values', async () => {
+    const db = new DB({
+      schema,
+    });
+    await db.insert(
+      'Todos',
+      {
+        text: 'Do something',
+        created_at: new Date(),
+      },
+      'todo-1'
+    );
+    const result = await db.fetchById('Todos', 'todo-1');
+    expect(result).toHaveProperty('completed');
+    expect(result.completed).toBe(false);
+  });
+  it('can use function aliases in schemas as default values', async () => {
+    const db = new DB({
+      schema: {
+        collections: {
+          Todos: {
+            attributes: S.Schema({
+              todoId: S.String({ defaultValue: { function: 'uuid' } }),
+              text: S.String(),
+              created_at: S.Date({ defaultValue: { function: 'now' } }),
+            }),
+          },
+        },
+      },
+    });
+    await db.insert(
+      'Todos',
+      {
+        text: 'Do something',
+      },
+      'todo-1'
+    );
+    const result = await db.fetchById('Todos', 'todo-1');
+    expect(result).toHaveProperty('todoId');
+    expect(result.todoId).toBeTypeOf('string');
+    expect(result).toHaveProperty('created_at');
+    expect(result.created_at instanceof Date).toBeTruthy();
+  });
+  it('should reject schemas that pass invalid default values', async () => {
+    expect(() =>
+      S.String({ defaultValue: { function: 'notAFunction' } })
+    ).toThrowError();
+    expect(() =>
+      S.String({ defaultValue: { invalidField: 'uuid' } })
+    ).toThrowError();
+    expect(() =>
+      S.String({ defaultValue: { value: ['array'] } })
+    ).toThrowError();
+    expect(() =>
+      S.String({ defaultValue: { value: true, function: 'now' } })
+    ).toThrowError();
+  });
+});
+
 describe('subscription errors', () => {
   it.todo('passes query errors to the callback', async () => {});
   it('handles errors in callback', () => {
