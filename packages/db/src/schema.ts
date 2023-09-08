@@ -14,7 +14,7 @@ import {
 } from '@sinclair/typebox';
 import { Value, ValuePointer } from '@sinclair/typebox/value';
 import {
-  InvalidSchemaDefaultError,
+  InvalidTypeOptionsError,
   InvalidSchemaPathError,
   InvalidSchemaType,
   InvalidSetTypeError,
@@ -50,26 +50,27 @@ type RegisterTypeFromBaseType<T extends RegisterBaseType> = TTuple<
 const Nullable = <T extends RegisterBaseType>(type: T) =>
   Type.Union([type, Type.Null()]);
 
+const DefaultFunctionSchema = Type.Object({
+  func: Type.String(),
+  args: Type.Optional(Type.Union([Type.Array(Type.Any()), Type.Null()])),
+});
+
+export type DefaultFunctionType = Static<typeof DefaultFunctionSchema>;
+
 const UserTypeOptionsSchema = Type.Object({
   nullable: Type.Optional(Type.Boolean()),
-  defaultValue: Type.Optional(
+  default: Type.Optional(
     Type.Union([
-      Type.Object({
-        value: Type.Union([
-          Type.String(),
-          Type.Number(),
-          Type.Boolean(),
-          Type.Null(),
-        ]),
-      }),
-      Type.Object({
-        function: Type.Union([Type.Literal('uuid'), Type.Literal('now')]),
-      }),
+      Type.String(),
+      Type.Number(),
+      Type.Boolean(),
+      Type.Null(),
+      DefaultFunctionSchema,
     ])
   ),
 });
 
-type UserTypeOptions = Static<typeof UserTypeOptionsSchema>;
+export type UserTypeOptions = Static<typeof UserTypeOptionsSchema>;
 
 function userTypeOptionsAreValid(options: UserTypeOptions) {
   return Value.Check(UserTypeOptionsSchema, options);
@@ -81,9 +82,9 @@ export function Register<T extends RegisterBaseType>(
   typeOverride?: string
 ) {
   if (options && !userTypeOptionsAreValid(options)) {
-    throw new InvalidSchemaDefaultError(options);
+    throw new InvalidTypeOptionsError(options);
   }
-  const { nullable, defaultValue } = options || {};
+  const { nullable, default: defaultValue } = options || {};
   return Type.Tuple([nullable ? Nullable(type) : type, Timestamp], {
     'x-serialized-type': typeOverride || type.type,
     'x-crdt-type': 'Register',
@@ -162,6 +163,13 @@ export class Schema {
 
   static Schema<Config extends SchemaConfig>(config: Config) {
     return Type.Object(config);
+  }
+
+  static get Default() {
+    return {
+      uuid: (length?: string) => ({ func: 'uuid', args: [length] }),
+      now: () => ({ func: 'now', args: null }),
+    };
   }
 }
 

@@ -4,6 +4,8 @@ import {
   Model,
   Models,
   objectToTimestampedObject,
+  UserTypeOptions,
+  Collection,
 } from './schema';
 import * as Document from './document';
 import { nanoid } from 'nanoid';
@@ -330,18 +332,25 @@ export default class DB<M extends Models<any, any> | undefined> {
     return result.has(id) ? result.get(id) : null;
   }
 
-  private getDefaultValuesForCollection(collection) {
+  private getDefaultValuesForCollection(collection: Collection<any>) {
     return Object.entries(collection?.attributes?.properties).reduce(
       (prev, [attribute, definition]) => {
-        let attributeDefault = definition['x-default-value'];
+        let attributeDefault = definition['x-default-value'] as
+          | UserTypeOptions['default']
+          | undefined;
         if (attributeDefault === undefined) {
           // no default object
           return prev;
         }
-        const { value, function: func } = attributeDefault;
-        if (attributeDefault.value !== undefined) prev[attribute] = value;
-        else if (func === 'uuid') prev[attribute] = nanoid();
-        else if (func === 'now') prev[attribute] = new Date().toISOString();
+        if (typeof attributeDefault !== 'object' || attributeDefault === null)
+          prev[attribute] = attributeDefault;
+        else {
+          const { args, func } = attributeDefault;
+          if (func === 'uuid')
+            prev[attribute] =
+              args && typeof args[0] === 'number' ? nanoid(args[0]) : nanoid();
+          else if (func === 'now') prev[attribute] = new Date().toISOString();
+        }
         return prev;
       },
       {} as Record<string, any>

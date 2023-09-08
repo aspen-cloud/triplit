@@ -211,13 +211,12 @@ export class InvalidSchemaPathError extends TriplitError {
   }
 }
 
-export class InvalidSchemaDefaultError extends TriplitError {
+export class InvalidTypeOptionsError extends TriplitError {
   constructor(defaultObj: any, ...args: any[]) {
     super(...args);
-    this.name = 'InvalidSchemaDefaultError';
-    this.message = `Defaults should be in the form of either {value: <value>} or {function: <'uuid' | 'now'> } but not both.
-    
-    Received ${JSON.stringify(defaultObj)}`;
+    this.name = 'InvalidTypeOptionsError';
+    // TODO: pass in more info about the specific attribute and schema mismatches
+    this.message = `Received ${JSON.stringify(defaultObj)}`;
     this.status = STATUS_CODES['Bad Request'];
   }
 }

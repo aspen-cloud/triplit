@@ -2747,7 +2747,7 @@ describe('default values in a schema', () => {
         attributes: S.Schema({
           text: S.String(),
           created_at: S.Date(),
-          completed: S.Boolean({ defaultValue: { value: false } }),
+          completed: S.Boolean({ default: false }),
         }),
       },
     },
@@ -2782,9 +2782,13 @@ describe('default values in a schema', () => {
         collections: {
           Todos: {
             attributes: S.Schema({
-              todoId: S.String({ defaultValue: { function: 'uuid' } }),
+              todoId: S.String({
+                default: S.Default.now(),
+              }),
               text: S.String(),
-              created_at: S.Date({ defaultValue: { function: 'now' } }),
+              created_at: S.Date({
+                default: S.Default.now(),
+              }),
             }),
           },
         },
@@ -2804,18 +2808,8 @@ describe('default values in a schema', () => {
     expect(result.created_at instanceof Date).toBeTruthy();
   });
   it('should reject schemas that pass invalid default values', async () => {
-    expect(() =>
-      S.String({ defaultValue: { function: 'notAFunction' } })
-    ).toThrowError();
-    expect(() =>
-      S.String({ defaultValue: { invalidField: 'uuid' } })
-    ).toThrowError();
-    expect(() =>
-      S.String({ defaultValue: { value: ['array'] } })
-    ).toThrowError();
-    expect(() =>
-      S.String({ defaultValue: { value: true, function: 'now' } })
-    ).toThrowError();
+    expect(() => S.String({ default: {} })).toThrowError();
+    expect(() => S.String({ default: ['array'] })).toThrowError();
   });
 });
 

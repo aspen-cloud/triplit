@@ -64,7 +64,9 @@ const client = new TriplitClient({
 
 Passing a schema to the client constructor will override any schema currently stored in your cache. You may also manage your schema with migrations, as explained in the [Migrations](#migrations) section. Using migrations is recommended for production applications that maintain state locally or use syncing.
 
-### Schema options
+## Schema options
+
+### `nullable`
 
 You can indicate an attribute is nullable by passing the `{ nullable: true }` option to its constructor. In the example collection below, `deleted_at` is a nullable attribute.
 
@@ -75,6 +77,25 @@ You can indicate an attribute is nullable by passing the `{ nullable: true }` op
       text: S.String(),
       complete: S.Boolean(),
       created_at: S.Date()
+      deleted_at: S.Date({ nullable: true })
+      tags: S.Set(S.String()),
+    }),
+  },
+```
+
+### `default`
+
+You can provide defaults values or functions for an attribute. Triplit currently supports literal values and two functions aliases.
+
+The below schema has multiple fields with default values, including functions.
+
+```typescript
+  todos: {
+    attributes: S.Schema({
+      id: S.String({ default: S.Default.uuid(5) }),
+      text: S.String(),
+      complete: S.Boolean({ default: false }),
+      created_at: S.Date({ default: S.Default.now })
       deleted_at: S.Date({ nullable: true })
       tags: S.Set(S.String()),
     }),
