@@ -1,5 +1,5 @@
 import { ValuePointer } from '@sinclair/typebox/value';
-import Builder, { QueryBuilderInputs, toBuilder } from './utils/builder';
+import Builder from './utils/builder';
 import {
   Query,
   Operator,
@@ -7,9 +7,8 @@ import {
   FilterGroup,
   entityToResultReducer,
   constructEntity,
-  WhereFilter,
-  QueryWhere,
   QUERY_INPUT_TRANSFORMERS,
+  QueryBuilderInputs,
 } from './query';
 import {
   getSchemaFromPath,
@@ -26,6 +25,7 @@ import {
   TripleRow,
   TripleStore,
   TripleStoreTransaction,
+  Value,
 } from './triple-store';
 import { Pipeline } from './utils/pipeline';
 import { EntityIdMissingError, InvalidFilterError } from './errors';
@@ -143,7 +143,7 @@ export async function fetch<Q extends CollectionQuery<any>>(
     : tx.getEntities(query.collectionName));
 
   let entityCount = 0;
-  let previousOrderVal;
+  let previousOrderVal: Value;
   const resultTriples: TripleRow[] = [];
   let entities = await new Pipeline(resultOrder)
     .map(async ({ id }) => {
@@ -241,7 +241,7 @@ function deserializeDatesInEntity(entity: any, schema: Model<any>) {
   return Object.entries(entity).reduce((acc, [key, value]) => {
     const dataType = schema?.properties?.[key]?.['x-serialized-type'];
     if (dataType === 'date' && value) {
-      acc[key] = new Date(value);
+      acc[key] = new Date(value as string);
     } else {
       acc[key] = value;
     }

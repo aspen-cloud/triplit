@@ -20,12 +20,7 @@ import CollectionQueryBuilder, {
 } from './collection-query';
 import { Query, QueryWhere } from './query';
 import MemoryStorage from './storage/memory-btree';
-import {
-  InvalidMigrationOperationError,
-  InvalidSchemaDefaultError,
-  InvalidSchemaDefaultFunctionError,
-  WriteRuleError,
-} from './errors';
+import { InvalidMigrationOperationError, WriteRuleError } from './errors';
 import { Clock } from './clocks/clock';
 
 type Reference = `ref:${string}`;

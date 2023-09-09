@@ -2,7 +2,9 @@ import { Model, TypeFromModel, updateEntityAtPath } from './schema';
 import { EntityId, TripleRow } from './triple-store';
 
 type Path = string;
-type Value = number | string | null;
+// Should be friendly types that we pass into queries
+// Not to be confused with the Value type that we store in the triple store
+type Value = number | string | boolean | Date | null;
 export type Operator = '=' | '<' | '>' | '<=' | '>=' | '!=' | 'like' | 'nlike';
 
 export type FilterStatement<M extends Model<any> | undefined, V = Value> = [
@@ -162,9 +164,6 @@ export const QUERY_INPUT_TRANSFORMERS = <
 });
 
 export type QueryBuilderInputs<M extends Model<any> | undefined> = {
-  where:
-    | FilterStatement<M, string | Date | number | null>
-    | WhereFilter<M>[]
-    | [QueryWhere<M>];
+  where: FilterStatement<M> | WhereFilter<M>[] | [QueryWhere<M>];
   order: NonNullable<Query<M>['order']> | [Query<M>['order']];
 };

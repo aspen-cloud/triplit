@@ -106,8 +106,13 @@ type SetTypeFromValidTypes<T extends ValidSetDataTypes> = TRecord<
     : never;
 };
 
+FormatRegistry.Set(
+  'date-time',
+  // @ts-ignore
+  fullFormats['date-time'].validate
+);
+
 // Could also use a namespace or module, but this worked best with our type generation
-FormatRegistry.Set('date-time', fullFormats['date-time'].validate);
 export class Schema {
   static String = (options?: UserTypeOptions) =>
     Register(Type.String(), options);
@@ -406,7 +411,7 @@ export function schemaToTriples(schema: StoreSchema<Models<any, any>>): EAV[] {
         type: pathSchema['x-serialized-type'],
         options: {
           nullable: pathSchema['x-nullable'],
-          defaultValue: pathSchema['x-default-value'],
+          default: pathSchema['x-default-value'],
         },
       };
     }

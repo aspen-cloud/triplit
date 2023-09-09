@@ -271,6 +271,7 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
     collectionName: CN,
     params?: Query<ModelFromModels<M, CN>>
   ): toBuilder<CollectionQuery<ModelFromModels<M, CN>>> {
+    // TODO: When fixing the type here, ensure the built output looks correct (had to manually assign this to work in the past)
     return CollectionQueryBuilder(collectionName as string, params);
   }
 

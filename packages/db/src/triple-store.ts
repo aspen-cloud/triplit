@@ -44,7 +44,9 @@ export type StoreSchema<M extends Models<any, any> | undefined> =
     ? undefined
     : never;
 
-export type Value = number | string | boolean | Date | null;
+// Value should be serializable, this is what goes into triples
+// Not to be confused with the Value type we define on queries
+export type Value = number | string | boolean | null;
 export type EntityId = string;
 export type AttributeItem = string | number;
 export type Attribute = AttributeItem[];
