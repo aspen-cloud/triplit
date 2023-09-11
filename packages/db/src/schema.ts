@@ -89,7 +89,7 @@ export function Register<T extends RegisterBaseType>(
     'x-serialized-type': typeOverride || type.type,
     'x-crdt-type': 'Register',
     'x-nullable': !!nullable,
-    'x-default-value': defaultValue,
+    ...(defaultValue !== undefined && { 'x-default-value': defaultValue }),
   }) as RegisterTypeFromBaseType<T>;
 }
 
@@ -411,7 +411,9 @@ export function schemaToTriples(schema: StoreSchema<Models<any, any>>): EAV[] {
         type: pathSchema['x-serialized-type'],
         options: {
           nullable: pathSchema['x-nullable'],
-          default: pathSchema['x-default-value'],
+          ...(pathSchema['x-default-value'] !== undefined && {
+            default: pathSchema['x-default-value'],
+          }),
         },
       };
     }
