@@ -121,7 +121,11 @@ export class Schema {
   static Boolean = (options?: UserTypeOptions) =>
     Register(Type.Boolean(options), options);
   static Date = (options?: UserTypeOptions) =>
-    Register(Type.String({ format: 'date-time' }), options, 'date');
+    Register(
+      Type.String({ format: 'date-time', default: null }),
+      options,
+      'date'
+    );
 
   // const StringEnum = TypeSystem.Type<
   //   string,
