@@ -1,8 +1,8 @@
 import React from 'react';
 import { Box, Text } from 'ink';
 // import createServer from '../../../../../packages/server/src/server';
-import TriplitServer from '@triplit/server';
-import { createServer as createConsoleServer } from '@triplit/console';
+// import TriplitServer from '@triplit/server';
+// import { createServer as createConsoleServer } from '@triplit/console';
 import jwt from 'jsonwebtoken';
 
 export const description = 'Starts the Triplit development environment';
@@ -12,10 +12,10 @@ export const args = {};
 export async function run() {
   process.env.JWT_SECRET =
     process.env.JWT_SECRET ?? 'jwt-key-for-development-only';
-  const startDBServer = TriplitServer.createServer();
-  const dbServer = startDBServer(6543);
-  const consoleServer = await createConsoleServer();
-  await consoleServer.listen(6542);
+  // const startDBServer = TriplitServer.createServer();
+  // const dbServer = startDBServer(6543);
+  // const consoleServer = await createConsoleServer();
+  // await consoleServer.listen(6542);
   // consoleServer.printUrls();
 
   const serviceKey = jwt.sign(
@@ -27,8 +27,8 @@ export async function run() {
   );
 
   process.on('SIGINT', function () {
-    dbServer.close();
-    consoleServer.close();
+    // dbServer.close();
+    // consoleServer.close();
   });
 
   return (

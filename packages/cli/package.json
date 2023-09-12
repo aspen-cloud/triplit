@@ -1,5 +1,5 @@
 {
-  "name": "@triplit/cli",
+  "name": "@triplit/cli-old",
   "version": "0.0.0",
   "description": "The official Triplit CLI for creating, managing, and migrating your Triplit projects",
   "author": "@aspen-cloud",
