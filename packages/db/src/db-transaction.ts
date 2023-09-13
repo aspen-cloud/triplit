@@ -6,7 +6,6 @@ import {
   Models,
   objectToTimestampedObject,
   SetProxy,
-  schemaToTriples,
   AttributeDefinition,
 } from './schema';
 import * as Document from './document';
@@ -27,7 +26,6 @@ import {
   CollectionRules,
   ruleToTuple,
   DropCollectionOperation,
-  RenameAttributeOperation,
   AddAttributeOperation,
   DropAttributeOperation,
   DBFetchOptions,
@@ -327,55 +325,6 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
       (eav) => [eav[0], eav[1]]
     );
     await this.storeTx.deleteMetadataTuples(deletes);
-
-    // DELETE DATA
-    // TODO: check _collection marker too?
-    // const attribute = [collectionName];
-    // const currentTriples = this.storeTx.findByAttribute(attribute);
-    // this.storeTx.deleteTriples(currentTriples);
-  }
-
-  // TODO: deprecate until we need to support it (cant be auto-generated right now)
-  async renameAttribute(params: RenameAttributeOperation[1]) {
-    const { collection: collectionName, path, newPath } = params;
-    // Update schema if there is schema
-    if (await this.getSchema()) {
-      const existingAttributeInfo = await this.storeTx.readMetadataTuples(
-        '_schema',
-        ['collections', collectionName, 'attributes', ...path]
-      );
-      // Delete old attribute tuples
-      const deletes = existingAttributeInfo.map<[string, AttributeItem[]]>(
-        (eav) => [eav[0], eav[1]]
-      );
-      // Upsert new attribute tuples
-      const updates = existingAttributeInfo.map<EAV>((eav) => {
-        const attr = [...eav[1]];
-        // ['collections', collectionName, 'attributes'] is prefix
-        attr.splice(3, 1, ...newPath); // Logic may change if path and new path arent strings
-        return [eav[0], attr, eav[2]];
-      });
-      await this.storeTx.deleteMetadataTuples(deletes);
-      await this.storeTx.updateMetadataTuples(updates);
-    }
-    // Update data in place
-    // For each storage scope, find all triples with the attribute and update them
-    for (const storageKey of Object.keys(this.storeTx.tupleTx.store.storage)) {
-      const attribute = [collectionName, ...path];
-      const newAttribute = [collectionName, ...newPath];
-      const scopedTx = this.storeTx.withScope({
-        read: [storageKey],
-        write: [storageKey],
-      });
-      const currentTriples = await scopedTx.findByAttribute(attribute);
-      const newTriples = transformTripleAttribute(
-        currentTriples,
-        attribute,
-        newAttribute
-      );
-      await scopedTx.deleteTriples(currentTriples);
-      await scopedTx.insertTriples(newTriples);
-    }
   }
 
   async addAttribute(params: AddAttributeOperation[1]) {
@@ -408,11 +357,6 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
       );
       await this.storeTx.deleteMetadataTuples(deletes);
     }
-
-    // TODO: check _collection marker too?
-    // const attribute = [collectionName, path];
-    // const currentTriples = this.storeTx.findByAttribute(attribute);
-    // this.storeTx.deleteTriples(currentTriples);
   }
 
   async alterAttributeOption(params: AlterAttributeOptionOperation[1]) {
@@ -447,7 +391,7 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
             'options',
             key,
           ],
-          // @ts-ignore TODO: determine if it should be many triples, should be json serializable though (to be safe)
+          // @ts-ignore (storing a serializable object here (ex default func), but not technically a valid Value)
           value,
         ]);
       }

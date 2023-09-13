@@ -1728,41 +1728,6 @@ describe('schema changes', async () => {
     // TODO: test data is actually dropped if we decide it should be
   });
 
-  it('can rename an attribute', async () => {
-    const schema = {
-      collections: {
-        students: {
-          attributes: S.Schema({
-            id: S.Number(),
-            name: S.String(),
-          }),
-        },
-      },
-    };
-    const db = new DB({ source: new InMemoryTupleStorage(), schema: schema });
-    await db.insert('students', { id: 1, name: 'Alice' }, 1);
-    await db.renameAttribute({
-      collection: 'students',
-      path: 'id',
-      newPath: 'studentId',
-    });
-    const dbSchema = await db.getSchema();
-    expect(dbSchema?.collections).toHaveProperty('students');
-    expect(dbSchema?.collections.students.attributes.properties).toHaveProperty(
-      'studentId'
-    );
-    expect(dbSchema?.collections.students.attributes.properties).toHaveProperty(
-      'name'
-    );
-    const query = db
-      .query('students')
-      .where([['studentId', '=', 1]])
-      .build();
-    const result = await db.fetch(query);
-    expect(result).toHaveLength(1);
-    expect(result.get('1').studentId).toEqual(1);
-  });
-
   it('can add an attribute', async () => {
     const schema = {
       collections: {

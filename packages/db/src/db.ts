@@ -75,12 +75,6 @@ export type DropAttributeOperation = [
   'drop_attribute',
   { collection: string; path: string[] }
 ];
-// TODO: rename path should be string[] not string
-export type RenameAttributeOperation = [
-  'rename_attribute',
-  { collection: string; path: string[]; newPath: string[] }
-];
-// TODO: possibly merge with rename_attribute?
 export type AlterAttributeOptionOperation = [
   'alter_attribute_option',
   { collection: string; path: string[] } & UserTypeOptions
@@ -94,7 +88,6 @@ type DBOperation =
   | DropCollectionOperation
   | AddAttributeOperation
   | DropAttributeOperation
-  | RenameAttributeOperation
   | AlterAttributeOptionOperation
   | DropAttributeOptionOperation;
 
@@ -519,12 +512,6 @@ export default class DB<M extends Models<any, any> | undefined> {
   async dropCollection(params: DropCollectionOperation[1]) {
     await this.transact(async (tx) => {
       await tx.dropCollection(params);
-    });
-  }
-
-  async renameAttribute(params: RenameAttributeOperation[1]) {
-    await this.transact(async (tx) => {
-      await tx.renameAttribute(params);
     });
   }
 
