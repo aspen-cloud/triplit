@@ -28,7 +28,11 @@ import {
   Value,
 } from './triple-store';
 import { Pipeline } from './utils/pipeline';
-import { EntityIdMissingError, InvalidFilterError } from './errors';
+import {
+  EntityIdMissingError,
+  InvalidFilterError,
+  TriplitError,
+} from './errors';
 import {
   stripCollectionFromId,
   appendCollectionToId,
@@ -107,15 +111,14 @@ export async function fetch<Q extends CollectionQuery<any>>(
       const results = new Map() as FetchResult<Q>;
       return includeTriples ? { results, triples } : results;
     }
-    let untimestampedEntity = timestampedObjectToPlainObject(entity);
+    let updatedEntity = entity;
     if (schema) {
-      untimestampedEntity = deserializeDatesInEntity(
-        untimestampedEntity,
-        schema
-      );
+      updatedEntity = deserializeDatesInEntity(updatedEntity, schema);
     }
+    if (!includeTriples)
+      updatedEntity = timestampedObjectToPlainObject(updatedEntity);
     const results = new Map([
-      [query.entityId, untimestampedEntity],
+      [query.entityId, updatedEntity],
     ]) as FetchResult<Q>;
     return includeTriples ? { results, triples } : results;
   }
@@ -222,26 +225,29 @@ export async function fetch<Q extends CollectionQuery<any>>(
   }
 
   return new Map(
-    schema
-      ? entities.map(([id, entity]) => [
-          id,
-          deserializeDatesInEntity(
-            timestampedObjectToPlainObject(entity),
-            schema
-          ),
-        ])
-      : entities.map(([id, entity]) => [
-          id,
-          timestampedObjectToPlainObject(entity),
-        ])
+    entities.map(([id, entity]) => [
+      id,
+      deserializeDatesInEntity(timestampedObjectToPlainObject(entity), schema),
+    ])
   ) as FetchResult<Q>;
 }
 
-function deserializeDatesInEntity(entity: any, schema: Model<any>) {
+function deserializeDatesInEntity(entity: any, schema?: Model<any>) {
+  if (!schema) return entity;
   return Object.entries(entity).reduce((acc, [key, value]) => {
     const dataType = schema?.properties?.[key]?.['x-serialized-type'];
-    if (dataType === 'date' && value) {
-      acc[key] = new Date(value as string);
+    if (dataType === 'date') {
+      // we have a timestamped entity
+      if (value instanceof Array && value.length === 2) {
+        acc[key] = [
+          typeof value[0] === 'string'
+            ? new Date(value[0] as string)
+            : value[0],
+          value[1],
+        ];
+      } else if (typeof value === 'string') {
+        acc[key] = new Date(value as string);
+      } else acc[key] = value;
     } else {
       acc[key] = value;
     }
@@ -459,7 +465,7 @@ function subscribeSingleEntity<Q extends CollectionQuery<any>>(
         : null;
       triples = fetchResult.triples;
       const results = new Map(
-        entity ? [[entityId, entity]] : []
+        entity ? [[entityId, timestampedObjectToPlainObject(entity)]] : []
       ) as FetchResult<Q>;
 
       onResults([results, triples]);
@@ -703,7 +709,6 @@ export function subscribe<Q extends CollectionQuery<any>>(
       query,
       ([results]) => {
         onResults(results);
-        console.log('single entity results', results);
       },
       onError,
       schema
