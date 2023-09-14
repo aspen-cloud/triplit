@@ -30,7 +30,7 @@ export function useQuery<CQ extends ClientQuery<any>>(
       (localResults) => {
         setFetching(false);
         setError(undefined);
-        setResults(localResults);
+        setResults(new Map(localResults));
       },
       (error) => {
         setFetching(false);
