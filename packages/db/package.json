@@ -1,11 +1,17 @@
 {
   "name": "@triplit/db",
   "version": "0.0.36",
-  "main": "dist/index.js",
-  "module": "dist/module.js",
+  "main": "dist/index.cjs",
+  "module": "dist/index.mjs",
   "typings": "dist/index.d.ts",
   "types": "dist/index.d.ts",
   "source": "src/index.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.cjs"
+    }
+  },
   "scripts": {
     "build": "yarn build:setup && parcel build . --no-cache && yarn build:cleanup",
     "build:setup": "mv tsconfig.json tsconfig.tmp.json && mv tsconfig.build.json tsconfig.json",

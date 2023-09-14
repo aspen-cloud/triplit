@@ -6,9 +6,9 @@
  */
 
 // TODO: note this somewhere - cannot export directly from external pkg with parcel
-export { SQLiteTupleStorage as SqliteStorage } from 'tuple-database/storage/SQLiteTupleStorage';
-export { IndexedDbTupleStorage as IndexedDbStorage } from 'tuple-database/storage/IndexedDbTupleStorage';
-export { BrowserTupleStorage as BrowserLocalStorage } from 'tuple-database/storage/BrowserTupleStorage';
+export { SQLiteTupleStorage as SqliteStorage } from 'tuple-database/storage/SQLiteTupleStorage.js';
+export { IndexedDbTupleStorage as IndexedDbStorage } from 'tuple-database/storage/IndexedDbTupleStorage.js';
+export { BrowserTupleStorage as BrowserLocalStorage } from 'tuple-database/storage/BrowserTupleStorage.js';
 export { default as MemoryStorage } from './storage/memory-btree';
 export { default as CachedIndexedDbStorage } from './storage/cached-indexed-db';
 

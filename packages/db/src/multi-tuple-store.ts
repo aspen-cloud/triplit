@@ -8,7 +8,7 @@ import {
   Unsubscribe,
   transactionalReadWriteAsync,
 } from 'tuple-database';
-import { compareTuple } from 'tuple-database/helpers/compareTuple';
+import { compareTuple } from 'tuple-database/helpers/compareTuple.js';
 import {
   TuplePrefix,
   TupleToObject,

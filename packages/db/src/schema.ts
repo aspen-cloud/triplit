@@ -26,7 +26,7 @@ import { timestampCompare } from './timestamp';
 import type { Attribute, EAV, StoreSchema } from './triple-store';
 import { TuplePrefix } from './utility-types';
 import { objectToTuples, triplesToObject } from './utils';
-import { fullFormats } from 'ajv-formats/dist/formats';
+import { fullFormats } from 'ajv-formats/dist/formats.js';
 
 // We infer TObject as a return type of some funcitons and this causes issues with consuming packages
 // Using solution 3.1 described in this comment as a fix: https://github.com/microsoft/TypeScript/issues/47663#issuecomment-1519138189
