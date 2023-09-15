@@ -33,6 +33,7 @@ import {
   ValueSchemaMismatchError,
   WriteRuleError,
 } from './errors';
+import { appendCollectionToId } from './db-helpers';
 
 export type StoreSchema<M extends Models<any, any> | undefined> =
   M extends Models<any, any>
@@ -241,19 +242,21 @@ export class TripleStoreOperator implements TripleStoreApi {
     // When updating schema tuples, we need to update the schema object for this tx
     // Tuple-database doesnt support listening to non commited writes, so manually listening
     // this.schema = this.readSchema();
-    this.schema = schema;
-    this.onMetadataChange(async ({ updates, deletes }) => {
-      if (
-        updates.some((u) => u[0] === '_schema') ||
-        deletes.some((d) => d[0] === '_schema')
-      ) {
-        this.schema = await this.readSchemaFromStorage();
-      }
-    });
+    // this.schema = schema;
+    // this.onMetadataChange(async ({ updates, deletes }) => {
+    //   if (
+    //     updates.some((u) => u[0] === '_schema') ||
+    //     deletes.some((d) => d[0] === '_schema')
+    //   ) {
+    //     this.schema = await this.readSchemaFromStorage();
+    //   }
+    // });
+    // this.onWrite
   }
 
   async readSchema() {
-    return this.schema;
+    // return this.schema;
+    return this.readSchemaFromStorage();
   }
 
   async getTransactionTimestamp() {
@@ -264,7 +267,10 @@ export class TripleStoreOperator implements TripleStoreApi {
   }
 
   private async readSchemaFromStorage() {
-    const schemaTriples = await this.readMetadataTuples('_schema');
+    const schemaTriples = await this.findByEntity(
+      appendCollectionToId('_metadata', '_schema')
+    );
+
     // At some point we probably want to validate the we extract (ie has expected props)
     if (!schemaTriples.length) return undefined;
     return tuplesToSchema(schemaTriples);
@@ -382,16 +388,23 @@ export class TripleStoreOperator implements TripleStoreApi {
     await this.insertTriples([tripleRow]);
   }
 
-  async insertTriples(triplesInput: TripleRow[]): Promise<void> {
+  async insertTriples(
+    triplesInput: TripleRow[],
+    shouldValidate = true
+  ): Promise<void> {
     if (!triplesInput.length) return;
     for (const triple of triplesInput) {
-      await this.addTripleToIndex(this.tupleOperator, triple);
+      if (triple.value === undefined) {
+        throw new Error("Cannot use 'undefined' as a value");
+      }
+      await this.addTripleToIndex(this.tupleOperator, triple, shouldValidate);
     }
   }
 
   private async addTripleToIndex(
     tx: ScopedMultiTupleOperator<TupleIndex>,
-    tripleInput: TripleRow
+    tripleInput: TripleRow,
+    shouldValidate = true
   ) {
     const { id: id, attribute, value, timestamp, expired } = tripleInput;
 
@@ -407,7 +420,7 @@ export class TripleStoreOperator implements TripleStoreApi {
       return;
     }
 
-    const schema = await this.readSchema();
+    const schema = shouldValidate && (await this.readSchema());
     if (schema) {
       try {
         validateTriple(schema.collections, attribute, value);
@@ -438,7 +451,6 @@ export class TripleStoreOperator implements TripleStoreApi {
     const tx = this.tupleOperator;
     for (const triple of triples) {
       const { id: id, attribute, value, timestamp } = triple;
-      tx.remove(['Entity', id]);
       tx.remove(['EAV', id, attribute, value, timestamp]);
       tx.remove(['AVE', attribute, value, id, timestamp]);
       tx.remove(['VAE', value, attribute, id, timestamp]);
@@ -493,6 +505,9 @@ export class TripleStoreOperator implements TripleStoreApi {
   }
 
   async setValue(id: EntityId, attribute: Attribute, value: Value) {
+    if (value === undefined) {
+      throw new Error("Cannot use 'undefined' as a value");
+    }
     const timestamp = await this.getTransactionTimestamp();
     const existingTriples = await this.findByEntityAttribute(id, attribute);
     const olderTriples = existingTriples.filter(
@@ -510,6 +525,15 @@ export class TripleStoreOperator implements TripleStoreApi {
         { id, attribute, value, timestamp, expired: false },
       ]);
     }
+  }
+
+  async expireEntityAttribute(id: EntityId, attribute: Attribute) {
+    const timestamp = await this.getTransactionTimestamp();
+    const existingTriples = await this.findByEntityAttribute(id, attribute);
+    await this.deleteTriples(existingTriples);
+    await this.insertTriples([
+      { id, attribute, value: null, timestamp, expired: true },
+    ]);
   }
 }
 
@@ -635,11 +659,17 @@ export class TripleStore implements TripleStoreApi {
   }
 
   private async overrideSchema(schema: StoreSchema<Models<any, any>>) {
-    await this.transact(async (tx) => {
-      await tx.deleteMetadataTuples([['_schema']]);
-      await tx.updateMetadataTuples(schemaToTriples(schema));
-    });
-    this.schema = schema;
+    const triples = schemaToTriples(schema);
+    const ts = await this.clock.getNextTimestamp();
+    const normalizedTriples = triples.map(([e, a, v]) => ({
+      id: appendCollectionToId('_metadata', e),
+      attribute: ['_metadata', ...a],
+      value: v,
+      timestamp: ts,
+      expired: false,
+    }));
+
+    return await this.insertTriples(normalizedTriples, false);
   }
 
   findByCollection(
@@ -738,13 +768,13 @@ export class TripleStore implements TripleStoreApi {
     scope?: Parameters<typeof this.tupleStore.transact>[0]
   ) {
     // const schema = await this.readSchema();
-    const schema = await this.readSchema();
+    // const schema = await this.readSchema();
     let isCanceled = false;
     const tx = await this.tupleStore.autoTransact(async (tupleTx) => {
       const tx = new TripleStoreTransaction({
         tupleTx: tupleTx,
         clock: this.clock,
-        schema,
+        // schema,
       });
       if (isCanceled) return tx;
       try {
@@ -792,9 +822,10 @@ export class TripleStore implements TripleStoreApi {
     });
   }
 
-  async insertTriples(triplesInput: TripleRow[]) {
+  async insertTriples(triplesInput: TripleRow[], shouldValidate = true) {
+    // await this.ensureInitializedSchema;
     await this.transact(async (tx) => {
-      await tx.insertTriples(triplesInput);
+      await tx.insertTriples(triplesInput, shouldValidate);
     });
   }
 
@@ -876,14 +907,17 @@ export class TripleStore implements TripleStoreApi {
     // Wait for initial schema write to complete
     await this.ensureInitializedSchema;
     // Lazily assign in memory schema object
-    if (!this.schema) {
-      this.schema = await this.readSchemaFromStorage();
-    }
+    // if (!this.schema) {
+    this.schema = await this.readSchemaFromStorage();
+    // }
     return this.schema;
   }
 
   private async readSchemaFromStorage() {
-    const schemaTriples = await this.readMetadataTuples('_schema');
+    // const schemaTriples = await this.readMetadataTuples('_schema');
+    const schemaTriples = await this.findByEntity(
+      appendCollectionToId('_metadata', '_schema')
+    );
     // At some point we probably want to validate the we extract (ie has expected props)
     if (!schemaTriples.length) return undefined;
     return tuplesToSchema(schemaTriples);
@@ -908,6 +942,7 @@ function validateTriple(
 
   // TODO: remove this hack
   if (modelName === '_collection') return;
+  if (modelName === '_metadata') return;
 
   const model = schema[modelName];
   if (!model) {

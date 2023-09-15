@@ -1,3 +1,4 @@
+import { ValuePointer } from '@sinclair/typebox/value';
 import { Model, TypeFromModel, updateEntityAtPath } from './schema';
 import { EntityId, TripleRow } from './triple-store';
 
@@ -50,6 +51,35 @@ export function entityToResultReducer<M extends Model<any>>(
   if (attribute[0] === '_collection')
     return { ...entity, _collection: [value, timestamp] };
   const [_collectionName, ...path] = attribute;
+
+  // Ensure that any number paths are converted to arrays in the entity
+  for (let i = 0; i < path.length; i++) {
+    const part = path[i];
+    if (typeof part === 'number') {
+      const pointerToParent = '/' + path.slice(0, i).join('/');
+      const existingParent = ValuePointer.Get(entity, pointerToParent);
+      if (!existingParent) {
+        // console.log('creating array at', pointerToParent, entity);
+        ValuePointer.Set(entity, pointerToParent, []);
+      }
+    }
+  }
+
+  // const leaf = path.at(-1);
+  // const maybeNum = Number(leaf);
+  // if (isNaN(maybeNum)) {
+  //   updateEntityAtPath(entity, path, value, timestamp);
+  // } else {
+  //   console.log('num path', entity, path, maybeNum);
+  //   // check if the path is an array
+  //   const pointerToParent = '/' + path.slice(0, -1).join('/');
+  //   const existingParent = ValuePointer.Get(entity, pointerToParent);
+  //   if (!existingParent) {
+  //     ValuePointer.Set(entity, pointerToParent, []);
+  //   }
+  //   updateEntityAtPath(entity, path, maybeNum, timestamp);
+  // }
+  // console.log('updating', path, value, JSON.stringify(entity, null, 2));
   updateEntityAtPath(entity, path, value, timestamp);
   return entity;
 }

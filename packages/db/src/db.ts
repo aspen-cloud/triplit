@@ -489,7 +489,7 @@ export default class DB<M extends Models<any, any> | undefined> {
     });
   }
 
-  private async applyRemoteTransaction(operations: DBOperation[]) {
+  private async applySchemaMigration(operations: DBOperation[]) {
     await this.tripleStore.transact(async (tripTx) => {
       const tx = new DBTransaction(tripTx);
       for (const operation of operations) {
@@ -527,7 +527,7 @@ export default class DB<M extends Models<any, any> | undefined> {
       const dbVersion = tripleSchema?.version ?? 0;
       if (canMigrate(migration, direction, dbVersion)) {
         try {
-          await this.applyRemoteTransaction(migration[direction]);
+          await this.applySchemaMigration(migration[direction]);
         } catch (e) {
           console.error(
             `Error applying ${direction} migration with verison`,
@@ -537,12 +537,21 @@ export default class DB<M extends Models<any, any> | undefined> {
           throw e;
         }
         // TODO: move this into the transaction
-        await this.tripleStore.updateMetadataTuples([
-          [
-            '_schema',
-            ['version'],
-            direction === 'up' ? migration.version : migration.parent,
-          ],
+        // await this.tripleStore.updateMetadataTuples([
+        //   [
+        //     '_schema',
+        //     ['version'],
+        //     direction === 'up' ? migration.version : migration.parent,
+        //   ],
+        // ]);
+        await this.tripleStore.insertTriples([
+          {
+            id: appendCollectionToId('_metadata', '_schema'),
+            attribute: ['_metadata', 'version'],
+            value: direction === 'up' ? migration.version : migration.parent,
+            timestamp: await this.tripleStore.clock.getNextTimestamp(),
+            expired: false,
+          },
         ]);
       } else {
         console.info('skipping migration', migration);

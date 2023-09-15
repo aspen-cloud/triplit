@@ -423,20 +423,21 @@ describe('Register operations', () => {
 
 describe('Set operations', () => {
   const schema = {
-    companies: {
-      attributes: S.Schema({
-        id: S.Number(),
-        name: S.String(),
-        employees: S.Set(S.Number()),
-      }),
+    collections: {
+      companies: {
+        attributes: S.Schema({
+          id: S.Number(),
+          name: S.String(),
+          employees: S.Set(S.Number()),
+        }),
+      },
     },
   };
   let db: DB<typeof schema>;
   beforeEach(async () => {
-    storage.data = [];
     db = new DB({
       source: new InMemoryTupleStorage(),
-      schema: { collections: schema },
+      schema,
     });
     await db.insert(
       'companies',
@@ -472,7 +473,7 @@ describe('Set operations', () => {
   it('can remove from set', async () => {
     const setQuery = CollectionQueryBuilder(
       'companies',
-      schema.companies.attributes
+      schema.collections.companies.attributes
     )
       .select(['id'])
       .where([['employees', '=', 2]])
@@ -961,13 +962,14 @@ describe('single entity subscriptions', async () => {
   });
   // 3) update other entities and not have it fire
 
-  it('can subscribe to an entity', async () => {
+  it.only('can subscribe to an entity', async () => {
     await Promise.all(
       defaultData.map((doc) => db.insert('students', doc, doc.id))
     );
     await testSubscription(db, db.query('students').entityId('3').build(), [
       {
         check: (results) => {
+          console.log('first check');
           const entity = results.get('3');
           expect(entity).toBeDefined();
           expect(results.size).toBe(1);
@@ -983,6 +985,7 @@ describe('single entity subscriptions', async () => {
           });
         },
         check: (results) => {
+          console.log('second check check');
           expect(results.get('3').major).toBe('sociology');
         },
       },
@@ -1719,7 +1722,7 @@ describe('schema changes', async () => {
         },
       },
     };
-    const db = new DB({ source: new InMemoryTupleStorage(), schema: schema });
+    const db = new DB({ schema: schema });
     const dbSchemaBefore = await db.getSchema();
     expect(dbSchemaBefore?.collections).toHaveProperty('students');
     await db.dropCollection({ name: 'students' });

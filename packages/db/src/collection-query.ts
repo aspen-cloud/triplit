@@ -469,6 +469,7 @@ function subscribeSingleEntity<Q extends CollectionQuery<any>>(
           const changed = entityInserts.length > 0 || entityDeletes.length > 0;
 
           // Early return prevents processing if no relevant entities were updated
+          console.log('is changed', changed);
           if (!changed) return;
 
           // if we have deletes, need to re-fetch the entity
@@ -487,7 +488,7 @@ function subscribeSingleEntity<Q extends CollectionQuery<any>>(
               triples.concat(entityInserts)
             );
           }
-
+          console.log('updating entity', entity);
           if (
             entity &&
             doesEntityObjMatchWhere(entity, query.where ?? [], schema)
@@ -496,7 +497,7 @@ function subscribeSingleEntity<Q extends CollectionQuery<any>>(
           } else {
             results.delete(entityId);
           }
-
+          console.log('sending new results', results);
           onResults([results, triples]);
         } catch (e) {
           onError && onError(e);

@@ -18,7 +18,7 @@ import CollectionQueryBuilder, {
   FetchResult,
 } from './collection-query';
 import { EntityNotFoundError, WriteRuleError } from './errors';
-import { ValuePointer } from '@sinclair/typebox/value';
+import { Value, ValuePointer } from '@sinclair/typebox/value';
 import {
   CollectionNameFromModels,
   CollectionFromModels,
@@ -39,6 +39,8 @@ import {
   replaceVariablesInQuery,
 } from './db-helpers';
 import { Query } from './query';
+import { toBuilder } from './utils/builder';
+import { objectToTuples } from './utils';
 
 export class DBTransaction<M extends Models<any, any> | undefined> {
   constructor(
@@ -149,7 +151,7 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
         "Cannot perform an update on an entity that doesn't exist"
       );
     }
-    const changes = new Map<string, any>();
+    const changes = {};
     const collectionSchema = collection?.attributes;
     const updateProxy = this.createUpdateProxy<typeof collectionSchema>(
       changes,
@@ -157,14 +159,22 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
       collectionSchema
     );
     await updater(updateProxy);
+    const changeTuples = objectToTuples(changes);
     const fullEntityId = appendCollectionToId(collectionName, entityId);
-    for (let [path, value] of changes) {
+    for (let tuple of changeTuples) {
+      const path = tuple.slice(0, -1) as string[];
+      let value = tuple.at(-1);
+      const attribute = [collectionName, ...path];
+      // undefined is treated as a delete
+      if (value === undefined) {
+        const triples = await this.storeTx.findByEAV([fullEntityId, attribute]);
+        for (const trip of triples) {
+          await this.storeTx.expireEntityAttribute(trip.id, trip.attribute);
+        }
+        continue;
+      }
       value = value instanceof Date ? value.toISOString() : value;
-      await this.storeTx.setValue(
-        fullEntityId,
-        [collectionName, ...path.slice(1).split('/')],
-        value
-      );
+      await this.storeTx.setValue(fullEntityId, attribute, value);
     }
     if (collection?.rules?.write?.length) {
       const updatedEntity = await this.fetchById(collectionName, entityId);
@@ -184,7 +194,7 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
   }
 
   private createUpdateProxy<M extends Model<any> | undefined>(
-    changeTracker: Map<string, any>,
+    changeTracker: {},
     entityObj: ProxyTypeFromModel<M>,
     schema?: M,
     prefix: string = ''
@@ -193,7 +203,7 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
       set: (_target, prop, value) => {
         const propPointer = [prefix, prop].join('/');
         if (!schema) {
-          changeTracker.set(propPointer, value);
+          ValuePointer.Set(changeTracker, propPointer, value);
           return true;
         }
         const propSchema = getSchemaFromPath(
@@ -206,13 +216,21 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
             `Cannot set unrecognized property ${propPointer} to ${value}`
           );
         }
-        changeTracker.set(propPointer, value);
+        ValuePointer.Set(changeTracker, propPointer, value);
+        return true;
+      },
+      deleteProperty: (_target, prop) => {
+        const propPointer = [prefix, prop].join('/');
+        ValuePointer.Set(changeTracker, propPointer, undefined);
         return true;
       },
       get: (_target, prop) => {
         const propPointer = [prefix, prop].join('/');
-        const propValue = ValuePointer.Get(entityObj, propPointer);
-        if (propValue === undefined) return changeTracker.get(propPointer);
+        let propValue = ValuePointer.Get(entityObj, propPointer);
+        if (propValue === undefined) {
+          propValue = ValuePointer.Get(changeTracker, propPointer);
+        }
+
         const propSchema =
           schema && getSchemaFromPath(schema, propPointer.slice(1).split('/'));
         if (
@@ -231,23 +249,38 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
           if (propSchema['x-crdt-type'] === 'Set') {
             return {
               add: (value: any) => {
-                changeTracker.set([propPointer, value].join('/'), true);
+                // changeTracker.set([propPointer, value].join('/'), true);
+                ValuePointer.Set(
+                  changeTracker,
+                  [propPointer, value].join('/'),
+                  true
+                );
               },
               remove: (value: any) => {
-                changeTracker.set([propPointer, value].join('/'), false);
+                // changeTracker.set([propPointer, value].join('/'), false);
+                ValuePointer.Set(
+                  changeTracker,
+                  [propPointer, value].join('/'),
+                  false
+                );
               },
               has: (value: any) => {
                 const valuePointer = [propPointer, value].join('/');
-                return changeTracker.has(valuePointer)
-                  ? changeTracker.get(valuePointer)
-                  : propValue[value];
+                return (
+                  ValuePointer.Get(changeTracker, valuePointer) ??
+                  propValue[value]
+                );
+                // return changeTracker.has(valuePointer)
+                //   ? changeTracker.get(valuePointer)
+                //   : propValue[value];
               },
             } as SetProxy<any>;
           }
         }
-        return changeTracker.has(propPointer)
-          ? changeTracker.get(propPointer)
-          : propValue;
+        // return changeTracker.has(propPointer)
+        //   ? changeTracker.get(propPointer)
+        //   : propValue;
+        return ValuePointer.Get(changeTracker, propPointer) ?? propValue;
       },
     });
   }
@@ -289,170 +322,91 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
     return result.has(id) ? result.get(id) : null;
   }
 
+  async checkOrCreateSchema() {
+    const existingSchema = await this.fetchById('_metadata', '_schema');
+    if (!existingSchema) {
+      await this.insert('_metadata', {}, '_schema');
+    }
+  }
+
   async createCollection(params: CreateCollectionOperation[1]) {
+    await this.checkOrCreateSchema();
     const { name: collectionName, attributes, rules } = params;
-    const attributeTuples = Object.entries(attributes).flatMap<EAV>(
-      ([path, attribute]) =>
-        attributeToTuples(attribute, [
-          'collections',
-          collectionName,
-          'attributes',
-          path,
-        ]).map((av) => ['_schema', ...av] as EAV)
-    );
-    const ruleTuples = !rules
-      ? []
-      : (['read', 'write', 'update'] as (keyof CollectionRules<any>)[]).flatMap(
-          (ruleType) =>
-            rules[ruleType] != undefined
-              ? rules[ruleType]!.flatMap((rule, i) =>
-                  ruleToTuple(collectionName, ruleType, i, rule)
-                )
-              : []
-        );
-    await this.storeTx.updateMetadataTuples([
-      ...attributeTuples,
-      ...ruleTuples,
-    ]);
+    await this.update('_metadata', '_schema', async (schema) => {
+      if (!schema.collections) schema.collections = {};
+      if (!schema.collections[collectionName])
+        schema.collections[collectionName] = {};
+      const collectionAttributes = schema.collections[collectionName];
+      collectionAttributes.attributes = attributes;
+      collectionAttributes.rules = rules;
+    });
   }
 
   async dropCollection(params: DropCollectionOperation[1]) {
     const { name: collectionName } = params;
-    // DELETE SCHEMA INFO
-    const existingAttributeInfo = await this.storeTx.readMetadataTuples(
-      '_schema',
-      ['collections', collectionName]
-    );
-    const deletes = existingAttributeInfo.map<[string, AttributeItem[]]>(
-      (eav) => [eav[0], eav[1]]
-    );
-    await this.storeTx.deleteMetadataTuples(deletes);
+    await this.update('_metadata', '_schema', async (schema) => {
+      if (!schema.collections) schema.collections = {};
+      delete schema.collections[collectionName];
+    });
   }
 
   async addAttribute(params: AddAttributeOperation[1]) {
     const { collection: collectionName, path, attribute } = params;
-    // Update schema if there is schema
-    if (await this.getSchema()) {
-      const fullPath = interleaveValue(path, 'properties');
-      const updates = attributeToTuples(attribute, [
-        'collections',
-        collectionName,
-        'attributes',
-        ...fullPath,
-      ]).map((av) => ['_schema', ...av] as EAV);
-      await this.storeTx.updateMetadataTuples(updates);
-    }
+    await this.update('_metadata', '_schema', async (schema) => {
+      const collectionAttributes = schema.collections[collectionName];
+      const parentPath = path.slice(0, -1);
+      const attrName = path[path.length - 1];
+      let attr = parentPath.reduce((acc, curr) => {
+        if (!acc[curr]) acc[curr] = {};
+        return acc[curr];
+      }, collectionAttributes.attributes);
+      attr[attrName] = attribute;
+    });
   }
 
   async dropAttribute(params: DropAttributeOperation[1]) {
     const { collection: collectionName, path } = params;
     // Update schema if there is schema
-    if (await this.getSchema()) {
-      const fullPath = interleaveValue(path, 'properties');
-      const existingAttributeInfo = await this.storeTx.readMetadataTuples(
-        '_schema',
-        ['collections', collectionName, 'attributes', ...fullPath]
-      );
-      // Delete old attribute tuples
-      const deletes = existingAttributeInfo.map<[string, AttributeItem[]]>(
-        (eav) => [eav[0], eav[1]]
-      );
-      await this.storeTx.deleteMetadataTuples(deletes);
-    }
+    await this.update('_metadata', '_schema', async (schema) => {
+      const collectionAttributes = schema.collections[collectionName];
+      const parentPath = path.slice(0, -1);
+      const attrName = path[path.length - 1];
+      let attr = parentPath.reduce((acc, curr) => {
+        if (!acc[curr]) acc[curr] = {};
+        return acc[curr];
+      }, collectionAttributes.attributes);
+      delete attr[attrName];
+    });
   }
 
   async alterAttributeOption(params: AlterAttributeOptionOperation[1]) {
     const { collection: collectionName, path, ...options } = params;
-    // Update schema if there is schema
-    if (await this.getSchema()) {
-      const deletes: [string, AttributeItem[]][] = [];
-      const updates: EAV[] = [];
-      for (const key of Object.keys(options)) {
-        const fullPath = interleaveValue(path, 'properties');
-        deletes.push([
-          '_schema',
-          [
-            'collections',
-            collectionName,
-            'attributes',
-            ...fullPath,
-            'options',
-            key,
-          ],
-        ]);
+    await this.update('_metadata', '_schema', async (schema) => {
+      const collectionAttributes = schema.collections[collectionName];
+      const parentPath = path.slice(0, -1);
+      const attrName = path[path.length - 1];
+      let attr = parentPath.reduce((acc, curr) => {
+        if (!acc[curr]) acc[curr] = {};
+        return acc[curr];
+      }, collectionAttributes.attributes);
+      for (const [option, value] of Object.entries(options)) {
+        attr[attrName].options[option] = value;
       }
-      for (const [key, value] of Object.entries(options)) {
-        const fullPath = interleaveValue(path, 'properties');
-        updates.push([
-          '_schema',
-          [
-            'collections',
-            collectionName,
-            'attributes',
-            ...fullPath,
-            'options',
-            key,
-          ],
-          // @ts-ignore (storing a serializable object here (ex default func), but not technically a valid Value)
-          value,
-        ]);
-      }
-      await this.storeTx.deleteMetadataTuples(deletes);
-      await this.storeTx.updateMetadataTuples(updates);
-    }
+    });
   }
 
   async dropAttributeOption(params: DropAttributeOptionOperation[1]) {
     const { collection: collectionName, path, option } = params;
     // Update schema if there is schema
-    if (await this.getSchema()) {
-      const deletes: [string, AttributeItem[]][] = [];
-      const fullPath = interleaveValue(path, 'properties');
-      deletes.push([
-        '_schema',
-        [
-          'collections',
-          collectionName,
-          'attributes',
-          ...fullPath,
-          'options',
-          option,
-        ],
-      ]);
-      await this.storeTx.deleteMetadataTuples(deletes);
-    }
+    await this.update('_metadata', '_schema', async (schema) => {
+      const collectionAttributes = schema.collections[collectionName];
+      const parentPath = path;
+      const attrName = option;
+      let attr = parentPath.reduce((acc, curr) => {
+        if (!acc[curr]) acc[curr] = {};
+        return acc[curr];
+      }, collectionAttributes.attributes);
+      delete attr[attrName];
+    });
   }
-}
-
-function interleaveValue<T, U>(arr: T[], value: U): (T | U)[] {
-  const result = [];
-  for (let i = 0; i < arr.length; i++) {
-    result.push(arr[i]);
-    if (i !== arr.length - 1) {
-      result.push(value);
-    }
-  }
-  return result;
-}
-
-function attributeToTuples(
-  attribute: AttributeDefinition,
-  prefix: string[] = []
-): [string[], any][] {
-  // return objectToTuples(json) as EAV[];
-  // check known types
-  if (attribute.type === 'record') {
-    return [
-      [[...prefix, 'type'], 'record'],
-      ...Object.entries(attribute.properties).flatMap(([key, value]) =>
-        attributeToTuples(value, [...prefix, 'properties', key])
-      ),
-    ];
-  }
-  return [
-    [[...prefix, 'type'], attribute.type],
-    ...Object.entries(attribute.options ?? {}).map(
-      ([key, value]) => [[...prefix, 'options', key], value] as [string[], any]
-    ),
-  ];
 }

@@ -23,11 +23,12 @@ import {
 } from './errors';
 import type { CollectionRules } from './db';
 import { timestampCompare } from './timestamp';
-import type { Attribute, EAV, StoreSchema } from './triple-store';
+import type { Attribute, EAV, StoreSchema, TripleRow } from './triple-store';
 import { TuplePrefix } from './utility-types';
 import { objectToTuples, triplesToObject } from './utils';
 import { fullFormats } from 'ajv-formats/dist/formats.js';
 import { nanoid } from 'nanoid';
+import { entityToResultReducer } from './query';
 
 // We infer TObject as a return type of some funcitons and this causes issues with consuming packages
 // Using solution 3.1 described in this comment as a fix: https://github.com/microsoft/TypeScript/issues/47663#issuecomment-1519138189
@@ -304,11 +305,14 @@ export type TypeFromModel<T extends TSchema> = Static<T>;
 export type JSONTypeFromModel<T extends Model<any> | undefined> =
   T extends Model<any> ? UnTimestampedObject<Static<T>> : any;
 
-export type TimestampedObject = {
-  [key: string | number]:
-    | [value: any, timestamp: TimestampType]
-    | TimestampedObject;
-};
+export type TimestampedObject =
+  | {
+      [key: string | number]:
+        | [value: any, timestamp: TimestampType]
+        | TimestampedObject;
+    }
+  | [value: any, timestamp: TimestampType][]
+  | [value: any, timestamp: TimestampType];
 
 export type UnTimestampedObject<T extends TimestampedObject> = {
   [k in keyof T]: T[k] extends TimestampedObject
@@ -335,15 +339,36 @@ export function objectToTimestampedObject(
 export function timestampedObjectToPlainObject<O extends TimestampedObject>(
   obj: O
 ): UnTimestampedObject<O> {
+  if (isTimestampedVal(obj)) {
+    return obj[0];
+  }
+  if (obj instanceof Array) {
+    return obj.map((v) => timestampedObjectToPlainObject(v));
+  }
   const entries = Object.entries(obj).map(([key, val]) => {
     if (typeof val === 'object' && val != null && !(val instanceof Array)) {
       return [key, timestampedObjectToPlainObject(val)];
     }
-    return [key, val[0]];
+    if (isTimestampedVal(val)) {
+      return [key, val[0]];
+    }
+    if (val instanceof Array) {
+      return [key, val.map((v) => timestampedObjectToPlainObject(v))];
+    }
+    throw new Error('Invalid timestamped object');
   });
   //TODO: result statically typed as any
   const result = Object.fromEntries(entries);
   return result;
+}
+
+function isTimestampedVal(val: any) {
+  return (
+    val instanceof Array &&
+    val.length === 2 &&
+    (val[0] === null || typeof val[0] !== 'object') &&
+    val[1] instanceof Array
+  );
 }
 
 export type AttributeDefinition =
@@ -408,12 +433,17 @@ function attributeDefinitionToSchema(schemaItem: AttributeDefinition) {
   throw new InvalidSchemaType(type);
 }
 
-export function tuplesToSchema(triples: TuplePrefix<EAV>[]) {
-  const schemaData = triplesToObject<{
-    _schema?: SchemaDefinition;
-  }>(triples);
-  const version = schemaData._schema?.version || 0;
-  const collections = schemaData._schema?.collections || {};
+export function tuplesToSchema(triples: TripleRow[]) {
+  // const schemaData = timestampedObjectToPlainObject(
+  //   triples.reduce(entityToResultReducer, {})
+  // );
+  const schemaEntity = triples.reduce(entityToResultReducer, {});
+  // console.log('schema entity', JSON.stringify(schemaEntity, null, 2));
+  const schemaData = timestampedObjectToPlainObject(schemaEntity);
+  // console.log('schema data', JSON.stringify(schemaData, null, 2));
+  const version = schemaData.version || 0;
+  const collections = schemaData.collections || {};
+  // console.log('schema data', JSON.stringify(schemaData, null, 2));
   return { version, collections: collectionsDefinitionToSchema(collections) };
 }
 
@@ -448,7 +478,7 @@ function attributesSchemaToJSON(schema: TObject<any>) {
       attributes[path] = {
         type: pathSchema['x-serialized-type'],
         options: {
-          nullable: pathSchema['x-nullable'],
+          nullable: pathSchema['x-nullable'] ?? false,
           ...(pathSchema['x-default-value'] !== undefined && {
             default: pathSchema['x-default-value'],
           }),
