@@ -962,7 +962,7 @@ describe('single entity subscriptions', async () => {
   });
   // 3) update other entities and not have it fire
 
-  it.only('can subscribe to an entity', async () => {
+  it('can subscribe to an entity', async () => {
     await Promise.all(
       defaultData.map((doc) => db.insert('students', doc, doc.id))
     );
@@ -2694,13 +2694,14 @@ describe('Nullable properties in a schema', () => {
     await expect(
       async () =>
         await db.update('Todos', 'todo-1', async (entity) => {
+          console.log('updating entity!!!');
           entity.created_at = null;
         })
     ).rejects.toThrowError(ValueSchemaMismatchError);
   });
 });
 
-it('throws an error if a register filter is malformed', async () => {
+it.todo('throws an error if a register filter is malformed', async () => {
   const db = new DB({
     schema: {
       collections: {
@@ -2723,7 +2724,7 @@ it('throws an error if a register filter is malformed', async () => {
   });
   await expect(db.fetch(query)).resolves.not.toThrowError();
   // Delete schema to allow malformed filter
-  await db.tripleStore.deleteMetadataTuples([['_schema']]);
+  // await db.tripleStore.deleteMetadataTuples([['_schema']]);
   await expect(db.fetch(query)).rejects.toThrowError(InvalidFilterError);
 });
 

@@ -339,6 +339,9 @@ export function objectToTimestampedObject(
 export function timestampedObjectToPlainObject<O extends TimestampedObject>(
   obj: O
 ): UnTimestampedObject<O> {
+  if (typeof obj !== 'object') {
+    throw new Error(`Can't untimestamp a non-object: ${obj}`);
+  }
   if (isTimestampedVal(obj)) {
     return obj[0];
   }
@@ -346,16 +349,7 @@ export function timestampedObjectToPlainObject<O extends TimestampedObject>(
     return obj.map((v) => timestampedObjectToPlainObject(v));
   }
   const entries = Object.entries(obj).map(([key, val]) => {
-    if (typeof val === 'object' && val != null && !(val instanceof Array)) {
-      return [key, timestampedObjectToPlainObject(val)];
-    }
-    if (isTimestampedVal(val)) {
-      return [key, val[0]];
-    }
-    if (val instanceof Array) {
-      return [key, val.map((v) => timestampedObjectToPlainObject(v))];
-    }
-    throw new Error('Invalid timestamped object');
+    return [key, timestampedObjectToPlainObject(val)];
   });
   //TODO: result statically typed as any
   const result = Object.fromEntries(entries);
@@ -366,8 +360,8 @@ function isTimestampedVal(val: any) {
   return (
     val instanceof Array &&
     val.length === 2 &&
-    (val[0] === null || typeof val[0] !== 'object') &&
-    val[1] instanceof Array
+    val[1] instanceof Array &&
+    val[1].length === 2
   );
 }
 
