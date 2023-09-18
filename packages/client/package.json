@@ -10,7 +10,7 @@
     "triplit": "./dist/cli.cjs"
   },
   "scripts": {
-    "build": "yarn build:code && yarn build:cli",
+    "build": "yarn build:code",
     "build:cli": "esbuild --bundle --platform=node --target=node14 --outfile=dist/cli.cjs cli/index.ts",
     "build:code": "yarn build:setup && parcel build . --no-cache && yarn build:cleanup",
     "build:setup": "mv tsconfig.json tsconfig.tmp.json && mv tsconfig.build.json tsconfig.json",

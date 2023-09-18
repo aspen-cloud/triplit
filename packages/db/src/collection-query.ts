@@ -8,7 +8,6 @@ import {
   entityToResultReducer,
   constructEntity,
   QUERY_INPUT_TRANSFORMERS,
-  QueryBuilderInputs,
 } from './query';
 import {
   getSchemaFromPath,
@@ -39,19 +38,17 @@ export default function CollectionQueryBuilder<
   M extends Model<any> | undefined
 >(collectionName: string, params?: Query<M>) {
   // TODO fixup ts so that select/where are actually optional
-  return Builder<CollectionQuery<M>, 'collectionName', QueryBuilderInputs<M>>(
-    {
-      collectionName,
-      ...params,
-      where: params?.where ?? [],
-      select: params?.select ?? [],
-      vars: params?.vars ?? {},
-    },
-    {
-      protectedFields: ['collectionName'],
-      inputTransformers: QUERY_INPUT_TRANSFORMERS<Query<M>, M>(),
-    }
-  );
+  const query: CollectionQuery<M> = {
+    collectionName,
+    ...params,
+    where: params?.where ?? [],
+    select: params?.select ?? [],
+    vars: params?.vars ?? {},
+  };
+  return Builder(query, {
+    protectedFields: ['collectionName'],
+    inputTransformers: QUERY_INPUT_TRANSFORMERS<Query<M>, M>(),
+  });
 }
 
 export type CollectionQuery<M extends Model<any> | undefined> = Query<M> & {

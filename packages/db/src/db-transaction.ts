@@ -39,7 +39,6 @@ import {
   replaceVariablesInQuery,
 } from './db-helpers';
 import { Query } from './query';
-import { toBuilder } from './utils/builder';
 
 export class DBTransaction<M extends Models<any, any> | undefined> {
   constructor(
@@ -275,7 +274,7 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
   private query<CN extends CollectionNameFromModels<M>>(
     collectionName: CN,
     params?: Query<ModelFromModels<M, CN>>
-  ): toBuilder<CollectionQuery<ModelFromModels<M, CN>>> {
+  ) {
     // TODO: When fixing the type here, ensure the built output looks correct (had to manually assign this to work in the past)
     return CollectionQueryBuilder(collectionName as string, params);
   }

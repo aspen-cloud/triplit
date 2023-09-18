@@ -1,31 +1,43 @@
+type ArgumentsType<T extends (...args: any[]) => any> = T extends (
+  ...args: infer A
+) => any
+  ? A
+  : never;
+
 export type toBuilder<
+  // The structure of the output data
   Data extends {},
-  ProtectedField extends keyof Data,
+  // The fields that cannot be edited
+  ProtectedField extends keyof Data = never,
+  // Field transformers
   CustomInputs extends {
-    [key in keyof Omit<Required<Data>, ProtectedField>]: any;
-  }
+    [key in keyof Omit<Required<Data>, ProtectedField>]: (
+      ...args: any
+    ) => Data[key];
+  } = never
 > = {
-  [k in keyof Omit<Required<Data>, ProtectedField>]: (
-    ...args: CustomInputs[k] extends undefined ? [Data[k]] : CustomInputs[k]
+  [K in keyof Omit<Required<Data>, ProtectedField>]: (
+    ...args: K extends keyof CustomInputs
+      ? ArgumentsType<CustomInputs[K]>
+      : [Data[K]]
   ) => toBuilder<Data, ProtectedField, CustomInputs>;
 } & { build: () => Data };
 
 export default function Builder<
   Data extends Object,
-  ProtectedField extends keyof Data,
+  ProtectedField extends keyof Data = never,
   CustomInputs extends {
-    [key in keyof Omit<Partial<Data>, ProtectedField>]: any;
-  }
+    [key in keyof Omit<Partial<Data>, ProtectedField>]: (
+      ...args: any
+    ) => Data[key];
+  } = never
 >(
   initial: Data,
   {
     inputTransformers,
     protectedFields,
   }: {
-    inputTransformers?: {
-      //@ts-ignore
-      [key in keyof CustomInputs]: (...input: CustomInputs[key]) => Data[key];
-    };
+    inputTransformers?: CustomInputs;
     protectedFields?: ProtectedField[];
   } = { protectedFields: [] }
 ): toBuilder<Data, ProtectedField, CustomInputs> {
@@ -45,10 +57,9 @@ export default function Builder<
           inputTransformers &&
           inputTransformers[name as keyof typeof inputTransformers]
         ) {
-          // @ts-ignore
           value = inputTransformers[name as keyof CustomInputs](...args);
         }
-        return Builder(
+        return Builder<Data, ProtectedField, CustomInputs>(
           { ...data, [name]: value },
           { protectedFields, inputTransformers }
         );

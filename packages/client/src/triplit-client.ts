@@ -30,7 +30,7 @@ import {
   RemoteSyncFailedError,
   UnrecognizedFetchPolicyError,
 } from './errors';
-import { QueryBuilderInputs } from 'packages/db/src/query';
+
 export { IndexedDbStorage, MemoryStorage };
 type Storage = IndexedDbStorage | MemoryStorage;
 
@@ -510,19 +510,17 @@ function ClientQueryBuilder<M extends Model<any> | undefined>(
   collectionName: string,
   params?: Query<M> & { syncStatus?: SyncStatus }
 ) {
-  return Builder<ClientQuery<M>, 'collectionName', QueryBuilderInputs<M>>(
-    {
-      collectionName,
-      ...params,
-      where: params?.where ?? [],
-      select: params?.select ?? [],
-      syncStatus: params?.syncStatus ?? 'all',
-    },
-    {
-      protectedFields: ['collectionName'],
-      inputTransformers: QUERY_INPUT_TRANSFORMERS<Query<M>, M>(),
-    }
-  );
+  const query: ClientQuery<M> = {
+    collectionName,
+    ...params,
+    where: params?.where ?? [],
+    select: params?.select ?? [],
+    syncStatus: params?.syncStatus ?? 'all',
+  };
+  return Builder(query, {
+    protectedFields: ['collectionName'],
+    inputTransformers: QUERY_INPUT_TRANSFORMERS<Query<M>, M>(),
+  });
 }
 
 export type ClientQueryBuilder<CQ extends ClientQuery<any>> = ReturnType<

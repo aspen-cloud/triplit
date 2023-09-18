@@ -36,7 +36,8 @@ export {
   constructEntities,
   QUERY_INPUT_TRANSFORMERS,
 } from './query';
-export type { Query } from './query';
+// TS issue occurs if we dont export FilterGroup (i think due to an infered return type somewhere)
+export type { Query, FilterGroup } from './query';
 export { stripCollectionFromId } from './db-helpers';
 export type { TripleRow } from './triple-store';
 export {

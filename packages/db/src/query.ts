@@ -33,10 +33,7 @@ export type QueryOrder<M extends Model<any> | undefined> = [
 export interface Query<M extends Model<any> | undefined> {
   where: QueryWhere<M>;
   select: (M extends Model<any> ? keyof M['properties'] : Path)[];
-  order?: [
-    property: M extends Model<any> ? keyof M['properties'] : Path,
-    direction: 'ASC' | 'DESC'
-  ][];
+  order?: QueryOrder<M>[];
   limit?: number;
   after?: ValueCursor;
   entityId?: string;
@@ -99,13 +96,22 @@ export function and<M extends Model<any> | undefined>(where: QueryWhere<M>) {
   return { mod: 'and' as const, filters: where };
 }
 
+type FilterInput<M extends Model<any> | undefined> =
+  | FilterStatement<M>
+  | WhereFilter<M>[]
+  | [QueryWhere<M>];
+
+type OrderInput<M extends Model<any> | undefined> =
+  | QueryOrder<M>
+  | QueryOrder<M>[]
+  | [QueryOrder<M>[]];
+
+// TODO: add functional type guards for conditionals
 export const QUERY_INPUT_TRANSFORMERS = <
   Q extends Query<any>,
   M extends Q extends Query<infer Model> ? Model : any
 >() => ({
-  where: (
-    ...args: FilterStatement<M> | WhereFilter<M>[] | [QueryWhere<M>]
-  ): QueryWhere<M> => {
+  where: (...args: FilterInput<M>): QueryWhere<M> => {
     if (typeof args[0] === 'string') {
       /**
        * E.g. where("id", "=", "123")
@@ -129,18 +135,16 @@ export const QUERY_INPUT_TRANSFORMERS = <
       throw new Error('Where clause of query is not formatted correctly');
     }
   },
-  order: (
-    ...args:
-      | NonNullable<Query<M>['order']>
-      | QueryOrder<M>[]
-      | [NonNullable<Query<M>['order']>]
-  ): Query<M>['order'] => {
+  order: (...args: OrderInput<M>): QueryOrder<M>[] | undefined => {
     if (!args[0]) return undefined;
     /**
      * E.g. order("id", "ASC")
      */
-    if (args.length === 2 && args.every((arg) => typeof arg === 'string')) {
-      return [args];
+    if (
+      args.length === 2 &&
+      (args as any[]).every((arg) => typeof arg === 'string')
+    ) {
+      return [[...args] as QueryOrder<M>];
     }
     /**
      * E.g. order(["id", "ASC"], ["name", "DESC"])
@@ -164,6 +168,6 @@ export const QUERY_INPUT_TRANSFORMERS = <
 });
 
 export type QueryBuilderInputs<M extends Model<any> | undefined> = {
-  where: FilterStatement<M> | WhereFilter<M>[] | [QueryWhere<M>];
-  order: NonNullable<Query<M>['order']> | [Query<M>['order']];
+  where: FilterInput<M>;
+  order: OrderInput<M>;
 };
