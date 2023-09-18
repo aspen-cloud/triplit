@@ -342,9 +342,12 @@ function satisfiesSetFilter(
     entity,
     pointer
   );
-  return Object.entries(value)
-    .filter(([_v, [inSet, _ts]]) => inSet)
-    .some(([v]) => isOperatorSatisfied(op, v, filterValue));
+  return (
+    !!value &&
+    Object.entries(value)
+      .filter(([_v, [inSet, _ts]]) => inSet)
+      .some(([v]) => isOperatorSatisfied(op, v, filterValue))
+  );
 }
 
 function satisfiesRegisterFilter(
