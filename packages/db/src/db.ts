@@ -24,7 +24,6 @@ import MemoryStorage from './storage/memory-btree';
 import { InvalidMigrationOperationError, WriteRuleError } from './errors';
 import { Clock } from './clocks/clock';
 
-type Reference = `ref:${string}`;
 import { DBTransaction } from './db-transaction';
 import {
   appendCollectionToId,
@@ -32,19 +31,6 @@ import {
   replaceVariablesInQuery,
   mapFilterStatements,
 } from './db-helpers';
-
-type AttributeType =
-  | 'string'
-  | 'number'
-  | 'boolean'
-  | 'set_string'
-  | 'set_number'
-  | 'record'
-  | Reference;
-
-type CollectionAttribute = {
-  type: AttributeType;
-};
 
 export interface Rule<M extends Model<any>> {
   filter: QueryWhere<M>;
@@ -513,9 +499,6 @@ export default class DB<M extends Models<any, any> | undefined> {
             break;
           case 'drop_collection':
             await tx.dropCollection(operation[1]);
-            break;
-          case 'rename_attribute':
-            await tx.renameAttribute(operation[1]);
             break;
           case 'add_attribute':
             await tx.addAttribute(operation[1]);

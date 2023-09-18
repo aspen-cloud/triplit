@@ -28,11 +28,7 @@ import {
   Value,
 } from './triple-store';
 import { Pipeline } from './utils/pipeline';
-import {
-  EntityIdMissingError,
-  InvalidFilterError,
-  TriplitError,
-} from './errors';
+import { EntityIdMissingError, InvalidFilterError } from './errors';
 import {
   stripCollectionFromId,
   appendCollectionToId,

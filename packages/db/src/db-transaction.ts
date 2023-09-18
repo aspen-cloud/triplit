@@ -36,7 +36,6 @@ import {
 import {
   validateExternalId,
   appendCollectionToId,
-  transformTripleAttribute,
   replaceVariablesInQuery,
 } from './db-helpers';
 import { Query } from './query';

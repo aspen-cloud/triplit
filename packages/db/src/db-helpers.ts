@@ -6,23 +6,9 @@ import {
 } from './errors';
 import { QueryWhere, FilterStatement } from './query';
 import { Model, Models } from './schema';
-import { TripleRow } from './triple-store';
 import type DB from './db';
 import type { DBTransaction } from './db-transaction';
 import { CollectionNameFromModels } from './db';
-
-export function transformTripleAttribute(
-  triples: TripleRow[],
-  attribute: string[],
-  newAttribute: string[]
-) {
-  // At some point this may not work for all data types, but for now it does
-  return triples.map<TripleRow>((triple) => {
-    const fullAttribute = [...triple.attribute];
-    fullAttribute.splice(0, attribute.length, ...newAttribute);
-    return { ...triple, attribute: fullAttribute };
-  });
-}
 
 const ID_SEPARATOR = '#';
 

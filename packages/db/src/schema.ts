@@ -259,6 +259,8 @@ export function updateEntityAtPath(
   ValuePointer.Set(entity, pointer, [value, timestamp]);
 }
 
+// type Reference = `ref:${string}`;
+
 type ValueSerializedSchemaType = 'string' | 'number' | 'boolean' | 'date';
 type SetSerializedSchemaType = 'set_string' | 'set_number';
 type TerminalSerializedSchemaType =
