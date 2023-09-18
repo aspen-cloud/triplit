@@ -38,7 +38,7 @@
     "@types/yargs": "^17",
     "esbuild": "^0.17.19",
     "parcel": "^2.9.3",
-    "typescript": "^5.0.2"
+    "typescript": "^5.2.2"
   },
   "engines": {
     "node": ">=18.0.0"
