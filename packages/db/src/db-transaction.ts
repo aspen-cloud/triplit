@@ -7,6 +7,7 @@ import {
   objectToTimestampedObject,
   SetProxy,
   AttributeDefinition,
+  getDefaultValuesForCollection,
 } from './schema';
 import * as Document from './document';
 import { nanoid } from 'nanoid';
@@ -100,7 +101,10 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
       if (validationError) throw validationError;
     }
     const collection = await this.getCollectionSchema(collectionName);
-
+    if (collection) {
+      const collectionDefaults = getDefaultValuesForCollection(collection);
+      doc = { ...collectionDefaults, ...doc };
+    }
     if (collection?.rules?.write?.length) {
       const filters = collection.rules.write.flatMap((r) => r.filter);
       let query = { where: filters } as CollectionQuery<ModelFromModels<M>>;

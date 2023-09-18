@@ -27,6 +27,7 @@ import type { Attribute, EAV, StoreSchema } from './triple-store';
 import { TuplePrefix } from './utility-types';
 import { objectToTuples, triplesToObject } from './utils';
 import { fullFormats } from 'ajv-formats/dist/formats.js';
+import { nanoid } from 'nanoid';
 
 // We infer TObject as a return type of some funcitons and this causes issues with consuming packages
 // Using solution 3.1 described in this comment as a fix: https://github.com/microsoft/TypeScript/issues/47663#issuecomment-1519138189
@@ -463,4 +464,31 @@ export function schemaToTriples(schema: StoreSchema<Models<any, any>>): EAV[] {
     const value = tuple.pop();
     return ['_schema', tuple, value] as EAV;
   });
+}
+
+export function getDefaultValuesForCollection(
+  collection: Collection<Record<string, any>> // would be nice to refactor so we can pull out x-custom-fields
+) {
+  return Object.entries(collection?.attributes?.properties).reduce(
+    (prev, [attribute, definition]) => {
+      let attributeDefault = definition['x-default-value'] as
+        | UserTypeOptions['default']
+        | undefined;
+      if (attributeDefault === undefined) {
+        // no default object
+        return prev;
+      }
+      if (typeof attributeDefault !== 'object' || attributeDefault === null)
+        prev[attribute] = attributeDefault;
+      else {
+        const { args, func } = attributeDefault;
+        if (func === 'uuid')
+          prev[attribute] =
+            args && typeof args[0] === 'number' ? nanoid(args[0]) : nanoid();
+        else if (func === 'now') prev[attribute] = new Date().toISOString();
+      }
+      return prev;
+    },
+    {} as Record<string, any>
+  );
 }

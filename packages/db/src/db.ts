@@ -5,8 +5,8 @@ import {
   Models,
   objectToTimestampedObject,
   UserTypeOptions,
-  Collection,
   AttributeDefinition,
+  getDefaultValuesForCollection,
 } from './schema';
 import * as Document from './document';
 import { nanoid } from 'nanoid';
@@ -332,31 +332,6 @@ export default class DB<M extends Models<any, any> | undefined> {
     return result.has(id) ? result.get(id) : null;
   }
 
-  private getDefaultValuesForCollection(collection: Collection<any>) {
-    return Object.entries(collection?.attributes?.properties).reduce(
-      (prev, [attribute, definition]) => {
-        let attributeDefault = definition['x-default-value'] as
-          | UserTypeOptions['default']
-          | undefined;
-        if (attributeDefault === undefined) {
-          // no default object
-          return prev;
-        }
-        if (typeof attributeDefault !== 'object' || attributeDefault === null)
-          prev[attribute] = attributeDefault;
-        else {
-          const { args, func } = attributeDefault;
-          if (func === 'uuid')
-            prev[attribute] =
-              args && typeof args[0] === 'number' ? nanoid(args[0]) : nanoid();
-          else if (func === 'now') prev[attribute] = new Date().toISOString();
-        }
-        return prev;
-      },
-      {} as Record<string, any>
-    );
-  }
-
   async insert(
     collectionName: CollectionNameFromModels<M>,
     doc: any,
@@ -370,7 +345,7 @@ export default class DB<M extends Models<any, any> | undefined> {
     await this.ensureMigrated;
     const collection = await this.getCollectionSchema(collectionName);
     if (collection) {
-      const collectionDefaults = this.getDefaultValuesForCollection(collection);
+      const collectionDefaults = getDefaultValuesForCollection(collection);
       doc = { ...collectionDefaults, ...doc };
     }
     if (collection?.rules?.write?.length) {

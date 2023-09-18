@@ -24,13 +24,14 @@ import { everyFilterStatement, mapFilterStatements } from '../src/db-helpers';
 const storage = new MemoryBTree();
 
 async function testDBAndTransaction(
-  db: DB<any>,
+  // should return a new instance if you are performing writes in your test
+  dbFactory: () => DB<any>,
   test: (db: DB<any> | DBTransaction<any>) => void | Promise<void>,
   scope: { db: boolean; tx: boolean } = { db: true, tx: true }
 ) {
-  if (scope.db) await test(db);
+  if (scope.db) await test(dbFactory());
   if (scope.tx)
-    await db.transact(async (tx) => {
+    await dbFactory().transact(async (tx) => {
       await test(tx);
     });
 }
@@ -2101,43 +2102,55 @@ describe('Rules', () => {
 
     it('fetch: filters results based on rules', async () => {
       const query = db.query('classes').build();
-      await testDBAndTransaction(db, async (db) => {
-        const results = await db.fetch(query);
-        const classesWithStudent2 = classes.filter((cls) =>
-          cls.enrolled_students.includes(USER_ID)
-        );
-        expect(results).toHaveLength(classesWithStudent2.length);
-      });
+      await testDBAndTransaction(
+        () => db,
+        async (db) => {
+          const results = await db.fetch(query);
+          const classesWithStudent2 = classes.filter((cls) =>
+            cls.enrolled_students.includes(USER_ID)
+          );
+          expect(results).toHaveLength(classesWithStudent2.length);
+        }
+      );
     });
 
     it('fetch: doesnt filter rules if skipRules is set', async () => {
       const query = db.query('classes').build();
-      await testDBAndTransaction(db, async (db) => {
-        const results = await db.fetch(query, { skipRules: true });
-        expect(results).toHaveLength(classes.length);
-      });
+      await testDBAndTransaction(
+        () => db,
+        async (db) => {
+          const results = await db.fetch(query, { skipRules: true });
+          expect(results).toHaveLength(classes.length);
+        }
+      );
     });
 
     it('fetchOne: filters results based on rules', async () => {
-      await testDBAndTransaction(db, async (db) => {
-        const nonEnrolledClass = await db.fetchById('classes', 'class-2');
-        expect(nonEnrolledClass).toBeNull();
-        const enrolledClass = await db.fetchById('classes', 'class-1');
-        expect(enrolledClass).not.toBeNull();
-      });
+      await testDBAndTransaction(
+        () => db,
+        async (db) => {
+          const nonEnrolledClass = await db.fetchById('classes', 'class-2');
+          expect(nonEnrolledClass).toBeNull();
+          const enrolledClass = await db.fetchById('classes', 'class-1');
+          expect(enrolledClass).not.toBeNull();
+        }
+      );
     });
 
     it('fetchOne: doesnt filter rules if skipRules is set', async () => {
-      await testDBAndTransaction(db, async (db) => {
-        const nonEnrolledClass = await db.fetchById('classes', 'class-2', {
-          skipRules: true,
-        });
-        expect(nonEnrolledClass).not.toBeNull();
-        const enrolledClass = await db.fetchById('classes', 'class-1', {
-          skipRules: true,
-        });
-        expect(enrolledClass).not.toBeNull();
-      });
+      await testDBAndTransaction(
+        () => db,
+        async (db) => {
+          const nonEnrolledClass = await db.fetchById('classes', 'class-2', {
+            skipRules: true,
+          });
+          expect(nonEnrolledClass).not.toBeNull();
+          const enrolledClass = await db.fetchById('classes', 'class-1', {
+            skipRules: true,
+          });
+          expect(enrolledClass).not.toBeNull();
+        }
+      );
     });
 
     it('filters results in subscriptions', async () => {
@@ -2732,51 +2745,61 @@ describe('default values in a schema', () => {
     ).not.toThrowError();
   });
   it('can insert an entity with default values', async () => {
-    const db = new DB({
-      schema,
-    });
-    await db.insert(
-      'Todos',
-      {
-        text: 'Do something',
-        created_at: new Date(),
-      },
-      'todo-1'
+    await testDBAndTransaction(
+      () =>
+        new DB({
+          schema,
+        }),
+      async (db) => {
+        await db.insert(
+          'Todos',
+          {
+            text: 'Do something',
+            created_at: new Date(),
+          },
+          'todo-1'
+        );
+        const result = await db.fetchById('Todos', 'todo-1');
+        expect(result).toHaveProperty('completed');
+        expect(result.completed).toBe(false);
+      }
     );
-    const result = await db.fetchById('Todos', 'todo-1');
-    expect(result).toHaveProperty('completed');
-    expect(result.completed).toBe(false);
   });
   it('can use function aliases in schemas as default values', async () => {
-    const db = new DB({
-      schema: {
-        collections: {
-          Todos: {
-            attributes: S.Schema({
-              todoId: S.String({
-                default: S.Default.now(),
-              }),
-              text: S.String(),
-              created_at: S.Date({
-                default: S.Default.now(),
-              }),
-            }),
+    await testDBAndTransaction(
+      () =>
+        new DB({
+          schema: {
+            collections: {
+              Todos: {
+                attributes: S.Schema({
+                  todoId: S.String({
+                    default: S.Default.now(),
+                  }),
+                  text: S.String(),
+                  created_at: S.Date({
+                    default: S.Default.now(),
+                  }),
+                }),
+              },
+            },
           },
-        },
-      },
-    });
-    await db.insert(
-      'Todos',
-      {
-        text: 'Do something',
-      },
-      'todo-1'
+        }),
+      async (db) => {
+        await db.insert(
+          'Todos',
+          {
+            text: 'Do something',
+          },
+          'todo-1'
+        );
+        const result = await db.fetchById('Todos', 'todo-1');
+        expect(result).toHaveProperty('todoId');
+        expect(result.todoId).toBeTypeOf('string');
+        expect(result).toHaveProperty('created_at');
+        expect(result.created_at instanceof Date).toBeTruthy();
+      }
     );
-    const result = await db.fetchById('Todos', 'todo-1');
-    expect(result).toHaveProperty('todoId');
-    expect(result.todoId).toBeTypeOf('string');
-    expect(result).toHaveProperty('created_at');
-    expect(result.created_at instanceof Date).toBeTruthy();
   });
   it('should reject schemas that pass invalid default values', async () => {
     expect(() => S.String({ default: {} })).toThrowError();
