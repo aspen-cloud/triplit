@@ -6,18 +6,12 @@
   "main": "dist/index.js",
   "module": "dist/module.js",
   "types": "dist/index.d.ts",
-  "bin": {
-    "triplit": "./dist/cli.cjs"
-  },
   "scripts": {
-    "build": "yarn build:code",
-    "build:cli": "esbuild --bundle --platform=node --target=node14 --outfile=dist/cli.cjs cli/index.ts",
-    "build:code": "yarn build:setup && parcel build . --no-cache && yarn build:cleanup",
+    "build": "yarn build:setup && parcel build . --no-cache && yarn build:cleanup",
     "build:setup": "mv tsconfig.json tsconfig.tmp.json && mv tsconfig.build.json tsconfig.json",
     "build:cleanup": "mv tsconfig.json tsconfig.build.json && mv tsconfig.tmp.json tsconfig.json",
-    "lint": "yarn lint:code && yarn lint:cli",
+    "lint": "yarn lint:code",
     "lint:code": "tsc",
-    "lint:cli": "cd ./cli && tsc",
     "publish-pkg": "node ../../scripts/npm-check-version-and-publish.js"
   },
   "files": [
