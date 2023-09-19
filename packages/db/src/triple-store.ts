@@ -659,11 +659,16 @@ export class TripleStore implements TripleStoreApi {
   }
 
   private async overrideSchema(schema: StoreSchema<Models<any, any>>) {
+    const existingTriples = await this.findByEntity(
+      appendCollectionToId('_metadata', '_schema')
+    );
+    await this.deleteTriples(existingTriples);
+
     const triples = schemaToTriples(schema);
     const ts = await this.clock.getNextTimestamp();
     const normalizedTriples = triples.map(([e, a, v]) => ({
-      id: appendCollectionToId('_metadata', e),
-      attribute: ['_metadata', ...a],
+      id: e,
+      attribute: a,
       value: v,
       timestamp: ts,
       expired: false,
@@ -767,8 +772,6 @@ export class TripleStore implements TripleStoreApi {
     callback: (tx: TripleStoreTransaction) => Promise<void>,
     scope?: Parameters<typeof this.tupleStore.transact>[0]
   ) {
-    // const schema = await this.readSchema();
-    // const schema = await this.readSchema();
     let isCanceled = false;
     const tx = await this.tupleStore.autoTransact(async (tupleTx) => {
       const tx = new TripleStoreTransaction({
@@ -817,13 +820,16 @@ export class TripleStore implements TripleStoreApi {
   }
 
   async insertTriple(tripleRow: TripleRow) {
+    await this.ensureInitializedSchema;
     await this.transact(async (tx) => {
       await tx.insertTriple(tripleRow);
     });
   }
 
   async insertTriples(triplesInput: TripleRow[], shouldValidate = true) {
-    // await this.ensureInitializedSchema;
+    if (shouldValidate) {
+      await this.ensureInitializedSchema;
+    }
     await this.transact(async (tx) => {
       await tx.insertTriples(triplesInput, shouldValidate);
     });
@@ -903,14 +909,16 @@ export class TripleStore implements TripleStoreApi {
     });
   }
 
-  async readSchema() {
+  async readSchema(includeTriples = false) {
     // Wait for initial schema write to complete
     await this.ensureInitializedSchema;
     // Lazily assign in memory schema object
     // if (!this.schema) {
-    this.schema = await this.readSchemaFromStorage();
+    const { schema, schemaTriples } =
+      (await this.readSchemaFromStorage()) ?? {};
     // }
-    return this.schema;
+    this.schema = schema;
+    return includeTriples ? { schema, schemaTriples } : this.schema;
   }
 
   private async readSchemaFromStorage() {
@@ -920,7 +928,11 @@ export class TripleStore implements TripleStoreApi {
     );
     // At some point we probably want to validate the we extract (ie has expected props)
     if (!schemaTriples.length) return undefined;
-    return tuplesToSchema(schemaTriples);
+    const schema = tuplesToSchema(schemaTriples);
+    return {
+      schema,
+      schemaTriples,
+    };
   }
 
   async clear() {

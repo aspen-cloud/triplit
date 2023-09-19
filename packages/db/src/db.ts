@@ -190,11 +190,13 @@ export default class DB<M extends Models<any, any> | undefined> {
     return ts[1];
   }
 
-  async getSchema() {
+  async getSchema({
+    includeTriples = false,
+  }: { includeTriples?: boolean } = {}) {
     await this.ensureMigrated;
     // TODO: add schema definition to triple store, so we can return StoreSchema<M>
     // Or make StoreSchema<M> compatible with StoreSchema<Models<any, any>>
-    return await this.tripleStore.readSchema();
+    return await this.tripleStore.readSchema(includeTriples);
   }
 
   async getCollectionSchema<CN extends CollectionNameFromModels<M>>(

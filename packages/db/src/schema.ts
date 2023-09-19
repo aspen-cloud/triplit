@@ -29,6 +29,7 @@ import { objectToTuples, triplesToObject } from './utils';
 import { fullFormats } from 'ajv-formats/dist/formats.js';
 import { nanoid } from 'nanoid';
 import { entityToResultReducer } from './query';
+import { appendCollectionToId } from './db-helpers';
 
 // We infer TObject as a return type of some funcitons and this causes issues with consuming packages
 // Using solution 3.1 described in this comment as a fix: https://github.com/microsoft/TypeScript/issues/47663#issuecomment-1519138189
@@ -488,7 +489,11 @@ export function schemaToTriples(schema: StoreSchema<Models<any, any>>): EAV[] {
   const tuples = objectToTuples(schemaData);
   return tuples.map((tuple) => {
     const value = tuple.pop();
-    return ['_schema', tuple, value] as EAV;
+    return [
+      appendCollectionToId('_metadata', '_schema'),
+      ['_metadata', ...tuple],
+      value,
+    ] as EAV;
   });
 }
 

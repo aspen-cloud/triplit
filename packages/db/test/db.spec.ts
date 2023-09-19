@@ -1673,6 +1673,8 @@ describe('database transactions', () => {
         },
       },
     });
+    // Adding this check to ensure the onInsert isn't called with schema/metadata triples
+    await db.tripleStore.ensureInitializedSchema;
     const insertSpy = vi.fn();
     db.tripleStore.onInsert(insertSpy);
     await db.transact(async (tx) => {
@@ -2694,7 +2696,6 @@ describe('Nullable properties in a schema', () => {
     await expect(
       async () =>
         await db.update('Todos', 'todo-1', async (entity) => {
-          console.log('updating entity!!!');
           entity.created_at = null;
         })
     ).rejects.toThrowError(ValueSchemaMismatchError);

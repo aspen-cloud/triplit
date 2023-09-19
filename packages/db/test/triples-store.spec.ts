@@ -203,9 +203,6 @@ describe('schema triple-store', () => {
     expect(await schemalessDB.readMetadataTuples('_schema')).toHaveLength(0);
 
     expect(await schemaDB.readSchema()).toBeTruthy();
-    expect(
-      (await schemaDB.readMetadataTuples('_schema')).length
-    ).toBeGreaterThan(0);
   });
 
   it('defining a store with a schema should overwrite existing schema', async () => {
@@ -228,16 +225,6 @@ describe('schema triple-store', () => {
     const afterSchema = await studentDB.readSchema();
     expect(afterSchema?.collections).not.toHaveProperty('Task');
     expect(afterSchema?.collections).toHaveProperty('Student');
-  });
-  it('should allow the deletion of metadatatriples', async () => {
-    const schemaDb = new TripleStore({
-      storage: new InMemoryTupleStorage(),
-      tenantId: 'TEST',
-      schema: { collections: { Task: TaskSchema }, version: 0 },
-    });
-    expect(await schemaDb.readSchema()).toBeTruthy();
-    await schemaDb.deleteMetadataTuples([['_schema']]);
-    expect(await schemaDb.readSchema()).toBeFalsy();
   });
 
   it('should allow inserting valid triples', () => {
@@ -272,6 +259,7 @@ describe('schema triple-store', () => {
       schema: { collections: { Task: TaskSchema }, version: 0 },
     });
     const id = 'task-4321';
+    // await db.ensureInitializedSchema;
     await expect(
       db.insertTriple({
         id,
