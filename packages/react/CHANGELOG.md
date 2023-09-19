@@ -1,5 +1,17 @@
 # @triplit/react
 
+## 0.0.37
+
+### Patch Changes
+
+- af14ded: - Add fetch policy options
+  - Bug fixes
+  - Performance improvements
+- Updated dependencies [af14ded]
+- Updated dependencies [dfa258c]
+- Updated dependencies [af14ded]
+  - @triplit/client@0.0.37
+
 ## 0.0.36
 
 ### Patch Changes
