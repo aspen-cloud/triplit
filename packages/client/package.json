@@ -19,17 +19,12 @@
   ],
   "dependencies": {
     "@triplit/db": "workspace:^",
-    "node-fetch": "^3.3.1",
-    "prettier": "^2.8.8",
-    "rxjs": "^7.8.1",
-    "yargs": "^17.7.2"
+    "rxjs": "^7.8.1"
   },
   "devDependencies": {
     "@parcel/config-default": "^2.9.3",
     "@parcel/transformer-typescript-tsc": "^2.9.3",
     "@types/node": "^20.4.0",
-    "@types/prettier": "^2",
-    "@types/yargs": "^17",
     "esbuild": "^0.17.19",
     "parcel": "^2.9.3",
     "typescript": "^5.2.2"
