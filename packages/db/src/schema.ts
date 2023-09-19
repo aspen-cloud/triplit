@@ -24,8 +24,7 @@ import {
 import type { CollectionRules } from './db';
 import { timestampCompare } from './timestamp';
 import type { Attribute, EAV, StoreSchema, TripleRow } from './triple-store';
-import { TuplePrefix } from './utility-types';
-import { objectToTuples, triplesToObject } from './utils';
+import { objectToTuples } from './utils';
 import { fullFormats } from 'ajv-formats/dist/formats.js';
 import { nanoid } from 'nanoid';
 import { entityToResultReducer } from './query';
@@ -429,16 +428,10 @@ function attributeDefinitionToSchema(schemaItem: AttributeDefinition) {
 }
 
 export function tuplesToSchema(triples: TripleRow[]) {
-  // const schemaData = timestampedObjectToPlainObject(
-  //   triples.reduce(entityToResultReducer, {})
-  // );
   const schemaEntity = triples.reduce(entityToResultReducer, {});
-  // console.log('schema entity', JSON.stringify(schemaEntity, null, 2));
   const schemaData = timestampedObjectToPlainObject(schemaEntity);
-  // console.log('schema data', JSON.stringify(schemaData, null, 2));
   const version = schemaData.version || 0;
   const collections = schemaData.collections || {};
-  // console.log('schema data', JSON.stringify(schemaData, null, 2));
   return { version, collections: collectionsDefinitionToSchema(collections) };
 }
 

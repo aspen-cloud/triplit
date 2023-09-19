@@ -225,7 +225,6 @@ export class TripleStoreOperator implements TripleStoreApi {
 
   constructor({
     tupleOperator,
-    schema,
     clock,
   }: {
     tupleOperator: ScopedMultiTupleOperator<TupleIndex>;
@@ -233,29 +232,10 @@ export class TripleStoreOperator implements TripleStoreApi {
     schema?: StoreSchema<Models<any, any>>;
   }) {
     this.tupleOperator = tupleOperator;
-    // this.schema = schema;
     this.clock = clock;
-    // This is probably not needed but currently doesn't work because there is no `subscribe`
-    // on the tuple transaction api
-    // syncClockWithStore(clock, this);
-
-    // When updating schema tuples, we need to update the schema object for this tx
-    // Tuple-database doesnt support listening to non commited writes, so manually listening
-    // this.schema = this.readSchema();
-    // this.schema = schema;
-    // this.onMetadataChange(async ({ updates, deletes }) => {
-    //   if (
-    //     updates.some((u) => u[0] === '_schema') ||
-    //     deletes.some((d) => d[0] === '_schema')
-    //   ) {
-    //     this.schema = await this.readSchemaFromStorage();
-    //   }
-    // });
-    // this.onWrite
   }
 
   async readSchema() {
-    // return this.schema;
     return this.readSchemaFromStorage();
   }
 
@@ -642,20 +622,6 @@ export class TripleStore implements TripleStoreApi {
     this.ensureInitializedSchema = schema
       ? this.overrideSchema(schema)
       : Promise.resolve();
-
-    // Listen to future writes to the schema
-    this.ensureInitializedSchema.then(() => {
-      // Slightly different than on tx, here we update schema on commit
-      // This is a bit awkward because we store schema on every store (which is also unnecessary)
-      this.tupleStore.subscribe({ prefix: ['metadata'] }, async (writes) => {
-        const { set = [], remove = [] } = writes;
-        const dataWrites = set.filter(({ key }) => key[1] === '_schema');
-        const dataDeletes = remove.filter((key) => key[1] === '_schema');
-        if (dataWrites.length || dataDeletes.length) {
-          this.schema = await this.readSchemaFromStorage();
-        }
-      });
-    });
   }
 
   private async overrideSchema(schema: StoreSchema<Models<any, any>>) {
