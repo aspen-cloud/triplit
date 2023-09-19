@@ -21,45 +21,48 @@ export function friendlyReadyState(conn: WebSocket): ConnectionStatus {
   }
 }
 
-// Add any changes to the WebSocket type here (ex more event handlers)
-var WebSocketProxy = new Proxy(WebSocket, {
-  construct: function (target, args) {
-    const instance = new target(
-      // @ts-ignore
-      ...args
-    );
+// temporary defensive check for node env
+if (typeof window !== 'undefined') {
+  // Add any changes to the WebSocket type here (ex more event handlers)
+  var WebSocketProxy = new Proxy(WebSocket, {
+    construct: function (target, args) {
+      const instance = new target(
+        // @ts-ignore
+        ...args
+      );
 
-    function dispatchConnectionChangeEvent() {
-      instance.dispatchEvent(new Event('connectionchange'));
-      if (
-        instance.onconnectionchange &&
-        typeof instance.onconnectionchange === 'function'
-      ) {
-        instance.onconnectionchange(friendlyReadyState(instance));
+      function dispatchConnectionChangeEvent() {
+        instance.dispatchEvent(new Event('connectionchange'));
+        if (
+          instance.onconnectionchange &&
+          typeof instance.onconnectionchange === 'function'
+        ) {
+          instance.onconnectionchange(friendlyReadyState(instance));
+        }
       }
-    }
 
-    // Capture the connecting state after the constructor is called
-    setTimeout(function () {
-      dispatchConnectionChangeEvent();
-    }, 0);
+      // Capture the connecting state after the constructor is called
+      setTimeout(function () {
+        dispatchConnectionChangeEvent();
+      }, 0);
 
-    const openHandler = () => {
-      dispatchConnectionChangeEvent();
-    };
+      const openHandler = () => {
+        dispatchConnectionChangeEvent();
+      };
 
-    const closeHandler = () => {
-      dispatchConnectionChangeEvent();
-      instance.removeEventListener('open', openHandler);
-      instance.removeEventListener('close', closeHandler);
-    };
+      const closeHandler = () => {
+        dispatchConnectionChangeEvent();
+        instance.removeEventListener('open', openHandler);
+        instance.removeEventListener('close', closeHandler);
+      };
 
-    instance.addEventListener('open', openHandler);
-    instance.addEventListener('close', closeHandler);
+      instance.addEventListener('open', openHandler);
+      instance.addEventListener('close', closeHandler);
 
-    return instance;
-  },
-});
+      return instance;
+    },
+  });
 
-// replace the native WebSocket with the proxy
-WebSocket = WebSocketProxy;
+  // replace the native WebSocket with the proxy
+  WebSocket = WebSocketProxy;
+}
