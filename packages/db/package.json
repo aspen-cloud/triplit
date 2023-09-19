@@ -13,7 +13,9 @@
     }
   },
   "scripts": {
-    "build": "yarn build:setup && parcel build . --no-cache && yarn build:cleanup",
+    "build": "yarn build:code && yarn build:types",
+    "build:types": "yarn tsc --p tsconfig.build.json",
+    "build:code": "yarn build:setup && parcel build . --no-cache && yarn build:cleanup",
     "build:setup": "mv tsconfig.json tsconfig.tmp.json && mv tsconfig.build.json tsconfig.json",
     "build:cleanup": "mv tsconfig.json tsconfig.build.json && mv tsconfig.tmp.json tsconfig.json",
     "lint": "tsc",

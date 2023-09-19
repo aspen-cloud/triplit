@@ -3,7 +3,12 @@
   "compilerOptions": {
     "target": "ESNext",
     "module": "ESNext",
-    "lib": ["ESNext", "DOM"]
+    "lib": ["ESNext", "DOM"],
+    "emitDeclarationOnly": true,
+    "declarationMap": true,
+    "outDir": "./dist",
+    "declaration": true,
+    "noEmit": false
   },
   "include": ["./src/**/*.ts"],
   "exclude": ["./dist", "node_modules"]
