@@ -144,7 +144,7 @@ export function ruleToTuple(
 
 export default class DB<M extends Models<any, any> | undefined> {
   tripleStore: TripleStore;
-  ensureMigrated: Promise<void>;
+  ensureMigrated: Promise<void | void[]>;
   variables: Record<string, any>;
 
   constructor({
@@ -180,9 +180,14 @@ export default class DB<M extends Models<any, any> | undefined> {
       clock,
     });
 
-    this.ensureMigrated = migrations
-      ? this.migrate(migrations, 'up').catch(() => {})
-      : Promise.resolve();
+    // TODO this is a hack to make sure the schema is initialized before any transaction is created
+    // we should be able to have this more cleanly handled in the Triple Store
+    this.ensureMigrated = Promise.all([
+      migrations
+        ? this.migrate(migrations, 'up').catch(() => {})
+        : Promise.resolve(),
+      this.tripleStore.ensureInitializedSchema,
+    ]);
   }
 
   async getClientId() {

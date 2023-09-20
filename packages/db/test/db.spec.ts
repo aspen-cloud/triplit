@@ -16,9 +16,12 @@ import {
 } from '../src';
 import { classes, students, departments } from './sample_data/school';
 import MemoryBTree from '../src/storage/memory-btree';
-import { stripCollectionFromId } from '../src/db';
 import { testSubscription } from './utils/test-subscription';
-import { everyFilterStatement, mapFilterStatements } from '../src/db-helpers';
+import {
+  everyFilterStatement,
+  mapFilterStatements,
+  stripCollectionFromId,
+} from '../src/db-helpers';
 
 // const storage = new InMemoryTupleStorage();
 const storage = new MemoryBTree();
@@ -2765,6 +2768,7 @@ describe('default values in a schema', () => {
           'todo-1'
         );
         const result = await db.fetchById('Todos', 'todo-1');
+        console.log('result', result);
         expect(result).toHaveProperty('completed');
         expect(result.completed).toBe(false);
       }
