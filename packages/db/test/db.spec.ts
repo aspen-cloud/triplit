@@ -18,6 +18,7 @@ import { classes, students, departments } from './sample_data/school';
 import MemoryBTree from '../src/storage/memory-btree';
 import { testSubscription } from './utils/test-subscription';
 import {
+  appendCollectionToId,
   everyFilterStatement,
   mapFilterStatements,
   stripCollectionFromId,
@@ -2705,7 +2706,7 @@ describe('Nullable properties in a schema', () => {
   });
 });
 
-it.todo('throws an error if a register filter is malformed', async () => {
+it('throws an error if a register filter is malformed', async () => {
   const db = new DB({
     schema: {
       collections: {
@@ -2728,7 +2729,11 @@ it.todo('throws an error if a register filter is malformed', async () => {
   });
   await expect(db.fetch(query)).resolves.not.toThrowError();
   // Delete schema to allow malformed filter
-  // await db.tripleStore.deleteMetadataTuples([['_schema']]);
+  await db.tripleStore.deleteTriples(
+    await db.tripleStore.findByEAV([
+      appendCollectionToId('_metadata', '_schema'),
+    ])
+  );
   await expect(db.fetch(query)).rejects.toThrowError(InvalidFilterError);
 });
 
