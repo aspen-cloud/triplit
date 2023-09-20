@@ -1,5 +1,18 @@
 # @triplit/client
 
+## 0.0.37
+
+### Patch Changes
+
+- af14ded: - More flexible formatting of query options (ex order('created_at', 'DESC'))
+- dfa258c: add api to react to socket connection changes
+- af14ded: - Add fetch policy options
+  - Bug fixes
+  - Performance improvements
+- Updated dependencies [af14ded]
+- Updated dependencies [af14ded]
+  - @triplit/db@0.0.37
+
 ## 0.0.36
 
 ### Patch Changes

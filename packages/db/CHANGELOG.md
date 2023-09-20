@@ -1,5 +1,16 @@
 # @triplit/db
 
+## 0.0.37
+
+### Patch Changes
+
+- af14ded: - Add support for date type
+  - Support deeply nested updates and migrations
+  - Allow additional data type options (nullable, default)
+- af14ded: - Add fetch policy options
+  - Bug fixes
+  - Performance improvements
+
 ## 0.0.36
 
 ### Patch Changes
