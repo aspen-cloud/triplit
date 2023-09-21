@@ -212,7 +212,7 @@ export async function fetch<Q extends CollectionQuery<any>>(
 
   if (includeTriples) {
     return {
-      results: new Map(entities),
+      results: new Map(entities), // TODO: also need to deserialize data?
       triples: filterToLatestEntityAttribute(resultTriples),
     };
   }
