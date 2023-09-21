@@ -1024,3 +1024,43 @@ describe('timestamp index', () => {
     );
   });
 });
+
+describe('Hooks', () => {
+  describe('beforeInsert', () => {
+    it('can hook in before insert', async () => {
+      const store = new TripleStore({ storage, tenantId: 'TEST' });
+      const hook = vi.fn();
+      store.beforeInsert(hook);
+      const triple: TripleRow = {
+        id: 'id',
+        attribute: ['attr'],
+        value: 'value',
+        timestamp: [1, 'A'],
+        expired: false,
+      };
+      const resp = store.insertTriple(triple);
+      await resp;
+      expect(hook).toHaveBeenCalled();
+    });
+
+    it('can prevent inserts by throwing an error', async () => {
+      const store = new TripleStore({ storage, tenantId: 'TEST' });
+      const hook = vi.fn().mockImplementation(() => {
+        throw new Error('nope');
+      });
+      store.beforeInsert(hook);
+      const triple: TripleRow = {
+        id: 'id',
+        attribute: ['attr'],
+        value: 'value',
+        timestamp: [1, 'A'],
+        expired: false,
+      };
+      const resp = store.insertTriple(triple);
+      await expect(resp).rejects.toThrow();
+      expect(hook).toHaveBeenCalled();
+      // double check triple was not inserted
+      expect(await store.findByEntity('id')).toHaveLength(0);
+    });
+  });
+});

@@ -29,6 +29,13 @@ export type TransactionScope<TupleSchema extends KeyValuePair> = {
 export default class MultiTupleStore<TupleSchema extends KeyValuePair> {
   readonly storageScope?: StorageScope;
   storage: Record<string, AsyncTupleDatabaseClient<TupleSchema>>;
+  hooks: {
+    before: ((
+      tuple: TupleSchema,
+      tx: MultiTupleTransaction<TupleSchema>
+    ) => void | Promise<void>)[];
+    after: never[];
+  };
   // subspacePrefix: Tuple;
 
   constructor({
@@ -40,6 +47,10 @@ export default class MultiTupleStore<TupleSchema extends KeyValuePair> {
   }) {
     this.storage = storage;
     this.storageScope = storageScope;
+    this.hooks = {
+      before: [],
+      after: [],
+    };
   }
 
   getStorageClients(context?: 'read' | 'write') {
@@ -49,6 +60,15 @@ export default class MultiTupleStore<TupleSchema extends KeyValuePair> {
       );
     }
     return Object.values(this.storage);
+  }
+
+  beforeInsert(
+    callback: (
+      tuple: TupleSchema,
+      tx: MultiTupleTransaction<TupleSchema>
+    ) => void | Promise<void>
+  ) {
+    this.hooks.before.push(callback);
   }
 
   async scan<T extends Tuple, P extends TuplePrefix<T>>(
@@ -120,6 +140,7 @@ export default class MultiTupleStore<TupleSchema extends KeyValuePair> {
     return new MultiTupleTransaction({
       scope: scope ?? this.storageScope,
       store: this,
+      hooks: this.hooks,
     });
   }
 
@@ -161,8 +182,26 @@ export default class MultiTupleStore<TupleSchema extends KeyValuePair> {
 
 export class ScopedMultiTupleOperator<TupleSchema extends KeyValuePair> {
   readonly txScope: TransactionScope<TupleSchema>;
-  constructor({ txScope }: { txScope: TransactionScope<TupleSchema> }) {
+  hooks: {
+    before: ((
+      tuple: TupleSchema,
+      tx: MultiTupleTransaction<TupleSchema>
+    ) => void | Promise<void>)[];
+  };
+  constructor({
+    txScope,
+    hooks,
+  }: {
+    txScope: TransactionScope<TupleSchema>;
+    hooks: {
+      before: ((
+        tuple: TupleSchema,
+        tx: MultiTupleTransaction<TupleSchema>
+      ) => void | Promise<void>)[];
+    };
+  }) {
     this.txScope = txScope;
+    this.hooks = hooks;
   }
 
   async scan<T extends Tuple, P extends TuplePrefix<T>>(
@@ -191,12 +230,15 @@ export class ScopedMultiTupleOperator<TupleSchema extends KeyValuePair> {
 
   // write: (writes: WriteOps<TupleSchema>) => TupleRootTransactionApi<TupleSchema>;
 
-  set<Key extends Tuple>(
+  async set<Key extends Tuple>(
     tuple: Key,
     value: Extract<TupleSchema, { key: TupleToObject<Key> }> extends unknown
       ? Extract<TupleSchema, { key: TupleToObject<Key> }>['value']
       : never
   ) {
+    for (const beforeHook of this.hooks.before) {
+      await beforeHook({ key: tuple, value }, this);
+    }
     this.txScope.write.forEach((tx) => tx.set(tuple, value));
   }
 }
@@ -238,13 +280,26 @@ export class MultiTupleTransaction<
   readonly txs: Record<string, AsyncTupleRootTransactionApi<TupleSchema>>;
   readonly store: MultiTupleStore<TupleSchema>;
   isCanceled = false;
+  hooks: {
+    before: ((
+      tuple: TupleSchema,
+      tx: MultiTupleTransaction<TupleSchema>
+    ) => void | Promise<void>)[];
+  };
 
   constructor({
     store,
     scope,
+    hooks,
   }: {
     store: MultiTupleStore<TupleSchema>;
     scope?: StorageScope;
+    hooks: {
+      before: ((
+        tuple: TupleSchema,
+        tx: MultiTupleTransaction<TupleSchema>
+      ) => void | Promise<void>)[];
+    };
   }) {
     const txs = Object.fromEntries(
       Object.entries(store.storage).map(([storageKey, store]) => [
@@ -259,9 +314,11 @@ export class MultiTupleTransaction<
         read: readKeys.map((storageKey) => txs[storageKey]),
         write: writeKeys.map((storageKey) => txs[storageKey]),
       },
+      hooks,
     });
     this.txs = txs;
     this.store = store;
+    this.hooks = hooks;
   }
 
   withScope(scope: StorageScope) {
@@ -272,6 +329,7 @@ export class MultiTupleTransaction<
         read: readKeys.map((storageKey) => this.txs[storageKey]),
         write: writeKeys.map((storageKey) => this.txs[storageKey]),
       },
+      hooks: this.hooks,
     });
   }
 

@@ -973,7 +973,6 @@ describe('single entity subscriptions', async () => {
     await testSubscription(db, db.query('students').entityId('3').build(), [
       {
         check: (results) => {
-          console.log('first check');
           const entity = results.get('3');
           expect(entity).toBeDefined();
           expect(results.size).toBe(1);
@@ -989,7 +988,6 @@ describe('single entity subscriptions', async () => {
           });
         },
         check: (results) => {
-          console.log('second check check');
           expect(results.get('3').major).toBe('sociology');
         },
       },

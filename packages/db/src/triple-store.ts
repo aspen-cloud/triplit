@@ -223,16 +223,31 @@ export class TripleStoreOperator implements TripleStoreApi {
 
   assignedTimestamp?: Timestamp;
 
+  hooks: {
+    before: ((
+      triple: TripleRow[],
+      tx: TripleStoreTransaction
+    ) => void | Promise<void>)[];
+  };
+
   constructor({
     tupleOperator,
     clock,
+    hooks,
   }: {
     tupleOperator: ScopedMultiTupleOperator<TupleIndex>;
     clock: Clock;
     schema?: StoreSchema<Models<any, any>>;
+    hooks: {
+      before: ((
+        triple: TripleRow[],
+        tx: TripleStoreTransaction
+      ) => void | Promise<void>)[];
+    };
   }) {
     this.tupleOperator = tupleOperator;
     this.clock = clock;
+    this.hooks = hooks;
   }
 
   async readSchema() {
@@ -373,6 +388,9 @@ export class TripleStoreOperator implements TripleStoreApi {
     shouldValidate = true
   ): Promise<void> {
     if (!triplesInput.length) return;
+    for (const hook of this.hooks.before) {
+      await hook(triplesInput, this);
+    }
     for (const triple of triplesInput) {
       if (triple.value === undefined) {
         throw new Error("Cannot use 'undefined' as a value");
@@ -413,10 +431,9 @@ export class TripleStoreOperator implements TripleStoreApi {
 
     const metadata = { expired };
 
-    // TODO add check for existing entity/attribute pair
     tx.set(['EAV', id, attribute, value, timestamp], metadata);
     tx.set(['AVE', attribute, value, id, timestamp], metadata);
-    // tx.set(['VAE', value, attribute, id, timestamp], metadata);
+    // // tx.set(['VAE', value, attribute, id, timestamp], metadata);
     tx.set(
       ['clientTimestamp', timestamp[1], timestamp, id, attribute, value],
       metadata
@@ -524,12 +541,19 @@ export class TripleStoreTransaction extends TripleStoreOperator {
     tupleTx,
     clock,
     schema,
+    hooks,
   }: {
     tupleTx: MultiTupleTransaction<TupleIndex>;
     clock: Clock;
     schema?: StoreSchema<Models<any, any>>;
+    hooks: {
+      before: ((
+        triple: TripleRow[],
+        tx: TripleStoreTransaction
+      ) => void | Promise<void>)[];
+    };
   }) {
-    super({ tupleOperator: tupleTx, clock, schema });
+    super({ tupleOperator: tupleTx, clock, schema, hooks });
     this.tupleTx = tupleTx;
   }
 
@@ -546,7 +570,17 @@ export class TripleStoreTransaction extends TripleStoreOperator {
       tupleOperator: this.tupleTx.withScope(scope),
       clock: this.clock,
       schema: this.schema,
+      hooks: this.hooks,
     });
+  }
+
+  beforeInsert(
+    callback: (
+      triples: TripleRow[],
+      tx: TripleStoreTransaction
+    ) => void | Promise<void>
+  ) {
+    this.hooks.before.push(callback);
   }
 }
 
@@ -561,6 +595,12 @@ export class TripleStore implements TripleStoreApi {
   clock: Clock;
   tenantId: string;
   ensureInitializedSchema: Promise<void>;
+  hooks: {
+    before: ((
+      triple: TripleRow[],
+      tx: TripleStoreTransaction
+    ) => void | Promise<void>)[];
+  };
 
   constructor({
     storage,
@@ -582,6 +622,9 @@ export class TripleStore implements TripleStoreApi {
     storageScope?: string[];
     clock?: Clock;
   }) {
+    this.hooks = {
+      before: [],
+    };
     if (!stores && !storage)
       throw new Error('Must provide either storage or stores');
     if (stores && storage)
@@ -615,6 +658,22 @@ export class TripleStore implements TripleStoreApi {
       storage: normalizedStores,
     }).subspace([this.tenantId]) as MultiTupleStore<TupleIndex>;
 
+    /**
+     * Example of using beforeInsert hook to add additional indexes
+     */
+    // this.tupleStore.beforeInsert((tuple, tx) => {
+    //   const { key, value: metadata } = tuple;
+    //   if (key[0] === 'EAV') {
+    //     const [_eav, id, attribute, value, timestamp] = key as EAVIndex['key'];
+
+    //     tx.set(['AVE', attribute, value, id, timestamp], metadata);
+    //     tx.set(
+    //       ['clientTimestamp', timestamp[1], timestamp, id, attribute, value],
+    //       metadata
+    //     );
+    //   }
+    // });
+
     this.clock = clock ?? new MemoryClock();
     this.clock.assignToStore(this);
 
@@ -641,6 +700,15 @@ export class TripleStore implements TripleStoreApi {
     }));
 
     return await this.insertTriples(normalizedTriples, false);
+  }
+
+  beforeInsert(
+    callback: (
+      triples: TripleRow[],
+      tx: TripleStoreTransaction
+    ) => void | Promise<void>
+  ) {
+    this.hooks.before.push(callback);
   }
 
   findByCollection(
@@ -743,6 +811,7 @@ export class TripleStore implements TripleStoreApi {
       const tx = new TripleStoreTransaction({
         tupleTx: tupleTx,
         clock: this.clock,
+        hooks: this.hooks,
         // schema,
       });
       if (isCanceled) return tx;
