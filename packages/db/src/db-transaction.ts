@@ -79,6 +79,13 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
     });
   }
 
+  // Doing this as a TS fix, but would like to properly define the _metadata scheam
+  readonly METADATA_COLLECTION_NAME =
+    '_metadata' as CollectionNameFromModels<M>;
+
+  // get schema() {
+  //   return this.storeTx.schema?.collections;
+  // }
   async getCollectionSchema<CN extends CollectionNameFromModels<M>>(
     collectionName: CN
   ) {
@@ -349,90 +356,117 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
   }
 
   async checkOrCreateSchema() {
-    const existingSchema = await this.fetchById('_metadata', '_schema');
+    const existingSchema = await this.fetchById(
+      this.METADATA_COLLECTION_NAME,
+      '_schema'
+    );
     if (!existingSchema) {
-      await this.insert('_metadata', {}, '_schema');
+      await this.insert(this.METADATA_COLLECTION_NAME, {}, '_schema');
     }
   }
 
   async createCollection(params: CreateCollectionOperation[1]) {
     await this.checkOrCreateSchema();
     const { name: collectionName, attributes, rules } = params;
-    await this.update('_metadata', '_schema', async (schema) => {
-      if (!schema.collections) schema.collections = {};
-      if (!schema.collections[collectionName])
-        schema.collections[collectionName] = {};
-      const collectionAttributes = schema.collections[collectionName];
-      collectionAttributes.attributes = attributes;
-      collectionAttributes.rules = rules;
-    });
+    await this.update(
+      this.METADATA_COLLECTION_NAME,
+      '_schema',
+      async (schema) => {
+        if (!schema.collections) schema.collections = {};
+        if (!schema.collections[collectionName])
+          schema.collections[collectionName] = {};
+        const collectionAttributes = schema.collections[collectionName];
+        collectionAttributes.attributes = attributes;
+        collectionAttributes.rules = rules;
+      }
+    );
   }
 
   async dropCollection(params: DropCollectionOperation[1]) {
     const { name: collectionName } = params;
-    await this.update('_metadata', '_schema', async (schema) => {
-      if (!schema.collections) schema.collections = {};
-      delete schema.collections[collectionName];
-    });
+    await this.update(
+      this.METADATA_COLLECTION_NAME,
+      '_schema',
+      async (schema) => {
+        if (!schema.collections) schema.collections = {};
+        delete schema.collections[collectionName];
+      }
+    );
   }
 
   async addAttribute(params: AddAttributeOperation[1]) {
     const { collection: collectionName, path, attribute } = params;
-    await this.update('_metadata', '_schema', async (schema) => {
-      const collectionAttributes = schema.collections[collectionName];
-      const parentPath = path.slice(0, -1);
-      const attrName = path[path.length - 1];
-      let attr = parentPath.reduce((acc, curr) => {
-        if (!acc[curr]) acc[curr] = {};
-        return acc[curr];
-      }, collectionAttributes.attributes);
-      attr[attrName] = attribute;
-    });
+    await this.update(
+      this.METADATA_COLLECTION_NAME,
+      '_schema',
+      async (schema) => {
+        const collectionAttributes = schema.collections[collectionName];
+        const parentPath = path.slice(0, -1);
+        const attrName = path[path.length - 1];
+        let attr = parentPath.reduce((acc, curr) => {
+          if (!acc[curr]) acc[curr] = {};
+          return acc[curr];
+        }, collectionAttributes.attributes);
+        attr[attrName] = attribute;
+      }
+    );
   }
 
   async dropAttribute(params: DropAttributeOperation[1]) {
     const { collection: collectionName, path } = params;
     // Update schema if there is schema
-    await this.update('_metadata', '_schema', async (schema) => {
-      const collectionAttributes = schema.collections[collectionName];
-      const parentPath = path.slice(0, -1);
-      const attrName = path[path.length - 1];
-      let attr = parentPath.reduce((acc, curr) => {
-        if (!acc[curr]) acc[curr] = {};
-        return acc[curr];
-      }, collectionAttributes.attributes);
-      delete attr[attrName];
-    });
+    await this.update(
+      this.METADATA_COLLECTION_NAME,
+      '_schema',
+      async (schema) => {
+        const collectionAttributes = schema.collections[collectionName];
+        const parentPath = path.slice(0, -1);
+        const attrName = path[path.length - 1];
+        let attr = parentPath.reduce((acc, curr) => {
+          if (!acc[curr]) acc[curr] = {};
+          return acc[curr];
+        }, collectionAttributes.attributes);
+        delete attr[attrName];
+      }
+    );
   }
 
   async alterAttributeOption(params: AlterAttributeOptionOperation[1]) {
     const { collection: collectionName, path, ...options } = params;
-    await this.update('_metadata', '_schema', async (schema) => {
-      const collectionAttributes = schema.collections[collectionName];
-      const parentPath = path.slice(0, -1);
-      const attrName = path[path.length - 1];
-      let attr = parentPath.reduce((acc, curr) => {
-        if (!acc[curr]) acc[curr] = {};
-        return acc[curr];
-      }, collectionAttributes.attributes);
-      for (const [option, value] of Object.entries(options)) {
-        attr[attrName].options[option] = value;
+    await this.update(
+      this.METADATA_COLLECTION_NAME,
+      '_schema',
+      async (schema) => {
+        const collectionAttributes = schema.collections[collectionName];
+        const parentPath = path.slice(0, -1);
+        const attrName = path[path.length - 1];
+        let attr = parentPath.reduce((acc, curr) => {
+          if (!acc[curr]) acc[curr] = {};
+          return acc[curr];
+        }, collectionAttributes.attributes);
+        for (const [option, value] of Object.entries(options)) {
+          attr[attrName].options[option] = value;
+        }
       }
-    });
+    );
   }
 
   async dropAttributeOption(params: DropAttributeOptionOperation[1]) {
     const { collection: collectionName, path, option } = params;
     // Update schema if there is schema
-    await this.update('_metadata', '_schema', async (schema) => {
-      const collectionAttributes = schema.collections[collectionName];
-      const parentPath = path;
-      const attrName = option;
-      let attr = parentPath.reduce((acc, curr) => {
-        if (!acc[curr]) acc[curr] = {};
-        return acc[curr];
-      }, collectionAttributes.attributes);
-      delete attr[attrName];
-    });
+    await this.update(
+      this.METADATA_COLLECTION_NAME,
+      '_schema',
+      async (schema) => {
+        const collectionAttributes = schema.collections[collectionName];
+        const parentPath = path;
+        const attrName = option;
+        let attr = parentPath.reduce((acc, curr) => {
+          if (!acc[curr]) acc[curr] = {};
+          return acc[curr];
+        }, collectionAttributes.attributes);
+        delete attr[attrName];
+      }
+    );
   }
 }

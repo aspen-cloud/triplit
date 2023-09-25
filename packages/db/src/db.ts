@@ -198,17 +198,16 @@ export default class DB<M extends Models<any, any> | undefined> {
     return ts[1];
   }
 
-  async getSchema({
-    includeTriples = false,
-  }: { includeTriples?: boolean } = {}) {
+  async getSchema() {
     await this.ensureMigrated;
-    const { schema, schemaTriples } = await readSchemaFromTripleStore(
-      this.tripleStore
-    );
-    if (includeTriples) {
-      return { schema, schemaTriples };
-    }
+    const { schema } = await readSchemaFromTripleStore(this.tripleStore);
     return schema;
+  }
+
+  async getSchemaTriples() {
+    await this.ensureMigrated;
+    const { schemaTriples } = await readSchemaFromTripleStore(this.tripleStore);
+    return schemaTriples;
   }
 
   async getCollectionSchema<CN extends CollectionNameFromModels<M>>(
