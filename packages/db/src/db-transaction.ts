@@ -64,7 +64,6 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
         this._schema ?? {}
       );
       const schemaDefinition = timestampedObjectToPlainObject(this._schema);
-      console.log('schemaDefinition', schemaDefinition);
       this.schema = {
         version: schemaDefinition.version ?? 0,
         collections:
@@ -78,14 +77,12 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
     collectionName: CN
   ) {
     const { collections } = (await this.getSchema()) ?? {};
-    if (!collections) return undefined;
+    if (!collections || !collections[collectionName]) return undefined;
     // TODO: i think we need some stuff in the triple store...
     const collectionSchema = collections[
       collectionName
     ] as CollectionFromModels<M, CN>;
-    return {
-      ...collectionSchema,
-    };
+    return collectionSchema;
   }
 
   private addReadRulesToQuery<Q extends CollectionQuery<ModelFromModels<M>>>(
@@ -103,7 +100,6 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
   }
 
   async getSchema() {
-    // return this.storeTx.readSchema();
     return this.schema;
   }
 

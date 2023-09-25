@@ -8,6 +8,7 @@ import {
   AttributeDefinition,
   getDefaultValuesForCollection,
   timestampedObjectToPlainObject,
+  tuplesToSchema,
 } from './schema';
 import * as Document from './document';
 import { nanoid } from 'nanoid';
@@ -31,6 +32,7 @@ import {
   validateExternalId,
   replaceVariablesInQuery,
   mapFilterStatements,
+  readSchemaFromTripleStore,
 } from './db-helpers';
 
 export interface Rule<M extends Model<any>> {
@@ -200,23 +202,25 @@ export default class DB<M extends Models<any, any> | undefined> {
     includeTriples = false,
   }: { includeTriples?: boolean } = {}) {
     await this.ensureMigrated;
-    // TODO: add schema definition to triple store, so we can return StoreSchema<M>
-    // Or make StoreSchema<M> compatible with StoreSchema<Models<any, any>>
-    return await this.tripleStore.readSchema(includeTriples);
+    const { schema, schemaTriples } = await readSchemaFromTripleStore(
+      this.tripleStore
+    );
+    if (includeTriples) {
+      return { schema, schemaTriples };
+    }
+    return schema;
   }
 
   async getCollectionSchema<CN extends CollectionNameFromModels<M>>(
     collectionName: CN
   ) {
     const collections = (await this.getSchema())?.collections;
-    if (!collections) return undefined;
+    if (!collections || !collections[collectionName]) return undefined;
     // TODO: i think we need some stuff in the triple store...
     const collectionSchema = collections[
       collectionName
     ] as CollectionFromModels<M, CN>;
-    return {
-      ...collectionSchema,
-    };
+    return collectionSchema;
   }
 
   static ABORT_TRANSACTION = Symbol('abort transaction');
@@ -531,8 +535,10 @@ export default class DB<M extends Models<any, any> | undefined> {
 
   async migrate(migrations: Migration[], direction: 'up' | 'down') {
     for (const migration of migrations) {
-      const tripleSchema = await this.tripleStore.readSchema();
-      const dbVersion = tripleSchema?.version ?? 0;
+      const { schema: storedSchema } = await readSchemaFromTripleStore(
+        this.tripleStore
+      );
+      const dbVersion = storedSchema?.version ?? 0;
       if (canMigrate(migration, direction, dbVersion)) {
         try {
           await this.applySchemaMigration(migration[direction]);
@@ -544,23 +550,18 @@ export default class DB<M extends Models<any, any> | undefined> {
           );
           throw e;
         }
-        // TODO: move this into the transaction
-        // await this.tripleStore.updateMetadataTuples([
-        //   [
-        //     '_schema',
-        //     ['version'],
-        //     direction === 'up' ? migration.version : migration.parent,
-        //   ],
-        // ]);
-        await this.tripleStore.insertTriples([
-          {
-            id: appendCollectionToId('_metadata', '_schema'),
-            attribute: ['_metadata', 'version'],
-            value: direction === 'up' ? migration.version : migration.parent,
-            timestamp: await this.tripleStore.clock.getNextTimestamp(),
-            expired: false,
-          },
-        ]);
+        await this.tripleStore.insertTriples(
+          [
+            {
+              id: appendCollectionToId('_metadata', '_schema'),
+              attribute: ['_metadata', 'version'],
+              value: direction === 'up' ? migration.version : migration.parent,
+              timestamp: await this.tripleStore.clock.getNextTimestamp(),
+              expired: false,
+            },
+          ],
+          false
+        );
       } else {
         console.info('skipping migration', migration);
       }

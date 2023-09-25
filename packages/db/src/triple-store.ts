@@ -33,7 +33,7 @@ import {
   ValueSchemaMismatchError,
   WriteRuleError,
 } from './errors';
-import { appendCollectionToId } from './db-helpers';
+import { appendCollectionToId, readSchemaFromTripleStore } from './db-helpers';
 
 export type StoreSchema<M extends Models<any, any> | undefined> =
   M extends Models<any, any>
@@ -206,7 +206,6 @@ export interface TripleStoreApi {
   deleteMetadataTuples(
     deletes: [entityId: string, attribute?: Attribute][]
   ): Promise<void>;
-  readSchema(): Promise<StoreSchema<Models<any, any>> | undefined>;
 }
 
 type MetadataListener = (changes: {
@@ -250,25 +249,11 @@ export class TripleStoreOperator implements TripleStoreApi {
     this.hooks = hooks;
   }
 
-  async readSchema() {
-    return this.readSchemaFromStorage();
-  }
-
   async getTransactionTimestamp() {
     if (!this.assignedTimestamp) {
       this.assignedTimestamp = await this.clock.getNextTimestamp();
     }
     return this.assignedTimestamp;
-  }
-
-  private async readSchemaFromStorage() {
-    const schemaTriples = await this.findByEntity(
-      appendCollectionToId('_metadata', '_schema')
-    );
-
-    // At some point we probably want to validate the we extract (ie has expected props)
-    if (!schemaTriples.length) return undefined;
-    return tuplesToSchema(schemaTriples);
   }
 
   async findByCollection(
@@ -418,7 +403,8 @@ export class TripleStoreOperator implements TripleStoreApi {
       return;
     }
 
-    const schema = shouldValidate && (await this.readSchema());
+    const schema =
+      shouldValidate && (await readSchemaFromTripleStore(this)).schema;
     if (schema) {
       try {
         validateTriple(schema.collections, attribute, value);
@@ -944,32 +930,6 @@ export class TripleStore implements TripleStoreApi {
     });
   }
 
-  async readSchema(includeTriples = false) {
-    // Wait for initial schema write to complete
-    await this.ensureInitializedSchema;
-    // Lazily assign in memory schema object
-    // if (!this.schema) {
-    const { schema, schemaTriples } =
-      (await this.readSchemaFromStorage()) ?? {};
-    // }
-    this.schema = schema;
-    return includeTriples ? { schema, schemaTriples } : this.schema;
-  }
-
-  private async readSchemaFromStorage() {
-    // const schemaTriples = await this.readMetadataTuples('_schema');
-    const schemaTriples = await this.findByEntity(
-      appendCollectionToId('_metadata', '_schema')
-    );
-    // At some point we probably want to validate the we extract (ie has expected props)
-    if (!schemaTriples.length) return undefined;
-    const schema = tuplesToSchema(schemaTriples);
-    return {
-      schema,
-      schemaTriples,
-    };
-  }
-
   async clear() {
     await this.tupleStore.clear();
   }
@@ -993,6 +953,7 @@ function validateTriple(
 
   const model = schema[modelName];
   if (!model) {
+    console.log('model not found', schema);
     throw new ModelNotFoundError(modelName as string, Object.keys(schema));
   }
 

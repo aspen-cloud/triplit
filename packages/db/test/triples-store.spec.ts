@@ -8,6 +8,7 @@ import {
 import { Schema as S } from '../src/schema';
 import MemoryBTree from '../src/storage/memory-btree';
 import { IndexedDbStorage, MemoryStorage } from '../src';
+import { readSchemaFromTripleStore } from '../src/db-helpers';
 
 // const storage = new InMemoryTupleStorage();
 const storage = new MemoryBTree();
@@ -189,40 +190,50 @@ describe('schema triple-store', () => {
   });
 
   it('defining a store with a schema should store schema', async () => {
-    const schemalessDB = new TripleStore({
+    const storeWithoutSchema = new TripleStore({
       storage: new InMemoryTupleStorage(),
       tenantId: 'TEST',
     });
-    const schemaDB = new TripleStore({
+    const storeWithSchema = new TripleStore({
       storage: new InMemoryTupleStorage(),
       tenantId: 'TEST',
       schema: { collections: { Task: TaskSchema }, version: 0 },
     });
+    const schemalessSchemaResp = await readSchemaFromTripleStore(
+      storeWithoutSchema
+    );
+    expect(schemalessSchemaResp.schema).toBeFalsy();
+    expect(schemalessSchemaResp.schemaTriples).toHaveLength(0);
 
-    expect(await schemalessDB.readSchema()).toBeFalsy();
-    expect(await schemalessDB.readMetadataTuples('_schema')).toHaveLength(0);
-
-    expect(await schemaDB.readSchema()).toBeTruthy();
+    await storeWithSchema.ensureInitializedSchema;
+    const storeWithSchemaSchemaResp = await readSchemaFromTripleStore(
+      storeWithSchema
+    );
+    expect(storeWithSchemaSchemaResp.schema).toBeTruthy();
   });
 
   it('defining a store with a schema should overwrite existing schema', async () => {
     // Using same storage, schema should be overwritten
     const storage = new InMemoryTupleStorage();
-    const taskDB = new TripleStore({
+    const taskStore = new TripleStore({
       storage,
       tenantId: 'TEST',
       schema: { collections: { Task: TaskSchema }, version: 0 },
     });
-    const beforeSchema = await taskDB.readSchema();
+    await taskStore.ensureInitializedSchema;
+    const { schema: beforeSchema } = await readSchemaFromTripleStore(taskStore);
     expect(beforeSchema?.collections).toHaveProperty('Task');
     expect(beforeSchema?.collections).not.toHaveProperty('Student');
 
-    const studentDB = new TripleStore({
+    const studentStore = new TripleStore({
       storage,
       tenantId: 'TEST',
       schema: { collections: { Student: StudentSchema }, version: 0 },
     });
-    const afterSchema = await studentDB.readSchema();
+    await studentStore.ensureInitializedSchema;
+    const { schema: afterSchema } = await readSchemaFromTripleStore(
+      studentStore
+    );
     expect(afterSchema?.collections).not.toHaveProperty('Task');
     expect(afterSchema?.collections).toHaveProperty('Student');
   });

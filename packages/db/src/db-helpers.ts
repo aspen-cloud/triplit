@@ -5,10 +5,11 @@ import {
   SessionVariableNotFoundError,
 } from './errors';
 import { QueryWhere, FilterStatement } from './query';
-import { Model, Models } from './schema';
+import { Model, Models, tuplesToSchema } from './schema';
 import type DB from './db';
 import type { DBTransaction } from './db-transaction';
 import { CollectionNameFromModels } from './db';
+import { TripleStore } from './triple-store';
 
 const ID_SEPARATOR = '#';
 
@@ -113,4 +114,18 @@ export async function applyRulesToEntity<
     return null;
   }
   return entity;
+}
+
+export async function getSchemaTriples(tripleStore: TripleStore) {
+  return tripleStore.findByEntity(appendCollectionToId('_metadata', '_schema'));
+}
+
+export async function readSchemaFromTripleStore(tripleSTores: TripleStore) {
+  const schemaTriples = await getSchemaTriples(tripleSTores);
+  const schema =
+    schemaTriples.length > 0 ? tuplesToSchema(schemaTriples) : undefined;
+  return {
+    schema,
+    schemaTriples,
+  };
 }

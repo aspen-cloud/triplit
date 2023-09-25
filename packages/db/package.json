@@ -12,6 +12,7 @@
       "require": "./dist/index.cjs"
     }
   },
+  "type": "module",
   "scripts": {
     "build": "yarn build:code && yarn build:types",
     "build:types": "yarn tsc --p tsconfig.build.json",
