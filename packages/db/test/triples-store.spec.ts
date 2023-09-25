@@ -8,7 +8,10 @@ import {
 import { Schema as S } from '../src/schema';
 import MemoryBTree from '../src/storage/memory-btree';
 import { IndexedDbStorage, MemoryStorage } from '../src';
-import { readSchemaFromTripleStore } from '../src/db-helpers';
+import {
+  overrideStoredSchema,
+  readSchemaFromTripleStore,
+} from '../src/db-helpers';
 
 // const storage = new InMemoryTupleStorage();
 const storage = new MemoryBTree();
@@ -189,60 +192,15 @@ describe('schema triple-store', () => {
     storage.wipe();
   });
 
-  it('defining a store with a schema should store schema', async () => {
-    const storeWithoutSchema = new TripleStore({
-      storage: new InMemoryTupleStorage(),
-      tenantId: 'TEST',
-    });
-    const storeWithSchema = new TripleStore({
-      storage: new InMemoryTupleStorage(),
-      tenantId: 'TEST',
-      schema: { collections: { Task: TaskSchema }, version: 0 },
-    });
-    const schemalessSchemaResp = await readSchemaFromTripleStore(
-      storeWithoutSchema
-    );
-    expect(schemalessSchemaResp.schema).toBeFalsy();
-    expect(schemalessSchemaResp.schemaTriples).toHaveLength(0);
-
-    await storeWithSchema.ensureInitializedSchema;
-    const storeWithSchemaSchemaResp = await readSchemaFromTripleStore(
-      storeWithSchema
-    );
-    expect(storeWithSchemaSchemaResp.schema).toBeTruthy();
-  });
-
-  it('defining a store with a schema should overwrite existing schema', async () => {
-    // Using same storage, schema should be overwritten
-    const storage = new InMemoryTupleStorage();
-    const taskStore = new TripleStore({
-      storage,
-      tenantId: 'TEST',
-      schema: { collections: { Task: TaskSchema }, version: 0 },
-    });
-    await taskStore.ensureInitializedSchema;
-    const { schema: beforeSchema } = await readSchemaFromTripleStore(taskStore);
-    expect(beforeSchema?.collections).toHaveProperty('Task');
-    expect(beforeSchema?.collections).not.toHaveProperty('Student');
-
-    const studentStore = new TripleStore({
-      storage,
-      tenantId: 'TEST',
-      schema: { collections: { Student: StudentSchema }, version: 0 },
-    });
-    await studentStore.ensureInitializedSchema;
-    const { schema: afterSchema } = await readSchemaFromTripleStore(
-      studentStore
-    );
-    expect(afterSchema?.collections).not.toHaveProperty('Task');
-    expect(afterSchema?.collections).toHaveProperty('Student');
-  });
-
-  it('should allow inserting valid triples', () => {
+  it('should allow inserting valid triples', async () => {
     const db = new TripleStore({
       storage,
       tenantId: 'TEST',
-      schema: { collections: { Task: TaskSchema }, version: 0 },
+      // schema: { collections: { Task: TaskSchema }, version: 0 },
+    });
+    await overrideStoredSchema(db, {
+      collections: { Task: TaskSchema },
+      version: 0,
     });
     const id = 'task-1234';
     expect(async () => {
@@ -267,7 +225,10 @@ describe('schema triple-store', () => {
     const db = new TripleStore({
       storage,
       tenantId: 'TEST',
-      schema: { collections: { Task: TaskSchema }, version: 0 },
+    });
+    await overrideStoredSchema(db, {
+      collections: { Task: TaskSchema },
+      version: 0,
     });
     const id = 'task-4321';
     // await db.ensureInitializedSchema;

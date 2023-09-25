@@ -13,6 +13,7 @@ import {
   InvalidFilterError,
   DBTransaction,
   InvalidSchemaPathError,
+  MemoryStorage,
 } from '../src';
 import { classes, students, departments } from './sample_data/school';
 import MemoryBTree from '../src/storage/memory-btree';
@@ -1676,7 +1677,7 @@ describe('database transactions', () => {
       },
     });
     // Adding this check to ensure the onInsert isn't called with schema/metadata triples
-    await db.tripleStore.ensureInitializedSchema;
+    await db.ensureMigrated;
     const insertSpy = vi.fn();
     db.tripleStore.onInsert(insertSpy);
     await db.transact(async (tx) => {
@@ -1811,6 +1812,42 @@ describe('schema changes', async () => {
     );
 
     // TODO: test data is actually dropped if we decide it should be
+  });
+
+  it('can override an existing schema', async () => {
+    const dataSource = new MemoryStorage();
+    const schemaOne = {
+      collections: {
+        students: {
+          attributes: S.Schema({
+            id: S.Number(),
+            name: S.String(),
+          }),
+        },
+      },
+    };
+    const schemaTwo = {
+      collections: {
+        products: {
+          attributes: S.Schema({
+            id: S.Number(),
+            name: S.String(),
+            price: S.Number(),
+          }),
+        },
+      },
+    };
+    const dbOne = new DB({ source: dataSource, schema: schemaOne });
+    await dbOne.ensureMigrated;
+    const beforeSchema = await dbOne.getSchema();
+    expect(beforeSchema).toBeDefined();
+    expect(beforeSchema?.collections?.students).toBeDefined();
+    const dbTwo = new DB({ source: dataSource, schema: schemaTwo });
+    await dbTwo.ensureMigrated;
+    const afterSchema = await dbTwo.getSchema();
+    expect(afterSchema).toBeDefined();
+    expect(afterSchema?.collections?.products).toBeDefined();
+    expect(afterSchema?.collections?.students).not.toBeDefined();
   });
 
   it.todo('can update attribute options');

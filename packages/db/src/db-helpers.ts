@@ -5,7 +5,7 @@ import {
   SessionVariableNotFoundError,
 } from './errors';
 import { QueryWhere, FilterStatement } from './query';
-import { Model, Models, tuplesToSchema } from './schema';
+import { Model, Models, schemaToTriples, tuplesToSchema } from './schema';
 import type DB from './db';
 import type { DBTransaction } from './db-transaction';
 import { CollectionNameFromModels } from './db';
@@ -128,4 +128,36 @@ export async function readSchemaFromTripleStore(tripleSTores: TripleStore) {
     schema,
     schemaTriples,
   };
+}
+
+export type StoreSchema<M extends Models<any, any> | undefined> =
+  M extends Models<any, any>
+    ? {
+        version: number;
+        collections: M;
+      }
+    : M extends undefined
+    ? undefined
+    : never;
+
+export async function overrideStoredSchema(
+  tripleStore: TripleStore,
+  schema: StoreSchema<Models<any, any>>
+) {
+  const existingTriples = await tripleStore.findByEntity(
+    appendCollectionToId('_metadata', '_schema')
+  );
+  await tripleStore.deleteTriples(existingTriples);
+
+  const triples = schemaToTriples(schema);
+  // TODO use tripleStore.setValues
+  const ts = await tripleStore.clock.getNextTimestamp();
+  const normalizedTriples = triples.map(([e, a, v]) => ({
+    id: e,
+    attribute: a,
+    value: v,
+    timestamp: ts,
+    expired: false,
+  }));
+  await tripleStore.insertTriples(normalizedTriples, false);
 }

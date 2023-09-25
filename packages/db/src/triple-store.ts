@@ -35,16 +35,6 @@ import {
 } from './errors';
 import { appendCollectionToId, readSchemaFromTripleStore } from './db-helpers';
 
-export type StoreSchema<M extends Models<any, any> | undefined> =
-  M extends Models<any, any>
-    ? {
-        version: number;
-        collections: M;
-      }
-    : M extends undefined
-    ? undefined
-    : never;
-
 // Value should be serializable, this is what goes into triples
 // Not to be confused with the Value type we define on queries
 export type Value = number | string | boolean | null;
@@ -576,11 +566,9 @@ export class TripleStore implements TripleStoreApi {
     AsyncTupleDatabaseClient<WithTenantIdPrefix<TupleIndex>>
   >;
   storageScope: string[];
-  private schema?: StoreSchema<Models<any, any>>;
   tupleStore: MultiTupleStore<TupleIndex>;
   clock: Clock;
   tenantId: string;
-  ensureInitializedSchema: Promise<void>;
   hooks: {
     before: ((
       triple: TripleRow[],
@@ -644,48 +632,8 @@ export class TripleStore implements TripleStoreApi {
       storage: normalizedStores,
     }).subspace([this.tenantId]) as MultiTupleStore<TupleIndex>;
 
-    /**
-     * Example of using beforeInsert hook to add additional indexes
-     */
-    // this.tupleStore.beforeInsert((tuple, tx) => {
-    //   const { key, value: metadata } = tuple;
-    //   if (key[0] === 'EAV') {
-    //     const [_eav, id, attribute, value, timestamp] = key as EAVIndex['key'];
-
-    //     tx.set(['AVE', attribute, value, id, timestamp], metadata);
-    //     tx.set(
-    //       ['clientTimestamp', timestamp[1], timestamp, id, attribute, value],
-    //       metadata
-    //     );
-    //   }
-    // });
-
     this.clock = clock ?? new MemoryClock();
     this.clock.assignToStore(this);
-
-    // If a schema is provided, overwrite the existing schema
-    this.ensureInitializedSchema = schema
-      ? this.overrideSchema(schema)
-      : Promise.resolve();
-  }
-
-  private async overrideSchema(schema: StoreSchema<Models<any, any>>) {
-    const existingTriples = await this.findByEntity(
-      appendCollectionToId('_metadata', '_schema')
-    );
-    await this.deleteTriples(existingTriples);
-
-    const triples = schemaToTriples(schema);
-    const ts = await this.clock.getNextTimestamp();
-    const normalizedTriples = triples.map(([e, a, v]) => ({
-      id: e,
-      attribute: a,
-      value: v,
-      timestamp: ts,
-      expired: false,
-    }));
-
-    return await this.insertTriples(normalizedTriples, false);
   }
 
   beforeInsert(
@@ -841,16 +789,12 @@ export class TripleStore implements TripleStoreApi {
   }
 
   async insertTriple(tripleRow: TripleRow) {
-    await this.ensureInitializedSchema;
     await this.transact(async (tx) => {
       await tx.insertTriple(tripleRow);
     });
   }
 
   async insertTriples(triplesInput: TripleRow[], shouldValidate = true) {
-    if (shouldValidate) {
-      await this.ensureInitializedSchema;
-    }
     await this.transact(async (tx) => {
       await tx.insertTriples(triplesInput, shouldValidate);
     });

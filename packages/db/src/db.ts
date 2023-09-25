@@ -33,6 +33,7 @@ import {
   replaceVariablesInQuery,
   mapFilterStatements,
   readSchemaFromTripleStore,
+  overrideStoredSchema,
 } from './db-helpers';
 
 export interface Rule<M extends Model<any>> {
@@ -171,7 +172,6 @@ export default class DB<M extends Models<any, any> | undefined> {
       throw new Error('Cannot provide both schema and migrations');
 
     // If a schema is provided, assume using schema but no migrations (keep at version 0)
-
     const tripleStoreSchema = schema
       ? { version: schema.version ?? 0, collections: schema.collections }
       : undefined;
@@ -183,14 +183,13 @@ export default class DB<M extends Models<any, any> | undefined> {
       clock,
     });
 
-    // TODO this is a hack to make sure the schema is initialized before any transaction is created
-    // we should be able to have this more cleanly handled in the Triple Store
-    this.ensureMigrated = Promise.all([
-      migrations
-        ? this.migrate(migrations, 'up').catch(() => {})
-        : Promise.resolve(),
-      this.tripleStore.ensureInitializedSchema,
-    ]);
+    this.ensureMigrated = migrations
+      ? this.migrate(migrations, 'up').catch((e) => {
+          console.error(e);
+        })
+      : tripleStoreSchema
+      ? overrideStoredSchema(this.tripleStore, tripleStoreSchema)
+      : Promise.resolve();
   }
 
   async getClientId() {
