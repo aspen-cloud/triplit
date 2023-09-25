@@ -7,6 +7,7 @@ import {
   UserTypeOptions,
   AttributeDefinition,
   getDefaultValuesForCollection,
+  timestampedObjectToPlainObject,
 } from './schema';
 import * as Document from './document';
 import { nanoid } from 'nanoid';
@@ -19,7 +20,7 @@ import CollectionQueryBuilder, {
   subscribe,
   subscribeTriples,
 } from './collection-query';
-import { Query, QueryWhere } from './query';
+import { Query, QueryWhere, entityToResultReducer } from './query';
 import MemoryStorage from './storage/memory-btree';
 import { InvalidMigrationOperationError, WriteRuleError } from './errors';
 import { Clock } from './clocks/clock';
@@ -239,8 +240,9 @@ export default class DB<M extends Models<any, any> | undefined> {
     storeScope?: { read: string[]; write: string[] }
   ) {
     await this.ensureMigrated;
+    const schema = await this.getSchema();
     return await this.tripleStore.transact(async (tripTx) => {
-      const tx = new DBTransaction<M>(tripTx, this.variables);
+      const tx = new DBTransaction<M>(tripTx, this.variables, schema);
       try {
         await callback(tx);
       } catch (e) {
@@ -490,8 +492,7 @@ export default class DB<M extends Models<any, any> | undefined> {
   }
 
   async dropAttribute(params: DropAttributeOperation[1]) {
-    await this.tripleStore.transact(async (tripTx) => {
-      const tx = new DBTransaction(tripTx);
+    await this.transact(async (tx) => {
       await tx.dropAttribute(params);
     });
   }

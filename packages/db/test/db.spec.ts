@@ -1715,6 +1715,27 @@ describe('schema changes', async () => {
     );
   });
 
+  it('can add a collection and observe changes in a transaction', async () => {
+    const db = new DB();
+    let txSchema;
+    await db.transact(async (tx) => {
+      expect(tx.schema).toBeUndefined();
+      const newCollection = {
+        name: 'students',
+        attributes: {
+          id: { type: 'number' },
+          name: { type: 'string' },
+        },
+      };
+      await tx.createCollection(newCollection);
+      txSchema = tx.schema;
+      expect(tx.schema).not.toBeUndefined();
+      expect(tx.schema).toHaveProperty('collections');
+      expect(tx.schema?.collections).toHaveProperty(newCollection.name);
+    });
+    expect(await db.getSchema()).toEqual(txSchema);
+  });
+
   it('can drop a collection definition from the schema', async () => {
     const schema = {
       collections: {
@@ -2771,7 +2792,6 @@ describe('default values in a schema', () => {
           'todo-1'
         );
         const result = await db.fetchById('Todos', 'todo-1');
-        console.log('result', result);
         expect(result).toHaveProperty('completed');
         expect(result.completed).toBe(false);
       }

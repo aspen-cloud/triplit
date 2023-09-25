@@ -45,7 +45,7 @@ export function entityToResultReducer<M extends Model<any>>(
   entity: TypeFromModel<M>,
   triple: TripleRow
 ) {
-  // TODO support tombestones and timestamps
+  // TODO support tombstones and timestamps
   const { attribute, value, timestamp, expired: isExpired } = triple;
   if (isExpired) return entity;
   if (attribute[0] === '_collection')
@@ -64,22 +64,6 @@ export function entityToResultReducer<M extends Model<any>>(
       }
     }
   }
-
-  // const leaf = path.at(-1);
-  // const maybeNum = Number(leaf);
-  // if (isNaN(maybeNum)) {
-  //   updateEntityAtPath(entity, path, value, timestamp);
-  // } else {
-  //   console.log('num path', entity, path, maybeNum);
-  //   // check if the path is an array
-  //   const pointerToParent = '/' + path.slice(0, -1).join('/');
-  //   const existingParent = ValuePointer.Get(entity, pointerToParent);
-  //   if (!existingParent) {
-  //     ValuePointer.Set(entity, pointerToParent, []);
-  //   }
-  //   updateEntityAtPath(entity, path, maybeNum, timestamp);
-  // }
-  // console.log('updating', path, value, JSON.stringify(entity, null, 2));
   updateEntityAtPath(entity, path, value, timestamp);
   return entity;
 }

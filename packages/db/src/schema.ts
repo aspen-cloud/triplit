@@ -340,7 +340,8 @@ export function timestampedObjectToPlainObject<O extends TimestampedObject>(
   obj: O
 ): UnTimestampedObject<O> {
   if (typeof obj !== 'object') {
-    throw new Error(`Can't untimestamp a non-object: ${obj}`);
+    // throw new Error(`Can't untimestamp a non-object: ${obj}`);
+    return obj;
   }
   if (isTimestampedVal(obj)) {
     return obj[0];
@@ -388,7 +389,7 @@ export type SchemaDefinition = {
   collections: CollectionsDefinition;
 };
 
-function collectionsDefinitionToSchema(
+export function collectionsDefinitionToSchema(
   collections: CollectionsDefinition
 ): Models<any, any> {
   const result: Models<any, any> = {};

@@ -8,6 +8,9 @@ import {
   SetProxy,
   AttributeDefinition,
   getDefaultValuesForCollection,
+  TimestampedObject,
+  timestampedObjectToPlainObject,
+  collectionsDefinitionToSchema,
 } from './schema';
 import * as Document from './document';
 import { nanoid } from 'nanoid';
@@ -38,19 +41,39 @@ import {
   appendCollectionToId,
   replaceVariablesInQuery,
 } from './db-helpers';
-import { Query } from './query';
-import { toBuilder } from './utils/builder';
+import { Query, entityToResultReducer } from './query';
 import { objectToTuples } from './utils';
 
 export class DBTransaction<M extends Models<any, any> | undefined> {
+  schema: Models<any, any> | undefined;
+  private _schema: TimestampedObject | undefined;
   constructor(
     readonly storeTx: TripleStoreTransaction,
-    readonly variables?: Record<string, any>
-  ) {}
+    readonly variables?: Record<string, any>,
+    schema?: Models<any, any>
+  ) {
+    this.schema = schema;
 
-  // get schema() {
-  //   return this.storeTx.schema?.collections;
-  // }
+    this.storeTx.beforeInsert(async (trips) => {
+      const metadataTriples = trips.filter(
+        ({ attribute }) => attribute[0] === '_metadata'
+      );
+      if (metadataTriples.length === 0) return;
+      this._schema = metadataTriples.reduce(
+        entityToResultReducer,
+        this._schema ?? {}
+      );
+      const schemaDefinition = timestampedObjectToPlainObject(this._schema);
+      console.log('schemaDefinition', schemaDefinition);
+      this.schema = {
+        version: schemaDefinition.version ?? 0,
+        collections:
+          schemaDefinition.collections &&
+          collectionsDefinitionToSchema(schemaDefinition.collections),
+      };
+    });
+  }
+
   async getCollectionSchema<CN extends CollectionNameFromModels<M>>(
     collectionName: CN
   ) {
@@ -80,7 +103,8 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
   }
 
   async getSchema() {
-    return this.storeTx.readSchema();
+    // return this.storeTx.readSchema();
+    return this.schema;
   }
 
   async commit() {
