@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { Schema as S, getSchemaFromPath } from '../src/schema';
+import { InvalidSchemaPathError } from '../src';
 
 describe('Schema', () => {
   const StudentSchema = S.Schema({
@@ -8,14 +9,19 @@ describe('Schema', () => {
     graduationYear: S.Number(),
   });
   it('should prevent an invalid accession in a schema', () => {
-    expect(() => getSchemaFromPath(StudentSchema, ['grade', 'foo'])).toThrow();
-    expect(() => getSchemaFromPath(S.String(), ['name'])).toThrow();
+    expect(() => getSchemaFromPath(StudentSchema, ['grade', 'foo'])).toThrow(
+      InvalidSchemaPathError
+    );
+    expect(() => getSchemaFromPath(S.String(), ['name'])).toThrowError(
+      InvalidSchemaPathError
+    );
   });
-  it('should only allow strings and numbers as set types', () => {
-    expect(() => S.Set(S.Number())).not.toThrowError();
-    expect(() => S.Set(S.String())).not.toThrowError();
-    expect(() => S.Set(S.Boolean())).toThrowError();
-    expect(() => S.Set(S.Set())).toThrowError();
-    expect(() => S.Set(S.Schema())).toThrowError();
+  it('should only allow value types as set types', () => {
+    expect(() => S.Schema({ foo: S.Set(S.Number()) })).not.toThrowError();
+    expect(() => S.Schema({ foo: S.Set(S.String()) })).not.toThrowError();
+    expect(() => S.Schema({ foo: S.Set(S.Boolean()) })).not.toThrowError();
+    expect(() => S.Schema({ foo: S.Set(S.Date()) })).not.toThrowError();
+    expect(() => S.Schema({ foo: S.Set(S.Set()) })).toThrowError();
+    expect(() => S.Schema({ foo: S.Set(S.Schema()) })).toThrowError();
   });
 });

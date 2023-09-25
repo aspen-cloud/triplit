@@ -2,7 +2,6 @@ import { ValuePointer } from '@sinclair/typebox/value';
 import Builder from './utils/builder';
 import {
   Query,
-  Operator,
   FilterStatement,
   FilterGroup,
   entityToResultReducer,
@@ -12,9 +11,10 @@ import {
 import {
   getSchemaFromPath,
   initialize,
+  JSONTypeFromModel,
   Model,
-  timestampedObjectToPlainObject,
-  TypeFromModel,
+  // timestampedObjectToPlainObject,
+  TimestampedTypeFromModel,
   UnTimestampedObject,
 } from './schema';
 import { Timestamp, timestampCompare } from './timestamp';
@@ -33,10 +33,12 @@ import {
   appendCollectionToId,
   splitIdParts,
 } from './db-helpers';
+import { Operator } from './data-types/base';
 
-export default function CollectionQueryBuilder<
-  M extends Model<any> | undefined
->(collectionName: string, params?: Query<M>) {
+export default function CollectionQueryBuilder<M extends Model | undefined>(
+  collectionName: string,
+  params?: Query<M>
+) {
   // TODO fixup ts so that select/where are actually optional
   const query: CollectionQuery<M> = {
     collectionName,
@@ -51,14 +53,14 @@ export default function CollectionQueryBuilder<
   });
 }
 
-export type CollectionQuery<M extends Model<any> | undefined> = Query<M> & {
+export type CollectionQuery<M extends Model | undefined> = Query<M> & {
   collectionName: string;
 };
 
 export type FetchResult<C extends CollectionQuery<any>> =
   C extends CollectionQuery<infer M>
-    ? M extends Model<any>
-      ? Map<string, UnTimestampedObject<TypeFromModel<M>>>
+    ? M extends Model
+      ? Map<string, JSONTypeFromModel<M>>
       : M extends undefined
       ? Map<string, any>
       : never
@@ -66,7 +68,7 @@ export type FetchResult<C extends CollectionQuery<any>> =
 
 export interface FetchOptions {
   includeTriples?: boolean;
-  schema?: Model<any>;
+  schema?: Model;
 }
 
 /**
@@ -105,11 +107,8 @@ export async function fetch<Q extends CollectionQuery<any>>(
       return includeTriples ? { results, triples } : results;
     }
     let updatedEntity = entity;
-    if (schema) {
-      updatedEntity = deserializeDatesInEntity(updatedEntity, schema);
-    }
     if (!includeTriples)
-      updatedEntity = timestampedObjectToPlainObject(updatedEntity);
+      updatedEntity = deserializeEntity(updatedEntity, schema);
     const results = new Map([
       [query.entityId, updatedEntity],
     ]) as FetchResult<Q>;
@@ -220,29 +219,31 @@ export async function fetch<Q extends CollectionQuery<any>>(
   return new Map(
     entities.map(([id, entity]) => [
       id,
-      deserializeDatesInEntity(timestampedObjectToPlainObject(entity), schema),
+      // TODO: deserialize at the right time...
+      deserializeEntity(entity, schema),
     ])
   ) as FetchResult<Q>;
 }
 
-function deserializeDatesInEntity(entity: any, schema?: Model<any>) {
-  if (!schema) return entity;
+// Go from CRDT representation to client representation
+function deserializeEntity<M extends Model>(
+  entity: TimestampedTypeFromModel<M>,
+  schema?: M
+) {
   return Object.entries(entity).reduce((acc, [key, value]) => {
-    const dataType = schema?.properties?.[key]?.['x-serialized-type'];
-    if (dataType === 'date') {
-      // we have a timestamped entity
-      if (value instanceof Array && value.length === 2) {
-        acc[key] = [
-          typeof value[0] === 'string'
-            ? new Date(value[0] as string)
-            : value[0],
-          value[1],
-        ];
-      } else if (typeof value === 'string') {
-        acc[key] = new Date(value as string);
-      } else acc[key] = value;
-    } else {
-      acc[key] = value;
+    const dataType = schema?.[key];
+    if (dataType) {
+      acc[key] = dataType.deserializeCRDT(value);
+    }
+    // TODO maybe have a datatype for schemaless?
+    // This feels dirty, need a way to support schemaless nested props
+    else {
+      // Array should be leaf since deserialization happens to timestamped values [value, timestamp]
+      if (Array.isArray(value)) {
+        acc[key] = value[0];
+      } else {
+        acc[key] = deserializeEntity(value, schema);
+      }
     }
     return acc;
   }, {} as any);
@@ -254,17 +255,17 @@ export function doesEntityObjMatchWhere<Q extends CollectionQuery<any>>(
   schema?: CollectionQuerySchema<Q>
 ) {
   const basicStatements = where.filter(
-    (statement): statement is FilterStatement<Model<any>> =>
+    (statement): statement is FilterStatement<Model> =>
       statement instanceof Array
   );
 
   const orStatements = where.filter(
-    (statement): statement is FilterGroup<Model<any>> =>
+    (statement): statement is FilterGroup<Model> =>
       'mod' in statement && statement.mod === 'or'
   );
 
   const andStatements = where.filter(
-    (statement): statement is FilterGroup<Model<any>> =>
+    (statement): statement is FilterGroup<Model> =>
       'mod' in statement && statement.mod === 'and'
   );
   const matchesBasicFilters = entitySatisfiesAllFilters(
@@ -298,8 +299,8 @@ export function doesEntityObjMatchWhere<Q extends CollectionQuery<any>>(
  */
 function entitySatisfiesAllFilters(
   entity: any,
-  filters: FilterStatement<Model<any>>[],
-  schema?: Model<any>
+  filters: FilterStatement<Model>[],
+  schema?: Model
 ): boolean {
   const groupedFilters: Map<string, [Operator, any][]> = filters.reduce(
     (groups, statement) => {
@@ -320,7 +321,7 @@ function entitySatisfiesAllFilters(
       const dataType = schema && getSchemaFromPath(schema, path.split('.'));
       return filters.every(([op, filterValue]) => {
         // If we have a schema handle specific cases
-        if (dataType && dataType['x-crdt-type'] === 'Set') {
+        if (dataType && dataType.type === 'set') {
           return satisfiesSetFilter(entity, path, op, filterValue);
         }
         // Use register as default
@@ -330,6 +331,7 @@ function entitySatisfiesAllFilters(
   );
 }
 
+// TODO: this should probably go into the set defintion
 // TODO: handle possible errors with sets
 function satisfiesSetFilter(
   entity: any,
@@ -461,7 +463,7 @@ function subscribeSingleEntity<Q extends CollectionQuery<any>>(
         : null;
       triples = fetchResult.triples;
       const results = new Map(
-        entity ? [[entityId, timestampedObjectToPlainObject(entity)]] : []
+        entity ? [[entityId, deserializeEntity(entity, schema)]] : []
       ) as FetchResult<Q>;
 
       onResults([results, triples]);
@@ -494,7 +496,7 @@ function subscribeSingleEntity<Q extends CollectionQuery<any>>(
             entity &&
             doesEntityObjMatchWhere(entity, query.where ?? [], schema)
           ) {
-            results.set(entityId, timestampedObjectToPlainObject(entity));
+            results.set(entityId, deserializeEntity(entity, schema));
           } else {
             results.delete(entityId);
           }
@@ -523,7 +525,7 @@ function subscribeResultsAndTriples<Q extends CollectionQuery<any>>(
   query: Q,
   onResults: (args: [results: FetchResult<Q>, newTriples: TripleRow[]]) => void,
   onError?: (error: any) => void,
-  schema?: Model<any>
+  schema?: Model
 ) {
   const order = query.order;
   const limit = query.limit;
@@ -541,7 +543,7 @@ function subscribeResultsAndTriples<Q extends CollectionQuery<any>>(
         new Map(
           [...results].map(([id, entity]) => [
             id,
-            timestampedObjectToPlainObject(entity),
+            deserializeEntity(entity, schema),
           ])
         ) as FetchResult<Q>,
         triples,
@@ -568,9 +570,10 @@ function subscribeResultsAndTriples<Q extends CollectionQuery<any>>(
                 appendCollectionToId(query.collectionName, entity)
               )
             );
+            // TODO: there is some slight inconsistency here between fetch and subscribe...this will assign default values, particularly to sets
             const entityObj = entityTriples.reduce(
               entityToResultReducer,
-              schema ? initialize(schema) : {}
+              {} //schema ? initialize(schema) : {}
             );
             const isInCollection =
               entityObj['_collection'] &&
@@ -666,7 +669,7 @@ function subscribeResultsAndTriples<Q extends CollectionQuery<any>>(
             new Map(
               [...results].map(([id, entity]) => [
                 id,
-                timestampedObjectToPlainObject(entity),
+                deserializeEntity(entity, schema),
               ])
             ) as FetchResult<Q>,
             triples,

@@ -46,11 +46,11 @@ export {
   schemaToJSON,
   timestampedObjectToPlainObject,
 } from './schema';
-export type { TObject, TypeFromModel } from './schema';
 export type {
-  AttributeDefinition,
-  CollectionDefinition,
-  CollectionsDefinition,
+  TObject,
+  TimestampedTypeFromModel as TypeFromModel, // TODO: dont alias
+} from './schema';
+export type {
   JSONTypeFromModel,
   ProxyTypeFromModel,
   Model,
@@ -58,6 +58,11 @@ export type {
   TimestampedObject,
   UnTimestampedObject,
 } from './schema';
+export type {
+  AttributeDefinition,
+  CollectionDefinition,
+  CollectionsDefinition,
+} from './data-types/serialization';
 export { timestampCompare } from './timestamp';
 export type { Timestamp } from './timestamp';
 export { DurableClock } from './clocks/durable-clock';

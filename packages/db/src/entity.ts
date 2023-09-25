@@ -1,7 +1,8 @@
 import { Model } from './schema';
 import { TripleStore } from './triple-store';
 
-export default class Entity<M extends Model<any>> {
+// TODO: deprecated?
+export default class Entity<M extends Model> {
   store: TripleStore;
   collectionName: string;
   model: M;
@@ -23,8 +24,8 @@ export default class Entity<M extends Model<any>> {
     this.id = entityId;
   }
 
-  prop(propPath: keyof M['properties']) {
-    if (this.model.properties[propPath]['x-crdt-type'] === 'Set') {
+  prop(propPath: keyof M) {
+    if (this.model[propPath].type === 'set') {
       return {
         add: () => {},
         remove: () => {},

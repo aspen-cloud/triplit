@@ -501,12 +501,11 @@ interface DBOptions<M extends Models<any, any> | undefined> {
 
 type SyncStatus = 'pending' | 'confirmed' | 'all';
 
-export type ClientQuery<M extends Model<any> | undefined> =
-  CollectionQuery<M> & {
-    syncStatus?: SyncStatus;
-  };
+export type ClientQuery<M extends Model | undefined> = CollectionQuery<M> & {
+  syncStatus?: SyncStatus;
+};
 
-function ClientQueryBuilder<M extends Model<any> | undefined>(
+function ClientQueryBuilder<M extends Model | undefined>(
   collectionName: string,
   params?: Query<M> & { syncStatus?: SyncStatus }
 ) {
@@ -643,10 +642,10 @@ export class TriplitClient<M extends Models<any, any> | undefined = undefined> {
     return ClientQueryBuilder<ModelFromModels<M, CN>>(collectionName as string);
   }
 
-  async fetch<
-    CN extends CollectionNameFromModels<M>,
-    CQ extends ClientQuery<ModelFromModels<M, CN>>
-  >(query: CQ, options?: FetchOptions) {
+  async fetch<CQ extends ClientQuery<ModelFromModels<M, any>>>(
+    query: CQ,
+    options?: FetchOptions
+  ) {
     const opts = options ?? this.defaultFetchOptions.fetch;
     if (opts.policy === 'local-only') {
       return this.fetchLocal(query);
@@ -688,10 +687,9 @@ export class TriplitClient<M extends Models<any, any> | undefined = undefined> {
     throw new UnrecognizedFetchPolicyError((opts as FetchOptions).policy);
   }
 
-  private fetchLocal<
-    CN extends CollectionNameFromModels<M>,
-    CQ extends ClientQuery<ModelFromModels<M, CN>>
-  >(query: CQ) {
+  private fetchLocal<CQ extends ClientQuery<ModelFromModels<M, any>>>(
+    query: CQ
+  ) {
     const scope = parseScope(query);
     return this.db.fetch(query, { scope, skipRules: true });
   }
@@ -707,9 +705,9 @@ export class TriplitClient<M extends Models<any, any> | undefined = undefined> {
     return results.get(id);
   }
 
-  insert(
-    collectionName: CollectionNameFromModels<M>,
-    object: JSONTypeFromModel<M[typeof collectionName]>,
+  insert<CN extends CollectionNameFromModels<M>>(
+    collectionName: CN,
+    object: JSONTypeFromModel<ModelFromModels<M, CN>>,
     id?: string
   ) {
     return this.db.insert(collectionName, object, id, {

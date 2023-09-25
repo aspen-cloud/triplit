@@ -1,33 +1,50 @@
-// @ts-nocheck
-import { DataType } from './base';
-import { Schema as S } from '../schema';
-import { Attribute } from '../triple-store';
+import { TimestampType, ValueType } from './base';
+import { CollectionInterface } from './collection';
+import { ValueSchemaTypes } from './serialization';
+import { ExtractDeserializedType } from './type';
 
-// Something weird is going on here?
-// Possibly a circular reference? Sometimes S is undefined
-const SetStructure = S.Set;
+const SET_OPERATORS = ['=', '!='] as const;
+type SetOperators = typeof SET_OPERATORS;
 
-const SetType: DataType<Set<any>, ReturnType<typeof SetStructure>> = {
-  fromJSON(val: Set<string>) {
-    // NOTE: Previously this returned an object from entries, but that loses some information as all keys are converted to strings
-    // This caused query issues down the line when queries expecting numbers were searching over strings and failing
-
-    return new Map(Array.from(val).map((item) => [item, true]));
-  },
-  toJSON() {
-    throw new Error('Function not implemented.');
-  },
-  internalStructure: () => SetStructure,
-  operations: {
-    add: (value: any) => {
-      const attributeValuePairs = [[[value], true] as [Attribute, boolean]];
-      return attributeValuePairs;
+export function SetType<Of extends ValueType<any>>(
+  of: Of
+): CollectionInterface<
+  'set',
+  Set<ExtractDeserializedType<Of>>,
+  Record<string, boolean>,
+  Record<string, [boolean, TimestampType]>, // TODO: should be based on the type of the key
+  SetOperators
+> {
+  if (!ValueSchemaTypes.includes(of.type))
+    throw new Error('Invalid set type: ' + of.type); // TODO: triplit error
+  if (of.options?.nullable) throw new Error('Set types cannot be nullable'); // TODO: triplit error
+  return {
+    type: 'set',
+    of,
+    supportedOperations: SET_OPERATORS,
+    toJSON() {
+      const json = { type: this.type, of: this.of.toJSON() };
+      return json;
     },
-    remove: (value: any) => {
-      const attributeValuePairs = [[[value], false] as [Attribute, boolean]];
-      return attributeValuePairs;
+    serialize(val) {
+      return [...val.values()].reduce((acc, key) => {
+        return { ...acc, [key as string]: true };
+      }, {});
     },
-  },
-};
-
-export default SetType;
+    deserialize(val: any) {
+      return val;
+    },
+    default() {
+      return new Set();
+    },
+    deserializeCRDT(val) {
+      return Object.entries(val)
+        .filter(([_k, v]) => !!v[0])
+        .map(([k, _v]) => this.of.fromString(k)); // TODO: figure out proper set deserialzied type
+    },
+    validate(_val: any) {
+      throw new Error('TODO: Set validation');
+    },
+  };
+}
+export type SetType<Of extends ValueType<any>> = ReturnType<typeof SetType<Of>>;

@@ -1,11 +1,30 @@
-import { EAV } from './triple-store';
+import { Attribute, EAV, Value } from './triple-store';
 import { TuplePrefix } from './utility-types';
 
 function setToJSON(val: Set<string>) {
   // NOTE: Previously this returned an object from entries, but that loses some information as all keys are converted to strings
   // This caused query issues down the line when queries expecting numbers were searching over strings and failing
 
-  return new Map(Array.from(val).map((item) => [item, true]));
+  return new Map(Array.from(val).map((item) => [toSerializable(item), true]));
+}
+
+export function serializedItemToTuples(
+  object: any,
+  prefix: Attribute = []
+): [Attribute, Value][] {
+  if (object == null || typeof object !== 'object') {
+    return [[prefix, object as Value]];
+  }
+  // Although we dont strictly support arrays, we have them in schema rules
+  // Currently need a way to serialize them...so we need to handle arrays
+  if (Array.isArray(object)) {
+    return object.flatMap((val, i) =>
+      serializedItemToTuples(val, [...prefix, i])
+    );
+  }
+  return Object.keys(object).flatMap((key) =>
+    serializedItemToTuples(object[key], [...prefix, key])
+  );
 }
 
 // TODO: add tests for Document.insert (notably for insert Set<number> or a non-string Set)
@@ -18,6 +37,7 @@ export function objectToTuples(
   }
   if (object instanceof Date)
     return [[...prefix, object.toISOString() as string]];
+
   // Maybe we support Maps in the future, for now this is secretly a helper for Sets
   if (object instanceof Map) {
     return [...object.entries()].flatMap(([key, val]) =>
@@ -26,6 +46,10 @@ export function objectToTuples(
   }
   if (object instanceof Set) {
     const normalizedObj = setToJSON(object);
+    // TEMPORARILY USE THIS TO RESOLVE ISSUE WITH EMPTY SETS
+    // Will unify implementations with refactor
+    if (normalizedObj.size === 0)
+      return objectToTuples(new Map([['_', false]]), prefix);
     return objectToTuples(normalizedObj, prefix);
   }
   if (object instanceof Array) {
@@ -34,6 +58,15 @@ export function objectToTuples(
   return Object.keys(object).flatMap((key) =>
     objectToTuples(object[key], [...prefix, key])
   );
+}
+
+// TODO: go deeper on proper inserts
+function toSerializable(val: any) {
+  if (val == null || typeof val !== 'object') {
+    return val;
+  }
+  if (val instanceof Date) return val.toISOString();
+  throw new Error('Unable to serialize value:', val);
 }
 
 export function triplesToObject<T>(triples: TuplePrefix<EAV>[]) {

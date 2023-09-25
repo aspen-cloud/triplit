@@ -1,48 +1,37 @@
 import { EAV, TripleRow, TripleStore } from './triple-store';
-import {
-  ProxyTypeFromModel,
-  Model,
-  Models,
-  objectToTimestampedObject,
-  UserTypeOptions,
-  AttributeDefinition,
-  getDefaultValuesForCollection,
-  timestampedObjectToPlainObject,
-  tuplesToSchema,
-} from './schema';
-import * as Document from './document';
-import { nanoid } from 'nanoid';
+import { ProxyTypeFromModel, Model, Models, JSONTypeFromModel } from './schema';
 import { AsyncTupleStorageApi } from 'tuple-database';
 import CollectionQueryBuilder, {
   CollectionQuery,
-  doesEntityObjMatchWhere,
   fetch,
   FetchResult,
   subscribe,
   subscribeTriples,
 } from './collection-query';
-import { Query, QueryWhere, entityToResultReducer } from './query';
+import { Query, QueryWhere } from './query';
 import MemoryStorage from './storage/memory-btree';
-import { InvalidMigrationOperationError, WriteRuleError } from './errors';
+import { InvalidMigrationOperationError } from './errors';
 import { Clock } from './clocks/clock';
 
 import { DBTransaction } from './db-transaction';
 import {
   appendCollectionToId,
-  validateExternalId,
   replaceVariablesInQuery,
   mapFilterStatements,
   readSchemaFromTripleStore,
   overrideStoredSchema,
-  validateTriple,
 } from './db-helpers';
+import {
+  AttributeDefinition,
+  UserTypeOptions,
+} from './data-types/serialization';
 
-export interface Rule<M extends Model<any>> {
+export interface Rule<M extends Model> {
   filter: QueryWhere<M>;
   description?: string;
 }
 
-export interface CollectionRules<M extends Model<any>> {
+export interface CollectionRules<M extends Model> {
   read?: Rule<M>[];
   write?: Rule<M>[];
   // insert?: Rule<M>[];
@@ -110,7 +99,7 @@ const DEFAULT_STORE_KEY = 'default';
 
 export type CollectionFromModels<
   M extends Models<any, any> | undefined,
-  CN extends CollectionNameFromModels<M> = CollectionNameFromModels<M>
+  CN extends CollectionNameFromModels<M> = any
 > = M extends Models<any, any>
   ? M[CN]
   : M extends undefined
@@ -119,7 +108,7 @@ export type CollectionFromModels<
 
 export type ModelFromModels<
   M extends Models<any, any> | undefined,
-  CN extends CollectionNameFromModels<M> = CollectionNameFromModels<M>
+  CN extends CollectionNameFromModels<M> = any
 > = M extends Models<any, any>
   ? M[CN]['attributes']
   : M extends undefined
@@ -224,6 +213,7 @@ export default class DB<M extends Models<any, any> | undefined> {
 
   static ABORT_TRANSACTION = Symbol('abort transaction');
 
+  // TODO: move to shared method with db-transaction
   private addReadRulesToQuery<Q extends CollectionQuery<ModelFromModels<M>>>(
     query: Q,
     collection: CollectionFromModels<M>
@@ -260,7 +250,7 @@ export default class DB<M extends Models<any, any> | undefined> {
     this.variables = { ...this.variables, ...variables };
   }
 
-  async fetch<Q extends CollectionQuery<ModelFromModels<M>>>(
+  async fetch<Q extends CollectionQuery<ModelFromModels<M, any>>>(
     query: Q,
     { scope, skipRules = false }: FetchOptions = {}
   ) {
@@ -330,9 +320,9 @@ export default class DB<M extends Models<any, any> | undefined> {
     return result.has(id) ? result.get(id) : null;
   }
 
-  async insert(
-    collectionName: CollectionNameFromModels<M>,
-    doc: any,
+  async insert<CN extends CollectionNameFromModels<M>>(
+    collectionName: CN,
+    doc: JSONTypeFromModel<ModelFromModels<M, CN>>,
     id?: string,
     storeScope?: { read: string[]; write: string[] }
   ) {

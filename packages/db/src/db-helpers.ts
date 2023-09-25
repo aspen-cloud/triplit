@@ -20,7 +20,7 @@ import type DB from './db';
 import type { DBTransaction } from './db-transaction';
 import { CollectionNameFromModels } from './db';
 import { Attribute, TripleStore, Value } from './triple-store';
-import { Value as SchemaValue } from '@sinclair/typebox/value';
+import { ValueSchemaTypes } from './data-types/serialization';
 
 const ID_SEPARATOR = '#';
 
@@ -50,9 +50,10 @@ export function stripCollectionFromId(id: string): string {
   return entityId;
 }
 
-export function replaceVariablesInFilterStatements<
-  M extends Model<any> | undefined
->(statements: QueryWhere<M>, variables: Record<string, any>): QueryWhere<M> {
+export function replaceVariablesInFilterStatements<M extends Model | undefined>(
+  statements: QueryWhere<M>,
+  variables: Record<string, any>
+): QueryWhere<M> {
   return statements.map((filter) => {
     if (!(filter instanceof Array)) {
       filter.filters = replaceVariablesInFilterStatements(
@@ -77,7 +78,7 @@ export function replaceVariablesInQuery<
   return { ...query, where };
 }
 
-export function mapFilterStatements<M extends Model<any> | undefined>(
+export function mapFilterStatements<M extends Model | undefined>(
   statements: QueryWhere<M>,
   mapFunction: (statement: FilterStatement<M>) => FilterStatement<M>
 ): QueryWhere<M> {
@@ -191,24 +192,23 @@ export function validateTriple(
 
   const model = schema[modelName];
   if (!model) {
-    console.log('model not found', schema);
     throw new ModelNotFoundError(modelName as string, Object.keys(schema));
   }
 
-  const clockedSchema = getSchemaFromPath(model.attributes, path);
+  const valueSchema = getSchemaFromPath(model.attributes, path);
 
   // We expect you to set values at leaf nodes
-  // Our leafs should be registers, so use that as check
-  const isLeaf = clockedSchema['x-crdt-type'] === 'Register';
+  // Our leafs should be value types, so use that as check
+  const isLeaf = (ValueSchemaTypes as unknown as string[]).includes(
+    valueSchema.type
+  );
   if (!isLeaf)
     throw new InvalidSchemaPathError(
       path as string[],
       'Cannot set the value of a non leaf node in the schema. For example, you may be attempting to set a value on a record type.'
     );
-
-  const valueSchema = clockedSchema.items[0];
   // Leaf values are an array [value, timestamp], so check value
-  if (!SchemaValue.Check(valueSchema, value))
+  if (!valueSchema.validate(value))
     throw new ValueSchemaMismatchError(
       modelName as string,
       attribute as string[],

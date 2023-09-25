@@ -1,17 +1,17 @@
-import { TripleStoreTransaction } from './triple-store';
+import { EAV, TripleRow, TripleStoreTransaction } from './triple-store';
 import {
   getSchemaFromPath,
   ProxyTypeFromModel,
   Model,
   Models,
-  objectToTimestampedObject,
   SetProxy,
   getDefaultValuesForCollection,
   TimestampedObject,
   timestampedObjectToPlainObject,
   collectionsDefinitionToSchema,
+  JSONTypeFromModel,
+  serializeClientModel,
 } from './schema';
-import * as Document from './document';
 import { nanoid } from 'nanoid';
 import CollectionQueryBuilder, {
   CollectionQuery,
@@ -39,8 +39,8 @@ import {
   replaceVariablesInQuery,
   validateTriple,
 } from './db-helpers';
-import { Query, entityToResultReducer } from './query';
-import { objectToTuples } from './utils';
+import { Query, constructEntity, entityToResultReducer } from './query';
+import { serializedItemToTuples } from './utils';
 
 export class DBTransaction<M extends Models<any, any> | undefined> {
   schema: Models<any, any> | undefined;
@@ -61,6 +61,7 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
         entityToResultReducer,
         this._schema ?? {}
       );
+      // TODO: schema triples and type?
       const schemaDefinition = timestampedObjectToPlainObject(this._schema);
       this.schema = {
         version: schemaDefinition.version ?? 0,
@@ -89,7 +90,8 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
   async getCollectionSchema<CN extends CollectionNameFromModels<M>>(
     collectionName: CN
   ) {
-    const { collections } = (await this.getSchema()) ?? {};
+    const res = await this.getSchema();
+    const { collections } = res ?? {};
     if (!collections || !collections[collectionName]) return undefined;
     // TODO: i think we need some stuff in the triple store...
     const collectionSchema = collections[
@@ -124,28 +126,56 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
     await this.storeTx.cancel();
   }
 
-  async insert(
-    collectionName: CollectionNameFromModels<M>,
-    doc: any,
+  async insert<CN extends CollectionNameFromModels<M>>(
+    collectionName: CN,
+    doc: JSONTypeFromModel<ModelFromModels<M, CN>>,
     id?: string
   ) {
+    // TODO: confirm if collectionName is required (validate if it is)
     if (id) {
       const validationError = validateExternalId(id);
       if (validationError) throw validationError;
     }
     const collection = await this.getCollectionSchema(collectionName);
-    if (collection) {
-      const collectionDefaults = getDefaultValuesForCollection(collection);
-      doc = { ...collectionDefaults, ...doc };
-    }
+
+    // serialize the doc values
+    const serializedDoc = serializeClientModel(doc, collection?.attributes);
+
+    // Append defaults
+    const fullDoc = collection
+      ? {
+          ...getDefaultValuesForCollection(collection),
+          ...serializedDoc,
+        }
+      : serializedDoc;
+
+    // create triples
+    const timestamp = await this.storeTx.getTransactionTimestamp();
+    const avTuples = serializedItemToTuples(fullDoc);
+    const storeId = appendCollectionToId(collectionName, id ?? nanoid());
+    const triples: TripleRow[] = avTuples.map<TripleRow>(
+      ([attribute, value]) => ({
+        id: storeId,
+        attribute: [collectionName, ...attribute],
+        value: value,
+        timestamp,
+        expired: false,
+      })
+    );
+    triples.push({
+      id: storeId,
+      attribute: ['_collection'],
+      value: collectionName,
+      timestamp,
+      expired: false,
+    });
+
+    // check rules (Could also be done after insertion)
     if (collection?.rules?.write?.length) {
       const filters = collection.rules.write.flatMap((r) => r.filter);
       let query = { where: filters } as CollectionQuery<ModelFromModels<M>>;
       query = replaceVariablesInQuery(this, query);
-      // TODO there is probably a better way to to this
-      // rather than converting to timestamped object check to
-      // validate the where filter
-      const timestampDoc = objectToTimestampedObject(doc);
+      const timestampDoc = constructEntity(triples, storeId);
       const satisfiedRule = doesEntityObjMatchWhere(
         timestampDoc,
         query.where,
@@ -156,12 +186,9 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
         throw new WriteRuleError(`Insert does not match write rules`);
       }
     }
-    await Document.insert(
-      this.storeTx,
-      appendCollectionToId(collectionName, id ?? nanoid()),
-      doc,
-      collectionName
-    );
+
+    // insert triples
+    await this.storeTx.insertTriples(triples);
   }
 
   async update<CN extends CollectionNameFromModels<M>>(
@@ -174,7 +201,6 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
     const collection = (await this.getSchema())?.collections[
       collectionName
     ] as CollectionFromModels<M, CN>;
-
     const entity = await this.fetchById(collectionName, entityId);
 
     if (!entity) {
@@ -184,6 +210,8 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
         "Cannot perform an update on an entity that doesn't exist"
       );
     }
+
+    // Collect changes
     const changes = {};
     const collectionSchema = collection?.attributes;
     const updateProxy = this.createUpdateProxy<typeof collectionSchema>(
@@ -191,31 +219,41 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
       entity,
       collectionSchema
     );
+
+    // Run updater (runs serialization of values)
     await updater(updateProxy);
-    const changeTuples = objectToTuples(changes);
-    const fullEntityId = appendCollectionToId(collectionName, entityId);
+    const changeTuples = serializedItemToTuples(changes);
+    const storeId = appendCollectionToId(collectionName, entityId);
+
+    // Create change tuples
+    const updateValues: EAV[] = [];
     for (let tuple of changeTuples) {
-      const path = tuple.slice(0, -1) as string[];
-      let value = tuple.at(-1);
-      const attribute = [collectionName, ...path];
+      const [attr, value] = tuple;
+      const storeAttribute = [collectionName, ...attr];
       // undefined is treated as a delete
       if (value === undefined) {
-        const triples = await this.storeTx.findByEAV([fullEntityId, attribute]);
+        const triples = await this.storeTx.findByEAV([storeId, storeAttribute]);
         for (const trip of triples) {
           await this.storeTx.expireEntityAttribute(trip.id, trip.attribute);
         }
         continue;
       }
-      value = value instanceof Date ? value.toISOString() : value;
-      await this.storeTx.setValue(fullEntityId, attribute, value);
+      // TODO: use standardized json conversions
+      updateValues.push([storeId, storeAttribute, value]);
     }
+
+    // Apply changes
+    await this.storeTx.setValues(updateValues);
+
+    // Check rules
     if (collection?.rules?.write?.length) {
-      const updatedEntity = await this.fetchById(collectionName, entityId);
+      const triples = await this.storeTx.findByEntity(storeId);
+      const entity = constructEntity(triples, storeId);
       const filters = collection.rules.write.flatMap((r) => r.filter);
       let query = { where: filters } as CollectionQuery<ModelFromModels<M>>;
       query = replaceVariablesInQuery(this, query);
       const satisfiedRule = doesEntityObjMatchWhere(
-        objectToTimestampedObject(updatedEntity),
+        entity,
         query.where,
         collectionSchema
       );
@@ -226,7 +264,7 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
     }
   }
 
-  private createUpdateProxy<M extends Model<any> | undefined>(
+  private createUpdateProxy<M extends Model | undefined>(
     changeTracker: {},
     entityObj: ProxyTypeFromModel<M>,
     schema?: M,
@@ -249,7 +287,8 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
             `Cannot set unrecognized property ${propPointer} to ${value}`
           );
         }
-        ValuePointer.Set(changeTracker, propPointer, value);
+        const serializedValue = propSchema.serialize(value);
+        ValuePointer.Set(changeTracker, propPointer, serializedValue);
         return true;
       },
       deleteProperty: (_target, prop) => {
@@ -268,7 +307,7 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
           schema && getSchemaFromPath(schema, propPointer.slice(1).split('/'));
         if (
           typeof propValue === 'object' &&
-          (!propSchema || propSchema['x-crdt-type'] !== 'Set') &&
+          (!propSchema || propSchema.type !== 'set') &&
           propValue !== null
         ) {
           return this.createUpdateProxy(
@@ -279,18 +318,20 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
           );
         }
         if (propSchema) {
-          if (propSchema['x-crdt-type'] === 'Set') {
+          if (propSchema.type == 'set') {
             return {
               add: (value: any) => {
                 // changeTracker.set([propPointer, value].join('/'), true);
+                const serializedValue = propSchema.of.serialize(value);
                 ValuePointer.Set(
                   changeTracker,
-                  [propPointer, value].join('/'),
+                  [propPointer, serializedValue].join('/'),
                   true
                 );
               },
               remove: (value: any) => {
                 // changeTracker.set([propPointer, value].join('/'), false);
+                const serializedValue = propSchema.of.serialize(value);
                 ValuePointer.Set(
                   changeTracker,
                   [propPointer, value].join('/'),
@@ -361,7 +402,7 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
       '_schema'
     );
     if (!existingSchema) {
-      await this.insert(this.METADATA_COLLECTION_NAME, {}, '_schema');
+      await this.insert(this.METADATA_COLLECTION_NAME, {} as any, '_schema');
     }
   }
 

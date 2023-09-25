@@ -126,7 +126,8 @@ export interface TripleStoreApi {
   insertTriples(triplesInput: TripleRow[]): void;
   deleteTriple(tripleRow: TripleRow): void;
   deleteTriples(triplesInput: TripleRow[]): void;
-  setValue(...triple: EAV): void;
+  setValue(...value: EAV): Promise<void>;
+  setValues(values: EAV[]): Promise<void>;
 
   // Read methods
   findByCollection(
@@ -452,26 +453,38 @@ export class TripleStoreOperator implements TripleStoreApi {
   }
 
   async setValue(id: EntityId, attribute: Attribute, value: Value) {
-    if (value === undefined) {
-      throw new Error("Cannot use 'undefined' as a value");
-    }
+    return await this.setValues([[id, attribute, value]]);
+  }
+
+  async setValues(eavs: EAV[]) {
+    if (!eavs.length) return;
     const timestamp = await this.getTransactionTimestamp();
-    const existingTriples = await this.findByEntityAttribute(id, attribute);
-    const olderTriples = existingTriples.filter(
-      ({ timestamp, expired }) =>
-        timestampCompare(timestamp, timestamp) == -1 && !expired
-    );
+    const toDelete: TripleRow[] = [];
+    const toInsert: TripleRow[] = [];
+    for (const eav of eavs) {
+      const [id, attribute, value] = eav;
+      if (value === undefined) {
+        throw new Error("Cannot use 'undefined' as a value");
+      }
+      const existingTriples = await this.findByEntityAttribute(id, attribute);
+      const olderTriples = existingTriples.filter(
+        ({ timestamp, expired }) =>
+          timestampCompare(timestamp, timestamp) == -1 && !expired
+      );
 
-    await this.deleteTriples(olderTriples);
+      if (olderTriples.length > 0) {
+        toDelete.push(...olderTriples);
+      }
 
-    const newerTriples = existingTriples.filter(
-      ({ timestamp }) => timestampCompare(timestamp, timestamp) == 1
-    );
-    if (newerTriples.length === 0) {
-      await this.insertTriples([
-        { id, attribute, value, timestamp, expired: false },
-      ]);
+      const newerTriples = existingTriples.filter(
+        ({ timestamp }) => timestampCompare(timestamp, timestamp) == 1
+      );
+      if (newerTriples.length === 0) {
+        toInsert.push({ id, attribute, value, timestamp, expired: false });
+      }
     }
+    await this.deleteTriples(toDelete);
+    await this.insertTriples(toInsert);
   }
 
   async expireEntityAttribute(id: EntityId, attribute: Attribute) {
@@ -753,6 +766,12 @@ export class TripleStore implements TripleStoreApi {
   ): Promise<void> {
     await this.transact(async (tx) => {
       await tx.setValue(entity, attribute, value);
+    });
+  }
+
+  async setValues(values: EAV[]): Promise<void> {
+    await this.transact(async (tx) => {
+      await tx.setValues(values);
     });
   }
 

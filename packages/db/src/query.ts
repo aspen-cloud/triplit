@@ -1,39 +1,41 @@
 import { ValuePointer } from '@sinclair/typebox/value';
-import { Model, TypeFromModel, updateEntityAtPath } from './schema';
+import { Model, TimestampedTypeFromModel, updateEntityAtPath } from './schema';
 import { EntityId, TripleRow } from './triple-store';
 
 type Path = string;
 // Should be friendly types that we pass into queries
 // Not to be confused with the Value type that we store in the triple store
 type Value = number | string | boolean | Date | null;
-export type Operator = '=' | '<' | '>' | '<=' | '>=' | '!=' | 'like' | 'nlike';
 
-export type FilterStatement<M extends Model<any> | undefined, V = Value> = [
-  M extends Model<any> ? keyof M['properties'] : Path,
-  Operator,
-  V
+export type FilterStatement<
+  M extends Model | undefined,
+  K extends M extends Model ? keyof M : Path = M extends Model ? keyof M : Path
+> = [
+  K,
+  M extends Model ? M[K]['supportedOperations'][number] : string,
+  Value // TODO: We could make this tighter by inspecting the type
 ];
-export type FilterGroup<M extends Model<any> | undefined> = {
+export type FilterGroup<M extends Model | undefined> = {
   mod: 'or' | 'and';
   filters: WhereFilter<M>[];
 };
 
-export type WhereFilter<M extends Model<any> | undefined> =
+export type WhereFilter<M extends Model | undefined> =
   | FilterStatement<M>
   | FilterGroup<M>;
 
-export type QueryWhere<M extends Model<any> | undefined> = WhereFilter<M>[];
+export type QueryWhere<M extends Model | undefined> = WhereFilter<M>[];
 
 export type ValueCursor = [value: Value, entityId: EntityId];
 
-export type QueryOrder<M extends Model<any> | undefined> = [
-  property: M extends Model<any> ? keyof M['properties'] : Path,
+export type QueryOrder<M extends Model | undefined> = [
+  property: M extends Model ? keyof M : Path,
   direction: 'ASC' | 'DESC'
 ];
 
-export interface Query<M extends Model<any> | undefined> {
+export interface Query<M extends Model | undefined> {
   where: QueryWhere<M>;
-  select: (M extends Model<any> ? keyof M['properties'] : Path)[];
+  select: (M extends Model ? keyof M : Path)[];
   order?: QueryOrder<M>[];
   limit?: number;
   after?: ValueCursor;
@@ -41,8 +43,8 @@ export interface Query<M extends Model<any> | undefined> {
   vars?: Record<string, any>;
 }
 
-export function entityToResultReducer<M extends Model<any>>(
-  entity: TypeFromModel<M>,
+export function entityToResultReducer<M extends Model>(
+  entity: TimestampedTypeFromModel<M>,
   triple: TripleRow
 ) {
   // TODO support tombstones and timestamps
@@ -53,6 +55,7 @@ export function entityToResultReducer<M extends Model<any>>(
   const [_collectionName, ...path] = attribute;
 
   // Ensure that any number paths are converted to arrays in the entity
+  // THIS IS USED FOR RULES
   for (let i = 0; i < path.length; i++) {
     const part = path[i];
     if (typeof part === 'number') {
@@ -68,7 +71,9 @@ export function entityToResultReducer<M extends Model<any>>(
   return entity;
 }
 
-export function constructEntities(triples: TripleRow[]) {
+export function constructEntities(
+  triples: TripleRow[]
+): Map<string, TimestampedTypeFromModel<Model>> {
   return triples.reduce((acc, triple) => {
     const { id } = triple;
     const entityObj = acc.get(id) ?? {};
@@ -102,20 +107,20 @@ function setRecordToArrayRecord(
   );
 }
 
-export function or<M extends Model<any> | undefined>(where: QueryWhere<M>) {
+export function or<M extends Model | undefined>(where: QueryWhere<M>) {
   return { mod: 'or' as const, filters: where };
 }
 
-export function and<M extends Model<any> | undefined>(where: QueryWhere<M>) {
+export function and<M extends Model | undefined>(where: QueryWhere<M>) {
   return { mod: 'and' as const, filters: where };
 }
 
-type FilterInput<M extends Model<any> | undefined> =
+type FilterInput<M extends Model | undefined> =
   | FilterStatement<M>
   | WhereFilter<M>[]
   | [QueryWhere<M>];
 
-type OrderInput<M extends Model<any> | undefined> =
+type OrderInput<M extends Model | undefined> =
   | QueryOrder<M>
   | QueryOrder<M>[]
   | [QueryOrder<M>[]];
@@ -181,7 +186,7 @@ export const QUERY_INPUT_TRANSFORMERS = <
   },
 });
 
-export type QueryBuilderInputs<M extends Model<any> | undefined> = {
+export type QueryBuilderInputs<M extends Model | undefined> = {
   where: FilterInput<M>;
   order: OrderInput<M>;
 };

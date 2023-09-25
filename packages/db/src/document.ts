@@ -1,7 +1,7 @@
 import { TripleRow, TripleStoreTransaction } from './triple-store';
 import { objectToTuples } from './utils';
 
-// TODO change to object for params
+// TODO: delete, this is deprecated
 export async function insert(
   store: TripleStoreTransaction,
   id: string,
