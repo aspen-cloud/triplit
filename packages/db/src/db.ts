@@ -191,16 +191,6 @@ export default class DB<M extends Models<any, any> | undefined> {
       : tripleStoreSchema
       ? overrideStoredSchema(this.tripleStore, tripleStoreSchema)
       : Promise.resolve();
-
-    this.ensureMigrated.then(() => {
-      this.tripleStore.beforeInsert(async (triples) => {
-        const schema = await this.getSchema();
-        if (!schema) return triples;
-        for (const trip of triples) {
-          validateTriple(schema.collections, trip.attribute, trip.value);
-        }
-      });
-    });
   }
 
   async getClientId() {
@@ -347,44 +337,9 @@ export default class DB<M extends Models<any, any> | undefined> {
     id?: string,
     storeScope?: { read: string[]; write: string[] }
   ) {
-    if (id) {
-      const validationError = validateExternalId(id);
-      if (validationError) throw validationError;
-    }
-    await this.ensureMigrated;
-    const collection = await this.getCollectionSchema(collectionName);
-    if (collection) {
-      const collectionDefaults = getDefaultValuesForCollection(collection);
-      doc = { ...collectionDefaults, ...doc };
-    }
-    if (collection?.rules?.write?.length) {
-      const filters = collection.rules.write.flatMap((r) => r.filter);
-      let query = { where: filters } as CollectionQuery<ModelFromModels<M>>;
-      query = replaceVariablesInQuery(this, query);
-      // TODO there is probably a better way to to this
-      // rather than converting to timestamped object check to
-      // validate the where filter
-      const timestampDoc = objectToTimestampedObject(doc);
-      const satisfiedRule = doesEntityObjMatchWhere(
-        timestampDoc,
-        query.where,
-        collection.attributes
-      );
-      if (!satisfiedRule) {
-        // TODO add better error that uses rule description
-        throw new WriteRuleError(`Insert does not match write rules`);
-      }
-    }
-
-    const timestamp = await this.tripleStore.transact(async (tx) => {
-      await Document.insert(
-        tx,
-        appendCollectionToId(collectionName, id ?? nanoid()),
-        doc,
-        collectionName
-      );
+    return this.transact(async (tx) => {
+      await tx.insert(collectionName, doc, id);
     }, storeScope);
-    return timestamp;
   }
 
   subscribe<Q extends CollectionQuery<ModelFromModels<M>>>(

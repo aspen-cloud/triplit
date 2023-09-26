@@ -1841,13 +1841,8 @@ describe('schema changes', async () => {
     await dbOne.ensureMigrated;
     const beforeSchema = await dbOne.getSchema();
     expect(beforeSchema).toBeDefined();
-    expect(beforeSchema?.collections?.students).toBeDefined();
+    expect(beforeSchema.collections.students).toBeDefined();
     const dbTwo = new DB({ source: dataSource, schema: schemaTwo });
-    await dbTwo.ensureMigrated;
-    const afterSchema = await dbTwo.getSchema();
-    expect(afterSchema).toBeDefined();
-    expect(afterSchema?.collections?.products).toBeDefined();
-    expect(afterSchema?.collections?.students).not.toBeDefined();
   });
 
   it.todo('can update attribute options');

@@ -1,4 +1,4 @@
-import { AttributeItem, EAV, TripleStoreTransaction } from './triple-store';
+import { TripleStoreTransaction } from './triple-store';
 import {
   getSchemaFromPath,
   ProxyTypeFromModel,
@@ -6,7 +6,6 @@ import {
   Models,
   objectToTimestampedObject,
   SetProxy,
-  AttributeDefinition,
   getDefaultValuesForCollection,
   TimestampedObject,
   timestampedObjectToPlainObject,
@@ -21,14 +20,12 @@ import CollectionQueryBuilder, {
   FetchResult,
 } from './collection-query';
 import { EntityNotFoundError, WriteRuleError } from './errors';
-import { Value, ValuePointer } from '@sinclair/typebox/value';
+import { ValuePointer } from '@sinclair/typebox/value';
 import {
   CollectionNameFromModels,
   CollectionFromModels,
   ModelFromModels,
   CreateCollectionOperation,
-  CollectionRules,
-  ruleToTuple,
   DropCollectionOperation,
   AddAttributeOperation,
   DropAttributeOperation,
@@ -40,6 +37,7 @@ import {
   validateExternalId,
   appendCollectionToId,
   replaceVariablesInQuery,
+  validateTriple,
 } from './db-helpers';
 import { Query, entityToResultReducer } from './query';
 import { objectToTuples } from './utils';
@@ -70,6 +68,14 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
           schemaDefinition.collections &&
           collectionsDefinitionToSchema(schemaDefinition.collections),
       };
+    });
+    this.storeTx.beforeInsert(async (triples) => {
+      if (!this.schema) return;
+      for (const trip of triples) {
+        if (trip.attribute[0] === '_metadata') continue;
+        if (trip.attribute[0] === '_collection') continue;
+        validateTriple(this.schema.collections, trip.attribute, trip.value);
+      }
     });
   }
 
