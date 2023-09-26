@@ -8,14 +8,7 @@ import {
   AsyncTupleDatabase,
   TupleStorageApi,
 } from 'tuple-database';
-import {
-  Models,
-  getSchemaFromPath,
-  tuplesToSchema,
-  schemaToTriples,
-} from './schema';
 import { Timestamp, timestampCompare } from './timestamp';
-import { Value as SchemaValue } from '@sinclair/typebox/value';
 import MultiTupleStore, {
   MultiTupleTransaction,
   ScopedMultiTupleOperator,
@@ -26,14 +19,9 @@ import { MemoryClock } from './clocks/memory-clock';
 import { entityToResultReducer, ValueCursor } from './query';
 import {
   IndexNotFoundError,
-  InvalidSchemaPathError,
   InvalidTimestampIndexScanError,
-  ModelNotFoundError,
-  NoSchemaRegisteredError,
-  ValueSchemaMismatchError,
   WriteRuleError,
 } from './errors';
-import { appendCollectionToId, readSchemaFromTripleStore } from './db-helpers';
 
 // Value should be serializable, this is what goes into triples
 // Not to be confused with the Value type we define on queries
@@ -207,7 +195,6 @@ export class TripleStoreOperator implements TripleStoreApi {
   tupleOperator: ScopedMultiTupleOperator<TupleIndex>;
   private txMetadataListeners: Set<MetadataListener> = new Set();
 
-  schema?: StoreSchema<Models<any, any>>;
   readonly clock: Clock;
 
   assignedTimestamp?: Timestamp;
@@ -226,7 +213,6 @@ export class TripleStoreOperator implements TripleStoreApi {
   }: {
     tupleOperator: ScopedMultiTupleOperator<TupleIndex>;
     clock: Clock;
-    schema?: StoreSchema<Models<any, any>>;
     hooks: {
       before: ((
         triple: TripleRow[],
@@ -393,18 +379,6 @@ export class TripleStoreOperator implements TripleStoreApi {
       return;
     }
 
-    const schema =
-      shouldValidate && (await readSchemaFromTripleStore(this)).schema;
-    if (schema) {
-      try {
-        validateTriple(schema.collections, attribute, value);
-      } catch (e) {
-        // console.error(e);
-        // this.cancel();
-        throw e;
-      }
-    }
-
     const metadata = { expired };
 
     tx.set(['EAV', id, attribute, value, timestamp], metadata);
@@ -516,12 +490,10 @@ export class TripleStoreTransaction extends TripleStoreOperator {
   constructor({
     tupleTx,
     clock,
-    schema,
     hooks,
   }: {
     tupleTx: MultiTupleTransaction<TupleIndex>;
     clock: Clock;
-    schema?: StoreSchema<Models<any, any>>;
     hooks: {
       before: ((
         triple: TripleRow[],
@@ -529,7 +501,7 @@ export class TripleStoreTransaction extends TripleStoreOperator {
       ) => void | Promise<void>)[];
     };
   }) {
-    super({ tupleOperator: tupleTx, clock, schema, hooks });
+    super({ tupleOperator: tupleTx, clock, hooks });
     this.tupleTx = tupleTx;
   }
 
@@ -545,7 +517,6 @@ export class TripleStoreTransaction extends TripleStoreOperator {
     return new TripleStoreOperator({
       tupleOperator: this.tupleTx.withScope(scope),
       clock: this.clock,
-      schema: this.schema,
       hooks: this.hooks,
     });
   }
@@ -580,7 +551,6 @@ export class TripleStore implements TripleStoreApi {
     storage,
     stores,
     tenantId,
-    schema,
     clock,
     storageScope = [],
   }: {
@@ -592,7 +562,6 @@ export class TripleStore implements TripleStoreApi {
       AsyncTupleDatabaseClient<WithTenantIdPrefix<TupleIndex>>
     >;
     tenantId?: string;
-    schema?: StoreSchema<Models<any, any>>;
     storageScope?: string[];
     clock?: Clock;
   }) {
@@ -746,7 +715,6 @@ export class TripleStore implements TripleStoreApi {
         tupleTx: tupleTx,
         clock: this.clock,
         hooks: this.hooks,
-        // schema,
       });
       if (isCanceled) return tx;
       try {
@@ -877,49 +845,6 @@ export class TripleStore implements TripleStoreApi {
   async clear() {
     await this.tupleStore.clear();
   }
-}
-
-function validateTriple(
-  schema: Models<any, any>,
-  attribute: Attribute,
-  value: Value
-) {
-  if (schema == undefined) {
-    throw new NoSchemaRegisteredError(
-      'Unable to run triple validation due to missing schema. This is unexpected and likely a bug.'
-    );
-  }
-  const [modelName, ...path] = attribute;
-
-  // TODO: remove this hack
-  if (modelName === '_collection') return;
-  if (modelName === '_metadata') return;
-
-  const model = schema[modelName];
-  if (!model) {
-    console.log('model not found', schema);
-    throw new ModelNotFoundError(modelName as string, Object.keys(schema));
-  }
-
-  const clockedSchema = getSchemaFromPath(model.attributes, path);
-
-  // We expect you to set values at leaf nodes
-  // Our leafs should be registers, so use that as check
-  const isLeaf = clockedSchema['x-crdt-type'] === 'Register';
-  if (!isLeaf)
-    throw new InvalidSchemaPathError(
-      path as string[],
-      'Cannot set the value of a non leaf node in the schema. For example, you may be attempting to set a value on a record type.'
-    );
-
-  const valueSchema = clockedSchema.items[0];
-  // Leaf values are an array [value, timestamp], so check value
-  if (!SchemaValue.Check(valueSchema, value))
-    throw new ValueSchemaMismatchError(
-      modelName as string,
-      attribute as string[],
-      value
-    );
 }
 
 async function scanToTriples(
@@ -1059,7 +984,6 @@ async function findByAttribute(
 //   return findByVAE(tx, [value]);
 // }
 
-// [tenantId, 'metadata', '_schema'] prefix
 function mapStaticTupleToEAV(tuple: { key: any[]; value: any }): EAV {
   const [_index, entityId, ...path] = tuple.key;
   return [entityId, path, tuple.value];

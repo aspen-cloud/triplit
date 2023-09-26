@@ -34,6 +34,7 @@ import {
   mapFilterStatements,
   readSchemaFromTripleStore,
   overrideStoredSchema,
+  validateTriple,
 } from './db-helpers';
 
 export interface Rule<M extends Model<any>> {
@@ -190,6 +191,16 @@ export default class DB<M extends Models<any, any> | undefined> {
       : tripleStoreSchema
       ? overrideStoredSchema(this.tripleStore, tripleStoreSchema)
       : Promise.resolve();
+
+    this.ensureMigrated.then(() => {
+      this.tripleStore.beforeInsert(async (triples) => {
+        const schema = await this.getSchema();
+        if (!schema) return triples;
+        for (const trip of triples) {
+          validateTriple(schema.collections, trip.attribute, trip.value);
+        }
+      });
+    });
   }
 
   async getClientId() {
