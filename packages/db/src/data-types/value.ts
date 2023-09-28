@@ -25,7 +25,7 @@ export type ValueInterface<
   TimestampedType,
   Operators
 > & {
-  readonly options?: UserTypeOptions;
+  readonly options: UserTypeOptions;
 
   // TODO: this is for sets...set keys will come from strings...might be a better place to put this
   fromString(val: string): DeserializedType;

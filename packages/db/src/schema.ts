@@ -256,7 +256,6 @@ export function schemaToJSON(
   for (const [collectionName, model] of Object.entries(schema.collections)) {
     const collection: CollectionDefinition = {
       attributes: attributesSchemaToJSON(model.attributes),
-      rules: {},
     };
     collections[collectionName] = collection;
   }

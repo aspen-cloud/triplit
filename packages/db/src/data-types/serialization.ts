@@ -12,7 +12,7 @@ export const ALL_TYPES = [...VALUE_TYPE_KEYS, ...COLLECTION_TYPE_KEYS] as const;
 
 export type ValueAttributeDefinition = {
   type: ValueTypeKeys;
-  options?: UserTypeOptions;
+  options: UserTypeOptions;
 };
 export type RecordAttributeDefinition = {
   type: 'record';

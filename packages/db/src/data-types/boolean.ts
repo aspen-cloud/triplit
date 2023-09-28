@@ -5,7 +5,7 @@ import {
   calcDefaultValue,
   userTypeOptionsAreValid,
 } from './base';
-import { UserTypeOptions, ValueAttributeDefinition } from './serialization';
+import { UserTypeOptions } from './serialization';
 import { TypeWithOptions, ValueInterface } from './value';
 import { Value } from '@sinclair/typebox/value';
 import { InvalidTypeOptionsError } from '../errors';
@@ -21,9 +21,9 @@ export type BooleanType<TypeOptions extends UserTypeOptions> = ValueInterface<
   BooleanOperators
 >;
 export function BooleanType<TypeOptions extends UserTypeOptions>(
-  options?: TypeOptions
+  options: TypeOptions = {} as TypeOptions
 ): BooleanType<TypeOptions> {
-  if (options && !userTypeOptionsAreValid(options)) {
+  if (!userTypeOptionsAreValid(options)) {
     throw new InvalidTypeOptionsError(options);
   }
   return {
@@ -31,16 +31,12 @@ export function BooleanType<TypeOptions extends UserTypeOptions>(
     options,
     supportedOperations: BOOLEAN_OPERATORS,
 
-    toJSON(): ValueAttributeDefinition {
-      const json: ValueAttributeDefinition = { type: this.type };
-      if (options) {
-        json['options'] = options;
-      }
-      return json;
+    toJSON() {
+      return { type: this.type, options: this.options };
     },
     serialize(val) {
       const valid =
-        (options?.nullable && val === null) || typeof val === 'boolean';
+        (options.nullable && val === null) || typeof val === 'boolean';
       if (!valid) {
         throw new Error('Invalid value for date: ' + val); //TODO: triplit error
       }
@@ -56,9 +52,7 @@ export function BooleanType<TypeOptions extends UserTypeOptions>(
       return calcDefaultValue(options);
     },
     validate(val: any) {
-      const type = options?.nullable
-        ? Nullable(Type.Boolean())
-        : Type.Boolean();
+      const type = options.nullable ? Nullable(Type.Boolean()) : Type.Boolean();
       return Value.Check(type, val);
     },
     fromString(val: string) {

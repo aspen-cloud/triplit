@@ -1702,8 +1702,8 @@ describe('schema changes', async () => {
     await db.createCollection({
       name: 'students',
       attributes: {
-        id: { type: 'number' },
-        name: { type: 'string' },
+        id: { type: 'number', options: {} },
+        name: { type: 'string', options: {} },
       },
     });
     const schema = await db.getSchema();
@@ -1720,8 +1720,8 @@ describe('schema changes', async () => {
       const newCollection = {
         name: 'students',
         attributes: {
-          id: { type: 'number' },
-          name: { type: 'string' },
+          id: { type: 'number', options: {} },
+          name: { type: 'string', options: {} },
         },
       };
       await tx.createCollection(newCollection);
@@ -1772,7 +1772,7 @@ describe('schema changes', async () => {
     await db.addAttribute({
       collection: 'students',
       path: ['age'],
-      attribute: { type: 'number' },
+      attribute: { type: 'number', options: {} },
     });
     const dbSchema = await db.getSchema();
     expect(dbSchema?.collections).toHaveProperty('students');
@@ -1851,8 +1851,8 @@ describe('migrations', () => {
           {
             name: 'students',
             attributes: {
-              id: { type: 'number' },
-              name: { type: 'string' },
+              id: { type: 'number', options: {} },
+              name: { type: 'string', options: {} },
             },
           },
         ],
@@ -1868,8 +1868,8 @@ describe('migrations', () => {
           {
             name: 'classes',
             attributes: {
-              id: { type: 'number' },
-              department: { type: 'string' },
+              id: { type: 'number', options: {} },
+              department: { type: 'string', options: {} },
             },
           },
         ],
@@ -2120,11 +2120,14 @@ describe('Rules', () => {
       await db.createCollection({
         name: 'classes',
         attributes: {
-          id: { type: 'string' },
-          name: { type: 'string' },
-          level: { type: 'number' },
-          department: { type: 'string' },
-          enrolled_students: { type: 'set', items: { type: 'string' } },
+          id: { type: 'string', options: {} },
+          name: { type: 'string', options: {} },
+          level: { type: 'number', options: {} },
+          department: { type: 'string', options: {} },
+          enrolled_students: {
+            type: 'set',
+            items: { type: 'string', options: {} },
+          },
         },
         rules: {
           read: [
@@ -2286,8 +2289,8 @@ describe('Rules', () => {
       await db.createCollection({
         name: 'posts',
         attributes: {
-          id: { type: 'string' },
-          author_id: { type: 'string' },
+          id: { type: 'string', options: {} },
+          author_id: { type: 'string', options: {} },
         },
         rules: {
           write: [
@@ -2360,9 +2363,9 @@ describe('Rules', () => {
       await db.createCollection({
         name: 'posts',
         attributes: {
-          id: { type: 'string' },
-          author_id: { type: 'string' },
-          content: { type: 'string' },
+          id: { type: 'string', options: {} },
+          author_id: { type: 'string', options: {} },
+          content: { type: 'string', options: {} },
         },
         rules: {
           write: [

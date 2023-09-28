@@ -33,9 +33,9 @@ export type DateType<TypeOptions extends UserTypeOptions> = ValueInterface<
   DateOperators
 >;
 export function DateType<TypeOptions extends UserTypeOptions>(
-  options?: TypeOptions
+  options: TypeOptions = {} as TypeOptions
 ): DateType<TypeOptions> {
-  if (options && !userTypeOptionsAreValid(options)) {
+  if (!userTypeOptionsAreValid(options)) {
     throw new InvalidTypeOptionsError(options);
   }
 
@@ -44,12 +44,8 @@ export function DateType<TypeOptions extends UserTypeOptions>(
     options,
     supportedOperations: DATE_OPERATORS,
 
-    toJSON(): ValueAttributeDefinition {
-      const json: ValueAttributeDefinition = { type: this.type };
-      if (options) {
-        json['options'] = options;
-      }
-      return json;
+    toJSON() {
+      return { type: this.type, options: this.options };
     },
     serialize(val: TypeWithOptions<Date, TypeOptions>) {
       return (val ? val.toISOString() : null) as TypeWithOptions<
@@ -67,9 +63,7 @@ export function DateType<TypeOptions extends UserTypeOptions>(
       return this.deserialize(val[0]);
     },
     validate(val: any) {
-      const type = options?.nullable
-        ? Nullable(DateSchemaType)
-        : DateSchemaType;
+      const type = options.nullable ? Nullable(DateSchemaType) : DateSchemaType;
       return Value.Check(type, val);
     },
     fromString(val: string) {

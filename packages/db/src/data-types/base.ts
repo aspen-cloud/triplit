@@ -45,13 +45,13 @@ export type RegisterTypeFromBaseType<T extends ValueSchemaType> = TTuple<
   'x-crdt-type': 'Register';
   'x-serialized-type': {
     type: T['type'] | SerializedValueOverrides;
-    options?: UserTypeOptions;
+    options: UserTypeOptions;
   };
 };
 export const Nullable = <T extends ValueSchemaType>(type: T) =>
   Type.Union([type, Type.Null()]);
 
-export function userTypeOptionsAreValid(options?: UserTypeOptions) {
+export function userTypeOptionsAreValid(options: UserTypeOptions) {
   return Value.Check(UserTypeOptionsSchema, options);
 }
 
@@ -62,10 +62,10 @@ export type TimestampType = Static<typeof Timestamp>;
 
 export function Register<T extends ValueSchemaType>(
   type: T,
-  options?: UserTypeOptions,
+  options: UserTypeOptions = {} as UserTypeOptions,
   typeOverride?: SerializedValueOverrides
 ) {
-  if (options && !userTypeOptionsAreValid(options)) {
+  if (!userTypeOptionsAreValid(options)) {
     throw new InvalidTypeOptionsError(options);
   }
 
@@ -74,15 +74,15 @@ export function Register<T extends ValueSchemaType>(
     options,
   });
 
-  return Type.Tuple([options?.nullable ? Nullable(type) : type, Timestamp], {
+  return Type.Tuple([options.nullable ? Nullable(type) : type, Timestamp], {
     'x-serialized-type': typeHelper?.toJSON(),
     'x-crdt-type': 'Register',
   }) as RegisterTypeFromBaseType<T>;
 }
 
 // NOTE: default values must be serializable
-export function calcDefaultValue(options?: UserTypeOptions) {
-  let attributeDefault = options?.default;
+export function calcDefaultValue(options: UserTypeOptions) {
+  let attributeDefault = options.default;
   if (attributeDefault === undefined) {
     // no default object
     return undefined;

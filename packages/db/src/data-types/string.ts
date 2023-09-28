@@ -5,11 +5,7 @@ import {
   calcDefaultValue,
   userTypeOptionsAreValid,
 } from './base';
-import {
-  AttributeDefinition,
-  UserTypeOptions,
-  ValueAttributeDefinition,
-} from './serialization';
+import { UserTypeOptions } from './serialization';
 import { TypeWithOptions, ValueInterface } from './value';
 import { Value } from '@sinclair/typebox/value';
 import { InvalidTypeOptionsError } from '../errors';
@@ -26,7 +22,7 @@ export type StringType<TypeOptions extends UserTypeOptions> = ValueInterface<
 >;
 
 export function StringType<TypeOptions extends UserTypeOptions>(
-  options?: TypeOptions
+  options: TypeOptions = {} as TypeOptions
 ): StringType<TypeOptions> {
   if (options && !userTypeOptionsAreValid(options)) {
     throw new InvalidTypeOptionsError(options);
@@ -36,17 +32,12 @@ export function StringType<TypeOptions extends UserTypeOptions>(
     type: 'string',
     options,
     supportedOperations: STRING_OPERATORS,
-
-    toJSON(): ValueAttributeDefinition {
-      const json: AttributeDefinition = { type: this.type };
-      if (options) {
-        json['options'] = options;
-      }
-      return json;
+    toJSON() {
+      return { type: this.type, options: this.options };
     },
     serialize(val) {
       const valid =
-        (options?.nullable && val === null) || typeof val === 'string';
+        (options.nullable && val === null) || typeof val === 'string';
       if (!valid) {
         throw new Error('Invalid value for date: ' + val); //TODO: triplit error
       }
@@ -62,7 +53,7 @@ export function StringType<TypeOptions extends UserTypeOptions>(
       return calcDefaultValue(options);
     },
     validate(val) {
-      const type = options?.nullable ? Nullable(Type.String()) : Type.String();
+      const type = options.nullable ? Nullable(Type.String()) : Type.String();
       return Value.Check(type, val);
     },
     fromString(val: string) {

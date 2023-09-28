@@ -21,7 +21,7 @@ export type NumberType<TypeOptions extends UserTypeOptions> = ValueInterface<
   NumberOperators
 >;
 export function NumberType<TypeOptions extends UserTypeOptions>(
-  options?: TypeOptions
+  options: TypeOptions = {} as TypeOptions
 ): NumberType<TypeOptions> {
   if (options && !userTypeOptionsAreValid(options)) {
     throw new InvalidTypeOptionsError(options);
@@ -33,15 +33,11 @@ export function NumberType<TypeOptions extends UserTypeOptions>(
     supportedOperations: NUMBER_OPERATORS,
 
     toJSON(): ValueAttributeDefinition {
-      const json: ValueAttributeDefinition = { type: this.type };
-      if (options) {
-        json['options'] = options;
-      }
-      return json;
+      return { type: this.type, options: this.options };
     },
     serialize(val) {
       const valid =
-        (options?.nullable && val === null) || typeof val === 'number';
+        (options.nullable && val === null) || typeof val === 'number';
       if (!valid) {
         throw new Error('Invalid value for date: ' + val); //TODO: triplit error
       }
@@ -57,7 +53,7 @@ export function NumberType<TypeOptions extends UserTypeOptions>(
       return calcDefaultValue(options);
     },
     validate(val: any) {
-      const type = options?.nullable ? Nullable(Type.Number()) : Type.Number();
+      const type = options.nullable ? Nullable(Type.Number()) : Type.Number();
       return Value.Check(type, val);
     },
     fromString(val: string) {
