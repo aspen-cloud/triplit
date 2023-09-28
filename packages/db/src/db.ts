@@ -456,8 +456,10 @@ export default class DB<M extends Models<any, any> | undefined> {
   }
 
   private async applySchemaMigration(operations: DBOperation[]) {
+    // Need to read from triple store manually because we block db.transaction() api and schema access
+    const { schema } = await readSchemaFromTripleStore(this.tripleStore);
     await this.tripleStore.transact(async (tripTx) => {
-      const tx = new DBTransaction(tripTx);
+      const tx = new DBTransaction(tripTx, this.variables, schema);
       for (const operation of operations) {
         switch (operation[0]) {
           case 'create_collection':

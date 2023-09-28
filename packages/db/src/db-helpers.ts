@@ -19,7 +19,7 @@ import {
 import type DB from './db';
 import type { DBTransaction } from './db-transaction';
 import { CollectionNameFromModels } from './db';
-import { Attribute, TripleStore, Value } from './triple-store';
+import { Attribute, TripleStore, TripleStoreApi, Value } from './triple-store';
 import { VALUE_TYPE_KEYS } from './data-types/serialization';
 
 const ID_SEPARATOR = '#';
@@ -128,12 +128,12 @@ export async function applyRulesToEntity<
   return entity;
 }
 
-export async function getSchemaTriples(tripleStore: TripleStore) {
+export async function getSchemaTriples(tripleStore: TripleStoreApi) {
   return tripleStore.findByEntity(appendCollectionToId('_metadata', '_schema'));
 }
 
-export async function readSchemaFromTripleStore(tripleSTores: TripleStore) {
-  const schemaTriples = await getSchemaTriples(tripleSTores);
+export async function readSchemaFromTripleStore(tripleStores: TripleStoreApi) {
+  const schemaTriples = await getSchemaTriples(tripleStores);
   const schema =
     schemaTriples.length > 0 ? tuplesToSchema(schemaTriples) : undefined;
   return {

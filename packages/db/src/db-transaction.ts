@@ -38,6 +38,7 @@ import {
   appendCollectionToId,
   replaceVariablesInQuery,
   validateTriple,
+  readSchemaFromTripleStore,
 } from './db-helpers';
 import { Query, constructEntity, entityToResultReducer } from './query';
 import { serializedItemToTuples } from './utils';
@@ -52,11 +53,16 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
   ) {
     this.schema = schema;
 
-    this.storeTx.beforeInsert(async (trips) => {
+    this.storeTx.beforeInsert(async (trips, tx) => {
       const metadataTriples = trips.filter(
         ({ attribute }) => attribute[0] === '_metadata'
       );
       if (metadataTriples.length === 0) return;
+      // on first schema update, initialize timestamped schema
+      if (!this._schema) {
+        const { schemaTriples } = await readSchemaFromTripleStore(tx);
+        metadataTriples.push(...schemaTriples);
+      }
       this._schema = metadataTriples.reduce(
         entityToResultReducer,
         this._schema ?? {}
