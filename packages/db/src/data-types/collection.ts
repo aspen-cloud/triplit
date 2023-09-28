@@ -15,5 +15,5 @@ export type CollectionInterface<
   SchemaType,
   Operators
 > & {
-  readonly of: ValueType<any>;
+  readonly items: ValueType<any>;
 };

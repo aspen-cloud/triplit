@@ -322,7 +322,7 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
             return {
               add: (value: any) => {
                 // changeTracker.set([propPointer, value].join('/'), true);
-                const serializedValue = propSchema.of.serialize(value);
+                const serializedValue = propSchema.items.serialize(value);
                 ValuePointer.Set(
                   changeTracker,
                   [propPointer, serializedValue].join('/'),
@@ -331,7 +331,7 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
               },
               remove: (value: any) => {
                 // changeTracker.set([propPointer, value].join('/'), false);
-                const serializedValue = propSchema.of.serialize(value);
+                const serializedValue = propSchema.items.serialize(value);
                 ValuePointer.Set(
                   changeTracker,
                   [propPointer, value].join('/'),

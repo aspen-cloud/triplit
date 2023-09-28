@@ -2124,7 +2124,7 @@ describe('Rules', () => {
           name: { type: 'string' },
           level: { type: 'number' },
           department: { type: 'string' },
-          enrolled_students: { type: 'set', of: { type: 'string' } },
+          enrolled_students: { type: 'set', items: { type: 'string' } },
         },
         rules: {
           read: [

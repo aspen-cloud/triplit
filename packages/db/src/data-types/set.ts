@@ -6,24 +6,24 @@ import { ExtractDeserializedType } from './type';
 const SET_OPERATORS = ['=', '!='] as const;
 type SetOperators = typeof SET_OPERATORS;
 
-export function SetType<Of extends ValueType<any>>(
-  of: Of
+export function SetType<Items extends ValueType<any>>(
+  items: Items
 ): CollectionInterface<
   'set',
-  Set<ExtractDeserializedType<Of>>,
+  Set<ExtractDeserializedType<Items>>,
   Record<string, boolean>,
   Record<string, [boolean, TimestampType]>, // TODO: should be based on the type of the key
   SetOperators
 > {
-  if (!VALUE_TYPE_KEYS.includes(of.type))
-    throw new Error('Invalid set type: ' + of.type); // TODO: triplit error
-  if (of.options?.nullable) throw new Error('Set types cannot be nullable'); // TODO: triplit error
+  if (!VALUE_TYPE_KEYS.includes(items.type))
+    throw new Error('Invalid set type: ' + items.type); // TODO: triplit error
+  if (items.options?.nullable) throw new Error('Set types cannot be nullable'); // TODO: triplit error
   return {
     type: 'set',
-    of,
+    items,
     supportedOperations: SET_OPERATORS,
     toJSON() {
-      const json = { type: this.type, of: this.of.toJSON() };
+      const json = { type: this.type, items: this.items.toJSON() };
       return json;
     },
     serialize(val) {
@@ -40,7 +40,7 @@ export function SetType<Of extends ValueType<any>>(
     deserializeCRDT(val) {
       return Object.entries(val)
         .filter(([_k, v]) => !!v[0])
-        .map(([k, _v]) => this.of.fromString(k)); // TODO: figure out proper set deserialzied type
+        .map(([k, _v]) => this.items.fromString(k)); // TODO: figure out proper set deserialzied type
     },
     validate(_val: any) {
       throw new Error('TODO: Set validation');

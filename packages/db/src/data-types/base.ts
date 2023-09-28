@@ -116,7 +116,7 @@ export function typeFromJSON(serializedType?: AttributeDefinition): DataType {
     case 'date':
       return DateType(serializedType.options);
     case 'set':
-      return SetType(typeFromJSON(serializedType.of));
+      return SetType(typeFromJSON(serializedType.items));
     case 'record':
       return RecordType(
         Object.fromEntries(

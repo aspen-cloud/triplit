@@ -20,7 +20,7 @@ export type RecordAttributeDefinition = {
 };
 export type CollectionAttributeDefinition = {
   type: CollectionTypeKeys;
-  of: ValueAttributeDefinition;
+  items: ValueAttributeDefinition;
 };
 
 export type AttributeDefinition =
