@@ -483,7 +483,7 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
   }
 
   async alterAttributeOption(params: AlterAttributeOptionOperation[1]) {
-    const { collection: collectionName, path, ...options } = params;
+    const { collection: collectionName, path, options } = params;
     await this.update(
       this.METADATA_COLLECTION_NAME,
       '_schema',
@@ -496,6 +496,8 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
           return acc[curr];
         }, collectionAttributes.attributes);
         for (const [option, value] of Object.entries(options)) {
+          // // instantiate this here until we support empty objects
+          if (!attr[attrName].options) attr[attrName].options = {};
           attr[attrName].options[option] = value;
         }
       }
@@ -510,13 +512,14 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
       '_schema',
       async (schema) => {
         const collectionAttributes = schema.collections[collectionName];
-        const parentPath = path;
-        const attrName = option;
-        let attr = parentPath.reduce((acc, curr) => {
+        let attr = path.reduce((acc, curr) => {
           if (!acc[curr]) acc[curr] = {};
           return acc[curr];
         }, collectionAttributes.attributes);
-        delete attr[attrName];
+
+        // instantiate this here until we support empty objects
+        if (!attr.options) attr.options = {};
+        delete attr.options[option];
       }
     );
   }

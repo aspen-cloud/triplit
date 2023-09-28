@@ -57,7 +57,7 @@ export type DropAttributeOperation = [
 ];
 export type AlterAttributeOptionOperation = [
   'alter_attribute_option',
-  { collection: string; path: string[] } & UserTypeOptions
+  { collection: string; path: string[]; options: UserTypeOptions }
 ];
 export type DropAttributeOptionOperation = [
   'drop_attribute_option',
