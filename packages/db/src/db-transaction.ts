@@ -297,14 +297,15 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
         return true;
       },
       get: (_target, prop) => {
-        const propPointer = [prefix, prop].join('/');
-        let propValue = ValuePointer.Get(entityObj, propPointer);
+        const parentPropPointer = [prefix, prop].join('/');
+        let propValue = ValuePointer.Get(entityObj, prop as string);
         if (propValue === undefined) {
-          propValue = ValuePointer.Get(changeTracker, propPointer);
+          propValue = ValuePointer.Get(changeTracker, parentPropPointer);
         }
 
         const propSchema =
-          schema && getSchemaFromPath(schema, propPointer.slice(1).split('/'));
+          schema &&
+          getSchemaFromPath(schema, parentPropPointer.slice(1).split('/'));
         if (
           typeof propValue === 'object' &&
           (!propSchema || propSchema.type !== 'set') &&
@@ -312,9 +313,9 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
         ) {
           return this.createUpdateProxy(
             changeTracker,
-            entityObj,
+            propValue,
             schema,
-            propPointer
+            parentPropPointer
           );
         }
         if (propSchema) {
@@ -325,7 +326,7 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
                 const serializedValue = propSchema.items.serialize(value);
                 ValuePointer.Set(
                   changeTracker,
-                  [propPointer, serializedValue].join('/'),
+                  [parentPropPointer, serializedValue].join('/'),
                   true
                 );
               },
@@ -334,12 +335,15 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
                 const serializedValue = propSchema.items.serialize(value);
                 ValuePointer.Set(
                   changeTracker,
-                  [propPointer, value].join('/'),
+                  [parentPropPointer, serializedValue].join('/'),
                   false
                 );
               },
               has: (value: any) => {
-                const valuePointer = [propPointer, value].join('/');
+                const serializedValue = propSchema.items.serialize(value);
+                const valuePointer = [parentPropPointer, serializedValue].join(
+                  '/'
+                );
                 return (
                   ValuePointer.Get(changeTracker, valuePointer) ??
                   propValue[value]
@@ -354,7 +358,7 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
         // return changeTracker.has(propPointer)
         //   ? changeTracker.get(propPointer)
         //   : propValue;
-        return ValuePointer.Get(changeTracker, propPointer) ?? propValue;
+        return ValuePointer.Get(changeTracker, parentPropPointer) ?? propValue;
       },
     });
   }
