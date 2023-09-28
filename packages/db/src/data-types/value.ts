@@ -1,6 +1,6 @@
 import { TNumber, TString, TBoolean } from '@sinclair/typebox';
 import { Operator, TimestampType } from './base';
-import { UserTypeOptions } from './serialization';
+import { UserTypeOptions, ValueTypeKeys } from './serialization';
 import { TypeInterface } from './type';
 
 export type ValueSchemaType = TString | TNumber | TBoolean;
@@ -13,7 +13,7 @@ export type TypeWithOptions<
 > = TypeOptions['nullable'] extends true ? T | null : T;
 
 export type ValueInterface<
-  TypeId extends string = string, // possibly specify known value types
+  TypeId extends ValueTypeKeys = ValueTypeKeys, // possibly specify known value types
   DeserializedType = any,
   SerializedType = any, // string, number, boolean, array, object
   TimestampedType = [value: DeserializedType, timestamp: TimestampType],

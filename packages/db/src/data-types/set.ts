@@ -1,6 +1,6 @@
 import { TimestampType, ValueType } from './base';
 import { CollectionInterface } from './collection';
-import { ValueSchemaTypes } from './serialization';
+import { VALUE_TYPE_KEYS } from './serialization';
 import { ExtractDeserializedType } from './type';
 
 const SET_OPERATORS = ['=', '!='] as const;
@@ -15,7 +15,7 @@ export function SetType<Of extends ValueType<any>>(
   Record<string, [boolean, TimestampType]>, // TODO: should be based on the type of the key
   SetOperators
 > {
-  if (!ValueSchemaTypes.includes(of.type))
+  if (!VALUE_TYPE_KEYS.includes(of.type))
     throw new Error('Invalid set type: ' + of.type); // TODO: triplit error
   if (of.options?.nullable) throw new Error('Set types cannot be nullable'); // TODO: triplit error
   return {

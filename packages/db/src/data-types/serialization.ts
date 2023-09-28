@@ -1,16 +1,17 @@
 import { Static, Type } from '@sinclair/typebox';
 import { CollectionRules } from '../db';
 
-export const ValueSchemaTypes = [
-  'string',
-  'number',
-  'boolean',
-  'date',
-] as const;
-type ValueSerializedSchemaType = (typeof ValueSchemaTypes)[number];
+export const VALUE_TYPE_KEYS = ['string', 'number', 'boolean', 'date'] as const;
+export type ValueTypeKeys = (typeof VALUE_TYPE_KEYS)[number];
+
+export const COLLECTION_TYPE_KEYS = ['set'] as const;
+export type CollectionTypeKeys = (typeof COLLECTION_TYPE_KEYS)[number];
+
+// TODO: add record type
+export const ALL_TYPES = [...VALUE_TYPE_KEYS, ...COLLECTION_TYPE_KEYS] as const;
 
 export type ValueAttributeDefinition = {
-  type: ValueSerializedSchemaType;
+  type: ValueTypeKeys;
   options?: UserTypeOptions;
 };
 export type RecordAttributeDefinition = {
@@ -18,7 +19,7 @@ export type RecordAttributeDefinition = {
   properties: Record<string, AttributeDefinition>;
 };
 export type CollectionAttributeDefinition = {
-  type: 'set'; // only sets are defined for now, but 'list' would go here
+  type: CollectionTypeKeys;
   of: ValueAttributeDefinition;
 };
 

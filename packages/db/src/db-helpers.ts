@@ -20,7 +20,7 @@ import type DB from './db';
 import type { DBTransaction } from './db-transaction';
 import { CollectionNameFromModels } from './db';
 import { Attribute, TripleStore, Value } from './triple-store';
-import { ValueSchemaTypes } from './data-types/serialization';
+import { VALUE_TYPE_KEYS } from './data-types/serialization';
 
 const ID_SEPARATOR = '#';
 
@@ -199,7 +199,7 @@ export function validateTriple(
 
   // We expect you to set values at leaf nodes
   // Our leafs should be value types, so use that as check
-  const isLeaf = (ValueSchemaTypes as unknown as string[]).includes(
+  const isLeaf = (VALUE_TYPE_KEYS as unknown as string[]).includes(
     valueSchema.type
   );
   if (!isLeaf)

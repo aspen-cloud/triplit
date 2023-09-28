@@ -1,8 +1,9 @@
 import { Operator, ValueType } from './base';
+import { CollectionTypeKeys } from './serialization';
 import { TypeInterface } from './type';
 
 export type CollectionInterface<
-  TypeId extends string = string,
+  TypeId extends CollectionTypeKeys = CollectionTypeKeys,
   DeserializedType = any,
   SerializedType = any,
   SchemaType = any,
