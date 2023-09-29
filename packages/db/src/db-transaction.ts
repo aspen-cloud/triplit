@@ -300,6 +300,7 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
       deleteProperty: (_target, prop) => {
         const propPointer = [prefix, prop].join('/');
         ValuePointer.Set(changeTracker, propPointer, undefined);
+        ValuePointer.Delete(entityObj, prop as string);
         return true;
       },
       get: (_target, prop) => {
