@@ -2599,26 +2599,25 @@ describe('Nested Properties', () => {
     });
   });
   describe('Schemafull', async () => {
-    let db;
+    const schema = {
+      Businesses: {
+        attributes: S.Schema({
+          name: S.String(),
+          address: S.Record({
+            street: S.Record({
+              number: S.String(),
+              name: S.String(),
+            }),
+            city: S.String(),
+            state: S.String(),
+          }),
+        }),
+      },
+    };
+    let db: DB<typeof schema>;
     beforeEach(async () => {
       db = new DB({
-        schema: {
-          collections: {
-            Businesses: {
-              attributes: S.Schema({
-                name: S.String(),
-                address: S.Record({
-                  street: S.Record({
-                    number: S.String(),
-                    name: S.String(),
-                  }),
-                  city: S.String(),
-                  state: S.String(),
-                }),
-              }),
-            },
-          },
-        },
+        schema: { collections: schema },
       });
     });
     const ENTITY_ID = 'business-1';

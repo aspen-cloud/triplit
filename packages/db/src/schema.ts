@@ -121,11 +121,11 @@ export interface SetProxy<T> {
   has: (value: T) => boolean;
 }
 
-type ProxyType<DT extends DataType> = DT extends SetType<infer Of>
-  ? SetProxy<ExtractDeserializedType<Of>>
-  : DT extends RecordType
-  ? never
-  : ExtractDeserializedType<DT>;
+type ProxyType<DT> = DT extends DataType
+  ? DT extends SetType<infer Of>
+    ? SetProxy<ExtractDeserializedType<Of>>
+    : ExtractDeserializedType<DT>
+  : never;
 
 export type ProxySchema<T extends ReturnType<typeof Schema.Schema>> = {
   [k in keyof T]: k extends string ? ProxyType<T[k]> : never;

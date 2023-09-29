@@ -27,7 +27,10 @@ export type ValueType<TO extends UserTypeOptions> =
   | NumberType<TO>
   | BooleanType<TO>
   | DateType<TO>;
-export type DataType = ValueType<any> | SetType<ValueType<any>> | RecordType; // TODO: Fixup record type
+export type DataType =
+  | ValueType<any>
+  | SetType<ValueType<any>>
+  | RecordType<{ [k: string]: DataType }>;
 
 export type ExtractTimestampedType<T extends ValueType<any>> =
   T extends ValueInterface<
