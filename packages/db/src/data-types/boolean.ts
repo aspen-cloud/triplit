@@ -38,7 +38,7 @@ export function BooleanType<TypeOptions extends UserTypeOptions>(
       const valid =
         (options.nullable && val === null) || typeof val === 'boolean';
       if (!valid) {
-        throw new Error('Invalid value for date: ' + val); //TODO: triplit error
+        throw new Error('Invalid value for boolean: ' + val); //TODO: triplit error
       }
       return val;
     },

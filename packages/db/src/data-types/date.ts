@@ -48,6 +48,10 @@ export function DateType<TypeOptions extends UserTypeOptions>(
       return { type: this.type, options: this.options };
     },
     serialize(val: TypeWithOptions<Date, TypeOptions>) {
+      const valid = (options.nullable && val === null) || val instanceof Date;
+      if (!valid) {
+        throw new Error('Invalid value for date: ' + val); //TODO: triplit error
+      }
       return (val ? val.toISOString() : null) as TypeWithOptions<
         string,
         TypeOptions

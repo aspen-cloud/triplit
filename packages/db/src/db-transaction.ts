@@ -70,12 +70,10 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
        * As well (when going back to a true incremental update system), when using the migrations option in the DB constructor, we need to query the schema triples when the hook first fires to initialize _schema,
        * otherwise the initial _schema value will just be the schema delta of the migration.
        */
-
       const { schemaTriples } = await readSchemaFromTripleStore(tx);
       metadataTriples.push(...schemaTriples);
-      // }
-      // Need to actually support tombstoning...or figure out how to properly read nulls so theyre deleted from objects
-      console.log('METADATA TRIPLES', metadataTriples);
+
+      // Need to actually support tombstoning...or figure out how to properly read tombstones so theyre deleted from objects
       this._schema = metadataTriples.reduce(
         entityToResultReducer,
         {} // this._schema ?? {}

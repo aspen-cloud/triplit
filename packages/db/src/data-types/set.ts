@@ -38,9 +38,11 @@ export function SetType<Items extends ValueType<any>>(
       return new Set();
     },
     deserializeCRDT(val) {
-      return Object.entries(val)
-        .filter(([_k, v]) => !!v[0])
-        .map(([k, _v]) => this.items.fromString(k)); // TODO: figure out proper set deserialzied type
+      return new Set(
+        Object.entries(val)
+          .filter(([_k, v]) => !!v[0])
+          .map(([k, _v]) => this.items.fromString(k))
+      ); // TODO: figure out proper set deserialzied type
     },
     validate(_val: any) {
       throw new Error('TODO: Set validation');

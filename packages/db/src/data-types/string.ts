@@ -39,7 +39,7 @@ export function StringType<TypeOptions extends UserTypeOptions>(
       const valid =
         (options.nullable && val === null) || typeof val === 'string';
       if (!valid) {
-        throw new Error('Invalid value for date: ' + val); //TODO: triplit error
+        throw new Error('Invalid value for string: ' + val); //TODO: triplit error
       }
       return val;
     },
@@ -52,6 +52,7 @@ export function StringType<TypeOptions extends UserTypeOptions>(
     default() {
       return calcDefaultValue(options);
     },
+    // THIS IS DB LEVEL VALIDATION!
     validate(val) {
       const type = options.nullable ? Nullable(Type.String()) : Type.String();
       return Value.Check(type, val);

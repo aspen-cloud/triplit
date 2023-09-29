@@ -39,7 +39,7 @@ export function NumberType<TypeOptions extends UserTypeOptions>(
       const valid =
         (options.nullable && val === null) || typeof val === 'number';
       if (!valid) {
-        throw new Error('Invalid value for date: ' + val); //TODO: triplit error
+        throw new Error('Invalid value for number: ' + val); //TODO: triplit error
       }
       return val;
     },
