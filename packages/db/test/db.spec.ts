@@ -16,6 +16,7 @@ import {
   MemoryStorage,
   schemaToJSON,
 } from '../src';
+import { Models } from '../src/schema';
 import { classes, students, departments } from './sample_data/school';
 import MemoryBTree from '../src/storage/memory-btree';
 import { testSubscription } from './utils/test-subscription';
@@ -29,10 +30,10 @@ import {
 // const storage = new InMemoryTupleStorage();
 const storage = new MemoryBTree();
 
-async function testDBAndTransaction(
+async function testDBAndTransaction<M extends Models<any, any> | undefined>(
   // should return a new instance if you are performing writes in your test
-  dbFactory: () => DB<any>,
-  test: (db: DB<any> | DBTransaction<any>) => void | Promise<void>,
+  dbFactory: () => DB<M>,
+  test: (db: DBTransaction<M>) => void | Promise<void>,
   scope: { db: boolean; tx: boolean } = { db: true, tx: true }
 ) {
   if (scope.db) await test(dbFactory());
@@ -1835,9 +1836,82 @@ describe('schema changes', async () => {
     const dbTwo = new DB({ source: dataSource, schema: schemaTwo });
   });
 
-  it.todo('can update attribute options');
+  it('can update attribute options', async () => {
+    const schema = {
+      collections: {
+        students: {
+          attributes: S.Schema({
+            id: S.Number(),
+            name: S.String(),
+          }),
+        },
+      },
+    };
+    await testDBAndTransaction(
+      () => new DB({ source: new InMemoryTupleStorage(), schema: schema }),
+      async (db) => {
+        await db.alterAttributeOption({
+          collection: 'students',
+          path: ['name'],
+          options: {
+            nullable: true,
+            default: 'Bobby Tables',
+          },
+        });
+        const dbSchema = await db.getSchema();
+        expect(
+          dbSchema?.collections.students.attributes.name.options.nullable
+        ).toBe(true);
+        expect(
+          dbSchema?.collections.students.attributes.name.options.default
+        ).toBe('Bobby Tables');
+      }
+    );
+  });
 
-  it.todo('can drop an attribute option');
+  it('can drop attribute options', async () => {
+    const schema = {
+      collections: {
+        students: {
+          attributes: S.Schema({
+            id: S.Number(),
+            name: S.String({
+              nullable: true,
+              default: 'Bobby Tables',
+            }),
+          }),
+        },
+      },
+    };
+    await testDBAndTransaction(
+      () => new DB({ source: new InMemoryTupleStorage(), schema: schema }),
+      async (db) => {
+        let dbSchema: Awaited<ReturnType<(typeof db)['getSchema']>> = undefined;
+
+        await db.dropAttributeOption({
+          collection: 'students',
+          path: ['name'],
+          option: 'nullable',
+        });
+
+        dbSchema = await db.getSchema();
+        expect(
+          dbSchema?.collections.students.attributes.name.options
+        ).not.toHaveProperty('nullable');
+
+        await db.dropAttributeOption({
+          collection: 'students',
+          path: ['name'],
+          option: 'default',
+        });
+
+        dbSchema = await db.getSchema();
+        expect(
+          dbSchema?.collections.students.attributes.name.options
+        ).not.toHaveProperty('default');
+      }
+    );
+  });
 });
 
 describe('migrations', () => {

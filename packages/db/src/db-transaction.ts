@@ -39,17 +39,18 @@ import {
   replaceVariablesInQuery,
   validateTriple,
   readSchemaFromTripleStore,
+  StoreSchema,
 } from './db-helpers';
 import { Query, constructEntity, entityToResultReducer } from './query';
 import { serializedItemToTuples } from './utils';
 
 export class DBTransaction<M extends Models<any, any> | undefined> {
-  schema: Models<any, any> | undefined;
+  schema: StoreSchema<M> | undefined;
   private _schema: TimestampedObject | undefined;
   constructor(
     readonly storeTx: TripleStoreTransaction,
     readonly variables?: Record<string, any>,
-    schema?: Models<any, any>
+    schema?: StoreSchema<M>
   ) {
     this.schema = schema;
 
@@ -58,14 +59,26 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
         ({ attribute }) => attribute[0] === '_metadata'
       );
       if (metadataTriples.length === 0) return;
-      // on first schema update, initialize timestamped schema
-      if (!this._schema) {
-        const { schemaTriples } = await readSchemaFromTripleStore(tx);
-        metadataTriples.push(...schemaTriples);
-      }
+
+      /**
+       * We need to support tombstoning in entityToResultReducer to properly handle schema incremental schema changes
+       * When we expire, we delete the old value and insert a tombstone,
+       * but we're not set up to do anything with that tombstone so it does nothing on an incremental update.
+       *
+       * For now setting this to requery the schema on updates.
+       *
+       * As well (when going back to a true incremental update system), when using the migrations option in the DB constructor, we need to query the schema triples when the hook first fires to initialize _schema,
+       * otherwise the initial _schema value will just be the schema delta of the migration.
+       */
+
+      const { schemaTriples } = await readSchemaFromTripleStore(tx);
+      metadataTriples.push(...schemaTriples);
+      // }
+      // Need to actually support tombstoning...or figure out how to properly read nulls so theyre deleted from objects
+      console.log('METADATA TRIPLES', metadataTriples);
       this._schema = metadataTriples.reduce(
         entityToResultReducer,
-        this._schema ?? {}
+        {} // this._schema ?? {}
       );
       // TODO: schema triples and type?
       const schemaDefinition = timestampedObjectToPlainObject(this._schema);

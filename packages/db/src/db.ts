@@ -455,6 +455,18 @@ export default class DB<M extends Models<any, any> | undefined> {
     });
   }
 
+  async alterAttributeOption(params: AlterAttributeOptionOperation[1]) {
+    await this.transact(async (tx) => {
+      await tx.alterAttributeOption(params);
+    });
+  }
+
+  async dropAttributeOption(params: DropAttributeOptionOperation[1]) {
+    await this.transact(async (tx) => {
+      await tx.dropAttributeOption(params);
+    });
+  }
+
   private async applySchemaMigration(operations: DBOperation[]) {
     // Need to read from triple store manually because we block db.transaction() api and schema access
     const { schema } = await readSchemaFromTripleStore(this.tripleStore);
