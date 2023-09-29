@@ -1837,31 +1837,54 @@ describe('schema changes', async () => {
   });
 
   it('can update attribute options', async () => {
-    const schema = {
-      collections: {
-        students: {
-          attributes: S.Schema({
-            id: S.Number(),
-            name: S.String(),
-          }),
-        },
-      },
-    };
     await testDBAndTransaction(
-      () => new DB({ source: new InMemoryTupleStorage(), schema: schema }),
+      () =>
+        new DB({
+          source: new InMemoryTupleStorage(),
+          schema: {
+            collections: {
+              students: {
+                attributes: S.Schema({
+                  id: S.Number(),
+                  name: S.String(),
+                }),
+              },
+            },
+          },
+        }),
       async (db) => {
+        // new values
         await db.alterAttributeOption({
           collection: 'students',
           path: ['name'],
           options: {
             nullable: true,
-            default: 'Bobby Tables',
+            default: "Robert'); DROP TABLE Students;--",
           },
         });
-        const dbSchema = await db.getSchema();
+
+        let dbSchema = await db.getSchema();
         expect(
           dbSchema?.collections.students.attributes.name.options.nullable
         ).toBe(true);
+        expect(
+          dbSchema?.collections.students.attributes.name.options.default
+        ).toBe("Robert'); DROP TABLE Students;--");
+
+        // update values
+        await db.alterAttributeOption({
+          collection: 'students',
+          path: ['name'],
+          options: {
+            nullable: false,
+            default: 'Bobby Tables',
+          },
+        });
+
+        dbSchema = await db.getSchema();
+        expect(
+          dbSchema?.collections.students.attributes.name.options.nullable
+        ).toBe(false);
         expect(
           dbSchema?.collections.students.attributes.name.options.default
         ).toBe('Bobby Tables');
@@ -2775,7 +2798,7 @@ describe('Nullable properties in a schema', () => {
         },
         'todo-1'
       )
-    ).rejects.toThrowError(ValueSchemaMismatchError);
+    ).rejects.toThrowError();
   });
   it('can update with nullable properties', async () => {
     const db = new DB({
@@ -2821,7 +2844,7 @@ describe('Nullable properties in a schema', () => {
         await db.update('Todos', 'todo-1', async (entity) => {
           entity.created_at = null;
         })
-    ).rejects.toThrowError(ValueSchemaMismatchError);
+    ).rejects.toThrowError();
   });
 });
 

@@ -71,7 +71,9 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
        * otherwise the initial _schema value will just be the schema delta of the migration.
        */
       const { schemaTriples } = await readSchemaFromTripleStore(tx);
-      metadataTriples.push(...schemaTriples);
+      // order matters here (may have attr + timestamp collisions inside a tx)
+      // TODO: we should fix that...
+      metadataTriples.unshift(...schemaTriples);
 
       // Need to actually support tombstoning...or figure out how to properly read tombstones so theyre deleted from objects
       this._schema = metadataTriples.reduce(
@@ -281,6 +283,7 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
     }
   }
 
+  // TODO add tests for proxy reads
   private createUpdateProxy<M extends Model | undefined>(
     changeTracker: {},
     entityObj: ProxyTypeFromModel<M>,
@@ -316,10 +319,9 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
       },
       get: (_target, prop) => {
         const parentPropPointer = [prefix, prop].join('/');
-        let propValue = ValuePointer.Get(entityObj, prop as string);
-        if (propValue === undefined) {
-          propValue = ValuePointer.Get(changeTracker, parentPropPointer);
-        }
+        let propValue = ValuePointer.Has(changeTracker, parentPropPointer)
+          ? ValuePointer.Get(changeTracker, parentPropPointer)
+          : ValuePointer.Get(entityObj, prop as string);
 
         const propSchema =
           schema &&
