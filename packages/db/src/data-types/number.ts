@@ -13,14 +13,15 @@ import { InvalidTypeOptionsError } from '../errors';
 const NUMBER_OPERATORS = ['=', '!=', '<', '>', '<=', '>='] as const;
 type NumberOperators = typeof NUMBER_OPERATORS;
 
-export type NumberType<TypeOptions extends UserTypeOptions> = ValueInterface<
-  'number',
-  TypeWithOptions<number, TypeOptions>,
-  TypeWithOptions<number, TypeOptions>,
-  [TypeWithOptions<number, TypeOptions>, TimestampType],
-  NumberOperators
->;
-export function NumberType<TypeOptions extends UserTypeOptions>(
+export type NumberType<TypeOptions extends UserTypeOptions = {}> =
+  ValueInterface<
+    'number',
+    TypeWithOptions<number, TypeOptions>,
+    TypeWithOptions<number, TypeOptions>,
+    [TypeWithOptions<number, TypeOptions>, TimestampType],
+    NumberOperators
+  >;
+export function NumberType<TypeOptions extends UserTypeOptions = {}>(
   options: TypeOptions = {} as TypeOptions
 ): NumberType<TypeOptions> {
   if (options && !userTypeOptionsAreValid(options)) {

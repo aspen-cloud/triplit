@@ -6,7 +6,6 @@ import {
   Builder,
   CachedIndexedDbStorage as IndexedDbStorage,
   Query,
-  JSONTypeFromModel,
   ProxyTypeFromModel,
   Model,
   Models,
@@ -20,6 +19,7 @@ import {
   timestampedObjectToPlainObject,
   stripCollectionFromId,
   QUERY_INPUT_TRANSFORMERS,
+  InsertTypeFromModel,
 } from '@triplit/db';
 import { Subject } from 'rxjs';
 import { getUserId } from './token';
@@ -707,7 +707,7 @@ export class TriplitClient<M extends Models<any, any> | undefined = undefined> {
 
   insert<CN extends CollectionNameFromModels<M>>(
     collectionName: CN,
-    object: JSONTypeFromModel<ModelFromModels<M, CN>>,
+    object: InsertTypeFromModel<ModelFromModels<M, CN>>,
     id?: string
   ) {
     return this.db.insert(collectionName, object, id, {

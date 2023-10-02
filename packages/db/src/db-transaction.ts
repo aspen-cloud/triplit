@@ -9,8 +9,8 @@ import {
   TimestampedObject,
   timestampedObjectToPlainObject,
   collectionsDefinitionToSchema,
-  JSONTypeFromModel,
   serializeClientModel,
+  InsertTypeFromModel,
 } from './schema';
 import { nanoid } from 'nanoid';
 import CollectionQueryBuilder, {
@@ -147,7 +147,7 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
 
   async insert<CN extends CollectionNameFromModels<M>>(
     collectionName: CN,
-    doc: JSONTypeFromModel<ModelFromModels<M, CN>>,
+    doc: InsertTypeFromModel<ModelFromModels<M, CN>>,
     id?: string
   ) {
     // TODO: confirm if collectionName is required (validate if it is)

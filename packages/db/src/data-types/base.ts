@@ -32,16 +32,6 @@ export type DataType =
   | SetType<ValueType<any>>
   | RecordType<{ [k: string]: DataType }>;
 
-export type ExtractTimestampedType<T extends ValueType<any>> =
-  T extends ValueInterface<
-    infer _TypeId,
-    infer _DeserializedType,
-    infer _JSType,
-    infer TimestampedType
-  >
-    ? TimestampedType
-    : never;
-
 export type RegisterTypeFromBaseType<T extends ValueSchemaType> = TTuple<
   [T, typeof Timestamp]
 > & {

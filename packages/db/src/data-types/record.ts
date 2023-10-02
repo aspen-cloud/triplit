@@ -1,13 +1,18 @@
 import { DataType } from './base';
 import { RecordAttributeDefinition } from './serialization';
-import { ExtractDeserializedType, TypeInterface } from './type';
+import {
+  ExtractDeserializedType,
+  ExtractSerializedType,
+  ExtractTimestampedType,
+  TypeInterface,
+} from './type';
 
 export type RecordType<Properties extends { [k: string]: DataType }> =
   TypeInterface<
     'record',
-    { [k in keyof Properties]: ExtractDeserializedType<Properties[k]> }, // TODO: dont use any
-    any,
-    any,
+    { [k in keyof Properties]: ExtractDeserializedType<Properties[k]> },
+    { [k in keyof Properties]: ExtractSerializedType<Properties[k]> },
+    { [k in keyof Properties]: ExtractTimestampedType<Properties[k]> },
     readonly []
   > & {
     properties: Properties;
@@ -32,8 +37,12 @@ export function RecordType<Properties extends { [k: string]: DataType }>(
     deserialize(val: any) {
       return val;
     },
+    // TODO: determine proper value and type here
+    // Type should go extract the deserialized type of each of its keys
     default() {
-      return undefined;
+      return Object.fromEntries(
+        Object.entries(properties).map(([key, val]) => [key, val.default()])
+      );
     },
     validate(_val: any) {
       return true; // TODO

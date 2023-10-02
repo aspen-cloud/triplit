@@ -6,15 +6,17 @@ import { ExtractDeserializedType } from './type';
 const SET_OPERATORS = ['=', '!='] as const;
 type SetOperators = typeof SET_OPERATORS;
 
-export function SetType<Items extends ValueType<any>>(
-  items: Items
-): CollectionInterface<
+export type SetType<Items extends ValueType<any>> = CollectionInterface<
   'set',
   Set<ExtractDeserializedType<Items>>,
   Record<string, boolean>,
   Record<string, [boolean, TimestampType]>, // TODO: should be based on the type of the key
   SetOperators
-> {
+>;
+
+export function SetType<Items extends ValueType<any>>(
+  items: Items
+): SetType<Items> {
   if (!VALUE_TYPE_KEYS.includes(items.type))
     throw new Error('Invalid set type: ' + items.type); // TODO: triplit error
   if (items.options?.nullable) throw new Error('Set types cannot be nullable'); // TODO: triplit error
@@ -49,4 +51,3 @@ export function SetType<Items extends ValueType<any>>(
     },
   };
 }
-export type SetType<Of extends ValueType<any>> = ReturnType<typeof SetType<Of>>;

@@ -7,7 +7,12 @@ import type { Attribute, EAV, TripleRow } from './triple-store';
 import { objectToTuples } from './utils';
 import { entityToResultReducer } from './query';
 import { appendCollectionToId, StoreSchema } from './db-helpers';
-import { typeFromJSON, DataType, TimestampType } from './data-types/base';
+import {
+  typeFromJSON,
+  DataType,
+  TimestampType,
+  ValueType,
+} from './data-types/base';
 import {
   AttributeDefinition,
   CollectionDefinition,
@@ -141,8 +146,38 @@ export type TimestampedTypeFromModel<M extends Model> = {
   [k in keyof M]: ExtractTimestampedType<M[k]>;
 };
 
+// Check if a type is unknown or undefined
+type IsUnknownOrUndefined<T> = unknown extends T
+  ? true
+  : undefined extends T
+  ? true
+  : false;
+
+type BooleanNot<T extends boolean> = T extends true ? false : true;
+
+type DataTypeHasNoDefault<T extends DataType> = T extends DataType
+  ? T extends ValueType<infer TypeOptions>
+    ? IsUnknownOrUndefined<TypeOptions['default']>
+    : false // sets and records always have defaults (might want to refactor based on return type of default())
+  : never;
+
+type DataTypeHasDefault<T extends DataType> = BooleanNot<
+  DataTypeHasNoDefault<T>
+>;
+
 // Exposed to client
-// TODO figure out proper naming
+export type InsertTypeFromModel<M extends Model | undefined> = M extends Model
+  ? {
+      [k in keyof M as DataTypeHasNoDefault<M[k]> extends true
+        ? k
+        : never]: ExtractDeserializedType<M[k]>;
+    } & {
+      [k in keyof M as DataTypeHasDefault<M[k]> extends true
+        ? k
+        : never]?: ExtractDeserializedType<M[k]>;
+    }
+  : any;
+
 export type JSONTypeFromModel<M extends Model | undefined> = M extends Model
   ? {
       [k in keyof M]: M[k] extends DataType

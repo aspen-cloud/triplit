@@ -13,15 +13,16 @@ import { InvalidTypeOptionsError } from '../errors';
 const STRING_OPERATORS = ['=', '!=', 'like', 'nlike'] as const;
 type StringOperators = typeof STRING_OPERATORS;
 
-export type StringType<TypeOptions extends UserTypeOptions> = ValueInterface<
-  'string',
-  TypeWithOptions<string, TypeOptions>,
-  TypeWithOptions<string, TypeOptions>,
-  [TypeWithOptions<string, TypeOptions>, TimestampType], // TODO: use register?
-  StringOperators
->;
+export type StringType<TypeOptions extends UserTypeOptions = {}> =
+  ValueInterface<
+    'string',
+    TypeWithOptions<string, TypeOptions>,
+    TypeWithOptions<string, TypeOptions>,
+    [TypeWithOptions<string, TypeOptions>, TimestampType], // TODO: use register?
+    StringOperators
+  >;
 
-export function StringType<TypeOptions extends UserTypeOptions>(
+export function StringType<TypeOptions extends UserTypeOptions = {}>(
   options: TypeOptions = {} as TypeOptions
 ): StringType<TypeOptions> {
   if (options && !userTypeOptionsAreValid(options)) {

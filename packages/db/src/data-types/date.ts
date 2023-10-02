@@ -25,14 +25,14 @@ const DateSchemaType = Type.String({
   default: null,
 });
 
-export type DateType<TypeOptions extends UserTypeOptions> = ValueInterface<
+export type DateType<TypeOptions extends UserTypeOptions = {}> = ValueInterface<
   'date',
   TypeWithOptions<Date, TypeOptions>,
   TypeWithOptions<string, TypeOptions>,
   [TypeWithOptions<string, TypeOptions>, TimestampType],
   DateOperators
 >;
-export function DateType<TypeOptions extends UserTypeOptions>(
+export function DateType<TypeOptions extends UserTypeOptions = {}>(
   options: TypeOptions = {} as TypeOptions
 ): DateType<TypeOptions> {
   if (!userTypeOptionsAreValid(options)) {

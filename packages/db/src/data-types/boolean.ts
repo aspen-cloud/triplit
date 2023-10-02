@@ -13,14 +13,15 @@ import { InvalidTypeOptionsError } from '../errors';
 const BOOLEAN_OPERATORS = ['=', '!='] as const;
 type BooleanOperators = typeof BOOLEAN_OPERATORS;
 
-export type BooleanType<TypeOptions extends UserTypeOptions> = ValueInterface<
-  'boolean',
-  TypeWithOptions<boolean, TypeOptions>,
-  TypeWithOptions<boolean, TypeOptions>,
-  [TypeWithOptions<boolean, TypeOptions>, TimestampType],
-  BooleanOperators
->;
-export function BooleanType<TypeOptions extends UserTypeOptions>(
+export type BooleanType<TypeOptions extends UserTypeOptions = {}> =
+  ValueInterface<
+    'boolean',
+    TypeWithOptions<boolean, TypeOptions>,
+    TypeWithOptions<boolean, TypeOptions>,
+    [TypeWithOptions<boolean, TypeOptions>, TimestampType],
+    BooleanOperators
+  >;
+export function BooleanType<TypeOptions extends UserTypeOptions = {}>(
   options: TypeOptions = {} as TypeOptions
 ): BooleanType<TypeOptions> {
   if (!userTypeOptionsAreValid(options)) {

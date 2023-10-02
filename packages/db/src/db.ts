@@ -1,5 +1,10 @@
 import { EAV, TripleRow, TripleStore } from './triple-store';
-import { ProxyTypeFromModel, Model, Models, JSONTypeFromModel } from './schema';
+import {
+  ProxyTypeFromModel,
+  Model,
+  Models,
+  InsertTypeFromModel,
+} from './schema';
 import { AsyncTupleStorageApi } from 'tuple-database';
 import CollectionQueryBuilder, {
   CollectionQuery,
@@ -322,7 +327,7 @@ export default class DB<M extends Models<any, any> | undefined> {
 
   async insert<CN extends CollectionNameFromModels<M>>(
     collectionName: CN,
-    doc: JSONTypeFromModel<ModelFromModels<M, CN>>,
+    doc: InsertTypeFromModel<ModelFromModels<M, CN>>,
     id?: string,
     storeScope?: { read: string[]; write: string[] }
   ) {

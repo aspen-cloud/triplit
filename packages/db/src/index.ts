@@ -51,6 +51,7 @@ export type {
   TimestampedTypeFromModel as TypeFromModel, // TODO: dont alias
 } from './schema';
 export type {
+  InsertTypeFromModel,
   JSONTypeFromModel,
   ProxyTypeFromModel,
   Model,

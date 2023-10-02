@@ -44,7 +44,7 @@ export type TypeInterface<
 
   deserializeCRDT(val: TimestampedType): DeserializedType;
 
-  default(): any;
+  default(): SerializedType;
 
   validate(val: any): boolean;
 };
