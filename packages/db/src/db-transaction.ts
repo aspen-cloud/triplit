@@ -448,8 +448,10 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
       '_schema',
       async (schema) => {
         if (!schema.collections) schema.collections = {};
+        // adding this here so that collections without attributes have some leaf value
+        // so that the collection key will show up in the schema
         if (!schema.collections[collectionName])
-          schema.collections[collectionName] = {};
+          schema.collections[collectionName] = { name: collectionName };
         const collectionAttributes = schema.collections[collectionName];
         collectionAttributes.attributes = attributes;
         collectionAttributes.rules = rules;
@@ -478,6 +480,12 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
         const collectionAttributes = schema.collections[collectionName];
         const parentPath = path.slice(0, -1);
         const attrName = path[path.length - 1];
+        // little hack to handle the case where we have no attributes yet
+
+        if (path.length === 1 && !collectionAttributes.attributes) {
+          collectionAttributes.attributes = { [path[0]]: attribute };
+          return;
+        }
         let attr = parentPath.reduce((acc, curr) => {
           if (!acc[curr]) acc[curr] = {};
           return acc[curr];

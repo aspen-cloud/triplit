@@ -63,6 +63,7 @@ export type {
 } from './schema';
 export type {
   AttributeDefinition,
+  CollectionAttributeDefinition,
   CollectionDefinition,
   CollectionsDefinition,
 } from './data-types/serialization';

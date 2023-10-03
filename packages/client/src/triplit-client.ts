@@ -38,6 +38,7 @@ interface SyncOptions {
   server?: string;
   apiKey?: string;
   secure?: boolean;
+  keepOpenOnSchemaMismatch?: boolean;
 }
 
 // Not totally sold on passing in the token here, but it felt awkward to have it in the sync options since its also relevant to the database
@@ -91,6 +92,8 @@ class SyncEngine {
   constructor(options: SyncOptions, db: DB<any>) {
     this.syncOptions = options;
     this.syncOptions.secure = options.secure ?? true;
+    this.syncOptions.keepOpenOnSchemaMismatch =
+      options.keepOpenOnSchemaMismatch ?? false;
     this.db = db;
     txCommits$.subscribe((txId) => {
       const callbacks = this.commitCallbacks.get(txId);
@@ -139,6 +142,10 @@ class SyncEngine {
     if (schemaVersion) {
       wsOptions.set('version', schemaVersion.toString());
     }
+    wsOptions.set(
+      'keep-open-on-schema-mismatch',
+      String(this.syncOptions.keepOpenOnSchemaMismatch)
+    );
     wsOptions.set('client', await this.db.getClientId());
     wsOptions.set('token', apiKey);
     return `${isSecure ? 'wss' : 'ws'}://${server}?${wsOptions.toString()}`;

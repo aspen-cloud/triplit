@@ -107,7 +107,11 @@ export async function fetch<Q extends CollectionQuery<any>>(
   const where = queryWithInsertedVars.where;
   if (query.entityId) {
     const storeId = appendCollectionToId(query.collectionName, query.entityId);
-    const triples = await tx.findByEntity(storeId);
+    // With schema's we're using tombstones, and need to filter down to the latest triples to ensure that the undefined value we set on a schema attribute to be respected
+    // this is probably a bandaid
+    const triples = filterToLatestEntityAttribute(
+      await tx.findByEntity(storeId)
+    );
     const entity = constructEntity(triples, storeId);
     if (!entity || !doesEntityObjMatchWhere(entity, where, schema)) {
       const results = new Map() as FetchResult<Q>;
@@ -518,7 +522,10 @@ function subscribeSingleEntity<Q extends CollectionQuery<any>>(
               : null;
             triples = fetchResult.triples;
           } else {
-            entity = entityInserts.reduce(entityToResultReducer, entity);
+            entity = filterToLatestEntityAttribute(entityInserts).reduce(
+              entityToResultReducer,
+              entity
+            );
             triples = filterToLatestEntityAttribute(
               triples.concat(entityInserts)
             );

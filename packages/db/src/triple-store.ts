@@ -367,11 +367,10 @@ export class TripleStoreOperator implements TripleStoreApi {
     shouldValidate = true
   ) {
     const { id: id, attribute, value, timestamp, expired } = tripleInput;
-
-    if (expired) {
-      console.info('Skipping index for expired triple');
-      return;
-    }
+    // if (expired) {
+    //   console.info('Skipping index for expired triple');
+    //   return;
+    // }
 
     // If we already have this triple, skip it (performance optimization)
     // This does add another binary search, so might be worth patching tuple-db to let us do this in tx.set()
@@ -491,9 +490,10 @@ export class TripleStoreOperator implements TripleStoreApi {
     const timestamp = await this.getTransactionTimestamp();
     const existingTriples = await this.findByEntityAttribute(id, attribute);
     await this.deleteTriples(existingTriples);
-    await this.insertTriples([
-      { id, attribute, value: null, timestamp, expired: true },
-    ]);
+    await this.insertTriples(
+      [{ id, attribute, value: null, timestamp, expired: true }],
+      false
+    );
   }
 }
 

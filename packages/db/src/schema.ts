@@ -262,7 +262,9 @@ export function collectionsDefinitionToSchema(
   const result: Models<any, any> = {};
   for (const [collectionName, definition] of Object.entries(collections)) {
     const config: SchemaConfig = {};
-    const attrs = Object.entries(definition.attributes);
+    const attrs = definition.attributes
+      ? Object.entries(definition.attributes)
+      : [];
     for (const [path, attrDef] of attrs) {
       config[path] = typeFromJSON(attrDef);
     }
