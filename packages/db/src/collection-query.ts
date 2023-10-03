@@ -13,6 +13,7 @@ import {
   initialize,
   JSONTypeFromModel,
   Model,
+  timestampedObjectToPlainObject,
   // timestampedObjectToPlainObject,
   TimestampedTypeFromModel,
   UnTimestampedObject,
@@ -32,8 +33,13 @@ import {
   stripCollectionFromId,
   appendCollectionToId,
   splitIdParts,
+  replaceVariablesInFilterStatements,
+  replaceVariablesInQuery,
+  someFilterStatements,
 } from './db-helpers';
 import { Operator } from './data-types/base';
+import { DBTransaction } from './db-transaction';
+import DB from './db';
 
 export default function CollectionQueryBuilder<M extends Model | undefined>(
   collectionName: string,
@@ -97,7 +103,8 @@ export async function fetch<Q extends CollectionQuery<any>>(
   query: Q,
   { includeTriples = false, schema }: FetchOptions = {}
 ) {
-  const where = query.where;
+  const queryWithInsertedVars = replaceVariablesInQuery(query);
+  const where = queryWithInsertedVars.where;
   if (query.entityId) {
     const storeId = appendCollectionToId(query.collectionName, query.entityId);
     const triples = await tx.findByEntity(storeId);
@@ -150,9 +157,33 @@ export async function fetch<Q extends CollectionQuery<any>>(
         return [externalId, { triples: [], entity: entityEntry }];
       }
     })
-    .filter(async ([, { entity }]) =>
-      doesEntityObjMatchWhere(entity, where, schema)
-    )
+    .filter(async ([, { entity }]) => {
+      const subQueries = where.filter((filter) => 'exists' in filter);
+      const plainFilters = where.filter((filter) => !('exists' in filter));
+      const basicMatch = doesEntityObjMatchWhere(entity, plainFilters, schema);
+      if (!basicMatch) return false;
+      const subQueryTriples: TripleRow[] = [];
+      for (const { exists: subQuery } of subQueries) {
+        const subQueryWithVariables = {
+          ...subQuery,
+          vars: {
+            ...subQuery.vars,
+            ...timestampedObjectToPlainObject(entity),
+          },
+        };
+        const { results: subQueryResult, triples } = await fetch(
+          tx,
+          subQueryWithVariables,
+          { includeTriples: true, schema }
+        );
+
+        const exists = subQueryResult.size > 0;
+        if (!exists) return false;
+        subQueryTriples.push(...triples);
+      }
+      resultTriples.push(...subQueryTriples);
+      return true;
+    })
     .map(async ([id, { triples, entity }]) => {
       resultTriples.push(...triples);
       return [id, entity] as [string, any];
@@ -529,6 +560,8 @@ function subscribeResultsAndTriples<Q extends CollectionQuery<any>>(
 ) {
   const order = query.order;
   const limit = query.limit;
+  const queryWithInsertedVars = replaceVariablesInQuery(query);
+  const where = queryWithInsertedVars.where;
   const asyncUnSub = async () => {
     let results: FetchResult<Q> = new Map() as FetchResult<Q>;
     let triples: TripleRow[] = [];
@@ -550,6 +583,26 @@ function subscribeResultsAndTriples<Q extends CollectionQuery<any>>(
       ]);
       const unsub = tripleStore.onWrite(async ({ inserts, deletes }) => {
         try {
+          // Handle queries with nested queries as a special case for now
+          if (someFilterStatements(where, (filter) => 'exists' in filter)) {
+            const fetchResult = await fetch(tripleStore, query, {
+              includeTriples: true,
+              schema,
+            });
+            results = fetchResult.results;
+            triples = fetchResult.triples;
+            onResults([
+              new Map(
+                [...results].map(([id, entity]) => [
+                  id,
+                  deserializeEntity(entity, schema),
+                ])
+              ) as FetchResult<Q>,
+              triples,
+            ]);
+            return;
+          }
+
           let nextResult = new Map(results);
           const matchedTriples = [];
           const updatedEntitiesForQuery = new Set<string>(
@@ -580,7 +633,7 @@ function subscribeResultsAndTriples<Q extends CollectionQuery<any>>(
               entityObj['_collection'][0] === query.collectionName;
             const isInResult =
               isInCollection &&
-              doesEntityObjMatchWhere(entityObj, query.where ?? [], schema);
+              doesEntityObjMatchWhere(entityObj, where ?? [], schema);
 
             // Check if the result stays within the current range of the query based on the limit
             // If it doesnt, we'll remove and might add it back when we backfill

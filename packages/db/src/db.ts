@@ -1,4 +1,5 @@
 import { EAV, TripleRow, TripleStore } from './triple-store';
+
 import {
   ProxyTypeFromModel,
   Model,
@@ -26,6 +27,8 @@ import {
   readSchemaFromTripleStore,
   overrideStoredSchema,
 } from './db-helpers';
+import { VariableAwareCache } from './variable-aware-cache';
+
 import {
   AttributeDefinition,
   UserTypeOptions,
@@ -112,6 +115,7 @@ interface FetchOptions {
 }
 
 const DEFAULT_STORE_KEY = 'default';
+const QUERY_CACHE_ENABLED = false;
 
 export type CollectionFromModels<
   M extends Models<any, any> | undefined,
@@ -156,6 +160,7 @@ export default class DB<M extends Models<any, any> | undefined> {
   tripleStore: TripleStore;
   ensureMigrated: Promise<void | void[]>;
   variables: Record<string, any>;
+  cache: VariableAwareCache<Models<any, any>>;
 
   constructor({
     schema,
@@ -167,6 +172,7 @@ export default class DB<M extends Models<any, any> | undefined> {
     variables,
   }: DBConfig<M> = {}) {
     this.variables = variables ?? {};
+    this.cache = new VariableAwareCache(this);
     // If only one source is provided, use the default key
     const sourcesMap = sources ?? {
       [DEFAULT_STORE_KEY]: source ?? new MemoryStorage(),
@@ -271,6 +277,9 @@ export default class DB<M extends Models<any, any> | undefined> {
     { scope, skipRules = false }: FetchOptions = {}
   ) {
     await this.ensureMigrated;
+    if (QUERY_CACHE_ENABLED && VariableAwareCache.canCacheQuery(query)) {
+      return this.cache.resolveFromCache(query);
+    }
     const { query: fetchQuery, collection } = await this.prepareQuery(query, {
       scope,
       skipRules,
@@ -305,14 +314,14 @@ export default class DB<M extends Models<any, any> | undefined> {
     options: FetchOptions
   ) {
     await this.ensureMigrated;
-    let fetchQuery = query;
+    let fetchQuery = { ...query };
     const collection = await this.getCollectionSchema(
       fetchQuery.collectionName as CollectionNameFromModels<M>
     );
     if (collection && !options.skipRules) {
       fetchQuery = this.addReadRulesToQuery(fetchQuery, collection);
     }
-    fetchQuery = replaceVariablesInQuery(this, fetchQuery);
+    fetchQuery.vars = { ...this.variables, ...(fetchQuery.vars ?? {}) };
     fetchQuery.where = mapFilterStatements(
       fetchQuery.where,
       ([prop, op, val]) => [
@@ -366,7 +375,8 @@ export default class DB<M extends Models<any, any> | undefined> {
           collection
         );
       }
-      subscriptionQuery = replaceVariablesInQuery(this, subscriptionQuery);
+      subscriptionQuery.vars = { ...this.variables, ...(query.vars ?? {}) };
+      subscriptionQuery = replaceVariablesInQuery(subscriptionQuery);
 
       const unsub = subscribe(
         scope ? this.tripleStore.setStorageScope(scope) : this.tripleStore,
@@ -405,7 +415,8 @@ export default class DB<M extends Models<any, any> | undefined> {
           collection
         );
       }
-      subscriptionQuery = replaceVariablesInQuery(this, subscriptionQuery);
+      subscriptionQuery.vars = { ...this.variables, ...(query.vars ?? {}) };
+      subscriptionQuery = replaceVariablesInQuery(subscriptionQuery);
 
       const unsub = subscribeTriples(
         scope ? this.tripleStore.setStorageScope(scope) : this.tripleStore,

@@ -3,9 +3,7 @@ import { getRxStorageMemory } from 'rxdb/plugins/storage-memory';
 import Bench from 'tinybench';
 import DB from '../src/db';
 import { RxDBQueryBuilderPlugin } from 'rxdb/plugins/query-builder';
-import { MemoryStorage } from '../src';
 import MemoryBTree from '../src/storage/memory-btree';
-import { fetch } from '../src/collection-query';
 addRxPlugin(RxDBQueryBuilderPlugin);
 
 const rxdb = await createRxDatabase({
@@ -55,74 +53,86 @@ function logAndThrowError(msg: string) {
   throw new Error(msg);
 }
 
+// Measure first run of each query
+
+// TRIPLIT
+let start = performance.now();
+await triplit.fetch(
+  triplit
+    .query('classes')
+    .vars({ level: 200 })
+    .where([['level', '=', `$level`]])
+    .build()
+);
+let end = performance.now();
+console.log(`Triplit first query: ${end - start}ms`);
+
+// RXDB
+start = performance.now();
+await rxdb.collections.classes.find().where('level').eq(200).exec();
+end = performance.now();
+console.log(`RxDB first query: ${end - start}ms`);
+
+// Measure second run of each query
+start = performance.now();
+await triplit.fetch(
+  triplit
+    .query('classes')
+    .vars({ level: 100 })
+    .where([['level', '=', `$level`]])
+    .build()
+);
+end = performance.now();
+console.log(`Triplit second query: ${end - start}ms`);
+
+// RXDB
+start = performance.now();
+await rxdb.collections.classes.find().where('level').eq(100).exec();
+end = performance.now();
+console.log(`RxDB second query: ${end - start}ms`);
+
 bench
   .add('vanilla js query', async () => {
-    CLASSES.filter((c) => c.level < 200).length;
+    // const level = Math.floor(Math.random() * 1000);
+    const level = 200;
+    const resp = CLASSES.filter((c) => c.level < level);
+    // if (resp.length !== CLASSES.filter((c) => c.level === level).length) {
+    //   logAndThrowError('RXDB: Wrong result count');
+    // }
   })
   .add('rxdb query', async () => {
+    // const level = Math.floor(Math.random() * 1000);
+    const level = 200;
     let resp = await rxdb.collections.classes
       .find()
       .where('level')
-      .lt(200)
+      .lt(level)
       .exec();
     resp = resp.map((doc) => doc.toJSON());
-    if (resp.length !== expectedClassCount)
-      logAndThrowError('RXDB: Wrong result count');
+    // if (resp.length !== CLASSES.filter((c) => c.level === level).length) {
+    //   logAndThrowError('RXDB: Wrong result count');
+    // }
   })
   .add('triplit query', async () => {
+    // const level = Math.floor(Math.random() * 1000);
+    const level = 200;
     const resp = await triplit.fetch(
       triplit
         .query('classes')
-        .where([['level', '<', 200]])
+        .vars({ level })
+        .where([['level', '<', `$level`]])
         .build()
     );
-    if (resp.size !== expectedClassCount)
-      logAndThrowError(
-        `Triplit: Wrong result count. Expected ${expectedClassCount}, got ${resp.size}}`
-      );
-  })
-  .add('triplit w/ triples query', async () => {
-    const resp = await fetch(
-      triplit.tripleStore,
-      triplit
-        .query('classes')
-        .where([['level', '<', 200]])
-        .build(),
-      { includeTriples: true }
-    );
-    if (resp.results.size !== expectedClassCount)
-      logAndThrowError(
-        `Triplit: Wrong result count. Expected ${expectedClassCount}, got ${resp.size}}`
-      );
-  })
-  .add('triple-store attribute index query', async () => {
-    const allLevels = await triplit.tripleStore.findByAVE([
-      ['classes', 'level'],
-    ]);
-
-    const resp = allLevels.filter((trip) => trip.value < 200);
-    if (resp.length !== expectedClassCount)
-      logAndThrowError('Triple Store: Wrong result count');
-  })
-  .add('triple-store entities index query', async () => {
-    const allClasses = await triplit.tripleStore.getEntities('classes');
-    try {
-      const resp = [...allClasses.values()].filter(
-        (trip) => trip.level && trip.level[0] < 200
-      );
-      if (resp.length !== expectedClassCount)
-        logAndThrowError(
-          `Triple Store Entities: Wrong result count. Expected ${expectedClassCount}, got ${resp.length}`
-        );
-    } catch (e) {
-      logAndThrowError(e.message);
-    }
+    // if (resp.size !== CLASSES.filter((c) => c.level === level).length)
+    //   logAndThrowError(
+    //     `Triplit: Wrong result count. Expected ${expectedClassCount}, got ${resp.size}}`
+    //   );
   });
 
 bench.addEventListener('error', (e) => {
   console.error(e);
   controller.abort();
 });
-await bench.run();
 
+await bench.run();
 console.table(bench.table());

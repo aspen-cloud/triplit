@@ -8,7 +8,7 @@ import {
   SessionVariableNotFoundError,
   ValueSchemaMismatchError,
 } from './errors';
-import { QueryWhere, FilterStatement } from './query';
+import { QueryWhere, FilterStatement, SubQuery } from './query';
 import {
   Model,
   Models,
@@ -55,6 +55,7 @@ export function replaceVariablesInFilterStatements<M extends Model | undefined>(
   variables: Record<string, any>
 ): QueryWhere<M> {
   return statements.map((filter) => {
+    if ('exists' in filter) return filter;
     if (!(filter instanceof Array)) {
       filter.filters = replaceVariablesInFilterStatements(
         filter.filters,
@@ -72,10 +73,35 @@ export function replaceVariablesInFilterStatements<M extends Model | undefined>(
 
 export function replaceVariablesInQuery<
   Q extends Pick<CollectionQuery<any>, 'where' | 'vars'>
->(db: DB<any> | DBTransaction<any>, query: Q): Q {
-  const variables = { ...(db.variables ?? {}), ...(query.vars ?? {}) };
-  const where = replaceVariablesInFilterStatements(query.where, variables);
+>(query: Q): Q {
+  // const variables = { ...(db.variables ?? {}), ...(query.vars ?? {}) };
+  const where = replaceVariablesInFilterStatements(
+    query.where,
+    query.vars ?? {}
+  );
   return { ...query, where };
+}
+
+export function* filterStatementIterator<M extends Model | undefined>(
+  statements: QueryWhere<M>
+): Generator<FilterStatement<M> | SubQuery> {
+  for (const statement of statements) {
+    if (!(statement instanceof Array) && 'filters' in statement) {
+      yield* filterStatementIterator(statement.filters);
+    } else {
+      yield statement;
+    }
+  }
+}
+
+export function someFilterStatements<M extends Model | undefined>(
+  statements: QueryWhere<M>,
+  someFunction: (statement: FilterStatement<M>) => boolean
+): boolean {
+  for (const statement of filterStatementIterator(statements)) {
+    if (someFunction(statement)) return true;
+  }
+  return false;
 }
 
 export function mapFilterStatements<M extends Model | undefined>(
@@ -83,7 +109,9 @@ export function mapFilterStatements<M extends Model | undefined>(
   mapFunction: (statement: FilterStatement<M>) => FilterStatement<M>
 ): QueryWhere<M> {
   return statements.map((filter) => {
-    if (!(filter instanceof Array)) {
+    // TODO this doesn't feel right to just exclude sub-queries here
+    if ('exists' in filter) return filter;
+    if (!(filter instanceof Array) && 'filters' in filter) {
       filter.filters = mapFilterStatements(filter.filters, mapFunction);
       return filter;
     }
@@ -101,31 +129,6 @@ export function everyFilterStatement(
     }
     return everyFunction(filter);
   });
-}
-
-export async function applyRulesToEntity<
-  M extends Models<any, any> | undefined,
-  CN extends CollectionNameFromModels<M>
->(db: DB<M> | DBTransaction<M>, collectionName: CN, entity: any) {
-  if (!entity) return entity;
-  const collection = await db.getCollectionSchema(collectionName);
-  const readRules = collection?.rules?.read;
-  if (readRules) {
-    const whereFilter = Object.values(readRules).flatMap((rule) => rule.filter);
-    let query = { where: whereFilter };
-    /**
-     * TODO we should just make this operate directly on where filters
-     * e.g.
-     * query.where = this.replaceVariablesInWhere(query.where)
-     */
-    query = replaceVariablesInQuery(db, query);
-    const collectionSchema = collection.attributes;
-    if (doesEntityObjMatchWhere(entity, query.where, collectionSchema)) {
-      return entity;
-    }
-    return null;
-  }
-  return entity;
 }
 
 export async function getSchemaTriples(tripleStore: TripleStoreApi) {

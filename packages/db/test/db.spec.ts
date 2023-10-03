@@ -746,8 +746,7 @@ describe('subscriptions', () => {
       const unsubscribe = db.subscribe(
         CollectionQueryBuilder('students')
           .limit(2)
-          // .order(['major', 'ASC'])
-          .order('major', 'ASCasdf')
+          .order('major', 'ASC')
           .where([['dorm', '=', 'Allen']])
           .build(),
         (students) => {
@@ -2692,7 +2691,6 @@ describe('Nested Properties', () => {
 
       const query = db.query('Businesses').entityId(ENTITY_ID).build();
       const result = (await db.fetch(query)).get(ENTITY_ID);
-      console.log(result);
       expect(result.address.street.number).toBe('123');
       expect(result.address.street.name).toBe('Main St');
       expect(result.address.city).toBe('San Francisco');
@@ -3128,5 +3126,350 @@ describe('subscription errors', () => {
         expect(error.message).toBe('Test Error');
       }
     );
+  });
+});
+
+describe('DB variable index cache view thing', () => {
+  it('maintains consistency across inserts', async () => {
+    const db = new DB({});
+    const query = db
+      .query('cars')
+      .where(['make', '=', 'Ford'], ['year', '>', '$year'])
+      .vars({ year: 2010 })
+      .build();
+
+    let results;
+
+    results = await db.fetch(query);
+    expect(results).toHaveLength(0);
+
+    await db.insert('cars', { make: 'Ford', year: 2011 }, 'car-1');
+    results = await db.fetch(query);
+    expect(results).toHaveLength(1);
+
+    await db.insert('cars', { make: 'Ford', year: 2009 }, 'car-2');
+    results = await db.fetch(query);
+    expect(results).toHaveLength(1);
+
+    await db.insert('cars', { make: 'Ford', year: 2010 }, 'car-3');
+    results = await db.fetch(query);
+    expect(results).toHaveLength(1);
+
+    await db.insert('cars', { make: 'Ford', year: 2020 }, 'car-4');
+    results = await db.fetch(query);
+    expect(results).toHaveLength(2);
+  });
+});
+
+describe('relational querying / sub querying', () => {
+  const db = new DB({});
+  beforeAll(async () => {
+    // Insert mock data for Cars and Manufacturers
+    // Manufacturer - Contains name and country
+    await db.insert(
+      'manufacturers',
+      { name: 'Ford', country: 'USA', id: 'ford' },
+      'ford'
+    );
+    await db.insert(
+      'manufacturers',
+      { name: 'Toyota', country: 'Japan', id: 'toyota' },
+      'toyota'
+    );
+    await db.insert(
+      'manufacturers',
+      { name: 'Honda', country: 'Japan', id: 'honda' },
+      'honda'
+    );
+    await db.insert(
+      'manufacturers',
+      { name: 'Volkswagen', country: 'Germany', id: 'vw' },
+      'vw'
+    );
+    // Cars - Contains a make, model, manufacturer, and class (like SUV)
+    const cars = [
+      { year: 2021, model: 'F150', manufacturer: 'ford', type: 'truck' },
+      { year: 2022, model: 'Fusion', manufacturer: 'ford', type: 'sedan' },
+      { year: 2022, model: 'Explorer', manufacturer: 'ford', type: 'SUV' },
+      { year: 2022, model: 'Camry', manufacturer: 'toyota', type: 'sedan' },
+      { year: 2021, model: 'Tacoma', manufacturer: 'toyota', type: 'truck' },
+      { year: 2021, model: 'Civic', manufacturer: 'honda', type: 'sedan' },
+      { year: 2022, model: 'Accord', manufacturer: 'honda', type: 'sedan' },
+      { year: 2022, model: 'Jetta', manufacturer: 'vw', type: 'sedan' },
+      { year: 2023, model: 'Atlas', manufacturer: 'vw', type: 'truck' },
+      { year: 2022, model: 'Tiguan', manufacturer: 'vw', type: 'SUV' },
+    ];
+    for (const car of cars) {
+      await db.insert('cars', car, `${car.manufacturer}-${car.model}`);
+    }
+  });
+  it('can handle sub queries that use variables', async () => {
+    const query = db
+      .query('manufacturers')
+      .where([
+        {
+          exists: db
+            .query('cars')
+            .where([
+              ['type', '=', 'SUV'],
+              ['manufacturer', '=', '$id'],
+            ])
+            .build(),
+        },
+      ])
+      .build();
+
+    const result = await db.fetch(query);
+    // console.log('result', result);
+    expect(result).toHaveLength(2);
+  });
+  it('can handle nested subqueries', async () => {
+    const query = db
+      .query('cars')
+      .where([
+        {
+          exists: db
+            .query('manufacturers')
+            .where([
+              ['id', '=', '$manufacturer'],
+              {
+                exists: db
+                  .query('cars')
+                  .where([
+                    ['type', '=', 'SUV'],
+                    ['manufacturer', '=', '$id'],
+                  ])
+                  .build(),
+              },
+            ])
+            .build(),
+        },
+      ])
+      .build();
+
+    const result = await db.fetch(query);
+    // console.log('car results result', carResult);
+    expect(result).toHaveLength(6);
+  });
+
+  it('can return triples with sub-queries', async () => {
+    const query = db
+      .query('manufacturers')
+      .where([
+        {
+          exists: db
+            .query('cars')
+            .where([
+              ['type', '=', 'SUV'],
+              ['manufacturer', '=', '$id'],
+            ])
+            .build(),
+        },
+      ])
+      .build();
+
+    const result = await db.fetchTriples(query);
+    const collectionsInTriples = result.reduce(
+      (collectionSet, { attribute }) => {
+        const collectionName = attribute[0];
+        if (collectionName !== '_collection') {
+          collectionSet.add(attribute[0]);
+        }
+        return collectionSet;
+      },
+      new Set()
+    );
+    expect(collectionsInTriples).toContain('manufacturers');
+    expect(collectionsInTriples).toContain('cars');
+  });
+
+  it('can subscribe to queries with sub-queries', async () => {
+    const query = db
+      .query('manufacturers')
+      .where([
+        {
+          exists: db
+            .query('cars')
+            .where([
+              ['type', '=', 'SUV'],
+              ['manufacturer', '=', '$id'],
+            ])
+            .build(),
+        },
+      ])
+      .build();
+    await testSubscription(db, query, [
+      {
+        check: (results) => {
+          expect(results).toHaveLength(2);
+        },
+      },
+      {
+        action: async () => {
+          db.transact(async (tx) => {
+            await tx.insert(
+              'manufacturers',
+              { name: 'Suburu', country: 'USA', id: 'suburu' },
+              'suburu'
+            );
+            await tx.insert(
+              'cars',
+              {
+                year: 2019,
+                model: 'Outback',
+                manufacturer: 'suburu',
+                type: 'SUV',
+              },
+              'suburu-outback'
+            );
+          });
+        },
+        check: (results) => {
+          expect(results).toHaveLength(3);
+        },
+      },
+      {
+        action: async () => {
+          await db.insert(
+            'cars',
+            {
+              year: 2023,
+              model: 'CRV',
+              manufacturer: 'honda',
+              type: 'SUV',
+            },
+            'honda-crv'
+          );
+        },
+        check: (results) => {
+          expect(results).toHaveLength(4);
+        },
+      },
+    ]);
+  });
+});
+
+/**
+ * This tests the power of the query engine to handle complex relational queries
+ * This test focuses on the classic graph example of aviation routes
+ */
+describe.todo('Graph-like queries', () => {
+  const db = new DB();
+  beforeAll(async () => {
+    // Insert a bunch of airplane, airport, and flights mock data
+    // Airplanes - Contains a make, model, and capacity
+    const airplanes = [
+      { make: 'Boeing', model: '737', capacity: 200 },
+      { make: 'Boeing', model: '747', capacity: 400 },
+      { make: 'Airbus', model: 'A320', capacity: 200 },
+      { make: 'Airbus', model: 'A380', capacity: 400 },
+    ];
+    for (const airplane of airplanes) {
+      await db.insert(
+        'airplanes',
+        airplane,
+        `${airplane.make}-${airplane.model}`
+      );
+    }
+    // Airports - Contains a name and location
+    const airports = [
+      { name: 'SFO', location: 'San Francisco, CA' },
+      { name: 'LAX', location: 'Los Angeles, CA' },
+      { name: 'JFK', location: 'New York, NY' },
+      { name: 'ORD', location: 'Chicago, IL' },
+    ];
+    for (const airport of airports) {
+      await db.insert('airports', airport, airport.name);
+    }
+    // Flights - Contains a flight number, airplane, origin, and destination
+    const flights = [
+      {
+        flight_number: 'UA-1',
+        airplane: 'Boeing-737',
+        origin: 'SFO',
+        destination: 'JFK',
+      },
+      {
+        flight_number: 'UA-2',
+        airplane: 'Boeing-737',
+        origin: 'JFK',
+        destination: 'SFO',
+      },
+      {
+        flight_number: 'UA-3',
+        airplane: 'Boeing-747',
+        origin: 'SFO',
+        destination: 'ORD',
+      },
+      {
+        flight_number: 'UA-4',
+        airplane: 'Boeing-747',
+        origin: 'ORD',
+        destination: 'SFO',
+      },
+      {
+        flight_number: 'UA-5',
+        airplane: 'Airbus-A320',
+        origin: 'SFO',
+        destination: 'LAX',
+      },
+      {
+        flight_number: 'UA-6',
+        airplane: 'Airbus-A320',
+        origin: 'LAX',
+        destination: 'SFO',
+      },
+      {
+        flight_number: 'UA-7',
+        airplane: 'Airbus-A380',
+        origin: 'SFO',
+        destination: 'JFK',
+      },
+      {
+        flight_number: 'UA-8',
+        airplane: 'Airbus-A380',
+        origin: 'JFK',
+        destination: 'SFO',
+      },
+    ];
+    for (const flight of flights) {
+      await db.insert('flights', flight, flight.flight_number);
+    }
+  });
+
+  it('can handle a deeply nested subquery', async () => {
+    const query = db
+      .query('airplanes')
+      .where([
+        {
+          exists: db
+            .query('flights')
+            .where([
+              ['airplane', '=', '$id'],
+              {
+                exists: db
+                  .query('airports')
+                  .where([
+                    ['name', '=', '$origin'],
+                    {
+                      exists: db
+                        .query('airports')
+                        .where([
+                          ['name', '=', '$destination'],
+                          ['location', '=', 'San Francisco, CA'],
+                        ])
+                        .build(),
+                    },
+                  ])
+                  .build(),
+              },
+            ])
+            .build(),
+        },
+      ])
+      .build();
+
+    const result = await db.fetch(query);
+    expect(result).toHaveLength(2);
   });
 });

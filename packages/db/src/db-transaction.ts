@@ -196,8 +196,10 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
       const filters = Object.values(collection.rules.write).flatMap(
         (r) => r.filter
       );
-      let query = { where: filters } as CollectionQuery<ModelFromModels<M>>;
-      query = replaceVariablesInQuery(this, query);
+      let query = { where: filters, vars: this.variables } as CollectionQuery<
+        ModelFromModels<M>
+      >;
+      query = replaceVariablesInQuery(query);
       const timestampDoc = constructEntity(triples, storeId);
       const satisfiedRule = doesEntityObjMatchWhere(
         timestampDoc,
@@ -275,8 +277,10 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
       const filters = Object.values(collection.rules.write).flatMap(
         (r) => r.filter
       );
-      let query = { where: filters } as CollectionQuery<ModelFromModels<M>>;
-      query = replaceVariablesInQuery(this, query);
+      let query = { where: filters, vars: this.variables } as CollectionQuery<
+        ModelFromModels<M>
+      >;
+      query = replaceVariablesInQuery(query);
       const satisfiedRule = doesEntityObjMatchWhere(
         entity,
         query.where,
@@ -393,14 +397,14 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
     query: Q,
     { skipRules = false }: DBFetchOptions = {}
   ): Promise<FetchResult<Q>> {
-    let fetchQuery = query;
+    let fetchQuery = { ...query };
     const collection = await this.getCollectionSchema(
       fetchQuery.collectionName as CollectionNameFromModels<M>
     );
     if (collection && !skipRules) {
       fetchQuery = this.addReadRulesToQuery(fetchQuery, collection);
     }
-    fetchQuery = replaceVariablesInQuery(this, fetchQuery);
+    fetchQuery.vars = { ...this.variables, ...fetchQuery.vars };
     return fetch(this.storeTx, fetchQuery, {
       schema: collection?.attributes,
       includeTriples: false,

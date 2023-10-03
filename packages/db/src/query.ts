@@ -20,9 +20,14 @@ export type FilterGroup<M extends Model | undefined> = {
   filters: WhereFilter<M>[];
 };
 
+export type SubQuery = {
+  exists: Query<any>;
+};
+
 export type WhereFilter<M extends Model | undefined> =
   | FilterStatement<M>
-  | FilterGroup<M>;
+  | FilterGroup<M>
+  | SubQuery;
 
 export type QueryWhere<M extends Model | undefined> = WhereFilter<M>[];
 
