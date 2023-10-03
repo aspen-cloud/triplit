@@ -124,6 +124,18 @@ describe('Database API', () => {
         .build()
     );
     expect(lte.size).toBe(classes.filter((cls) => cls.level <= 200).length);
+    const _in = await db.fetch(
+      CollectionQueryBuilder('Class')
+        .where([['level', 'in', [100, 200]]])
+        .build()
+    );
+    expect(_in.size).toBe(4);
+    const nin = await db.fetch(
+      CollectionQueryBuilder('Class')
+        .where([['level', 'nin', [100, 200]]])
+        .build()
+    );
+    expect(nin.size).toBe(1);
   });
 
   it('supports basic queries with the "like" operator', async () => {

@@ -449,6 +449,10 @@ function isOperatorSatisfied(op: Operator, value: any, filterValue: any) {
       return ilike(value, filterValue);
     case 'nlike':
       return !ilike(value, filterValue);
+    case 'in':
+      return new Set(filterValue).has(value);
+    case 'nin':
+      return !new Set(filterValue).has(value);
     default:
       throw new InvalidFilterError(`The operator ${op} is not recognized.`);
   }

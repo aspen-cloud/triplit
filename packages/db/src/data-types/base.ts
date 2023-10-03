@@ -20,7 +20,17 @@ import {
   ValueSchemaType,
 } from './value';
 
-export type Operator = '=' | '<' | '>' | '<=' | '>=' | '!=' | 'like' | 'nlike';
+export type Operator =
+  | '='
+  | '<'
+  | '>'
+  | '<='
+  | '>='
+  | '!='
+  | 'like'
+  | 'nlike'
+  | 'in'
+  | 'nin';
 
 export type ValueType<TO extends UserTypeOptions> =
   | StringType<TO>

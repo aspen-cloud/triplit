@@ -5,7 +5,15 @@ import { EntityId, TripleRow } from './triple-store';
 type Path = string;
 // Should be friendly types that we pass into queries
 // Not to be confused with the Value type that we store in the triple store
-type Value = number | string | boolean | Date | null;
+type Value =
+  | number
+  | string
+  | boolean
+  | Date
+  | null
+  | number[]
+  | boolean[]
+  | string[];
 
 export type FilterStatement<
   M extends Model | undefined,
