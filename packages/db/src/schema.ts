@@ -283,18 +283,26 @@ export function tuplesToSchema(triples: TripleRow[]) {
   return { version, collections: collectionsDefinitionToSchema(collections) };
 }
 
-// TODO: probably want to handle rules
 export function schemaToJSON(
   schema: StoreSchema<Models<any, any>>
 ): SchemaDefinition {
   const collections: CollectionsDefinition = {};
   for (const [collectionName, model] of Object.entries(schema.collections)) {
-    const collection: CollectionDefinition = {
-      attributes: attributesSchemaToJSON(model.attributes),
-    };
+    const collection = collectionSchemaToJSON(model);
     collections[collectionName] = collection;
   }
   return { version: schema.version, collections };
+}
+
+function collectionSchemaToJSON(
+  collection: Collection<any>
+): CollectionDefinition {
+  const collectionDefinition: CollectionDefinition = {
+    attributes: attributesSchemaToJSON(collection.attributes),
+  };
+  // TODO: we have a few cases where inserting undefined at a key breaks things...we should fix this at some common insertion point
+  if (collection.rules) collectionDefinition.rules = collection.rules;
+  return collectionDefinition;
 }
 
 export function attributesSchemaToJSON(schema: Model) {

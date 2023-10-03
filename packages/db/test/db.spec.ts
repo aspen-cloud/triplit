@@ -1935,6 +1935,140 @@ describe('schema changes', async () => {
       }
     );
   });
+
+  it('can create a collection with rules', async () => {
+    await testDBAndTransaction(
+      () =>
+        new DB({
+          source: new InMemoryTupleStorage(),
+        }),
+      async (db) => {
+        await db.createCollection({
+          name: 'students',
+          attributes: {
+            id: { type: 'number', options: {} },
+            name: { type: 'string', options: {} },
+          },
+          rules: {
+            read: {
+              'only-read-self': {
+                filter: [['id', '=', '$SESSION_USER_ID']],
+                description: 'Can only read your own student record',
+              },
+            },
+          },
+        });
+        const dbSchema = await db.getSchema();
+        expect(
+          Object.keys(dbSchema?.collections.students.rules?.read!)
+        ).toHaveLength(1);
+        const rule =
+          dbSchema?.collections.students.rules?.read!['only-read-self']!;
+        expect(rule.filter).toEqual([['id', '=', '$SESSION_USER_ID']]);
+        expect(rule.description).toEqual(
+          'Can only read your own student record'
+        );
+      }
+    );
+  });
+
+  it('can add a rule to a collection', async () => {
+    await testDBAndTransaction(
+      () =>
+        new DB({
+          source: new InMemoryTupleStorage(),
+          schema: {
+            collections: {
+              students: {
+                attributes: S.Schema({
+                  id: S.Number(),
+                  name: S.String(),
+                }),
+              },
+            },
+          },
+        }),
+      async (db) => {
+        {
+          const schema = await db.getSchema();
+          const rules = schema?.collections.students.rules?.read ?? {};
+          expect(Object.keys(rules)).toHaveLength(0);
+        }
+
+        await db.addRule({
+          scope: 'read',
+          collection: 'students',
+          id: 'only-read-self',
+          rule: {
+            filter: [['id', '=', '$SESSION_USER_ID']],
+            description: 'Can only read your own student record',
+          },
+        });
+
+        {
+          const schema = await db.getSchema();
+          const rules = schema?.collections.students.rules?.read!;
+          expect(Object.keys(rules)).toHaveLength(1);
+          const rule = rules['only-read-self']!;
+          expect(rule.filter).toEqual([['id', '=', '$SESSION_USER_ID']]);
+          expect(rule.description).toEqual(
+            'Can only read your own student record'
+          );
+        }
+      }
+    );
+  });
+
+  it('can drop a rule from a collection', async () => {
+    await testDBAndTransaction(
+      () =>
+        new DB({
+          source: new InMemoryTupleStorage(),
+          schema: {
+            collections: {
+              students: {
+                attributes: S.Schema({
+                  id: S.Number(),
+                  name: S.String(),
+                }),
+                rules: {
+                  read: {
+                    'only-read-self': {
+                      filter: [['id', '=', '$SESSION_USER_ID']],
+                      description: 'Can only read your own student record',
+                    },
+                  },
+                },
+              },
+            },
+          },
+        }),
+      async (db) => {
+        {
+          const schema = await db.getSchema();
+          const rules = schema?.collections.students.rules?.read!;
+          expect(Object.keys(rules)).toHaveLength(1);
+          const rule = rules['only-read-self']!;
+          expect(rule.filter).toEqual([['id', '=', '$SESSION_USER_ID']]);
+          expect(rule.description).toEqual(
+            'Can only read your own student record'
+          );
+        }
+
+        await db.dropRule({
+          scope: 'read',
+          collection: 'students',
+          id: 'only-read-self',
+        });
+
+        {
+          const schema = await db.getSchema();
+          const rules = schema?.collections.students.rules?.read ?? {};
+          expect(Object.keys(rules)).toHaveLength(0);
+        }
+      }
+    );
+  });
 });
 
 describe('migrations', () => {
@@ -2227,12 +2361,12 @@ describe('Rules', () => {
           },
         },
         rules: {
-          read: [
-            {
+          read: {
+            enrolled_students_read: {
               description: "Students can only view classes they're enrolled in",
               filter: [['enrolled_students', '=', '$user_id']],
             },
-          ],
+          },
         },
       });
 

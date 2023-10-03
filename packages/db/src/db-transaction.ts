@@ -32,6 +32,8 @@ import {
   DBFetchOptions,
   AlterAttributeOptionOperation,
   DropAttributeOptionOperation,
+  AddRuleOperation,
+  DropRuleOperation,
 } from './db';
 import {
   validateExternalId,
@@ -126,7 +128,7 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
     if (collection?.rules?.read) {
       const updatedWhere = [
         ...query.where,
-        ...collection.rules.read.flatMap((rule) => rule.filter),
+        ...Object.values(collection.rules.read).flatMap((rule) => rule.filter),
       ];
       return { ...query, where: updatedWhere };
     }
@@ -191,7 +193,9 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
 
     // check rules (Could also be done after insertion)
     if (collection?.rules?.write?.length) {
-      const filters = collection.rules.write.flatMap((r) => r.filter);
+      const filters = Object.values(collection.rules.write).flatMap(
+        (r) => r.filter
+      );
       let query = { where: filters } as CollectionQuery<ModelFromModels<M>>;
       query = replaceVariablesInQuery(this, query);
       const timestampDoc = constructEntity(triples, storeId);
@@ -268,7 +272,9 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
     if (collection?.rules?.write?.length) {
       const triples = await this.storeTx.findByEntity(storeId);
       const entity = constructEntity(triples, storeId);
-      const filters = collection.rules.write.flatMap((r) => r.filter);
+      const filters = Object.values(collection.rules.write).flatMap(
+        (r) => r.filter
+      );
       let query = { where: filters } as CollectionQuery<ModelFromModels<M>>;
       query = replaceVariablesInQuery(this, query);
       const satisfiedRule = doesEntityObjMatchWhere(
@@ -534,6 +540,33 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
         // instantiate this here until we support empty objects
         if (!attr.options) attr.options = {};
         delete attr.options[option];
+      }
+    );
+  }
+
+  async addRule(params: AddRuleOperation[1]) {
+    const { collection, scope, id, rule } = params;
+    await this.update(
+      this.METADATA_COLLECTION_NAME,
+      '_schema',
+      async (schema) => {
+        const collectionAttributes = schema.collections[collection];
+        if (!collectionAttributes.rules) collectionAttributes.rules = {};
+        if (!collectionAttributes.rules[scope])
+          collectionAttributes.rules[scope] = {};
+        collectionAttributes.rules[scope][id] = rule;
+      }
+    );
+  }
+
+  async dropRule(params: DropRuleOperation[1]) {
+    const { collection, scope, id } = params;
+    await this.update(
+      this.METADATA_COLLECTION_NAME,
+      '_schema',
+      async (schema) => {
+        const collectionAttributes = schema.collections[collection];
+        delete collectionAttributes.rules[scope][id];
       }
     );
   }

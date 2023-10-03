@@ -37,8 +37,8 @@ export interface Rule<M extends Model> {
 }
 
 export interface CollectionRules<M extends Model> {
-  read?: Rule<M>[];
-  write?: Rule<M>[];
+  read?: Record<string, Rule<M>>;
+  write?: Record<string, Rule<M>>;
   // insert?: Rule<M>[];
   // update?: Rule<M>[];
 }
@@ -68,13 +68,24 @@ export type DropAttributeOptionOperation = [
   'drop_attribute_option',
   { collection: string; path: string[]; option: string }
 ];
+export type AddRuleOperation = [
+  'add_rule',
+  { collection: string; scope: string; id: string; rule: Rule<any> }
+];
+export type DropRuleOperation = [
+  'drop_rule',
+  { collection: string; scope: string; id: string }
+];
+
 type DBOperation =
   | CreateCollectionOperation
   | DropCollectionOperation
   | AddAttributeOperation
   | DropAttributeOperation
   | AlterAttributeOptionOperation
-  | DropAttributeOptionOperation;
+  | DropAttributeOptionOperation
+  | AddRuleOperation
+  | DropRuleOperation;
 
 export type Migration = {
   up: DBOperation[];
@@ -226,7 +237,7 @@ export default class DB<M extends Models<any, any> | undefined> {
     if (collection?.rules?.read) {
       const updatedWhere = [
         ...query.where,
-        ...collection.rules.read.flatMap((rule) => rule.filter),
+        ...Object.values(collection.rules.read).flatMap((rule) => rule.filter),
       ];
       return { ...query, where: updatedWhere };
     }
@@ -472,6 +483,18 @@ export default class DB<M extends Models<any, any> | undefined> {
     });
   }
 
+  async addRule(params: AddRuleOperation[1]) {
+    await this.transact(async (tx) => {
+      await tx.addRule(params);
+    });
+  }
+
+  async dropRule(params: DropRuleOperation[1]) {
+    await this.transact(async (tx) => {
+      await tx.dropRule(params);
+    });
+  }
+
   private async applySchemaMigration(operations: DBOperation[]) {
     // Need to read from triple store manually because we block db.transaction() api and schema access
     const { schema } = await readSchemaFromTripleStore(this.tripleStore);
@@ -496,6 +519,12 @@ export default class DB<M extends Models<any, any> | undefined> {
             break;
           case 'drop_attribute_option':
             await tx.dropAttributeOption(operation[1]);
+            break;
+          case 'add_rule':
+            await tx.addRule(operation[1]);
+            break;
+          case 'drop_rule':
+            await tx.dropRule(operation[1]);
             break;
           default:
             throw new InvalidMigrationOperationError(

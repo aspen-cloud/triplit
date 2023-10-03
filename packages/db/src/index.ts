@@ -26,6 +26,8 @@ export type {
   DropAttributeOperation,
   AlterAttributeOptionOperation,
   DropAttributeOptionOperation,
+  AddRuleOperation,
+  DropRuleOperation,
 } from './db';
 export type { DBTransaction } from './db-transaction';
 export {

@@ -111,7 +111,7 @@ export async function applyRulesToEntity<
   const collection = await db.getCollectionSchema(collectionName);
   const readRules = collection?.rules?.read;
   if (readRules) {
-    const whereFilter = readRules.flatMap((rule) => rule.filter);
+    const whereFilter = Object.values(readRules).flatMap((rule) => rule.filter);
     let query = { where: whereFilter };
     /**
      * TODO we should just make this operate directly on where filters
