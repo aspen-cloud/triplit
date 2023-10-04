@@ -457,7 +457,7 @@ export class TripleStoreOperator implements TripleStoreApi {
 
   async setValues(eavs: EAV[]) {
     if (!eavs.length) return;
-    const timestamp = await this.getTransactionTimestamp();
+    const txTimestamp = await this.getTransactionTimestamp();
     const toDelete: TripleRow[] = [];
     const toInsert: TripleRow[] = [];
     for (const eav of eavs) {
@@ -468,7 +468,7 @@ export class TripleStoreOperator implements TripleStoreApi {
       const existingTriples = await this.findByEntityAttribute(id, attribute);
       const olderTriples = existingTriples.filter(
         ({ timestamp, expired }) =>
-          timestampCompare(timestamp, timestamp) == -1 && !expired
+          timestampCompare(timestamp, txTimestamp) === -1 && !expired
       );
 
       if (olderTriples.length > 0) {
@@ -476,10 +476,16 @@ export class TripleStoreOperator implements TripleStoreApi {
       }
 
       const newerTriples = existingTriples.filter(
-        ({ timestamp }) => timestampCompare(timestamp, timestamp) == 1
+        ({ timestamp }) => timestampCompare(timestamp, txTimestamp) === 1
       );
       if (newerTriples.length === 0) {
-        toInsert.push({ id, attribute, value, timestamp, expired: false });
+        toInsert.push({
+          id,
+          attribute,
+          value,
+          timestamp: txTimestamp,
+          expired: false,
+        });
       }
     }
     await this.deleteTriples(toDelete);
