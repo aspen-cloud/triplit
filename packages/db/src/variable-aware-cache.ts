@@ -1,20 +1,33 @@
-import { CollectionQuery } from './collection-query';
+import {
+  CollectionQuery,
+  FetchResult,
+  subscribeResultsAndTriples,
+} from './collection-query';
 import DB, { ModelFromModels } from './db';
 import { mapFilterStatements } from './db-helpers';
 import { FilterStatement } from './query';
-import { Models } from './schema';
+import { Model, Models, getSchemaFromPath } from './schema';
 import * as TB from '@sinclair/typebox/value';
+import { TripleRow, TripleStore } from './triple-store';
 
 export class VariableAwareCache<M extends Models<any, any>> {
-  cache: Map<BigInt, Map<string, any>>;
+  cache: Map<
+    BigInt,
+    {
+      results: Map<string, any>;
+      triples: Map<string, TripleRow[]>;
+    }
+  >;
 
-  constructor(readonly db: DB<M>) {
+  constructor(readonly tripleStore: TripleStore) {
     this.cache = new Map();
   }
 
   static canCacheQuery<Q extends CollectionQuery<ModelFromModels<any>>>(
-    query: Q
+    query: Q,
+    model?: Model
   ) {
+    if (!model) return false;
     if (query.where.some((f) => !(f instanceof Array) && !('exists' in f)))
       return false;
     const statements = mapFilterStatements(query.where, (f) => f).filter(
@@ -28,6 +41,11 @@ export class VariableAwareCache<M extends Models<any, any>> {
     // if (variableStatements[0][1] !== '=') return false;
     if (!['=', '<', '<=', '>', '>=', '!='].includes(variableStatements[0][1]))
       return false;
+    const attributeSchema = getSchemaFromPath(
+      model,
+      variableStatements[0][0].split('.')
+    );
+    if (attributeSchema.type === 'set') return false;
     return true;
   }
 
@@ -36,11 +54,14 @@ export class VariableAwareCache<M extends Models<any, any>> {
   ) {
     return new Promise<void>((resolve) => {
       const id = this.viewQueryToId(viewQuery);
-      this.db.subscribe(viewQuery, (results) => {
-        this.cache.set(id, results);
-        // console.log('setting index', id, results);
-        resolve();
-      });
+      subscribeResultsAndTriples(
+        this.tripleStore,
+        viewQuery,
+        ([results, triples]) => {
+          this.cache.set(id, { results, triples });
+          resolve();
+        }
+      );
     });
   }
 
@@ -48,7 +69,12 @@ export class VariableAwareCache<M extends Models<any, any>> {
     return TB.Value.Hash(viewQuery);
   }
 
-  async resolveFromCache(query: CollectionQuery<ModelFromModels<M>>) {
+  async resolveFromCache<Q extends CollectionQuery<ModelFromModels<M>>>(
+    query: Q
+  ): Promise<{
+    results: FetchResult<Q>;
+    triples: Map<string, TripleRow[]>;
+  }> {
     const { views, variableFilters } = this.queryToViews(query);
     const id = this.viewQueryToId(views[0]);
     // console.log('attempting to use index for', id);
@@ -59,13 +85,13 @@ export class VariableAwareCache<M extends Models<any, any>> {
     const [prop, op, varStr] = variableFilters[0];
     const varKey = varStr.slice(1);
     const varValue = query.vars![varKey];
-
-    const resultEntries = [...this.cache.get(id)!.entries()];
+    const view = this.cache.get(id)!;
+    const viewResultEntries = [...view.results.entries()];
 
     let start, end;
     if (['=', '<', '<=', '>', '>='].includes(op)) {
       start = binarySearch(
-        resultEntries,
+        viewResultEntries,
         varValue,
         ([, ent]) => ent[prop],
         'start',
@@ -78,7 +104,7 @@ export class VariableAwareCache<M extends Models<any, any>> {
         }
       );
       end = binarySearch(
-        resultEntries,
+        viewResultEntries,
         varValue,
         ([, ent]) => ent[prop],
         'end',
@@ -93,7 +119,7 @@ export class VariableAwareCache<M extends Models<any, any>> {
     }
     if (op === '!=') {
       start = binarySearch(
-        resultEntries,
+        viewResultEntries,
         varValue,
         ([, ent]) => ent[prop],
         'start',
@@ -102,7 +128,7 @@ export class VariableAwareCache<M extends Models<any, any>> {
         }
       );
       end = binarySearch(
-        resultEntries,
+        viewResultEntries,
         varValue,
         ([, ent]) => ent[prop],
         'end',
@@ -110,17 +136,29 @@ export class VariableAwareCache<M extends Models<any, any>> {
           return a === b ? 0 : a < b ? -1 : 1;
         }
       );
-      return new Map([
-        ...resultEntries.slice(0, start + 1),
-        ...resultEntries.slice(end),
-      ]);
+      const resultEntries = [
+        ...viewResultEntries.slice(0, start + 1),
+        ...viewResultEntries.slice(end),
+      ];
+      return {
+        results: new Map(resultEntries),
+        triples: new Map(
+          resultEntries.map(([id, _]) => [id, view.triples.get(id)!])
+        ),
+      };
     }
     if (start == undefined || end == undefined) {
       throw new Error(
         'Cannot index queries that have a variable and use this operator:' + op
       );
     }
-    return new Map(resultEntries.slice(start, end + 1));
+    const resultEntries = viewResultEntries.slice(start, end + 1);
+    return {
+      results: new Map(resultEntries),
+      triples: new Map(
+        resultEntries.map(([id, _]) => [id, view.triples.get(id)!])
+      ),
+    };
   }
 
   queryToViews<Q extends CollectionQuery<ModelFromModels<M>>>(query: Q) {

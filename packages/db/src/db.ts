@@ -115,7 +115,7 @@ interface FetchOptions {
 }
 
 const DEFAULT_STORE_KEY = 'default';
-const QUERY_CACHE_ENABLED = false;
+const QUERY_CACHE_ENABLED = true;
 
 export type CollectionFromModels<
   M extends Models<any, any> | undefined,
@@ -172,7 +172,6 @@ export default class DB<M extends Models<any, any> | undefined> {
     variables,
   }: DBConfig<M> = {}) {
     this.variables = variables ?? {};
-    this.cache = new VariableAwareCache(this);
     // If only one source is provided, use the default key
     const sourcesMap = sources ?? {
       [DEFAULT_STORE_KEY]: source ?? new MemoryStorage(),
@@ -194,6 +193,7 @@ export default class DB<M extends Models<any, any> | undefined> {
       schema: tripleStoreSchema,
       clock,
     });
+    this.cache = new VariableAwareCache(this.tripleStore);
 
     this.ensureMigrated = migrations
       ? this.migrate(migrations, 'up').catch((e) => {
@@ -277,17 +277,19 @@ export default class DB<M extends Models<any, any> | undefined> {
     { scope, skipRules = false }: FetchOptions = {}
   ) {
     await this.ensureMigrated;
-    if (QUERY_CACHE_ENABLED && VariableAwareCache.canCacheQuery(query)) {
-      return this.cache.resolveFromCache(query);
-    }
     const { query: fetchQuery, collection } = await this.prepareQuery(query, {
       scope,
       skipRules,
     });
+
     return await fetch(
       scope ? this.tripleStore.setStorageScope(scope) : this.tripleStore,
       fetchQuery,
-      { schema: collection?.attributes, includeTriples: false }
+      {
+        schema: collection?.attributes,
+        includeTriples: false,
+        cache: QUERY_CACHE_ENABLED ? this.cache : undefined,
+      }
     );
   }
 
@@ -300,13 +302,15 @@ export default class DB<M extends Models<any, any> | undefined> {
       scope,
       skipRules,
     });
-    return (
-      await fetch(
-        scope ? this.tripleStore.setStorageScope(scope) : this.tripleStore,
-        fetchQuery,
-        { schema: collection?.attributes, includeTriples: true }
-      )
-    ).triples;
+    return [
+      ...(
+        await fetch(
+          scope ? this.tripleStore.setStorageScope(scope) : this.tripleStore,
+          fetchQuery,
+          { schema: collection?.attributes, includeTriples: true }
+        )
+      ).triples.values(),
+    ].flat();
   }
 
   private async prepareQuery<Q extends CollectionQuery<ModelFromModels<M>>>(
@@ -421,7 +425,7 @@ export default class DB<M extends Models<any, any> | undefined> {
       const unsub = subscribeTriples(
         scope ? this.tripleStore.setStorageScope(scope) : this.tripleStore,
         subscriptionQuery,
-        onResults,
+        (tripMap) => onResults([...tripMap.values()].flat()),
         onError,
         //@ts-ignore
         collection?.attributes

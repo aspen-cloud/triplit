@@ -93,16 +93,16 @@ console.log(`RxDB second query: ${end - start}ms`);
 
 bench
   .add('vanilla js query', async () => {
-    // const level = Math.floor(Math.random() * 1000);
-    const level = 200;
+    const level = Math.floor(Math.random() * 1000);
+    // const level = 200;
     const resp = CLASSES.filter((c) => c.level < level);
     // if (resp.length !== CLASSES.filter((c) => c.level === level).length) {
     //   logAndThrowError('RXDB: Wrong result count');
     // }
   })
   .add('rxdb query', async () => {
-    // const level = Math.floor(Math.random() * 1000);
-    const level = 200;
+    const level = Math.floor(Math.random() * 1000);
+    // const level = 200;
     let resp = await rxdb.collections.classes
       .find()
       .where('level')
@@ -114,8 +114,8 @@ bench
     // }
   })
   .add('triplit query', async () => {
-    // const level = Math.floor(Math.random() * 1000);
-    const level = 200;
+    const level = Math.floor(Math.random() * 1000);
+    // const level = 200;
     const resp = await triplit.fetch(
       triplit
         .query('classes')

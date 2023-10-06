@@ -40,6 +40,7 @@ import {
 import { Operator } from './data-types/base';
 import { DBTransaction } from './db-transaction';
 import DB from './db';
+import { VariableAwareCache } from './variable-aware-cache';
 
 export default function CollectionQueryBuilder<M extends Model | undefined>(
   collectionName: string,
@@ -91,28 +92,47 @@ export async function fetch<Q extends CollectionQuery<any>>(
   query: Q,
   options?: FetchOptions & {
     includeTriples: false;
+    cache?: VariableAwareCache<any>;
   }
 ): Promise<FetchResult<Q>>;
 export async function fetch<Q extends CollectionQuery<any>>(
   tx: TripleStoreTransaction | TripleStore,
   query: Q,
-  options?: FetchOptions & { includeTriples: true }
-): Promise<{ results: FetchResult<Q>; triples: TripleRow[] }>;
+  options?: FetchOptions & {
+    includeTriples: true;
+    cache?: VariableAwareCache<any>;
+  }
+): Promise<{ results: FetchResult<Q>; triples: Map<string, TripleRow[]> }>;
 export async function fetch<Q extends CollectionQuery<any>>(
   tx: TripleStoreTransaction | TripleStore,
   query: Q,
-  { includeTriples = false, schema }: FetchOptions = {}
+  {
+    includeTriples = false,
+    schema,
+    cache,
+  }: FetchOptions & { cache?: VariableAwareCache<any> } = {}
 ) {
+  if (
+    (cache &&
+      VariableAwareCache.canCacheQuery(
+        query,
+        schema && schema[query.collectionName]
+      ),
+    schema && schema[query.collectionName])
+  ) {
+    return (await cache.resolveFromCache(query)).results;
+  }
   const queryWithInsertedVars = replaceVariablesInQuery(query);
   const where = queryWithInsertedVars.where;
   if (query.entityId) {
     const storeId = appendCollectionToId(query.collectionName, query.entityId);
     // With schema's we're using tombstones, and need to filter down to the latest triples to ensure that the undefined value we set on a schema attribute to be respected
     // this is probably a bandaid
-    const triples = filterToLatestEntityAttribute(
+    const entityTriples = filterToLatestEntityAttribute(
       await tx.findByEntity(storeId)
     );
-    const entity = constructEntity(triples, storeId);
+    const entity = constructEntity(entityTriples, storeId);
+    const triples = new Map([[query.entityId, entityTriples]]);
     if (!entity || !doesEntityObjMatchWhere(entity, where, schema)) {
       const results = new Map() as FetchResult<Q>;
       return includeTriples ? { results, triples } : results;
@@ -150,7 +170,7 @@ export async function fetch<Q extends CollectionQuery<any>>(
 
   let entityCount = 0;
   let previousOrderVal: Value;
-  const resultTriples: TripleRow[] = [];
+  const resultTriples: Map<string, TripleRow[]> = new Map();
   let entities = await new Pipeline(resultOrder)
     .map(async ({ id }) => {
       const entityEntry = allEntities.get(id);
@@ -161,7 +181,7 @@ export async function fetch<Q extends CollectionQuery<any>>(
         return [externalId, { triples: [], entity: entityEntry }];
       }
     })
-    .filter(async ([, { entity }]) => {
+    .filter(async ([id, { entity }]) => {
       const subQueries = where.filter((filter) => 'exists' in filter);
       const plainFilters = where.filter((filter) => !('exists' in filter));
       const basicMatch = doesEntityObjMatchWhere(entity, plainFilters, schema);
@@ -178,18 +198,26 @@ export async function fetch<Q extends CollectionQuery<any>>(
         const { results: subQueryResult, triples } = await fetch(
           tx,
           subQueryWithVariables,
-          { includeTriples: true, schema }
+          { includeTriples: true, schema, cache }
         );
 
         const exists = subQueryResult.size > 0;
         if (!exists) return false;
-        subQueryTriples.push(...triples);
+        subQueryTriples.push(...[...triples.values()].flat());
       }
-      resultTriples.push(...subQueryTriples);
+      if (!resultTriples.has(id)) {
+        resultTriples.set(id, subQueryTriples);
+      } else {
+        resultTriples.set(id, resultTriples.get(id)!.concat(subQueryTriples));
+      }
       return true;
     })
     .map(async ([id, { triples, entity }]) => {
-      resultTriples.push(...triples);
+      if (!resultTriples.has(id)) {
+        resultTriples.set(id, triples);
+      } else {
+        resultTriples.set(id, resultTriples.get(id)!.concat(triples));
+      }
       return [id, entity] as [string, any];
     })
     .take(limit && (!order || order.length <= 1) ? limit : Infinity)
@@ -247,7 +275,7 @@ export async function fetch<Q extends CollectionQuery<any>>(
   if (includeTriples) {
     return {
       results: new Map(entities), // TODO: also need to deserialize data?
-      triples: filterToLatestEntityAttribute(resultTriples),
+      triples: resultTriples,
     };
   }
 
@@ -482,17 +510,19 @@ type CollectionQuerySchema<Q extends CollectionQuery<any>> =
 function subscribeSingleEntity<Q extends CollectionQuery<any>>(
   tripleStore: TripleStore,
   query: Q,
-  onResults: (args: [results: FetchResult<Q>, newTriples: TripleRow[]]) => void,
+  onResults: (
+    args: [results: FetchResult<Q>, newTriples: Map<string, TripleRow[]>]
+  ) => void,
   onError?: (error: any) => void,
   schema?: CollectionQuerySchema<Q>
 ) {
   const asyncUnSub = async () => {
     const { collectionName, entityId } = query;
     let entity: any;
-    let triples: TripleRow[] = [];
+    let triples: Map<string, TripleRow[]> = new Map();
     try {
       if (!entityId) throw new EntityIdMissingError();
-      const storeId = appendCollectionToId(collectionName, entityId);
+      const internalEntityId = appendCollectionToId(collectionName, entityId);
       const fetchResult = await fetch(tripleStore, query, {
         includeTriples: true,
         schema,
@@ -508,10 +538,13 @@ function subscribeSingleEntity<Q extends CollectionQuery<any>>(
       onResults([results, triples]);
       const unsub = tripleStore.onWrite(async ({ inserts, deletes }) => {
         try {
-          const entityInserts = inserts.filter(({ id }) => id === storeId);
-          const entityDeletes = deletes.filter(({ id }) => id === storeId);
+          const entityInserts = inserts.filter(
+            ({ id }) => id === internalEntityId
+          );
+          const entityDeletes = deletes.filter(
+            ({ id }) => id === internalEntityId
+          );
           const changed = entityInserts.length > 0 || entityDeletes.length > 0;
-
           // Early return prevents processing if no relevant entities were updated
           if (!changed) return;
 
@@ -530,18 +563,25 @@ function subscribeSingleEntity<Q extends CollectionQuery<any>>(
               entityToResultReducer,
               entity
             );
-            triples = filterToLatestEntityAttribute(
-              triples.concat(entityInserts)
-            );
+            console.log('entity', entity);
+            console.log('triples before', triples);
+            if (!triples.has(entityId)) {
+              triples.set(entityId, []);
+            }
+            triples.get(entityId)!.push(...entityInserts);
+            console.log('triples after', triples);
           }
+          console.log('checking WHERE');
           if (
             entity &&
             doesEntityObjMatchWhere(entity, query.where ?? [], schema)
           ) {
+            console.log('setting entity');
             results.set(entityId, deserializeEntity(entity, schema));
           } else {
             results.delete(entityId);
           }
+          console.log('on results');
           onResults([results, triples]);
         } catch (e) {
           onError && onError(e);
@@ -562,10 +602,12 @@ function subscribeSingleEntity<Q extends CollectionQuery<any>>(
   };
 }
 
-function subscribeResultsAndTriples<Q extends CollectionQuery<any>>(
+export function subscribeResultsAndTriples<Q extends CollectionQuery<any>>(
   tripleStore: TripleStore,
   query: Q,
-  onResults: (args: [results: FetchResult<Q>, newTriples: TripleRow[]]) => void,
+  onResults: (
+    args: [results: FetchResult<Q>, newTriples: Map<string, TripleRow[]>]
+  ) => void,
   onError?: (error: any) => void,
   schema?: Model
 ) {
@@ -575,7 +617,7 @@ function subscribeResultsAndTriples<Q extends CollectionQuery<any>>(
   const where = queryWithInsertedVars.where;
   const asyncUnSub = async () => {
     let results: FetchResult<Q> = new Map() as FetchResult<Q>;
-    let triples: TripleRow[] = [];
+    let triples: Map<string, TripleRow[]> = new Map();
     try {
       const fetchResult = await fetch(tripleStore, query, {
         includeTriples: true,
@@ -615,7 +657,7 @@ function subscribeResultsAndTriples<Q extends CollectionQuery<any>>(
           }
 
           let nextResult = new Map(results);
-          const matchedTriples = [];
+          const matchedTriples: Map<string, TripleRow[]> = new Map();
           const updatedEntitiesForQuery = new Set<string>(
             [...inserts, ...deletes]
               .map(({ id }) => splitIdParts(id))
@@ -665,11 +707,11 @@ function subscribeResultsAndTriples<Q extends CollectionQuery<any>>(
             // Add to result or prune as needed
             if (isInResult && satisfiesLimitRange) {
               nextResult.set(entity, entityObj);
-              matchedTriples.push(...entityTriples);
+              matchedTriples.set(entity, entityTriples);
             } else {
               if (nextResult.has(entity)) {
                 nextResult.delete(entity);
-                matchedTriples.push(...entityTriples);
+                matchedTriples.set(entity, entityTriples);
               }
             }
           }
@@ -810,7 +852,7 @@ function stringifyEA(entity: EntityId, attribute: Attribute) {
 export function subscribeTriples<Q extends CollectionQuery<any>>(
   tripleStore: TripleStore,
   query: Q,
-  onResults: (results: TripleRow[]) => void,
+  onResults: (results: Map<string, TripleRow[]>) => void,
   onError?: (error: any) => void,
   schema?: CollectionQuerySchema<Q>
 ) {
