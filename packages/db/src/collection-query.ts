@@ -563,25 +563,19 @@ function subscribeSingleEntity<Q extends CollectionQuery<any>>(
               entityToResultReducer,
               entity
             );
-            console.log('entity', entity);
-            console.log('triples before', triples);
             if (!triples.has(entityId)) {
               triples.set(entityId, []);
             }
             triples.get(entityId)!.push(...entityInserts);
-            console.log('triples after', triples);
           }
-          console.log('checking WHERE');
           if (
             entity &&
             doesEntityObjMatchWhere(entity, query.where ?? [], schema)
           ) {
-            console.log('setting entity');
             results.set(entityId, deserializeEntity(entity, schema));
           } else {
             results.delete(entityId);
           }
-          console.log('on results');
           onResults([results, triples]);
         } catch (e) {
           onError && onError(e);
