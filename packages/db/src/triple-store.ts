@@ -192,6 +192,19 @@ type MetadataListener = (changes: {
   deletes: [entityId: string, attribute?: Attribute][];
 }) => void | Promise<void>;
 
+type TripleStoreBeforeInsertHook = (
+  triple: TripleRow[],
+  tx: TripleStoreTransaction
+) => void | Promise<void>;
+
+type TripleStoreBeforeCommitHook = (
+  tx: TripleStoreTransaction
+) => void | Promise<void>;
+
+type TripleStoreHooks = {
+  beforeInsert: TripleStoreBeforeInsertHook[];
+};
+
 export class TripleStoreOperator implements TripleStoreApi {
   tupleOperator: ScopedMultiTupleOperator<TupleIndex>;
   private txMetadataListeners: Set<MetadataListener> = new Set();
@@ -200,12 +213,7 @@ export class TripleStoreOperator implements TripleStoreApi {
 
   assignedTimestamp?: Timestamp;
 
-  hooks: {
-    before: ((
-      triple: TripleRow[],
-      tx: TripleStoreTransaction
-    ) => void | Promise<void>)[];
-  };
+  hooks: TripleStoreHooks;
 
   constructor({
     tupleOperator,
@@ -214,12 +222,7 @@ export class TripleStoreOperator implements TripleStoreApi {
   }: {
     tupleOperator: ScopedMultiTupleOperator<TupleIndex>;
     clock: Clock;
-    hooks: {
-      before: ((
-        triple: TripleRow[],
-        tx: TripleStoreTransaction
-      ) => void | Promise<void>)[];
-    };
+    hooks: TripleStoreHooks;
   }) {
     this.tupleOperator = tupleOperator;
     this.clock = clock;
@@ -350,7 +353,7 @@ export class TripleStoreOperator implements TripleStoreApi {
     shouldValidate = true
   ): Promise<void> {
     if (!triplesInput.length) return;
-    for (const hook of this.hooks.before) {
+    for (const hook of this.hooks.beforeInsert) {
       await hook(triplesInput, this);
     }
     for (const triple of triplesInput) {
@@ -513,12 +516,7 @@ export class TripleStoreTransaction extends TripleStoreOperator {
   }: {
     tupleTx: MultiTupleTransaction<TupleIndex>;
     clock: Clock;
-    hooks: {
-      before: ((
-        triple: TripleRow[],
-        tx: TripleStoreTransaction
-      ) => void | Promise<void>)[];
-    };
+    hooks: TripleStoreHooks;
   }) {
     super({ tupleOperator: tupleTx, clock, hooks });
     this.tupleTx = tupleTx;
@@ -540,13 +538,12 @@ export class TripleStoreTransaction extends TripleStoreOperator {
     });
   }
 
-  beforeInsert(
-    callback: (
-      triples: TripleRow[],
-      tx: TripleStoreTransaction
-    ) => void | Promise<void>
-  ) {
-    this.hooks.before.push(callback);
+  beforeInsert(callback: TripleStoreBeforeInsertHook) {
+    this.hooks.beforeInsert.push(callback);
+  }
+
+  beforeCommit(callback: TripleStoreBeforeCommitHook) {
+    this.tupleTx.hooks.beforeCommit.push(() => callback(this));
   }
 }
 
@@ -559,12 +556,7 @@ export class TripleStore implements TripleStoreApi {
   tupleStore: MultiTupleStore<TupleIndex>;
   clock: Clock;
   tenantId: string;
-  hooks: {
-    before: ((
-      triple: TripleRow[],
-      tx: TripleStoreTransaction
-    ) => void | Promise<void>)[];
-  };
+  hooks: TripleStoreHooks;
 
   constructor({
     storage,
@@ -585,7 +577,7 @@ export class TripleStore implements TripleStoreApi {
     clock?: Clock;
   }) {
     this.hooks = {
-      before: [],
+      beforeInsert: [],
     };
     if (!stores && !storage)
       throw new Error('Must provide either storage or stores');
@@ -624,13 +616,8 @@ export class TripleStore implements TripleStoreApi {
     this.clock.assignToStore(this);
   }
 
-  beforeInsert(
-    callback: (
-      triples: TripleRow[],
-      tx: TripleStoreTransaction
-    ) => void | Promise<void>
-  ) {
-    this.hooks.before.push(callback);
+  beforeInsert(callback: TripleStoreBeforeInsertHook) {
+    this.hooks.beforeInsert.push(callback);
   }
 
   findByCollection(

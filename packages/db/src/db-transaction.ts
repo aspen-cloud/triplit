@@ -42,19 +42,30 @@ import {
   validateTriple,
   readSchemaFromTripleStore,
   StoreSchema,
+  splitIdParts,
 } from './db-helpers';
 import { Query, constructEntity, entityToResultReducer } from './query';
 import { serializedItemToTuples } from './utils';
 
+interface TransactionOptions<
+  M extends Models<any, any> | undefined = undefined
+> {
+  variables?: Record<string, any>;
+  schema?: StoreSchema<M>;
+  skipRules?: boolean;
+}
+
 export class DBTransaction<M extends Models<any, any> | undefined> {
   schema: StoreSchema<M> | undefined;
   private _schema: TimestampedObject | undefined;
+  readonly variables?: Record<string, any>;
+
   constructor(
     readonly storeTx: TripleStoreTransaction,
-    readonly variables?: Record<string, any>,
-    schema?: StoreSchema<M>
+    readonly options: TransactionOptions<M> = {}
   ) {
-    this.schema = schema;
+    this.schema = options.schema;
+    this.variables = options.variables;
 
     this.storeTx.beforeInsert(async (trips, tx) => {
       const metadataTriples = trips.filter(
@@ -99,6 +110,52 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
         validateTriple(this.schema.collections, trip.attribute, trip.value);
       }
     });
+    if (!options?.skipRules) {
+      // Check rules on write
+      this.storeTx.beforeCommit(async (tx) => {
+        const updatedEntities = new Set(
+          Object.values(tx.tupleTx.txs).flatMap((storageTx) => {
+            return (
+              storageTx.writes.set
+                .filter((tuple) => tuple.key[1] === 'EAV')
+                // TODO: our ts is wrong here
+                .map((tuple) => tuple.key[2] as string)
+                .concat(
+                  storageTx.writes.remove
+                    .filter((key) => key[1] === 'EAV')
+                    .map((key) => key[2] as string)
+                )
+            );
+          })
+        );
+        const schema = await this.getSchema();
+        for (const storeId of updatedEntities) {
+          const [collectionName, _entityId] = splitIdParts(storeId);
+          if (collectionName === '_metadata') continue;
+          const collection = schema?.collections[collectionName];
+          const writeRules = Object.values(collection?.rules?.write ?? {});
+          if (writeRules.length) {
+            const triples = await tx.findByEntity(storeId);
+            const entity = constructEntity(triples, storeId);
+            const filters = writeRules.flatMap((r) => r.filter);
+            let query = {
+              where: filters,
+              vars: this.variables,
+            } as CollectionQuery<ModelFromModels<M>>;
+            query = replaceVariablesInQuery(query);
+            const satisfiedRule = doesEntityObjMatchWhere(
+              entity,
+              query.where,
+              collection?.attributes
+            );
+            if (!satisfiedRule) {
+              // TODO add better error that uses rule description
+              throw new WriteRuleError(`Update does not match write rules`);
+            }
+          }
+        }
+      });
+    }
   }
 
   // Doing this as a TS fix, but would like to properly define the _metadata scheam
@@ -191,27 +248,6 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
       expired: false,
     });
 
-    // check rules (Could also be done after insertion)
-    if (collection?.rules?.write?.length) {
-      const filters = Object.values(collection.rules.write).flatMap(
-        (r) => r.filter
-      );
-      let query = { where: filters, vars: this.variables } as CollectionQuery<
-        ModelFromModels<M>
-      >;
-      query = replaceVariablesInQuery(query);
-      const timestampDoc = constructEntity(triples, storeId);
-      const satisfiedRule = doesEntityObjMatchWhere(
-        timestampDoc,
-        query.where,
-        collection.attributes
-      );
-      if (!satisfiedRule) {
-        // TODO add better error that uses rule description
-        throw new WriteRuleError(`Insert does not match write rules`);
-      }
-    }
-
     // insert triples
     await this.storeTx.insertTriples(triples);
   }
@@ -269,28 +305,6 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
 
     // Apply changes
     await this.storeTx.setValues(updateValues);
-
-    // Check rules
-    if (collection?.rules?.write?.length) {
-      const triples = await this.storeTx.findByEntity(storeId);
-      const entity = constructEntity(triples, storeId);
-      const filters = Object.values(collection.rules.write).flatMap(
-        (r) => r.filter
-      );
-      let query = { where: filters, vars: this.variables } as CollectionQuery<
-        ModelFromModels<M>
-      >;
-      query = replaceVariablesInQuery(query);
-      const satisfiedRule = doesEntityObjMatchWhere(
-        entity,
-        query.where,
-        collectionSchema
-      );
-      if (!satisfiedRule) {
-        // TODO add better error that uses rule description
-        throw new WriteRuleError(`Update does not match write rules`);
-      }
-    }
   }
 
   // TODO add tests for proxy reads

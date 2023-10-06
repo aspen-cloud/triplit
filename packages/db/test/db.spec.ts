@@ -2535,12 +2535,12 @@ describe('Rules', () => {
           author_id: { type: 'string', options: {} },
         },
         rules: {
-          write: [
-            {
+          write: {
+            'post-author': {
               description: 'Users can only post posts they authored',
               filter: [['author_id', '=', '$user_id']],
             },
-          ],
+          },
         },
       });
     });
@@ -2559,7 +2559,7 @@ describe('Rules', () => {
             { id: 'post-1', author_id: 'Not-the-current-user' },
             'post-2'
           )
-        ).rejects.toThrowError();
+        ).rejects.toThrowError(WriteRuleError);
       });
     });
 
@@ -2585,7 +2585,22 @@ describe('Rules', () => {
               'post-2'
             );
           })
-        ).rejects.toThrowError();
+        ).rejects.toThrowError(WriteRuleError);
+      });
+
+      it('ignores rules if skipRules is set', async () => {
+        expect(
+          db.transact(
+            async (tx) => {
+              await tx.insert(
+                'posts',
+                { id: 'post-1', author_id: 'Not-the-current-user' },
+                'post-2'
+              );
+            },
+            { skipRules: true }
+          )
+        ).resolves.not.toThrowError();
       });
     });
   });
@@ -2594,7 +2609,8 @@ describe('Rules', () => {
     let db: DB<any>;
     const USER_ID = 'the-user-id';
     const POST_ID = 'post-1';
-    beforeAll(async () => {
+    const POST = { id: POST_ID, author_id: USER_ID, content: 'before' };
+    beforeEach(async () => {
       db = new DB({
         storage: new MemoryBTree(),
         variables: {
@@ -2610,20 +2626,16 @@ describe('Rules', () => {
           content: { type: 'string', options: {} },
         },
         rules: {
-          write: [
-            {
+          write: {
+            'post-author': {
               description: 'Users can only post posts they authored',
               filter: [['author_id', '=', '$user_id']],
             },
-          ],
+          },
         },
       });
 
-      await db.insert(
-        'posts',
-        { id: POST_ID, author_id: USER_ID, content: 'before' },
-        POST_ID
-      );
+      await db.insert('posts', POST, POST_ID);
     });
 
     describe('update single', () => {
@@ -2643,6 +2655,21 @@ describe('Rules', () => {
         ).rejects.toThrowError(WriteRuleError);
         const post = await db.fetchById('posts', POST_ID);
         expect(post.author_id).not.toBe('not me');
+      });
+
+      it('ignores rules if skipRules is set', async () => {
+        await expect(
+          db.update(
+            'posts',
+            POST_ID,
+            async (entity) => {
+              entity.author_id = 'not me';
+            },
+            { skipRules: true }
+          )
+        ).resolves.not.toThrowError();
+        const post = await db.fetchById('posts', POST_ID);
+        expect(post.author_id).toBe('not me');
       });
     });
 

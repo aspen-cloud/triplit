@@ -639,8 +639,11 @@ export class TriplitClient<M extends Models<any, any> | undefined = undefined> {
 
   async transact(callback: (tx: DBTransaction<M>) => Promise<void>) {
     return this.db.transact(callback, {
-      read: ['outbox', 'cache'],
-      write: ['outbox'],
+      skipRules: true,
+      storeScope: {
+        read: ['outbox', 'cache'],
+        write: ['outbox'],
+      },
     });
   }
 
@@ -718,8 +721,11 @@ export class TriplitClient<M extends Models<any, any> | undefined = undefined> {
     id?: string
   ) {
     return this.db.insert(collectionName, object, id, {
-      read: ['outbox', 'cache'],
-      write: ['outbox'],
+      skipRules: true,
+      storeScope: {
+        read: ['outbox', 'cache'],
+        write: ['outbox'],
+      },
     });
   }
 

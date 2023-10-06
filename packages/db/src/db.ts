@@ -46,6 +46,11 @@ export interface CollectionRules<M extends Model> {
   // update?: Rule<M>[];
 }
 
+interface TransactOptions {
+  storeScope?: { read: string[]; write: string[] };
+  skipRules?: boolean;
+}
+
 export type CreateCollectionOperation = [
   'create_collection',
   {
@@ -252,12 +257,16 @@ export default class DB<M extends Models<any, any> | undefined> {
 
   async transact(
     callback: (tx: DBTransaction<M>) => Promise<void>,
-    storeScope?: { read: string[]; write: string[] }
+    options: TransactOptions = {}
   ) {
     await this.ensureMigrated;
     const schema = await this.getSchema();
     return await this.tripleStore.transact(async (tripTx) => {
-      const tx = new DBTransaction<M>(tripTx, this.variables, schema);
+      const tx = new DBTransaction<M>(tripTx, {
+        variables: this.variables,
+        schema,
+        skipRules: options.skipRules,
+      });
       try {
         await callback(tx);
       } catch (e) {
@@ -265,7 +274,7 @@ export default class DB<M extends Models<any, any> | undefined> {
         await tx.cancel();
         throw e;
       }
-    }, storeScope);
+    }, options.storeScope);
   }
 
   updateVariables(variables: Record<string, any>) {
@@ -353,11 +362,11 @@ export default class DB<M extends Models<any, any> | undefined> {
     collectionName: CN,
     doc: InsertTypeFromModel<ModelFromModels<M, CN>>,
     id?: string,
-    storeScope?: { read: string[]; write: string[] }
+    options: TransactOptions = {}
   ) {
     return this.transact(async (tx) => {
       await tx.insert(collectionName, doc, id);
-    }, storeScope);
+    }, options);
   }
 
   subscribe<Q extends CollectionQuery<ModelFromModels<M>>>(
@@ -447,12 +456,12 @@ export default class DB<M extends Models<any, any> | undefined> {
     updater: (
       entity: ProxyTypeFromModel<ModelFromModels<M, CN>>
     ) => Promise<void>,
-    storeScope?: { read: string[]; write: string[] }
+    options: TransactOptions = {}
   ) {
     await this.ensureMigrated;
     return await this.transact(async (tx) => {
       await tx.update(collectionName, entityId, updater);
-    }, storeScope);
+    }, options);
   }
 
   query<CN extends CollectionNameFromModels<M>>(
@@ -514,7 +523,10 @@ export default class DB<M extends Models<any, any> | undefined> {
     // Need to read from triple store manually because we block db.transaction() api and schema access
     const { schema } = await readSchemaFromTripleStore(this.tripleStore);
     await this.tripleStore.transact(async (tripTx) => {
-      const tx = new DBTransaction(tripTx, this.variables, schema);
+      const tx = new DBTransaction(tripTx, {
+        variables: this.variables,
+        schema,
+      });
       for (const operation of operations) {
         switch (operation[0]) {
           case 'create_collection':
