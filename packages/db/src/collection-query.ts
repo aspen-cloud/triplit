@@ -112,15 +112,8 @@ export async function fetch<Q extends CollectionQuery<any>>(
     cache,
   }: FetchOptions & { cache?: VariableAwareCache<any> } = {}
 ) {
-  if (
-    (cache &&
-      VariableAwareCache.canCacheQuery(
-        query,
-        schema && schema[query.collectionName]
-      ),
-    schema && schema[query.collectionName])
-  ) {
-    return (await cache.resolveFromCache(query)).results;
+  if (cache && VariableAwareCache.canCacheQuery(query, schema)) {
+    return (await cache!.resolveFromCache(query)).results;
   }
   const queryWithInsertedVars = replaceVariablesInQuery(query);
   const where = queryWithInsertedVars.where;

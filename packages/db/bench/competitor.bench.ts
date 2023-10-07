@@ -2,6 +2,7 @@ import { addRxPlugin, createRxDatabase } from 'rxdb';
 import { getRxStorageMemory } from 'rxdb/plugins/storage-memory';
 import Bench from 'tinybench';
 import DB from '../src/db';
+import { Schema as S } from '../src/schema';
 import { RxDBQueryBuilderPlugin } from 'rxdb/plugins/query-builder';
 import MemoryBTree from '../src/storage/memory-btree';
 addRxPlugin(RxDBQueryBuilderPlugin);
@@ -32,15 +33,34 @@ const CLASSES = new Array(1000).fill(0).map((_, i) => ({
   name: `Class ${i}`,
 }));
 
-const triplit = new DB({ source: new MemoryBTree() });
+const triplit = new DB({
+  source: new MemoryBTree(),
+  schema: {
+    version: 0,
+    collections: {
+      classes: {
+        attributes: S.Schema({
+          id: S.String(),
+          level: S.Number(),
+          name: S.String(),
+        }),
+      },
+    },
+  },
+});
 
 await rxdb.collections.classes.bulkInsert(CLASSES);
 
-await triplit.transact(async (tx) => {
-  for (const cls of CLASSES) {
-    await tx.insert('classes', cls, cls.id);
-  }
-});
+try {
+  await triplit.transact(async (tx) => {
+    for (const cls of CLASSES) {
+      await tx.insert('classes', cls, cls.id);
+    }
+  });
+  console.log('done inserting into triplit');
+} catch (e) {
+  console.error(e);
+}
 
 const expectedClassCount = CLASSES.filter((c) => c.level < 200).length;
 
