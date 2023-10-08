@@ -27,7 +27,7 @@ export class VariableAwareCache<M extends Models<any, any>> {
     query: Q,
     model?: Model
   ) {
-    if (!model) return false;
+    // if (!model) return false;
     if (query.where.some((f) => !(f instanceof Array) && !('exists' in f)))
       return false;
     const statements = mapFilterStatements(query.where, (f) => f).filter(
@@ -41,11 +41,13 @@ export class VariableAwareCache<M extends Models<any, any>> {
     // if (variableStatements[0][1] !== '=') return false;
     if (!['=', '<', '<=', '>', '>=', '!='].includes(variableStatements[0][1]))
       return false;
-    const attributeSchema = getSchemaFromPath(
-      model,
-      variableStatements[0][0].split('.')
-    );
-    if (attributeSchema.type === 'set') return false;
+    if (model) {
+      const attributeSchema = getSchemaFromPath(
+        model,
+        variableStatements[0][0].split('.')
+      );
+      if (attributeSchema.type === 'set') return false;
+    }
     return true;
   }
 

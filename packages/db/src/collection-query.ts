@@ -113,7 +113,9 @@ export async function fetch<Q extends CollectionQuery<any>>(
   }: FetchOptions & { cache?: VariableAwareCache<any> } = {}
 ) {
   if (cache && VariableAwareCache.canCacheQuery(query, schema)) {
-    return (await cache!.resolveFromCache(query)).results;
+    const cacheResult = await cache!.resolveFromCache(query);
+    if (!includeTriples) return cacheResult.results;
+    return cacheResult;
   }
   const queryWithInsertedVars = replaceVariablesInQuery(query);
   const where = queryWithInsertedVars.where;
@@ -188,12 +190,12 @@ export async function fetch<Q extends CollectionQuery<any>>(
             ...timestampedObjectToPlainObject(entity),
           },
         };
-        const { results: subQueryResult, triples } = await fetch(
-          tx,
-          subQueryWithVariables,
-          { includeTriples: true, schema, cache }
-        );
-
+        const subQueryFetch = await fetch(tx, subQueryWithVariables, {
+          includeTriples: true,
+          schema,
+          cache,
+        });
+        const { results: subQueryResult, triples } = subQueryFetch;
         const exists = subQueryResult.size > 0;
         if (!exists) return false;
         subQueryTriples.push(...[...triples.values()].flat());
