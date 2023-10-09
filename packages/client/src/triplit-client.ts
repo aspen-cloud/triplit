@@ -494,6 +494,9 @@ class SyncEngine {
   }
 }
 
+// Could probably make this an option if you want client side validation
+const SKIP_RULES = true;
+
 interface DBOptions<M extends Models<any, any> | undefined> {
   // TODO: can probably pull in a type from @triplit/db
   schema?: { collections: NonNullable<M>; version?: number };
@@ -639,7 +642,7 @@ export class TriplitClient<M extends Models<any, any> | undefined = undefined> {
 
   async transact(callback: (tx: DBTransaction<M>) => Promise<void>) {
     return this.db.transact(callback, {
-      skipRules: true,
+      skipRules: SKIP_RULES,
       storeScope: {
         read: ['outbox', 'cache'],
         write: ['outbox'],
@@ -701,7 +704,7 @@ export class TriplitClient<M extends Models<any, any> | undefined = undefined> {
     query: CQ
   ) {
     const scope = parseScope(query);
-    return this.db.fetch(query, { scope, skipRules: true });
+    return this.db.fetch(query, { scope, skipRules: SKIP_RULES });
   }
 
   async fetchOne<CN extends CollectionNameFromModels<M>>(
@@ -721,7 +724,7 @@ export class TriplitClient<M extends Models<any, any> | undefined = undefined> {
     id?: string
   ) {
     return this.db.insert(collectionName, object, id, {
-      skipRules: true,
+      skipRules: SKIP_RULES,
       storeScope: {
         read: ['outbox', 'cache'],
         write: ['outbox'],
@@ -737,8 +740,11 @@ export class TriplitClient<M extends Models<any, any> | undefined = undefined> {
     ) => Promise<void>
   ) {
     return this.db.update(collectionName, entityId, updater, {
-      read: ['outbox', 'cache'],
-      write: ['outbox'],
+      skipRules: SKIP_RULES,
+      storeScope: {
+        read: ['outbox', 'cache'],
+        write: ['outbox'],
+      },
     });
   }
 
@@ -757,7 +763,7 @@ export class TriplitClient<M extends Models<any, any> | undefined = undefined> {
       try {
         return this.db.subscribe(query, onResults, onError, {
           scope,
-          skipRules: true,
+          skipRules: SKIP_RULES,
         });
       } catch (e) {
         if (onError) onError(e);
@@ -773,7 +779,7 @@ export class TriplitClient<M extends Models<any, any> | undefined = undefined> {
       let unsubscribeRemote = () => {};
       unsubscribeLocal = this.db.subscribe(query, onResults, onError, {
         scope,
-        skipRules: true,
+        skipRules: SKIP_RULES,
       });
       if (scope.includes('cache'))
         unsubscribeRemote = this.syncEngine.subscribe(query);
@@ -794,7 +800,7 @@ export class TriplitClient<M extends Models<any, any> | undefined = undefined> {
           if (!cancel) {
             unsubscribeLocal = this.db.subscribe(query, onResults, onError, {
               scope,
-              skipRules: true,
+              skipRules: SKIP_RULES,
             });
             if (scope.includes('cache'))
               unsubscribeRemote = this.syncEngine.subscribe(query);
@@ -826,7 +832,7 @@ export class TriplitClient<M extends Models<any, any> | undefined = undefined> {
           if (!cancel) {
             unsubscribeLocal = this.db.subscribe(query, onResults, onError, {
               scope,
-              skipRules: true,
+              skipRules: SKIP_RULES,
             });
             if (scope.includes('cache'))
               unsubscribeRemote = this.syncEngine.subscribe(query);
