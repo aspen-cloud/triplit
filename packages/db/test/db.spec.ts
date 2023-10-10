@@ -3426,6 +3426,283 @@ describe('relational querying / sub querying', () => {
   });
 });
 
+describe('Subqueries in schema', () => {
+  let db: DB<any>;
+  beforeAll(async () => {
+    db = new DB({
+      schema: {
+        collections: {
+          departments: {
+            attributes: S.Schema({
+              id: S.String(),
+              name: S.String(),
+              classes: S.Query({
+                collectionName: 'classes',
+                where: [['department_id', '=', '$id']],
+              }),
+            }),
+          },
+          classes: {
+            attributes: S.Schema({
+              name: S.String(),
+              level: S.Number(),
+              building: S.String(),
+              department_id: S.String(),
+              department: S.Query({
+                collectionName: 'departments',
+                where: [['id', '=', '$department_id']],
+              }),
+            }),
+          },
+        },
+      },
+    });
+
+    const buildings = ['Warner', 'BiHall', 'Twilight', 'Voter'];
+    const departments = ['CS', 'Math', 'English', 'History'];
+    const classes = [
+      {
+        name: 'CS 101',
+        level: 100,
+        building: 'Warner',
+        department_id: 'CS',
+      },
+      {
+        name: 'CS 201',
+        level: 200,
+        building: 'Warner',
+        department_id: 'CS',
+      },
+      {
+        name: 'CS 301',
+        level: 300,
+        building: 'Warner',
+        department_id: 'CS',
+      },
+      {
+        name: 'Math 101',
+        level: 100,
+        building: 'BiHall',
+        department_id: 'Math',
+      },
+      {
+        name: 'Math 201',
+        level: 200,
+        building: 'BiHall',
+        department_id: 'Math',
+      },
+      {
+        name: 'Math 301',
+        level: 300,
+        building: 'BiHall',
+        department_id: 'Math',
+      },
+      {
+        name: 'English 101',
+        level: 100,
+        building: 'Twilight',
+        department_id: 'English',
+      },
+      {
+        name: 'English 201',
+        level: 200,
+        building: 'Twilight',
+        department_id: 'English',
+      },
+      {
+        name: 'English 301',
+        level: 300,
+        building: 'Twilight',
+        department_id: 'English',
+      },
+      {
+        name: 'History 101',
+        level: 100,
+        building: 'Voter',
+        department_id: 'History',
+      },
+      {
+        name: 'History 201',
+        level: 200,
+        building: 'Voter',
+        department_id: 'History',
+      },
+      {
+        name: 'History 301',
+        level: 300,
+        building: 'Voter',
+        department_id: 'History',
+      },
+    ];
+    for (const department of departments) {
+      await db.insert(
+        'departments',
+        { id: department, name: department },
+        department
+      );
+    }
+    for (const cls of classes) {
+      await db.insert('classes', cls, cls.name);
+    }
+  });
+
+  it('can query a subquery in a schema', async () => {
+    // test finding all departments in a Voter
+    const results = await db.fetch(
+      db
+        .query('departments')
+        .where([['classes.building', '=', 'Voter']])
+        .build()
+    );
+
+    expect(results).toHaveLength(1);
+  });
+
+  it('can query a subquery in a transaction', async () => {
+    // test finding all departments in a Voter
+    await db.transact(async (tx) => {
+      const results = await tx.fetch(
+        db
+          .query('departments')
+          .where([['classes.building', '=', 'Voter']])
+          .build()
+      );
+
+      expect(results).toHaveLength(1);
+    });
+  });
+
+  it('can query a subquery with a set attribute', async () => {
+    // find classes in the CS deparment
+    const results = await db.fetch(
+      db
+        .query('classes')
+        .where([['department.name', '=', 'CS']])
+        .build()
+    );
+
+    expect(results).toHaveLength(3);
+  });
+
+  it('can query a subquery within a subscription', async () => {
+    // find classes in the CS deparment
+    const query = db
+      .query('classes')
+      .where([['department.name', '=', 'CS']])
+      .build();
+
+    await testSubscription(db, query, [
+      {
+        check: (results) => {
+          console.log('results 1', results);
+          expect(results).toHaveLength(3);
+        },
+      },
+      {
+        action: async () => {
+          await db.insert(
+            'classes',
+            {
+              name: 'CS 401',
+              level: 400,
+              building: 'Warner',
+              department_id: 'CS',
+            },
+            'CS 401'
+          );
+        },
+        check: (results) => {
+          console.log('results 2', results);
+          expect(results).toHaveLength(4);
+        },
+      },
+    ]);
+  });
+});
+
+describe.todo('social network test', () => {
+  let db: DB<any>;
+  beforeAll(async () => {
+    db = new DB({
+      schema: {
+        collections: {
+          users: {
+            attributes: S.Schema({
+              id: S.String(),
+              name: S.String(),
+              friend_ids: S.Set(S.String()),
+              friends: S.Query({
+                collectionName: 'users',
+                where: [['id', 'in', '$friend_ids']],
+              }),
+              posts: S.Query({
+                collectionName: 'posts',
+                where: [['author_id', '=', '$id']],
+              }),
+            }),
+          },
+          posts: {
+            attributes: S.Schema({
+              id: S.String(),
+              content: S.String(),
+              author_id: S.String(),
+            }),
+          },
+        },
+      },
+    });
+    // insert sample data
+    await db.insert(
+      'users',
+      {
+        id: 'user-1',
+        name: 'Alice',
+        friend_ids: new Set(['user-2', 'user-3']),
+      },
+      'user-1'
+    );
+    await db.insert(
+      'users',
+      { id: 'user-2', name: 'Bob', friend_ids: new Set(['user-1', 'user-3']) },
+      'user-2'
+    );
+    await db.insert(
+      'users',
+      {
+        id: 'user-3',
+        name: 'Charlie',
+        friend_ids: new Set(['user-1', 'user-2']),
+      },
+      'user-3'
+    );
+    await db.insert(
+      'posts',
+      { id: 'post-1', content: 'Hello World!', author_id: 'user-1' },
+      'post-1'
+    );
+    await db.insert(
+      'posts',
+      { id: 'post-2', content: 'Hello World!', author_id: 'user-2' },
+      'post-2'
+    );
+    await db.insert(
+      'posts',
+      { id: 'post-3', content: 'Hello World!', author_id: 'user-3' },
+      'post-3'
+    );
+  });
+
+  it('can query posts from friends', () => {
+    const query = db
+      .query('posts')
+      .vars({})
+      .where([['author.friends', '=', '$USER_ID']])
+      .build();
+    const results = db.fetch(query);
+    expect(results).toHaveLength(2);
+  });
+});
+
 /**
  * This tests the power of the query engine to handle complex relational queries
  * This test focuses on the classic graph example of aviation routes

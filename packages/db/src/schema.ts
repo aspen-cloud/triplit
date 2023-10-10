@@ -30,6 +30,7 @@ import {
   ExtractSerializedType,
   ExtractTimestampedType,
 } from './data-types/type';
+import { QueryType } from './data-types/query';
 
 // We infer TObject as a return type of some funcitons and this causes issues with consuming packages
 // Using solution 3.1 described in this comment as a fix: https://github.com/microsoft/TypeScript/issues/47663#issuecomment-1519138189
@@ -45,6 +46,8 @@ export class Schema {
   static Record = RecordType;
 
   static Set = SetType;
+
+  static Query = QueryType;
 
   static Schema<T extends SchemaConfig>(config: T) {
     return config;
@@ -82,6 +85,9 @@ export function getSchemaFromPath(
   if (!scope) throw new InvalidSchemaPathError(path as string[]); // TODO: Triplit error
   for (let i = 1; i < path.length; i++) {
     if (!scope) throw new InvalidSchemaPathError(path as string[]); // TODO: Triplit error
+    if (scope.type === 'query') {
+      return scope;
+    }
     if (scope.type === 'set') {
       // scope = scope.of; // TODO: MAYBE validate here, we're validating a key, returning boolean
       scope = BooleanType(); // TODO: this is wrong? or right?

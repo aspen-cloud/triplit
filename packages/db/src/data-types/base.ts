@@ -19,6 +19,7 @@ import {
   ValueInterface,
   ValueSchemaType,
 } from './value';
+import { QueryType } from './query';
 
 export type Operator =
   | '='
@@ -40,7 +41,8 @@ export type ValueType<TO extends UserTypeOptions> =
 export type DataType =
   | ValueType<any>
   | SetType<ValueType<any>>
-  | RecordType<{ [k: string]: DataType }>;
+  | RecordType<{ [k: string]: DataType }>
+  | QueryType<any>;
 
 export type RegisterTypeFromBaseType<T extends ValueSchemaType> = TTuple<
   [T, typeof Timestamp]
@@ -120,6 +122,8 @@ export function typeFromJSON(serializedType?: AttributeDefinition): DataType {
       return DateType(serializedType.options);
     case 'set':
       return SetType(typeFromJSON(serializedType.items));
+    case 'query':
+      return QueryType(serializedType.query);
     case 'record':
       return RecordType(
         Object.fromEntries(

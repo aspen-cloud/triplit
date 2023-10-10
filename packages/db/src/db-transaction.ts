@@ -42,6 +42,7 @@ import {
   validateTriple,
   readSchemaFromTripleStore,
   StoreSchema,
+  mapFilterStatements,
   splitIdParts,
 } from './db-helpers';
 import { Query, constructEntity, entityToResultReducer } from './query';
@@ -412,15 +413,43 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
     { skipRules = false }: DBFetchOptions = {}
   ): Promise<FetchResult<Q>> {
     let fetchQuery = { ...query };
-    const collection = await this.getCollectionSchema(
+    const collectionSchema = await this.getCollectionSchema(
       fetchQuery.collectionName as CollectionNameFromModels<M>
     );
-    if (collection && !skipRules) {
-      fetchQuery = this.addReadRulesToQuery(fetchQuery, collection);
+    if (collectionSchema && !skipRules) {
+      fetchQuery = this.addReadRulesToQuery(fetchQuery, collectionSchema);
     }
     fetchQuery.vars = { ...this.variables, ...fetchQuery.vars };
+    fetchQuery.where = mapFilterStatements(
+      fetchQuery.where,
+      ([prop, op, val]) => [
+        prop,
+        op,
+        val instanceof Date ? val.toISOString() : val,
+      ]
+    );
+    if (collectionSchema) {
+      fetchQuery.where = mapFilterStatements(
+        fetchQuery.where,
+        ([prop, op, val]) => {
+          const attributeType = getSchemaFromPath(
+            collectionSchema.attributes,
+            prop.split('.')
+          );
+          if (attributeType.type !== 'query') {
+            return [prop, op, val];
+          }
+          const [_collectionName, ...path] = prop.split('.');
+          const subquery = { ...attributeType.query };
+          subquery.where = [...subquery.where, [path.join('.'), op, val]];
+          return {
+            exists: subquery,
+          };
+        }
+      );
+    }
     return fetch(this.storeTx, fetchQuery, {
-      schema: collection?.attributes,
+      schema: (await this.getSchema())?.collections,
       includeTriples: false,
     });
   }

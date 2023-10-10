@@ -13,6 +13,7 @@ import {
   initialize,
   JSONTypeFromModel,
   Model,
+  Models,
   timestampedObjectToPlainObject,
   // timestampedObjectToPlainObject,
   TimestampedTypeFromModel,
@@ -75,7 +76,7 @@ export type FetchResult<C extends CollectionQuery<any>> =
 
 export interface FetchOptions {
   includeTriples?: boolean;
-  schema?: Model;
+  schema?: Models<any, any>;
 }
 
 /**
@@ -112,7 +113,8 @@ export async function fetch<Q extends CollectionQuery<any>>(
     cache,
   }: FetchOptions & { cache?: VariableAwareCache<any> } = {}
 ) {
-  if (cache && VariableAwareCache.canCacheQuery(query, schema)) {
+  const collectionSchema = schema && schema[query.collectionName]?.attributes;
+  if (cache && VariableAwareCache.canCacheQuery(query, collectionSchema)) {
     const cacheResult = await cache!.resolveFromCache(query);
     if (!includeTriples) return cacheResult.results;
     return cacheResult;
@@ -128,13 +130,13 @@ export async function fetch<Q extends CollectionQuery<any>>(
     );
     const entity = constructEntity(entityTriples, storeId);
     const triples = new Map([[query.entityId, entityTriples]]);
-    if (!entity || !doesEntityObjMatchWhere(entity, where, schema)) {
+    if (!entity || !doesEntityObjMatchWhere(entity, where, collectionSchema)) {
       const results = new Map() as FetchResult<Q>;
       return includeTriples ? { results, triples } : results;
     }
     let updatedEntity = entity;
     if (!includeTriples)
-      updatedEntity = deserializeEntity(updatedEntity, schema);
+      updatedEntity = deserializeEntity(updatedEntity, collectionSchema);
     const results = new Map([
       [query.entityId, updatedEntity],
     ]) as FetchResult<Q>;
@@ -179,7 +181,11 @@ export async function fetch<Q extends CollectionQuery<any>>(
     .filter(async ([id, { entity }]) => {
       const subQueries = where.filter((filter) => 'exists' in filter);
       const plainFilters = where.filter((filter) => !('exists' in filter));
-      const basicMatch = doesEntityObjMatchWhere(entity, plainFilters, schema);
+      const basicMatch = doesEntityObjMatchWhere(
+        entity,
+        plainFilters,
+        collectionSchema
+      );
       if (!basicMatch) return false;
       const subQueryTriples: TripleRow[] = [];
       for (const { exists: subQuery } of subQueries) {
@@ -598,7 +604,7 @@ export function subscribeResultsAndTriples<Q extends CollectionQuery<any>>(
     args: [results: FetchResult<Q>, newTriples: Map<string, TripleRow[]>]
   ) => void,
   onError?: (error: any) => void,
-  schema?: Model
+  schema?: Models<any, any>
 ) {
   const order = query.order;
   const limit = query.limit;
@@ -618,7 +624,10 @@ export function subscribeResultsAndTriples<Q extends CollectionQuery<any>>(
         new Map(
           [...results].map(([id, entity]) => [
             id,
-            deserializeEntity(entity, schema),
+            deserializeEntity(
+              entity,
+              schema && schema[query.collectionName]?.attributes
+            ),
           ])
         ) as FetchResult<Q>,
         triples,
@@ -637,7 +646,10 @@ export function subscribeResultsAndTriples<Q extends CollectionQuery<any>>(
               new Map(
                 [...results].map(([id, entity]) => [
                   id,
-                  deserializeEntity(entity, schema),
+                  deserializeEntity(
+                    entity,
+                    schema && schema[query.collectionName]?.attributes
+                  ),
                 ])
               ) as FetchResult<Q>,
               triples,
@@ -675,7 +687,11 @@ export function subscribeResultsAndTriples<Q extends CollectionQuery<any>>(
               entityObj['_collection'][0] === query.collectionName;
             const isInResult =
               isInCollection &&
-              doesEntityObjMatchWhere(entityObj, where ?? [], schema);
+              doesEntityObjMatchWhere(
+                entityObj,
+                where ?? [],
+                schema && schema[query.collectionName]?.attributes
+              );
 
             // Check if the result stays within the current range of the query based on the limit
             // If it doesnt, we'll remove and might add it back when we backfill
@@ -764,7 +780,10 @@ export function subscribeResultsAndTriples<Q extends CollectionQuery<any>>(
             new Map(
               [...results].map(([id, entity]) => [
                 id,
-                deserializeEntity(entity, schema),
+                deserializeEntity(
+                  entity,
+                  schema && schema[query.collectionName]?.attributes
+                ),
               ])
             ) as FetchResult<Q>,
             triples,
@@ -793,7 +812,7 @@ export function subscribe<Q extends CollectionQuery<any>>(
   query: Q,
   onResults: (results: FetchResult<Q>) => void,
   onError?: (error: any) => void,
-  schema?: CollectionQuerySchema<Q>
+  schema?: Models<any, any>
 ) {
   if (query.entityId) {
     return subscribeSingleEntity(
@@ -803,7 +822,7 @@ export function subscribe<Q extends CollectionQuery<any>>(
         onResults(results);
       },
       onError,
-      schema
+      schema && schema[query.collectionName]?.attributes
     );
   }
   return subscribeResultsAndTriples(

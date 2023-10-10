@@ -5,6 +5,7 @@ import {
   Model,
   Models,
   InsertTypeFromModel,
+  getSchemaFromPath,
 } from './schema';
 import { AsyncTupleStorageApi } from 'tuple-database';
 import CollectionQueryBuilder, {
@@ -296,7 +297,7 @@ export default class DB<M extends Models<any, any> | undefined> {
       scope ? this.tripleStore.setStorageScope(scope) : this.tripleStore,
       fetchQuery,
       {
-        schema: collection?.attributes,
+        schema: (await this.getSchema())?.collections,
         includeTriples: false,
         cache: QUERY_CACHE_ENABLED ? this.cache : undefined,
       }
@@ -317,7 +318,10 @@ export default class DB<M extends Models<any, any> | undefined> {
         await fetch(
           scope ? this.tripleStore.setStorageScope(scope) : this.tripleStore,
           fetchQuery,
-          { schema: collection?.attributes, includeTriples: true }
+          {
+            schema: (await this.getSchema())?.collections,
+            includeTriples: true,
+          }
         )
       ).triples.values(),
     ].flat();
@@ -329,11 +333,11 @@ export default class DB<M extends Models<any, any> | undefined> {
   ) {
     await this.ensureMigrated;
     let fetchQuery = { ...query };
-    const collection = await this.getCollectionSchema(
+    const collectionSchema = await this.getCollectionSchema(
       fetchQuery.collectionName as CollectionNameFromModels<M>
     );
-    if (collection && !options.skipRules) {
-      fetchQuery = this.addReadRulesToQuery(fetchQuery, collection);
+    if (collectionSchema && !options.skipRules) {
+      fetchQuery = this.addReadRulesToQuery(fetchQuery, collectionSchema);
     }
     fetchQuery.vars = { ...this.variables, ...(fetchQuery.vars ?? {}) };
     fetchQuery.where = mapFilterStatements(
@@ -344,7 +348,27 @@ export default class DB<M extends Models<any, any> | undefined> {
         val instanceof Date ? val.toISOString() : val,
       ]
     );
-    return { query: fetchQuery, collection };
+    if (collectionSchema) {
+      fetchQuery.where = mapFilterStatements(
+        fetchQuery.where,
+        ([prop, op, val]) => {
+          const attributeType = getSchemaFromPath(
+            collectionSchema.attributes,
+            prop.split('.')
+          );
+          if (attributeType.type !== 'query') {
+            return [prop, op, val];
+          }
+          const [_collectionName, ...path] = prop.split('.');
+          const subquery = { ...attributeType.query };
+          subquery.where = [...subquery.where, [path.join('.'), op, val]];
+          return {
+            exists: subquery,
+          };
+        }
+      );
+    }
+    return { query: fetchQuery, collection: collectionSchema };
   }
 
   // TODO: we could probably infer a type here
@@ -377,28 +401,17 @@ export default class DB<M extends Models<any, any> | undefined> {
     { scope, skipRules = false }: { scope?: string[]; skipRules?: boolean } = {}
   ) {
     const startSubscription = async () => {
-      let subscriptionQuery = query;
-      // TODO: get rid of this "as" here
-      const collection = await this.getCollectionSchema(
-        subscriptionQuery.collectionName as CollectionNameFromModels<M>
-      );
-      if (collection && !skipRules) {
-        // TODO see other comment about replaceVariablesInQuery on how to improve
-        subscriptionQuery = this.addReadRulesToQuery(
-          subscriptionQuery,
-          collection
-        );
-      }
-      subscriptionQuery.vars = { ...this.variables, ...(query.vars ?? {}) };
-      subscriptionQuery = replaceVariablesInQuery(subscriptionQuery);
+      let { query: subscriptionQuery } = await this.prepareQuery(query, {
+        scope,
+        skipRules,
+      });
 
       const unsub = subscribe(
         scope ? this.tripleStore.setStorageScope(scope) : this.tripleStore,
         subscriptionQuery,
         onResults,
         onError,
-        // @ts-ignore
-        collection?.attributes
+        (await this.getSchema())?.collections
       );
       return unsub;
     };

@@ -4,7 +4,7 @@ import { CollectionRules } from '../db';
 export const VALUE_TYPE_KEYS = ['string', 'number', 'boolean', 'date'] as const;
 export type ValueTypeKeys = (typeof VALUE_TYPE_KEYS)[number];
 
-export const COLLECTION_TYPE_KEYS = ['set'] as const;
+export const COLLECTION_TYPE_KEYS = ['set', 'query'] as const;
 export type CollectionTypeKeys = (typeof COLLECTION_TYPE_KEYS)[number];
 
 // TODO: add record type
