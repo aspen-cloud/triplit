@@ -55,7 +55,10 @@ export class Schema {
 
   static get Default() {
     return {
-      uuid: (length?: string) => ({ func: 'uuid', args: [length] }),
+      uuid: (length?: string) => ({
+        func: 'uuid',
+        args: length ? [length] : null,
+      }),
       now: () => ({ func: 'now', args: null }),
     };
   }

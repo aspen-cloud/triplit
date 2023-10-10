@@ -67,6 +67,7 @@ export type {
   CollectionAttributeDefinition,
   CollectionDefinition,
   CollectionsDefinition,
+  UserTypeOptions,
 } from './data-types/serialization';
 export { timestampCompare } from './timestamp';
 export type { Timestamp } from './timestamp';
