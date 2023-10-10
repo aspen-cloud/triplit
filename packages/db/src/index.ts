@@ -47,6 +47,7 @@ export {
   tuplesToSchema,
   schemaToJSON,
   timestampedObjectToPlainObject,
+  hashSchema,
 } from './schema';
 export type {
   TObject,

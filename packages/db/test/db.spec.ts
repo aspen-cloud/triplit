@@ -2119,13 +2119,51 @@ describe('migrations', () => {
       down: [['drop_collection', { name: 'classes' }]],
     },
   ];
-  it('initializing a DB with migrations sets the schema', async () => {
+
+  it('initializing a DB with migrations sets the schema and migrations tracker', async () => {
     const db = new DB({ migrations });
     const dbSchema = await db.getSchema();
     expect(dbSchema?.collections).toHaveProperty('students');
     expect(dbSchema?.collections).toHaveProperty('classes');
     expect(dbSchema?.version).toEqual(2);
+
+    const appliedMigrations = Object.values(await db.getAppliedMigrations());
+    expect(appliedMigrations.length).toEqual(2);
+    expect(appliedMigrations[0].id).toEqual(1);
+    expect(appliedMigrations[0].parent).toEqual(0);
+    expect(appliedMigrations[1].id).toEqual(2);
+    expect(appliedMigrations[1].parent).toEqual(1);
   });
+
+  it('migrating updates migrations tracker', async () => {
+    const db = new DB();
+    await db.ensureMigrated;
+    {
+      const appliedMigrations = Object.values(await db.getAppliedMigrations());
+      expect(appliedMigrations.length).toEqual(0);
+    }
+    await db.migrate([migrations[0]], 'up');
+    {
+      const appliedMigrations = Object.values(await db.getAppliedMigrations());
+      expect(appliedMigrations.length).toEqual(1);
+    }
+    await db.migrate([migrations[1]], 'up');
+    {
+      const appliedMigrations = Object.values(await db.getAppliedMigrations());
+      expect(appliedMigrations.length).toEqual(2);
+    }
+    await db.migrate([migrations[1]], 'down');
+    {
+      const appliedMigrations = Object.values(await db.getAppliedMigrations());
+      expect(appliedMigrations.length).toEqual(1);
+    }
+    await db.migrate([migrations[0]], 'down');
+    {
+      const appliedMigrations = Object.values(await db.getAppliedMigrations());
+      expect(appliedMigrations.length).toEqual(0);
+    }
+  });
+
   it('will stop migrating on an error and rollback changes', async () => {
     const migrationsCopy = JSON.parse(
       JSON.stringify(migrations)

@@ -286,8 +286,9 @@ export function tuplesToSchema(triples: TripleRow[]) {
 }
 
 export function schemaToJSON(
-  schema: StoreSchema<Models<any, any>>
-): SchemaDefinition {
+  schema: StoreSchema<Models<any, any> | undefined>
+): SchemaDefinition | undefined {
+  if (!schema) return undefined;
   const collections: CollectionsDefinition = {};
   for (const [collectionName, model] of Object.entries(schema.collections)) {
     const collection = collectionSchemaToJSON(model);
@@ -343,4 +344,26 @@ export function getDefaultValuesForCollection(
     },
     {} as Record<string, any> // TODO: dont use any
   );
+}
+
+// Poor man's hash function for schema
+// Using this in place of a version check on schemas for syncing
+// Schema versions are harder to manage with console updates
+// Using this hash as a way to check if schemas mismatch since its easy to send as a url param
+export function hashSchema(collections: CollectionsDefinition | undefined) {
+  if (!collections) return undefined;
+  const tuples = objectToTuples(collections);
+  const sortedTriplesStr = tuples
+    .map((t) => JSON.stringify(t))
+    .sort()
+    .join('');
+  return stringHash(sortedTriplesStr);
+}
+
+function stringHash(str: string, base = 31, mod = 1e9 + 9) {
+  let hashValue = 0;
+  for (let i = 0; i < str.length; i++) {
+    hashValue = (hashValue * base + str.charCodeAt(i)) % mod;
+  }
+  return hashValue;
 }

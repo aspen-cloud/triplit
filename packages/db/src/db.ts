@@ -33,6 +33,7 @@ import {
   AttributeDefinition,
   UserTypeOptions,
 } from './data-types/serialization';
+import { triplesToObject } from './utils';
 
 export interface Rule<M extends Model> {
   filter: QueryWhere<M>;
@@ -563,10 +564,14 @@ export default class DB<M extends Models<any, any> | undefined> {
   }
 
   async migrate(migrations: Migration[], direction: 'up' | 'down') {
-    for (const migration of migrations) {
+    const sortedMigrations = migrations.sort(
+      (a, b) => (a.version - b.version) * (direction === 'up' ? 1 : -1)
+    );
+    for (const migration of sortedMigrations) {
       const { schema: storedSchema } = await readSchemaFromTripleStore(
         this.tripleStore
       );
+
       const dbVersion = storedSchema?.version ?? 0;
       if (canMigrate(migration, direction, dbVersion)) {
         try {
@@ -579,6 +584,7 @@ export default class DB<M extends Models<any, any> | undefined> {
           );
           throw e;
         }
+        // Keeping for backwards compatability, but it doesnt really need to be in the schema
         await this.tripleStore.insertTriples(
           [
             {
@@ -591,10 +597,57 @@ export default class DB<M extends Models<any, any> | undefined> {
           ],
           false
         );
+        if (direction === 'up') {
+          await this.addMigrationMarker(migration);
+        } else if (direction === 'down') {
+          await this.removeMigrationMarker(migration);
+        }
       } else {
         console.info('skipping migration', migration);
       }
     }
+  }
+
+  async getAppliedMigrations() {
+    const migrationTuples = await this.tripleStore.readMetadataTuples(
+      'migrations'
+    );
+    const res = triplesToObject<{
+      migrations?: Record<
+        string,
+        { applied: string; id: number; parent: number }
+      >;
+    }>(migrationTuples);
+    return res.migrations || {};
+  }
+
+  async getLatestMigrationId() {
+    const migrations = await this.getAppliedMigrations();
+    const maxVersion = Object.values(migrations).reduce<number | undefined>(
+      (max, m) => Math.max(max || 0, m.id),
+      undefined
+    );
+    return maxVersion;
+  }
+
+  async addMigrationMarker(migration: Migration) {
+    // Validation occurs at caller, so call with care
+    await this.tripleStore.updateMetadataTuples([
+      ['migrations', [`${migration.version}`, 'id'], migration.version],
+      ['migrations', [`${migration.version}`, 'parent'], migration.parent],
+      [
+        'migrations',
+        [`${migration.version}`, 'applied'],
+        new Date().toISOString(),
+      ],
+    ]);
+  }
+
+  async removeMigrationMarker(migration: Migration) {
+    // Validation occurs at caller, so call with care
+    await this.tripleStore.deleteMetadataTuples([
+      ['migrations', [`${migration.version}`]],
+    ]);
   }
 
   async getCollectionStats() {

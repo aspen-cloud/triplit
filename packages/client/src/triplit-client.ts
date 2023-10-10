@@ -20,6 +20,8 @@ import {
   stripCollectionFromId,
   QUERY_INPUT_TRANSFORMERS,
   InsertTypeFromModel,
+  schemaToJSON,
+  hashSchema,
 } from '@triplit/db';
 import { Subject } from 'rxjs';
 import { getUserId } from './token';
@@ -138,14 +140,18 @@ class SyncEngine {
       return undefined;
     }
     const wsOptions = new URLSearchParams();
-    const schemaVersion = (await this.db.getSchema())?.version;
-    if (schemaVersion) {
-      wsOptions.set('version', schemaVersion.toString());
-    }
-    wsOptions.set(
-      'keep-open-on-schema-mismatch',
-      String(this.syncOptions.keepOpenOnSchemaMismatch)
+    const hash = hashSchema(
+      schemaToJSON(await this.db.getSchema())?.collections
     );
+    if (hash) {
+      wsOptions.set('schema', hash.toString());
+    }
+    if (this.syncOptions.keepOpenOnSchemaMismatch) {
+      wsOptions.set(
+        'keep-open-on-schema-mismatch',
+        String(this.syncOptions.keepOpenOnSchemaMismatch)
+      );
+    }
     wsOptions.set('client', await this.db.getClientId());
     wsOptions.set('token', apiKey);
     return `${isSecure ? 'wss' : 'ws'}://${server}?${wsOptions.toString()}`;
@@ -303,9 +309,9 @@ class SyncEngine {
     this.conn.onclose = (ev) => {
       if (ev.reason) {
         const { type, retry } = JSON.parse(ev.reason);
-        if (type === 'MIGRATION_REQUIRED') {
+        if (type === 'SCHEMA_MISMATCH') {
           console.error(
-            'The server has closed the connection because the client schema is out of date. Please update your client schema.'
+            'The server has closed the connection because the client schema does not match the server schema. Please update your client schema.'
           );
         }
         if (!retry) {
