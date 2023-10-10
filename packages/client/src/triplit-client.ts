@@ -20,27 +20,27 @@ import {
   stripCollectionFromId,
   QUERY_INPUT_TRANSFORMERS,
   InsertTypeFromModel,
-  schemaToJSON,
-  hashSchema,
 } from '@triplit/db';
 import { Subject } from 'rxjs';
 import { getUserId } from './token';
-import { ConnectionStatus, friendlyReadyState } from './websocket';
+import { ConnectionStatus } from './websocket';
 import {
   MissingConnectionInformationError,
   RemoteFetchFailedError,
   RemoteSyncFailedError,
   UnrecognizedFetchPolicyError,
 } from './errors';
-
+import { WebSocketTransport } from './websocket-transport';
+import { SyncTransport } from './websocket-transport';
 export { IndexedDbStorage, MemoryStorage };
 type Storage = IndexedDbStorage | MemoryStorage;
 
-interface SyncOptions {
+export interface SyncOptions {
   server?: string;
   apiKey?: string;
   secure?: boolean;
   keepOpenOnSchemaMismatch?: boolean;
+  transport?: SyncTransport;
 }
 
 // Not totally sold on passing in the token here, but it felt awkward to have it in the sync options since its also relevant to the database
@@ -77,7 +77,7 @@ const txFailures$ = new Subject<{ txId: string; error: unknown }>();
 
 class SyncEngine {
   // @ts-ignore
-  private conn: WebSocket;
+  private transport: SyncTransport;
 
   private queries: Map<string, { params: CollectionQuery<any> }> = new Map();
 
@@ -131,34 +131,8 @@ class SyncEngine {
       : undefined;
   }
 
-  private async getWsURI() {
-    const { secure: isSecure, apiKey, server } = this.syncOptions;
-    if (!server || !apiKey) {
-      console.warn(
-        'Both a server and apiKey are required to sync. Skipping sync connection.'
-      );
-      return undefined;
-    }
-    const wsOptions = new URLSearchParams();
-    const hash = hashSchema(
-      schemaToJSON(await this.db.getSchema())?.collections
-    );
-    if (hash) {
-      wsOptions.set('schema', hash.toString());
-    }
-    if (this.syncOptions.keepOpenOnSchemaMismatch) {
-      wsOptions.set(
-        'keep-open-on-schema-mismatch',
-        String(this.syncOptions.keepOpenOnSchemaMismatch)
-      );
-    }
-    wsOptions.set('client', await this.db.getClientId());
-    wsOptions.set('token', apiKey);
-    return `${isSecure ? 'wss' : 'ws'}://${server}?${wsOptions.toString()}`;
-  }
-
-  private initialize() {
-    this.connect();
+  private async initialize() {
+    await this.connect();
 
     // Browser: on network connection / disconnection, connect / disconnect ws
     if (typeof window !== 'undefined') {
@@ -183,7 +157,7 @@ class SyncEngine {
 
   subscribe(params: CollectionQuery<any>) {
     let id = Date.now().toString(36) + Math.random().toString(36).slice(2); // unique enough id
-    this.sendMessage('CONNECT_QUERY', { id, params });
+    this.transport.sendMessage('CONNECT_QUERY', { id, params });
     this.queries.set(id, { params });
     return () => {
       this.disconnectQuery(id);
@@ -191,7 +165,7 @@ class SyncEngine {
   }
 
   disconnectQuery(id: string) {
-    this.sendMessage('DISCONNECT_QUERY', { id });
+    this.transport.sendMessage('DISCONNECT_QUERY', { id });
     this.queries.delete(id);
   }
 
@@ -213,20 +187,7 @@ class SyncEngine {
   }
 
   private async signalOutboxTriples() {
-    this.sendMessage('TRIPLES_PENDING', {});
-  }
-
-  private get isOpen() {
-    return this.conn && this.conn.readyState === this.conn.OPEN;
-  }
-
-  private sendMessage(type: string, payload: any) {
-    // For now, skip sending messages if we're not connected. I dont think we need a queue yet.
-    if (!this.isOpen) {
-      console.log('skipping', type, payload);
-      return;
-    }
-    this.conn.send(JSON.stringify({ type, payload }));
+    this.transport.sendMessage('TRIPLES_PENDING', {});
   }
 
   async connect() {
@@ -234,10 +195,16 @@ class SyncEngine {
       1000,
       JSON.stringify({ type: 'CONNECTION_OVERRIDE', retry: false })
     );
-    const wsUri = await this.getWsURI();
-    if (!wsUri) return;
-    this.conn = new WebSocket(wsUri);
-    this.conn.onmessage = async (evt) => {
+    const transport =
+      this.syncOptions.transport ??
+      new WebSocketTransport(
+        this.syncOptions,
+        await this.db.getClientId(),
+        (await this.db.getSchema())?.version
+      );
+    if (!transport) return;
+    this.transport = transport;
+    this.transport.onMessage(async (evt) => {
       const message = JSON.parse(evt.data);
       if (message.type === 'ERROR') {
         await this.handleErrorMessage(message);
@@ -280,7 +247,7 @@ class SyncEngine {
           // For now just flush outbox
           const triplesToSend = await outboxOperator.findByEntity();
           if (triplesToSend.length > 0) {
-            this.sendMessage('TRIPLES', { triples: triplesToSend });
+            this.transport.sendMessage('TRIPLES', { triples: triplesToSend });
           }
         });
         for (const txId of txIds) {
@@ -293,22 +260,26 @@ class SyncEngine {
           .setStorageScope(['outbox'])
           .findByEntity();
         if (triplesToSend.length > 0) {
-          this.sendMessage('TRIPLES', { triples: triplesToSend });
+          this.transport.sendMessage('TRIPLES', { triples: triplesToSend });
         }
       }
-    };
-    this.conn.onopen = (ev) => {
-      console.log('open ws', ev);
+    });
+    this.transport.onOpen((evt) => {
+      console.log('open ws', evt);
       this.resetReconnectTimeout();
 
       // Reconnect any queries
       for (const [id, queryInfo] of this.queries) {
-        this.sendMessage('CONNECT_QUERY', { id, params: queryInfo.params });
+        this.transport.sendMessage('CONNECT_QUERY', {
+          id,
+          params: queryInfo.params,
+        });
       }
-    };
-    this.conn.onclose = (ev) => {
-      if (ev.reason) {
-        const { type, retry } = JSON.parse(ev.reason);
+    });
+
+    this.transport.onClose((evt) => {
+      if (evt.reason) {
+        const { type, retry } = JSON.parse(evt.reason);
         if (type === 'SCHEMA_MISMATCH') {
           console.error(
             'The server has closed the connection because the client schema does not match the server schema. Please update your client schema.'
@@ -329,20 +300,20 @@ class SyncEngine {
         30000,
         this.reconnectTimeoutDelay * 2
       );
-    };
-    this.conn.onerror = (ev) => {
-      // console.log('error ws', ev);
-      console.error(ev);
+    });
+    this.transport.onError((evt) => {
+      // console.log('error ws', evt);
+      console.error(evt);
       // on error, close the connection and attempt to reconnect
-      this.conn.close();
-    };
+      this.transport.close();
+    });
 
     // NOTE: this comes from proxy in websocket.ts
-    this.conn.onconnectionchange = (state) => {
+    this.transport.onConnectionChange((state: ConnectionStatus) => {
       for (const handler of this.connectionChangeHandlers) {
         handler(state);
       }
-    };
+    });
   }
 
   updateConnection(options: Partial<SyncOptions>) {
@@ -356,10 +327,6 @@ class SyncEngine {
       1000,
       JSON.stringify({ type: 'MANUAL_DISCONNECT', retry: false })
     );
-  }
-
-  get connectionStatus() {
-    return this.conn ? friendlyReadyState(this.conn) : undefined;
   }
 
   private async handleErrorMessage(message: any) {
@@ -392,7 +359,7 @@ class SyncEngine {
       .setStorageScope(['outbox'])
       .findByClientTimestamp(await this.db.getClientId(), 'eq', timestamp);
     if (triplesToSend.length > 0)
-      this.sendMessage('TRIPLES', { triples: triplesToSend });
+      this.transport.sendMessage('TRIPLES', { triples: triplesToSend });
   }
 
   async rollback(txIds: string | string[]) {
@@ -419,7 +386,7 @@ class SyncEngine {
     runImmediately: boolean = false
   ) {
     this.connectionChangeHandlers.add(callback);
-    if (runImmediately) callback(this.connectionStatus);
+    if (runImmediately) callback(this.transport.connectionStatus);
     return () => this.connectionChangeHandlers.delete(callback);
   }
 
@@ -427,7 +394,7 @@ class SyncEngine {
     code?: number | undefined,
     reason?: string | undefined
   ) {
-    if (this.conn) this.conn.close(code, reason);
+    if (this.transport) this.transport.close(code, reason);
   }
 
   private resetReconnectTimeout() {
