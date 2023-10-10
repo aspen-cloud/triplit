@@ -285,7 +285,7 @@ export async function fetch<Q extends CollectionQuery<any>>(
     entities.map(([id, entity]) => [
       id,
       // TODO: deserialize at the right time...
-      deserializeEntity(entity, schema),
+      deserializeEntity(entity, collectionSchema),
     ])
   ) as FetchResult<Q>;
 }
