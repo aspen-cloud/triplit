@@ -189,14 +189,15 @@ export async function fetch<Q extends CollectionQuery<any>>(
       if (!basicMatch) return false;
       const subQueryTriples: TripleRow[] = [];
       for (const { exists: subQuery } of subQueries) {
-        const subQueryWithVariables = {
+        const existsSubQuery = {
           ...subQuery,
           vars: {
             ...subQuery.vars,
             ...timestampedObjectToPlainObject(entity),
           },
+          limit: 1,
         };
-        const subQueryFetch = await fetch(tx, subQueryWithVariables, {
+        const subQueryFetch = await fetch(tx, existsSubQuery, {
           includeTriples: true,
           schema,
           cache,
