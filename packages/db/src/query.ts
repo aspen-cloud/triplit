@@ -1,6 +1,7 @@
 import { ValuePointer } from '@sinclair/typebox/value';
 import { Model, TimestampedTypeFromModel, updateEntityAtPath } from './schema';
 import { EntityId, TripleRow } from './triple-store';
+import { QueryClauseFormattingError } from './errors';
 
 type Path = string;
 // Should be friendly types that we pass into queries
@@ -164,7 +165,7 @@ export const QUERY_INPUT_TRANSFORMERS = <
        */
       return args as QueryWhere<M>;
     } else {
-      throw new Error('Where clause of query is not formatted correctly');
+      throw new QueryClauseFormattingError('where', args);
     }
   },
   order: (...args: OrderInput<M>): QueryOrder<M>[] | undefined => {
@@ -195,7 +196,7 @@ export const QUERY_INPUT_TRANSFORMERS = <
       return args[0] as NonNullable<Query<M>['order']>;
     }
 
-    throw new Error('Order clause of query is not formatted correctly');
+    throw new QueryClauseFormattingError('order', args);
   },
 });
 

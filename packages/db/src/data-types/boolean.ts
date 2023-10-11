@@ -8,7 +8,7 @@ import {
 import { UserTypeOptions } from './serialization';
 import { TypeWithOptions, ValueInterface } from './value';
 import { Value } from '@sinclair/typebox/value';
-import { InvalidTypeOptionsError } from '../errors';
+import { InvalidTypeOptionsError, SerializingError } from '../errors';
 
 const BOOLEAN_OPERATORS = ['=', '!='] as const;
 type BooleanOperators = typeof BOOLEAN_OPERATORS;
@@ -39,7 +39,7 @@ export function BooleanType<TypeOptions extends UserTypeOptions = {}>(
       const valid =
         (options.nullable && val === null) || typeof val === 'boolean';
       if (!valid) {
-        throw new Error('Invalid value for boolean: ' + val); //TODO: triplit error
+        throw new SerializingError('boolean', val);
       }
       return val;
     },

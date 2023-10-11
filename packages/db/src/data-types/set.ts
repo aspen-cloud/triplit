@@ -1,3 +1,8 @@
+import {
+  InvalidSchemaOptionsError,
+  InvalidSetTypeError,
+  NotImplementedError,
+} from '../errors';
 import { TimestampType, ValueType } from './base';
 import { CollectionInterface } from './collection';
 import { VALUE_TYPE_KEYS } from './serialization';
@@ -18,8 +23,9 @@ export function SetType<Items extends ValueType<any>>(
   items: Items
 ): SetType<Items> {
   if (!VALUE_TYPE_KEYS.includes(items.type))
-    throw new Error('Invalid set type: ' + items.type); // TODO: triplit error
-  if (items.options?.nullable) throw new Error('Set types cannot be nullable'); // TODO: triplit error
+    throw new InvalidSetTypeError(items.type);
+  if (items.options?.nullable)
+    throw new InvalidSchemaOptionsError('Set types cannot be nullable');
   return {
     type: 'set',
     items,
@@ -47,7 +53,7 @@ export function SetType<Items extends ValueType<any>>(
       ); // TODO: figure out proper set deserialzied type
     },
     validate(_val: any) {
-      throw new Error('TODO: Set validation');
+      throw new NotImplementedError('Set validation');
     },
   };
 }

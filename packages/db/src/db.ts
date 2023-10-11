@@ -17,7 +17,7 @@ import CollectionQueryBuilder, {
 } from './collection-query';
 import { Query, QueryWhere } from './query';
 import MemoryStorage from './storage/memory-btree';
-import { InvalidMigrationOperationError } from './errors';
+import { DBOptionsError, InvalidMigrationOperationError } from './errors';
 import { Clock } from './clocks/clock';
 
 import { DBTransaction } from './db-transaction';
@@ -183,10 +183,10 @@ export default class DB<M extends Models<any, any> | undefined> {
       [DEFAULT_STORE_KEY]: source ?? new MemoryStorage(),
     };
     if (Object.keys(sourcesMap).length === 0)
-      throw new Error('No triple stores provided.');
+      throw new DBOptionsError('No triple stores provided.');
 
     if (schema && migrations)
-      throw new Error('Cannot provide both schema and migrations');
+      throw new DBOptionsError('Cannot provide both schema and migrations');
 
     // If a schema is provided, assume using schema but no migrations (keep at version 0)
     const tripleStoreSchema = schema

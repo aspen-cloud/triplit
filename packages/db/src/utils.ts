@@ -1,3 +1,4 @@
+import { UnserializableValueError } from './errors';
 import { Attribute, EAV, Value } from './triple-store';
 import { TuplePrefix } from './utility-types';
 
@@ -66,7 +67,7 @@ function toSerializable(val: any) {
     return val;
   }
   if (val instanceof Date) return val.toISOString();
-  throw new Error('Unable to serialize value:', val);
+  throw new UnserializableValueError(val);
 }
 
 export function triplesToObject<T>(triples: TuplePrefix<EAV>[]) {

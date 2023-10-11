@@ -20,6 +20,8 @@ import { entityToResultReducer, ValueCursor } from './query';
 import {
   IndexNotFoundError,
   InvalidTimestampIndexScanError,
+  InvalidTripleStoreValueError,
+  TripleStoreOptionsError,
   WriteRuleError,
 } from './errors';
 
@@ -358,7 +360,7 @@ export class TripleStoreOperator implements TripleStoreApi {
     }
     for (const triple of triplesInput) {
       if (triple.value === undefined) {
-        throw new Error("Cannot use 'undefined' as a value");
+        throw new InvalidTripleStoreValueError(undefined);
       }
       await this.addTripleToIndex(this.tupleOperator, triple, shouldValidate);
     }
@@ -466,7 +468,7 @@ export class TripleStoreOperator implements TripleStoreApi {
     for (const eav of eavs) {
       const [id, attribute, value] = eav;
       if (value === undefined) {
-        throw new Error("Cannot use 'undefined' as a value");
+        throw new InvalidTripleStoreValueError(undefined);
       }
       const existingTriples = await this.findByEntityAttribute(id, attribute);
       const olderTriples = existingTriples.filter(
@@ -580,9 +582,13 @@ export class TripleStore implements TripleStoreApi {
       beforeInsert: [],
     };
     if (!stores && !storage)
-      throw new Error('Must provide either storage or stores');
+      throw new TripleStoreOptionsError(
+        'Must provide either storage or stores'
+      );
     if (stores && storage)
-      throw new Error('Cannot provide both storage and stores');
+      throw new TripleStoreOptionsError(
+        'Cannot provide both storage and stores'
+      );
 
     this.storageScope = storageScope;
     let normalizedStores;

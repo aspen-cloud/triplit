@@ -1,3 +1,8 @@
+import {
+  COLLECTION_TYPE_KEYS,
+  VALUE_TYPE_KEYS,
+} from './data-types/serialization';
+
 export const STATUS_CODES = {
   Success: 200,
 
@@ -177,7 +182,7 @@ export class InvalidSetTypeError extends TriplitError {
   constructor(type: string, ...args: any[]) {
     super(...args);
     this.name = 'InvalidSetTypeError';
-    this.message = `A set may only be of type 'string' or 'number'. You passed '${type}'.`;
+    this.message = `When constructing the schema, an invalid type for the items in a set was recieved. A set may only be of type ${COLLECTION_TYPE_KEYS}. You passed '${type}'.`;
     this.status = STATUS_CODES['Bad Request'];
   }
 }
@@ -237,5 +242,156 @@ export class WriteRuleError extends TriplitError {
     this.name = 'RuleError';
     this.message = `Write failed because it didn't pass a Rule.`;
     this.status = STATUS_CODES.Unauthorized;
+  }
+}
+
+export class UnrecognizedPropertyInUpdateError extends TriplitError {
+  constructor(propPointer: string, value: any, ...args: any[]) {
+    super(...args);
+    this.name = 'UnrecognizedPropertyInUpdateError';
+    this.message = `Cannot set unrecognized property ${propPointer} to ${String(
+      value
+    )} during an entity update. The property may not be defined in your schema.`;
+    this.status = STATUS_CODES['Bad Request'];
+  }
+}
+
+// TODO: this one is weird, feels like we shouldn't get here
+export class MissingAttributeDefinitionError extends TriplitError {
+  constructor(...args: any[]) {
+    super(...args);
+    this.name = 'MissingAttributeDefinitionError';
+    this.message =
+      'An attribute definition is missing from your schema. Please check that your schema has properly formed attribute definitions for each attribute.';
+    this.status = STATUS_CODES['Internal Server Error'];
+  }
+}
+
+export class UnrecognizedAttributeTypeError extends TriplitError {
+  constructor(type: string, ...args: any[]) {
+    super(...args);
+    this.name = 'UnrecognizedAttributeTypeError';
+    this.message = `An attribute in the schema contains an unsupported ${type}. Valid types are ${[
+      VALUE_TYPE_KEYS,
+      ...COLLECTION_TYPE_KEYS,
+      'query',
+    ]}`;
+    this.status = STATUS_CODES['Bad Request'];
+  }
+}
+
+export class EditingProtectedFieldError extends TriplitError {
+  constructor(field: string, ...args: any[]) {
+    super(...args);
+    this.name = 'EditingProtectedFieldError';
+    this.message = `Cannot edit protected field: ${field}`;
+    this.status = STATUS_CODES['Bad Request'];
+  }
+}
+
+export class InvalidTripleStoreValueError extends TriplitError {
+  constructor(value: any, ...args: any[]) {
+    super(...args);
+    this.name = 'InvalidTripleStoreValueError';
+    this.message = `Cannot store value ${String(value)} in the triple store.`;
+    this.status = STATUS_CODES['Bad Request'];
+  }
+}
+
+export class UnsupportedOperatorInQueryCacheError extends TriplitError {
+  constructor(operator: string, supportedOperators: string[], ...args: any[]) {
+    super(...args);
+    this.name = 'UnsupportedOperatorInQueryCacheError';
+    this.message = `Queries with the operator ${operator} in a where clause can't be stored in the query cache. Currently, supported operators are: ${supportedOperators}`;
+    this.status = STATUS_CODES['Bad Request'];
+  }
+}
+
+export class UnserializableValueError extends TriplitError {
+  constructor(value: any, ...args: any[]) {
+    super(...args);
+    this.name = 'UnserializableValueError';
+    this.message = `Cannot serialize value ${String(
+      value
+    )} for insertion into the database.`;
+    this.status = STATUS_CODES['Bad Request'];
+  }
+}
+
+export class TripleStoreOptionsError extends TriplitError {
+  constructor(context?: string, ...args: any[]) {
+    super(...args);
+    this.name = 'TripleStoreOptionsError';
+    this.message = `There was an error in the configuration of the triple store. ${context}`;
+    this.status = STATUS_CODES['Bad Request'];
+  }
+}
+
+export class QueryClauseFormattingError extends TriplitError {
+  constructor(
+    clauseType: 'order' | 'where' | 'select' | 'syncStatus',
+    clause: any,
+    ...args: any[]
+  ) {
+    super(...args);
+    this.name = 'QueryClauseFormattingError';
+    this.message = `The ${clauseType} clause is not formatted correctly.
+    
+    Received: ${JSON.stringify(clause)}`;
+    this.status = STATUS_CODES['Bad Request'];
+  }
+}
+
+export class EmptyTupleInsertionError extends TriplitError {
+  constructor(
+    id: string,
+    document: Record<string, any>,
+    collectionName?: string,
+    ...args: any[]
+  ) {
+    super(...args);
+    this.name = 'EmptyTupleInsertionError';
+    this.message = `Insertion of the document ${JSON.stringify(
+      document
+    )} with the id ${id}${
+      collectionName ? ' in the collection ' + collectionName : ''
+    } failed because it generated an empty tuple.`;
+    this.status = STATUS_CODES['Bad Request'];
+  }
+}
+
+export class DBOptionsError extends TriplitError {
+  constructor(context: string, ...args: any[]) {
+    super(...args);
+    this.name = 'DBOptionsError';
+    this.message = `There was an error in the configuration of the Triplit database: ${context}`;
+    this.status = STATUS_CODES['Bad Request'];
+  }
+}
+
+export class SerializingError extends TriplitError {
+  constructor(targetType: string, erroneousValue: any, ...args: any[]) {
+    super(...args);
+    this.name = 'SerializingError';
+    this.message = `When inserting or updating an entity, there was an error serializing the data: ${erroneousValue} as type: ${targetType}`;
+    this.status = STATUS_CODES['Bad Request'];
+  }
+}
+
+export class InvalidSchemaOptionsError extends TriplitError {
+  constructor(context: string, ...args: any[]) {
+    super(...args);
+    this.name = 'InvalidAttributeOptionsError';
+    this.message = `The options for an attribute in the schema are invalid: ${context}`;
+    this.status = STATUS_CODES['Bad Request'];
+  }
+}
+
+export class NotImplementedError extends TriplitError {
+  constructor(context: string, ...args: any[]) {
+    super(...args);
+    this.name = 'NotImplementedError';
+    this.message = `This feature is not yet implemented: ${context}`;
+    this.status = STATUS_CODES['Bad Request'];
   }
 }

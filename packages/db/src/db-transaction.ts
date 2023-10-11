@@ -19,7 +19,11 @@ import CollectionQueryBuilder, {
   fetch,
   FetchResult,
 } from './collection-query';
-import { EntityNotFoundError, WriteRuleError } from './errors';
+import {
+  EntityNotFoundError,
+  UnrecognizedPropertyInUpdateError,
+  WriteRuleError,
+} from './errors';
 import { ValuePointer } from '@sinclair/typebox/value';
 import {
   CollectionNameFromModels,
@@ -328,9 +332,7 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
         );
         if (!propSchema) {
           // TODO use correct Triplit Error
-          throw new Error(
-            `Cannot set unrecognized property ${propPointer} to ${value}`
-          );
+          throw new UnrecognizedPropertyInUpdateError(propPointer, value);
         }
         const serializedValue = propSchema.serialize(value);
         ValuePointer.Set(changeTracker, propPointer, serializedValue);

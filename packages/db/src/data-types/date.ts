@@ -9,7 +9,7 @@ import {
 } from './base';
 import { TypeWithOptions, ValueInterface } from './value';
 import { Value } from '@sinclair/typebox/value';
-import { InvalidTypeOptionsError } from '../errors';
+import { InvalidTypeOptionsError, SerializingError } from '../errors';
 
 FormatRegistry.Set(
   'date-time',
@@ -50,7 +50,7 @@ export function DateType<TypeOptions extends UserTypeOptions = {}>(
     serialize(val: TypeWithOptions<Date, TypeOptions>) {
       const valid = (options.nullable && val === null) || val instanceof Date;
       if (!valid) {
-        throw new Error('Invalid value for date: ' + val); //TODO: triplit error
+        throw new SerializingError('date', val);
       }
       return (val ? val.toISOString() : null) as TypeWithOptions<
         string,

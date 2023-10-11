@@ -1,3 +1,4 @@
+import { EmptyTupleInsertionError } from './errors';
 import { TripleRow, TripleStoreTransaction } from './triple-store';
 import { objectToTuples } from './utils';
 
@@ -13,7 +14,7 @@ export async function insert(
 
   const avRows = extendedTuples.map((pathVal) => {
     if (pathVal.length === 0)
-      throw new Error('Empty tuple generated for document');
+      throw new EmptyTupleInsertionError(id, document, collectionName);
     return {
       attribute: [
         ...(collectionName ? [collectionName] : []),

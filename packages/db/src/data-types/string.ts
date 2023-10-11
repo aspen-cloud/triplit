@@ -8,7 +8,7 @@ import {
 import { UserTypeOptions } from './serialization';
 import { TypeWithOptions, ValueInterface } from './value';
 import { Value } from '@sinclair/typebox/value';
-import { InvalidTypeOptionsError } from '../errors';
+import { InvalidTypeOptionsError, SerializingError } from '../errors';
 
 const STRING_OPERATORS = ['=', '!=', 'like', 'nlike'] as const;
 type StringOperators = typeof STRING_OPERATORS;
@@ -40,7 +40,7 @@ export function StringType<TypeOptions extends UserTypeOptions = {}>(
       const valid =
         (options.nullable && val === null) || typeof val === 'string';
       if (!valid) {
-        throw new Error('Invalid value for string: ' + val); //TODO: triplit error
+        throw new SerializingError('string', val); //TODO: triplit error
       }
       return val;
     },

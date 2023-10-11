@@ -83,11 +83,11 @@ export function getSchemaFromPath(
   model: Record<string, DataType>,
   path: Attribute
 ): DataType {
-  if (path.length === 0) throw new Error('Path must have at least one part'); // TODO: triplit error
+  if (path.length === 0) throw new InvalidSchemaPathError([]);
   let scope = model[path[0]];
-  if (!scope) throw new InvalidSchemaPathError(path as string[]); // TODO: Triplit error
+  if (!scope) throw new InvalidSchemaPathError(path as string[]);
   for (let i = 1; i < path.length; i++) {
-    if (!scope) throw new InvalidSchemaPathError(path as string[]); // TODO: Triplit error
+    if (!scope) throw new InvalidSchemaPathError(path as string[]);
     if (scope.type === 'query') {
       return scope;
     }
@@ -98,7 +98,7 @@ export function getSchemaFromPath(
       const part = path[i];
       scope = scope.properties[part];
     } else {
-      throw new InvalidSchemaPathError(path as string[]); // TODO: Triplit error
+      throw new InvalidSchemaPathError(path as string[]);
     }
   }
   return scope;
@@ -239,7 +239,6 @@ export function timestampedObjectToPlainObject<O extends TimestampedObject>(
   obj: O
 ): UnTimestampedObject<O> {
   if (typeof obj !== 'object') {
-    // throw new Error(`Can't untimestamp a non-object: ${obj}`);
     return obj;
   }
   if (isTimestampedVal(obj)) {

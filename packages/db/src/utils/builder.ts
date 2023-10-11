@@ -1,3 +1,5 @@
+import { EditingProtectedFieldError } from '../errors';
+
 type ArgumentsType<T extends (...args: any[]) => any> = T extends (
   ...args: infer A
 ) => any
@@ -48,7 +50,7 @@ export default function Builder<
         return () => data;
       }
       if (protectedFields?.includes(name as ProtectedField)) {
-        throw new Error(`Cannot edit protected field: ${String(name)}`);
+        throw new EditingProtectedFieldError(String(name));
       }
 
       return (...args: any[]) => {

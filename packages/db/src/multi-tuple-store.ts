@@ -14,7 +14,7 @@ import {
   TupleToObject,
   RemoveTupleValuePairPrefix,
 } from 'tuple-database/database/typeHelpers';
-import { DBScanFailureError } from './errors';
+import { DBScanFailureError, NotImplementedError } from './errors';
 
 export type StorageScope = {
   read?: string[];
@@ -184,7 +184,7 @@ export default class MultiTupleStore<TupleSchema extends KeyValuePair> {
   }
 
   close(): void {
-    throw new Error('Method not implemented.');
+    throw new NotImplementedError('MultiTupleStore.close() method');
   }
 }
 

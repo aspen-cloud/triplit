@@ -1,6 +1,10 @@
 import { Static, TTuple, Type } from '@sinclair/typebox';
 import { nanoid } from 'nanoid';
-import { InvalidTypeOptionsError } from '../errors';
+import {
+  InvalidTypeOptionsError,
+  MissingAttributeDefinitionError,
+  UnrecognizedAttributeTypeError,
+} from '../errors';
 import { Value } from '@sinclair/typebox/value';
 import {
   UserTypeOptionsSchema,
@@ -14,11 +18,7 @@ import { RecordType } from './record';
 import { NumberType } from './number';
 import { BooleanType } from './boolean';
 import { SetType } from './set';
-import {
-  SerializedValueOverrides,
-  ValueInterface,
-  ValueSchemaType,
-} from './value';
+import { SerializedValueOverrides, ValueSchemaType } from './value';
 import { QueryType } from './query';
 
 export type Operator =
@@ -110,7 +110,7 @@ export function typeFromJSON(
 ): ValueType<any>;
 export function typeFromJSON(serializedType?: AttributeDefinition): DataType;
 export function typeFromJSON(serializedType?: AttributeDefinition): DataType {
-  if (!serializedType) throw new Error('NO TYPE'); // TODO: triplit error, better message
+  if (!serializedType) throw new MissingAttributeDefinitionError();
   switch (serializedType.type) {
     case 'string':
       return StringType(serializedType.options);
@@ -134,7 +134,7 @@ export function typeFromJSON(serializedType?: AttributeDefinition): DataType {
         )
       );
   }
-  throw new Error(
-    `UNRECOGNIZED TYPE ${(serializedType as AttributeDefinition).type}`
-  ); // TODO: triplit error
+  throw new UnrecognizedAttributeTypeError(
+    (serializedType as AttributeDefinition).type
+  );
 }

@@ -8,7 +8,7 @@ import {
 import { UserTypeOptions, ValueAttributeDefinition } from './serialization';
 import { TypeWithOptions, ValueInterface } from './value';
 import { Value } from '@sinclair/typebox/value';
-import { InvalidTypeOptionsError } from '../errors';
+import { InvalidTypeOptionsError, SerializingError } from '../errors';
 
 const NUMBER_OPERATORS = ['=', '!=', '<', '>', '<=', '>='] as const;
 type NumberOperators = typeof NUMBER_OPERATORS;
@@ -40,7 +40,7 @@ export function NumberType<TypeOptions extends UserTypeOptions = {}>(
       const valid =
         (options.nullable && val === null) || typeof val === 'number';
       if (!valid) {
-        throw new Error('Invalid value for number: ' + val); //TODO: triplit error
+        throw new SerializingError('number', val);
       }
       return val;
     },

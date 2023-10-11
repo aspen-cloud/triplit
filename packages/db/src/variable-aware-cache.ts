@@ -9,6 +9,7 @@ import { FilterStatement } from './query';
 import { Model, Models, getSchemaFromPath } from './schema';
 import * as TB from '@sinclair/typebox/value';
 import { TripleRow, TripleStore } from './triple-store';
+import { UnsupportedOperatorInQueryCacheError } from './errors';
 
 export class VariableAwareCache<M extends Models<any, any>> {
   cache: Map<
@@ -89,7 +90,6 @@ export class VariableAwareCache<M extends Models<any, any>> {
     const varValue = query.vars![varKey];
     const view = this.cache.get(id)!;
     const viewResultEntries = [...view.results.entries()];
-
     let start, end;
     if (['=', '<', '<=', '>', '>='].includes(op)) {
       start = binarySearch(
@@ -150,9 +150,14 @@ export class VariableAwareCache<M extends Models<any, any>> {
       };
     }
     if (start == undefined || end == undefined) {
-      throw new Error(
-        'Cannot index queries that have a variable and use this operator:' + op
-      );
+      throw new UnsupportedOperatorInQueryCacheError(op, [
+        '=',
+        '!=',
+        '<',
+        '<=',
+        '>',
+        '>=',
+      ]);
     }
     const resultEntries = viewResultEntries.slice(start, end + 1);
     return {
