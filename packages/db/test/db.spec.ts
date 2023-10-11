@@ -513,6 +513,52 @@ describe('Set operations', () => {
 
     expect(postUpdateLookup).toHaveLength(0);
   });
+
+  it('can create sets with different types', async () => {
+    const schema = {
+      collections: {
+        companies: {
+          attributes: S.Schema({
+            id: S.Number(),
+            name: S.String(),
+            employees: S.Set(S.Number()),
+            managers: S.Set(S.String()),
+            holidays: S.Set(S.Date()),
+          }),
+        },
+      },
+    };
+    const db = new DB({
+      schema,
+    });
+    await db.insert(
+      'companies',
+      {
+        id: 1,
+        name: 'Planet Express',
+        employees: new Set([1, 2, 10]),
+        managers: new Set(['Philip J. Fry', 'Turanga Leela']),
+        holidays: new Set([new Date(2020, 0, 1), new Date(2020, 6, 4)]),
+      },
+      'px'
+    );
+
+    const company = await db.fetchById('companies', 'px');
+
+    expect(company.employees).toBeInstanceOf(Set);
+    expect(company.managers).toBeInstanceOf(Set);
+    expect(company.holidays).toBeInstanceOf(Set);
+
+    expect(
+      [...company.employees.values()].every((val) => typeof val === 'number')
+    ).toBeTruthy();
+    expect(
+      [...company.managers.values()].every((val) => typeof val === 'string')
+    ).toBeTruthy();
+    expect(
+      [...company.holidays.values()].every((val) => val instanceof Date)
+    ).toBeTruthy();
+  });
 });
 
 describe('date operations', () => {
