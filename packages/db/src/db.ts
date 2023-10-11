@@ -23,7 +23,6 @@ import { Clock } from './clocks/clock';
 import { DBTransaction } from './db-transaction';
 import {
   appendCollectionToId,
-  replaceVariablesInQuery,
   mapFilterStatements,
   readSchemaFromTripleStore,
   overrideStoredSchema,
@@ -431,19 +430,13 @@ export default class DB<M extends Models<any, any> | undefined> {
     { scope, skipRules = false }: { scope?: string[]; skipRules?: boolean } = {}
   ) {
     const startSubscription = async () => {
-      let subscriptionQuery = query;
-      const collection = await this.getCollectionSchema(
-        subscriptionQuery.collectionName as CollectionNameFromModels<M>
+      let { query: subscriptionQuery, collection } = await this.prepareQuery(
+        query,
+        {
+          scope,
+          skipRules,
+        }
       );
-      if (collection && !skipRules) {
-        // @ts-ignore
-        subscriptionQuery = this.addReadRulesToQuery(
-          subscriptionQuery,
-          collection
-        );
-      }
-      subscriptionQuery.vars = { ...this.variables, ...(query.vars ?? {}) };
-      subscriptionQuery = replaceVariablesInQuery(subscriptionQuery);
 
       const unsub = subscribeTriples(
         scope ? this.tripleStore.setStorageScope(scope) : this.tripleStore,
