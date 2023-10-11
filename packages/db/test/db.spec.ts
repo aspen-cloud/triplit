@@ -15,6 +15,9 @@ import {
   InvalidSchemaPathError,
   MemoryStorage,
   schemaToJSON,
+  SerializingError,
+  InvalidInternalEntityIdError,
+  InvalidEntityIdError,
 } from '../src';
 import { Models } from '../src/schema';
 import { classes, students, departments } from './sample_data/school';
@@ -67,16 +70,18 @@ describe('Database API', () => {
   it('will throw an error if the provided entity id has a # sign in it', async () => {
     expect(
       async () => await db.insert('Student', { name: 'John Doe' }, 'John#Doe')
-    ).rejects.toThrowError();
+    ).rejects.toThrowError(InvalidEntityIdError);
     expect(
       db.transact((tx) =>
         tx.insert('Student', { name: 'John Doe' }, 'John#Doe')
       )
-    ).rejects.toThrowError();
+    ).rejects.toThrowError(InvalidEntityIdError);
   });
 
   it('will throw an error when it parses an ID with a # in it', async () => {
-    expect(() => stripCollectionFromId('Student#john#1')).toThrowError();
+    expect(() => stripCollectionFromId('Student#john#1')).toThrowError(
+      InvalidInternalEntityIdError
+    );
   });
 
   it('can lookup entity by Id', async () => {
@@ -244,7 +249,7 @@ describe('Database API', () => {
           .where([['name', 'not a real operator', 'Boi-1da']])
           .build()
       )
-    ).rejects.toThrowError();
+    ).rejects.toThrowError(InvalidFilterError);
   });
 
   it('supports filtering on one attribute with multiple operators', async () => {
@@ -276,7 +281,7 @@ describe('Database API', () => {
           .where([['album', '=', 'The Blueprint']])
           .build()
       )
-    ).rejects.toThrowError();
+    ).rejects.toThrowError(InvalidFilterError);
     await expect(
       db.fetch(
         CollectionQueryBuilder('Rapper')
@@ -3007,7 +3012,7 @@ describe('Nullable properties in a schema', () => {
         },
         'todo-1'
       )
-    ).rejects.toThrowError();
+    ).rejects.toThrowError(SerializingError);
   });
   it('can update with nullable properties', async () => {
     const db = new DB({
@@ -3053,7 +3058,7 @@ describe('Nullable properties in a schema', () => {
         await db.update('Todos', 'todo-1', async (entity) => {
           entity.created_at = null;
         })
-    ).rejects.toThrowError();
+    ).rejects.toThrowError(SerializingError);
   });
 });
 
