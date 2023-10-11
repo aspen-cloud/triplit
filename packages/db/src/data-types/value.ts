@@ -14,19 +14,12 @@ export type TypeWithOptions<
 
 export type ValueInterface<
   TypeId extends ValueTypeKeys = ValueTypeKeys, // possibly specify known value types
-  DeserializedType = any,
-  SerializedType = any, // string, number, boolean, array, object
-  TimestampedType = [value: DeserializedType, timestamp: TimestampType],
+  JSType = any,
+  JsonType = any, // string, number, boolean, array, object
   Operators extends readonly Operator[] = readonly Operator[]
-> = TypeInterface<
-  TypeId,
-  DeserializedType,
-  SerializedType,
-  TimestampedType,
-  Operators
-> & {
+> = TypeInterface<TypeId, JSType, JsonType, Operators> & {
   readonly options: UserTypeOptions;
 
   // TODO: this is for sets...set keys will come from strings...might be a better place to put this
-  fromString(val: string): DeserializedType;
+  fromString(val: string): JSType;
 };

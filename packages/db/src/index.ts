@@ -44,7 +44,7 @@ export { stripCollectionFromId } from './db-helpers';
 export type { TripleRow } from './triple-store';
 export {
   Schema,
-  tuplesToSchema,
+  triplesToSchema as tuplesToSchema,
   schemaToJSON,
   timestampedObjectToPlainObject,
   hashSchema,

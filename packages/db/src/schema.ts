@@ -50,7 +50,7 @@ export class Schema {
   static Query = QueryType;
 
   static Schema<T extends SchemaConfig>(config: T) {
-    return config;
+    return Schema.Record(config);
   }
 
   static get Default() {
@@ -66,7 +66,8 @@ export class Schema {
 
 type SchemaConfig = Record<string, DataType>;
 
-export type Model<T extends SchemaConfig = Record<string, DataType>> = T;
+// export type Model<T extends SchemaConfig = Record<string, DataType>> = T;
+export type Model<T extends { [k: string]: DataType }> = RecordType<T>;
 
 export type Collection<T extends SchemaConfig = SchemaConfig> = {
   attributes: Model<T>;
@@ -80,11 +81,11 @@ export type Models<
 
 // This will generally be what we store in the DB for a path
 export function getSchemaFromPath(
-  model: Record<string, DataType>,
+  model: Model<any>,
   path: Attribute
 ): DataType {
   if (path.length === 0) throw new InvalidSchemaPathError([]);
-  let scope = model[path[0]];
+  let scope = model.properties[path[0]];
   if (!scope) throw new InvalidSchemaPathError(path as string[]);
   for (let i = 1; i < path.length; i++) {
     if (!scope) throw new InvalidSchemaPathError(path as string[]);
@@ -104,15 +105,6 @@ export function getSchemaFromPath(
   return scope;
 }
 
-// export function initialize<M extends Model>(model: M) {
-//   return Object.fromEntries(
-//     Object.entries(model).map(([key, value]) => [
-//       key,
-//       Value.Create(value.toTypebox()),
-//     ])
-//   );
-// }
-
 export function updateEntityAtPath(
   entity: any,
   path: Attribute,
@@ -127,8 +119,6 @@ export function updateEntityAtPath(
   ValuePointer.Set(entity, pointer, [value, timestamp]);
 }
 
-// type Reference = `ref:${string}`;
-
 export interface SetProxy<T> {
   add: (value: T) => void;
   remove: (value: T) => void;
@@ -141,19 +131,13 @@ type ProxyType<DT> = DT extends DataType
     : ExtractDeserializedType<DT>
   : never;
 
-export type ProxySchema<T extends ReturnType<typeof Schema.Schema>> = {
-  [k in keyof T]: k extends string ? ProxyType<T[k]> : never;
-};
-
 // Pull out the proxy type from a model by checking the x-serialized-type
-export type ProxyTypeFromModel<T extends Model | undefined> = T extends Model
-  ? ProxySchema<T>
-  : any;
+export type ProxyTypeFromModel<T extends Model<any> | undefined> =
+  T extends Model<any> ? ProxyType<T> : any;
 
 // Used for entity reducer
-export type TimestampedTypeFromModel<M extends Model> = {
-  [k in keyof M]: ExtractTimestampedType<M[k]>;
-};
+export type TimestampedTypeFromModel<M extends Model<any>> =
+  ExtractTimestampedType<M>;
 
 // Check if a type is unknown or undefined
 type IsUnknownOrUndefined<T> = unknown extends T
@@ -175,27 +159,29 @@ type DataTypeHasDefault<T extends DataType> = BooleanNot<
 >;
 
 // Exposed to client
-export type InsertTypeFromModel<M extends Model | undefined> = M extends Model
-  ? {
-      [k in keyof M as DataTypeHasNoDefault<M[k]> extends true
-        ? k
-        : never]: ExtractDeserializedType<M[k]>;
-    } & {
-      [k in keyof M as DataTypeHasDefault<M[k]> extends true
-        ? k
-        : never]?: ExtractDeserializedType<M[k]>;
-    }
-  : any;
+export type InsertTypeFromModel<M extends Model<any> | undefined> =
+  M extends Model
+    ? {
+        [k in keyof M as DataTypeHasNoDefault<M[k]> extends true
+          ? k
+          : never]: ExtractDeserializedType<M[k]>;
+      } & {
+        [k in keyof M as DataTypeHasDefault<M[k]> extends true
+          ? k
+          : never]?: ExtractDeserializedType<M[k]>;
+      }
+    : any;
 
-export type JSONTypeFromModel<M extends Model | undefined> = M extends Model
-  ? {
-      [k in keyof M]: M[k] extends DataType
-        ? ExtractDeserializedType<M[k]>
-        : never;
-    }
-  : any;
+export type JSONTypeFromModel<M extends Model<any> | undefined> =
+  M extends Model
+    ? {
+        [k in keyof M]: M[k] extends DataType
+          ? ExtractDeserializedType<M[k]>
+          : never;
+      }
+    : any;
 
-export type SerializedTypeFromModel<M extends Model | undefined> =
+export type SerializedTypeFromModel<M extends Model<any> | undefined> =
   M extends Model
     ? {
         [k in keyof M]: ExtractSerializedType<M[k]>;
@@ -219,16 +205,26 @@ export type UnTimestampedObject<T extends TimestampedObject> = {
     : never;
 };
 
-export function serializeClientModel<M extends Model | undefined>(
+export function convertEntityToJS<M extends Model<any>>(
+  entity: TimestampedTypeFromModel<M>,
+  schema?: M
+) {
+  const untimestampedEntity = timestampedObjectToPlainObject(entity);
+  return schema
+    ? schema.convertJsonValueToJS(untimestampedEntity)
+    : untimestampedEntity;
+}
+
+export function serializeClientModel<M extends Model<any> | undefined>(
   entity: JSONTypeFromModel<M>,
   model: M
 ) {
   const serialized: SerializedTypeFromModel<M> = {} as any;
   for (const [key, val] of Object.entries(entity)) {
-    const schema = model?.[key];
+    const schema = model?.properties?.[key];
     // Schemaless should already be in a serialized format
     // TODO: we can confirm this with typebox validation
-    serialized[key] = schema ? schema.serialize(val) : val;
+    serialized[key] = schema ? schema.convertInputToJson(val) : val;
   }
   return serialized;
 }
@@ -267,26 +263,34 @@ function isTimestampedVal(val: any) {
 export function collectionsDefinitionToSchema(
   collections: CollectionsDefinition
 ): Models<any, any> {
-  const result: Models<any, any> = {};
-  for (const [collectionName, definition] of Object.entries(collections)) {
-    const config: SchemaConfig = {};
-    const attrs = definition.attributes
-      ? Object.entries(definition.attributes)
-      : [];
-    for (const [path, attrDef] of attrs) {
-      config[path] = typeFromJSON(attrDef);
-    }
-    result[collectionName] = {
-      attributes: Schema.Schema(config),
-      rules: definition.rules,
-    };
-  }
-
-  return result;
+  return Object.fromEntries(
+    Object.entries(collections).map(([collectionName, collectionDef]) => [
+      collectionName,
+      {
+        ...collectionDef,
+        attributes: typeFromJSON(collectionDef.attributes) as Model<any>,
+      },
+    ])
+  );
 }
 
-export function tuplesToSchema(triples: TripleRow[]) {
-  const schemaEntity = triples.reduce(entityToResultReducer, {});
+export function schemaToTriples(schema: StoreSchema<Models<any, any>>): EAV[] {
+  const schemaData = schemaToJSON(schema);
+  const tuples = objectToTuples(schemaData);
+  return tuples.map((tuple) => {
+    const value = tuple.pop();
+    return [
+      appendCollectionToId('_metadata', '_schema'),
+      ['_metadata', ...tuple],
+      value,
+    ] as EAV;
+  });
+}
+
+export function triplesToSchema(triples: TripleRow[]) {
+  const schemaEntity = triples
+    .filter((trip) => !trip.expired)
+    .reduce(entityToResultReducer, {});
   const schemaData = timestampedObjectToPlainObject(schemaEntity);
   const version = schemaData.version || 0;
   const collections = schemaData.collections || {};
@@ -308,50 +312,24 @@ export function schemaToJSON(
 function collectionSchemaToJSON(
   collection: Collection<any>
 ): CollectionDefinition {
-  const collectionDefinition: CollectionDefinition = {
-    attributes: attributesSchemaToJSON(collection.attributes),
+  // const collectionDefinition: CollectionDefinition = {
+  //   // attributes: attributesSchemaToJSON(collection.attributes),
+  //   attributes: collection.attributes.toJSON(),
+  // };
+  // // TODO: we have a few cases where inserting undefined at a key breaks things...we should fix this at some common insertion point
+  // if (collection.rules) collectionDefinition.rules = collection.rules;
+  // return collectionDefinition;
+  const rulesObj = collection.rules ? { rules: collection.rules } : {};
+  return {
+    attributes: collection.attributes.toJSON(),
+    ...rulesObj,
   };
-  // TODO: we have a few cases where inserting undefined at a key breaks things...we should fix this at some common insertion point
-  if (collection.rules) collectionDefinition.rules = collection.rules;
-  return collectionDefinition;
-}
-
-export function attributesSchemaToJSON(schema: Model) {
-  const attributes: Record<string, AttributeDefinition> = {};
-  for (const path of Object.keys(schema)) {
-    const type = getSchemaFromPath(schema, [path]);
-    // const type = typeFromSchema(pathSchema);
-    attributes[path] = type!.toJSON();
-  }
-  return attributes;
-}
-
-export function schemaToTriples(schema: StoreSchema<Models<any, any>>): EAV[] {
-  const schemaData = schemaToJSON(schema);
-  const tuples = objectToTuples(schemaData);
-  return tuples.map((tuple) => {
-    const value = tuple.pop();
-    return [
-      appendCollectionToId('_metadata', '_schema'),
-      ['_metadata', ...tuple],
-      value,
-    ] as EAV;
-  });
 }
 
 export function getDefaultValuesForCollection(
   collection: Collection<SchemaConfig>
 ) {
-  return Object.entries(collection?.attributes).reduce(
-    (prev, [attribute, definition]) => {
-      const defaultValue = definition.default();
-      if (defaultValue !== undefined) {
-        prev[attribute] = defaultValue;
-      }
-      return prev;
-    },
-    {} as Record<string, any> // TODO: dont use any
-  );
+  return collection.attributes.default();
 }
 
 // Poor man's hash function for schema

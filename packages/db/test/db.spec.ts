@@ -486,28 +486,26 @@ describe('Set operations', () => {
     expect(preUpdateLookup).toHaveLength(0);
 
     await db.update('companies', 1, async (entity) => {
-      await entity.employees.add(7);
+      entity.employees.add(7);
     });
     const postUpdateLookup = await db.fetch(setQuery);
     expect(postUpdateLookup).toHaveLength(1);
     expect(postUpdateLookup.get('1')).toBeTruthy();
+    expect(postUpdateLookup.get('1').employees).toBeInstanceOf(Set);
   });
 
   it('can remove from set', async () => {
-    const setQuery = CollectionQueryBuilder(
-      'companies',
-      schema.collections.companies.attributes
-    )
+    const setQuery = db
+      .query('companies')
       .select(['id'])
       .where([['employees', '=', 2]])
       .build();
-
     const preUpdateLookup = await db.fetch(setQuery);
     expect(preUpdateLookup).toHaveLength(1);
     expect(preUpdateLookup.get('1')).toBeTruthy();
 
     await db.update('companies', 1, async (entity) => {
-      await entity.employees.remove(2);
+      entity.employees.remove(2);
       expect(entity.employees.has(2)).toBeFalsy();
     });
 
@@ -1725,8 +1723,12 @@ describe('schema changes', async () => {
     });
     const schema = await db.getSchema();
     expect(schema?.collections).toHaveProperty('students');
-    expect(schema?.collections.students.attributes).toHaveProperty('id');
-    expect(schema?.collections.students.attributes).toHaveProperty('name');
+    expect(schema?.collections.students.attributes.properties).toHaveProperty(
+      'id'
+    );
+    expect(schema?.collections.students.attributes.properties).toHaveProperty(
+      'name'
+    );
   });
 
   it('can add a collection and observe changes in a transaction', async () => {
@@ -1793,8 +1795,12 @@ describe('schema changes', async () => {
     });
     const dbSchema = await db.getSchema();
     expect(dbSchema?.collections).toHaveProperty('students');
-    expect(dbSchema?.collections.students.attributes).toHaveProperty('age');
-    expect(dbSchema?.collections.students.attributes).toHaveProperty('name');
+    expect(dbSchema?.collections.students.attributes.properties).toHaveProperty(
+      'age'
+    );
+    expect(dbSchema?.collections.students.attributes.properties).toHaveProperty(
+      'name'
+    );
   });
 
   it.todo('can add a nested attribute');
@@ -1815,8 +1821,12 @@ describe('schema changes', async () => {
     await db.dropAttribute({ collection: 'students', path: ['id'] });
     const dbSchema = await db.getSchema();
     expect(dbSchema?.collections).toHaveProperty('students');
-    expect(dbSchema?.collections.students.attributes).not.toHaveProperty('id');
-    expect(dbSchema?.collections.students.attributes).toHaveProperty('name');
+    expect(
+      dbSchema?.collections.students.attributes.properties
+    ).not.toHaveProperty('id');
+    expect(dbSchema?.collections.students.attributes.properties).toHaveProperty(
+      'name'
+    );
 
     // TODO: test data is actually dropped if we decide it should be
   });
@@ -1849,7 +1859,6 @@ describe('schema changes', async () => {
     const beforeSchema = await dbOne.getSchema();
     expect(beforeSchema).toBeDefined();
     expect(beforeSchema.collections.students).toBeDefined();
-    const dbTwo = new DB({ source: dataSource, schema: schemaTwo });
   });
 
   it('can update attribute options', async () => {
@@ -1881,10 +1890,12 @@ describe('schema changes', async () => {
 
         let dbSchema = await db.getSchema();
         expect(
-          dbSchema?.collections.students.attributes.name.options.nullable
+          dbSchema?.collections.students.attributes.properties.name.options
+            .nullable
         ).toBe(true);
         expect(
-          dbSchema?.collections.students.attributes.name.options.default
+          dbSchema?.collections.students.attributes.properties.name.options
+            .default
         ).toBe("Robert'); DROP TABLE Students;--");
 
         // update values
@@ -1899,10 +1910,12 @@ describe('schema changes', async () => {
 
         dbSchema = await db.getSchema();
         expect(
-          dbSchema?.collections.students.attributes.name.options.nullable
+          dbSchema?.collections.students.attributes.properties.name.options
+            .nullable
         ).toBe(false);
         expect(
-          dbSchema?.collections.students.attributes.name.options.default
+          dbSchema?.collections.students.attributes.properties.name.options
+            .default
         ).toBe('Bobby Tables');
       }
     );
@@ -1935,7 +1948,7 @@ describe('schema changes', async () => {
 
         dbSchema = await db.getSchema();
         expect(
-          dbSchema?.collections.students.attributes.name.options
+          dbSchema?.collections.students.attributes.properties.name.options
         ).not.toHaveProperty('nullable');
 
         await db.dropAttributeOption({
@@ -1946,7 +1959,7 @@ describe('schema changes', async () => {
 
         dbSchema = await db.getSchema();
         expect(
-          dbSchema?.collections.students.attributes.name.options
+          dbSchema?.collections.students.attributes.properties.name.options
         ).not.toHaveProperty('default');
       }
     );
@@ -3599,7 +3612,6 @@ describe('Subqueries in schema', () => {
     await testSubscription(db, query, [
       {
         check: (results) => {
-          console.log('results 1', results);
           expect(results).toHaveLength(3);
         },
       },
@@ -3617,7 +3629,6 @@ describe('Subqueries in schema', () => {
           );
         },
         check: (results) => {
-          console.log('results 2', results);
           expect(results).toHaveLength(4);
         },
       },

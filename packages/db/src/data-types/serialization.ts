@@ -29,9 +29,7 @@ export type AttributeDefinition =
   | CollectionAttributeDefinition;
 
 export interface CollectionDefinition {
-  attributes: {
-    [path: string]: AttributeDefinition;
-  };
+  attributes: RecordAttributeDefinition;
   rules?: CollectionRules<any>;
 }
 

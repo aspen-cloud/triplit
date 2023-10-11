@@ -36,7 +36,7 @@ export function NumberType<TypeOptions extends UserTypeOptions = {}>(
     toJSON(): ValueAttributeDefinition {
       return { type: this.type, options: this.options };
     },
-    serialize(val) {
+    convertInputToJson(val) {
       const valid =
         (options.nullable && val === null) || typeof val === 'number';
       if (!valid) {
@@ -44,16 +44,13 @@ export function NumberType<TypeOptions extends UserTypeOptions = {}>(
       }
       return val;
     },
-    deserialize(val) {
+    convertJsonValueToJS(val) {
       return val;
-    },
-    deserializeCRDT(val) {
-      return this.deserialize(val[0]);
     },
     default() {
       return calcDefaultValue(options);
     },
-    validate(val: any) {
+    validateInput(val: any) {
       const type = options.nullable ? Nullable(Type.Number()) : Type.Number();
       return Value.Check(type, val);
     },

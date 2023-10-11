@@ -29,7 +29,6 @@ export type DateType<TypeOptions extends UserTypeOptions = {}> = ValueInterface<
   'date',
   TypeWithOptions<Date, TypeOptions>,
   TypeWithOptions<string, TypeOptions>,
-  [TypeWithOptions<string, TypeOptions>, TimestampType],
   DateOperators
 >;
 export function DateType<TypeOptions extends UserTypeOptions = {}>(
@@ -47,7 +46,7 @@ export function DateType<TypeOptions extends UserTypeOptions = {}>(
     toJSON() {
       return { type: this.type, options: this.options };
     },
-    serialize(val: TypeWithOptions<Date, TypeOptions>) {
+    convertInputToJson(val: TypeWithOptions<Date, TypeOptions>) {
       const valid = (options.nullable && val === null) || val instanceof Date;
       if (!valid) {
         throw new SerializingError('date', val);
@@ -57,16 +56,13 @@ export function DateType<TypeOptions extends UserTypeOptions = {}>(
         TypeOptions
       >;
     },
-    deserialize(val: TypeWithOptions<string, TypeOptions>) {
-      return (val ? new Date(val) : null) as TypeWithOptions<Date, TypeOptions>;
-    },
     default() {
       return calcDefaultValue(options);
     },
-    deserializeCRDT(val) {
-      return this.deserialize(val[0]);
+    convertJsonValueToJS(val) {
+      return (val ? new Date(val) : null) as TypeWithOptions<Date, TypeOptions>;
     },
-    validate(val: any) {
+    validateInput(val: any) {
       const type = options.nullable ? Nullable(DateSchemaType) : DateSchemaType;
       return Value.Check(type, val);
     },

@@ -26,25 +26,29 @@ export type ExtractTimestampedType<T extends TypeInterface> =
     ? TimestampedType
     : never;
 
+/**
+ * This represents a definition of a type that can be used in a collection
+ * It can be used to completely define the shape, validation, and serialization of a type
+ * Note: it still needs some better restructuring
+ */
 export type TypeInterface<
   TypeId extends string = string, // possibly specify known value types
-  DeserializedType = any,
-  SerializedType = any, // string, number, boolean, array, object
-  TimestampedType = any,
+  JSType = any,
+  JsonType = any, // string, number, boolean, array, object
   Operators extends readonly Operator[] = readonly Operator[]
 > = {
   readonly type: TypeId;
   readonly supportedOperations: Operators;
-
+  // How the this definition should be serialized
+  // it needs to contain enough information to be able to reconstruct the type
   toJSON(): AttributeDefinition; // TOOD: handle proper typing with nulls too
 
-  serialize(val: DeserializedType): SerializedType;
+  // How to convert the input (e.g. from db.insert(..)) to the internal value
+  convertInputToJson(val: JSType): JsonType;
 
-  deserialize(val: SerializedType): DeserializedType;
+  convertJsonValueToJS(val: JSType): JSType;
 
-  deserializeCRDT(val: TimestampedType): DeserializedType;
+  default(): JsonType | undefined;
 
-  default(): SerializedType;
-
-  validate(val: any): boolean;
+  validateInput(val: any): boolean;
 };

@@ -11,6 +11,7 @@ import {
   collectionsDefinitionToSchema,
   serializeClientModel,
   InsertTypeFromModel,
+  Schema as S,
 } from './schema';
 import { nanoid } from 'nanoid';
 import CollectionQueryBuilder, {
@@ -51,6 +52,8 @@ import {
 } from './db-helpers';
 import { Query, constructEntity, entityToResultReducer } from './query';
 import { serializedItemToTuples } from './utils';
+import { typeFromJSON } from './data-types/base';
+import { RecordType } from './data-types/record';
 
 interface TransactionOptions<
   M extends Models<any, any> | undefined = undefined
@@ -219,15 +222,19 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
       const validationError = validateExternalId(id);
       if (validationError) throw validationError;
     }
-    const collection = await this.getCollectionSchema(collectionName);
+    const collectionSchema = await this.getCollectionSchema(collectionName);
 
+    // TODO apply defaults before "serializing"
     // serialize the doc values
-    const serializedDoc = serializeClientModel(doc, collection?.attributes);
+    const serializedDoc = serializeClientModel(
+      doc,
+      collectionSchema?.attributes
+    );
 
     // Append defaults
-    const fullDoc = collection
+    const fullDoc = collectionSchema
       ? {
-          ...getDefaultValuesForCollection(collection),
+          ...getDefaultValuesForCollection(collectionSchema),
           ...serializedDoc,
         }
       : serializedDoc;
@@ -299,9 +306,9 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
       // undefined is treated as a delete
       if (value === undefined) {
         const triples = await this.storeTx.findByEAV([storeId, storeAttribute]);
-        for (const trip of triples) {
-          await this.storeTx.expireEntityAttribute(trip.id, trip.attribute);
-        }
+        await this.storeTx.expireEntityAttributes(
+          triples.map(({ id, attribute }) => ({ id, attribute }))
+        );
         continue;
       }
       // TODO: use standardized json conversions
@@ -313,7 +320,7 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
   }
 
   // TODO add tests for proxy reads
-  private createUpdateProxy<M extends Model | undefined>(
+  private createUpdateProxy<M extends Model<any> | undefined>(
     changeTracker: {},
     entityObj: ProxyTypeFromModel<M>,
     schema?: M,
@@ -334,7 +341,7 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
           // TODO use correct Triplit Error
           throw new UnrecognizedPropertyInUpdateError(propPointer, value);
         }
-        const serializedValue = propSchema.serialize(value);
+        const serializedValue = propSchema.convertInputToJson(value);
         ValuePointer.Set(changeTracker, propPointer, serializedValue);
         return true;
       },
@@ -370,7 +377,8 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
             return {
               add: (value: any) => {
                 // changeTracker.set([propPointer, value].join('/'), true);
-                const serializedValue = propSchema.items.serialize(value);
+                const serializedValue =
+                  propSchema.items.convertInputToJson(value);
                 ValuePointer.Set(
                   changeTracker,
                   [parentPropPointer, serializedValue].join('/'),
@@ -379,7 +387,8 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
               },
               remove: (value: any) => {
                 // changeTracker.set([propPointer, value].join('/'), false);
-                const serializedValue = propSchema.items.serialize(value);
+                const serializedValue =
+                  propSchema.items.convertInputToJson(value);
                 ValuePointer.Set(
                   changeTracker,
                   [parentPropPointer, serializedValue].join('/'),
@@ -387,7 +396,8 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
                 );
               },
               has: (value: any) => {
-                const serializedValue = propSchema.items.serialize(value);
+                const serializedValue =
+                  propSchema.items.convertInputToJson(value);
                 const valuePointer = [parentPropPointer, serializedValue].join(
                   '/'
                 );
@@ -498,7 +508,10 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
         if (!schema.collections[collectionName])
           schema.collections[collectionName] = { name: collectionName };
         const collectionAttributes = schema.collections[collectionName];
-        collectionAttributes.attributes = attributes;
+        collectionAttributes.attributes = typeFromJSON({
+          type: 'record',
+          properties: attributes,
+        }).toJSON();
         collectionAttributes.rules = rules;
       }
     );
@@ -523,19 +536,17 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
       '_schema',
       async (schema) => {
         const collectionAttributes = schema.collections[collectionName];
-        const parentPath = path.slice(0, -1);
-        const attrName = path[path.length - 1];
-        // little hack to handle the case where we have no attributes yet
 
-        if (path.length === 1 && !collectionAttributes.attributes) {
-          collectionAttributes.attributes = { [path[0]]: attribute };
-          return;
+        if (!collectionAttributes.attributes) {
+          // TODO add proper Typescript type here
+          collectionAttributes.attributes = { type: 'record', properties: {} };
         }
-        let attr = parentPath.reduce((acc, curr) => {
-          if (!acc[curr]) acc[curr] = {};
-          return acc[curr];
-        }, collectionAttributes.attributes);
-        attr[attrName] = attribute;
+
+        ValuePointer.Set(
+          collectionAttributes.attributes.properties,
+          path.join('/'),
+          attribute
+        );
       }
     );
   }
@@ -553,7 +564,7 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
         let attr = parentPath.reduce((acc, curr) => {
           if (!acc[curr]) acc[curr] = {};
           return acc[curr];
-        }, collectionAttributes.attributes);
+        }, collectionAttributes.attributes.properties);
         delete attr[attrName];
       }
     );
@@ -571,7 +582,7 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
         let attr = parentPath.reduce((acc, curr) => {
           if (!acc[curr]) acc[curr] = {};
           return acc[curr];
-        }, collectionAttributes.attributes);
+        }, collectionAttributes.attributes.properties);
         for (const [option, value] of Object.entries(options)) {
           // // instantiate this here until we support empty objects
           if (!attr[attrName].options) attr[attrName].options = {};
@@ -592,7 +603,7 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
         let attr = path.reduce((acc, curr) => {
           if (!acc[curr]) acc[curr] = {};
           return acc[curr];
-        }, collectionAttributes.attributes);
+        }, collectionAttributes.attributes.properties);
 
         // instantiate this here until we support empty objects
         if (!attr.options) attr.options = {};

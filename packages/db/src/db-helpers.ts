@@ -14,7 +14,7 @@ import {
   Models,
   getSchemaFromPath,
   schemaToTriples,
-  tuplesToSchema,
+  triplesToSchema,
 } from './schema';
 import type DB from './db';
 import type { DBTransaction } from './db-transaction';
@@ -138,7 +138,7 @@ export async function getSchemaTriples(tripleStore: TripleStoreApi) {
 export async function readSchemaFromTripleStore(tripleStores: TripleStoreApi) {
   const schemaTriples = await getSchemaTriples(tripleStores);
   const schema =
-    schemaTriples.length > 0 ? tuplesToSchema(schemaTriples) : undefined;
+    schemaTriples.length > 0 ? triplesToSchema(schemaTriples) : undefined;
   return {
     schema,
     schemaTriples,
@@ -211,7 +211,7 @@ export function validateTriple(
       'Cannot set the value of a non leaf node in the schema. For example, you may be attempting to set a value on a record type.'
     );
   // Leaf values are an array [value, timestamp], so check value
-  if (!valueSchema.validate(value))
+  if (!valueSchema.validateInput(value))
     throw new ValueSchemaMismatchError(
       modelName as string,
       attribute as string[],

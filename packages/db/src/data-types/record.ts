@@ -12,7 +12,7 @@ export type RecordType<Properties extends { [k: string]: DataType }> =
     'record',
     { [k in keyof Properties]: ExtractDeserializedType<Properties[k]> },
     { [k in keyof Properties]: ExtractSerializedType<Properties[k]> },
-    { [k in keyof Properties]: ExtractTimestampedType<Properties[k]> },
+    // { [k in keyof Properties]: ExtractTimestampedType<Properties[k]> },
     readonly []
   > & {
     properties: Properties;
@@ -31,27 +31,27 @@ export function RecordType<Properties extends { [k: string]: DataType }>(
       );
       return { type: this.type, properties: serializedProps };
     },
-    serialize(val: any) {
-      return val;
-    },
-    deserialize(val: any) {
+    convertInputToJson(val: any) {
       return val;
     },
     // TODO: determine proper value and type here
     // Type should go extract the deserialized type of each of its keys
     default() {
       return Object.fromEntries(
-        Object.entries(properties).map(([key, val]) => [key, val.default()])
+        Object.entries(properties)
+          .map(([key, val]) => [key, val.default()])
+          .filter(([_, v]) => v !== undefined)
       );
     },
-    validate(_val: any) {
+    validateInput(_val: any) {
       return true; // TODO
     },
-    deserializeCRDT(val) {
+    convertJsonValueToJS(val) {
       return Object.fromEntries(
         Object.entries(val).map(([k, v]) => [
           k,
-          properties[k].deserializeCRDT(v),
+          // This is mostly to catch when "_collection" is included in the entity
+          properties[k] ? properties[k].convertJsonValueToJS(v) : k,
         ])
       );
     },

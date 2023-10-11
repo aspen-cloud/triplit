@@ -4,16 +4,10 @@ import { TypeInterface } from './type';
 
 export type CollectionInterface<
   TypeId extends CollectionTypeKeys = CollectionTypeKeys,
-  DeserializedType = any,
-  SerializedType = any,
+  JSType = any,
+  JsonType = any,
   SchemaType = any,
   Operators extends readonly Operator[] = readonly Operator[]
-> = TypeInterface<
-  TypeId,
-  DeserializedType,
-  SerializedType,
-  SchemaType,
-  Operators
-> & {
+> = TypeInterface<TypeId, JSType, JsonType, Operators> & {
   readonly items: ValueType<any>;
 };

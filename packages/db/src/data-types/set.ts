@@ -34,25 +34,22 @@ export function SetType<Items extends ValueType<any>>(
       const json = { type: this.type, items: this.items.toJSON() };
       return json;
     },
-    serialize(val) {
+    convertInputToJson(val: Set<any>) {
       return [...val.values()].reduce((acc, key) => {
         return { ...acc, [key as string]: true };
       }, {});
     },
-    deserialize(val: any) {
-      return val;
-    },
     default() {
       return new Set();
     },
-    deserializeCRDT(val) {
+    convertJsonValueToJS(val) {
       return new Set(
         Object.entries(val)
-          .filter(([_k, v]) => !!v[0])
+          .filter(([_k, v]) => !!v)
           .map(([k, _v]) => this.items.fromString(k))
       ); // TODO: figure out proper set deserialzied type
     },
-    validate(_val: any) {
+    validateInput(_val: any) {
       throw new NotImplementedError('Set validation');
     },
   };

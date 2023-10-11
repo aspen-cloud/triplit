@@ -506,6 +506,28 @@ export class TripleStoreOperator implements TripleStoreApi {
       false
     );
   }
+
+  async expireEntityAttributes(
+    values: { id: EntityId; attribute: Attribute }[]
+  ) {
+    const allExistingTriples: TripleRow[] = [];
+    for (const { id, attribute } of values) {
+      const existingTriples = await this.findByEntityAttribute(id, attribute);
+      allExistingTriples.push(...existingTriples);
+    }
+    const timestamp = await this.getTransactionTimestamp();
+    await this.deleteTriples(allExistingTriples);
+    await this.insertTriples(
+      values.map(({ id, attribute }) => ({
+        id,
+        attribute,
+        value: null,
+        timestamp,
+        expired: true,
+      })),
+      false
+    );
+  }
 }
 
 export class TripleStoreTransaction extends TripleStoreOperator {
@@ -869,7 +891,6 @@ async function scanToTriples(
   tx: MultiTupleStoreOrTransaction,
   ...scanParams: Parameters<MultiTupleStoreOrTransaction['scan']>
 ) {
-  // console.log(scanParams);
   // @ts-ignore
   return (await tx.scan(...scanParams)).map(indexToTriple);
 }

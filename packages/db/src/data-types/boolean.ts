@@ -18,7 +18,6 @@ export type BooleanType<TypeOptions extends UserTypeOptions = {}> =
     'boolean',
     TypeWithOptions<boolean, TypeOptions>,
     TypeWithOptions<boolean, TypeOptions>,
-    [TypeWithOptions<boolean, TypeOptions>, TimestampType],
     BooleanOperators
   >;
 export function BooleanType<TypeOptions extends UserTypeOptions = {}>(
@@ -35,7 +34,7 @@ export function BooleanType<TypeOptions extends UserTypeOptions = {}>(
     toJSON() {
       return { type: this.type, options: this.options };
     },
-    serialize(val) {
+    convertInputToJson(val: any) {
       const valid =
         (options.nullable && val === null) || typeof val === 'boolean';
       if (!valid) {
@@ -43,16 +42,13 @@ export function BooleanType<TypeOptions extends UserTypeOptions = {}>(
       }
       return val;
     },
-    deserialize(val) {
+    convertJsonValueToJS(val: boolean) {
       return val;
-    },
-    deserializeCRDT(val) {
-      return this.deserialize(val[0]);
     },
     default() {
       return calcDefaultValue(options);
     },
-    validate(val: any) {
+    validateInput(val: any) {
       const type = options.nullable ? Nullable(Type.Boolean()) : Type.Boolean();
       return Value.Check(type, val);
     },

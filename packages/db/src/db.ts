@@ -196,7 +196,6 @@ export default class DB<M extends Models<any, any> | undefined> {
     this.tripleStore = new TripleStore({
       storage: sourcesMap,
       tenantId,
-      schema: tripleStoreSchema,
       clock,
     });
     this.cache = new VariableAwareCache(this.tripleStore);

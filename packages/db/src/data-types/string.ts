@@ -1,10 +1,5 @@
 import { Type } from '@sinclair/typebox';
-import {
-  Nullable,
-  TimestampType,
-  calcDefaultValue,
-  userTypeOptionsAreValid,
-} from './base';
+import { Nullable, calcDefaultValue, userTypeOptionsAreValid } from './base';
 import { UserTypeOptions } from './serialization';
 import { TypeWithOptions, ValueInterface } from './value';
 import { Value } from '@sinclair/typebox/value';
@@ -18,7 +13,6 @@ export type StringType<TypeOptions extends UserTypeOptions = {}> =
     'string',
     TypeWithOptions<string, TypeOptions>,
     TypeWithOptions<string, TypeOptions>,
-    [TypeWithOptions<string, TypeOptions>, TimestampType], // TODO: use register?
     StringOperators
   >;
 
@@ -36,7 +30,7 @@ export function StringType<TypeOptions extends UserTypeOptions = {}>(
     toJSON() {
       return { type: this.type, options: this.options };
     },
-    serialize(val) {
+    convertInputToJson(val) {
       const valid =
         (options.nullable && val === null) || typeof val === 'string';
       if (!valid) {
@@ -44,17 +38,14 @@ export function StringType<TypeOptions extends UserTypeOptions = {}>(
       }
       return val;
     },
-    deserialize(val) {
+    convertJsonValueToJS(val) {
       return val;
-    },
-    deserializeCRDT(val) {
-      return this.deserialize(val[0]);
     },
     default() {
       return calcDefaultValue(options);
     },
     // THIS IS DB LEVEL VALIDATION!
-    validate(val) {
+    validateInput(val) {
       const type = options.nullable ? Nullable(Type.String()) : Type.String();
       return Value.Check(type, val);
     },

@@ -17,14 +17,16 @@ type Value =
   | string[];
 
 export type FilterStatement<
-  M extends Model | undefined,
-  K extends M extends Model ? keyof M : Path = M extends Model ? keyof M : Path
+  M extends Model<any> | undefined,
+  K extends M extends Model<any> ? keyof M : Path = M extends Model<any>
+    ? keyof M
+    : Path
 > = [
   K,
-  M extends Model ? M[K]['supportedOperations'][number] : string,
+  M extends Model<any> ? M[K]['supportedOperations'][number] : string,
   Value // TODO: We could make this tighter by inspecting the type
 ];
-export type FilterGroup<M extends Model | undefined> = {
+export type FilterGroup<M extends Model<any> | undefined> = {
   mod: 'or' | 'and';
   filters: WhereFilter<M>[];
 };
@@ -33,23 +35,23 @@ export type SubQuery = {
   exists: Query<any>;
 };
 
-export type WhereFilter<M extends Model | undefined> =
+export type WhereFilter<M extends Model<any> | undefined> =
   | FilterStatement<M>
   | FilterGroup<M>
   | SubQuery;
 
-export type QueryWhere<M extends Model | undefined> = WhereFilter<M>[];
+export type QueryWhere<M extends Model<any> | undefined> = WhereFilter<M>[];
 
 export type ValueCursor = [value: Value, entityId: EntityId];
 
-export type QueryOrder<M extends Model | undefined> = [
-  property: M extends Model ? keyof M : Path,
+export type QueryOrder<M extends Model<any> | undefined> = [
+  property: M extends Model<any> ? keyof M : Path,
   direction: 'ASC' | 'DESC'
 ];
 
-export interface Query<M extends Model | undefined> {
+export interface Query<M extends Model<any> | undefined> {
   where: QueryWhere<M>;
-  select: (M extends Model ? keyof M : Path)[];
+  select: (M extends Model<any> ? keyof M : Path)[];
   order?: QueryOrder<M>[];
   limit?: number;
   after?: ValueCursor;
@@ -57,7 +59,7 @@ export interface Query<M extends Model | undefined> {
   vars?: Record<string, any>;
 }
 
-export function entityToResultReducer<M extends Model>(
+export function entityToResultReducer<M extends Model<any>>(
   entity: TimestampedTypeFromModel<M>,
   triple: TripleRow
 ) {
@@ -87,7 +89,7 @@ export function entityToResultReducer<M extends Model>(
 
 export function constructEntities(
   triples: TripleRow[]
-): Map<string, TimestampedTypeFromModel<Model>> {
+): Map<string, TimestampedTypeFromModel<Model<any>>> {
   return triples.reduce((acc, triple) => {
     const { id } = triple;
     const entityObj = acc.get(id) ?? {};
@@ -121,20 +123,20 @@ function setRecordToArrayRecord(
   );
 }
 
-export function or<M extends Model | undefined>(where: QueryWhere<M>) {
+export function or<M extends Model<any> | undefined>(where: QueryWhere<M>) {
   return { mod: 'or' as const, filters: where };
 }
 
-export function and<M extends Model | undefined>(where: QueryWhere<M>) {
+export function and<M extends Model<any> | undefined>(where: QueryWhere<M>) {
   return { mod: 'and' as const, filters: where };
 }
 
-type FilterInput<M extends Model | undefined> =
+type FilterInput<M extends Model<any> | undefined> =
   | FilterStatement<M>
   | WhereFilter<M>[]
   | [QueryWhere<M>];
 
-type OrderInput<M extends Model | undefined> =
+type OrderInput<M extends Model<any> | undefined> =
   | QueryOrder<M>
   | QueryOrder<M>[]
   | [QueryOrder<M>[]];
@@ -200,7 +202,7 @@ export const QUERY_INPUT_TRANSFORMERS = <
   },
 });
 
-export type QueryBuilderInputs<M extends Model | undefined> = {
+export type QueryBuilderInputs<M extends Model<any> | undefined> = {
   where: FilterInput<M>;
   order: OrderInput<M>;
 };
