@@ -298,11 +298,11 @@ export class InvalidTripleStoreValueError extends TriplitError {
   }
 }
 
-export class UnsupportedOperatorInQueryCacheError extends TriplitError {
-  constructor(operator: string, supportedOperators: string[], ...args: any[]) {
+export class QueryCacheError extends TriplitError {
+  constructor(...args: any[]) {
     super(...args);
-    this.name = 'UnsupportedOperatorInQueryCacheError';
-    this.message = `Queries with the operator ${operator} in a where clause can't be stored in the query cache. Currently, supported operators are: ${supportedOperators}`;
+    this.name = 'QueryCacheError';
+    this.message = 'An error ocurred inside the query cache';
     this.status = STATUS_CODES['Bad Request'];
   }
 }
@@ -319,10 +319,10 @@ export class UnserializableValueError extends TriplitError {
 }
 
 export class TripleStoreOptionsError extends TriplitError {
-  constructor(context?: string, ...args: any[]) {
+  constructor(...args: any[]) {
     super(...args);
     this.name = 'TripleStoreOptionsError';
-    this.message = `There was an error in the configuration of the triple store. ${context}`;
+    this.message = `There was an error in the configuration of the triple store.`;
     this.status = STATUS_CODES['Bad Request'];
   }
 }
@@ -361,10 +361,10 @@ export class EmptyTupleInsertionError extends TriplitError {
 }
 
 export class DBOptionsError extends TriplitError {
-  constructor(context: string, ...args: any[]) {
+  constructor(...args: any[]) {
     super(...args);
     this.name = 'DBOptionsError';
-    this.message = `There was an error in the configuration of the Triplit database: ${context}`;
+    this.message = `There was an error in the configuration of the Triplit database.`;
     this.status = STATUS_CODES['Bad Request'];
   }
 }
@@ -379,19 +379,19 @@ export class SerializingError extends TriplitError {
 }
 
 export class InvalidSchemaOptionsError extends TriplitError {
-  constructor(context: string, ...args: any[]) {
+  constructor(...args: any[]) {
     super(...args);
     this.name = 'InvalidAttributeOptionsError';
-    this.message = `The options for an attribute in the schema are invalid: ${context}`;
+    this.message = `The options for an attribute in the schema are invalid.`;
     this.status = STATUS_CODES['Bad Request'];
   }
 }
 
 export class NotImplementedError extends TriplitError {
-  constructor(context: string, ...args: any[]) {
+  constructor(...args: any[]) {
     super(...args);
     this.name = 'NotImplementedError';
-    this.message = `This feature is not yet implemented: ${context}`;
+    this.message = `This feature is not yet implemented.`;
     this.status = STATUS_CODES['Bad Request'];
   }
 }

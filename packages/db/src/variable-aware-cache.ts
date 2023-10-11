@@ -3,13 +3,13 @@ import {
   FetchResult,
   subscribeResultsAndTriples,
 } from './collection-query';
-import DB, { ModelFromModels } from './db';
+import { ModelFromModels } from './db';
 import { mapFilterStatements } from './db-helpers';
 import { FilterStatement } from './query';
 import { Model, Models, getSchemaFromPath } from './schema';
 import * as TB from '@sinclair/typebox/value';
 import { TripleRow, TripleStore } from './triple-store';
-import { UnsupportedOperatorInQueryCacheError } from './errors';
+import { QueryCacheError } from './errors';
 
 export class VariableAwareCache<M extends Models<any, any>> {
   cache: Map<
@@ -150,14 +150,16 @@ export class VariableAwareCache<M extends Models<any, any>> {
       };
     }
     if (start == undefined || end == undefined) {
-      throw new UnsupportedOperatorInQueryCacheError(op, [
-        '=',
-        '!=',
-        '<',
-        '<=',
-        '>',
-        '>=',
-      ]);
+      throw new QueryCacheError(
+        `Queries with the operator ${op} in a where clause can't be stored in the query cache. Currently, supported operators are: ${[
+          '=',
+          '!=',
+          '<',
+          '<=',
+          '>',
+          '>=',
+        ]}`
+      );
     }
     const resultEntries = viewResultEntries.slice(start, end + 1);
     return {
