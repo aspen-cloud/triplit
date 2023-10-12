@@ -271,7 +271,7 @@ export class UnrecognizedAttributeTypeError extends TriplitError {
   constructor(type: string, ...args: any[]) {
     super(...args);
     this.name = 'UnrecognizedAttributeTypeError';
-    this.message = `An attribute in the schema contains an unsupported ${type}. Valid types are ${[
+    this.message = `An attribute in the schema contains an unsupported type: ${type}. Valid types are ${[
       VALUE_TYPE_KEYS,
       ...COLLECTION_TYPE_KEYS,
       'query',
