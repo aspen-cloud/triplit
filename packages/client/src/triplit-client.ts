@@ -31,6 +31,7 @@ import {
   UnrecognizedFetchPolicyError,
 } from './errors';
 import { WebSocketTransport } from './websocket-transport';
+import { ClientSyncMessage, ServerSyncMessage } from '@/types/sync';
 export { IndexedDbStorage, MemoryStorage };
 type Storage = IndexedDbStorage | MemoryStorage;
 
@@ -45,7 +46,10 @@ export interface SyncTransport {
   isOpen: boolean;
   connectionStatus: ConnectionStatus | undefined;
   onOpen(callback: (ev: any) => void): void;
-  sendMessage(type: string, payload: any): void;
+  sendMessage<Msg extends ClientSyncMessage>(
+    type: Msg['type'],
+    payload: Msg['payload']
+  ): void;
   onMessage(callback: (message: any) => void): void;
   onError(callback: (ev: any) => void): void;
   connect(params: ConnectParams): void;
@@ -254,7 +258,7 @@ class SyncEngine {
     const params = await this.getConnectionParams();
     this.transport.connect(params);
     this.transport.onMessage(async (evt) => {
-      const message = JSON.parse(evt.data);
+      const message: ServerSyncMessage = JSON.parse(evt.data);
       if (message.type === 'ERROR') {
         await this.handleErrorMessage(message);
       }
