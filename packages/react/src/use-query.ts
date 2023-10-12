@@ -17,6 +17,7 @@ export function useQuery<M extends Model | undefined>(
     FetchResult<ClientQuery<M>> | undefined
   >(undefined);
   const [fetching, setFetching] = useState(true);
+  const [fetchingRemote, setFetchingRemote] = useState(true);
   const [error, setError] = useState<any>(undefined);
 
   const builtQuery = query && query.build();
@@ -28,9 +29,10 @@ export function useQuery<M extends Model | undefined>(
     setFetching(true);
     const unsubscribe = client.subscribe(
       builtQuery,
-      (localResults) => {
+      (localResults, { hasRemoteFulfilled }) => {
         setFetching(false);
         setError(undefined);
+        setFetchingRemote(!hasRemoteFulfilled);
         setResults(new Map(localResults) as FetchResult<ClientQuery<M>>);
       },
       (error) => {
@@ -47,6 +49,7 @@ export function useQuery<M extends Model | undefined>(
 
   return {
     fetching,
+    fetchingRemote,
     results,
     error,
   };

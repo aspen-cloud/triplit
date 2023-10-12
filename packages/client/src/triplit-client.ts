@@ -79,7 +79,10 @@ class SyncEngine {
   // @ts-ignore
   private transport: SyncTransport;
 
-  private queries: Map<string, { params: CollectionQuery<any> }> = new Map();
+  private queries: Map<
+    string,
+    { params: CollectionQuery<any>; fulfilled: boolean }
+  > = new Map();
 
   private reconnectTimeoutDelay = 250;
   private reconnectTimeout: any;
@@ -90,6 +93,8 @@ class SyncEngine {
   private connectionChangeHandlers: Set<
     (status: ConnectionStatus | undefined) => void
   > = new Set();
+
+  queryFulfillmentCallbacks: Map<string, () => {}>;
 
   constructor(options: SyncOptions, db: DB<any>) {
     this.syncOptions = options;
@@ -115,6 +120,7 @@ class SyncEngine {
         }
       }
     });
+    this.queryFulfillmentCallbacks = new Map();
     this.initialize();
   }
 
@@ -155,13 +161,25 @@ class SyncEngine {
     });
   }
 
-  subscribe(params: CollectionQuery<any>) {
+  subscribe(params: CollectionQuery<any>, onQueryFulfilled?: () => void) {
     let id = Date.now().toString(36) + Math.random().toString(36).slice(2); // unique enough id
     this.transport.sendMessage('CONNECT_QUERY', { id, params });
-    this.queries.set(id, { params });
+    this.queries.set(id, { params, fulfilled: false });
+    this.onQueryFulfilled(id, () => {
+      this.queries.set(id, { params, fulfilled: true });
+      if (onQueryFulfilled) onQueryFulfilled();
+    });
     return () => {
       this.disconnectQuery(id);
     };
+  }
+
+  onQueryFulfilled(queryId: string, callback: (response: any) => void) {
+    this.queryFulfillmentCallbacks.set(queryId, callback);
+  }
+
+  hasQueryBeenFulfilled(queryId: string) {
+    return this.queries.get(queryId)?.fulfilled ?? false;
   }
 
   disconnectQuery(id: string) {
@@ -212,10 +230,20 @@ class SyncEngine {
       if (message.type === 'TRIPLES') {
         const { payload } = message;
         const triples = payload.triples;
-        if (triples.length === 0) return;
-        await this.db.tripleStore
-          .setStorageScope(['cache'])
-          .insertTriples(triples);
+        const queryIds = payload.forQueries;
+        console.log(this.queryFulfillmentCallbacks);
+        for (const qId of queryIds) {
+          const callback = this.queryFulfillmentCallbacks.get(qId);
+          if (callback) {
+            callback(payload);
+          }
+          this.queryFulfillmentCallbacks.delete(qId);
+        }
+        if (triples.length !== 0) {
+          await this.db.tripleStore
+            .setStorageScope(['cache'])
+            .insertTriples(triples);
+        }
       }
 
       if (message.type === 'TRIPLES_ACK') {
@@ -724,7 +752,10 @@ export class TriplitClient<M extends Models<any, any> | undefined = undefined> {
   // TODO: refactor so some logic is shared across policies (ex starting a local and remote sub is verbose and repetitive)
   subscribe<CQ extends ClientQuery<ModelFromModels<M>>>(
     query: CQ,
-    onResults: (results: FetchResult<CQ>) => void,
+    onResults: (
+      results: FetchResult<CQ>,
+      info: { hasRemoteFulfilled: boolean }
+    ) => void,
     onError?: (error: any) => void,
     options?: SubscriptionOptions
   ) {
@@ -750,12 +781,28 @@ export class TriplitClient<M extends Models<any, any> | undefined = undefined> {
     if (opts.policy === 'local-first') {
       let unsubscribeLocal = () => {};
       let unsubscribeRemote = () => {};
-      unsubscribeLocal = this.db.subscribe(query, onResults, onError, {
-        scope,
-        skipRules: SKIP_RULES,
-      });
-      if (scope.includes('cache'))
-        unsubscribeRemote = this.syncEngine.subscribe(query);
+      let hasRemoteFulfilled = false;
+      const clientSubscriptionCallback = (results: FetchResult<CQ>) => {
+        onResults(results, { hasRemoteFulfilled });
+      };
+      unsubscribeLocal = this.db.subscribe(
+        query,
+        clientSubscriptionCallback,
+        onError,
+        {
+          scope,
+          skipRules: SKIP_RULES,
+        }
+      );
+      if (scope.includes('cache')) {
+        const onFulfilled = () => {
+          hasRemoteFulfilled = true;
+          // TODO we should manually call the db subscription callback with
+          // the remote status just in case there are no new results but
+          // we also don't want to call it with stale results
+        };
+        unsubscribeRemote = this.syncEngine.subscribe(query, onFulfilled);
+      }
       return () => {
         unsubscribeLocal();
         unsubscribeRemote();
