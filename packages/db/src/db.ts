@@ -461,7 +461,7 @@ export default class DB<M extends Models<any, any> | undefined> {
     entityId: string,
     updater: (
       entity: ProxyTypeFromModel<ModelFromModels<M, CN>>
-    ) => Promise<void>,
+    ) => void | Promise<void>,
     options: TransactOptions = {}
   ) {
     await this.ensureMigrated;

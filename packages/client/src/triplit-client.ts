@@ -773,7 +773,7 @@ export class TriplitClient<M extends Models<any, any> | undefined = undefined> {
     entityId: string,
     updater: (
       entity: ProxyTypeFromModel<ModelFromModels<M, CN>>
-    ) => Promise<void>
+    ) => void | Promise<void>
   ) {
     return this.db.update(collectionName, entityId, updater, {
       skipRules: SKIP_RULES,

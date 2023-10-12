@@ -269,7 +269,7 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
     entityId: string,
     updater: (
       entity: ProxyTypeFromModel<ModelFromModels<M, CN>>
-    ) => Promise<void>
+    ) => void | Promise<void>
   ) {
     const collection = (await this.getSchema())?.collections[
       collectionName
