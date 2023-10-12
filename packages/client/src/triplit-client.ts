@@ -21,7 +21,7 @@ import {
   QUERY_INPUT_TRANSFORMERS,
   InsertTypeFromModel,
 } from '@triplit/db';
-import { Subject } from 'rxjs';
+import { Subject, throttle } from 'rxjs';
 import { getUserId } from './token';
 import { ConnectionStatus } from './websocket';
 import {
@@ -31,9 +31,28 @@ import {
   UnrecognizedFetchPolicyError,
 } from './errors';
 import { WebSocketTransport } from './websocket-transport';
-import { SyncTransport } from './websocket-transport';
 export { IndexedDbStorage, MemoryStorage };
 type Storage = IndexedDbStorage | MemoryStorage;
+
+export type ConnectParams = {
+  apiKey: string;
+  clientId: string;
+  version?: number;
+  keepOpenOnSchemaMismatch?: boolean;
+};
+
+export interface SyncTransport {
+  isOpen: boolean;
+  connectionStatus: ConnectionStatus | undefined;
+  onOpen(callback: (ev: any) => void): void;
+  sendMessage(type: string, payload: any): void;
+  onMessage(callback: (message: any) => void): void;
+  onError(callback: (ev: any) => void): void;
+  connect(params: ConnectParams): void;
+  close(code?: number, reason?: string): void;
+  onClose(callback: (ev: any) => void): void;
+  onConnectionChange(callback: (state: ConnectionStatus) => void): void;
+}
 
 export interface SyncOptions {
   server?: string;
@@ -102,6 +121,9 @@ class SyncEngine {
     this.syncOptions.keepOpenOnSchemaMismatch =
       options.keepOpenOnSchemaMismatch ?? false;
     this.db = db;
+    this.transport =
+      options.transport ??
+      new WebSocketTransport(options.server, options.secure);
     txCommits$.subscribe((txId) => {
       const callbacks = this.commitCallbacks.get(txId);
       if (callbacks) {
@@ -135,6 +157,17 @@ class SyncEngine {
           this.syncOptions.server
         }`
       : undefined;
+  }
+
+  async getConnectionParams() {
+    const clientId = await this.db.getClientId();
+    const schemaVersion = (await this.db.getSchema())?.version;
+    return {
+      clientId,
+      version: schemaVersion,
+      keepOpenOnSchemaMismatch: this.syncOptions.keepOpenOnSchemaMismatch,
+      apiKey: this.syncOptions.apiKey,
+    };
   }
 
   private async initialize() {
@@ -204,7 +237,12 @@ class SyncEngine {
     return () => this.failureCallbacks.get(txId)?.delete(callback);
   }
 
-  private async signalOutboxTriples() {
+  // private async signalOutboxTriples() {
+  //   // this.transport.sendMessage('TRIPLES_PENDING', {});
+  //   return throttle(() => this.transport.sendMessage('TRIPLES_PENDING', {}), 100);
+  // }
+
+  private signalOutboxTriples() {
     this.transport.sendMessage('TRIPLES_PENDING', {});
   }
 
@@ -213,15 +251,8 @@ class SyncEngine {
       1000,
       JSON.stringify({ type: 'CONNECTION_OVERRIDE', retry: false })
     );
-    const transport =
-      this.syncOptions.transport ??
-      new WebSocketTransport(
-        this.syncOptions,
-        await this.db.getClientId(),
-        (await this.db.getSchema())?.version
-      );
-    if (!transport) return;
-    this.transport = transport;
+    const params = await this.getConnectionParams();
+    this.transport.connect(params);
     this.transport.onMessage(async (evt) => {
       const message = JSON.parse(evt.data);
       if (message.type === 'ERROR') {
@@ -295,7 +326,7 @@ class SyncEngine {
     this.transport.onOpen((evt) => {
       console.log('open ws', evt);
       this.resetReconnectTimeout();
-
+      this.signalOutboxTriples();
       // Reconnect any queries
       for (const [id, queryInfo] of this.queries) {
         this.transport.sendMessage('CONNECT_QUERY', {

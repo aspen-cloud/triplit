@@ -1,59 +1,9 @@
-import { SyncOptions } from '@triplit/client';
+import { ConnectParams, SyncTransport } from '@triplit/client';
 import { ConnectionStatus, friendlyReadyState } from './websocket';
-
-function getWsURI(
-  syncOptions: SyncOptions,
-  clientId: string,
-  schemaVersion?: number
-) {
-  const { secure: isSecure, apiKey, server } = syncOptions;
-  if (!server || !apiKey) {
-    console.warn(
-      'Both a server and apiKey are required to sync. Skipping sync connection.'
-    );
-    return undefined;
-  }
-  const wsOptions = new URLSearchParams();
-  if (schemaVersion) {
-    wsOptions.set('version', schemaVersion.toString());
-  }
-  wsOptions.set(
-    'keep-open-on-schema-mismatch',
-    String(syncOptions.keepOpenOnSchemaMismatch)
-  );
-  wsOptions.set('client', clientId);
-  wsOptions.set('token', apiKey);
-  return `${isSecure ? 'wss' : 'ws'}://${server}?${wsOptions.toString()}`;
-}
-
-export interface SyncTransport {
-  isOpen: boolean;
-  connectionStatus: ConnectionStatus | undefined;
-  onOpen(callback: (ev: any) => void): void;
-  sendMessage(type: string, payload: any): void;
-  onMessage(callback: (message: any) => void): void;
-  onError(callback: (ev: any) => void): void;
-  close(code?: number, reason?: string): void;
-  onClose(callback: (ev: any) => void): void;
-  onConnectionChange(callback: (state: ConnectionStatus) => void): void;
-}
 
 export class WebSocketTransport implements SyncTransport {
   ws: WebSocket | undefined = undefined;
-  constructor(
-    public syncOptions: SyncOptions,
-    public clientId: string,
-    public schemaVersion?: number
-  ) {
-    const uri = getWsURI(syncOptions, clientId, schemaVersion);
-    if (!uri) {
-      console.warn(
-        'Both a server and apiKey are required to sync. Skipping sync connection.'
-      );
-      return;
-    }
-    this.ws = new WebSocket(uri);
-  }
+  constructor(public server: string, public secure: boolean) {}
   get isOpen(): boolean {
     return !!this.ws && this.ws.readyState === this.ws.OPEN;
   }
@@ -67,10 +17,34 @@ export class WebSocketTransport implements SyncTransport {
     // For now, skip sending messages if we're not connected. I dont think we need a queue yet.
     if (!this.ws) return;
     if (!this.isOpen) {
-      console.log('skipping', type, payload);
+      // console.log('skipping', type, payload);
       return;
     }
     this.ws.send(JSON.stringify({ type, payload }));
+  }
+  connect(params: ConnectParams): void {
+    if (this.ws && this.isOpen) this.ws.close();
+    const { apiKey, clientId, version, keepOpenOnSchemaMismatch } = params;
+    if (!(apiKey && clientId && this.server)) {
+      console.warn(
+        'Both an apiKey and clientId are required to sync. Skipping sync connection.'
+      );
+      return;
+    }
+    const wsOptions = new URLSearchParams();
+    if (version) {
+      wsOptions.set('version', version.toString());
+    }
+    wsOptions.set(
+      'keep-open-on-schema-mismatch',
+      String(keepOpenOnSchemaMismatch)
+    );
+    wsOptions.set('client', clientId);
+    wsOptions.set('token', apiKey);
+    const wsUri = `${this.secure ? 'wss' : 'ws'}://${
+      this.server
+    }?${wsOptions.toString()}`;
+    this.ws = new WebSocket(wsUri);
   }
   onMessage(callback: (message: any) => void): void {
     if (this.ws) this.ws.onmessage = callback;
