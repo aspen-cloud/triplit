@@ -1,7 +1,9 @@
 import { ValuePointer } from '@sinclair/typebox/value';
-import { Model, TimestampedTypeFromModel, updateEntityAtPath } from './schema';
-import { EntityId, TripleRow } from './triple-store';
+import { Model, TimestampedTypeFromModel } from './schema';
+import { Attribute, EntityId, TripleRow } from './triple-store';
 import { QueryClauseFormattingError } from './errors';
+import { TimestampType } from './data-types/base';
+import { timestampCompare } from './timestamp';
 
 type Path = string;
 // Should be friendly types that we pass into queries
@@ -63,11 +65,16 @@ export function entityToResultReducer<M extends Model<any>>(
   entity: TimestampedTypeFromModel<M>,
   triple: TripleRow
 ) {
-  // TODO support tombstones and timestamps
-  const { attribute, value, timestamp, expired: isExpired } = triple;
-  if (isExpired) return entity;
+  const { attribute, value: rawValue, timestamp, expired: isExpired } = triple;
+
+  // Set tombstones as undefined, so we can continue to reduce and check timestamp
+  const value = isExpired ? undefined : rawValue;
+
   if (attribute[0] === '_collection')
-    return { ...entity, _collection: [value, timestamp] };
+    return {
+      ...entity,
+      _collection: [value, timestamp],
+    };
   const [_collectionName, ...path] = attribute;
 
   // Ensure that any number paths are converted to arrays in the entity
@@ -85,6 +92,24 @@ export function entityToResultReducer<M extends Model<any>>(
   }
   updateEntityAtPath(entity, path, value, timestamp);
   return entity;
+}
+
+function updateEntityAtPath(
+  entity: any,
+  path: Attribute,
+  value: any,
+  timestamp: TimestampType
+) {
+  const pointer = '/' + path.join('/');
+  const currentValue = ValuePointer.Get(entity, pointer);
+  if (currentValue && timestampCompare(timestamp, currentValue[1]) < 0) {
+    return;
+  }
+  if (value === undefined) {
+    ValuePointer.Delete(entity, pointer);
+    return;
+  }
+  ValuePointer.Set(entity, pointer, [value, timestamp]);
 }
 
 export function constructEntities(

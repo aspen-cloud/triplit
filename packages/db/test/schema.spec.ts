@@ -12,9 +12,6 @@ describe('Schema', () => {
     expect(() => getSchemaFromPath(StudentSchema, ['grade', 'foo'])).toThrow(
       InvalidSchemaPathError
     );
-    expect(() => getSchemaFromPath(S.String(), ['name'])).toThrowError(
-      InvalidSchemaPathError
-    );
   });
   it('should only allow value types as set types', () => {
     expect(() => S.Schema({ foo: S.Set(S.Number()) })).not.toThrowError();

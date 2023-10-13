@@ -305,10 +305,9 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
       const storeAttribute = [collectionName, ...attr];
       // undefined is treated as a delete
       if (value === undefined) {
-        const triples = await this.storeTx.findByEAV([storeId, storeAttribute]);
-        await this.storeTx.expireEntityAttributes(
-          triples.map(({ id, attribute }) => ({ id, attribute }))
-        );
+        await this.storeTx.expireEntityAttributes([
+          { id: storeId, attribute: storeAttribute },
+        ]);
         continue;
       }
       // TODO: use standardized json conversions

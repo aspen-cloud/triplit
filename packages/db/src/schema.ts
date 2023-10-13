@@ -105,20 +105,6 @@ export function getSchemaFromPath(
   return scope;
 }
 
-export function updateEntityAtPath(
-  entity: any,
-  path: Attribute,
-  value: any,
-  timestamp: TimestampType
-) {
-  const pointer = '/' + path.join('/');
-  const currentValue = ValuePointer.Get(entity, pointer);
-  if (currentValue && timestampCompare(timestamp, currentValue[1]) < 0) {
-    return;
-  }
-  ValuePointer.Set(entity, pointer, [value, timestamp]);
-}
-
 export interface SetProxy<T> {
   add: (value: T) => void;
   remove: (value: T) => void;
