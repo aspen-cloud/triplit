@@ -1,4 +1,11 @@
-import { EAV, TripleRow, TripleStoreTransaction } from './triple-store';
+import {
+  EAV,
+  EntityId,
+  TripleRow,
+  TripleStoreTransaction,
+  findByEntity,
+  isTupleEntityDeleteMarker,
+} from './triple-store';
 import {
   getSchemaFromPath,
   ProxyTypeFromModel,
@@ -53,7 +60,7 @@ import {
 import { Query, constructEntity, entityToResultReducer } from './query';
 import { serializedItemToTuples } from './utils';
 import { typeFromJSON } from './data-types/base';
-import { RecordType } from './data-types/record';
+import { MAX, MIN } from 'tuple-database';
 
 interface TransactionOptions<
   M extends Models<any, any> | undefined = undefined
@@ -61,6 +68,39 @@ interface TransactionOptions<
   variables?: Record<string, any>;
   schema?: StoreSchema<M>;
   skipRules?: boolean;
+}
+
+const EXEMPT_FROM_WRITE_RULES = new Set(['_metadata']);
+
+function checkWriteRules<M extends Models<any, any> | undefined>(
+  id: EntityId,
+  entity: any,
+  variables: Record<string, any> | undefined,
+  schema: StoreSchema<M> | undefined
+) {
+  const [collectionName, _entityId] = splitIdParts(id);
+
+  if (EXEMPT_FROM_WRITE_RULES.has(collectionName)) return;
+
+  const collection = schema?.collections[collectionName];
+  const writeRules = Object.values(collection?.rules?.write ?? {});
+  if (writeRules.length) {
+    const filters = writeRules.flatMap((r) => r.filter);
+    let query = {
+      where: filters,
+      vars: variables,
+    } as CollectionQuery<ModelFromModels<M>>;
+    query = replaceVariablesInQuery(query);
+    const satisfiedRule = doesEntityObjMatchWhere(
+      entity,
+      query.where,
+      collection?.attributes
+    );
+    if (!satisfiedRule) {
+      // TODO add better error that uses rule description
+      throw new WriteRuleError(`Update does not match write rules`);
+    }
+  }
 }
 
 export class DBTransaction<M extends Models<any, any> | undefined> {
@@ -121,46 +161,46 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
     if (!options?.skipRules) {
       // Check rules on write
       this.storeTx.beforeCommit(async (tx) => {
-        const updatedEntities = new Set(
-          Object.values(tx.tupleTx.txs).flatMap((storageTx) => {
-            return (
-              storageTx.writes.set
-                .filter((tuple) => tuple.key[1] === 'EAV')
-                // TODO: our ts is wrong here
-                .map((tuple) => tuple.key[2] as string)
-                .concat(
-                  storageTx.writes.remove
-                    .filter((key) => key[1] === 'EAV')
-                    .map((key) => key[2] as string)
-                )
-            );
-          })
+        const txs = Object.values(tx.tupleTx.txs);
+        const deletedTriples = txs.flatMap((stx) => {
+          return stx.writes.remove.filter((key) => key[1] === 'EAV');
+        });
+        const updatedTriples = txs.flatMap((stx) => {
+          return stx.writes.set.filter((tuple) => tuple.key[1] === 'EAV');
+        });
+
+        const deletedEntityIds = new Set(
+          updatedTriples
+            .filter((tuple) => isTupleEntityDeleteMarker(tuple))
+            .map((tuple) => tuple.key[2] as string)
         );
+        const deletedEntities = new Map();
+        for (const id of deletedEntityIds) {
+          const entity = constructEntity(await tx.store.findByEntity(id), id);
+          deletedEntities.set(id, entity);
+        }
+
+        const updatedEntityIds = new Set(
+          updatedTriples
+            .map((tuple) => tuple.key[2] as string)
+            .concat(deletedTriples.map((key) => key[2] as string))
+            .filter((id) => !deletedEntityIds.has(id))
+        );
+
+        const updatedEntities = new Map();
+        for (const id of updatedEntityIds) {
+          const triples = await tx.findByEntity(id);
+          const entity = constructEntity(triples, id);
+          updatedEntities.set(id, entity);
+        }
+
+
         const schema = await this.getSchema();
-        for (const storeId of updatedEntities) {
-          const [collectionName, _entityId] = splitIdParts(storeId);
-          if (collectionName === '_metadata') continue;
-          const collection = schema?.collections[collectionName];
-          const writeRules = Object.values(collection?.rules?.write ?? {});
-          if (writeRules.length) {
-            const triples = await tx.findByEntity(storeId);
-            const entity = constructEntity(triples, storeId);
-            const filters = writeRules.flatMap((r) => r.filter);
-            let query = {
-              where: filters,
-              vars: this.variables,
-            } as CollectionQuery<ModelFromModels<M>>;
-            query = replaceVariablesInQuery(query);
-            const satisfiedRule = doesEntityObjMatchWhere(
-              entity,
-              query.where,
-              collection?.attributes
-            );
-            if (!satisfiedRule) {
-              // TODO add better error that uses rule description
-              throw new WriteRuleError(`Update does not match write rules`);
-            }
-          }
+        for (const [storeId, entity] of updatedEntities) {
+          checkWriteRules(storeId, entity, this.variables, schema);
+        }
+        for (const [storeId, entity] of deletedEntities) {
+          checkWriteRules(storeId, entity, this.variables, schema);
         }
       });
     }
@@ -316,6 +356,14 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
 
     // Apply changes
     await this.storeTx.setValues(updateValues);
+  }
+
+  async delete<CN extends CollectionNameFromModels<M>>(
+    collectionName: CN,
+    id: string
+  ) {
+    const storeId = appendCollectionToId(collectionName, id);
+    await this.storeTx.expireEntity(storeId);
   }
 
   // TODO add tests for proxy reads

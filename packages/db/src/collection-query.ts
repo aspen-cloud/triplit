@@ -36,6 +36,7 @@ import {
 } from './db-helpers';
 import { Operator } from './data-types/base';
 import { VariableAwareCache } from './variable-aware-cache';
+import { isTimestampedEntityDeleted } from './entity';
 
 export default function CollectionQueryBuilder<
   M extends Model<any> | undefined
@@ -121,7 +122,11 @@ export async function fetch<Q extends CollectionQuery<any>>(
     const entityTriples = filterToLatestEntityAttribute(
       await tx.findByEntity(storeId)
     );
-    const entity = constructEntity(entityTriples, storeId);
+    let entity = constructEntity(entityTriples, storeId);
+    // handle deleted entites
+    if (isTimestampedEntityDeleted(entity)) {
+      entity = null;
+    }
     const triples = new Map([[query.entityId, entityTriples]]);
     if (!entity || !doesEntityObjMatchWhere(entity, where, collectionSchema)) {
       const results = new Map() as FetchResult<Q>;
@@ -171,6 +176,8 @@ export async function fetch<Q extends CollectionQuery<any>>(
         return [externalId, { triples: [], entity: entityEntry }];
       }
     })
+    // filter out deleted
+    .filter(async ([_id, { entity }]) => !isTimestampedEntityDeleted(entity))
     .filter(async ([id, { entity }]) => {
       const subQueries = where.filter((filter) => 'exists' in filter);
       const plainFilters = where.filter((filter) => !('exists' in filter));

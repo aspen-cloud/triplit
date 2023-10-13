@@ -392,6 +392,16 @@ export default class DB<M extends Models<any, any> | undefined> {
     }, options);
   }
 
+  async delete<CN extends CollectionNameFromModels<M>>(
+    collectionName: CN,
+    id: string,
+    options: TransactOptions = {}
+  ) {
+    return this.transact(async (tx) => {
+      await tx.delete(collectionName, id);
+    }, options);
+  }
+
   subscribe<Q extends CollectionQuery<ModelFromModels<M>>>(
     query: Q,
     onResults: (results: FetchResult<Q>) => void,

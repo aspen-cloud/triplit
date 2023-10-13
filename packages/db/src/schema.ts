@@ -5,7 +5,7 @@ import type { CollectionRules } from './db';
 import { timestampCompare } from './timestamp';
 import type { Attribute, EAV, TripleRow } from './triple-store';
 import { objectToTuples } from './utils';
-import { entityToResultReducer } from './query';
+import { constructEntity } from './query';
 import { appendCollectionToId, StoreSchema } from './db-helpers';
 import {
   typeFromJSON,
@@ -274,9 +274,10 @@ export function schemaToTriples(schema: StoreSchema<Models<any, any>>): EAV[] {
 }
 
 export function triplesToSchema(triples: TripleRow[]) {
-  const schemaEntity = triples
-    .filter((trip) => !trip.expired)
-    .reduce(entityToResultReducer, {});
+  const schemaEntity = constructEntity(
+    triples,
+    appendCollectionToId('_metadata', '_schema')
+  );
   const schemaData = timestampedObjectToPlainObject(schemaEntity);
   const version = schemaData.version || 0;
   const collections = schemaData.collections || {};

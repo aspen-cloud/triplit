@@ -18,6 +18,7 @@ import {
   SerializingError,
   InvalidInternalEntityIdError,
   InvalidEntityIdError,
+  EntityNotFoundError,
 } from '../src';
 import { Models } from '../src/schema';
 import { classes, students, departments } from './sample_data/school';
@@ -1148,6 +1149,52 @@ describe('single entity subscriptions', async () => {
         expect(spy).toHaveBeenCalledTimes(2);
         resolve();
       }, 50);
+    });
+  });
+});
+
+describe('delete api', () => {
+  it('can delete an entity', async () => {
+    const db = new DB();
+    await db.insert('posts', { id: 'post-1', author_id: 'user-1' }, 'post-1');
+    {
+      const post = await db.fetchById('posts', 'post-1');
+      expect(post).toStrictEqual({
+        _collection: 'posts',
+        id: 'post-1',
+        author_id: 'user-1',
+      });
+    }
+    await db.delete('posts', 'post-1');
+    {
+      const post = await db.fetchById('posts', 'post-1');
+      expect(post).toBeNull();
+    }
+  });
+  it('in a transaction, delete an entity and then insert the same one', async () => {
+    const db = new DB();
+    await db.insert('posts', { id: 'post-1', author_id: 'user-1' }, 'post-1');
+    await db.transact(async (tx) => {
+      await tx.delete('posts', 'post-1');
+      await tx.insert('posts', { id: 'post-1', author_id: 'user-1' }, 'post-1');
+    });
+    const post = await db.fetchById('posts', 'post-1');
+    expect(post).toStrictEqual({
+      _collection: 'posts',
+      id: 'post-1',
+      author_id: 'user-1',
+    });
+  });
+  it('in a transaction, delete an entity and then update the same one', async () => {
+    const db = new DB();
+    await db.insert('posts', { id: 'post-1', author_id: 'user-1' }, 'post-1');
+    await db.transact(async (tx) => {
+      await tx.delete('posts', 'post-1');
+      expect(
+        tx.update('posts', 'post-1', (entity) => {
+          entity.author_id = 'user-2';
+        })
+      ).rejects.toThrowError(EntityNotFoundError);
     });
   });
 });
@@ -2798,6 +2845,84 @@ describe('Rules', () => {
         const post = await db.fetchById('posts', POST_ID);
         expect(post!.author_id).not.toBe('not me');
       });
+    });
+  });
+
+  describe('Delete', () => {
+    const schema = {
+      collections: {
+        posts: {
+          attributes: S.Schema({
+            id: S.String(),
+            author_id: S.String(),
+          }),
+          rules: {
+            write: {
+              'post-author': {
+                description: 'Users can only post posts they authored',
+                filter: [['author_id', '=', '$user_id']],
+              },
+            },
+          },
+        },
+      },
+    };
+
+    const user_id = 'user-1';
+
+    it('can delete entity that passes rule', async () => {
+      const db = new DB({
+        schema,
+        variables: {
+          user_id,
+        },
+      });
+      await db.insert('posts', { id: 'post-1', author_id: user_id }, 'post-1');
+      await db.delete('posts', 'post-1');
+    });
+
+    it("throws an error when deleting an entity that doesn't pass rule", async () => {
+      const storage = new InMemoryTupleStorage();
+      const db1 = new DB({
+        schema,
+        variables: {
+          user_id,
+        },
+        source: storage,
+      });
+      const db2 = new DB({
+        schema,
+        variables: {
+          user_id: 'user-2',
+        },
+        source: storage,
+      });
+      await db1.insert('posts', { id: 'post-1', author_id: user_id }, 'post-1');
+      await expect(db2.delete('posts', 'post-1')).rejects.toThrowError(
+        WriteRuleError
+      );
+    });
+
+    it('ignores rules if skipRules is set', async () => {
+      const storage = new InMemoryTupleStorage();
+      const db1 = new DB({
+        schema,
+        variables: {
+          user_id,
+        },
+        source: storage,
+      });
+      const db2 = new DB({
+        schema,
+        variables: {
+          user_id: 'user-2',
+        },
+        source: storage,
+      });
+      await db1.insert('posts', { id: 'post-1', author_id: user_id }, 'post-1');
+      await expect(
+        db2.delete('posts', 'post-1', { skipRules: true })
+      ).resolves.not.toThrowError();
     });
   });
 });

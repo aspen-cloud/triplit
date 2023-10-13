@@ -787,6 +787,19 @@ export class TriplitClient<M extends Models<any, any> | undefined = undefined> {
     });
   }
 
+  delete<CN extends CollectionNameFromModels<M>>(
+    collectionName: CN,
+    entityId: string
+  ) {
+    return this.db.delete(collectionName, entityId, {
+      skipRules: SKIP_RULES,
+      storeScope: {
+        read: ['outbox', 'cache'],
+        write: ['outbox'],
+      },
+    });
+  }
+
   // TODO: refactor so some logic is shared across policies (ex starting a local and remote sub is verbose and repetitive)
   subscribe<CQ extends ClientQuery<ModelFromModels<M>>>(
     query: CQ,

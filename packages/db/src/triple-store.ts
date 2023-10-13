@@ -16,12 +16,13 @@ import MultiTupleStore, {
 } from './multi-tuple-store';
 import { Clock } from './clocks/clock';
 import { MemoryClock } from './clocks/memory-clock';
-import { entityToResultReducer, ValueCursor } from './query';
+import { constructEntities, constructEntity, ValueCursor } from './query';
 import {
   IndexNotFoundError,
   InvalidTimestampIndexScanError,
   InvalidTripleStoreValueError,
   TripleStoreOptionsError,
+  TriplitError,
   WriteRuleError,
 } from './errors';
 
@@ -372,16 +373,22 @@ export class TripleStoreOperator implements TripleStoreApi {
     shouldValidate = true
   ) {
     const { id: id, attribute, value, timestamp, expired } = tripleInput;
-    // if (expired) {
-    //   console.info('Skipping index for expired triple');
-    //   return;
-    // }
 
     // If we already have this triple, skip it (performance optimization)
-    // This does add another binary search, so might be worth patching tuple-db to let us do this in tx.set()
-    if (await tx.exists(['EAV', id, attribute, value, timestamp])) {
-      console.warn("inserting triple that's already in the db");
-      return;
+    const existingTriples = await tx.scan({
+      prefix: ['EAV', id, attribute, value, timestamp],
+    });
+    if (existingTriples.length > 1) {
+      throw new TriplitError(
+        'Found multiple tuples with the same key. This should not happen.'
+      );
+    }
+    if (existingTriples.length === 1) {
+      const existingTriple = indexToTriple(existingTriples[0]);
+      if (existingTriple.expired === expired) {
+        console.info('Skipping index for existing triple');
+        return;
+      }
     }
 
     const metadata = { expired };
@@ -507,6 +514,21 @@ export class TripleStoreOperator implements TripleStoreApi {
     );
   }
 
+  async expireEntity(id: EntityId) {
+    const timestamp = await this.getTransactionTimestamp();
+    const collectionTriple = await this.findByEntityAttribute(id, [
+      '_collection',
+    ]);
+    const existingTriples = await this.findByEntity(id);
+    await this.insertTriples(
+      collectionTriple.map((t) => ({ ...t, timestamp, expired: true }))
+    );
+
+    // Perform local garbage collection
+    // Feels like it would be nice to do GC in hooks...tried once and it was a bit messy with other assumptions
+    await this.deleteTriples(existingTriples);
+  }
+
   async expireEntityAttributes(
     values: { id: EntityId; attribute: Attribute }[]
   ) {
@@ -532,17 +554,20 @@ export class TripleStoreOperator implements TripleStoreApi {
 
 export class TripleStoreTransaction extends TripleStoreOperator {
   tupleTx: MultiTupleTransaction<TupleIndex>;
-
+  store: TripleStore;
   constructor({
+    store,
     tupleTx,
     clock,
     hooks,
   }: {
+    store: TripleStore;
     tupleTx: MultiTupleTransaction<TupleIndex>;
     clock: Clock;
     hooks: TripleStoreHooks;
   }) {
     super({ tupleOperator: tupleTx, clock, hooks });
+    this.store = store;
     this.tupleTx = tupleTx;
   }
 
@@ -746,6 +771,7 @@ export class TripleStore implements TripleStoreApi {
     let isCanceled = false;
     const tx = await this.tupleStore.autoTransact(async (tupleTx) => {
       const tx = new TripleStoreTransaction({
+        store: this,
         tupleTx: tupleTx,
         clock: this.clock,
         hooks: this.hooks,
@@ -994,7 +1020,7 @@ function findValuesInRange(
 //   });
 // }
 
-async function findByEntity(
+export async function findByEntity(
   tx: MultiTupleStoreOrTransaction,
   id?: EntityId
 ): Promise<TripleRow[]> {
@@ -1077,8 +1103,7 @@ async function findByClientTimestamp(
 
 async function getEntity(tx: MultiTupleStoreOrTransaction, entityId: string) {
   const triples = await findByEntity(tx, entityId);
-  if (triples.length === 0) return null;
-  return triples.reduce(entityToResultReducer, {});
+  return constructEntity(triples, entityId);
 }
 
 async function getEntities(
@@ -1086,12 +1111,7 @@ async function getEntities(
   collectionName: string
 ) {
   const triples = await findByCollection(tx, collectionName);
-  return triples.reduce((acc, triple) => {
-    const { id } = triple;
-    const entityObj = acc.get(id) ?? {};
-    acc.set(id, entityToResultReducer(entityObj, triple));
-    return acc;
-  }, new Map());
+  return constructEntities(triples);
 }
 
 async function findMaxTimestamp(
@@ -1103,4 +1123,9 @@ async function findMaxTimestamp(
     reverse: true,
   })) as ClientTimestampIndex[];
   return res[0]?.key[2];
+}
+
+// We use the _collection tuple to indicate if an entity delete should occur
+export function isTupleEntityDeleteMarker(tuple: TupleIndex) {
+  return tuple.key[3][0] === '_collection' && tuple.value.expired;
 }
