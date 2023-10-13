@@ -36,6 +36,8 @@ export { IndexedDbStorage, MemoryStorage };
 type Storage = IndexedDbStorage | MemoryStorage;
 
 export type ConnectParams = {
+  server: string;
+  secure: boolean;
   apiKey: string;
   clientId: string;
   version?: number;
@@ -125,9 +127,7 @@ class SyncEngine {
     this.syncOptions.keepOpenOnSchemaMismatch =
       options.keepOpenOnSchemaMismatch ?? false;
     this.db = db;
-    this.transport =
-      options.transport ??
-      new WebSocketTransport(options.server, options.secure);
+    this.transport = options.transport ?? new WebSocketTransport();
     txCommits$.subscribe((txId) => {
       const callbacks = this.commitCallbacks.get(txId);
       if (callbacks) {
@@ -171,6 +171,8 @@ class SyncEngine {
       version: schemaVersion,
       keepOpenOnSchemaMismatch: this.syncOptions.keepOpenOnSchemaMismatch,
       apiKey: this.syncOptions.apiKey,
+      server: this.syncOptions.server,
+      secure: this.syncOptions.secure,
     };
   }
 
@@ -328,7 +330,7 @@ class SyncEngine {
       }
     });
     this.transport.onOpen((evt) => {
-      console.log('open ws', evt);
+      console.info('sync connection has opened');
       this.resetReconnectTimeout();
       this.signalOutboxTriples();
       // Reconnect any queries

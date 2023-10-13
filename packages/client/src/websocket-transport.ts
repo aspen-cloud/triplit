@@ -3,7 +3,7 @@ import { ConnectionStatus, friendlyReadyState } from './websocket';
 
 export class WebSocketTransport implements SyncTransport {
   ws: WebSocket | undefined = undefined;
-  constructor(public server: string, public secure: boolean) {}
+  constructor() {}
   get isOpen(): boolean {
     return !!this.ws && this.ws.readyState === this.ws.OPEN;
   }
@@ -24,10 +24,23 @@ export class WebSocketTransport implements SyncTransport {
   }
   connect(params: ConnectParams): void {
     if (this.ws && this.isOpen) this.ws.close();
-    const { apiKey, clientId, version, keepOpenOnSchemaMismatch } = params;
-    if (!(apiKey && clientId && this.server)) {
+    const {
+      apiKey,
+      clientId,
+      version,
+      keepOpenOnSchemaMismatch,
+      server,
+      secure,
+    } = params;
+    const missingParams = [];
+    if (!apiKey) missingParams.push('apiKey');
+    if (!clientId) missingParams.push('clientId');
+    if (!server) missingParams.push('server');
+    if (missingParams.length > 0) {
       console.warn(
-        'Both an apiKey and clientId are required to sync. Skipping sync connection.'
+        `Missing required params: [${missingParams.join(
+          ', '
+        )}]. Skipping sync connection.`
       );
       return;
     }
@@ -41,9 +54,9 @@ export class WebSocketTransport implements SyncTransport {
     );
     wsOptions.set('client', clientId);
     wsOptions.set('token', apiKey);
-    const wsUri = `${this.secure ? 'wss' : 'ws'}://${
-      this.server
-    }?${wsOptions.toString()}`;
+    const wsUri = `${
+      secure ? 'wss' : 'ws'
+    }://${server}?${wsOptions.toString()}`;
     this.ws = new WebSocket(wsUri);
   }
   onMessage(callback: (message: any) => void): void {
