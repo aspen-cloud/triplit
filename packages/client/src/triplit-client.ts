@@ -20,6 +20,7 @@ import {
   stripCollectionFromId,
   QUERY_INPUT_TRANSFORMERS,
   InsertTypeFromModel,
+  hashSchema,
 } from '@triplit/db';
 import { Subject, throttle } from 'rxjs';
 import { getUserId } from './token';
@@ -165,7 +166,7 @@ class SyncEngine {
 
   async getConnectionParams() {
     const clientId = await this.db.getClientId();
-    const schemaVersion = (await this.db.getSchema())?.version;
+    const schemaVersion = hashSchema((await this.db.getSchema())?.collections);
     return {
       clientId,
       version: schemaVersion,
