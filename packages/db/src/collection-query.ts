@@ -654,10 +654,9 @@ export function subscribeResultsAndTriples<Q extends CollectionQuery<any>>(
               )
             );
             // TODO: there is some slight inconsistency here between fetch and subscribe...this will assign default values, particularly to sets
-            const entityObj = entityTriples.reduce(
-              entityToResultReducer,
-              {} //schema ? initialize(schema) : {}
-            );
+            const entityObj: any = entityTriples.reduce((ent, trip) => {
+              return entityToResultReducer(ent, trip);
+            }, {});
             const isInCollection =
               entityObj['_collection'] &&
               entityObj['_collection'][0] === query.collectionName;
@@ -788,7 +787,7 @@ export function subscribe<Q extends CollectionQuery<any>>(
   query: Q,
   onResults: (results: FetchResult<Q>) => void,
   onError?: (error: any) => void,
-  schema?: Models<any, any>
+  schema?: CollectionQuerySchema<Q>
 ) {
   if (query.entityId) {
     return subscribeSingleEntity(
@@ -798,7 +797,7 @@ export function subscribe<Q extends CollectionQuery<any>>(
         onResults(results);
       },
       onError,
-      schema && schema[query.collectionName]?.attributes
+      schema
     );
   }
   return subscribeResultsAndTriples(

@@ -50,10 +50,9 @@ export function stripCollectionFromId(id: string): string {
   return entityId;
 }
 
-export function replaceVariablesInFilterStatements<M extends Model | undefined>(
-  statements: QueryWhere<M>,
-  variables: Record<string, any>
-): QueryWhere<M> {
+export function replaceVariablesInFilterStatements<
+  M extends Model<any> | undefined
+>(statements: QueryWhere<M>, variables: Record<string, any>): QueryWhere<M> {
   return statements.map((filter) => {
     if ('exists' in filter) return filter;
     if (!(filter instanceof Array)) {
@@ -82,7 +81,7 @@ export function replaceVariablesInQuery<
   return { ...query, where };
 }
 
-export function* filterStatementIterator<M extends Model | undefined>(
+export function* filterStatementIterator<M extends Model<any> | undefined>(
   statements: QueryWhere<M>
 ): Generator<FilterStatement<M> | SubQuery> {
   for (const statement of statements) {
@@ -94,7 +93,7 @@ export function* filterStatementIterator<M extends Model | undefined>(
   }
 }
 
-export function someFilterStatements<M extends Model | undefined>(
+export function someFilterStatements<M extends Model<any> | undefined>(
   statements: QueryWhere<M>,
   someFunction: (statement: FilterStatement<M>) => boolean
 ): boolean {
@@ -104,7 +103,7 @@ export function someFilterStatements<M extends Model | undefined>(
   return false;
 }
 
-export function mapFilterStatements<M extends Model | undefined>(
+export function mapFilterStatements<M extends Model<any> | undefined>(
   statements: QueryWhere<M>,
   mapFunction: (statement: FilterStatement<M>) => FilterStatement<M>
 ): QueryWhere<M> {
@@ -124,9 +123,11 @@ export function everyFilterStatement(
   everyFunction: (statement: FilterStatement<any>) => boolean
 ): boolean {
   return statements.every((filter) => {
-    if (!(filter instanceof Array)) {
+    if (!(filter instanceof Array) && 'filters' in filter) {
       return everyFilterStatement(filter.filters, everyFunction);
     }
+    // TODO should this traverse sub-queries?
+    if ('exists' in filter) return true;
     return everyFunction(filter);
   });
 }

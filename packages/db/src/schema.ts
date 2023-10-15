@@ -2,7 +2,7 @@ import { TObject } from '@sinclair/typebox';
 import { ValuePointer } from '@sinclair/typebox/value';
 import { InvalidSchemaPathError } from './errors';
 import type { CollectionRules } from './db';
-import { timestampCompare } from './timestamp';
+import { Timestamp, timestampCompare } from './timestamp';
 import type { Attribute, EAV, TripleRow } from './triple-store';
 import { objectToTuples } from './utils';
 import { constructEntity } from './query';
@@ -14,9 +14,9 @@ import {
   ValueType,
 } from './data-types/base';
 import {
-  AttributeDefinition,
   CollectionDefinition,
   CollectionsDefinition,
+  RecordAttributeDefinition,
   SchemaDefinition,
 } from './data-types/serialization';
 import { StringType } from './data-types/string';
@@ -146,7 +146,7 @@ type DataTypeHasDefault<T extends DataType> = BooleanNot<
 
 // Exposed to client
 export type InsertTypeFromModel<M extends Model<any> | undefined> =
-  M extends Model
+  M extends Model<any>
     ? {
         [k in keyof M as DataTypeHasNoDefault<M[k]> extends true
           ? k
@@ -159,7 +159,7 @@ export type InsertTypeFromModel<M extends Model<any> | undefined> =
     : any;
 
 export type JSONTypeFromModel<M extends Model<any> | undefined> =
-  M extends Model
+  M extends Model<any>
     ? {
         [k in keyof M]: M[k] extends DataType
           ? ExtractDeserializedType<M[k]>
@@ -168,20 +168,17 @@ export type JSONTypeFromModel<M extends Model<any> | undefined> =
     : any;
 
 export type SerializedTypeFromModel<M extends Model<any> | undefined> =
-  M extends Model
+  M extends Model<any>
     ? {
         [k in keyof M]: ExtractSerializedType<M[k]>;
       }
     : any;
 
-export type TimestampedObject =
-  | {
-      [key: string | number]:
-        | [value: any, timestamp: TimestampType]
-        | TimestampedObject;
-    }
-  | [value: any, timestamp: TimestampType][]
-  | [value: any, timestamp: TimestampType];
+export type TimestampedObject = Timestamped<object>;
+
+export type Timestamped<T> = T extends { [key: string]: any }
+  ? { [K in keyof T]: Timestamped<T[K]> }
+  : [T, Timestamp];
 
 export type UnTimestampedObject<T extends TimestampedObject> = {
   [k in keyof T]: T[k] extends TimestampedObject
@@ -299,16 +296,9 @@ export function schemaToJSON(
 function collectionSchemaToJSON(
   collection: Collection<any>
 ): CollectionDefinition {
-  // const collectionDefinition: CollectionDefinition = {
-  //   // attributes: attributesSchemaToJSON(collection.attributes),
-  //   attributes: collection.attributes.toJSON(),
-  // };
-  // // TODO: we have a few cases where inserting undefined at a key breaks things...we should fix this at some common insertion point
-  // if (collection.rules) collectionDefinition.rules = collection.rules;
-  // return collectionDefinition;
   const rulesObj = collection.rules ? { rules: collection.rules } : {};
   return {
-    attributes: collection.attributes.toJSON(),
+    attributes: collection.attributes.toJSON() as RecordAttributeDefinition,
     ...rulesObj,
   };
 }

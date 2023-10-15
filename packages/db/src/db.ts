@@ -26,6 +26,7 @@ import {
   mapFilterStatements,
   readSchemaFromTripleStore,
   overrideStoredSchema,
+  StoreSchema,
 } from './db-helpers';
 import { VariableAwareCache } from './variable-aware-cache';
 
@@ -214,10 +215,10 @@ export default class DB<M extends Models<any, any> | undefined> {
     return ts[1];
   }
 
-  async getSchema() {
+  async getSchema(): Promise<StoreSchema<M>> {
     await this.ensureMigrated;
     const { schema } = await readSchemaFromTripleStore(this.tripleStore);
-    return schema;
+    return schema as StoreSchema<M>;
   }
 
   async getSchemaTriples() {
@@ -228,13 +229,11 @@ export default class DB<M extends Models<any, any> | undefined> {
 
   async getCollectionSchema<CN extends CollectionNameFromModels<M>>(
     collectionName: CN
-  ) {
+  ): Promise<CollectionFromModels<M, CN> | undefined> {
     const collections = (await this.getSchema())?.collections;
     if (!collections || !collections[collectionName]) return undefined;
     // TODO: i think we need some stuff in the triple store...
-    const collectionSchema = collections[
-      collectionName
-    ] as CollectionFromModels<M, CN>;
+    const collectionSchema = collections[collectionName];
     return collectionSchema;
   }
 
@@ -419,7 +418,7 @@ export default class DB<M extends Models<any, any> | undefined> {
         subscriptionQuery,
         onResults,
         onError,
-        (await this.getSchema())?.collections
+        await this.getCollectionSchema(query.collectionName)
       );
       return unsub;
     };

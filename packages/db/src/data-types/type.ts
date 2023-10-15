@@ -1,3 +1,4 @@
+import { Timestamp } from '../timestamp';
 import { Operator } from './base';
 import { AttributeDefinition } from './serialization';
 
@@ -17,13 +18,10 @@ export type ExtractSerializedType<T> = T extends TypeInterface<
   : never;
 
 export type ExtractTimestampedType<T extends TypeInterface> =
-  T extends TypeInterface<
-    infer _TypeId,
-    infer _DeserializedType,
-    infer _SerializedType,
-    infer TimestampedType
-  >
-    ? TimestampedType
+  T extends TypeInterface<infer _TypeId, infer _JSType, infer JsonType, any>
+    ? JsonType extends Record<string, infer Value>
+      ? Record<string, ExtractDeserializedType<Value>>
+      : [JsonType, Timestamp]
     : never;
 
 /**

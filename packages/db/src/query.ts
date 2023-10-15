@@ -1,5 +1,5 @@
 import { ValuePointer } from '@sinclair/typebox/value';
-import { Model, TimestampedTypeFromModel } from './schema';
+import { Model, Timestamped, TimestampedTypeFromModel } from './schema';
 import { Attribute, EntityId, TripleRow } from './triple-store';
 import { QueryClauseFormattingError } from './errors';
 import { TimestampType } from './data-types/base';
@@ -20,12 +20,12 @@ type Value =
 
 export type FilterStatement<
   M extends Model<any> | undefined,
-  K extends M extends Model<any> ? keyof M : Path = M extends Model<any>
-    ? keyof M
-    : Path
+  K extends M extends Model<any>
+    ? keyof M['properties']
+    : Path = M extends Model<any> ? keyof M : Path
 > = [
   K,
-  M extends Model<any> ? M[K]['supportedOperations'][number] : string,
+  M extends Model<any> ? M['properties'][K]['operators'] : string,
   Value // TODO: We could make this tighter by inspecting the type
 ];
 export type FilterGroup<M extends Model<any> | undefined> = {
@@ -61,8 +61,8 @@ export interface Query<M extends Model<any> | undefined> {
   vars?: Record<string, any>;
 }
 
-export function entityToResultReducer<M extends Model<any>>(
-  entity: TimestampedTypeFromModel<M>,
+export function entityToResultReducer<T extends Timestamped<object>>(
+  entity: T,
   triple: TripleRow
 ) {
   const { attribute, value: rawValue, timestamp, expired: isExpired } = triple;
@@ -112,7 +112,7 @@ function updateEntityAtPath(
   ValuePointer.Set(entity, pointer, [value, timestamp]);
 }
 
-export function constructEntities(
+export function triplesToEntities(
   triples: TripleRow[]
 ): Map<string, TimestampedTypeFromModel<Model<any>>> {
   return triples.reduce((acc, triple) => {
@@ -124,7 +124,7 @@ export function constructEntities(
 }
 
 export function constructEntity(triples: TripleRow[], id: string) {
-  const entities = constructEntities(triples);
+  const entities = triplesToEntities(triples);
   return entities.get(id);
 }
 

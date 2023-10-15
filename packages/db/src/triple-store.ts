@@ -16,7 +16,7 @@ import MultiTupleStore, {
 } from './multi-tuple-store';
 import { Clock } from './clocks/clock';
 import { MemoryClock } from './clocks/memory-clock';
-import { constructEntities, constructEntity, ValueCursor } from './query';
+import { triplesToEntities, constructEntity, ValueCursor } from './query';
 import {
   IndexNotFoundError,
   InvalidTimestampIndexScanError,
@@ -1111,7 +1111,7 @@ async function getEntities(
   collectionName: string
 ) {
   const triples = await findByCollection(tx, collectionName);
-  return constructEntities(triples);
+  return triplesToEntities(triples);
 }
 
 async function findMaxTimestamp(

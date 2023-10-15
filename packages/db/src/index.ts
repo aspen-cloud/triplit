@@ -35,7 +35,7 @@ export {
   or,
   and,
   constructEntity,
-  constructEntities,
+  triplesToEntities as constructEntities,
   QUERY_INPUT_TRANSFORMERS,
 } from './query';
 // TS issue occurs if we dont export FilterGroup (i think due to an infered return type somewhere)
@@ -44,7 +44,7 @@ export { stripCollectionFromId } from './db-helpers';
 export type { TripleRow } from './triple-store';
 export {
   Schema,
-  triplesToSchema as tuplesToSchema,
+  triplesToSchema,
   schemaToJSON,
   timestampedObjectToPlainObject,
   hashSchema,
