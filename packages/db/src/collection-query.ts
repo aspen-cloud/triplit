@@ -7,6 +7,7 @@ import {
   entityToResultReducer,
   constructEntity,
   QUERY_INPUT_TRANSFORMERS,
+  SubQuery,
 } from './query';
 import {
   convertEntityToJS,
@@ -122,7 +123,7 @@ export async function fetch<Q extends CollectionQuery<any>>(
     const entityTriples = filterToLatestEntityAttribute(
       await tx.findByEntity(storeId)
     );
-    let entity = constructEntity(entityTriples, storeId);
+    let entity: any | null = constructEntity(entityTriples, storeId);
     // handle deleted entites
     if (isTimestampedEntityDeleted(entity)) {
       entity = null;
@@ -170,16 +171,17 @@ export async function fetch<Q extends CollectionQuery<any>>(
     .map(async ({ id }) => {
       const entityEntry = allEntities.get(id);
       const externalId = stripCollectionFromId(id);
-      if (entityEntry.triples) {
-        return [externalId, entityEntry];
-      } else {
-        return [externalId, { triples: [], entity: entityEntry }];
+      if (entityEntry?.triples) {
+        return [externalId, entityEntry] as const;
       }
+      return [externalId, { triples: [], entity: entityEntry }] as const;
     })
     // filter out deleted
     .filter(async ([_id, { entity }]) => !isTimestampedEntityDeleted(entity))
     .filter(async ([id, { entity }]) => {
-      const subQueries = where.filter((filter) => 'exists' in filter);
+      const subQueries = where.filter(
+        (filter) => 'exists' in filter
+      ) as SubQuery[];
       const plainFilters = where.filter((filter) => !('exists' in filter));
       const basicMatch = doesEntityObjMatchWhere(
         entity,

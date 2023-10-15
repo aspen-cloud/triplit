@@ -235,6 +235,7 @@ export class ScopedMultiTupleOperator<TupleSchema extends KeyValuePair> {
       : never
   ) {
     for (const beforeHook of this.hooks.beforeInsert) {
+      // @ts-ignore
       await beforeHook({ key: tuple, value }, this);
     }
     this.txScope.write.forEach((tx) => tx.set(tuple, value));
