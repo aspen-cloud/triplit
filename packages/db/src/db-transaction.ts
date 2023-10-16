@@ -2,6 +2,8 @@ import {
   EAV,
   EntityId,
   TripleRow,
+  TripleStoreBeforeCommitHook,
+  TripleStoreBeforeInsertHook,
   TripleStoreTransaction,
   findByEntity,
   isTupleEntityDeleteMarker,
@@ -60,7 +62,6 @@ import {
 import { Query, constructEntity, entityToResultReducer } from './query';
 import { serializedItemToTuples } from './utils';
 import { typeFromJSON } from './data-types/base';
-import { MAX, MIN } from 'tuple-database';
 
 interface TransactionOptions<
   M extends Models<any, any> | undefined = undefined
@@ -108,6 +109,99 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
   private _schema: TimestampedObject | undefined;
   readonly variables?: Record<string, any>;
 
+  private ValidateTripleSchema: TripleStoreBeforeInsertHook = async (
+    triples
+  ) => {
+    if (!this.schema) return;
+    for (const trip of triples) {
+      if (trip.attribute[0] === '_metadata') continue;
+      if (trip.attribute[0] === '_collection') continue;
+      validateTriple(this.schema.collections, trip.attribute, trip.value);
+    }
+  };
+
+  private CheckCanWrite: TripleStoreBeforeCommitHook = async (tx) => {
+    const txs = Object.values(tx.tupleTx.txs);
+    const deletedTriples = txs.flatMap((stx) => {
+      return stx.writes.remove.filter((key) => key[1] === 'EAV');
+    });
+    const updatedTriples = txs.flatMap((stx) => {
+      return stx.writes.set.filter((tuple) => tuple.key[1] === 'EAV');
+    });
+
+    const deletedEntityIds = new Set(
+      updatedTriples
+        .filter((tuple) => isTupleEntityDeleteMarker(tuple))
+        .map((tuple) => tuple.key[2] as string)
+    );
+    const deletedEntities = new Map();
+    for (const id of deletedEntityIds) {
+      const entity = constructEntity(await tx.store.findByEntity(id), id);
+      deletedEntities.set(id, entity);
+    }
+
+    const updatedEntityIds = new Set(
+      updatedTriples
+        .map((tuple) => tuple.key[2] as string)
+        .concat(deletedTriples.map((key) => key[2] as string))
+        .filter((id) => !deletedEntityIds.has(id))
+    );
+
+    const updatedEntities = new Map();
+    for (const id of updatedEntityIds) {
+      const triples = await tx.findByEntity(id);
+      const entity = constructEntity(triples, id);
+      updatedEntities.set(id, entity);
+    }
+
+    const schema = await this.getSchema();
+    for (const [storeId, entity] of updatedEntities) {
+      checkWriteRules(storeId, entity, this.variables, schema);
+    }
+    for (const [storeId, entity] of deletedEntities) {
+      checkWriteRules(storeId, entity, this.variables, schema);
+    }
+  };
+
+  private UpdateLocalSchema: TripleStoreBeforeInsertHook = async (
+    trips,
+    tx
+  ) => {
+    const metadataTriples = trips.filter(
+      ({ attribute }) => attribute[0] === '_metadata'
+    );
+    if (metadataTriples.length === 0) return;
+
+    /**
+     * We need to support tombstoning in entityToResultReducer to properly handle schema incremental schema changes
+     * When we expire, we delete the old value and insert a tombstone,
+     * but we're not set up to do anything with that tombstone so it does nothing on an incremental update.
+     *
+     * For now setting this to requery the schema on updates.
+     *
+     * As well (when going back to a true incremental update system), when using the migrations option in the DB constructor, we need to query the schema triples when the hook first fires to initialize _schema,
+     * otherwise the initial _schema value will just be the schema delta of the migration.
+     */
+    const { schemaTriples } = await readSchemaFromTripleStore(tx);
+    // order matters here (may have attr + timestamp collisions inside a tx)
+    // TODO: we should fix that...
+    metadataTriples.unshift(...schemaTriples);
+
+    // Need to actually support tombstoning...or figure out how to properly read tombstones so theyre deleted from objects
+    this._schema = metadataTriples.reduce(
+      entityToResultReducer,
+      {} // this._schema ?? {}
+    );
+    // TODO: schema triples and type?
+    const schemaDefinition = timestampedObjectToPlainObject(this._schema);
+    this.schema = {
+      version: schemaDefinition.version ?? 0,
+      collections:
+        schemaDefinition.collections &&
+        collectionsDefinitionToSchema(schemaDefinition.collections),
+    };
+  };
+
   constructor(
     readonly storeTx: TripleStoreTransaction,
     readonly options: TransactionOptions<M> = {}
@@ -115,94 +209,11 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
     this.schema = options.schema;
     this.variables = options.variables;
 
-    this.storeTx.beforeInsert(async (trips, tx) => {
-      const metadataTriples = trips.filter(
-        ({ attribute }) => attribute[0] === '_metadata'
-      );
-      if (metadataTriples.length === 0) return;
-
-      /**
-       * We need to support tombstoning in entityToResultReducer to properly handle schema incremental schema changes
-       * When we expire, we delete the old value and insert a tombstone,
-       * but we're not set up to do anything with that tombstone so it does nothing on an incremental update.
-       *
-       * For now setting this to requery the schema on updates.
-       *
-       * As well (when going back to a true incremental update system), when using the migrations option in the DB constructor, we need to query the schema triples when the hook first fires to initialize _schema,
-       * otherwise the initial _schema value will just be the schema delta of the migration.
-       */
-      const { schemaTriples } = await readSchemaFromTripleStore(tx);
-      // order matters here (may have attr + timestamp collisions inside a tx)
-      // TODO: we should fix that...
-      metadataTriples.unshift(...schemaTriples);
-
-      // Need to actually support tombstoning...or figure out how to properly read tombstones so theyre deleted from objects
-      this._schema = metadataTriples.reduce(
-        entityToResultReducer,
-        {} // this._schema ?? {}
-      );
-      // TODO: schema triples and type?
-      const schemaDefinition = timestampedObjectToPlainObject(this._schema);
-      this.schema = {
-        version: schemaDefinition.version ?? 0,
-        collections:
-          schemaDefinition.collections &&
-          collectionsDefinitionToSchema(schemaDefinition.collections),
-      };
-    });
-    this.storeTx.beforeInsert(async (triples) => {
-      if (!this.schema) return;
-      for (const trip of triples) {
-        if (trip.attribute[0] === '_metadata') continue;
-        if (trip.attribute[0] === '_collection') continue;
-        validateTriple(this.schema.collections, trip.attribute, trip.value);
-      }
-    });
+    this.storeTx.beforeInsert(this.ValidateTripleSchema);
+    this.storeTx.beforeInsert(this.UpdateLocalSchema);
     if (!options?.skipRules) {
       // Check rules on write
-      this.storeTx.beforeCommit(async (tx) => {
-        const txs = Object.values(tx.tupleTx.txs);
-        const deletedTriples = txs.flatMap((stx) => {
-          return stx.writes.remove.filter((key) => key[1] === 'EAV');
-        });
-        const updatedTriples = txs.flatMap((stx) => {
-          return stx.writes.set.filter((tuple) => tuple.key[1] === 'EAV');
-        });
-
-        const deletedEntityIds = new Set(
-          updatedTriples
-            .filter((tuple) => isTupleEntityDeleteMarker(tuple))
-            .map((tuple) => tuple.key[2] as string)
-        );
-        const deletedEntities = new Map();
-        for (const id of deletedEntityIds) {
-          const entity = constructEntity(await tx.store.findByEntity(id), id);
-          deletedEntities.set(id, entity);
-        }
-
-        const updatedEntityIds = new Set(
-          updatedTriples
-            .map((tuple) => tuple.key[2] as string)
-            .concat(deletedTriples.map((key) => key[2] as string))
-            .filter((id) => !deletedEntityIds.has(id))
-        );
-
-        const updatedEntities = new Map();
-        for (const id of updatedEntityIds) {
-          const triples = await tx.findByEntity(id);
-          const entity = constructEntity(triples, id);
-          updatedEntities.set(id, entity);
-        }
-
-
-        const schema = await this.getSchema();
-        for (const [storeId, entity] of updatedEntities) {
-          checkWriteRules(storeId, entity, this.variables, schema);
-        }
-        for (const [storeId, entity] of deletedEntities) {
-          checkWriteRules(storeId, entity, this.variables, schema);
-        }
-      });
+      this.storeTx.beforeCommit(this.CheckCanWrite);
     }
   }
 

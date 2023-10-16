@@ -195,12 +195,12 @@ type MetadataListener = (changes: {
   deletes: [entityId: string, attribute?: Attribute][];
 }) => void | Promise<void>;
 
-type TripleStoreBeforeInsertHook = (
+export type TripleStoreBeforeInsertHook = (
   triple: TripleRow[],
   tx: TripleStoreTransaction
 ) => void | Promise<void>;
 
-type TripleStoreBeforeCommitHook = (
+export type TripleStoreBeforeCommitHook = (
   tx: TripleStoreTransaction
 ) => void | Promise<void>;
 
