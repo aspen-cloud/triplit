@@ -24,14 +24,7 @@ export class WebSocketTransport implements SyncTransport {
   }
   connect(params: ConnectParams): void {
     if (this.ws && this.isOpen) this.ws.close();
-    const {
-      apiKey,
-      clientId,
-      version,
-      keepOpenOnSchemaMismatch,
-      server,
-      secure,
-    } = params;
+    const { apiKey, clientId, version, syncSchema, server, secure } = params;
     const missingParams = [];
     if (!apiKey) missingParams.push('apiKey');
     if (!clientId) missingParams.push('clientId');
@@ -48,10 +41,7 @@ export class WebSocketTransport implements SyncTransport {
     if (version) {
       wsOptions.set('version', version.toString());
     }
-    wsOptions.set(
-      'keep-open-on-schema-mismatch',
-      String(keepOpenOnSchemaMismatch)
-    );
+    wsOptions.set('sync-schema', String(syncSchema));
     wsOptions.set('client', clientId);
     wsOptions.set('token', apiKey);
     const wsUri = `${

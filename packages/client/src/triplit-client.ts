@@ -21,6 +21,7 @@ import {
   QUERY_INPUT_TRANSFORMERS,
   InsertTypeFromModel,
   hashSchema,
+  TripleRow,
 } from '@triplit/db';
 import { Subject, throttle } from 'rxjs';
 import { getUserId } from './token';
@@ -42,7 +43,7 @@ export type ConnectParams = {
   apiKey: string;
   clientId: string;
   version?: number;
-  keepOpenOnSchemaMismatch?: boolean;
+  syncSchema?: boolean;
 };
 
 export interface SyncTransport {
@@ -65,7 +66,7 @@ export interface SyncOptions {
   server?: string;
   apiKey?: string;
   secure?: boolean;
-  keepOpenOnSchemaMismatch?: boolean;
+  syncSchema?: boolean;
   transport?: SyncTransport;
 }
 
@@ -125,8 +126,7 @@ class SyncEngine {
   constructor(options: SyncOptions, db: DB<any>) {
     this.syncOptions = options;
     this.syncOptions.secure = options.secure ?? true;
-    this.syncOptions.keepOpenOnSchemaMismatch =
-      options.keepOpenOnSchemaMismatch ?? false;
+    this.syncOptions.syncSchema = options.syncSchema ?? false;
     this.db = db;
     this.transport = options.transport ?? new WebSocketTransport();
     txCommits$.subscribe((txId) => {
@@ -170,7 +170,7 @@ class SyncEngine {
     return {
       clientId,
       version: schemaVersion,
-      keepOpenOnSchemaMismatch: this.syncOptions.keepOpenOnSchemaMismatch,
+      syncSchema: this.syncOptions.syncSchema,
       apiKey: this.syncOptions.apiKey,
       server: this.syncOptions.server,
       secure: this.syncOptions.secure,
@@ -312,9 +312,7 @@ class SyncEngine {
 
           // For now just flush outbox
           const triplesToSend = await outboxOperator.findByEntity();
-          if (triplesToSend.length > 0) {
-            this.transport.sendMessage('TRIPLES', { triples: triplesToSend });
-          }
+          this.sendTriples(triplesToSend);
         });
         for (const txId of txIds) {
           txCommits$.next(txId);
@@ -325,9 +323,7 @@ class SyncEngine {
         const triplesToSend = await this.db.tripleStore
           .setStorageScope(['outbox'])
           .findByEntity();
-        if (triplesToSend.length > 0) {
-          this.transport.sendMessage('TRIPLES', { triples: triplesToSend });
-        }
+        this.sendTriples(triplesToSend);
       }
     });
     this.transport.onOpen((evt) => {
@@ -419,13 +415,20 @@ class SyncEngine {
     }
   }
 
+  private sendTriples(triples: TripleRow[]) {
+    const triplesToSend = this.syncOptions.syncSchema
+      ? triples
+      : triples.filter(({ id }) => !id.includes('_metadata#_schema'));
+    if (triplesToSend.length === 0) return;
+    this.transport.sendMessage('TRIPLES', { triples: triplesToSend });
+  }
+
   async retry(txId: string) {
     const timestamp = JSON.parse(txId);
     const triplesToSend = await this.db.tripleStore
       .setStorageScope(['outbox'])
       .findByClientTimestamp(await this.db.getClientId(), 'eq', timestamp);
-    if (triplesToSend.length > 0)
-      this.transport.sendMessage('TRIPLES', { triples: triplesToSend });
+    if (triplesToSend.length > 0) this.sendTriples(triplesToSend);
   }
 
   async rollback(txIds: string | string[]) {

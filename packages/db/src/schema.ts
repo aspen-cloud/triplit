@@ -246,13 +246,15 @@ export function collectionsDefinitionToSchema(
   collections: CollectionsDefinition
 ): Models<any, any> {
   return Object.fromEntries(
-    Object.entries(collections).map(([collectionName, collectionDef]) => [
-      collectionName,
-      {
-        ...collectionDef,
-        attributes: typeFromJSON(collectionDef.attributes) as Model<any>,
-      },
-    ])
+    Object.entries(collections).map(([collectionName, collectionDef]) => {
+      return [
+        collectionName,
+        {
+          ...collectionDef,
+          attributes: typeFromJSON(collectionDef.attributes) as Model<any>,
+        },
+      ];
+    })
   );
 }
 
