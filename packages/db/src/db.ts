@@ -108,7 +108,12 @@ type StorageSource = AsyncTupleStorageApi;
 
 interface DBConfig<M extends Models<any, any> | undefined> {
   schema?: { collections: NonNullable<M>; version?: number };
-  migrations?: Migration[];
+  migrations?:
+    | Migration[]
+    | {
+        definitions: Migration[];
+        scopes?: string[];
+      };
   source?: StorageSource;
   sources?: Record<string, StorageSource>;
   tenantId?: string;
@@ -202,7 +207,10 @@ export default class DB<M extends Models<any, any> | undefined> {
     this.cache = new VariableAwareCache(this.tripleStore);
 
     this.ensureMigrated = migrations
-      ? this.migrate(migrations, 'up').catch((e) => {
+      ? (Array.isArray(migrations)
+          ? this.migrate(migrations, 'up')
+          : this.migrate(migrations.definitions, 'up', migrations.scopes)
+        ).catch((e) => {
           console.error(e);
         })
       : tripleStoreSchema
@@ -534,50 +542,93 @@ export default class DB<M extends Models<any, any> | undefined> {
     });
   }
 
-  private async applySchemaMigration(operations: DBOperation[]) {
+  private async applySchemaMigration(
+    migration: Migration,
+    direction: 'up' | 'down',
+    scopes?: string[]
+  ) {
+    const operations = migration[direction];
     // Need to read from triple store manually because we block db.transaction() api and schema access
     const { schema } = await readSchemaFromTripleStore(this.tripleStore);
-    await this.tripleStore.transact(async (tripTx) => {
-      const tx = new DBTransaction(tripTx, {
-        variables: this.variables,
-        schema,
-      });
-      for (const operation of operations) {
-        switch (operation[0]) {
-          case 'create_collection':
-            await tx.createCollection(operation[1]);
-            break;
-          case 'drop_collection':
-            await tx.dropCollection(operation[1]);
-            break;
-          case 'add_attribute':
-            await tx.addAttribute(operation[1]);
-            break;
-          case 'drop_attribute':
-            await tx.dropAttribute(operation[1]);
-            break;
-          case 'alter_attribute_option':
-            await tx.alterAttributeOption(operation[1]);
-            break;
-          case 'drop_attribute_option':
-            await tx.dropAttributeOption(operation[1]);
-            break;
-          case 'add_rule':
-            await tx.addRule(operation[1]);
-            break;
-          case 'drop_rule':
-            await tx.dropRule(operation[1]);
-            break;
-          default:
-            throw new InvalidMigrationOperationError(
-              `The operation ${operation[0]} is not recognized.`
-            );
+    await this.tripleStore.transact(
+      async (tripTx) => {
+        const tx = new DBTransaction(tripTx, {
+          variables: this.variables,
+          schema,
+        });
+        for (const operation of operations) {
+          switch (operation[0]) {
+            case 'create_collection':
+              await tx.createCollection(operation[1]);
+              break;
+            case 'drop_collection':
+              await tx.dropCollection(operation[1]);
+              break;
+            case 'add_attribute':
+              await tx.addAttribute(operation[1]);
+              break;
+            case 'drop_attribute':
+              await tx.dropAttribute(operation[1]);
+              break;
+            case 'alter_attribute_option':
+              await tx.alterAttributeOption(operation[1]);
+              break;
+            case 'drop_attribute_option':
+              await tx.dropAttributeOption(operation[1]);
+              break;
+            case 'add_rule':
+              await tx.addRule(operation[1]);
+              break;
+            case 'drop_rule':
+              await tx.dropRule(operation[1]);
+              break;
+            default:
+              throw new InvalidMigrationOperationError(
+                `The operation ${operation[0]} is not recognized.`
+              );
+          }
         }
-      }
-    });
+        // Keeping for backwards compatability, but it doesnt really need to be in the schema
+        await tripTx.insertTriples([
+          {
+            id: appendCollectionToId('_metadata', '_schema'),
+            attribute: ['_metadata', 'version'],
+            value: direction === 'up' ? migration.version : migration.parent,
+            timestamp: await tripTx.clock.getNextTimestamp(),
+            expired: false,
+          },
+        ]);
+        if (direction === 'up') {
+          // Add migration marker
+          await tripTx.updateMetadataTuples([
+            ['migrations', [`${migration.version}`, 'id'], migration.version],
+            [
+              'migrations',
+              [`${migration.version}`, 'parent'],
+              migration.parent,
+            ],
+            [
+              'migrations',
+              [`${migration.version}`, 'applied'],
+              new Date().toISOString(),
+            ],
+          ]);
+        } else if (direction === 'down') {
+          // remove migration marker
+          await tripTx.deleteMetadataTuples([
+            ['migrations', [`${migration.version}`]],
+          ]);
+        }
+      },
+      scopes ? { read: scopes, write: scopes } : undefined
+    );
   }
 
-  async migrate(migrations: Migration[], direction: 'up' | 'down') {
+  async migrate(
+    migrations: Migration[],
+    direction: 'up' | 'down',
+    scopes?: string[]
+  ) {
     const sortedMigrations = migrations.sort(
       (a, b) => (a.version - b.version) * (direction === 'up' ? 1 : -1)
     );
@@ -589,7 +640,7 @@ export default class DB<M extends Models<any, any> | undefined> {
       const dbVersion = storedSchema?.version ?? 0;
       if (canMigrate(migration, direction, dbVersion)) {
         try {
-          await this.applySchemaMigration(migration[direction]);
+          await this.applySchemaMigration(migration, direction, scopes);
         } catch (e) {
           console.error(
             `Error applying ${direction} migration with verison`,
@@ -597,21 +648,6 @@ export default class DB<M extends Models<any, any> | undefined> {
             e
           );
           throw e;
-        }
-        // Keeping for backwards compatability, but it doesnt really need to be in the schema
-        await this.tripleStore.insertTriples([
-          {
-            id: appendCollectionToId('_metadata', '_schema'),
-            attribute: ['_metadata', 'version'],
-            value: direction === 'up' ? migration.version : migration.parent,
-            timestamp: await this.tripleStore.clock.getNextTimestamp(),
-            expired: false,
-          },
-        ]);
-        if (direction === 'up') {
-          await this.addMigrationMarker(migration);
-        } else if (direction === 'down') {
-          await this.removeMigrationMarker(migration);
         }
       } else {
         console.info('skipping migration', migration);
@@ -639,26 +675,6 @@ export default class DB<M extends Models<any, any> | undefined> {
       undefined
     );
     return maxVersion;
-  }
-
-  async addMigrationMarker(migration: Migration) {
-    // Validation occurs at caller, so call with care
-    await this.tripleStore.updateMetadataTuples([
-      ['migrations', [`${migration.version}`, 'id'], migration.version],
-      ['migrations', [`${migration.version}`, 'parent'], migration.parent],
-      [
-        'migrations',
-        [`${migration.version}`, 'applied'],
-        new Date().toISOString(),
-      ],
-    ]);
-  }
-
-  async removeMigrationMarker(migration: Migration) {
-    // Validation occurs at caller, so call with care
-    await this.tripleStore.deleteMetadataTuples([
-      ['migrations', [`${migration.version}`]],
-    ]);
   }
 
   async getCollectionStats() {

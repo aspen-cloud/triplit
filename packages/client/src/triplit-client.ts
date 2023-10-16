@@ -148,7 +148,7 @@ class SyncEngine {
       }
     });
     this.queryFulfillmentCallbacks = new Map();
-    this.initialize();
+    this.setupWindowListeners();
   }
 
   get token() {
@@ -177,9 +177,7 @@ class SyncEngine {
     };
   }
 
-  private async initialize() {
-    await this.connect();
-
+  private async setupWindowListeners() {
     // Browser: on network connection / disconnection, connect / disconnect ws
     if (typeof window !== 'undefined') {
       const connectionHandler = this.connect.bind(this);
@@ -650,7 +648,12 @@ export class TriplitClient<M extends Models<any, any> | undefined = undefined> {
     this.db = new DB({
       clock: new DurableClock('cache', options?.db?.clientId),
       schema: options?.db?.schema,
-      migrations: options?.db?.migrations,
+      migrations: options?.db?.migrations
+        ? {
+            definitions: options.db.migrations,
+            scopes: ['cache'],
+          }
+        : undefined,
       variables: options?.db?.variables,
       sources: {
         //@ts-ignore
@@ -680,6 +683,9 @@ export class TriplitClient<M extends Models<any, any> | undefined = undefined> {
     }
 
     this.syncEngine = new SyncEngine(options?.sync ?? {}, this.db);
+    this.db.ensureMigrated.then(() => {
+      this.syncEngine.connect();
+    });
   }
 
   async transact(callback: (tx: DBTransaction<M>) => Promise<void>) {
