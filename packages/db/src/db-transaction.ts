@@ -173,25 +173,19 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
     if (metadataTriples.length === 0) return;
 
     /**
-     * We need to support tombstoning in entityToResultReducer to properly handle schema incremental schema changes
-     * When we expire, we delete the old value and insert a tombstone,
-     * but we're not set up to do anything with that tombstone so it does nothing on an incremental update.
-     *
-     * For now setting this to requery the schema on updates.
-     *
-     * As well (when going back to a true incremental update system), when using the migrations option in the DB constructor, we need to query the schema triples when the hook first fires to initialize _schema,
+     * When using the migrations option in the DB constructor, we need to query the schema triples when the hook first fires to initialize _schema,
      * otherwise the initial _schema value will just be the schema delta of the migration.
      */
-    const { schemaTriples } = await readSchemaFromTripleStore(tx);
-    // order matters here (may have attr + timestamp collisions inside a tx)
-    // TODO: we should fix that...
-    metadataTriples.unshift(...schemaTriples);
+    if (!this._schema) {
+      const { schemaTriples } = await readSchemaFromTripleStore(tx);
+      metadataTriples.unshift(...schemaTriples);
+    }
 
-    // Need to actually support tombstoning...or figure out how to properly read tombstones so theyre deleted from objects
     this._schema = metadataTriples.reduce(
       entityToResultReducer,
-      {} // this._schema ?? {}
+      this._schema ?? {}
     );
+
     // TODO: schema triples and type?
     const schemaDefinition = timestampedObjectToPlainObject(this._schema);
     this.schema = {
