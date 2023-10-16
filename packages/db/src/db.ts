@@ -418,7 +418,7 @@ export default class DB<M extends Models<any, any> | undefined> {
         subscriptionQuery,
         onResults,
         onError,
-        await this.getCollectionSchema(query.collectionName)
+        (await this.getSchema())?.collections
       );
       return unsub;
     };
