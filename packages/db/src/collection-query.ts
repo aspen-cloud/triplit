@@ -499,6 +499,7 @@ function subscribeSingleEntity<Q extends CollectionQuery<any>>(
     const { collectionName, entityId } = query;
     let entity: any;
     let triples: Map<string, TripleRow[]> = new Map();
+    const collectionSchema = schema && schema[query.collectionName]?.attributes;
     try {
       if (!entityId) throw new EntityIdMissingError();
       const internalEntityId = appendCollectionToId(collectionName, entityId);
@@ -511,7 +512,7 @@ function subscribeSingleEntity<Q extends CollectionQuery<any>>(
         : null;
       triples = fetchResult.triples;
       const results = new Map(
-        entity ? [[entityId, convertEntityToJS(entity, schema)]] : []
+        entity ? [[entityId, convertEntityToJS(entity, collectionSchema)]] : []
       ) as FetchResult<Q>;
 
       onResults([results, triples]);
@@ -549,9 +550,9 @@ function subscribeSingleEntity<Q extends CollectionQuery<any>>(
           }
           if (
             entity &&
-            doesEntityObjMatchWhere(entity, query.where ?? [], schema)
+            doesEntityObjMatchWhere(entity, query.where ?? [], collectionSchema)
           ) {
-            results.set(entityId, convertEntityToJS(entity, schema));
+            results.set(entityId, convertEntityToJS(entity, collectionSchema));
           } else {
             results.delete(entityId);
           }
