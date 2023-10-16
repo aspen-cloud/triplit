@@ -1,12 +1,7 @@
 import { FormatRegistry, Type } from '@sinclair/typebox';
 import { fullFormats } from 'ajv-formats/dist/formats.js';
-import { UserTypeOptions, ValueAttributeDefinition } from './serialization';
-import {
-  Nullable,
-  TimestampType,
-  calcDefaultValue,
-  userTypeOptionsAreValid,
-} from './base';
+import { UserTypeOptions } from './serialization';
+import { Nullable, calcDefaultValue, userTypeOptionsAreValid } from './base';
 import { TypeWithOptions, ValueInterface } from './value';
 import { Value } from '@sinclair/typebox/value';
 import { InvalidTypeOptionsError, SerializingError } from '../errors';
@@ -57,7 +52,7 @@ export function DateType<TypeOptions extends UserTypeOptions = {}>(
       >;
     },
     default() {
-      return calcDefaultValue(options);
+      return calcDefaultValue(options) as string | undefined;
     },
     convertJsonValueToJS(val) {
       return (val ? new Date(val) : null) as TypeWithOptions<Date, TypeOptions>;

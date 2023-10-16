@@ -3,7 +3,6 @@ import { RecordAttributeDefinition } from './serialization';
 import {
   ExtractDeserializedType,
   ExtractSerializedType,
-  ExtractTimestampedType,
   TypeInterface,
 } from './type';
 

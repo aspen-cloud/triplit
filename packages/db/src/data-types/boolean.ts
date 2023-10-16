@@ -1,10 +1,5 @@
 import { Type } from '@sinclair/typebox';
-import {
-  Nullable,
-  TimestampType,
-  calcDefaultValue,
-  userTypeOptionsAreValid,
-} from './base';
+import { Nullable, calcDefaultValue, userTypeOptionsAreValid } from './base';
 import { UserTypeOptions } from './serialization';
 import { TypeWithOptions, ValueInterface } from './value';
 import { Value } from '@sinclair/typebox/value';
@@ -46,7 +41,7 @@ export function BooleanType<TypeOptions extends UserTypeOptions = {}>(
       return val;
     },
     default() {
-      return calcDefaultValue(options);
+      return calcDefaultValue(options) as boolean | undefined;
     },
     validateInput(val: any) {
       const type = options.nullable ? Nullable(Type.Boolean()) : Type.Boolean();

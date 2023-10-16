@@ -1,5 +1,5 @@
 import { TNumber, TString, TBoolean } from '@sinclair/typebox';
-import { Operator, TimestampType } from './base';
+import { Operator } from './base';
 import { UserTypeOptions, ValueTypeKeys } from './serialization';
 import { TypeInterface } from './type';
 

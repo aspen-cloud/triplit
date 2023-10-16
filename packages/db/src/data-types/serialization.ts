@@ -42,6 +42,7 @@ export type SchemaDefinition = {
   collections: CollectionsDefinition;
 };
 
+// Could be nice to get a generic to determine the expected value of default
 export type UserTypeOptions = Static<typeof UserTypeOptionsSchema>;
 
 const DefaultFunctionSchema = Type.Object({

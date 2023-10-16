@@ -34,7 +34,7 @@ export function StringType<TypeOptions extends UserTypeOptions = {}>(
       const valid =
         (options.nullable && val === null) || typeof val === 'string';
       if (!valid) {
-        throw new SerializingError('string', val); //TODO: triplit error
+        throw new SerializingError('string', val);
       }
       return val;
     },
@@ -42,7 +42,7 @@ export function StringType<TypeOptions extends UserTypeOptions = {}>(
       return val;
     },
     default() {
-      return calcDefaultValue(options);
+      return calcDefaultValue(options) as string | undefined;
     },
     // THIS IS DB LEVEL VALIDATION!
     validateInput(val) {

@@ -6,7 +6,7 @@ export type CollectionInterface<
   TypeId extends CollectionTypeKeys = CollectionTypeKeys,
   JSType = any,
   JsonType = any,
-  SchemaType = any,
+  _SchemaType = any,
   Operators extends readonly Operator[] = readonly Operator[]
 > = TypeInterface<TypeId, JSType, JsonType, Operators> & {
   readonly items: ValueType<any>;

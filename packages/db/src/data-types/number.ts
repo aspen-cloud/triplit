@@ -1,10 +1,5 @@
 import { Type } from '@sinclair/typebox';
-import {
-  Nullable,
-  TimestampType,
-  calcDefaultValue,
-  userTypeOptionsAreValid,
-} from './base';
+import { Nullable, calcDefaultValue, userTypeOptionsAreValid } from './base';
 import { UserTypeOptions, ValueAttributeDefinition } from './serialization';
 import { TypeWithOptions, ValueInterface } from './value';
 import { Value } from '@sinclair/typebox/value';
@@ -18,7 +13,6 @@ export type NumberType<TypeOptions extends UserTypeOptions = {}> =
     'number',
     TypeWithOptions<number, TypeOptions>,
     TypeWithOptions<number, TypeOptions>,
-    [TypeWithOptions<number, TypeOptions>, TimestampType],
     NumberOperators
   >;
 export function NumberType<TypeOptions extends UserTypeOptions = {}>(
@@ -48,7 +42,7 @@ export function NumberType<TypeOptions extends UserTypeOptions = {}>(
       return val;
     },
     default() {
-      return calcDefaultValue(options);
+      return calcDefaultValue(options) as number | undefined;
     },
     validateInput(val: any) {
       const type = options.nullable ? Nullable(Type.Number()) : Type.Number();
