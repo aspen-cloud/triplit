@@ -1,15 +1,11 @@
 import { DataType } from './base';
 import { RecordAttributeDefinition } from './serialization';
-import {
-  ExtractDeserializedType,
-  ExtractSerializedType,
-  TypeInterface,
-} from './type';
+import { ExtractJSType, ExtractSerializedType, TypeInterface } from './type';
 
 export type RecordType<Properties extends { [k: string]: DataType }> =
   TypeInterface<
     'record',
-    { [k in keyof Properties]: ExtractDeserializedType<Properties[k]> },
+    { [k in keyof Properties]: ExtractJSType<Properties[k]> },
     { [k in keyof Properties]: ExtractSerializedType<Properties[k]> },
     // { [k in keyof Properties]: ExtractTimestampedType<Properties[k]> },
     readonly []
@@ -46,13 +42,24 @@ export function RecordType<Properties extends { [k: string]: DataType }>(
       return true; // TODO
     },
     convertJsonValueToJS(val) {
-      return Object.fromEntries(
-        Object.entries(val).map(([k, v]) => [
-          k,
+      const result: Partial<{
+        [K in keyof Properties]: ExtractJSType<Properties[K]>;
+      }> = {};
+      for (const k in val) {
+        if (Object.prototype.hasOwnProperty.call(val, k)) {
+          const v = val[k];
           // This is mostly to catch when "_collection" is included in the entity
-          properties[k] ? properties[k].convertJsonValueToJS(v) : k,
-        ])
-      );
+          result[k] = properties[k]
+            ? properties[k].convertJsonValueToJS(
+                // @ts-ignore
+                v
+              )
+            : k;
+        }
+      }
+      return result as {
+        [K in keyof Properties]: ExtractJSType<Properties[K]>;
+      };
     },
   };
 }

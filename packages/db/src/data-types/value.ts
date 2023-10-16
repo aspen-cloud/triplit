@@ -19,7 +19,6 @@ export type ValueInterface<
   Operators extends readonly Operator[] = readonly Operator[]
 > = TypeInterface<TypeId, JSType, JsonType, Operators> & {
   readonly options: UserTypeOptions;
-
-  // TODO: this is for sets...set keys will come from strings...might be a better place to put this
+  // Our current rule is that values can go into collections, need this for working with collections
   fromString(val: string): JSType;
 };

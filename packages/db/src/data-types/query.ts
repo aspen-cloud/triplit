@@ -2,7 +2,7 @@ import { CollectionQuery } from '../collection-query';
 import { Model } from '../schema';
 import { TypeInterface } from './type';
 
-type SubQuery<M extends Model<any>> = Pick<
+export type SubQuery<M extends Model<any> | undefined> = Pick<
   CollectionQuery<M>,
   'collectionName' | 'where'
 >;
@@ -10,7 +10,7 @@ type SubQuery<M extends Model<any>> = Pick<
 export type QueryType<Query extends SubQuery<any>> = TypeInterface<
   'query',
   Query,
-  Query,
+  string, //TODO: is this even applicable? ... might need to break it out into its own concepts we slowly add to
   readonly []
 > & {
   query: Query;
@@ -37,10 +37,7 @@ export function QueryType<Q extends SubQuery<any>>(query: Q): QueryType<Q> {
       return true; // TODO
     },
     convertJsonValueToJS(val) {
-      return JSON.parse(val);
-    },
-    fromString(str: string) {
-      return JSON.parse(str);
+      return JSON.parse(val) as Q;
     },
   };
 }

@@ -25,7 +25,7 @@ import { DateType } from './data-types/date';
 import { RecordType } from './data-types/record';
 import { SetType } from './data-types/set';
 import {
-  ExtractDeserializedType,
+  ExtractJSType,
   ExtractSerializedType,
   ExtractTimestampedType,
 } from './data-types/type';
@@ -112,8 +112,8 @@ export interface SetProxy<T> {
 
 type ProxyType<DT> = DT extends DataType
   ? DT extends SetType<infer Of>
-    ? SetProxy<ExtractDeserializedType<Of>>
-    : ExtractDeserializedType<DT>
+    ? SetProxy<ExtractJSType<Of>>
+    : ExtractJSType<DT>
   : never;
 
 // Pull out the proxy type from a model by checking the x-serialized-type
@@ -149,20 +149,18 @@ export type InsertTypeFromModel<M extends Model<any> | undefined> =
     ? {
         [k in keyof M as DataTypeHasNoDefault<M[k]> extends true
           ? k
-          : never]: ExtractDeserializedType<M[k]>;
+          : never]: ExtractJSType<M[k]>;
       } & {
         [k in keyof M as DataTypeHasDefault<M[k]> extends true
           ? k
-          : never]?: ExtractDeserializedType<M[k]>;
+          : never]?: ExtractJSType<M[k]>;
       }
     : any;
 
 export type JSONTypeFromModel<M extends Model<any> | undefined> =
   M extends Model<any>
     ? {
-        [k in keyof M]: M[k] extends DataType
-          ? ExtractDeserializedType<M[k]>
-          : never;
+        [k in keyof M]: M[k] extends DataType ? ExtractJSType<M[k]> : never;
       }
     : any;
 

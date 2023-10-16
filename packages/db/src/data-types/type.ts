@@ -2,7 +2,7 @@ import { Timestamp } from '../timestamp';
 import { Operator } from './base';
 import { AttributeDefinition } from './serialization';
 
-export type ExtractDeserializedType<T> = T extends TypeInterface<
+export type ExtractJSType<T> = T extends TypeInterface<
   infer _TypeId,
   infer DeserializedType
 >
@@ -20,7 +20,7 @@ export type ExtractSerializedType<T> = T extends TypeInterface<
 export type ExtractTimestampedType<T extends TypeInterface> =
   T extends TypeInterface<infer _TypeId, infer _JSType, infer JsonType, any>
     ? JsonType extends Record<string, infer Value>
-      ? Record<string, ExtractDeserializedType<Value>>
+      ? Record<string, ExtractJSType<Value>>
       : [JsonType, Timestamp]
     : never;
 
@@ -44,7 +44,7 @@ export type TypeInterface<
   // How to convert the input (e.g. from db.insert(..)) to the internal value
   convertInputToJson(val: JSType): JsonType;
 
-  convertJsonValueToJS(val: JSType): JSType;
+  convertJsonValueToJS(val: JsonType): JSType;
 
   default(): JsonType | undefined;
 

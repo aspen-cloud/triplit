@@ -1,10 +1,11 @@
 import { Static, Type } from '@sinclair/typebox';
 import { CollectionRules } from '../db';
+import { SubQuery } from './query';
 
 export const VALUE_TYPE_KEYS = ['string', 'number', 'boolean', 'date'] as const;
 export type ValueTypeKeys = (typeof VALUE_TYPE_KEYS)[number];
 
-export const COLLECTION_TYPE_KEYS = ['set', 'query'] as const;
+export const COLLECTION_TYPE_KEYS = ['set'] as const;
 export type CollectionTypeKeys = (typeof COLLECTION_TYPE_KEYS)[number];
 
 // TODO: add record type
@@ -22,11 +23,16 @@ export type CollectionAttributeDefinition = {
   type: CollectionTypeKeys;
   items: ValueAttributeDefinition;
 };
+export type QueryAttributeDefinition = {
+  type: 'query';
+  query: SubQuery<any>;
+};
 
 export type AttributeDefinition =
   | ValueAttributeDefinition
   | RecordAttributeDefinition
-  | CollectionAttributeDefinition;
+  | CollectionAttributeDefinition
+  | QueryAttributeDefinition;
 
 export interface CollectionDefinition {
   attributes: RecordAttributeDefinition;

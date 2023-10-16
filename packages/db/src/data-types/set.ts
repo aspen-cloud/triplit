@@ -5,15 +5,19 @@ import {
 } from '../errors';
 import { TimestampType, ValueType } from './base';
 import { CollectionInterface } from './collection';
-import { VALUE_TYPE_KEYS } from './serialization';
-import { ExtractDeserializedType } from './type';
+import {
+  CollectionAttributeDefinition,
+  VALUE_TYPE_KEYS,
+  ValueAttributeDefinition,
+} from './serialization';
+import { ExtractJSType } from './type';
 
 const SET_OPERATORS = ['=', '!='] as const;
 type SetOperators = typeof SET_OPERATORS;
 
 export type SetType<Items extends ValueType<any>> = CollectionInterface<
   'set',
-  Set<ExtractDeserializedType<Items>>,
+  Set<ExtractJSType<Items>>,
   Record<string, boolean>,
   Record<string, [boolean, TimestampType]>, // TODO: should be based on the type of the key
   SetOperators
@@ -30,9 +34,11 @@ export function SetType<Items extends ValueType<any>>(
     type: 'set',
     items,
     supportedOperations: SET_OPERATORS,
-    toJSON() {
-      const json = { type: this.type, items: this.items.toJSON() };
-      return json;
+    toJSON(): CollectionAttributeDefinition {
+      return {
+        type: this.type,
+        items: this.items.toJSON() as ValueAttributeDefinition,
+      };
     },
     convertInputToJson(val: Set<any>) {
       return [...val.values()].reduce((acc, key) => {
@@ -40,14 +46,14 @@ export function SetType<Items extends ValueType<any>>(
       }, {});
     },
     default() {
-      return new Set();
+      return new Set(); // TODO: should return record
     },
     convertJsonValueToJS(val) {
       return new Set(
         Object.entries(val)
           .filter(([_k, v]) => !!v)
-          .map(([k, _v]) => this.items.fromString(k))
-      ); // TODO: figure out proper set deserialzied type
+          .map(([k, _v]) => this.items.fromString(k) as ExtractJSType<Items>)
+      );
     },
     validateInput(_val: any) {
       throw new NotImplementedError('Set validation');
