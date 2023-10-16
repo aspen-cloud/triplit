@@ -1,4 +1,4 @@
-import { CollectionQuery, doesEntityObjMatchWhere } from './collection-query';
+import { CollectionQuery } from './collection-query';
 import {
   InvalidEntityIdError,
   InvalidInternalEntityIdError,
@@ -16,9 +16,6 @@ import {
   schemaToTriples,
   triplesToSchema,
 } from './schema';
-import type DB from './db';
-import type { DBTransaction } from './db-transaction';
-import { CollectionNameFromModels } from './db';
 import { Attribute, TripleStore, TripleStoreApi, Value } from './triple-store';
 import { VALUE_TYPE_KEYS } from './data-types/serialization';
 
@@ -95,7 +92,7 @@ export function* filterStatementIterator<M extends Model<any> | undefined>(
 
 export function someFilterStatements<M extends Model<any> | undefined>(
   statements: QueryWhere<M>,
-  someFunction: (statement: FilterStatement<M>) => boolean
+  someFunction: (statement: SubQuery | FilterStatement<M>) => boolean
 ): boolean {
   for (const statement of filterStatementIterator(statements)) {
     if (someFunction(statement)) return true;
@@ -175,7 +172,7 @@ export async function overrideStoredSchema(
     timestamp: ts,
     expired: false,
   }));
-  await tripleStore.insertTriples(normalizedTriples, false);
+  await tripleStore.insertTriples(normalizedTriples);
 }
 
 export function validateTriple(

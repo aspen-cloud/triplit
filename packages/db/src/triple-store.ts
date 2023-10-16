@@ -351,10 +351,7 @@ export class TripleStoreOperator implements TripleStoreApi {
     await this.insertTriples([tripleRow]);
   }
 
-  async insertTriples(
-    triplesInput: TripleRow[],
-    shouldValidate = true
-  ): Promise<void> {
+  async insertTriples(triplesInput: TripleRow[]): Promise<void> {
     if (!triplesInput.length) return;
     for (const hook of this.hooks.beforeInsert) {
       await hook(triplesInput, this);
@@ -363,14 +360,13 @@ export class TripleStoreOperator implements TripleStoreApi {
       if (triple.value === undefined) {
         throw new InvalidTripleStoreValueError(undefined);
       }
-      await this.addTripleToIndex(this.tupleOperator, triple, shouldValidate);
+      await this.addTripleToIndex(this.tupleOperator, triple);
     }
   }
 
   private async addTripleToIndex(
     tx: ScopedMultiTupleOperator<TupleIndex>,
-    tripleInput: TripleRow,
-    shouldValidate = true
+    tripleInput: TripleRow
   ) {
     const { id: id, attribute, value, timestamp, expired } = tripleInput;
 
@@ -508,10 +504,9 @@ export class TripleStoreOperator implements TripleStoreApi {
     const timestamp = await this.getTransactionTimestamp();
     const existingTriples = await this.findByEntityAttribute(id, attribute);
     await this.deleteTriples(existingTriples);
-    await this.insertTriples(
-      [{ id, attribute, value: null, timestamp, expired: true }],
-      false
-    );
+    await this.insertTriples([
+      { id, attribute, value: null, timestamp, expired: true },
+    ]);
   }
 
   async expireEntity(id: EntityId) {
@@ -546,8 +541,7 @@ export class TripleStoreOperator implements TripleStoreApi {
         value: null,
         timestamp,
         expired: true,
-      })),
-      false
+      }))
     );
   }
 }
@@ -828,9 +822,9 @@ export class TripleStore implements TripleStoreApi {
     });
   }
 
-  async insertTriples(triplesInput: TripleRow[], shouldValidate = true) {
+  async insertTriples(triplesInput: TripleRow[]) {
     await this.transact(async (tx) => {
-      await tx.insertTriples(triplesInput, shouldValidate);
+      await tx.insertTriples(triplesInput);
     });
   }
 

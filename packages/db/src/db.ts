@@ -285,7 +285,7 @@ export default class DB<M extends Models<any, any> | undefined> {
     { scope, skipRules = false }: FetchOptions = {}
   ) {
     await this.ensureMigrated;
-    const { query: fetchQuery, collection } = await this.prepareQuery(query, {
+    const { query: fetchQuery } = await this.prepareQuery(query, {
       scope,
       skipRules,
     });
@@ -306,7 +306,7 @@ export default class DB<M extends Models<any, any> | undefined> {
     { scope, skipRules = false }: FetchOptions = {}
   ) {
     await this.ensureMigrated;
-    const { query: fetchQuery, collection } = await this.prepareQuery(query, {
+    const { query: fetchQuery } = await this.prepareQuery(query, {
       scope,
       skipRules,
     });
@@ -599,18 +599,15 @@ export default class DB<M extends Models<any, any> | undefined> {
           throw e;
         }
         // Keeping for backwards compatability, but it doesnt really need to be in the schema
-        await this.tripleStore.insertTriples(
-          [
-            {
-              id: appendCollectionToId('_metadata', '_schema'),
-              attribute: ['_metadata', 'version'],
-              value: direction === 'up' ? migration.version : migration.parent,
-              timestamp: await this.tripleStore.clock.getNextTimestamp(),
-              expired: false,
-            },
-          ],
-          false
-        );
+        await this.tripleStore.insertTriples([
+          {
+            id: appendCollectionToId('_metadata', '_schema'),
+            attribute: ['_metadata', 'version'],
+            value: direction === 'up' ? migration.version : migration.parent,
+            timestamp: await this.tripleStore.clock.getNextTimestamp(),
+            expired: false,
+          },
+        ]);
         if (direction === 'up') {
           await this.addMigrationMarker(migration);
         } else if (direction === 'down') {

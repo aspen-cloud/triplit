@@ -5,7 +5,6 @@ import {
   TripleStoreBeforeCommitHook,
   TripleStoreBeforeInsertHook,
   TripleStoreTransaction,
-  findByEntity,
   isTupleEntityDeleteMarker,
 } from './triple-store';
 import {
@@ -20,7 +19,6 @@ import {
   collectionsDefinitionToSchema,
   serializeClientModel,
   InsertTypeFromModel,
-  Schema as S,
 } from './schema';
 import { nanoid } from 'nanoid';
 import CollectionQueryBuilder, {

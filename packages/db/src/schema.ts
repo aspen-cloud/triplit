@@ -1,8 +1,7 @@
 import { TObject } from '@sinclair/typebox';
-import { ValuePointer } from '@sinclair/typebox/value';
 import { InvalidSchemaPathError } from './errors';
 import type { CollectionRules } from './db';
-import { Timestamp, timestampCompare } from './timestamp';
+import { Timestamp } from './timestamp';
 import type { Attribute, EAV, TripleRow } from './triple-store';
 import { objectToTuples } from './utils';
 import { constructEntity } from './query';
