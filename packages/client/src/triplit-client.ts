@@ -751,7 +751,7 @@ export class TriplitClient<M extends Models<any, any> | undefined = undefined> {
     query: CQ
   ) {
     const scope = parseScope(query);
-    return this.db.fetch(query, { scope, skipRules: SKIP_RULES });
+    return this.db.fetch(query, { scope });
   }
 
   async fetchById<CN extends CollectionNameFromModels<M>>(
@@ -763,6 +763,11 @@ export class TriplitClient<M extends Models<any, any> | undefined = undefined> {
     const results = await this.fetch(query, options);
     // TODO: fixup some type loss here..
     return results.get(id);
+  }
+
+  async fetchOne<CQ extends ClientQuery<ModelFromModels<M, any>>>(query: CQ) {
+    const scope = parseScope(query);
+    return await this.db.fetchOne(query, { scope, skipRules: SKIP_RULES });
   }
 
   insert<CN extends CollectionNameFromModels<M>>(

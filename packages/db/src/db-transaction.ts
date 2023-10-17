@@ -535,6 +535,15 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
     return result.has(id) ? result.get(id) : null;
   }
 
+  async fetchOne<Q extends CollectionQuery<ModelFromModels<M>>>(
+    query: Q,
+    { scope, skipRules = false }: DBFetchOptions = {}
+  ) {
+    query.limit = 1;
+    const result = await this.fetch(query, { scope, skipRules });
+    return result.size > 0 ? result.entries().next().value : null;
+  }
+
   async checkOrCreateSchema() {
     const existingSchema = await this.fetchById(
       this.METADATA_COLLECTION_NAME,

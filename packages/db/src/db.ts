@@ -388,6 +388,16 @@ export default class DB<M extends Models<any, any> | undefined> {
     return result.has(id) ? result.get(id) : null;
   }
 
+  async fetchOne<Q extends CollectionQuery<ModelFromModels<M>>>(
+    query: Q,
+    { scope, skipRules = false }: FetchOptions = {}
+  ) {
+    query.limit = 1;
+    await this.ensureMigrated;
+    const result = await this.fetch(query, { scope, skipRules });
+    return result.size > 0 ? result : null;
+  }
+
   async insert<CN extends CollectionNameFromModels<M>>(
     collectionName: CN,
     doc: InsertTypeFromModel<ModelFromModels<M, CN>>,

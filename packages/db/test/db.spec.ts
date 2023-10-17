@@ -340,6 +340,28 @@ describe('Database API', () => {
   });
 });
 
+it('supports fetchOne', async () => {
+  const db = new DB({ source: new InMemoryTupleStorage() });
+  await db.insert('Student', { name: 'John Doe' }, '1');
+  await db.insert('Student', { name: 'Jane Doe' }, '2');
+  await db.insert('Student', { name: 'John Smith' }, '3');
+  await db.insert('Student', { name: 'Jane Smith' }, '4');
+  const john = await db.fetchOne(
+    CollectionQueryBuilder('Student')
+      .where([['name', 'like', 'John%']])
+      .build()
+  );
+  expect(john).toBeTruthy();
+  expect(john.size).toBe(1);
+  expect(Array.from(john?.values())[0]?.name).toBe('John Doe');
+  const noStudent = await db.fetchOne(
+    CollectionQueryBuilder('Student')
+      .where([['name', 'like', '%Etta%']])
+      .build()
+  );
+  expect(noStudent).toBeNull();
+});
+
 describe('OR queries', () => {
   const db = new DB({ source: new InMemoryTupleStorage() });
   it('supports OR queries', async () => {
