@@ -39,12 +39,14 @@ import {
 import { Operator } from './data-types/base';
 import { VariableAwareCache } from './variable-aware-cache';
 import { isTimestampedEntityDeleted } from './entity';
+import { CollectionNameFromModels, ModelFromModels } from './db';
 
 export default function CollectionQueryBuilder<
-  M extends Model<any> | undefined
->(collectionName: string, params?: Query<M>) {
+  M extends Models<any, any> | undefined,
+  CN extends CollectionNameFromModels<M>
+>(collectionName: CN, params?: Query<ModelFromModels<M, CN>>) {
   // TODO fixup ts so that select/where are actually optional
-  const query: CollectionQuery<M> = {
+  const query: CollectionQuery<M, CN> = {
     collectionName,
     ...params,
     where: params?.where ?? [],
@@ -53,18 +55,24 @@ export default function CollectionQueryBuilder<
   };
   return Builder(query, {
     protectedFields: ['collectionName'],
-    inputTransformers: QUERY_INPUT_TRANSFORMERS<Query<M>, M>(),
+    inputTransformers: QUERY_INPUT_TRANSFORMERS<
+      Query<ModelFromModels<M, CN>>,
+      ModelFromModels<M, CN>
+    >(),
   });
 }
 
-export type CollectionQuery<M extends Model<any> | undefined> = Query<M> & {
-  collectionName: string;
+export type CollectionQuery<
+  M extends Models<any, any> | undefined,
+  CN extends CollectionNameFromModels<M>
+> = Query<ModelFromModels<M, CN>> & {
+  collectionName: CN;
 };
 
-export type FetchResult<C extends CollectionQuery<any>> =
-  C extends CollectionQuery<infer M>
-    ? M extends Model<any>
-      ? Map<string, JSONTypeFromModel<M>>
+export type FetchResult<C extends CollectionQuery<any, any>> =
+  C extends CollectionQuery<infer M, infer CN>
+    ? M extends Models<any, any>
+      ? Map<string, JSONTypeFromModel<ModelFromModels<M, CN>>>
       : M extends undefined
       ? Map<string, any>
       : never
@@ -84,7 +92,7 @@ export interface FetchOptions {
  * @param query
  * @param options
  */
-export async function fetch<Q extends CollectionQuery<any>>(
+export async function fetch<Q extends CollectionQuery<any, any>>(
   tx: TripleStoreApi,
   query: Q,
   options?: FetchOptions & {
@@ -92,7 +100,7 @@ export async function fetch<Q extends CollectionQuery<any>>(
     cache?: VariableAwareCache<any>;
   }
 ): Promise<FetchResult<Q>>;
-export async function fetch<Q extends CollectionQuery<any>>(
+export async function fetch<Q extends CollectionQuery<any, any>>(
   tx: TripleStoreApi,
   query: Q,
   options?: FetchOptions & {
@@ -100,7 +108,7 @@ export async function fetch<Q extends CollectionQuery<any>>(
     cache?: VariableAwareCache<any>;
   }
 ): Promise<{ results: FetchResult<Q>; triples: Map<string, TripleRow[]> }>;
-export async function fetch<Q extends CollectionQuery<any>>(
+export async function fetch<Q extends CollectionQuery<any, any>>(
   tx: TripleStoreApi,
   query: Q,
   {
@@ -292,7 +300,7 @@ export async function fetch<Q extends CollectionQuery<any>>(
   ) as FetchResult<Q>;
 }
 
-export function doesEntityObjMatchWhere<Q extends CollectionQuery<any>>(
+export function doesEntityObjMatchWhere<Q extends CollectionQuery<any, any>>(
   entityObj: any,
   where: Q['where'],
   schema?: CollectionQuerySchema<Q>
@@ -492,10 +500,10 @@ async function getCollectionEntities(
   return triplesToEntities(collectionTriples);
 }
 
-type CollectionQuerySchema<Q extends CollectionQuery<any>> =
-  Q extends CollectionQuery<infer M> ? M : never;
+export type CollectionQuerySchema<Q extends CollectionQuery<any, any>> =
+  Q extends CollectionQuery<infer M, infer CN> ? ModelFromModels<M, CN> : never;
 
-function subscribeSingleEntity<Q extends CollectionQuery<any>>(
+function subscribeSingleEntity<Q extends CollectionQuery<any, any>>(
   tripleStore: TripleStore,
   query: Q,
   onResults: (
@@ -585,7 +593,7 @@ function subscribeSingleEntity<Q extends CollectionQuery<any>>(
   };
 }
 
-export function subscribeResultsAndTriples<Q extends CollectionQuery<any>>(
+export function subscribeResultsAndTriples<Q extends CollectionQuery<any, any>>(
   tripleStore: TripleStore,
   query: Q,
   onResults: (
@@ -794,7 +802,7 @@ export function subscribeResultsAndTriples<Q extends CollectionQuery<any>>(
   };
 }
 
-export function subscribe<Q extends CollectionQuery<any>>(
+export function subscribe<Q extends CollectionQuery<any, any>>(
   tripleStore: TripleStore,
   query: Q,
   onResults: (results: FetchResult<Q>) => void,
@@ -844,7 +852,7 @@ function stringifyEA(entity: EntityId, attribute: Attribute) {
   return `${entity}|${attribute}`;
 }
 
-export function subscribeTriples<Q extends CollectionQuery<any>>(
+export function subscribeTriples<Q extends CollectionQuery<any, any>>(
   tripleStore: TripleStore,
   query: Q,
   onResults: (results: Map<string, TripleRow[]>) => void,

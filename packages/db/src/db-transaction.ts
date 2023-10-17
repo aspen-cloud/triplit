@@ -88,7 +88,7 @@ function checkWriteRules<M extends Models<any, any> | undefined>(
     let query = {
       where: filters,
       vars: variables,
-    } as CollectionQuery<ModelFromModels<M>>;
+    } as CollectionQuery<M, any>;
     query = replaceVariablesInQuery(query);
     const satisfiedRule = doesEntityObjMatchWhere(
       entity,
@@ -229,7 +229,7 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
     return collectionSchema;
   }
 
-  private addReadRulesToQuery<Q extends CollectionQuery<ModelFromModels<M>>>(
+  private addReadRulesToQuery<Q extends CollectionQuery<M, any>>(
     query: Q,
     collection: CollectionFromModels<M>
   ): Q {
@@ -470,7 +470,7 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
     });
   }
 
-  async fetch<Q extends CollectionQuery<ModelFromModels<M>>>(
+  async fetch<Q extends CollectionQuery<M, any>>(
     query: Q,
     { skipRules = false }: DBFetchOptions = {}
   ): Promise<FetchResult<Q>> {
@@ -522,7 +522,7 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
     params?: Query<ModelFromModels<M, CN>>
   ) {
     // TODO: When fixing the type here, ensure the built output looks correct (had to manually assign this to work in the past)
-    return CollectionQueryBuilder(collectionName as string, params);
+    return CollectionQueryBuilder(collectionName, params);
   }
 
   async fetchById<CN extends CollectionNameFromModels<M>>(

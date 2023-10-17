@@ -1,13 +1,14 @@
 import { CollectionQuery } from '../collection-query';
-import { Model } from '../schema';
+import { CollectionNameFromModels } from '../db';
+import { Models } from '../schema';
 import { TypeInterface } from './type';
 
-export type SubQuery<M extends Model<any> | undefined> = Pick<
-  CollectionQuery<M>,
-  'collectionName' | 'where'
->;
+export type SubQuery<
+  M extends Models<any, any> | undefined,
+  CN extends CollectionNameFromModels<M>
+> = Pick<CollectionQuery<M, CN>, 'collectionName' | 'where'>;
 
-export type QueryType<Query extends SubQuery<any>> = TypeInterface<
+export type QueryType<Query extends SubQuery<any, any>> = TypeInterface<
   'query',
   Query,
   string, //TODO: is this even applicable? ... might need to break it out into its own concepts we slowly add to
@@ -16,7 +17,9 @@ export type QueryType<Query extends SubQuery<any>> = TypeInterface<
   query: Query;
 };
 
-export function QueryType<Q extends SubQuery<any>>(query: Q): QueryType<Q> {
+export function QueryType<Q extends SubQuery<any, any>>(
+  query: Q
+): QueryType<Q> {
   return {
     type: 'query' as const,
     supportedOperations: [] as const, // 'hasKey', etc

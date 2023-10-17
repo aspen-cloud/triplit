@@ -68,7 +68,7 @@ export function replaceVariablesInFilterStatements<
 }
 
 export function replaceVariablesInQuery<
-  Q extends Pick<CollectionQuery<any>, 'where' | 'vars'>
+  Q extends Pick<CollectionQuery<any, any>, 'where' | 'vars'>
 >(query: Q): Q {
   // const variables = { ...(db.variables ?? {}), ...(query.vars ?? {}) };
   const where = replaceVariablesInFilterStatements(

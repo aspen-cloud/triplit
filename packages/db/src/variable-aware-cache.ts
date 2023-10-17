@@ -1,12 +1,13 @@
 import {
   CollectionQuery,
+  CollectionQuerySchema,
   FetchResult,
   subscribeResultsAndTriples,
 } from './collection-query';
 import { ModelFromModels } from './db';
 import { mapFilterStatements } from './db-helpers';
 import { FilterStatement, isFilterStatement } from './query';
-import { JSONTypeFromModel, Model, Models, getSchemaFromPath } from './schema';
+import { Models, getSchemaFromPath } from './schema';
 import * as TB from '@sinclair/typebox/value';
 import { TripleRow, TripleStore } from './triple-store';
 import { QueryCacheError } from './errors';
@@ -24,19 +25,20 @@ export class VariableAwareCache<Schema extends Models<any, any>> {
     this.cache = new Map();
   }
 
-  static canCacheQuery<M extends Model<any> | undefined>(
-    query: CollectionQuery<M>,
-    model?: M
-  ) {
+  static canCacheQuery<
+    M extends Models<any, any> | undefined,
+    Q extends CollectionQuery<any, any>
+  >(query: Q, model?: ModelFromModels<M> | undefined) {
     // if (!model) return false;
     if (query.where.some((f) => !(f instanceof Array) && !('exists' in f)))
       return false;
     const statements = mapFilterStatements(query.where, (f) => f).filter(
       isFilterStatement
-    ) as FilterStatement<M>[];
-    const variableStatements: FilterStatement<M>[] = statements.filter(
-      ([, , v]) => typeof v === 'string' && v.startsWith('$')
-    );
+    ) as FilterStatement<ModelFromModels<M>>[];
+    const variableStatements: FilterStatement<ModelFromModels<M>>[] =
+      statements.filter(
+        ([, , v]) => typeof v === 'string' && v.startsWith('$')
+      );
     if (variableStatements.length !== 1) return false;
     // if (variableStatements[0][1] !== '=') return false;
     if (!['=', '<', '<=', '>', '>=', '!='].includes(variableStatements[0][1]))
@@ -51,7 +53,7 @@ export class VariableAwareCache<Schema extends Models<any, any>> {
     return true;
   }
 
-  async createView<M extends Model<any>>(viewQuery: CollectionQuery<M>) {
+  async createView<Q extends CollectionQuery<Schema, any>>(viewQuery: Q) {
     return new Promise<void>((resolve) => {
       const id = this.viewQueryToId(viewQuery);
       subscribeResultsAndTriples(
@@ -69,7 +71,7 @@ export class VariableAwareCache<Schema extends Models<any, any>> {
     return TB.Value.Hash(viewQuery);
   }
 
-  async resolveFromCache<Q extends CollectionQuery<ModelFromModels<Schema>>>(
+  async resolveFromCache<Q extends CollectionQuery<Schema, any>>(
     query: Q
   ): Promise<{
     results: FetchResult<Q>;
@@ -169,8 +171,10 @@ export class VariableAwareCache<Schema extends Models<any, any>> {
     };
   }
 
-  queryToViews<Q extends CollectionQuery<ModelFromModels<Schema>>>(query: Q) {
-    const variableFilters: FilterStatement<ModelFromModels<Schema>>[] = [];
+  queryToViews<Q extends CollectionQuery<Schema, any>>(query: Q) {
+    const variableFilters: FilterStatement<
+      CollectionQuerySchema<Q> | undefined
+    >[] = [];
     const nonVariableFilters = query.where.filter((filter) => {
       if (!(filter instanceof Array)) return true;
       const [_prop, _op, val] = filter;
@@ -191,7 +195,7 @@ export class VariableAwareCache<Schema extends Models<any, any>> {
             ...(query.order ?? []),
           ],
         },
-      ] as CollectionQuery<ModelFromModels<Schema>>[],
+      ] as Q[],
       variableFilters,
     };
   }

@@ -25,7 +25,7 @@ export type CollectionAttributeDefinition = {
 };
 export type QueryAttributeDefinition = {
   type: 'query';
-  query: SubQuery<any>;
+  query: SubQuery<any, any>;
 };
 
 export type AttributeDefinition =

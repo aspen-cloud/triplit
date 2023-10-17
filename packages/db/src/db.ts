@@ -248,7 +248,7 @@ export default class DB<M extends Models<any, any> | undefined> {
   static ABORT_TRANSACTION = Symbol('abort transaction');
 
   // TODO: move to shared method with db-transaction
-  private addReadRulesToQuery<Q extends CollectionQuery<ModelFromModels<M>>>(
+  private addReadRulesToQuery<Q extends CollectionQuery<M, any>>(
     query: Q,
     collection: CollectionFromModels<M>
   ): Q {
@@ -288,7 +288,7 @@ export default class DB<M extends Models<any, any> | undefined> {
     this.variables = { ...this.variables, ...variables };
   }
 
-  async fetch<Q extends CollectionQuery<ModelFromModels<M, any>>>(
+  async fetch<Q extends CollectionQuery<M, any>>(
     query: Q,
     { scope, skipRules = false }: FetchOptions = {}
   ) {
@@ -309,7 +309,7 @@ export default class DB<M extends Models<any, any> | undefined> {
     );
   }
 
-  async fetchTriples<Q extends CollectionQuery<ModelFromModels<M>>>(
+  async fetchTriples<Q extends CollectionQuery<M, any>>(
     query: Q,
     { scope, skipRules = false }: FetchOptions = {}
   ) {
@@ -332,7 +332,7 @@ export default class DB<M extends Models<any, any> | undefined> {
     ].flat();
   }
 
-  private async prepareQuery<Q extends CollectionQuery<ModelFromModels<M>>>(
+  private async prepareQuery<Q extends CollectionQuery<M, any>>(
     query: Q,
     options: FetchOptions
   ) {
@@ -419,7 +419,7 @@ export default class DB<M extends Models<any, any> | undefined> {
     }, options);
   }
 
-  subscribe<Q extends CollectionQuery<ModelFromModels<M>>>(
+  subscribe<Q extends CollectionQuery<M, any>>(
     query: Q,
     onResults: (results: FetchResult<Q>) => void,
     onError?: (error: any) => void,
@@ -449,7 +449,7 @@ export default class DB<M extends Models<any, any> | undefined> {
     };
   }
 
-  subscribeTriples<Q extends CollectionQuery<ModelFromModels<M>>>(
+  subscribeTriples<Q extends CollectionQuery<M, any>>(
     query: Q,
     onResults: (results: TripleRow[]) => void,
     onError?: (error: any) => void,
