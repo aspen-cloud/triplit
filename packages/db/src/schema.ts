@@ -275,7 +275,7 @@ export function triplesToSchema(triples: TripleRow[]) {
     appendCollectionToId('_metadata', '_schema')
   );
   const schemaData = timestampedObjectToPlainObject(schemaEntity);
-  const version = schemaData.version || 0;
+  const version = (schemaData.version as number) || 0;
   const collections = schemaData.collections || {};
   return { version, collections: collectionsDefinitionToSchema(collections) };
 }

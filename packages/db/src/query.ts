@@ -1,5 +1,5 @@
 import { ValuePointer } from '@sinclair/typebox/value';
-import { Model, Timestamped, TimestampedTypeFromModel } from './schema';
+import { Model, Timestamped } from './schema';
 import { Attribute, EntityId, TripleRow } from './triple-store';
 import { QueryClauseFormattingError } from './errors';
 import { TimestampType } from './data-types/base';

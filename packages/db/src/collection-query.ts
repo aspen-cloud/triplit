@@ -862,7 +862,7 @@ function stringifyEA(entity: EntityId, attribute: Attribute) {
 }
 
 export function subscribeTriples<
-  M extends Models<any, any>,
+  M extends Models<any, any> | undefined,
   Q extends CollectionQuery<M, any>
 >(
   tripleStore: TripleStore,

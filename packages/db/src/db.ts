@@ -26,6 +26,7 @@ import {
   mapFilterStatements,
   readSchemaFromTripleStore,
   overrideStoredSchema,
+  StoreSchema,
 } from './db-helpers';
 import { VariableAwareCache } from './variable-aware-cache';
 
@@ -222,22 +223,10 @@ export default class DB<M extends Models<any, any> | undefined> {
     return ts[1];
   }
 
-  // Had TS issues using StoreSchema<M> here
-  async getSchema(): Promise<
-    | {
-        version: any;
-        collections: M;
-      }
-    | undefined
-  > {
+  async getSchema(): Promise<StoreSchema<M> | undefined> {
     await this.ensureMigrated;
     const { schema } = await readSchemaFromTripleStore(this.tripleStore);
-    return schema as
-      | {
-          version: any;
-          collections: M;
-        }
-      | undefined;
+    return schema as StoreSchema<M> | undefined;
   }
 
   async getSchemaTriples() {
@@ -442,7 +431,7 @@ export default class DB<M extends Models<any, any> | undefined> {
         skipRules,
       });
 
-      const unsub = subscribe(
+      const unsub = subscribe<M, Q>(
         scope ? this.tripleStore.setStorageScope(scope) : this.tripleStore,
         subscriptionQuery,
         onResults,
@@ -467,21 +456,17 @@ export default class DB<M extends Models<any, any> | undefined> {
     { scope, skipRules = false }: { scope?: string[]; skipRules?: boolean } = {}
   ) {
     const startSubscription = async () => {
-      let { query: subscriptionQuery, collection } = await this.prepareQuery(
-        query,
-        {
-          scope,
-          skipRules,
-        }
-      );
+      let { query: subscriptionQuery } = await this.prepareQuery(query, {
+        scope,
+        skipRules,
+      });
 
-      const unsub = subscribeTriples(
+      const unsub = subscribeTriples<M, Q>(
         scope ? this.tripleStore.setStorageScope(scope) : this.tripleStore,
         subscriptionQuery,
         (tripMap) => onResults([...tripMap.values()].flat()),
         onError,
-        //@ts-ignore
-        collection?.attributes
+        (await this.getSchema())?.collections
       );
       return unsub;
     };
@@ -512,7 +497,7 @@ export default class DB<M extends Models<any, any> | undefined> {
     collectionName: CN,
     params?: Query<ModelFromModels<M, CN>>
   ) {
-    return CollectionQueryBuilder(collectionName as string, params);
+    return CollectionQueryBuilder(collectionName, params);
   }
 
   async createCollection(params: CreateCollectionOperation[1]) {
