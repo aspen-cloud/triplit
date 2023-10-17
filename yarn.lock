@@ -3481,7 +3481,6 @@ __metadata:
     "@vitest/coverage-v8": ^0.33.0
     "@vitest/ui": ^0.33.0
     ajv-formats: ^2.1.1
-    idb: ^7.1.1
     nanoid: ^3.0.0
     parcel: ^2.9.3
     pino: ^8.11.0
@@ -3492,7 +3491,6 @@ __metadata:
     tuple-database: ^2.2.0
     typescript: ^5.2.2
     vitest: ^0.32.2
-    zod: ^3.20.6
   languageName: unknown
   linkType: soft
 
@@ -7421,7 +7419,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"idb@npm:7.1.1, idb@npm:^7.1.1":
+"idb@npm:7.1.1":
   version: 7.1.1
   resolution: "idb@npm:7.1.1"
   checksum: 1973c28d53c784b177bdef9f527ec89ec239ec7cf5fcbd987dae75a16c03f5b7dfcc8c6d3285716fd0309dd57739805390bd9f98ce23b1b7d8849a3b52de8d56
@@ -13264,7 +13262,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"zod@npm:3.21.4, zod@npm:^3.20.6":
+"zod@npm:3.21.4":
   version: 3.21.4
   resolution: "zod@npm:3.21.4"
   checksum: f185ba87342ff16f7a06686767c2b2a7af41110c7edf7c1974095d8db7a73792696bcb4a00853de0d2edeb34a5b2ea6a55871bc864227dace682a0a28de33e1f
