@@ -54,10 +54,9 @@ import {
   validateTriple,
   readSchemaFromTripleStore,
   StoreSchema,
-  mapFilterStatements,
   splitIdParts,
   getCollectionSchema,
-  addReadRulesToQuery,
+  prepareQuery,
 } from './db-helpers';
 import { Query, constructEntity, entityToResultReducer } from './query';
 import { serializedItemToTuples } from './utils';
@@ -444,45 +443,12 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
 
   async fetch<Q extends CollectionQuery<M, any>>(
     query: Q,
-    { skipRules = false }: DBFetchOptions = {}
+    { scope, skipRules = false }: DBFetchOptions = {}
   ): Promise<FetchResult<Q>> {
-    let fetchQuery = { ...query };
-    const collectionSchema = await getCollectionSchema(
-      this,
-      fetchQuery.collectionName
-    );
-    if (collectionSchema && !skipRules) {
-      fetchQuery = addReadRulesToQuery<M, Q>(fetchQuery, collectionSchema);
-    }
-    fetchQuery.vars = { ...this.variables, ...fetchQuery.vars };
-    fetchQuery.where = mapFilterStatements(
-      fetchQuery.where,
-      ([prop, op, val]) => [
-        prop,
-        op,
-        val instanceof Date ? val.toISOString() : val,
-      ]
-    );
-    if (collectionSchema) {
-      fetchQuery.where = mapFilterStatements(
-        fetchQuery.where,
-        ([prop, op, val]) => {
-          const attributeType = getSchemaFromPath(
-            collectionSchema.attributes,
-            prop.split('.')
-          );
-          if (attributeType.type !== 'query') {
-            return [prop, op, val];
-          }
-          const [_collectionName, ...path] = prop.split('.');
-          const subquery = { ...attributeType.query };
-          subquery.where = [...subquery.where, [path.join('.'), op, val]];
-          return {
-            exists: subquery,
-          };
-        }
-      );
-    }
+    const { query: fetchQuery } = await prepareQuery(this, query, {
+      scope,
+      skipRules,
+    });
     return fetch(this.storeTx, fetchQuery, {
       schema: (await this.getSchema())?.collections,
       includeTriples: false,
@@ -503,6 +469,7 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
     id: string,
     { skipRules = false }: DBFetchOptions = {}
   ) {
+    // TODO: prepare query?
     const query = this.query(collectionName).entityId(id).build();
     const result = await this.fetch(query, { skipRules });
     return result.has(id) ? result.get(id) : null;
@@ -512,6 +479,7 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
     query: Q,
     { scope, skipRules = false }: DBFetchOptions = {}
   ) {
+    // TODO: prepare query?
     query.limit = 1;
     const result = await this.fetch(query, { scope, skipRules });
     return result.size > 0 ? result.entries().next().value : null;

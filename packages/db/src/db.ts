@@ -5,7 +5,6 @@ import {
   Model,
   Models,
   InsertTypeFromModel,
-  getSchemaFromPath,
 } from './schema';
 import { AsyncTupleStorageApi } from 'tuple-database';
 import CollectionQueryBuilder, {
@@ -23,12 +22,10 @@ import { Clock } from './clocks/clock';
 import { DBTransaction } from './db-transaction';
 import {
   appendCollectionToId,
-  mapFilterStatements,
   readSchemaFromTripleStore,
   overrideStoredSchema,
   StoreSchema,
-  getCollectionSchema,
-  addReadRulesToQuery,
+  prepareQuery,
 } from './db-helpers';
 import { VariableAwareCache } from './variable-aware-cache';
 
@@ -121,11 +118,6 @@ interface DBConfig<M extends Models<any, any> | undefined> {
   tenantId?: string;
   clock?: Clock;
   variables?: Record<string, any>;
-}
-
-interface FetchOptions {
-  scope?: string[];
-  skipRules?: boolean;
 }
 
 const DEFAULT_STORE_KEY = 'default';
@@ -267,10 +259,10 @@ export default class DB<M extends Models<any, any> | undefined> {
 
   async fetch<Q extends CollectionQuery<M, any>>(
     query: Q,
-    { scope, skipRules = false }: FetchOptions = {}
+    { scope, skipRules = false }: DBFetchOptions = {}
   ) {
     await this.ensureMigrated;
-    const { query: fetchQuery } = await this.prepareQuery(query, {
+    const { query: fetchQuery } = await prepareQuery(this, query, {
       scope,
       skipRules,
     });
@@ -288,10 +280,10 @@ export default class DB<M extends Models<any, any> | undefined> {
 
   async fetchTriples<Q extends CollectionQuery<M, any>>(
     query: Q,
-    { scope, skipRules = false }: FetchOptions = {}
+    { scope, skipRules = false }: DBFetchOptions = {}
   ) {
     await this.ensureMigrated;
-    const { query: fetchQuery } = await this.prepareQuery(query, {
+    const { query: fetchQuery } = await prepareQuery(this, query, {
       scope,
       skipRules,
     });
@@ -309,51 +301,6 @@ export default class DB<M extends Models<any, any> | undefined> {
     ].flat();
   }
 
-  private async prepareQuery<Q extends CollectionQuery<M, any>>(
-    query: Q,
-    options: FetchOptions
-  ) {
-    await this.ensureMigrated;
-    let fetchQuery = { ...query };
-    const collectionSchema = await getCollectionSchema(
-      this,
-      fetchQuery.collectionName
-    );
-    if (collectionSchema && !options.skipRules) {
-      fetchQuery = addReadRulesToQuery<M, Q>(fetchQuery, collectionSchema);
-    }
-    fetchQuery.vars = { ...this.variables, ...(fetchQuery.vars ?? {}) };
-    fetchQuery.where = mapFilterStatements(
-      fetchQuery.where,
-      ([prop, op, val]) => [
-        prop,
-        op,
-        val instanceof Date ? val.toISOString() : val,
-      ]
-    );
-    if (collectionSchema) {
-      fetchQuery.where = mapFilterStatements(
-        fetchQuery.where,
-        ([prop, op, val]) => {
-          const attributeType = getSchemaFromPath(
-            collectionSchema.attributes,
-            prop.split('.')
-          );
-          if (attributeType.type !== 'query') {
-            return [prop, op, val];
-          }
-          const [_collectionName, ...path] = prop.split('.');
-          const subquery = { ...attributeType.query };
-          subquery.where = [...subquery.where, [path.join('.'), op, val]];
-          return {
-            exists: subquery,
-          };
-        }
-      );
-    }
-    return { query: fetchQuery, collection: collectionSchema };
-  }
-
   // TODO: we could probably infer a type here
   async fetchById<CN extends CollectionNameFromModels<M>>(
     collectionName: CN,
@@ -361,6 +308,7 @@ export default class DB<M extends Models<any, any> | undefined> {
     { skipRules = false }: DBFetchOptions = {}
   ) {
     await this.ensureMigrated;
+    // TODO: prepare query?
     const query = this.query(collectionName).entityId(id).build();
     const result = await this.fetch(query, { skipRules });
     return result.has(id) ? result.get(id) : null;
@@ -368,10 +316,11 @@ export default class DB<M extends Models<any, any> | undefined> {
 
   async fetchOne<Q extends CollectionQuery<M, any>>(
     query: Q,
-    { scope, skipRules = false }: FetchOptions = {}
+    { scope, skipRules = false }: DBFetchOptions = {}
   ) {
     query.limit = 1;
     await this.ensureMigrated;
+    // TODO: prepare query?
     const result = await this.fetch(query, { scope, skipRules });
     return result.size > 0 ? result : null;
   }
@@ -404,7 +353,8 @@ export default class DB<M extends Models<any, any> | undefined> {
     { scope, skipRules = false }: { scope?: string[]; skipRules?: boolean } = {}
   ) {
     const startSubscription = async () => {
-      let { query: subscriptionQuery } = await this.prepareQuery(query, {
+      await this.ensureMigrated;
+      let { query: subscriptionQuery } = await prepareQuery(this, query, {
         scope,
         skipRules,
       });
@@ -434,7 +384,8 @@ export default class DB<M extends Models<any, any> | undefined> {
     { scope, skipRules = false }: { scope?: string[]; skipRules?: boolean } = {}
   ) {
     const startSubscription = async () => {
-      let { query: subscriptionQuery } = await this.prepareQuery(query, {
+      await this.ensureMigrated;
+      let { query: subscriptionQuery } = await prepareQuery(this, query, {
         scope,
         skipRules,
       });

@@ -18,7 +18,11 @@ import {
 } from './schema';
 import { Attribute, TripleStore, TripleStoreApi, Value } from './triple-store';
 import { VALUE_TYPE_KEYS } from './data-types/serialization';
-import DB, { CollectionFromModels, CollectionNameFromModels } from './db';
+import DB, {
+  CollectionFromModels,
+  CollectionNameFromModels,
+  DBFetchOptions,
+} from './db';
 import { DBTransaction } from './db-transaction';
 
 const ID_SEPARATOR = '#';
@@ -104,7 +108,9 @@ export function someFilterStatements<M extends Model<any> | undefined>(
 
 export function mapFilterStatements<M extends Model<any> | undefined>(
   statements: QueryWhere<M>,
-  mapFunction: (statement: FilterStatement<M>) => FilterStatement<M>
+  mapFunction: (
+    statement: SubQuery | FilterStatement<M>
+  ) => SubQuery | FilterStatement<M>
 ): QueryWhere<M> {
   return statements.map((filter) => {
     // TODO this doesn't feel right to just exclude sub-queries here
@@ -245,4 +251,44 @@ export function addReadRulesToQuery<
     return { ...query, where: updatedWhere };
   }
   return query;
+}
+
+export async function prepareQuery<
+  M extends Models<any, any> | undefined,
+  Q extends CollectionQuery<M, any>
+>(tx: DB<M> | DBTransaction<M>, query: Q, options: DBFetchOptions) {
+  let fetchQuery = { ...query };
+  const collectionSchema = await getCollectionSchema(
+    tx,
+    fetchQuery.collectionName
+  );
+  if (collectionSchema && !options.skipRules) {
+    fetchQuery = addReadRulesToQuery<M, Q>(fetchQuery, collectionSchema);
+  }
+  fetchQuery.vars = { ...tx.variables, ...(fetchQuery.vars ?? {}) };
+  fetchQuery.where = mapFilterStatements(fetchQuery.where, (statement) => {
+    if (!Array.isArray(statement)) return statement;
+    const [prop, op, val] = statement;
+    return [prop, op, val instanceof Date ? val.toISOString() : val];
+  });
+  if (collectionSchema) {
+    fetchQuery.where = mapFilterStatements(fetchQuery.where, (statement) => {
+      if (!Array.isArray(statement)) return statement;
+      const [prop, op, val] = statement;
+      const attributeType = getSchemaFromPath(
+        collectionSchema.attributes,
+        prop.split('.')
+      );
+      if (attributeType.type !== 'query') {
+        return [prop, op, val];
+      }
+      const [_collectionName, ...path] = prop.split('.');
+      const subquery = { ...attributeType.query };
+      subquery.where = [...subquery.where, [path.join('.'), op, val]];
+      return {
+        exists: subquery,
+      };
+    });
+  }
+  return { query: fetchQuery, collection: collectionSchema };
 }
