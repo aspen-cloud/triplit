@@ -56,6 +56,7 @@ import {
   StoreSchema,
   mapFilterStatements,
   splitIdParts,
+  getCollectionSchema,
 } from './db-helpers';
 import { Query, constructEntity, entityToResultReducer } from './query';
 import { serializedItemToTuples } from './utils';
@@ -213,22 +214,6 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
   readonly METADATA_COLLECTION_NAME =
     '_metadata' as CollectionNameFromModels<M>;
 
-  // get schema() {
-  //   return this.storeTx.schema?.collections;
-  // }
-  async getCollectionSchema<CN extends CollectionNameFromModels<M>>(
-    collectionName: CN
-  ) {
-    const res = await this.getSchema();
-    const { collections } = res ?? {};
-    if (!collections || !collections[collectionName]) return undefined;
-    // TODO: i think we need some stuff in the triple store...
-    const collectionSchema = collections[
-      collectionName
-    ] as CollectionFromModels<M, CN>;
-    return collectionSchema;
-  }
-
   private addReadRulesToQuery<Q extends CollectionQuery<M, any>>(
     query: Q,
     collection: CollectionFromModels<M>
@@ -265,7 +250,7 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
       const validationError = validateExternalId(id);
       if (validationError) throw validationError;
     }
-    const collectionSchema = await this.getCollectionSchema(collectionName);
+    const collectionSchema = await getCollectionSchema(this, collectionName);
 
     // TODO apply defaults before "serializing"
     // serialize the doc values
@@ -475,8 +460,9 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
     { skipRules = false }: DBFetchOptions = {}
   ): Promise<FetchResult<Q>> {
     let fetchQuery = { ...query };
-    const collectionSchema = await this.getCollectionSchema(
-      fetchQuery.collectionName as CollectionNameFromModels<M>
+    const collectionSchema = await getCollectionSchema(
+      this,
+      fetchQuery.collectionName
     );
     if (collectionSchema && !skipRules) {
       fetchQuery = this.addReadRulesToQuery(fetchQuery, collectionSchema);

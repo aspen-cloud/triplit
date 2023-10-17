@@ -18,6 +18,8 @@ import {
 } from './schema';
 import { Attribute, TripleStore, TripleStoreApi, Value } from './triple-store';
 import { VALUE_TYPE_KEYS } from './data-types/serialization';
+import DB, { CollectionFromModels, CollectionNameFromModels } from './db';
+import { DBTransaction } from './db-transaction';
 
 const ID_SEPARATOR = '#';
 
@@ -215,4 +217,18 @@ export function validateTriple(
       attribute as string[],
       value
     );
+}
+
+export async function getCollectionSchema<
+  M extends Models<any, any> | undefined,
+  CN extends CollectionNameFromModels<M>
+>(tx: DB<M> | DBTransaction<M>, collectionName: CN) {
+  const res = await tx.getSchema();
+  const { collections } = res ?? {};
+  if (!collections || !collections[collectionName]) return undefined;
+  const collectionSchema = collections[collectionName] as CollectionFromModels<
+    M,
+    CN
+  >;
+  return collectionSchema;
 }

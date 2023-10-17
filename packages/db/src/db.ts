@@ -27,6 +27,7 @@ import {
   readSchemaFromTripleStore,
   overrideStoredSchema,
   StoreSchema,
+  getCollectionSchema,
 } from './db-helpers';
 import { VariableAwareCache } from './variable-aware-cache';
 
@@ -235,16 +236,6 @@ export default class DB<M extends Models<any, any> | undefined> {
     return schemaTriples;
   }
 
-  async getCollectionSchema<CN extends CollectionNameFromModels<M>>(
-    collectionName: CN
-  ): Promise<CollectionFromModels<M, CN> | undefined> {
-    const collections = (await this.getSchema())?.collections;
-    if (!collections || !collections[collectionName]) return undefined;
-    // TODO: i think we need some stuff in the triple store...
-    const collectionSchema = collections[collectionName];
-    return collectionSchema;
-  }
-
   static ABORT_TRANSACTION = Symbol('abort transaction');
 
   // TODO: move to shared method with db-transaction
@@ -338,8 +329,9 @@ export default class DB<M extends Models<any, any> | undefined> {
   ) {
     await this.ensureMigrated;
     let fetchQuery = { ...query };
-    const collectionSchema = await this.getCollectionSchema(
-      fetchQuery.collectionName as CollectionNameFromModels<M>
+    const collectionSchema = await getCollectionSchema(
+      this,
+      fetchQuery.collectionName
     );
     if (collectionSchema && !options.skipRules) {
       fetchQuery = this.addReadRulesToQuery(fetchQuery, collectionSchema);
