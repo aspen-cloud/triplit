@@ -4,7 +4,7 @@ import { Callout } from 'nextra-theme-docs';
 
 ## Fetch
 
-Data can be fetched with a single request. The Triplit Client provides two methods `fetch` and `fetchOne` which will make a single request to your database. How that request interacts with the local database and remote database can be configured by setting proper [options](#fetch-options).
+Data can be fetched with a single request. The Triplit Client provides two methods `fetch` and `fetchById` which will make a single request to your database. How that request interacts with the local database and remote database can be configured by setting proper [options](#fetch-options).
 
 `fetch()` executes the specified query and returns a Map with entity ids as keys and the associated entities as values. For example:
 
@@ -16,18 +16,18 @@ const query = client.query('employees').build();
 const result = await client.fetch(query, options); // Map<string, { name: string }>
 ```
 
-`fetchOne()` queries for a single entity by its id and returns the entity if it is found or `undefined` if it is not. For example:
+`fetchById()` queries for a single entity by its id and returns the entity if it is found or `undefined` if it is not. For example:
 
 ```typescript
 await client.insert('employees', { name: 'Philip J. Fry' }, 'Fry');
 await client.insert('employees', { name: 'Turanga Leela' }, 'Leela');
 
-const fry = await client.fetchOne('employees', 'Fry', options); // { name: 'Philip J. Fry' }
-const leela = await client.fetchOne('employees', 'Leela', options); // { name: 'Turanga Leela' }
-const bender = await client.fetchOne('employees', 'Bender', options); // undefined
+const fry = await client.fetchById('employees', 'Fry', options); // { name: 'Philip J. Fry' }
+const leela = await client.fetchById('employees', 'Leela', options); // { name: 'Turanga Leela' }
+const bender = await client.fetchById('employees', 'Bender', options); // undefined
 ```
 
-`fetchOne` is equivalent to building a query with the [entityId](/queries#entity-id) parameter and pulling out the proper result from the result set.
+`fetchById` is equivalent to building a query with the [entityId](/queries#entity-id) parameter and pulling out the proper result from the result set.
 
 ## Fetch options
 

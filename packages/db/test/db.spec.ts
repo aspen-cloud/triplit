@@ -2569,7 +2569,7 @@ describe('Rules', () => {
       );
     });
 
-    it('fetchOne: filters results based on rules', async () => {
+    it('fetchById: filters results based on rules', async () => {
       await testDBAndTransaction(
         () => db,
         async (db) => {
@@ -2581,7 +2581,7 @@ describe('Rules', () => {
       );
     });
 
-    it('fetchOne: doesnt filter rules if skipRules is set', async () => {
+    it('fetchById: doesnt filter rules if skipRules is set', async () => {
       await testDBAndTransaction(
         () => db,
         async (db) => {

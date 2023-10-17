@@ -754,7 +754,7 @@ export class TriplitClient<M extends Models<any, any> | undefined = undefined> {
     return this.db.fetch(query, { scope, skipRules: SKIP_RULES });
   }
 
-  async fetchOne<CN extends CollectionNameFromModels<M>>(
+  async fetchById<CN extends CollectionNameFromModels<M>>(
     collectionName: CN,
     id: string,
     options?: FetchOptions
