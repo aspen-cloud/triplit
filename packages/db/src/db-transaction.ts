@@ -535,7 +535,7 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
     return result.has(id) ? result.get(id) : null;
   }
 
-  async fetchOne<Q extends CollectionQuery<ModelFromModels<M>>>(
+  async fetchOne<Q extends CollectionQuery<M, any>>(
     query: Q,
     { scope, skipRules = false }: DBFetchOptions = {}
   ) {
