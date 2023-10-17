@@ -28,6 +28,18 @@ export type FilterStatement<
   M extends Model<any> ? M['properties'][K]['operators'] : string,
   Value // TODO: We could make this tighter by inspecting the type
 ];
+
+export function isFilterStatement(
+  filter: WhereFilter<any>
+): filter is FilterStatement<any> {
+  return (
+    filter instanceof Array &&
+    filter.length === 3 &&
+    typeof filter[0] === 'string' &&
+    typeof filter[1] === 'string'
+  );
+}
+
 export type FilterGroup<M extends Model<any> | undefined> = {
   mod: 'or' | 'and';
   filters: WhereFilter<M>[];

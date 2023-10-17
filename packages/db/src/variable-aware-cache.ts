@@ -5,13 +5,13 @@ import {
 } from './collection-query';
 import { ModelFromModels } from './db';
 import { mapFilterStatements } from './db-helpers';
-import { FilterStatement } from './query';
-import { Model, Models, getSchemaFromPath } from './schema';
+import { FilterStatement, isFilterStatement } from './query';
+import { JSONTypeFromModel, Model, Models, getSchemaFromPath } from './schema';
 import * as TB from '@sinclair/typebox/value';
 import { TripleRow, TripleStore } from './triple-store';
 import { QueryCacheError } from './errors';
 
-export class VariableAwareCache<M extends Models<any, any>> {
+export class VariableAwareCache<Schema extends Models<any, any>> {
   cache: Map<
     BigInt,
     {
@@ -24,20 +24,19 @@ export class VariableAwareCache<M extends Models<any, any>> {
     this.cache = new Map();
   }
 
-  static canCacheQuery<Q extends CollectionQuery<ModelFromModels<any>>>(
-    query: Q,
-    model?: Model
+  static canCacheQuery<M extends Model<any> | undefined>(
+    query: CollectionQuery<M>,
+    model?: M
   ) {
     // if (!model) return false;
     if (query.where.some((f) => !(f instanceof Array) && !('exists' in f)))
       return false;
     const statements = mapFilterStatements(query.where, (f) => f).filter(
-      (f) => f instanceof Array
+      isFilterStatement
+    ) as FilterStatement<M>[];
+    const variableStatements: FilterStatement<M>[] = statements.filter(
+      ([, , v]) => typeof v === 'string' && v.startsWith('$')
     );
-    const variableStatements: FilterStatement<ModelFromModels<M>>[] =
-      statements.filter(
-        ([, , v]) => typeof v === 'string' && v.startsWith('$')
-      );
     if (variableStatements.length !== 1) return false;
     // if (variableStatements[0][1] !== '=') return false;
     if (!['=', '<', '<=', '>', '>=', '!='].includes(variableStatements[0][1]))
@@ -52,9 +51,7 @@ export class VariableAwareCache<M extends Models<any, any>> {
     return true;
   }
 
-  async createView<Q extends CollectionQuery<ModelFromModels<M>>>(
-    viewQuery: Q
-  ) {
+  async createView<M extends Model<any>>(viewQuery: CollectionQuery<M>) {
     return new Promise<void>((resolve) => {
       const id = this.viewQueryToId(viewQuery);
       subscribeResultsAndTriples(
@@ -72,13 +69,14 @@ export class VariableAwareCache<M extends Models<any, any>> {
     return TB.Value.Hash(viewQuery);
   }
 
-  async resolveFromCache<Q extends CollectionQuery<ModelFromModels<M>>>(
+  async resolveFromCache<Q extends CollectionQuery<ModelFromModels<Schema>>>(
     query: Q
   ): Promise<{
     results: FetchResult<Q>;
     triples: Map<string, TripleRow[]>;
   }> {
     const { views, variableFilters } = this.queryToViews(query);
+
     const id = this.viewQueryToId(views[0]);
     // console.log('attempting to use index for', id);
     if (!this.cache.has(id)) {
@@ -86,7 +84,7 @@ export class VariableAwareCache<M extends Models<any, any>> {
     }
     // TODO support multiple variable clauses
     const [prop, op, varStr] = variableFilters[0];
-    const varKey = varStr.slice(1);
+    const varKey = (varStr as string).slice(1);
     const varValue = query.vars![varKey];
     const view = this.cache.get(id)!;
     const viewResultEntries = [...view.results.entries()];
@@ -143,7 +141,7 @@ export class VariableAwareCache<M extends Models<any, any>> {
         ...viewResultEntries.slice(end),
       ];
       return {
-        results: new Map(resultEntries),
+        results: new Map(resultEntries) as FetchResult<Q>,
         triples: new Map(
           resultEntries.map(([id, _]) => [id, view.triples.get(id)!])
         ),
@@ -162,16 +160,17 @@ export class VariableAwareCache<M extends Models<any, any>> {
       );
     }
     const resultEntries = viewResultEntries.slice(start, end + 1);
+
     return {
-      results: new Map(resultEntries),
+      results: new Map(resultEntries) as FetchResult<Q>,
       triples: new Map(
         resultEntries.map(([id, _]) => [id, view.triples.get(id)!])
       ),
     };
   }
 
-  queryToViews<Q extends CollectionQuery<ModelFromModels<M>>>(query: Q) {
-    const variableFilters: FilterStatement<ModelFromModels<M>>[] = [];
+  queryToViews<Q extends CollectionQuery<ModelFromModels<Schema>>>(query: Q) {
+    const variableFilters: FilterStatement<ModelFromModels<Schema>>[] = [];
     const nonVariableFilters = query.where.filter((filter) => {
       if (!(filter instanceof Array)) return true;
       const [_prop, _op, val] = filter;
@@ -192,7 +191,7 @@ export class VariableAwareCache<M extends Models<any, any>> {
             ...(query.order ?? []),
           ],
         },
-      ],
+      ] as CollectionQuery<ModelFromModels<Schema>>[],
       variableFilters,
     };
   }
