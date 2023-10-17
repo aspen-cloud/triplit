@@ -503,14 +503,17 @@ async function getCollectionEntities(
 export type CollectionQuerySchema<Q extends CollectionQuery<any, any>> =
   Q extends CollectionQuery<infer M, infer CN> ? ModelFromModels<M, CN> : never;
 
-function subscribeSingleEntity<Q extends CollectionQuery<any, any>>(
+function subscribeSingleEntity<
+  M extends Models<any, any> | undefined,
+  Q extends CollectionQuery<M, any>
+>(
   tripleStore: TripleStore,
   query: Q,
   onResults: (
     args: [results: FetchResult<Q>, newTriples: Map<string, TripleRow[]>]
   ) => void,
   onError?: (error: any) => void,
-  schema?: CollectionQuerySchema<Q>
+  schema?: M
 ) {
   const asyncUnSub = async () => {
     const { collectionName, entityId } = query;
@@ -593,14 +596,17 @@ function subscribeSingleEntity<Q extends CollectionQuery<any, any>>(
   };
 }
 
-export function subscribeResultsAndTriples<Q extends CollectionQuery<any, any>>(
+export function subscribeResultsAndTriples<
+  M extends Models<any, any> | undefined,
+  Q extends CollectionQuery<M, any>
+>(
   tripleStore: TripleStore,
   query: Q,
   onResults: (
     args: [results: FetchResult<Q>, newTriples: Map<string, TripleRow[]>]
   ) => void,
   onError?: (error: any) => void,
-  schema?: Models<any, any>
+  schema?: M
 ) {
   const order = query.order;
   const limit = query.limit;
@@ -802,12 +808,15 @@ export function subscribeResultsAndTriples<Q extends CollectionQuery<any, any>>(
   };
 }
 
-export function subscribe<Q extends CollectionQuery<any, any>>(
+export function subscribe<
+  M extends Models<any, any> | undefined,
+  Q extends CollectionQuery<M, any>
+>(
   tripleStore: TripleStore,
   query: Q,
   onResults: (results: FetchResult<Q>) => void,
   onError?: (error: any) => void,
-  schema?: CollectionQuerySchema<Q>
+  schema?: M
 ) {
   if (query.entityId) {
     return subscribeSingleEntity(
@@ -852,12 +861,15 @@ function stringifyEA(entity: EntityId, attribute: Attribute) {
   return `${entity}|${attribute}`;
 }
 
-export function subscribeTriples<Q extends CollectionQuery<any, any>>(
+export function subscribeTriples<
+  M extends Models<any, any>,
+  Q extends CollectionQuery<M, any>
+>(
   tripleStore: TripleStore,
   query: Q,
   onResults: (results: Map<string, TripleRow[]>) => void,
   onError?: (error: any) => void,
-  schema?: CollectionQuerySchema<Q>
+  schema?: M
 ) {
   if (query.entityId) {
     return subscribeSingleEntity(

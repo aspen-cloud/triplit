@@ -26,7 +26,6 @@ import {
   mapFilterStatements,
   readSchemaFromTripleStore,
   overrideStoredSchema,
-  StoreSchema,
 } from './db-helpers';
 import { VariableAwareCache } from './variable-aware-cache';
 
@@ -223,10 +222,22 @@ export default class DB<M extends Models<any, any> | undefined> {
     return ts[1];
   }
 
-  async getSchema(): Promise<StoreSchema<M>> {
+  // Had TS issues using StoreSchema<M> here
+  async getSchema(): Promise<
+    | {
+        version: any;
+        collections: M;
+      }
+    | undefined
+  > {
     await this.ensureMigrated;
     const { schema } = await readSchemaFromTripleStore(this.tripleStore);
-    return schema as StoreSchema<M>;
+    return schema as
+      | {
+          version: any;
+          collections: M;
+        }
+      | undefined;
   }
 
   async getSchemaTriples() {
