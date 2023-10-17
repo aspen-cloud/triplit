@@ -267,7 +267,6 @@ class SyncEngine {
         const { payload } = message;
         const triples = payload.triples;
         const queryIds = payload.forQueries;
-        console.log(this.queryFulfillmentCallbacks);
         for (const qId of queryIds) {
           const callback = this.queryFulfillmentCallbacks.get(qId);
           if (callback) {
