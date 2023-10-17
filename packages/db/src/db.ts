@@ -36,12 +36,12 @@ import {
 } from './data-types/serialization';
 import { triplesToObject } from './utils';
 
-export interface Rule<M extends Model> {
+export interface Rule<M extends Model<any>> {
   filter: QueryWhere<M>;
   description?: string;
 }
 
-export interface CollectionRules<M extends Model> {
+export interface CollectionRules<M extends Model<any>> {
   read?: Record<string, Rule<M>>;
   write?: Record<string, Rule<M>>;
   // insert?: Rule<M>[];
