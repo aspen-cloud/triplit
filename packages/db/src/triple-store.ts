@@ -16,7 +16,7 @@ import MultiTupleStore, {
 } from './multi-tuple-store';
 import { Clock } from './clocks/clock';
 import { MemoryClock } from './clocks/memory-clock';
-import { triplesToEntities, constructEntity, ValueCursor } from './query';
+import { ValueCursor } from './query';
 import {
   IndexNotFoundError,
   InvalidTimestampIndexScanError,
@@ -125,12 +125,17 @@ function isTupleStorage(object: any): object is AsyncTupleStorageApi {
 
 export interface TripleStoreApi {
   // Mutation methods
-  insertTriple(tripleRow: TripleRow): void;
-  insertTriples(triplesInput: TripleRow[]): void;
-  deleteTriple(tripleRow: TripleRow): void;
-  deleteTriples(triplesInput: TripleRow[]): void;
+  insertTriple(tripleRow: TripleRow): Promise<void>;
+  insertTriples(triplesInput: TripleRow[]): Promise<void>;
+  deleteTriple(tripleRow: TripleRow): Promise<void>;
+  deleteTriples(triplesInput: TripleRow[]): Promise<void>;
   setValue(...value: EAV): Promise<void>;
   setValues(values: EAV[]): Promise<void>;
+  expireEntity(id: EntityId): Promise<void>;
+  expireEntityAttribute(id: EntityId, attribute: Attribute): Promise<void>;
+  expireEntityAttributes(
+    values: { id: EntityId; attribute: Attribute }[]
+  ): Promise<void>;
 
   // Read methods
   findByCollection(
@@ -162,15 +167,6 @@ export interface TripleStoreApi {
     direction?: 'ASC' | 'DESC'
   ): Promise<TripleRow[]>;
 
-  // findByVAE(
-  //   [value, attribute, entityId]: [
-  //     value?: Value,
-  //     attribute?: Attribute,
-  //     entityId?: EntityId
-  //   ],
-  //   direction?: 'ASC' | 'DESC'
-  // ): Promise<TripleRow[]>;
-
   findByEntity(id?: EntityId): Promise<TripleRow[]>;
 
   findByEntityAttribute(
@@ -180,7 +176,16 @@ export interface TripleStoreApi {
 
   findByAttribute(attribute: Attribute): Promise<TripleRow[]>;
 
-  // findByValue(value: Value): Promise<TripleRow[]>;
+  findValuesInRange(
+    attribute: Attribute,
+    constraints:
+      | {
+          greaterThan?: ValueCursor;
+          lessThan?: ValueCursor;
+          direction?: 'ASC' | 'DESC';
+        }
+      | undefined
+  ): Promise<TripleRow[]>;
 
   // metadata operations
   readMetadataTuples(entityId: string, attribute?: Attribute): Promise<EAV[]>;
@@ -208,35 +213,31 @@ type TripleStoreHooks = {
   beforeInsert: TripleStoreBeforeInsertHook[];
 };
 
-export class TripleStoreOperator implements TripleStoreApi {
+// A helper class for scoping, basically what a transaction does without commit/cancel
+export class TripleStoreTxOperator implements TripleStoreApi {
+  parentTx: TripleStoreTransaction;
   tupleOperator: ScopedMultiTupleOperator<TupleIndex>;
   private txMetadataListeners: Set<MetadataListener> = new Set();
 
   readonly clock: Clock;
 
-  assignedTimestamp?: Timestamp;
-
   hooks: TripleStoreHooks;
 
   constructor({
+    parentTx,
     tupleOperator,
     clock,
     hooks,
   }: {
+    parentTx: TripleStoreTransaction;
     tupleOperator: ScopedMultiTupleOperator<TupleIndex>;
     clock: Clock;
     hooks: TripleStoreHooks;
   }) {
+    this.parentTx = parentTx;
     this.tupleOperator = tupleOperator;
     this.clock = clock;
     this.hooks = hooks;
-  }
-
-  async getTransactionTimestamp() {
-    if (!this.assignedTimestamp) {
-      this.assignedTimestamp = await this.clock.getNextTimestamp();
-    }
-    return this.assignedTimestamp;
   }
 
   async findByCollection(
@@ -279,16 +280,7 @@ export class TripleStoreOperator implements TripleStoreApi {
   ): Promise<TripleRow[]> {
     return findByAVE(this.tupleOperator, tupleArgs, direction);
   }
-  // findByVAE(
-  //   tupleArgs: [
-  //     value?: Value | undefined,
-  //     attribute?: Attribute | undefined,
-  //     entityId?: string | undefined
-  //   ],
-  //   direction?: 'ASC' | 'DESC' | undefined
-  // ): Promise<TripleRow[]> {
-  //   return findByVAE(this.tupleOperator, tupleArgs, direction);
-  // }
+
   async findByEntity(id?: string | undefined): Promise<TripleRow[]> {
     return findByEntity(this.tupleOperator, id);
   }
@@ -301,34 +293,6 @@ export class TripleStoreOperator implements TripleStoreApi {
   async findByAttribute(attribute: Attribute): Promise<TripleRow[]> {
     return findByAttribute(this.tupleOperator, attribute);
   }
-  // async findByValue(value: Value): Promise<TripleRow[]> {
-  //   return findByValue(this.tupleOperator, value);
-  // }
-
-  getEntity(entityId: string) {
-    return getEntity(this.tupleOperator, entityId);
-  }
-
-  getEntities(collectionName: string) {
-    return getEntities(this.tupleOperator, collectionName);
-  }
-
-  // async commit(): Promise<void> {
-  //   if (this.isCanceled) {
-  //     console.warn('Cannot commit already canceled transaction.');
-  //     return;
-  //   }
-  //   await this.tupleOperator.commit();
-  // }
-
-  // async cancel(): Promise<void> {
-  //   if (this.isCanceled) {
-  //     console.warn('Attempted to cancel already canceled transaction.');
-  //     return;
-  //   }
-  //   await this.tupleOperator.cancel();
-  //   this.isCanceled = true;
-  // }
 
   findMaxTimestamp(clientId: string) {
     return findMaxTimestamp(this.tupleOperator, clientId);
@@ -354,7 +318,7 @@ export class TripleStoreOperator implements TripleStoreApi {
   async insertTriples(triplesInput: TripleRow[]): Promise<void> {
     if (!triplesInput.length) return;
     for (const hook of this.hooks.beforeInsert) {
-      await hook(triplesInput, this);
+      await hook(triplesInput, this.parentTx);
     }
     for (const triple of triplesInput) {
       if (triple.value === undefined) {
@@ -465,7 +429,7 @@ export class TripleStoreOperator implements TripleStoreApi {
 
   async setValues(eavs: EAV[]) {
     if (!eavs.length) return;
-    const txTimestamp = await this.getTransactionTimestamp();
+    const txTimestamp = await this.parentTx.getTransactionTimestamp();
     const toDelete: TripleRow[] = [];
     const toInsert: TripleRow[] = [];
     for (const eav of eavs) {
@@ -500,17 +464,8 @@ export class TripleStoreOperator implements TripleStoreApi {
     await this.insertTriples(toInsert);
   }
 
-  async expireEntityAttribute(id: EntityId, attribute: Attribute) {
-    const timestamp = await this.getTransactionTimestamp();
-    const existingTriples = await this.findByEntityAttribute(id, attribute);
-    await this.deleteTriples(existingTriples);
-    await this.insertTriples([
-      { id, attribute, value: null, timestamp, expired: true },
-    ]);
-  }
-
   async expireEntity(id: EntityId) {
-    const timestamp = await this.getTransactionTimestamp();
+    const timestamp = await this.parentTx.getTransactionTimestamp();
     const collectionTriple = await this.findByEntityAttribute(id, [
       '_collection',
     ]);
@@ -524,6 +479,10 @@ export class TripleStoreOperator implements TripleStoreApi {
     await this.deleteTriples(existingTriples);
   }
 
+  async expireEntityAttribute(id: EntityId, attribute: Attribute) {
+    return this.expireEntityAttributes([{ id, attribute }]);
+  }
+
   async expireEntityAttributes(
     values: { id: EntityId; attribute: Attribute }[]
   ) {
@@ -532,7 +491,7 @@ export class TripleStoreOperator implements TripleStoreApi {
       const existingTriples = await this.findByEntityAttribute(id, attribute);
       allExistingTriples.push(...existingTriples);
     }
-    const timestamp = await this.getTransactionTimestamp();
+    const timestamp = await this.parentTx.getTransactionTimestamp();
     await this.deleteTriples(allExistingTriples);
     await this.insertTriples(
       values.map(({ id, attribute }) => ({
@@ -546,9 +505,14 @@ export class TripleStoreOperator implements TripleStoreApi {
   }
 }
 
-export class TripleStoreTransaction extends TripleStoreOperator {
+export class TripleStoreTransaction implements TripleStoreApi {
+  private operator: TripleStoreTxOperator;
   tupleTx: MultiTupleTransaction<TupleIndex>;
   store: TripleStore;
+  readonly clock: Clock;
+  hooks: TripleStoreHooks;
+  assignedTimestamp?: Timestamp;
+
   constructor({
     store,
     tupleTx,
@@ -560,9 +524,144 @@ export class TripleStoreTransaction extends TripleStoreOperator {
     clock: Clock;
     hooks: TripleStoreHooks;
   }) {
-    super({ tupleOperator: tupleTx, clock, hooks });
+    this.clock = clock;
+    this.hooks = hooks;
+    this.operator = new TripleStoreTxOperator({
+      parentTx: this,
+      tupleOperator: tupleTx,
+      clock,
+      hooks,
+    });
     this.store = store;
     this.tupleTx = tupleTx;
+  }
+
+  insertTriple(tripleRow: TripleRow): Promise<void> {
+    return this.operator.insertTriple(tripleRow);
+  }
+
+  insertTriples(triplesInput: TripleRow[]): Promise<void> {
+    return this.operator.insertTriples(triplesInput);
+  }
+
+  deleteTriple(tripleRow: TripleRow): Promise<void> {
+    return this.operator.deleteTriple(tripleRow);
+  }
+
+  deleteTriples(triplesInput: TripleRow[]): Promise<void> {
+    return this.operator.deleteTriples(triplesInput);
+  }
+
+  setValue(...value: EAV): Promise<void> {
+    return this.operator.setValue(...value);
+  }
+
+  setValues(values: EAV[]): Promise<void> {
+    return this.operator.setValues(values);
+  }
+
+  expireEntity(id: EntityId): Promise<void> {
+    return this.operator.expireEntity(id);
+  }
+
+  expireEntityAttribute(id: EntityId, attribute: Attribute): Promise<void> {
+    return this.operator.expireEntityAttribute(id, attribute);
+  }
+
+  expireEntityAttributes(
+    values: { id: EntityId; attribute: Attribute }[]
+  ): Promise<void> {
+    return this.operator.expireEntityAttributes(values);
+  }
+
+  findByCollection(
+    collection: string,
+    direction?: 'ASC' | 'DESC' | undefined
+  ): Promise<TripleRow[]> {
+    return this.operator.findByCollection(collection, direction);
+  }
+
+  findMaxTimestamp(clientId: string): Promise<Timestamp | undefined> {
+    return this.operator.findMaxTimestamp(clientId);
+  }
+
+  findByClientTimestamp(
+    clientId: string,
+    scanDirection: 'lt' | 'lte' | 'gt' | 'gte',
+    timestamp: Timestamp | undefined
+  ): Promise<TripleRow[]> {
+    return this.operator.findByClientTimestamp(
+      clientId,
+      scanDirection,
+      timestamp
+    );
+  }
+
+  findByEAV(
+    eav: [
+      entityId?: string | undefined,
+      attribute?: Attribute | undefined,
+      value?: Value | undefined
+    ],
+    direction?: 'ASC' | 'DESC' | undefined
+  ): Promise<TripleRow[]> {
+    return this.operator.findByEAV(eav, direction);
+  }
+
+  findByAVE(
+    ave: [
+      attribute?: Attribute | undefined,
+      value?: Value | undefined,
+      entityId?: string | undefined
+    ],
+    direction?: 'ASC' | 'DESC' | undefined
+  ): Promise<TripleRow[]> {
+    return this.operator.findByAVE(ave, direction);
+  }
+
+  findByEntity(id?: string | undefined): Promise<TripleRow[]> {
+    return this.operator.findByEntity(id);
+  }
+
+  findByEntityAttribute(
+    id: string,
+    attribute: Attribute
+  ): Promise<TripleRow[]> {
+    return this.operator.findByEntityAttribute(id, attribute);
+  }
+
+  findByAttribute(attribute: Attribute): Promise<TripleRow[]> {
+    return this.operator.findByAttribute(attribute);
+  }
+
+  readMetadataTuples(
+    entityId: string,
+    attribute?: Attribute | undefined
+  ): Promise<EAV[]> {
+    return this.operator.readMetadataTuples(entityId, attribute);
+  }
+
+  updateMetadataTuples(updates: EAV[]): Promise<void> {
+    return this.operator.updateMetadataTuples(updates);
+  }
+
+  deleteMetadataTuples(
+    deletes: [entityId: string, attribute?: Attribute | undefined][]
+  ): Promise<void> {
+    return this.operator.deleteMetadataTuples(deletes);
+  }
+
+  findValuesInRange(
+    attribute: Attribute,
+    constraints:
+      | {
+          greaterThan?: ValueCursor | undefined;
+          lessThan?: ValueCursor | undefined;
+          direction?: 'ASC' | 'DESC' | undefined;
+        }
+      | undefined
+  ): Promise<TripleRow[]> {
+    return this.operator.findValuesInRange(attribute, constraints);
   }
 
   async commit(): Promise<void> {
@@ -574,7 +673,8 @@ export class TripleStoreTransaction extends TripleStoreOperator {
   }
 
   withScope(scope: StorageScope) {
-    return new TripleStoreOperator({
+    return new TripleStoreTxOperator({
+      parentTx: this,
       tupleOperator: this.tupleTx.withScope(scope),
       clock: this.clock,
       hooks: this.hooks,
@@ -587,6 +687,13 @@ export class TripleStoreTransaction extends TripleStoreOperator {
 
   beforeCommit(callback: TripleStoreBeforeCommitHook) {
     this.tupleTx.hooks.beforeCommit.push(() => callback(this));
+  }
+
+  async getTransactionTimestamp() {
+    if (!this.assignedTimestamp) {
+      this.assignedTimestamp = await this.clock.getNextTimestamp();
+    }
+    return this.assignedTimestamp;
   }
 }
 
@@ -674,19 +781,6 @@ export class TripleStore implements TripleStoreApi {
     return findByCollection(this.tupleStore, collection, direction);
   }
 
-  async findValuesInRange(
-    attribute: Attribute,
-    constraints:
-      | {
-          greaterThan?: ValueCursor;
-          lessThan?: ValueCursor;
-          direction?: 'ASC' | 'DESC';
-        }
-      | undefined
-  ) {
-    return findValuesInRange(this.tupleStore, attribute, constraints);
-  }
-
   findByEAV(
     [entityId, attribute, value]: [
       entityId?: string | undefined,
@@ -707,16 +801,7 @@ export class TripleStore implements TripleStoreApi {
   ): Promise<TripleRow[]> {
     return findByAVE(this.tupleStore, [attribute, value, entityId], direction);
   }
-  // findByVAE(
-  //   [value, attribute, entityId]: [
-  //     value?: Value | undefined,
-  //     attribute?: Attribute | undefined,
-  //     entityId?: string | undefined
-  //   ],
-  //   direction?: 'ASC' | 'DESC' | undefined
-  // ): Promise<TripleRow[]> {
-  //   return findByVAE(this.tupleStore, [value, attribute, entityId], direction);
-  // }
+
   findByEntity(id?: string | undefined): Promise<TripleRow[]> {
     return findByEntity(this.tupleStore, id);
   }
@@ -729,16 +814,18 @@ export class TripleStore implements TripleStoreApi {
   findByAttribute(attribute: Attribute): Promise<TripleRow[]> {
     return findByAttribute(this.tupleStore, attribute);
   }
-  // findByValue(value: Value): Promise<TripleRow[]> {
-  //   return findByValue(this.tupleStore, value);
-  // }
 
-  getEntity(entityId: string) {
-    return getEntity(this.tupleStore, entityId);
-  }
-
-  getEntities(collectionName: string) {
-    return getEntities(this.tupleStore, collectionName);
+  async findValuesInRange(
+    attribute: Attribute,
+    constraints:
+      | {
+          greaterThan?: ValueCursor;
+          lessThan?: ValueCursor;
+          direction?: 'ASC' | 'DESC';
+        }
+      | undefined
+  ) {
+    return findValuesInRange(this.tupleStore, attribute, constraints);
   }
 
   findMaxTimestamp(clientId: string) {
@@ -813,6 +900,24 @@ export class TripleStore implements TripleStoreApi {
   async setValues(values: EAV[]): Promise<void> {
     await this.transact(async (tx) => {
       await tx.setValues(values);
+    });
+  }
+
+  async expireEntity(id: string) {
+    await this.transact(async (tx) => {
+      await tx.expireEntity(id);
+    });
+  }
+
+  async expireEntityAttribute(id: string, attribute: Attribute) {
+    await this.transact(async (tx) => {
+      await tx.expireEntityAttribute(id, attribute);
+    });
+  }
+
+  async expireEntityAttributes(values: { id: string; attribute: Attribute }[]) {
+    await this.transact(async (tx) => {
+      await tx.expireEntityAttributes(values);
     });
   }
 
@@ -1095,19 +1200,6 @@ async function findByClientTimestamp(
   );
 }
 
-async function getEntity(tx: MultiTupleStoreOrTransaction, entityId: string) {
-  const triples = await findByEntity(tx, entityId);
-  return constructEntity(triples, entityId);
-}
-
-async function getEntities(
-  tx: MultiTupleStoreOrTransaction,
-  collectionName: string
-) {
-  const triples = await findByCollection(tx, collectionName);
-  return triplesToEntities(triples);
-}
-
 async function findMaxTimestamp(
   tx: MultiTupleStoreOrTransaction,
   clientId: string
@@ -1121,5 +1213,7 @@ async function findMaxTimestamp(
 
 // We use the _collection tuple to indicate if an entity delete should occur
 export function isTupleEntityDeleteMarker(tuple: TupleIndex) {
-  return tuple.key[3][0] === '_collection' && tuple.value.expired;
+  // @ts-ignore TODO: need to fix to support subspaces
+  const collectionMarker = tuple.key[3][0];
+  return collectionMarker === '_collection' && tuple.value.expired;
 }

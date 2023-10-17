@@ -8,6 +8,7 @@ import {
   constructEntity,
   QUERY_INPUT_TRANSFORMERS,
   SubQuery,
+  triplesToEntities,
 } from './query';
 import {
   convertEntityToJS,
@@ -23,7 +24,7 @@ import {
   EntityId,
   TripleRow,
   TripleStore,
-  TripleStoreTransaction,
+  TripleStoreApi,
   Value,
 } from './triple-store';
 import { Pipeline } from './utils/pipeline';
@@ -84,7 +85,7 @@ export interface FetchOptions {
  * @param options
  */
 export async function fetch<Q extends CollectionQuery<any>>(
-  tx: TripleStoreTransaction | TripleStore,
+  tx: TripleStoreApi,
   query: Q,
   options?: FetchOptions & {
     includeTriples: false;
@@ -92,7 +93,7 @@ export async function fetch<Q extends CollectionQuery<any>>(
   }
 ): Promise<FetchResult<Q>>;
 export async function fetch<Q extends CollectionQuery<any>>(
-  tx: TripleStoreTransaction | TripleStore,
+  tx: TripleStoreApi,
   query: Q,
   options?: FetchOptions & {
     includeTriples: true;
@@ -100,7 +101,7 @@ export async function fetch<Q extends CollectionQuery<any>>(
   }
 ): Promise<{ results: FetchResult<Q>; triples: Map<string, TripleRow[]> }>;
 export async function fetch<Q extends CollectionQuery<any>>(
-  tx: TripleStoreTransaction | TripleStore,
+  tx: TripleStoreApi,
   query: Q,
   {
     includeTriples = false,
@@ -162,7 +163,7 @@ export async function fetch<Q extends CollectionQuery<any>>(
   // look into refactoring with constructEntities()
   const allEntities = await (includeTriples
     ? getCollectionEntitiesAndTriples(tx, query.collectionName)
-    : tx.getEntities(query.collectionName));
+    : getCollectionEntities(tx, query.collectionName));
 
   let entityCount = 0;
   let previousOrderVal: Value;
@@ -466,7 +467,7 @@ function isOperatorSatisfied(op: Operator, value: any, filterValue: any) {
 }
 
 async function getCollectionEntitiesAndTriples(
-  tx: TripleStoreTransaction | TripleStore,
+  tx: TripleStoreApi,
   collectionName: string
 ): Promise<Map<string, { triples: TripleRow[]; entity: any }>> {
   // This could use the object entity index but keeping seperate for now to allow this to be used in instead of the entity index if we need to disable it
@@ -481,6 +482,14 @@ async function getCollectionEntitiesAndTriples(
     entry.entity = entityToResultReducer(entry.entity ?? {}, triple);
     return acc;
   }, new Map());
+}
+
+async function getCollectionEntities(
+  tx: TripleStoreApi,
+  collectionName: string
+): Promise<Map<string, { triples: TripleRow[]; entity: any }>> {
+  const collectionTriples = await tx.findByCollection(collectionName);
+  return triplesToEntities(collectionTriples);
 }
 
 type CollectionQuerySchema<Q extends CollectionQuery<any>> =

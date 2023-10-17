@@ -126,7 +126,9 @@ function updateEntityAtPath(
 
 export function triplesToEntities(
   triples: TripleRow[]
-): Map<string, TimestampedTypeFromModel<Model<any>>> {
+  // TODO: should be timestamped type from a model...figure out how / when to do this
+  // Want a proper way to say "this is what i expect the shape of the result to be" with a generic
+): Map<string, any> {
   return triples.reduce((acc, triple) => {
     const { id } = triple;
     const entityObj = acc.get(id) ?? {};
