@@ -28,6 +28,7 @@ import {
   overrideStoredSchema,
   StoreSchema,
   getCollectionSchema,
+  addReadRulesToQuery,
 } from './db-helpers';
 import { VariableAwareCache } from './variable-aware-cache';
 
@@ -238,21 +239,6 @@ export default class DB<M extends Models<any, any> | undefined> {
 
   static ABORT_TRANSACTION = Symbol('abort transaction');
 
-  // TODO: move to shared method with db-transaction
-  private addReadRulesToQuery<Q extends CollectionQuery<M, any>>(
-    query: Q,
-    collection: CollectionFromModels<M>
-  ): Q {
-    if (collection?.rules?.read) {
-      const updatedWhere = [
-        ...query.where,
-        ...Object.values(collection.rules.read).flatMap((rule) => rule.filter),
-      ];
-      return { ...query, where: updatedWhere };
-    }
-    return query;
-  }
-
   async transact(
     callback: (tx: DBTransaction<M>) => Promise<void>,
     options: TransactOptions = {}
@@ -334,7 +320,7 @@ export default class DB<M extends Models<any, any> | undefined> {
       fetchQuery.collectionName
     );
     if (collectionSchema && !options.skipRules) {
-      fetchQuery = this.addReadRulesToQuery(fetchQuery, collectionSchema);
+      fetchQuery = addReadRulesToQuery<M, Q>(fetchQuery, collectionSchema);
     }
     fetchQuery.vars = { ...this.variables, ...(fetchQuery.vars ?? {}) };
     fetchQuery.where = mapFilterStatements(

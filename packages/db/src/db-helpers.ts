@@ -232,3 +232,17 @@ export async function getCollectionSchema<
   >;
   return collectionSchema;
 }
+
+export function addReadRulesToQuery<
+  M extends Models<any, any> | undefined,
+  Q extends CollectionQuery<M, any>
+>(query: Q, collection: CollectionFromModels<M>): Q {
+  if (collection?.rules?.read) {
+    const updatedWhere = [
+      ...query.where,
+      ...Object.values(collection.rules.read).flatMap((rule) => rule.filter),
+    ];
+    return { ...query, where: updatedWhere };
+  }
+  return query;
+}

@@ -57,6 +57,7 @@ import {
   mapFilterStatements,
   splitIdParts,
   getCollectionSchema,
+  addReadRulesToQuery,
 } from './db-helpers';
 import { Query, constructEntity, entityToResultReducer } from './query';
 import { serializedItemToTuples } from './utils';
@@ -213,20 +214,6 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
   // Doing this as a TS fix, but would like to properly define the _metadata scheam
   readonly METADATA_COLLECTION_NAME =
     '_metadata' as CollectionNameFromModels<M>;
-
-  private addReadRulesToQuery<Q extends CollectionQuery<M, any>>(
-    query: Q,
-    collection: CollectionFromModels<M>
-  ): Q {
-    if (collection?.rules?.read) {
-      const updatedWhere = [
-        ...query.where,
-        ...Object.values(collection.rules.read).flatMap((rule) => rule.filter),
-      ];
-      return { ...query, where: updatedWhere };
-    }
-    return query;
-  }
 
   async getSchema() {
     return this.schema;
@@ -465,7 +452,7 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
       fetchQuery.collectionName
     );
     if (collectionSchema && !skipRules) {
-      fetchQuery = this.addReadRulesToQuery(fetchQuery, collectionSchema);
+      fetchQuery = addReadRulesToQuery<M, Q>(fetchQuery, collectionSchema);
     }
     fetchQuery.vars = { ...this.variables, ...fetchQuery.vars };
     fetchQuery.where = mapFilterStatements(
