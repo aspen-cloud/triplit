@@ -1,25 +1,26 @@
 {
   "name": "@triplit/db",
   "version": "0.0.37",
-  "main": "dist/index.cjs",
-  "module": "dist/index.mjs",
-  "typings": "dist/index.d.ts",
-  "source": "src/index.ts",
+  "source": "./src/index.ts",
+  "main": "./dist/cjs/index.js",
+  "module": "./dist/esm/index.js",
+  "typings": "./dist/types/index.d.ts",
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.mjs",
-      "require": "./dist/index.cjs"
+      "types": "./dist/types/index.d.ts",
+      "require": "./dist/cjs/index.js",
+      "import": "./dist/esm/index.js",
+      "default": "./dist/esm/index.js"
     }
   },
   "type": "module",
   "scripts": {
-    "build": "yarn build:code && yarn build:types",
-    "build:types": "yarn tsc --p tsconfig.build.json",
-    "build:code": "yarn build:setup && parcel build . --no-cache && yarn build:cleanup",
-    "build:setup": "mv tsconfig.json tsconfig.tmp.json && mv tsconfig.build.json tsconfig.json",
-    "build:cleanup": "mv tsconfig.json tsconfig.build.json && mv tsconfig.tmp.json tsconfig.json",
-    "lint": "tsc",
+    "build": "yarn build:esm & yarn build:cjs & yarn build:types & wait",
+    "build:esm": "tsc --module ESNext --outDir ./dist/esm",
+    "build:cjs": "tsc --module CommonJS --outDir ./dist/cjs",
+    "build:types": "tsc --emitDeclarationOnly",
+    "lint:build": "npx publint",
+    "lint": "tsc --noEmit",
     "test": "vitest",
     "test-coverage": "vitest --coverage",
     "test-coverage-ui": "vitest --ui --coverage",
@@ -32,14 +33,11 @@
     "/dist"
   ],
   "devDependencies": {
-    "@parcel/config-default": "^2.9.3",
-    "@parcel/transformer-typescript-tsc": "^2.9.3",
     "@stryker-mutator/core": "^7.1.1",
     "@stryker-mutator/vitest-runner": "^7.1.1",
     "@vitest/coverage-c8": "^0.29.2",
     "@vitest/coverage-v8": "^0.33.0",
     "@vitest/ui": "^0.33.0",
-    "parcel": "^2.9.3",
     "rxdb": "^14.14.2",
     "rxjs": "^7.8.1",
     "tinybench": "^2.5.0",

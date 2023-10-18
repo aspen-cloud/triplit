@@ -2,16 +2,25 @@
   "name": "@triplit/client",
   "packageManager": "yarn@3.4.1",
   "version": "0.0.37",
-  "source": "src/index.ts",
-  "main": "dist/index.js",
-  "module": "dist/module.js",
-  "types": "dist/index.d.ts",
+  "source": "./src/index.ts",
+  "main": "./dist/cjs/index.js",
+  "module": "./dist/esm/index.js",
+  "types": "./dist/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/types/index.d.ts",
+      "require": "./dist/cjs/index.js",
+      "import": "./dist/esm/index.js",
+      "default": "./dist/esm/index.js"
+    }
+  },
   "scripts": {
-    "build": "yarn build:setup && parcel build . --no-cache && yarn build:cleanup",
-    "build:setup": "mv tsconfig.json tsconfig.tmp.json && mv tsconfig.build.json tsconfig.json",
-    "build:cleanup": "mv tsconfig.json tsconfig.build.json && mv tsconfig.tmp.json tsconfig.json",
-    "lint": "yarn lint:code",
-    "lint:code": "tsc",
+    "build:esm": "tsc --module ESNext --outDir ./dist/esm",
+    "build:cjs": "tsc --module CommonJS --outDir ./dist/cjs",
+    "build:types": "tsc --emitDeclarationOnly",
+    "build": "npm run build:esm & npm run build:cjs & npm run build:types & wait",
+    "lint:build": "npx publint",
+    "lint": "tsc --noEmit",
     "publish-pkg": "node ../../scripts/npm-check-version-and-publish.js"
   },
   "files": [
@@ -22,11 +31,7 @@
     "rxjs": "^7.8.1"
   },
   "devDependencies": {
-    "@parcel/config-default": "^2.9.3",
-    "@parcel/transformer-typescript-tsc": "^2.9.3",
     "@types/node": "^20.4.0",
-    "esbuild": "^0.17.19",
-    "parcel": "^2.9.3",
     "typescript": "^5.2.2"
   },
   "engines": {
