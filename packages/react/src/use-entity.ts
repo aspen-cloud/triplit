@@ -17,7 +17,6 @@ export function useEntity<
 ) {
   const { fetching, fetchingRemote, results, error } = useQuery(
     client,
-    // @ts-ignore TODO: generics getting weird with models and collection queries...probably worth refactoring when we have joins (as we'll need to redo some typing then anyway)
     client.query(collectionName).entityId(id),
     options
   );

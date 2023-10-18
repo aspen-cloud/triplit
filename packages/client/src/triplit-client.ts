@@ -7,7 +7,6 @@ import {
   CachedIndexedDbStorage as IndexedDbStorage,
   Query,
   ProxyTypeFromModel,
-  Model,
   Models,
   CollectionNameFromModels,
   DBTransaction,
@@ -23,7 +22,7 @@ import {
   hashSchema,
   TripleRow,
 } from '@triplit/db';
-import { Subject, throttle } from 'rxjs';
+import { Subject } from 'rxjs';
 import { getUserId } from './token';
 import { ConnectionStatus } from './websocket';
 import {
@@ -37,10 +36,10 @@ import { ClientSyncMessage, ServerSyncMessage } from '@/types/sync';
 export { IndexedDbStorage, MemoryStorage };
 type Storage = IndexedDbStorage | MemoryStorage;
 
-export type ConnectParams = {
-  server: string;
-  secure: boolean;
-  apiKey: string;
+export type TransportConnectParams = {
+  server?: string;
+  secure?: boolean;
+  apiKey?: string;
   clientId: string;
   version?: number;
   syncSchema?: boolean;
@@ -56,7 +55,7 @@ export interface SyncTransport {
   ): void;
   onMessage(callback: (message: any) => void): void;
   onError(callback: (ev: any) => void): void;
-  connect(params: ConnectParams): void;
+  connect(params: TransportConnectParams): void;
   close(code?: number, reason?: string): void;
   onClose(callback: (ev: any) => void): void;
   onConnectionChange(callback: (state: ConnectionStatus) => void): void;
@@ -108,7 +107,7 @@ class SyncEngine {
 
   private queries: Map<
     string,
-    { params: CollectionQuery<any>; fulfilled: boolean }
+    { params: CollectionQuery<any, any>; fulfilled: boolean }
   > = new Map();
 
   private reconnectTimeoutDelay = 250;
@@ -121,7 +120,7 @@ class SyncEngine {
     (status: ConnectionStatus | undefined) => void
   > = new Set();
 
-  queryFulfillmentCallbacks: Map<string, () => {}>;
+  queryFulfillmentCallbacks: Map<string, (response: any) => void>;
 
   constructor(options: SyncOptions, db: DB<any>) {
     this.syncOptions = options;
@@ -164,7 +163,7 @@ class SyncEngine {
       : undefined;
   }
 
-  async getConnectionParams() {
+  async getConnectionParams(): Promise<TransportConnectParams> {
     const clientId = await this.db.getClientId();
     const schemaVersion = hashSchema((await this.db.getSchema())?.collections);
     return {
@@ -199,7 +198,7 @@ class SyncEngine {
     });
   }
 
-  subscribe(params: CollectionQuery<any>, onQueryFulfilled?: () => void) {
+  subscribe(params: CollectionQuery<any, any>, onQueryFulfilled?: () => void) {
     let id = Date.now().toString(36) + Math.random().toString(36).slice(2); // unique enough id
     this.transport.sendMessage('CONNECT_QUERY', { id, params });
     this.queries.set(id, { params, fulfilled: false });
@@ -323,7 +322,7 @@ class SyncEngine {
         this.sendTriples(triplesToSend);
       }
     });
-    this.transport.onOpen((evt) => {
+    this.transport.onOpen(() => {
       console.info('sync connection has opened');
       this.resetReconnectTimeout();
       this.signalOutboxTriples();
@@ -468,7 +467,7 @@ class SyncEngine {
     this.reconnectTimeoutDelay = 250;
   }
 
-  async syncQuery(query: ClientQuery<any>) {
+  async syncQuery(query: ClientQuery<any, any>) {
     try {
       const triples = await this.getRemoteTriples(query);
       await this.db.tripleStore
@@ -481,7 +480,7 @@ class SyncEngine {
     }
   }
 
-  async fetchQuery<CQ extends ClientQuery<any>>(query: CQ) {
+  async fetchQuery<CQ extends ClientQuery<any, any>>(query: CQ) {
     try {
       // Simpler to serialize triples and reconstruct entities on the client
       // TODO: set up a method that handles this (triples --> friendly entity)
@@ -501,7 +500,7 @@ class SyncEngine {
     }
   }
 
-  private async getRemoteTriples(query: ClientQuery<any>) {
+  private async getRemoteTriples(query: ClientQuery<any, any>) {
     const res = await this.fetchFromServer(`/queryTriples`, {
       method: 'POST',
       headers: {
@@ -550,15 +549,21 @@ interface DBOptions<M extends Models<any, any> | undefined> {
 
 type SyncStatus = 'pending' | 'confirmed' | 'all';
 
-export type ClientQuery<M extends Model | undefined> = CollectionQuery<M> & {
+export type ClientQuery<
+  M extends Models<any, any> | undefined,
+  CN extends CollectionNameFromModels<M>
+> = CollectionQuery<M, CN> & {
   syncStatus?: SyncStatus;
 };
 
-function ClientQueryBuilder<M extends Model | undefined>(
-  collectionName: string,
-  params?: Query<M> & { syncStatus?: SyncStatus }
+function ClientQueryBuilder<
+  M extends Models<any, any> | undefined,
+  CN extends CollectionNameFromModels<M>
+>(
+  collectionName: CN,
+  params?: Query<ModelFromModels<M, CN>> & { syncStatus?: SyncStatus }
 ) {
-  const query: ClientQuery<M> = {
+  const query: ClientQuery<M, CN> = {
     collectionName,
     ...params,
     where: params?.where ?? [],
@@ -567,15 +572,21 @@ function ClientQueryBuilder<M extends Model | undefined>(
   };
   return Builder(query, {
     protectedFields: ['collectionName'],
-    inputTransformers: QUERY_INPUT_TRANSFORMERS<Query<M>, M>(),
+    inputTransformers: QUERY_INPUT_TRANSFORMERS<
+      Query<ModelFromModels<M, CN>>,
+      ModelFromModels<M, CN>
+    >(),
   });
 }
 
-export type ClientQueryBuilder<CQ extends ClientQuery<any>> = ReturnType<
-  typeof ClientQueryBuilder<CQ extends ClientQuery<infer M> ? M : any>
+export type ClientQueryBuilder<CQ extends ClientQuery<any, any>> = ReturnType<
+  typeof ClientQueryBuilder<
+    CQ extends ClientQuery<infer M, any> ? M : any,
+    CQ extends ClientQuery<infer _M, infer CN> ? CN : any
+  >
 >;
 
-function parseScope(query: ClientQuery<any>) {
+function parseScope(query: ClientQuery<any, any>) {
   const { syncStatus } = query;
   if (!syncStatus) return ['cache', 'outbox'];
   switch (syncStatus) {
@@ -699,10 +710,10 @@ export class TriplitClient<M extends Models<any, any> | undefined = undefined> {
 
   // TODO: is this better done with generics?
   query<CN extends CollectionNameFromModels<M>>(collectionName: CN) {
-    return ClientQueryBuilder<ModelFromModels<M, CN>>(collectionName as string);
+    return ClientQueryBuilder<M, CN>(collectionName);
   }
 
-  async fetch<CQ extends ClientQuery<ModelFromModels<M, any>>>(
+  async fetch<CQ extends ClientQuery<M, any>>(
     query: CQ,
     options?: FetchOptions
   ) {
@@ -747,9 +758,7 @@ export class TriplitClient<M extends Models<any, any> | undefined = undefined> {
     throw new UnrecognizedFetchPolicyError((opts as FetchOptions).policy);
   }
 
-  private fetchLocal<CQ extends ClientQuery<ModelFromModels<M, any>>>(
-    query: CQ
-  ) {
+  private fetchLocal<CQ extends ClientQuery<M, any>>(query: CQ) {
     const scope = parseScope(query);
     return this.db.fetch(query, { scope });
   }
@@ -765,7 +774,7 @@ export class TriplitClient<M extends Models<any, any> | undefined = undefined> {
     return results.get(id);
   }
 
-  async fetchOne<CQ extends ClientQuery<ModelFromModels<M, any>>>(query: CQ) {
+  async fetchOne<CQ extends ClientQuery<M, any>>(query: CQ) {
     const scope = parseScope(query);
     return await this.db.fetchOne(query, { scope, skipRules: SKIP_RULES });
   }
@@ -814,7 +823,7 @@ export class TriplitClient<M extends Models<any, any> | undefined = undefined> {
   }
 
   // TODO: refactor so some logic is shared across policies (ex starting a local and remote sub is verbose and repetitive)
-  subscribe<CQ extends ClientQuery<ModelFromModels<M>>>(
+  subscribe<CQ extends ClientQuery<M, any>>(
     query: CQ,
     onResults: (
       results: FetchResult<CQ>,
@@ -829,10 +838,16 @@ export class TriplitClient<M extends Models<any, any> | undefined = undefined> {
 
     if (opts.policy === 'local-only') {
       try {
-        return this.db.subscribe(query, onResults, onError, {
-          scope,
-          skipRules: SKIP_RULES,
-        });
+        return this.db.subscribe(
+          query,
+          // @ts-ignore TODO: include hasRemoteFulfilled
+          onResults,
+          onError,
+          {
+            scope,
+            skipRules: SKIP_RULES,
+          }
+        );
       } catch (e) {
         if (onError) onError(e);
         else warnError(e);
@@ -882,10 +897,16 @@ export class TriplitClient<M extends Models<any, any> | undefined = undefined> {
         .catch(warnError)
         .then(() => {
           if (!cancel) {
-            unsubscribeLocal = this.db.subscribe(query, onResults, onError, {
-              scope,
-              skipRules: SKIP_RULES,
-            });
+            unsubscribeLocal = this.db.subscribe(
+              query,
+              // @ts-ignore TODO: include hasRemoteFulfilled
+              onResults,
+              onError,
+              {
+                scope,
+                skipRules: SKIP_RULES,
+              }
+            );
             if (scope.includes('cache'))
               unsubscribeRemote = this.syncEngine.subscribe(query);
           }
@@ -914,10 +935,16 @@ export class TriplitClient<M extends Models<any, any> | undefined = undefined> {
         .catch(warnError)
         .then(() => {
           if (!cancel) {
-            unsubscribeLocal = this.db.subscribe(query, onResults, onError, {
-              scope,
-              skipRules: SKIP_RULES,
-            });
+            unsubscribeLocal = this.db.subscribe(
+              query,
+              // @ts-ignore TODO: include hasRemoteFulfilled
+              onResults,
+              onError,
+              {
+                scope,
+                skipRules: SKIP_RULES,
+              }
+            );
             if (scope.includes('cache'))
               unsubscribeRemote = this.syncEngine.subscribe(query);
           }

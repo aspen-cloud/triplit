@@ -1,20 +1,24 @@
 import { useEffect, useState } from 'react';
 import {
   FetchResult,
-  Model,
   TriplitClient,
   ClientQuery,
   ClientQueryBuilder,
   SubscriptionOptions,
+  CollectionNameFromModels,
+  Models,
 } from '@triplit/client';
 
-export function useQuery<M extends Model | undefined>(
+export function useQuery<
+  M extends Models<any, any> | undefined,
+  CN extends CollectionNameFromModels<M>
+>(
   client: TriplitClient<any>,
-  query: ClientQueryBuilder<ClientQuery<M>>,
+  query: ClientQueryBuilder<ClientQuery<M, CN>>,
   options?: SubscriptionOptions
 ) {
   const [results, setResults] = useState<
-    FetchResult<ClientQuery<M>> | undefined
+    FetchResult<ClientQuery<M, CN>> | undefined
   >(undefined);
   const [fetching, setFetching] = useState(true);
   const [fetchingRemote, setFetchingRemote] = useState(true);
@@ -33,7 +37,7 @@ export function useQuery<M extends Model | undefined>(
         setFetching(false);
         setError(undefined);
         setFetchingRemote(!hasRemoteFulfilled);
-        setResults(new Map(localResults) as FetchResult<ClientQuery<M>>);
+        setResults(new Map(localResults) as FetchResult<ClientQuery<M, CN>>);
       },
       (error) => {
         setFetching(false);

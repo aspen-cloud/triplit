@@ -1,4 +1,4 @@
-import { ConnectParams, SyncTransport } from '@triplit/client';
+import { TransportConnectParams, SyncTransport } from './triplit-client';
 import { ConnectionStatus, friendlyReadyState } from './websocket';
 
 export class WebSocketTransport implements SyncTransport {
@@ -22,14 +22,14 @@ export class WebSocketTransport implements SyncTransport {
     }
     this.ws.send(JSON.stringify({ type, payload }));
   }
-  connect(params: ConnectParams): void {
+  connect(params: TransportConnectParams): void {
     if (this.ws && this.isOpen) this.ws.close();
     const { apiKey, clientId, version, syncSchema, server, secure } = params;
     const missingParams = [];
-    if (!apiKey) missingParams.push('apiKey');
-    if (!clientId) missingParams.push('clientId');
-    if (!server) missingParams.push('server');
-    if (missingParams.length > 0) {
+    if (!apiKey || !clientId || !server) {
+      if (!apiKey) missingParams.push('apiKey');
+      if (!clientId) missingParams.push('clientId');
+      if (!server) missingParams.push('server');
       console.warn(
         `Missing required params: [${missingParams.join(
           ', '
