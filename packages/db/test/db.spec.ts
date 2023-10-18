@@ -36,13 +36,15 @@ const storage = new MemoryBTree();
 
 async function testDBAndTransaction<M extends Models<any, any> | undefined>(
   // should return a new instance if you are performing writes in your test
-  dbFactory: () => DB<M>,
-  test: (db: DBTransaction<M>) => void | Promise<void>,
+  dbFactory: () => DB<M> | Promise<DB<M>>,
+  test: (db: DB<M> | DBTransaction<M>) => void | Promise<void>,
   scope: { db: boolean; tx: boolean } = { db: true, tx: true }
 ) {
-  if (scope.db) await test(dbFactory());
+  if (scope.db) await test(await dbFactory());
   if (scope.tx)
-    await dbFactory().transact(async (tx) => {
+    await (
+      await dbFactory()
+    ).transact(async (tx) => {
       await test(tx);
     });
 }
