@@ -572,7 +572,10 @@ function subscribeSingleEntity<
             entity &&
             doesEntityObjMatchWhere(entity, query.where ?? [], collectionSchema)
           ) {
-            results.set(entityId, convertEntityToJS(entity, collectionSchema));
+            results.set(
+              entityId,
+              convertEntityToJS(entity, collectionSchema) as any
+            );
           } else {
             results.delete(entityId);
           }

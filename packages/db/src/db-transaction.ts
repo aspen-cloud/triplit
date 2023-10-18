@@ -61,6 +61,7 @@ import {
 import { Query, constructEntity, entityToResultReducer } from './query';
 import { serializedItemToTuples } from './utils';
 import { typeFromJSON } from './data-types/base';
+import { SchemaDefinition } from './data-types/serialization';
 
 interface TransactionOptions<
   M extends Models<any, any> | undefined = undefined
@@ -185,14 +186,16 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
       this._schema ?? {}
     );
 
-    // TODO: schema triples and type?
-    const schemaDefinition = timestampedObjectToPlainObject(this._schema);
+    // Type definitions are kinda ugly here
+    const schemaDefinition = timestampedObjectToPlainObject(this._schema) as
+      | SchemaDefinition
+      | undefined;
     this.schema = {
-      version: schemaDefinition.version ?? 0,
+      version: schemaDefinition?.version ?? 0,
       collections:
-        schemaDefinition.collections &&
+        schemaDefinition?.collections &&
         collectionsDefinitionToSchema(schemaDefinition.collections),
-    };
+    } as StoreSchema<M>;
   };
 
   constructor(
@@ -228,7 +231,7 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
 
   async insert<CN extends CollectionNameFromModels<M>>(
     collectionName: CN,
-    doc: InsertTypeFromModel<ModelFromModels<M, CN>>,
+    doc: InsertTypeFromModel<ModelFromModels<M, CN> | undefined>,
     id?: string
   ) {
     // TODO: confirm if collectionName is required (validate if it is)
@@ -362,7 +365,10 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
           // TODO use correct Triplit Error
           throw new UnrecognizedPropertyInUpdateError(propPointer, value);
         }
-        const serializedValue = propSchema.convertInputToJson(value);
+        const serializedValue = propSchema.convertInputToJson(
+          // @ts-ignore Big DataType union results in never as arg type
+          value
+        );
         ValuePointer.Set(changeTracker, propPointer, serializedValue);
         return true;
       },
