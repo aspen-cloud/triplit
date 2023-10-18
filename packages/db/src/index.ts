@@ -47,7 +47,7 @@ export {
   triplesToSchema,
   schemaToJSON,
   timestampedObjectToPlainObject,
-  hashSchema,
+  hashSchemaJSON,
 } from './schema';
 export type {
   TObject,

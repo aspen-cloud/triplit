@@ -19,8 +19,9 @@ import {
   stripCollectionFromId,
   QUERY_INPUT_TRANSFORMERS,
   InsertTypeFromModel,
-  hashSchema,
+  hashSchemaJSON,
   TripleRow,
+  schemaToJSON,
 } from '@triplit/db';
 import { Subject } from 'rxjs';
 import { getUserId } from './token';
@@ -165,7 +166,9 @@ class SyncEngine {
 
   async getConnectionParams(): Promise<TransportConnectParams> {
     const clientId = await this.db.getClientId();
-    const schemaHash = hashSchema((await this.db.getSchema())?.collections);
+    const schemaHash = hashSchemaJSON(
+      schemaToJSON(await this.db.getSchema())?.collections
+    );
     return {
       clientId,
       schema: schemaHash,

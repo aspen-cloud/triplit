@@ -319,7 +319,7 @@ export function getDefaultValuesForCollection(
 // Using this in place of a version check on schemas for syncing
 // Schema versions are harder to manage with console updates
 // Using this hash as a way to check if schemas mismatch since its easy to send as a url param
-export function hashSchema(collections: CollectionsDefinition | undefined) {
+export function hashSchemaJSON(collections: CollectionsDefinition | undefined) {
   if (!collections) return undefined;
   const tuples = objectToTuples(collections);
   const sortedTriplesStr = tuples
