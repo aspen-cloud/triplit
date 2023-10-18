@@ -8,7 +8,7 @@ import {
   SessionVariableNotFoundError,
   ValueSchemaMismatchError,
 } from './errors';
-import { QueryWhere, FilterStatement, SubQuery } from './query';
+import { QueryWhere, FilterStatement, SubQueryFilter } from './query';
 import {
   Model,
   Models,
@@ -86,7 +86,7 @@ export function replaceVariablesInQuery<
 
 export function* filterStatementIterator<M extends Model<any> | undefined>(
   statements: QueryWhere<M>
-): Generator<FilterStatement<M> | SubQuery> {
+): Generator<FilterStatement<M> | SubQueryFilter> {
   for (const statement of statements) {
     if (!(statement instanceof Array) && 'filters' in statement) {
       yield* filterStatementIterator(statement.filters);
@@ -98,7 +98,7 @@ export function* filterStatementIterator<M extends Model<any> | undefined>(
 
 export function someFilterStatements<M extends Model<any> | undefined>(
   statements: QueryWhere<M>,
-  someFunction: (statement: SubQuery | FilterStatement<M>) => boolean
+  someFunction: (statement: SubQueryFilter | FilterStatement<M>) => boolean
 ): boolean {
   for (const statement of filterStatementIterator(statements)) {
     if (someFunction(statement)) return true;
@@ -109,8 +109,8 @@ export function someFilterStatements<M extends Model<any> | undefined>(
 export function mapFilterStatements<M extends Model<any> | undefined>(
   statements: QueryWhere<M>,
   mapFunction: (
-    statement: SubQuery | FilterStatement<M>
-  ) => SubQuery | FilterStatement<M>
+    statement: SubQueryFilter | FilterStatement<M>
+  ) => SubQueryFilter | FilterStatement<M>
 ): QueryWhere<M> {
   return statements.map((filter) => {
     // TODO this doesn't feel right to just exclude sub-queries here

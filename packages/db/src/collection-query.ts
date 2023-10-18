@@ -7,7 +7,7 @@ import {
   entityToResultReducer,
   constructEntity,
   QUERY_INPUT_TRANSFORMERS,
-  SubQuery,
+  SubQueryFilter,
   triplesToEntities,
 } from './query';
 import {
@@ -202,7 +202,7 @@ export async function fetch<
     .filter(async ([id, { entity }]) => {
       const subQueries = where.filter(
         (filter) => 'exists' in filter
-      ) as SubQuery<M>[];
+      ) as SubQueryFilter<M>[];
       const plainFilters = where.filter((filter) => !('exists' in filter));
       const basicMatch = doesEntityObjMatchWhere(
         entity,

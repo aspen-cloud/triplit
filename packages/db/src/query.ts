@@ -47,7 +47,7 @@ export type FilterGroup<M extends Model<any> | undefined> = {
   filters: WhereFilter<M>[];
 };
 
-export type SubQuery<
+export type SubQueryFilter<
   M extends Models<any, any> | undefined = any,
   CN extends CollectionNameFromModels<M> = any
 > = {
@@ -57,7 +57,7 @@ export type SubQuery<
 export type WhereFilter<M extends Model<any> | undefined> =
   | FilterStatement<M>
   | FilterGroup<M>
-  | SubQuery;
+  | SubQueryFilter;
 
 export type QueryWhere<M extends Model<any> | undefined> = WhereFilter<M>[];
 
