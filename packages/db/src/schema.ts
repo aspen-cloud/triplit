@@ -147,27 +147,33 @@ type DataTypeHasDefault<T extends DataType> = BooleanNot<
 export type InsertTypeFromModel<M extends Model<any> | undefined> =
   M extends Model<any>
     ? {
-        [k in keyof M as DataTypeHasNoDefault<M[k]> extends true
+        [k in keyof M['properties'] as DataTypeHasNoDefault<
+          M['properties'][k]
+        > extends true
           ? k
-          : never]: ExtractJSType<M[k]>;
+          : never]: ExtractJSType<M['properties'][k]>;
       } & {
-        [k in keyof M as DataTypeHasDefault<M[k]> extends true
+        [k in keyof M['properties'] as DataTypeHasDefault<
+          M['properties'][k]
+        > extends true
           ? k
-          : never]?: ExtractJSType<M[k]>;
+          : never]?: ExtractJSType<M['properties'][k]>;
       }
     : any;
 
 export type JSONTypeFromModel<M extends Model<any> | undefined> =
   M extends Model<any>
     ? {
-        [k in keyof M]: M[k] extends DataType ? ExtractJSType<M[k]> : never;
+        [k in keyof M['properties']]: M['properties'][k] extends DataType
+          ? ExtractJSType<M['properties'][k]>
+          : never;
       }
     : any;
 
 export type SerializedTypeFromModel<M extends Model<any> | undefined> =
   M extends Model<any>
     ? {
-        [k in keyof M]: ExtractSerializedType<M[k]>;
+        [k in keyof M['properties']]: ExtractSerializedType<M['properties'][k]>;
       }
     : any;
 
