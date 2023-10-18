@@ -24,7 +24,7 @@ export class WebSocketTransport implements SyncTransport {
   }
   connect(params: TransportConnectParams): void {
     if (this.ws && this.isOpen) this.ws.close();
-    const { apiKey, clientId, version, syncSchema, server, secure } = params;
+    const { apiKey, clientId, schema, syncSchema, server, secure } = params;
     const missingParams = [];
     if (!apiKey || !clientId || !server) {
       if (!apiKey) missingParams.push('apiKey');
@@ -38,8 +38,8 @@ export class WebSocketTransport implements SyncTransport {
       return;
     }
     const wsOptions = new URLSearchParams();
-    if (version) {
-      wsOptions.set('version', version.toString());
+    if (schema) {
+      wsOptions.set('schema', schema.toString());
     }
     wsOptions.set('sync-schema', String(syncSchema));
     wsOptions.set('client', clientId);

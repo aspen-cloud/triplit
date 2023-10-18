@@ -41,7 +41,7 @@ export type TransportConnectParams = {
   secure?: boolean;
   apiKey?: string;
   clientId: string;
-  version?: number;
+  schema?: number;
   syncSchema?: boolean;
 };
 
@@ -165,10 +165,10 @@ class SyncEngine {
 
   async getConnectionParams(): Promise<TransportConnectParams> {
     const clientId = await this.db.getClientId();
-    const schemaVersion = hashSchema((await this.db.getSchema())?.collections);
+    const schemaHash = hashSchema((await this.db.getSchema())?.collections);
     return {
       clientId,
-      version: schemaVersion,
+      schema: schemaHash,
       syncSchema: this.syncOptions.syncSchema,
       apiKey: this.syncOptions.apiKey,
       server: this.syncOptions.server,
