@@ -56,7 +56,7 @@ export class VariableAwareCache<Schema extends Models<any, any>> {
   async createView<Q extends CollectionQuery<Schema, any>>(viewQuery: Q) {
     return new Promise<void>((resolve) => {
       const id = this.viewQueryToId(viewQuery);
-      subscribeResultsAndTriples(
+      subscribeResultsAndTriples<Schema, Q>(
         this.tripleStore,
         viewQuery,
         ([results, triples]) => {

@@ -267,7 +267,7 @@ export default class DB<M extends Models<any, any> | undefined> {
       skipRules,
     });
 
-    return await fetch(
+    return await fetch<M, Q>(
       scope ? this.tripleStore.setStorageScope(scope) : this.tripleStore,
       fetchQuery,
       {
@@ -289,7 +289,7 @@ export default class DB<M extends Models<any, any> | undefined> {
     });
     return [
       ...(
-        await fetch(
+        await fetch<M, Q>(
           scope ? this.tripleStore.setStorageScope(scope) : this.tripleStore,
           fetchQuery,
           {

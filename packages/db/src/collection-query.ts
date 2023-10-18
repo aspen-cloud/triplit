@@ -92,7 +92,10 @@ export interface FetchOptions {
  * @param query
  * @param options
  */
-export async function fetch<Q extends CollectionQuery<any, any>>(
+export async function fetch<
+  M extends Models<any, any> | undefined,
+  Q extends CollectionQuery<M, any>
+>(
   tx: TripleStoreApi,
   query: Q,
   options?: FetchOptions & {
@@ -100,7 +103,10 @@ export async function fetch<Q extends CollectionQuery<any, any>>(
     cache?: VariableAwareCache<any>;
   }
 ): Promise<FetchResult<Q>>;
-export async function fetch<Q extends CollectionQuery<any, any>>(
+export async function fetch<
+  M extends Models<any, any> | undefined,
+  Q extends CollectionQuery<M, any>
+>(
   tx: TripleStoreApi,
   query: Q,
   options?: FetchOptions & {
@@ -108,7 +114,10 @@ export async function fetch<Q extends CollectionQuery<any, any>>(
     cache?: VariableAwareCache<any>;
   }
 ): Promise<{ results: FetchResult<Q>; triples: Map<string, TripleRow[]> }>;
-export async function fetch<Q extends CollectionQuery<any, any>>(
+export async function fetch<
+  M extends Models<any, any> | undefined,
+  Q extends CollectionQuery<M, any>
+>(
   tx: TripleStoreApi,
   query: Q,
   {
@@ -183,14 +192,17 @@ export async function fetch<Q extends CollectionQuery<any, any>>(
       if (entityEntry?.triples) {
         return [externalId, entityEntry] as const;
       }
-      return [externalId, { triples: [], entity: entityEntry }] as const;
+      return [
+        externalId,
+        { triples: [] as TripleRow[], entity: entityEntry },
+      ] as const;
     })
     // filter out deleted
     .filter(async ([_id, { entity }]) => !isTimestampedEntityDeleted(entity))
     .filter(async ([id, { entity }]) => {
       const subQueries = where.filter(
         (filter) => 'exists' in filter
-      ) as SubQuery[];
+      ) as SubQuery<M>[];
       const plainFilters = where.filter((filter) => !('exists' in filter));
       const basicMatch = doesEntityObjMatchWhere(
         entity,
@@ -208,11 +220,15 @@ export async function fetch<Q extends CollectionQuery<any, any>>(
           },
           limit: 1,
         };
-        const subQueryFetch = await fetch(tx, existsSubQuery, {
-          includeTriples: true,
-          schema,
-          cache,
-        });
+        const subQueryFetch = await fetch<M, typeof existsSubQuery>(
+          tx,
+          existsSubQuery,
+          {
+            includeTriples: true,
+            schema,
+            cache,
+          }
+        );
         const { results: subQueryResult, triples } = subQueryFetch;
         const exists = subQueryResult.size > 0;
         if (!exists) return false;
@@ -523,7 +539,7 @@ function subscribeSingleEntity<
     try {
       if (!entityId) throw new EntityIdMissingError();
       const internalEntityId = appendCollectionToId(collectionName, entityId);
-      const fetchResult = await fetch(tripleStore, query, {
+      const fetchResult = await fetch<M, Q>(tripleStore, query, {
         includeTriples: true,
         schema,
       });
@@ -550,7 +566,7 @@ function subscribeSingleEntity<
 
           // if we have deletes, need to re-fetch the entity
           if (entityDeletes.length) {
-            const fetchResult = await fetch(tripleStore, query, {
+            const fetchResult = await fetch<M, Q>(tripleStore, query, {
               includeTriples: true,
               schema,
             });
@@ -619,7 +635,7 @@ export function subscribeResultsAndTriples<
     let results: FetchResult<Q> = new Map() as FetchResult<Q>;
     let triples: Map<string, TripleRow[]> = new Map();
     try {
-      const fetchResult = await fetch(tripleStore, query, {
+      const fetchResult = await fetch<M, Q>(tripleStore, query, {
         includeTriples: true,
         schema,
       });
@@ -641,7 +657,7 @@ export function subscribeResultsAndTriples<
         try {
           // Handle queries with nested queries as a special case for now
           if (someFilterStatements(where, (filter) => 'exists' in filter)) {
-            const fetchResult = await fetch(tripleStore, query, {
+            const fetchResult = await fetch<M, Q>(tripleStore, query, {
               includeTriples: true,
               schema,
             });
@@ -744,7 +760,7 @@ export function subscribeResultsAndTriples<
                     ]
                   : undefined,
               };
-              const backFilledResults = await fetch(
+              const backFilledResults = await fetch<M, Q>(
                 tripleStore,
                 backFillQuery,
                 {

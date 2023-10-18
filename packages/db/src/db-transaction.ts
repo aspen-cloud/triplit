@@ -455,7 +455,7 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
       scope,
       skipRules,
     });
-    return fetch(this.storeTx, fetchQuery, {
+    return fetch<M, Q>(this.storeTx, fetchQuery, {
       schema: (await this.getSchema())?.collections,
       includeTriples: false,
     });

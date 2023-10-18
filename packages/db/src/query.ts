@@ -1,9 +1,11 @@
 import { ValuePointer } from '@sinclair/typebox/value';
-import { Model, Timestamped } from './schema';
+import { Model, Models, Timestamped } from './schema';
 import { Attribute, EntityId, TripleRow } from './triple-store';
 import { QueryClauseFormattingError } from './errors';
 import { TimestampType } from './data-types/base';
 import { timestampCompare } from './timestamp';
+import { CollectionQuery } from './collection-query';
+import { CollectionNameFromModels } from './db';
 
 type Path = string;
 // Should be friendly types that we pass into queries
@@ -45,8 +47,11 @@ export type FilterGroup<M extends Model<any> | undefined> = {
   filters: WhereFilter<M>[];
 };
 
-export type SubQuery = {
-  exists: Query<any>;
+export type SubQuery<
+  M extends Models<any, any> | undefined = any,
+  CN extends CollectionNameFromModels<M> = any
+> = {
+  exists: CollectionQuery<M, CN>;
 };
 
 export type WhereFilter<M extends Model<any> | undefined> =
