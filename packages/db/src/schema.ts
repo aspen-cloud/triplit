@@ -215,8 +215,7 @@ export function serializeClientModel<M extends Model<any> | undefined>(
   return serialized;
 }
 
-// TODO: make this work with the new typing system
-// Keeping for now because it handles rules well
+// TODO: perform a pass on this to see how we can improve its types
 export function timestampedObjectToPlainObject<O extends TimestampedObject>(
   obj: O
 ): UnTimestampedObject<O> {
@@ -224,9 +223,11 @@ export function timestampedObjectToPlainObject<O extends TimestampedObject>(
     return obj;
   }
   if (isTimestampedVal(obj)) {
+    // @ts-ignore
     return obj[0];
   }
   if (obj instanceof Array) {
+    // @ts-ignore
     return obj.map((v) => timestampedObjectToPlainObject(v));
   }
   const entries = Object.entries(obj).map(([key, val]) => {

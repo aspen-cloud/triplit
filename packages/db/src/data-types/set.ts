@@ -45,6 +45,7 @@ export function SetType<Items extends ValueType<any>>(
         return { ...acc, [key as string]: true };
       }, {});
     },
+    // @ts-ignore TODO fix during testing
     default() {
       return new Set(); // TODO: should return record
     },
