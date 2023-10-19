@@ -6,7 +6,7 @@ import {
   Models,
   InsertTypeFromModel,
 } from './schema';
-import { AsyncTupleStorageApi } from 'tuple-database';
+import { AsyncTupleStorageApi, Tuple, TupleStorageApi } from 'tuple-database';
 import CollectionQueryBuilder, {
   CollectionQuery,
   fetch,
@@ -103,7 +103,7 @@ export type Migration = {
   parent: number;
 };
 
-type StorageSource = AsyncTupleStorageApi;
+type StorageSource = AsyncTupleStorageApi | TupleStorageApi;
 
 interface DBConfig<M extends Models<any, any> | undefined> {
   schema?: { collections: NonNullable<M>; version?: number };
