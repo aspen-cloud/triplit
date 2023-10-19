@@ -55,8 +55,8 @@ describe('schemaful', () => {
             // default functions
             defaultNow: S.String({ default: S.Default.now() }),
             defaultUuid: S.String({ default: S.Default.uuid() }),
-            // TODO: subqueries
-            // subquery: S.Query({...})
+            // subqueries
+            subquery: S.Query({ collectionName: 'test2', where: [] }),
           }),
         },
       },
@@ -103,6 +103,8 @@ describe('schemaful', () => {
     expectEntityParam
       .toHaveProperty('defaultUuid')
       .toEqualTypeOf<string | undefined>();
+
+    expectEntityParam.not.toHaveProperty('subquery');
   });
   test.todo('insert: collection param informs entity param'); // Not sure how to test this, but collectionName should narrow the type of entity param
 
@@ -155,6 +157,8 @@ describe('schemaful', () => {
             // default functions
             defaultNow: S.String({ default: S.Default.now() }),
             defaultUuid: S.String({ default: S.Default.uuid() }),
+            // subqueries
+            subquery: S.Query({ collectionName: 'test2', where: [] }),
           }),
         },
       },
@@ -193,6 +197,8 @@ describe('schemaful', () => {
     expectEntityProxyParam
       .toHaveProperty('defaultUuid')
       .toEqualTypeOf<string>();
+
+    expectEntityProxyParam.not.toHaveProperty('subquery');
   });
 
   test('fetch: returns a map of properly typed entities', () => {
@@ -221,6 +227,8 @@ describe('schemaful', () => {
             // default functions
             defaultNow: S.String({ default: S.Default.now() }),
             defaultUuid: S.String({ default: S.Default.uuid() }),
+            // subqueries
+            subquery: S.Query({ collectionName: 'test2', where: [] }),
           }),
         },
       },

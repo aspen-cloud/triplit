@@ -13,7 +13,7 @@ import {
 import {
   convertEntityToJS,
   getSchemaFromPath,
-  JSONTypeFromModel,
+  ResultTypeFromModel,
   Model,
   Models,
   timestampedObjectToPlainObject,
@@ -72,7 +72,7 @@ export type CollectionQuery<
 export type FetchResult<C extends CollectionQuery<any, any>> =
   C extends CollectionQuery<infer M, infer CN>
     ? M extends Models<any, any>
-      ? Map<string, JSONTypeFromModel<ModelFromModels<M, CN>>>
+      ? Map<string, ResultTypeFromModel<ModelFromModels<M, CN>>>
       : M extends undefined
       ? Map<string, any>
       : never

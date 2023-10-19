@@ -116,11 +116,13 @@ type ProxyType<DT> = DT extends DataType
     : ExtractJSType<DT>
   : never;
 
-// Pull out the proxy type from a model by checking the x-serialized-type
-export type ProxyTypeFromModel<T extends Model<any> | undefined> =
-  T extends Model<any>
+export type ProxyTypeFromModel<M extends Model<any> | undefined> =
+  M extends Model<any>
     ? {
-        [k in keyof T['properties']]: ProxyType<T['properties'][k]>;
+        // remove subqueries from update model
+        [k in keyof M['properties'] as M['properties'][k] extends QueryType<any>
+          ? never
+          : k]: ProxyType<M['properties'][k]>;
       }
     : any;
 
@@ -147,32 +149,50 @@ type DataTypeHasDefault<T extends DataType> = BooleanNot<
   DataTypeHasNoDefault<T>
 >;
 
-// Exposed to client
 export type InsertTypeFromModel<M extends Model<any> | undefined> =
   M extends Model<any>
     ? {
+        // If the type has no default, it must be provided
         [k in keyof M['properties'] as DataTypeHasNoDefault<
           M['properties'][k]
         > extends true
-          ? k
+          ? // remove subqueries from insert model
+            M['properties'][k] extends QueryType<any>
+            ? never
+            : k
           : never]: ExtractJSType<M['properties'][k]>;
       } & {
+        // If the type has a default, it can be omitted
         [k in keyof M['properties'] as DataTypeHasDefault<
           M['properties'][k]
         > extends true
-          ? k
+          ? // remove subqueries from insert model
+            M['properties'][k] extends QueryType<any>
+            ? never
+            : k
           : never]?: ExtractJSType<M['properties'][k]>;
       }
     : any;
 
-export type JSONTypeFromModel<M extends Model<any> | undefined> =
+export type ResultTypeFromModel<M extends Model<any> | undefined> =
   M extends Model<any>
     ? {
-        [k in keyof M['properties']]: M['properties'][k] extends DataType
+        // remove subqueries from result model
+        [k in keyof M['properties'] as M['properties'][k] extends QueryType<any>
+          ? never
+          : k]: M['properties'][k] extends DataType
           ? ExtractJSType<M['properties'][k]>
           : never;
       }
     : any;
+
+type JSTypeFromModel<M extends Model<any> | undefined> = M extends Model<any>
+  ? {
+      [k in keyof M['properties']]: M['properties'][k] extends DataType
+        ? ExtractJSType<M['properties'][k]>
+        : never;
+    }
+  : any;
 
 export type SerializedTypeFromModel<M extends Model<any> | undefined> =
   M extends Model<any>
@@ -206,7 +226,7 @@ export function convertEntityToJS<M extends Model<any>>(
 }
 
 export function serializeClientModel<M extends Model<any> | undefined>(
-  entity: JSONTypeFromModel<M>,
+  entity: JSTypeFromModel<M>,
   model: M
 ) {
   const serialized: SerializedTypeFromModel<M> = {} as any;

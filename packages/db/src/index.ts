@@ -55,7 +55,7 @@ export type {
 } from './schema';
 export type {
   InsertTypeFromModel,
-  JSONTypeFromModel,
+  ResultTypeFromModel,
   ProxyTypeFromModel,
   Model,
   Models,
