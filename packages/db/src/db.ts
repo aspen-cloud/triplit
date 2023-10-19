@@ -162,7 +162,7 @@ export function ruleToTuple(
   ]);
 }
 
-export default class DB<M extends Models<any, any> | undefined> {
+export default class DB<M extends Models<any, any> | undefined = undefined> {
   tripleStore: TripleStore;
   ensureMigrated: Promise<void | void[]>;
   variables: Record<string, any>;

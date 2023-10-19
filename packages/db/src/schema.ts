@@ -118,7 +118,11 @@ type ProxyType<DT> = DT extends DataType
 
 // Pull out the proxy type from a model by checking the x-serialized-type
 export type ProxyTypeFromModel<T extends Model<any> | undefined> =
-  T extends Model<any> ? ProxyType<T> : any;
+  T extends Model<any>
+    ? {
+        [k in keyof T['properties']]: ProxyType<T['properties'][k]>;
+      }
+    : any;
 
 // Used for entity reducer
 export type TimestampedTypeFromModel<M extends Model<any>> =
