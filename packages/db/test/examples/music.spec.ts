@@ -8,7 +8,7 @@ describe('Music app queries', () => {
       schema: {
         collections: {
           artists: {
-            attributes: S.Schema({
+            schema: S.Schema({
               id: S.String(),
               name: S.String(),
               tracks: S.Query({
@@ -22,7 +22,7 @@ describe('Music app queries', () => {
             }),
           },
           tracks: {
-            attributes: S.Schema({
+            schema: S.Schema({
               id: S.String(),
               title: S.String(),
               artist_id: S.String(),
@@ -38,7 +38,7 @@ describe('Music app queries', () => {
             }),
           },
           albums: {
-            attributes: S.Schema({
+            schema: S.Schema({
               id: S.String(),
               title: S.String(),
               artist_id: S.String(),
@@ -53,7 +53,7 @@ describe('Music app queries', () => {
             }),
           },
           playlists: {
-            attributes: S.Schema({
+            schema: S.Schema({
               id: S.String(),
               name: S.String(),
               track_ids: S.Set(S.String()),

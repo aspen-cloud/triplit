@@ -474,7 +474,7 @@ describe('Set operations', () => {
   const schema = {
     collections: {
       companies: {
-        attributes: S.Schema({
+        schema: S.Schema({
           id: S.Number(),
           name: S.String(),
           employees: S.Set(S.Number()),
@@ -543,7 +543,7 @@ describe('Set operations', () => {
     const schema = {
       collections: {
         companies: {
-          attributes: S.Schema({
+          schema: S.Schema({
             id: S.Number(),
             name: S.String(),
             employees: S.Set(S.Number()),
@@ -591,7 +591,7 @@ describe('date operations', () => {
   const schema = {
     collections: {
       students: {
-        attributes: S.Schema({
+        schema: S.Schema({
           id: S.String(),
           name: S.String(),
           birthday: S.Date(),
@@ -1031,7 +1031,7 @@ describe('single entity subscriptions', async () => {
     schema: {
       collections: {
         students: {
-          attributes: S.Schema({
+          schema: S.Schema({
             id: S.String(),
             name: S.String(),
             major: S.String(),
@@ -1347,7 +1347,7 @@ describe('ORDER & LIMIT & Pagination', () => {
     schema: {
       collections: {
         TestScores: {
-          attributes: S.Schema({
+          schema: S.Schema({
             score: S.Number(),
             date: S.String(),
           }),
@@ -1650,7 +1650,7 @@ describe('database transactions', () => {
       schema: {
         collections: {
           TestScores: {
-            attributes: S.Schema({
+            schema: S.Schema({
               score: S.Number(),
               date: S.String(),
             }),
@@ -1681,7 +1681,7 @@ describe('database transactions', () => {
       schema: {
         collections: {
           TestScores: {
-            attributes: S.Schema({
+            schema: S.Schema({
               score: S.Number(),
               date: S.String(),
             }),
@@ -1713,7 +1713,7 @@ describe('database transactions', () => {
       schema: {
         collections: {
           TestScores: {
-            attributes: S.Schema({
+            schema: S.Schema({
               score: S.Number(),
               date: S.String(),
             }),
@@ -1769,7 +1769,7 @@ describe('database transactions', () => {
       schema: {
         collections: {
           TestScores: {
-            attributes: S.Schema({
+            schema: S.Schema({
               score: S.Number(),
               date: S.String(),
             }),
@@ -1800,7 +1800,7 @@ describe('database transactions', () => {
       schema: {
         collections: {
           TestScores: {
-            attributes: S.Schema({
+            schema: S.Schema({
               score: S.Number(),
               date: S.String(),
             }),
@@ -1833,17 +1833,15 @@ describe('schema changes', async () => {
     const db = new DB({ source: new InMemoryTupleStorage() });
     await db.createCollection({
       name: 'students',
-      attributes: {
+      schema: {
         id: { type: 'number', options: {} },
         name: { type: 'string', options: {} },
       },
     });
     const schema = await db.getSchema();
     expect(schema?.collections).toHaveProperty('students');
-    expect(schema?.collections.students.attributes.properties).toHaveProperty(
-      'id'
-    );
-    expect(schema?.collections.students.attributes.properties).toHaveProperty(
+    expect(schema?.collections.students.schema.properties).toHaveProperty('id');
+    expect(schema?.collections.students.schema.properties).toHaveProperty(
       'name'
     );
   });
@@ -1855,7 +1853,7 @@ describe('schema changes', async () => {
       expect(tx.schema).toBeUndefined();
       const newCollection = {
         name: 'students',
-        attributes: {
+        schema: {
           id: { type: 'number', options: {} },
           name: { type: 'string', options: {} },
         },
@@ -1875,7 +1873,7 @@ describe('schema changes', async () => {
     const schema = {
       collections: {
         students: {
-          attributes: S.Schema({
+          schema: S.Schema({
             id: S.Number(),
             name: S.String(),
           }),
@@ -1896,7 +1894,7 @@ describe('schema changes', async () => {
     const schema = {
       collections: {
         students: {
-          attributes: S.Schema({
+          schema: S.Schema({
             id: S.Number(),
             name: S.String(),
           }),
@@ -1912,10 +1910,10 @@ describe('schema changes', async () => {
     });
     const dbSchema = await db.getSchema();
     expect(dbSchema?.collections).toHaveProperty('students');
-    expect(dbSchema?.collections.students.attributes.properties).toHaveProperty(
+    expect(dbSchema?.collections.students.schema.properties).toHaveProperty(
       'age'
     );
-    expect(dbSchema?.collections.students.attributes.properties).toHaveProperty(
+    expect(dbSchema?.collections.students.schema.properties).toHaveProperty(
       'name'
     );
   });
@@ -1926,7 +1924,7 @@ describe('schema changes', async () => {
     const schema = {
       collections: {
         students: {
-          attributes: S.Schema({
+          schema: S.Schema({
             id: S.Number(),
             name: S.String(),
           }),
@@ -1938,10 +1936,10 @@ describe('schema changes', async () => {
     await db.dropAttribute({ collection: 'students', path: ['id'] });
     const dbSchema = await db.getSchema();
     expect(dbSchema?.collections).toHaveProperty('students');
-    expect(
-      dbSchema?.collections.students.attributes.properties
-    ).not.toHaveProperty('id');
-    expect(dbSchema?.collections.students.attributes.properties).toHaveProperty(
+    expect(dbSchema?.collections.students.schema.properties).not.toHaveProperty(
+      'id'
+    );
+    expect(dbSchema?.collections.students.schema.properties).toHaveProperty(
       'name'
     );
 
@@ -1953,7 +1951,7 @@ describe('schema changes', async () => {
     const schemaOne = {
       collections: {
         students: {
-          attributes: S.Schema({
+          schema: S.Schema({
             id: S.Number(),
             name: S.String(),
           }),
@@ -1963,7 +1961,7 @@ describe('schema changes', async () => {
     const schemaTwo = {
       collections: {
         products: {
-          attributes: S.Schema({
+          schema: S.Schema({
             id: S.Number(),
             name: S.String(),
             price: S.Number(),
@@ -1986,7 +1984,7 @@ describe('schema changes', async () => {
           schema: {
             collections: {
               students: {
-                attributes: S.Schema({
+                schema: S.Schema({
                   id: S.Number(),
                   name: S.String(),
                 }),
@@ -2007,12 +2005,10 @@ describe('schema changes', async () => {
 
         let dbSchema = await db.getSchema();
         expect(
-          dbSchema?.collections.students.attributes.properties.name.options
-            .nullable
+          dbSchema?.collections.students.schema.properties.name.options.nullable
         ).toBe(true);
         expect(
-          dbSchema?.collections.students.attributes.properties.name.options
-            .default
+          dbSchema?.collections.students.schema.properties.name.options.default
         ).toBe("Robert'); DROP TABLE Students;--");
 
         // update values
@@ -2027,12 +2023,10 @@ describe('schema changes', async () => {
 
         dbSchema = await db.getSchema();
         expect(
-          dbSchema?.collections.students.attributes.properties.name.options
-            .nullable
+          dbSchema?.collections.students.schema.properties.name.options.nullable
         ).toBe(false);
         expect(
-          dbSchema?.collections.students.attributes.properties.name.options
-            .default
+          dbSchema?.collections.students.schema.properties.name.options.default
         ).toBe('Bobby Tables');
       }
     );
@@ -2042,7 +2036,7 @@ describe('schema changes', async () => {
     const schema = {
       collections: {
         students: {
-          attributes: S.Schema({
+          schema: S.Schema({
             id: S.Number(),
             name: S.String({
               nullable: true,
@@ -2065,7 +2059,7 @@ describe('schema changes', async () => {
 
         dbSchema = await db.getSchema();
         expect(
-          dbSchema?.collections.students.attributes.properties.name.options
+          dbSchema?.collections.students.schema.properties.name.options
         ).not.toHaveProperty('nullable');
 
         await db.dropAttributeOption({
@@ -2076,7 +2070,7 @@ describe('schema changes', async () => {
 
         dbSchema = await db.getSchema();
         expect(
-          dbSchema?.collections.students.attributes.properties.name.options
+          dbSchema?.collections.students.schema.properties.name.options
         ).not.toHaveProperty('default');
       }
     );
@@ -2091,7 +2085,7 @@ describe('schema changes', async () => {
       async (db) => {
         await db.createCollection({
           name: 'students',
-          attributes: {
+          schema: {
             id: { type: 'number', options: {} },
             name: { type: 'string', options: {} },
           },
@@ -2126,7 +2120,7 @@ describe('schema changes', async () => {
           schema: {
             collections: {
               students: {
-                attributes: S.Schema({
+                schema: S.Schema({
                   id: S.Number(),
                   name: S.String(),
                 }),
@@ -2173,7 +2167,7 @@ describe('schema changes', async () => {
           schema: {
             collections: {
               students: {
-                attributes: S.Schema({
+                schema: S.Schema({
                   id: S.Number(),
                   name: S.String(),
                 }),
@@ -2227,7 +2221,7 @@ describe('migrations', () => {
           'create_collection',
           {
             name: 'students',
-            attributes: {
+            schema: {
               id: { type: 'number', options: {} },
               name: { type: 'string', options: {} },
             },
@@ -2244,7 +2238,7 @@ describe('migrations', () => {
           'create_collection',
           {
             name: 'classes',
-            attributes: {
+            schema: {
               id: { type: 'number', options: {} },
               department: { type: 'string', options: {} },
             },
@@ -2386,7 +2380,7 @@ describe('migrations', () => {
       const schema = {
         collections: {
           students: {
-            attributes: S.Schema({
+            schema: S.Schema({
               id: S.Number(),
               name: S.String(),
             }),
@@ -2534,7 +2528,7 @@ describe('Rules', () => {
     beforeAll(async () => {
       await db.createCollection({
         name: 'classes',
-        attributes: {
+        schema: {
           id: { type: 'string', options: {} },
           name: { type: 'string', options: {} },
           level: { type: 'number', options: {} },
@@ -2703,7 +2697,7 @@ describe('Rules', () => {
 
       await db.createCollection({
         name: 'posts',
-        attributes: {
+        schema: {
           id: { type: 'string', options: {} },
           author_id: { type: 'string', options: {} },
         },
@@ -2793,7 +2787,7 @@ describe('Rules', () => {
 
       await db.createCollection({
         name: 'posts',
-        attributes: {
+        schema: {
           id: { type: 'string', options: {} },
           author_id: { type: 'string', options: {} },
           content: { type: 'string', options: {} },
@@ -2876,7 +2870,7 @@ describe('Rules', () => {
     const schema = {
       collections: {
         posts: {
-          attributes: S.Schema({
+          schema: S.Schema({
             id: S.String(),
             author_id: S.String(),
           }),
@@ -3046,7 +3040,7 @@ describe('Nested Properties', () => {
   describe('Schemafull', async () => {
     const schema = {
       Businesses: {
-        attributes: S.Schema({
+        schema: S.Schema({
           name: S.String(),
           address: S.Record({
             street: S.Record({
@@ -3149,7 +3143,7 @@ describe('Nullable properties in a schema', () => {
   const schema = {
     collections: {
       Todos: {
-        attributes: S.Schema({
+        schema: S.Schema({
           text: S.String(),
           created_at: S.Date(),
           deleted_at: S.Date({ nullable: true }),
@@ -3275,7 +3269,7 @@ it('throws an error if a register filter is malformed', async () => {
     schema: {
       collections: {
         Classes: {
-          attributes: S.Schema({
+          schema: S.Schema({
             name: S.String(),
             students: S.Set(S.String()),
           }),
@@ -3305,7 +3299,7 @@ describe('default values in a schema', () => {
   const schema = {
     collections: {
       Todos: {
-        attributes: S.Schema({
+        schema: S.Schema({
           text: S.String(),
           created_at: S.Date(),
           completed: S.Boolean({ default: false }),
@@ -3349,7 +3343,7 @@ describe('default values in a schema', () => {
           schema: {
             collections: {
               Todos: {
-                attributes: S.Schema({
+                schema: S.Schema({
                   todoId: S.String({
                     default: S.Default.now(),
                   }),
@@ -3397,7 +3391,7 @@ describe('subscription errors', () => {
       schema: {
         collections: {
           Classes: {
-            attributes: S.Schema({
+            schema: S.Schema({
               name: S.String(),
               students: S.Set(S.String()),
             }),
@@ -3646,7 +3640,7 @@ describe('Subqueries in schema', () => {
       schema: {
         collections: {
           departments: {
-            attributes: S.Schema({
+            schema: S.Schema({
               id: S.String(),
               name: S.String(),
               classes: S.Query({
@@ -3656,7 +3650,7 @@ describe('Subqueries in schema', () => {
             }),
           },
           classes: {
-            attributes: S.Schema({
+            schema: S.Schema({
               name: S.String(),
               level: S.Number(),
               building: S.String(),
@@ -3838,7 +3832,7 @@ describe.todo('social network test', () => {
       schema: {
         collections: {
           users: {
-            attributes: S.Schema({
+            schema: S.Schema({
               id: S.String(),
               name: S.String(),
               friend_ids: S.Set(S.String()),
@@ -3853,7 +3847,7 @@ describe.todo('social network test', () => {
             }),
           },
           posts: {
-            attributes: S.Schema({
+            schema: S.Schema({
               id: S.String(),
               content: S.String(),
               author_id: S.String(),

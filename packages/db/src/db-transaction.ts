@@ -95,7 +95,7 @@ function checkWriteRules<M extends Models<any, any> | undefined>(
     const satisfiedRule = doesEntityObjMatchWhere(
       entity,
       query.where,
-      collection?.attributes
+      collection?.schema
     );
     if (!satisfiedRule) {
       // TODO add better error that uses rule description
@@ -243,10 +243,7 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
 
     // TODO apply defaults before "serializing"
     // serialize the doc values
-    const serializedDoc = serializeClientModel(
-      doc,
-      collectionSchema?.attributes
-    );
+    const serializedDoc = serializeClientModel(doc, collectionSchema?.schema);
 
     // Append defaults
     const fullDoc = collectionSchema
@@ -303,7 +300,7 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
 
     // Collect changes
     const changes = {};
-    const collectionSchema = collection?.attributes;
+    const collectionSchema = collection?.schema;
     const updateProxy = this.createUpdateProxy<typeof collectionSchema>(
       changes,
       entity,
@@ -503,20 +500,20 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
 
   async createCollection(params: CreateCollectionOperation[1]) {
     await this.checkOrCreateSchema();
-    const { name: collectionName, attributes, rules } = params;
+    const { name: collectionName, schema, rules } = params;
     await this.update(
       this.METADATA_COLLECTION_NAME,
       '_schema',
-      async (schema) => {
-        if (!schema.collections) schema.collections = {};
+      async (schemaEntity) => {
+        if (!schemaEntity.collections) schemaEntity.collections = {};
         // adding this here so that collections without attributes have some leaf value
         // so that the collection key will show up in the schema
-        if (!schema.collections[collectionName])
-          schema.collections[collectionName] = { name: collectionName };
-        const collectionAttributes = schema.collections[collectionName];
-        collectionAttributes.attributes = typeFromJSON({
+        if (!schemaEntity.collections[collectionName])
+          schemaEntity.collections[collectionName] = { name: collectionName };
+        const collectionAttributes = schemaEntity.collections[collectionName];
+        collectionAttributes.schema = typeFromJSON({
           type: 'record',
-          properties: attributes,
+          properties: schema,
         }).toJSON();
         collectionAttributes.rules = rules;
       }
@@ -543,13 +540,13 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
       async (schema) => {
         const collectionAttributes = schema.collections[collectionName];
 
-        if (!collectionAttributes.attributes) {
+        if (!collectionAttributes.schema) {
           // TODO add proper Typescript type here
-          collectionAttributes.attributes = { type: 'record', properties: {} };
+          collectionAttributes.schema = { type: 'record', properties: {} };
         }
 
         ValuePointer.Set(
-          collectionAttributes.attributes.properties,
+          collectionAttributes.schema.properties,
           path.join('/'),
           attribute
         );
@@ -570,7 +567,7 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
         let attr = parentPath.reduce((acc, curr) => {
           if (!acc[curr]) acc[curr] = {};
           return acc[curr];
-        }, collectionAttributes.attributes.properties);
+        }, collectionAttributes.schema.properties);
         delete attr[attrName];
       }
     );
@@ -588,7 +585,7 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
         let attr = parentPath.reduce((acc, curr) => {
           if (!acc[curr]) acc[curr] = {};
           return acc[curr];
-        }, collectionAttributes.attributes.properties);
+        }, collectionAttributes.schema.properties);
         for (const [option, value] of Object.entries(options)) {
           // // instantiate this here until we support empty objects
           if (!attr[attrName].options) attr[attrName].options = {};
@@ -609,7 +606,7 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
         let attr = path.reduce((acc, curr) => {
           if (!acc[curr]) acc[curr] = {};
           return acc[curr];
-        }, collectionAttributes.attributes.properties);
+        }, collectionAttributes.schema.properties);
 
         // instantiate this here until we support empty objects
         if (!attr.options) attr.options = {};

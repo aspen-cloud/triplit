@@ -126,7 +126,7 @@ export async function fetch<
     cache,
   }: FetchOptions & { cache?: VariableAwareCache<any> } = {}
 ) {
-  const collectionSchema = schema && schema[query.collectionName]?.attributes;
+  const collectionSchema = schema && schema[query.collectionName]?.schema;
   if (cache && VariableAwareCache.canCacheQuery(query, collectionSchema)) {
     const cacheResult = await cache!.resolveFromCache(query);
     if (!includeTriples) return cacheResult.results;
@@ -535,7 +535,7 @@ function subscribeSingleEntity<
     const { collectionName, entityId } = query;
     let entity: any;
     let triples: Map<string, TripleRow[]> = new Map();
-    const collectionSchema = schema && schema[query.collectionName]?.attributes;
+    const collectionSchema = schema && schema[query.collectionName]?.schema;
     try {
       if (!entityId) throw new EntityIdMissingError();
       const internalEntityId = appendCollectionToId(collectionName, entityId);
@@ -647,7 +647,7 @@ export function subscribeResultsAndTriples<
             id,
             convertEntityToJS(
               entity,
-              schema && schema[query.collectionName]?.attributes
+              schema && schema[query.collectionName]?.schema
             ),
           ])
         ) as FetchResult<Q>,
@@ -669,7 +669,7 @@ export function subscribeResultsAndTriples<
                   id,
                   convertEntityToJS(
                     entity,
-                    schema && schema[query.collectionName]?.attributes
+                    schema && schema[query.collectionName]?.schema
                   ),
                 ])
               ) as FetchResult<Q>,
@@ -710,7 +710,7 @@ export function subscribeResultsAndTriples<
               doesEntityObjMatchWhere(
                 entityObj,
                 where ?? [],
-                schema && schema[query.collectionName]?.attributes
+                schema && schema[query.collectionName]?.schema
               );
 
             // Check if the result stays within the current range of the query based on the limit
@@ -802,7 +802,7 @@ export function subscribeResultsAndTriples<
                 id,
                 convertEntityToJS(
                   entity,
-                  schema && schema[query.collectionName]?.attributes
+                  schema && schema[query.collectionName]?.schema
                 ),
               ])
             ) as FetchResult<Q>,

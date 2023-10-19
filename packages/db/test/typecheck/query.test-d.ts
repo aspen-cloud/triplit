@@ -10,17 +10,17 @@ describe('schemaful', () => {
     const schema = {
       collections: {
         a: {
-          attributes: S.Schema({
+          schema: S.Schema({
             attr: S.String(),
           }),
         },
         b: {
-          attributes: S.Schema({
+          schema: S.Schema({
             attr: S.String(),
           }),
         },
         c: {
-          attributes: S.Schema({
+          schema: S.Schema({
             attr: S.String(),
           }),
         },
@@ -33,7 +33,7 @@ describe('schemaful', () => {
     const schema = {
       collections: {
         test: {
-          attributes: S.Schema({
+          schema: S.Schema({
             // value types
             string: S.String(),
             boolean: S.Boolean(),
@@ -110,17 +110,17 @@ describe('schemaful', () => {
     const schema = {
       collections: {
         a: {
-          attributes: S.Schema({
+          schema: S.Schema({
             attr: S.String(),
           }),
         },
         b: {
-          attributes: S.Schema({
+          schema: S.Schema({
             attr: S.String(),
           }),
         },
         c: {
-          attributes: S.Schema({
+          schema: S.Schema({
             attr: S.String(),
           }),
         },
@@ -133,7 +133,7 @@ describe('schemaful', () => {
     const schema = {
       collections: {
         test: {
-          attributes: S.Schema({
+          schema: S.Schema({
             // value types
             string: S.String(),
             boolean: S.Boolean(),
@@ -199,7 +199,7 @@ describe('schemaful', () => {
     const schema = {
       collections: {
         test: {
-          attributes: S.Schema({
+          schema: S.Schema({
             // value types
             string: S.String(),
             boolean: S.Boolean(),

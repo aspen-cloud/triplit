@@ -39,7 +39,7 @@ const triplit = new DB({
     version: 0,
     collections: {
       classes: {
-        attributes: S.Schema({
+        schema: S.Schema({
           id: S.String(),
           level: S.Number(),
           name: S.String(),

@@ -204,7 +204,7 @@ export function validateTriple(
     throw new ModelNotFoundError(modelName as string, Object.keys(schema));
   }
 
-  const valueSchema = getSchemaFromPath(model.attributes, path);
+  const valueSchema = getSchemaFromPath(model.schema, path);
 
   // We expect you to set values at leaf nodes
   // Our leafs should be value types, so use that as check
@@ -276,7 +276,7 @@ export async function prepareQuery<
       if (!Array.isArray(statement)) return statement;
       const [prop, op, val] = statement;
       const attributeType = getSchemaFromPath(
-        collectionSchema.attributes,
+        collectionSchema.schema,
         prop.split('.')
       );
       if (attributeType.type !== 'query') {

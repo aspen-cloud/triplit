@@ -35,7 +35,7 @@ export type AttributeDefinition =
   | QueryAttributeDefinition;
 
 export interface CollectionDefinition {
-  attributes: RecordAttributeDefinition;
+  schema: RecordAttributeDefinition;
   rules?: CollectionRules<any>;
 }
 

@@ -34,7 +34,7 @@ import { Schema as S, TriplitClient } from '@triplit/client';
 
 const collections = {
   todos: {
-    attributes: S.Schema({
+    schema: S.Schema({
       id: S.String(),
       text: S.String(),
       complete: S.Boolean(),
@@ -43,7 +43,7 @@ const collections = {
     }),
   },
   users: {
-    attributes: S.Schema({
+    schema: S.Schema({
       name: S.string(),
       address: S.Record({
         street: S.string(),
@@ -72,7 +72,7 @@ You can indicate an attribute is nullable by passing the `{ nullable: true }` op
 
 ```typescript
   todos: {
-    attributes: S.Schema({
+    schema: S.Schema({
       id: S.String(),
       text: S.String(),
       complete: S.Boolean(),
@@ -91,7 +91,7 @@ The below schema has multiple fields with default values, including functions.
 
 ```typescript
   todos: {
-    attributes: S.Schema({
+    schema: S.Schema({
       id: S.String({ default: S.Default.uuid(5) }),
       text: S.String(),
       complete: S.Boolean({ default: false }),
@@ -152,7 +152,7 @@ A migration creating a collection called `todos` would look like this:
       "create_collection",
       {
         "name": "todos",
-        "attributes": {
+        "schema": {
           "text": {
             "type": "string"
           },
@@ -183,14 +183,14 @@ Migrations support the following operations:
 
 #### create_collection
 
-Creates a collection with attributes.
+Creates a collection with schema.
 
 ```json
 [
   "create_collection",
   {
     "name": "todos",
-    "attributes": {
+    "schema": {
       "text": {
         "type": "string"
       },

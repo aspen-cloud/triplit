@@ -69,7 +69,7 @@ type SchemaConfig = Record<string, DataType>;
 export type Model<T extends { [k: string]: DataType }> = RecordType<T>;
 
 export type Collection<T extends SchemaConfig = SchemaConfig> = {
-  attributes: Model<T>;
+  schema: Model<T>;
   rules?: CollectionRules<Model<T>>;
 };
 
@@ -260,7 +260,7 @@ export function collectionsDefinitionToSchema(
         collectionName,
         {
           ...collectionDef,
-          attributes: typeFromJSON(collectionDef.attributes) as Model<any>,
+          schema: typeFromJSON(collectionDef.schema) as Model<any>,
         },
       ];
     })
@@ -308,7 +308,7 @@ function collectionSchemaToJSON(
 ): CollectionDefinition {
   const rulesObj = collection.rules ? { rules: collection.rules } : {};
   return {
-    attributes: collection.attributes.toJSON() as RecordAttributeDefinition,
+    schema: collection.schema.toJSON() as RecordAttributeDefinition,
     ...rulesObj,
   };
 }
@@ -316,7 +316,7 @@ function collectionSchemaToJSON(
 export function getDefaultValuesForCollection(
   collection: Collection<SchemaConfig>
 ) {
-  return collection.attributes.default();
+  return collection.schema.default();
 }
 
 // Poor man's hash function for schema

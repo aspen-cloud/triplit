@@ -56,7 +56,7 @@ export type CreateCollectionOperation = [
   'create_collection',
   {
     name: string;
-    attributes: { [path: string]: AttributeDefinition };
+    schema: { [path: string]: AttributeDefinition };
     rules?: CollectionRules<any>;
   }
 ];
@@ -136,7 +136,7 @@ export type ModelFromModels<
   M extends Models<any, any> | undefined,
   CN extends CollectionNameFromModels<M> = any
 > = M extends Models<any, any>
-  ? M[CN]['attributes']
+  ? M[CN]['schema']
   : M extends undefined
   ? undefined
   : never;
