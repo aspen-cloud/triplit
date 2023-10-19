@@ -104,7 +104,7 @@ TriplitDB has support for
 
 # How it works
 
-Under the hood, TriplitDB utilizes a timestamped [Triple Store](https://en.wikipedia.org/wiki/Triplestore) to support efficiently merging changes from multiple sources whether that’s multiple writers or multiple storage layers. Each object that’s inserted is decomposed into a EAV triple of Entity (ID), Attribute (path in the object), and a Value. Each triple is stored with a [Lamport Timestamp](https://en.wikipedia.org/wiki/Lamport_timestamp) and treated as a [Last Writer Wins Register (LWW)](https://www.notion.so/You-probably-don-t-need-text-CRDTs-dce9cf7a42b64726893b3d69cd9070c3?pvs=21). To support its tuple based storage system, TriplitDB uses [Tuple Database](https://github.com/ccorcos/tuple-database/) as a generic querying interface and transaction manager.
+Under the hood, TriplitDB utilizes a timestamped [Triple Store](https://en.wikipedia.org/wiki/Triplestore) to support efficiently merging changes from multiple sources whether that’s multiple writers or multiple storage layers. Each object that’s inserted is decomposed into a EAV triple of Entity (ID), Attribute (path in the object), and a Value. Each triple is stored with a [Lamport Timestamp](https://en.wikipedia.org/wiki/Lamport_timestamp) and treated as a [Last Writer Wins Register (LWW)](https://github.com/pfrazee/crdt_notes#last-writer-wins-register-lww-register). To support its tuple based storage system, TriplitDB uses [Tuple Database](https://github.com/ccorcos/tuple-database/) as a generic querying interface and transaction manager.
 
 # Documentation
 
