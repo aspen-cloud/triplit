@@ -12,6 +12,7 @@ node_modules
 
 # build artifacts
 dist
+tsconfig.tsbuildinfo
 
 # parcel
 .parcel-cache
