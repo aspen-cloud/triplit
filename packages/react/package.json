@@ -7,10 +7,12 @@
   "module": "dist/module.js",
   "types": "dist/index.d.ts",
   "scripts": {
-    "build": "yarn build:setup && parcel build . --no-cache && yarn build:cleanup",
-    "build:setup": "mv tsconfig.json tsconfig.tmp.json && mv tsconfig.build.json tsconfig.json",
-    "build:cleanup": "mv tsconfig.json tsconfig.build.json && mv tsconfig.tmp.json tsconfig.json",
-    "lint": "tsc",
+    "build": "npm run build:esm & npm run build:cjs & npm run build:types & wait",
+    "build:esm": "tsc --module ESNext --outDir ./dist/esm",
+    "build:cjs": "tsc --module CommonJS --outDir ./dist/cjs",
+    "build:types": "tsc --emitDeclarationOnly",
+    "lint:build": "npx publint",
+    "lint": "tsc --noEmit",
     "publish-pkg": "node ../../scripts/npm-check-version-and-publish.js"
   },
   "files": [
