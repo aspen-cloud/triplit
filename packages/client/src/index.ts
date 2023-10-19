@@ -1,6 +1,5 @@
 export { Schema } from '@triplit/db';
 export type {
-  FetchResult,
   CollectionQuery,
   toBuilder,
   CollectionNameFromModels,

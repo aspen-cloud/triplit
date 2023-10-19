@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import {
-  FetchResult,
+  ClientFetchResult,
   TriplitClient,
   ClientQuery,
   ClientQueryBuilder,
@@ -18,7 +18,7 @@ export function useQuery<
   options?: SubscriptionOptions
 ) {
   const [results, setResults] = useState<
-    FetchResult<ClientQuery<M, CN>> | undefined
+    ClientFetchResult<ClientQuery<M, CN>> | undefined
   >(undefined);
   const [fetching, setFetching] = useState(true);
   const [fetchingRemote, setFetchingRemote] = useState(true);
@@ -37,7 +37,9 @@ export function useQuery<
         setFetching(false);
         setError(undefined);
         setFetchingRemote(!hasRemoteFulfilled);
-        setResults(new Map(localResults) as FetchResult<ClientQuery<M, CN>>);
+        setResults(
+          new Map(localResults) as ClientFetchResult<ClientQuery<M, CN>>
+        );
       },
       (error) => {
         setFetching(false);

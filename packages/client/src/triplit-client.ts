@@ -11,7 +11,6 @@ import {
   CollectionNameFromModels,
   DBTransaction,
   ModelFromModels,
-  FetchResult,
   DurableClock,
   TriplitError,
   constructEntities,
@@ -22,6 +21,7 @@ import {
   hashSchemaJSON,
   TripleRow,
   schemaToJSON,
+  ResultTypeFromModel,
 } from '@triplit/db';
 import { Subject } from 'rxjs';
 import { getUserId } from './token';
@@ -36,6 +36,26 @@ import { WebSocketTransport } from './websocket-transport';
 import { ClientSyncMessage, ServerSyncMessage } from '@/types/sync';
 export { IndexedDbStorage, MemoryStorage };
 type Storage = IndexedDbStorage | MemoryStorage;
+
+/**
+ * There is some odd behavior when using infer with intersection types
+ * Our query types are set up as:
+ * CollectionQuery<...> = Query<...> & { ... }
+ * ClientQuery<...> = CollectionQuery<...> & { ... }
+ *
+ * However, if you attempt to infer the generic of a base object (ex. CollectionQuery<infer M>) with the intersected object (ClientQuery<any>) the inferred type M is overly generic
+ *
+ * Recreating the fetch result type here to avoid this issue
+ * Playground: https://www.typescriptlang.org/play?#code/KYDwDg9gTgLgBDAnmYcCyEAmwA2BnAHgCg44BhCHHYAYxgEsIA7AOQEMBbVUGYJzPHDwwo9JgHMANCTgAVODz4C4AJVrRMBYaImShIseIB8RI3AC8q9VE0UqtBs3Zc9sowG4iRJCjgAhNjxgAjQFEF5+QQxsfAI2JkQ9eMQjPTIWMIjlAGtgRAgAM3QzSwBvGTYYEQBGAC50AG10gF1PAF8vH1QAUXClYE1QxUj0LFxCZKSE1PIM4Zy8wuKLf0DgtDSWMwAyOFLKkQAmeu1DNs9vZFRZYGFqgnl5wQCguISplJK5TKVntbfEnBkmYAPxwADkYECeHBcHq4IKbHoOHBni6cluMEODx+IxewUmQOmX0efTx-zEBWAUDgAFUPqC6XCIYjkajOlc4ABJJhgACu8EsvSyAwIpV4wnq+3hBQgEHBbTaenBEpg4I8HN8ajwfJwMGqKxudwIPP5MA16O1uqxhsx2NNAo8QA
+ */
+export type ClientFetchResult<C extends ClientQuery<any, any>> =
+  C extends ClientQuery<infer M, infer CN>
+    ? M extends Models<any, any>
+      ? Map<string, ResultTypeFromModel<ModelFromModels<M, CN>>>
+      : M extends undefined
+      ? Map<string, any>
+      : never
+    : never;
 
 export type TransportConnectParams = {
   server?: string;
@@ -494,7 +514,7 @@ class SyncEngine {
           stripCollectionFromId(id),
           timestampedObjectToPlainObject(entity),
         ])
-      ) as FetchResult<CQ>;
+      ) as ClientFetchResult<CQ>;
     } catch (e) {
       if (e instanceof TriplitError) throw e;
       if (e instanceof Error)
@@ -562,10 +582,7 @@ export type ClientQuery<
 function ClientQueryBuilder<
   M extends Models<any, any> | undefined,
   CN extends CollectionNameFromModels<M>
->(
-  collectionName: CN,
-  params?: Query<ModelFromModels<M, CN>> & { syncStatus?: SyncStatus }
-) {
+>(collectionName: CN, params?: Omit<ClientQuery<M, CN>, 'collectionName'>) {
   const query: ClientQuery<M, CN> = {
     collectionName,
     ...params,
@@ -829,7 +846,7 @@ export class TriplitClient<M extends Models<any, any> | undefined = undefined> {
   subscribe<CQ extends ClientQuery<M, any>>(
     query: CQ,
     onResults: (
-      results: FetchResult<CQ>,
+      results: ClientFetchResult<CQ>,
       info: { hasRemoteFulfilled: boolean }
     ) => void,
     onError?: (error: any) => void,
@@ -864,8 +881,8 @@ export class TriplitClient<M extends Models<any, any> | undefined = undefined> {
       let unsubscribeLocal = () => {};
       let unsubscribeRemote = () => {};
       let hasRemoteFulfilled = false;
-      const clientSubscriptionCallback = (results: FetchResult<CQ>) => {
-        onResults(results, { hasRemoteFulfilled });
+      const clientSubscriptionCallback = (results: any) => {
+        onResults(results as ClientFetchResult<CQ>, { hasRemoteFulfilled });
       };
       unsubscribeLocal = this.db.subscribe(
         query,
