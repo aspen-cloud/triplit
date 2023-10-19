@@ -1,10 +1,10 @@
 {
+  "extends": "./tsconfig.base.json",
   "compilerOptions": {
     "baseUrl": ".",
     "paths": {
       "@triplit/*": ["./packages/*/src"],
       "@/*": ["../*"]
     }
-  },
-  "extends": "./tsconfig.base.json"
+  }
 }

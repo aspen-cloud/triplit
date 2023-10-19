@@ -16,3 +16,5 @@ tsconfig.tsbuildinfo
 
 # parcel
 .parcel-cache
+
+.turbo

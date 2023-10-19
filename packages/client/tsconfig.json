@@ -5,7 +5,6 @@
     "target": "ESNext", // You can adjust the target as needed.
     "module": "ESNext", // This will be overridden in npm scripts
     "outDir": "./dist", // Output directory
-    // "rootDir": "./src", // Assuming you have your TypeScript files here
     "strict": true,
     "moduleResolution": "node",
     "esModuleInterop": true,
