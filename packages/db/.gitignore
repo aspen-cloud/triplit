@@ -22,3 +22,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# typecheck artifacts
+tsconfig.vitest-temp.json
