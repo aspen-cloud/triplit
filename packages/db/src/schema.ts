@@ -104,25 +104,13 @@ export function getSchemaFromPath(
   return scope;
 }
 
-export interface SetProxy<T> {
-  add: (value: T) => void;
-  remove: (value: T) => void;
-  has: (value: T) => boolean;
-}
-
-type ProxyType<DT> = DT extends DataType
-  ? DT extends SetType<infer Of>
-    ? SetProxy<ExtractJSType<Of>>
-    : ExtractJSType<DT>
-  : never;
-
-export type ProxyTypeFromModel<M extends Model<any> | undefined> =
+export type UpdateTypeFromModel<M extends Model<any> | undefined> =
   M extends Model<any>
     ? {
         // remove subqueries from update model
         [k in keyof M['properties'] as M['properties'][k] extends QueryType<any>
           ? never
-          : k]: ProxyType<M['properties'][k]>;
+          : k]: ExtractJSType<M['properties'][k]>;
       }
     : any;
 

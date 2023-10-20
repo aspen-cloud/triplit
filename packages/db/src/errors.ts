@@ -119,11 +119,11 @@ export class EntityIdMissingError extends TriplitError {
 }
 
 // Mutation Errors
-export class InvalidMutationError extends TriplitError {
+export class InvalidAssignmentError extends TriplitError {
   constructor(...args: any[]) {
     super(...args);
-    this.name = 'InvalidMutationError';
-    this.message = `You are attempting a mutation that is invalid.`;
+    this.name = 'InvalidAssignmentError';
+    this.message = `You are attempting to assign a value that is not valid for the attribute you are assigning to.`;
     this.status = STATUS_CODES['Bad Request'];
   }
 }

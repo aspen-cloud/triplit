@@ -9,10 +9,9 @@ import {
 } from './triple-store.js';
 import {
   getSchemaFromPath,
-  ProxyTypeFromModel,
+  UpdateTypeFromModel,
   Model,
   Models,
-  SetProxy,
   getDefaultValuesForCollection,
   TimestampedObject,
   timestampedObjectToPlainObject,
@@ -29,6 +28,8 @@ import CollectionQueryBuilder, {
 } from './collection-query.js';
 import {
   EntityNotFoundError,
+  InvalidAssignmentError,
+  TriplitError,
   UnrecognizedPropertyInUpdateError,
   WriteRuleError,
 } from './errors.js';
@@ -62,6 +63,7 @@ import { Query, constructEntity, entityToResultReducer } from './query.js';
 import { serializedItemToTuples } from './utils.js';
 import { typeFromJSON } from './data-types/base.js';
 import { SchemaDefinition } from './data-types/serialization.js';
+import { createSetProxy } from './data-types/set.js';
 
 interface TransactionOptions<
   M extends Models<any, any> | undefined = undefined
@@ -282,15 +284,23 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
     collectionName: CN,
     entityId: string,
     updater: (
-      entity: ProxyTypeFromModel<ModelFromModels<M, CN>>
+      entity: UpdateTypeFromModel<ModelFromModels<M, CN>>
     ) => void | Promise<void>
   ) {
     const collection = (await this.getSchema())?.collections[
       collectionName
     ] as CollectionFromModels<M, CN>;
-    const entity = await this.fetchById(collectionName, entityId);
 
-    if (!entity) {
+    // TODO: Would be great to plug into the pipeline at any point
+    // In this case I want untimestamped values, valid values
+    const storeId = appendCollectionToId(collectionName, entityId);
+    const entityTriples = await this.storeTx.findByEntity(storeId);
+    const timestampedEntity = constructEntity(entityTriples, storeId);
+    const entity = timestampedObjectToPlainObject(timestampedEntity);
+
+    // If enntity doenst exist or is deleted, throw error
+    // Schema/metadata does not have _collection attribute
+    if (collectionName !== '_metadata' && !entity?._collection) {
       throw new EntityNotFoundError(
         entityId,
         collectionName,
@@ -310,7 +320,6 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
     // Run updater (runs serialization of values)
     await updater(updateProxy);
     const changeTuples = serializedItemToTuples(changes);
-    const storeId = appendCollectionToId(collectionName, entityId);
 
     // Create change tuples
     const updateValues: EAV[] = [];
@@ -343,10 +352,10 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
   // TODO add tests for proxy reads
   private createUpdateProxy<M extends Model<any> | undefined>(
     changeTracker: {},
-    entityObj: ProxyTypeFromModel<M>,
+    entityObj: UpdateTypeFromModel<M>,
     schema?: M,
     prefix: string = ''
-  ): ProxyTypeFromModel<M> {
+  ): UpdateTypeFromModel<M> {
     return new Proxy(entityObj, {
       set: (_target, prop, value) => {
         const propPointer = [prefix, prop].join('/');
@@ -359,13 +368,21 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
           propPointer.slice(1).split('/')
         );
         if (!propSchema) {
-          // TODO use correct Triplit Error
           throw new UnrecognizedPropertyInUpdateError(propPointer, value);
+        }
+        if (propSchema.type === 'set') {
+          // Naively setting the value on the change tracker will override previous changes
+          // Instead we want some kind of merge behavior
+          // Throwing error for now
+          throw new InvalidAssignmentError(
+            'You cannot assign a set property directly. Use add, remove, or clear instead.'
+          );
         }
         const serializedValue = propSchema.convertInputToJson(
           // @ts-ignore Big DataType union results in never as arg type
           value
         );
+
         ValuePointer.Set(changeTracker, propPointer, serializedValue);
         return true;
       },
@@ -377,69 +394,33 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
       },
       get: (_target, prop) => {
         const parentPropPointer = [prefix, prop].join('/');
-        let propValue = ValuePointer.Has(changeTracker, parentPropPointer)
-          ? ValuePointer.Get(changeTracker, parentPropPointer)
-          : ValuePointer.Get(entityObj, prop as string);
+        const hasChange = ValuePointer.Has(changeTracker, parentPropPointer);
+        const updatedValue = ValuePointer.Get(changeTracker, parentPropPointer);
+        const originalValue = ValuePointer.Get(entityObj, prop as string);
+        const currentValue = hasChange ? updatedValue : originalValue;
 
         const propSchema =
           schema &&
           getSchemaFromPath(schema, parentPropPointer.slice(1).split('/'));
-        if (
-          typeof propValue === 'object' &&
-          (!propSchema || propSchema.type !== 'set') &&
-          propValue !== null
-        ) {
+
+        if (propSchema && propSchema.type === 'set') {
+          return createSetProxy(
+            changeTracker,
+            parentPropPointer,
+            originalValue,
+            propSchema
+          );
+        }
+        if (typeof currentValue === 'object' && currentValue !== null) {
           return this.createUpdateProxy(
             changeTracker,
-            propValue,
+            currentValue,
             schema,
             parentPropPointer
           );
         }
-        if (propSchema) {
-          if (propSchema.type == 'set') {
-            return {
-              add: (value: any) => {
-                // changeTracker.set([propPointer, value].join('/'), true);
-                const serializedValue =
-                  propSchema.items.convertInputToJson(value);
-                ValuePointer.Set(
-                  changeTracker,
-                  [parentPropPointer, serializedValue].join('/'),
-                  true
-                );
-              },
-              remove: (value: any) => {
-                // changeTracker.set([propPointer, value].join('/'), false);
-                const serializedValue =
-                  propSchema.items.convertInputToJson(value);
-                ValuePointer.Set(
-                  changeTracker,
-                  [parentPropPointer, serializedValue].join('/'),
-                  false
-                );
-              },
-              has: (value: any) => {
-                const serializedValue =
-                  propSchema.items.convertInputToJson(value);
-                const valuePointer = [parentPropPointer, serializedValue].join(
-                  '/'
-                );
-                return (
-                  ValuePointer.Get(changeTracker, valuePointer) ??
-                  propValue[value]
-                );
-                // return changeTracker.has(valuePointer)
-                //   ? changeTracker.get(valuePointer)
-                //   : propValue[value];
-              },
-            } as SetProxy<any>;
-          }
-        }
-        // return changeTracker.has(propPointer)
-        //   ? changeTracker.get(propPointer)
-        //   : propValue;
-        return ValuePointer.Get(changeTracker, parentPropPointer) ?? propValue;
+
+        return currentValue;
       },
     });
   }

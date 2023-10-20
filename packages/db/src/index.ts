@@ -56,7 +56,7 @@ export type {
 export type {
   InsertTypeFromModel,
   ResultTypeFromModel,
-  ProxyTypeFromModel,
+  UpdateTypeFromModel,
   Model,
   Models,
   TimestampedObject,

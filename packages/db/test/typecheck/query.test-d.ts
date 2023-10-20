@@ -1,6 +1,6 @@
 import { expectTypeOf, test, describe } from 'vitest';
 import DB from '../../src/db.js';
-import { Schema as S, SetProxy } from '../../src/schema.js';
+import { Schema as S } from '../../src/schema.js';
 
 // Want to figure out the best way to test various data types + operation combos
 // Right now im reusing this exhaustive schema (also defined in cli tests)
@@ -40,7 +40,8 @@ describe('schemaful', () => {
             number: S.Number(),
             date: S.Date(),
             // set type
-            set: S.Set(S.String()),
+            setString: S.Set(S.String()),
+            setNumber: S.Set(S.Number()),
             // record type
             record: S.Record({
               attr1: S.String(),
@@ -74,8 +75,12 @@ describe('schemaful', () => {
 
     // Sets always have a default so can be undefined
     expectEntityParam
-      .toHaveProperty('set')
+      .toHaveProperty('setString')
       .toEqualTypeOf<Set<string> | undefined>();
+
+    expectEntityParam
+      .toHaveProperty('setNumber')
+      .toEqualTypeOf<Set<number> | undefined>();
 
     // records always have a default so can be undefined
     expectEntityParam
@@ -142,7 +147,8 @@ describe('schemaful', () => {
             number: S.Number(),
             date: S.Date(),
             // set type
-            set: S.Set(S.String()),
+            setString: S.Set(S.String()),
+            setNumber: S.Set(S.Number()),
             // record type
             record: S.Record({
               attr1: S.String(),
@@ -174,8 +180,12 @@ describe('schemaful', () => {
     expectEntityProxyParam.toHaveProperty('date').toEqualTypeOf<Date>();
 
     expectEntityProxyParam
-      .toHaveProperty('set')
-      .toEqualTypeOf<SetProxy<string>>();
+      .toHaveProperty('setString')
+      .toEqualTypeOf<Set<string>>();
+
+    expectEntityProxyParam
+      .toHaveProperty('setNumber')
+      .toEqualTypeOf<Set<number>>();
 
     expectEntityProxyParam
       .toHaveProperty('record')
@@ -212,7 +222,8 @@ describe('schemaful', () => {
             number: S.Number(),
             date: S.Date(),
             // set type
-            set: S.Set(S.String()),
+            setString: S.Set(S.String()),
+            setNumber: S.Set(S.Number()),
             // record type
             record: S.Record({
               attr1: S.String(),
@@ -243,7 +254,8 @@ describe('schemaful', () => {
           boolean: boolean;
           number: number;
           date: Date;
-          set: Set<string>;
+          setString: Set<string>;
+          setNumber: Set<number>;
           record: { attr1: string; attr2: string };
           nullableFalse: string;
           nullableTrue: string | null;

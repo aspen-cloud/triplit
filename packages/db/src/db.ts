@@ -1,7 +1,7 @@
 import { EAV, TripleRow, TripleStore } from './triple-store.js';
 
 import {
-  ProxyTypeFromModel,
+  UpdateTypeFromModel,
   Model,
   Models,
   InsertTypeFromModel,
@@ -412,7 +412,7 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
     collectionName: CN,
     entityId: string,
     updater: (
-      entity: ProxyTypeFromModel<ModelFromModels<M, CN>>
+      entity: UpdateTypeFromModel<ModelFromModels<M, CN>>
     ) => void | Promise<void>,
     options: TransactOptions = {}
   ) {

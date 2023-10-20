@@ -19,6 +19,7 @@ import {
   InvalidInternalEntityIdError,
   InvalidEntityIdError,
   EntityNotFoundError,
+  InvalidAssignmentError,
 } from '../src';
 import { Models } from '../src/schema.js';
 import { classes, students, departments } from './sample_data/school.js';
@@ -530,7 +531,7 @@ describe('Set operations', () => {
     expect(preUpdateLookup.get('1')).toBeTruthy();
 
     await db.update('companies', 1, async (entity) => {
-      entity.employees.remove(2);
+      entity.employees.delete(2);
       expect(entity.employees.has(2)).toBeFalsy();
     });
 
@@ -4030,5 +4031,105 @@ describe.todo('Graph-like queries', () => {
 
     const result = await db.fetch(query);
     expect(result).toHaveLength(2);
+  });
+});
+
+describe('set proxy', () => {
+  const schema = {
+    collections: {
+      Users: {
+        schema: S.Schema({
+          name: S.String(),
+          friends: S.Set(S.String()),
+        }),
+      },
+    },
+  };
+  const defaultUser = {
+    name: 'Alice',
+    friends: new Set(['Bob', 'Charlie']),
+  };
+  it('set.size correctly tracks updates', async () => {
+    const db = new DB({ schema });
+    await db.insert('Users', defaultUser, 'user-1');
+    await db.update('Users', 'user-1', async (entity) => {
+      // initial check
+      expect(entity.friends.size).toBe(2);
+
+      // can add and size is updated
+      entity.friends.add('Diane');
+      expect(entity.friends.size).toBe(3);
+
+      // can delete and size is updated
+      entity.friends.delete('Bob');
+      expect(entity.friends.size).toBe(2);
+
+      // can clear and size is updated
+      entity.friends.clear();
+      expect(entity.friends.size).toBe(0);
+    });
+  });
+  it('set.has correctly tracks updates', async () => {
+    const db = new DB({ schema });
+    await db.insert('Users', defaultUser, 'user-1');
+    await db.update('Users', 'user-1', async (entity) => {
+      // initial check
+      expect(entity.friends.has('Bob')).toBe(true);
+      expect(entity.friends.has('Diane')).toBe(false);
+
+      // can add and has result is updated
+      entity.friends.add('Diane');
+      expect(entity.friends.has('Diane')).toBe(true);
+
+      // can delete and has result is updated
+      entity.friends.delete('Bob');
+      expect(entity.friends.has('Bob')).toBe(false);
+
+      entity.friends.clear();
+      expect(entity.friends.has('Bob')).toBe(false);
+      expect(entity.friends.has('Charlie')).toBe(false);
+      expect(entity.friends.has('Diane')).toBe(false);
+    });
+  });
+  it('set iteration works properly', async () => {
+    const db = new DB({ schema });
+    await db.insert('Users', defaultUser, 'user-1');
+    await db.update('Users', 'user-1', async (entity) => {
+      // Array.from
+      expect(Array.from(entity.friends)).toEqual(['Bob', 'Charlie']);
+
+      // keys
+      const keys: string[] = [];
+      for (const key of entity.friends.keys()) {
+        keys.push(key);
+      }
+      expect(keys).toEqual(['Bob', 'Charlie']);
+
+      // values
+      const values: string[] = [];
+      for (const value of entity.friends.values()) {
+        values.push(value);
+      }
+      expect(values).toEqual(['Bob', 'Charlie']);
+
+      // entries
+      const entries: [string, string][] = [];
+      for (const entry of entity.friends.entries()) {
+        entries.push(entry);
+      }
+      expect(entries).toEqual([
+        ['Bob', 'Bob'],
+        ['Charlie', 'Charlie'],
+      ]);
+    });
+  });
+  it('cannot assign to a set', async () => {
+    const db = new DB({ schema });
+    await db.insert('Users', defaultUser, 'user-1');
+    await db.update('Users', 'user-1', async (entity) => {
+      expect(() => {
+        entity.friends = new Set(['bad']);
+      }).toThrowError(InvalidAssignmentError);
+    });
   });
 });

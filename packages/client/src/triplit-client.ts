@@ -6,7 +6,7 @@ import {
   Builder,
   CachedIndexedDbStorage as IndexedDbStorage,
   Query,
-  ProxyTypeFromModel,
+  UpdateTypeFromModel,
   Models,
   CollectionNameFromModels,
   DBTransaction,
@@ -817,7 +817,7 @@ export class TriplitClient<M extends Models<any, any> | undefined = undefined> {
     collectionName: CN,
     entityId: string,
     updater: (
-      entity: ProxyTypeFromModel<ModelFromModels<M, CN>>
+      entity: UpdateTypeFromModel<ModelFromModels<M, CN>>
     ) => void | Promise<void>
   ) {
     return this.db.update(collectionName, entityId, updater, {
