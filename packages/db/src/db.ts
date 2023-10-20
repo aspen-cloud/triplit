@@ -6,7 +6,7 @@ import {
   Models,
   InsertTypeFromModel,
 } from './schema.js';
-import { AsyncTupleStorageApi, Tuple, TupleStorageApi } from 'tuple-database';
+import { AsyncTupleStorageApi, TupleStorageApi } from 'tuple-database';
 import CollectionQueryBuilder, {
   CollectionQuery,
   fetch,
