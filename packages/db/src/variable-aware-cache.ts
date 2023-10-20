@@ -3,14 +3,14 @@ import {
   CollectionQuerySchema,
   FetchResult,
   subscribeResultsAndTriples,
-} from './collection-query';
-import { ModelFromModels } from './db';
-import { mapFilterStatements } from './db-helpers';
-import { FilterStatement, isFilterStatement } from './query';
-import { Models, getSchemaFromPath } from './schema';
+} from './collection-query.js';
+import { ModelFromModels } from './db.js';
+import { mapFilterStatements } from './db-helpers.js';
+import { FilterStatement, isFilterStatement } from './query.js';
+import { Models, getSchemaFromPath } from './schema.js';
 import * as TB from '@sinclair/typebox/value';
-import { TripleRow, TripleStore } from './triple-store';
-import { QueryCacheError } from './errors';
+import { TripleRow, TripleStore } from './triple-store.js';
+import { QueryCacheError } from './errors.js';
 
 export class VariableAwareCache<Schema extends Models<any, any>> {
   cache: Map<

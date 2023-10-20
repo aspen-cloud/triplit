@@ -1,6 +1,6 @@
 import { Static, Type } from '@sinclair/typebox';
-import { CollectionRules } from '../db';
-import { SubQuery } from './query';
+import { CollectionRules } from '../db.js';
+import { SubQuery } from './query.js';
 
 export const VALUE_TYPE_KEYS = ['string', 'number', 'boolean', 'date'] as const;
 export type ValueTypeKeys = (typeof VALUE_TYPE_KEYS)[number];

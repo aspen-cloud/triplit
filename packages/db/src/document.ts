@@ -1,6 +1,6 @@
-import { EmptyTupleInsertionError } from './errors';
-import { TripleRow, TripleStoreTransaction } from './triple-store';
-import { objectToTuples } from './utils';
+import { EmptyTupleInsertionError } from './errors.js';
+import { TripleRow, TripleStoreTransaction } from './triple-store.js';
+import { objectToTuples } from './utils.js';
 
 // TODO: delete, this is deprecated
 export async function insert(

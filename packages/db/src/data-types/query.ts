@@ -1,7 +1,7 @@
-import { CollectionQuery } from '../collection-query';
-import { CollectionNameFromModels } from '../db';
-import { Models } from '../schema';
-import { TypeInterface } from './type';
+import { CollectionQuery } from '../collection-query.js';
+import { CollectionNameFromModels } from '../db.js';
+import { Models } from '../schema.js';
+import { TypeInterface } from './type.js';
 
 export type SubQuery<
   M extends Models<any, any> | undefined,

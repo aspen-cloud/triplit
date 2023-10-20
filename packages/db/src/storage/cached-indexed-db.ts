@@ -5,7 +5,7 @@ import {
   WriteOps,
 } from 'tuple-database';
 import { IndexedDbTupleStorage } from 'tuple-database/storage/IndexedDbTupleStorage.js';
-import MemoryBTree from './memory-btree';
+import MemoryBTree from './memory-btree.js';
 export default class CachedIndexedDbStorage implements AsyncTupleStorageApi {
   private _indexedDB: IndexedDbTupleStorage;
   private _cache: MemoryBTree;

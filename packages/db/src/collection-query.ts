@@ -1,5 +1,5 @@
 import { ValuePointer } from '@sinclair/typebox/value';
-import Builder from './utils/builder';
+import Builder from './utils/builder.js';
 import {
   Query,
   FilterStatement,
@@ -9,7 +9,7 @@ import {
   QUERY_INPUT_TRANSFORMERS,
   SubQueryFilter,
   triplesToEntities,
-} from './query';
+} from './query.js';
 import {
   convertEntityToJS,
   getSchemaFromPath,
@@ -17,8 +17,8 @@ import {
   Model,
   Models,
   timestampedObjectToPlainObject,
-} from './schema';
-import { Timestamp, timestampCompare } from './timestamp';
+} from './schema.js';
+import { Timestamp, timestampCompare } from './timestamp.js';
 import {
   Attribute,
   EntityId,
@@ -26,20 +26,20 @@ import {
   TripleStore,
   TripleStoreApi,
   Value,
-} from './triple-store';
-import { Pipeline } from './utils/pipeline';
-import { EntityIdMissingError, InvalidFilterError } from './errors';
+} from './triple-store.js';
+import { Pipeline } from './utils/pipeline.js';
+import { EntityIdMissingError, InvalidFilterError } from './errors.js';
 import {
   stripCollectionFromId,
   appendCollectionToId,
   splitIdParts,
   replaceVariablesInQuery,
   someFilterStatements,
-} from './db-helpers';
-import { Operator } from './data-types/base';
-import { VariableAwareCache } from './variable-aware-cache';
-import { isTimestampedEntityDeleted } from './entity';
-import { CollectionNameFromModels, ModelFromModels } from './db';
+} from './db-helpers.js';
+import { Operator } from './data-types/base.js';
+import { VariableAwareCache } from './variable-aware-cache.js';
+import { isTimestampedEntityDeleted } from './entity.js';
+import { CollectionNameFromModels, ModelFromModels } from './db.js';
 
 export default function CollectionQueryBuilder<
   M extends Models<any, any> | undefined,

@@ -1,6 +1,6 @@
-import { DataType } from './base';
-import { RecordAttributeDefinition } from './serialization';
-import { ExtractJSType, ExtractSerializedType, TypeInterface } from './type';
+import { DataType } from './base.js';
+import { RecordAttributeDefinition } from './serialization.js';
+import { ExtractJSType, ExtractSerializedType, TypeInterface } from './type.js';
 
 export type RecordType<Properties extends { [k: string]: DataType }> =
   TypeInterface<

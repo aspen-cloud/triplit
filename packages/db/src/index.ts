@@ -9,10 +9,10 @@
 export { SQLiteTupleStorage as SqliteStorage } from 'tuple-database/storage/SQLiteTupleStorage.js';
 export { IndexedDbTupleStorage as IndexedDbStorage } from 'tuple-database/storage/IndexedDbTupleStorage.js';
 export { BrowserTupleStorage as BrowserLocalStorage } from 'tuple-database/storage/BrowserTupleStorage.js';
-export { default as MemoryStorage } from './storage/memory-btree';
-export { default as CachedIndexedDbStorage } from './storage/cached-indexed-db';
+export { default as MemoryStorage } from './storage/memory-btree.js';
+export { default as CachedIndexedDbStorage } from './storage/cached-indexed-db.js';
 
-import DB from './db';
+import DB from './db.js';
 export default DB;
 export { DB };
 export type {
@@ -28,8 +28,8 @@ export type {
   DropAttributeOptionOperation,
   AddRuleOperation,
   DropRuleOperation,
-} from './db';
-export type { DBTransaction } from './db-transaction';
+} from './db.js';
+export type { DBTransaction } from './db-transaction.js';
 export {
   queryResultToJson,
   or,
@@ -37,22 +37,22 @@ export {
   constructEntity,
   triplesToEntities as constructEntities,
   QUERY_INPUT_TRANSFORMERS,
-} from './query';
+} from './query.js';
 // TS issue occurs if we dont export FilterGroup (i think due to an infered return type somewhere)
-export type { Query, FilterGroup } from './query';
-export { stripCollectionFromId } from './db-helpers';
-export type { TripleRow } from './triple-store';
+export type { Query, FilterGroup } from './query.js';
+export { stripCollectionFromId } from './db-helpers.js';
+export type { TripleRow } from './triple-store.js';
 export {
   Schema,
   triplesToSchema,
   schemaToJSON,
   timestampedObjectToPlainObject,
   hashSchemaJSON,
-} from './schema';
+} from './schema.js';
 export type {
   TObject,
   TimestampedTypeFromModel as TypeFromModel, // TODO: dont alias
-} from './schema';
+} from './schema.js';
 export type {
   InsertTypeFromModel,
   ResultTypeFromModel,
@@ -61,21 +61,21 @@ export type {
   Models,
   TimestampedObject,
   UnTimestampedObject,
-} from './schema';
+} from './schema.js';
 export type {
   AttributeDefinition,
   CollectionAttributeDefinition,
   CollectionDefinition,
   CollectionsDefinition,
   UserTypeOptions,
-} from './data-types/serialization';
-export { timestampCompare } from './timestamp';
-export type { Timestamp } from './timestamp';
-export { DurableClock } from './clocks/durable-clock';
-export { MemoryClock } from './clocks/memory-clock';
-export { default as CollectionQueryBuilder } from './collection-query';
-export type { CollectionQuery, FetchResult } from './collection-query';
-export { default as Builder } from './utils/builder';
-export type { toBuilder } from './utils/builder';
-export type { IsAny } from './utility-types';
-export * from './errors';
+} from './data-types/serialization.js';
+export { timestampCompare } from './timestamp.js';
+export type { Timestamp } from './timestamp.js';
+export { DurableClock } from './clocks/durable-clock.js';
+export { MemoryClock } from './clocks/memory-clock.js';
+export { default as CollectionQueryBuilder } from './collection-query.js';
+export type { CollectionQuery, FetchResult } from './collection-query.js';
+export { default as Builder } from './utils/builder.js';
+export type { toBuilder } from './utils/builder.js';
+export type { IsAny } from './utility-types.js';
+export * from './errors.js';

@@ -1,4 +1,4 @@
-import { EditingProtectedFieldError } from '../errors';
+import { EditingProtectedFieldError } from '../errors.js';
 
 type ArgumentsType<T extends (...args: any[]) => any> = T extends (
   ...args: infer A

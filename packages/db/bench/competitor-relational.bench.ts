@@ -1,6 +1,6 @@
 import Bench from 'tinybench';
-import DB from '../src/db';
-import MemoryBTree from '../src/storage/memory-btree';
+import DB from '../src/db.js';
+import MemoryBTree from '../src/storage/memory-btree.js';
 
 const db = new DB({ source: new MemoryBTree() });
 

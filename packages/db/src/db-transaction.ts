@@ -6,7 +6,7 @@ import {
   TripleStoreBeforeInsertHook,
   TripleStoreTransaction,
   isTupleEntityDeleteMarker,
-} from './triple-store';
+} from './triple-store.js';
 import {
   getSchemaFromPath,
   ProxyTypeFromModel,
@@ -19,19 +19,19 @@ import {
   collectionsDefinitionToSchema,
   serializeClientModel,
   InsertTypeFromModel,
-} from './schema';
+} from './schema.js';
 import { nanoid } from 'nanoid';
 import CollectionQueryBuilder, {
   CollectionQuery,
   doesEntityObjMatchWhere,
   fetch,
   FetchResult,
-} from './collection-query';
+} from './collection-query.js';
 import {
   EntityNotFoundError,
   UnrecognizedPropertyInUpdateError,
   WriteRuleError,
-} from './errors';
+} from './errors.js';
 import { ValuePointer } from '@sinclair/typebox/value';
 import {
   CollectionNameFromModels,
@@ -46,7 +46,7 @@ import {
   DropAttributeOptionOperation,
   AddRuleOperation,
   DropRuleOperation,
-} from './db';
+} from './db.js';
 import {
   validateExternalId,
   appendCollectionToId,
@@ -57,11 +57,11 @@ import {
   splitIdParts,
   getCollectionSchema,
   prepareQuery,
-} from './db-helpers';
-import { Query, constructEntity, entityToResultReducer } from './query';
-import { serializedItemToTuples } from './utils';
-import { typeFromJSON } from './data-types/base';
-import { SchemaDefinition } from './data-types/serialization';
+} from './db-helpers.js';
+import { Query, constructEntity, entityToResultReducer } from './query.js';
+import { serializedItemToTuples } from './utils.js';
+import { typeFromJSON } from './data-types/base.js';
+import { SchemaDefinition } from './data-types/serialization.js';
 
 interface TransactionOptions<
   M extends Models<any, any> | undefined = undefined

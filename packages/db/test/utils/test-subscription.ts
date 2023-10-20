@@ -1,16 +1,16 @@
 import { CollectionQuery, DB, FetchResult, Model, Query } from '../../src';
 
-interface Step<Q extends CollectionQuery<any>> {
+interface Step<Q extends CollectionQuery<any, any>> {
   action: (results: FetchResult<Q>) => Promise<void> | void;
   check: (results: FetchResult<Q>) => Promise<void> | void;
 }
 
-type Steps<Q extends CollectionQuery<any>> = [
+type Steps<Q extends CollectionQuery<any, any>> = [
   Pick<Step<Q>, 'check'>,
   ...Step<Q>[]
 ];
 
-export async function testSubscription<Q extends CollectionQuery<any>>(
+export async function testSubscription<Q extends CollectionQuery<any, any>>(
   db: DB<any>,
   query: Q,
   steps: Steps<Q>

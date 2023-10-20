@@ -14,7 +14,7 @@ import {
   TupleToObject,
   RemoveTupleValuePairPrefix,
 } from 'tuple-database/database/typeHelpers';
-import { DBScanFailureError, NotImplementedError } from './errors';
+import { DBScanFailureError, NotImplementedError } from './errors.js';
 
 export type StorageScope = {
   read?: string[];

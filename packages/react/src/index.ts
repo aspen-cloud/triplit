@@ -1,2 +1,2 @@
-export * from './use-query';
-export * from './use-entity';
+export * from './use-query.js';
+export * from './use-entity.js';

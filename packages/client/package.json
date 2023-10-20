@@ -3,22 +3,19 @@
   "packageManager": "yarn@3.4.1",
   "version": "0.0.37",
   "source": "./src/index.ts",
-  "main": "./dist/cjs/index.js",
-  "module": "./dist/esm/index.js",
-  "types": "./dist/types/index.d.ts",
+  "main": "./dist/index.js",
+  "type": "module",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "exports": {
     ".": {
-      "types": "./dist/types/index.d.ts",
-      "require": "./dist/cjs/index.js",
-      "import": "./dist/esm/index.js",
-      "default": "./dist/esm/index.js"
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
     }
   },
   "scripts": {
-    "build:esm": "tsc --module ESNext --outDir ./dist/esm",
-    "build:cjs": "tsc --module CommonJS --outDir ./dist/cjs",
-    "build:types": "tsc --emitDeclarationOnly",
-    "build": "npm run build:esm & npm run build:cjs & npm run build:types & wait",
+    "build": "tsc",
     "lint:build": "npx publint",
     "lint": "tsc --noEmit",
     "publish-pkg": "node ../../scripts/npm-check-version-and-publish.js"
@@ -31,6 +28,7 @@
     "rxjs": "^7.8.1"
   },
   "devDependencies": {
+    "@triplit/types": "workspace:^",
     "@types/node": "^20.4.0",
     "typescript": "^5.2.2"
   },

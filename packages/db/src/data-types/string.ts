@@ -1,9 +1,9 @@
 import { Type } from '@sinclair/typebox';
-import { Nullable, calcDefaultValue, userTypeOptionsAreValid } from './base';
-import { UserTypeOptions } from './serialization';
-import { TypeWithOptions, ValueInterface } from './value';
+import { Nullable, calcDefaultValue, userTypeOptionsAreValid } from './base.js';
+import { UserTypeOptions } from './serialization.js';
+import { TypeWithOptions, ValueInterface } from './value.js';
 import { Value } from '@sinclair/typebox/value';
-import { InvalidTypeOptionsError, SerializingError } from '../errors';
+import { InvalidTypeOptionsError, SerializingError } from '../errors.js';
 
 const STRING_OPERATORS = ['=', '!=', 'like', 'nlike'] as const;
 type StringOperators = typeof STRING_OPERATORS;

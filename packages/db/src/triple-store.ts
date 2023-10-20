@@ -8,15 +8,15 @@ import {
   AsyncTupleDatabase,
   TupleStorageApi,
 } from 'tuple-database';
-import { Timestamp, timestampCompare } from './timestamp';
+import { Timestamp, timestampCompare } from './timestamp.js';
 import MultiTupleStore, {
   MultiTupleTransaction,
   ScopedMultiTupleOperator,
   StorageScope,
-} from './multi-tuple-store';
-import { Clock } from './clocks/clock';
-import { MemoryClock } from './clocks/memory-clock';
-import { ValueCursor } from './query';
+} from './multi-tuple-store.js';
+import { Clock } from './clocks/clock.js';
+import { MemoryClock } from './clocks/memory-clock.js';
+import { ValueCursor } from './query.js';
 import {
   IndexNotFoundError,
   InvalidTimestampIndexScanError,
@@ -24,7 +24,7 @@ import {
   TripleStoreOptionsError,
   TriplitError,
   WriteRuleError,
-} from './errors';
+} from './errors.js';
 
 // Value should be serializable, this is what goes into triples
 // Not to be confused with the Value type we define on queries

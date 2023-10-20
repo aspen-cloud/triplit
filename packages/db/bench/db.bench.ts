@@ -1,9 +1,9 @@
 import { describe, bench, beforeEach, beforeAll } from 'vitest';
 import { CollectionQuery, MemoryStorage } from '../src';
-import { TripleStore } from '../src/triple-store';
-import * as Doc from '../src/document';
-import { classes, departments, students } from '../test/sample_data/school';
-import { fetch, fastFetch } from '../src/collection-query';
+import { TripleStore } from '../src/triple-store.js';
+import * as Doc from '../src/document.js';
+import { classes, departments, students } from '../test/sample_data/school.js';
+import { fetch, fastFetch } from '../src/collection-query.js';
 
 describe('Fetch speed', () => {
   const storage = new MemoryStorage();

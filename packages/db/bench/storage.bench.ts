@@ -1,8 +1,8 @@
 import { Bench } from 'tinybench';
 import { InMemoryTupleStorage } from 'tuple-database';
-import MemoryBTree from '../src/storage/memory-btree';
-import { TripleStore } from '../src/triple-store';
-import * as Document from '../src/document';
+import MemoryBTree from '../src/storage/memory-btree.js';
+import { TripleStore } from '../src/triple-store.js';
+import * as Document from '../src/document.js';
 
 const bench = new Bench();
 

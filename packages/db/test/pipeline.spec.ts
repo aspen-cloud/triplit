@@ -1,5 +1,5 @@
 import { describe, expect, it, beforeEach, beforeAll, vi } from 'vitest';
-import { Pipeline } from '../src/utils/pipeline';
+import { Pipeline } from '../src/utils/pipeline.js';
 
 const numbers = [1, 2, 3, 4, 5];
 

@@ -1,35 +1,35 @@
 import { TObject } from '@sinclair/typebox';
-import { InvalidSchemaPathError } from './errors';
-import type { CollectionRules } from './db';
-import { Timestamp } from './timestamp';
-import type { Attribute, EAV, TripleRow } from './triple-store';
-import { objectToTuples } from './utils';
-import { constructEntity } from './query';
-import { appendCollectionToId, StoreSchema } from './db-helpers';
+import { InvalidSchemaPathError } from './errors.js';
+import type { CollectionRules } from './db.js';
+import { Timestamp } from './timestamp.js';
+import type { Attribute, EAV, TripleRow } from './triple-store.js';
+import { objectToTuples } from './utils.js';
+import { constructEntity } from './query.js';
+import { appendCollectionToId, StoreSchema } from './db-helpers.js';
 import {
   typeFromJSON,
   DataType,
   TimestampType,
   ValueType,
-} from './data-types/base';
+} from './data-types/base.js';
 import {
   CollectionDefinition,
   CollectionsDefinition,
   RecordAttributeDefinition,
   SchemaDefinition,
-} from './data-types/serialization';
-import { StringType } from './data-types/string';
-import { NumberType } from './data-types/number';
-import { BooleanType } from './data-types/boolean';
-import { DateType } from './data-types/date';
-import { RecordType } from './data-types/record';
-import { SetType } from './data-types/set';
+} from './data-types/serialization.js';
+import { StringType } from './data-types/string.js';
+import { NumberType } from './data-types/number.js';
+import { BooleanType } from './data-types/boolean.js';
+import { DateType } from './data-types/date.js';
+import { RecordType } from './data-types/record.js';
+import { SetType } from './data-types/set.js';
 import {
   ExtractJSType,
   ExtractSerializedType,
   ExtractTimestampedType,
-} from './data-types/type';
-import { QueryType } from './data-types/query';
+} from './data-types/type.js';
+import { QueryType } from './data-types/query.js';
 
 // We infer TObject as a return type of some funcitons and this causes issues with consuming packages
 // Using solution 3.1 described in this comment as a fix: https://github.com/microsoft/TypeScript/issues/47663#issuecomment-1519138189

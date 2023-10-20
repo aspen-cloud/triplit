@@ -3304,13 +3304,14 @@ __metadata:
   resolution: "@triplit/client@workspace:packages/client"
   dependencies:
     "@triplit/db": "workspace:^"
+    "@triplit/types": "workspace:^"
     "@types/node": ^20.4.0
     rxjs: ^7.8.1
     typescript: ^5.2.2
   languageName: unknown
   linkType: soft
 
-"@triplit/db@workspace:^, @triplit/db@workspace:packages/db":
+"@triplit/db@^0.0.37, @triplit/db@workspace:^, @triplit/db@workspace:packages/db":
   version: 0.0.0-use.local
   resolution: "@triplit/db@workspace:packages/db"
   dependencies:
@@ -3346,6 +3347,15 @@ __metadata:
   peerDependencies:
     react: "*"
     react-dom: "*"
+  languageName: unknown
+  linkType: soft
+
+"@triplit/types@workspace:^, @triplit/types@workspace:packages/types":
+  version: 0.0.0-use.local
+  resolution: "@triplit/types@workspace:packages/types"
+  dependencies:
+    "@triplit/db": ^0.0.37
+    typescript: ^5.2.2
   languageName: unknown
   linkType: soft
 

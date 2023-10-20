@@ -1,6 +1,6 @@
-import { Timestamp } from '../timestamp';
-import { Operator } from './base';
-import { AttributeDefinition } from './serialization';
+import { Timestamp } from '../timestamp.js';
+import { Operator } from './base.js';
+import { AttributeDefinition } from './serialization.js';
 
 export type ExtractJSType<T> = T extends TypeInterface<
   infer _TypeId,

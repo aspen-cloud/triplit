@@ -2,15 +2,15 @@ import {
   InvalidSchemaOptionsError,
   InvalidSetTypeError,
   NotImplementedError,
-} from '../errors';
-import { TimestampType, ValueType } from './base';
-import { CollectionInterface } from './collection';
+} from '../errors.js';
+import { TimestampType, ValueType } from './base.js';
+import { CollectionInterface } from './collection.js';
 import {
   CollectionAttributeDefinition,
   VALUE_TYPE_KEYS,
   ValueAttributeDefinition,
-} from './serialization';
-import { ExtractJSType } from './type';
+} from './serialization.js';
+import { ExtractJSType } from './type.js';
 
 const SET_OPERATORS = ['=', '!='] as const;
 type SetOperators = typeof SET_OPERATORS;

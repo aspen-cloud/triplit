@@ -1,6 +1,6 @@
 import { expectTypeOf, test, describe } from 'vitest';
-import DB from '../../src/db';
-import { Schema as S, SetProxy } from '../../src/schema';
+import DB from '../../src/db.js';
+import { Schema as S, SetProxy } from '../../src/schema.js';
 
 // Want to figure out the best way to test various data types + operation combos
 // Right now im reusing this exhaustive schema (also defined in cli tests)

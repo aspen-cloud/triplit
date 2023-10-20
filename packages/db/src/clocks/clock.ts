@@ -1,5 +1,5 @@
-import { Timestamp } from '../timestamp';
-import { TripleStore } from '../triple-store';
+import { Timestamp } from '../timestamp.js';
+import { TripleStore } from '../triple-store.js';
 
 export interface Clock {
   assignToStore(store: TripleStore): Promise<void>;

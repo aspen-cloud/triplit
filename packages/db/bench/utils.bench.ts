@@ -1,5 +1,5 @@
 import { describe, bench } from 'vitest';
-import { objectToTuples } from '../src/utils';
+import { objectToTuples } from '../src/utils.js';
 
 const testObject = {
   name: 'test',

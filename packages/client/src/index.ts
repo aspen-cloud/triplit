@@ -7,4 +7,4 @@ export type {
   Models,
   Migration,
 } from '@triplit/db';
-export * from './triplit-client';
+export * from './triplit-client.js';

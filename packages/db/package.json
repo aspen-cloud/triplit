@@ -15,9 +15,8 @@
   },
   "type": "module",
   "scripts": {
-    "build": "yarn build:esm & yarn build:cjs & yarn build:types & wait",
+    "build": "yarn build:esm & yarn build:types & wait",
     "build:esm": "tsc --module ESNext --outDir ./dist/esm",
-    "build:cjs": "tsc --module CommonJS --outDir ./dist/cjs",
     "build:types": "tsc --emitDeclarationOnly",
     "lint:build": "npx publint",
     "lint": "tsc --noEmit",

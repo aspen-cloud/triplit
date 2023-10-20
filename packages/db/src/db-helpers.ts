@@ -1,4 +1,4 @@
-import { CollectionQuery } from './collection-query';
+import { CollectionQuery } from './collection-query.js';
 import {
   InvalidEntityIdError,
   InvalidInternalEntityIdError,
@@ -7,23 +7,28 @@ import {
   NoSchemaRegisteredError,
   SessionVariableNotFoundError,
   ValueSchemaMismatchError,
-} from './errors';
-import { QueryWhere, FilterStatement, SubQueryFilter } from './query';
+} from './errors.js';
+import { QueryWhere, FilterStatement, SubQueryFilter } from './query.js';
 import {
   Model,
   Models,
   getSchemaFromPath,
   schemaToTriples,
   triplesToSchema,
-} from './schema';
-import { Attribute, TripleStore, TripleStoreApi, Value } from './triple-store';
-import { VALUE_TYPE_KEYS } from './data-types/serialization';
+} from './schema.js';
+import {
+  Attribute,
+  TripleStore,
+  TripleStoreApi,
+  Value,
+} from './triple-store.js';
+import { VALUE_TYPE_KEYS } from './data-types/serialization.js';
 import DB, {
   CollectionFromModels,
   CollectionNameFromModels,
   DBFetchOptions,
-} from './db';
-import { DBTransaction } from './db-transaction';
+} from './db.js';
+import { DBTransaction } from './db-transaction.js';
 
 const ID_SEPARATOR = '#';
 

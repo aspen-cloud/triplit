@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { Schema as S, getSchemaFromPath } from '../src/schema';
+import { Schema as S, getSchemaFromPath } from '../src/schema.js';
 import { InvalidSchemaPathError } from '../src';
 
 describe('Schema', () => {

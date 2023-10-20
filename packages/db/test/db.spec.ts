@@ -20,16 +20,16 @@ import {
   InvalidEntityIdError,
   EntityNotFoundError,
 } from '../src';
-import { Models } from '../src/schema';
-import { classes, students, departments } from './sample_data/school';
-import MemoryBTree from '../src/storage/memory-btree';
-import { testSubscription } from './utils/test-subscription';
+import { Models } from '../src/schema.js';
+import { classes, students, departments } from './sample_data/school.js';
+import MemoryBTree from '../src/storage/memory-btree.js';
+import { testSubscription } from './utils/test-subscription.js';
 import {
   appendCollectionToId,
   everyFilterStatement,
   mapFilterStatements,
   stripCollectionFromId,
-} from '../src/db-helpers';
+} from '../src/db-helpers.js';
 
 // const storage = new InMemoryTupleStorage();
 const storage = new MemoryBTree();

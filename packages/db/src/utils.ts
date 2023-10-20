@@ -1,6 +1,6 @@
-import { UnserializableValueError } from './errors';
-import { Attribute, EAV, Value } from './triple-store';
-import { TuplePrefix } from './utility-types';
+import { UnserializableValueError } from './errors.js';
+import { Attribute, EAV, Value } from './triple-store.js';
+import { TuplePrefix } from './utility-types.js';
 
 function setToJSON(val: Set<string>) {
   // NOTE: Previously this returned an object from entries, but that loses some information as all keys are converted to strings

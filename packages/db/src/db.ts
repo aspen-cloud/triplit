@@ -1,11 +1,11 @@
-import { EAV, TripleRow, TripleStore } from './triple-store';
+import { EAV, TripleRow, TripleStore } from './triple-store.js';
 
 import {
   ProxyTypeFromModel,
   Model,
   Models,
   InsertTypeFromModel,
-} from './schema';
+} from './schema.js';
 import { AsyncTupleStorageApi, Tuple, TupleStorageApi } from 'tuple-database';
 import CollectionQueryBuilder, {
   CollectionQuery,
@@ -13,27 +13,27 @@ import CollectionQueryBuilder, {
   FetchResult,
   subscribe,
   subscribeTriples,
-} from './collection-query';
-import { Query, QueryWhere } from './query';
-import MemoryStorage from './storage/memory-btree';
-import { DBOptionsError, InvalidMigrationOperationError } from './errors';
-import { Clock } from './clocks/clock';
+} from './collection-query.js';
+import { Query, QueryWhere } from './query.js';
+import MemoryStorage from './storage/memory-btree.js';
+import { DBOptionsError, InvalidMigrationOperationError } from './errors.js';
+import { Clock } from './clocks/clock.js';
 
-import { DBTransaction } from './db-transaction';
+import { DBTransaction } from './db-transaction.js';
 import {
   appendCollectionToId,
   readSchemaFromTripleStore,
   overrideStoredSchema,
   StoreSchema,
   prepareQuery,
-} from './db-helpers';
-import { VariableAwareCache } from './variable-aware-cache';
+} from './db-helpers.js';
+import { VariableAwareCache } from './variable-aware-cache.js';
 
 import {
   AttributeDefinition,
   UserTypeOptions,
-} from './data-types/serialization';
-import { triplesToObject } from './utils';
+} from './data-types/serialization.js';
+import { triplesToObject } from './utils.js';
 
 export interface Rule<M extends Model<any>> {
   filter: QueryWhere<M>;

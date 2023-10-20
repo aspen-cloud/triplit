@@ -1,6 +1,6 @@
-import { Operator, ValueType } from './base';
-import { CollectionTypeKeys } from './serialization';
-import { TypeInterface } from './type';
+import { Operator, ValueType } from './base.js';
+import { CollectionTypeKeys } from './serialization.js';
+import { TypeInterface } from './type.js';
 
 export type CollectionInterface<
   TypeId extends CollectionTypeKeys = CollectionTypeKeys,

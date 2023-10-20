@@ -4,22 +4,22 @@ import {
   InvalidTypeOptionsError,
   MissingAttributeDefinitionError,
   UnrecognizedAttributeTypeError,
-} from '../errors';
+} from '../errors.js';
 import { Value } from '@sinclair/typebox/value';
 import {
   UserTypeOptionsSchema,
   UserTypeOptions,
   AttributeDefinition,
   ValueAttributeDefinition,
-} from './serialization';
-import { StringType } from './string';
-import { DateType } from './date';
-import { RecordType } from './record';
-import { NumberType } from './number';
-import { BooleanType } from './boolean';
-import { SetType } from './set';
-import { SerializedValueOverrides, ValueSchemaType } from './value';
-import { QueryType } from './query';
+} from './serialization.js';
+import { StringType } from './string.js';
+import { DateType } from './date.js';
+import { RecordType } from './record.js';
+import { NumberType } from './number.js';
+import { BooleanType } from './boolean.js';
+import { SetType } from './set.js';
+import { SerializedValueOverrides, ValueSchemaType } from './value.js';
+import { QueryType } from './query.js';
 
 export type Operator =
   | '='

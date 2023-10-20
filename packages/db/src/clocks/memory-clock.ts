@@ -1,7 +1,7 @@
 import { nanoid } from 'nanoid';
-import { Timestamp } from '../timestamp';
-import { TripleStore } from '../triple-store';
-import { Clock } from './clock';
+import { Timestamp } from '../timestamp.js';
+import { TripleStore } from '../triple-store.js';
+import { Clock } from './clock.js';
 
 export class MemoryClock implements Clock {
   clientId: string;

@@ -1,10 +1,10 @@
 import { InMemoryTupleStorage } from 'tuple-database';
 import { describe, bench, beforeEach } from 'vitest';
-import * as Document from '../src/document';
-import { TripleStore } from '../src/triple-store';
-import MemoryBTree from '../src/storage/memory-btree';
+import * as Document from '../src/document.js';
+import { TripleStore } from '../src/triple-store.js';
+import MemoryBTree from '../src/storage/memory-btree.js';
 import { nanoid } from 'nanoid';
-import { MemoryClock } from '../src/clocks/memory-clock';
+import { MemoryClock } from '../src/clocks/memory-clock.js';
 
 const doc = {
   text: ['H', 'e', 'l', 'l', 'o', ',', ' ', 'w', 'o', 'r', 'l', 'd'],

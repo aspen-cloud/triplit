@@ -1,7 +1,7 @@
 import { TNumber, TString, TBoolean } from '@sinclair/typebox';
-import { Operator } from './base';
-import { UserTypeOptions, ValueTypeKeys } from './serialization';
-import { TypeInterface } from './type';
+import { Operator } from './base.js';
+import { UserTypeOptions, ValueTypeKeys } from './serialization.js';
+import { TypeInterface } from './type.js';
 
 export type ValueSchemaType = TString | TNumber | TBoolean;
 

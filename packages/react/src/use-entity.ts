@@ -4,7 +4,7 @@ import {
   CollectionNameFromModels,
   SubscriptionOptions,
 } from '@triplit/client';
-import { useQuery } from './use-query';
+import { useQuery } from './use-query.js';
 
 export function useEntity<
   M extends Models<any, any> | undefined,

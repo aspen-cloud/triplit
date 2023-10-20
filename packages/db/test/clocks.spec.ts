@@ -1,7 +1,7 @@
 import { describe, expect, it, beforeEach, beforeAll, vi } from 'vitest';
 import { MemoryStorage } from '../src';
-import { DurableClock } from '../src/clocks/durable-clock';
-import { TripleStore } from '../src/triple-store';
+import { DurableClock } from '../src/clocks/durable-clock.js';
+import { TripleStore } from '../src/triple-store.js';
 
 describe('DurableClock', () => {
   it('creates a fresh clock if no relevant metadata', async () => {

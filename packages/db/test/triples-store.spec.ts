@@ -4,14 +4,14 @@ import {
   TripleRow,
   TripleStore,
   TripleStoreTransaction,
-} from '../src/triple-store';
-import { Schema as S } from '../src/schema';
-import MemoryBTree from '../src/storage/memory-btree';
+} from '../src/triple-store.js';
+import { Schema as S } from '../src/schema.js';
+import MemoryBTree from '../src/storage/memory-btree.js';
 import { IndexedDbStorage, MemoryStorage } from '../src';
 import {
   overrideStoredSchema,
   readSchemaFromTripleStore,
-} from '../src/db-helpers';
+} from '../src/db-helpers.js';
 
 // const storage = new InMemoryTupleStorage();
 const storage = new MemoryBTree();

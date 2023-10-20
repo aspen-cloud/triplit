@@ -1,8 +1,8 @@
 import { nanoid } from 'nanoid';
-import { Timestamp, timestampCompare } from '../timestamp';
-import { TripleStore } from '../triple-store';
-import { triplesToObject } from '../utils';
-import { Clock } from './clock';
+import { Timestamp, timestampCompare } from '../timestamp.js';
+import { TripleStore } from '../triple-store.js';
+import { triplesToObject } from '../utils.js';
+import { Clock } from './clock.js';
 
 // Keep track of the clock in the database metadata
 export class DurableClock implements Clock {

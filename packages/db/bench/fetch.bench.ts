@@ -1,8 +1,8 @@
 import { MemoryStorage } from '../src';
-import { TripleStore } from '../src/triple-store';
-import * as Doc from '../src/document';
+import { TripleStore } from '../src/triple-store.js';
+import * as Doc from '../src/document.js';
 import Bench from 'tinybench';
-import CollectionQuery, { fetch, fastFetch } from '../src/collection-query';
+import CollectionQuery, { fetch, fastFetch } from '../src/collection-query.js';
 
 const bench = new Bench();
 

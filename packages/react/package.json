@@ -3,22 +3,20 @@
   "packageManager": "yarn@3.4.1",
   "version": "0.0.37",
   "source": "./src/index.ts",
-  "main": "./dist/cjs/index.js",
-  "module": "./dist/esm/index.js",
-  "types": "./dist/types/index.d.ts",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "type": "module",
   "exports": {
     ".": {
-      "types": "./dist/types/index.d.ts",
-      "require": "./dist/cjs/index.js",
-      "import": "./dist/esm/index.js",
-      "default": "./dist/esm/index.js"
+      "types": "./dist/index.d.ts",
+      "require": "./dist/index.js",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
     }
   },
   "scripts": {
-    "build": "npm run build:esm & npm run build:cjs & npm run build:types & wait",
-    "build:esm": "tsc --module ESNext --outDir ./dist/esm",
-    "build:cjs": "tsc --module CommonJS --outDir ./dist/cjs",
-    "build:types": "tsc --emitDeclarationOnly",
+    "build": "tsc",
     "lint:build": "npx publint",
     "lint": "tsc --noEmit",
     "publish-pkg": "node ../../scripts/npm-check-version-and-publish.js"

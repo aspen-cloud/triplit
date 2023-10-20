@@ -1,8 +1,8 @@
 import { InMemoryTupleStorage } from 'tuple-database';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { MemoryClock } from '../src/clocks/memory-clock';
-import * as Document from '../src/document';
-import { TripleStore } from '../src/triple-store';
+import { MemoryClock } from '../src/clocks/memory-clock.js';
+import * as Document from '../src/document.js';
+import { TripleStore } from '../src/triple-store.js';
 
 const storage = new InMemoryTupleStorage();
 const store = new TripleStore({ storage, tenantId: 'TEST' });

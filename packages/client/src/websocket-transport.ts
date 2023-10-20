@@ -1,5 +1,5 @@
-import { TransportConnectParams, SyncTransport } from './triplit-client';
-import { ConnectionStatus, friendlyReadyState } from './websocket';
+import { TransportConnectParams, SyncTransport } from './triplit-client.js';
+import { ConnectionStatus, friendlyReadyState } from './websocket.js';
 
 export class WebSocketTransport implements SyncTransport {
   ws: WebSocket | undefined = undefined;

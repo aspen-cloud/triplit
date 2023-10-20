@@ -24,16 +24,16 @@ import {
   ResultTypeFromModel,
 } from '@triplit/db';
 import { Subject } from 'rxjs';
-import { getUserId } from './token';
-import { ConnectionStatus } from './websocket';
+import { getUserId } from './token.js';
+import { ConnectionStatus } from './websocket.js';
 import {
   MissingConnectionInformationError,
   RemoteFetchFailedError,
   RemoteSyncFailedError,
   UnrecognizedFetchPolicyError,
-} from './errors';
-import { WebSocketTransport } from './websocket-transport';
-import { ClientSyncMessage, ServerSyncMessage } from '@/types/sync';
+} from './errors.js';
+import { WebSocketTransport } from './websocket-transport.js';
+import { ClientSyncMessage, ServerSyncMessage } from '@triplit/types/sync';
 export { IndexedDbStorage, MemoryStorage };
 type Storage = IndexedDbStorage | MemoryStorage;
 

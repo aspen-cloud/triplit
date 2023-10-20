@@ -1,10 +1,10 @@
 import { FormatRegistry, Type } from '@sinclair/typebox';
 import { fullFormats } from 'ajv-formats/dist/formats.js';
-import { UserTypeOptions } from './serialization';
-import { Nullable, calcDefaultValue, userTypeOptionsAreValid } from './base';
-import { TypeWithOptions, ValueInterface } from './value';
+import { UserTypeOptions } from './serialization.js';
+import { Nullable, calcDefaultValue, userTypeOptionsAreValid } from './base.js';
+import { TypeWithOptions, ValueInterface } from './value.js';
 import { Value } from '@sinclair/typebox/value';
-import { InvalidTypeOptionsError, SerializingError } from '../errors';
+import { InvalidTypeOptionsError, SerializingError } from '../errors.js';
 
 FormatRegistry.Set(
   'date-time',

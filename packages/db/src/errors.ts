@@ -1,7 +1,7 @@
 import {
   COLLECTION_TYPE_KEYS,
   VALUE_TYPE_KEYS,
-} from './data-types/serialization';
+} from './data-types/serialization.js';
 
 export const STATUS_CODES = {
   Success: 200,

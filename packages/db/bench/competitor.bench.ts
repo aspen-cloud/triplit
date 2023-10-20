@@ -1,10 +1,10 @@
 import { addRxPlugin, createRxDatabase } from 'rxdb';
 import { getRxStorageMemory } from 'rxdb/plugins/storage-memory';
 import Bench from 'tinybench';
-import DB from '../src/db';
-import { Schema as S } from '../src/schema';
+import DB from '../src/db.js';
+import { Schema as S } from '../src/schema.js';
 import { RxDBQueryBuilderPlugin } from 'rxdb/plugins/query-builder';
-import MemoryBTree from '../src/storage/memory-btree';
+import MemoryBTree from '../src/storage/memory-btree.js';
 addRxPlugin(RxDBQueryBuilderPlugin);
 
 const rxdb = await createRxDatabase({
