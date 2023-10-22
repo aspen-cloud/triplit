@@ -813,7 +813,7 @@ describe('subscriptions', () => {
     });
   });
 
-  it.only('emits triples even when entity is removed from query', async () => {
+  it('emits triples even when entity is removed from query', async () => {
     const spy = vi.fn();
     const unsubscribe = db.subscribeTriples(
       CollectionQueryBuilder('students')
