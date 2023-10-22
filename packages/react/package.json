@@ -16,7 +16,7 @@
     }
   },
   "scripts": {
-    "build": "tsc",
+    "build": "tsc -b",
     "lint:build": "npx publint",
     "lint": "tsc --noEmit",
     "publish-pkg": "node ../../scripts/npm-check-version-and-publish.js"
