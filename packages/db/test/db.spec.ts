@@ -813,6 +813,41 @@ describe('subscriptions', () => {
     });
   });
 
+  it.only('emits triples even when entity is removed from query', async () => {
+    const spy = vi.fn();
+    const unsubscribe = db.subscribeTriples(
+      CollectionQueryBuilder('students')
+        .select(['name', 'major'])
+        .where([['dorm', '!=', 'Battell']])
+        .build(),
+      (triples) => {
+        console.log('triples', triples);
+        spy(triples);
+      }
+    );
+
+    await new Promise((resolve) => {
+      setTimeout(resolve, 10);
+    });
+
+    await db.update('students', '1', async (entity) => {
+      entity.dorm = 'Battell';
+    });
+
+    await new Promise((resolve) => {
+      setTimeout(resolve, 10);
+    });
+
+    expect(spy).toHaveBeenCalledTimes(2);
+
+    console.log(spy.mock.calls);
+
+    expect(spy.mock.calls[0][0].length).toBeGreaterThan(0);
+    expect(spy.mock.calls[1][0].length).toBeGreaterThan(0);
+
+    await unsubscribe();
+  });
+
   it('data properly backfills with order and limit', () => {
     return new Promise<void>(async (resolve, reject) => {
       let i = 0;
