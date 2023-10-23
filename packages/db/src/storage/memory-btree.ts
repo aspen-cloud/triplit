@@ -13,7 +13,7 @@ import BTree from 'sorted-btree';
 // Hack for https://github.com/qwertie/btree-typescript/issues/36
 // @ts-ignore
 const BTreeClass = (BTree.default ? BTree.default : BTree) as typeof BTree;
-export default class MemoryBTree implements TupleStorageApi {
+export class MemoryBTreeStorage implements TupleStorageApi {
   btree: BTree<any, any>;
   constructor() {
     this.btree = new BTreeClass<Tuple, any>(undefined, compareTuple);

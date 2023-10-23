@@ -11,6 +11,11 @@
       "require": "./dist/cjs/index.js",
       "import": "./dist/esm/index.js",
       "default": "./dist/esm/index.js"
+    },
+    "./storage/*": {
+      "types": "./dist/types/storage/*.d.ts",
+      "require": "./dist/storage/*.js",
+      "import": "./dist/storage/*.js"
     }
   },
   "type": "module",

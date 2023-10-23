@@ -15,7 +15,7 @@ import CollectionQueryBuilder, {
   subscribeTriples,
 } from './collection-query.js';
 import { Query, QueryWhere } from './query.js';
-import MemoryStorage from './storage/memory-btree.js';
+import { MemoryBTreeStorage } from './storage/memory-btree.js';
 import { DBOptionsError, InvalidMigrationOperationError } from './errors.js';
 import { Clock } from './clocks/clock.js';
 
@@ -180,7 +180,7 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
     this.variables = variables ?? {};
     // If only one source is provided, use the default key
     const sourcesMap = sources ?? {
-      [DEFAULT_STORE_KEY]: source ?? new MemoryStorage(),
+      [DEFAULT_STORE_KEY]: source ?? new MemoryBTreeStorage(),
     };
     if (Object.keys(sourcesMap).length === 0)
       throw new DBOptionsError('No triple stores provided.');

@@ -1,11 +1,8 @@
 import {
   DB,
-  MemoryStorage,
   Migration,
   CollectionQuery,
   Builder,
-  CachedIndexedDbStorage as IndexedDbStorage,
-  Query,
   UpdateTypeFromModel,
   Models,
   CollectionNameFromModels,
@@ -23,6 +20,7 @@ import {
   schemaToJSON,
   ResultTypeFromModel,
   toBuilder,
+  Storage,
 } from '@triplit/db';
 import { Subject } from 'rxjs';
 import { getUserId } from './token.js';
@@ -35,8 +33,7 @@ import {
 } from './errors.js';
 import { WebSocketTransport } from './websocket-transport.js';
 import { ClientSyncMessage, ServerSyncMessage } from '@triplit/types/sync';
-export { IndexedDbStorage, MemoryStorage };
-type Storage = IndexedDbStorage | MemoryStorage;
+import { MemoryBTreeStorage } from '@triplit/db/storage/memory-btree';
 
 /**
  * There is some odd behavior when using infer with intersection types
@@ -687,12 +684,9 @@ export class TriplitClient<M extends Models<any, any> | undefined = undefined> {
       variables: options?.db?.variables,
       sources: {
         //@ts-ignore
-        cache:
-          options?.db?.storage?.cache ?? new IndexedDbStorage('triplit-cache'),
+        cache: options?.db?.storage?.cache ?? new MemoryBTreeStorage(),
         //@ts-ignore
-        outbox:
-          options?.db?.storage?.outbox ??
-          new IndexedDbStorage('triplit-outbox'),
+        outbox: options?.db?.storage?.outbox ?? new MemoryBTreeStorage(),
       },
     });
 

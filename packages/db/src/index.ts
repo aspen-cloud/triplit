@@ -5,12 +5,7 @@
  * What this means is everything must be imported from "@triplit/db", and not "@triplit/db/dist/query" or something like that.
  */
 
-// TODO: note this somewhere - cannot export directly from external pkg with parcel
-export { SQLiteTupleStorage as SqliteStorage } from 'tuple-database/storage/SQLiteTupleStorage.js';
-export { IndexedDbTupleStorage as IndexedDbStorage } from 'tuple-database/storage/IndexedDbTupleStorage.js';
-export { BrowserTupleStorage as BrowserLocalStorage } from 'tuple-database/storage/BrowserTupleStorage.js';
-export { default as MemoryStorage } from './storage/memory-btree.js';
-export { default as CachedIndexedDbStorage } from './storage/cached-indexed-db.js';
+export type { TupleStorageApi as Storage } from 'tuple-database';
 
 import DB from './db.js';
 export default DB;
