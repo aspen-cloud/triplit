@@ -1,0 +1,58 @@
+{
+  "name": "@triplit/server-core",
+  "packageManager": "yarn@3.4.1",
+  "private": true,
+  "module": "dist/index.js",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "require": "./dist/index.js",
+      "import": "./dist/index.js"
+    },
+    "./services": {
+      "types": "./dist/services.d.ts",
+      "require": "./dist/services.js",
+      "import": "./dist/services.js"
+    },
+    "./platform": {
+      "types": "./dist/platform.d.ts",
+      "require": "./dist/platform.js",
+      "import": "./dist/platform.js"
+    },
+    "./account-service/*": {
+      "types": "./dist/account-service/*.d.ts",
+      "require": "./dist/account-service/*.js",
+      "import": "./dist/account-service/*.js"
+    },
+    "./token": {
+      "types": "./dist/token.d.ts",
+      "require": "./dist/token.js",
+      "import": "./dist/token.js"
+    },
+    "./*": {
+      "types": "./dist/*.d.ts",
+      "require": "./dist/*.js",
+      "import": "./dist/*.js"
+    },
+    "./**/*": {
+      "types": "./dist/**/*.d.ts",
+      "require": "./dist/**/*.js",
+      "import": "./dist/**/*.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "lint": "tsc --noEmit",
+    "lint:build": "npx publint"
+  },
+  "dependencies": {
+    "@triplit/db": "workspace:^",
+    "jose": "^4.15.4"
+  },
+  "devDependencies": {
+    "@triplit/types": "workspace:^",
+    "@types/node": "^18.15.2",
+    "typescript": "^5.2.2"
+  }
+}

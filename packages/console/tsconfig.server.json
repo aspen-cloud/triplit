@@ -1,0 +1,36 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "strict": false,
+    "composite": true,
+    "lib": ["ESNext"],
+    "module": "esnext",
+    "target": "esnext",
+    "moduleResolution": "Node",
+    "moduleDetection": "force",
+    "downlevelIteration": true,
+    "skipLibCheck": true,
+    "jsx": "react",
+    "allowSyntheticDefaultImports": true,
+    "forceConsistentCasingInFileNames": true,
+    "allowJs": true,
+    "esModuleInterop": true,
+    "outDir": "dist",
+    "rootDir": "server",
+    "emitDeclarationOnly": true,
+    "declarationDir": "dist"
+  },
+  "references": [
+    {
+      "path": "../db/tsconfig.json"
+    },
+    {
+      "path": "../client/tsconfig.json"
+    },
+    {
+      "path": "../server/tsconfig.json"
+    }
+  ],
+  "include": ["server/index.ts"],
+  "exclude": ["node_modules", "dist"]
+}

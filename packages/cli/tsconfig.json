@@ -1,0 +1,38 @@
+{
+  // "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "strict": false,
+    "composite": false,
+    "lib": ["ESNext"],
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "target": "ES2020",
+    "moduleDetection": "force",
+    "downlevelIteration": true,
+    "skipLibCheck": true,
+    "jsx": "react",
+    "allowSyntheticDefaultImports": true,
+    "forceConsistentCasingInFileNames": true,
+    "allowJs": true,
+    "esModuleInterop": true,
+    "outDir": "./dist",
+    "rootDir": "./src/",
+    "declaration": false
+  },
+  "references": [
+    {
+      "path": "../db/tsconfig.json"
+    },
+    {
+      "path": "../client/tsconfig.json"
+    },
+    {
+      "path": "../server/tsconfig.json"
+    },
+    {
+      "path": "../console/tsconfig.server.json"
+    }
+  ],
+  "include": ["src/**/*.ts", "src/**/*.tsx"],
+  "exclude": ["node_modules", "dist"]
+}

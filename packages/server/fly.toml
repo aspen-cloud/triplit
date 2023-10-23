@@ -1,0 +1,48 @@
+# fly.toml app configuration file generated for triplit-server on 2023-04-28T16:29:31-07:00
+#
+# See https://fly.io/docs/reference/configuration/ for information about how to use this file.
+#
+
+app = "triplit-server"
+kill_signal = "SIGINT"
+kill_timeout = 5
+primary_region = "ord"
+processes = []
+
+[build]
+
+[env]
+  PORT = "8080"
+
+[experimental]
+  auto_rollback = true
+
+[mounts]
+  destination = "/mnt/triplitdb"
+  source = "triplitdb"
+
+[[services]]
+  http_checks = []
+  internal_port = 8080
+  processes = ["app"]
+  protocol = "tcp"
+  script_checks = []
+  [services.concurrency]
+    hard_limit = 10000
+    soft_limit = 6000
+    type = "connections"
+
+  [[services.ports]]
+    force_https = true
+    handlers = ["http"]
+    port = 80
+
+  [[services.ports]]
+    handlers = ["tls", "http"]
+    port = 443
+
+  [[services.tcp_checks]]
+    grace_period = "1s"
+    interval = "15s"
+    restart_limit = 0
+    timeout = "2s"

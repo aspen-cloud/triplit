@@ -1,0 +1,43 @@
+{
+  "name": "@triplit/server",
+  "packageManager": "yarn@3.4.1",
+  "private": true,
+  "types": "dist/index.d.ts",
+  "main": "dist/index.js",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch ./run.ts",
+    "start": "node --loader tsx ./src/index.ts",
+    "build": "tsc -b",
+    "deploy:prod": "(cd ../../ && flyctl deploy --dockerfile=./packages/server/Dockerfile --ignorefile=./packages/server/.dockerignore --config=./packages/server/fly.toml)",
+    "deploy:load": "(cd ../../ && flyctl deploy --dockerfile=./packages/server/Dockerfile --ignorefile=./packages/server/.dockerignore --config=./packages/server/fly.load.toml)",
+    "docker": "(cd ../../ && docker build -f ./packages/server/Dockerfile .)",
+    "lint": "tsc --noEmit",
+    "lint:build": "npx publint",
+    "util:gentoken": "node ./dev/scripts/createToken.cjs"
+  },
+  "dependencies": {
+    "@triplit/db": "workspace:^",
+    "@triplit/server-core": "workspace:^",
+    "better-sqlite3": "^8.3.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.0.3",
+    "express": "^4.18.2",
+    "jsonwebtoken": "^9.0.0",
+    "node-cache": "^5.1.2",
+    "rate-limiter-flexible": "^2.4.1",
+    "ws": "^8.13.0"
+  },
+  "devDependencies": {
+    "@triplit/types": "workspace:^",
+    "@types/better-sqlite3": "^7.6.4",
+    "@types/cors": "^2",
+    "@types/express": "^4.17.17",
+    "@types/jsonwebtoken": "^9",
+    "@types/node": "^18.15.2",
+    "@types/ws": "^8.5.4",
+    "esbuild": "^0.19.3",
+    "tsx": "^3.12.10",
+    "typescript": "^5.2.2"
+  }
+}
