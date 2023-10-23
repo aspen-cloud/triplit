@@ -24,6 +24,15 @@ export type ExtractTimestampedType<T extends TypeInterface> =
       : [JsonType, Timestamp]
     : never;
 
+export type ExtractOperators<T extends TypeInterface> = T extends TypeInterface<
+  infer _TypeId,
+  infer _JSType,
+  infer _JsonType,
+  infer Operators
+>
+  ? Operators[number]
+  : never;
+
 /**
  * This represents a definition of a type that can be used in a collection
  * It can be used to completely define the shape, validation, and serialization of a type

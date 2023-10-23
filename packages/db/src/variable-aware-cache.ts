@@ -46,7 +46,7 @@ export class VariableAwareCache<Schema extends Models<any, any>> {
     if (model) {
       const attributeSchema = getSchemaFromPath(
         model,
-        variableStatements[0][0].split('.')
+        (variableStatements[0][0] as string).split('.')
       );
       if (attributeSchema.type === 'set') return false;
     }
@@ -177,9 +177,9 @@ export class VariableAwareCache<Schema extends Models<any, any>> {
     >[] = [];
     const nonVariableFilters = query.where.filter((filter) => {
       if (!(filter instanceof Array)) return true;
-      const [_prop, _op, val] = filter;
+      const [prop, _op, val] = filter;
       if (typeof val === 'string' && val.startsWith('$')) {
-        variableFilters.push(filter);
+        variableFilters.push([prop as string, _op, val]);
         return false;
       }
       return true;

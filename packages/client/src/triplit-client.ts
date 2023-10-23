@@ -22,6 +22,7 @@ import {
   TripleRow,
   schemaToJSON,
   ResultTypeFromModel,
+  toBuilder,
 } from '@triplit/db';
 import { Subject } from 'rxjs';
 import { getUserId } from './token.js';
@@ -50,11 +51,7 @@ type Storage = IndexedDbStorage | MemoryStorage;
  */
 export type ClientFetchResult<C extends ClientQuery<any, any>> =
   C extends ClientQuery<infer M, infer CN>
-    ? M extends Models<any, any>
-      ? Map<string, ResultTypeFromModel<ModelFromModels<M, CN>>>
-      : M extends undefined
-      ? Map<string, any>
-      : never
+    ? Map<string, ResultTypeFromModel<ModelFromModels<M, CN>>>
     : never;
 
 export type TransportConnectParams = {
@@ -582,7 +579,14 @@ export type ClientQuery<
 function ClientQueryBuilder<
   M extends Models<any, any> | undefined,
   CN extends CollectionNameFromModels<M>
->(collectionName: CN, params?: Omit<ClientQuery<M, CN>, 'collectionName'>) {
+>(
+  collectionName: CN,
+  params?: Omit<ClientQuery<M, CN>, 'collectionName'>
+): toBuilder<
+  ClientQuery<M, CN>,
+  'collectionName',
+  QUERY_INPUT_TRANSFORMERS<ModelFromModels<M, CN>>
+> {
   const query: ClientQuery<M, CN> = {
     collectionName,
     ...params,
@@ -590,21 +594,17 @@ function ClientQueryBuilder<
     select: params?.select ?? [],
     syncStatus: params?.syncStatus ?? 'all',
   };
+  const transformers = QUERY_INPUT_TRANSFORMERS<ModelFromModels<M, CN>>();
   return Builder(query, {
     protectedFields: ['collectionName'],
-    inputTransformers: QUERY_INPUT_TRANSFORMERS<
-      Query<ModelFromModels<M, CN>>,
-      ModelFromModels<M, CN>
-    >(),
+    inputTransformers: transformers,
   });
 }
 
-export type ClientQueryBuilder<CQ extends ClientQuery<any, any>> = ReturnType<
-  typeof ClientQueryBuilder<
-    CQ extends ClientQuery<infer M, any> ? M : any,
-    CQ extends ClientQuery<infer _M, infer CN> ? CN : any
-  >
->;
+export type ClientQueryBuilder<
+  M extends Models<any, any> | undefined,
+  CN extends CollectionNameFromModels<M>
+> = ReturnType<typeof ClientQueryBuilder<M, CN>>;
 
 function parseScope(query: ClientQuery<any, any>) {
   const { syncStatus } = query;
@@ -729,14 +729,16 @@ export class TriplitClient<M extends Models<any, any> | undefined = undefined> {
   }
 
   // TODO: is this better done with generics?
-  query<CN extends CollectionNameFromModels<M>>(collectionName: CN) {
+  query<CN extends CollectionNameFromModels<M>>(
+    collectionName: CN
+  ): ClientQueryBuilder<M, CN> {
     return ClientQueryBuilder<M, CN>(collectionName);
   }
 
   async fetch<CQ extends ClientQuery<M, any>>(
     query: CQ,
     options?: FetchOptions
-  ) {
+  ): Promise<ClientFetchResult<CQ>> {
     const opts = options ?? this.defaultFetchOptions.fetch;
     if (opts.policy === 'local-only') {
       return this.fetchLocal(query);
@@ -778,9 +780,11 @@ export class TriplitClient<M extends Models<any, any> | undefined = undefined> {
     throw new UnrecognizedFetchPolicyError((opts as FetchOptions).policy);
   }
 
-  private fetchLocal<CQ extends ClientQuery<M, any>>(query: CQ) {
+  private async fetchLocal<CQ extends ClientQuery<M, any>>(query: CQ) {
     const scope = parseScope(query);
-    return this.db.fetch(query, { scope });
+    const res = await this.db.fetch(query, { scope });
+    // @ts-ignore
+    return res as Promise<ClientFetchResult<CQ>>;
   }
 
   async fetchById<CN extends CollectionNameFromModels<M>>(
@@ -796,7 +800,9 @@ export class TriplitClient<M extends Models<any, any> | undefined = undefined> {
 
   async fetchOne<CQ extends ClientQuery<M, any>>(query: CQ) {
     const scope = parseScope(query);
-    return await this.db.fetchOne(query, { scope, skipRules: SKIP_RULES });
+    const res = await this.db.fetchOne(query, { scope, skipRules: SKIP_RULES });
+    // @ts-ignore
+    return res as Promise<ClientFetchResult<CQ>>;
   }
 
   insert<CN extends CollectionNameFromModels<M>>(

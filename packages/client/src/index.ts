@@ -6,5 +6,7 @@ export type {
   Model,
   Models,
   Migration,
+  ResultTypeFromModel,
+  ModelFromModels,
 } from '@triplit/db';
 export * from './triplit-client.js';

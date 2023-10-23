@@ -294,3 +294,36 @@ describe('schemaless', () => {
     expectTypeOf(db.fetch(query)).resolves.toEqualTypeOf<Map<string, any>>();
   });
 });
+
+describe('query builder', () => {
+  test('select', () => {
+    const schema = {
+      collections: {
+        test: {
+          schema: S.Schema({
+            attr1: S.String(),
+            attr2: S.Boolean(),
+            attr3: S.Number(),
+
+            // Not included
+            subquery: S.Query({ collectionName: 'test2', where: [] }),
+          }),
+        },
+      },
+    };
+    // Schemaful
+    {
+      const db = new DB({ schema });
+      const query = db.query('test');
+      expectTypeOf(query.select)
+        .parameter(0)
+        .toEqualTypeOf<('attr1' | 'attr2' | 'attr3')[]>();
+    }
+    // schemaless
+    {
+      const db = new DB();
+      const query = db.query('test');
+      expectTypeOf(query.select).parameter(0).toEqualTypeOf<string[]>();
+    }
+  });
+});

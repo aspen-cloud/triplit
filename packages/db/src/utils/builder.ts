@@ -1,5 +1,7 @@
 import { EditingProtectedFieldError } from '../errors.js';
 
+type KeyOfOrEmpty<T> = T extends never ? never : keyof T;
+
 type ArgumentsType<T extends (...args: any[]) => any> = T extends (
   ...args: infer A
 ) => any
@@ -13,13 +15,13 @@ export type toBuilder<
   ProtectedField extends keyof Data = never,
   // Field transformers
   CustomInputs extends {
-    [key in keyof Omit<Required<Data>, ProtectedField>]: (
+    [key in keyof Omit<Partial<Data>, ProtectedField>]: (
       ...args: any
     ) => Data[key];
   } = never
 > = {
   [K in keyof Omit<Required<Data>, ProtectedField>]: (
-    ...args: K extends keyof CustomInputs
+    ...args: K extends KeyOfOrEmpty<CustomInputs>
       ? ArgumentsType<CustomInputs[K]>
       : [Data[K]]
   ) => toBuilder<Data, ProtectedField, CustomInputs>;

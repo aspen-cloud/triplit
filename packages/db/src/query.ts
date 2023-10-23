@@ -1,11 +1,12 @@
 import { ValuePointer } from '@sinclair/typebox/value';
-import { Model, Models, Timestamped } from './schema.js';
+import { Model, Models, ResultTypeFromModel, Timestamped } from './schema.js';
 import { Attribute, EntityId, TripleRow } from './triple-store.js';
 import { QueryClauseFormattingError } from './errors.js';
 import { TimestampType } from './data-types/base.js';
 import { timestampCompare } from './timestamp.js';
 import { CollectionQuery } from './collection-query.js';
 import { CollectionNameFromModels } from './db.js';
+import { ExtractOperators } from './data-types/type.js';
 
 type Path = string;
 // Should be friendly types that we pass into queries
@@ -24,10 +25,10 @@ export type FilterStatement<
   M extends Model<any> | undefined,
   K extends M extends Model<any>
     ? keyof M['properties']
-    : Path = M extends Model<any> ? keyof M : Path
+    : Path = M extends Model<any> ? keyof M['properties'] : Path
 > = [
   K,
-  M extends Model<any> ? M['properties'][K]['operators'] : string,
+  M extends Model<any> ? ExtractOperators<M['properties'][K]> : string,
   Value // TODO: We could make this tighter by inspecting the type
 ];
 
@@ -64,13 +65,13 @@ export type QueryWhere<M extends Model<any> | undefined> = WhereFilter<M>[];
 export type ValueCursor = [value: Value, entityId: EntityId];
 
 export type QueryOrder<M extends Model<any> | undefined> = [
-  property: M extends Model<any> ? keyof M : Path,
+  property: M extends Model<any> ? keyof ResultTypeFromModel<M> : Path,
   direction: 'ASC' | 'DESC'
 ];
 
 export interface Query<M extends Model<any> | undefined> {
   where: QueryWhere<M>;
-  select: (M extends Model<any> ? keyof M : Path)[];
+  select: (M extends Model<any> ? keyof ResultTypeFromModel<M> : Path)[];
   order?: QueryOrder<M>[];
   limit?: number;
   after?: ValueCursor;
@@ -185,10 +186,12 @@ type OrderInput<M extends Model<any> | undefined> =
   | QueryOrder<M>[]
   | [QueryOrder<M>[]];
 
+export type QUERY_INPUT_TRANSFORMERS<M extends Model<any> | undefined> =
+  ReturnType<typeof QUERY_INPUT_TRANSFORMERS<M>>;
+
 // TODO: add functional type guards for conditionals
 export const QUERY_INPUT_TRANSFORMERS = <
-  Q extends Query<any>,
-  M extends Q extends Query<infer Model> ? Model : any
+  M extends Model<any> | undefined
 >() => ({
   where: (...args: FilterInput<M>): QueryWhere<M> => {
     if (typeof args[0] === 'string') {

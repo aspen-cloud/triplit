@@ -14,9 +14,14 @@ export function useQuery<
   CN extends CollectionNameFromModels<M>
 >(
   client: TriplitClient<any>,
-  query: ClientQueryBuilder<ClientQuery<M, CN>>,
+  query: ClientQueryBuilder<M, CN>,
   options?: SubscriptionOptions
-) {
+): {
+  fetching: boolean;
+  fetchingRemote: boolean;
+  results: ClientFetchResult<ClientQuery<M, CN>> | undefined;
+  error: any;
+} {
   const [results, setResults] = useState<
     ClientFetchResult<ClientQuery<M, CN>> | undefined
   >(undefined);

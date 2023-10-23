@@ -55,10 +55,7 @@ export default function CollectionQueryBuilder<
   };
   return Builder(query, {
     protectedFields: ['collectionName'],
-    inputTransformers: QUERY_INPUT_TRANSFORMERS<
-      Query<ModelFromModels<M, CN>>,
-      ModelFromModels<M, CN>
-    >(),
+    inputTransformers: QUERY_INPUT_TRANSFORMERS<ModelFromModels<M, CN>>(),
   });
 }
 
@@ -71,11 +68,7 @@ export type CollectionQuery<
 
 export type FetchResult<C extends CollectionQuery<any, any>> =
   C extends CollectionQuery<infer M, infer CN>
-    ? M extends Models<any, any>
-      ? Map<string, ResultTypeFromModel<ModelFromModels<M, CN>>>
-      : M extends undefined
-      ? Map<string, any>
-      : never
+    ? Map<string, ResultTypeFromModel<ModelFromModels<M, CN>>>
     : never;
 
 export interface FetchOptions {
@@ -719,8 +712,8 @@ export function subscribeResultsAndTriples<
             if (order && limit && nextResult.size >= limit) {
               const allValues = [...nextResult.values()];
               const valueRange = [
-                allValues.at(0)[order[0][0]][0],
-                allValues.at(-1)[order[0][0]][0],
+                allValues.at(0)![order[0][0]][0],
+                allValues.at(-1)![order[0][0]][0],
               ];
               const entityValue = entityObj[order[0][0]][0];
               satisfiesLimitRange =

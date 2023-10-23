@@ -29,7 +29,6 @@ import CollectionQueryBuilder, {
 import {
   EntityNotFoundError,
   InvalidAssignmentError,
-  TriplitError,
   UnrecognizedPropertyInUpdateError,
   WriteRuleError,
 } from './errors.js';

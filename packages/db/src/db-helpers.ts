@@ -282,12 +282,12 @@ export async function prepareQuery<
       const [prop, op, val] = statement;
       const attributeType = getSchemaFromPath(
         collectionSchema.schema,
-        prop.split('.')
+        (prop as string).split('.')
       );
       if (attributeType.type !== 'query') {
         return [prop, op, val];
       }
-      const [_collectionName, ...path] = prop.split('.');
+      const [_collectionName, ...path] = (prop as string).split('.');
       const subquery = { ...attributeType.query };
       subquery.where = [...subquery.where, [path.join('.'), op, val]];
       return {
