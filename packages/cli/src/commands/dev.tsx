@@ -48,7 +48,7 @@ export async function run({ flags }) {
   const dbServer = startDBServer(dbPort);
   const consoleServer = createConsoleServer('../../console', {
     token: serviceKey,
-    projName: 'tripli-test',
+    projName: 'triplit-test',
     server: `http://localhost:${dbPort}`,
   });
   consoleServer.listen(consolePort);
