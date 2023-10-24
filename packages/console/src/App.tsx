@@ -15,7 +15,8 @@ import {
   ProjectViewer,
   addProjectToConsole,
 } from './components';
-import { MemoryStorage, TriplitClient } from '@triplit/client';
+import { TriplitClient } from '@triplit/client';
+import { MemoryBTreeStorage as MemoryStorage } from '@triplit/db/storage/memory-btree';
 import { useProjectState } from './components';
 const projectClients = new Map<string, TriplitClient<any>>();
 
