@@ -14,8 +14,8 @@
     },
     "./storage/*": {
       "types": "./dist/types/storage/*.d.ts",
-      "require": "./dist/storage/*.js",
-      "import": "./dist/storage/*.js"
+      "require": "./dist/cjs/storage/*.js",
+      "import": "./dist/esm/storage/*.js"
     }
   },
   "type": "module",
