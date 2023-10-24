@@ -1,4 +1,4 @@
-import { yellow, italic } from 'ansis/colors';
+import { yellow, italic, blue } from 'ansis/colors';
 import { withServerRequester } from '../../middleware/add-server-requester.js';
 import {
   applyMigration,
@@ -11,7 +11,8 @@ export const description = 'Runs down migrations on the remote database';
 export const run = withServerRequester(async ({ args, ctx }) => {
   const endVersion = args[0];
   if (endVersion == undefined) throw new Error('No version specified');
-
+  console.log(`Migrating down the sync server: `, blue(ctx.url));
+  console.log();
   const resp = await getMigrationsStatus({ ctx });
   const { status, server } = resp;
 

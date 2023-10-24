@@ -9,6 +9,8 @@ import {
 export const description = 'Run up migrations on the remote database';
 
 export const run = withServerRequester(async ({ args, ctx }) => {
+  console.log(`Migrating up the sync server: `, blue(ctx.url));
+  console.log();
   const resp = await getMigrationsStatus({ ctx });
   const { status, server } = resp;
 

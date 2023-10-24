@@ -14,6 +14,8 @@ const pullMigrationName = 'sync_with_remote';
 
 // Need to figure out something with version
 export const run = withServerRequester(async ({ ctx }) => {
+  console.log(`Pulling latest migrations from sync server: `, blue(ctx.url));
+  console.log();
   const res = await getMigrationsStatus({ ctx });
   const { status, server, project } = res;
   if (status === 'SERVER_UNTRACKED_CHANGES') {

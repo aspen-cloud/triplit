@@ -5,6 +5,8 @@ import { getMigrationsStatus } from '../../migration.js';
 export const description = 'View migration status of remote database';
 
 export const run = withServerRequester(async ({ ctx }) => {
+  console.log(`Getting migration status of the sync server: `, blue(ctx.url));
+  console.log();
   const res = await getMigrationsStatus({ ctx });
   const { status, server, project } = res;
 
@@ -14,7 +16,6 @@ export const run = withServerRequester(async ({ ctx }) => {
   // red: unapplied on server, but behind server (will need to regenerate)
   // blue: applied on server, but not tracked by migrations
   // gray: unknown
-
   console.log(
     'These are you remote and local migrations. They are color coded as follows:'
   );
