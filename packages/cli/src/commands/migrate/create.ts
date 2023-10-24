@@ -62,7 +62,8 @@ export const run = async ({ args }) => {
     dbSchemaJSON,
     localSchemaJSON,
     timestamp,
-    latest
+    latest,
+    sanitizedMigrationName
   );
 
   if (!migration) {

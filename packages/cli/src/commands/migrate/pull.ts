@@ -30,7 +30,8 @@ export const run = withServerRequester(async ({ ctx }) => {
       tempSchema ?? {},
       server.schema ?? {},
       timestamp,
-      latest
+      latest,
+      pullMigrationName
     );
 
     if (!migration) {

@@ -101,6 +101,7 @@ export type Migration = {
   down: DBOperation[];
   version: number;
   parent: number;
+  name: string;
 };
 
 type StorageSource = AsyncTupleStorageApi | TupleStorageApi;
@@ -544,6 +545,7 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
               [`${migration.version}`, 'parent'],
               migration.parent,
             ],
+            ['migrations', [`${migration.version}`, 'name'], migration.name],
             [
               'migrations',
               [`${migration.version}`, 'applied'],
@@ -599,7 +601,7 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
     const res = triplesToObject<{
       migrations?: Record<
         string,
-        { applied: string; id: number; parent: number }
+        { applied: string; id: number; parent: number; name: string }
       >;
     }>(migrationTuples);
     return res.migrations || {};

@@ -52,7 +52,7 @@ export async function getMigrationsStatus({ ctx }): Promise<{
     migrationHash: number | undefined;
     schemaHash: number | undefined;
     schema: CollectionsDefinition | undefined;
-    migrations: { id: number; parent: number }[];
+    migrations: { id: number; parent: number; name: string }[];
     statuses: Record<number, ServerMigrationStatus>;
   };
   project: {
@@ -71,7 +71,7 @@ export async function getMigrationsStatus({ ctx }): Promise<{
 
   const { schemaHash: serverHash, schema: serverSchemaJSON } =
     serverMigrationInfo;
-  const serverMigrations: [{ id: number; parent: number }] =
+  const serverMigrations: [{ id: number; parent: number; name: string }] =
     serverMigrationInfo.migrations ?? [];
 
   const projectMigrations = readMigrations()
@@ -290,11 +290,12 @@ export function createMigration(
   schemaLeft: CollectionsDefinition,
   schemaRight: CollectionsDefinition,
   version: number,
-  parent: number
+  parent: number,
+  name: string
 ) {
   const schemaDiff = diff(schemaLeft, schemaRight);
   if (!schemaDiff) return undefined;
-  const migration: Migration = { up: [], down: [], version, parent };
+  const migration: Migration = { up: [], down: [], version, parent, name };
   const context = { previousSchema: schemaLeft, targetScema: schemaRight };
   parseCollectionDiff(migration, schemaDiff, context);
   return migration;
