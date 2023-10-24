@@ -730,6 +730,9 @@ export function subscribeResultsAndTriples<
               if (nextResult.has(entity)) {
                 nextResult.delete(entity);
                 matchedTriples.set(entity, entityTriples);
+              } else {
+                // No change to result, return early
+                return;
               }
             }
           }

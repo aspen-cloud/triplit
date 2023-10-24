@@ -4165,3 +4165,43 @@ describe('set proxy', () => {
     });
   });
 });
+
+// Non relevant data should not fire subscription
+it('subscription overfire', async () => {
+  const db = new DB();
+  const completedTodosQuery = db
+    .query('todos')
+    .where('completed', '=', true)
+    .build();
+
+  let calls = 0;
+  // Subscribe to query updates
+  db.subscribe(completedTodosQuery, (data) => {
+    // do something with data
+    console.log(data);
+    calls++;
+  });
+
+  // Insert data over time
+  await new Promise<void>((res) =>
+    setTimeout(async () => {
+      await db.insert('todos', { text: 'Buy milk', completed: true });
+      res();
+    }, 500)
+  );
+  await new Promise<void>((res) =>
+    setTimeout(async () => {
+      await db.insert('todos', { text: 'Buy eggs', completed: false });
+      res();
+    }, 500)
+  );
+  await new Promise<void>((res) =>
+    setTimeout(async () => {
+      await db.insert('todos', { text: 'Buy bread', completed: true });
+      res();
+    }, 500)
+  );
+
+  await new Promise<void>((res) => setTimeout(res, 1000));
+  expect(calls).toEqual(3);
+});
