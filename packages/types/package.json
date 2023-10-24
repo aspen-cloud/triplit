@@ -2,7 +2,7 @@
   "name": "@triplit/types",
   "packageManager": "yarn@3.4.1",
   "scripts": {
-    "build": "tsc --build --force"
+    "build": "tsc"
   },
   "exports": {
     "./*": {

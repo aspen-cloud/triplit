@@ -8,7 +8,7 @@
   "scripts": {
     "dev": "tsx watch ./run.ts",
     "start": "node --loader tsx ./src/index.ts",
-    "build": "tsc -b",
+    "build": "tsc",
     "deploy:prod": "(cd ../../ && flyctl deploy --dockerfile=./packages/server/Dockerfile --ignorefile=./packages/server/.dockerignore --config=./packages/server/fly.toml)",
     "deploy:load": "(cd ../../ && flyctl deploy --dockerfile=./packages/server/Dockerfile --ignorefile=./packages/server/.dockerignore --config=./packages/server/fly.load.toml)",
     "docker": "(cd ../../ && docker build -f ./packages/server/Dockerfile .)",

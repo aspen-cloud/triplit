@@ -3,7 +3,7 @@
   "version": "0.0.1-beta.3",
   "type": "module",
   "scripts": {
-    "build": "tsc -b",
+    "build": "tsc",
     "release": "npm publish --access public",
     "test": "vitest run",
     "test:watch": "vitest watch"
