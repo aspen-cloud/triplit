@@ -29,7 +29,7 @@ Inside your project directory, install the Triplit client package `@triplit/clie
 
 ## Setting up your client
 
-A Triplit client instance will set up a local cache for your data and (if turned on) will set up the required network connections for syncing. The specifics of your local cache and syncing can be configured by passing in options to the client, which are described in the [client options reference](/client-options). For now we will not pass in any options, which will set up an in-memory local cache with no schema and no syncing.
+A Triplit client instance will set up a local database for your data and (if turned on) will set up the required network connections for syncing. The specifics of your local database and syncing can be configured by passing in options to the client, which are described in the [client options reference](/client-options). For now we will not pass in any options, which will set up an in-memory local database with no schema and no syncing.
 
 ```typescript
 import { TriplitClient } from '@triplit/client';
@@ -37,22 +37,58 @@ import { TriplitClient } from '@triplit/client';
 const client = new TriplitClient();
 ```
 
-Triplit organizes your data into collections, which are like tables in a relational database. You create query on a collection by calling `client.query()` and appending data to select and filters. Along with one-off queries, you can subscribe to incremental changes to a query.
+Triplit organizes your data into collections, which are like tables in a relational database. You can insert, update, and delete entities in a collection. As well, you can execute arbitrary queries on the database and subscribe to changes to query results over time.
+
+For example, you can insert some data into a collection and then query for it.
 
 ```typescript
-const completeTodoIdsQuery = client
+// Define a query
+const completedTodosQuery = client
   .query('todos')
-  .select(['id'])
-  .where([[['completed'], '=', true]]);
+  .where('completed', '=', true)
+  .build();
 
-// One-off query
-const completeTodoIds = client.fetch(completeTodoIdsQuery);
+// Insert data
+await client.insert('todos', { text: 'Buy milk', completed: true });
+await client.insert('todos', { text: 'Buy eggs', completed: false });
+await client.insert('todos', { text: 'Buy bread', completed: true });
 
-// Subscription
-const unsubscribe = client.subscribe(completeTodoIdsQuery, (data) => {
+// Execute the query
+const completedTodos = await client.fetch(completedTodosQuery);
+console.log(completedTodos);
+```
+
+You can also subscribe to data changes over time.
+
+```typescript
+// Define a query
+const completedTodosQuery = client
+  .query('todos')
+  .where('completed', '=', true)
+  .build();
+
+// Insert data over time
+setTimeout(
+  () => client.insert('todos', { text: 'Buy milk', completed: true }),
+  1000
+);
+setTimeout(
+  () => client.insert('todos', { text: 'Buy eggs', completed: false }),
+  2000
+);
+setTimeout(
+  () => client.insert('todos', { text: 'Buy bread', completed: true }),
+  3000
+);
+
+// Subscribe to query updates
+const unsubscribe = client.subscribe(completedTodosQuery, (data) => {
   // do something with data
+  console.log(data);
 });
 ```
+
+This is Triplit in its most basic form - a simple local database for your app with reactive queries. The rest of these docs will provide more detail on Triplit's database api, the additional features Triplit provides for app developers, and how its sync engine can be used to create powerful local-first and multiplayer experiences.
 
 ## Framework support
 
