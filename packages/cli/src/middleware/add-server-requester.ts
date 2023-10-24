@@ -24,10 +24,9 @@ export function withServerRequester(cmd) {
     const decodedToken = JWT.decode(token);
     // @ts-ignore
     const projectId = decodedToken?.['x-triplit-project-id'];
-
-    const url = process.env.DB_URL ?? `https://${projectId}.triplit.io`;
+    const url = flags.remote ?? process.env.DB_URL ?? `http://localhost:6543`; // `https://${projectId}.triplit.io`;
     const requestServer = makeRequester({ url, token });
-
+    // TODO: add prod flag
     return cmd({
       flags,
       args,
@@ -61,7 +60,7 @@ function makeRequester({ url, token }) {
       if (e.response) {
         throw e.response.data;
       } else if (e.request) {
-        throw 'No response was received from server. Please ensure you are connected to the internet and are pointing to the correct server.';
+        throw `No response was received from server: ${url}. Please ensure you are connected to the internet and are pointing to the correct server.`;
       }
       throw `An error occured while requesting the remote database: ${e.message}`;
     }
