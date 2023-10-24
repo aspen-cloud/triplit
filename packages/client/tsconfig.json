@@ -5,6 +5,7 @@
     "target": "ESNext", // You can adjust the target as needed.
     "module": "Node16", // This will be overridden in npm scripts
     "outDir": "./dist", // Output directory
+    "tsBuildInfoFile": "./dist/tsconfig.tsbuildinfo",
     "strict": true,
     "esModuleInterop": true,
     "declaration": true, // This is important to generate type declarations

@@ -2,7 +2,7 @@
   // "extends": "../../tsconfig.json",
   "compilerOptions": {
     "strict": false,
-    "composite": false,
+    "composite": true,
     "lib": ["ESNext"],
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
@@ -16,8 +16,8 @@
     "allowJs": true,
     "esModuleInterop": true,
     "outDir": "./dist",
-    "rootDir": "./src/",
-    "declaration": false
+    "tsBuildInfoFile": "./dist/tsconfig.tsbuildinfo",
+    "rootDir": "./src/"
   },
   "references": [
     {
