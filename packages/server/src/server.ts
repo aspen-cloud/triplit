@@ -1,6 +1,8 @@
 import WS, { WebSocketServer } from 'ws';
 import express from 'express';
-import { DB, TriplitError, MemoryStorage, SqliteStorage } from '@triplit/db';
+import { DB, TriplitError } from '@triplit/db';
+import { MemoryBTreeStorage as MemoryStorage } from '@triplit/db/storage/memory-btree';
+import { SQLiteTupleStorage as SqliteStorage } from '@triplit/db/storage/sqlite';
 import {
   MalformedMessagePayloadError,
   RateLimitExceededError,
