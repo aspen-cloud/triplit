@@ -13,7 +13,6 @@ import {
   InvalidFilterError,
   DBTransaction,
   InvalidSchemaPathError,
-  MemoryStorage,
   schemaToJSON,
   SerializingError,
   InvalidInternalEntityIdError,
@@ -23,7 +22,7 @@ import {
 } from '../src';
 import { Models } from '../src/schema.js';
 import { classes, students, departments } from './sample_data/school.js';
-import MemoryBTree from '../src/storage/memory-btree.js';
+import { MemoryBTreeStorage as MemoryStorage } from '../src/storage/memory-btree.js';
 import { testSubscription } from './utils/test-subscription.js';
 import {
   appendCollectionToId,
@@ -33,7 +32,7 @@ import {
 } from '../src/db-helpers.js';
 
 // const storage = new InMemoryTupleStorage();
-const storage = new MemoryBTree();
+const storage = new MemoryStorage();
 
 async function testDBAndTransaction<M extends Models<any, any> | undefined>(
   // should return a new instance if you are performing writes in your test
@@ -2725,7 +2724,6 @@ describe('Rules', () => {
     const USER_ID = 'the-user-id';
     beforeAll(async () => {
       db = new DB({
-        storage: new MemoryBTree(),
         variables: {
           user_id: USER_ID,
         },
@@ -2815,7 +2813,6 @@ describe('Rules', () => {
     const POST = { id: POST_ID, author_id: USER_ID, content: 'before' };
     beforeEach(async () => {
       db = new DB({
-        storage: new MemoryBTree(),
         variables: {
           user_id: USER_ID,
         },

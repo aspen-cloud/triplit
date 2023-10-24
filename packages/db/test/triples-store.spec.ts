@@ -6,15 +6,14 @@ import {
   TripleStoreTransaction,
 } from '../src/triple-store.js';
 import { Schema as S } from '../src/schema.js';
-import MemoryBTree from '../src/storage/memory-btree.js';
-import { IndexedDbStorage, MemoryStorage } from '../src';
+import { MemoryBTreeStorage as MemoryStorage } from '../src/storage/memory-btree.js';
 import {
   overrideStoredSchema,
   readSchemaFromTripleStore,
 } from '../src/db-helpers.js';
 
 // const storage = new InMemoryTupleStorage();
-const storage = new MemoryBTree();
+const storage = new MemoryStorage();
 
 beforeEach(() => {
   // storage.data = [];

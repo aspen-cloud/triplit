@@ -1,5 +1,5 @@
 import { describe, bench, beforeEach, beforeAll } from 'vitest';
-import { CollectionQuery, MemoryStorage } from '../src';
+import { MemoryBTreeStorage as MemoryStorage } from '../src/storage/memory-btree.js';
 import { TripleStore } from '../src/triple-store.js';
 import * as Doc from '../src/document.js';
 import { classes, departments, students } from '../test/sample_data/school.js';

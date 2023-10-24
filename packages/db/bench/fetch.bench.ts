@@ -1,4 +1,4 @@
-import { MemoryStorage } from '../src';
+import { MemoryBTreeStorage as MemoryStorage } from '../src/storage/memory-btree.js';
 import { TripleStore } from '../src/triple-store.js';
 import * as Doc from '../src/document.js';
 import Bench from 'tinybench';

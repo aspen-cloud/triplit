@@ -1,5 +1,5 @@
 import { describe, expect, it, beforeEach, beforeAll, vi } from 'vitest';
-import { MemoryStorage } from '../src';
+import { MemoryBTreeStorage as MemoryStorage } from '../src/storage/memory-btree.js';
 import { DurableClock } from '../src/clocks/durable-clock.js';
 import { TripleStore } from '../src/triple-store.js';
 
