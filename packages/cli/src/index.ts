@@ -54,7 +54,29 @@ async function execute(args: string[], flags: {}) {
     return;
   }
   const cmdDef = await getCommandDefinition(command);
-  const result = await cmdDef.run({ flags, args: commandArgs, ctx: {} });
+  const cmdFlagsDefs = Object.entries(cmdDef.flags);
+
+  const unaliasedFlags = Object.entries(flags).reduce(
+    (acc, [flagName, flagValue]) => {
+      const flagDef = cmdFlagsDefs.find(
+        ([name, { char }]) => name === flagName || char === flagName
+      );
+      if (flagDef) {
+        const [name, def] = flagDef;
+        acc[name] = flagValue;
+      } else {
+        acc[flagName] = flagValue;
+      }
+      return acc;
+    },
+    {}
+  );
+
+  const result = await cmdDef.run({
+    flags: unaliasedFlags,
+    args: commandArgs,
+    ctx: {},
+  });
   if (result && React.isValidElement(result)) {
     render(result, { patchConsole: false });
   }

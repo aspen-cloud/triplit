@@ -5,6 +5,14 @@ import React from 'react';
 
 export const description = 'View migration status of remote database';
 
+export const flags = {
+  all: {
+    type: 'boolean',
+    char: 'a',
+    description: 'Show all migrations',
+  },
+};
+
 export const run = withServerRequester(async ({ flags, ctx }) => {
   // console.log(`\nGetting migration status of the sync server: `, blue(ctx.url));
   const showAllMigrations = !!flags.all;
