@@ -23,17 +23,14 @@ export async function addProjectToConsole(formValues: ImportProjectFormValues) {
     const projectId = getProjectIdFromApiKey(token);
     const [protocol, origin] = server.split('://');
     const primaryKey = formConsolePrimaryKey(projectId, server);
-    await consoleClient.insert(
-      'projects',
-      {
-        displayName,
-        token,
-        projectId,
-        server: origin,
-        secure: protocol === 'https',
-      },
-      primaryKey
-    );
+    await consoleClient.insert('projects', {
+      displayName,
+      token,
+      projectId,
+      server: origin,
+      secure: protocol === 'https',
+      id: primaryKey,
+    });
     return primaryKey;
   } catch (e) {
     console.error(e);

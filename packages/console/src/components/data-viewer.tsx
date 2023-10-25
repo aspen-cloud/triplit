@@ -39,11 +39,11 @@ async function onSelectEntity(
   collectionName: string,
   projectId: string
 ) {
-  await consoleClient.insert(
-    'selections',
-    { collectionName, projectId },
-    entityId
-  );
+  await consoleClient.insert('selections', {
+    collectionName,
+    projectId,
+    id: entityId,
+  });
 }
 async function onDeselectEntity(entityId: string) {
   await consoleClient.delete('selections', entityId);
@@ -79,7 +79,7 @@ async function onSelectAllEntities(
   await consoleClient.transact(async (tx) => {
     await Promise.all(
       entityIds.map((entityId) =>
-        tx.insert('selections', { collectionName, projectId }, entityId)
+        tx.insert('selections', { collectionName, projectId, id: entityId })
       )
     );
   });
@@ -231,7 +231,7 @@ export function DataViewer({
       header: () => (
         <Tooltip label="Select all">
           <Checkbox
-            className="mx-2"
+            className="mx-3"
             checked={allVisibleEntitiesAreSelected}
             onCheckedChange={toggleSelectAllEntities}
           />
@@ -241,7 +241,7 @@ export function DataViewer({
         const entityId = row.getValue('id');
         return (
           <Checkbox
-            className="mx-2"
+            className="mx-3"
             checked={selectedEntities && selectedEntities.has(entityId)}
             onCheckedChange={(checked) => {
               checked
@@ -261,75 +261,78 @@ export function DataViewer({
       selectedEntities,
     ]
   );
+  console.log('uniqueAttributes', uniqueAttributes);
   const columns = useMemo(() => {
     const cols: ColumnDef<any>[] = [selectEntitiesColumn, idColumn];
-    uniqueAttributes.forEach((attr) => {
-      const typeDef = collectionSchema?.schema?.properties?.[attr];
-      const isQueryColumn = typeDef?.type === 'query';
-      cols.push({
-        cell: ({ row, column }) => {
-          const cellKey = `${row.getValue('id')}_${column.id}`;
-          if (isQueryColumn)
+    Array.from(uniqueAttributes)
+      .filter((attr) => attr !== 'id')
+      .forEach((attr) => {
+        const typeDef = collectionSchema?.schema?.properties?.[attr];
+        const isQueryColumn = typeDef?.type === 'query';
+        cols.push({
+          cell: ({ row, column }) => {
+            const cellKey = `${row.getValue('id')}_${column.id}`;
+            if (isQueryColumn)
+              return (
+                <RelationCell
+                  queryDef={typeDef}
+                  onClickRelationLink={() => {
+                    const where = typeDef?.query?.where;
+                    const whereWithVariablesReplaced = where.map(
+                      ([attribute, operator, value]) => {
+                        if (typeof value === 'string' && value.startsWith('$'))
+                          value = row.getValue(value.split('$')[1] as string);
+                        return [attribute, operator, value];
+                      }
+                    );
+                    setUrlQueryState({
+                      where: JSON.stringify(whereWithVariablesReplaced),
+                      collectionName: typeDef?.query?.collectionName,
+                    });
+                  }}
+                />
+              );
             return (
-              <RelationCell
-                queryDef={typeDef}
-                onClickRelationLink={() => {
-                  const where = typeDef?.query?.where;
-                  const whereWithVariablesReplaced = where.map(
-                    ([attribute, operator, value]) => {
-                      if (typeof value === 'string' && value.startsWith('$'))
-                        value = row.getValue(value.split('$')[1] as string);
-                      return [attribute, operator, value];
-                    }
-                  );
-                  setUrlQueryState({
-                    where: JSON.stringify(whereWithVariablesReplaced),
-                    collectionName: typeDef?.query?.collectionName,
-                  });
-                }}
+              <DataCell
+                attributeDef={typeDef}
+                selected={selectedCell === cellKey}
+                onSelectCell={() => setSelectedCell(cellKey)}
+                attribute={attr}
+                collection={collection}
+                entityId={row.getValue('id')}
+                client={client}
+                value={row.getValue(attr)}
               />
             );
-          return (
-            <DataCell
-              attributeDef={typeDef}
-              selected={selectedCell === cellKey}
-              onSelectCell={() => setSelectedCell(cellKey)}
-              attribute={attr}
-              collection={collection}
-              entityId={row.getValue('id')}
-              client={client}
-              value={row.getValue(attr)}
-            />
-          );
-        },
-        header: ({ column }) => {
-          return (
-            <TriplitColumnHeader
-              attribute={attr}
-              attributeDef={typeDef}
-              rightIcon={
-                typeDef && (
-                  <ColumnMenu
-                    onDelete={() => {
-                      setDeleteAttributeDialogIsOpen(true);
-                      setSelectedAttribute(attr);
-                    }}
-                    onEdit={() => {
-                      setAddOrUpdateAttributeFormOpen(true);
-                      setAttributeToUpdate({
-                        name: attr,
-                        ...collectionSchema?.schema?.properties?.[attr],
-                      });
-                    }}
-                  />
-                )
-              }
-            />
-          );
-        },
-        accessorKey: attr,
+          },
+          header: ({ column }) => {
+            return (
+              <TriplitColumnHeader
+                attribute={attr}
+                attributeDef={typeDef}
+                rightIcon={
+                  typeDef && (
+                    <ColumnMenu
+                      onDelete={() => {
+                        setDeleteAttributeDialogIsOpen(true);
+                        setSelectedAttribute(attr);
+                      }}
+                      onEdit={() => {
+                        setAddOrUpdateAttributeFormOpen(true);
+                        setAttributeToUpdate({
+                          name: attr,
+                          ...collectionSchema?.schema?.properties?.[attr],
+                        });
+                      }}
+                    />
+                  )
+                }
+              />
+            );
+          },
+          accessorKey: attr,
+        });
       });
-    });
     return cols;
   }, [
     uniqueAttributes,
