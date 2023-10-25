@@ -784,7 +784,7 @@ export class TriplitClient<M extends Models<any, any> | undefined = undefined> {
     query: CQ
   ): Promise<ClientFetchResult<CQ>> {
     const scope = parseScope(query);
-    const res = await this.db.fetch(query, { scope });
+    const res = await this.db.fetch(query, { scope, skipRules: SKIP_RULES });
     return res;
   }
 
@@ -795,15 +795,18 @@ export class TriplitClient<M extends Models<any, any> | undefined = undefined> {
   ) {
     const query = this.query(collectionName).entityId(id).build();
     const results = await this.fetch(query, options);
-    // TODO: fixup some type loss here..
     return results.get(id);
   }
 
   async fetchOne<CQ extends ClientQuery<M, any>>(
-    query: CQ
-  ): Promise<[string, ClientFetchResultEntity<CQ>] | null> {
-    const scope = parseScope(query);
-    return this.db.fetchOne(query, { scope, skipRules: SKIP_RULES });
+    query: CQ,
+    options?: FetchOptions
+  ) {
+    query.limit = 1;
+    const result = await this.fetch(query, options);
+    const entry = [...result.entries()][0];
+    if (!entry) return null;
+    return entry;
   }
 
   insert<CN extends CollectionNameFromModels<M>>(
