@@ -14,22 +14,24 @@ For example, if you want to query the `users` collection, you would write the fo
 const query = client.query('users');
 ```
 
-<Callout emoji="⚠️">
-  Relationships and joins are not yet supported in Triplit, but are on the
-  [roadmap](https://triplit.dev/roadmap).
-</Callout>
+## Selecting attributes
 
-## Selecting fields
-
-To specify which fields you want to return, you can use the `select` method. This method accepts a list of field names as arguments.
+To specify which attributes you want to return, you can use the `select` method. This method accepts a list of attribute names for the collection as arguments.
 
 ```typescript
 const query = client.query('users').select(['id', 'name', 'email', 'dob']);
 ```
 
+<Callout emoji="⚠️">
+  Relationships are only partially supported in Triplit. Specifically you may
+  filter data based on a relationship,{' '}
+  <b>however related data is not selectable.</b>
+  Full support for relationships is on the [roadmap](https://triplit.dev/roadmap).
+</Callout>
+
 ## Filtering
 
-To filter results based on conditions, you can use the `where` method. This method accepts a list of clauses as arguments. A clause is a tuple that takes the form `[field, operator, value]`.
+To filter results based on conditions, you can use the `where` method. This method accepts a list of clauses as arguments. A clause is a tuple that takes the form `[attribute, operator, value]`.
 
 For example the following query will return all registered users.
 
@@ -37,10 +39,16 @@ For example the following query will return all registered users.
 const query = client
   .query('users')
   .select(['id', 'name', 'email', 'dob'])
-  .where([[['is_registered', '=', true]]]);
+  .where('is_registered', '=', true);
 ```
 
-By default all clauses are joined with a logical AND, but you may use `or` and `and` methods within the clause array to specify how clauses should be logically grouped and joined.
+Clauses can be passed to `where` as a single clause or an array of clauses:
+
+- `.where('is_registered', '=', true)`
+- `.where(['is_registered', '=', true])`
+- `.where([['is_registered', '=', true]])`
+
+If multiple clauses are provided, all clauses are joined with a logical AND. However, you may use `or` and `and` methods within the clause array to specify how clauses should be logically grouped and joined.
 
 For example the following query will return all registered users who are either an admin or an owner.
 
@@ -63,24 +71,11 @@ const query = client
 
 ### Operators
 
-Triplit currently supports `=`, `!=`, `>`, `>=`, `<`, `<=`, `like` and `nlike` operators in `where` statements.
-
-You can use the `like` operator in a where clause to do simple filtering with string similarity. A `like` expression is true if the supplied field matches the supplied filter pattern.
-
-An underscore (`_`) in a pattern stands for (matches) any single character; a percent sign (`%`) matches any sequence of zero or more characters.
-
-For example:
-
-```typescript
-['triplit', 'like', 'triplit']    true
-['triplit', 'like', 'tri%']       true
-['triplit', 'like', 'tr_pl_t']    true
-['triplit', 'like', 'trip']       false
-```
+See the list of [data types](/schemas#data-types) for more information on the operators that can be used in a where clause.
 
 ## Order
 
-To order the results of a query, you can use the `order` method. This method accepts a single order clause as arguments. A clause is a tuple that takes the form `[field, direction]`.
+To order the results of a query, you can use the `order` method. This method accepts a list of order clauses as an argument. An order clause is a tuple that takes the form `[attribute, direction]`. `direction` can be either `ASC` or `DESC`. Clauses are applied in the order they are provided.
 
 For example the following query will return all users ordered by their creation date in descending order.
 
@@ -88,13 +83,14 @@ For example the following query will return all users ordered by their creation 
 const query = client
   .query('users')
   .select(['id', 'name', 'email', 'dob'])
-  .order(['created_at', 'DESC']);
+  .order('created_at', 'DESC');
 ```
 
-<Callout emoji="⚠️">
-  Ordering by multiple fields is not supported by Triplit, but is on the
-  [roadmap](https://triplit.dev/roadmap).
-</Callout>
+Clauses can be passed to `order` as a single clause or an array of clauses:
+
+- `.order('created_at', 'DESC')`
+- `.order(['created_at', 'DESC'])`
+- `.order([['created_at', 'DESC']])`
 
 ## Limit
 
@@ -110,9 +106,11 @@ const query = client
   .limit(10);
 ```
 
+As a convenience, Triplit also provides a method [fetchOne](/fetching#fetch) to fetch just the first entity of a query result.
+
 ## Variables
 
-You may pass variables to a query by using the `variables` method.
+You may pass variables to a query by using the `variables` method. Variables are passed in as strings with `$` prepended to the variable name.
 
 For example, you may define a query that queries for restaurants that are open by cuisine:
 
@@ -174,4 +172,4 @@ For example, the following query will return just the user with id `abc`, if it 
 const query = client.query('users').entityId('abc');
 ```
 
-As a convenience, Triplit provides a method [fetchById](/fetching#fetch) to fetch an entity by its id. It is recommended to use `fetchById` instead of `entityId`.
+As a convenience, Triplit also provides a method [fetchById](/fetching#fetch) to fetch an entity by its id.

@@ -1,8 +1,8 @@
 {
   "index": "Welcome",
   "getting-started": "Getting started",
-  "fetching": "Fetching",
   "queries": "Queries",
+  "fetching": "Fetching",
   "mutations": "Mutations",
   "schemas": "Schemas",
   "storage": "Storage",

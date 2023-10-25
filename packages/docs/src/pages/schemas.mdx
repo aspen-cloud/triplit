@@ -102,6 +102,23 @@ The below schema has multiple fields with default values, including functions.
   },
 ```
 
+### Operators (TODO)
+
+Triplit currently supports `=`, `!=`, `>`, `>=`, `<`, `<=`, `like` and `nlike` operators in `where` statements.
+
+You can use the `like` operator in a where clause to do simple filtering with string similarity. A `like` expression is true if the supplied attribute matches the supplied filter pattern.
+
+An underscore (`_`) in a pattern stands for (matches) any single character; a percent sign (`%`) matches any sequence of zero or more characters.
+
+For example:
+
+```typescript
+['triplit', 'like', 'triplit']    true
+['triplit', 'like', 'tri%']       true
+['triplit', 'like', 'tr_pl_t']    true
+['triplit', 'like', 'trip']       false
+```
+
 ## Migrations
 
 <Callout emoji="⚠️">
