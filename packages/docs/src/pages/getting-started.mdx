@@ -67,6 +67,12 @@ const completedTodosQuery = client
   .where('completed', '=', true)
   .build();
 
+// Subscribe to query result updates
+const unsubscribe = client.subscribe(completedTodosQuery, (data) => {
+  // do something with data
+  console.log(data);
+});
+
 // Insert data over time
 setTimeout(
   () => client.insert('todos', { text: 'Buy milk', completed: true }),
@@ -80,15 +86,9 @@ setTimeout(
   () => client.insert('todos', { text: 'Buy bread', completed: true }),
   3000
 );
-
-// Subscribe to query updates
-const unsubscribe = client.subscribe(completedTodosQuery, (data) => {
-  // do something with data
-  console.log(data);
-});
 ```
 
-This is Triplit in its most basic form - a simple local database for your app with reactive queries. The rest of these docs will provide more detail on Triplit's database api, the additional features Triplit provides for app developers, and how its sync engine can be used to create powerful local-first and multiplayer experiences.
+This is Triplit in its most basic form - a simple local database for your app with reactive queries. The rest of these docs will provide more detail on Triplit's database API, the additional features Triplit provides for app developers, and how its sync engine can be used to create powerful local-first and multiplayer experiences.
 
 ## Framework support
 
