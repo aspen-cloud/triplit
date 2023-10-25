@@ -288,7 +288,6 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
       entity: UpdateTypeFromModel<ModelFromModels<M, CN>>
     ) => void | Promise<void>
   ) {
-    console.log(collectionName, entityId);
     const collection =
       collectionName !== '_metadata'
         ? ((await this.getSchema())?.collections[
