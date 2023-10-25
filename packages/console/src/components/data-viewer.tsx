@@ -2,8 +2,7 @@ import { TriplitClient } from '@triplit/client';
 import { useQuery } from '@triplit/react';
 import { useMemo, useState, useCallback } from 'react';
 import '@glideapps/glide-data-grid/dist/index.css';
-import { Modal } from 'packages/console/@/components/ui/modal';
-import { QueryWhere } from '../../../db/src/query';
+import { Modal } from '@/components/ui/modal.js';
 import { CreateEntityForm } from '.';
 import { consoleClient } from '../../triplit/client';
 import { ColumnDef } from '@tanstack/react-table';
@@ -13,7 +12,7 @@ import {
   TriplitColumnHeader,
   RelationCell,
 } from './data-table';
-import { Button } from 'packages/console/@/components/ui/button';
+import { Button } from '@/components/ui/button';
 import {
   NewAttributeForm,
   addOrUpdateAttributeFormOpenAtom,
@@ -28,10 +27,7 @@ import { Checkbox } from '../../@/components/ui/checkbox';
 import { Tooltip } from '../../@/components/ui/tooltip-simple';
 import { Trash } from '@phosphor-icons/react';
 import { useSelectedCollection } from '../hooks/useSelectedCollection';
-import {
-  QueryAttributeDefinition,
-  SchemaDefinition,
-} from '../../../db/src/data-types/serialization';
+import { SchemaDefinition } from '../../../db/src/data-types/serialization';
 import useUrlState from '@ahooksjs/use-url-state';
 
 const deleteAttributeDialogIsOpenAtom = atom(false);

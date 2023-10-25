@@ -6,7 +6,7 @@ import {
   JWTPayloadIsOfCorrectForm,
 } from './utils/server';
 import '@glideapps/glide-data-grid/dist/index.css';
-import { Modal } from 'packages/console/@/components/ui/modal';
+import { Modal } from '@/components/ui/modal.js';
 import {
   ImportProjectForm,
   ImportProjectFormValues,
