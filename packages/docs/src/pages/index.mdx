@@ -1,6 +1,19 @@
 # Welcome to Triplit
 
-Triplit is a state management system for building delightful UX.
+Triplit is a full-stack framework for state management and realtime collaboration. It handles:
+
+- Local caching with a fully queryable client-side database
+- Durable server-side storage
+- Optimistic updates
+- Realtime data subscriptions and synchronization with conflict resolution at the field level
+- Rollbacks of failed updates
+- Offline read and write capabilities
+- Keeping network traffic to a minimum and being performant
+- Managing schemas and type definitions
+
+These features are required for any application that aims to be fast and responsive, and are especially important for realtime collaboration.
+
+## Why Triplit?
 
 **Triplit is fast.** By default, every update using triplit occurs optimistically and is saved in a local cache.
 
@@ -10,4 +23,4 @@ Triplit is a state management system for building delightful UX.
 
 **Triplit is developer friendly.** Triplit takes care to be easy to use. It gets rid of the headaches of building a realtime system at all levels of the stack. Additionally, it is designed to work well with Typescript applications, ensuring your type definitions remain up to date as your schema evolves.
 
-Using Triplit is a decision to make your app's interactions snappy and to delight your users. If you want to make your app go fast, then buckle up.
+The rest of the docs will explain how to use Triplit in your application.
