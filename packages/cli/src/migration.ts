@@ -335,7 +335,7 @@ function parseCollectionDiff(
     } else if (collectionDiffStatus === 'CHANGED') {
       throw new Error('NOT HANDLED. FAILED TO PARSE.');
     } else {
-      if (collectionDiff.schema.properties) {
+      if (collectionDiff.schema?.properties) {
         parseAttributesDiff(
           migration,
           collectionKey,
