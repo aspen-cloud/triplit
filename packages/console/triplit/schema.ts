@@ -3,6 +3,7 @@ import { Schema as S } from '@triplit/client';
 export const schemaObject = {
   filters: {
     schema: S.Schema({
+      id: S.Id(),
       attribute: S.String(),
       asType: S.String(),
       operator: S.String(),
@@ -15,6 +16,7 @@ export const schemaObject = {
 
   orders: {
     schema: S.Schema({
+      id: S.Id(),
       attribute: S.String({ nullable: true }),
       direction: S.String({ nullable: true }),
       collectionName: S.String(),
@@ -25,6 +27,7 @@ export const schemaObject = {
 
   projects: {
     schema: S.Schema({
+      id: S.Id(),
       displayName: S.String(),
       projectId: S.String(),
       token: S.String(),
@@ -34,6 +37,7 @@ export const schemaObject = {
   },
   selections: {
     schema: S.Schema({
+      id: S.Id(),
       collectionName: S.String(),
       projectId: S.String(),
     }),
