@@ -9,6 +9,7 @@ import { withServerRequester } from '../../middleware/add-server-requester.js';
 import { getMigrationsDir } from '../../filesystem.js';
 import { blue, italic } from 'ansis/colors';
 import DB, { schemaToJSON } from '@triplit/db';
+import { writeSchemaWithMigrations } from './codegen.js';
 
 const pullMigrationName = 'sync_with_remote';
 
@@ -61,9 +62,15 @@ export const run = withServerRequester(async ({ ctx }) => {
     );
     await applyMigration(migration, 'up', ctx);
 
-    console.log(
-      'Please update your local schema file to reflect the changes in the migration file manually or by running `triplit migrate codegen` (changes not tracked by migrations will be lost).'
-    );
+    if (project.schemaHash === project.migrationsHash) {
+      console.log('\n...Regenerating schema file with the new migration\n');
+      const newMigrations = [...project.migrations, migration];
+      writeSchemaWithMigrations(newMigrations);
+    } else {
+      // console.log(
+      //   'Your schema.ts file has untracked changes. Run `triplit migrate create [migration_name]` and `triplit migrate up` to track the changes and push them to the remote.\n'
+      // );
+    }
     return;
   }
 

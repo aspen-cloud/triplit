@@ -13,6 +13,7 @@ import {
 import { getMigrationsStatus } from '../../migration.js';
 import { withServerRequester } from '../../middleware/add-server-requester.js';
 import { getTriplitDir } from '../../filesystem.js';
+import { blue } from 'ansis/colors';
 
 export const description =
   'Generates a schema file based on your current migrations';
@@ -23,7 +24,10 @@ export const run = withServerRequester(async ({ ctx }) => {
     const status = res.project.statuses[m.version];
     return status === 'IN_SYNC' || status === 'UNAPPLIED';
   });
+  await writeSchemaWithMigrations(migrations);
+});
 
+export async function writeSchemaWithMigrations(migrations: Migration[]) {
   const fileName = path.join(getTriplitDir(), 'schema.ts');
   const fileContent = await schemaFileContentFromMigrations(migrations);
   fs.mkdirSync(path.dirname(fileName), { recursive: true });
@@ -31,9 +35,9 @@ export const run = withServerRequester(async ({ ctx }) => {
   const formatted = await format(fileContent, { parser: 'typescript' });
   fs.writeFile(fileName, formatted, 'utf8', (err) => {
     if (err) throw err;
-    console.log(`New schema has been saved at ${fileName}`);
+    console.log(blue(`New schema has been saved at ${fileName}`));
   });
-});
+}
 
 // Currently using this in tests
 export async function schemaFileContentFromMigrations(migrations: Migration[]) {
