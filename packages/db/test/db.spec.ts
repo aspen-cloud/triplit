@@ -2652,73 +2652,56 @@ describe('Rules', () => {
       );
     });
 
-    it('filters results in subscriptions', async () => {
-      return new Promise<void>((resolve, reject) => {
-        const classesWithStudent = classes.filter((cls) =>
-          cls.enrolled_students.includes(USER_ID)
-        );
-        let callbackNum = 0;
-        const assertionSteps = [
-          {
-            check: (results: Map<string, any>) => {
-              expect(results).toHaveLength(classesWithStudent.length);
-            },
-          },
-          {
-            update: async () => {
-              const classId = `class-5`;
-              db.insert('classes', {
-                id: classId,
-                name: 'Another class for student 2',
-                level: 300,
-                department: 'dep-2',
-                enrolled_students: new Set([
-                  'student-1',
-                  'student-3',
-                  USER_ID,
-                  'student-5',
-                ]),
-              });
-            },
-            check: (results: Map<string, any>) => {
-              expect(results).toHaveLength(classesWithStudent.length + 1);
-            },
-          },
-          {
-            update: async () => {
-              const classId = `class-6`;
-              db.insert('classes', {
-                id: classId,
-                name: 'NOT A class for student 2',
-                level: 200,
-                department: 'dep-3',
-                enrolled_students: new Set([
-                  'student-1',
-                  'student-3',
-                  'student-5',
-                ]),
-              });
-            },
-            check: (results: Map<string, any>) => {
-              expect(results).toHaveLength(classesWithStudent.length + 1);
-            },
-          },
-        ];
-        db.subscribe(db.query('classes').build(), (results) => {
-          assertionSteps[callbackNum].check(results);
-          callbackNum++;
-          if (
-            assertionSteps[callbackNum] &&
-            assertionSteps[callbackNum].update
-          ) {
-            // @ts-ignore
-            assertionSteps[callbackNum].update();
-          }
-          if (callbackNum >= assertionSteps.length) {
-            resolve();
-          }
-        });
+    it('subscriptions only fire if filter matches', async () => {
+      const db = new DB();
+      const completedTodosQuery = db
+        .query('todos')
+        .where('completed', '=', true)
+        .build();
+
+      let calls = 0;
+      let assertions = [
+        (results: Map<string, any>) => {
+          expect(results.size).toBe(0);
+        },
+        (results: Map<string, any>) => {
+          expect(results.size).toBe(1);
+          expect(results.get('1')).toBeTruthy();
+        },
+        (results: Map<string, any>) => {
+          expect(results.size).toBe(2);
+          expect(results.get('1')).toBeTruthy();
+          expect(results.get('2')).toBeFalsy();
+          expect(results.get('3')).toBeTruthy();
+        },
+      ];
+      db.subscribe(completedTodosQuery, (data) => {
+        assertions[calls](data);
+        calls++;
       });
+
+      // Insert data over time
+      await new Promise<void>((res) =>
+        setTimeout(async () => {
+          await db.insert('todos', { text: 'Buy milk', completed: true }, '1');
+          res();
+        }, 100)
+      );
+      await new Promise<void>((res) =>
+        setTimeout(async () => {
+          await db.insert('todos', { text: 'Buy eggs', completed: false }, '2');
+          res();
+        }, 100)
+      );
+      await new Promise<void>((res) =>
+        setTimeout(async () => {
+          await db.insert('todos', { text: 'Buy bread', completed: true }, '3');
+          res();
+        }, 100)
+      );
+
+      await new Promise<void>((res) => setTimeout(res, 1000));
+      expect(calls).toEqual(3);
     });
   });
   describe('Insert', () => {
@@ -4166,44 +4149,4 @@ describe('set proxy', () => {
       }).toThrowError(InvalidAssignmentError);
     });
   });
-});
-
-// Non relevant data should not fire subscription
-it('subscription overfire', async () => {
-  const db = new DB();
-  const completedTodosQuery = db
-    .query('todos')
-    .where('completed', '=', true)
-    .build();
-
-  let calls = 0;
-  // Subscribe to query updates
-  db.subscribe(completedTodosQuery, (data) => {
-    // do something with data
-    console.log(data);
-    calls++;
-  });
-
-  // Insert data over time
-  await new Promise<void>((res) =>
-    setTimeout(async () => {
-      await db.insert('todos', { text: 'Buy milk', completed: true });
-      res();
-    }, 500)
-  );
-  await new Promise<void>((res) =>
-    setTimeout(async () => {
-      await db.insert('todos', { text: 'Buy eggs', completed: false });
-      res();
-    }, 500)
-  );
-  await new Promise<void>((res) =>
-    setTimeout(async () => {
-      await db.insert('todos', { text: 'Buy bread', completed: true });
-      res();
-    }, 500)
-  );
-
-  await new Promise<void>((res) => setTimeout(res, 1000));
-  expect(calls).toEqual(3);
 });
