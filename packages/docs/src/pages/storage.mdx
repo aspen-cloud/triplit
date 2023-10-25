@@ -6,7 +6,7 @@ On the client, Triplit keeps your data in two storage areas: an 'outbox' and a '
 
 If you are offline or do not have syncing enabled, then the data will remain in the outbox so you can sync that data at a later time should you decide to.
 
-## MemoryStorage
+## Memory
 
 If you would only like to store data ephemerally, you can use the memory storage engine. This will store your data in memory and will not persist across page refreshes.
 
@@ -15,7 +15,7 @@ If you use memory storage for your outbox, data may be lost if the user refreshe
 If no storage options are provided this is the default.
 
 ```typescript
-import { TriplitClient, MemoryStorage } from '@triplit/client';
+import { MemoryBTreeStorage as MemoryStorage } from '@triplit/db/storage/memory-btree';
 
 const client = new TriplitClient({
   db: {
@@ -27,14 +27,14 @@ const client = new TriplitClient({
 });
 ```
 
-## IndexedDBStorage
+## IndexedDB
 
 If you would like to persist data between refreshes in the browser you can use the IndexedDB storage engine. This will store your data in the browser's IndexedDB database.
 
 To improve performance, data is also cached in memory.
 
 ```typescript
-import { TriplitClient, IndexedDBStorage } from '@triplit/client';
+import { IndexedDbStorage } from '@triplit/db/storage/indexed-db';
 
 const client = new TriplitClient({
   db: {
