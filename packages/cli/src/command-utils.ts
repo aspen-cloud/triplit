@@ -7,7 +7,7 @@ export interface CommandDefinition {
   name: string;
   description?: string;
   args?: string[];
-  flags?: string[];
+  flags?: Record<string, Flag>;
   run: (params: {
     args: string[];
     flags: any;

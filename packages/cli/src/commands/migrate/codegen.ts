@@ -140,7 +140,7 @@ function schemaItemToString(schemaItem: AttributeDefinition): string {
   if (type === 'set') return `S.Set(${schemaItemToString(schemaItem.items)})`;
   if (type === 'record')
     return `S.Record({${Object.entries(schemaItem.properties)
-      .map(([key, value]) => `${key}: ${schemaItemToString(value)}`)
+      .map(([key, value]) => `${key}: ${schemaItemToString(value as any)}`)
       .join(',\n')}})`;
   throw new Error(`Invalid type: ${type}`);
 }
