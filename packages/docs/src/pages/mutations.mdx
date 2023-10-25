@@ -4,36 +4,39 @@ import { Callout } from 'nextra-theme-docs';
 
 ## Defining mutations
 
-The trilpit client provides two methods for mutating data: `insert` and `update`.
+The trilpit client allows you to insert, update, and delete data from your database.
 
 ### Insert
 
 `insert()` inserts a new record into a collection. For example:
 
 ```typescript
-await client.insert('employee', { name: 'Philip Fry' }, 1);
+await client.insert('employee', { id: 'Fry', name: 'Philip Fry' });
 ```
 
-Providing an id is optional. If no id is provided, one will be generated for you.
+The `id` field in Triplit is a special field that is used to uniquely identify records and is required on entities. If you do not provide an id, one will be generated for you.
 
 ### Update
 
 `update()` updates an existing record in a collection. For example:
 
 ```typescript
-await client.update('employee', 1, async (entity) => {
+await client.update('employee', 'Fry', async (entity) => {
   entity.name = 'Philip J. Fry';
 });
 ```
 
-If possible, `update` will look at the schema you have provided to provide proper methods for interacting with you data. If no schema is provided, all fields are treated as registers.
+If possible, `update` will look at the schema you have provided to provide proper type hints for interacting with you data. If no schema is provided, all fields are treated as `any`.
 
-Registers are treated as values and can be assigned to in the updater function.
+See [here](/docs/schema#data-types) for more information on data types.
 
-Sets have the following API:
-`add(value: any)`
-`remove(value: any)`
-`has(value: any)`
+### Delete
+
+`delete()` deletes a record from a collection. For example:
+
+```typescript
+await client.delete('employee', 'Fry');
+```
 
 ## Transactions
 
@@ -43,9 +46,12 @@ A transaction can be created by calling `client.transact()`. For example:
 
 ```typescript
 await client.transact((tx) => {
-  await tx.insert('employee', { name: 'Philip J. Fry' }, 1);
-  await tx.insert('employee', { name: 'Turanga Leela' }, 2);
-  await tx.insert('employee', { name: 'Bender Bending Rodriguez' }, 3);
+  await tx.insert('employee', { id: 'Fry', name: 'Philip J. Fry' });
+  await tx.insert('employee', { id: 'Leela', name: 'Turanga Leela' });
+  await tx.insert('employee', {
+    id: 'Bender',
+    name: 'Bender Bending Rodriguez',
+  });
 });
 ```
 
@@ -53,7 +59,7 @@ If you decide you need to abort a transaction, you can call `cancel` inside your
 
 ```typescript
 await client.transact((tx) => {
-  await tx.insert('employee', { name: 'Hermes Conrad' }, 4);
+  await tx.insert('employee', { id: 'Hermes', name: 'Hermes Conrad' });
   await tx.cancel();
 });
 ```
@@ -64,17 +70,23 @@ Mutations are first run on Triplit's local cache "optimistically", returning a p
 
 ```typescript
 try {
-  const txId = await client.insert('employee', { name: 'Philip Fry' }, 1);
+  const txId = await client.insert('employee', {
+    id: 'Fry',
+    name: 'Philip J. Fry',
+  });
   // Optimistic update succeeded
 } catch (e) {
   // Optimistic update failed
 }
 ```
 
-If syncing is enabled, mutations will then be applied to the server. To react to a transaction successfully running or failing on the server, you can pass a callback to `client.syncEngine.onTxCommit(txId, callback)` or `client.syncEngine.onTxFailure(txId, callback)`. The client also provides methods for helping you manage what should happen to your data if a transaction fails on the server. `client.syncEngine.retry(txId)` will retry a transaction with the id `txId`. `client.syncEngine.rollback(txId)` will rollback a transaction with the id `txId`, removing it from the local cache. For example:
+If syncing is enabled, mutations will then be applied to the server when possible. To react to a transaction successfully running or failing on the server, you can pass a callback to `client.syncEngine.onTxCommit(txId, callback)` or `client.syncEngine.onTxFailure(txId, callback)`. The client also provides methods for helping you manage what should happen to your data if a transaction fails on the server. `client.syncEngine.retry(txId)` will retry a transaction with the id `txId`. `client.syncEngine.rollback(txId)` will rollback a transaction with the id `txId`, removing it from the local cache. For example:
 
 ```typescript
-const txId = await client.insert('employee', { name: 'Philip Fry' }, 1);
+const txId = await client.insert('employee', {
+  id: 'Fry',
+  name: 'Philip J. Fry',
+});
 client.syncEngine.onTxCommit(txId, () => {
   // Transaction succeeded on the server
 });
@@ -90,7 +102,3 @@ client.syncEngine.onTxFailure(txId, (e) => {
 ```
 
 Tripit's API attempts to give you the flexibility to handle errors in various ways. For example, you could choose to retry a transaction a certain number of times before rolling it back. Or you could choose to retry a transaction only if it failed due to a network error.
-
-## Deletes
-
-Presently deletes should be handled by users by setting a deleted flag on the entity. The Triplit team is presently evaluating support for deletion.
