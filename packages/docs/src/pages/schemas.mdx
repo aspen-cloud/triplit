@@ -9,104 +9,70 @@ take advantage of all the features provided by Triplit.
 
 Limitations of schemaless mode include:
 
-- You are limited to exclusively using registers to store your data.
+- You are limited to exclusively using storing value types that are supported by JSON: string, number, boolean, null.
 - If you use Typescript, you will not get type checking for your queries and results.
+- Relationships between collections are not supported.
 
 ## Defining your schema
 
-A schema object defines your collections and the attributes on those collections. Schemas are defined in Javascript on your client using methods provided by the `@triplit/client` package. The following datatypes are supported:
-
-- string
-- number
-- boolean
-- Date
-- Set\<string\>
-- Set\<number\>
-
-Schema values may also be deeply nested
-
-The following schema defines a collection called `todos` with five attributes and a collection called `users` with two attributes (one of which is nested):
+A schema object defines your collections and the attributes and relationships on those collections. Schemas are defined in Javascript like so:
 
 ```typescript
-import { Schema as S, TriplitClient } from '@triplit/client';
+import { Schema as S } from '@triplit/db';
+import { TriplitClient } from '@triplit/client';
 
-const collections = {
-  todos: {
-    schema: S.Schema({
-      id: S.String(),
-      text: S.String(),
-      complete: S.Boolean(),
-      created_at: S.Date()
-      tags: S.Set(S.String()),
-    }),
-  },
-  users: {
-    schema: S.Schema({
-      name: S.string(),
-      address: S.Record({
-        street: S.string(),
-        city: S.string(),
-        state: S.string(),
-        zip: S.string(),
+const schema = {
+  collections: {
+    todos: {
+      schema: S.Schema({
+        id: S.String(),
+        text: S.String(),
+        complete: S.Boolean(),
+        created_at: S.Date(),
+        tags: S.Set(S.String()),
       }),
-    }),
+    },
+    users: {
+      schema: S.Schema({
+        name: S.string(),
+        address: S.Record({
+          street: S.string(),
+          city: S.string(),
+          state: S.string(),
+          zip: S.string(),
+        }),
+      }),
+    },
   },
 };
 
 const client = new TriplitClient({
   db: {
-    schema: { collections },
+    schema,
   },
 });
 ```
 
-Passing a schema to the client constructor will override any schema currently stored in your cache. You may also manage your schema with migrations, as explained in the [Migrations](#migrations) section. Using migrations is recommended for production applications that maintain state locally or use syncing.
+Passing a schema to the client constructor will override any schema currently stored in your cache. You may also manage your schema with migrations, as explained in the [Migrations](#migrations) section. Using migrations is recommended for production applications that persist state locally or use syncing.
 
-## Schema options
+## Data types
 
-### `nullable`
+When using a schema you have a few datatypes at your disposal:
 
-You can indicate an attribute is nullable by passing the `{ nullable: true }` option to its constructor. In the example collection below, `deleted_at` is a nullable attribute.
+### Value types
 
-```typescript
-  todos: {
-    schema: S.Schema({
-      id: S.String(),
-      text: S.String(),
-      complete: S.Boolean(),
-      created_at: S.Date()
-      deleted_at: S.Date({ nullable: true })
-      tags: S.Set(S.String()),
-    }),
-  },
-```
+Value types are basic primitive types for the database.
 
-### `default`
+#### String
 
-You can provide defaults values or functions for an attribute. Triplit currently supports literal values and two functions aliases.
-
-The below schema has multiple fields with default values, including functions.
+The string data type is used to store text.
 
 ```typescript
-  todos: {
-    schema: S.Schema({
-      id: S.String({ default: S.Default.uuid(5) }),
-      text: S.String(),
-      complete: S.Boolean({ default: false }),
-      created_at: S.Date({ default: S.Default.now })
-      deleted_at: S.Date({ nullable: true })
-      tags: S.Set(S.String()),
-    }),
-  },
+import { Schema as S } from '@triplit/db';
+const stringType = S.String();
 ```
 
-### Data types
-
-TODO
-
-### Operators (TODO)
-
-Triplit currently supports `=`, `!=`, `>`, `>=`, `<`, `<=`, `like` and `nlike` operators in `where` statements.
+Strings support `=`, `!=`, `like` and `nlike` operators in `where` statements.
 
 You can use the `like` operator in a where clause to do simple filtering with string similarity. A `like` expression is true if the supplied attribute matches the supplied filter pattern.
 
@@ -121,6 +87,171 @@ For example:
 ['triplit', 'like', 'trip']       false
 ```
 
+#### Number
+
+The number data type is used to store integer or float numbers.
+
+```typescript
+import { Schema as S } from '@triplit/db';
+const numberType = S.Number();
+```
+
+Numbers support `=`, `!=`, `>`, `>=`, `<`, `<=` operators in `where` statements.
+
+#### Boolean
+
+The boolean data type is used to store true or false values.
+
+```typescript
+import { Schema as S } from '@triplit/db';
+const booleanType = S.Boolean();
+```
+
+Booleans support `=`, `!=` operators in `where` statements.
+
+#### Date
+
+The date data type is used to store date and time values.
+
+```typescript
+import { Schema as S } from '@triplit/db';
+const dateType = S.Date();
+```
+
+Dates support `=`, `!=`, `>`, `>=`, `<`, `<=` operators in `where` statements.
+
+#### Options
+
+Value types have a few options that can be passed to their constructor.
+
+##### `nullable`
+
+You can indicate an attribute is nullable by passing the `{ nullable: true }` option to its constructor.
+
+```typescript
+import { Schema as S } from '@triplit/db';
+import { TriplitClient } from '@triplit/client';
+const schema = {
+  collections: {
+    test: {
+      schema: S.Schema({
+        nullableString: S.String({ nullable: true }),
+      }),
+    },
+  },
+};
+const client = new TriplitClient({
+  db: {
+    schema,
+  },
+});
+await client.insert('test', {
+  nullableString: null,
+});
+```
+
+##### `default`
+
+You can provide defaults values or functions for an attribute. Triplit currently support literal values and the following functions:
+
+- `uuid()`
+- `now()`
+
+The below schema has literal and function default values.
+
+```typescript
+import { Schema as S } from '@triplit/db';
+import { TriplitClient } from '@triplit/client';
+const schema = {
+  collections: {
+    test: {
+      schema: S.Schema({
+        defaultValue: S.String({ default: 'hello' }),
+        defaultFunction: S.Date({ default: S.Default.now() }),
+      }),
+    },
+  },
+};
+await client.insert('test', {});
+// { defaultValue: 'hello', defaultFunction: '2021-03-01T00:00:00.000Z' }
+```
+
+### Set
+
+Set types are used to store a collection of non nullable value types. Sets are unordered and do not allow duplicate values.
+
+<Callout type="info" emoji="ℹ️">
+  Lists, which support ordering and duplicate values, are on the
+  [roadmap](https://triplit.dev/roadmap).
+</Callout>
+
+```typescript
+import { Schema as S } from '@triplit/db';
+const stringSet = S.Set(S.String());
+```
+
+Sets support `=`, `!=` operators in `where` statements, which check if the set contains the value.
+
+### Record
+
+Record types support nested information.
+
+```typescript
+import { Schema as S } from '@triplit/db';
+const recordType = S.Record({
+  street: S.String(),
+  city: S.String(),
+  state: S.String(),
+  zip: S.String(),
+});
+```
+
+## Relationships
+
+<Callout emoji="⚠️">
+  Relationships are only partially supported in Triplit. Specifically you may
+  filter data based on a relationship,{' '}
+  <b>however related data is not selectable.</b>
+  Full support for relationships is on the [roadmap](https://triplit.dev/roadmap).
+</Callout>
+
+To define a relationship between two collections, you define a subquery that describes the relationship with `Query()`. Within the where clause, you can reference the current collection's attributes with `$`.
+
+```typescript
+import { Schema as S } from '@triplit/db';
+const schema = {
+  collections: {
+    departments: {
+      schema: S.Schema({
+        id: S.String(),
+        name: S.String(),
+        classes: S.Query({
+          collectionName: 'classes',
+          where: [['department_id', '=', '$id']],
+        }),
+      }),
+    },
+    classes: {
+      schema: S.Schema({
+        name: S.String(),
+        level: S.Number(),
+        building: S.String(),
+        department_id: S.String(),
+        department: S.Query({
+          collectionName: 'departments',
+          where: [['id', '=', '$department_id']],
+        }),
+      }),
+    },
+  },
+};
+
+const query = client
+  .query('departments')
+  .where([['classes.building', '=', 'Voter']])
+  .build();
+```
+
 ## Migrations
 
 <Callout emoji="⚠️">
@@ -128,29 +259,27 @@ For example:
   may change. Please report any issues you encounter.
 </Callout>
 
-The `@triplit/client` package also provides a CLI tool for generating migrations.
-
-_The rest of this page will assume you use yarn as your package manager._
-
-A `--token` flag is required by all commands that contact the server.
+The `@triplit/cli` package provides a CLI tool for generating migrations.
 
 Additional details about the CLI tool can be found by running `yarn triplit --help`.
 
 ### Checking the current server status
 
 ```bash
-yarn triplit status --token=<secret_token>
+triplit status --token=<secret_token>
 ```
 
-This command returns the current schema status of your remote database. If the database is schemaful, this will include the current migration version.
+This command checks the current state of your project's schema and migrations and the current state of your server's schema and migrations. It will print out a report of the differences between the two and recommend actions to take if necessary.
 
 ### Creating migrations
 
+To create a migration, you must first create or edit your schema file, located at `triplit/schema.ts`. Once you have made your changes, run the following command:
+
 ```bash
-yarn triplit create some_migration_name
+triplit create some_migration_name
 ```
 
-This command creates a new file inside your app's directory at `triplit/migrations` for you to define a migration. It will not run any migrations.
+Based on the changes made in `triplit/schema.ts`, this command creates a new file containing a migration definition inside your app's directory at `triplit/migrations`. It will not run any migrations.
 
 Migration files are written in JSON and contain the following fields:
 
@@ -158,9 +287,11 @@ Migration files are written in JSON and contain the following fields:
 
 `down`: A set of operations to apply to the server to migrate down.
 
-`version`: A version indicator for the migration. This field should not be modified by the user.
+`version`: A version indicator for the migration.
 
-`parent`: The version of the previous migration. This field should not be modified by the user.
+`parent`: The version of the previous migration.
+
+`name`: The name of the migration.
 
 A migration creating a collection called `todos` would look like this:
 
@@ -191,124 +322,40 @@ A migration creating a collection called `todos` would look like this:
     ]
   ],
   "version": 1685494192864,
-  "parent": 0
+  "parent": 0,
+  "name": "1685494192864_create_todos"
 }
-```
-
-### Migration operations
-
-Migration operations are defined as tuples of the operation name and the arguments to the operation.
-Migrations support the following operations:
-
-#### create_collection
-
-Creates a collection with schema.
-
-```json
-[
-  "create_collection",
-  {
-    "name": "todos",
-    "schema": {
-      "text": {
-        "type": "string"
-      },
-      "complete": {
-        "type": "boolean"
-      },
-      "tags": {
-        "type": "set_string"
-      }
-    }
-  }
-]
-```
-
-#### drop_collection
-
-Drops a collection.
-
-```json
-[
-  "drop_collection",
-  {
-    "name": "todos"
-  }
-]
-```
-
-#### add_attribute
-
-Adds an attribute to a collection.
-
-```json
-[
-  "add_attribute",
-  {
-    "collection": "todos",
-    "path": "deleted",
-    "attribute": {
-      "type": "boolean"
-    }
-  }
-]
-```
-
-#### drop_attribute
-
-Drops an attribute from a collection.
-
-```json
-[
-  "drop_attribute",
-  {
-    "collection": "todos",
-    "path": "deleted"
-  }
-]
-```
-
-#### rename_attribute
-
-Renames an attribute on a collection.
-
-```json
-[
-  "rename_attribute",
-  {
-    "collection": "todos",
-    "path": "deleted",
-    "newPath": "archived"
-  }
-]
 ```
 
 ### Running migrations
 
 ```bash
-yarn triplit migrate up --token=<secret_token>
+yarn triplit migrate up <version>
 ```
 
-This command applies all up migrations to your server and generates a type definition for your schema. You may optionally provide a version to migrate to.
+This command applies all up migrations to your server. You may optionally provide a version to migrate to.
 
 Migrate down to a specific migration:
 
 ```bash
-yarn triplit migrate down 1685494192864 --token=<secret_token>
+yarn triplit migrate down <version>
 ```
 
-This command applies all down migrations to your server until you reach the specified verison and generates a type definition for your schema. You may optionally provide a version to migrate to.
+This command applies all down migrations to your server until you reach the specified verison. You may optionally provide a version to migrate to.
 
-### Generated schema
+### Passing migrations to the client
 
 When applying migrations to the server, Triplit will generate a schema for you at `triplit/schema.ts`.
 
-To apply migrations to your client database, they must be passed to your client on instantiation.
+To apply migrations to your client database, they must be passed to your client on instantiation. Unfortunately types cannot be inferred from migrations alone, so you will also need to pass the schema type to the client as a generic.
 
 ```typescript
 import { TriplitClient } from '@triplit/client';
-import { Schema, migrations } from './triplit/schema';
+import { schema } from './triplit/schema';
+import 1685494192864_create_todos from './triplit/migrations/1685494192864_create_todos.json';
 
+type Schema = typeof schema;
+const migrations = [1685494192864_create_todos];
 const client = new TriplitClient<Schema>({
   db: {
     migrations,
