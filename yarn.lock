@@ -5345,6 +5345,7 @@ __metadata:
     "@triplit/client": "workspace:^"
     "@triplit/db": "workspace:^"
     "@triplit/react": "workspace:^"
+    "@triplit/server-core": "workspace:^"
     "@types/lodash": ^4
     "@types/node": ^20.8.7
     "@types/react": ^18.2.17

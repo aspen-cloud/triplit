@@ -8,7 +8,7 @@ import {
   JWTPayloadIsOfCorrectForm,
 } from '../utils/server';
 import { consoleClient, formConsolePrimaryKey } from '../../triplit/client';
-import { TokenReadError } from '@triplit/server-core/src/errors';
+import { TokenReadError } from '@triplit/server-core';
 import { FormField } from '@/components/ui/form-field';
 
 export interface ImportProjectFormValues {

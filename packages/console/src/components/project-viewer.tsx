@@ -1,4 +1,4 @@
-import { MemoryStorage, TriplitClient } from '@triplit/client';
+import { TriplitClient } from '@triplit/client';
 import { useEffect, useMemo, useState } from 'react';
 import { CaretDown, GridFour, Selection } from '@phosphor-icons/react';
 import '@glideapps/glide-data-grid/dist/index.css';
@@ -8,8 +8,8 @@ import {
   FullScreenWrapper,
   Project,
 } from '.';
-import { CloseButton } from 'packages/console/@/components/ui/close-button';
-import { Button } from 'packages/console/@/components/ui/button';
+import { CloseButton } from '@/components/ui/close-button';
+import { Button } from '@/components/ui/button';
 import { ProjectOptionsMenu } from './project-options-menu';
 import { useEntity } from '@triplit/react';
 import { CreateCollectionDialog } from './create-collection-dialog';

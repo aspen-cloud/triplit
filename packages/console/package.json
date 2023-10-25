@@ -33,6 +33,7 @@
     "@triplit/client": "workspace:^",
     "@triplit/db": "workspace:^",
     "@triplit/react": "workspace:^",
+    "@triplit/server-core": "workspace:^",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.0.0",
     "cmdk": "^0.2.0",
