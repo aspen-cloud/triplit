@@ -814,7 +814,7 @@ export class TriplitClient<M extends Models<any, any> | undefined = undefined> {
     object: InsertTypeFromModel<ModelFromModels<M, CN>>,
     id?: string
   ) {
-    return this.db.insert(collectionName, object, id, {
+    return this.db.insert(collectionName, object, {
       skipRules: SKIP_RULES,
       storeScope: {
         read: ['outbox', 'cache'],

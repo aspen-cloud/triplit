@@ -232,14 +232,8 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
 
   async insert<CN extends CollectionNameFromModels<M>>(
     collectionName: CN,
-    doc: InsertTypeFromModel<ModelFromModels<M, CN> | undefined>,
-    id?: string
+    doc: InsertTypeFromModel<ModelFromModels<M, CN> | undefined>
   ) {
-    // TODO: confirm if collectionName is required (validate if it is)
-    if (id) {
-      const validationError = validateExternalId(id);
-      if (validationError) throw validationError;
-    }
     const collectionSchema = await getCollectionSchema(this, collectionName);
 
     // TODO apply defaults before "serializing"
@@ -254,10 +248,16 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
         }
       : serializedDoc;
 
+    // this is just to handle the schemaless case
+    if (fullDoc.id === undefined) fullDoc.id = nanoid();
+
+    const validationError = validateExternalId(fullDoc.id);
+    if (validationError) throw validationError;
+
     // create triples
     const timestamp = await this.storeTx.getTransactionTimestamp();
     const avTuples = serializedItemToTuples(fullDoc);
-    const storeId = appendCollectionToId(collectionName, id ?? nanoid());
+    const storeId = appendCollectionToId(collectionName, fullDoc.id);
     const triples: TripleRow[] = avTuples.map<TripleRow>(
       ([attribute, value]) => ({
         id: storeId,
@@ -286,9 +286,12 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
       entity: UpdateTypeFromModel<ModelFromModels<M, CN>>
     ) => void | Promise<void>
   ) {
-    const collection = (await this.getSchema())?.collections[
-      collectionName
-    ] as CollectionFromModels<M, CN>;
+    console.log(collectionName, entityId);
+    const collection =
+      collectionName !== '_metadata' &&
+      ((await this.getSchema())?.collections[
+        collectionName
+      ] as CollectionFromModels<M, CN>);
 
     // TODO: Would be great to plug into the pipeline at any point
     // In this case I want untimestamped values, valid values
@@ -476,7 +479,9 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
       '_schema'
     );
     if (!existingSchema) {
-      await this.insert(this.METADATA_COLLECTION_NAME, {} as any, '_schema');
+      await this.insert(this.METADATA_COLLECTION_NAME, {
+        id: '_schema',
+      } as any);
     }
   }
 

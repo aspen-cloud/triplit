@@ -37,6 +37,7 @@ export type { TObject };
 
 // Could also use a namespace or module, but this worked best with our type generation
 export class Schema {
+  static Id = () => StringType({ nullable: false, default: { func: 'uuid' } });
   static String = StringType;
   static Number = NumberType;
   static Boolean = BooleanType;
@@ -63,10 +64,12 @@ export class Schema {
   }
 }
 
-type SchemaConfig = Record<string, DataType>;
+type SchemaConfig = { id: StringType<{ nullable: false }> } & Record<
+  string,
+  DataType
+>;
 
-// export type Model<T extends SchemaConfig = Record<string, DataType>> = T;
-export type Model<T extends { [k: string]: DataType }> = RecordType<T>;
+export type Model<T extends SchemaConfig> = RecordType<T>;
 
 export type Collection<T extends SchemaConfig = SchemaConfig> = {
   schema: Model<T>;

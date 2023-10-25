@@ -331,11 +331,10 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
   async insert<CN extends CollectionNameFromModels<M>>(
     collectionName: CN,
     doc: InsertTypeFromModel<ModelFromModels<M, CN>>,
-    id?: string,
     options: TransactOptions = {}
   ) {
     return this.transact(async (tx) => {
-      await tx.insert(collectionName, doc, id);
+      await tx.insert(collectionName, doc);
     }, options);
   }
 

@@ -15,9 +15,11 @@ export type ValueAttributeDefinition = {
   type: ValueTypeKeys;
   options: UserTypeOptions;
 };
-export type RecordAttributeDefinition = {
+export type RecordAttributeDefinition<
+  Properties extends Record<string, AttributeDefinition> = {}
+> = {
   type: 'record';
-  properties: Record<string, AttributeDefinition>;
+  properties: Properties;
 };
 export type CollectionAttributeDefinition = {
   type: CollectionTypeKeys;
@@ -35,7 +37,9 @@ export type AttributeDefinition =
   | QueryAttributeDefinition;
 
 export interface CollectionDefinition {
-  schema: RecordAttributeDefinition;
+  schema: RecordAttributeDefinition<{
+    id: { type: 'string'; options: { nullable: false } };
+  }>;
   rules?: CollectionRules<any>;
 }
 

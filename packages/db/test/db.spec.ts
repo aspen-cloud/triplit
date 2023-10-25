@@ -54,16 +54,16 @@ describe('Database API', () => {
   beforeEach(async () => {
     db = new DB({});
     for (const student of students) {
-      await db.insert('Student', student, student.id);
+      await db.insert('Student', student);
     }
     for (const schoolClass of classes) {
-      await db.insert('Class', schoolClass, schoolClass.id);
+      await db.insert('Class', schoolClass);
     }
     for (const department of departments) {
-      await db.insert('Department', department, department.id);
+      await db.insert('Department', department);
     }
     for (const rapper of RAPPERS_AND_PRODUCERS) {
-      await db.insert('Rapper', rapper, rapper.id);
+      await db.insert('Rapper', rapper);
     }
   });
   it('can furnish the client id', async () => {
@@ -72,11 +72,12 @@ describe('Database API', () => {
 
   it('will throw an error if the provided entity id has a # sign in it', async () => {
     expect(
-      async () => await db.insert('Student', { name: 'John Doe' }, 'John#Doe')
+      async () =>
+        await db.insert('Student', { name: 'John Doe', id: 'John#Doe' })
     ).rejects.toThrowError(InvalidEntityIdError);
     expect(
       db.transact((tx) =>
-        tx.insert('Student', { name: 'John Doe' }, 'John#Doe')
+        tx.insert('Student', { name: 'John Doe', id: 'John#Doe' })
       )
     ).rejects.toThrowError(InvalidEntityIdError);
   });
@@ -232,12 +233,12 @@ describe('Database API', () => {
   });
 
   const RAPPERS_AND_PRODUCERS = [
-    { name: 'Ty Dolla $ign', id: 1 },
-    { name: 'Boi-1da', id: 2 },
-    { name: 'Mike Will Made-It', id: 3 },
-    { name: "Noah '40' Shebib", id: 4 },
-    { name: 'The Notoious B.I.G.', id: 5 },
-    { name: "Travis 'LaFlame' Scott", id: 6 },
+    { name: 'Ty Dolla $ign', id: '1', rank: 1 },
+    { name: 'Boi-1da', id: '2', rank: 2 },
+    { name: 'Mike Will Made-It', id: '3', rank: 3 },
+    { name: "Noah '40' Shebib", id: '4', rank: 4 },
+    { name: 'The Notoious B.I.G.', id: '5', rank: 5 },
+    { name: "Travis 'LaFlame' Scott", id: '6', rank: 6 },
   ];
 
   it('supports basic queries without filters', async () => {
@@ -260,21 +261,21 @@ describe('Database API', () => {
       CollectionQueryBuilder('Rapper')
         .where([
           and([
-            ['id', '<', 5],
-            ['id', '>=', 2],
+            ['rank', '<', 5],
+            ['rank', '>=', 2],
           ]),
         ])
         .build()
     );
-    const ids = [...results.values()].map((r) => r.id);
-    expect(Math.max(...ids)).toBe(4);
-    expect(Math.min(...ids)).toBe(2);
+    const ranks = [...results.values()].map((r) => r.rank);
+    expect(Math.max(...ranks)).toBe(4);
+    expect(Math.min(...ranks)).toBe(2);
     expect(results.size).toBe(3);
   });
 
   it('throws an error when a non-terminal object path is provided', async () => {
     await db.insert('Rapper', {
-      id: 7,
+      id: '7',
       name: 'Jay-Z',
       album: { name: 'The Blueprint', released: '2001' },
     });
@@ -346,10 +347,10 @@ it('fetchOne gets first match or null', async () => {
   await testDBAndTransaction(
     () => new DB(),
     async (db) => {
-      await db.insert('Student', { name: 'John Doe' }, '1');
-      await db.insert('Student', { name: 'Jane Doe' }, '2');
-      await db.insert('Student', { name: 'John Smith' }, '3');
-      await db.insert('Student', { name: 'Jane Smith' }, '4');
+      await db.insert('Student', { name: 'John Doe', id: '1' });
+      await db.insert('Student', { name: 'Jane Doe', id: '2' });
+      await db.insert('Student', { name: 'John Smith', id: '3' });
+      await db.insert('Student', { name: 'Jane Smith', id: '4' });
       const johnQuery = CollectionQueryBuilder('Student')
         .where([['name', 'like', 'John%']])
         .build();
@@ -370,23 +371,30 @@ describe('OR queries', () => {
   const db = new DB({ source: new InMemoryTupleStorage() });
   it('supports OR queries', async () => {
     // storage.data = [];
+    await db.insert('roster', { id: '1', name: 'Alice', age: 22 });
+
     await db.insert(
       'roster',
-      { id: 1, name: 'Alice', age: 22, team: 'red' },
-      1
+      { id: '2', name: 'Bob', age: 23, team: 'blue' },
+      2
     );
-    await db.insert('roster', { id: 2, name: 'Bob', age: 23, team: 'blue' }, 2);
+    await db.insert('roster', {
+      id: '3',
+      name: 'Charlie',
+      age: 22,
+      team: 'blue',
+    });
+    await db.insert('roster', {
+      id: '4',
+      name: 'Dennis',
+      age: 24,
+      team: 'blue',
+    });
     await db.insert(
       'roster',
-      { id: 3, name: 'Charlie', age: 22, team: 'blue' },
-      3
+      { id: '5', name: 'Ella', age: 23, team: 'red' },
+      5
     );
-    await db.insert(
-      'roster',
-      { id: 4, name: 'Dennis', age: 24, team: 'blue' },
-      4
-    );
-    await db.insert('roster', { id: 5, name: 'Ella', age: 23, team: 'red' }, 5);
     const redOr22 = await db.fetch(
       CollectionQueryBuilder('roster')
         .where([
@@ -430,9 +438,9 @@ describe('Register operations', () => {
   let db;
   beforeEach(async () => {
     db = new DB({ source: new InMemoryTupleStorage() });
-    await db.insert('employees', { id: 1, name: 'Philip J. Fry' }, 1);
-    await db.insert('employees', { id: 2, name: 'Turanga Leela' }, 2);
-    await db.insert('employees', { id: 3, name: 'Amy Wong' }, 3);
+    await db.insert('employees', { id: 1, name: 'Philip J. Fry' });
+    await db.insert('employees', { id: 2, name: 'Turanga Leela' });
+    await db.insert('employees', { id: 3, name: 'Amy Wong' });
     await db.insert(
       'employees',
       { id: 4, name: 'Bender Bending Rodriguez' },
@@ -477,7 +485,7 @@ describe('Set operations', () => {
     collections: {
       companies: {
         schema: S.Schema({
-          id: S.Number(),
+          id: S.String({ nullable: false }),
           name: S.String(),
           employees: S.Set(S.Number()),
         }),
@@ -490,14 +498,14 @@ describe('Set operations', () => {
       source: new InMemoryTupleStorage(),
       schema,
     });
-    await db.insert(
-      'companies',
-      { id: 1, name: 'Planet Express', employees: new Set([1, 2, 10]) },
-      1
-    );
+    await db.insert('companies', {
+      id: '1',
+      name: 'Planet Express',
+      employees: new Set([1, 2, 10]),
+    });
     // await db.insert(
     //   'companies',
-    //   { id: 2, name: 'MomCorp', employees: new Set([4, 5, 6]) },
+    //   { id: "2", name: 'MomCorp', employees: new Set([4, 5, 6]) },
     //   2
     // );
   });
@@ -546,7 +554,7 @@ describe('Set operations', () => {
       collections: {
         companies: {
           schema: S.Schema({
-            id: S.Number(),
+            id: S.String(),
             name: S.String(),
             employees: S.Set(S.Number()),
             managers: S.Set(S.String()),
@@ -558,19 +566,19 @@ describe('Set operations', () => {
     const db = new DB({
       schema,
     });
-    await db.insert(
-      'companies',
-      {
-        id: 1,
-        name: 'Planet Express',
-        employees: new Set([1, 2, 10]),
-        managers: new Set(['Philip J. Fry', 'Turanga Leela']),
-        holidays: new Set([new Date(2020, 0, 1), new Date(2020, 6, 4)]),
-      },
-      'px'
-    );
+    await db.insert('companies', {
+      id: 'planex',
+      name: 'Planet Express',
+      employees: new Set([1, 2, 10]),
+      managers: new Set(['Philip J. Fry', 'Turanga Leela']),
+      holidays: new Set([new Date(2020, 0, 1), new Date(2020, 6, 4)]),
+    });
 
-    const company = await db.fetchById('companies', 'px');
+    const company = await db.fetchById('companies', 'planex');
+
+    expect(company).not.toBeNull();
+
+    if (!company) throw new Error('this shouldnt ever happen');
 
     expect(company.employees).toBeInstanceOf(Set);
     expect(company.managers).toBeInstanceOf(Set);
@@ -612,9 +620,7 @@ describe('date operations', () => {
   ];
 
   beforeAll(async () => {
-    await Promise.all(
-      defaultData.map((doc) => db.insert('students', doc, doc.id))
-    );
+    await Promise.all(defaultData.map((doc) => db.insert('students', doc)));
   });
 
   it('can fetch dates', async () => {
@@ -689,13 +695,13 @@ describe('subscriptions', () => {
   beforeEach(async () => {
     db = new DB({ source: new InMemoryTupleStorage() });
     const docs = [
-      { id: 1, name: 'Alice', major: 'Computer Science', dorm: 'Allen' },
-      { id: 2, name: 'Bob', major: 'Biology', dorm: 'Battell' },
-      { id: 3, name: 'Charlie', major: 'Computer Science', dorm: 'Battell' },
-      { id: 4, name: 'David', major: 'Math', dorm: 'Allen' },
-      { id: 5, name: 'Emily', major: 'Biology', dorm: 'Allen' },
+      { id: '1', name: 'Alice', major: 'Computer Science', dorm: 'Allen' },
+      { id: '2', name: 'Bob', major: 'Biology', dorm: 'Battell' },
+      { id: '3', name: 'Charlie', major: 'Computer Science', dorm: 'Battell' },
+      { id: '4', name: 'David', major: 'Math', dorm: 'Allen' },
+      { id: '5', name: 'Emily', major: 'Biology', dorm: 'Allen' },
     ];
-    await Promise.all(docs.map((doc) => db.insert('students', doc, doc.id)));
+    await Promise.all(docs.map((doc) => db.insert('students', doc)));
   });
 
   it('handles selection updates', async (done) => {
@@ -933,7 +939,7 @@ describe('subscriptions', () => {
 
       await db.insert(
         'students',
-        { id: 6, name: 'Frank', major: 'Astronomy', dorm: 'Allen' },
+        { id: '6', name: 'Frank', major: 'Astronomy', dorm: 'Allen' },
         '6'
       );
 
@@ -979,22 +985,22 @@ describe('subscriptions', () => {
       // Add to result set (at beginning, end, inbetween)
       await db.insert(
         'students',
-        { id: 1, name: 'Alice', age: 30, deleted: false },
+        { id: '1', name: 'Alice', age: 30, deleted: false },
         '1'
       );
       await db.insert(
         'students',
-        { id: 2, name: 'Bob', age: 21, deleted: false },
+        { id: '2', name: 'Bob', age: 21, deleted: false },
         '2'
       );
       await db.insert(
         'students',
-        { id: 3, name: 'Charlie', age: 35, deleted: false },
+        { id: '3', name: 'Charlie', age: 35, deleted: false },
         '3'
       );
       await db.insert(
         'students',
-        { id: 4, name: 'Alice', age: 32, deleted: false },
+        { id: '4', name: 'Alice', age: 32, deleted: false },
         '4'
       );
 
@@ -1052,7 +1058,7 @@ describe('subscriptions', () => {
 
       await db.insert(
         'students',
-        { id: 6, name: 'Frank', major: 'Astronomy', dorm: 'Allen' },
+        { id: '6', name: 'Frank', major: 'Astronomy', dorm: 'Allen' },
         '6'
       );
 
@@ -1091,9 +1097,7 @@ describe('single entity subscriptions', async () => {
   // 3) update other entities and not have it fire
 
   it('can subscribe to an entity', async () => {
-    await Promise.all(
-      defaultData.map((doc) => db.insert('students', doc, doc.id))
-    );
+    await Promise.all(defaultData.map((doc) => db.insert('students', doc)));
     await testSubscription(db, db.query('students').entityId('3').build(), [
       {
         check: (results) => {
@@ -1118,9 +1122,7 @@ describe('single entity subscriptions', async () => {
     ]);
   });
   it("can should return nothing if the entity doesn't exist, and then update when it is inserted and deleted", async () => {
-    await Promise.all(
-      defaultData.map((doc) => db.insert('students', doc, doc.id))
-    );
+    await Promise.all(defaultData.map((doc) => db.insert('students', doc)));
     await testSubscription(db, db.query('students').entityId('6').build(), [
       {
         check: (results) => {
@@ -1164,9 +1166,7 @@ describe('single entity subscriptions', async () => {
     ]);
   });
   it('should only fire updates when the entity in question is affected', async () => {
-    await Promise.all(
-      defaultData.map((doc) => db.insert('students', doc, doc.id))
-    );
+    await Promise.all(defaultData.map((doc) => db.insert('students', doc)));
     await new Promise<void>(async (resolve) => {
       const spy = vi.fn();
       db.subscribe(db.query('students').entityId('3').build(), spy);
@@ -1217,7 +1217,7 @@ describe('single entity subscriptions', async () => {
 describe('delete api', () => {
   it('can delete an entity', async () => {
     const db = new DB();
-    await db.insert('posts', { id: 'post-1', author_id: 'user-1' }, 'post-1');
+    await db.insert('posts', { id: 'post-1', author_id: 'user-1' });
     {
       const post = await db.fetchById('posts', 'post-1');
       expect(post).toStrictEqual({
@@ -1234,10 +1234,10 @@ describe('delete api', () => {
   });
   it('in a transaction, delete an entity and then insert the same one', async () => {
     const db = new DB();
-    await db.insert('posts', { id: 'post-1', author_id: 'user-1' }, 'post-1');
+    await db.insert('posts', { id: 'post-1', author_id: 'user-1' });
     await db.transact(async (tx) => {
       await tx.delete('posts', 'post-1');
-      await tx.insert('posts', { id: 'post-1', author_id: 'user-1' }, 'post-1');
+      await tx.insert('posts', { id: 'post-1', author_id: 'user-1' });
     });
     const post = await db.fetchById('posts', 'post-1');
     expect(post).toStrictEqual({
@@ -1248,7 +1248,7 @@ describe('delete api', () => {
   });
   it('in a transaction, delete an entity and then update the same one', async () => {
     const db = new DB();
-    await db.insert('posts', { id: 'post-1', author_id: 'user-1' }, 'post-1');
+    await db.insert('posts', { id: 'post-1', author_id: 'user-1' });
     await db.transact(async (tx) => {
       await tx.delete('posts', 'post-1');
       expect(
@@ -1278,21 +1278,17 @@ it('safely handles multiple subscriptions', async () => {
     .build();
   db.subscribe(query1, () => {});
   db.subscribe(query2, () => {});
-  await db.insert('students', { name: 'Alice', major: 'Computer Science' }, 1);
-  await db.insert('students', { name: 'Bill', major: 'Biology' }, 2);
-  await db.insert('students', { name: 'Cam', major: 'Computer Science' }, 3);
+  await db.insert('students', { name: 'Alice', major: 'Computer Science' });
+  await db.insert('students', { name: 'Bill', major: 'Biology' });
+  await db.insert('students', { name: 'Cam', major: 'Computer Science' });
 
-  await db.insert(
-    'bands',
-    { name: 'The Beatles', genre: 'Rock', founded: 1960 },
-    1
-  );
-  await db.insert('bands', { name: 'NWA', genre: 'Hip Hop', founded: 1986 }, 2);
-  await db.insert(
-    'bands',
-    { name: 'The Who', genre: 'Rock', founded: 1964 },
-    3
-  );
+  await db.insert('bands', {
+    name: 'The Beatles',
+    genre: 'Rock',
+    founded: 1960,
+  });
+  await db.insert('bands', { name: 'NWA', genre: 'Hip Hop', founded: 1986 });
+  await db.insert('bands', { name: 'The Who', genre: 'Rock', founded: 1964 });
 });
 
 const TEST_SCORES = [
@@ -1385,6 +1381,7 @@ describe('ORDER & LIMIT & Pagination', () => {
       collections: {
         TestScores: {
           schema: S.Schema({
+            id: S.Id(),
             score: S.Number(),
             date: S.String(),
           }),
@@ -1688,6 +1685,7 @@ describe('database transactions', () => {
         collections: {
           TestScores: {
             schema: S.Schema({
+              id: S.String({ default: { func: 'uuid' } }),
               score: S.Number(),
               date: S.String(),
             }),
@@ -1719,6 +1717,7 @@ describe('database transactions', () => {
         collections: {
           TestScores: {
             schema: S.Schema({
+              id: S.String({ default: { func: 'uuid' } }),
               score: S.Number(),
               date: S.String(),
             }),
@@ -1751,6 +1750,7 @@ describe('database transactions', () => {
         collections: {
           TestScores: {
             schema: S.Schema({
+              id: S.String(),
               score: S.Number(),
               date: S.String(),
             }),
@@ -1759,14 +1759,11 @@ describe('database transactions', () => {
       },
     });
     const DOC_ID = 'my-score';
-    await db.insert(
-      'TestScores',
-      {
-        score: 80,
-        date: '2023-04-16',
-      },
-      DOC_ID
-    );
+    await db.insert('TestScores', {
+      score: 80,
+      date: '2023-04-16',
+      id: DOC_ID,
+    });
     await db.transact(async (tx) => {
       await tx.update('TestScores', DOC_ID, async (entity) => {
         entity.score = 999;
@@ -1788,14 +1785,11 @@ describe('database transactions', () => {
   it('can fetch by id in a transaction', async () => {
     const db = new DB({});
     await db.transact(async (tx) => {
-      await tx.insert(
-        'TestScores',
-        {
-          score: 80,
-          date: '2023-04-16',
-        },
-        '1'
-      );
+      await tx.insert('TestScores', {
+        score: 80,
+        date: '2023-04-16',
+        id: '1',
+      });
       const result = await tx.fetchById('TestScores', '1');
       expect(result.score).toBe(80);
     });
@@ -1807,6 +1801,7 @@ describe('database transactions', () => {
         collections: {
           TestScores: {
             schema: S.Schema({
+              id: S.String({ default: { func: 'uuid' } }),
               score: S.Number(),
               date: S.String(),
             }),
@@ -1814,14 +1809,11 @@ describe('database transactions', () => {
         },
       },
     });
-    await db.insert(
-      'TestScores',
-      {
-        score: 80,
-        date: '2023-04-16',
-      },
-      'score-1'
-    );
+    await db.insert('TestScores', {
+      id: 'score-1',
+      score: 80,
+      date: '2023-04-16',
+    });
     await db.transact(async (tx) => {
       expect((await db.fetchById('TestScores', 'score-1'))!.score).toBe(80);
       await tx.update('TestScores', 'score-1', async (entity) => {
@@ -1838,6 +1830,7 @@ describe('database transactions', () => {
         collections: {
           TestScores: {
             schema: S.Schema({
+              id: S.String({ default: { func: 'uuid' } }),
               score: S.Number(),
               date: S.String(),
             }),
@@ -1911,7 +1904,7 @@ describe('schema changes', async () => {
       collections: {
         students: {
           schema: S.Schema({
-            id: S.Number(),
+            id: S.String(),
             name: S.String(),
           }),
         },
@@ -1932,14 +1925,14 @@ describe('schema changes', async () => {
       collections: {
         students: {
           schema: S.Schema({
-            id: S.Number(),
+            id: S.String(),
             name: S.String(),
           }),
         },
       },
     };
     const db = new DB({ source: new InMemoryTupleStorage(), schema: schema });
-    await db.insert('students', { id: 1, name: 'Alice' }, 1);
+    await db.insert('students', { id: '1', name: 'Alice' });
     await db.addAttribute({
       collection: 'students',
       path: ['age'],
@@ -1962,14 +1955,14 @@ describe('schema changes', async () => {
       collections: {
         students: {
           schema: S.Schema({
-            id: S.Number(),
+            id: S.String(),
             name: S.String(),
           }),
         },
       },
     };
     const db = new DB({ source: new InMemoryTupleStorage(), schema: schema });
-    await db.insert('students', { id: 1, name: 'Alice' }, 1);
+    await db.insert('students', { id: '1', name: 'Alice' });
     await db.dropAttribute({ collection: 'students', path: ['id'] });
     const dbSchema = await db.getSchema();
     expect(dbSchema?.collections).toHaveProperty('students');
@@ -1989,7 +1982,7 @@ describe('schema changes', async () => {
       collections: {
         students: {
           schema: S.Schema({
-            id: S.Number(),
+            id: S.String(),
             name: S.String(),
           }),
         },
@@ -1999,7 +1992,7 @@ describe('schema changes', async () => {
       collections: {
         products: {
           schema: S.Schema({
-            id: S.Number(),
+            id: S.String(),
             name: S.String(),
             price: S.Number(),
           }),
@@ -2022,7 +2015,7 @@ describe('schema changes', async () => {
             collections: {
               students: {
                 schema: S.Schema({
-                  id: S.Number(),
+                  id: S.String(),
                   name: S.String(),
                 }),
               },
@@ -2074,7 +2067,7 @@ describe('schema changes', async () => {
       collections: {
         students: {
           schema: S.Schema({
-            id: S.Number(),
+            id: S.String(),
             name: S.String({
               nullable: true,
               default: 'Bobby Tables',
@@ -2158,7 +2151,7 @@ describe('schema changes', async () => {
             collections: {
               students: {
                 schema: S.Schema({
-                  id: S.Number(),
+                  id: S.String(),
                   name: S.String(),
                 }),
               },
@@ -2205,7 +2198,7 @@ describe('schema changes', async () => {
             collections: {
               students: {
                 schema: S.Schema({
-                  id: S.Number(),
+                  id: S.String(),
                   name: S.String(),
                 }),
                 rules: {
@@ -2418,7 +2411,7 @@ describe('migrations', () => {
         collections: {
           students: {
             schema: S.Schema({
-              id: S.Number(),
+              id: S.String(),
               name: S.String(),
             }),
           },
@@ -2426,7 +2419,7 @@ describe('migrations', () => {
       };
       const storage = new InMemoryTupleStorage();
       const db = new DB({ source: storage, schema: schema });
-      await db.insert('students', { id: 1, name: 'Alice' }, 1);
+      await db.insert('students', { id: '1', name: 'Alice' });
 
       expect(storage.data.length).not.toBe(0);
 
@@ -2587,14 +2580,10 @@ describe('Rules', () => {
 
       await db.transact(async (tx) => {
         for (const cls of classes) {
-          await tx.insert(
-            'classes',
-            {
-              ...cls,
-              enrolled_students: new Set(cls.enrolled_students),
-            },
-            cls.id
-          );
+          await tx.insert('classes', {
+            ...cls,
+            enrolled_students: new Set(cls.enrolled_students),
+          });
         }
       });
     });
@@ -2679,7 +2668,6 @@ describe('Rules', () => {
         assertions[calls](data);
         calls++;
       });
-
       // Insert data over time
       await new Promise<void>((res) =>
         setTimeout(async () => {
@@ -2702,6 +2690,72 @@ describe('Rules', () => {
 
       await new Promise<void>((res) => setTimeout(res, 1000));
       expect(calls).toEqual(3);
+    });
+  });
+
+  it('filters results in subscriptions', async () => {
+    return new Promise<void>((resolve, reject) => {
+      const classesWithStudent = classes.filter((cls) =>
+        cls.enrolled_students.includes(USER_ID)
+      );
+      let callbackNum = 0;
+      const assertionSteps = [
+        {
+          check: (results: Map<string, any>) => {
+            expect(results).toHaveLength(classesWithStudent.length);
+          },
+        },
+        {
+          update: async () => {
+            const classId = `class-6`;
+            db.insert('classes', {
+              id: classId,
+              name: 'Another class for student 2',
+              level: 300,
+              department: 'dep-2',
+              enrolled_students: new Set([
+                'student-1',
+                'student-3',
+                USER_ID,
+                'student-5',
+              ]),
+            });
+          },
+          check: (results: Map<string, any>) => {
+            expect(results).toHaveLength(classesWithStudent.length + 1);
+          },
+        },
+        {
+          update: async () => {
+            const classId = `class-6`;
+            db.insert('classes', {
+              id: classId,
+              name: 'NOT A class for student 2',
+              level: 200,
+              department: 'dep-3',
+              enrolled_students: new Set([
+                'student-1',
+                'student-3',
+                'student-5',
+              ]),
+            });
+          },
+          check: (results: Map<string, any>) => {
+            expect(results).toHaveLength(classesWithStudent.length + 1);
+          },
+        },
+      ];
+      db.subscribe(db.query('classes').build(), (results) => {
+        assertionSteps[callbackNum].check(results);
+        callbackNum++;
+        if (assertionSteps[callbackNum] && assertionSteps[callbackNum].update) {
+          // @ts-ignore
+          assertionSteps[callbackNum].update();
+        }
+        if (callbackNum >= assertionSteps.length) {
+          resolve();
+        }
+      });
     });
   });
   describe('Insert', () => {
@@ -2734,17 +2788,16 @@ describe('Rules', () => {
     describe('insert single', () => {
       it('can insert an entity that matches the filter', async () => {
         expect(
-          db.insert('posts', { id: 'post-1', author_id: USER_ID }, 'post-1')
+          db.insert('posts', { id: 'post-1', author_id: USER_ID })
         ).resolves.not.toThrowError();
       });
 
       it("throws an error when inserting a obj that doesn't match filter", async () => {
         expect(
-          db.insert(
-            'posts',
-            { id: 'post-1', author_id: 'Not-the-current-user' },
-            'post-2'
-          )
+          db.insert('posts', {
+            id: 'post-1',
+            author_id: 'Not-the-current-user',
+          })
         ).rejects.toThrowError(WriteRuleError);
       });
     });
@@ -2753,11 +2806,7 @@ describe('Rules', () => {
       it('can insert an entity that matches the filter', async () => {
         expect(
           db.transact(async (tx) => {
-            await tx.insert(
-              'posts',
-              { id: 'post-1', author_id: USER_ID },
-              'post-1'
-            );
+            await tx.insert('posts', { id: 'post-1', author_id: USER_ID });
           })
         ).resolves.not.toThrowError();
       });
@@ -2778,11 +2827,10 @@ describe('Rules', () => {
         expect(
           db.transact(
             async (tx) => {
-              await tx.insert(
-                'posts',
-                { id: 'post-1', author_id: 'Not-the-current-user' },
-                'post-2'
-              );
+              await tx.insert('posts', {
+                id: 'post-1',
+                author_id: 'Not-the-current-user',
+              });
             },
             { skipRules: true }
           )
@@ -2820,7 +2868,7 @@ describe('Rules', () => {
         },
       });
 
-      await db.insert('posts', POST, POST_ID);
+      await db.insert('posts', POST);
     });
 
     describe('update single', () => {
@@ -2913,7 +2961,7 @@ describe('Rules', () => {
           user_id,
         },
       });
-      await db.insert('posts', { id: 'post-1', author_id: user_id }, 'post-1');
+      await db.insert('posts', { id: 'post-1', author_id: user_id });
       await db.delete('posts', 'post-1');
     });
 
@@ -2983,12 +3031,13 @@ describe('Nested Properties', () => {
           city: 'San Francisco',
           state: 'CA',
         },
+        id: ENTITY_ID,
       },
     };
 
     it('can insert an entity with nested properties', async () => {
       for (const [id, data] of Object.entries(defaultData)) {
-        await db.insert('Businesses', data, id);
+        await db.insert('Businesses', data);
       }
 
       const query = db.query('Businesses').entityId(ENTITY_ID).build();
@@ -3001,7 +3050,7 @@ describe('Nested Properties', () => {
 
     it('can update nested properties', async () => {
       for (const [id, data] of Object.entries(defaultData)) {
-        await db.insert('Businesses', data, id);
+        await db.insert('Businesses', data);
       }
 
       const query = db.query('Businesses').entityId(ENTITY_ID).build();
@@ -3020,7 +3069,7 @@ describe('Nested Properties', () => {
 
     it('can query based on nested property', async () => {
       for (const [id, data] of Object.entries(defaultData)) {
-        await db.insert('Businesses', data, id);
+        await db.insert('Businesses', data);
       }
 
       const positiveResults = await db.fetch(
@@ -3042,7 +3091,7 @@ describe('Nested Properties', () => {
 
     it('can select specific nested properties', async () => {
       for (const [id, data] of Object.entries(defaultData)) {
-        await db.insert('Businesses', data, id);
+        await db.insert('Businesses', data);
       }
 
       const results = await db.fetch(
@@ -3059,6 +3108,7 @@ describe('Nested Properties', () => {
     const schema = {
       Businesses: {
         schema: S.Schema({
+          id: S.Id(),
           name: S.String(),
           address: S.Record({
             street: S.Record({
@@ -3094,7 +3144,7 @@ describe('Nested Properties', () => {
 
     it('can insert an entity with nested properties', async () => {
       for (const [id, data] of Object.entries(defaultData)) {
-        await db.insert('Businesses', data, id);
+        await db.insert('Businesses', { ...data, id });
       }
 
       const query = db.query('Businesses').entityId(ENTITY_ID).build();
@@ -3134,7 +3184,7 @@ describe('Nested Properties', () => {
 
     it('can query based on nested property', async () => {
       for (const [id, data] of Object.entries(defaultData)) {
-        await db.insert('Businesses', data, id);
+        await db.insert('Businesses', data);
       }
 
       const positiveResults = await db.fetch(
@@ -3162,6 +3212,7 @@ describe('Nullable properties in a schema', () => {
     collections: {
       Todos: {
         schema: S.Schema({
+          id: S.Id(),
           text: S.String(),
           created_at: S.Date(),
           deleted_at: S.Date({ nullable: true }),
@@ -3183,25 +3234,19 @@ describe('Nullable properties in a schema', () => {
     });
     expect(
       async () =>
-        await db.insert(
-          'Todos',
-          {
-            text: 'Do something',
-            created_at: new Date(),
-            deleted_at: null,
-          },
-          'todo-1'
-        )
+        await db.insert('Todos', {
+          id: 'todo-1',
+          text: 'Do something',
+          created_at: new Date(),
+          deleted_at: null,
+        })
     ).not.toThrowError();
-    await db.insert(
-      'Todos',
-      {
-        text: 'Do something',
-        created_at: new Date(),
-        deleted_at: null,
-      },
-      'todo-1'
-    );
+    await db.insert('Todos', {
+      id: 'todo-1',
+      text: 'Do something',
+      created_at: new Date(),
+      deleted_at: null,
+    });
     const result = await db.fetchById('Todos', 'todo-1');
     expect(result).toHaveProperty('deleted_at');
     expect(result.deleted_at).toBeNull();
@@ -3212,41 +3257,32 @@ describe('Nullable properties in a schema', () => {
     });
     expect(
       async () =>
-        await db.insert(
-          'Todos',
-          {
-            text: 'Do something',
-            created_at: new Date(),
-            deleted_at: null,
-          },
-          'todo-1'
-        )
+        await db.insert('Todos', {
+          id: 'todo-1',
+          text: 'Do something',
+          created_at: new Date(),
+          deleted_at: null,
+        })
     ).not.toThrowError();
     await expect(
-      db.insert(
-        'Todos',
-        {
-          text: 'Do something',
-          created_at: null,
-          deleted_at: null,
-        },
-        'todo-1'
-      )
+      db.insert('Todos', {
+        id: 'todo-1',
+        text: 'Do something',
+        created_at: null,
+        deleted_at: null,
+      })
     ).rejects.toThrowError(SerializingError);
   });
   it('can update with nullable properties', async () => {
     const db = new DB({
       schema,
     });
-    await db.insert(
-      'Todos',
-      {
-        text: 'Do something',
-        created_at: new Date(),
-        deleted_at: null,
-      },
-      'todo-1'
-    );
+    await db.insert('Todos', {
+      id: 'todo-1',
+      text: 'Do something',
+      created_at: new Date(),
+      deleted_at: null,
+    });
     await db.update('Todos', 'todo-1', async (entity) => {
       entity.deleted_at = new Date();
     });
@@ -3264,15 +3300,12 @@ describe('Nullable properties in a schema', () => {
     const db = new DB({
       schema,
     });
-    await db.insert(
-      'Todos',
-      {
-        text: 'Do something',
-        created_at: new Date(),
-        deleted_at: null,
-      },
-      'todo-1'
-    );
+    await db.insert('Todos', {
+      id: 'todo-1',
+      text: 'Do something',
+      created_at: new Date(),
+      deleted_at: null,
+    });
     await expect(
       async () =>
         await db.update('Todos', 'todo-1', async (entity) => {
@@ -3288,6 +3321,7 @@ it('throws an error if a register filter is malformed', async () => {
       collections: {
         Classes: {
           schema: S.Schema({
+            id: S.Id(),
             name: S.String(),
             students: S.Set(S.String()),
           }),
@@ -3318,6 +3352,7 @@ describe('default values in a schema', () => {
     collections: {
       Todos: {
         schema: S.Schema({
+          id: S.String(),
           text: S.String(),
           created_at: S.Date(),
           completed: S.Boolean({ default: false }),
@@ -3340,14 +3375,11 @@ describe('default values in a schema', () => {
           schema,
         }),
       async (db) => {
-        await db.insert(
-          'Todos',
-          {
-            text: 'Do something',
-            created_at: new Date(),
-          },
-          'todo-1'
-        );
+        await db.insert('Todos', {
+          id: 'todo-1',
+          text: 'Do something',
+          created_at: new Date(),
+        });
         const result = await db.fetchById('Todos', 'todo-1');
         expect(result).toHaveProperty('completed');
         expect(result.completed).toBe(false);
@@ -3362,6 +3394,7 @@ describe('default values in a schema', () => {
             collections: {
               Todos: {
                 schema: S.Schema({
+                  id: S.Id(),
                   todoId: S.String({
                     default: S.Default.now(),
                   }),
@@ -3375,13 +3408,10 @@ describe('default values in a schema', () => {
           },
         }),
       async (db) => {
-        await db.insert(
-          'Todos',
-          {
-            text: 'Do something',
-          },
-          'todo-1'
-        );
+        await db.insert('Todos', {
+          id: 'todo-1',
+          text: 'Do something',
+        });
         const result = await db.fetchById('Todos', 'todo-1');
         expect(result).toHaveProperty('todoId');
         expect(result.todoId).toBeTypeOf('string');
@@ -3394,9 +3424,11 @@ describe('default values in a schema', () => {
   it.todo(
     'should reject schemas that pass invalid default values',
     async () => {
-      expect(() => S.Schema({ foo: S.String({ default: {} }) })).toThrowError();
       expect(() =>
-        S.Schema({ foo: S.String({ default: ['array'] }) })
+        S.Schema({ id: S.Id(), foo: S.String({ default: {} }) })
+      ).toThrowError();
+      expect(() =>
+        S.Schema({ id: S.Id(), foo: S.String({ default: ['array'] }) })
       ).toThrowError();
     }
   );
@@ -3410,6 +3442,7 @@ describe('subscription errors', () => {
         collections: {
           Classes: {
             schema: S.Schema({
+              id: S.Id(),
               name: S.String(),
               students: S.Set(S.String()),
             }),
@@ -3445,19 +3478,19 @@ describe('DB variable index cache view thing', () => {
     results = await db.fetch(query);
     expect(results).toHaveLength(0);
 
-    await db.insert('cars', { make: 'Ford', year: 2011 }, 'car-1');
+    await db.insert('cars', { make: 'Ford', year: 2011 });
     results = await db.fetch(query);
     expect(results).toHaveLength(1);
 
-    await db.insert('cars', { make: 'Ford', year: 2009 }, 'car-2');
+    await db.insert('cars', { make: 'Ford', year: 2009 });
     results = await db.fetch(query);
     expect(results).toHaveLength(1);
 
-    await db.insert('cars', { make: 'Ford', year: 2010 }, 'car-3');
+    await db.insert('cars', { make: 'Ford', year: 2010 });
     results = await db.fetch(query);
     expect(results).toHaveLength(1);
 
-    await db.insert('cars', { make: 'Ford', year: 2020 }, 'car-4');
+    await db.insert('cars', { make: 'Ford', year: 2020 });
     results = await db.fetch(query);
     expect(results).toHaveLength(2);
   });
@@ -3468,26 +3501,26 @@ describe('relational querying / sub querying', () => {
   beforeAll(async () => {
     // Insert mock data for Cars and Manufacturers
     // Manufacturer - Contains name and country
-    await db.insert(
-      'manufacturers',
-      { name: 'Ford', country: 'USA', id: 'ford' },
-      'ford'
-    );
-    await db.insert(
-      'manufacturers',
-      { name: 'Toyota', country: 'Japan', id: 'toyota' },
-      'toyota'
-    );
-    await db.insert(
-      'manufacturers',
-      { name: 'Honda', country: 'Japan', id: 'honda' },
-      'honda'
-    );
-    await db.insert(
-      'manufacturers',
-      { name: 'Volkswagen', country: 'Germany', id: 'vw' },
-      'vw'
-    );
+    await db.insert('manufacturers', {
+      name: 'Ford',
+      country: 'USA',
+      id: 'ford',
+    });
+    await db.insert('manufacturers', {
+      name: 'Toyota',
+      country: 'Japan',
+      id: 'toyota',
+    });
+    await db.insert('manufacturers', {
+      name: 'Honda',
+      country: 'Japan',
+      id: 'honda',
+    });
+    await db.insert('manufacturers', {
+      name: 'Volkswagen',
+      country: 'Germany',
+      id: 'vw',
+    });
     // Cars - Contains a make, model, manufacturer, and class (like SUV)
     const cars = [
       { year: 2021, model: 'F150', manufacturer: 'ford', type: 'truck' },
@@ -3502,7 +3535,7 @@ describe('relational querying / sub querying', () => {
       { year: 2022, model: 'Tiguan', manufacturer: 'vw', type: 'SUV' },
     ];
     for (const car of cars) {
-      await db.insert('cars', car, `${car.manufacturer}-${car.model}`);
+      await db.insert('cars', car);
     }
   });
   it('can handle sub queries that use variables', async () => {
@@ -3609,21 +3642,17 @@ describe('relational querying / sub querying', () => {
       {
         action: async () => {
           db.transact(async (tx) => {
-            await tx.insert(
-              'manufacturers',
-              { name: 'Suburu', country: 'USA', id: 'suburu' },
-              'suburu'
-            );
-            await tx.insert(
-              'cars',
-              {
-                year: 2019,
-                model: 'Outback',
-                manufacturer: 'suburu',
-                type: 'SUV',
-              },
-              'suburu-outback'
-            );
+            await tx.insert('manufacturers', {
+              name: 'Suburu',
+              country: 'USA',
+              id: 'suburu',
+            });
+            await tx.insert('cars', {
+              year: 2019,
+              model: 'Outback',
+              manufacturer: 'suburu',
+              type: 'SUV',
+            });
           });
         },
         check: (results) => {
@@ -3632,16 +3661,12 @@ describe('relational querying / sub querying', () => {
       },
       {
         action: async () => {
-          await db.insert(
-            'cars',
-            {
-              year: 2023,
-              model: 'CRV',
-              manufacturer: 'honda',
-              type: 'SUV',
-            },
-            'honda-crv'
-          );
+          await db.insert('cars', {
+            year: 2023,
+            model: 'CRV',
+            manufacturer: 'honda',
+            type: 'SUV',
+          });
         },
         check: (results) => {
           expect(results).toHaveLength(4);
@@ -3669,6 +3694,7 @@ describe('Subqueries in schema', () => {
           },
           classes: {
             schema: S.Schema({
+              id: S.Id(),
               name: S.String(),
               level: S.Number(),
               building: S.String(),
@@ -3683,7 +3709,6 @@ describe('Subqueries in schema', () => {
       },
     });
 
-    const buildings = ['Warner', 'BiHall', 'Twilight', 'Voter'];
     const departments = ['CS', 'Math', 'English', 'History'];
     const classes = [
       {
@@ -3760,14 +3785,10 @@ describe('Subqueries in schema', () => {
       },
     ];
     for (const department of departments) {
-      await db.insert(
-        'departments',
-        { id: department, name: department },
-        department
-      );
+      await db.insert('departments', { id: department, name: department });
     }
     for (const cls of classes) {
-      await db.insert('classes', cls, cls.name);
+      await db.insert('classes', cls);
     }
   });
 
@@ -3824,16 +3845,13 @@ describe('Subqueries in schema', () => {
       },
       {
         action: async () => {
-          await db.insert(
-            'classes',
-            {
-              name: 'CS 401',
-              level: 400,
-              building: 'Warner',
-              department_id: 'CS',
-            },
-            'CS 401'
-          );
+          await db.insert('classes', {
+            id: 'CS 401',
+            name: 'CS 401',
+            level: 400,
+            building: 'Warner',
+            department_id: 'CS',
+          });
         },
         check: (results) => {
           expect(results).toHaveLength(4);
@@ -3875,44 +3893,36 @@ describe.todo('social network test', () => {
       },
     });
     // insert sample data
-    await db.insert(
-      'users',
-      {
-        id: 'user-1',
-        name: 'Alice',
-        friend_ids: new Set(['user-2', 'user-3']),
-      },
-      'user-1'
-    );
-    await db.insert(
-      'users',
-      { id: 'user-2', name: 'Bob', friend_ids: new Set(['user-1', 'user-3']) },
-      'user-2'
-    );
-    await db.insert(
-      'users',
-      {
-        id: 'user-3',
-        name: 'Charlie',
-        friend_ids: new Set(['user-1', 'user-2']),
-      },
-      'user-3'
-    );
-    await db.insert(
-      'posts',
-      { id: 'post-1', content: 'Hello World!', author_id: 'user-1' },
-      'post-1'
-    );
-    await db.insert(
-      'posts',
-      { id: 'post-2', content: 'Hello World!', author_id: 'user-2' },
-      'post-2'
-    );
-    await db.insert(
-      'posts',
-      { id: 'post-3', content: 'Hello World!', author_id: 'user-3' },
-      'post-3'
-    );
+    await db.insert('users', {
+      id: 'user-1',
+      name: 'Alice',
+      friend_ids: new Set(['user-2', 'user-3']),
+    });
+    await db.insert('users', {
+      id: 'user-2',
+      name: 'Bob',
+      friend_ids: new Set(['user-1', 'user-3']),
+    });
+    await db.insert('users', {
+      id: 'user-3',
+      name: 'Charlie',
+      friend_ids: new Set(['user-1', 'user-2']),
+    });
+    await db.insert('posts', {
+      id: 'post-1',
+      content: 'Hello World!',
+      author_id: 'user-1',
+    });
+    await db.insert('posts', {
+      id: 'post-2',
+      content: 'Hello World!',
+      author_id: 'user-2',
+    });
+    await db.insert('posts', {
+      id: 'post-3',
+      content: 'Hello World!',
+      author_id: 'user-3',
+    });
   });
 
   it('can query posts from friends', () => {
@@ -3942,11 +3952,10 @@ describe.todo('Graph-like queries', () => {
       { make: 'Airbus', model: 'A380', capacity: 400 },
     ];
     for (const airplane of airplanes) {
-      await db.insert(
-        'airplanes',
-        airplane,
-        `${airplane.make}-${airplane.model}`
-      );
+      await db.insert('airplanes', {
+        ...airplane,
+        id: `${airplane.make}-${airplane.model}`,
+      });
     }
     // Airports - Contains a name and location
     const airports = [
@@ -3956,7 +3965,7 @@ describe.todo('Graph-like queries', () => {
       { name: 'ORD', location: 'Chicago, IL' },
     ];
     for (const airport of airports) {
-      await db.insert('airports', airport, airport.name);
+      await db.insert('airports', airport);
     }
     // Flights - Contains a flight number, airplane, origin, and destination
     const flights = [
@@ -4010,7 +4019,7 @@ describe.todo('Graph-like queries', () => {
       },
     ];
     for (const flight of flights) {
-      await db.insert('flights', flight, flight.flight_number);
+      await db.insert('flights', flight);
     }
   });
 
@@ -4056,6 +4065,7 @@ describe('set proxy', () => {
     collections: {
       Users: {
         schema: S.Schema({
+          id: S.String(),
           name: S.String(),
           friends: S.Set(S.String()),
         }),
@@ -4063,12 +4073,13 @@ describe('set proxy', () => {
     },
   };
   const defaultUser = {
+    id: 'user-1',
     name: 'Alice',
     friends: new Set(['Bob', 'Charlie']),
   };
   it('set.size correctly tracks updates', async () => {
     const db = new DB({ schema });
-    await db.insert('Users', defaultUser, 'user-1');
+    await db.insert('Users', defaultUser);
     await db.update('Users', 'user-1', async (entity) => {
       // initial check
       expect(entity.friends.size).toBe(2);
@@ -4088,7 +4099,7 @@ describe('set proxy', () => {
   });
   it('set.has correctly tracks updates', async () => {
     const db = new DB({ schema });
-    await db.insert('Users', defaultUser, 'user-1');
+    await db.insert('Users', defaultUser);
     await db.update('Users', 'user-1', async (entity) => {
       // initial check
       expect(entity.friends.has('Bob')).toBe(true);
@@ -4110,7 +4121,7 @@ describe('set proxy', () => {
   });
   it('set iteration works properly', async () => {
     const db = new DB({ schema });
-    await db.insert('Users', defaultUser, 'user-1');
+    await db.insert('Users', defaultUser);
     await db.update('Users', 'user-1', async (entity) => {
       // Array.from
       expect(Array.from(entity.friends)).toEqual(['Bob', 'Charlie']);
@@ -4142,7 +4153,7 @@ describe('set proxy', () => {
   });
   it('cannot assign to a set', async () => {
     const db = new DB({ schema });
-    await db.insert('Users', defaultUser, 'user-1');
+    await db.insert('Users', defaultUser);
     await db.update('Users', 'user-1', async (entity) => {
       expect(() => {
         entity.friends = new Set(['bad']);
