@@ -25,6 +25,9 @@
     },
     {
       "path": "../db/tsconfig.json"
+    },
+    {
+      "path": "../react/tsconfig.json"
     }
   ]
 }
