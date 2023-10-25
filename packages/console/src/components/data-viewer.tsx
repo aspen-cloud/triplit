@@ -346,7 +346,8 @@ export function DataViewer({
   const createNewEntity = useCallback(
     async (entity: any, id: string) => {
       try {
-        await client.insert(collection, entity, id !== '' ? id : undefined);
+        if (id) entity = Object.assign(entity, { id });
+        await client.insert(collection, entity);
         setCreateEntityModalIsOpen(false);
       } catch (e) {
         console.error(e);

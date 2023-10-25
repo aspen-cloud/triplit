@@ -18,9 +18,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
   CollectionTypeKeys,
-  QueryAttributeDefinition,
   RecordAttributeDefinition,
-  ValueAttributeDefinition,
   ValueTypeKeys,
 } from '../../../db/src/data-types/serialization';
 import { Collection } from '../../../db/src/schema.js';
