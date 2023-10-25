@@ -327,3 +327,89 @@ describe('query builder', () => {
     }
   });
 });
+
+type MapKey<M> = M extends Map<infer K, any> ? K : never;
+type MapValue<M> = M extends Map<any, infer V> ? V : never;
+
+describe('fetching', () => {
+  const schema = {
+    collections: {
+      test: {
+        schema: S.Schema({
+          attr1: S.String(),
+          attr2: S.Boolean(),
+          attr3: S.Number(),
+
+          // Not included
+          subquery: S.Query({ collectionName: 'test2', where: [] }),
+        }),
+      },
+    },
+  };
+
+  test('fetch', async () => {
+    // Schemaful
+    {
+      const db = new DB({ schema });
+      const query = db.query('test').build();
+      const res = await db.fetch(query);
+
+      expectTypeOf<MapKey<typeof res>>().toEqualTypeOf<string>();
+      const expectValueTypeOf = expectTypeOf<MapValue<typeof res>>();
+      expectValueTypeOf.toHaveProperty('attr1').toEqualTypeOf<string>();
+      expectValueTypeOf.toHaveProperty('attr2').toEqualTypeOf<boolean>();
+      expectValueTypeOf.toHaveProperty('attr3').toEqualTypeOf<number>();
+      expectValueTypeOf.not.toHaveProperty('subquery');
+    }
+    // schemaless
+    {
+      const db = new DB();
+      const query = db.query('test').build();
+      expectTypeOf(db.fetch(query)).resolves.toEqualTypeOf<Map<string, any>>();
+    }
+  });
+
+  test('fetchById', () => {
+    // Schemaful
+    {
+      const db = new DB({ schema });
+      expectTypeOf(db.fetchById('test', 'id')).resolves.toEqualTypeOf<{
+        attr1: string;
+        attr2: boolean;
+        attr3: number;
+      } | null>();
+    }
+    // schemaless
+    {
+      const db = new DB();
+      expectTypeOf(db.fetchById('test', 'id')).resolves.toBeAny();
+    }
+  });
+
+  test('fetchOne', () => {
+    // Schemaful
+    {
+      const db = new DB({ schema });
+      const query = db.query('test').build();
+      expectTypeOf(db.fetchOne(query)).resolves.toEqualTypeOf<
+        | [
+            string,
+            {
+              attr1: string;
+              attr2: boolean;
+              attr3: number;
+            }
+          ]
+        | null
+      >();
+    }
+    // schemaless
+    {
+      const db = new DB();
+      const query = db.query('test').build();
+      expectTypeOf(db.fetchOne(query)).resolves.toEqualTypeOf<
+        [string, any] | null
+      >();
+    }
+  });
+});

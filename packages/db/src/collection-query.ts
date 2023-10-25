@@ -66,9 +66,14 @@ export type CollectionQuery<
   collectionName: CN;
 };
 
-export type FetchResult<C extends CollectionQuery<any, any>> =
+export type FetchResult<C extends CollectionQuery<any, any>> = Map<
+  string,
+  FetchResultEntity<C>
+>;
+
+export type FetchResultEntity<C extends CollectionQuery<any, any>> =
   C extends CollectionQuery<infer M, infer CN>
-    ? Map<string, ResultTypeFromModel<ModelFromModels<M, CN>>>
+    ? ResultTypeFromModel<ModelFromModels<M, CN>>
     : never;
 
 export interface FetchOptions {

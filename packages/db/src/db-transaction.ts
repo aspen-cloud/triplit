@@ -465,7 +465,9 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
     // TODO: prepare query?
     query.limit = 1;
     const result = await this.fetch(query, { scope, skipRules });
-    return result.size > 0 ? result.entries().next().value : null;
+    const entry = [...result.entries()][0];
+    if (!entry) return null;
+    return entry;
   }
 
   async checkOrCreateSchema() {

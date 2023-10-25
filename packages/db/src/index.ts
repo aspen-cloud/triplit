@@ -69,7 +69,11 @@ export type { Timestamp } from './timestamp.js';
 export { DurableClock } from './clocks/durable-clock.js';
 export { MemoryClock } from './clocks/memory-clock.js';
 export { default as CollectionQueryBuilder } from './collection-query.js';
-export type { CollectionQuery, FetchResult } from './collection-query.js';
+export type {
+  CollectionQuery,
+  FetchResult,
+  FetchResultEntity,
+} from './collection-query.js';
 export { default as Builder } from './utils/builder.js';
 export type { toBuilder } from './utils/builder.js';
 export type { IsAny } from './utility-types.js';

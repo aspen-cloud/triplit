@@ -311,7 +311,7 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
     // TODO: prepare query?
     const query = this.query(collectionName).entityId(id).build();
     const result = await this.fetch(query, { skipRules });
-    return result.has(id) ? result.get(id) : null;
+    return result.has(id) ? result.get(id)! : null;
   }
 
   async fetchOne<Q extends CollectionQuery<M, any>>(
@@ -322,7 +322,9 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
     await this.ensureMigrated;
     // TODO: prepare query?
     const result = await this.fetch(query, { scope, skipRules });
-    return result.size > 0 ? result : null;
+    const entry = [...result.entries()][0];
+    if (!entry) return null;
+    return entry;
   }
 
   async insert<CN extends CollectionNameFromModels<M>>(

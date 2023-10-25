@@ -21,6 +21,7 @@ import {
   ResultTypeFromModel,
   toBuilder,
   Storage,
+  FetchResultEntity,
 } from '@triplit/db';
 import { Subject } from 'rxjs';
 import { getUserId } from './token.js';
@@ -46,9 +47,14 @@ import { MemoryBTreeStorage } from '@triplit/db/storage/memory-btree';
  * Recreating the fetch result type here to avoid this issue
  * Playground: https://www.typescriptlang.org/play?#code/KYDwDg9gTgLgBDAnmYcCyEAmwA2BnAHgCg44BhCHHYAYxgEsIA7AOQEMBbVUGYJzPHDwwo9JgHMANCTgAVODz4C4AJVrRMBYaImShIseIB8RI3AC8q9VE0UqtBs3Zc9sowG4iRJCjgAhNjxgAjQFEF5+QQxsfAI2JkQ9eMQjPTIWMIjlAGtgRAgAM3QzSwBvGTYYEQBGAC50AG10gF1PAF8vH1QAUXClYE1QxUj0LFxCZKSE1PIM4Zy8wuKLf0DgtDSWMwAyOFLKkQAmeu1DNs9vZFRZYGFqgnl5wQCguISplJK5TKVntbfEnBkmYAPxwADkYECeHBcHq4IKbHoOHBni6cluMEODx+IxewUmQOmX0efTx-zEBWAUDgAFUPqC6XCIYjkajOlc4ABJJhgACu8EsvSyAwIpV4wnq+3hBQgEHBbTaenBEpg4I8HN8ajwfJwMGqKxudwIPP5MA16O1uqxhsx2NNAo8QA
  */
-export type ClientFetchResult<C extends ClientQuery<any, any>> =
+export type ClientFetchResult<C extends ClientQuery<any, any>> = Map<
+  string,
+  ClientFetchResultEntity<C>
+>;
+
+export type ClientFetchResultEntity<C extends ClientQuery<any, any>> =
   C extends ClientQuery<infer M, infer CN>
-    ? Map<string, ResultTypeFromModel<ModelFromModels<M, CN>>>
+    ? ResultTypeFromModel<ModelFromModels<M, CN>>
     : never;
 
 export type TransportConnectParams = {
@@ -774,11 +780,12 @@ export class TriplitClient<M extends Models<any, any> | undefined = undefined> {
     throw new UnrecognizedFetchPolicyError((opts as FetchOptions).policy);
   }
 
-  private async fetchLocal<CQ extends ClientQuery<M, any>>(query: CQ) {
+  private async fetchLocal<CQ extends ClientQuery<M, any>>(
+    query: CQ
+  ): Promise<ClientFetchResult<CQ>> {
     const scope = parseScope(query);
     const res = await this.db.fetch(query, { scope });
-    // @ts-ignore
-    return res as Promise<ClientFetchResult<CQ>>;
+    return res;
   }
 
   async fetchById<CN extends CollectionNameFromModels<M>>(
@@ -792,11 +799,11 @@ export class TriplitClient<M extends Models<any, any> | undefined = undefined> {
     return results.get(id);
   }
 
-  async fetchOne<CQ extends ClientQuery<M, any>>(query: CQ) {
+  async fetchOne<CQ extends ClientQuery<M, any>>(
+    query: CQ
+  ): Promise<[string, ClientFetchResultEntity<CQ>] | null> {
     const scope = parseScope(query);
-    const res = await this.db.fetchOne(query, { scope, skipRules: SKIP_RULES });
-    // @ts-ignore
-    return res as Promise<ClientFetchResult<CQ>>;
+    return this.db.fetchOne(query, { scope, skipRules: SKIP_RULES });
   }
 
   insert<CN extends CollectionNameFromModels<M>>(

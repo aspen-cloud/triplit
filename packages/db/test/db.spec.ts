@@ -342,26 +342,28 @@ describe('Database API', () => {
   });
 });
 
-it('supports fetchOne', async () => {
-  const db = new DB({ source: new InMemoryTupleStorage() });
-  await db.insert('Student', { name: 'John Doe' }, '1');
-  await db.insert('Student', { name: 'Jane Doe' }, '2');
-  await db.insert('Student', { name: 'John Smith' }, '3');
-  await db.insert('Student', { name: 'Jane Smith' }, '4');
-  const john = await db.fetchOne(
-    CollectionQueryBuilder('Student')
-      .where([['name', 'like', 'John%']])
-      .build()
+it('fetchOne gets first match or null', async () => {
+  await testDBAndTransaction(
+    () => new DB(),
+    async (db) => {
+      await db.insert('Student', { name: 'John Doe' }, '1');
+      await db.insert('Student', { name: 'Jane Doe' }, '2');
+      await db.insert('Student', { name: 'John Smith' }, '3');
+      await db.insert('Student', { name: 'Jane Smith' }, '4');
+      const johnQuery = CollectionQueryBuilder('Student')
+        .where([['name', 'like', 'John%']])
+        .build();
+      const ettaQuery = CollectionQueryBuilder('Student')
+        .where([['name', 'like', '%Etta%']])
+        .build();
+      const john = await db.fetchOne(johnQuery);
+      expect(john![0]).toBe('1');
+      expect(john![1].name).toBe('John Doe');
+
+      const etta = await db.fetchOne(ettaQuery);
+      expect(etta).toBeNull();
+    }
   );
-  expect(john).toBeTruthy();
-  expect(john.size).toBe(1);
-  expect(Array.from(john?.values())[0]?.name).toBe('John Doe');
-  const noStudent = await db.fetchOne(
-    CollectionQueryBuilder('Student')
-      .where([['name', 'like', '%Etta%']])
-      .build()
-  );
-  expect(noStudent).toBeNull();
 });
 
 describe('OR queries', () => {
