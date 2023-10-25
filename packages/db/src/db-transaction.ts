@@ -240,16 +240,18 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
     // serialize the doc values
     const serializedDoc = serializeClientModel(doc, collectionSchema?.schema);
 
+    const defaultValues = collectionSchema
+      ? getDefaultValuesForCollection(collectionSchema)
+      : {};
+
     // Append defaults
-    const fullDoc = collectionSchema
-      ? {
-          ...getDefaultValuesForCollection(collectionSchema),
-          ...serializedDoc,
-        }
-      : serializedDoc;
+    const fullDoc = {
+      ...defaultValues,
+      ...serializedDoc,
+    };
 
     // this is just to handle the schemaless case
-    if (fullDoc.id === undefined) fullDoc.id = nanoid();
+    if (!collectionSchema && fullDoc.id === undefined) fullDoc.id = nanoid();
 
     const validationError = validateExternalId(fullDoc.id);
     if (validationError) throw validationError;

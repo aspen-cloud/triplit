@@ -937,11 +937,12 @@ describe('subscriptions', () => {
         }
       );
 
-      await db.insert(
-        'students',
-        { id: '6', name: 'Frank', major: 'Astronomy', dorm: 'Allen' },
-        '6'
-      );
+      await db.insert('students', {
+        id: '6',
+        name: 'Frank',
+        major: 'Astronomy',
+        dorm: 'Allen',
+      });
 
       await unsubscribe();
     });
@@ -983,26 +984,30 @@ describe('subscriptions', () => {
       );
 
       // Add to result set (at beginning, end, inbetween)
-      await db.insert(
-        'students',
-        { id: '1', name: 'Alice', age: 30, deleted: false },
-        '1'
-      );
-      await db.insert(
-        'students',
-        { id: '2', name: 'Bob', age: 21, deleted: false },
-        '2'
-      );
-      await db.insert(
-        'students',
-        { id: '3', name: 'Charlie', age: 35, deleted: false },
-        '3'
-      );
-      await db.insert(
-        'students',
-        { id: '4', name: 'Alice', age: 32, deleted: false },
-        '4'
-      );
+      await db.insert('students', {
+        id: '1',
+        name: 'Alice',
+        age: 30,
+        deleted: false,
+      });
+      await db.insert('students', {
+        id: '2',
+        name: 'Bob',
+        age: 21,
+        deleted: false,
+      });
+      await db.insert('students', {
+        id: '3',
+        name: 'Charlie',
+        age: 35,
+        deleted: false,
+      });
+      await db.insert('students', {
+        id: '4',
+        name: 'Alice',
+        age: 32,
+        deleted: false,
+      });
 
       // reorder
       await db.update('students', '4', async (entity) => {
@@ -1056,15 +1061,83 @@ describe('subscriptions', () => {
         }
       );
 
-      await db.insert(
-        'students',
-        { id: '6', name: 'Frank', major: 'Astronomy', dorm: 'Allen' },
-        '6'
-      );
+      await db.insert('students', {
+        id: '6',
+        name: 'Frank',
+        major: 'Astronomy',
+        dorm: 'Allen',
+      });
 
       await unsubscribe();
     });
   });
+});
+
+describe("Entity Id'ing", () => {
+  describe('schemaless', () => {
+    it('can insert an entity with an id attribute and retrieve it using the same id', async () => {
+      const db = new DB();
+      const id = 'myId';
+      const entity = { id, name: 'Alice' };
+      await db.insert('students', entity);
+      const result = await db.fetchById('students', id);
+      expect(result).toMatchObject(entity);
+    });
+    it('can insert an entity without an id attribute and have it generated', async () => {
+      const db = new DB();
+      const entityDoc = { name: 'Alice' };
+      await db.insert('students', entityDoc);
+      const result = await db.fetchOne(db.query('students').build());
+      console.log('result', result);
+      expect(result).not.toBeNull();
+      const [entId, entity] = result;
+      expect(entity.id).toBeDefined();
+      expect(entId).toEqual(entity.id);
+    });
+  });
+
+  describe('with schema', () => {
+    it('can define a schema with a required id attribute and fail if its not provided', async () => {
+      const db = new DB({
+        schema: {
+          collections: {
+            students: {
+              schema: S.Schema({
+                id: S.String({ nullable: false }),
+                name: S.String(),
+              }),
+            },
+          },
+        },
+      });
+      const entityDoc = { name: 'Alice' };
+      await expect(db.insert('students', entityDoc)).rejects.toThrow();
+    });
+
+    it('can define a schema with an auto generated id attribute and have it generated', async () => {
+      const db = new DB({
+        schema: {
+          collections: {
+            students: {
+              schema: S.Schema({
+                id: S.String({ default: { func: 'uuid' } }),
+                name: S.String(),
+              }),
+            },
+          },
+        },
+      });
+      const entityDoc = { name: 'Alice' };
+      await db.insert('students', entityDoc);
+      const result = await db.fetchOne(db.query('students').build());
+      expect(result).not.toBeNull();
+      const [entId, entity] = result;
+      expect(entity.id).toBeDefined();
+      expect(entId).toEqual(entity.id);
+    });
+  });
+
+  it.todo("prevent's updating ID's on entities");
 });
 
 describe('single entity subscriptions', async () => {

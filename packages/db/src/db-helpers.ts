@@ -33,6 +33,9 @@ import { DBTransaction } from './db-transaction.js';
 const ID_SEPARATOR = '#';
 
 export function validateExternalId(id: string): Error | undefined {
+  if (!id) {
+    return new InvalidEntityIdError(id, 'id cannot be undefined.');
+  }
   if (String(id).includes(ID_SEPARATOR)) {
     return new InvalidEntityIdError(id, `Id cannot include ${ID_SEPARATOR}.`);
   }
