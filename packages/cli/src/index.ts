@@ -54,23 +54,27 @@ async function execute(args: string[], flags: {}) {
     return;
   }
   const cmdDef = await getCommandDefinition(command);
-  const cmdFlagsDefs = Object.entries(cmdDef.flags ?? {});
 
-  const unaliasedFlags = Object.entries(flags).reduce(
-    (acc, [flagName, flagValue]) => {
-      const flagDef = cmdFlagsDefs.find(
-        ([name, { char }]) => name === flagName || char === flagName
-      );
-      if (flagDef) {
-        const [name, def] = flagDef;
-        acc[name] = flagValue;
-      } else {
-        acc[flagName] = flagValue;
-      }
-      return acc;
-    },
-    {}
-  );
+  let unaliasedFlags = flags;
+
+  if (cmdDef.flags) {
+    const cmdFlagsDefs = Object.entries(cmdDef.flags ?? {});
+    unaliasedFlags = Object.entries(flags).reduce(
+      (acc, [flagName, flagValue]) => {
+        const flagDef = cmdFlagsDefs.find(
+          ([name, { char }]) => name === flagName || char === flagName
+        );
+        if (flagDef) {
+          const [name, def] = flagDef;
+          acc[name] = flagValue;
+        } else {
+          acc[flagName] = flagValue;
+        }
+        return acc;
+      },
+      {}
+    );
+  }
 
   const result = await cmdDef.run({
     flags: unaliasedFlags,
