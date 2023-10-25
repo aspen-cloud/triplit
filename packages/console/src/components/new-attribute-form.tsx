@@ -4,13 +4,13 @@ import {
   CollectionAttributeDefinition,
   CollectionDefinition,
 } from '@triplit/db';
-import { Button } from 'packages/console/@/components/ui/button';
-import { Checkbox } from 'packages/console/@/components/ui/checkbox';
-import { Input } from 'packages/console/@/components/ui/input';
-import { Label } from 'packages/console/@/components/ui/label';
-import { Select } from 'packages/console/@/components/ui/simple-select';
+import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select } from '@/components/ui/simple-select';
 import { ComponentProps, useEffect, useState } from 'react';
-import { Code } from 'packages/console/@/components/ui/code';
+import { Code } from '@/components/ui/code';
 import { TriplitClient } from '@triplit/client';
 import {
   Sheet,
@@ -19,7 +19,7 @@ import {
   SheetFooter,
   SheetHeader,
   SheetTitle,
-} from 'packages/console/@/components/ui/sheet';
+} from '@/components/ui/sheet';
 import { atom, useAtom } from 'jotai';
 import {
   ALL_TYPES,

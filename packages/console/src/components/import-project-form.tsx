@@ -1,6 +1,6 @@
-import { Button } from 'packages/console/@/components/ui/button';
-import { PasswordInput } from 'packages/console/@/components/ui/password-input';
-import { Input } from 'packages/console/@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { PasswordInput } from '@/components/ui/password-input';
+import { Input } from '@/components/ui/input';
 import { useForm } from '@mantine/form';
 import { useCallback, useEffect, useState } from 'react';
 import {
@@ -8,8 +8,8 @@ import {
   JWTPayloadIsOfCorrectForm,
 } from '../utils/server';
 import { consoleClient, formConsolePrimaryKey } from '../../triplit/client';
-import { TokenReadError } from 'packages/server-core/src/errors';
-import { FormField } from 'packages/console/@/components/ui/form-field';
+import { TokenReadError } from '@triplit/server-core/src/errors';
+import { FormField } from '@/components/ui/form-field';
 
 export interface ImportProjectFormValues {
   token: string;

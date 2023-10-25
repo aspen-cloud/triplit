@@ -5,17 +5,17 @@ import {
 } from '@triplit/db';
 import { useEffect, useMemo, useState } from 'react';
 import '@glideapps/glide-data-grid/dist/index.css';
-import { SetInput } from 'packages/console/@/components/ui/set-input';
-import { Button } from 'packages/console/@/components/ui/button';
-import { Input } from 'packages/console/@/components/ui/input';
-import { Select } from 'packages/console/@/components/ui/simple-select';
+import { SetInput } from '@/components/ui/set-input';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Select } from '@/components/ui/simple-select';
 import { randomId } from '@mantine/hooks';
 import { useForm } from '@mantine/form';
-import { CloseButton } from 'packages/console/@/components/ui/close-button';
-import { FormField } from 'packages/console/@/components/ui/form-field';
-import { Combobox } from 'packages/console/@/components/ui/combobox';
-import { Textarea } from 'packages/console/@/components/ui/textarea';
-import { Checkbox } from 'packages/console/@/components/ui/checkbox';
+import { CloseButton } from '@/components/ui/close-button';
+import { FormField } from '@/components/ui/form-field';
+import { Combobox } from '@/components/ui/combobox';
+import { Textarea } from '@/components/ui/textarea';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   CollectionTypeKeys,
   QueryAttributeDefinition,

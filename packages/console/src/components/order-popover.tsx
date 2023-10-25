@@ -2,12 +2,12 @@ import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from 'packages/console/@/components/ui/popover';
+} from '@/components/ui/popover';
 import { useMemo, useState } from 'react';
-import { Button } from 'packages/console/@/components/ui/button';
-import { Code } from 'packages/console/@/components/ui/code';
-import { Select } from 'packages/console/@/components/ui/simple-select';
-import { CloseButton } from 'packages/console/@/components/ui/close-button';
+import { Button } from '@/components/ui/button';
+import { Code } from '@/components/ui/code';
+import { Select } from '@/components/ui/simple-select';
+import { CloseButton } from '@/components/ui/close-button';
 import { QueryOrder } from '../../../db/src/query';
 
 type OrderPopoverProps = {

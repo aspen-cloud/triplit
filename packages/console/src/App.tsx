@@ -16,7 +16,6 @@ import {
   addProjectToConsole,
 } from './components';
 import { TriplitClient } from '@triplit/client';
-import { MemoryBTreeStorage as MemoryStorage } from '@triplit/db/storage/memory-btree';
 import { useProjectState } from './components';
 const projectClients = new Map<string, TriplitClient<any>>();
 
@@ -77,12 +76,6 @@ function App() {
     const { server, secure, token } = project;
     const newClient = new TriplitClient({
       sync: { server, secure, syncSchema: true },
-      db: {
-        storage: {
-          cache: new MemoryStorage(),
-          outbox: new MemoryStorage(),
-        },
-      },
       auth: { token },
     });
     projectClients.set(projectId, newClient);

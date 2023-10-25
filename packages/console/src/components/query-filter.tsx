@@ -1,9 +1,9 @@
 import { AttributeDefinition, Model } from '@triplit/db';
 import { useCallback } from 'react';
-import { Select } from 'packages/console/@/components/ui/simple-select';
-import { Input } from 'packages/console/@/components/ui/input';
-import { FormField } from 'packages/console/@/components/ui/form-field';
-import { CloseButton } from 'packages/console/@/components/ui/close-button';
+import { Select } from '@/components/ui/simple-select';
+import { Input } from '@/components/ui/input';
+import { FormField } from '@/components/ui/form-field';
+import { CloseButton } from '@/components/ui/close-button';
 import { typeFromJSON } from '../../../db/src/data-types/base';
 import {
   ALL_TYPES,

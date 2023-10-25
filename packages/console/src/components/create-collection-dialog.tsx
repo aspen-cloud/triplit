@@ -1,4 +1,4 @@
-import { Button } from 'packages/console/@/components/ui/button';
+import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
@@ -7,9 +7,9 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from 'packages/console/@/components/ui/dialog';
-import { Input } from 'packages/console/@/components/ui/input';
-import { Label } from 'packages/console/@/components/ui/label';
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { useState } from 'react';
 
 type CreateCollectionDialogProps = {

@@ -1,5 +1,5 @@
-import { Input } from 'packages/console/@/components/ui/input';
-import { Checkbox } from 'packages/console/@/components/ui/checkbox';
+import { Input } from '@/components/ui/input';
+import { Checkbox } from '@/components/ui/checkbox';
 
 export function CollectionSchemaDetail({ collectionSchema }) {
   const attributes = collectionSchema.schema?.properties;

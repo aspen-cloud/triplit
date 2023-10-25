@@ -1,4 +1,4 @@
-import { Modal } from 'packages/console/@/components/ui/modal';
+import { Modal } from '@/components/ui/modal';
 import { ImportProjectForm, addProjectToConsole } from './import-project-form';
 import { ProjectInfoForm } from './project-info-form';
 import { ProjectSelector } from './project-selector';
@@ -12,7 +12,7 @@ import {
   DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from 'packages/console/@/components/ui/dropdown-menu';
+} from '@/components/ui/dropdown-menu';
 import { DeleteProjectDialog } from './delete-project-dialog';
 
 export function ProjectOptionsMenu({

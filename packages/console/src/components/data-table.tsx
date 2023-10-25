@@ -12,29 +12,29 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from 'packages/console/@/components/ui/table';
+} from '@/components/ui/table';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Input } from 'packages/console/@/components/ui/input';
+import { Input } from '@/components/ui/input';
 
 import {
   Popover,
   PopoverTrigger,
   PopoverContent,
-} from 'packages/console/@/components/ui/popover';
+} from '@/components/ui/popover';
 import {
   Select,
   SelectValue,
   SelectTrigger,
   SelectContent,
   SelectItem,
-} from 'packages/console/@/components/ui/select';
-import { Textarea } from 'packages/console/@/components/ui/textarea';
-import { Tooltip } from 'packages/console/@/components/ui/tooltip-simple';
-import { cn } from 'packages/console/@/lib/utils';
-import { SetInput } from 'packages/console/@/components/ui/set-input';
+} from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
+import { Tooltip } from '@/components/ui/tooltip-simple';
+import { cn } from '@/lib/utils';
+import { SetInput } from '@/components/ui/set-input';
 import { PARSE_FUNCS } from './create-entity-form';
-import { Button } from 'packages/console/@/components/ui/button';
-import { Code } from 'packages/console/@/components/ui/code';
+import { Button } from '@/components/ui/button';
+import { Code } from '@/components/ui/code';
 import { TriplitClient } from '@triplit/client';
 import { AttributeDefinition } from '@triplit/db';
 import {

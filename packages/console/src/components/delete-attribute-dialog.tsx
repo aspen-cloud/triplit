@@ -7,8 +7,8 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from 'packages/console/@/components/ui/alert-dialog';
-import { Code } from 'packages/console/@/components/ui/code';
+} from '@/components/ui/alert-dialog';
+import { Code } from '@/components/ui/code';
 
 import { ComponentProps } from 'react';
 
