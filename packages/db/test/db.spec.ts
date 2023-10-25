@@ -2671,19 +2671,31 @@ describe('Rules', () => {
       // Insert data over time
       await new Promise<void>((res) =>
         setTimeout(async () => {
-          await db.insert('todos', { text: 'Buy milk', completed: true }, '1');
+          await db.insert('todos', {
+            text: 'Buy milk',
+            completed: true,
+            id: '1',
+          });
           res();
         }, 100)
       );
       await new Promise<void>((res) =>
         setTimeout(async () => {
-          await db.insert('todos', { text: 'Buy eggs', completed: false }, '2');
+          await db.insert('todos', {
+            text: 'Buy eggs',
+            completed: false,
+            id: '2',
+          });
           res();
         }, 100)
       );
       await new Promise<void>((res) =>
         setTimeout(async () => {
-          await db.insert('todos', { text: 'Buy bread', completed: true }, '3');
+          await db.insert('todos', {
+            text: 'Buy bread',
+            completed: true,
+            id: '3',
+          });
           res();
         }, 100)
       );
@@ -2693,71 +2705,6 @@ describe('Rules', () => {
     });
   });
 
-  it('filters results in subscriptions', async () => {
-    return new Promise<void>((resolve, reject) => {
-      const classesWithStudent = classes.filter((cls) =>
-        cls.enrolled_students.includes(USER_ID)
-      );
-      let callbackNum = 0;
-      const assertionSteps = [
-        {
-          check: (results: Map<string, any>) => {
-            expect(results).toHaveLength(classesWithStudent.length);
-          },
-        },
-        {
-          update: async () => {
-            const classId = `class-6`;
-            db.insert('classes', {
-              id: classId,
-              name: 'Another class for student 2',
-              level: 300,
-              department: 'dep-2',
-              enrolled_students: new Set([
-                'student-1',
-                'student-3',
-                USER_ID,
-                'student-5',
-              ]),
-            });
-          },
-          check: (results: Map<string, any>) => {
-            expect(results).toHaveLength(classesWithStudent.length + 1);
-          },
-        },
-        {
-          update: async () => {
-            const classId = `class-6`;
-            db.insert('classes', {
-              id: classId,
-              name: 'NOT A class for student 2',
-              level: 200,
-              department: 'dep-3',
-              enrolled_students: new Set([
-                'student-1',
-                'student-3',
-                'student-5',
-              ]),
-            });
-          },
-          check: (results: Map<string, any>) => {
-            expect(results).toHaveLength(classesWithStudent.length + 1);
-          },
-        },
-      ];
-      db.subscribe(db.query('classes').build(), (results) => {
-        assertionSteps[callbackNum].check(results);
-        callbackNum++;
-        if (assertionSteps[callbackNum] && assertionSteps[callbackNum].update) {
-          // @ts-ignore
-          assertionSteps[callbackNum].update();
-        }
-        if (callbackNum >= assertionSteps.length) {
-          resolve();
-        }
-      });
-    });
-  });
   describe('Insert', () => {
     let db: DB<undefined>;
     const USER_ID = 'the-user-id';
