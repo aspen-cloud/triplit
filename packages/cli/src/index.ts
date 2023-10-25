@@ -54,7 +54,7 @@ async function execute(args: string[], flags: {}) {
     return;
   }
   const cmdDef = await getCommandDefinition(command);
-  const cmdFlagsDefs = Object.entries(cmdDef.flags);
+  const cmdFlagsDefs = Object.entries(cmdDef.flags ?? {});
 
   const unaliasedFlags = Object.entries(flags).reduce(
     (acc, [flagName, flagValue]) => {
