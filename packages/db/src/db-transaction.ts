@@ -290,10 +290,11 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
   ) {
     console.log(collectionName, entityId);
     const collection =
-      collectionName !== '_metadata' &&
-      ((await this.getSchema())?.collections[
-        collectionName
-      ] as CollectionFromModels<M, CN>);
+      collectionName !== '_metadata'
+        ? ((await this.getSchema())?.collections[
+            collectionName
+          ] as CollectionFromModels<M, CN>)
+        : undefined;
 
     // TODO: Would be great to plug into the pipeline at any point
     // In this case I want untimestamped values, valid values

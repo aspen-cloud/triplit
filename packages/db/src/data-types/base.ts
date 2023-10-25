@@ -129,7 +129,7 @@ export function typeFromJSON(serializedType?: AttributeDefinition): DataType {
         Object.fromEntries(
           Object.entries(serializedType.properties).map(([key, val]) => [
             key,
-            typeFromJSON(val),
+            typeFromJSON(val as any),
           ])
         )
       );

@@ -319,7 +319,7 @@ function collectionSchemaToJSON(
 ): CollectionDefinition {
   const rulesObj = collection.rules ? { rules: collection.rules } : {};
   return {
-    schema: collection.schema.toJSON() as RecordAttributeDefinition,
+    schema: collection.schema.toJSON() as Model<any>,
     ...rulesObj,
   };
 }
