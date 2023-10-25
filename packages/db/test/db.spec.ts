@@ -1565,7 +1565,7 @@ describe('ORDER & LIMIT & Pagination', () => {
       CollectionQueryBuilder('TestScores')
         .order(['score', 'DESC'])
         .limit(5)
-        .after([lastDoc[1].score, lastDoc])
+        .after([lastDoc[1].score, lastDoc[0]])
         .build()
     );
 
@@ -1607,7 +1607,7 @@ describe('ORDER & LIMIT & Pagination', () => {
       CollectionQueryBuilder('TestScores')
         .order(['score', 'ASC'])
         .limit(5)
-        .after([lastDoc[1].score, lastDoc])
+        .after([lastDoc[1].score, lastDoc[0]])
         .build()
     );
 
