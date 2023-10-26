@@ -39,13 +39,18 @@ it('codegen can generate a schema from migrations', async () => {
         defaultNow: S.String({ default: S.Default.now() }),
         defaultUuid: S.String({ default: S.Default.uuid() }),
         defaultUuidArgs: S.String({ default: S.Default.uuid('4') }),
+
+        subQuery: S.Query({
+          collectionName: 'collection',
+          where: [['attr', '=', 'value']],
+        }),
       }),
     },
   };
   const jsonSchema = schemaToJSON({ collections: schema, version: 0 })!;
 
   // Create a migration
-  const migration = createMigration({}, jsonSchema.collections, 1, 0);
+  const migration = createMigration({}, jsonSchema.collections, 1, 0, '');
   if (!migration) throw new Error('migration is undefined');
 
   // Generate a schema from the migration
@@ -59,7 +64,13 @@ it('codegen can generate a schema from migrations', async () => {
 
   // Check no migration will be created
   expect(
-    createMigration(jsonSchema.collections, codegenSchemaJSON.collections, 1, 0)
+    createMigration(
+      jsonSchema.collections,
+      codegenSchemaJSON.collections,
+      1,
+      0,
+      ''
+    )
   ).toBe(undefined);
 
   // check schemas match

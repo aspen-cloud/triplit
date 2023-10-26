@@ -6,6 +6,7 @@ import {
   AttributeDefinition,
   CollectionsDefinition,
   CollectionDefinition,
+  QueryAttributeDefinition,
   schemaToJSON,
   UserTypeOptions,
   Migration,
@@ -142,6 +143,7 @@ function schemaItemToString(schemaItem: AttributeDefinition): string {
     return `S.Record({${Object.entries(schemaItem.properties)
       .map(([key, value]) => `${key}: ${schemaItemToString(value as any)}`)
       .join(',\n')}})`;
+  if (type === 'query') return `S.Query(${subQueryToString(schemaItem.query)})`;
   throw new Error(`Invalid type: ${type}`);
 }
 
@@ -180,4 +182,11 @@ function valueToJS(value: any) {
   if (typeof value === 'boolean') return `${value}`;
   if (value === null) return `null`;
   throw new Error(`Invalid value: ${value}`);
+}
+
+function subQueryToString(subquery: QueryAttributeDefinition['query']) {
+  const { collectionName, where } = subquery;
+  return `{collectionName: '${collectionName}', where: ${JSON.stringify(
+    where
+  )}}`;
 }
