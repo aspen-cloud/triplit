@@ -40,8 +40,8 @@ In `triplit/packages` you can find our open source projects:
 - [Client](https://github.com/aspen-cloud/triplit/tree/main/packages/client) - Browser library to interact with local and remote TriplitDBs.
 - [React](https://github.com/aspen-cloud/triplit/tree/main/packages/react) - React bindings for @triplit/client.
 - [Console](https://github.com/aspen-cloud/triplit/tree/main/packages/console) - React app for viewing and mutating data in Triplit projects and managing their schemas.
-- [Server](https://github.com/aspen-cloud/triplit/tree/main/packages/server) - HTTP server for syncing data between Triplit clients.
-- [Server-core](https://github.com/aspen-cloud/triplit/tree/main/packages/server-core) - Utility library for servers running triplit that contains the syncing business logic.
+- [Server](https://github.com/aspen-cloud/triplit/tree/main/packages/server) - Node server for syncing data between Triplit clients.
+- [Server-core](https://github.com/aspen-cloud/triplit/tree/main/packages/server-core) - Utility library for servers running Triplit.
 - [Docs](https://github.com/aspen-cloud/triplit/tree/main/packages/docs) - Triplit docs, built with Nextera.
 - [Types](https://github.com/aspen-cloud/triplit/tree/main/packages/types) - Shared types for various Triplit projects.
 
