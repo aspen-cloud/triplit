@@ -11,16 +11,19 @@ describe('schemaful', () => {
       collections: {
         a: {
           schema: S.Schema({
+            id: S.Id(),
             attr: S.String(),
           }),
         },
         b: {
           schema: S.Schema({
+            id: S.Id(),
             attr: S.String(),
           }),
         },
         c: {
           schema: S.Schema({
+            id: S.Id(),
             attr: S.String(),
           }),
         },
@@ -34,6 +37,7 @@ describe('schemaful', () => {
       collections: {
         test: {
           schema: S.Schema({
+            id: S.Id(),
             // value types
             string: S.String(),
             boolean: S.Boolean(),
@@ -118,16 +122,19 @@ describe('schemaful', () => {
       collections: {
         a: {
           schema: S.Schema({
+            id: S.Id(),
             attr: S.String(),
           }),
         },
         b: {
           schema: S.Schema({
+            id: S.Id(),
             attr: S.String(),
           }),
         },
         c: {
           schema: S.Schema({
+            id: S.Id(),
             attr: S.String(),
           }),
         },
@@ -141,6 +148,7 @@ describe('schemaful', () => {
       collections: {
         test: {
           schema: S.Schema({
+            id: S.Id(),
             // value types
             string: S.String(),
             boolean: S.Boolean(),
@@ -216,6 +224,7 @@ describe('schemaful', () => {
       collections: {
         test: {
           schema: S.Schema({
+            id: S.Id(),
             // value types
             string: S.String(),
             boolean: S.Boolean(),
@@ -250,6 +259,7 @@ describe('schemaful', () => {
       Map<
         string,
         {
+          id: string;
           string: string;
           boolean: boolean;
           number: number;
@@ -301,6 +311,7 @@ describe('query builder', () => {
       collections: {
         test: {
           schema: S.Schema({
+            id: S.Id(),
             attr1: S.String(),
             attr2: S.Boolean(),
             attr3: S.Number(),
@@ -317,7 +328,7 @@ describe('query builder', () => {
       const query = db.query('test');
       expectTypeOf(query.select)
         .parameter(0)
-        .toEqualTypeOf<('attr1' | 'attr2' | 'attr3')[]>();
+        .toEqualTypeOf<('attr1' | 'attr2' | 'attr3' | 'id')[]>();
     }
     // schemaless
     {
@@ -336,6 +347,7 @@ describe('fetching', () => {
     collections: {
       test: {
         schema: S.Schema({
+          id: S.Id(),
           attr1: S.String(),
           attr2: S.Boolean(),
           attr3: S.Number(),
@@ -374,6 +386,7 @@ describe('fetching', () => {
     {
       const db = new DB({ schema });
       expectTypeOf(db.fetchById('test', 'id')).resolves.toEqualTypeOf<{
+        id: string;
         attr1: string;
         attr2: boolean;
         attr3: number;
@@ -395,6 +408,7 @@ describe('fetching', () => {
         | [
             string,
             {
+              id: string;
               attr1: string;
               attr2: boolean;
               attr3: number;

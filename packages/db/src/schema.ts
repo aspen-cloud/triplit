@@ -15,7 +15,6 @@ import {
 import {
   CollectionDefinition,
   CollectionsDefinition,
-  RecordAttributeDefinition,
   SchemaDefinition,
 } from './data-types/serialization.js';
 import { StringType } from './data-types/string.js';
