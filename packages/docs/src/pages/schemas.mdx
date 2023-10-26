@@ -25,7 +25,7 @@ const schema = {
   collections: {
     todos: {
       schema: S.Schema({
-        id: S.String(),
+        id: S.Id(),
         text: S.String(),
         complete: S.Boolean(),
         created_at: S.Date(),
@@ -34,6 +34,7 @@ const schema = {
     },
     users: {
       schema: S.Schema({
+        id: S.Id(),
         name: S.string(),
         address: S.Record({
           street: S.string(),
@@ -54,6 +55,29 @@ const client = new TriplitClient({
 ```
 
 Passing a schema to the client constructor will override any schema currently stored in your cache. You may also manage your schema with migrations, as explained in the [Migrations](#migrations) section. Using migrations is recommended for production applications that persist state locally or use syncing.
+
+### id
+
+Every collection in Triplit must define an `id` field in its schema. The `S.Id()` data type will generate a random `id` by default upon insertion. If you want to specify the `id` for each entity, you may pass it **as a string** in to the `insert` method as shown below.
+
+```typescript
+// assigning the id automatically
+await client.insert('todos', {
+  text: 'get tortillas',
+  complete: false,
+  created_at: new Date(),
+  tags: new Set([groceries]),
+})
+
+// assigning the id manually
+await client.insert('todos', {
+  id: 'tortillas'
+  text: 'get tortillas',
+  complete: false,
+  created_at: new Date(),
+  tags: new Set([groceries]),
+})
+```
 
 ## Data types
 
@@ -135,6 +159,7 @@ const schema = {
   collections: {
     test: {
       schema: S.Schema({
+        id: S.Id(),
         nullableString: S.String({ nullable: true }),
       }),
     },
@@ -164,8 +189,9 @@ import { Schema as S } from '@triplit/db';
 import { TriplitClient } from '@triplit/client';
 const schema = {
   collections: {
-    test: {
+    messages: {
       schema: S.Schema({
+        id: S.Id(),
         defaultValue: S.String({ default: 'hello' }),
         defaultFunction: S.Date({ default: S.Default.now() }),
       }),
@@ -173,7 +199,7 @@ const schema = {
   },
 };
 await client.insert('test', {});
-// { defaultValue: 'hello', defaultFunction: '2021-03-01T00:00:00.000Z' }
+// { id: <uuid>, defaultValue: 'hello', defaultFunction: '2021-03-01T00:00:00.000Z' }
 ```
 
 ### Set
@@ -223,7 +249,7 @@ const schema = {
   collections: {
     departments: {
       schema: S.Schema({
-        id: S.String(),
+        id: S.Id(),
         name: S.String(),
         classes: S.Query({
           collectionName: 'classes',
@@ -233,6 +259,7 @@ const schema = {
     },
     classes: {
       schema: S.Schema({
+        id: S.Id(),
         name: S.String(),
         level: S.Number(),
         building: S.String(),
