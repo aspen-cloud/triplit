@@ -128,6 +128,15 @@ export class InvalidAssignmentError extends TriplitError {
   }
 }
 
+export class InvalidOperationError extends TriplitError {
+  constructor(...args: any[]) {
+    super(...args);
+    this.name = 'InvalidOperationError';
+    this.message = `You are attempting to perform an operation that is not valid.`;
+    this.status = STATUS_CODES['Bad Request'];
+  }
+}
+
 // Schema Errors
 export class ValueSchemaMismatchError extends TriplitError {
   constructor(model: string, attribute: string[], value: any, ...args: any[]) {

@@ -9,17 +9,15 @@ import {
   CollectionQueryBuilder,
   queryResultToJson,
   WriteRuleError,
-  ValueSchemaMismatchError,
   InvalidFilterError,
   DBTransaction,
-  InvalidSchemaPathError,
   schemaToJSON,
   SerializingError,
   InvalidInternalEntityIdError,
   InvalidEntityIdError,
   EntityNotFoundError,
-  InvalidAssignmentError,
   InvalidMigrationOperationError,
+  InvalidOperationError,
 } from '../src';
 import { Models } from '../src/schema.js';
 import { classes, students, departments } from './sample_data/school.js';
@@ -27,8 +25,6 @@ import { MemoryBTreeStorage as MemoryStorage } from '../src/storage/memory-btree
 import { testSubscription } from './utils/test-subscription.js';
 import {
   appendCollectionToId,
-  everyFilterStatement,
-  mapFilterStatements,
   stripCollectionFromId,
 } from '../src/db-helpers.js';
 
@@ -484,82 +480,273 @@ describe('Register operations', () => {
 describe('Set operations', () => {
   const schema = {
     collections: {
-      companies: {
+      Users: {
         schema: S.Schema({
-          id: S.String({ nullable: false }),
+          id: S.String(),
           name: S.String(),
-          employees: S.Set(S.Number()),
+          friends: S.Set(S.String()),
         }),
       },
     },
   };
-  let db: DB<typeof schema.collections>;
-  beforeEach(async () => {
-    db = new DB({
-      source: new InMemoryTupleStorage(),
-      schema,
+  const defaultUser = {
+    id: 'user-1',
+    name: 'Alice',
+    friends: new Set(['Bob', 'Charlie']),
+  };
+
+  it('can insert a set', async () => {
+    const db = new DB({ schema });
+    await db.insert('Users', defaultUser);
+    const result = await db.fetchById('Users', 'user-1');
+    expect(result!.friends).toBeInstanceOf(Set);
+    expect([...result!.friends.values()]).toEqual(['Bob', 'Charlie']);
+  });
+
+  it('can insert an empty set', async () => {
+    const db = new DB({ schema });
+    await db.insert('Users', {
+      id: 'user-1',
+      name: 'Alice',
+      friends: new Set(),
     });
-    await db.insert('companies', {
-      id: '1',
-      name: 'Planet Express',
-      employees: new Set([1, 2, 10]),
+    const result = await db.fetchById('Users', 'user-1');
+    expect(result!.friends).toBeInstanceOf(Set);
+    expect([...result!.friends.values()]).toEqual([]);
+  });
+
+  it('sets default to empty set', async () => {
+    const db = new DB({ schema });
+    await db.insert('Users', {
+      id: 'user-1',
+      name: 'Alice',
     });
-    // await db.insert(
-    //   'companies',
-    //   { id: "2", name: 'MomCorp', employees: new Set([4, 5, 6]) },
-    //   2
-    // );
+    const result = await db.fetchById('Users', 'user-1');
+    expect(result!.friends).toBeInstanceOf(Set);
+    expect([...result!.friends.values()]).toEqual([]);
+  });
+
+  it('cannot insert a non-set', async () => {
+    const db = new DB({ schema });
+    await expect(
+      db.insert('Users', {
+        id: 'user-1',
+        name: 'Alice',
+        friends: 123,
+      })
+    ).rejects.toThrowError(SerializingError);
+  });
+
+  it('cannot insert a set with non-matching values', async () => {
+    const db = new DB({ schema });
+    await expect(
+      db.insert('Users', {
+        id: 'user-1',
+        name: 'Alice',
+        friends: new Set([123]),
+      })
+    ).rejects.toThrowError(SerializingError);
+  });
+
+  it('cannot insert a set with null', async () => {
+    const db = new DB({ schema });
+    await expect(
+      db.insert('Users', {
+        id: 'user-1',
+        name: 'Alice',
+        friends: new Set(['Bob', null]),
+      })
+    ).rejects.toThrowError(SerializingError);
   });
 
   it('can add to set', async () => {
-    const setQuery = db
-      .query('companies')
-      .select(['id', 'employees'])
-      .where('employees', '=', 7)
-      .build();
-
-    const preUpdateLookup = await db.fetch(setQuery);
-    expect(preUpdateLookup).toHaveLength(0);
-
-    await db.update('companies', 1, async (entity) => {
-      entity.employees.add(7);
+    const db = new DB({ schema });
+    await db.insert('Users', defaultUser);
+    await db.update('Users', 'user-1', async (entity) => {
+      entity.friends.add('Diane');
+      expect([...entity.friends.values()]).toEqual(['Bob', 'Charlie', 'Diane']);
     });
-    const postUpdateLookup = await db.fetch(setQuery);
-    expect(postUpdateLookup).toHaveLength(1);
-    expect(postUpdateLookup.get('1')).toBeTruthy();
-    expect(postUpdateLookup.get('1').employees).toBeInstanceOf(Set);
+    const result = await db.fetchById('Users', 'user-1');
+    expect(result!.friends).toBeInstanceOf(Set);
+    expect([...result!.friends.values()]).toEqual(['Bob', 'Charlie', 'Diane']);
   });
 
   it('can remove from set', async () => {
-    const setQuery = db
-      .query('companies')
-      .select(['id'])
-      .where([['employees', '=', 2]])
-      .build();
-    const preUpdateLookup = await db.fetch(setQuery);
-    expect(preUpdateLookup).toHaveLength(1);
-    expect(preUpdateLookup.get('1')).toBeTruthy();
-
-    await db.update('companies', 1, async (entity) => {
-      entity.employees.delete(2);
-      expect(entity.employees.has(2)).toBeFalsy();
+    const db = new DB({ schema });
+    await db.insert('Users', defaultUser);
+    await db.update('Users', 'user-1', async (entity) => {
+      entity.friends.delete('Bob');
+      expect([...entity.friends.values()]).toEqual(['Charlie']);
     });
+    {
+      const result = await db.fetchById('Users', 'user-1');
+      expect(result!.friends).toBeInstanceOf(Set);
+      expect([...result!.friends.values()]).toEqual(['Charlie']);
+    }
+    await db.update('Users', 'user-1', async (entity) => {
+      entity.friends.delete('Charlie');
+      expect([...entity.friends.values()]).toEqual([]);
+    });
+    {
+      const result = await db.fetchById('Users', 'user-1');
+      expect(result!.friends).toBeInstanceOf(Set);
+      expect([...result!.friends.values()]).toEqual([]);
+    }
+  });
 
-    const postUpdateLookup = await db.fetch(setQuery);
+  it('can clear a set', async () => {
+    const db = new DB({ schema });
+    await db.insert('Users', defaultUser);
+    await db.update('Users', 'user-1', async (entity) => {
+      entity.friends.clear();
+      expect([...entity.friends.values()]).toEqual([]);
+    });
+    const result = await db.fetchById('Users', 'user-1');
+    expect(result!.friends).toBeInstanceOf(Set);
+    expect([...result!.friends.values()]).toEqual([]);
+  });
 
-    expect(postUpdateLookup).toHaveLength(0);
+  it('set.size correctly tracks updates', async () => {
+    const db = new DB({ schema });
+    await db.insert('Users', defaultUser);
+    await db.update('Users', 'user-1', async (entity) => {
+      // initial check
+      expect(entity.friends.size).toBe(2);
+
+      // can add and size is updated
+      entity.friends.add('Diane');
+      expect(entity.friends.size).toBe(3);
+
+      // can delete and size is updated
+      entity.friends.delete('Bob');
+      expect(entity.friends.size).toBe(2);
+
+      // can clear and size is updated
+      entity.friends.clear();
+      expect(entity.friends.size).toBe(0);
+    });
+  });
+
+  it('set.has correctly tracks updates', async () => {
+    const db = new DB({ schema });
+    await db.insert('Users', defaultUser);
+    await db.update('Users', 'user-1', async (entity) => {
+      // initial check
+      expect(entity.friends.has('Bob')).toBe(true);
+      expect(entity.friends.has('Diane')).toBe(false);
+
+      // can add and has result is updated
+      entity.friends.add('Diane');
+      expect(entity.friends.has('Diane')).toBe(true);
+
+      // can delete and has result is updated
+      entity.friends.delete('Bob');
+      expect(entity.friends.has('Bob')).toBe(false);
+
+      entity.friends.clear();
+      expect(entity.friends.has('Bob')).toBe(false);
+      expect(entity.friends.has('Charlie')).toBe(false);
+      expect(entity.friends.has('Diane')).toBe(false);
+    });
+  });
+
+  it('set iteration works properly', async () => {
+    const db = new DB({ schema });
+    await db.insert('Users', defaultUser);
+    await db.update('Users', 'user-1', async (entity) => {
+      // Array.from
+      expect(Array.from(entity.friends)).toEqual(['Bob', 'Charlie']);
+
+      // keys
+      const keys: string[] = [];
+      for (const key of entity.friends.keys()) {
+        keys.push(key);
+      }
+      expect(keys).toEqual(['Bob', 'Charlie']);
+
+      // values
+      const values: string[] = [];
+      for (const value of entity.friends.values()) {
+        values.push(value);
+      }
+      expect(values).toEqual(['Bob', 'Charlie']);
+
+      // entries
+      const entries: [string, string][] = [];
+      for (const entry of entity.friends.entries()) {
+        entries.push(entry);
+      }
+      expect(entries).toEqual([
+        ['Bob', 'Bob'],
+        ['Charlie', 'Charlie'],
+      ]);
+    });
+  });
+
+  it('can assign to a set', async () => {
+    const db = new DB({ schema });
+    await db.insert('Users', defaultUser);
+    await db.update('Users', 'user-1', async (entity) => {
+      entity.friends = new Set(['test']);
+      expect([...entity.friends.values()]).toEqual(['test']);
+    });
+    const result = await db.fetchById('Users', 'user-1');
+    expect([...result!.friends.values()]).toEqual(['test']);
+  });
+
+  it('can assign an empty set', async () => {
+    const db = new DB({ schema });
+    await db.insert('Users', defaultUser);
+    await db.update('Users', 'user-1', async (entity) => {
+      entity.friends = new Set();
+      expect([...entity.friends.values()]).toEqual([]);
+    });
+    const result = await db.fetchById('Users', 'user-1');
+    expect([...result!.friends.values()]).toEqual([]);
+  });
+
+  it('cannot assign a non-set', async () => {
+    const db = new DB({ schema });
+    await db.insert('Users', defaultUser);
+    await expect(
+      db.update('Users', 'user-1', async (entity) => {
+        entity.friends = 123;
+      })
+    ).rejects.toThrowError(SerializingError);
+  });
+
+  it('cannot add the wrong type to a set', async () => {
+    const db = new DB({ schema });
+    await db.insert('Users', defaultUser);
+    await expect(
+      db.update('Users', 'user-1', async (entity) => {
+        entity.friends.add(123);
+      })
+    ).rejects.toThrowError(SerializingError);
+  });
+
+  it('cannot add null to a set', async () => {
+    const db = new DB({
+      schema,
+    });
+    await db.insert('Users', defaultUser);
+    await expect(
+      db.update('Users', 'user-1', async (entity) => {
+        entity.friends.add(null);
+      })
+    ).rejects.toThrowError(SerializingError);
   });
 
   it('can create sets with different types', async () => {
     const schema = {
       collections: {
-        companies: {
+        test: {
           schema: S.Schema({
-            id: S.String(),
-            name: S.String(),
-            employees: S.Set(S.Number()),
-            managers: S.Set(S.String()),
-            holidays: S.Set(S.Date()),
+            id: S.Id(),
+            stringSet: S.Set(S.String()),
+            numberSet: S.Set(S.Number()),
+            booleanSet: S.Set(S.Boolean()),
+            dateSet: S.Set(S.Date()),
           }),
         },
       },
@@ -567,33 +754,376 @@ describe('Set operations', () => {
     const db = new DB({
       schema,
     });
-    await db.insert('companies', {
-      id: 'planex',
-      name: 'Planet Express',
-      employees: new Set([1, 2, 10]),
-      managers: new Set(['Philip J. Fry', 'Turanga Leela']),
-      holidays: new Set([new Date(2020, 0, 1), new Date(2020, 6, 4)]),
+    await db.insert('test', {
+      id: 'test1',
+      stringSet: new Set(['a']),
+      numberSet: new Set([1]),
+      booleanSet: new Set([true]),
+      dateSet: new Set([new Date(2020, 1, 1)]),
     });
 
-    const company = await db.fetchById('companies', 'planex');
+    await db.update('test', 'test1', async (entity) => {
+      entity.stringSet.add('b');
+      entity.numberSet.add(2);
+      entity.booleanSet.add(false);
+      entity.dateSet.add(new Date(2020, 1, 2));
+    });
 
-    expect(company).not.toBeNull();
-
-    if (!company) throw new Error('this shouldnt ever happen');
-
-    expect(company.employees).toBeInstanceOf(Set);
-    expect(company.managers).toBeInstanceOf(Set);
-    expect(company.holidays).toBeInstanceOf(Set);
+    const result = await db.fetchById('test', 'test1');
+    expect(result.stringSet).toBeInstanceOf(Set);
+    expect(result.numberSet).toBeInstanceOf(Set);
+    expect(result.booleanSet).toBeInstanceOf(Set);
+    expect(result.dateSet).toBeInstanceOf(Set);
 
     expect(
-      [...company.employees.values()].every((val) => typeof val === 'number')
+      [...result.stringSet.values()].every((val) => typeof val === 'string')
     ).toBeTruthy();
     expect(
-      [...company.managers.values()].every((val) => typeof val === 'string')
+      [...result.numberSet.values()].every((val) => typeof val === 'number')
     ).toBeTruthy();
     expect(
-      [...company.holidays.values()].every((val) => val instanceof Date)
+      [...result.dateSet.values()].every((val) => val instanceof Date)
     ).toBeTruthy();
+    expect(
+      [...result.booleanSet.values()].every((val) => typeof val === 'boolean')
+    ).toBeTruthy();
+  });
+});
+
+describe('record operations', () => {
+  it('schemaless: can insert an empty record', async () => {
+    const db = new DB();
+    await db.insert('test', {
+      id: 'item1',
+      shallow: {},
+      deep: {
+        deeper: {
+          deepest: {},
+        },
+      },
+      value: 'test',
+    });
+    const result = await db.fetchById('test', 'item1');
+    expect(result.shallow).toEqual({});
+    expect(result.deep.deeper.deepest).toEqual({});
+  });
+
+  const defaultRecord = {
+    id: 'alice',
+    data: {
+      firstName: 'Alice',
+      lastName: 'Smith',
+      address: {
+        street: '123 Main St',
+        city: 'San Francisco',
+      },
+    },
+  };
+
+  it('schemaless: can update a record to empty', async () => {
+    const db = new DB();
+    await db.insert('test', defaultRecord);
+    await db.update('test', 'alice', async (entity) => {
+      entity.data.address = {};
+      expect(entity.data).toEqual({
+        firstName: 'Alice',
+        lastName: 'Smith',
+        address: {},
+      });
+    });
+    const result = await db.fetchById('test', 'alice');
+    expect(result.data).toEqual({
+      firstName: 'Alice',
+      lastName: 'Smith',
+      address: {},
+    });
+  });
+
+  it('schemaless: can assign a record to a new attribute', async () => {
+    const db = new DB();
+    await db.insert('test', defaultRecord);
+    await db.update('test', 'alice', async (entity) => {
+      entity.data.test = {
+        att1: 'val1',
+      };
+      expect(entity.data.test).toEqual({
+        att1: 'val1',
+      });
+    });
+    const result = await db.fetchById('test', 'alice');
+    expect(result.data).toEqual({
+      ...defaultRecord.data,
+      test: {
+        att1: 'val1',
+      },
+    });
+  });
+
+  it('schemaless: can assign values', async () => {
+    const db = new DB();
+    await db.insert('test', defaultRecord);
+    await db.update('test', 'alice', async (entity) => {
+      entity.data.address = 'val1';
+      expect(entity.data.address).toEqual('val1');
+    });
+    const result = await db.fetchById('test', 'alice');
+    expect(result.data).toEqual({
+      ...defaultRecord.data,
+      address: 'val1',
+    });
+  });
+  it('schemaless: can assign null', async () => {
+    const db = new DB();
+    await db.insert('test', defaultRecord);
+    await db.update('test', 'alice', async (entity) => {
+      entity.data.address = null;
+      expect(entity.data.address).toEqual(null);
+    });
+    const result = await db.fetchById('test', 'alice');
+    expect(result.data).toEqual({
+      ...defaultRecord.data,
+      address: null,
+    });
+  });
+  it('schemaless: can assign another record', async () => {
+    const db = new DB();
+    await db.insert('test', defaultRecord);
+    await db.update('test', 'alice', async (entity) => {
+      entity.data.address = {
+        att1: 'val1',
+        attr2: {
+          att3: 'val3',
+        },
+      };
+      expect(entity.data.address).toEqual({
+        att1: 'val1',
+        attr2: {
+          att3: 'val3',
+        },
+      });
+    });
+    const result = await db.fetchById('test', 'alice');
+    expect(result.data).toEqual({
+      ...defaultRecord.data,
+      address: {
+        att1: 'val1',
+        attr2: {
+          att3: 'val3',
+        },
+      },
+    });
+  });
+  it('schemaless: can delete properties', async () => {
+    const db = new DB();
+    await db.insert('test', defaultRecord);
+    await db.update('test', 'alice', async (entity) => {
+      delete entity.data.firstName;
+      delete entity.data.address.city;
+      expect(entity.data).toEqual({
+        lastName: 'Smith',
+        address: {
+          street: '123 Main St',
+        },
+      });
+    });
+    {
+      const result = await db.fetchById('test', 'alice');
+      expect(result.data).toEqual({
+        lastName: 'Smith',
+        address: {
+          street: '123 Main St',
+        },
+      });
+    }
+    await db.update('test', 'alice', async (entity) => {
+      delete entity.data.lastName;
+      delete entity.data.address;
+      expect(entity.data).toEqual({});
+    });
+    {
+      const result = await db.fetchById('test', 'alice');
+      expect(result.data).toEqual({});
+    }
+  });
+
+  it('schemaless: can delete deep properties', async () => {
+    const db = new DB();
+    await db.insert('test', {
+      id: 'alice',
+      data: {
+        firstName: 'Alice',
+        lastName: 'Smith',
+        deep: {
+          deeper: {
+            deepest: {
+              address: {
+                street: '123 Main St',
+                city: 'San Francisco',
+              },
+            },
+          },
+        },
+      },
+    });
+    await db.update('test', 'alice', async (entity) => {
+      delete entity.data.deep;
+      expect(entity.data).toEqual({
+        firstName: 'Alice',
+        lastName: 'Smith',
+      });
+    });
+    const result = await db.fetchById('test', 'alice');
+    expect(result.data).toEqual({
+      firstName: 'Alice',
+      lastName: 'Smith',
+    });
+  });
+
+  const schema = {
+    collections: {
+      test: {
+        schema: S.Schema({
+          id: S.Id(),
+          data: S.Record({
+            firstName: S.String(),
+            lastName: S.String(),
+            address: S.Record({
+              street: S.String(),
+              city: S.String(),
+            }),
+          }),
+        }),
+      },
+    },
+  };
+
+  it('schemaful: can insert an empty record', async () => {
+    const db = new DB({
+      schema: {
+        collections: {
+          test: {
+            schema: S.Schema({
+              id: S.Id(),
+              shallow: S.Record({}),
+              deep: S.Record({
+                deeper: S.Record({
+                  deepest: S.Record({}),
+                }),
+              }),
+              value: S.String(),
+            }),
+          },
+        },
+      },
+    });
+    await db.insert('test', {
+      id: 'item1',
+      shallow: {},
+      deep: {
+        deeper: {
+          deepest: {},
+        },
+      },
+      value: 'test',
+    });
+    const result = await db.fetchById('test', 'item1');
+    expect(result.shallow).toEqual({});
+    expect(result.deep.deeper.deepest).toEqual({});
+  });
+
+  it('schemaful: can update a record', async () => {
+    const db = new DB({
+      schema,
+    });
+    await db.insert('test', defaultRecord);
+    await db.update('test', 'alice', async (entity) => {
+      entity.data = {
+        ...entity.data,
+        address: {
+          city: 'New York',
+          street: '123 Main St',
+        },
+      };
+      expect(entity.data).toEqual({
+        firstName: 'Alice',
+        lastName: 'Smith',
+        address: {
+          street: '123 Main St',
+          city: 'New York',
+        },
+      });
+    });
+    const result = await db.fetchById('test', 'alice');
+    expect(result.data).toEqual({
+      firstName: 'Alice',
+      lastName: 'Smith',
+      address: {
+        street: '123 Main St',
+        city: 'New York',
+      },
+    });
+  });
+
+  it('schemaful: cannot update a record to include a new property', async () => {
+    const db = new DB({
+      schema,
+    });
+    await db.insert('test', defaultRecord);
+    await expect(
+      db.update('test', 'alice', async (entity) => {
+        entity.data = {
+          ...entity.data,
+          address: {
+            city: 'New York',
+            street: '123 Main St',
+            foo: 'bar',
+          },
+        };
+      })
+    ).rejects.toThrowError(SerializingError);
+  });
+
+  it('schemaful: cannot update a record with an invalid property', async () => {
+    const db = new DB({
+      schema,
+    });
+    await db.insert('test', defaultRecord);
+    await expect(
+      db.update('test', 'alice', async (entity) => {
+        entity.data = {
+          ...entity.data,
+          address: {
+            city: 'New York',
+            street: 123,
+          },
+        };
+      })
+    ).rejects.toThrowError(SerializingError);
+  });
+
+  it('schemaful: deleting an attiribute throws an error', async () => {
+    const db = new DB({
+      schema,
+    });
+    await db.insert('test', defaultRecord);
+    await expect(
+      db.update('test', 'alice', async (entity) => {
+        delete entity.data.firstName;
+      })
+    ).rejects.toThrowError(InvalidOperationError);
+  });
+
+  it('schemaful: cannot assign a non record', async () => {
+    const db = new DB({
+      schema,
+    });
+    await db.insert('test', defaultRecord);
+    // TODO: this waits for triple validation to freak out, not sure if we should do it sooner
+    await expect(
+      db.update('test', 'alice', async (entity) => {
+        entity.data = 123;
+      })
+    ).rejects.toThrowError(SerializingError);
   });
 });
 
@@ -3168,6 +3698,7 @@ describe('Nested Properties', () => {
       },
     };
 
+    // May be duplicated in 'record operations'
     it('can insert an entity with nested properties', async () => {
       for (const [id, data] of Object.entries(defaultData)) {
         await db.insert('Businesses', { ...data, id });
@@ -3181,6 +3712,7 @@ describe('Nested Properties', () => {
       expect(result.address.state).toBe('CA');
     });
 
+    // May be duplicated in 'record operations'
     it('rejects inserts of malformed objects', async () => {
       await expect(
         db.insert('Businesses', {
@@ -3191,7 +3723,7 @@ describe('Nested Properties', () => {
             state: 'CA',
           },
         })
-      ).rejects.toThrowError(InvalidSchemaPathError);
+      ).rejects.toThrowError(SerializingError);
 
       await expect(
         db.insert('Businesses', {
@@ -3205,7 +3737,7 @@ describe('Nested Properties', () => {
             state: 'CA',
           },
         })
-      ).rejects.toThrowError(ValueSchemaMismatchError);
+      ).rejects.toThrowError(SerializingError);
     });
 
     it('can query based on nested property', async () => {
@@ -4083,107 +4615,5 @@ describe.todo('Graph-like queries', () => {
 
     const result = await db.fetch(query);
     expect(result).toHaveLength(2);
-  });
-});
-
-describe('set proxy', () => {
-  const schema = {
-    collections: {
-      Users: {
-        schema: S.Schema({
-          id: S.String(),
-          name: S.String(),
-          friends: S.Set(S.String()),
-        }),
-      },
-    },
-  };
-  const defaultUser = {
-    id: 'user-1',
-    name: 'Alice',
-    friends: new Set(['Bob', 'Charlie']),
-  };
-  it('set.size correctly tracks updates', async () => {
-    const db = new DB({ schema });
-    await db.insert('Users', defaultUser);
-    await db.update('Users', 'user-1', async (entity) => {
-      // initial check
-      expect(entity.friends.size).toBe(2);
-
-      // can add and size is updated
-      entity.friends.add('Diane');
-      expect(entity.friends.size).toBe(3);
-
-      // can delete and size is updated
-      entity.friends.delete('Bob');
-      expect(entity.friends.size).toBe(2);
-
-      // can clear and size is updated
-      entity.friends.clear();
-      expect(entity.friends.size).toBe(0);
-    });
-  });
-  it('set.has correctly tracks updates', async () => {
-    const db = new DB({ schema });
-    await db.insert('Users', defaultUser);
-    await db.update('Users', 'user-1', async (entity) => {
-      // initial check
-      expect(entity.friends.has('Bob')).toBe(true);
-      expect(entity.friends.has('Diane')).toBe(false);
-
-      // can add and has result is updated
-      entity.friends.add('Diane');
-      expect(entity.friends.has('Diane')).toBe(true);
-
-      // can delete and has result is updated
-      entity.friends.delete('Bob');
-      expect(entity.friends.has('Bob')).toBe(false);
-
-      entity.friends.clear();
-      expect(entity.friends.has('Bob')).toBe(false);
-      expect(entity.friends.has('Charlie')).toBe(false);
-      expect(entity.friends.has('Diane')).toBe(false);
-    });
-  });
-  it('set iteration works properly', async () => {
-    const db = new DB({ schema });
-    await db.insert('Users', defaultUser);
-    await db.update('Users', 'user-1', async (entity) => {
-      // Array.from
-      expect(Array.from(entity.friends)).toEqual(['Bob', 'Charlie']);
-
-      // keys
-      const keys: string[] = [];
-      for (const key of entity.friends.keys()) {
-        keys.push(key);
-      }
-      expect(keys).toEqual(['Bob', 'Charlie']);
-
-      // values
-      const values: string[] = [];
-      for (const value of entity.friends.values()) {
-        values.push(value);
-      }
-      expect(values).toEqual(['Bob', 'Charlie']);
-
-      // entries
-      const entries: [string, string][] = [];
-      for (const entry of entity.friends.entries()) {
-        entries.push(entry);
-      }
-      expect(entries).toEqual([
-        ['Bob', 'Bob'],
-        ['Charlie', 'Charlie'],
-      ]);
-    });
-  });
-  it('cannot assign to a set', async () => {
-    const db = new DB({ schema });
-    await db.insert('Users', defaultUser);
-    await db.update('Users', 'user-1', async (entity) => {
-      expect(() => {
-        entity.friends = new Set(['bad']);
-      }).toThrowError(InvalidAssignmentError);
-    });
   });
 });

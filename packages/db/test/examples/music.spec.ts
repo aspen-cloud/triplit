@@ -120,7 +120,7 @@ describe('Music app queries', () => {
     const playlist1 = {
       id: 'playlist1',
       name: 'Best of Rock',
-      track_ids: ['track1', 'track3'],
+      track_ids: new Set(['track1', 'track3']),
     };
     await db.insert('playlists', playlist1, playlist1.id);
   });

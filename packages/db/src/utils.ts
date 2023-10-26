@@ -18,14 +18,24 @@ export function serializedItemToTuples(
   }
   // Although we dont strictly support arrays, we have them in schema rules
   // Currently need a way to serialize them...so we need to handle arrays
+  // Not using numbers because we track array indexes as strings, which breaks things, so storing the full array...idk how this works with syncing
   if (Array.isArray(object)) {
-    return object.flatMap((val, i) =>
-      serializedItemToTuples(val, [...prefix, i])
-    );
+    return [
+      [
+        prefix,
+        //@ts-ignore
+        object as Value,
+      ],
+    ];
   }
-  return Object.keys(object).flatMap((key) =>
-    serializedItemToTuples(object[key], [...prefix, key])
+  const result: [Attribute, Value][] = [];
+  if (prefix.length) result.push([prefix, '{}']);
+  result.push(
+    ...Object.keys(object).flatMap((key) =>
+      serializedItemToTuples(object[key], [...prefix, key])
+    )
   );
+  return result;
 }
 
 // TODO: add tests for Document.insert (notably for insert Set<number> or a non-string Set)

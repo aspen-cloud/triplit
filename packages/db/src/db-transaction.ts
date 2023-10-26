@@ -1,10 +1,12 @@
 import {
+  Attribute,
   EAV,
   EntityId,
   TripleRow,
   TripleStoreBeforeCommitHook,
   TripleStoreBeforeInsertHook,
   TripleStoreTransaction,
+  Value,
   isTupleEntityDeleteMarker,
 } from './triple-store.js';
 import {
@@ -28,7 +30,7 @@ import CollectionQueryBuilder, {
 } from './collection-query.js';
 import {
   EntityNotFoundError,
-  InvalidAssignmentError,
+  InvalidOperationError,
   UnrecognizedPropertyInUpdateError,
   WriteRuleError,
 } from './errors.js';
@@ -117,6 +119,7 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
     for (const trip of triples) {
       if (trip.attribute[0] === '_metadata') continue;
       if (trip.attribute[0] === '_collection') continue;
+      // TODO: figure out how to validate tombstones (value will be null so validation may fail, but want to think through if naively skipping is ok)
       validateTriple(this.schema.collections, trip.attribute, trip.value);
     }
   };
@@ -314,8 +317,8 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
     }
 
     // Collect changes
-    const changes = {};
     const collectionSchema = collection?.schema;
+    const changes = new ChangeTracker(entity);
     const updateProxy = this.createUpdateProxy<typeof collectionSchema>(
       changes,
       entity,
@@ -324,7 +327,7 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
 
     // Run updater (runs serialization of values)
     await updater(updateProxy);
-    const changeTuples = serializedItemToTuples(changes);
+    const changeTuples = changes.getTuples();
 
     // Create change tuples
     const updateValues: EAV[] = [];
@@ -356,16 +359,17 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
 
   // TODO add tests for proxy reads
   private createUpdateProxy<M extends Model<any> | undefined>(
-    changeTracker: {},
+    changeTracker: ChangeTracker,
     entityObj: UpdateTypeFromModel<M>,
     schema?: M,
     prefix: string = ''
   ): UpdateTypeFromModel<M> {
     return new Proxy(entityObj, {
       set: (_target, prop, value) => {
+        if (typeof prop === 'symbol') return true;
         const propPointer = [prefix, prop].join('/');
         if (!schema) {
-          ValuePointer.Set(changeTracker, propPointer, value);
+          changeTracker.set(propPointer, value);
           return true;
         }
         const propSchema = getSchemaFromPath(
@@ -375,46 +379,36 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
         if (!propSchema) {
           throw new UnrecognizedPropertyInUpdateError(propPointer, value);
         }
-        if (propSchema.type === 'set') {
-          // Naively setting the value on the change tracker will override previous changes
-          // Instead we want some kind of merge behavior
-          // Throwing error for now
-          throw new InvalidAssignmentError(
-            'You cannot assign a set property directly. Use add, remove, or clear instead.'
-          );
-        }
         const serializedValue = propSchema.convertInputToJson(
           // @ts-ignore Big DataType union results in never as arg type
           value
         );
-
-        ValuePointer.Set(changeTracker, propPointer, serializedValue);
+        changeTracker.set(propPointer, serializedValue);
         return true;
       },
       deleteProperty: (_target, prop) => {
+        if (typeof prop === 'symbol') return true;
+        if (!!schema)
+          throw new InvalidOperationError(
+            `Cannot delete property ${prop}. If the property is nullable you can set it to null instead.`
+          );
         const propPointer = [prefix, prop].join('/');
-        ValuePointer.Set(changeTracker, propPointer, undefined);
+        // ValuePointer.Set(changeTracker, propPointer, undefined);
+        changeTracker.set(propPointer, undefined);
         ValuePointer.Delete(entityObj, prop as string);
         return true;
       },
       get: (_target, prop) => {
+        if (typeof prop === 'symbol') return undefined;
         const parentPropPointer = [prefix, prop].join('/');
-        const hasChange = ValuePointer.Has(changeTracker, parentPropPointer);
-        const updatedValue = ValuePointer.Get(changeTracker, parentPropPointer);
-        const originalValue = ValuePointer.Get(entityObj, prop as string);
-        const currentValue = hasChange ? updatedValue : originalValue;
+        const currentValue = changeTracker.get(parentPropPointer);
 
         const propSchema =
           schema &&
           getSchemaFromPath(schema, parentPropPointer.slice(1).split('/'));
 
         if (propSchema && propSchema.type === 'set') {
-          return createSetProxy(
-            changeTracker,
-            parentPropPointer,
-            originalValue,
-            propSchema
-          );
+          return createSetProxy(changeTracker, parentPropPointer, propSchema);
         }
         if (typeof currentValue === 'object' && currentValue !== null) {
           return this.createUpdateProxy(
@@ -529,7 +523,6 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
       '_schema',
       async (schema) => {
         const collectionAttributes = schema.collections[collectionName];
-
         if (!collectionAttributes.schema) {
           // TODO add proper Typescript type here
           collectionAttributes.schema = { type: 'record', properties: {} };
@@ -630,5 +623,49 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
         delete collectionAttributes.rules[scope][id];
       }
     );
+  }
+}
+
+export class ChangeTracker {
+  // On assignment, set proper tuples
+  private tuplesTracker: Record<string, Value> = {};
+
+  // Track updated values with ValuePointer
+  changes: Record<string, any> = {};
+
+  constructor(changes: Record<string, any>) {
+    this.changes = changes;
+  }
+
+  set(prop: string, value: any) {
+    ValuePointer.Set(this.changes, prop, value);
+    const tuples = serializedItemToTuples(value, prop.slice(1).split('/'));
+    for (const tuple of tuples) {
+      const [attr, value] = tuple;
+      this.tuplesTracker[attr.join('/')] = value;
+    }
+  }
+
+  delete(prop: string) {
+    ValuePointer.Delete(this.changes, prop);
+  }
+
+  get(prop: string) {
+    return ValuePointer.Get(this.changes, prop);
+  }
+
+  has(prop: string) {
+    return ValuePointer.Has(this.changes, prop);
+  }
+
+  getChanges() {
+    return this.changes;
+  }
+
+  getTuples(): [Attribute, Value][] {
+    return Object.entries(this.tuplesTracker).map(([attr, value]) => [
+      attr.split('/'),
+      value,
+    ]);
   }
 }

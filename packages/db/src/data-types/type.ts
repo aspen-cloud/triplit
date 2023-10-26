@@ -57,5 +57,9 @@ export type TypeInterface<
 
   default(): JsonType | undefined;
 
+  // User input validation
   validateInput(val: any): boolean;
+
+  // Triple store validation
+  validateTripleValue(val: any): boolean;
 };

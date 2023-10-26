@@ -123,10 +123,13 @@ function updateEntityAtPath(
   if (currentValue && timestampCompare(timestamp, currentValue[1]) < 0) {
     return;
   }
-  // if (value === undefined) {
-  //   ValuePointer.Delete(entity, pointer);
-  //   return;
-  // }
+
+  // If we get an object marker, assign an empty object to the pointer if it doesn't exist
+  if (value === '{}') {
+    if (currentValue == undefined) ValuePointer.Set(entity, pointer, {});
+    return;
+  }
+
   ValuePointer.Set(entity, pointer, [value, timestamp]);
 }
 

@@ -31,11 +31,7 @@ export function StringType<TypeOptions extends UserTypeOptions = {}>(
       return { type: this.type, options: this.options };
     },
     convertInputToJson(val) {
-      const valid =
-        (options.nullable && val === null) || typeof val === 'string';
-      if (!valid) {
-        throw new SerializingError('string', val);
-      }
+      if (!this.validateInput(val)) throw new SerializingError('string', val);
       return val;
     },
     convertJsonValueToJS(val) {
@@ -44,8 +40,10 @@ export function StringType<TypeOptions extends UserTypeOptions = {}>(
     default() {
       return calcDefaultValue(options) as string | undefined;
     },
-    // THIS IS DB LEVEL VALIDATION!
-    validateInput(val) {
+    validateInput(val: any) {
+      return (options.nullable && val === null) || typeof val === 'string';
+    },
+    validateTripleValue(val) {
       const type = options.nullable ? Nullable(Type.String()) : Type.String();
       return Value.Check(type, val);
     },

@@ -1,3 +1,4 @@
+import { SerializingError } from '../errors.js';
 import { DataType } from './base.js';
 import { RecordAttributeDefinition } from './serialization.js';
 import { ExtractJSType, ExtractSerializedType, TypeInterface } from './type.js';
@@ -27,6 +28,7 @@ export function RecordType<Properties extends { [k: string]: DataType }>(
       return { type: this.type, properties: serializedProps };
     },
     convertInputToJson(val: any) {
+      if (!this.validateInput(val)) throw new SerializingError(`record`, val);
       return val;
     },
     // TODO: determine proper value and type here
@@ -39,6 +41,24 @@ export function RecordType<Properties extends { [k: string]: DataType }>(
       );
     },
     validateInput(_val: any) {
+      // cannot assign null
+      if (_val === null) return false;
+      // must be an object
+      if (typeof _val !== 'object') return false;
+      // must have all the properties
+      if (Object.keys(_val).length !== Object.keys(properties).length)
+        return false;
+      for (const k in properties) {
+        if (Object.prototype.hasOwnProperty.call(properties, k)) {
+          const v = properties[k];
+          if (!v.validateInput(_val[k])) return false;
+        } else {
+          return false;
+        }
+      }
+      return true;
+    },
+    validateTripleValue(_val: any) {
       return true; // TODO
     },
     convertJsonValueToJS(val) {

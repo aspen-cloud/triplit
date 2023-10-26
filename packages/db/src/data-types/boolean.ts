@@ -30,11 +30,7 @@ export function BooleanType<TypeOptions extends UserTypeOptions = {}>(
       return { type: this.type, options: this.options };
     },
     convertInputToJson(val: any) {
-      const valid =
-        (options.nullable && val === null) || typeof val === 'boolean';
-      if (!valid) {
-        throw new SerializingError('boolean', val);
-      }
+      if (!this.validateInput(val)) throw new SerializingError('boolean', val);
       return val;
     },
     convertJsonValueToJS(val: boolean) {
@@ -44,6 +40,9 @@ export function BooleanType<TypeOptions extends UserTypeOptions = {}>(
       return calcDefaultValue(options) as boolean | undefined;
     },
     validateInput(val: any) {
+      return (options.nullable && val === null) || typeof val === 'boolean';
+    },
+    validateTripleValue(val: any) {
       const type = options.nullable ? Nullable(Type.Boolean()) : Type.Boolean();
       return Value.Check(type, val);
     },

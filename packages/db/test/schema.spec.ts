@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { Schema as S, getSchemaFromPath } from '../src/schema.js';
-import { InvalidSchemaPathError } from '../src';
+import { InvalidSchemaOptionsError, InvalidSchemaPathError } from '../src';
 
 describe('Schema', () => {
   const StudentSchema = S.Schema({
@@ -20,5 +20,10 @@ describe('Schema', () => {
     expect(() => S.Schema({ foo: S.Set(S.Date()) })).not.toThrowError();
     expect(() => S.Schema({ foo: S.Set(S.Set()) })).toThrowError();
     expect(() => S.Schema({ foo: S.Set(S.Schema()) })).toThrowError();
+  });
+  it('set types cannot be nullable', () => {
+    expect(() =>
+      S.Schema({ foo: S.Set(S.Number({ nullable: true })) })
+    ).toThrowError(InvalidSchemaOptionsError);
   });
 });

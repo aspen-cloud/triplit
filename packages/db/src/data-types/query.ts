@@ -39,6 +39,9 @@ export function QueryType<Q extends SubQuery<any, any>>(
     validateInput(_val: any) {
       return true; // TODO
     },
+    validateTripleValue(_val: any) {
+      return true; // TODO
+    },
     convertJsonValueToJS(val) {
       return JSON.parse(val) as Q;
     },

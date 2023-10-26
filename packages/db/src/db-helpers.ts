@@ -213,6 +213,8 @@ export function validateTriple(
   }
 
   const valueSchema = getSchemaFromPath(model.schema, path);
+  // allow record marker for certain types
+  if (value === '{}' && ['record', 'set'].includes(valueSchema.type)) return;
 
   // We expect you to set values at leaf nodes
   // Our leafs should be value types, so use that as check
@@ -222,10 +224,10 @@ export function validateTriple(
   if (!isLeaf)
     throw new InvalidSchemaPathError(
       path as string[],
-      'Cannot set the value of a non leaf node in the schema. For example, you may be attempting to set a value on a record type.'
+      'Cannot set a non-value type to a value. For example, you may be attempting to set a value on a record type.'
     );
   // Leaf values are an array [value, timestamp], so check value
-  if (!valueSchema.validateInput(value))
+  if (!valueSchema.validateTripleValue(value))
     throw new ValueSchemaMismatchError(
       modelName as string,
       attribute as string[],

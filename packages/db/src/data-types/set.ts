@@ -1,8 +1,8 @@
-import { ValuePointer } from '@sinclair/typebox/value';
 import {
   InvalidSchemaOptionsError,
   InvalidSetTypeError,
   NotImplementedError,
+  SerializingError,
 } from '../errors.js';
 import { TimestampType, ValueType } from './base.js';
 import { CollectionInterface } from './collection.js';
@@ -12,6 +12,7 @@ import {
   ValueAttributeDefinition,
 } from './serialization.js';
 import { ExtractJSType } from './type.js';
+import { ChangeTracker } from '../db-transaction.js';
 
 const SET_OPERATORS = ['=', '!='] as const;
 type SetOperators = typeof SET_OPERATORS;
@@ -42,13 +43,14 @@ export function SetType<Items extends ValueType<any>>(
       };
     },
     convertInputToJson(val: Set<any>) {
+      if (!this.validateInput(val))
+        throw new SerializingError(`set<${items.type}>`, val);
       return [...val.values()].reduce((acc, key) => {
         return { ...acc, [key as string]: true };
       }, {});
     },
-    // @ts-ignore TODO fix during testing
     default() {
-      return new Set(); // TODO: should return record
+      return {};
     },
     convertJsonValueToJS(val) {
       return new Set(
@@ -57,101 +59,88 @@ export function SetType<Items extends ValueType<any>>(
           .map(([k, _v]) => this.items.fromString(k) as ExtractJSType<Items>)
       );
     },
-    validateInput(_val: any) {
+    validateInput(val: any) {
+      // must be a set
+      if (!(val instanceof Set)) return false;
+      // cannot have null values
+      // must match items schema
+      return [...val.values()].every(
+        (v) => v !== null && this.items.validateInput(v)
+      );
+    },
+    validateTripleValue(_val: any) {
       throw new NotImplementedError('Set validation');
     },
   };
 }
 
-// This is an abstraction around ValuePointer and the relevant pieces of info we need for updates
-// I think it could be used for other complex types, and you'd this object for ensuring relevant changes are passed to the update
-class ChangeTracker {
+class SetUpdateProxy<T> {
   constructor(
-    public changes: Record<string, any>,
-    public prefix: string,
-    public value: any,
-    public schema: any
+    public changeTracker: ChangeTracker,
+    private prefix: string,
+    public schema: SetType<ValueType<any>>
   ) {}
-
-  get(prop?: string) {
-    if (!prop) return ValuePointer.Get(this.changes, this.prefix) ?? this.value;
-    return (
-      ValuePointer.Get(this.changes, [this.prefix, prop].join('/')) ??
-      ValuePointer.Get(this.value, [prop].join('/'))
+  add(value: T) {
+    const serializedValue = this.schema.items.convertInputToJson(
+      // @ts-ignore
+      value
+    );
+    this.changeTracker.set(
+      [...this.prefix.split('/'), serializedValue].join('/'),
+      true
     );
   }
-
-  set(prop: string, value: any) {
-    ValuePointer.Set(this.changes, [this.prefix, prop].join('/'), value);
-  }
-
-  getChange(prop: string) {
-    return ValuePointer.Get(this.changes, [this.prefix, prop].join('/'));
-  }
-
-  getChangedKeys() {
-    const prefixObj = ValuePointer.Get(this.changes, this.prefix);
-    return Object.keys(prefixObj ?? {});
-  }
-}
-
-class SetUpdateProxy<T> {
-  constructor(public changeTracker: ChangeTracker) {}
-  add(value: T) {
-    const serializedValue =
-      this.changeTracker.schema.items.convertInputToJson(value);
-    this.changeTracker.set(serializedValue, true);
-  }
   clear(): void {
-    const values = getSetFromChangeTracker(this.changeTracker);
+    const values = getSetFromChangeTracker(this.changeTracker, this.prefix);
     values.forEach((v) => {
-      this.changeTracker.set(v, false);
+      this.changeTracker.set([...this.prefix.split('/'), v].join('/'), false);
     });
   }
   delete(value: T) {
-    const serializedValue =
-      this.changeTracker.schema.items.convertInputToJson(value);
-    if (this.changeTracker.get(serializedValue)) {
-      this.changeTracker.set(serializedValue, false);
+    const serializedValue = this.schema.items.convertInputToJson(
+      // @ts-ignore
+      value
+    );
+    if (
+      this.changeTracker.get(
+        [...this.prefix.split('/'), serializedValue].join('/')
+      )
+    ) {
+      this.changeTracker.set(
+        [...this.prefix.split('/'), serializedValue].join('/'),
+        false
+      );
     }
   }
 }
 
-function getSetFromChangeTracker(changeTracker: ChangeTracker) {
-  const baseValues = Object.keys(changeTracker.value).filter(
-    (k) => changeTracker.value[k]
-  );
+function getSetFromChangeTracker(
+  changeTracker: ChangeTracker,
+  setPointer: string
+) {
+  const baseValues = Object.entries(changeTracker.get(setPointer))
+    .filter(([_k, v]) => !!v)
+    .map(([k, _v]) => k);
 
-  const s = new Set(baseValues);
-  for (const change of changeTracker.getChangedKeys()) {
-    if (changeTracker.getChange(change)) {
-      s.add(change);
-    } else {
-      s.delete(change);
-    }
-  }
-  return s;
+  return new Set(baseValues);
 }
 
 export function createSetProxy<T>(
-  changes: any,
+  changeTracker: ChangeTracker,
   propPointer: string,
-  propValue: Record<string, boolean>,
-  propSchema: SetType<ValueType<any>>
+  schema: SetType<ValueType<any>>
 ): Set<T> {
-  const changeTracker = new ChangeTracker(
-    changes,
-    propPointer,
-    propValue,
-    propSchema
-  );
-  const stringSet = getSetFromChangeTracker(changeTracker);
+  const stringSet = getSetFromChangeTracker(changeTracker, propPointer);
   const set = new Set(
     [...stringSet].map(
-      (v) => changeTracker.schema.items.convertJsonValueToJS(v) as T
+      (v) =>
+        schema.items.convertJsonValueToJS(
+          // @ts-ignore
+          v
+        ) as T
     )
   );
-  const proxy = new SetUpdateProxy<T>(changeTracker);
+  const proxy = new SetUpdateProxy<T>(changeTracker, propPointer, schema);
   return new Proxy(set, {
     get(target, prop) {
       if (

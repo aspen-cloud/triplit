@@ -42,10 +42,7 @@ export function DateType<TypeOptions extends UserTypeOptions = {}>(
       return { type: this.type, options: this.options };
     },
     convertInputToJson(val: TypeWithOptions<Date, TypeOptions>) {
-      const valid = (options.nullable && val === null) || val instanceof Date;
-      if (!valid) {
-        throw new SerializingError('date', val);
-      }
+      if (!this.validateInput(val)) throw new SerializingError('date', val);
       return (val ? val.toISOString() : null) as TypeWithOptions<
         string,
         TypeOptions
@@ -58,6 +55,9 @@ export function DateType<TypeOptions extends UserTypeOptions = {}>(
       return (val ? new Date(val) : null) as TypeWithOptions<Date, TypeOptions>;
     },
     validateInput(val: any) {
+      return (options.nullable && val === null) || val instanceof Date;
+    },
+    validateTripleValue(val: any) {
       const type = options.nullable ? Nullable(DateSchemaType) : DateSchemaType;
       return Value.Check(type, val);
     },

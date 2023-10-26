@@ -3,7 +3,7 @@ import { InvalidSchemaPathError } from './errors.js';
 import type { CollectionRules } from './db.js';
 import { Timestamp } from './timestamp.js';
 import type { Attribute, EAV, TripleRow } from './triple-store.js';
-import { objectToTuples } from './utils.js';
+import { objectToTuples, serializedItemToTuples } from './utils.js';
 import { constructEntity } from './query.js';
 import { appendCollectionToId, StoreSchema } from './db-helpers.js';
 import {
@@ -82,6 +82,7 @@ export type Models<
 > = Record<CollectionName, Collection<T>>;
 
 // This will generally be what we store in the DB for a path
+// Maybe refactor this to throw InvalidSchemaPathError more efficiently
 export function getSchemaFromPath(
   model: Model<any>,
   path: Attribute
@@ -104,6 +105,7 @@ export function getSchemaFromPath(
       throw new InvalidSchemaPathError(path as string[]);
     }
   }
+  if (!scope) throw new InvalidSchemaPathError(path as string[]);
   return scope;
 }
 
@@ -284,13 +286,12 @@ export function collectionsDefinitionToSchema(
 
 export function schemaToTriples(schema: StoreSchema<Models<any, any>>): EAV[] {
   const schemaData = schemaToJSON(schema);
-  const tuples = objectToTuples(schemaData);
+  const tuples = serializedItemToTuples(schemaData);
   return tuples.map((tuple) => {
-    const value = tuple.pop();
     return [
       appendCollectionToId('_metadata', '_schema'),
-      ['_metadata', ...tuple],
-      value,
+      ['_metadata', ...tuple[0]],
+      tuple[1],
     ] as EAV;
   });
 }
