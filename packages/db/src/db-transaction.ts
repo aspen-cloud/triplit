@@ -31,6 +31,7 @@ import CollectionQueryBuilder, {
 import {
   EntityNotFoundError,
   InvalidOperationError,
+  InvalidTripleStoreValueError,
   UnrecognizedPropertyInUpdateError,
   WriteRuleError,
 } from './errors.js';
@@ -65,6 +66,7 @@ import { serializedItemToTuples } from './utils.js';
 import { typeFromJSON } from './data-types/base.js';
 import { SchemaDefinition } from './data-types/serialization.js';
 import { createSetProxy } from './data-types/set.js';
+import { timestampCompare } from './timestamp.js';
 
 interface TransactionOptions<
   M extends Models<any, any> | undefined = undefined
@@ -168,10 +170,10 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
   };
 
   private UpdateLocalSchema: TripleStoreBeforeInsertHook = async (
-    trips,
+    triples,
     tx
   ) => {
-    const metadataTriples = trips.filter(
+    const metadataTriples = triples.filter(
       ({ attribute }) => attribute[0] === '_metadata'
     );
     if (metadataTriples.length === 0) return;
@@ -203,6 +205,26 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
     } as StoreSchema<M>;
   };
 
+  private GarbageCollect: TripleStoreBeforeInsertHook = async (triples, tx) => {
+    const toDelete: TripleRow[] = [];
+    for (const triple of triples) {
+      const { id, attribute, value, timestamp: txTimestamp } = triple;
+      if (value === undefined) {
+        throw new InvalidTripleStoreValueError(undefined);
+      }
+      const existingTriples = await tx.findByEntityAttribute(id, attribute);
+      const olderTriples = existingTriples.filter(
+        ({ timestamp, expired }) =>
+          timestampCompare(timestamp, txTimestamp) === -1 && !expired
+      );
+
+      if (olderTriples.length > 0) {
+        toDelete.push(...olderTriples);
+      }
+    }
+    await tx.deleteTriples(toDelete);
+  };
+
   constructor(
     readonly storeTx: TripleStoreTransaction,
     readonly options: TransactionOptions<M> = {}
@@ -211,7 +233,9 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
     this.variables = options.variables;
 
     this.storeTx.beforeInsert(this.ValidateTripleSchema);
+    this.storeTx.beforeInsert(this.GarbageCollect);
     this.storeTx.beforeInsert(this.UpdateLocalSchema);
+
     if (!options?.skipRules) {
       // Check rules on write
       this.storeTx.beforeCommit(this.CheckCanWrite);

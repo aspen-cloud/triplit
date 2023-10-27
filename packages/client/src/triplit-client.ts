@@ -297,15 +297,18 @@ class SyncEngine {
           this.queryFulfillmentCallbacks.delete(qId);
         }
         if (triples.length !== 0) {
-          await this.db.tripleStore
-            .setStorageScope(['cache'])
-            .insertTriples(triples);
+          await this.db.transact(async (dbTx) => {
+            await dbTx.storeTx
+              .withScope({ read: ['cache'], write: ['cache'] })
+              .insertTriples(triples);
+          });
         }
       }
 
       if (message.type === 'TRIPLES_ACK') {
         const { payload } = message;
         const { txIds } = payload;
+        // TODO: do we want hooks to run here?
         await this.db.tripleStore.transact(async (tx) => {
           const outboxOperator = tx.withScope({
             read: ['outbox'],
@@ -493,9 +496,11 @@ class SyncEngine {
   async syncQuery(query: ClientQuery<any, any>) {
     try {
       const triples = await this.getRemoteTriples(query);
-      await this.db.tripleStore
-        .setStorageScope(['cache'])
-        .insertTriples(triples);
+      await this.db.transact(async (dbTx) => {
+        await dbTx.storeTx
+          .withScope({ read: ['cache'], write: ['cache'] })
+          .insertTriples(triples);
+      });
     } catch (e) {
       if (e instanceof TriplitError) throw e;
       if (e instanceof Error) throw new RemoteSyncFailedError(query, e.message);

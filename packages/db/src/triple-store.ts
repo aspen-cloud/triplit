@@ -430,7 +430,6 @@ export class TripleStoreTxOperator implements TripleStoreApi {
   async setValues(eavs: EAV[]) {
     if (!eavs.length) return;
     const txTimestamp = await this.parentTx.getTransactionTimestamp();
-    const toDelete: TripleRow[] = [];
     const toInsert: TripleRow[] = [];
     for (const eav of eavs) {
       const [id, attribute, value] = eav;
@@ -438,15 +437,6 @@ export class TripleStoreTxOperator implements TripleStoreApi {
         throw new InvalidTripleStoreValueError(undefined);
       }
       const existingTriples = await this.findByEntityAttribute(id, attribute);
-      const olderTriples = existingTriples.filter(
-        ({ timestamp, expired }) =>
-          timestampCompare(timestamp, txTimestamp) === -1 && !expired
-      );
-
-      if (olderTriples.length > 0) {
-        toDelete.push(...olderTriples);
-      }
-
       const newerTriples = existingTriples.filter(
         ({ timestamp }) => timestampCompare(timestamp, txTimestamp) === 1
       );
@@ -460,7 +450,6 @@ export class TripleStoreTxOperator implements TripleStoreApi {
         });
       }
     }
-    await this.deleteTriples(toDelete);
     await this.insertTriples(toInsert);
   }
 
