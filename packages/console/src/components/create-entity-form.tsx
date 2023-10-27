@@ -43,13 +43,22 @@ interface FormValues {
     setItemsType?: CollectionAttributeDefinition['items']['type'];
     fieldValue: string | Set<any>;
     key: string;
+    defaultFunction?: string;
   }[];
 }
 
-function convertFormToEntity(attributes: FormValues['attributes']) {
+function convertFormToEntity(
+  attributes: FormValues['attributes'],
+  model?: Model
+) {
   const entity: any = {};
   attributes.forEach((attr) => {
     const { type, fieldValue, fieldName } = attr;
+    // if we have a default function like uuid or now, don't set the field,
+    // let the system take the wheel
+    const hasDefaultFunction =
+      !!model?.schema.properties[fieldName]?.options?.func;
+    if (hasDefaultFunction && !fieldValue) return;
     if (attr.nullable && fieldValue === null) entity[fieldName] = null;
     else if (type === 'boolean') {
       entity[fieldName] = fieldValue === 'true';
@@ -80,13 +89,22 @@ function initializeNewEntityForm(model?: Collection<any>): FormValues {
     .map(([attr, attributeDef]) => {
       const type = attributeDef.type;
       const nullable = attributeDef?.options?.nullable;
+      const hasDefaultValue =
+        attributeDef?.options?.default !== undefined &&
+        typeof attributeDef?.options?.default !== 'object';
       return {
         type,
         setItemsType: type === 'set' ? attributeDef?.items?.type : undefined,
         nullable,
         fieldName: attr,
-        fieldValue: type === 'set' ? new Set() : '',
+        fieldValue:
+          type === 'set'
+            ? new Set()
+            : hasDefaultValue
+            ? String(attributeDef?.options?.default)
+            : '',
         key: attr,
+        defaultFunction: attributeDef?.options?.default?.func,
       };
     });
   return { id: '', attributes };
@@ -249,6 +267,9 @@ export function CreateEntityForm({
                 }
                 parse={PARSE_FUNCS[item.setItemsType]}
               />
+            )}
+            {item.defaultFunction && (
+              <div className="text-foreground-muted">{`Default: ${item.defaultFunction}()`}</div>
             )}
           </FormField>
           {item.nullable ||
