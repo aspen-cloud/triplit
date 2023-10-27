@@ -25,6 +25,7 @@ import { atom, useAtom } from 'jotai';
 import {
   ALL_TYPES,
   CollectionTypeKeys,
+  UserTypeOptions,
   VALUE_TYPE_KEYS,
   ValueAttributeDefinition,
   ValueTypeKeys,
@@ -34,7 +35,7 @@ export type AttributesForm = {
   [key: string]: AttributeDefinition;
 };
 
-async function updateCollectionSchema(
+async function addAttributeToSchema(
   client: TriplitClient<any>,
   collectionName: string,
   attributeName: string,
@@ -45,6 +46,31 @@ async function updateCollectionSchema(
     collection: collectionName,
     path: [attributeName],
     attribute: newAttribute,
+  });
+}
+
+async function updateAttributeOptions(
+  client: TriplitClient<any>,
+  collectionName: string,
+  attributeName: string,
+  options: UserTypeOptions
+) {
+  await client.db.alterAttributeOption({
+    collection: collectionName,
+    path: [attributeName],
+    options,
+  });
+}
+
+async function dropDefaultOption(
+  client: TriplitClient<any>,
+  collectionName: string,
+  attributeName: string
+) {
+  await client.db.dropAttributeOption({
+    collection: collectionName,
+    path: [attributeName],
+    option: 'default',
   });
 }
 
@@ -71,6 +97,7 @@ export const attributeToUpdateAtom = atom<
 export function NewAttributeForm(
   props: NewAttributeFormProps & ComponentProps<typeof Sheet>
 ) {
+  const { client, collectionName, collectionSchema } = props;
   const [attributeToUpdate, setAttributeToUpdate] = useAtom(
     attributeToUpdateAtom
   );
@@ -137,17 +164,17 @@ export function NewAttributeForm(
     }
     const baseOptions = { nullable };
     if (!hasDefault) return { ...baseAttribute, options: baseOptions };
-    let defaultValue: any = '';
+    let value: any = '';
     if (defaultType === 'Value')
-      defaultValue =
+      value =
         attributeBaseType === 'date' && defaultValue !== undefined
           ? new Date(defaultValue)
           : defaultValue;
-    if (defaultType === 'now') defaultValue = Schema.Default.now();
-    if (defaultType === 'uuid') defaultValue = Schema.Default.uuid();
+    if (defaultType === 'now') value = Schema.Default.now();
+    if (defaultType === 'uuid') value = Schema.Default.uuid();
     return {
       ...baseAttribute,
-      options: { ...baseOptions, default: defaultValue },
+      options: { ...baseOptions, default: value },
     } as AttributeDefinition;
   }, [
     attributeBaseType,
@@ -157,6 +184,35 @@ export function NewAttributeForm(
     defaultType,
     defaultValue,
   ]);
+
+  const submitForm = useCallback(async () => {
+    const updatedAttribute =
+      formToAttributeDefinition() as ValueAttributeDefinition;
+    if (!attributeToUpdate) {
+      await addAttributeToSchema(
+        client,
+        collectionName,
+        name,
+        updatedAttribute
+      );
+      setOpen(false);
+      return;
+    }
+    if (
+      updatedAttribute.options.default === undefined &&
+      attributeToUpdate.options?.default !== undefined
+    ) {
+      await dropDefaultOption(client, collectionName, name);
+    }
+    await updateAttributeOptions(
+      client,
+      collectionName,
+      name,
+      updatedAttribute.options
+    );
+
+    setOpen(false);
+  }, [attributeToUpdate, client, collectionName, formToAttributeDefinition]);
 
   return (
     <Sheet
@@ -186,11 +242,11 @@ export function NewAttributeForm(
             {attributeToUpdate ? (
               <span>
                 Update <Code>{attributeToUpdate.name}</Code> on{' '}
-                <Code>{props.collectionName}</Code>
+                <Code>{collectionName}</Code>
               </span>
             ) : (
               <span>
-                Add a new attribute to <Code>{props.collectionName}</Code>
+                Add a new attribute to <Code>{collectionName}</Code>
               </span>
             )}
           </SheetDescription>
@@ -262,15 +318,47 @@ export function NewAttributeForm(
                           onValueChange={setDefaultType}
                           data={getDefaultOptionsFromType(attributeBaseType)}
                         />
-                        {defaultType === 'Value' && (
-                          <Input
-                            placeholder='e.g. "Hello", 9, null'
-                            value={defaultValue}
-                            onChange={(e) => {
-                              setDefaultValue(e.target.value);
-                            }}
-                          />
-                        )}
+                        {defaultType === 'Value' &&
+                          attributeBaseType === 'string' && (
+                            <Input
+                              type="text"
+                              value={defaultValue}
+                              onChange={(e) => {
+                                setDefaultValue(e.target.value);
+                              }}
+                            />
+                          )}
+                        {defaultType === 'Value' &&
+                          attributeBaseType === 'boolean' && (
+                            <Select
+                              data={['true', 'false']}
+                              placeholder='e.g. "Hello", 9, null'
+                              value={String(defaultValue)}
+                              onValueChange={(value) => {
+                                setDefaultValue(value === 'false');
+                              }}
+                            />
+                          )}
+                        {defaultType === 'Value' &&
+                          attributeBaseType === 'number' && (
+                            <Input
+                              type="number"
+                              value={String(defaultValue)}
+                              onChange={(e) => {
+                                setDefaultValue(e.target.valueAsNumber);
+                              }}
+                            />
+                          )}
+                        {defaultType === 'Value' &&
+                          attributeBaseType === 'date' && (
+                            <Input
+                              type="datetime-local"
+                              value={defaultValue}
+                              onChange={(e) => {
+                                setDefaultValue(e.target.value);
+                              }}
+                            />
+                          )}
                       </div>
                       <div className="text-muted-foreground">
                         A default value can either be a literal value e.g.{' '}
@@ -309,17 +397,7 @@ export function NewAttributeForm(
             // TODO: prevent attribute name conflicts as necessary
             disabled={name === ''}
             variant={'default'}
-            onClick={async () => {
-              const newAttribute = formToAttributeDefinition();
-              // console.log(newAttribute);
-              await updateCollectionSchema(
-                props.client,
-                props.collectionName,
-                name,
-                newAttribute
-              );
-              setOpen(false);
-            }}
+            onClick={submitForm}
           >
             Save
           </Button>
