@@ -811,8 +811,7 @@ export class TriplitClient<M extends Models<any, any> | undefined = undefined> {
 
   insert<CN extends CollectionNameFromModels<M>>(
     collectionName: CN,
-    object: InsertTypeFromModel<ModelFromModels<M, CN>>,
-    id?: string
+    object: InsertTypeFromModel<ModelFromModels<M, CN>>
   ) {
     return this.db.insert(collectionName, object, {
       skipRules: SKIP_RULES,

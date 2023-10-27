@@ -9,8 +9,8 @@ Data for a query can be requested at a single moment in time. The Triplit Client
 `fetch()` executes the specified query and returns a Map with entity ids as keys and the associated entities as values. For example:
 
 ```typescript
-await client.insert('employees', { name: 'Philip J. Fry' }, 'Fry');
-await client.insert('employees', { name: 'Turanga Leela' }, 'Leela');
+await client.insert('employees', { id: 'Fry', name: 'Philip J. Fry' });
+await client.insert('employees', { id: 'Leela', name: 'Turanga Leela' });
 
 const query = client.query('employees').build();
 const result = await client.fetch(query, options); // Map<string, { name: string }>
@@ -19,8 +19,8 @@ const result = await client.fetch(query, options); // Map<string, { name: string
 `fetchOne` is similar to `fetch()` but will return a tuple `[id, entity]` of the first entity in the result set or `null` if the result set is empty. For example:
 
 ```typescript
-await client.insert('employees', { name: 'Philip J. Fry' }, 'Fry');
-await client.insert('employees', { name: 'Turanga Leela' }, 'Leela');
+await client.insert('employees', { id: 'Fry', name: 'Philip J. Fry' });
+await client.insert('employees', { id: 'Leela', name: 'Turanga Leela' });
 
 const query = client.query('employees').build();
 const result = await client.fetchOne(query, options); // ['Fry', { name: 'Philip J. Fry' }]
@@ -37,8 +37,8 @@ This is a convenient shorthand for using the [limit parameter](/queries#limit) `
 `fetchById()` queries for a single entity by its id and returns the entity if it is found or `null` if it is not. For example:
 
 ```typescript
-await client.insert('employees', { name: 'Philip J. Fry' }, 'Fry');
-await client.insert('employees', { name: 'Turanga Leela' }, 'Leela');
+await client.insert('employees', { id: 'Fry', name: 'Philip J. Fry' });
+await client.insert('employees', { id: 'Leela', name: 'Turanga Leela' });
 
 const fry = await client.fetchById('employees', 'Fry', options); // { name: 'Philip J. Fry' }
 const leela = await client.fetchById('employees', 'Leela', options); // { name: 'Turanga Leela' }
