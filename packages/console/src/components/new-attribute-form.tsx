@@ -9,7 +9,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/simple-select';
-import { ComponentProps, useEffect, useState } from 'react';
+import { ComponentProps, useEffect, useState, useCallback } from 'react';
 import { Code } from '@/components/ui/code';
 import { TriplitClient } from '@triplit/client';
 import {
@@ -26,6 +26,7 @@ import {
   ALL_TYPES,
   CollectionTypeKeys,
   VALUE_TYPE_KEYS,
+  ValueAttributeDefinition,
   ValueTypeKeys,
 } from '../../../db/src/data-types/serialization';
 
@@ -39,6 +40,7 @@ async function updateCollectionSchema(
   attributeName: string,
   newAttribute: AttributeDefinition
 ) {
+  console.log(collectionName, attributeName, newAttribute);
   await client.db.addAttribute({
     collection: collectionName,
     path: [attributeName],
@@ -60,7 +62,10 @@ type NewAttributeFormProps = {
 export const addOrUpdateAttributeFormOpenAtom = atom(false);
 
 export const attributeToUpdateAtom = atom<
-  (AttributeDefinition & { name: string }) | null
+  | ((ValueAttributeDefinition | CollectionAttributeDefinition) & {
+      name: string;
+    })
+  | null
 >(null);
 
 export function NewAttributeForm(
@@ -75,6 +80,7 @@ export function NewAttributeForm(
   const [attributeBaseType, setAttributeBaseType] = useState<
     ValueTypeKeys | CollectionTypeKeys
   >('string');
+  const [hasDefault, setHasDefault] = useState(false);
   const [setType, setSetType] = useState<ValueTypeKeys>('string');
   const [defaultType, setDefaultType] = useState<'Value' | 'now' | 'uuid'>(
     'Value'
@@ -89,6 +95,7 @@ export function NewAttributeForm(
     setDefaultType('Value');
     setDefaultValue('');
     setNullable(false);
+    setHasDefault(false);
   }
 
   useEffect(() => {
@@ -97,14 +104,19 @@ export function NewAttributeForm(
       if (attributeToUpdate.type === 'set') {
         setAttributeBaseType('set');
         setSetType(attributeToUpdate.items.type);
+        return;
       } else {
         setAttributeBaseType(attributeToUpdate.type);
       }
       setNullable(attributeToUpdate?.options?.nullable ?? false);
       if (attributeToUpdate?.options?.default === undefined) {
+        setHasDefault(false);
         setDefaultType('Value');
         setDefaultValue('');
-      } else if (typeof attributeToUpdate.options.default === 'object') {
+        return;
+      }
+      setHasDefault(true);
+      if (typeof attributeToUpdate.options.default === 'object') {
         setDefaultType(attributeToUpdate.options.default.func);
       } else {
         setDefaultType('Value');
@@ -115,6 +127,37 @@ export function NewAttributeForm(
     }
   }, [attributeToUpdate]);
 
+  const formToAttributeDefinition = useCallback(() => {
+    const baseAttribute = { type: attributeBaseType };
+    if (attributeBaseType === 'set') {
+      return {
+        ...baseAttribute,
+        items: { type: setType },
+      } as CollectionAttributeDefinition;
+    }
+    const baseOptions = { nullable };
+    if (!hasDefault) return { ...baseAttribute, options: baseOptions };
+    let defaultValue: any = '';
+    if (defaultType === 'Value')
+      defaultValue =
+        attributeBaseType === 'date' && defaultValue !== undefined
+          ? new Date(defaultValue)
+          : defaultValue;
+    if (defaultType === 'now') defaultValue = Schema.Default.now();
+    if (defaultType === 'uuid') defaultValue = Schema.Default.uuid();
+    return {
+      ...baseAttribute,
+      options: { ...baseOptions, default: defaultValue },
+    } as AttributeDefinition;
+  }, [
+    attributeBaseType,
+    setType,
+    nullable,
+    hasDefault,
+    defaultType,
+    defaultValue,
+  ]);
+
   return (
     <Sheet
       open={open}
@@ -123,7 +166,7 @@ export function NewAttributeForm(
         if (!open) setAttributeToUpdate(null);
       }}
     >
-      <SheetTrigger>
+      <SheetTrigger asChild>
         <Button size={'sm'} variant={'secondary'}>
           New attribute
         </Button>
@@ -200,32 +243,43 @@ export function NewAttributeForm(
               <div className="font-bold">Options</div>
               <div className="flex flex-col gap-5 col-span-2">
                 <div className="flex flex-col gap-3">
-                  <div className="flex flex-row items-center justify-between">
-                    <Label>Default</Label>{' '}
-                    <div className="text-muted-foreground">Optional</div>
-                  </div>
-                  <div className="flex flex-row">
-                    <Select
-                      value={defaultType}
-                      onValueChange={setDefaultType}
-                      data={getDefaultOptionsFromType(attributeBaseType)}
+                  <div className="flex flex-row items-center gap-3">
+                    <Checkbox
+                      className="w-5 h-5"
+                      checked={hasDefault}
+                      onCheckedChange={setHasDefault}
                     />
-                    {defaultType === 'Value' && (
-                      <Input
-                        placeholder='e.g. "Hello", 9, null'
-                        value={defaultValue}
-                        onChange={(e) => {
-                          setDefaultValue(e.target.value);
-                        }}
-                      />
-                    )}
+                    <div className="flex flex-row justify-between items-center w-full">
+                      <Label>Default value</Label>
+                      <div className="text-muted-foreground">Optional</div>
+                    </div>
                   </div>
-                  <div className="text-muted-foreground">
-                    A default value can either be a literal value e.g.{' '}
-                    <Code>"Hello", 9, null</Code> or a Triplit-provided
-                    function. If left empty, the attribute will be undefined by
-                    default.
-                  </div>
+                  {hasDefault && (
+                    <>
+                      <div className="flex flex-row gap-2">
+                        <Select
+                          value={defaultType}
+                          onValueChange={setDefaultType}
+                          data={getDefaultOptionsFromType(attributeBaseType)}
+                        />
+                        {defaultType === 'Value' && (
+                          <Input
+                            placeholder='e.g. "Hello", 9, null'
+                            value={defaultValue}
+                            onChange={(e) => {
+                              setDefaultValue(e.target.value);
+                            }}
+                          />
+                        )}
+                      </div>
+                      <div className="text-muted-foreground">
+                        A default value can either be a literal value e.g.{' '}
+                        <Code>"Hello", 9, null</Code> or a Triplit-provided
+                        function. If left empty, the attribute will be undefined
+                        by default.
+                      </div>
+                    </>
+                  )}
                 </div>
                 <div className="flex flex-row items-center gap-3">
                   <Checkbox
@@ -256,26 +310,8 @@ export function NewAttributeForm(
             disabled={name === ''}
             variant={'default'}
             onClick={async () => {
-              const newAttribute =
-                attributeBaseType === 'set'
-                  ? ({
-                      type: 'set',
-                      items: { type: setType },
-                    } as CollectionAttributeDefinition)
-                  : ({
-                      type: attributeBaseType,
-                      options: {
-                        default:
-                          defaultType === 'Value'
-                            ? attributeBaseType === 'date'
-                              ? new Date(defaultValue)
-                              : defaultValue || undefined
-                            : defaultType === 'now'
-                            ? Schema.Default.now()
-                            : Schema.Default.uuid(),
-                        nullable,
-                      },
-                    } as AttributeDefinition);
+              const newAttribute = formToAttributeDefinition();
+              // console.log(newAttribute);
               await updateCollectionSchema(
                 props.client,
                 props.collectionName,
