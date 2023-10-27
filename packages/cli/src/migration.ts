@@ -357,7 +357,6 @@ function parseAttributesDiff(
 ) {
   // We are not expecting the attributes property to be added or removed
   if (Array.isArray(diff)) throw new Error('Invalid diff: diff at attributes');
-
   for (const attributeKey of Object.keys(diff)) {
     const attributeDiff = diff[attributeKey];
     const attributeDiffStatus = diffStatus(attributeDiff);
@@ -390,6 +389,15 @@ function parseAttributesDiff(
     } else if (attributeDiffStatus === 'CHANGED') {
       throw new Error('NOT HANDLED. FAILED TO PARSE.');
     } else {
+      if (!!attributeDiff.type) {
+        throw new Error(
+          `Invalid diff: changing an attribute type is not support. Received diff:\n\n${JSON.stringify(
+            attributeDiff,
+            null,
+            2
+          )}`
+        );
+      }
       // properties implies its a record type...might be nicer to actually read info from the schema
       if (!!attributeDiff.properties) {
         parseAttributesDiff(migration, collection, attributeDiff.properties, [
@@ -406,7 +414,13 @@ function parseAttributesDiff(
           attributeDiff.options
         );
       } else {
-        throw new Error('Invalid diff: no options or properties to parse');
+        throw new Error(
+          `Invalid diff: received an unrecognized attribute definition diff\n\n${JSON.stringify(
+            attributeDiff,
+            null,
+            2
+          )}`
+        );
       }
     }
   }
