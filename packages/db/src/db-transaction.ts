@@ -191,6 +191,7 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
     const schemaDefinition = timestampedObjectToPlainObject(this._schema) as
       | SchemaDefinition
       | undefined;
+
     this.schema = {
       version: schemaDefinition?.version ?? 0,
       collections:
@@ -504,7 +505,7 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
           type: 'record',
           properties: schema,
         }).toJSON();
-        collectionAttributes.rules = rules;
+        if (rules) collectionAttributes.rules = rules;
       }
     );
   }

@@ -123,10 +123,10 @@ function updateEntityAtPath(
   if (currentValue && timestampCompare(timestamp, currentValue[1]) < 0) {
     return;
   }
-  if (value === undefined) {
-    ValuePointer.Delete(entity, pointer);
-    return;
-  }
+  // if (value === undefined) {
+  //   ValuePointer.Delete(entity, pointer);
+  //   return;
+  // }
   ValuePointer.Set(entity, pointer, [value, timestamp]);
 }
 

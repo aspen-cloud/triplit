@@ -36,7 +36,8 @@ export type { TObject };
 
 // Could also use a namespace or module, but this worked best with our type generation
 export class Schema {
-  static Id = () => StringType({ nullable: false, default: { func: 'uuid' } });
+  static Id = () =>
+    StringType({ nullable: false, default: Schema.Default.uuid() });
   static String = StringType;
   static Number = NumberType;
   static Boolean = BooleanType;
@@ -242,11 +243,15 @@ export function timestampedObjectToPlainObject<O extends TimestampedObject>(
   }
   if (obj instanceof Array) {
     // @ts-ignore
-    return obj.map((v) => timestampedObjectToPlainObject(v));
+    return obj
+      .map((v) => timestampedObjectToPlainObject(v))
+      .filter((v) => v !== undefined);
   }
-  const entries = Object.entries(obj).map(([key, val]) => {
-    return [key, timestampedObjectToPlainObject(val)];
-  });
+  const entries = Object.entries(obj)
+    .map(([key, val]) => {
+      return [key, timestampedObjectToPlainObject(val)];
+    })
+    .filter(([_key, val]) => val !== undefined);
   //TODO: result statically typed as any
   const result = Object.fromEntries(entries);
   return result;

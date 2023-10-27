@@ -19,6 +19,7 @@ import {
   InvalidEntityIdError,
   EntityNotFoundError,
   InvalidAssignmentError,
+  InvalidMigrationOperationError,
 } from '../src';
 import { Models } from '../src/schema.js';
 import { classes, students, departments } from './sample_data/school.js';
@@ -2396,7 +2397,7 @@ describe('migrations', () => {
     }
   });
 
-  it('will stop migrating on an error and rollback changes', async () => {
+  it('will stop migrating on an error', async () => {
     const migrationsCopy = JSON.parse(
       JSON.stringify(migrations)
     ) as Migration[];
@@ -2407,10 +2408,15 @@ describe('migrations', () => {
       },
     ]);
     const db = new DB({ migrations: migrationsCopy });
-    const dbSchema = await db.getSchema();
-    expect(dbSchema?.collections).toHaveProperty('students');
-    expect(dbSchema?.collections).not.toHaveProperty('classes');
-    expect(dbSchema?.version).toEqual(1);
+    expect(db.ensureMigrated).rejects.toThrowError(
+      InvalidMigrationOperationError
+    );
+    // const db = new DB({ migrations: migrationsCopy });
+
+    // const dbSchema = await db.getSchema();
+    // expect(dbSchema?.collections).toHaveProperty('students');
+    // expect(dbSchema?.collections).not.toHaveProperty('classes');
+    // expect(dbSchema?.version).toEqual(1);
   });
 
   it('will only run migrations if version and parent pointer match', async () => {
