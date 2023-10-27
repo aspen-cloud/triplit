@@ -22,6 +22,17 @@ import {
   ValueTypeKeys,
 } from '../../../db/src/data-types/serialization';
 import { Collection } from '../../../db/src/schema.js';
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from '@/components/ui/sheet';
+import { Code } from '@/components/ui/code';
+import { TriplitClient } from '@triplit/client';
 
 interface FormValues {
   id: string;
@@ -63,10 +74,12 @@ function initializeNewEntityForm(model?: Collection<any>): FormValues {
       Exclude<AttributeDefinition, RecordAttributeDefinition>
     ][]
   )
-    .filter(([_attr, definition]) => definition.type !== 'query')
+    .filter(
+      ([_attr, definition]) => definition.type !== 'query' && _attr !== 'id'
+    )
     .map(([attr, attributeDef]) => {
       const type = attributeDef.type;
-      const nullable = attributeDef.options.nullable;
+      const nullable = attributeDef?.options?.nullable;
       return {
         type,
         setItemsType: type === 'set' ? attributeDef?.items?.type : undefined,
@@ -111,15 +124,14 @@ export function CreateEntityForm({
   collection,
   inferredAttributes,
   collectionDefinition,
-  onCreate,
-  onCancel,
+  client,
 }: {
   collection: string;
   inferredAttributes?: string[];
   collectionDefinition?: Collection<any>;
-  onCreate: (entity: any, id: string) => void;
-  onCancel: () => void;
+  client: TriplitClient<any>;
 }) {
+  const [open, setOpen] = useState(false);
   const form = useForm<FormValues>({
     initialValues: initializeNewEntityForm(collectionDefinition),
   });
@@ -276,46 +288,79 @@ export function CreateEntityForm({
     ]
   );
   return (
-    <form
-      onSubmit={(e) => {
-        e.preventDefault();
-        onCreate(convertFormToEntity(form.values.attributes), form.values.id);
-      }}
-      className="flex flex-col gap-4"
-    >
-      <FormField label="id" description="The primary key for this entity">
-        <Input
-          placeholder="auto-generate (leave blank)"
-          {...form.getInputProps('id')}
-        />
-      </FormField>
-      {!collectionDefinition && <div className="text-xs -mb-3">Attributes</div>}
-      {fields}
-      {!collectionDefinition && (
-        <Button
-          variant={'default'}
-          type="button"
-          onClick={() => {
-            form.insertListItem('attributes', {
-              fieldName:
-                unselectedAttributes.length > 0 ? unselectedAttributes[0] : '',
-              type: 'string',
-              fieldValue: '',
-              key: randomId(),
-            });
+    <Sheet open={open} onOpenChange={setOpen}>
+      <SheetTrigger asChild>
+        <Button size={'sm'} variant={'secondary'}>
+          New entity
+        </Button>
+      </SheetTrigger>
+      <SheetContent className="text-sm">
+        <SheetHeader>
+          <SheetTitle>New entity</SheetTitle>
+          <SheetDescription>
+            Create a new entity in <Code>{collection}</Code>
+          </SheetDescription>
+        </SheetHeader>
+        <form
+          onSubmit={async (e) => {
+            e.preventDefault();
+            try {
+              let entity = convertFormToEntity(form.values.attributes);
+              if (form.values.id)
+                entity = Object.assign(entity, { id: form.values.id });
+              console.log(entity);
+              await client.insert(collection, entity);
+              setOpen(false);
+            } catch (e) {
+              console.error(e);
+            }
           }}
+          className="flex flex-col gap-4 mt-8"
         >
-          Add attribute
-        </Button>
-      )}
-      <div className="flex flex-row self-end gap-2">
-        {/* todo update so that onClose clears state */}
-        <Button type="button" onClick={onCancel} variant="outline">
-          Cancel
-        </Button>
-        <Button type="submit">Create</Button>
-      </div>
-    </form>
+          <FormField label="id" description="The primary key for this entity">
+            <Input
+              placeholder="auto-generate (leave blank)"
+              {...form.getInputProps('id')}
+            />
+          </FormField>
+          {!collectionDefinition && (
+            <div className="text-xs -mb-3">Attributes</div>
+          )}
+          {fields}
+          {!collectionDefinition && (
+            <Button
+              variant={'default'}
+              type="button"
+              onClick={() => {
+                form.insertListItem('attributes', {
+                  fieldName:
+                    unselectedAttributes.length > 0
+                      ? unselectedAttributes[0]
+                      : '',
+                  type: 'string',
+                  fieldValue: '',
+                  key: randomId(),
+                });
+              }}
+            >
+              Add attribute
+            </Button>
+          )}
+          <div className="flex flex-row self-end gap-2">
+            {/* todo update so that onClose clears state */}
+            <Button
+              type="button"
+              onClick={() => setOpen(false)}
+              variant="outline"
+            >
+              Cancel
+            </Button>
+            <Button type="submit">Create</Button>
+          </div>
+        </form>
+        <SheetFooter></SheetFooter>
+      </SheetContent>
+    </Sheet>
   );
 }
 

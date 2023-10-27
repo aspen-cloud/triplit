@@ -147,7 +147,6 @@ export function DataViewer({
     ])
   );
   const [createEntityModalIsOpen, setCreateEntityModalIsOpen] = useState(false);
-
   const collectionSchema = schema?.collections?.[selectedCollection];
   const filters = JSON.parse(urlQueryState.where ?? '[]');
   const order = JSON.parse(urlQueryState.order ?? '[]');
@@ -261,7 +260,6 @@ export function DataViewer({
       selectedEntities,
     ]
   );
-  console.log('uniqueAttributes', uniqueAttributes);
   const columns = useMemo(() => {
     const cols: ColumnDef<any>[] = [selectEntitiesColumn, idColumn];
     Array.from(uniqueAttributes)
@@ -343,19 +341,6 @@ export function DataViewer({
     idColumn,
   ]);
 
-  const createNewEntity = useCallback(
-    async (entity: any, id: string) => {
-      try {
-        if (id) entity = Object.assign(entity, { id });
-        await client.insert(collection, entity);
-        setCreateEntityModalIsOpen(false);
-      } catch (e) {
-        console.error(e);
-      }
-    },
-    [client, collection]
-  );
-
   const flatFilteredEntities = useMemo(
     () => sortedAndFilteredEntities.map(([id, entity]) => ({ id, ...entity })),
     [sortedAndFilteredEntities]
@@ -363,26 +348,6 @@ export function DataViewer({
 
   return (
     <div className="flex flex-col w-full h-full">
-      <Modal
-        open={createEntityModalIsOpen}
-        onOpenChange={setCreateEntityModalIsOpen}
-        title={`Create new entity`}
-      >
-        <CreateEntityForm
-          collectionDefinition={collectionSchema}
-          collection={collection}
-          inferredAttributes={Array.from(uniqueAttributes)}
-          onCreate={createNewEntity}
-          onCancel={() => setCreateEntityModalIsOpen(false)}
-        />
-      </Modal>
-      <NewAttributeForm
-        open={addOrUpdateAttributeFormOpen}
-        onOpenChange={setAddOrUpdateAttributeFormOpen}
-        collectionName={collection}
-        client={client}
-        collectionSchema={collectionSchema}
-      />
       <DeleteAttributeDialog
         collectionName={collection}
         attributeName={selectedAttribute}
@@ -420,13 +385,12 @@ export function DataViewer({
             setUrlQueryState({ order: JSON.stringify(order) });
           }}
         />
-        <Button
-          size={'sm'}
-          variant={'secondary'}
-          onClick={() => setCreateEntityModalIsOpen(true)}
-        >
-          Add entity
-        </Button>
+        <CreateEntityForm
+          collectionDefinition={collectionSchema}
+          collection={collection}
+          inferredAttributes={Array.from(uniqueAttributes)}
+          client={client}
+        />
         {selectedEntities && selectedEntities.size > 0 && (
           <Button
             size={'sm'}
@@ -444,13 +408,13 @@ export function DataViewer({
           </Button>
         )}
         {collectionSchema && (
-          <Button
-            size={'sm'}
-            variant={'secondary'}
-            onClick={() => setAddOrUpdateAttributeFormOpen(true)}
-          >
-            New attribute
-          </Button>
+          <NewAttributeForm
+            open={addOrUpdateAttributeFormOpen}
+            onOpenChange={setAddOrUpdateAttributeFormOpen}
+            collectionName={collection}
+            client={client}
+            collectionSchema={collectionSchema}
+          />
         )}
       </div>
       <DataTable columns={columns} data={flatFilteredEntities} />

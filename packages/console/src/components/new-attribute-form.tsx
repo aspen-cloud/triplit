@@ -19,6 +19,7 @@ import {
   SheetFooter,
   SheetHeader,
   SheetTitle,
+  SheetTrigger,
 } from '@/components/ui/sheet';
 import { atom, useAtom } from 'jotai';
 import {
@@ -122,6 +123,11 @@ export function NewAttributeForm(
         if (!open) setAttributeToUpdate(null);
       }}
     >
+      <SheetTrigger>
+        <Button size={'sm'} variant={'secondary'}>
+          New attribute
+        </Button>
+      </SheetTrigger>
       <SheetContent className="text-sm">
         <SheetHeader>
           <SheetTitle>
@@ -263,7 +269,7 @@ export function NewAttributeForm(
                           defaultType === 'Value'
                             ? attributeBaseType === 'date'
                               ? new Date(defaultValue)
-                              : defaultValue
+                              : defaultValue || undefined
                             : defaultType === 'now'
                             ? Schema.Default.now()
                             : Schema.Default.uuid(),
