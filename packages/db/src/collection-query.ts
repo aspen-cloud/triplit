@@ -132,8 +132,11 @@ export async function fetch<
   }
   const queryWithInsertedVars = replaceVariablesInQuery(query);
   const where = queryWithInsertedVars.where;
-  if (query.entityId) {
-    const storeId = appendCollectionToId(query.collectionName, query.entityId);
+  if (queryWithInsertedVars.entityId) {
+    const storeId = appendCollectionToId(
+      queryWithInsertedVars.collectionName,
+      queryWithInsertedVars.entityId
+    );
     // With schema's we're using tombstones, and need to filter down to the latest triples to ensure that the undefined value we set on a schema attribute to be respected
     // this is probably a bandaid
     const entityTriples = filterToLatestEntityAttribute(
@@ -144,7 +147,7 @@ export async function fetch<
     if (isTimestampedEntityDeleted(entity)) {
       entity = null;
     }
-    const triples = new Map([[query.entityId, entityTriples]]);
+    const triples = new Map([[queryWithInsertedVars.entityId, entityTriples]]);
     if (!entity || !doesEntityObjMatchWhere(entity, where, collectionSchema)) {
       const results = new Map() as FetchResult<Q>;
       return includeTriples ? { results, triples } : results;
@@ -153,7 +156,7 @@ export async function fetch<
     if (!includeTriples)
       updatedEntity = convertEntityToJS(updatedEntity, collectionSchema);
     const results = new Map([
-      [query.entityId, updatedEntity],
+      [queryWithInsertedVars.entityId, updatedEntity],
     ]) as FetchResult<Q>;
     return includeTriples ? { results, triples } : results;
   }

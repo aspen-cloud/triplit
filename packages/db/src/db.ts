@@ -26,6 +26,7 @@ import {
   overrideStoredSchema,
   StoreSchema,
   prepareQuery,
+  replaceVariable,
 } from './db-helpers.js';
 import { VariableAwareCache } from './variable-aware-cache.js';
 
@@ -260,16 +261,15 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
 
   async fetch<Q extends CollectionQuery<M, any>>(
     query: Q,
-    { scope, skipRules = false }: DBFetchOptions = {}
+    options: DBFetchOptions = {}
   ) {
     await this.ensureMigrated;
-    const { query: fetchQuery } = await prepareQuery(this, query, {
-      scope,
-      skipRules,
-    });
+    const { query: fetchQuery } = await prepareQuery(this, query, options);
 
     return await fetch<M, Q>(
-      scope ? this.tripleStore.setStorageScope(scope) : this.tripleStore,
+      options.scope
+        ? this.tripleStore.setStorageScope(options.scope)
+        : this.tripleStore,
       fetchQuery,
       {
         schema: (await this.getSchema())?.collections,
@@ -281,17 +281,16 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
 
   async fetchTriples<Q extends CollectionQuery<M, any>>(
     query: Q,
-    { scope, skipRules = false }: DBFetchOptions = {}
+    options: DBFetchOptions = {}
   ) {
     await this.ensureMigrated;
-    const { query: fetchQuery } = await prepareQuery(this, query, {
-      scope,
-      skipRules,
-    });
+    const { query: fetchQuery } = await prepareQuery(this, query, options);
     return [
       ...(
         await fetch<M, Q>(
-          scope ? this.tripleStore.setStorageScope(scope) : this.tripleStore,
+          options.scope
+            ? this.tripleStore.setStorageScope(options.scope)
+            : this.tripleStore,
           fetchQuery,
           {
             schema: (await this.getSchema())?.collections,
@@ -306,23 +305,23 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
   async fetchById<CN extends CollectionNameFromModels<M>>(
     collectionName: CN,
     id: string,
-    { skipRules = false }: DBFetchOptions = {}
+    options: DBFetchOptions = {}
   ) {
     await this.ensureMigrated;
-    // TODO: prepare query?
     const query = this.query(collectionName).entityId(id).build();
-    const result = await this.fetch(query, { skipRules });
-    return result.has(id) ? result.get(id)! : null;
+    const result = await this.fetch(query, options);
+    // Fetch handles replacing variables, need to replace here to pull data out
+    const entityId = replaceVariable(id, this.variables);
+    return result.has(entityId) ? result.get(entityId)! : null;
   }
 
   async fetchOne<Q extends CollectionQuery<M, any>>(
     query: Q,
-    { scope, skipRules = false }: DBFetchOptions = {}
+    options: DBFetchOptions = {}
   ) {
     query.limit = 1;
     await this.ensureMigrated;
-    // TODO: prepare query?
-    const result = await this.fetch(query, { scope, skipRules });
+    const result = await this.fetch(query, options);
     const entry = [...result.entries()][0];
     if (!entry) return null;
     return entry;

@@ -73,23 +73,35 @@ export function replaceVariablesInFilterStatements<
       );
       return filter;
     }
-    if (typeof filter[2] !== 'string' || !filter[2].startsWith('$'))
-      return filter;
-    const varValue = variables[filter[2].slice(1)];
-    if (!varValue) throw new SessionVariableNotFoundError(filter[2]);
-    return [filter[0], filter[1], varValue] as FilterStatement<M>;
+    const replacedValue = replaceVariable(filter[2], variables);
+    return [filter[0], filter[1], replacedValue] as FilterStatement<M>;
   });
 }
 
+export function replaceVariable(
+  target: any,
+  variables: Record<string, any> = {}
+) {
+  if (typeof target !== 'string') return target;
+  if (!target.startsWith('$')) return target;
+  const varValue = variables[target.slice(1)];
+  if (!varValue) throw new SessionVariableNotFoundError(target);
+  return varValue;
+}
+
 export function replaceVariablesInQuery<
-  Q extends Pick<CollectionQuery<any, any>, 'where' | 'vars'>
+  Q extends Pick<CollectionQuery<any, any>, 'where' | 'entityId' | 'vars'>
 >(query: Q): Q {
   // const variables = { ...(db.variables ?? {}), ...(query.vars ?? {}) };
   const where = replaceVariablesInFilterStatements(
     query.where,
     query.vars ?? {}
   );
-  return { ...query, where };
+  const entityId = query.entityId
+    ? replaceVariable(query.entityId, query.vars ?? {})
+    : undefined;
+
+  return { ...query, where, entityId };
 }
 
 export function* filterStatementIterator<M extends Model<any> | undefined>(
@@ -279,6 +291,7 @@ export async function prepareQuery<
   fetchQuery.where = mapFilterStatements(fetchQuery.where, (statement) => {
     if (!Array.isArray(statement)) return statement;
     const [prop, op, val] = statement;
+    // TODO: should be integrated into type system
     return [prop, op, val instanceof Date ? val.toISOString() : val];
   });
   if (collectionSchema) {

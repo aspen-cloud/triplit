@@ -60,6 +60,7 @@ import {
   splitIdParts,
   getCollectionSchema,
   prepareQuery,
+  replaceVariable,
 } from './db-helpers.js';
 import { Query, constructEntity, entityToResultReducer } from './query.js';
 import { serializedItemToTuples } from './utils.js';
@@ -450,12 +451,11 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
 
   async fetch<Q extends CollectionQuery<M, any>>(
     query: Q,
-    { scope, skipRules = false }: DBFetchOptions = {}
+    options: DBFetchOptions = {}
   ): Promise<FetchResult<Q>> {
-    const { query: fetchQuery } = await prepareQuery(this, query, {
-      scope,
-      skipRules,
-    });
+    const { query: fetchQuery } = await prepareQuery(this, query, options);
+    // TODO: read scope?
+    // See difference between this fetch and db fetch
     return fetch<M, Q>(this.storeTx, fetchQuery, {
       schema: (await this.getSchema())?.collections,
       includeTriples: false,
@@ -474,21 +474,21 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
   async fetchById<CN extends CollectionNameFromModels<M>>(
     collectionName: CN,
     id: string,
-    { skipRules = false }: DBFetchOptions = {}
+    options: DBFetchOptions = {}
   ) {
-    // TODO: prepare query?
     const query = this.query(collectionName).entityId(id).build();
-    const result = await this.fetch(query, { skipRules });
-    return result.has(id) ? result.get(id) : null;
+    const result = await this.fetch(query, options);
+    // Fetch handles replacing variables, need to replace here to pull data out
+    const entityId = replaceVariable(id, this.variables);
+    return result.has(entityId) ? result.get(entityId) : null;
   }
 
   async fetchOne<Q extends CollectionQuery<M, any>>(
     query: Q,
-    { scope, skipRules = false }: DBFetchOptions = {}
+    options: DBFetchOptions = {}
   ) {
-    // TODO: prepare query?
     query.limit = 1;
-    const result = await this.fetch(query, { scope, skipRules });
+    const result = await this.fetch(query, options);
     const entry = [...result.entries()][0];
     if (!entry) return null;
     return entry;

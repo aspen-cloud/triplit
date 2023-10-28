@@ -191,4 +191,10 @@ For example, the following query will return just the user with id `abc`, if it 
 const query = client.query('users').entityId('abc');
 ```
 
+You may also pass a DB variable to `entityId`.
+
+```typescript
+const query = client.query('users').entityId('$userId');
+```
+
 As a convenience, Triplit also provides a method [fetchById](/fetching#fetch) to fetch an entity by its id.

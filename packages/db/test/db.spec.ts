@@ -3130,19 +3130,65 @@ describe('DB Variables', () => {
       for (const cls of classes) {
         await tx.insert('classes', cls);
       }
+      for (const dpt of departments) {
+        await tx.insert('departments', dpt);
+      }
     });
   });
 
-  it('can use variables in simple query', async () => {
+  it('fetch supports variables', async () => {
     const query = db
       .query('classes')
       .where([['department', '=', '$DEPARTMENT']])
       .build();
-    const result = await db.fetch(query);
-    expect(result).toHaveLength(classesInDep.length);
-    expect(
-      [...result.values()].every((r) => r.department === DEPARTMENT)
-    ).toBeTruthy();
+
+    await testDBAndTransaction(
+      () => db,
+      async (db) => {
+        const result = await db.fetch(query);
+        expect(result).toHaveLength(classesInDep.length);
+        expect(
+          [...result.values()].every((r) => r.department === DEPARTMENT)
+        ).toBeTruthy();
+      }
+    );
+  });
+
+  it('fetchOne supports variables', async () => {
+    const query = db
+      .query('classes')
+      .where([['department', '=', '$DEPARTMENT']])
+      .build();
+
+    await testDBAndTransaction(
+      () => db,
+      async (db) => {
+        const result = await db.fetchOne(query);
+        expect(result?.[1].department).toBe(DEPARTMENT);
+      }
+    );
+  });
+
+  it('fetchById supports variables', async () => {
+    await testDBAndTransaction(
+      () => db,
+      async (db) => {
+        const result = await db.fetchById('departments', '$DEPARTMENT');
+        expect(result?.id).toBe(DEPARTMENT);
+      }
+    );
+  });
+
+  it('entityId supports variables', async () => {
+    const query = db.query('departments').entityId('$DEPARTMENT').build();
+    await testDBAndTransaction(
+      () => db,
+      async (db) => {
+        const result = await db.fetch(query);
+        expect(result).toHaveLength(1);
+        expect(result.get('dep-1')?.id).toBe(DEPARTMENT);
+      }
+    );
   });
 
   it('can use variables in query with simple grouped filter', async () => {
@@ -3174,25 +3220,16 @@ describe('DB Variables', () => {
         },
       ])
       .build();
-    const result = await db.fetch(query);
-    expect(result).toHaveLength(classesInDep.length);
-    expect(
-      [...result.values()].every((r) => r.department === DEPARTMENT)
-    ).toBeTruthy();
-  });
-
-  it('works in a transaction', async () => {
-    const query = db
-      .query('classes')
-      .where([{ mod: 'and', filters: [['department', '=', '$DEPARTMENT']] }])
-      .build();
-    await db.transact(async (tx) => {
-      const result = await tx.fetch(query);
-      expect(result).toHaveLength(classesInDep.length);
-      expect(
-        [...result.values()].every((r) => r.department === DEPARTMENT)
-      ).toBeTruthy();
-    });
+    await testDBAndTransaction(
+      () => db,
+      async (db) => {
+        const result = await db.fetch(query);
+        expect(result).toHaveLength(classesInDep.length);
+        expect(
+          [...result.values()].every((r) => r.department === DEPARTMENT)
+        ).toBeTruthy();
+      }
+    );
   });
 
   it('can update global variables', async () => {
@@ -3200,6 +3237,7 @@ describe('DB Variables', () => {
       .query('classes')
       .where([['department', '=', '$DEPARTMENT']])
       .build();
+
     const preUpdateResult = await db.fetch(query);
     expect(preUpdateResult.size).toBe(3);
 
@@ -3217,12 +3255,20 @@ describe('DB Variables', () => {
     const builtQuery1 = query.vars({ DEPARTMENT: 'dep-1' }).build();
     const builtQuery2 = query.vars({ DEPARTMENT: 'dep-2' }).build();
 
-    const result1 = await db.fetch(builtQuery1);
-    const result2 = await db.fetch(builtQuery2);
+    await testDBAndTransaction(
+      () => db,
+      async (db) => {
+        const result1 = await db.fetch(builtQuery1);
+        const result2 = await db.fetch(builtQuery2);
 
-    expect(result1.size).toBe(3);
-    expect(result2.size).toBe(2);
+        expect(result1.size).toBe(3);
+        expect(result2.size).toBe(2);
+      }
+    );
   });
+
+  it.todo('insert supports variables');
+  it.todo('update supports variables');
 
   it.todo('supports updating variables with active subscriptions');
 });
