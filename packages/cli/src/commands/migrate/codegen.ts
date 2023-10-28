@@ -12,20 +12,22 @@ import {
   Migration,
 } from '@triplit/db';
 import { getMigrationsStatus } from '../../migration.js';
-import { withServerRequester } from '../../middleware/add-server-requester.js';
+import { serverRequesterMiddleware } from '../../middleware/add-server-requester.js';
 import { getTriplitDir } from '../../filesystem.js';
 import { blue } from 'ansis/colors';
+import { Command } from '../../command.js';
 
-export const description =
-  'Generates a schema file based on your current migrations';
-
-export const run = withServerRequester(async ({ ctx }) => {
-  const res = await getMigrationsStatus({ ctx });
-  const migrations = res.project.migrations.filter((m) => {
-    const status = res.project.statuses[m.version];
-    return status === 'IN_SYNC' || status === 'UNAPPLIED';
-  });
-  await writeSchemaWithMigrations(migrations);
+export default Command({
+  description: 'Generates a schema file based on your current migrations',
+  middleware: [serverRequesterMiddleware],
+  run: async ({ ctx }) => {
+    const res = await getMigrationsStatus({ ctx });
+    const migrations = res.project.migrations.filter((m) => {
+      const status = res.project.statuses[m.version];
+      return status === 'IN_SYNC' || status === 'UNAPPLIED';
+    });
+    await writeSchemaWithMigrations(migrations);
+  },
 });
 
 export async function writeSchemaWithMigrations(migrations: Migration[]) {

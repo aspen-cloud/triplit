@@ -2,18 +2,7 @@ import { readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { ReactElement } from 'react';
 import { Flag } from './flags.js';
-
-export interface CommandDefinition {
-  name: string;
-  description?: string;
-  args?: string[];
-  flags?: Record<string, Flag>;
-  run: (params: {
-    args: string[];
-    flags: any;
-    ctx: any;
-  }) => Promise<ReactElement> | ReactElement | Promise<void> | void;
-}
+import { CommandDefinition } from './command.js';
 
 export type CommandInfo = {
   name: string;
@@ -25,7 +14,7 @@ export type CommandTree = { [key: string]: CommandTree | CommandInfo };
 export async function getCommandsWithDefinition(
   commands: CommandTree,
   prefix: string[]
-): Promise<CommandDefinition[]> {
+): Promise<(CommandDefinition<any, any, any> & { name: string })[]> {
   return Promise.all(
     Object.entries(commands).flatMap(async ([name, cmd]) => {
       if (isCommandInfo(cmd)) {
@@ -35,7 +24,7 @@ export async function getCommandsWithDefinition(
     })
   ).then((results) =>
     results.flat().filter((cmd) => cmd.description)
-  ) as Promise<CommandDefinition[]>;
+  ) as Promise<(CommandDefinition<any, any, any> & { name: string })[]>;
 }
 
 export function isCommandInfo(obj: {}): obj is CommandInfo {
@@ -45,12 +34,12 @@ export function isCommandInfo(obj: {}): obj is CommandInfo {
 export async function getCommandDefinition(
   cmd: CommandInfo,
   prefix: string[] = []
-): Promise<CommandDefinition> {
+): Promise<CommandDefinition<any, any, any> & { name: string }> {
   const { name, sourcePath } = cmd;
-  const { description, args, flags, run } = (await import(
-    sourcePath
-  )) as CommandDefinition;
-  return { name: prefix.concat(name).join(' '), description, args, flags, run };
+  const { default: definition } = (await import(sourcePath)) as {
+    default: CommandDefinition<any, any, any>;
+  };
+  return { name: prefix.concat(name).join(' '), ...definition };
 }
 
 // Recursively find all ts and tsx files in the commands directory

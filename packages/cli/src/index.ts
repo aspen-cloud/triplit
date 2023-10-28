@@ -16,6 +16,7 @@ import minimist from 'minimist';
 import { fileURLToPath } from 'node:url';
 import { WebSocket } from 'ws';
 import fetch from 'node-fetch';
+import { Flag } from './flags.js';
 // @ts-ignore
 global.WebSocket = WebSocket;
 // @ts-ignore
@@ -58,7 +59,9 @@ async function execute(args: string[], flags: {}) {
   let unaliasedFlags = flags;
 
   if (cmdDef.flags) {
-    const cmdFlagsDefs = Object.entries(cmdDef.flags ?? {});
+    const cmdFlagsDefs = Object.entries(
+      (cmdDef.flags as Record<string, Flag>) ?? {}
+    );
     unaliasedFlags = Object.entries(flags).reduce(
       (acc, [flagName, flagValue]) => {
         const flagDef = cmdFlagsDefs.find(
@@ -75,11 +78,22 @@ async function execute(args: string[], flags: {}) {
       {}
     );
   }
+  let ctx = {};
+  for (const middleware of cmdDef.middleware ?? []) {
+    const result = await middleware.run({
+      flags: unaliasedFlags,
+      args: commandArgs,
+      ctx,
+    });
+    if (result) {
+      ctx = { ...ctx, ...result };
+    }
+  }
 
   const result = await cmdDef.run({
     flags: unaliasedFlags,
     args: commandArgs,
-    ctx: {},
+    ctx,
   });
   if (result && React.isValidElement(result)) {
     render(result, { patchConsole: false });

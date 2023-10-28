@@ -1,9 +1,25 @@
 import prompts from 'prompts';
 import axios from 'axios';
 import * as JWT from 'jsonwebtoken';
+import { Middleware } from '../middleware.js';
 
-export function withServerRequester(cmd) {
-  return async ({ flags, args, ctx }) => {
+export const serverRequesterMiddleware = Middleware({
+  name: 'Server Requester',
+  flags: {
+    token: {
+      description: 'API Token (Service Key)',
+      required: false,
+      char: 't',
+      type: 'string',
+    },
+    remote: {
+      description: 'Remote URL to connect to',
+      required: false,
+      char: 'r',
+      type: 'string',
+    },
+  },
+  run: async ({ flags, args }) => {
     let token = flags.token ?? process.env.TOKEN;
     if (!token) {
       // request token
@@ -27,13 +43,9 @@ export function withServerRequester(cmd) {
     const url = flags.remote ?? process.env.DB_URL ?? `http://localhost:6543`; // `https://${projectId}.triplit.io`;
     const requestServer = makeRequester({ url, token });
     // TODO: add prod flag
-    return cmd({
-      flags,
-      args,
-      ctx: { ...ctx, requestServer, projectId, token, url },
-    });
-  };
-}
+    return { requestServer, projectId, token, url };
+  },
+});
 
 function makeRequester({ url, token }) {
   return async function request(
