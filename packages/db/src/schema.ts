@@ -64,7 +64,7 @@ export class Schema {
   }
 }
 
-type SchemaConfig = { id: StringType<{ nullable: false }> } & Record<
+type SchemaConfig = { id: ReturnType<typeof Schema.Id> } & Record<
   string,
   DataType
 >;
@@ -112,10 +112,9 @@ export function getSchemaFromPath(
 export type UpdateTypeFromModel<M extends Model<any> | undefined> =
   M extends Model<any>
     ? {
-        // remove subqueries from update model
-        [k in keyof M['properties'] as M['properties'][k] extends QueryType<any>
-          ? never
-          : k]: ExtractJSType<M['properties'][k]>;
+        [k in keyof ReadModelFromModel<M>['properties']]: ExtractJSType<
+          M['properties'][k]
+        >;
       }
     : any;
 
@@ -146,34 +145,39 @@ export type InsertTypeFromModel<M extends Model<any> | undefined> =
   M extends Model<any>
     ? {
         // If the type has no default, it must be provided
-        [k in keyof M['properties'] as DataTypeHasNoDefault<
+        [k in keyof ReadModelFromModel<M>['properties'] as DataTypeHasNoDefault<
           M['properties'][k]
         > extends true
-          ? // remove subqueries from insert model
-            M['properties'][k] extends QueryType<any>
-            ? never
-            : k
+          ? k
           : never]: ExtractJSType<M['properties'][k]>;
       } & {
         // If the type has a default, it can be omitted
-        [k in keyof M['properties'] as DataTypeHasDefault<
+        [k in keyof ReadModelFromModel<M>['properties'] as DataTypeHasDefault<
           M['properties'][k]
         > extends true
-          ? // remove subqueries from insert model
-            M['properties'][k] extends QueryType<any>
-            ? never
-            : k
+          ? k
           : never]?: ExtractJSType<M['properties'][k]>;
       }
+    : any;
+
+// A subset of the model that can be read
+// This is just the model without subqueries
+export type ReadModelFromModel<M extends Model<any> | undefined> =
+  M extends Model<infer Config>
+    ? Config extends SchemaConfig
+      ? Model<//@ts-ignore
+        {
+          [k in keyof Config as Config[k] extends QueryType<any>
+            ? never
+            : k]: Config[k];
+        }>
+      : never
     : any;
 
 export type ResultTypeFromModel<M extends Model<any> | undefined> =
   M extends Model<any>
     ? {
-        // remove subqueries from result model
-        [k in keyof M['properties'] as M['properties'][k] extends QueryType<any>
-          ? never
-          : k]: M['properties'][k] extends DataType
+        [k in keyof ReadModelFromModel<M>['properties']]: M['properties'][k] extends DataType
           ? ExtractJSType<M['properties'][k]>
           : never;
       }

@@ -1,5 +1,5 @@
 import { ValuePointer } from '@sinclair/typebox/value';
-import { Model, Models, ResultTypeFromModel, Timestamped } from './schema.js';
+import { Model, Models, ReadModelFromModel, Timestamped } from './schema.js';
 import { Attribute, EntityId, TripleRow } from './triple-store.js';
 import { QueryClauseFormattingError } from './errors.js';
 import { TimestampType } from './data-types/base.js';
@@ -7,6 +7,7 @@ import { timestampCompare } from './timestamp.js';
 import { CollectionQuery } from './collection-query.js';
 import { CollectionNameFromModels } from './db.js';
 import { ExtractOperators } from './data-types/type.js';
+import { RecordType } from './data-types/record.js';
 
 type Path = string;
 // Should be friendly types that we pass into queries
@@ -23,14 +24,44 @@ type Value =
 
 export type FilterStatement<
   M extends Model<any> | undefined,
-  K extends M extends Model<any>
-    ? keyof M['properties']
-    : Path = M extends Model<any> ? keyof M['properties'] : Path
+  K extends M extends Model<any> ? RecordPaths<M> : Path = M extends Model<any>
+    ? RecordPaths<M>
+    : Path
 > = [
   K,
-  M extends Model<any> ? ExtractOperators<M['properties'][K]> : string,
+  M extends Model<any> ? ExtractOperators<ExtractTypeAtPath<M, K>> : string,
   Value // TODO: We could make this tighter by inspecting the type
 ];
+
+type RecordPaths<R extends RecordType<any>> = R extends RecordType<any>
+  ? {
+      [K in keyof R['properties']]: R['properties'][K] extends RecordType<any>
+        ?
+            | `${string & K}`
+            | `${string & K}.${RecordPaths<
+                // @ts-ignore
+                R['properties'][K]
+              >}`
+        : `${string & K}`;
+    }[keyof R['properties']]
+  : never;
+
+type ExtractTypeAtPath<
+  M extends RecordType<any>,
+  P extends any // should be a dot notation path
+> = P extends `${infer K}.${infer Rest}` // if path is nested
+  ? K extends keyof M['properties'] // if key is a valid key
+    ? M['properties'][K] extends RecordType<any> // if value at key is a record type
+      ? ExtractTypeAtPath<
+          // @ts-ignore
+          M['properties'][K],
+          Rest
+        > // recurse
+      : never // if value at key is not a record type
+    : never // if key is not a valid key
+  : P extends keyof M['properties'] // if path is not nested
+  ? M['properties'][P] // return value at path
+  : never; // if path is not valid
 
 export function isFilterStatement(
   filter: WhereFilter<any>
@@ -65,13 +96,13 @@ export type QueryWhere<M extends Model<any> | undefined> = WhereFilter<M>[];
 export type ValueCursor = [value: Value, entityId: EntityId];
 
 export type QueryOrder<M extends Model<any> | undefined> = [
-  property: M extends Model<any> ? keyof ResultTypeFromModel<M> : Path,
+  property: M extends Model<any> ? RecordPaths<ReadModelFromModel<M>> : Path,
   direction: 'ASC' | 'DESC'
 ];
 
 export interface Query<M extends Model<any> | undefined> {
   where: QueryWhere<M>;
-  select: (M extends Model<any> ? keyof ResultTypeFromModel<M> : Path)[];
+  select: (M extends Model<any> ? RecordPaths<ReadModelFromModel<M>> : Path)[];
   order?: QueryOrder<M>[];
   limit?: number;
   after?: ValueCursor;

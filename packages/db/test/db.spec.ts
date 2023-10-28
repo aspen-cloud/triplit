@@ -2032,11 +2032,85 @@ describe('ORDER & LIMIT & Pagination', () => {
     expect(areAllScoresDescending).toBeTruthy();
   });
 
+  it('order by deep properties', async () => {
+    const db = new DB({
+      schema: {
+        collections: {
+          test: {
+            schema: S.Schema({
+              id: S.Id(),
+              deep: S.Record({
+                deeper: S.Record({
+                  deepest: S.Record({
+                    prop: S.Number(),
+                  }),
+                }),
+                prop: S.Number(),
+              }),
+            }),
+          },
+        },
+      },
+    });
+    await db.insert('test', {
+      id: '1',
+      deep: {
+        deeper: {
+          deepest: {
+            prop: 400,
+          },
+        },
+        prop: 299,
+      },
+    });
+    await db.insert('test', {
+      id: '2',
+      deep: {
+        deeper: {
+          deepest: {
+            prop: 399,
+          },
+        },
+        prop: 300,
+      },
+    });
+    await db.insert('test', {
+      id: '3',
+      deep: {
+        deeper: {
+          deepest: {
+            prop: 401,
+          },
+        },
+        prop: 301,
+      },
+    });
+
+    {
+      const resultsASC = await db.fetch(
+        db.query('test').order(['deep.deeper.deepest.prop', 'ASC']).build()
+      );
+      const resultsDESC = await db.fetch(
+        db.query('test').order(['deep.deeper.deepest.prop', 'DESC']).build()
+      );
+      expect([...resultsASC.keys()]).toEqual(['2', '1', '3']);
+      expect([...resultsDESC.keys()]).toEqual(['3', '1', '2']);
+    }
+    {
+      const resultsASC = await db.fetch(
+        db.query('test').order(['deep.prop', 'ASC']).build()
+      );
+      const resultsDESC = await db.fetch(
+        db.query('test').order(['deep.prop', 'DESC']).build()
+      );
+      expect([...resultsASC.keys()]).toEqual(['1', '2', '3']);
+      expect([...resultsDESC.keys()]).toEqual(['3', '2', '1']);
+    }
+  });
+
   it('order by multiple properties', async () => {
     const descendingScoresResults = await db.fetch(
-      CollectionQueryBuilder('TestScores')
-        .order(['score', 'ASC'], ['date', 'DESC'])
-        .build()
+      db.query('TestScores').order(['score', 'ASC'], ['date', 'DESC']).build()
     );
     expect(descendingScoresResults.size).toBe(TEST_SCORES.length);
     const areAllScoresDescending = Array.from(

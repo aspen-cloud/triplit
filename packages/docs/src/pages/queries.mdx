@@ -27,6 +27,17 @@ const query = client.query('users').select(['id', 'name', 'email', 'dob']);
   Full support for relationships is on the [roadmap](https://triplit.dev/roadmap).
 </Callout>
 
+If the type you are selecting is a record, you may also select a specific attribute of the record by using dot notation. The result will be an object with just the selected keys.
+
+```typescript
+const query = client
+  .query('users')
+  .select(['id', 'address.street', 'address.city']);
+// {id: 'abc', address: {street: '123 Main St', city: 'New York'}}
+```
+
+If you do not call select on a query, all attributes are selected.
+
 ## Filtering
 
 To filter results based on conditions, you can use the `where` method. This method accepts a list of clauses as arguments. A clause is a tuple that takes the form `[attribute, operator, value]`.
@@ -67,6 +78,12 @@ const query = client
   ]);
 ```
 
+You may use dot notation to filter by attirbutes of a record.
+
+```typescript
+const query = client.query('users').where('address.city', '=', 'New York');
+```
+
 ### Operators
 
 See the list of [data types](/schemas#data-types) for more information on the operators that can be used in a where clause.
@@ -90,6 +107,12 @@ Clauses can be passed to `order` as a single clause or an array of clauses:
 - `.order(['created_at', 'DESC'])`
 - `.order([['created_at', 'DESC']])`
 
+You may use dot notation to order by attirbutes of a record.
+
+```typescript
+const query = client.query('users').order('address.city', 'ASC');
+```
+
 ## Limit
 
 Many times you will want to limit the number of results returned by a query. To do this, you can use the `limit` method.
@@ -100,7 +123,7 @@ For example, the following query will return the 10 most recently created users.
 const query = client
   .query('users')
   .select(['id', 'name', 'email', 'dob'])
-  .order(['created_at', 'DESC'])
+  .order('created_at', 'DESC')
   .limit(10);
 ```
 
@@ -114,10 +137,8 @@ For example, you may define a query that queries for restaurants that are open b
 
 ```typescript
 const baseQuery = client.query('restaurants').where([
-  [
-    ['is_open', '=', true],
-    ['cuisine', '=', '$cuisine'],
-  ],
+  ['is_open', '=', true],
+  ['cuisine', '=', '$cuisine'],
 ]);
 const openItalianRestaurantsQuery = baseQuery.variables({ cuisine: 'italian' });
 const openMexicanRestaurantsQuery = baseQuery.variables({ cuisine: 'mexican' });

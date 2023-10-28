@@ -1,6 +1,7 @@
 import { expectTypeOf, test, describe } from 'vitest';
-import DB from '../../src/db.js';
+import DB, { ModelFromModels } from '../../src/db.js';
 import { Schema as S } from '../../src/schema.js';
+import { QueryOrder, QueryWhere, WhereFilter } from '../../src/query.js';
 
 // Want to figure out the best way to test various data types + operation combos
 // Right now im reusing this exhaustive schema (also defined in cli tests)
@@ -315,6 +316,9 @@ describe('query builder', () => {
             attr1: S.String(),
             attr2: S.Boolean(),
             attr3: S.Number(),
+            record: S.Record({
+              attr1: S.String(),
+            }),
 
             // Not included
             subquery: S.Query({ collectionName: 'test2', where: [] }),
@@ -328,13 +332,119 @@ describe('query builder', () => {
       const query = db.query('test');
       expectTypeOf(query.select)
         .parameter(0)
-        .toEqualTypeOf<('attr1' | 'attr2' | 'attr3' | 'id')[]>();
+        .toEqualTypeOf<
+          ('attr1' | 'attr2' | 'attr3' | 'record' | 'record.attr1' | 'id')[]
+        >();
     }
     // schemaless
     {
       const db = new DB();
       const query = db.query('test');
       expectTypeOf(query.select).parameter(0).toEqualTypeOf<string[]>();
+    }
+  });
+  test('where attribute prop', () => {
+    const schema = {
+      collections: {
+        test: {
+          schema: S.Schema({
+            id: S.Id(),
+            attr1: S.Record({
+              inner1: S.Record({
+                inner1A: S.String(),
+                inner1B: S.String(),
+              }),
+              inner2: S.Record({
+                inner2A: S.String(),
+              }),
+            }),
+            attr2: S.Boolean(),
+            // should include query
+            query: S.Query({ collectionName: 'test2', where: [] }),
+          }),
+        },
+      },
+    };
+    {
+      const db = new DB({ schema });
+      const query = db.query('test');
+      expectTypeOf(query.where)
+        .parameter(0)
+        .toMatchTypeOf<
+          | 'id'
+          | 'attr1'
+          | 'attr1.inner1'
+          | 'attr1.inner1.inner1A'
+          | 'attr1.inner1.inner1B'
+          | 'attr1.inner2'
+          | 'attr1.inner2.inner2A'
+          | 'attr2'
+          | 'query'
+          | WhereFilter<ModelFromModels<(typeof schema)['collections'], 'test'>>
+          | QueryWhere<ModelFromModels<(typeof schema)['collections'], 'test'>>
+        >();
+    }
+    {
+      const db = new DB();
+      const query = db.query('test');
+      expectTypeOf(query.where)
+        .parameter(0)
+        .toMatchTypeOf<
+          string | WhereFilter<undefined> | QueryWhere<undefined>
+        >();
+    }
+  });
+
+  test('order attribute prop', () => {
+    const schema = {
+      collections: {
+        test: {
+          schema: S.Schema({
+            id: S.Id(),
+            attr1: S.Record({
+              inner1: S.Record({
+                inner1A: S.String(),
+                inner1B: S.String(),
+              }),
+              inner2: S.Record({
+                inner2A: S.String(),
+              }),
+            }),
+            attr2: S.Boolean(),
+            // should not include query
+            query: S.Query({ collectionName: 'test2', where: [] }),
+          }),
+        },
+      },
+    };
+    {
+      const db = new DB({ schema });
+      const query = db.query('test');
+      expectTypeOf(query.order)
+        .parameter(0)
+        .toMatchTypeOf<
+          | 'id'
+          | 'attr1'
+          | 'attr1.inner1'
+          | 'attr1.inner1.inner1A'
+          | 'attr1.inner1.inner1B'
+          | 'attr1.inner2'
+          | 'attr1.inner2.inner2A'
+          | 'attr2'
+          | QueryOrder<ModelFromModels<(typeof schema)['collections'], 'test'>>
+          | QueryOrder<
+              ModelFromModels<(typeof schema)['collections'], 'test'>
+            >[]
+        >();
+    }
+    {
+      const db = new DB();
+      const query = db.query('test');
+      expectTypeOf(query.where)
+        .parameter(0)
+        .toMatchTypeOf<
+          string | WhereFilter<undefined> | QueryWhere<undefined>
+        >();
     }
   });
 });
