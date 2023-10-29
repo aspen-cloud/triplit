@@ -27,7 +27,7 @@ import { fileURLToPath } from 'node:url';
 import { WebSocket } from 'ws';
 import fetch from 'node-fetch';
 import { Flag } from './flags.js';
-import { CommandDefinition } from './command.js';
+import { ArgDefinitions, CommandDefinition } from './command.js';
 // @ts-ignore
 global.WebSocket = WebSocket;
 // @ts-ignore
@@ -118,9 +118,25 @@ async function execute(args: string[], flags: {}) {
     }
   }
 
+  let parsedCommandArgs = {};
+
+  if (cmdDef.args) {
+    if (cmdDef.args instanceof Array) {
+      parsedCommandArgs = cmdDef.args?.reduce((acc, arg, i) => {
+        acc[arg.name] = commandArgs[i];
+        return acc;
+      }, {});
+    } else {
+      const { name, description } = cmdDef.args;
+      parsedCommandArgs = {
+        [name]: commandArgs,
+      };
+    }
+  }
+
   const result = await cmdDef.run({
     flags: unaliasedFlags,
-    args: commandArgs,
+    args: parsedCommandArgs,
     ctx,
   });
   if (result && React.isValidElement(result)) {
@@ -138,27 +154,41 @@ async function printDirectoryHelp(name: string, commands: CommandTree) {
   );
 }
 
-function printCommandHelp<Cmd extends CommandDefinition<any, any, any>>(
-  name: string,
-  cmdDef: Cmd
-) {
+function printCommandHelp<
+  Cmd extends CommandDefinition<ArgDefinitions, any, any>
+>(name: string, cmdDef: Cmd) {
   // @ts-ignore
   console.log(`triplit ${bold(name)}`);
   console.log(dim(cmdDef.description));
   console.log();
-  if (cmdDef.args?.length) {
+  if (cmdDef.args) {
     console.log('Arguments:');
-    for (const arg of cmdDef.args) {
-      console.log(`  ${bold(arg.name)} - ${arg.description}`);
+    if (cmdDef.args instanceof Array) {
+      for (let i = 0; i < cmdDef.args.length; i++) {
+        const arg = cmdDef.args[i];
+        console.log(
+          // @ts-ignore
+          `${dim`${i.toString()}:`} ${bold(arg.name)} ${dim(arg.description)}`
+        );
+      }
+    } else {
+      const { name, description } = cmdDef.args;
+      console.log(`...${bold(name)} ${dim(description)}`);
     }
     console.log();
   }
-  console.log('Flags:');
+  let hasPrintFlagHeader = false;
   if (cmdDef.flags) {
+    console.log('Flags:');
+    hasPrintFlagHeader = true;
     printFlags(cmdDef.flags);
   }
   if (cmdDef.middleware?.length) {
     for (const middleware of cmdDef.middleware) {
+      if (!hasPrintFlagHeader) {
+        console.log('Flags:');
+        hasPrintFlagHeader = true;
+      }
       printFlags(middleware.flags ?? {});
     }
     console.log();
@@ -174,6 +204,10 @@ function printCommandHelp<Cmd extends CommandDefinition<any, any, any>>(
 
 function printFlags(flags: Record<string, Flag>) {
   for (const [name, flag] of Object.entries(flags)) {
-    console.log(`  ${bold(name)} - ${flag.description}`);
+    console.log(
+      `--${bold(name)}${flag.char ? `, -${bold(flag.char)}` : ''} ${dim(
+        flag.description
+      )}`
+    );
   }
 }

@@ -10,9 +10,9 @@ import { Command } from '../../command.js';
 export default Command({
   description: 'Runs down migrations on the remote database',
   middleware: [serverRequesterMiddleware],
-  args: ['version'],
+  args: [{ name: 'version', description: 'The version to migrate down to' }],
   run: async ({ args, ctx }) => {
-    const endVersion = args[0];
+    const endVersion = +args.version;
     if (endVersion == undefined) throw new Error('No version specified');
     console.log(`Migrating down the sync server: `, blue(ctx.url));
     console.log();

@@ -10,7 +10,13 @@ import { Command } from '../../command.js';
 export default Command({
   description: 'Runs up migrations on the remote database',
   middleware: [serverRequesterMiddleware],
-  args: ['version'],
+  args: [
+    {
+      name: 'version',
+      description: 'The version to migrate up to',
+      required: false,
+    },
+  ],
   run: async ({ args, ctx }) => {
     console.log(`Migrating up the sync server: `, blue(ctx.url));
     console.log();
@@ -27,7 +33,7 @@ export default Command({
 
     // If no schema or already using migrations, apply proper migrations
     const startVersion = server.migrationIds?.at(-1) || 0;
-    const endVersion = args[0];
+    const endVersion = +args.version;
     if (endVersion && endVersion < startVersion) {
       console.error(
         `Migration version ${endVersion} is less than server version ${startVersion}`
