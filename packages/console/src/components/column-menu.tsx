@@ -18,7 +18,7 @@ export function ColumnMenu(props: ColumnMenuProps) {
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button
-          className="p-0 text-secondary hover:text-primary hover:bg-inherit"
+          className="p-0 text-primary/30 hover:text-primary hover:bg-inherit"
           variant={'ghost'}
           size={'sm'}
         >

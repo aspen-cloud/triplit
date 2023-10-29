@@ -10,27 +10,24 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { Code } from '@/components/ui/code';
-
+import { useSelectedCollection } from 'src/hooks/useSelectedCollection.js';
 import { ComponentProps } from 'react';
 
 type DeleteCollectionDialogProps = {
-  collectionName: string;
-  projectName: string;
   client: TriplitClient<any>;
 };
 
 export function DeleteCollectionDialog(
   props: DeleteCollectionDialogProps & ComponentProps<typeof AlertDialog>
 ) {
-  const { collectionName, projectName, onOpenChange, client, ...dialogProps } =
-    props;
+  const { onOpenChange, client, ...dialogProps } = props;
+  const [collection, setSelectedCollection] = useSelectedCollection();
   return (
     <AlertDialog onOpenChange={onOpenChange} {...dialogProps}>
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>
-            Delete <Code>{collectionName}</Code> from <Code>{projectName}</Code>
-            ?
+            Delete <Code>{collection}</Code>?
           </AlertDialogTitle>
           <AlertDialogDescription>
             This action cannot be undone. This will permanently delete the
@@ -41,7 +38,8 @@ export function DeleteCollectionDialog(
           <AlertDialogCancel>Cancel</AlertDialogCancel>
           <AlertDialogAction
             onClick={async () => {
-              await client.db.dropCollection({ name: collectionName });
+              await client.db.dropCollection({ name: collection });
+              setSelectedCollection(undefined);
               onOpenChange && onOpenChange(false);
             }}
           >

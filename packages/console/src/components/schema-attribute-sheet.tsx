@@ -41,7 +41,6 @@ async function addAttributeToSchema(
   attributeName: string,
   newAttribute: AttributeDefinition
 ) {
-  console.log(collectionName, attributeName, newAttribute);
   await client.db.addAttribute({
     collection: collectionName,
     path: [attributeName],
@@ -222,11 +221,6 @@ export function SchemaAttributeSheet(
         if (!open) setAttributeToUpdate(null);
       }}
     >
-      <SheetTrigger asChild>
-        <Button size={'sm'} variant={'secondary'}>
-          New attribute
-        </Button>
-      </SheetTrigger>
       <SheetContent className="text-sm">
         <SheetHeader>
           <SheetTitle>

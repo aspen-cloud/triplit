@@ -6,10 +6,11 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { CaretDown } from '@phosphor-icons/react';
-import { TrashSimple } from '@phosphor-icons/react/dist/ssr';
+import { TrashSimple, Plus } from '@phosphor-icons/react';
 
 type CollectionMenuProps = {
   onDelete: () => void;
+  onAddAttribute: () => void;
 };
 
 export function CollectionMenu(props: CollectionMenuProps) {
@@ -17,7 +18,7 @@ export function CollectionMenu(props: CollectionMenuProps) {
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button
-          className="p-0 h-auto hover:bg-inherit"
+          className="p-0 h-auto hover:bg-inherit text-primary/40"
           variant={'ghost'}
           size={'sm'}
         >
@@ -25,8 +26,12 @@ export function CollectionMenu(props: CollectionMenuProps) {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent>
+        <DropdownMenuItem onSelect={() => props.onAddAttribute()}>
+          <Plus className="w-4 h-4 mr-2" />
+          Add attribute
+        </DropdownMenuItem>
         <DropdownMenuItem
-          className="text-destructive"
+          className="text-red-600 focus:text-red-600"
           onSelect={() => props.onDelete()}
         >
           <TrashSimple className="w-4 h-4 mr-2" />

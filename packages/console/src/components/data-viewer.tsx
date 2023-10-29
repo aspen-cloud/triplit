@@ -2,7 +2,7 @@ import { TriplitClient } from '@triplit/client';
 import { useQuery } from '@triplit/react';
 import { useMemo, useState, useCallback } from 'react';
 import '@glideapps/glide-data-grid/dist/index.css';
-import { CreateEntityForm } from '.';
+import { CreateEntityForm, useProjectState } from '.';
 import { consoleClient } from '../../triplit/client';
 import { ColumnDef } from '@tanstack/react-table';
 import {
@@ -28,6 +28,8 @@ import { useSelectedCollection } from '../hooks/useSelectedCollection';
 import { SchemaDefinition } from '../../../db/src/data-types/serialization';
 import useUrlState from '@ahooksjs/use-url-state';
 import { DeleteEntitiesDialog } from './delete-entities-dialog.js';
+import { CollectionMenu } from './collection-menu.js';
+import { DeleteCollectionDialog } from './delete-collection-dialog.js';
 
 const deleteAttributeDialogIsOpenAtom = atom(false);
 
@@ -110,6 +112,8 @@ export function DataViewer({
   client: TriplitClient<any>;
   schema?: SchemaDefinition;
 }) {
+  const [deleteCollectionDialogOpen, setDeleteCollectionDialogOpen] =
+    useState(false);
   const [deleteAttributeDialogIsOpen, setDeleteAttributeDialogIsOpen] = useAtom(
     deleteAttributeDialogIsOpenAtom
   );
@@ -334,27 +338,53 @@ export function DataViewer({
     () => sortedAndFilteredEntities.map(([id, entity]) => ({ id, ...entity })),
     [sortedAndFilteredEntities]
   );
-
   return (
     <div className="flex flex-col w-full h-full">
-      <DeleteAttributeDialog
-        collectionName={collection}
-        attributeName={selectedAttribute}
-        open={deleteAttributeDialogIsOpen}
-        onOpenChange={(open) => {
-          setDeleteAttributeDialogIsOpen(open);
-          if (!open) setSelectedAttribute('');
-        }}
-        onSubmit={async () => {
-          await deleteAttribute(client, collection, selectedAttribute);
-          setDeleteAttributeDialogIsOpen(false);
-        }}
-      />
-      <div className="flex flex-row gap-3 p-4 items-center border-b">
-        <div className="text-sm px-2">{`Showing ${
-          sortedAndFilteredEntities.length
-        } of ${allResults?.size ?? 0}`}</div>
+      {collectionSchema && (
+        <>
+          <SchemaAttributeSheet
+            open={addOrUpdateAttributeFormOpen}
+            onOpenChange={setAddOrUpdateAttributeFormOpen}
+            collectionName={collection}
+            client={client}
+            collectionSchema={collectionSchema}
+          />
 
+          <DeleteCollectionDialog
+            open={deleteCollectionDialogOpen}
+            onOpenChange={setDeleteCollectionDialogOpen}
+            client={client}
+          />
+          <DeleteAttributeDialog
+            collectionName={collection}
+            attributeName={selectedAttribute}
+            open={deleteAttributeDialogIsOpen}
+            onOpenChange={(open) => {
+              setDeleteAttributeDialogIsOpen(open);
+              if (!open) setSelectedAttribute('');
+            }}
+            onSubmit={async () => {
+              await deleteAttribute(client, collection, selectedAttribute);
+              setDeleteAttributeDialogIsOpen(false);
+            }}
+          />
+        </>
+      )}
+      <h3 className="px-5 mt-5 text-2xl font-semibold tracking-tight flex flex-row gap-2">
+        {collection}
+        {schema && (
+          <CollectionMenu
+            onDelete={() => {
+              setDeleteCollectionDialogOpen(true);
+            }}
+            onAddAttribute={() => {
+              setAddOrUpdateAttributeFormOpen(true);
+              setAttributeToUpdate(null);
+            }}
+          />
+        )}
+      </h3>
+      <div className="flex flex-row gap-3 p-4 items-center border-b">
         <FiltersPopover
           filters={filters}
           uniqueAttributes={uniqueAttributes}
@@ -374,6 +404,9 @@ export function DataViewer({
             setUrlQueryState({ order: JSON.stringify(order) });
           }}
         />
+        <div className="text-sm px-2">{`Showing ${
+          sortedAndFilteredEntities.length
+        } of ${allResults?.size ?? 0}`}</div>
 
         <CreateEntityForm
           collectionDefinition={collectionSchema}
@@ -381,16 +414,6 @@ export function DataViewer({
           inferredAttributes={Array.from(uniqueAttributes)}
           client={client}
         />
-
-        {collectionSchema && (
-          <SchemaAttributeSheet
-            open={addOrUpdateAttributeFormOpen}
-            onOpenChange={setAddOrUpdateAttributeFormOpen}
-            collectionName={collection}
-            client={client}
-            collectionSchema={collectionSchema}
-          />
-        )}
       </div>
       <DataTable columns={columns} data={flatFilteredEntities} />
     </div>

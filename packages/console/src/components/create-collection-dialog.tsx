@@ -24,8 +24,8 @@ export function CreateCollectionDialog(props: CreateCollectionDialogProps) {
     <Dialog onOpenChange={setOpen} open={open}>
       <DialogTrigger asChild>
         <Button className="h-auto text-xs px-2 py-1" variant="secondary">
+          <Plus className="mr-1" />
           Create
-          <Plus className="ml-1" />
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">

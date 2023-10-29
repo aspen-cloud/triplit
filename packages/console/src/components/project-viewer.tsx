@@ -1,20 +1,12 @@
 import { Schema, TriplitClient } from '@triplit/client';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { CaretDown, GridFour, Selection } from '@phosphor-icons/react';
 import '@glideapps/glide-data-grid/dist/index.css';
-import {
-  CollectionSchemaDetail,
-  DataViewer,
-  FullScreenWrapper,
-  Project,
-} from '.';
-import { CloseButton } from '@/components/ui/close-button';
+import { DataViewer, FullScreenWrapper, Project } from '.';
 import { Button } from '@/components/ui/button';
 import { ProjectOptionsMenu } from './project-options-menu';
 import { useEntity } from '@triplit/react';
 import { CreateCollectionDialog } from './create-collection-dialog';
-import { CollectionMenu } from './collection-menu';
-import { DeleteCollectionDialog } from './delete-collection-dialog';
 import { fetchCollectionStats } from '../utils/server';
 import { useSelectedCollection } from '../hooks/useSelectedCollection';
 
@@ -30,13 +22,10 @@ export function ProjectViewer({
   // ProjectViewer.tsx - handles loading client and safely rendering children
 
   const [selectedCollection, setSelectedCollection] = useSelectedCollection();
-  const [deleteCollectionDialogOpen, setDeleteCollectionDialogOpen] =
-    useState(false);
 
   // TODO: why does this break when you switch away from a project and back?
   const { results: schema } = useEntity(client, '_metadata', '_schema');
   const [collections, setCollections] = useState<string[]>([]);
-  const [showSchemaEditor, setShowSchemaEditor] = useState(false);
   useEffect(() => {
     if (schema && schema.collections) {
       setCollections(Object.keys(schema.collections));
@@ -50,10 +39,6 @@ export function ProjectViewer({
       })();
     }
   }, [schema, project]);
-  useEffect(() => {
-    if (selectedCollection && !collections.includes(selectedCollection))
-      setSelectedCollection(undefined);
-  }, [selectedCollection, collections]);
 
   // if loading render loading state
   if (!client) return <FullScreenWrapper>Loading...</FullScreenWrapper>;
@@ -61,24 +46,14 @@ export function ProjectViewer({
   // If client, render hooks that rely on client safely
   return (
     <div className="grid grid-cols-6 bg-popover">
-      <div className=" border-r col-span-1 h-screen flex flex-col p-3 gap-3 ">
+      <div className=" border-r col-span-1 h-screen flex flex-col p-3 ">
         <ProjectOptionsMenu projectPrimaryKey={projectPrimaryKey}>
           <Button variant="secondary" className="w-full">
             <div className="font-bold truncate ">{project?.displayName}</div>
             <CaretDown className="ml-2 shrink-0" />
           </Button>
         </ProjectOptionsMenu>
-
-        {selectedCollection && (
-          <DeleteCollectionDialog
-            open={deleteCollectionDialogOpen}
-            onOpenChange={setDeleteCollectionDialogOpen}
-            collectionName={selectedCollection}
-            projectName={project?.displayName}
-            client={client}
-          />
-        )}
-        <div className="flex flex-row items-center justify-between">
+        <div className="flex flex-row items-center justify-between my-4">
           Collections{' '}
           {shouldShowCreateCollectionButton && (
             <CreateCollectionDialog
@@ -97,29 +72,17 @@ export function ProjectViewer({
           )}
         </div>
         {collections.map((collection) => (
-          <div
+          <Button
             key={collection}
-            className={`truncate flex flex-row justify-between items-center text-muted-foreground cursor-pointer hover:underline ${
-              selectedCollection === collection ? 'font-bold' : ''
-            }`}
+            onClick={() => {
+              setSelectedCollection(collection);
+            }}
+            variant={selectedCollection === collection ? 'default' : 'ghost'}
+            className={`truncate flex h-auto px-2 py-1 flex-row items-center gap-2 justify-start`}
           >
-            <div
-              className="flex flex-row items-center gap-2"
-              onClick={() => {
-                setSelectedCollection(collection);
-              }}
-            >
-              <GridFour weight="light" size={24} />
-              {`${collection}`}
-            </div>
-            {schema && collection === selectedCollection && (
-              <CollectionMenu
-                onDelete={() => {
-                  setDeleteCollectionDialogOpen(true);
-                }}
-              />
-            )}
-          </div>
+            <GridFour weight="light" size={24} />
+            {`${collection}`}
+          </Button>
         ))}
         {collections.length === 0 && (
           <div className="text-xs">
@@ -130,30 +93,14 @@ export function ProjectViewer({
         )}
       </div>
       <div className="col-span-5 flex flex-col">
-        {showSchemaEditor && selectedCollection && schema && (
-          <div className="p-5">
-            <div className="mb-4 flex flex-row justify-between">
-              <div>
-                {selectedCollection}
-                <span className="text-zinc-500 ml-2">schema</span>
-              </div>
-              <CloseButton onClick={() => setShowSchemaEditor(false)} />
-            </div>
-            <CollectionSchemaDetail
-              collectionSchema={schema.collections[selectedCollection]}
-            />
-          </div>
-        )}
-        {!showSchemaEditor && selectedCollection && (
+        {selectedCollection ? (
           <DataViewer
             projectId={projectPrimaryKey}
             collection={selectedCollection}
             client={client}
             schema={schema}
-            onPressEditSchema={() => schema && setShowSchemaEditor(true)}
           />
-        )}
-        {!selectedCollection && (
+        ) : (
           <div className="flex flex-col h-full justify-center items-center gap-6">
             <Selection size={80} weight="thin" />
             No collection selected
