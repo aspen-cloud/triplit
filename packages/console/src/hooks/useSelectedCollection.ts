@@ -6,6 +6,7 @@ export function useSelectedCollection() {
   });
   return [
     state.collectionName,
-    (collectionName: string) => setState({ collectionName }),
+    (collectionName: string) =>
+      setState({ collectionName, order: undefined, where: undefined }),
   ];
 }
