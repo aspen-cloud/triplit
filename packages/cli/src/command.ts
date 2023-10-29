@@ -27,6 +27,7 @@ export interface CommandDefinition<
   Middleware extends MiddlewareDefinition<any, any, any>[] = []
 > {
   description?: string;
+  examples?: { usage: string; description?: string }[];
   args?: Args;
   flags?: Flags;
   middleware?: Middleware;

@@ -1,7 +1,17 @@
 #!/usr/bin/env node
 import dotenv from 'dotenv';
 dotenv.config();
-import { bold, italic, red } from 'ansis/colors';
+import {
+  bgGreenBright,
+  bold,
+  dim,
+  green,
+  inverse,
+  italic,
+  red,
+  white,
+  whiteBright,
+} from 'ansis/colors';
 import React from 'react';
 import { render } from 'ink';
 import {
@@ -17,6 +27,7 @@ import { fileURLToPath } from 'node:url';
 import { WebSocket } from 'ws';
 import fetch from 'node-fetch';
 import { Flag } from './flags.js';
+import { CommandDefinition } from './command.js';
 // @ts-ignore
 global.WebSocket = WebSocket;
 // @ts-ignore
@@ -51,10 +62,18 @@ async function execute(args: string[], flags: {}) {
       console.error('Could not find command: ' + args.join(' '));
     }
 
-    await printHelp(i === 0 ? 'triplit' : args.slice(0, i).join(' '), command);
+    await printDirectoryHelp(
+      i === 0 ? 'triplit' : args.slice(0, i).join(' '),
+      command
+    );
     return;
   }
   const cmdDef = await getCommandDefinition(command);
+  // @ts-ignore
+  if (flags.help || flags.h) {
+    printCommandHelp(cmdDef.name, cmdDef);
+    return;
+  }
 
   let unaliasedFlags = flags;
 
@@ -109,7 +128,7 @@ async function execute(args: string[], flags: {}) {
   }
 }
 
-async function printHelp(name: string, commands: CommandTree) {
+async function printDirectoryHelp(name: string, commands: CommandTree) {
   console.log(`Available commands for ${bold(name)}`);
   const commandDefs = await getCommandsWithDefinition(commands, []);
   console.log(
@@ -117,4 +136,44 @@ async function printHelp(name: string, commands: CommandTree) {
       .map((cmd) => `  ${bold(cmd.name)} - ${cmd.description}`)
       .join('\n')
   );
+}
+
+function printCommandHelp<Cmd extends CommandDefinition<any, any, any>>(
+  name: string,
+  cmdDef: Cmd
+) {
+  // @ts-ignore
+  console.log(`triplit ${bold(name)}`);
+  console.log(dim(cmdDef.description));
+  console.log();
+  if (cmdDef.args?.length) {
+    console.log('Arguments:');
+    for (const arg of cmdDef.args) {
+      console.log(`  ${bold(arg.name)} - ${arg.description}`);
+    }
+    console.log();
+  }
+  console.log('Flags:');
+  if (cmdDef.flags) {
+    printFlags(cmdDef.flags);
+  }
+  if (cmdDef.middleware?.length) {
+    for (const middleware of cmdDef.middleware) {
+      printFlags(middleware.flags ?? {});
+    }
+    console.log();
+  }
+  if (cmdDef.examples?.length) {
+    console.log('Examples:');
+    for (const example of cmdDef.examples) {
+      console.log(`  ${bold(example.usage)} - ${example.description}`);
+    }
+    console.log();
+  }
+}
+
+function printFlags(flags: Record<string, Flag>) {
+  for (const [name, flag] of Object.entries(flags)) {
+    console.log(`  ${bold(name)} - ${flag.description}`);
+  }
 }
