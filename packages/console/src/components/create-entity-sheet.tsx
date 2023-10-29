@@ -20,8 +20,8 @@ import {
   CollectionTypeKeys,
   RecordAttributeDefinition,
   ValueTypeKeys,
-} from '../../../db/src/data-types/serialization';
-import { Collection } from '../../../db/src/schema.js';
+} from '@triplit/db/src/data-types/serialization.js';
+import { Collection } from '@triplit/db/src/schema.js';
 import {
   Sheet,
   SheetContent,
@@ -49,7 +49,7 @@ interface FormValues {
 
 function convertFormToEntity(
   attributes: FormValues['attributes'],
-  model?: Model
+  model?: Model<any>
 ) {
   const entity: any = {};
   attributes.forEach((attr) => {
@@ -138,7 +138,7 @@ function TypeLabel({
   );
 }
 
-export function CreateEntityForm({
+export function CreateEntitySheet({
   collection,
   inferredAttributes,
   collectionDefinition,

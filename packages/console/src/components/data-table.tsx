@@ -32,7 +32,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Tooltip } from '@/components/ui/tooltip-simple';
 import { cn } from '@/lib/utils';
 import { SetInput } from '@/components/ui/set-input';
-import { PARSE_FUNCS } from './create-entity-form';
+import { PARSE_FUNCS } from './create-entity-sheet';
 import { Button } from '@/components/ui/button';
 import { Code } from '@/components/ui/code';
 import { TriplitClient } from '@triplit/client';

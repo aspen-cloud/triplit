@@ -94,7 +94,7 @@ export const attributeToUpdateAtom = atom<
   | null
 >(null);
 
-export function NewAttributeForm(
+export function SchemaAttributeSheet(
   props: NewAttributeFormProps & ComponentProps<typeof Sheet>
 ) {
   const { client, collectionName, collectionSchema } = props;

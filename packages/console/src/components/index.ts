@@ -1,4 +1,4 @@
-export { CreateEntityForm } from './create-entity-form';
+export { CreateEntitySheet as CreateEntityForm } from './create-entity-sheet';
 export { ProjectInfoForm } from './project-info-form';
 export type { Project } from './project-info-form';
 export { QueryFilter } from './query-filter';

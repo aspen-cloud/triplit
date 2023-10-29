@@ -13,10 +13,10 @@ import {
 } from './data-table';
 import { Button } from '@/components/ui/button';
 import {
-  NewAttributeForm,
+  SchemaAttributeSheet,
   addOrUpdateAttributeFormOpenAtom,
   attributeToUpdateAtom,
-} from './new-attribute-form';
+} from './schema-attribute-sheet';
 import { ColumnMenu } from './column-menu';
 import { DeleteAttributeDialog } from './delete-attribute-dialog';
 import { atom, useAtom } from 'jotai';
@@ -385,7 +385,7 @@ export function DataViewer({
           />
         )}
         {collectionSchema && (
-          <NewAttributeForm
+          <SchemaAttributeSheet
             open={addOrUpdateAttributeFormOpen}
             onOpenChange={setAddOrUpdateAttributeFormOpen}
             collectionName={collection}
