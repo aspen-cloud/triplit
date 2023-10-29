@@ -2,7 +2,6 @@ import { TriplitClient } from '@triplit/client';
 import { useQuery } from '@triplit/react';
 import { useMemo, useState, useCallback } from 'react';
 import '@glideapps/glide-data-grid/dist/index.css';
-import { Modal } from '@/components/ui/modal.js';
 import { CreateEntityForm } from '.';
 import { consoleClient } from '../../triplit/client';
 import { ColumnDef } from '@tanstack/react-table';
@@ -25,10 +24,10 @@ import { FiltersPopover } from './filters-popover';
 import { OrderPopover } from './order-popover';
 import { Checkbox } from '../../@/components/ui/checkbox';
 import { Tooltip } from '../../@/components/ui/tooltip-simple';
-import { Trash } from '@phosphor-icons/react';
 import { useSelectedCollection } from '../hooks/useSelectedCollection';
 import { SchemaDefinition } from '../../../db/src/data-types/serialization';
 import useUrlState from '@ahooksjs/use-url-state';
+import { DeleteEntitiesDialog } from './delete-entities-dialog.js';
 
 const deleteAttributeDialogIsOpenAtom = atom(false);
 
@@ -82,19 +81,6 @@ async function onSelectAllEntities(
         tx.insert('selections', { collectionName, projectId, id: entityId })
       )
     );
-  });
-}
-
-async function deleteEntities(
-  client: TriplitClient<any>,
-  collectionName: string,
-  ids: string[]
-) {
-  await client.transact(async (tx) => {
-    await Promise.all(ids.map((id) => tx.delete(collectionName, id)));
-  });
-  await consoleClient.transact(async (tx) => {
-    await Promise.all(ids.map((id) => tx.delete('selections', id)));
   });
 }
 
@@ -392,20 +378,11 @@ export function DataViewer({
           client={client}
         />
         {selectedEntities && selectedEntities.size > 0 && (
-          <Button
-            size={'sm'}
-            variant={'destructive'}
-            onClick={async () => {
-              await deleteEntities(
-                client,
-                collection,
-                Array.from(selectedEntities.keys())
-              );
-            }}
-          >
-            <Trash className=" mr-2" />
-            Delete selected entities
-          </Button>
+          <DeleteEntitiesDialog
+            entityIds={[...selectedEntities.keys()]}
+            collectionName={collection}
+            client={client}
+          />
         )}
         {collectionSchema && (
           <NewAttributeForm
