@@ -5,83 +5,84 @@ import { blue } from 'ansis/colors';
 import { readLocalSchema } from '../../schema.js';
 import { createMigration, readMigrations } from '../../migration.js';
 import { getMigrationsDir, getTriplitDir } from '../../filesystem.js';
+import { Command } from '../../command.js';
 
-export const description =
-  'Generates a migration based on your current schema file';
+export default Command({
+  description: 'Generates a migration based on your current schema file',
+  args: ['migrationName'],
+  run: async ({ args }) => {
+    const migrationName = args.join('_');
+    if (!migrationName) throw new Error('Missing migration name');
+    const sanitizedMigrationName = sanitizeFilename(migrationName); //args.migrationName
+    // define a name for the migration
+    const timestamp = Date.now();
+    const fileName = path.join(
+      getMigrationsDir(),
+      `${timestamp}_${sanitizedMigrationName}.json`
+    );
+    fs.mkdirSync(path.dirname(fileName), { recursive: true });
 
-export const args = {};
+    const migrationFiles = readMigrations()
+      // .filter((mf) => version == undefined || mf.migration.version <= version)
+      .sort((a, b) => a.migration.version - b.migration.version);
 
-export const run = async ({ args }) => {
-  const migrationName = args[0];
-  if (!migrationName) throw new Error('Missing migration name');
-  const sanitizedMigrationName = sanitizeFilename(migrationName); //args.migrationName
-  // define a name for the migration
-  const timestamp = Date.now();
-  const fileName = path.join(
-    getMigrationsDir(),
-    `${timestamp}_${sanitizedMigrationName}.json`
-  );
-  fs.mkdirSync(path.dirname(fileName), { recursive: true });
+    const latest =
+      migrationFiles.length === 0
+        ? 0
+        : migrationFiles[migrationFiles.length - 1].migration.version;
 
-  const migrationFiles = readMigrations()
-    // .filter((mf) => version == undefined || mf.migration.version <= version)
-    .sort((a, b) => a.migration.version - b.migration.version);
+    if (latest == undefined || latest > timestamp)
+      throw new Error('Invalid timestamp');
 
-  const latest =
-    migrationFiles.length === 0
-      ? 0
-      : migrationFiles[migrationFiles.length - 1].migration.version;
+    const db = new DB({ migrations: migrationFiles.map((mf) => mf.migration) });
+    await db.ensureMigrated;
 
-  if (latest == undefined || latest > timestamp)
-    throw new Error('Invalid timestamp');
+    const dbSchema = await db.getSchema();
+    if (dbSchema && dbSchema.version !== latest)
+      throw new Error('Local database failed to apply all migrations');
+    const dbSchemaJSON = dbSchema
+      ? JSON.parse(JSON.stringify(schemaToJSON(dbSchema).collections))
+      : {};
 
-  const db = new DB({ migrations: migrationFiles.map((mf) => mf.migration) });
-  await db.ensureMigrated;
+    const localSchema = await readLocalSchema();
 
-  const dbSchema = await db.getSchema();
-  if (dbSchema && dbSchema.version !== latest)
-    throw new Error('Local database failed to apply all migrations');
-  const dbSchemaJSON = dbSchema
-    ? JSON.parse(JSON.stringify(schemaToJSON(dbSchema).collections))
-    : {};
-
-  const localSchema = await readLocalSchema();
-
-  if (!localSchema) {
-    createEmptySchemaFile();
-    return;
-  }
-
-  const localSchemaJSON = JSON.parse(
-    JSON.stringify(
-      schemaToJSON({ collections: localSchema, version: timestamp }).collections
-    )
-  );
-
-  const migration = createMigration(
-    dbSchemaJSON,
-    localSchemaJSON,
-    timestamp,
-    latest,
-    sanitizedMigrationName
-  );
-
-  if (!migration) {
-    console.log('No changes detected');
-    return;
-  }
-
-  fs.writeFile(
-    fileName,
-    JSON.stringify(migration, null, 2) + '\n',
-    'utf8',
-    (err) => {
-      if (err) throw err;
-      // @ts-ignore
-      console.log(blue`Migration file created at ${fileName}`);
+    if (!localSchema) {
+      createEmptySchemaFile();
+      return;
     }
-  );
-};
+
+    const localSchemaJSON = JSON.parse(
+      JSON.stringify(
+        schemaToJSON({ collections: localSchema, version: timestamp })
+          .collections
+      )
+    );
+
+    const migration = createMigration(
+      dbSchemaJSON,
+      localSchemaJSON,
+      timestamp,
+      latest,
+      sanitizedMigrationName
+    );
+
+    if (!migration) {
+      console.log('No changes detected');
+      return;
+    }
+
+    fs.writeFile(
+      fileName,
+      JSON.stringify(migration, null, 2) + '\n',
+      'utf8',
+      (err) => {
+        if (err) throw err;
+        // @ts-ignore
+        console.log(blue`Migration file created at ${fileName}`);
+      }
+    );
+  },
+});
 
 function sanitizeFilename(filename: string) {
   return filename
