@@ -120,7 +120,7 @@ export function DataViewer({
   );
   const [selectedAttribute, setSelectedAttribute] = useState<string>('');
   const [selectedCell, setSelectedCell] = useState<string | null>(null);
-  const [selectedCollection, setSelectedCollection] = useSelectedCollection();
+  const [selectedCollection, _setSelectedCollection] = useSelectedCollection();
   const [urlQueryState, setUrlQueryState] = useUrlState({
     where: undefined,
     order: undefined,
@@ -132,7 +132,6 @@ export function DataViewer({
       ['projectId', '=', projectId],
     ])
   );
-  const [createEntityModalIsOpen, setCreateEntityModalIsOpen] = useState(false);
   const collectionSchema = schema?.collections?.[selectedCollection];
   const filters = JSON.parse(urlQueryState.where ?? '[]');
   const order = JSON.parse(urlQueryState.order ?? '[]');
@@ -198,45 +197,48 @@ export function DataViewer({
 
   const idColumn: ColumnDef<any> = useMemo(
     () => ({
-      header: () => <TriplitColumnHeader attribute="id" />,
-      cell: ({ row }) => (
-        <DataCell
-          attribute="id"
-          value={row.getValue('id')}
-          entityId={row.getValue('id')}
-        />
-      ),
-      accessorKey: 'id',
-    }),
-    []
-  );
-
-  const selectEntitiesColumn: ColumnDef<any> = useMemo(
-    () => ({
       header: () => (
-        <Tooltip label="Select all">
-          <Checkbox
-            className="mx-3"
-            checked={allVisibleEntitiesAreSelected}
-            onCheckedChange={toggleSelectAllEntities}
-          />
-        </Tooltip>
+        <div className="flex flex-row items-center">
+          <Tooltip label="Select all">
+            <Checkbox
+              className="ml-3 mr-1"
+              checked={allVisibleEntitiesAreSelected}
+              onCheckedChange={toggleSelectAllEntities}
+            />
+          </Tooltip>
+          <TriplitColumnHeader attribute="id">
+            {selectedEntities && selectedEntities.size > 0 && (
+              <DeleteEntitiesDialog
+                entityIds={[...selectedEntities.keys()]}
+                collectionName={collection}
+                client={client}
+              />
+            )}
+          </TriplitColumnHeader>
+        </div>
       ),
       cell: ({ row }) => {
         const entityId = row.getValue('id');
         return (
-          <Checkbox
-            className="mx-3"
-            checked={selectedEntities && selectedEntities.has(entityId)}
-            onCheckedChange={(checked) => {
-              checked
-                ? onSelectEntity(entityId, collection, projectId)
-                : onDeselectEntity(entityId);
-            }}
-          />
+          <div className="flex flex-row items-center">
+            <Checkbox
+              className="ml-3 mr-1"
+              checked={selectedEntities && selectedEntities.has(entityId)}
+              onCheckedChange={(checked) => {
+                checked
+                  ? onSelectEntity(entityId, collection, projectId)
+                  : onDeselectEntity(entityId);
+              }}
+            />
+            <DataCell
+              attribute="id"
+              value={row.getValue('id')}
+              entityId={row.getValue('id')}
+            />
+          </div>
         );
       },
-      accessorKey: 'checkbox',
+      accessorKey: 'id',
     }),
     [
       allVisibleEntitiesAreSelected,
@@ -246,8 +248,8 @@ export function DataViewer({
       selectedEntities,
     ]
   );
-  const columns = useMemo(() => {
-    const cols: ColumnDef<any>[] = [selectEntitiesColumn, idColumn];
+  const dataColumns = useMemo(() => {
+    const cols: ColumnDef<any>[] = [];
     Array.from(uniqueAttributes)
       .filter((attr) => attr !== 'id')
       .forEach((attr) => {
@@ -323,9 +325,10 @@ export function DataViewer({
     collectionSchema,
     selectedCell,
     toggleSelectAllEntities,
-    selectEntitiesColumn,
     idColumn,
   ]);
+
+  const columns = [idColumn, ...dataColumns];
 
   const flatFilteredEntities = useMemo(
     () => sortedAndFilteredEntities.map(([id, entity]) => ({ id, ...entity })),
@@ -348,6 +351,10 @@ export function DataViewer({
         }}
       />
       <div className="flex flex-row gap-3 p-4 items-center border-b">
+        <div className="text-sm px-2">{`Showing ${
+          sortedAndFilteredEntities.length
+        } of ${allResults?.size ?? 0}`}</div>
+
         <FiltersPopover
           filters={filters}
           uniqueAttributes={uniqueAttributes}
@@ -358,10 +365,6 @@ export function DataViewer({
             setUrlQueryState({ where: JSON.stringify(filters) });
           }}
         />
-
-        <Button size={'sm'} variant={'secondary'}>{`Showing ${
-          sortedAndFilteredEntities.length
-        } of ${allResults?.size ?? 0}`}</Button>
         <OrderPopover
           uniqueAttributes={uniqueAttributes}
           collection={collection}
@@ -371,19 +374,14 @@ export function DataViewer({
             setUrlQueryState({ order: JSON.stringify(order) });
           }}
         />
+
         <CreateEntityForm
           collectionDefinition={collectionSchema}
           collection={collection}
           inferredAttributes={Array.from(uniqueAttributes)}
           client={client}
         />
-        {selectedEntities && selectedEntities.size > 0 && (
-          <DeleteEntitiesDialog
-            entityIds={[...selectedEntities.keys()]}
-            collectionName={collection}
-            client={client}
-          />
-        )}
+
         {collectionSchema && (
           <SchemaAttributeSheet
             open={addOrUpdateAttributeFormOpen}

@@ -89,20 +89,21 @@ type ColumnHeaderProps = {
   onClickHeader?: () => void;
   rightIcon?: React.ReactNode;
   attributeDef?: AttributeDefinition;
-};
+} & React.HTMLAttributes<HTMLDivElement>;
 
 export function TriplitColumnHeader(props: ColumnHeaderProps) {
-  const { attribute, onClickHeader, rightIcon, attributeDef } = props;
+  const { attribute, onClickHeader, rightIcon, attributeDef, children } = props;
   return (
     <div
       className="flex flex-row gap-2 items-center justify-between text-xs px-4 w-full h-full"
       onClick={onClickHeader}
     >
-      <div className="flex flex-row gap-1">
+      <div className="flex flex-row items-center gap-1">
         <div className="">{attribute}</div>
         {attributeDef?.type && (
           <div className="font-normal text-zinc-500">{attributeDef.type}</div>
         )}
+        {children}
       </div>
       {rightIcon}
     </div>

@@ -41,7 +41,11 @@ export function DeleteEntitiesDialog(props: DeleteEntitiesDialogProps) {
   return (
     <AlertDialog open={open} onOpenChange={setOpen}>
       <AlertDialogTrigger asChild>
-        <Button size={'sm'} variant={'destructive'}>
+        <Button
+          size={'sm'}
+          variant={'destructive'}
+          className="py-1 h-auto px-2 ml-3"
+        >
           <Trash className=" mr-2" />
           Delete
         </Button>
