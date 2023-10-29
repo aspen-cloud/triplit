@@ -39,7 +39,6 @@ export async function getCommandDefinition(
   const { default: definition } = (await import(sourcePath)) as {
     default: CommandDefinition<any, any, any>;
   };
-  console.log('definition', definition);
   return { name: prefix.concat(name).join(' '), ...definition };
 }
 
