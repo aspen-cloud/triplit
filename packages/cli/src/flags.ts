@@ -1,25 +1,63 @@
-// An interface that represents the shape of the flags object that mimics Ocliff flags
-type FlagTypes = 'string' | 'boolean' | 'number' | 'integer' | 'file';
-
-export interface Flag {
+export interface Flag<T = any> {
   description?: string;
   required?: boolean;
   char?: string;
-  type?: FlagTypes;
+  parse: (input: string | number | boolean) => T;
+  default?: T;
 }
 
 export type FlagsToTypes<F extends Record<string, Flag>> = {
   [K in keyof F]: FlagDefinitionToType<F[K]>;
 };
 
-type FlagDefinitionToType<F extends Flag> = F['type'] extends 'string'
-  ? string
-  : F['type'] extends 'boolean'
-  ? boolean
-  : F['type'] extends 'number'
-  ? number
-  : F['type'] extends 'integer'
-  ? number
-  : F['type'] extends 'file'
-  ? string
-  : never;
+type FlagDefinitionToType<F extends Flag> = F extends Flag<infer T> ? T : never;
+
+type BuiltInFlagOpts = Omit<Flag, 'parse'>;
+
+export function Boolean(opts: BuiltInFlagOpts): Flag<boolean> {
+  return {
+    ...opts,
+    parse: (input) => input === 'true' || input === '1',
+  };
+}
+
+export function String(opts: BuiltInFlagOpts): Flag<string> {
+  return {
+    ...opts,
+    parse: (input) => input.toString(),
+  };
+}
+
+export function Number(opts: BuiltInFlagOpts): Flag<number> {
+  return {
+    ...opts,
+    parse: (input) => {
+      if (typeof input === 'number') return input;
+      if (typeof input === 'string') {
+        let maybeNum = parseFloat(input);
+        if (!isNaN(maybeNum)) {
+          return maybeNum;
+        }
+      }
+      throw new Error(`Expected a number but received: ${input}`);
+    },
+  };
+}
+
+export function Enum<E extends Readonly<string[]>>(
+  opts: BuiltInFlagOpts & { options: E }
+): Flag<E[number]> {
+  return {
+    ...opts,
+    parse: (input: string) => {
+      if (!opts.options.includes(input)) {
+        throw new Error(
+          `Invalid option: "${input}". Valid options are: ${opts.options.join(
+            ', '
+          )}`
+        );
+      }
+      return input;
+    },
+  };
+}

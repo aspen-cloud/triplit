@@ -7,25 +7,24 @@ import path from 'path';
 import fs from 'fs';
 import { getDataDir } from '../filesystem.js';
 import { Command } from '../command.js';
+import * as Flag from '../flags.js';
 
 export default Command({
   description: 'Starts the Triplit development environment',
   flags: {
-    storage: {
-      type: 'string',
+    storage: Flag.Enum({
+      options: ['memory', 'sqlite'] as const,
       char: 's',
       description: 'Database storage type',
-    },
-    consolePort: {
-      type: 'number',
+    }),
+    consolePort: Flag.Number({
       char: 'c',
       description: 'Port to run the console server on',
-    },
-    dbPort: {
-      type: 'number',
+    }),
+    dbPort: Flag.Number({
       char: 'd',
       description: 'Port to run the database server on',
-    },
+    }),
   },
   async run({ flags }) {
     const consolePort = flags.consolePort || 6542;

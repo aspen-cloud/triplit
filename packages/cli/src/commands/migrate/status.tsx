@@ -1,5 +1,5 @@
 import { Command } from '../../command.js';
-import { Flag } from '../../flags.js';
+import * as Flag from '../../flags.js';
 import { serverRequesterMiddleware } from '../../middleware/add-server-requester.js';
 import { getMigrationsStatus } from '../../migration.js';
 import { Box, Newline, Text } from 'ink';
@@ -8,11 +8,10 @@ import React from 'react';
 export default Command({
   description: 'View migration status of remote database',
   flags: {
-    all: {
-      type: 'boolean',
+    all: Flag.Boolean({
       char: 'a',
       description: 'Show all migrations',
-    },
+    }),
   },
   middleware: [serverRequesterMiddleware],
   run: async ({ flags, ctx }) => {

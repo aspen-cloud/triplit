@@ -2,22 +2,21 @@ import prompts from 'prompts';
 import axios from 'axios';
 import * as JWT from 'jsonwebtoken';
 import { Middleware } from '../middleware.js';
+import * as Flag from '../flags.js';
 
 export const serverRequesterMiddleware = Middleware({
   name: 'Server Requester',
   flags: {
-    token: {
+    token: Flag.String({
       description: 'API Token (Service Key)',
       required: false,
       char: 't',
-      type: 'string',
-    },
-    remote: {
+    }),
+    remote: Flag.String({
       description: 'Remote URL to connect to',
       required: false,
       char: 'r',
-      type: 'string',
-    },
+    }),
   },
   run: async ({ flags, args }) => {
     let token = flags.token ?? process.env.TOKEN;

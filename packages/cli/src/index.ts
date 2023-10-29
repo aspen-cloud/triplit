@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import dotenv from 'dotenv';
 dotenv.config();
-import { bold } from 'ansis/colors';
+import { bold, italic, red } from 'ansis/colors';
 import React from 'react';
 import { render } from 'ink';
 import {
@@ -63,15 +63,24 @@ async function execute(args: string[], flags: {}) {
       (cmdDef.flags as Record<string, Flag>) ?? {}
     );
     unaliasedFlags = Object.entries(flags).reduce(
-      (acc, [flagName, flagValue]) => {
+      (acc, [flagName, flagInput]) => {
         const flagDef = cmdFlagsDefs.find(
           ([name, { char }]) => name === flagName || char === flagName
         );
         if (flagDef) {
           const [name, def] = flagDef;
-          acc[name] = flagValue;
+          try {
+            acc[name] = def.parse(flagInput as string | boolean | number);
+          } catch (e) {
+            console.error(
+              // @ts-ignore
+              red`Could not interpret input for flag ${bold(name)}`
+            );
+            console.error(`   ${e.message}`);
+            process.exit(1);
+          }
         } else {
-          acc[flagName] = flagValue;
+          acc[flagName] = flagInput;
         }
         return acc;
       },
