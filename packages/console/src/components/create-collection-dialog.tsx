@@ -10,6 +10,7 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Plus } from '@phosphor-icons/react';
 import { useState } from 'react';
 
 type CreateCollectionDialogProps = {
@@ -22,7 +23,10 @@ export function CreateCollectionDialog(props: CreateCollectionDialogProps) {
   return (
     <Dialog onOpenChange={setOpen} open={open}>
       <DialogTrigger asChild>
-        <Button variant="outline">Create Collection</Button>
+        <Button className="h-auto text-xs px-2 py-1" variant="secondary">
+          Create
+          <Plus className="ml-1" />
+        </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">
         <form

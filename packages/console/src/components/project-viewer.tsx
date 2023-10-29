@@ -1,4 +1,4 @@
-import { TriplitClient } from '@triplit/client';
+import { Schema, TriplitClient } from '@triplit/client';
 import { useEffect, useMemo, useState } from 'react';
 import { CaretDown, GridFour, Selection } from '@phosphor-icons/react';
 import '@glideapps/glide-data-grid/dist/index.css';
@@ -57,6 +57,7 @@ export function ProjectViewer({
 
   // if loading render loading state
   if (!client) return <FullScreenWrapper>Loading...</FullScreenWrapper>;
+  const shouldShowCreateCollectionButton = schema || collections.length === 0;
   // If client, render hooks that rely on client safely
   return (
     <div className="grid grid-cols-6 bg-popover">
@@ -67,21 +68,7 @@ export function ProjectViewer({
             <CaretDown className="ml-2 shrink-0" />
           </Button>
         </ProjectOptionsMenu>
-        {schema && (
-          <CreateCollectionDialog
-            onSubmit={async (collectionName) => {
-              try {
-                await client.db.createCollection({
-                  name: collectionName,
-                  schema: {},
-                });
-                setSelectedCollection(collectionName);
-              } catch (e) {
-                console.error(e);
-              }
-            }}
-          />
-        )}
+
         {selectedCollection && (
           <DeleteCollectionDialog
             open={deleteCollectionDialogOpen}
@@ -91,7 +78,24 @@ export function ProjectViewer({
             client={client}
           />
         )}
-        <div>Collections</div>
+        <div className="flex flex-row items-center justify-between">
+          Collections{' '}
+          {shouldShowCreateCollectionButton && (
+            <CreateCollectionDialog
+              onSubmit={async (collectionName) => {
+                try {
+                  await client.db.createCollection({
+                    name: collectionName,
+                    schema: { id: Schema.Id().toJSON() },
+                  });
+                  setSelectedCollection(collectionName);
+                } catch (e) {
+                  console.error(e);
+                }
+              }}
+            />
+          )}
+        </div>
         {collections.map((collection) => (
           <div
             key={collection}
