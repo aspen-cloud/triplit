@@ -346,7 +346,7 @@ export class TripleStoreTxOperator implements TripleStoreApi {
     if (existingTriples.length === 1) {
       const existingTriple = indexToTriple(existingTriples[0]);
       if (existingTriple.expired === expired) {
-        console.info('Skipping index for existing triple');
+        // console.info('Skipping index for existing triple');
         return;
       }
     }
