@@ -19,17 +19,19 @@ import {
   SheetFooter,
   SheetHeader,
   SheetTitle,
-  SheetTrigger,
 } from '@/components/ui/sheet';
 import { atom, useAtom } from 'jotai';
 import {
   ALL_TYPES,
-  CollectionTypeKeys,
+  AllTypes,
+  RecordAttributeDefinition,
   UserTypeOptions,
   VALUE_TYPE_KEYS,
   ValueAttributeDefinition,
   ValueTypeKeys,
 } from '../../../db/src/data-types/serialization';
+import { randomId } from '@mantine/hooks';
+import { CloseButton } from '@/components/ui/close-button.js';
 
 export type AttributesForm = {
   [key: string]: AttributeDefinition;
@@ -87,7 +89,11 @@ type NewAttributeFormProps = {
 export const addOrUpdateAttributeFormOpenAtom = atom(false);
 
 export const attributeToUpdateAtom = atom<
-  | ((ValueAttributeDefinition | CollectionAttributeDefinition) & {
+  | ((
+      | ValueAttributeDefinition
+      | CollectionAttributeDefinition
+      | RecordAttributeDefinition
+    ) & {
       name: string;
     })
   | null
@@ -102,20 +108,23 @@ export function SchemaAttributeSheet(
   );
   const editing = !!attributeToUpdate;
   const [open, setOpen] = useAtom(addOrUpdateAttributeFormOpenAtom);
-  const [name, setName] = useState('');
-  const [attributeBaseType, setAttributeBaseType] = useState<
-    ValueTypeKeys | CollectionTypeKeys
-  >('string');
+  const [attributeName, setAttributeName] = useState('');
+  const [attributeBaseType, setAttributeBaseType] =
+    useState<AllTypes>('string');
   const [hasDefault, setHasDefault] = useState(false);
   const [setType, setSetType] = useState<ValueTypeKeys>('string');
   const [defaultType, setDefaultType] = useState<'Value' | 'now' | 'uuid'>(
     'Value'
   );
+  const [recordKeyTypes, setRecordKeyTypes] = useState<
+    Record<string, [string, ValueTypeKeys]>
+  >({});
   const [defaultValue, setDefaultValue] = useState('');
   const [nullable, setNullable] = useState(false);
 
   function setDefaults() {
-    setName('');
+    setAttributeName('');
+    setRecordKeyTypes({});
     setAttributeBaseType('string');
     setSetType('string');
     setDefaultType('Value');
@@ -126,13 +135,22 @@ export function SchemaAttributeSheet(
 
   useEffect(() => {
     if (attributeToUpdate) {
-      setName(attributeToUpdate.name);
+      setAttributeName(attributeToUpdate.name);
+      setAttributeBaseType(attributeToUpdate.type);
       if (attributeToUpdate.type === 'set') {
-        setAttributeBaseType('set');
         setSetType(attributeToUpdate.items.type);
         return;
-      } else {
-        setAttributeBaseType(attributeToUpdate.type);
+      }
+      if (attributeToUpdate.type === 'record') {
+        setRecordKeyTypes(
+          Object.fromEntries(
+            Object.entries(attributeToUpdate.properties).map(([key, value]) => [
+              key,
+              [key, value.type],
+            ])
+          )
+        );
+        return;
       }
       setNullable(attributeToUpdate?.options?.nullable ?? false);
       if (attributeToUpdate?.options?.default === undefined) {
@@ -161,6 +179,17 @@ export function SchemaAttributeSheet(
         items: { type: setType },
       } as CollectionAttributeDefinition;
     }
+    if (attributeBaseType === 'record') {
+      return {
+        ...baseAttribute,
+        properties: Object.fromEntries(
+          Object.entries(recordKeyTypes).map(([_key, [name, type]]) => [
+            name,
+            { type },
+          ])
+        ),
+      } as RecordAttributeDefinition;
+    }
     const baseOptions = { nullable };
     if (!hasDefault) return { ...baseAttribute, options: baseOptions };
     let value: any = '';
@@ -178,6 +207,7 @@ export function SchemaAttributeSheet(
   }, [
     attributeBaseType,
     setType,
+    recordKeyTypes,
     nullable,
     hasDefault,
     defaultType,
@@ -191,7 +221,7 @@ export function SchemaAttributeSheet(
       await addAttributeToSchema(
         client,
         collectionName,
-        name,
+        attributeName,
         updatedAttribute
       );
       setOpen(false);
@@ -201,17 +231,23 @@ export function SchemaAttributeSheet(
       updatedAttribute.options.default === undefined &&
       attributeToUpdate.options?.default !== undefined
     ) {
-      await dropDefaultOption(client, collectionName, name);
+      await dropDefaultOption(client, collectionName, attributeName);
     }
     await updateAttributeOptions(
       client,
       collectionName,
-      name,
+      attributeName,
       updatedAttribute.options
     );
 
     setOpen(false);
-  }, [attributeToUpdate, client, collectionName, formToAttributeDefinition]);
+  }, [
+    attributeToUpdate,
+    client,
+    attributeName,
+    collectionName,
+    formToAttributeDefinition,
+  ]);
 
   return (
     <Sheet
@@ -253,9 +289,9 @@ export function SchemaAttributeSheet(
               <Input
                 disabled={editing}
                 placeholder="attribute_name"
-                value={name}
+                value={attributeName}
                 onChange={(e) => {
-                  setName(e.target.value);
+                  setAttributeName(e.target.value);
                 }}
               />
             </div>
@@ -268,7 +304,7 @@ export function SchemaAttributeSheet(
                   setAttributeBaseType(value as ValueTypeKeys);
                   setDefaultType('Value');
                 }}
-                data={ALL_TYPES}
+                data={[...ALL_TYPES]}
               />
               {attributeBaseType === 'set' && (
                 <Select
@@ -277,9 +313,71 @@ export function SchemaAttributeSheet(
                   onValueChange={(value) => {
                     setSetType(value as ValueTypeKeys);
                   }}
-                  data={VALUE_TYPE_KEYS}
+                  data={[...VALUE_TYPE_KEYS]}
                 />
               )}
+              {attributeBaseType === 'record' && (
+                <div className="flex flex-col gap-3">
+                  {Object.entries(recordKeyTypes).map(([key, [name, type]]) => (
+                    <div key={key} className="flex flex-row gap-2 items-end">
+                      <Input
+                        label="Key"
+                        placeholder="e.g. name"
+                        value={name}
+                        disabled={editing}
+                        onChange={(e) => {
+                          setRecordKeyTypes((prev) => {
+                            const next = { ...prev };
+                            next[key] = [e.target.value, type];
+                            return next;
+                          });
+                        }}
+                      />
+                      <Select
+                        label="Type"
+                        disabled={editing}
+                        value={type}
+                        onValueChange={(type) => {
+                          setRecordKeyTypes((prev) => {
+                            const next = { ...prev };
+                            next[key] = [name, type];
+                            return next;
+                          });
+                        }}
+                        data={[...VALUE_TYPE_KEYS]}
+                      />
+                      {!editing && (
+                        <CloseButton
+                          className="mb-2"
+                          disabled={editing}
+                          onClick={() => {
+                            setRecordKeyTypes((prev) => {
+                              const next = { ...prev };
+                              delete next[key];
+                              return next;
+                            });
+                          }}
+                        />
+                      )}
+                    </div>
+                  ))}
+
+                  {!editing && (
+                    <Button
+                      onClick={() => {
+                        setRecordKeyTypes((prev) => {
+                          const next = { ...prev };
+                          next[randomId()] = ['', 'string'];
+                          return next;
+                        });
+                      }}
+                    >
+                      Add property
+                    </Button>
+                  )}
+                </div>
+              )}
+
               <div className="flex text-muted-foreground">
                 The attribute type will be validated whenever an attribute's
                 data is written or updated. It will also provide type hinting
@@ -287,7 +385,7 @@ export function SchemaAttributeSheet(
               </div>
             </div>
           </div>
-          {attributeBaseType !== 'set' && (
+          {attributeBaseType !== 'set' && attributeBaseType !== 'record' && (
             <>
               <hr className="col-span-full mt-10 mb-5" />
               <div className="font-bold">Options</div>
@@ -389,7 +487,7 @@ export function SchemaAttributeSheet(
           </Button>
           <Button
             // TODO: prevent attribute name conflicts as necessary
-            disabled={name === ''}
+            disabled={attributeName === ''}
             variant={'default'}
             onClick={submitForm}
           >

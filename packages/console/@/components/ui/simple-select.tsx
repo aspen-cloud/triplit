@@ -6,16 +6,18 @@ import {
   SelectContent,
   SelectItem,
 } from './select';
+import { InputLabel } from './input-label';
 
 import { ComponentProps } from 'react';
 
 type SelectWithLabelProps = {
   data: string[];
+  label?: string;
 } & ComponentProps<typeof BaseSelect> &
   ComponentProps<typeof SelectTrigger>;
 
 export function Select({ className, ...props }: SelectWithLabelProps) {
-  return (
+  let baseInput = (
     <BaseSelect {...props}>
       <SelectTrigger className={className}>
         <SelectValue>{props.value}</SelectValue>
@@ -29,4 +31,12 @@ export function Select({ className, ...props }: SelectWithLabelProps) {
       </SelectContent>
     </BaseSelect>
   );
+  if (props.label)
+    return (
+      <div className="flex flex-col w-full">
+        <InputLabel value={props.label} />
+        {baseInput}
+      </div>
+    );
+  return baseInput;
 }

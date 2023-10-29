@@ -8,8 +8,16 @@ export type ValueTypeKeys = (typeof VALUE_TYPE_KEYS)[number];
 export const COLLECTION_TYPE_KEYS = ['set'] as const;
 export type CollectionTypeKeys = (typeof COLLECTION_TYPE_KEYS)[number];
 
+export const RECORD_TYPE_KEYS = ['record'] as const;
+export type RecordTypeKeys = (typeof RECORD_TYPE_KEYS)[number];
+
 // TODO: add record type
-export const ALL_TYPES = [...VALUE_TYPE_KEYS, ...COLLECTION_TYPE_KEYS] as const;
+export const ALL_TYPES = [
+  ...VALUE_TYPE_KEYS,
+  ...COLLECTION_TYPE_KEYS,
+  ...RECORD_TYPE_KEYS,
+] as const;
+export type AllTypes = (typeof ALL_TYPES)[number];
 
 export type ValueAttributeDefinition = {
   type: ValueTypeKeys;
@@ -18,7 +26,7 @@ export type ValueAttributeDefinition = {
 export type RecordAttributeDefinition<
   Properties extends Record<string, AttributeDefinition> = {}
 > = {
-  type: 'record';
+  type: RecordTypeKeys;
   properties: Properties;
 };
 export type CollectionAttributeDefinition = {
