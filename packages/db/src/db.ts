@@ -351,17 +351,20 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
     query: Q,
     onResults: (results: FetchResult<Q>) => void,
     onError?: (error: any) => void,
-    { scope, skipRules = false }: { scope?: string[]; skipRules?: boolean } = {}
+    options: DBFetchOptions = {}
   ) {
     const startSubscription = async () => {
       await this.ensureMigrated;
-      let { query: subscriptionQuery } = await prepareQuery(this, query, {
-        scope,
-        skipRules,
-      });
+      let { query: subscriptionQuery } = await prepareQuery(
+        this,
+        query,
+        options
+      );
 
       const unsub = subscribe<M, Q>(
-        scope ? this.tripleStore.setStorageScope(scope) : this.tripleStore,
+        options.scope
+          ? this.tripleStore.setStorageScope(options.scope)
+          : this.tripleStore,
         subscriptionQuery,
         onResults,
         onError,
@@ -382,17 +385,20 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
     query: Q,
     onResults: (results: TripleRow[]) => void,
     onError?: (error: any) => void,
-    { scope, skipRules = false }: { scope?: string[]; skipRules?: boolean } = {}
+    options: DBFetchOptions = {}
   ) {
     const startSubscription = async () => {
       await this.ensureMigrated;
-      let { query: subscriptionQuery } = await prepareQuery(this, query, {
-        scope,
-        skipRules,
-      });
+      let { query: subscriptionQuery } = await prepareQuery(
+        this,
+        query,
+        options
+      );
 
       const unsub = subscribeTriples<M, Q>(
-        scope ? this.tripleStore.setStorageScope(scope) : this.tripleStore,
+        options.scope
+          ? this.tripleStore.setStorageScope(options.scope)
+          : this.tripleStore,
         subscriptionQuery,
         (tripMap) => onResults([...tripMap.values()].flat()),
         onError,
