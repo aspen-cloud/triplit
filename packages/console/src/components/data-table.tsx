@@ -177,7 +177,7 @@ function CellValue(props: {
     return <SetCellContents setType={setType} triplitSet={value as Set<any>} />;
   if (type === 'date' && value instanceof Date)
     return (value as Date).toISOString();
-  return JSON.stringify(value);
+  return JSON.stringify(value, null, 2);
 }
 
 type TriplitRelationCellProps = {

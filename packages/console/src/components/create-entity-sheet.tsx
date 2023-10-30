@@ -39,13 +39,30 @@ interface FormValues {
   id: string;
   attributes: {
     fieldName: string;
-    type: Exclude<AttributeDefinition['type'], 'record'>;
-    nullable: boolean;
-    setItemsType?: CollectionAttributeDefinition['items']['type'];
+    definition: AttributeDefinition;
     fieldValue: string | Set<any>;
     key: string;
-    defaultFunction?: string;
   }[];
+}
+
+function convertFormValueToTriplitValue(
+  value: string | Record<string, any>,
+  definition: AttributeDefinition
+) {
+  const hasDefaultFunction = !!definition?.options?.default?.func;
+  if (hasDefaultFunction && !value) return undefined;
+  if (definition?.options?.nullable && value === null) return null;
+  if (definition.type === 'boolean') return value === 'true';
+  if (definition.type === 'number') return Number(value);
+  if (definition.type === 'date') return new Date(value);
+  if (definition.type === 'record')
+    return Object.fromEntries(
+      Object.entries(value).map(([name, value]) => [
+        name,
+        convertFormValueToTriplitValue(value, definition.properties[name]),
+      ])
+    );
+  return value;
 }
 
 function convertFormToEntity(
@@ -54,26 +71,31 @@ function convertFormToEntity(
 ) {
   const entity: any = {};
   attributes.forEach((attr) => {
-    const { type, fieldValue, fieldName } = attr;
-    // if we have a default function like uuid or now, don't set the field,
-    // let the system take the wheel
-    const hasDefaultFunction =
-      !!model?.schema.properties[fieldName]?.options?.func;
-    if (hasDefaultFunction && !fieldValue) return;
-    if (attr.nullable && fieldValue === null) entity[fieldName] = null;
-    else if (type === 'boolean') {
-      entity[fieldName] = fieldValue === 'true';
-    } else if (type === 'number') {
-      entity[fieldName] = Number(fieldValue);
-    } else if (type === 'date' && !(fieldValue instanceof Set)) {
-      fieldValue
-        ? (entity[fieldName] = new Date(fieldValue))
-        : delete entity[fieldName];
-    } else {
-      entity[fieldName] = fieldValue;
-    }
+    const { definition, fieldValue, fieldName } = attr;
+    const triplitValue = convertFormValueToTriplitValue(fieldValue, definition);
+    if (triplitValue !== undefined) entity[fieldName] = triplitValue;
   });
   return entity;
+}
+
+function getDefaultFormValueForAttribute(definition: AttributeDefinition): any {
+  const hasDefaultValue =
+    definition?.options?.default !== undefined &&
+    typeof definition?.options?.default !== 'object';
+  if (hasDefaultValue) return definition.options.default;
+  if (definition.type === 'record')
+    return Object.fromEntries(
+      Object.entries(definition.properties).map(([name, definition]) => [
+        name,
+        getDefaultFormValueForAttribute(definition),
+      ])
+    );
+  if (definition.type === 'set') return new Set();
+  if (definition.type === 'boolean') return '';
+  if (definition.type === 'number') return '';
+  if (definition.type === 'date') return '';
+  if (definition.type === 'string') return '';
+  return '';
 }
 
 function initializeNewEntityForm(model?: Collection<any>): FormValues {
@@ -87,25 +109,12 @@ function initializeNewEntityForm(model?: Collection<any>): FormValues {
     .filter(
       ([_attr, definition]) => definition.type !== 'query' && _attr !== 'id'
     )
-    .map(([attr, attributeDef]) => {
-      const type = attributeDef.type;
-      const nullable = attributeDef?.options?.nullable;
-      const hasDefaultValue =
-        attributeDef?.options?.default !== undefined &&
-        typeof attributeDef?.options?.default !== 'object';
+    .map(([attr, definition]) => {
       return {
-        type,
-        setItemsType: type === 'set' ? attributeDef?.items?.type : undefined,
-        nullable,
+        definition,
         fieldName: attr,
-        fieldValue:
-          type === 'set'
-            ? new Set()
-            : hasDefaultValue
-            ? String(attributeDef?.options?.default)
-            : '',
+        fieldValue: getDefaultFormValueForAttribute(definition),
         key: attr,
-        defaultFunction: attributeDef?.options?.default?.func,
       };
     });
   return { id: '', attributes };
@@ -201,9 +210,11 @@ export function CreateEntitySheet({
               <Select
                 className="w-1/4"
                 data={['string', 'boolean', 'number']}
-                value={item.type}
+                value={item.definition.type}
                 onValueChange={(value) => {
-                  form.setFieldValue(`attributes.${index}.type`, value);
+                  form.setFieldValue(`attributes.${index}.definition`, {
+                    value,
+                  });
                 }}
               />
             </>
@@ -213,13 +224,17 @@ export function CreateEntitySheet({
               collectionDefinition && (
                 <TypeLabel
                   name={item.fieldName}
-                  type={item.type}
-                  setItemsType={item.setItemsType}
+                  type={item.definition.type}
+                  setItemsType={
+                    item.definition.type === 'set'
+                      ? item.definition.items.type
+                      : undefined
+                  }
                 />
               )
             }
           >
-            {item.type === 'string' && (
+            {item.definition.type === 'string' && (
               <Textarea
                 disabled={item.fieldValue === null}
                 value={item.fieldValue ?? ''}
@@ -231,21 +246,21 @@ export function CreateEntitySheet({
                 }}
               />
             )}
-            {item.type === 'number' && (
+            {item.definition.type === 'number' && (
               <Input
                 type="number"
                 disabled={item.fieldValue === null}
                 {...form.getInputProps(`attributes.${index}.fieldValue`)}
               />
             )}
-            {item.type === 'date' && (
+            {item.definition.type === 'date' && (
               <Input
                 type="datetime-local"
                 disabled={item.fieldValue === null}
                 {...form.getInputProps(`attributes.${index}.fieldValue`)}
               />
             )}
-            {item.type === 'boolean' && (
+            {item.definition.type === 'boolean' && (
               <Select
                 disabled={item.fieldValue === null}
                 data={['true', 'false']}
@@ -255,45 +270,92 @@ export function CreateEntitySheet({
                 }}
               />
             )}
-            {item.type === 'set' && (
+            {item.definition.type === 'set' && (
               <SetInput
                 value={form.values.attributes[index].fieldValue}
                 onChange={(value) => {
                   form.setFieldValue(`attributes.${index}.fieldValue`, value);
                 }}
                 renderItem={
-                  item?.setItemsType === 'date'
+                  item.definition.items.type === 'date'
                     ? (date: Date) => date.toISOString()
                     : undefined
                 }
-                parse={PARSE_FUNCS[item.setItemsType]}
+                parse={PARSE_FUNCS[item.definition.items.type]}
               />
             )}
-            {item.defaultFunction && (
-              <div className="text-foreground-muted">{`Default: ${item.defaultFunction}()`}</div>
+            {item.definition.type === 'record' &&
+              Object.entries(item.definition.properties).map(
+                ([name, definition]) => (
+                  <div className="flex flex-row gap-2" key={name}>
+                    <div className="ml-10 w-1/4">
+                      <TypeLabel
+                        name={name}
+                        type={item.definition.properties[name].type}
+                      />
+                    </div>
+                    {definition.type === 'string' && (
+                      <Textarea
+                        key={name}
+                        disabled={item.fieldValue === null}
+                        {...form.getInputProps(
+                          `attributes.${index}.fieldValue.${name}`
+                        )}
+                      />
+                    )}
+                    {definition.type === 'number' && (
+                      <Input
+                        type="number"
+                        disabled={item.fieldValue === null}
+                        {...form.getInputProps(
+                          `attributes.${index}.fieldValue.${name}`
+                        )}
+                      />
+                    )}
+                    {definition.type === 'date' && (
+                      <Input
+                        type="datetime-local"
+                        disabled={item.fieldValue === null}
+                        {...form.getInputProps(
+                          `attributes.${index}.fieldValue.${name}`
+                        )}
+                      />
+                    )}
+
+                    {definition.type === 'boolean' && (
+                      <Select
+                        disabled={item.fieldValue === null}
+                        data={['true', 'false']}
+                        value={item.fieldValue[name]}
+                        onValueChange={(value) => {
+                          form.setFieldValue(
+                            `attributes.${index}.fieldValue.${name}`,
+                            value
+                          );
+                        }}
+                      />
+                    )}
+                  </div>
+                )
+              )}
+            {item?.definition?.options?.default?.func && (
+              <div className="text-muted-foreground">{`Default: ${item?.definition?.options?.default?.func}()`}</div>
             )}
           </FormField>
-          {item.nullable ||
-            (!collectionDefinition && (
-              <div className="flex flex-col gap-2 self-end items-center mb-[10px]">
-                <p className="text-sm mb-2">Null?</p>
-                <Checkbox
-                  className="h-[20px] w-[20px]"
-                  checked={item.fieldValue === null}
-                  onCheckedChange={(checked) => {
-                    checked
-                      ? form.setFieldValue(
-                          `attributes.${index}.fieldValue`,
-                          null
-                        )
-                      : form.setFieldValue(
-                          `attributes.${index}.fieldValue`,
-                          ''
-                        );
-                  }}
-                />
-              </div>
-            ))}
+          {(item.definition?.options?.nullable || !collectionDefinition) && (
+            <div className="flex flex-col gap-2 self-end items-center mb-[10px]">
+              <p className="text-sm mb-2">Null?</p>
+              <Checkbox
+                className="h-[20px] w-[20px]"
+                checked={item.fieldValue === null}
+                onCheckedChange={(checked) => {
+                  checked
+                    ? form.setFieldValue(`attributes.${index}.fieldValue`, null)
+                    : form.setFieldValue(`attributes.${index}.fieldValue`, '');
+                }}
+              />
+            </div>
+          )}
           {!collectionDefinition && (
             <CloseButton
               onClick={() => form.removeListItem('attributes', index)}
@@ -364,7 +426,7 @@ export function CreateEntitySheet({
                     unselectedAttributes.length > 0
                       ? unselectedAttributes[0]
                       : '',
-                  type: 'string',
+                  definition: { type: 'string' },
                   fieldValue: '',
                   key: randomId(),
                 });
@@ -373,7 +435,7 @@ export function CreateEntitySheet({
               Add attribute
             </Button>
           )}
-          <div className="flex flex-row self-end gap-2">
+          <SheetFooter>
             {/* todo update so that onClose clears state */}
             <Button
               type="button"
@@ -383,9 +445,8 @@ export function CreateEntitySheet({
               Cancel
             </Button>
             <Button type="submit">Create</Button>
-          </div>
+          </SheetFooter>
         </form>
-        <SheetFooter></SheetFooter>
       </SheetContent>
     </Sheet>
   );
