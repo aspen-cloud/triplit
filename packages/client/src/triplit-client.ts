@@ -400,6 +400,10 @@ class SyncEngine {
     });
   }
 
+  get connectionStatus() {
+    return this.transport.connectionStatus;
+  }
+
   updateConnection(options: Partial<SyncOptions>) {
     this.disconnect();
     this.syncOptions = { ...this.syncOptions, ...options };
