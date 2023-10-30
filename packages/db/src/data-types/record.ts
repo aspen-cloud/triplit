@@ -34,7 +34,7 @@ export function RecordType<Properties extends { [k: string]: DataType }>(
           k,
           propDef.convertInputToJson(
             // @ts-ignore
-            val[key]
+            val[k]
           ),
         ])
       ) as { [K in keyof Properties]: ExtractSerializedType<Properties[K]> };
