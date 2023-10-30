@@ -1602,6 +1602,105 @@ describe('subscriptions', () => {
       await unsubscribe();
     });
   });
+
+  // Covers bug in past where subscriptions failed to fire if a transaction contained irrelevant data
+  it('can handle multiple subscriptions', async () => {
+    const db = new DB();
+    const completedTodosQuery = db
+      .query('todos')
+      .where('completed', '=', true)
+      .build();
+    const incompleteTodosQuery = db
+      .query('todos')
+      .where('completed', '=', false)
+      .build();
+
+    let completedCalls = 0;
+    let completedAssertions = [
+      (results: Map<string, any>) => {
+        expect(results.size).toBe(0);
+      },
+      (results: Map<string, any>) => {
+        expect(results.size).toBe(1);
+        expect(results.get('1')).toBeTruthy();
+      },
+      (results: Map<string, any>) => {
+        expect(results.size).toBe(2);
+        expect(results.get('1')).toBeTruthy();
+        expect(results.get('3')).toBeTruthy();
+      },
+    ];
+    db.subscribe(completedTodosQuery, (data) => {
+      completedAssertions[completedCalls](data);
+      completedCalls++;
+    });
+
+    let incompleteCalls = 0;
+    let incompleteAssertions = [
+      (results: Map<string, any>) => {
+        expect(results.size).toBe(0);
+      },
+      (results: Map<string, any>) => {
+        expect(results.size).toBe(1);
+        expect(results.get('2')).toBeTruthy();
+      },
+      (results: Map<string, any>) => {
+        expect(results.size).toBe(2);
+        expect(results.get('2')).toBeTruthy();
+        expect(results.get('4')).toBeTruthy();
+      },
+    ];
+    db.subscribe(incompleteTodosQuery, (data) => {
+      incompleteAssertions[incompleteCalls](data);
+      incompleteCalls++;
+    });
+
+    // only subscription A fires
+    await new Promise<void>((res) =>
+      setTimeout(async () => {
+        await db.insert('todos', {
+          text: 'Buy milk',
+          completed: true,
+          id: '1',
+        });
+        res();
+      }, 20)
+    );
+    // only subscription B fires
+    await new Promise<void>((res) =>
+      setTimeout(async () => {
+        await db.insert('todos', {
+          text: 'Buy eggs',
+          completed: false,
+          id: '2',
+        });
+        res();
+      }, 20)
+    );
+
+    // Both fire
+    await new Promise<void>((res) =>
+      setTimeout(async () => {
+        await db.transact(async (tx) => {
+          await tx.insert('todos', {
+            text: 'Buy bread',
+            completed: true,
+            id: '3',
+          });
+          await tx.insert('todos', {
+            text: 'Buy butter',
+            completed: false,
+            id: '4',
+          });
+        });
+        res();
+      }, 20)
+    );
+
+    await new Promise<void>((res) => setTimeout(res, 20));
+    expect(completedCalls).toEqual(3);
+    expect(incompleteCalls).toEqual(3);
+  });
 });
 
 describe("Entity Id'ing", () => {
@@ -3406,7 +3505,7 @@ describe('Rules', () => {
             id: '1',
           });
           res();
-        }, 100)
+        }, 20)
       );
       await new Promise<void>((res) =>
         setTimeout(async () => {
@@ -3416,7 +3515,7 @@ describe('Rules', () => {
             id: '2',
           });
           res();
-        }, 100)
+        }, 20)
       );
       await new Promise<void>((res) =>
         setTimeout(async () => {
@@ -3426,10 +3525,10 @@ describe('Rules', () => {
             id: '3',
           });
           res();
-        }, 100)
+        }, 20)
       );
 
-      await new Promise<void>((res) => setTimeout(res, 1000));
+      await new Promise<void>((res) => setTimeout(res, 20));
       expect(calls).toEqual(3);
     });
   });
