@@ -38,10 +38,11 @@ import { Code } from '@/components/ui/code';
 import { TriplitClient } from '@triplit/client';
 import { AttributeDefinition } from '@triplit/db';
 import {
-  CollectionTypeKeys,
+  CollectionAttributeDefinition,
   QueryAttributeDefinition,
-  ValueTypeKeys,
-} from '../../../db/src/data-types/serialization';
+  RecordAttributeDefinition,
+  ValueAttributeDefinition,
+} from '@triplit/db/src/data-types/serialization';
 import { ArrowSquareOut } from '@phosphor-icons/react';
 
 async function updateTriplitValue(
@@ -101,7 +102,7 @@ export function TriplitColumnHeader(props: ColumnHeaderProps) {
       <div className="flex flex-row items-center gap-1">
         <div className="">{attribute}</div>
         {attributeDef?.type && (
-          <div className="font-normal text-zinc-500">{attributeDef.type}</div>
+          <div className="font-normal text-primary/50">{attributeDef.type}</div>
         )}
         {children}
       </div>
@@ -125,12 +126,12 @@ type TriplitDataCellProps = {
 
 function SetCellContents({
   triplitSet,
-  setType,
+  definition,
   limit = 3,
   className,
 }: {
   triplitSet: Set<any>;
-  setType?: ValueTypeKeys;
+  definition: CollectionAttributeDefinition;
   limit?: number;
   className?: string;
 }) {
@@ -138,44 +139,94 @@ function SetCellContents({
   const items = [...triplitSet];
   return (
     <div className="flex flex-row gap-1 items-center">
-      <div className="text-zinc-500">{'{'}</div>
+      <div>{'{'}</div>
       {items.slice(0, limit).map((item) => (
         <div
           key={item}
           className={cn('bg-secondary px-1 py-0.5 rounded-sm', className)}
         >
-          <CellValue value={item} type={setType} />
+          <CellValue value={item} definition={definition} />
         </div>
       ))}
       {items.length > limit && (
         <Tooltip
           label={
             <SetCellContents
+              definition={definition}
               triplitSet={triplitSet}
               limit={Infinity}
-              className="bg-zinc-200"
+              className="border bg-inherit"
             />
           }
         >
-          <div className="text-zinc-500">+{items.length - limit}</div>
+          <div>+{items.length - limit}</div>
         </Tooltip>
       )}
-      <div className="text-zinc-500">{'}'}</div>
+      <div>{'}'}</div>
+    </div>
+  );
+}
+
+function RecordCellContents({
+  record,
+  definition,
+  limit = 3,
+  className,
+}: {
+  record: Record<string, any>;
+  definition?: RecordAttributeDefinition;
+  limit?: number;
+  className?: string;
+}) {
+  if (!record) return null;
+  const items = Object.entries(record);
+  return (
+    <div className="flex flex-row gap-1 items-center">
+      <div>{'{'}</div>
+      {items.slice(0, limit).map(([key, value]) => (
+        <div
+          key={key}
+          className={cn(
+            'bg-secondary px-1 py-0.5 rounded-sm flex flex-row items-center gap-1',
+            className
+          )}
+        >
+          <div>{key} :</div>
+          <CellValue value={value} definition={definition?.properties[key]} />
+        </div>
+      ))}
+      {items.length > limit && (
+        <Tooltip
+          label={
+            <RecordCellContents
+              record={record}
+              limit={Infinity}
+              className="border bg-inherit"
+            />
+          }
+        >
+          <div>+{items.length - limit}</div>
+        </Tooltip>
+      )}
+      <div>{'}'}</div>
     </div>
   );
 }
 
 function CellValue(props: {
-  type: ValueTypeKeys | CollectionTypeKeys;
-  setType?: ValueTypeKeys;
+  definition: AttributeDefinition;
   value: TriplitDataTypes;
 }) {
-  const { type, value, setType } = props;
-  if (value === null) return <span className="text-zinc-500">null</span>;
+  const { definition, value } = props;
+  if (value === null) return <span className="text-primary/50">null</span>;
   if (value === undefined) return '';
-  if (type === 'set' && value instanceof Set)
-    return <SetCellContents setType={setType} triplitSet={value as Set<any>} />;
-  if (type === 'date' && value instanceof Date)
+  if (definition.type === 'record' && value instanceof Object)
+    return <RecordCellContents record={value} definition={definition} />;
+  if (definition.type === 'set' && value instanceof Set)
+    return (
+      <SetCellContents definition={definition} triplitSet={value as Set<any>} />
+    );
+  if (definition.type === 'date' && value instanceof Date)
     return (value as Date).toISOString();
   return JSON.stringify(value, null, 2);
 }
@@ -231,8 +282,7 @@ export function DataCell(props: TriplitDataCellProps) {
         }`}
       >
         <CellValue
-          setType={setType}
-          type={attributeDef?.type ?? 'string'}
+          definition={attributeDef ?? { type: 'string', options: {} }}
           value={value}
         />
       </PopoverTrigger>
@@ -241,7 +291,7 @@ export function DataCell(props: TriplitDataCellProps) {
         {isSet && setType ? (
           <SetCellEditor
             set={value}
-            setType={setType}
+            definition={attributeDef}
             onChangeSet={(value, action) => {
               updateTriplitSet(
                 attribute,
@@ -256,9 +306,10 @@ export function DataCell(props: TriplitDataCellProps) {
         ) : (
           <ValueCellEditor
             value={value}
-            nullable={attributeDef && attributeDef.options?.nullable}
+            definition={
+              attributeDef ?? { type: 'string', options: { nullable: true } }
+            }
             onBlur={() => setIsEditing(false)}
-            type={attributeDef?.type}
             onSubmit={(newValue: TriplitDataTypes) => {
               if (newValue !== value)
                 updateTriplitValue(
@@ -280,11 +331,11 @@ export function DataCell(props: TriplitDataCellProps) {
 type SetCellEditorProps = {
   onChangeSet(value: string, action: 'add' | 'delete'): void;
   set: Set<string> | undefined;
-  setType: ValueTypeKeys;
+  definition: CollectionAttributeDefinition;
 };
 
 function SetCellEditor(props: SetCellEditorProps) {
-  const { set, onChangeSet, setType } = props;
+  const { set, onChangeSet, definition } = props;
   return (
     <SetInput
       value={set}
@@ -294,18 +345,19 @@ function SetCellEditor(props: SetCellEditorProps) {
       onRemoveItem={(value) => {
         onChangeSet(value, 'delete');
       }}
-      parse={PARSE_FUNCS[setType]}
-      renderItem={(value) => <CellValue value={value} type={setType} />}
+      parse={PARSE_FUNCS[definition.items.type]}
+      renderItem={(value) => (
+        <CellValue value={value} definition={definition.items} />
+      )}
     />
   );
 }
 
 type ValueCellEditorProps = {
   value: TriplitDataTypes;
-  type?: string;
+  definition: ValueAttributeDefinition;
   onSubmit: (newValue: TriplitDataTypes) => void;
   onBlur: () => void;
-  nullable?: boolean;
 };
 
 function coerceStringToTriplitType(
@@ -329,7 +381,9 @@ function coerceTriplitTypeToInput(value: TriplitDataTypes, type: string) {
 }
 
 function ValueCellEditor(props: ValueCellEditorProps) {
-  const { value, type, onSubmit, onBlur, nullable } = props;
+  const { value, definition, onSubmit, onBlur } = props;
+  const { type, options } = definition;
+  const nullable = !!options?.nullable;
   const [draftValue, setDraftValue] = useState<string>(
     type ? coerceTriplitTypeToInput(value, type) : JSON.stringify(value)
   );
