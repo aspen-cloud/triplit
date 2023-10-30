@@ -10,7 +10,7 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Plus } from '@phosphor-icons/react';
+import { Plus } from 'lucide-react';
 import { useState } from 'react';
 
 type CreateCollectionDialogProps = {
@@ -24,10 +24,10 @@ export function CreateCollectionDialog(props: CreateCollectionDialogProps) {
     <Dialog onOpenChange={setOpen} open={open}>
       <DialogTrigger asChild>
         <Button
-          className="h-auto text-xs px-2 py-1 flex flex-row gap-1"
+          className="h-auto py-1 px-3 flex flex-row gap-1"
           variant="secondary"
         >
-          <Plus className="shrink-0" />
+          <Plus className="shrink-0 h-4 w-4" />
           <span className="hidden lg:inline">Create</span>
         </Button>
       </DialogTrigger>

@@ -6,7 +6,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { CaretDown } from '@phosphor-icons/react';
-import { TrashSimple, Plus } from '@phosphor-icons/react';
+import { Trash, Plus } from 'lucide-react';
 
 type CollectionMenuProps = {
   onDelete: () => void;
@@ -34,7 +34,7 @@ export function CollectionMenu(props: CollectionMenuProps) {
           className="text-red-600 focus:text-red-600"
           onSelect={() => props.onDelete()}
         >
-          <TrashSimple className="w-4 h-4 mr-2" />
+          <Trash className="w-4 h-4 mr-2" />
           Delete collection
         </DropdownMenuItem>
       </DropdownMenuContent>

@@ -48,7 +48,9 @@ export function OrderPopover(props: OrderPopoverProps) {
         <Button
           size={'sm'}
           variant={'secondary'}
-          className={hasOrders ? 'bg-blue-500 hover:bg-blue-600' : ''}
+          className={`${
+            hasOrders ? 'bg-blue-500 hover:bg-blue-600' : ''
+          } py-1 h-auto`}
         >
           <span className="mr-2">Order</span>
           <span className={hasOrders ? '' : 'text-zinc-500'}>

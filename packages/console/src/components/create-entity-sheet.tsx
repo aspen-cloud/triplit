@@ -33,7 +33,7 @@ import {
 } from '@/components/ui/sheet';
 import { Code } from '@/components/ui/code';
 import { TriplitClient } from '@triplit/client';
-import { Plus } from '@phosphor-icons/react';
+import { Plus } from 'lucide-react';
 
 interface FormValues {
   id: string;
@@ -315,9 +315,9 @@ export function CreateEntitySheet({
         <Button
           size={'sm'}
           variant={'secondary'}
-          className="bg-green-950 hover:bg-green-900 text-green-400"
+          className="bg-green-950 hover:bg-green-900 text-green-400 gap-1 py-1 h-auto"
         >
-          <Plus className="mr-2" />
+          <Plus className="h-4 w-4" />
           New entity
         </Button>
       </SheetTrigger>

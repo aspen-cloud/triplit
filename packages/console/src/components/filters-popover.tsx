@@ -88,7 +88,9 @@ export function FiltersPopover(props: FiltersPopoverProps) {
         <Button
           size={'sm'}
           variant={'secondary'}
-          className={`${hasFilters ? 'bg-blue-500 hover:bg-blue-600' : ''}`}
+          className={`${
+            hasFilters ? 'bg-blue-500 hover:bg-blue-600' : ''
+          } py-1 h-auto`}
         >
           <span className="mr-2">Filters</span>
           <span className={hasFilters ? '' : 'text-zinc-500'}>

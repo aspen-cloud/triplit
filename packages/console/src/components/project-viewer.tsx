@@ -53,8 +53,8 @@ export function ProjectViewer({
             <CaretDown className="ml-2 shrink-0" />
           </Button>
         </ProjectOptionsMenu>
-        <div className="flex flex-row items-center justify-between my-4">
-          Collections{' '}
+        <div className="flex flex-row items-cente justify-between my-4">
+          <span className="truncate text-sm md:text-base">Collections</span>
           {shouldShowCreateCollectionButton && (
             <CreateCollectionDialog
               onSubmit={async (collectionName) => {
@@ -80,8 +80,8 @@ export function ProjectViewer({
             variant={selectedCollection === collection ? 'default' : 'ghost'}
             className={`truncate flex h-auto px-2 py-1 flex-row items-center gap-2 justify-start`}
           >
-            <GridFour weight="light" size={24} />
-            {`${collection}`}
+            <GridFour weight="light" className="shrink-0" size={24} />
+            <span className="text-xs md:text-sm truncate">{`${collection}`}</span>
           </Button>
         ))}
         {collections.length === 0 && (
