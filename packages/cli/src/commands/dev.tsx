@@ -48,7 +48,8 @@ export default Command({
         'x-triplit-token-type': 'secret',
         'x-triplit-project-id': process.env.PROJECT_ID,
       },
-      process.env.JWT_SECRET
+      process.env.JWT_SECRET,
+      { noTimestamp: true }
     );
 
     const anonKey = jwt.sign(
@@ -56,7 +57,8 @@ export default Command({
         'x-triplit-token-type': 'anon',
         'x-triplit-project-id': process.env.PROJECT_ID,
       },
-      process.env.JWT_SECRET
+      process.env.JWT_SECRET,
+      { noTimestamp: true }
     );
 
     const startDBServer = createDBServer({
