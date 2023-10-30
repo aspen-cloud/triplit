@@ -321,7 +321,7 @@ export function CreateEntitySheet({
           New entity
         </Button>
       </SheetTrigger>
-      <SheetContent className="text-sm">
+      <SheetContent className="text-sm sm:max-w-[40%]">
         <SheetHeader>
           <SheetTitle>New entity</SheetTitle>
           <SheetDescription>

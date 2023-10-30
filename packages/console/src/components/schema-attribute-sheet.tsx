@@ -257,7 +257,7 @@ export function SchemaAttributeSheet(
         if (!open) setAttributeToUpdate(null);
       }}
     >
-      <SheetContent className="text-sm">
+      <SheetContent className="text-sm sm:max-w-[40%]">
         <SheetHeader>
           <SheetTitle>
             {attributeToUpdate ? (
