@@ -1,7 +1,7 @@
 import path from 'path';
 import fs from 'fs';
 
-function createDirIfNotExists(dir: string) {
+export function createDirIfNotExists(dir: string) {
   if (!fs.existsSync(dir)) {
     fs.mkdirSync(dir, { recursive: true });
   }
