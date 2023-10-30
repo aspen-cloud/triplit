@@ -205,7 +205,7 @@ export function DataViewer({
         <div className="flex flex-row items-center">
           <Tooltip label="Select all">
             <Checkbox
-              className="ml-3 mr-1"
+              className="ml-4 mr-1"
               checked={allVisibleEntitiesAreSelected}
               onCheckedChange={toggleSelectAllEntities}
             />
@@ -226,7 +226,7 @@ export function DataViewer({
         return (
           <div className="flex flex-row items-center">
             <Checkbox
-              className="ml-3 mr-1"
+              className="ml-4 mr-1"
               checked={selectedEntities && selectedEntities.has(entityId)}
               onCheckedChange={(checked) => {
                 checked
@@ -370,7 +370,7 @@ export function DataViewer({
           />
         </>
       )}
-      <h3 className="px-5 mt-5 text-2xl font-semibold tracking-tight flex flex-row gap-2">
+      <h3 className="px-4 mt-5 mb-1 text-2xl font-semibold tracking-tight flex flex-row gap-2">
         {collection}
         {schema && (
           <CollectionMenu
@@ -384,7 +384,7 @@ export function DataViewer({
           />
         )}
       </h3>
-      <div className="flex flex-row gap-3 p-4 items-center border-b">
+      <div className="flex flex-row gap-4 p-4 items-center border-b">
         <FiltersPopover
           filters={filters}
           uniqueAttributes={uniqueAttributes}

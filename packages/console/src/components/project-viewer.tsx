@@ -46,7 +46,7 @@ export function ProjectViewer({
   // If client, render hooks that rely on client safely
   return (
     <div className="grid grid-cols-6 bg-popover">
-      <div className=" border-r col-span-1 h-screen flex flex-col p-3 ">
+      <div className=" border-r col-span-1 h-screen flex flex-col p-4 ">
         <ProjectOptionsMenu projectPrimaryKey={projectPrimaryKey}>
           <Button variant="secondary" className="w-full">
             <div className="font-bold truncate ">{project?.displayName}</div>
@@ -54,7 +54,9 @@ export function ProjectViewer({
           </Button>
         </ProjectOptionsMenu>
         <div className="flex flex-row items-cente justify-between my-4">
-          <span className="truncate text-sm md:text-base">Collections</span>
+          <span className="truncate text-sm md:text-lg font-semibold">
+            Collections
+          </span>
           {shouldShowCreateCollectionButton && (
             <CreateCollectionDialog
               onSubmit={async (collectionName) => {
