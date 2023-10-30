@@ -111,7 +111,13 @@ export function TriplitColumnHeader(props: ColumnHeaderProps) {
   );
 }
 
-export type TriplitDataTypes = string | number | boolean | Date | null;
+export type TriplitDataTypes =
+  | string
+  | number
+  | boolean
+  | Date
+  | null
+  | Record<string, any>;
 
 type TriplitDataCellProps = {
   entityId: string;
@@ -263,8 +269,6 @@ export function DataCell(props: TriplitDataCellProps) {
     client,
     collection,
   } = props;
-  const isSet = attributeDef?.type === 'set';
-  const setType = isSet ? attributeDef.items.type : undefined;
   const [isEditing, setIsEditing] = useState(false);
   useEffect(() => {
     if (!selected) setIsEditing(false);
@@ -288,7 +292,7 @@ export function DataCell(props: TriplitDataCellProps) {
       </PopoverTrigger>
 
       <PopoverContent className="text-xs p-1">
-        {isSet && setType ? (
+        {attributeDef?.type === 'set' ? (
           <SetCellEditor
             set={value}
             definition={attributeDef}
@@ -302,6 +306,22 @@ export function DataCell(props: TriplitDataCellProps) {
                 action
               );
             }}
+          />
+        ) : attributeDef?.type === 'record' ? (
+          <RecordCellEditor
+            value={value}
+            definition={attributeDef}
+            onSubmit={(newValue) => {
+              updateTriplitValue(
+                attribute,
+                client,
+                collection,
+                entityId,
+                newValue
+              );
+              setIsEditing(false);
+            }}
+            onBlur={() => setIsEditing(false)}
           />
         ) : (
           <ValueCellEditor
@@ -362,18 +382,36 @@ type ValueCellEditorProps = {
 
 function coerceStringToTriplitType(
   value: string | null | Array<any>,
-  type: string
+  definition: AttributeDefinition
 ) {
+  const { type } = definition;
   if (value === null || value === null) return value;
   if (type === 'number') return Number(value);
   if (type === 'boolean') return JSON.parse(value);
   if (type === 'date') return new Date(value);
-  if (type.startsWith('set_')) return new Set(value);
-
+  if (type === 'set') return new Set(value);
+  if (type === 'record')
+    return Object.fromEntries(
+      Object.entries(value).map(([key, value]) => [
+        key,
+        coerceStringToTriplitType(value, definition.properties[key]),
+      ])
+    );
   return value;
 }
 
-function coerceTriplitTypeToInput(value: TriplitDataTypes, type: string) {
+function coerceTriplitTypeToInput(
+  value: TriplitDataTypes,
+  definition: AttributeDefinition
+) {
+  const { type } = definition;
+  if (type === 'record' && typeof value === 'object')
+    return Object.fromEntries(
+      Object.entries(value).map(([key, value]) => [
+        key,
+        coerceTriplitTypeToInput(value, definition.properties[key]),
+      ])
+    );
   if (value === null || value === undefined) return '';
   if (type && type === 'date')
     return new Date(value as string | Date).toISOString();
@@ -385,7 +423,7 @@ function ValueCellEditor(props: ValueCellEditorProps) {
   const { type, options } = definition;
   const nullable = !!options?.nullable;
   const [draftValue, setDraftValue] = useState<string>(
-    type ? coerceTriplitTypeToInput(value, type) : JSON.stringify(value)
+    type ? coerceTriplitTypeToInput(value, definition) : JSON.stringify(value)
   );
   const [error, setError] = useState('');
   const EditorInput = useMemo(() => {
@@ -398,13 +436,13 @@ function ValueCellEditor(props: ValueCellEditorProps) {
   const submitNewValue = useCallback(() => {
     try {
       const submitValue = type
-        ? coerceStringToTriplitType(draftValue, type)
+        ? coerceStringToTriplitType(draftValue, definition)
         : JSON.parse(draftValue);
       onSubmit(submitValue);
     } catch (e: any) {
       setError(e.message);
     }
-  }, [type, draftValue]);
+  }, [definition, draftValue]);
 
   return (
     <div>
@@ -442,6 +480,76 @@ function ValueCellEditor(props: ValueCellEditorProps) {
           onClick={(e) => {
             e.preventDefault();
             submitNewValue();
+          }}
+          size={'sm'}
+          className="text-xs h-auto py-1 px-2"
+        >
+          Save
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+type RecordCellEditorProps = {
+  value: Record<string, any>;
+  definition: RecordAttributeDefinition;
+  onSubmit: (newValue: Record<string, any>) => void;
+  onBlur: () => void;
+};
+
+function RecordCellEditor(props: RecordCellEditorProps) {
+  const { value, definition, onSubmit, onBlur } = props;
+  const { properties } = definition;
+  const [draftValue, setDraftValue] = useState<string>(
+    coerceTriplitTypeToInput(value, definition)
+  );
+
+  const EditorInputs = useMemo(() => {
+    return Object.keys(properties).map((key) => {
+      const type = properties[key].type;
+      if (type === 'date') return DateInput;
+      if (type === 'boolean') return BooleanInput;
+      if (type === 'number') return NumberInput;
+      return StringInput;
+    });
+  }, [properties]);
+
+  return (
+    <div className="flex flex-col gap-2">
+      {EditorInputs.map((EditorInput, index) => {
+        const key = Object.keys(properties)[index];
+        return (
+          <div key={key} className="flex flex-col gap-1">
+            <div className="text-xs ml-1">{key}</div>
+            <EditorInput
+              onChange={(newValue) => {
+                setDraftValue((draftValue) => {
+                  const newDraftValue = { ...draftValue };
+                  newDraftValue[key] = newValue;
+                  return newDraftValue;
+                });
+              }}
+              value={draftValue[key]}
+            />
+          </div>
+        );
+      })}
+      <div className="flex flex-row gap-1 justify-end mt-1">
+        <Button
+          onClick={(e) => {
+            onBlur();
+          }}
+          size={'sm'}
+          className="text-xs h-auto py-1 px-2"
+          variant={'outline'}
+        >
+          Cancel
+        </Button>
+        <Button
+          onClick={(e) => {
+            e.preventDefault();
+            onSubmit(coerceStringToTriplitType(draftValue, definition));
           }}
           size={'sm'}
           className="text-xs h-auto py-1 px-2"
