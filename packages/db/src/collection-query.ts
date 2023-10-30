@@ -693,6 +693,8 @@ export function subscribeResultsAndTriples<
           // Early return prevents processing if no relevant entities were updated
           // While a query is always scoped to a single collection this is safe
           if (!updatedEntitiesForQuery.size) return;
+
+          let queryShouldRefire = false;
           for (const entity of updatedEntitiesForQuery) {
             const entityTriples = filterToLatestEntityAttribute(
               await tripleStore.findByEntity(
@@ -732,18 +734,22 @@ export function subscribeResultsAndTriples<
 
             // Add to result or prune as needed
             if (isInResult && satisfiesLimitRange) {
+              // Adding to result set
               nextResult.set(entity, entityObj);
               matchedTriples.set(entity, entityTriples);
+              queryShouldRefire = true;
             } else {
               if (nextResult.has(entity)) {
+                // prune from a result set
                 nextResult.delete(entity);
                 matchedTriples.set(entity, entityTriples);
-              } else {
-                // No change to result, return early
-                return;
+                queryShouldRefire = true;
               }
             }
           }
+
+          // No change to result, return early
+          if (!queryShouldRefire) return;
 
           if (order || limit) {
             const entries = [...nextResult];
