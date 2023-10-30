@@ -29,7 +29,15 @@ export function RecordType<Properties extends { [k: string]: DataType }>(
     },
     convertInputToJson(val: any) {
       if (!this.validateInput(val)) throw new SerializingError(`record`, val);
-      return val;
+      return Object.fromEntries(
+        Object.entries(properties).map(([k, propDef]) => [
+          k,
+          propDef.convertInputToJson(
+            // @ts-ignore
+            val[key]
+          ),
+        ])
+      ) as { [K in keyof Properties]: ExtractSerializedType<Properties[K]> };
     },
     // TODO: determine proper value and type here
     // Type should go extract the deserialized type of each of its keys
