@@ -225,6 +225,7 @@ export function SchemaAttributeSheet(
         updatedAttribute
       );
       setOpen(false);
+      setDefaults();
       return;
     }
     if (
@@ -242,6 +243,7 @@ export function SchemaAttributeSheet(
 
     setOpen(false);
   }, [
+    setDefaults,
     attributeToUpdate,
     client,
     attributeName,
