@@ -267,7 +267,7 @@ export function SchemaAttributeSheet(
                 Update <Code>{attributeToUpdate.name}</Code>
               </span>
             ) : (
-              'New attribute'
+              'Insert attribute'
             )}
           </SheetTitle>
           <SheetDescription>

@@ -380,12 +380,12 @@ export function CreateEntitySheet({
           className="bg-green-950 hover:bg-green-900 text-green-400 gap-1 py-1 h-auto"
         >
           <Plus className="h-4 w-4" />
-          New entity
+          Insert
         </Button>
       </SheetTrigger>
       <SheetContent className="text-sm sm:max-w-[40%]">
         <SheetHeader>
-          <SheetTitle>New entity</SheetTitle>
+          <SheetTitle>Insert entity</SheetTitle>
           <SheetDescription>
             Create a new entity in <Code>{collection}</Code>
           </SheetDescription>

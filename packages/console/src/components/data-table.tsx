@@ -661,11 +661,13 @@ export function DataTable<TData, TValue>({
                         header.column.columnDef.header,
                         header.getContext()
                       )}
-                  <div
-                    onMouseDown={header.getResizeHandler()}
-                    onTouchStart={header.getResizeHandler()}
-                    className="cursor-col-resize absolute right-0 top-0 w-2 h-full"
-                  />
+                  {header.id !== 'new_column_creator' && (
+                    <div
+                      onMouseDown={header.getResizeHandler()}
+                      onTouchStart={header.getResizeHandler()}
+                      className="cursor-col-resize absolute right-0 top-0 w-2 h-full"
+                    />
+                  )}
                 </TableHead>
               );
             })}

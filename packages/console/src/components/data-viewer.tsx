@@ -12,6 +12,7 @@ import {
   RelationCell,
 } from './data-table';
 import { Button } from '@/components/ui/button';
+import { Plus } from 'lucide-react';
 import {
   SchemaAttributeSheet,
   addOrUpdateAttributeFormOpenAtom,
@@ -221,6 +222,7 @@ export function DataViewer({
           </TriplitColumnHeader>
         </div>
       ),
+      size: 200,
       cell: ({ row }) => {
         const entityId = row.getValue('id');
         return (
@@ -332,7 +334,31 @@ export function DataViewer({
     idColumn,
   ]);
 
-  const columns = [idColumn, ...dataColumns];
+  const columns = [
+    idColumn,
+    ...dataColumns,
+    {
+      header: ({ column }) => {
+        column;
+        return (
+          <div className="flex flex-col justify-center items-center h-full">
+            <Tooltip label="Insert attribute">
+              <Button
+                onClick={() => setAddOrUpdateAttributeFormOpen(true)}
+                variant={'ghost'}
+                className="h-auto py-1"
+              >
+                <Plus className="h-4 w-4" />
+              </Button>
+            </Tooltip>
+          </div>
+        );
+      },
+      size: 75,
+      cell: () => null,
+      accessorKey: 'new_column_creator',
+    } as ColumnDef<any>,
+  ];
 
   const flatFilteredEntities = useMemo(
     () => sortedAndFilteredEntities.map(([id, entity]) => ({ id, ...entity })),
