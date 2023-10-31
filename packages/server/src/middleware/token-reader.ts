@@ -30,7 +30,8 @@ export async function useHttpToken(
   try {
     const { data, error } = await parseAndValidateToken(
       token,
-      process.env.JWT_SECRET!
+      process.env.JWT_SECRET!,
+      process.env.PROJECT_ID!
     );
 
     if (!data || error) {
@@ -50,5 +51,9 @@ export async function useHttpToken(
 export async function readWSToken(request: IncomingMessage) {
   const url = new URL(`http://localhost${request.url!}`);
   const token = url.searchParams.get('token');
-  return parseAndValidateToken(token!, process.env.JWT_SECRET!);
+  return parseAndValidateToken(
+    token!,
+    process.env.JWT_SECRET!,
+    process.env.PROJECT_ID!
+  );
 }

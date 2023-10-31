@@ -2,6 +2,7 @@ import { ParsedToken, ParseResult } from '@triplit/types/sync';
 import { JWTPayload, jwtVerify } from 'jose';
 import {
   InvalidTokenPayloadError,
+  InvalidTokenProjectIdError,
   InvalidTokenSignatureError,
 } from './errors.js';
 
@@ -21,6 +22,7 @@ type ProjectJWT = TriplitJWT | ExternalJWT;
 export async function parseAndValidateToken(
   token: string,
   secretKey: string,
+  projectId: string,
   options: { payloadPath?: string } = {}
 ): Promise<ParseResult<ParsedToken>> {
   const encodedKey = new TextEncoder().encode(secretKey);
@@ -82,6 +84,13 @@ export async function parseAndValidateToken(
         ),
       };
     }
+  }
+
+  if (payload['x-triplit-project-id'] !== projectId) {
+    return {
+      data: undefined,
+      error: new InvalidTokenProjectIdError(),
+    };
   }
 
   return {
