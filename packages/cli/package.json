@@ -28,7 +28,6 @@
     "bun-types": "latest",
     "react-devtools-core": "^4.28.0",
     "tsx": "^3.12.9",
-    "typescript": "^5.2.2",
     "vitest": "^0.34.6"
   },
   "dependencies": {
@@ -48,6 +47,7 @@
     "prettier": "^3.0.3",
     "prompts": "^2.4.2",
     "react": "^18.2.0",
+    "typescript": "^5.2.2",
     "ws": "^8.14.1"
   }
 }
