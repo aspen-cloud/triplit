@@ -99,10 +99,12 @@ export function TriplitColumnHeader(props: ColumnHeaderProps) {
       className="flex flex-row gap-2 items-center justify-between text-xs px-4 w-full h-full"
       onClick={onClickHeader}
     >
-      <div className="flex flex-row items-center gap-1">
-        <div className="">{attribute}</div>
+      <div className="flex flex-row items-center truncate gap-1">
+        <div className="truncate">{attribute}</div>
         {attributeDef?.type && (
-          <div className="font-normal text-primary/50">{attributeDef.type}</div>
+          <div className="font-normal text-primary/50 truncate">
+            {attributeDef.type}
+          </div>
         )}
         {children}
       </div>
@@ -281,7 +283,7 @@ export function DataCell(props: TriplitDataCellProps) {
           selected && setIsEditing(!isEditing);
         }}
         // setting height manually until we can figure out how to get these to fill the row
-        className={`text-left px-3 py-2 border w-full h-[38px] ${
+        className={`text-left px-3 py-2 border truncate w-full h-[38px] ${
           selected ? 'border-blue-600' : 'border-transparent'
         }`}
       >
@@ -291,7 +293,7 @@ export function DataCell(props: TriplitDataCellProps) {
         />
       </PopoverTrigger>
 
-      <PopoverContent className="text-xs p-1">
+      <PopoverContent className="text-xs p-1" align="start">
         {attributeDef?.type === 'set' ? (
           <SetCellEditor
             set={value}
@@ -630,22 +632,40 @@ export function DataTable<TData, TValue>({
     data,
     columns,
     getCoreRowModel: getCoreRowModel(),
+    columnResizeMode: 'onChange',
+    defaultColumn: {
+      size: 150,
+      minSize: 50,
+      maxSize: 1000,
+    },
   });
 
   return (
-    <Table className="bg-popover text-xs w-full">
+    <Table
+      className="bg-popover text-xs w-full border-r border-t"
+      style={{ width: table.getCenterTotalSize() }}
+    >
       <TableHeader>
         {table.getHeaderGroups().map((headerGroup) => (
           <TableRow key={headerGroup.id} className={``}>
             {headerGroup.headers.map((header, index) => {
               return (
-                <TableHead key={`${header.id}_${index}`} className="px-0">
+                <TableHead
+                  key={`${header.id}_${index}`}
+                  className="px-0 relative truncate "
+                  style={{ width: header.getSize() }}
+                >
                   {header.isPlaceholder
                     ? null
                     : flexRender(
                         header.column.columnDef.header,
                         header.getContext()
                       )}
+                  <div
+                    onMouseDown={header.getResizeHandler()}
+                    onTouchStart={header.getResizeHandler()}
+                    className="cursor-col-resize absolute right-0 top-0 w-2 h-full"
+                  />
                 </TableHead>
               );
             })}
@@ -662,7 +682,8 @@ export function DataTable<TData, TValue>({
               {row.getVisibleCells().map((cell, index) => (
                 <TableCell
                   key={`${cell.id}_${index}`}
-                  className="truncate w-[50px] p-0"
+                  className="truncate p-0"
+                  style={{ width: cell.column.getSize() }}
                 >
                   {flexRender(cell.column.columnDef.cell, cell.getContext())}
                 </TableCell>
@@ -671,7 +692,10 @@ export function DataTable<TData, TValue>({
           ))
         ) : (
           <TableRow className="bg-popover hover:bg-inherit">
-            <TableCell colSpan={columns.length} className="h-24 text-center">
+            <TableCell
+              colSpan={columns.length}
+              className="h-24 w-full text-center text-muted-foreground"
+            >
               No results
             </TableCell>
           </TableRow>

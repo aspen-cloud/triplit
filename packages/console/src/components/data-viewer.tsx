@@ -202,7 +202,7 @@ export function DataViewer({
   const idColumn: ColumnDef<any> = useMemo(
     () => ({
       header: () => (
-        <div className="flex flex-row items-center">
+        <div className="flex flex-row h-full items-center">
           <Tooltip label="Select all">
             <Checkbox
               className="ml-4 mr-1"
@@ -224,7 +224,7 @@ export function DataViewer({
       cell: ({ row }) => {
         const entityId = row.getValue('id');
         return (
-          <div className="flex flex-row items-center">
+          <div className="flex flex-row items-center h-full">
             <Checkbox
               className="ml-4 mr-1"
               checked={selectedEntities && selectedEntities.has(entityId)}
@@ -384,7 +384,7 @@ export function DataViewer({
           />
         )}
       </h3>
-      <div className="flex flex-row gap-4 p-4 items-center border-b">
+      <div className="flex flex-row gap-4 p-4 items-center">
         <FiltersPopover
           filters={filters}
           uniqueAttributes={uniqueAttributes}
