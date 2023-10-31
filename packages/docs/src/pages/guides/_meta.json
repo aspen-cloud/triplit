@@ -1,3 +1,6 @@
 {
+  "local": "Local development",
+  "migrations": "Migrations",
+  "cloud": "Triplit Cloud",
   "auth": "Auth"
 }

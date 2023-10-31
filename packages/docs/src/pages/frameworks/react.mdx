@@ -72,3 +72,23 @@ function App() {
   return <div>{entity.text}</div>;
 }
 ```
+
+## useConnectionStatus
+
+The `useConnectionStatus` hook subscribes to changes to the connection status of the client and will automatically unsubscribe when the component unmounts.
+
+```tsx
+import { useConnectionStatus } from '@triplit/react';
+
+const client = new TriplitClient();
+
+function App() {
+  const connectionStatus = useConnectionStatus(client);
+
+  return (
+    <div>
+      The client is {connectionStatus === 'OPEN' ? 'connected' : 'disconnected'}
+    </div>
+  );
+}
+```

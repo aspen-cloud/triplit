@@ -1,14 +1,14 @@
 {
   "index": "Welcome",
   "getting-started": "Getting started",
-  "queries": "Queries",
-  "fetching": "Fetching",
-  "mutations": "Mutations",
-  "storage": "Storage",
+  "client-database": "Database",
+  "fetching-data": "Fetching data",
+  "updating-data": "Updating data",
+  "sync": "Syncing data",
   "schemas": "Schemas",
-  "sync-engine": "Sync",
+  "access-control": "Access control",
   "client-options": "Client options",
-  "whats-next": "What's next",
   "frameworks": "Frameworks",
-  "guides": "Guides"
+  "guides": "Guides",
+  "whats-next": "What's next"
 }

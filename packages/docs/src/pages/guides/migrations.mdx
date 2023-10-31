@@ -1,0 +1,112 @@
+import { Callout } from 'nextra-theme-docs';
+
+# Migrations
+
+<Callout emoji="⚠️">
+  The process for managing migrations may change. Please report any issues you
+  encounter.
+</Callout>
+
+The `@triplit/cli` package provides a CLI tool for generating migrations.
+
+Additional details about the CLI tool can be found by running `yarn triplit --help`.
+
+## Checking the current server status
+
+```bash
+triplit status
+```
+
+This command checks the current state of your project's schema and migrations and the current state of your server's schema and migrations. It will print out a report of the differences between the two and recommend actions to take if necessary.
+
+## Creating migrations
+
+To create a migration, you must first create or edit your schema file, located at `triplit/schema.ts`. Once you have made your changes, run the following command:
+
+```bash
+triplit create some_migration_name
+```
+
+Based on the changes made in `triplit/schema.ts`, this command creates a new file containing a migration definition inside your app's directory at `triplit/migrations`. It will not run any migrations.
+
+Migration files are written in JSON and contain the following fields:
+
+`up`: A set of operations to apply to the server to migrate up.
+
+`down`: A set of operations to apply to the server to migrate down.
+
+`version`: A version indicator for the migration.
+
+`parent`: The version of the previous migration.
+
+`name`: The name of the migration.
+
+A migration creating a collection called `todos` would look like this:
+
+```json
+{
+  "up": [
+    [
+      "create_collection",
+      {
+        "name": "todos",
+        "schema": {
+          "text": {
+            "type": "string"
+          },
+          "complete": {
+            "type": "boolean"
+          }
+        }
+      }
+    ]
+  ],
+  "down": [
+    [
+      "drop_collection",
+      {
+        "name": "todos"
+      }
+    ]
+  ],
+  "version": 1685494192864,
+  "parent": 0,
+  "name": "1685494192864_create_todos"
+}
+```
+
+## Running migrations
+
+```bash
+yarn triplit migrate up <version>
+```
+
+This command applies all up migrations to your server. You may optionally provide a version to migrate to.
+
+Migrate down to a specific migration:
+
+```bash
+yarn triplit migrate down <version>
+```
+
+This command applies all down migrations to your server until you reach the specified verison. You may optionally provide a version to migrate to.
+
+## Passing migrations to the client
+
+When applying migrations to the server, Triplit will generate a schema for you at `triplit/schema.ts`.
+
+To apply migrations to your client database, they must be passed to your client on instantiation. Unfortunately types cannot be inferred from migrations alone, so you will also need to pass the schema type to the client as a generic.
+
+```typescript
+import { TriplitClient } from '@triplit/client';
+import { schema } from './triplit/schema';
+import 1685494192864_create_todos from './triplit/migrations/1685494192864_create_todos.json';
+
+type Schema = typeof schema;
+const migrations = [1685494192864_create_todos];
+const client = new TriplitClient<Schema>({
+  db: {
+    migrations,
+  },
+});
+```

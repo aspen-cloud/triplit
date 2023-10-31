@@ -1,0 +1,54 @@
+# Syncing Data
+
+Triplit is most powerful when it is used to sync data across multiple devices and users. Every Triplit Client is equiped with a sync engine that is responsible for managing the connection to the server and syncing data between your local database and remote database.
+
+## Setting up sync
+
+To set up syncing, you need to tell your Triplit Client how to connect to the remote database with the `sync` options in the constructor. Additional options can be found [here](/client-options).
+
+```typescript
+const client = new TriplitClient({
+  sync: {
+    server: '<remote database origin>',
+  },
+  auth: {
+    token: '<access token>',
+  },
+});
+```
+
+## Example
+
+[Once you've installed](/getting-started) the Triplit CLI, you can run the following command to start a local Triplit Server (and remote database):
+
+```bash
+triplit dev
+```
+
+By default this will set up a server at `localhost:6543`, and should display an access token for your database.
+
+You can run this script in multiple browser tabs to simulate multiple users/devices connecting and sending data.
+
+```typescript
+import { TriplitClient } from '@triplit/client';
+
+const client = new TriplitClient({
+  sync: {
+    server: 'localhost:6543',
+  },
+  auth: {
+    token: '<access token>',
+  },
+});
+
+const query = client.query('todos').build();
+
+client.subscribe(query, (todos) => {
+  console.log(todos);
+});
+
+client.insert('todos', {
+  text: 'My Todo',
+  createdAt: new Date().toISOString(),
+});
+```

@@ -1,9 +1,5 @@
 # Sync Engine
 
-Triplit is most powerful when it is used to sync data across multiple devices and users. The sync engine is responsible for managing the connection to the server and syncing data between your local database and remote database.
-
-To turn on syncing, set the proper [client options](/client-options).
-
 ## Connecting and disconnecting
 
 Instantiating a client will automatically connect to the server. If the connection is unexpectedly lost, the client will automatically reconnect.
@@ -24,3 +20,7 @@ client.syncEngine.onConnectionStatusChange((status) => {
   if (status === 'CLOSED') console.log('Disconnected from server');
 }, true);
 ```
+
+## Handling errors
+
+See [error and success handling](/updating-data#error-and-success-handling) for more information.

@@ -1,0 +1,22 @@
+# Subscriptions
+
+Alternatively, you may subscribe to a query. Subscribing to a query will provide continual updates to the query result based on the state of your local database.
+
+If the sync engine is connected to the remote database, subscribing to a query will keep your local database in sync with the remote database as well (depending on the [options](/fetching-data/fetch#fetch-options) provided to the subscription).
+
+Starting a subscription is as simple as defining a query and a callback to run when data has updated:
+
+```typescript
+const unsubscribe = client.subscribe(
+  query,
+  (results, info) => {
+    // handle results
+  },
+  (error) => {
+    // handle error
+  },
+  options
+);
+```
+
+If a subscription query fails on the server then syncing for that query will stop. However, the subscription will remain active and updates to the local database will still be available. As well, the syncing of other queries will not be impacted. Although you will not recieve updates from the server, updates that you make via [mutations](/mutations) will be sent.
