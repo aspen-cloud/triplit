@@ -14,6 +14,8 @@ Triplit brings together:
 
 💽 **Durable server-side storage** with an admin dashboard
 
+😃 **Optimistic updates** to make every interaction feel fast
+
 🔗 **Relational querying** for complex data models
 
 🛫 **Offline-mode** with automatic reconnection and consistency guarantees
