@@ -1,6 +1,9 @@
 import { ParsedToken, ParseResult } from '@triplit/types/sync';
 import { JWTPayload, jwtVerify } from 'jose';
-import { InvalidTokenPayloadError } from './errors.js';
+import {
+  InvalidTokenPayloadError,
+  InvalidTokenSignatureError,
+} from './errors.js';
 
 type TriplitJWT = {
   'x-triplit-token-type': 'test' | 'anon' | 'secret';
@@ -21,10 +24,16 @@ export async function parseAndValidateToken(
   options: { payloadPath?: string } = {}
 ): Promise<ParseResult<ParsedToken>> {
   const encodedKey = new TextEncoder().encode(secretKey);
-  const verified = await jwtVerify(token, encodedKey);
-  if (!verified) {
-    throw new Error('Invalid token signature');
+  let verified;
+  try {
+    verified = await jwtVerify(token, encodedKey);
+    if (!verified) {
+      throw new InvalidTokenSignatureError();
+    }
+  } catch {
+    throw new InvalidTokenSignatureError();
   }
+
   let payload = verified.payload;
 
   if (options.payloadPath) {
