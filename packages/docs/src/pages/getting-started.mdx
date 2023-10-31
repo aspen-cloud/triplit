@@ -4,30 +4,44 @@ import { Callout, Tabs, Tab } from 'nextra-theme-docs';
 
 ## Installation
 
-Inside your project directory, install the Triplit client package `@triplit/client`:
+Triplit provides a CLI for creating and managing Triplit projects. Install the CLI in your project:
 
 <Tabs items={['npm', 'pnpm', 'yarn']}>
 
   <Tab>
     ```bash copy
-    npm i @triplit/client
+    npm install --save-dev @triplit/cli
     ```
   </Tab>
     <Tab>
     ```bash copy
-    pnpm add @triplit/client
+    pnpm add --save-dev @triplit/cli
     ```
   </Tab>
   <Tab>
     ```bash copy
-    yarn add @triplit/client
+    yarn add --dev @triplit/cli 
     ```
   </Tab>
 </Tabs>
 
+All commands in the CLI are inspectable by adding the `--help` flag. For example, to see the available commands:
+
+```bash
+triplit --help
+```
+
+Once you have the CLI installed you can initialize a new Triplit project, which will create the files and folders for a Triplit project and install the required dependencies.
+
+```bash
+triplit init
+```
+
+Alternatively, you may manually install the packages you need.
+
 ## Setting up your client
 
-A Triplit client instance will set up a local database for your data and (if turned on) will set up the required network connections for syncing. The specifics of your local database and syncing can be configured by passing in options to the client, which are described in the [client options reference](/client-options). For now we will not pass in any options, which will set up an in-memory local database with no schema and no syncing.
+A Triplit client instance will set up a local database for your data and ([if turned on](/sync-engine)) will set up the required network connections for syncing. The specifics of your local database and syncing can be configured by passing in options to the client, which are described in the [client options reference](/client-options). For now we will not pass in any options, which will just set up an in-memory local database.
 
 ```typescript
 import { TriplitClient } from '@triplit/client';
