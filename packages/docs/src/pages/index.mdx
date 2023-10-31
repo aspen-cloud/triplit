@@ -2,17 +2,20 @@
 
 Triplit is a full-stack framework for state management and realtime collaboration. It handles:
 
-- Local caching with a fully queryable client-side database
-- Durable server-side storage
-- Optimistic updates
-- Realtime data subscriptions and synchronization with conflict resolution at the field level
-- Row level authorization of data
-- Rollbacks of failed updates
-- Offline read and write capabilities
-- Keeping network traffic to a minimum and being performant
-- Managing schemas and type definitions
+🔄 **Real-time sync** with incremental updates and conflict resolution at the property level <br />
+🏠 **Local caching** powered by a full-fledged client-side database <br />
+💽 **Durable server-side storage** with an admin dashboard <br />
+😃 **Optimistic updates** enabling snappy interactions <br />
+🔗 **Relational querying** for complex data models <br />
+🛫 **Offline-mode** with automatic reconnection and consistency guarantees <br />
+🔙 **Rollback and retry management** on failed updates <br />
+🗂️ **Schemas** for data safety and Typescript autocompletion <br />
+🔐 **Authorization** with row level granularity <br />
+🤝 **Collaboration/Multiplayer** powered by [CRDTs](https://en.wikipedia.org/wiki/Conflict-free_replicated_data_type) <br />
+🏎️ **Low latency** with minimal network traffic using delta patches <br />
+📝 **Simple API** for querying and mutating data in both vanilla Javascript and React <br />
 
-These features are required for any application that aims to be fast and responsive, and are especially important for realtime collaboration.
+These features are required for any application that aims to be fast, responsive, and reliable, and are especially important for real-time or collaborative features.
 
 ## Why Triplit?
 
@@ -20,8 +23,10 @@ These features are required for any application that aims to be fast and respons
 
 **Triplit is flexible.** Triplit supports arbitrary queries over it's cache and handles query invalidation for you. Triplit's cache also ensures your app will not sacrifice UX in poor or offline network conditions.
 
-**Triplit is connected.** Triplit's syncing engine handles the complexity of propagating and merging updates, making it a great fit for quickly adding collaborative features to your application.
+**Triplit is connected.** Triplit's syncing engine handles the complexity of propagating and merging updates, making it a great fit for quickly adding real-time or collaborative features to your application.
 
 **Triplit is developer friendly.** Triplit takes care to be easy to use. It gets rid of the headaches of building a realtime system at all levels of the stack. Additionally, it is designed to work well with Typescript applications, ensuring your type definitions remain up to date as your schema evolves.
+
+**Triplit is open source.** Triplit may be self-hosted, so you can run it on your own infrastructure. Triplit also provides a hosted service that managages upgrades, auto-scaling, and offers technical support.
 
 The rest of the docs will explain how to use Triplit in your application.
