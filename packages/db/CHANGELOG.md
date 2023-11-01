@@ -1,5 +1,11 @@
 # @triplit/db
 
+## 0.0.39
+
+### Patch Changes
+
+- 1bb02af: version bump test
+
 ## 0.0.38
 
 ### Patch Changes
