@@ -5386,7 +5386,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@triplit/db@^0.0.37, @triplit/db@workspace:^, @triplit/db@workspace:packages/db":
+"@triplit/db@^0.0.38, @triplit/db@workspace:^, @triplit/db@workspace:packages/db":
   version: 0.0.0-use.local
   resolution: "@triplit/db@workspace:packages/db"
   dependencies:
@@ -5468,7 +5468,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@triplit/types@workspace:packages/types"
   dependencies:
-    "@triplit/db": ^0.0.37
+    "@triplit/db": ^0.0.38
     typescript: ^5.2.2
   languageName: unknown
   linkType: soft
