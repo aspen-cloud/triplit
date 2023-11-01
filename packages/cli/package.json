@@ -1,12 +1,12 @@
 {
   "name": "@triplit/cli",
-  "version": "0.0.1-beta.3",
+  "version": "0.0.37",
   "type": "module",
   "scripts": {
     "build": "tsc",
-    "release": "npm publish --access public",
     "test": "vitest run",
-    "test:watch": "vitest watch"
+    "test:watch": "vitest watch",
+    "publish-pkg": "node ../../scripts/npm-check-version-and-publish.js"
   },
   "bin": {
     "triplit": "./dist/index.js"

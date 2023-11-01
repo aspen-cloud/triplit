@@ -1,7 +1,6 @@
 {
   "name": "@triplit/console",
-  "private": true,
-  "version": "0.0.0",
+  "version": "0.0.37",
   "type": "module",
   "main": "dist/index.js",
   "scripts": {
@@ -11,7 +10,8 @@
     "build:server": "yarn tsx build-server.ts",
     "build:types": "tsc -p tsconfig.server.json",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "publish-pkg": "node ../../scripts/npm-check-version-and-publish.js"
   },
   "dependencies": {
     "@ahooksjs/use-url-state": "^3.5.1",

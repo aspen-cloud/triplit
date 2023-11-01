@@ -1,7 +1,7 @@
 {
   "name": "@triplit/server-core",
   "packageManager": "yarn@3.4.1",
-  "private": true,
+  "version": "0.0.37",
   "module": "dist/index.js",
   "type": "module",
   "exports": {
@@ -44,7 +44,8 @@
   "scripts": {
     "build": "tsc",
     "lint": "tsc --noEmit",
-    "lint:build": "npx publint"
+    "lint:build": "npx publint",
+    "publish-pkg": "node ../../scripts/npm-check-version-and-publish.js"
   },
   "dependencies": {
     "@triplit/db": "workspace:^",

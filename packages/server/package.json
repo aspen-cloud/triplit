@@ -1,7 +1,7 @@
 {
   "name": "@triplit/server",
   "packageManager": "yarn@3.4.1",
-  "private": true,
+  "version": "0.0.37",
   "types": "dist/index.d.ts",
   "main": "dist/index.js",
   "type": "module",
@@ -14,7 +14,8 @@
     "docker": "(cd ../../ && docker build -f ./packages/server/Dockerfile .)",
     "lint": "tsc --noEmit",
     "lint:build": "npx publint",
-    "util:gentoken": "node ./dev/scripts/createToken.cjs"
+    "util:gentoken": "node ./dev/scripts/createToken.cjs",
+    "publish-pkg": "node ../../scripts/npm-check-version-and-publish.js"
   },
   "dependencies": {
     "@triplit/db": "workspace:^",
