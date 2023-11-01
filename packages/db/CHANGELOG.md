@@ -1,5 +1,11 @@
 # @triplit/db
 
+## 0.1.0
+
+### Minor Changes
+
+- 2f75a31: bump version for beta release
+
 ## 0.0.39
 
 ### Patch Changes
