@@ -9,7 +9,7 @@ import { Callout } from 'nextra-theme-docs';
 
 The `@triplit/cli` package provides a CLI tool for generating migrations.
 
-Additional details about the CLI tool can be found by running `yarn triplit --help`.
+Additional details about the CLI tool can be found by running `triplit --help`.
 
 ## Checking the current server status
 
@@ -20,6 +20,8 @@ triplit status
 This command checks the current state of your project's schema and migrations and the current state of your server's schema and migrations. It will print out a report of the differences between the two and recommend actions to take if necessary.
 
 ## Creating migrations
+
+### Local creation
 
 To create a migration, you must first create or edit your schema file, located at `triplit/schema.ts`. Once you have made your changes, run the following command:
 
@@ -75,10 +77,28 @@ A migration creating a collection called `todos` would look like this:
 }
 ```
 
-## Running migrations
+### Syncing with the Console
+
+The Triplit Console also allows you to make changes to your schema via a GUI. Your project will not be aware of these changes until you run pull those changes into your project. This command will generate a migration file for you based on the changes made in the console:
 
 ```bash
-yarn triplit migrate up <version>
+triplit migrate pull
+```
+
+### Code generation
+
+Triplit also provides a code generation tool to aid with editing your schema. To generate a schema file based on the current set of migrations, run:
+
+```bash
+triplit migrate codegen
+```
+
+This will overwrite any changes to your schema file that have not been tracked by migrations.
+
+## Applying migrations
+
+```bash
+triplit migrate up <version>
 ```
 
 This command applies all up migrations to your server. You may optionally provide a version to migrate to.
@@ -86,7 +106,7 @@ This command applies all up migrations to your server. You may optionally provid
 Migrate down to a specific migration:
 
 ```bash
-yarn triplit migrate down <version>
+triplit migrate down <version>
 ```
 
 This command applies all down migrations to your server until you reach the specified verison. You may optionally provide a version to migrate to.
