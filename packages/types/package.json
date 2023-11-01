@@ -15,6 +15,6 @@
     "typescript": "^5.2.2"
   },
   "dependencies": {
-    "@triplit/db": "^0.0.38"
+    "@triplit/db": "^0.0.39"
   }
 }

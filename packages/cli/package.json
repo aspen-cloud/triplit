@@ -1,6 +1,6 @@
 {
   "name": "@triplit/cli",
-  "version": "0.0.38",
+  "version": "0.0.39",
   "type": "module",
   "scripts": {
     "build": "tsc",
