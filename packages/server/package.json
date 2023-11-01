@@ -3,8 +3,15 @@
   "packageManager": "yarn@3.4.1",
   "version": "0.0.38",
   "types": "dist/index.d.ts",
-  "main": "dist/index.js",
   "type": "module",
+  "files": [
+    "dist"
+  ],
+  "exports": {
+    ".": {
+      "import": "./dist/index.js"
+    }
+  },
   "scripts": {
     "dev": "tsx watch ./run.ts",
     "start": "node --loader tsx ./src/index.ts",

@@ -4,6 +4,9 @@
   "version": "0.0.38",
   "module": "dist/index.js",
   "type": "module",
+  "files": [
+    "dist"
+  ],
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
