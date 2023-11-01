@@ -2,10 +2,14 @@
   "name": "@triplit/console",
   "version": "0.0.38",
   "type": "module",
-  "main": "dist/index.js",
   "files": [
     "dist"
   ],
+  "exports": {
+    ".": {
+      "import": "./dist/index.js"
+    }
+  },
   "scripts": {
     "dev": "vite",
     "build": "yarn build:web && yarn build:server",
