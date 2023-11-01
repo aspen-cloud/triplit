@@ -397,8 +397,8 @@ export function CreateEntitySheet({
               let entity = convertFormToEntity(form.values.attributes);
               if (form.values.id)
                 entity = Object.assign(entity, { id: form.values.id });
-              console.log(entity);
               await client.insert(collection, entity);
+              form.reset();
               setOpen(false);
             } catch (e) {
               console.error(e);
