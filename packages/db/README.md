@@ -77,7 +77,7 @@ TriplitDB has support for
 
    const db = new TriplitDB({
      schema: todoSchema,
-     source: new IndexedDBStorage(),
+     source: new IndexedDBStorage('db-name'),
    });
    ```
 

@@ -9,6 +9,9 @@ export function formConsolePrimaryKey(projectId: string, server: string) {
 export const consoleClient = new TriplitClient({
   db: {
     schema: { collections: DBConsoleSchemaObject, version: 0 },
-    storage: { cache: new IndexedDbStorage(), outbox: new IndexedDbStorage() },
+    storage: {
+      cache: new IndexedDbStorage('console-cache'),
+      outbox: new IndexedDbStorage('console-outbox'),
+    },
   },
 });
