@@ -1,5 +1,13 @@
 # @triplit/client
 
+## 0.0.39
+
+### Patch Changes
+
+- 1bb02af: version bump test
+- Updated dependencies [1bb02af]
+  - @triplit/db@0.0.39
+
 ## 0.0.38
 
 ### Patch Changes
