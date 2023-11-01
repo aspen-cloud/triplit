@@ -34,7 +34,7 @@ const queryEmpty = client
 const resultEmpty = await client.fetchOne(queryEmpty); // null
 ```
 
-This is a convenient shorthand for using the [limit parameter](/queries#limit) `.limit(1)` and extracting the result from the result set.
+This is a convenient shorthand for using the [limit parameter](/fetching-data/queries#limit) `.limit(1)` and extracting the result from the result set.
 
 ## FetchById
 
@@ -49,7 +49,7 @@ const leela = await client.fetchById('employees', 'Leela', options); // { name: 
 const bender = await client.fetchById('employees', 'Bender', options); // null
 ```
 
-This is a convenient shorthand for using the [entityId parameter](/queries#entity-id) `.entityId(id)` and extracting the result from the result set.
+This is a convenient shorthand for using the [entityId parameter](/fetching-data/queries#entity-id) `.entityId(id)` and extracting the result from the result set.
 
 ## Fetch options
 
@@ -62,8 +62,9 @@ If no options are provided, queries will be fulfilled with the options `{ policy
 The `policy` option determines how you interact with your local and remote databases.
 
 <Callout type="info" emoji="ℹ️">
-  This is distinct from the [syncState](/queries#sync-state) parameter on a
-  query, which indicates how you wish to query your local database.
+  This is distinct from the [syncState](/fetching-data/queries#sync-state)
+  parameter on a query, which indicates how you wish to query your local
+  database.
 </Callout>
 
 The following policy types are valid:

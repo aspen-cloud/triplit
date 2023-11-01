@@ -127,7 +127,7 @@ const query = client
   .limit(10);
 ```
 
-As a convenience, Triplit also provides a method [fetchOne](/fetching#fetch) to fetch just the first entity of a query result.
+As a convenience, Triplit also provides a method [fetchOne](/fetching-data/fetch#fetchone) to fetch just the first entity of a query result.
 
 ## Variables
 
@@ -152,7 +152,7 @@ Certain variables are used internally by Triplit to aid with authorization and o
 
 ## Sync state
 
-Triplit's client [storage](/storage) is split into two areas - an outbox for unsynced updates and a cache for synced updates. Sometimes you may want to indicate that to a user that data has not yet been saved to the server. To do this, you can use the `syncStatus` method. This method accepts a single sync state (`pending`, `confirmed`, `all`) as an argument.
+Triplit's client [storage](/client-database/storage) is split into two areas - an outbox for unsynced updates and a cache for synced updates. Sometimes you may want to indicate that to a user that data has not yet been saved to the server. To do this, you can use the `syncStatus` method. This method accepts a single sync state (`pending`, `confirmed`, `all`) as an argument.
 
 For example, a messaging app could use two queries to build message sent indicators. In [React](/frameworks/react):
 
@@ -197,4 +197,4 @@ You may also pass a DB variable to `entityId`.
 const query = client.query('users').entityId('$userId');
 ```
 
-As a convenience, Triplit also provides a method [fetchById](/fetching#fetch) to fetch an entity by its id.
+As a convenience, Triplit also provides a method [fetchById](/fetching-data/fetch#fetchbyid) to fetch an entity by its id.
