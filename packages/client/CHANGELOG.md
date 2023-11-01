@@ -1,5 +1,13 @@
 # @triplit/client
 
+## 0.0.38
+
+### Patch Changes
+
+- 8761ebe: Many changes, bump version in prep for beta release
+- Updated dependencies [8761ebe]
+  - @triplit/db@0.0.38
+
 ## 0.0.37
 
 ### Patch Changes

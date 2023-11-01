@@ -1,5 +1,11 @@
 # @triplit/db
 
+## 0.0.38
+
+### Patch Changes
+
+- 8761ebe: Many changes, bump version in prep for beta release
+
 ## 0.0.37
 
 ### Patch Changes
