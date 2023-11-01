@@ -2,9 +2,9 @@
 
 ## Client and Server model
 
-As the monicker, "a full-stack database" implies, Triplit has components that run on both the client and the server. In particular, each client has its own database that is fully queryable just like the remote database. Thus, any query can be immediately fulfilled by the client without needing to go to the network. The client database is kept in sync with the remote database by setting up subsriptions to queries.
+As the monicker, "a full-stack database" implies, Triplit has components that run on both the client and the server. In particular, each client has its own database that is fully queryable just like the remote database. Thus, any query can be immediately fulfilled by the client without needing to go to the network. The client database is kept in sync with the remote database by setting up subscriptions to queries.
 
-Along with reads, every client is able to write to its database and Triplit ensures the write is propogated to the remote database and other listening clients. Because writes go directly to the client database, your application gets an optimistic effect to all of its writes.
+Along with reads, every client is able to write to its database and Triplit ensures the write is propagated to the remote database and other listening clients. Because writes go directly to the client database, your application gets an optimistic effect to all of its writes.
 
 ## Client Database
 
