@@ -31,8 +31,9 @@ export default Command({
     const dbPort = flags.dbPort || 6543;
 
     process.env.JWT_SECRET =
-      process.env.JWT_SECRET ?? 'jwt-key-for-development-only';
-    process.env.PROJECT_ID = process.env.PROJECT_ID ?? 'local-project-id';
+      process.env.TRIPLIT_JWT_SECRET ?? 'jwt-key-for-development-only';
+    process.env.PROJECT_ID =
+      process.env.TRIPLIT_PROJECT_ID ?? 'local-project-id';
 
     if (flags.storage === 'sqlite') {
       const dataDir = getDataDir();

@@ -15,7 +15,8 @@ import { Command } from '../../command.js';
 const pullMigrationName = 'sync_with_remote';
 
 export default Command({
-  description: 'Pulls the latest migrations from the remote database',
+  description:
+    'Fetches the remote database schema and generates a migration based on any changes',
   middleware: [serverRequesterMiddleware],
   run: async ({ ctx }) => {
     console.log(`Pulling latest migrations from sync server: `, blue(ctx.url));

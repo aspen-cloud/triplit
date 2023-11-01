@@ -19,7 +19,7 @@ export const serverRequesterMiddleware = Middleware({
     }),
   },
   run: async ({ flags, args }) => {
-    let token = flags.token ?? process.env.TOKEN;
+    let token = flags.token ?? process.env.TRIPLIT_SERVICE_TOKEN;
     if (!token) {
       // request token
       ({ token } = await prompts({
@@ -39,7 +39,8 @@ export const serverRequesterMiddleware = Middleware({
     const decodedToken = JWT.decode(token);
     // @ts-ignore
     const projectId = decodedToken?.['x-triplit-project-id'];
-    const url = flags.remote ?? process.env.DB_URL ?? `http://localhost:6543`; // `https://${projectId}.triplit.io`;
+    const url =
+      flags.remote ?? process.env.TRIPLIT_DB_URL ?? `http://localhost:6543`; // `https://${projectId}.triplit.io`;
     const requestServer = makeRequester({ url, token });
     // TODO: add prod flag
     return { requestServer, projectId, token, url };
