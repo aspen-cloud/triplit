@@ -3,6 +3,9 @@
   "version": "0.0.38",
   "type": "module",
   "main": "dist/index.js",
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "dev": "vite",
     "build": "yarn build:web && yarn build:server",
