@@ -1,15 +1,12 @@
-/**
- * The fastest path migrating over from our previous pkg setup and including our tuple-database patch is to continue to bundle our source code output.
- * For now, it means we need to export our source code output from this file.
- * IMO, we'd just transpile each file and keep our directory structure to allow for more selective importing.
- * What this means is everything must be imported from "@triplit/db", and not "@triplit/db/dist/query" or something like that.
- */
-
-export type { TupleStorageApi as Storage } from 'tuple-database';
-
 import DB from './db.js';
+import type { TupleStorageApi, AsyncTupleStorageApi } from 'tuple-database';
+
 export default DB;
 export { DB };
+
+type Storage = TupleStorageApi | AsyncTupleStorageApi;
+export type { Storage };
+
 export type {
   Migration,
   CollectionNameFromModels,
