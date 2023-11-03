@@ -507,23 +507,27 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
   }
 
   async createCollection(params: CreateCollectionOperation[1]) {
+    // Create schema object so it can be updated
     await this.checkOrCreateSchema();
-    const { name: collectionName, schema, rules } = params;
+    const { name: collectionName, schema: schemaJSON, rules } = params;
     await this.update(
       this.METADATA_COLLECTION_NAME,
       '_schema',
       async (schemaEntity) => {
+        // If there are no collections, create property
         if (!schemaEntity.collections) schemaEntity.collections = {};
-        // adding this here so that collections without attributes have some leaf value
-        // so that the collection key will show up in the schema
-        if (!schemaEntity.collections[collectionName])
-          schemaEntity.collections[collectionName] = { name: collectionName };
-        const collectionAttributes = schemaEntity.collections[collectionName];
-        collectionAttributes.schema = typeFromJSON({
+        // Overwrite collection data
+        // Schemas are saved as record types, so translate that here
+        const schemaJSONWithType = typeFromJSON({
           type: 'record',
-          properties: schema,
+          properties: schemaJSON,
         }).toJSON();
-        if (rules) collectionAttributes.rules = rules;
+        const newSchema: any = {
+          schema: schemaJSONWithType,
+        };
+        // rules may be undefined, only add key if defined
+        if (rules) newSchema.rules = rules;
+        schemaEntity.collections[collectionName] = newSchema;
       }
     );
   }

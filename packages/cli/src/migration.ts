@@ -665,6 +665,7 @@ function genCreateCollectionOperation(
     'create_collection',
     {
       name,
+      ...collectionDefinition,
       schema: attributes,
     },
   ];
