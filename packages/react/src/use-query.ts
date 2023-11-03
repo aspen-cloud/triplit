@@ -3,7 +3,7 @@ import {
   ClientFetchResult,
   TriplitClient,
   ClientQuery,
-  ClientQueryBuilder,
+  createClientQueryBuilder,
   SubscriptionOptions,
   CollectionNameFromModels,
   Models,

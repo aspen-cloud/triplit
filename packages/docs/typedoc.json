@@ -1,0 +1,13 @@
+{
+  "entryPointStrategy": "packages",
+  "entryPoints": ["../client"],
+  "plugin": ["typedoc-plugin-markdown"],
+  "out": "./src/pages/reference",
+  "hideInPageTOC": true,
+  "hideBreadcrumbs": true,
+  "compilerOptions": {
+    "strict": false
+  },
+  "skipErrorChecking": true,
+  "excludeExternals": true
+}

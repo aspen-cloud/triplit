@@ -36,17 +36,17 @@ import { WebSocketTransport } from './websocket-transport.js';
 import { ClientSyncMessage, ServerSyncMessage } from '@triplit/types/sync';
 import { MemoryBTreeStorage } from '@triplit/db/storage/memory-btree';
 
-/**
- * There is some odd behavior when using infer with intersection types
- * Our query types are set up as:
- * CollectionQuery<...> = Query<...> & { ... }
- * ClientQuery<...> = CollectionQuery<...> & { ... }
- *
- * However, if you attempt to infer the generic of a base object (ex. CollectionQuery<infer M>) with the intersected object (ClientQuery<any>) the inferred type M is overly generic
- *
- * Recreating the fetch result type here to avoid this issue
- * Playground: https://www.typescriptlang.org/play?#code/KYDwDg9gTgLgBDAnmYcCyEAmwA2BnAHgCg44BhCHHYAYxgEsIA7AOQEMBbVUGYJzPHDwwo9JgHMANCTgAVODz4C4AJVrRMBYaImShIseIB8RI3AC8q9VE0UqtBs3Zc9sowG4iRJCjgAhNjxgAjQFEF5+QQxsfAI2JkQ9eMQjPTIWMIjlAGtgRAgAM3QzSwBvGTYYEQBGAC50AG10gF1PAF8vH1QAUXClYE1QxUj0LFxCZKSE1PIM4Zy8wuKLf0DgtDSWMwAyOFLKkQAmeu1DNs9vZFRZYGFqgnl5wQCguISplJK5TKVntbfEnBkmYAPxwADkYECeHBcHq4IKbHoOHBni6cluMEODx+IxewUmQOmX0efTx-zEBWAUDgAFUPqC6XCIYjkajOlc4ABJJhgACu8EsvSyAwIpV4wnq+3hBQgEHBbTaenBEpg4I8HN8ajwfJwMGqKxudwIPP5MA16O1uqxhsx2NNAo8QA
- */
+//
+//  There is some odd behavior when using infer with intersection types
+//  Our query types are set up as:
+//  CollectionQuery<...> = Query<...> & { ... }
+//  ClientQuery<...> = CollectionQuery<...> & { ... }
+//
+//  However, if you attempt to infer the generic of a base object (ex. CollectionQuery<infer M>) with the intersected object (ClientQuery<any>) the inferred type M is overly generic
+//
+//  Recreating the fetch result type here to avoid this issue
+//  Playground: https://www.typescriptlang.org/play?#code/KYDwDg9gTgLgBDAnmYcCyEAmwA2BnAHgCg44BhCHHYAYxgEsIA7AOQEMBbVUGYJzPHDwwo9JgHMANCTgAVODz4C4AJVrRMBYaImShIseIB8RI3AC8q9VE0UqtBs3Zc9sowG4iRJCjgAhNjxgAjQFEF5+QQxsfAI2JkQ9eMQjPTIWMIjlAGtgRAgAM3QzSwBvGTYYEQBGAC50AG10gF1PAF8vH1QAUXClYE1QxUj0LFxCZKSE1PIM4Zy8wuKLf0DgtDSWMwAyOFLKkQAmeu1DNs9vZFRZYGFqgnl5wQCguISplJK5TKVntbfEnBkmYAPxwADkYECeHBcHq4IKbHoOHBni6cluMEODx+IxewUmQOmX0efTx-zEBWAUDgAFUPqC6XCIYjkajOlc4ABJJhgACu8EsvSyAwIpV4wnq+3hBQgEHBbTaenBEpg4I8HN8ajwfJwMGqKxudwIPP5MA16O1uqxhsx2NNAo8QA
+
 export type ClientFetchResult<C extends ClientQuery<any, any>> = Map<
   string,
   ClientFetchResultEntity<C>
@@ -567,7 +567,7 @@ class SyncEngine {
 // Could probably make this an option if you want client side validation
 const SKIP_RULES = true;
 
-interface DBOptions<M extends Models<any, any> | undefined> {
+export interface DBOptions<M extends Models<any, any> | undefined> {
   // TODO: can probably pull in a type from @triplit/db
   schema?: { collections: NonNullable<M>; version?: number };
   migrations?: Migration[];
@@ -579,7 +579,7 @@ interface DBOptions<M extends Models<any, any> | undefined> {
   clientId?: string;
 }
 
-type SyncStatus = 'pending' | 'confirmed' | 'all';
+export type SyncStatus = 'pending' | 'confirmed' | 'all';
 
 export type ClientQuery<
   M extends Models<any, any> | undefined,
@@ -631,19 +631,19 @@ function parseScope(query: ClientQuery<any, any>) {
   }
 }
 
-type LocalFirstFetchOptions = {
+export type LocalFirstFetchOptions = {
   policy: 'local-first';
 };
-type LocalOnlyFetchOptions = {
+export type LocalOnlyFetchOptions = {
   policy: 'local-only';
 };
-type RemoteFirstFetchOptions = {
+export type RemoteFirstFetchOptions = {
   policy: 'remote-first';
 };
-type RemoteOnlyFetchOptions = {
+export type RemoteOnlyFetchOptions = {
   policy: 'remote-only';
 };
-type LocalAndRemoteFetchOptions = {
+export type LocalAndRemoteFetchOptions = {
   policy: 'local-and-remote';
   timeout?: number;
 };
