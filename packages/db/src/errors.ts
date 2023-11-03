@@ -265,13 +265,11 @@ export class UnrecognizedPropertyInUpdateError extends TriplitError {
   }
 }
 
-// TODO: this one is weird, feels like we shouldn't get here
-export class MissingAttributeDefinitionError extends TriplitError {
+export class TypeJSONParseError extends TriplitError {
   constructor(...args: any[]) {
     super(...args);
-    this.name = 'MissingAttributeDefinitionError';
-    this.message =
-      'An attribute definition is missing from your schema. Please check that your schema has properly formed attribute definitions for each attribute.';
+    this.name = 'TypeJSONParseError';
+    this.message = 'Failed to parse this type from a serialized form.';
     this.status = STATUS_CODES['Internal Server Error'];
   }
 }

@@ -82,6 +82,7 @@ export class Server {
         );
       await this.db.migrate([migration], direction);
     } catch (e) {
+      if (e instanceof TriplitError) return errorResponse(e);
       return errorResponse(new TriplitError('Error applying migration'));
     }
     return ServerResponse(200, 'Migration applied');

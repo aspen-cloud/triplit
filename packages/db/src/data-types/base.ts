@@ -2,7 +2,7 @@ import { Static, TTuple, Type } from '@sinclair/typebox';
 import { nanoid } from 'nanoid';
 import {
   InvalidTypeOptionsError,
-  MissingAttributeDefinitionError,
+  TypeJSONParseError,
   UnrecognizedAttributeTypeError,
 } from '../errors.js';
 import { Value } from '@sinclair/typebox/value';
@@ -110,7 +110,10 @@ export function typeFromJSON(
 ): ValueType<any>;
 export function typeFromJSON(serializedType?: AttributeDefinition): DataType;
 export function typeFromJSON(serializedType?: AttributeDefinition): DataType {
-  if (!serializedType) throw new MissingAttributeDefinitionError();
+  if (!serializedType)
+    throw new TypeJSONParseError(
+      'Cannot parse serialized type. It is undefined.'
+    );
   switch (serializedType.type) {
     case 'string':
       return StringType(serializedType.options);

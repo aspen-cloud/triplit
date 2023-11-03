@@ -17,6 +17,7 @@ it('codegen can generate a schema from migrations', async () => {
   const schema = {
     test: {
       schema: S.Schema({
+        id: S.Id(),
         // value types
         string: S.String(),
         boolean: S.Boolean(),
