@@ -55,7 +55,8 @@ export default Command({
     }
 
     // Get package manager
-    let packageManager = flags.packageManager?.toLowerCase();
+    let packageManager: string | undefined =
+      flags.packageManager?.toLowerCase();
     if (!packageManager) {
       console.log('No package manager specified, inferring...');
       packageManager = inferPackageManager();

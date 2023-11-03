@@ -20,7 +20,7 @@ export default Command({
     const res = await getMigrationsStatus({ ctx });
     const { status, server, project } = res;
 
-    let recommendedUserAction = null;
+    let recommendedUserAction: React.JSX.Element | string | null = null;
     if (status === 'IN_SYNC')
       recommendedUserAction = (
         <Text color={'green'}>

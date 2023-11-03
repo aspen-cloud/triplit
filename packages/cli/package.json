@@ -4,6 +4,7 @@
   "type": "module",
   "scripts": {
     "build": "tsc",
+    "lint": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest watch",
     "publish-pkg": "node ../../scripts/npm-check-version-and-publish.js"

@@ -1,6 +1,7 @@
 {
   // "extends": "../../tsconfig.json",
   "compilerOptions": {
+    // TODO: move to strict
     "strict": false,
     "composite": true,
     "lib": ["ESNext"],

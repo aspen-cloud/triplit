@@ -44,13 +44,13 @@ export async function writeSchemaWithMigrations(migrations: Migration[]) {
 
 // Currently using this in tests
 export async function schemaFileContentFromMigrations(migrations: Migration[]) {
-  const db = new DB({ migrations: migrations });
+  const db = new DB<any>({ migrations: migrations });
   await db.ensureMigrated;
   const schema = await db.getSchema();
   const schemaJSON = schemaToJSON(schema);
 
   const schemaContent = collectionsDefinitionToFileContent(
-    schemaJSON.collections
+    schemaJSON?.collections ?? {}
   );
   const fileContent =
     `
@@ -151,7 +151,7 @@ function schemaItemToString(schemaItem: AttributeDefinition): string {
 
 function valueOptionsToString(options: UserTypeOptions): string {
   const { nullable, default: defaultValue } = options;
-  const result = [];
+  const result: string[] = [];
   if (nullable !== undefined) result.push(`nullable: ${nullable}`);
   if (defaultValue !== undefined)
     result.push(`default: ${defaultValueToString(defaultValue)}`);

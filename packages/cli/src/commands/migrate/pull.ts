@@ -26,10 +26,10 @@ export default Command({
     if (status === 'SERVER_UNTRACKED_CHANGES') {
       // Create a DB up to the latest server migration
       const latest = server.migrationIds.at(-1) ?? 0;
-      const db = new DB({
+      const db = new DB<any>({
         migrations: project.migrations.filter((m) => m.version <= latest),
       });
-      const tempSchema = schemaToJSON(await db.getSchema()).collections;
+      const tempSchema = schemaToJSON(await db.getSchema())?.collections;
       const timestamp = Date.now();
       const migration = createMigration(
         tempSchema ?? {},

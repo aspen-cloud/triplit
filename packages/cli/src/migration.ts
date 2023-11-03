@@ -87,7 +87,7 @@ export async function getMigrationsStatus({ ctx }): Promise<{
 
   // DB of migrations up to what is known on the server
   // TODO: Think through if this is correct if other migrations slip in
-  const serverMigrationsDB = new DB({
+  const serverMigrationsDB = new DB<any>({
     migrations: projectMigrations.filter((m) =>
       serverMigrationIds.includes(m.version)
     ),
@@ -100,7 +100,7 @@ export async function getMigrationsStatus({ ctx }): Promise<{
   );
 
   // DB of all migrations in the project
-  const projectMigrationsDB = new DB({
+  const projectMigrationsDB = new DB<any>({
     migrations: projectMigrations,
   });
   await projectMigrationsDB.ensureMigrated;
@@ -620,9 +620,13 @@ function parseRuleDiff(
     throw new Error('NOT IMPLEMENTED');
   } else if (ruleDiffStatus === 'UNCHANGED') {
     // json diffing library is too specific with diff, but if we get here a property on the rule has changed
-    const oldRule = context.previousSchema[collection].rules[ruleType][ruleKey];
-    const newRule = context.targetScema[collection].rules[ruleType][ruleKey];
-
+    const oldRule =
+      context.previousSchema[collection].rules?.[ruleType][ruleKey];
+    const newRule = context.targetScema[collection].rules?.[ruleType][ruleKey];
+    // Throwing an error because its unexpected, but I havent really tested if it could happen (I think deleting/adding rules is handled elsewhere)
+    if (!oldRule || !newRule) {
+      throw new Error('Failed to create migration: Unexpected diff');
+    }
     const dropOldRuleOperation = genDropRuleOperation({
       collection,
       scope: ruleType,

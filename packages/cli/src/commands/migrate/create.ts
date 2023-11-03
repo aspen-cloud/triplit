@@ -34,14 +34,16 @@ export default Command({
     if (latest == undefined || latest > timestamp)
       throw new Error('Invalid timestamp');
 
-    const db = new DB({ migrations: migrationFiles.map((mf) => mf.migration) });
+    const db = new DB<any>({
+      migrations: migrationFiles.map((mf) => mf.migration),
+    });
     await db.ensureMigrated;
 
     const dbSchema = await db.getSchema();
     if (dbSchema && dbSchema.version !== latest)
       throw new Error('Local database failed to apply all migrations');
     const dbSchemaJSON = dbSchema
-      ? JSON.parse(JSON.stringify(schemaToJSON(dbSchema).collections))
+      ? JSON.parse(JSON.stringify(schemaToJSON(dbSchema)?.collections ?? {}))
       : {};
 
     const localSchema = await readLocalSchema();

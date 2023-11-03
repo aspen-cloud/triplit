@@ -312,6 +312,13 @@ export function triplesToSchema(triples: TripleRow[]) {
 }
 
 export function schemaToJSON(
+  schema: StoreSchema<Models<any, any>>
+): SchemaDefinition;
+export function schemaToJSON(schema: undefined): undefined;
+export function schemaToJSON(
+  schema: StoreSchema<Models<any, any> | undefined>
+): SchemaDefinition | undefined;
+export function schemaToJSON(
   schema: StoreSchema<Models<any, any> | undefined>
 ): SchemaDefinition | undefined {
   if (!schema) return undefined;
