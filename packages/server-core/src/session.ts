@@ -213,6 +213,11 @@ export class Session {
       );
     }
   }
+
+  insert(collectionName: string, entity: any) {
+    return this.db.insert(collectionName, entity);
+  }
+
   async isClientSchemaCompatible() {
     const serverSchema = await this.db.getSchema();
     const serverHash = hashSchemaJSON(schemaToJSON(serverSchema)?.collections);
