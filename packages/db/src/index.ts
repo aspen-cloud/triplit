@@ -20,6 +20,7 @@ export type {
   DropAttributeOptionOperation,
   AddRuleOperation,
   DropRuleOperation,
+  DBConfig,
 } from './db.js';
 export type { DBTransaction } from './db-transaction.js';
 export {

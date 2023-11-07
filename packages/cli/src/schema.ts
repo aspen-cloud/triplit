@@ -3,6 +3,13 @@ import fs from 'node:fs';
 import ts from 'typescript';
 import { getTriplitDir } from './filesystem.js';
 
+// Within a process, break the import cache in case of file changes
+// I'd rather not do this, but had issues with tests not picking up changes
+async function importFresh(modulePath: string) {
+  const cacheBustingModulePath = `${modulePath}?update=${Date.now()}`;
+  return await import(cacheBustingModulePath);
+}
+
 export async function readLocalSchema() {
   const triplitDir = getTriplitDir();
   const schemaPath = path.join(triplitDir, 'schema.ts');
@@ -13,7 +20,7 @@ export async function readLocalSchema() {
     const transpiledJs = transpileTsFile(schemaPath);
     fs.mkdirSync(path.dirname(transpiledJsPath), { recursive: true });
     fs.writeFileSync(transpiledJsPath, transpiledJs, 'utf8');
-    const { schema } = await import(transpiledJsPath);
+    const { schema } = await importFresh(transpiledJsPath);
     return schema;
   } finally {
     fs.rmSync(tmpDir, { recursive: true, force: true });

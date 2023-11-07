@@ -1,7 +1,10 @@
 import { Command } from '../../command.js';
 import * as Flag from '../../flags.js';
 import { serverRequesterMiddleware } from '../../middleware/add-server-requester.js';
-import { getMigrationsStatus } from '../../migration.js';
+import {
+  getMigrationsStatus,
+  projectHasUntrackedChanges,
+} from '../../migration.js';
 import { Box, Newline, Text } from 'ink';
 import React from 'react';
 
@@ -110,7 +113,10 @@ export default Command({
                   key={version}
                 >{`${version.toString()}_${name}`}</Text>
               ))}
-            {project.schemaHash !== project.migrationsHash ? (
+            {projectHasUntrackedChanges(
+              project.schemaHash,
+              project.migrationsHash
+            ) ? (
               <Text color={'yellow'} italic>
                 Untracked schema changes
               </Text>

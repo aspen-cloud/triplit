@@ -4,12 +4,13 @@ import {
   applyMigration,
   createMigration,
   getMigrationsStatus,
+  projectHasUntrackedChanges,
 } from '../../migration.js';
 import { serverRequesterMiddleware } from '../../middleware/add-server-requester.js';
 import { getMigrationsDir } from '../../filesystem.js';
 import { blue, italic } from 'ansis/colors';
 import DB, { schemaToJSON } from '@triplit/db';
-import { writeSchemaWithMigrations } from './codegen.js';
+import { schemaFileContentFromMigrations, writeSchemaFile } from './codegen.js';
 import { Command } from '../../command.js';
 
 const pullMigrationName = 'sync_with_remote';
@@ -64,12 +65,18 @@ export default Command({
         // @ts-ignore
         blue`applying ${italic('up')} migration with id ${migration.version}`
       );
+      // TODO: handle failed migration
       await applyMigration(migration, 'up', ctx);
 
-      if (project.schemaHash === project.migrationsHash) {
+      if (
+        projectHasUntrackedChanges(project.schemaHash, project.migrationsHash)
+      ) {
         console.log('\n...Regenerating schema file with the new migration\n');
         const newMigrations = [...project.migrations, migration];
-        writeSchemaWithMigrations(newMigrations);
+        const fileContent = await schemaFileContentFromMigrations(
+          newMigrations
+        );
+        await writeSchemaFile(fileContent);
       } else {
         // console.log(
         //   'Your schema.ts file has untracked changes. Run `triplit migrate create [migration_name]` and `triplit migrate up` to track the changes and push them to the remote.\n'

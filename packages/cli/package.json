@@ -5,6 +5,7 @@
   "scripts": {
     "build": "tsc",
     "lint": "tsc --noEmit",
+    "lint:strict": "tsc --noEmit --strict",
     "test": "vitest run",
     "test:watch": "vitest watch",
     "publish-pkg": "node ../../scripts/npm-check-version-and-publish.js"

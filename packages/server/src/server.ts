@@ -1,6 +1,6 @@
 import WS, { WebSocketServer } from 'ws';
 import express from 'express';
-import { DB, TriplitError } from '@triplit/db';
+import { DB, DBConfig, TriplitError } from '@triplit/db';
 import { MemoryBTreeStorage as MemoryStorage } from '@triplit/db/storage/memory-btree';
 import { SQLiteTupleStorage as SqliteStorage } from '@triplit/db/storage/sqlite';
 import {
@@ -46,8 +46,9 @@ function setupSqliteStorage() {
   return new SqliteStorage(db);
 }
 
-type ServerOptions = {
+export type ServerOptions = {
   storage?: 'sqlite' | 'memory';
+  dbOptions?: DBConfig<any>;
 };
 
 export function createServer(options?: ServerOptions) {
@@ -63,6 +64,7 @@ export function createServer(options?: ServerOptions) {
       new DB({
         source: dbSource,
         tenantId: projectId,
+        ...(options?.dbOptions ?? {}),
       })
     );
     triplitServers.set(projectId, server);

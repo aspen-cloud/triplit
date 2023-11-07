@@ -234,7 +234,7 @@ export async function getMigrationsStatus({ ctx }): Promise<{
   }
 
   // check if we need to generate a migration (ie we have locally updated the schema)
-  if (projectFileHash !== projectMigrationsHash) {
+  if (projectHasUntrackedChanges(projectFileHash, projectMigrationsHash)) {
     return { status: 'PROJECT_UNTRACKED_CHANGES', ...info };
   }
 
@@ -261,6 +261,19 @@ export async function getMigrationsStatus({ ctx }): Promise<{
 
   // Something wasnt hit, so we dont know the status
   return { status: 'UNKNOWN', ...info };
+}
+
+export function projectHasUntrackedChanges(
+  projectFileHash: number | undefined,
+  projectMigrationsHash: number | undefined
+) {
+  // Schemaless (ie no schema file) and an empty schema are treated the same on the client
+  const projectFileHasContent = !!projectFileHash;
+  const projectMigrationsHasContent = !!projectMigrationsHash;
+  const bothEmpty = !projectFileHasContent && !projectMigrationsHasContent;
+  // if both empty, no changes
+  if (bothEmpty) return false;
+  return projectFileHash !== projectMigrationsHash;
 }
 
 export async function applyMigration(

@@ -107,7 +107,7 @@ export type Migration = {
 
 type StorageSource = AsyncTupleStorageApi | TupleStorageApi;
 
-interface DBConfig<M extends Models<any, any> | undefined> {
+export interface DBConfig<M extends Models<any, any> | undefined> {
   schema?: { collections: NonNullable<M>; version?: number };
   migrations?:
     | Migration[]

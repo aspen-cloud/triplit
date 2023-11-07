@@ -26,13 +26,16 @@ export default Command({
       const status = res.project.statuses[m.version];
       return status === 'IN_SYNC' || status === 'UNAPPLIED';
     });
-    await writeSchemaWithMigrations(migrations);
+    const fileContent = await schemaFileContentFromMigrations(migrations);
+    await writeSchemaFile(fileContent);
   },
 });
 
-export async function writeSchemaWithMigrations(migrations: Migration[]) {
-  const fileName = path.join(getTriplitDir(), 'schema.ts');
-  const fileContent = await schemaFileContentFromMigrations(migrations);
+export async function writeSchemaFile(
+  fileContent: string,
+  options: { path?: string } = {}
+) {
+  const fileName = path.join(options?.path || getTriplitDir(), 'schema.ts');
   fs.mkdirSync(path.dirname(fileName), { recursive: true });
   //use prettier as a fallback for formatting
   const formatted = await format(fileContent, { parser: 'typescript' });
@@ -47,6 +50,17 @@ export async function schemaFileContentFromMigrations(migrations: Migration[]) {
   const db = new DB<any>({ migrations: migrations });
   await db.ensureMigrated;
   const schema = await db.getSchema();
+  return schemaFileContentFromSchema(schema);
+}
+
+export function schemaFileContentFromSchema(
+  schema:
+    | {
+        version: number;
+        collections: any;
+      }
+    | undefined
+) {
   const schemaJSON = schemaToJSON(schema);
 
   const schemaContent = collectionsDefinitionToFileContent(

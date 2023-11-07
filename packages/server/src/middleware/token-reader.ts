@@ -30,8 +30,8 @@ export async function useHttpToken(
   try {
     const { data, error } = await parseAndValidateToken(
       token,
-      process.env.JWT_SECRET! || 'test-secret',
-      process.env.PROJECT_ID! || 'project'
+      process.env.JWT_SECRET!,
+      process.env.PROJECT_ID!
     );
 
     if (error) throw error;
