@@ -1,5 +1,21 @@
 # @triplit/cli
 
+## 0.2.0
+
+### Minor Changes
+
+- 61455a2: minor version bump
+
+### Patch Changes
+
+- Updated dependencies [61455a2]
+- Updated dependencies [61455a2]
+- Updated dependencies [61455a2]
+  - @triplit/client@0.2.0
+  - @triplit/console@0.2.0
+  - @triplit/db@0.2.0
+  - @triplit/server@0.2.0
+
 ## 0.1.1
 
 ### Patch Changes
