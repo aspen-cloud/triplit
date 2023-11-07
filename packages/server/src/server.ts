@@ -207,6 +207,17 @@ export function createServer(options?: ServerOptions) {
     res.json(payload).status(statusCode);
   });
 
+  app.post('/insert', async (req, res) => {
+    const server = getServer(req.token!);
+    const { collectionName, entity } = req.body;
+    const { statusCode, payload } = await server.insert(
+      collectionName,
+      entity,
+      req.token!
+    );
+    return res.json(payload).status(statusCode);
+  });
+
   wss.on('error', (err) => {
     console.log('error', err);
   });

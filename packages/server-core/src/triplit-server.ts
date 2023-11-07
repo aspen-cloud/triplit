@@ -140,6 +140,25 @@ export class Server {
   ) {
     return new Session(clientId, token, this.db, clientSchemaHash, syncSchema);
   }
+
+  async insert(collectionName: string, entity: any, token: ParsedToken) {
+    if (!hasAdminAccess(token)) return UnauthorizedResponse();
+    try {
+      await this.db.insert(collectionName, entity);
+      return ServerResponse(200, 'Insert successful');
+    } catch (e) {
+      if (e instanceof TriplitError) {
+        return ServerResponse(e.status, {
+          message: e.message,
+          context: e.contextMessage,
+        });
+      }
+      return ServerResponse(500, {
+        message: 'Could not insert entity',
+        context: 'Unknown server error',
+      });
+    }
+  }
 }
 
 function errorResponse(e: Error) {

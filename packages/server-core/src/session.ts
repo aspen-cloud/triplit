@@ -73,7 +73,6 @@ export class Session {
 
     parsedQuery.vars = {
       ...parsedQuery.vars,
-      SESSION_USER_ID: this.token.userId,
     };
     const unsubscribe = this.db.subscribeTriples(
       this.db.query(collectionName, parsedQuery).build(),
@@ -214,7 +213,7 @@ export class Session {
     }
   }
 
-  insert(collectionName: string, entity: any) {
+  async insert(collectionName: string, entity: any) {
     return this.db.insert(collectionName, entity);
   }
 
