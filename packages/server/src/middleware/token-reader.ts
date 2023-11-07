@@ -30,21 +30,24 @@ export async function useHttpToken(
   try {
     const { data, error } = await parseAndValidateToken(
       token,
-      process.env.JWT_SECRET!,
-      process.env.PROJECT_ID!
+      process.env.JWT_SECRET! || 'test-secret',
+      process.env.PROJECT_ID! || 'project'
     );
 
-    if (!data || error) {
-      if (error instanceof TriplitError) {
-        return res.status(error.status).send(error.toJSON());
-      }
-      throw error;
-    }
+    if (error) throw error;
+
     req.token = data;
     return next();
   } catch (e) {
-    // TODO send better error
-    return res.sendStatus(500);
+    let triplitError: TriplitError;
+    if (e instanceof TriplitError) triplitError = e;
+    if (e instanceof Error) triplitError = new TriplitError(e.message, 500);
+    else
+      triplitError = new TriplitError(
+        'An unknown error occured while parsing token',
+        500
+      );
+    return res.status(triplitError.status).send(triplitError.toJSON());
   }
 }
 

@@ -30,10 +30,16 @@ export async function parseAndValidateToken(
   try {
     verified = await jwtVerify(token, encodedKey);
     if (!verified) {
-      throw new InvalidTokenSignatureError();
+      return {
+        data: undefined,
+        error: new InvalidTokenSignatureError(),
+      };
     }
   } catch {
-    throw new InvalidTokenSignatureError();
+    return {
+      data: undefined,
+      error: new InvalidTokenSignatureError(),
+    };
   }
 
   let payload = verified.payload;

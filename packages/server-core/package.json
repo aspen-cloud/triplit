@@ -33,6 +33,11 @@
       "require": "./dist/token.js",
       "import": "./dist/token.js"
     },
+    "./errors": {
+      "types": "./dist/errors.d.ts",
+      "require": "./dist/errors.js",
+      "import": "./dist/errors.js"
+    },
     "./*": {
       "types": "./dist/*.d.ts",
       "require": "./dist/*.js",
