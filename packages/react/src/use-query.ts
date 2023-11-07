@@ -3,10 +3,10 @@ import {
   ClientFetchResult,
   TriplitClient,
   ClientQuery,
-  createClientQueryBuilder,
   SubscriptionOptions,
   CollectionNameFromModels,
   Models,
+  ClientQueryBuilder,
 } from '@triplit/client';
 
 export function useQuery<
