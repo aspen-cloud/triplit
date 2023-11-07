@@ -407,7 +407,7 @@ class SyncEngine {
   updateConnection(options: Partial<SyncOptions>) {
     const areAnyOptionsNew = (
       Object.keys(options) as Array<keyof SyncOptions>
-    ).some((option) => this.syncOptions[option] === options[option]);
+    ).some((option) => this.syncOptions[option] !== options[option]);
     if (!areAnyOptionsNew) return;
 
     this.disconnect();
