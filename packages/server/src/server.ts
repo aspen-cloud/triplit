@@ -232,55 +232,60 @@ export function createServer(options?: ServerOptions) {
     const server = app.listen(port, callback);
 
     server.on('upgrade', (request, socket, head) => {
-      readWSToken(request).then(({ data: token, error }) => {
-        if (!token || error) {
-          console.error(error);
-          // TODO: Send 401?
-          socket.end();
-          return;
-        }
-
-        wss.handleUpgrade(request, socket, head, async (socket) => {
-          try {
-            if (request.url) {
-              const parsedUrl = url.parse(request.url!, true);
-              const clientId = parsedUrl.query.client as string;
-              const clientHash = parsedUrl.query.schema
-                ? parseInt(parsedUrl.query.schema as string)
-                : undefined;
-              const syncSchema = parsedUrl.query['sync-schema'] === 'true';
-              const server = getServer(token);
-              const session = await server.getSession(
-                clientId,
-                token,
-                clientHash,
-                syncSchema
-              );
-              // @ts-ignore
-              socket.session = session;
-              const schemaIncombaitility =
-                await session.isClientSchemaCompatible();
-              if (schemaIncombaitility) {
-                socket.close(
-                  schemaIncombaitility.code,
-                  JSON.stringify(schemaIncombaitility.metadata)
-                );
-                return;
-              }
-            }
-          } catch (e) {
-            console.error(e);
-            // TODO: send info about the error back to the server, at least if its a TriplitError
-            socket.close(
-              1008,
-              JSON.stringify({ type: 'INTERNAL_ERROR', retry: false })
-            );
+      readWSToken(request)
+        .then(({ data: token, error }) => {
+          if (!token || error) {
+            console.error(error);
+            // TODO: Send 401?
+            socket.end();
             return;
           }
 
-          wss.emit('connection', socket, request);
+          wss.handleUpgrade(request, socket, head, async (socket) => {
+            try {
+              if (request.url) {
+                const parsedUrl = url.parse(request.url!, true);
+                const clientId = parsedUrl.query.client as string;
+                const clientHash = parsedUrl.query.schema
+                  ? parseInt(parsedUrl.query.schema as string)
+                  : undefined;
+                const syncSchema = parsedUrl.query['sync-schema'] === 'true';
+                const server = getServer(token);
+                const session = await server.getSession(
+                  clientId,
+                  token,
+                  clientHash,
+                  syncSchema
+                );
+                // @ts-ignore
+                socket.session = session;
+                const schemaIncombaitility =
+                  await session.isClientSchemaCompatible();
+                if (schemaIncombaitility) {
+                  socket.close(
+                    schemaIncombaitility.code,
+                    JSON.stringify(schemaIncombaitility.metadata)
+                  );
+                  return;
+                }
+              }
+            } catch (e) {
+              console.error(e);
+              // TODO: send info about the error back to the server, at least if its a TriplitError
+              socket.close(
+                1008,
+                JSON.stringify({ type: 'INTERNAL_ERROR', retry: false })
+              );
+              return;
+            }
+
+            wss.emit('connection', socket, request);
+          });
+        })
+        .catch((e) => {
+          console.error(e);
+          socket.end();
         });
-      });
     });
 
     return {
