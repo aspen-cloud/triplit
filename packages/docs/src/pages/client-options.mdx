@@ -12,16 +12,19 @@ These options define your local cache.
 
 These options define how you want to sync with the server.
 
-- `server` is the host of the server where your project lives
-- `apiKey` is the API key for your project
+- `serverUrl` is the url of the server where your project lives e.g. `https://<project-id>.triplit.io`
 
-These options can be updated by passing options to `client.updateSyncOptions`.
+The `serverUrl` can be updated with the `client.updateServerUrl` method.
 
 ## Auth options
 
 These options define how you authenticate with your client database and remote database.
 
-- `token` is a jwt that is used to identify the user to the client database and remote databases (see the [Auth guide](/guides/auth)). Providing a `token` will set the variable `$SESSION_USER_ID` on the database, which is used for authorization rules. Providing a `token` will also override the `sync.apiKey` option.
+- `token` is a jwt that is used to identify the user to the client database and remote databases (see the [Auth guide](/guides/auth)). Providing a `token` will set the variable `$SESSION_USER_ID` on the database, which is used for authorization rules.
 - `claimsPath` is the path to the Triplit claims on the token. It should be a `.` separated string like `path.to.claims`. This should match the value set on your project in the Triplit Dashboard.
 
-These options can be updated by passing options to `client.updateAuthOptions`.
+The `token` can be updated with the `client.updateToken` method.
+
+Use the `client.updateOptions` method if you need to update the `serverUrl` and `token` atomically.
+
+Using `client.updateOptions`, `client.updateServerUrl` or `client.updateOptions` will result in the client closing its existing Websocket connection and attempting to open a new one with the provided URL/token.

@@ -125,8 +125,6 @@ import 1685494192864_create_todos from './triplit/migrations/1685494192864_creat
 type Schema = typeof schema;
 const migrations = [1685494192864_create_todos];
 const client = new TriplitClient<Schema>({
-  db: {
-    migrations,
-  },
+  migrations,
 });
 ```

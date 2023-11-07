@@ -22,35 +22,31 @@ import { Schema as S } from '@triplit/db';
 import { TriplitClient } from '@triplit/client';
 
 const schema = {
-  collections: {
-    todos: {
-      schema: S.Schema({
-        id: S.Id(),
-        text: S.String(),
-        complete: S.Boolean(),
-        created_at: S.Date(),
-        tags: S.Set(S.String()),
+  todos: {
+    schema: S.Schema({
+      id: S.Id(),
+      text: S.String(),
+      complete: S.Boolean(),
+      created_at: S.Date(),
+      tags: S.Set(S.String()),
+    }),
+  },
+  users: {
+    schema: S.Schema({
+      id: S.Id(),
+      name: S.string(),
+      address: S.Record({
+        street: S.string(),
+        city: S.string(),
+        state: S.string(),
+        zip: S.string(),
       }),
-    },
-    users: {
-      schema: S.Schema({
-        id: S.Id(),
-        name: S.string(),
-        address: S.Record({
-          street: S.string(),
-          city: S.string(),
-          state: S.string(),
-          zip: S.string(),
-        }),
-      }),
-    },
+    }),
   },
 };
 
 const client = new TriplitClient({
-  db: {
-    schema,
-  },
+  schema,
 });
 ```
 
@@ -156,20 +152,18 @@ You can indicate an attribute is nullable by passing the `{ nullable: true }` op
 import { Schema as S } from '@triplit/db';
 import { TriplitClient } from '@triplit/client';
 const schema = {
-  collections: {
-    test: {
-      schema: S.Schema({
-        id: S.Id(),
-        nullableString: S.String({ nullable: true }),
-      }),
-    },
+  test: {
+    schema: S.Schema({
+      id: S.Id(),
+      nullableString: S.String({ nullable: true }),
+    }),
   },
 };
+
 const client = new TriplitClient({
-  db: {
-    schema,
-  },
+  schema,
 });
+
 await client.insert('test', {
   nullableString: null,
 });

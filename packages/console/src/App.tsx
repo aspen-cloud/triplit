@@ -53,7 +53,7 @@ function App() {
         await addProjectToConsole({
           server,
           token,
-          displayName: projName ?? 'triplit-local',
+          displayName: projName ?? 'triplit-project',
         });
       }
       setProjectId(primaryKey);
@@ -73,10 +73,11 @@ function App() {
       return savedClient;
     }
     if (!project) return;
-    const { server, secure, token } = project;
+    const { secure, server, token } = project;
     const newClient = new TriplitClient({
-      sync: { server, secure, syncSchema: true },
-      auth: { token },
+      serverUrl: `${secure ? 'https' : 'http'}://${server}`,
+      token,
+      syncSchema: true,
     });
     projectClients.set(projectId, newClient);
     return newClient;

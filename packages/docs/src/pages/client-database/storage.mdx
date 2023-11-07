@@ -11,14 +11,18 @@ If you use memory storage for your outbox, data may be lost if the user refreshe
 If no storage options are provided this is the default.
 
 ```typescript
+const client = new TriplitClient({
+  storage: 'memory',
+});
+
+// Which is equivalent to
+
 import { MemoryBTreeStorage as MemoryStorage } from '@triplit/db/storage/memory-btree';
 
 const client = new TriplitClient({
-  db: {
-    storage: {
-      outbox: new MemoryStorage(),
-      cache: new MemoryStorage(),
-    },
+  storage: {
+    outbox: new MemoryStorage(),
+    cache: new MemoryStorage(),
   },
 });
 ```
@@ -30,14 +34,20 @@ If you would like to persist data between refreshes in the browser you can use t
 To improve performance, data is also cached in memory.
 
 ```typescript
+const client = new TriplitClient({
+  storage: 'indexeddb',
+});
+
+// Which is equivalent to
+
 import { IndexedDbStorage } from '@triplit/db/storage/indexed-db';
 
 const client = new TriplitClient({
-  db: {
-    storage: {
-      outbox: new IndexedDBStorage('my-app-outbox'),
-      cache: new IndexedDBStorage('my-app-cache'),
-    },
+  storage: {
+    outbox: new IndexedDBStorage('triplit-outbox'),
+    cache: new IndexedDBStorage('triplit-cache'),
   },
 });
 ```
+
+Note that passing storage: `'indexeddb'` to the constructor will create IndexedDB databases using the names `'triplit-outbox'` and `'triplit-cache'`. If your application connects to multiple projects with separate clients, we recommend you create your own custom-named instances of `IndexedDBStorage` so that naming conflicts do not occur.

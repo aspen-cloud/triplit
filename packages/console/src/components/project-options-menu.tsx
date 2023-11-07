@@ -44,7 +44,7 @@ export function ProjectOptionsMenu({
           }}
           onPressImportProject={() => {
             setSelectModalIsOpen(false);
-            setInfoModalIsOpen(true);
+            setImportModalIsOpen(true);
           }}
         />
       </Modal>

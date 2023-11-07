@@ -10,18 +10,10 @@ export default Command({
   description: 'Start a REPL with the Triplit client',
   middleware: [serverRequesterMiddleware],
   run: ({ ctx }) => {
-    const [protocol, host] = ctx.url.split('://');
-    //   console.log(Triplit.TriplitClient);
     global.triplit = new Triplit.TriplitClient({
-      sync: {
-        server: host,
-        secure: protocol === 'https',
-      },
-      auth: {
-        token: ctx.token,
-      },
+      serverUrl: ctx.url,
+      token: ctx.token,
     });
-
     repl.start(`db> `);
   },
 });

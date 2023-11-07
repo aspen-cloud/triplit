@@ -21,7 +21,6 @@ import {
   ResultTypeFromModel,
   toBuilder,
   Storage,
-  FetchResultEntity,
 } from '@triplit/db';
 import { Subject } from 'rxjs';
 import { getUserId } from './token.js';
@@ -35,6 +34,7 @@ import {
 import { WebSocketTransport } from './websocket-transport.js';
 import { ClientSyncMessage, ServerSyncMessage } from '@triplit/types/sync';
 import { MemoryBTreeStorage } from '@triplit/db/storage/memory-btree';
+import { IndexedDbStorage } from '@triplit/db/storage/indexed-db';
 
 //
 //  There is some odd behavior when using infer with intersection types
@@ -60,7 +60,7 @@ export type ClientFetchResultEntity<C extends ClientQuery<any, any>> =
 export type TransportConnectParams = {
   server?: string;
   secure?: boolean;
-  apiKey?: string;
+  token?: string;
   clientId: string;
   schema?: number;
   syncSchema?: boolean;
@@ -84,7 +84,7 @@ export interface SyncTransport {
 
 export interface SyncOptions {
   server?: string;
-  apiKey?: string;
+  token?: string;
   secure?: boolean;
   syncSchema?: boolean;
   transport?: SyncTransport;
@@ -172,7 +172,7 @@ class SyncEngine {
   }
 
   get token() {
-    return this.syncOptions.apiKey;
+    return this.syncOptions.token;
   }
 
   // @ts-ignore
@@ -193,7 +193,7 @@ class SyncEngine {
       clientId,
       schema: schemaHash,
       syncSchema: this.syncOptions.syncSchema,
-      apiKey: this.syncOptions.apiKey,
+      token: this.syncOptions.token,
       server: this.syncOptions.server,
       secure: this.syncOptions.secure,
     };
@@ -405,6 +405,11 @@ class SyncEngine {
   }
 
   updateConnection(options: Partial<SyncOptions>) {
+    const areAnyOptionsNew = (
+      Object.keys(options) as Array<keyof SyncOptions>
+    ).some((option) => this.syncOptions[option] === options[option]);
+    if (!areAnyOptionsNew) return;
+
     this.disconnect();
     this.syncOptions = { ...this.syncOptions, ...options };
     this.connect();
@@ -660,11 +665,51 @@ export type SubscriptionOptions =
   | RemoteFirstFetchOptions
   | LocalAndRemoteFetchOptions;
 
+type StorageOptions =
+  | { cache: Storage; outbox: Storage }
+  | 'indexeddb'
+  | 'memory';
+
+function getClientStorage(storageOption: StorageOptions) {
+  if (
+    typeof storageOption === 'object' &&
+    ('cache' in storageOption || 'outbox' in storageOption)
+  ) {
+    if (!('cache' in storageOption) || !('outbox' in storageOption))
+      throw new Error('Must define both outbox and client.');
+    return storageOption;
+  }
+
+  if (storageOption === 'memory')
+    return {
+      cache: new MemoryBTreeStorage(),
+      outbox: new MemoryBTreeStorage(),
+    };
+
+  if (storageOption === 'indexeddb') {
+    return {
+      cache: new IndexedDbStorage('triplit-cache'),
+      outbox: new IndexedDbStorage('triplit-outbox'),
+    };
+  }
+}
+
+const DEFAULT_STORAGE_OPTION = 'memory';
 export interface ClientOptions<M extends Models<any, any> | undefined> {
-  db?: DBOptions<M>;
-  sync?: Omit<SyncOptions, 'apiKey'>;
-  auth?: AuthOptions;
-  defaultFetchOptions?: {
+  schema?: M;
+  token?: string;
+  claimsPath?: string;
+
+  serverUrl?: string;
+  migrations?: Migration[];
+  syncSchema?: boolean;
+  transport?: SyncTransport;
+
+  variables?: Record<string, any>;
+  clientId?: string;
+  storage?: StorageOptions;
+
+  defaultQueryOptions?: {
     fetch?: FetchOptions;
     subscription?: SubscriptionOptions;
   };
@@ -686,34 +731,48 @@ export class TriplitClient<M extends Models<any, any> | undefined = undefined> {
   };
 
   constructor(options?: ClientOptions<M>) {
-    this.authOptions = options?.auth ?? {};
+    const {
+      schema,
+      token,
+      claimsPath,
+      serverUrl,
+      syncSchema,
+      transport,
+      migrations,
+      clientId,
+      variables,
+      storage,
+      defaultQueryOptions,
+    } = options ?? {};
+    const clock = new DurableClock('cache', clientId);
+    this.authOptions = { token, claimsPath };
     this.db = new DB({
-      clock: new DurableClock('cache', options?.db?.clientId),
-      schema: options?.db?.schema,
-      migrations: options?.db?.migrations
+      clock,
+      schema: schema ? { collections: schema, version: 0 } : undefined,
+      migrations: migrations
         ? {
-            definitions: options.db.migrations,
+            definitions: migrations,
             scopes: ['cache'],
           }
         : undefined,
-      variables: options?.db?.variables,
-      sources: {
-        //@ts-ignore
-        cache: options?.db?.storage?.cache ?? new MemoryBTreeStorage(),
-        //@ts-ignore
-        outbox: options?.db?.storage?.outbox ?? new MemoryBTreeStorage(),
-      },
+      variables,
+      sources: getClientStorage(storage ?? DEFAULT_STORAGE_OPTION),
     });
 
     this.defaultFetchOptions = {
       fetch: DEFAULT_FETCH_OPTIONS,
       subscription: DEFAULT_FETCH_OPTIONS,
-      ...options?.defaultFetchOptions,
+      ...defaultQueryOptions,
     };
 
-    const syncOptions: SyncOptions = options?.sync ?? {};
+    const syncOptions: SyncOptions = {
+      syncSchema,
+      transport,
+      ...(serverUrl ? mapServerUrlToSyncOptions(serverUrl) : {}),
+    };
+
     if (this.authOptions.token) {
-      syncOptions.apiKey = this.authOptions.token;
+      syncOptions.token = this.authOptions.token;
       const userId = getUserId(
         this.authOptions.token,
         this.authOptions.claimsPath
@@ -721,7 +780,7 @@ export class TriplitClient<M extends Models<any, any> | undefined = undefined> {
       this.db.updateVariables({ SESSION_USER_ID: userId });
     }
 
-    this.syncEngine = new SyncEngine(options?.sync ?? {}, this.db);
+    this.syncEngine = new SyncEngine(syncOptions, this.db);
     this.db.ensureMigrated.then(() => {
       this.syncEngine.connect();
     });
@@ -1003,15 +1062,50 @@ export class TriplitClient<M extends Models<any, any> | undefined = undefined> {
     );
   }
 
-  updateAuthOptions(options: Partial<AuthOptions>) {
-    this.authOptions = { ...this.authOptions, ...options };
-    if (options.hasOwnProperty('token')) {
-      const { claimsPath, token } = this.authOptions;
-      this.syncEngine.updateConnection({ apiKey: token });
+  updateOptions(options: Pick<ClientOptions<M>, 'token' | 'serverUrl'>) {
+    const { token, serverUrl } = options;
+    const hasToken = options.hasOwnProperty('token');
+    const hasServerUrl = options.hasOwnProperty('serverUrl');
+    let updatedSyncOptions = {};
+
+    // handle updating the token and variables for auth purposes
+    if (hasToken) {
+      this.authOptions = { ...this.authOptions, token };
+      const { claimsPath } = this.authOptions;
       const userId = token ? getUserId(token, claimsPath) : undefined;
       this.db.updateVariables({ SESSION_USER_ID: userId });
+
+      // and update the sync engine
+      updatedSyncOptions = { ...updatedSyncOptions, token };
+    }
+
+    // handle updating the server url for sync purposes
+    if (hasServerUrl) {
+      const { server, secure } = serverUrl
+        ? mapServerUrlToSyncOptions(serverUrl)
+        : { server: undefined, secure: undefined };
+      updatedSyncOptions = { ...updatedSyncOptions, server, secure };
+    }
+
+    if (hasToken || hasServerUrl) {
+      this.syncEngine.updateConnection(updatedSyncOptions);
     }
   }
+
+  updateToken(token: string) {
+    this.updateOptions({ token });
+  }
+
+  updateServerUrl(serverUrl: string) {
+    this.updateOptions({ serverUrl });
+  }
+}
+
+function mapServerUrlToSyncOptions(serverUrl: string) {
+  const url = new URL(serverUrl);
+  const secure = url.protocol === 'https:';
+  const server = url.host;
+  return { server, secure };
 }
 
 function warnError(e: any) {
