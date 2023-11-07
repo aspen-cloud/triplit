@@ -1,5 +1,12 @@
 # @triplit/db
 
+## 0.2.1
+
+### Patch Changes
+
+- 56d80f1: - rename MissingAttributeDefinitionError to TypeJSONParseError
+  - refactor createCollection to handle rules
+
 ## 0.2.0
 
 ### Minor Changes
