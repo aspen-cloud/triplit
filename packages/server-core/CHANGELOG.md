@@ -1,5 +1,18 @@
 # @triplit/server-core
 
+## 0.2.0
+
+### Minor Changes
+
+- 61455a2: minor version bump
+
+### Patch Changes
+
+- 61455a2: - add endpoints for http based insert
+  - code quality improvements
+- Updated dependencies [61455a2]
+  - @triplit/db@0.2.0
+
 ## 0.1.1
 
 ### Patch Changes

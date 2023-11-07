@@ -1,5 +1,17 @@
 # @triplit/client
 
+## 0.2.0
+
+### Minor Changes
+
+- 61455a2: minor version bump
+- 61455a2: Flatten constructor inputs, use url instead of host for server
+
+### Patch Changes
+
+- Updated dependencies [61455a2]
+  - @triplit/db@0.2.0
+
 ## 0.1.1
 
 ### Patch Changes
