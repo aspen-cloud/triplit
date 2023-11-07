@@ -1,5 +1,11 @@
 # @triplit/db
 
+## 0.1.1
+
+### Patch Changes
+
+- 6a92bbe: Fix Storage type error and include indexeddb dependency
+
 ## 0.1.0
 
 ### Minor Changes
