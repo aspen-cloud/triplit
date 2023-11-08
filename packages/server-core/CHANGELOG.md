@@ -1,5 +1,14 @@
 # @triplit/server-core
 
+## 0.2.1
+
+### Patch Changes
+
+- 56d80f1: - export errors
+  - properly format invalid token errors
+- Updated dependencies [56d80f1]
+  - @triplit/db@0.2.1
+
 ## 0.2.0
 
 ### Minor Changes

@@ -1,5 +1,19 @@
 # @triplit/cli
 
+## 0.2.1
+
+### Patch Changes
+
+- 56d80f1: - check undefined in certain places
+  - properly pull from unsynced remote changes and empty project schema
+  - add rules to codegen
+- Updated dependencies [56d80f1]
+- Updated dependencies [56d80f1]
+  - @triplit/db@0.2.1
+  - @triplit/server@0.2.1
+  - @triplit/console@0.2.1
+  - @triplit/client@0.2.1
+
 ## 0.2.0
 
 ### Minor Changes
