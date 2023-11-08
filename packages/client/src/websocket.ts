@@ -1,4 +1,4 @@
-export type ConnectionStatus = 'CONNECTING' | 'OPEN' | 'CLOSING' | 'CLOSED';
+import { ConnectionStatus } from './transport/transport.js';
 
 declare global {
   interface WebSocket {

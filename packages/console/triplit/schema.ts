@@ -1,4 +1,4 @@
-import { Schema as S } from '@triplit/client';
+import { Schema as S } from '@triplit/db';
 
 export const schemaObject = {
   filters: {

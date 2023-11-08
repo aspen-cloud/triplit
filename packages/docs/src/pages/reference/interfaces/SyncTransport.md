@@ -4,11 +4,11 @@
 
 ### connectionStatus
 
-• **connectionStatus**: `undefined` \| `ConnectionStatus`
+• **connectionStatus**: `undefined` \| [`ConnectionStatus`](../modules.md#connectionstatus)
 
 #### Defined in
 
-[client/src/triplit-client.ts:71](https://github.com/aspen-cloud/triplit-internal/blob/9058061d/public/packages/client/src/triplit-client.ts#L71)
+[packages/client/src/transport/transport.ts:15](https://github.com/aspen-cloud/triplit/blob/18e722a/packages/client/src/transport/transport.ts#L15)
 
 ___
 
@@ -18,7 +18,7 @@ ___
 
 #### Defined in
 
-[client/src/triplit-client.ts:70](https://github.com/aspen-cloud/triplit-internal/blob/9058061d/public/packages/client/src/triplit-client.ts#L70)
+[packages/client/src/transport/transport.ts:14](https://github.com/aspen-cloud/triplit/blob/18e722a/packages/client/src/transport/transport.ts#L14)
 
 ## Methods
 
@@ -39,7 +39,7 @@ ___
 
 #### Defined in
 
-[client/src/triplit-client.ts:80](https://github.com/aspen-cloud/triplit-internal/blob/9058061d/public/packages/client/src/triplit-client.ts#L80)
+[packages/client/src/transport/transport.ts:24](https://github.com/aspen-cloud/triplit/blob/18e722a/packages/client/src/transport/transport.ts#L24)
 
 ___
 
@@ -59,7 +59,7 @@ ___
 
 #### Defined in
 
-[client/src/triplit-client.ts:79](https://github.com/aspen-cloud/triplit-internal/blob/9058061d/public/packages/client/src/triplit-client.ts#L79)
+[packages/client/src/transport/transport.ts:23](https://github.com/aspen-cloud/triplit/blob/18e722a/packages/client/src/transport/transport.ts#L23)
 
 ___
 
@@ -79,7 +79,7 @@ ___
 
 #### Defined in
 
-[client/src/triplit-client.ts:81](https://github.com/aspen-cloud/triplit-internal/blob/9058061d/public/packages/client/src/triplit-client.ts#L81)
+[packages/client/src/transport/transport.ts:25](https://github.com/aspen-cloud/triplit/blob/18e722a/packages/client/src/transport/transport.ts#L25)
 
 ___
 
@@ -91,7 +91,7 @@ ___
 
 | Name | Type |
 | :------ | :------ |
-| `callback` | (`state`: `ConnectionStatus`) => `void` |
+| `callback` | (`state`: [`ConnectionStatus`](../modules.md#connectionstatus)) => `void` |
 
 #### Returns
 
@@ -99,7 +99,7 @@ ___
 
 #### Defined in
 
-[client/src/triplit-client.ts:82](https://github.com/aspen-cloud/triplit-internal/blob/9058061d/public/packages/client/src/triplit-client.ts#L82)
+[packages/client/src/transport/transport.ts:26](https://github.com/aspen-cloud/triplit/blob/18e722a/packages/client/src/transport/transport.ts#L26)
 
 ___
 
@@ -119,7 +119,7 @@ ___
 
 #### Defined in
 
-[client/src/triplit-client.ts:78](https://github.com/aspen-cloud/triplit-internal/blob/9058061d/public/packages/client/src/triplit-client.ts#L78)
+[packages/client/src/transport/transport.ts:22](https://github.com/aspen-cloud/triplit/blob/18e722a/packages/client/src/transport/transport.ts#L22)
 
 ___
 
@@ -139,7 +139,7 @@ ___
 
 #### Defined in
 
-[client/src/triplit-client.ts:77](https://github.com/aspen-cloud/triplit-internal/blob/9058061d/public/packages/client/src/triplit-client.ts#L77)
+[packages/client/src/transport/transport.ts:21](https://github.com/aspen-cloud/triplit/blob/18e722a/packages/client/src/transport/transport.ts#L21)
 
 ___
 
@@ -159,7 +159,7 @@ ___
 
 #### Defined in
 
-[client/src/triplit-client.ts:72](https://github.com/aspen-cloud/triplit-internal/blob/9058061d/public/packages/client/src/triplit-client.ts#L72)
+[packages/client/src/transport/transport.ts:16](https://github.com/aspen-cloud/triplit/blob/18e722a/packages/client/src/transport/transport.ts#L16)
 
 ___
 
@@ -186,4 +186,4 @@ ___
 
 #### Defined in
 
-[client/src/triplit-client.ts:73](https://github.com/aspen-cloud/triplit-internal/blob/9058061d/public/packages/client/src/triplit-client.ts#L73)
+[packages/client/src/transport/transport.ts:17](https://github.com/aspen-cloud/triplit/blob/18e722a/packages/client/src/transport/transport.ts#L17)

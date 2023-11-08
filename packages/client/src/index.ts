@@ -1,12 +1,11 @@
-export { Schema } from '@triplit/db';
+// TODO: would like to avoid re-exporting if possible (exports going to react pkg)
 export type {
-  CollectionQuery,
-  toBuilder,
   CollectionNameFromModels,
-  Model,
   Models,
-  Migration,
   ResultTypeFromModel,
   ModelFromModels,
 } from '@triplit/db';
 export * from './triplit-client.js';
+export * from './sync-engine.js';
+export * from './errors.js';
+export * from './transport/transport.js';

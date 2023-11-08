@@ -6,7 +6,7 @@ Instantiating a client will automatically connect to the server. If the connecti
 
 You may also manually manage the state connection to the server by calling `client.syncEngine.connect()` and `client.syncEngine.disconnect()`.
 
-The connection parameters used in the client constructor can be updated by calling `client.syncEngine.updateConnection(params)`. If necessary, this will disconnect and reconnect to the server with the new parameters. Updating the `auth.token` parameter will also automatically update the sync connection (see [auth options](/client-options#auth-options) for more information).
+The connection parameters used in the client constructor can be updated by calling `client.updateOptions(params)`. If necessary, this will disconnect and reconnect to the server with the new parameters.
 
 ## Connection status
 

@@ -1,4 +1,5 @@
-import { Schema, TriplitClient } from '@triplit/client';
+import { Schema } from '@triplit/db';
+import { TriplitClient } from '@triplit/client';
 import { useEffect, useState } from 'react';
 import { CaretDown, GridFour, Selection } from '@phosphor-icons/react';
 import '@glideapps/glide-data-grid/dist/index.css';

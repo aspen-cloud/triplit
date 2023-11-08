@@ -30,7 +30,7 @@
 
 #### Defined in
 
-[client/src/triplit-client.ts:688](https://github.com/aspen-cloud/triplit-internal/blob/9058061d/public/packages/client/src/triplit-client.ts#L688)
+[packages/client/src/triplit-client.ts:216](https://github.com/aspen-cloud/triplit/blob/18e722a/packages/client/src/triplit-client.ts#L216)
 
 ## Properties
 
@@ -40,7 +40,7 @@
 
 #### Defined in
 
-[client/src/triplit-client.ts:681](https://github.com/aspen-cloud/triplit-internal/blob/9058061d/public/packages/client/src/triplit-client.ts#L681)
+[packages/client/src/triplit-client.ts:209](https://github.com/aspen-cloud/triplit/blob/18e722a/packages/client/src/triplit-client.ts#L209)
 
 ___
 
@@ -50,7 +50,7 @@ ___
 
 #### Defined in
 
-[client/src/triplit-client.ts:679](https://github.com/aspen-cloud/triplit-internal/blob/9058061d/public/packages/client/src/triplit-client.ts#L679)
+[packages/client/src/triplit-client.ts:203](https://github.com/aspen-cloud/triplit/blob/18e722a/packages/client/src/triplit-client.ts#L203)
 
 ___
 
@@ -67,17 +67,19 @@ ___
 
 #### Defined in
 
-[client/src/triplit-client.ts:683](https://github.com/aspen-cloud/triplit-internal/blob/9058061d/public/packages/client/src/triplit-client.ts#L683)
+[packages/client/src/triplit-client.ts:211](https://github.com/aspen-cloud/triplit/blob/18e722a/packages/client/src/triplit-client.ts#L211)
 
 ___
 
 ### syncEngine
 
-• **syncEngine**: `SyncEngine`
+• **syncEngine**: [`SyncEngine`](SyncEngine.md)
+
+The sync engine is responsible for managing the connection to the server and syncing data
 
 #### Defined in
 
-[client/src/triplit-client.ts:680](https://github.com/aspen-cloud/triplit-internal/blob/9058061d/public/packages/client/src/triplit-client.ts#L680)
+[packages/client/src/triplit-client.ts:208](https://github.com/aspen-cloud/triplit/blob/18e722a/packages/client/src/triplit-client.ts#L208)
 
 ## Methods
 
@@ -104,7 +106,7 @@ ___
 
 #### Defined in
 
-[client/src/triplit-client.ts:850](https://github.com/aspen-cloud/triplit-internal/blob/9058061d/public/packages/client/src/triplit-client.ts#L850)
+[packages/client/src/triplit-client.ts:392](https://github.com/aspen-cloud/triplit/blob/18e722a/packages/client/src/triplit-client.ts#L392)
 
 ___
 
@@ -116,7 +118,7 @@ ___
 
 | Name | Type |
 | :------ | :------ |
-| `CQ` | extends `Query`\<[`ModelFromModels`](../modules.md#modelfrommodels)\<`M`, `any`\>, `CQ`\> & \{ `collectionName`: `any`  } & \{ `syncStatus?`: [`SyncStatus`](../modules.md#syncstatus)  } |
+| `CQ` | extends [`ClientQuery`](../modules.md#clientquery)\<`M`, `any`\> |
 
 #### Parameters
 
@@ -131,7 +133,7 @@ ___
 
 #### Defined in
 
-[client/src/triplit-client.ts:747](https://github.com/aspen-cloud/triplit-internal/blob/9058061d/public/packages/client/src/triplit-client.ts#L747)
+[packages/client/src/triplit-client.ts:289](https://github.com/aspen-cloud/triplit/blob/18e722a/packages/client/src/triplit-client.ts#L289)
 
 ___
 
@@ -159,7 +161,7 @@ ___
 
 #### Defined in
 
-[client/src/triplit-client.ts:800](https://github.com/aspen-cloud/triplit-internal/blob/9058061d/public/packages/client/src/triplit-client.ts#L800)
+[packages/client/src/triplit-client.ts:342](https://github.com/aspen-cloud/triplit/blob/18e722a/packages/client/src/triplit-client.ts#L342)
 
 ___
 
@@ -171,7 +173,7 @@ ___
 
 | Name | Type |
 | :------ | :------ |
-| `CQ` | extends `Query`\<[`ModelFromModels`](../modules.md#modelfrommodels)\<`M`, `any`\>, `CQ`\> & \{ `collectionName`: `any`  } & \{ `syncStatus?`: [`SyncStatus`](../modules.md#syncstatus)  } |
+| `CQ` | extends [`ClientQuery`](../modules.md#clientquery)\<`M`, `any`\> |
 
 #### Parameters
 
@@ -185,19 +187,19 @@ ___
 
 #### Defined in
 
-[client/src/triplit-client.ts:792](https://github.com/aspen-cloud/triplit-internal/blob/9058061d/public/packages/client/src/triplit-client.ts#L792)
+[packages/client/src/triplit-client.ts:334](https://github.com/aspen-cloud/triplit/blob/18e722a/packages/client/src/triplit-client.ts#L334)
 
 ___
 
 ### fetchOne
 
-▸ **fetchOne**\<`CQ`\>(`query`, `options?`): `Promise`\<``null`` \| [`string`, [`ClientFetchResultEntity`](../modules.md#clientfetchresultentity)\<`CQ`\>]\>
+▸ **fetchOne**\<`CQ`\>(`query`, `options?`): `Promise`\<``null`` \| [`string`, `ClientFetchResultEntity`\<`CQ`\>]\>
 
 #### Type parameters
 
 | Name | Type |
 | :------ | :------ |
-| `CQ` | extends `Query`\<[`ModelFromModels`](../modules.md#modelfrommodels)\<`M`, `any`\>, `CQ`\> & \{ `collectionName`: `any`  } & \{ `syncStatus?`: [`SyncStatus`](../modules.md#syncstatus)  } |
+| `CQ` | extends [`ClientQuery`](../modules.md#clientquery)\<`M`, `any`\> |
 
 #### Parameters
 
@@ -208,11 +210,11 @@ ___
 
 #### Returns
 
-`Promise`\<``null`` \| [`string`, [`ClientFetchResultEntity`](../modules.md#clientfetchresultentity)\<`CQ`\>]\>
+`Promise`\<``null`` \| [`string`, `ClientFetchResultEntity`\<`CQ`\>]\>
 
 #### Defined in
 
-[client/src/triplit-client.ts:810](https://github.com/aspen-cloud/triplit-internal/blob/9058061d/public/packages/client/src/triplit-client.ts#L810)
+[packages/client/src/triplit-client.ts:352](https://github.com/aspen-cloud/triplit/blob/18e722a/packages/client/src/triplit-client.ts#L352)
 
 ___
 
@@ -239,13 +241,13 @@ ___
 
 #### Defined in
 
-[client/src/triplit-client.ts:821](https://github.com/aspen-cloud/triplit-internal/blob/9058061d/public/packages/client/src/triplit-client.ts#L821)
+[packages/client/src/triplit-client.ts:363](https://github.com/aspen-cloud/triplit/blob/18e722a/packages/client/src/triplit-client.ts#L363)
 
 ___
 
 ### query
 
-▸ **query**\<`CN`\>(`collectionName`): [`toBuilder`](../modules.md#tobuilder)\<[`ClientQuery`](../modules.md#clientquery)\<`M`, `CN`\>, ``"collectionName"``, \{ `order`: (...`args`: `OrderInput`\<[`ModelFromModels`](../modules.md#modelfrommodels)\<`M`, `CN`\>\>) => `undefined` \| `QueryOrder`\<[`ModelFromModels`](../modules.md#modelfrommodels)\<`M`, `CN`\>\>[] ; `where`: (...`args`: `FilterInput`\<[`ModelFromModels`](../modules.md#modelfrommodels)\<`M`, `CN`\>\>) => `QueryWhere`\<[`ModelFromModels`](../modules.md#modelfrommodels)\<`M`, `CN`\>\>  }\>
+▸ **query**\<`CN`\>(`collectionName`): `toBuilder`\<[`ClientQuery`](../modules.md#clientquery)\<`M`, `CN`\>, ``"collectionName"``, `QUERY_INPUT_TRANSFORMERS`\<[`ModelFromModels`](../modules.md#modelfrommodels)\<`M`, `CN`\>\>\>
 
 #### Type parameters
 
@@ -261,11 +263,11 @@ ___
 
 #### Returns
 
-[`toBuilder`](../modules.md#tobuilder)\<[`ClientQuery`](../modules.md#clientquery)\<`M`, `CN`\>, ``"collectionName"``, \{ `order`: (...`args`: `OrderInput`\<[`ModelFromModels`](../modules.md#modelfrommodels)\<`M`, `CN`\>\>) => `undefined` \| `QueryOrder`\<[`ModelFromModels`](../modules.md#modelfrommodels)\<`M`, `CN`\>\>[] ; `where`: (...`args`: `FilterInput`\<[`ModelFromModels`](../modules.md#modelfrommodels)\<`M`, `CN`\>\>) => `QueryWhere`\<[`ModelFromModels`](../modules.md#modelfrommodels)\<`M`, `CN`\>\>  }\>
+`toBuilder`\<[`ClientQuery`](../modules.md#clientquery)\<`M`, `CN`\>, ``"collectionName"``, `QUERY_INPUT_TRANSFORMERS`\<[`ModelFromModels`](../modules.md#modelfrommodels)\<`M`, `CN`\>\>\>
 
 #### Defined in
 
-[client/src/triplit-client.ts:741](https://github.com/aspen-cloud/triplit-internal/blob/9058061d/public/packages/client/src/triplit-client.ts#L741)
+[packages/client/src/triplit-client.ts:283](https://github.com/aspen-cloud/triplit/blob/18e722a/packages/client/src/triplit-client.ts#L283)
 
 ___
 
@@ -277,7 +279,7 @@ ___
 
 | Name | Type |
 | :------ | :------ |
-| `CQ` | extends `Query`\<[`ModelFromModels`](../modules.md#modelfrommodels)\<`M`, `any`\>, `CQ`\> & \{ `collectionName`: `any`  } & \{ `syncStatus?`: [`SyncStatus`](../modules.md#syncstatus)  } |
+| `CQ` | extends [`ClientQuery`](../modules.md#clientquery)\<`M`, `any`\> |
 
 #### Parameters
 
@@ -300,7 +302,7 @@ ___
 
 #### Defined in
 
-[client/src/triplit-client.ts:864](https://github.com/aspen-cloud/triplit-internal/blob/9058061d/public/packages/client/src/triplit-client.ts#L864)
+[packages/client/src/triplit-client.ts:406](https://github.com/aspen-cloud/triplit/blob/18e722a/packages/client/src/triplit-client.ts#L406)
 
 ___
 
@@ -320,7 +322,7 @@ ___
 
 #### Defined in
 
-[client/src/triplit-client.ts:730](https://github.com/aspen-cloud/triplit-internal/blob/9058061d/public/packages/client/src/triplit-client.ts#L730)
+[packages/client/src/triplit-client.ts:272](https://github.com/aspen-cloud/triplit/blob/18e722a/packages/client/src/triplit-client.ts#L272)
 
 ___
 
@@ -348,19 +350,19 @@ ___
 
 #### Defined in
 
-[client/src/triplit-client.ts:834](https://github.com/aspen-cloud/triplit-internal/blob/9058061d/public/packages/client/src/triplit-client.ts#L834)
+[packages/client/src/triplit-client.ts:376](https://github.com/aspen-cloud/triplit/blob/18e722a/packages/client/src/triplit-client.ts#L376)
 
 ___
 
-### updateAuthOptions
+### updateOptions
 
-▸ **updateAuthOptions**(`options`): `void`
+▸ **updateOptions**(`options`): `void`
 
 #### Parameters
 
 | Name | Type |
 | :------ | :------ |
-| `options` | `Partial`\<`AuthOptions`\> |
+| `options` | `Pick`\<[`ClientOptions`](../interfaces/ClientOptions.md)\<`M`\>, ``"token"`` \| ``"serverUrl"``\> |
 
 #### Returns
 
@@ -368,4 +370,44 @@ ___
 
 #### Defined in
 
-[client/src/triplit-client.ts:1006](https://github.com/aspen-cloud/triplit-internal/blob/9058061d/public/packages/client/src/triplit-client.ts#L1006)
+[packages/client/src/triplit-client.ts:548](https://github.com/aspen-cloud/triplit/blob/18e722a/packages/client/src/triplit-client.ts#L548)
+
+___
+
+### updateServerUrl
+
+▸ **updateServerUrl**(`serverUrl`): `void`
+
+#### Parameters
+
+| Name | Type |
+| :------ | :------ |
+| `serverUrl` | `string` |
+
+#### Returns
+
+`void`
+
+#### Defined in
+
+[packages/client/src/triplit-client.ts:582](https://github.com/aspen-cloud/triplit/blob/18e722a/packages/client/src/triplit-client.ts#L582)
+
+___
+
+### updateToken
+
+▸ **updateToken**(`token`): `void`
+
+#### Parameters
+
+| Name | Type |
+| :------ | :------ |
+| `token` | `string` |
+
+#### Returns
+
+`void`
+
+#### Defined in
+
+[packages/client/src/triplit-client.ts:578](https://github.com/aspen-cloud/triplit/blob/18e722a/packages/client/src/triplit-client.ts#L578)
