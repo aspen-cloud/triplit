@@ -108,7 +108,7 @@ export class InvalidTokenPayloadError extends TriplitError {
   constructor(...args: any[]) {
     super(...args);
     this.name = 'InvalidTokenPayloadError';
-    this.message = 'The token paylaod is invalid.';
+    this.message = 'The token payload is invalid.';
     this.status = STATUS_CODES['Bad Request'];
   }
 }

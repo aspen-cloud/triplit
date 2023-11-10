@@ -31,7 +31,8 @@ export async function useHttpToken(
     const { data, error } = await parseAndValidateToken(
       token,
       process.env.JWT_SECRET!,
-      process.env.PROJECT_ID!
+      process.env.PROJECT_ID!,
+      { payloadPath: process.env.CLAIMS_PATH! }
     );
 
     if (error) throw error;
@@ -41,11 +42,10 @@ export async function useHttpToken(
   } catch (e) {
     let triplitError: TriplitError;
     if (e instanceof TriplitError) triplitError = e;
-    if (e instanceof Error) triplitError = new TriplitError(e.message, 500);
+    else if (e instanceof Error) triplitError = new TriplitError(e.message);
     else
       triplitError = new TriplitError(
-        'An unknown error occured while parsing token',
-        500
+        'An unknown error occured while parsing token'
       );
     return res.status(triplitError.status).send(triplitError.toJSON());
   }
@@ -57,6 +57,7 @@ export async function readWSToken(request: IncomingMessage) {
   return parseAndValidateToken(
     token!,
     process.env.JWT_SECRET!,
-    process.env.PROJECT_ID!
+    process.env.PROJECT_ID!,
+    { payloadPath: process.env.CLAIMS_PATH! }
   );
 }

@@ -23,7 +23,7 @@ function ServerResponse(statusCode: number = 200, payload?: any) {
 
 function UnauthorizedResponse() {
   const error = new ServiceKeyRequiredError();
-  return ServerResponse(error.status, error.toString());
+  return ServerResponse(error.status, error.toJSON());
 }
 
 function hasAdminAccess(token: ParsedToken) {
@@ -85,7 +85,7 @@ export class Server {
       if (e instanceof TriplitError) return errorResponse(e);
       return errorResponse(new TriplitError('Error applying migration'));
     }
-    return ServerResponse(200, 'Migration applied');
+    return ServerResponse(200);
   }
 
   async getCollectionStats(token: ParsedToken) {
@@ -146,7 +146,7 @@ export class Server {
     if (!hasAdminAccess(token)) return UnauthorizedResponse();
     try {
       await this.db.insert(collectionName, entity);
-      return ServerResponse(200, 'Insert successful');
+      return ServerResponse(200);
     } catch (e) {
       if (e instanceof TriplitError) {
         return ServerResponse(e.status, {
@@ -164,11 +164,11 @@ export class Server {
 
 function errorResponse(e: Error) {
   if (e instanceof TriplitError) {
-    return ServerResponse(e.status, e.toString());
+    return ServerResponse(e.status, e.toJSON());
   }
   const generalError = new TriplitError(
     'An unknown error occured processing your request'
   );
   console.log(e);
-  return ServerResponse(generalError.status, generalError.toString());
+  return ServerResponse(generalError.status, generalError.toJSON());
 }

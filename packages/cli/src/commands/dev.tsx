@@ -34,6 +34,7 @@ export default Command({
       process.env.TRIPLIT_JWT_SECRET ?? 'jwt-key-for-development-only';
     process.env.PROJECT_ID =
       process.env.TRIPLIT_PROJECT_ID ?? 'local-project-id';
+    process.env.CLAIMS_PATH = process.env.TRIPLIT_CLAIMS_PATH;
 
     if (flags.storage === 'sqlite') {
       const dataDir = getDataDir();

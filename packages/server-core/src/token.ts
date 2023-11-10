@@ -5,7 +5,10 @@ import {
   InvalidTokenProjectIdError,
   InvalidTokenSignatureError,
 } from './errors.js';
+import { TriplitError } from '@triplit/db';
 
+const TriplitJWTType = ['test', 'anon', 'secret'] as const;
+type TriplitJWTType = (typeof TriplitJWTType)[number];
 type TriplitJWT = {
   'x-triplit-token-type': 'test' | 'anon' | 'secret';
   'x-triplit-project-id': string;
@@ -24,7 +27,7 @@ export async function parseAndValidateToken(
   secretKey: string,
   projectId: string,
   options: { payloadPath?: string } = {}
-): Promise<ParseResult<ParsedToken>> {
+): Promise<ParseResult<ParsedToken, TriplitError>> {
   const encodedKey = new TextEncoder().encode(secretKey);
   let verified;
   try {
@@ -44,7 +47,11 @@ export async function parseAndValidateToken(
 
   let payload = verified.payload;
 
-  if (options.payloadPath) {
+  // Should still accept our own tokens, so only check payload path if it might be external (we cant find our claims at base)
+  const possiblyExternal = !TriplitJWTType.includes(
+    payload['x-triplit-token-type'] as TriplitJWTType
+  );
+  if (possiblyExternal && options.payloadPath) {
     // @ts-ignore
     payload = options.payloadPath.split('.').reduce((acc, curr) => {
       if (acc) {
@@ -63,20 +70,20 @@ export async function parseAndValidateToken(
     };
   }
 
+  if (!('x-triplit-token-type' in payload)) {
+    return {
+      data: undefined,
+      error: new InvalidTokenPayloadError(
+        'There is no token type assigned to this token. If you are using an external token please ensure you have provided a path to the claims in the settings of your project.'
+      ),
+    };
+  }
+
   if (!('x-triplit-project-id' in payload)) {
     return {
       data: undefined,
       error: new InvalidTokenPayloadError(
         'There is no projectId assigned to this token.'
-      ),
-    };
-  }
-
-  if (!('x-triplit-token-type' in payload)) {
-    return {
-      data: undefined,
-      error: new InvalidTokenPayloadError(
-        'There is no token type assigned to this token.'
       ),
     };
   }
