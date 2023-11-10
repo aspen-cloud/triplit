@@ -73,6 +73,7 @@ export class Session {
 
     parsedQuery.vars = {
       ...parsedQuery.vars,
+      SESSION_USER_ID: this.token.userId,
     };
     const unsubscribe = this.db.subscribeTriples(
       this.db.query(collectionName, parsedQuery).build(),
