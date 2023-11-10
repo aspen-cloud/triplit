@@ -57,8 +57,7 @@ export function createServer(options?: ServerOptions) {
 
   const triplitServers = new Map<string, Server>();
 
-  function getServer(token: ParsedToken) {
-    const projectId = token.projectId;
+  function getServer(projectId: string) {
     if (triplitServers.has(projectId)) return triplitServers.get(projectId)!;
     const server = new Server(
       new DB({
@@ -171,26 +170,32 @@ export function createServer(options?: ServerOptions) {
   // app.use(rateLimiterMiddleware);
 
   app.post('/queryTriples', async (req, res) => {
-    const server = getServer(req.token!);
-    const { statusCode, payload } = await server.queryTriples(req.body);
+    const server = getServer(process.env.PROJECT_ID!);
+    const session = server.createSession(req.token!);
+    const { statusCode, payload } = await session.queryTriples(req.body);
     res.json(payload).status(statusCode);
   });
 
   app.post('/clear', async (req, res) => {
-    const server = getServer(req.token!);
-    const { statusCode, payload } = await server.clearDB(req.body, req.token!);
+    const server = getServer(process.env.PROJECT_ID!);
+    const session = server.createSession(req.token!);
+    const { statusCode, payload } = await session.clearDB(req.body, req.token!);
     res.json(payload).status(statusCode);
   });
 
   app.get('/migration/status', async (req, res) => {
-    const server = getServer(req.token!);
-    const { statusCode, payload } = await server.getMigrationStatus(req.token!);
+    const server = getServer(process.env.PROJECT_ID!);
+    const session = server.createSession(req.token!);
+    const { statusCode, payload } = await session.getMigrationStatus(
+      req.token!
+    );
     res.json(payload).status(statusCode);
   });
 
   app.post('/migration/apply', async (req, res) => {
-    const server = getServer(req.token!);
-    const { statusCode, payload } = await server.applyMigration(
+    const server = getServer(process.env.PROJECT_ID!);
+    const session = server.createSession(req.token!);
+    const { statusCode, payload } = await session.applyMigration(
       req.body,
       req.token
     );
@@ -198,21 +203,26 @@ export function createServer(options?: ServerOptions) {
   });
 
   app.get('/stats', async (req, res) => {
-    const server = getServer(req.token!);
-    const { statusCode, payload } = await server.getCollectionStats(req.token!);
+    const server = getServer(process.env.PROJECT_ID!);
+    const session = server.createSession(req.token!);
+    const { statusCode, payload } = await session.getCollectionStats(
+      req.token!
+    );
     res.json(payload).status(statusCode);
   });
 
   app.get('/schema', async (req, res) => {
-    const server = getServer(req.token!);
-    const { statusCode, payload } = await server.getSchema({}, req.token!);
+    const server = getServer(process.env.PROJECT_ID!);
+    const session = server.createSession(req.token!);
+    const { statusCode, payload } = await session.getSchema({}, req.token!);
     res.json(payload).status(statusCode);
   });
 
   app.post('/insert', async (req, res) => {
-    const server = getServer(req.token!);
+    const server = getServer(process.env.PROJECT_ID!);
+    const session = server.createSession(req.token!);
     const { collectionName, entity } = req.body;
-    const { statusCode, payload } = await server.insert(
+    const { statusCode, payload } = await session.insert(
       collectionName,
       entity,
       req.token!
@@ -252,17 +262,16 @@ export function createServer(options?: ServerOptions) {
                   ? parseInt(parsedUrl.query.schema as string)
                   : undefined;
                 const syncSchema = parsedUrl.query['sync-schema'] === 'true';
-                const server = getServer(token);
-                const session = await server.getSession(
+                const server = getServer(process.env.PROJECT_ID!);
+                const connection = server.createConnection(token!, {
                   clientId,
-                  token,
-                  clientHash,
-                  syncSchema
-                );
+                  clientSchemaHash: clientHash,
+                  syncSchema,
+                });
                 // @ts-ignore
-                socket.session = session;
+                socket.session = connection;
                 const schemaIncombaitility =
-                  await session.isClientSchemaCompatible();
+                  await connection.isClientSchemaCompatible();
                 if (schemaIncombaitility) {
                   socket.close(
                     schemaIncombaitility.code,

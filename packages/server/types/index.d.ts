@@ -1,4 +1,4 @@
-import { ParsedToken, Session } from '@triplit/server-core';
+import { ParsedToken, Session, Connection } from '@triplit/server-core';
 
 declare module 'ws' {
   class _WS extends WebSocket {}
@@ -6,7 +6,7 @@ declare module 'ws' {
     isAlive: boolean;
     token?: ParsedToken;
     clientId?: string;
-    session?: Session;
+    session?: Connection;
   }
 }
 
