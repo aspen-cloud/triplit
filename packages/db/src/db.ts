@@ -214,7 +214,7 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
       : Promise.resolve();
   }
 
-  withVars(variables: Record<string, any>): DB {
+  withVars(variables: Record<string, any>): DB<M> {
     return Session(this, variables);
   }
 
