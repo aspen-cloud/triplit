@@ -214,6 +214,10 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
       : Promise.resolve();
   }
 
+  withVars(variables: Record<string, any>): DB {
+    return Session(this, variables);
+  }
+
   async getClientId() {
     const ts = await this.tripleStore.clock.getCurrentTimestamp();
     return ts[1];
@@ -651,4 +655,17 @@ function canMigrate(
   } else {
     return migration.version === dbVersion;
   }
+}
+
+function Session<T extends DB<any>>(db: T, vars: Record<string, any>): T {
+  return new Proxy<T>(db, {
+    get(target, prop, receiver) {
+      if (prop === 'variables') {
+        return { ...db.variables, ...vars };
+      }
+      return Reflect.get(target, prop, receiver);
+    },
+    set: Reflect.set,
+    deleteProperty: Reflect.deleteProperty,
+  });
 }

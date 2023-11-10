@@ -4836,3 +4836,57 @@ describe.todo('Graph-like queries', () => {
     expect(result).toHaveLength(2);
   });
 });
+
+describe('sessions', () => {
+  it('can create scoped variables with sessions that leave the original variables unaffected', () => {
+    const db = new DB();
+    expect(db.variables).toEqual({});
+    {
+      const session = db.withVars({ foo: 'bar' });
+      expect(session.variables).toEqual({ foo: 'bar' });
+      expect(db.variables).toEqual({});
+    }
+    {
+      const session = db
+        .withVars({ foo: 'bar' })
+        .withVars({ bar: 'baz' })
+        .withVars({ foo: 'baz' });
+      expect(session.variables).toEqual({ foo: 'baz', bar: 'baz' });
+      expect(db.variables).toEqual({});
+    }
+  });
+
+  it('can create multiple sessions and use their variables in queries independently', async () => {
+    const db = new DB();
+    const sessionFoo = db.withVars({ name: 'foo' });
+    const sessionBar = db.withVars({ name: 'bar' });
+
+    // Insert some data
+    await sessionFoo.insert('test', { id: '1', name: 'bar', visible: false });
+    await sessionBar.insert('test', { id: '2', name: 'foo', visible: true });
+    await db.insert('test', { id: '3', bar: 'baz', visible: true });
+
+    const query = db
+      .query('test')
+      .where(['name', '=', '$name'], ['visible', '=', true])
+      .build();
+
+    {
+      expect(await db.fetch(db.query('test').build())).toHaveLength(3);
+    }
+
+    {
+      const resp = await sessionFoo.fetch(query);
+      expect(resp).toHaveLength(1);
+      expect(resp.get('2')).toMatchObject({
+        id: '2',
+        name: 'foo',
+        visible: true,
+      });
+    }
+    {
+      const resp = await sessionBar.fetch(query);
+      expect(resp).toHaveLength(0);
+    }
+  });
+});
