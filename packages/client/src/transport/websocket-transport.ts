@@ -1,4 +1,4 @@
-import { friendlyReadyState } from '../websocket.js';
+import { CloseReason } from '@triplit/types/sync';
 import {
   ConnectionStatus,
   SyncTransport,
@@ -27,7 +27,7 @@ export class WebSocketTransport implements SyncTransport {
     this.ws.send(JSON.stringify({ type, payload }));
   }
   connect(params: TransportConnectParams): void {
-    if (this.ws && this.isOpen) this.ws.close();
+    if (this.ws && this.isOpen) this.close();
     const { token, clientId, schema, syncSchema, server, secure } = params;
     const missingParams = [];
     if (!token || !clientId || !server) {
@@ -59,8 +59,9 @@ export class WebSocketTransport implements SyncTransport {
   onError(callback: (ev: any) => void): void {
     if (this.ws) this.ws.onerror = callback;
   }
-  close(code?: number, reason?: string): void {
-    this.ws && this.ws.close(code, reason);
+  close(reason?: CloseReason): void {
+    // Assuming normal close for now (1000), possibly map reasons to codes later
+    this.ws && this.ws.close(1000, JSON.stringify(reason));
   }
   onClose(callback: (ev: any) => void): void {
     if (this.ws) this.ws.onclose = callback;
@@ -68,4 +69,71 @@ export class WebSocketTransport implements SyncTransport {
   onConnectionChange(callback: (state: ConnectionStatus) => void): void {
     if (this.ws) this.ws.onconnectionchange = callback;
   }
+}
+
+declare global {
+  interface WebSocket {
+    onconnectionchange: (status: ConnectionStatus) => void;
+  }
+}
+
+function friendlyReadyState(conn: WebSocket): ConnectionStatus {
+  switch (conn.readyState) {
+    case conn.CONNECTING:
+      return 'CONNECTING';
+    case conn.OPEN:
+      return 'OPEN';
+    case conn.CLOSING:
+      return 'CLOSING'; // I'm not sure 'CLOSING' will ever be a state we see with connection change events
+    case conn.CLOSED:
+    // Default to closed... this shouldnt happen and probably indicates something is wrong
+    default:
+      return 'CLOSED';
+  }
+}
+
+// temporary defensive check for node env
+if (typeof window !== 'undefined') {
+  // Add any changes to the WebSocket type here (ex more event handlers)
+  var WebSocketProxy = new Proxy(WebSocket, {
+    construct: function (target, args) {
+      const instance = new target(
+        // @ts-ignore
+        ...args
+      );
+
+      function dispatchConnectionChangeEvent() {
+        instance.dispatchEvent(new Event('connectionchange'));
+        if (
+          instance.onconnectionchange &&
+          typeof instance.onconnectionchange === 'function'
+        ) {
+          instance.onconnectionchange(friendlyReadyState(instance));
+        }
+      }
+
+      // Capture the connecting state after the constructor is called
+      setTimeout(function () {
+        dispatchConnectionChangeEvent();
+      }, 0);
+
+      const openHandler = () => {
+        dispatchConnectionChangeEvent();
+      };
+
+      const closeHandler = () => {
+        dispatchConnectionChangeEvent();
+        instance.removeEventListener('open', openHandler);
+        instance.removeEventListener('close', closeHandler);
+      };
+
+      instance.addEventListener('open', openHandler);
+      instance.addEventListener('close', closeHandler);
+
+      return instance;
+    },
+  });
+
+  // replace the native WebSocket with the proxy
+  WebSocket = WebSocketProxy;
 }

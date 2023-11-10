@@ -18,6 +18,7 @@ import {
   ParseResult,
   ParsedToken,
 } from '@triplit/types/sync';
+import { parseAndValidateToken } from '@triplit/server-core/token';
 
 function parseClientMessage(
   message: WS.RawData
@@ -165,25 +166,27 @@ export function createServer(options?: ServerOptions) {
   });
 
   app.use(cors({ origin: true }));
-  app.use(useHttpToken);
+
+  const authenticated = express.Router();
+  authenticated.use(useHttpToken);
 
   // app.use(rateLimiterMiddleware);
 
-  app.post('/queryTriples', async (req, res) => {
+  authenticated.post('/queryTriples', async (req, res) => {
     const server = getServer(process.env.PROJECT_ID!);
     const session = server.createSession(req.token!);
     const { statusCode, payload } = await session.queryTriples(req.body);
     res.json(payload).status(statusCode);
   });
 
-  app.post('/clear', async (req, res) => {
+  authenticated.post('/clear', async (req, res) => {
     const server = getServer(process.env.PROJECT_ID!);
     const session = server.createSession(req.token!);
     const { statusCode, payload } = await session.clearDB(req.body, req.token!);
     res.json(payload).status(statusCode);
   });
 
-  app.get('/migration/status', async (req, res) => {
+  authenticated.get('/migration/status', async (req, res) => {
     const server = getServer(process.env.PROJECT_ID!);
     const session = server.createSession(req.token!);
     const { statusCode, payload } = await session.getMigrationStatus(
@@ -192,7 +195,7 @@ export function createServer(options?: ServerOptions) {
     res.json(payload).status(statusCode);
   });
 
-  app.post('/migration/apply', async (req, res) => {
+  authenticated.post('/migration/apply', async (req, res) => {
     const server = getServer(process.env.PROJECT_ID!);
     const session = server.createSession(req.token!);
     const { statusCode, payload } = await session.applyMigration(
@@ -202,7 +205,7 @@ export function createServer(options?: ServerOptions) {
     res.json(payload).status(statusCode);
   });
 
-  app.get('/stats', async (req, res) => {
+  authenticated.get('/stats', async (req, res) => {
     const server = getServer(process.env.PROJECT_ID!);
     const session = server.createSession(req.token!);
     const { statusCode, payload } = await session.getCollectionStats(
@@ -211,14 +214,14 @@ export function createServer(options?: ServerOptions) {
     res.json(payload).status(statusCode);
   });
 
-  app.get('/schema', async (req, res) => {
+  authenticated.get('/schema', async (req, res) => {
     const server = getServer(process.env.PROJECT_ID!);
     const session = server.createSession(req.token!);
     const { statusCode, payload } = await session.getSchema({}, req.token!);
     res.json(payload).status(statusCode);
   });
 
-  app.post('/insert', async (req, res) => {
+  authenticated.post('/insert', async (req, res) => {
     const server = getServer(process.env.PROJECT_ID!);
     const session = server.createSession(req.token!);
     const { collectionName, entity } = req.body;
@@ -229,6 +232,78 @@ export function createServer(options?: ServerOptions) {
     );
     return res.json(payload).status(statusCode);
   });
+
+  authenticated.post('/message', async (req, res) => {
+    try {
+      const server = getServer(process.env.PROJECT_ID!);
+      const { message, options } = req.body;
+      const { clientId } = options;
+      const session = server.getConnection(clientId);
+      if (!session) {
+        throw new Error('NO CONNECTION OPEN!');
+      }
+      await session.dispatchCommand(message);
+      return res.sendStatus(200);
+    } catch (e) {
+      console.error(e);
+      return res.sendStatus(500);
+    }
+  });
+
+  // set up a server sent event stream
+  app.get('/message-events', async (req, res) => {
+    // Can't set headers with EventSource, check query params
+    const { schema, client, syncSchema, token: rawToken } = req.query;
+    const { data: token, error } = await parseAndValidateToken(
+      rawToken as string,
+      process.env.JWT_SECRET!,
+      process.env.PROJECT_ID!,
+      { payloadPath: process.env.CLAIMS_PATH! }
+    );
+    if (error) {
+      console.error(error);
+      return res.sendStatus(401);
+    }
+    const server = getServer(process.env.PROJECT_ID!);
+
+    const connection = server.openConnection(token, {
+      clientId: client as string,
+      clientSchemaHash: schema ? parseInt(schema as string) : undefined,
+      syncSchema: syncSchema === 'true',
+    });
+
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Connection', 'keep-alive');
+    res.flushHeaders(); // flush the headers to establish SSE with client
+
+    let unsubscribe: (() => void) | undefined = undefined;
+    // If client closes connection, stop sending events
+    res.on('close', () => {
+      unsubscribe?.();
+      res.end();
+    });
+
+    const schemaIncombaitility = await connection.isClientSchemaCompatible();
+    if (schemaIncombaitility) {
+      res.write(
+        `data: ${JSON.stringify({
+          type: 'CLOSE',
+          payload: schemaIncombaitility,
+        })}\n\n`
+      );
+      return;
+    }
+
+    unsubscribe = connection.addListener((messageType, payload) => {
+      res.write(`data: ${JSON.stringify({ type: messageType, payload })}\n\n`);
+    });
+
+    return;
+  });
+
+  app.use('/', authenticated);
 
   wss.on('error', (err) => {
     console.log('error', err);
@@ -263,7 +338,7 @@ export function createServer(options?: ServerOptions) {
                   : undefined;
                 const syncSchema = parsedUrl.query['sync-schema'] === 'true';
                 const server = getServer(process.env.PROJECT_ID!);
-                const connection = server.createConnection(token!, {
+                const connection = server.openConnection(token!, {
                   clientId,
                   clientSchemaHash: clientHash,
                   syncSchema,
@@ -273,10 +348,7 @@ export function createServer(options?: ServerOptions) {
                 const schemaIncombaitility =
                   await connection.isClientSchemaCompatible();
                 if (schemaIncombaitility) {
-                  socket.close(
-                    schemaIncombaitility.code,
-                    JSON.stringify(schemaIncombaitility.metadata)
-                  );
+                  socket.close(1008, JSON.stringify(schemaIncombaitility));
                   return;
                 }
               }

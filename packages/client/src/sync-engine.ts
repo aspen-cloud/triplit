@@ -20,12 +20,13 @@ import {
   TransportConnectParams,
 } from './transport/transport.js';
 import { WebSocketTransport } from './transport/websocket-transport.js';
-import { ServerSyncMessage } from '@triplit/types/sync';
+import { CloseReason, ServerSyncMessage } from '@triplit/types/sync';
 import {
   MissingConnectionInformationError,
   RemoteFetchFailedError,
   RemoteSyncFailedError,
 } from './errors.js';
+import { HttpTransport } from './transport/http-transport.js';
 
 /**
  * The SyncEngine is responsible for managing the connection to the server and syncing data
@@ -122,10 +123,7 @@ export class SyncEngine {
       window.addEventListener('online', connectionHandler);
       const disconnectHandler = this.closeConnection.bind(this);
       window.addEventListener('offline', () =>
-        disconnectHandler(
-          1000,
-          JSON.stringify({ type: 'NETWORK_OFFLINE', retry: false })
-        )
+        disconnectHandler({ type: 'NETWORK_OFFLINE', retry: false })
       );
     }
 
@@ -210,10 +208,7 @@ export class SyncEngine {
    * Initiate a sync connection with the server
    */
   async connect() {
-    this.closeConnection(
-      1000,
-      JSON.stringify({ type: 'CONNECTION_OVERRIDE', retry: false })
-    );
+    this.closeConnection({ type: 'CONNECTION_OVERRIDE', retry: false });
     const params = await this.getConnectionParams();
     this.transport.connect(params);
     this.transport.onMessage(async (evt) => {
@@ -283,6 +278,11 @@ export class SyncEngine {
           .findByEntity();
         this.sendTriples(triplesToSend);
       }
+
+      if (message.type === 'CLOSE') {
+        const { payload } = message;
+        this.closeConnection(payload);
+      }
     });
     this.transport.onOpen(() => {
       console.info('sync connection has opened');
@@ -298,6 +298,7 @@ export class SyncEngine {
     });
 
     this.transport.onClose((evt) => {
+      // If there is no reason, then default is to retry
       if (evt.reason) {
         const { type, retry } = JSON.parse(evt.reason);
         if (type === 'SCHEMA_MISMATCH') {
@@ -305,6 +306,7 @@ export class SyncEngine {
             'The server has closed the connection because the client schema does not match the server schema. Please update your client schema.'
           );
         }
+
         if (!retry) {
           // early return to prevent reconnect
           return;
@@ -363,10 +365,7 @@ export class SyncEngine {
    * Disconnect from the server
    */
   disconnect() {
-    this.closeConnection(
-      1000,
-      JSON.stringify({ type: 'MANUAL_DISCONNECT', retry: false })
-    );
+    this.closeConnection({ type: 'MANUAL_DISCONNECT', retry: false });
   }
 
   private async handleErrorMessage(message: any) {
@@ -453,11 +452,8 @@ export class SyncEngine {
     };
   }
 
-  private closeConnection(
-    code?: number | undefined,
-    reason?: string | undefined
-  ) {
-    if (this.transport) this.transport.close(code, reason);
+  private closeConnection(reason?: CloseReason) {
+    if (this.transport) this.transport.close(reason);
   }
 
   private resetReconnectTimeout() {

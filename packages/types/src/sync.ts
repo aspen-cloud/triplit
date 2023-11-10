@@ -5,6 +5,25 @@ type SyncMessage<Type extends string, Payload extends any> = {
   payload: Payload;
 };
 
+type ServerCloseReason = { type: ServerCloseReasonType; retry: boolean };
+
+/**
+ * Reasons for a client side connection close
+ * - CONNECTION_OVERRIDE: The client has opened a new connection and this one is no longer needed
+ * - MANUAL_DISCONNECT: The client has manually closed the connection
+ * - NETWORK_OFFLINE: The client has lost network connectivity
+ */
+export type ClientCloseReasonType =
+  | 'CONNECTION_OVERRIDE'
+  | 'MANUAL_DISCONNECT'
+  | 'NETWORK_OFFLINE';
+export type ServerCloseReasonType = 'SCHEMA_MISMATCH';
+export type CloseReasonType = ClientCloseReasonType | ServerCloseReasonType;
+export type CloseReason = {
+  type: CloseReasonType;
+  retry: boolean;
+};
+
 export type ServerSyncMessage =
   | SyncMessage<'TRIPLES_ACK', { txIds: string[] }>
   | SyncMessage<'TRIPLES', { triples: TripleRow[]; forQueries: string[] }>
@@ -12,7 +31,8 @@ export type ServerSyncMessage =
   | SyncMessage<
       'ERROR',
       { messageType: ClientSyncMessage['type']; error: any; metadata: any }
-    >;
+    >
+  | SyncMessage<'CLOSE', ServerCloseReason>;
 
 export type ClientSyncMessage =
   | SyncMessage<

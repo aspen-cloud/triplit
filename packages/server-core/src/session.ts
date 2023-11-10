@@ -48,6 +48,9 @@ export class Connection {
 
   addListener(listener: (messageType: string, payload: {}) => void) {
     this.listeners.add(listener);
+    return () => {
+      this.listeners.delete(listener);
+    };
   }
 
   close() {
@@ -227,12 +230,9 @@ export class Connection {
       !this.options.syncSchema
     )
       return {
-        code: 1008,
-        metadata: {
-          type: 'SCHEMA_MISMATCH',
-          payload: {},
-          retry: false,
-        },
+        type: 'SCHEMA_MISMATCH',
+        payload: {},
+        retry: false,
       };
     return undefined;
   }

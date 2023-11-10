@@ -1,4 +1,4 @@
-import { ClientSyncMessage } from '@triplit/types/sync';
+import { ClientSyncMessage, CloseReason } from '@triplit/types/sync';
 
 /**
  * Possible values reflect the WebSocket readyState: https://developer.mozilla.org/en-US/docs/Web/API/WebSocket/readyState
@@ -21,7 +21,7 @@ export interface SyncTransport {
   onMessage(callback: (message: any) => void): void;
   onError(callback: (ev: any) => void): void;
   connect(params: TransportConnectParams): void;
-  close(code?: number, reason?: string): void;
+  close(reason?: CloseReason): void;
   onClose(callback: (ev: any) => void): void;
   onConnectionChange(callback: (state: ConnectionStatus) => void): void;
 }
