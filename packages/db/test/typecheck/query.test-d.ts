@@ -3,6 +3,10 @@ import DB, { ModelFromModels } from '../../src/db.js';
 import { Schema as S } from '../../src/schema.js';
 import { QueryOrder, QueryWhere, WhereFilter } from '../../src/query.js';
 
+type TransactionAPI<TxDB extends DB<any>> = TxDB extends DB<infer M>
+  ? Parameters<Parameters<DB<M>['transact']>[0]>[0]
+  : never;
+
 // Want to figure out the best way to test various data types + operation combos
 // Right now im reusing this exhaustive schema (also defined in cli tests)
 
@@ -32,6 +36,9 @@ describe('schemaful', () => {
     };
     const db = new DB({ schema });
     expectTypeOf(db.insert).parameter(0).toEqualTypeOf<'a' | 'b' | 'c'>();
+    expectTypeOf<TransactionAPI<typeof db>['insert']>()
+      .parameter(0)
+      .toEqualTypeOf<'a' | 'b' | 'c'>();
   });
   test('insert: entity param properly reads from schema', () => {
     const schema = {
@@ -69,21 +76,33 @@ describe('schemaful', () => {
     };
     const db = new DB({ schema });
     const expectEntityParam = expectTypeOf(db.insert).parameter(1);
+    const expectEntityParamInTx =
+      expectTypeOf<TransactionAPI<typeof db>['insert']>().parameter(1);
 
     expectEntityParam.toHaveProperty('string').toEqualTypeOf<string>();
+    expectEntityParamInTx.toHaveProperty('string').toEqualTypeOf<string>();
 
     expectEntityParam.toHaveProperty('boolean').toEqualTypeOf<boolean>();
+    expectEntityParamInTx.toHaveProperty('boolean').toEqualTypeOf<boolean>();
 
     expectEntityParam.toHaveProperty('number').toEqualTypeOf<number>();
+    expectEntityParamInTx.toHaveProperty('number').toEqualTypeOf<number>();
 
     expectEntityParam.toHaveProperty('date').toEqualTypeOf<Date>();
+    expectEntityParamInTx.toHaveProperty('date').toEqualTypeOf<Date>();
 
     // Sets always have a default so can be undefined
     expectEntityParam
       .toHaveProperty('setString')
       .toEqualTypeOf<Set<string> | undefined>();
+    expectEntityParamInTx
+      .toHaveProperty('setString')
+      .toEqualTypeOf<Set<string> | undefined>();
 
     expectEntityParam
+      .toHaveProperty('setNumber')
+      .toEqualTypeOf<Set<number> | undefined>();
+    expectEntityParamInTx
       .toHaveProperty('setNumber')
       .toEqualTypeOf<Set<number> | undefined>();
 
@@ -91,31 +110,54 @@ describe('schemaful', () => {
     expectEntityParam
       .toHaveProperty('record')
       .toEqualTypeOf<{ attr1: string; attr2: string } | undefined>();
+    expectEntityParamInTx
+      .toHaveProperty('record')
+      .toEqualTypeOf<{ attr1: string; attr2: string } | undefined>();
 
     expectEntityParam.toHaveProperty('nullableFalse').toEqualTypeOf<string>();
+    expectEntityParamInTx
+      .toHaveProperty('nullableFalse')
+      .toEqualTypeOf<string>();
 
     expectEntityParam
+      .toHaveProperty('nullableTrue')
+      .toEqualTypeOf<string | null>();
+    expectEntityParamInTx
       .toHaveProperty('nullableTrue')
       .toEqualTypeOf<string | null>();
 
     expectEntityParam
       .toHaveProperty('defaultValue')
       .toEqualTypeOf<string | undefined>();
+    expectEntityParamInTx
+      .toHaveProperty('defaultValue')
+      .toEqualTypeOf<string | undefined>();
 
     expectEntityParam
+      .toHaveProperty('defaultNull')
+      .toEqualTypeOf<string | undefined>();
+    expectEntityParamInTx
       .toHaveProperty('defaultNull')
       .toEqualTypeOf<string | undefined>();
 
     expectEntityParam
       .toHaveProperty('defaultNow')
       .toEqualTypeOf<string | undefined>();
+    expectEntityParamInTx
+      .toHaveProperty('defaultNow')
+      .toEqualTypeOf<string | undefined>();
 
     expectEntityParam
       .toHaveProperty('defaultUuid')
       .toEqualTypeOf<string | undefined>();
+    expectEntityParamInTx
+      .toHaveProperty('defaultUuid')
+      .toEqualTypeOf<string | undefined>();
 
     expectEntityParam.not.toHaveProperty('subquery');
+    expectEntityParamInTx.not.toHaveProperty('subquery');
   });
+
   test.todo('insert: collection param informs entity param'); // Not sure how to test this, but collectionName should narrow the type of entity param
 
   test('update: collection param includes all collections', () => {
@@ -143,6 +185,9 @@ describe('schemaful', () => {
     };
     const db = new DB({ schema });
     expectTypeOf(db.update).parameter(0).toEqualTypeOf<'a' | 'b' | 'c'>();
+    expectTypeOf<TransactionAPI<typeof db>['update']>()
+      .parameter(0)
+      .toEqualTypeOf<'a' | 'b' | 'c'>();
   });
   test('update: entity param in updater properly reads proxy values from schema', () => {
     const schema = {
@@ -182,38 +227,76 @@ describe('schemaful', () => {
     const expectEntityProxyParam = expectTypeOf(db.update)
       .parameter(2)
       .parameter(0);
+    const expectEntityProxyParamInTx = expectTypeOf<
+      TransactionAPI<typeof db>['update']
+    >()
+      .parameter(2)
+      .parameter(0);
 
     expectEntityProxyParam.toHaveProperty('string').toEqualTypeOf<string>();
+    expectEntityProxyParamInTx.toHaveProperty('string').toEqualTypeOf<string>();
     expectEntityProxyParam.toHaveProperty('boolean').toEqualTypeOf<boolean>();
+    expectEntityProxyParamInTx
+      .toHaveProperty('boolean')
+      .toEqualTypeOf<boolean>();
     expectEntityProxyParam.toHaveProperty('number').toEqualTypeOf<number>();
+    expectEntityProxyParamInTx.toHaveProperty('number').toEqualTypeOf<number>();
     expectEntityProxyParam.toHaveProperty('date').toEqualTypeOf<Date>();
+    expectEntityProxyParamInTx.toHaveProperty('date').toEqualTypeOf<Date>();
 
     expectEntityProxyParam
+      .toHaveProperty('setString')
+      .toEqualTypeOf<Set<string>>();
+    expectEntityProxyParamInTx
       .toHaveProperty('setString')
       .toEqualTypeOf<Set<string>>();
 
     expectEntityProxyParam
       .toHaveProperty('setNumber')
       .toEqualTypeOf<Set<number>>();
+    expectEntityProxyParamInTx
+      .toHaveProperty('setNumber')
+      .toEqualTypeOf<Set<number>>();
 
     expectEntityProxyParam
+      .toHaveProperty('record')
+      .toEqualTypeOf<{ attr1: string; attr2: string }>();
+    expectEntityProxyParamInTx
       .toHaveProperty('record')
       .toEqualTypeOf<{ attr1: string; attr2: string }>();
 
     expectEntityProxyParam
       .toHaveProperty('nullableFalse')
       .toEqualTypeOf<string>();
+    expectEntityProxyParamInTx
+      .toHaveProperty('nullableFalse')
+      .toEqualTypeOf<string>();
     expectEntityProxyParam
+      .toHaveProperty('nullableTrue')
+      .toEqualTypeOf<string | null>();
+    expectEntityProxyParamInTx
       .toHaveProperty('nullableTrue')
       .toEqualTypeOf<string | null>();
     expectEntityProxyParam
       .toHaveProperty('defaultValue')
       .toEqualTypeOf<string>();
+    expectEntityProxyParamInTx
+      .toHaveProperty('defaultValue')
+      .toEqualTypeOf<string>();
     expectEntityProxyParam
       .toHaveProperty('defaultNull')
       .toEqualTypeOf<string>();
+    expectEntityProxyParamInTx
+      .toHaveProperty('defaultNull')
+      .toEqualTypeOf<string>();
     expectEntityProxyParam.toHaveProperty('defaultNow').toEqualTypeOf<string>();
+    expectEntityProxyParamInTx
+      .toHaveProperty('defaultNow')
+      .toEqualTypeOf<string>();
     expectEntityProxyParam
+      .toHaveProperty('defaultUuid')
+      .toEqualTypeOf<string>();
+    expectEntityProxyParamInTx
       .toHaveProperty('defaultUuid')
       .toEqualTypeOf<string>();
 
@@ -284,19 +367,32 @@ describe('schemaless', () => {
   test('insert: collection param is string', () => {
     const db = new DB();
     expectTypeOf(db.insert).parameter(0).toEqualTypeOf<string>();
+    expectTypeOf<TransactionAPI<typeof db>['insert']>()
+      .parameter(0)
+      .toEqualTypeOf<string>();
   });
   test('insert: entity param is any', () => {
     const db = new DB();
     expectTypeOf(db.insert).parameter(1).toEqualTypeOf<any>();
+    expectTypeOf<TransactionAPI<typeof db>['insert']>()
+      .parameter(1)
+      .toEqualTypeOf<any>();
   });
 
   test('update: collection param is string', () => {
     const db = new DB();
     expectTypeOf(db.update).parameter(0).toEqualTypeOf<string>();
+    expectTypeOf<TransactionAPI<typeof db>['update']>()
+      .parameter(0)
+      .toEqualTypeOf<string>();
   });
   test('update: entity param in updater is any', () => {
     const db = new DB();
     expectTypeOf(db.update).parameter(2).parameter(0).toEqualTypeOf<any>();
+    expectTypeOf<TransactionAPI<typeof db>['update']>()
+      .parameter(2)
+      .parameter(0)
+      .toEqualTypeOf<any>();
   });
 
   test('fetch: returns a Map<string, any>', () => {

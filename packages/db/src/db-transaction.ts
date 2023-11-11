@@ -261,13 +261,17 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
 
   async insert<CN extends CollectionNameFromModels<M>>(
     collectionName: CN,
-    doc: InsertTypeFromModel<ModelFromModels<M, CN> | undefined>
+    doc: InsertTypeFromModel<ModelFromModels<M, CN>>
   ) {
     const collectionSchema = await getCollectionSchema(this, collectionName);
 
     // TODO apply defaults before "serializing"
     // serialize the doc values
-    const serializedDoc = serializeClientModel(doc, collectionSchema?.schema);
+    const serializedDoc = serializeClientModel<ModelFromModels<M, CN>>(
+      doc,
+      // @ts-expect-error Should figure out the right way to merge ModelFromModels and CollectionFromModels['schema']
+      collectionSchema?.schema
+    );
 
     const defaultValues = collectionSchema
       ? getDefaultValuesForCollection(collectionSchema)
