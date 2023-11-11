@@ -281,8 +281,8 @@ export class Session {
     return new Connection(this, connectionParams);
   }
 
-  async clearDB({ full }: { full?: boolean }, token: ParsedToken) {
-    if (!hasAdminAccess(token)) return NotAdminResponse();
+  async clearDB({ full }: { full?: boolean }) {
+    if (!hasAdminAccess(this.token)) return NotAdminResponse();
     try {
       if (full) {
         // Delete all data associated with this tenant
@@ -298,8 +298,8 @@ export class Session {
     }
   }
 
-  async getMigrationStatus(token: ParsedToken) {
-    if (!hasAdminAccess(token)) return NotAdminResponse();
+  async getMigrationStatus() {
+    if (!hasAdminAccess(this.token)) return NotAdminResponse();
     const schema = await this.db.getSchema();
     if (!schema) {
       return ServerResponse(200, { type: 'schemaless' });
@@ -318,11 +318,14 @@ export class Session {
     });
   }
 
-  async applyMigration(
-    { migration, direction }: { migration: any; direction: 'up' | 'down' },
-    token: ParsedToken
-  ) {
-    if (!hasAdminAccess(token)) return NotAdminResponse();
+  async applyMigration({
+    migration,
+    direction,
+  }: {
+    migration: any;
+    direction: 'up' | 'down';
+  }) {
+    if (!hasAdminAccess(this.token)) return NotAdminResponse();
     try {
       if (!migration || !direction)
         return errorResponse(
@@ -336,8 +339,8 @@ export class Session {
     return ServerResponse(200);
   }
 
-  async getCollectionStats(token: ParsedToken) {
-    if (!hasAdminAccess(token)) return NotAdminResponse();
+  async getCollectionStats() {
+    if (!hasAdminAccess(this.token)) return NotAdminResponse();
     const stats = await this.db.getCollectionStats();
     const payload = Array.from(stats).map(([collection, numEntities]) => ({
       collection,
@@ -346,8 +349,8 @@ export class Session {
     return ServerResponse(200, payload);
   }
 
-  async getSchema(params: { format?: 'json' | 'triples' }, token: ParsedToken) {
-    if (!hasAdminAccess(token)) return NotAdminResponse();
+  async getSchema(params: { format?: 'json' | 'triples' }) {
+    if (!hasAdminAccess(this.token)) return NotAdminResponse();
     const format = params?.format ?? 'triples';
     const schema = await this.db.getSchema();
     if (!schema) return ServerResponse(200, { type: 'schemaless' });
@@ -381,8 +384,8 @@ export class Session {
     }
   }
 
-  async insert(collectionName: string, entity: any, token: ParsedToken) {
-    if (!hasAdminAccess(token)) return NotAdminResponse();
+  async insert(collectionName: string, entity: any) {
+    if (!hasAdminAccess(this.token)) return NotAdminResponse();
     try {
       await this.db.insert(collectionName, entity);
       return ServerResponse(200);

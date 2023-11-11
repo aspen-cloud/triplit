@@ -182,42 +182,35 @@ export function createServer(options?: ServerOptions) {
   authenticated.post('/clear', async (req, res) => {
     const server = getServer(process.env.PROJECT_ID!);
     const session = server.createSession(req.token!);
-    const { statusCode, payload } = await session.clearDB(req.body, req.token!);
+    const { statusCode, payload } = await session.clearDB(req.body);
     res.json(payload).status(statusCode);
   });
 
   authenticated.get('/migration/status', async (req, res) => {
     const server = getServer(process.env.PROJECT_ID!);
     const session = server.createSession(req.token!);
-    const { statusCode, payload } = await session.getMigrationStatus(
-      req.token!
-    );
+    const { statusCode, payload } = await session.getMigrationStatus();
     res.json(payload).status(statusCode);
   });
 
   authenticated.post('/migration/apply', async (req, res) => {
     const server = getServer(process.env.PROJECT_ID!);
     const session = server.createSession(req.token!);
-    const { statusCode, payload } = await session.applyMigration(
-      req.body,
-      req.token
-    );
+    const { statusCode, payload } = await session.applyMigration(req.body);
     res.json(payload).status(statusCode);
   });
 
   authenticated.get('/stats', async (req, res) => {
     const server = getServer(process.env.PROJECT_ID!);
     const session = server.createSession(req.token!);
-    const { statusCode, payload } = await session.getCollectionStats(
-      req.token!
-    );
+    const { statusCode, payload } = await session.getCollectionStats();
     res.json(payload).status(statusCode);
   });
 
   authenticated.get('/schema', async (req, res) => {
     const server = getServer(process.env.PROJECT_ID!);
     const session = server.createSession(req.token!);
-    const { statusCode, payload } = await session.getSchema({}, req.token!);
+    const { statusCode, payload } = await session.getSchema(req.query);
     res.json(payload).status(statusCode);
   });
 
@@ -227,8 +220,7 @@ export function createServer(options?: ServerOptions) {
     const { collectionName, entity } = req.body;
     const { statusCode, payload } = await session.insert(
       collectionName,
-      entity,
-      req.token!
+      entity
     );
     return res.json(payload).status(statusCode);
   });
