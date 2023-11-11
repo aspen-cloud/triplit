@@ -25,7 +25,7 @@
     "build:types": "tsc --emitDeclarationOnly",
     "lint:build": "npx publint",
     "lint": "tsc --noEmit",
-    "test": "vitest run",
+    "test": "vitest run && yarn typecheck",
     "test:watch": "vitest watch",
     "test-coverage": "vitest --coverage",
     "test-coverage-ui": "vitest --ui --coverage",
