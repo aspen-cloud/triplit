@@ -4,7 +4,7 @@ import { UserTypeOptions } from './serialization.js';
 import { Nullable, calcDefaultValue, userTypeOptionsAreValid } from './base.js';
 import { TypeWithOptions, ValueInterface } from './value.js';
 import { Value } from '@sinclair/typebox/value';
-import { InvalidTypeOptionsError, SerializingError } from '../errors.js';
+import { InvalidTypeOptionsError, DBSerializationError } from '../errors.js';
 
 FormatRegistry.Set(
   'date-time',
@@ -41,8 +41,8 @@ export function DateType<TypeOptions extends UserTypeOptions = {}>(
     toJSON() {
       return { type: this.type, options: this.options };
     },
-    convertInputToJson(val: TypeWithOptions<Date, TypeOptions>) {
-      if (!this.validateInput(val)) throw new SerializingError('date', val);
+    convertInputToDBValue(val: TypeWithOptions<Date, TypeOptions>) {
+      if (!this.validateInput(val)) throw new DBSerializationError('date', val);
       return (val ? val.toISOString() : null) as TypeWithOptions<
         string,
         TypeOptions
@@ -51,7 +51,7 @@ export function DateType<TypeOptions extends UserTypeOptions = {}>(
     default() {
       return calcDefaultValue(options) as string | undefined;
     },
-    convertJsonValueToJS(val) {
+    convertDBValueToJS(val) {
       return (val ? new Date(val) : null) as TypeWithOptions<Date, TypeOptions>;
     },
     validateInput(val: any) {

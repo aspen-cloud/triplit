@@ -3,7 +3,7 @@ import { Nullable, calcDefaultValue, userTypeOptionsAreValid } from './base.js';
 import { UserTypeOptions } from './serialization.js';
 import { TypeWithOptions, ValueInterface } from './value.js';
 import { Value } from '@sinclair/typebox/value';
-import { InvalidTypeOptionsError, SerializingError } from '../errors.js';
+import { InvalidTypeOptionsError, DBSerializationError } from '../errors.js';
 
 const BOOLEAN_OPERATORS = ['=', '!='] as const;
 type BooleanOperators = typeof BOOLEAN_OPERATORS;
@@ -29,11 +29,12 @@ export function BooleanType<TypeOptions extends UserTypeOptions = {}>(
     toJSON() {
       return { type: this.type, options: this.options };
     },
-    convertInputToJson(val: any) {
-      if (!this.validateInput(val)) throw new SerializingError('boolean', val);
+    convertInputToDBValue(val: any) {
+      if (!this.validateInput(val))
+        throw new DBSerializationError('boolean', val);
       return val;
     },
-    convertJsonValueToJS(val: boolean) {
+    convertDBValueToJS(val: boolean) {
       return val;
     },
     default() {

@@ -4,24 +4,24 @@ import { AttributeDefinition } from './serialization.js';
 
 export type ExtractJSType<T> = T extends TypeInterface<
   infer _TypeId,
-  infer DeserializedType
+  infer JSType
 >
-  ? DeserializedType
+  ? JSType
   : never;
 
-export type ExtractSerializedType<T> = T extends TypeInterface<
+export type ExtractDBType<T> = T extends TypeInterface<
   infer _TypeId,
-  infer _DeserializedType,
-  infer SerializedType
+  infer _JSType,
+  infer DBType
 >
-  ? SerializedType
+  ? DBType
   : never;
 
 export type ExtractTimestampedType<T extends TypeInterface> =
-  T extends TypeInterface<infer _TypeId, infer _JSType, infer JsonType, any>
-    ? JsonType extends Record<string, infer Value>
+  T extends TypeInterface<infer _TypeId, infer _JSType, infer DBType, any>
+    ? DBType extends Record<string, infer Value>
       ? Record<string, ExtractJSType<Value>>
-      : [JsonType, Timestamp]
+      : [DBType, Timestamp]
     : never;
 
 export type ExtractOperators<T extends TypeInterface> = T extends TypeInterface<
@@ -41,7 +41,7 @@ export type ExtractOperators<T extends TypeInterface> = T extends TypeInterface<
 export type TypeInterface<
   TypeId extends string = string, // possibly specify known value types
   JSType = any,
-  JsonType = any, // string, number, boolean, array, object
+  DBType = any, // string, number, boolean, array, object
   Operators extends readonly Operator[] = readonly Operator[]
 > = {
   readonly type: TypeId;
@@ -51,11 +51,11 @@ export type TypeInterface<
   toJSON(): AttributeDefinition; // TOOD: handle proper typing with nulls too
 
   // How to convert the input (e.g. from db.insert(..)) to the internal value
-  convertInputToJson(val: JSType): JsonType;
+  convertInputToDBValue(val: JSType): DBType;
 
-  convertJsonValueToJS(val: JsonType): JSType;
+  convertDBValueToJS(val: DBType): JSType;
 
-  default(): JsonType | undefined;
+  default(): DBType | undefined;
 
   // User input validation
   validateInput(val: any): boolean;

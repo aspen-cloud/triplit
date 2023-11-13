@@ -3,7 +3,7 @@ import { Nullable, calcDefaultValue, userTypeOptionsAreValid } from './base.js';
 import { UserTypeOptions, ValueAttributeDefinition } from './serialization.js';
 import { TypeWithOptions, ValueInterface } from './value.js';
 import { Value } from '@sinclair/typebox/value';
-import { InvalidTypeOptionsError, SerializingError } from '../errors.js';
+import { InvalidTypeOptionsError, DBSerializationError } from '../errors.js';
 
 const NUMBER_OPERATORS = ['=', '!=', '<', '>', '<=', '>='] as const;
 type NumberOperators = typeof NUMBER_OPERATORS;
@@ -30,11 +30,12 @@ export function NumberType<TypeOptions extends UserTypeOptions = {}>(
     toJSON(): ValueAttributeDefinition {
       return { type: this.type, options: this.options };
     },
-    convertInputToJson(val) {
-      if (!this.validateInput(val)) throw new SerializingError('number', val);
+    convertInputToDBValue(val) {
+      if (!this.validateInput(val))
+        throw new DBSerializationError('number', val);
       return val;
     },
-    convertJsonValueToJS(val) {
+    convertDBValueToJS(val) {
       return val;
     },
     default() {

@@ -3,7 +3,7 @@ import { InvalidSchemaPathError } from './errors.js';
 import type { CollectionRules } from './db.js';
 import { Timestamp } from './timestamp.js';
 import type { Attribute, EAV, TripleRow } from './triple-store.js';
-import { objectToTuples, serializedItemToTuples } from './utils.js';
+import { dbDocumentToTuples, objectToTuples } from './utils.js';
 import { constructEntity } from './query.js';
 import { appendCollectionToId, StoreSchema } from './db-helpers.js';
 import {
@@ -25,7 +25,7 @@ import { RecordType } from './data-types/record.js';
 import { SetType } from './data-types/set.js';
 import {
   ExtractJSType,
-  ExtractSerializedType,
+  ExtractDBType,
   ExtractTimestampedType,
 } from './data-types/type.js';
 import { QueryType } from './data-types/query.js';
@@ -191,10 +191,10 @@ type JSTypeFromModel<M extends Model<any> | undefined> = M extends Model<any>
     }
   : any;
 
-export type SerializedTypeFromModel<M extends Model<any> | undefined> =
+export type DBTypeFromModel<M extends Model<any> | undefined> =
   M extends Model<any>
     ? {
-        [k in keyof M['properties']]: ExtractSerializedType<M['properties'][k]>;
+        [k in keyof M['properties']]: ExtractDBType<M['properties'][k]>;
       }
     : any;
 
@@ -218,22 +218,27 @@ export function convertEntityToJS<M extends Model<any>>(
 ) {
   const untimestampedEntity = timestampedObjectToPlainObject(entity);
   return schema
-    ? schema.convertJsonValueToJS(untimestampedEntity)
+    ? schema.convertDBValueToJS(untimestampedEntity)
     : untimestampedEntity;
 }
 
-export function serializeClientModel<M extends Model<any> | undefined>(
+// USE THIS METHOD TO CONVERT USER INPUT DOC TO DB DATA
+// One small thing we overlooked here is that we dont account for defaults when serializing a client record for db insert
+// and we expect records to be fully hydrated at serialization time
+// TODO: determine how we might be able to leverage defaults inside of records
+// S.Record({ a: S.String({ default: 'a' }) })
+export function clientInputToDbModel<M extends Model<any> | undefined>(
   entity: JSTypeFromModel<M>,
   model: M
 ) {
-  const serialized: SerializedTypeFromModel<M> = {} as any;
+  const dbDoc: DBTypeFromModel<M> = {} as any;
   for (const [key, val] of Object.entries(entity)) {
     const schema = model?.properties?.[key];
     // Schemaless should already be in a serialized format
     // TODO: we can confirm this with typebox validation
-    serialized[key] = schema ? schema.convertInputToJson(val) : val;
+    dbDoc[key] = schema ? schema.convertInputToDBValue(val) : val;
   }
-  return serialized;
+  return dbDoc;
 }
 
 // TODO: perform a pass on this to see how we can improve its types
@@ -244,11 +249,11 @@ export function timestampedObjectToPlainObject<O extends TimestampedObject>(
     return obj;
   }
   if (isTimestampedVal(obj)) {
-    // @ts-ignore
+    // @ts-expect-error
     return obj[0];
   }
   if (obj instanceof Array) {
-    // @ts-ignore
+    // @ts-expect-error
     return obj
       .map((v) => timestampedObjectToPlainObject(v))
       .filter((v) => v !== undefined);
@@ -290,7 +295,7 @@ export function collectionsDefinitionToSchema(
 
 export function schemaToTriples(schema: StoreSchema<Models<any, any>>): EAV[] {
   const schemaData = schemaToJSON(schema);
-  const tuples = serializedItemToTuples(schemaData);
+  const tuples = dbDocumentToTuples(schemaData);
   return tuples.map((tuple) => {
     return [
       appendCollectionToId('_metadata', '_schema'),

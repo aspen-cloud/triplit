@@ -9,7 +9,7 @@ function setToJSON(val: Set<string>) {
   return new Map(Array.from(val).map((item) => [toSerializable(item), true]));
 }
 
-export function serializedItemToTuples(
+export function dbDocumentToTuples(
   object: any,
   prefix: Attribute = []
 ): [Attribute, Value][] {
@@ -23,7 +23,7 @@ export function serializedItemToTuples(
     return [
       [
         prefix,
-        //@ts-ignore
+        //@ts-expect-error
         object as Value,
       ],
     ];
@@ -32,7 +32,7 @@ export function serializedItemToTuples(
   if (prefix.length) result.push([prefix, '{}']);
   result.push(
     ...Object.keys(object).flatMap((key) =>
-      serializedItemToTuples(object[key], [...prefix, key])
+      dbDocumentToTuples(object[key], [...prefix, key])
     )
   );
   return result;

@@ -1,13 +1,13 @@
-import { SerializingError } from '../errors.js';
+import { DBSerializationError } from '../errors.js';
 import { DataType } from './base.js';
 import { RecordAttributeDefinition } from './serialization.js';
-import { ExtractJSType, ExtractSerializedType, TypeInterface } from './type.js';
+import { ExtractJSType, ExtractDBType, TypeInterface } from './type.js';
 
 export type RecordType<Properties extends { [k: string]: DataType }> =
   TypeInterface<
     'record',
     { [k in keyof Properties]: ExtractJSType<Properties[k]> },
-    { [k in keyof Properties]: ExtractSerializedType<Properties[k]> },
+    { [k in keyof Properties]: ExtractDBType<Properties[k]> },
     // { [k in keyof Properties]: ExtractTimestampedType<Properties[k]> },
     readonly []
   > & {
@@ -27,20 +27,20 @@ export function RecordType<Properties extends { [k: string]: DataType }>(
       );
       return { type: this.type, properties: serializedProps };
     },
-    convertInputToJson(val: any) {
-      if (!this.validateInput(val)) throw new SerializingError(`record`, val);
+    convertInputToDBValue(val: any) {
+      if (!this.validateInput(val))
+        throw new DBSerializationError(`record`, val);
       return Object.fromEntries(
         Object.entries(properties).map(([k, propDef]) => [
           k,
-          propDef.convertInputToJson(
-            // @ts-ignore
+          propDef.convertInputToDBValue(
+            // @ts-expect-error
             val[k]
           ),
         ])
-      ) as { [K in keyof Properties]: ExtractSerializedType<Properties[K]> };
+      ) as { [K in keyof Properties]: ExtractDBType<Properties[K]> };
     },
-    // TODO: determine proper value and type here
-    // Type should go extract the deserialized type of each of its keys
+    // Type should go extract the db type of each of its keys
     default() {
       return Object.fromEntries(
         Object.entries(properties)
@@ -69,7 +69,7 @@ export function RecordType<Properties extends { [k: string]: DataType }>(
     validateTripleValue(_val: any) {
       return true; // TODO
     },
-    convertJsonValueToJS(val) {
+    convertDBValueToJS(val) {
       const result: Partial<{
         [K in keyof Properties]: ExtractJSType<Properties[K]>;
       }> = {};
@@ -78,7 +78,7 @@ export function RecordType<Properties extends { [k: string]: DataType }>(
           const v = val[k];
           // This is mostly to catch when "_collection" is included in the entity
           result[k] = properties[k]
-            ? properties[k].convertJsonValueToJS(
+            ? properties[k].convertDBValueToJS(
                 // @ts-ignore
                 v
               )

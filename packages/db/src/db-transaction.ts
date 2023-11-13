@@ -18,8 +18,10 @@ import {
   TimestampedObject,
   timestampedObjectToPlainObject,
   collectionsDefinitionToSchema,
-  serializeClientModel,
+  clientInputToDbModel,
   InsertTypeFromModel,
+  convertEntityToJS,
+  DBTypeFromModel,
 } from './schema.js';
 import { nanoid } from 'nanoid';
 import CollectionQueryBuilder, {
@@ -63,7 +65,7 @@ import {
   replaceVariable,
 } from './db-helpers.js';
 import { Query, constructEntity, entityToResultReducer } from './query.js';
-import { serializedItemToTuples } from './utils.js';
+import { dbDocumentToTuples } from './utils.js';
 import { typeFromJSON } from './data-types/base.js';
 import { SchemaDefinition } from './data-types/serialization.js';
 import { createSetProxy } from './data-types/set.js';
@@ -265,9 +267,8 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
   ) {
     const collectionSchema = await getCollectionSchema(this, collectionName);
 
-    // TODO apply defaults before "serializing"
-    // serialize the doc values
-    const serializedDoc = serializeClientModel<ModelFromModels<M, CN>>(
+    // prep the doc for insert to db
+    const dbDoc = clientInputToDbModel(
       doc,
       // @ts-expect-error Should figure out the right way to merge ModelFromModels and CollectionFromModels['schema']
       collectionSchema?.schema
@@ -280,7 +281,7 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
     // Append defaults
     const fullDoc = {
       ...defaultValues,
-      ...serializedDoc,
+      ...dbDoc,
     };
 
     // this is just to handle the schemaless case
@@ -291,7 +292,7 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
 
     // create triples
     const timestamp = await this.storeTx.getTransactionTimestamp();
-    const avTuples = serializedItemToTuples(fullDoc);
+    const avTuples = dbDocumentToTuples(fullDoc);
     const storeId = appendCollectionToId(collectionName, fullDoc.id);
     const triples: TripleRow[] = avTuples.map<TripleRow>(
       ([attribute, value]) => ({
@@ -408,11 +409,11 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
         if (!propSchema) {
           throw new UnrecognizedPropertyInUpdateError(propPointer, value);
         }
-        const serializedValue = propSchema.convertInputToJson(
-          // @ts-ignore Big DataType union results in never as arg type
+        const dbValue = propSchema.convertInputToDBValue(
+          // @ts-expect-error Big DataType union results in never as arg type
           value
         );
-        changeTracker.set(propPointer, serializedValue);
+        changeTracker.set(propPointer, dbValue);
         return true;
       },
       deleteProperty: (_target, prop) => {
@@ -671,7 +672,7 @@ export class ChangeTracker {
 
   set(prop: string, value: any) {
     ValuePointer.Set(this.changes, prop, value);
-    const tuples = serializedItemToTuples(value, prop.slice(1).split('/'));
+    const tuples = dbDocumentToTuples(value, prop.slice(1).split('/'));
     for (const tuple of tuples) {
       const [attr, value] = tuple;
       this.tuplesTracker[attr.join('/')] = value;

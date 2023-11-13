@@ -269,7 +269,7 @@ export class TypeJSONParseError extends TriplitError {
   constructor(...args: any[]) {
     super(...args);
     this.name = 'TypeJSONParseError';
-    this.message = 'Failed to parse this type from a serialized form.';
+    this.message = 'Failed to parse this type from a JSON form.';
     this.status = STATUS_CODES['Internal Server Error'];
   }
 }
@@ -376,10 +376,10 @@ export class DBOptionsError extends TriplitError {
   }
 }
 
-export class SerializingError extends TriplitError {
+export class DBSerializationError extends TriplitError {
   constructor(targetType: string, erroneousValue: any, ...args: any[]) {
     super(...args);
-    this.name = 'SerializingError';
+    this.name = 'DBSerializationError';
     this.message = `When inserting or updating an entity, there was an error serializing the data: ${erroneousValue} as type: ${targetType}`;
     this.status = STATUS_CODES['Bad Request'];
   }

@@ -28,7 +28,7 @@ export function QueryType<Q extends SubQuery<any, any>>(
       // TODO verify this works with non-memory storage providers
       return { type: this.type, query };
     },
-    convertInputToJson(val: any) {
+    convertInputToDBValue(val: any) {
       return JSON.stringify(val);
     },
     // TODO: determine proper value and type here
@@ -42,7 +42,7 @@ export function QueryType<Q extends SubQuery<any, any>>(
     validateTripleValue(_val: any) {
       return true; // TODO
     },
-    convertJsonValueToJS(val) {
+    convertDBValueToJS(val) {
       return JSON.parse(val) as Q;
     },
   };

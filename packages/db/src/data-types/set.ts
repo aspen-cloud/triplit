@@ -2,7 +2,7 @@ import {
   InvalidSchemaOptionsError,
   InvalidSetTypeError,
   NotImplementedError,
-  SerializingError,
+  DBSerializationError,
 } from '../errors.js';
 import { TimestampType, ValueType } from './base.js';
 import { CollectionInterface } from './collection.js';
@@ -42,9 +42,9 @@ export function SetType<Items extends ValueType<any>>(
         items: this.items.toJSON() as ValueAttributeDefinition,
       };
     },
-    convertInputToJson(val: Set<any>) {
+    convertInputToDBValue(val: Set<any>) {
       if (!this.validateInput(val))
-        throw new SerializingError(`set<${items.type}>`, val);
+        throw new DBSerializationError(`set<${items.type}>`, val);
       return [...val.values()].reduce((acc, key) => {
         return { ...acc, [key as string]: true };
       }, {});
@@ -52,7 +52,7 @@ export function SetType<Items extends ValueType<any>>(
     default() {
       return {};
     },
-    convertJsonValueToJS(val) {
+    convertDBValueToJS(val) {
       return new Set(
         Object.entries(val)
           .filter(([_k, v]) => !!v)
@@ -81,7 +81,7 @@ class SetUpdateProxy<T> {
     public schema: SetType<ValueType<any>>
   ) {}
   add(value: T) {
-    const serializedValue = this.schema.items.convertInputToJson(
+    const serializedValue = this.schema.items.convertInputToDBValue(
       // @ts-ignore
       value
     );
@@ -97,7 +97,7 @@ class SetUpdateProxy<T> {
     });
   }
   delete(value: T) {
-    const serializedValue = this.schema.items.convertInputToJson(
+    const serializedValue = this.schema.items.convertInputToDBValue(
       // @ts-ignore
       value
     );
@@ -134,7 +134,7 @@ export function createSetProxy<T>(
   const set = new Set(
     [...stringSet].map(
       (v) =>
-        schema.items.convertJsonValueToJS(
+        schema.items.convertDBValueToJS(
           // @ts-ignore
           v
         ) as T

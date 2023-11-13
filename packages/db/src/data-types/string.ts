@@ -3,7 +3,7 @@ import { Nullable, calcDefaultValue, userTypeOptionsAreValid } from './base.js';
 import { UserTypeOptions } from './serialization.js';
 import { TypeWithOptions, ValueInterface } from './value.js';
 import { Value } from '@sinclair/typebox/value';
-import { InvalidTypeOptionsError, SerializingError } from '../errors.js';
+import { InvalidTypeOptionsError, DBSerializationError } from '../errors.js';
 
 const STRING_OPERATORS = ['=', '!=', 'like', 'nlike'] as const;
 type StringOperators = typeof STRING_OPERATORS;
@@ -30,11 +30,12 @@ export function StringType<TypeOptions extends UserTypeOptions = {}>(
     toJSON() {
       return { type: this.type, options: this.options };
     },
-    convertInputToJson(val) {
-      if (!this.validateInput(val)) throw new SerializingError('string', val);
+    convertInputToDBValue(val) {
+      if (!this.validateInput(val))
+        throw new DBSerializationError('string', val);
       return val;
     },
-    convertJsonValueToJS(val) {
+    convertDBValueToJS(val) {
       return val;
     },
     default() {

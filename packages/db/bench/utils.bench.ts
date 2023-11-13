@@ -1,5 +1,5 @@
 import { describe, bench } from 'vitest';
-import { objectToTuples } from '../src/utils.js';
+import { dbDocumentToTuples } from '../src/utils.js';
 
 const testObject = {
   name: 'test',
@@ -14,7 +14,7 @@ let arr = [];
 
 describe('Document performance', () => {
   bench('object to tuples', () => {
-    objectToTuples(testObject);
+    dbDocumentToTuples(testObject);
   });
 
   bench('json stringify', () => {

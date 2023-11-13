@@ -12,7 +12,7 @@ import {
   InvalidFilterError,
   DBTransaction,
   schemaToJSON,
-  SerializingError,
+  DBSerializationError,
   InvalidInternalEntityIdError,
   InvalidEntityIdError,
   EntityNotFoundError,
@@ -534,7 +534,7 @@ describe('Set operations', () => {
         name: 'Alice',
         friends: 123,
       })
-    ).rejects.toThrowError(SerializingError);
+    ).rejects.toThrowError(DBSerializationError);
   });
 
   it('cannot insert a set with non-matching values', async () => {
@@ -545,7 +545,7 @@ describe('Set operations', () => {
         name: 'Alice',
         friends: new Set([123]),
       })
-    ).rejects.toThrowError(SerializingError);
+    ).rejects.toThrowError(DBSerializationError);
   });
 
   it('cannot insert a set with null', async () => {
@@ -556,7 +556,7 @@ describe('Set operations', () => {
         name: 'Alice',
         friends: new Set(['Bob', null]),
       })
-    ).rejects.toThrowError(SerializingError);
+    ).rejects.toThrowError(DBSerializationError);
   });
 
   it('can add to set', async () => {
@@ -712,7 +712,7 @@ describe('Set operations', () => {
       db.update('Users', 'user-1', async (entity) => {
         entity.friends = 123;
       })
-    ).rejects.toThrowError(SerializingError);
+    ).rejects.toThrowError(DBSerializationError);
   });
 
   it('cannot add the wrong type to a set', async () => {
@@ -722,7 +722,7 @@ describe('Set operations', () => {
       db.update('Users', 'user-1', async (entity) => {
         entity.friends.add(123);
       })
-    ).rejects.toThrowError(SerializingError);
+    ).rejects.toThrowError(DBSerializationError);
   });
 
   it('cannot add null to a set', async () => {
@@ -734,7 +734,7 @@ describe('Set operations', () => {
       db.update('Users', 'user-1', async (entity) => {
         entity.friends.add(null);
       })
-    ).rejects.toThrowError(SerializingError);
+    ).rejects.toThrowError(DBSerializationError);
   });
 
   it('can create sets with different types', async () => {
@@ -1080,7 +1080,7 @@ describe('record operations', () => {
           },
         };
       })
-    ).rejects.toThrowError(SerializingError);
+    ).rejects.toThrowError(DBSerializationError);
   });
 
   it('schemaful: cannot update a record with an invalid property', async () => {
@@ -1098,7 +1098,7 @@ describe('record operations', () => {
           },
         };
       })
-    ).rejects.toThrowError(SerializingError);
+    ).rejects.toThrowError(DBSerializationError);
   });
 
   it('schemaful: deleting an attiribute throws an error', async () => {
@@ -1123,7 +1123,7 @@ describe('record operations', () => {
       db.update('test', 'alice', async (entity) => {
         entity.data = 123;
       })
-    ).rejects.toThrowError(SerializingError);
+    ).rejects.toThrowError(DBSerializationError);
   });
 });
 
@@ -3942,7 +3942,7 @@ describe('Nested Properties', () => {
             state: 'CA',
           },
         })
-      ).rejects.toThrowError(SerializingError);
+      ).rejects.toThrowError(DBSerializationError);
 
       await expect(
         db.insert('Businesses', {
@@ -3956,7 +3956,7 @@ describe('Nested Properties', () => {
             state: 'CA',
           },
         })
-      ).rejects.toThrowError(SerializingError);
+      ).rejects.toThrowError(DBSerializationError);
     });
 
     it('can query based on nested property', async () => {
@@ -4048,7 +4048,7 @@ describe('Nullable properties in a schema', () => {
         created_at: null,
         deleted_at: null,
       })
-    ).rejects.toThrowError(SerializingError);
+    ).rejects.toThrowError(DBSerializationError);
   });
   it('can update with nullable properties', async () => {
     const db = new DB({
@@ -4088,7 +4088,7 @@ describe('Nullable properties in a schema', () => {
         await db.update('Todos', 'todo-1', async (entity) => {
           entity.created_at = null;
         })
-    ).rejects.toThrowError(SerializingError);
+    ).rejects.toThrowError(DBSerializationError);
   });
 });
 

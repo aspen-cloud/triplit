@@ -44,15 +44,6 @@ export type DataType =
   | RecordType<{ [k: string]: DataType }>
   | QueryType<any>;
 
-export type RegisterTypeFromBaseType<T extends ValueSchemaType> = TTuple<
-  [T, typeof Timestamp]
-> & {
-  'x-crdt-type': 'Register';
-  'x-serialized-type': {
-    type: T['type'] | SerializedValueOverrides;
-    options: UserTypeOptions;
-  };
-};
 export const Nullable = <T extends ValueSchemaType>(type: T) =>
   Type.Union([type, Type.Null()]);
 
@@ -64,26 +55,6 @@ export const Timestamp = Type.Readonly(
   Type.Tuple([Type.Number(), Type.String()])
 );
 export type TimestampType = Static<typeof Timestamp>;
-
-export function Register<T extends ValueSchemaType>(
-  type: T,
-  options: UserTypeOptions = {} as UserTypeOptions,
-  typeOverride?: SerializedValueOverrides
-) {
-  if (!userTypeOptionsAreValid(options)) {
-    throw new InvalidTypeOptionsError(options);
-  }
-
-  const typeHelper = typeFromJSON({
-    type: typeOverride || type.type,
-    options,
-  });
-
-  return Type.Tuple([options.nullable ? Nullable(type) : type, Timestamp], {
-    'x-serialized-type': typeHelper?.toJSON(),
-    'x-crdt-type': 'Register',
-  }) as RegisterTypeFromBaseType<T>;
-}
 
 // NOTE: default values must be serializable
 export function calcDefaultValue(options: UserTypeOptions) {
@@ -112,7 +83,7 @@ export function typeFromJSON(serializedType?: AttributeDefinition): DataType;
 export function typeFromJSON(serializedType?: AttributeDefinition): DataType {
   if (!serializedType)
     throw new TypeJSONParseError(
-      'Cannot parse serialized type. It is undefined.'
+      'Failed to parse this schema definition from its serialized form because it is undefined.'
     );
   switch (serializedType.type) {
     case 'string':
