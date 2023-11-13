@@ -6,7 +6,7 @@ import DB, {
   hashSchemaJSON,
   schemaToJSON,
   stripCollectionFromId,
-  timestampedObjectToPlainObject,
+  convertEntityToJS,
 } from '@triplit/db';
 import {
   ClientFetchResult,
@@ -485,13 +485,12 @@ export class SyncEngine {
   async fetchQuery<CQ extends ClientQuery<any, any>>(query: CQ) {
     try {
       // Simpler to serialize triples and reconstruct entities on the client
-      // TODO: set up a method that handles this (triples --> friendly entity)
       const triples = await this.getRemoteTriples(query);
       const entities = constructEntities(triples);
       return new Map(
         [...entities].map(([id, entity]) => [
           stripCollectionFromId(id),
-          timestampedObjectToPlainObject(entity),
+          convertEntityToJS(entity),
         ])
       ) as ClientFetchResult<CQ>;
     } catch (e) {

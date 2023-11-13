@@ -45,6 +45,24 @@ export class TriplitError extends Error {
 }
 
 // DB Errors
+export class InvalidCollectionNameError extends TriplitError {
+  constructor(collectionName: string, ...args: any[]) {
+    super(...args);
+    this.name = 'InvalidCollectionNameError';
+    this.message = `${collectionName} is not a valid collection name.`;
+    this.status = STATUS_CODES['Bad Request'];
+  }
+}
+
+export class InvalidInsertDocumentError extends TriplitError {
+  constructor(...args: any[]) {
+    super(...args);
+    this.name = 'InvalidInsertDocumentError';
+    this.message = `The document you are attempting to insert is invalid.`;
+    this.status = STATUS_CODES['Bad Request'];
+  }
+}
+
 export class InvalidInternalEntityIdError extends TriplitError {
   constructor(entityId: string, ...args: any[]) {
     super(...args);

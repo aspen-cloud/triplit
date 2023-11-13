@@ -4,6 +4,8 @@ import {
   schemaToJSON,
   hashSchemaJSON,
   CollectionQuery,
+  Attribute,
+  Value,
 } from '@triplit/db';
 import {
   QuerySyncError,
@@ -384,32 +386,84 @@ export class Session {
     }
   }
 
+  async fetch(query: CollectionQuery<any, any>) {
+    if (!hasAdminAccess(this.token)) return NotAdminResponse();
+    try {
+      return ServerResponse(200, {
+        result: [...(await this.db.fetch(query)).entries()],
+      });
+    } catch (e) {
+      return errorResponse(e as Error);
+    }
+  }
+
   async insert(collectionName: string, entity: any) {
     if (!hasAdminAccess(this.token)) return NotAdminResponse();
     try {
-      await this.db.insert(collectionName, entity);
-      return ServerResponse(200);
+      const txResult = await this.db.insert(collectionName, entity);
+      return ServerResponse(200, txResult);
     } catch (e) {
-      if (e instanceof TriplitError) {
-        return ServerResponse(e.status, {
-          message: e.message,
-          context: e.contextMessage,
-        });
-      }
-      return ServerResponse(500, {
-        message: 'Could not insert entity',
-        context: 'Unknown server error',
+      return errorResponse(e, {
+        fallbackMessage: 'Could not insert entity. An unknown error occured.',
+      });
+    }
+  }
+
+  async update(
+    collectionName: string,
+    entityId: string,
+    patches: (['set', Attribute, Value] | ['delete', Attribute])[]
+  ) {
+    if (!hasAdminAccess(this.token)) return NotAdminResponse();
+    try {
+      const txResult = await this.db.update(
+        collectionName,
+        entityId,
+        (entity) => {
+          for (const patch of patches) {
+            const path = patch[1];
+            let current = entity;
+            for (let i = 0; i < path.length - 1; i++) {
+              current = current[path[i]];
+            }
+            if (patch[0] === 'delete') {
+              delete current[path[path.length - 1]];
+            } else if (patch[0] === 'set') {
+              current[path[path.length - 1]] = patch[2];
+            } else {
+              throw new TriplitError(`Invalid patch type: ${patch[0]}`);
+            }
+          }
+        }
+      );
+      return ServerResponse(200, txResult);
+    } catch (e) {
+      return errorResponse(e, {
+        fallbackMessage: 'Could not delete entity. An unknown error occured.',
+      });
+    }
+  }
+
+  async delete(collectionName: string, entityId: string) {
+    if (!hasAdminAccess(this.token)) return NotAdminResponse();
+    try {
+      const txResult = await this.db.delete(collectionName, entityId);
+      return ServerResponse(200, txResult);
+    } catch (e) {
+      return errorResponse(e, {
+        fallbackMessage: 'Could not delete entity. An unknown error occured.',
       });
     }
   }
 }
 
-function errorResponse(e: Error) {
+function errorResponse(e: unknown, options?: { fallbackMessage?: string }) {
   if (e instanceof TriplitError) {
     return ServerResponse(e.status, e.toJSON());
   }
   const generalError = new TriplitError(
-    'An unknown error occured processing your request'
+    options?.fallbackMessage ??
+      'An unknown error occured processing your request.'
   );
   console.log(e);
   return ServerResponse(generalError.status, generalError.toJSON());

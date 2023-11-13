@@ -18,6 +18,8 @@ import {
   EntityNotFoundError,
   InvalidMigrationOperationError,
   InvalidOperationError,
+  InvalidCollectionNameError,
+  InvalidInsertDocumentError,
 } from '../src';
 import { Models } from '../src/schema.js';
 import { classes, students, departments } from './sample_data/school.js';
@@ -356,6 +358,33 @@ describe('Database API', () => {
       expect(result.txId).toBeTruthy();
       expect(result.output).toBe(undefined);
     }
+  });
+
+  it('insert throws an error if no collection name is provided', async () => {
+    const db = new DB();
+    await expect(
+      db.insert(undefined, { name: 'John Doe', id: '1' })
+    ).rejects.toThrowError(InvalidCollectionNameError);
+    await expect(
+      db.insert('', { name: 'John Doe', id: '1' })
+    ).rejects.toThrowError(InvalidCollectionNameError);
+  });
+
+  it('insert throws an error if no document is provided', async () => {
+    const db = new DB();
+    await expect(db.insert('Student', undefined)).rejects.toThrowError(
+      InvalidInsertDocumentError
+    );
+  });
+
+  it('insert throws an error if the document is not an object', async () => {
+    const db = new DB();
+    await expect(db.insert('Student', undefined)).rejects.toThrowError(
+      InvalidInsertDocumentError
+    );
+    await expect(db.insert('Student', 123)).rejects.toThrowError(
+      InvalidInsertDocumentError
+    );
   });
 });
 

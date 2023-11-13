@@ -33,6 +33,8 @@ import CollectionQueryBuilder, {
 } from './collection-query.js';
 import {
   EntityNotFoundError,
+  InvalidCollectionNameError,
+  InvalidInsertDocumentError,
   InvalidOperationError,
   InvalidTripleStoreValueError,
   UnrecognizedPropertyInUpdateError,
@@ -267,14 +269,24 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
     collectionName: CN,
     doc: InsertTypeFromModel<ModelFromModels<M, CN>>
   ) {
+    if (!collectionName)
+      throw new InvalidCollectionNameError(
+        collectionName,
+        'Collection name must be defined'
+      );
+    if (!doc)
+      throw new InvalidInsertDocumentError(
+        'The document being inserted is undefined'
+      );
+    if (typeof doc !== 'object' || Array.isArray(doc))
+      throw new InvalidInsertDocumentError(
+        `The document being inserted must be an object.`
+      );
+
     const collectionSchema = await getCollectionSchema(this, collectionName);
 
     // prep the doc for insert to db
-    const dbDoc = clientInputToDbModel(
-      doc,
-      // @ts-expect-error Should figure out the right way to merge ModelFromModels and CollectionFromModels['schema']
-      collectionSchema?.schema
-    );
+    const dbDoc = clientInputToDbModel(doc, collectionSchema?.schema);
 
     const defaultValues = collectionSchema
       ? getDefaultValuesForCollection(collectionSchema)

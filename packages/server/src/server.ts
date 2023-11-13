@@ -177,42 +177,50 @@ export function createServer(options?: ServerOptions) {
     const server = getServer(process.env.PROJECT_ID!);
     const session = server.createSession(req.token!);
     const { statusCode, payload } = await session.queryTriples(req.body);
-    res.json(payload).status(statusCode);
+    res.status(statusCode).json(payload);
   });
 
   authenticated.post('/clear', async (req, res) => {
     const server = getServer(process.env.PROJECT_ID!);
     const session = server.createSession(req.token!);
     const { statusCode, payload } = await session.clearDB(req.body);
-    res.json(payload).status(statusCode);
+    res.status(statusCode).json(payload);
   });
 
   authenticated.get('/migration/status', async (req, res) => {
     const server = getServer(process.env.PROJECT_ID!);
     const session = server.createSession(req.token!);
     const { statusCode, payload } = await session.getMigrationStatus();
-    res.json(payload).status(statusCode);
+    res.status(statusCode).json(payload);
   });
 
   authenticated.post('/migration/apply', async (req, res) => {
     const server = getServer(process.env.PROJECT_ID!);
     const session = server.createSession(req.token!);
     const { statusCode, payload } = await session.applyMigration(req.body);
-    res.json(payload).status(statusCode);
+    res.status(statusCode).json(payload);
   });
 
   authenticated.get('/stats', async (req, res) => {
     const server = getServer(process.env.PROJECT_ID!);
     const session = server.createSession(req.token!);
     const { statusCode, payload } = await session.getCollectionStats();
-    res.json(payload).status(statusCode);
+    res.status(statusCode).json(payload);
   });
 
   authenticated.get('/schema', async (req, res) => {
     const server = getServer(process.env.PROJECT_ID!);
     const session = server.createSession(req.token!);
     const { statusCode, payload } = await session.getSchema(req.query);
-    res.json(payload).status(statusCode);
+    res.status(statusCode).json(payload);
+  });
+
+  authenticated.post('/fetch', async (req, res) => {
+    const server = getServer(process.env.PROJECT_ID!);
+    const session = server.createSession(req.token!);
+    const { query } = req.body;
+    const { statusCode, payload } = await session.fetch(query);
+    res.status(statusCode).json(payload);
   });
 
   authenticated.post('/insert', async (req, res) => {
@@ -223,7 +231,30 @@ export function createServer(options?: ServerOptions) {
       collectionName,
       entity
     );
-    return res.json(payload).status(statusCode);
+    res.status(statusCode).json(payload);
+  });
+
+  authenticated.post('/update', async (req, res) => {
+    const server = getServer(process.env.PROJECT_ID!);
+    const session = server.createSession(req.token!);
+    const { collectionName, entityId, patches } = req.body;
+    const { statusCode, payload } = await session.update(
+      collectionName,
+      entityId,
+      patches
+    );
+    res.status(statusCode).json(payload);
+  });
+
+  authenticated.post('/delete', async (req, res) => {
+    const server = getServer(process.env.PROJECT_ID!);
+    const session = server.createSession(req.token!);
+    const { collectionName, entityId } = req.body;
+    const { statusCode, payload } = await session.delete(
+      collectionName,
+      entityId
+    );
+    res.status(statusCode).json(payload);
   });
 
   authenticated.post('/message', async (req, res) => {

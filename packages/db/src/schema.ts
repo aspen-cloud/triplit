@@ -357,6 +357,7 @@ export function getDefaultValuesForCollection(
 // Using this hash as a way to check if schemas mismatch since its easy to send as a url param
 export function hashSchemaJSON(collections: CollectionsDefinition | undefined) {
   if (!collections) return undefined;
+  // TODO: dont use this method if avoidable...trying to deprecate
   const tuples = objectToTuples(collections);
   const sortedTriplesStr = tuples
     .map((t) => JSON.stringify(t))
