@@ -12,7 +12,7 @@ export class MemoryClock implements Clock {
   }
 
   async assignToStore(store: TripleStore): Promise<void> {
-    const maxTs = await store.findMaxTimestamp(this.clientId);
+    const maxTs = await store.findMaxClientTimestamp(this.clientId);
     if (maxTs) this.setTick(maxTs[0]);
     store.onInsert((triples) => {
       triples.forEach(({ timestamp }) => {

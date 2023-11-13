@@ -142,7 +142,7 @@ export interface TripleStoreApi {
     collection: string,
     direction?: 'ASC' | 'DESC'
   ): Promise<TripleRow[]>;
-  findMaxTimestamp(clientId: string): Promise<Timestamp | undefined>;
+  findMaxClientTimestamp(clientId: string): Promise<Timestamp | undefined>;
   findByClientTimestamp(
     clientId: string,
     scanDirection: 'lt' | 'lte' | 'gt' | 'gte',
@@ -294,8 +294,8 @@ export class TripleStoreTxOperator implements TripleStoreApi {
     return findByAttribute(this.tupleOperator, attribute);
   }
 
-  findMaxTimestamp(clientId: string) {
-    return findMaxTimestamp(this.tupleOperator, clientId);
+  findMaxClientTimestamp(clientId: string) {
+    return findMaxClientTimestamp(this.tupleOperator, clientId);
   }
 
   findByClientTimestamp(
@@ -570,8 +570,8 @@ export class TripleStoreTransaction implements TripleStoreApi {
     return this.operator.findByCollection(collection, direction);
   }
 
-  findMaxTimestamp(clientId: string): Promise<Timestamp | undefined> {
-    return this.operator.findMaxTimestamp(clientId);
+  findMaxClientTimestamp(clientId: string): Promise<Timestamp | undefined> {
+    return this.operator.findMaxClientTimestamp(clientId);
   }
 
   findByClientTimestamp(
@@ -815,6 +815,10 @@ export class TripleStore implements TripleStoreApi {
       | undefined
   ) {
     return findValuesInRange(this.tupleStore, attribute, constraints);
+  }
+
+  findMaxClientTimestamp(clientId: string) {
+    return findMaxClientTimestamp(this.tupleStore, clientId);
   }
 
   findMaxTimestamp(clientId: string) {
@@ -1196,7 +1200,7 @@ async function findByClientTimestamp(
   );
 }
 
-async function findMaxTimestamp(
+async function findMaxClientTimestamp(
   tx: MultiTupleStoreOrTransaction,
   clientId: string
 ): Promise<Timestamp | undefined> {

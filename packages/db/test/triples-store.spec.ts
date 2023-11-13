@@ -864,9 +864,9 @@ describe('timestamp index', () => {
       expired: false,
     });
 
-    expect(await store.findMaxTimestamp('A')).toEqual([4, 'A']);
-    expect(await store.findMaxTimestamp('B')).toEqual([5, 'B']);
-    expect(await store.findMaxTimestamp('C')).toEqual(undefined);
+    expect(await store.findMaxClientTimestamp('A')).toEqual([4, 'A']);
+    expect(await store.findMaxClientTimestamp('B')).toEqual([5, 'B']);
+    expect(await store.findMaxClientTimestamp('C')).toEqual(undefined);
   });
   it('equal to queries', async () => {
     const store = new TripleStore({ storage, tenantId: 'TEST' });

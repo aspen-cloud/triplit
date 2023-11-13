@@ -1,6 +1,6 @@
 import WS, { WebSocketServer } from 'ws';
 import express from 'express';
-import { DB, DBConfig, TriplitError } from '@triplit/db';
+import { DB, DBConfig, DurableClock, TriplitError } from '@triplit/db';
 import { MemoryBTreeStorage as MemoryStorage } from '@triplit/db/storage/memory-btree';
 import { SQLiteTupleStorage as SqliteStorage } from '@triplit/db/storage/sqlite';
 import {
@@ -64,6 +64,7 @@ export function createServer(options?: ServerOptions) {
       new DB({
         source: dbSource,
         tenantId: projectId,
+        clock: new DurableClock(),
         ...(options?.dbOptions ?? {}),
       })
     );

@@ -7,15 +7,18 @@ import { Clock } from './clock.js';
 // Keep track of the clock in the database metadata
 export class DurableClock implements Clock {
   private clock?: Timestamp;
-  private scope: string;
+  private scope?: string;
   private scopedStore?: TripleStore;
 
   private clockReady: Promise<void>;
   private readyCallbacks?: [() => void, (reason?: any) => void];
   private assigned?: boolean;
+
+  // THIS IS ONLY USED FOR INITIALIZING THE CLOCK
+  // MANUAL ASSIGNMENTS ONLY HAVE USE CASES IN TESTING
   private clientId: string;
 
-  constructor(clockScope: string, clientId?: string) {
+  constructor(clockScope?: string, clientId?: string) {
     this.scope = clockScope;
     this.clientId = clientId || nanoid();
     this.clockReady = new Promise(async (res, rej) => {
@@ -30,7 +33,9 @@ export class DurableClock implements Clock {
     this.assigned = true;
     const [res, rej] = this.readyCallbacks!;
     try {
-      this.scopedStore = store.setStorageScope([this.scope]);
+      this.scopedStore = this.scope
+        ? store.setStorageScope([this.scope])
+        : store;
 
       // Initialize in memory clock with current stored clock or create a new one
       const clockTuples = await this.scopedStore.readMetadataTuples('clock');
