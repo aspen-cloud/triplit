@@ -45,13 +45,9 @@ export default function CollectionQueryBuilder<
   M extends Models<any, any> | undefined,
   CN extends CollectionNameFromModels<M>
 >(collectionName: CN, params?: Query<ModelFromModels<M, CN>>) {
-  // TODO fixup ts so that select/where are actually optional
   const query: CollectionQuery<M, CN> = {
     collectionName,
     ...params,
-    where: params?.where ?? [],
-    select: params?.select ?? [],
-    vars: params?.vars ?? {},
   };
   return Builder(query, {
     protectedFields: ['collectionName'],
@@ -200,7 +196,9 @@ export async function fetch<
     })
     // filter out deleted
     .filter(async ([_id, { entity }]) => !isTimestampedEntityDeleted(entity))
+    // Apply where filters
     .filter(async ([id, { entity }]) => {
+      if (!where) return true;
       const subQueries = where.filter(
         (filter) => 'exists' in filter
       ) as SubQueryFilter<M>[];
@@ -322,6 +320,7 @@ export function doesEntityObjMatchWhere<Q extends CollectionQuery<any, any>>(
   where: Q['where'],
   schema?: CollectionQuerySchema<Q>
 ) {
+  if (!where) return true;
   const basicStatements = where.filter(
     (statement): statement is FilterStatement<Model<any>> =>
       statement instanceof Array
@@ -657,7 +656,10 @@ export function subscribeResultsAndTriples<
       const unsub = tripleStore.onWrite(async ({ inserts, deletes }) => {
         try {
           // Handle queries with nested queries as a special case for now
-          if (someFilterStatements(where, (filter) => 'exists' in filter)) {
+          if (
+            where &&
+            someFilterStatements(where, (filter) => 'exists' in filter)
+          ) {
             const fetchResult = await fetch<M, Q>(tripleStore, query, {
               includeTriples: true,
               schema,

@@ -101,8 +101,8 @@ export type QueryOrder<M extends Model<any> | undefined> = [
 ];
 
 export interface Query<M extends Model<any> | undefined> {
-  where: QueryWhere<M>;
-  select: (M extends Model<any> ? RecordPaths<ReadModelFromModel<M>> : Path)[];
+  where?: QueryWhere<M>;
+  select?: (M extends Model<any> ? RecordPaths<ReadModelFromModel<M>> : Path)[];
   order?: QueryOrder<M>[];
   limit?: number;
   after?: ValueCursor;

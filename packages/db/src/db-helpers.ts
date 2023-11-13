@@ -93,10 +93,9 @@ export function replaceVariablesInQuery<
   Q extends Pick<CollectionQuery<any, any>, 'where' | 'entityId' | 'vars'>
 >(query: Q): Q {
   // const variables = { ...(db.variables ?? {}), ...(query.vars ?? {}) };
-  const where = replaceVariablesInFilterStatements(
-    query.where,
-    query.vars ?? {}
-  );
+  const where = query.where
+    ? replaceVariablesInFilterStatements(query.where, query.vars ?? {})
+    : undefined;
   const entityId = query.entityId
     ? replaceVariable(query.entityId, query.vars ?? {})
     : undefined;
@@ -267,7 +266,7 @@ export function addReadRulesToQuery<
 >(query: Q, collection: CollectionFromModels<M>): Q {
   if (collection?.rules?.read) {
     const updatedWhere = [
-      ...query.where,
+      ...(query.where ?? []),
       ...Object.values(collection.rules.read).flatMap((rule) => rule.filter),
     ];
     return { ...query, where: updatedWhere };
@@ -288,12 +287,15 @@ export async function prepareQuery<
     fetchQuery = addReadRulesToQuery<M, Q>(fetchQuery, collectionSchema);
   }
   fetchQuery.vars = { ...tx.variables, ...(fetchQuery.vars ?? {}) };
-  fetchQuery.where = mapFilterStatements(fetchQuery.where, (statement) => {
-    if (!Array.isArray(statement)) return statement;
-    const [prop, op, val] = statement;
-    // TODO: should be integrated into type system
-    return [prop, op, val instanceof Date ? val.toISOString() : val];
-  });
+  fetchQuery.where = mapFilterStatements(
+    fetchQuery.where ?? [],
+    (statement) => {
+      if (!Array.isArray(statement)) return statement;
+      const [prop, op, val] = statement;
+      // TODO: should be integrated into type system
+      return [prop, op, val instanceof Date ? val.toISOString() : val];
+    }
+  );
   if (collectionSchema) {
     fetchQuery.where = mapFilterStatements(fetchQuery.where, (statement) => {
       if (!Array.isArray(statement)) return statement;

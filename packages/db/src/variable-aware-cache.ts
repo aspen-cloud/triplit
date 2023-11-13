@@ -30,9 +30,12 @@ export class VariableAwareCache<Schema extends Models<any, any>> {
     Q extends CollectionQuery<any, any>
   >(query: Q, model?: ModelFromModels<M> | undefined) {
     // if (!model) return false;
-    if (query.where.some((f) => !(f instanceof Array) && !('exists' in f)))
+    if (
+      query.where &&
+      query.where.some((f) => !(f instanceof Array) && !('exists' in f))
+    )
       return false;
-    const statements = mapFilterStatements(query.where, (f) => f).filter(
+    const statements = mapFilterStatements(query.where ?? [], (f) => f).filter(
       isFilterStatement
     ) as FilterStatement<ModelFromModels<M>>[];
     const variableStatements: FilterStatement<ModelFromModels<M>>[] =
@@ -175,15 +178,17 @@ export class VariableAwareCache<Schema extends Models<any, any>> {
     const variableFilters: FilterStatement<
       CollectionQuerySchema<Q> | undefined
     >[] = [];
-    const nonVariableFilters = query.where.filter((filter) => {
-      if (!(filter instanceof Array)) return true;
-      const [prop, _op, val] = filter;
-      if (typeof val === 'string' && val.startsWith('$')) {
-        variableFilters.push([prop as string, _op, val]);
-        return false;
-      }
-      return true;
-    });
+    const nonVariableFilters = query.where
+      ? query.where.filter((filter) => {
+          if (!(filter instanceof Array)) return true;
+          const [prop, _op, val] = filter;
+          if (typeof val === 'string' && val.startsWith('$')) {
+            variableFilters.push([prop as string, _op, val]);
+            return false;
+          }
+          return true;
+        })
+      : undefined;
     return {
       views: [
         {
