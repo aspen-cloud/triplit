@@ -1,4 +1,4 @@
-import { Check, Copy } from '@phosphor-icons/react';
+import { Check, Copy } from 'lucide-react';
 import { Tooltip } from './tooltip-simple';
 import { Button } from './button';
 import { useState } from 'react';

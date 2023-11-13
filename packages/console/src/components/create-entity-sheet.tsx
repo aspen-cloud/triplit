@@ -5,17 +5,9 @@ import {
 } from '@triplit/db';
 import { useEffect, useMemo, useState } from 'react';
 import '@glideapps/glide-data-grid/dist/index.css';
-import { SetInput } from '@/components/ui/set-input';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Select } from '@/components/ui/simple-select';
+
 import { randomId } from '@mantine/hooks';
 import { useForm } from '@mantine/form';
-import { CloseButton } from '@/components/ui/close-button';
-import { FormField } from '@/components/ui/form-field';
-import { Combobox } from '@/components/ui/combobox';
-import { Textarea } from '@/components/ui/textarea';
-import { Checkbox } from '@/components/ui/checkbox';
 import {
   CollectionTypeKeys,
   RecordAttributeDefinition,
@@ -23,6 +15,15 @@ import {
 } from '@triplit/db/src/data-types/serialization.js';
 import { Collection } from '@triplit/db/src/schema.js';
 import {
+  SetInput,
+  Button,
+  Input,
+  Select,
+  CloseButton,
+  FormField,
+  Combobox,
+  Textarea,
+  Checkbox,
   Sheet,
   SheetContent,
   SheetDescription,
@@ -30,8 +31,8 @@ import {
   SheetHeader,
   SheetTitle,
   SheetTrigger,
-} from '@/components/ui/sheet';
-import { Code } from '@/components/ui/code';
+  Code,
+} from '@triplit/ui';
 import { TriplitClient } from '@triplit/client';
 import { Plus } from 'lucide-react';
 

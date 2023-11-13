@@ -1,6 +1,4 @@
-import { Button } from '@/components/ui/button';
-import { PasswordInput } from '@/components/ui/password-input';
-import { Input } from '@/components/ui/input';
+import { Button, PasswordInput, Input, FormField } from '@triplit/ui';
 import { useForm } from '@mantine/form';
 import { useCallback, useEffect, useState } from 'react';
 import {
@@ -9,7 +7,6 @@ import {
 } from '../utils/server';
 import { consoleClient, formConsolePrimaryKey } from '../../triplit/client';
 import { TokenReadError } from '@triplit/server-core';
-import { FormField } from '@/components/ui/form-field';
 
 export interface ImportProjectFormValues {
   token: string;

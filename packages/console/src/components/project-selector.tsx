@@ -1,4 +1,4 @@
-import { Button } from '@/components/ui/button';
+import { Button } from '@triplit/ui';
 import { DownloadSimple } from '@phosphor-icons/react';
 import { useMemo } from 'react';
 import { useProjectState } from './project-provider';

@@ -11,7 +11,7 @@ import {
   TriplitColumnHeader,
   RelationCell,
 } from './data-table';
-import { Button } from '@/components/ui/button';
+import { Button, Checkbox, Tooltip } from '@triplit/ui';
 import { Plus } from 'lucide-react';
 import {
   SchemaAttributeSheet,
@@ -23,8 +23,6 @@ import { DeleteAttributeDialog } from './delete-attribute-dialog';
 import { atom, useAtom } from 'jotai';
 import { FiltersPopover } from './filters-popover';
 import { OrderPopover } from './order-popover';
-import { Checkbox } from '../../@/components/ui/checkbox';
-import { Tooltip } from '../../@/components/ui/tooltip-simple';
 import { useSelectedCollection } from '../hooks/useSelectedCollection';
 import { SchemaDefinition } from '../../../db/src/data-types/serialization';
 import useUrlState from '@ahooksjs/use-url-state';

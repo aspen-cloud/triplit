@@ -1,10 +1,10 @@
-import { Button } from '@/components/ui/button';
 import {
+  Button,
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+} from '@triplit/ui';
 import { CaretDown, PencilSimple } from '@phosphor-icons/react';
 import { TrashSimple } from '@phosphor-icons/react/dist/ssr';
 

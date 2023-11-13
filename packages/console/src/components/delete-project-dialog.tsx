@@ -7,8 +7,8 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
-import { Code } from '@/components/ui/code';
+} from '@triplit/ui';
+import { Code } from '@triplit/ui';
 import { consoleClient } from 'triplit/client';
 import { ComponentProps } from 'react';
 import { useProjectState } from './project-provider';

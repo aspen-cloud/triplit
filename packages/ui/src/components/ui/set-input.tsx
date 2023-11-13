@@ -2,7 +2,7 @@ import { Input } from './input';
 import { Button } from './button';
 import { useState } from 'react';
 import { cn } from '../../lib/utils';
-import { X } from '@phosphor-icons/react';
+import { X } from 'lucide-react';
 
 type SetInputProps<T> = {
   className?: T;

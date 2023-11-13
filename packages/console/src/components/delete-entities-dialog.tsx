@@ -1,5 +1,7 @@
 import { TriplitClient } from '@triplit/client';
 import {
+  Code,
+  Button,
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -9,11 +11,9 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
-} from '@/components/ui/alert-dialog';
-import { Code } from '@/components/ui/code';
+} from '@triplit/ui';
 import { useState } from 'react';
 import { consoleClient } from 'triplit/client.js';
-import { Button } from '@/components/ui/button.js';
 import { Trash } from '@phosphor-icons/react';
 
 type DeleteEntitiesDialogProps = {

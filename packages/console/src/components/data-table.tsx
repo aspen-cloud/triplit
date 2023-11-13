@@ -5,6 +5,7 @@ import {
   useReactTable,
 } from '@tanstack/react-table';
 
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Table,
   TableBody,
@@ -12,29 +13,19 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table';
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Input } from '@/components/ui/input';
-
-import {
+  Input,
   Popover,
   PopoverTrigger,
   PopoverContent,
-} from '@/components/ui/popover';
-import {
   Select,
-  SelectValue,
-  SelectTrigger,
-  SelectContent,
-  SelectItem,
-} from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea';
-import { Tooltip } from '@/components/ui/tooltip-simple';
-import { cn } from '@/lib/utils';
-import { SetInput } from '@/components/ui/set-input';
+  Textarea,
+  Tooltip,
+  cn,
+  SetInput,
+  Button,
+  Code,
+} from '@triplit/ui';
 import { PARSE_FUNCS } from './create-entity-sheet';
-import { Button } from '@/components/ui/button';
-import { Code } from '@/components/ui/code';
 import { TriplitClient } from '@triplit/client';
 import { AttributeDefinition } from '@triplit/db';
 import {
@@ -583,19 +574,11 @@ function NumberInput(props: InputProps) {
 function BooleanInput(props: InputProps) {
   const { value, onChange } = props;
   return (
-    <Select value={value} onValueChange={(value) => onChange(value)}>
-      <SelectTrigger className="text-xs py-0">
-        <SelectValue>{value}</SelectValue>
-      </SelectTrigger>
-      <SelectContent className="text-xs">
-        <SelectItem className="text-xs" value={'false'}>
-          false
-        </SelectItem>
-        <SelectItem className="text-xs" value={'true'}>
-          true
-        </SelectItem>
-      </SelectContent>
-    </Select>
+    <Select
+      data={['false', 'true']}
+      value={value}
+      onValueChange={(value) => onChange(value)}
+    />
   );
 }
 

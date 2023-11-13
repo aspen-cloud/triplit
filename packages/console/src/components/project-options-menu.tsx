@@ -1,4 +1,3 @@
-import { Modal } from '@/components/ui/modal';
 import { ImportProjectForm, addProjectToConsole } from './import-project-form';
 import { ProjectInfoForm } from './project-info-form';
 import { ProjectSelector } from './project-selector';
@@ -7,12 +6,13 @@ import { useState } from 'react';
 import { useProjectState } from './project-provider';
 import { useProject } from '../hooks/useProject';
 import {
+  Modal,
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+} from '@triplit/ui';
 import { DeleteProjectDialog } from './delete-project-dialog';
 
 export function ProjectOptionsMenu({

@@ -1,5 +1,4 @@
-import { Input } from '@/components/ui/input';
-import { Checkbox } from '@/components/ui/checkbox';
+import { Input, Checkbox } from '@triplit/ui';
 
 export function CollectionSchemaDetail({ collectionSchema }) {
   const attributes = collectionSchema.schema?.properties;

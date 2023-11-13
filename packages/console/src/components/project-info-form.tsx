@@ -1,13 +1,14 @@
 import { SchemaType as DBConsoleSchemaType } from '../../triplit/schema';
 import { useEffect, useState, useCallback } from 'react';
-import '@glideapps/glide-data-grid/dist/index.css';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import { CopyButtonWithTooltip } from '@/components/ui/copy-button';
+import {
+  Input,
+  Button,
+  PasswordInput,
+  FormField,
+  CopyButtonWithTooltip,
+} from '@triplit/ui';
 import { UpdateTypeFromModel } from '@triplit/db';
 import { consoleClient } from '../../triplit/client';
-import { PasswordInput } from '@/components/ui/password-input';
-import { FormField } from '@/components/ui/form-field';
 
 export type Project = UpdateTypeFromModel<
   DBConsoleSchemaType['projects']['attributes']

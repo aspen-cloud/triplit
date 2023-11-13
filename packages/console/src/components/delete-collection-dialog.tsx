@@ -1,5 +1,6 @@
 import { TriplitClient } from '@triplit/client';
 import {
+  Code,
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -8,8 +9,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
-import { Code } from '@/components/ui/code';
+} from '@triplit/ui';
 import { useSelectedCollection } from 'src/hooks/useSelectedCollection.js';
 import { ComponentProps } from 'react';
 

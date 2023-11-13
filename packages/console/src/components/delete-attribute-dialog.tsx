@@ -1,4 +1,5 @@
 import {
+  Code,
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -7,8 +8,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
-import { Code } from '@/components/ui/code';
+} from '@triplit/ui';
 
 import { ComponentProps } from 'react';
 

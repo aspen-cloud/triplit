@@ -2,7 +2,7 @@ import { Input } from './input';
 import { Button } from './button';
 import { ComponentProps, useState } from 'react';
 import { Tooltip } from './tooltip-simple';
-import { Eye, EyeSlash } from '@phosphor-icons/react';
+import { Eye, EyeOff } from 'lucide-react';
 
 export function PasswordInput(props: ComponentProps<typeof Input>) {
   const [type, setType] = useState('password');
@@ -18,7 +18,7 @@ export function PasswordInput(props: ComponentProps<typeof Input>) {
             setType(type === 'password' ? 'text' : 'password');
           }}
         >
-          {type === 'password' ? <Eye size={18} /> : <EyeSlash size={18} />}
+          {type === 'password' ? <Eye size={18} /> : <EyeOff size={18} />}
         </Button>
       </Tooltip>
     </div>

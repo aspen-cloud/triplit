@@ -4,22 +4,24 @@ import {
   CollectionAttributeDefinition,
   CollectionDefinition,
 } from '@triplit/db';
-import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Select } from '@/components/ui/simple-select';
-import { ComponentProps, useEffect, useState, useCallback } from 'react';
-import { Code } from '@/components/ui/code';
-import { TriplitClient } from '@triplit/client';
 import {
+  Button,
+  Checkbox,
+  Input,
+  Label,
+  Select,
   Sheet,
   SheetContent,
   SheetDescription,
   SheetFooter,
   SheetHeader,
   SheetTitle,
-} from '@/components/ui/sheet';
+  CloseButton,
+  Code,
+} from '@triplit/ui';
+import { ComponentProps, useEffect, useState, useCallback } from 'react';
+import { TriplitClient } from '@triplit/client';
+
 import { atom, useAtom } from 'jotai';
 import {
   ALL_TYPES,
@@ -31,7 +33,6 @@ import {
   ValueTypeKeys,
 } from '../../../db/src/data-types/serialization';
 import { randomId } from '@mantine/hooks';
-import { CloseButton } from '@/components/ui/close-button.js';
 
 export type AttributesForm = {
   [key: string]: AttributeDefinition;

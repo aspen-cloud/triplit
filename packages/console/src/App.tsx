@@ -5,8 +5,7 @@ import {
   getProjectIdFromApiKey,
   JWTPayloadIsOfCorrectForm,
 } from './utils/server';
-import '@glideapps/glide-data-grid/dist/index.css';
-import { Modal } from '@/components/ui/modal.js';
+import { Modal } from '@triplit/ui';
 import {
   ImportProjectForm,
   ImportProjectFormValues,

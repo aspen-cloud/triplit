@@ -1,13 +1,13 @@
+import { useCallback, useState } from 'react';
+import { QueryFilter } from './query-filter';
 import {
+  Button,
+  Code,
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from '@/components/ui/popover';
-import { useCallback, useState } from 'react';
-import { QueryFilter } from './query-filter';
-import { Button } from '@/components/ui/button';
-import { Code } from '@/components/ui/code';
-import { Select } from '@/components/ui/simple-select';
+  Select,
+} from '@triplit/ui';
 import { typeFromJSON } from '../../../db/src/data-types/base';
 import { QueryWhere } from '../../../db/src/query';
 import { randomId } from '@mantine/hooks';

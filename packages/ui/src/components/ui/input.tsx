@@ -1,6 +1,6 @@
 import * as React from 'react';
 
-import { cn } from 'packages/console/@/lib/utils';
+import { cn } from '../../lib/utils';
 import { InputLabel } from './input-label';
 
 export interface InputProps

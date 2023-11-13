@@ -2,12 +2,12 @@ import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from '@/components/ui/popover';
+  Select,
+  Code,
+  CloseButton,
+  Button,
+} from '@triplit/ui';
 import { useMemo, useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Code } from '@/components/ui/code';
-import { Select } from '@/components/ui/simple-select';
-import { CloseButton } from '@/components/ui/close-button';
 import { QueryOrder } from '../../../db/src/query';
 
 type OrderPopoverProps = {
