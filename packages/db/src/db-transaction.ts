@@ -22,6 +22,7 @@ import {
   InsertTypeFromModel,
   convertEntityToJS,
   DBTypeFromModel,
+  ResultTypeFromModel,
 } from './schema.js';
 import { nanoid } from 'nanoid';
 import CollectionQueryBuilder, {
@@ -70,6 +71,7 @@ import { typeFromJSON } from './data-types/base.js';
 import { SchemaDefinition } from './data-types/serialization.js';
 import { createSetProxy } from './data-types/set.js';
 import { timestampCompare } from './timestamp.js';
+import { ExtractJSType } from './data-types/type.js';
 
 interface TransactionOptions<
   M extends Models<any, any> | undefined = undefined
@@ -313,6 +315,11 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
 
     // insert triples
     await this.storeTx.insertTriples(triples);
+
+    return convertEntityToJS(
+      constructEntity(triples, storeId),
+      collectionSchema?.schema
+    ) as ResultTypeFromModel<ModelFromModels<M, CN>>;
   }
 
   async update<CN extends CollectionNameFromModels<M>>(

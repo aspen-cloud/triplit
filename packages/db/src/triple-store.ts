@@ -834,33 +834,40 @@ export class TripleStore implements TripleStoreApi {
     );
   }
 
-  async transact(
-    callback: (tx: TripleStoreTransaction) => Promise<void>,
+  async transact<Output>(
+    callback: (tx: TripleStoreTransaction) => Promise<Output>,
     scope?: Parameters<typeof this.tupleStore.transact>[0]
   ) {
     let isCanceled = false;
-    const tx = await this.tupleStore.autoTransact(async (tupleTx) => {
-      const tx = new TripleStoreTransaction({
-        store: this,
-        tupleTx: tupleTx,
-        clock: this.clock,
-        hooks: this.hooks,
-      });
-      if (isCanceled) return tx;
-      try {
-        await callback(tx);
-      } catch (e) {
-        if (e instanceof WriteRuleError) {
-          isCanceled = true;
-          await tx.cancel();
+    const { tx, output } = await this.tupleStore.autoTransact(
+      async (tupleTx) => {
+        const tx = new TripleStoreTransaction({
+          store: this,
+          tupleTx: tupleTx,
+          clock: this.clock,
+          hooks: this.hooks,
+        });
+        let output: Output | undefined;
+        if (isCanceled) return { tx, output };
+        try {
+          output = await callback(tx);
+        } catch (e) {
+          if (e instanceof WriteRuleError) {
+            isCanceled = true;
+            await tx.cancel();
+          }
+          throw e;
         }
-        throw e;
-      }
-      return tx;
-    }, scope);
-    return tx.assignedTimestamp
-      ? JSON.stringify(tx.assignedTimestamp)
-      : undefined;
+        return { tx, output };
+      },
+      scope
+    );
+    return {
+      txId: tx.assignedTimestamp
+        ? JSON.stringify(tx.assignedTimestamp)
+        : undefined,
+      output,
+    };
   }
 
   setStorageScope(storageKeys: (keyof typeof this.stores)[]) {

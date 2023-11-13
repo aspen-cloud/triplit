@@ -237,8 +237,8 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
 
   static ABORT_TRANSACTION = Symbol('abort transaction');
 
-  async transact(
-    callback: (tx: DBTransaction<M>) => Promise<void>,
+  async transact<Output>(
+    callback: (tx: DBTransaction<M>) => Promise<Output>,
     options: TransactOptions = {}
   ) {
     await this.ensureMigrated;
@@ -250,7 +250,7 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
         skipRules: options.skipRules,
       });
       try {
-        await callback(tx);
+        return await callback(tx);
       } catch (e) {
         console.error(e);
         await tx.cancel();
@@ -337,7 +337,7 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
     options: TransactOptions = {}
   ) {
     return this.transact(async (tx) => {
-      await tx.insert(collectionName, doc);
+      return await tx.insert(collectionName, doc);
     }, options);
   }
 

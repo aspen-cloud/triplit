@@ -269,7 +269,7 @@ export class TriplitClient<M extends Models<any, any> | undefined = undefined> {
     });
   }
 
-  async transact(callback: (tx: DBTransaction<M>) => Promise<void>) {
+  async transact<Output>(callback: (tx: DBTransaction<M>) => Promise<Output>) {
     return this.db.transact(callback, {
       skipRules: SKIP_RULES,
       storeScope: {

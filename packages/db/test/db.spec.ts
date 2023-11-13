@@ -338,6 +338,25 @@ describe('Database API', () => {
     const json = queryResultToJson(results);
     expect(json).toBeTypeOf('object');
   });
+
+  it('transactions return the txId and result of the callback', async () => {
+    const db = new DB();
+    {
+      const result = await db.transact(async (tx) => {
+        await tx.insert('Student', { name: 'John Doe', id: '1' });
+        return 'hello';
+      });
+      expect(result.txId).toBeTruthy();
+      expect(result.output).toBe('hello');
+    }
+    {
+      const result = await db.transact(async (tx) => {
+        await tx.insert('Student', { name: 'Jane Doe', id: '2' });
+      });
+      expect(result.txId).toBeTruthy();
+      expect(result.output).toBe(undefined);
+    }
+  });
 });
 
 it('fetchOne gets first match or null', async () => {

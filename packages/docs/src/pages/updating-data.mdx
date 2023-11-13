@@ -68,7 +68,7 @@ Mutations are first run on Triplit's local cache "optimistically", returning a p
 
 ```typescript
 try {
-  const txId = await client.insert('employee', {
+  const { txId } = await client.insert('employee', {
     id: 'Fry',
     name: 'Philip J. Fry',
   });
@@ -81,7 +81,7 @@ try {
 If the sync engine is connected, mutations will then be applied to the server when possible. To react to a transaction successfully running or failing on the server, you can pass a callback to `client.syncEngine.onTxCommit(txId, callback)` or `client.syncEngine.onTxFailure(txId, callback)`. The client also provides methods for helping you manage what should happen to your data if a transaction fails on the server. `client.syncEngine.retry(txId)` will retry a transaction with the id `txId`. `client.syncEngine.rollback(txId)` will rollback a transaction with the id `txId`, removing it from the local cache. For example:
 
 ```typescript
-const txId = await client.insert('employee', {
+const { txId } = await client.insert('employee', {
   id: 'Fry',
   name: 'Philip J. Fry',
 });
