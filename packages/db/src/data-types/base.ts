@@ -1,7 +1,6 @@
-import { Static, TTuple, Type } from '@sinclair/typebox';
+import { Static, Type } from '@sinclair/typebox';
 import { nanoid } from 'nanoid';
 import {
-  InvalidTypeOptionsError,
   TypeJSONParseError,
   UnrecognizedAttributeTypeError,
 } from '../errors.js';
@@ -18,7 +17,7 @@ import { RecordType } from './record.js';
 import { NumberType } from './number.js';
 import { BooleanType } from './boolean.js';
 import { SetType } from './set.js';
-import { SerializedValueOverrides, ValueSchemaType } from './value.js';
+import { ValueSchemaType } from './value.js';
 import { QueryType } from './query.js';
 
 export type Operator =

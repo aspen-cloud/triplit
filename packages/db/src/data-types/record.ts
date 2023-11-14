@@ -40,6 +40,48 @@ export function RecordType<Properties extends { [k: string]: DataType }>(
         ])
       ) as { [K in keyof Properties]: ExtractDBType<Properties[K]> };
     },
+    convertDBValueToJS(val) {
+      const result: Partial<{
+        [K in keyof Properties]: ExtractJSType<Properties[K]>;
+      }> = {};
+      for (const k in val) {
+        if (Object.prototype.hasOwnProperty.call(val, k)) {
+          const v = val[k];
+          // This is mostly to catch when "_collection" is included in the entity
+          result[k] = properties[k]
+            ? properties[k].convertDBValueToJS(
+                // @ts-expect-error
+                v
+              )
+            : k;
+        }
+      }
+      return result as {
+        [K in keyof Properties]: ExtractJSType<Properties[K]>;
+      };
+    },
+    convertJSONToJS(val) {
+      if (typeof val !== 'object')
+        throw new Error('Invalid JSON value for record');
+      return Object.fromEntries(
+        Object.entries(val).map(([k, v]) => {
+          const propDef = properties[k];
+          if (!propDef) throw new Error(`Invalid property ${k} for record`);
+          return [k, propDef.convertJSONToJS(v)];
+        })
+      ) as { [K in keyof Properties]: ExtractJSType<Properties[K]> };
+    },
+    convertJSToJSON(val) {
+      return Object.fromEntries(
+        Object.entries(properties).map(([k, propDef]) => [
+          k,
+          propDef.convertJSToJSON(
+            // @ts-expect-error
+            val[k]
+          ),
+        ])
+      );
+    },
     // Type should go extract the db type of each of its keys
     default() {
       return Object.fromEntries(
@@ -53,11 +95,21 @@ export function RecordType<Properties extends { [k: string]: DataType }>(
       if (_val === null) return false;
       // must be an object
       if (typeof _val !== 'object') return false;
-      // must have all the properties
-      if (Object.keys(_val).length !== Object.keys(properties).length)
+
+      // all required properties are present
+      const requiredProperties = Object.entries(properties).filter(
+        ([_k, v]) => !!v.default()
+      );
+      const keysSet = new Set(Object.keys(_val));
+      if (
+        !requiredProperties.every(([k, _v]) => {
+          return keysSet.has(k);
+        })
+      )
         return false;
-      for (const k in properties) {
-        if (Object.prototype.hasOwnProperty.call(properties, k)) {
+
+      for (const k in _val) {
+        if (properties[k]) {
           const v = properties[k];
           if (!v.validateInput(_val[k])) return false;
         } else {
@@ -68,26 +120,6 @@ export function RecordType<Properties extends { [k: string]: DataType }>(
     },
     validateTripleValue(_val: any) {
       return true; // TODO
-    },
-    convertDBValueToJS(val) {
-      const result: Partial<{
-        [K in keyof Properties]: ExtractJSType<Properties[K]>;
-      }> = {};
-      for (const k in val) {
-        if (Object.prototype.hasOwnProperty.call(val, k)) {
-          const v = val[k];
-          // This is mostly to catch when "_collection" is included in the entity
-          result[k] = properties[k]
-            ? properties[k].convertDBValueToJS(
-                // @ts-ignore
-                v
-              )
-            : k;
-        }
-      }
-      return result as {
-        [K in keyof Properties]: ExtractJSType<Properties[K]>;
-      };
     },
   };
 }

@@ -386,6 +386,16 @@ describe('Database API', () => {
       InvalidInsertDocumentError
     );
   });
+
+  it('delete throws an error if no collection name is provided', async () => {
+    const db = new DB();
+    await expect(db.delete(undefined, '1')).rejects.toThrowError(
+      InvalidCollectionNameError
+    );
+    await expect(db.delete('', '1')).rejects.toThrowError(
+      InvalidCollectionNameError
+    );
+  });
 });
 
 it('fetchOne gets first match or null', async () => {

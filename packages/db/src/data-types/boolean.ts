@@ -37,6 +37,14 @@ export function BooleanType<TypeOptions extends UserTypeOptions = {}>(
     convertDBValueToJS(val: boolean) {
       return val;
     },
+    convertJSONToJS(val: any) {
+      if (typeof val !== 'boolean')
+        throw new Error('Invalid JSON value for boolean');
+      return val;
+    },
+    convertJSToJSON(val: boolean) {
+      return val;
+    },
     default() {
       return calcDefaultValue(options) as boolean | undefined;
     },

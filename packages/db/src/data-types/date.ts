@@ -48,11 +48,20 @@ export function DateType<TypeOptions extends UserTypeOptions = {}>(
         TypeOptions
       >;
     },
-    default() {
-      return calcDefaultValue(options) as string | undefined;
-    },
     convertDBValueToJS(val) {
       return (val ? new Date(val) : null) as TypeWithOptions<Date, TypeOptions>;
+    },
+    convertJSONToJS(val) {
+      if (typeof val !== 'string')
+        throw new Error('Invalid JSON value for date');
+      return new Date(val);
+    },
+    convertJSToJSON(val) {
+      // @ts-expect-error
+      return val.toISOString();
+    },
+    default() {
+      return calcDefaultValue(options) as string | undefined;
     },
     validateInput(val: any) {
       return (options.nullable && val === null) || val instanceof Date;

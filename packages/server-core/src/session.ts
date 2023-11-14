@@ -6,6 +6,7 @@ import {
   CollectionQuery,
   Attribute,
   Value,
+  getSchemaFromPath,
 } from '@triplit/db';
 import {
   QuerySyncError,
@@ -389,8 +390,18 @@ export class Session {
   async fetch(query: CollectionQuery<any, any>) {
     if (!hasAdminAccess(this.token)) return NotAdminResponse();
     try {
+      const result = await this.db.fetch(query);
+      const schema = await this.db.getSchema();
+      const { collectionName } = query;
+      const collectionSchema = schema?.collections[collectionName]?.schema;
+      const data = new Map(
+        [...result.entries()].map(([id, entity]) => [
+          id,
+          collectionSchema ? collectionSchema.convertJSToJSON(entity) : entity,
+        ])
+      );
       return ServerResponse(200, {
-        result: [...(await this.db.fetch(query)).entries()],
+        result: [...data.entries()],
       });
     } catch (e) {
       return errorResponse(e as Error);
@@ -400,8 +411,19 @@ export class Session {
   async insert(collectionName: string, entity: any) {
     if (!hasAdminAccess(this.token)) return NotAdminResponse();
     try {
-      const txResult = await this.db.insert(collectionName, entity);
-      return ServerResponse(200, txResult);
+      const schema = await this.db.getSchema();
+      const collectionSchema = schema?.collections[collectionName]?.schema;
+      const insertEntity = collectionSchema
+        ? collectionSchema.convertJSONToJS(entity)
+        : entity;
+      const txResult = await this.db.insert(collectionName, insertEntity);
+      const serializableResult = {
+        ...txResult,
+        output: collectionSchema
+          ? collectionSchema.convertJSToJSON(txResult.output)
+          : txResult.output,
+      };
+      return ServerResponse(200, serializableResult);
     } catch (e) {
       return errorResponse(e, {
         fallbackMessage: 'Could not insert entity. An unknown error occured.',
@@ -416,6 +438,17 @@ export class Session {
   ) {
     if (!hasAdminAccess(this.token)) return NotAdminResponse();
     try {
+      const schema = await this.db.getSchema();
+      const collectionSchema = schema?.collections[collectionName]?.schema;
+      if (collectionSchema) {
+        patches.forEach((p) => {
+          if (p[0] === 'set') {
+            const attrSchema = getSchemaFromPath(collectionSchema, p[1]);
+            p[2] = attrSchema.convertJSONToJS(p[2]);
+          }
+        });
+      }
+
       const txResult = await this.db.update(
         collectionName,
         entityId,
@@ -439,7 +472,7 @@ export class Session {
       return ServerResponse(200, txResult);
     } catch (e) {
       return errorResponse(e, {
-        fallbackMessage: 'Could not delete entity. An unknown error occured.',
+        fallbackMessage: 'Could not update entity. An unknown error occured.',
       });
     }
   }

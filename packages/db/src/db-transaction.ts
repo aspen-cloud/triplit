@@ -21,7 +21,6 @@ import {
   clientInputToDbModel,
   InsertTypeFromModel,
   convertEntityToJS,
-  DBTypeFromModel,
   ResultTypeFromModel,
 } from './schema.js';
 import { nanoid } from 'nanoid';
@@ -73,7 +72,6 @@ import { typeFromJSON } from './data-types/base.js';
 import { SchemaDefinition } from './data-types/serialization.js';
 import { createSetProxy } from './data-types/set.js';
 import { timestampCompare } from './timestamp.js';
-import { ExtractJSType } from './data-types/type.js';
 
 interface TransactionOptions<
   M extends Models<any, any> | undefined = undefined
@@ -402,6 +400,11 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
     collectionName: CN,
     id: string
   ) {
+    if (!collectionName)
+      throw new InvalidCollectionNameError(
+        collectionName,
+        'Collection name must be defined'
+      );
     const storeId = appendCollectionToId(collectionName, id);
     await this.storeTx.expireEntity(storeId);
   }

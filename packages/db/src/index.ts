@@ -42,6 +42,7 @@ export {
   timestampedObjectToPlainObject,
   hashSchemaJSON,
   convertEntityToJS,
+  getSchemaFromPath,
 } from './schema.js';
 export type {
   TObject,

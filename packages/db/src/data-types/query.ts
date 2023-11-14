@@ -31,6 +31,15 @@ export function QueryType<Q extends SubQuery<any, any>>(
     convertInputToDBValue(val: any) {
       return JSON.stringify(val);
     },
+    convertDBValueToJS(val) {
+      return JSON.parse(val) as Q;
+    },
+    convertJSONToJS(val) {
+      return val;
+    },
+    convertJSToJSON(val) {
+      return val;
+    },
     // TODO: determine proper value and type here
     // Type should go extract the deserialized type of each of its keys
     default() {
@@ -41,9 +50,6 @@ export function QueryType<Q extends SubQuery<any, any>>(
     },
     validateTripleValue(_val: any) {
       return true; // TODO
-    },
-    convertDBValueToJS(val) {
-      return JSON.parse(val) as Q;
     },
   };
 }

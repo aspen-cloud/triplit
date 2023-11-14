@@ -38,6 +38,14 @@ export function NumberType<TypeOptions extends UserTypeOptions = {}>(
     convertDBValueToJS(val) {
       return val;
     },
+    convertJSONToJS(val) {
+      if (typeof val !== 'number')
+        throw new Error('Invalid JSON value for number');
+      return val;
+    },
+    convertJSToJSON(val) {
+      return val;
+    },
     default() {
       return calcDefaultValue(options) as number | undefined;
     },

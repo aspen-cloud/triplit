@@ -429,14 +429,17 @@ describe('query builder', () => {
       expectTypeOf(query.select)
         .parameter(0)
         .toEqualTypeOf<
-          ('attr1' | 'attr2' | 'attr3' | 'record' | 'record.attr1' | 'id')[]
+          | ('attr1' | 'attr2' | 'attr3' | 'record' | 'record.attr1' | 'id')[]
+          | undefined
         >();
     }
     // schemaless
     {
       const db = new DB();
       const query = db.query('test');
-      expectTypeOf(query.select).parameter(0).toEqualTypeOf<string[]>();
+      expectTypeOf(query.select)
+        .parameter(0)
+        .toEqualTypeOf<string[] | undefined>();
     }
   });
   test('where attribute prop', () => {

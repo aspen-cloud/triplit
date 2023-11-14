@@ -55,6 +55,10 @@ export type TypeInterface<
 
   convertDBValueToJS(val: DBType): JSType;
 
+  convertJSONToJS(val: any): JSType;
+
+  convertJSToJSON(val: JSType): any;
+
   default(): DBType | undefined;
 
   // User input validation

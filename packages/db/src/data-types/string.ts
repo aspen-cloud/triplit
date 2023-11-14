@@ -38,6 +38,14 @@ export function StringType<TypeOptions extends UserTypeOptions = {}>(
     convertDBValueToJS(val) {
       return val;
     },
+    convertJSONToJS(val) {
+      if (typeof val !== 'string')
+        throw new Error('Invalid JSON value for string');
+      return val;
+    },
+    convertJSToJSON(val) {
+      return val;
+    },
     default() {
       return calcDefaultValue(options) as string | undefined;
     },

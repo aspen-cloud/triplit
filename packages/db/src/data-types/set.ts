@@ -42,12 +42,17 @@ export function SetType<Items extends ValueType<any>>(
         items: this.items.toJSON() as ValueAttributeDefinition,
       };
     },
+
     convertInputToDBValue(val: Set<any>) {
       if (!this.validateInput(val))
         throw new DBSerializationError(`set<${items.type}>`, val);
       return [...val.values()].reduce((acc, key) => {
         return { ...acc, [key as string]: true };
       }, {});
+    },
+    convertJSONToJS(val: any[]) {
+      if (!Array.isArray(val)) throw new Error('Invalid JSON value for set');
+      return new Set(val);
     },
     default() {
       return {};
@@ -58,6 +63,10 @@ export function SetType<Items extends ValueType<any>>(
           .filter(([_k, v]) => !!v)
           .map(([k, _v]) => this.items.fromString(k) as ExtractJSType<Items>)
       );
+    },
+    convertJSToJSON(val) {
+      if (!(val instanceof Set)) throw new Error('Invalid JS value for set');
+      return [...val.values()];
     },
     validateInput(val: any) {
       // must be a set

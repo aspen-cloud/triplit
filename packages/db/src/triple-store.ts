@@ -821,10 +821,6 @@ export class TripleStore implements TripleStoreApi {
     return findMaxClientTimestamp(this.tupleStore, clientId);
   }
 
-  findMaxTimestamp(clientId: string) {
-    return findMaxTimestamp(this.tupleStore, clientId);
-  }
-
   findByClientTimestamp(
     clientId: string,
     scanDirection: 'lt' | 'lte' | 'gt' | 'gte' | 'eq',
