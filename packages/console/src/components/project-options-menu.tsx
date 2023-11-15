@@ -5,6 +5,7 @@ import { DownloadSimple, FolderOpen, Info, Trash } from '@phosphor-icons/react';
 import { useState } from 'react';
 import { useProjectState } from './project-provider';
 import { useProject } from '../hooks/useProject';
+import { useSelectedCollection } from 'src/hooks/useSelectedCollection.js';
 import {
   Modal,
   DropdownMenu,
@@ -20,6 +21,7 @@ export function ProjectOptionsMenu({
 }: {
   children: React.ReactNode;
 }) {
+  const [_selectedCollection, setSelectedCollection] = useSelectedCollection();
   const [projectPrimaryKey, setSelectedProjectId] = useProjectState();
   const [infoModalIsOpen, setInfoModalIsOpen] = useState(false);
   const [selectModalIsOpen, setSelectModalIsOpen] = useState(false);
@@ -27,7 +29,7 @@ export function ProjectOptionsMenu({
   const [deleteProjectDialogIsOpen, setDeleteProjectDialogIsOpen] =
     useState(false);
   const { results: project } = useProject(projectPrimaryKey);
-
+  if (!(project && projectPrimaryKey)) return null;
   return (
     <>
       <DeleteProjectDialog
@@ -39,7 +41,10 @@ export function ProjectOptionsMenu({
         <ProjectSelector
           currentProjectId={projectPrimaryKey}
           onSelectProject={(id) => {
-            if (id !== projectPrimaryKey) setSelectedProjectId(id);
+            if (id !== projectPrimaryKey) {
+              setSelectedProjectId(id);
+              setSelectedCollection(undefined);
+            }
             setSelectModalIsOpen(false);
           }}
           onPressImportProject={() => {

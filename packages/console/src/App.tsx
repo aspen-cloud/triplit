@@ -16,9 +16,12 @@ import {
 } from './components';
 import { TriplitClient } from '@triplit/client';
 import { useProjectState } from './components';
+import { useSelectedCollection } from './hooks/useSelectedCollection.js';
 const projectClients = new Map<string, TriplitClient<any>>();
 
 function App() {
+  const [_selectedCollection, setSelectedCollection] = useSelectedCollection();
+
   const [projectHint, setProjectHint] = useState<
     ImportProjectFormValues | undefined
   >(undefined);
@@ -66,12 +69,12 @@ function App() {
   }, [projectEntities, projectId]);
 
   const client = useMemo(() => {
+    if (!(projectId && project)) return;
     const savedClient = projectClients.get(projectId);
     if (savedClient) {
       savedClient?.syncEngine.connect();
       return savedClient;
     }
-    if (!project) return;
     const { secure, server, token } = project;
     const newClient = new TriplitClient({
       serverUrl: `${secure ? 'https' : 'http'}://${server}`,
@@ -94,6 +97,7 @@ function App() {
         <ProjectSelector
           onSelectProject={(id) => {
             setProjectId(id);
+            setSelectedCollection(undefined);
           }}
           onPressImportProject={() => {
             setImportModalIsOpen(true);

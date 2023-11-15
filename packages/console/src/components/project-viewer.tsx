@@ -7,7 +7,7 @@ import { Button } from '@triplit/ui';
 import { ProjectOptionsMenu } from './project-options-menu';
 import { useEntity } from '@triplit/react';
 import { CreateCollectionDialog } from './create-collection-dialog';
-import { fetchCollectionStats } from '../utils/server';
+import { CollectionStats, fetchCollectionStats } from '../utils/server';
 import { useSelectedCollection } from '../hooks/useSelectedCollection';
 
 export function ProjectViewer({
@@ -22,32 +22,26 @@ export function ProjectViewer({
   // ProjectViewer.tsx - handles loading client and safely rendering children
 
   const [selectedCollection, setSelectedCollection] = useSelectedCollection();
-
-  // TODO: why does this break when you switch away from a project and back?
+  const [collectionStats, setCollectionStats] = useState<CollectionStats[]>([]);
   const { results: schema } = useEntity(client, '_metadata', '_schema');
-  const [collections, setCollections] = useState<string[]>([]);
   useEffect(() => {
-    if (schema && schema.collections) {
-      setCollections(Object.keys(schema.collections));
-    } else {
-      (async () => {
-        setCollections(
-          (await fetchCollectionStats(project)).map(
-            ({ collection }) => collection
-          )
-        );
-      })();
-    }
-  }, [schema, project]);
+    (async () => {
+      setCollectionStats(await fetchCollectionStats(project));
+    })();
+  }, [project]);
 
+  const collectionsTolist = schema
+    ? Object.keys(schema.collections)
+    : collectionStats.map(({ collection }) => collection);
   // if loading render loading state
   if (!client) return <FullScreenWrapper>Loading...</FullScreenWrapper>;
-  const shouldShowCreateCollectionButton = schema || collections.length === 0;
+  const shouldShowCreateCollectionButton =
+    schema || collectionsTolist.length === 0;
   // If client, render hooks that rely on client safely
   return (
     <div className="grid grid-cols-6 bg-popover">
       <div className=" border-r col-span-1 h-screen flex flex-col p-4 ">
-        <ProjectOptionsMenu projectPrimaryKey={projectPrimaryKey}>
+        <ProjectOptionsMenu>
           <Button variant="secondary" className="w-full">
             <div className="font-bold truncate ">{project?.displayName}</div>
             <CaretDown className="ml-2 shrink-0" />
@@ -73,7 +67,7 @@ export function ProjectViewer({
             />
           )}
         </div>
-        {collections.map((collection) => (
+        {collectionsTolist.map((collection) => (
           <Button
             key={collection}
             onClick={() => {
@@ -86,7 +80,7 @@ export function ProjectViewer({
             <span className="text-xs md:text-sm truncate">{`${collection}`}</span>
           </Button>
         ))}
-        {collections.length === 0 && (
+        {collectionsTolist.length === 0 && (
           <div className="text-xs">
             {
               'Looks like you haven’t added any data yet. Once there is data saved in your Triplit instance, your collections will show up here.'
