@@ -108,7 +108,8 @@ export class Connection {
           innerError,
         });
         return;
-      }
+      },
+      { skipRules: this.session.token.type === 'secret' }
     );
 
     if (this.connectedQueries.has(queryKey)) {
@@ -268,7 +269,6 @@ export class Session {
     if (!token) throw new Error('Token is required');
     // TODO: figure out admin middleware
     const variables = {};
-
     if (token.userId)
       // @ts-expect-error
       variables['SESSION_USER_ID'] = token.userId;
