@@ -575,11 +575,11 @@ export class TriplitClient<M extends Models<any, any> | undefined = undefined> {
     }
   }
 
-  updateToken(token: string) {
+  updateToken(token: string | undefined) {
     this.updateOptions({ token });
   }
 
-  updateServerUrl(serverUrl: string) {
+  updateServerUrl(serverUrl: string | undefined) {
     this.updateOptions({ serverUrl });
   }
 }
