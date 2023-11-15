@@ -29,12 +29,12 @@ export default Command({
   async run({ flags }) {
     const consolePort = flags.consolePort || 6542;
     const dbPort = flags.dbPort || 6543;
-
     process.env.JWT_SECRET =
       process.env.TRIPLIT_JWT_SECRET ?? 'jwt-key-for-development-only';
     process.env.PROJECT_ID =
       process.env.TRIPLIT_PROJECT_ID ?? 'local-project-id';
-    process.env.CLAIMS_PATH = process.env.TRIPLIT_CLAIMS_PATH;
+    if (process.env.TRIPLIT_CLAIMS_PATH)
+      process.env.CLAIMS_PATH = process.env.TRIPLIT_CLAIMS_PATH;
 
     if (flags.storage === 'sqlite') {
       const dataDir = getDataDir();
