@@ -210,7 +210,6 @@ export class SyncEngine {
   async connect() {
     this.closeConnection({ type: 'CONNECTION_OVERRIDE', retry: false });
     const params = await this.getConnectionParams();
-    this.transport.connect(params);
     this.transport.onMessage(async (evt) => {
       const message: ServerSyncMessage = JSON.parse(evt.data);
       if (message.type === 'ERROR') {
@@ -312,6 +311,7 @@ export class SyncEngine {
           return;
         }
       }
+
       // Attempt to reconnect with backoff
       const connectionHandler = this.connect.bind(this);
       this.reconnectTimeout = setTimeout(
@@ -336,6 +336,9 @@ export class SyncEngine {
         handler(state);
       }
     });
+
+    // Call after setting up listeners
+    this.transport.connect(params);
   }
 
   /**

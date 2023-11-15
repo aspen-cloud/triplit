@@ -2691,7 +2691,6 @@ describe('database transactions', () => {
     expect(insertSpy).toHaveBeenCalledTimes(1);
   });
 
-  // TODO: test this over the network
   it('can delete and set the same attribute within a transaction', async () => {
     // set then delete
     {

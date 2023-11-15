@@ -219,8 +219,8 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
       }
       const existingTriples = await tx.findByEntityAttribute(id, attribute);
       const olderTriples = existingTriples.filter(
-        ({ timestamp, expired }) =>
-          timestampCompare(timestamp, txTimestamp) === -1 && !expired
+        // If a triple has the same timestamp, overwrite and assume the write order is correct
+        ({ timestamp }) => timestampCompare(timestamp, txTimestamp) < 1
       );
 
       if (olderTriples.length > 0) {
