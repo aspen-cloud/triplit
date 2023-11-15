@@ -210,6 +210,7 @@ export async function fetch<
         const existsSubQuery = {
           ...subQuery,
           vars: {
+            ...query.vars,
             ...subQuery.vars,
             ...timestampedObjectToPlainObject(entity),
           },
