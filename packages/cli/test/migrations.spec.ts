@@ -422,6 +422,215 @@ describe('migration creation', () => {
     });
   });
 
+  describe('subquery changes', () => {
+    it('can create a migration that adds a subquery', () => {
+      const schemaA = {
+        test1: {
+          schema: S.Schema({
+            id: S.Id(),
+          }),
+        },
+        test2: {
+          schema: S.Schema({
+            id: S.Id(),
+          }),
+        },
+      } satisfies Models<any, any>;
+      const schemaB = {
+        test1: {
+          schema: S.Schema({
+            id: S.Id(),
+            subQuery: S.Query({
+              collectionName: 'test2',
+              where: [['id', '=', '$id']],
+            }),
+          }),
+        },
+        test2: {
+          schema: S.Schema({
+            id: S.Id(),
+          }),
+        },
+      } satisfies Models<any, any>;
+      const jsonSchemaA = schemaToJSON({ collections: schemaA, version: 0 })!;
+      const jsonSchemaB = schemaToJSON({ collections: schemaB, version: 0 })!;
+      const migration = createMigration(
+        jsonSchemaA.collections,
+        jsonSchemaB.collections,
+        1,
+        0,
+        ''
+      );
+      expect(migration?.up).toEqual([
+        [
+          'add_attribute',
+          {
+            collection: 'test1',
+            path: ['subQuery'],
+            attribute: S.Query({
+              collectionName: 'test2',
+              where: [['id', '=', '$id']],
+            }).toJSON(),
+          },
+        ],
+      ]);
+      expect(migration?.down).toEqual([
+        [
+          'drop_attribute',
+          {
+            collection: 'test1',
+            path: ['subQuery'],
+          },
+        ],
+      ]);
+    });
+    it('can create a migration that removes a subquery', () => {
+      const schemaA = {
+        test1: {
+          schema: S.Schema({
+            id: S.Id(),
+            subQuery: S.Query({
+              collectionName: 'test2',
+              where: [['id', '=', '$id']],
+            }),
+          }),
+        },
+        test2: {
+          schema: S.Schema({
+            id: S.Id(),
+          }),
+        },
+      } satisfies Models<any, any>;
+      const schemaB = {
+        test1: {
+          schema: S.Schema({
+            id: S.Id(),
+          }),
+        },
+        test2: {
+          schema: S.Schema({
+            id: S.Id(),
+          }),
+        },
+      } satisfies Models<any, any>;
+      const jsonSchemaA = schemaToJSON({ collections: schemaA, version: 0 })!;
+      const jsonSchemaB = schemaToJSON({ collections: schemaB, version: 0 })!;
+      const migration = createMigration(
+        jsonSchemaA.collections,
+        jsonSchemaB.collections,
+        1,
+        0,
+        ''
+      );
+      expect(migration?.up).toEqual([
+        [
+          'drop_attribute',
+          {
+            collection: 'test1',
+            path: ['subQuery'],
+          },
+        ],
+      ]);
+      expect(migration?.down).toEqual([
+        [
+          'add_attribute',
+          {
+            collection: 'test1',
+            path: ['subQuery'],
+            attribute: S.Query({
+              collectionName: 'test2',
+              where: [['id', '=', '$id']],
+            }).toJSON(),
+          },
+        ],
+      ]);
+    });
+    it('can create a migration that edits a subquery', () => {
+      const schemaA = {
+        test1: {
+          schema: S.Schema({
+            id: S.Id(),
+            subQuery: S.Query({
+              collectionName: 'test2',
+              where: [['id', '=', 'id']],
+            }),
+          }),
+        },
+        test2: {
+          schema: S.Schema({
+            id: S.Id(),
+          }),
+        },
+      } satisfies Models<any, any>;
+      const schemaB = {
+        test1: {
+          schema: S.Schema({
+            id: S.Id(),
+            subQuery: S.Query({
+              collectionName: 'test2',
+              where: [['id', '=', '$id']],
+            }),
+          }),
+        },
+        test2: {
+          schema: S.Schema({
+            id: S.Id(),
+          }),
+        },
+      } satisfies Models<any, any>;
+      const jsonSchemaA = schemaToJSON({ collections: schemaA, version: 0 })!;
+      const jsonSchemaB = schemaToJSON({ collections: schemaB, version: 0 })!;
+      const migration = createMigration(
+        jsonSchemaA.collections,
+        jsonSchemaB.collections,
+        1,
+        0,
+        ''
+      );
+      console.dir(migration, { depth: null });
+      expect(migration?.up).toEqual([
+        [
+          'drop_attribute',
+          {
+            collection: 'test1',
+            path: ['subQuery'],
+          },
+        ],
+        [
+          'add_attribute',
+          {
+            collection: 'test1',
+            path: ['subQuery'],
+            attribute: S.Query({
+              collectionName: 'test2',
+              where: [['id', '=', '$id']],
+            }).toJSON(),
+          },
+        ],
+      ]);
+      expect(migration?.down).toEqual([
+        [
+          'drop_attribute',
+          {
+            collection: 'test1',
+            path: ['subQuery'],
+          },
+        ],
+        [
+          'add_attribute',
+          {
+            collection: 'test1',
+            path: ['subQuery'],
+            attribute: S.Query({
+              collectionName: 'test2',
+              where: [['id', '=', 'id']],
+            }).toJSON(),
+          },
+        ],
+      ]);
+    });
+  });
+
   describe('rule changes', () => {
     it('can create a migration that adds a rule', () => {
       const schemaA = {

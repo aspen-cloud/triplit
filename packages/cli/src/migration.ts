@@ -352,7 +352,8 @@ function parseCollectionDiff(
         parseAttributesDiff(
           migration,
           collectionKey,
-          collectionDiff.schema.properties
+          collectionDiff.schema.properties,
+          context
         );
       }
       if (collectionDiff.rules) {
@@ -366,6 +367,7 @@ function parseAttributesDiff(
   migration: Migration,
   collection: string,
   diff: any,
+  context: MigrationContext,
   attributePrefix: string[] = []
 ) {
   // We are not expecting the attributes property to be added or removed
@@ -404,7 +406,7 @@ function parseAttributesDiff(
     } else {
       if (!!attributeDiff.type) {
         throw new Error(
-          `Invalid diff: changing an attribute type is not support. Received diff:\n\n${JSON.stringify(
+          `Invalid diff: changing an attribute type is not supported. Received diff:\n\n${JSON.stringify(
             attributeDiff,
             null,
             2
@@ -413,10 +415,13 @@ function parseAttributesDiff(
       }
       // properties implies its a record type...might be nicer to actually read info from the schema
       if (!!attributeDiff.properties) {
-        parseAttributesDiff(migration, collection, attributeDiff.properties, [
-          ...attributePrefix,
-          attributeKey,
-        ]);
+        parseAttributesDiff(
+          migration,
+          collection,
+          attributeDiff.properties,
+          context,
+          [...attributePrefix, attributeKey]
+        );
       }
       // options implies its a leaf type
       else if (!!attributeDiff.options) {
@@ -425,6 +430,40 @@ function parseAttributesDiff(
           collection,
           [...attributePrefix, attributeKey],
           attributeDiff.options
+        );
+      }
+      // subquery change, drop and add
+      else if (!!attributeDiff.query) {
+        const oldDefinition = getAttributeDefinitionFromPath(
+          context.previousSchema[collection].schema,
+          [...attributePrefix, attributeKey]
+        );
+        const newDefinition = getAttributeDefinitionFromPath(
+          context.targetScema[collection].schema,
+          [...attributePrefix, attributeKey]
+        );
+        const dropOldAttributeOperation = genDropAttributeOperation({
+          collection,
+          path: [...attributePrefix, attributeKey],
+        });
+        const addNewAttributeOperation = genAddAttributeOperation({
+          collection,
+          path: [...attributePrefix, attributeKey],
+          attribute: newDefinition,
+        });
+        const dropNewAttributeOperation = genDropAttributeOperation({
+          collection,
+          path: [...attributePrefix, attributeKey],
+        });
+        const addOldAttributeOperation = genAddAttributeOperation({
+          collection,
+          path: [...attributePrefix, attributeKey],
+          attribute: oldDefinition,
+        });
+        migration.up.push(dropOldAttributeOperation, addNewAttributeOperation);
+        migration.down.unshift(
+          dropNewAttributeOperation,
+          addOldAttributeOperation
         );
       } else {
         throw new Error(
@@ -732,4 +771,16 @@ function diffStatus(diff: any) {
   if (diff.length === 2) return 'CHANGED';
   if (diff.length === 3) return 'REMOVED';
   throw new Error('Invalid diff');
+}
+
+function getAttributeDefinitionFromPath(
+  schema: CollectionDefinition['schema'],
+  path: string[]
+): any {
+  return path.reduce((acc, key, i) => {
+    if (acc.type === 'record') {
+      return acc.properties[key];
+    }
+    throw new Error('Invalid path');
+  }, schema);
 }

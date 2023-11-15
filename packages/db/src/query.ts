@@ -157,7 +157,8 @@ function updateEntityAtPath(
 
   // If we get an object marker, assign an empty object to the pointer if it doesn't exist
   if (value === '{}') {
-    if (currentValue == undefined) ValuePointer.Set(entity, pointer, {});
+    if (currentValue == undefined || currentValue[0] == undefined)
+      ValuePointer.Set(entity, pointer, {});
     return;
   }
 

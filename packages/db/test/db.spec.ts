@@ -2690,6 +2690,52 @@ describe('database transactions', () => {
     });
     expect(insertSpy).toHaveBeenCalledTimes(1);
   });
+
+  // TODO: test this over the network
+  it('can delete and set the same attribute within a transaction', async () => {
+    // set then delete
+    {
+      const db = new DB();
+      await db.insert('test', {
+        id: '1',
+      });
+
+      await db.transact(async (tx) => {
+        await tx.update('test', '1', async (entity) => {
+          entity.attr = {
+            test: 'obj',
+          };
+        });
+        await tx.update('test', '1', async (entity) => {
+          delete entity['attr'];
+        });
+      });
+      const result = await db.fetchById('test', '1');
+      expect(result.attr).toBeUndefined();
+    }
+
+    // delete then set
+    {
+      const db = new DB();
+      await db.insert('test', {
+        id: '1',
+        attr: 'foo',
+      });
+
+      await db.transact(async (tx) => {
+        await tx.update('test', '1', async (entity) => {
+          delete entity['attr'];
+        });
+        await tx.update('test', '1', async (entity) => {
+          entity.attr = {
+            test: 'obj',
+          };
+        });
+      });
+      const result = await db.fetchById('test', '1');
+      expect(result.attr).toStrictEqual({ test: 'obj' });
+    }
+  });
 });
 
 describe('schema changes', async () => {

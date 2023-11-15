@@ -133,11 +133,7 @@ export async function fetch<
       queryWithInsertedVars.collectionName,
       queryWithInsertedVars.entityId
     );
-    // With schema's we're using tombstones, and need to filter down to the latest triples to ensure that the undefined value we set on a schema attribute to be respected
-    // this is probably a bandaid
-    const entityTriples = filterToLatestEntityAttribute(
-      await tx.findByEntity(storeId)
-    );
+    const entityTriples = await tx.findByEntity(storeId);
     let entity: any | null = constructEntity(entityTriples, storeId);
     // handle deleted entites
     if (isTimestampedEntityDeleted(entity)) {
@@ -575,10 +571,7 @@ function subscribeSingleEntity<
               : null;
             triples = fetchResult.triples;
           } else {
-            entity = filterToLatestEntityAttribute(entityInserts).reduce(
-              entityToResultReducer,
-              entity
-            );
+            entity = entityInserts.reduce(entityToResultReducer, entity);
             if (!triples.has(entityId)) {
               triples.set(entityId, []);
             }
@@ -698,10 +691,8 @@ export function subscribeResultsAndTriples<
 
           let queryShouldRefire = false;
           for (const entity of updatedEntitiesForQuery) {
-            const entityTriples = filterToLatestEntityAttribute(
-              await tripleStore.findByEntity(
-                appendCollectionToId(query.collectionName, entity)
-              )
+            const entityTriples = await tripleStore.findByEntity(
+              appendCollectionToId(query.collectionName, entity)
             );
             // TODO: there is some slight inconsistency here between fetch and subscribe...this will assign default values, particularly to sets
             const entityObj: any = entityTriples.reduce((ent, trip) => {
@@ -869,27 +860,6 @@ export function subscribe<
     onError,
     schema
   );
-}
-
-// TODO: we should do this in a single step when calling entityToResultReducer
-function filterToLatestEntityAttribute(triples: TripleRow[]) {
-  const latest = new Map<string, TripleRow>();
-  for (const triple of triples) {
-    const key = stringifyEA(triple.id, triple.attribute);
-    if (!latest.has(key)) {
-      latest.set(key, triple);
-      continue;
-    }
-    if (timestampCompare(latest.get(key)!.timestamp, triple.timestamp) < 0) {
-      latest.set(key, triple);
-      continue;
-    }
-  }
-  return [...latest.values()];
-}
-
-function stringifyEA(entity: EntityId, attribute: Attribute) {
-  return `${entity}|${attribute}`;
 }
 
 export function subscribeTriples<
