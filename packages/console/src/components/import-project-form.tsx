@@ -108,7 +108,7 @@ export function ImportProjectForm({
     <form className="flex flex-col gap-6" onSubmit={form.onSubmit(onSubmit)}>
       <FormField
         label="Triplit secret key"
-        description="The secret key for your Triplit project can be found at triplit.dev/console"
+        description="The secret key for your Triplit project can be found at https://triplit.dev/dashboard"
         error={form.getInputProps('token').error}
       >
         <PasswordInput
