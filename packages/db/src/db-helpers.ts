@@ -172,13 +172,13 @@ export async function readSchemaFromTripleStore(tripleStores: TripleStoreApi) {
 
 export type StoreSchema<M extends Models<any, any> | undefined> =
   M extends Models<any, any>
-    ? {
-        version: number;
-        collections: M;
-      }
-    : M extends undefined
-    ? undefined
-    : never;
+  ? {
+    version: number;
+    collections: M;
+  }
+  : M extends undefined
+  ? undefined
+  : never;
 
 export async function overrideStoredSchema(
   tripleStore: TripleStore,

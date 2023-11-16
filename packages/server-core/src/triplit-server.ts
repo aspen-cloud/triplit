@@ -1,17 +1,9 @@
-import {
-  DB as TriplitDB,
-  CollectionQuery,
-  TriplitError,
-  schemaToJSON,
-  hashSchemaJSON,
-  Storage,
-} from '@triplit/db';
-import { ServiceKeyRequiredError } from './errors.js';
+import { DB as TriplitDB } from '@triplit/db';
 import { ParsedToken } from '@triplit/types/sync';
 import { Connection, ConnectionOptions, Session } from './session.js';
 
 /**
- * Represents a Triplit server for a speicific tenant.
+ * Represents a Triplit server for a specific tenant.
  */
 export class Server {
   private connections: Map<string, Connection> = new Map();

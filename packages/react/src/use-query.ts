@@ -15,7 +15,7 @@ export function useQuery<
 >(
   client: TriplitClient<any>,
   query: ClientQueryBuilder<M, CN>,
-  options?: SubscriptionOptions
+  options?: { localOnly?: boolean }
 ): {
   fetching: boolean;
   fetchingRemote: boolean;
@@ -26,11 +26,25 @@ export function useQuery<
     ClientFetchResult<ClientQuery<M, CN>> | undefined
   >(undefined);
   const [fetching, setFetching] = useState(true);
-  const [fetchingRemote, setFetchingRemote] = useState(true);
+  const [fetchingRemote, setFetchingRemote] = useState(
+    client.syncEngine.connectionStatus === 'CONNECTING' ||
+    client.syncEngine.connectionStatus === 'OPEN'
+  );
   const [error, setError] = useState<any>(undefined);
 
   const builtQuery = query && query.build();
   const stringifiedQuery = builtQuery && JSON.stringify(builtQuery);
+
+  useEffect(() => {
+    const unsub = client.syncEngine.onConnectionStatusChange((status) => {
+      if (status === 'CLOSING' || status === 'CLOSED') {
+        setFetchingRemote(false);
+      }
+    });
+    return () => {
+      unsub();
+    };
+  }, [stringifiedQuery, client]);
 
   useEffect(() => {
     if (!client) return;
@@ -38,10 +52,9 @@ export function useQuery<
     setFetching(true);
     const unsubscribe = client.subscribe(
       builtQuery,
-      (localResults, { hasRemoteFulfilled }) => {
+      (localResults) => {
         setFetching(false);
         setError(undefined);
-        setFetchingRemote(!hasRemoteFulfilled);
         setResults(
           new Map(localResults) as ClientFetchResult<ClientQuery<M, CN>>
         );
@@ -50,7 +63,14 @@ export function useQuery<
         setFetching(false);
         setError(error);
       },
-      options
+      options?.localOnly
+        ? { localOnly: true }
+        : {
+          localOnly: false,
+          onRemoteFulfilled: () => {
+            setFetchingRemote(false);
+          },
+        }
     );
 
     return () => {

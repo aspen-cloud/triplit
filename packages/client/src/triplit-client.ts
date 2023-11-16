@@ -42,8 +42,8 @@ export type ClientFetchResult<C extends ClientQuery<any, any>> = Map<
 
 type ClientFetchResultEntity<C extends ClientQuery<any, any>> =
   C extends ClientQuery<infer M, infer CN>
-    ? ResultTypeFromModel<ModelFromModels<M, CN>>
-    : never;
+  ? ResultTypeFromModel<ModelFromModels<M, CN>>
+  : never;
 
 export interface SyncOptions {
   server?: string;
@@ -138,10 +138,8 @@ export type FetchOptions =
   | LocalAndRemoteFetchOptions;
 
 export type SubscriptionOptions =
-  | LocalFirstFetchOptions
-  | LocalOnlyFetchOptions
-  | RemoteFirstFetchOptions
-  | LocalAndRemoteFetchOptions;
+  | { localOnly: true }
+  | { localOnly: undefined | false; onRemoteFulfilled?: () => void };
 
 type StorageOptions =
   | { cache: Storage; outbox: Storage }
@@ -210,7 +208,6 @@ export class TriplitClient<M extends Models<any, any> | undefined = undefined> {
 
   private defaultFetchOptions: {
     fetch: FetchOptions;
-    subscription: SubscriptionOptions;
   };
 
   constructor(options?: ClientOptions<M>) {
@@ -234,9 +231,9 @@ export class TriplitClient<M extends Models<any, any> | undefined = undefined> {
       schema: schema ? { collections: schema, version: 0 } : undefined,
       migrations: migrations
         ? {
-            definitions: migrations,
-            scopes: ['cache'],
-          }
+          definitions: migrations,
+          scopes: ['cache'],
+        }
         : undefined,
       variables,
       sources: getClientStorage(storage ?? DEFAULT_STORAGE_OPTION),
@@ -244,7 +241,6 @@ export class TriplitClient<M extends Models<any, any> | undefined = undefined> {
 
     this.defaultFetchOptions = {
       fetch: DEFAULT_FETCH_OPTIONS,
-      subscription: DEFAULT_FETCH_OPTIONS,
       ...defaultQueryOptions,
     };
 
@@ -412,11 +408,11 @@ export class TriplitClient<M extends Models<any, any> | undefined = undefined> {
     onError?: (error: any) => void,
     options?: SubscriptionOptions
   ) {
-    const opts = options ?? this.defaultFetchOptions.subscription;
+    const opts: SubscriptionOptions = { localOnly: false, ...options };
 
     const scope = parseScope(query);
 
-    if (opts.policy === 'local-only') {
+    if (opts.localOnly) {
       try {
         return this.db.subscribe(
           query,
@@ -431,118 +427,39 @@ export class TriplitClient<M extends Models<any, any> | undefined = undefined> {
       } catch (e) {
         if (onError) onError(e);
         else warnError(e);
-        return () => {};
+        return () => { };
       }
     }
 
-    // Hit cache first, then backfill with remote
-    // If we introduce staleness maybe could add that here (sync remote before subscribing if stale)
-    if (opts.policy === 'local-first') {
-      let unsubscribeLocal = () => {};
-      let unsubscribeRemote = () => {};
-      let hasRemoteFulfilled = false;
-      const clientSubscriptionCallback = (results: any) => {
-        onResults(results as ClientFetchResult<CQ>, { hasRemoteFulfilled });
-      };
-      unsubscribeLocal = this.db.subscribe(
-        query,
-        clientSubscriptionCallback,
-        onError,
-        {
-          scope,
-          skipRules: SKIP_RULES,
-        }
-      );
-      if (scope.includes('cache')) {
-        const onFulfilled = () => {
-          hasRemoteFulfilled = true;
-          // TODO we should manually call the db subscription callback with
-          // the remote status just in case there are no new results but
-          // we also don't want to call it with stale results
-        };
-        unsubscribeRemote = this.syncEngine.subscribe(query, onFulfilled);
+    let unsubscribeLocal = () => { };
+    let unsubscribeRemote = () => { };
+    let hasRemoteFulfilled = false;
+    const clientSubscriptionCallback = (results: any) => {
+      onResults(results as ClientFetchResult<CQ>, { hasRemoteFulfilled });
+    };
+    unsubscribeLocal = this.db.subscribe(
+      query,
+      clientSubscriptionCallback,
+      onError,
+      {
+        scope,
+        skipRules: SKIP_RULES,
       }
-      return () => {
-        unsubscribeLocal();
-        unsubscribeRemote();
-      };
-    }
-
-    if (opts.policy === 'remote-first') {
-      let cancel = false;
-      let unsubscribeLocal = () => {};
-      let unsubscribeRemote = () => {};
-      this.syncEngine
-        .syncQuery(query)
-        .catch(warnError)
-        .then(() => {
-          if (!cancel) {
-            unsubscribeLocal = this.db.subscribe(
-              query,
-              // @ts-ignore TODO: include hasRemoteFulfilled
-              onResults,
-              onError,
-              {
-                scope,
-                skipRules: SKIP_RULES,
-              }
-            );
-            if (scope.includes('cache'))
-              unsubscribeRemote = this.syncEngine.subscribe(query);
-          }
-        })
-        .catch((e) => {
-          if (onError) onError(e);
-          else warnError(e);
-        });
-
-      return () => {
-        cancel = true;
-        unsubscribeLocal();
-        unsubscribeRemote();
-      };
-    }
-
-    if (opts.policy === 'local-and-remote') {
-      let cancel = false;
-      let unsubscribeLocal = () => {};
-      let unsubscribeRemote = () => {};
-      const timeout = opts.timeout || 0;
-      Promise.race([
-        this.syncEngine.syncQuery(query),
-        new Promise((res) => setTimeout(res, timeout)),
-      ])
-        .catch(warnError)
-        .then(() => {
-          if (!cancel) {
-            unsubscribeLocal = this.db.subscribe(
-              query,
-              // @ts-ignore TODO: include hasRemoteFulfilled
-              onResults,
-              onError,
-              {
-                scope,
-                skipRules: SKIP_RULES,
-              }
-            );
-            if (scope.includes('cache'))
-              unsubscribeRemote = this.syncEngine.subscribe(query);
-          }
-        })
-        .catch((e) => {
-          if (onError) onError(e);
-          else warnError(e);
-        });
-
-      return () => {
-        cancel = true;
-        unsubscribeLocal();
-        unsubscribeRemote();
-      };
-    }
-    throw new UnrecognizedFetchPolicyError(
-      (opts as SubscriptionOptions).policy
     );
+    if (scope.includes('cache')) {
+      const onFulfilled = () => {
+        hasRemoteFulfilled = true;
+        opts.onRemoteFulfilled?.();
+        // TODO we should manually call the db subscription callback with
+        // the remote status just in case there are no new results but
+        // we also don't want to call it with stale results
+      };
+      unsubscribeRemote = this.syncEngine.subscribe(query, onFulfilled);
+    }
+    return () => {
+      unsubscribeLocal();
+      unsubscribeRemote();
+    };
   }
 
   updateOptions(options: Pick<ClientOptions<M>, 'token' | 'serverUrl'>) {

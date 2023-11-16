@@ -2,7 +2,7 @@
 
 Alternatively, you may subscribe to a query. Subscribing to a query will provide continual updates to the query result based on the state of your local database.
 
-If the sync engine is connected to the remote database, subscribing to a query will keep your local database in sync with the remote database as well (depending on the [options](/fetching-data/fetch#fetch-options) provided to the subscription).
+If the sync engine is connected to the remote database, subscribing to a query will keep your local database in sync with the remote database as well depending on the options provided to the subscription).
 
 Starting a subscription is as simple as defining a query and a callback to run when data has updated:
 
@@ -15,7 +15,13 @@ const unsubscribe = client.subscribe(
   (error) => {
     // handle error
   },
-  options
+  // Optional
+  {
+    localOnly: false,
+    onRemoteFulfilled: () => {
+      console.log('server has sent back results for the subscription')
+    }
+  }
 );
 ```
 

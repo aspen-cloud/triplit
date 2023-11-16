@@ -20,7 +20,7 @@ export function ProjectViewer({
   client: TriplitClient<any>;
 }) {
   // ProjectViewer.tsx - handles loading client and safely rendering children
-
+  window.appClient = client;
   const [selectedCollection, setSelectedCollection] = useSelectedCollection();
   const [collectionStats, setCollectionStats] = useState<CollectionStats[]>([]);
   const { results: schema } = useEntity(client, '_metadata', '_schema');
