@@ -57,7 +57,7 @@ export function DateType<TypeOptions extends UserTypeOptions = {}>(
       return new Date(val);
     },
     convertJSToJSON(val) {
-      // @ts-expect-error
+      if (val === null) return val;
       return val.toISOString();
     },
     default() {
