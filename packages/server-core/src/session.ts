@@ -89,8 +89,8 @@ export class Connection {
             triples: [],
             forQueries: [queryKey],
           });
-          return
-        };
+          return;
+        }
         const triplesForClient = triples.filter(
           ({ timestamp: [_t, client] }) => client !== this.options.clientId
         );
@@ -107,8 +107,8 @@ export class Connection {
           error instanceof TriplitError
             ? error
             : new TriplitError(
-              'An unknown error occurred while processing your request.'
-            );
+                'An unknown error occurred while processing your request.'
+              );
         this.sendErrorResponse('CONNECT_QUERY', new QuerySyncError(params), {
           queryKey,
           innerError,
@@ -184,8 +184,8 @@ export class Connection {
         e instanceof TriplitError
           ? e
           : new TriplitError(
-            'An unknown error occurred while processing your request.'
-          );
+              'An unknown error occurred while processing your request.'
+            );
       this.sendErrorResponse('TRIPLES', new TriplesInsertError(), {
         failures: Object.keys(txTriples).map((txId) => ({
           txId,
@@ -220,8 +220,8 @@ export class Connection {
         e instanceof TriplitError
           ? e
           : new TriplitError(
-            'An unknown error occurred while processing your request.'
-          )
+              'An unknown error occurred while processing your request.'
+            )
       );
     }
   }
@@ -502,7 +502,7 @@ function errorResponse(e: unknown, options?: { fallbackMessage?: string }) {
   }
   const generalError = new TriplitError(
     options?.fallbackMessage ??
-    'An unknown error occured processing your request.'
+      'An unknown error occured processing your request.'
   );
   console.log(e);
   return ServerResponse(generalError.status, generalError.toJSON());
