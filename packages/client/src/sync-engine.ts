@@ -45,9 +45,8 @@ export class SyncEngine {
   private db: DB<any>;
   private syncOptions: SyncOptions;
 
-  private connectionChangeHandlers: Set<
-    (status: ConnectionStatus) => void
-  > = new Set();
+  private connectionChangeHandlers: Set<(status: ConnectionStatus) => void> =
+    new Set();
 
   private queryFulfillmentCallbacks: Map<string, (response: any) => void>;
   private txCommits$ = new Subject<string>();
@@ -95,8 +94,9 @@ export class SyncEngine {
 
   private get httpUri() {
     return this.syncOptions.server
-      ? `${this.syncOptions.secure ? 'https' : 'http'}://${this.syncOptions.server
-      }`
+      ? `${this.syncOptions.secure ? 'https' : 'http'}://${
+          this.syncOptions.server
+        }`
       : undefined;
   }
 
@@ -209,6 +209,7 @@ export class SyncEngine {
   async connect() {
     this.closeConnection({ type: 'CONNECTION_OVERRIDE', retry: false });
     const params = await this.getConnectionParams();
+    this.transport.connect(params);
     this.transport.onMessage(async (evt) => {
       const message: ServerSyncMessage = JSON.parse(evt.data);
       if (message.type === 'ERROR') {
@@ -335,9 +336,6 @@ export class SyncEngine {
         handler(state);
       }
     });
-
-    // Call after setting up listeners
-    this.transport.connect(params);
   }
 
   /**
