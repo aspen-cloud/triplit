@@ -5,7 +5,7 @@ import { getTriplitDir } from './filesystem.js';
 
 // Within a process, break the import cache in case of file changes
 // I'd rather not do this, but had issues with tests not picking up changes
-async function importFresh(modulePath: string) {
+export async function importFresh(modulePath: string) {
   const cacheBustingModulePath = `${modulePath}?update=${Date.now()}`;
   return await import(cacheBustingModulePath);
 }

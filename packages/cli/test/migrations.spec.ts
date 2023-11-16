@@ -2,7 +2,7 @@ import { it, expect, describe } from 'vitest';
 import { createMigration } from '../src/migration';
 import { Models, Schema as S, hashSchemaJSON, schemaToJSON } from '@triplit/db';
 import { schemaFileContentFromMigrations } from '../src/commands/migrate/codegen';
-import { transpileTsString } from '../src/schema';
+import { importFresh, transpileTsString } from '../src/schema';
 import fs from 'fs';
 import path from 'path';
 
@@ -92,6 +92,36 @@ it('codegen can generate a schema from migrations', async () => {
   const hash1 = hashSchemaJSON(jsonSchema.collections);
   const hash2 = hashSchemaJSON(codegenSchemaJSON.collections);
   expect(hash1).toBe(hash2);
+});
+
+it('codegen can handle kebab case collections and attributes', async () => {
+  const schema = {
+    'test-collection': {
+      schema: S.Schema({
+        id: S.Id(),
+        'string-attr': S.String(),
+      }),
+    },
+  } satisfies Models<any, any>;
+  const jsonSchema = schemaToJSON({ collections: schema, version: 0 })!;
+  const migration = createMigration({}, jsonSchema.collections, 1, 0, '');
+  if (!migration) throw new Error('migration is undefined');
+  const schemaFileContent = await schemaFileContentFromMigrations([migration]);
+  const codegenSchemaFileStr = transpileTsString(schemaFileContent);
+  const codegenSchema = await schemaFromFileString(codegenSchemaFileStr);
+  const codegenSchemaJSON = schemaToJSON({
+    collections: codegenSchema,
+    version: 0,
+  })!;
+
+  expect(codegenSchemaJSON.collections.hasOwnProperty('test-collection')).toBe(
+    true
+  );
+  expect(
+    codegenSchemaJSON.collections[
+      'test-collection'
+    ].schema.properties.hasOwnProperty('string-attr')
+  ).toBe(true);
 });
 
 describe('migration creation', () => {
@@ -587,7 +617,7 @@ describe('migration creation', () => {
         0,
         ''
       );
-      console.dir(migration, { depth: null });
+
       expect(migration?.up).toEqual([
         [
           'drop_attribute',
@@ -915,7 +945,7 @@ async function schemaFromFileString(source: string) {
   try {
     fs.mkdirSync(tmpDir, { recursive: true });
     fs.writeFileSync(tmpPath, source, 'utf8');
-    const { schema } = await import(tmpPath);
+    const { schema } = await importFresh(tmpPath);
     return schema;
   } finally {
     fs.rmSync(tmpDir, { recursive: true, force: true });

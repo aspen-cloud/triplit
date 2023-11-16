@@ -87,7 +87,7 @@ export function collectionsDefinitionToFileContent(
   let result = '{\n';
   for (let collectionKey in collectionsDefinition) {
     result += indent;
-    result += `${collectionKey}: {\n`;
+    result += `'${collectionKey}': {\n`;
     const { schema: attributes, rules } = collectionsDefinition[collectionKey];
     result += generateAttributesSection(attributes, indent + indentation);
     result += generateRulesSection(rules, indent + indentation);
@@ -133,10 +133,10 @@ function generateAttributeSchema(
 ) {
   if (path.length === 0) return schemaItemToString(schemaItem);
   if (path.length === 1)
-    return indent + `${path[0]}: ${schemaItemToString(schemaItem)},\n`;
+    return indent + `'${path[0]}': ${schemaItemToString(schemaItem)},\n`;
   let result = '';
   const [head, ...tail] = path;
-  result += indent + `${head}: {\n`;
+  result += indent + `'${head}': {\n`;
   result += generateAttributeSchema(tail, schemaItem, indent + indentation);
   result += indent + '},\n';
   return result;
@@ -157,7 +157,7 @@ function schemaItemToString(schemaItem: AttributeDefinition): string {
   if (type === 'set') return `S.Set(${schemaItemToString(schemaItem.items)})`;
   if (type === 'record')
     return `S.Record({${Object.entries(schemaItem.properties)
-      .map(([key, value]) => `${key}: ${schemaItemToString(value as any)}`)
+      .map(([key, value]) => `'${key}': ${schemaItemToString(value as any)}`)
       .join(',\n')}})`;
   if (type === 'query') return `S.Query(${subQueryToString(schemaItem.query)})`;
   throw new Error(`Invalid type: ${type}`);

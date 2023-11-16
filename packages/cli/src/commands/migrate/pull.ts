@@ -8,7 +8,7 @@ import {
 } from '../../migration.js';
 import { serverRequesterMiddleware } from '../../middleware/add-server-requester.js';
 import { getMigrationsDir } from '../../filesystem.js';
-import { blue, italic } from 'ansis/colors';
+import { blue, italic, red } from 'ansis/colors';
 import DB, { schemaToJSON } from '@triplit/db';
 import { schemaFileContentFromMigrations, writeSchemaFile } from './codegen.js';
 import { Command } from '../../command.js';
@@ -69,14 +69,23 @@ export default Command({
       await applyMigration(migration, 'up', ctx);
 
       if (
-        projectHasUntrackedChanges(project.schemaHash, project.migrationsHash)
+        !projectHasUntrackedChanges(project.schemaHash, project.migrationsHash)
       ) {
-        console.log('\n...Regenerating schema file with the new migration\n');
-        const newMigrations = [...project.migrations, migration];
-        const fileContent = await schemaFileContentFromMigrations(
-          newMigrations
-        );
-        await writeSchemaFile(fileContent);
+        try {
+          console.log('\n...Regenerating schema file with the new migration\n');
+          const newMigrations = [...project.migrations, migration];
+          const fileContent = await schemaFileContentFromMigrations(
+            newMigrations
+          );
+          await writeSchemaFile(fileContent);
+        } catch (e) {
+          console.log(
+            red(
+              `An error occured regenerating your schema file. You may re-run \`triplit migrate codegen\`. If that fails you may need to manually edit your schema file to reflect the changes applied in the latest migration.`
+            )
+          );
+          console.error(e);
+        }
       } else {
         // console.log(
         //   'Your schema.ts file has untracked changes. Run `triplit migrate create [migration_name]` and `triplit migrate up` to track the changes and push them to the remote.\n'
