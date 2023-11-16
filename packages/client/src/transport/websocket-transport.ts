@@ -7,12 +7,12 @@ import {
 
 export class WebSocketTransport implements SyncTransport {
   ws: WebSocket | undefined = undefined;
-  constructor() {}
+  constructor() { }
   get isOpen(): boolean {
     return !!this.ws && this.ws.readyState === this.ws.OPEN;
   }
-  get connectionStatus(): ConnectionStatus | undefined {
-    return this.ws ? friendlyReadyState(this.ws) : undefined;
+  get connectionStatus(): ConnectionStatus {
+    return this.ws ? friendlyReadyState(this.ws) : "CLOSED";
   }
   onOpen(callback: (ev: any) => void): void {
     if (this.ws) this.ws.onopen = callback;
@@ -48,9 +48,8 @@ export class WebSocketTransport implements SyncTransport {
     wsOptions.set('sync-schema', String(syncSchema));
     wsOptions.set('client', clientId);
     wsOptions.set('token', token);
-    const wsUri = `${
-      secure ? 'wss' : 'ws'
-    }://${server}?${wsOptions.toString()}`;
+    const wsUri = `${secure ? 'wss' : 'ws'
+      }://${server}?${wsOptions.toString()}`;
     this.ws = new WebSocket(wsUri);
   }
   onMessage(callback: (message: any) => void): void {

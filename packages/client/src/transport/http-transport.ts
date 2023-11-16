@@ -11,7 +11,7 @@ export class HttpTransport implements SyncTransport {
   private closeCallback: ((ev: any) => void) | undefined;
   private transportOptions: TransportConnectParams | undefined;
 
-  constructor() {}
+  constructor() { }
 
   get isOpen(): boolean {
     return (
@@ -20,8 +20,8 @@ export class HttpTransport implements SyncTransport {
     );
   }
 
-  get connectionStatus(): ConnectionStatus | undefined {
-    return this.eventSource ? friendlyReadyState(this.eventSource) : undefined;
+  get connectionStatus(): ConnectionStatus {
+    return this.eventSource ? friendlyReadyState(this.eventSource) : "CLOSED";
   }
 
   onOpen(callback: (ev: any) => void): void {
@@ -87,9 +87,8 @@ export class HttpTransport implements SyncTransport {
     eventSourceOptions.set('sync-schema', String(syncSchema));
     eventSourceOptions.set('client', clientId);
     eventSourceOptions.set('token', token);
-    const eventSourceUri = `${
-      secure ? 'https' : 'http'
-    }://${server}/message-events?${eventSourceOptions.toString()}`;
+    const eventSourceUri = `${secure ? 'https' : 'http'
+      }://${server}/message-events?${eventSourceOptions.toString()}`;
     this.eventSource = new EventSource(eventSourceUri);
     this.transportOptions = params;
   }

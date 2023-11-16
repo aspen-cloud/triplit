@@ -12,7 +12,7 @@ export type ConnectionStatus = 'CONNECTING' | 'OPEN' | 'CLOSING' | 'CLOSED';
 
 export interface SyncTransport {
   isOpen: boolean;
-  connectionStatus: ConnectionStatus | undefined;
+  connectionStatus: ConnectionStatus;
   onOpen(callback: (ev: any) => void): void;
   sendMessage<Msg extends ClientSyncMessage>(
     type: Msg['type'],

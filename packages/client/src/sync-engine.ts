@@ -46,7 +46,7 @@ export class SyncEngine {
   private syncOptions: SyncOptions;
 
   private connectionChangeHandlers: Set<
-    (status: ConnectionStatus | undefined) => void
+    (status: ConnectionStatus) => void
   > = new Set();
 
   private queryFulfillmentCallbacks: Map<string, (response: any) => void>;
@@ -95,9 +95,8 @@ export class SyncEngine {
 
   private get httpUri() {
     return this.syncOptions.server
-      ? `${this.syncOptions.secure ? 'https' : 'http'}://${
-          this.syncOptions.server
-        }`
+      ? `${this.syncOptions.secure ? 'https' : 'http'}://${this.syncOptions.server
+      }`
       : undefined;
   }
 
@@ -445,7 +444,7 @@ export class SyncEngine {
    * @returns A function that removes the callback from the connection status change listeners
    */
   onConnectionStatusChange(
-    callback: (status: ConnectionStatus | undefined) => void,
+    callback: (status: ConnectionStatus) => void,
     runImmediately: boolean = false
   ) {
     this.connectionChangeHandlers.add(callback);
