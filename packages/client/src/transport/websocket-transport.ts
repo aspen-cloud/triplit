@@ -7,6 +7,7 @@ import {
 
 export class WebSocketTransport implements SyncTransport {
   ws: WebSocket | undefined = undefined;
+  private connectionListeners: Set<((state: ConnectionStatus) => void)> = new Set();
   constructor() { }
   get isOpen(): boolean {
     return !!this.ws && this.ws.readyState === this.ws.OPEN;
@@ -51,6 +52,10 @@ export class WebSocketTransport implements SyncTransport {
     const wsUri = `${secure ? 'wss' : 'ws'
       }://${server}?${wsOptions.toString()}`;
     this.ws = new WebSocket(wsUri);
+    this.ws.onconnectionchange = (status) => {
+      this.connectionListeners.forEach((listener) => listener(status));
+    }
+
   }
   onMessage(callback: (message: any) => void): void {
     if (this.ws) this.ws.onmessage = callback;
@@ -63,10 +68,13 @@ export class WebSocketTransport implements SyncTransport {
     this.ws && this.ws.close(1000, JSON.stringify(reason));
   }
   onClose(callback: (ev: any) => void): void {
-    if (this.ws) this.ws.onclose = callback;
+    if (this.ws) this.ws.onclose = callback
   }
-  onConnectionChange(callback: (state: ConnectionStatus) => void): void {
-    if (this.ws) this.ws.onconnectionchange = callback;
+  onConnectionChange(callback: (state: ConnectionStatus) => void): () => void {
+    this.connectionListeners.add(callback);
+    return () => {
+      this.connectionListeners.delete(callback);
+    }
   }
 }
 
