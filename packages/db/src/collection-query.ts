@@ -142,9 +142,10 @@ export async function fetch<
     const triples = new Map([[queryWithInsertedVars.entityId, entityTriples]]);
     if (!entity || !doesEntityObjMatchWhere(entity, where, collectionSchema)) {
       const results = new Map() as FetchResult<Q>;
-      return includeTriples ? { results, triples } : results;
+      return includeTriples ? { results, triples: [] } : results;
     }
     let updatedEntity = entity;
+    // @WE I'm sure theres a reason, but its unclear why we do this? If we arent including triples, dont strip timestamps?
     if (!includeTriples)
       updatedEntity = convertEntityToJS(updatedEntity, collectionSchema);
     const results = new Map([
