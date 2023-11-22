@@ -64,9 +64,9 @@ bench
   .add('vanilla js map', async () => {
     const db = new Map(CLASSES.map((cls) => [cls.id, cls]));
   })
-  // .add('rxdb bulk', async () => {
-  //   await rxdb.collections.classes.bulkInsert(CLASSES);
-  // })
+  .add('rxdb bulk', async () => {
+    await rxdb.collections.classes.bulkInsert(CLASSES);
+  })
   .add('rxdb', async () => {
     try {
       for (const cls of CLASSES) {
@@ -77,6 +77,11 @@ bench
     }
   })
   .add('triplit', async () => {
+    for (const cls of CLASSES) {
+      await triplit.insert('classes', cls);
+    }
+  })
+  .add('triplit bulk', async () => {
     await triplit.transact(async (tx) => {
       for (const cls of CLASSES) {
         await tx.insert('classes', cls);
