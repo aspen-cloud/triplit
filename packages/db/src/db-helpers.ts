@@ -172,13 +172,13 @@ export async function readSchemaFromTripleStore(tripleStores: TripleStoreApi) {
 
 export type StoreSchema<M extends Models<any, any> | undefined> =
   M extends Models<any, any>
-  ? {
-    version: number;
-    collections: M;
-  }
-  : M extends undefined
-  ? undefined
-  : never;
+    ? {
+        version: number;
+        collections: M;
+      }
+    : M extends undefined
+    ? undefined
+    : never;
 
 export async function overrideStoredSchema(
   tripleStore: TripleStore,
@@ -232,11 +232,12 @@ export function validateTriple(
   const isLeaf = (VALUE_TYPE_KEYS as unknown as string[]).includes(
     valueSchema.type
   );
-  if (!isLeaf)
+  if (!isLeaf) {
     throw new InvalidSchemaPathError(
       path as string[],
       'Cannot set a non-value type to a value. For example, you may be attempting to set a value on a record type.'
     );
+  }
   // Leaf values are an array [value, timestamp], so check value
   if (!valueSchema.validateTripleValue(value))
     throw new ValueSchemaMismatchError(

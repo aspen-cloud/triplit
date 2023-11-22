@@ -47,9 +47,9 @@ export type TripleRow = {
 
 export type TripleMetadata = { expired: Expired };
 
-export type EAVIndex = {
-  key: ['EAV', EntityId, Attribute, Value, Timestamp];
-  value: TripleMetadata;
+export type EATIndex = {
+  key: ['EAT', EntityId, Attribute, Timestamp];
+  value: [Value, TripleMetadata['expired']];
 };
 
 export type AVEIndex = {
@@ -77,7 +77,7 @@ type WithTenantIdPrefix<T extends KeyValuePair> = {
   value: T['value'];
 };
 
-export type TripleIndex = EAVIndex | AVEIndex | VAEIndex | ClientTimestampIndex;
+export type TripleIndex = EATIndex | AVEIndex | VAEIndex | ClientTimestampIndex;
 type TupleIndex = TripleIndex | MetadataIndex;
 // export type TenantTripleIndex = WithTenantIdPrefix<TripleIndex>;
 
@@ -89,8 +89,9 @@ function indexToTriple(index: TupleIndex): TripleRow {
   const indexType = index.key[0];
   let e, a, v, t;
   switch (indexType) {
-    case 'EAV':
-      [, e, a, v, t] = index.key as EAVIndex['key'];
+    case 'EAT':
+      [, e, a, t] = index.key as EATIndex['key'];
+      v = index.value[0];
       break;
     case 'AVE':
       [, a, v, e, t] = index.key as AVEIndex['key'];
@@ -109,7 +110,7 @@ function indexToTriple(index: TupleIndex): TripleRow {
     attribute: a,
     value: v,
     timestamp: t,
-    expired: index.value.expired,
+    expired: indexType === 'EAT' ? index.value[1] : index.value.expired,
   };
 }
 
@@ -335,31 +336,23 @@ export class TripleStoreTxOperator implements TripleStoreApi {
     const { id: id, attribute, value, timestamp, expired } = tripleInput;
 
     // If we already have this triple, skip it (performance optimization)
-    const existingTriples = await tx.scan({
-      prefix: ['EAV', id, attribute, value, timestamp],
-    });
-    if (existingTriples.length > 1) {
-      throw new TriplitError(
-        'Found multiple tuples with the same key. This should not happen.'
-      );
-    }
-    if (existingTriples.length === 1) {
-      const existingTriple = indexToTriple(existingTriples[0]);
-      if (existingTriple.expired === expired) {
-        // console.info('Skipping index for existing triple');
-        return;
-      }
-    }
+    // const existingTriples = await tx.scan({
+    //   prefix: ['EAT', id, attribute, value, timestamp],
+    // });
+    // if (existingTriples.length > 1) {
+    //   throw new TriplitError(
+    //     'Found multiple tuples with the same key. This should not happen.'
+    //   );
+    // }
+    // if (existingTriples.length === 1) {
+    //   const existingTriple = indexToTriple(existingTriples[0]);
+    //   if (existingTriple.expired === expired) {
+    //     // console.info('Skipping index for existing triple');
+    //     return;
+    //   }
+    // }
 
-    const metadata = { expired };
-
-    tx.set(['EAV', id, attribute, value, timestamp], metadata);
-    tx.set(['AVE', attribute, value, id, timestamp], metadata);
-    // // tx.set(['VAE', value, attribute, id, timestamp], metadata);
-    tx.set(
-      ['clientTimestamp', timestamp[1], timestamp, id, attribute, value],
-      metadata
-    );
+    tx.set(['EAT', id, attribute, timestamp], [value, expired]);
   }
 
   async deleteTriple(trip: TripleRow) {
@@ -370,9 +363,9 @@ export class TripleStoreTxOperator implements TripleStoreApi {
     const tx = this.tupleOperator;
     for (const triple of triples) {
       const { id: id, attribute, value, timestamp } = triple;
-      tx.remove(['EAV', id, attribute, value, timestamp]);
+      tx.remove(['EAT', id, attribute, timestamp]);
       tx.remove(['AVE', attribute, value, id, timestamp]);
-      tx.remove(['VAE', value, attribute, id, timestamp]);
+      // tx.remove(['VAE', value, attribute, id, timestamp]);
       tx.remove([
         'clientTimestamp',
         timestamp[1],
@@ -454,18 +447,20 @@ export class TripleStoreTxOperator implements TripleStoreApi {
   }
 
   async expireEntity(id: EntityId) {
-    const timestamp = await this.parentTx.getTransactionTimestamp();
-    const collectionTriple = await this.findByEntityAttribute(id, [
-      '_collection',
-    ]);
-    const existingTriples = await this.findByEntity(id);
-    await this.insertTriples(
-      collectionTriple.map((t) => ({ ...t, timestamp, expired: true }))
-    );
+    // const timestamp = await this.parentTx.getTransactionTimestamp();
+    // const collectionTriple = await this.findByEntityAttribute(id, [
+    //   '_collection',
+    // ]);
+    // const existingTriples = await this.findByEntity(id);
+    // await this.insertTriples(
+    //   collectionTriple.map((t) => ({ ...t, timestamp, expired: true }))
+    // );
+    // await this.setValue(id, ['_collection'], null);
+    await this.expireEntityAttribute(id, ['_collection']);
 
     // Perform local garbage collection
     // Feels like it would be nice to do GC in hooks...tried once and it was a bit messy with other assumptions
-    await this.deleteTriples(existingTriples);
+    // await this.deleteTriples(existingTriples);
   }
 
   async expireEntityAttribute(id: EntityId, attribute: Attribute) {
@@ -483,7 +478,7 @@ export class TripleStoreTxOperator implements TripleStoreApi {
     const timestamp = await this.parentTx.getTransactionTimestamp();
     await this.deleteTriples(allExistingTriples);
     await this.insertTriples(
-      values.map(({ id, attribute }) => ({
+      allExistingTriples.map(({ id, attribute }) => ({
         id,
         attribute,
         value: null,
@@ -523,6 +518,15 @@ export class TripleStoreTransaction implements TripleStoreApi {
     });
     this.store = store;
     this.tupleTx = tupleTx;
+  }
+
+  get writes(): TripleRow[] {
+    return (this.tupleTx.writes.set ?? [])
+      .filter(({ key }) => {
+        const [_prefix, type] = key;
+        return type === 'EAT';
+      })
+      .map(({ key, value }) => indexToTriple({ key: key.slice(1), value }));
   }
 
   insertTriple(tripleRow: TripleRow): Promise<void> {
@@ -686,6 +690,25 @@ export class TripleStoreTransaction implements TripleStoreApi {
   }
 }
 
+function addIndexesToTransaction(tupleTx: MultiTupleTransaction<TupleIndex>) {
+  // Add AVE and clientTimestamp indexes for each EAV insert
+  const { set = [] } = tupleTx.writes;
+  if (set.length === 0) return;
+
+  for (const { key, value: tupleValue } of set) {
+    const [_client, indexType, ...indexKey] = key;
+    if (indexType !== 'EAT') continue;
+    const [id, attribute, timestamp] = indexKey;
+    // console.log(key, tupleValue);
+    const [value, isExpired] = tupleValue;
+    tupleTx.set(['AVE', attribute, value, id, timestamp], value);
+    tupleTx.set(
+      ['clientTimestamp', timestamp[1], timestamp, id, attribute, value],
+      value
+    );
+  }
+}
+
 export class TripleStore implements TripleStoreApi {
   stores: Record<
     string,
@@ -757,6 +780,40 @@ export class TripleStore implements TripleStoreApi {
 
     this.clock = clock ?? new MemoryClock();
     this.clock.assignToStore(this);
+    this.tupleStore.beforeScan(addIndexesToTransaction);
+    this.tupleStore.beforeCommit(addIndexesToTransaction);
+  }
+
+  async ensureStorageIsMigrated() {
+    // Check if any EAV tuples exist and migrate them to EAT
+    const existingTuples = (await this.tupleStore.scan({
+      prefix: ['EAV'],
+    })) as {
+      key: ['EAV', EntityId, Attribute, Value, Timestamp];
+      value: TripleMetadata;
+    }[];
+
+    if (existingTuples.length === 0) return;
+
+    const tuplesToInsert: EATIndex[] = [];
+    for (const tuple of existingTuples) {
+      const [_index, id, attribute, value, timestamp] = tuple.key;
+      const { expired } = tuple.value;
+      tuplesToInsert.push({
+        key: ['EAT', id, attribute, timestamp],
+        value: [value, expired],
+      });
+    }
+    await this.tupleStore.autoTransact(async (tx) => {
+      // Delete old EAV tuples
+      for (const tuple of existingTuples) {
+        tx.remove(tuple.key);
+      }
+      // Insert new EAT tuples
+      for (const tuple of tuplesToInsert) {
+        await tx.set(tuple.key, tuple.value);
+      }
+    }, undefined);
   }
 
   beforeInsert(callback: TripleStoreBeforeInsertHook) {
@@ -937,7 +994,7 @@ export class TripleStore implements TripleStoreApi {
       callback(triples);
     }
     const unsub = this.tupleStore.subscribe(
-      { prefix: ['EAV'] },
+      { prefix: ['EAT'] },
       writesCallback
     );
     return () => {
@@ -963,7 +1020,7 @@ export class TripleStore implements TripleStoreApi {
       callback({ inserts, deletes });
     }
     const unsub = this.tupleStore.subscribe(
-      { prefix: ['EAV'] },
+      { prefix: ['EAT'] },
       writesCallback
     );
     return unsub;
@@ -1022,7 +1079,7 @@ async function findByCollection(
   direction?: 'ASC' | 'DESC'
 ) {
   return scanToTriples(tx, {
-    prefix: ['EAV'],
+    prefix: ['EAT'],
     gte: [collectionName],
     // @ts-ignore
     lt: [collectionName + MAX],
@@ -1040,7 +1097,7 @@ async function findByEAV(
   direction?: 'ASC' | 'DESC'
 ) {
   const scanArgs = {
-    prefix: ['EAV'],
+    prefix: ['EAT'],
     gte: [entityId ?? MIN, attribute ?? MIN, value ?? MIN],
     // @ts-ignore
     lt: [entityId ?? MAX, [...(attribute ?? []), MAX], MAX],

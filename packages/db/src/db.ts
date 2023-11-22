@@ -202,16 +202,18 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
     });
     this.cache = new VariableAwareCache(this.tripleStore);
 
-    this.ensureMigrated = migrations
-      ? Array.isArray(migrations)
-        ? this.migrate(migrations, 'up')
-        : this.migrate(migrations.definitions, 'up', migrations.scopes)
-      : // .catch((e) => {
-      //   console.error(e);
-      // })
-      tripleStoreSchema
-      ? overrideStoredSchema(this.tripleStore, tripleStoreSchema)
-      : Promise.resolve();
+    this.ensureMigrated = this.tripleStore.ensureStorageIsMigrated().then(() =>
+      migrations
+        ? Array.isArray(migrations)
+          ? this.migrate(migrations, 'up')
+          : this.migrate(migrations.definitions, 'up', migrations.scopes)
+        : // .catch((e) => {
+        //   console.error(e);
+        // })
+        tripleStoreSchema
+        ? overrideStoredSchema(this.tripleStore, tripleStoreSchema)
+        : Promise.resolve()
+    );
   }
 
   withVars(variables: Record<string, any>): DB<M> {

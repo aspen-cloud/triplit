@@ -7,6 +7,7 @@ import {
   AsyncTupleRootTransactionApi,
   Unsubscribe,
   transactionalReadWriteAsync,
+  WriteOps,
 } from 'tuple-database';
 import { compareTuple } from 'tuple-database/helpers/compareTuple.js';
 import {
@@ -31,11 +32,14 @@ type MultiTupleStoreBeforeInsertHook<TupleSchema extends KeyValuePair> = (
   tx: MultiTupleTransaction<TupleSchema>
 ) => void | Promise<void>;
 
-type MultiTupleStoreBeforeCommitHook = () => void | Promise<void>;
+type MultiTupleStoreBeforeCommitHook<TupleSchema extends KeyValuePair> = (
+  tx: MultiTupleTransaction<TupleSchema>
+) => void | Promise<void>;
 
 type MultiTupleStoreHooks<TupleSchema extends KeyValuePair> = {
   beforeInsert: MultiTupleStoreBeforeInsertHook<TupleSchema>[];
-  beforeCommit: MultiTupleStoreBeforeCommitHook[];
+  beforeCommit: MultiTupleStoreBeforeCommitHook<TupleSchema>[];
+  beforeScan: MultiTupleStoreBeforeCommitHook<TupleSchema>[];
 };
 
 export default class MultiTupleStore<TupleSchema extends KeyValuePair> {
@@ -56,6 +60,7 @@ export default class MultiTupleStore<TupleSchema extends KeyValuePair> {
     this.hooks = {
       beforeInsert: [],
       beforeCommit: [],
+      beforeScan: [],
     };
   }
 
@@ -72,8 +77,12 @@ export default class MultiTupleStore<TupleSchema extends KeyValuePair> {
     this.hooks.beforeInsert.push(callback);
   }
 
-  beforeCommit(callback: MultiTupleStoreBeforeCommitHook) {
+  beforeCommit(callback: MultiTupleStoreBeforeCommitHook<TupleSchema>) {
     this.hooks.beforeCommit.push(callback);
+  }
+
+  beforeScan(callback: MultiTupleStoreBeforeCommitHook<TupleSchema>) {
+    this.hooks.beforeScan.push(callback);
   }
 
   async scan<T extends Tuple, P extends TuplePrefix<T>>(
@@ -148,6 +157,7 @@ export default class MultiTupleStore<TupleSchema extends KeyValuePair> {
       hooks: {
         beforeInsert: [...this.hooks.beforeInsert],
         beforeCommit: [...this.hooks.beforeCommit],
+        beforeScan: [...this.hooks.beforeScan],
       },
     });
   }
@@ -310,6 +320,31 @@ export class MultiTupleTransaction<
     this.hooks = hooks;
   }
 
+  get writes() {
+    return Object.values(this.txs).reduce(
+      (all, tx) => ({
+        set: [...all.set, ...tx.writes.set],
+        remove: [...all.remove, ...tx.writes.remove],
+      }),
+      { set: [], remove: [] } as WriteOps
+    );
+  }
+
+  async scan<T extends Tuple, P extends TuplePrefix<T>>(
+    args?: ScanArgs<T, P> | undefined
+  ): Promise<TupleSchema[]> {
+    for (const beforeHook of this.hooks.beforeScan) {
+      await beforeHook(this);
+    }
+    const comparer = (a: TupleSchema, b: TupleSchema) =>
+      (compareTuple(a.key, b.key) * (args?.reverse ? -1 : 1)) as 1 | -1 | 0;
+
+    return mergeMultipleSortedArrays(
+      await Promise.all(this.txScope.read.map((store) => store.scan(args))),
+      comparer
+    );
+  }
+
   withScope(scope: StorageScope) {
     const readKeys = scope.read ?? Object.keys(this.store.storage);
     const writeKeys = scope.write ?? Object.keys(this.store.storage);
@@ -328,7 +363,7 @@ export class MultiTupleTransaction<
       return;
     }
     for (const beforeHook of this.hooks.beforeCommit) {
-      await beforeHook();
+      await beforeHook(this);
     }
     await Promise.all(Object.values(this.txs).map((tx) => tx.commit()));
   }

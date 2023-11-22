@@ -29,7 +29,7 @@ export function RecordType<Properties extends { [k: string]: DataType }>(
     },
     convertInputToDBValue(val: any) {
       if (!this.validateInput(val))
-        throw new DBSerializationError(`record`, val);
+        throw new DBSerializationError(`record`, JSON.stringify(val));
       return Object.fromEntries(
         Object.entries(properties).map(([k, propDef]) => [
           k,

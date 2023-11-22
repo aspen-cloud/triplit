@@ -27,7 +27,7 @@ await rxdb.addCollections({
   },
 });
 
-const CLASSES = new Array(1000).fill(0).map((_, i) => ({
+const CLASSES = new Array(100).fill(0).map((_, i) => ({
   id: i.toString(),
   level: Math.floor(Math.random() * 1000),
   name: `Class ${i}`,

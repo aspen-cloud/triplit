@@ -31,6 +31,7 @@ import CollectionQueryBuilder, {
   FetchResult,
 } from './collection-query.js';
 import {
+  DBSerializationError,
   EntityNotFoundError,
   InvalidCollectionNameError,
   InvalidInsertDocumentError,
@@ -126,6 +127,7 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
     for (const trip of triples) {
       if (trip.attribute[0] === '_metadata') continue;
       if (trip.attribute[0] === '_collection') continue;
+      if (trip.expired) continue;
       // TODO: figure out how to validate tombstones (value will be null so validation may fail, but want to think through if naively skipping is ok)
       validateTriple(this.schema.collections, trip.attribute, trip.value);
     }
@@ -134,10 +136,10 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
   private CheckCanWrite: TripleStoreBeforeCommitHook = async (tx) => {
     const txs = Object.values(tx.tupleTx.txs);
     const deletedTriples = txs.flatMap((stx) => {
-      return stx.writes.remove.filter((key) => key[1] === 'EAV');
+      return stx.writes.remove.filter((key) => key[1] === 'EAT');
     });
     const updatedTriples = txs.flatMap((stx) => {
-      return stx.writes.set.filter((tuple) => tuple.key[1] === 'EAV');
+      return stx.writes.set.filter((tuple) => tuple.key[1] === 'EAT');
     });
 
     const deletedEntityIds = new Set(
@@ -219,8 +221,7 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
       }
       const existingTriples = await tx.findByEntityAttribute(id, attribute);
       const olderTriples = existingTriples.filter(
-        // If a triple has the same timestamp, overwrite and assume the write order is correct
-        ({ timestamp }) => timestampCompare(timestamp, txTimestamp) < 1
+        ({ timestamp }) => timestampCompare(timestamp, txTimestamp) < 0
       );
 
       if (olderTriples.length > 0) {
@@ -238,8 +239,10 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
     this.variables = options.variables;
 
     this.storeTx.beforeInsert(this.ValidateTripleSchema);
-    this.storeTx.beforeInsert(this.GarbageCollect);
     this.storeTx.beforeInsert(this.UpdateLocalSchema);
+    // this.storeTx.beforeCommit(async (tx) => {
+    //   await this.GarbageCollect(tx.writes, tx);
+    // });
 
     if (!options?.skipRules) {
       // Check rules on write
@@ -353,7 +356,7 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
     const timestampedEntity = constructEntity(entityTriples, storeId);
     const entity = timestampedObjectToPlainObject(timestampedEntity);
 
-    // If enntity doenst exist or is deleted, throw error
+    // If entity doesn't exist or is deleted, throw error
     // Schema/metadata does not have _collection attribute
     if (collectionName !== '_metadata' && !entity?._collection) {
       throw new EntityNotFoundError(
@@ -382,10 +385,12 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
       const [attr, value] = tuple;
       const storeAttribute = [collectionName, ...attr];
       // undefined is treated as a delete
-      if (value === undefined) {
+      if (value === undefined || value === '{}') {
         await this.storeTx.expireEntityAttributes([
           { id: storeId, attribute: storeAttribute },
         ]);
+      }
+      if (value === undefined) {
         continue;
       }
       // TODO: use standardized json conversions
@@ -430,6 +435,24 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
         );
         if (!propSchema) {
           throw new UnrecognizedPropertyInUpdateError(propPointer, value);
+        }
+        if (propSchema.type === 'set') {
+          if (!Array.isArray(value) && !(value instanceof Set)) {
+            throw new DBSerializationError(
+              'Set',
+              `Cannot assign a non-array or non-set value to a set.`
+            );
+          }
+          const setProxy = createSetProxy(
+            changeTracker,
+            propPointer,
+            propSchema
+          );
+          setProxy.clear();
+          for (const v of value) {
+            setProxy.add(v);
+          }
+          return true;
         }
         const dbValue = propSchema.convertInputToDBValue(
           // @ts-expect-error Big DataType union results in never as arg type

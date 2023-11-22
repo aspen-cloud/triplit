@@ -16,6 +16,9 @@ export function dbDocumentToTuples(
   if (object == null || typeof object !== 'object') {
     return [[prefix, object as Value]];
   }
+  if (Object.keys(object).length === 0) {
+    return [[prefix, '{}' as Value]];
+  }
   // Although we dont strictly support arrays, we have them in schema rules
   // Currently need a way to serialize them...so we need to handle arrays
   // Not using numbers because we track array indexes as strings, which breaks things, so storing the full array...idk how this works with syncing
