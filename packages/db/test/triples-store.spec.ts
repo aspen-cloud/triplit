@@ -11,6 +11,7 @@ import {
   overrideStoredSchema,
   readSchemaFromTripleStore,
 } from '../src/db-helpers.js';
+import { timestampCompare } from '../src/timestamp.js';
 
 // const storage = new InMemoryTupleStorage();
 const storage = new MemoryStorage();
@@ -384,7 +385,7 @@ describe('search/scan functionality', async () => {
     await store.insertTriples(defaultData);
     await store.transact(async (tx) => {
       expect(
-        (await tx.findByEAV(['cats#2', ['height']])).map(({ id }) => id)
+        (await tx.findByEAT(['cats#2', ['height']])).map(({ id }) => id)
       ).toMatchObject(['cats#2']);
     });
     expect(
@@ -393,7 +394,7 @@ describe('search/scan functionality', async () => {
       )
     ).toMatchObject(['dogs#1']);
     expect(
-      (await store.findByEAV(['dogs#1', ['height']])).map(({ id }) => id)
+      (await store.findByEAT(['dogs#1', ['height']])).map(({ id }) => id)
     ).toMatchObject(['dogs#1']);
     expect(
       await store.findByEntityAttribute('dogs#2', ['height'])
@@ -479,7 +480,14 @@ describe('mutating triple values from the store', () => {
     });
     expect((await store.findByEntity('id'))[0].value).toBe('value');
     await store.setValue('id', ['attr'], 'new-value');
-    expect((await store.findByEntity('id'))[0].value).toBe('new-value');
+    const triples = (await store.findByEntity('id')).filter(
+      ({ expired }) => !expired
+    );
+    expect(triples.length).toBeGreaterThanOrEqual(1);
+    const sortedTriples = triples.sort(
+      (t1, t2) => -1 * timestampCompare(t1.timestamp, t2.timestamp)
+    );
+    expect(sortedTriples[0].value).toBe('new-value');
   });
 });
 

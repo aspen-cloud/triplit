@@ -110,6 +110,7 @@ function indexToTriple(index: TupleIndex): TripleRow {
     attribute: a,
     value: v,
     timestamp: t,
+    // @ts-ignore
     expired: indexType === 'EAT' ? index.value[1] : index.value.expired,
   };
 }
@@ -150,7 +151,7 @@ export interface TripleStoreApi {
     timestamp: Timestamp | undefined
   ): Promise<TripleRow[]>;
 
-  findByEAV(
+  findByEAT(
     [entityId, attribute, value]: [
       entityId?: EntityId,
       attribute?: Attribute,
@@ -261,7 +262,7 @@ export class TripleStoreTxOperator implements TripleStoreApi {
     return findValuesInRange(this.tupleOperator, attribute, constraints);
   }
 
-  async findByEAV(
+  async findByEAT(
     tupleArgs: [
       entityId?: string | undefined,
       attribute?: Attribute | undefined,
@@ -269,7 +270,7 @@ export class TripleStoreTxOperator implements TripleStoreApi {
     ],
     direction?: 'ASC' | 'DESC' | undefined
   ): Promise<TripleRow[]> {
-    return findByEAV(this.tupleOperator, tupleArgs, direction);
+    return findByEAT(this.tupleOperator, tupleArgs, direction);
   }
   findByAVE(
     tupleArgs: [
@@ -521,12 +522,15 @@ export class TripleStoreTransaction implements TripleStoreApi {
   }
 
   get writes(): TripleRow[] {
-    return (this.tupleTx.writes.set ?? [])
-      .filter(({ key }) => {
-        const [_prefix, type] = key;
-        return type === 'EAT';
-      })
-      .map(({ key, value }) => indexToTriple({ key: key.slice(1), value }));
+    return (
+      (this.tupleTx.writes.set ?? [])
+        .filter(({ key }) => {
+          const [_prefix, type] = key;
+          return type === 'EAT';
+        })
+        // @ts-ignore
+        .map(({ key, value }) => indexToTriple({ key: key.slice(1), value }))
+    );
   }
 
   insertTriple(tripleRow: TripleRow): Promise<void> {
@@ -590,7 +594,7 @@ export class TripleStoreTransaction implements TripleStoreApi {
     );
   }
 
-  findByEAV(
+  findByEAT(
     eav: [
       entityId?: string | undefined,
       attribute?: Attribute | undefined,
@@ -598,7 +602,7 @@ export class TripleStoreTransaction implements TripleStoreApi {
     ],
     direction?: 'ASC' | 'DESC' | undefined
   ): Promise<TripleRow[]> {
-    return this.operator.findByEAV(eav, direction);
+    return this.operator.findByEAT(eav, direction);
   }
 
   findByAVE(
@@ -699,11 +703,17 @@ function addIndexesToTransaction(tupleTx: MultiTupleTransaction<TupleIndex>) {
     const [_client, indexType, ...indexKey] = key;
     if (indexType !== 'EAT') continue;
     const [id, attribute, timestamp] = indexKey;
-    // console.log(key, tupleValue);
     const [value, isExpired] = tupleValue;
     tupleTx.set(['AVE', attribute, value, id, timestamp], value);
     tupleTx.set(
-      ['clientTimestamp', timestamp[1], timestamp, id, attribute, value],
+      [
+        'clientTimestamp',
+        (timestamp as Timestamp)[1],
+        timestamp,
+        id,
+        attribute,
+        value,
+      ],
       value
     );
   }
@@ -786,6 +796,7 @@ export class TripleStore implements TripleStoreApi {
 
   async ensureStorageIsMigrated() {
     // Check if any EAV tuples exist and migrate them to EAT
+    // @ts-ignore
     const existingTuples = (await this.tupleStore.scan({
       prefix: ['EAV'],
     })) as {
@@ -827,15 +838,14 @@ export class TripleStore implements TripleStoreApi {
     return findByCollection(this.tupleStore, collection, direction);
   }
 
-  findByEAV(
-    [entityId, attribute, value]: [
+  findByEAT(
+    [entityId, attribute]: [
       entityId?: string | undefined,
-      attribute?: Attribute | undefined,
-      value?: Value | undefined
+      attribute?: Attribute | undefined
     ],
     direction?: 'ASC' | 'DESC' | undefined
   ): Promise<TripleRow[]> {
-    return findByEAV(this.tupleStore, [entityId, attribute, value], direction);
+    return findByEAT(this.tupleStore, [entityId, attribute], direction);
   }
   findByAVE(
     [attribute, value, entityId]: [
@@ -893,7 +903,7 @@ export class TripleStore implements TripleStoreApi {
 
   async transact<Output>(
     callback: (tx: TripleStoreTransaction) => Promise<Output>,
-    scope?: Parameters<typeof this.tupleStore.transact>[0]
+    scope?: StorageScope
   ) {
     let isCanceled = false;
     const { tx, output } = await this.tupleStore.autoTransact(
@@ -1087,18 +1097,14 @@ async function findByCollection(
   });
 }
 
-async function findByEAV(
+async function findByEAT(
   tx: MultiTupleStoreOrTransaction,
-  [entityId, attribute, value]: [
-    entityId?: EntityId,
-    attribute?: Attribute,
-    value?: Value
-  ] = [],
+  [entityId, attribute]: [entityId?: EntityId, attribute?: Attribute] = [],
   direction?: 'ASC' | 'DESC'
 ) {
   const scanArgs = {
     prefix: ['EAT'],
-    gte: [entityId ?? MIN, attribute ?? MIN, value ?? MIN],
+    gte: [entityId ?? MIN, attribute ?? MIN],
     // @ts-ignore
     lt: [entityId ?? MAX, [...(attribute ?? []), MAX], MAX],
     reverse: direction === 'DESC',
@@ -1176,7 +1182,7 @@ export async function findByEntity(
   tx: MultiTupleStoreOrTransaction,
   id?: EntityId
 ): Promise<TripleRow[]> {
-  return findByEAV(tx, [id]);
+  return findByEAT(tx, [id]);
 }
 
 async function findByEntityAttribute(
@@ -1184,7 +1190,7 @@ async function findByEntityAttribute(
   id: EntityId,
   attribute: Attribute
 ): Promise<TripleRow[]> {
-  return findByEAV(tx, [id, attribute]);
+  return findByEAT(tx, [id, attribute]);
 }
 
 async function findByAttribute(

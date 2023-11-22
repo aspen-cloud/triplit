@@ -42,8 +42,8 @@ export type ClientFetchResult<C extends ClientQuery<any, any>> = Map<
 
 type ClientFetchResultEntity<C extends ClientQuery<any, any>> =
   C extends ClientQuery<infer M, infer CN>
-  ? ResultTypeFromModel<ModelFromModels<M, CN>>
-  : never;
+    ? ResultTypeFromModel<ModelFromModels<M, CN>>
+    : never;
 
 export interface SyncOptions {
   server?: string;
@@ -231,9 +231,9 @@ export class TriplitClient<M extends Models<any, any> | undefined = undefined> {
       schema: schema ? { collections: schema, version: 0 } : undefined,
       migrations: migrations
         ? {
-          definitions: migrations,
-          scopes: ['cache'],
-        }
+            definitions: migrations,
+            scopes: ['cache'],
+          }
         : undefined,
       variables,
       sources: getClientStorage(storage ?? DEFAULT_STORAGE_OPTION),
@@ -427,12 +427,12 @@ export class TriplitClient<M extends Models<any, any> | undefined = undefined> {
       } catch (e) {
         if (onError) onError(e);
         else warnError(e);
-        return () => { };
+        return () => {};
       }
     }
 
-    let unsubscribeLocal = () => { };
-    let unsubscribeRemote = () => { };
+    let unsubscribeLocal = () => {};
+    let unsubscribeRemote = () => {};
     let hasRemoteFulfilled = false;
     const clientSubscriptionCallback = (results: any) => {
       onResults(results as ClientFetchResult<CQ>, { hasRemoteFulfilled });

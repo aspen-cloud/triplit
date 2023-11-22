@@ -283,7 +283,6 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
       throw new InvalidInsertDocumentError(
         `The document being inserted must be an object.`
       );
-
     const collectionSchema = await getCollectionSchema(this, collectionName);
 
     // prep the doc for insert to db

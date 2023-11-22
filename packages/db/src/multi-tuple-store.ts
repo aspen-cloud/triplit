@@ -323,8 +323,8 @@ export class MultiTupleTransaction<
   get writes() {
     return Object.values(this.txs).reduce(
       (all, tx) => ({
-        set: [...all.set, ...tx.writes.set],
-        remove: [...all.remove, ...tx.writes.remove],
+        set: [...all.set!, ...tx.writes.set],
+        remove: [...all.remove!, ...tx.writes.remove],
       }),
       { set: [], remove: [] } as WriteOps
     );

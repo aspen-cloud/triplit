@@ -4213,7 +4213,7 @@ it.skip('throws an error if a register filter is malformed', async () => {
   await expect(db.fetch(query)).resolves.not.toThrowError();
   // Delete schema to allow malformed filter
   await db.tripleStore.deleteTriples(
-    await db.tripleStore.findByEAV([
+    await db.tripleStore.findByEAT([
       appendCollectionToId('_metadata', '_schema'),
     ])
   );
