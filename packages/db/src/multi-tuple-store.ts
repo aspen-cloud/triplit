@@ -51,13 +51,15 @@ export default class MultiTupleStore<TupleSchema extends KeyValuePair> {
   constructor({
     storage,
     storageScope,
+    hooks,
   }: {
     storage: Record<string, AsyncTupleDatabaseClient<TupleSchema>>;
     storageScope?: { read?: string[]; write?: string[] };
+    hooks?: MultiTupleStoreHooks<TupleSchema>;
   }) {
     this.storage = storage;
     this.storageScope = storageScope;
-    this.hooks = {
+    this.hooks = hooks ?? {
       beforeInsert: [],
       beforeCommit: [],
       beforeScan: [],
@@ -147,6 +149,11 @@ export default class MultiTupleStore<TupleSchema extends KeyValuePair> {
     return new MultiTupleStore({
       storage: prefixedStorages,
       storageScope: this.storageScope,
+      hooks: {
+        beforeInsert: [...this.hooks.beforeInsert],
+        beforeCommit: [...this.hooks.beforeCommit],
+        beforeScan: [...this.hooks.beforeScan],
+      },
     }) as MultiTupleStore<RemoveTupleValuePairPrefix<TupleSchema, P>>;
   }
 
@@ -171,7 +178,15 @@ export default class MultiTupleStore<TupleSchema extends KeyValuePair> {
       return await transactionalReadWriteAsync()(callback)(
         // @ts-ignore
         scope
-          ? new MultiTupleStore({ storage: this.storage, storageScope: scope })
+          ? new MultiTupleStore({
+              storage: this.storage,
+              storageScope: scope,
+              hooks: {
+                beforeInsert: [...this.hooks.beforeInsert],
+                beforeCommit: [...this.hooks.beforeCommit],
+                beforeScan: [...this.hooks.beforeScan],
+              },
+            })
           : this
       );
     } catch (e) {

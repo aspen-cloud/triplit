@@ -695,7 +695,9 @@ function addIndexesToTransaction(tupleTx: MultiTupleTransaction<TupleIndex>) {
     if (indexType !== 'EAT') continue;
     const [id, attribute, timestamp] = indexKey;
     const [value, isExpired] = tupleValue;
-    tupleTx.set(['AVE', attribute, value, id, timestamp], value);
+    tupleTx.set(['AVE', attribute, value, id, timestamp], {
+      expired: isExpired,
+    });
     tupleTx.set(
       [
         'clientTimestamp',
@@ -705,7 +707,7 @@ function addIndexesToTransaction(tupleTx: MultiTupleTransaction<TupleIndex>) {
         attribute,
         value,
       ],
-      value
+      { expired: isExpired }
     );
   }
 }
