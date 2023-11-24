@@ -152,11 +152,7 @@ export interface TripleStoreApi {
   ): Promise<TripleRow[]>;
 
   findByEAT(
-    [entityId, attribute, value]: [
-      entityId?: EntityId,
-      attribute?: Attribute,
-      value?: Value
-    ],
+    [entityId, attribute]: [entityId?: EntityId, attribute?: Attribute],
     direction?: 'ASC' | 'DESC'
   ): Promise<TripleRow[]>;
 
@@ -265,8 +261,7 @@ export class TripleStoreTxOperator implements TripleStoreApi {
   async findByEAT(
     tupleArgs: [
       entityId?: string | undefined,
-      attribute?: Attribute | undefined,
-      value?: Value | undefined
+      attribute?: Attribute | undefined
     ],
     direction?: 'ASC' | 'DESC' | undefined
   ): Promise<TripleRow[]> {
@@ -595,11 +590,7 @@ export class TripleStoreTransaction implements TripleStoreApi {
   }
 
   findByEAT(
-    eav: [
-      entityId?: string | undefined,
-      attribute?: Attribute | undefined,
-      value?: Value | undefined
-    ],
+    eav: [entityId?: string | undefined, attribute?: Attribute | undefined],
     direction?: 'ASC' | 'DESC' | undefined
   ): Promise<TripleRow[]> {
     return this.operator.findByEAT(eav, direction);
