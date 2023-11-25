@@ -5,10 +5,10 @@ import {
   TripleRow,
   TripleStoreBeforeCommitHook,
   TripleStoreBeforeInsertHook,
-  TripleStoreTransaction,
   Value,
   isTupleEntityDeleteMarker,
 } from './triple-store.js';
+import { TripleStoreTransaction } from './triple-store-transaction.js';
 import {
   getSchemaFromPath,
   UpdateTypeFromModel,
