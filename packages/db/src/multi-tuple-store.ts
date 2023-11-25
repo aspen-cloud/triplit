@@ -345,6 +345,10 @@ export class MultiTupleTransaction<
     );
   }
 
+  beforeScan(callback: MultiTupleStoreBeforeCommitHook<TupleSchema>) {
+    this.hooks.beforeScan.push(callback);
+  }
+
   async scan<T extends Tuple, P extends TuplePrefix<T>>(
     args?: ScanArgs<T, P> | undefined
   ): Promise<TupleSchema[]> {

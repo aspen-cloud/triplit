@@ -584,7 +584,7 @@ export class TripleStore implements TripleStoreApi {
 
     this.clock = clock ?? new MemoryClock();
     this.clock.assignToStore(this);
-    this.tupleStore.beforeScan(addIndexesToTransaction);
+
     this.tupleStore.beforeCommit(addIndexesToTransaction);
   }
 
@@ -702,6 +702,7 @@ export class TripleStore implements TripleStoreApi {
     let isCanceled = false;
     const { tx, output } = await this.tupleStore.autoTransact(
       async (tupleTx) => {
+        tupleTx.beforeScan(addIndexesToTransaction);
         const tx = new TripleStoreTransaction({
           store: this,
           tupleTx: tupleTx,
