@@ -150,8 +150,11 @@ export default class MultiTupleStore<TupleSchema extends KeyValuePair> {
       storage: prefixedStorages,
       storageScope: this.storageScope,
       hooks: {
+        // @ts-ignore
         beforeInsert: [...this.hooks.beforeInsert],
+        // @ts-ignore
         beforeCommit: [...this.hooks.beforeCommit],
+        // @ts-ignore
         beforeScan: [...this.hooks.beforeScan],
       },
     }) as MultiTupleStore<RemoveTupleValuePairPrefix<TupleSchema, P>>;
