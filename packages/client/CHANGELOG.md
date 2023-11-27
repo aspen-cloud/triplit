@@ -1,5 +1,14 @@
 # @triplit/client
 
+## 0.2.2
+
+### Patch Changes
+
+- d92db2c: fixup authentication variable handling
+- Updated dependencies [d92db2c]
+- Updated dependencies [d92db2c]
+  - @triplit/db@0.2.2
+
 ## 0.2.1
 
 ### Patch Changes

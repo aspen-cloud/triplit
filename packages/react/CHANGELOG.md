@@ -1,5 +1,12 @@
 # @triplit/react
 
+## 0.2.2
+
+### Patch Changes
+
+- Updated dependencies [d92db2c]
+  - @triplit/client@0.2.2
+
 ## 0.2.1
 
 ### Patch Changes
