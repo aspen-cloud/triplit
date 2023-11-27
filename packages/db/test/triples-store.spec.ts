@@ -964,4 +964,44 @@ describe('Hooks', () => {
       expect(await store.findByEntity('id')).toHaveLength(0);
     });
   });
+
+  describe('beforeCommit', () => {
+    it('can hook in before commit', async () => {
+      const store = new TripleStore({ storage, tenantId: 'TEST' });
+      const hook = vi.fn();
+      await store.transact(async (tx) => {
+        tx.beforeCommit(hook);
+        await tx.insertTriple({
+          id: 'id',
+          attribute: ['attr'],
+          value: 'value',
+          timestamp: [1, 'A'],
+          expired: false,
+        });
+      });
+      expect(hook).toHaveBeenCalledTimes(1);
+    });
+
+    it('can prevent commits by throwing an error', async () => {
+      const store = new TripleStore({ storage, tenantId: 'TEST' });
+      const hook = vi.fn().mockImplementation(() => {
+        throw new Error('nope');
+      });
+
+      const resp = store.transact(async (tx) => {
+        tx.beforeCommit(hook);
+        await tx.insertTriple({
+          id: 'id',
+          attribute: ['attr'],
+          value: 'value',
+          timestamp: [1, 'A'],
+          expired: false,
+        });
+      });
+      await expect(resp).rejects.toThrow();
+      expect(hook).toHaveBeenCalled();
+      // double check triple was not inserted
+      expect(await store.findByEntity('id')).toHaveLength(0);
+    });
+  });
 });
