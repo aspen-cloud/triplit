@@ -1,5 +1,17 @@
 # @triplit/console
 
+## 0.2.2
+
+### Patch Changes
+
+- Updated dependencies [d92db2c]
+- Updated dependencies [d92db2c]
+- Updated dependencies [d92db2c]
+  - @triplit/client@0.2.2
+  - @triplit/db@0.2.2
+  - @triplit/server-core@0.2.2
+  - @triplit/react@0.2.2
+
 ## 0.2.1
 
 ### Patch Changes

@@ -1,5 +1,18 @@
 # @triplit/cli
 
+## 0.2.2
+
+### Patch Changes
+
+- 9967688: Fix bug breaking codegen with kebab case collections/attributes
+- Updated dependencies [d92db2c]
+- Updated dependencies [d92db2c]
+- Updated dependencies [d92db2c]
+  - @triplit/client@0.2.2
+  - @triplit/db@0.2.2
+  - @triplit/server@0.2.2
+  - @triplit/console@0.2.2
+
 ## 0.2.1
 
 ### Patch Changes

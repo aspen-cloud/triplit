@@ -1,5 +1,12 @@
 # @triplit/db
 
+## 0.2.2
+
+### Patch Changes
+
+- d92db2c: fixup authentication variable handling
+- d92db2c: drop automatic garbage collection
+
 ## 0.2.1
 
 ### Patch Changes
