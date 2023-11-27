@@ -1,10 +1,6 @@
 import { InMemoryTupleStorage } from 'tuple-database';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import {
-  TripleRow,
-  TripleStore,
-  TripleStoreTransaction,
-} from '../src/triple-store.js';
+import { TripleRow, TripleStore } from '../src/triple-store.js';
 import { Schema as S } from '../src/schema.js';
 import { MemoryBTreeStorage as MemoryStorage } from '../src/storage/memory-btree.js';
 import {
@@ -12,6 +8,7 @@ import {
   readSchemaFromTripleStore,
 } from '../src/db-helpers.js';
 import { timestampCompare } from '../src/timestamp.js';
+import { TripleStoreTransaction } from '../src/triple-store-transaction.js';
 
 // const storage = new InMemoryTupleStorage();
 const storage = new MemoryStorage();
