@@ -21,4 +21,5 @@ export * from './components/ui/simple-select.jsx';
 export * from './components/ui/table.jsx';
 export * from './components/ui/textarea.jsx';
 export * from './components/ui/tooltip-simple.jsx';
+export * from './components/ui/tabs.jsx';
 export { cn } from './lib/utils.js';

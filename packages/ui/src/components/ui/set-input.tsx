@@ -30,7 +30,7 @@ export function SetInput(props: SetInputProps<any>) {
     <div className={cn('flex flex-col gap-2 w-full', className)}>
       {value && value.size > 0 && (
         <div className="flex flex-wrap gap-2">
-          {[...value].map((item) => (
+          {Array.from(value).map((item) => (
             <div
               key={item}
               className="flex flex-row gap-1 text-sm py-1 pl-2 pr-1 bg-secondary rounded-sm"

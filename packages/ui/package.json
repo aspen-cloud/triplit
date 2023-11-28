@@ -10,23 +10,41 @@
     "@radix-ui/react-select": "^2.0.0",
     "@radix-ui/react-separator": "^1.0.3",
     "@radix-ui/react-slot": "^1.0.2",
+    "@radix-ui/react-tabs": "^1.0.4",
     "@radix-ui/react-tooltip": "^1.0.7",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.0.0",
     "cmdk": "^0.2.0",
     "lucide-react": "^0.292.0",
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0",
     "tailwind-merge": "^2.0.0",
-    "tailwindcss-animate": "^1.0.7",
-    "typescript": "latest"
+    "tailwindcss-animate": "^1.0.7"
   },
-  "main": "./src/index.ts",
+  "files": [
+    "src"
+  ],
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./*": [
+      "./src/*.ts",
+      "./src/*.tsx",
+      "./src/*/index.ts"
+    ],
+    "./tailwind": {
+      "require": "./src/tailwind.cjs"
+    },
+    "./css": "./globals.css"
+  },
   "types": "./src/index.ts",
   "module": "./src/index.ts",
   "devDependencies": {
-    "@types/react": "^18.2.21",
-    "@types/react-dom": "^18.2.7",
-    "tailwindcss": "^3.3.5"
+    "@types/react": "^18.2.38",
+    "tailwindcss": "^3.3.5",
+    "typescript": "latest"
+  },
+  "peerDependencies": {
+    "next": "*",
+    "react": "^17.0.0 || ^18.0.0-0",
+    "react-dom": "^17.0.0 || ^18.0.0-0"
   }
 }
