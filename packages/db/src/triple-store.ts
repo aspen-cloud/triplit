@@ -22,7 +22,6 @@ import {
   InvalidTimestampIndexScanError,
   InvalidTripleStoreValueError,
   TripleStoreOptionsError,
-  TriplitError,
   WriteRuleError,
 } from './errors.js';
 import { TripleStoreTransaction } from './triple-store-transaction.js';

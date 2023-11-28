@@ -36,7 +36,6 @@ import {
   InvalidCollectionNameError,
   InvalidInsertDocumentError,
   InvalidOperationError,
-  InvalidTripleStoreValueError,
   UnrecognizedPropertyInUpdateError,
   WriteRuleError,
 } from './errors.js';
@@ -72,7 +71,6 @@ import { dbDocumentToTuples } from './utils.js';
 import { typeFromJSON } from './data-types/base.js';
 import { SchemaDefinition } from './data-types/serialization.js';
 import { createSetProxy } from './data-types/set.js';
-import { timestampCompare } from './timestamp.js';
 
 interface TransactionOptions<
   M extends Models<any, any> | undefined = undefined
@@ -212,24 +210,24 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
     } as StoreSchema<M>;
   };
 
-  private GarbageCollect: TripleStoreBeforeInsertHook = async (triples, tx) => {
-    const toDelete: TripleRow[] = [];
-    for (const triple of triples) {
-      const { id, attribute, value, timestamp: txTimestamp } = triple;
-      if (value === undefined) {
-        throw new InvalidTripleStoreValueError(undefined);
-      }
-      const existingTriples = await tx.findByEntityAttribute(id, attribute);
-      const olderTriples = existingTriples.filter(
-        ({ timestamp }) => timestampCompare(timestamp, txTimestamp) < 0
-      );
+  // private GarbageCollect: TripleStoreBeforeInsertHook = async (triples, tx) => {
+  //   const toDelete: TripleRow[] = [];
+  //   for (const triple of triples) {
+  //     const { id, attribute, value, timestamp: txTimestamp } = triple;
+  //     if (value === undefined) {
+  //       throw new InvalidTripleStoreValueError(undefined);
+  //     }
+  //     const existingTriples = await tx.findByEntityAttribute(id, attribute);
+  //     const olderTriples = existingTriples.filter(
+  //       ({ timestamp }) => timestampCompare(timestamp, txTimestamp) < 0
+  //     );
 
-      if (olderTriples.length > 0) {
-        toDelete.push(...olderTriples);
-      }
-    }
-    await tx.deleteTriples(toDelete);
-  };
+  //     if (olderTriples.length > 0) {
+  //       toDelete.push(...olderTriples);
+  //     }
+  //   }
+  //   await tx.deleteTriples(toDelete);
+  // };
 
   constructor(
     readonly storeTx: TripleStoreTransaction,

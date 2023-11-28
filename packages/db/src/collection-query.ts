@@ -18,10 +18,8 @@ import {
   Models,
   timestampedObjectToPlainObject,
 } from './schema.js';
-import { Timestamp, timestampCompare } from './timestamp.js';
+import { Timestamp } from './timestamp.js';
 import {
-  Attribute,
-  EntityId,
   TripleRow,
   TripleStore,
   TripleStoreApi,
