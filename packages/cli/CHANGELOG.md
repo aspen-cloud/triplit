@@ -1,5 +1,16 @@
 # @triplit/cli
 
+## 0.2.3
+
+### Patch Changes
+
+- 06636a7: Fix CLI missing dependency issue
+- Updated dependencies [06636a7]
+  - @triplit/client@0.2.3
+  - @triplit/console@0.2.3
+  - @triplit/db@0.2.3
+  - @triplit/server@0.2.3
+
 ## 0.2.2
 
 ### Patch Changes
