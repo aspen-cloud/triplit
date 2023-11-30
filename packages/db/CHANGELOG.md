@@ -1,5 +1,11 @@
 # @triplit/db
 
+## 0.2.3
+
+### Patch Changes
+
+- 06636a7: Fix CLI missing dependency issue
+
 ## 0.2.2
 
 ### Patch Changes
