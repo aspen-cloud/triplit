@@ -32,7 +32,6 @@
     "@triplit/db": "workspace:^",
     "@triplit/react": "workspace:^",
     "@triplit/server-core": "workspace:^",
-    "@triplit/ui": "workspace:^",
     "class-variance-authority": "^0.7.0",
     "dayjs": "^1.11.9",
     "jotai": "^2.4.2",
@@ -51,6 +50,7 @@
     "tailwindcss-animate": "^1.0.7"
   },
   "devDependencies": {
+    "@triplit/ui": "workspace:^",
     "@types/lodash": "^4",
     "@types/node": "^20.8.7",
     "@types/react": "^18.2.17",
