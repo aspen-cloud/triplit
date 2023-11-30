@@ -51,7 +51,9 @@ export function DateType<TypeOptions extends UserTypeOptions = {}>(
     convertDBValueToJS(val) {
       return (val ? new Date(val) : null) as TypeWithOptions<Date, TypeOptions>;
     },
+    // @ts-ignore
     convertJSONToJS(val) {
+      if (options.nullable && val === null) return null;
       if (typeof val !== 'string')
         throw new Error('Invalid JSON value for date');
       return new Date(val);

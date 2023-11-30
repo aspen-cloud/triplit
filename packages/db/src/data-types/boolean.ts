@@ -37,7 +37,9 @@ export function BooleanType<TypeOptions extends UserTypeOptions = {}>(
     convertDBValueToJS(val: boolean) {
       return val;
     },
+    // @ts-ignore
     convertJSONToJS(val: any) {
+      if (options.nullable && val === null) return null;
       if (typeof val !== 'boolean')
         throw new Error('Invalid JSON value for boolean');
       return val;

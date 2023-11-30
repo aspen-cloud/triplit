@@ -38,7 +38,9 @@ export function NumberType<TypeOptions extends UserTypeOptions = {}>(
     convertDBValueToJS(val) {
       return val;
     },
+    // @ts-ignore
     convertJSONToJS(val) {
+      if (options.nullable && val === null) return null;
       if (typeof val !== 'number')
         throw new Error('Invalid JSON value for number');
       return val;
