@@ -234,6 +234,13 @@ export function createServer(options?: ServerOptions) {
     res.status(statusCode).json(payload);
   });
 
+  authenticated.post('/bulk-insert', async (req, res) => {
+    const server = getServer(process.env.PROJECT_ID!);
+    const session = server.createSession(req.token!);
+    const { statusCode, payload } = await session.bulkInsert(req.body);
+    res.status(statusCode).json(payload);
+  });
+
   authenticated.post('/update', async (req, res) => {
     const server = getServer(process.env.PROJECT_ID!);
     const session = server.createSession(req.token!);

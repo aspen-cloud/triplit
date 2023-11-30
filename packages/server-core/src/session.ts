@@ -417,6 +417,7 @@ export class Session {
   async insert(collectionName: string, entity: any) {
     if (!hasAdminAccess(this.token)) return NotAdminResponse();
     try {
+      console.log('INSERTING ENTITY', entity);
       const schema = await this.db.getSchema();
       const collectionSchema = schema?.collections[collectionName]?.schema;
       const insertEntity = collectionSchema
@@ -428,6 +429,44 @@ export class Session {
         output: collectionSchema
           ? collectionSchema.convertJSToJSON(txResult.output)
           : txResult.output,
+      };
+      return ServerResponse(200, serializableResult);
+    } catch (e) {
+      return errorResponse(e, {
+        fallbackMessage: 'Could not insert entity. An unknown error occured.',
+      });
+    }
+  }
+
+  async bulkInsert(inserts: Record<string, any[]>) {
+    if (!hasAdminAccess(this.token)) return NotAdminResponse();
+    try {
+      const schema = await this.db.getSchema();
+      // @ts-ignore
+      const txResult = await this.db.transact(async (tx) => {
+        const output = Object.keys(inserts).reduce(
+          (acc, collectionName) => ({ ...acc, [collectionName]: [] }),
+          {}
+        ) as Record<string, any[]>;
+        for (const [collectionName, entities] of Object.entries(inserts)) {
+          const collectionSchema = schema?.collections[collectionName]?.schema;
+          for (const entity of entities) {
+            const insertEntity = collectionSchema
+              ? collectionSchema.convertJSONToJS(entity)
+              : entity;
+            const insertedEntity = await tx.insert(
+              collectionName,
+              insertEntity
+            );
+            output[collectionName].push(
+              collectionSchema.convertJSToJSON(insertedEntity)
+            );
+          }
+        }
+        return output;
+      });
+      const serializableResult = {
+        ...txResult,
       };
       return ServerResponse(200, serializableResult);
     } catch (e) {
