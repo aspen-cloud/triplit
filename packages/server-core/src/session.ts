@@ -417,7 +417,6 @@ export class Session {
   async insert(collectionName: string, entity: any) {
     if (!hasAdminAccess(this.token)) return NotAdminResponse();
     try {
-      console.log('INSERTING ENTITY', entity);
       const schema = await this.db.getSchema();
       const collectionSchema = schema?.collections[collectionName]?.schema;
       const insertEntity = collectionSchema
