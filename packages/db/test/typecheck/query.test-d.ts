@@ -1,7 +1,13 @@
 import { expectTypeOf, test, describe } from 'vitest';
 import DB, { ModelFromModels } from '../../src/db.js';
 import { Schema as S } from '../../src/schema.js';
-import { QueryOrder, QueryWhere, WhereFilter } from '../../src/query.js';
+import {
+  CollectionQuery,
+  QueryOrder,
+  QueryWhere,
+  WhereFilter,
+} from '../../src/query.js';
+import { FetchResult } from '../../src/collection-query.js';
 
 type TransactionAPI<TxDB extends DB<any>> = TxDB extends DB<infer M>
   ? Parameters<Parameters<DB<M>['transact']>[0]>[0]
@@ -69,7 +75,7 @@ describe('schemaful', () => {
             defaultNow: S.String({ default: S.Default.now() }),
             defaultUuid: S.String({ default: S.Default.uuid() }),
             // subqueries
-            subquery: S.Query({ collectionName: 'test2', where: [] }),
+            subquery: S.Query({ collectionName: 'test2' as const, where: [] }),
           }),
         },
       },
@@ -218,7 +224,7 @@ describe('schemaful', () => {
             defaultNow: S.String({ default: S.Default.now() }),
             defaultUuid: S.String({ default: S.Default.uuid() }),
             // subqueries
-            subquery: S.Query({ collectionName: 'test2', where: [] }),
+            subquery: S.Query({ collectionName: 'test2' as const, where: [] }),
           }),
         },
       },
@@ -303,7 +309,7 @@ describe('schemaful', () => {
     expectEntityProxyParam.not.toHaveProperty('subquery');
   });
 
-  test('fetch: returns a map of properly typed entities', () => {
+  test('fetch: returns a map of properly typed entities', async () => {
     const schema = {
       collections: {
         test: {
@@ -332,14 +338,20 @@ describe('schemaful', () => {
             defaultNow: S.String({ default: S.Default.now() }),
             defaultUuid: S.String({ default: S.Default.uuid() }),
             // subqueries
-            subquery: S.Query({ collectionName: 'test2', where: [] }),
+            subquery: S.Query({ collectionName: 'test2' as const, where: [] }),
+          }),
+        },
+        test2: {
+          schema: S.Schema({
+            id: S.Id(),
           }),
         },
       },
     };
     const db = new DB({ schema });
     const query = db.query('test').build();
-    expectTypeOf(db.fetch(query)).resolves.toEqualTypeOf<
+    const result = await db.fetch(query);
+    expectTypeOf(result).toEqualTypeOf<
       Map<
         string,
         {
@@ -357,9 +369,15 @@ describe('schemaful', () => {
           defaultNull: string;
           defaultNow: string;
           defaultUuid: string;
+          subquery: FetchResult<
+            CollectionQuery<typeof schema.collections, 'test2'>
+          >;
         }
       >
     >();
+    expectTypeOf(result.get('a')!.subquery.get('a')!).toEqualTypeOf<{
+      id: string;
+    }>();
   });
 });
 
@@ -417,7 +435,7 @@ describe('query builder', () => {
             }),
 
             // Not included
-            subquery: S.Query({ collectionName: 'test2', where: [] }),
+            subquery: S.Query({ collectionName: 'test2' as const, where: [] }),
           }),
         },
       },
@@ -429,7 +447,15 @@ describe('query builder', () => {
       expectTypeOf(query.select)
         .parameter(0)
         .toEqualTypeOf<
-          | ('attr1' | 'attr2' | 'attr3' | 'record' | 'record.attr1' | 'id')[]
+          | (
+              | 'attr1'
+              | 'attr2'
+              | 'attr3'
+              | 'record'
+              | 'record.attr1'
+              | 'id'
+              | [string, CollectionQuery<typeof schema.collections, any>]
+            )[]
           | undefined
         >();
     }
@@ -439,7 +465,9 @@ describe('query builder', () => {
       const query = db.query('test');
       expectTypeOf(query.select)
         .parameter(0)
-        .toEqualTypeOf<string[] | undefined>();
+        .toEqualTypeOf<
+          (string | [string, CollectionQuery<undefined, any>])[] | undefined
+        >();
     }
   });
   test('where attribute prop', () => {
@@ -459,7 +487,7 @@ describe('query builder', () => {
             }),
             attr2: S.Boolean(),
             // should include query
-            query: S.Query({ collectionName: 'test2', where: [] }),
+            query: S.Query({ collectionName: 'test2' as const, where: [] }),
           }),
         },
       },
@@ -511,7 +539,7 @@ describe('query builder', () => {
             }),
             attr2: S.Boolean(),
             // should not include query
-            query: S.Query({ collectionName: 'test2', where: [] }),
+            query: S.Query({ collectionName: 'test2' as const, where: [] }),
           }),
         },
       },
@@ -546,6 +574,38 @@ describe('query builder', () => {
         >();
     }
   });
+
+  test('include', () => {
+    const schema = {
+      collections: {
+        test: {
+          schema: S.Schema({
+            id: S.Id(),
+            attr1: S.String(),
+            subquery: S.Query({ collectionName: 'test2' as const, where: [] }),
+          }),
+        },
+        test2: {
+          schema: S.Schema({
+            id: S.Id(),
+          }),
+        },
+      },
+    };
+    // Schemaful
+    {
+      const db = new DB({ schema });
+      const query = db.query('test');
+      // TODO
+      expectTypeOf(query.include).parameter(0).toEqualTypeOf<'subquery'>();
+    }
+    // schemaless
+    {
+      const db = new DB();
+      const query = db.query('test');
+      expectTypeOf(query.include).parameter(0).toEqualTypeOf<never>();
+    }
+  });
 });
 
 type MapKey<M> = M extends Map<infer K, any> ? K : never;
@@ -560,9 +620,12 @@ describe('fetching', () => {
           attr1: S.String(),
           attr2: S.Boolean(),
           attr3: S.Number(),
-
-          // Not included
-          subquery: S.Query({ collectionName: 'test2', where: [] }),
+          subquery: S.Query({ collectionName: 'test2' as const, where: [] }),
+        }),
+      },
+      test2: {
+        schema: S.Schema({
+          id: S.Id(),
         }),
       },
     },
@@ -580,7 +643,7 @@ describe('fetching', () => {
       expectValueTypeOf.toHaveProperty('attr1').toEqualTypeOf<string>();
       expectValueTypeOf.toHaveProperty('attr2').toEqualTypeOf<boolean>();
       expectValueTypeOf.toHaveProperty('attr3').toEqualTypeOf<number>();
-      expectValueTypeOf.not.toHaveProperty('subquery');
+      expectValueTypeOf.toHaveProperty('subquery');
     }
     // schemaless
     {
@@ -599,6 +662,9 @@ describe('fetching', () => {
         attr1: string;
         attr2: boolean;
         attr3: number;
+        subquery: FetchResult<
+          CollectionQuery<typeof schema.collections, 'test2'>
+        >;
       } | null>();
     }
     // schemaless
@@ -621,6 +687,9 @@ describe('fetching', () => {
               attr1: string;
               attr2: boolean;
               attr3: number;
+              subquery: FetchResult<
+                CollectionQuery<typeof schema.collections, 'test2'>
+              >;
             }
           ]
         | null

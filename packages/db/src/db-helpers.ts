@@ -1,4 +1,3 @@
-import { CollectionQuery } from './collection-query.js';
 import {
   InvalidEntityIdError,
   InvalidInternalEntityIdError,
@@ -8,7 +7,12 @@ import {
   SessionVariableNotFoundError,
   ValueSchemaMismatchError,
 } from './errors.js';
-import { QueryWhere, FilterStatement, SubQueryFilter } from './query.js';
+import {
+  QueryWhere,
+  FilterStatement,
+  SubQueryFilter,
+  CollectionQuery,
+} from './query.js';
 import {
   Model,
   Models,
@@ -90,7 +94,9 @@ export function replaceVariable(
 }
 
 export function replaceVariablesInQuery<
-  Q extends Pick<CollectionQuery<any, any>, 'where' | 'entityId' | 'vars'>
+  Q extends Partial<
+    Pick<CollectionQuery<any, any>, 'where' | 'entityId' | 'vars'>
+  >
 >(query: Q): Q {
   // const variables = { ...(db.variables ?? {}), ...(query.vars ?? {}) };
   const where = query.where
@@ -275,6 +281,16 @@ export function addReadRulesToQuery<
   return query;
 }
 
+export function mergeQueries<M extends Models<any, any> | undefined>(
+  queryA: CollectionQuery<M, any>,
+  queryB?: CollectionQuery<M, any>
+) {
+  if (!queryB) return queryA;
+  const mergedWhere = [...(queryA.where ?? []), ...(queryB.where ?? [])];
+  const mergedSelect = [...(queryA.select ?? []), ...(queryB.select ?? [])];
+  return { ...queryA, ...queryB, where: mergedWhere, select: mergedSelect };
+}
+
 export async function prepareQuery<
   M extends Models<any, any> | undefined,
   Q extends CollectionQuery<M, any>
@@ -298,6 +314,7 @@ export async function prepareQuery<
     }
   );
   if (collectionSchema) {
+    // Convert any filters that use relations from schema to *exists* queries
     fetchQuery.where = mapFilterStatements(fetchQuery.where, (statement) => {
       if (!Array.isArray(statement)) return statement;
       const [prop, op, val] = statement;
@@ -315,6 +332,27 @@ export async function prepareQuery<
         exists: subquery,
       };
     });
+    if (fetchQuery.include) {
+      for (const [relationName, extraQuery] of Object.entries(
+        fetchQuery.include as Record<string, CollectionQuery<M, any>>
+      )) {
+        const attributeType = getSchemaFromPath(collectionSchema.schema, [
+          relationName,
+        ]);
+        if (attributeType.type !== 'query') {
+          throw new Error(
+            `${relationName} is not an existing relationship in ${fetchQuery.collectionName} schema`
+          );
+        }
+        if (!fetchQuery.select) fetchQuery.select = [];
+        const merged = mergeQueries(attributeType.query, extraQuery);
+        const subquerySelection: [string, CollectionQuery<M, any>] = [
+          relationName,
+          merged,
+        ];
+        fetchQuery.select.push(subquerySelection);
+      }
+    }
   }
   return { query: fetchQuery, collection: collectionSchema };
 }

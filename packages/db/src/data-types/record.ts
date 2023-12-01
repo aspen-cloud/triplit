@@ -47,13 +47,16 @@ export function RecordType<Properties extends { [k: string]: DataType }>(
       for (const k in val) {
         if (Object.prototype.hasOwnProperty.call(val, k)) {
           const v = val[k];
+          if (!properties[k] || properties[k].type === 'query') {
+            result[k] = v;
+            continue;
+          }
           // This is mostly to catch when "_collection" is included in the entity
-          result[k] = properties[k]
-            ? properties[k].convertDBValueToJS(
-                // @ts-expect-error
-                v
-              )
-            : k;
+          // @ts-expect-error
+          result[k] = properties[k].convertDBValueToJS(
+            // @ts-expect-error
+            v
+          );
         }
       }
       return result as {

@@ -450,6 +450,7 @@ export class Session {
         patches.forEach((p) => {
           if (p[0] === 'set') {
             const attrSchema = getSchemaFromPath(collectionSchema, p[1]);
+            // @ts-expect-error
             p[2] = attrSchema.convertJSONToJS(p[2]);
           }
         });

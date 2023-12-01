@@ -25,7 +25,6 @@ import {
 } from './schema.js';
 import { nanoid } from 'nanoid';
 import CollectionQueryBuilder, {
-  CollectionQuery,
   doesEntityObjMatchWhere,
   fetch,
   FetchResult,
@@ -66,7 +65,12 @@ import {
   prepareQuery,
   replaceVariable,
 } from './db-helpers.js';
-import { Query, constructEntity, entityToResultReducer } from './query.js';
+import {
+  CollectionQuery,
+  Query,
+  constructEntity,
+  entityToResultReducer,
+} from './query.js';
 import { dbDocumentToTuples } from './utils.js';
 import { typeFromJSON } from './data-types/base.js';
 import { SchemaDefinition } from './data-types/serialization.js';
@@ -512,7 +516,7 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
   // maybe make it public? Keeping private bc its only used internally
   private query<CN extends CollectionNameFromModels<M>>(
     collectionName: CN,
-    params?: Query<ModelFromModels<M, CN>>
+    params?: Query<M, CN>
   ) {
     // TODO: When fixing the type here, ensure the built output looks correct (had to manually assign this to work in the past)
     return CollectionQueryBuilder(collectionName, params);

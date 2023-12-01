@@ -8,13 +8,12 @@ import {
 } from './schema.js';
 import { AsyncTupleStorageApi, TupleStorageApi } from 'tuple-database';
 import CollectionQueryBuilder, {
-  CollectionQuery,
   fetch,
   FetchResult,
   subscribe,
   subscribeTriples,
 } from './collection-query.js';
-import { Query, QueryWhere } from './query.js';
+import { CollectionQuery, Query, QueryWhere } from './query.js';
 import { MemoryBTreeStorage } from './storage/memory-btree.js';
 import { DBOptionsError, InvalidMigrationOperationError } from './errors.js';
 import { Clock } from './clocks/clock.js';
@@ -143,8 +142,19 @@ export type ModelFromModels<
   ? undefined
   : never;
 
+type IsAny<T> = 0 extends 1 & T ? true : false;
+type isAnyOrUndefined<T> = IsAny<T> extends true
+  ? true
+  : undefined extends T
+  ? true
+  : false;
+
 export type CollectionNameFromModels<M extends Models<any, any> | undefined> =
-  M extends Models<any, any> ? keyof M : M extends undefined ? string : never;
+  isAnyOrUndefined<M> extends true
+    ? string
+    : M extends Models<any, any>
+    ? keyof M
+    : never;
 
 export interface DBFetchOptions {
   skipRules?: boolean;
@@ -437,7 +447,7 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
 
   query<CN extends CollectionNameFromModels<M>>(
     collectionName: CN,
-    params?: Query<ModelFromModels<M, CN>>
+    params?: Query<M, CN>
   ) {
     return CollectionQueryBuilder(collectionName, params);
   }

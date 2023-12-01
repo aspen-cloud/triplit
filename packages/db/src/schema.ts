@@ -112,7 +112,7 @@ export function getSchemaFromPath(
 export type UpdateTypeFromModel<M extends Model<any> | undefined> =
   M extends Model<any>
     ? {
-        [k in keyof ReadModelFromModel<M>['properties']]: ExtractJSType<
+        [k in keyof SelectModelFromModel<M>['properties']]: ExtractJSType<
           M['properties'][k]
         >;
       }
@@ -145,14 +145,14 @@ export type InsertTypeFromModel<M extends Model<any> | undefined> =
   M extends Model<any>
     ? {
         // If the type has no default, it must be provided
-        [k in keyof ReadModelFromModel<M>['properties'] as DataTypeHasNoDefault<
+        [k in keyof SelectModelFromModel<M>['properties'] as DataTypeHasNoDefault<
           M['properties'][k]
         > extends true
           ? k
           : never]: ExtractJSType<M['properties'][k]>;
       } & {
         // If the type has a default, it can be omitted
-        [k in keyof ReadModelFromModel<M>['properties'] as DataTypeHasDefault<
+        [k in keyof SelectModelFromModel<M>['properties'] as DataTypeHasDefault<
           M['properties'][k]
         > extends true
           ? k
@@ -160,12 +160,11 @@ export type InsertTypeFromModel<M extends Model<any> | undefined> =
       }
     : any;
 
-// A subset of the model that can be read
-// This is just the model without subqueries
-export type ReadModelFromModel<M extends Model<any> | undefined> =
+// A subset of the model is available in select
+export type SelectModelFromModel<M extends Model<any> | undefined> =
   M extends Model<infer Config>
     ? Config extends SchemaConfig
-      ? Model<//@ts-ignore
+      ? Model<//@ts-expect-error
         {
           [k in keyof Config as Config[k] extends QueryType<any>
             ? never
@@ -177,7 +176,7 @@ export type ReadModelFromModel<M extends Model<any> | undefined> =
 export type ResultTypeFromModel<M extends Model<any> | undefined> =
   M extends Model<any>
     ? {
-        [k in keyof ReadModelFromModel<M>['properties']]: M['properties'][k] extends DataType
+        [k in keyof M['properties']]: M['properties'][k] extends DataType
           ? ExtractJSType<M['properties'][k]>
           : never;
       }
@@ -257,6 +256,14 @@ export function timestampedObjectToPlainObject<O extends TimestampedObject>(
     return obj
       .map((v) => timestampedObjectToPlainObject(v))
       .filter((v) => v !== undefined);
+  }
+  if (obj instanceof Map) {
+    // @ts-expect-error
+    return new Map(
+      Array.from(obj.entries()).map(([key, val]) => {
+        return [key, timestampedObjectToPlainObject(val)];
+      })
+    );
   }
   const entries = Object.entries(obj)
     .map(([key, val]) => {

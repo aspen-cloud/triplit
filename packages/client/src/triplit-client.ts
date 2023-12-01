@@ -12,7 +12,7 @@ import {
   TriplitError,
   QUERY_INPUT_TRANSFORMERS,
   InsertTypeFromModel,
-  ResultTypeFromModel,
+  ReturnTypeFromQuery,
   toBuilder,
   Storage,
 } from '@triplit/db';
@@ -42,7 +42,9 @@ export type ClientFetchResult<C extends ClientQuery<any, any>> = Map<
 
 type ClientFetchResultEntity<C extends ClientQuery<any, any>> =
   C extends ClientQuery<infer M, infer CN>
-    ? ResultTypeFromModel<ModelFromModels<M, CN>>
+    ? M extends Models<any, any>
+      ? ReturnTypeFromQuery<M, CN>
+      : any
     : never;
 
 export interface SyncOptions {
@@ -67,9 +69,9 @@ export type SyncStatus = 'pending' | 'confirmed' | 'all';
 export type ClientQuery<
   M extends Models<any, any> | undefined,
   CN extends CollectionNameFromModels<M>
-> = CollectionQuery<M, CN> & {
+> = {
   syncStatus?: SyncStatus;
-};
+} & CollectionQuery<M, CN>;
 
 function ClientQueryBuilder<
   M extends Models<any, any> | undefined,
@@ -80,7 +82,7 @@ function ClientQueryBuilder<
 ): toBuilder<
   ClientQuery<M, CN>,
   'collectionName',
-  QUERY_INPUT_TRANSFORMERS<ModelFromModels<M, CN>>
+  QUERY_INPUT_TRANSFORMERS<M, CN>
 > {
   const query: ClientQuery<M, CN> = {
     collectionName,
@@ -89,7 +91,7 @@ function ClientQueryBuilder<
     select: params?.select ?? [],
     syncStatus: params?.syncStatus ?? 'all',
   };
-  const transformers = QUERY_INPUT_TRANSFORMERS<ModelFromModels<M, CN>>();
+  const transformers = QUERY_INPUT_TRANSFORMERS<M, CN>();
   return Builder(query, {
     protectedFields: ['collectionName'],
     inputTransformers: transformers,
@@ -282,7 +284,7 @@ export class TriplitClient<M extends Models<any, any> | undefined = undefined> {
     return ClientQueryBuilder<M, CN>(collectionName);
   }
 
-  async fetch<CQ extends ClientQuery<M, any>>(
+  async fetch<CQ extends ClientQuery<M, CollectionNameFromModels<M>>>(
     query: CQ,
     options?: FetchOptions
   ): Promise<ClientFetchResult<CQ>> {
@@ -341,7 +343,10 @@ export class TriplitClient<M extends Models<any, any> | undefined = undefined> {
     options?: FetchOptions
   ) {
     const query = this.query(collectionName).entityId(id).build();
-    const results = await this.fetch(query, options);
+    const results = await this.fetch(
+      query as ClientQuery<M, CollectionNameFromModels<M>>,
+      options
+    );
     return results.get(id);
   }
 

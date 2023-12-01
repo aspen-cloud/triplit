@@ -1,12 +1,15 @@
 import {
-  CollectionQuery,
   CollectionQuerySchema,
   FetchResult,
   subscribeResultsAndTriples,
 } from './collection-query.js';
 import { ModelFromModels } from './db.js';
 import { mapFilterStatements } from './db-helpers.js';
-import { FilterStatement, isFilterStatement } from './query.js';
+import {
+  CollectionQuery,
+  FilterStatement,
+  isFilterStatement,
+} from './query.js';
 import { Models, getSchemaFromPath } from './schema.js';
 import * as TB from '@sinclair/typebox/value';
 import { TripleRow, TripleStore } from './triple-store.js';

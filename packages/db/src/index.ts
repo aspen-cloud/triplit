@@ -32,7 +32,7 @@ export {
   QUERY_INPUT_TRANSFORMERS,
 } from './query.js';
 // TS issue occurs if we dont export FilterGroup (i think due to an infered return type somewhere)
-export type { Query, FilterGroup } from './query.js';
+export type { Query, FilterGroup, CollectionQuery } from './query.js';
 export { stripCollectionFromId } from './db-helpers.js';
 export type { TripleRow, EntityId, Attribute, Value } from './triple-store.js';
 export {
@@ -71,9 +71,9 @@ export { DurableClock } from './clocks/durable-clock.js';
 export { MemoryClock } from './clocks/memory-clock.js';
 export { default as CollectionQueryBuilder } from './collection-query.js';
 export type {
-  CollectionQuery,
   FetchResult,
   FetchResultEntity,
+  ReturnTypeFromQuery,
 } from './collection-query.js';
 export { default as Builder } from './utils/builder.js';
 export type { toBuilder } from './utils/builder.js';

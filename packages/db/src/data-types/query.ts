@@ -1,17 +1,18 @@
-import { CollectionQuery } from '../collection-query.js';
+import { FetchResult } from '../collection-query.js';
 import { CollectionNameFromModels } from '../db.js';
+import { CollectionQuery } from '../query.js';
 import { Models } from '../schema.js';
 import { TypeInterface } from './type.js';
 
 export type SubQuery<
-  M extends Models<any, any> | undefined,
+  M extends Models<any, any>,
   CN extends CollectionNameFromModels<M>
 > = Pick<CollectionQuery<M, CN>, 'collectionName' | 'where'>;
 
 export type QueryType<Query extends SubQuery<any, any>> = TypeInterface<
   'query',
-  Query,
-  string, //TODO: is this even applicable? ... might need to break it out into its own concepts we slowly add to
+  FetchResult<Query>,
+  any, //TODO: is this even applicable? ... might need to break it out into its own concepts we slowly add to
   readonly []
 > & {
   query: Query;
@@ -32,7 +33,7 @@ export function QueryType<Q extends SubQuery<any, any>>(
       return JSON.stringify(val);
     },
     convertDBValueToJS(val) {
-      return JSON.parse(val) as Q;
+      return val as FetchResult<Q>;
     },
     convertJSONToJS(val) {
       return val;

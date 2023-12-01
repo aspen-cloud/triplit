@@ -9,11 +9,11 @@ import {
   QUERY_INPUT_TRANSFORMERS,
   SubQueryFilter,
   triplesToEntities,
+  CollectionQuery,
 } from './query.js';
 import {
   convertEntityToJS,
   getSchemaFromPath,
-  ResultTypeFromModel,
   Model,
   Models,
   timestampedObjectToPlainObject,
@@ -38,36 +38,57 @@ import { Operator } from './data-types/base.js';
 import { VariableAwareCache } from './variable-aware-cache.js';
 import { isTimestampedEntityDeleted } from './entity.js';
 import { CollectionNameFromModels, ModelFromModels } from './db.js';
+import { QueryType } from './data-types/query.js';
+import { ExtractJSType } from './data-types/type.js';
 
 export default function CollectionQueryBuilder<
   M extends Models<any, any> | undefined,
   CN extends CollectionNameFromModels<M>
->(collectionName: CN, params?: Query<ModelFromModels<M, CN>>) {
+>(collectionName: CN, params?: Query<M, CN>) {
   const query: CollectionQuery<M, CN> = {
     collectionName,
     ...params,
   };
   return Builder(query, {
     protectedFields: ['collectionName'],
-    inputTransformers: QUERY_INPUT_TRANSFORMERS<ModelFromModels<M, CN>>(),
+    inputTransformers: QUERY_INPUT_TRANSFORMERS<M, CN>(),
   });
 }
-
-export type CollectionQuery<
-  M extends Models<any, any> | undefined,
-  CN extends CollectionNameFromModels<M>
-> = Query<ModelFromModels<M, CN>> & {
-  collectionName: CN;
-};
 
 export type FetchResult<C extends CollectionQuery<any, any>> = Map<
   string,
   FetchResultEntity<C>
 >;
 
+export type CollectionNameFromQuery<Q extends CollectionQuery<any, any>> =
+  Q extends CollectionQuery<infer _M, infer CN> ? CN : never;
+
+export type JSTypeOrRelation<
+  Ms extends Models<any, any>,
+  M extends Model<any>,
+  propName extends keyof M['properties']
+> = M['properties'][propName] extends QueryType<infer Q>
+  ? FetchResult<CollectionQuery<Ms, Q['collectionName']>>
+  : ExtractJSType<M['properties'][propName]>;
+
+export type ReturnTypeFromQuery<
+  M extends Models<any, any>,
+  CN extends CollectionNameFromModels<M>
+> = ModelFromModels<M, CN> extends Model<any>
+  ? {
+      [k in keyof ModelFromModels<M, CN>['properties']]: JSTypeOrRelation<
+        M,
+        ModelFromModels<M, CN>,
+        k
+      >;
+    }
+  : any;
+
 export type FetchResultEntity<C extends CollectionQuery<any, any>> =
   C extends CollectionQuery<infer M, infer CN>
-    ? ResultTypeFromModel<ModelFromModels<M, CN>>
+    ? M extends Models<any, any>
+      ? ReturnTypeFromQuery<M, CN>
+      : any
     : never;
 
 export interface FetchOptions {
@@ -278,23 +299,50 @@ export async function fetch<
   }
 
   if (select && select.length > 0) {
-    entities = entities.map(([entId, entity]) => {
-      const selectedEntity = select.reduce<any>((acc, selectPath) => {
-        const pathParts = (selectPath as string).split('.');
-        const leafMostPart = pathParts.pop()!;
-        let selectScope = acc;
-        let entityScope = entity;
-        for (const pathPart of pathParts) {
-          selectScope[pathPart] = selectScope[pathPart] ?? {};
-          selectScope = selectScope[pathPart];
-          entityScope = entity[pathPart];
-        }
-        selectScope[leafMostPart] = entityScope[leafMostPart];
+    entities = await new Pipeline(entities)
+      .map(async ([entId, entity]) => {
+        const selectedEntity = select
+          .filter((sel) => typeof sel === 'string')
+          .reduce<any>((acc, selectPath) => {
+            const pathParts = (selectPath as string).split('.');
+            const leafMostPart = pathParts.pop()!;
+            let selectScope = acc;
+            let entityScope = entity;
+            for (const pathPart of pathParts) {
+              selectScope[pathPart] = selectScope[pathPart] ?? {};
+              selectScope = selectScope[pathPart];
+              entityScope = entity[pathPart];
+            }
+            selectScope[leafMostPart] = entityScope[leafMostPart];
 
-        return acc;
-      }, {});
-      return [entId, selectedEntity];
-    });
+            return acc;
+          }, {});
+        const subqueries = select.filter((sel) => typeof sel !== 'string') as [
+          string,
+          CollectionQuery<M, any>
+        ][];
+        for (const [propName, subquery] of subqueries) {
+          const subqueryResult = await fetch<M, typeof subquery>(
+            tx,
+            {
+              ...subquery,
+              vars: {
+                ...query.vars,
+                ...subquery.vars,
+                ...convertEntityToJS(entity, collectionSchema),
+              },
+            },
+            {
+              includeTriples: false,
+              schema,
+              cache,
+            }
+          );
+          selectedEntity[propName] = subqueryResult;
+        }
+        return [entId, selectedEntity] as [string, any];
+      })
+      .toArray();
   }
 
   if (includeTriples) {
@@ -621,8 +669,7 @@ export function subscribeResultsAndTriples<
   onError?: (error: any) => void,
   schema?: M
 ) {
-  const order = query.order;
-  const limit = query.limit;
+  const { select, order, limit } = query;
   const queryWithInsertedVars = replaceVariablesInQuery(query);
   const where = queryWithInsertedVars.where;
   const asyncUnSub = async () => {
@@ -651,8 +698,9 @@ export function subscribeResultsAndTriples<
         try {
           // Handle queries with nested queries as a special case for now
           if (
-            where &&
-            someFilterStatements(where, (filter) => 'exists' in filter)
+            (where &&
+              someFilterStatements(where, (filter) => 'exists' in filter)) ||
+            (select && select.some((sel) => typeof sel !== 'string'))
           ) {
             const fetchResult = await fetch<M, Q>(tripleStore, query, {
               includeTriples: true,

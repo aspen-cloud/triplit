@@ -32,6 +32,11 @@ import {
   appendCollectionToId,
   stripCollectionFromId,
 } from '../src/db-helpers.js';
+import {
+  CollectionNameFromQuery,
+  JSTypeOrRelation,
+} from '../src/collection-query.js';
+import { CollectionFromModels, ModelFromModels } from '../src/db.js';
 
 // const storage = new InMemoryTupleStorage();
 const storage = new MemoryStorage();
@@ -4984,5 +4989,235 @@ describe('sessions', () => {
       const resp = await sessionBar.fetch(query);
       expect(resp).toHaveLength(0);
     }
+  });
+});
+
+describe('selecting subqueries', () => {
+  const db = new DB({
+    schema: {
+      collections: {
+        users: {
+          schema: S.Schema({
+            id: S.String(),
+            name: S.String(),
+            friend_ids: S.Set(S.String()),
+            // friends: S.Query({
+            //   collectionName: 'users',
+            //   where: [['id', 'in', '$friend_ids']],
+            // }),
+            // posts: S.Query({
+            //   collectionName: 'posts',
+            //   where: [['author_id', '=', '$id']],
+            // }),
+          }),
+        },
+        posts: {
+          schema: S.Schema({
+            id: S.String(),
+            content: S.String(),
+            author_id: S.String(),
+            topics: S.Set(S.String()),
+          }),
+        },
+      },
+    },
+  });
+  beforeAll(async () => {
+    await db.insert('users', {
+      id: 'user-1',
+      name: 'Alice',
+      friend_ids: new Set(['user-2', 'user-3']),
+    });
+    await db.insert('users', {
+      id: 'user-2',
+      name: 'Bob',
+      friend_ids: new Set(['user-1', 'user-3']),
+    });
+    await db.insert('users', {
+      id: 'user-3',
+      name: 'Charlie',
+      friend_ids: new Set(['user-1', 'user-2']),
+    });
+    await db.insert('posts', {
+      id: 'post-1',
+      content: 'Hello World!',
+      author_id: 'user-1',
+      topics: new Set(['comedy', 'sports']),
+    });
+    await db.insert('posts', {
+      id: 'post-2',
+      content: 'Hello World!',
+      author_id: 'user-2',
+    });
+    await db.insert('posts', {
+      id: 'post-3',
+      content: 'Hello World!',
+      author_id: 'user-3',
+    });
+  });
+  it('can select subqueries', async () => {
+    const query = db
+      .query('users')
+      .select([
+        'id',
+        [
+          'posts',
+          db
+            .query('posts', {
+              where: [['author_id', '=', '$id']],
+            })
+            .build(),
+        ],
+      ])
+      .build();
+    const result = await db.fetch(query);
+    expect(result.get('user-1')).toHaveProperty('posts');
+    expect(result.get('user-1').posts).toHaveLength(1);
+    expect(result.get('user-1').posts.get('post-1')).toMatchObject({
+      id: 'post-1',
+      content: 'Hello World!',
+      author_id: 'user-1',
+      topics: new Set(['comedy', 'sports']),
+    });
+  });
+
+  it('can subscribe with subqueries', async () => {
+    const query = db
+      .query('users')
+      .select([
+        'id',
+        [
+          'posts',
+          db
+            .query('posts', {
+              where: [['author_id', '=', '$id']],
+            })
+            .build(),
+        ],
+      ])
+      .build();
+    await testSubscription(db, query, [
+      {
+        check: (results) => {
+          expect(results).toHaveLength(3);
+          expect(results.get('user-1')).toHaveProperty('posts');
+          expect(results.get('user-1').posts).toHaveLength(1);
+          expect(results.get('user-1').posts.get('post-1')).toMatchObject({
+            id: 'post-1',
+            content: 'Hello World!',
+            author_id: 'user-1',
+            topics: new Set(['comedy', 'sports']),
+          });
+        },
+      },
+      {
+        action: async () => {
+          await db.insert('posts', {
+            id: 'post-4',
+            content: 'Hello World!',
+            author_id: 'user-1',
+          });
+        },
+        check: (results) => {
+          expect(results).toHaveLength(3);
+          expect(results.get('user-1')).toHaveProperty('posts');
+          expect(results.get('user-1')!.posts).toHaveLength(2);
+          expect(results.get('user-1')!.posts.get('post-4')).toMatchObject({
+            id: 'post-4',
+            content: 'Hello World!',
+            author_id: 'user-1',
+          });
+        },
+      },
+    ]);
+  });
+});
+
+describe('selecting subqueries from schema', () => {
+  const db = new DB({
+    schema: {
+      collections: {
+        users: {
+          schema: S.Schema({
+            id: S.String(),
+            name: S.String(),
+            friend_ids: S.Set(S.String()),
+            posts: S.Query({
+              collectionName: 'posts' as const,
+              where: [['author_id', '=', '$id']],
+            }),
+            friends: S.Query({
+              collectionName: 'users' as const,
+              where: [['id', 'in', '$friend_ids']],
+            }),
+          }),
+        },
+        posts: {
+          schema: S.Schema({
+            id: S.String(),
+            content: S.String(),
+            author_id: S.String(),
+            topics: S.Set(S.String()),
+          }),
+        },
+      },
+    },
+  });
+
+  beforeAll(async () => {
+    await db.insert('users', {
+      id: 'user-1',
+      name: 'Alice',
+      friend_ids: new Set(['user-2', 'user-3']),
+    });
+    await db.insert('users', {
+      id: 'user-2',
+      name: 'Bob',
+      friend_ids: new Set(['user-1', 'user-3']),
+    });
+    await db.insert('users', {
+      id: 'user-3',
+      name: 'Charlie',
+      friend_ids: new Set(['user-1', 'user-2']),
+    });
+    await db.insert('posts', {
+      id: 'post-1',
+      content: 'Hello World!',
+      author_id: 'user-1',
+      topics: new Set(['comedy', 'sports']),
+    });
+    await db.insert('posts', {
+      id: 'post-2',
+      content: 'Hello World!',
+      author_id: 'user-2',
+    });
+    await db.insert('posts', {
+      id: 'post-3',
+      content: 'Hello World!',
+      author_id: 'user-3',
+    });
+  });
+  it('can select subqueries', async () => {
+    const query = db
+      .query('users')
+      .include('posts')
+      .include('friends', { where: [['name', 'like', '%e']] })
+      .build();
+
+    const result = await db.fetch(query);
+    expect(result.get('user-1')).toHaveProperty('posts');
+    expect(result.get('user-1')!.posts).toHaveLength(1);
+    expect(result.get('user-1')!.posts.get('post-1')).toMatchObject({
+      id: 'post-1',
+      content: 'Hello World!',
+      author_id: 'user-1',
+      topics: new Set(['comedy', 'sports']),
+    });
+    expect(result.get('user-1')!.friends).toHaveLength(1);
+    expect(result.get('user-1')!.friends.get('user-3')).toMatchObject({
+      id: 'user-3',
+      name: 'Charlie',
+      friend_ids: new Set(['user-1', 'user-2']),
+    });
   });
 });
