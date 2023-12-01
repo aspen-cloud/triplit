@@ -5205,6 +5205,10 @@ describe('selecting subqueries from schema', () => {
       .build();
 
     const result = await db.fetch(query);
+
+    // Other fields are included in the selection
+    expect(result.get('user-1')).toHaveProperty('name');
+
     expect(result.get('user-1')).toHaveProperty('posts');
     expect(result.get('user-1')!.posts).toHaveLength(1);
     expect(result.get('user-1')!.posts.get('post-1')).toMatchObject({
@@ -5219,5 +5223,13 @@ describe('selecting subqueries from schema', () => {
       name: 'Charlie',
       friend_ids: new Set(['user-1', 'user-2']),
     });
+  });
+
+  it('must use include to select subqueries', async () => {
+    const query = db.query('users').build();
+
+    const result = await db.fetch(query);
+    expect(result.get('user-1')).not.toHaveProperty('posts');
+    expect(result.get('user-1')).not.toHaveProperty('friends');
   });
 });

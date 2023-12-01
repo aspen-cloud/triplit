@@ -33,6 +33,7 @@ import DB, {
   DBFetchOptions,
 } from './db.js';
 import { DBTransaction } from './db-transaction.js';
+import { DataType } from './data-types/base.js';
 
 const ID_SEPARATOR = '#';
 
@@ -314,6 +315,18 @@ export async function prepareQuery<
     }
   );
   if (collectionSchema) {
+    // If we dont have a field selection, select all fields
+    // Helps guard against 'include' injection causing issues as well
+    if (!fetchQuery.select) {
+      const selectAllProps = Object.entries(
+        collectionSchema.schema.properties as Record<string, DataType>
+      )
+        .filter(([_key, definition]) => definition.type !== 'query')
+        .map(([key, _definition]) => key);
+      //@ts-expect-error
+      fetchQuery.select = selectAllProps;
+    }
+
     // Convert any filters that use relations from schema to *exists* queries
     fetchQuery.where = mapFilterStatements(fetchQuery.where, (statement) => {
       if (!Array.isArray(statement)) return statement;
