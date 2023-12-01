@@ -87,8 +87,6 @@ function ClientQueryBuilder<
   const query: ClientQuery<M, CN> = {
     collectionName,
     ...params,
-    where: params?.where ?? [],
-    select: params?.select ?? [],
     syncStatus: params?.syncStatus ?? 'all',
   };
   const transformers = QUERY_INPUT_TRANSFORMERS<M, CN>();
