@@ -328,7 +328,8 @@ export const QUERY_INPUT_TRANSFORMERS = <
   ): Record<string, any> {
     return {
       ...q.include,
-      [relationName]: query,
+      // Set to null so the inclusion of the key can be serialized
+      [relationName]: query ?? null,
     };
   },
 });
