@@ -596,7 +596,6 @@ describe('query builder', () => {
     {
       const db = new DB({ schema });
       const query = db.query('test');
-      // TODO
       expectTypeOf(query.include).parameter(0).toEqualTypeOf<'subquery'>();
     }
     // schemaless

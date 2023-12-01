@@ -104,7 +104,7 @@ type RelationAttributes<M extends Model<any>> = {
   [K in keyof M['properties']]: M['properties'][K] extends QueryType<any>
     ? K
     : never;
-}[keyof M];
+}[keyof M['properties']];
 
 export type CollectionQuery<
   M extends Models<any, any> | undefined,
