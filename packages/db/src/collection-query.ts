@@ -71,6 +71,12 @@ export type JSTypeOrRelation<
   ? FetchResult<CollectionQuery<Ms, Q['collectionName']>>
   : ExtractJSType<M['properties'][propName]>;
 
+// Trying this out, having types that know and dont know the schema exists might be a useful pattern
+export type MaybeReturnTypeFromQuery<
+  M extends Models<any, any> | undefined,
+  CN extends CollectionNameFromModels<M>
+> = M extends Models<any, any> ? ReturnTypeFromQuery<M, CN> : any;
+
 export type ReturnTypeFromQuery<
   M extends Models<any, any>,
   CN extends CollectionNameFromModels<M>

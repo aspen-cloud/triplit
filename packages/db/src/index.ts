@@ -50,7 +50,6 @@ export type {
 } from './schema.js';
 export type {
   InsertTypeFromModel,
-  ResultTypeFromModel,
   UpdateTypeFromModel,
   Model,
   Models,
@@ -74,6 +73,7 @@ export type {
   FetchResult,
   FetchResultEntity,
   ReturnTypeFromQuery,
+  MaybeReturnTypeFromQuery,
 } from './collection-query.js';
 export { default as Builder } from './utils/builder.js';
 export type { toBuilder } from './utils/builder.js';

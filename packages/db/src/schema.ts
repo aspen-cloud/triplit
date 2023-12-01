@@ -173,15 +173,6 @@ export type SelectModelFromModel<M extends Model<any> | undefined> =
       : never
     : any;
 
-export type ResultTypeFromModel<M extends Model<any> | undefined> =
-  M extends Model<any>
-    ? {
-        [k in keyof M['properties']]: M['properties'][k] extends DataType
-          ? ExtractJSType<M['properties'][k]>
-          : never;
-      }
-    : any;
-
 type JSTypeFromModel<M extends Model<any> | undefined> = M extends Model<any>
   ? {
       [k in keyof M['properties']]: M['properties'][k] extends DataType

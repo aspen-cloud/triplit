@@ -3,8 +3,7 @@ import {
   Models,
   CollectionNameFromModels,
   SubscriptionOptions,
-  ResultTypeFromModel,
-  ModelFromModels,
+  MaybeReturnTypeFromQuery,
 } from '@triplit/client';
 import { useQuery } from './use-query.js';
 
@@ -19,7 +18,7 @@ export function useEntity<
 ): {
   fetching: boolean;
   fetchingRemote: boolean;
-  results: ResultTypeFromModel<ModelFromModels<M, CN>> | undefined;
+  results: MaybeReturnTypeFromQuery<M, CN> | undefined;
   error: any;
 } {
   const { fetching, fetchingRemote, results, error } = useQuery(

@@ -202,7 +202,7 @@ function valueToJS(value: any) {
 
 function subQueryToString(subquery: QueryAttributeDefinition['query']) {
   const { collectionName, where } = subquery;
-  return `{collectionName: '${collectionName}', where: ${JSON.stringify(
+  return `{collectionName: '${collectionName}' as const, where: ${JSON.stringify(
     where
   )}}`;
 }

@@ -21,13 +21,14 @@ import {
   clientInputToDbModel,
   InsertTypeFromModel,
   convertEntityToJS,
-  ResultTypeFromModel,
 } from './schema.js';
 import { nanoid } from 'nanoid';
 import CollectionQueryBuilder, {
   doesEntityObjMatchWhere,
   fetch,
   FetchResult,
+  MaybeReturnTypeFromQuery,
+  ReturnTypeFromQuery,
 } from './collection-query.js';
 import {
   DBSerializationError,
@@ -333,7 +334,7 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
     return convertEntityToJS(
       constructEntity(triples, storeId),
       collectionSchema?.schema
-    ) as ResultTypeFromModel<ModelFromModels<M, CN>>;
+    ) as MaybeReturnTypeFromQuery<M, CN>;
   }
 
   async update<CN extends CollectionNameFromModels<M>>(

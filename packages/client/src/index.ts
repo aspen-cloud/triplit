@@ -2,7 +2,7 @@
 export type {
   CollectionNameFromModels,
   Models,
-  ResultTypeFromModel,
+  MaybeReturnTypeFromQuery,
   ModelFromModels,
 } from '@triplit/db';
 export * from './triplit-client.js';
