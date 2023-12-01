@@ -235,7 +235,7 @@ export function clientInputToDbModel<M extends Model<any> | undefined>(
 export function timestampedObjectToPlainObject<O extends TimestampedObject>(
   obj: O
 ): UnTimestampedObject<O> {
-  if (typeof obj !== 'object') {
+  if (typeof obj !== 'object' || obj === null) {
     return obj;
   }
   if (isTimestampedVal(obj)) {
