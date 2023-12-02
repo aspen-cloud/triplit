@@ -3558,13 +3558,23 @@ describe('Rules', () => {
       await testDBAndTransaction(
         () => db,
         async (db) => {
-          const nonEnrolledClass = await db.fetchById('classes', 'class-2', {
-            skipRules: true,
-          });
+          const nonEnrolledClass = await db.fetchById(
+            'classes',
+            'class-2',
+            {},
+            {
+              skipRules: true,
+            }
+          );
           expect(nonEnrolledClass).not.toBeNull();
-          const enrolledClass = await db.fetchById('classes', 'class-1', {
-            skipRules: true,
-          });
+          const enrolledClass = await db.fetchById(
+            'classes',
+            'class-1',
+            {},
+            {
+              skipRules: true,
+            }
+          );
           expect(enrolledClass).not.toBeNull();
         }
       );
@@ -5231,5 +5241,19 @@ describe('selecting subqueries from schema', () => {
     const result = await db.fetch(query);
     expect(result.get('user-1')).not.toHaveProperty('posts');
     expect(result.get('user-1')).not.toHaveProperty('friends');
+  });
+
+  it('can include subqueries in fetch by id', async () => {
+    const result = (await db.fetchById('users', 'user-1', {
+      include: ['posts'],
+    }))!;
+    expect(result).toHaveProperty('posts');
+    expect(result.posts).toHaveLength(1);
+    expect(result.posts.get('post-1')).toMatchObject({
+      id: 'post-1',
+      content: 'Hello World!',
+      author_id: 'user-1',
+      topics: new Set(['comedy', 'sports']),
+    });
   });
 });

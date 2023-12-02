@@ -174,6 +174,15 @@ export function ruleToTuple(
   ]);
 }
 
+export type FetchByIdQueryParams<
+  M extends Models<any, any> | undefined,
+  CN extends CollectionNameFromModels<M>
+> = {
+  include?: Parameters<
+    ReturnType<typeof CollectionQueryBuilder<M, CN>>['include']
+  >[0][];
+};
+
 export default class DB<M extends Models<any, any> | undefined = undefined> {
   tripleStore: TripleStore;
   ensureMigrated: Promise<void | void[]>;
@@ -321,11 +330,15 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
   async fetchById<CN extends CollectionNameFromModels<M>>(
     collectionName: CN,
     id: string,
+    queryParams: FetchByIdQueryParams<M, CN> = {},
     options: DBFetchOptions = {}
   ) {
     await this.ensureMigrated;
-    const query = this.query(collectionName).entityId(id).build();
-    const result = await this.fetch(query, options);
+    let query = this.query(collectionName).entityId(id);
+    for (const inc of queryParams.include ?? []) {
+      query = query.include(inc);
+    }
+    const result = await this.fetch(query.build(), options);
     // Fetch handles replacing variables, need to replace here to pull data out
     const entityId = replaceVariable(id, this.variables);
     return result.has(entityId) ? result.get(entityId)! : null;

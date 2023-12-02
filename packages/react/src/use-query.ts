@@ -28,7 +28,7 @@ export function useQuery<
   const [fetching, setFetching] = useState(true);
   const [fetchingRemote, setFetchingRemote] = useState(
     client.syncEngine.connectionStatus === 'CONNECTING' ||
-    client.syncEngine.connectionStatus === 'OPEN'
+      client.syncEngine.connectionStatus === 'OPEN'
   );
   const [error, setError] = useState<any>(undefined);
 
@@ -66,11 +66,11 @@ export function useQuery<
       options?.localOnly
         ? { localOnly: true }
         : {
-          localOnly: false,
-          onRemoteFulfilled: () => {
-            setFetchingRemote(false);
-          },
-        }
+            localOnly: false,
+            onRemoteFulfilled: () => {
+              setFetchingRemote(false);
+            },
+          }
     );
 
     return () => {

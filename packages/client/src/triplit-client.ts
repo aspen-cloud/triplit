@@ -15,6 +15,7 @@ import {
   ReturnTypeFromQuery,
   toBuilder,
   Storage,
+  FetchByIdQueryParams,
 } from '@triplit/db';
 import { getUserId } from './token.js';
 import { UnrecognizedFetchPolicyError } from './errors.js';
@@ -338,11 +339,15 @@ export class TriplitClient<M extends Models<any, any> | undefined = undefined> {
   async fetchById<CN extends CollectionNameFromModels<M>>(
     collectionName: CN,
     id: string,
+    queryParams?: FetchByIdQueryParams<M, CN>,
     options?: FetchOptions
   ) {
-    const query = this.query(collectionName).entityId(id).build();
+    let query = this.query(collectionName).entityId(id);
+    for (const inc of queryParams?.include ?? []) {
+      query = query.include(inc);
+    }
     const results = await this.fetch(
-      query as ClientQuery<M, CollectionNameFromModels<M>>,
+      query.build() as ClientQuery<M, CollectionNameFromModels<M>>,
       options
     );
     return results.get(id);

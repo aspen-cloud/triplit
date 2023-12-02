@@ -152,55 +152,31 @@ export async function fetch<
     return cacheResult;
   }
   const queryWithInsertedVars = replaceVariablesInQuery(query);
-  const where = queryWithInsertedVars.where;
-  if (queryWithInsertedVars.entityId) {
-    const storeId = appendCollectionToId(
-      queryWithInsertedVars.collectionName,
-      queryWithInsertedVars.entityId
-    );
-    const entityTriples = await tx.findByEntity(storeId);
-    let entity: any | null = constructEntity(entityTriples, storeId);
-    // handle deleted entites
-    if (isTimestampedEntityDeleted(entity)) {
-      entity = null;
-    }
-    const triples = new Map([[queryWithInsertedVars.entityId, entityTriples]]);
-    if (!entity || !doesEntityObjMatchWhere(entity, where, collectionSchema)) {
-      const results = new Map() as FetchResult<Q>;
-      const triples = new Map() as Map<string, TripleRow[]>;
-      return includeTriples ? { results, triples } : results;
-    }
-    let updatedEntity = entity;
-    // @WE I'm sure theres a reason, but its unclear why we do this? If we arent including triples, dont strip timestamps?
-    if (!includeTriples)
-      updatedEntity = convertEntityToJS(updatedEntity, collectionSchema);
-    const results = new Map([
-      [queryWithInsertedVars.entityId, updatedEntity],
-    ]) as FetchResult<Q>;
-    return includeTriples ? { results, triples } : results;
-  }
+  const { order, limit, select, where, entityId, collectionName, after } =
+    queryWithInsertedVars;
+  const allEntities = entityId
+    ? await getEntityAndTriples(tx, collectionName, entityId)
+    : await (includeTriples
+        ? getCollectionEntitiesAndTriples(tx, collectionName)
+        : getCollectionEntities(tx, collectionName));
 
-  const order = query.order;
-  const limit = query.limit;
-  const select = query.select;
-  const resultOrder = await (order
-    ? tx.findValuesInRange(
-        [query.collectionName, ...(order[0][0] as string).split('.')],
-        {
-          direction: order[0][1],
-          ...(query.after && (!order || order.length <= 1)
-            ? order[0][1] === 'DESC'
-              ? { lessThan: query.after }
-              : { greaterThan: query.after }
-            : {}),
-        }
-      )
-    : tx.findByAVE([['_collection'], query.collectionName]));
-
-  // look into refactoring with constructEntities()
-  const allEntities = await (includeTriples
-    ? getCollectionEntitiesAndTriples(tx, query.collectionName)
-    : getCollectionEntities(tx, query.collectionName));
+  const resultOrder = entityId
+    ? allEntities.size === 0
+      ? []
+      : [...allEntities.values()][0].triples
+    : await (order
+        ? tx.findValuesInRange(
+            [collectionName, ...(order[0][0] as string).split('.')],
+            {
+              direction: order[0][1],
+              ...(after && (!order || order.length <= 1)
+                ? order[0][1] === 'DESC'
+                  ? { lessThan: after }
+                  : { greaterThan: after }
+                : {}),
+            }
+          )
+        : tx.findByAVE([['_collection'], collectionName]));
 
   let entityCount = 0;
   let previousOrderVal: Value;
@@ -295,9 +271,9 @@ export async function fetch<
       return 0;
     });
     let startIndex = 0;
-    if (query.after) {
+    if (after) {
       let afterIndex = entities.findIndex(
-        ([id]) => id === stripCollectionFromId(query.after![1])
+        ([id]) => id === stripCollectionFromId(after![1])
       );
       if (afterIndex !== -1) startIndex = afterIndex + 1;
     }
@@ -327,6 +303,7 @@ export async function fetch<
           string,
           CollectionQuery<M, any>
         ][];
+        const subQueryTriples: TripleRow[] = [];
         for (const [propName, subquery] of subqueries) {
           const subqueryResult = await fetch<M, typeof subquery>(
             tx,
@@ -339,13 +316,23 @@ export async function fetch<
               },
             },
             {
-              includeTriples: false,
+              includeTriples: true,
               schema,
               cache,
             }
           );
-          selectedEntity[propName] = subqueryResult;
+          selectedEntity[propName] = subqueryResult.results;
+          subQueryTriples.push(...[...subqueryResult.triples.values()].flat());
         }
+        if (!resultTriples.has(entId)) {
+          resultTriples.set(entId, subQueryTriples);
+        } else {
+          resultTriples.set(
+            entId,
+            resultTriples.get(entId)!.concat(subQueryTriples)
+          );
+        }
+
         return [entId, selectedEntity] as [string, any];
       })
       .toArray();
@@ -557,6 +544,17 @@ async function getCollectionEntitiesAndTriples(
     entry.entity = entityToResultReducer(entry.entity ?? {}, triple);
     return acc;
   }, new Map());
+}
+
+async function getEntityAndTriples(
+  tx: TripleStoreApi,
+  collectionName: string,
+  id: string
+) {
+  const storeId = appendCollectionToId(collectionName, id);
+  const entityTriples = await tx.findByEntity(storeId);
+  const entity = constructEntity(entityTriples, storeId);
+  return new Map([[storeId, { triples: entityTriples, entity }]]);
 }
 
 async function getCollectionEntities(

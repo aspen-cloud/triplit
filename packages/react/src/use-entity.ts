@@ -4,6 +4,7 @@ import {
   CollectionNameFromModels,
   SubscriptionOptions,
   MaybeReturnTypeFromQuery,
+  FetchByIdQueryParams,
 } from '@triplit/client';
 import { useQuery } from './use-query.js';
 
@@ -14,6 +15,7 @@ export function useEntity<
   client: TriplitClient<M>,
   collectionName: CN,
   id: string,
+  queryParams?: FetchByIdQueryParams<M, CN>,
   options?: SubscriptionOptions
 ): {
   fetching: boolean;
@@ -21,9 +23,13 @@ export function useEntity<
   results: MaybeReturnTypeFromQuery<M, CN> | undefined;
   error: any;
 } {
+  let query = client.query(collectionName).entityId(id);
+  for (const inc of queryParams?.include ?? []) {
+    query = query.include(inc);
+  }
   const { fetching, fetchingRemote, results, error } = useQuery(
     client,
-    client.query(collectionName).entityId(id),
+    query,
     options
   );
   return {

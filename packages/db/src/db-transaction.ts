@@ -53,6 +53,7 @@ import {
   DropAttributeOptionOperation,
   AddRuleOperation,
   DropRuleOperation,
+  FetchByIdQueryParams,
 } from './db.js';
 import {
   validateExternalId,
@@ -526,10 +527,14 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
   async fetchById<CN extends CollectionNameFromModels<M>>(
     collectionName: CN,
     id: string,
+    queryParams: FetchByIdQueryParams<M, CN> = {},
     options: DBFetchOptions = {}
   ) {
-    const query = this.query(collectionName).entityId(id).build();
-    const result = await this.fetch(query, options);
+    let query = this.query(collectionName).entityId(id);
+    for (const inc of queryParams.include ?? []) {
+      query = query.include(inc);
+    }
+    const result = await this.fetch(query.build(), options);
     // Fetch handles replacing variables, need to replace here to pull data out
     const entityId = replaceVariable(id, this.variables);
     return result.has(entityId) ? result.get(entityId) : null;

@@ -21,6 +21,7 @@ export type {
   AddRuleOperation,
   DropRuleOperation,
   DBConfig,
+  FetchByIdQueryParams,
 } from './db.js';
 export type { DBTransaction } from './db-transaction.js';
 export {
