@@ -308,7 +308,8 @@ export function triplesToSchema(triples: TripleRow[]) {
     triples,
     appendCollectionToId('_metadata', '_schema')
   );
-  const schemaData = timestampedObjectToPlainObject(schemaEntity);
+  if (!schemaEntity) throw new Error('Could not construct schema entity');
+  const schemaData = timestampedObjectToPlainObject(schemaEntity.data);
   const version = (schemaData.version as number) || 0;
   const collections = (schemaData.collections as Models<any, any>) || {};
   return { version, collections: collectionsDefinitionToSchema(collections) };

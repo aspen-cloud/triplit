@@ -4,12 +4,12 @@ import {
   Query,
   FilterStatement,
   FilterGroup,
-  entityToResultReducer,
-  constructEntity,
   QUERY_INPUT_TRANSFORMERS,
   SubQueryFilter,
-  triplesToEntities,
   CollectionQuery,
+  triplesToEntities,
+  Entity,
+  updateEntity,
 } from './query.js';
 import {
   convertEntityToJS,
@@ -154,11 +154,19 @@ export async function fetch<
   const queryWithInsertedVars = replaceVariablesInQuery(query);
   const { order, limit, select, where, entityId, collectionName, after } =
     queryWithInsertedVars;
-  const allEntities = entityId
-    ? await getEntityAndTriples(tx, collectionName, entityId)
-    : await (includeTriples
-        ? getCollectionEntitiesAndTriples(tx, collectionName)
-        : getCollectionEntities(tx, collectionName));
+
+  const collectionTriples = entityId
+    ? await tx.findByEntity(appendCollectionToId(collectionName, entityId))
+    : await tx.findByCollection(query.collectionName);
+  const entitiesMap = triplesToEntities(collectionTriples);
+  const allEntities = new Map(
+    [...entitiesMap.entries()].map(([id, entity]) => {
+      return [
+        id,
+        { entity: entity.data, triples: Object.values(entity.triples) },
+      ];
+    })
+  );
 
   const resultOrder = entityId
     ? allEntities.size === 0
@@ -190,7 +198,7 @@ export async function fetch<
       }
       return [
         externalId,
-        { triples: [] as TripleRow[], entity: entityEntry },
+        { triples: [] as TripleRow[], entity: entityEntry?.entity },
       ] as const;
     })
     // filter out deleted
@@ -215,7 +223,7 @@ export async function fetch<
           vars: {
             ...query.vars,
             ...subQuery.vars,
-            ...timestampedObjectToPlainObject(entity),
+            ...timestampedObjectToPlainObject(entity as any),
           },
           limit: 1,
         };
@@ -528,43 +536,6 @@ function isOperatorSatisfied(op: Operator, value: any, filterValue: any) {
   }
 }
 
-async function getCollectionEntitiesAndTriples(
-  tx: TripleStoreApi,
-  collectionName: string
-): Promise<Map<string, { triples: TripleRow[]; entity: any }>> {
-  // This could use the object entity index but keeping seperate for now to allow this to be used in instead of the entity index if we need to disable it
-  const collectionTriples = await tx.findByCollection(collectionName);
-  return collectionTriples.reduce((acc, triple) => {
-    const { id } = triple;
-    if (!acc.has(id)) {
-      acc.set(id, { triples: [], entity: {} });
-    }
-    const entry = acc.get(id);
-    entry!.triples.push(triple);
-    entry.entity = entityToResultReducer(entry.entity ?? {}, triple);
-    return acc;
-  }, new Map());
-}
-
-async function getEntityAndTriples(
-  tx: TripleStoreApi,
-  collectionName: string,
-  id: string
-) {
-  const storeId = appendCollectionToId(collectionName, id);
-  const entityTriples = await tx.findByEntity(storeId);
-  const entity = constructEntity(entityTriples, storeId);
-  return new Map([[storeId, { triples: entityTriples, entity }]]);
-}
-
-async function getCollectionEntities(
-  tx: TripleStoreApi,
-  collectionName: string
-): Promise<Map<string, { triples: TripleRow[]; entity: any }>> {
-  const collectionTriples = await tx.findByCollection(collectionName);
-  return triplesToEntities(collectionTriples);
-}
-
 export type CollectionQuerySchema<Q extends CollectionQuery<any, any>> =
   Q extends CollectionQuery<infer M, infer CN> ? ModelFromModels<M, CN> : never;
 
@@ -624,11 +595,18 @@ function subscribeSingleEntity<
               : null;
             triples = fetchResult.triples;
           } else {
-            entity = entityInserts.reduce(entityToResultReducer, entity);
+            const entityWrapper = new Entity({
+              data: entity,
+              triples: [...triples.values()].flat(),
+            });
+            updateEntity(entityWrapper, entityInserts);
+            entity = entityWrapper.data;
+            // entityInserts.reduce(entityToResultReducer, entity);
             if (!triples.has(entityId)) {
               triples.set(entityId, []);
             }
-            triples.get(entityId)!.push(...entityInserts);
+            triples.set(entityId, Object.values(entityWrapper.triples));
+            // triples.get(entityId)!.push(...entityInserts);
           }
           if (
             entity &&
@@ -747,10 +725,10 @@ export function subscribeResultsAndTriples<
             const entityTriples = await tripleStore.findByEntity(
               appendCollectionToId(query.collectionName, entity)
             );
-            // TODO: there is some slight inconsistency here between fetch and subscribe...this will assign default values, particularly to sets
-            const entityObj: any = entityTriples.reduce((ent, trip) => {
-              return entityToResultReducer(ent, trip);
-            }, {});
+
+            const entityWrapper = new Entity();
+            updateEntity(entityWrapper, entityTriples);
+            const entityObj = entityWrapper.data as FetchResultEntity<Q>;
             const isInCollection =
               entityObj['_collection'] &&
               entityObj['_collection'][0] === query.collectionName;

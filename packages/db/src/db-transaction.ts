@@ -69,9 +69,10 @@ import {
 } from './db-helpers.js';
 import {
   CollectionQuery,
+  Entity,
   Query,
   constructEntity,
-  entityToResultReducer,
+  updateEntity,
 } from './query.js';
 import { dbDocumentToTuples } from './utils.js';
 import { typeFromJSON } from './data-types/base.js';
@@ -90,7 +91,7 @@ const EXEMPT_FROM_WRITE_RULES = new Set(['_metadata']);
 
 function checkWriteRules<M extends Models<any, any> | undefined>(
   id: EntityId,
-  entity: any,
+  timestampedEntity: any,
   variables: Record<string, any> | undefined,
   schema: StoreSchema<M> | undefined
 ) {
@@ -108,7 +109,7 @@ function checkWriteRules<M extends Models<any, any> | undefined>(
     } as CollectionQuery<M, any>;
     query = replaceVariablesInQuery(query);
     const satisfiedRule = doesEntityObjMatchWhere(
-      entity,
+      timestampedEntity,
       query.where,
       collection?.schema
     );
@@ -121,7 +122,7 @@ function checkWriteRules<M extends Models<any, any> | undefined>(
 
 export class DBTransaction<M extends Models<any, any> | undefined> {
   schema: StoreSchema<M> | undefined;
-  private _schema: TimestampedObject | undefined;
+  private _schema: Entity | undefined;
   readonly variables?: Record<string, any>;
 
   private ValidateTripleSchema: TripleStoreBeforeInsertHook = async (
@@ -154,7 +155,7 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
     const deletedEntities = new Map();
     for (const id of deletedEntityIds) {
       const entity = constructEntity(await tx.store.findByEntity(id), id);
-      deletedEntities.set(id, entity);
+      if (entity) deletedEntities.set(id, entity.data);
     }
 
     const updatedEntityIds = new Set(
@@ -168,15 +169,15 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
     for (const id of updatedEntityIds) {
       const triples = await tx.findByEntity(id);
       const entity = constructEntity(triples, id);
-      updatedEntities.set(id, entity);
+      if (entity) updatedEntities.set(id, entity.data);
     }
 
     const schema = await this.getSchema();
-    for (const [storeId, entity] of updatedEntities) {
-      checkWriteRules(storeId, entity, this.variables, schema);
+    for (const [storeId, timestampedEntity] of updatedEntities) {
+      checkWriteRules(storeId, timestampedEntity, this.variables, schema);
     }
-    for (const [storeId, entity] of deletedEntities) {
-      checkWriteRules(storeId, entity, this.variables, schema);
+    for (const [storeId, timestampedEntity] of deletedEntities) {
+      checkWriteRules(storeId, timestampedEntity, this.variables, schema);
     }
   };
 
@@ -198,15 +199,13 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
       metadataTriples.unshift(...schemaTriples);
     }
 
-    this._schema = metadataTriples.reduce(
-      entityToResultReducer,
-      this._schema ?? {}
-    );
+    this._schema = this._schema ?? new Entity();
+    updateEntity(this._schema, metadataTriples);
 
     // Type definitions are kinda ugly here
-    const schemaDefinition = timestampedObjectToPlainObject(this._schema) as
-      | SchemaDefinition
-      | undefined;
+    const schemaDefinition = timestampedObjectToPlainObject(
+      this._schema.data
+    ) as SchemaDefinition | undefined;
 
     this.schema = {
       version: schemaDefinition?.version ?? 0,
@@ -331,9 +330,10 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
 
     // insert triples
     await this.storeTx.insertTriples(triples);
-
+    const insertedEntity = constructEntity(triples, storeId);
+    if (!insertedEntity) throw new Error('Malformed id');
     return convertEntityToJS(
-      constructEntity(triples, storeId),
+      insertedEntity.data as any,
       collectionSchema?.schema
     ) as MaybeReturnTypeFromQuery<M, CN>;
   }
@@ -357,7 +357,7 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
     const storeId = appendCollectionToId(collectionName, entityId);
     const entityTriples = await this.storeTx.findByEntity(storeId);
     const timestampedEntity = constructEntity(entityTriples, storeId);
-    const entity = timestampedObjectToPlainObject(timestampedEntity);
+    const entity = timestampedObjectToPlainObject(timestampedEntity!.data);
 
     // If entity doesn't exist or is deleted, throw error
     // Schema/metadata does not have _collection attribute

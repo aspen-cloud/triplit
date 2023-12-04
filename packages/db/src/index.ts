@@ -29,6 +29,7 @@ export {
   or,
   and,
   constructEntity,
+  // TODO
   triplesToEntities as constructEntities,
   QUERY_INPUT_TRANSFORMERS,
 } from './query.js';

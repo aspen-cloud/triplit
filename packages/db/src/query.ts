@@ -136,72 +136,87 @@ export type Query<
   CN extends CollectionNameFromModels<M>
 > = Omit<CollectionQuery<M, CN>, 'collectionName'>;
 
-export function entityToResultReducer<T extends Timestamped<object>>(
-  entity: T,
-  triple: TripleRow
-) {
-  const { attribute, value: rawValue, timestamp, expired: isExpired } = triple;
+export class Entity {
+  data: Record<string, any> = {};
+  triples: Record<string, TripleRow> = {};
 
-  // Set tombstones as undefined, so we can continue to reduce and check timestamp
-  const value = isExpired ? undefined : rawValue;
-
-  if (attribute[0] === '_collection')
-    return {
-      ...entity,
-      _collection: [value, timestamp],
-    };
-  const [_collectionName, ...path] = attribute;
-
-  // Ensure that any number paths are converted to arrays in the entity
-  // THIS IS USED FOR RULES
-  for (let i = 0; i < path.length; i++) {
-    const part = path[i];
-    if (typeof part === 'number') {
-      const pointerToParent = '/' + path.slice(0, i).join('/');
-      const existingParent = ValuePointer.Get(entity, pointerToParent);
-      if (!existingParent) {
-        // console.log('creating array at', pointerToParent, entity);
-        ValuePointer.Set(entity, pointerToParent, []);
-      }
+  constructor(init?: { data?: Record<string, any>; triples: TripleRow[] }) {
+    if (init) {
+      this.data = init.data ?? {};
+      this.triples = init.triples.reduce((acc, triple) => {
+        acc['/' + triple.attribute.join('/')] = triple;
+        return acc;
+      }, {} as Record<string, TripleRow>);
     }
   }
-  updateEntityAtPath(entity, path, value, timestamp);
-  return entity;
+
+  applyTriple(triple: TripleRow): boolean {
+    const {
+      attribute,
+      value: rawValue,
+      timestamp,
+      expired: isExpired,
+    } = triple;
+    // Set tombstones as undefined, so we can continue to reduce and check timestamp
+    const value = isExpired ? undefined : rawValue;
+    if (attribute[0] === '_collection') {
+      const pointer = '/_collection';
+      ValuePointer.Set(this.data, pointer, [value, timestamp]);
+      this.triples[pointer] = triple;
+      return true;
+    }
+
+    const [_collectionName, ...path] = attribute;
+    const pointer = '/' + path.join('/');
+
+    // TODO: implement this
+    // Ensure that any number paths are converted to arrays in the entity
+    // THIS IS USED FOR RULES
+    for (let i = 0; i < path.length; i++) {
+      const part = path[i];
+      if (typeof part === 'number') {
+        const pointerToParent = '/' + path.slice(0, i).join('/');
+        const existingParent = ValuePointer.Get(this.data, pointerToParent);
+        if (!existingParent) {
+          // console.log('creating array at', pointerToParent, entity);
+          ValuePointer.Set(this.data, pointerToParent, []);
+        }
+      }
+    }
+
+    const currentValue = ValuePointer.Get(this.data, pointer);
+    if (currentValue && timestampCompare(timestamp, currentValue[1]) < 0) {
+      return false;
+    }
+
+    // If we get an object marker, assign an empty object to the pointer if it doesn't exist
+    if (value === '{}') {
+      // if (currentValue == undefined || currentValue[0] == undefined)
+      ValuePointer.Set(this.data, pointer, {});
+      this.triples[pointer] = triple;
+      return true;
+    }
+
+    ValuePointer.Set(this.data, pointer, [value, timestamp]);
+    this.triples[pointer] = triple;
+    return true;
+  }
 }
 
-function updateEntityAtPath(
-  entity: any,
-  path: Attribute,
-  value: any,
-  timestamp: TimestampType
-) {
-  const pointer = '/' + path.join('/');
-  const currentValue = ValuePointer.Get(entity, pointer);
-  if (currentValue && timestampCompare(timestamp, currentValue[1]) < 0) {
-    return;
-  }
-
-  // If we get an object marker, assign an empty object to the pointer if it doesn't exist
-  if (value === '{}') {
-    // if (currentValue == undefined || currentValue[0] == undefined)
-    ValuePointer.Set(entity, pointer, {});
-    return;
-  }
-
-  ValuePointer.Set(entity, pointer, [value, timestamp]);
+export function updateEntity(entity: Entity, triples: TripleRow[]) {
+  return triples.reduce((hasChanges, triple) => {
+    return entity.applyTriple(triple) || hasChanges;
+  }, false);
 }
 
-export function triplesToEntities(
-  triples: TripleRow[]
-  // TODO: should be timestamped type from a model...figure out how / when to do this
-  // Want a proper way to say "this is what i expect the shape of the result to be" with a generic
-): Map<string, any> {
+export function triplesToEntities(triples: TripleRow[]) {
   return triples.reduce((acc, triple) => {
     const { id } = triple;
-    const entityObj = acc.get(id) ?? {};
-    acc.set(id, entityToResultReducer(entityObj, triple));
+    const entityObj = acc.get(id) ?? new Entity();
+    entityObj.applyTriple(triple);
+    acc.set(id, entityObj);
     return acc;
-  }, new Map());
+  }, new Map<string, Entity>());
 }
 
 export function constructEntity(triples: TripleRow[], id: string) {

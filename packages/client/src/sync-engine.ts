@@ -490,7 +490,7 @@ export class SyncEngine {
       return new Map(
         [...entities].map(([id, entity]) => [
           stripCollectionFromId(id),
-          convertEntityToJS(entity),
+          convertEntityToJS(entity.data as any),
         ])
       ) as ClientFetchResult<CQ>;
     } catch (e) {
