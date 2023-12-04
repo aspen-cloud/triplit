@@ -5,7 +5,7 @@ import { TypeWithOptions, ValueInterface } from './value.js';
 import { Value } from '@sinclair/typebox/value';
 import { InvalidTypeOptionsError, DBSerializationError } from '../errors.js';
 
-const STRING_OPERATORS = ['=', '!=', 'like', 'nlike'] as const;
+const STRING_OPERATORS = ['=', '!=', 'like', 'nlike', 'in', 'nin'] as const;
 type StringOperators = typeof STRING_OPERATORS;
 
 export type StringType<TypeOptions extends UserTypeOptions = {}> =

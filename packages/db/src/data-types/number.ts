@@ -5,7 +5,16 @@ import { TypeWithOptions, ValueInterface } from './value.js';
 import { Value } from '@sinclair/typebox/value';
 import { InvalidTypeOptionsError, DBSerializationError } from '../errors.js';
 
-const NUMBER_OPERATORS = ['=', '!=', '<', '>', '<=', '>='] as const;
+const NUMBER_OPERATORS = [
+  '=',
+  '!=',
+  '<',
+  '>',
+  '<=',
+  '>=',
+  'in',
+  'nin',
+] as const;
 type NumberOperators = typeof NUMBER_OPERATORS;
 
 export type NumberType<TypeOptions extends UserTypeOptions = {}> =
