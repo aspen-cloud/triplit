@@ -488,28 +488,30 @@ export class TripleStoreTxOperator implements TripleStoreApi {
 
 function addIndexesToTransaction(tupleTx: MultiTupleTransaction<TupleIndex>) {
   // Add AVE and clientTimestamp indexes for each EAV insert
-  const { set = [] } = tupleTx.writes;
-  if (set.length === 0) return;
-
-  for (const { key, value: tupleValue } of set) {
-    const [_client, indexType, ...indexKey] = key;
-    if (indexType !== 'EAT') continue;
-    const [id, attribute, timestamp] = indexKey;
-    const [value, isExpired] = tupleValue;
-    tupleTx.set(['AVE', attribute, value, id, timestamp], {
-      expired: isExpired,
-    });
-    tupleTx.set(
-      [
-        'clientTimestamp',
-        (timestamp as Timestamp)[1],
-        timestamp,
-        id,
-        attribute,
-        value,
-      ],
-      { expired: isExpired }
-    );
+  for (const [store, writes] of Object.entries(tupleTx.writes)) {
+    const { set = [] } = writes;
+    if (set.length === 0) continue;
+    const scopedTx = tupleTx.withScope({ read: [store], write: [store] });
+    for (const { key, value: tupleValue } of set) {
+      const [_client, indexType, ...indexKey] = key;
+      if (indexType !== 'EAT') continue;
+      const [id, attribute, timestamp] = indexKey;
+      const [value, isExpired] = tupleValue;
+      scopedTx.set(['AVE', attribute, value, id, timestamp], {
+        expired: isExpired,
+      });
+      scopedTx.set(
+        [
+          'clientTimestamp',
+          (timestamp as Timestamp)[1],
+          timestamp,
+          id,
+          attribute,
+          value,
+        ],
+        { expired: isExpired }
+      );
+    }
   }
 }
 

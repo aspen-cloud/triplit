@@ -49,18 +49,6 @@ export class TripleStoreTransaction implements TripleStoreApi {
     this.tupleTx = tupleTx;
   }
 
-  get writes(): TripleRow[] {
-    return (
-      (this.tupleTx.writes.set ?? [])
-        .filter(({ key }) => {
-          const [_prefix, type] = key;
-          return type === 'EAT';
-        })
-        // @ts-ignore
-        .map(({ key, value }) => indexToTriple({ key: key.slice(1), value }))
-    );
-  }
-
   insertTriple(tripleRow: TripleRow): Promise<void> {
     return this.operator.insertTriple(tripleRow);
   }
