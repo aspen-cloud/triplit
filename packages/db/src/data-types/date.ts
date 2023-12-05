@@ -43,7 +43,7 @@ export function DateType<TypeOptions extends UserTypeOptions = {}>(
     },
     convertInputToDBValue(val: TypeWithOptions<Date, TypeOptions>) {
       if (!this.validateInput(val)) throw new DBSerializationError('date', val);
-      return (val ? val.toISOString() : null) as TypeWithOptions<
+      return (val ? new Date(val).toISOString() : null) as TypeWithOptions<
         string,
         TypeOptions
       >;
@@ -66,7 +66,11 @@ export function DateType<TypeOptions extends UserTypeOptions = {}>(
       return calcDefaultValue(options) as string | undefined;
     },
     validateInput(val: any) {
-      return (options.nullable && val === null) || val instanceof Date;
+      return (
+        (options.nullable && val === null) ||
+        val instanceof Date ||
+        !Number.isNaN(Date.parse(val))
+      );
     },
     validateTripleValue(val: any) {
       const type = options.nullable ? Nullable(DateSchemaType) : DateSchemaType;
