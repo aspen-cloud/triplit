@@ -1,5 +1,4 @@
 import {
-  Callback,
   KeyValuePair,
   ScanArgs,
   Tuple,

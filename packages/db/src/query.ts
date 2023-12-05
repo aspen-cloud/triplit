@@ -1,8 +1,7 @@
 import { ValuePointer } from '@sinclair/typebox/value';
-import { Model, Models, SelectModelFromModel, Timestamped } from './schema.js';
-import { Attribute, EntityId, TripleRow } from './triple-store.js';
+import { Model, Models, SelectModelFromModel } from './schema.js';
+import { EntityId, TripleRow } from './triple-store.js';
 import { QueryClauseFormattingError } from './errors.js';
-import { TimestampType } from './data-types/base.js';
 import { timestampCompare } from './timestamp.js';
 import { CollectionNameFromModels, ModelFromModels } from './db.js';
 import { ExtractOperators } from './data-types/type.js';

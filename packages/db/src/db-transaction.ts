@@ -15,7 +15,6 @@ import {
   Model,
   Models,
   getDefaultValuesForCollection,
-  TimestampedObject,
   timestampedObjectToPlainObject,
   collectionsDefinitionToSchema,
   clientInputToDbModel,
@@ -28,7 +27,6 @@ import CollectionQueryBuilder, {
   fetch,
   FetchResult,
   MaybeReturnTypeFromQuery,
-  ReturnTypeFromQuery,
 } from './collection-query.js';
 import {
   DBSerializationError,

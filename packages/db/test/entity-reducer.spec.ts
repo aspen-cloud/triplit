@@ -1,7 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { TripleRow } from '../src/triple-store.js';
 import { Timestamp } from '../src/timestamp.js';
-import { triplesToEntities } from '../src/query.js';
+import { Entity, triplesToEntities } from '../src/query.js';
+
+function extractEntityData(entities: Map<string, Entity>): Map<string, any> {
+  return new Map(
+    Array.from(entities.entries()).map(([id, entity]) => [id, entity.data])
+  );
+}
 
 describe('Simple Entity Reduction', () => {
   it('can reduce triples to entities', () => {
@@ -30,7 +36,7 @@ describe('Simple Entity Reduction', () => {
         expired: false,
       },
     ];
-    const entities = triplesToEntities(triples);
+    const entities = extractEntityData(triplesToEntities(triples));
     expect(entities).toEqual(
       new Map([
         [
@@ -70,7 +76,7 @@ describe('Simple Entity Reduction', () => {
         expired: false,
       },
     ];
-    const entities = triplesToEntities(triples);
+    const entities = extractEntityData(triplesToEntities(triples));
     expect(entities).toEqual(
       new Map([
         [
@@ -115,7 +121,7 @@ describe('Simple Entity Reduction', () => {
         expired: false,
       },
     ];
-    const entities = triplesToEntities(triples);
+    const entities = extractEntityData(triplesToEntities(triples));
     expect(entities).toEqual(
       new Map([
         [
@@ -152,7 +158,7 @@ describe('Simple Entity Reduction', () => {
         expired: false,
       },
     ];
-    const entities = triplesToEntities(triples);
+    const entities = extractEntityData(triplesToEntities(triples));
     expect(entities).toEqual(
       new Map([
         [
@@ -200,7 +206,7 @@ describe('Nested Object Reduction', () => {
         expired: false,
       },
     ];
-    const entities = triplesToEntities(triples);
+    const entities = extractEntityData(triplesToEntities(triples));
     expect(entities).toEqual(
       new Map([
         [
@@ -265,7 +271,7 @@ describe('Nested Object Reduction', () => {
         expired: false,
       },
     ];
-    const entities = triplesToEntities(triples);
+    const entities = extractEntityData(triplesToEntities(triples));
     expect(entities).toEqual(
       new Map([
         [
