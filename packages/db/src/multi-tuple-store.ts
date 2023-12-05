@@ -46,16 +46,19 @@ export default class MultiTupleStore<TupleSchema extends KeyValuePair> {
   readonly storageScope?: StorageScope;
   storage: Record<string, AsyncTupleDatabaseClient<TupleSchema>>;
   hooks: MultiTupleStoreHooks<TupleSchema>;
+  reactivity: MultiTupleReactivity;
   // subspacePrefix: Tuple;
 
   constructor({
     storage,
     storageScope,
     hooks,
+    reactivity,
   }: {
     storage: Record<string, AsyncTupleDatabaseClient<TupleSchema>>;
     storageScope?: { read?: string[]; write?: string[] };
     hooks?: MultiTupleStoreHooks<TupleSchema>;
+    reactivity?: MultiTupleReactivity;
   }) {
     this.storage = storage;
     this.storageScope = storageScope;
@@ -64,6 +67,7 @@ export default class MultiTupleStore<TupleSchema extends KeyValuePair> {
       beforeCommit: [],
       beforeScan: [],
     };
+    this.reactivity = reactivity ?? new MultiTupleReactivity();
   }
 
   getStorageClients(context?: 'read' | 'write') {
@@ -73,6 +77,15 @@ export default class MultiTupleStore<TupleSchema extends KeyValuePair> {
       );
     }
     return Object.values(this.storage);
+  }
+
+  getStorageClientsEntries(context?: 'read' | 'write') {
+    if (context && this.storageScope && this.storageScope[context]) {
+      return this.storageScope[context]!.map(
+        (storageKey) => [storageKey, this.storage[storageKey]] as const
+      );
+    }
+    return Object.entries(this.storage);
   }
 
   beforeInsert(callback: MultiTupleStoreBeforeInsertHook<TupleSchema>) {
@@ -104,15 +117,31 @@ export default class MultiTupleStore<TupleSchema extends KeyValuePair> {
 
   subscribe<T extends Tuple, P extends TuplePrefix<T>>(
     args: ScanArgs<T, P>,
-    callback: Callback<Extract<TupleSchema, { key: TupleToObject<P> }>>
+    callback: MultiTupleReactivityCallback<TupleSchema>
   ): Unsubscribe {
-    const unsubFuncs = this.getStorageClients('read').map((store) =>
-      store.subscribe(args, callback)
+    const unsubFuncs = this.getStorageClientsEntries('read').map(
+      ([storeId, store]) =>
+        store.subscribe(args, (writeOps, txId) => {
+          const reactivityId = this.reactivity.getReactivityId(storeId, txId);
+          if (!reactivityId) {
+            // Shouldnt happen, but problematic if it does (we're not tracking updates properly)
+            console.warn('Not tracking reactivity for', storeId, txId);
+            return;
+          }
+          this.reactivity.updateCallback(
+            reactivityId,
+            callback,
+            writeOps,
+            storeId,
+            txId
+          );
+        })
     );
     return () => {
       Promise.all(unsubFuncs).then((unsubs) =>
         unsubs.forEach((unsub) => unsub())
       );
+      // TODO: clean up reactivity
     };
   }
 
@@ -157,6 +186,7 @@ export default class MultiTupleStore<TupleSchema extends KeyValuePair> {
         // @ts-ignore
         beforeScan: [...this.hooks.beforeScan],
       },
+      reactivity: this.reactivity,
     }) as MultiTupleStore<RemoveTupleValuePairPrefix<TupleSchema, P>>;
   }
 
@@ -189,6 +219,7 @@ export default class MultiTupleStore<TupleSchema extends KeyValuePair> {
                 beforeCommit: [...this.hooks.beforeCommit],
                 beforeScan: [...this.hooks.beforeScan],
               },
+              reactivity: this.reactivity,
             })
           : this
       );
@@ -309,6 +340,8 @@ export class MultiTupleTransaction<
   isCanceled = false;
   hooks: MultiTupleStoreHooks<TupleSchema>;
 
+  id: string = Math.random().toString(36).slice(2);
+
   constructor({
     store,
     scope,
@@ -318,12 +351,10 @@ export class MultiTupleTransaction<
     scope?: StorageScope;
     hooks: MultiTupleStoreHooks<TupleSchema>;
   }) {
-    const txs = Object.fromEntries(
-      Object.entries(store.storage).map(([storageKey, store]) => [
-        storageKey,
-        store.transact(),
-      ])
+    const txEntries = Object.entries(store.storage).map(
+      ([storageKey, store]) => [storageKey, store.transact()] as const
     );
+    const txs = Object.fromEntries(txEntries);
     const readKeys = scope?.read ?? Object.keys(store.storage);
     const writeKeys = scope?.write ?? Object.keys(store.storage);
     super({
@@ -333,6 +364,9 @@ export class MultiTupleTransaction<
       },
       hooks,
     });
+    for (const [storageKey, tx] of txEntries) {
+      store.reactivity.trackSubTx(storageKey, tx.id, this.id);
+    }
     this.txs = txs;
     this.store = store;
     this.hooks = hooks;
@@ -388,6 +422,7 @@ export class MultiTupleTransaction<
       await beforeHook(this);
     }
     await Promise.all(Object.values(this.txs).map((tx) => tx.commit()));
+    this.store.reactivity.emit(this.id);
   }
   async cancel() {
     if (this.isCanceled) {
@@ -396,5 +431,65 @@ export class MultiTupleTransaction<
     }
     await Promise.all(Object.values(this.txs).map((tx) => tx.cancel()));
     this.isCanceled = true;
+  }
+}
+
+type MultiTupleReactivityCallback<TupleSchema extends KeyValuePair> = (
+  storeWrites: Record<
+    string,
+    WriteOps<Extract<TupleSchema, { key: TupleToObject<any> }>>
+  >
+) => void;
+export class MultiTupleReactivity {
+  private txCallbacks: Record<
+    string,
+    {
+      callbacks: Set<MultiTupleReactivityCallback<any>>;
+      args: Record<string, WriteOps<any>>;
+      subTxs: string[];
+    }
+  > = {};
+  private subTxReactivityIds: Record<string, string> = {};
+
+  trackSubTx(storeId: string, txId: string, multiStoreTxId: string) {
+    this.subTxReactivityIds[`${storeId}_${txId}`] = multiStoreTxId;
+  }
+
+  getReactivityId(storeId: string, txId: string) {
+    return this.subTxReactivityIds[`${storeId}_${txId}`];
+  }
+
+  updateCallback(
+    reactivityId: string,
+    callback: MultiTupleReactivityCallback<any>,
+    writeOps: WriteOps<any>,
+    storeId: string,
+    txId: string
+  ) {
+    if (!this.txCallbacks[reactivityId]) {
+      this.txCallbacks[reactivityId] = {
+        callbacks: new Set(),
+        args: {},
+        subTxs: [],
+      };
+    }
+    this.txCallbacks[reactivityId].callbacks.add(callback);
+    this.txCallbacks[reactivityId].args[storeId] = writeOps;
+    this.txCallbacks[reactivityId].subTxs.push(txId);
+  }
+
+  emit(reactivityId: string) {
+    const txCallbacks = this.txCallbacks[reactivityId];
+    if (txCallbacks) {
+      for (const callback of txCallbacks.callbacks) {
+        callback(txCallbacks.args);
+      }
+
+      // cleanup (maybe make its own method)
+      for (const subTxId of txCallbacks.subTxs) {
+        delete this.subTxReactivityIds[subTxId];
+      }
+      delete this.txCallbacks[reactivityId];
+    }
   }
 }

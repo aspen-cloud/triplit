@@ -58,8 +58,9 @@ export class DurableClock implements Clock {
     }
 
     // Listen on all storages for new timestamps
-    store.onInsert(async (triples) => {
-      const maxTimestamp = triples.reduce<Timestamp | undefined>(
+    store.onInsert(async (inserts) => {
+      const allTriples = Object.values(inserts).flat();
+      const maxTimestamp = allTriples.reduce<Timestamp | undefined>(
         (max, triple) =>
           timestampCompare(triple.timestamp, max) > 0 ? triple.timestamp : max,
         undefined

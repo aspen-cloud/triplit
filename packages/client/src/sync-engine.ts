@@ -128,8 +128,8 @@ export class SyncEngine {
 
     const throttledSignal = throttle(() => this.signalOutboxTriples(), 100);
 
-    this.db.tripleStore.setStorageScope(['outbox']).onInsert((triples) => {
-      if (triples.length === 0) return;
+    this.db.tripleStore.setStorageScope(['outbox']).onInsert((inserts) => {
+      if (!inserts['outbox']?.length) return;
       throttledSignal();
     });
   }

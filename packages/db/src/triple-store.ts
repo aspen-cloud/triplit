@@ -10,6 +10,7 @@ import {
 } from 'tuple-database';
 import { Timestamp, timestampCompare } from './timestamp.js';
 import MultiTupleStore, {
+  MultiTupleReactivity,
   MultiTupleTransaction,
   ScopedMultiTupleOperator,
   StorageScope,
@@ -522,12 +523,14 @@ export class TripleStore implements TripleStoreApi {
   clock: Clock;
   tenantId: string;
   hooks: TripleStoreHooks;
+  reactivity: MultiTupleReactivity;
 
   constructor({
     storage,
     stores,
     tenantId,
     clock,
+    reactivity,
     storageScope = [],
   }: {
     storage?:
@@ -537,6 +540,7 @@ export class TripleStore implements TripleStoreApi {
       string,
       AsyncTupleDatabaseClient<WithTenantIdPrefix<TupleIndex>>
     >;
+    reactivity?: MultiTupleReactivity;
     tenantId?: string;
     storageScope?: string[];
     clock?: Clock;
@@ -577,8 +581,10 @@ export class TripleStore implements TripleStoreApi {
     // Server side database should provide a tenantId (project id)
     this.stores = normalizedStores;
     this.tenantId = tenantId ?? 'client';
+    this.reactivity = reactivity ?? new MultiTupleReactivity();
     this.tupleStore = new MultiTupleStore<WithTenantIdPrefix<TupleIndex>>({
       storage: normalizedStores,
+      reactivity: this.reactivity,
     }).subspace([this.tenantId]) as MultiTupleStore<TupleIndex>;
 
     this.clock = clock ?? new MemoryClock();
@@ -741,6 +747,7 @@ export class TripleStore implements TripleStoreApi {
       storageScope: storageKeys,
       tenantId: this.tenantId,
       clock: this.clock,
+      reactivity: this.reactivity,
     });
   }
 
@@ -790,12 +797,22 @@ export class TripleStore implements TripleStoreApi {
     });
   }
 
-  onInsert(callback: (triples: TripleRow[]) => void) {
-    function writesCallback(writes: WriteOps<TupleIndex>) {
-      const { set = [] } = writes;
-      if (set.length === 0) return;
-      const triples = set.map((w) => indexToTriple(w));
-      callback(triples);
+  onInsert(callback: (inserts: Record<string, TripleRow[]>) => void) {
+    function writesCallback(storeWrites: Record<string, WriteOps<TupleIndex>>) {
+      const mappedInserts = Object.fromEntries(
+        Object.entries(storeWrites)
+          .filter(([_store, writes]) => {
+            const { set = [] } = writes;
+            return set.length > 0;
+          })
+          .map(([store, writes]) => {
+            const { set = [] } = writes;
+            const inserts = set.map((w) => indexToTriple(w));
+            return [store, inserts];
+          })
+      );
+
+      callback(mappedInserts);
     }
     const unsub = this.tupleStore.subscribe(
       { prefix: ['EAT'] },
@@ -811,17 +828,29 @@ export class TripleStore implements TripleStoreApi {
   // This might actually be a use case for tombstones
   // This also handles rolling back on outbox deletes
   onWrite(
-    callback: (writes: { inserts: TripleRow[]; deletes: TripleRow[] }) => void
+    callback: (
+      writes: Record<string, { inserts: TripleRow[]; deletes: TripleRow[] }>
+    ) => void
   ) {
-    function writesCallback(writes: WriteOps<TupleIndex>) {
-      const { set = [], remove = [] } = writes;
-      if (set.length === 0 && remove.length === 0) return;
-      const inserts = set.map((w) => indexToTriple(w));
-      const deletes = remove.map((w) =>
-        //@ts-ignore
-        indexToTriple({ key: w, value: { expired: false } })
+    function writesCallback(storeWrites: Record<string, WriteOps<TupleIndex>>) {
+      const mappedWrites = Object.fromEntries(
+        Object.entries(storeWrites)
+          .filter(([_store, writes]) => {
+            const { set = [], remove = [] } = writes;
+            return set.length > 0 || remove.length > 0;
+          })
+          .map(([store, writes]) => {
+            const { set = [], remove = [] } = writes;
+            const inserts = set.map((w) => indexToTriple(w));
+            const deletes = remove.map((w) =>
+              //@ts-ignore
+              indexToTriple({ key: w, value: { expired: false } })
+            );
+            return [store, { inserts, deletes }];
+          })
       );
-      callback({ inserts, deletes });
+
+      callback(mappedWrites);
     }
     const unsub = this.tupleStore.subscribe(
       { prefix: ['EAT'] },

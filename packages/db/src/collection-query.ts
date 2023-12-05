@@ -572,52 +572,61 @@ function subscribeSingleEntity<
       ) as FetchResult<Q>;
 
       onResults([results, triples]);
-      const unsub = tripleStore.onWrite(async ({ inserts, deletes }) => {
+      const unsub = tripleStore.onWrite(async (storeWrites) => {
         try {
-          const entityInserts = inserts.filter(
-            ({ id }) => id === internalEntityId
-          );
-          const entityDeletes = deletes.filter(
-            ({ id }) => id === internalEntityId
-          );
-          const changed = entityInserts.length > 0 || entityDeletes.length > 0;
-          // Early return prevents processing if no relevant entities were updated
-          if (!changed) return;
-
-          // if we have deletes, need to re-fetch the entity
-          if (entityDeletes.length) {
-            const fetchResult = await fetch<M, Q>(tripleStore, query, {
-              includeTriples: true,
-              schema,
-            });
-            entity = fetchResult.results.has(entityId)
-              ? fetchResult.results.get(entityId)
-              : null;
-            triples = fetchResult.triples;
-          } else {
-            const entityWrapper = new Entity({
-              data: entity,
-              triples: [...triples.values()].flat(),
-            });
-            updateEntity(entityWrapper, entityInserts);
-            entity = entityWrapper.data;
-            // entityInserts.reduce(entityToResultReducer, entity);
-            if (!triples.has(entityId)) {
-              triples.set(entityId, []);
-            }
-            triples.set(entityId, Object.values(entityWrapper.triples));
-            // triples.get(entityId)!.push(...entityInserts);
-          }
-          if (
-            entity &&
-            doesEntityObjMatchWhere(entity, query.where ?? [], collectionSchema)
-          ) {
-            results.set(
-              entityId,
-              convertEntityToJS(entity, collectionSchema) as any
+          for (const [_storeId, { inserts, deletes }] of Object.entries(
+            storeWrites
+          )) {
+            const entityInserts = inserts.filter(
+              ({ id }) => id === internalEntityId
             );
-          } else {
-            results.delete(entityId);
+            const entityDeletes = deletes.filter(
+              ({ id }) => id === internalEntityId
+            );
+            const changed =
+              entityInserts.length > 0 || entityDeletes.length > 0;
+            // Early return prevents processing if no relevant entities were updated
+            if (!changed) return;
+
+            // if we have deletes, need to re-fetch the entity
+            if (entityDeletes.length) {
+              const fetchResult = await fetch<M, Q>(tripleStore, query, {
+                includeTriples: true,
+                schema,
+              });
+              entity = fetchResult.results.has(entityId)
+                ? fetchResult.results.get(entityId)
+                : null;
+              triples = fetchResult.triples;
+            } else {
+              const entityWrapper = new Entity({
+                data: entity,
+                triples: [...triples.values()].flat(),
+              });
+              updateEntity(entityWrapper, entityInserts);
+              entity = entityWrapper.data;
+              // entityInserts.reduce(entityToResultReducer, entity);
+              if (!triples.has(entityId)) {
+                triples.set(entityId, []);
+              }
+              triples.set(entityId, Object.values(entityWrapper.triples));
+              // triples.get(entityId)!.push(...entityInserts);
+            }
+            if (
+              entity &&
+              doesEntityObjMatchWhere(
+                entity,
+                query.where ?? [],
+                collectionSchema
+              )
+            ) {
+              results.set(
+                entityId,
+                convertEntityToJS(entity, collectionSchema) as any
+              );
+            } else {
+              results.delete(entityId);
+            }
           }
           onResults([results, triples]);
         } catch (e) {
@@ -676,7 +685,7 @@ export function subscribeResultsAndTriples<
         ) as FetchResult<Q>,
         triples,
       ]);
-      const unsub = tripleStore.onWrite(async ({ inserts, deletes }) => {
+      const unsub = tripleStore.onWrite(async (storeWrites) => {
         try {
           // Handle queries with nested queries as a special case for now
           if (
@@ -705,10 +714,16 @@ export function subscribeResultsAndTriples<
             return;
           }
 
+          const allInserts = Object.values(storeWrites).flatMap(
+            (ops) => ops.inserts
+          );
+          const allDeletes = Object.values(storeWrites).flatMap(
+            (ops) => ops.deletes
+          );
           let nextResult = new Map(results);
           const matchedTriples: Map<string, TripleRow[]> = new Map();
           const updatedEntitiesForQuery = new Set<string>(
-            [...inserts, ...deletes]
+            [...allInserts, ...allDeletes]
               .map(({ id }) => splitIdParts(id))
               .filter(
                 ([collectionName, _id]) =>
