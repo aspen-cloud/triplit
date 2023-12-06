@@ -9,7 +9,6 @@ import {
   TripleStore,
   TripleStoreHooks,
   TripleRow,
-  indexToTriple,
   EAV,
   EntityId,
   Attribute,
