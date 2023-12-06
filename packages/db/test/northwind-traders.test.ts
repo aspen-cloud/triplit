@@ -13,7 +13,7 @@ import SUPPLIERS from './sample_data/northwind-traders/suppliers.json';
 import TERRITORIES from './sample_data/northwind-traders/territories.json';
 
 // TODO: run separately?
-describe.skip('northwind tranders', () => {
+describe('northwind tranders', () => {
   // Setup classic NorthWind Traders schema
   const schema = {
     collections: {

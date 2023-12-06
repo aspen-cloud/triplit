@@ -267,7 +267,7 @@ export function timestampedObjectToPlainObject<O extends TimestampedObject>(
   }
   if (isTimestampedVal(obj)) {
     // @ts-expect-error
-    return obj[0];
+    return timestampedObjectToPlainObject(obj[0]);
   }
   if (obj instanceof Array) {
     // @ts-expect-error

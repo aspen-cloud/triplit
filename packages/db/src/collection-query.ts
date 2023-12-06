@@ -11,6 +11,7 @@ import {
   Entity,
   updateEntity,
   RelationSubquery,
+  EntityPointer,
 } from './query.js';
 import {
   convertEntityToJS,
@@ -415,20 +416,7 @@ export async function fetch<
       .map(async ([entId, entity]) => {
         const selectedEntity = select
           .filter((sel) => typeof sel === 'string')
-          .reduce<any>((acc, selectPath) => {
-            const pathParts = (selectPath as string).split('.');
-            const leafMostPart = pathParts.pop()!;
-            let selectScope = acc;
-            let entityScope = entity;
-            for (const pathPart of pathParts) {
-              selectScope[pathPart] = selectScope[pathPart] ?? {};
-              selectScope = selectScope[pathPart];
-              entityScope = entity[pathPart];
-            }
-            selectScope[leafMostPart] = entityScope[leafMostPart];
-
-            return acc;
-          }, {});
+          .reduce<any>(selectParser(entity), {});
         const subqueries = select.filter(
           (sel) => typeof sel !== 'string'
         ) as RelationSubquery<M>[];
@@ -661,11 +649,10 @@ function satisfiesSetFilter(
   filterValue: any
 ) {
   const pointer = '/' + path.replace('.', '/');
-  const value: Record<string, [boolean, Timestamp]> = ValuePointer.Get(
+  const value: Record<string, [boolean, Timestamp]> = EntityPointer.Get(
     entity,
     pointer
   );
-
   // We dont really support "deleting" sets, but they can appear deleted if the entity is deleted
   // Come back to this after refactoring triple reducer to handle nested data betters
   if (Array.isArray(value)) {
@@ -673,16 +660,12 @@ function satisfiesSetFilter(
     if (value[0] === undefined) {
       return false;
     }
-    // TODO: could use more contextual information (ie id and collection name)
-    throw new TriplitError(
-      `A value at ${path} could not properly be read as a set.`
-    );
   }
-
+  const setData = timestampedObjectToPlainObject(value);
   return (
-    !!value &&
-    Object.entries(value)
-      .filter(([_v, [inSet, _ts]]) => inSet)
+    setData &&
+    Object.entries(setData)
+      .filter(([_v, inSet]) => inSet)
       .some(([v]) => isOperatorSatisfied(op, v, filterValue))
   );
 }
@@ -693,15 +676,19 @@ function satisfiesRegisterFilter(
   op: Operator,
   filterValue: any
 ) {
-  const maybeValue = path
-    .split('.')
-    .reduce((acc, curr) => acc && acc[curr], entity);
+  const maybeValue = EntityPointer.Get(entity, '/' + path.replace('.', '/'));
   if (!maybeValue)
     console.warn(`${path} not found in ${JSON.stringify(entity)}`);
 
   // maybeValue is expected to be of shape [value, timestamp]
   // this may happen if a schema is expected but not there and we're reading a value that cant be parsed, the schema is incorrect somehow, or if the provided path is incorrect
-  if (maybeValue && (!(maybeValue instanceof Array) || maybeValue.length > 2)) {
+  const isTimestampedValue =
+    !!maybeValue && maybeValue instanceof Array && maybeValue.length === 2;
+  const isTerminalValue =
+    !!maybeValue &&
+    isTimestampedValue &&
+    (typeof maybeValue[0] !== 'object' || typeof maybeValue[0] === null);
+  if (!!maybeValue && (!isTimestampedValue || !isTerminalValue)) {
     throw new InvalidFilterError(
       `Received an unexpected value at path '${path}' in entity ${JSON.stringify(
         entity
@@ -851,20 +838,7 @@ function subscribeSingleEntity<
               if (select && select.length > 0) {
                 entity = select
                   .filter((sel) => typeof sel === 'string')
-                  .reduce<any>((acc, selectPath) => {
-                    const pathParts = (selectPath as string).split('.');
-                    const leafMostPart = pathParts.pop()!;
-                    let selectScope = acc;
-                    let entityScope = entity;
-                    for (const pathPart of pathParts) {
-                      selectScope[pathPart] = selectScope[pathPart] ?? {};
-                      selectScope = selectScope[pathPart];
-                      entityScope = entity[pathPart];
-                    }
-                    selectScope[leafMostPart] = entityScope[leafMostPart];
-
-                    return acc;
-                  }, {});
+                  .reduce<any>(selectParser(entity), {});
 
                 const subqueries = select.filter(
                   (sel) => typeof sel !== 'string'
@@ -1252,4 +1226,21 @@ function extractSubqueryVarsFromEntity(entity: any, collectionSchema: any) {
   }
   delete obj['_collection'];
   return obj;
+}
+
+function selectParser(entity: any) {
+  return (acc: Record<string, any>, selectPath: any) => {
+    const pathParts = (selectPath as string).split('.');
+    const leafMostPart = pathParts.pop()!;
+    let selectScope = acc;
+    let entityScope = entity;
+    for (const pathPart of pathParts) {
+      selectScope[pathPart] = selectScope[pathPart] ?? {};
+      selectScope = selectScope[pathPart];
+      entityScope = entity[pathPart][0];
+    }
+    selectScope[leafMostPart] = entityScope[leafMostPart];
+
+    return acc;
+  };
 }

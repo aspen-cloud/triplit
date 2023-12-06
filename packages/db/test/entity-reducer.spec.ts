@@ -1,7 +1,14 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { TripleRow } from '../src/triple-store.js';
 import { Timestamp } from '../src/timestamp.js';
-import { Entity, triplesToEntities } from '../src/query.js';
+import {
+  Entity,
+  EntityPointer,
+  cleanTimestampedData,
+  triplesToEntities,
+} from '../src/query.js';
+import DB from '../src/db.js';
+import { timestampedObjectToPlainObject } from '../src/schema.js';
 
 function extractEntityData(entities: Map<string, Entity>): Map<string, any> {
   return new Map(
@@ -10,7 +17,7 @@ function extractEntityData(entities: Map<string, Entity>): Map<string, any> {
 }
 
 describe('Simple Entity Reduction', () => {
-  it('can reduce triples to entities', () => {
+  it('can reduce triples to entities', async () => {
     const TS: Timestamp = [0, 'test'];
     const COL_NAME = 'Users';
     const triples: TripleRow[] = [
@@ -36,7 +43,7 @@ describe('Simple Entity Reduction', () => {
         expired: false,
       },
     ];
-    testAllTriplePermutations(triples, (triples) => {
+    await testAllTriplePermutations(triples, (triples) => {
       const entities = extractEntityData(triplesToEntities(triples));
       expect(entities).toEqual(
         new Map([
@@ -53,7 +60,7 @@ describe('Simple Entity Reduction', () => {
     });
   });
 
-  it('ensures only highest timestamps are kept', () => {
+  it('ensures only highest timestamps are kept', async () => {
     const COL_NAME = 'Users';
     const triples: TripleRow[] = [
       {
@@ -78,7 +85,7 @@ describe('Simple Entity Reduction', () => {
         expired: false,
       },
     ];
-    testAllTriplePermutations(triples, (triples) => {
+    await testAllTriplePermutations(triples, async (triples) => {
       const entities = extractEntityData(triplesToEntities(triples));
       expect(entities).toEqual(
         new Map([
@@ -93,7 +100,7 @@ describe('Simple Entity Reduction', () => {
     });
   });
 
-  it('supports tombstoning attributes with expired triples', () => {
+  it('supports tombstoning attributes with expired triples', async () => {
     const COL_NAME = 'Users';
     const triples: TripleRow[] = [
       {
@@ -125,7 +132,7 @@ describe('Simple Entity Reduction', () => {
         expired: false,
       },
     ];
-    testAllTriplePermutations(triples, (triples) => {
+    await testAllTriplePermutations(triples, (triples) => {
       const entities = extractEntityData(triplesToEntities(triples));
       expect(entities).toEqual(
         new Map([
@@ -139,7 +146,7 @@ describe('Simple Entity Reduction', () => {
       );
     });
   });
-  it('supports overwriting deleted values', () => {
+  it('supports overwriting deleted values', async () => {
     const COL_NAME = 'Users';
     const triples: TripleRow[] = [
       {
@@ -164,7 +171,7 @@ describe('Simple Entity Reduction', () => {
         expired: false,
       },
     ];
-    testAllTriplePermutations(triples, (triples) => {
+    await testAllTriplePermutations(triples, (triples) => {
       const entities = extractEntityData(triplesToEntities(triples));
       expect(entities).toEqual(
         new Map([
@@ -181,7 +188,7 @@ describe('Simple Entity Reduction', () => {
 });
 
 describe('Nested Object Reduction', () => {
-  it('can created nested properties within an entitiy', () => {
+  it('can create nested properties within an entitiy', async () => {
     const TS: Timestamp = [0, 'test'];
     const COL_NAME = 'Users';
     const triples: TripleRow[] = [
@@ -189,6 +196,13 @@ describe('Nested Object Reduction', () => {
         id: '1',
         attribute: [COL_NAME, 'name'],
         value: 'bob',
+        timestamp: TS,
+        expired: false,
+      },
+      {
+        id: '1',
+        attribute: [COL_NAME, 'address'],
+        value: '{}',
         timestamp: TS,
         expired: false,
       },
@@ -214,7 +228,7 @@ describe('Nested Object Reduction', () => {
         expired: false,
       },
     ];
-    testAllTriplePermutations(triples, (triples) => {
+    await testAllTriplePermutations(triples, (triples) => {
       const entities = extractEntityData(triplesToEntities(triples));
       expect(entities).toEqual(
         new Map([
@@ -222,18 +236,21 @@ describe('Nested Object Reduction', () => {
             '1',
             {
               name: ['bob', TS],
-              address: {
-                street: ['123 Main St', TS],
-                city: ['San Francisco', TS],
-                state: ['CA', TS],
-              },
+              address: [
+                {
+                  street: ['123 Main St', TS],
+                  city: ['San Francisco', TS],
+                  state: ['CA', TS],
+                },
+                TS,
+              ],
             },
           ],
         ])
       );
     });
   });
-  it('can overwrite nested properties within an entitiy', () => {
+  it('can overwrite nested properties within an entitiy', async () => {
     const TS0: Timestamp = [0, 'test'];
     const TS1: Timestamp = [1, 'test'];
     const COL_NAME = 'Users';
@@ -242,6 +259,13 @@ describe('Nested Object Reduction', () => {
         id: '1',
         attribute: [COL_NAME, 'name'],
         value: 'bob',
+        timestamp: TS0,
+        expired: false,
+      },
+      {
+        id: '1',
+        attribute: [COL_NAME, 'address'],
+        value: '{}',
         timestamp: TS0,
         expired: false,
       },
@@ -281,7 +305,7 @@ describe('Nested Object Reduction', () => {
         expired: false,
       },
     ];
-    testAllTriplePermutations(triples, (triples) => {
+    await testAllTriplePermutations(triples, (triples) => {
       const entities = extractEntityData(triplesToEntities(triples));
       expect(entities).toEqual(
         new Map([
@@ -289,15 +313,68 @@ describe('Nested Object Reduction', () => {
             '1',
             {
               name: ['bob', TS0],
-              address: {
-                street: ['123 Main St', TS0],
-                city: ['New York City', TS1],
-                state: ['NY', TS1],
-              },
+              address: [
+                {
+                  street: ['123 Main St', TS0],
+                  city: ['New York City', TS1],
+                  state: ['NY', TS1],
+                },
+                TS0,
+              ],
             },
           ],
         ])
       );
+    });
+  });
+
+  it('can assign to objects', async () => {
+    const COL_NAME = 'Users';
+    const db = new DB();
+    const { txId: txId0 } = await db.insert(COL_NAME, {
+      id: '1',
+      address: {
+        street: '123 Main St',
+        city: 'San Francisco',
+      },
+    });
+    const { txId: txId1 } = await db.update(COL_NAME, '1', (entity) => {
+      entity.address = {
+        city: 'New York City',
+        state: 'NY',
+      };
+    });
+    const TS0 = JSON.parse(txId0!);
+    const TS1 = JSON.parse(txId1!);
+    const triples: TripleRow[] = await db.tripleStore.findByEntity();
+    await testAllTriplePermutations(triples, (triples) => {
+      let entities: any = undefined;
+      try {
+        entities = extractEntityData(triplesToEntities(triples));
+        expect(entities).toEqual(
+          new Map([
+            [
+              'Users#1',
+              {
+                _collection: [COL_NAME, TS0],
+                id: ['1', TS0],
+                address: [
+                  {
+                    street: [undefined, TS1], // tombstone
+                    city: ['New York City', TS1],
+                    state: ['NY', TS1],
+                  },
+                  TS1,
+                ],
+              },
+            ],
+          ])
+        );
+      } catch (e) {
+        console.log('Failed on triples:', triples);
+        console.dir(entities, { depth: null });
+        throw e;
+      }
     });
   });
 });

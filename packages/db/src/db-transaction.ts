@@ -268,6 +268,7 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
     updateEntity(this._schema, metadataTriples);
 
     // Type definitions are kinda ugly here
+    // @ts-expect-error - Probably want a way to override the output type of this
     const schemaDefinition = timestampedObjectToPlainObject(
       this._schema.data
     ) as SchemaDefinition | undefined;
