@@ -201,8 +201,6 @@ export async function fetch<
         { triples: [] as TripleRow[], entity: entityEntry?.entity },
       ] as const;
     })
-    // filter out deleted
-    .filter(async ([_id, { entity }]) => !isTimestampedEntityDeleted(entity))
     // Apply where filters
     .filter(async ([id, { entity }]) => {
       if (!where) return true;
@@ -267,6 +265,8 @@ export async function fetch<
       if (entityCount > limit!) return false;
       return true;
     })
+    // We need to make sure that all the triples are accounted for before we filter out deleted entities
+    .filter(async ([, entity]) => !isTimestampedEntityDeleted(entity))
     .toArray();
 
   if (order && order.length > 1) {
