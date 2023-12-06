@@ -17,7 +17,7 @@ type BuiltInFlagOpts = Omit<Flag, 'parse'>;
 export function Boolean(opts: BuiltInFlagOpts): Flag<boolean> {
   return {
     ...opts,
-    parse: (input) => input === 'true' || input === '1',
+    parse: (input) => input === true || input === 'true' || input === '1',
   };
 }
 
