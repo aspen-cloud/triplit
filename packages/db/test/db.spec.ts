@@ -5160,6 +5160,10 @@ describe('selecting subqueries from schema', () => {
               collectionName: 'users' as const,
               where: [['id', 'in', '$friend_ids']],
             }),
+            likes: S.Query({
+              collectionName: 'likes' as const,
+              where: [['user_id', '=', '$id']],
+            }),
           }),
         },
         posts: {
@@ -5168,6 +5172,17 @@ describe('selecting subqueries from schema', () => {
             content: S.String(),
             author_id: S.String(),
             topics: S.Set(S.String()),
+            likes: S.Query({
+              collectionName: 'likes' as const,
+              where: [['post_id', '=', '$id']],
+            }),
+          }),
+        },
+        likes: {
+          schema: S.Schema({
+            id: S.Id(),
+            user_id: S.String(),
+            post_id: S.String(),
           }),
         },
       },
@@ -5205,6 +5220,21 @@ describe('selecting subqueries from schema', () => {
       id: 'post-3',
       content: 'Hello World!',
       author_id: 'user-3',
+    });
+    await db.insert('likes', {
+      id: 'like-1',
+      user_id: 'user-1',
+      post_id: 'post-1',
+    });
+    await db.insert('likes', {
+      id: 'like-2',
+      user_id: 'user-2',
+      post_id: 'post-1',
+    });
+    await db.insert('likes', {
+      id: 'like-3',
+      user_id: 'user-3',
+      post_id: 'post-1',
     });
   });
   it('can select subqueries', async () => {
@@ -5255,5 +5285,33 @@ describe('selecting subqueries from schema', () => {
       author_id: 'user-1',
       topics: new Set(['comedy', 'sports']),
     });
+  });
+  it.fails('can select subsubqueries', async () => {
+    const query = db
+      .query('users')
+      .include('posts', { include: { likes: null } })
+      .build();
+    const result = await db.fetch(query);
+    // Other fields are included in the selection
+    expect(result.get('user-1')).toHaveProperty('name');
+    expect(result.get('user-1')).toHaveProperty('posts');
+    expect(result.get('user-1')!.posts).toHaveLength(1);
+    expect(result.get('user-1')!.posts.get('post-1')).toBeDefined();
+    // fails
+    expect(result.get('user-1')!.posts.get('post-1')?.likes).toBeDefined();
+  });
+  it('should throw an error if you try to update a subquery', async () => {
+    expect(
+      async () =>
+        await db.update('users', 'user-1', async (entity) => {
+          entity.likes = new Set(['like-1', 'like-2']);
+        })
+    ).rejects.toThrowError();
+    expect(
+      async () =>
+        await db.update('users', 'user-1', async (entity) => {
+          entity.posts = { hello: 'world' };
+        })
+    ).rejects.toThrowError();
   });
 });
