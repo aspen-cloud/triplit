@@ -308,10 +308,16 @@ export function triplesToSchema(triples: TripleRow[]) {
     triples,
     appendCollectionToId('_metadata', '_schema')
   );
-  if (!schemaEntity) throw new Error('Could not construct schema entity');
-  const schemaData = timestampedObjectToPlainObject(schemaEntity.data);
+  if (!schemaEntity) return undefined;
+  return timestampedSchemaToSchema(schemaEntity.data);
+}
+
+export function timestampedSchemaToSchema(
+  schema: Record<string, any>
+): StoreSchema<Models<any, any>> {
+  const schemaData = timestampedObjectToPlainObject(schema);
   const version = (schemaData.version as number) || 0;
-  const collections = (schemaData.collections as Models<any, any>) || {};
+  const collections = (schemaData.collections as CollectionsDefinition) || {};
   return { version, collections: collectionsDefinitionToSchema(collections) };
 }
 

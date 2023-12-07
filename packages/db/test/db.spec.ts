@@ -3212,7 +3212,7 @@ describe('migrations', () => {
       },
     ]);
     const db = new DB({ migrations: migrationsCopy });
-    expect(db.ensureMigrated).rejects.toThrowError(
+    await expect(db.ensureMigrated).rejects.toThrowError(
       InvalidMigrationOperationError
     );
     // const db = new DB({ migrations: migrationsCopy });

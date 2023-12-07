@@ -1,10 +1,11 @@
-import { EAV, TripleRow, TripleStore } from './triple-store.js';
+import { EAV, TripleRow, TripleStore, indexToTriple } from './triple-store.js';
 
 import {
   UpdateTypeFromModel,
   Model,
   Models,
   InsertTypeFromModel,
+  timestampedSchemaToSchema,
 } from './schema.js';
 import { AsyncTupleStorageApi, TupleStorageApi } from 'tuple-database';
 import CollectionQueryBuilder, {
@@ -13,7 +14,14 @@ import CollectionQueryBuilder, {
   subscribe,
   subscribeTriples,
 } from './collection-query.js';
-import { CollectionQuery, Query, QueryWhere } from './query.js';
+import {
+  CollectionQuery,
+  Entity,
+  Query,
+  QueryWhere,
+  constructEntity,
+  updateEntity,
+} from './query.js';
 import { MemoryBTreeStorage } from './storage/memory-btree.js';
 import { DBOptionsError, InvalidMigrationOperationError } from './errors.js';
 import { Clock } from './clocks/clock.js';
@@ -26,6 +34,7 @@ import {
   StoreSchema,
   prepareQuery,
   replaceVariable,
+  getSchemaTriples,
 } from './db-helpers.js';
 import { VariableAwareCache } from './variable-aware-cache.js';
 
@@ -189,6 +198,9 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
   variables: Record<string, any>;
   cache: VariableAwareCache<Models<any, any>>;
 
+  _schema?: Entity; // Timestamped Object
+  schema?: StoreSchema<M>;
+
   constructor({
     schema,
     source,
@@ -221,18 +233,44 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
     });
     this.cache = new VariableAwareCache(this.tripleStore);
 
-    this.ensureMigrated = this.tripleStore.ensureStorageIsMigrated().then(() =>
-      migrations
-        ? Array.isArray(migrations)
-          ? this.migrate(migrations, 'up')
-          : this.migrate(migrations.definitions, 'up', migrations.scopes)
-        : // .catch((e) => {
-        //   console.error(e);
-        // })
-        tripleStoreSchema
-        ? overrideStoredSchema(this.tripleStore, tripleStoreSchema)
-        : Promise.resolve()
-    );
+    this.ensureMigrated = this.tripleStore
+      .ensureStorageIsMigrated()
+      // Apply migrations or overwrite schema
+      .then(() =>
+        migrations
+          ? Array.isArray(migrations)
+            ? this.migrate(migrations, 'up')
+            : this.migrate(migrations.definitions, 'up', migrations.scopes)
+          : // .catch((e) => {
+          //   console.error(e);
+          // })
+          tripleStoreSchema
+          ? overrideStoredSchema(this.tripleStore, tripleStoreSchema)
+          : Promise.resolve()
+      )
+      // Setup schema subscription
+      .then(() => {
+        this.tripleStore.tupleStore.subscribe(
+          { prefix: ['EAT', appendCollectionToId('_metadata', '_schema')] },
+          async (storeWrites) => {
+            // This assumes we are properly using tombstoning, so only looking at set operations
+            const schemaTriples = Object.values(storeWrites).flatMap(
+              (w) => w.set?.map(indexToTriple) ?? []
+            );
+
+            // Initialize schema entity
+            if (!this._schema) {
+              await this.loadSchemaData();
+            }
+
+            // Update schema
+            updateEntity(this._schema!, schemaTriples);
+            this.schema = timestampedSchemaToSchema(
+              this._schema!.data
+            ) as StoreSchema<M>;
+          }
+        );
+      });
   }
 
   withVars(variables: Record<string, any>): DB<M> {
@@ -244,16 +282,27 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
     return ts[1];
   }
 
-  async getSchema(): Promise<StoreSchema<M> | undefined> {
+  private async loadSchemaData() {
     await this.ensureMigrated;
-    const { schema } = await readSchemaFromTripleStore(this.tripleStore);
-    return schema as StoreSchema<M> | undefined;
+    const triples = await getSchemaTriples(this.tripleStore);
+    this._schema =
+      constructEntity(triples, appendCollectionToId('_metadata', '_schema')) ??
+      new Entity();
+
+    // Schema should remain undefined if no triples
+    if (triples.length) {
+      this.schema = timestampedSchemaToSchema(
+        this._schema.data
+      ) as StoreSchema<M>;
+    }
   }
 
-  async getSchemaTriples() {
+  async getSchema(): Promise<StoreSchema<M> | undefined> {
     await this.ensureMigrated;
-    const { schemaTriples } = await readSchemaFromTripleStore(this.tripleStore);
-    return schemaTriples;
+    if (!this._schema) {
+      await this.loadSchemaData();
+    }
+    return this.schema;
   }
 
   static ABORT_TRANSACTION = Symbol('abort transaction');
