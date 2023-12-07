@@ -26,6 +26,7 @@ import {
   WriteRuleError,
 } from './errors.js';
 import { TripleStoreTransaction } from './triple-store-transaction.js';
+import { performInBatches } from './utils/performance.js';
 
 // Value should be serializable, this is what goes into triples
 // Not to be confused with the Value type we define on queries
@@ -486,33 +487,42 @@ export class TripleStoreTxOperator implements TripleStoreApi {
   }
 }
 
-function addIndexesToTransaction(tupleTx: MultiTupleTransaction<TupleIndex>) {
+async function addIndexesToTransaction(
+  tupleTx: MultiTupleTransaction<TupleIndex>
+) {
   // Add AVE and clientTimestamp indexes for each EAV insert
   for (const [store, writes] of Object.entries(tupleTx.writes)) {
     const { set = [] } = writes;
     if (set.length === 0) continue;
     const scopedTx = tupleTx.withScope({ read: [store], write: [store] });
-    // To keep interactivity on large inserts, we should batch these
-    for (const { key, value: tupleValue } of set) {
-      const [_client, indexType, ...indexKey] = key;
-      if (indexType !== 'EAT') continue;
-      const [id, attribute, timestamp] = indexKey;
-      const [value, isExpired] = tupleValue;
-      scopedTx.set(['AVE', attribute, value, id, timestamp], {
-        expired: isExpired,
-      });
-      scopedTx.set(
-        [
-          'clientTimestamp',
-          (timestamp as Timestamp)[1],
-          timestamp,
-          id,
-          attribute,
-          value,
-        ],
-        { expired: isExpired }
-      );
-    }
+    // To maintain interactivity on large inserts, we should batch these
+    await performInBatches(
+      (batch) => {
+        for (const { key, value: tupleValue } of batch) {
+          const [_client, indexType, ...indexKey] = key;
+          if (indexType !== 'EAT') continue;
+
+          const [id, attribute, timestamp] = indexKey;
+          const [value, isExpired] = tupleValue;
+          scopedTx.set(['AVE', attribute, value, id, timestamp], {
+            expired: isExpired,
+          });
+          scopedTx.set(
+            [
+              'clientTimestamp',
+              (timestamp as Timestamp)[1],
+              timestamp,
+              id,
+              attribute,
+              value,
+            ],
+            { expired: isExpired }
+          );
+        }
+      },
+      set,
+      200 // batch size is fairly arbitrary here
+    );
   }
 }
 
@@ -710,11 +720,11 @@ export class TripleStore implements TripleStoreApi {
     let isCanceled = false;
     const { tx, output } = await this.tupleStore.autoTransact(
       async (tupleTx) => {
-        tupleTx.beforeScan((args, tx) => {
+        tupleTx.beforeScan(async (args, tx) => {
           // We scan when checking write rules and repeated indexing is a bottleneck on large inserts
           // This is a bandaid fix, but we should try to prevent repeated indexing
           if (args!.prefix[0] === 'EAT') return;
-          addIndexesToTransaction(tx);
+          await addIndexesToTransaction(tx);
         });
         const tx = new TripleStoreTransaction({
           store: this,
