@@ -136,14 +136,34 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
     }
   };
 
+  // This does a lot of reads on commit, isnt overly efficient
   private CheckCanWrite: TripleStoreBeforeCommitHook = async (tx) => {
+    const schema = await this.getSchema();
+
     const txs = Object.values(tx.tupleTx.txs);
+
+    function hasWriteRules(collectionName: string) {
+      return (
+        Object.values(schema?.collections?.[collectionName]?.rules?.write ?? {})
+          .length > 0
+      );
+    }
+
+    // Note: I'm not totally sure this will work with subqueries in rules
     const deletedTriples = txs.flatMap((stx) => {
-      return stx.writes.remove.filter((key) => key[1] === 'EAT');
+      return stx.writes.remove.filter(
+        (key) => key[1] === 'EAT' && hasWriteRules(splitIdParts(key[2])[0])
+      );
     });
     const updatedTriples = txs.flatMap((stx) => {
-      return stx.writes.set.filter((tuple) => tuple.key[1] === 'EAT');
+      return stx.writes.set.filter(
+        (tuple) =>
+          tuple.key[1] === 'EAT' && hasWriteRules(splitIdParts(tuple.key[2])[0])
+      );
     });
+
+    // Return early to prevent unnecessary reads
+    if (!deletedTriples.length && !updatedTriples.length) return;
 
     const deletedEntityIds = new Set(
       updatedTriples
@@ -170,7 +190,6 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
       if (entity) updatedEntities.set(id, entity.data);
     }
 
-    const schema = await this.getSchema();
     for (const [storeId, timestampedEntity] of updatedEntities) {
       checkWriteRules(storeId, timestampedEntity, this.variables, schema);
     }

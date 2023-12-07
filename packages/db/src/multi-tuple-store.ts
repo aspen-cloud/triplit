@@ -35,10 +35,15 @@ type MultiTupleStoreBeforeCommitHook<TupleSchema extends KeyValuePair> = (
   tx: MultiTupleTransaction<TupleSchema>
 ) => void | Promise<void>;
 
+type MultiTupleStoreBeforeScanHook<TupleSchema extends KeyValuePair> = (
+  scanArgs: ScanArgs<any, any> | undefined,
+  tx: MultiTupleTransaction<TupleSchema>
+) => void | Promise<void>;
+
 type MultiTupleStoreHooks<TupleSchema extends KeyValuePair> = {
   beforeInsert: MultiTupleStoreBeforeInsertHook<TupleSchema>[];
   beforeCommit: MultiTupleStoreBeforeCommitHook<TupleSchema>[];
-  beforeScan: MultiTupleStoreBeforeCommitHook<TupleSchema>[];
+  beforeScan: MultiTupleStoreBeforeScanHook<TupleSchema>[];
 };
 
 export default class MultiTupleStore<TupleSchema extends KeyValuePair> {
@@ -95,7 +100,7 @@ export default class MultiTupleStore<TupleSchema extends KeyValuePair> {
     this.hooks.beforeCommit.push(callback);
   }
 
-  beforeScan(callback: MultiTupleStoreBeforeCommitHook<TupleSchema>) {
+  beforeScan(callback: MultiTupleStoreBeforeScanHook<TupleSchema>) {
     this.hooks.beforeScan.push(callback);
   }
 
@@ -377,7 +382,7 @@ export class MultiTupleTransaction<
     );
   }
 
-  beforeScan(callback: MultiTupleStoreBeforeCommitHook<TupleSchema>) {
+  beforeScan(callback: MultiTupleStoreBeforeScanHook<TupleSchema>) {
     this.hooks.beforeScan.push(callback);
   }
 
@@ -385,7 +390,7 @@ export class MultiTupleTransaction<
     args?: ScanArgs<T, P> | undefined
   ): Promise<TupleSchema[]> {
     for (const beforeHook of this.hooks.beforeScan) {
-      await beforeHook(this);
+      await beforeHook(args, this);
     }
     const comparer = (a: TupleSchema, b: TupleSchema) =>
       (compareTuple(a.key, b.key) * (args?.reverse ? -1 : 1)) as 1 | -1 | 0;

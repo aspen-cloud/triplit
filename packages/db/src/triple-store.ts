@@ -492,6 +492,7 @@ function addIndexesToTransaction(tupleTx: MultiTupleTransaction<TupleIndex>) {
     const { set = [] } = writes;
     if (set.length === 0) continue;
     const scopedTx = tupleTx.withScope({ read: [store], write: [store] });
+    // To keep interactivity on large inserts, we should batch these
     for (const { key, value: tupleValue } of set) {
       const [_client, indexType, ...indexKey] = key;
       if (indexType !== 'EAT') continue;
@@ -709,7 +710,12 @@ export class TripleStore implements TripleStoreApi {
     let isCanceled = false;
     const { tx, output } = await this.tupleStore.autoTransact(
       async (tupleTx) => {
-        tupleTx.beforeScan(addIndexesToTransaction);
+        tupleTx.beforeScan((args, tx) => {
+          // We scan when checking write rules and repeated indexing is a bottleneck on large inserts
+          // This is a bandaid fix, but we should try to prevent repeated indexing
+          if (args!.prefix[0] === 'EAT') return;
+          addIndexesToTransaction(tx);
+        });
         const tx = new TripleStoreTransaction({
           store: this,
           tupleTx: tupleTx,
