@@ -228,13 +228,6 @@ const recordType = S.Record({
 
 ## Relationships
 
-<Callout emoji="⚠️">
-  Relationships are only partially supported in Triplit. Specifically you may
-  filter data based on a relationship,{' '}
-  <b>however related data is not selectable.</b>
-  Full support for relationships is on the [roadmap](https://triplit.dev/roadmap).
-</Callout>
-
 To define a relationship between two collections, you define a subquery that describes the relationship with `Query()`. Within the where clause, you can reference the current collection's attributes with `$`.
 
 ```typescript

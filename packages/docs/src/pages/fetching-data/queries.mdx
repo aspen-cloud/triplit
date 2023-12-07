@@ -20,13 +20,6 @@ To specify which attributes you want to return, you can use the `select` method.
 const query = client.query('users').select(['id', 'name', 'email', 'dob']);
 ```
 
-<Callout emoji="⚠️">
-  Relationships are only partially supported in Triplit. Specifically you may
-  filter data based on a relationship,{' '}
-  <b>however related data is not selectable.</b>
-  Full support for relationships is on the [roadmap](https://triplit.dev/roadmap).
-</Callout>
-
 If the type you are selecting is a record, you may also select a specific attribute of the record by using dot notation. The result will be an object with just the selected keys.
 
 ```typescript
@@ -37,6 +30,50 @@ const query = client
 ```
 
 If you do not call select on a query, all attributes are selected.
+
+### Selecting related entities
+
+If you have defined a relation in your schema, you can choose to select entities defined by the relation in a query.
+
+For example, the following schema defines a relation between `users` and `messages`
+
+```typescript
+const schema = {
+  collections: {
+    users: S.Schema({
+      id: S.Id(),
+      name: S.Id(),
+      email: S.String(),
+    }),
+    messages: S.Schema({
+      id: S.Id(),
+      text: S.String(),
+      sender_id: S.String(),
+      sender: S.Query({
+        collectionName: 'users',
+        where: [[id, '=', '$sender_id']],
+      }),
+    }),
+  },
+};
+```
+
+By default, a query on `messages` will not include the `sender` as an attribute. To include the sender, use the `include` method in the query builder.
+
+```typescript
+const query = client.query('messages').include('sender');
+
+/*
+{
+  id: '1',
+  text: 'hello world!',
+  sender_id: 'bob',
+  sender: new Map([
+    ['bob', { id: 'bob', name: 'Bob Jones', email: 'bob@triplit.com' }],
+  ]),
+};
+*/
+```
 
 ## Filtering
 
