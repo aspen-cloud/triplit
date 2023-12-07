@@ -1,8 +1,6 @@
-import { Type } from '@sinclair/typebox';
-import { Nullable, calcDefaultValue, userTypeOptionsAreValid } from './base.js';
+import { calcDefaultValue, userTypeOptionsAreValid } from './base.js';
 import { UserTypeOptions } from './serialization.js';
 import { TypeWithOptions, ValueInterface } from './value.js';
-import { Value } from '@sinclair/typebox/value';
 import { InvalidTypeOptionsError, DBSerializationError } from '../errors.js';
 
 const BOOLEAN_OPERATORS = ['=', '!='] as const;
@@ -54,8 +52,7 @@ export function BooleanType<TypeOptions extends UserTypeOptions = {}>(
       return (options.nullable && val === null) || typeof val === 'boolean';
     },
     validateTripleValue(val: any) {
-      const type = options.nullable ? Nullable(Type.Boolean()) : Type.Boolean();
-      return Value.Check(type, val);
+      return typeof val === 'boolean' || (!!options.nullable && val === null);
     },
     fromString(val: string) {
       return val === 'true';

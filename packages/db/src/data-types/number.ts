@@ -1,8 +1,6 @@
-import { Type } from '@sinclair/typebox';
-import { Nullable, calcDefaultValue, userTypeOptionsAreValid } from './base.js';
+import { calcDefaultValue, userTypeOptionsAreValid } from './base.js';
 import { UserTypeOptions, ValueAttributeDefinition } from './serialization.js';
 import { TypeWithOptions, ValueInterface } from './value.js';
-import { Value } from '@sinclair/typebox/value';
 import { InvalidTypeOptionsError, DBSerializationError } from '../errors.js';
 
 const NUMBER_OPERATORS = [
@@ -64,8 +62,7 @@ export function NumberType<TypeOptions extends UserTypeOptions = {}>(
       return (options.nullable && val === null) || typeof val === 'number';
     },
     validateTripleValue(val: any) {
-      const type = options.nullable ? Nullable(Type.Number()) : Type.Number();
-      return Value.Check(type, val);
+      return typeof val === 'number' || (!!options.nullable && val === null);
     },
     fromString(val: string) {
       return parseFloat(val);

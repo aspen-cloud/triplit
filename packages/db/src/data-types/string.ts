@@ -1,8 +1,6 @@
-import { Type } from '@sinclair/typebox';
-import { Nullable, calcDefaultValue, userTypeOptionsAreValid } from './base.js';
+import { calcDefaultValue, userTypeOptionsAreValid } from './base.js';
 import { UserTypeOptions } from './serialization.js';
 import { TypeWithOptions, ValueInterface } from './value.js';
-import { Value } from '@sinclair/typebox/value';
 import { InvalidTypeOptionsError, DBSerializationError } from '../errors.js';
 
 const STRING_OPERATORS = ['=', '!=', 'like', 'nlike', 'in', 'nin'] as const;
@@ -55,8 +53,7 @@ export function StringType<TypeOptions extends UserTypeOptions = {}>(
       return (options.nullable && val === null) || typeof val === 'string';
     },
     validateTripleValue(val) {
-      const type = options.nullable ? Nullable(Type.String()) : Type.String();
-      return Value.Check(type, val);
+      return typeof val === 'string' || (!!options.nullable && val === null);
     },
     fromString(val: string) {
       return val;
