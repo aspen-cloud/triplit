@@ -152,13 +152,26 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
     // Note: I'm not totally sure this will work with subqueries in rules
     const deletedTriples = txs.flatMap((stx) => {
       return stx.writes.remove.filter(
-        (key) => key[1] === 'EAT' && hasWriteRules(splitIdParts(key[2])[0])
+        (key) =>
+          key[1] === 'EAT' &&
+          hasWriteRules(
+            splitIdParts(
+              //@ts-expect-error typing with tuple prefix is off by 1
+              key[2]
+            )[0]
+          )
       );
     });
     const updatedTriples = txs.flatMap((stx) => {
       return stx.writes.set.filter(
         (tuple) =>
-          tuple.key[1] === 'EAT' && hasWriteRules(splitIdParts(tuple.key[2])[0])
+          tuple.key[1] === 'EAT' &&
+          hasWriteRules(
+            splitIdParts(
+              //@ts-expect-error
+              tuple.key[2]
+            )[0]
+          )
       );
     });
 
