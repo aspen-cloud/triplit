@@ -1,16 +1,16 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import DB, { Schema as S } from '../src/index.js';
-import CATEGORIES from './sample_data/northwind-tranders/categories.json';
-import CUSTOMERS from './sample_data/northwind-tranders/customers.json';
-import EMPLOYEE_TERRITORIES from './sample_data/northwind-tranders/employee-territories.json';
-import EMPLOYEES from './sample_data/northwind-tranders/employees.json';
-import ORDER_DETAILS from './sample_data/northwind-tranders/order-details.json';
-import ORDERS from './sample_data/northwind-tranders/orders.json';
-import PRODUCTS from './sample_data/northwind-tranders/products.json';
-import REGIONS from './sample_data/northwind-tranders/regions.json';
-import SHIPPERS from './sample_data/northwind-tranders/shippers.json';
-import SUPPLIERS from './sample_data/northwind-tranders/suppliers.json';
-import TERRITORIES from './sample_data/northwind-tranders/territories.json';
+import CATEGORIES from './sample_data/northwind-traders/categories.json';
+import CUSTOMERS from './sample_data/northwind-traders/customers.json';
+import EMPLOYEE_TERRITORIES from './sample_data/northwind-traders/employee-territories.json';
+import EMPLOYEES from './sample_data/northwind-traders/employees.json';
+import ORDER_DETAILS from './sample_data/northwind-traders/order-details.json';
+import ORDERS from './sample_data/northwind-traders/orders.json';
+import PRODUCTS from './sample_data/northwind-traders/products.json';
+import REGIONS from './sample_data/northwind-traders/regions.json';
+import SHIPPERS from './sample_data/northwind-traders/shippers.json';
+import SUPPLIERS from './sample_data/northwind-traders/suppliers.json';
+import TERRITORIES from './sample_data/northwind-traders/territories.json';
 
 // TODO: run separately?
 describe.skip('northwind tranders', () => {
@@ -204,36 +204,48 @@ describe.skip('northwind tranders', () => {
   });
   beforeAll(async () => {
     const start = performance.now();
-    for (const customer of CUSTOMERS) {
-      await db.insert('customers', customer);
-    }
-    for (const category of CATEGORIES) {
-      await db.insert('categories', category);
-    }
-    for (const employee of EMPLOYEES) {
-      await db.insert('employees', employee);
-    }
-    for (const order of ORDERS) {
-      await db.insert('orders', order);
-    }
-    for (const product of PRODUCTS) {
-      await db.insert('products', product);
-    }
-    for (const supplier of SUPPLIERS) {
-      await db.insert('suppliers', supplier);
-    }
-    for (const territory of TERRITORIES) {
-      await db.insert('territories', territory);
-    }
-    for (const region of REGIONS) {
-      await db.insert('regions', region);
-    }
-    for (const shipper of SHIPPERS) {
-      await db.insert('shippers', shipper);
-    }
-    for (const orderDetail of ORDER_DETAILS) {
-      await db.insert('orderDetails', orderDetail);
-    }
+
+    await db.transact(async (tx) => {
+      for (const customer of CUSTOMERS) {
+        await tx.insert('customers', customer);
+      }
+
+      for (const category of CATEGORIES) {
+        await tx.insert('categories', category);
+      }
+
+      for (const employee of EMPLOYEES) {
+        await tx.insert('employees', employee);
+      }
+
+      for (const order of ORDERS) {
+        await tx.insert('orders', order);
+      }
+
+      for (const product of PRODUCTS) {
+        await tx.insert('products', product);
+      }
+
+      for (const supplier of SUPPLIERS) {
+        await tx.insert('suppliers', supplier);
+      }
+
+      for (const territory of TERRITORIES) {
+        await tx.insert('territories', territory);
+      }
+
+      for (const region of REGIONS) {
+        await tx.insert('regions', region);
+      }
+
+      for (const shipper of SHIPPERS) {
+        await tx.insert('shippers', shipper);
+      }
+
+      for (const orderDetail of ORDER_DETAILS) {
+        await tx.insert('orderDetails', orderDetail);
+      }
+    });
 
     // for (const employeeTerritory of EMPLOYEE_TERRITORIES) {
     //   await db.update(
