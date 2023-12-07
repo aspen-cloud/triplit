@@ -1,0 +1,56 @@
+# Frequent Asked Questions
+
+## What is a CRDT?
+
+A [CRDT](https://en.wikipedia.org/wiki/Conflict-free_replicated_data_type) is a Conflict-Free Replicated Data Type. It's a name for a family of data structures that can handle updates from multiple independent writers and converge to a consistent, usable state. They're increasingly used to build networked applications with some multiplayer or collaborative element. One well-known CRDT implmentation for web applications is [Yjs](https://github.com/yjs/yjs). Triplit implements its own CRDTs that can handle multiple independent writers to database objects and their properties. Specifically, each leaf attribute of a Triplit object ('entity') is a Last-Writer-Wins Register: when merging updates to an object from multiple writers, the most recent update 'wins'.
+
+## Does Triplit support partial replication?
+
+Yes. Triplit's sync protocol sends only 'deltas' between the client and server to minimize latency and network traffic. Triplit clients subscribe to specific queries, and Triplit servers only send data to the clients that a) are listening for it and b) that they have not yet recieved.
+
+## Why doesn’t Triplit support Arrays?
+
+## What’s the difference between Client and DB?
+
+The [DB](https://github.com/aspen-cloud/triplit/tree/main/packages/db) is the Client's underlying storage layer and has support for:
+
+- Reactive queries that are incrementally updated
+- Built-in storage providers for in-memory, IndexedDB, and Sqlite
+- Automatic indexing of object properties for fast querying
+- Combine multiple storage layers in the same DB with granular scoping on reads and writes
+- Persistent and/or ephemeral storage backends
+- Transactions with rollback
+- Schema for validation, type hinting and enhanced CRDT-based storage.
+- First-party schema migration support
+
+The Client wraps the DB, and adds functionality for syncing over the network. In most cases (unless you're designing your own syncing protocol!) you'll want to use the Client, even if you're only using Triplit as a local cache.
+
+## Why do I need a special database for collaborative work?
+
+## Triplit supports reletaional queries. Why doesn't it need join tables?
+
+Triplit support for Set attribute allows it to establish complex relations without join tables. Sets can be used to "embed" the related ids directly on the entity. For example, a schema for a chat app with users and messages could be defined as follows:
+
+```typescript
+const schema = {
+  collections: {
+    users: {
+      schema: S.Schema({
+        id: S.String(),
+        name: S.String(),
+      }),
+    },
+    messages: {
+      schema: S.Schema({
+        id: S.Id(),
+        text: S.String(),
+        likes: S.Set(S.String()),
+        users_who_liked: S.Query({
+          collectionName: 'users',
+          where: [['id', 'in', '$likes']],
+        }),
+      }),
+    },
+  },
+};
+```
