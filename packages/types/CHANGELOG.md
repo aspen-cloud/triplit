@@ -4,6 +4,13 @@
 
 ### Patch Changes
 
+- Updated dependencies [4af4fde]
+  - @triplit/db@0.3.0
+
+## null
+
+### Patch Changes
+
 - Updated dependencies [61455a2]
   - @triplit/db@0.2.0
 
