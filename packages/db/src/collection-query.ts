@@ -33,6 +33,7 @@ import {
   splitIdParts,
   replaceVariablesInQuery,
   someFilterStatements,
+  addReadRulesToQuery,
 } from './db-helpers.js';
 import { Operator } from './data-types/base.js';
 import { VariableAwareCache } from './variable-aware-cache.js';
@@ -216,7 +217,7 @@ export async function fetch<
       if (!basicMatch) return false;
       const subQueryTriples: TripleRow[] = [];
       for (const { exists: subQuery } of subQueries) {
-        const existsSubQuery = {
+        let existsSubQuery = {
           ...subQuery,
           vars: {
             ...query.vars,
@@ -224,7 +225,13 @@ export async function fetch<
             ...timestampedObjectToPlainObject(entity as any),
           },
           limit: 1,
-        };
+        } as CollectionQuery<typeof schema, any>;
+        if (schema) {
+          existsSubQuery = addReadRulesToQuery(
+            existsSubQuery,
+            schema[existsSubQuery.collectionName]
+          );
+        }
         const subQueryFetch = await fetch<M, typeof existsSubQuery>(
           tx,
           existsSubQuery,
@@ -318,13 +325,20 @@ export async function fetch<
             ...subquery.vars,
             ...convertEntityToJS(entity, collectionSchema),
           };
+          let fullSubquery = {
+            ...subquery,
+            vars: combinedVars,
+          } as CollectionQuery<typeof schema, any>;
+          if (schema) {
+            fullSubquery = addReadRulesToQuery(
+              fullSubquery,
+              schema[fullSubquery.collectionName]
+            );
+          }
           try {
             const subqueryResult = await fetch<M, typeof subquery>(
               tx,
-              {
-                ...subquery,
-                vars: combinedVars,
-              },
+              fullSubquery,
               {
                 includeTriples: true,
                 schema,

@@ -5206,6 +5206,13 @@ describe('selecting subqueries from schema', () => {
               where: [['post_id', '=', '$id']],
             }),
           }),
+          rules: {
+            read: {
+              'read your own posts': {
+                filter: [['author_id', '=', '$USER_ID']],
+              },
+            },
+          },
         },
         likes: {
           schema: S.Schema({
@@ -5215,6 +5222,9 @@ describe('selecting subqueries from schema', () => {
           }),
         },
       },
+    },
+    variables: {
+      USER_ID: 'user-1',
     },
   });
 
@@ -5342,5 +5352,27 @@ describe('selecting subqueries from schema', () => {
           entity.posts = { hello: 'world' };
         })
     ).rejects.toThrowError();
+  });
+
+  it('correctly applies rules to subqueries', async () => {
+    const userDB = db.withVars({ USER_ID: 'user-1' });
+    {
+      const result = await userDB.fetch(userDB.query('posts').build());
+      expect(result).toHaveLength(1);
+    }
+    {
+      const result = await userDB.fetch(
+        userDB.query('users').include('posts').build()
+      );
+      expect(result).toHaveLength(3);
+      expect(result.get('user-1')).toHaveProperty('posts');
+      expect(result.get('user-1')!.posts).toHaveLength(1);
+
+      expect(result.get('user-2')).toHaveProperty('posts');
+      expect(result.get('user-2')!.posts).toHaveLength(0);
+
+      expect(result.get('user-3')).toHaveProperty('posts');
+      expect(result.get('user-3')!.posts).toHaveLength(0);
+    }
   });
 });
