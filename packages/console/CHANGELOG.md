@@ -1,5 +1,19 @@
 # @triplit/console
 
+## 0.3.0
+
+### Minor Changes
+
+- 4af4fde: Add selecting subqueries and improve insert performance
+
+### Patch Changes
+
+- Updated dependencies [4af4fde]
+  - @triplit/client@0.3.0
+  - @triplit/db@0.3.0
+  - @triplit/react@0.3.0
+  - @triplit/server-core@0.3.0
+
 ## 0.2.3
 
 ### Patch Changes
