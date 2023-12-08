@@ -2,7 +2,7 @@ import { TriplitClient } from '@triplit/client';
 import { useQuery } from '@triplit/react';
 import { useMemo, useState, useCallback } from 'react';
 import '@glideapps/glide-data-grid/dist/index.css';
-import { CreateEntityForm, useProjectState } from '.';
+import { CreateEntityForm } from '.';
 import { consoleClient } from '../../triplit/client';
 import { ColumnDef } from '@tanstack/react-table';
 import {
@@ -222,9 +222,10 @@ export function DataViewer({
       ),
       size: 200,
       cell: ({ row }) => {
-        const entityId = row.getValue('id');
+        // TODO: properly type tanstack table
+        const entityId = row.getValue('id') as string;
         return (
-          <div className="flex flex-row items-center h-full">
+          <div className="flex flex-row items-center h-full" key={entityId}>
             <Checkbox
               className="ml-4 mr-1"
               checked={selectedEntities && selectedEntities.has(entityId)}
@@ -238,6 +239,10 @@ export function DataViewer({
               attribute="id"
               value={row.getValue('id')}
               entityId={row.getValue('id')}
+              collection={collection}
+              client={client}
+              selected={false}
+              onSelectCell={() => {}}
             />
           </div>
         );
@@ -257,8 +262,11 @@ export function DataViewer({
     Array.from(uniqueAttributes)
       .filter((attr) => attr !== 'id')
       .forEach((attr) => {
-        const typeDef = collectionSchema?.schema?.properties?.[attr];
-        const isQueryColumn = typeDef?.type === 'query';
+        const typeDef =
+          collectionSchema?.schema?.properties?.[
+            attr as keyof (typeof collectionSchema)['schema']['properties']
+          ];
+        const isQueryColumn = typeDef && typeDef.type === 'query';
         cols.push({
           cell: ({ row, column }) => {
             const cellKey = `${row.getValue('id')}_${column.id}`;
@@ -284,6 +292,7 @@ export function DataViewer({
               );
             return (
               <DataCell
+                key={row.getValue('id')}
                 attributeDef={typeDef}
                 selected={selectedCell === cellKey}
                 onSelectCell={() => setSelectedCell(cellKey)}

@@ -1,11 +1,12 @@
 import {
+  Cell,
   ColumnDef,
   flexRender,
   getCoreRowModel,
   useReactTable,
 } from '@tanstack/react-table';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Table,
   TableBody,
@@ -35,6 +36,7 @@ import {
   ValueAttributeDefinition,
 } from '@triplit/db/src/data-types/serialization';
 import { ArrowSquareOut } from '@phosphor-icons/react';
+import { set } from 'lodash';
 
 async function updateTriplitValue(
   attribute: string,
@@ -111,17 +113,6 @@ export type TriplitDataTypes =
   | Date
   | null
   | Record<string, any>;
-
-type TriplitDataCellProps = {
-  entityId: string;
-  selected: boolean;
-  client: TriplitClient<any>;
-  collection: string;
-  attribute: string;
-  value: TriplitDataTypes;
-  attributeDef?: AttributeDefinition;
-  onSelectCell: () => void;
-};
 
 function SetCellContents({
   triplitSet,
@@ -251,17 +242,27 @@ export function RelationCell({
   );
 }
 
-export function DataCell(props: TriplitDataCellProps) {
-  const {
-    value,
-    entityId,
-    attribute,
-    attributeDef,
-    onSelectCell,
-    selected,
-    client,
-    collection,
-  } = props;
+type TriplitDataCellProps = {
+  entityId: string;
+  selected: boolean;
+  client: TriplitClient<any>;
+  collection: string;
+  attribute: string;
+  value: TriplitDataTypes;
+  attributeDef?: AttributeDefinition;
+  onSelectCell: () => void;
+};
+
+export function DataCell({
+  value,
+  entityId,
+  attribute,
+  attributeDef = { type: 'string', options: { nullable: true } },
+  onSelectCell = () => {},
+  selected = false,
+  client,
+  collection,
+}: TriplitDataCellProps) {
   const [isEditing, setIsEditing] = useState(false);
   useEffect(() => {
     if (!selected) setIsEditing(false);
@@ -319,9 +320,7 @@ export function DataCell(props: TriplitDataCellProps) {
         ) : (
           <ValueCellEditor
             value={value}
-            definition={
-              attributeDef ?? { type: 'string', options: { nullable: true } }
-            }
+            definition={attributeDef as ValueAttributeDefinition}
             onBlur={() => setIsEditing(false)}
             onSubmit={(newValue: TriplitDataTypes) => {
               if (newValue !== value)
@@ -621,6 +620,7 @@ export function DataTable<TData, TValue>({
       minSize: 50,
       maxSize: 1000,
     },
+    getRowId: (row) => row.id,
   });
 
   return (
@@ -634,7 +634,7 @@ export function DataTable<TData, TValue>({
             {headerGroup.headers.map((header, index) => {
               return (
                 <TableHead
-                  key={`${header.id}_${index}`}
+                  key={header.id}
                   className="px-0 relative truncate "
                   style={{ width: header.getSize() }}
                 >
@@ -659,22 +659,19 @@ export function DataTable<TData, TValue>({
       </TableHeader>
       <TableBody className="">
         {table.getRowModel().rows?.length ? (
-          table.getRowModel().rows.map((row, index) => (
-            <TableRow
-              key={row.id}
-              data-state={row.getIsSelected() && 'selected'}
-            >
-              {row.getVisibleCells().map((cell, index) => (
-                <TableCell
-                  key={`${cell.id}_${index}`}
-                  className="truncate p-0"
-                  style={{ width: cell.column.getSize() }}
-                >
-                  {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                </TableCell>
-              ))}
-            </TableRow>
-          ))
+          table.getRowModel().rows.map((row) => {
+            return (
+              <TableRow
+                key={row.id}
+                data-state={row.getIsSelected() && 'selected'}
+              >
+                {row.getVisibleCells().map((cell) => (
+                  // This key shouldn't use index
+                  <FlashingCell key={cell.id} cell={cell} />
+                ))}
+              </TableRow>
+            );
+          })
         ) : (
           <TableRow className="bg-popover hover:bg-inherit">
             <TableCell
@@ -687,5 +684,44 @@ export function DataTable<TData, TValue>({
         )}
       </TableBody>
     </Table>
+  );
+}
+
+function FlashingCell({ cell }: { cell: Cell<any, any> }) {
+  const stringifiedValue = useMemo(() => {
+    const value = cell.getValue();
+    if (typeof value !== 'object' || value === null) return value;
+    if (value instanceof Date) return value.toISOString();
+    if (value instanceof Set) return JSON.stringify([...value]);
+    if (value instanceof Map) return JSON.stringify([...value]);
+    return JSON.stringify(value);
+  }, [cell.getValue()]);
+  const [hasRecentlyChanged, setHasRecentlyChanged] = useState(false);
+
+  const prevState = useRef(undefined);
+  // const [isFirstRender, setIsFirstRender] = useState(true);
+
+  useEffect(() => {
+    if (
+      prevState.current !== stringifiedValue &&
+      prevState.current !== undefined
+    ) {
+      setHasRecentlyChanged(true);
+      setTimeout(() => {
+        setHasRecentlyChanged(false);
+      }, 1000);
+    }
+    prevState.current = stringifiedValue;
+  }, [stringifiedValue]);
+
+  return (
+    <TableCell
+      className={`truncate p-0 transition-colors ${
+        hasRecentlyChanged ? 'bg-muted' : 'bg-transparent'
+      }`}
+      style={{ width: cell.column.getSize() }}
+    >
+      {flexRender(cell.column.columnDef.cell, cell.getContext())}
+    </TableCell>
   );
 }
