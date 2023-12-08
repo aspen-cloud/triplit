@@ -4,8 +4,14 @@ import Bench from 'tinybench';
 import DB from '../src/db.js';
 import { Schema as S } from '../src/schema.js';
 import { RxDBQueryBuilderPlugin } from 'rxdb/plugins/query-builder';
-import { MemoryBTreeStorage as MemoryBTree } from '../src/storage/memory-btree.js';
+import {
+  MemoryBTreeStorage as MemoryBTree,
+  MemoryBTreeStorage,
+} from '../src/storage/memory-btree.js';
+import { TupleDatabase, TupleDatabaseClient } from 'tuple-database';
+import BTree from 'sorted-btree';
 addRxPlugin(RxDBQueryBuilderPlugin);
+const BTreeClass = (BTree.default ? BTree.default : BTree) as typeof BTree;
 
 const rxdb = await createRxDatabase({
   name: 'exampledb',
@@ -63,6 +69,22 @@ function logAndThrowError(msg: string) {
 bench
   .add('vanilla js map', async () => {
     const db = new Map(CLASSES.map((cls) => [cls.id, cls]));
+  })
+  .add('TupleDB', async () => {
+    const tupleDb = new TupleDatabaseClient(
+      new TupleDatabase(new MemoryBTreeStorage())
+    );
+    const tx = tupleDb.transact();
+    for (const cls of CLASSES) {
+      tx.set(['classes', cls.id], cls);
+    }
+    tx.commit();
+  })
+  .add('Btree', async () => {
+    const btree = new BTreeClass();
+    for (const cls of CLASSES) {
+      btree.set(cls.id, cls);
+    }
   })
   .add('rxdb bulk', async () => {
     await rxdb.collections.classes.bulkInsert(CLASSES);
