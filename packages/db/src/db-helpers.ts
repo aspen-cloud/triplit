@@ -31,6 +31,7 @@ import DB, {
   CollectionFromModels,
   CollectionNameFromModels,
   DBFetchOptions,
+  ModelFromModels,
 } from './db.js';
 import { DBTransaction } from './db-transaction.js';
 import { DataType } from './data-types/base.js';
@@ -345,27 +346,48 @@ export async function prepareQuery<
         exists: subquery,
       };
     });
+
     if (fetchQuery.include) {
-      for (const [relationName, extraQuery] of Object.entries(
-        fetchQuery.include as Record<string, CollectionQuery<M, any>>
-      )) {
-        const attributeType = getSchemaFromPath(collectionSchema.schema, [
-          relationName,
-        ]);
-        if (attributeType.type !== 'query') {
-          throw new Error(
-            `${relationName} is not an existing relationship in ${fetchQuery.collectionName} schema`
-          );
-        }
-        if (!fetchQuery.select) fetchQuery.select = [];
-        const merged = mergeQueries(attributeType.query, extraQuery);
-        const subquerySelection: [string, CollectionQuery<M, any>] = [
-          relationName,
-          merged,
-        ];
-        fetchQuery.select.push(subquerySelection);
-      }
+      await addSubsSelectsFromIncludes(
+        fetchQuery,
+        (await tx.getSchema())!.collections
+      );
     }
   }
   return { query: fetchQuery, collection: collectionSchema };
+}
+
+async function addSubsSelectsFromIncludes<
+  M extends Models<any, any>,
+  CN extends CollectionNameFromModels<M>
+>(query: CollectionQuery<M, CN>, schema: M) {
+  if (!query.include) return query;
+  const collectionSchema = schema[query.collectionName];
+  for (const [relationName, extraQuery] of Object.entries(
+    query.include as Record<string, CollectionQuery<M, any>>
+  )) {
+    const attributeType = getSchemaFromPath(collectionSchema.schema!, [
+      relationName,
+    ]);
+    if (attributeType.type !== 'query') {
+      throw new Error(
+        `${relationName} is not an existing relationship in ${query.collectionName} schema`
+      );
+    }
+    if (!query.select) query.select = [];
+    let additionalQuery = extraQuery;
+    if (additionalQuery && additionalQuery.include) {
+      additionalQuery = await addSubsSelectsFromIncludes(
+        { ...extraQuery, collectionName: attributeType.query.collectionName },
+        schema
+      );
+    }
+    const merged = mergeQueries(attributeType.query, additionalQuery);
+    const subquerySelection: [string, CollectionQuery<M, any>] = [
+      relationName,
+      merged,
+    ];
+    query.select.push(subquerySelection);
+  }
+  return query;
 }

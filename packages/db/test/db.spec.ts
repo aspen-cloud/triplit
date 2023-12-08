@@ -5011,14 +5011,7 @@ describe('selecting subqueries', () => {
             id: S.String(),
             name: S.String(),
             friend_ids: S.Set(S.String()),
-            // friends: S.Query({
-            //   collectionName: 'users',
-            //   where: [['id', 'in', '$friend_ids']],
-            // }),
-            // posts: S.Query({
-            //   collectionName: 'posts',
-            //   where: [['author_id', '=', '$id']],
-            // }),
+            liked_post_ids: S.Set(S.String()),
           }),
         },
         posts: {
@@ -5037,16 +5030,19 @@ describe('selecting subqueries', () => {
       id: 'user-1',
       name: 'Alice',
       friend_ids: new Set(['user-2', 'user-3']),
+      liked_post_ids: new Set(['post-1']),
     });
     await db.insert('users', {
       id: 'user-2',
       name: 'Bob',
       friend_ids: new Set(['user-1', 'user-3']),
+      liked_post_ids: new Set(['post-1']),
     });
     await db.insert('users', {
       id: 'user-3',
       name: 'Charlie',
       friend_ids: new Set(['user-1', 'user-2']),
+      liked_post_ids: new Set(['post-1']),
     });
     await db.insert('posts', {
       id: 'post-1',
@@ -5089,6 +5085,39 @@ describe('selecting subqueries', () => {
       author_id: 'user-1',
       topics: new Set(['comedy', 'sports']),
     });
+  });
+
+  it('can select nested subqueries', async () => {
+    const query = db
+      .query('users')
+      .select([
+        'id',
+        [
+          'posts',
+          db
+            .query('posts', {
+              where: [['author_id', '=', '$id']],
+            })
+            .select([
+              'id',
+              [
+                'likedBy',
+                db
+                  .query('users', {
+                    where: [['liked_post_ids', '=', '$id']],
+                  })
+                  .build(),
+              ],
+            ])
+            .build(),
+        ],
+      ])
+      .build();
+    const result = await db.fetch(query);
+    expect(result.get('user-1')).toHaveProperty('posts');
+    expect(result.get('user-1')!.posts).toHaveLength(1);
+    expect(result.get('user-1')!.posts.get('post-1').likedBy).toBeDefined();
+    expect(result.get('user-1')!.posts.get('post-1').likedBy).toHaveLength(3);
   });
 
   it('can subscribe with subqueries', async () => {
@@ -5286,7 +5315,7 @@ describe('selecting subqueries from schema', () => {
       topics: new Set(['comedy', 'sports']),
     });
   });
-  it.fails('can select subsubqueries', async () => {
+  it('can select subsubqueries', async () => {
     const query = db
       .query('users')
       .include('posts', { include: { likes: null } })

@@ -313,24 +313,32 @@ export async function fetch<
         ][];
         const subQueryTriples: TripleRow[] = [];
         for (const [propName, subquery] of subqueries) {
-          const subqueryResult = await fetch<M, typeof subquery>(
-            tx,
-            {
-              ...subquery,
-              vars: {
-                ...query.vars,
-                ...subquery.vars,
-                ...convertEntityToJS(entity, collectionSchema),
+          const combinedVars = {
+            ...query.vars,
+            ...subquery.vars,
+            ...convertEntityToJS(entity, collectionSchema),
+          };
+          try {
+            const subqueryResult = await fetch<M, typeof subquery>(
+              tx,
+              {
+                ...subquery,
+                vars: combinedVars,
               },
-            },
-            {
-              includeTriples: true,
-              schema,
-              cache,
-            }
-          );
-          selectedEntity[propName] = subqueryResult.results;
-          subQueryTriples.push(...[...subqueryResult.triples.values()].flat());
+              {
+                includeTriples: true,
+                schema,
+                cache,
+              }
+            );
+
+            selectedEntity[propName] = subqueryResult.results;
+            subQueryTriples.push(
+              ...[...subqueryResult.triples.values()].flat()
+            );
+          } catch (e) {
+            console.error(e);
+          }
         }
         if (!resultTriples.has(entId)) {
           resultTriples.set(entId, subQueryTriples);
@@ -352,7 +360,6 @@ export async function fetch<
       triples: resultTriples,
     };
   }
-
   return new Map(
     entities.map(([id, entity]) => [
       id,

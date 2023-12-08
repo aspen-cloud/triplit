@@ -38,6 +38,10 @@ export class VariableAwareCache<Schema extends Models<any, any>> {
       query.where.some((f) => !(f instanceof Array) && !('exists' in f))
     )
       return false;
+
+    if (query.select && query.select.some((s) => typeof s === 'object'))
+      return false;
+
     const statements = mapFilterStatements(query.where ?? [], (f) => f).filter(
       isFilterStatement
     ) as FilterStatement<ModelFromModels<M>>[];
@@ -46,7 +50,7 @@ export class VariableAwareCache<Schema extends Models<any, any>> {
         ([, , v]) => typeof v === 'string' && v.startsWith('$')
       );
     if (variableStatements.length !== 1) return false;
-    // if (variableStatements[0][1] !== '=') return false;
+
     if (!['=', '<', '<=', '>', '>=', '!='].includes(variableStatements[0][1]))
       return false;
     if (model) {
