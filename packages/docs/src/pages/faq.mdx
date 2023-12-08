@@ -1,35 +1,42 @@
-# Frequent Asked Questions
+# Frequently asked questions
 
-## What is a CRDT?
+## How does Triplit handle multiple writers?
 
-A [CRDT](https://en.wikipedia.org/wiki/Conflict-free_replicated_data_type) is a Conflict-Free Replicated Data Type. It's a name for a family of data structures that can handle updates from multiple independent writers and converge to a consistent, usable state. They're increasingly used to build networked applications with some multiplayer or collaborative element. One well-known CRDT implmentation for web applications is [Yjs](https://github.com/yjs/yjs). Triplit implements its own CRDTs that can handle multiple independent writers to database objects and their properties. Specifically, each leaf attribute of a Triplit object ('entity') is a Last-Writer-Wins Register: when merging updates to an object from multiple writers, the most recent update 'wins'.
+Every entity inserted into Triplit is broken down at the attribute level, and each attribute is assigned a unique timestamp. This means when multiple users change different attributes of the same entity, they don't conflict or collide. When two users do update the same attribute at the same time, we use these timestamps to decide which value will be kept. In the literature this type of data structure is called a CRDT or more specifically a Last Writer Wins Register that uses Lamport timestamps.
+
+A [CRDT](https://en.wikipedia.org/wiki/Conflict-free_replicated_data_type) is a Conflict-Free Replicated Data Type. It's a name for a family of data structures that can handle updates from multiple independent writers and converge to a consistent, usable state.
 
 ## Does Triplit support partial replication?
 
-Yes. Triplit's sync protocol sends only 'deltas' between the client and server to minimize latency and network traffic. Triplit clients subscribe to specific queries, and Triplit servers only send data to the clients that a) are listening for it and b) that they have not yet recieved.
+Yes. We believe that partial replication is the only practical way to make applications fast over the network. When Triplit clients subscribe to specific queries the Triplit servers only send data to the clients that are listening for it and that have not yet received it. Triplit's sync protocol sends only 'deltas' between the client and server to minimize latency and network traffic.
 
-## Why doesn’t Triplit support Arrays?
+## Why does Triplit support sets but not arrays?
 
-## What’s the difference between Client and DB?
+Every data structure that Triplit can store is designed to support multiple concurrent writers. Sets are able to handle concurrent additions and removals without problem, but arrays lose many nice properties under collaboration. Consider the push method: if two people concurrently push to an array they will end up adding an element to the same index, ultimately causing one item to overwrite the other. In the future, Triplit will expose a List datatype that will support pushing to the beginning and end of a list and assignment operations to specific indices. In most cases using a Set or a List in place of an Array will suffice.
 
-The [DB](https://github.com/aspen-cloud/triplit/tree/main/packages/db) is the Client's underlying storage layer and has support for:
+## What’s the difference between the Client and DB?
 
-- Reactive queries that are incrementally updated
+The [DB](https://github.com/aspen-cloud/triplit/tree/main/packages/db) is the Client's underlying storage layer and provides:
+
+- A reactive query engine
 - Built-in storage providers for in-memory, IndexedDB, and Sqlite
-- Automatic indexing of object properties for fast querying
-- Combine multiple storage layers in the same DB with granular scoping on reads and writes
-- Persistent and/or ephemeral storage backends
+- Automatic indexing of object properties
 - Transactions with rollback
-- Schema for validation, type hinting and enhanced CRDT-based storage.
-- First-party schema migration support
+- Schemas for validation and type hinting
 
-The Client wraps the DB, and adds functionality for syncing over the network. In most cases (unless you're designing your own syncing protocol!) you'll want to use the Client, even if you're only using Triplit as a local cache.
+The Client extends the DB with functionality for syncing over the network and authenticating with Triplit servers. In most cases (unless you're designing your own syncing protocol!) you'll want to use the Client, even if you're only using Triplit as a local cache.
 
-## Why do I need a special database for collaborative work?
+## Why should I care about offline support?
 
-## Triplit supports reletaional queries. Why doesn't it need join tables?
+We believe that app behavior should be deterministic in all network conditions, whether your users take your product on an airplane or if your servers go down. Apps that work well offline also happen to be fast and responsive, thanks to caching and optimistic updates.
 
-Triplit support for Set attribute allows it to establish complex relations without join tables. Sets can be used to "embed" the related ids directly on the entity. For example, a schema for a chat app with users and messages could be defined as follows:
+## Why do ordinary databases struggle with collaborative applications?
+
+Many popular databases do not implement real-time query subscriptions, which are the foundation for collaborative apps. Developers generally end up replicating the functionality of their remote database on the client to create the illusion of live updating queries.
+
+## How is Triplit a relational database if it doesn't use joins?
+
+In Triplit, relationships are simply sub-queries. They allow you to connect entities across collections (or even within the same collection) with the expressiveness of a query. Triplit's support for set attributes allows it to establish complex relations without join tables. Sets can be used to "embed" the related ids directly on the entity. For example, a schema for a chat app with users and messages could be defined as follows:
 
 ```typescript
 const schema = {
