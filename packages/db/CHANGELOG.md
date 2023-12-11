@@ -1,5 +1,11 @@
 # @triplit/db
 
+## 0.3.0
+
+### Minor Changes
+
+- 4af4fde: Add selecting subqueries and improve insert performance
+
 ## 0.2.3
 
 ### Patch Changes
