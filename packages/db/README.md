@@ -5,14 +5,12 @@
 ![build badge](https://github.com/aspen-cloud/triplit/actions/workflows/build-db.yml/badge.svg)
 ![coverage badge](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/pbohlman/f5f2c109373b081a8d894d8289f135e3/raw/triplit_coverage.json)
 [![twitter badge](https://img.shields.io/badge/twitter-%40triplit__dev-1DA1F2)](https://twitter.com/triplit_dev)
-
-<!-- add these when the repo goes public -->
-<!-- ![build badge](https://img.shields.io/github/actions/workflow/status/aspen-cloud/triplit/build-db?label=build) -->
-<!-- [![license badge](https://img.shields.io/github/license/aspen-cloud/triplit)](https://github.com/aspen-cloud/triplit/blob/main/LICENSE) -->
+[![discord badge](https://img.shields.io/discord/1138467878623006720?label=discord&color=5969EA)](https://discord.gg/q89sGWHqQ5)
+[![license badge](https://img.shields.io/github/license/aspen-cloud/triplit)](https://github.com/aspen-cloud/triplit/blob/main/LICENSE)
 
 TriplitDB is the embedded database that powers [Triplit](https://triplit.dev/), a complete solution to data persistence, state management, and realtime synchronization for web applications that want to go _fast_.
 
-> ⚠️ TriplitDB is in alpha and does not strictly follow semantic versioning
+> ⚠️ Triplit DB is pre-1.0.0, but does its best to follow [semantic versioning practices](https://semver.org/). Minor version updates may include breaking changes, while patches should maintain backwards compatibility.
 
 ### Goal
 
@@ -35,72 +33,73 @@ TriplitDB has support for
 
 1. Install from using your preferred packet manager.
 
-   ```
-   npm i @triplit/db
-   // or
-   pnpm add @triplit/db
-   // or
-   yarn add @triplit/db
-   ```
+```
+npm i @triplit/db
+// or
+pnpm add @triplit/db
+// or
+yarn add @triplit/db
+```
 
 2. Define a schema (optional)
 
-   A schema can comprise multiple ‘collections’ (similar to a table in SQL). Using a schema with TriplitDB will enable type checking and the full the benefit of our CRDT-based data structures, like sets.
+A schema can comprise multiple ‘collections’ (similar to a table in SQL). Using a schema with TriplitDB will enable type checking and the full the benefit of our CRDT-based data structures, like sets. Schemas can also specify default values or indicate that an attribute is nullable.
 
-   ```tsx
-   import { Schema as S } from `@triplit/db`;
+```tsx
+import { Schema as S } from `@triplit/db`;
 
-   const todoSchema = S.Schema({
-     todos: {
-       text: S.String(),
-       created_at: S.String(),
-       complete: S.Boolean(),
-       tags: S.Set(S.String())
-     }
-   })
-   ```
+export const todoSchema = {
+  todos: {
+    schema: S.Schema({
+      id: S.Id(),
+      text: S.String(),
+      completed: S.Boolean({ default: false }),
+      created_at: S.String({ default: S.Default.now() }),
+      tagIds: S.Set(S.String()),
+    }),
+  },
+};
+```
 
 3. Construct a TriplitDB instance
 
-   ```tsx
-   import TriplitDB from `@triplit/db`;
+```tsx
+import TriplitDB from `@triplit/db`;
 
-   const db = new TriplitDB({
-     schema: todoSchema,
-   })
-   ```
+const db = new TriplitDB({
+  schema: todoSchema,
+})
+```
 
-   By default your data will be stored ephemerally in memory and not persist through page refreshes. To add persistent storage, initialize your `TriplitDB` instance with the IndexedDB storage engine. This will store your data in the browser’s IndexedDB database and persist through refreshes.
+By default your data will be stored ephemerally in memory and not persist through page refreshes. To add persistent storage, initialize your `TriplitDB` instance with the IndexedDB storage engine. This will store your data in the browser’s IndexedDB database and persist through refreshes.
 
-   ```tsx
-   import TriplitDB, { IndexedDBStorage } from '@triplit/db';
+```tsx
+import TriplitDB, { IndexedDBStorage } from '@triplit/db';
 
-   const db = new TriplitDB({
-     schema: todoSchema,
-     source: new IndexedDBStorage('db-name'),
-   });
-   ```
+const db = new TriplitDB({
+  schema: todoSchema,
+  source: new IndexedDBStorage('db-name'),
+});
+```
 
 4. Define read and write queries
 
-   ```tsx
-   function createTodo(todoText, todoTags) {
-     db.transact(async (tx) => {
-       await tx.insert('todos', {
-         text: todoText,
-         completed: false,
-         tagIds: new Set(todoTags),
-         created_at: new Date().toISOString(),
-       });
-     });
-   }
+```tsx
+function createTodo(todoText, todoTags) {
+  db.transact(async (tx) => {
+    await tx.insert('todos', {
+      text: todoText,
+      tagIds: new Set(todoTags),
+    });
+  });
+}
 
-   function fetchTodos() {
-     db.fetch(db.query('todos').build());
-   }
-   ```
+function fetchTodos() {
+  db.fetch(db.query('todos').build());
+}
+```
 
-   TriplitDB queries support several filter operations. Read the docs for our [client](https://www.triplit.dev/docs/queries) for more information.
+TriplitDB queries support several filter operations. Read the docs for our [client](https://www.triplit.dev/docs/fetching-data/queries) for more information.
 
 # How it works
 
@@ -110,10 +109,10 @@ Under the hood, TriplitDB utilizes a timestamped [Triple Store](https://en.wikip
 
 For more information and examples of TriplitDB in action, please refer to the official [Triplit documentation](https://wwww.triplit.dev/docs). For the features listed below, the client exposes the same API as TriplitDB.
 
-- [Queries](https://www.triplit.dev/docs/queries)
-- [Mutations](https://www.triplit.dev/docs/mutations)
+- [Queries](https://www.triplit.dev/docs/fetching-data/queries)
+- [Mutations](https://www.triplit.dev/docs/updating-data)
 - [Schemas](https://www.triplit.dev/docs/schemas)
-- [Storage](https://www.triplit.dev/docs/storage)
+- [Storage](https://www.triplit.dev/docs/client-database/storage)
 
 # Contact us
 
