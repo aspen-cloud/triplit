@@ -5510,17 +5510,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@triplit/client@npm:^0.3.0, @triplit/client@npm:latest":
-  version: 0.3.0
-  resolution: "@triplit/client@npm:0.3.0"
-  dependencies:
-    "@triplit/db": ^0.3.0
-    rxjs: ^7.8.1
-  checksum: c87d2a34290955fa97a2c192201a87e4ee3937f8ea213b45eb69c91f24da0344c40fcc92c956c40c00e631e2b763ccc77b2582d248727400874ccf2f36df3ef2
-  languageName: node
-  linkType: hard
-
-"@triplit/client@workspace:^, @triplit/client@workspace:packages/client":
+"@triplit/client@^0.3.0, @triplit/client@workspace:^, @triplit/client@workspace:packages/client":
   version: 0.0.0-use.local
   resolution: "@triplit/client@workspace:packages/client"
   dependencies:
@@ -5532,42 +5522,17 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@triplit/console@npm:^0.3.0":
+"@triplit/client@npm:latest":
   version: 0.3.0
-  resolution: "@triplit/console@npm:0.3.0"
+  resolution: "@triplit/client@npm:0.3.0"
   dependencies:
-    "@ahooksjs/use-url-state": ^3.5.1
-    "@emotion/react": ^11.11.1
-    "@glideapps/glide-data-grid": ^5.2.1
-    "@mantine/form": ^6.0.18
-    "@mantine/hooks": ^6.0.17
-    "@phosphor-icons/react": ^2.0.10
-    "@tanstack/react-table": ^8.9.8
-    "@triplit/client": ^0.3.0
     "@triplit/db": ^0.3.0
-    "@triplit/react": ^0.3.0
-    "@triplit/server-core": ^0.3.0
-    class-variance-authority: ^0.7.0
-    dayjs: ^1.11.9
-    jotai: ^2.4.2
-    localforage: ^1.10.0
-    lodash: ^4.17.21
-    lucide-react: ^0.276.0
-    marked: ^6.0.0
-    match-sorter: ^6.3.1
-    nanoid: ^4.0.2
-    react: ^18.2.0
-    react-dom: ^18.2.0
-    react-responsive-carousel: ^3.2.23
-    react-router-dom: ^6.17.0
-    sort-by: ^1.2.0
-    tailwind-merge: ^1.14.0
-    tailwindcss-animate: ^1.0.7
-  checksum: 1ec53b8d5d04d50d491eafaf48dfa4287104f2e534a7d143f834239ee5468b12f84d63ad518902164ea6e800016c53e437b867bf4ed604558264867210278eee
+    rxjs: ^7.8.1
+  checksum: c87d2a34290955fa97a2c192201a87e4ee3937f8ea213b45eb69c91f24da0344c40fcc92c956c40c00e631e2b763ccc77b2582d248727400874ccf2f36df3ef2
   languageName: node
   linkType: hard
 
-"@triplit/console@workspace:^, @triplit/console@workspace:packages/console":
+"@triplit/console@^0.3.0, @triplit/console@workspace:^, @triplit/console@workspace:packages/console":
   version: 0.0.0-use.local
   resolution: "@triplit/console@workspace:packages/console"
   dependencies:
@@ -5645,7 +5610,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@triplit/db@npm:^0.3.0, @triplit/db@npm:latest":
+"@triplit/db@npm:latest":
   version: 0.3.0
   resolution: "@triplit/db@npm:0.3.0"
   dependencies:
@@ -5661,7 +5626,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@triplit/react@npm:^0.3.0, @triplit/react@npm:latest":
+"@triplit/react@npm:latest":
   version: 0.3.0
   resolution: "@triplit/react@npm:0.3.0"
   dependencies:
@@ -5689,16 +5654,6 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@triplit/server-core@npm:^0.3.0":
-  version: 0.3.0
-  resolution: "@triplit/server-core@npm:0.3.0"
-  dependencies:
-    "@triplit/db": ^0.3.0
-    jose: ^4.15.4
-  checksum: 385743102c0c2d3e3f55d45f3441ba1da8e62e3a552e6683340517d9905602364672cb78e5a2f0dc3e5aa178538fd190a116c7de0ce1793b1a3a073af044ae9f
-  languageName: node
-  linkType: hard
-
 "@triplit/server-core@workspace:^, @triplit/server-core@workspace:packages/server-core":
   version: 0.0.0-use.local
   resolution: "@triplit/server-core@workspace:packages/server-core"
@@ -5711,25 +5666,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@triplit/server@npm:^0.3.0":
-  version: 0.3.0
-  resolution: "@triplit/server@npm:0.3.0"
-  dependencies:
-    "@triplit/db": ^0.3.0
-    "@triplit/server-core": ^0.3.0
-    better-sqlite3: ^8.3.0
-    cors: ^2.8.5
-    dotenv: ^16.0.3
-    express: ^4.18.2
-    jsonwebtoken: ^9.0.0
-    node-cache: ^5.1.2
-    rate-limiter-flexible: ^2.4.1
-    ws: ^8.13.0
-  checksum: eeacfdd9c45f629ece4a13c54d1f480cbfdc05a098e23d396bff66793e088d64f9007ce1e91cbcb38ca25842f2db204aa3c74c5d1cc53b6a51ff1e7588344489
-  languageName: node
-  linkType: hard
-
-"@triplit/server@workspace:^, @triplit/server@workspace:packages/server":
+"@triplit/server@^0.3.0, @triplit/server@workspace:^, @triplit/server@workspace:packages/server":
   version: 0.0.0-use.local
   resolution: "@triplit/server@workspace:packages/server"
   dependencies:
