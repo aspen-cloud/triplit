@@ -5342,7 +5342,7 @@ describe('selecting subqueries from schema', () => {
 
   it('can include subqueries in fetch by id', async () => {
     const result = (await db.fetchById('users', 'user-1', {
-      include: { posts: undefined },
+      include: { posts: null },
     }))!;
     expect(result).toHaveProperty('posts');
     expect(result.posts).toHaveLength(1);

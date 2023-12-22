@@ -11,6 +11,7 @@ import { AsyncTupleStorageApi, TupleStorageApi } from '@triplit/tuple-database';
 import CollectionQueryBuilder, {
   fetch,
   FetchResult,
+  FetchResultEntity,
   subscribe,
   subscribeTriples,
 } from './collection-query.js';
@@ -388,6 +389,7 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
     options: DBFetchOptions = {}
   ) {
     const query = this.query(collectionName, queryParams)
+      // @ts-expect-error ModelFromModels<M, CN> doesnt pass through that 'id' is a property
       .where('id', '=', id)
       .build();
     return this.fetchOne(query, options);
@@ -396,7 +398,7 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
   async fetchOne<Q extends CollectionQuery<M, any>>(
     query: Q,
     options: DBFetchOptions = {}
-  ) {
+  ): Promise<FetchResultEntity<Q> | null> {
     query.limit = 1;
     await this.ensureMigrated;
     const result = await this.fetch(query, options);

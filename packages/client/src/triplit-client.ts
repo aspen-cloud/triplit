@@ -343,8 +343,20 @@ export class TriplitClient<M extends Models<any, any> | undefined = undefined> {
     options?: FetchOptions
   ) {
     let query = this.query(collectionName).entityId(id);
-    for (const inc of queryParams?.include ?? []) {
-      query = query.include(inc);
+    if (queryParams?.include) {
+      for (const [relation, subquery] of Object.entries(queryParams.include)) {
+        if (subquery)
+          query = query.include(
+            // @ts-expect-error
+            relation,
+            subquery
+          );
+        else
+          query = query.include(
+            // @ts-expect-error
+            relation
+          );
+      }
     }
     const results = await this.fetch(
       query.build() as ClientQuery<M, CollectionNameFromModels<M>>,

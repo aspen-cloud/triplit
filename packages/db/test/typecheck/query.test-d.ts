@@ -678,29 +678,21 @@ describe('fetching', () => {
     {
       const db = new DB({ schema });
       const query = db.query('test').build();
-      expectTypeOf(db.fetchOne(query)).resolves.toEqualTypeOf<
-        | [
-            string,
-            {
-              id: string;
-              attr1: string;
-              attr2: boolean;
-              attr3: number;
-              subquery: FetchResult<
-                CollectionQuery<typeof schema.collections, 'test2'>
-              >;
-            }
-          ]
-        | null
-      >();
+      expectTypeOf(db.fetchOne(query)).resolves.toEqualTypeOf<{
+        id: string;
+        attr1: string;
+        attr2: boolean;
+        attr3: number;
+        subquery: FetchResult<
+          CollectionQuery<typeof schema.collections, 'test2'>
+        >;
+      } | null>();
     }
     // schemaless
     {
       const db = new DB();
       const query = db.query('test').build();
-      expectTypeOf(db.fetchOne(query)).resolves.toEqualTypeOf<
-        [string, any] | null
-      >();
+      expectTypeOf(db.fetchOne(query)).resolves.toEqualTypeOf<any>();
     }
   });
 });

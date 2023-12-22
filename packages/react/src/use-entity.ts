@@ -24,8 +24,20 @@ export function useEntity<
   error: any;
 } {
   let query = client.query(collectionName).entityId(id);
-  for (const inc of queryParams?.include ?? []) {
-    query = query.include(inc);
+  if (queryParams?.include) {
+    for (const [relation, subquery] of Object.entries(queryParams.include)) {
+      if (subquery)
+        query = query.include(
+          // @ts-expect-error
+          relation,
+          subquery
+        );
+      else
+        query = query.include(
+          // @ts-expect-error
+          relation
+        );
+    }
   }
   const { fetching, fetchingRemote, results, error } = useQuery(
     client,

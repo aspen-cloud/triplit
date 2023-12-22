@@ -107,5 +107,7 @@
     {
       "path": "../types/tsconfig.json"
     }
-  ]
+  ],
+  "include": ["./src/**/*.ts"],
+  "exclude": ["./dist", "node_modules"]
 }

@@ -122,11 +122,13 @@ export type CollectionQuery<
   entityId?: string;
   vars?: Record<string, any>;
   collectionName: CN;
-  include?: Record<
-    M extends Models<any, any>
-      ? RelationAttributes<ModelFromModels<M, CN>>
-      : never,
-    Query<M, any> | undefined
+  include?: Partial<
+    Record<
+      M extends Models<any, any>
+        ? RelationAttributes<ModelFromModels<M, CN>>
+        : string,
+      Query<M, any> | null
+    >
   >;
 };
 
