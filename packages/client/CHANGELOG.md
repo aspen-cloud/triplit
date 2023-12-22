@@ -1,5 +1,13 @@
 # @triplit/client
 
+## 0.3.1
+
+### Patch Changes
+
+- 76c9700: Improve performance and support RSA-signed tokens
+- Updated dependencies [76c9700]
+  - @triplit/db@0.3.1
+
 ## 0.3.0
 
 ### Minor Changes

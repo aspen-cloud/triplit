@@ -1,5 +1,11 @@
 # @triplit/db
 
+## 0.3.1
+
+### Patch Changes
+
+- 76c9700: Improve performance and support RSA-signed tokens
+
 ## 0.3.0
 
 ### Minor Changes
