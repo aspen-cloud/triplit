@@ -8,7 +8,7 @@ import {
   MemoryBTreeStorage as MemoryBTree,
   MemoryBTreeStorage,
 } from '../src/storage/memory-btree.js';
-import { TupleDatabase, TupleDatabaseClient } from 'tuple-database';
+import { TupleDatabase, TupleDatabaseClient } from '@triplit/tuple-database';
 import BTree from 'sorted-btree';
 addRxPlugin(RxDBQueryBuilderPlugin);
 const BTreeClass = (BTree.default ? BTree.default : BTree) as typeof BTree;
@@ -41,18 +41,18 @@ const CLASSES = new Array(100).fill(0).map((_, i) => ({
 
 const triplit = new DB({
   source: new MemoryBTree(),
-  schema: {
-    version: 0,
-    collections: {
-      classes: {
-        schema: S.Schema({
-          id: S.String(),
-          level: S.Number(),
-          name: S.String(),
-        }),
-      },
-    },
-  },
+  // schema: {
+  //   version: 0,
+  //   collections: {
+  //     classes: {
+  //       schema: S.Schema({
+  //         id: S.String(),
+  //         level: S.Number(),
+  //         name: S.String(),
+  //       }),
+  //     },
+  //   },
+  // },
 });
 
 const expectedClassCount = CLASSES.filter((c) => c.level < 200).length;

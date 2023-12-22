@@ -39,10 +39,8 @@ export async function writeSchemaFile(
   fs.mkdirSync(path.dirname(fileName), { recursive: true });
   //use prettier as a fallback for formatting
   const formatted = await format(fileContent, { parser: 'typescript' });
-  fs.writeFile(fileName, formatted, 'utf8', (err) => {
-    if (err) throw err;
-    console.log(blue(`New schema has been saved at ${fileName}`));
-  });
+  fs.writeFileSync(fileName, formatted, 'utf8');
+  console.log(blue(`New schema has been saved at ${fileName}`));
 }
 
 // Currently using this in tests
@@ -62,7 +60,10 @@ export function schemaFileContentFromSchema(
     | undefined
 ) {
   const schemaJSON = schemaToJSON(schema);
+  return schemaFileContentFromJSON(schemaJSON);
+}
 
+export function schemaFileContentFromJSON(schemaJSON: any) {
   const schemaContent = collectionsDefinitionToFileContent(
     schemaJSON?.collections ?? {}
   );

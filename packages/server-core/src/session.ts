@@ -7,6 +7,7 @@ import {
   Attribute,
   Value,
   getSchemaFromPath,
+  Timestamp,
 } from '@triplit/db';
 import {
   QuerySyncError,
@@ -76,30 +77,32 @@ export class Connection {
     this.sendResponse('ERROR', payload);
   }
 
-  handleConnectQueryMessage(msgParams: { id: string; params: any }) {
-    const { id: queryKey, params } = msgParams;
+  handleConnectQueryMessage(msgParams: {
+    id: string;
+    params: any;
+    state?: Timestamp[];
+  }) {
+    const { id: queryKey, params, state } = msgParams;
     const { collectionName, ...parsedQuery } = params;
-
+    const clientStates = new Map(
+      (state ?? []).map(([sequence, client]) => [client, sequence])
+    );
     const unsubscribe = this.session.db.subscribeTriples(
       this.session.db.query(collectionName, parsedQuery).build(),
       (results) => {
         const triples = results ?? [];
-        if (triples.length === 0) {
-          this.sendResponse('TRIPLES', {
-            triples: [],
-            forQueries: [queryKey],
-          });
-          return;
-        }
+        // TODO: dont require this flag
+        // For watch mode to work, we need to send all triples for now
         const triplesForClient = triples.filter(
-          ({ timestamp: [_t, client] }) => client !== this.options.clientId
+          ({ timestamp: [t, client] }) =>
+            client !== this.options.clientId &&
+            (!clientStates.has(client) || clientStates.get(client)! < t)
         );
-        if (triplesForClient.length === 0) return;
+
         this.sendResponse('TRIPLES', {
           triples: triplesForClient,
           forQueries: [queryKey],
         });
-        return;
       },
       (error) => {
         console.error(error);
@@ -282,11 +285,7 @@ export class Session {
     this.db = server.db.withVars(variables);
   }
 
-  createConnection(connectionParams: {
-    clientId: string;
-    clientSchemaHash: number | undefined;
-    syncSchema?: boolean | undefined;
-  }) {
+  createConnection(connectionParams: ConnectionOptions) {
     return new Connection(this, connectionParams);
   }
 

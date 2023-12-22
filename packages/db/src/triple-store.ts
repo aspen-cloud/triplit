@@ -7,7 +7,7 @@ import {
   KeyValuePair,
   AsyncTupleDatabase,
   TupleStorageApi,
-} from 'tuple-database';
+} from '@triplit/tuple-database';
 import { Timestamp, timestampCompare } from './timestamp.js';
 import MultiTupleStore, {
   MultiTupleReactivity,
@@ -521,7 +521,7 @@ async function addIndexesToTransaction(
         }
       },
       set,
-      200 // batch size is fairly arbitrary here
+      10000 // batch size is fairly arbitrary, okay to edit if needed
     );
   }
 }
@@ -815,8 +815,12 @@ export class TripleStore implements TripleStoreApi {
     });
   }
 
-  onInsert(callback: (inserts: Record<string, TripleRow[]>) => void) {
-    function writesCallback(storeWrites: Record<string, WriteOps<TupleIndex>>) {
+  onInsert(
+    callback: (inserts: Record<string, TripleRow[]>) => void | Promise<void>
+  ) {
+    async function writesCallback(
+      storeWrites: Record<string, WriteOps<TupleIndex>>
+    ) {
       const mappedInserts = Object.fromEntries(
         Object.entries(storeWrites)
           .filter(([_store, writes]) => {
@@ -830,7 +834,7 @@ export class TripleStore implements TripleStoreApi {
           })
       );
 
-      callback(mappedInserts);
+      await callback(mappedInserts);
     }
     const unsub = this.tupleStore.subscribe(
       { prefix: ['EAT'] },
@@ -848,9 +852,11 @@ export class TripleStore implements TripleStoreApi {
   onWrite(
     callback: (
       writes: Record<string, { inserts: TripleRow[]; deletes: TripleRow[] }>
-    ) => void
+    ) => void | Promise<void>
   ) {
-    function writesCallback(storeWrites: Record<string, WriteOps<TupleIndex>>) {
+    async function writesCallback(
+      storeWrites: Record<string, WriteOps<TupleIndex>>
+    ) {
       const mappedWrites = Object.fromEntries(
         Object.entries(storeWrites)
           .filter(([_store, writes]) => {
@@ -868,7 +874,7 @@ export class TripleStore implements TripleStoreApi {
           })
       );
 
-      callback(mappedWrites);
+      await callback(mappedWrites);
     }
     const unsub = this.tupleStore.subscribe(
       { prefix: ['EAT'] },

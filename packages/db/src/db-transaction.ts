@@ -319,17 +319,20 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
     const collectionSchema = await getCollectionSchema(this, collectionName);
 
     // prep the doc for insert to db
-    const dbDoc = clientInputToDbModel(doc, collectionSchema?.schema);
-
     const defaultValues = collectionSchema
       ? getDefaultValuesForCollection(collectionSchema)
       : {};
 
     // Append defaults
-    const fullDoc = {
+    const inputWithDefaults = {
       ...defaultValues,
-      ...dbDoc,
+      ...doc,
     };
+
+    const fullDoc = clientInputToDbModel(
+      inputWithDefaults,
+      collectionSchema?.schema
+    );
 
     // this is just to handle the schemaless case
     if (!collectionSchema && fullDoc.id === undefined) fullDoc.id = nanoid();
@@ -560,14 +563,11 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
     queryParams: FetchByIdQueryParams<M, CN> = {},
     options: DBFetchOptions = {}
   ) {
-    let query = this.query(collectionName).entityId(id);
-    for (const inc of queryParams.include ?? []) {
-      query = query.include(inc);
-    }
-    const result = await this.fetch(query.build(), options);
-    // Fetch handles replacing variables, need to replace here to pull data out
-    const entityId = replaceVariable(id, this.variables);
-    return result.has(entityId) ? result.get(entityId) : null;
+    return this.fetchOne(
+      // @ts-ignore
+      this.query(collectionName, queryParams).where('id', '=', id).build(),
+      options
+    );
   }
 
   async fetchOne<Q extends CollectionQuery<M, any>>(
@@ -576,9 +576,9 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
   ) {
     query.limit = 1;
     const result = await this.fetch(query, options);
-    const entry = [...result.entries()][0];
-    if (!entry) return null;
-    return entry;
+    const entity = [...result.values()][0];
+    if (!entity) return null;
+    return entity;
   }
 
   async checkOrCreateSchema() {

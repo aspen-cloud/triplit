@@ -7,6 +7,7 @@ import DB, {
   schemaToJSON,
   stripCollectionFromId,
   convertEntityToJS,
+  Timestamp,
 } from '@triplit/db';
 import {
   ClientFetchResult,
@@ -26,7 +27,11 @@ import {
   RemoteFetchFailedError,
   RemoteSyncFailedError,
 } from './errors.js';
-import { HttpTransport } from './transport/http-transport.js';
+import { Value } from '@sinclair/typebox/value';
+
+type OnMessageCallback = (message: ServerSyncMessage) => void;
+
+const QUERY_STATE_KEY = 'query-state';
 
 /**
  * The SyncEngine is responsible for managing the connection to the server and syncing data
@@ -51,6 +56,8 @@ export class SyncEngine {
   private queryFulfillmentCallbacks: Map<string, (response: any) => void>;
   private txCommits$ = new Subject<string>();
   private txFailures$ = new Subject<{ txId: string; error: unknown }>();
+
+  private messageSubscribers: Set<OnMessageCallback> = new Set();
 
   /**
    *
@@ -100,6 +107,13 @@ export class SyncEngine {
       : undefined;
   }
 
+  onSyncMessage(callback: (message: ServerSyncMessage) => void) {
+    this.messageSubscribers.add(callback);
+    return () => {
+      this.messageSubscribers.delete(callback);
+    };
+  }
+
   private async getConnectionParams(): Promise<TransportConnectParams> {
     const clientId = await this.db.getClientId();
     const schemaHash = hashSchemaJSON(
@@ -134,20 +148,65 @@ export class SyncEngine {
     });
   }
 
+  private async getQueryState(queryId: string) {
+    const queryState = await this.db.tripleStore.readMetadataTuples(
+      QUERY_STATE_KEY,
+      [queryId]
+    );
+    if (queryState.length === 0) return undefined;
+    const stateVector = JSON.parse(queryState[0][2] as string);
+    return stateVector;
+  }
+
+  private async setQueryState(queryId: string, stateVector: Timestamp[]) {
+    await this.db.tripleStore.updateMetadataTuples([
+      [QUERY_STATE_KEY, [queryId], JSON.stringify(stateVector)],
+    ]);
+  }
+
   /**
    * @hidden
    */
   subscribe(params: CollectionQuery<any, any>, onQueryFulfilled?: () => void) {
-    let id = Date.now().toString(36) + Math.random().toString(36).slice(2); // unique enough id
-    this.transport.sendMessage('CONNECT_QUERY', { id, params });
-    this.queries.set(id, { params, fulfilled: false });
-    this.onQueryFulfilled(id, () => {
-      this.queries.set(id, { params, fulfilled: true });
-      if (onQueryFulfilled) onQueryFulfilled();
+    const queryHash = Value.Hash(params).toString();
+    const id = queryHash;
+    this.getQueryState(id).then((queryState) => {
+      this.transport.sendMessage('CONNECT_QUERY', {
+        id: id,
+        params,
+        state: queryState,
+      });
+      this.queries.set(id, { params, fulfilled: false });
+      this.onQueryFulfilled(id, (resp) => {
+        const { triples } = resp;
+        if (triples.length > 0) {
+          const stateVector = this.triplesToStateVector(triples);
+          this.setQueryState(id, stateVector);
+        }
+        this.queries.set(id, { params, fulfilled: true });
+        if (onQueryFulfilled) onQueryFulfilled();
+      });
     });
+
     return () => {
       this.disconnectQuery(id);
     };
+  }
+
+  private triplesToStateVector(triples: TripleRow[]): Timestamp[] {
+    const clientClocks = new Map<string, number>();
+    triples.forEach((t) => {
+      // only set the clock if it is greater than the current clock for each client
+      const [tick, clientId] = t.timestamp;
+      const currentClock = clientClocks.get(clientId);
+      if (!currentClock || tick > currentClock) {
+        clientClocks.set(clientId, tick);
+      }
+    });
+    return [...clientClocks.entries()].map(([clientId, timestamp]) => [
+      timestamp,
+      clientId,
+    ]);
   }
 
   onQueryFulfilled(queryId: string, callback: (response: any) => void) {
@@ -212,6 +271,9 @@ export class SyncEngine {
     this.transport.connect(params);
     this.transport.onMessage(async (evt) => {
       const message: ServerSyncMessage = JSON.parse(evt.data);
+      for (const handler of this.messageSubscribers) {
+        handler(message);
+      }
       if (message.type === 'ERROR') {
         await this.handleErrorMessage(message);
       }
@@ -224,7 +286,7 @@ export class SyncEngine {
           if (callback) {
             callback(payload);
           }
-          this.queryFulfillmentCallbacks.delete(qId);
+          // this.queryFulfillmentCallbacks.delete(qId);
         }
         if (triples.length !== 0) {
           await this.db.transact(async (dbTx) => {
@@ -283,10 +345,18 @@ export class SyncEngine {
         this.closeConnection(payload);
       }
     });
-    this.transport.onOpen(() => {
+    this.transport.onOpen(async () => {
       console.info('sync connection has opened');
       this.resetReconnectTimeout();
-      this.signalOutboxTriples();
+      // Cut down on message sending by only signaling if there are triples to send
+      const outboxTriples = (
+        await this.db.tripleStore.setStorageScope(['outbox']).findByEntity()
+      ).filter(
+        ({ id }) =>
+          this.syncOptions.syncSchema || !id.includes('_metadata#_schema')
+      );
+      const hasOutboxTriples = !!outboxTriples.length;
+      if (hasOutboxTriples) this.signalOutboxTriples();
       // Reconnect any queries
       for (const [id, queryInfo] of this.queries) {
         this.transport.sendMessage('CONNECT_QUERY', {

@@ -3,8 +3,8 @@ import {
   KeyValuePair,
   ScanStorageArgs,
   WriteOps,
-} from 'tuple-database';
-import { IndexedDbTupleStorage } from 'tuple-database/storage/IndexedDbTupleStorage.js';
+} from '@triplit/tuple-database';
+import { IndexedDbTupleStorage } from '@triplit/tuple-database/storage/IndexedDbTupleStorage.js';
 import { MemoryBTreeStorage } from './memory-btree.js';
 
 export class IndexedDbStorage implements AsyncTupleStorageApi {

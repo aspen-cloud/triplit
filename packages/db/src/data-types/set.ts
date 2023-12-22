@@ -44,8 +44,13 @@ export function SetType<Items extends ValueType<any>>(
     },
 
     convertInputToDBValue(val: Set<any>) {
-      if (!this.validateInput(val))
-        throw new DBSerializationError(`set<${items.type}>`, val);
+      const invalidReason = this.validateInput(val);
+      if (invalidReason)
+        throw new DBSerializationError(
+          `set<${items.type}>`,
+          val,
+          invalidReason
+        );
       return [...val.values()].reduce((acc, key) => {
         return { ...acc, [key as string]: true };
       }, {});
@@ -54,8 +59,8 @@ export function SetType<Items extends ValueType<any>>(
       if (!Array.isArray(val)) throw new Error('Invalid JSON value for set');
       return new Set(val);
     },
-    default() {
-      return {};
+    defaultInput() {
+      return new Set();
     },
     convertDBValueToJS(val) {
       return new Set(
@@ -70,12 +75,20 @@ export function SetType<Items extends ValueType<any>>(
     },
     validateInput(val: any) {
       // must be a set
-      if (!(val instanceof Set)) return false;
+      if (!(val instanceof Set)) return `Expected Set, got ${typeof val}`;
+      const values = Array.from(val.values());
       // cannot have null values
+      if (values.includes(null)) return 'Set cannot contain null values';
       // must match items schema
-      return [...val.values()].every(
-        (v) => v !== null && this.items.validateInput(v)
-      );
+      const invalid = values.reduce<[any, string] | undefined>((reason, v) => {
+        if (reason) return reason;
+        const invalidReason = this.items.validateInput(v);
+        if (invalidReason) return [v, invalidReason];
+        return undefined;
+      }, undefined);
+      if (invalid)
+        return `Invalid value ${invalid[0]} for set<${items.type}>. Reason: ${invalid[1]}.`;
+      return;
     },
     validateTripleValue(_val: any) {
       throw new NotImplementedError('Set validation');

@@ -218,17 +218,11 @@ export function convertEntityToJS<M extends Model<any>>(
 // TODO: determine how we might be able to leverage defaults inside of records
 // S.Record({ a: S.String({ default: 'a' }) })
 export function clientInputToDbModel<M extends Model<any> | undefined>(
-  entity: JSTypeFromModel<M>,
+  input: JSTypeFromModel<M>,
   model: M
 ) {
-  const dbDoc: DBTypeFromModel<M> = {} as any;
-  for (const [key, val] of Object.entries(entity)) {
-    const schema = model?.properties?.[key];
-    // Schemaless should already be in a serialized format
-    // TODO: we can confirm this with typebox validation
-    dbDoc[key] = schema ? schema.convertInputToDBValue(val) : val;
-  }
-  return dbDoc;
+  if (!model) return input as DBTypeFromModel<M>;
+  return model.convertInputToDBValue(input) as DBTypeFromModel<M>;
 }
 
 // TODO: perform a pass on this to see how we can improve its types
@@ -314,11 +308,22 @@ export function triplesToSchema(triples: TripleRow[]) {
 
 export function timestampedSchemaToSchema(
   schema: Record<string, any>
-): StoreSchema<Models<any, any>> {
+): StoreSchema<Models<any, any>> | undefined {
   const schemaData = timestampedObjectToPlainObject(schema);
   const version = (schemaData.version as number) || 0;
   const collections = (schemaData.collections as CollectionsDefinition) || {};
-  return { version, collections: collectionsDefinitionToSchema(collections) };
+  return JSONToSchema({
+    version,
+    collections,
+  });
+}
+
+export function JSONToSchema(
+  schemaJSON: SchemaDefinition | undefined
+): StoreSchema<Models<any, any>> | undefined {
+  if (!schemaJSON) return undefined;
+  const collections = collectionsDefinitionToSchema(schemaJSON.collections);
+  return { version: schemaJSON.version, collections };
 }
 
 export function schemaToJSON(
@@ -353,7 +358,7 @@ function collectionSchemaToJSON(
 export function getDefaultValuesForCollection(
   collection: Collection<SchemaConfig>
 ) {
-  return collection.schema.default();
+  return collection.schema.defaultInput();
 }
 
 // Poor man's hash function for schema

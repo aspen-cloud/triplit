@@ -1,6 +1,10 @@
 import { calcDefaultValue, userTypeOptionsAreValid } from './base.js';
 import { UserTypeOptions } from './serialization.js';
-import { TypeWithOptions, ValueInterface } from './value.js';
+import {
+  TypeWithOptions,
+  ValueInterface,
+  valueMismatchMessage,
+} from './value.js';
 import { InvalidTypeOptionsError, DBSerializationError } from '../errors.js';
 
 const STRING_OPERATORS = ['=', '!=', 'like', 'nlike', 'in', 'nin'] as const;
@@ -29,8 +33,9 @@ export function StringType<TypeOptions extends UserTypeOptions = {}>(
       return { type: this.type, options: this.options };
     },
     convertInputToDBValue(val) {
-      if (!this.validateInput(val))
-        throw new DBSerializationError('string', val);
+      const invalidReason = this.validateInput(val);
+      if (invalidReason)
+        throw new DBSerializationError('string', val, invalidReason);
       return val;
     },
     convertDBValueToJS(val) {
@@ -46,11 +51,13 @@ export function StringType<TypeOptions extends UserTypeOptions = {}>(
     convertJSToJSON(val) {
       return val;
     },
-    default() {
+    defaultInput() {
       return calcDefaultValue(options) as string | undefined;
     },
     validateInput(val: any) {
-      return (options.nullable && val === null) || typeof val === 'string';
+      if (typeof val === 'string' || (!!options.nullable && val === null))
+        return;
+      return valueMismatchMessage('string', options, val);
     },
     validateTripleValue(val) {
       return typeof val === 'string' || (!!options.nullable && val === null);

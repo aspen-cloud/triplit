@@ -4,6 +4,7 @@ export interface Flag<T = any> {
   char?: string;
   parse: (input: string | number | boolean) => T;
   default?: T;
+  hidden?: boolean;
 }
 
 export type FlagsToTypes<F extends Record<string, Flag>> = {

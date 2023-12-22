@@ -1,5 +1,8 @@
 import DB from './db.js';
-import type { TupleStorageApi, AsyncTupleStorageApi } from 'tuple-database';
+import type {
+  TupleStorageApi,
+  AsyncTupleStorageApi,
+} from '@triplit/tuple-database';
 
 export default DB;
 export { DB };
@@ -41,6 +44,7 @@ export {
   Schema,
   triplesToSchema,
   schemaToJSON,
+  JSONToSchema,
   timestampedObjectToPlainObject,
   hashSchemaJSON,
   convertEntityToJS,

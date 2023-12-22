@@ -203,13 +203,15 @@ function printCommandHelp<
 }
 
 function printFlags(flags: Record<string, Flag>) {
-  for (const [name, flag] of Object.entries(flags)) {
+  for (const [name, flag] of Object.entries(flags).filter(
+    ([, flag]) => !flag.hidden
+  )) {
     console.log(
       `--${bold(name)}${flag.char ? `, -${bold(flag.char)}` : ''} ${dim(
         flag.description
       )}`
     );
-    // @ts-ignore This is specific to enum flags, maybe flag types have their own help text function?
+    // @ts-expect-error This is specific to enum flags, maybe flag types have their own help text function?
     const options = flag.options;
     if (options) {
       console.log(`    Options: ${options.join(', ')}`);

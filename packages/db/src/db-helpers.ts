@@ -31,7 +31,6 @@ import DB, {
   CollectionFromModels,
   CollectionNameFromModels,
   DBFetchOptions,
-  ModelFromModels,
 } from './db.js';
 import { DBTransaction } from './db-transaction.js';
 import { DataType } from './data-types/base.js';
@@ -91,7 +90,7 @@ export function replaceVariable(
   if (typeof target !== 'string') return target;
   if (!target.startsWith('$')) return target;
   const varValue = variables[target.slice(1)];
-  if (!varValue) throw new SessionVariableNotFoundError(target);
+  if (varValue === undefined) throw new SessionVariableNotFoundError(target);
   return varValue;
 }
 

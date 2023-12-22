@@ -1,4 +1,4 @@
-import { InMemoryTupleStorage } from 'tuple-database';
+import { InMemoryTupleStorage } from '@triplit/tuple-database';
 import { describe, expect, it, beforeEach, beforeAll, vi } from 'vitest';
 import {
   and,
@@ -404,6 +404,40 @@ describe('Database API', () => {
       InvalidCollectionNameError
     );
   });
+
+  it('checks the schema has proper fields on an insert', async () => {
+    const db = new DB({
+      schema: {
+        collections: {
+          test: {
+            schema: S.Schema({
+              id: S.Id(),
+              name: S.String(),
+              age: S.Number(),
+              email: S.String({ nullable: true, default: null }),
+            }),
+          },
+        },
+      },
+    });
+    // TODO: use more specific error, validation function should probably return a string or list of errors as context messages so we can give context to why the failure occured
+    // no missing fields
+    await expect(
+      db.insert('test', {
+        id: '1',
+      })
+    ).rejects.toThrowError(DBSerializationError);
+
+    // no extra fields
+    await expect(
+      db.insert('test', {
+        id: '1',
+        name: 'John Doe',
+        age: 22,
+        extraField: 'extra',
+      })
+    ).rejects.toThrowError(DBSerializationError);
+  });
 });
 
 it('fetchOne gets first match or null', async () => {
@@ -421,8 +455,9 @@ it('fetchOne gets first match or null', async () => {
         .where([['name', 'like', '%Etta%']])
         .build();
       const john = await db.fetchOne(johnQuery);
-      expect(john![0]).toBe('1');
-      expect(john![1].name).toBe('John Doe');
+      expect(john).toBeDefined();
+      expect(john.id).toBe('1');
+      expect(john.name).toBe('John Doe');
 
       const etta = await db.fetchOne(ettaQuery);
       expect(etta).toBeNull();
@@ -565,6 +600,7 @@ describe('Set operations', () => {
     const db = new DB({ schema });
     await db.insert('Users', defaultUser);
     const result = await db.fetchById('Users', 'user-1');
+    console.log('result', result);
     expect(result!.friends).toBeInstanceOf(Set);
     expect([...result!.friends.values()]).toEqual(['Bob', 'Charlie']);
   });
@@ -1443,8 +1479,6 @@ describe('subscriptions', () => {
 
     expect(spy).toHaveBeenCalledTimes(2);
 
-    console.log(spy.mock.calls);
-
     expect(spy.mock.calls[0][0].length).toBeGreaterThan(0);
     expect(spy.mock.calls[1][0].length).toBeGreaterThan(0);
 
@@ -1778,9 +1812,7 @@ describe("Entity Id'ing", () => {
       await db.insert('students', entityDoc);
       const result = await db.fetchOne(db.query('students').build());
       expect(result).not.toBeNull();
-      const [entId, entity] = result;
-      expect(entity.id).toBeDefined();
-      expect(entId).toEqual(entity.id);
+      expect(result.id).toBeDefined();
     });
   });
 
@@ -1817,11 +1849,9 @@ describe("Entity Id'ing", () => {
       });
       const entityDoc = { name: 'Alice' };
       await db.insert('students', entityDoc);
-      const result = await db.fetchOne(db.query('students').build());
-      expect(result).not.toBeNull();
-      const [entId, entity] = result;
+      const entity = await db.fetchOne(db.query('students').build());
+      expect(entity).not.toBeNull();
       expect(entity.id).toBeDefined();
-      expect(entId).toEqual(entity.id);
     });
   });
 
@@ -2722,14 +2752,12 @@ describe('database transactions', () => {
           delete entity['attr'];
         });
         await tx.update('test', '1', async (entity) => {
-          console.log('entity', entity);
           entity.attr = {
             test: 'obj',
           };
         });
       });
       const result = await db.fetchById('test', '1');
-      console.log('result', result);
       expect(result.attr).toStrictEqual({ test: 'obj' });
     }
   });
@@ -3364,7 +3392,7 @@ describe('DB Variables', () => {
       () => db,
       async (db) => {
         const result = await db.fetchOne(query);
-        expect(result?.[1].department).toBe(DEPARTMENT);
+        expect(result.department).toBe(DEPARTMENT);
       }
     );
   });
@@ -5314,7 +5342,7 @@ describe('selecting subqueries from schema', () => {
 
   it('can include subqueries in fetch by id', async () => {
     const result = (await db.fetchById('users', 'user-1', {
-      include: ['posts'],
+      include: { posts: undefined },
     }))!;
     expect(result).toHaveProperty('posts');
     expect(result.posts).toHaveLength(1);
@@ -5374,5 +5402,42 @@ describe('selecting subqueries from schema', () => {
       expect(result.get('user-3')).toHaveProperty('posts');
       expect(result.get('user-3')!.posts).toHaveLength(0);
     }
+  });
+
+  it('subscribe to subqueries when using entityId in query', async () => {
+    const userDB = db.withVars({ USER_ID: 'user-1' });
+    const query = userDB
+      .query('users')
+      .entityId('user-1')
+      .include('posts')
+      .build();
+    await testSubscription(userDB, query, [
+      {
+        check: (results) => {
+          expect(results).toHaveLength(1);
+          expect(results.get('user-1')).toHaveProperty('posts');
+          expect(results.get('user-1')!.posts).toHaveLength(1);
+        },
+      },
+      {
+        action: async () => {
+          await userDB.insert('posts', {
+            id: 'post-4',
+            content: 'Hello World!',
+            author_id: 'user-1',
+          });
+        },
+        check: (results) => {
+          expect(results).toHaveLength(1);
+          expect(results.get('user-1')).toHaveProperty('posts');
+          expect(results.get('user-1')!.posts).toHaveLength(2);
+          expect(results.get('user-1')!.posts.get('post-4')).toMatchObject({
+            id: 'post-4',
+            content: 'Hello World!',
+            author_id: 'user-1',
+          });
+        },
+      },
+    ]);
   });
 });

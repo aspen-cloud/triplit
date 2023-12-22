@@ -28,16 +28,23 @@ export function RecordType<Properties extends { [k: string]: DataType }>(
       return { type: this.type, properties: serializedProps };
     },
     convertInputToDBValue(val: any) {
-      if (!this.validateInput(val))
-        throw new DBSerializationError(`record`, JSON.stringify(val));
+      const invalidReason = this.validateInput(val);
+      if (invalidReason)
+        throw new DBSerializationError(
+          `record`,
+          JSON.stringify(val),
+          invalidReason
+        );
       return Object.fromEntries(
-        Object.entries(properties).map(([k, propDef]) => [
-          k,
-          propDef.convertInputToDBValue(
-            // @ts-expect-error
-            val[k]
-          ),
-        ])
+        Object.entries(properties)
+          .filter(([_k, propDef]) => propDef.type !== 'query')
+          .map(([k, propDef]) => [
+            k,
+            propDef.convertInputToDBValue(
+              // @ts-expect-error
+              val[k]
+            ),
+          ])
       ) as { [K in keyof Properties]: ExtractDBType<Properties[K]> };
     },
     convertDBValueToJS(val) {
@@ -86,40 +93,43 @@ export function RecordType<Properties extends { [k: string]: DataType }>(
       );
     },
     // Type should go extract the db type of each of its keys
-    default() {
+    defaultInput() {
       return Object.fromEntries(
         Object.entries(properties)
-          .map(([key, val]) => [key, val.default()])
+          .map(([key, val]) => [key, val.defaultInput()])
           .filter(([_, v]) => v !== undefined)
       );
     },
     validateInput(_val: any) {
       // cannot assign null
-      if (_val === null) return false;
+      if (_val === null) return 'value cannot be null';
       // must be an object
-      if (typeof _val !== 'object') return false;
+      if (typeof _val !== 'object') return 'value must be an object';
 
       // all required properties are present
       const requiredProperties = Object.entries(properties).filter(
-        ([_k, v]) => !!v.default()
+        // Need to add query here to support schemas as records
+        ([_k, v]) => v.type !== 'query' && v.defaultInput() === undefined
       );
       const keysSet = new Set(Object.keys(_val));
-      if (
-        !requiredProperties.every(([k, _v]) => {
-          return keysSet.has(k);
+      const missingProperties = requiredProperties
+        .filter(([k, _v]) => {
+          return !keysSet.has(k);
         })
-      )
-        return false;
+        .map(([k, _v]) => k);
+      if (missingProperties.length > 0)
+        return `missing properties: ${missingProperties.join(', ')}`;
 
       for (const k in _val) {
         if (properties[k]) {
           const v = properties[k];
-          if (!v.validateInput(_val[k])) return false;
+          const reason = v.validateInput(_val[k]);
+          if (reason) return `invalid value for ${k} (${reason})`;
         } else {
-          return false;
+          return `invalid property ${k}`;
         }
       }
-      return true;
+      return undefined;
     },
     validateTripleValue(_val: any) {
       return true; // TODO

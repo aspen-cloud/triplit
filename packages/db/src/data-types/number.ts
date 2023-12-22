@@ -1,6 +1,10 @@
 import { calcDefaultValue, userTypeOptionsAreValid } from './base.js';
 import { UserTypeOptions, ValueAttributeDefinition } from './serialization.js';
-import { TypeWithOptions, ValueInterface } from './value.js';
+import {
+  TypeWithOptions,
+  ValueInterface,
+  valueMismatchMessage,
+} from './value.js';
 import { InvalidTypeOptionsError, DBSerializationError } from '../errors.js';
 
 const NUMBER_OPERATORS = [
@@ -38,8 +42,9 @@ export function NumberType<TypeOptions extends UserTypeOptions = {}>(
       return { type: this.type, options: this.options };
     },
     convertInputToDBValue(val) {
-      if (!this.validateInput(val))
-        throw new DBSerializationError('number', val);
+      const invalidReason = this.validateInput(val);
+      if (invalidReason)
+        throw new DBSerializationError('number', val, invalidReason);
       return val;
     },
     convertDBValueToJS(val) {
@@ -55,11 +60,13 @@ export function NumberType<TypeOptions extends UserTypeOptions = {}>(
     convertJSToJSON(val) {
       return val;
     },
-    default() {
+    defaultInput() {
       return calcDefaultValue(options) as number | undefined;
     },
     validateInput(val: any) {
-      return (options.nullable && val === null) || typeof val === 'number';
+      if (typeof val === 'number' || (!!options.nullable && val === null))
+        return;
+      return valueMismatchMessage('number', options, val);
     },
     validateTripleValue(val: any) {
       return typeof val === 'number' || (!!options.nullable && val === null);

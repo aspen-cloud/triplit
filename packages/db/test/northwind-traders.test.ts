@@ -144,7 +144,7 @@ describe.skip('northwind tranders', () => {
           id: S.Id(),
           name: S.String(),
           description: S.String(),
-          picture: S.String(),
+          picture: S.String({ nullable: true, default: null }),
           products: S.Query({
             collectionName: 'products',
             where: [['categoryId', '=', '$id']],

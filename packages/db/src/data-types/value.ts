@@ -22,3 +22,13 @@ export type ValueInterface<
   // Our current rule is that values can go into collections, need this for working with collections
   fromString(val: string): JSType;
 };
+
+export function valueMismatchMessage(
+  type: string,
+  options: UserTypeOptions,
+  value: any
+) {
+  return `Expected a ${type} value${
+    !!options.nullable ? ' or null' : ''
+  }, but got ${typeof value} instead.`;
+}

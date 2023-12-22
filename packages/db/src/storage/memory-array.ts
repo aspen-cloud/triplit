@@ -1,1 +1,1 @@
-export { InMemoryTupleStorage as MemoryArrayStorage } from 'tuple-database/storage/InMemoryTupleStorage.js';
+export { InMemoryTupleStorage as MemoryArrayStorage } from '@triplit/tuple-database/storage/InMemoryTupleStorage.js';

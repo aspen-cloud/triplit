@@ -43,11 +43,11 @@ export function QueryType<Q extends SubQuery<any, any>>(
     },
     // TODO: determine proper value and type here
     // Type should go extract the deserialized type of each of its keys
-    default() {
+    defaultInput() {
       return undefined;
     },
     validateInput(_val: any) {
-      return true; // TODO
+      return undefined; // TODO
     },
     validateTripleValue(_val: any) {
       return true; // TODO

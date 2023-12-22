@@ -2,7 +2,11 @@ import { FormatRegistry, Type } from '@sinclair/typebox';
 import { fullFormats } from 'ajv-formats/dist/formats.js';
 import { UserTypeOptions } from './serialization.js';
 import { Nullable, calcDefaultValue, userTypeOptionsAreValid } from './base.js';
-import { TypeWithOptions, ValueInterface } from './value.js';
+import {
+  TypeWithOptions,
+  ValueInterface,
+  valueMismatchMessage,
+} from './value.js';
 import { Value } from '@sinclair/typebox/value';
 import { InvalidTypeOptionsError, DBSerializationError } from '../errors.js';
 
@@ -42,7 +46,9 @@ export function DateType<TypeOptions extends UserTypeOptions = {}>(
       return { type: this.type, options: this.options };
     },
     convertInputToDBValue(val: TypeWithOptions<Date, TypeOptions>) {
-      if (!this.validateInput(val)) throw new DBSerializationError('date', val);
+      const invalidReason = this.validateInput(val);
+      if (invalidReason)
+        throw new DBSerializationError('date', val, invalidReason);
       return (val ? new Date(val).toISOString() : null) as TypeWithOptions<
         string,
         TypeOptions
@@ -62,15 +68,19 @@ export function DateType<TypeOptions extends UserTypeOptions = {}>(
       if (val === null) return val;
       return val.toISOString();
     },
-    default() {
-      return calcDefaultValue(options) as string | undefined;
+    defaultInput() {
+      const dateString = calcDefaultValue(options) as string | undefined;
+      if (dateString == null) return dateString;
+      return new Date(dateString);
     },
     validateInput(val: any) {
-      return (
-        (options.nullable && val === null) ||
+      if (
         val instanceof Date ||
-        !Number.isNaN(Date.parse(val))
-      );
+        !Number.isNaN(Date.parse(val)) ||
+        (options.nullable && val === null)
+      )
+        return;
+      return valueMismatchMessage('date', options, val);
     },
     validateTripleValue(val: any) {
       const type = options.nullable ? Nullable(DateSchemaType) : DateSchemaType;

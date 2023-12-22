@@ -51,6 +51,7 @@
   },
   "scripts": {
     "build": "tsc",
+    "test": "vitest",
     "lint": "tsc --noEmit",
     "lint:build": "npx publint",
     "publish-pkg": "node ../../scripts/npm-check-version-and-publish.js"
@@ -62,6 +63,7 @@
   "devDependencies": {
     "@triplit/types": "workspace:^",
     "@types/node": "^18.15.2",
-    "typescript": "^5.2.2"
+    "typescript": "^5.2.2",
+    "vitest": "^1.1.0"
   }
 }

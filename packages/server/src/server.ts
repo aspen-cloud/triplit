@@ -50,6 +50,7 @@ function setupSqliteStorage() {
 export type ServerOptions = {
   storage?: 'sqlite' | 'memory';
   dbOptions?: DBConfig<any>;
+  watchMode?: boolean;
 };
 
 export function createServer(options?: ServerOptions) {
@@ -343,11 +344,8 @@ export function createServer(options?: ServerOptions) {
     clearInterval(heartbeatInterval);
   });
 
-  return function startServer(
-    port: number,
-    callback?: (() => void) | undefined
-  ) {
-    const server = app.listen(port, callback);
+  return function startServer(port: number, onOpen?: (() => void) | undefined) {
+    const server = app.listen(port, onOpen);
 
     server.on('upgrade', (request, socket, head) => {
       readWSToken(request)
@@ -379,6 +377,7 @@ export function createServer(options?: ServerOptions) {
                 const schemaIncombaitility =
                   await connection.isClientSchemaCompatible();
                 if (schemaIncombaitility) {
+                  schemaIncombaitility.retry = !!options?.watchMode;
                   socket.close(1008, JSON.stringify(schemaIncombaitility));
                   return;
                 }

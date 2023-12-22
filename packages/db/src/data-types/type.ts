@@ -59,10 +59,11 @@ export type TypeInterface<
 
   convertJSToJSON(val: JSType): any;
 
-  default(): DBType | undefined;
+  // Should return a possible user input value
+  defaultInput(): JSType | undefined;
 
   // User input validation
-  validateInput(val: any): boolean;
+  validateInput(val: any): string | undefined;
 
   // Triple store validation
   validateTripleValue(val: any): boolean;

@@ -1,5 +1,5 @@
 import { ParsedToken, ParseResult } from '@triplit/types/sync';
-import { JWTPayload, jwtVerify } from 'jose';
+import { JWTPayload, jwtVerify, importSPKI, KeyLike, importJWK } from 'jose';
 import {
   InvalidTokenPayloadError,
   InvalidTokenProjectIdError,
@@ -22,13 +22,28 @@ type ExternalJWT = {
 
 type ProjectJWT = TriplitJWT | ExternalJWT;
 
+async function getJwtKey(rawPublicKey: string): Promise<KeyLike | Uint8Array> {
+  if (rawPublicKey.startsWith('-----BEGIN PUBLIC KEY-----')) {
+    console.log('using rsa public key');
+    return importSPKI(rawPublicKey, 'RS256');
+  }
+  let parsedKey;
+  try {
+    parsedKey = JSON.parse(rawPublicKey);
+  } catch {}
+  if (parsedKey) {
+    return importJWK(parsedKey, 'RS256');
+  }
+  return new TextEncoder().encode(rawPublicKey);
+}
+
 export async function parseAndValidateToken(
   token: string,
   secretKey: string,
   projectId: string,
   options: { payloadPath?: string } = {}
 ): Promise<ParseResult<ParsedToken, TriplitError>> {
-  const encodedKey = new TextEncoder().encode(secretKey);
+  const encodedKey = await getJwtKey(secretKey);
   let verified;
   try {
     verified = await jwtVerify(token, encodedKey);
@@ -38,7 +53,9 @@ export async function parseAndValidateToken(
         error: new InvalidTokenSignatureError(),
       };
     }
-  } catch {
+  } catch (err) {
+    console.error(err);
+    // TODO add better expiration error
     return {
       data: undefined,
       error: new InvalidTokenSignatureError(),

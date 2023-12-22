@@ -1,6 +1,10 @@
 import { calcDefaultValue, userTypeOptionsAreValid } from './base.js';
 import { UserTypeOptions } from './serialization.js';
-import { TypeWithOptions, ValueInterface } from './value.js';
+import {
+  TypeWithOptions,
+  ValueInterface,
+  valueMismatchMessage,
+} from './value.js';
 import { InvalidTypeOptionsError, DBSerializationError } from '../errors.js';
 
 const BOOLEAN_OPERATORS = ['=', '!='] as const;
@@ -28,8 +32,9 @@ export function BooleanType<TypeOptions extends UserTypeOptions = {}>(
       return { type: this.type, options: this.options };
     },
     convertInputToDBValue(val: any) {
-      if (!this.validateInput(val))
-        throw new DBSerializationError('boolean', val);
+      const invalidReason = this.validateInput(val);
+      if (invalidReason)
+        throw new DBSerializationError('boolean', val, invalidReason);
       return val;
     },
     convertDBValueToJS(val: boolean) {
@@ -45,11 +50,13 @@ export function BooleanType<TypeOptions extends UserTypeOptions = {}>(
     convertJSToJSON(val: boolean) {
       return val;
     },
-    default() {
+    defaultInput() {
       return calcDefaultValue(options) as boolean | undefined;
     },
     validateInput(val: any) {
-      return (options.nullable && val === null) || typeof val === 'boolean';
+      if (typeof val === 'boolean' || (!!options.nullable && val === null))
+        return;
+      return valueMismatchMessage('boolean', options, val);
     },
     validateTripleValue(val: any) {
       return typeof val === 'boolean' || (!!options.nullable && val === null);

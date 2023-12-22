@@ -412,8 +412,8 @@ export class TriplitClient<M extends Models<any, any> | undefined = undefined> {
     onResults: (
       results: ClientFetchResult<CQ>,
       info: { hasRemoteFulfilled: boolean }
-    ) => void,
-    onError?: (error: any) => void,
+    ) => void | Promise<void>,
+    onError?: (error: any) => void | Promise<void>,
     options?: SubscriptionOptions
   ) {
     const opts: SubscriptionOptions = { localOnly: false, ...options };
@@ -442,9 +442,8 @@ export class TriplitClient<M extends Models<any, any> | undefined = undefined> {
     let unsubscribeLocal = () => {};
     let unsubscribeRemote = () => {};
     let hasRemoteFulfilled = false;
-    const clientSubscriptionCallback = (results: any) => {
+    const clientSubscriptionCallback = (results: any) =>
       onResults(results as ClientFetchResult<CQ>, { hasRemoteFulfilled });
-    };
     unsubscribeLocal = this.db.subscribe(
       query,
       clientSubscriptionCallback,

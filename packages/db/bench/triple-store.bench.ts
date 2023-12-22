@@ -1,4 +1,4 @@
-import { InMemoryTupleStorage } from 'tuple-database';
+import { InMemoryTupleStorage } from '@triplit/tuple-database';
 import { describe, bench, beforeEach } from 'vitest';
 import * as Document from '../src/document.js';
 import { TripleStore } from '../src/triple-store.js';

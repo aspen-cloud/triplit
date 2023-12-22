@@ -103,6 +103,66 @@ export interface FetchOptions {
   schema?: Models<any, any>;
 }
 
+function getIdFilterFromQuery(query: CollectionQuery<any, any>): string | null {
+  const { where, entityId, collectionName } = query;
+
+  if (entityId) return appendCollectionToId(collectionName, entityId);
+
+  const idEqualityFilters = where?.filter(
+    (filter) =>
+      filter instanceof Array && filter[0] === 'id' && filter[1] === '='
+  ) as FilterStatement<Model<any>>[];
+
+  if (idEqualityFilters.length > 0) {
+    return appendCollectionToId(
+      collectionName,
+      idEqualityFilters[0][2] as string
+    );
+  }
+  return null;
+}
+
+async function getTriplesForQuery<
+  M extends Models<any, any> | undefined,
+  Q extends CollectionQuery<M, any>
+>(tx: TripleStoreApi, query: Q) {
+  const entityId = getIdFilterFromQuery(query);
+
+  if (entityId) {
+    return tx.findByEntity(entityId);
+  }
+  return tx.findByCollection(query.collectionName);
+}
+
+async function getOrderedIdsForQuery<
+  M extends Models<any, any> | undefined,
+  Q extends CollectionQuery<M, any>
+>(tx: TripleStoreApi, query: Q) {
+  const { order, limit, after } = query;
+  const entityId = getIdFilterFromQuery(query);
+  if (entityId) {
+    return [entityId];
+  }
+  return Array.from(
+    new Set(
+      (
+        await (order
+          ? tx.findValuesInRange(
+              [query.collectionName, ...(order[0][0] as string).split('.')],
+              {
+                direction: order[0][1],
+                ...(after && (!order || order.length <= 1)
+                  ? order[0][1] === 'DESC'
+                    ? { lessThan: after }
+                    : { greaterThan: after }
+                  : {}),
+              }
+            )
+          : tx.findByAVE([['_collection'], query.collectionName]))
+      ).map((t) => t.id)
+    )
+  );
+}
 /**
  * Fetch
  * @summary This function is used to fetch entities from the database. It can be used to fetch a single entity or a collection of entities.
@@ -156,9 +216,8 @@ export async function fetch<
   const { order, limit, select, where, entityId, collectionName, after } =
     queryWithInsertedVars;
 
-  const collectionTriples = entityId
-    ? await tx.findByEntity(appendCollectionToId(collectionName, entityId))
-    : await tx.findByCollection(query.collectionName);
+  const collectionTriples = await getTriplesForQuery(tx, queryWithInsertedVars);
+
   const entitiesMap = triplesToEntities(collectionTriples);
   const allEntities = new Map(
     [...entitiesMap.entries()].map(([id, entity]) => {
@@ -169,29 +228,14 @@ export async function fetch<
     })
   );
 
-  const resultOrder = entityId
-    ? allEntities.size === 0
-      ? []
-      : [...allEntities.values()][0].triples
-    : await (order
-        ? tx.findValuesInRange(
-            [collectionName, ...(order[0][0] as string).split('.')],
-            {
-              direction: order[0][1],
-              ...(after && (!order || order.length <= 1)
-                ? order[0][1] === 'DESC'
-                  ? { lessThan: after }
-                  : { greaterThan: after }
-                : {}),
-            }
-          )
-        : tx.findByAVE([['_collection'], collectionName]));
+  const resultOrder = await getOrderedIdsForQuery(tx, queryWithInsertedVars);
 
   let entityCount = 0;
   let previousOrderVal: Value;
   const resultTriples: Map<string, TripleRow[]> = new Map();
   let entities = await new Pipeline(resultOrder)
-    .map(async ({ id }) => {
+    .filter(async (id) => allEntities.has(id))
+    .map(async (id) => {
       const entityEntry = allEntities.get(id);
       const externalId = stripCollectionFromId(id);
       if (entityEntry?.triples) {
@@ -568,12 +612,12 @@ function subscribeSingleEntity<
   query: Q,
   onResults: (
     args: [results: FetchResult<Q>, newTriples: Map<string, TripleRow[]>]
-  ) => void,
-  onError?: (error: any) => void,
+  ) => void | Promise<void>,
+  onError?: (error: any) => void | Promise<void>,
   schema?: M
 ) {
   const asyncUnSub = async () => {
-    const { collectionName, entityId } = query;
+    const { collectionName, entityId, select } = query;
     let entity: any;
     let triples: Map<string, TripleRow[]> = new Map();
     const collectionSchema = schema && schema[query.collectionName]?.schema;
@@ -592,7 +636,6 @@ function subscribeSingleEntity<
         entity ? [[entityId, convertEntityToJS(entity, collectionSchema)]] : []
       ) as FetchResult<Q>;
 
-      onResults([results, triples]);
       const unsub = tripleStore.onWrite(async (storeWrites) => {
         try {
           for (const [_storeId, { inserts, deletes }] of Object.entries(
@@ -604,10 +647,18 @@ function subscribeSingleEntity<
             const entityDeletes = deletes.filter(
               ({ id }) => id === internalEntityId
             );
-            const changed =
-              entityInserts.length > 0 || entityDeletes.length > 0;
-            // Early return prevents processing if no relevant entities were updated
-            if (!changed) return;
+            const entityChangesCount =
+              entityInserts.length + entityDeletes.length;
+
+            // early return if there are no relational selects or if there are no inserts or deletes
+            if (
+              entityChangesCount === 0 &&
+              (!select ||
+                select.length === 0 ||
+                select.every((sel) => typeof sel === 'string'))
+            ) {
+              return;
+            }
 
             // if we have deletes, need to re-fetch the entity
             if (entityDeletes.length) {
@@ -626,12 +677,10 @@ function subscribeSingleEntity<
               });
               updateEntity(entityWrapper, entityInserts);
               entity = entityWrapper.data;
-              // entityInserts.reduce(entityToResultReducer, entity);
               if (!triples.has(entityId)) {
                 triples.set(entityId, []);
               }
               triples.set(entityId, Object.values(entityWrapper.triples));
-              // triples.get(entityId)!.push(...entityInserts);
             }
             if (
               entity &&
@@ -641,6 +690,60 @@ function subscribeSingleEntity<
                 collectionSchema
               )
             ) {
+              if (select && select.length > 0) {
+                entity = select
+                  .filter((sel) => typeof sel === 'string')
+                  .reduce<any>((acc, selectPath) => {
+                    const pathParts = (selectPath as string).split('.');
+                    const leafMostPart = pathParts.pop()!;
+                    let selectScope = acc;
+                    let entityScope = entity;
+                    for (const pathPart of pathParts) {
+                      selectScope[pathPart] = selectScope[pathPart] ?? {};
+                      selectScope = selectScope[pathPart];
+                      entityScope = entity[pathPart];
+                    }
+                    selectScope[leafMostPart] = entityScope[leafMostPart];
+
+                    return acc;
+                  }, {});
+
+                const subqueries = select.filter(
+                  (sel) => typeof sel !== 'string'
+                ) as [string, CollectionQuery<M, any>][];
+                for (const [propName, subquery] of subqueries) {
+                  const combinedVars = {
+                    ...query.vars,
+                    ...subquery.vars,
+                    ...convertEntityToJS(entity, collectionSchema),
+                  };
+                  let fullSubquery = {
+                    ...subquery,
+                    vars: combinedVars,
+                  } as CollectionQuery<typeof schema, any>;
+                  if (schema) {
+                    fullSubquery = addReadRulesToQuery(
+                      fullSubquery,
+                      schema[fullSubquery.collectionName]
+                    );
+                  }
+                  const subqueryResult = await fetch<M, typeof subquery>(
+                    tripleStore,
+                    fullSubquery,
+                    {
+                      includeTriples: true,
+                      schema,
+                    }
+                  );
+                  entity[propName] = subqueryResult.results;
+                  triples.set(
+                    entityId,
+                    [...triples.get(entityId)!].concat(
+                      [...subqueryResult.triples.values()].flat()
+                    )
+                  );
+                }
+              }
               results.set(
                 entityId,
                 convertEntityToJS(entity, collectionSchema) as any
@@ -649,14 +752,15 @@ function subscribeSingleEntity<
               results.delete(entityId);
             }
           }
-          onResults([results, triples]);
+          await onResults([results, triples]);
         } catch (e) {
-          onError && onError(e);
+          onError && (await onError(e));
         }
       });
+      await onResults([results, triples]);
       return unsub;
     } catch (e) {
-      onError && onError(e);
+      onError && (await onError(e));
     }
     return () => {};
   };
@@ -677,8 +781,8 @@ export function subscribeResultsAndTriples<
   query: Q,
   onResults: (
     args: [results: FetchResult<Q>, newTriples: Map<string, TripleRow[]>]
-  ) => void,
-  onError?: (error: any) => void,
+  ) => void | Promise<void>,
+  onError?: (error: any) => void | Promise<void>,
   schema?: M
 ) {
   const { select, order, limit } = query;
@@ -694,18 +798,6 @@ export function subscribeResultsAndTriples<
       });
       results = fetchResult.results;
       triples = fetchResult.triples;
-      onResults([
-        new Map(
-          [...results].map(([id, entity]) => [
-            id,
-            convertEntityToJS(
-              entity,
-              schema && schema[query.collectionName]?.schema
-            ),
-          ])
-        ) as FetchResult<Q>,
-        triples,
-      ]);
       const unsub = tripleStore.onWrite(async (storeWrites) => {
         try {
           // Handle queries with nested queries as a special case for now
@@ -720,7 +812,7 @@ export function subscribeResultsAndTriples<
             });
             results = fetchResult.results;
             triples = fetchResult.triples;
-            onResults([
+            await onResults([
               new Map(
                 [...results].map(([id, entity]) => [
                   id,
@@ -866,7 +958,7 @@ export function subscribeResultsAndTriples<
           results = nextResult as FetchResult<Q>;
           triples = matchedTriples;
           // console.timeEnd('query recalculation');
-          onResults([
+          await onResults([
             new Map(
               [...results].map(([id, entity]) => [
                 id,
@@ -879,12 +971,24 @@ export function subscribeResultsAndTriples<
             triples,
           ]);
         } catch (e) {
-          onError && onError(e);
+          onError && (await onError(e));
         }
       });
+      await onResults([
+        new Map(
+          [...results].map(([id, entity]) => [
+            id,
+            convertEntityToJS(
+              entity,
+              schema && schema[query.collectionName]?.schema
+            ),
+          ])
+        ) as FetchResult<Q>,
+        triples,
+      ]);
       return unsub;
     } catch (e) {
-      onError && onError(e);
+      onError && (await onError(e));
     }
     return () => {};
   };
@@ -903,17 +1007,15 @@ export function subscribe<
 >(
   tripleStore: TripleStore,
   query: Q,
-  onResults: (results: FetchResult<Q>) => void,
-  onError?: (error: any) => void,
+  onResults: (results: FetchResult<Q>) => void | Promise<void>,
+  onError?: (error: any) => void | Promise<void>,
   schema?: M
 ) {
   if (query.entityId) {
     return subscribeSingleEntity(
       tripleStore,
       query,
-      ([results]) => {
-        onResults(results);
-      },
+      ([results]) => onResults(results),
       onError,
       schema
     );
@@ -921,9 +1023,7 @@ export function subscribe<
   return subscribeResultsAndTriples(
     tripleStore,
     query,
-    ([results]) => {
-      onResults(results);
-    },
+    ([results]) => onResults(results),
     onError,
     schema
   );
@@ -935,17 +1035,15 @@ export function subscribeTriples<
 >(
   tripleStore: TripleStore,
   query: Q,
-  onResults: (results: Map<string, TripleRow[]>) => void,
-  onError?: (error: any) => void,
+  onResults: (results: Map<string, TripleRow[]>) => void | Promise<void>,
+  onError?: (error: any) => void | Promise<void>,
   schema?: M
 ) {
   if (query.entityId) {
     return subscribeSingleEntity(
       tripleStore,
       query,
-      ([_results, triples]) => {
-        onResults(triples);
-      },
+      ([_results, triples]) => onResults(triples),
       onError,
       schema
     );
@@ -953,9 +1051,7 @@ export function subscribeTriples<
   return subscribeResultsAndTriples(
     tripleStore,
     query,
-    ([_results, triples]) => {
-      onResults(triples);
-    },
+    ([_results, triples]) => onResults(triples),
     onError,
     schema
   );

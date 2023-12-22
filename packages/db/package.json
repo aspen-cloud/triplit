@@ -53,6 +53,7 @@
   },
   "dependencies": {
     "@sinclair/typebox": "^0.27.4",
+    "@triplit/tuple-database": "^2.2.5",
     "ajv-formats": "^2.1.1",
     "idb": "^7.1.1",
     "nanoid": "^3.0.0",

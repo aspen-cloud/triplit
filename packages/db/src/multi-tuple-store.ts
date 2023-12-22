@@ -7,13 +7,13 @@ import {
   Unsubscribe,
   transactionalReadWriteAsync,
   WriteOps,
-} from 'tuple-database';
-import { compareTuple } from 'tuple-database/helpers/compareTuple.js';
+} from '@triplit/tuple-database';
+import { compareTuple } from '@triplit/tuple-database/helpers/compareTuple.js';
 import {
   TuplePrefix,
   TupleToObject,
   RemoveTupleValuePairPrefix,
-} from 'tuple-database/database/typeHelpers';
+} from '@triplit/tuple-database/database/typeHelpers';
 import { DBScanFailureError, NotImplementedError } from './errors.js';
 
 export type StorageScope = {
@@ -439,17 +439,19 @@ type MultiTupleReactivityCallback<TupleSchema extends KeyValuePair> = (
     string,
     WriteOps<Extract<TupleSchema, { key: TupleToObject<any> }>>
   >
-) => void;
+) => void | Promise<void>;
+type MultiTupleReactivityCallbackArgs = Record<string, WriteOps<any>>;
 export class MultiTupleReactivity {
   private txCallbacks: Record<
     string,
     {
       callbacks: Set<MultiTupleReactivityCallback<any>>;
-      args: Record<string, WriteOps<any>>;
+      args: MultiTupleReactivityCallbackArgs;
       subTxs: string[];
     }
   > = {};
   private subTxReactivityIds: Record<string, string> = {};
+  private taskQueue = new TaskQueue();
 
   trackSubTx(storeId: string, txId: string, multiStoreTxId: string) {
     this.subTxReactivityIds[`${storeId}_${txId}`] = multiStoreTxId;
@@ -481,15 +483,45 @@ export class MultiTupleReactivity {
   emit(reactivityId: string) {
     const txCallbacks = this.txCallbacks[reactivityId];
     if (txCallbacks) {
-      for (const callback of txCallbacks.callbacks) {
-        callback(txCallbacks.args);
-      }
-
-      // cleanup (maybe make its own method)
+      this.taskQueue.schedule(
+        Array.from(txCallbacks.callbacks),
+        txCallbacks.args
+      );
       for (const subTxId of txCallbacks.subTxs) {
         delete this.subTxReactivityIds[subTxId];
       }
       delete this.txCallbacks[reactivityId];
     }
+  }
+}
+
+class TaskQueue {
+  queue: [any, any][] = [];
+  isRunning = false;
+
+  async schedule(callbacks: any[], args: any) {
+    if (this.isRunning) {
+      setTimeout(() => {
+        this.queue.push(...callbacks.map((cb) => [cb, args] as [any, any]));
+        this.run();
+      });
+      return;
+    }
+    this.queue.push(...callbacks.map((cb) => [cb, args] as [any, any]));
+    this.run();
+  }
+
+  async run() {
+    if (this.isRunning) {
+      return;
+    }
+    this.isRunning = true;
+    while (this.queue.length) {
+      const stuff = this.queue.shift();
+      if (!stuff) break;
+      const [cb, a] = stuff;
+      await cb(a);
+    }
+    this.isRunning = false;
   }
 }

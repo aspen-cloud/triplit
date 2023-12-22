@@ -1,14 +1,19 @@
 import { format } from 'prettier';
 import { Command } from '../command.js';
-import { TRIPLIT_DIR, createDirIfNotExists } from '../filesystem.js';
+import { CWD, TRIPLIT_DIR, createDirIfNotExists } from '../filesystem.js';
 import * as Flag from '../flags.js';
 import fs from 'fs';
 import path from 'path';
 import { spawn } from 'child_process';
 import { blue, green, red, yellow } from 'ansis/colors';
+import degit from 'degit';
 
 function isProjectSetup() {
   return fs.existsSync(TRIPLIT_DIR);
+}
+
+function hasPackageJson() {
+  return fs.existsSync('package.json');
 }
 
 function inferPackageManager() {
@@ -37,13 +42,36 @@ export default Command({
       char: 'f',
       description: 'Frontend framework helpers to install',
     }),
+    template: Flag.Enum({
+      options: ['chat'] as const,
+      char: 't',
+      description: 'Project template to use',
+    }),
   },
   async run({ flags }) {
-    console.log('Creating Triplit project...');
     // check if project is setup
     if (isProjectSetup()) {
       console.log('Project already initialized');
       return;
+    }
+
+    if (flags.template) {
+      if (hasPackageJson()) {
+        console.log(
+          'Cannot create template in existing project. Please run this command in an empty directory.'
+        );
+        return;
+      }
+      if (flags.template === 'chat') {
+        await degit('aspen-cloud/triplit/templates/chat-template').clone(
+          path.join(CWD, 'chat-template')
+        );
+        console.log('Created project with chat template');
+        return;
+      } else {
+        console.log('Invalid template specified. Available templates: chat');
+        return;
+      }
     }
 
     if (flags.framework) {

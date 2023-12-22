@@ -7,7 +7,7 @@ import {
   InsertTypeFromModel,
   timestampedSchemaToSchema,
 } from './schema.js';
-import { AsyncTupleStorageApi, TupleStorageApi } from 'tuple-database';
+import { AsyncTupleStorageApi, TupleStorageApi } from '@triplit/tuple-database';
 import CollectionQueryBuilder, {
   fetch,
   FetchResult,
@@ -183,14 +183,19 @@ export function ruleToTuple(
   ]);
 }
 
+// export type FetchByIdQueryParams<
+//   M extends Models<any, any> | undefined,
+//   CN extends CollectionNameFromModels<M>
+// > = {
+//   include?: Parameters<
+//     ReturnType<typeof CollectionQueryBuilder<M, CN>>['include']
+//   >[0][];
+// };
+
 export type FetchByIdQueryParams<
   M extends Models<any, any> | undefined,
   CN extends CollectionNameFromModels<M>
-> = {
-  include?: Parameters<
-    ReturnType<typeof CollectionQueryBuilder<M, CN>>['include']
-  >[0][];
-};
+> = Pick<Query<M, CN>, 'include'>;
 
 export default class DB<M extends Models<any, any> | undefined = undefined> {
   tripleStore: TripleStore;
@@ -382,15 +387,10 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
     queryParams: FetchByIdQueryParams<M, CN> = {},
     options: DBFetchOptions = {}
   ) {
-    await this.ensureMigrated;
-    let query = this.query(collectionName).entityId(id);
-    for (const inc of queryParams.include ?? []) {
-      query = query.include(inc);
-    }
-    const result = await this.fetch(query.build(), options);
-    // Fetch handles replacing variables, need to replace here to pull data out
-    const entityId = replaceVariable(id, this.variables);
-    return result.has(entityId) ? result.get(entityId)! : null;
+    const query = this.query(collectionName, queryParams)
+      .where('id', '=', id)
+      .build();
+    return this.fetchOne(query, options);
   }
 
   async fetchOne<Q extends CollectionQuery<M, any>>(
@@ -400,9 +400,9 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
     query.limit = 1;
     await this.ensureMigrated;
     const result = await this.fetch(query, options);
-    const entry = [...result.entries()][0];
-    if (!entry) return null;
-    return entry;
+    const entity = [...result.values()][0];
+    if (!entity) return null;
+    return entity;
   }
 
   async insert<CN extends CollectionNameFromModels<M>>(
@@ -427,8 +427,8 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
 
   subscribe<Q extends CollectionQuery<M, any>>(
     query: Q,
-    onResults: (results: FetchResult<Q>) => void,
-    onError?: (error: any) => void,
+    onResults: (results: FetchResult<Q>) => void | Promise<void>,
+    onError?: (error: any) => void | Promise<void>,
     options: DBFetchOptions = {}
   ) {
     const startSubscription = async () => {
@@ -461,8 +461,8 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
 
   subscribeTriples<Q extends CollectionQuery<M, any>>(
     query: Q,
-    onResults: (results: TripleRow[]) => void,
-    onError?: (error: any) => void,
+    onResults: (results: TripleRow[]) => void | Promise<void>,
+    onError?: (error: any) => void | Promise<void>,
     options: DBFetchOptions = {}
   ) {
     const startSubscription = async () => {

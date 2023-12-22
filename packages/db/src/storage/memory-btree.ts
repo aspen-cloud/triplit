@@ -6,8 +6,8 @@ import {
   Tuple,
   TupleStorageApi,
   WriteOps,
-} from 'tuple-database';
-import { compareTuple } from 'tuple-database/helpers/compareTuple.js';
+} from '@triplit/tuple-database';
+import { compareTuple } from '@triplit/tuple-database/helpers/compareTuple.js';
 import BTree from 'sorted-btree';
 
 // Hack for https://github.com/qwertie/btree-typescript/issues/36
