@@ -2,9 +2,9 @@
 
 # Overview
 
-[Triplit](https://www.triplit.dev) is a complete solution to data persistence, state management, and realtime synchronization for web applications that want to go fast.
+[Triplit](https://www.triplit.dev) is an open-source database that syncs data between server and browser in real-time.
 
-We provide a real-time syncing datastore that you can drop into your app as a simple Typescript package. Triplit handles storing your data on the server and intelligently syncs your queries to your clients. **We call this type of system a “full stack database”**—you can watch our presentation to the [Local First community](https://localfirstweb.dev/) on this new paradigm [here](https://www.notion.so/Don-t-send-schema-triples-from-client-without-service-key-4e2c2f85f7d6401bb8ad6a942c9607ea?pvs=21).
+Triplit provides a real-time syncing datastore that you can drop into your app as a Typescript package. Triplit handles storing your data on the server and intelligently syncs your queries to your clients. **We call this type of system a “full stack database”**—you can watch our presentation to the [Local First community](https://localfirstweb.dev/) on this new paradigm [here](https://www.notion.so/Don-t-send-schema-triples-from-client-without-service-key-4e2c2f85f7d6401bb8ad6a942c9607ea?pvs=21).
 
 Triplit brings together:
 
@@ -24,7 +24,7 @@ Triplit brings together:
 
 🗂️ **Schemas** for data safety and Typescript autocompletion
 
-🔐 **Authorization** with row level granularity
+🔐 **Authorization** that's enforced on the server for both read and writes
 
 🤝 **Collaboration/Multiplayer** powered by [CRDTs](https://en.wikipedia.org/wiki/Conflict-free_replicated_data_type)
 
