@@ -66,6 +66,28 @@ function logAndThrowError(msg: string) {
   throw new Error(msg);
 }
 
+// Time first inserts for each bench
+{
+  const now = performance.now();
+  for (const cls of CLASSES) {
+    await rxdb.collections.classes.upsert(cls);
+  }
+  console.log(
+    `rxdb first insert ${CLASSES.length} classes: ${performance.now() - now}ms`
+  );
+}
+{
+  const now = performance.now();
+  for (const cls of CLASSES) {
+    await triplit.insert('classes', cls);
+  }
+  console.log(
+    `triplit first insert ${CLASSES.length} classes: ${
+      performance.now() - now
+    }ms`
+  );
+}
+
 bench
   .add('vanilla js map', async () => {
     const db = new Map(CLASSES.map((cls) => [cls.id, cls]));
