@@ -1,13 +1,3 @@
-import {
-  Attribute,
-  EAV,
-  EntityId,
-  TripleRow,
-  TripleStoreBeforeCommitHook,
-  TripleStoreBeforeInsertHook,
-  Value,
-  isTupleEntityDeleteMarker,
-} from './triple-store.js';
 import { TripleStoreTransaction } from './triple-store-transaction.js';
 import {
   getSchemaFromPath,
@@ -76,6 +66,16 @@ import { dbDocumentToTuples } from './utils.js';
 import { typeFromJSON } from './data-types/base.js';
 import { SchemaDefinition } from './data-types/serialization.js';
 import { createSetProxy } from './data-types/set.js';
+import {
+  EntityId,
+  TripleStoreBeforeInsertHook,
+  TripleStoreBeforeCommitHook,
+  isTupleEntityDeleteMarker,
+  TripleRow,
+  EAV,
+  Attribute,
+  Value,
+} from './triple-store-utils.js';
 
 interface TransactionOptions<
   M extends Models<any, any> | undefined = undefined
@@ -185,7 +185,7 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
     );
     const deletedEntities = new Map();
     for (const id of deletedEntityIds) {
-      const entity = constructEntity(await tx.store.findByEntity(id), id);
+      const entity = constructEntity(await tx.findByEntity(id), id);
       if (entity) deletedEntities.set(id, entity.data);
     }
 
