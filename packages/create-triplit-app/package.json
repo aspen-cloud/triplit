@@ -1,0 +1,29 @@
+{
+  "name": "create-triplit-app",
+  "packageManager": "yarn@3.4.1",
+  "version": "0.0.3",
+  "bin": "./index.js",
+  "files": [
+    "index.js",
+    "/dist",
+    "/files"
+  ],
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "lint": "tsc --noEmit",
+    "publish-pkg": "node ../../scripts/npm-check-version-and-publish.js"
+  },
+  "dependencies": {
+    "ansis": "^2.0.3",
+    "degit": "^2.8.4",
+    "minimist": "^1.2.8",
+    "prompts": "^2.4.2"
+  },
+  "devDependencies": {
+    "@types/degit": "^2",
+    "@types/minimist": "^1.2.4",
+    "@types/prompts": "^2",
+    "typescript": "^5.3.3"
+  }
+}
