@@ -34,8 +34,10 @@ triplit --help
 Once you have the CLI installed you can initialize a new Triplit project, which will create the files and folders for a Triplit project and install the required dependencies:
 
 ```bash
-triplit init
+npm create triplit-app .
 ```
+
+````
 
 Alternatively, you may manually install the packages you need.
 
@@ -47,7 +49,7 @@ A Triplit Client instance will set up a local database for your data and ([if tu
 import { TriplitClient } from '@triplit/client';
 
 const client = new TriplitClient();
-```
+````
 
 Triplit organizes your data into collections, which are like tables in a relational database. You can insert, update, and delete entities in a collection. As well, you can execute arbitrary queries on the database and subscribe to changes to query results over time.
 
