@@ -4,7 +4,7 @@
     "lib": ["ESNext"],
     "target": "ESNext", // You can adjust the target as needed.
     "module": "ESNext", // This will be overridden in npm scripts
-    "outDir": "./dist", // Output directory
+    "outDir": "./dist/esm", // Output directory
     "tsBuildInfoFile": "./dist/tsconfig.tsbuildinfo",
     "strict": true,
     "moduleResolution": "node",
@@ -13,7 +13,8 @@
     "declarationDir": "./dist/types", // Directory for type declarations
     "isolatedModules": true,
     "skipLibCheck": true,
-    "rootDir": "./src/"
+    "rootDir": "./src/",
+    "incremental": true
   },
   "include": ["./src/**/*.ts"],
   "exclude": ["./dist", "node_modules"]

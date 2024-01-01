@@ -20,9 +20,7 @@
   },
   "type": "module",
   "scripts": {
-    "build": "yarn build:esm & yarn build:types",
-    "build:esm": "tsc --module ESNext --outDir ./dist/esm",
-    "build:types": "tsc --emitDeclarationOnly",
+    "build": "tsc  --build --pretty",
     "lint:build": "npx publint",
     "lint": "tsc --noEmit",
     "test": "yarn test:unit && yarn typecheck",

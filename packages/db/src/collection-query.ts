@@ -19,12 +19,7 @@ import {
   timestampedObjectToPlainObject,
 } from './schema.js';
 import { Timestamp } from './timestamp.js';
-import {
-  TripleRow,
-  TripleStore,
-  TripleStoreApi,
-  Value,
-} from './triple-store.js';
+import { TripleStore, TripleStoreApi } from './triple-store.js';
 import { Pipeline } from './utils/pipeline.js';
 import { EntityIdMissingError, InvalidFilterError } from './errors.js';
 import {
@@ -41,6 +36,7 @@ import { isTimestampedEntityDeleted } from './entity.js';
 import { CollectionNameFromModels, ModelFromModels } from './db.js';
 import { QueryType } from './data-types/query.js';
 import { ExtractJSType } from './data-types/type.js';
+import { TripleRow, Value } from './triple-store-utils.js';
 
 export default function CollectionQueryBuilder<
   M extends Models<any, any> | undefined,
@@ -223,7 +219,10 @@ export async function fetch<
     [...entitiesMap.entries()].map(([id, entity]) => {
       return [
         id,
-        { entity: entity.data, triples: Object.values(entity.triples) },
+        {
+          entity: entity.data,
+          triples: Object.values(entity.triples) as TripleRow[],
+        },
       ];
     })
   );

@@ -1,5 +1,5 @@
 import { UnserializableValueError } from './errors.js';
-import { Attribute, EAV, Value } from './triple-store.js';
+import { Attribute, EAV, Value } from './triple-store-utils.js';
 import { TuplePrefix } from './utility-types.js';
 
 function setToJSON(val: Set<string>) {

@@ -1,12 +1,12 @@
 import { ValuePointer } from '@sinclair/typebox/value';
 import { Model, Models, SelectModelFromModel } from './schema.js';
-import { EntityId, TripleRow } from './triple-store.js';
 import { QueryClauseFormattingError } from './errors.js';
 import { timestampCompare } from './timestamp.js';
 import { CollectionNameFromModels, ModelFromModels } from './db.js';
 import { ExtractOperators } from './data-types/type.js';
 import { RecordType } from './data-types/record.js';
 import { QueryType } from './data-types/query.js';
+import { EntityId, TripleRow } from './triple-store-utils.js';
 
 type Path = string;
 // Should be friendly types that we pass into queries

@@ -2,7 +2,7 @@ import { TObject } from '@sinclair/typebox';
 import { InvalidSchemaPathError } from './errors.js';
 import type { CollectionRules } from './db.js';
 import { Timestamp } from './timestamp.js';
-import type { Attribute, EAV, TripleRow } from './triple-store.js';
+import type { Attribute, EAV, TripleRow } from './triple-store-utils.js';
 import { dbDocumentToTuples, objectToTuples } from './utils.js';
 import { constructEntity } from './query.js';
 import { appendCollectionToId, StoreSchema } from './db-helpers.js';

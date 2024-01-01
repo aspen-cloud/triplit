@@ -316,13 +316,8 @@ export class TripleStoreTransaction implements TripleStoreApi {
   }
 
   withScope(scope: StorageScope) {
-    // return new TripleStoreTxOperator({
-    //   parentTx: this,
-    //   tupleOperator: this.tupleTx.withScope(scope),
-    //   clock: this.clock,
-    //   hooks: this.hooks,
-    // });
     return new TripleStoreTransaction({
+      // @ts-expect-error
       tupleTx: this.tupleTx.withScope(scope),
       clock: this.clock,
       hooks: this.hooks,

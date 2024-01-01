@@ -12,8 +12,9 @@ import {
 } from './query.js';
 import { Models, getSchemaFromPath } from './schema.js';
 import * as TB from '@sinclair/typebox/value';
-import { TripleRow, TripleStore } from './triple-store.js';
+import { TripleStore } from './triple-store.js';
 import { QueryCacheError } from './errors.js';
+import { TripleRow } from './triple-store-utils.js';
 
 export class VariableAwareCache<Schema extends Models<any, any>> {
   cache: Map<

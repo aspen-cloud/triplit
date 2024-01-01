@@ -20,12 +20,7 @@ import {
   schemaToTriples,
   triplesToSchema,
 } from './schema.js';
-import {
-  Attribute,
-  TripleStore,
-  TripleStoreApi,
-  Value,
-} from './triple-store.js';
+import { TripleStore, TripleStoreApi } from './triple-store.js';
 import { VALUE_TYPE_KEYS } from './data-types/serialization.js';
 import DB, {
   CollectionFromModels,
@@ -34,6 +29,7 @@ import DB, {
 } from './db.js';
 import { DBTransaction } from './db-transaction.js';
 import { DataType } from './data-types/base.js';
+import { Attribute, Value } from './triple-store-utils.js';
 
 const ID_SEPARATOR = '#';
 
