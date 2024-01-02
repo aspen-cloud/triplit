@@ -4,25 +4,95 @@ import { Callout, Tabs, Tab } from 'nextra-theme-docs';
 
 ## Installation
 
-Triplit provides a CLI for creating and managing Triplit projects. Install the CLI in your project:
+### Templating
 
-<Tabs items={['npm', 'pnpm', 'yarn']}>
+If you would like to scaffold a complete full stack application with Triplit, you can use the create comamnd:
 
+<Tabs items={['npm', 'pnpm', 'yarn', 'bun']}>
+  <Tab>
+    ```bash copy
+    npm create triplit-app my-app
+    ```
+
+  </Tab>
+  <Tab>
+    ```bash copy
+    pnpm create triplit-app my-app
+    ```
+
+  </Tab>
+  <Tab>
+    ```bash copy
+    yarn create triplit-app my-app
+    ```
+
+  </Tab>
+  <Tab>
+    ```bash copy
+    bun create triplit-app my-app
+    ```
+    
+    </Tab>
+</Tabs>
+
+As well you may use the `create` command to create a new Triplit project from a template. For example, to create a new Triplit project with a working chat application:
+
+<Tabs items={['npm', 'pnpm', 'yarn', 'bun']}>
+  <Tab>
+    ```bash copy
+    npm create triplit-app my-app --template=chat
+    ```
+
+  </Tab>
+  <Tab>
+    ```bash copy
+    pnpm create triplit-app my-app --template=chat
+    ```
+
+  </Tab>
+  <Tab>
+    ```bash copy
+    yarn create triplit-app my-app --template=chat
+    ```
+
+  </Tab>
+  <Tab>
+    ```bash copy
+    bun create triplit-app my-app --template=chat
+    ```
+    
+    </Tab>
+</Tabs>
+
+### Existing projects
+
+If you have an existing project, Triplit also provides a CLI for creating and managing Triplit projects. Install the CLI in your project:
+
+<Tabs items={['npm', 'pnpm', 'yarn', 'bun']}>
   <Tab>
     ```bash copy
     npm install --save-dev @triplit/cli
     ```
+
   </Tab>
-    <Tab>
+  <Tab>
     ```bash copy
     pnpm add --save-dev @triplit/cli
     ```
+
   </Tab>
   <Tab>
     ```bash copy
     yarn add --dev @triplit/cli 
     ```
+
   </Tab>
+  <Tab>
+    ```bash copy
+    bun add --dev @triplit/cli 
+    ```
+    
+    </Tab>
 </Tabs>
 
 All commands in the CLI are inspectable by adding the `--help` flag. For example, to see the available commands:
@@ -34,10 +104,8 @@ triplit --help
 Once you have the CLI installed you can initialize a new Triplit project, which will create the files and folders for a Triplit project and install the required dependencies:
 
 ```bash
-npm create triplit-app .
+triplit init
 ```
-
-````
 
 Alternatively, you may manually install the packages you need.
 
@@ -49,7 +117,7 @@ A Triplit Client instance will set up a local database for your data and ([if tu
 import { TriplitClient } from '@triplit/client';
 
 const client = new TriplitClient();
-````
+```
 
 Triplit organizes your data into collections, which are like tables in a relational database. You can insert, update, and delete entities in a collection. As well, you can execute arbitrary queries on the database and subscribe to changes to query results over time.
 
