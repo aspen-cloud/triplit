@@ -8585,7 +8585,7 @@ __metadata:
     prompts: ^2.4.2
     typescript: ^5.3.3
   bin:
-    create-triplit-app: ./dist/index.js
+    create-triplit-app: ./index.js
   languageName: unknown
   linkType: soft
 
