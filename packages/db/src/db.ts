@@ -259,7 +259,6 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
         this.tripleStore.tupleStore.subscribe(
           { prefix: ['EAT', appendCollectionToId('_metadata', '_schema')] },
           async (storeWrites) => {
-            console.log('storeWrites', storeWrites);
             // This assumes we are properly using tombstoning, so only looking at set operations
             const schemaTriples = Object.values(storeWrites).flatMap(
               (w) => w.set?.map(indexToTriple) ?? []
