@@ -19,6 +19,7 @@
     "@radix-ui/react-dialog": "^1.0.5",
     "@radix-ui/react-dropdown-menu": "^2.0.6",
     "@radix-ui/react-slot": "^1.0.2",
+    "@triplit/authjs-adapter": "^0.0.1",
     "@triplit/client": "^0.3.1",
     "@triplit/db": "^0.3.1",
     "@triplit/react": "^0.3.1",

@@ -27,13 +27,7 @@
             "type": "query",
             "query": {
               "collectionName": "users",
-              "where": [
-                [
-                  "id",
-                  "=",
-                  "$sender_id"
-                ]
-              ]
+              "where": [["id", "=", "$sender_id"]]
             }
           },
           "text": {
@@ -60,26 +54,14 @@
             "type": "query",
             "query": {
               "collectionName": "conversations",
-              "where": [
-                [
-                  "id",
-                  "=",
-                  "$conversationId"
-                ]
-              ]
+              "where": [["id", "=", "$conversationId"]]
             }
           }
         },
         "rules": {
           "read": {
             "inConvo": {
-              "filter": [
-                [
-                  "convo.members",
-                  "=",
-                  "$SESSION_USER_ID"
-                ]
-              ]
+              "filter": [["convo.members", "=", "$SESSION_USER_ID"]]
             }
           }
         }
@@ -115,26 +97,14 @@
             "type": "query",
             "query": {
               "collectionName": "users",
-              "where": [
-                [
-                  "id",
-                  "in",
-                  "$members"
-                ]
-              ]
+              "where": [["id", "in", "$members"]]
             }
           }
         },
         "rules": {
           "read": {
             "isMember": {
-              "filter": [
-                [
-                  "members",
-                  "=",
-                  "$SESSION_USER_ID"
-                ]
-              ]
+              "filter": [["members", "=", "$SESSION_USER_ID"]]
             }
           }
         }
@@ -241,6 +211,13 @@
             "type": "string",
             "options": {}
           },
+          "user": {
+            "type": "query",
+            "query": {
+              "collectionName": "users",
+              "where": [["id", "=", "$userId"]]
+            }
+          },
           "type": {
             "type": "string",
             "options": {}
@@ -323,6 +300,13 @@
           "userId": {
             "type": "string",
             "options": {}
+          },
+          "user": {
+            "type": "query",
+            "query": {
+              "collectionName": "users",
+              "where": [["id", "=", "$userId"]]
+            }
           },
           "expires": {
             "type": "date",

@@ -1,11 +1,11 @@
 // import CredentialsProvider from "next-auth/providers/credentials"
 import CredentialsProvider from "@auth/core/providers/credentials"
+import { TriplitAdapter } from "@triplit/authjs-adapter"
 // import jwt from "jsonwebtoken"
 import * as jwt from "jose"
 import NextAuth, { NextAuthConfig } from "next-auth"
 import GithubProvider from "next-auth/providers/github"
 
-import TriplitAdapter from "./lib/auth-adapter.js"
 import { isPasswordValid } from "./lib/crypt.js"
 
 export const authOptions: NextAuthConfig = {

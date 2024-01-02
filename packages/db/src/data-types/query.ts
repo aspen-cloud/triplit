@@ -36,10 +36,11 @@ export function QueryType<Q extends SubQuery<any, any>>(
       return val as FetchResult<Q>;
     },
     convertJSONToJS(val) {
-      return val;
+      throw new Error('Not implemented');
     },
     convertJSToJSON(val) {
-      return val;
+      if (!val) return val;
+      return Array.from(val.entries());
     },
     // TODO: determine proper value and type here
     // Type should go extract the deserialized type of each of its keys

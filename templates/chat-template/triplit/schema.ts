@@ -1,5 +1,4 @@
-import { Models } from "@triplit/client"
-import { Schema as S } from "@triplit/db"
+import { Models, Schema as S } from "@triplit/db"
 
 export const schema = {
   messages: {
@@ -77,6 +76,10 @@ export const schema = {
     schema: S.Schema({
       id: S.Id(),
       userId: S.String(),
+      user: S.Query({
+        collectionName: "users" as const,
+        where: [["id", "=", "$userId"]],
+      }),
       type: S.String(),
       provider: S.String(),
       providerAccountId: S.String(),
@@ -93,6 +96,10 @@ export const schema = {
     schema: S.Schema({
       id: S.Id(),
       userId: S.String(),
+      user: S.Query({
+        collectionName: "users" as const,
+        where: [["id", "=", "$userId"]],
+      }),
       expires: S.Date(),
       sessionToken: S.String(),
     }),
