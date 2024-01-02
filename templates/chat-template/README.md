@@ -4,13 +4,19 @@ A template for building a chat app with offline-mode + caching, optimistic updat
 
 ## Getting started
 
+### Download the template and install its dependencies
+
+```bash
+yarn create triplit-app --template=chat && cd triplit-app && yarn install
+```
+
 ### Run the Next.js dev server
 
 ```bash
 yarn dev
 ```
 
-### Run the Triplit dev environment
+### In another terminal, run the Triplit dev environment
 
 To get syncing working between multiple clients, you'll need to start a local Triplit dev environment.
 
