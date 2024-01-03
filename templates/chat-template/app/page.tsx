@@ -12,23 +12,21 @@ export default async function IndexPage() {
           in production.
         </p>
         <h3>Features</h3>
-        <p>
-          <ul>
-            <li>
-              Sent/unsent indicators for messages using Triplit's{" "}
-              <code>syncStatus</code> query filter
-            </li>
-            <li>
-              Offline support using Triplit's built-in offline cache and
-              optimistic updates
-            </li>
-            <li>
-              Realtime updates and syncing between clients using Triplit's sync
-              enginge.
-            </li>
-            <li>User accounts stored in Triplit's remote database </li>
-          </ul>
-        </p>
+        <ul>
+          <li>
+            Sent/unsent indicators for messages using Triplit's{" "}
+            <code>syncStatus</code> query filter
+          </li>
+          <li>
+            Offline support using Triplit's built-in offline cache and
+            optimistic updates
+          </li>
+          <li>
+            Realtime updates and syncing between clients using Triplit's sync
+            enginge.
+          </li>
+          <li>User accounts stored in Triplit's remote database </li>
+        </ul>
         <h3>Built with</h3>
         <p>
           <a href="https://nextjs.org/"> Next.js</a>,{" "}
