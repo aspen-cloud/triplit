@@ -1,5 +1,13 @@
 # @triplit/client
 
+## 0.3.2
+
+### Patch Changes
+
+- eaedd37: Add remote client to directly query http api
+- Updated dependencies [817e4cd]
+  - @triplit/db@0.3.2
+
 ## 0.3.1
 
 ### Patch Changes
