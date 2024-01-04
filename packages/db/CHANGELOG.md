@@ -1,5 +1,11 @@
 # @triplit/db
 
+## 0.3.2
+
+### Patch Changes
+
+- 817e4cd: export update proxy methods
+
 ## 0.3.1
 
 ### Patch Changes
