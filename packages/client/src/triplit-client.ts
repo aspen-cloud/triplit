@@ -1,8 +1,6 @@
 import {
   DB,
   Migration,
-  CollectionQuery,
-  Builder,
   UpdateTypeFromModel,
   Models,
   CollectionNameFromModels,
@@ -10,10 +8,7 @@ import {
   ModelFromModels,
   DurableClock,
   TriplitError,
-  QUERY_INPUT_TRANSFORMERS,
   InsertTypeFromModel,
-  ReturnTypeFromQuery,
-  toBuilder,
   Storage,
   FetchByIdQueryParams,
 } from '@triplit/db';
@@ -23,30 +18,14 @@ import { MemoryBTreeStorage } from '@triplit/db/storage/memory-btree';
 import { IndexedDbStorage } from '@triplit/db/storage/indexed-db';
 import { SyncTransport } from './transport/transport.js';
 import { SyncEngine } from './sync-engine.js';
-
-//  There is some odd behavior when using infer with intersection types
-//  Our query types are set up as:
-//  CollectionQuery<...> = Query<...> & { ... }
-//  ClientQuery<...> = CollectionQuery<...> & { ... }
-//
-//  However, if you attempt to infer the generic of a base object (ex. CollectionQuery<infer M>) with the intersected object (ClientQuery<any>) the inferred type M is overly generic
-//
-//  Recreating the fetch result type here to avoid this issue
-//  Playground: https://www.typescriptlang.org/play?#code/KYDwDg9gTgLgBDAnmYcCyEAmwA2BnAHgCg44BhCHHYAYxgEsIA7AOQEMBbVUGYJzPHDwwo9JgHMANCTgAVODz4C4AJVrRMBYaImShIseIB8RI3AC8q9VE0UqtBs3Zc9sowG4iRJCjgAhNjxgAjQFEF5+QQxsfAI2JkQ9eMQjPTIWMIjlAGtgRAgAM3QzSwBvGTYYEQBGAC50AG10gF1PAF8vH1QAUXClYE1QxUj0LFxCZKSE1PIM4Zy8wuKLf0DgtDSWMwAyOFLKkQAmeu1DNs9vZFRZYGFqgnl5wQCguISplJK5TKVntbfEnBkmYAPxwADkYECeHBcHq4IKbHoOHBni6cluMEODx+IxewUmQOmX0efTx-zEBWAUDgAFUPqC6XCIYjkajOlc4ABJJhgACu8EsvSyAwIpV4wnq+3hBQgEHBbTaenBEpg4I8HN8ajwfJwMGqKxudwIPP5MA16O1uqxhsx2NNAo8QA
-/**
- * Results from a query based on the query's model in the format `Map<id, entity>`
- */
-export type ClientFetchResult<C extends ClientQuery<any, any>> = Map<
-  string,
-  ClientFetchResultEntity<C>
->;
-
-type ClientFetchResultEntity<C extends ClientQuery<any, any>> =
-  C extends ClientQuery<infer M, infer CN>
-    ? M extends Models<any, any>
-      ? ReturnTypeFromQuery<M, CN>
-      : any
-    : never;
+import {
+  ClientFetchResult,
+  ClientQuery,
+  ClientQueryBuilder,
+  prepareFetchByIdQuery,
+  prepareFetchOneQuery,
+} from './utils/query.js';
+import { RemoteClient } from './remote-client.js';
 
 export interface SyncOptions {
   server?: string;
@@ -64,43 +43,6 @@ interface AuthOptions {
 
 // Could probably make this an option if you want client side validation
 const SKIP_RULES = true;
-
-export type SyncStatus = 'pending' | 'confirmed' | 'all';
-
-export type ClientQuery<
-  M extends Models<any, any> | undefined,
-  CN extends CollectionNameFromModels<M>
-> = {
-  syncStatus?: SyncStatus;
-} & CollectionQuery<M, CN>;
-
-function ClientQueryBuilder<
-  M extends Models<any, any> | undefined,
-  CN extends CollectionNameFromModels<M>
->(
-  collectionName: CN,
-  params?: Omit<ClientQuery<M, CN>, 'collectionName'>
-): toBuilder<
-  ClientQuery<M, CN>,
-  'collectionName',
-  QUERY_INPUT_TRANSFORMERS<M, CN>
-> {
-  const query: ClientQuery<M, CN> = {
-    collectionName,
-    ...params,
-    syncStatus: params?.syncStatus ?? 'all',
-  };
-  const transformers = QUERY_INPUT_TRANSFORMERS<M, CN>();
-  return Builder(query, {
-    protectedFields: ['collectionName'],
-    inputTransformers: transformers,
-  });
-}
-
-export type ClientQueryBuilder<
-  M extends Models<any, any> | undefined,
-  CN extends CollectionNameFromModels<M>
-> = ReturnType<typeof ClientQueryBuilder<M, CN>>;
 
 function parseScope(query: ClientQuery<any, any>) {
   const { syncStatus } = query;
@@ -206,6 +148,7 @@ export class TriplitClient<M extends Models<any, any> | undefined = undefined> {
    */
   syncEngine: SyncEngine;
   authOptions: AuthOptions;
+  remote: RemoteClient<M>;
 
   private defaultFetchOptions: {
     fetch: FetchOptions;
@@ -250,6 +193,8 @@ export class TriplitClient<M extends Models<any, any> | undefined = undefined> {
       transport,
       ...(serverUrl ? mapServerUrlToSyncOptions(serverUrl) : {}),
     };
+
+    this.remote = new RemoteClient({ server: serverUrl, token });
 
     if (this.authOptions.token) {
       syncOptions.token = this.authOptions.token;
@@ -342,24 +287,9 @@ export class TriplitClient<M extends Models<any, any> | undefined = undefined> {
     queryParams?: FetchByIdQueryParams<M, CN>,
     options?: FetchOptions
   ) {
-    let query = this.query(collectionName).entityId(id);
-    if (queryParams?.include) {
-      for (const [relation, subquery] of Object.entries(queryParams.include)) {
-        if (subquery)
-          query = query.include(
-            // @ts-expect-error
-            relation,
-            subquery
-          );
-        else
-          query = query.include(
-            // @ts-expect-error
-            relation
-          );
-      }
-    }
+    const query = prepareFetchByIdQuery(collectionName, id, queryParams);
     const results = await this.fetch(
-      query.build() as ClientQuery<M, CollectionNameFromModels<M>>,
+      query as ClientQuery<M, CollectionNameFromModels<M>>,
       options
     );
     return results.get(id);
@@ -369,11 +299,11 @@ export class TriplitClient<M extends Models<any, any> | undefined = undefined> {
     query: CQ,
     options?: FetchOptions
   ) {
-    query.limit = 1;
+    query = prepareFetchOneQuery(query);
     const result = await this.fetch(query, options);
-    const entry = [...result.entries()][0];
-    if (!entry) return null;
-    return entry;
+    const entity = [...result.values()][0];
+    if (!entity) return null;
+    return entity;
   }
 
   insert<CN extends CollectionNameFromModels<M>>(
@@ -508,6 +438,7 @@ export class TriplitClient<M extends Models<any, any> | undefined = undefined> {
 
     if (hasToken || hasServerUrl) {
       this.syncEngine.updateConnection(updatedSyncOptions);
+      this.remote.updateOptions(updatedSyncOptions);
     }
   }
 

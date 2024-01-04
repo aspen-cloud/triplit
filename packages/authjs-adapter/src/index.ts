@@ -1,8 +1,8 @@
 import type { Adapter, AdapterUser } from '@auth/core/adapters';
+import type { RemoteClient } from '@triplit/client';
 
 export function TriplitAdapter(
-  server: string,
-  token: string,
+  client: RemoteClient<any>,
   options = {
     sessionCollectionName: 'sessions',
     userCollectionName: 'users',
@@ -10,187 +10,114 @@ export function TriplitAdapter(
     verificationRequestCollectionName: 'verificationRequests',
   }
 ): Adapter {
-  // TODO: setup a nicer http api wrapper that handles requests, errors, (de)serialization, etc.
-  const fetchData = async (uri: string, method: string, body: any) => {
-    const res = await fetch(server + uri, {
-      method,
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: 'Bearer ' + token,
-      },
-      body: JSON.stringify(body),
-    });
-    if (!res.ok) return { result: undefined, error: await res.text() };
-    return { result: await res.json(), error: undefined };
-  };
   return {
     async createUser(user) {
-      const { result } = await fetchData('/insert', 'POST', {
-        collectionName: options.userCollectionName,
-        entity: user,
-      });
+      const result = await client.insert(options.userCollectionName, user);
       return result?.output;
     },
     async getUser(id) {
-      const { result } = await fetchData('/fetch', 'POST', {
-        query: {
-          collectionName: options.userCollectionName,
-          entityId: id,
-        },
-      });
-      const user = (new Map(result?.result ?? []).get(id) ??
-        null) as AdapterUser | null;
+      const user =
+        (await client.fetchById(options.userCollectionName, id)) ?? null;
       return user;
     },
     async getUserByEmail(email) {
-      const { result } = await fetchData('/fetch', 'POST', {
-        query: {
-          collectionName: options.userCollectionName,
-          where: [['email', '=', email]],
-          limit: 1,
-        },
+      const user = await client.fetchOne({
+        collectionName: options.userCollectionName,
+        where: [['email', '=', email]],
       });
-      const user = result?.result?.[0]?.[1];
       return user;
     },
     async getUserByAccount({ providerAccountId, provider }) {
-      const { result: accountRes } = await fetchData('/fetch', 'POST', {
-        query: {
-          collectionName: options.accountCollectionName,
-          where: [
-            ['provider', '=', provider],
-            ['providerAccountId', '=', providerAccountId],
-          ],
-          limit: 1,
-          // We could make schema optional and do a manual join here
-          include: { user: null },
-        },
+      const account = await client.fetchOne({
+        collectionName: options.accountCollectionName,
+        where: [
+          ['provider', '=', provider],
+          ['providerAccountId', '=', providerAccountId],
+        ],
+        // We could make schema optional and do a manual join here
+        include: { user: null },
       });
-      const account = accountRes.result?.[0]?.[1];
-      if (!account) return null;
-      const user = (new Map(account?.user ?? []).get(account.userId) ??
-        null) as AdapterUser | null;
-      return user;
+      return account?.user?.get(account.userId) ?? null;
     },
     async updateUser(user) {
-      const patches = extractNestedObjectValues(user).map((tuple) => [
-        'set',
-        ...tuple,
-      ]);
-      const { result } = await fetchData('/update', 'POST', {
-        collectionName: options.userCollectionName,
-        entityId: user.id,
-        patches,
-      });
+      const { id, ...rest } = user;
+      const result = await client.update(
+        options.userCollectionName,
+        user.id,
+        (entity) => {
+          Object.entries(rest).forEach(([key, value]) => {
+            entity[key] = value;
+          });
+        }
+      );
       return result?.output;
     },
     async linkAccount(account) {
-      const { result } = await fetchData('/insert', 'POST', {
-        collectionName: options.accountCollectionName,
-        entity: account,
-      });
+      const result = await client.insert(
+        options.accountCollectionName,
+        account
+      );
       return result?.output;
     },
     async unlinkAccount({ providerAccountId, provider }) {
-      const { result: accountResult } = await fetchData('/fetch', 'POST', {
-        query: {
-          collectionName: options.accountCollectionName,
-          where: [
-            ['provider', '=', provider],
-            ['providerAccountId', '=', providerAccountId],
-          ],
-          limit: 1,
-        },
-      });
-      const account = accountResult?.result?.[0]?.[1];
-      if (!account) return;
-      const { result: deleteResult } = await fetchData('/delete', 'POST', {
+      const account = await client.fetchOne({
         collectionName: options.accountCollectionName,
-        entityId: account.id,
+        where: [
+          ['provider', '=', provider],
+          ['providerAccountId', '=', providerAccountId],
+        ],
       });
-      if (!deleteResult) return;
+      if (!account) return;
+      await client.delete(options.accountCollectionName, account.id);
       return account;
     },
-    async createSession({ sessionToken, userId, expires }) {
-      const { result } = await fetchData('/insert', 'POST', {
-        collectionName: options.sessionCollectionName,
-        entity: { sessionToken, userId, expires: expires.toISOString() },
-      });
+    async createSession(session) {
+      const result = await client.insert(
+        options.sessionCollectionName,
+        session
+      );
       return result?.output;
     },
     async getSessionAndUser(sessionToken) {
-      const { result: sessionResult } = await fetchData('/fetch', 'POST', {
-        query: {
-          collectionName: options.sessionCollectionName,
-          where: [['sessionToken', '=', sessionToken]],
-          limit: 1,
-          include: { user: null },
-        },
+      const session = await client.fetchOne({
+        collectionName: options.sessionCollectionName,
+        where: [['sessionToken', '=', sessionToken]],
+        include: { user: null },
       });
-      const session = sessionResult?.result?.[0]?.[1];
       if (!session) return null;
-      const user = (new Map(session?.user ?? []).get(session.userId) ??
-        null) as AdapterUser | null;
+      const user = session?.user?.get(session.userId);
       if (!user) return null;
       return { session, user };
     },
     async updateSession(newSession) {
-      const { result: sessionResult } = await fetchData('/fetch', 'POST', {
-        query: {
-          collectionName: options.sessionCollectionName,
-          where: [['sessionToken', '=', newSession.sessionToken]],
-          limit: 1,
-        },
-      });
-      const session = sessionResult?.result?.[0]?.[1];
-      if (!session) return null;
-      const patches = extractNestedObjectValues(newSession).map((tuple) => [
-        'set',
-        ...tuple,
-      ]);
-      const { result: updateResult } = await fetchData('/update', 'POST', {
+      const session = await client.fetchOne({
         collectionName: options.sessionCollectionName,
-        entityId: session.id,
-        patches,
+        where: [['sessionToken', '=', newSession.sessionToken]],
+        select: ['id'],
       });
-      return updateResult?.output;
+      const sessionId = session?.id;
+      if (!session) return null;
+      const result = await client.update(
+        options.sessionCollectionName,
+        sessionId,
+        (entity) => {
+          Object.entries(newSession).forEach(([key, value]) => {
+            entity[key] = value;
+          });
+        }
+      );
+      return result?.output;
     },
     async deleteSession(sessionToken) {
-      const { result: sessionResult } = await fetchData('/fetch', 'POST', {
-        query: {
-          collectionName: options.sessionCollectionName,
-          where: [['sessionToken', '=', sessionToken]],
-          limit: 1,
-        },
-      });
-      const session = sessionResult?.result?.[0]?.[1];
-      if (!session) return null;
-      const { result: deleteResult } = await fetchData('/delete', 'POST', {
+      const session = await client.fetchOne({
         collectionName: options.sessionCollectionName,
-        entityId: session.id,
+        where: [['sessionToken', '=', sessionToken]],
+        select: ['id'],
       });
-      if (!deleteResult) return null;
+      const sessionId = session?.id;
+      if (!sessionId) return null;
+      await client.delete(options.sessionCollectionName, sessionId);
       return session;
     },
   };
-}
-
-function extractNestedObjectValues(obj: Record<string, any>) {
-  let result: any[] = [];
-
-  function recurse(subObj: Record<string, any>, path: string[] = []) {
-    for (let key in subObj) {
-      if (subObj.hasOwnProperty(key)) {
-        let newPath = path.concat(key);
-        if (typeof subObj[key] === 'object' && subObj[key] !== null) {
-          recurse(subObj[key], newPath);
-        } else {
-          result.push([newPath, subObj[key]]);
-        }
-      }
-    }
-  }
-
-  recurse(obj);
-  return result;
 }

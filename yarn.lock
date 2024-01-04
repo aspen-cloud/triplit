@@ -5569,9 +5569,11 @@ __metadata:
   resolution: "@triplit/authjs-adapter@workspace:packages/authjs-adapter"
   dependencies:
     "@auth/core": ^0.19.0
+    "@triplit/client": "workspace:^"
     typescript: ^5.3.3
   peerDependencies:
     "@auth/core": "*"
+    "@triplit/client": "*"
   languageName: unknown
   linkType: soft
 

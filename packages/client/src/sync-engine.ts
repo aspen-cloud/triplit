@@ -9,11 +9,7 @@ import DB, {
   convertEntityToJS,
   Timestamp,
 } from '@triplit/db';
-import {
-  ClientFetchResult,
-  ClientQuery,
-  SyncOptions,
-} from './triplit-client.js';
+import { SyncOptions } from './triplit-client.js';
 import { Subject } from 'rxjs';
 import {
   ConnectionStatus,
@@ -28,6 +24,7 @@ import {
   RemoteSyncFailedError,
 } from './errors.js';
 import { Value } from '@sinclair/typebox/value';
+import { ClientFetchResult, ClientQuery } from './utils/query.js';
 
 type OnMessageCallback = (message: ServerSyncMessage) => void;
 

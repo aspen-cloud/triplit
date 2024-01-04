@@ -405,7 +405,7 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
     // Collect changes
     const collectionSchema = collection?.schema;
     const changes = new ChangeTracker(entity);
-    const updateProxy = this.createUpdateProxy<typeof collectionSchema>(
+    const updateProxy = createUpdateProxy<typeof collectionSchema>(
       changes,
       entity,
       collectionSchema
@@ -448,91 +448,6 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
       );
     const storeId = appendCollectionToId(collectionName, id);
     await this.storeTx.expireEntity(storeId);
-  }
-
-  // TODO add tests for proxy reads
-  private createUpdateProxy<M extends Model<any> | undefined>(
-    changeTracker: ChangeTracker,
-    entityObj: UpdateTypeFromModel<M>,
-    schema?: M,
-    prefix: string = ''
-  ): UpdateTypeFromModel<M> {
-    return new Proxy(entityObj, {
-      set: (_target, prop, value) => {
-        if (typeof prop === 'symbol') return true;
-        const propPointer = [prefix, prop].join('/');
-        if (!schema) {
-          changeTracker.set(propPointer, value);
-          return true;
-        }
-        const propSchema = getSchemaFromPath(
-          schema,
-          propPointer.slice(1).split('/')
-        );
-        if (!propSchema) {
-          throw new UnrecognizedPropertyInUpdateError(propPointer, value);
-        }
-        if (propSchema.type === 'set') {
-          if (!Array.isArray(value) && !(value instanceof Set)) {
-            throw new DBSerializationError(
-              'Set',
-              `Cannot assign a non-array or non-set value to a set.`
-            );
-          }
-          const setProxy = createSetProxy(
-            changeTracker,
-            propPointer,
-            propSchema
-          );
-          setProxy.clear();
-          for (const v of value) {
-            setProxy.add(v);
-          }
-          return true;
-        }
-        const dbValue = propSchema.convertInputToDBValue(
-          // @ts-expect-error Big DataType union results in never as arg type
-          value
-        );
-        changeTracker.set(propPointer, dbValue);
-        return true;
-      },
-      deleteProperty: (_target, prop) => {
-        if (typeof prop === 'symbol') return true;
-        if (!!schema)
-          throw new InvalidOperationError(
-            `Cannot delete property ${prop}. If the property is nullable you can set it to null instead.`
-          );
-        const propPointer = [prefix, prop].join('/');
-        // ValuePointer.Set(changeTracker, propPointer, undefined);
-        changeTracker.set(propPointer, undefined);
-        ValuePointer.Delete(entityObj, prop as string);
-        return true;
-      },
-      get: (_target, prop) => {
-        if (typeof prop === 'symbol') return undefined;
-        const parentPropPointer = [prefix, prop].join('/');
-        const currentValue = changeTracker.get(parentPropPointer);
-
-        const propSchema =
-          schema &&
-          getSchemaFromPath(schema, parentPropPointer.slice(1).split('/'));
-
-        if (propSchema && propSchema.type === 'set') {
-          return createSetProxy(changeTracker, parentPropPointer, propSchema);
-        }
-        if (typeof currentValue === 'object' && currentValue !== null) {
-          return this.createUpdateProxy(
-            changeTracker,
-            currentValue,
-            schema,
-            parentPropPointer
-          );
-        }
-
-        return currentValue;
-      },
-    });
   }
 
   async fetch<Q extends CollectionQuery<M, any>>(
@@ -783,4 +698,84 @@ export class ChangeTracker {
       value,
     ]);
   }
+}
+
+export function createUpdateProxy<M extends Model<any> | undefined>(
+  changeTracker: ChangeTracker,
+  entityObj: UpdateTypeFromModel<M>,
+  schema?: M,
+  prefix: string = ''
+): UpdateTypeFromModel<M> {
+  return new Proxy(entityObj, {
+    set: (_target, prop, value) => {
+      if (typeof prop === 'symbol') return true;
+      const propPointer = [prefix, prop].join('/');
+      if (!schema) {
+        changeTracker.set(propPointer, value);
+        return true;
+      }
+      const propSchema = getSchemaFromPath(
+        schema,
+        propPointer.slice(1).split('/')
+      );
+      if (!propSchema) {
+        throw new UnrecognizedPropertyInUpdateError(propPointer, value);
+      }
+      if (propSchema.type === 'set') {
+        if (!Array.isArray(value) && !(value instanceof Set)) {
+          throw new DBSerializationError(
+            'Set',
+            `Cannot assign a non-array or non-set value to a set.`
+          );
+        }
+        const setProxy = createSetProxy(changeTracker, propPointer, propSchema);
+        setProxy.clear();
+        for (const v of value) {
+          setProxy.add(v);
+        }
+        return true;
+      }
+      const dbValue = propSchema.convertInputToDBValue(
+        // @ts-expect-error Big DataType union results in never as arg type
+        value
+      );
+      changeTracker.set(propPointer, dbValue);
+      return true;
+    },
+    deleteProperty: (_target, prop) => {
+      if (typeof prop === 'symbol') return true;
+      if (!!schema)
+        throw new InvalidOperationError(
+          `Cannot delete property ${prop}. If the property is nullable you can set it to null instead.`
+        );
+      const propPointer = [prefix, prop].join('/');
+      // ValuePointer.Set(changeTracker, propPointer, undefined);
+      changeTracker.set(propPointer, undefined);
+      ValuePointer.Delete(entityObj, prop as string);
+      return true;
+    },
+    get: (_target, prop) => {
+      if (typeof prop === 'symbol') return undefined;
+      const parentPropPointer = [prefix, prop].join('/');
+      const currentValue = changeTracker.get(parentPropPointer);
+
+      const propSchema =
+        schema &&
+        getSchemaFromPath(schema, parentPropPointer.slice(1).split('/'));
+
+      if (propSchema && propSchema.type === 'set') {
+        return createSetProxy(changeTracker, parentPropPointer, propSchema);
+      }
+      if (typeof currentValue === 'object' && currentValue !== null) {
+        return createUpdateProxy(
+          changeTracker,
+          currentValue,
+          schema,
+          parentPropPointer
+        );
+      }
+
+      return currentValue;
+    },
+  });
 }

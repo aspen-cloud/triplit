@@ -1,6 +1,7 @@
 // import CredentialsProvider from "next-auth/providers/credentials"
 import CredentialsProvider from "@auth/core/providers/credentials"
 import { TriplitAdapter } from "@triplit/authjs-adapter"
+import { RemoteClient } from "@triplit/client"
 // import jwt from "jsonwebtoken"
 import * as jwt from "jose"
 import NextAuth, { NextAuthConfig } from "next-auth"
@@ -8,11 +9,13 @@ import GithubProvider from "next-auth/providers/github"
 
 import { isPasswordValid } from "./lib/crypt.js"
 
+const adapterClient = new RemoteClient({
+  server: process.env.TRIPLIT_DB_URL,
+  token: process.env.TRIPLIT_SERVICE_TOKEN,
+})
+
 export const authOptions: NextAuthConfig = {
-  adapter: TriplitAdapter(
-    process.env.TRIPLIT_DB_URL!,
-    process.env.TRIPLIT_SERVICE_TOKEN!
-  ),
+  adapter: TriplitAdapter(adapterClient),
   // Configure one or more authentication providers
   providers: [
     // ...add more providers here
