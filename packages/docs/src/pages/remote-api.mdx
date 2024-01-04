@@ -1,0 +1,195 @@
+# Remote API
+
+## Overview
+
+The Remote API is a RESTful API that allows you to interact with a Triplit Cloud production server or the Triplit [Node server](https://github.com/aspen-cloud/triplit/tree/main/packages/server) that you can host yourself. It's useful if your client can't connect over WebSockets, or if your application wants to forgo the local cache and optimistic updates that the Triplit sync protocol provides. This can be useful for applications that need certainty about the state of the database, or for migrating data to Triplit from other services.
+
+## Authentication
+
+The Remote API, like the Triplit sync protocol, uses [JSON Web Tokens](https://jwt.io/) (JWT) for authentication. If you're communicating with a Triplit Cloud production server, you'll need to use your project's Service or Anon key from the [Triplit Cloud dashboard](/dashboard) for your project. If you're communicating with a Node server that you control, you'll need a properly formed JWT with the correct claims. Using the [Triplit CLI](/docs/guides/local-development) and `triplit dev` command will automatically generate acceptable Service and Anon keys for you.
+
+With your token in hand, set up your HTTP client to send the token in the `Authorization` header with the `Bearer` scheme. Using the `Fetch` API, it would look like this:
+
+```ts
+// Request
+await fetch('https://<project-id>.triplit.io/<route>', {
+  headers: {
+    'Content-Type': 'application/json',
+    Authorization: 'Bearer ' + TRIPLIT_TOKEN,
+  },
+});
+```
+
+## RemoteClient
+
+The Remote API is also available with a convenient JavaScript client seeks to mimic the `TriplitClient` API as closely as possible. Instead of using the native Triplit syncing protocol, the `RemoteClient` uses the Remote API to communicate with the server.
+
+```ts
+import { RemoteClient } from '@triplit/client';
+
+const remoteClient = new RemoteClient({
+  projectId: '<project-id>',
+  token: TRIPLIT_TOKEN,
+});
+
+// Fetch all entities in the "todos" collection
+const todos = await remoteClient.fetch({
+  collectionName: 'todos',
+});
+
+// Insert a new entity into the "todos" collection
+await remoteClient.insert('todos', {
+  id: '123',
+  title: 'Buy milk',
+  completed: false,
+});
+
+// Update an entity in the "todos" collection
+await remoteClient.update('todos', '123', (entity) => {
+  entity.completed = true;
+});
+
+// Delete an entity in the "todos" collection
+await remoteClient.delete('todos', '123');
+
+// Fetch the entity with the ID "123" in the "todos" collection
+await remoteClient.fetchById('todos', '123');
+
+// Fetch just one entity in the "todos" collection
+await remoteClient.fetchOne({
+  collectionName: 'todos',
+  where: [['completed', '=', false]],
+});
+```
+
+## Routes
+
+### `/fetch`
+
+Performs a fetch, returning the an array of entities that meet the query criteria.
+
+```ts
+// Request
+await fetch('https://<project-id>.triplit.io/fetch', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    Authorization: 'Bearer ' + TRIPLIT_TOKEN,
+  },
+  body: JSON.stringify({
+    collection: 'todos',
+    query: {
+      collectionName: 'todos',
+      where: [['completed', '=', false]],
+    },
+  }),
+});
+
+// Response
+[
+  {
+    id: '123',
+    title: 'Buy milk',
+    completed: false,
+  },
+  {
+    id: '456',
+    title: 'Buy eggs',
+    completed: false,
+  },
+];
+```
+
+### `/insert`
+
+Inserts a single entity for a given collection.
+
+```ts
+// Request
+await fetch('https://<project-id>.triplit.io/insert', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    Authorization: 'Bearer ' + TRIPLIT_TOKEN,
+  },
+  body: JSON.stringify({
+    collectionName: 'todos',
+    entity: {
+      id: '123',
+      title: 'Buy milk',
+      completed: false,
+    },
+  }),
+});
+```
+
+### `/bulk-insert`
+
+Inserts several entities at once that are provided as an object where the collection names are the keys and the list of entities for that collection are the values.
+
+```ts
+// Request
+await fetch('https://<project-id>.triplit.io/bulk-insert', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    Authorization: 'Bearer ' + TRIPLIT_TOKEN,
+  },
+  body: JSON.stringify({
+    todos: [
+      {
+        id: '123',
+        title: 'Buy milk',
+        completed: false,
+      },
+      {
+        id: '456',
+        title: 'Buy eggs',
+        completed: false,
+      },
+    ],
+  }),
+});
+```
+
+### `/update`
+
+Updates a single entity for a given collection with a set of provided patches.
+
+```ts
+// Request
+await fetch('https://<project-id>.triplit.io/update', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    Authorization: 'Bearer ' + TRIPLIT_TOKEN,
+  },
+  body: JSON.stringify({
+    collectionName: 'todos',
+    entityId: '123',
+    patches: [
+      ['set', 'completed', true],
+      ['set', 'title', 'Buy milk and eggs'],
+    ],
+  }),
+});
+```
+
+### `/delete`
+
+Deletes a single entity for a given collection.
+
+```ts
+// Request
+await fetch('https://<project-id>.triplit.io/delete', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    Authorization: 'Bearer ' + TRIPLIT_TOKEN,
+  },
+  body: JSON.stringify({
+    collectionName: 'todos',
+    entityId: '123',
+  }),
+});
+```
