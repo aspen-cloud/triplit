@@ -20,43 +20,47 @@ await fetch('https://<project-id>.triplit.io/<route>', {
 });
 ```
 
-## RemoteClient
+## `TriplitClient.remote`
 
-The Remote API is also available with a convenient JavaScript client seeks to mimic the `TriplitClient` API as closely as possible. Instead of using the native Triplit syncing protocol, the `RemoteClient` uses the Remote API to communicate with the server.
+You can access the Remote API through the `remote` property on the `TriplitClient` instance. It provides methods for fetching, inserting, updating, and deleting entities in your database. Any queries using this API will bypass the local cache and and mutations will not cause optimistic updates. If you have live queries syncing with the remote database, the Remote API will trigger these queries to update once the server confirms the changes.
+
+If you're only interested in talking to Triplit with the Remote API, and forgo local caching and optimistic updates altogether, you can use the `RemoteClient` class directly.
 
 ```ts
-import { RemoteClient } from '@triplit/client';
+import { TriplitClient } from '@triplit/client';
 
-const remoteClient = new RemoteClient({
-  projectId: '<project-id>',
+const client = new TriplitClient({
+  serverUrl: 'https://<project-id>.triplit.io',
   token: TRIPLIT_TOKEN,
 });
 
+// client.remote is an instance of RemoteClient
+
 // Fetch all entities in the "todos" collection
-const todos = await remoteClient.fetch({
+const todos = await client.remote.fetch({
   collectionName: 'todos',
 });
 
 // Insert a new entity into the "todos" collection
-await remoteClient.insert('todos', {
+await client.remote.insert('todos', {
   id: '123',
   title: 'Buy milk',
   completed: false,
 });
 
 // Update an entity in the "todos" collection
-await remoteClient.update('todos', '123', (entity) => {
+await client.remote.update('todos', '123', (entity) => {
   entity.completed = true;
 });
 
 // Delete an entity in the "todos" collection
-await remoteClient.delete('todos', '123');
+await client.remote.delete('todos', '123');
 
 // Fetch the entity with the ID "123" in the "todos" collection
-await remoteClient.fetchById('todos', '123');
+await client.remote.fetchById('todos', '123');
 
 // Fetch just one entity in the "todos" collection
-await remoteClient.fetchOne({
+await client.remote.fetchOne({
   collectionName: 'todos',
   where: [['completed', '=', false]],
 });
