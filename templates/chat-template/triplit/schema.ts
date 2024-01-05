@@ -6,17 +6,11 @@ export const schema = {
       id: S.Id(),
       conversationId: S.String(),
       sender_id: S.String(),
-      sender: S.Query({
-        collectionName: "users" as const,
-        where: [["id", "=", "$sender_id"]],
-      }),
+      sender: S.Entity("users", "$sender_id"),
       text: S.String(),
       created_at: S.String({ default: S.Default.now() }),
       likes: S.Set(S.String()),
-      convo: S.Query({
-        collectionName: "conversations" as const,
-        where: [["id", "=", "$conversationId"]],
-      }),
+      convo: S.Entity("conversations", "$conversationId"),
     }),
     rules: {
       read: {
@@ -76,10 +70,7 @@ export const schema = {
     schema: S.Schema({
       id: S.Id(),
       userId: S.String(),
-      user: S.Query({
-        collectionName: "users" as const,
-        where: [["id", "=", "$userId"]],
-      }),
+      user: S.Entity("users", "$userId"),
       type: S.String(),
       provider: S.String(),
       providerAccountId: S.String(),
@@ -96,10 +87,7 @@ export const schema = {
     schema: S.Schema({
       id: S.Id(),
       userId: S.String(),
-      user: S.Query({
-        collectionName: "users" as const,
-        where: [["id", "=", "$userId"]],
-      }),
+      user: S.Entity("users", "$userId"),
       expires: S.Date(),
       sessionToken: S.String(),
     }),

@@ -1,0 +1,265 @@
+{
+  "up": [
+    [
+      "drop_attribute",
+      {
+        "collection": "accounts",
+        "path": [
+          "user"
+        ]
+      }
+    ],
+    [
+      "add_attribute",
+      {
+        "collection": "accounts",
+        "path": [
+          "user"
+        ],
+        "attribute": {
+          "type": "query",
+          "query": {
+            "collectionName": "users",
+            "where": [
+              [
+                "id",
+                "=",
+                "$userId"
+              ]
+            ]
+          },
+          "cardinality": "one"
+        }
+      }
+    ],
+    [
+      "drop_attribute",
+      {
+        "collection": "messages",
+        "path": [
+          "convo"
+        ]
+      }
+    ],
+    [
+      "add_attribute",
+      {
+        "collection": "messages",
+        "path": [
+          "convo"
+        ],
+        "attribute": {
+          "type": "query",
+          "query": {
+            "collectionName": "conversations",
+            "where": [
+              [
+                "id",
+                "=",
+                "$conversationId"
+              ]
+            ]
+          },
+          "cardinality": "one"
+        }
+      }
+    ],
+    [
+      "drop_attribute",
+      {
+        "collection": "messages",
+        "path": [
+          "sender"
+        ]
+      }
+    ],
+    [
+      "add_attribute",
+      {
+        "collection": "messages",
+        "path": [
+          "sender"
+        ],
+        "attribute": {
+          "type": "query",
+          "query": {
+            "collectionName": "users",
+            "where": [
+              [
+                "id",
+                "=",
+                "$sender_id"
+              ]
+            ]
+          },
+          "cardinality": "one"
+        }
+      }
+    ],
+    [
+      "drop_attribute",
+      {
+        "collection": "sessions",
+        "path": [
+          "user"
+        ]
+      }
+    ],
+    [
+      "add_attribute",
+      {
+        "collection": "sessions",
+        "path": [
+          "user"
+        ],
+        "attribute": {
+          "type": "query",
+          "query": {
+            "collectionName": "users",
+            "where": [
+              [
+                "id",
+                "=",
+                "$userId"
+              ]
+            ]
+          },
+          "cardinality": "one"
+        }
+      }
+    ]
+  ],
+  "down": [
+    [
+      "drop_attribute",
+      {
+        "collection": "sessions",
+        "path": [
+          "user"
+        ]
+      }
+    ],
+    [
+      "add_attribute",
+      {
+        "collection": "sessions",
+        "path": [
+          "user"
+        ],
+        "attribute": {
+          "type": "query",
+          "query": {
+            "collectionName": "users",
+            "where": [
+              [
+                "id",
+                "=",
+                "$userId"
+              ]
+            ]
+          },
+          "cardinality": "many"
+        }
+      }
+    ],
+    [
+      "drop_attribute",
+      {
+        "collection": "messages",
+        "path": [
+          "sender"
+        ]
+      }
+    ],
+    [
+      "add_attribute",
+      {
+        "collection": "messages",
+        "path": [
+          "sender"
+        ],
+        "attribute": {
+          "type": "query",
+          "query": {
+            "collectionName": "users",
+            "where": [
+              [
+                "id",
+                "=",
+                "$sender_id"
+              ]
+            ]
+          },
+          "cardinality": "many"
+        }
+      }
+    ],
+    [
+      "drop_attribute",
+      {
+        "collection": "messages",
+        "path": [
+          "convo"
+        ]
+      }
+    ],
+    [
+      "add_attribute",
+      {
+        "collection": "messages",
+        "path": [
+          "convo"
+        ],
+        "attribute": {
+          "type": "query",
+          "query": {
+            "collectionName": "conversations",
+            "where": [
+              [
+                "id",
+                "=",
+                "$conversationId"
+              ]
+            ]
+          },
+          "cardinality": "many"
+        }
+      }
+    ],
+    [
+      "drop_attribute",
+      {
+        "collection": "accounts",
+        "path": [
+          "user"
+        ]
+      }
+    ],
+    [
+      "add_attribute",
+      {
+        "collection": "accounts",
+        "path": [
+          "user"
+        ],
+        "attribute": {
+          "type": "query",
+          "query": {
+            "collectionName": "users",
+            "where": [
+              [
+                "id",
+                "=",
+                "$userId"
+              ]
+            ]
+          },
+          "cardinality": "many"
+        }
+      }
+    ]
+  ],
+  "version": 1704491866654,
+  "parent": 1701457803469,
+  "name": "use_entity_shorthand"
+}

@@ -198,6 +198,7 @@ function ChatBubble({
   isOwnMessage: boolean
   showSentIndicator?: boolean
 }) {
+  console.log(message)
   return (
     <div className={cn(isOwnMessage && "self-end")}>
       <div
@@ -208,9 +209,7 @@ function ChatBubble({
         )}
       >
         {!isOwnMessage && (
-          <div className="text-sm font-bold">
-            {message.sender.get(message.sender_id)?.name}
-          </div>
+          <div className="text-sm font-bold">{message.sender?.name}</div>
         )}
         <div>{message.text}</div>
         <div className="text-xs text-muted-foregrounopenMemberModal">
