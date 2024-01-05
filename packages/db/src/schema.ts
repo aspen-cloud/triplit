@@ -49,6 +49,9 @@ export class Schema {
 
   static Query = QueryType;
 
+  static Entity = (collectionName: string, entityId: string) =>
+    QueryType({ collectionName, where: [['id', '=', entityId]] }, 'one');
+
   static Schema<T extends SchemaConfig>(config: T) {
     return Schema.Record(config);
   }

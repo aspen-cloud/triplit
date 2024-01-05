@@ -1,6 +1,6 @@
 import { Static, Type } from '@sinclair/typebox';
 import { CollectionRules } from '../db.js';
-import { SubQuery } from './query.js';
+import { QueryResultCardinality, SubQuery } from './query.js';
 import { Schema } from '../schema.js';
 
 export const VALUE_TYPE_KEYS = ['string', 'number', 'boolean', 'date'] as const;
@@ -37,6 +37,7 @@ export type CollectionAttributeDefinition = {
 export type QueryAttributeDefinition = {
   type: 'query';
   query: SubQuery<any, any>;
+  cardinality: QueryResultCardinality;
 };
 
 export type AttributeDefinition =

@@ -9,6 +9,8 @@ export type SubQuery<
   CN extends CollectionNameFromModels<M>
 > = Pick<CollectionQuery<M, CN>, 'collectionName' | 'where'>;
 
+export type QueryResultCardinality = 'one' | 'many';
+
 export type QueryType<Query extends SubQuery<any, any>> = TypeInterface<
   'query',
   FetchResult<Query>,
@@ -16,18 +18,21 @@ export type QueryType<Query extends SubQuery<any, any>> = TypeInterface<
   readonly []
 > & {
   query: Query;
+  cardinality: QueryResultCardinality;
 };
 
 export function QueryType<Q extends SubQuery<any, any>>(
-  query: Q
+  query: Q,
+  cardinality: QueryResultCardinality = 'many'
 ): QueryType<Q> {
   return {
     type: 'query' as const,
+    cardinality,
     supportedOperations: [] as const, // 'hasKey', etc
     query,
     toJSON() {
       // TODO verify this works with non-memory storage providers
-      return { type: this.type, query };
+      return { type: this.type, query, cardinality };
     },
     convertInputToDBValue(val: any) {
       return JSON.stringify(val);

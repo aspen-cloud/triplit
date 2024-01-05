@@ -433,7 +433,7 @@ function parseAttributesDiff(
         );
       }
       // subquery change, drop and add
-      else if (!!attributeDiff.query) {
+      else if (!!attributeDiff.query || !!attributeDiff.cardinality) {
         const oldDefinition = getAttributeDefinitionFromPath(
           context.previousSchema[collection].schema,
           [...attributePrefix, attributeKey]

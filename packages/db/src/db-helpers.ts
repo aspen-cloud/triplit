@@ -382,7 +382,7 @@ async function addSubsSelectsFromIncludes<
     const subquerySelection: RelationSubquery<M> = {
       attributeName: relationName,
       subquery: merged,
-      cardinality: 'many',
+      cardinality: attributeType.cardinality,
     };
 
     query.select.push(subquerySelection);

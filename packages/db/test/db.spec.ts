@@ -37,6 +37,10 @@ import {
   JSTypeOrRelation,
 } from '../src/collection-query.js';
 import { CollectionFromModels, ModelFromModels } from '../src/db.js';
+import { set } from 'tuple-database/helpers/sortedTupleArray.js';
+
+const pause = async (ms: number = 100) =>
+  new Promise((resolve) => setTimeout(resolve, ms));
 
 // const storage = new InMemoryTupleStorage();
 const storage = new MemoryStorage();
@@ -5202,6 +5206,54 @@ describe('selecting subqueries', () => {
       },
     ]);
   });
+
+  it('can select a singleton via a subquery', async () => {
+    const query = db
+      .query('users')
+      .select([
+        'id',
+        {
+          attributeName: 'favoritePost',
+          subquery: db
+            .query('posts', {
+              where: [['author_id', '=', '$id']],
+            })
+            .build(),
+          cardinality: 'one',
+        },
+      ])
+      .build();
+    const result = await db.fetch(query);
+    console.log('result', result);
+    expect(result.get('user-1')).toHaveProperty('favoritePost');
+    expect(result.get('user-1').favoritePost).toMatchObject({
+      id: 'post-1',
+      content: 'Hello World!',
+      author_id: 'user-1',
+      topics: new Set(['comedy', 'sports']),
+    });
+  });
+  it('should return null or undefined if a singleton subquery has no results', async () => {
+    const query = db
+      .query('users')
+      .select([
+        'id',
+        {
+          attributeName: 'favoritePost',
+          subquery: db
+            .query('posts', {
+              where: [['author_id', '=', 'george']],
+            })
+            .build(),
+          cardinality: 'one',
+        },
+      ])
+      .build();
+    const result = await db.fetch(query);
+    console.log('result', result);
+    expect(result.get('user-1')).toHaveProperty('favoritePost');
+    expect(result.get('user-1').favoritePost).toEqual(null);
+  });
 });
 
 describe('selecting subqueries from schema', () => {
@@ -5232,6 +5284,7 @@ describe('selecting subqueries from schema', () => {
             id: S.String(),
             content: S.String(),
             author_id: S.String(),
+            author: S.Entity('users', '$author_id'),
             topics: S.Set(S.String()),
             likes: S.Query({
               collectionName: 'likes' as const,
@@ -5408,6 +5461,26 @@ describe('selecting subqueries from schema', () => {
     }
   });
 
+  it('can select a singleton via a subquery', async () => {
+    const query = db.query('posts').include('author').build();
+    const result = await db.fetch(query);
+    expect(result.get('post-1')).toHaveProperty('author');
+    expect(result.get('post-1').author).toMatchObject({
+      id: 'user-1',
+      name: 'Alice',
+      friend_ids: new Set(['user-2', 'user-3']),
+    });
+  });
+
+  it('will return null if a singleton subquery has no results', async () => {
+    const query = db
+      .query('posts')
+      .include('author', { where: [['id', '=', 'george']] })
+      .build();
+    const result = await db.fetch(query);
+    expect(result.get('post-1')).toHaveProperty('author');
+    expect(result.get('post-1').author).toEqual(null);
+  });
   it('subscribe to subqueries when using entityId in query', async () => {
     const userDB = db.withVars({ USER_ID: 'user-1' });
     const query = userDB

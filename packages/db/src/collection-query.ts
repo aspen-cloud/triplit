@@ -362,7 +362,7 @@ export async function fetch<
           (sel) => typeof sel !== 'string'
         ) as RelationSubquery<M>[];
         const subQueryTriples: TripleRow[] = [];
-        for (const { attributeName, subquery } of subqueries) {
+        for (const { attributeName, subquery, cardinality } of subqueries) {
           const combinedVars = {
             ...query.vars,
             ...subquery.vars,
@@ -379,15 +379,18 @@ export async function fetch<
             );
           }
           try {
-            const subqueryResult = await fetch<M, typeof subquery>(
-              tx,
-              fullSubquery,
-              {
-                includeTriples: true,
-                schema,
-                cache,
-              }
-            );
+            const subqueryResult =
+              cardinality === 'one'
+                ? await fetchOne<M, typeof subquery>(tx, fullSubquery, {
+                    includeTriples: true,
+                    schema,
+                    cache,
+                  })
+                : await fetch<M, typeof subquery>(tx, fullSubquery, {
+                    includeTriples: true,
+                    schema,
+                    cache,
+                  });
 
             selectedEntity[attributeName] = subqueryResult.results;
             subQueryTriples.push(
@@ -423,6 +426,67 @@ export async function fetch<
       convertEntityToJS(entity, collectionSchema),
     ])
   ) as FetchResult<Q>;
+}
+
+export async function fetchOne<
+  M extends Models<any, any> | undefined,
+  Q extends CollectionQuery<M, any>
+>(
+  tx: TripleStoreApi,
+  query: Q,
+  options?: FetchOptions & {
+    includeTriples: true;
+    cache?: VariableAwareCache<any>;
+  }
+): Promise<{
+  results: FetchResultEntity<Q> | null;
+  triples: Map<string, TripleRow[]>;
+}>;
+export async function fetchOne<
+  M extends Models<any, any> | undefined,
+  Q extends CollectionQuery<M, any>
+>(
+  tx: TripleStoreApi,
+  query: Q,
+  options?: FetchOptions & {
+    includeTriples: false;
+    cache?: VariableAwareCache<any>;
+  }
+): Promise<FetchResultEntity<Q> | null>;
+export async function fetchOne<
+  M extends Models<any, any> | undefined,
+  Q extends CollectionQuery<M, any>
+>(
+  tx: TripleStoreApi,
+  query: Q,
+  {
+    includeTriples = false,
+    schema,
+    cache,
+  }: FetchOptions & {
+    cache?: VariableAwareCache<any>;
+  } = {}
+) {
+  if (includeTriples) {
+    const fetchResult = await fetch(tx, query, {
+      includeTriples: true,
+      schema,
+      cache,
+    });
+    const { results, triples } = fetchResult;
+    return {
+      results: [...results.values()][0] ?? null,
+      triples,
+    };
+  }
+  const fetchResult = await fetch(tx, query, {
+    includeTriples: false,
+    schema,
+    cache,
+  });
+  const entity = [...fetchResult.values()][0];
+  if (!entity) return null;
+  return entity;
 }
 
 export function doesEntityObjMatchWhere<Q extends CollectionQuery<any, any>>(
@@ -710,7 +774,11 @@ function subscribeSingleEntity<
                 const subqueries = select.filter(
                   (sel) => typeof sel !== 'string'
                 ) as RelationSubquery<M>[];
-                for (const { attributeName, subquery } of subqueries) {
+                for (const {
+                  attributeName,
+                  subquery,
+                  cardinality,
+                } of subqueries) {
                   const combinedVars = {
                     ...query.vars,
                     ...subquery.vars,
@@ -726,14 +794,21 @@ function subscribeSingleEntity<
                       schema[fullSubquery.collectionName]
                     );
                   }
-                  const subqueryResult = await fetch<M, typeof subquery>(
-                    tripleStore,
-                    fullSubquery,
-                    {
-                      includeTriples: true,
-                      schema,
-                    }
-                  );
+                  const subqueryResult =
+                    cardinality === 'one'
+                      ? await fetchOne<M, typeof subquery>(
+                          tripleStore,
+                          fullSubquery,
+                          { includeTriples: true, schema }
+                        )
+                      : await fetch<M, typeof subquery>(
+                          tripleStore,
+                          fullSubquery,
+                          {
+                            includeTriples: true,
+                            schema,
+                          }
+                        );
                   entity[attributeName] = subqueryResult.results;
                   triples.set(
                     entityId,

@@ -96,7 +96,7 @@ export function typeFromJSON(serializedType?: AttributeDefinition): DataType {
     case 'set':
       return SetType(typeFromJSON(serializedType.items));
     case 'query':
-      return QueryType(serializedType.query);
+      return QueryType(serializedType.query, serializedType.cardinality);
     case 'record':
       return RecordType(
         Object.fromEntries(

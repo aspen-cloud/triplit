@@ -160,7 +160,10 @@ function schemaItemToString(schemaItem: AttributeDefinition): string {
     return `S.Record({${Object.entries(schemaItem.properties)
       .map(([key, value]) => `'${key}': ${schemaItemToString(value as any)}`)
       .join(',\n')}})`;
-  if (type === 'query') return `S.Query(${subQueryToString(schemaItem.query)})`;
+  if (type === 'query')
+    return `S.Query(${subQueryToString(schemaItem.query)}, ${
+      schemaItem.cardinality
+    })`;
   throw new Error(`Invalid type: ${type}`);
 }
 
