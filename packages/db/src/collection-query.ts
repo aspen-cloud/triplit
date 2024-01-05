@@ -10,6 +10,7 @@ import {
   triplesToEntities,
   Entity,
   updateEntity,
+  RelationSubquery,
 } from './query.js';
 import {
   convertEntityToJS,
@@ -357,12 +358,11 @@ export async function fetch<
 
             return acc;
           }, {});
-        const subqueries = select.filter((sel) => typeof sel !== 'string') as [
-          string,
-          CollectionQuery<M, any>
-        ][];
+        const subqueries = select.filter(
+          (sel) => typeof sel !== 'string'
+        ) as RelationSubquery<M>[];
         const subQueryTriples: TripleRow[] = [];
-        for (const [propName, subquery] of subqueries) {
+        for (const { attributeName, subquery } of subqueries) {
           const combinedVars = {
             ...query.vars,
             ...subquery.vars,
@@ -389,7 +389,7 @@ export async function fetch<
               }
             );
 
-            selectedEntity[propName] = subqueryResult.results;
+            selectedEntity[attributeName] = subqueryResult.results;
             subQueryTriples.push(
               ...[...subqueryResult.triples.values()].flat()
             );
@@ -709,8 +709,8 @@ function subscribeSingleEntity<
 
                 const subqueries = select.filter(
                   (sel) => typeof sel !== 'string'
-                ) as [string, CollectionQuery<M, any>][];
-                for (const [propName, subquery] of subqueries) {
+                ) as RelationSubquery<M>[];
+                for (const { attributeName, subquery } of subqueries) {
                   const combinedVars = {
                     ...query.vars,
                     ...subquery.vars,
@@ -734,7 +734,7 @@ function subscribeSingleEntity<
                       schema,
                     }
                   );
-                  entity[propName] = subqueryResult.results;
+                  entity[attributeName] = subqueryResult.results;
                   triples.set(
                     entityId,
                     [...triples.get(entityId)!].concat(

@@ -105,6 +105,12 @@ type RelationAttributes<M extends Model<any>> = {
     : never;
 }[keyof M['properties']];
 
+export type RelationSubquery<M extends Models<any, any> | undefined> = {
+  attributeName: string;
+  subquery: CollectionQuery<M, any>;
+  cardinality: 'one' | 'many';
+};
+
 export type CollectionQuery<
   M extends Models<any, any> | undefined,
   CN extends CollectionNameFromModels<M>
@@ -114,8 +120,9 @@ export type CollectionQuery<
     | (M extends Models<any, any>
         ? RecordPaths<SelectModelFromModel<ModelFromModels<M, CN>>>
         : Path)
-    | [string, CollectionQuery<M, any>]
+    | RelationSubquery<M>
   )[];
+  // | [string, CollectionQuery<M, any>]
   order?: QueryOrder<ModelFromModels<M, CN>>[];
   limit?: number;
   after?: ValueCursor;

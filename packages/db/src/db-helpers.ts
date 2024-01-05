@@ -12,6 +12,7 @@ import {
   FilterStatement,
   SubQueryFilter,
   CollectionQuery,
+  RelationSubquery,
 } from './query.js';
 import {
   Model,
@@ -378,10 +379,12 @@ async function addSubsSelectsFromIncludes<
       );
     }
     const merged = mergeQueries(attributeType.query, additionalQuery);
-    const subquerySelection: [string, CollectionQuery<M, any>] = [
-      relationName,
-      merged,
-    ];
+    const subquerySelection: RelationSubquery<M> = {
+      attributeName: relationName,
+      subquery: merged,
+      cardinality: 'many',
+    };
+
     query.select.push(subquerySelection);
   }
   return query;

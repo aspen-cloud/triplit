@@ -5094,14 +5094,15 @@ describe('selecting subqueries', () => {
       .query('users')
       .select([
         'id',
-        [
-          'posts',
-          db
+        {
+          attributeName: 'posts',
+          subquery: db
             .query('posts', {
               where: [['author_id', '=', '$id']],
             })
             .build(),
-        ],
+          cardinality: 'many',
+        },
       ])
       .build();
     const result = await db.fetch(query);
@@ -5120,25 +5121,27 @@ describe('selecting subqueries', () => {
       .query('users')
       .select([
         'id',
-        [
-          'posts',
-          db
+        {
+          attributeName: 'posts',
+          subquery: db
             .query('posts', {
               where: [['author_id', '=', '$id']],
             })
             .select([
               'id',
-              [
-                'likedBy',
-                db
+              {
+                attributeName: 'likedBy',
+                subquery: db
                   .query('users', {
                     where: [['liked_post_ids', '=', '$id']],
                   })
                   .build(),
-              ],
+                cardinality: 'many',
+              },
             ])
             .build(),
-        ],
+          cardinality: 'many',
+        },
       ])
       .build();
     const result = await db.fetch(query);
@@ -5153,14 +5156,15 @@ describe('selecting subqueries', () => {
       .query('users')
       .select([
         'id',
-        [
-          'posts',
-          db
+        {
+          attributeName: 'posts',
+          subquery: db
             .query('posts', {
               where: [['author_id', '=', '$id']],
             })
             .build(),
-        ],
+          cardinality: 'many',
+        },
       ])
       .build();
     await testSubscription(db, query, [

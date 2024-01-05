@@ -5,6 +5,7 @@ import {
   CollectionQuery,
   QueryOrder,
   QueryWhere,
+  RelationSubquery,
   WhereFilter,
 } from '../../src/query.js';
 import { FetchResult } from '../../src/collection-query.js';
@@ -454,7 +455,7 @@ describe('query builder', () => {
               | 'record'
               | 'record.attr1'
               | 'id'
-              | [string, CollectionQuery<typeof schema.collections, any>]
+              | RelationSubquery<typeof schema.collections>
             )[]
           | undefined
         >();
@@ -465,9 +466,7 @@ describe('query builder', () => {
       const query = db.query('test');
       expectTypeOf(query.select)
         .parameter(0)
-        .toEqualTypeOf<
-          (string | [string, CollectionQuery<undefined, any>])[] | undefined
-        >();
+        .toEqualTypeOf<(string | RelationSubquery<undefined>)[] | undefined>();
     }
   });
   test('where attribute prop', () => {
