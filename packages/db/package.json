@@ -2,20 +2,20 @@
   "name": "@triplit/db",
   "version": "0.3.2",
   "source": "./src/index.ts",
-  "main": "./dist/cjs/index.js",
-  "module": "./dist/esm/index.js",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
   "typings": "./dist/types/index.d.ts",
   "exports": {
     ".": {
       "types": "./dist/types/index.d.ts",
-      "require": "./dist/cjs/index.js",
-      "import": "./dist/esm/index.js",
-      "default": "./dist/esm/index.js"
+      "require": "./dist/index.js",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
     },
     "./storage/*": {
       "types": "./dist/types/storage/*.d.ts",
-      "require": "./dist/cjs/storage/*.js",
-      "import": "./dist/esm/storage/*.js"
+      "require": "./dist/storage/*.js",
+      "import": "./dist/storage/*.js"
     }
   },
   "type": "module",
