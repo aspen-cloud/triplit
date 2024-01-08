@@ -28,10 +28,7 @@
     "@triplit/client": "workspace:^"
   },
   "devDependencies": {
-    "@parcel/config-default": "^2.9.3",
-    "@parcel/transformer-typescript-tsc": "^2.9.3",
     "@types/react": "^18.2.0",
-    "parcel": "^2.9.3",
     "typescript": "^5.2.2"
   },
   "peerDependencies": {

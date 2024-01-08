@@ -14,7 +14,4 @@ node_modules
 dist
 tsconfig.tsbuildinfo
 
-# parcel
-.parcel-cache
-
 .turbo
