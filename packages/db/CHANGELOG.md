@@ -1,5 +1,11 @@
 # @triplit/db
 
+## 0.3.3
+
+### Patch Changes
+
+- 5398d8d: build esm only, fixup entry point resolution
+
 ## 0.3.2
 
 ### Patch Changes
