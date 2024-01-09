@@ -4,6 +4,13 @@
 
 ### Patch Changes
 
+- Updated dependencies [c29a932]
+  - @triplit/authjs-adapter@0.1.0
+
+## null
+
+### Patch Changes
+
 - Updated dependencies [eaedd37]
 - Updated dependencies [cc0871f]
 - Updated dependencies [817e4cd]

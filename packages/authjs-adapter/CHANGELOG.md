@@ -1,5 +1,11 @@
 # @triplit/authjs-adapter
 
+## 0.1.0
+
+### Minor Changes
+
+- c29a932: use relations in adapter, pass remote client parms to constructor, include all authjs methods
+
 ## 0.0.2
 
 ### Patch Changes
