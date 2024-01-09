@@ -166,6 +166,7 @@ function deserializeHTTPEntity<CQ extends ClientQuery<any, any>>(
 ): ClientFetchResultEntity<CQ> {
   const { include, collectionName } = query;
   const collectionSchema = schema?.[collectionName]?.schema;
+
   const deserializedEntity = collectionSchema
     ? (collectionSchema.convertDBValueToJS(
         entity

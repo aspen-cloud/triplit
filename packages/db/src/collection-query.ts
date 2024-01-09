@@ -318,6 +318,11 @@ export async function fetch<
     })
     // We need to make sure that all the triples are accounted for before we filter out deleted entities
     .filter(async ([, entity]) => !isTimestampedEntityDeleted(entity))
+    // Clean internal fields from entities
+    .map(async ([id, entity]) => {
+      delete entity['_collection'];
+      return [id, entity] as [string, any];
+    })
     .toArray();
 
   if (order && order.length > 1) {

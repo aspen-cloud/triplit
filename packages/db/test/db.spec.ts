@@ -2012,7 +2012,6 @@ describe('delete api', () => {
     {
       const post = await db.fetchById('posts', 'post-1');
       expect(post).toStrictEqual({
-        _collection: 'posts',
         id: 'post-1',
         author_id: 'user-1',
       });
@@ -2032,7 +2031,6 @@ describe('delete api', () => {
     });
     const post = await db.fetchById('posts', 'post-1');
     expect(post).toStrictEqual({
-      _collection: 'posts',
       id: 'post-1',
       author_id: 'user-1',
     });
