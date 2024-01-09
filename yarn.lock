@@ -4474,6 +4474,7 @@ __metadata:
   dependencies:
     "@auth/core": ^0.19.0
     "@triplit/client": "workspace:^"
+    "@triplit/db": "workspace:^"
     typescript: ^5.3.3
   peerDependencies:
     "@auth/core": "*"

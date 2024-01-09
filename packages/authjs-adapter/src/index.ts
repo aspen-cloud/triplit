@@ -1,35 +1,57 @@
-import type { Adapter, AdapterUser } from '@auth/core/adapters';
-import type { RemoteClient } from '@triplit/client';
+import type { Adapter, AdapterSession, AdapterUser } from '@auth/core/adapters';
+import { RemoteClient } from '@triplit/client';
+import { Models } from '@triplit/db';
 
+export type TriplitAdapterConnectionOptions = {
+  server: string;
+  token: string;
+  schema?: Models<any, any>;
+  sessionCollectionName?: string;
+  userCollectionName?: string;
+  accountCollectionName?: string;
+  verificationRequestCollectionName?: string;
+};
+
+/**
+ *
+ *
+ */
 export function TriplitAdapter(
-  client: RemoteClient<any>,
-  options = {
-    sessionCollectionName: 'sessions',
-    userCollectionName: 'users',
-    accountCollectionName: 'accounts',
-    verificationRequestCollectionName: 'verificationRequests',
-  }
+  options: TriplitAdapterConnectionOptions
 ): Adapter {
+  const client = new RemoteClient({
+    server: options.server,
+    token: options.token,
+    schema: options.schema,
+  });
+  const collectionNames = {
+    session: options.sessionCollectionName || 'sessions',
+    user: options.userCollectionName || 'users',
+    account: options.accountCollectionName || 'accounts',
+    verificationRequest:
+      options.verificationRequestCollectionName || 'verificationTokens',
+  };
+
   return {
     async createUser(user) {
-      const result = await client.insert(options.userCollectionName, user);
+      const result = await client.insert(collectionNames.user, user);
       return result?.output;
     },
     async getUser(id) {
-      const user =
-        (await client.fetchById(options.userCollectionName, id)) ?? null;
+      const user = ((await client.fetchById(collectionNames.user, id)) ??
+        null) as AdapterUser | null;
       return user;
     },
     async getUserByEmail(email) {
       const user = await client.fetchOne({
-        collectionName: options.userCollectionName,
+        collectionName: collectionNames.user,
         where: [['email', '=', email]],
       });
       return user;
     },
     async getUserByAccount({ providerAccountId, provider }) {
       const account = await client.fetchOne({
-        collectionName: options.accountCollectionName,
+        collectionName: collectionNames.account,
         where: [
           ['provider', '=', provider],
           ['providerAccountId', '=', providerAccountId],
@@ -41,83 +63,115 @@ export function TriplitAdapter(
     },
     async updateUser(user) {
       const { id, ...rest } = user;
-      const result = await client.update(
-        options.userCollectionName,
-        user.id,
-        (entity) => {
-          Object.entries(rest).forEach(([key, value]) => {
-            entity[key] = value;
-          });
-        }
-      );
-      return result?.output;
+      await client.update(collectionNames.user, user.id, (entity) => {
+        Object.entries(rest).forEach(([key, value]) => {
+          entity[key] = value;
+        });
+      });
+      const updatedUser = await this.getUser!(id);
+      if (!updatedUser) throw new Error('User not found');
+      return updatedUser;
     },
     async linkAccount(account) {
-      const result = await client.insert(
-        options.accountCollectionName,
-        account
-      );
+      const result = await client.insert(collectionNames.account, account);
       return result?.output;
     },
     async unlinkAccount({ providerAccountId, provider }) {
       const account = await client.fetchOne({
-        collectionName: options.accountCollectionName,
+        collectionName: collectionNames.account,
         where: [
           ['provider', '=', provider],
           ['providerAccountId', '=', providerAccountId],
         ],
       });
       if (!account) return;
-      await client.delete(options.accountCollectionName, account.id);
+      await client.delete(collectionNames.account, account.id);
       return account;
     },
     async createSession(session) {
-      const result = await client.insert(
-        options.sessionCollectionName,
-        session
-      );
+      const result = await client.insert(collectionNames.session, session);
       return result?.output;
     },
     async getSessionAndUser(sessionToken) {
-      const session = await client.fetchOne({
-        collectionName: options.sessionCollectionName,
+      const sessionWithUser = await client.fetchOne({
+        collectionName: collectionNames.session,
         where: [['sessionToken', '=', sessionToken]],
         include: { user: null },
       });
-      if (!session) return null;
-      const user = session?.user?.get(session.userId);
+      if (!sessionWithUser) return null;
+      const { user: userMap, ...session } = sessionWithUser;
+      const user = userMap?.get(session.userId);
       if (!user) return null;
       return { session, user };
     },
     async updateSession(newSession) {
       const session = await client.fetchOne({
-        collectionName: options.sessionCollectionName,
+        collectionName: collectionNames.session,
         where: [['sessionToken', '=', newSession.sessionToken]],
-        select: ['id'],
       });
       const sessionId = session?.id;
       if (!session) return null;
-      const result = await client.update(
-        options.sessionCollectionName,
-        sessionId,
-        (entity) => {
-          Object.entries(newSession).forEach(([key, value]) => {
-            entity[key] = value;
-          });
-        }
-      );
-      return result?.output;
+      await client.update(collectionNames.session, sessionId, (entity) => {
+        Object.entries(newSession).forEach(([key, value]) => {
+          entity[key] = value;
+        });
+      });
+      const updatedSession =
+        ((await client.fetchById(
+          'sessions',
+          sessionId
+        )) as unknown as AdapterSession) ?? null;
+      return updatedSession;
     },
     async deleteSession(sessionToken) {
       const session = await client.fetchOne({
-        collectionName: options.sessionCollectionName,
+        collectionName: collectionNames.session,
         where: [['sessionToken', '=', sessionToken]],
-        select: ['id'],
       });
       const sessionId = session?.id;
       if (!sessionId) return null;
-      await client.delete(options.sessionCollectionName, sessionId);
+      await client.delete(collectionNames.session, sessionId);
       return session;
+    },
+    async createVerificationToken(token) {
+      const result = await client.insert(collectionNames.verificationRequest, {
+        ...token,
+        expires: token.expires.toISOString(),
+      });
+      return result?.output;
+    },
+    async useVerificationToken({ identifier, token }) {
+      const result = await client.fetchOne({
+        collectionName: collectionNames.verificationRequest,
+        where: [
+          ['identifier', '=', identifier],
+          ['token', '=', token],
+        ],
+      });
+      if (!result) return null;
+      const { id, ...tokenResult } = result;
+      await client.delete(collectionNames.verificationRequest, id);
+      return tokenResult;
+    },
+    async deleteUser(userId) {
+      const user = await client.fetchById(collectionNames.user, userId);
+      if (!user) return null;
+      const sessions = await client.fetch({
+        collectionName: collectionNames.session,
+        where: [['userId', '=', userId]],
+      });
+      for (const [id] of sessions) {
+        await client.delete(collectionNames.session, id);
+      }
+      const accounts = await client.fetch({
+        collectionName: collectionNames.account,
+        where: [['userId', '=', userId]],
+      });
+      for (const [id] of accounts) {
+        await client.delete(collectionNames.account, id);
+      }
+      await client.delete(collectionNames.user, userId);
+      return user as unknown as AdapterUser;
     },
   };
 }
