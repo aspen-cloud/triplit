@@ -4468,7 +4468,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@triplit/authjs-adapter@^0.0.2, @triplit/authjs-adapter@workspace:packages/authjs-adapter":
+"@triplit/authjs-adapter@^0.1.0, @triplit/authjs-adapter@workspace:packages/authjs-adapter":
   version: 0.0.0-use.local
   resolution: "@triplit/authjs-adapter@workspace:packages/authjs-adapter"
   dependencies:
@@ -13691,7 +13691,7 @@ __metadata:
     "@radix-ui/react-dropdown-menu": ^2.0.6
     "@radix-ui/react-slot": ^1.0.2
     "@tailwindcss/typography": ^0.5.10
-    "@triplit/authjs-adapter": ^0.0.2
+    "@triplit/authjs-adapter": ^0.1.0
     "@triplit/cli": ^0.3.2
     "@triplit/client": ^0.3.2
     "@triplit/db": ^0.3.2
