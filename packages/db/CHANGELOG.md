@@ -1,5 +1,11 @@
 # @triplit/db
 
+## 0.3.5
+
+### Patch Changes
+
+- 91ee2eb: dont return internal attributes from fetch
+
 ## 0.3.4
 
 ### Patch Changes
