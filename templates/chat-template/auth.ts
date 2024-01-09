@@ -1,21 +1,20 @@
 // import CredentialsProvider from "next-auth/providers/credentials"
 import CredentialsProvider from "@auth/core/providers/credentials"
 import { TriplitAdapter } from "@triplit/authjs-adapter"
-import { RemoteClient } from "@triplit/client"
 // import jwt from "jsonwebtoken"
 import * as jwt from "jose"
 import NextAuth, { NextAuthConfig } from "next-auth"
 import GithubProvider from "next-auth/providers/github"
 
 import { isPasswordValid } from "./lib/crypt.js"
-
-const adapterClient = new RemoteClient({
-  server: process.env.TRIPLIT_DB_URL,
-  token: process.env.TRIPLIT_SERVICE_TOKEN,
-})
+import { schema } from "./triplit/schema.js"
 
 export const authOptions: NextAuthConfig = {
-  adapter: TriplitAdapter(adapterClient),
+  adapter: TriplitAdapter({
+    server: process.env.TRIPLIT_DB_URL!,
+    token: process.env.TRIPLIT_SERVICE_TOKEN!,
+    schema: schema,
+  }),
   // Configure one or more authentication providers
   providers: [
     // ...add more providers here
@@ -103,22 +102,10 @@ export const authOptions: NextAuthConfig = {
   jwt: {
     secret: process.env.NEXTAUTH_SECRET,
     encode: async ({ secret, token, maxAge }) => {
-      const alg = "HS256"
-      const secretKey = new TextEncoder().encode(secret)
-      const encodedToken = await new jwt.SignJWT(token)
-        .setIssuedAt()
-        .setExpirationTime("24h")
-        .setProtectedHeader({ alg })
-        .sign(secretKey)
-      return encodedToken
+      return await signToken(token, secret)
     },
-    decode: async ({ secret, token, maxAge }) => {
-      const secretKey = new TextEncoder().encode(secret)
-      //   const decodedToken = jwt.verify(token, secret, { algorithms: ["HS256"] })
-      const decodedToken = await jwt.jwtVerify(token!, secretKey, {
-        algorithms: ["HS256"],
-      })
-      return decodedToken.payload
+    decode: async ({ secret, token }) => {
+      return await decodeToken(token!, secret)
     },
   },
   callbacks: {
@@ -131,12 +118,9 @@ export const authOptions: NextAuthConfig = {
       return token
     },
     async session({ session, token, user }) {
-      //   const encodedToken = jwt.sign(token, process.env.NEXTAUTH_SECRET, {
-      //     algorithm: "HS256",
-      //   })
-      session.user.id = token["x-triplit-user-id"]
-      //   session.token = encodedToken
-      session.token = await signToken(token, process.env.NEXTAUTH_SECRET!)
+      if (process.env.NEXTAUTH_SECRET) {
+        session.token = await signToken(token, process.env.NEXTAUTH_SECRET)
+      }
       return session
     },
     async authorized({ request, auth }) {
@@ -162,4 +146,12 @@ async function signToken(token: any, secret: string) {
     .setProtectedHeader({ alg })
     .sign(secretKey)
   return encodedToken
+}
+
+async function decodeToken(token: string, secret: string) {
+  const secretKey = new TextEncoder().encode(secret)
+  const decodedToken = await jwt.jwtVerify(token, secretKey, {
+    algorithms: ["HS256"],
+  })
+  return decodedToken.payload
 }
