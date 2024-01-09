@@ -108,13 +108,13 @@ export class RemoteClient<M extends Models<any, any> | undefined> {
       entity: UpdateTypeFromModel<ModelFromModels<M, CN>>
     ) => void | Promise<void>
   ) {
-    // TODO: get schema
+    const collectionSchema = this.options.schema?.[collectionName]?.schema;
     const entity = {};
     const changes = new ChangeTracker(entity);
-    const updateProxy = createUpdateProxy(
+    const updateProxy: any = createUpdateProxy(
       changes,
-      entity
-      // collectionSchema
+      entity,
+      collectionSchema
     );
     await updater(updateProxy);
     const changeTuples = changes.getTuples();

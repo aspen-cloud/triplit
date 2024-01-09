@@ -209,7 +209,13 @@ export function convertEntityToJS<M extends Model<any>>(
   entity: TimestampedTypeFromModel<M>,
   schema?: M
 ) {
+  // remove timestamps
   const untimestampedEntity = timestampedObjectToPlainObject(entity);
+
+  // Clean internal fields from entities
+  delete untimestampedEntity._collection;
+
+  // convert values based on schema
   return schema
     ? schema.convertDBValueToJS(untimestampedEntity)
     : untimestampedEntity;
