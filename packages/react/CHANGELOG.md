@@ -1,5 +1,13 @@
 # @triplit/react
 
+## 0.3.4
+
+### Patch Changes
+
+- 0d95347: remove parcel dependency
+- Updated dependencies [0d95347]
+  - @triplit/client@0.3.4
+
 ## 0.3.3
 
 ### Patch Changes

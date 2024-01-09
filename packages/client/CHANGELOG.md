@@ -1,5 +1,14 @@
 # @triplit/client
 
+## 0.3.4
+
+### Patch Changes
+
+- 0d95347: fixup value deserialization in remote client
+- Updated dependencies [0d95347]
+- Updated dependencies [0d95347]
+  - @triplit/db@0.3.4
+
 ## 0.3.3
 
 ### Patch Changes

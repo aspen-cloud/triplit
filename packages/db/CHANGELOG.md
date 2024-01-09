@@ -1,5 +1,12 @@
 # @triplit/db
 
+## 0.3.4
+
+### Patch Changes
+
+- 0d95347: add listener api for schema changes
+- 0d95347: remove parcel dependency
+
 ## 0.3.3
 
 ### Patch Changes
