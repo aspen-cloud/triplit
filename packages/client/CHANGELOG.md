@@ -1,5 +1,13 @@
 # @triplit/client
 
+## 0.3.6
+
+### Patch Changes
+
+- 8edd13f: properly use schema in remote client update api
+- Updated dependencies [8edd13f]
+  - @triplit/db@0.3.6
+
 ## 0.3.5
 
 ### Patch Changes

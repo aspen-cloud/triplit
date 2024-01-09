@@ -1,5 +1,11 @@
 # @triplit/db
 
+## 0.3.6
+
+### Patch Changes
+
+- 8edd13f: properly prune internal attributes on fetch
+
 ## 0.3.5
 
 ### Patch Changes
