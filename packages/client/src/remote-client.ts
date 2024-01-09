@@ -20,9 +20,11 @@ import {
 
 // Interact with remote via http api, totally separate from your local database
 export class RemoteClient<M extends Models<any, any> | undefined> {
-  constructor(public options: { server?: string; token?: string }) {}
+  constructor(
+    public options: { server?: string; token?: string; schema?: M }
+  ) {}
 
-  updateOptions(options: { server?: string; token?: string }) {
+  updateOptions(options: { server?: string; token?: string; schema?: M }) {
     this.options = { ...this.options, ...options };
   }
 
@@ -48,7 +50,7 @@ export class RemoteClient<M extends Models<any, any> | undefined> {
       query,
     });
     if (error) throw new Error(error);
-    return deserializeHTTPFetchResult(query, data.result);
+    return deserializeHTTPFetchResult(query, data.result, this.options.schema);
   }
 
   async fetchOne<CQ extends ClientQuery<any, any>>(
@@ -59,7 +61,11 @@ export class RemoteClient<M extends Models<any, any> | undefined> {
       query,
     });
     if (error) throw new Error(error);
-    const deserialized = deserializeHTTPFetchResult(query, data.result);
+    const deserialized = deserializeHTTPFetchResult(
+      query,
+      data.result,
+      this.options.schema
+    );
     const entity = [...deserialized.values()][0];
     if (!entity) return null;
     return entity;
@@ -75,7 +81,11 @@ export class RemoteClient<M extends Models<any, any> | undefined> {
       query,
     });
     if (error) throw new Error(error);
-    const deserialized = deserializeHTTPFetchResult(query, data.result);
+    const deserialized = deserializeHTTPFetchResult(
+      query,
+      data.result,
+      this.options.schema
+    );
     return deserialized.get(id);
   }
 
@@ -138,30 +148,45 @@ export class RemoteClient<M extends Models<any, any> | undefined> {
 
 function deserializeHTTPFetchResult<CQ extends ClientQuery<any, any>>(
   query: CQ,
-  result: [string, any][]
+  result: [string, any][],
+  schema?: any
 ): ClientFetchResult<CQ> {
   return new Map(
-    result.map((entry) => [entry[0], deserializeHTTPEntity(query, entry[1])])
+    result.map((entry) => [
+      entry[0],
+      deserializeHTTPEntity(query, entry[1], schema),
+    ])
   );
 }
 
-// TODO: handle more complex deserialization (deeply nested relationships)
 function deserializeHTTPEntity<CQ extends ClientQuery<any, any>>(
   query: CQ,
-  entity: any
+  entity: any,
+  schema?: any
 ): ClientFetchResultEntity<CQ> {
-  const { include } = query;
-  if (!include) return entity;
+  const { include, collectionName } = query;
+  const collectionSchema = schema?.[collectionName]?.schema;
+  const deserializedEntity = collectionSchema
+    ? (collectionSchema.convertDBValueToJS(
+        entity
+      ) as ClientFetchResultEntity<CQ>)
+    : entity;
+  if (!include) return deserializedEntity;
   const includeKeys = Object.keys(include);
-  if (includeKeys.length === 0) return entity;
+  if (includeKeys.length === 0) return deserializedEntity;
   for (const key of includeKeys) {
-    if (!(key in entity)) continue;
+    // Get query from schema or from include
+    const query =
+      include[key] === null
+        ? schema?.[collectionName]?.schema?.properties?.[key]?.query
+        : include[key];
+    if (!query) continue;
     const relationData = deserializeHTTPFetchResult(
-      // @ts-expect-error empty query should have collection name
-      include[key] ?? {}, // could be null (part of the schema)
-      entity[key]
+      query, // could be null (part of the schema)
+      deserializedEntity[key],
+      schema
     );
-    entity[key] = relationData;
+    deserializedEntity[key] = relationData;
   }
-  return entity;
+  return deserializedEntity;
 }

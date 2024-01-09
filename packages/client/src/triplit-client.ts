@@ -194,7 +194,14 @@ export class TriplitClient<M extends Models<any, any> | undefined = undefined> {
       ...(serverUrl ? mapServerUrlToSyncOptions(serverUrl) : {}),
     };
 
-    this.remote = new RemoteClient({ server: serverUrl, token });
+    this.remote = new RemoteClient({
+      server: serverUrl,
+      token,
+      schema: this.db.schema?.collections,
+    });
+    this.db.onSchemaChange((schema) => {
+      this.remote.updateOptions({ schema: schema?.collections });
+    });
 
     if (this.authOptions.token) {
       syncOptions.token = this.authOptions.token;

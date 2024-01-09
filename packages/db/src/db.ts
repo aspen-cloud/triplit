@@ -198,6 +198,10 @@ export type FetchByIdQueryParams<
   CN extends CollectionNameFromModels<M>
 > = Pick<Query<M, CN>, 'include'>;
 
+type SchemaChangeCallback<M extends Models<any, any> | undefined> = (
+  schema: StoreSchema<M> | undefined
+) => void;
+
 export default class DB<M extends Models<any, any> | undefined = undefined> {
   tripleStore: TripleStore;
   ensureMigrated: Promise<void | void[]>;
@@ -206,6 +210,7 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
 
   _schema?: Entity; // Timestamped Object
   schema?: StoreSchema<M>;
+  private onSchemaChangeCallbacks: Set<SchemaChangeCallback<M>>;
 
   constructor({
     schema,
@@ -239,6 +244,11 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
     });
     this.cache = new VariableAwareCache(this.tripleStore);
 
+    // Add listener to update in memory schema
+    const updateCachedSchemaOnChange: SchemaChangeCallback<M> = (schema) =>
+      (this.schema = schema);
+    this.onSchemaChangeCallbacks = new Set([updateCachedSchemaOnChange]);
+
     this.ensureMigrated = this.tripleStore
       .ensureStorageIsMigrated()
       // Apply migrations or overwrite schema
@@ -271,9 +281,14 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
 
             // Update schema
             updateEntity(this._schema!, schemaTriples);
-            this.schema = timestampedSchemaToSchema(
+            const newSchema = timestampedSchemaToSchema(
               this._schema!.data
             ) as StoreSchema<M>;
+
+            // Call any listeners
+            for (const cb of this.onSchemaChangeCallbacks) {
+              cb(newSchema);
+            }
           }
         );
       });
@@ -718,6 +733,11 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
 
   async clear() {
     await this.tripleStore.clear();
+  }
+
+  onSchemaChange(cb: SchemaChangeCallback<M>) {
+    this.onSchemaChangeCallbacks.add(cb);
+    return () => this.onSchemaChangeCallbacks.delete(cb);
   }
 }
 
