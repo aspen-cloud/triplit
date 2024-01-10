@@ -228,7 +228,7 @@ const recordType = S.Record({
 
 ## Relationships
 
-To define a relationship between two collections, you define a subquery that describes the relationship with `Query()`. Within the where clause, you can reference the current collection's attributes with `$`.
+To define a relationship between two collections, you define a subquery that describes the relationship with `RelationMany`, `RelationOne` or `RelationById`. A `RelationMany` attribute will be in the shape `Map<string, Entity>` while `RelationOne` and `RelationById` are designed for singleton relations and will be directly nested or a sub-object or `null` if an applicable entity doesn't exist. Within a relation, either in a where clause or the `RelationById` id, parameter, you can reference the current collection's attributes with `$`.
 
 ```typescript
 import { Schema as S } from '@triplit/db';
@@ -238,7 +238,7 @@ const schema = {
       schema: S.Schema({
         id: S.Id(),
         name: S.String(),
-        classes: S.Query({
+        classes: S.RelationMany({
           collectionName: 'classes',
           where: [['department_id', '=', '$id']],
         }),
@@ -251,10 +251,7 @@ const schema = {
         level: S.Number(),
         building: S.String(),
         department_id: S.String(),
-        department: S.Query({
-          collectionName: 'departments',
-          where: [['id', '=', '$department_id']],
-        }),
+        department: S.RelationById('department', '$department_id'),
       }),
     },
   },

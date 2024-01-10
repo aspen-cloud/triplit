@@ -160,10 +160,22 @@ function schemaItemToString(schemaItem: AttributeDefinition): string {
     return `S.Record({${Object.entries(schemaItem.properties)
       .map(([key, value]) => `'${key}': ${schemaItemToString(value as any)}`)
       .join(',\n')}})`;
-  if (type === 'query')
-    return `S.Query(${subQueryToString(schemaItem.query)}, ${
-      schemaItem.cardinality
-    })`;
+  if (type === 'query') {
+    const { query, cardinality } = schemaItem;
+    if (cardinality === 'one') {
+      const isRelationById =
+        query.collectionName &&
+        query.where &&
+        query.where.length === 1 &&
+        query.where[0][0] === 'id' &&
+        query.where[0][1] === '=' &&
+        Object.keys(query).length === 2;
+      if (isRelationById)
+        return `S.RelationById('${query.collectionName}', '${query.where[0][2]}')`;
+      return `S.RelationOne(${subQueryToString(query)})`;
+    }
+    return `S.RelationMany(${subQueryToString(query)})`;
+  }
   throw new Error(`Invalid type: ${type}`);
 }
 
@@ -205,8 +217,10 @@ function valueToJS(value: any) {
 }
 
 function subQueryToString(subquery: QueryAttributeDefinition['query']) {
-  const { collectionName, where } = subquery;
+  const { collectionName, where, limit, order } = subquery;
+  const limitString = limit ? `, limit: ${limit}` : '';
+  const orderString = order ? `, order: ${JSON.stringify(order)}` : '';
   return `{collectionName: '${collectionName}' as const, where: ${JSON.stringify(
     where
-  )}}`;
+  )}${limitString}${orderString}}`;
 }

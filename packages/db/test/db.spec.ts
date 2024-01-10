@@ -5282,7 +5282,7 @@ describe('selecting subqueries from schema', () => {
             id: S.String(),
             content: S.String(),
             author_id: S.String(),
-            author: S.Entity('users', '$author_id'),
+            author: S.RelationById('users', '$author_id'),
             topics: S.Set(S.String()),
             likes: S.Query({
               collectionName: 'likes' as const,

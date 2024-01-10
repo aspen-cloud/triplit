@@ -285,7 +285,7 @@ export class TriplitClient<M extends Models<any, any> | undefined = undefined> {
   ): Promise<ClientFetchResult<CQ>> {
     const scope = parseScope(query);
     const res = await this.db.fetch(query, { scope, skipRules: SKIP_RULES });
-    return res;
+    return res as ClientFetchResult<CQ>;
   }
 
   async fetchById<CN extends CollectionNameFromModels<M>>(

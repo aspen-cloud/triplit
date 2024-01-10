@@ -1,10 +1,10 @@
 import { TObject } from '@sinclair/typebox';
 import { InvalidSchemaPathError } from './errors.js';
-import type { CollectionRules } from './db.js';
+import type { CollectionNameFromModels, CollectionRules } from './db.js';
 import { Timestamp } from './timestamp.js';
 import type { Attribute, EAV, TripleRow } from './triple-store-utils.js';
 import { dbDocumentToTuples, objectToTuples } from './utils.js';
-import { constructEntity } from './query.js';
+import { CollectionQuery, constructEntity } from './query.js';
 import { appendCollectionToId, StoreSchema } from './db-helpers.js';
 import {
   typeFromJSON,
@@ -28,7 +28,11 @@ import {
   ExtractDBType,
   ExtractTimestampedType,
 } from './data-types/type.js';
-import { QueryType } from './data-types/query.js';
+import {
+  QueryResultCardinality,
+  QueryType,
+  SubQuery,
+} from './data-types/query.js';
 
 // We infer TObject as a return type of some funcitons and this causes issues with consuming packages
 // Using solution 3.1 described in this comment as a fix: https://github.com/microsoft/TypeScript/issues/47663#issuecomment-1519138189
@@ -49,8 +53,16 @@ export class Schema {
 
   static Query = QueryType;
 
-  static Entity = (collectionName: string, entityId: string) =>
-    QueryType({ collectionName, where: [['id', '=', entityId]] }, 'one');
+  static RelationMany = <Q extends SubQuery<any, any>>(query: Q) =>
+    QueryType(query, 'many');
+
+  static RelationOne = <Q extends SubQuery<any, any>>(query: Q) =>
+    QueryType({ ...query, limit: 1 }, 'one');
+
+  static RelationById = <C extends CollectionNameFromModels<any>>(
+    collectionName: C,
+    entityId: string
+  ) => QueryType({ collectionName, where: [['id', '=', entityId]] }, 'one');
 
   static Schema<T extends SchemaConfig>(config: T) {
     return Schema.Record(config);
@@ -169,7 +181,7 @@ export type SelectModelFromModel<M extends Model<any> | undefined> =
     ? Config extends SchemaConfig
       ? Model<//@ts-expect-error
         {
-          [k in keyof Config as Config[k] extends QueryType<any>
+          [k in keyof Config as Config[k] extends QueryType<any, any>
             ? never
             : k]: Config[k];
         }>

@@ -17,6 +17,7 @@ import {
   getSchemaFromPath,
   Model,
   Models,
+  Schema,
   timestampedObjectToPlainObject,
 } from './schema.js';
 import { Timestamp } from './timestamp.js';
@@ -35,7 +36,7 @@ import { Operator } from './data-types/base.js';
 import { VariableAwareCache } from './variable-aware-cache.js';
 import { isTimestampedEntityDeleted } from './entity.js';
 import { CollectionNameFromModels, ModelFromModels } from './db.js';
-import { QueryType } from './data-types/query.js';
+import { QueryResultCardinality, QueryType } from './data-types/query.js';
 import { ExtractJSType } from './data-types/type.js';
 import { TripleRow, Value } from './triple-store-utils.js';
 
@@ -53,6 +54,11 @@ export default function CollectionQueryBuilder<
   });
 }
 
+export type QueryResult<
+  Q extends CollectionQuery<any, any>,
+  C extends QueryResultCardinality
+> = C extends 'one' ? FetchResultEntity<Q> : FetchResult<Q>;
+
 export type FetchResult<C extends CollectionQuery<any, any>> = Map<
   string,
   FetchResultEntity<C>
@@ -65,8 +71,8 @@ export type JSTypeOrRelation<
   Ms extends Models<any, any>,
   M extends Model<any>,
   propName extends keyof M['properties']
-> = M['properties'][propName] extends QueryType<infer Q>
-  ? FetchResult<CollectionQuery<Ms, Q['collectionName']>>
+> = M['properties'][propName] extends QueryType<infer Q, infer Cardinality>
+  ? QueryResult<CollectionQuery<Ms, Q['collectionName']>, Cardinality>
   : ExtractJSType<M['properties'][propName]>;
 
 // Trying this out, having types that know and dont know the schema exists might be a useful pattern
@@ -93,7 +99,7 @@ export type FetchResultEntity<C extends CollectionQuery<any, any>> =
     ? M extends Models<any, any>
       ? ReturnTypeFromQuery<M, CN>
       : any
-    : never;
+    : 'bad fetch result';
 
 export interface FetchOptions {
   includeTriples?: boolean;

@@ -7,24 +7,30 @@ import { TypeInterface } from './type.js';
 export type SubQuery<
   M extends Models<any, any>,
   CN extends CollectionNameFromModels<M>
-> = Pick<CollectionQuery<M, CN>, 'collectionName' | 'where'>;
+> = Pick<
+  CollectionQuery<M, CN>,
+  'collectionName' | 'where' | 'limit' | 'order'
+>;
 
 export type QueryResultCardinality = 'one' | 'many';
 
-export type QueryType<Query extends SubQuery<any, any>> = TypeInterface<
+export type QueryType<
+  Query extends SubQuery<any, any>,
+  C extends QueryResultCardinality
+> = TypeInterface<
   'query',
   FetchResult<Query>,
   any, //TODO: is this even applicable? ... might need to break it out into its own concepts we slowly add to
   readonly []
 > & {
   query: Query;
-  cardinality: QueryResultCardinality;
+  cardinality: C;
 };
 
-export function QueryType<Q extends SubQuery<any, any>>(
-  query: Q,
-  cardinality: QueryResultCardinality = 'many'
-): QueryType<Q> {
+export function QueryType<
+  Q extends SubQuery<any, any>,
+  C extends QueryResultCardinality
+>(query: Q, cardinality: C = 'many' as C): QueryType<Q, C> {
   return {
     type: 'query' as const,
     cardinality,

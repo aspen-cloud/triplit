@@ -41,7 +41,7 @@ export type DataType =
   | ValueType<any>
   | SetType<ValueType<any>>
   | RecordType<{ [k: string]: DataType }>
-  | QueryType<any>;
+  | QueryType<any, any>;
 
 export const Nullable = <T extends ValueSchemaType>(type: T) =>
   Type.Union([type, Type.Null()]);

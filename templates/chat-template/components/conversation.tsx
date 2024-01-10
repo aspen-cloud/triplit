@@ -120,7 +120,6 @@ function MessageList({ convoId }: { convoId: string }) {
     error: messagesError,
     fetching: isFetchingMessages,
   } = useMessages(convoId)
-
   const messageArray = useMemo(() => {
     if (!messages) return []
     return Array.from(messages).map(([_id, message]) => message)

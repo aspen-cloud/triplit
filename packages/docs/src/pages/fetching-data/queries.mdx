@@ -33,7 +33,7 @@ If you do not call select on a query, all attributes are selected.
 
 ### Selecting related entities
 
-If you have defined a relation in your schema, you can choose to select entities defined by the relation in a query.
+If you have defined a relation in your schema using `RelationById`, `RelationOne`, or `RelationMany`, you can choose to select entities defined by the relation in a query.
 
 For example, the following schema defines a relation between `users` and `messages`
 
@@ -49,10 +49,7 @@ const schema = {
       id: S.Id(),
       text: S.String(),
       sender_id: S.String(),
-      sender: S.Query({
-        collectionName: 'users',
-        where: [[id, '=', '$sender_id']],
-      }),
+      sender: S.RelationById('users', '$sender_id'),
     }),
   },
 };

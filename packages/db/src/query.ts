@@ -100,7 +100,7 @@ export type QueryOrder<M extends Model<any> | undefined> = [
 ];
 
 type RelationAttributes<M extends Model<any>> = {
-  [K in keyof M['properties']]: M['properties'][K] extends QueryType<any>
+  [K in keyof M['properties']]: M['properties'][K] extends QueryType<any, any>
     ? K
     : never;
 }[keyof M['properties']];

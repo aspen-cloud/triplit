@@ -6,11 +6,11 @@ export const schema = {
       id: S.Id(),
       conversationId: S.String(),
       sender_id: S.String(),
-      sender: S.Entity("users", "$sender_id"),
+      sender: S.RelationById("users", "$sender_id"),
       text: S.String(),
       created_at: S.String({ default: S.Default.now() }),
       likes: S.Set(S.String()),
-      convo: S.Entity("conversations", "$conversationId"),
+      convo: S.RelationById("conversations", "$conversationId"),
     }),
     rules: {
       read: {
@@ -25,7 +25,7 @@ export const schema = {
       id: S.Id(),
       name: S.String(),
       members: S.Set(S.String()),
-      membersInfo: S.Query({
+      membersInfo: S.RelationMany({
         collectionName: "users" as const,
         where: [["id", "in", "$members"]],
       }),
@@ -70,7 +70,7 @@ export const schema = {
     schema: S.Schema({
       id: S.Id(),
       userId: S.String(),
-      user: S.Entity("users", "$userId"),
+      user: S.RelationById("users", "$userId"),
       type: S.String(),
       provider: S.String(),
       providerAccountId: S.String(),
@@ -87,7 +87,7 @@ export const schema = {
     schema: S.Schema({
       id: S.Id(),
       userId: S.String(),
-      user: S.Entity("users", "$userId"),
+      user: S.RelationById("users", "$userId"),
       expires: S.Date(),
       sessionToken: S.String(),
     }),

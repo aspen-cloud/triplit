@@ -1,4 +1,4 @@
-import { expectTypeOf, test, describe } from 'vitest';
+import { expectTypeOf, test, describe, expect } from 'vitest';
 import DB, { ModelFromModels } from '../../src/db.js';
 import { Schema as S } from '../../src/schema.js';
 import {
@@ -8,7 +8,7 @@ import {
   RelationSubquery,
   WhereFilter,
 } from '../../src/query.js';
-import { FetchResult } from '../../src/collection-query.js';
+import { FetchResult, QueryResult } from '../../src/collection-query.js';
 
 type TransactionAPI<TxDB extends DB<any>> = TxDB extends DB<infer M>
   ? Parameters<Parameters<DB<M>['transact']>[0]>[0]
@@ -339,7 +339,10 @@ describe('schemaful', () => {
             defaultNow: S.String({ default: S.Default.now() }),
             defaultUuid: S.String({ default: S.Default.uuid() }),
             // subqueries
-            subquery: S.Query({ collectionName: 'test2' as const, where: [] }),
+            subquery: S.RelationMany({
+              collectionName: 'test2' as const,
+              where: [],
+            }),
           }),
         },
         test2: {
@@ -370,8 +373,9 @@ describe('schemaful', () => {
           defaultNull: string;
           defaultNow: string;
           defaultUuid: string;
-          subquery: FetchResult<
-            CollectionQuery<typeof schema.collections, 'test2'>
+          subquery: QueryResult<
+            CollectionQuery<typeof schema.collections, 'test2'>,
+            'many'
           >;
         }
       >
@@ -618,7 +622,10 @@ describe('fetching', () => {
           attr1: S.String(),
           attr2: S.Boolean(),
           attr3: S.Number(),
-          subquery: S.Query({ collectionName: 'test2' as const, where: [] }),
+          subquery: S.RelationMany({
+            collectionName: 'test2' as const,
+            where: [],
+          }),
         }),
       },
       test2: {
@@ -655,14 +662,16 @@ describe('fetching', () => {
     // Schemaful
     {
       const db = new DB({ schema });
+      type TestType = QueryResult<
+        CollectionQuery<typeof schema.collections, 'test2'>,
+        'many'
+      >;
       expectTypeOf(db.fetchById('test', 'id')).resolves.toEqualTypeOf<{
         id: string;
         attr1: string;
         attr2: boolean;
         attr3: number;
-        subquery: FetchResult<
-          CollectionQuery<typeof schema.collections, 'test2'>
-        >;
+        subquery: TestType;
       } | null>();
     }
     // schemaless
@@ -677,13 +686,19 @@ describe('fetching', () => {
     {
       const db = new DB({ schema });
       const query = db.query('test').build();
+      type TestType = QueryResult<
+        CollectionQuery<typeof schema.collections, 'test'>,
+        'many'
+      >;
+
       expectTypeOf(db.fetchOne(query)).resolves.toEqualTypeOf<{
         id: string;
         attr1: string;
         attr2: boolean;
         attr3: number;
-        subquery: FetchResult<
-          CollectionQuery<typeof schema.collections, 'test2'>
+        subquery: QueryResult<
+          CollectionQuery<typeof schema.collections, 'test2'>,
+          'many'
         >;
       } | null>();
     }
