@@ -5521,27 +5521,25 @@ describe('hooks API', async () => {
   it('before write hooks will run on transaction', async () => {
     const db = new DB();
     const beforeCommitFn = vi.fn();
-    db.setTrigger(
+    db.addTrigger(
       { when: 'beforeCommit', collectionName: 'users' },
       beforeCommitFn
     );
-
     const beforeInsertFn = vi.fn();
-    db.setTrigger(
+    db.addTrigger(
       { when: 'beforeInsert', collectionName: 'users' },
       beforeInsertFn
     );
     const beforeUpdateFn = vi.fn();
-    db.setTrigger(
+    db.addTrigger(
       { when: 'beforeUpdate', collectionName: 'users' },
       beforeUpdateFn
     );
     const beforeDeleteFn = vi.fn();
-    db.setTrigger(
+    db.addTrigger(
       { when: 'beforeDelete', collectionName: 'users' },
       beforeDeleteFn
     );
-
     await db.transact(async (tx) => {
       await tx.insert('users', { id: '1', name: 'alice' });
       await tx.insert('users', { id: '2', name: 'bob' });
@@ -5568,7 +5566,6 @@ describe('hooks API', async () => {
     });
     expect(beforeUpdateFn).toHaveBeenCalledTimes(0);
     expect(beforeDeleteFn).toHaveBeenCalledTimes(0);
-
     await db.transact(async (tx) => {
       await tx.update('users', '1', (entity) => {
         entity.name = 'aaron';
@@ -5625,24 +5622,40 @@ describe('hooks API', async () => {
     });
   });
   it('after write hooks will run on transaction', async () => {
-    const db = new DB();
+    const db = new DB({
+      schema: {
+        collections: {
+          users: {
+            schema: S.Schema({
+              id: S.String(),
+              name: S.String(),
+            }),
+          },
+          tasks: {
+            schema: S.Schema({
+              id: S.String(),
+              text: S.String(),
+              due: S.Date(),
+              completed: S.Boolean(),
+            }),
+          },
+        },
+      },
+    });
     const afterCommitFn = vi.fn();
-    db.setTrigger(
-      { when: 'afterCommit', collectionName: 'users' },
-      afterCommitFn
-    );
+    db.addTrigger({ when: 'afterCommit' }, afterCommitFn);
     const afterInsertFn = vi.fn();
-    db.setTrigger(
+    db.addTrigger(
       { when: 'afterInsert', collectionName: 'users' },
       afterInsertFn
     );
     const afterUpdateFn = vi.fn();
-    db.setTrigger(
+    db.addTrigger(
       { when: 'afterUpdate', collectionName: 'users' },
       afterUpdateFn
     );
     const afterDeleteFn = vi.fn();
-    db.setTrigger(
+    db.addTrigger(
       { when: 'afterDelete', collectionName: 'users' },
       afterDeleteFn
     );

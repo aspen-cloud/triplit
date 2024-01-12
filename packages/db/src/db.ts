@@ -4,12 +4,15 @@ import {
   Models,
   InsertTypeFromModel,
   timestampedSchemaToSchema,
+  Schema,
 } from './schema.js';
 import { AsyncTupleStorageApi, TupleStorageApi } from '@triplit/tuple-database';
 import CollectionQueryBuilder, {
   fetch,
   FetchResult,
   FetchResultEntity,
+  MaybeReturnTypeFromQuery,
+  ReturnTypeFromQuery,
   subscribe,
   subscribeTriples,
 } from './collection-query.js';
@@ -25,7 +28,7 @@ import { MemoryBTreeStorage } from './storage/memory-btree.js';
 import { DBOptionsError, InvalidMigrationOperationError } from './errors.js';
 import { Clock } from './clocks/clock.js';
 
-import { DBTransaction, EntityOpSet } from './db-transaction.js';
+import { DBTransaction } from './db-transaction.js';
 import {
   appendCollectionToId,
   readSchemaFromTripleStore,
@@ -202,6 +205,71 @@ type SchemaChangeCallback<M extends Models<any, any> | undefined> = (
   schema: StoreSchema<M> | undefined
 ) => void;
 
+// export interface DBApi<M extends Models<any, any> | undefined> {
+//   insert<CN extends CollectionNameFromModels<M>>(
+//     collectionName: CN,
+//     doc: InsertTypeFromModel<ModelFromModels<M, CN>>
+//   ): Promise<MaybeReturnTypeFromQuery<M, CN>>;
+//   update<CN extends CollectionNameFromModels<M>>(
+//     collectionName: CN,
+//     entityId: string,
+//     updater: (
+//       entity: UpdateTypeFromModel<ModelFromModels<M, CN>>
+//     ) => void | Promise<void>
+//   ): Promise<void>;
+//   delete<CN extends CollectionNameFromModels<M>>(
+//     collectionName: CN,
+//     id: string
+//   ): Promise<void>;
+
+//   fetch<Q extends CollectionQuery<M, any>>(
+//     query: Q,
+//     options?: DBFetchOptions
+//   ): Promise<FetchResult<Q>>;
+//   fetchById<CN extends CollectionNameFromModels<M>>(
+//     collectionName: CN,
+//     id: string,
+//     queryParams?: FetchByIdQueryParams<M, CN>,
+//     options?: DBFetchOptions
+//   ): Promise<FetchResultEntity<CollectionQuery<M, CN>> | null>;
+//   fetchOne<Q extends CollectionQuery<M, any>>(
+//     query: Q,
+//     options?: DBFetchOptions
+//   ): Promise<FetchResultEntity<Q> | null>;
+
+//   // TODO: add query() method
+// }
+
+type TxOutput<Output> = {
+  txId: string | undefined;
+  output: Output | undefined;
+};
+
+// // Extends DB API with transact method
+// export interface TransactableDBApi<M extends Models<any, any> | undefined>
+//   extends DBApi<M> {
+//   transact<Output>(
+//     callback: (tx: DBTransaction<M>) => Promise<Output>,
+//     options?: TransactOptions
+//   ): Promise<TxOutput<Output>>;
+
+//   insert<CN extends CollectionNameFromModels<M>>(
+//     collectionName: CN,
+//     doc: InsertTypeFromModel<ModelFromModels<M, CN>>
+//   ): Promise<TxOutput<MaybeReturnTypeFromQuery<M, CN>>>;
+//   update<CN extends CollectionNameFromModels<M>>(
+//     collectionName: CN,
+//     entityId: string,
+//     updater: (
+//       entity: UpdateTypeFromModel<ModelFromModels<M, CN>>
+//     ) => void | Promise<void>
+//   ): Promise<TxOutput<void>>;
+//   delete<CN extends CollectionNameFromModels<M>>(
+//     collectionName: CN,
+//     id: string
+//   ): Promise<TxOutput<void>>;
+// }
+
 type TriggerWhen =
   | 'afterCommit'
   | 'afterDelete'
@@ -212,106 +280,166 @@ type TriggerWhen =
   | 'beforeInsert'
   | 'beforeUpdate';
 
-interface TriggerOptionsBase {
-  when: TriggerWhen;
-  collectionName: string;
-}
+export type EntityOpSet = {
+  inserts: [string, any][];
+  updates: [string, any][];
+  deletes: [string, any][];
+};
 
-interface AfterCommitOptions extends TriggerOptionsBase {
+interface AfterCommitOptions<M extends Models<any, any> | undefined> {
   when: 'afterCommit';
 }
-type AfterCommitCallback = (args: {
+type AfterCommitCallback<M extends Models<any, any> | undefined> = (args: {
   opSet: EntityOpSet;
-  // TODO: should be db transaction
-  tx: TripleStoreTransaction;
-  db: TripleStoreApi;
+  tx: DBTransaction<M>;
+  db: DB<M>;
 }) => void | Promise<void>;
-interface AfterInsertOptions extends TriggerOptionsBase {
+interface AfterInsertOptions<
+  M extends Models<any, any> | undefined,
+  CN extends CollectionNameFromModels<M>
+> {
   when: 'afterInsert';
+  collectionName: CN;
 }
-type AfterInsertCallback = (args: {
-  entity: any;
-  tx: TripleStoreTransaction;
-  db: TripleStoreApi;
+type AfterInsertCallback<
+  M extends Models<any, any> | undefined,
+  CN extends CollectionNameFromModels<M>
+> = (args: {
+  entity: FetchResultEntity<CollectionQuery<M, CN>>;
+  tx: DBTransaction<M>;
+  db: DB<M>;
 }) => void | Promise<void>;
-interface AfterUpdateOptions extends TriggerOptionsBase {
+interface AfterUpdateOptions<
+  M extends Models<any, any> | undefined,
+  CN extends CollectionNameFromModels<M>
+> {
   when: 'afterUpdate';
+  collectionName: CN;
 }
-type AfterUpdateCallback = (args: {
-  entity: any;
-  tx: TripleStoreTransaction;
-  db: TripleStoreApi;
+type AfterUpdateCallback<
+  M extends Models<any, any> | undefined,
+  CN extends CollectionNameFromModels<M>
+> = (args: {
+  entity: FetchResultEntity<CollectionQuery<M, CN>>;
+  tx: DBTransaction<M>;
+  db: DB<M>;
 }) => void | Promise<void>;
-interface AfterDeleteOptions extends TriggerOptionsBase {
+interface AfterDeleteOptions<
+  M extends Models<any, any> | undefined,
+  CN extends CollectionNameFromModels<M>
+> {
   when: 'afterDelete';
+  collectionName: CN;
 }
-type AfterDeleteCallback = (args: {
-  entity: any;
-  tx: TripleStoreTransaction;
-  db: TripleStoreApi;
+type AfterDeleteCallback<
+  M extends Models<any, any> | undefined,
+  CN extends CollectionNameFromModels<M>
+> = (args: {
+  entity: FetchResultEntity<CollectionQuery<M, CN>>;
+  tx: DBTransaction<M>;
+  db: DB<M>;
 }) => void | Promise<void>;
-interface BeforeCommitOptions extends TriggerOptionsBase {
+interface BeforeCommitOptions<M extends Models<any, any> | undefined> {
   when: 'beforeCommit';
 }
-type BeforeCommitCallback = (args: {
+type BeforeCommitCallback<M extends Models<any, any> | undefined> = (args: {
   opSet: EntityOpSet;
-  tx: TripleStoreTransaction;
-  db: TripleStoreApi;
+  tx: DBTransaction<M>;
+  db: DB<M>;
 }) => void | Promise<void>;
-interface BeforeInsertOptions extends TriggerOptionsBase {
+interface BeforeInsertOptions<
+  M extends Models<any, any> | undefined,
+  CN extends CollectionNameFromModels<M>
+> {
   when: 'beforeInsert';
+  collectionName: CN;
 }
-type BeforeInsertCallback = (args: {
-  entity: any;
-  tx: TripleStoreTransaction;
-  db: TripleStoreApi;
+type BeforeInsertCallback<
+  M extends Models<any, any> | undefined,
+  CN extends CollectionNameFromModels<M>
+> = (args: {
+  entity: FetchResultEntity<CollectionQuery<M, CN>>;
+  tx: DBTransaction<M>;
+  db: DB<M>;
 }) => void | Promise<void>;
-interface BeforeUpdateOptions extends TriggerOptionsBase {
+interface BeforeUpdateOptions<
+  M extends Models<any, any> | undefined,
+  CN extends CollectionNameFromModels<M>
+> {
   when: 'beforeUpdate';
+  collectionName: CN;
 }
-type BeforeUpdateCallback = (args: {
-  entity: any;
-  tx: TripleStoreTransaction;
-  db: TripleStoreApi;
+type BeforeUpdateCallback<
+  M extends Models<any, any> | undefined,
+  CN extends CollectionNameFromModels<M>
+> = (args: {
+  entity: FetchResultEntity<CollectionQuery<M, CN>>;
+  tx: DBTransaction<M>;
+  db: DB<M>;
 }) => void | Promise<void>;
-interface BeforeDeleteOptions extends TriggerOptionsBase {
+interface BeforeDeleteOptions<
+  M extends Models<any, any> | undefined,
+  CN extends CollectionNameFromModels<M>
+> {
   when: 'beforeDelete';
+  collectionName: CN;
 }
-type BeforeDeleteCallback = (args: {
-  entity: any;
-  tx: TripleStoreTransaction;
-  db: TripleStoreApi;
+type BeforeDeleteCallback<
+  M extends Models<any, any> | undefined,
+  CN extends CollectionNameFromModels<M>
+> = (args: {
+  entity: FetchResultEntity<CollectionQuery<M, CN>>;
+  tx: DBTransaction<M>;
+  db: DB<M>;
 }) => void | Promise<void>;
 
 type TriggerOptions =
-  | AfterCommitOptions
-  | AfterInsertOptions
-  | AfterUpdateOptions
-  | AfterDeleteOptions
-  | BeforeCommitOptions
-  | BeforeInsertOptions
-  | BeforeUpdateOptions
-  | BeforeDeleteOptions;
+  | AfterCommitOptions<any>
+  | AfterInsertOptions<any, any>
+  | AfterUpdateOptions<any, any>
+  | AfterDeleteOptions<any, any>
+  | BeforeCommitOptions<any>
+  | BeforeInsertOptions<any, any>
+  | BeforeUpdateOptions<any, any>
+  | BeforeDeleteOptions<any, any>;
 
 type TriggerCallback =
-  | AfterCommitCallback
-  | AfterInsertCallback
-  | AfterUpdateCallback
-  | AfterDeleteCallback
-  | BeforeCommitCallback
-  | BeforeInsertCallback
-  | BeforeUpdateCallback
-  | BeforeDeleteCallback;
+  | AfterCommitCallback<any>
+  | AfterInsertCallback<any, any>
+  | AfterUpdateCallback<any, any>
+  | AfterDeleteCallback<any, any>
+  | BeforeCommitCallback<any>
+  | BeforeInsertCallback<any, any>
+  | BeforeUpdateCallback<any, any>
+  | BeforeDeleteCallback<any, any>;
 
-export type DBHooks = {
-  afterCommit: [AfterCommitCallback, AfterCommitOptions][];
-  afterInsert: [AfterInsertCallback, AfterInsertOptions][];
-  afterUpdate: [AfterInsertCallback, AfterUpdateOptions][];
-  afterDelete: [AfterDeleteCallback, AfterDeleteOptions][];
-  beforeCommit: [BeforeCommitCallback, BeforeCommitOptions][];
-  beforeInsert: [BeforeInsertCallback, BeforeInsertOptions][];
-  beforeUpdate: [BeforeUpdateCallback, BeforeUpdateOptions][];
-  beforeDelete: [BeforeDeleteCallback, BeforeDeleteOptions][];
+export type DBHooks<M extends Models<any, any> | undefined> = {
+  afterCommit: [AfterCommitCallback<M>, AfterCommitOptions<M>][];
+  afterInsert: [
+    AfterInsertCallback<M, CollectionNameFromModels<M>>,
+    AfterInsertOptions<M, CollectionNameFromModels<M>>
+  ][];
+  afterUpdate: [
+    AfterInsertCallback<M, CollectionNameFromModels<M>>,
+    AfterUpdateOptions<M, CollectionNameFromModels<M>>
+  ][];
+  afterDelete: [
+    AfterDeleteCallback<M, CollectionNameFromModels<M>>,
+    AfterDeleteOptions<M, CollectionNameFromModels<M>>
+  ][];
+  beforeCommit: [BeforeCommitCallback<M>, BeforeCommitOptions<M>][];
+  beforeInsert: [
+    BeforeInsertCallback<M, CollectionNameFromModels<M>>,
+    BeforeInsertOptions<M, CollectionNameFromModels<M>>
+  ][];
+  beforeUpdate: [
+    BeforeUpdateCallback<M, CollectionNameFromModels<M>>,
+    BeforeUpdateOptions<M, CollectionNameFromModels<M>>
+  ][];
+  beforeDelete: [
+    BeforeDeleteCallback<M, CollectionNameFromModels<M>>,
+    BeforeDeleteOptions<M, CollectionNameFromModels<M>>
+  ][];
 };
 
 export default class DB<M extends Models<any, any> | undefined = undefined> {
@@ -324,7 +452,7 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
   schema?: StoreSchema<M>;
   private onSchemaChangeCallbacks: Set<SchemaChangeCallback<M>>;
 
-  private hooks: DBHooks = {
+  private hooks: DBHooks<M> = {
     afterCommit: [],
     afterInsert: [],
     afterUpdate: [],
@@ -418,47 +546,78 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
       });
   }
 
-  setTrigger(on: AfterCommitOptions, callback: AfterCommitCallback): void;
-  setTrigger(on: AfterInsertOptions, callback: AfterInsertCallback): void;
-  setTrigger(on: AfterUpdateOptions, callback: AfterUpdateCallback): void;
-  setTrigger(on: AfterDeleteOptions, callback: AfterDeleteCallback): void;
-  setTrigger(on: BeforeCommitOptions, callback: BeforeCommitCallback): void;
-  setTrigger(on: BeforeInsertOptions, callback: BeforeInsertCallback): void;
-  setTrigger(on: BeforeUpdateOptions, callback: BeforeUpdateCallback): void;
-  setTrigger(on: BeforeDeleteOptions, callback: BeforeDeleteCallback): void;
-  setTrigger(on: TriggerOptions, callback: TriggerCallback) {
+  addTrigger(on: AfterCommitOptions<M>, callback: AfterCommitCallback<M>): void;
+  addTrigger<CN extends CollectionNameFromModels<M>>(
+    on: AfterInsertOptions<M, CN>,
+    callback: AfterInsertCallback<M, CN>
+  ): void;
+  addTrigger<CN extends CollectionNameFromModels<M>>(
+    on: AfterUpdateOptions<M, CN>,
+    callback: AfterUpdateCallback<M, CN>
+  ): void;
+  addTrigger<CN extends CollectionNameFromModels<M>>(
+    on: AfterDeleteOptions<M, CN>,
+    callback: AfterDeleteCallback<M, CN>
+  ): void;
+  addTrigger(
+    on: BeforeCommitOptions<M>,
+    callback: BeforeCommitCallback<M>
+  ): void;
+  addTrigger<CN extends CollectionNameFromModels<M>>(
+    on: BeforeInsertOptions<M, CN>,
+    callback: BeforeInsertCallback<M, CN>
+  ): void;
+  addTrigger<CN extends CollectionNameFromModels<M>>(
+    on: BeforeUpdateOptions<M, CN>,
+    callback: BeforeUpdateCallback<M, CN>
+  ): void;
+  addTrigger<CN extends CollectionNameFromModels<M>>(
+    on: BeforeDeleteOptions<M, CN>,
+    callback: BeforeDeleteCallback<M, CN>
+  ): void;
+  addTrigger(on: TriggerOptions, callback: TriggerCallback) {
     switch (on.when) {
       case 'afterCommit':
-        // @ts-expect-error TODO
-        this.hooks.afterCommit.push([callback, on]);
+        this.hooks.afterCommit.push([callback as AfterCommitCallback<M>, on]);
         break;
       case 'afterInsert':
-        // @ts-expect-error TODO
-        this.hooks.afterInsert.push([callback, on]);
+        this.hooks.afterInsert.push([
+          callback as AfterInsertCallback<M, CollectionNameFromModels<M>>,
+          on,
+        ]);
         break;
       case 'afterUpdate':
-        // @ts-expect-error TODO
-        this.hooks.afterUpdate.push([callback, on]);
+        this.hooks.afterUpdate.push([
+          callback as AfterUpdateCallback<M, CollectionNameFromModels<M>>,
+          on,
+        ]);
         break;
       case 'afterDelete':
-        // @ts-expect-error TODO
-        this.hooks.afterDelete.push([callback, on]);
+        this.hooks.afterDelete.push([
+          callback as AfterDeleteCallback<M, CollectionNameFromModels<M>>,
+          on,
+        ]);
         break;
       case 'beforeCommit':
-        // @ts-expect-error TODO
-        this.hooks.beforeCommit.push([callback, on]);
+        this.hooks.beforeCommit.push([callback as BeforeCommitCallback<M>, on]);
         break;
       case 'beforeInsert':
-        // @ts-expect-error TODO
-        this.hooks.beforeInsert.push([callback, on]);
+        this.hooks.beforeInsert.push([
+          callback as BeforeInsertCallback<M, CollectionNameFromModels<M>>,
+          on,
+        ]);
         break;
       case 'beforeUpdate':
-        // @ts-expect-error TODO
-        this.hooks.beforeUpdate.push([callback, on]);
+        this.hooks.beforeUpdate.push([
+          callback as BeforeUpdateCallback<M, CollectionNameFromModels<M>>,
+          on,
+        ]);
         break;
       case 'beforeDelete':
-        // @ts-expect-error TODO
-        this.hooks.beforeDelete.push([callback, on]);
+        this.hooks.beforeDelete.push([
+          callback as BeforeDeleteCallback<M, CollectionNameFromModels<M>>,
+          on,
+        ]);
         break;
     }
   }

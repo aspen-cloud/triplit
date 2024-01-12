@@ -44,6 +44,7 @@ import {
   FetchByIdQueryParams,
   DBHooks,
   DEFAULT_STORE_KEY,
+  EntityOpSet,
 } from './db.js';
 import {
   validateExternalId,
@@ -123,12 +124,6 @@ function checkWriteRules<M extends Models<any, any> | undefined>(
   }
 }
 
-export type EntityOpSet = {
-  inserts: [string, any][];
-  updates: [string, any][];
-  deletes: [string, any][];
-};
-
 async function triplesToEntityOpSet(
   triples: TripleRow[],
   tripleStore: TripleStoreApi
@@ -151,14 +146,23 @@ async function triplesToEntityOpSet(
     if (!entity) continue;
     switch (operation) {
       case 'insert':
-        opSet.inserts.push([id, timestampedObjectToPlainObject(entity.data)]);
+        opSet.inserts.push([
+          id,
+          timestampedObjectToPlainObject(entity.data) as any,
+        ]);
         break;
       case 'update':
         // TODO: add deltas to update
-        opSet.updates.push([id, timestampedObjectToPlainObject(entity.data)]);
+        opSet.updates.push([
+          id,
+          timestampedObjectToPlainObject(entity.data) as any,
+        ]);
         break;
       case 'delete':
-        opSet.deletes.push([id, timestampedObjectToPlainObject(entity.data)]);
+        opSet.deletes.push([
+          id,
+          timestampedObjectToPlainObject(entity.data) as any,
+        ]);
         break;
     }
   }
@@ -333,7 +337,7 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
           ([id]) => splitIdParts(id)[0] === options.collectionName
         );
         for (const [id, entity] of collectionInserts) {
-          await hook({ entity, tx, db: tx });
+          await hook({ entity, tx: this, db: this.db });
         }
       }
     }
@@ -343,7 +347,7 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
           ([id]) => splitIdParts(id)[0] === options.collectionName
         );
         for (const [id, entity] of collectionUpdates) {
-          await hook({ entity, tx, db: tx });
+          await hook({ entity, tx: this, db: this.db });
         }
       }
     }
@@ -353,21 +357,24 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
           ([id]) => splitIdParts(id)[0] === options.collectionName
         );
         for (const [id, entity] of collectionDeletes) {
-          await hook({ entity, tx, db: tx });
+          await hook({ entity, tx: this, db: this.db });
         }
       }
     }
 
     for (const [hook, options] of this.hooks.beforeCommit) {
-      const inserts = opSet.inserts.filter(
-        ([id]) => splitIdParts(id)[0] === options.collectionName
-      );
-      const updates = opSet.updates.filter(
-        ([id]) => splitIdParts(id)[0] === options.collectionName
-      );
-      const deletes = opSet.deletes.filter(
-        ([id]) => splitIdParts(id)[0] === options.collectionName
-      );
+      const inserts = opSet.inserts;
+      // .filter(
+      //   ([id]) => splitIdParts(id)[0] === options.collectionName
+      // );
+      const updates = opSet.updates;
+      // .filter(
+      //   ([id]) => splitIdParts(id)[0] === options.collectionName
+      // );
+      const deletes = opSet.deletes;
+      // .filter(
+      //   ([id]) => splitIdParts(id)[0] === options.collectionName
+      // );
       if (!inserts.length && !updates.length && !deletes.length) continue;
       await hook({
         opSet: {
@@ -375,8 +382,8 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
           updates,
           deletes,
         },
-        tx,
-        db: tx,
+        tx: this,
+        db: this.db,
       });
     }
   };
@@ -402,7 +409,7 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
           ([id]) => splitIdParts(id)[0] === options.collectionName
         );
         for (const [_id, entity] of collectionInserts) {
-          await hook({ entity, tx: tx, db: this.db.tripleStore });
+          await hook({ entity, tx: this, db: this.db });
         }
       }
     }
@@ -413,7 +420,7 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
         );
 
         for (const [_id, entity] of collectionUpdates) {
-          await hook({ entity, tx: tx, db: this.db.tripleStore });
+          await hook({ entity, tx: this, db: this.db });
         }
       }
     }
@@ -423,21 +430,24 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
           ([id]) => splitIdParts(id)[0] === options.collectionName
         );
         for (const [_id, entity] of collectionDeletes) {
-          await hook({ entity, tx: tx, db: this.db.tripleStore });
+          await hook({ entity, tx: this, db: this.db });
         }
       }
     }
 
     for (const [hook, options] of this.hooks.afterCommit) {
-      const inserts = opSet.inserts.filter(
-        ([id]) => splitIdParts(id)[0] === options.collectionName
-      );
-      const updates = opSet.updates.filter(
-        ([id]) => splitIdParts(id)[0] === options.collectionName
-      );
-      const deletes = opSet.deletes.filter(
-        ([id]) => splitIdParts(id)[0] === options.collectionName
-      );
+      const inserts = opSet.inserts;
+      // .filter(
+      //   ([id]) => splitIdParts(id)[0] === options.collectionName
+      // );
+      const updates = opSet.updates;
+      // .filter(
+      //   ([id]) => splitIdParts(id)[0] === options.collectionName
+      // );
+      const deletes = opSet.deletes;
+      // .filter(
+      //   ([id]) => splitIdParts(id)[0] === options.collectionName
+      // );
       if (!inserts.length && !updates.length && !deletes.length) continue;
       await hook({
         opSet: {
@@ -445,8 +455,8 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
           updates,
           deletes,
         },
-        tx,
-        db: this.db.tripleStore,
+        tx: this,
+        db: this.db,
       });
     }
   };
@@ -454,7 +464,7 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
   constructor(
     readonly db: DB<M>,
     readonly storeTx: TripleStoreTransaction,
-    private readonly hooks: DBHooks,
+    private readonly hooks: DBHooks<M>,
     readonly options: TransactionOptions<M> = {}
   ) {
     this.schema = options.schema;
