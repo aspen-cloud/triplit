@@ -98,3 +98,13 @@ export function triplesToObject<T>(triples: TuplePrefix<EAV>[]) {
   }
   return result as T;
 }
+
+export function copyHooks<Hooks extends Record<string, any[]>>(
+  hooks: Hooks
+): Hooks {
+  return Object.entries(hooks).reduce<Hooks>((acc, [key, value]) => {
+    // @ts-ignore
+    acc[key] = [...value];
+    return acc;
+  }, {} as Hooks);
+}

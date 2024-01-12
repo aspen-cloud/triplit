@@ -42,6 +42,8 @@ import {
   AddRuleOperation,
   DropRuleOperation,
   FetchByIdQueryParams,
+  DBHooks,
+  DEFAULT_STORE_KEY,
 } from './db.js';
 import {
   validateExternalId,
@@ -75,7 +77,10 @@ import {
   EAV,
   Attribute,
   Value,
+  TripleStoreAfterCommitHook,
 } from './triple-store-utils.js';
+import { TripleStoreApi } from './triple-store.js';
+import DB, { constructEntities } from './index.js';
 
 interface TransactionOptions<
   M extends Models<any, any> | undefined = undefined
@@ -118,6 +123,48 @@ function checkWriteRules<M extends Models<any, any> | undefined>(
   }
 }
 
+export type EntityOpSet = {
+  inserts: [string, any][];
+  updates: [string, any][];
+  deletes: [string, any][];
+};
+
+async function triplesToEntityOpSet(
+  triples: TripleRow[],
+  tripleStore: TripleStoreApi
+): Promise<EntityOpSet> {
+  const deltas = Array.from(constructEntities(triples).entries());
+  const opSet: EntityOpSet = { inserts: [], updates: [], deletes: [] };
+  for (const [id, delta] of deltas) {
+    // default to update
+    let operation: 'insert' | 'update' | 'delete' = 'update';
+    // Inserts and deletes will include the _collection attribute
+    if ('_collection' in delta.data) {
+      // Deletes will set _collection to undefined
+      const isDelete = delta.data._collection[0] === undefined;
+      if (isDelete) operation = 'delete';
+      else operation = 'insert';
+    }
+
+    // Get the full entities from the triple store
+    const entity = constructEntity(await tripleStore.findByEntity(id), id);
+    if (!entity) continue;
+    switch (operation) {
+      case 'insert':
+        opSet.inserts.push([id, timestampedObjectToPlainObject(entity.data)]);
+        break;
+      case 'update':
+        // TODO: add deltas to update
+        opSet.updates.push([id, timestampedObjectToPlainObject(entity.data)]);
+        break;
+      case 'delete':
+        opSet.deletes.push([id, timestampedObjectToPlainObject(entity.data)]);
+        break;
+    }
+  }
+  return opSet;
+}
+
 export class DBTransaction<M extends Models<any, any> | undefined> {
   schema: StoreSchema<M> | undefined;
   private _schema: Entity | undefined;
@@ -137,7 +184,8 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
   };
 
   // This does a lot of reads on commit, isnt overly efficient
-  private CheckCanWrite: TripleStoreBeforeCommitHook = async (tx) => {
+  // TODO: mayube can use triples?
+  private CheckCanWrite: TripleStoreBeforeCommitHook = async (triples, tx) => {
     const schema = await this.getSchema();
 
     const txs = Object.values(tx.tupleTx.txs);
@@ -264,8 +312,149 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
   //   await tx.deleteTriples(toDelete);
   // };
 
+  private CallBeforeCommitDBHooks: TripleStoreBeforeCommitHook = async (
+    triplesByStorage,
+    tx
+  ) => {
+    const hasBeforeCallbacks =
+      this.hooks.beforeCommit.length > 0 ||
+      this.hooks.beforeInsert.length > 0 ||
+      this.hooks.beforeUpdate.length > 0 ||
+      this.hooks.beforeDelete.length > 0;
+    if (!hasBeforeCallbacks) return;
+
+    // At the moment, triggers only work for a single 'default' storage
+    if (!triplesByStorage[DEFAULT_STORE_KEY]?.length) return;
+    const triples = triplesByStorage[DEFAULT_STORE_KEY];
+    const opSet = await triplesToEntityOpSet(triples, this.storeTx);
+    if (opSet.inserts.length) {
+      for (const [hook, options] of this.hooks.beforeInsert) {
+        const collectionInserts = opSet.inserts.filter(
+          ([id]) => splitIdParts(id)[0] === options.collectionName
+        );
+        for (const [id, entity] of collectionInserts) {
+          await hook({ entity, tx, db: tx });
+        }
+      }
+    }
+    if (opSet.updates.length) {
+      for (const [hook, options] of this.hooks.beforeUpdate) {
+        const collectionUpdates = opSet.updates.filter(
+          ([id]) => splitIdParts(id)[0] === options.collectionName
+        );
+        for (const [id, entity] of collectionUpdates) {
+          await hook({ entity, tx, db: tx });
+        }
+      }
+    }
+    if (opSet.deletes.length) {
+      for (const [hook, options] of this.hooks.beforeDelete) {
+        const collectionDeletes = opSet.deletes.filter(
+          ([id]) => splitIdParts(id)[0] === options.collectionName
+        );
+        for (const [id, entity] of collectionDeletes) {
+          await hook({ entity, tx, db: tx });
+        }
+      }
+    }
+
+    for (const [hook, options] of this.hooks.beforeCommit) {
+      const inserts = opSet.inserts.filter(
+        ([id]) => splitIdParts(id)[0] === options.collectionName
+      );
+      const updates = opSet.updates.filter(
+        ([id]) => splitIdParts(id)[0] === options.collectionName
+      );
+      const deletes = opSet.deletes.filter(
+        ([id]) => splitIdParts(id)[0] === options.collectionName
+      );
+      if (!inserts.length && !updates.length && !deletes.length) continue;
+      await hook({
+        opSet: {
+          inserts,
+          updates,
+          deletes,
+        },
+        tx,
+        db: tx,
+      });
+    }
+  };
+
+  private CallAfterCommitDBHooks: TripleStoreAfterCommitHook = async (
+    triplesByStorage,
+    tx
+  ) => {
+    const hasAfterCallbacks =
+      this.hooks.afterCommit.length > 0 ||
+      this.hooks.afterInsert.length > 0 ||
+      this.hooks.afterUpdate.length > 0 ||
+      this.hooks.afterDelete.length > 0;
+    if (!hasAfterCallbacks) return;
+
+    // At the moment, triggers only work for a single 'default' storage
+    if (!triplesByStorage[DEFAULT_STORE_KEY]?.length) return;
+    const triples = triplesByStorage[DEFAULT_STORE_KEY];
+    const opSet = await triplesToEntityOpSet(triples, this.db.tripleStore);
+    if (opSet.inserts.length) {
+      for (const [hook, options] of this.hooks.afterInsert) {
+        const collectionInserts = opSet.inserts.filter(
+          ([id]) => splitIdParts(id)[0] === options.collectionName
+        );
+        for (const [_id, entity] of collectionInserts) {
+          await hook({ entity, tx: tx, db: this.db.tripleStore });
+        }
+      }
+    }
+    if (opSet.updates.length) {
+      for (const [hook, options] of this.hooks.afterUpdate) {
+        const collectionUpdates = opSet.updates.filter(
+          ([id]) => splitIdParts(id)[0] === options.collectionName
+        );
+
+        for (const [_id, entity] of collectionUpdates) {
+          await hook({ entity, tx: tx, db: this.db.tripleStore });
+        }
+      }
+    }
+    if (opSet.deletes.length) {
+      for (const [hook, options] of this.hooks.afterDelete) {
+        const collectionDeletes = opSet.deletes.filter(
+          ([id]) => splitIdParts(id)[0] === options.collectionName
+        );
+        for (const [_id, entity] of collectionDeletes) {
+          await hook({ entity, tx: tx, db: this.db.tripleStore });
+        }
+      }
+    }
+
+    for (const [hook, options] of this.hooks.afterCommit) {
+      const inserts = opSet.inserts.filter(
+        ([id]) => splitIdParts(id)[0] === options.collectionName
+      );
+      const updates = opSet.updates.filter(
+        ([id]) => splitIdParts(id)[0] === options.collectionName
+      );
+      const deletes = opSet.deletes.filter(
+        ([id]) => splitIdParts(id)[0] === options.collectionName
+      );
+      if (!inserts.length && !updates.length && !deletes.length) continue;
+      await hook({
+        opSet: {
+          inserts,
+          updates,
+          deletes,
+        },
+        tx,
+        db: this.db.tripleStore,
+      });
+    }
+  };
+
   constructor(
+    readonly db: DB<M>,
     readonly storeTx: TripleStoreTransaction,
+    private readonly hooks: DBHooks,
     readonly options: TransactionOptions<M> = {}
   ) {
     this.schema = options.schema;
@@ -281,6 +470,9 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
       // Check rules on write
       this.storeTx.beforeCommit(this.CheckCanWrite);
     }
+
+    this.storeTx.beforeCommit(this.CallBeforeCommitDBHooks);
+    this.storeTx.afterCommit(this.CallAfterCommitDBHooks);
   }
 
   // Doing this as a TS fix, but would like to properly define the _metadata scheam

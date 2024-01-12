@@ -26,12 +26,12 @@ export type TransactionScope<TupleSchema extends KeyValuePair> = {
   write: AsyncTupleRootTransactionApi<TupleSchema>[];
 };
 
-type MultiTupleStoreBeforeInsertHook<TupleSchema extends KeyValuePair> = (
-  tuple: TupleSchema,
+type MultiTupleStoreBeforeCommitHook<TupleSchema extends KeyValuePair> = (
   tx: MultiTupleTransaction<TupleSchema>
 ) => void | Promise<void>;
 
-type MultiTupleStoreBeforeCommitHook<TupleSchema extends KeyValuePair> = (
+type MultiTupleStoreBeforeInsertHook<TupleSchema extends KeyValuePair> = (
+  tuple: TupleSchema,
   tx: MultiTupleTransaction<TupleSchema>
 ) => void | Promise<void>;
 
@@ -40,10 +40,19 @@ type MultiTupleStoreBeforeScanHook<TupleSchema extends KeyValuePair> = (
   tx: MultiTupleTransaction<TupleSchema>
 ) => void | Promise<void>;
 
+type MultiTupleStoreAfterCommitHook<TupleSchema extends KeyValuePair> = (
+  tx: MultiTupleTransaction<TupleSchema>
+) => void | Promise<void>;
+
 type MultiTupleStoreHooks<TupleSchema extends KeyValuePair> = {
-  beforeInsert: MultiTupleStoreBeforeInsertHook<TupleSchema>[];
+  // Runs before committing a transaction
   beforeCommit: MultiTupleStoreBeforeCommitHook<TupleSchema>[];
+  // Runs before setting a tuple value in a transaction
+  beforeInsert: MultiTupleStoreBeforeInsertHook<TupleSchema>[];
+  // Runs before any scan operation
   beforeScan: MultiTupleStoreBeforeScanHook<TupleSchema>[];
+  // Runs after committing a transaction (notably different from reactivity hooks, which are fire and forget in the event loop)
+  afterCommit: MultiTupleStoreAfterCommitHook<TupleSchema>[];
 };
 
 export default class MultiTupleStore<TupleSchema extends KeyValuePair> {
@@ -67,9 +76,10 @@ export default class MultiTupleStore<TupleSchema extends KeyValuePair> {
     this.storage = storage;
     this.storageScope = storageScope;
     this.hooks = hooks ?? {
-      beforeInsert: [],
       beforeCommit: [],
+      beforeInsert: [],
       beforeScan: [],
+      afterCommit: [],
     };
     this.reactivity = reactivity ?? new MultiTupleReactivity();
   }
@@ -98,6 +108,10 @@ export default class MultiTupleStore<TupleSchema extends KeyValuePair> {
 
   beforeCommit(callback: MultiTupleStoreBeforeCommitHook<TupleSchema>) {
     this.hooks.beforeCommit.push(callback);
+  }
+
+  afterCommit(callback: MultiTupleStoreAfterCommitHook<TupleSchema>) {
+    this.hooks.afterCommit.push(callback);
   }
 
   beforeScan(callback: MultiTupleStoreBeforeScanHook<TupleSchema>) {
@@ -184,11 +198,13 @@ export default class MultiTupleStore<TupleSchema extends KeyValuePair> {
       storageScope: this.storageScope,
       hooks: {
         // @ts-ignore
-        beforeInsert: [...this.hooks.beforeInsert],
-        // @ts-ignore
         beforeCommit: [...this.hooks.beforeCommit],
         // @ts-ignore
+        beforeInsert: [...this.hooks.beforeInsert],
+        // @ts-ignore
         beforeScan: [...this.hooks.beforeScan],
+        // @ts-ignore
+        afterCommit: [...this.hooks.afterCommit],
       },
       reactivity: this.reactivity,
     }) as MultiTupleStore<RemoveTupleValuePairPrefix<TupleSchema, P>>;
@@ -199,9 +215,10 @@ export default class MultiTupleStore<TupleSchema extends KeyValuePair> {
       scope: scope ?? this.storageScope,
       store: this,
       hooks: {
-        beforeInsert: [...this.hooks.beforeInsert],
         beforeCommit: [...this.hooks.beforeCommit],
+        beforeInsert: [...this.hooks.beforeInsert],
         beforeScan: [...this.hooks.beforeScan],
+        afterCommit: [...this.hooks.afterCommit],
       },
     });
   }
@@ -219,9 +236,10 @@ export default class MultiTupleStore<TupleSchema extends KeyValuePair> {
               storage: this.storage,
               storageScope: scope,
               hooks: {
-                beforeInsert: [...this.hooks.beforeInsert],
                 beforeCommit: [...this.hooks.beforeCommit],
+                beforeInsert: [...this.hooks.beforeInsert],
                 beforeScan: [...this.hooks.beforeScan],
+                afterCommit: [...this.hooks.afterCommit],
               },
               reactivity: this.reactivity,
             })
@@ -418,10 +436,20 @@ export class MultiTupleTransaction<
       console.warn('Cannot commit already canceled transaction.');
       return;
     }
+    // Run before hooks
     for (const beforeHook of this.hooks.beforeCommit) {
       await beforeHook(this);
     }
+
+    // perform commit
     await Promise.all(Object.values(this.txs).map((tx) => tx.commit()));
+
+    // run after hooks
+    for (const afterHook of this.hooks.afterCommit) {
+      await afterHook(this);
+    }
+
+    // schedule reactivity callbacks
     this.store.reactivity.emit(this.id);
   }
   async cancel() {

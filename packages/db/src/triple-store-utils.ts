@@ -76,34 +76,49 @@ export type MetadataListener = (changes: {
 }) => void | Promise<void>;
 
 export type TripleStoreBeforeInsertHook = (
-  triple: TripleRow[],
+  triples: TripleRow[],
   tx: TripleStoreTransaction
 ) => void | Promise<void>;
 
 export type TripleStoreBeforeCommitHook = (
+  triples: Record<string, TripleRow[]>,
+  tx: TripleStoreTransaction
+) => void | Promise<void>;
+
+export type TripleStoreAfterCommitHook = (
+  triples: Record<string, TripleRow[]>,
   tx: TripleStoreTransaction
 ) => void | Promise<void>;
 
 export type TripleStoreHooks = {
   beforeInsert: TripleStoreBeforeInsertHook[];
+  beforeCommit: TripleStoreBeforeCommitHook[];
+  afterCommit: TripleStoreAfterCommitHook[];
 };
 
-export function indexToTriple(index: TupleIndex): TripleRow {
-  const indexType = index.key[0];
+// TODO: figure out prefix issue
+export function indexToTriple(
+  index: TupleIndex,
+  prefix: string[] = []
+): TripleRow {
+  const indexKey = index.key.slice(
+    0 + (prefix?.length ?? 0)
+  ) as TupleIndex['key'];
+  const indexType = indexKey[0];
   let e, a, v, t;
   switch (indexType) {
     case 'EAT':
-      [, e, a, t] = index.key as EATIndex['key'];
+      [, e, a, t] = indexKey as EATIndex['key'];
       v = index.value[0];
       break;
     case 'AVE':
-      [, a, v, e, t] = index.key as AVEIndex['key'];
+      [, a, v, e, t] = indexKey as AVEIndex['key'];
       break;
     // case 'VAE':
-    //   [, v, a, e, t] = index.key as VAEIndex['key'];
+    //   [, v, a, e, t] = indexKey as VAEIndex['key'];
     //   break;
     case 'clientTimestamp':
-      [, , t, e, a, v] = index.key as ClientTimestampIndex['key'];
+      [, , t, e, a, v] = indexKey as ClientTimestampIndex['key'];
       break;
     default:
       throw new IndexNotFoundError(indexType);

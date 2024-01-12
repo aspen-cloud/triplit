@@ -25,14 +25,13 @@ import { MemoryBTreeStorage } from './storage/memory-btree.js';
 import { DBOptionsError, InvalidMigrationOperationError } from './errors.js';
 import { Clock } from './clocks/clock.js';
 
-import { DBTransaction } from './db-transaction.js';
+import { DBTransaction, EntityOpSet } from './db-transaction.js';
 import {
   appendCollectionToId,
   readSchemaFromTripleStore,
   overrideStoredSchema,
   StoreSchema,
   prepareQuery,
-  replaceVariable,
   getSchemaTriples,
 } from './db-helpers.js';
 import { VariableAwareCache } from './variable-aware-cache.js';
@@ -41,9 +40,10 @@ import {
   AttributeDefinition,
   UserTypeOptions,
 } from './data-types/serialization.js';
-import { triplesToObject } from './utils.js';
+import { copyHooks, triplesToObject } from './utils.js';
 import { EAV, indexToTriple, TripleRow } from './triple-store-utils.js';
-import { TripleStore } from './triple-store.js';
+import { TripleStore, TripleStoreApi } from './triple-store.js';
+import { TripleStoreTransaction } from './triple-store-transaction.js';
 
 export interface Rule<M extends Model<any>> {
   filter: QueryWhere<M>;
@@ -131,7 +131,7 @@ export interface DBConfig<M extends Models<any, any> | undefined> {
   variables?: Record<string, any>;
 }
 
-const DEFAULT_STORE_KEY = 'default';
+export const DEFAULT_STORE_KEY = 'default';
 const QUERY_CACHE_ENABLED = true;
 
 export type CollectionFromModels<
@@ -202,6 +202,118 @@ type SchemaChangeCallback<M extends Models<any, any> | undefined> = (
   schema: StoreSchema<M> | undefined
 ) => void;
 
+type TriggerWhen =
+  | 'afterCommit'
+  | 'afterDelete'
+  | 'afterInsert'
+  | 'afterUpdate'
+  | 'beforeCommit'
+  | 'beforeDelete'
+  | 'beforeInsert'
+  | 'beforeUpdate';
+
+interface TriggerOptionsBase {
+  when: TriggerWhen;
+  collectionName: string;
+}
+
+interface AfterCommitOptions extends TriggerOptionsBase {
+  when: 'afterCommit';
+}
+type AfterCommitCallback = (args: {
+  opSet: EntityOpSet;
+  // TODO: should be db transaction
+  tx: TripleStoreTransaction;
+  db: TripleStoreApi;
+}) => void | Promise<void>;
+interface AfterInsertOptions extends TriggerOptionsBase {
+  when: 'afterInsert';
+}
+type AfterInsertCallback = (args: {
+  entity: any;
+  tx: TripleStoreTransaction;
+  db: TripleStoreApi;
+}) => void | Promise<void>;
+interface AfterUpdateOptions extends TriggerOptionsBase {
+  when: 'afterUpdate';
+}
+type AfterUpdateCallback = (args: {
+  entity: any;
+  tx: TripleStoreTransaction;
+  db: TripleStoreApi;
+}) => void | Promise<void>;
+interface AfterDeleteOptions extends TriggerOptionsBase {
+  when: 'afterDelete';
+}
+type AfterDeleteCallback = (args: {
+  entity: any;
+  tx: TripleStoreTransaction;
+  db: TripleStoreApi;
+}) => void | Promise<void>;
+interface BeforeCommitOptions extends TriggerOptionsBase {
+  when: 'beforeCommit';
+}
+type BeforeCommitCallback = (args: {
+  opSet: EntityOpSet;
+  tx: TripleStoreTransaction;
+  db: TripleStoreApi;
+}) => void | Promise<void>;
+interface BeforeInsertOptions extends TriggerOptionsBase {
+  when: 'beforeInsert';
+}
+type BeforeInsertCallback = (args: {
+  entity: any;
+  tx: TripleStoreTransaction;
+  db: TripleStoreApi;
+}) => void | Promise<void>;
+interface BeforeUpdateOptions extends TriggerOptionsBase {
+  when: 'beforeUpdate';
+}
+type BeforeUpdateCallback = (args: {
+  entity: any;
+  tx: TripleStoreTransaction;
+  db: TripleStoreApi;
+}) => void | Promise<void>;
+interface BeforeDeleteOptions extends TriggerOptionsBase {
+  when: 'beforeDelete';
+}
+type BeforeDeleteCallback = (args: {
+  entity: any;
+  tx: TripleStoreTransaction;
+  db: TripleStoreApi;
+}) => void | Promise<void>;
+
+type TriggerOptions =
+  | AfterCommitOptions
+  | AfterInsertOptions
+  | AfterUpdateOptions
+  | AfterDeleteOptions
+  | BeforeCommitOptions
+  | BeforeInsertOptions
+  | BeforeUpdateOptions
+  | BeforeDeleteOptions;
+
+type TriggerCallback =
+  | AfterCommitCallback
+  | AfterInsertCallback
+  | AfterUpdateCallback
+  | AfterDeleteCallback
+  | BeforeCommitCallback
+  | BeforeInsertCallback
+  | BeforeUpdateCallback
+  | BeforeDeleteCallback;
+
+export type DBHooks = {
+  afterCommit: [AfterCommitCallback, AfterCommitOptions][];
+  afterInsert: [AfterInsertCallback, AfterInsertOptions][];
+  afterUpdate: [AfterInsertCallback, AfterUpdateOptions][];
+  afterDelete: [AfterDeleteCallback, AfterDeleteOptions][];
+  beforeCommit: [BeforeCommitCallback, BeforeCommitOptions][];
+  beforeInsert: [BeforeInsertCallback, BeforeInsertOptions][];
+  beforeUpdate: [BeforeUpdateCallback, BeforeUpdateOptions][];
+  beforeDelete: [BeforeDeleteCallback, BeforeDeleteOptions][];
+};
+
 export default class DB<M extends Models<any, any> | undefined = undefined> {
   tripleStore: TripleStore;
   ensureMigrated: Promise<void | void[]>;
@@ -211,6 +323,17 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
   _schema?: Entity; // Timestamped Object
   schema?: StoreSchema<M>;
   private onSchemaChangeCallbacks: Set<SchemaChangeCallback<M>>;
+
+  private hooks: DBHooks = {
+    afterCommit: [],
+    afterInsert: [],
+    afterUpdate: [],
+    afterDelete: [],
+    beforeCommit: [],
+    beforeInsert: [],
+    beforeUpdate: [],
+    beforeDelete: [],
+  };
 
   constructor({
     schema,
@@ -242,6 +365,7 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
       tenantId,
       clock,
     });
+
     this.cache = new VariableAwareCache(this.tripleStore);
 
     // Add listener to update in memory schema
@@ -271,7 +395,7 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
           async (storeWrites) => {
             // This assumes we are properly using tombstoning, so only looking at set operations
             const schemaTriples = Object.values(storeWrites).flatMap(
-              (w) => w.set?.map(indexToTriple) ?? []
+              (w) => w.set?.map((s) => indexToTriple(s)) ?? []
             );
 
             // Initialize schema entity
@@ -292,6 +416,51 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
           }
         );
       });
+  }
+
+  setTrigger(on: AfterCommitOptions, callback: AfterCommitCallback): void;
+  setTrigger(on: AfterInsertOptions, callback: AfterInsertCallback): void;
+  setTrigger(on: AfterUpdateOptions, callback: AfterUpdateCallback): void;
+  setTrigger(on: AfterDeleteOptions, callback: AfterDeleteCallback): void;
+  setTrigger(on: BeforeCommitOptions, callback: BeforeCommitCallback): void;
+  setTrigger(on: BeforeInsertOptions, callback: BeforeInsertCallback): void;
+  setTrigger(on: BeforeUpdateOptions, callback: BeforeUpdateCallback): void;
+  setTrigger(on: BeforeDeleteOptions, callback: BeforeDeleteCallback): void;
+  setTrigger(on: TriggerOptions, callback: TriggerCallback) {
+    switch (on.when) {
+      case 'afterCommit':
+        // @ts-expect-error TODO
+        this.hooks.afterCommit.push([callback, on]);
+        break;
+      case 'afterInsert':
+        // @ts-expect-error TODO
+        this.hooks.afterInsert.push([callback, on]);
+        break;
+      case 'afterUpdate':
+        // @ts-expect-error TODO
+        this.hooks.afterUpdate.push([callback, on]);
+        break;
+      case 'afterDelete':
+        // @ts-expect-error TODO
+        this.hooks.afterDelete.push([callback, on]);
+        break;
+      case 'beforeCommit':
+        // @ts-expect-error TODO
+        this.hooks.beforeCommit.push([callback, on]);
+        break;
+      case 'beforeInsert':
+        // @ts-expect-error TODO
+        this.hooks.beforeInsert.push([callback, on]);
+        break;
+      case 'beforeUpdate':
+        // @ts-expect-error TODO
+        this.hooks.beforeUpdate.push([callback, on]);
+        break;
+      case 'beforeDelete':
+        // @ts-expect-error TODO
+        this.hooks.beforeDelete.push([callback, on]);
+        break;
+    }
   }
 
   withVars(variables: Record<string, any>): DB<M> {
@@ -335,7 +504,7 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
     await this.ensureMigrated;
     const schema = await this.getSchema();
     return await this.tripleStore.transact(async (tripTx) => {
-      const tx = new DBTransaction<M>(tripTx, {
+      const tx = new DBTransaction<M>(this, tripTx, this.hooks, {
         variables: this.variables,
         schema,
         skipRules: options.skipRules,
@@ -589,8 +758,9 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
     const { schema } = await readSchemaFromTripleStore(this.tripleStore);
     await this.tripleStore.transact(
       async (tripTx) => {
-        const tx = new DBTransaction(tripTx, {
+        const tx = new DBTransaction(this, tripTx, copyHooks(this.hooks), {
           variables: this.variables,
+          // @ts-expect-error storeSchema issue
           schema,
         });
         for (const operation of operations) {

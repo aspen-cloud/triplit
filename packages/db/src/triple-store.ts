@@ -41,7 +41,10 @@ import {
   Value,
   findValuesInRange,
   mapStaticTupleToEAV,
+  TripleStoreBeforeCommitHook,
+  TripleStoreAfterCommitHook,
 } from './triple-store-utils.js';
+import { copyHooks } from './utils.js';
 
 function isTupleStorage(object: any): object is AsyncTupleStorageApi {
   if (typeof object !== 'object') return false;
@@ -195,7 +198,9 @@ export class TripleStore implements TripleStoreApi {
     clock?: Clock;
   }) {
     this.hooks = {
+      beforeCommit: [],
       beforeInsert: [],
+      afterCommit: [],
     };
     if (!stores && !storage)
       throw new TripleStoreOptionsError(
@@ -277,6 +282,14 @@ export class TripleStore implements TripleStoreApi {
 
   beforeInsert(callback: TripleStoreBeforeInsertHook) {
     this.hooks.beforeInsert.push(callback);
+  }
+
+  beforeCommit(callback: TripleStoreBeforeCommitHook) {
+    this.hooks.beforeCommit.push(callback);
+  }
+
+  afterCommit(callback: TripleStoreAfterCommitHook) {
+    this.hooks.afterCommit.push(callback);
   }
 
   findByCollection(
@@ -365,7 +378,7 @@ export class TripleStore implements TripleStoreApi {
         const tx = new TripleStoreTransaction({
           tupleTx: tupleTx,
           clock: this.clock,
-          hooks: this.hooks,
+          hooks: copyHooks(this.hooks),
         });
         let output: Output | undefined;
         if (isCanceled) return { tx, output };

@@ -29,7 +29,23 @@ import {
   Value,
   TripleStoreBeforeCommitHook,
   TripleStoreBeforeInsertHook,
+  TripleStoreAfterCommitHook,
+  indexToTriple,
 } from './triple-store-utils.js';
+import { copyHooks } from './utils.js';
+
+function extractTriplesFromTx(tx: MultiTupleTransaction<TupleIndex>) {
+  return Object.fromEntries(
+    Object.entries(tx.txs).map(([key, tx]) => {
+      return [
+        key,
+        tx.writes.set
+          .filter((t) => t.key[1] === 'EAT')
+          .map((i) => indexToTriple(i, ['client'])),
+      ];
+    })
+  );
+}
 
 export class TripleStoreTransaction implements TripleStoreApi {
   tupleTx: MultiTupleTransaction<TupleIndex>;
@@ -52,6 +68,20 @@ export class TripleStoreTransaction implements TripleStoreApi {
     this.tupleTx = tupleTx;
     this.clock = clock;
     this.hooks = hooks;
+
+    // register tuple store hooks
+    this.hooks.beforeCommit.forEach((hook) => {
+      this.tupleTx.hooks.beforeCommit.push((tx) => {
+        const triples = extractTriplesFromTx(tx);
+        return hook(triples, this);
+      });
+    });
+    this.hooks.afterCommit.forEach((hook) => {
+      this.tupleTx.hooks.afterCommit.push((tx) => {
+        const triples = extractTriplesFromTx(tx);
+        return hook(triples, this);
+      });
+    });
   }
 
   async getTransactionTimestamp() {
@@ -320,7 +350,7 @@ export class TripleStoreTransaction implements TripleStoreApi {
       // @ts-expect-error
       tupleTx: this.tupleTx.withScope(scope),
       clock: this.clock,
-      hooks: this.hooks,
+      hooks: copyHooks(this.hooks),
     });
   }
 
@@ -329,6 +359,14 @@ export class TripleStoreTransaction implements TripleStoreApi {
   }
 
   beforeCommit(callback: TripleStoreBeforeCommitHook) {
-    this.tupleTx.hooks.beforeCommit.push(() => callback(this));
+    this.tupleTx.hooks.beforeCommit.push((tx) =>
+      callback(extractTriplesFromTx(tx), this)
+    );
+  }
+
+  afterCommit(callback: TripleStoreAfterCommitHook) {
+    this.tupleTx.hooks.afterCommit.push((tx) =>
+      callback(extractTriplesFromTx(tx), this)
+    );
   }
 }
