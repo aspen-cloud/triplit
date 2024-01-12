@@ -205,70 +205,11 @@ type SchemaChangeCallback<M extends Models<any, any> | undefined> = (
   schema: StoreSchema<M> | undefined
 ) => void;
 
-// export interface DBApi<M extends Models<any, any> | undefined> {
-//   insert<CN extends CollectionNameFromModels<M>>(
-//     collectionName: CN,
-//     doc: InsertTypeFromModel<ModelFromModels<M, CN>>
-//   ): Promise<MaybeReturnTypeFromQuery<M, CN>>;
-//   update<CN extends CollectionNameFromModels<M>>(
-//     collectionName: CN,
-//     entityId: string,
-//     updater: (
-//       entity: UpdateTypeFromModel<ModelFromModels<M, CN>>
-//     ) => void | Promise<void>
-//   ): Promise<void>;
-//   delete<CN extends CollectionNameFromModels<M>>(
-//     collectionName: CN,
-//     id: string
-//   ): Promise<void>;
-
-//   fetch<Q extends CollectionQuery<M, any>>(
-//     query: Q,
-//     options?: DBFetchOptions
-//   ): Promise<FetchResult<Q>>;
-//   fetchById<CN extends CollectionNameFromModels<M>>(
-//     collectionName: CN,
-//     id: string,
-//     queryParams?: FetchByIdQueryParams<M, CN>,
-//     options?: DBFetchOptions
-//   ): Promise<FetchResultEntity<CollectionQuery<M, CN>> | null>;
-//   fetchOne<Q extends CollectionQuery<M, any>>(
-//     query: Q,
-//     options?: DBFetchOptions
-//   ): Promise<FetchResultEntity<Q> | null>;
-
-//   // TODO: add query() method
-// }
 
 type TxOutput<Output> = {
   txId: string | undefined;
   output: Output | undefined;
 };
-
-// // Extends DB API with transact method
-// export interface TransactableDBApi<M extends Models<any, any> | undefined>
-//   extends DBApi<M> {
-//   transact<Output>(
-//     callback: (tx: DBTransaction<M>) => Promise<Output>,
-//     options?: TransactOptions
-//   ): Promise<TxOutput<Output>>;
-
-//   insert<CN extends CollectionNameFromModels<M>>(
-//     collectionName: CN,
-//     doc: InsertTypeFromModel<ModelFromModels<M, CN>>
-//   ): Promise<TxOutput<MaybeReturnTypeFromQuery<M, CN>>>;
-//   update<CN extends CollectionNameFromModels<M>>(
-//     collectionName: CN,
-//     entityId: string,
-//     updater: (
-//       entity: UpdateTypeFromModel<ModelFromModels<M, CN>>
-//     ) => void | Promise<void>
-//   ): Promise<TxOutput<void>>;
-//   delete<CN extends CollectionNameFromModels<M>>(
-//     collectionName: CN,
-//     id: string
-//   ): Promise<TxOutput<void>>;
-// }
 
 type TriggerWhen =
   | 'afterCommit'
