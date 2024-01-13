@@ -4,7 +4,7 @@
 
 [Triplit](https://www.triplit.dev) is an open-source database that syncs data between server and browser in real-time.
 
-Triplit provides a real-time syncing datastore that you can drop into your app as a Typescript package. Triplit handles storing your data on the server and intelligently syncs your queries to your clients. **We call this type of system a “full stack database”**—you can watch our presentation to the [Local First community](https://localfirstweb.dev/) on this new paradigm [here](https://www.notion.so/Don-t-send-schema-triples-from-client-without-service-key-4e2c2f85f7d6401bb8ad6a942c9607ea?pvs=21).
+Triplit provides a real-time syncing datastore that you can drop into your app as a Typescript package. Triplit handles storing your data on the server and intelligently syncs your queries to your clients. **We call this type of system a “full stack database”**—you can watch our presentation to the [Local First community](https://localfirstweb.dev/) on this new paradigm [here](https://www.youtube.com/watch?v=SEB-hF1F-UU&t=1465s).
 
 Triplit brings together:
 
