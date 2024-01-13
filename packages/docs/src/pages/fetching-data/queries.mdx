@@ -112,7 +112,7 @@ const query = client
   ]);
 ```
 
-You may use dot notation to filter by attirbutes of a record.
+You may use dot notation to filter by attributes of a record.
 
 ```typescript
 const query = client.query('users').where('address.city', '=', 'New York');
@@ -141,7 +141,7 @@ Clauses can be passed to `order` as a single clause or an array of clauses:
 - `.order(['created_at', 'DESC'])`
 - `.order([['created_at', 'DESC']])`
 
-You may use dot notation to order by attirbutes of a record.
+You may use dot notation to order by attributes of a record.
 
 ```typescript
 const query = client.query('users').order('address.city', 'ASC');

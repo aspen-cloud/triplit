@@ -8,7 +8,7 @@ Along with reads, every client is able to write to its database and Triplit ensu
 
 ## Client Database
 
-On the client, Triplit keeps your data in two storage areas: an `outbox` and a `cache`. The outbox is a queue of data that is waiting to be sent to the server. The cache is a local copy of the data that has been confirmed to have been recieved by the server.
+On the client, Triplit keeps your data in two storage areas: an `outbox` and a `cache`. The outbox is a queue of data that is waiting to be sent to the server. The cache is a local copy of the data that has been confirmed to have been received by the server.
 
 Although the outbox acts as a queue, it is actually a separate part of the database that is equally queryable. By default, results from the cache and outbox are merged together, however queries can be configured to only return data from the cache (to display only confirmed data) or only return data from the outbox (to denote unconfirmed data).
 
@@ -16,4 +16,4 @@ If a client is offline or is not connected to the remote database for any reason
 
 ## Server Database
 
-The server database provides durable centralized storage for clients and handles propagating writes to other listeneing clients. As well, the server acts as an authoritative figure for data as needed. For example, access control rules are checked on the server and unauthorized updates are rejected and not propagated.
+The server database provides durable centralized storage for clients and handles propagating writes to other listening clients. As well, the server acts as an authoritative figure for data as needed. For example, access control rules are checked on the server and unauthorized updates are rejected and not propagated.
