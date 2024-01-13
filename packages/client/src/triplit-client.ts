@@ -20,6 +20,7 @@ import { SyncTransport } from './transport/transport.js';
 import { SyncEngine } from './sync-engine.js';
 import {
   ClientFetchResult,
+  ClientFetchResultEntity,
   ClientQuery,
   ClientQueryBuilder,
   prepareFetchByIdQuery,
@@ -235,7 +236,7 @@ export class TriplitClient<M extends Models<any, any> | undefined = undefined> {
     return ClientQueryBuilder<M, CN>(collectionName);
   }
 
-  async fetch<CQ extends ClientQuery<M, CollectionNameFromModels<M>>>(
+  async fetch<CQ extends ClientQuery<M, any>>(
     query: CQ,
     options?: FetchOptions
   ): Promise<ClientFetchResult<CQ>> {
@@ -305,7 +306,7 @@ export class TriplitClient<M extends Models<any, any> | undefined = undefined> {
   async fetchOne<CQ extends ClientQuery<M, any>>(
     query: CQ,
     options?: FetchOptions
-  ) {
+  ): Promise<ClientFetchResultEntity<CQ> | null> {
     query = prepareFetchOneQuery(query);
     const result = await this.fetch(query, options);
     const entity = [...result.values()][0];
