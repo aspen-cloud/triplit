@@ -64,7 +64,7 @@ await client.transact((tx) => {
 
 ## Error and success handling
 
-Mutations are first run on Triplit's local cache "optimistically", returning a promise. If the optimistic mutation is successful, the promise will resolve with the id of the transaction. If the optimistic mutation fails, the promise will reject with an error. So you can handle optimisitc updates with standard promise handling. For example:
+Mutations are first run on Triplit's local cache "optimistically", returning a promise. If the optimistic mutation is successful, the promise will resolve with the id of the transaction. If the optimistic mutation fails, the promise will reject with an error. So you can handle optimistic updates with standard promise handling. For example:
 
 ```typescript
 try {
@@ -99,4 +99,4 @@ client.syncEngine.onTxFailure(txId, (e) => {
 });
 ```
 
-Tripit's API attempts to give you the flexibility to handle errors in various ways. For example, you could choose to retry a transaction a certain number of times before rolling it back. Or you could choose to retry a transaction only if it failed due to a network error.
+Triplit's API attempts to give you the flexibility to handle errors in various ways. For example, you could choose to retry a transaction a certain number of times before rolling it back. Or you could choose to retry a transaction only if it failed due to a network error.
