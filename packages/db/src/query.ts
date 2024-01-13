@@ -147,6 +147,7 @@ export type Query<
 export class Entity {
   data: Record<string, any> = {};
   triples: Record<string, TripleRow> = {};
+  tripleHistory: Record<string, TripleRow[]> = {};
 
   constructor(init?: { data?: Record<string, any>; triples: TripleRow[] }) {
     if (init) {
@@ -165,17 +166,25 @@ export class Entity {
       timestamp,
       expired: isExpired,
     } = triple;
+
     // Set tombstones as undefined, so we can continue to reduce and check timestamp
     const value = isExpired ? undefined : rawValue;
     if (attribute[0] === '_collection') {
       const pointer = '/_collection';
       ValuePointer.Set(this.data, pointer, [value, timestamp]);
       this.triples[pointer] = triple;
+      this.tripleHistory[pointer]
+        ? this.tripleHistory[pointer].push(triple)
+        : (this.tripleHistory[pointer] = [triple]);
       return true;
     }
 
     const [_collectionName, ...path] = attribute;
     const pointer = '/' + path.join('/');
+
+    this.tripleHistory[pointer]
+      ? this.tripleHistory[pointer].push(triple)
+      : (this.tripleHistory[pointer] = [triple]);
 
     // TODO: implement this
     // Ensure that any number paths are converted to arrays in the entity
@@ -217,9 +226,25 @@ export function updateEntity(entity: Entity, triples: TripleRow[]) {
   }, false);
 }
 
-export function triplesToEntities(triples: TripleRow[]) {
+export function triplesToEntities(
+  triples: TripleRow[],
+  maxTimestamps?: Map<string, number>
+) {
   return triples.reduce((acc, triple) => {
-    const { id } = triple;
+    const { id, timestamp } = triple;
+    // Limits triple application to a point in time
+    if (maxTimestamps) {
+      const [_clock, client] = timestamp;
+      // if timestamp is greater, return early and dont apply triple
+      if (!maxTimestamps.has(client)) return acc;
+      const stateVectorEntry = maxTimestamps.get(client)!;
+      if (
+        stateVectorEntry &&
+        timestampCompare(timestamp, [stateVectorEntry, client]) > 0
+      ) {
+        return acc;
+      }
+    }
     const entityObj = acc.get(id) ?? new Entity();
     entityObj.applyTriple(triple);
     acc.set(id, entityObj);

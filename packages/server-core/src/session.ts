@@ -91,8 +91,6 @@ export class Connection {
       this.session.db.query(collectionName, parsedQuery).build(),
       (results) => {
         const triples = results ?? [];
-        // TODO: dont require this flag
-        // For watch mode to work, we need to send all triples for now
         const triplesForClient = triples.filter(
           ({ timestamp: [t, client] }) =>
             client !== this.options.clientId &&
@@ -118,7 +116,10 @@ export class Connection {
         });
         return;
       },
-      { skipRules: this.session.token.type === 'secret' }
+      {
+        skipRules: this.session.token.type === 'secret',
+        stateVector: clientStates,
+      }
     );
 
     if (this.connectedQueries.has(queryKey)) {

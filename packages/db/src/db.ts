@@ -172,6 +172,7 @@ export type CollectionNameFromModels<M extends Models<any, any> | undefined> =
 export interface DBFetchOptions {
   skipRules?: boolean;
   scope?: string[];
+  stateVector?: Map<string, number>;
 }
 
 export function ruleToTuple(
@@ -766,7 +767,8 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
         subscriptionQuery,
         (tripMap) => onResults([...tripMap.values()].flat()),
         onError,
-        (await this.getSchema())?.collections
+        (await this.getSchema())?.collections,
+        options.stateVector
       );
       return unsub;
     };

@@ -356,9 +356,12 @@ export class SyncEngine {
       if (hasOutboxTriples) this.signalOutboxTriples();
       // Reconnect any queries
       for (const [id, queryInfo] of this.queries) {
-        this.transport.sendMessage('CONNECT_QUERY', {
-          id,
-          params: queryInfo.params,
+        this.getQueryState(id).then((queryState) => {
+          this.transport.sendMessage('CONNECT_QUERY', {
+            id,
+            params: queryInfo.params,
+            state: queryState,
+          });
         });
       }
     });
