@@ -51,7 +51,7 @@ const schema = {
       sender_id: S.String(),
       sender: S.Query({
         collectionName: 'users',
-        where: [[id, '=', '$sender_id']],
+        where: [['id', '=', '$sender_id']],
       }),
     }),
   },
