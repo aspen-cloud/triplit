@@ -1,5 +1,15 @@
 # @triplit/console
 
+## 0.3.7
+
+### Patch Changes
+
+- Updated dependencies [4d2d381]
+  - @triplit/db@0.3.7
+  - @triplit/client@0.3.7
+  - @triplit/server-core@0.3.7
+  - @triplit/react@0.3.7
+
 ## 0.3.6
 
 ### Patch Changes
