@@ -339,8 +339,7 @@ describe('schemaful', () => {
             defaultNow: S.String({ default: S.Default.now() }),
             defaultUuid: S.String({ default: S.Default.uuid() }),
             // subqueries
-            subquery: S.RelationMany({
-              collectionName: 'test2' as const,
+            subquery: S.RelationMany('test2', {
               where: [],
             }),
           }),
@@ -622,8 +621,7 @@ describe('fetching', () => {
           attr1: S.String(),
           attr2: S.Boolean(),
           attr3: S.Number(),
-          subquery: S.RelationMany({
-            collectionName: 'test2' as const,
+          subquery: S.RelationMany('test2', {
             where: [],
           }),
         }),

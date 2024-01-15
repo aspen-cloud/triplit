@@ -15,4 +15,6 @@ export type {
   ClientFetchResult,
   ClientQuery,
   ClientQueryBuilder,
+  ClientSchema,
+  Entity,
 } from './utils/query.js';

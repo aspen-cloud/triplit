@@ -53,11 +53,21 @@ export class Schema {
 
   static Query = QueryType;
 
-  static RelationMany = <Q extends SubQuery<any, any>>(query: Q) =>
-    QueryType(query, 'many');
+  static RelationMany = <
+    C extends CollectionNameFromModels<any>,
+    Q extends Omit<SubQuery<any, C>, 'collectionName'>
+  >(
+    collectionName: C,
+    query: Q
+  ) => QueryType({ collectionName, ...query }, 'many');
 
-  static RelationOne = <Q extends SubQuery<any, any>>(query: Q) =>
-    QueryType({ ...query, limit: 1 }, 'one');
+  static RelationOne = <
+    C extends CollectionNameFromModels<any>,
+    Q extends Omit<SubQuery<any, C>, 'collectionName'>
+  >(
+    collectionName: C,
+    query: Q
+  ) => QueryType({ collectionName, ...query, limit: 1 }, 'one');
 
   static RelationById = <C extends CollectionNameFromModels<any>>(
     collectionName: C,

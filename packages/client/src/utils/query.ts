@@ -26,24 +26,31 @@ export type ClientFetchResult<C extends ClientQuery<any, any>> = Map<
   ClientFetchResultEntity<C>
 >;
 
+export type ClientSchema = Models<any, any>;
+
 export type ClientFetchResultEntity<C extends ClientQuery<any, any>> =
   C extends ClientQuery<infer M, infer CN>
-    ? M extends Models<any, any>
+    ? M extends ClientSchema
       ? ReturnTypeFromQuery<M, CN>
       : any
     : never;
 
 export type SyncStatus = 'pending' | 'confirmed' | 'all';
 
+export type Entity<
+  M extends ClientSchema,
+  CN extends CollectionNameFromModels<M>
+> = ReturnTypeFromQuery<M, CN>;
+
 export type ClientQuery<
-  M extends Models<any, any> | undefined,
+  M extends ClientSchema | undefined,
   CN extends CollectionNameFromModels<M>
 > = {
   syncStatus?: SyncStatus;
 } & CollectionQuery<M, CN>;
 
 export function ClientQueryBuilder<
-  M extends Models<any, any> | undefined,
+  M extends ClientSchema | undefined,
   CN extends CollectionNameFromModels<M>
 >(
   collectionName: CN,
@@ -66,7 +73,7 @@ export function ClientQueryBuilder<
 }
 
 export type ClientQueryBuilder<
-  M extends Models<any, any> | undefined,
+  M extends ClientSchema | undefined,
   CN extends CollectionNameFromModels<M>
 > = ReturnType<typeof ClientQueryBuilder<M, CN>>;
 
@@ -78,7 +85,7 @@ export function prepareFetchOneQuery<CQ extends ClientQuery<any, any>>(
 }
 
 export function prepareFetchByIdQuery<
-  M extends Models<any, any> | undefined,
+  M extends ClientSchema | undefined,
   CN extends CollectionNameFromModels<M>
 >(
   collectionName: CN,

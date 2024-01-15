@@ -162,19 +162,24 @@ function schemaItemToString(schemaItem: AttributeDefinition): string {
       .join(',\n')}})`;
   if (type === 'query') {
     const { query, cardinality } = schemaItem;
+    const { collectionName, ...queryParams } = query;
     if (cardinality === 'one') {
       const isRelationById =
-        query.collectionName &&
+        collectionName &&
         query.where &&
         query.where.length === 1 &&
         query.where[0][0] === 'id' &&
         query.where[0][1] === '=' &&
-        Object.keys(query).length === 2;
+        Object.keys(queryParams).length === 1;
       if (isRelationById)
-        return `S.RelationById('${query.collectionName}', '${query.where[0][2]}')`;
-      return `S.RelationOne(${subQueryToString(query)})`;
+        return `S.RelationById('${collectionName}', '${queryParams.where[0][2]}')`;
+      return `S.RelationOne('${collectionName}',${subQueryToString(
+        queryParams
+      )})`;
     }
-    return `S.RelationMany(${subQueryToString(query)})`;
+    return `S.RelationMany('${collectionName}',${subQueryToString(
+      queryParams
+    )})`;
   }
   throw new Error(`Invalid type: ${type}`);
 }
@@ -216,11 +221,23 @@ function valueToJS(value: any) {
   throw new Error(`Invalid value: ${value}`);
 }
 
-function subQueryToString(subquery: QueryAttributeDefinition['query']) {
-  const { collectionName, where, limit, order } = subquery;
-  const limitString = limit ? `, limit: ${limit}` : '';
-  const orderString = order ? `, order: ${JSON.stringify(order)}` : '';
-  return `{collectionName: '${collectionName}' as const, where: ${JSON.stringify(
-    where
-  )}${limitString}${orderString}}`;
+function subQueryToString(
+  subquery: Omit<QueryAttributeDefinition['query'], 'collectionName'>
+) {
+  const { where, limit, order } = subquery;
+  // const collectionNameString = collectionName
+  //   ? `collectionName: '${collectionName}' as const`
+  //   : '';
+  const whereString = where ? `where: ${JSON.stringify(where)}` : '';
+  const limitString = limit ? `limit: ${limit}` : '';
+  const orderString = order ? `order: ${JSON.stringify(order)}` : '';
+  const cleanedString = [
+    // collectionNameString,
+    whereString,
+    limitString,
+    orderString,
+  ]
+    .filter((str) => str)
+    .join(', ');
+  return `{${cleanedString}}`;
 }

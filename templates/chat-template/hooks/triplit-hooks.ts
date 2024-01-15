@@ -1,12 +1,12 @@
-import { ReturnTypeFromQuery } from "@triplit/db"
-import { useEntity, useQuery } from "@triplit/react"
+import { Entity } from "@triplit/client"
+import { useQuery } from "@triplit/react"
 
 import { client } from "@/lib/triplit.js"
 
 import { schema } from "../triplit/schema.js"
 
-export type Conversation = ReturnTypeFromQuery<typeof schema, "conversations">
-export type Message = ReturnTypeFromQuery<typeof schema, "messages">
+export type Conversation = Entity<typeof schema, "conversations">
+export type Message = Entity<typeof schema, "messages">
 
 // Populate the conversation sidebar (or full screen on mobile) and applies
 // the search filter to the query results.

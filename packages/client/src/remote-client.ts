@@ -14,12 +14,13 @@ import {
   ClientFetchResult,
   ClientFetchResultEntity,
   ClientQuery,
+  ClientSchema,
   prepareFetchByIdQuery,
   prepareFetchOneQuery,
 } from './utils/query.js';
 
 // Interact with remote via http api, totally separate from your local database
-export class RemoteClient<M extends Models<any, any> | undefined> {
+export class RemoteClient<M extends ClientSchema | undefined> {
   constructor(
     public options: { server?: string; token?: string; schema?: M }
   ) {}

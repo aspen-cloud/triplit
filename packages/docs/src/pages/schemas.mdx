@@ -19,9 +19,9 @@ A schema object defines your collections and the attributes and relationships on
 
 ```typescript
 import { Schema as S } from '@triplit/db';
-import { TriplitClient } from '@triplit/client';
+import { TriplitClient, ClientSchema } from '@triplit/client';
 
-const schema = {
+const schema: ClientSchema = {
   todos: {
     schema: S.Schema({
       id: S.Id(),
@@ -73,6 +73,38 @@ await client.insert('todos', {
   created_at: new Date(),
   tags: new Set([groceries]),
 })
+```
+
+### Getting types from your schema
+
+While the `schema` passed to the client constructor will be used to validate your queries and give you type hinting in any of the client's methods, you may want to extract the types from your schema to use in other parts of your application. You can do this with the `Entity` type.
+
+```typescript
+import { Entity, ClientSchema } from '@triplit/client';
+
+const schema: ClientSchema = {
+  todos: {
+    schema: S.Schema({
+      id: S.Id(),
+      text: S.String(),
+      complete: S.Boolean(),
+      created_at: S.Date(),
+      tags: S.Set(S.String()),
+    }),
+  },
+};
+
+type Todo = Entity<typeof schema, 'todos'>;
+/* 
+Todo will be a simple type:
+{ 
+  id: string, 
+  text: string, 
+  complete: boolean, 
+  created_at: Date, 
+  tags: Set<string> 
+} 
+*/
 ```
 
 ## Data types
@@ -235,8 +267,7 @@ const schema = {
     schema: S.Schema({
       id: S.Id(),
       name: S.String(),
-      classes: S.RelationMany({
-        collectionName: 'classes',
+      classes: S.RelationMany('classes', {
         where: [['department_id', '=', '$id']],
       }),
     }),

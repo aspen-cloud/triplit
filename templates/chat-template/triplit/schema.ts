@@ -25,8 +25,7 @@ export const schema = {
       id: S.Id(),
       name: S.String(),
       members: S.Set(S.String()),
-      membersInfo: S.RelationMany({
-        collectionName: "users" as const,
+      membersInfo: S.RelationMany("users", {
         where: [["id", "in", "$members"]],
       }),
     }),

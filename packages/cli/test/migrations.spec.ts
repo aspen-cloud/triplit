@@ -45,14 +45,15 @@ it('codegen can generate a schema from migrations', async () => {
           collectionName: 'collection',
           where: [['attr', '=', 'value']],
         }),
-        relationMany: S.RelationMany({
-          collectionName: 'collection',
+        subquery2: S.RelationMany('collection', {
+          where: [['attr', '=', 'value']],
+        }),
+        relationMany: S.RelationMany('collection', {
           where: [['attr', '=', 'value']],
           order: [['attr', 'ASC']],
           limit: 10,
         }),
-        relationOne: S.RelationOne({
-          collectionName: 'collection',
+        relationOne: S.RelationOne('collection', {
           where: [['attr', '=', 'value']],
           order: [['attr', 'DESC']],
         }),
@@ -75,7 +76,6 @@ it('codegen can generate a schema from migrations', async () => {
     },
   } satisfies Models<any, any>;
   const jsonSchema = schemaToJSON({ collections: schema, version: 0 })!;
-
   // Create a migration
   const migration = createMigration({}, jsonSchema.collections, 1, 0, '');
   if (!migration) throw new Error('migration is undefined');
@@ -676,8 +676,7 @@ describe('migration creation', () => {
         test: {
           schema: S.Schema({
             id: S.Id(),
-            subquery: S.RelationMany({
-              collectionName: 'test2',
+            subquery: S.RelationMany('test2', {
               where: [],
             }),
           }),
@@ -687,8 +686,7 @@ describe('migration creation', () => {
         test: {
           schema: S.Schema({
             id: S.Id(),
-            subquery: S.RelationOne({
-              collectionName: 'test2',
+            subquery: S.RelationOne('test2', {
               where: [],
             }),
           }),
@@ -716,8 +714,7 @@ describe('migration creation', () => {
           {
             collection: 'test',
             path: ['subquery'],
-            attribute: S.RelationOne({
-              collectionName: 'test2',
+            attribute: S.RelationOne('test2', {
               where: [],
             }).toJSON(),
           },
@@ -736,8 +733,7 @@ describe('migration creation', () => {
           {
             collection: 'test',
             path: ['subquery'],
-            attribute: S.RelationMany({
-              collectionName: 'test2',
+            attribute: S.RelationMany('test2', {
               where: [],
             }).toJSON(),
           },

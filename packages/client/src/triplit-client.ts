@@ -23,6 +23,7 @@ import {
   ClientFetchResultEntity,
   ClientQuery,
   ClientQueryBuilder,
+  ClientSchema,
   prepareFetchByIdQuery,
   prepareFetchOneQuery,
 } from './utils/query.js';
@@ -116,7 +117,7 @@ function getClientStorage(storageOption: StorageOptions) {
 
 const DEFAULT_STORAGE_OPTION = 'memory';
 
-export interface ClientOptions<M extends Models<any, any> | undefined> {
+export interface ClientOptions<M extends ClientSchema | undefined> {
   schema?: M;
   token?: string;
   claimsPath?: string;
@@ -141,7 +142,7 @@ const DEFAULT_FETCH_OPTIONS = {
   policy: 'local-first',
 } as const;
 
-export class TriplitClient<M extends Models<any, any> | undefined = undefined> {
+export class TriplitClient<M extends ClientSchema | undefined = undefined> {
   db: DB<M>;
 
   /**
