@@ -1,5 +1,11 @@
 # @triplit/db
 
+## 0.3.8
+
+### Patch Changes
+
+- f4f87df: Add RelationMany, RelationOne and RelationById schema helpers
+
 ## 0.3.7
 
 ### Patch Changes
