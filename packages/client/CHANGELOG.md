@@ -1,5 +1,13 @@
 # @triplit/client
 
+## 0.3.8
+
+### Patch Changes
+
+- f4f87df: Add Entity and ClientSchema helper types
+- Updated dependencies [f4f87df]
+  - @triplit/db@0.3.8
+
 ## 0.3.7
 
 ### Patch Changes
