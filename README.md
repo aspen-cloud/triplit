@@ -55,6 +55,6 @@ In `triplit/packages` you can find the various projects that power Triplit:
 
 If you're interested in getting early access to Triplit Cloud (currently in developer preview), sign up [here](https://www.triplit.dev/waitlist) to join the waitlist.
 
-The best way to get in touch is to join our [Discord](https://discord.gg/MRhJXkWV)! We're here to answer questions, help developers get started with Triplit and preview new features.
+The best way to get in touch is to join our [Discord](https://discord.gg/q89sGWHqQ5)! We're here to answer questions, help developers get started with Triplit and preview new features.
 
 You can follow us on [Twitter/X](https://twitter.com/triplit_dev) to see our latest announcements.

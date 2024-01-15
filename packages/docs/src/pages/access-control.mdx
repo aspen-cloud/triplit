@@ -21,25 +21,23 @@ Rules for access control are defined in the `rules` property of a schema. Both `
 ```typescript
 import { Schema as S } from '@triplit/db';
 const schema = {
-  collections: {
-    todos: {
-      schema: S.Schema({
-        id: S.Id(),
-        author_id: S.String(),
-        text: S.String(),
-      }),
-      rules: {
-        read: {
-          'author-is-user': {
-            description: 'Users can only post todos they authored',
-            filter: [['author_id', '=', '$SESSION_USER_ID']],
-          },
+  todos: {
+    schema: S.Schema({
+      id: S.Id(),
+      author_id: S.String(),
+      text: S.String(),
+    }),
+    rules: {
+      read: {
+        'author-is-user': {
+          description: 'Users can only post todos they authored',
+          filter: [['author_id', '=', '$SESSION_USER_ID']],
         },
-        write: {
-          'author-is-user': {
-            description: 'Users can only edit their own todos',
-            filter: [['author_id', '=', '$SESSION_USER_ID']],
-          },
+      },
+      write: {
+        'author-is-user': {
+          description: 'Users can only edit their own todos',
+          filter: [['author_id', '=', '$SESSION_USER_ID']],
         },
       },
     },

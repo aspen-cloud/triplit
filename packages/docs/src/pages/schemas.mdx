@@ -182,14 +182,12 @@ The below schema has literal and function default values.
 import { Schema as S } from '@triplit/db';
 import { TriplitClient } from '@triplit/client';
 const schema = {
-  collections: {
-    messages: {
-      schema: S.Schema({
-        id: S.Id(),
-        defaultValue: S.String({ default: 'hello' }),
-        defaultFunction: S.Date({ default: S.Default.now() }),
-      }),
-    },
+  messages: {
+    schema: S.Schema({
+      id: S.Id(),
+      defaultValue: S.String({ default: 'hello' }),
+      defaultFunction: S.Date({ default: S.Default.now() }),
+    }),
   },
 };
 await client.insert('test', {});
@@ -233,27 +231,25 @@ To define a relationship between two collections, you define a subquery that des
 ```typescript
 import { Schema as S } from '@triplit/db';
 const schema = {
-  collections: {
-    departments: {
-      schema: S.Schema({
-        id: S.Id(),
-        name: S.String(),
-        classes: S.RelationMany({
-          collectionName: 'classes',
-          where: [['department_id', '=', '$id']],
-        }),
+  departments: {
+    schema: S.Schema({
+      id: S.Id(),
+      name: S.String(),
+      classes: S.RelationMany({
+        collectionName: 'classes',
+        where: [['department_id', '=', '$id']],
       }),
-    },
-    classes: {
-      schema: S.Schema({
-        id: S.Id(),
-        name: S.String(),
-        level: S.Number(),
-        building: S.String(),
-        department_id: S.String(),
-        department: S.RelationById('department', '$department_id'),
-      }),
-    },
+    }),
+  },
+  classes: {
+    schema: S.Schema({
+      id: S.Id(),
+      name: S.String(),
+      level: S.Number(),
+      building: S.String(),
+      department_id: S.String(),
+      department: S.RelationById('department', '$department_id'),
+    }),
   },
 };
 

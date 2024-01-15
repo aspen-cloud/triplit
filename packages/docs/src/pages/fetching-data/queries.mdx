@@ -39,19 +39,17 @@ For example, the following schema defines a relation between `users` and `messag
 
 ```typescript
 const schema = {
-  collections: {
-    users: S.Schema({
-      id: S.Id(),
-      name: S.Id(),
-      email: S.String(),
-    }),
-    messages: S.Schema({
-      id: S.Id(),
-      text: S.String(),
-      sender_id: S.String(),
-      sender: S.RelationById('users', '$sender_id'),
-    }),
-  },
+  users: S.Schema({
+    id: S.Id(),
+    name: S.Id(),
+    email: S.String(),
+  }),
+  messages: S.Schema({
+    id: S.Id(),
+    text: S.String(),
+    sender_id: S.String(),
+    sender: S.RelationById('users', '$sender_id'),
+  }),
 };
 ```
 
