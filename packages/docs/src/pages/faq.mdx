@@ -40,24 +40,22 @@ In Triplit, relationships are simply sub-queries. They allow you to connect enti
 
 ```typescript
 const schema = {
-  collections: {
-    users: {
-      schema: S.Schema({
-        id: S.String(),
-        name: S.String(),
+  users: {
+    schema: S.Schema({
+      id: S.String(),
+      name: S.String(),
+    }),
+  },
+  messages: {
+    schema: S.Schema({
+      id: S.Id(),
+      text: S.String(),
+      likes: S.Set(S.String()),
+      users_who_liked: S.Query({
+        collectionName: 'users',
+        where: [['id', 'in', '$likes']],
       }),
-    },
-    messages: {
-      schema: S.Schema({
-        id: S.Id(),
-        text: S.String(),
-        likes: S.Set(S.String()),
-        users_who_liked: S.Query({
-          collectionName: 'users',
-          where: [['id', 'in', '$likes']],
-        }),
-      }),
-    },
+    }),
   },
 };
 ```
