@@ -1,5 +1,11 @@
 # @triplit/db
 
+## 0.3.7
+
+### Patch Changes
+
+- 4d2d381: add relationship types to schema
+
 ## 0.3.6
 
 ### Patch Changes
