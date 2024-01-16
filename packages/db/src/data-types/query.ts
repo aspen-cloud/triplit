@@ -51,6 +51,8 @@ export function QueryType<
     },
     convertJSToJSON(val) {
       if (!val) return val;
+      // Serialize data, cardinality could be one or many
+      if (cardinality === 'one') return val;
       return Array.from(val.entries());
     },
     // TODO: determine proper value and type here
