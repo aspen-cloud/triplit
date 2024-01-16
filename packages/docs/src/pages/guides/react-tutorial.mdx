@@ -7,14 +7,17 @@ This tutorial will show you how to build a simple Todos app with React, Vite and
 - How to create a new Triplit project
 - How to create a new React app with Vite
 - How to create a Triplit schema for the Todos app
+- How to use the Triplit console
 - How to read and mutate data with Triplit
 - How to sync data with Triplit
 
-The app uses:
+The app will be built with:
 
 - [React](https://reactjs.org/) as the UI framework
 - [Vite](https://vitejs.dev/) as the build tool
 - [Triplit](/) as the database and sync engine
+
+If at any time you want to check your progress against the finished app, or if you get stuck, you can find the source code for the finished app [here](https://github.com/aspen-cloud/triplit-react-todos).
 
 ## Project setup
 
@@ -56,7 +59,7 @@ We're going to set up a [schema](/schemas) for the Todos app in the `triplit/sch
 import { Schema as S } from '@triplit/db';
 import { ClientSchema } from '@triplit/client';
 
-export const schema: ClientSchema = {
+export const schema = {
   todos: {
     schema: S.Schema({
       id: S.Id(),
@@ -65,7 +68,7 @@ export const schema: ClientSchema = {
       created_at: S.Date({ default: S.Default.now() }),
     }),
   },
-};
+} satisfies ClientSchema;
 ```
 
 This schema defines a single collection, `todos`, with the following fields:
@@ -87,12 +90,12 @@ This will start the sync server on port `6543` and a database console on port `6
 
 <Callout emoji="💡">
   If you're using our hosted service, Triplit Cloud, you can use the API keys
-  and url shown on the dashbaord for your project page. The instructions in the
-  rest of this tutorial are the same whether you're using Triplit Cloud or
-  running the sync server locally.
+  and url shown on the [dashboard](https://triplit.dev/dashboard) for your
+  project page. The instructions in the rest of this tutorial are the same
+  whether you're using Triplit Cloud or running the sync server locally.
 </Callout>
 
-Now's a good time to set up a `.env` file in the `todos` directory. This file will contain the API keys that your app will use to connect to the sync server. Create a new file called `.env` in the `todos` directory and add the following contents:
+Now's a good time to set up an `.env` file in the `todos` directory. This file will contain the API keys that your app will use to connect to the sync server. Create a new file called `.env` in the `todos` directory and add the following:
 
 ```bash filename=".env" copy
 TRIPLIT_DB_URL=http://localhost:6543
@@ -140,7 +143,7 @@ Let's start building the app.
 
 ### Getting started with Vite
 
-Vite is a build tool that makes building app fast and easy. We already installed Vite above, so let's start using it.
+Vite is a build tool that makes building apps fast and easy. We already installed Vite above, so let's start using it.
 
 In a new terminal, in the `todos` directory, run the following command to start the Vite development server:
 
@@ -150,9 +153,9 @@ npm run dev
 
 This will start the Vite development server on port `5173`. You can now open your browser and navigate to `http://localhost:5173` to see the app.
 
-### The Triplit Client
+### The Triplit client
 
-Now that we have the development server running, let's integrate Triplit into our client code so that we can read and write data.
+Now that we have the development server running, let's integrate Triplit into our client code.
 
 Triplit provides a client library that you can use to read and write data. Let's initialize it with our API keys and the schema that we defined earlier. Create a new file in the `src` directory called `client.ts` and add the following code:
 
@@ -161,7 +164,6 @@ import { schema } from './schema.js';
 
 export const triplit = new TriplitClient({
   schema,
-  storage: 'memory',
   serverUrl: import.meta.env.VITE_TRIPLIT_SERVER_URL,
   token: import.meta.env.VITE_TRIPLIT_TOKEN,
 });
@@ -169,11 +171,86 @@ export const triplit = new TriplitClient({
 
 Any time you want to read or write data, you'll import the `triplit` object from this file.
 
-### First things First
+### Optional: styling
 
-The Vite app template comes with a `App.tsx` file that contains a some components. Let's replace it with a component that creates a new todo.
+The Vite app template comes with some basic styles. Feel free to replace them with your own styles or some of ours. Replace the contents of index.css with the following:
 
-Replace the contents of `App.tsx` with the following code:
+```css filename="src/index.css" copy
+:root {
+  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+
+  color-scheme: light dark;
+  color: rgba(255, 255, 255, 0.87);
+  background-color: #242424;
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+}
+
+.app {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  width: 100%;
+  max-width: 400px;
+  gap: 16px;
+}
+
+.todo {
+  display: flex;
+  gap: 1em;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.btn {
+  margin-left: 8px;
+  border: none;
+  border-radius: 0.25em;
+  padding: 0.5em 1em;
+  background-color: cornflowerblue;
+  color: #fff;
+  font-size: 1em;
+  cursor: pointer;
+}
+
+.todo-input {
+  border-radius: 0.25em;
+  border-color: cornflowerblue;
+  padding: 0.5em 1em;
+  background-color: #242424;
+  color: #fff;
+  font-size: 1em;
+}
+
+.x-button {
+  border: none;
+  background-color: transparent;
+  display: none;
+}
+.x-button:hover {
+  filter: brightness(1.5);
+}
+
+.todo:hover .x-button {
+  display: block;
+}
+```
+
+### Creating todos
+
+The Vite app template comes with an `App.tsx` file that contains some components. Let's replace it with an `<form/>` component that creates a new todo.
+
+Replace the contents of `App.tsx` with the following:
 
 ```tsx filename="src/App.tsx" copy showLineNumbers
 import React, { useState } from 'react';
@@ -182,34 +259,32 @@ import { triplit } from './client';
 export default function App() {
   const [text, setText] = useState('');
 
-  async function handleSubmit(e: React.FormEvent) {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     await triplit.insert('todos', { text });
     setText('');
-  }
-
-  function onChange(e: React.ChangeEvent<HTMLInputElement>) {
-    setText(e.target.value);
-  }
+  };
 
   return (
-    <div className="App">
+    <div className="app">
       <form onSubmit={handleSubmit}>
         <input
           type="text"
+          placeholder="What needs to be done?"
+          className="todo-input"
           value={text}
-          onChange={(e) => {
-            setText(e.target.value);
-          }}
+          onChange={(e) => setText(e.target.value)}
         />
-        <button type="submit">Add Todo</button>
+        <button className="btn" type="submit" disabled={!text}>
+          Add Todo
+        </button>
       </form>
     </div>
   );
 }
 ```
 
-This component renders a form with a text input and a submit button. When the form is submitted, it calls `triplit.insert` to create a new todo.
+This component renders a form with a text input and a submit button. When the form is submitted, it calls `triplit.insert` to create a new todo. It uses React to update the text input's value and clear it when the form is submitted.
 
 <Callout emoji="💡">
   Notice that in the call to `triplit.insert`, we're omitting several of the
@@ -218,11 +293,31 @@ This component renders a form with a text input and a submit button. When the fo
   fill in those fields with their default values.
 </Callout>
 
+### The Triplit console
+
+We have a component that creates a new todo, but we still need to write some code that fetches the todos from the database and renders them on the page. If we want to test that our insertions are working without doing any more work, we can use the Triplit console.
+
+When you ran `npx triplit dev` earlier, it started a Triplit console on port `6542`. You can open the console by navigating to `http://localhost:6542` in your browser. You should see a page that looks like this:
+
+![Triplit console](/triplit-console.png)
+
+The console allows you to view and edit the contents of your database. You can use it to view the todos that you've created so far. You can also use it to create new todos or update existing ones. Add some todos from your Vite app, and watch them appear in the `todos` collection in the console. Then, in the console, click on a cell in the new rows that appear and update it.
+
+<Callout emoji="💡">
+  The Triplit console is super powerful. Not only can you mutate data, but you
+  can apply filters, sorts, navigate relations and more. You can even edit your
+  schema, either by adding new columns or updating/deleting existing ones. Be
+  careful - if you make any changes to your schema, they'll go into effect _just
+  on the server_ and you'll need to `npx triplit migrate pull` to get your
+  client's schema in sync. Read more about migrations
+  [here](/guides/migrations).
+</Callout>
+
 ### Creating a todo component
 
 Now that we have a way to create a new todo, let's create a component that renders a todo.
 
-Create a `components` directory in the `src` directory and a file called `Todo.tsx` and add the following code:
+Create a new `components` directory inside the `src` directory and a file called `Todo.tsx` and add the following code:
 
 ```tsx filename="src/components/Todo.tsx" copy
 import { Entity } from '@triplit/client';
@@ -233,25 +328,35 @@ type Todo = Entity<typeof schema, 'todos'>;
 
 export default function Todo({ todo }: { todo: Todo }) {
   return (
-    <div>
+    <div className="todo">
       <input
         type="checkbox"
         checked={todo.completed}
         onChange={() =>
-          tripdivt.update('todos', todo.id, async (entity) => {
+          triplit.update('todos', todo.id, async (entity) => {
             entity.completed = !todo.completed;
           })
         }
       />
       {todo.text}
+      <button
+        className="x-button"
+        onClick={() => {
+          triplit.delete('todos', todo.id);
+        }}
+      >
+        ❌
+      </button>
     </div>
   );
 }
 ```
 
-In this component, we're rendering a checkbox and the todo text. The `Todo` component takes a single prop, a `Todo` entity, and renders it. To get the `Todo` type from our schema we use the `Entity` generic type, and pass in our schema and the name of the collection (`'todos'`) that we want a type for.
+In this component, we're rendering a checkbox and some text describing our todo. The `Todo` component takes a single prop, a `Todo` entity, and renders it. To get the `Todo` type from our schema we use the `Entity` generic type, and pass in our schema and the name of the collection (`'todos'`) that we want a type for.
 
 When the checkbox is clicked, we call `triplit.update` to update the todo's `completed` field. `triplit.update` takes three arguments: the name of the collection, the id of the entity to update, and a callback that updates the entity.
+
+When the ❌ button is clicked, we call `triplit.delete` to delete the todo. `triplit.delete` takes two arguments: the name of the collection and the id of the entity to delete.
 
 ### Rendering the todos
 
@@ -280,14 +385,18 @@ export default function App() {
   };
 
   return (
-    <div className="App">
+    <div className="app">
       <form onSubmit={handleSubmit}>
         <input
           type="text"
+          placeholder="What needs to be done?"
+          className="todo-input"
           value={text}
           onChange={(e) => setText(e.target.value)}
         />
-        <button type="submit">Add Todo</button>
+        <button className="btn" type="submit" disabled={!text}>
+          Add Todo
+        </button>
       </form>
     </div>
   );
@@ -311,7 +420,7 @@ The `useQuery` hook takes two arguments: a Triplit client and a query. The query
 
 Now we're going to render the todos in the `App` component. Add the following lines to the `App` component:
 
-```tsx filename="src/App.tsx" copy showLineNumbers {4, 14, 32-38}
+```tsx filename="src/App.tsx" copy showLineNumbers {4, 14, 36-42}
 import React, { useState } from 'react';
 import { useQuery } from '@triplit/react';
 import { triplit } from '../triplit/client';
@@ -334,14 +443,18 @@ export default function App() {
   };
 
   return (
-    <div className="App">
+    <div className="app">
       <form onSubmit={handleSubmit}>
         <input
           type="text"
+          placeholder="What needs to be done?"
+          className="todo-input"
           value={text}
           onChange={(e) => setText(e.target.value)}
         />
-        <button type="submit">Add Todo</button>
+        <button className="btn" type="submit" disabled={!text}>
+          Add Todo
+        </button>
       </form>
       {todos && (
         <div>
@@ -361,6 +474,36 @@ Here we've:
 2. Called the `useTodos` hook to query the todos
 3. Rendered the todos by turning the `Map<string, Todo>` returned by the `useTodos` hook into an `Array`, and iterated over the array with `Array.map` in our `<App/>` component.
 
+<Callout emoji="💡">
+  Triplit queries are *live*, meaning that you never need to manually refetch
+  data. As other clients insert, update or delete data, your query will
+  automatically update to reflect those changes. Even if you go offline, the
+  query will listen for the changes that you make locally and update the query
+  with those local changes. When you go back online, the Triplit will sync those
+  local changes with the server and pull in any changes it missed while we were
+  offline.
+</Callout>
+
 ## Testing out the sync
 
 Now that we have a working app, let's test out the sync. In one browser window, navigate to `http://localhost:5173`. Then, open a private browsing window and navigate to `http://localhost:5173`. You should see the same app in both tabs. Now, create a new todo in one tab. You should see the todo appear in the other tab. Try checking and unchecking the todo. You should see the changes reflected in the other tab. Triplit works offline as well - try disconnecting from the internet and creating a new todo in one of the windows. You should see the todo appear in the other tab when you reconnect. This is the power of syncing with Triplit!
+
+## Next steps
+
+We've built a simple Todos app with React, Vite and Triplit. We've learned how to:
+
+- Create a new Triplit project
+- Create a new React app with Vite
+- Create a Triplit schema for the Todos app
+- Read and mutate data with Triplit
+- Sync data with Triplit
+
+And there are still a lot of things that we haven't covered.
+
+- The rest of Triplit's [query API](/fetching-data/queries) to select, filter and paginate data
+- Triplit's [access control rules](/access-control) to control who can read and write data
+- Triplit's [transaction API](/updating-data#transactions)
+- Triplit's [relational API](/schemas#relationships) to establish relationships between collections and then [select data across those relationships](/fetching-data/queries#selecting-related-entities)
+- The various [storage options](/client-database/storage) for your Triplit client's cache
+
+If you have any questions, feel free to reach out to us on [Discord](https://discord.gg/q89sGWHqQ5) or [Twitter](https://twitter.com/triplit_dev).

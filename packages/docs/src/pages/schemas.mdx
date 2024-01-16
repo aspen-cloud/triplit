@@ -21,7 +21,7 @@ A schema object defines your collections and the attributes and relationships on
 import { Schema as S } from '@triplit/db';
 import { TriplitClient, ClientSchema } from '@triplit/client';
 
-const schema: ClientSchema = {
+const schema = {
   todos: {
     schema: S.Schema({
       id: S.Id(),
@@ -43,7 +43,7 @@ const schema: ClientSchema = {
       }),
     }),
   },
-};
+} satisfies ClientSchema;
 
 const client = new TriplitClient({
   schema,
@@ -82,7 +82,7 @@ While the `schema` passed to the client constructor will be used to validate you
 ```typescript
 import { Entity, ClientSchema } from '@triplit/client';
 
-const schema: ClientSchema = {
+const schema = {
   todos: {
     schema: S.Schema({
       id: S.Id(),
@@ -92,7 +92,7 @@ const schema: ClientSchema = {
       tags: S.Set(S.String()),
     }),
   },
-};
+} satisfies ClientSchema;
 
 type Todo = Entity<typeof schema, 'todos'>;
 /* 
@@ -217,13 +217,13 @@ const schema = {
   messages: {
     schema: S.Schema({
       id: S.Id(),
-      defaultValue: S.String({ default: 'hello' }),
-      defaultFunction: S.Date({ default: S.Default.now() }),
+      text: S.String({ default: 'hello' }),
+      sent_at: S.Date({ default: S.Default.now() }),
     }),
   },
 };
 await client.insert('test', {});
-// { id: <uuid>, defaultValue: 'hello', defaultFunction: '2021-03-01T00:00:00.000Z' }
+// { id: <uuid>, text: 'hello', sent_at: '2021-03-01T00:00:00.000Z' }
 ```
 
 ### Set
