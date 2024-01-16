@@ -1,5 +1,11 @@
 # @triplit/db
 
+## 0.3.9
+
+### Patch Changes
+
+- ff3bfe2: Properly handle single relationship deserialization
+
 ## 0.3.8
 
 ### Patch Changes

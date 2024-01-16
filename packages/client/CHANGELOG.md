@@ -1,5 +1,13 @@
 # @triplit/client
 
+## 0.3.9
+
+### Patch Changes
+
+- ff3bfe2: Properly handle single relationship deserialization
+- Updated dependencies [ff3bfe2]
+  - @triplit/db@0.3.9
+
 ## 0.3.8
 
 ### Patch Changes

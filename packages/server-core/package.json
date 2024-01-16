@@ -1,7 +1,7 @@
 {
   "name": "@triplit/server-core",
   "packageManager": "yarn@3.4.1",
-  "version": "0.3.8",
+  "version": "0.3.9",
   "module": "dist/index.js",
   "type": "module",
   "files": [
