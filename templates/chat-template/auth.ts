@@ -121,6 +121,10 @@ export const authOptions: NextAuthConfig = {
       if (process.env.NEXTAUTH_SECRET) {
         session.token = await signToken(token, process.env.NEXTAUTH_SECRET)
       }
+      if (session.user) {
+        // @ts-expect-error
+        session.user.id = token["x-triplit-user-id"]
+      }
       return session
     },
     async authorized({ request, auth }) {
