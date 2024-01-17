@@ -1,5 +1,3 @@
-import { randomUUID } from "crypto"
-
 import { hashPassword } from "@/lib/crypt.js"
 
 export async function POST(request: Request) {
@@ -26,7 +24,7 @@ export async function POST(request: Request) {
 
   const hashedPassword = await hashPassword(password)
 
-  const id = randomUUID()
+  const id = crypto.randomUUID()
 
   const credential = {
     userId: id,
