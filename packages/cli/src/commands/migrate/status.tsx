@@ -151,7 +151,7 @@ export default Command({
             ) : null}
           </Box>
         </Box>
-        {recommendedUserAction}
+        <Text>{recommendedUserAction}</Text>
       </Box>
     );
   },
