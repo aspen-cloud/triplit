@@ -484,6 +484,25 @@ Here we've:
   offline.
 </Callout>
 
+## Persisting data
+
+So far, Triplit has been storing data in-memory (the default for `TriplitClient`). That means that if you refresh the page and go offline, you'll lose your data. Triplit supports a variety of [storage options](/client-database/storage) that you can use to persist your data even between refreshes or if you go offline.
+
+[IndexedDB](https://developer.mozilla.org/en-US/docs/Web/API/IndexedDB_API) is a low level durable storage API built into all modern browsers. Update the `client.ts` file to use the `indexeddb` storage option:
+
+```ts filename="triplit/client.ts" copy {4}
+import { schema } from './schema.js';
+
+export const triplit = new TriplitClient({
+  storage: 'indexeddb',
+  schema,
+  serverUrl: import.meta.env.VITE_TRIPLIT_SERVER_URL,
+  token: import.meta.env.VITE_TRIPLIT_TOKEN,
+});
+```
+
+When you use the Triplit client to insert or update data, that data will persist to IndexedDB. Test it out: if you create a few todos and refresh your browser, you should see that your todos are still there.
+
 ## Testing out the sync
 
 Now that we have a working app, let's test out the sync. In one browser window, navigate to `http://localhost:5173`. Then, open a private browsing window and navigate to `http://localhost:5173`. You should see the same app in both tabs. Now, create a new todo in one tab. You should see the todo appear in the other tab. Try checking and unchecking the todo. You should see the changes reflected in the other tab. Triplit works offline as well - try disconnecting from the internet and creating a new todo in one of the windows. You should see the todo appear in the other tab when you reconnect. This is the power of syncing with Triplit!
