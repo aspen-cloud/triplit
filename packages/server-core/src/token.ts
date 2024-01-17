@@ -1,5 +1,12 @@
 import { ParsedToken, ParseResult } from '@triplit/types/sync';
-import { JWTPayload, jwtVerify, importSPKI, KeyLike, importJWK } from 'jose';
+import {
+  JWTPayload,
+  jwtVerify,
+  importSPKI,
+  KeyLike,
+  importJWK,
+  decodeJwt,
+} from 'jose';
 import {
   InvalidTokenPayloadError,
   InvalidTokenProjectIdError,
@@ -39,30 +46,14 @@ async function getJwtKey(rawPublicKey: string): Promise<KeyLike | Uint8Array> {
 
 export async function parseAndValidateToken(
   token: string,
-  secretKey: string,
+  triplitSecret: string, // Signing secret for triplit tokens
   projectId: string,
-  options: { payloadPath?: string } = {}
+  options: {
+    payloadPath?: string;
+    externalSecret?: string; // optional signing secret for external tokens
+  } = {}
 ): Promise<ParseResult<ParsedToken, TriplitError>> {
-  const encodedKey = await getJwtKey(secretKey);
-  let verified;
-  try {
-    verified = await jwtVerify(token, encodedKey);
-    if (!verified) {
-      return {
-        data: undefined,
-        error: new InvalidTokenSignatureError(),
-      };
-    }
-  } catch (err) {
-    console.error(err);
-    // TODO add better expiration error
-    return {
-      data: undefined,
-      error: new InvalidTokenSignatureError(),
-    };
-  }
-
-  let payload = verified.payload;
+  let payload = decodeJwt(token);
 
   // Should still accept our own tokens, so only check payload path if it might be external (we cant find our claims at base)
   const possiblyExternal = !TriplitJWTType.includes(
@@ -82,7 +73,7 @@ export async function parseAndValidateToken(
     return {
       data: undefined,
       error: new InvalidTokenPayloadError(
-        'Could not locate Triplit claims in your external token. If claims are not located at the root of the token please ensure you have provided a path to the claims in the settings of your project.'
+        'Could not locate Triplit claims in your token. If claims are not located at the root of the token please ensure you have provided a path to the claims in the settings of your project.'
       ),
     };
   }
@@ -93,6 +84,30 @@ export async function parseAndValidateToken(
       error: new InvalidTokenPayloadError(
         'There is no token type assigned to this token. If you are using an external token please ensure you have provided a path to the claims in the settings of your project.'
       ),
+    };
+  }
+
+  const tokenType = payload['x-triplit-token-type'];
+  const secretKey =
+    tokenType === 'external'
+      ? options.externalSecret ?? triplitSecret
+      : triplitSecret;
+  const encodedKey = await getJwtKey(secretKey);
+  let verified;
+  try {
+    verified = await jwtVerify(token, encodedKey);
+    if (!verified) {
+      return {
+        data: undefined,
+        error: new InvalidTokenSignatureError(),
+      };
+    }
+  } catch (err) {
+    console.error(err);
+    // TODO add better expiration error
+    return {
+      data: undefined,
+      error: new InvalidTokenSignatureError(),
     };
   }
 
