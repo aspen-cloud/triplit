@@ -182,7 +182,7 @@ async function createTriplitAppWithVite() {
   const viteScaffold = new Promise<void>((resolve, reject) => {
     const child = spawn(pkgManager, createArgs, {
       stdio: [process.stdin, process.stdout, process.stderr],
-    })!;
+    shell:true})!;
     child.on('error', (err) => {
       console.error(err);
       reject();

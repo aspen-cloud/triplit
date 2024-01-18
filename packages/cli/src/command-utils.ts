@@ -36,7 +36,7 @@ export async function getCommandDefinition(
   prefix: string[] = []
 ): Promise<CommandDefinition<any, any, any> & { name: string }> {
   const { name, sourcePath } = cmd;
-  const { default: definition } = (await import(sourcePath)) as {
+  const { default: definition } = (await import('file:///' + sourcePath)) as {
     default: CommandDefinition<any, any, any>;
   };
   return { name: prefix.concat(name).join(' '), ...definition };

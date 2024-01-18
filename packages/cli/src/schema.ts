@@ -20,7 +20,7 @@ export async function readLocalSchema() {
     const transpiledJs = transpileTsFile(schemaPath);
     fs.mkdirSync(path.dirname(transpiledJsPath), { recursive: true });
     fs.writeFileSync(transpiledJsPath, transpiledJs, 'utf8');
-    const { schema } = await importFresh(transpiledJsPath);
+    const { schema } = await importFresh('file:///' + transpiledJsPath);
     return schema;
   } finally {
     fs.rmSync(tmpDir, { recursive: true, force: true });
