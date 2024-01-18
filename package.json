@@ -22,8 +22,5 @@
     "turbo": "^1.10.15",
     "typescript": "^5.2.2"
   },
-  "packageManager": "yarn@3.4.1",
-  "resolutions": {
-    "tuple-database@^2.2.0": "patch:tuple-database@patch%3Atuple-database@npm%253A2.2.0%23./.yarn/patches/tuple-database-npm-2.2.0-131af7737b.patch%3A%3Aversion=2.2.0&hash=a2c0f3&locator=%2540triplit%2540workspace%253A.#./.yarn/patches/tuple-database-patch-021b29bc0c.patch"
-  }
+  "packageManager": "yarn@3.4.1"
 }
