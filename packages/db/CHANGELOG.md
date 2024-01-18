@@ -1,5 +1,11 @@
 # @triplit/db
 
+## 0.3.10
+
+### Patch Changes
+
+- ae9bad9: clean up @tuple-database deps to fixt nextjs builds
+
 ## 0.3.9
 
 ### Patch Changes
