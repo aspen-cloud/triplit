@@ -1,4 +1,3 @@
-import { MIN, MAX } from 'tuple-database';
 import {
   IndexNotFoundError,
   InvalidTimestampIndexScanError,
@@ -9,7 +8,7 @@ import MultiTupleStore, {
 import { ValueCursor } from './query.js';
 import { Timestamp } from './timestamp.js';
 import { TripleStoreTransaction } from './triple-store-transaction.js';
-import { KeyValuePair } from '@triplit/tuple-database';
+import { KeyValuePair, MIN, MAX } from '@triplit/tuple-database';
 
 // Value should be serializable, this is what goes into triples
 // Not to be confused with the Value type we define on queries

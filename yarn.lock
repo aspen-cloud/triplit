@@ -4597,7 +4597,7 @@ __metadata:
     "@sinclair/typebox": ^0.27.4
     "@stryker-mutator/core": ^7.3.0
     "@stryker-mutator/vitest-runner": ^7.3.0
-    "@triplit/tuple-database": ^2.2.5
+    "@triplit/tuple-database": ^2.2.8
     "@vitest/coverage-c8": ^0.29.2
     "@vitest/coverage-v8": ^0.33.0
     "@vitest/ui": ^0.33.0
@@ -4609,7 +4609,6 @@ __metadata:
     rxjs: ^7.8.1
     sorted-btree: ^1.8.1
     tinybench: ^2.5.0
-    tuple-database: ^2.2.0
     typescript: ^5.2.2
     vitest: ^0.32.2
   languageName: unknown
@@ -4668,22 +4667,22 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@triplit/tuple-database@npm:^2.2.5":
-  version: 2.2.5
-  resolution: "@triplit/tuple-database@npm:2.2.5"
+"@triplit/tuple-database@npm:^2.2.8":
+  version: 2.2.8
+  resolution: "@triplit/tuple-database@npm:2.2.8"
   dependencies:
     elen: ^1.0.10
     fractional-indexing: ^3.1.0
     fs-extra: ^11.1.0
-    lodash: ^4.17.21
     md5: ^2.3.0
+    remeda: ^1.37.0
     uuid: ^9.0.0
   peerDependencies:
     react: "*"
   peerDependenciesMeta:
     react:
       optional: true
-  checksum: e922e76f8f0581ce0b4b8e3c3271a5c87db87a3e4d26eeae69c2f3695e94783877b10d40a85fa1871aefef589c0e113e80246b2485fa9f60ef56b0e32b964267
+  checksum: d9fef85da2232ba5454d53593eef70956a7a6cc7bc0926b28e2d1411cc26e680f28c6f8a5f40f9fa36e7c93cb486f7a4921b1073cb75775066b2d0a647833e36
   languageName: node
   linkType: hard
 
@@ -15642,6 +15641,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"remeda@npm:^1.37.0":
+  version: 1.37.0
+  resolution: "remeda@npm:1.37.0"
+  checksum: c77e4331302fd62ca9a292bbe86e20074623061f486fec1a688cd0dca13eec90c9fef12cd36759c0845bac24a4c03712f22598a2ad65211ad5107e1ef4f14680
+  languageName: node
+  linkType: hard
+
 "remove-accents@npm:0.4.2":
   version: 0.4.2
   resolution: "remove-accents@npm:0.4.2"
@@ -17559,63 +17565,6 @@ __metadata:
   version: 0.0.6
   resolution: "tunnel@npm:0.0.6"
   checksum: c362948df9ad34b649b5585e54ce2838fa583aa3037091aaed66793c65b423a264e5229f0d7e9a95513a795ac2bd4cb72cda7e89a74313f182c1e9ae0b0994fa
-  languageName: node
-  linkType: hard
-
-"tuple-database@npm:2.2.0":
-  version: 2.2.0
-  resolution: "tuple-database@npm:2.2.0"
-  dependencies:
-    elen: ^1.0.10
-    fractional-indexing: ^3.1.0
-    fs-extra: ^11.1.0
-    lodash: ^4.17.21
-    md5: ^2.3.0
-    uuid: ^9.0.0
-  peerDependencies:
-    react: "*"
-  peerDependenciesMeta:
-    react:
-      optional: true
-  checksum: 322662c7ca76dfc0a79617e572153ce79d8d64f08b811b7616bbba078dbca370e31b2128ff69bdbceabbfac4bdf19491bc58185d4a1a79d4dc9a6868cde280ab
-  languageName: node
-  linkType: hard
-
-"tuple-database@patch:tuple-database@npm%3A2.2.0#./.yarn/patches/tuple-database-npm-2.2.0-131af7737b.patch::version=2.2.0&hash=a2c0f3&locator=%40triplit%40workspace%3A.":
-  version: 2.2.0
-  resolution: "tuple-database@patch:tuple-database@npm%3A2.2.0#./.yarn/patches/tuple-database-npm-2.2.0-131af7737b.patch::version=2.2.0&hash=a2c0f3&locator=%40triplit%40workspace%3A."
-  dependencies:
-    elen: ^1.0.10
-    fractional-indexing: ^3.1.0
-    fs-extra: ^11.1.0
-    lodash: ^4.17.21
-    md5: ^2.3.0
-    uuid: ^9.0.0
-  peerDependencies:
-    react: "*"
-  peerDependenciesMeta:
-    react:
-      optional: true
-  checksum: e5a3f290f90dd912e621ef480247624e493d2852e39302133a0b0d5262204d8051916a9eb6745f75dc5a3b751fa2245605cbe11cf77b507d8474fc46edd2efd6
-  languageName: node
-  linkType: hard
-
-"tuple-database@patch:tuple-database@patch%3Atuple-database@npm%253A2.2.0%23./.yarn/patches/tuple-database-npm-2.2.0-131af7737b.patch%3A%3Aversion=2.2.0&hash=a2c0f3&locator=%2540triplit%2540workspace%253A.#./.yarn/patches/tuple-database-patch-021b29bc0c.patch::locator=triplit%40workspace%3A.":
-  version: 2.2.0
-  resolution: "tuple-database@patch:tuple-database@patch%3Atuple-database@npm%253A2.2.0%23./.yarn/patches/tuple-database-npm-2.2.0-131af7737b.patch%3A%3Aversion=2.2.0&hash=a2c0f3&locator=%2540triplit%2540workspace%253A.#./.yarn/patches/tuple-database-patch-021b29bc0c.patch::version=2.2.0&hash=f90f70&locator=triplit%40workspace%3A."
-  dependencies:
-    elen: ^1.0.10
-    fractional-indexing: ^3.1.0
-    fs-extra: ^11.1.0
-    lodash: ^4.17.21
-    md5: ^2.3.0
-    uuid: ^9.0.0
-  peerDependencies:
-    react: "*"
-  peerDependenciesMeta:
-    react:
-      optional: true
-  checksum: f7f70811fc7cab24bec74a2d3b13b8b0cf394c064c3f4c122f75e39c9ad2ac85de8c3d5ee01fb0e874f73961dc5c0f95d91933354ddac78dbc93ab350571fec0
   languageName: node
   linkType: hard
 
