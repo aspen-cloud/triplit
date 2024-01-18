@@ -14,18 +14,18 @@ export default async function IndexPage() {
         <h3>Features</h3>
         <ul>
           <li>
-            Sent/unsent indicators for messages using Triplit's{" "}
+            Sent/unsent indicators for messages using Triplit&apos;s{" "}
             <code>syncStatus</code> query filter
           </li>
           <li>
-            Offline support using Triplit's built-in offline cache and
+            Offline support using Triplit&apos;s built-in offline cache and
             optimistic updates
           </li>
           <li>
-            Realtime updates and syncing between clients using Triplit's sync
-            enginge.
+            Realtime updates and syncing between clients using Triplit&apos;s
+            sync enginge.
           </li>
-          <li>User accounts stored in Triplit's remote database </li>
+          <li>User accounts stored in Triplit&apos;s remote database </li>
         </ul>
         <h3>Built with</h3>
         <p>

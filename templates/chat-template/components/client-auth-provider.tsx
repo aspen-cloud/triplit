@@ -13,7 +13,9 @@ export function ClientAuthProvider({
   const { data: session } = useSession()
   const jwtRef = useRef<string | undefined>()
   useEffect(() => {
+    // @ts-expect-error
     if (session?.token !== jwtRef.current) {
+      // @ts-expect-error
       jwtRef.current = session?.token ?? undefined
       client.updateToken(jwtRef.current)
     }

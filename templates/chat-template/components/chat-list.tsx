@@ -131,7 +131,7 @@ export function ChatList() {
           )}
           {conversations &&
             conversations.size > 0 &&
-            [...conversations].map(([id, conversation]) => (
+            Array.from(conversations).map(([id, conversation]) => (
               <ConvoListItem
                 key={id}
                 convo={conversation}

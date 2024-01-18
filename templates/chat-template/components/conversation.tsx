@@ -83,6 +83,7 @@ function MessageInput({ convoId }: { convoId: string }) {
             .insert("messages", {
               conversationId: convoId,
               text: draftMsg,
+              // @ts-expect-error
               sender_id: session.user.id,
             })
             .then(() => {
@@ -150,6 +151,7 @@ function MessageList({ convoId }: { convoId: string }) {
         </div>
       ) : (
         messageArray.map((message, index) => {
+          // @ts-expect-error
           const isOwnMessage = message.sender_id === session.user.id
           const isFirstMessageInABlockFromThisDay =
             index === messageArray.length - 1 ||

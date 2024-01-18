@@ -61,7 +61,7 @@ export const authOptions: NextAuthConfig = {
         }
 
         const isPasswordMatch = await isPasswordValid(
-          credentials.password,
+          credentials.password as string,
           authInfo.password
         )
 
@@ -100,6 +100,7 @@ export const authOptions: NextAuthConfig = {
     strategy: "jwt" as const,
   },
   jwt: {
+    // @ts-expect-error
     secret: process.env.NEXTAUTH_SECRET,
     encode: async ({ secret, token, maxAge }) => {
       return await signToken(token, secret)
@@ -119,6 +120,7 @@ export const authOptions: NextAuthConfig = {
     },
     async session({ session, token, user }) {
       if (process.env.NEXTAUTH_SECRET) {
+        // @ts-expect-error
         session.token = await signToken(token, process.env.NEXTAUTH_SECRET)
       }
       if (session.user) {
