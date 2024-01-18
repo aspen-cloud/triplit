@@ -1,5 +1,12 @@
 # @triplit/console
 
+## 0.3.10
+
+### Patch Changes
+
+- Updated dependencies [7c8e6eb]
+  - @triplit/server-core@0.3.10
+
 ## 0.3.9
 
 ### Patch Changes
