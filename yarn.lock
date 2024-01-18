@@ -4482,7 +4482,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@triplit/cli@^0.3.11, @triplit/cli@workspace:packages/cli":
+"@triplit/cli@^0.3.12, @triplit/cli@workspace:packages/cli":
   version: 0.0.0-use.local
   resolution: "@triplit/cli@workspace:packages/cli"
   dependencies:
@@ -13691,7 +13691,7 @@ __metadata:
     "@radix-ui/react-slot": ^1.0.2
     "@tailwindcss/typography": ^0.5.10
     "@triplit/authjs-adapter": ^0.1.0
-    "@triplit/cli": ^0.3.11
+    "@triplit/cli": ^0.3.12
     "@triplit/client": ^0.3.10
     "@triplit/db": ^0.3.10
     "@triplit/react": ^0.3.10
