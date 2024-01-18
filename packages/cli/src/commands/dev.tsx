@@ -48,6 +48,8 @@ export default Command({
       process.env.TRIPLIT_PROJECT_ID ?? 'local-project-id';
     if (process.env.TRIPLIT_CLAIMS_PATH)
       process.env.CLAIMS_PATH = process.env.TRIPLIT_CLAIMS_PATH;
+    if (process.env.TRIPLIT_EXTERNAL_JWT_SECRET)
+      process.env.EXTERNAL_JWT_SECRET = process.env.TRIPLIT_EXTERNAL_JWT_SECRET;
 
     if (flags.storage === 'sqlite') {
       const dataDir = getDataDir();

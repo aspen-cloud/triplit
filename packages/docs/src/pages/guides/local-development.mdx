@@ -29,6 +29,8 @@ If your project has a `.env` file, you may set the following environment variabl
 - `TRIPLIT_DB_URL` - The URL to use for connecting to the database. If not set, you may use a flag in the CLI (which takes precedent) or use the default URL for the local database.
 - `TRIPLIT_PROJECT_ID` - Sets the project identifier used on the local api tokens.
 - `TRIPLIT_JWT_SECRET` - Overrides the JWT secret used when generating local api tokens.
+- `TRIPLIT_EXTERNAL_JWT_SECRET` - Overrides the JWT secret used when generating external api tokens.
+- `TRIPLIT_CLAIMS_PATH` - A `.` separated path to read Triplit claims on external api tokens. If not set, claims are assumed to be at the root of the token.
 
 ## Database Migrations
 

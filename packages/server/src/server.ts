@@ -290,7 +290,10 @@ export function createServer(options?: ServerOptions) {
       rawToken as string,
       process.env.JWT_SECRET!,
       process.env.PROJECT_ID!,
-      { payloadPath: process.env.CLAIMS_PATH! }
+      {
+        payloadPath: process.env.CLAIMS_PATH,
+        externalSecret: process.env.EXTERNAL_JWT_SECRET,
+      }
     );
     if (error) {
       console.error(error);

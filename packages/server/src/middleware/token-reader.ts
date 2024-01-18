@@ -32,7 +32,10 @@ export async function useHttpToken(
       token,
       process.env.JWT_SECRET!,
       process.env.PROJECT_ID!,
-      { payloadPath: process.env.CLAIMS_PATH! }
+      {
+        payloadPath: process.env.CLAIMS_PATH,
+        externalSecret: process.env.EXTERNAL_JWT_SECRET,
+      }
     );
 
     if (error) throw error;
@@ -58,6 +61,9 @@ export async function readWSToken(request: IncomingMessage) {
     token!,
     process.env.JWT_SECRET!,
     process.env.PROJECT_ID!,
-    { payloadPath: process.env.CLAIMS_PATH! }
+    {
+      payloadPath: process.env.CLAIMS_PATH,
+      externalSecret: process.env.EXTERNAL_JWT_SECRET,
+    }
   );
 }
