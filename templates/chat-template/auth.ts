@@ -118,6 +118,8 @@ export const authOptions: NextAuthConfig = {
       token["x-triplit-token-type"] = "external"
       return token
     },
+    // when attempting to build on vercel { token } throwing a type error in below parameter
+    // @ts-ignore
     async session({ session, token, user }) {
       if (process.env.NEXTAUTH_SECRET) {
         // @ts-expect-error
