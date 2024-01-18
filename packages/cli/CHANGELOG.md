@@ -1,5 +1,15 @@
 # @triplit/cli
 
+## 0.3.10
+
+### Patch Changes
+
+- 7c8e6eb: - fixup render issue in migrate status
+  - read external secret env var
+- Updated dependencies [7c8e6eb]
+  - @triplit/server@0.3.10
+  - @triplit/console@0.3.10
+
 ## 0.3.9
 
 ### Patch Changes

@@ -1,5 +1,13 @@
 # @triplit/server
 
+## 0.3.10
+
+### Patch Changes
+
+- 7c8e6eb: add option to use external jwt secret for token verification
+- Updated dependencies [7c8e6eb]
+  - @triplit/server-core@0.3.10
+
 ## 0.3.9
 
 ### Patch Changes
