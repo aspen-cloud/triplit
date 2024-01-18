@@ -33,7 +33,7 @@ export function SearchUsers({
   const members = conversation?.membersInfo
   const { nonMembers } = useUsersNotInConversationList(conversation)
 
-  // @ts-expect-error
+  // @ts-ignore
   const currentUser = members?.get(currentUserId)
   const membersExCurrentUser = members
     ? Array.from(members).filter(([id]) => id !== currentUserId)

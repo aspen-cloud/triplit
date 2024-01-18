@@ -100,7 +100,7 @@ export const authOptions: NextAuthConfig = {
     strategy: "jwt" as const,
   },
   jwt: {
-    // @ts-expect-error
+    // @ts-ignore
     secret: process.env.NEXTAUTH_SECRET,
     encode: async ({ secret, token, maxAge }) => {
       return await signToken(token, secret)
@@ -122,11 +122,11 @@ export const authOptions: NextAuthConfig = {
     // @ts-ignore
     async session({ session, token, user }) {
       if (process.env.NEXTAUTH_SECRET) {
-        // @ts-expect-error
+        // @ts-ignore
         session.token = await signToken(token, process.env.NEXTAUTH_SECRET)
       }
       if (session.user) {
-        // @ts-expect-error
+        // @ts-ignore
         session.user.id = token["x-triplit-user-id"]
       }
       return session
