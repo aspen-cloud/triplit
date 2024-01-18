@@ -1,5 +1,11 @@
 # @triplit/cli
 
+## 0.3.11
+
+### Patch Changes
+
+- 47a3773: fix cli on windows
+
 ## 0.3.10
 
 ### Patch Changes
