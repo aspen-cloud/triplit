@@ -41,7 +41,7 @@ export type { TObject };
 // Could also use a namespace or module, but this worked best with our type generation
 export class Schema {
   static Id = () =>
-    StringType({ nullable: false, default: Schema.Default.uuid() });
+    StringType({ nullable: false, default: this.Default.uuid() });
   static String = StringType;
   static Number = NumberType;
   static Boolean = BooleanType;
@@ -75,7 +75,7 @@ export class Schema {
   ) => QueryType({ collectionName, where: [['id', '=', entityId]] }, 'one');
 
   static Schema<T extends SchemaConfig>(config: T) {
-    return Schema.Record(config);
+    return this.Record(config);
   }
 
   static get Default() {
