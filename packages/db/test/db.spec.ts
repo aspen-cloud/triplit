@@ -32,12 +32,6 @@ import {
   appendCollectionToId,
   stripCollectionFromId,
 } from '../src/db-helpers.js';
-import {
-  CollectionNameFromQuery,
-  JSTypeOrRelation,
-} from '../src/collection-query.js';
-import { CollectionFromModels, ModelFromModels } from '../src/db.js';
-import { set } from 'tuple-database/helpers/sortedTupleArray.js';
 
 const pause = async (ms: number = 100) =>
   new Promise((resolve) => setTimeout(resolve, ms));
