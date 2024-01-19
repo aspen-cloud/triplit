@@ -251,17 +251,10 @@ export default class MultiTupleStore<TupleSchema extends KeyValuePair> {
   }
 
   async clear() {
-    await Promise.all(
-      Object.values(this.storage).map(async (store) => {
-        await transactionalReadWriteAsync()(async (tx) => {
-          const allData = await tx.scan();
-          await Promise.all(allData.map((data) => tx.remove(data.key)));
-        })(
-          // @ts-ignore
-          store
-        );
-      })
-    );
+    await this.autoTransact(async (tx) => {
+      const allData = await tx.scan();
+      allData.forEach((data) => tx.remove(data.key));
+    }, this.storageScope);
   }
 
   close(): void {

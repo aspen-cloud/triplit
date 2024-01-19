@@ -206,7 +206,6 @@ type SchemaChangeCallback<M extends Models<any, any> | undefined> = (
   schema: StoreSchema<M> | undefined
 ) => void;
 
-
 type TxOutput<Output> = {
   txId: string | undefined;
   output: Output | undefined;
@@ -463,10 +462,18 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
         this.tripleStore.tupleStore.subscribe(
           { prefix: ['EAT', appendCollectionToId('_metadata', '_schema')] },
           async (storeWrites) => {
+            // If there are deletes clear cached data and update if there are sets
+            // NOTE: IF WE ADD GARBAGE COLLECITON ENSURE THIS IS STILL CORRECT
+            if (Object.values(storeWrites).some((w) => !!w.remove?.length)) {
+              this.schema = undefined;
+              this._schema = undefined;
+            }
+
             // This assumes we are properly using tombstoning, so only looking at set operations
             const schemaTriples = Object.values(storeWrites).flatMap(
               (w) => w.set?.map((s) => indexToTriple(s)) ?? []
             );
+            if (!schemaTriples.length) return;
 
             // Initialize schema entity
             if (!this._schema) {

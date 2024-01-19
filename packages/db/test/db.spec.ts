@@ -5736,3 +5736,31 @@ describe('hooks API', async () => {
     });
   });
 });
+
+it('clearing a database resets the schema', async () => {
+  const schema = {
+    collections: {
+      test: {
+        schema: S.Schema({
+          id: S.String(),
+          name: S.String(),
+        }),
+      },
+    },
+    version: 0,
+  };
+  const db = new DB({ schema });
+  await db.ensureMigrated;
+
+  // Should load schema into cache
+  const resultSchema = await db.getSchema();
+  const cacheSchema = db.schema!;
+  expect(schemaToJSON(resultSchema)).toEqual(schemaToJSON(schema));
+  expect(schemaToJSON(cacheSchema)).toEqual(schemaToJSON(schema));
+
+  await db.clear();
+
+  // Should reset schema cache
+  const schemaAfterClear = await db.getSchema();
+  expect(schemaAfterClear).toEqual(undefined);
+});

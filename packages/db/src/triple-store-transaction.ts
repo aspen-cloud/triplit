@@ -205,7 +205,7 @@ export class TripleStoreTransaction implements TripleStoreApi {
   }
 
   async deleteTriple(trip: TripleRow) {
-    this.deleteTriples([trip]);
+    await this.deleteTriples([trip]);
   }
 
   async deleteTriples(triples: TripleRow[]) {
