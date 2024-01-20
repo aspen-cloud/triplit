@@ -97,6 +97,8 @@ export class Connection {
             (!clientStates.has(client) || clientStates.get(client)! < t)
         );
 
+        // Possibly return early if no triples?
+
         this.sendResponse('TRIPLES', {
           triples: triplesForClient,
           forQueries: [queryKey],

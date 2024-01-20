@@ -1035,13 +1035,16 @@ export function subscribeResultsAndTriples<
             if (isInResult && satisfiesLimitRange) {
               // Adding to result set
               nextResult.set(entity, entityObj);
-              matchedTriples.set(entity, entityTriples);
+              matchedTriples.set(entity, Object.values(entityWrapper.triples));
               queryShouldRefire = true;
             } else {
               if (nextResult.has(entity)) {
                 // prune from a result set
                 nextResult.delete(entity);
-                matchedTriples.set(entity, entityTriples);
+                matchedTriples.set(
+                  entity,
+                  Object.values(entityWrapper.triples)
+                );
                 queryShouldRefire = true;
               }
             }
