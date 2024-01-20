@@ -42,6 +42,13 @@ export class TriplitError extends Error {
       contextMessage: this.contextMessage,
     };
   }
+  static fromJson(json: any) {
+    const error = new TriplitError(json.contextMessage);
+    if (json.message) error.message = json.message;
+    if (json.name) error.name = json.name;
+    if (json.status) error.status = json.status;
+    return error;
+  }
 }
 
 // DB Errors

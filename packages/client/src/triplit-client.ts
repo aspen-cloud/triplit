@@ -196,7 +196,7 @@ export class TriplitClient<M extends ClientSchema | undefined = undefined> {
       ...(serverUrl ? mapServerUrlToSyncOptions(serverUrl) : {}),
     };
 
-    this.remote = new RemoteClient({
+    this.remote = new RemoteClient<M>({
       server: serverUrl,
       token,
       schema: this.db.schema?.collections,

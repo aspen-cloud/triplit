@@ -132,6 +132,8 @@ async function execute(args: string[], flags: {}) {
         [name]: commandArgs,
       };
     }
+  } else {
+    parsedCommandArgs = commandArgs;
   }
 
   const result = await cmdDef.run({

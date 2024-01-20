@@ -9,6 +9,7 @@ import {
   createUpdateProxy,
   Attribute,
   Value,
+  TriplitError,
 } from '@triplit/db';
 import {
   ClientFetchResult,
@@ -19,6 +20,14 @@ import {
   prepareFetchOneQuery,
 } from './utils/query.js';
 
+function parseError(error: string) {
+  try {
+    const jsonError = JSON.parse(error);
+    return TriplitError.fromJson(jsonError);
+  } catch (e) {
+    return new TriplitError(error);
+  }
+}
 // Interact with remote via http api, totally separate from your local database
 export class RemoteClient<M extends ClientSchema | undefined> {
   constructor(
@@ -30,8 +39,8 @@ export class RemoteClient<M extends ClientSchema | undefined> {
   }
 
   private async sendRequest(uri: string, method: string, body: any) {
-    if (!this.options.server) throw new Error('No server url provided');
-    if (!this.options.token) throw new Error('No token provided');
+    if (!this.options.server) throw new TriplitError('No server url provided');
+    if (!this.options.token) throw new TriplitError('No token provided');
     const res = await fetch(this.options.server + uri, {
       method,
       headers: {
@@ -40,7 +49,8 @@ export class RemoteClient<M extends ClientSchema | undefined> {
       },
       body: JSON.stringify(body),
     });
-    if (!res.ok) return { data: undefined, error: await res.text() };
+    if (!res.ok)
+      return { data: undefined, error: parseError(await res.text()) };
     return { data: await res.json(), error: undefined };
   }
 
@@ -50,7 +60,7 @@ export class RemoteClient<M extends ClientSchema | undefined> {
     const { data, error } = await this.sendRequest('/fetch', 'POST', {
       query,
     });
-    if (error) throw new Error(error);
+    if (error) throw error;
     return deserializeHTTPFetchResult(query, data.result, this.options.schema);
   }
 
@@ -61,7 +71,7 @@ export class RemoteClient<M extends ClientSchema | undefined> {
     const { data, error } = await this.sendRequest('/fetch', 'POST', {
       query,
     });
-    if (error) throw new Error(error);
+    if (error) throw error;
     const deserialized = deserializeHTTPFetchResult(
       query,
       data.result,
@@ -81,7 +91,7 @@ export class RemoteClient<M extends ClientSchema | undefined> {
     const { data, error } = await this.sendRequest('/fetch', 'POST', {
       query,
     });
-    if (error) throw new Error(error);
+    if (error) throw error;
     const deserialized = deserializeHTTPFetchResult(
       query,
       data.result,
@@ -98,7 +108,17 @@ export class RemoteClient<M extends ClientSchema | undefined> {
       collectionName,
       entity: object,
     });
-    if (error) throw new Error(error);
+    if (error) throw error;
+    return data;
+  }
+
+  async bulkInsert(bulk: BulkInsert<M>) {
+    const { data, error } = await this.sendRequest(
+      '/bulk-insert',
+      'POST',
+      bulk
+    );
+    if (error) throw error;
     return data;
   }
 
@@ -130,7 +150,7 @@ export class RemoteClient<M extends ClientSchema | undefined> {
       entityId,
       patches,
     });
-    if (error) throw new Error(error);
+    if (error) throw error;
     return data;
   }
 
@@ -142,7 +162,7 @@ export class RemoteClient<M extends ClientSchema | undefined> {
       collectionName,
       entityId,
     });
-    if (error) throw new Error(error);
+    if (error) throw error;
     return data;
   }
 }
@@ -200,3 +220,12 @@ function deserializeHTTPEntity<CQ extends ClientQuery<any, any>>(
   }
   return deserializedEntity;
 }
+
+export type BulkInsert<M extends ClientSchema | undefined> =
+  M extends ClientSchema
+    ? {
+        [CN in CollectionNameFromModels<M>]?: InsertTypeFromModel<
+          ModelFromModels<M, CN>
+        >[];
+      }
+    : Record<string, any>;
