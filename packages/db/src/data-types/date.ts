@@ -1,28 +1,15 @@
-import { FormatRegistry, Type } from '@sinclair/typebox';
-import { fullFormats } from 'ajv-formats/dist/formats.js';
 import { UserTypeOptions } from './serialization.js';
-import { Nullable, calcDefaultValue, userTypeOptionsAreValid } from './base.js';
+import { calcDefaultValue, userTypeOptionsAreValid } from './base.js';
 import {
   TypeWithOptions,
   ValueInterface,
   valueMismatchMessage,
 } from './value.js';
-import { Value } from '@sinclair/typebox/value';
 import { InvalidTypeOptionsError, DBSerializationError } from '../errors.js';
-
-FormatRegistry.Set(
-  'date-time',
-  // @ts-ignore
-  fullFormats['date-time'].validate
-);
+import { isDateTime } from '../utils/date.js';
 
 const DATE_OPERATORS = ['=', '!=', '<', '>', '<=', '>='] as const;
 type DateOperators = typeof DATE_OPERATORS;
-
-const DateSchemaType = Type.String({
-  format: 'date-time',
-  default: null,
-});
 
 export type DateType<TypeOptions extends UserTypeOptions = {}> = ValueInterface<
   'date',
@@ -83,8 +70,9 @@ export function DateType<TypeOptions extends UserTypeOptions = {}>(
       return valueMismatchMessage('date', options, val);
     },
     validateTripleValue(val: any) {
-      const type = options.nullable ? Nullable(DateSchemaType) : DateSchemaType;
-      return Value.Check(type, val);
+      if (options.nullable && val === null) return true;
+      if (typeof val !== 'string') return false;
+      return isDateTime(val);
     },
     fromString(val: string) {
       return new Date(val);
