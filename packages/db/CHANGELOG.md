@@ -1,5 +1,13 @@
 # @triplit/db
 
+## 0.3.11
+
+### Patch Changes
+
+- 9e222c8: ensure clear() resets in memory schema
+  small bug fixes
+- ed225fd: Fix bug causing oversending of triples
+
 ## 0.3.10
 
 ### Patch Changes
