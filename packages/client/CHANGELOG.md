@@ -1,5 +1,14 @@
 # @triplit/client
 
+## 0.3.11
+
+### Patch Changes
+
+- fd213a5: Add bulkInsert method to RemoteClient
+- Updated dependencies [9e222c8]
+- Updated dependencies [ed225fd]
+  - @triplit/db@0.3.11
+
 ## 0.3.10
 
 ### Patch Changes
