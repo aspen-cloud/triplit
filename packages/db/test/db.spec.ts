@@ -435,6 +435,24 @@ describe('Database API', () => {
         extraField: 'extra',
       })
     ).rejects.toThrowError(DBSerializationError);
+
+    // fields have valid types
+    await expect(
+      db.insert('test', {
+        id: '1',
+        name: 'John Doe',
+        age: '22',
+      })
+    )
+      .rejects.toThrowError(DBSerializationError)
+      // TODO: maybe setup custom matchers to test messages: https://jestjs.io/docs/expect#expectextendmatchers
+      // Ugly but so is setting up try / catch
+      .then((assertion) => {
+        const error = assertion.__flags.object;
+        expect(error.message).toContain(
+          'invalid value for age (Expected a number value, but got string instead.)'
+        );
+      });
   });
 });
 

@@ -171,7 +171,7 @@ export default Command({
 
 function logError(e: Error | TriplitError) {
   if (e instanceof TriplitError) {
-    console.error(red(e.message));
+    console.error(red(e.baseMessage));
     e.contextMessage && console.error(red(e.contextMessage));
   } else {
     console.error(red(e.message));

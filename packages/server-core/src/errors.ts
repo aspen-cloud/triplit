@@ -15,7 +15,7 @@ export class UnauthorizedError extends TriplitError {
   constructor(...args: any[]) {
     super(...args);
     this.name = 'UnauthorizedError';
-    this.message = 'Unauthorized';
+    this.baseMessage = 'Unauthorized';
     this.status = STATUS_CODES['Unauthorized'];
   }
 }
@@ -24,7 +24,7 @@ export class NoTokenProvidedError extends TriplitError {
   constructor(...args: any[]) {
     super(...args);
     this.name = 'NoTokenProvidedError';
-    this.message = 'No token provided.';
+    this.baseMessage = 'No token provided.';
     this.status = STATUS_CODES['Unauthorized'];
   }
 }
@@ -33,7 +33,7 @@ export class InvalidAuthenticationSchemeError extends TriplitError {
   constructor(...args: any[]) {
     super(...args);
     this.name = 'InvalidAuthenticationSchemeError';
-    this.message = 'Must use Bearer authentication scheme.';
+    this.baseMessage = 'Must use Bearer authentication scheme.';
     this.status = STATUS_CODES['Unauthorized'];
   }
 }
@@ -42,7 +42,7 @@ export class InvalidTokenSignatureError extends TriplitError {
   constructor(...args: any[]) {
     super(...args);
     this.name = 'InvalidTokenSignatureError';
-    this.message =
+    this.baseMessage =
       'The signature on your token could not be verified successfully.';
     this.status = STATUS_CODES['Unauthorized'];
   }
@@ -52,7 +52,7 @@ export class InvalidTokenProjectIdError extends TriplitError {
   constructor(...args: any[]) {
     super(...args);
     this.name = 'InvalidTokenProjectIdError';
-    this.message =
+    this.baseMessage =
       'The project id on your token does not match the project id for this request.';
     this.status = STATUS_CODES['Unauthorized'];
   }
@@ -62,7 +62,7 @@ export class TokenMissingProjectIdError extends TriplitError {
   constructor(...args: any[]) {
     super(...args);
     this.name = 'TokenMissingProjectIdError';
-    this.message = 'The auth token you are using is missing a project id.';
+    this.baseMessage = 'The auth token you are using is missing a project id.';
     this.status = STATUS_CODES['Unauthorized'];
   }
 }
@@ -71,7 +71,7 @@ export class ThirdPartyTokenInfoNotFoundError extends TriplitError {
   constructor(...args: any[]) {
     super(...args);
     this.name = 'ThirdPartyTokenInfoNotFoundError';
-    this.message =
+    this.baseMessage =
       'Information for your third party token could not be found. This may be because you have not set an external jwt secret or you are referencing the wrong project. This may also be an issue with Triplit.';
     this.status = STATUS_CODES['Internal Server Error'];
   }
@@ -81,7 +81,7 @@ export class TokenReadError extends TriplitError {
   constructor(...args: any[]) {
     super(...args);
     this.name = 'TokenReadError';
-    this.message = 'Error reading token.';
+    this.baseMessage = 'Error reading token.';
     this.status = STATUS_CODES['Internal Server Error'];
   }
 }
@@ -90,7 +90,7 @@ export class UnrecognizedTokenTypeError extends TriplitError {
   constructor(type: string, ...args: any[]) {
     super(...args);
     this.name = 'UnrecognizedTokenTypeError';
-    this.message = `The token type ${type} is not recognized.`;
+    this.baseMessage = `The token type ${type} is not recognized.`;
     this.status = STATUS_CODES['Bad Request'];
   }
 }
@@ -99,7 +99,7 @@ export class ServiceKeyRequiredError extends TriplitError {
   constructor(...args: any[]) {
     super(...args);
     this.name = 'ServiceKeyRequiredError';
-    this.message = 'Service key required.';
+    this.baseMessage = 'Service key required.';
     this.status = STATUS_CODES['Unauthorized'];
   }
 }
@@ -108,7 +108,7 @@ export class InvalidTokenPayloadError extends TriplitError {
   constructor(...args: any[]) {
     super(...args);
     this.name = 'InvalidTokenPayloadError';
-    this.message = 'The token payload is invalid.';
+    this.baseMessage = 'The token payload is invalid.';
     this.status = STATUS_CODES['Bad Request'];
   }
 }
@@ -117,7 +117,7 @@ export class TokenVerificationError extends TriplitError {
   constructor(...args: any[]) {
     super(...args);
     this.name = 'TokenVerificationError';
-    this.message = 'Error verifying token.';
+    this.baseMessage = 'Error verifying token.';
     this.status = STATUS_CODES['Unauthorized'];
   }
 }
@@ -127,7 +127,7 @@ export class UnrecognizedMessageTypeError extends TriplitError {
   constructor(type: string, ...args: any[]) {
     super(...args);
     this.name = 'UnrecognizedMessageTypeError';
-    this.message = `Unrecognized message type: ${type}.`;
+    this.baseMessage = `Unrecognized message type: ${type}.`;
     this.status = STATUS_CODES['Bad Request'];
   }
 }
@@ -136,7 +136,7 @@ export class MalformedMessagePayloadError extends TriplitError {
   constructor(...args: any[]) {
     super(...args);
     this.name = 'MalformedMessagePayloadError';
-    this.message = `Messages payloads must be valid JSON.`;
+    this.baseMessage = `Messages payloads must be valid JSON.`;
     this.status = STATUS_CODES['Bad Request'];
   }
 }
@@ -146,7 +146,7 @@ export class RateLimitExceededError extends TriplitError {
   constructor(...args: any[]) {
     super(...args);
     this.name = 'RateLimitExceededError';
-    this.message = 'Rate limit exceeded.';
+    this.baseMessage = 'Rate limit exceeded.';
     this.status = STATUS_CODES['Too Many Requests'];
   }
 }
@@ -156,7 +156,7 @@ export class TriplesInsertError extends TriplitError {
   constructor(...args: any[]) {
     super(...args);
     this.name = 'TriplesInsertError';
-    this.message = 'Triples insert error.';
+    this.baseMessage = 'Triples insert error.';
     this.status = STATUS_CODES['Internal Server Error'];
   }
 }
@@ -166,7 +166,7 @@ export class QuerySyncError extends TriplitError {
   constructor(params: any, ...args: any[]) {
     super(...args);
     this.name = 'QuerySyncError';
-    this.message = `An error occured while syncing your query: ${JSON.stringify(
+    this.baseMessage = `An error occured while syncing your query: ${JSON.stringify(
       params
     )}`;
     this.status = STATUS_CODES['Internal Server Error'];
@@ -177,7 +177,7 @@ export class PlatformSetupError extends TriplitError {
   constructor(...args: any[]) {
     super(...args);
     this.name = 'PlatformSetupError';
-    this.message =
+    this.baseMessage =
       'There was an error using the services provided by the platform. Please check that the server platform is setup correctly on server initialization.';
     this.status = STATUS_CODES['Internal Server Error'];
   }
@@ -187,7 +187,7 @@ export class TupleStoreEncodingError extends TriplitError {
   constructor(...args: any[]) {
     super(...args);
     this.name = 'TupleStoreEncodingError';
-    this.message =
+    this.baseMessage =
       'The sync server encountered an unknown value type when encoding a tuple.';
     this.status = STATUS_CODES['Internal Server Error'];
   }
@@ -197,7 +197,7 @@ export class TupleStoreDecodingError extends TriplitError {
   constructor(...args: any[]) {
     super(...args);
     this.name = 'TupleStoreDecodingError';
-    this.message =
+    this.baseMessage =
       'The sync server encountered an invalid encoding byte when decoding a tuple.';
     this.status = STATUS_CODES['Internal Server Error'];
   }
@@ -207,7 +207,7 @@ export class UnserializableObjectError extends TriplitError {
   constructor(...args: any[]) {
     super(...args);
     this.name = 'UnserializableObjectError';
-    this.message =
+    this.baseMessage =
       'The sync server encountered an object that could not be serialized.';
     this.status = STATUS_CODES['Internal Server Error'];
   }
