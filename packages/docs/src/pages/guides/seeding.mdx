@@ -1,0 +1,127 @@
+# Seeding a Triplit Database
+
+In this guide, we'll walk through how to use `triplit seed` to seed a database.
+
+## Creating a seed file
+
+First, we'll need to create a seed file. This is a file that contains the data we want to seed the database with. We'll use the `triplit seed` command to this file.
+
+```bash
+triplit seed --create my-first-seed
+```
+
+This will create a file called `my-first-seed.ts` in the `triplit/seeds` directory. It will instrospect your [schema](/schemas) defined in `triplit/schema.ts`. It will use the schema to provide some initial type hinting to help ensure that the data in your seed adheres to the schema.
+
+For example, a schema file might look like this:
+
+```ts filename="triplit/schema.ts" copy
+import { Schema as S } from '@triplit/db';
+import { ClientSchema } from '@triplit/client';
+
+export const schema = {
+  todos: {
+    schema: S.Schema({
+      id: S.Id(),
+      text: S.String(),
+      completed: S.Boolean({ default: false }),
+      created_at: S.Date({ default: S.Default.now() }),
+    }),
+  },
+  profiles: {
+    schema: S.Schema({
+      id: S.Id(),
+      name: S.String(),
+      created_at: S.Date({ default: S.Default.now() }),
+    }),
+  },
+} satisfies ClientSchema;
+```
+
+And would result in a seed file that looks like this:
+
+```ts filename="triplit/seeds/my-first-seed.ts" copy
+import { BulkInsert } from '@triplit/client';
+import { schema } from '../schema.js';
+export default function seed(): BulkInsert<typeof schema> {
+  return {
+    todos: [],
+    profiles: [],
+  };
+}
+```
+
+## Editing the seed file
+
+Now that we have scaffolded a seed file, we can start adding data to it. Let's add a few todos:
+
+```ts filename="triplit/seeds/my-first-seed.ts" copy
+import { BulkInsert } from '@triplit/client';
+import { schema } from '../schema.js';
+export default function seed(): BulkInsert<typeof schema> {
+  return {
+    todos: [
+      {
+        text: 'Buy milk',
+      },
+      {
+        text: 'Buy eggs',
+      },
+      {
+        text: 'Buy bread',
+      },
+    ],
+    profiles: [
+      {
+        name: 'Cole Cooper',
+      },
+    ],
+  };
+}
+```
+
+You can add whatever scripts you want to this file, including external libraries, as long as it exports a default function that adheres to the `BulkInsert` type (a record with collection names as keys and arrays of entities as values).
+
+## Using the seed file
+
+Now that we have a seed file, we can use the `triplit seed` command to seed the database. First, make sure that your environment variables are set up correctly, with `TRIPLIT_DB_URL` pointing to your database (be it a local dev server or a Triplit Cloud instance) and `TRIPLIT_SERVICE_TOKEN` set to a valid service token.
+
+Then, run the `triplit seed` command with the name of the seed file as an argument:
+
+```bash copy
+triplit seed my-first-seed
+```
+
+You should see some output
+
+```bash
+> Running seed file: my-first-seed.ts
+> Successfully seeded with my-seed.ts
+> Inserted 3 document(s) into todos
+> Inserted 1 document(s) into users
+```
+
+## `triplit seed` options
+
+### `--create`
+
+You can use the `--create` option to create a seed file with some helpful typescript. This will introspect your schema and provide some initial type hinting to help ensure that the data in your seed adheres to the schema.
+
+```bash copy
+triplit seed --create my-first-seed
+```
+
+### `--all`
+
+You can define multiple seed files in the `triplit/seeds` directory. You can run them all at once by using the `--all` option.
+
+```bash copy
+triplit seed --all
+```
+
+### `--file`
+
+You can also run a specific seed file, not necessarily located in `triplit/seeds/[seed-file].ts` by using the `--file` option.
+
+```bash copy
+triplit seed --file path/to/my-seed.ts
+```

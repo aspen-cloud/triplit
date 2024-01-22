@@ -2,6 +2,7 @@
   "react-tutorial": "React + Vite tutorial",
   "local-development": "Local development",
   "migrations": "Migrations",
+  "seeding": "Seeding a database",
   "triplit-cloud": "Triplit Cloud",
   "auth": "Auth"
 }
