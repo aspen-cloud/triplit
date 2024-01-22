@@ -1,5 +1,16 @@
 # @triplit/cli
 
+## 0.3.14
+
+### Patch Changes
+
+- d9831f5: Handle schemaless case in `triplit seed`
+- Updated dependencies [f2b0f1f]
+  - @triplit/db@0.3.12
+  - @triplit/client@0.3.12
+  - @triplit/console@0.3.13
+  - @triplit/server@0.3.13
+
 ## 0.3.13
 
 ### Patch Changes
