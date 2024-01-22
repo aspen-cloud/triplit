@@ -389,16 +389,22 @@ export class Session {
         new TriplitError('{ query: CollectionQuery } missing from request body')
       );
     try {
-      return ServerResponse(200, await this.db.fetchTriples(query));
+      return ServerResponse(
+        200,
+        await this.db.fetchTriples(query, {
+          skipRules: hasAdminAccess(this.token),
+        })
+      );
     } catch (e) {
       return errorResponse(e as Error);
     }
   }
 
   async fetch(query: CollectionQuery<any, any>) {
-    if (!hasAdminAccess(this.token)) return NotAdminResponse();
     try {
-      const result = await this.db.fetch(query);
+      const result = await this.db.fetch(query, {
+        skipRules: hasAdminAccess(this.token),
+      });
       const schema = await this.db.getSchema();
       const { collectionName } = query;
       const collectionSchema = schema?.collections[collectionName]?.schema;
@@ -417,14 +423,15 @@ export class Session {
   }
 
   async insert(collectionName: string, entity: any) {
-    if (!hasAdminAccess(this.token)) return NotAdminResponse();
     try {
       const schema = await this.db.getSchema();
       const collectionSchema = schema?.collections[collectionName]?.schema;
       const insertEntity = collectionSchema
         ? collectionSchema.convertJSONToJS(entity)
         : entity;
-      const txResult = await this.db.insert(collectionName, insertEntity);
+      const txResult = await this.db.insert(collectionName, insertEntity, {
+        skipRules: hasAdminAccess(this.token),
+      });
       const serializableResult = {
         ...txResult,
         output: collectionSchema
@@ -440,32 +447,34 @@ export class Session {
   }
 
   async bulkInsert(inserts: Record<string, any[]>) {
-    if (!hasAdminAccess(this.token)) return NotAdminResponse();
     try {
       const schema = await this.db.getSchema();
-      // @ts-ignore
-      const txResult = await this.db.transact(async (tx) => {
-        const output = Object.keys(inserts).reduce(
-          (acc, collectionName) => ({ ...acc, [collectionName]: [] }),
-          {}
-        ) as Record<string, any[]>;
-        for (const [collectionName, entities] of Object.entries(inserts)) {
-          const collectionSchema = schema?.collections[collectionName]?.schema;
-          for (const entity of entities) {
-            const insertEntity = collectionSchema
-              ? collectionSchema.convertJSONToJS(entity)
-              : entity;
-            const insertedEntity = await tx.insert(
-              collectionName,
-              insertEntity
-            );
-            output[collectionName].push(
-              collectionSchema.convertJSToJSON(insertedEntity)
-            );
+      const txResult = await this.db.transact(
+        async (tx) => {
+          const output = Object.keys(inserts).reduce(
+            (acc, collectionName) => ({ ...acc, [collectionName]: [] }),
+            {}
+          ) as Record<string, any[]>;
+          for (const [collectionName, entities] of Object.entries(inserts)) {
+            const collectionSchema =
+              schema?.collections[collectionName]?.schema;
+            for (const entity of entities) {
+              const insertEntity = collectionSchema
+                ? collectionSchema.convertJSONToJS(entity)
+                : entity;
+              const insertedEntity = await tx.insert(
+                collectionName,
+                insertEntity
+              );
+              output[collectionName].push(
+                collectionSchema.convertJSToJSON(insertedEntity)
+              );
+            }
           }
-        }
-        return output;
-      });
+          return output;
+        },
+        { skipRules: hasAdminAccess(this.token) }
+      );
       const serializableResult = {
         ...txResult,
       };
@@ -482,7 +491,6 @@ export class Session {
     entityId: string,
     patches: (['set', Attribute, Value] | ['delete', Attribute])[]
   ) {
-    if (!hasAdminAccess(this.token)) return NotAdminResponse();
     try {
       const schema = await this.db.getSchema();
       const collectionSchema = schema?.collections[collectionName]?.schema;
@@ -514,7 +522,8 @@ export class Session {
               throw new TriplitError(`Invalid patch type: ${patch[0]}`);
             }
           }
-        }
+        },
+        { skipRules: hasAdminAccess(this.token) }
       );
       return ServerResponse(200, txResult);
     } catch (e) {
@@ -525,9 +534,10 @@ export class Session {
   }
 
   async delete(collectionName: string, entityId: string) {
-    if (!hasAdminAccess(this.token)) return NotAdminResponse();
     try {
-      const txResult = await this.db.delete(collectionName, entityId);
+      const txResult = await this.db.delete(collectionName, entityId, {
+        skipRules: hasAdminAccess(this.token),
+      });
       return ServerResponse(200, txResult);
     } catch (e) {
       return errorResponse(e, {
