@@ -1,5 +1,11 @@
 # @triplit/db
 
+## 0.3.12
+
+### Patch Changes
+
+- f2b0f1f: remove FormatRegistry usage in date
+
 ## 0.3.11
 
 ### Patch Changes
