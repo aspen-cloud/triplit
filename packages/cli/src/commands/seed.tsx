@@ -21,9 +21,11 @@ function seedDirExists() {
 }
 
 function getSeedTemplate(schema: Models<any, any> | undefined) {
-  return `import { BulkInsert } from "@triplit/client"
-import { schema } from "../schema.js"
-export default function seed(): BulkInsert<typeof schema> {
+  return `import { BulkInsert } from \"@triplit/client\"
+${schema ? 'import { schema } from "../schema.js"' : ''}
+export default function seed(): BulkInsert<${
+    schema ? 'typeof schema' : 'any'
+  }> {
   return {${
     schema
       ? Object.keys(schema).reduce((prev, collectionName) => {
@@ -154,7 +156,7 @@ export default Command({
               grey(
                 `Inserted ${blue(
                   String(collection.length)
-                )} entities into ${blue(collectionName)}`
+                )} document(s) into ${blue(collectionName)}`
               )
             );
           }

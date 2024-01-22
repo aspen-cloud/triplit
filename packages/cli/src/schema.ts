@@ -4,6 +4,6 @@ import { getTriplitDir, loadTsModule } from './filesystem.js';
 export async function readLocalSchema() {
   const triplitDir = getTriplitDir();
   const schemaPath = path.join(triplitDir, 'schema.ts');
-  const { schema } = await loadTsModule(schemaPath);
-  return schema;
+  const result = await loadTsModule(schemaPath);
+  return result && result.schema ? result.schema : null;
 }
