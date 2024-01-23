@@ -1,5 +1,12 @@
 # @triplit/db
 
+## 0.3.13
+
+### Patch Changes
+
+- 78edb1d: Improve error messaging
+- 0bd7759: Improve indexeddb performance and prevent ghost attributes from deleted entities
+
 ## 0.3.12
 
 ### Patch Changes

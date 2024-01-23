@@ -1,5 +1,19 @@
 # @triplit/cli
 
+## 0.3.15
+
+### Patch Changes
+
+- 78edb1d: Improve error messaging
+- 0bd7759: Improve indexeddb performance and prevent ghost attributes from deleted entities
+- Updated dependencies [78edb1d]
+- Updated dependencies [0bd7759]
+- Updated dependencies [b21dacf]
+  - @triplit/client@0.3.13
+  - @triplit/db@0.3.13
+  - @triplit/console@0.3.14
+  - @triplit/server@0.3.14
+
 ## 0.3.14
 
 ### Patch Changes
