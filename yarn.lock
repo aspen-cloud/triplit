@@ -4505,6 +4505,7 @@ __metadata:
     chokidar: ^3.5.3
     degit: ^2.8.4
     dotenv: ^16.3.1
+    dotenv-expand: ^10.0.0
     ink: ^4.4.0
     jsondiffpatch: ^0.5.0
     jsonwebtoken: ^9.0.2
@@ -8297,6 +8298,13 @@ __metadata:
   version: 3.0.5
   resolution: "dompurify@npm:3.0.5"
   checksum: 2d9421570c833ce26ce7022955241749b646d41e8bf453f42ede9f22d0e98af482cedb7dfbf8129419eb48b351c1d677a08fc9f1cd91836ce7f6c1807a0676b2
+  languageName: node
+  linkType: hard
+
+"dotenv-expand@npm:^10.0.0":
+  version: 10.0.0
+  resolution: "dotenv-expand@npm:10.0.0"
+  checksum: 2a38b470efe0abcb1ac8490421a55e1d764dc9440fd220942bce40965074f3fb00b585f4346020cb0f0f219966ee6b4ee5023458b3e2953fe5b3214de1b314ee
   languageName: node
   linkType: hard
 
