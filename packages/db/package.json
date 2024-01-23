@@ -51,11 +51,10 @@
   },
   "dependencies": {
     "@sinclair/typebox": "^0.27.4",
-    "@triplit/tuple-database": "^2.2.8",
+    "@triplit/tuple-database": "^2.2.10",
     "idb": "^7.1.1",
     "nanoid": "^3.0.0",
     "pino": "^8.11.0",
-    "sorted-btree": "^1.8.1",
     "tinybench": "^2.5.0"
   }
 }

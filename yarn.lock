@@ -4597,7 +4597,7 @@ __metadata:
     "@sinclair/typebox": ^0.27.4
     "@stryker-mutator/core": ^7.3.0
     "@stryker-mutator/vitest-runner": ^7.3.0
-    "@triplit/tuple-database": ^2.2.8
+    "@triplit/tuple-database": ^2.2.10
     "@vitest/coverage-c8": ^0.29.2
     "@vitest/coverage-v8": ^0.33.0
     "@vitest/ui": ^0.33.0
@@ -4606,7 +4606,6 @@ __metadata:
     pino: ^8.11.0
     rxdb: ^14.14.2
     rxjs: ^7.8.1
-    sorted-btree: ^1.8.1
     tinybench: ^2.5.0
     typescript: ^5.2.2
     vitest: ^0.32.2
@@ -4666,22 +4665,23 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@triplit/tuple-database@npm:^2.2.8":
-  version: 2.2.8
-  resolution: "@triplit/tuple-database@npm:2.2.8"
+"@triplit/tuple-database@npm:^2.2.10":
+  version: 2.2.10
+  resolution: "@triplit/tuple-database@npm:2.2.10"
   dependencies:
     elen: ^1.0.10
     fractional-indexing: ^3.1.0
     fs-extra: ^11.1.0
     md5: ^2.3.0
     remeda: ^1.37.0
+    sorted-btree: ^1.8.1
     uuid: ^9.0.0
   peerDependencies:
     react: "*"
   peerDependenciesMeta:
     react:
       optional: true
-  checksum: d9fef85da2232ba5454d53593eef70956a7a6cc7bc0926b28e2d1411cc26e680f28c6f8a5f40f9fa36e7c93cb486f7a4921b1073cb75775066b2d0a647833e36
+  checksum: f942f925b064a51d38c971f3819aade5621d023acd6022d06a303c27a82ea5cab0e68745cc30549062100a01ed7626aadf241638fdf72b9bff4391f73caed4fe
   languageName: node
   linkType: hard
 
