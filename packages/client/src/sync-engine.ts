@@ -339,7 +339,12 @@ export class SyncEngine {
 
       if (message.type === 'CLOSE') {
         const { payload } = message;
-        this.closeConnection(payload);
+        console.warn(
+          `Closing connection${payload?.message ? `: ${payload.message}` : '.'}`
+        );
+        const { type, retry } = payload;
+        // Close payload must remain under 125 bytes
+        this.closeConnection({ type, retry });
       }
     });
     this.transport.onOpen(async () => {
@@ -378,6 +383,7 @@ export class SyncEngine {
 
         if (!retry) {
           // early return to prevent reconnect
+          console.warn('Connection will not automatically retry.');
           return;
         }
       }

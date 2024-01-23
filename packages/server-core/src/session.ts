@@ -23,6 +23,7 @@ import {
   ServerSyncMessage,
   ClientSyncMessage,
   ParsedToken,
+  ServerCloseReason,
 } from '@triplit/types/sync';
 import { Server } from './triplit-server.js';
 
@@ -237,7 +238,7 @@ export class Connection {
     return this.session.db.insert(collectionName, entity);
   }
 
-  async isClientSchemaCompatible() {
+  async isClientSchemaCompatible(): Promise<ServerCloseReason | undefined> {
     const serverSchema = await this.session.db.getSchema();
     const serverHash = hashSchemaJSON(schemaToJSON(serverSchema)?.collections);
     if (
@@ -247,8 +248,8 @@ export class Connection {
     )
       return {
         type: 'SCHEMA_MISMATCH',
-        payload: {},
         retry: false,
+        message: 'Client schema does not match server schema.',
       };
     return undefined;
   }

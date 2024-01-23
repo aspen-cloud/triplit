@@ -5,7 +5,11 @@ type SyncMessage<Type extends string, Payload extends any> = {
   payload: Payload;
 };
 
-type ServerCloseReason = { type: ServerCloseReasonType; retry: boolean };
+export type ServerCloseReason = {
+  type: ServerCloseReasonType;
+  retry: boolean;
+  message?: string;
+};
 
 /**
  * Reasons for a client side connection close
@@ -17,7 +21,10 @@ export type ClientCloseReasonType =
   | 'CONNECTION_OVERRIDE'
   | 'MANUAL_DISCONNECT'
   | 'NETWORK_OFFLINE';
-export type ServerCloseReasonType = 'SCHEMA_MISMATCH';
+export type ServerCloseReasonType =
+  | 'SCHEMA_MISMATCH'
+  | 'UNAUTHORIZED'
+  | 'INTERNAL_ERROR';
 export type CloseReasonType = ClientCloseReasonType | ServerCloseReasonType;
 export type CloseReason = {
   type: CloseReasonType;

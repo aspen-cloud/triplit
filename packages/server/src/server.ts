@@ -17,6 +17,7 @@ import {
   ClientSyncMessage,
   ParseResult,
   ParsedToken,
+  ServerCloseReason,
 } from '@triplit/types/sync';
 import { parseAndValidateToken } from '@triplit/server-core/token';
 
@@ -82,7 +83,7 @@ export function createServer(options?: ServerOptions) {
   });
 
   const heartbeatInterval = setInterval(function ping() {
-    // @ts-ignore
+    // @ts-expect-error
     wss.clients.forEach(function each(ws: WS.WebSocket) {
       if (ws.isAlive === false) return ws.terminate();
       ws.isAlive = false;
@@ -90,11 +91,16 @@ export function createServer(options?: ServerOptions) {
     });
   }, 30000);
 
-  function sendMessage(socket: WS.WebSocket, type: string, payload: any) {
+  function sendMessage(
+    socket: WS.WebSocket,
+    type: string,
+    payload: any,
+    options: { dropIfClosed?: boolean } = {}
+  ) {
     const message = JSON.stringify({ type, payload });
     if (socket.readyState === WS.OPEN) {
       socket.send(message);
-    } else {
+    } else if (!options.dropIfClosed) {
       // I think this is unlikely to be hit, but just in case the socket isnt opened yet, queue messages
       const send = () => {
         socket.send(message);
@@ -117,6 +123,18 @@ export function createServer(options?: ServerOptions) {
       metadata,
     };
     sendMessage(socket, 'ERROR', payload);
+  }
+
+  function closeSocket(socket: WS, reason: ServerCloseReason, code?: number) {
+    // Send message informing client of upcoming close, may include message containing reason
+    // @ts-expect-error
+    sendMessage(socket, 'CLOSE', reason, { dropIfClosed: true });
+    // Close connection
+    // Close payload must remain under 125 bytes
+    socket.close(
+      code,
+      JSON.stringify({ type: reason.type, retry: reason.retry })
+    );
   }
 
   wss.on('connection', async (socket: WS.WebSocket) => {
@@ -157,11 +175,13 @@ export function createServer(options?: ServerOptions) {
 
     socket.on('close', (code, reason) => {
       session!.close();
+      // Should this use the closeSocket function?
       socket.close(code, reason);
     });
 
     socket.on('error', (err) => {
       console.log('error', err);
+      closeSocket(socket, { type: 'INTERNAL_ERROR', retry: false }, 1011);
     });
 
     sendMessage(socket, 'TRIPLES_REQUEST', {});
@@ -351,57 +371,64 @@ export function createServer(options?: ServerOptions) {
     const server = app.listen(port, onOpen);
 
     server.on('upgrade', (request, socket, head) => {
-      readWSToken(request)
-        .then(({ data: token, error }) => {
-          if (!token || error) {
-            console.error(error);
-            // TODO: Send 401?
-            socket.end();
-            return;
-          }
-
-          wss.handleUpgrade(request, socket, head, async (socket) => {
-            try {
-              if (request.url) {
-                const parsedUrl = url.parse(request.url!, true);
-                const clientId = parsedUrl.query.client as string;
-                const clientHash = parsedUrl.query.schema
-                  ? parseInt(parsedUrl.query.schema as string)
-                  : undefined;
-                const syncSchema = parsedUrl.query['sync-schema'] === 'true';
-                const server = getServer(process.env.PROJECT_ID!);
-                const connection = server.openConnection(token!, {
-                  clientId,
-                  clientSchemaHash: clientHash,
-                  syncSchema,
-                });
-                // @ts-ignore
-                socket.session = connection;
-                const schemaIncombaitility =
-                  await connection.isClientSchemaCompatible();
-                if (schemaIncombaitility) {
-                  schemaIncombaitility.retry = !!options?.watchMode;
-                  socket.close(1008, JSON.stringify(schemaIncombaitility));
-                  return;
-                }
-              }
-            } catch (e) {
-              console.error(e);
-              // TODO: send info about the error back to the server, at least if its a TriplitError
-              socket.close(
-                1008,
-                JSON.stringify({ type: 'INTERNAL_ERROR', retry: false })
-              );
+      wss.handleUpgrade(request, socket, head, async (socket) => {
+        let token: ParsedToken | undefined = undefined;
+        try {
+          const tokenRes = await readWSToken(request);
+          if (tokenRes.error) throw tokenRes.error;
+          token = tokenRes.data;
+        } catch (e) {
+          closeSocket(
+            socket,
+            {
+              type: 'UNAUTHORIZED',
+              retry: false,
+              message: e instanceof Error ? e.message : undefined,
+            },
+            1008
+          );
+          return;
+        }
+        try {
+          if (request.url) {
+            const parsedUrl = url.parse(request.url!, true);
+            const clientId = parsedUrl.query.client as string;
+            const clientHash = parsedUrl.query.schema
+              ? parseInt(parsedUrl.query.schema as string)
+              : undefined;
+            const syncSchema = parsedUrl.query['sync-schema'] === 'true';
+            const server = getServer(process.env.PROJECT_ID!);
+            const connection = server.openConnection(token!, {
+              clientId,
+              clientSchemaHash: clientHash,
+              syncSchema,
+            });
+            // @ts-expect-error
+            socket.session = connection;
+            const schemaIncombaitility =
+              await connection.isClientSchemaCompatible();
+            if (schemaIncombaitility) {
+              schemaIncombaitility.retry = !!options?.watchMode;
+              closeSocket(socket, schemaIncombaitility, 1008);
               return;
             }
-
-            wss.emit('connection', socket, request);
-          });
-        })
-        .catch((e) => {
+          }
+        } catch (e) {
           console.error(e);
-          socket.end();
-        });
+          closeSocket(
+            socket,
+            {
+              type: 'INTERNAL_ERROR',
+              retry: false,
+              message: e instanceof Error ? e.message : undefined,
+            },
+            1011
+          );
+          return;
+        }
+
+        wss.emit('connection', socket, request);
+      });
     });
 
     return {

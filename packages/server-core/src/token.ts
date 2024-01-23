@@ -11,6 +11,7 @@ import {
   InvalidTokenPayloadError,
   InvalidTokenProjectIdError,
   InvalidTokenSignatureError,
+  TokenVerificationError,
 } from './errors.js';
 import { TriplitError } from '@triplit/db';
 
@@ -45,7 +46,7 @@ async function getJwtKey(rawPublicKey: string): Promise<KeyLike | Uint8Array> {
 }
 
 export async function parseAndValidateToken(
-  token: string,
+  token: string | null | undefined,
   triplitSecret: string, // Signing secret for triplit tokens
   projectId: string,
   options: {
@@ -53,6 +54,12 @@ export async function parseAndValidateToken(
     externalSecret?: string; // optional signing secret for external tokens
   } = {}
 ): Promise<ParseResult<ParsedToken, TriplitError>> {
+  if (!token)
+    return {
+      data: undefined,
+      error: new TokenVerificationError('No token provided'),
+    };
+
   let payload = decodeJwt(token);
 
   // Should still accept our own tokens, so only check payload path if it might be external (we cant find our claims at base)
