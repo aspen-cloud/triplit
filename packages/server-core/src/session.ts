@@ -97,9 +97,8 @@ export class Connection {
             client !== this.options.clientId &&
             (!clientStates.has(client) || clientStates.get(client)! < t)
         );
-
-        // Possibly return early if no triples?
-
+        // We should always send triples to client even if there are none
+        // so that the client knows that the query has been fulfilled by the remote
         this.sendResponse('TRIPLES', {
           triples: triplesForClient,
           forQueries: [queryKey],

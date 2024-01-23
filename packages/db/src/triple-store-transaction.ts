@@ -296,20 +296,10 @@ export class TripleStoreTransaction implements TripleStoreApi {
   }
 
   async expireEntity(id: EntityId) {
-    // const timestamp = await this.parentTx.getTransactionTimestamp();
-    // const collectionTriple = await this.findByEntityAttribute(id, [
-    //   '_collection',
-    // ]);
-    // const existingTriples = await this.findByEntity(id);
-    // await this.insertTriples(
-    //   collectionTriple.map((t) => ({ ...t, timestamp, expired: true }))
-    // );
-    // await this.setValue(id, ['_collection'], null);
-    await this.expireEntityAttribute(id, ['_collection']);
-
-    // Perform local garbage collection
-    // Feels like it would be nice to do GC in hooks...tried once and it was a bit messy with other assumptions
-    // await this.deleteTriples(existingTriples);
+    const existingTriples = await this.findByEntity(id);
+    await this.expireEntityAttributes(
+      existingTriples.map(({ attribute, id }) => ({ id, attribute }))
+    );
   }
 
   async expireEntityAttribute(id: EntityId, attribute: Attribute) {
@@ -325,7 +315,15 @@ export class TripleStoreTransaction implements TripleStoreApi {
       allExistingTriples.push(...existingTriples);
     }
     const timestamp = await this.getTransactionTimestamp();
-    await this.deleteTriples(allExistingTriples);
+    // We need to overwrite any existing writes to that attribute that
+    // occurred in the same TX (i.e. same timestamp)
+    // normally the EAT index would take care of this but this needs to handle
+    // deleting entire nested objects in schemaless mode
+    await this.deleteTriples(
+      allExistingTriples.filter(
+        (t) => timestampCompare(t.timestamp, timestamp) === 0
+      )
+    );
     await this.insertTriples(
       allExistingTriples.map(({ id, attribute }) => ({
         id,
