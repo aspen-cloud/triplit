@@ -2,9 +2,9 @@ import { it, expect, describe } from 'vitest';
 import { createMigration } from '../src/migration';
 import { Models, Schema as S, hashSchemaJSON, schemaToJSON } from '@triplit/db';
 import { schemaFileContentFromMigrations } from '../src/commands/migrate/codegen';
-import { importFresh, transpileTsString } from '../src/schema';
-import fs from 'fs';
-import path from 'path';
+import * as fs from 'node:fs';
+import * as path from 'node:path';
+import { transpileTsString, importFresh } from '../src/filesystem';
 
 // TODO: evaluate the best way to test the CLI
 // Test helpers
