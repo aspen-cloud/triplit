@@ -4,6 +4,7 @@ import {
   WriteOps,
   AsyncTupleDatabase,
   TupleStorageApi,
+  compareTuple,
 } from '@triplit/tuple-database';
 import { Timestamp } from './timestamp.js';
 import MultiTupleStore, {
@@ -184,6 +185,7 @@ export class TripleStore implements TripleStoreApi {
     clock,
     reactivity,
     storageScope = [],
+    enableGarbageCollection = false,
   }: {
     storage?:
       | (TupleStorageApi | AsyncTupleStorageApi)
@@ -196,6 +198,7 @@ export class TripleStore implements TripleStoreApi {
     tenantId?: string;
     storageScope?: string[];
     clock?: Clock;
+    enableGarbageCollection?: boolean;
   }) {
     this.hooks = {
       beforeCommit: [],
@@ -245,6 +248,14 @@ export class TripleStore implements TripleStoreApi {
     this.clock.assignToStore(this);
 
     this.tupleStore.beforeCommit(addIndexesToTransaction);
+
+    if (enableGarbageCollection) {
+      this.afterCommit(
+        throttle(() => {
+          this.collectGarbage();
+        }, 1000)
+      );
+    }
   }
 
   async ensureStorageIsMigrated() {
@@ -568,4 +579,47 @@ export class TripleStore implements TripleStoreApi {
   async clear() {
     await this.tupleStore.clear();
   }
+
+  async collectGarbage() {
+    const allTriples = await this.findByEAT([]);
+    const triplesToDelete = [];
+    let currentEntityId: string | null = null;
+    let currentAttribute: any = [];
+    for (let i = allTriples.length - 1; i >= 0; i--) {
+      const triple = allTriples[i];
+      if (
+        triple.id === currentEntityId &&
+        compareTuple(triple.attribute, currentAttribute) === 0
+      ) {
+        triplesToDelete.push(triple);
+        continue;
+      }
+      currentEntityId = triple.id;
+      currentAttribute = triple.attribute;
+    }
+    await this.deleteTriples(triplesToDelete);
+  }
+}
+
+function throttle(callback: () => void, delay: number) {
+  let wait = false;
+  let refire = false;
+  function refireOrReset() {
+    if (refire) {
+      callback();
+      refire = false;
+      setTimeout(refireOrReset, delay);
+    } else {
+      wait = false;
+    }
+  }
+  return function () {
+    if (!wait) {
+      callback();
+      wait = true;
+      setTimeout(refireOrReset, delay);
+    } else {
+      refire = true;
+    }
+  };
 }
