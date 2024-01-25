@@ -1,5 +1,11 @@
 # @triplit/server-core
 
+## 0.3.15
+
+### Patch Changes
+
+- 623ca55: fix schemaless bug in bulk-insert route
+
 ## 0.3.14
 
 ### Patch Changes
