@@ -1,5 +1,11 @@
 # @triplit/cli
 
+## 0.3.16
+
+### Patch Changes
+
+- e3d42ed: Use dotenv expand
+
 ## 0.3.15
 
 ### Patch Changes
