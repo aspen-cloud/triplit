@@ -16,6 +16,7 @@ import {
   schemaFileContentFromJSON,
   writeSchemaFile,
 } from './migrate/codegen.js';
+import { emitKeypressEvents } from 'readline';
 
 export default Command({
   description: 'Starts the Triplit development environment',
@@ -36,6 +37,11 @@ export default Command({
     watch: Flag.Boolean({
       char: 'w',
       description: 'Watch for schema changes',
+      hidden: true,
+    }),
+    verbose: Flag.Boolean({
+      char: 'v',
+      description: 'Verbose logging',
       hidden: true,
     }),
   },
@@ -88,6 +94,7 @@ export default Command({
         schema,
       },
       watchMode: !!flags.watch,
+      verboseLogs: !!flags.verbose,
     });
     let watcher: chokidar.FSWatcher | undefined = undefined;
     let remoteSchemaUnsubscribe = undefined;
@@ -226,6 +233,11 @@ export default Command({
                 Anon Token
               </Text>
               <Text wrap="end">{anonKey}</Text>
+            </Box>
+            <Box flexDirection="column">
+              <Text bold underline>
+                Logs {flags.verbose ? '(verbose)' : ''}
+              </Text>
             </Box>
           </Box>
         </Box>

@@ -110,7 +110,7 @@ export async function parseAndValidateToken(
       };
     }
   } catch (err) {
-    console.error(err);
+    // console.error(err);
     // TODO add better expiration error
     return {
       data: undefined,

@@ -20,6 +20,7 @@ import {
   ServerCloseReason,
 } from '@triplit/types/sync';
 import { parseAndValidateToken } from '@triplit/server-core/token';
+import { logger } from './logger.js';
 
 function parseClientMessage(
   message: WS.RawData
@@ -52,12 +53,13 @@ export type ServerOptions = {
   storage?: 'sqlite' | 'memory';
   dbOptions?: DBConfig<any>;
   watchMode?: boolean;
+  verboseLogs?: boolean;
 };
 
 export function createServer(options?: ServerOptions) {
   const dbSource =
     options?.storage === 'sqlite' ? setupSqliteStorage() : new MemoryStorage();
-
+  if (options?.verboseLogs) logger.verbose = true;
   const triplitServers = new Map<string, Server>();
 
   function getServer(projectId: string) {
@@ -76,6 +78,29 @@ export function createServer(options?: ServerOptions) {
 
   const app = express();
   app.use(express.json());
+  app.use((req, res, next) => {
+    const start = new Date();
+    let send = res.send;
+    res.send = (c) => {
+      const end = new Date();
+      let body = c;
+      try {
+        body = JSON.parse(c);
+      } catch (e) {}
+      const resWithBody = {
+        ...res,
+        body,
+      };
+      logger.logRequestAndResponse(
+        req,
+        resWithBody,
+        end.getTime() - start.getTime()
+      );
+      res.send = send;
+      return res.send(c);
+    };
+    next();
+  });
 
   const wss = new WebSocketServer({
     noServer: true,
@@ -97,7 +122,14 @@ export function createServer(options?: ServerOptions) {
     payload: any,
     options: { dropIfClosed?: boolean } = {}
   ) {
+    const send = socket.send;
     const message = JSON.stringify({ type, payload });
+    socket.send = (m) => {
+      // @ts-expect-error
+      logger.logMessage('sent', { type, payload });
+      socket.send = send;
+      return socket.send(m);
+    };
     if (socket.readyState === WS.OPEN) {
       socket.send(message);
     } else if (!options.dropIfClosed) {
@@ -170,6 +202,7 @@ export function createServer(options?: ServerOptions) {
           new RateLimitExceededError()
         );
       }
+      logger.logMessage('received', parsedMessage);
       session!.dispatchCommand(parsedMessage!);
     });
 
@@ -180,7 +213,6 @@ export function createServer(options?: ServerOptions) {
     });
 
     socket.on('error', (err) => {
-      console.log('error', err);
       closeSocket(socket, { type: 'INTERNAL_ERROR', retry: false }, 1011);
     });
 
@@ -316,7 +348,6 @@ export function createServer(options?: ServerOptions) {
       }
     );
     if (error) {
-      console.error(error);
       return res.sendStatus(401);
     }
     const server = getServer(process.env.PROJECT_ID!);
@@ -361,7 +392,7 @@ export function createServer(options?: ServerOptions) {
   app.use('/', authenticated);
 
   wss.on('error', (err) => {
-    console.log('error', err);
+    console.log(err);
   });
   wss.on('close', () => {
     clearInterval(heartbeatInterval);
@@ -414,7 +445,6 @@ export function createServer(options?: ServerOptions) {
             }
           }
         } catch (e) {
-          console.error(e);
           closeSocket(
             socket,
             {
