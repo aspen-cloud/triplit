@@ -467,7 +467,9 @@ export class Session {
                 insertEntity
               );
               output[collectionName].push(
-                collectionSchema.convertJSToJSON(insertedEntity)
+                collectionSchema
+                  ? collectionSchema.convertJSToJSON(insertedEntity)
+                  : insertedEntity
               );
             }
           }
