@@ -1,7 +1,6 @@
-import { ClientSyncMessage, ServerSyncMessage } from '@triplit/types/sync';
+import { ClientSyncMessage, ServerSyncMessage } from '@triplit/server-core';
 import { consola } from 'consola';
 import { colorize } from 'consola/utils';
-import { log } from 'console';
 
 export function green(text: string) {
   return colorize('green', text);

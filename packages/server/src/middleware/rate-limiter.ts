@@ -1,4 +1,3 @@
-// import { ParsedToken } from '@triplit/types/sync';
 import { NextFunction, Request, Response } from 'express';
 // import { RateLimiterMemory } from 'rate-limiter-flexible';
 import WebSocket from 'ws';

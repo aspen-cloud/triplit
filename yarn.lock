@@ -4645,7 +4645,6 @@ __metadata:
   dependencies:
     "@triplit/db": "workspace:^"
     "@triplit/server-core": "workspace:^"
-    "@triplit/types": "workspace:^"
     "@types/better-sqlite3": ^7.6.4
     "@types/cors": ^2
     "@types/express": ^4.17.17

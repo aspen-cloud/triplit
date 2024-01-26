@@ -12,13 +12,13 @@ import { useHttpToken, readWSToken } from './middleware/token-reader.js';
 import { rateLimiterMiddlewareWs } from './middleware/rate-limiter.js';
 import url from 'url';
 import sqlite from 'better-sqlite3';
-import { Server } from '@triplit/server-core';
 import {
+  Server,
+  ServerCloseReason,
   ClientSyncMessage,
   ParseResult,
   ParsedToken,
-  ServerCloseReason,
-} from '@triplit/types/sync';
+} from '@triplit/server-core';
 import { parseAndValidateToken } from '@triplit/server-core/token';
 import { logger } from './logger.js';
 
