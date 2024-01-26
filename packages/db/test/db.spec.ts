@@ -32,6 +32,8 @@ import {
   appendCollectionToId,
   stripCollectionFromId,
 } from '../src/db-helpers.js';
+import { TripleRow } from '../dist/types/triple-store-utils.js';
+import { triplesToStateVector } from '../src/triple-store-utils.js';
 
 const pause = async (ms: number = 100) =>
   new Promise((resolve) => setTimeout(resolve, ms));
@@ -4885,6 +4887,85 @@ describe.todo('social network test', () => {
       .build();
     const results = db.fetch(query);
     expect(results).toHaveLength(2);
+  });
+});
+
+describe('state vector querying', () => {
+  it('respects rules when fetching after some state vector', async () => {
+    const db = new DB({
+      schema: {
+        collections: {
+          posts: {
+            schema: S.Schema({
+              id: S.String(),
+              author_id: S.String(),
+              content: S.String(),
+            }),
+            rules: {
+              read: {
+                'post-author': {
+                  description: 'Users can only read posts they authored',
+                  filter: [['author_id', '=', '$user_id']],
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+    const user_id = 'user-1';
+    const user_id2 = 'user-2';
+    const post_id = 'post-1';
+    const post_id2 = 'post-2';
+    await db.insert('posts', { id: post_id, author_id: user_id, content: '' });
+    await db.insert('posts', {
+      id: post_id2,
+      author_id: user_id2,
+      content: '',
+    });
+    const query = db
+      .query('posts')
+      .where([['author_id', '=', '$user_id']])
+      .build();
+    const userDB = db.withVars({ user_id });
+    const results = await userDB.fetchTriples(query);
+    const resultEntities = results.reduce(
+      (entitySet: Set<string>, triple: TripleRow) => {
+        entitySet.add(stripCollectionFromId(triple.id));
+        return entitySet;
+      },
+      new Set()
+    );
+
+    expect(resultEntities).toHaveLength(1);
+    expect(resultEntities).toContain(post_id);
+
+    const stateVector = triplesToStateVector(results);
+    await db.insert('posts', {
+      id: 'post-3',
+      author_id: user_id2,
+      content: '',
+    });
+    const clientStates = new Map(
+      (stateVector ?? []).map(([sequence, client]) => [client, sequence])
+    );
+    const callback = vi.fn();
+    const unsub = userDB.subscribeTriples(query, callback, () => {}, {
+      stateVector: clientStates,
+    });
+    await pause(10);
+    unsub();
+    expect(callback).toHaveBeenCalledTimes(1);
+    const results2 = callback.mock.calls[0][0];
+    const result2Entities = results2.reduce(
+      (entitySet: Set<string>, triple: TripleRow) => {
+        entitySet.add(stripCollectionFromId(triple.id));
+        return entitySet;
+      },
+      new Set()
+    );
+    expect(result2Entities).toHaveLength(1);
+    expect(result2Entities).toContain(post_id);
   });
 });
 

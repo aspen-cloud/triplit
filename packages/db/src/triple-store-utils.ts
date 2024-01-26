@@ -333,3 +333,19 @@ export function isTupleEntityDeleteMarker(tuple: TupleIndex) {
   const collectionMarker = tuple.key[3][0];
   return collectionMarker === '_collection' && tuple.value.expired;
 }
+
+export function triplesToStateVector(triples: TripleRow[]): Timestamp[] {
+  const clientClocks = new Map<string, number>();
+  triples.forEach((t) => {
+    // only set the clock if it is greater than the current clock for each client
+    const [tick, clientId] = t.timestamp;
+    const currentClock = clientClocks.get(clientId);
+    if (!currentClock || tick > currentClock) {
+      clientClocks.set(clientId, tick);
+    }
+  });
+  return [...clientClocks.entries()].map(([clientId, timestamp]) => [
+    timestamp,
+    clientId,
+  ]);
+}
