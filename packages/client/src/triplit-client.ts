@@ -135,6 +135,8 @@ export interface ClientOptions<M extends ClientSchema | undefined> {
     fetch?: FetchOptions;
     subscription?: SubscriptionOptions;
   };
+
+  autoConnect?: boolean;
 }
 
 // default policy is local-and-remote and no timeout
@@ -170,6 +172,7 @@ export class TriplitClient<M extends ClientSchema | undefined = undefined> {
       storage,
       defaultQueryOptions,
     } = options ?? {};
+    const autoConnect = options?.autoConnect ?? true;
     const clock = new DurableClock('cache', clientId);
     this.authOptions = { token, claimsPath };
     this.db = new DB({
@@ -215,8 +218,9 @@ export class TriplitClient<M extends ClientSchema | undefined = undefined> {
     }
 
     this.syncEngine = new SyncEngine(syncOptions, this.db);
+    // Look into how calling connect / disconnect early is handled
     this.db.ensureMigrated.then(() => {
-      this.syncEngine.connect();
+      if (autoConnect) this.syncEngine.connect();
     });
   }
 
