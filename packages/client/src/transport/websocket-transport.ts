@@ -5,11 +5,23 @@ import {
   TransportConnectParams,
 } from './transport.js';
 
+const DEFAULT_PAYLOAD_SIZE_LIMIT = (1024 * 1024) / 2;
+
+interface WebSocketTransportOptions {
+  messagePayloadSizeLimit?: number;
+}
+
 export class WebSocketTransport implements SyncTransport {
   ws: WebSocket | undefined = undefined;
   private connectionListeners: Set<(state: ConnectionStatus) => void> =
     new Set();
-  constructor() {}
+  constructor(private options: WebSocketTransportOptions) {
+    this.options.messagePayloadSizeLimit =
+      // allow 0 to disable the limit
+      this.options.messagePayloadSizeLimit == undefined
+        ? DEFAULT_PAYLOAD_SIZE_LIMIT
+        : this.options.messagePayloadSizeLimit;
+  }
   get isOpen(): boolean {
     return !!this.ws && this.ws.readyState === this.ws.OPEN;
   }
@@ -24,6 +36,34 @@ export class WebSocketTransport implements SyncTransport {
     if (!this.ws) return;
     if (!this.isOpen) {
       // console.log('skipping', type, payload);
+      return;
+    }
+
+    // Perform chunking if the message is too large
+    const serializedMessage = JSON.stringify(message);
+    const bytes = getPayloadSize(serializedMessage);
+    if (
+      this.options.messagePayloadSizeLimit &&
+      bytes > this.options.messagePayloadSizeLimit
+    ) {
+      const chunks = chunkMessage(
+        serializedMessage,
+        Math.ceil(bytes / this.options.messagePayloadSizeLimit)
+      );
+      const messageid = (Math.random() + 1).toString(36).substring(7);
+      for (let i = 0; i < chunks.length; i++) {
+        this.ws.send(
+          JSON.stringify({
+            type: 'CHUNK',
+            payload: {
+              data: chunks[i],
+              total: chunks.length,
+              index: i,
+              id: messageid,
+            },
+          })
+        );
+      }
       return;
     }
     this.ws.send(JSON.stringify(message));
@@ -77,6 +117,19 @@ export class WebSocketTransport implements SyncTransport {
       this.connectionListeners.delete(callback);
     };
   }
+}
+
+function getPayloadSize(payload: string): number {
+  return new TextEncoder().encode(payload).length;
+}
+
+function chunkMessage(message: string, numChunks: number): string[] {
+  let chunks = [];
+  const chunkSize = Math.ceil(message.length / numChunks);
+  for (let i = 0; i < message.length; i += chunkSize) {
+    chunks.push(message.slice(i, i + chunkSize));
+  }
+  return chunks;
 }
 
 declare global {

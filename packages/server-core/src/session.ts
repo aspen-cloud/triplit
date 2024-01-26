@@ -40,6 +40,8 @@ export class Connection {
   connectedQueries: Map<string, () => void>;
   listeners: Set<(messageType: string, payload: {}) => void>;
 
+  chunkedMessages: Map<string, string[]> = new Map();
+
   constructor(public session: Session, public options: ConnectionOptions) {
     this.connectedQueries = new Map<string, () => void>();
     this.listeners = new Set();
@@ -204,6 +206,25 @@ export class Connection {
     }
   }
 
+  handleChunkMessage(msgParams: {
+    data: string;
+    total: number;
+    index: number;
+    id: string;
+  }) {
+    const { data, total, index, id } = msgParams;
+    if (!this.chunkedMessages.has(id)) {
+      this.chunkedMessages.set(id, []);
+    }
+    const chunks = this.chunkedMessages.get(id)!;
+    chunks[index] = data;
+    if (isChunkedMessageComplete(chunks, total)) {
+      const message = JSON.parse(this.chunkedMessages.get(id)!.join(''));
+      this.chunkedMessages.delete(id);
+      this.dispatchCommand(message);
+    }
+  }
+
   dispatchCommand(message: ClientSyncMessage) {
     try {
       switch (message.type) {
@@ -215,6 +236,8 @@ export class Connection {
           return this.handleTriplesPendingMessage();
         case 'TRIPLES':
           return this.handleTriplesMessage(message.payload);
+        case 'CHUNK':
+          return this.handleChunkMessage(message.payload);
         default:
           return this.sendErrorResponse(
             // @ts-ignore
@@ -255,6 +278,14 @@ export class Connection {
       };
     return undefined;
   }
+}
+
+function isChunkedMessageComplete(message: string[], total: number) {
+  if (message.length !== total) return false;
+  for (let i = 0; i < total; i++) {
+    if (!message[i]) return false;
+  }
+  return true;
 }
 
 type ServerResponse = {

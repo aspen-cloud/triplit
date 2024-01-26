@@ -70,12 +70,17 @@ export type ClientTriplesMessage = SyncMessage<
   'TRIPLES',
   { triples: TripleRow[] }
 >;
+export type ClientChunkMessage = SyncMessage<
+  'CHUNK',
+  { data: string; total: number; index: number; id: string }
+>;
 
 export type ClientSyncMessage =
   | ClientConnectQueryMessage
   | ClientDisconnectQueryMessage
   | ClientTriplesPendingMessage
-  | ClientTriplesMessage;
+  | ClientTriplesMessage
+  | ClientChunkMessage;
 
 export type ParsedToken = {
   projectId: string;
