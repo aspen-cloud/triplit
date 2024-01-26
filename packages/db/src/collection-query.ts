@@ -125,7 +125,7 @@ function getIdFilterFromQuery(query: CollectionQuery<any, any>): string | null {
   return null;
 }
 
-async function getTriplesForQuery<
+async function getCandidateTriplesForQuery<
   M extends Models<any, any> | undefined,
   Q extends CollectionQuery<M, any>
 >(tx: TripleStoreApi, query: Q) {
@@ -270,7 +270,10 @@ export async function fetch<
   const { order, limit, select, where, entityId, collectionName, after } =
     queryWithInsertedVars;
 
-  const collectionTriples = await getTriplesForQuery(tx, queryWithInsertedVars);
+  const collectionTriples = await getCandidateTriplesForQuery(
+    tx,
+    queryWithInsertedVars
+  );
   const entitiesMap = triplesToEntities(collectionTriples);
   // TODO: ensure state vector + cache works
   const stateVectorSyncTriples = getTriplesAfterStateVector(

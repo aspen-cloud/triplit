@@ -403,6 +403,7 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
     beforeUpdate: [],
     beforeDelete: [],
   };
+  private _pendingSchemaRequest: Promise<void> | null;
 
   constructor({
     schema,
@@ -429,6 +430,7 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
       ? { version: schema.version ?? 0, collections: schema.collections }
       : undefined;
 
+    this._pendingSchemaRequest = null;
     this.tripleStore = new TripleStore({
       storage: sourcesMap,
       tenantId,
@@ -597,8 +599,11 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
 
   async getSchema(): Promise<StoreSchema<M> | undefined> {
     await this.ensureMigrated;
+    if (this._pendingSchemaRequest) await this._pendingSchemaRequest;
     if (!this._schema) {
-      await this.loadSchemaData();
+      this._pendingSchemaRequest = this.loadSchemaData();
+      await this._pendingSchemaRequest;
+      this._pendingSchemaRequest = null;
     }
     return this.schema;
   }
