@@ -14,10 +14,7 @@ export interface SyncTransport {
   isOpen: boolean;
   connectionStatus: ConnectionStatus;
   onOpen(callback: (ev: any) => void): void;
-  sendMessage<Msg extends ClientSyncMessage>(
-    type: Msg['type'],
-    payload: Msg['payload']
-  ): void;
+  sendMessage(message: ClientSyncMessage): void;
   onMessage(callback: (message: any) => void): void;
   onError(callback: (ev: any) => void): void;
   connect(params: TransportConnectParams): void;

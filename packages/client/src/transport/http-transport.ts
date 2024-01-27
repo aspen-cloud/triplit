@@ -11,7 +11,7 @@ export class HttpTransport implements SyncTransport {
   private closeCallback: ((ev: any) => void) | undefined;
   private transportOptions: TransportConnectParams | undefined;
 
-  constructor() { }
+  constructor() {}
 
   get isOpen(): boolean {
     return (
@@ -21,17 +21,14 @@ export class HttpTransport implements SyncTransport {
   }
 
   get connectionStatus(): ConnectionStatus {
-    return this.eventSource ? friendlyReadyState(this.eventSource) : "CLOSED";
+    return this.eventSource ? friendlyReadyState(this.eventSource) : 'CLOSED';
   }
 
   onOpen(callback: (ev: any) => void): void {
     if (this.eventSource) this.eventSource.onopen = callback;
   }
 
-  sendMessage<Msg extends ClientSyncMessage>(
-    type: Msg['type'],
-    payload: Msg['payload']
-  ): void {
+  sendMessage(message: ClientSyncMessage): void {
     if (!this.transportOptions) return;
     if (!this.isOpen) return;
 
@@ -45,7 +42,7 @@ export class HttpTransport implements SyncTransport {
         Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify({
-        message: { type, payload },
+        message,
         options: { clientId },
       }),
     }).catch((err) => {
@@ -87,8 +84,9 @@ export class HttpTransport implements SyncTransport {
     eventSourceOptions.set('sync-schema', String(syncSchema));
     eventSourceOptions.set('client', clientId);
     eventSourceOptions.set('token', token);
-    const eventSourceUri = `${secure ? 'https' : 'http'
-      }://${server}/message-events?${eventSourceOptions.toString()}`;
+    const eventSourceUri = `${
+      secure ? 'https' : 'http'
+    }://${server}/message-events?${eventSourceOptions.toString()}`;
     this.eventSource = new EventSource(eventSourceUri);
     this.transportOptions = params;
   }

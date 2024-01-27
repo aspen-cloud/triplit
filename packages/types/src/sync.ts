@@ -1,4 +1,4 @@
-import { CollectionQuery, TripleRow } from '@triplit/db';
+import { CollectionQuery, Timestamp, TripleRow } from '@triplit/db';
 
 type SyncMessage<Type extends string, Payload extends any> = {
   type: Type;
@@ -31,24 +31,51 @@ export type CloseReason = {
   retry: boolean;
 };
 
+export type ServerTriplesAckMessage = SyncMessage<
+  'TRIPLES_ACK',
+  { txIds: string[] }
+>;
+export type ServerTriplesMessage = SyncMessage<
+  'TRIPLES',
+  { triples: TripleRow[]; forQueries: string[] }
+>;
+export type ServrTriplesRequestMessage = SyncMessage<'TRIPLES_REQUEST', {}>;
+export type ServerErrorMessage = SyncMessage<
+  'ERROR',
+  { messageType: ClientSyncMessage['type']; error: any; metadata: any }
+>;
+export type ServerCloseMessage = SyncMessage<'CLOSE', ServerCloseReason>;
+
 export type ServerSyncMessage =
-  | SyncMessage<'TRIPLES_ACK', { txIds: string[] }>
-  | SyncMessage<'TRIPLES', { triples: TripleRow[]; forQueries: string[] }>
-  | SyncMessage<'TRIPLES_REQUEST', {}>
-  | SyncMessage<
-      'ERROR',
-      { messageType: ClientSyncMessage['type']; error: any; metadata: any }
-    >
-  | SyncMessage<'CLOSE', ServerCloseReason>;
+  | ServerTriplesAckMessage
+  | ServerTriplesMessage
+  | ServrTriplesRequestMessage
+  | ServerErrorMessage
+  | ServerCloseMessage;
+
+export type ClientConnectQueryMessage = SyncMessage<
+  'CONNECT_QUERY',
+  {
+    id: string;
+    params: CollectionQuery<any, any>;
+    state?: Timestamp[];
+  }
+>;
+export type ClientDisconnectQueryMessage = SyncMessage<
+  'DISCONNECT_QUERY',
+  { id: string }
+>;
+export type ClientTriplesPendingMessage = SyncMessage<'TRIPLES_PENDING', {}>;
+export type ClientTriplesMessage = SyncMessage<
+  'TRIPLES',
+  { triples: TripleRow[] }
+>;
 
 export type ClientSyncMessage =
-  | SyncMessage<
-      'CONNECT_QUERY',
-      { id: string; params: CollectionQuery<any, any> }
-    >
-  | SyncMessage<'DISCONNECT_QUERY', { id: string }>
-  | SyncMessage<'TRIPLES_PENDING', {}>
-  | SyncMessage<'TRIPLES', { triples: TripleRow[] }>;
+  | ClientConnectQueryMessage
+  | ClientDisconnectQueryMessage
+  | ClientTriplesPendingMessage
+  | ClientTriplesMessage;
 
 export type ParsedToken = {
   projectId: string;

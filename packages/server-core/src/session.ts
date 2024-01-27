@@ -24,6 +24,9 @@ import {
   ClientSyncMessage,
   ParsedToken,
   ServerCloseReason,
+  ClientConnectQueryMessage,
+  ClientDisconnectQueryMessage,
+  ClientTriplesMessage,
 } from '@triplit/types/sync';
 import { Server } from './triplit-server.js';
 
@@ -78,11 +81,7 @@ export class Connection {
     this.sendResponse('ERROR', payload);
   }
 
-  handleConnectQueryMessage(msgParams: {
-    id: string;
-    params: any;
-    state?: Timestamp[];
-  }) {
+  handleConnectQueryMessage(msgParams: ClientConnectQueryMessage['payload']) {
     const { id: queryKey, params, state } = msgParams;
     const { collectionName, ...parsedQuery } = params;
     const clientStates = new Map(
@@ -131,7 +130,9 @@ export class Connection {
     this.connectedQueries.set(queryKey, unsubscribe);
   }
 
-  handleDisconnectQueryMessage(msgParams: { id: string }) {
+  handleDisconnectQueryMessage(
+    msgParams: ClientDisconnectQueryMessage['payload']
+  ) {
     const { id: queryKey } = msgParams;
     if (this.connectedQueries.has(queryKey)) {
       this.connectedQueries.get(queryKey)?.();
@@ -143,7 +144,7 @@ export class Connection {
     this.sendResponse('TRIPLES_REQUEST', {});
   }
 
-  async handleTriplesMessage(msgParams: { triples: any[] }) {
+  async handleTriplesMessage(msgParams: ClientTriplesMessage['payload']) {
     const { triples } = msgParams;
     if (!triples?.length) return;
     let successes: string[] = [];

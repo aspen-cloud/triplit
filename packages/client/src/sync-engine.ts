@@ -17,7 +17,11 @@ import {
   TransportConnectParams,
 } from './transport/transport.js';
 import { WebSocketTransport } from './transport/websocket-transport.js';
-import { CloseReason, ServerSyncMessage } from '@triplit/types/sync';
+import {
+  ClientSyncMessage,
+  CloseReason,
+  ServerSyncMessage,
+} from '@triplit/types/sync';
 import {
   MissingConnectionInformationError,
   RemoteFetchFailedError,
@@ -26,7 +30,8 @@ import {
 import { Value } from '@sinclair/typebox/value';
 import { ClientFetchResult, ClientQuery } from './utils/query.js';
 
-type OnMessageCallback = (message: ServerSyncMessage) => void;
+type OnMessageReceivedCallback = (message: ServerSyncMessage) => void;
+type OnMessageSentCallback = (message: ClientSyncMessage) => void;
 
 const QUERY_STATE_KEY = 'query-state';
 
@@ -54,7 +59,9 @@ export class SyncEngine {
   private txCommits$ = new Subject<string>();
   private txFailures$ = new Subject<{ txId: string; error: unknown }>();
 
-  private messageSubscribers: Set<OnMessageCallback> = new Set();
+  private messageReceivedSubscribers: Set<OnMessageReceivedCallback> =
+    new Set();
+  private messageSentSubscribers: Set<OnMessageSentCallback> = new Set();
 
   /**
    *
@@ -104,10 +111,17 @@ export class SyncEngine {
       : undefined;
   }
 
-  onSyncMessage(callback: (message: ServerSyncMessage) => void) {
-    this.messageSubscribers.add(callback);
+  onSyncMessageReceived(callback: OnMessageReceivedCallback) {
+    this.messageReceivedSubscribers.add(callback);
     return () => {
-      this.messageSubscribers.delete(callback);
+      this.messageReceivedSubscribers.delete(callback);
+    };
+  }
+
+  onSyncMessageSent(callback: OnMessageSentCallback) {
+    this.messageSentSubscribers.add(callback);
+    return () => {
+      this.messageSentSubscribers.delete(callback);
     };
   }
 
@@ -168,10 +182,13 @@ export class SyncEngine {
     const queryHash = Value.Hash(params).toString();
     const id = queryHash;
     this.getQueryState(id).then((queryState) => {
-      this.transport.sendMessage('CONNECT_QUERY', {
-        id: id,
-        params,
-        state: queryState,
+      this.sendMessage({
+        type: 'CONNECT_QUERY',
+        payload: {
+          id: id,
+          params,
+          state: queryState,
+        },
       });
       this.queries.set(id, { params, fulfilled: false });
       this.onQueryFulfilled(id, (resp) => {
@@ -218,7 +235,7 @@ export class SyncEngine {
    * @hidden
    */
   disconnectQuery(id: string) {
-    this.transport.sendMessage('DISCONNECT_QUERY', { id });
+    this.sendMessage({ type: 'DISCONNECT_QUERY', payload: { id } });
     this.queries.delete(id);
   }
 
@@ -256,7 +273,7 @@ export class SyncEngine {
   }
 
   private signalOutboxTriples() {
-    this.transport.sendMessage('TRIPLES_PENDING', {});
+    this.sendMessage({ type: 'TRIPLES_PENDING', payload: {} });
   }
 
   /**
@@ -268,7 +285,7 @@ export class SyncEngine {
     this.transport.connect(params);
     this.transport.onMessage(async (evt) => {
       const message: ServerSyncMessage = JSON.parse(evt.data);
-      for (const handler of this.messageSubscribers) {
+      for (const handler of this.messageReceivedSubscribers) {
         handler(message);
       }
       if (message.type === 'ERROR') {
@@ -362,10 +379,13 @@ export class SyncEngine {
       // Reconnect any queries
       for (const [id, queryInfo] of this.queries) {
         this.getQueryState(id).then((queryState) => {
-          this.transport.sendMessage('CONNECT_QUERY', {
-            id,
-            params: queryInfo.params,
-            state: queryState,
+          this.sendMessage({
+            type: 'CONNECT_QUERY',
+            payload: {
+              id,
+              params: queryInfo.params,
+              state: queryState,
+            },
           });
         });
       }
@@ -473,7 +493,14 @@ export class SyncEngine {
       ? triples
       : triples.filter(({ id }) => !id.includes('_metadata#_schema'));
     if (triplesToSend.length === 0) return;
-    this.transport.sendMessage('TRIPLES', { triples: triplesToSend });
+    this.sendMessage({ type: 'TRIPLES', payload: { triples: triplesToSend } });
+  }
+
+  private sendMessage(message: ClientSyncMessage) {
+    this.transport.sendMessage(message);
+    for (const handler of this.messageSentSubscribers) {
+      handler(message);
+    }
   }
 
   /**

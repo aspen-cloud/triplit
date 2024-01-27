@@ -1,4 +1,4 @@
-import { CloseReason } from '@triplit/types/sync';
+import { ClientSyncMessage, CloseReason } from '@triplit/types/sync';
 import {
   ConnectionStatus,
   SyncTransport,
@@ -19,14 +19,14 @@ export class WebSocketTransport implements SyncTransport {
   onOpen(callback: (ev: any) => void): void {
     if (this.ws) this.ws.onopen = callback;
   }
-  sendMessage(type: string, payload: any): void {
+  sendMessage(message: ClientSyncMessage): void {
     // For now, skip sending messages if we're not connected. I dont think we need a queue yet.
     if (!this.ws) return;
     if (!this.isOpen) {
       // console.log('skipping', type, payload);
       return;
     }
-    this.ws.send(JSON.stringify({ type, payload }));
+    this.ws.send(JSON.stringify(message));
   }
   connect(params: TransportConnectParams): void {
     if (this.ws && this.isOpen) this.close();
