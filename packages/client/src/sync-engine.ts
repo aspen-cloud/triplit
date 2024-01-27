@@ -63,6 +63,8 @@ export class SyncEngine {
     new Set();
   private messageSentSubscribers: Set<OnMessageSentCallback> = new Set();
 
+  private awaitingAck: Set<string> = new Set();
+
   /**
    *
    * @param options configuration options for the sync engine
@@ -313,44 +315,59 @@ export class SyncEngine {
 
       if (message.type === 'TRIPLES_ACK') {
         const { payload } = message;
-        const { txIds } = payload;
-        // TODO: do we want hooks to run here?
-        await this.db.tripleStore.transact(async (tx) => {
-          const outboxOperator = tx.withScope({
-            read: ['outbox'],
-            write: ['outbox'],
-          });
-          const cacheOperator = tx.withScope({
-            read: ['cache'],
-            write: ['cache'],
-          });
-          // move all commited outbox triples to cache
-          for (const clientTxId of txIds) {
-            const timestamp = JSON.parse(clientTxId);
-            const triplesToEvict = await outboxOperator.findByClientTimestamp(
-              await this.db.getClientId(),
-              'eq',
-              timestamp
-            );
-            if (triplesToEvict.length > 0) {
-              await cacheOperator.insertTriples(triplesToEvict);
-              await outboxOperator.deleteTriples(triplesToEvict);
+        const { txIds, failedTxs } = payload;
+        try {
+          const failuresSet = new Set(failedTxs);
+          // TODO: do we want hooks to run here?
+          await this.db.tripleStore.transact(async (tx) => {
+            const outboxOperator = tx.withScope({
+              read: ['outbox'],
+              write: ['outbox'],
+            });
+            const cacheOperator = tx.withScope({
+              read: ['cache'],
+              write: ['cache'],
+            });
+            // move all commited outbox triples to cache
+            for (const clientTxId of txIds) {
+              const timestamp = JSON.parse(clientTxId);
+              const triplesToEvict = await outboxOperator.findByClientTimestamp(
+                await this.db.getClientId(),
+                'eq',
+                timestamp
+              );
+              if (triplesToEvict.length > 0) {
+                await cacheOperator.insertTriples(triplesToEvict);
+                await outboxOperator.deleteTriples(triplesToEvict);
+              }
             }
-          }
 
-          // For now just flush outbox
-          const triplesToSend = await outboxOperator.findByEntity();
-          this.sendTriples(triplesToSend);
-        });
-        for (const txId of txIds) {
-          this.txCommits$.next(txId);
+            // Filter out failures, tell server there are unsent triples
+            const triplesToSend = (await outboxOperator.findByEntity()).filter(
+              (t) => !failuresSet.has(JSON.stringify(t.timestamp))
+            );
+            if (triplesToSend.length) this.signalOutboxTriples();
+          });
+          for (const txId of txIds) {
+            this.txCommits$.next(txId);
+          }
+        } finally {
+          // After processing, clean state (ACK received)
+          for (const txId of txIds) {
+            this.awaitingAck.delete(txId);
+          }
+          for (const txId of failedTxs) {
+            this.awaitingAck.delete(txId);
+          }
         }
       }
 
       if (message.type === 'TRIPLES_REQUEST') {
-        const triplesToSend = await this.db.tripleStore
-          .setStorageScope(['outbox'])
-          .findByEntity();
+        // we do this outbox scan like a million times (i think the server can still do a small throttle for backpressue of those mesasges bc theyre stateless)
+        const triplesToSend = (
+          await this.db.tripleStore.setStorageScope(['outbox']).findByEntity()
+        ).filter((t) => !this.awaitingAck.has(JSON.stringify(t.timestamp)));
+
         this.sendTriples(triplesToSend);
       }
 
@@ -392,6 +409,9 @@ export class SyncEngine {
     });
 
     this.transport.onClose((evt) => {
+      // Clear any sync state
+      this.awaitingAck = new Set();
+
       // If there is no reason, then default is to retry
       if (evt.reason) {
         const { type, retry } = JSON.parse(evt.reason);
@@ -476,6 +496,7 @@ export class SyncEngine {
         break;
       case 'TriplesInsertError':
         const failures = metadata?.failures ?? [];
+        // Could maybe do this on ACK too
         for (const failure of failures) {
           const { txId, error } = failure;
           this.txFailures$.next({ txId, error });
@@ -493,6 +514,9 @@ export class SyncEngine {
       ? triples
       : triples.filter(({ id }) => !id.includes('_metadata#_schema'));
     if (triplesToSend.length === 0) return;
+    triplesToSend.forEach((t) =>
+      this.awaitingAck.add(JSON.stringify(t.timestamp))
+    );
     this.sendMessage({ type: 'TRIPLES', payload: { triples: triplesToSend } });
   }
 

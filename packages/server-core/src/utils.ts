@@ -24,6 +24,7 @@ export async function insertTriplesByTransaction(
   const successes: string[] = [];
   const failures: [string, TriplitError][] = [];
   try {
+    // This plays weird with hooks, because everything is in a single transaciton here, so one failing client tx in a hook will fail all of them
     await db.transact(async (dbTx) => {
       const tx = dbTx.storeTx;
       for (const txId in triplesByTransaction) {

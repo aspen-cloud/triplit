@@ -33,7 +33,7 @@ export type CloseReason = {
 
 export type ServerTriplesAckMessage = SyncMessage<
   'TRIPLES_ACK',
-  { txIds: string[] }
+  { txIds: string[]; failedTxs: string[] }
 >;
 export type ServerTriplesMessage = SyncMessage<
   'TRIPLES',

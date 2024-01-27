@@ -182,10 +182,12 @@ export class Connection {
             error: error.toJSON(),
           })),
         });
-        return;
       }
 
-      this.sendResponse('TRIPLES_ACK', { txIds: successes });
+      this.sendResponse('TRIPLES_ACK', {
+        txIds: successes,
+        failedTxs: failures.map(([txId]) => txId),
+      });
     } catch (e) {
       const error =
         e instanceof TriplitError
