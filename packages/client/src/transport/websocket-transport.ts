@@ -15,7 +15,7 @@ export class WebSocketTransport implements SyncTransport {
   ws: WebSocket | undefined = undefined;
   private connectionListeners: Set<(state: ConnectionStatus) => void> =
     new Set();
-  constructor(private options: WebSocketTransportOptions) {
+  constructor(private options: WebSocketTransportOptions = {}) {
     this.options.messagePayloadSizeLimit =
       // allow 0 to disable the limit
       this.options.messagePayloadSizeLimit == undefined
