@@ -195,7 +195,7 @@ export class Connection {
 
       this.sendResponse('TRIPLES_ACK', {
         txIds: successes,
-        failedTxs: failures.map(([txId]) => txId),
+        failedTxIds: failures.map(([txId]) => txId),
       });
     } catch (e) {
       const error =

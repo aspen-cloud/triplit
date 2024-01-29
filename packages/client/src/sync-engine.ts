@@ -316,9 +316,9 @@ export class SyncEngine {
 
       if (message.type === 'TRIPLES_ACK') {
         const { payload } = message;
-        const { txIds, failedTxs } = payload;
+        const { txIds, failedTxIds } = payload;
         try {
-          const failuresSet = new Set(failedTxs);
+          const failuresSet = new Set(failedTxIds);
           // TODO: do we want hooks to run here?
           await this.db.tripleStore.transact(async (tx) => {
             const outboxOperator = tx.withScope({
@@ -357,7 +357,7 @@ export class SyncEngine {
           for (const txId of txIds) {
             this.awaitingAck.delete(txId);
           }
-          for (const txId of failedTxs) {
+          for (const txId of failedTxIds) {
             this.awaitingAck.delete(txId);
           }
         }
