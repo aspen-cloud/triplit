@@ -23,7 +23,11 @@ import {
 import { Timestamp, timestampCompare } from './timestamp.js';
 import { TripleStore, TripleStoreApi } from './triple-store.js';
 import { Pipeline } from './utils/pipeline.js';
-import { EntityIdMissingError, InvalidFilterError } from './errors.js';
+import {
+  EntityIdMissingError,
+  InvalidFilterError,
+  TriplitError,
+} from './errors.js';
 import {
   stripCollectionFromId,
   appendCollectionToId,
@@ -659,6 +663,20 @@ function satisfiesSetFilter(
     entity,
     pointer
   );
+
+  // We dont really support "deleting" sets, but they can appear deleted if the entity is deleted
+  // Come back to this after refactoring triple reducer to handle nested data betters
+  if (Array.isArray(value)) {
+    // indicates set is deleted
+    if (value[0] === undefined) {
+      return false;
+    }
+    // TODO: could use more contextual information (ie id and collection name)
+    throw new TriplitError(
+      `A value at ${path} could not properly be read as a set.`
+    );
+  }
+
   return (
     !!value &&
     Object.entries(value)

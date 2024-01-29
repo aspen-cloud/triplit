@@ -907,6 +907,110 @@ describe('Set operations', () => {
       [...result.booleanSet.values()].every((val) => typeof val === 'boolean')
     ).toBeTruthy();
   });
+
+  // Sets cant really be deleted at the moment, but entities with sets can, make sure fetch still works
+  it('set filters can fetch deleted entities', async () => {
+    const schema = {
+      collections: {
+        students: {
+          schema: S.Schema({
+            id: S.Id(),
+            name: S.String(),
+            classes: S.Set(S.String()),
+          }),
+        },
+      },
+    };
+    const db = new DB({ schema });
+    await db.insert('students', {
+      id: '1',
+      name: 'Alice',
+      classes: new Set(['math', 'science']),
+    });
+    await db.insert('students', {
+      id: '2',
+      name: 'Bob',
+      classes: new Set(['math', 'science']),
+    });
+    await db.delete('students', '1');
+
+    const query = db
+      .query('students')
+      .where([['classes', '=', 'math']])
+      .build();
+
+    const results = await db.fetch(query);
+    expect(results.size).toBe(1);
+    expect(results.get('2')).toBeDefined();
+  });
+
+  it('Can subscribe to queries with a set in the filter', async () => {
+    const schema = {
+      collections: {
+        students: {
+          schema: S.Schema({
+            id: S.Id(),
+            name: S.String(),
+            classes: S.Set(S.String()),
+          }),
+        },
+      },
+    };
+
+    const db = new DB({ schema });
+    const query = db
+      .query('students')
+      .where([['classes', '=', 'math']])
+      .build();
+    await db.insert('students', {
+      id: '1',
+      name: 'Alice',
+      classes: new Set(['math', 'science']),
+    });
+
+    await testSubscription(db, query, [
+      { check: (data) => expect(Array.from(data.keys())).toEqual(['1']) },
+      // Insert
+      {
+        action: async () => {
+          await db.transact(async (tx) => {
+            await tx.insert('students', {
+              id: '2',
+              name: 'Bob',
+              classes: new Set(['history', 'science']),
+            });
+            await tx.insert('students', {
+              id: '3',
+              name: 'Charlie',
+              classes: new Set(['math', 'history']),
+            });
+          });
+        },
+        check: (data) => expect(Array.from(data.keys())).toEqual(['1', '3']),
+      },
+      // Update
+      {
+        action: async () => {
+          await db.transact(async (tx) => {
+            await tx.update('students', '2', async (entity) => {
+              entity.classes.add('math');
+            });
+            await tx.update('students', '3', async (entity) => {
+              entity.classes.delete('math');
+            });
+          });
+        },
+        check: (data) => expect(Array.from(data.keys())).toEqual(['1', '2']),
+      },
+      // Delete
+      {
+        action: async () => {
+          await db.delete('students', '1');
+        },
+        check: (data) => expect(Array.from(data.keys())).toEqual(['2']),
+      },
+    ]);
+  });
 });
 
 describe('record operations', () => {
