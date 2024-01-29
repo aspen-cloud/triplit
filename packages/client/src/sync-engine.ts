@@ -29,6 +29,7 @@ import {
 } from './errors.js';
 import { Value } from '@sinclair/typebox/value';
 import { ClientFetchResult, ClientQuery } from './utils/query.js';
+import { TripleStoreApi } from 'packages/db/src/triple-store.js';
 
 type OnMessageReceivedCallback = (message: ServerSyncMessage) => void;
 type OnMessageSentCallback = (message: ClientSyncMessage) => void;
@@ -343,9 +344,9 @@ export class SyncEngine {
             }
 
             // Filter out failures, tell server there are unsent triples
-            const triplesToSend = (await outboxOperator.findByEntity()).filter(
-              (t) => !failuresSet.has(JSON.stringify(t.timestamp))
-            );
+            const triplesToSend = (
+              await this.getTriplesToSend(outboxOperator)
+            ).filter((t) => !failuresSet.has(JSON.stringify(t.timestamp)));
             if (triplesToSend.length) this.signalOutboxTriples();
           });
           for (const txId of txIds) {
@@ -364,10 +365,9 @@ export class SyncEngine {
 
       if (message.type === 'TRIPLES_REQUEST') {
         // we do this outbox scan like a million times (i think the server can still do a small throttle for backpressue of those mesasges bc theyre stateless)
-        const triplesToSend = (
-          await this.db.tripleStore.setStorageScope(['outbox']).findByEntity()
-        ).filter((t) => !this.awaitingAck.has(JSON.stringify(t.timestamp)));
-
+        const triplesToSend = await this.getTriplesToSend(
+          this.db.tripleStore.setStorageScope(['outbox'])
+        );
         this.sendTriples(triplesToSend);
       }
 
@@ -385,11 +385,8 @@ export class SyncEngine {
       console.info('sync connection has opened');
       this.resetReconnectTimeout();
       // Cut down on message sending by only signaling if there are triples to send
-      const outboxTriples = (
-        await this.db.tripleStore.setStorageScope(['outbox']).findByEntity()
-      ).filter(
-        ({ id }) =>
-          this.syncOptions.syncSchema || !id.includes('_metadata#_schema')
+      const outboxTriples = await this.getTriplesToSend(
+        this.db.tripleStore.setStorageScope(['outbox'])
       );
       const hasOutboxTriples = !!outboxTriples.length;
       if (hasOutboxTriples) this.signalOutboxTriples();
@@ -656,6 +653,17 @@ export class SyncEngine {
     return fetch(`${this.httpUri}${path}`, {
       ...init,
       headers: { Authorization: `Bearer ${this.token}`, ...init?.headers },
+    });
+  }
+
+  private async getTriplesToSend(store: TripleStoreApi) {
+    return (await store.findByEntity()).filter((t) => {
+      const hasBeenSent = this.awaitingAck.has(JSON.stringify(t.timestamp));
+      return (
+        !hasBeenSent &&
+        // Filter out schema triples if syncSchema is false
+        (this.syncOptions.syncSchema || !t.id.includes('_metadata#_schema'))
+      );
     });
   }
 }
