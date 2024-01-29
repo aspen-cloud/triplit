@@ -142,8 +142,15 @@ export class Connection {
     }
   }
 
+  // in case TRIPLES_PENDING requests pile up, throttle them
+  // Or figure out a better way to tap into queue of pending requests
+  private throttledTriplesRequest = throttle(
+    () => this.sendResponse('TRIPLES_REQUEST', {}),
+    10
+  );
+
   handleTriplesPendingMessage() {
-    this.sendResponse('TRIPLES_REQUEST', {});
+    this.throttledTriplesRequest();
   }
 
   async handleTriplesMessage(msgParams: ClientTriplesMessage['payload']) {
@@ -593,4 +600,27 @@ function errorResponse(e: unknown, options?: { fallbackMessage?: string }) {
   );
   console.log(e);
   return ServerResponse(generalError.status, generalError.toJSON());
+}
+
+function throttle(callback: () => void, delay: number) {
+  let wait = false;
+  let refire = false;
+  function refireOrReset() {
+    if (refire) {
+      callback();
+      refire = false;
+      setTimeout(refireOrReset, delay);
+    } else {
+      wait = false;
+    }
+  }
+  return function () {
+    if (!wait) {
+      callback();
+      wait = true;
+      setTimeout(refireOrReset, delay);
+    } else {
+      refire = true;
+    }
+  };
 }
