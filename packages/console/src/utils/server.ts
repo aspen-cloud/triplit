@@ -43,7 +43,7 @@ async function queryServer(route: string, project: Project) {
   const { server, secure, token } = project;
   try {
     return await fetch(`http${secure ? 's' : ''}://${server}/${route}`, {
-      method: 'GET',
+      method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         authorization: `Bearer ${token}`,

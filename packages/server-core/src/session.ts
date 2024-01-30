@@ -11,6 +11,7 @@ import {
 } from '@triplit/db';
 import {
   QuerySyncError,
+  RouteNotFoundError,
   ServiceKeyRequiredError,
   TriplesInsertError,
   UnrecognizedMessageTypeError,
@@ -295,12 +296,12 @@ function isChunkedMessageComplete(message: string[], total: number) {
   return true;
 }
 
-type ServerResponse = {
+export type ServerResponse = {
   statusCode: number;
   payload?: any;
 };
 
-function ServerResponse(statusCode: number = 200, payload?: any) {
+export function ServerResponse(statusCode: number = 200, payload?: any) {
   return {
     payload,
     statusCode,
@@ -309,6 +310,11 @@ function ServerResponse(statusCode: number = 200, payload?: any) {
 
 function NotAdminResponse() {
   const error = new ServiceKeyRequiredError();
+  return ServerResponse(error.status, error.toJSON());
+}
+
+export function routeNotFoundResponse(route: string[]) {
+  const error = new RouteNotFoundError(route);
   return ServerResponse(error.status, error.toJSON());
 }
 

@@ -65,7 +65,7 @@ export async function getMigrationsStatus({ ctx }): Promise<{
   };
 }> {
   const serverMigrationInfo = await ctx.requestServer(
-    'GET',
+    'POST',
     '/migration/status'
   );
 

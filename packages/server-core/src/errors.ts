@@ -1,4 +1,5 @@
 import { STATUS_CODES as HTTP_CODES, TriplitError } from '@triplit/db';
+import { Route } from './triplit-server.js';
 
 const STATUS_CODES = {
   ...HTTP_CODES,
@@ -210,5 +211,16 @@ export class UnserializableObjectError extends TriplitError {
     this.baseMessage =
       'The sync server encountered an object that could not be serialized.';
     this.status = STATUS_CODES['Internal Server Error'];
+  }
+}
+
+export class RouteNotFoundError extends TriplitError {
+  constructor(route: string[], ...args: any[]) {
+    super(...args);
+    this.name = 'RouteNotFoundError';
+    this.baseMessage = `The server does not have a handler for this request: /${route.join(
+      '/'
+    )}`;
+    this.status = STATUS_CODES['Not Found'];
   }
 }

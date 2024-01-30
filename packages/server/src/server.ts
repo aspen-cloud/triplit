@@ -21,6 +21,7 @@ import {
 } from '@triplit/server-core';
 import { parseAndValidateToken } from '@triplit/server-core/token';
 import { logger } from './logger.js';
+import { Route } from '@triplit/server-core/triplit-server';
 
 function parseClientMessage(
   message: WS.RawData
@@ -223,106 +224,14 @@ export function createServer(options?: ServerOptions) {
 
   const authenticated = express.Router();
   authenticated.use(useHttpToken);
-
   // app.use(rateLimiterMiddleware);
-
-  authenticated.post('/queryTriples', async (req, res) => {
-    const server = getServer(process.env.PROJECT_ID!);
-    const session = server.createSession(req.token!);
-    const { statusCode, payload } = await session.queryTriples(req.body);
-    res.status(statusCode).json(payload);
-  });
-
-  authenticated.post('/clear', async (req, res) => {
-    const server = getServer(process.env.PROJECT_ID!);
-    const session = server.createSession(req.token!);
-    const { statusCode, payload } = await session.clearDB(req.body);
-    res.status(statusCode).json(payload);
-  });
-
-  authenticated.get('/migration/status', async (req, res) => {
-    const server = getServer(process.env.PROJECT_ID!);
-    const session = server.createSession(req.token!);
-    const { statusCode, payload } = await session.getMigrationStatus();
-    res.status(statusCode).json(payload);
-  });
-
-  authenticated.post('/migration/apply', async (req, res) => {
-    const server = getServer(process.env.PROJECT_ID!);
-    const session = server.createSession(req.token!);
-    const { statusCode, payload } = await session.applyMigration(req.body);
-    res.status(statusCode).json(payload);
-  });
-
-  authenticated.get('/stats', async (req, res) => {
-    const server = getServer(process.env.PROJECT_ID!);
-    const session = server.createSession(req.token!);
-    const { statusCode, payload } = await session.getCollectionStats();
-    res.status(statusCode).json(payload);
-  });
-
-  authenticated.get('/schema', async (req, res) => {
-    const server = getServer(process.env.PROJECT_ID!);
-    const session = server.createSession(req.token!);
-    const { statusCode, payload } = await session.getSchema(req.query);
-    res.status(statusCode).json(payload);
-  });
-
-  authenticated.post('/fetch', async (req, res) => {
-    const server = getServer(process.env.PROJECT_ID!);
-    const session = server.createSession(req.token!);
-    const { query } = req.body;
-    const { statusCode, payload } = await session.fetch(query);
-    res.status(statusCode).json(payload);
-  });
-
-  authenticated.post('/insert', async (req, res) => {
-    const server = getServer(process.env.PROJECT_ID!);
-    const session = server.createSession(req.token!);
-    const { collectionName, entity } = req.body;
-    const { statusCode, payload } = await session.insert(
-      collectionName,
-      entity
-    );
-    res.status(statusCode).json(payload);
-  });
-
-  authenticated.post('/bulk-insert', async (req, res) => {
-    const server = getServer(process.env.PROJECT_ID!);
-    const session = server.createSession(req.token!);
-    const { statusCode, payload } = await session.bulkInsert(req.body);
-    res.status(statusCode).json(payload);
-  });
-
-  authenticated.post('/update', async (req, res) => {
-    const server = getServer(process.env.PROJECT_ID!);
-    const session = server.createSession(req.token!);
-    const { collectionName, entityId, patches } = req.body;
-    const { statusCode, payload } = await session.update(
-      collectionName,
-      entityId,
-      patches
-    );
-    res.status(statusCode).json(payload);
-  });
-
-  authenticated.post('/delete', async (req, res) => {
-    const server = getServer(process.env.PROJECT_ID!);
-    const session = server.createSession(req.token!);
-    const { collectionName, entityId } = req.body;
-    const { statusCode, payload } = await session.delete(
-      collectionName,
-      entityId
-    );
-    res.status(statusCode).json(payload);
-  });
+  const triplitServer = getServer(process.env.PROJECT_ID!);
 
   authenticated.post('/message', async (req, res) => {
     try {
-      const server = getServer(process.env.PROJECT_ID!);
       const { message, options } = req.body;
       const { clientId } = options;
-      const session = server.getConnection(clientId);
+      const session = triplitServer.getConnection(clientId);
       if (!session) {
         throw new Error('NO CONNECTION OPEN!');
       }
@@ -332,6 +241,16 @@ export function createServer(options?: ServerOptions) {
       console.error(e);
       return res.sendStatus(500);
     }
+  });
+
+  authenticated.post('*', async (req, res) => {
+    const path = req.path.split('/').slice(1) as Route; // ignore first empty string from split
+    const { statusCode, payload } = await triplitServer.handleRequest(
+      path,
+      req.body,
+      req.token!
+    );
+    res.status(statusCode).json(payload);
   });
 
   // set up a server sent event stream
@@ -350,9 +269,8 @@ export function createServer(options?: ServerOptions) {
     if (error) {
       return res.sendStatus(401);
     }
-    const server = getServer(process.env.PROJECT_ID!);
 
-    const connection = server.openConnection(token, {
+    const connection = triplitServer.openConnection(token, {
       clientId: client as string,
       clientSchemaHash: schema ? parseInt(schema as string) : undefined,
       syncSchema: syncSchema === 'true',
