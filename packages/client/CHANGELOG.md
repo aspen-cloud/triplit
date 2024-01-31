@@ -1,5 +1,11 @@
 # @triplit/client
 
+## 0.3.15
+
+### Patch Changes
+
+- 7d75647: fixup broken triple filter
+
 ## 0.3.14
 
 ### Patch Changes
