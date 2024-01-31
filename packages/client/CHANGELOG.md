@@ -1,5 +1,11 @@
 # @triplit/client
 
+## 0.3.16
+
+### Patch Changes
+
+- 962cbfc: fixup sync bug breaking pagination
+
 ## 0.3.15
 
 ### Patch Changes
