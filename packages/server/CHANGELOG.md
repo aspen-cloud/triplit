@@ -1,5 +1,20 @@
 # @triplit/server
 
+## 0.3.16
+
+### Patch Changes
+
+- 75a765c: use types from server-core and remove dep
+
+  add logs for requests and websocket message
+
+- 391d77f: refactor Triplit REST API routing into server-core and use in node server package
+- Updated dependencies [391d77f]
+- Updated dependencies [75a765c]
+- Updated dependencies [33cc09c]
+  - @triplit/server-core@0.3.16
+  - @triplit/db@0.3.14
+
 ## 0.3.15
 
 ### Patch Changes

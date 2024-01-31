@@ -1,5 +1,20 @@
 # @triplit/console
 
+## 0.3.16
+
+### Patch Changes
+
+- 391d77f: Use POST instead of GET for triplit server routes
+- Updated dependencies [195c4a8]
+- Updated dependencies [391d77f]
+- Updated dependencies [75a765c]
+- Updated dependencies [195c4a8]
+- Updated dependencies [33cc09c]
+  - @triplit/client@0.3.14
+  - @triplit/server-core@0.3.16
+  - @triplit/db@0.3.14
+  - @triplit/react@0.3.14
+
 ## 0.3.15
 
 ### Patch Changes

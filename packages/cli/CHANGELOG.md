@@ -1,5 +1,22 @@
 # @triplit/cli
 
+## 0.3.18
+
+### Patch Changes
+
+- 75a765c: add [-v verbose] flag for dev server logging to `dev` command
+- 391d77f: Use POST instead of GET for triplit server routes
+- Updated dependencies [75a765c]
+- Updated dependencies [195c4a8]
+- Updated dependencies [391d77f]
+- Updated dependencies [391d77f]
+- Updated dependencies [195c4a8]
+- Updated dependencies [33cc09c]
+  - @triplit/server@0.3.16
+  - @triplit/client@0.3.14
+  - @triplit/console@0.3.16
+  - @triplit/db@0.3.14
+
 ## 0.3.17
 
 ### Patch Changes
