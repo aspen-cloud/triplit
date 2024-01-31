@@ -1,5 +1,13 @@
 # @triplit/cli
 
+## 0.3.20
+
+### Patch Changes
+
+- Updated dependencies [962cbfc]
+  - @triplit/client@0.3.16
+  - @triplit/console@0.3.18
+
 ## 0.3.19
 
 ### Patch Changes
