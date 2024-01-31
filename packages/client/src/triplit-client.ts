@@ -11,6 +11,7 @@ import {
   InsertTypeFromModel,
   Storage,
   FetchByIdQueryParams,
+  FetchResult,
 } from '@triplit/db';
 import { getUserId } from './token.js';
 import { UnrecognizedFetchPolicyError } from './errors.js';
@@ -397,8 +398,16 @@ export class TriplitClient<M extends ClientSchema | undefined = undefined> {
     let unsubscribeLocal = () => {};
     let unsubscribeRemote = () => {};
     let hasRemoteFulfilled = false;
-    const clientSubscriptionCallback = (results: any) =>
+    let fulfilledTimeout: NodeJS.Timeout | number | null = null;
+    let results: FetchResult<CQ>;
+    const clientSubscriptionCallback = (newResults: FetchResult<CQ>) => {
+      results = newResults;
+      if (fulfilledTimeout !== null) {
+        clearTimeout(fulfilledTimeout);
+        fulfilledTimeout = null;
+      }
       onResults(results as ClientFetchResult<CQ>, { hasRemoteFulfilled });
+    };
     unsubscribeLocal = this.db.subscribe(
       query,
       clientSubscriptionCallback,
@@ -411,10 +420,15 @@ export class TriplitClient<M extends ClientSchema | undefined = undefined> {
     if (scope.includes('cache')) {
       const onFulfilled = () => {
         hasRemoteFulfilled = true;
-        opts.onRemoteFulfilled?.();
-        // TODO we should manually call the db subscription callback with
-        // the remote status just in case there are no new results but
-        // we also don't want to call it with stale results
+        if (fulfilledTimeout !== null) {
+          clearTimeout(fulfilledTimeout);
+        }
+        // This is a hack to make sure we don't call onRemoteFulfilled before
+        // the local subscription callback has had a chance to refire
+        fulfilledTimeout = setTimeout(() => {
+          onResults(results as ClientFetchResult<CQ>, { hasRemoteFulfilled });
+          opts.onRemoteFulfilled?.();
+        }, 250);
       };
       unsubscribeRemote = this.syncEngine.subscribe(query, onFulfilled);
     }
