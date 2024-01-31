@@ -1,5 +1,14 @@
 # @triplit/server-core
 
+## 0.3.16
+
+### Patch Changes
+
+- 391d77f: refactor Triplit REST API routing into server-core and use in node server package
+- 75a765c: re-export relevant types for syncing from @triplit/types
+- Updated dependencies [33cc09c]
+  - @triplit/db@0.3.14
+
 ## 0.3.15
 
 ### Patch Changes

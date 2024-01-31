@@ -1,5 +1,11 @@
 # @triplit/db
 
+## 0.3.14
+
+### Patch Changes
+
+- 33cc09c: refactor state vector querying, handle many async schema loads, fixup set filter bug with deleted entities
+
 ## 0.3.13
 
 ### Patch Changes

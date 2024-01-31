@@ -1,5 +1,14 @@
 # @triplit/client
 
+## 0.3.14
+
+### Patch Changes
+
+- 195c4a8: handle non json websocket close reasons
+- 195c4a8: dont use TextEncoder api for chunking
+- Updated dependencies [33cc09c]
+  - @triplit/db@0.3.14
+
 ## 0.3.13
 
 ### Patch Changes
