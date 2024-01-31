@@ -1,3 +1,7 @@
 {
-  "react": "React"
+  "react": "React",
+  "react-native": {
+    "title": "React Native",
+    "display": "hidden"
+  }
 }

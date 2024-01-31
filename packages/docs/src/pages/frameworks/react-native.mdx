@@ -1,0 +1,117 @@
+import { Tabs, Tab, Callout } from 'nextra-theme-docs';
+
+# React Native
+
+<Callout emoji="⚠️">
+  Support for React Native is still experimental. If you run into any issues,
+  please let us know by opening an issue on the [Triplit
+  GitHub](https://github.com/aspen-cloud/triplit) or by reaching out to us on
+  [Discord]('https://discord.gg/q89sGWHqQ5').
+</Callout>
+
+React Native is the best way to run Triplit on a mobile app. The hooks available in the [React package](/frameworks/react) are also available in React Native.
+
+## Expo
+
+If you are using Expo to setup your React Native project, you can follow these steps to get Triplit up and running.
+
+### 1. Create an Expo project and install Triplit
+
+Create your expo project:
+
+```bash
+npx create-expo-app -t expo-template-blank-typescript
+
+cd my-app
+```
+
+For more information on setting up an Expo project with typescript see the [Expo documentation](https://docs.expo.dev/guides/typescript/).
+
+Next, install Triplit's packages:
+
+<Tabs items={['npm', 'pnpm', 'yarn', 'bun']}>
+  <Tab>
+    ```bash
+    npm i @triplit/client @triplit/react
+    npm i @triplit/cli --save-dev
+    ```
+  </Tab>
+  <Tab>
+    ```bash
+    pnpm add @triplit/client @triplit/react
+    pnpm add @triplit/cli --save-dev
+    ```
+
+  </Tab>
+  <Tab>
+    ```bash
+    yarn add @triplit/client @triplit/react
+    yarn add @triplit/cli --dev
+    ```
+
+  </Tab>
+  <Tab>
+    ```bash
+    bun add @triplit/client @triplit/react
+    bun add @triplit/cli --dev
+    ```
+    
+    </Tab>
+</Tabs>
+
+### 2. Update metro.config.js
+
+Some Triplit packages use [Package Exports](https://nodejs.org/docs/latest-v18.x/api/packages.html#package-entry-points), which Metro does not yet support.
+
+<Callout type="info" emoji="ℹ️">
+  Metro does have a configuration option
+  [unstable_enablePackageExports](https://metrobundler.dev/docs/configuration/#unstable_enablepackageexports-experimental)
+  but we found it broke other parts of the package resolution process.
+</Callout>
+
+To handle these imports, you will need to add a `metro.config.js` file to the root of your project with the following content:
+
+```javascript
+const { getDefaultConfig } = require('expo/metro-config');
+const path = require('path');
+
+// Resolve exports from @triplit/db
+function customResolver(context, moduleName, platform) {
+  if (moduleName.startsWith('@triplit/db/storage')) {
+    const suffix = moduleName.replace('@triplit/db/storage', '');
+    const basePath = path.dirname(require.resolve('@triplit/db'));
+    const filePath = path.join(basePath, `storage`, `${suffix}.js`);
+    return {
+      filePath: filePath,
+      type: 'sourceFile',
+    };
+  }
+  return context.resolveRequest(context, moduleName, platform);
+}
+config.resolver.resolveRequest = customResolver;
+
+module.exports = config;
+```
+
+### 3. Configure polyfills
+
+Triplit was originally built to run in web browsers, so a few APIs are used in some core packages and dependencies that are not in the ECMAScript spec that Hermes implements. So you will need to add some polyfills to your project. We list some polyfills below, but you may use other packages or write your own.
+
+- crypto.getRandomValues: [react-native-get-random-values](https://www.npmjs.com/package/react-native-get-random-values)
+- URL: [react-native-url-polyfill](https://www.npmjs.com/package/react-native-url-polyfill)
+- atob / btoa: [@react-native-anywhere/polyfill-base64](https://www.npmjs.com/package/@react-native-anywhere/polyfill-base64)
+- EventTarget: [event-target-polyfill](https://www.npmjs.com/package/event-target-polyfill)
+- hasown: [hasown](https://www.npmjs.com/package/hasown)
+
+These polyfills should be imported or implemented in your project's entry file so they can be run as early as possible.
+
+```javascript
+import 'react-native-get-random-values';
+// ... other polyfills
+
+// The rest of your entry file
+```
+
+## Bare React Native
+
+The team over at Triplit hasn't had the chance to test out a bare React Native project. Although we don't expect the required steps to be much different than with Expo, there may be differences. If you have set up Triplit in a bare RN project, please let us know how it went!
