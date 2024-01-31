@@ -100,9 +100,7 @@ export class SyncEngine {
     // Signal the server when there are triples to send
     const throttledSignal = throttle(() => this.signalOutboxTriples(), 100);
     this.db.tripleStore.setStorageScope(['outbox']).onInsert((inserts) => {
-      const triplesToSend =
-        inserts['outbox']?.filter((t) => this.shouldSendTriple(t)) ?? [];
-      if (!triplesToSend.length) return;
+      if (!inserts['outbox']?.length) return;
       throttledSignal();
     });
   }
