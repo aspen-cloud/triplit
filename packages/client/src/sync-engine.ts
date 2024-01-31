@@ -101,7 +101,7 @@ export class SyncEngine {
     const throttledSignal = throttle(() => this.signalOutboxTriples(), 100);
     this.db.tripleStore.setStorageScope(['outbox']).onInsert((inserts) => {
       const triplesToSend =
-        inserts['outbox']?.filter(this.shouldSendTriple) ?? [];
+        inserts['outbox']?.filter((t) => this.shouldSendTriple(t)) ?? [];
       if (!triplesToSend.length) return;
       throttledSignal();
     });
@@ -658,7 +658,7 @@ export class SyncEngine {
   }
 
   private async getTriplesToSend(store: TripleStoreApi) {
-    return (await store.findByEntity()).filter(this.shouldSendTriple);
+    return (await store.findByEntity()).filter((t) => this.shouldSendTriple(t));
   }
 
   private shouldSendTriple(t: TripleRow) {
