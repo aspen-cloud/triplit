@@ -96,7 +96,15 @@ export class SyncEngine {
       }
     });
     this.queryFulfillmentCallbacks = new Map();
-    this.setupWindowListeners();
+
+    // Signal the server when there are triples to send
+    const throttledSignal = throttle(() => this.signalOutboxTriples(), 100);
+    this.db.tripleStore.setStorageScope(['outbox']).onInsert((inserts) => {
+      const triplesToSend =
+        inserts['outbox']?.filter(this.shouldSendTriple) ?? [];
+      if (!triplesToSend.length) return;
+      throttledSignal();
+    });
   }
 
   /**
@@ -141,25 +149,6 @@ export class SyncEngine {
       server: this.syncOptions.server,
       secure: this.syncOptions.secure,
     };
-  }
-
-  private async setupWindowListeners() {
-    // Browser: on network connection / disconnection, connect / disconnect ws
-    if (typeof window !== 'undefined') {
-      const connectionHandler = this.connect.bind(this);
-      window.addEventListener('online', connectionHandler);
-      const disconnectHandler = this.closeConnection.bind(this);
-      window.addEventListener('offline', () =>
-        disconnectHandler({ type: 'NETWORK_OFFLINE', retry: false })
-      );
-    }
-
-    const throttledSignal = throttle(() => this.signalOutboxTriples(), 100);
-
-    this.db.tripleStore.setStorageScope(['outbox']).onInsert((inserts) => {
-      if (!inserts['outbox']?.length) return;
-      throttledSignal();
-    });
   }
 
   private async getQueryState(queryId: string) {
@@ -411,7 +400,19 @@ export class SyncEngine {
 
       // If there is no reason, then default is to retry
       if (evt.reason) {
-        const { type, retry } = JSON.parse(evt.reason);
+        let type: string;
+        let retry: boolean;
+        // We populate the reason field with some information about the close
+        // Some WS implementations include a reason field that isn't a JSON string on connection failures, etc
+        try {
+          const { type: t, retry: r } = JSON.parse(evt.reason);
+          type = t;
+          retry = r;
+        } catch (e) {
+          type = 'UNKNOWN';
+          retry = true;
+        }
+
         if (type === 'SCHEMA_MISMATCH') {
           console.error(
             'The server has closed the connection because the client schema does not match the server schema. Please update your client schema.'
@@ -657,14 +658,16 @@ export class SyncEngine {
   }
 
   private async getTriplesToSend(store: TripleStoreApi) {
-    return (await store.findByEntity()).filter((t) => {
-      const hasBeenSent = this.awaitingAck.has(JSON.stringify(t.timestamp));
-      return (
-        !hasBeenSent &&
-        // Filter out schema triples if syncSchema is false
-        (this.syncOptions.syncSchema || !t.id.includes('_metadata#_schema'))
-      );
-    });
+    return (await store.findByEntity()).filter(this.shouldSendTriple);
+  }
+
+  private shouldSendTriple(t: TripleRow) {
+    const hasBeenSent = this.awaitingAck.has(JSON.stringify(t.timestamp));
+    return (
+      !hasBeenSent &&
+      // Filter out schema triples if syncSchema is false
+      (this.syncOptions.syncSchema || !t.id.includes('_metadata#_schema'))
+    );
   }
 }
 

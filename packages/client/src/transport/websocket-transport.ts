@@ -120,7 +120,12 @@ export class WebSocketTransport implements SyncTransport {
 }
 
 function getPayloadSize(payload: string): number {
-  return new TextEncoder().encode(payload).length;
+  var sizeInBytes = 0;
+  for (let i = 0; i < payload.length; i++) {
+    const code = payload.charCodeAt(i);
+    sizeInBytes += code < 0x80 ? 1 : code < 0x800 ? 2 : code < 0x10000 ? 3 : 4;
+  }
+  return sizeInBytes;
 }
 
 function chunkMessage(message: string, numChunks: number): string[] {
