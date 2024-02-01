@@ -16,7 +16,6 @@ import {
   schemaFileContentFromJSON,
   writeSchemaFile,
 } from './migrate/codegen.js';
-import { emitKeypressEvents } from 'readline';
 
 export default Command({
   description: 'Starts the Triplit development environment',

@@ -19,7 +19,11 @@
     "outDir": "./dist",
     "tsBuildInfoFile": "./dist/tsconfig.tsbuildinfo",
     "rootDir": "./src/",
-    "declarationDir": "./dist/types"
+    "declarationDir": "./dist/types",
+    "types": ["@cloudflare/workers-types"],
+    "paths": {
+      "@triplit/db": ["../db/src/index.ts"]
+    }
   },
   "references": [
     {

@@ -5,6 +5,7 @@ import WebSocket from 'ws';
 import { Command } from '../command.js';
 import { serverRequesterMiddleware } from '../middleware/add-server-requester.js';
 
+// @ts-ignore
 global.WebSocket = WebSocket;
 export default Command({
   description: 'Start a REPL with the Triplit client',

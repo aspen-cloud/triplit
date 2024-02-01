@@ -53,6 +53,7 @@ export interface CommandDefinition<
   args?: Args;
   flags?: Flags;
   middleware?: Middleware;
+  preRelease?: boolean;
   run: RunCommand<Args, Flags, Middleware>;
 }
 

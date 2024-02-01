@@ -70,6 +70,10 @@ async function execute(args: string[], flags: {}) {
     return;
   }
   const cmdDef = await getCommandDefinition(command);
+  if (cmdDef.preRelease && !process.env.ENABLE_PRE_RELEASE) {
+    console.error(`Could not find command: ${bold(cmdDef.name)}.`);
+    return;
+  }
   // @ts-ignore
   if (flags.help || flags.h) {
     printCommandHelp(cmdDef.name, cmdDef);
@@ -149,7 +153,10 @@ async function execute(args: string[], flags: {}) {
 
 async function printDirectoryHelp(name: string, commands: CommandTree) {
   console.log(`Available commands for ${bold(name)}`);
-  const commandDefs = await getCommandsWithDefinition(commands, []);
+  let commandDefs = await getCommandsWithDefinition(commands, []);
+  if (!process.env.ENABLE_PRE_RELEASE) {
+    commandDefs = commandDefs.filter((cmd) => !cmd.preRelease);
+  }
   console.log(
     commandDefs
       .map((cmd) => `  ${bold(cmd.name)} - ${cmd.description}`)
