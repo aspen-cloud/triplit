@@ -86,7 +86,17 @@ async function execute(args: string[], flags: {}) {
     const cmdFlagsDefs = Object.entries(
       (cmdDef.flags as Record<string, Flag>) ?? {}
     );
-    unaliasedFlags = Object.entries(flags).reduce(
+    // Apply defaults to flags if one is provided and the flag is not already set
+    const flagsWithDefaults = cmdFlagsDefs.reduce(
+      (flags, [flagName, flagInput]) => {
+        if ('default' in flagInput && !(flagName in flags)) {
+          flags[flagName] = flagInput.default;
+        }
+        return flags;
+      },
+      flags
+    );
+    unaliasedFlags = Object.entries(flagsWithDefaults).reduce(
       (acc, [flagName, flagInput]) => {
         const flagDef = cmdFlagsDefs.find(
           ([name, { char }]) => name === flagName || char === flagName
