@@ -1027,6 +1027,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@cloudflare/workers-types@npm:^4.20240129.0":
+  version: 4.20240129.0
+  resolution: "@cloudflare/workers-types@npm:4.20240129.0"
+  checksum: e2f0394c58978aa8ca476b2c6e91a8c9bd4297de0c12ebb3084a31b112b28637fe193d7ec2cfa57912a79feaf31fb87eb82c4b0eda03fb7d6d3f3c23c1f3b2da
+  languageName: node
+  linkType: hard
+
 "@corex/deepmerge@npm:^4.0.43":
   version: 4.0.43
   resolution: "@corex/deepmerge@npm:4.0.43"
@@ -4838,6 +4845,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@triplit/db@workspace:packages/db"
   dependencies:
+    "@cloudflare/workers-types": ^4.20240129.0
     "@sinclair/typebox": ^0.27.4
     "@stryker-mutator/core": ^7.3.0
     "@stryker-mutator/vitest-runner": ^7.3.0

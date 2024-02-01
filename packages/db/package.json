@@ -38,6 +38,7 @@
     "/dist"
   ],
   "devDependencies": {
+    "@cloudflare/workers-types": "^4.20240129.0",
     "@stryker-mutator/core": "^7.3.0",
     "@stryker-mutator/vitest-runner": "^7.3.0",
     "@vitest/coverage-c8": "^0.29.2",
