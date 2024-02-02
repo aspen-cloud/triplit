@@ -1,46 +1,21 @@
 import { blue } from 'ansis/colors';
 import { Command } from '../command.js';
-import * as Flag from '../flags.js';
 import { accessTokenMiddleware } from '../middleware/account-auth.js';
-import { supabase } from '../supabase.js';
-import prompts from 'prompts';
+import { getOrganization } from '../organization-state.js';
 
 export default Command({
   description: 'Checks the status of the current user',
   flags: {},
   middleware: [accessTokenMiddleware],
-  async run({ flags, ctx, args }) {
-    // get the user's organizations
-    const { data, error } = await supabase.from('organizations').select('*');
-    if (error) {
-      console.error('Error fetching organizations', error);
-      return;
-    }
+  async run({ ctx }) {
     console.log("\nYou're logged in as", blue(ctx.session.user.email ?? ''));
-    if (data.length === 0) {
-      console.log('You are not a member of any organizations.');
-      return;
+    const organization = getOrganization();
+    if (organization) {
+      console.log(
+        "You're currently working with the organization",
+        blue(organization.name)
+      );
     }
-    const { data: subscriptions, error: subscriptionError } = await supabase
-      .from('subscriptions')
-      .select('organization_id, subscription_type_id');
-    if (subscriptionError) {
-      console.error('Error fetching subscriptions', subscriptionError);
-      return;
-    }
-    const orgsAndSubs = data.map((org) => {
-      const sub = subscriptions.find((sub) => sub.organization_id === org.id);
-      return {
-        ...org,
-        subscription:
-          mapSubscriptionType(sub?.subscription_type_id) ?? 'self-hosted',
-      };
-    });
-    console.log('\nYou are a member of the following organizations:\n');
-    orgsAndSubs.forEach((org) => {
-      console.log(`- ${org.name}, ${org.subscription}`);
-    });
-    console.log('\n');
   },
 });
 
