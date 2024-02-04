@@ -1,4 +1,14 @@
-import { DB } from '@triplit/db';
+import { DB, TriplitError } from '@triplit/db';
+import {
+  MalformedMessagePayloadError,
+  Server as TriplitServer,
+} from '@triplit/server-core';
+import {
+  ServerCloseReason,
+  ParseResult,
+  ClientSyncMessage,
+  ParsedToken,
+} from '@triplit/types/sync.js';
 export interface Env {
   // Example binding to KV. Learn more at https://developers.cloudflare.com/workers/runtime-apis/kv/
   // MY_KV_NAMESPACE: KVNamespace;
@@ -21,6 +31,7 @@ export interface Env {
 }
 // @ts-ignore
 import { schema } from '@/schema';
+import { parseAndValidateToken } from '@triplit/server-core/token';
 
 export default {
   /**
@@ -42,13 +53,180 @@ export default {
 
 export class TriplitDurableObject implements DurableObject {
   db: any;
+  triplitServer: TriplitServer;
   constructor(readonly state: DurableObjectState, readonly env: Env) {
     this.db = new DB({
       schema,
     });
+    this.triplitServer = new TriplitServer(this.db);
   }
 
   async fetch(request: Request): Promise<Response> {
+    const projectId = request.headers.get('x-triplit-project-id')!;
+    const xTriplitToken = request.headers.get('x-triplit-token');
+    const jwt_secret = request.headers.get('x-triplit-jwt-secret');
+    const external_jwt_path =
+      request.headers.get('x-triplit-external-jwt-path') ?? undefined;
+    const external_jwt_secret =
+      request.headers.get('x-triplit-external-jwt-secret') ?? undefined;
+    const upgradeHeader = request.headers.get('Upgrade');
+
+    const { data: token, error } = await parseAndValidateToken(
+      xTriplitToken,
+      jwt_secret!,
+      projectId!,
+      {
+        payloadPath: external_jwt_path,
+        externalSecret: external_jwt_secret,
+      }
+    );
+    if (error) {
+      if (upgradeHeader === 'websocket') {
+        return handleWebSocketUpgradeFailure(error.toString());
+      }
+      return new Response(error.toString(), { status: error.status });
+    }
+    if (upgradeHeader === 'websocket') {
+      return this.handleWebSocketUpgrade(request, token);
+    }
     return new Response('Hello world from Triplit Cloud V2');
   }
+
+  async handleWebSocketUpgrade(
+    request: Request,
+    token: ParsedToken
+  ): Promise<Response> {
+    const url = new URL(request.url);
+    const clientId = url.searchParams.get('client')!;
+    const clientSchemaHashString = url.searchParams.get('schema')!;
+    const clientSchemaHash = clientSchemaHashString
+      ? parseInt(clientSchemaHashString)
+      : undefined;
+    const syncSchema = url.searchParams.get('sync-schema') === 'true';
+    const webSocketPair = new WebSocketPair();
+    const [client, server] = Object.values(webSocketPair);
+
+    const response = new Response(null, {
+      status: 101,
+      // @ts-ignore
+      webSocket: client,
+    });
+
+    server.accept();
+
+    const syncConnection = this.triplitServer.openConnection(token, {
+      clientSchemaHash,
+      clientId,
+      syncSchema,
+    });
+
+    const unsubscribeMessageListener = syncConnection.addListener(
+      (messageType, payload) => {
+        sendMessage(server, messageType, payload);
+      }
+    );
+
+    server.addEventListener('message', async (message) => {
+      const { data: parsedMessage, error } = parseClientMessage(message);
+      if (error)
+        return sendErrorMessage(
+          server,
+          undefined,
+          new MalformedMessagePayloadError(),
+          {
+            message,
+          }
+        );
+      syncConnection.dispatchCommand(parsedMessage);
+    });
+    let errorHandler = (evt: ErrorEvent) => {
+      // This is what will fire if, for example, platform limitations are hit like message size
+      // Unfortunately the returned error (at least in wrangler) is not descriptive at all
+      closeSocket(
+        server,
+        { type: 'INTERNAL_ERROR', retry: false, message: evt?.error?.message },
+        1011
+      );
+      syncConnection.close();
+      unsubscribeMessageListener();
+    };
+    let closeHandler = (evt: CloseEvent) => {
+      // For now echo back code and reason
+      // Should this use the closeSocket function?
+      server.close(evt.code, evt.reason);
+      syncConnection.close();
+      unsubscribeMessageListener();
+    };
+    server.addEventListener('close', closeHandler);
+    server.addEventListener('error', errorHandler);
+
+    return response;
+  }
+}
+
+function handleWebSocketUpgradeFailure(reason: string): Response {
+  const webSocketPair = new WebSocketPair();
+  const [client, server] = Object.values(webSocketPair);
+  const response = new Response(null, {
+    status: 101,
+    // @ts-ignore
+    webSocket: client,
+  });
+  closeSocket(
+    server,
+    {
+      type: 'UNAUTHORIZED',
+      retry: false,
+      message: reason,
+    },
+    1008
+  );
+  return response;
+}
+
+function closeSocket(
+  socket: WebSocket,
+  reason: ServerCloseReason,
+  code?: number
+) {
+  // Send message informing client of upcoming close, may include message containing reason
+  sendMessage(socket, 'CLOSE', reason);
+  // Close connection
+  // Close payload must remain under 125 bytes
+  socket.close(
+    code,
+    JSON.stringify({ type: reason.type, retry: reason.retry })
+  );
+}
+
+function parseClientMessage(
+  message: MessageEvent
+): ParseResult<ClientSyncMessage> {
+  // TODO: do more validation here
+  try {
+    const parsedMessage = JSON.parse(message.data as string);
+    return { data: parsedMessage, error: undefined };
+  } catch (e) {
+    return { data: undefined, error: e as Error };
+  }
+}
+
+function sendMessage(socket: WebSocket, type: string, payload: any) {
+  const message = JSON.stringify({ type, payload });
+  socket.send(message);
+}
+
+function sendErrorMessage(
+  socket: WebSocket,
+  originalMessage: ClientSyncMessage | undefined, // message is undefined if we cannot parse it,
+  error: TriplitError,
+  metadata?: any
+) {
+  const messageType = originalMessage?.type;
+  let payload = {
+    messageType,
+    error: error.toJSON(),
+    metadata,
+  };
+  sendMessage(socket, 'ERROR', payload);
 }

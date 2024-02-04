@@ -13,7 +13,7 @@ import { rateLimiterMiddlewareWs } from './middleware/rate-limiter.js';
 import url from 'url';
 import sqlite from 'better-sqlite3';
 import {
-  Server,
+  Server as TriplitServer,
   ServerCloseReason,
   ClientSyncMessage,
   ParseResult,
@@ -61,11 +61,11 @@ export function createServer(options?: ServerOptions) {
   const dbSource =
     options?.storage === 'sqlite' ? setupSqliteStorage() : new MemoryStorage();
   if (options?.verboseLogs) logger.verbose = true;
-  const triplitServers = new Map<string, Server>();
+  const triplitServers = new Map<string, TriplitServer>();
 
   function getServer(projectId: string) {
     if (triplitServers.has(projectId)) return triplitServers.get(projectId)!;
-    const server = new Server(
+    const server = new TriplitServer(
       new DB({
         source: dbSource,
         tenantId: projectId,

@@ -4738,6 +4738,8 @@ __metadata:
     "@triplit/console": "workspace:^"
     "@triplit/db": "workspace:^"
     "@triplit/server": "workspace:^"
+    "@triplit/server-core": "workspace:^"
+    "@triplit/types": "workspace:^"
     "@types/degit": ^2
     "@types/ink": ^2.0.3
     "@types/jsonwebtoken": ^9.0.2

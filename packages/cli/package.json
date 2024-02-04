@@ -21,6 +21,7 @@
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20240117.0",
+    "@triplit/types": "workspace:^",
     "@types/degit": "^2",
     "@types/ink": "^2.0.3",
     "@types/jsonwebtoken": "^9.0.2",
@@ -40,6 +41,7 @@
     "@triplit/console": "workspace:^",
     "@triplit/db": "workspace:^",
     "@triplit/server": "workspace:^",
+    "@triplit/server-core": "workspace:^",
     "ansis": "^1.5.5",
     "axios": "^1.5.0",
     "better-sqlite3": "^8.6.0",

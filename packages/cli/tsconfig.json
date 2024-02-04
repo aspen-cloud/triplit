@@ -22,7 +22,8 @@
     "declarationDir": "./dist/types",
     "types": ["@cloudflare/workers-types"],
     "paths": {
-      "@triplit/db": ["../db/src/index.ts"]
+      "@triplit/db": ["../db/src/index.ts"],
+      "@triplit/server-core": ["../server-core/src/index.ts"]
     }
   },
   "references": [
@@ -37,6 +38,12 @@
     },
     {
       "path": "../console/tsconfig.server.json"
+    },
+    {
+      "path": "../server-core/tsconfig.json"
+    },
+    {
+      "path": "../types/tsconfig.json"
     }
   ],
   "include": ["src/**/*.ts", "src/**/*.tsx"],

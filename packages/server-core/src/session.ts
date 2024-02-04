@@ -29,7 +29,7 @@ import {
   ClientDisconnectQueryMessage,
   ClientTriplesMessage,
 } from '@triplit/types/sync';
-import { Server } from './triplit-server.js';
+import { Server as TriplitServer } from './triplit-server.js';
 
 export interface ConnectionOptions {
   clientId: string;
@@ -324,7 +324,7 @@ function hasAdminAccess(token: ParsedToken) {
 
 export class Session {
   db: TriplitDB<any>;
-  constructor(public server: Server, public token: ParsedToken) {
+  constructor(public server: TriplitServer, public token: ParsedToken) {
     if (!token) throw new Error('Token is required');
     // TODO: figure out admin middleware
     const variables = {};
