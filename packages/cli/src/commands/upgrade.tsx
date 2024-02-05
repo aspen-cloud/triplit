@@ -12,17 +12,27 @@ export default Command({
     const organization = getOrganization();
     if (!organization) {
       console.log(
-        'You must be a member of an organization to upgrade it.\n Run `triplet org` to select or create an organization.'
+        'You must be a member of an organization to upgrade.\n Run `triplit org` to select or create an organization.'
       );
       return;
     }
     try {
-      const { url } = await ctx.requestServer('POST', '/account/upgrade', {
-        organizationId: organization.id,
-      });
-      console.log(
-        '\nTo complete the upgrade, pay via Stripe at the following link:\n'
+      const { url, hasExistingSubscription } = await ctx.requestServer(
+        'POST',
+        '/account/upgrade',
+        {
+          organizationId: organization.id,
+        }
       );
+      if (hasExistingSubscription) {
+        console.log(
+          '\nYou already have a paid subscription for this organization. Use the billing portal to change or cancel your subscription:\n'
+        );
+      } else {
+        console.log(
+          '\nTo complete the upgrade, pay via Stripe at the following link:\n'
+        );
+      }
       console.log(blue(url));
     } catch (error) {
       console.error('Error upgrading', error);
