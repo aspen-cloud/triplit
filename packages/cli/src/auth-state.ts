@@ -8,3 +8,7 @@ export const storeSession = (session: Session) => {
 export const getSession = () => {
   return getConfig('auth.session') as Session;
 };
+
+export const clearSession = () => {
+  storeConfig('auth.session', null);
+};
