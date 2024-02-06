@@ -28,6 +28,7 @@ export default Command({
           return;
         }
         storeOrganization(organization);
+        console.log(`Switched to organization: ${blue(organization.name)}`);
       }
       return;
     } else {
@@ -43,6 +44,7 @@ export default Command({
           return;
         }
         storeOrganization(organization);
+        console.log(`Switched to organization: ${blue(organization.name)}`);
       }
       return;
     }
