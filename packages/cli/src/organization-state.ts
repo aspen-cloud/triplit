@@ -15,3 +15,7 @@ export const storeOrganization = (org: Organization) => {
 export const getOrganization = () => {
   return getConfig(KEY) as Organization | null;
 };
+
+export const clearOrganization = () => {
+  storeConfig(KEY, null);
+};

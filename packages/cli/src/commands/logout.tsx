@@ -1,5 +1,6 @@
 import { Command } from '../command.js';
 import { clearSession, getSession, storeSession } from '../auth-state.js';
+import { clearOrganization } from '../organization-state.js';
 
 export default Command({
   description: 'Sign out of Triplit Cloud',
@@ -11,6 +12,7 @@ export default Command({
       return;
     }
     clearSession();
+    clearOrganization();
     console.log('You have been logged out.');
   },
 });
