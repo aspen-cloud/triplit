@@ -5,6 +5,7 @@ import { fileURLToPath } from 'url';
 import * as path from 'path';
 import axios, { AxiosError } from 'axios';
 import { accessTokenMiddleware } from '../middleware/account-auth.js';
+import { getOrganization } from '../organization-state.js';
 
 export default Command({
   description: 'Deploy to Triplit Cloud',
@@ -22,6 +23,13 @@ export default Command({
     }),
   },
   async run({ flags, ctx, args }) {
+    const organization = getOrganization();
+    if (!organization) {
+      console.error(
+        'You are not currently working with an organization. Run `triplit org` to select or create an organization.'
+      );
+      return;
+    }
     const workerPath = path.join(
       path.dirname(fileURLToPath(import.meta.url)),
       '../deploy/worker.js'
