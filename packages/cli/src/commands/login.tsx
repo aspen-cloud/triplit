@@ -3,6 +3,8 @@ import { Command } from '../command.js';
 import * as Flag from '../flags.js';
 import { getSession, storeSession } from '../auth-state.js';
 import { supabase } from '../supabase.js';
+import { selectOrCreateAnOrganization } from '../remote-utils.js';
+import { storeOrganization } from '../organization-state.js';
 
 export default Command({
   description: 'Authenticate with Triplit Cloud',
@@ -54,7 +56,21 @@ export default Command({
       token: code,
     });
 
-    storeSession(data.session);
-    console.log('Logged in successfully');
+    if (data && data.session) {
+      storeSession(data.session);
+
+      console.log('Logged in successfully');
+
+      console.log('Choose an organization to work with:\n');
+      const organization = await selectOrCreateAnOrganization();
+      if (!organization) {
+        console.log('No organization selected');
+        return;
+      }
+      storeOrganization(organization);
+    } else {
+      console.log('Failed to login');
+      console.log(error);
+    }
   },
 });
