@@ -1,5 +1,10 @@
 import { Flag, FlagsToTypes } from './flags.js';
 
+/**
+ *
+ * @param def
+ * @returns Either a context object to merge into the current context, or a string to print to the console as an error messages.
+ */
 export function Middleware<
   Args extends string[] = string[],
   Flags extends Record<string, Flag> = Record<string, Flag>,
@@ -22,5 +27,5 @@ export interface MiddlewareDefinition<
   run: (params: {
     flags: FlagsToTypes<Flags>;
     args: Args;
-  }) => Ctx | Promise<Ctx>;
+  }) => Ctx | Promise<Ctx> | string | Promise<string>;
 }

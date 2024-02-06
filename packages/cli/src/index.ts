@@ -60,7 +60,7 @@ async function execute(args: string[], flags: {}) {
 
   if (!isCommandInfo(command)) {
     if (commandArgs.length > 0) {
-      console.error('Could not find command: ' + args.join(' '));
+      console.error(red('Could not find command: ' + args.join(' ')));
     }
 
     await printDirectoryHelp(
@@ -118,6 +118,10 @@ async function execute(args: string[], flags: {}) {
       args: commandArgs,
       ctx,
     });
+    if (typeof result === 'string') {
+      console.error(red(result));
+      process.exit(1);
+    }
     if (result) {
       ctx = { ...ctx, ...result };
     }

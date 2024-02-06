@@ -7,7 +7,7 @@ export const accessTokenMiddleware = Middleware({
   run: async ({ flags, args }) => {
     let session = getSession();
     if (!session) {
-      throw new Error('No session found. Please login first then try again.');
+      return 'No session found. Please login first then try again.';
     }
     // Check if session is expired
     const now = new Date();
@@ -15,7 +15,7 @@ export const accessTokenMiddleware = Middleware({
     if (now > expiresAt) {
       const { data, error } = await supabase.auth.refreshSession(session);
       if (error) {
-        throw new Error(error.message);
+        return error.message;
       }
       session = data.session;
       storeSession(data.session);
