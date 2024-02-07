@@ -170,8 +170,6 @@ setTimeout(
 );
 ```
 
-This is Triplit in its most basic form - a simple local database for your app with reactive queries. The rest of these docs will provide more detail on Triplit's database API, the additional features Triplit provides for app developers, and how its sync engine can be used to create powerful local-first and multiplayer experiences.
-
 ## Framework support
 
 If you are using a framework like React, Vue (coming soon), or Svelte (coming soon), you can use the Triplit framework bindings to make it easier to work with Triplit in your framework. See [frameworks](/frameworks) for more information.
@@ -291,11 +289,15 @@ const client = new TriplitClient({
 If you're using a schema **your client will not sync with the server until you migrate it**. You migrate with the Triplit CLI:
 
 ```bash copy
-triplit migrate create --name=my-first-migration
+triplit migrate create my-first-migration
 triplit migrate up
 ```
 
 With the appropriate environment variables set, the Triplit CLI will let you push schema changes to the server or even [seed](/guides/seeding) it with data. Read more about migrations [here](/guides/migrations).
+
+## Next steps
+
+This is Triplit in its most basic form - a syncing database for your app with reactive queries and great Typescript support. The rest of these docs will provide more detail on Triplit's database API and guides for building specific applications with it.
 
 ## Additional resources
 
