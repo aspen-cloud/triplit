@@ -113,7 +113,7 @@ Alternatively, you may manually install the packages you need.
 
 A Triplit Client instance will set up a local database for your data and ([if turned on](/sync)) will set up the required network connections for syncing. The specifics of your local database and syncing can be configured by passing in options to the client, which are described in the [client options reference](/client-options). For now we will not pass in any options, which will just set up an in-memory local database.
 
-```typescript
+```typescript copy
 import { TriplitClient } from '@triplit/client';
 
 const client = new TriplitClient();
@@ -123,7 +123,7 @@ Triplit organizes your data into collections, which are like tables in a relatio
 
 For example, you can insert some data into a collection and then query for it.
 
-```typescript
+```typescript copy
 // Define a query
 const completedTodosQuery = client
   .query('todos')
@@ -142,7 +142,7 @@ console.log(completedTodos);
 
 You can also subscribe to data changes over time.
 
-```typescript
+```typescript copy
 // Define a query
 const completedTodosQuery = client
   .query('todos')
@@ -175,3 +175,131 @@ This is Triplit in its most basic form - a simple local database for your app wi
 ## Framework support
 
 If you are using a framework like React, Vue (coming soon), or Svelte (coming soon), you can use the Triplit framework bindings to make it easier to work with Triplit in your framework. See [frameworks](/frameworks) for more information.
+
+## Schemas and Typescript
+
+Triplit uses a schema to define the structure of your data. This schema is used to validate your data and to generate typescript types for client methods. Though you can technically define your schema anywhere, we recommend you save it at the `/triplit/schema.ts` path in your project folder. If you used one of the [initialization commands](/getting-started#installation) this file should have been created for you.
+
+You can define a schema for your data like this:
+
+```typescript filename="/triplit/schema.ts" copy
+import { Schema as S } from '@triplit/db';
+import { ClientSchema } from '@triplit/client';
+
+export const schema = {
+  todos: {
+    schema: S.Schema({
+      id: S.Id(),
+      text: S.String(),
+      completed: S.Boolean({ default: false }),
+    }),
+  },
+} satisfies ClientSchema;
+```
+
+And pass it as a paramter to the client constructor:
+
+```typescript copy {2,4}
+import { TriplitClient } from '@triplit/client';
+import { schema } from './schema.js';
+
+const client = new TriplitClient({ schema });
+```
+
+You can extract types from the schema to use in your app:
+
+```typescript copy
+import { Entity } from '@triplit/client';
+import { schema } from './schema';
+
+type Todo = Entity<typeof schema, 'todos'>;
+```
+
+Read about all the data types and options available in a schema [here](/schemas).
+
+## Syncing
+
+So far we've covered how to set up a local database and query it. But what if you want to sync your data across devices? Triplit provides a powerful sync engine that can be used to sync your data across devices in real-time. You can read more about syncing [here](/sync).
+
+### Syncing in local development
+
+Triplit has a robust local development environment that you can set up with a single command.
+
+```bash
+triplit dev
+```
+
+This will start a local development server that you can use to test syncing. The default URL for the local development server is `http://localhost:6543`. It will also generate a Service Token and an Anonymous Token that your client app will use to authorize with the server.
+
+We recommend setting up a `.env` file in your project to store these.
+
+```bash filename=".env" copy
+TRIPLIT_DB_URL=http://localhost:6543
+TRIPLIT_SERVICE_TOKEN=generated-by-triplit-dev
+TRIPLIT_ANONYMOUS_TOKEN=generated-by-triplit-dev
+```
+
+Then, you can use these environment variables to initialize your client:
+
+```typescript copy {6-7}
+import { TriplitClient } from '@triplit/client';
+import { schema } from './schema.js';
+
+const client = new TriplitClient({
+  schema,
+  serverUrl: process.env.TRIPLIT_DB_URL,
+  token: process.env.TRIPLIT_ANONYMOUS_TOKEN,
+});
+```
+
+If you're using a schema **your client will not sync with the server until you migrate it**. You migrate with the Triplit CLI:
+
+```bash copy
+triplit migrate create --name=my-first-migration
+triplit migrate up
+```
+
+With the appropriate environment variables set, the Triplit CLI will let you push schema changes to the server or even [seed](/guides/seeding) it with data. Read more about migrations [here](/guides/migrations).
+
+### Syncing with Triplit Cloud
+
+Triplit Cloud is a managed service that provides a scalable and secure way to sync your data across devices. You can sign up for the waitlist for Triplit Cloud in our [Discord](https://discord.gg/q89sGWHqQ5) with the `/waitlist` command.
+
+Once you have access to Triplit Cloud, you can create a project. That project will have a unique database host url, a Service Token and an Anonymouos Token. Your client app will use these to authorize with the server.
+
+We recommend setting up a `.env` file in your project to store these.
+
+```bash filename=".env" copy
+TRIPLIT_DB_URL=https://project-id.triplit.io
+TRIPLIT_SERVICE_TOKEN=taken-from-triplit-cloud
+TRIPLIT_ANONYMOUS_TOKEN=taken-from-triplit-cloud
+```
+
+Then, you can use these environment variables to initialize your client:
+
+```typescript copy {6-7}
+import { TriplitClient } from '@triplit/client';
+import { schema } from './schema.js';
+
+const client = new TriplitClient({
+  schema,
+  serverUrl: process.env.TRIPLIT_DB_URL,
+  token: process.env.TRIPLIT_ANONYMOUS_TOKEN,
+});
+```
+
+If you're using a schema **your client will not sync with the server until you migrate it**. You migrate with the Triplit CLI:
+
+```bash copy
+triplit migrate create --name=my-first-migration
+triplit migrate up
+```
+
+With the appropriate environment variables set, the Triplit CLI will let you push schema changes to the server or even [seed](/guides/seeding) it with data. Read more about migrations [here](/guides/migrations).
+
+## Additional resources
+
+- [Simple example app: Todos with Triplit, React and Vite](/guides/react-tutorial)
+- [Advanced example app: Chat with Triplit, NextAuth and Next.js](https://github.com/aspen-cloud/triplit/tree/main/templates/chat-template#readme)
+- [Adding access control](/access-control)
+- [Remote API, if you prefer HTTP to Websockets](/remote-api)
