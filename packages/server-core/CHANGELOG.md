@@ -1,5 +1,11 @@
 # @triplit/server-core
 
+## 0.3.17
+
+### Patch Changes
+
+- 2e1a2ad: fixup bugs in schema and schemaless syncing in the console
+
 ## 0.3.16
 
 ### Patch Changes
