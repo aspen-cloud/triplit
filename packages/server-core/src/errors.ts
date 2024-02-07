@@ -100,7 +100,7 @@ export class ServiceKeyRequiredError extends TriplitError {
   constructor(...args: any[]) {
     super(...args);
     this.name = 'ServiceKeyRequiredError';
-    this.baseMessage = 'Service key required.';
+    this.baseMessage = 'Service token required.';
     this.status = STATUS_CODES['Unauthorized'];
   }
 }
