@@ -10,7 +10,7 @@ export const accessTokenMiddleware = Middleware({
   run: async ({ flags, args }) => {
     let session = getSession();
     if (!session) {
-      return 'No session found. Please login first then try again.';
+      return 'No session found. Run `triplit login` and then retry.';
     }
     // Check if session is expired
     const now = new Date();

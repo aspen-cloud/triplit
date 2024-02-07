@@ -13,6 +13,7 @@ import { CWD } from '../filesystem.js';
 import { existsSync, readFileSync } from 'fs';
 import { supabase } from '../supabase.js';
 import { blue, bold } from 'ansis/colors';
+import ora from 'ora';
 
 export default Command({
   description: 'Deploy to Triplit Cloud',
@@ -39,27 +40,37 @@ export default Command({
       );
       return;
     }
+    const subscriptionStatusSpinner = ora(
+      `Checking ${organization.name} subscription status`
+    );
+    subscriptionStatusSpinner.start();
     const { data: subscription, error: subscriptionError } = await supabase
       .from('subscriptions')
       .select('id, stripe_subscription_id, status, subscription_type_id')
       .eq('organization_id', organization.id)
       .neq('status', 'canceled')
       .maybeSingle();
-
     if (subscriptionError) {
+      subscriptionStatusSpinner.fail();
       console.error('Error fetching subscription', subscriptionError);
       return;
     }
     if (!subscription) {
+      subscriptionStatusSpinner.fail();
+
       console.log(
         `${blue(
           organization.name
-        )} is not subscribed to a Triplit plan with hosted deployments. Run ${blue(
+        )} is not subscribed to a Triplit plan with hosted deployments.`
+      );
+      console.log(
+        `Run ${blue(
           '`triplit upgrade`'
         )} to upgrade your organization and enable cloud deployments.`
       );
       return;
     }
+    subscriptionStatusSpinner.succeed();
 
     let config = getConfig();
     if (!config) {
@@ -118,6 +129,8 @@ export default Command({
         });
       }
     }
+    const buildingSpinner = ora('Building project');
+    buildingSpinner.start();
     const workerPath = path.join(
       path.dirname(fileURLToPath(import.meta.url)),
       '../deploy/worker.js'
@@ -134,11 +147,15 @@ export default Command({
       },
     });
     if (result.errors.length) {
+      buildingSpinner.fail();
       for (const error of result.errors) {
         console.error(error.text);
       }
       return;
     }
+    buildingSpinner.succeed();
+    const uploadSpinner = ora('Uploading to Triplit Cloud');
+    uploadSpinner.start();
     try {
       const response = await axios.post(
         `http://localhost:8787/deploy/${flags.projectId ?? config.id}`,
@@ -150,8 +167,9 @@ export default Command({
           },
         }
       );
-      console.log('Deployed successfully.');
+      uploadSpinner.succeed('Deployment complete');
     } catch (err) {
+      uploadSpinner.fail();
       if (err instanceof AxiosError) {
         // log info about Axios Error
         if (err.response) {
