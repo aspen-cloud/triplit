@@ -23,7 +23,8 @@ export function useEntity<
   results: MaybeReturnTypeFromQuery<M, CN> | undefined;
   error: any;
 } {
-  let query = client.query(collectionName).entityId(id);
+  // @ts-ignore
+  let query = client.query(collectionName).where('id', '=', id).limit(1);
   if (queryParams?.include) {
     for (const [relation, subquery] of Object.entries(queryParams.include)) {
       if (subquery)
