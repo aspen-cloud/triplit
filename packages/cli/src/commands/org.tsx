@@ -8,6 +8,7 @@ import { selectOrCreateAnOrganization } from '../remote-utils.js';
 export default Command({
   description: 'Checks the status of the current user',
   flags: {},
+  preRelease: true,
   middleware: [accessTokenMiddleware],
   async run({ ctx }) {
     const organization = getOrganization();

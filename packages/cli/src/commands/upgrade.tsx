@@ -7,6 +7,7 @@ import ora from 'ora';
 export default Command({
   description: 'Upgrades an organization to a paid plan',
   flags: {},
+  preRelease: true,
   middleware: [accessTokenMiddleware],
   async run({ flags, ctx, args }) {
     // get the user's organizations

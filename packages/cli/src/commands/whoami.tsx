@@ -6,6 +6,7 @@ import { getOrganization } from '../organization-state.js';
 export default Command({
   description: 'Checks the status of the current user',
   flags: {},
+  preRelease: true,
   middleware: [accessTokenMiddleware],
   async run({ ctx }) {
     console.log("\nYou're logged in as", blue(ctx.session.user.email ?? ''));
