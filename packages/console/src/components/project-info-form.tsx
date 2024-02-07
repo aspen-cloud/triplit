@@ -68,7 +68,7 @@ export function ProjectInfoForm({
         <Input value={projectId} readOnly />
       </FormField>
       <div className="flex flex-row gap-2 items-end">
-        <FormField label="API key">
+        <FormField label="Service Token">
           <PasswordInput
             autoComplete="off"
             className="w-full"

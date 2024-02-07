@@ -8,7 +8,7 @@ export const serverRequesterMiddleware = Middleware({
   name: 'Server Requester',
   flags: {
     token: Flag.String({
-      description: 'API Token (Service Key)',
+      description: 'Service Token',
       required: false,
       char: 't',
     }),
@@ -23,7 +23,7 @@ export const serverRequesterMiddleware = Middleware({
     if (!token) {
       // request token
       ({ token } = await prompts({
-        message: 'API Token (Service Key)',
+        message: 'Service Token',
         name: 'token',
         type: 'password',
         validate: (tokenInput) => {

@@ -6,7 +6,7 @@ The Remote API is a RESTful API that allows you to interact with a Triplit Cloud
 
 ## Authentication
 
-The Remote API, like the Triplit sync protocol, uses [JSON Web Tokens](https://jwt.io/) (JWT) for authentication. If you're communicating with a Triplit Cloud production server, you'll need to use your project's Service or Anon key from the [Triplit Cloud dashboard](/dashboard) for your project. If you're communicating with a Node server that you control, you'll need a properly formed JWT with the correct claims. Using the [Triplit CLI](/docs/guides/local-development) and `triplit dev` command will automatically generate acceptable Service and Anon keys for you.
+The Remote API, like the Triplit sync protocol, uses [JSON Web Tokens](https://jwt.io/) (JWT) for authentication. If you're communicating with a Triplit Cloud production server, you'll need to use your project's Service or Anonymous Token from the [Triplit Cloud dashboard](/dashboard) for your project. If you're communicating with a Node server that you control, you'll need a properly formed JWT with the correct claims. Using the [Triplit CLI](/docs/guides/local-development) and `triplit dev` command will automatically generate acceptable Service and Anonymous tokens for you.
 
 With your token in hand, set up your HTTP client to send the token in the `Authorization` header with the `Bearer` scheme. Using the `Fetch` API, it would look like this:
 

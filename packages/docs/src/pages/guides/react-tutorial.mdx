@@ -86,16 +86,16 @@ Triplit provides a development server that you can use to test your app locally.
 npx triplit dev
 ```
 
-This will start the sync server on port `6543` and a database console on port `6542`. It will also output API keys that your app will use to connect to the sync server.
+This will start the sync server on port `6543` and a database console on port `6542`. It will also output API tokens that your app will use to connect to the sync server.
 
 <Callout emoji="💡">
-  If you're using our hosted service, Triplit Cloud, you can use the API keys
+  If you're using our hosted service, Triplit Cloud, you can use the API tokens
   and url shown on the [dashboard](https://triplit.dev/dashboard) for your
   project page. The instructions in the rest of this tutorial are the same
   whether you're using Triplit Cloud or running the sync server locally.
 </Callout>
 
-Now's a good time to set up an `.env` file in the `todos` directory. This file will contain the API keys that your app will use to connect to the sync server. Create a new file called `.env` in the `todos` directory and add the following:
+Now's a good time to set up an `.env` file in the `todos` directory. This file will contain the API tokens that your app will use to connect to the sync server. Create a new file called `.env` in the `todos` directory and add the following:
 
 ```bash filename=".env" copy
 TRIPLIT_DB_URL=http://localhost:6543
@@ -157,7 +157,7 @@ This will start the Vite development server on port `5173`. You can now open you
 
 Now that we have the development server running, let's integrate Triplit into our client code.
 
-Triplit provides a client library that you can use to read and write data. Let's initialize it with our API keys and the schema that we defined earlier. Create a new file in the `src` directory called `client.ts` and add the following code:
+Triplit provides a client library that you can use to read and write data. Let's initialize it with our API tokens and the schema that we defined earlier. Create a new file in the `src` directory called `client.ts` and add the following code:
 
 ```ts filename="triplit/client.ts" copy
 import { schema } from './schema.js';

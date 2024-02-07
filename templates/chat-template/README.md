@@ -31,7 +31,7 @@ This will spin up both the server responsible for syncing and a developer consol
 This is a good time to set up your `.env`, which needs to be properly configured so that the Triplit Client running in your app and the dev environment can talk to each other. We include a mostly complete example `.env.example`, that needs two modification to start working.
 
 - Rename it to `.env`
-- Update the `TRIPLIT_SERVICE_TOKEN` with the `Service Key` in the CLI output after you run `yarn triplit dev`
+- Update the `TRIPLIT_SERVICE_TOKEN` with the `Service Token` in the CLI output after you run `yarn triplit dev`
 - Optionally, register your app with [Github](https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/creating-an-oauth-app) and update the `GITHUB_ID and GITHUB_SECRET` to add oauth support to the demo.
 
 ### Migrate your sync server

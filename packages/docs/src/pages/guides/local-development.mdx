@@ -19,13 +19,13 @@ By default this will start the following services:
 - Triplit Console, running at port 6542
 - Triplit Database server, running at port 6543
 
-And prints a usable Service API key and Anon API key for connecting to the database.
+And prints a usable Service Token and Anonymous Token for connecting to the database.
 
 ## Additional environment variables
 
 If your project has a `.env` file, you may set the following environment variables to configure the Triplit Database server:
 
-- `TRIPLIT_SERVICE_TOKEN` - The Service API key to use for connecting to the database for CLI commands. If not set, you may use a flag in the CLI (which takes precedent) or the CLI will prompt you for a key.
+- `TRIPLIT_SERVICE_TOKEN` - The Service Token to use for connecting to the database for CLI commands. If not set, you may use a flag in the CLI (which takes precedent) or the CLI will prompt you for a key.
 - `TRIPLIT_DB_URL` - The URL to use for connecting to the database. If not set, you may use a flag in the CLI (which takes precedent) or use the default URL for the local database.
 - `TRIPLIT_PROJECT_ID` - Sets the project identifier used on the local api tokens.
 - `TRIPLIT_JWT_SECRET` - Overrides the JWT secret used when generating local api tokens.

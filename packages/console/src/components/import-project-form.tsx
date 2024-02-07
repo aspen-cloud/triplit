@@ -58,7 +58,7 @@ export function ImportProjectForm({
     validate: {
       token: (value) =>
         !JWTPayloadIsOfCorrectForm(value)
-          ? 'Secret key has malformed metadata'
+          ? 'Service token has malformed metadata'
           : null,
 
       displayName: (value) =>
@@ -81,7 +81,7 @@ export function ImportProjectForm({
     } else {
       form.setFieldError(
         'token',
-        'Secret key has malformed metadata, please check that it is correct'
+        'Service token has malformed metadata, please check that it is correct'
       );
     }
   }, [projectHint, tokenHint, serverHint, displayNameHint, form]);
@@ -99,7 +99,7 @@ export function ImportProjectForm({
     } catch (e) {
       form.setFieldError(
         'token',
-        'Unabled to parse secret key, please check that it is correct'
+        'Unabled to parse Service Token, please check that it is correct'
       );
     }
   }, [form]);
@@ -107,8 +107,8 @@ export function ImportProjectForm({
   return (
     <form className="flex flex-col gap-6" onSubmit={form.onSubmit(onSubmit)}>
       <FormField
-        label="Triplit secret key"
-        description="The secret key for your Triplit project can be found at https://triplit.dev/dashboard"
+        label="Triplit Service Token"
+        description="The Service Token for your Triplit project can be found at https://triplit.dev/dashboard"
         error={form.getInputProps('token').error}
       >
         <PasswordInput

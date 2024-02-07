@@ -170,7 +170,7 @@ export class Connection {
             failures.push([
               txId,
               new TriplitError(
-                'Invalid permissions to modify schema. Must use service key.'
+                'Invalid permissions to modify schema. Must use Service Token.'
               ),
             ]);
             return false;

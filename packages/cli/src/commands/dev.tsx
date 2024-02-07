@@ -223,13 +223,13 @@ export default Command({
           <Box flexDirection="column" gap={1}>
             <Box flexDirection="column">
               <Text bold underline>
-                Service Key
+                Service Token
               </Text>
               <Text wrap="end">{serviceKey}</Text>
             </Box>
             <Box flexDirection="column">
               <Text bold underline>
-                Anon Token
+                Anonymous Token
               </Text>
               <Text wrap="end">{anonKey}</Text>
             </Box>
