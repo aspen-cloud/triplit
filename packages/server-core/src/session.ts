@@ -400,10 +400,12 @@ export class Session {
   async getCollectionStats() {
     if (!hasAdminAccess(this.token)) return NotAdminResponse();
     const stats = await this.db.getCollectionStats();
-    const payload = Array.from(stats).map(([collection, numEntities]) => ({
-      collection,
-      numEntities,
-    }));
+    const payload = Array.from(stats)
+      .filter(([collection]) => collection !== '_metadata')
+      .map(([collection, numEntities]) => ({
+        collection,
+        numEntities,
+      }));
     return ServerResponse(200, payload);
   }
 
