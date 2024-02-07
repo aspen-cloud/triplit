@@ -104,19 +104,36 @@ export class RemoteClient<M extends ClientSchema | undefined> {
     collectionName: CN,
     object: InsertTypeFromModel<ModelFromModels<M, CN>>
   ) {
+    // we need to convert Sets to arrays before sending to the server
+    const schema = this.options.schema?.[collectionName]?.schema;
+    const jsonEntity = schema ? schema!.convertJSToJSON(object) : object;
     const { data, error } = await this.sendRequest('/insert', 'POST', {
       collectionName,
-      entity: object,
+      entity: jsonEntity,
     });
     if (error) throw error;
     return data;
   }
 
   async bulkInsert(bulk: BulkInsert<M>) {
+    // we need to convert Sets to arrays before sending to the server
+    const jsonBulkInsert = this.options.schema
+      ? Object.fromEntries(
+          Object.entries(bulk).map(([collectionName, entities]) => [
+            collectionName,
+            entities?.map((entity) =>
+              this.options.schema![collectionName]?.schema.convertJSToJSON(
+                entity
+              )
+            ),
+          ])
+        )
+      : bulk;
+
     const { data, error } = await this.sendRequest(
       '/bulk-insert',
       'POST',
-      bulk
+      jsonBulkInsert
     );
     if (error) throw error;
     return data;
@@ -189,9 +206,7 @@ function deserializeHTTPEntity<CQ extends ClientQuery<any, any>>(
   const collectionSchema = schema?.[collectionName]?.schema;
 
   const deserializedEntity = collectionSchema
-    ? (collectionSchema.convertDBValueToJS(
-        entity
-      ) as ClientFetchResultEntity<CQ>)
+    ? (collectionSchema.convertJSONToJS(entity) as ClientFetchResultEntity<CQ>)
     : entity;
   if (!include) return deserializedEntity;
   const includeKeys = Object.keys(include);

@@ -47,7 +47,9 @@ export function QueryType<
       return val as FetchResult<Q>;
     },
     convertJSONToJS(val) {
-      throw new Error('Not implemented');
+      // TODO we likely need to recurse into the subquery
+      // collection type and continue conversion
+      return val;
     },
     convertJSToJSON(val) {
       if (!val) return val;
