@@ -1,5 +1,11 @@
 # @triplit/db
 
+## 0.3.15
+
+### Patch Changes
+
+- 554aaa6: Implement basic json to js conversion of queries
+
 ## 0.3.14
 
 ### Patch Changes
