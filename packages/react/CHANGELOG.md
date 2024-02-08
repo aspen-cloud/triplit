@@ -1,5 +1,13 @@
 # @triplit/react
 
+## 0.3.17
+
+### Patch Changes
+
+- 9898891: fixup query used in useEntity hook
+- Updated dependencies [9898891]
+  - @triplit/client@0.3.17
+
 ## 0.3.16
 
 ### Patch Changes
