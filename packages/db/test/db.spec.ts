@@ -153,6 +153,36 @@ describe('Database API', () => {
     );
     expect(nin.size).toBe(1);
   });
+  it('treats "in" operations on sets as a defacto "intersects"', async () => {
+    const newDb = new DB({
+      schema: {
+        collections: {
+          test: { schema: S.Schema({ id: S.Id(), set: S.Set(S.String()) }) },
+        },
+      },
+    });
+    await newDb.insert('test', { id: '1', set: new Set(['a', 'b', 'c']) });
+    await newDb.insert('test', { id: '2', set: new Set(['a']) });
+    await newDb.insert('test', { id: '3', set: new Set(['d', 'e']) });
+    let results = await newDb.fetch(
+      CollectionQueryBuilder('test')
+        .where([['set', 'in', ['a', 'd']]])
+        .build()
+    );
+    expect(results.size).toBe(3);
+    results = await newDb.fetch(
+      CollectionQueryBuilder('test')
+        .where([['set', 'in', ['d']]])
+        .build()
+    );
+    expect(results.size).toBe(1);
+    results = await newDb.fetch(
+      CollectionQueryBuilder('test')
+        .where([['set', 'in', ['a', 'b']]])
+        .build()
+    );
+    expect(results.size).toBe(2);
+  });
 
   it('supports basic queries with the "like" operator', async () => {
     const studentsNamedJohn = await db.fetch(
