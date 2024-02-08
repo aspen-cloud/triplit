@@ -1,5 +1,15 @@
 # @triplit/cli
 
+## 0.3.21
+
+### Patch Changes
+
+- 434c825: fixup set serialization in the RemoteClient
+- Updated dependencies [2e1a2ad]
+  - @triplit/server-core@0.3.17
+  - @triplit/console@0.3.19
+  - @triplit/server@0.3.17
+
 ## 0.3.20
 
 ### Patch Changes
