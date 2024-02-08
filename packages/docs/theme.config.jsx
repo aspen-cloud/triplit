@@ -45,12 +45,6 @@ export default {
         <meta property="og:type" content="website" />
         <meta name="twitter:card" content={TWITTER_CARD_TYPE} />
         <meta name="twitter:site" content={TWITTER_HANDLE} />
-        {process.env.NEXT_PUBLIC_ANALYTICS && (
-          <Script
-            src="https://analytics.aspen.cloud/script.js"
-            data-website-id="b67ee66a-f198-4e55-9fab-be86aee0ce86"
-          ></Script>
-        )}
       </>
     );
   },

@@ -1,0 +1,15 @@
+import Script from 'next/script';
+
+export default function App({ Component, pageProps }) {
+  return (
+    <>
+      <Component {...pageProps} />
+      {process.env.NEXT_PUBLIC_ANALYTICS && (
+        <Script
+          src="https://analytics.aspen.cloud/script.js"
+          data-website-id="b67ee66a-f198-4e55-9fab-be86aee0ce86"
+        ></Script>
+      )}
+    </>
+  );
+}
