@@ -1,5 +1,11 @@
 # @triplit/client
 
+## 0.3.17
+
+### Patch Changes
+
+- 9898891: fixup set serialization in the RemoteClient
+
 ## 0.3.16
 
 ### Patch Changes
