@@ -4949,7 +4949,7 @@ describe('Subqueries in schema', () => {
   });
 });
 
-describe.todo('social network test', () => {
+describe('social network test', () => {
   let db: DB<any>;
   beforeAll(async () => {
     db = new DB({
@@ -4975,6 +4975,7 @@ describe.todo('social network test', () => {
               id: S.String(),
               content: S.String(),
               author_id: S.String(),
+              author: S.RelationById('users', '$author_id'),
             }),
           },
         },
@@ -5013,13 +5014,13 @@ describe.todo('social network test', () => {
     });
   });
 
-  it('can query posts from friends', () => {
-    const query = db
+  it('can query posts from friends', async () => {
+    const userDb = db.withVars({ USER_ID: 'user-1' });
+    const query = userDb
       .query('posts')
-      .vars({})
-      .where([['author.friends', '=', '$USER_ID']])
+      .where([['author.friend_ids', '=', '$USER_ID']])
       .build();
-    const results = db.fetch(query);
+    const results = await userDb.fetch(query);
     expect(results).toHaveLength(2);
   });
 });
