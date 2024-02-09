@@ -116,7 +116,7 @@ export function FiltersPopover(props: FiltersPopoverProps) {
                   );
                 }}
                 attributes={filterAttributes}
-                model={collectionSchema}
+                schema={collectionSchema.schema}
                 onPressRemove={() => {
                   setDraftFilters((prev) =>
                     prev.filter((f) => f.id !== data.id)
