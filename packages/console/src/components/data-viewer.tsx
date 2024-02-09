@@ -278,9 +278,14 @@ export function DataViewer({
                     const where = typeDef?.query?.where;
                     const whereWithVariablesReplaced = where.map(
                       ([attribute, operator, value]) => {
+                        let parsedVal = value;
                         if (typeof value === 'string' && value.startsWith('$'))
-                          value = row.getValue(value.split('$')[1] as string);
-                        return [attribute, operator, value];
+                          parsedVal = row.getValue(
+                            value.split('$')[1] as string
+                          );
+                        if (parsedVal instanceof Set)
+                          parsedVal = Array.from(parsedVal);
+                        return [attribute, operator, parsedVal];
                       }
                     );
                     setUrlQueryState({
