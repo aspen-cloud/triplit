@@ -258,7 +258,8 @@ export function clientInputToDbModel<M extends Model<any> | undefined>(
 
 // TODO: perform a pass on this to see how we can improve its types
 export function timestampedObjectToPlainObject<O extends TimestampedObject>(
-  obj: O
+  obj: O,
+  maintainKeys?: boolean
 ): UnTimestampedObject<O> {
   if (typeof obj !== 'object' || obj === null) {
     return obj;
@@ -271,7 +272,7 @@ export function timestampedObjectToPlainObject<O extends TimestampedObject>(
     // @ts-expect-error
     return obj
       .map((v) => timestampedObjectToPlainObject(v))
-      .filter((v) => v !== undefined);
+      .filter((v) => !!maintainKeys || v !== undefined);
   }
   if (obj instanceof Map) {
     // @ts-expect-error
@@ -285,7 +286,7 @@ export function timestampedObjectToPlainObject<O extends TimestampedObject>(
     .map(([key, val]) => {
       return [key, timestampedObjectToPlainObject(val)];
     })
-    .filter(([_key, val]) => val !== undefined);
+    .filter(([_key, val]) => !!maintainKeys || val !== undefined);
   //TODO: result statically typed as any
   const result = Object.fromEntries(entries);
   return result;

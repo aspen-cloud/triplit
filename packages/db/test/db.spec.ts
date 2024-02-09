@@ -4587,46 +4587,79 @@ describe('DB variable index cache view thing', () => {
 
 describe('relational querying / sub querying', () => {
   const db = new DB({});
+  const DATA = [
+    [
+      'manufacturers',
+      {
+        name: 'Ford',
+        country: 'USA',
+        id: 'ford',
+      },
+    ],
+    [
+      'manufacturers',
+      {
+        name: 'Toyota',
+        country: 'Japan',
+        id: 'toyota',
+      },
+    ],
+    [
+      'manufacturers',
+      {
+        name: 'Honda',
+        country: 'Japan',
+        id: 'honda',
+      },
+    ],
+    [
+      'manufacturers',
+      {
+        name: 'Volkswagen',
+        country: 'Germany',
+        id: 'vw',
+      },
+    ],
+    [
+      'cars',
+      { year: 2021, model: 'F150', manufacturer: 'ford', type: 'truck' },
+    ],
+    [
+      'cars',
+      { year: 2022, model: 'Fusion', manufacturer: 'ford', type: 'sedan' },
+    ],
+    [
+      'cars',
+      { year: 2022, model: 'Explorer', manufacturer: 'ford', type: 'SUV' },
+    ],
+    [
+      'cars',
+      { year: 2022, model: 'Camry', manufacturer: 'toyota', type: 'sedan' },
+    ],
+    [
+      'cars',
+      { year: 2021, model: 'Tacoma', manufacturer: 'toyota', type: 'truck' },
+    ],
+    [
+      'cars',
+      { year: 2021, model: 'Civic', manufacturer: 'honda', type: 'sedan' },
+    ],
+    [
+      'cars',
+      { year: 2022, model: 'Accord', manufacturer: 'honda', type: 'sedan' },
+    ],
+    ['cars', { year: 2022, model: 'Jetta', manufacturer: 'vw', type: 'sedan' }],
+    ['cars', { year: 2023, model: 'Atlas', manufacturer: 'vw', type: 'truck' }],
+    ['cars', { year: 2022, model: 'Tiguan', manufacturer: 'vw', type: 'SUV' }],
+  ];
   beforeAll(async () => {
     // Insert mock data for Cars and Manufacturers
     // Manufacturer - Contains name and country
-    await db.insert('manufacturers', {
-      name: 'Ford',
-      country: 'USA',
-      id: 'ford',
-    });
-    await db.insert('manufacturers', {
-      name: 'Toyota',
-      country: 'Japan',
-      id: 'toyota',
-    });
-    await db.insert('manufacturers', {
-      name: 'Honda',
-      country: 'Japan',
-      id: 'honda',
-    });
-    await db.insert('manufacturers', {
-      name: 'Volkswagen',
-      country: 'Germany',
-      id: 'vw',
-    });
-    // Cars - Contains a make, model, manufacturer, and class (like SUV)
-    const cars = [
-      { year: 2021, model: 'F150', manufacturer: 'ford', type: 'truck' },
-      { year: 2022, model: 'Fusion', manufacturer: 'ford', type: 'sedan' },
-      { year: 2022, model: 'Explorer', manufacturer: 'ford', type: 'SUV' },
-      { year: 2022, model: 'Camry', manufacturer: 'toyota', type: 'sedan' },
-      { year: 2021, model: 'Tacoma', manufacturer: 'toyota', type: 'truck' },
-      { year: 2021, model: 'Civic', manufacturer: 'honda', type: 'sedan' },
-      { year: 2022, model: 'Accord', manufacturer: 'honda', type: 'sedan' },
-      { year: 2022, model: 'Jetta', manufacturer: 'vw', type: 'sedan' },
-      { year: 2023, model: 'Atlas', manufacturer: 'vw', type: 'truck' },
-      { year: 2022, model: 'Tiguan', manufacturer: 'vw', type: 'SUV' },
-    ];
-    for (const car of cars) {
-      await db.insert('cars', car);
+    for (const [collection, data] of DATA) {
+      await db.insert(collection, data);
     }
   });
+
   it('can handle sub queries that use variables', async () => {
     const query = db
       .query('manufacturers')
@@ -4646,6 +4679,46 @@ describe('relational querying / sub querying', () => {
     const result = await db.fetch(query);
     expect(result).toHaveLength(2);
   });
+
+  it('can handle sub queries that use variables with deletes', async () => {
+    const db = new DB({});
+    for (const [collection, data] of DATA) {
+      await db.insert(collection, data);
+    }
+    // Add matching data
+    await db.insert('manufacturers', {
+      name: 'Suburu',
+      country: 'USA',
+      id: 'suburu',
+    });
+    await db.insert('cars', {
+      year: 2019,
+      model: 'Outback',
+      manufacturer: 'suburu',
+      type: 'SUV',
+    });
+    // Delete a parent that would inject variables
+    await db.delete('manufacturers', 'suburu');
+
+    const query = db
+      .query('manufacturers')
+      .where([
+        {
+          exists: db
+            .query('cars')
+            .where([
+              ['type', '=', 'SUV'],
+              ['manufacturer', '=', '$id'],
+            ])
+            .build(),
+        },
+      ])
+      .build();
+
+    const result = await db.fetch(query, { noCache: true });
+    expect(result).toHaveLength(2);
+  });
+
   it('can handle nested subqueries', async () => {
     const query = db
       .query('cars')

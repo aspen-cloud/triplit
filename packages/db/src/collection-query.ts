@@ -335,7 +335,9 @@ export async function fetch<
           vars: {
             ...query.vars,
             ...subQuery.vars,
-            ...timestampedObjectToPlainObject(entity as any),
+            // Ensure we pass in all keys from the entity (2nd param true)
+            // Kind of a hack to get around issues with deleted data
+            ...timestampedObjectToPlainObject(entity as any, true),
           },
           limit: 1,
         } as CollectionQuery<typeof schema, any>;

@@ -173,6 +173,7 @@ export interface DBFetchOptions {
   skipRules?: boolean;
   scope?: string[];
   stateVector?: Map<string, number>;
+  noCache?: boolean;
 }
 
 export function ruleToTuple(
@@ -651,7 +652,8 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
       {
         schema: (await this.getSchema())?.collections,
         includeTriples: false,
-        cache: QUERY_CACHE_ENABLED ? this.cache : undefined,
+        cache:
+          QUERY_CACHE_ENABLED && !options?.noCache ? this.cache : undefined,
       }
     );
   }
