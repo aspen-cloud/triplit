@@ -19,6 +19,7 @@ import {
 import {
   groupTriplesByTimestamp,
   insertTriplesByTransaction,
+  isTriplitError,
 } from './utils.js';
 import {
   ServerSyncMessage,
@@ -108,12 +109,11 @@ export class Connection {
       },
       (error) => {
         console.error(error);
-        const innerError =
-          error instanceof TriplitError
-            ? error
-            : new TriplitError(
-                'An unknown error occurred while processing your request.'
-              );
+        const innerError = isTriplitError(error)
+          ? error
+          : new TriplitError(
+              'An unknown error occurred while processing your request.'
+            );
         this.sendErrorResponse('CONNECT_QUERY', new QuerySyncError(params), {
           queryKey,
           innerError,
@@ -199,12 +199,11 @@ export class Connection {
         failedTxIds: failures.map(([txId]) => txId),
       });
     } catch (e) {
-      const error =
-        e instanceof TriplitError
-          ? e
-          : new TriplitError(
-              'An unknown error occurred while processing your request.'
-            );
+      const error = isTriplitError(e)
+        ? e
+        : new TriplitError(
+            'An unknown error occurred while processing your request.'
+          );
       this.sendErrorResponse('TRIPLES', new TriplesInsertError(), {
         failures: Object.keys(txTriples).map((txId) => ({
           txId,
@@ -257,7 +256,7 @@ export class Connection {
     } catch (e) {
       return this.sendErrorResponse(
         message.type,
-        e instanceof TriplitError
+        isTriplitError(e)
           ? e
           : new TriplitError(
               'An unknown error occurred while processing your request.'
@@ -391,7 +390,7 @@ export class Session {
         );
       await this.db.migrate([migration], direction);
     } catch (e) {
-      if (e instanceof TriplitError) return errorResponse(e);
+      if (isTriplitError(e)) return errorResponse(e);
       return errorResponse(new TriplitError('Error applying migration'));
     }
     return ServerResponse(200);
@@ -599,7 +598,7 @@ export class Session {
 }
 
 function errorResponse(e: unknown, options?: { fallbackMessage?: string }) {
-  if (e instanceof TriplitError) {
+  if (isTriplitError(e)) {
     return ServerResponse(e.status, e.toJSON());
   }
   const generalError = new TriplitError(

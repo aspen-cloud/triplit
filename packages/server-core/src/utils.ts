@@ -32,7 +32,7 @@ export async function insertTriplesByTransaction(
           await tx.insertTriples(triplesByTransaction[txId]);
           successes.push(txId);
         } catch (e) {
-          if (e instanceof TriplitError) {
+          if (isTriplitError(e)) {
             failures.push([txId, e]);
           } else {
             failures.push([
@@ -52,14 +52,20 @@ export async function insertTriplesByTransaction(
     return {
       successes: [],
       failures: Object.keys(triplesByTransaction).map((txId) => {
-        const failure =
-          e instanceof TriplitError
-            ? e
-            : new TriplitError(
-                'An unknown error occurred while performing a bulk insert to the triple store'
-              );
+        const failure = isTriplitError(e)
+          ? e
+          : new TriplitError(
+              'An unknown error occurred while performing a bulk insert to the triple store'
+            );
         return [txId, failure];
       }),
     };
   }
+}
+
+// For some reason in cloudflare workers instanceof doesn't work for custom errors
+// I think this might be related to the nature of how we bundle and deploy
+// Fallback to checking for a property as a backup
+export function isTriplitError(e: any): e is TriplitError {
+  return e instanceof TriplitError || e?.__isTriplitError === true;
 }

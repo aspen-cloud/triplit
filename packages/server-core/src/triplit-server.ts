@@ -8,6 +8,7 @@ import {
   routeNotFoundResponse,
 } from './session.js';
 import type { ServerResponse as ServerResponseType } from './session.js';
+import { isTriplitError } from './utils.js';
 
 /**
  * Represents a Triplit server for a specific tenant.
@@ -82,10 +83,9 @@ export class Server {
           return routeNotFoundResponse(route);
       }
     } catch (e: any) {
-      const error =
-        e instanceof TriplitError
-          ? e
-          : new TriplitError('An unknown error occured');
+      const error = isTriplitError(e)
+        ? e
+        : new TriplitError('An unknown error occured');
       return ServerResponse(error.status, error.toJSON());
     }
   }

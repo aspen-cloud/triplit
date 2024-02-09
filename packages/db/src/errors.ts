@@ -24,6 +24,9 @@ export class TriplitError extends Error {
   baseMessage: string;
   contextMessage?: string;
 
+  // Fallback property for checking if an error is a TriplitError
+  readonly __isTriplitError = true;
+
   constructor(contextMessage?: string, ...args: any[]) {
     super(...args);
     this.name = 'TriplitError';

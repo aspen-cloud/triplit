@@ -633,8 +633,17 @@ export class SyncEngine {
       body: JSON.stringify({ query }),
     });
     if (!res.ok) {
-      // TODO: add more context
-      throw new RemoteFetchFailedError(query, res.statusText);
+      let errorBody;
+      try {
+        errorBody = await res.json();
+      } catch (e) {
+        throw new RemoteFetchFailedError(
+          query,
+          `The server responded with an error: ${await res.text()}`
+        );
+      }
+      const message = errorBody.message ?? JSON.stringify(errorBody);
+      throw new RemoteFetchFailedError(query, message);
     }
     return await res.json();
   }
