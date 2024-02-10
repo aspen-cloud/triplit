@@ -1,5 +1,12 @@
 # @triplit/db
 
+## 0.3.16
+
+### Patch Changes
+
+- 6bf47f6: pass deleted keys to variables in exists subquery
+- 3fe5761: Add fallback prop to TriplitErrors for identification
+
 ## 0.3.15
 
 ### Patch Changes

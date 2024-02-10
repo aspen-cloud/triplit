@@ -1,5 +1,14 @@
 # @triplit/client
 
+## 0.3.19
+
+### Patch Changes
+
+- 3fe5761: Improve triple fetch error handling
+- Updated dependencies [6bf47f6]
+- Updated dependencies [3fe5761]
+  - @triplit/db@0.3.16
+
 ## 0.3.18
 
 ### Patch Changes
