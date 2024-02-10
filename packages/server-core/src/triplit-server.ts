@@ -39,11 +39,12 @@ export class Server {
 
   async handleRequest(
     route: Route,
-    params: any,
+    maybeParams: any,
     token: ParsedToken
   ): Promise<ServerResponseType> {
     try {
       if (!isValidRoute(route)) return routeNotFoundResponse(route);
+      const params: any = maybeParams || {};
       const session = this.createSession(token);
       const firstSegment = route[0];
       switch (firstSegment) {

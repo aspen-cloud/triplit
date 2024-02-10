@@ -351,7 +351,10 @@ export class Session {
       }
       return ServerResponse(200);
     } catch (e) {
-      return ServerResponse(500);
+      if (isTriplitError(e)) return errorResponse(e);
+      return errorResponse(e, {
+        fallbackMessage: 'An unknown error occured clearing the database.',
+      });
     }
   }
 
