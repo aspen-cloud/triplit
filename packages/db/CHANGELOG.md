@@ -1,5 +1,12 @@
 # @triplit/db
 
+## 0.3.17
+
+### Patch Changes
+
+- 458fc03: Fixup issues with set values in filters
+- 10bb3eb: Add more informative errors when parsing values to types
+
 ## 0.3.16
 
 ### Patch Changes
