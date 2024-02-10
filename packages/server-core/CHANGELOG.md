@@ -1,5 +1,14 @@
 # @triplit/server-core
 
+## 0.3.20
+
+### Patch Changes
+
+- fde0f56: Ensure server params have value before parsing, send proper error on /clear
+- Updated dependencies [458fc03]
+- Updated dependencies [10bb3eb]
+  - @triplit/db@0.3.17
+
 ## 0.3.19
 
 ### Patch Changes
