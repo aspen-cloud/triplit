@@ -5,7 +5,11 @@ import {
   ValueInterface,
   valueMismatchMessage,
 } from './value.js';
-import { InvalidTypeOptionsError, DBSerializationError } from '../errors.js';
+import {
+  InvalidTypeOptionsError,
+  DBSerializationError,
+  JSONValueParseError,
+} from '../errors.js';
 
 const STRING_OPERATORS = ['=', '!=', 'like', 'nlike', 'in', 'nin'] as const;
 type StringOperators = typeof STRING_OPERATORS;
@@ -44,8 +48,7 @@ export function StringType<TypeOptions extends UserTypeOptions = {}>(
     // @ts-ignore
     convertJSONToJS(val) {
       if (options.nullable && val === null) return null;
-      if (typeof val !== 'string')
-        throw new Error('Invalid JSON value for string');
+      if (typeof val !== 'string') throw new JSONValueParseError('string', val);
       return val;
     },
     convertJSToJSON(val) {

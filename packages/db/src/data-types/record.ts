@@ -1,4 +1,8 @@
-import { DBSerializationError } from '../errors.js';
+import {
+  DBSerializationError,
+  JSONValueParseError,
+  TriplitError,
+} from '../errors.js';
 import { DataType } from './base.js';
 import { RecordAttributeDefinition } from './serialization.js';
 import { ExtractJSType, ExtractDBType, TypeInterface } from './type.js';
@@ -71,12 +75,12 @@ export function RecordType<Properties extends { [k: string]: DataType }>(
       };
     },
     convertJSONToJS(val) {
-      if (typeof val !== 'object')
-        throw new Error('Invalid JSON value for record');
+      if (typeof val !== 'object') throw new JSONValueParseError('record', val);
       return Object.fromEntries(
         Object.entries(val).map(([k, v]) => {
           const propDef = properties[k];
-          if (!propDef) throw new Error(`Invalid property ${k} for record`);
+          if (!propDef)
+            throw new TriplitError(`Invalid property ${k} for record`);
           return [k, propDef.convertJSONToJS(v)];
         })
       ) as { [K in keyof Properties]: ExtractJSType<Properties[K]> };

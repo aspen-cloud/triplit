@@ -5,7 +5,11 @@ import {
   ValueInterface,
   valueMismatchMessage,
 } from './value.js';
-import { InvalidTypeOptionsError, DBSerializationError } from '../errors.js';
+import {
+  InvalidTypeOptionsError,
+  DBSerializationError,
+  JSONValueParseError,
+} from '../errors.js';
 
 const NUMBER_OPERATORS = [
   '=',
@@ -53,8 +57,7 @@ export function NumberType<TypeOptions extends UserTypeOptions = {}>(
     // @ts-ignore
     convertJSONToJS(val) {
       if (options.nullable && val === null) return null;
-      if (typeof val !== 'number')
-        throw new Error('Invalid JSON value for number');
+      if (typeof val !== 'number') throw new JSONValueParseError('number', val);
       return val;
     },
     convertJSToJSON(val) {

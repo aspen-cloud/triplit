@@ -5,7 +5,11 @@ import {
   ValueInterface,
   valueMismatchMessage,
 } from './value.js';
-import { InvalidTypeOptionsError, DBSerializationError } from '../errors.js';
+import {
+  InvalidTypeOptionsError,
+  DBSerializationError,
+  JSONValueParseError,
+} from '../errors.js';
 import { isDateTime } from '../utils/date.js';
 
 const DATE_OPERATORS = ['=', '!=', '<', '>', '<=', '>='] as const;
@@ -47,8 +51,7 @@ export function DateType<TypeOptions extends UserTypeOptions = {}>(
     // @ts-ignore
     convertJSONToJS(val) {
       if (options.nullable && val === null) return null;
-      if (typeof val !== 'string')
-        throw new Error('Invalid JSON value for date');
+      if (typeof val !== 'string') throw new JSONValueParseError('date', val);
       return new Date(val);
     },
     convertJSToJSON(val) {

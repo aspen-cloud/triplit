@@ -441,3 +441,25 @@ export class NotImplementedError extends TriplitError {
     this.status = STATUS_CODES['Bad Request'];
   }
 }
+
+export class JSONValueParseError extends TriplitError {
+  constructor(type: string, value: any, ...args: any[]) {
+    super(...args);
+    this.name = 'JSONValueParseError';
+    this.baseMessage = `Failed to parse a ${type} value from the provided JSON input: ${JSON.stringify(
+      value
+    )}`;
+    this.status = STATUS_CODES['Bad Request'];
+  }
+}
+
+export class JSToJSONValueParseError extends TriplitError {
+  constructor(type: string, value: any, ...args: any[]) {
+    super(...args);
+    this.name = 'JSToJSONValueParseError';
+    this.baseMessage = `Failed to tranform to JSON from the provided ${type} input: ${JSON.stringify(
+      value
+    )}`;
+    this.status = STATUS_CODES['Bad Request'];
+  }
+}

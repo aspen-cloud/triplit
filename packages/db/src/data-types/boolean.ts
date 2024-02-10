@@ -5,7 +5,11 @@ import {
   ValueInterface,
   valueMismatchMessage,
 } from './value.js';
-import { InvalidTypeOptionsError, DBSerializationError } from '../errors.js';
+import {
+  InvalidTypeOptionsError,
+  DBSerializationError,
+  JSONValueParseError,
+} from '../errors.js';
 
 const BOOLEAN_OPERATORS = ['=', '!='] as const;
 type BooleanOperators = typeof BOOLEAN_OPERATORS;
@@ -44,7 +48,7 @@ export function BooleanType<TypeOptions extends UserTypeOptions = {}>(
     convertJSONToJS(val: any) {
       if (options.nullable && val === null) return null;
       if (typeof val !== 'boolean')
-        throw new Error('Invalid JSON value for boolean');
+        throw new JSONValueParseError('boolean', val);
       return val;
     },
     convertJSToJSON(val: boolean) {

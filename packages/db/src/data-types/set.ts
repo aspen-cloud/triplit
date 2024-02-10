@@ -3,6 +3,8 @@ import {
   InvalidSetTypeError,
   NotImplementedError,
   DBSerializationError,
+  JSONValueParseError,
+  JSToJSONValueParseError,
 } from '../errors.js';
 import { TimestampType, ValueType } from './base.js';
 import { CollectionInterface } from './collection.js';
@@ -56,7 +58,8 @@ export function SetType<Items extends ValueType<any>>(
       }, {});
     },
     convertJSONToJS(val: any[]) {
-      if (!Array.isArray(val)) throw new Error('Invalid JSON value for set');
+      if (!Array.isArray(val))
+        throw new JSONValueParseError(`set<${this.items.type}>`, val);
       return new Set(val);
     },
     defaultInput() {
@@ -70,7 +73,8 @@ export function SetType<Items extends ValueType<any>>(
       );
     },
     convertJSToJSON(val) {
-      if (!(val instanceof Set)) throw new Error('Invalid JS value for set');
+      if (!(val instanceof Set))
+        throw new JSToJSONValueParseError(`set<${this.items.type}>`, val);
       return [...val.values()];
     },
     validateInput(val: any) {
