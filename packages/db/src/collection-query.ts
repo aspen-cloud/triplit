@@ -337,7 +337,7 @@ export async function fetch<
             ...subQuery.vars,
             // Ensure we pass in all keys from the entity (2nd param true)
             // Kind of a hack to get around issues with deleted data
-            ...timestampedObjectToPlainObject(entity as any, true),
+            ...extractSubqueryVarsFromEntity(entity, collectionSchema),
           },
           limit: 1,
         } as CollectionQuery<typeof schema, any>;
@@ -437,7 +437,7 @@ export async function fetch<
           const combinedVars = {
             ...query.vars,
             ...subquery.vars,
-            ...convertEntityToJS(entity, collectionSchema),
+            ...extractSubqueryVarsFromEntity(entity, collectionSchema),
           };
           let fullSubquery = {
             ...subquery,
@@ -877,7 +877,7 @@ function subscribeSingleEntity<
                   const combinedVars = {
                     ...query.vars,
                     ...subquery.vars,
-                    ...convertEntityToJS(entity, collectionSchema),
+                    ...extractSubqueryVarsFromEntity(entity, collectionSchema),
                   };
                   let fullSubquery = {
                     ...subquery,
@@ -1231,4 +1231,25 @@ export function subscribeTriples<
     schema,
     stateVector
   );
+}
+
+// Subquery variables should include attr: undefined if the entity does not have a value for a given attribute
+// This is because the subquery may depend on that variable key existing
+// This is worth refactoring, but for now this works
+function extractSubqueryVarsFromEntity(entity: any, collectionSchema: any) {
+  let obj: any = {};
+  if (collectionSchema) {
+    const emptyObj = Object.keys(collectionSchema.properties).reduce<any>(
+      (obj, k) => {
+        obj[k] = undefined;
+        return obj;
+      },
+      {}
+    );
+    obj = { ...emptyObj, ...convertEntityToJS(entity, collectionSchema) };
+  } else {
+    obj = { ...timestampedObjectToPlainObject(entity as any, true) };
+  }
+  delete obj['_collection'];
+  return obj;
 }
