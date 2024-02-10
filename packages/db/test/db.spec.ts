@@ -5181,7 +5181,7 @@ describe('state vector querying', () => {
  * This tests the power of the query engine to handle complex relational queries
  * This test focuses on the classic graph example of aviation routes
  */
-describe.todo('Graph-like queries', () => {
+describe('Graph-like queries', () => {
   const db = new DB();
   beforeAll(async () => {
     // Insert a bunch of airplane, airport, and flights mock data
@@ -5265,6 +5265,7 @@ describe.todo('Graph-like queries', () => {
   });
 
   it('can handle a deeply nested subquery', async () => {
+    // Find all plane models that have flown to 'San Francisco, CA' from non-CA airports
     const query = db
       .query('airplanes')
       .where([
@@ -5278,6 +5279,7 @@ describe.todo('Graph-like queries', () => {
                   .query('airports')
                   .where([
                     ['name', '=', '$origin'],
+                    ['location', 'nlike', '%, CA'],
                     {
                       exists: db
                         .query('airports')
@@ -5297,7 +5299,11 @@ describe.todo('Graph-like queries', () => {
       .build();
 
     const result = await db.fetch(query);
-    expect(result).toHaveLength(2);
+    expect(Array.from(result.keys())).toEqual([
+      'Airbus-A380',
+      'Boeing-737',
+      'Boeing-747',
+    ]);
   });
 });
 
