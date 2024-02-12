@@ -137,10 +137,11 @@ export function getSchemaFromPath(
 export type UpdateTypeFromModel<M extends Model<any> | undefined> =
   M extends Model<any>
     ? {
-        [k in keyof SelectModelFromModel<M>['properties']]: ExtractJSType<
-          M['properties'][k]
-        >;
-      }
+        [k in keyof SelectModelFromModel<M>['properties'] as Exclude<
+          k,
+          'id'
+        >]: ExtractJSType<M['properties'][k]>;
+      } & { readonly id: string }
     : any;
 
 // Used for entity reducer

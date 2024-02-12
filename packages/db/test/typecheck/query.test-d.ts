@@ -160,7 +160,6 @@ describe('schemaful', () => {
     expectEntityParamInTx
       .toHaveProperty('defaultUuid')
       .toEqualTypeOf<string | undefined>();
-
     expectEntityParam.not.toHaveProperty('subquery');
     expectEntityParamInTx.not.toHaveProperty('subquery');
   });
@@ -306,7 +305,8 @@ describe('schemaful', () => {
     expectEntityProxyParamInTx
       .toHaveProperty('defaultUuid')
       .toEqualTypeOf<string>();
-
+    expectEntityProxyParam.toMatchTypeOf<{ readonly id: string }>();
+    expectEntityProxyParamInTx.toMatchTypeOf<{ readonly id: string }>();
     expectEntityProxyParam.not.toHaveProperty('subquery');
   });
 

@@ -575,7 +575,13 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
     // Run updater (runs serialization of values)
     await updater(updateProxy);
     const changeTuples = changes.getTuples();
-
+    for (const [attr, value] of changeTuples) {
+      if (attr.slice(-1)[0] === 'id') {
+        throw new InvalidOperationError(
+          `Attempted to update the id of an entity in the ${collectionName} from ${entity.id} to ${value}. The 'id' attribute of an entity is immutable and cannot be updated.`
+        );
+      }
+    }
     // Create change tuples
     const updateValues: EAV[] = [];
     for (let tuple of changeTuples) {
