@@ -62,16 +62,20 @@ it('EntityPointer can overwrite child data', () => {
   });
 });
 
-// This is a weird special case
-it('EntityPointer will ignore deep undefined assignments', () => {
+it('EntityPointer can overwrite undefined', () => {
   const obj = {};
   const TS: Timestamp = [1, 'test'];
   EntityPointer.Set(obj, '/a/b', undefined, TS);
-  EntityPointer.Set(obj, '/a/b/c', undefined, TS);
+  EntityPointer.Set(obj, '/a/b/c', 2, TS);
   expect(obj).toEqual({
     a: [
       {
-        b: [undefined, TS],
+        b: [
+          {
+            c: [2, TS],
+          },
+          TS,
+        ],
       },
       undefined,
     ],

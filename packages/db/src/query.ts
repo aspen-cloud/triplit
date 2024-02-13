@@ -319,12 +319,15 @@ export namespace EntityPointer {
       ); // throw new ValuePointerRootSetError(value, pointer, [update, timestamp])
     let [owner, next, key] = [null as any, value, ''];
     for (const component of Format(pointer)) {
-      // This situation comes up with expirations and sets
-      // I think if we're at an undefined point in the object and the value is undefined, just drop it?
-      // Alternatively we can set as undefined
+      // This is contextual which I dont love, but if we are setting a tombstone for an already tombstoned value, just stop
       if (update === undefined && next === undefined) return;
 
       // If the next value is undefined, create it to continue traversing path
+      if (next === undefined) {
+        next = {};
+        // so we dont lose the reference to the owner/parent
+        owner[key][0] = next;
+      }
       if (next[component] === undefined) next[component] = [{}, undefined];
       owner = next;
       next = next[component][0];
