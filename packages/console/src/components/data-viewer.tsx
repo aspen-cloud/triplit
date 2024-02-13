@@ -101,13 +101,11 @@ async function deleteAttribute(
 }
 
 export function DataViewer({
-  collection,
   client,
   schema,
   projectId,
 }: {
   projectId: string;
-  collection: string;
   client: TriplitClient<any>;
   schema?: SchemaDefinition;
 }) {
@@ -131,7 +129,7 @@ export function DataViewer({
   const { results: selectedEntities } = useQuery(
     consoleClient,
     consoleClient.query('selections').where([
-      ['collectionName', '=', collection],
+      ['collectionName', '=', selectedCollection],
       ['projectId', '=', projectId],
     ])
   );
@@ -142,12 +140,15 @@ export function DataViewer({
   const { results: orderedAndFilteredResults } = useQuery(
     client,
     client
-      .query(collection)
+      .query(selectedCollection)
       .order(...order)
       .where(filters)
   );
 
-  const { results: allResults } = useQuery(client, client.query(collection));
+  const { results: allResults } = useQuery(
+    client,
+    client.query(selectedCollection)
+  );
   const sortedAndFilteredEntities = useMemo(
     () => Array.from(orderedAndFilteredResults ?? []),
     [orderedAndFilteredResults]
@@ -185,15 +186,15 @@ export function DataViewer({
 
   const toggleSelectAllEntities = useCallback(() => {
     allVisibleEntitiesAreSelected
-      ? onDeselectAllEntities(collection, projectId)
+      ? onDeselectAllEntities(selectedCollection, projectId)
       : onSelectAllEntities(
           sortedAndFilteredEntities.map(([id]) => id),
-          collection,
+          selectedCollection,
           projectId
         );
   }, [
     sortedAndFilteredEntities,
-    collection,
+    selectedCollection,
     projectId,
     allVisibleEntitiesAreSelected,
   ]);
@@ -213,7 +214,7 @@ export function DataViewer({
             {selectedEntities && selectedEntities.size > 0 && (
               <DeleteEntitiesDialog
                 entityIds={[...selectedEntities.keys()]}
-                collectionName={collection}
+                collectionName={selectedCollection}
                 client={client}
               />
             )}
@@ -231,7 +232,7 @@ export function DataViewer({
               checked={selectedEntities && selectedEntities.has(entityId)}
               onCheckedChange={(checked) => {
                 checked
-                  ? onSelectEntity(entityId, collection, projectId)
+                  ? onSelectEntity(entityId, selectedCollection, projectId)
                   : onDeselectEntity(entityId);
               }}
             />
@@ -239,7 +240,7 @@ export function DataViewer({
               attribute="id"
               value={row.getValue('id')}
               entityId={row.getValue('id')}
-              collection={collection}
+              collection={selectedCollection}
               client={client}
               selected={false}
               onSelectCell={() => {}}
@@ -251,7 +252,7 @@ export function DataViewer({
     }),
     [
       allVisibleEntitiesAreSelected,
-      collection,
+      selectedCollection,
       projectId,
       toggleSelectAllEntities,
       selectedEntities,
@@ -302,7 +303,7 @@ export function DataViewer({
                 selected={selectedCell === cellKey}
                 onSelectCell={() => setSelectedCell(cellKey)}
                 attribute={attr}
-                collection={collection}
+                collection={selectedCollection}
                 entityId={row.getValue('id')}
                 client={client}
                 value={row.getValue(attr)}
@@ -383,7 +384,7 @@ export function DataViewer({
           <SchemaAttributeSheet
             open={addOrUpdateAttributeFormOpen}
             onOpenChange={setAddOrUpdateAttributeFormOpen}
-            collectionName={collection}
+            collectionName={selectedCollection}
             client={client}
             collectionSchema={collectionSchema}
           />
@@ -394,7 +395,7 @@ export function DataViewer({
             client={client}
           />
           <DeleteAttributeDialog
-            collectionName={collection}
+            collectionName={selectedCollection}
             attributeName={selectedAttribute}
             open={deleteAttributeDialogIsOpen}
             onOpenChange={(open) => {
@@ -402,14 +403,18 @@ export function DataViewer({
               if (!open) setSelectedAttribute('');
             }}
             onSubmit={async () => {
-              await deleteAttribute(client, collection, selectedAttribute);
+              await deleteAttribute(
+                client,
+                selectedCollection,
+                selectedAttribute
+              );
               setDeleteAttributeDialogIsOpen(false);
             }}
           />
         </>
       )}
       <h3 className="px-4 mt-5 mb-1 text-2xl font-semibold tracking-tight flex flex-row gap-2">
-        {collection}
+        {selectedCollection}
         {schema && (
           <CollectionMenu
             onDelete={() => {
@@ -427,7 +432,7 @@ export function DataViewer({
           filters={filters}
           uniqueAttributes={uniqueAttributes}
           projectId={projectId}
-          collection={collection}
+          collection={selectedCollection}
           collectionSchema={collectionSchema}
           onSubmit={(filters) => {
             setUrlQueryState({ where: JSON.stringify(filters) });
@@ -435,7 +440,7 @@ export function DataViewer({
         />
         <OrderPopover
           uniqueAttributes={uniqueAttributes}
-          collection={collection}
+          collection={selectedCollection}
           collectionSchema={collectionSchema}
           order={order}
           onSubmit={(order) => {
@@ -448,7 +453,7 @@ export function DataViewer({
 
         <CreateEntityForm
           collectionDefinition={collectionSchema}
-          collection={collection}
+          collection={selectedCollection}
           inferredAttributes={Array.from(uniqueAttributes)}
           client={client}
         />

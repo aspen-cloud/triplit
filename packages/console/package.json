@@ -24,7 +24,7 @@
     "@ahooksjs/use-url-state": "^3.5.1",
     "@emotion/react": "^11.11.1",
     "@glideapps/glide-data-grid": "^5.2.1",
-    "@mantine/form": "^6.0.18",
+    "@mantine/form": "^7.5.2",
     "@mantine/hooks": "^6.0.17",
     "@phosphor-icons/react": "^2.0.10",
     "@tanstack/react-table": "^8.9.8",

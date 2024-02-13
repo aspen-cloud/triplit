@@ -178,200 +178,203 @@ export function CreateEntitySheet({
   }, [form.values.attributes, collectionDefinition, allAttributes]);
 
   useEffect(() => {
-    form.setValues(initializeNewEntityForm(collectionDefinition));
+    form.setInitialValues(initializeNewEntityForm(collectionDefinition));
+    form.reset();
+
     setCustomAttributes([]);
   }, [collection, collectionDefinition]);
-
-  const fields = useMemo(
-    () =>
-      form.values.attributes.map((item, index) => (
-        <div
-          key={item.key}
-          className={`flex w-full flex-row ${
-            collectionDefinition ? 'items-center' : 'items-start'
-          } gap-2`}
-        >
-          {!collectionDefinition && (
-            <>
-              <Combobox
-                placeholder="Add an attribute..."
-                className="w-[37.5%]"
-                data={unselectedAttributes.concat(
-                  item.fieldName ? [item.fieldName] : []
-                )}
-                onAddValue={(query) => {
-                  setCustomAttributes((prev) => [...prev, query]);
-                  return query;
-                }}
-                value={item.fieldName}
-                onChangeValue={(value) => {
-                  form.setFieldValue(`attributes.${index}.fieldName`, value);
-                }}
-              />
-              <Select
-                className="w-1/4"
-                data={['string', 'boolean', 'number']}
-                value={item.definition.type}
-                onValueChange={(value) => {
-                  form.setFieldValue(`attributes.${index}.definition`, {
-                    value,
-                  });
-                }}
-              />
-            </>
-          )}
-          <FormField
-            label={
-              collectionDefinition && (
-                <TypeLabel
-                  name={item.fieldName}
-                  type={item.definition.type}
-                  setItemsType={
-                    item.definition.type === 'set'
-                      ? item.definition.items.type
-                      : undefined
-                  }
-                />
-              )
-            }
-          >
-            {item.definition.type === 'string' && (
-              <Textarea
-                disabled={item.fieldValue === null}
-                value={item.fieldValue ?? ''}
-                onChange={(e) => {
-                  form.setFieldValue(
-                    `attributes.${index}.fieldValue`,
-                    e.target.value
-                  );
-                }}
-              />
-            )}
-            {item.definition.type === 'number' && (
-              <Input
-                type="number"
-                disabled={item.fieldValue === null}
-                {...form.getInputProps(`attributes.${index}.fieldValue`)}
-              />
-            )}
-            {item.definition.type === 'date' && (
-              <Input
-                type="datetime-local"
-                disabled={item.fieldValue === null}
-                {...form.getInputProps(`attributes.${index}.fieldValue`)}
-              />
-            )}
-            {item.definition.type === 'boolean' && (
-              <Select
-                disabled={item.fieldValue === null}
-                data={['true', 'false']}
-                value={item.fieldValue}
-                onValueChange={(value) => {
-                  form.setFieldValue(`attributes.${index}.fieldValue`, value);
-                }}
-              />
-            )}
-            {item.definition.type === 'set' && (
-              <SetInput
-                value={form.values.attributes[index].fieldValue}
-                onChange={(value) => {
-                  form.setFieldValue(`attributes.${index}.fieldValue`, value);
-                }}
-                renderItem={
-                  item.definition.items.type === 'date'
-                    ? (date: Date) => date.toISOString()
+  const fields =
+    // useMemo(
+    //   () =>
+    form.values.attributes.map((item, index) => (
+      <div
+        key={item.key}
+        className={`flex w-full flex-row ${
+          collectionDefinition ? 'items-center' : 'items-start'
+        } gap-2`}
+      >
+        {!collectionDefinition && (
+          <>
+            <Combobox
+              placeholder="Add an attribute..."
+              className="w-[37.5%]"
+              data={unselectedAttributes.concat(
+                item.fieldName ? [item.fieldName] : []
+              )}
+              onAddValue={(query) => {
+                setCustomAttributes((prev) => [...prev, query]);
+                return query;
+              }}
+              value={item.fieldName}
+              onChangeValue={(value) => {
+                form.setFieldValue(`attributes.${index}.fieldName`, value);
+              }}
+            />
+            <Select
+              className="w-1/4"
+              data={['string', 'boolean', 'number']}
+              value={item.definition.type}
+              onValueChange={(value) => {
+                form.setFieldValue(`attributes.${index}.definition`, {
+                  value,
+                });
+              }}
+            />
+          </>
+        )}
+        <FormField
+          label={
+            collectionDefinition && (
+              <TypeLabel
+                name={item.fieldName}
+                type={item.definition.type}
+                setItemsType={
+                  item.definition.type === 'set'
+                    ? item.definition.items.type
                     : undefined
                 }
-                parse={PARSE_FUNCS[item.definition.items.type]}
               />
-            )}
-            {item.definition.type === 'record' &&
-              Object.entries(item.definition.properties).map(
-                ([name, definition]) => (
-                  <div className="flex flex-row gap-2" key={name}>
-                    <div className="ml-10 w-1/4">
-                      <TypeLabel
-                        name={name}
-                        type={item.definition.properties[name].type}
-                      />
-                    </div>
-                    {definition.type === 'string' && (
-                      <Textarea
-                        key={name}
-                        disabled={item.fieldValue === null}
-                        {...form.getInputProps(
-                          `attributes.${index}.fieldValue.${name}`
-                        )}
-                      />
-                    )}
-                    {definition.type === 'number' && (
-                      <Input
-                        type="number"
-                        disabled={item.fieldValue === null}
-                        {...form.getInputProps(
-                          `attributes.${index}.fieldValue.${name}`
-                        )}
-                      />
-                    )}
-                    {definition.type === 'date' && (
-                      <Input
-                        type="datetime-local"
-                        disabled={item.fieldValue === null}
-                        {...form.getInputProps(
-                          `attributes.${index}.fieldValue.${name}`
-                        )}
-                      />
-                    )}
-
-                    {definition.type === 'boolean' && (
-                      <Select
-                        disabled={item.fieldValue === null}
-                        data={['true', 'false']}
-                        value={item.fieldValue[name]}
-                        onValueChange={(value) => {
-                          form.setFieldValue(
-                            `attributes.${index}.fieldValue.${name}`,
-                            value
-                          );
-                        }}
-                      />
-                    )}
-                  </div>
-                )
-              )}
-            {item?.definition?.options?.default?.func && (
-              <div className="text-muted-foreground">{`Default: ${item?.definition?.options?.default?.func}()`}</div>
-            )}
-          </FormField>
-          {(item.definition?.options?.nullable || !collectionDefinition) && (
-            <div className="flex flex-col gap-2 self-end items-center mb-[10px]">
-              <p className="text-sm mb-2">Null?</p>
-              <Checkbox
-                className="h-[20px] w-[20px]"
-                checked={item.fieldValue === null}
-                onCheckedChange={(checked) => {
-                  checked
-                    ? form.setFieldValue(`attributes.${index}.fieldValue`, null)
-                    : form.setFieldValue(`attributes.${index}.fieldValue`, '');
-                }}
-              />
-            </div>
-          )}
-          {!collectionDefinition && (
-            <CloseButton
-              onClick={() => form.removeListItem('attributes', index)}
+            )
+          }
+        >
+          {item.definition.type === 'string' && (
+            <Textarea
+              disabled={item.fieldValue === null}
+              value={item.fieldValue ?? ''}
+              onChange={(e) => {
+                form.setFieldValue(
+                  `attributes.${index}.fieldValue`,
+                  e.target.value
+                );
+              }}
             />
           )}
-        </div>
-      )),
-    [
-      form,
-      collectionDefinition,
-      inferredAttributes,
-      unselectedAttributes,
-      customAttributes,
-    ]
-  );
+          {item.definition.type === 'number' && (
+            <Input
+              type="number"
+              disabled={item.fieldValue === null}
+              {...form.getInputProps(`attributes.${index}.fieldValue`)}
+            />
+          )}
+          {item.definition.type === 'date' && (
+            <Input
+              type="datetime-local"
+              disabled={item.fieldValue === null}
+              {...form.getInputProps(`attributes.${index}.fieldValue`)}
+            />
+          )}
+          {item.definition.type === 'boolean' && (
+            <Select
+              disabled={item.fieldValue === null}
+              data={['true', 'false']}
+              value={item.fieldValue}
+              onValueChange={(value) => {
+                form.setFieldValue(`attributes.${index}.fieldValue`, value);
+              }}
+            />
+          )}
+          {item.definition.type === 'set' && (
+            <SetInput
+              value={form.values.attributes[index].fieldValue}
+              onChange={(value) => {
+                form.setFieldValue(`attributes.${index}.fieldValue`, value);
+              }}
+              renderItem={
+                item.definition.items.type === 'date'
+                  ? (date: Date) => date.toISOString()
+                  : undefined
+              }
+              parse={PARSE_FUNCS[item.definition.items.type]}
+            />
+          )}
+          {item.definition.type === 'record' &&
+            Object.entries(item.definition.properties).map(
+              ([name, definition]) => (
+                <div className="flex flex-row gap-2" key={name}>
+                  <div className="ml-10 w-1/4">
+                    <TypeLabel
+                      name={name}
+                      type={item.definition.properties[name].type}
+                    />
+                  </div>
+                  {definition.type === 'string' && (
+                    <Textarea
+                      key={name}
+                      disabled={item.fieldValue === null}
+                      {...form.getInputProps(
+                        `attributes.${index}.fieldValue.${name}`
+                      )}
+                    />
+                  )}
+                  {definition.type === 'number' && (
+                    <Input
+                      type="number"
+                      disabled={item.fieldValue === null}
+                      {...form.getInputProps(
+                        `attributes.${index}.fieldValue.${name}`
+                      )}
+                    />
+                  )}
+                  {definition.type === 'date' && (
+                    <Input
+                      type="datetime-local"
+                      disabled={item.fieldValue === null}
+                      {...form.getInputProps(
+                        `attributes.${index}.fieldValue.${name}`
+                      )}
+                    />
+                  )}
+
+                  {definition.type === 'boolean' && (
+                    <Select
+                      disabled={item.fieldValue === null}
+                      data={['true', 'false']}
+                      value={item.fieldValue[name]}
+                      onValueChange={(value) => {
+                        form.setFieldValue(
+                          `attributes.${index}.fieldValue.${name}`,
+                          value
+                        );
+                      }}
+                    />
+                  )}
+                </div>
+              )
+            )}
+          {item?.definition?.options?.default?.func && (
+            <div className="text-muted-foreground">{`Default: ${item?.definition?.options?.default?.func}()`}</div>
+          )}
+        </FormField>
+        {(item.definition?.options?.nullable || !collectionDefinition) && (
+          <div className="flex flex-col gap-2 self-end items-center mb-[10px]">
+            <p className="text-sm mb-2">Null?</p>
+            <Checkbox
+              className="h-[20px] w-[20px]"
+              checked={item.fieldValue === null}
+              onCheckedChange={(checked) => {
+                checked
+                  ? form.setFieldValue(`attributes.${index}.fieldValue`, null)
+                  : form.setFieldValue(`attributes.${index}.fieldValue`, '');
+              }}
+            />
+          </div>
+        )}
+        {!collectionDefinition && (
+          <CloseButton
+            onClick={() => form.removeListItem('attributes', index)}
+          />
+        )}
+      </div>
+    ));
+  //     ,
+  //   [
+  //     form,
+  //     collectionDefinition,
+  //     inferredAttributes,
+  //     unselectedAttributes,
+  //     customAttributes,
+  //   ]
+  // );
   return (
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>

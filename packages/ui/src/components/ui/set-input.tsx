@@ -69,7 +69,7 @@ export function SetInput(props: SetInputProps<any>) {
             try {
               const parsedItem = parse ? parse(draftItem) : draftItem;
               onAddItem && onAddItem(parsedItem);
-              onChange && onChange(value.add(parsedItem));
+              onChange && onChange(new Set(value).add(parsedItem));
               setDraftItem('');
             } catch (e) {
               if (e instanceof Error) setError(e.message);
