@@ -293,7 +293,7 @@ describe('Database API', () => {
     ).rejects.toThrowError(InvalidFilterError);
   });
 
-  it('supports filtering on one attribute with multiple operators', async () => {
+  it('supports filtering on one attribute with multiple operators (and() helper)', async () => {
     const results = await db.fetch(
       CollectionQueryBuilder('Rapper')
         .where([
@@ -302,6 +302,20 @@ describe('Database API', () => {
             ['rank', '>=', 2],
           ]),
         ])
+        .build()
+    );
+    const ranks = [...results.values()].map((r) => r.rank);
+    expect(Math.max(...ranks)).toBe(4);
+    expect(Math.min(...ranks)).toBe(2);
+    expect(results.size).toBe(3);
+  });
+
+  it('supports filtering on one attribute with multiple operators (additive)', async () => {
+    const results = await db.fetch(
+      CollectionQueryBuilder('Rapper')
+        .where([['rank', '<', 5]])
+        .where('rank', '>=', 2)
+        .where()
         .build()
     );
     const ranks = [...results.values()].map((r) => r.rank);
@@ -2525,6 +2539,28 @@ describe('ORDER & LIMIT & Pagination', () => {
   it('order by multiple properties', async () => {
     const descendingScoresResults = await db.fetch(
       db.query('TestScores').order(['score', 'ASC'], ['date', 'DESC']).build()
+    );
+    expect(descendingScoresResults.size).toBe(TEST_SCORES.length);
+    const areAllScoresDescending = Array.from(
+      descendingScoresResults.values()
+    ).every((result, i, arr) => {
+      if (i === 0) return true;
+      const previous = arr[i - 1];
+      const current = result;
+      const hasCorrectOrder =
+        previous.score < current.score ||
+        (previous.score === current.score && previous.date >= current.date);
+      return hasCorrectOrder;
+    });
+    expect(areAllScoresDescending).toBeTruthy();
+  });
+  it.only('order by multiple properties (additive)', async () => {
+    const descendingScoresResults = await db.fetch(
+      db
+        .query('TestScores')
+        .order(['score', 'ASC'])
+        .order('date', 'DESC')
+        .build()
     );
     expect(descendingScoresResults.size).toBe(TEST_SCORES.length);
     const areAllScoresDescending = Array.from(

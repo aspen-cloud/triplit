@@ -442,14 +442,15 @@ export const QUERY_INPUT_TRANSFORMERS = <
   CN extends CollectionNameFromModels<M>
 >() => ({
   where: (
-    _q: Query<M, CN>,
+    q: Query<M, CN>,
     ...args: FilterInput<ModelFromModels<M, CN>>
   ): QueryWhere<ModelFromModels<M, CN>> => {
+    let newWhere: QueryWhere<ModelFromModels<M, CN>> = [];
     if (typeof args[0] === 'string') {
       /**
        * E.g. where("id", "=", "123")
        */
-      return [args as FilterStatement<ModelFromModels<M, CN>>];
+      newWhere = [args as FilterStatement<ModelFromModels<M, CN>>];
     } else if (
       args.length === 1 &&
       args[0] instanceof Array &&
@@ -458,21 +459,23 @@ export const QUERY_INPUT_TRANSFORMERS = <
       /**
        *  E.g. where([["id", "=", "123"], ["name", "=", "foo"]])
        */
-      return args[0] as QueryWhere<ModelFromModels<M, CN>>;
+      newWhere = args[0] as QueryWhere<ModelFromModels<M, CN>>;
     } else if (args.every((arg) => typeof arg === 'object')) {
       /**
        * E.g. where(["id", "=", "123"], ["name", "=", "foo"]);
        */
-      return args as QueryWhere<ModelFromModels<M, CN>>;
+      newWhere = args as QueryWhere<ModelFromModels<M, CN>>;
     } else {
       throw new QueryClauseFormattingError('where', args);
     }
+    return [...(q.where ?? []), ...newWhere];
   },
   order: (
-    _q: Query<M, CN>,
+    q: Query<M, CN>,
     ...args: OrderInput<ModelFromModels<M, CN>>
   ): QueryOrder<ModelFromModels<M, CN>>[] | undefined => {
     if (!args[0]) return undefined;
+    let newOrder: QueryOrder<ModelFromModels<M, CN>>[] = [];
     /**
      * E.g. order("id", "ASC")
      */
@@ -480,26 +483,25 @@ export const QUERY_INPUT_TRANSFORMERS = <
       args.length === 2 &&
       (args as any[]).every((arg) => typeof arg === 'string')
     ) {
-      return [[...args] as QueryOrder<ModelFromModels<M, CN>>];
-    }
-    /**
-     * E.g. order(["id", "ASC"], ["name", "DESC"])
-     */
-    if (args.every((arg) => arg instanceof Array)) {
-      return args as NonNullable<Query<M, CN>['order']>;
-    }
-    /**
-     * E.g. order([["id", "ASC"], ["name", "DESC"]])
-     */
-    if (
+      newOrder = [[...args] as QueryOrder<ModelFromModels<M, CN>>];
+    } else if (args.every((arg) => arg instanceof Array)) {
+      /**
+       * E.g. order(["id", "ASC"], ["name", "DESC"])
+       */
+      newOrder = args as NonNullable<Query<M, CN>['order']>;
+    } else if (
+      /**
+       * E.g. order([["id", "ASC"], ["name", "DESC"]])
+       */
       args.length === 1 &&
       args[0] instanceof Array &&
       args[0].every((arg) => arg instanceof Array)
     ) {
-      return args[0] as NonNullable<Query<M, CN>['order']>;
+      newOrder = args[0] as NonNullable<Query<M, CN>['order']>;
+    } else {
+      throw new QueryClauseFormattingError('order', args);
     }
-
-    throw new QueryClauseFormattingError('order', args);
+    return [...(q.order ?? []), ...newOrder];
   },
   include<
     RName extends M extends Models<any, any>
