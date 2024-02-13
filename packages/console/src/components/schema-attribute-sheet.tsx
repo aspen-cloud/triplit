@@ -260,7 +260,7 @@ export function SchemaAttributeSheet(
         if (!open) setAttributeToUpdate(null);
       }}
     >
-      <SheetContent className="text-sm sm:max-w-[40%]">
+      <SheetContent className="text-sm sm:max-w-[40%] overflow-y-auto">
         <SheetHeader>
           <SheetTitle>
             {attributeToUpdate ? (

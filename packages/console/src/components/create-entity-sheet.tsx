@@ -384,7 +384,7 @@ export function CreateEntitySheet({
           Insert
         </Button>
       </SheetTrigger>
-      <SheetContent className="text-sm sm:max-w-[40%]">
+      <SheetContent className="text-sm sm:max-w-[40%] overflow-y-auto">
         <SheetHeader>
           <SheetTitle>Insert entity</SheetTitle>
           <SheetDescription>
