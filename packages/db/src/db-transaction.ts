@@ -869,11 +869,11 @@ export class ChangeTracker {
 
 export function createUpdateProxy<M extends Model<any> | undefined>(
   changeTracker: ChangeTracker,
-  entityObj: UpdateTypeFromModel<M>,
+  entityObj: Partial<UpdateTypeFromModel<M>>,
   schema?: M,
   prefix: string = ''
 ): UpdateTypeFromModel<M> {
-  return new Proxy(entityObj, {
+  return new Proxy(entityObj as UpdateTypeFromModel<M>, {
     set: (_target, prop, value) => {
       if (typeof prop === 'symbol') return true;
       const propPointer = [prefix, prop].join('/');
