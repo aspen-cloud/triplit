@@ -16,6 +16,7 @@ import {
   ClientFetchResultEntity,
   ClientQuery,
   ClientSchema,
+  RemoteClientQueryBuilder,
   prepareFetchByIdQuery,
   prepareFetchOneQuery,
 } from './utils/query.js';
@@ -181,6 +182,12 @@ export class RemoteClient<M extends ClientSchema | undefined> {
     });
     if (error) throw error;
     return data;
+  }
+
+  query<CN extends CollectionNameFromModels<M>>(
+    collectionName: CN
+  ): RemoteClientQueryBuilder<M, CN> {
+    return RemoteClientQueryBuilder<M, CN>(collectionName);
   }
 }
 

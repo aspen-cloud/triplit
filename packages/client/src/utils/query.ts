@@ -72,10 +72,38 @@ export function ClientQueryBuilder<
   });
 }
 
+export function RemoteClientQueryBuilder<
+  M extends ClientSchema | undefined,
+  CN extends CollectionNameFromModels<M>
+  // syncStatus doesn't apply for the remote client
+>(
+  collectionName: CN,
+  params?: Omit<CollectionQuery<M, CN>, 'collectionName'>
+): toBuilder<
+  CollectionQuery<M, CN>,
+  'collectionName',
+  QUERY_INPUT_TRANSFORMERS<M, CN>
+> {
+  const query: CollectionQuery<M, CN> = {
+    collectionName,
+    ...params,
+  };
+  const transformers = QUERY_INPUT_TRANSFORMERS<M, CN>();
+  return Builder(query, {
+    protectedFields: ['collectionName'],
+    inputTransformers: transformers,
+  });
+}
+
 export type ClientQueryBuilder<
   M extends ClientSchema | undefined,
   CN extends CollectionNameFromModels<M>
 > = ReturnType<typeof ClientQueryBuilder<M, CN>>;
+
+export type RemoteClientQueryBuilder<
+  M extends ClientSchema | undefined,
+  CN extends CollectionNameFromModels<M>
+> = ReturnType<typeof RemoteClientQueryBuilder<M, CN>>;
 
 export function prepareFetchOneQuery<CQ extends ClientQuery<any, any>>(
   query: CQ
