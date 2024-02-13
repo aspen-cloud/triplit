@@ -436,8 +436,13 @@ describe('Database API', () => {
   });
 
   it('update throws an error if you attempt to mutate the entity id', async () => {
+    // Schemaless
     const db = new DB();
-    await db.insert('Student', { name: 'John Doe', id: '1' });
+    await db.insert('Student', {
+      name: 'John Doe',
+      id: '1',
+      not: { id: 'not_id' },
+    });
     await expect(
       db.update('Student', '1', (entity) => {
         entity.id = '2';
@@ -448,24 +453,46 @@ describe('Database API', () => {
         delete entity.id;
       })
     ).rejects.toThrowError(InvalidOperationError);
+    await expect(
+      db.update('Student', '1', (entity) => {
+        entity.not.id = 'updated';
+      })
+    ).resolves.not.toThrow();
+
+    // Schemaful
     const schemaDb = new DB({
       schema: {
         collections: {
-          test: { schema: S.Schema({ id: S.Id() }) },
+          Student: {
+            schema: S.Schema({
+              id: S.Id(),
+              name: S.String(),
+              not: S.Record({ id: S.String() }),
+            }),
+          },
         },
       },
     });
-    await schemaDb.insert('test', { id: '1' });
+    await schemaDb.insert('Student', {
+      id: '1',
+      name: 'John Doe',
+      not: { id: 'not_id' },
+    });
     await expect(
-      schemaDb.update('test', '1', (entity) => {
+      schemaDb.update('Student', '1', (entity) => {
         entity.id = '2';
       })
     ).rejects.toThrowError(InvalidOperationError);
     await expect(
-      schemaDb.update('test', '1', (entity) => {
+      schemaDb.update('Student', '1', (entity) => {
         delete entity.id;
       })
     ).rejects.toThrowError(InvalidOperationError);
+    await expect(
+      schemaDb.update('Student', '1', (entity) => {
+        entity.not.id = 'updated';
+      })
+    ).resolves.not.toThrow();
   });
 
   it('checks the schema has proper fields on an insert', async () => {
