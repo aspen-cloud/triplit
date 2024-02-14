@@ -890,14 +890,25 @@ export function createUpdateProxy<M extends Model<any> | undefined>(
         throw new UnrecognizedPropertyInUpdateError(propPointer, value);
       }
       if (propSchema.type === 'set') {
+        if (value === null && propSchema.options.nullable) {
+          changeTracker.set(propPointer, null);
+          return true;
+        }
         if (!Array.isArray(value) && !(value instanceof Set)) {
           throw new DBSerializationError(
             'Set',
             `Cannot assign a non-array or non-set value to a set.`
           );
         }
+        const existingVal = changeTracker.get(propPointer);
         const setProxy = createSetProxy(changeTracker, propPointer, propSchema);
-        setProxy.clear();
+
+        if (existingVal !== null) {
+          setProxy.clear();
+        } else {
+          // Set object landmark if empty set or previously null
+          changeTracker.set(propPointer, new Set());
+        }
         for (const v of value) {
           setProxy.add(v);
         }
@@ -926,7 +937,9 @@ export function createUpdateProxy<M extends Model<any> | undefined>(
       if (typeof prop === 'symbol') return undefined;
       const parentPropPointer = [prefix, prop].join('/');
       const currentValue = changeTracker.get(parentPropPointer);
-
+      if (currentValue === null) {
+        return null;
+      }
       const propSchema =
         schema &&
         getSchemaFromPath(schema, parentPropPointer.slice(1).split('/'));

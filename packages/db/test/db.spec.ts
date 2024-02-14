@@ -1115,6 +1115,98 @@ describe('Set operations', () => {
       },
     ]);
   });
+  describe('nullable sets', () => {
+    it('can define nullable sets in schema', async () => {
+      const schema = {
+        collections: {
+          test: {
+            schema: S.Schema({
+              id: S.Id(),
+              name: S.String(),
+              friends: S.Set(S.String(), { nullable: true }),
+            }),
+          },
+        },
+      };
+      const db = new DB({ schema });
+      await db.insert('test', {
+        id: '1',
+        name: 'Alice',
+        friends: new Set(['Bob', 'Charlie']),
+      });
+      await db.insert('test', {
+        id: '2',
+        name: 'Bob',
+        friends: null,
+      });
+      await db.insert('test', {
+        id: '3',
+        name: 'Charlie',
+        friends: new Set(),
+      });
+      await db.insert('test', {
+        id: '4',
+        name: 'Diane',
+        friends: new Set(['Ella']),
+      });
+
+      const result = await db.fetchById('test', '2');
+      expect(result!.friends).toBeNull();
+      const result2 = await db.fetchById('test', '3');
+      expect(result2!.friends).toBeInstanceOf(Set);
+      expect([...result2!.friends!.values()]).toEqual([]);
+    });
+
+    it('can update a null set to a non-null set', async () => {
+      const schema = {
+        collections: {
+          test: {
+            schema: S.Schema({
+              id: S.Id(),
+              name: S.String(),
+              friends: S.Set(S.String(), { nullable: true }),
+            }),
+          },
+        },
+      };
+      const db = new DB({ schema });
+      await db.insert('test', {
+        id: '1',
+        name: 'Alice',
+        friends: null,
+      });
+      await db.update('test', '1', async (entity) => {
+        entity.friends = new Set(['Bob', 'Charlie']);
+      });
+      const result = await db.fetchById('test', '1');
+      expect(result!.friends).toBeInstanceOf(Set);
+      expect([...result!.friends!.values()]).toEqual(['Bob', 'Charlie']);
+    });
+    it('can update update a nullable set to null', async () => {
+      const schema = {
+        collections: {
+          test: {
+            schema: S.Schema({
+              id: S.Id(),
+              name: S.String(),
+              friends: S.Set(S.String(), { nullable: true }),
+            }),
+          },
+        },
+      };
+      const db = new DB({ schema });
+      await db.insert('test', {
+        id: '1',
+        name: 'Alice',
+        friends: new Set(['Bob', 'Charlie']),
+      });
+      await db.update('test', '1', async (entity) => {
+        entity.friends = null;
+      });
+      const result = await db.fetchById('test', '1');
+      expect(result!.friends).toBeNull();
+    });
+  });
 });
 
 describe('record operations', () => {
@@ -2554,7 +2646,7 @@ describe('ORDER & LIMIT & Pagination', () => {
     });
     expect(areAllScoresDescending).toBeTruthy();
   });
-  it.only('order by multiple properties (additive)', async () => {
+  it('order by multiple properties (additive)', async () => {
     const descendingScoresResults = await db.fetch(
       db
         .query('TestScores')

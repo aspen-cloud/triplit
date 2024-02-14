@@ -33,6 +33,7 @@ export type RecordAttributeDefinition<
 export type CollectionAttributeDefinition = {
   type: CollectionTypeKeys;
   items: ValueAttributeDefinition;
+  options: UserTypeOptions;
 };
 export type QueryAttributeDefinition = {
   type: 'query';

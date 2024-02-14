@@ -1,5 +1,5 @@
 import { Operator, ValueType } from './base.js';
-import { CollectionTypeKeys } from './serialization.js';
+import { CollectionTypeKeys, UserTypeOptions } from './serialization.js';
 import { TypeInterface } from './type.js';
 
 export type CollectionInterface<
@@ -10,4 +10,5 @@ export type CollectionInterface<
   Operators extends readonly Operator[] = readonly Operator[]
 > = TypeInterface<TypeId, JSType, JsonType, Operators> & {
   readonly items: ValueType<any>;
+  readonly options: UserTypeOptions;
 };

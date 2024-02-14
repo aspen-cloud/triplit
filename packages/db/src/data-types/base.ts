@@ -94,7 +94,15 @@ export function typeFromJSON(serializedType?: AttributeDefinition): DataType {
     case 'date':
       return DateType(serializedType.options);
     case 'set':
-      return SetType(typeFromJSON(serializedType.items));
+      console.log(
+        'reconstructing set',
+        serializedType.items,
+        serializedType.options
+      );
+      return SetType(
+        typeFromJSON(serializedType.items),
+        serializedType.options
+      );
     case 'query':
       return QueryType(serializedType.query, serializedType.cardinality);
     case 'record':
