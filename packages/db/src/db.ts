@@ -135,7 +135,7 @@ export interface DBConfig<M extends Models<any, any> | undefined> {
 }
 
 export const DEFAULT_STORE_KEY = 'default';
-const QUERY_CACHE_ENABLED = true;
+const QUERY_CACHE_ENABLED = false;
 
 export type CollectionFromModels<
   M extends Models<any, any> | undefined,
