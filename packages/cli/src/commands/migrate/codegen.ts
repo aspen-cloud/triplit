@@ -155,7 +155,10 @@ function schemaItemToString(schemaItem: AttributeDefinition): string {
     return `S.Number(${valueOptionsToString(schemaItem.options)})`;
   if (type === 'date')
     return `S.Date(${valueOptionsToString(schemaItem.options)})`;
-  if (type === 'set') return `S.Set(${schemaItemToString(schemaItem.items)})`;
+  if (type === 'set')
+    return `S.Set(${schemaItemToString(
+      schemaItem.items
+    )}, ${valueOptionsToString(schemaItem.options)})`;
   if (type === 'record')
     return `S.Record({${Object.entries(schemaItem.properties)
       .map(([key, value]) => `'${key}': ${schemaItemToString(value as any)}`)
