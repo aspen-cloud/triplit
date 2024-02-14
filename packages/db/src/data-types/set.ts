@@ -133,7 +133,7 @@ class SetUpdateProxy<T> {
   constructor(
     public changeTracker: ChangeTracker,
     private prefix: string,
-    public schema: SetType<ValueType<any>>
+    public schema: SetType<ValueType<any>, any>
   ) {}
   add(value: T) {
     const serializedValue = this.schema.items.convertInputToDBValue(
@@ -183,7 +183,7 @@ function getSetFromChangeTracker(
 export function createSetProxy<T>(
   changeTracker: ChangeTracker,
   propPointer: string,
-  schema: SetType<ValueType<any>>
+  schema: SetType<ValueType<any>, any>
 ): Set<T> {
   let set;
   if (schema.options.nullable && changeTracker.get(propPointer) === null) {
