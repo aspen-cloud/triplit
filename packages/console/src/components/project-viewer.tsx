@@ -76,7 +76,11 @@ export function ProjectViewer({
             variant={selectedCollection === collection ? 'default' : 'ghost'}
             className={`truncate flex h-auto px-2 py-1 flex-row items-center gap-2 justify-start`}
           >
-            <GridFour weight="light" className="shrink-0" size={24} />
+            <GridFour
+              weight="light"
+              className="shrink-0 hidden md:inline-block"
+              size={24}
+            />
             <span className="text-xs md:text-sm truncate">{`${collection}`}</span>
           </Button>
         ))}

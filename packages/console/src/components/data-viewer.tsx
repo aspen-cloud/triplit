@@ -243,6 +243,7 @@ export function DataViewer({
               collection={selectedCollection}
               client={client}
               selected={false}
+              editable={false}
               onSelectCell={() => {}}
             />
           </div>

@@ -138,10 +138,6 @@ export function SchemaAttributeSheet(
     if (attributeToUpdate) {
       setAttributeName(attributeToUpdate.name);
       setAttributeBaseType(attributeToUpdate.type);
-      if (attributeToUpdate.type === 'set') {
-        setSetType(attributeToUpdate.items.type);
-        return;
-      }
       if (attributeToUpdate.type === 'record') {
         setRecordKeyTypes(
           Object.fromEntries(
@@ -154,6 +150,12 @@ export function SchemaAttributeSheet(
         return;
       }
       setNullable(attributeToUpdate?.options?.nullable ?? false);
+
+      if (attributeToUpdate.type === 'set') {
+        setSetType(attributeToUpdate.items.type);
+        return;
+      }
+
       if (attributeToUpdate?.options?.default === undefined) {
         setHasDefault(false);
         setDefaultType('Value');
@@ -178,6 +180,7 @@ export function SchemaAttributeSheet(
       return {
         ...baseAttribute,
         items: { type: setType },
+        options: { nullable },
       } as CollectionAttributeDefinition;
     }
     if (attributeBaseType === 'record') {
@@ -388,82 +391,84 @@ export function SchemaAttributeSheet(
               </div>
             </div>
           </div>
-          {attributeBaseType !== 'set' && attributeBaseType !== 'record' && (
+          {attributeBaseType !== 'record' && (
             <>
               <hr className="col-span-full mt-10 mb-5" />
               <div className="font-bold">Options</div>
               <div className="flex flex-col gap-5 col-span-2">
-                <div className="flex flex-col gap-3">
-                  <div className="flex flex-row items-center gap-3">
-                    <Checkbox
-                      className="w-5 h-5"
-                      checked={hasDefault}
-                      onCheckedChange={setHasDefault}
-                    />
-                    <div className="flex flex-row justify-between items-center w-full">
-                      <Label>Default value</Label>
-                      <div className="text-muted-foreground">Optional</div>
+                {attributeBaseType !== 'set' && (
+                  <div className="flex flex-col gap-3">
+                    <div className="flex flex-row items-center gap-3">
+                      <Checkbox
+                        className="w-5 h-5"
+                        checked={hasDefault}
+                        onCheckedChange={setHasDefault}
+                      />
+                      <div className="flex flex-row justify-between items-center w-full">
+                        <Label>Default value</Label>
+                        <div className="text-muted-foreground">Optional</div>
+                      </div>
                     </div>
+                    {hasDefault && (
+                      <>
+                        <div className="flex flex-row gap-2">
+                          <Select
+                            value={defaultType}
+                            onValueChange={setDefaultType}
+                            data={getDefaultOptionsFromType(attributeBaseType)}
+                          />
+                          {defaultType === 'Value' &&
+                            attributeBaseType === 'string' && (
+                              <Input
+                                type="text"
+                                value={defaultValue}
+                                onChange={(e) => {
+                                  setDefaultValue(e.target.value);
+                                }}
+                              />
+                            )}
+                          {defaultType === 'Value' &&
+                            attributeBaseType === 'boolean' && (
+                              <Select
+                                data={['true', 'false']}
+                                placeholder='e.g. "Hello", 9, null'
+                                value={String(defaultValue)}
+                                onValueChange={(value) => {
+                                  setDefaultValue(value === 'false');
+                                }}
+                              />
+                            )}
+                          {defaultType === 'Value' &&
+                            attributeBaseType === 'number' && (
+                              <Input
+                                type="number"
+                                value={String(defaultValue)}
+                                onChange={(e) => {
+                                  setDefaultValue(e.target.valueAsNumber);
+                                }}
+                              />
+                            )}
+                          {defaultType === 'Value' &&
+                            attributeBaseType === 'date' && (
+                              <Input
+                                type="datetime-local"
+                                value={defaultValue}
+                                onChange={(e) => {
+                                  setDefaultValue(e.target.value);
+                                }}
+                              />
+                            )}
+                        </div>
+                        <div className="text-muted-foreground">
+                          A default value can either be a literal value e.g.{' '}
+                          <Code>"Hello", 9, null</Code> or a Triplit-provided
+                          function. If left empty, the attribute will be
+                          undefined by default.
+                        </div>
+                      </>
+                    )}
                   </div>
-                  {hasDefault && (
-                    <>
-                      <div className="flex flex-row gap-2">
-                        <Select
-                          value={defaultType}
-                          onValueChange={setDefaultType}
-                          data={getDefaultOptionsFromType(attributeBaseType)}
-                        />
-                        {defaultType === 'Value' &&
-                          attributeBaseType === 'string' && (
-                            <Input
-                              type="text"
-                              value={defaultValue}
-                              onChange={(e) => {
-                                setDefaultValue(e.target.value);
-                              }}
-                            />
-                          )}
-                        {defaultType === 'Value' &&
-                          attributeBaseType === 'boolean' && (
-                            <Select
-                              data={['true', 'false']}
-                              placeholder='e.g. "Hello", 9, null'
-                              value={String(defaultValue)}
-                              onValueChange={(value) => {
-                                setDefaultValue(value === 'false');
-                              }}
-                            />
-                          )}
-                        {defaultType === 'Value' &&
-                          attributeBaseType === 'number' && (
-                            <Input
-                              type="number"
-                              value={String(defaultValue)}
-                              onChange={(e) => {
-                                setDefaultValue(e.target.valueAsNumber);
-                              }}
-                            />
-                          )}
-                        {defaultType === 'Value' &&
-                          attributeBaseType === 'date' && (
-                            <Input
-                              type="datetime-local"
-                              value={defaultValue}
-                              onChange={(e) => {
-                                setDefaultValue(e.target.value);
-                              }}
-                            />
-                          )}
-                      </div>
-                      <div className="text-muted-foreground">
-                        A default value can either be a literal value e.g.{' '}
-                        <Code>"Hello", 9, null</Code> or a Triplit-provided
-                        function. If left empty, the attribute will be undefined
-                        by default.
-                      </div>
-                    </>
-                  )}
-                </div>
+                )}
                 <div className="flex flex-row items-center gap-3">
                   <Checkbox
                     className="w-5 h-5"

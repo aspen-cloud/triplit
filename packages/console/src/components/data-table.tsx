@@ -60,13 +60,18 @@ async function updateTriplitSet(
   collection: string,
   entityId: string,
   value: TriplitDataTypes,
-  action: 'add' | 'delete'
+  action: 'add' | 'delete' | 'null'
 ) {
   try {
     await client.update(collection, entityId, async (originalEntity) => {
-      action === 'add'
-        ? originalEntity[attribute].add(value)
-        : originalEntity[attribute].delete(value);
+      if (action === 'null') originalEntity[attribute] = null;
+      else if (action === 'add') {
+        if (originalEntity[attribute] === null) {
+          originalEntity[attribute] = new Set([value]);
+        } else {
+          originalEntity[attribute].add(value);
+        }
+      } else if (action === 'delete') originalEntity[attribute].delete(value);
     });
   } catch (e) {
     console.error(e);
@@ -120,7 +125,7 @@ function SetCellContents({
   limit = 3,
   className,
 }: {
-  triplitSet: Set<any>;
+  triplitSet: Set<any> | null;
   definition: CollectionAttributeDefinition;
   limit?: number;
   className?: string;
@@ -251,6 +256,7 @@ type TriplitDataCellProps = {
   value: TriplitDataTypes;
   attributeDef?: AttributeDefinition;
   onSelectCell: () => void;
+  editable?: boolean;
 };
 
 export function DataCell({
@@ -262,6 +268,7 @@ export function DataCell({
   selected = false,
   client,
   collection,
+  editable = true,
 }: TriplitDataCellProps) {
   const [isEditing, setIsEditing] = useState(false);
   useEffect(() => {
@@ -274,6 +281,7 @@ export function DataCell({
           onSelectCell();
           selected && setIsEditing(!isEditing);
         }}
+        disabled={!editable}
         // setting height manually until we can figure out how to get these to fill the row
         className={`text-left px-3 py-2 border truncate w-full h-[38px] ${
           selected ? 'border-blue-600' : 'border-transparent'
@@ -341,27 +349,41 @@ export function DataCell({
 }
 
 type SetCellEditorProps = {
-  onChangeSet(value: string, action: 'add' | 'delete'): void;
+  onChangeSet(value: string | null, action: 'add' | 'delete' | 'null'): void;
   set: Set<string> | undefined;
   definition: CollectionAttributeDefinition;
 };
 
 function SetCellEditor(props: SetCellEditorProps) {
   const { set, onChangeSet, definition } = props;
+  const nullable = definition.options?.nullable;
   return (
-    <SetInput
-      value={set}
-      onAddItem={(value) => {
-        onChangeSet(value, 'add');
-      }}
-      onRemoveItem={(value) => {
-        onChangeSet(value, 'delete');
-      }}
-      parse={PARSE_FUNCS[definition.items.type]}
-      renderItem={(value) => (
-        <CellValue value={value} definition={definition.items} />
+    <div className="flex flex-col p-1 gap-1 items-start">
+      <SetInput
+        value={set}
+        onAddItem={(value) => {
+          onChangeSet(value, 'add');
+        }}
+        onRemoveItem={(value) => {
+          onChangeSet(value, 'delete');
+        }}
+        parse={PARSE_FUNCS[definition.items.type]}
+        renderItem={(value) => (
+          <CellValue value={value} definition={definition.items} />
+        )}
+      />
+      {nullable && (
+        <Button
+          className="text-xs h-auto py-1 px-2 justify-self-start"
+          variant={'ghost'}
+          onClick={(e) => {
+            onChangeSet(null, 'null');
+          }}
+        >
+          Set to <Code className="text-xs ml-1">null</Code>
+        </Button>
       )}
-    />
+    </div>
   );
 }
 
