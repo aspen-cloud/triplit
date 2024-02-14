@@ -39,7 +39,7 @@ export type ValueType<TO extends UserTypeOptions> =
   | DateType<TO>;
 export type DataType =
   | ValueType<any>
-  | SetType<ValueType<any>>
+  | SetType<ValueType<any>, any>
   | RecordType<{ [k: string]: DataType }>
   | QueryType<any, any>;
 

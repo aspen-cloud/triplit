@@ -16,18 +16,18 @@ import {
 } from './serialization.js';
 import { ExtractJSType } from './type.js';
 import { ChangeTracker } from '../db-transaction.js';
+import { TypeWithOptions } from './value.js';
+import { StringType } from './string.js';
 
 const SET_OPERATORS = ['=', '!='] as const;
 type SetOperators = typeof SET_OPERATORS;
 
 export type SetType<
   Items extends ValueType<any>,
-  TypeOptions extends UserTypeOptions = {}
+  TypeOptions extends UserTypeOptions = { nullable: false }
 > = CollectionInterface<
   'set',
-  TypeOptions['nullable'] extends true
-    ? Set<ExtractJSType<Items>> | null
-    : Set<ExtractJSType<Items>>,
+  TypeWithOptions<Set<ExtractJSType<Items>>, TypeOptions>,
   Record<string, boolean>,
   Record<string, [boolean, TimestampType]>, // TODO: should be based on the type of the key
   SetOperators

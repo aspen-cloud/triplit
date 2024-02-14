@@ -61,6 +61,7 @@ describe('schemaful', () => {
             // set type
             setString: S.Set(S.String()),
             setNumber: S.Set(S.Number()),
+            nullableSet: S.Set(S.String(), { nullable: true }),
             // record type
             record: S.Record({
               attr1: S.String(),
@@ -77,6 +78,10 @@ describe('schemaful', () => {
             defaultUuid: S.String({ default: S.Default.uuid() }),
             // subqueries
             subquery: S.Query({ collectionName: 'test2' as const, where: [] }),
+            // relations
+            relationOne: S.RelationOne('test', { where: [] }),
+            relationMany: S.RelationMany('test', { where: [] }),
+            relationById: S.RelationById('test', 'test-id'),
           }),
         },
       },

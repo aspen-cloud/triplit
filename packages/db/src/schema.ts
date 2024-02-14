@@ -160,7 +160,7 @@ type BooleanNot<T extends boolean> = T extends true ? false : true;
 type DataTypeHasNoDefault<T extends DataType> = T extends DataType
   ? T extends ValueType<infer TypeOptions>
     ? IsUnknownOrUndefined<TypeOptions['default']>
-    : false // sets and records always have defaults (might want to refactor based on return type of default())
+    : true // Sets (CollectionTypes) currently do NOT have defaults
   : never;
 
 type DataTypeHasDefault<T extends DataType> = BooleanNot<
