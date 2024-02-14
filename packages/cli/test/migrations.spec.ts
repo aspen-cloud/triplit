@@ -25,6 +25,8 @@ it('codegen can generate a schema from migrations', async () => {
         date: S.Date(),
         // set type
         set: S.Set(S.String()),
+        nullableSet: S.Set(S.String(), { nullable: true }),
+        notNullableSet: S.Set(S.String(), { nullable: false }),
         // record type
         record: S.Record({
           attr1: S.String(),

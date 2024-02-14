@@ -158,7 +158,7 @@ function schemaItemToString(schemaItem: AttributeDefinition): string {
   if (type === 'set')
     return `S.Set(${schemaItemToString(
       schemaItem.items
-    )}, ${valueOptionsToString(schemaItem.options)})`;
+    )},${valueOptionsToString(schemaItem.options)})`;
   if (type === 'record')
     return `S.Record({${Object.entries(schemaItem.properties)
       .map(([key, value]) => `'${key}': ${schemaItemToString(value as any)}`)
