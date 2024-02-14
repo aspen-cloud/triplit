@@ -9,6 +9,7 @@ import {
 } from './session.js';
 import type { ServerResponse as ServerResponseType } from './session.js';
 import { isTriplitError } from './utils.js';
+import { Logger, NullLogger } from './logging.js';
 
 /**
  * Represents a Triplit server for a specific tenant.
@@ -16,7 +17,7 @@ import { isTriplitError } from './utils.js';
 export class Server {
   private connections: Map<string, Connection> = new Map();
 
-  constructor(public db: TriplitDB<any>) {}
+  constructor(public db: TriplitDB<any>, public logger: Logger = NullLogger) {}
 
   createSession(token: ParsedToken) {
     return new Session(this, token);
@@ -42,53 +43,80 @@ export class Server {
     maybeParams: any,
     token: ParsedToken
   ): Promise<ServerResponseType> {
+    const params: any = maybeParams || {};
+    let resp: ServerResponseType;
     try {
       if (!isValidRoute(route)) return routeNotFoundResponse(route);
-      const params: any = maybeParams || {};
+      this.logger.log('Handling request', { route, params, token });
       const session = this.createSession(token);
       const firstSegment = route[0];
       switch (firstSegment) {
         case 'queryTriples':
-          return await session.queryTriples(params);
+          resp = await session.queryTriples(params);
+          break;
         case 'clear':
-          return await session.clearDB(params);
+          resp = await session.clearDB(params);
+          break;
+
         case 'migration': {
-          if (route[1] === 'status') return await session.getMigrationStatus();
-          if (route[1] === 'apply') return await session.applyMigration(params);
+          if (route[1] === 'status') {
+            resp = await session.getMigrationStatus();
+            break;
+          }
+          if (route[1] === 'apply') {
+            resp = await session.applyMigration(params);
+            break;
+          }
         }
         case 'stats':
-          return await session.getCollectionStats();
+          resp = await session.getCollectionStats();
+          break;
         case 'fetch': {
           const { query } = params;
-          return await session.fetch(query);
+          resp = await session.fetch(query);
+          break;
         }
         case 'insert': {
           const { collectionName, entity } = params;
-          return await session.insert(collectionName, entity);
+          resp = await session.insert(collectionName, entity);
+          break;
         }
         case 'bulk-insert': {
-          return await session.bulkInsert(params);
+          resp = await session.bulkInsert(params);
+          break;
         }
         case 'update': {
           const { collectionName, entityId, patches } = params;
-          return await session.update(collectionName, entityId, patches);
+          resp = await session.update(collectionName, entityId, patches);
+          break;
         }
         case 'delete': {
           const { collectionName, entityId } = params;
-          return await session.delete(collectionName, entityId);
+          resp = await session.delete(collectionName, entityId);
+          break;
         }
         case 'schema': {
-          return await session.getSchema(params);
+          resp = await session.getSchema(params);
+          break;
         }
         default:
-          return routeNotFoundResponse(route);
+          resp = routeNotFoundResponse(route);
+          break;
       }
     } catch (e: any) {
       const error = isTriplitError(e)
         ? e
         : new TriplitError('An unknown error occured');
-      return ServerResponse(error.status, error.toJSON());
+      this.logger.error('Error handling request', {
+        route,
+        params,
+        token,
+        error,
+      });
+      resp = ServerResponse(error.status, error.toJSON());
     }
+    this.logger.log('Sending response', resp);
+    return resp;
   }
 }
 
