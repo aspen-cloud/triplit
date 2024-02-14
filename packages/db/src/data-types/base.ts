@@ -94,11 +94,6 @@ export function typeFromJSON(serializedType?: AttributeDefinition): DataType {
     case 'date':
       return DateType(serializedType.options);
     case 'set':
-      console.log(
-        'reconstructing set',
-        serializedType.items,
-        serializedType.options
-      );
       return SetType(
         typeFromJSON(serializedType.items),
         serializedType.options
