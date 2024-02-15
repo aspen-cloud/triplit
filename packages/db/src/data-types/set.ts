@@ -17,14 +17,13 @@ import {
 import { ExtractJSType } from './type.js';
 import { ChangeTracker } from '../db-transaction.js';
 import { TypeWithOptions } from './value.js';
-import { StringType } from './string.js';
 
 const SET_OPERATORS = ['=', '!='] as const;
 type SetOperators = typeof SET_OPERATORS;
 
 export type SetType<
   Items extends ValueType<any>,
-  TypeOptions extends UserTypeOptions = { nullable: false }
+  TypeOptions extends UserTypeOptions = {}
 > = CollectionInterface<
   'set',
   TypeWithOptions<Set<ExtractJSType<Items>>, TypeOptions>,
