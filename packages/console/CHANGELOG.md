@@ -1,5 +1,22 @@
 # @triplit/console
 
+## 0.3.24
+
+### Patch Changes
+
+- 9651552: add support for nullable sets
+- ed2d2f7: Add overflow styles to create sheets and fixup entity form bugs
+- Updated dependencies [9651552]
+- Updated dependencies [43626b6]
+- Updated dependencies [9a7fe03]
+- Updated dependencies [5ea23b8]
+- Updated dependencies [e0334d1]
+- Updated dependencies [480f8eb]
+  - @triplit/db@0.3.18
+  - @triplit/server-core@0.3.21
+  - @triplit/client@0.3.21
+  - @triplit/react@0.3.21
+
 ## 0.3.23
 
 ### Patch Changes

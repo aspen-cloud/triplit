@@ -1,5 +1,24 @@
 # @triplit/cli
 
+## 0.3.26
+
+### Patch Changes
+
+- 270ba6a: Add support for nullable sets in codegen
+- 04a22c8: Apply defaults to flags
+- Updated dependencies [9651552]
+- Updated dependencies [43626b6]
+- Updated dependencies [9a7fe03]
+- Updated dependencies [5ea23b8]
+- Updated dependencies [e0334d1]
+- Updated dependencies [480f8eb]
+- Updated dependencies [ed2d2f7]
+  - @triplit/console@0.3.24
+  - @triplit/db@0.3.18
+  - @triplit/server-core@0.3.21
+  - @triplit/client@0.3.21
+  - @triplit/server@0.3.21
+
 ## 0.3.25
 
 ### Patch Changes
