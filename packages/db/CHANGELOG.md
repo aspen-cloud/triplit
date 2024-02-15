@@ -1,5 +1,14 @@
 # @triplit/db
 
+## 0.3.18
+
+### Patch Changes
+
+- 9651552: add support for nullable sets
+- 9a7fe03: add support for additive query filters and order statements in the query builder api
+- 5ea23b8: ensure object assignments are agnostic to order
+- 480f8eb: Add error and ts preventing updates to an entity id
+
 ## 0.3.17
 
 ### Patch Changes

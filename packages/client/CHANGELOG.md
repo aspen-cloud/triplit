@@ -1,5 +1,16 @@
 # @triplit/client
 
+## 0.3.21
+
+### Patch Changes
+
+- e0334d1: Add query builder to RemoteClient
+- Updated dependencies [9651552]
+- Updated dependencies [9a7fe03]
+- Updated dependencies [5ea23b8]
+- Updated dependencies [480f8eb]
+  - @triplit/db@0.3.18
+
 ## 0.3.20
 
 ### Patch Changes

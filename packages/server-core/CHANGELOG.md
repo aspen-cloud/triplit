@@ -1,5 +1,16 @@
 # @triplit/server-core
 
+## 0.3.21
+
+### Patch Changes
+
+- 43626b6: add internal logs to TriplitServer
+- Updated dependencies [9651552]
+- Updated dependencies [9a7fe03]
+- Updated dependencies [5ea23b8]
+- Updated dependencies [480f8eb]
+  - @triplit/db@0.3.18
+
 ## 0.3.20
 
 ### Patch Changes
