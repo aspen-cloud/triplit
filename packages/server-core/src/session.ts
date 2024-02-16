@@ -53,6 +53,7 @@ export class Connection {
     messageType: Msg['type'],
     payload: Msg['payload']
   ) {
+    this.session.server.logger.log('Sending message', { messageType, payload });
     for (const listener of this.listeners) {
       listener(messageType, payload);
     }
@@ -233,6 +234,7 @@ export class Connection {
   }
 
   dispatchCommand(message: ClientSyncMessage) {
+    this.session.server.logger.log('Received message', message);
     try {
       switch (message.type) {
         case 'CONNECT_QUERY':
