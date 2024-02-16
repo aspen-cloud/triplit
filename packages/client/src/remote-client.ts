@@ -123,8 +123,13 @@ export class RemoteClient<M extends ClientSchema | undefined> {
           Object.entries(bulk).map(([collectionName, entities]) => [
             collectionName,
             entities?.map((entity: any) =>
-              this.options.schema![collectionName]?.schema.convertJSToJSON(
-                entity
+              Object.fromEntries(
+                Object.entries(entity).map(([attribute, value]) => [
+                  attribute,
+                  this.options.schema![collectionName]?.schema.properties[
+                    attribute
+                  ].convertJSToJSON(value),
+                ])
               )
             ),
           ])

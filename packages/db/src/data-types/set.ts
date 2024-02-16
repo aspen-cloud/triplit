@@ -91,6 +91,7 @@ export function SetType<
       );
     },
     convertJSToJSON(val) {
+      if (options.nullable && val === null) return null;
       if (!(val instanceof Set))
         throw new JSToJSONValueParseError(`set<${this.items.type}>`, val);
       return [...val.values()];
