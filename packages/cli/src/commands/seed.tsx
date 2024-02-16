@@ -61,10 +61,10 @@ export default Command({
       char: 'a',
       description: 'Run all seed files in /triplit/seeds',
     }),
-    create: Flag.String({
+    create: Flag.Boolean({
       char: 'c',
       description: 'Create a new seed file',
-      default: 'seed',
+      default: false,
     }),
     file: Flag.String({
       char: 'f',
@@ -77,7 +77,17 @@ export default Command({
     if (flags.create) {
       const schema = await readLocalSchema();
       const seedTemplate = getSeedTemplate(schema);
-      writeSeedFile(flags.create, seedTemplate);
+      const { fileName } = await prompts({
+        type: 'text',
+        initial: 'seed',
+        name: 'fileName',
+        message: 'Name of the seed file',
+      });
+      if (!fileName) {
+        console.log('Aborting');
+        return;
+      }
+      writeSeedFile(fileName, seedTemplate);
       return;
     }
 
@@ -123,8 +133,8 @@ export default Command({
             name: 'seeds',
             message: 'Which seed files do you want to run?',
             choices: allSeeds.map((seed) => ({
-              title: seed,
-              value: path.join(SEED_DIR, seed),
+              title: path.basename(seed),
+              value: seed,
             })),
           },
         ])
