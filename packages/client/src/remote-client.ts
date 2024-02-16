@@ -107,7 +107,14 @@ export class RemoteClient<M extends ClientSchema | undefined> {
   ) {
     // we need to convert Sets to arrays before sending to the server
     const schema = this.options.schema?.[collectionName]?.schema;
-    const jsonEntity = schema ? schema!.convertJSToJSON(object) : object;
+    const jsonEntity = schema
+      ? Object.fromEntries(
+          Object.entries(object).map(([attribute, value]) => [
+            attribute,
+            schema.properties[attribute].convertJSToJSON(value),
+          ])
+        )
+      : object;
     const { data, error } = await this.sendRequest('/insert', 'POST', {
       collectionName,
       entity: jsonEntity,
