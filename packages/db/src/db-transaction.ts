@@ -80,6 +80,7 @@ import {
 } from './triple-store-utils.js';
 import { TripleStoreApi } from './triple-store.js';
 import DB, { constructEntities } from './index.js';
+import { RecordType } from './data-types/record.js';
 
 interface TransactionOptions<
   M extends Models<any, any> | undefined = undefined
@@ -874,20 +875,30 @@ export function createUpdateProxy<M extends Model<any> | undefined>(
   schema?: M,
   prefix: string = ''
 ): UpdateTypeFromModel<M> {
+  function proxyDeleteProperty(prop: string) {
+    const propPointer = [prefix, prop].join('/');
+    // ValuePointer.Set(changeTracker, propPointer, undefined);
+    changeTracker.set(propPointer, undefined);
+    ValuePointer.Delete(entityObj, prop as string);
+    return true;
+  }
   return new Proxy(entityObj as UpdateTypeFromModel<M>, {
     set: (_target, prop, value) => {
       if (typeof prop === 'symbol') return true;
       const propPointer = [prefix, prop].join('/');
       if (!schema) {
+        // TODO: add test that schemaless set to undefined works like delete
+        if (value === undefined) return proxyDeleteProperty(prop);
         changeTracker.set(propPointer, value);
         return true;
       }
-      const propSchema = getSchemaFromPath(
-        schema,
-        propPointer.slice(1).split('/')
-      );
+      const propPath = propPointer.slice(1).split('/');
+      const propSchema = getSchemaFromPath(schema, propPath);
       if (!propSchema) {
         throw new UnrecognizedPropertyInUpdateError(propPointer, value);
+      }
+      if (propSchema.context.optional && value === undefined) {
+        return proxyDeleteProperty(prop);
       }
       if (propSchema.type === 'set') {
         if (value === null && propSchema.options.nullable) {
@@ -923,15 +934,20 @@ export function createUpdateProxy<M extends Model<any> | undefined>(
     },
     deleteProperty: (_target, prop) => {
       if (typeof prop === 'symbol') return true;
-      if (!!schema)
-        throw new InvalidOperationError(
-          `Cannot delete property ${prop}. If the property is nullable you can set it to null instead.`
-        );
-      const propPointer = [prefix, prop].join('/');
-      // ValuePointer.Set(changeTracker, propPointer, undefined);
-      changeTracker.set(propPointer, undefined);
-      ValuePointer.Delete(entityObj, prop as string);
-      return true;
+      if (schema) {
+        const propPointer = [prefix, prop].join('/');
+        const propPath = propPointer.slice(1).split('/');
+        const propSchema = getSchemaFromPath(
+          schema,
+          propPath
+        ) as RecordType<any>;
+        if (!propSchema.context.optional) {
+          throw new InvalidOperationError(
+            `Cannot delete property ${prop} because it is not optional. Please mark this property optional in your schema. If the property is nullable you may also set it to null.`
+          );
+        }
+      }
+      return proxyDeleteProperty(prop);
     },
     get: (_target, prop) => {
       if (typeof prop === 'symbol') return undefined;

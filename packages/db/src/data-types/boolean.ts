@@ -29,9 +29,9 @@ export function BooleanType<TypeOptions extends UserTypeOptions = {}>(
   }
   return {
     type: 'boolean',
-    options,
     supportedOperations: BOOLEAN_OPERATORS,
-
+    context: {},
+    options,
     toJSON() {
       return { type: this.type, options: this.options };
     },

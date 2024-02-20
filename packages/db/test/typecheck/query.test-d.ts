@@ -68,7 +68,10 @@ describe('schemaful', () => {
             record: S.Record({
               attr1: S.String(),
               attr2: S.String(),
+              attr3: S.Optional(S.String()),
             }),
+            // optional
+            optional: S.Optional(S.String()),
             // nullable
             nullableFalse: S.String({ nullable: false }),
             nullableTrue: S.String({ nullable: true }),
@@ -130,10 +133,21 @@ describe('schemaful', () => {
     // records always have a default so can be undefined
     expectEntityParam
       .toHaveProperty('record')
-      .toEqualTypeOf<{ attr1: string; attr2: string } | undefined>();
+      .toEqualTypeOf<
+        ({ attr1: string; attr2: string } & { attr3?: string }) | undefined
+      >();
     expectEntityParamInTx
       .toHaveProperty('record')
-      .toEqualTypeOf<{ attr1: string; attr2: string } | undefined>();
+      .toEqualTypeOf<
+        ({ attr1: string; attr2: string } & { attr3?: string }) | undefined
+      >();
+
+    expectEntityParam
+      .toHaveProperty('optional')
+      .toEqualTypeOf<string | undefined>();
+    expectEntityParamInTx
+      .toHaveProperty('optional')
+      .toEqualTypeOf<string | undefined>();
 
     expectEntityParam.toHaveProperty('nullableFalse').toEqualTypeOf<string>();
     expectEntityParamInTx
@@ -238,7 +252,10 @@ describe('schemaful', () => {
             record: S.Record({
               attr1: S.String(),
               attr2: S.String(),
+              attr3: S.Optional(S.String()),
             }),
+            // optional
+            optional: S.Optional(S.String()),
             // nullable
             nullableFalse: S.String({ nullable: false }),
             nullableTrue: S.String({ nullable: true }),
@@ -302,10 +319,18 @@ describe('schemaful', () => {
 
     expectEntityProxyParam
       .toHaveProperty('record')
-      .toEqualTypeOf<{ attr1: string; attr2: string }>();
+      .toEqualTypeOf<{ attr1: string; attr2: string } & { attr3?: string }>();
     expectEntityProxyParamInTx
       .toHaveProperty('record')
-      .toEqualTypeOf<{ attr1: string; attr2: string }>();
+      .toEqualTypeOf<{ attr1: string; attr2: string } & { attr3?: string }>();
+
+    expectEntityProxyParam
+      .toHaveProperty('optional')
+      .toEqualTypeOf<string | undefined>();
+
+    expectEntityProxyParamInTx
+      .toHaveProperty('optional')
+      .toEqualTypeOf<string | undefined>();
 
     expectEntityProxyParam
       .toHaveProperty('nullableFalse')
@@ -372,7 +397,10 @@ describe('schemaful', () => {
             record: S.Record({
               attr1: S.String(),
               attr2: S.String(),
+              attr3: S.Optional(S.String()),
             }),
+            // optional
+            optional: S.Optional(S.String()),
             // nullable
             nullableFalse: S.String({ nullable: false }),
             nullableTrue: S.String({ nullable: true }),
@@ -414,7 +442,8 @@ describe('schemaful', () => {
           setString: Set<string>;
           setNumber: Set<number>;
           nullableSet: Set<string> | null;
-          record: { attr1: string; attr2: string };
+          record: { attr1: string; attr2: string } & { attr3?: string };
+          optional: string | undefined;
           nullableFalse: string;
           nullableTrue: string | null;
           defaultValue: string;

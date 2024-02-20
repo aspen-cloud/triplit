@@ -31,8 +31,9 @@ export function StringType<TypeOptions extends UserTypeOptions = {}>(
 
   return {
     type: 'string',
-    options,
     supportedOperations: STRING_OPERATORS,
+    context: {},
+    options,
     toJSON() {
       return { type: this.type, options: this.options };
     },

@@ -2,6 +2,7 @@ import { Static, Type } from '@sinclair/typebox';
 import { CollectionRules } from '../db.js';
 import { QueryResultCardinality, SubQuery } from './query.js';
 import { Schema } from '../schema.js';
+import { DataType } from './base.js';
 
 export const VALUE_TYPE_KEYS = ['string', 'number', 'boolean', 'date'] as const;
 export type ValueTypeKeys = (typeof VALUE_TYPE_KEYS)[number];
@@ -25,10 +26,11 @@ export type ValueAttributeDefinition = {
   options: UserTypeOptions;
 };
 export type RecordAttributeDefinition<
-  Properties extends Record<string, AttributeDefinition> = {}
+  Properties extends Record<string, DataType> = {}
 > = {
   type: RecordTypeKeys;
-  properties: Properties;
+  properties: Record<keyof Properties, AttributeDefinition>;
+  optional?: (keyof Properties)[];
 };
 export type CollectionAttributeDefinition = {
   type: CollectionTypeKeys;
@@ -43,7 +45,7 @@ export type QueryAttributeDefinition = {
 
 export type AttributeDefinition =
   | ValueAttributeDefinition
-  | RecordAttributeDefinition
+  | RecordAttributeDefinition<any>
   | CollectionAttributeDefinition
   | QueryAttributeDefinition;
 

@@ -47,9 +47,10 @@ export function SetType<
     );
   return {
     type: 'set',
+    supportedOperations: SET_OPERATORS,
+    context: {},
     items,
     options,
-    supportedOperations: SET_OPERATORS,
     toJSON(): CollectionAttributeDefinition {
       return {
         type: this.type,

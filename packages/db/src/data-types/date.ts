@@ -30,9 +30,9 @@ export function DateType<TypeOptions extends UserTypeOptions = {}>(
 
   return {
     type: 'date',
-    options,
     supportedOperations: DATE_OPERATORS,
-
+    context: {},
+    options,
     toJSON() {
       return { type: this.type, options: this.options };
     },

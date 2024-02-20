@@ -33,8 +33,9 @@ export function QueryType<
 >(query: Q, cardinality: C = 'many' as C): QueryType<Q, C> {
   return {
     type: 'query' as const,
-    cardinality,
     supportedOperations: [] as const, // 'hasKey', etc
+    context: {},
+    cardinality,
     query,
     toJSON() {
       // TODO verify this works with non-memory storage providers

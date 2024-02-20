@@ -4,13 +4,14 @@ import type { CollectionNameFromModels, CollectionRules } from './db.js';
 import { Timestamp } from './timestamp.js';
 import type { Attribute, EAV, TripleRow } from './triple-store-utils.js';
 import { dbDocumentToTuples, objectToTuples } from './utils.js';
-import { CollectionQuery, constructEntity } from './query.js';
+import { constructEntity } from './query.js';
 import { appendCollectionToId, StoreSchema } from './db-helpers.js';
 import {
   typeFromJSON,
   DataType,
   TimestampType,
   ValueType,
+  Optional,
 } from './data-types/base.js';
 import {
   CollectionDefinition,
@@ -28,11 +29,7 @@ import {
   ExtractDBType,
   ExtractTimestampedType,
 } from './data-types/type.js';
-import {
-  QueryResultCardinality,
-  QueryType,
-  SubQuery,
-} from './data-types/query.js';
+import { QueryType, SubQuery } from './data-types/query.js';
 
 // We infer TObject as a return type of some funcitons and this causes issues with consuming packages
 // Using solution 3.1 described in this comment as a fix: https://github.com/microsoft/TypeScript/issues/47663#issuecomment-1519138189
@@ -74,8 +71,10 @@ export class Schema {
     entityId: string
   ) => QueryType({ collectionName, where: [['id', '=', entityId]] }, 'one');
 
-  static Schema<T extends SchemaConfig>(config: T) {
-    return this.Record(config);
+  static Schema<T extends SchemaConfig>(
+    ...args: Parameters<typeof this.Record<T>>
+  ) {
+    return this.Record(...args);
   }
 
   static get Default() {
@@ -87,11 +86,16 @@ export class Schema {
       now: () => ({ func: 'now', args: null }),
     };
   }
+
+  static Optional<T extends DataType>(type: T): Optional<T> {
+    type.context.optional = true;
+    return type as Optional<T>;
+  }
 }
 
 type SchemaConfig = { id: ReturnType<typeof Schema.Id> } & Record<
   string,
-  DataType
+  DataType | Optional<DataType>
 >;
 
 export type Model<T extends SchemaConfig> = RecordType<T>;
@@ -136,12 +140,26 @@ export function getSchemaFromPath(
 
 export type UpdateTypeFromModel<M extends Model<any> | undefined> =
   M extends Model<any>
-    ? {
-        [k in keyof SelectModelFromModel<M>['properties'] as Exclude<
-          k,
+    ? // If properties are required by the schema, they are required in the update type
+      {
+        [k in keyof Omit<
+          SelectModelFromModel<M>['properties'],
           'id'
-        >]: ExtractJSType<M['properties'][k]>;
-      } & { readonly id: string }
+        > as IsPropertyRequired<
+          SelectModelFromModel<M>['properties'][k]
+        > extends true
+          ? k
+          : never]: ExtractJSType<M['properties'][k]>;
+      } & { // If properties are optional by the schema, they are optional in the update type
+        [k in keyof Omit<
+          SelectModelFromModel<M>['properties'],
+          'id'
+        > as IsPropertyOptional<
+          SelectModelFromModel<M>['properties'][k]
+        > extends true
+          ? k
+          : never]?: ExtractJSType<M['properties'][k]>;
+      } & { readonly id: string } // The id should be readonly
     : any;
 
 // Used for entity reducer
@@ -167,18 +185,35 @@ type DataTypeHasDefault<T extends DataType> = BooleanNot<
   DataTypeHasNoDefault<T>
 >;
 
+export type IsPropertyOptional<T extends DataType> = T extends DataType
+  ? T extends Optional<T>
+    ? true
+    : false
+  : never;
+
+type IsPropertyRequired<T extends DataType> = BooleanNot<IsPropertyOptional<T>>;
+
+type InsertOptional<T extends DataType> = T extends DataType
+  ? // If the type has a default or is optional, it can be omitted
+    DataTypeHasNoDefault<T> extends true
+    ? IsPropertyRequired<T> extends true
+      ? false
+      : true
+    : true
+  : never;
+
+type InsertRequired<T extends DataType> = BooleanNot<InsertOptional<T>>;
+
 export type InsertTypeFromModel<M extends Model<any> | undefined> =
   M extends Model<any>
     ? {
-        // If the type has no default, it must be provided
-        [k in keyof SelectModelFromModel<M>['properties'] as DataTypeHasNoDefault<
+        [k in keyof SelectModelFromModel<M>['properties'] as InsertRequired<
           M['properties'][k]
         > extends true
           ? k
           : never]: ExtractJSType<M['properties'][k]>;
       } & {
-        // If the type has a default, it can be omitted
-        [k in keyof SelectModelFromModel<M>['properties'] as DataTypeHasDefault<
+        [k in keyof SelectModelFromModel<M>['properties'] as InsertOptional<
           M['properties'][k]
         > extends true
           ? k
@@ -383,6 +418,7 @@ function collectionSchemaToJSON(
 ): CollectionDefinition {
   const rulesObj = collection.rules ? { rules: collection.rules } : {};
   return {
+    // @ts-expect-error need to refactor SchemaConfig type + id constant I think
     schema: collection.schema.toJSON() as Model<any>,
     ...rulesObj,
   };

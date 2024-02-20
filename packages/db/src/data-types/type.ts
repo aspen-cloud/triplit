@@ -46,6 +46,8 @@ export type TypeInterface<
 > = {
   readonly type: TypeId;
   readonly supportedOperations: Operators;
+  // Context stores additional runtime information about the type
+  readonly context: Record<string, any>;
   // How the this definition should be serialized
   // it needs to contain enough information to be able to reconstruct the type
   toJSON(): AttributeDefinition; // TOOD: handle proper typing with nulls too

@@ -39,9 +39,9 @@ export function NumberType<TypeOptions extends UserTypeOptions = {}>(
 
   return {
     type: 'number',
-    options,
     supportedOperations: NUMBER_OPERATORS,
-
+    context: {},
+    options,
     toJSON(): ValueAttributeDefinition {
       return { type: this.type, options: this.options };
     },

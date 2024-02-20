@@ -1544,6 +1544,153 @@ describe('record operations', () => {
       })
     ).rejects.toThrowError();
   });
+
+  describe('optional properties', async () => {
+    const schema = {
+      collections: {
+        test: {
+          schema: S.Schema({
+            id: S.Id(),
+            optionalAttr: S.Optional(S.String()),
+            record: S.Record({
+              attr: S.String(),
+              optionalAttr: S.Optional(S.String()),
+            }),
+          }),
+        },
+      },
+    };
+
+    it('can insert optional properties', async () => {
+      const db = new DB({
+        schema,
+      });
+      await db.insert('test', {
+        id: 'item1',
+        record: {
+          attr: 'attr',
+        },
+      });
+      {
+        const result = await db.fetchById('test', 'item1');
+        expect(result).toEqual({
+          id: 'item1',
+          record: {
+            attr: 'attr',
+          },
+        });
+      }
+      await db.insert('test', {
+        id: 'item2',
+        optionalAttr: undefined,
+        record: {
+          attr: 'attr',
+          optionalAttr: undefined,
+        },
+      });
+      {
+        const result = await db.fetchById('test', 'item1');
+        expect(result).toEqual({
+          id: 'item1',
+          record: {
+            attr: 'attr',
+          },
+        });
+      }
+    });
+
+    it.only('can update optional properties', async () => {
+      const db = new DB({
+        schema,
+      });
+      await db.insert('test', {
+        id: 'item1',
+        record: {
+          attr: 'attr',
+        },
+      });
+      await db.update('test', 'item1', async (entity) => {
+        entity.optionalAttr = 'optional';
+        entity.record.optionalAttr = 'optional';
+      });
+      {
+        const result = await db.fetchById('test', 'item1');
+        expect(result).toEqual({
+          id: 'item1',
+          optionalAttr: 'optional',
+          record: {
+            attr: 'attr',
+            optionalAttr: 'optional',
+          },
+        });
+      }
+      await db.update('test', 'item1', async (entity) => {
+        entity.optionalAttr = undefined;
+        entity.record.optionalAttr = undefined;
+      });
+      {
+        const result = await db.fetchById('test', 'item1');
+        expect(result).toEqual({
+          id: 'item1',
+          record: {
+            attr: 'attr',
+          },
+        });
+      }
+    });
+
+    it('can delete optional properties', async () => {
+      const db = new DB({
+        schema,
+      });
+      await db.insert('test', {
+        id: 'item1',
+        record: {
+          attr: 'attr',
+          optionalAttr: 'optional',
+        },
+      });
+      await db.update('test', 'item1', async (entity) => {
+        delete entity.optionalAttr;
+        delete entity.record.optionalAttr;
+      });
+      const result = await db.fetchById('test', 'item1');
+      expect(result).toEqual({
+        id: 'item1',
+        record: {
+          attr: 'attr',
+        },
+      });
+    });
+
+    it('can select optional types without values', async () => {
+      const db = new DB({
+        schema,
+      });
+      await db.insert('test', {
+        id: 'item1',
+        record: {
+          attr: 'attr',
+        },
+      });
+      {
+        const result = await db.fetch(
+          db.query('test').select(['optionalAttr']).build()
+        );
+        expect(result.get('item1')).toEqual({});
+      }
+      {
+        const result = await db.fetch(
+          db.query('test').select(['optionalAttr', 'record']).build()
+        );
+        expect(result.get('item1')).toEqual({
+          record: {
+            attr: 'attr',
+          },
+        });
+      }
+    });
+  });
 });
 
 describe('date operations', () => {
@@ -6363,4 +6510,25 @@ it('clearing a database resets the schema', async () => {
   // Should reset schema cache
   const schemaAfterClear = await db.getSchema();
   expect(schemaAfterClear).toEqual(undefined);
+});
+
+it('can upsert data with optional properties', async () => {
+  const schema = {
+    collections: {
+      test: {
+        schema: S.Schema({
+          id: S.String(),
+          name: S.Optional(S.String()),
+          age: S.Optional(S.Number()),
+        }),
+      },
+    },
+  };
+  const db = new DB({ schema });
+
+  await db.insert('test', { id: '1', name: 'alice' });
+  await db.insert('test', { id: '1', age: 30 });
+
+  const result = await db.fetchById('test', '1');
+  expect(result).toStrictEqual({ id: '1', name: 'alice', age: 30 });
 });

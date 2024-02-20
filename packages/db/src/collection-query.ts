@@ -16,6 +16,7 @@ import {
 import {
   convertEntityToJS,
   getSchemaFromPath,
+  IsPropertyOptional,
   Model,
   Models,
   Schema,
@@ -78,6 +79,8 @@ export type JSTypeOrRelation<
   propName extends keyof M['properties']
 > = M['properties'][propName] extends QueryType<infer Q, infer Cardinality>
   ? QueryResult<CollectionQuery<Ms, Q['collectionName']>, Cardinality>
+  : IsPropertyOptional<M['properties'][propName]> extends true
+  ? ExtractJSType<M['properties'][propName]> | undefined
   : ExtractJSType<M['properties'][propName]>;
 
 // Trying this out, having types that know and dont know the schema exists might be a useful pattern

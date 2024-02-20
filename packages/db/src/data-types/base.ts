@@ -32,6 +32,8 @@ export type Operator =
   | 'in'
   | 'nin';
 
+export type Optional<T extends DataType> = T & { context: { optional: true } };
+
 export type ValueType<TO extends UserTypeOptions> =
   | StringType<TO>
   | NumberType<TO>
@@ -40,7 +42,7 @@ export type ValueType<TO extends UserTypeOptions> =
 export type DataType =
   | ValueType<any>
   | SetType<ValueType<any>, any>
-  | RecordType<{ [k: string]: DataType }>
+  | RecordType<{ [k: string]: DataType | Optional<DataType> }>
   | QueryType<any, any>;
 
 export const Nullable = <T extends ValueSchemaType>(type: T) =>
@@ -76,41 +78,64 @@ export function calcDefaultValue(options: UserTypeOptions) {
 }
 
 export function typeFromJSON(
-  serializedType?: ValueAttributeDefinition
+  serializedType: ValueAttributeDefinition | undefined,
+  context?: Record<string, any>
 ): ValueType<any>;
-export function typeFromJSON(serializedType?: AttributeDefinition): DataType;
-export function typeFromJSON(serializedType?: AttributeDefinition): DataType {
+export function typeFromJSON(
+  serializedType: AttributeDefinition | undefined,
+  context?: Record<string, any>
+): DataType;
+export function typeFromJSON(
+  serializedType: AttributeDefinition | undefined,
+  context: Record<string, any> = {}
+): DataType {
   if (!serializedType)
     throw new TypeJSONParseError(
       'Failed to parse this schema definition from its serialized form because it is undefined.'
     );
+  let baseType: DataType;
   switch (serializedType.type) {
     case 'string':
-      return StringType(serializedType.options);
+      baseType = StringType(serializedType.options);
+      break;
     case 'number':
-      return NumberType(serializedType.options);
+      baseType = NumberType(serializedType.options);
+      break;
     case 'boolean':
-      return BooleanType(serializedType.options);
+      baseType = BooleanType(serializedType.options);
+      break;
     case 'date':
-      return DateType(serializedType.options);
+      baseType = DateType(serializedType.options);
+      break;
     case 'set':
-      return SetType(
+      baseType = SetType(
         typeFromJSON(serializedType.items),
         serializedType.options
       );
+      break;
     case 'query':
-      return QueryType(serializedType.query, serializedType.cardinality);
+      baseType = QueryType(serializedType.query, serializedType.cardinality);
+      break;
     case 'record':
-      return RecordType(
+      const optional = serializedType.optional || [];
+      baseType = RecordType(
         Object.fromEntries(
           Object.entries(serializedType.properties).map(([key, val]) => [
             key,
-            typeFromJSON(val as any),
+            typeFromJSON(val as any, { optional: optional.includes(key) }),
           ])
         )
       );
+      break;
+    default:
+      throw new UnrecognizedAttributeTypeError(
+        (serializedType as AttributeDefinition).type
+      );
   }
-  throw new UnrecognizedAttributeTypeError(
-    (serializedType as AttributeDefinition).type
-  );
+
+  // apply context
+  for (const key in context) {
+    baseType.context[key] = context[key];
+  }
+  return baseType;
 }
