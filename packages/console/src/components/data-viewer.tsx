@@ -379,7 +379,7 @@ export function DataViewer({
     [sortedAndFilteredEntities]
   );
   return (
-    <div className="flex flex-col w-full h-full">
+    <div className="flex flex-col w-full h-screen overflow-hidden">
       {collectionSchema && (
         <>
           <SchemaAttributeSheet

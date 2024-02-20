@@ -647,7 +647,7 @@ export function DataTable<TData, TValue>({
 
   return (
     <Table
-      className="bg-popover text-xs w-full border-r border-t"
+      className="bg-popover text-xs w-full border-r border-t flex flex-col h-full overflow-hidden "
       style={{ width: table.getCenterTotalSize() }}
     >
       <TableHeader>
@@ -679,7 +679,7 @@ export function DataTable<TData, TValue>({
           </TableRow>
         ))}
       </TableHeader>
-      <TableBody className="">
+      <TableBody className="h-full overflow-y-scroll">
         {table.getRowModel().rows?.length ? (
           table.getRowModel().rows.map((row) => {
             return (
