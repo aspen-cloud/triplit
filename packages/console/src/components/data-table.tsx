@@ -631,7 +631,12 @@ function DateInput(props: InputProps) {
 export function DataTable<TData, TValue>({
   columns,
   data,
-}: DataTableProps<TData, TValue>) {
+  onLoadMore,
+  showLoadMore,
+}: DataTableProps<TData, TValue> & {
+  onLoadMore?: () => void;
+  showLoadMore?: boolean;
+}) {
   const table = useReactTable({
     data,
     columns,
@@ -703,6 +708,15 @@ export function DataTable<TData, TValue>({
               No results
             </TableCell>
           </TableRow>
+        )}
+        {showLoadMore && (
+          <Button
+            className="w-full rounded-none"
+            variant={'secondary'}
+            onClick={onLoadMore}
+          >
+            Load more
+          </Button>
         )}
       </TableBody>
     </Table>

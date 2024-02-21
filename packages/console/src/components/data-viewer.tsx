@@ -1,6 +1,6 @@
 import { TriplitClient } from '@triplit/client';
 import { useQuery } from '@triplit/react';
-import { useMemo, useState, useCallback } from 'react';
+import { useMemo, useState, useCallback, useEffect } from 'react';
 import '@glideapps/glide-data-grid/dist/index.css';
 import { CreateEntityForm } from '.';
 import { consoleClient } from '../../triplit/client';
@@ -100,6 +100,8 @@ async function deleteAttribute(
   }
 }
 
+const PAGE_SIZE = 25;
+
 export function DataViewer({
   client,
   schema,
@@ -126,6 +128,7 @@ export function DataViewer({
     where: undefined,
     order: undefined,
   });
+  const [limit, setLimit] = useState(PAGE_SIZE);
   const { results: selectedEntities } = useQuery(
     consoleClient,
     consoleClient.query('selections').where([
@@ -136,13 +139,19 @@ export function DataViewer({
   const collectionSchema = schema?.collections?.[selectedCollection];
   const filters = JSON.parse(urlQueryState.where ?? '[]');
   const order = JSON.parse(urlQueryState.order ?? '[]');
-
-  const { results: orderedAndFilteredResults } = useQuery(
+  const noFilters = filters.length === 0;
+  const {
+    results: orderedAndFilteredResults,
+    fetchingRemote,
+    fetching,
+  } = useQuery(
     client,
     client
       .query(selectedCollection)
       .order(...order)
       .where(filters)
+      // only apply a limit if we have no filters
+      .limit(noFilters ? limit : Infinity)
   );
 
   const { results: allResults } = useQuery(
@@ -153,6 +162,12 @@ export function DataViewer({
     () => Array.from(orderedAndFilteredResults ?? []),
     [orderedAndFilteredResults]
   );
+
+  const hasMoreEntitiesToShow =
+    noFilters &&
+    allResults &&
+    orderedAndFilteredResults &&
+    allResults.size > orderedAndFilteredResults.size;
 
   const uniqueAttributes: Set<string> = useMemo(() => {
     const attributes = new Set<string>();
@@ -198,6 +213,10 @@ export function DataViewer({
     projectId,
     allVisibleEntitiesAreSelected,
   ]);
+
+  useEffect(() => {
+    setLimit(PAGE_SIZE);
+  }, [selectedCollection]);
 
   const idColumn: ColumnDef<any> = useMemo(
     () => ({
@@ -259,17 +278,16 @@ export function DataViewer({
       selectedEntities,
     ]
   );
-  const dataColumns = useMemo(() => {
-    const cols: ColumnDef<any>[] = [];
-    Array.from(uniqueAttributes)
+  const dataColumns: ColumnDef<any>[] = useMemo(() => {
+    return Array.from(uniqueAttributes)
       .filter((attr) => attr !== 'id')
-      .forEach((attr) => {
+      .map((attr) => {
         const typeDef =
           collectionSchema?.schema?.properties?.[
             attr as keyof (typeof collectionSchema)['schema']['properties']
           ];
         const isQueryColumn = typeDef && typeDef.type === 'query';
-        cols.push({
+        return {
           cell: ({ row, column }) => {
             const cellKey = `${row.getValue('id')}_${column.id}`;
             if (isQueryColumn)
@@ -337,9 +355,8 @@ export function DataViewer({
             );
           },
           accessorKey: attr,
-        });
+        };
       });
-    return cols;
   }, [
     uniqueAttributes,
     collectionSchema,
@@ -458,8 +475,18 @@ export function DataViewer({
           inferredAttributes={Array.from(uniqueAttributes)}
           client={client}
         />
+        <div className="text-sm px-2">
+          {fetchingRemote ? 'Loading' : 'Not Loading'}
+        </div>
       </div>
-      <DataTable columns={columns} data={flatFilteredEntities} />
+      <DataTable
+        columns={columns}
+        data={flatFilteredEntities}
+        showLoadMore={hasMoreEntitiesToShow}
+        onLoadMore={() => {
+          setLimit((prev) => prev + PAGE_SIZE);
+        }}
+      />
     </div>
   );
 }
