@@ -29,7 +29,7 @@
     "test-coverage": "vitest --coverage",
     "test-coverage-ui": "vitest --ui --coverage",
     "test-ci": "vitest run --coverage.enabled --coverage.reporter='text-summary'",
-    "typecheck": "vitest typecheck --no-watch",
+    "typecheck": "vitest --typecheck.only --no-watch",
     "bench": "vitest bench",
     "coverage": "stryker run",
     "publish-pkg": "node ../../scripts/npm-check-version-and-publish.js"
