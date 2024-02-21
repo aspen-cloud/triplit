@@ -2,23 +2,23 @@
   "name": "@triplit/server",
   "packageManager": "yarn@3.4.1",
   "version": "0.3.21",
-  "types": "dist/index.d.ts",
+  "source": "./src/index.ts",
+  "main": "./dist/index.js",
   "type": "module",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
   "files": [
     "dist"
   ],
-  "exports": {
-    ".": {
-      "import": "./dist/index.js"
-    }
-  },
   "scripts": {
-    "dev": "tsx watch ./run.ts",
-    "start": "node --loader tsx ./src/index.ts",
     "build": "tsc",
-    "deploy:prod": "(cd ../../ && flyctl deploy --dockerfile=./packages/server/Dockerfile --ignorefile=./packages/server/.dockerignore --config=./packages/server/fly.toml)",
-    "deploy:load": "(cd ../../ && flyctl deploy --dockerfile=./packages/server/Dockerfile --ignorefile=./packages/server/.dockerignore --config=./packages/server/fly.load.toml)",
-    "docker": "(cd ../../ && docker build -f ./packages/server/Dockerfile .)",
     "lint": "tsc --noEmit",
     "lint:build": "npx publint",
     "util:gentoken": "node ./dev/scripts/createToken.cjs",

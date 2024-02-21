@@ -22,6 +22,10 @@ import {
 import { parseAndValidateToken } from '@triplit/server-core/token';
 import { logger } from './logger.js';
 import { Route } from '@triplit/server-core/triplit-server';
+import path from 'path';
+
+// ESM override for __dirname
+const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
 
 function parseClientMessage(
   message: WS.RawData
