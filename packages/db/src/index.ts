@@ -23,6 +23,7 @@ export type {
   DropAttributeOptionOperation,
   AddRuleOperation,
   DropRuleOperation,
+  SetAttributeOptionalOperation,
   DBConfig,
   FetchByIdQueryParams,
 } from './db.js';

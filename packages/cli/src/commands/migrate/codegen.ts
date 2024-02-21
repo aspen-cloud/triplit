@@ -105,7 +105,16 @@ function generateAttributesSection(
   result += indent + 'schema: S.Schema({\n';
   for (const path in schema.properties) {
     const itemInfo = schema.properties[path];
-    result += generateAttributeSchema([path], itemInfo, indent + indentation);
+    const optional =
+      schema.optional?.includes(
+        // @ts-expect-error typescript trying to be too smart
+        path
+      ) ?? false;
+    result += generateAttributeSchema(
+      [path],
+      { attribute: itemInfo, optional: optional },
+      indent + indentation
+    );
   }
   result += indent + '}),\n';
   return result;
@@ -129,7 +138,7 @@ function generateRulesSection(
 
 function generateAttributeSchema(
   path: string[],
-  schemaItem: AttributeDefinition,
+  schemaItem: { attribute: AttributeDefinition; optional: boolean },
   indent: string
 ) {
   if (path.length === 0) return schemaItemToString(schemaItem);
@@ -145,46 +154,76 @@ function generateAttributeSchema(
 
 // TODO: parse options
 // TODO: put on type classes?
-function schemaItemToString(schemaItem: AttributeDefinition): string {
-  const { type } = schemaItem;
-  if (type === 'string')
-    return `S.String(${valueOptionsToString(schemaItem.options)})`;
-  if (type === 'boolean')
-    return `S.Boolean(${valueOptionsToString(schemaItem.options)})`;
-  if (type === 'number')
-    return `S.Number(${valueOptionsToString(schemaItem.options)})`;
-  if (type === 'date')
-    return `S.Date(${valueOptionsToString(schemaItem.options)})`;
-  if (type === 'set')
-    return `S.Set(${schemaItemToString(
-      schemaItem.items
-    )},${valueOptionsToString(schemaItem.options)})`;
-  if (type === 'record')
-    return `S.Record({${Object.entries(schemaItem.properties)
-      .map(([key, value]) => `'${key}': ${schemaItemToString(value as any)}`)
-      .join(',\n')}})`;
-  if (type === 'query') {
-    const { query, cardinality } = schemaItem;
-    const { collectionName, ...queryParams } = query;
-    if (cardinality === 'one') {
-      const isRelationById =
-        collectionName &&
-        query.where &&
-        query.where.length === 1 &&
-        query.where[0][0] === 'id' &&
-        query.where[0][1] === '=' &&
-        Object.keys(queryParams).length === 1;
-      if (isRelationById)
-        return `S.RelationById('${collectionName}', '${queryParams.where[0][2]}')`;
-      return `S.RelationOne('${collectionName}',${subQueryToString(
-        queryParams
-      )})`;
-    }
-    return `S.RelationMany('${collectionName}',${subQueryToString(
-      queryParams
-    )})`;
+function schemaItemToString(schemaItem: {
+  attribute: AttributeDefinition;
+  optional?: boolean;
+}): string {
+  const { attribute, optional } = schemaItem;
+  const { type } = attribute;
+  let result = '';
+  switch (type) {
+    case 'string':
+      result = `S.String(${valueOptionsToString(attribute.options)})`;
+      break;
+    case 'boolean':
+      result = `S.Boolean(${valueOptionsToString(attribute.options)})`;
+      break;
+    case 'number':
+      result = `S.Number(${valueOptionsToString(attribute.options)})`;
+      break;
+    case 'date':
+      result = `S.Date(${valueOptionsToString(attribute.options)})`;
+      break;
+    case 'set':
+      result = `S.Set(${schemaItemToString({
+        attribute: attribute.items,
+      })},${valueOptionsToString(attribute.options)})`;
+      break;
+    case 'record':
+      result = `S.Record({${Object.entries(attribute.properties)
+        .map(([key, value]) => {
+          const optional = attribute.optional?.includes(key) ?? false;
+          return `'${key}': ${schemaItemToString({
+            attribute: value,
+            optional,
+          })}`;
+        })
+        .join(',\n')}})`;
+      break;
+    case 'query':
+      const { query, cardinality } = attribute;
+      const { collectionName, ...queryParams } = query;
+      if (cardinality === 'one') {
+        const isRelationById =
+          collectionName &&
+          query.where &&
+          query.where.length === 1 &&
+          query.where[0][0] === 'id' &&
+          query.where[0][1] === '=' &&
+          Object.keys(queryParams).length === 1;
+        if (isRelationById)
+          result = `S.RelationById('${collectionName}', '${queryParams.where[0][2]}')`;
+        else
+          result = `S.RelationOne('${collectionName}',${subQueryToString(
+            queryParams
+          )})`;
+      } else {
+        result = `S.RelationMany('${collectionName}',${subQueryToString(
+          queryParams
+        )})`;
+      }
+      break;
+    default:
+      throw new Error(`Invalid type: ${type}`);
   }
-  throw new Error(`Invalid type: ${type}`);
+  const excludeOptional = ['query'];
+  if (!excludeOptional.includes(type))
+    result = wrapOptional(result, optional ?? false);
+  return result;
+}
+
+function wrapOptional(type: string, optional: boolean) {
+  return optional ? `S.Optional(${type})` : type;
 }
 
 function valueOptionsToString(options: UserTypeOptions): string {

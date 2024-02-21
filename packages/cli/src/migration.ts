@@ -13,6 +13,7 @@ import DB, {
   CollectionsDefinition,
   hashSchemaJSON,
   schemaToJSON,
+  SetAttributeOptionalOperation,
 } from '@triplit/db';
 import { diff } from 'jsondiffpatch';
 import { getMigrationsDir } from './filesystem.js';
@@ -311,6 +312,9 @@ export function createMigration(
   const migration: Migration = { up: [], down: [], version, parent, name };
   const context = { previousSchema: schemaLeft, targetScema: schemaRight };
   parseCollectionDiff(migration, schemaDiff, context);
+  // Dont love this check, but sometimes we have diffs that are basically no ops and shouldnt create migrations
+  if (migration.up.length === 0 && migration.down.length === 0)
+    return undefined;
   return migration;
 }
 
@@ -353,6 +357,14 @@ function parseCollectionDiff(
           migration,
           collectionKey,
           collectionDiff.schema.properties,
+          context
+        );
+      }
+      if (collectionDiff.schema?.optional) {
+        parseOptionalPropsDiff(
+          migration,
+          collectionKey,
+          collectionDiff.schema.optional,
           context
         );
       }
@@ -423,8 +435,18 @@ function parseAttributesDiff(
           [...attributePrefix, attributeKey]
         );
       }
+      // Also implies its a record type
+      if (!!attributeDiff.optional) {
+        parseOptionalPropsDiff(
+          migration,
+          collection,
+          attributeDiff.optional,
+          context,
+          [...attributePrefix, attributeKey]
+        );
+      }
       // options implies its a leaf type
-      else if (!!attributeDiff.options) {
+      if (!!attributeDiff.options) {
         parseAttributeOptionsDiff(
           migration,
           collection,
@@ -433,7 +455,7 @@ function parseAttributesDiff(
         );
       }
       // subquery change, drop and add
-      else if (!!attributeDiff.query || !!attributeDiff.cardinality) {
+      if (!!attributeDiff.query || !!attributeDiff.cardinality) {
         const oldDefinition = getAttributeDefinitionFromPath(
           context.previousSchema[collection].schema,
           [...attributePrefix, attributeKey]
@@ -465,15 +487,16 @@ function parseAttributesDiff(
           dropNewAttributeOperation,
           addOldAttributeOperation
         );
-      } else {
-        throw new Error(
-          `Invalid diff: received an unrecognized attribute definition diff\n\n${JSON.stringify(
-            attributeDiff,
-            null,
-            2
-          )}`
-        );
       }
+
+      // TODO: figure out what to do with "unknown" diff properties
+      // throw new Error(
+      //   `Invalid diff: received an unrecognized attribute definition diff\n\n${JSON.stringify(
+      //     attributeDiff,
+      //     null,
+      //     2
+      //   )}`
+      // );
     }
   }
 }
@@ -534,6 +557,101 @@ function parseAttributeOptionsDiff(
       throw new Error('Failed to create migration: Unexpected diff');
     }
   }
+}
+
+function parseOptionalPropsDiff(
+  migration: Migration,
+  collection: string,
+  diff: any,
+  context: MigrationContext,
+  attributePrefix: string[] = []
+) {
+  const optionalDiffStatus = diffStatus(diff);
+  if (optionalDiffStatus === 'ADDED') {
+    const optionalDefinition = diff[0];
+    for (const optionalKey of optionalDefinition) {
+      const attrPath = [...attributePrefix, optionalKey];
+      const setOptionalOp = genSetAttributeOptionalOperation({
+        collection,
+        path: attrPath,
+        optional: true,
+      });
+      const setNotOptionalOp = genSetAttributeOptionalOperation({
+        collection,
+        path: attrPath,
+        optional: false,
+      });
+      migration.up.push(setOptionalOp);
+      migration.down.unshift(setNotOptionalOp);
+    }
+  }
+  if (optionalDiffStatus === 'REMOVED') {
+    const optionalDefinition = diff[0];
+    for (const optionalKey of optionalDefinition) {
+      const attrPath = [...attributePrefix, optionalKey];
+      const setNotOptionalOp = genSetAttributeOptionalOperation({
+        collection,
+        path: attrPath,
+        optional: false,
+      });
+      const setOptionalOp = genSetAttributeOptionalOperation({
+        collection,
+        path: attrPath,
+        optional: true,
+      });
+      migration.up.push(setNotOptionalOp);
+      migration.down.unshift(setOptionalOp);
+    }
+  }
+  if (optionalDiffStatus === 'CHANGED') {
+    throw new Error('Failed to create migration: Unexpected diff');
+  }
+  if (optionalDiffStatus === 'UNCHANGED') {
+    if (diff._t !== 'a')
+      throw new Error('Failed to create migration: Unexpected diff'); // Not array
+    const oldOptional = context.previousSchema[collection].schema.optional;
+    const newOptional = context.targetScema[collection].schema.optional;
+    const { added, removed } = calculateArrayChanges(oldOptional, newOptional);
+    for (const optionalKey of added) {
+      const attrPath = [...attributePrefix, optionalKey];
+      const setOptionalOp = genSetAttributeOptionalOperation({
+        collection,
+        path: attrPath,
+        optional: true,
+      });
+      const setNotOptionalOp = genSetAttributeOptionalOperation({
+        collection,
+        path: attrPath,
+        optional: false,
+      });
+      migration.up.push(setOptionalOp);
+      migration.down.unshift(setNotOptionalOp);
+    }
+    for (const optionalKey of removed) {
+      const attrPath = [...attributePrefix, optionalKey];
+      const setNotOptionalOp = genSetAttributeOptionalOperation({
+        collection,
+        path: attrPath,
+        optional: false,
+      });
+      const setOptionalOp = genSetAttributeOptionalOperation({
+        collection,
+        path: attrPath,
+        optional: true,
+      });
+      migration.up.push(setNotOptionalOp);
+      migration.down.unshift(setOptionalOp);
+    }
+  }
+}
+
+function calculateArrayChanges(
+  oldArray: any[],
+  newArray: any[]
+): { added: any[]; removed: any[] } {
+  const added = newArray.filter((item) => !oldArray.includes(item));
+  const removed = oldArray.filter((item) => !newArray.includes(item));
+  return { added, removed };
 }
 
 function parseRulesDiff(
@@ -713,12 +831,14 @@ function genCreateCollectionOperation(
   collectionDefinition: CollectionDefinition
 ): CreateCollectionOperation {
   const attributes = collectionDefinition.schema.properties;
+  const optional = collectionDefinition.schema.optional;
   return [
     'create_collection',
     {
       name,
       ...collectionDefinition,
       schema: attributes,
+      optional,
     },
   ];
 }
@@ -763,6 +883,12 @@ function genAddRuleOperation(params: AddRuleOperation[1]): AddRuleOperation {
 function genDropRuleOperation(params: DropRuleOperation[1]): DropRuleOperation {
   // TODO: validate options
   return ['drop_rule', params];
+}
+
+function genSetAttributeOptionalOperation(
+  params: SetAttributeOptionalOperation[1]
+): SetAttributeOptionalOperation {
+  return ['set_attribute_optional', params];
 }
 
 function diffStatus(diff: any) {
