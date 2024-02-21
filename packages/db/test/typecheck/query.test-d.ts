@@ -6,9 +6,14 @@ import {
   QueryOrder,
   QueryWhere,
   RelationSubquery,
+  ValueCursor,
   WhereFilter,
 } from '../../src/query.js';
-import { FetchResult, QueryResult } from '../../src/collection-query.js';
+import {
+  FetchResult,
+  QueryResult,
+  ReturnTypeFromQuery,
+} from '../../src/collection-query.js';
 
 type TransactionAPI<TxDB extends DB<any>> = TxDB extends DB<infer M>
   ? Parameters<Parameters<DB<M>['transact']>[0]>[0]
@@ -695,6 +700,43 @@ describe('query builder', () => {
       const db = new DB();
       const query = db.query('test');
       expectTypeOf(query.include).parameter(0).toEqualTypeOf<never>();
+    }
+  });
+
+  test('after', () => {
+    const schema = {
+      collections: {
+        test: {
+          schema: S.Schema({
+            id: S.Id(),
+            attr1: S.String(),
+            attr2: S.Boolean(),
+            attr3: S.Number(),
+            // should not include query
+            query: S.Query({ collectionName: 'test2' as const, where: [] }),
+          }),
+        },
+      },
+    };
+    {
+      const db = new DB({ schema });
+      const query = db.query('test');
+      expectTypeOf(query.after)
+        .parameter(0)
+        .toMatchTypeOf<
+          | ValueCursor
+          | ReturnTypeFromQuery<typeof schema.collections, 'test'>
+          | undefined
+        >();
+    }
+    {
+      const db = new DB();
+      const query = db.query('test');
+      expectTypeOf(query.where)
+        .parameter(0)
+        .toMatchTypeOf<
+          string | WhereFilter<undefined> | QueryWhere<undefined>
+        >();
     }
   });
 });

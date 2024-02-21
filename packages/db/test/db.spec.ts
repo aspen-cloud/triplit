@@ -3220,9 +3220,11 @@ describe.each(['ASC', 'DESC'])('pagination stress test: %s', (sortOrder) => {
     },
   ];
   it.each(
-    Object.keys(schema.collections.students.schema.properties)
-    // ['expected_graduation_date']
-  )('can sort and paginate by %s', async (prop) => {
+    Object.keys(schema.collections.students.schema.properties).map((prop) => ({
+      prop,
+      type: schema.collections.students.schema.properties[prop].type,
+    }))
+  )('can sort and paginate by $prop ($type)', async ({ prop }) => {
     const db = new DB({
       schema,
       source: new InMemoryTupleStorage(),
@@ -3239,17 +3241,19 @@ describe.each(['ASC', 'DESC'])('pagination stress test: %s', (sortOrder) => {
     for (let i = 0; i < correctOrder.length; i += PAGE_SIZE) {
       correctPages.push(correctOrder.slice(i, i + PAGE_SIZE));
     }
-    let lastEntity;
+    let lastEntity: (typeof entities)[number] | undefined = undefined;
     for (let i = 0; i < correctPages.length; i++) {
       const results = await db.fetch(
         db
           .query('students')
           .order([prop, sortOrder])
           .limit(PAGE_SIZE)
-          .after(i > 0 ? [lastEntity[prop], lastEntity.id] : undefined)
+          .after(lastEntity)
           .build()
       );
-      lastEntity = Array.from(results.values()).pop();
+      lastEntity = Array.from(
+        results.values()
+      ).pop() as (typeof entities)[number];
 
       expect(Array.from(results.values()).map((e) => e[prop])).toEqual(
         correctPages[i]
