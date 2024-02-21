@@ -193,11 +193,11 @@ export class NoSchemaRegisteredError extends TriplitError {
   }
 }
 
-export class ModelNotFoundError extends TriplitError {
-  constructor(modelName: string, existingKeys: string[], ...args: any[]) {
+export class CollectionNotFoundError extends TriplitError {
+  constructor(collectionName: string, existingKeys: string[], ...args: any[]) {
     super(...args);
-    this.name = 'ModelNotFoundError';
-    this.baseMessage = `Could not find a model with name ${modelName} in your schema. Valid collections are: [${existingKeys
+    this.name = 'CollectionNotFoundError';
+    this.baseMessage = `Could not find a collection with name ${collectionName} in your schema. Valid collections are: [${existingKeys
       .map((k) => `'${k}'`)
       .join(', ')}].`;
     this.status = STATUS_CODES['Bad Request'];
@@ -236,17 +236,6 @@ export class InvalidSchemaType extends TriplitError {
     super(...args);
     this.name = 'InvalidSchemaType';
     this.baseMessage = `The type '${type}' is not a valid type for a Triplit schema.`;
-    this.status = STATUS_CODES['Bad Request'];
-  }
-}
-
-export class SchemaPathDoesNotExistError extends TriplitError {
-  constructor(path: string[], ...args: any[]) {
-    super(...args);
-    this.name = 'SchemaPathDoesNotExistError';
-    this.baseMessage = `The path '${path.join(
-      '.'
-    )}' does not exist in the schema.`;
     this.status = STATUS_CODES['Bad Request'];
   }
 }

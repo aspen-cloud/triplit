@@ -20,8 +20,10 @@ import {
   InvalidOperationError,
   InvalidCollectionNameError,
   InvalidInsertDocumentError,
+  CollectionNotFoundError,
+  InvalidSchemaPathError,
 } from '../src';
-import { Models } from '../src/schema.js';
+import { Models, hashSchemaJSON } from '../src/schema.js';
 import { classes, students, departments } from './sample_data/school.js';
 import { MemoryBTreeStorage as MemoryStorage } from '../src/storage/memory-btree.js';
 import {
@@ -1599,7 +1601,7 @@ describe('record operations', () => {
       }
     });
 
-    it.only('can update optional properties', async () => {
+    it('can update optional properties', async () => {
       const db = new DB({
         schema,
       });
@@ -3355,122 +3357,802 @@ describe('database transactions', () => {
 });
 
 describe('schema changes', async () => {
-  it('can add a collection definition to the schema', async () => {
-    // const schema = {};
-    const db = new DB({ source: new InMemoryTupleStorage() });
-    await db.createCollection({
-      name: 'students',
-      schema: {
-        id: { type: 'number', options: {} },
-        name: { type: 'string', options: {} },
-      },
-    });
-    const schema = await db.getSchema();
-    expect(schema?.collections).toHaveProperty('students');
-    expect(schema?.collections.students.schema.properties).toHaveProperty('id');
-    expect(schema?.collections.students.schema.properties).toHaveProperty(
-      'name'
-    );
-  });
-
-  it('can add a collection and observe changes in a transaction', async () => {
-    const db = new DB();
-    let txSchema;
-    await db.transact(async (tx) => {
-      expect(tx.schema).toBeUndefined();
-      const newCollection = {
+  describe('createCollection', () => {
+    it('can create a collection definition', async () => {
+      const db = new DB();
+      await db.createCollection({
         name: 'students',
         schema: {
           id: { type: 'number', options: {} },
           name: { type: 'string', options: {} },
         },
+      });
+      const schema = await db.getSchema();
+      expect(schema?.collections).toHaveProperty('students');
+      expect(schema?.collections.students.schema.properties).toHaveProperty(
+        'id'
+      );
+      expect(schema?.collections.students.schema.properties).toHaveProperty(
+        'name'
+      );
+    });
+
+    it('can add a collection and observe changes in a transaction', async () => {
+      const db = new DB();
+      let txSchema;
+      await db.transact(async (tx) => {
+        expect(tx.schema).toBeUndefined();
+        const newCollection = {
+          name: 'students',
+          schema: {
+            id: { type: 'number', options: {} },
+            name: { type: 'string', options: {} },
+          },
+        };
+        await tx.createCollection(newCollection);
+        txSchema = tx.schema;
+        expect(tx.schema).not.toBeUndefined();
+        expect(tx.schema).toHaveProperty('collections');
+        expect(tx.schema?.collections).toHaveProperty(newCollection.name);
+      });
+      expect(schemaToJSON((await db.getSchema())!)).toEqual(
+        schemaToJSON(txSchema)
+      );
+    });
+
+    it('can create a collection with rules', async () => {
+      await testDBAndTransaction(
+        () =>
+          new DB({
+            source: new InMemoryTupleStorage(),
+          }),
+        async (db) => {
+          await db.createCollection({
+            name: 'students',
+            schema: {
+              id: { type: 'number', options: {} },
+              name: { type: 'string', options: {} },
+            },
+            rules: {
+              read: {
+                'only-read-self': {
+                  filter: [['id', '=', '$SESSION_USER_ID']],
+                  description: 'Can only read your own student record',
+                },
+              },
+            },
+          });
+          const dbSchema = await db.getSchema();
+          expect(
+            Object.keys(dbSchema?.collections.students.rules?.read!)
+          ).toHaveLength(1);
+          const rule =
+            dbSchema?.collections.students.rules?.read!['only-read-self']!;
+          expect(rule.filter).toEqual([['id', '=', '$SESSION_USER_ID']]);
+          expect(rule.description).toEqual(
+            'Can only read your own student record'
+          );
+        }
+      );
+    });
+  });
+
+  describe('dropCollection', () => {
+    it('can drop a collection definition from the schema', async () => {
+      const schema = {
+        collections: {
+          students: {
+            schema: S.Schema({
+              id: S.String(),
+              name: S.String(),
+            }),
+          },
+        },
       };
-      await tx.createCollection(newCollection);
-      txSchema = tx.schema;
-      expect(tx.schema).not.toBeUndefined();
-      expect(tx.schema).toHaveProperty('collections');
-      expect(tx.schema?.collections).toHaveProperty(newCollection.name);
+      const db = new DB({ schema: schema });
+      const dbSchemaBefore = await db.getSchema();
+      expect(dbSchemaBefore?.collections).toHaveProperty('students');
+      await db.dropCollection({ name: 'students' });
+      const dbSchemaAfter = await db.getSchema();
+      expect(dbSchemaAfter?.collections).not.toHaveProperty('students');
+
+      // TODO: test data is actually dropped if we decide it should be
     });
-    expect(schemaToJSON((await db.getSchema())!)).toEqual(
-      schemaToJSON(txSchema)
-    );
   });
 
-  it('can drop a collection definition from the schema', async () => {
-    const schema = {
+  describe('addAttribute', () => {
+    const defaultSchema = {
       collections: {
         students: {
           schema: S.Schema({
             id: S.String(),
             name: S.String(),
+            address: S.Record({
+              street: S.String(),
+            }),
           }),
         },
       },
     };
-    const db = new DB({ schema: schema });
-    const dbSchemaBefore = await db.getSchema();
-    expect(dbSchemaBefore?.collections).toHaveProperty('students');
-    await db.dropCollection({ name: 'students' });
-    const dbSchemaAfter = await db.getSchema();
-    expect(dbSchemaAfter?.collections).not.toHaveProperty('students');
 
-    // TODO: test data is actually dropped if we decide it should be
-  });
+    it('can add an attribute', async () => {
+      await testDBAndTransaction(
+        () => new DB({ schema: defaultSchema }),
+        async (db) => {
+          await db.addAttribute({
+            collection: 'students',
+            path: ['age'],
+            attribute: { type: 'number', options: {} },
+          });
+          const dbSchema = await db.getSchema();
+          expect(dbSchema?.collections).toHaveProperty('students');
+          expect(
+            dbSchema?.collections.students.schema.properties
+          ).toHaveProperty('age');
+          expect(
+            dbSchema?.collections.students.schema.properties
+          ).toHaveProperty('name');
+        }
+      );
 
-  it('can add an attribute', async () => {
-    const schema = {
-      collections: {
-        students: {
-          schema: S.Schema({
-            id: S.String(),
-            name: S.String(),
-          }),
-        },
-      },
-    };
-    const db = new DB({ source: new InMemoryTupleStorage(), schema: schema });
-    await db.insert('students', { id: '1', name: 'Alice' });
-    await db.addAttribute({
-      collection: 'students',
-      path: ['age'],
-      attribute: { type: 'number', options: {} },
+      it('can add a nested attribute', async () => {
+        await testDBAndTransaction(
+          () => new DB({ schema: defaultSchema }),
+          async (db) => {
+            await db.addAttribute({
+              collection: 'students',
+              path: ['address', 'state'],
+              attribute: { type: 'string', options: {} },
+            });
+            const dbSchema = await db.getSchema();
+            console.dir(dbSchema, { depth: null });
+            expect(dbSchema?.collections).toHaveProperty('students');
+            expect(
+              dbSchema?.collections.students.schema.properties
+            ).toHaveProperty('address');
+            expect(
+              dbSchema?.collections.students.schema.properties.address
+                .properties
+            ).toHaveProperty('state');
+          }
+        );
+      });
+
+      it('addAttribute throws if the collection doesnt exist', async () => {
+        await testDBAndTransaction(
+          () => new DB({ schema: defaultSchema }),
+          async (db) => {
+            expect(
+              db.addAttribute({
+                collection: 'todos',
+                path: ['text'],
+                attribute: { type: 'string', options: {} },
+              })
+            ).rejects.toThrowError(CollectionNotFoundError);
+          }
+        );
+      });
+
+      it('addAttribute throws if the path is not valid', async () => {
+        await testDBAndTransaction(
+          () => new DB({ schema: defaultSchema }),
+          async (db) => {
+            expect(
+              db.addAttribute({
+                collection: 'students',
+                path: [],
+                attribute: { type: 'string', options: {} },
+              })
+            ).rejects.toThrowError(InvalidSchemaPathError);
+            expect(
+              db.addAttribute({
+                collection: 'students',
+                path: ['addresss', 'state'],
+                attribute: { type: 'string', options: {} },
+              })
+            ).rejects.toThrowError(InvalidSchemaPathError);
+          }
+        );
+      });
+
+      it('addAttribute is idempoent', async () => {
+        await testDBAndTransaction(
+          () => new DB({ schema: defaultSchema }),
+          async (db) => {
+            await db.addAttribute({
+              collection: 'students',
+              path: ['age'],
+              attribute: { type: 'number', options: {} },
+            });
+            const hash1 = hashSchemaJSON(
+              schemaToJSON(await db.getSchema())?.collections
+            );
+            await db.addAttribute({
+              collection: 'students',
+              path: ['age'],
+              attribute: { type: 'number', options: {} },
+            });
+            const dbSchema = await db.getSchema();
+            expect(dbSchema?.collections).toHaveProperty('students');
+            expect(
+              dbSchema?.collections.students.schema.properties
+            ).toHaveProperty('age');
+            const hash2 = hashSchemaJSON(schemaToJSON(dbSchema)?.collections);
+
+            expect(hash1).toBe(hash2);
+          }
+        );
+      });
     });
-    const dbSchema = await db.getSchema();
-    expect(dbSchema?.collections).toHaveProperty('students');
-    expect(dbSchema?.collections.students.schema.properties).toHaveProperty(
-      'age'
-    );
-    expect(dbSchema?.collections.students.schema.properties).toHaveProperty(
-      'name'
-    );
+
+    describe('dropAttribute', () => {
+      const defaultSchema = {
+        collections: {
+          students: {
+            schema: S.Schema({
+              id: S.String(),
+              name: S.String(),
+              age: S.String(),
+              address: S.Record({
+                street: S.String(),
+                state: S.String(),
+              }),
+            }),
+          },
+        },
+      };
+
+      it('can drop an attribute', async () => {
+        await testDBAndTransaction(
+          () => new DB({ schema: defaultSchema }),
+          async (db) => {
+            await db.dropAttribute({ collection: 'students', path: ['age'] });
+            const dbSchema = await db.getSchema();
+            expect(dbSchema?.collections).toHaveProperty('students');
+            expect(
+              dbSchema?.collections.students.schema.properties
+            ).not.toHaveProperty('age');
+            expect(
+              dbSchema?.collections.students.schema.properties
+            ).toHaveProperty('name');
+          }
+        );
+      });
+
+      it('can drop a nested attribute', async () => {
+        await testDBAndTransaction(
+          () => new DB({ schema: defaultSchema }),
+          async (db) => {
+            await db.dropAttribute({
+              collection: 'students',
+              path: ['address', 'state'],
+            });
+            const dbSchema = await db.getSchema();
+            expect(dbSchema?.collections).toHaveProperty('students');
+            expect(
+              dbSchema?.collections.students.schema.properties
+            ).toHaveProperty('address');
+            expect(
+              dbSchema?.collections.students.schema.properties.address
+                .properties
+            ).not.toHaveProperty('state');
+          }
+        );
+      });
+
+      it('dropAttribute throws if the collection doesnt exist', async () => {
+        await testDBAndTransaction(
+          () => new DB({ schema: defaultSchema }),
+          async (db) => {
+            expect(
+              db.dropAttribute({
+                collection: 'todos',
+                path: ['text'],
+              })
+            ).rejects.toThrowError(CollectionNotFoundError);
+          }
+        );
+      });
+
+      it('dropAttribute throws if the path is not valid', async () => {
+        await testDBAndTransaction(
+          () => new DB({ schema: defaultSchema }),
+          async (db) => {
+            expect(
+              db.dropAttribute({
+                collection: 'students',
+                path: [],
+              })
+            ).rejects.toThrowError(InvalidSchemaPathError);
+            expect(
+              db.dropAttribute({
+                collection: 'students',
+                path: ['addresss', 'state'],
+              })
+            ).rejects.toThrowError(InvalidSchemaPathError);
+          }
+        );
+      });
+
+      it('dropAttribute is idempoent', async () => {
+        await testDBAndTransaction(
+          () => new DB({ schema: defaultSchema }),
+          async (db) => {
+            await db.dropAttribute({ collection: 'students', path: ['age'] });
+            const hash1 = hashSchemaJSON(
+              schemaToJSON(await db.getSchema())?.collections
+            );
+            await db.dropAttribute({ collection: 'students', path: ['age'] });
+            const dbSchema = await db.getSchema();
+            expect(dbSchema?.collections).toHaveProperty('students');
+            expect(
+              dbSchema?.collections.students.schema.properties
+            ).not.toHaveProperty('age');
+            const hash2 = hashSchemaJSON(schemaToJSON(dbSchema)?.collections);
+
+            expect(hash1).toBe(hash2);
+          }
+        );
+      });
+    });
   });
 
-  it.todo('can add a nested attribute');
-
-  it('can drop an attribute', async () => {
-    const schema = {
+  describe('alterAttributeOption', () => {
+    const defaultSchema = {
       collections: {
         students: {
           schema: S.Schema({
             id: S.String(),
             name: S.String(),
+            address: S.Record({
+              street: S.String(),
+              zip: S.String(),
+            }),
           }),
         },
       },
     };
-    const db = new DB({ source: new InMemoryTupleStorage(), schema: schema });
-    await db.insert('students', { id: '1', name: 'Alice' });
-    await db.dropAttribute({ collection: 'students', path: ['id'] });
-    const dbSchema = await db.getSchema();
-    expect(dbSchema?.collections).toHaveProperty('students');
-    expect(dbSchema?.collections.students.schema.properties).not.toHaveProperty(
-      'id'
-    );
-    expect(dbSchema?.collections.students.schema.properties).toHaveProperty(
-      'name'
-    );
+    it('can update attribute options', async () => {
+      await testDBAndTransaction(
+        () =>
+          new DB({
+            schema: defaultSchema,
+          }),
+        async (db) => {
+          // new values
+          await db.alterAttributeOption({
+            collection: 'students',
+            path: ['name'],
+            options: {
+              nullable: true,
+              default: "Robert'); DROP TABLE Students;--",
+            },
+          });
 
-    // TODO: test data is actually dropped if we decide it should be
+          let dbSchema = await db.getSchema();
+          expect(
+            dbSchema?.collections.students.schema.properties.name.options
+              .nullable
+          ).toBe(true);
+          expect(
+            dbSchema?.collections.students.schema.properties.name.options
+              .default
+          ).toBe("Robert'); DROP TABLE Students;--");
+
+          // update values
+          await db.alterAttributeOption({
+            collection: 'students',
+            path: ['name'],
+            options: {
+              nullable: false,
+              default: 'Bobby Tables',
+            },
+          });
+
+          dbSchema = await db.getSchema();
+          expect(
+            dbSchema?.collections.students.schema.properties.name.options
+              .nullable
+          ).toBe(false);
+          expect(
+            dbSchema?.collections.students.schema.properties.name.options
+              .default
+          ).toBe('Bobby Tables');
+        }
+      );
+    });
+
+    it('alterAttributeOption can update a nested attribute', async () => {
+      await testDBAndTransaction(
+        () =>
+          new DB({
+            schema: defaultSchema,
+          }),
+        async (db) => {
+          await db.alterAttributeOption({
+            collection: 'students',
+            path: ['address', 'zip'],
+            options: {
+              nullable: true,
+              default: '12345',
+            },
+          });
+
+          {
+            const dbSchema = await db.getSchema();
+            expect(
+              dbSchema?.collections.students.schema.properties.address
+                .properties.zip.options.nullable
+            ).toBe(true);
+            expect(
+              dbSchema?.collections.students.schema.properties.address
+                .properties.zip.options.default
+            ).toBe('12345');
+          }
+
+          await db.alterAttributeOption({
+            collection: 'students',
+            path: ['address', 'zip'],
+            options: {
+              nullable: false,
+              default: '54321',
+            },
+          });
+
+          {
+            const dbSchema = await db.getSchema();
+            expect(
+              dbSchema?.collections.students.schema.properties.address
+                .properties.zip.options.nullable
+            ).toBe(false);
+            expect(
+              dbSchema?.collections.students.schema.properties.address
+                .properties.zip.options.default
+            ).toBe('54321');
+          }
+        }
+      );
+    });
+
+    it('alterAttributeOption throws if the collection doesnt exist', async () => {
+      await testDBAndTransaction(
+        () =>
+          new DB({
+            schema: defaultSchema,
+          }),
+        async (db) => {
+          expect(
+            db.alterAttributeOption({
+              collection: 'todos',
+              path: ['text'],
+              options: { nullable: true },
+            })
+          ).rejects.toThrowError(CollectionNotFoundError);
+        }
+      );
+    });
+
+    it('alterAttributeOption throws if the path is not valid', async () => {
+      await testDBAndTransaction(
+        () =>
+          new DB({
+            schema: defaultSchema,
+          }),
+        async (db) => {
+          expect(
+            db.alterAttributeOption({
+              collection: 'students',
+              path: [],
+              options: { nullable: true },
+            })
+          ).rejects.toThrowError(InvalidSchemaPathError);
+          expect(
+            db.alterAttributeOption({
+              collection: 'students',
+              path: ['addresss', 'state'],
+              options: { nullable: true },
+            })
+          ).rejects.toThrowError(InvalidSchemaPathError);
+          expect(
+            db.alterAttributeOption({
+              collection: 'students',
+              path: ['address', 'foo'],
+              options: { nullable: true },
+            })
+          ).rejects.toThrowError(InvalidSchemaPathError);
+        }
+      );
+    });
+
+    it('alterAttributeOption is idempoent', async () => {
+      await testDBAndTransaction(
+        () =>
+          new DB({
+            schema: defaultSchema,
+          }),
+        async (db) => {
+          await db.alterAttributeOption({
+            collection: 'students',
+            path: ['name'],
+            options: { nullable: true },
+          });
+          const hash1 = hashSchemaJSON(
+            schemaToJSON(await db.getSchema())?.collections
+          );
+          await db.alterAttributeOption({
+            collection: 'students',
+            path: ['name'],
+            options: { nullable: true },
+          });
+          const dbSchema = await db.getSchema();
+          expect(
+            dbSchema?.collections.students.schema.properties.name.options
+              .nullable
+          ).toBe(true);
+          const hash2 = hashSchemaJSON(schemaToJSON(dbSchema)?.collections);
+
+          expect(hash1).toBe(hash2);
+        }
+      );
+    });
+  });
+
+  describe('dropAttributeOption', () => {
+    const defaultSchema = {
+      collections: {
+        students: {
+          schema: S.Schema({
+            id: S.String(),
+            name: S.String({
+              nullable: true,
+              default: 'Bobby Tables',
+            }),
+            address: S.Record({
+              street: S.String(),
+              state: S.String(),
+              zip: S.String({
+                nullable: true,
+                default: '54321',
+              }),
+            }),
+          }),
+        },
+      },
+    };
+    it('can drop attribute options', async () => {
+      await testDBAndTransaction(
+        () => new DB({ schema: defaultSchema }),
+        async (db) => {
+          await db.dropAttributeOption({
+            collection: 'students',
+            path: ['name'],
+            option: 'nullable',
+          });
+          {
+            const dbSchema = await db.getSchema();
+            expect(
+              dbSchema?.collections.students.schema.properties.name.options
+            ).not.toHaveProperty('nullable');
+          }
+          await db.dropAttributeOption({
+            collection: 'students',
+            path: ['name'],
+            option: 'default',
+          });
+          {
+            const dbSchema = await db.getSchema();
+            expect(
+              dbSchema?.collections.students.schema.properties.name.options
+            ).not.toHaveProperty('default');
+          }
+        }
+      );
+    });
+    it('dropAttributeOption can drop a nested attribute option', async () => {
+      await testDBAndTransaction(
+        () => new DB({ schema: defaultSchema }),
+        async (db) => {
+          await db.dropAttributeOption({
+            collection: 'students',
+            path: ['address', 'zip'],
+            option: 'nullable',
+          });
+          {
+            const dbSchema = await db.getSchema();
+            expect(
+              dbSchema?.collections.students.schema.properties.address
+                .properties.zip.options
+            ).not.toHaveProperty('nullable');
+          }
+          await db.dropAttributeOption({
+            collection: 'students',
+            path: ['address', 'zip'],
+            option: 'default',
+          });
+          {
+            const dbSchema = await db.getSchema();
+            expect(
+              dbSchema?.collections.students.schema.properties.address
+                .properties.zip.options
+            ).not.toHaveProperty('default');
+          }
+        }
+      );
+    });
+
+    it('dropAttributeOption throws if the collection doesnt exist', async () => {
+      await testDBAndTransaction(
+        () => new DB({ schema: defaultSchema }),
+        async (db) => {
+          expect(
+            db.dropAttributeOption({
+              collection: 'todos',
+              path: ['text'],
+              option: 'nullable',
+            })
+          ).rejects.toThrowError(CollectionNotFoundError);
+        }
+      );
+    });
+
+    it('dropAttributeOption throws if the path is not valid', async () => {
+      await testDBAndTransaction(
+        () => new DB({ schema: defaultSchema }),
+        async (db) => {
+          expect(
+            db.dropAttributeOption({
+              collection: 'students',
+              path: [],
+              option: 'nullable',
+            })
+          ).rejects.toThrowError(InvalidSchemaPathError);
+          expect(
+            db.dropAttributeOption({
+              collection: 'students',
+              path: ['addresss', 'zip'],
+              option: 'nullable',
+            })
+          ).rejects.toThrowError(InvalidSchemaPathError);
+          expect(
+            db.dropAttributeOption({
+              collection: 'students',
+              path: ['address', 'foo'],
+              option: 'nullable',
+            })
+          ).rejects.toThrowError(InvalidSchemaPathError);
+        }
+      );
+    });
+
+    it('dropAttributeOption is idempoent', async () => {
+      await testDBAndTransaction(
+        () => new DB({ schema: defaultSchema }),
+        async (db) => {
+          await db.dropAttributeOption({
+            collection: 'students',
+            path: ['name'],
+            option: 'nullable',
+          });
+          const hash1 = hashSchemaJSON(
+            schemaToJSON(await db.getSchema())?.collections
+          );
+          await db.dropAttributeOption({
+            collection: 'students',
+            path: ['name'],
+            option: 'nullable',
+          });
+          const dbSchema = await db.getSchema();
+          expect(
+            dbSchema?.collections.students.schema.properties.name.options
+          ).not.toHaveProperty('nullable');
+          const hash2 = hashSchemaJSON(schemaToJSON(dbSchema)?.collections);
+
+          expect(hash1).toBe(hash2);
+        }
+      );
+    });
+  });
+
+  describe('addRule', () => {
+    it('can add a rule to a collection', async () => {
+      await testDBAndTransaction(
+        () =>
+          new DB({
+            source: new InMemoryTupleStorage(),
+            schema: {
+              collections: {
+                students: {
+                  schema: S.Schema({
+                    id: S.String(),
+                    name: S.String(),
+                  }),
+                },
+              },
+            },
+          }),
+        async (db) => {
+          {
+            const schema = await db.getSchema();
+            const rules = schema?.collections.students.rules?.read ?? {};
+            expect(Object.keys(rules)).toHaveLength(0);
+          }
+
+          await db.addRule({
+            scope: 'read',
+            collection: 'students',
+            id: 'only-read-self',
+            rule: {
+              filter: [['id', '=', '$SESSION_USER_ID']],
+              description: 'Can only read your own student record',
+            },
+          });
+
+          {
+            const schema = await db.getSchema();
+            const rules = schema?.collections.students.rules?.read!;
+            expect(Object.keys(rules)).toHaveLength(1);
+            const rule = rules['only-read-self']!;
+            expect(rule.filter).toEqual([['id', '=', '$SESSION_USER_ID']]);
+            expect(rule.description).toEqual(
+              'Can only read your own student record'
+            );
+          }
+        }
+      );
+    });
+  });
+
+  describe('dropRule', () => {
+    it('can drop a rule from a collection', async () => {
+      await testDBAndTransaction(
+        () =>
+          new DB({
+            source: new InMemoryTupleStorage(),
+            schema: {
+              collections: {
+                students: {
+                  schema: S.Schema({
+                    id: S.String(),
+                    name: S.String(),
+                  }),
+                  rules: {
+                    read: {
+                      'only-read-self': {
+                        filter: [['id', '=', '$SESSION_USER_ID']],
+                        description: 'Can only read your own student record',
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          }),
+        async (db) => {
+          {
+            const schema = await db.getSchema();
+            const rules = schema?.collections.students.rules?.read!;
+            expect(Object.keys(rules)).toHaveLength(1);
+            const rule = rules['only-read-self']!;
+            expect(rule.filter).toEqual([['id', '=', '$SESSION_USER_ID']]);
+            expect(rule.description).toEqual(
+              'Can only read your own student record'
+            );
+          }
+
+          await db.dropRule({
+            scope: 'read',
+            collection: 'students',
+            id: 'only-read-self',
+          });
+
+          {
+            const schema = await db.getSchema();
+            const rules = schema?.collections.students.rules?.read ?? {};
+            expect(Object.keys(rules)).toHaveLength(0);
+          }
+        }
+      );
+    });
   });
 
   it('can override an existing schema', async () => {
@@ -3501,240 +4183,6 @@ describe('schema changes', async () => {
     const beforeSchema = await dbOne.getSchema();
     expect(beforeSchema).toBeDefined();
     expect(beforeSchema.collections.students).toBeDefined();
-  });
-
-  it('can update attribute options', async () => {
-    await testDBAndTransaction(
-      () =>
-        new DB({
-          source: new InMemoryTupleStorage(),
-          schema: {
-            collections: {
-              students: {
-                schema: S.Schema({
-                  id: S.String(),
-                  name: S.String(),
-                }),
-              },
-            },
-          },
-        }),
-      async (db) => {
-        // new values
-        await db.alterAttributeOption({
-          collection: 'students',
-          path: ['name'],
-          options: {
-            nullable: true,
-            default: "Robert'); DROP TABLE Students;--",
-          },
-        });
-
-        let dbSchema = await db.getSchema();
-        expect(
-          dbSchema?.collections.students.schema.properties.name.options.nullable
-        ).toBe(true);
-        expect(
-          dbSchema?.collections.students.schema.properties.name.options.default
-        ).toBe("Robert'); DROP TABLE Students;--");
-
-        // update values
-        await db.alterAttributeOption({
-          collection: 'students',
-          path: ['name'],
-          options: {
-            nullable: false,
-            default: 'Bobby Tables',
-          },
-        });
-
-        dbSchema = await db.getSchema();
-        expect(
-          dbSchema?.collections.students.schema.properties.name.options.nullable
-        ).toBe(false);
-        expect(
-          dbSchema?.collections.students.schema.properties.name.options.default
-        ).toBe('Bobby Tables');
-      }
-    );
-  });
-
-  it('can drop attribute options', async () => {
-    const schema = {
-      collections: {
-        students: {
-          schema: S.Schema({
-            id: S.String(),
-            name: S.String({
-              nullable: true,
-              default: 'Bobby Tables',
-            }),
-          }),
-        },
-      },
-    };
-    await testDBAndTransaction(
-      () => new DB({ source: new InMemoryTupleStorage(), schema: schema }),
-      async (db) => {
-        let dbSchema: Awaited<ReturnType<(typeof db)['getSchema']>> = undefined;
-
-        await db.dropAttributeOption({
-          collection: 'students',
-          path: ['name'],
-          option: 'nullable',
-        });
-
-        dbSchema = await db.getSchema();
-        expect(
-          dbSchema?.collections.students.schema.properties.name.options
-        ).not.toHaveProperty('nullable');
-
-        await db.dropAttributeOption({
-          collection: 'students',
-          path: ['name'],
-          option: 'default',
-        });
-
-        dbSchema = await db.getSchema();
-        expect(
-          dbSchema?.collections.students.schema.properties.name.options
-        ).not.toHaveProperty('default');
-      }
-    );
-  });
-
-  it('can create a collection with rules', async () => {
-    await testDBAndTransaction(
-      () =>
-        new DB({
-          source: new InMemoryTupleStorage(),
-        }),
-      async (db) => {
-        await db.createCollection({
-          name: 'students',
-          schema: {
-            id: { type: 'number', options: {} },
-            name: { type: 'string', options: {} },
-          },
-          rules: {
-            read: {
-              'only-read-self': {
-                filter: [['id', '=', '$SESSION_USER_ID']],
-                description: 'Can only read your own student record',
-              },
-            },
-          },
-        });
-        const dbSchema = await db.getSchema();
-        expect(
-          Object.keys(dbSchema?.collections.students.rules?.read!)
-        ).toHaveLength(1);
-        const rule =
-          dbSchema?.collections.students.rules?.read!['only-read-self']!;
-        expect(rule.filter).toEqual([['id', '=', '$SESSION_USER_ID']]);
-        expect(rule.description).toEqual(
-          'Can only read your own student record'
-        );
-      }
-    );
-  });
-
-  it('can add a rule to a collection', async () => {
-    await testDBAndTransaction(
-      () =>
-        new DB({
-          source: new InMemoryTupleStorage(),
-          schema: {
-            collections: {
-              students: {
-                schema: S.Schema({
-                  id: S.String(),
-                  name: S.String(),
-                }),
-              },
-            },
-          },
-        }),
-      async (db) => {
-        {
-          const schema = await db.getSchema();
-          const rules = schema?.collections.students.rules?.read ?? {};
-          expect(Object.keys(rules)).toHaveLength(0);
-        }
-
-        await db.addRule({
-          scope: 'read',
-          collection: 'students',
-          id: 'only-read-self',
-          rule: {
-            filter: [['id', '=', '$SESSION_USER_ID']],
-            description: 'Can only read your own student record',
-          },
-        });
-
-        {
-          const schema = await db.getSchema();
-          const rules = schema?.collections.students.rules?.read!;
-          expect(Object.keys(rules)).toHaveLength(1);
-          const rule = rules['only-read-self']!;
-          expect(rule.filter).toEqual([['id', '=', '$SESSION_USER_ID']]);
-          expect(rule.description).toEqual(
-            'Can only read your own student record'
-          );
-        }
-      }
-    );
-  });
-
-  it('can drop a rule from a collection', async () => {
-    await testDBAndTransaction(
-      () =>
-        new DB({
-          source: new InMemoryTupleStorage(),
-          schema: {
-            collections: {
-              students: {
-                schema: S.Schema({
-                  id: S.String(),
-                  name: S.String(),
-                }),
-                rules: {
-                  read: {
-                    'only-read-self': {
-                      filter: [['id', '=', '$SESSION_USER_ID']],
-                      description: 'Can only read your own student record',
-                    },
-                  },
-                },
-              },
-            },
-          },
-        }),
-      async (db) => {
-        {
-          const schema = await db.getSchema();
-          const rules = schema?.collections.students.rules?.read!;
-          expect(Object.keys(rules)).toHaveLength(1);
-          const rule = rules['only-read-self']!;
-          expect(rule.filter).toEqual([['id', '=', '$SESSION_USER_ID']]);
-          expect(rule.description).toEqual(
-            'Can only read your own student record'
-          );
-        }
-
-        await db.dropRule({
-          scope: 'read',
-          collection: 'students',
-          id: 'only-read-self',
-        });
-
-        {
-          const schema = await db.getSchema();
-          const rules = schema?.collections.students.rules?.read ?? {};
-          expect(Object.keys(rules)).toHaveLength(0);
-        }
-      }
-    );
   });
 });
 

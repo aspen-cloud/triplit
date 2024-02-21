@@ -2,7 +2,7 @@ import {
   InvalidEntityIdError,
   InvalidInternalEntityIdError,
   InvalidSchemaPathError,
-  ModelNotFoundError,
+  CollectionNotFoundError,
   NoSchemaRegisteredError,
   SessionVariableNotFoundError,
   ValueSchemaMismatchError,
@@ -224,7 +224,7 @@ export function validateTriple(
 
   const model = schema[modelName];
   if (!model) {
-    throw new ModelNotFoundError(modelName as string, Object.keys(schema));
+    throw new CollectionNotFoundError(modelName as string, Object.keys(schema));
   }
 
   const valueSchema = getSchemaFromPath(model.schema, path);
