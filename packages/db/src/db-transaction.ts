@@ -47,6 +47,7 @@ import DB, {
   DBHooks,
   DEFAULT_STORE_KEY,
   EntityOpSet,
+  SetAttributeOptionalOperation,
 } from './db.js';
 import {
   validateExternalId,
@@ -682,7 +683,15 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
   async createCollection(params: CreateCollectionOperation[1]) {
     // Create schema object so it can be updated
     await this.checkOrCreateSchema();
-    const { name: collectionName, schema: schemaJSON, rules } = params;
+    // The set of params here is unfortunately awkward to add to because of the way the schema is stored
+    // We really want schema to encompass properties + optional + whatever else a part of the record type
+    // Keeping the way it is now for backwards compatability though
+    const {
+      name: collectionName,
+      schema: schemaJSON,
+      rules,
+      optional,
+    } = params;
     await this.update(
       this.METADATA_COLLECTION_NAME,
       '_schema',
@@ -694,6 +703,7 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
         const schemaJSONWithType = typeFromJSON({
           type: 'record',
           properties: schemaJSON,
+          optional,
         }).toJSON();
         const newSchema: any = {
           schema: schemaJSONWithType,
@@ -718,123 +728,75 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
   }
 
   async addAttribute(params: AddAttributeOperation[1]) {
-    const { collection: collectionName, path, attribute } = params;
-    if (path.length === 0)
-      throw new InvalidSchemaPathError(
-        path,
-        'The provided path is empty. Paths must be at least one level deep.'
-      );
+    const { collection: collectionName, path, attribute, optional } = params;
+    validatePath(path);
     await this.update(
       this.METADATA_COLLECTION_NAME,
       '_schema',
       async (schema) => {
-        const collectionAttributes = schema.collections[collectionName];
-        if (!collectionAttributes?.schema) {
-          throw new CollectionNotFoundError(
-            collectionName,
-            Object.keys(schema.collections)
-          );
-        }
+        validateCollectionName(schema.collections, collectionName);
 
         const parentPath = path.slice(0, -1);
         const attrName = path[path.length - 1];
 
-        const parent = parentPath.reduce((acc, curr) => {
-          if (!acc[curr])
-            throw new InvalidSchemaPathError(
-              path,
-              'Could not traverse this path'
-            );
-          if (!acc[curr].properties)
-            throw new InvalidSchemaPathError(
-              path,
-              'This path terminated at a non-record type.'
-            );
-          return acc[curr].properties;
-        }, collectionAttributes.schema.properties);
+        const parent = getAttribute(
+          parentPath,
+          schema.collections[collectionName]
+        );
+        validateIsValidRecordInTraversal(parent, path);
 
-        parent[attrName] = attribute;
+        // Update properties
+        parent.properties[attrName] = attribute;
+
+        updateOptional(parent, attrName, optional ?? false);
       }
     );
   }
 
   async dropAttribute(params: DropAttributeOperation[1]) {
     const { collection: collectionName, path } = params;
-    if (path.length === 0)
-      throw new InvalidSchemaPathError(
-        path,
-        'The provided path is empty. Paths must be at least one level deep.'
-      );
-    // Update schema if there is schema
+    validatePath(path);
     await this.update(
       this.METADATA_COLLECTION_NAME,
       '_schema',
       async (schema) => {
-        const collectionAttributes = schema.collections[collectionName];
-        if (!collectionAttributes?.schema) {
-          throw new CollectionNotFoundError(
-            collectionName,
-            Object.keys(schema.collections)
-          );
-        }
+        validateCollectionName(schema.collections, collectionName);
 
         const parentPath = path.slice(0, -1);
         const attrName = path[path.length - 1];
-        const parent = parentPath.reduce((acc, curr) => {
-          if (!acc[curr])
-            throw new InvalidSchemaPathError(
-              path,
-              'Could not traverse this path'
-            );
-          if (!acc[curr].properties)
-            throw new InvalidSchemaPathError(
-              path,
-              'This path terminated at a non-record type.'
-            );
-          return acc[curr].properties;
-        }, collectionAttributes.schema.properties);
 
-        delete parent[attrName];
+        const parent = getAttribute(
+          parentPath,
+          schema.collections[collectionName]
+        );
+        validateIsValidRecordInTraversal(parent, path);
+
+        delete parent.properties[attrName];
+
+        updateOptional(parent, attrName, false);
       }
     );
   }
 
   async alterAttributeOption(params: AlterAttributeOptionOperation[1]) {
     const { collection: collectionName, path, options } = params;
-    if (path.length === 0)
-      throw new InvalidSchemaPathError(
-        path,
-        'The provided path is empty. Paths must be at least one level deep.'
-      );
+    validatePath(path);
     await this.update(
       this.METADATA_COLLECTION_NAME,
       '_schema',
       async (schema) => {
-        const collectionAttributes = schema.collections[collectionName];
-        if (!collectionAttributes?.schema) {
-          throw new CollectionNotFoundError(
-            collectionName,
-            Object.keys(schema.collections)
-          );
-        }
+        validateCollectionName(schema.collections, collectionName);
 
         const parentPath = path.slice(0, -1);
         const attrName = path[path.length - 1];
-        const parent = parentPath.reduce((acc, curr) => {
-          if (!acc[curr])
-            throw new InvalidSchemaPathError(
-              path,
-              'Could not traverse this path'
-            );
-          if (!acc[curr].properties)
-            throw new InvalidSchemaPathError(
-              path,
-              'This path terminated at a non-record type.'
-            );
-          return acc[curr].properties;
-        }, collectionAttributes.schema.properties);
 
-        const attr = parent[attrName];
+        const parent = getAttribute(
+          parentPath,
+          schema.collections[collectionName]
+        );
+        validateIsValidRecordInTraversal(parent, path);
+
+        const attr = parent.properties[attrName];
         if (!attr)
           throw new InvalidSchemaPathError(
             path,
@@ -852,41 +814,23 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
 
   async dropAttributeOption(params: DropAttributeOptionOperation[1]) {
     const { collection: collectionName, path, option } = params;
-    if (path.length === 0)
-      throw new InvalidSchemaPathError(
-        path,
-        'The provided path is empty. Paths must be at least one level deep.'
-      );
-
+    validatePath(path);
     await this.update(
       this.METADATA_COLLECTION_NAME,
       '_schema',
       async (schema) => {
-        const collectionAttributes = schema.collections[collectionName];
-        if (!collectionAttributes?.schema) {
-          throw new CollectionNotFoundError(
-            collectionName,
-            Object.keys(schema.collections)
-          );
-        }
+        validateCollectionName(schema.collections, collectionName);
 
         const parentPath = path.slice(0, -1);
         const attrName = path[path.length - 1];
-        const parent = parentPath.reduce((acc, curr) => {
-          if (!acc[curr])
-            throw new InvalidSchemaPathError(
-              path,
-              'Could not traverse this path'
-            );
-          if (!acc[curr].properties)
-            throw new InvalidSchemaPathError(
-              path,
-              'This path terminated at a non-record type.'
-            );
-          return acc[curr].properties;
-        }, collectionAttributes.schema.properties);
 
-        const attr = parent[attrName];
+        const parent = getAttribute(
+          parentPath,
+          schema.collections[collectionName]
+        );
+        validateIsValidRecordInTraversal(parent, path);
+
+        const attr = parent.properties[attrName];
         if (!attr)
           throw new InvalidSchemaPathError(
             path,
@@ -923,6 +867,91 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
         delete collectionAttributes.rules[scope][id];
       }
     );
+  }
+
+  async setAttributeOptional(params: SetAttributeOptionalOperation[1]) {
+    const { collection: collectionName, path, optional } = params;
+    validatePath(path);
+    await this.update(
+      this.METADATA_COLLECTION_NAME,
+      '_schema',
+      async (schema) => {
+        validateCollectionName(schema.collections, collectionName);
+
+        const parentPath = path.slice(0, -1);
+        const attrName = path[path.length - 1];
+
+        const parent = getAttribute(
+          parentPath,
+          schema.collections[collectionName]
+        );
+        validateIsValidRecordInTraversal(parent, path);
+
+        if (!parent.properties[attrName]) {
+          throw new InvalidSchemaPathError(
+            path,
+            'Could not traverse this path'
+          );
+        }
+
+        updateOptional(parent, attrName, optional);
+      }
+    );
+  }
+}
+
+// Updates the optional properties of a record type
+// Arrays are pretty sensitive in (de)serialization
+// Really hard to work with arrays right now, specifically inplace operations and empty arrays
+function updateOptional(
+  recordAttr: RecordType<any>,
+  attrName: string,
+  optional: boolean
+) {
+  if (!recordAttr.optional && optional) recordAttr.optional = [attrName];
+  if (recordAttr.optional) {
+    if (!recordAttr.optional.includes(attrName) && optional) {
+      const updatedKeys = [];
+      for (let i = 0; i < recordAttr.optional.length; i++) {
+        updatedKeys.push(recordAttr.optional[i]);
+      }
+      recordAttr.optional = [...updatedKeys, attrName];
+    } else if (recordAttr.optional.includes(attrName) && !optional)
+      recordAttr.optional = recordAttr.optional.filter(
+        (attr) => attr !== attrName
+      );
+  }
+}
+
+function getAttribute(path: string[], collectionAttributes: any) {
+  return path.reduce((acc, curr) => {
+    validateIsValidRecordInTraversal(acc, path);
+    return acc.properties[curr];
+  }, collectionAttributes.schema);
+}
+
+function validateIsValidRecordInTraversal(record: any, path: string[]) {
+  if (!record)
+    throw new InvalidSchemaPathError(path, 'Could not traverse this path');
+  if (!record.properties)
+    throw new InvalidSchemaPathError(
+      path,
+      'This path terminated at a non-record type.'
+    );
+}
+
+function validatePath(path: string[]) {
+  if (path.length === 0)
+    throw new InvalidSchemaPathError(
+      path,
+      'The provided path is empty. Paths must be at least one level deep.'
+    );
+}
+
+function validateCollectionName(collections: any, collectionName: string) {
+  const collectionAttributes = collections[collectionName];
+  if (!collectionAttributes?.schema) {
+    throw new CollectionNotFoundError(collectionName, Object.keys(collections));
   }
 }
 

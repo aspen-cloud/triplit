@@ -150,7 +150,8 @@ export type UpdateTypeFromModel<M extends Model<any> | undefined> =
         > extends true
           ? k
           : never]: ExtractJSType<M['properties'][k]>;
-      } & { // If properties are optional by the schema, they are optional in the update type
+      } & {
+        // If properties are optional by the schema, they are optional in the update type
         [k in keyof Omit<
           SelectModelFromModel<M>['properties'],
           'id'

@@ -3494,206 +3494,250 @@ describe('schema changes', async () => {
           ).toHaveProperty('name');
         }
       );
-
-      it('can add a nested attribute', async () => {
-        await testDBAndTransaction(
-          () => new DB({ schema: defaultSchema }),
-          async (db) => {
-            await db.addAttribute({
-              collection: 'students',
-              path: ['address', 'state'],
-              attribute: { type: 'string', options: {} },
-            });
-            const dbSchema = await db.getSchema();
-            console.dir(dbSchema, { depth: null });
-            expect(dbSchema?.collections).toHaveProperty('students');
-            expect(
-              dbSchema?.collections.students.schema.properties
-            ).toHaveProperty('address');
-            expect(
-              dbSchema?.collections.students.schema.properties.address
-                .properties
-            ).toHaveProperty('state');
-          }
-        );
-      });
-
-      it('addAttribute throws if the collection doesnt exist', async () => {
-        await testDBAndTransaction(
-          () => new DB({ schema: defaultSchema }),
-          async (db) => {
-            expect(
-              db.addAttribute({
-                collection: 'todos',
-                path: ['text'],
-                attribute: { type: 'string', options: {} },
-              })
-            ).rejects.toThrowError(CollectionNotFoundError);
-          }
-        );
-      });
-
-      it('addAttribute throws if the path is not valid', async () => {
-        await testDBAndTransaction(
-          () => new DB({ schema: defaultSchema }),
-          async (db) => {
-            expect(
-              db.addAttribute({
-                collection: 'students',
-                path: [],
-                attribute: { type: 'string', options: {} },
-              })
-            ).rejects.toThrowError(InvalidSchemaPathError);
-            expect(
-              db.addAttribute({
-                collection: 'students',
-                path: ['addresss', 'state'],
-                attribute: { type: 'string', options: {} },
-              })
-            ).rejects.toThrowError(InvalidSchemaPathError);
-          }
-        );
-      });
-
-      it('addAttribute is idempoent', async () => {
-        await testDBAndTransaction(
-          () => new DB({ schema: defaultSchema }),
-          async (db) => {
-            await db.addAttribute({
-              collection: 'students',
-              path: ['age'],
-              attribute: { type: 'number', options: {} },
-            });
-            const hash1 = hashSchemaJSON(
-              schemaToJSON(await db.getSchema())?.collections
-            );
-            await db.addAttribute({
-              collection: 'students',
-              path: ['age'],
-              attribute: { type: 'number', options: {} },
-            });
-            const dbSchema = await db.getSchema();
-            expect(dbSchema?.collections).toHaveProperty('students');
-            expect(
-              dbSchema?.collections.students.schema.properties
-            ).toHaveProperty('age');
-            const hash2 = hashSchemaJSON(schemaToJSON(dbSchema)?.collections);
-
-            expect(hash1).toBe(hash2);
-          }
-        );
-      });
     });
 
-    describe('dropAttribute', () => {
-      const defaultSchema = {
-        collections: {
-          students: {
-            schema: S.Schema({
-              id: S.String(),
-              name: S.String(),
-              age: S.String(),
-              address: S.Record({
-                street: S.String(),
-                state: S.String(),
-              }),
+    it('can add an optional attribute', async () => {
+      await testDBAndTransaction(
+        () => new DB({ schema: defaultSchema }),
+        async (db) => {
+          await db.addAttribute({
+            collection: 'students',
+            path: ['age'],
+            attribute: { type: 'number', options: {} },
+            optional: true,
+          });
+          const dbSchema = await db.getSchema();
+          expect(dbSchema?.collections).toHaveProperty('students');
+          expect(
+            dbSchema?.collections.students.schema.properties
+          ).toHaveProperty('age');
+          expect(
+            dbSchema?.collections.students.schema.optional?.includes('age')
+          ).toBe(true);
+        }
+      );
+    });
+
+    it('can add a nested attribute', async () => {
+      await testDBAndTransaction(
+        () => new DB({ schema: defaultSchema }),
+        async (db) => {
+          await db.addAttribute({
+            collection: 'students',
+            path: ['address', 'state'],
+            attribute: { type: 'string', options: {} },
+          });
+          const dbSchema = await db.getSchema();
+          expect(dbSchema?.collections).toHaveProperty('students');
+          expect(
+            dbSchema?.collections.students.schema.properties
+          ).toHaveProperty('address');
+          expect(
+            dbSchema?.collections.students.schema.properties.address.properties
+          ).toHaveProperty('state');
+        }
+      );
+    });
+
+    it('addAttribute throws if the collection doesnt exist', async () => {
+      await testDBAndTransaction(
+        () => new DB({ schema: defaultSchema }),
+        async (db) => {
+          await expect(
+            db.addAttribute({
+              collection: 'todos',
+              path: ['text'],
+              attribute: { type: 'string', options: {} },
+            })
+          ).rejects.toThrowError(CollectionNotFoundError);
+        }
+      );
+    });
+
+    it('addAttribute throws if the path is not valid', async () => {
+      await testDBAndTransaction(
+        () => new DB({ schema: defaultSchema }),
+        async (db) => {
+          await expect(
+            db.addAttribute({
+              collection: 'students',
+              path: [],
+              attribute: { type: 'string', options: {} },
+            })
+          ).rejects.toThrowError(InvalidSchemaPathError);
+          await expect(
+            db.addAttribute({
+              collection: 'students',
+              path: ['addresss', 'state'],
+              attribute: { type: 'string', options: {} },
+            })
+          ).rejects.toThrowError(InvalidSchemaPathError);
+        }
+      );
+    });
+
+    it('addAttribute is idempoent', async () => {
+      await testDBAndTransaction(
+        () => new DB({ schema: defaultSchema }),
+        async (db) => {
+          await db.addAttribute({
+            collection: 'students',
+            path: ['age'],
+            attribute: { type: 'number', options: {} },
+          });
+          const hash1 = hashSchemaJSON(
+            schemaToJSON(await db.getSchema())?.collections
+          );
+          await db.addAttribute({
+            collection: 'students',
+            path: ['age'],
+            attribute: { type: 'number', options: {} },
+          });
+          const dbSchema = await db.getSchema();
+          expect(dbSchema?.collections).toHaveProperty('students');
+          expect(
+            dbSchema?.collections.students.schema.properties
+          ).toHaveProperty('age');
+          const hash2 = hashSchemaJSON(schemaToJSON(dbSchema)?.collections);
+
+          expect(hash1).toBe(hash2);
+        }
+      );
+    });
+  });
+
+  describe('dropAttribute', () => {
+    const defaultSchema = {
+      collections: {
+        students: {
+          schema: S.Schema({
+            id: S.String(),
+            name: S.String(),
+            age: S.String(),
+            address: S.Record({
+              street: S.String(),
+              state: S.String(),
             }),
+          }),
+        },
+      },
+    };
+
+    it('can drop an attribute', async () => {
+      await testDBAndTransaction(
+        () => new DB({ schema: defaultSchema }),
+        async (db) => {
+          await db.dropAttribute({ collection: 'students', path: ['age'] });
+          const dbSchema = await db.getSchema();
+          expect(dbSchema?.collections).toHaveProperty('students');
+          expect(
+            dbSchema?.collections.students.schema.properties
+          ).not.toHaveProperty('age');
+          expect(
+            dbSchema?.collections.students.schema.properties
+          ).toHaveProperty('name');
+        }
+      );
+    });
+
+    it('Dropping an optional attribute cleans up data', async () => {
+      const db = new DB({
+        schema: {
+          collections: {
+            students: {
+              schema: S.Schema({
+                id: S.String(),
+                name: S.String(),
+                age: S.Optional(S.Number()),
+              }),
+            },
           },
         },
-      };
-
-      it('can drop an attribute', async () => {
-        await testDBAndTransaction(
-          () => new DB({ schema: defaultSchema }),
-          async (db) => {
-            await db.dropAttribute({ collection: 'students', path: ['age'] });
-            const dbSchema = await db.getSchema();
-            expect(dbSchema?.collections).toHaveProperty('students');
-            expect(
-              dbSchema?.collections.students.schema.properties
-            ).not.toHaveProperty('age');
-            expect(
-              dbSchema?.collections.students.schema.properties
-            ).toHaveProperty('name');
-          }
-        );
       });
+      await db.dropAttribute({ collection: 'students', path: ['age'] });
+      const dbSchema = await db.getSchema();
 
-      it('can drop a nested attribute', async () => {
-        await testDBAndTransaction(
-          () => new DB({ schema: defaultSchema }),
-          async (db) => {
-            await db.dropAttribute({
+      expect(
+        dbSchema?.collections.students.schema.properties
+      ).not.toHaveProperty('age');
+      expect(dbSchema?.collections.students.schema.optional).not.toContain(
+        'age'
+      );
+    });
+
+    it('can drop a nested attribute', async () => {
+      await testDBAndTransaction(
+        () => new DB({ schema: defaultSchema }),
+        async (db) => {
+          await db.dropAttribute({
+            collection: 'students',
+            path: ['address', 'state'],
+          });
+          const dbSchema = await db.getSchema();
+          expect(dbSchema?.collections).toHaveProperty('students');
+          expect(
+            dbSchema?.collections.students.schema.properties
+          ).toHaveProperty('address');
+          expect(
+            dbSchema?.collections.students.schema.properties.address.properties
+          ).not.toHaveProperty('state');
+        }
+      );
+    });
+
+    it('dropAttribute throws if the collection doesnt exist', async () => {
+      await testDBAndTransaction(
+        () => new DB({ schema: defaultSchema }),
+        async (db) => {
+          await expect(
+            db.dropAttribute({
+              collection: 'todos',
+              path: ['text'],
+            })
+          ).rejects.toThrowError(CollectionNotFoundError);
+        }
+      );
+    });
+
+    it('dropAttribute throws if the path is not valid', async () => {
+      await testDBAndTransaction(
+        () => new DB({ schema: defaultSchema }),
+        async (db) => {
+          await expect(
+            db.dropAttribute({
               collection: 'students',
-              path: ['address', 'state'],
-            });
-            const dbSchema = await db.getSchema();
-            expect(dbSchema?.collections).toHaveProperty('students');
-            expect(
-              dbSchema?.collections.students.schema.properties
-            ).toHaveProperty('address');
-            expect(
-              dbSchema?.collections.students.schema.properties.address
-                .properties
-            ).not.toHaveProperty('state');
-          }
-        );
-      });
+              path: [],
+            })
+          ).rejects.toThrowError(InvalidSchemaPathError);
+          await expect(
+            db.dropAttribute({
+              collection: 'students',
+              path: ['addresss', 'state'],
+            })
+          ).rejects.toThrowError(InvalidSchemaPathError);
+        }
+      );
+    });
 
-      it('dropAttribute throws if the collection doesnt exist', async () => {
-        await testDBAndTransaction(
-          () => new DB({ schema: defaultSchema }),
-          async (db) => {
-            expect(
-              db.dropAttribute({
-                collection: 'todos',
-                path: ['text'],
-              })
-            ).rejects.toThrowError(CollectionNotFoundError);
-          }
-        );
-      });
+    it('dropAttribute is idempoent', async () => {
+      await testDBAndTransaction(
+        () => new DB({ schema: defaultSchema }),
+        async (db) => {
+          await db.dropAttribute({ collection: 'students', path: ['age'] });
+          const hash1 = hashSchemaJSON(
+            schemaToJSON(await db.getSchema())?.collections
+          );
+          await db.dropAttribute({ collection: 'students', path: ['age'] });
+          const dbSchema = await db.getSchema();
+          expect(dbSchema?.collections).toHaveProperty('students');
+          expect(
+            dbSchema?.collections.students.schema.properties
+          ).not.toHaveProperty('age');
+          const hash2 = hashSchemaJSON(schemaToJSON(dbSchema)?.collections);
 
-      it('dropAttribute throws if the path is not valid', async () => {
-        await testDBAndTransaction(
-          () => new DB({ schema: defaultSchema }),
-          async (db) => {
-            expect(
-              db.dropAttribute({
-                collection: 'students',
-                path: [],
-              })
-            ).rejects.toThrowError(InvalidSchemaPathError);
-            expect(
-              db.dropAttribute({
-                collection: 'students',
-                path: ['addresss', 'state'],
-              })
-            ).rejects.toThrowError(InvalidSchemaPathError);
-          }
-        );
-      });
-
-      it('dropAttribute is idempoent', async () => {
-        await testDBAndTransaction(
-          () => new DB({ schema: defaultSchema }),
-          async (db) => {
-            await db.dropAttribute({ collection: 'students', path: ['age'] });
-            const hash1 = hashSchemaJSON(
-              schemaToJSON(await db.getSchema())?.collections
-            );
-            await db.dropAttribute({ collection: 'students', path: ['age'] });
-            const dbSchema = await db.getSchema();
-            expect(dbSchema?.collections).toHaveProperty('students');
-            expect(
-              dbSchema?.collections.students.schema.properties
-            ).not.toHaveProperty('age');
-            const hash2 = hashSchemaJSON(schemaToJSON(dbSchema)?.collections);
-
-            expect(hash1).toBe(hash2);
-          }
-        );
-      });
+          expect(hash1).toBe(hash2);
+        }
+      );
     });
   });
 
@@ -3821,7 +3865,7 @@ describe('schema changes', async () => {
             schema: defaultSchema,
           }),
         async (db) => {
-          expect(
+          await expect(
             db.alterAttributeOption({
               collection: 'todos',
               path: ['text'],
@@ -3839,21 +3883,21 @@ describe('schema changes', async () => {
             schema: defaultSchema,
           }),
         async (db) => {
-          expect(
+          await expect(
             db.alterAttributeOption({
               collection: 'students',
               path: [],
               options: { nullable: true },
             })
           ).rejects.toThrowError(InvalidSchemaPathError);
-          expect(
+          await expect(
             db.alterAttributeOption({
               collection: 'students',
               path: ['addresss', 'state'],
               options: { nullable: true },
             })
           ).rejects.toThrowError(InvalidSchemaPathError);
-          expect(
+          await expect(
             db.alterAttributeOption({
               collection: 'students',
               path: ['address', 'foo'],
@@ -3984,7 +4028,7 @@ describe('schema changes', async () => {
       await testDBAndTransaction(
         () => new DB({ schema: defaultSchema }),
         async (db) => {
-          expect(
+          await expect(
             db.dropAttributeOption({
               collection: 'todos',
               path: ['text'],
@@ -3999,21 +4043,21 @@ describe('schema changes', async () => {
       await testDBAndTransaction(
         () => new DB({ schema: defaultSchema }),
         async (db) => {
-          expect(
+          await expect(
             db.dropAttributeOption({
               collection: 'students',
               path: [],
               option: 'nullable',
             })
           ).rejects.toThrowError(InvalidSchemaPathError);
-          expect(
+          await expect(
             db.dropAttributeOption({
               collection: 'students',
               path: ['addresss', 'zip'],
               option: 'nullable',
             })
           ).rejects.toThrowError(InvalidSchemaPathError);
-          expect(
+          await expect(
             db.dropAttributeOption({
               collection: 'students',
               path: ['address', 'foo'],
@@ -4150,6 +4194,205 @@ describe('schema changes', async () => {
             const rules = schema?.collections.students.rules?.read ?? {};
             expect(Object.keys(rules)).toHaveLength(0);
           }
+        }
+      );
+    });
+  });
+
+  describe('setAttributeOptional', () => {
+    const defaultSchema = {
+      collections: {
+        test: {
+          schema: S.Schema({
+            id: S.String(),
+            required: S.String(),
+            optional: S.Optional(S.String()),
+            record: S.Record({
+              required: S.String(),
+              optional: S.Optional(S.String()),
+            }),
+          }),
+        },
+      },
+    };
+    it('can set an attribute to optional', async () => {
+      await testDBAndTransaction(
+        () => new DB({ schema: defaultSchema }),
+        async (db) => {
+          {
+            const schema = await db.getSchema();
+            expect(schema?.collections.test.schema.optional?.length).toBe(1);
+            expect(
+              schema?.collections.test.schema.optional?.includes('optional')
+            ).toBe(true);
+          }
+          await db.setAttributeOptional({
+            collection: 'test',
+            path: ['required'],
+            optional: true,
+          });
+          {
+            const schema = await db.getSchema();
+            expect(schema?.collections.test.schema.optional?.length).toBe(2);
+            expect(
+              schema?.collections.test.schema.optional?.includes('required')
+            ).toBe(true);
+            expect(
+              schema?.collections.test.schema.optional?.includes('optional')
+            ).toBe(true);
+          }
+          await db.setAttributeOptional({
+            collection: 'test',
+            path: ['optional'],
+            optional: false,
+          });
+          {
+            const schema = await db.getSchema();
+            expect(schema?.collections.test.schema.optional?.length).toBe(1);
+            expect(
+              schema?.collections.test.schema.optional?.includes('required')
+            ).toBe(true);
+          }
+        }
+      );
+    });
+
+    it('setAttributeOptional can set a nested attribute optional', async () => {
+      await testDBAndTransaction(
+        () => new DB({ schema: defaultSchema }),
+        async (db) => {
+          {
+            const schema = await db.getSchema();
+            expect(
+              schema?.collections.test.schema.properties.record.optional?.length
+            ).toBe(1);
+            expect(
+              schema?.collections.test.schema.properties.record.optional?.includes(
+                'optional'
+              )
+            ).toBe(true);
+          }
+          await db.setAttributeOptional({
+            collection: 'test',
+            path: ['record', 'required'],
+            optional: true,
+          });
+          {
+            const schema = await db.getSchema();
+            expect(
+              schema?.collections.test.schema.properties.record.optional?.length
+            ).toBe(2);
+            expect(
+              schema?.collections.test.schema.properties.record.optional?.includes(
+                'required'
+              )
+            ).toBe(true);
+            expect(
+              schema?.collections.test.schema.properties.record.optional?.includes(
+                'optional'
+              )
+            ).toBe(true);
+          }
+          await db.setAttributeOptional({
+            collection: 'test',
+            path: ['record', 'optional'],
+            optional: false,
+          });
+          {
+            const schema = await db.getSchema();
+            expect(
+              schema?.collections.test.schema.properties.record.optional?.length
+            ).toBe(1);
+            expect(
+              schema?.collections.test.schema.properties.record.optional?.includes(
+                'required'
+              )
+            ).toBe(true);
+          }
+        }
+      );
+    });
+
+    it('setAttributeOptional throws if the collection doesnt exist', async () => {
+      await testDBAndTransaction(
+        () => new DB({ schema: defaultSchema }),
+        async (db) => {
+          await expect(
+            db.setAttributeOptional({
+              collection: 'todos',
+              path: ['text'],
+              optional: true,
+            })
+          ).rejects.toThrowError(CollectionNotFoundError);
+        }
+      );
+    });
+
+    it('setAttributeOptional throws if the path is not valid', async () => {
+      await testDBAndTransaction(
+        () => new DB({ schema: defaultSchema }),
+        async (db) => {
+          await expect(
+            db.setAttributeOptional({
+              collection: 'test',
+              path: [],
+              optional: true,
+            })
+          ).rejects.toThrowError(InvalidSchemaPathError);
+          await expect(
+            db.setAttributeOptional({
+              collection: 'test',
+              path: ['recordd', 'required'],
+              optional: true,
+            })
+          ).rejects.toThrowError(InvalidSchemaPathError);
+          await expect(
+            db.setAttributeOptional({
+              collection: 'test',
+              path: ['record', 'foo'],
+              optional: true,
+            })
+          ).rejects.toThrowError(InvalidSchemaPathError);
+        }
+      );
+    });
+
+    it('setAttributeOptional is idempoent', async () => {
+      await testDBAndTransaction(
+        () => new DB({ schema: defaultSchema }),
+        async (db) => {
+          await db.setAttributeOptional({
+            collection: 'test',
+            path: ['required'],
+            optional: true,
+          });
+          await db.setAttributeOptional({
+            collection: 'test',
+            path: ['optional'],
+            optional: false,
+          });
+          const hash1 = hashSchemaJSON(
+            schemaToJSON(await db.getSchema())?.collections
+          );
+          await db.setAttributeOptional({
+            collection: 'test',
+            path: ['required'],
+            optional: true,
+          });
+          await db.setAttributeOptional({
+            collection: 'test',
+            path: ['optional'],
+            optional: false,
+          });
+          const dbSchema = await db.getSchema();
+          expect(dbSchema?.collections.test.schema.optional?.length).toBe(1);
+          expect(
+            dbSchema?.collections.test.schema.optional?.includes('required')
+          ).toBe(true);
+
+          const hash2 = hashSchemaJSON(schemaToJSON(dbSchema)?.collections);
+
+          expect(hash1).toBe(hash2);
         }
       );
     });
@@ -6980,3 +7223,31 @@ it('can upsert data with optional properties', async () => {
   const result = await db.fetchById('test', '1');
   expect(result).toStrictEqual({ id: '1', name: 'alice', age: 30 });
 });
+
+// it.only('handles lists?', async () => {
+//   {
+//     const db = new DB();
+//     await db.insert('test', {
+//       id: '1',
+//       name: 'test',
+//       list: ['a', 'b', 'c'],
+//     });
+//     const result = await db.fetch(db.query('test').build());
+//     expect(result.get('1')).toMatchObject({
+//       id: '1',
+//       name: 'test',
+//       list: ['a', 'b', 'c'],
+//     });
+
+//     await db.update('test', '1', (entity) => {
+//       entity.list = ['d', 'e', 'f'];
+//     });
+
+//     const result2 = await db.fetch(db.query('test').build());
+//     expect(result2.get('1')).toMatchObject({
+//       id: '1',
+//       name: 'test',
+//       list: ['d', 'e', 'f'],
+//     });
+//   }
+// });

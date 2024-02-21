@@ -71,12 +71,18 @@ export type CreateCollectionOperation = [
     name: string;
     schema: { [path: string]: AttributeDefinition };
     rules?: CollectionRules<any>;
+    optional?: string[];
   }
 ];
 export type DropCollectionOperation = ['drop_collection', { name: string }];
 export type AddAttributeOperation = [
   'add_attribute',
-  { collection: string; path: string[]; attribute: AttributeDefinition }
+  {
+    collection: string;
+    path: string[];
+    attribute: AttributeDefinition;
+    optional?: boolean;
+  }
 ];
 export type DropAttributeOperation = [
   'drop_attribute',
@@ -98,6 +104,10 @@ export type DropRuleOperation = [
   'drop_rule',
   { collection: string; scope: string; id: string }
 ];
+export type SetAttributeOptionalOperation = [
+  'set_attribute_optional',
+  { collection: string; path: string[]; optional: boolean }
+];
 
 type DBOperation =
   | CreateCollectionOperation
@@ -107,7 +117,8 @@ type DBOperation =
   | AlterAttributeOptionOperation
   | DropAttributeOptionOperation
   | AddRuleOperation
-  | DropRuleOperation;
+  | DropRuleOperation
+  | SetAttributeOptionalOperation;
 
 export type Migration = {
   up: DBOperation[];
@@ -864,6 +875,12 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
     });
   }
 
+  async setAttributeOptional(params: SetAttributeOptionalOperation[1]) {
+    await this.transact(async (tx) => {
+      await tx.setAttributeOptional(params);
+    });
+  }
+
   private async applySchemaMigration(
     migration: Migration,
     direction: 'up' | 'down',
@@ -904,6 +921,9 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
               break;
             case 'drop_rule':
               await tx.dropRule(operation[1]);
+              break;
+            case 'set_attribute_optional':
+              await tx.setAttributeOptional(operation[1]);
               break;
             default:
               throw new InvalidMigrationOperationError(
