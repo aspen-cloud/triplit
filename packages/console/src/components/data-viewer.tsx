@@ -475,9 +475,6 @@ export function DataViewer({
           inferredAttributes={Array.from(uniqueAttributes)}
           client={client}
         />
-        <div className="text-sm px-2">
-          {fetchingRemote ? 'Loading' : 'Not Loading'}
-        </div>
       </div>
       <DataTable
         columns={columns}
