@@ -318,6 +318,13 @@ export async function prepareQuery<
       return [prop, op, val instanceof Date ? val.toISOString() : val];
     }
   );
+  if (fetchQuery.after)
+    fetchQuery.after = [
+      fetchQuery.after[0] instanceof Date
+        ? fetchQuery.after[0].toISOString()
+        : fetchQuery.after[0],
+      appendCollectionToId(fetchQuery.collectionName, fetchQuery.after[1]),
+    ];
   if (collectionSchema) {
     // If we dont have a field selection, select all fields
     // Helps guard against 'include' injection causing issues as well

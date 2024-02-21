@@ -2771,7 +2771,6 @@ describe('ORDER & LIMIT & Pagination', () => {
     expect(secondPageResults.size).toBe(5);
     expect(areAllScoresAscendingAfterSecondPage).toBeTruthy();
   });
-
   it('can pull in more results to satisfy limit in subscription when current result no longer satisfies FILTER', async () => {
     const LIMIT = 5;
 
@@ -2891,6 +2890,92 @@ describe('ORDER & LIMIT & Pagination', () => {
     expect([...results.values()].map((r) => r.year)).toEqual([
       2019, 2018, 2017, 2016, 2015,
     ]);
+  });
+});
+
+describe.each(['ASC', 'DESC'])('pagination stress test: %s', (sortOrder) => {
+  const schema = {
+    collections: {
+      students: {
+        schema: S.Schema({
+          id: S.String(),
+          name: S.String(),
+          graduated: S.Boolean(),
+          expected_graduation_date: S.Date(),
+        }),
+      },
+    },
+  };
+
+  const PAGE_SIZE = 2;
+  const entities = [
+    {
+      id: '5',
+      name: 'Bob',
+      graduated: false,
+      expected_graduation_date: new Date('2023-04-16'),
+    },
+    {
+      id: '3',
+      name: 'Alice',
+      graduated: false,
+      expected_graduation_date: new Date('2022-01-02'),
+    },
+    {
+      id: '2',
+      name: 'David',
+      graduated: false,
+      expected_graduation_date: new Date('2021-05-02'),
+    },
+    {
+      id: '1',
+      name: 'Charlie',
+      graduated: true,
+      expected_graduation_date: new Date('2021-05-10'),
+    },
+    {
+      id: '4',
+      name: 'Emily',
+      graduated: true,
+      expected_graduation_date: new Date('2026-05-02'),
+    },
+  ];
+  it.each(
+    Object.keys(schema.collections.students.schema.properties)
+    // ['expected_graduation_date']
+  )('can sort and paginate by %s', async (prop) => {
+    const db = new DB({
+      schema,
+      source: new InMemoryTupleStorage(),
+    });
+    await Promise.all(entities.map((doc) => db.insert('students', doc)));
+    const correctOrder = entities
+      .sort((a, b) => {
+        if (a[prop] < b[prop]) return sortOrder === 'ASC' ? -1 : 1;
+        if (a[prop] > b[prop]) return sortOrder === 'ASC' ? 1 : -1;
+        return 0;
+      })
+      .map((e) => e[prop]);
+    const correctPages = [];
+    for (let i = 0; i < correctOrder.length; i += PAGE_SIZE) {
+      correctPages.push(correctOrder.slice(i, i + PAGE_SIZE));
+    }
+    let lastEntity;
+    for (let i = 0; i < correctPages.length; i++) {
+      const results = await db.fetch(
+        db
+          .query('students')
+          .order([prop, sortOrder])
+          .limit(PAGE_SIZE)
+          .after(i > 0 ? [lastEntity[prop], lastEntity.id] : undefined)
+          .build()
+      );
+      lastEntity = Array.from(results.values()).pop();
+
+      expect(Array.from(results.values()).map((e) => e[prop])).toEqual(
+        correctPages[i]
+      );
+    }
   });
 });
 
