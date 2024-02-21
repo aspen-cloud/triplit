@@ -145,6 +145,26 @@ You may use dot notation to order by attributes of a record.
 const query = client.query('users').order('address.city', 'ASC');
 ```
 
+### After
+
+You may use the `after` method to specify an entity to start the query from. This is useful for paginating results. You must use `order` before using `after`. At the moment, `after` only supports a single cursor that corresponds to the first `order` clause.
+
+```typescript {12-14}
+const PAGE_SIZE = 10;
+
+const query = client
+  .query('users')
+  .select(['id', 'name', 'email', 'dob'])
+  .order('created_at', 'DESC')
+  .limit(PAGE_SIZE);
+
+const { results: firstPage } = client.fetch(query);
+const lastEntity = Array.from(firstPage.values()).pop();
+
+const secondPageQuery = firstQuery.after(lastEntity);
+const { results: secondPage } = client.fetch(secondPageQuery);
+```
+
 ## Limit
 
 Many times you will want to limit the number of results returned by a query. To do this, you can use the `limit` method.
