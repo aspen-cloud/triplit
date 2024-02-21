@@ -1209,6 +1209,60 @@ describe('Set operations', () => {
       expect(result!.friends).toBeNull();
     });
   });
+
+  describe('optional sets', () => {
+    const schema = {
+      collections: {
+        test: {
+          schema: S.Schema({
+            id: S.Id(),
+            name: S.String(),
+            friends: S.Optional(S.Set(S.String())),
+          }),
+        },
+      },
+    };
+
+    it('can delete an optional set', async () => {
+      const db = new DB({ schema });
+      await db.insert('test', {
+        id: '1',
+        name: 'Alice',
+        friends: new Set(['Bob', 'Charlie']),
+      });
+      {
+        const result = await db.fetchById('test', '1');
+        expect(result!.friends).toBeInstanceOf(Set);
+        expect([...result!.friends!.values()]).toEqual(['Bob', 'Charlie']);
+      }
+      await db.update('test', '1', async (entity) => {
+        delete entity.friends;
+      });
+      const result = await db.fetchById('test', '1');
+      expect(result!.friends).toBeUndefined();
+    });
+
+    it('can assign undefined to optional sets', async () => {
+      const db = new DB({ schema });
+      await db.insert('test', {
+        id: '1',
+        name: 'Alice',
+        friends: new Set(['Bob', 'Charlie']),
+      });
+      {
+        const result = await db.fetchById('test', '1');
+        expect(result!.friends).toBeInstanceOf(Set);
+        expect([...result!.friends!.values()]).toEqual(['Bob', 'Charlie']);
+      }
+      await db.update('test', '1', async (entity) => {
+        entity.friends = undefined;
+      });
+      {
+        const result = await db.fetchById('test', '1');
+        expect(result!.friends).toBeUndefined();
+      }
+    });
+  });
 });
 
 describe('record operations', () => {
@@ -1689,6 +1743,82 @@ describe('record operations', () => {
           record: {
             attr: 'attr',
           },
+        });
+      }
+    });
+  });
+
+  describe('optional records', async () => {
+    const schema = {
+      collections: {
+        test: {
+          schema: S.Schema({
+            id: S.Id(),
+            optionalRecord: S.Optional(
+              S.Record({
+                attr: S.String(),
+              })
+            ),
+          }),
+        },
+      },
+    };
+
+    it('can delete optional records', async () => {
+      const db = new DB({
+        schema,
+      });
+      await db.insert('test', {
+        id: 'item1',
+        optionalRecord: {
+          attr: 'attr',
+        },
+      });
+      {
+        const result = await db.fetchById('test', 'item1');
+        expect(result).toEqual({
+          id: 'item1',
+          optionalRecord: {
+            attr: 'attr',
+          },
+        });
+      }
+      await db.update('test', 'item1', async (entity) => {
+        delete entity.optionalRecord;
+      });
+      {
+        const result = await db.fetchById('test', 'item1');
+        expect(result).toEqual({
+          id: 'item1',
+        });
+      }
+    });
+    it('can set optional records to undefined', async () => {
+      const db = new DB({
+        schema,
+      });
+      await db.insert('test', {
+        id: 'item1',
+        optionalRecord: {
+          attr: 'attr',
+        },
+      });
+      {
+        const result = await db.fetchById('test', 'item1');
+        expect(result).toEqual({
+          id: 'item1',
+          optionalRecord: {
+            attr: 'attr',
+          },
+        });
+      }
+      await db.update('test', 'item1', async (entity) => {
+        entity.optionalRecord = undefined;
+      });
+      {
+        const result = await db.fetchById('test', 'item1');
+        expect(result).toEqual({
+          id: 'item1',
         });
       }
     });
@@ -7223,31 +7353,3 @@ it('can upsert data with optional properties', async () => {
   const result = await db.fetchById('test', '1');
   expect(result).toStrictEqual({ id: '1', name: 'alice', age: 30 });
 });
-
-// it.only('handles lists?', async () => {
-//   {
-//     const db = new DB();
-//     await db.insert('test', {
-//       id: '1',
-//       name: 'test',
-//       list: ['a', 'b', 'c'],
-//     });
-//     const result = await db.fetch(db.query('test').build());
-//     expect(result.get('1')).toMatchObject({
-//       id: '1',
-//       name: 'test',
-//       list: ['a', 'b', 'c'],
-//     });
-
-//     await db.update('test', '1', (entity) => {
-//       entity.list = ['d', 'e', 'f'];
-//     });
-
-//     const result2 = await db.fetch(db.query('test').build());
-//     expect(result2.get('1')).toMatchObject({
-//       id: '1',
-//       name: 'test',
-//       list: ['d', 'e', 'f'],
-//     });
-//   }
-// });

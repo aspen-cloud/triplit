@@ -1017,7 +1017,6 @@ export function createUpdateProxy<M extends Model<any> | undefined>(
       if (typeof prop === 'symbol') return true;
       const propPointer = [prefix, prop].join('/');
       if (!schema) {
-        // TODO: add test that schemaless set to undefined works like delete
         if (value === undefined) return proxyDeleteProperty(prop);
         changeTracker.set(propPointer, value);
         return true;
