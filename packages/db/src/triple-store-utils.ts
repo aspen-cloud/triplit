@@ -47,7 +47,7 @@ export type VAEIndex = {
 };
 
 export type ClientTimestampIndex = {
-  key: ['clientTimestamp', string, Timestamp, EntityId, Attribute, Value]; // [tenant, 'clientTimestamp', client]
+  key: ['clientTimestamp', Timestamp, EntityId, Attribute, Value]; // [tenant, 'clientTimestamp', client]
   value: TripleMetadata;
 };
 
@@ -117,7 +117,7 @@ export function indexToTriple(
     //   [, v, a, e, t] = indexKey as VAEIndex['key'];
     //   break;
     case 'clientTimestamp':
-      [, , t, e, a, v] = indexKey as ClientTimestampIndex['key'];
+      [, t, e, a, v] = indexKey as ClientTimestampIndex['key'];
       break;
     default:
       throw new IndexNotFoundError(indexType);
@@ -272,11 +272,10 @@ export function mapStaticTupleToEAV(tuple: { key: any[]; value: any }): EAV {
 // NOTE: SOME WEIRD STUFF GOING ON WITH TUPLE DATABASE AND gt/lte with array prefixes
 export async function findByClientTimestamp(
   tx: MultiTupleStoreOrTransaction,
-  clientId: string,
   scanDirection: 'lt' | 'lte' | 'gt' | 'gte' | 'eq',
   timestamp: Timestamp | undefined
 ) {
-  const indexPrefix = ['clientTimestamp', clientId];
+  const indexPrefix = ['clientTimestamp'];
   if (scanDirection === 'lt') {
     if (!timestamp) return [];
     return await scanToTriples(tx, {
@@ -321,10 +320,10 @@ export async function findMaxClientTimestamp(
   clientId: string
 ): Promise<Timestamp | undefined> {
   const res = (await tx.scan({
-    prefix: ['clientTimestamp', clientId],
+    prefix: ['clientTimestamp'],
     reverse: true,
   })) as ClientTimestampIndex[];
-  return res[0]?.key[2];
+  return res[0]?.key[1];
 }
 
 // We use the _collection tuple to indicate if an entity delete should occur

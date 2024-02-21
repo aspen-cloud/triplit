@@ -9,6 +9,7 @@ import {
 import { AsyncTupleStorageApi, TupleStorageApi } from '@triplit/tuple-database';
 import CollectionQueryBuilder, {
   fetch,
+  fetchDeltaTriples,
   FetchResult,
   FetchResultEntity,
   MaybeReturnTypeFromQuery,
@@ -650,7 +651,7 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
 
   async fetch<Q extends CollectionQuery<M, any>>(
     query: Q,
-    options: DBFetchOptions = {}
+    options: DBFetchOptions = { noCache: true }
   ) {
     await this.ensureMigrated;
     const schema = (await this.getSchema())?.collections as M;
@@ -674,6 +675,20 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
     );
   }
 
+  async fetchDeltaTriples<Q extends CollectionQuery<M, any>>(
+    query: Q,
+    stateVector: Required<DBFetchOptions>['stateVector']
+  ) {
+    await this.ensureMigrated;
+    const { query: fetchQuery } = await prepareQuery(this, query, {});
+    return fetchDeltaTriples<M, Q>(
+      this.tripleStore,
+      fetchQuery,
+      stateVector,
+      (await this.getSchema())?.collections
+    );
+  }
+
   async fetchTriples<Q extends CollectionQuery<M, any>>(
     query: Q,
     options: DBFetchOptions = {}
@@ -694,6 +709,7 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
           {
             schema: schema,
             includeTriples: true,
+            stateVector: options.stateVector,
           }
         )
       ).triples.values(),

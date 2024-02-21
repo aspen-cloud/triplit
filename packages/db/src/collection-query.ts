@@ -1,4 +1,5 @@
 import { ValuePointer } from '@sinclair/typebox/value';
+import { Value as TBValue } from '@sinclair/typebox/value';
 import Builder from './utils/builder.js';
 import {
   Query,
@@ -225,6 +226,252 @@ function getTriplesAfterStateVector(
   );
 }
 
+export async function fetchDeltaTriples<
+  M extends Models<any, any> | undefined,
+  Q extends CollectionQuery<M, any>
+>(
+  tx: TripleStoreApi,
+  query: Q,
+  stateVector: Map<string, number>,
+  schema?: M
+): Promise<TripleRow[]> {
+  const queryPermutations = generateQueryRootPermutations(query);
+  const timestamps = [...stateVector.entries()].map(
+    ([cId, n]) => [n, cId] as Timestamp
+  );
+  const maxTimestamp = timestamps.reduce(
+    (acc, curr) => (timestampCompare(acc, curr) < 0 ? curr : acc),
+    [0, ''] as Timestamp
+  );
+  const triplesAfterStateVector = await tx.findByClientTimestamp(
+    'gt',
+    maxTimestamp
+  );
+  const changedEntityTriples = triplesAfterStateVector.reduce(
+    (entities, trip) => {
+      if (!entities.has(trip.id)) {
+        entities.set(trip.id, []);
+      }
+      entities.get(trip.id)!.push(trip);
+      return entities;
+    },
+    new Map<string, TripleRow[]>()
+  );
+  const deltaTriples: TripleRow[] = [];
+  for (const changedEntityId of changedEntityTriples.keys()) {
+    const entityTriples = await tx.findByEntity(changedEntityId);
+    const entityBeforeStateVector = getEntitiesAtStateVector(
+      entityTriples,
+      stateVector
+    ).get(changedEntityId)?.data;
+    const entityAfterStateVector =
+      getEntitiesAtStateVector(entityTriples).get(changedEntityId)?.data;
+
+    for (const q of queryPermutations) {
+      if (q.collectionName !== splitIdParts(changedEntityId)[0]) {
+        continue;
+      }
+      const matchesBefore =
+        !!entityBeforeStateVector &&
+        doesEntityObjMatchWhere(
+          entityBeforeStateVector,
+          q.where,
+          schema && schema[q.collectionName].schema
+        );
+      const matchesAfter =
+        !!entityAfterStateVector &&
+        doesEntityObjMatchWhere(
+          entityAfterStateVector,
+          q.where,
+          schema && schema[q.collectionName].schema
+        );
+      if (!matchesBefore && !matchesAfter) {
+        continue;
+      }
+      const subQueries = (q.where ?? []).filter(
+        (filter) => 'exists' in filter
+      ) as SubQueryFilter<M>[];
+      let matchesWithSubqueriesBefore = true;
+      if (matchesBefore) {
+        for (const { exists: subQuery } of subQueries) {
+          const subQueryResult = await fetchOne(
+            tx,
+            {
+              ...subQuery,
+              vars: {
+                ...q.vars,
+                ...subQuery.vars,
+                ...schema![q.collectionName].schema?.convertDBValueToJS(
+                  timestampedObjectToPlainObject(entityBeforeStateVector, true)
+                ),
+              },
+            } as CollectionQuery<M, any>,
+            { includeTriples: true, schema }
+          );
+          if (subQueryResult.results === null) {
+            matchesWithSubqueriesBefore = false;
+            continue;
+          }
+        }
+      } else {
+        matchesWithSubqueriesBefore = false;
+      }
+      if (!matchesWithSubqueriesBefore && !matchesAfter) {
+        continue;
+      }
+      const afterTriplesMatch = [];
+      let matchesWithSubqueriesAfter = true;
+      for (const { exists: subQuery } of subQueries) {
+        const subQueryResult = await fetchOne(
+          tx,
+          {
+            ...subQuery,
+            vars: {
+              ...q.vars,
+              ...subQuery.vars,
+              ...schema![q.collectionName].schema?.convertDBValueToJS(
+                timestampedObjectToPlainObject(
+                  entityAfterStateVector as any,
+                  true
+                )
+              ),
+            },
+          } as CollectionQuery<M, any>,
+          { includeTriples: true, schema }
+        );
+        if (subQueryResult.results === null) {
+          matchesWithSubqueriesAfter = false;
+          continue;
+        }
+        afterTriplesMatch.push(...[...subQueryResult.triples.values()].flat());
+      }
+      if (!matchesWithSubqueriesBefore && !matchesWithSubqueriesAfter) {
+        continue;
+      }
+      if (!matchesWithSubqueriesBefore) {
+        deltaTriples.push(...afterTriplesMatch);
+      }
+      deltaTriples.push(...changedEntityTriples.get(changedEntityId)!);
+    }
+  }
+  return deltaTriples;
+}
+
+/**
+ * This takes a relational query (i.e. has sub-queriess in `where` or `select`) and generates all permutations of the query where each sub-query is written as the root query.
+ * In a sense it reverses the direction of the relation.
+ * E.g. If the query is like "Users with posts created in the last week" it will generate permutations like "Posts created in the last week with their users"
+ * @param query The query to generate permutations for
+ */
+export function generateQueryRootPermutations<
+  M extends Models<any, any> | undefined,
+  Q extends CollectionQuery<M, any>
+>(query: Q) {
+  const queries = [];
+  for (const chain of generateQueryChains(query)) {
+    queries.push(queryChainToQuery(chain.toReversed()));
+  }
+  return queries;
+}
+
+/**
+ * This takes a list of queries and builds up a query where
+ * each query implicit depends on the next query
+ * each query at pos 0 will have add an exists filter to the next query
+ * @param chain
+ */
+function queryChainToQuery<
+  M extends Models<any, any> | undefined,
+  Q extends CollectionQuery<M, any>
+>(chain: Q[], additionalFilters: FilterStatement<any, any>[] = []): Q {
+  const [first, ...rest] = chain;
+  if (rest.length === 0) return first;
+  const variableFilters = (first.where ?? []).filter(
+    (filter) => filter instanceof Array && filter[2].startsWith('$')
+  ) as FilterStatement<Model<any>>[];
+  const nonVariableFilters = (first.where ?? []).filter(
+    (filter) => !(filter instanceof Array && filter[2].startsWith('$'))
+  ) as FilterStatement<Model<any>>[];
+  const next = queryChainToQuery(
+    rest,
+    variableFilters.map(reverseRelationFilter)
+  );
+  return {
+    ...first,
+    where: [
+      ...nonVariableFilters,
+      {
+        exists: next,
+      },
+    ],
+  };
+}
+
+function* generateQueryChains<
+  M extends Models<any, any> | undefined,
+  Q extends CollectionQuery<M, any>
+>(query: Q, prefix: Q[] = []): Generator<Q[]> {
+  yield [...prefix, query];
+  const subQueries = (query.where ?? []).filter(
+    (filter) => 'exists' in filter
+  ) as SubQueryFilter<M>[];
+  for (const subQuery of subQueries) {
+    // yield [query, subQuery] as const;
+    const queryWithoutSubQuery = {
+      ...query,
+      where: (query.where ?? []).filter((f) => f !== subQuery),
+    };
+    yield* generateQueryChains(subQuery.exists, [
+      ...prefix,
+      queryWithoutSubQuery,
+    ]);
+  }
+}
+
+export function changeQueryRoot<
+  M extends Models<any, any> | undefined,
+  Q extends CollectionQuery<M, any>
+>(query: Q, subQueryPath: string) {
+  const newQuery = TBValue.Clone(query); // this clone is likely not necessary bc we clone in the caller
+  const newRoot = ValuePointer.Get(
+    query,
+    subQueryPath + '/exists'
+  ) as CollectionQuery<M, any>;
+  // TODO: ignore variables already bound to query
+  // TODO: handle AND and OR filters
+  const variableFilters = (newRoot.where ?? []).filter(
+    (filter) => filter instanceof Array && filter[2].startsWith('$')
+  ) as FilterStatement<Model<any>>[];
+  const nonVariableFilters = (newRoot.where ?? []).filter(
+    (filter) => !(filter instanceof Array && filter[2].startsWith('$'))
+  ) as FilterStatement<Model<any>>[];
+
+  ValuePointer.Delete(newQuery, subQueryPath);
+  newRoot.where = nonVariableFilters;
+  newRoot.where.push({
+    exists: {
+      collectionName: query.collectionName,
+      where: [
+        ...(newQuery.where ?? []),
+        ...variableFilters.map(reverseRelationFilter),
+      ],
+      // vars: query.vars,
+    },
+  });
+  newRoot.vars = query.vars;
+  return newRoot;
+}
+
+function reverseRelationFilter(filter: FilterStatement<any, any>) {
+  const [path, op, value] = filter;
+  if (typeof value !== 'string' || !value.startsWith('$')) {
+    throw new TriplitError(
+      `Expected filter value to be a relation variable, but got ${value}`
+    );
+  }
+  return [value.slice(1), op, '$' + path] as FilterStatement<any, any>;
+}
+
 /**
  * Fetch
  * @summary This function is used to fetch entities from the database. It can be used to fetch a single entity or a collection of entities.
@@ -276,7 +523,10 @@ export async function fetch<
   } = {}
 ) {
   const collectionSchema = schema && schema[query.collectionName]?.schema;
-  if (cache && VariableAwareCache.canCacheQuery(query, collectionSchema)) {
+  if (
+    cache &&
+    (await VariableAwareCache.canCacheQuery(query, collectionSchema))
+  ) {
     const cacheResult = await cache!.resolveFromCache(query);
     if (!includeTriples) return cacheResult.results;
     return cacheResult;
@@ -363,6 +613,7 @@ export async function fetch<
             schema,
             cache,
             skipRules,
+            stateVector,
           }
         );
         const { results: subQueryResult, triples } = subQueryFetch;
@@ -453,6 +704,7 @@ export async function fetch<
                   schema,
                   cache,
                   skipRules,
+                  stateVector,
                 });
 
           selectedEntity[attributeName] = subqueryResult.results;

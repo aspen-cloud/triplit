@@ -149,16 +149,10 @@ export class TripleStoreTransaction implements TripleStoreApi {
   }
 
   findByClientTimestamp(
-    clientId: string,
     scanDirection: 'lt' | 'lte' | 'gt' | 'gte' | 'eq',
     timestamp: Timestamp | undefined
   ) {
-    return findByClientTimestamp(
-      this.tupleTx,
-      clientId,
-      scanDirection,
-      timestamp
-    );
+    return findByClientTimestamp(this.tupleTx, scanDirection, timestamp);
   }
 
   async insertTriple(tripleRow: TripleRow): Promise<void> {

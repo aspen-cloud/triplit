@@ -78,7 +78,6 @@ export interface TripleStoreApi {
   ): Promise<TripleRow[]>;
   findMaxClientTimestamp(clientId: string): Promise<Timestamp | undefined>;
   findByClientTimestamp(
-    clientId: string,
     scanDirection: 'lt' | 'lte' | 'gt' | 'gte',
     timestamp: Timestamp | undefined
   ): Promise<TripleRow[]>;
@@ -147,17 +146,9 @@ async function addIndexesToTransaction(
           scopedTx.set(['AVE', attribute, value, id, timestamp], {
             expired: isExpired,
           });
-          scopedTx.set(
-            [
-              'clientTimestamp',
-              (timestamp as Timestamp)[1],
-              timestamp,
-              id,
-              attribute,
-              value,
-            ],
-            { expired: isExpired }
-          );
+          scopedTx.set(['clientTimestamp', timestamp, id, attribute, value], {
+            expired: isExpired,
+          });
         }
       },
       set,
@@ -361,16 +352,10 @@ export class TripleStore implements TripleStoreApi {
   }
 
   findByClientTimestamp(
-    clientId: string,
     scanDirection: 'lt' | 'lte' | 'gt' | 'gte' | 'eq',
     timestamp: Timestamp | undefined
   ) {
-    return findByClientTimestamp(
-      this.tupleStore,
-      clientId,
-      scanDirection,
-      timestamp
-    );
+    return findByClientTimestamp(this.tupleStore, scanDirection, timestamp);
   }
 
   async transact<Output>(

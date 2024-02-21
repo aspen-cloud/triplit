@@ -320,7 +320,6 @@ export class SyncEngine {
             for (const clientTxId of txIds) {
               const timestamp = JSON.parse(clientTxId);
               const triplesToEvict = await outboxOperator.findByClientTimestamp(
-                await this.db.getClientId(),
                 'eq',
                 timestamp
               );

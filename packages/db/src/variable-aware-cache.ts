@@ -29,7 +29,7 @@ export class VariableAwareCache<Schema extends Models<any, any>> {
     this.cache = new Map();
   }
 
-  static canCacheQuery<
+  static async canCacheQuery<
     M extends Models<any, any> | undefined,
     Q extends CollectionQuery<any, any>
   >(query: Q, model?: ModelFromModels<M> | undefined) {
@@ -43,9 +43,9 @@ export class VariableAwareCache<Schema extends Models<any, any>> {
     if (query.select && query.select.some((s) => typeof s === 'object'))
       return false;
 
-    const statements = mapFilterStatements(query.where ?? [], (f) => f).filter(
-      isFilterStatement
-    ) as FilterStatement<ModelFromModels<M>>[];
+    const statements = (
+      await mapFilterStatements(query.where ?? [], (f) => f)
+    ).filter(isFilterStatement) as FilterStatement<ModelFromModels<M>>[];
     const variableStatements: FilterStatement<ModelFromModels<M>>[] =
       statements.filter(
         ([, , v]) => typeof v === 'string' && v.startsWith('$')

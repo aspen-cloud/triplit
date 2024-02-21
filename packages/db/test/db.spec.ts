@@ -596,11 +596,7 @@ describe('OR queries', () => {
     // storage.data = [];
     await db.insert('roster', { id: '1', name: 'Alice', age: 22 });
 
-    await db.insert(
-      'roster',
-      { id: '2', name: 'Bob', age: 23, team: 'blue' },
-      2
-    );
+    await db.insert('roster', { id: '2', name: 'Bob', age: 23, team: 'blue' });
     await db.insert('roster', {
       id: '3',
       name: 'Charlie',
@@ -613,10 +609,20 @@ describe('OR queries', () => {
       age: 24,
       team: 'blue',
     });
-    await db.insert(
+    await db.insert('roster', { id: '5', name: 'Ella', age: 23, team: 'red' });
+    console.log(
       'roster',
-      { id: '5', name: 'Ella', age: 23, team: 'red' },
-      5
+      await db.fetch(
+        db
+          .query('roster')
+          .where([
+            or([
+              ['team', '=', 'red'],
+              ['age', '=', 22],
+            ]),
+          ])
+          .build()
+      )
     );
     const redOr22 = await db.fetch(
       CollectionQueryBuilder('roster')
@@ -6471,6 +6477,484 @@ describe('state vector querying', () => {
     );
     expect(result2Entities).toHaveLength(1);
     expect(result2Entities).toContain(post_id);
+  });
+  it('works with relational querying', async () => {
+    const db = new DB({
+      schema: {
+        collections: {
+          users: {
+            schema: S.Schema({
+              id: S.String(),
+              name: S.String(),
+              friend_ids: S.Set(S.String()),
+              posts: S.RelationMany('posts', {
+                where: [['author_id', '=', '$id']],
+              }),
+            }),
+          },
+          posts: {
+            schema: S.Schema({
+              id: S.String(),
+              content: S.String(),
+              author_id: S.String(),
+            }),
+          },
+        },
+      },
+    });
+    const user_id = 'user-1';
+    const user_id2 = 'user-2';
+    const post_id = 'post-1';
+    const post_id2 = 'post-2';
+    await db.insert('users', { id: user_id, name: 'Alice' });
+    await db.insert('users', { id: user_id2, name: 'Bob' });
+    await db.insert('posts', { id: post_id, author_id: user_id, content: '' });
+    await db.insert('posts', {
+      id: post_id2,
+      author_id: user_id2,
+      content: '',
+    });
+    const query = db.query('users').include('posts').build();
+    const initialTriples = await db.fetchTriples(query);
+    const stateVector = triplesToStateVector(initialTriples);
+    await db.insert('posts', { id: 'post-3', author_id: user_id, content: '' });
+    const queryStateVector = stateVector.reduce(
+      (stateVector, [sequence, client]) => {
+        stateVector.set(client, sequence);
+        return stateVector;
+      },
+      new Map<string, number>()
+    );
+    const afterTriples = await db.fetchDeltaTriples(query, queryStateVector);
+  });
+});
+
+describe('delta querying', async () => {
+  describe('simple single collection queries', () => {
+    const db = new DB({
+      schema: {
+        collections: {
+          posts: {
+            schema: S.Schema({
+              id: S.String(),
+              author_id: S.String(),
+              content: S.String(),
+            }),
+          },
+        },
+      },
+    });
+    const user_id = 'user-1';
+    const user_id2 = 'user-2';
+    const post_id = 'post-1';
+    const post_id2 = 'post-2';
+    beforeEach(async () => {
+      db.clear();
+      await db.insert('posts', {
+        id: post_id,
+        author_id: user_id,
+        content: '',
+      });
+      await db.insert('posts', {
+        id: post_id2,
+        author_id: user_id2,
+        content: '',
+      });
+    });
+
+    it('can fetch delta triples', async () => {
+      const query = db.query('posts').where('author_id', '=', user_id).build();
+      const initialTriples = await db.fetchTriples(query);
+      const stateVector = triplesToStateVector(initialTriples);
+      await db.insert('posts', {
+        id: 'post-3',
+        author_id: user_id,
+        content: '',
+      });
+      await db.insert('posts', {
+        id: 'post-4',
+        author_id: user_id2,
+        content: '',
+      });
+      const queryStateVector = stateVector.reduce(
+        (stateVector, [sequence, client]) => {
+          stateVector.set(client, sequence);
+          return stateVector;
+        },
+        new Map<string, number>()
+      );
+      const deltaTriples = await db.fetchDeltaTriples(query, queryStateVector);
+      // console.log('initial triples', initialTriples);
+      // console.log('delta triples', deltaTriples);
+      // console.log('second triples check', await db.fetchTriples(query));
+      expect(deltaTriples.length).toBeGreaterThan(0);
+      expect(
+        new Set(deltaTriples.map((triple) => stripCollectionFromId(triple.id)))
+      ).toEqual(new Set(['post-3']));
+    });
+
+    it('captures deletes in delta triples', async () => {
+      const query = db.query('posts').where('author_id', '=', user_id).build();
+      const initialTriples = await db.fetchTriples(query);
+      const stateVector = triplesToStateVector(initialTriples);
+      await db.delete('posts', post_id);
+      const queryStateVector = stateVector.reduce(
+        (stateVector, [sequence, client]) => {
+          stateVector.set(client, sequence);
+          return stateVector;
+        },
+        new Map<string, number>()
+      );
+      const deltaTriples = await db.fetchDeltaTriples(query, queryStateVector);
+      expect(deltaTriples.length).toBeGreaterThan(0);
+      expect(
+        new Set(deltaTriples.map((triple) => stripCollectionFromId(triple.id)))
+      ).toEqual(new Set([post_id]));
+    });
+
+    it('captures invalidated results in delta triples', async () => {
+      const query = db.query('posts').where('author_id', '=', user_id).build();
+      const initialTriples = await db.fetchTriples(query);
+      const stateVector = triplesToStateVector(initialTriples);
+
+      const queryStateVector = stateVector.reduce(
+        (stateVector, [sequence, client]) => {
+          stateVector.set(client, sequence);
+          return stateVector;
+        },
+        new Map<string, number>()
+      );
+      await db.update('posts', post_id, async (entity) => {
+        entity.author_id = user_id2;
+      });
+      const deltaTriples = await db.fetchDeltaTriples(query, queryStateVector);
+      expect(deltaTriples.length).toBeGreaterThan(0);
+      expect(
+        new Set(deltaTriples.map((triple) => stripCollectionFromId(triple.id)))
+      ).toEqual(new Set([post_id]));
+    });
+
+    it('only returns relevant delta triples', async () => {
+      const query = db.query('posts').where('author_id', '=', user_id).build();
+      const initialTriples = await db.fetchTriples(query);
+      const stateVector = triplesToStateVector(initialTriples);
+      await db.insert('posts', {
+        id: 'post-4',
+        author_id: user_id2,
+        content: '',
+      });
+      const queryStateVector = stateVector.reduce(
+        (stateVector, [sequence, client]) => {
+          stateVector.set(client, sequence);
+          return stateVector;
+        },
+        new Map<string, number>()
+      );
+      const deltaTriples = await db.fetchDeltaTriples(query, queryStateVector);
+      expect(deltaTriples).toHaveLength(0);
+    });
+  });
+
+  describe('relational queries', () => {
+    const schema = {
+      collections: {
+        users: {
+          schema: S.Schema({
+            id: S.String(),
+            name: S.String(),
+            friend_ids: S.Set(S.String()),
+            friends: S.RelationMany('users', {
+              where: [['id', 'in', '$friend_ids']],
+            }),
+            posts: S.RelationMany('posts', {
+              where: [['author_id', '=', '$id']],
+            }),
+          }),
+        },
+        posts: {
+          schema: S.Schema({
+            id: S.String(),
+            content: S.String(),
+            created_at: S.Date(),
+            author_id: S.String(),
+            author: S.RelationById('users', '$author_id'),
+          }),
+        },
+      },
+    };
+
+    const insertSampleData = async (db) => {
+      // insert some test data
+      await db.insert('users', {
+        id: 'user-1',
+        name: 'Alice',
+        friend_ids: new Set(['user-2', 'user-3']),
+      });
+      await db.insert('users', {
+        id: 'user-2',
+        name: 'Bob',
+        friend_ids: new Set(['user-1', 'user-3']),
+      });
+      await db.insert('users', {
+        id: 'user-3',
+        name: 'Charlie',
+        friend_ids: new Set(['user-1', 'user-2']),
+      });
+      await db.insert('posts', {
+        id: 'post-1',
+        author_id: 'user-1',
+        content: '',
+        created_at: new Date('2022-06-01'),
+      });
+      await db.insert('posts', {
+        id: 'post-2',
+        author_id: 'user-2',
+        content: '',
+        created_at: new Date('2022-01-01'),
+      });
+      await db.insert('posts', {
+        id: 'post-3',
+        author_id: 'user-3',
+        content: '',
+        created_at: new Date('2022-03-01'),
+      });
+    };
+
+    it('can fetch delta triples', async () => {
+      const db = new DB({ schema });
+      await insertSampleData(db);
+      const query = db
+        .query('users')
+        .where('posts.created_at', '>', new Date('2022-05-01'))
+        .build();
+      const initialTriples = await db.fetchTriples(query);
+      expect(initialTriples.length).toBeGreaterThan(0);
+      const stateVector = triplesToStateVector(initialTriples);
+
+      // insert another post after the queried date
+      await db.insert('posts', {
+        id: 'post-4',
+        author_id: 'user-2',
+        content: '',
+        created_at: new Date('2022-06-02'),
+      });
+
+      const queryStateVector = stateVector.reduce(
+        (stateVector, [sequence, client]) => {
+          stateVector.set(client, sequence);
+          return stateVector;
+        },
+        new Map<string, number>()
+      );
+      const deltaTriples = await db.fetchDeltaTriples(query, queryStateVector);
+      expect(deltaTriples.length).toBeGreaterThan(0);
+      expect(deltaTriples).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ id: 'posts#post-4' }),
+        ])
+      );
+    });
+    it('ignores irrelevant delta triples', async () => {
+      const db = new DB({ schema });
+      await insertSampleData(db);
+      const query = db
+        .query('users')
+        .where('posts.created_at', '>', new Date('2022-05-01'))
+        .build();
+      const initialTriples = await db.fetchTriples(query);
+      expect(initialTriples.length).toBeGreaterThan(0);
+      const stateVector = triplesToStateVector(initialTriples);
+
+      // insert another post after the queried date
+      await db.insert('posts', {
+        id: 'post-4',
+        author_id: 'user-2',
+        content: '',
+        created_at: new Date('2022-01-02'),
+      });
+
+      const queryStateVector = stateVector.reduce(
+        (stateVector, [sequence, client]) => {
+          stateVector.set(client, sequence);
+          return stateVector;
+        },
+        new Map<string, number>()
+      );
+      const deltaTriples = await db.fetchDeltaTriples(query, queryStateVector);
+      expect(deltaTriples.length).toBe(0);
+    });
+  });
+
+  describe('sync queries', async () => {
+    // create two databases with a shared relational schema
+    const schema = {
+      collections: {
+        users: {
+          schema: S.Schema({
+            id: S.String(),
+            name: S.String(),
+            friend_ids: S.Set(S.String()),
+            friends: S.RelationMany('users', {
+              where: [['id', 'in', '$friend_ids']],
+            }),
+            posts: S.RelationMany('posts', {
+              where: [['author_id', '=', '$id']],
+            }),
+          }),
+        },
+        posts: {
+          schema: S.Schema({
+            id: S.String(),
+            content: S.String(),
+            created_at: S.Date(),
+            author_id: S.String(),
+            author: S.RelationById('users', '$author_id'),
+          }),
+        },
+      },
+    };
+    const insertSampleData = async (db) => {
+      // insert some test data
+      await db.insert('users', {
+        id: 'user-1',
+        name: 'Alice',
+        friend_ids: new Set(['user-2', 'user-3']),
+      });
+      await db.insert('users', {
+        id: 'user-2',
+        name: 'Bob',
+        friend_ids: new Set(['user-1', 'user-3']),
+      });
+      await db.insert('users', {
+        id: 'user-3',
+        name: 'Charlie',
+        friend_ids: new Set(['user-1', 'user-2']),
+      });
+      await db.insert('posts', {
+        id: 'post-1',
+        author_id: 'user-1',
+        content: '',
+        created_at: new Date('2022-06-01'),
+      });
+      await db.insert('posts', {
+        id: 'post-2',
+        author_id: 'user-2',
+        content: '',
+        created_at: new Date('2022-01-01'),
+      });
+      await db.insert('posts', {
+        id: 'post-3',
+        author_id: 'user-3',
+        content: '',
+        created_at: new Date('2022-03-01'),
+      });
+    };
+    const QUERIES = [
+      {
+        query: (db) => db.query('users').build(),
+        description: 'fetch all users',
+      },
+      {
+        query: (db) =>
+          db.query('posts').where('author.name', 'like', 'Alice%').build(),
+        description: 'fetch all posts by users with name like Alice',
+      },
+      {
+        description: 'Fetch posts from friends of user-1',
+        query: (db) =>
+          db.query('posts').where('author.friend_ids', '=', 'user-1').build(),
+      },
+      {
+        description: 'Fetch posts from friends of Alice',
+        query: (db) =>
+          db
+            .query('posts')
+            .where('author.friends.name', 'like', 'Alice%')
+            .build(),
+      },
+      {
+        description: 'Fetch posts from friends of both Alice and Bob',
+        query: (db) =>
+          db
+            .query('posts')
+            .where(
+              and([
+                ['author.friends.name', 'like', 'Alice%'],
+                ['author.friends.name', 'like', 'David%'],
+              ])
+            )
+            .build(),
+      },
+    ];
+    describe.each(QUERIES)('$description', ({ query }) => {
+      const MUTATIONS = [
+        {
+          description: 'insert a new user',
+          action: async (db) => {
+            await db.insert('users', {
+              id: 'user-4',
+              name: 'David',
+              friend_ids: new Set(['user-1', 'user-2']),
+            });
+          },
+        },
+        {
+          description: 'insert a new post',
+          action: async (db) => {
+            await db.insert('posts', {
+              id: 'post-4',
+              author_id: 'user-4',
+              content: '',
+              created_at: new Date('2022-06-01'),
+            });
+          },
+        },
+        {
+          description: 'update a user',
+          action: async (db) => {
+            await db.update('users', 'user-1', (user) => {
+              user.name = 'Alice Smith';
+            });
+          },
+        },
+        {
+          description: 'delete a user',
+          action: async (db) => {
+            await db.delete('users', 'user-1');
+          },
+        },
+        {
+          description: 'delete a post',
+          action: async (db) => {
+            await db.delete('posts', 'post-1');
+          },
+        },
+      ];
+      it.each(MUTATIONS)('$description', async ({ action, description }) => {
+        const serverDB = new DB({ schema });
+        const clientDB = new DB({ schema });
+        await insertSampleData(serverDB);
+        await insertSampleData(clientDB);
+        const initialTriples = await serverDB.fetchTriples(query(serverDB));
+        const stateVector = triplesToStateVector(initialTriples);
+        await action(serverDB);
+        const queryStateVector = stateVector.reduce(
+          (stateVector, [sequence, client]) => {
+            stateVector.set(client, sequence);
+            return stateVector;
+          },
+          new Map<string, number>()
+        );
+        const deltaTriples = await serverDB.fetchDeltaTriples(
+          query(clientDB),
+          queryStateVector
+        );
+        await clientDB.tripleStore.insertTriples(deltaTriples);
+        const clientResults = await clientDB.fetch(query(clientDB));
+        const serverResults = await serverDB.fetch(query(serverDB));
+        expect(clientResults).toEqual(serverResults);
+      });
+    });
   });
 });
 

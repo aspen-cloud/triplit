@@ -111,6 +111,9 @@ export function RecordType<
       for (const k in val) {
         if (Object.prototype.hasOwnProperty.call(val, k)) {
           const v = val[k];
+          // TODO this should be removed instead our entity reducer should return
+          // null for undefined entities and we should handle that in the properties types
+          if (v === undefined) continue;
           if (!properties[k] || properties[k].type === 'query') {
             // @ts-expect-error
             result[k] = v;
