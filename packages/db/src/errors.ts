@@ -364,7 +364,7 @@ export class TripleStoreOptionsError extends TriplitError {
 
 export class QueryClauseFormattingError extends TriplitError {
   constructor(
-    clauseType: 'order' | 'where' | 'select' | 'syncStatus',
+    clauseType: 'order' | 'where' | 'select' | 'syncStatus' | 'after',
     clause: any,
     ...args: any[]
   ) {
@@ -373,6 +373,15 @@ export class QueryClauseFormattingError extends TriplitError {
     this.baseMessage = `The ${clauseType} clause is not formatted correctly.
     
     Received: ${JSON.stringify(clause)}`;
+    this.status = STATUS_CODES['Bad Request'];
+  }
+}
+
+export class AfterClauseWithNoOrderError extends TriplitError {
+  constructor(...args: any[]) {
+    super(...args);
+    this.name = 'AfterClauseWithNoOrderError';
+    this.baseMessage = `The 'after' clause must be used after an 'order' clause.`;
     this.status = STATUS_CODES['Bad Request'];
   }
 }

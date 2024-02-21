@@ -1,11 +1,15 @@
 import { Model, Models, SelectModelFromModel } from './schema.js';
-import { QueryClauseFormattingError } from './errors.js';
+import {
+  AfterClauseWithNoOrderError,
+  QueryClauseFormattingError,
+} from './errors.js';
 import { Timestamp, timestampCompare } from './timestamp.js';
 import { CollectionNameFromModels, ModelFromModels } from './db.js';
 import { ExtractOperators } from './data-types/type.js';
 import { RecordType } from './data-types/record.js';
 import { QueryType } from './data-types/query.js';
 import { EntityId, TripleRow } from './triple-store-utils.js';
+import { ReturnTypeFromQuery } from './index.js';
 
 type Path = string;
 // Should be friendly types that we pass into queries
@@ -434,6 +438,14 @@ type OrderInput<M extends Model<any> | undefined> =
   | QueryOrder<M>[]
   | [QueryOrder<M>[]];
 
+type AfterInput<
+  M extends Models<any, any> | undefined,
+  CN extends CollectionNameFromModels<M>
+> =
+  | ValueCursor
+  | (M extends Models<any, any> ? ReturnTypeFromQuery<M, CN> : undefined)
+  | undefined;
+
 export type QUERY_INPUT_TRANSFORMERS<
   M extends Models<any, any> | undefined,
   CN extends CollectionNameFromModels<M>
@@ -520,6 +532,21 @@ export const QUERY_INPUT_TRANSFORMERS = <
       // Set to null so the inclusion of the key can be serialized
       [relationName]: query ?? null,
     };
+  },
+  after(q: Query<M, CN>, args: AfterInput<M, CN>): ValueCursor | undefined {
+    if (!args) return undefined;
+    if (!q.order) throw new AfterClauseWithNoOrderError(args);
+    const attributeToOrderBy = q.order[0][0];
+    if (args instanceof Array && args.length === 2) return args;
+    if (
+      typeof args === 'object' &&
+      !(args instanceof Array) &&
+      Object.hasOwn(args, 'id') &&
+      Object.hasOwn(args, attributeToOrderBy)
+    ) {
+      return [args[attributeToOrderBy] as Value, args.id as string];
+    }
+    throw new QueryClauseFormattingError('after', args);
   },
 });
 
