@@ -46,10 +46,11 @@ export type RecordType<
 export function RecordType<
   Properties extends { [k: string]: DataType | Optional<DataType> }
 >(properties: Properties): RecordType<Properties> {
-  const optional =
+  const optional = (
     Object.entries(properties)
       .filter(([_k, v]) => !!v.context.optional)
-      .map(([k, _v]) => k) || [];
+      .map(([k, _v]) => k) || []
+  ).sort();
 
   function isOptional(key: string) {
     return optional.includes(key);

@@ -12,7 +12,7 @@ import { transpileTsString, importFresh } from '../src/filesystem';
 
 // This test is a start to our testing
 // We should be able to define a schema, generate a migration, then run codegen with the migration and get out an equivalent schema
-it.only('codegen can generate a schema from migrations', async () => {
+it('codegen can generate a schema from migrations', async () => {
   // Define a schema (add types you'd like to test)
   const schema = {
     test: {
@@ -35,15 +35,15 @@ it.only('codegen can generate a schema from migrations', async () => {
         }),
         // optional
         optional: S.Optional(S.String()),
-        // optionalSet: S.Optional(S.Set(S.String())),
+        optionalSet: S.Optional(S.Set(S.String())),
         optionalNumber: S.Optional(S.Number()),
         optionalBoolean: S.Optional(S.Boolean()),
         optionalRecord: S.Optional(S.Record({})),
         // nullable
         nullableFalse: S.String({ nullable: false }),
         nullableTrue: S.String({ nullable: true }),
-        // nullableNumber: S.Number({ nullable: true }),
-        // nullableDate: S.Date({ nullable: true }),
+        nullableNumber: S.Number({ nullable: true }),
+        nullableDate: S.Date({ nullable: true }),
         // default values
         defaultValue: S.String({ default: 'default' }),
         defaultNull: S.String({ default: null }),
