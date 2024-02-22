@@ -21,6 +21,27 @@ describe('query root permutations', () => {
     prettyPrint(permutations);
     expect(permutations).toHaveLength(2);
   });
+  it('can generate a permutation for each subquery filter', () => {
+    const query = {
+      collectionName: 'manufacturers',
+      select: [
+        {
+          attributeName: 'suvs',
+          cardinality: 'many',
+          subquery: {
+            collectionName: 'cars',
+            where: [
+              ['type', '=', 'SUV'],
+              ['manufacturer', '=', '$id'],
+            ],
+          },
+        },
+      ],
+    };
+    const permutations = generateQueryRootPermutations<any, any>(query);
+    prettyPrint(permutations);
+    expect(permutations).toHaveLength(2);
+  });
 });
 
 function prettyPrint(obj: any) {
@@ -30,8 +51,8 @@ function prettyPrint(obj: any) {
       (key, value) => {
         if (Array.isArray(value) && value.every((v) => typeof v !== 'object')) {
           // Convert array to a JSON string with no spacing for indentation
-          //   return o value.join(', ') + ']';
-          return value;
+          return '[' + value.join(', ') + ']';
+          // return value;
         }
         return value; // Return non-array values unchanged
       },

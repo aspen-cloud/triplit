@@ -610,20 +610,6 @@ describe('OR queries', () => {
       team: 'blue',
     });
     await db.insert('roster', { id: '5', name: 'Ella', age: 23, team: 'red' });
-    console.log(
-      'roster',
-      await db.fetch(
-        db
-          .query('roster')
-          .where([
-            or([
-              ['team', '=', 'red'],
-              ['age', '=', 22],
-            ]),
-          ])
-          .build()
-      )
-    );
     const redOr22 = await db.fetch(
       CollectionQueryBuilder('roster')
         .where([
@@ -6884,6 +6870,10 @@ describe('delta querying', async () => {
               ])
             )
             .build(),
+      },
+      {
+        description: 'Fetch users and include their posts',
+        query: (db) => db.query('users').include('posts').build(),
       },
     ];
     describe.each(QUERIES)('$description', ({ query }) => {

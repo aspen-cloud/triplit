@@ -45,7 +45,11 @@ import { isTimestampedEntityDeleted } from './entity.js';
 import { CollectionNameFromModels, ModelFromModels } from './db.js';
 import { QueryResultCardinality, QueryType } from './data-types/query.js';
 import { ExtractJSType } from './data-types/type.js';
-import { TripleRow, Value } from './triple-store-utils.js';
+import {
+  TripleRow,
+  Value,
+  triplesToStateVector,
+} from './triple-store-utils.js';
 
 export default function CollectionQueryBuilder<
   M extends Models<any, any> | undefined,
@@ -229,6 +233,139 @@ function getTriplesAfterStateVector(
 export async function fetchDeltaTriples<
   M extends Models<any, any> | undefined,
   Q extends CollectionQuery<M, any>
+>(tx: TripleStoreApi, query: Q, newTriples: TripleRow[], schema?: M) {
+  const queryPermutations = generateQueryRootPermutations(query);
+  const changedEntityTriples = newTriples.reduce((entities, trip) => {
+    if (!entities.has(trip.id)) {
+      entities.set(trip.id, []);
+    }
+    entities.get(trip.id)!.push(trip);
+    return entities;
+  }, new Map<string, TripleRow[]>());
+  const deltaTriples: TripleRow[] = [];
+  for (const changedEntityId of changedEntityTriples.keys()) {
+    const entityTriples = await tx.findByEntity(changedEntityId);
+    const stateVector = triplesToStateVector(entityTriples);
+    const queryStateVector = stateVector.reduce<Map<string, number>>(
+      (vec, ts) => {
+        vec.set(ts[1], ts[0]);
+        return vec;
+      },
+      new Map()
+    );
+    const entityBeforeStateVector = getEntitiesAtStateVector(
+      entityTriples,
+      queryStateVector
+    ).get(changedEntityId)?.data;
+    const entityAfterStateVector =
+      getEntitiesAtStateVector(entityTriples).get(changedEntityId)?.data;
+
+    for (const q of queryPermutations) {
+      if (q.collectionName !== splitIdParts(changedEntityId)[0]) {
+        continue;
+      }
+      const matchesBefore =
+        !!entityBeforeStateVector &&
+        doesEntityObjMatchWhere(
+          entityBeforeStateVector,
+          q.where,
+          schema && schema[q.collectionName].schema
+        );
+      const matchesAfter =
+        !!entityAfterStateVector &&
+        doesEntityObjMatchWhere(
+          entityAfterStateVector,
+          q.where,
+          schema && schema[q.collectionName].schema
+        );
+      if (!matchesBefore && !matchesAfter) {
+        continue;
+      }
+      const subQueries = (q.where ?? []).filter(
+        (filter) => 'exists' in filter
+      ) as SubQueryFilter<M>[];
+      let matchesWithSubqueriesBefore = true;
+      if (matchesBefore) {
+        for (const { exists: subQuery } of subQueries) {
+          const subQueryResult = await fetchOne(
+            tx,
+            {
+              ...subQuery,
+              vars: {
+                ...q.vars,
+                ...subQuery.vars,
+                ...(schema
+                  ? schema![q.collectionName].schema?.convertDBValueToJS(
+                      timestampedObjectToPlainObject(
+                        entityBeforeStateVector,
+                        true
+                      )
+                    )
+                  : timestampedObjectToPlainObject(
+                      entityBeforeStateVector,
+                      true
+                    )),
+              },
+            } as CollectionQuery<M, any>,
+            { includeTriples: true, schema }
+          );
+          if (subQueryResult.results === null) {
+            matchesWithSubqueriesBefore = false;
+            continue;
+          }
+        }
+      } else {
+        matchesWithSubqueriesBefore = false;
+      }
+      if (!matchesWithSubqueriesBefore && !matchesAfter) {
+        continue;
+      }
+      const afterTriplesMatch = [];
+      let matchesWithSubqueriesAfter = true;
+      for (const { exists: subQuery } of subQueries) {
+        const subQueryResult = await fetchOne(
+          tx,
+          {
+            ...subQuery,
+            vars: {
+              ...q.vars,
+              ...subQuery.vars,
+              ...(schema
+                ? schema![q.collectionName].schema?.convertDBValueToJS(
+                    timestampedObjectToPlainObject(
+                      entityAfterStateVector as any,
+                      true
+                    )
+                  )
+                : timestampedObjectToPlainObject(
+                    entityAfterStateVector as any,
+                    true
+                  )),
+            },
+          } as CollectionQuery<M, any>,
+          { includeTriples: true, schema }
+        );
+        if (subQueryResult.results === null) {
+          matchesWithSubqueriesAfter = false;
+          continue;
+        }
+        afterTriplesMatch.push(...[...subQueryResult.triples.values()].flat());
+      }
+      if (!matchesWithSubqueriesBefore && !matchesWithSubqueriesAfter) {
+        continue;
+      }
+      if (!matchesWithSubqueriesBefore) {
+        deltaTriples.push(...afterTriplesMatch);
+      }
+      deltaTriples.push(...changedEntityTriples.get(changedEntityId)!);
+    }
+  }
+  return deltaTriples;
+}
+
+export async function fetchDeltaTriplesFromStateVector<
+  M extends Models<any, any> | undefined,
+  Q extends CollectionQuery<M, any>
 >(
   tx: TripleStoreApi,
   query: Q,
@@ -358,7 +495,7 @@ export async function fetchDeltaTriples<
 }
 
 /**
- * This takes a relational query (i.e. has sub-queriess in `where` or `select`) and generates all permutations of the query where each sub-query is written as the root query.
+ * This takes a relational query (i.e. has sub-queries in `where` or `select`) and generates all permutations of the query where each sub-query is written as the root query.
  * In a sense it reverses the direction of the relation.
  * E.g. If the query is like "Users with posts created in the last week" it will generate permutations like "Posts created in the last week with their users"
  * @param query The query to generate permutations for
@@ -385,7 +522,11 @@ function queryChainToQuery<
   Q extends CollectionQuery<M, any>
 >(chain: Q[], additionalFilters: FilterStatement<any, any>[] = []): Q {
   const [first, ...rest] = chain;
-  if (rest.length === 0) return first;
+  if (rest.length === 0)
+    return {
+      ...first,
+      where: [...(first.where ?? []), ...additionalFilters],
+    };
   const variableFilters = (first.where ?? []).filter(
     (filter) => filter instanceof Array && filter[2].startsWith('$')
   ) as FilterStatement<Model<any>>[];
@@ -400,6 +541,7 @@ function queryChainToQuery<
     ...first,
     where: [
       ...nonVariableFilters,
+      ...additionalFilters,
       {
         exists: next,
       },
@@ -412,56 +554,42 @@ function* generateQueryChains<
   Q extends CollectionQuery<M, any>
 >(query: Q, prefix: Q[] = []): Generator<Q[]> {
   yield [...prefix, query];
-  const subQueries = (query.where ?? []).filter(
+  const subQueryFilters = (query.where ?? []).filter(
     (filter) => 'exists' in filter
   ) as SubQueryFilter<M>[];
+  const subQuerySelects = (query.select ?? []).filter(
+    (select) => typeof select !== 'string'
+  ) as RelationSubquery<M>[];
+  const subQueries = [
+    ...subQueryFilters.map((f) => f.exists),
+    ...subQuerySelects.map((s) => s.subquery),
+  ];
   for (const subQuery of subQueries) {
     // yield [query, subQuery] as const;
     const queryWithoutSubQuery = {
       ...query,
-      where: (query.where ?? []).filter((f) => f !== subQuery),
+      where: (query.where ?? []).filter(
+        (f) => !f.exists || f.exists !== subQuery
+      ),
+      select: (query.select ?? []).filter(
+        (s) => typeof s !== 'object' || s.subquery !== subQuery
+      ),
     };
-    yield* generateQueryChains(subQuery.exists, [
-      ...prefix,
-      queryWithoutSubQuery,
-    ]);
+    yield* generateQueryChains(subQuery, [...prefix, queryWithoutSubQuery]);
   }
 }
 
-export function changeQueryRoot<
-  M extends Models<any, any> | undefined,
-  Q extends CollectionQuery<M, any>
->(query: Q, subQueryPath: string) {
-  const newQuery = TBValue.Clone(query); // this clone is likely not necessary bc we clone in the caller
-  const newRoot = ValuePointer.Get(
-    query,
-    subQueryPath + '/exists'
-  ) as CollectionQuery<M, any>;
-  // TODO: ignore variables already bound to query
-  // TODO: handle AND and OR filters
-  const variableFilters = (newRoot.where ?? []).filter(
-    (filter) => filter instanceof Array && filter[2].startsWith('$')
-  ) as FilterStatement<Model<any>>[];
-  const nonVariableFilters = (newRoot.where ?? []).filter(
-    (filter) => !(filter instanceof Array && filter[2].startsWith('$'))
-  ) as FilterStatement<Model<any>>[];
-
-  ValuePointer.Delete(newQuery, subQueryPath);
-  newRoot.where = nonVariableFilters;
-  newRoot.where.push({
-    exists: {
-      collectionName: query.collectionName,
-      where: [
-        ...(newQuery.where ?? []),
-        ...variableFilters.map(reverseRelationFilter),
-      ],
-      // vars: query.vars,
-    },
-  });
-  newRoot.vars = query.vars;
-  return newRoot;
-}
-
+const REVERSE_OPERATOR_MAPPINGS = {
+  '=': '=',
+  '<': '>',
+  '>': '<',
+  '<=': '>=',
+  '>=': '<=',
+  in: '=', // we need the inverse for sets
+  // TODO support Set operators
+  // the issue is that we use '=' for set membership so we can't just reverse the operator
+  // naively to "in"
+};
 function reverseRelationFilter(filter: FilterStatement<any, any>) {
   const [path, op, value] = filter;
   if (typeof value !== 'string' || !value.startsWith('$')) {
@@ -469,7 +597,12 @@ function reverseRelationFilter(filter: FilterStatement<any, any>) {
       `Expected filter value to be a relation variable, but got ${value}`
     );
   }
-  return [value.slice(1), op, '$' + path] as FilterStatement<any, any>;
+  return [
+    value.slice(1),
+    REVERSE_OPERATOR_MAPPINGS[op],
+    // op,
+    '$' + path,
+  ] as FilterStatement<any, any>;
 }
 
 /**
@@ -1463,14 +1596,85 @@ export function subscribeTriples<
       options
     );
   }
-  return subscribeResultsAndTriples(
-    tripleStore,
-    query,
-    ([_results, triples]) => onResults(triples),
-    onError,
-    schema,
-    options
-  );
+
+  // return subscribeResultsAndTriples(
+  //   tripleStore,
+  //   query,
+  //   ([_results, triples]) => onResults(triples),
+  //   onError,
+  //   schema,
+  //   stateVector
+  // );
+  // console.log(JSON.stringify(query, null, 2));
+  const asyncUnSub = async () => {
+    let triples: Map<string, TripleRow[]> = new Map();
+    try {
+      const fetchResult = await fetch<M, Q>(tripleStore, query, {
+        includeTriples: true,
+        schema,
+        stateVector,
+      });
+      triples = fetchResult.triples;
+      let currentStateVector = triplesToStateVector(
+        [...triples.values()].flat()
+      );
+      const unsub = tripleStore.onWrite(async (storeWrites) => {
+        // const queryStateVector = currentStateVector.reduce(
+        //   (acc, [t, client]) => {
+        //     acc.set(client, t);
+        //     return acc;
+        //   },
+        //   new Map<string, number>()
+        // );
+
+        const deltaTriples = await fetchDeltaTriples(
+          tripleStore,
+          query,
+          storeWrites.default.inserts
+        );
+        const deltaSet = new Set(
+          deltaTriples.map(
+            (t) => t.id + t.attribute + t.timestamp[0] + t.timestamp[1]
+          )
+        );
+        for (const trip of storeWrites.default.inserts) {
+          const tripKey =
+            trip.id + trip.attribute + trip.timestamp[0] + trip.timestamp[1];
+          if (!deltaSet.has(tripKey)) {
+            console.log(tripKey, '\x1b[33m<-- MISSING\x1b[0m');
+          } else {
+            console.log(tripKey);
+          }
+        }
+        // console.log(
+        //   'writes',
+        //   storeWrites.default.inserts, deltaTriples)
+        // );
+        currentStateVector = triplesToStateVector(deltaTriples);
+        const triplesMap = deltaTriples.reduce((acc, t) => {
+          if (acc.has(t.id)) {
+            acc.get(t.id)!.push(t);
+          } else {
+            acc.set(t.id, [t]);
+          }
+          return acc;
+        }, new Map<string, TripleRow[]>());
+        onResults(triplesMap);
+      });
+      await onResults(triples);
+      return unsub;
+    } catch (e) {
+      onError && (await onError(e));
+    }
+    return () => {};
+  };
+
+  const unsubPromise = asyncUnSub();
+
+  return async () => {
+    const unsub = await unsubPromise;
+    unsub();
+  };
 }
 
 // Subquery variables should include attr: undefined if the entity does not have a value for a given attribute

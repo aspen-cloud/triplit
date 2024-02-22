@@ -9,7 +9,7 @@ import {
 import { AsyncTupleStorageApi, TupleStorageApi } from '@triplit/tuple-database';
 import CollectionQueryBuilder, {
   fetch,
-  fetchDeltaTriples,
+  fetchDeltaTriplesFromStateVector,
   FetchResult,
   FetchResultEntity,
   MaybeReturnTypeFromQuery,
@@ -681,7 +681,7 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
   ) {
     await this.ensureMigrated;
     const { query: fetchQuery } = await prepareQuery(this, query, {});
-    return fetchDeltaTriples<M, Q>(
+    return fetchDeltaTriplesFromStateVector<M, Q>(
       this.tripleStore,
       fetchQuery,
       stateVector,
