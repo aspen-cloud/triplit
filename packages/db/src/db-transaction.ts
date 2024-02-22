@@ -698,12 +698,13 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
       async (schemaEntity) => {
         // If there are no collections, create property
         if (!schemaEntity.collections) schemaEntity.collections = {};
+        const sortedOptional = optional ? optional.slice().sort() : undefined;
         // Overwrite collection data
         // Schemas are saved as record types, so translate that here
         const schemaJSONWithType = typeFromJSON({
           type: 'record',
           properties: schemaJSON,
-          optional,
+          optional: sortedOptional,
         }).toJSON();
         const newSchema: any = {
           schema: schemaJSONWithType,
@@ -920,6 +921,7 @@ function updateOptional(
       recordAttr.optional = recordAttr.optional.filter(
         (attr) => attr !== attrName
       );
+    recordAttr.optional = recordAttr.optional.slice().sort();
   }
 }
 

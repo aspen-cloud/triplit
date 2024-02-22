@@ -76,6 +76,18 @@ async function dropDefaultOption(
   });
 }
 
+async function makeAttributeOptional(
+  client: TriplitClient<any>,
+  collectionName: string,
+  attributeName: string
+) {
+  await client.db.setAttributeOptional({
+    collection: collectionName,
+    path: [attributeName],
+    optional: true,
+  });
+}
+
 function getDefaultOptionsFromType(type: ValueTypeKeys) {
   if (type === 'date') return ['Value', 'now'];
   if (type === 'string') return ['Value', 'uuid'];
@@ -107,6 +119,7 @@ export function SchemaAttributeSheet(
   const [attributeToUpdate, setAttributeToUpdate] = useAtom(
     attributeToUpdateAtom
   );
+  console.log(collectionSchema);
   const editing = !!attributeToUpdate;
   const [open, setOpen] = useAtom(addOrUpdateAttributeFormOpenAtom);
   const [attributeName, setAttributeName] = useState('');
@@ -117,6 +130,7 @@ export function SchemaAttributeSheet(
   const [defaultType, setDefaultType] = useState<'Value' | 'now' | 'uuid'>(
     'Value'
   );
+  const [isOptional, setIsOptional] = useState(false);
   const [recordKeyTypes, setRecordKeyTypes] = useState<
     Record<string, [string, ValueTypeKeys]>
   >({});
@@ -132,6 +146,7 @@ export function SchemaAttributeSheet(
     setDefaultValue('');
     setNullable(false);
     setHasDefault(false);
+    setIsOptional(false);
   }
 
   useEffect(() => {
@@ -150,7 +165,12 @@ export function SchemaAttributeSheet(
         return;
       }
       setNullable(attributeToUpdate?.options?.nullable ?? false);
-
+      setIsOptional(
+        !!(
+          collectionSchema.schema.optional &&
+          collectionSchema.schema.optional.includes(attributeToUpdate.name)
+        )
+      );
       if (attributeToUpdate.type === 'set') {
         setSetType(attributeToUpdate.items.type);
         return;
@@ -210,6 +230,7 @@ export function SchemaAttributeSheet(
     } as AttributeDefinition;
   }, [
     attributeBaseType,
+    collectionSchema,
     setType,
     recordKeyTypes,
     nullable,
@@ -238,6 +259,13 @@ export function SchemaAttributeSheet(
     ) {
       await dropDefaultOption(client, collectionName, attributeName);
     }
+    const isAlreadyOptional = collectionSchema.schema.optional?.includes(
+      // @ts-expect-error
+      attributeName
+    );
+    if (!isAlreadyOptional && isOptional) {
+      await makeAttributeOptional(client, collectionName, attributeName);
+    }
     await updateAttributeOptions(
       client,
       collectionName,
@@ -253,6 +281,8 @@ export function SchemaAttributeSheet(
     attributeName,
     collectionName,
     formToAttributeDefinition,
+    collectionSchema,
+    isOptional,
   ]);
 
   return (
@@ -391,101 +421,111 @@ export function SchemaAttributeSheet(
               </div>
             </div>
           </div>
-          {attributeBaseType !== 'record' && (
-            <>
-              <hr className="col-span-full mt-10 mb-5" />
-              <div className="font-bold">Options</div>
-              <div className="flex flex-col gap-5 col-span-2">
-                {attributeBaseType !== 'set' && (
-                  <div className="flex flex-col gap-3">
-                    <div className="flex flex-row items-center gap-3">
-                      <Checkbox
-                        className="w-5 h-5"
-                        checked={hasDefault}
-                        onCheckedChange={setHasDefault}
-                      />
-                      <div className="flex flex-row justify-between items-center w-full">
-                        <Label>Default value</Label>
-                        <div className="text-muted-foreground">Optional</div>
-                      </div>
-                    </div>
-                    {hasDefault && (
-                      <>
-                        <div className="flex flex-row gap-2">
-                          <Select
-                            value={defaultType}
-                            onValueChange={setDefaultType}
-                            data={getDefaultOptionsFromType(attributeBaseType)}
-                          />
-                          {defaultType === 'Value' &&
-                            attributeBaseType === 'string' && (
-                              <Input
-                                type="text"
-                                value={defaultValue}
-                                onChange={(e) => {
-                                  setDefaultValue(e.target.value);
-                                }}
-                              />
-                            )}
-                          {defaultType === 'Value' &&
-                            attributeBaseType === 'boolean' && (
-                              <Select
-                                data={['true', 'false']}
-                                placeholder='e.g. "Hello", 9, null'
-                                value={String(defaultValue)}
-                                onValueChange={(value) => {
-                                  setDefaultValue(value === 'false');
-                                }}
-                              />
-                            )}
-                          {defaultType === 'Value' &&
-                            attributeBaseType === 'number' && (
-                              <Input
-                                type="number"
-                                value={String(defaultValue)}
-                                onChange={(e) => {
-                                  setDefaultValue(e.target.valueAsNumber);
-                                }}
-                              />
-                            )}
-                          {defaultType === 'Value' &&
-                            attributeBaseType === 'date' && (
-                              <Input
-                                type="datetime-local"
-                                value={defaultValue}
-                                onChange={(e) => {
-                                  setDefaultValue(e.target.value);
-                                }}
-                              />
-                            )}
-                        </div>
-                        <div className="text-muted-foreground">
-                          A default value can either be a literal value e.g.{' '}
-                          <Code>"Hello", 9, null</Code> or a Triplit-provided
-                          function. If left empty, the attribute will be
-                          undefined by default.
-                        </div>
-                      </>
-                    )}
-                  </div>
-                )}
+
+          <hr className="col-span-full mt-10 mb-5" />
+          <div className="font-bold">Options</div>
+          <div className="flex flex-col gap-5 col-span-2">
+            <div className="flex flex-row items-center gap-3">
+              <Checkbox
+                className="w-5 h-5"
+                checked={isOptional}
+                disabled={
+                  !!(
+                    attributeToUpdate &&
+                    collectionSchema.schema.optional?.includes(
+                      // @ts-expect-error
+                      attributeToUpdate.name
+                    )
+                  )
+                }
+                onCheckedChange={setIsOptional}
+              />
+              <Label>Optional</Label>
+            </div>
+            {attributeBaseType !== 'set' && attributeBaseType !== 'record' && (
+              <div className="flex flex-col gap-3">
                 <div className="flex flex-row items-center gap-3">
                   <Checkbox
                     className="w-5 h-5"
-                    checked={nullable}
-                    disabled={
-                      attributeToUpdate && attributeToUpdate?.options?.nullable
-                    }
-                    onCheckedChange={setNullable}
+                    checked={hasDefault}
+                    onCheckedChange={setHasDefault}
                   />
-                  <div className="flex flex-row justify-between items-center w-full">
-                    <Label>Nullable</Label>
-                    <div className="text-muted-foreground">Optional</div>
-                  </div>
+                  <Label>Default value</Label>
                 </div>
+                {hasDefault && (
+                  <>
+                    <div className="flex flex-row gap-2">
+                      <Select
+                        value={defaultType}
+                        onValueChange={setDefaultType}
+                        data={getDefaultOptionsFromType(attributeBaseType)}
+                      />
+                      {defaultType === 'Value' &&
+                        attributeBaseType === 'string' && (
+                          <Input
+                            type="text"
+                            value={defaultValue}
+                            onChange={(e) => {
+                              setDefaultValue(e.target.value);
+                            }}
+                          />
+                        )}
+                      {defaultType === 'Value' &&
+                        attributeBaseType === 'boolean' && (
+                          <Select
+                            data={['true', 'false']}
+                            placeholder='e.g. "Hello", 9, null'
+                            value={String(defaultValue)}
+                            onValueChange={(value) => {
+                              setDefaultValue(value === 'false');
+                            }}
+                          />
+                        )}
+                      {defaultType === 'Value' &&
+                        attributeBaseType === 'number' && (
+                          <Input
+                            type="number"
+                            value={String(defaultValue)}
+                            onChange={(e) => {
+                              setDefaultValue(e.target.valueAsNumber);
+                            }}
+                          />
+                        )}
+                      {defaultType === 'Value' &&
+                        attributeBaseType === 'date' && (
+                          <Input
+                            type="datetime-local"
+                            value={defaultValue}
+                            onChange={(e) => {
+                              setDefaultValue(e.target.value);
+                            }}
+                          />
+                        )}
+                    </div>
+                    <div className="text-muted-foreground">
+                      A default value can either be a literal value e.g.{' '}
+                      <Code>"Hello", 9, null</Code> or a Triplit-provided
+                      function. If left empty, the attribute will be undefined
+                      by default.
+                    </div>
+                  </>
+                )}
               </div>
-            </>
-          )}
+            )}
+            {attributeBaseType !== 'record' && (
+              <div className="flex flex-row items-center gap-3">
+                <Checkbox
+                  className="w-5 h-5"
+                  checked={nullable}
+                  disabled={
+                    attributeToUpdate && attributeToUpdate?.options?.nullable
+                  }
+                  onCheckedChange={setNullable}
+                />
+                <Label>Nullable</Label>
+              </div>
+            )}
+          </div>
         </div>
         <hr className="col-span-full mt-10 mb-5" />
 
