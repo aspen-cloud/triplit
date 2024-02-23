@@ -1,5 +1,16 @@
 # @triplit/db
 
+## 0.3.19
+
+### Patch Changes
+
+- f248061: fix and test pagination bug
+- aff7f7f: add support for optional attributes
+- 71504b0: Accept entities in after clause of queries
+- 1ef3f46: fixup inserting nullable sets over remote client
+- 2ab8039: fixup queries with limit but no order
+- fd652f7: Fixup bugs with migration operations on nested attributes
+
 ## 0.3.18
 
 ### Patch Changes

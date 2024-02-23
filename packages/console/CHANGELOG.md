@@ -1,5 +1,24 @@
 # @triplit/console
 
+## 0.3.25
+
+### Patch Changes
+
+- 2ab8039: add support for setting values as undefined from console
+- 6aebafe: add basic pagination to console
+- 00fbea0: fixup overflow styles for large amounts of data
+- Updated dependencies [f248061]
+- Updated dependencies [aff7f7f]
+- Updated dependencies [71504b0]
+- Updated dependencies [1b8bb22]
+- Updated dependencies [1ef3f46]
+- Updated dependencies [2ab8039]
+- Updated dependencies [fd652f7]
+  - @triplit/db@0.3.19
+  - @triplit/server-core@0.3.22
+  - @triplit/client@0.3.22
+  - @triplit/react@0.3.22
+
 ## 0.3.24
 
 ### Patch Changes

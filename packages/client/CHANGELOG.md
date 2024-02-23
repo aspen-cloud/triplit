@@ -1,5 +1,18 @@
 # @triplit/client
 
+## 0.3.22
+
+### Patch Changes
+
+- 1ef3f46: fixup inserting nullable sets over remote client
+- Updated dependencies [f248061]
+- Updated dependencies [aff7f7f]
+- Updated dependencies [71504b0]
+- Updated dependencies [1ef3f46]
+- Updated dependencies [2ab8039]
+- Updated dependencies [fd652f7]
+  - @triplit/db@0.3.19
+
 ## 0.3.21
 
 ### Patch Changes
