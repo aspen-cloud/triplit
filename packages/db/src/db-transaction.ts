@@ -902,8 +902,8 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
 }
 
 // Updates the optional properties of a record type
-// Arrays are pretty sensitive in (de)serialization
-// Really hard to work with arrays right now, specifically inplace operations and empty arrays
+// Only use pure assignment operations for arrays
+// Ensure optional is sorted when assigned
 function updateOptional(
   recordAttr: RecordType<any>,
   attrName: string,
@@ -916,12 +916,11 @@ function updateOptional(
       for (let i = 0; i < recordAttr.optional.length; i++) {
         updatedKeys.push(recordAttr.optional[i]);
       }
-      recordAttr.optional = [...updatedKeys, attrName];
+      recordAttr.optional = [...updatedKeys, attrName].sort();
     } else if (recordAttr.optional.includes(attrName) && !optional)
-      recordAttr.optional = recordAttr.optional.filter(
-        (attr) => attr !== attrName
-      );
-    recordAttr.optional = recordAttr.optional.slice().sort();
+      recordAttr.optional = recordAttr.optional
+        .filter((attr) => attr !== attrName)
+        .sort();
   }
 }
 

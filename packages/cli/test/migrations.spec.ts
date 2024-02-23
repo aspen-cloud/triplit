@@ -112,8 +112,6 @@ it('codegen can generate a schema from migrations', async () => {
       ''
     )
   ).toBe(undefined);
-  console.log(jsonSchema.collections.test.schema.optional);
-  console.log(codegenSchemaJSON.collections.test.schema.optional);
 
   // check schemas match
   const hash1 = hashSchemaJSON(jsonSchema.collections);

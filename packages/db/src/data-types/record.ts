@@ -61,6 +61,9 @@ export function RecordType<
     supportedOperations: [] as const, // 'hasKey', etc
     context: {},
     properties,
+    // Due to how we "hash" schemas we need to keep optional keys sorted
+    // I think we're setup to do that where needed
+    // A better approach might be a hash function per data type
     optional,
     toJSON(): RecordAttributeDefinition<Properties> {
       const serializedProps = Object.fromEntries(
