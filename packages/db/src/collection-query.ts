@@ -235,6 +235,7 @@ export async function fetchDeltaTriples<
   Q extends CollectionQuery<M, any>
 >(tx: TripleStoreApi, query: Q, newTriples: TripleRow[], schema?: M) {
   const queryPermutations = generateQueryRootPermutations(query);
+
   const changedEntityTriples = newTriples.reduce((entities, trip) => {
     if (!entities.has(trip.id)) {
       entities.set(trip.id, []);
@@ -243,19 +244,22 @@ export async function fetchDeltaTriples<
     return entities;
   }, new Map<string, TripleRow[]>());
   const deltaTriples: TripleRow[] = [];
+
+  // this is kinda weird but we're actually creating the state vector that would be
+  // before these changed triples so it's looking for the min timestamp rather than
+  // the max
+  const stateVector = newTriples.reduce<Map<string, number>>((acc, curr) => {
+    const [tick, clientId] = curr.timestamp;
+    if (!acc.has(clientId) || tick < acc.get(clientId)! + 1) {
+      acc.set(clientId, Math.max(tick - 1, 0));
+    }
+    return acc;
+  }, new Map());
   for (const changedEntityId of changedEntityTriples.keys()) {
     const entityTriples = await tx.findByEntity(changedEntityId);
-    const stateVector = triplesToStateVector(entityTriples);
-    const queryStateVector = stateVector.reduce<Map<string, number>>(
-      (vec, ts) => {
-        vec.set(ts[1], ts[0]);
-        return vec;
-      },
-      new Map()
-    );
     const entityBeforeStateVector = getEntitiesAtStateVector(
       entityTriples,
-      queryStateVector
+      stateVector
     ).get(changedEntityId)?.data;
     const entityAfterStateVector =
       getEntitiesAtStateVector(entityTriples).get(changedEntityId)?.data;
@@ -372,7 +376,7 @@ export async function fetchDeltaTriplesFromStateVector<
   stateVector: Map<string, number>,
   schema?: M
 ): Promise<TripleRow[]> {
-  const queryPermutations = generateQueryRootPermutations(query);
+  // const queryPermutations = generateQueryRootPermutations(query);
   const timestamps = [...stateVector.entries()].map(
     ([cId, n]) => [n, cId] as Timestamp
   );
@@ -384,114 +388,7 @@ export async function fetchDeltaTriplesFromStateVector<
     'gt',
     maxTimestamp
   );
-  const changedEntityTriples = triplesAfterStateVector.reduce(
-    (entities, trip) => {
-      if (!entities.has(trip.id)) {
-        entities.set(trip.id, []);
-      }
-      entities.get(trip.id)!.push(trip);
-      return entities;
-    },
-    new Map<string, TripleRow[]>()
-  );
-  const deltaTriples: TripleRow[] = [];
-  for (const changedEntityId of changedEntityTriples.keys()) {
-    const entityTriples = await tx.findByEntity(changedEntityId);
-    const entityBeforeStateVector = getEntitiesAtStateVector(
-      entityTriples,
-      stateVector
-    ).get(changedEntityId)?.data;
-    const entityAfterStateVector =
-      getEntitiesAtStateVector(entityTriples).get(changedEntityId)?.data;
-
-    for (const q of queryPermutations) {
-      if (q.collectionName !== splitIdParts(changedEntityId)[0]) {
-        continue;
-      }
-      const matchesBefore =
-        !!entityBeforeStateVector &&
-        doesEntityObjMatchWhere(
-          entityBeforeStateVector,
-          q.where,
-          schema && schema[q.collectionName].schema
-        );
-      const matchesAfter =
-        !!entityAfterStateVector &&
-        doesEntityObjMatchWhere(
-          entityAfterStateVector,
-          q.where,
-          schema && schema[q.collectionName].schema
-        );
-      if (!matchesBefore && !matchesAfter) {
-        continue;
-      }
-      const subQueries = (q.where ?? []).filter(
-        (filter) => 'exists' in filter
-      ) as SubQueryFilter<M>[];
-      let matchesWithSubqueriesBefore = true;
-      if (matchesBefore) {
-        for (const { exists: subQuery } of subQueries) {
-          const subQueryResult = await fetchOne(
-            tx,
-            {
-              ...subQuery,
-              vars: {
-                ...q.vars,
-                ...subQuery.vars,
-                ...schema![q.collectionName].schema?.convertDBValueToJS(
-                  timestampedObjectToPlainObject(entityBeforeStateVector, true)
-                ),
-              },
-            } as CollectionQuery<M, any>,
-            { includeTriples: true, schema }
-          );
-          if (subQueryResult.results === null) {
-            matchesWithSubqueriesBefore = false;
-            continue;
-          }
-        }
-      } else {
-        matchesWithSubqueriesBefore = false;
-      }
-      if (!matchesWithSubqueriesBefore && !matchesAfter) {
-        continue;
-      }
-      const afterTriplesMatch = [];
-      let matchesWithSubqueriesAfter = true;
-      for (const { exists: subQuery } of subQueries) {
-        const subQueryResult = await fetchOne(
-          tx,
-          {
-            ...subQuery,
-            vars: {
-              ...q.vars,
-              ...subQuery.vars,
-              ...schema![q.collectionName].schema?.convertDBValueToJS(
-                timestampedObjectToPlainObject(
-                  entityAfterStateVector as any,
-                  true
-                )
-              ),
-            },
-          } as CollectionQuery<M, any>,
-          { includeTriples: true, schema }
-        );
-        if (subQueryResult.results === null) {
-          matchesWithSubqueriesAfter = false;
-          continue;
-        }
-        afterTriplesMatch.push(...[...subQueryResult.triples.values()].flat());
-      }
-      if (!matchesWithSubqueriesBefore && !matchesWithSubqueriesAfter) {
-        continue;
-      }
-      if (!matchesWithSubqueriesBefore) {
-        deltaTriples.push(...afterTriplesMatch);
-      }
-      deltaTriples.push(...changedEntityTriples.get(changedEntityId)!);
-    }
-  }
-  return deltaTriples;
+  return fetchDeltaTriples(tx, query, triplesAfterStateVector, schema);
 }
 
 /**
@@ -1597,15 +1494,6 @@ export function subscribeTriples<
     );
   }
 
-  // return subscribeResultsAndTriples(
-  //   tripleStore,
-  //   query,
-  //   ([_results, triples]) => onResults(triples),
-  //   onError,
-  //   schema,
-  //   stateVector
-  // );
-  // console.log(JSON.stringify(query, null, 2));
   const asyncUnSub = async () => {
     let triples: Map<string, TripleRow[]> = new Map();
     try {
@@ -1619,14 +1507,6 @@ export function subscribeTriples<
         [...triples.values()].flat()
       );
       const unsub = tripleStore.onWrite(async (storeWrites) => {
-        // const queryStateVector = currentStateVector.reduce(
-        //   (acc, [t, client]) => {
-        //     acc.set(client, t);
-        //     return acc;
-        //   },
-        //   new Map<string, number>()
-        // );
-
         const deltaTriples = await fetchDeltaTriples(
           tripleStore,
           query,
@@ -1637,19 +1517,6 @@ export function subscribeTriples<
             (t) => t.id + t.attribute + t.timestamp[0] + t.timestamp[1]
           )
         );
-        for (const trip of storeWrites.default.inserts) {
-          const tripKey =
-            trip.id + trip.attribute + trip.timestamp[0] + trip.timestamp[1];
-          if (!deltaSet.has(tripKey)) {
-            console.log(tripKey, '\x1b[33m<-- MISSING\x1b[0m');
-          } else {
-            console.log(tripKey);
-          }
-        }
-        // console.log(
-        //   'writes',
-        //   storeWrites.default.inserts, deltaTriples)
-        // );
         currentStateVector = triplesToStateVector(deltaTriples);
         const triplesMap = deltaTriples.reduce((acc, t) => {
           if (acc.has(t.id)) {

@@ -2039,7 +2039,7 @@ describe('subscriptions', () => {
     let i = 0;
     const assertions = [
       (data) => expect(data.length).toBe(10),
-      (data) => expect(data.length).toBe(5),
+      (data) => expect(data.length).toBe(1),
     ];
     const unsubscribe = db.subscribeTriples(
       CollectionQueryBuilder('students')
@@ -6924,8 +6924,10 @@ describe('delta querying', async () => {
         const serverDB = new DB({ schema });
         const clientDB = new DB({ schema });
         await insertSampleData(serverDB);
-        await insertSampleData(clientDB);
+        // await insertSampleData(clientDB);
         const initialTriples = await serverDB.fetchTriples(query(serverDB));
+        await clientDB.tripleStore.insertTriples(initialTriples);
+        // console.log('initial triples', initialTriples);
         const stateVector = triplesToStateVector(initialTriples);
         await action(serverDB);
         const queryStateVector = stateVector.reduce(
