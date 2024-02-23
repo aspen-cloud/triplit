@@ -146,17 +146,18 @@ export function DataViewer({
       client
         .query(selectedCollection)
         .order(...order)
-        .where(filters),
+        .where(filters)
+        .limit(noFilters ? limit : Infinity),
     // only apply a limit if we have no filters
-    // .limit(noFilters ? limit : Infinity)
     [selectedCollection, order, filters, limit, noFilters]
   );
 
+  // TODO remove localOnly when we get rid of the whole-collection query above
   const {
     results: orderedAndFilteredResults,
     fetchingRemote,
     fetching,
-  } = useQuery(client, query);
+  } = useQuery(client, query, { localOnly: true });
 
   const { results: allResults } = useQuery(
     client,
