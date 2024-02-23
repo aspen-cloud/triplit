@@ -39,15 +39,15 @@ export function ProjectViewer({
     schema || collectionsTolist.length === 0;
   // If client, render hooks that rely on client safely
   return (
-    <div className="flex bg-popover">
-      <div className=" border-r h-screen flex flex-col p-4">
+    <div className="flex bg-popover max-w-[100vw] overflow-hidden">
+      <div className=" border-r h-screen flex flex-col p-4 max-w-[300px]">
         <ProjectOptionsMenu>
           <Button variant="secondary" className="w-full">
             <div className="font-bold truncate ">{project?.displayName}</div>
             <CaretDown className="ml-2 shrink-0" />
           </Button>
         </ProjectOptionsMenu>
-        <div className="flex flex-row items-center justify-between my-4">
+        <div className="flex flex-row items-center justify-between gap-2 md:gap-4 my-4">
           <span className="truncate text-sm md:text-lg font-semibold">
             Collections
           </span>
@@ -92,7 +92,7 @@ export function ProjectViewer({
           </div>
         )}
       </div>
-      <div className="flex-grow flex flex-col">
+      <div className="flex-grow flex flex-col min-w-0">
         {selectedCollection ? (
           <DataViewer
             projectId={projectPrimaryKey}

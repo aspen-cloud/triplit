@@ -43,11 +43,26 @@ async function updateTriplitValue(
   client: TriplitClient,
   collection: string,
   entityId: string,
-  value: TriplitDataTypes
+  value: TriplitDataTypes & undefined
 ) {
   try {
     await client.update(collection, entityId, async (originalEntity) => {
       originalEntity[attribute] = value;
+    });
+  } catch (e) {
+    console.error(e);
+  }
+}
+
+async function deleteTriplitValue(
+  attribute: string,
+  client: TriplitClient,
+  collection: string,
+  entityId: string
+) {
+  try {
+    await client.update(collection, entityId, async (originalEntity) => {
+      delete originalEntity[attribute];
     });
   } catch (e) {
     console.error(e);
@@ -64,14 +79,32 @@ async function updateTriplitSet(
 ) {
   try {
     await client.update(collection, entityId, async (originalEntity) => {
-      if (action === 'null') originalEntity[attribute] = null;
-      else if (action === 'add') {
-        if (originalEntity[attribute] === null) {
+      if (action === 'add') {
+        if (
+          originalEntity[attribute] === null ||
+          originalEntity[attribute] === undefined
+        ) {
           originalEntity[attribute] = new Set([value]);
-        } else {
-          originalEntity[attribute].add(value);
+          return;
         }
-      } else if (action === 'delete') originalEntity[attribute].delete(value);
+        if (originalEntity[attribute] instanceof Set) {
+          originalEntity[attribute].add(value);
+          return;
+        }
+      } else if (
+        action === 'delete' &&
+        originalEntity[attribute] instanceof Set
+      ) {
+        const deleted = originalEntity[attribute].delete(value);
+        if (!deleted && value instanceof Date) {
+          const dateObjToDelete = Array.from(
+            originalEntity[attribute] as Set<Date>
+          ).find((date: Date) => date.toISOString() === value.toISOString());
+          if (dateObjToDelete) {
+            originalEntity[attribute].delete(dateObjToDelete);
+          }
+        }
+      }
     });
   } catch (e) {
     console.error(e);
@@ -257,6 +290,7 @@ type TriplitDataCellProps = {
   attributeDef?: AttributeDefinition;
   onSelectCell: () => void;
   editable?: boolean;
+  optional?: boolean;
 };
 
 export function DataCell({
@@ -269,8 +303,10 @@ export function DataCell({
   client,
   collection,
   editable = true,
+  optional = false,
 }: TriplitDataCellProps) {
   const [isEditing, setIsEditing] = useState(false);
+  const nullable = !!attributeDef?.options?.nullable;
   useEffect(() => {
     if (!selected) setIsEditing(false);
   }, [selected]);
@@ -293,7 +329,7 @@ export function DataCell({
         />
       </PopoverTrigger>
 
-      <PopoverContent className="text-xs p-1" align="start">
+      <PopoverContent className="text-xs p-1.5" align="start">
         {attributeDef?.type === 'set' ? (
           <SetCellEditor
             set={value}
@@ -343,6 +379,43 @@ export function DataCell({
             }}
           />
         )}
+        {(nullable || optional) && (
+          <div className="pt-2 flex flex-row gap-2">
+            {nullable && (
+              <Button
+                className="text-xs h-auto py-1 px-2 justify-self-start"
+                variant={'ghost'}
+                disabled={value === null}
+                onClick={(e) => {
+                  updateTriplitValue(
+                    attribute,
+                    client,
+                    collection,
+                    entityId,
+                    null
+                  );
+                }}
+              >
+                Set to <Code className="text-xs ml-1">null</Code>
+              </Button>
+            )}
+            {optional && (
+              <Button
+                className="text-xs h-auto py-1 px-2 justify-self-start"
+                disabled={value === undefined}
+                variant={'ghost'}
+                onClick={(e) => {
+                  deleteTriplitValue(attribute, client, collection, entityId);
+                }}
+              >
+                Delete{' '}
+                {attributeDef.type === 'set' || attributeDef.type === 'record'
+                  ? attributeDef.type
+                  : 'value'}
+              </Button>
+            )}
+          </div>
+        )}
       </PopoverContent>
     </Popover>
   );
@@ -356,34 +429,20 @@ type SetCellEditorProps = {
 
 function SetCellEditor(props: SetCellEditorProps) {
   const { set, onChangeSet, definition } = props;
-  const nullable = definition.options?.nullable;
   return (
-    <div className="flex flex-col p-1 gap-1 items-start">
-      <SetInput
-        value={set}
-        onAddItem={(value) => {
-          onChangeSet(value, 'add');
-        }}
-        onRemoveItem={(value) => {
-          onChangeSet(value, 'delete');
-        }}
-        parse={PARSE_FUNCS[definition.items.type]}
-        renderItem={(value) => (
-          <CellValue value={value} definition={definition.items} />
-        )}
-      />
-      {nullable && (
-        <Button
-          className="text-xs h-auto py-1 px-2 justify-self-start"
-          variant={'ghost'}
-          onClick={(e) => {
-            onChangeSet(null, 'null');
-          }}
-        >
-          Set to <Code className="text-xs ml-1">null</Code>
-        </Button>
+    <SetInput
+      value={set}
+      onAddItem={(value) => {
+        onChangeSet(value, 'add');
+      }}
+      onRemoveItem={(value) => {
+        onChangeSet(value, 'delete');
+      }}
+      parse={PARSE_FUNCS[definition.items.type]}
+      renderItem={(value) => (
+        <CellValue value={value} definition={definition.items} />
       )}
-    </div>
+    />
   );
 }
 
@@ -469,17 +528,6 @@ function ValueCellEditor(props: ValueCellEditorProps) {
       />
       {error && <div className="text-red-500 my-1 text-xs">{error}</div>}
       <div className="flex flex-row gap-1 justify-end mt-1">
-        {nullable && (
-          <Button
-            className="text-xs h-auto py-1 px-2 justify-self-start"
-            variant={'ghost'}
-            onClick={(e) => {
-              onSubmit(null);
-            }}
-          >
-            Set to <Code className="text-xs ml-1">null</Code>
-          </Button>
-        )}
         <Button
           onClick={(e) => {
             onBlur();
@@ -652,7 +700,7 @@ export function DataTable<TData, TValue>({
 
   return (
     <Table
-      className="bg-popover text-xs w-full border-r border-t flex flex-col h-full overflow-hidden "
+      className="bg-popover text-xs border-r border-t flex flex-col h-full"
       style={{ width: table.getCenterTotalSize() }}
     >
       <TableHeader>

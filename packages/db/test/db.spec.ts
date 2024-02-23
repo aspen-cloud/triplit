@@ -1823,6 +1823,37 @@ describe('record operations', () => {
       }
     });
   });
+  it('can add and delete from optional sets', async () => {
+    const schema = {
+      collections: {
+        test: {
+          schema: S.Schema({
+            id: S.Id(),
+            optionalSet: S.Optional(S.Set(S.Number())),
+          }),
+        },
+      },
+    };
+    const db = new DB({
+      schema,
+    });
+    await db.insert('test', {
+      id: 'item1',
+      optionalSet: new Set([1, 2]),
+    });
+    await db.update('test', 'item1', async (entity) => {
+      entity.optionalSet.add(3);
+    });
+    await db.update('test', 'item1', async (entity) => {
+      entity.optionalSet.delete(1);
+    });
+    const result = await db.fetchById('test', 'item1');
+    expect(result!.optionalSet?.entries()).toEqual(new Set([2, 3]).entries());
+    await db.update('test', 'item1', async (entity) => {
+      entity.optionalSet = undefined;
+    });
+    expect((await db.fetchById('test', 'item1'))!.optionalSet).toBeUndefined();
+  });
 });
 
 describe('date operations', () => {

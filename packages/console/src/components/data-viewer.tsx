@@ -295,6 +295,10 @@ export function DataViewer({
         return {
           cell: ({ row, column }) => {
             const cellKey = `${row.getValue('id')}_${column.id}`;
+            const isOptional = !!collectionSchema?.schema.optional?.includes(
+              //@ts-expect-error
+              attr
+            );
             if (isQueryColumn)
               return (
                 <RelationCell
@@ -331,6 +335,7 @@ export function DataViewer({
                 entityId={row.getValue('id')}
                 client={client}
                 value={row.getValue(attr)}
+                optional={isOptional}
               />
             );
           },
@@ -401,7 +406,7 @@ export function DataViewer({
     [sortedAndFilteredEntities]
   );
   return (
-    <div className="flex flex-col w-full h-screen overflow-hidden">
+    <div className="flex flex-col max-w-full items-start h-screen overflow-hidden">
       {collectionSchema && (
         <>
           <SchemaAttributeSheet

@@ -119,7 +119,6 @@ export function SchemaAttributeSheet(
   const [attributeToUpdate, setAttributeToUpdate] = useAtom(
     attributeToUpdateAtom
   );
-  console.log(collectionSchema);
   const editing = !!attributeToUpdate;
   const [open, setOpen] = useAtom(addOrUpdateAttributeFormOpenAtom);
   const [attributeName, setAttributeName] = useState('');
