@@ -1746,6 +1746,26 @@ describe('record operations', () => {
         });
       }
     });
+
+    it('optional properties are read as undefined in the updater if not set', async () => {
+      const db = new DB({
+        schema,
+      });
+      await db.insert('test', {
+        id: 'item1',
+        record: {
+          attr: 'attr',
+        },
+      });
+      await db.update('test', 'item1', async (entity) => {
+        expect(entity.optionalAttr).toBeUndefined();
+        expect(entity.record.optionalAttr).toBeUndefined();
+        entity.optionalAttr = 'assigned';
+        entity.record.optionalAttr = 'assigned';
+        expect(entity.optionalAttr).toBe('assigned');
+        expect(entity.record.optionalAttr).toBe('assigned');
+      });
+    });
   });
 
   describe('optional records', async () => {

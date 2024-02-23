@@ -1058,16 +1058,22 @@ export function createUpdateProxy<M extends Model<any> | undefined>(
       if (typeof prop === 'symbol') return undefined;
       const parentPropPointer = [prefix, prop].join('/');
       const currentValue = changeTracker.get(parentPropPointer);
-      if (currentValue === null) {
-        return null;
-      }
+
+      // Non exitent values should be read as undefined
+      if (currentValue === undefined) return undefined;
+      // Null values will be returned as null (essentially the base case of "return currentValue")
+      if (currentValue === null) return null;
+
       const propSchema =
         schema &&
         getSchemaFromPath(schema, parentPropPointer.slice(1).split('/'));
 
+      // Handle sets
       if (propSchema && propSchema.type === 'set') {
         return createSetProxy(changeTracker, parentPropPointer, propSchema);
       }
+
+      // Handle deep objects
       if (typeof currentValue === 'object' && currentValue !== null) {
         return createUpdateProxy(
           changeTracker,
