@@ -440,9 +440,6 @@ export function hashSchemaJSON(collections: CollectionsDefinition | undefined) {
   if (!collections) return undefined;
   // TODO: dont use this method if avoidable...trying to deprecate
   const tuples = objectToTuples(collections);
-  for (const i in tuples) {
-    if (tuples[i][2] === 'optional') console.log(tuples[i]);
-  }
   const sortedTriplesStr = tuples
     .map((t) => JSON.stringify(t))
     .sort()
