@@ -1,5 +1,20 @@
 # @triplit/server
 
+## 0.3.22
+
+### Patch Changes
+
+- a38389c: update package.json for improved package support
+- Updated dependencies [f248061]
+- Updated dependencies [aff7f7f]
+- Updated dependencies [71504b0]
+- Updated dependencies [1b8bb22]
+- Updated dependencies [1ef3f46]
+- Updated dependencies [2ab8039]
+- Updated dependencies [fd652f7]
+  - @triplit/db@0.3.19
+  - @triplit/server-core@0.3.22
+
 ## 0.3.21
 
 ### Patch Changes

@@ -1,5 +1,29 @@
 # @triplit/cli
 
+## 0.3.27
+
+### Patch Changes
+
+- 944ac26: fixup seed creation option
+- aff7f7f: add support for optional attributes
+- 016fbd8: Add schema viewing commands
+- Updated dependencies [2ab8039]
+- Updated dependencies [f248061]
+- Updated dependencies [aff7f7f]
+- Updated dependencies [6aebafe]
+- Updated dependencies [00fbea0]
+- Updated dependencies [71504b0]
+- Updated dependencies [1b8bb22]
+- Updated dependencies [1ef3f46]
+- Updated dependencies [a38389c]
+- Updated dependencies [2ab8039]
+- Updated dependencies [fd652f7]
+  - @triplit/console@0.3.25
+  - @triplit/db@0.3.19
+  - @triplit/server-core@0.3.22
+  - @triplit/client@0.3.22
+  - @triplit/server@0.3.22
+
 ## 0.3.26
 
 ### Patch Changes
