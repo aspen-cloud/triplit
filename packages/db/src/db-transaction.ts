@@ -1030,31 +1030,6 @@ export function createUpdateProxy<M extends Model<any> | undefined>(
       if (propSchema.context.optional && value === undefined) {
         return proxyDeleteProperty(prop);
       }
-      if (propSchema.type === 'set') {
-        if (value === null && propSchema.options.nullable) {
-          changeTracker.set(propPointer, null);
-          return true;
-        }
-        if (!Array.isArray(value) && !(value instanceof Set)) {
-          throw new DBSerializationError(
-            'Set',
-            `Cannot assign a non-array or non-set value to a set.`
-          );
-        }
-        const existingVal = changeTracker.get(propPointer);
-        const setProxy = createSetProxy(changeTracker, propPointer, propSchema);
-
-        if (existingVal !== null) {
-          setProxy.clear();
-        } else {
-          // Set object landmark if empty set or previously null
-          changeTracker.set(propPointer, new Set());
-        }
-        for (const v of value) {
-          setProxy.add(v);
-        }
-        return true;
-      }
       const dbValue = propSchema.convertInputToDBValue(
         // @ts-expect-error Big DataType union results in never as arg type
         value

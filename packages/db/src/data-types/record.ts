@@ -162,6 +162,8 @@ export function RecordType<
     },
     // Type should go extract the db type of each of its keys
     defaultInput() {
+      // Record defaults are kinda weird, think through this
+      if (this.context.optional) return undefined;
       return Object.fromEntries(
         Object.entries(properties)
           .map(([key, val]) => [key, val.defaultInput()])
