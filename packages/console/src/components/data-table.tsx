@@ -684,7 +684,7 @@ export function DataTable<TData, TValue>({
           </TableRow>
         ))}
       </TableHeader>
-      <TableBody className="h-full overflow-y-auto">
+      <TableBody className="h-full w-max overflow-y-auto">
         {table.getRowModel().rows?.length ? (
           table.getRowModel().rows.map((row) => {
             return (
