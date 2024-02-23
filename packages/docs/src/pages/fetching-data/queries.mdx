@@ -161,7 +161,7 @@ const query = client
 const { results: firstPage } = client.fetch(query);
 const lastEntity = Array.from(firstPage.values()).pop();
 
-const secondPageQuery = firstQuery.after(lastEntity);
+const secondPageQuery = query.after(lastEntity);
 const { results: secondPage } = client.fetch(secondPageQuery);
 ```
 

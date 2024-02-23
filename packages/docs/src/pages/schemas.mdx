@@ -272,19 +272,43 @@ const recordType = S.Record({
 });
 ```
 
-#### Optional
+### Optional
 
-You may mark attributes in a record as optional with the `Optional` modifier. They will not be required by the schema and will be undefined at runtime if not provided. Optional attributes may also be deleted and assigned to `undefined` in updater functions.
+You may mark attributes in a schema (and record) as optional with the `Optional` modifier. They will not be required by the schema and will be undefined at runtime if not provided. Optional attributes may also be deleted and assigned to `undefined` in updater functions.
 
-```typescript
+```typescript {7}
 import { Schema as S } from '@triplit/db';
-const recordTypeWithOptional = S.Record({
-  street: S.String(),
-  city: S.String(),
-  state: S.String(),
-  zip: S.String(),
-  optional: S.Optional(S.String()),
+
+const schema = S.Schema({
+  address: {
+    schema: {
+      street: S.String(),
+      apartmentNumber: S.Optional(S.String()),
+      city: S.String(),
+      state: S.String(),
+      zip: S.String(),
+    },
+  },
 });
+
+/*
+Will be valid:
+{
+  street: '123 Main St',
+  city: 'Anytown',
+  state: 'NY',
+  zip: '12345',
+}
+
+Will also be valid:
+{
+  street: '123 Main St',
+  city: 'Anytown',
+  state: 'NY',
+  zip: '12345',
+  apartmentNumber: '2',
+}
+*/
 ```
 
 ## Relationships
