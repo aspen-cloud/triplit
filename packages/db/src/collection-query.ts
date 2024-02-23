@@ -1050,26 +1050,27 @@ export function subscribeResultsAndTriples<
               }
             }
           }
-
           // No change to result, return early
           if (!queryShouldRefire) return;
-
           if (order || limit) {
             const entries = [...nextResult];
 
             // If we have removed data from the result set we need to backfill
             if (limit && entries.length < limit) {
               const lastResultEntry = entries.at(entries.length - 1);
+              const lastResultEntryId =
+                lastResultEntry &&
+                appendCollectionToId(query.collectionName, lastResultEntry[0]);
               const backFillQuery = {
                 ...query,
                 limit: limit - entries.length,
-                after: lastResultEntry
+                // If there is no explicit order, then order by Id is assumed
+                after: lastResultEntryId
                   ? [
-                      lastResultEntry[1][order![0][0]][0],
-                      appendCollectionToId(
-                        query.collectionName,
-                        lastResultEntry[0]
-                      ),
+                      order
+                        ? lastResultEntry[1][order![0][0]][0]
+                        : lastResultEntryId,
+                      lastResultEntryId,
                     ]
                   : undefined,
               };
@@ -1122,6 +1123,7 @@ export function subscribeResultsAndTriples<
             triples,
           ]);
         } catch (e) {
+          console.error(e);
           onError && (await onError(e));
         }
       });
@@ -1139,6 +1141,7 @@ export function subscribeResultsAndTriples<
       ]);
       return unsub;
     } catch (e) {
+      console.error(e);
       onError && (await onError(e));
     }
     return () => {};
