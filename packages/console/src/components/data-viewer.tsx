@@ -140,19 +140,23 @@ export function DataViewer({
   const filters = JSON.parse(urlQueryState.where ?? '[]');
   const order = JSON.parse(urlQueryState.order ?? '[]');
   const noFilters = filters.length === 0;
+
+  const query = useMemo(
+    () =>
+      client
+        .query(selectedCollection)
+        .order(...order)
+        .where(filters),
+    // only apply a limit if we have no filters
+    // .limit(noFilters ? limit : Infinity)
+    [selectedCollection, order, filters, limit, noFilters]
+  );
+
   const {
     results: orderedAndFilteredResults,
     fetchingRemote,
     fetching,
-  } = useQuery(
-    client,
-    client
-      .query(selectedCollection)
-      .order(...order)
-      .where(filters)
-      // only apply a limit if we have no filters
-      .limit(noFilters ? limit : Infinity)
-  );
+  } = useQuery(client, query);
 
   const { results: allResults } = useQuery(
     client,
