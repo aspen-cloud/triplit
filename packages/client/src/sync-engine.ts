@@ -527,10 +527,10 @@ export class SyncEngine {
    * @param txId
    */
   async retry(txId: string) {
-    const timestamp = JSON.parse(txId);
+    const timestamp: Timestamp = JSON.parse(txId);
     const triplesToSend = await this.db.tripleStore
       .setStorageScope(['outbox'])
-      .findByClientTimestamp(await this.db.getClientId(), 'eq', timestamp);
+      .findByClientTimestamp('eq', timestamp);
     if (triplesToSend.length > 0) this.sendTriples(triplesToSend);
   }
 
@@ -547,11 +547,7 @@ export class SyncEngine {
       });
       for (const txId of txIdList) {
         const timestamp = JSON.parse(txId);
-        const triples = await scopedTx.findByClientTimestamp(
-          await this.db.getClientId(),
-          'eq',
-          timestamp
-        );
+        const triples = await scopedTx.findByClientTimestamp('eq', timestamp);
         await scopedTx.deleteTriples(triples);
       }
     });

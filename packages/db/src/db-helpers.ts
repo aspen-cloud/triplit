@@ -155,7 +155,7 @@ export async function mapFilterStatements<M extends Model<any> | undefined>(
           mapFunction
         );
       }
-      return mapFunction(statement);
+      return mapFunction(statement as FilterStatement<M>);
     })
   );
 }

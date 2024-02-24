@@ -425,10 +425,18 @@ function queryChainToQuery<
       where: [...(first.where ?? []), ...additionalFilters],
     };
   const variableFilters = (first.where ?? []).filter(
-    (filter) => filter instanceof Array && filter[2].startsWith('$')
+    (filter) =>
+      filter instanceof Array &&
+      typeof filter[2] === 'string' &&
+      filter[2].startsWith('$')
   ) as FilterStatement<Model<any>>[];
   const nonVariableFilters = (first.where ?? []).filter(
-    (filter) => !(filter instanceof Array && filter[2].startsWith('$'))
+    (filter) =>
+      !(
+        filter instanceof Array &&
+        typeof filter[2] === 'string' &&
+        filter[2].startsWith('$')
+      )
   ) as FilterStatement<Model<any>>[];
   const next = queryChainToQuery(
     rest,
@@ -466,13 +474,16 @@ function* generateQueryChains<
     const queryWithoutSubQuery = {
       ...query,
       where: (query.where ?? []).filter(
-        (f) => !f.exists || f.exists !== subQuery
+        (f) => !('exists' in f) || f.exists !== subQuery
       ),
       select: (query.select ?? []).filter(
         (s) => typeof s !== 'object' || s.subquery !== subQuery
       ),
     };
-    yield* generateQueryChains(subQuery, [...prefix, queryWithoutSubQuery]);
+    yield* generateQueryChains(subQuery as Q, [
+      ...prefix,
+      queryWithoutSubQuery,
+    ]);
   }
 }
 
@@ -496,8 +507,8 @@ function reverseRelationFilter(filter: FilterStatement<any, any>) {
   }
   return [
     value.slice(1),
+    // @ts-expect-error
     REVERSE_OPERATOR_MAPPINGS[op],
-    // op,
     '$' + path,
   ] as FilterStatement<any, any>;
 }
