@@ -626,11 +626,15 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
     query: Q,
     options: DBFetchOptions = {}
   ): Promise<FetchResult<Q>> {
-    const { query: fetchQuery } = await prepareQuery(this, query, options);
+    const schema = (await this.getSchema())?.collections as M;
+    const fetchQuery = prepareQuery(query, schema, {
+      variables: this.variables,
+      skipRules: options.skipRules,
+    });
     // TODO: read scope?
     // See difference between this fetch and db fetch
     return fetch<M, Q>(this.storeTx, fetchQuery, {
-      schema: (await this.getSchema())?.collections,
+      schema,
       includeTriples: false,
     });
   }

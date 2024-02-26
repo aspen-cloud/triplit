@@ -34,6 +34,11 @@ import { Attribute, Value } from './triple-store-utils.js';
 
 const ID_SEPARATOR = '#';
 
+export interface QueryPreparationOptions {
+  skipRules?: boolean;
+  variables?: Record<string, any>;
+}
+
 export function validateExternalId(id: string): Error | undefined {
   if (!id) {
     return new InvalidEntityIdError(id, 'id cannot be undefined.');
@@ -296,19 +301,21 @@ export function mergeQueries<M extends Models<any, any> | undefined>(
   return { ...queryA, ...queryB, where: mergedWhere, select: mergedSelect };
 }
 
-export async function prepareQuery<
+export function prepareQuery<
   M extends Models<any, any> | undefined,
   Q extends CollectionQuery<M, any>
->(tx: DB<M> | DBTransaction<M>, query: Q, options: DBFetchOptions) {
+>(query: Q, schema: M, options: QueryPreparationOptions = {}) {
   let fetchQuery = { ...query };
-  const collectionSchema = await getCollectionSchema(
-    tx,
+  const collectionSchema = schema?.[
     fetchQuery.collectionName
-  );
+  ] as CollectionFromModels<M, any>;
   if (collectionSchema && !options.skipRules) {
     fetchQuery = addReadRulesToQuery<M, Q>(fetchQuery, collectionSchema);
   }
-  fetchQuery.vars = { ...tx.variables, ...(fetchQuery.vars ?? {}) };
+  fetchQuery.vars = {
+    ...(options.variables ?? {}),
+    ...(fetchQuery.vars ?? {}),
+  };
   fetchQuery.where = mapFilterStatements(
     fetchQuery.where ?? [],
     (statement) => {
@@ -358,16 +365,13 @@ export async function prepareQuery<
     });
 
     if (fetchQuery.include) {
-      await addSubsSelectsFromIncludes(
-        fetchQuery,
-        (await tx.getSchema())!.collections
-      );
+      addSubsSelectsFromIncludes(fetchQuery, schema);
     }
   }
-  return { query: fetchQuery, collection: collectionSchema };
+  return fetchQuery;
 }
 
-async function addSubsSelectsFromIncludes<
+function addSubsSelectsFromIncludes<
   M extends Models<any, any>,
   CN extends CollectionNameFromModels<M>
 >(query: CollectionQuery<M, CN>, schema: M) {
@@ -387,7 +391,7 @@ async function addSubsSelectsFromIncludes<
     if (!query.select) query.select = [];
     let additionalQuery = extraQuery;
     if (additionalQuery && additionalQuery.include) {
-      additionalQuery = await addSubsSelectsFromIncludes(
+      additionalQuery = addSubsSelectsFromIncludes(
         { ...extraQuery, collectionName: attributeType.query.collectionName },
         schema
       );

@@ -653,7 +653,11 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
     options: DBFetchOptions = {}
   ) {
     await this.ensureMigrated;
-    const { query: fetchQuery } = await prepareQuery(this, query, options);
+    const schema = (await this.getSchema())?.collections as M;
+    const fetchQuery = prepareQuery(query, schema, {
+      skipRules: options.skipRules,
+      variables: this.variables,
+    });
 
     return await fetch<M, Q>(
       options.scope
@@ -661,10 +665,11 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
         : this.tripleStore,
       fetchQuery,
       {
-        schema: (await this.getSchema())?.collections,
+        schema,
         includeTriples: false,
         cache:
           QUERY_CACHE_ENABLED && !options?.noCache ? this.cache : undefined,
+        skipRules: options.skipRules,
       }
     );
   }
@@ -674,7 +679,11 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
     options: DBFetchOptions = {}
   ) {
     await this.ensureMigrated;
-    const { query: fetchQuery } = await prepareQuery(this, query, options);
+    const schema = (await this.getSchema())?.collections as M;
+    const fetchQuery = prepareQuery(query, schema, {
+      skipRules: options.skipRules,
+      variables: this.variables,
+    });
     return [
       ...(
         await fetch<M, Q>(
@@ -683,7 +692,7 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
             : this.tripleStore,
           fetchQuery,
           {
-            schema: (await this.getSchema())?.collections,
+            schema: schema,
             includeTriples: true,
           }
         )
@@ -745,11 +754,11 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
   ) {
     const startSubscription = async () => {
       await this.ensureMigrated;
-      let { query: subscriptionQuery } = await prepareQuery(
-        this,
-        query,
-        options
-      );
+      const schema = (await this.getSchema())?.collections as M;
+      let subscriptionQuery = prepareQuery(query, schema, {
+        skipRules: options.skipRules,
+        variables: this.variables,
+      });
 
       const unsub = subscribe<M, Q>(
         options.scope
@@ -758,7 +767,8 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
         subscriptionQuery,
         onResults,
         onError,
-        (await this.getSchema())?.collections
+        schema,
+        { skipRules: options.skipRules, stateVector: options.stateVector }
       );
       return unsub;
     };
@@ -779,11 +789,11 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
   ) {
     const startSubscription = async () => {
       await this.ensureMigrated;
-      let { query: subscriptionQuery } = await prepareQuery(
-        this,
-        query,
-        options
-      );
+      const schema = (await this.getSchema())?.collections as M;
+      let subscriptionQuery = prepareQuery(query, schema, {
+        skipRules: options.skipRules,
+        variables: this.variables,
+      });
 
       const unsub = subscribeTriples<M, Q>(
         options.scope
@@ -792,8 +802,8 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
         subscriptionQuery,
         (tripMap) => onResults([...tripMap.values()].flat()),
         onError,
-        (await this.getSchema())?.collections,
-        options.stateVector
+        schema,
+        { skipRules: options.skipRules, stateVector: options.stateVector }
       );
       return unsub;
     };

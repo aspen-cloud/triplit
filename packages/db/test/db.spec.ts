@@ -22,6 +22,7 @@ import {
   InvalidInsertDocumentError,
   CollectionNotFoundError,
   InvalidSchemaPathError,
+  SessionVariableNotFoundError,
 } from '../src';
 import { Models, hashSchemaJSON } from '../src/schema.js';
 import { classes, students, departments } from './sample_data/school.js';
@@ -6929,9 +6930,6 @@ describe('selecting subqueries from schema', () => {
         },
       },
     },
-    variables: {
-      USER_ID: 'user-1',
-    },
   });
 
   beforeAll(async () => {
@@ -6982,14 +6980,17 @@ describe('selecting subqueries from schema', () => {
       post_id: 'post-1',
     });
   });
+
+  const user1DB = db.withVars({ USER_ID: 'user-1' });
+
   it('can select subqueries', async () => {
-    const query = db
+    const query = user1DB
       .query('users')
       .include('posts')
       .include('friends', { where: [['name', 'like', '%e']] })
       .build();
 
-    const result = await db.fetch(query);
+    const result = await user1DB.fetch(query);
 
     // Other fields are included in the selection
     expect(result.get('user-1')).toHaveProperty('name');
@@ -7011,15 +7012,15 @@ describe('selecting subqueries from schema', () => {
   });
 
   it('must use include to select subqueries', async () => {
-    const query = db.query('users').build();
+    const query = user1DB.query('users').build();
 
-    const result = await db.fetch(query);
+    const result = await user1DB.fetch(query);
     expect(result.get('user-1')).not.toHaveProperty('posts');
     expect(result.get('user-1')).not.toHaveProperty('friends');
   });
 
   it('can include subqueries in fetch by id', async () => {
-    const result = (await db.fetchById('users', 'user-1', {
+    const result = (await user1DB.fetchById('users', 'user-1', {
       include: { posts: null },
     }))!;
     expect(result).toHaveProperty('posts');
@@ -7032,11 +7033,11 @@ describe('selecting subqueries from schema', () => {
     });
   });
   it('can select subsubqueries', async () => {
-    const query = db
+    const query = user1DB
       .query('users')
       .include('posts', { include: { likes: null } })
       .build();
-    const result = await db.fetch(query);
+    const result = await user1DB.fetch(query);
     // Other fields are included in the selection
     expect(result.get('user-1')).toHaveProperty('name');
     expect(result.get('user-1')).toHaveProperty('posts');
@@ -7048,27 +7049,26 @@ describe('selecting subqueries from schema', () => {
   it('should throw an error if you try to update a subquery', async () => {
     expect(
       async () =>
-        await db.update('users', 'user-1', async (entity) => {
+        await user1DB.update('users', 'user-1', async (entity) => {
           entity.likes = new Set(['like-1', 'like-2']);
         })
     ).rejects.toThrowError();
     expect(
       async () =>
-        await db.update('users', 'user-1', async (entity) => {
+        await user1DB.update('users', 'user-1', async (entity) => {
           entity.posts = { hello: 'world' };
         })
     ).rejects.toThrowError();
   });
 
   it('correctly applies rules to subqueries', async () => {
-    const userDB = db.withVars({ USER_ID: 'user-1' });
     {
-      const result = await userDB.fetch(userDB.query('posts').build());
+      const result = await user1DB.fetch(user1DB.query('posts').build());
       expect(result).toHaveLength(1);
     }
     {
-      const result = await userDB.fetch(
-        userDB.query('users').include('posts').build()
+      const result = await user1DB.fetch(
+        user1DB.query('users').include('posts').build()
       );
       expect(result).toHaveLength(3);
       expect(result.get('user-1')).toHaveProperty('posts');
@@ -7082,9 +7082,28 @@ describe('selecting subqueries from schema', () => {
     }
   });
 
+  it('skipRules option should skip rules for subqueries', async () => {
+    const query = db.query('users').include('posts').build();
+    // Presently if you dont skip rules, but dont have the necessary session variables, it will throw an error
+    // Ex admin access to a user's posts
+    await expect(db.fetch(query, { skipRules: false })).rejects.toThrowError(
+      SessionVariableNotFoundError
+    );
+    const results = await db.fetch(query, {
+      skipRules: true,
+    });
+    expect(results).toHaveLength(3);
+    expect(results.get('user-1')).toHaveProperty('posts');
+    expect(results.get('user-1')!.posts).toHaveLength(1);
+    expect(results.get('user-2')).toHaveProperty('posts');
+    expect(results.get('user-2')!.posts).toHaveLength(1);
+    expect(results.get('user-3')).toHaveProperty('posts');
+    expect(results.get('user-3')!.posts).toHaveLength(1);
+  });
+
   it('can select a singleton via a subquery', async () => {
-    const query = db.query('posts').include('author').build();
-    const result = await db.fetch(query);
+    const query = user1DB.query('posts').include('author').build();
+    const result = await user1DB.fetch(query);
     expect(result.get('post-1')).toHaveProperty('author');
     expect(result.get('post-1').author).toMatchObject({
       id: 'user-1',
@@ -7094,22 +7113,21 @@ describe('selecting subqueries from schema', () => {
   });
 
   it('will return null if a singleton subquery has no results', async () => {
-    const query = db
+    const query = user1DB
       .query('posts')
       .include('author', { where: [['id', '=', 'george']] })
       .build();
-    const result = await db.fetch(query);
+    const result = await user1DB.fetch(query);
     expect(result.get('post-1')).toHaveProperty('author');
     expect(result.get('post-1').author).toEqual(null);
   });
   it('subscribe to subqueries when using entityId in query', async () => {
-    const userDB = db.withVars({ USER_ID: 'user-1' });
-    const query = userDB
+    const query = user1DB
       .query('users')
       .entityId('user-1')
       .include('posts')
       .build();
-    await testSubscription(userDB, query, [
+    await testSubscription(user1DB, query, [
       {
         check: (results) => {
           expect(results).toHaveLength(1);
@@ -7119,7 +7137,7 @@ describe('selecting subqueries from schema', () => {
       },
       {
         action: async () => {
-          await userDB.insert('posts', {
+          await user1DB.insert('posts', {
             id: 'post-4',
             content: 'Hello World!',
             author_id: 'user-1',

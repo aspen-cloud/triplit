@@ -36,7 +36,7 @@ import {
   splitIdParts,
   replaceVariablesInQuery,
   someFilterStatements,
-  addReadRulesToQuery,
+  prepareQuery,
 } from './db-helpers.js';
 import { Operator } from './data-types/base.js';
 import { VariableAwareCache } from './variable-aware-cache.js';
@@ -112,6 +112,12 @@ export type FetchResultEntity<C extends CollectionQuery<any, any>> =
 export interface FetchOptions {
   includeTriples?: boolean;
   schema?: Models<any, any>;
+  skipRules?: boolean;
+}
+
+interface SubscriptionOptions {
+  skipRules?: boolean;
+  stateVector?: Map<string, number>;
 }
 
 function getIdFilterFromQuery(query: CollectionQuery<any, any>): string | null {
@@ -263,6 +269,7 @@ export async function fetch<
     schema,
     cache,
     stateVector,
+    skipRules,
   }: FetchOptions & {
     cache?: VariableAwareCache<any>;
     stateVector?: Map<string, number>;
@@ -345,12 +352,9 @@ export async function fetch<
           },
           limit: 1,
         } as CollectionQuery<typeof schema, any>;
-        if (schema) {
-          existsSubQuery = addReadRulesToQuery(
-            existsSubQuery,
-            schema[existsSubQuery.collectionName]
-          );
-        }
+        existsSubQuery = prepareQuery(existsSubQuery, schema, {
+          skipRules,
+        });
         const subQueryFetch = await fetch<M, typeof existsSubQuery>(
           tx,
           existsSubQuery,
@@ -358,6 +362,7 @@ export async function fetch<
             includeTriples: true,
             schema,
             cache,
+            skipRules,
           }
         );
         const { results: subQueryResult, triples } = subQueryFetch;
@@ -434,33 +439,24 @@ export async function fetch<
             ...subquery,
             vars: combinedVars,
           } as CollectionQuery<typeof schema, any>;
-          if (schema) {
-            fullSubquery = addReadRulesToQuery(
-              fullSubquery,
-              schema[fullSubquery.collectionName]
-            );
-          }
-          try {
-            const subqueryResult =
-              cardinality === 'one'
-                ? await fetchOne<M, typeof subquery>(tx, fullSubquery, {
-                    includeTriples: true,
-                    schema,
-                    cache,
-                  })
-                : await fetch<M, typeof subquery>(tx, fullSubquery, {
-                    includeTriples: true,
-                    schema,
-                    cache,
-                  });
+          fullSubquery = prepareQuery(fullSubquery, schema, { skipRules });
+          const subqueryResult =
+            cardinality === 'one'
+              ? await fetchOne<M, typeof subquery>(tx, fullSubquery, {
+                  includeTriples: true,
+                  schema,
+                  cache,
+                  skipRules,
+                })
+              : await fetch<M, typeof subquery>(tx, fullSubquery, {
+                  includeTriples: true,
+                  schema,
+                  cache,
+                  skipRules,
+                });
 
-            selectedEntity[attributeName] = subqueryResult.results;
-            subQueryTriples.push(
-              ...[...subqueryResult.triples.values()].flat()
-            );
-          } catch (e) {
-            console.error(e);
-          }
+          selectedEntity[attributeName] = subqueryResult.results;
+          subQueryTriples.push(...[...subqueryResult.triples.values()].flat());
         }
         if (!resultTriples.has(entId)) {
           resultTriples.set(entId, subQueryTriples);
@@ -762,7 +758,8 @@ function subscribeSingleEntity<
     args: [results: FetchResult<Q>, newTriples: Map<string, TripleRow[]>]
   ) => void | Promise<void>,
   onError?: (error: any) => void | Promise<void>,
-  schema?: M
+  schema?: M,
+  options: SubscriptionOptions = {}
 ) {
   const asyncUnSub = async () => {
     const { collectionName, entityId, select } = query;
@@ -775,6 +772,8 @@ function subscribeSingleEntity<
       const fetchResult = await fetch<M, Q>(tripleStore, query, {
         includeTriples: true,
         schema,
+        skipRules: options.skipRules,
+        stateVector: options.stateVector,
       });
       entity = fetchResult.results.has(entityId)
         ? fetchResult.results.get(entityId)
@@ -860,18 +859,19 @@ function subscribeSingleEntity<
                     ...subquery,
                     vars: combinedVars,
                   } as CollectionQuery<typeof schema, any>;
-                  if (schema) {
-                    fullSubquery = addReadRulesToQuery(
-                      fullSubquery,
-                      schema[fullSubquery.collectionName]
-                    );
-                  }
+                  fullSubquery = prepareQuery(fullSubquery, schema, {
+                    skipRules: options.skipRules,
+                  });
                   const subqueryResult =
                     cardinality === 'one'
                       ? await fetchOne<M, typeof subquery>(
                           tripleStore,
                           fullSubquery,
-                          { includeTriples: true, schema }
+                          {
+                            includeTriples: true,
+                            schema,
+                            skipRules: options.skipRules,
+                          }
                         )
                       : await fetch<M, typeof subquery>(
                           tripleStore,
@@ -879,6 +879,7 @@ function subscribeSingleEntity<
                           {
                             includeTriples: true,
                             schema,
+                            skipRules: options.skipRules,
                           }
                         );
                   entity[attributeName] = subqueryResult.results;
@@ -930,7 +931,7 @@ export function subscribeResultsAndTriples<
   ) => void | Promise<void>,
   onError?: (error: any) => void | Promise<void>,
   schema?: M,
-  stateVector?: Map<string, number>
+  options: SubscriptionOptions = {}
 ) {
   const { select, order, limit } = query;
   const queryWithInsertedVars = replaceVariablesInQuery(query);
@@ -942,7 +943,8 @@ export function subscribeResultsAndTriples<
       const fetchResult = await fetch<M, Q>(tripleStore, query, {
         includeTriples: true,
         schema,
-        stateVector,
+        skipRules: options.skipRules,
+        stateVector: options.stateVector,
       });
       results = fetchResult.results;
       triples = fetchResult.triples;
@@ -1080,6 +1082,8 @@ export function subscribeResultsAndTriples<
                 {
                   schema,
                   includeTriples: true,
+                  skipRules: options.skipRules,
+                  // State vector needed in backfill?
                 }
               );
               entries.push(...backFilledResults.results);
@@ -1163,7 +1167,8 @@ export function subscribe<
   query: Q,
   onResults: (results: FetchResult<Q>) => void | Promise<void>,
   onError?: (error: any) => void | Promise<void>,
-  schema?: M
+  schema?: M,
+  options: SubscriptionOptions = {}
 ) {
   if (query.entityId) {
     return subscribeSingleEntity(
@@ -1171,7 +1176,8 @@ export function subscribe<
       query,
       ([results]) => onResults(results),
       onError,
-      schema
+      schema,
+      options
     );
   }
   return subscribeResultsAndTriples(
@@ -1179,7 +1185,8 @@ export function subscribe<
     query,
     ([results]) => onResults(results),
     onError,
-    schema
+    schema,
+    options
   );
 }
 
@@ -1192,7 +1199,7 @@ export function subscribeTriples<
   onResults: (results: Map<string, TripleRow[]>) => void | Promise<void>,
   onError?: (error: any) => void | Promise<void>,
   schema?: M,
-  stateVector?: Map<string, number>
+  options: SubscriptionOptions = {}
 ) {
   if (query.entityId) {
     return subscribeSingleEntity(
@@ -1200,7 +1207,8 @@ export function subscribeTriples<
       query,
       ([_results, triples]) => onResults(triples),
       onError,
-      schema
+      schema,
+      options
     );
   }
   return subscribeResultsAndTriples(
@@ -1209,7 +1217,7 @@ export function subscribeTriples<
     ([_results, triples]) => onResults(triples),
     onError,
     schema,
-    stateVector
+    options
   );
 }
 
