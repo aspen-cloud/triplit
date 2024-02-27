@@ -10,6 +10,7 @@ type TooltipProps = {
   children: React.ReactNode;
   label: string | React.ReactNode;
   align?: 'center' | 'start' | 'end';
+  hidden?: boolean;
 };
 
 export function Tooltip(props: TooltipProps) {
@@ -17,7 +18,9 @@ export function Tooltip(props: TooltipProps) {
     <TooltipProvider>
       <BaseTooltip delayDuration={100}>
         <TooltipTrigger asChild>{props.children}</TooltipTrigger>
-        <TooltipContent align={props.align}>{props.label}</TooltipContent>
+        <TooltipContent hidden={props.hidden} align={props.align}>
+          {props.label}
+        </TooltipContent>
       </BaseTooltip>
     </TooltipProvider>
   );
