@@ -282,9 +282,11 @@ export async function fetchDeltaTriples<
           q.where,
           schema && schema[q.collectionName].schema
         );
+
       if (!matchesBefore && !matchesAfter) {
         continue;
       }
+
       const subQueries = (q.where ?? []).filter(
         (filter) => 'exists' in filter
       ) as SubQueryFilter<M>[];
@@ -365,30 +367,6 @@ export async function fetchDeltaTriples<
     }
   }
   return deltaTriples;
-}
-
-export async function fetchDeltaTriplesFromStateVector<
-  M extends Models<any, any> | undefined,
-  Q extends CollectionQuery<M, any>
->(
-  tx: TripleStoreApi,
-  query: Q,
-  stateVector: Map<string, number>,
-  schema?: M
-): Promise<TripleRow[]> {
-  // const queryPermutations = generateQueryRootPermutations(query);
-  const timestamps = [...stateVector.entries()].map(
-    ([cId, n]) => [n, cId] as Timestamp
-  );
-  const maxTimestamp = timestamps.reduce(
-    (acc, curr) => (timestampCompare(acc, curr) < 0 ? curr : acc),
-    [0, ''] as Timestamp
-  );
-  const triplesAfterStateVector = await tx.findByClientTimestamp(
-    'gt',
-    maxTimestamp
-  );
-  return fetchDeltaTriples(tx, query, triplesAfterStateVector, schema);
 }
 
 /**
@@ -1514,21 +1492,18 @@ export function subscribeTriples<
         stateVector,
       });
       triples = fetchResult.triples;
-      let currentStateVector = triplesToStateVector(
-        [...triples.values()].flat()
-      );
+
       const unsub = tripleStore.onWrite(async (storeWrites) => {
+        const allInserts = Object.values(storeWrites).flatMap(
+          (ops) => ops.inserts
+        );
         const deltaTriples = await fetchDeltaTriples(
           tripleStore,
           query,
-          storeWrites.default.inserts
+          allInserts,
+          schema
         );
-        const deltaSet = new Set(
-          deltaTriples.map(
-            (t) => t.id + t.attribute + t.timestamp[0] + t.timestamp[1]
-          )
-        );
-        currentStateVector = triplesToStateVector(deltaTriples);
+
         const triplesMap = deltaTriples.reduce((acc, t) => {
           if (acc.has(t.id)) {
             acc.get(t.id)!.push(t);
@@ -1542,6 +1517,7 @@ export function subscribeTriples<
       await onResults(triples);
       return unsub;
     } catch (e) {
+      console.error(e);
       onError && (await onError(e));
     }
     return () => {};

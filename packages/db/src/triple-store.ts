@@ -46,6 +46,7 @@ import {
   TripleStoreAfterCommitHook,
 } from './triple-store-utils.js';
 import { copyHooks } from './utils.js';
+import { TRIPLE_STORE_MIGRATIONS } from './triple-store-migrations.js';
 
 function isTupleStorage(object: any): object is AsyncTupleStorageApi {
   if (typeof object !== 'object') return false;
@@ -78,6 +79,7 @@ export interface TripleStoreApi {
   ): Promise<TripleRow[]>;
   findMaxClientTimestamp(clientId: string): Promise<Timestamp | undefined>;
   findByClientTimestamp(
+    clientId: string,
     scanDirection: 'lt' | 'lte' | 'gt' | 'gte',
     timestamp: Timestamp | undefined
   ): Promise<TripleRow[]>;
@@ -146,9 +148,19 @@ async function addIndexesToTransaction(
           scopedTx.set(['AVE', attribute, value, id, timestamp], {
             expired: isExpired,
           });
-          scopedTx.set(['clientTimestamp', timestamp, id, attribute, value], {
-            expired: isExpired,
-          });
+          scopedTx.set(
+            [
+              'clientTimestamp',
+              (timestamp as Timestamp)[1],
+              timestamp,
+              id,
+              attribute,
+              value,
+            ],
+            {
+              expired: isExpired,
+            }
+          );
         }
       },
       set,
@@ -250,36 +262,9 @@ export class TripleStore implements TripleStoreApi {
   }
 
   async ensureStorageIsMigrated() {
-    // Check if any EAV tuples exist and migrate them to EAT
-    // @ts-ignore
-    const existingTuples = (await this.tupleStore.scan({
-      prefix: ['EAV'],
-    })) as {
-      key: ['EAV', EntityId, Attribute, Value, Timestamp];
-      value: TripleMetadata;
-    }[];
-
-    if (existingTuples.length === 0) return;
-
-    const tuplesToInsert: EATIndex[] = [];
-    for (const tuple of existingTuples) {
-      const [_index, id, attribute, value, timestamp] = tuple.key;
-      const { expired } = tuple.value;
-      tuplesToInsert.push({
-        key: ['EAT', id, attribute, timestamp],
-        value: [value, expired],
-      });
+    for (const migrate of TRIPLE_STORE_MIGRATIONS) {
+      await migrate(this.tupleStore);
     }
-    await this.tupleStore.autoTransact(async (tx) => {
-      // Delete old EAV tuples
-      for (const tuple of existingTuples) {
-        tx.remove(tuple.key);
-      }
-      // Insert new EAT tuples
-      for (const tuple of tuplesToInsert) {
-        await tx.set(tuple.key, tuple.value);
-      }
-    }, undefined);
   }
 
   beforeInsert(callback: TripleStoreBeforeInsertHook) {
@@ -352,10 +337,16 @@ export class TripleStore implements TripleStoreApi {
   }
 
   findByClientTimestamp(
+    clientId: string,
     scanDirection: 'lt' | 'lte' | 'gt' | 'gte' | 'eq',
     timestamp: Timestamp | undefined
   ) {
-    return findByClientTimestamp(this.tupleStore, scanDirection, timestamp);
+    return findByClientTimestamp(
+      this.tupleStore,
+      clientId,
+      scanDirection,
+      timestamp
+    );
   }
 
   async transact<Output>(

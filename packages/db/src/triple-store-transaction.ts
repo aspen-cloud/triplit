@@ -149,10 +149,16 @@ export class TripleStoreTransaction implements TripleStoreApi {
   }
 
   findByClientTimestamp(
+    clientId: string,
     scanDirection: 'lt' | 'lte' | 'gt' | 'gte' | 'eq',
     timestamp: Timestamp | undefined
   ) {
-    return findByClientTimestamp(this.tupleTx, scanDirection, timestamp);
+    return findByClientTimestamp(
+      this.tupleTx,
+      clientId,
+      scanDirection,
+      timestamp
+    );
   }
 
   async insertTriple(tripleRow: TripleRow): Promise<void> {
@@ -209,14 +215,7 @@ export class TripleStoreTransaction implements TripleStoreApi {
       tx.remove(['EAT', id, attribute, timestamp]);
       tx.remove(['AVE', attribute, value, id, timestamp]);
       // tx.remove(['VAE', value, attribute, id, timestamp]);
-      tx.remove([
-        'clientTimestamp',
-        timestamp[1],
-        timestamp,
-        id,
-        attribute,
-        value,
-      ]);
+      tx.remove(['ts', timestamp, id, attribute, value]);
     }
   }
 

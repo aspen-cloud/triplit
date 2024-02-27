@@ -33,10 +33,12 @@ import {
 } from './utils/test-subscription.js';
 import {
   appendCollectionToId,
+  prepareQuery,
   stripCollectionFromId,
 } from '../src/db-helpers.js';
 import { TripleRow } from '../dist/types/triple-store-utils.js';
 import { triplesToStateVector } from '../src/triple-store-utils.js';
+import { fetchDeltaTriples } from '../src/collection-query.js';
 
 const pause = async (ms: number = 100) =>
   new Promise((resolve) => setTimeout(resolve, ms));
@@ -6464,7 +6466,7 @@ describe('state vector querying', () => {
     expect(result2Entities).toHaveLength(1);
     expect(result2Entities).toContain(post_id);
   });
-  it('works with relational querying', async () => {
+  it.todo('works with relational querying', async () => {
     const db = new DB({
       schema: {
         collections: {
@@ -6511,7 +6513,12 @@ describe('state vector querying', () => {
       },
       new Map<string, number>()
     );
-    const afterTriples = await db.fetchDeltaTriples(query, queryStateVector);
+    // const afterTriples = await fetchDeltaTriplesFromStateVector(
+    //   db.tripleStore,
+    //   query,
+    //   queryStateVector
+    // );
+    // TODO add expect / assertions
   });
 });
 
@@ -6550,8 +6557,11 @@ describe('delta querying', async () => {
 
     it('can fetch delta triples', async () => {
       const query = db.query('posts').where('author_id', '=', user_id).build();
-      const initialTriples = await db.fetchTriples(query);
-      const stateVector = triplesToStateVector(initialTriples);
+
+      const addedTriples: TripleRow[] = [];
+      db.tripleStore.onInsert((newTriples) => {
+        addedTriples.push(...[...Object.values(newTriples)].flat());
+      });
       await db.insert('posts', {
         id: 'post-3',
         author_id: user_id,
@@ -6562,17 +6572,15 @@ describe('delta querying', async () => {
         author_id: user_id2,
         content: '',
       });
-      const queryStateVector = stateVector.reduce(
-        (stateVector, [sequence, client]) => {
-          stateVector.set(client, sequence);
-          return stateVector;
-        },
-        new Map<string, number>()
+
+      const deltaTriples = await fetchDeltaTriples(
+        db.tripleStore,
+        query,
+        addedTriples,
+        (
+          await db.getSchema()
+        )?.collections
       );
-      const deltaTriples = await db.fetchDeltaTriples(query, queryStateVector);
-      // console.log('initial triples', initialTriples);
-      // console.log('delta triples', deltaTriples);
-      // console.log('second triples check', await db.fetchTriples(query));
       expect(deltaTriples.length).toBeGreaterThan(0);
       expect(
         new Set(deltaTriples.map((triple) => stripCollectionFromId(triple.id)))
@@ -6581,17 +6589,21 @@ describe('delta querying', async () => {
 
     it('captures deletes in delta triples', async () => {
       const query = db.query('posts').where('author_id', '=', user_id).build();
-      const initialTriples = await db.fetchTriples(query);
-      const stateVector = triplesToStateVector(initialTriples);
+
+      const addedTriples: TripleRow[] = [];
+      db.tripleStore.onInsert((newTriples) => {
+        addedTriples.push(...[...Object.values(newTriples)].flat());
+      });
       await db.delete('posts', post_id);
-      const queryStateVector = stateVector.reduce(
-        (stateVector, [sequence, client]) => {
-          stateVector.set(client, sequence);
-          return stateVector;
-        },
-        new Map<string, number>()
+
+      const deltaTriples = await fetchDeltaTriples(
+        db.tripleStore,
+        query,
+        addedTriples,
+        (
+          await db.getSchema()
+        )?.collections
       );
-      const deltaTriples = await db.fetchDeltaTriples(query, queryStateVector);
       expect(deltaTriples.length).toBeGreaterThan(0);
       expect(
         new Set(deltaTriples.map((triple) => stripCollectionFromId(triple.id)))
@@ -6600,20 +6612,23 @@ describe('delta querying', async () => {
 
     it('captures invalidated results in delta triples', async () => {
       const query = db.query('posts').where('author_id', '=', user_id).build();
-      const initialTriples = await db.fetchTriples(query);
-      const stateVector = triplesToStateVector(initialTriples);
 
-      const queryStateVector = stateVector.reduce(
-        (stateVector, [sequence, client]) => {
-          stateVector.set(client, sequence);
-          return stateVector;
-        },
-        new Map<string, number>()
-      );
+      const addedTriples: TripleRow[] = [];
+      db.tripleStore.onInsert((newTriples) => {
+        addedTriples.push(...[...Object.values(newTriples)].flat());
+      });
+
       await db.update('posts', post_id, async (entity) => {
         entity.author_id = user_id2;
       });
-      const deltaTriples = await db.fetchDeltaTriples(query, queryStateVector);
+      const deltaTriples = await fetchDeltaTriples(
+        db.tripleStore,
+        query,
+        addedTriples,
+        (
+          await db.getSchema()
+        )?.collections
+      );
       expect(deltaTriples.length).toBeGreaterThan(0);
       expect(
         new Set(deltaTriples.map((triple) => stripCollectionFromId(triple.id)))
@@ -6622,21 +6637,24 @@ describe('delta querying', async () => {
 
     it('only returns relevant delta triples', async () => {
       const query = db.query('posts').where('author_id', '=', user_id).build();
-      const initialTriples = await db.fetchTriples(query);
-      const stateVector = triplesToStateVector(initialTriples);
+
+      const addedTriples: TripleRow[] = [];
+      db.tripleStore.onInsert((newTriples) => {
+        addedTriples.push(...[...Object.values(newTriples)].flat());
+      });
       await db.insert('posts', {
         id: 'post-4',
         author_id: user_id2,
         content: '',
       });
-      const queryStateVector = stateVector.reduce(
-        (stateVector, [sequence, client]) => {
-          stateVector.set(client, sequence);
-          return stateVector;
-        },
-        new Map<string, number>()
+      const deltaTriples = await fetchDeltaTriples(
+        db.tripleStore,
+        query,
+        addedTriples,
+        (
+          await db.getSchema()
+        )?.collections
       );
-      const deltaTriples = await db.fetchDeltaTriples(query, queryStateVector);
       expect(deltaTriples).toHaveLength(0);
     });
   });
@@ -6715,7 +6733,11 @@ describe('delta querying', async () => {
         .build();
       const initialTriples = await db.fetchTriples(query);
       expect(initialTriples.length).toBeGreaterThan(0);
-      const stateVector = triplesToStateVector(initialTriples);
+
+      const addedTriples: TripleRow[] = [];
+      db.tripleStore.onInsert((newTriples) => {
+        addedTriples.push(...[...Object.values(newTriples)].flat());
+      });
 
       // insert another post after the queried date
       await db.insert('posts', {
@@ -6724,15 +6746,15 @@ describe('delta querying', async () => {
         content: '',
         created_at: new Date('2022-06-02'),
       });
-
-      const queryStateVector = stateVector.reduce(
-        (stateVector, [sequence, client]) => {
-          stateVector.set(client, sequence);
-          return stateVector;
-        },
-        new Map<string, number>()
+      const { query: fetchQuery } = await prepareQuery(db, query, {});
+      const deltaTriples = await fetchDeltaTriples(
+        db.tripleStore,
+        fetchQuery,
+        addedTriples,
+        (
+          await db.getSchema()
+        )?.collections
       );
-      const deltaTriples = await db.fetchDeltaTriples(query, queryStateVector);
       expect(deltaTriples.length).toBeGreaterThan(0);
       expect(deltaTriples).toEqual(
         expect.arrayContaining([
@@ -6749,8 +6771,11 @@ describe('delta querying', async () => {
         .build();
       const initialTriples = await db.fetchTriples(query);
       expect(initialTriples.length).toBeGreaterThan(0);
-      const stateVector = triplesToStateVector(initialTriples);
 
+      const addedTriples: TripleRow[] = [];
+      db.tripleStore.onInsert((newTriples) => {
+        addedTriples.push(...[...Object.values(newTriples)].flat());
+      });
       // insert another post after the queried date
       await db.insert('posts', {
         id: 'post-4',
@@ -6759,14 +6784,16 @@ describe('delta querying', async () => {
         created_at: new Date('2022-01-02'),
       });
 
-      const queryStateVector = stateVector.reduce(
-        (stateVector, [sequence, client]) => {
-          stateVector.set(client, sequence);
-          return stateVector;
-        },
-        new Map<string, number>()
+      const { query: fetchQuery } = await prepareQuery(db, query, {});
+      const deltaTriples = await fetchDeltaTriples(
+        db.tripleStore,
+        fetchQuery,
+        addedTriples,
+        (
+          await db.getSchema()
+        )?.collections
       );
-      const deltaTriples = await db.fetchDeltaTriples(query, queryStateVector);
+
       expect(deltaTriples.length).toBe(0);
     });
   });
@@ -6924,23 +6951,31 @@ describe('delta querying', async () => {
         const serverDB = new DB({ schema });
         const clientDB = new DB({ schema });
         await insertSampleData(serverDB);
-        // await insertSampleData(clientDB);
+
         const initialTriples = await serverDB.fetchTriples(query(serverDB));
         await clientDB.tripleStore.insertTriples(initialTriples);
-        // console.log('initial triples', initialTriples);
-        const stateVector = triplesToStateVector(initialTriples);
+
+        const addedTriples: TripleRow[] = [];
+        serverDB.tripleStore.onInsert((newTriples) => {
+          addedTriples.push(...[...Object.values(newTriples)].flat());
+        });
+
         await action(serverDB);
-        const queryStateVector = stateVector.reduce(
-          (stateVector, [sequence, client]) => {
-            stateVector.set(client, sequence);
-            return stateVector;
-          },
-          new Map<string, number>()
-        );
-        const deltaTriples = await serverDB.fetchDeltaTriples(
+
+        const { query: fetchQuery } = await prepareQuery(
+          clientDB,
           query(clientDB),
-          queryStateVector
+          {}
         );
+        const deltaTriples = await fetchDeltaTriples(
+          serverDB.tripleStore,
+          fetchQuery,
+          addedTriples,
+          (
+            await serverDB.getSchema()
+          )?.collections
+        );
+
         await clientDB.tripleStore.insertTriples(deltaTriples);
         const clientResults = await clientDB.fetch(query(clientDB));
         const serverResults = await serverDB.fetch(query(serverDB));

@@ -675,20 +675,6 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
     );
   }
 
-  async fetchDeltaTriples<Q extends CollectionQuery<M, any>>(
-    query: Q,
-    stateVector: Required<DBFetchOptions>['stateVector']
-  ) {
-    await this.ensureMigrated;
-    const { query: fetchQuery } = await prepareQuery(this, query, {});
-    return fetchDeltaTriplesFromStateVector<M, Q>(
-      this.tripleStore,
-      fetchQuery,
-      stateVector,
-      (await this.getSchema())?.collections
-    );
-  }
-
   async fetchTriples<Q extends CollectionQuery<M, any>>(
     query: Q,
     options: DBFetchOptions = {}

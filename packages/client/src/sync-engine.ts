@@ -320,6 +320,7 @@ export class SyncEngine {
             for (const clientTxId of txIds) {
               const timestamp = JSON.parse(clientTxId);
               const triplesToEvict = await outboxOperator.findByClientTimestamp(
+                await this.db.getClientId(),
                 'eq',
                 timestamp
               );
@@ -530,7 +531,7 @@ export class SyncEngine {
     const timestamp: Timestamp = JSON.parse(txId);
     const triplesToSend = await this.db.tripleStore
       .setStorageScope(['outbox'])
-      .findByClientTimestamp('eq', timestamp);
+      .findByClientTimestamp(await this.db.getClientId(), 'eq', timestamp);
     if (triplesToSend.length > 0) this.sendTriples(triplesToSend);
   }
 
@@ -547,7 +548,11 @@ export class SyncEngine {
       });
       for (const txId of txIdList) {
         const timestamp = JSON.parse(txId);
-        const triples = await scopedTx.findByClientTimestamp('eq', timestamp);
+        const triples = await scopedTx.findByClientTimestamp(
+          await this.db.getClientId(),
+          'eq',
+          timestamp
+        );
         await scopedTx.deleteTriples(triples);
       }
     });
