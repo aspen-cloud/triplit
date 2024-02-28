@@ -376,9 +376,7 @@ export function generateQueryRootPermutations<
   Q extends CollectionQuery<M, any>
 >(query: Q) {
   const queries = [];
-  console.log('generating query permutations', query);
   for (const chain of generateQueryChains(query)) {
-    console.log('chain', chain);
     queries.push(queryChainToQuery(chain.toReversed()));
   }
   return queries;
