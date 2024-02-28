@@ -85,6 +85,16 @@ export class Server {
           resp = await session.bulkInsert(params);
           break;
         }
+        case 'insert-triples': {
+          const { triples } = params;
+          resp = await session.insertTriples(triples);
+          break;
+        }
+        case 'delete-triples': {
+          const { entityAttributes } = params;
+          resp = await session.deleteTriples(entityAttributes);
+          break;
+        }
         case 'update': {
           const { collectionName, entityId, patches } = params;
           resp = await session.update(collectionName, entityId, patches);
@@ -128,6 +138,8 @@ const TRIPLIT_SEGEMENTS = [
   'fetch',
   'insert',
   'bulk-insert',
+  'insert-triples',
+  'delete-triples',
   'update',
   'delete',
 ] as const;

@@ -10,6 +10,7 @@ import {
   Attribute,
   Value,
   TriplitError,
+  EntityId,
 } from '@triplit/db';
 import {
   ClientFetchResult,
@@ -148,6 +149,22 @@ export class RemoteClient<M extends ClientSchema | undefined> {
       'POST',
       jsonBulkInsert
     );
+    if (error) throw error;
+    return data;
+  }
+
+  async insertTriples(triples: any[]) {
+    const { data, error } = await this.sendRequest('/insert-triples', 'POST', {
+      triples,
+    });
+    if (error) throw error;
+    return data;
+  }
+
+  async deleteTriples(entityAttributes: [EntityId, Attribute][]) {
+    const { data, error } = await this.sendRequest('/delete-triples', 'POST', {
+      entityAttributes,
+    });
     if (error) throw error;
     return data;
   }

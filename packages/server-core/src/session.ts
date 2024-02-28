@@ -8,6 +8,7 @@ import {
   Value,
   getSchemaFromPath,
   Timestamp,
+  EntityId,
 } from '@triplit/db';
 import {
   QuerySyncError,
@@ -537,6 +538,36 @@ export class Session {
     } catch (e) {
       return errorResponse(e, {
         fallbackMessage: 'Could not insert entity. An unknown error occured.',
+      });
+    }
+  }
+
+  async insertTriples(triples: any[]) {
+    try {
+      if (!hasAdminAccess(this.token)) return NotAdminResponse();
+      await this.db.tripleStore.insertTriples(triples);
+      return ServerResponse(200, {});
+    } catch (e) {
+      return errorResponse(e, {
+        fallbackMessage: 'Could not insert triples. An unknown error occured.',
+      });
+    }
+  }
+
+  async deleteTriples(entityAttributes: [EntityId, Attribute][]) {
+    try {
+      if (!hasAdminAccess(this.token)) return NotAdminResponse();
+      await this.db.tripleStore.transact(async (tx) => {
+        for (const [entityId, attribute] of entityAttributes) {
+          await tx.deleteTriples(
+            await tx.findByEntityAttribute(entityId, attribute)
+          );
+        }
+      });
+      return ServerResponse(200, {});
+    } catch (e) {
+      return errorResponse(e, {
+        fallbackMessage: 'Could not delete triples. An unknown error occured.',
       });
     }
   }
