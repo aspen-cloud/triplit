@@ -549,28 +549,28 @@ export async function fetch<
   const { order, limit, select, where, entityId, collectionName, after } =
     queryWithInsertedVars;
 
-  const collectionTriples = await getCandidateTriplesForQuery(
-    tx,
-    queryWithInsertedVars
-  );
-  const entitiesMap = triplesToEntities(collectionTriples);
+  // const collectionTriples = await getCandidateTriplesForQuery(
+  //   tx,
+  //   queryWithInsertedVars
+  // );
+  // const entitiesMap = triplesToEntities(collectionTriples);
   // TODO: ensure state vector + cache works
-  const stateVectorSyncTriples = getTriplesAfterStateVector(
-    collectionTriples,
-    entitiesMap,
-    stateVector
-  );
-  const allEntities = new Map(
-    [...entitiesMap.entries()].map(([id, entity]) => {
-      return [
-        id,
-        {
-          entity: entity.data,
-          triples: Object.values(entity.triples) as TripleRow[],
-        },
-      ];
-    })
-  );
+  // const stateVectorSyncTriples = getTriplesAfterStateVector(
+  //   collectionTriples,
+  //   entitiesMap,
+  //   stateVector
+  // );
+  // const allEntities = new Map(
+  //   [...entitiesMap.entries()].map(([id, entity]) => {
+  //     return [
+  //       id,
+  //       {
+  //         entity: entity.data,
+  //         triples: Object.values(entity.triples) as TripleRow[],
+  //       },
+  //     ];
+  //   })
+  // );
 
   const resultOrder = await getOrderedIdsForQuery(tx, queryWithInsertedVars);
 
@@ -578,20 +578,22 @@ export async function fetch<
   let previousOrderVal: Value;
   const resultTriples: Map<string, TripleRow[]> = new Map();
   let entities = await new Pipeline(resultOrder)
-    .filter(async (id) => allEntities.has(id))
+    // .filter(async (id) => allEntities.has(id))
     .map(async (id) => {
-      const entityEntry = allEntities.get(id);
+      // const entityEntry = allEntities.get(id);
+      const entityTriples = await tx.findByEntity(id);
+      const entity = triplesToEntities(entityTriples).get(id)?.data;
+      // console.log('entityTriples', entityTriples);
+      // console.log('entity', entity);
       const externalId = stripCollectionFromId(id);
-      if (entityEntry?.triples) {
-        return [externalId, entityEntry] as const;
+      if (!includeTriples) {
+        return [externalId, { entity, triples: [] }] as const;
       }
-      return [
-        externalId,
-        { triples: [] as TripleRow[], entity: entityEntry?.entity },
-      ] as const;
+      return [externalId, { triples: entityTriples, entity }] as const;
     })
     // Apply where filters
     .filter(async ([id, { entity }]) => {
+      if (!entity) return false;
       if (!where) return true;
       const subQueries = where.filter(
         (filter) => 'exists' in filter
@@ -740,14 +742,14 @@ export async function fetch<
 
   if (includeTriples) {
     // Append state vector sync triples to triples result
-    stateVectorSyncTriples.forEach((triple) => {
-      const [_collection, id] = splitIdParts(triple.id);
-      if (resultTriples.has(id)) {
-        resultTriples.get(id)?.push(triple);
-      } else {
-        resultTriples.set(id, [triple]);
-      }
-    });
+    // stateVectorSyncTriples.forEach((triple) => {
+    //   const [_collection, id] = splitIdParts(triple.id);
+    //   if (resultTriples.has(id)) {
+    //     resultTriples.get(id)?.push(triple);
+    //   } else {
+    //     resultTriples.set(id, [triple]);
+    //   }
+    // });
     return {
       results: new Map(entities), // TODO: also need to deserialize data?
       triples: resultTriples,
