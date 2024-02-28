@@ -549,42 +549,16 @@ export async function fetch<
   const { order, limit, select, where, entityId, collectionName, after } =
     queryWithInsertedVars;
 
-  // const collectionTriples = await getCandidateTriplesForQuery(
-  //   tx,
-  //   queryWithInsertedVars
-  // );
-  // const entitiesMap = triplesToEntities(collectionTriples);
-  // TODO: ensure state vector + cache works
-  // const stateVectorSyncTriples = getTriplesAfterStateVector(
-  //   collectionTriples,
-  //   entitiesMap,
-  //   stateVector
-  // );
-  // const allEntities = new Map(
-  //   [...entitiesMap.entries()].map(([id, entity]) => {
-  //     return [
-  //       id,
-  //       {
-  //         entity: entity.data,
-  //         triples: Object.values(entity.triples) as TripleRow[],
-  //       },
-  //     ];
-  //   })
-  // );
-
+  // TODO lazy load as needed using a cursor or iterator rather than loading entire index at once
   const resultOrder = await getOrderedIdsForQuery(tx, queryWithInsertedVars);
 
   let entityCount = 0;
   let previousOrderVal: Value;
   const resultTriples: Map<string, TripleRow[]> = new Map();
   let entities = await new Pipeline(resultOrder)
-    // .filter(async (id) => allEntities.has(id))
     .map(async (id) => {
-      // const entityEntry = allEntities.get(id);
       const entityTriples = await tx.findByEntity(id);
       const entity = triplesToEntities(entityTriples).get(id)?.data;
-      // console.log('entityTriples', entityTriples);
-      // console.log('entity', entity);
       const externalId = stripCollectionFromId(id);
       if (!includeTriples) {
         return [externalId, { entity, triples: [] }] as const;
@@ -646,7 +620,7 @@ export async function fetch<
     })
     .map(async ([id, { triples, entity }]) => {
       if (!resultTriples.has(id)) {
-        resultTriples.set(id, triples);
+        resultTriples.set(id, triples as TripleRow[]);
       } else {
         resultTriples.set(id, resultTriples.get(id)!.concat(triples));
       }
