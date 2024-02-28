@@ -4,16 +4,12 @@ import {
   Models,
   InsertTypeFromModel,
   timestampedSchemaToSchema,
-  Schema,
 } from './schema.js';
 import { AsyncTupleStorageApi, TupleStorageApi } from '@triplit/tuple-database';
 import CollectionQueryBuilder, {
   fetch,
-  fetchDeltaTriplesFromStateVector,
   FetchResult,
   FetchResultEntity,
-  MaybeReturnTypeFromQuery,
-  ReturnTypeFromQuery,
   subscribe,
   subscribeTriples,
 } from './collection-query.js';
@@ -46,8 +42,7 @@ import {
 } from './data-types/serialization.js';
 import { copyHooks, triplesToObject } from './utils.js';
 import { EAV, indexToTriple, TripleRow } from './triple-store-utils.js';
-import { TripleStore, TripleStoreApi } from './triple-store.js';
-import { TripleStoreTransaction } from './triple-store-transaction.js';
+import { TripleStore } from './triple-store.js';
 
 export interface Rule<M extends Model<any>> {
   filter: QueryWhere<M>;

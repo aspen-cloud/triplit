@@ -94,7 +94,8 @@ export function replaceVariable(
   const varKey = target.slice(1);
   if (!(varKey in variables)) {
     console.warn(new SessionVariableNotFoundError(target));
-    return null;
+    // TODO should we throw here? or will there be other issues with undefined
+    return undefined;
   }
   return variables[varKey];
 }
@@ -104,7 +105,6 @@ export function replaceVariablesInQuery<
     Pick<CollectionQuery<any, any>, 'where' | 'entityId' | 'vars'>
   >
 >(query: Q): Q {
-  // const variables = { ...(db.variables ?? {}), ...(query.vars ?? {}) };
   const where = query.where
     ? replaceVariablesInFilterStatements(query.where, query.vars ?? {})
     : undefined;
@@ -137,27 +137,19 @@ export function someFilterStatements<M extends Model<any> | undefined>(
   return false;
 }
 
-export async function mapFilterStatements<M extends Model<any> | undefined>(
+export function mapFilterStatements<M extends Model<any> | undefined>(
   statements: QueryWhere<M>,
   mapFunction: (
     statement: SubQueryFilter | FilterStatement<M>
-  ) =>
-    | SubQueryFilter
-    | FilterStatement<M>
-    | Promise<SubQueryFilter | FilterStatement<M>>
-): Promise<QueryWhere<M>> {
-  return Promise.all(
-    statements.map(async (statement) => {
-      if ('exists' in statement) return statement;
-      if (!(statement instanceof Array) && 'filters' in statement) {
-        statement.filters = await mapFilterStatements(
-          statement.filters,
-          mapFunction
-        );
-      }
-      return mapFunction(statement as FilterStatement<M>);
-    })
-  );
+  ) => SubQueryFilter | FilterStatement<M>
+): QueryWhere<M> {
+  return statements.map((statement) => {
+    if ('exists' in statement) return statement;
+    if (!(statement instanceof Array) && 'filters' in statement) {
+      statement.filters = mapFilterStatements(statement.filters, mapFunction);
+    }
+    return mapFunction(statement as FilterStatement<M>);
+  });
 }
 
 export function everyFilterStatement(
@@ -325,7 +317,7 @@ export function prepareQuery<
     ...(options.variables ?? {}),
     ...(fetchQuery.vars ?? {}),
   };
-  fetchQuery.where = await mapFilterStatements(
+  fetchQuery.where = mapFilterStatements(
     fetchQuery.where ?? [],
     (statement) => {
       if (!Array.isArray(statement)) return statement;
@@ -355,26 +347,23 @@ export function prepareQuery<
     }
 
     // Convert any filters that use relations from schema to *exists* queries
-    fetchQuery.where = await mapFilterStatements(
-      fetchQuery.where,
-      async (statement) => {
-        if (!Array.isArray(statement)) return statement;
-        const [prop, op, val] = statement;
-        const attributeType = getSchemaFromPath(
-          collectionSchema.schema,
-          (prop as string).split('.')
-        );
-        if (attributeType.type !== 'query') {
-          return [prop, op, val];
-        }
-        const [_collectionName, ...path] = (prop as string).split('.');
-        const subquery = { ...attributeType.query };
-        subquery.where = [...subquery.where, [path.join('.'), op, val]];
-        return {
-          exists: (await prepareQuery(tx, subquery, options)).query,
-        };
+    fetchQuery.where = mapFilterStatements(fetchQuery.where, (statement) => {
+      if (!Array.isArray(statement)) return statement;
+      const [prop, op, val] = statement;
+      const attributeType = getSchemaFromPath(
+        collectionSchema.schema,
+        (prop as string).split('.')
+      );
+      if (attributeType.type !== 'query') {
+        return [prop, op, val];
       }
-    );
+      const [_collectionName, ...path] = (prop as string).split('.');
+      const subquery = { ...attributeType.query };
+      subquery.where = [...subquery.where, [path.join('.'), op, val]];
+      return {
+        exists: prepareQuery(subquery, schema, options),
+      };
+    });
 
     if (fetchQuery.include) {
       addSubsSelectsFromIncludes(fetchQuery, schema);

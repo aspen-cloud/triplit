@@ -45,11 +45,7 @@ import { isTimestampedEntityDeleted } from './entity.js';
 import { CollectionNameFromModels, ModelFromModels } from './db.js';
 import { QueryResultCardinality, QueryType } from './data-types/query.js';
 import { ExtractJSType } from './data-types/type.js';
-import {
-  TripleRow,
-  Value,
-  triplesToStateVector,
-} from './triple-store-utils.js';
+import { TripleRow, Value } from './triple-store-utils.js';
 
 export default function CollectionQueryBuilder<
   M extends Models<any, any> | undefined,
@@ -380,7 +376,9 @@ export function generateQueryRootPermutations<
   Q extends CollectionQuery<M, any>
 >(query: Q) {
   const queries = [];
+  console.log('generating query permutations', query);
   for (const chain of generateQueryChains(query)) {
+    console.log('chain', chain);
     queries.push(queryChainToQuery(chain.toReversed()));
   }
   return queries;
@@ -542,10 +540,7 @@ export async function fetch<
   } = {}
 ) {
   const collectionSchema = schema && schema[query.collectionName]?.schema;
-  if (
-    cache &&
-    (await VariableAwareCache.canCacheQuery(query, collectionSchema))
-  ) {
+  if (cache && VariableAwareCache.canCacheQuery(query, collectionSchema)) {
     const cacheResult = await cache!.resolveFromCache(query);
     if (!includeTriples) return cacheResult.results;
     return cacheResult;
@@ -1489,7 +1484,7 @@ export function subscribeTriples<
       const fetchResult = await fetch<M, Q>(tripleStore, query, {
         includeTriples: true,
         schema,
-        stateVector,
+        stateVector: options.stateVector,
       });
       triples = fetchResult.triples;
 

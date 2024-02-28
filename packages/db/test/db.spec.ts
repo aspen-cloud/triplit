@@ -6746,7 +6746,7 @@ describe('delta querying', async () => {
         content: '',
         created_at: new Date('2022-06-02'),
       });
-      const { query: fetchQuery } = await prepareQuery(db, query, {});
+      const fetchQuery = prepareQuery(query, schema['collections'], {});
       const deltaTriples = await fetchDeltaTriples(
         db.tripleStore,
         fetchQuery,
@@ -6784,7 +6784,7 @@ describe('delta querying', async () => {
         created_at: new Date('2022-01-02'),
       });
 
-      const { query: fetchQuery } = await prepareQuery(db, query, {});
+      const fetchQuery = prepareQuery(query, schema['collections'], {});
       const deltaTriples = await fetchDeltaTriples(
         db.tripleStore,
         fetchQuery,
@@ -6962,9 +6962,9 @@ describe('delta querying', async () => {
 
         await action(serverDB);
 
-        const { query: fetchQuery } = await prepareQuery(
-          clientDB,
+        const fetchQuery = prepareQuery(
           query(clientDB),
+          schema['collections'],
           {}
         );
         const deltaTriples = await fetchDeltaTriples(
@@ -7595,11 +7595,15 @@ describe('selecting subqueries from schema', () => {
 
   it('skipRules option should skip rules for subqueries', async () => {
     const query = db.query('users').include('posts').build();
-    // Presently if you dont skip rules, but dont have the necessary session variables, it will throw an error
-    // Ex admin access to a user's posts
-    await expect(db.fetch(query, { skipRules: false })).rejects.toThrowError(
-      SessionVariableNotFoundError
-    );
+    {
+      const results = await db.fetch(query, { skipRules: false });
+      expect([...results.values()].map((user) => user.posts)).toMatchObject([
+        new Map(),
+        new Map(),
+        new Map(),
+      ]);
+    }
+
     const results = await db.fetch(query, {
       skipRules: true,
     });
