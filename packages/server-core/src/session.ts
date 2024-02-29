@@ -341,6 +341,7 @@ export class Session {
     return new Connection(this, connectionParams);
   }
 
+  // TODO: ensure data that we store in memory is invalidated when the db is "cleared"
   async clearDB({ full }: { full?: boolean }) {
     if (!hasAdminAccess(this.token)) return NotAdminResponse();
     try {
