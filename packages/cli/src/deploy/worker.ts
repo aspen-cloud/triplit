@@ -1,6 +1,7 @@
 import { DB, TriplitError } from '@triplit/db';
 import {
   MalformedMessagePayloadError,
+  Route,
   Server as TriplitServer,
 } from '@triplit/server-core';
 import {
@@ -56,7 +57,7 @@ export class TriplitDurableObject implements DurableObject {
   triplitServer: TriplitServer;
   constructor(readonly state: DurableObjectState, readonly env: Env) {
     this.db = new DB({
-      schema,
+      schema: { collections: schema },
     });
     this.triplitServer = new TriplitServer(this.db);
   }
@@ -88,6 +89,21 @@ export class TriplitDurableObject implements DurableObject {
     }
     if (upgradeHeader === 'websocket') {
       return this.handleWebSocketUpgrade(request, token);
+    }
+    if (request.method === 'POST') {
+      let path = new URL(request.url).pathname.slice(1).split('/');
+      const body = await parseBodyIfExists(request);
+      const { statusCode, payload } = await this.triplitServer.handleRequest(
+        path as Route,
+        body,
+        token
+      );
+      return new Response(JSON.stringify(payload), {
+        status: statusCode,
+        headers: {
+          'content-type': 'application/json;charset=UTF-8',
+        },
+      });
     }
     return new Response('Hello world from Triplit Cloud V2');
   }
@@ -229,4 +245,12 @@ function sendErrorMessage(
     metadata,
   };
   sendMessage(socket, 'ERROR', payload);
+}
+
+export async function parseBodyIfExists(request: Request) {
+  try {
+    return await request.json();
+  } catch (e) {
+    return undefined;
+  }
 }
