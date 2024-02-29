@@ -116,7 +116,12 @@ export class Server {
     } catch (e: any) {
       const error = isTriplitError(e)
         ? e
-        : new TriplitError('An unknown error occured');
+        : new TriplitError(
+            `An unknown error occurred while handling the request: ${route.join(
+              '/'
+            )}`,
+            e
+          );
       this.logger.error('Error handling request', {
         route,
         params,
