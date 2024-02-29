@@ -103,9 +103,11 @@ export const authOptions: NextAuthConfig = {
     // @ts-ignore
     secret: process.env.NEXTAUTH_SECRET,
     encode: async ({ secret, token, maxAge }) => {
+      // @ts-ignore
       return await signToken(token, secret)
     },
     decode: async ({ secret, token }) => {
+      // @ts-ignore
       return await decodeToken(token!, secret)
     },
   },
