@@ -357,13 +357,14 @@ export function collectionsDefinitionToSchema(
 export function schemaToTriples(schema: StoreSchema<Models<any, any>>): EAV[] {
   const schemaData = schemaToJSON(schema);
   const tuples = dbDocumentToTuples(schemaData);
-  return tuples.map((tuple) => {
-    return [
-      appendCollectionToId('_metadata', '_schema'),
-      ['_metadata', ...tuple[0]],
-      tuple[1],
-    ] as EAV;
-  });
+  const id = appendCollectionToId('_metadata', '_schema');
+  const collectionTuple = [id, ['_collection'], '_metadata'] as EAV;
+  return [
+    collectionTuple,
+    ...tuples.map((tuple) => {
+      return [id, ['_metadata', ...tuple[0]], tuple[1]] as EAV;
+    }),
+  ];
 }
 
 export function triplesToSchema(triples: TripleRow[]) {

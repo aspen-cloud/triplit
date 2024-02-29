@@ -349,8 +349,14 @@ export class Session {
         await this.db.clear();
       } else {
         // Just delete triples
-        const allTriples = await this.db.tripleStore.findByEntity();
-        await this.db.tripleStore.deleteTriples(allTriples);
+        await this.db.tripleStore.transact(async (tx) => {
+          const allTriples = await tx.findByEntity();
+          // Filter out synced metadata
+          const dataTriples = allTriples.filter(
+            ({ id }) => !id.includes('_metadata')
+          );
+          await tx.deleteTriples(dataTriples);
+        });
       }
       return ServerResponse(200);
     } catch (e) {
