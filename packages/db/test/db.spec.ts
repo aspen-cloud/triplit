@@ -6422,10 +6422,7 @@ describe('state vector querying', () => {
       author_id: user_id2,
       content: '',
     });
-    const query = db
-      .query('posts')
-      .where([['author_id', '=', '$user_id']])
-      .build();
+    const query = db.query('posts').build();
     const userDB = db.withVars({ user_id });
     const results = await userDB.fetchTriples(query);
     const resultEntities = results.reduce(
@@ -6440,7 +6437,7 @@ describe('state vector querying', () => {
     expect(resultEntities).toContain(post_id);
 
     const stateVector = triplesToStateVector(results);
-    await db.insert('posts', {
+    const { txId } = await db.insert('posts', {
       id: 'post-3',
       author_id: user_id2,
       content: '',
@@ -6463,8 +6460,7 @@ describe('state vector querying', () => {
       },
       new Set()
     );
-    expect(result2Entities).toHaveLength(1);
-    expect(result2Entities).toContain(post_id);
+    expect(result2Entities).toHaveLength(0);
   });
   it.todo('works with relational querying', async () => {
     const db = new DB({

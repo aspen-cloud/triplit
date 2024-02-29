@@ -31,6 +31,7 @@ import {
   TripleStoreBeforeInsertHook,
   TripleStoreAfterCommitHook,
   indexToTriple,
+  findAllClientIds,
 } from './triple-store-utils.js';
 import { copyHooks } from './utils.js';
 
@@ -159,6 +160,10 @@ export class TripleStoreTransaction implements TripleStoreApi {
       scanDirection,
       timestamp
     );
+  }
+
+  findAllClientIds(): Promise<string[]> {
+    return findAllClientIds(this.tupleTx);
   }
 
   async insertTriple(tripleRow: TripleRow): Promise<void> {

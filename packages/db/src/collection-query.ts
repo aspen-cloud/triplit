@@ -1,5 +1,3 @@
-import { ValuePointer } from '@sinclair/typebox/value';
-import { Value as TBValue } from '@sinclair/typebox/value';
 import Builder from './utils/builder.js';
 import {
   Query,
@@ -20,10 +18,9 @@ import {
   IsPropertyOptional,
   Model,
   Models,
-  Schema,
   timestampedObjectToPlainObject,
 } from './schema.js';
-import { Timestamp, timestampCompare } from './timestamp.js';
+import { Timestamp } from './timestamp.js';
 import { TripleStore, TripleStoreApi } from './triple-store.js';
 import { Pipeline } from './utils/pipeline.js';
 import {
@@ -192,38 +189,23 @@ function getEntitiesAtStateVector(
   );
 }
 
-/**
- * When a subscription is made, the initial fetch includes a state vector.
- * This state vector is used to pick up any triples that may invalidate existing data in a querying client.
- */
-function getTriplesAfterStateVector(
-  collectionTriples: TripleRow[],
-  currentEntities: Map<string, Entity>,
-  stateVector?: Map<string, number>
-) {
-  // Get the entities at the state vector
-  const entitiesAtStateVector = getEntitiesAtStateVector(
-    collectionTriples,
-    stateVector
+async function getTriplesAfterStateVector(
+  tx: TripleStoreApi,
+  stateVector: Map<string, number>
+): Promise<TripleRow[]> {
+  const allTriples: TripleRow[] = [];
+  const allClientIds = await tx.findAllClientIds();
+  const completeStateVector = new Map<string, number>(
+    allClientIds.map((clientId) => [clientId, stateVector.get(clientId) ?? 0])
   );
-
-  // For those entities, get the triples that are newer than the state vector
-  return Array.from(entitiesAtStateVector.entries()).flatMap(
-    ([entityId, entity]) => {
-      const currentEntity = currentEntities.get(entityId);
-      if (!currentEntity) return [];
-      return Object.entries(currentEntity.tripleHistory).flatMap(
-        ([attrPointer, triples]) => {
-          const eaTimestamp = entity.triples[attrPointer]?.timestamp;
-          if (!eaTimestamp) return [];
-
-          return triples.filter(
-            (triple) => timestampCompare(triple.timestamp, eaTimestamp) === 1
-          );
-        }
-      );
-    }
-  );
+  for (const [clientId, tick] of completeStateVector) {
+    const triples = await tx.findByClientTimestamp(clientId, 'gt', [
+      tick,
+      clientId,
+    ]);
+    allTriples.push(...triples);
+  }
+  return allTriples;
 }
 
 export async function fetchDeltaTriples<
@@ -713,15 +695,6 @@ export async function fetch<
   }
 
   if (includeTriples) {
-    // Append state vector sync triples to triples result
-    // stateVectorSyncTriples.forEach((triple) => {
-    //   const [_collection, id] = splitIdParts(triple.id);
-    //   if (resultTriples.has(id)) {
-    //     resultTriples.get(id)?.push(triple);
-    //   } else {
-    //     resultTriples.set(id, [triple]);
-    //   }
-    // });
     return {
       results: new Map(entities), // TODO: also need to deserialize data?
       triples: resultTriples,
@@ -1455,12 +1428,33 @@ export function subscribeTriples<
   const asyncUnSub = async () => {
     let triples: Map<string, TripleRow[]> = new Map();
     try {
-      const fetchResult = await fetch<M, Q>(tripleStore, query, {
-        includeTriples: true,
-        schema,
-        stateVector: options.stateVector,
-      });
-      triples = fetchResult.triples;
+      if (options.stateVector && options.stateVector.size > 0) {
+        const triplesAfterStateVector = await getTriplesAfterStateVector(
+          tripleStore,
+          options.stateVector
+        );
+        const deltaTriples = await fetchDeltaTriples(
+          tripleStore,
+          query,
+          triplesAfterStateVector,
+          schema
+        );
+        triples = deltaTriples.reduce((acc, t) => {
+          if (acc.has(t.id)) {
+            acc.get(t.id)!.push(t);
+          } else {
+            acc.set(t.id, [t]);
+          }
+          return acc;
+        }, new Map<string, TripleRow[]>());
+      } else {
+        const fetchResult = await fetch<M, Q>(tripleStore, query, {
+          includeTriples: true,
+          schema,
+          stateVector: options.stateVector,
+        });
+        triples = fetchResult.triples;
+      }
 
       const unsub = tripleStore.onWrite(async (storeWrites) => {
         const allInserts = Object.values(storeWrites).flatMap(

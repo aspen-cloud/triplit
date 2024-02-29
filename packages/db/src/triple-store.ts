@@ -44,6 +44,7 @@ import {
   mapStaticTupleToEAV,
   TripleStoreBeforeCommitHook,
   TripleStoreAfterCommitHook,
+  findAllClientIds,
 } from './triple-store-utils.js';
 import { copyHooks } from './utils.js';
 import { TRIPLE_STORE_MIGRATIONS } from './triple-store-migrations.js';
@@ -83,6 +84,7 @@ export interface TripleStoreApi {
     scanDirection: 'lt' | 'lte' | 'gt' | 'gte',
     timestamp: Timestamp | undefined
   ): Promise<TripleRow[]>;
+  findAllClientIds(): Promise<string[]>;
 
   findByEAT(
     [entityId, attribute]: [entityId?: EntityId, attribute?: Attribute],
@@ -334,6 +336,10 @@ export class TripleStore implements TripleStoreApi {
 
   findMaxClientTimestamp(clientId: string) {
     return findMaxClientTimestamp(this.tupleStore, clientId);
+  }
+
+  findAllClientIds() {
+    return findAllClientIds(this.tupleStore);
   }
 
   findByClientTimestamp(
