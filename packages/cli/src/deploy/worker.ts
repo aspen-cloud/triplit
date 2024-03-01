@@ -183,6 +183,7 @@ export class TriplitDurableObject implements DurableObject {
 function handleWebSocketUpgradeFailure(reason: string): Response {
   const webSocketPair = new WebSocketPair();
   const [client, server] = Object.values(webSocketPair);
+  server.accept();
   const response = new Response(null, {
     status: 101,
     // @ts-ignore
