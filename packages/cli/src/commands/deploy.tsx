@@ -86,7 +86,8 @@ export default Command({
           .eq('organization_id', organization.id)
           .eq('name', possibleProjectName)
           .single();
-      if (existingProject) {
+
+      const shouldUseExistingProject = async () => {
         console.log(
           `A project with the name ${bold(
             possibleProjectName
@@ -97,11 +98,14 @@ export default Command({
           name: 'proceed',
           message: 'Would you like to deploy to this exiting project?',
         });
-        if (proceed)
-          config = createConfig({
-            id: existingProject.id,
-            name: existingProject.name,
-          });
+        return proceed;
+      };
+
+      if (existingProject && (await shouldUseExistingProject())) {
+        config = createConfig({
+          id: existingProject.id,
+          name: existingProject.name,
+        });
       } else {
         const { proceed } = await prompts({
           type: 'confirm',
@@ -171,6 +175,7 @@ export default Command({
         }
       );
       uploadSpinner.succeed('Deployment complete');
+      // TODO log URL and maybe dashboard link
     } catch (err) {
       uploadSpinner.fail();
       if (err instanceof AxiosError) {
