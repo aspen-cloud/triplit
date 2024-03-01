@@ -3,7 +3,8 @@ import { Middleware } from '../middleware.js';
 import { supabase } from '../supabase.js';
 import axios from 'axios';
 
-const MANAGEMENT_API = 'http://localhost:8787';
+export const MANAGEMENT_API_URL =
+  process.env.MANAGEMENT_API_URL ?? 'https://api.triplit.dev';
 
 export const accessTokenMiddleware = Middleware({
   name: 'Access Token',
@@ -39,7 +40,7 @@ function makeAPIRequester(token: string) {
     params?: any
   ) {
     const payload = method === 'GET' ? { params } : { data: params };
-    const url = MANAGEMENT_API + path;
+    const url = MANAGEMENT_API_URL + path;
     try {
       const resp = await axios.request({
         method,

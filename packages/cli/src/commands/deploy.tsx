@@ -5,7 +5,10 @@ import * as esbuild from 'esbuild';
 import { fileURLToPath } from 'url';
 import * as path from 'path';
 import axios, { AxiosError } from 'axios';
-import { accessTokenMiddleware } from '../middleware/account-auth.js';
+import {
+  MANAGEMENT_API_URL,
+  accessTokenMiddleware,
+} from '../middleware/account-auth.js';
 import { getOrganization } from '../organization-state.js';
 import { selectOrCreateAnOrganization } from '../remote-utils.js';
 import { createConfig, getConfig } from '../project-config.js';
@@ -158,7 +161,7 @@ export default Command({
     uploadSpinner.start();
     try {
       const response = await axios.post(
-        `http://localhost:8787/deploy/${flags.projectId ?? config.id}`,
+        `${MANAGEMENT_API_URL}/deploy/${flags.projectId ?? config.id}`,
         result.outputFiles[0].text,
         {
           headers: {
