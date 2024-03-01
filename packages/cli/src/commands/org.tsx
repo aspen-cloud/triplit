@@ -6,7 +6,7 @@ import prompts from 'prompts';
 import { selectOrCreateAnOrganization } from '../remote-utils.js';
 
 export default Command({
-  description: 'Checks the status of the current user',
+  description: 'Check and manage the selected organization of the current user',
   flags: {},
   preRelease: true,
   middleware: [accessTokenMiddleware],
