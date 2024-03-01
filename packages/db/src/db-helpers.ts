@@ -194,22 +194,24 @@ export async function overrideStoredSchema(
   tripleStore: TripleStore,
   schema: StoreSchema<Models<any, any>>
 ) {
-  const existingTriples = await tripleStore.findByEntity(
-    appendCollectionToId('_metadata', '_schema')
-  );
-  await tripleStore.deleteTriples(existingTriples);
+  await tripleStore.transact(async (tx) => {
+    const existingTriples = await tripleStore.findByEntity(
+      appendCollectionToId('_metadata', '_schema')
+    );
+    await tripleStore.deleteTriples(existingTriples);
 
-  const triples = schemaToTriples(schema);
-  // TODO use tripleStore.setValues
-  const ts = await tripleStore.clock.getNextTimestamp();
-  const normalizedTriples = triples.map(([e, a, v]) => ({
-    id: e,
-    attribute: a,
-    value: v,
-    timestamp: ts,
-    expired: false,
-  }));
-  await tripleStore.insertTriples(normalizedTriples);
+    const triples = schemaToTriples(schema);
+    // TODO use tripleStore.setValues
+    const ts = await tripleStore.clock.getNextTimestamp();
+    const normalizedTriples = triples.map(([e, a, v]) => ({
+      id: e,
+      attribute: a,
+      value: v,
+      timestamp: ts,
+      expired: false,
+    }));
+    await tripleStore.insertTriples(normalizedTriples);
+  });
 }
 
 export function validateTriple(
