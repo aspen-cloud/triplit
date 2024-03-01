@@ -1,5 +1,22 @@
 # @triplit/cli
 
+## 0.3.28
+
+### Patch Changes
+
+- 6a25f68: point to prod api server
+- c684c0a: point to dashboard in upgrade cmd
+- 9e1e0aa: add REST api to v2 worker
+- Updated dependencies [e01131d]
+- Updated dependencies [b07bba6]
+- Updated dependencies [b26a16b]
+- Updated dependencies [b07bba6]
+  - @triplit/console@0.3.26
+  - @triplit/db@0.3.20
+  - @triplit/server-core@0.3.23
+  - @triplit/client@0.3.23
+  - @triplit/server@0.3.23
+
 ## 0.3.27
 
 ### Patch Changes

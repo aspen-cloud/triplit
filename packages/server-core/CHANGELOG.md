@@ -1,5 +1,14 @@
 # @triplit/server-core
 
+## 0.3.23
+
+### Patch Changes
+
+- b26a16b: add additional context to router handler
+- Updated dependencies [b07bba6]
+- Updated dependencies [b07bba6]
+  - @triplit/db@0.3.20
+
 ## 0.3.22
 
 ### Patch Changes

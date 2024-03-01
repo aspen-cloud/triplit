@@ -1,5 +1,12 @@
 # @triplit/db
 
+## 0.3.20
+
+### Patch Changes
+
+- b07bba6: Ensure that schemas passed in to the DB constructor have id and collection triples
+- b07bba6: Add support for 'has' and '!has' set operators
+
 ## 0.3.19
 
 ### Patch Changes
