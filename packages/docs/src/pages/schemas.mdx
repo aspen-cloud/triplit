@@ -34,12 +34,12 @@ const schema = {
   users: {
     schema: S.Schema({
       id: S.Id(),
-      name: S.string(),
+      name: S.String(),
       address: S.Record({
-        street: S.string(),
-        city: S.string(),
-        state: S.string(),
-        zip: S.string(),
+        street: S.String(),
+        city: S.String(),
+        state: S.String(),
+        zip: S.String(),
       }),
     }),
   },
