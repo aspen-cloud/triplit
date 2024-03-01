@@ -1,4 +1,4 @@
-import { DB, TriplitError } from '@triplit/db';
+import { DB, DurableClock, TriplitError } from '@triplit/db';
 import {
   MalformedMessagePayloadError,
   Route,
@@ -10,6 +10,8 @@ import {
   ClientSyncMessage,
   ParsedToken,
 } from '@triplit/types/sync.js';
+import DurableObjectStore from '@triplit/db/storage/durable-object-tuple-store';
+
 export interface Env {
   // Example binding to KV. Learn more at https://developers.cloudflare.com/workers/runtime-apis/kv/
   // MY_KV_NAMESPACE: KVNamespace;
@@ -58,6 +60,9 @@ export class TriplitDurableObject implements DurableObject {
   constructor(readonly state: DurableObjectState, readonly env: Env) {
     this.db = new DB({
       schema: { collections: schema },
+      clock: new DurableClock(),
+      source: new DurableObjectStore(state.storage),
+      tenantId: 'server',
     });
     this.triplitServer = new TriplitServer(this.db);
   }
