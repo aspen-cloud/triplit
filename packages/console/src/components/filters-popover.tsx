@@ -51,7 +51,6 @@ export function FiltersPopover(props: FiltersPopoverProps) {
   const [draftFilters, setDraftFilters] = useState(
     mapFilterArraysToFilterObjects(props.filters, collectionSchema)
   );
-
   const onCreateNewDraftFilter = useCallback(
     (attribute: string) => {
       const attributeDefinition = collectionSchema
@@ -116,7 +115,7 @@ export function FiltersPopover(props: FiltersPopoverProps) {
                   );
                 }}
                 attributes={filterAttributes}
-                schema={collectionSchema.schema}
+                schema={collectionSchema?.schema}
                 onPressRemove={() => {
                   setDraftFilters((prev) =>
                     prev.filter((f) => f.id !== data.id)
