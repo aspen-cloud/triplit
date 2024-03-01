@@ -1,5 +1,18 @@
 # @triplit/console
 
+## 0.3.26
+
+### Patch Changes
+
+- e01131d: fixup undefined accession error in a schemaless filter
+- Updated dependencies [b07bba6]
+- Updated dependencies [b26a16b]
+- Updated dependencies [b07bba6]
+  - @triplit/db@0.3.20
+  - @triplit/server-core@0.3.23
+  - @triplit/client@0.3.23
+  - @triplit/react@0.3.23
+
 ## 0.3.25
 
 ### Patch Changes
