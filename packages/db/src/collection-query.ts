@@ -445,14 +445,15 @@ function* generateQueryChains<
 
 const REVERSE_OPERATOR_MAPPINGS = {
   '=': '=',
+  '!=': '!=',
   '<': '>',
   '>': '<',
   '<=': '>=',
   '>=': '<=',
-  in: '=', // we need the inverse for sets
-  // TODO support Set operators
-  // the issue is that we use '=' for set membership so we can't just reverse the operator
-  // naively to "in"
+  in: 'has',
+  nin: '!has',
+  has: 'in',
+  '!has': 'nin',
 };
 function reverseRelationFilter(filter: FilterStatement<any, any>) {
   const [path, op, value] = filter;
@@ -873,13 +874,18 @@ function satisfiesSetFilter(
       return false;
     }
   }
+
   const setData = timestampedObjectToPlainObject(value);
-  return (
-    setData &&
-    Object.entries(setData)
-      .filter(([_v, inSet]) => inSet)
-      .some(([v]) => isOperatorSatisfied(op, v, filterValue))
-  );
+  if (!setData) return false;
+  const filteredSet = Object.entries(setData).filter(([_v, inSet]) => inSet);
+  if (op === 'has') {
+    return filteredSet.some(([v]) => v === filterValue);
+  }
+  if (op === '!has') {
+    return filteredSet.every(([v]) => v !== filterValue);
+  }
+
+  return filteredSet.some(([v]) => isOperatorSatisfied(op, v, filterValue));
 }
 
 function satisfiesRegisterFilter(

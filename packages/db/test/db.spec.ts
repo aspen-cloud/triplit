@@ -283,6 +283,60 @@ describe('Database API', () => {
     { name: "Travis 'LaFlame' Scott", id: '6', rank: 6 },
   ];
 
+  it.only('supports basic queries with the has and !has operators', async () => {
+    const db = new DB({
+      schema: {
+        collections: {
+          Classes: {
+            schema: S.Schema({
+              id: S.Id(),
+              name: S.String(),
+              level: S.Number(),
+              department: S.String(),
+              enrolled_students: S.Set(S.String()),
+            }),
+          },
+        },
+      },
+    });
+    await Promise.all(
+      classes.map((cls) =>
+        db.insert('Classes', {
+          ...cls,
+          enrolled_students: new Set(cls.enrolled_students),
+        })
+      )
+    );
+    const results = await db.fetch(
+      CollectionQueryBuilder('Classes')
+        .where([['enrolled_students', 'has', 'student-1']])
+        .build()
+    );
+    expect([...results.keys()]).toStrictEqual(['class-2', 'class-3']);
+    const results2 = await db.fetch(
+      CollectionQueryBuilder('Classes')
+        .where([['enrolled_students', 'has', 'bad-id']])
+        .build()
+    );
+    expect(results2.size).toBe(0);
+    const results3 = await db.fetch(
+      CollectionQueryBuilder('Classes')
+        .where([['enrolled_students', '!has', 'student-1']])
+        .build()
+    );
+    expect([...results3.keys()]).toStrictEqual([
+      'class-1',
+      'class-4',
+      'class-5',
+    ]);
+    const results4 = await db.fetch(
+      CollectionQueryBuilder('Classes')
+        .where([['enrolled_students', '!has', 'bad-id']])
+        .build()
+    );
+    expect(results4.size).toBe(5);
+  });
+
   it('supports basic queries without filters', async () => {
     const results = await db.fetch(CollectionQueryBuilder('Student').build());
     expect(results.size).toBe(students.length);

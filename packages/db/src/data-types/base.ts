@@ -30,7 +30,9 @@ export type Operator =
   | 'like'
   | 'nlike'
   | 'in'
-  | 'nin';
+  | 'nin'
+  | 'has'
+  | '!has';
 
 export type Optional<T extends DataType> = T & { context: { optional: true } };
 

@@ -256,7 +256,7 @@ import { Schema as S } from '@triplit/db';
 const stringSet = S.Set(S.String());
 ```
 
-Sets support `=`, `!=` operators in `where` statements, which check if the set contains the value.
+Sets support `has` and `!has` operators in `where` statements, which check if the set does or does not contain the value.
 
 ### Record
 
