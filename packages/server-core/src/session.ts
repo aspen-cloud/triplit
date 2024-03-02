@@ -98,9 +98,7 @@ export class Connection {
       (results) => {
         const triples = results ?? [];
         const triplesForClient = triples.filter(
-          ({ timestamp: [t, client] }) =>
-            client !== this.options.clientId &&
-            (!clientStates.has(client) || clientStates.get(client)! < t)
+          ({ timestamp: [_t, client] }) => client !== this.options.clientId
         );
         // We should always send triples to client even if there are none
         // so that the client knows that the query has been fulfilled by the remote
