@@ -283,7 +283,7 @@ describe('Database API', () => {
     { name: "Travis 'LaFlame' Scott", id: '6', rank: 6 },
   ];
 
-  it.only('supports basic queries with the has and !has operators', async () => {
+  it('supports basic queries with the has and !has operators', async () => {
     const db = new DB({
       schema: {
         collections: {

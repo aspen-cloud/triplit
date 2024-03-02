@@ -195,14 +195,14 @@ export async function overrideStoredSchema(
   schema: StoreSchema<Models<any, any>>
 ) {
   await tripleStore.transact(async (tx) => {
-    const existingTriples = await tripleStore.findByEntity(
+    const existingTriples = await tx.findByEntity(
       appendCollectionToId('_metadata', '_schema')
     );
-    await tripleStore.deleteTriples(existingTriples);
+    await tx.deleteTriples(existingTriples);
 
     const triples = schemaToTriples(schema);
     // TODO use tripleStore.setValues
-    const ts = await tripleStore.clock.getNextTimestamp();
+    const ts = await tx.clock.getNextTimestamp();
     const normalizedTriples = triples.map(([e, a, v]) => ({
       id: e,
       attribute: a,
@@ -210,7 +210,7 @@ export async function overrideStoredSchema(
       timestamp: ts,
       expired: false,
     }));
-    await tripleStore.insertTriples(normalizedTriples);
+    await tx.insertTriples(normalizedTriples);
   });
 }
 
