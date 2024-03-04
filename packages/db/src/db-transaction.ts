@@ -1006,7 +1006,7 @@ export class ChangeTracker {
 
 export function createUpdateProxy<M extends Model<any> | undefined>(
   changeTracker: ChangeTracker,
-  entityObj: Partial<UpdateTypeFromModel<M>>,
+  entityObj: any, // TODO: type this properly, should be an untimestamped entity
   schema?: M,
   prefix: string = ''
 ): UpdateTypeFromModel<M> {
@@ -1017,7 +1017,11 @@ export function createUpdateProxy<M extends Model<any> | undefined>(
     ValuePointer.Delete(entityObj, prop as string);
     return true;
   }
-  return new Proxy(entityObj as UpdateTypeFromModel<M>, {
+  const convertedForRead = convertEntityToJS(
+    entityObj,
+    schema
+  ) as UpdateTypeFromModel<M>;
+  return new Proxy(convertedForRead, {
     set: (_target, prop, value) => {
       if (typeof prop === 'symbol') return true;
       const propPointer = [prefix, prop].join('/');
@@ -1087,7 +1091,13 @@ export function createUpdateProxy<M extends Model<any> | undefined>(
         );
       }
 
-      return currentValue;
+      // TODO: fixup access to 'constructor' and other props
+      return propSchema
+        ? propSchema.convertDBValueToJS(
+            // @ts-expect-error
+            currentValue
+          )
+        : currentValue;
     },
   });
 }

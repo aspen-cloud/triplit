@@ -619,6 +619,46 @@ describe('Database API', () => {
         );
       });
   });
+
+  it('updater function returns js values on reads', async () => {
+    const db = new DB({
+      schema: {
+        collections: {
+          test: {
+            schema: S.Schema({
+              id: S.Id(),
+              string: S.String(),
+              number: S.Number(),
+              nullable: S.String({ nullable: true }),
+              date: S.Date(),
+              set: S.Set(S.String()),
+            }),
+          },
+        },
+      },
+    });
+    const NOW = new Date();
+    await db.insert('test', {
+      id: '1',
+      string: 'string',
+      number: 1,
+      nullable: null,
+      date: NOW,
+      set: new Set(['a', 'b', 'c']),
+    });
+    await db.update('test', '1', (entity) => {
+      expect(entity.string).toBe('string');
+      expect(entity.number).toBe(1);
+      expect(entity.nullable).toBe(null);
+      expect(entity.date).toStrictEqual(NOW);
+      expect(entity.set).toBeInstanceOf(Set);
+      expect([...entity.set.values()]).toEqual(['a', 'b', 'c']);
+      // For now just logging
+      // TODO: figure out what to do with 'constructor' prop
+      // Also figure out how to test without going through proxy
+      console.log(entity);
+    });
+  });
 });
 
 it('fetchOne gets first match or null', async () => {
