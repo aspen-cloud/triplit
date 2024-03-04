@@ -7,9 +7,11 @@ import { cn } from '../../lib/utils';
 export function CopyButtonWithTooltip({
   copyValue,
   className = '',
+  size = 18,
 }: {
   copyValue: string;
   className?: string;
+  size?: number;
 }) {
   const [copied, setCopied] = useState(false);
 
@@ -27,7 +29,7 @@ export function CopyButtonWithTooltip({
         className={cn('p-1 h-auto', className)}
         onClick={onClickCopy}
       >
-        {copied ? <Check size={18} /> : <Copy size={18} />}
+        {copied ? <Check size={size} /> : <Copy size={size} />}
       </Button>
     </Tooltip>
   );
