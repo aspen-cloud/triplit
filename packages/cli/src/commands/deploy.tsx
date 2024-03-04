@@ -163,6 +163,7 @@ export default Command({
     buildingSpinner.succeed();
     const uploadSpinner = ora('Uploading to Triplit Cloud');
     uploadSpinner.start();
+    const projectId = flags.projectId ?? config.id;
     try {
       const response = await axios.post(
         `${MANAGEMENT_API_URL}/deploy/${flags.projectId ?? config.id}`,
@@ -175,7 +176,16 @@ export default Command({
         }
       );
       uploadSpinner.succeed('Deployment complete');
-      // TODO log URL and maybe dashboard link
+      console.log(
+        `Your project has been deployed to ${blue(
+          'https://' + projectId + '.triplit.io'
+        )}`
+      );
+      console.log(
+        `Visit ${blue(
+          'triplit.dev/dashboard/project/' + projectId
+        )} to view its connection tokens.`
+      );
     } catch (err) {
       uploadSpinner.fail();
       if (err instanceof AxiosError) {
