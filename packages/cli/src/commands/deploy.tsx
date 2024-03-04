@@ -177,14 +177,9 @@ export default Command({
       );
       uploadSpinner.succeed('Deployment complete');
       console.log(
-        `Your project has been deployed to ${blue(
-          'https://' + projectId + '.triplit.io'
-        )}`
-      );
-      console.log(
-        `Visit ${blue(
-          'triplit.dev/dashboard/project/' + projectId
-        )} to view its connection tokens.`
+        `\nSet up you local .env file using the dashboard:\n\n${
+          blue('https://triplit.dev/dashboard/project/' + projectId) + '\n'
+        }`
       );
     } catch (err) {
       uploadSpinner.fail();
