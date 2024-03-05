@@ -359,7 +359,7 @@ export function generateQueryRootPermutations<
 >(query: Q) {
   const queries = [];
   for (const chain of generateQueryChains(query)) {
-    queries.push(queryChainToQuery(chain.toReversed()));
+    queries.push(queryChainToQuery(chain.slice().reverse()));
   }
   return queries;
 }
