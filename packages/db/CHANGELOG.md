@@ -1,5 +1,11 @@
 # @triplit/db
 
+## 0.3.21
+
+### Patch Changes
+
+- 25ba609: Fixup deserialization bug in updater
+
 ## 0.3.20
 
 ### Patch Changes
