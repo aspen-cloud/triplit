@@ -1,5 +1,18 @@
 # @triplit/cli
 
+## 0.3.29
+
+### Patch Changes
+
+- 45e09f7: add message pointing cli users to dashboard on successful deployment
+- Updated dependencies [25ba609]
+- Updated dependencies [3d36ab6]
+  - @triplit/db@0.3.21
+  - @triplit/client@0.3.24
+  - @triplit/console@0.3.27
+  - @triplit/server@0.3.24
+  - @triplit/server-core@0.3.24
+
 ## 0.3.28
 
 ### Patch Changes
