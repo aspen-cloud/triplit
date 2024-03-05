@@ -329,16 +329,20 @@ export class SyncEngine {
                 await outboxOperator.deleteTriples(triplesToEvict);
               }
             }
-
-            // Filter out failures, tell server there are unsent triples
-            const triplesToSend = (
-              await this.getTriplesToSend(outboxOperator)
-            ).filter((t) => !failuresSet.has(JSON.stringify(t.timestamp)));
-            if (triplesToSend.length) this.signalOutboxTriples();
           });
           for (const txId of txIds) {
             this.txCommits$.next(txId);
           }
+
+          // Filter out failures, tell server there are unsent triples
+          // Would be nice to not load all these into memory
+          // However for most workloads its hopefully not that much data
+          const triplesToSend = (
+            await this.getTriplesToSend(
+              this.db.tripleStore.setStorageScope(['outbox'])
+            )
+          ).filter((t) => !failuresSet.has(JSON.stringify(t.timestamp)));
+          if (triplesToSend.length) this.signalOutboxTriples();
         } finally {
           // After processing, clean state (ACK received)
           for (const txId of txIds) {
