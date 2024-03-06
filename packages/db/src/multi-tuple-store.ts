@@ -228,8 +228,13 @@ export default class MultiTupleStore<TupleSchema extends KeyValuePair> {
     scope: StorageScope | undefined
   ) {
     try {
-      // @ts-ignore
-      return await transactionalReadWriteAsync()(callback)(
+      return await transactionalReadWriteAsync(5, {
+        exponentialBackoff: true,
+        jitter: true,
+      })(
+        // @ts-ignore
+        callback
+      )(
         // @ts-ignore
         scope
           ? new MultiTupleStore({
