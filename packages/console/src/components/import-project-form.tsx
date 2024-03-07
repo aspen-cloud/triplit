@@ -42,17 +42,21 @@ export function ImportProjectForm({
   onSubmit: (values: ImportProjectFormValues) => void;
   projectHint?: ImportProjectFormValues;
 }) {
-  const [imported, setImported] = useState(false);
   const {
     token: tokenHint,
     server: serverHint,
     displayName: displayNameHint,
   } = projectHint ?? {};
+
+  const [imported, setImported] = useState(
+    tokenHint && JWTPayloadIsOfCorrectForm(tokenHint)
+  );
+
   const form = useForm<ImportProjectFormValues>({
     initialValues: {
-      token: '',
-      displayName: '',
-      server: '',
+      token: tokenHint ?? '',
+      displayName: displayNameHint ?? '',
+      server: serverHint ?? '',
     },
 
     validate: {
@@ -64,27 +68,13 @@ export function ImportProjectForm({
       displayName: (value) =>
         value.length < 3 ? 'Display name is too short' : null,
     },
+    initialErrors: {
+      token:
+        tokenHint && !JWTPayloadIsOfCorrectForm(tokenHint)
+          ? 'Service token has malformed metadata, please check that it is correct'
+          : null,
+    },
   });
-
-  useEffect(() => {
-    if (!projectHint) return;
-    if (
-      form.values.token === tokenHint &&
-      form.values.server === serverHint &&
-      form.values.displayName === displayNameHint
-    ) {
-      return;
-    }
-    form.setValues(projectHint ?? {});
-    if (tokenHint && JWTPayloadIsOfCorrectForm(tokenHint)) {
-      setImported(true);
-    } else {
-      form.setFieldError(
-        'token',
-        'Service token has malformed metadata, please check that it is correct'
-      );
-    }
-  }, [projectHint, tokenHint, serverHint, displayNameHint, form]);
 
   const importSecretKey = useCallback(() => {
     try {
