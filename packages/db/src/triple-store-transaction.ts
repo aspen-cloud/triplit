@@ -219,8 +219,14 @@ export class TripleStoreTransaction implements TripleStoreApi {
       const { id: id, attribute, value, timestamp } = triple;
       tx.remove(['EAT', id, attribute, timestamp]);
       tx.remove(['AVE', attribute, value, id, timestamp]);
-      // tx.remove(['VAE', value, attribute, id, timestamp]);
-      tx.remove(['ts', timestamp, id, attribute, value]);
+      tx.remove([
+        'clientTimestamp',
+        timestamp[1],
+        timestamp,
+        id,
+        attribute,
+        value,
+      ]);
     }
   }
 

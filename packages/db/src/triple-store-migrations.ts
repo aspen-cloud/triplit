@@ -31,11 +31,12 @@ export const TRIPLE_STORE_MIGRATIONS: ((
       tuplesToInsert.push({
         key: ['EAT', id, attribute, timestamp],
         value: [value, expired],
-      });
+      } as EATIndex);
     }
     await tupleStore.autoTransact(async (tx) => {
       // Delete old EAV tuples
       for (const tuple of existingTuples) {
+        // @ts-ignore
         tx.remove(tuple.key);
       }
       // Insert new EAT tuples

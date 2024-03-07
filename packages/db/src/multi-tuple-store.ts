@@ -301,7 +301,7 @@ export class ScopedMultiTupleOperator<TupleSchema extends KeyValuePair> {
 
   // get: <T extends Tuple>(tuple: T) => (Extract<TupleSchema, { key: TupleToObject<T>; }> extends unknown ? Extract<TupleSchema, { key: TupleToObject<T>; }>['value'] : never) | undefined;
   // exists: <T extends Tuple>(tuple: T) => boolean;
-  remove(tuple: Tuple) {
+  remove(tuple: TupleSchema['key']) {
     this.txScope.write.forEach((tx) => tx.remove(tuple));
   }
 
