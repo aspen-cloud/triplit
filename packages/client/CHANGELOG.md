@@ -1,5 +1,13 @@
 # @triplit/client
 
+## 0.3.24
+
+### Patch Changes
+
+- 3d36ab6: Move outbox read for sync signal to prevent transaction conflicts
+- Updated dependencies [25ba609]
+  - @triplit/db@0.3.21
+
 ## 0.3.23
 
 ### Patch Changes
