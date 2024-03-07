@@ -1,5 +1,12 @@
 # @triplit/db
 
+## 0.3.22
+
+### Patch Changes
+
+- 557e10f: Add jitter and exponential backoff to autoretry logic
+- 2d41a65: improve delete performance
+
 ## 0.3.21
 
 ### Patch Changes
