@@ -200,9 +200,12 @@ export function CreateEntitySheet({
     // useMemo(
     //   () =>
     form.values.attributes.map((item, index) => {
+      const hasDefault = item.definition?.options?.default !== undefined;
       const isRequired =
+        !hasDefault &&
         !optionalAttributes.has(item.fieldName) &&
         (!item.definition?.options?.nullable || item.fieldValue !== null);
+
       return (
         <div
           key={item.key}
