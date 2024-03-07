@@ -2,7 +2,7 @@ import { TriplitClient } from '@triplit/client';
 import { useQuery } from '@triplit/react';
 import { useMemo, useState, useCallback, useEffect } from 'react';
 import '@glideapps/glide-data-grid/dist/index.css';
-import { CreateEntityForm } from '.';
+import { CreateEntitySheet } from '.';
 import { consoleClient } from '../../triplit/client';
 import { ColumnDef } from '@tanstack/react-table';
 import {
@@ -118,9 +118,7 @@ export function DataViewer({
   );
   const [addOrUpdateAttributeFormOpen, setAddOrUpdateAttributeFormOpen] =
     useAtom(addOrUpdateAttributeFormOpenAtom);
-  const [_attributeToUpdate, setAttributeToUpdate] = useAtom(
-    attributeToUpdateAtom
-  );
+  const [attributeToUpdate, setAttributeToUpdate] = useState(null);
   const [selectedAttribute, setSelectedAttribute] = useState<string>('');
   const [selectedCell, setSelectedCell] = useState<string | null>(null);
   const [selectedCollection, _setSelectedCollection] = useSelectedCollection();
@@ -385,7 +383,10 @@ export function DataViewer({
           <div className="flex flex-col justify-center items-center h-full">
             <Tooltip label="Insert attribute">
               <Button
-                onClick={() => setAddOrUpdateAttributeFormOpen(true)}
+                onClick={() => {
+                  setAddOrUpdateAttributeFormOpen(true);
+                  setAttributeToUpdate(null);
+                }}
                 variant={'ghost'}
                 className="h-auto py-1"
               >
@@ -410,6 +411,8 @@ export function DataViewer({
       {collectionSchema && (
         <>
           <SchemaAttributeSheet
+            attributeToUpdate={attributeToUpdate}
+            key={attributeToUpdate ? attributeToUpdate.name : 'new'}
             open={addOrUpdateAttributeFormOpen}
             onOpenChange={setAddOrUpdateAttributeFormOpen}
             collectionName={selectedCollection}
@@ -479,7 +482,8 @@ export function DataViewer({
           sortedAndFilteredEntities.length
         } of ${allResults?.size ?? 0}`}</div>
 
-        <CreateEntityForm
+        <CreateEntitySheet
+          key={selectedCollection}
           collectionDefinition={collectionSchema}
           collection={selectedCollection}
           inferredAttributes={Array.from(uniqueAttributes)}

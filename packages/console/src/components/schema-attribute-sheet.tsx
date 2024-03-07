@@ -98,100 +98,71 @@ type NewAttributeFormProps = {
   client: TriplitClient<any>;
   collectionName: string;
   collectionSchema: CollectionDefinition;
+  attributeToUpdate:
+    | null
+    | ((
+        | ValueAttributeDefinition
+        | CollectionAttributeDefinition
+        | RecordAttributeDefinition
+      ) & {
+        name: string;
+      });
 };
 export const addOrUpdateAttributeFormOpenAtom = atom(false);
 
-export const attributeToUpdateAtom = atom<
-  | ((
-      | ValueAttributeDefinition
-      | CollectionAttributeDefinition
-      | RecordAttributeDefinition
-    ) & {
-      name: string;
-    })
-  | null
->(null);
-
-export function SchemaAttributeSheet(
-  props: NewAttributeFormProps & ComponentProps<typeof Sheet>
-) {
-  const { client, collectionName, collectionSchema } = props;
-  const [attributeToUpdate, setAttributeToUpdate] = useAtom(
-    attributeToUpdateAtom
-  );
+export function SchemaAttributeSheet({
+  attributeToUpdate,
+  client,
+  collectionName,
+  collectionSchema,
+}: NewAttributeFormProps & ComponentProps<typeof Sheet>) {
   const editing = !!attributeToUpdate;
   const [open, setOpen] = useAtom(addOrUpdateAttributeFormOpenAtom);
-  const [attributeName, setAttributeName] = useState('');
-  const [attributeBaseType, setAttributeBaseType] =
-    useState<AllTypes>('string');
-  const [hasDefault, setHasDefault] = useState(false);
-  const [setType, setSetType] = useState<ValueTypeKeys>('string');
-  const [defaultType, setDefaultType] = useState<'Value' | 'now' | 'uuid'>(
-    'Value'
+  const [attributeName, setAttributeName] = useState(
+    attributeToUpdate?.name ?? ''
   );
-  const [isOptional, setIsOptional] = useState(false);
+  const [attributeBaseType, setAttributeBaseType] = useState<AllTypes>(
+    attributeToUpdate?.type ?? 'string'
+  );
+  const [hasDefault, setHasDefault] = useState(
+    attributeToUpdate?.options?.default !== undefined
+  );
+  const [setType, setSetType] = useState<ValueTypeKeys>(
+    attributeToUpdate?.items?.type ?? 'string'
+  );
+  const [defaultType, setDefaultType] = useState<'Value' | 'now' | 'uuid'>(
+    typeof attributeToUpdate?.options?.default === 'object'
+      ? attributeToUpdate.options.default.func
+      : 'Value'
+  );
+  const [isOptional, setIsOptional] = useState(
+    !!(
+      collectionSchema.schema.optional &&
+      collectionSchema.schema.optional.includes(attributeToUpdate?.name)
+    )
+  );
   const [recordKeyTypes, setRecordKeyTypes] = useState<
     Record<string, [string, ValueTypeKeys]>
-  >({});
-  const [defaultValue, setDefaultValue] = useState('');
-  const [nullable, setNullable] = useState(false);
-
-  function setDefaults() {
-    setAttributeName('');
-    setRecordKeyTypes({});
-    setAttributeBaseType('string');
-    setSetType('string');
-    setDefaultType('Value');
-    setDefaultValue('');
-    setNullable(false);
-    setHasDefault(false);
-    setIsOptional(false);
-  }
-
-  useEffect(() => {
-    if (attributeToUpdate) {
-      setAttributeName(attributeToUpdate.name);
-      setAttributeBaseType(attributeToUpdate.type);
-      if (attributeToUpdate.type === 'record') {
-        setRecordKeyTypes(
-          Object.fromEntries(
-            Object.entries(attributeToUpdate.properties).map(([key, value]) => [
-              key,
-              [key, value.type],
-            ])
-          )
-        );
-        return;
-      }
-      setNullable(attributeToUpdate?.options?.nullable ?? false);
-      setIsOptional(
-        !!(
-          collectionSchema.schema.optional &&
-          collectionSchema.schema.optional.includes(attributeToUpdate.name)
+  >(
+    attributeToUpdate?.type === 'record'
+      ? Object.fromEntries(
+          Object.entries(attributeToUpdate.properties).map(([key, value]) => [
+            key,
+            [key, (value as ValueAttributeDefinition).type],
+          ])
         )
-      );
-      if (attributeToUpdate.type === 'set') {
-        setSetType(attributeToUpdate.items.type);
-        return;
-      }
+      : {}
+  );
 
-      if (attributeToUpdate?.options?.default === undefined) {
-        setHasDefault(false);
-        setDefaultType('Value');
-        setDefaultValue('');
-        return;
-      }
-      setHasDefault(true);
-      if (typeof attributeToUpdate.options.default === 'object') {
-        setDefaultType(attributeToUpdate.options.default.func);
-      } else {
-        setDefaultType('Value');
-        setDefaultValue(String(attributeToUpdate.options.default));
-      }
-    } else {
-      setDefaults();
-    }
-  }, [attributeToUpdate]);
+  const [defaultValue, setDefaultValue] = useState(
+    attributeToUpdate?.options?.default &&
+      typeof attributeToUpdate?.options?.default !== 'object'
+      ? String(attributeToUpdate.options.default)
+      : ''
+  );
+  const [nullable, setNullable] = useState(
+    attributeToUpdate?.options?.nullable ?? false
+  );
 
   const formToAttributeDefinition = useCallback(() => {
     const baseAttribute = { type: attributeBaseType };
@@ -249,7 +220,6 @@ export function SchemaAttributeSheet(
         updatedAttribute
       );
       setOpen(false);
-      setDefaults();
       return;
     }
     if (
@@ -274,7 +244,6 @@ export function SchemaAttributeSheet(
 
     setOpen(false);
   }, [
-    setDefaults,
     attributeToUpdate,
     client,
     attributeName,
@@ -289,7 +258,6 @@ export function SchemaAttributeSheet(
       open={open}
       onOpenChange={(open) => {
         setOpen(open);
-        if (!open) setAttributeToUpdate(null);
       }}
     >
       <SheetContent className="text-sm sm:max-w-[40%] overflow-y-auto">

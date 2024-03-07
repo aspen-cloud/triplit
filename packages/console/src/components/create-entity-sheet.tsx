@@ -187,12 +187,6 @@ export function CreateEntitySheet({
     );
   }, [form.values.attributes, collectionDefinition, allAttributes]);
 
-  useEffect(() => {
-    form.setInitialValues(initializeNewEntityForm(collectionDefinition));
-    form.reset();
-
-    setCustomAttributes([]);
-  }, [collection, collectionDefinition]);
   const optionalAttributes = new Set(
     collectionDefinition?.schema?.optional ?? []
   );
