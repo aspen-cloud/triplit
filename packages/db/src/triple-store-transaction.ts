@@ -301,8 +301,23 @@ export class TripleStoreTransaction implements TripleStoreApi {
 
   async expireEntity(id: EntityId) {
     const existingTriples = await this.findByEntity(id);
+    // reduce triples to just the highest timestamp for each attribute
+    const attributeTimestamps = new Map<string, TripleRow>();
+    for (const triple of existingTriples) {
+      const attributeKey = JSON.stringify(triple.attribute);
+      const currentTimestamp = attributeTimestamps.get(attributeKey)?.timestamp;
+      if (
+        !currentTimestamp ||
+        timestampCompare(triple.timestamp, currentTimestamp) > 0
+      ) {
+        attributeTimestamps.set(attributeKey, triple);
+      }
+    }
     await this.expireEntityAttributes(
-      existingTriples.map(({ attribute, id }) => ({ id, attribute }))
+      [...attributeTimestamps.values()].map(({ attribute, id }) => ({
+        id,
+        attribute,
+      }))
     );
   }
 
