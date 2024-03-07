@@ -40,7 +40,7 @@ export function ProjectViewer({
   // If client, render hooks that rely on client safely
   return (
     <div className="flex bg-popover max-w-[100vw] overflow-hidden">
-      <div className=" border-r h-screen flex flex-col p-4 max-w-[300px]">
+      <div className=" border-r h-screen flex flex-col p-4 w-[250px]">
         <ProjectOptionsMenu>
           <Button variant="secondary" className="w-full">
             <div className="font-bold truncate ">{project?.displayName}</div>
