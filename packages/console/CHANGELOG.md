@@ -1,5 +1,17 @@
 # @triplit/console
 
+## 0.3.28
+
+### Patch Changes
+
+- dba43e3: fix handling of required attributes with default in create entity form
+- Updated dependencies [557e10f]
+- Updated dependencies [2d41a65]
+  - @triplit/db@0.3.22
+  - @triplit/client@0.3.25
+  - @triplit/server-core@0.3.25
+  - @triplit/react@0.3.25
+
 ## 0.3.27
 
 ### Patch Changes
