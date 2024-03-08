@@ -81,7 +81,7 @@ export default Command({
         } catch (e) {
           console.log(
             red(
-              `An error occured regenerating your schema file. You may re-run \`triplit migrate codegen\`. If that fails you may need to manually edit your schema file to reflect the changes applied in the latest migration.`
+              `An error occurred regenerating your schema file. You may re-run \`triplit migrate codegen\`. If that fails you may need to manually edit your schema file to reflect the changes applied in the latest migration.`
             )
           );
           console.error(e);

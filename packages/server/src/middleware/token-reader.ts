@@ -48,7 +48,7 @@ export async function useHttpToken(
     else if (e instanceof Error) triplitError = new TriplitError(e.message);
     else
       triplitError = new TriplitError(
-        'An unknown error occured while parsing token'
+        'An unknown error occurred while parsing token'
       );
     return res.status(triplitError.status).send(triplitError.toJSON());
   }

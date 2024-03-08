@@ -60,7 +60,7 @@ function makeAPIRequester(token: string) {
       } else if (e.request) {
         throw `No response was received from server: ${url}. Please ensure you are connected to the internet and are pointing to the correct server.`;
       }
-      throw `An error occured while requesting the remote database: ${e.message}`;
+      throw `An error occurred while requesting the remote database: ${e.message}`;
     }
   };
 }

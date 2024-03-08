@@ -361,7 +361,7 @@ export class Session {
     } catch (e) {
       if (isTriplitError(e)) return errorResponse(e);
       return errorResponse(e, {
-        fallbackMessage: 'An unknown error occured clearing the database.',
+        fallbackMessage: 'An unknown error occurred clearing the database.',
       });
     }
   }
@@ -500,7 +500,7 @@ export class Session {
       return ServerResponse(200, serializableResult);
     } catch (e) {
       return errorResponse(e, {
-        fallbackMessage: 'Could not insert entity. An unknown error occured.',
+        fallbackMessage: 'Could not insert entity. An unknown error occurred.',
       });
     }
   }
@@ -542,7 +542,7 @@ export class Session {
       return ServerResponse(200, serializableResult);
     } catch (e) {
       return errorResponse(e, {
-        fallbackMessage: 'Could not insert entity. An unknown error occured.',
+        fallbackMessage: 'Could not insert entity. An unknown error occurred.',
       });
     }
   }
@@ -554,7 +554,7 @@ export class Session {
       return ServerResponse(200, {});
     } catch (e) {
       return errorResponse(e, {
-        fallbackMessage: 'Could not insert triples. An unknown error occured.',
+        fallbackMessage: 'Could not insert triples. An unknown error occurred.',
       });
     }
   }
@@ -572,7 +572,7 @@ export class Session {
       return ServerResponse(200, {});
     } catch (e) {
       return errorResponse(e, {
-        fallbackMessage: 'Could not delete triples. An unknown error occured.',
+        fallbackMessage: 'Could not delete triples. An unknown error occurred.',
       });
     }
   }
@@ -619,7 +619,7 @@ export class Session {
       return ServerResponse(200, txResult);
     } catch (e) {
       return errorResponse(e, {
-        fallbackMessage: 'Could not update entity. An unknown error occured.',
+        fallbackMessage: 'Could not update entity. An unknown error occurred.',
       });
     }
   }
@@ -632,7 +632,7 @@ export class Session {
       return ServerResponse(200, txResult);
     } catch (e) {
       return errorResponse(e, {
-        fallbackMessage: 'Could not delete entity. An unknown error occured.',
+        fallbackMessage: 'Could not delete entity. An unknown error occurred.',
       });
     }
   }
@@ -644,7 +644,7 @@ function errorResponse(e: unknown, options?: { fallbackMessage?: string }) {
   }
   const generalError = new TriplitError(
     options?.fallbackMessage ??
-      'An unknown error occured processing your request.'
+      'An unknown error occurred processing your request.'
   );
   console.log(e);
   return ServerResponse(generalError.status, generalError.toJSON());

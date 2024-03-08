@@ -583,7 +583,7 @@ describe('Database API', () => {
         },
       },
     });
-    // TODO: use more specific error, validation function should probably return a string or list of errors as context messages so we can give context to why the failure occured
+    // TODO: use more specific error, validation function should probably return a string or list of errors as context messages so we can give context to why the failure occurred
     // no missing fields
     await expect(
       db.insert('test', {

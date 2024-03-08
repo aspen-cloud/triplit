@@ -167,7 +167,7 @@ export class QuerySyncError extends TriplitError {
   constructor(params: any, ...args: any[]) {
     super(...args);
     this.name = 'QuerySyncError';
-    this.baseMessage = `An error occured while syncing your query: ${JSON.stringify(
+    this.baseMessage = `An error occurred while syncing your query: ${JSON.stringify(
       params
     )}`;
     this.status = STATUS_CODES['Internal Server Error'];
