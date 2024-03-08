@@ -7,8 +7,10 @@ import { useNavigate } from 'react-router-dom';
 
 export function ProjectSelector({
   onPressImportProject,
+  onSelectProject,
 }: {
   onPressImportProject: () => void;
+  onSelectProject?: (projectId: string) => void;
 }) {
   const [currentProjectId] = useProjectState();
   const projectEntities = useProjects();
@@ -27,7 +29,10 @@ export function ProjectSelector({
         <Button
           key={id}
           style={{ height: 50 }}
-          onClick={() => navigate('/' + id)}
+          onClick={() => {
+            onSelectProject && onSelectProject(id);
+            navigate('/' + id);
+          }}
           variant={
             currentProjectId && currentProjectId === id ? 'default' : 'ghost'
           }

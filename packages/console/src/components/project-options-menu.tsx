@@ -43,6 +43,9 @@ export function ProjectOptionsMenu({
             setSelectModalIsOpen(false);
             setImportModalIsOpen(true);
           }}
+          onSelectProject={(projectId) => {
+            setSelectModalIsOpen(false);
+          }}
         />
       </Modal>
       <Modal
