@@ -134,7 +134,7 @@ export function TriplitColumnHeader(props: ColumnHeaderProps) {
         <div className="truncate">{attribute}</div>
         {attributeDef?.type && (
           <div className="font-normal text-primary/50 truncate">
-            {attributeDef.type}
+            {attributeDef.type === 'query' ? 'relation' : attributeDef.type}
           </div>
         )}
         {children}

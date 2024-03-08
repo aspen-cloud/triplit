@@ -1,5 +1,11 @@
 import { atom, useAtom } from 'jotai';
+import { useNavigate, useParams } from 'react-router-dom';
 
-export const selectedProjectIdAtom = atom<string | undefined>(undefined);
-
-export const useProjectState = () => useAtom(selectedProjectIdAtom);
+export const useProjectState = () => {
+  const { projectId } = useParams();
+  const navigate = useNavigate();
+  return [
+    projectId,
+    (newProjectId: string) => navigate('/' + newProjectId),
+  ] as const;
+};

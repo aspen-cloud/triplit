@@ -7,12 +7,10 @@ import {
   FormField,
   CopyButtonWithTooltip,
 } from '@triplit/ui';
-import { UpdateTypeFromModel } from '@triplit/db';
 import { consoleClient } from '../../triplit/client';
+import { Entity } from '@triplit/client';
 
-export type Project = UpdateTypeFromModel<
-  DBConsoleSchemaType['projects']['attributes']
->;
+export type Project = Entity<DBConsoleSchemaType, 'projects'>;
 
 export function ProjectInfoForm({
   projectId: projectPrimaryKey,

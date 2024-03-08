@@ -39,14 +39,6 @@ export function ProjectOptionsMenu({
       />
       <Modal open={selectModalIsOpen} onOpenChange={setSelectModalIsOpen}>
         <ProjectSelector
-          currentProjectId={projectPrimaryKey}
-          onSelectProject={(id) => {
-            if (id !== projectPrimaryKey) {
-              setSelectedProjectId(id);
-              setSelectedCollection(undefined);
-            }
-            setSelectModalIsOpen(false);
-          }}
           onPressImportProject={() => {
             setSelectModalIsOpen(false);
             setImportModalIsOpen(true);

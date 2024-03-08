@@ -8,10 +8,12 @@ export function createServer(_assetPath, consoleParams) {
   return http.createServer((req, res) => {
     // Default to index.html
     const [urlPath] = req.url.split('?');
-    const filePath = path.join(
-      basePath,
-      urlPath === '/' ? 'index.html' : urlPath
-    );
+    const isFileRoute =
+      urlPath.endsWith('.css') ||
+      urlPath.endsWith('.js') ||
+      urlPath.endsWith('.jpeg') ||
+      urlPath.endsWith('.jpg');
+    const filePath = path.join(basePath, isFileRoute ? urlPath : 'index.html');
     const extname = path.extname(filePath);
 
     if (consoleParams && req.url === '/') {

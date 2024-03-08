@@ -3,11 +3,21 @@ import ReactDOM from 'react-dom/client';
 import App from './App';
 import { createBrowserRouter, RouterProvider } from 'react-router-dom';
 import '../../ui/globals.css';
+import { ProjectViewer, loader } from './components/project-viewer.js';
 
 const router = createBrowserRouter([
   {
     path: '/',
     element: <App />,
+  },
+  {
+    path: ':projectId',
+    loader: ({ params }) =>
+      params.projectId ? loader(params.projectId) : null,
+    element: <ProjectViewer />,
+    // we have to disable revalidation because otherwise it's re-mounting
+    // the component and re-running the loader whenever the query params change
+    shouldRevalidate: () => false,
   },
 ]);
 

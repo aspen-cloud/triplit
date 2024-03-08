@@ -1,11 +1,11 @@
 import { Button, PasswordInput, Input, FormField } from '@triplit/ui';
 import { useForm } from '@mantine/form';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import {
   getProjectIdFromApiKey,
   JWTPayloadIsOfCorrectForm,
 } from '../utils/server';
-import { consoleClient, formConsolePrimaryKey } from '../../triplit/client';
+import { consoleClient } from '../../triplit/client';
 import { TokenReadError } from '@triplit/server-core';
 
 export interface ImportProjectFormValues {
@@ -19,16 +19,15 @@ export async function addProjectToConsole(formValues: ImportProjectFormValues) {
   try {
     const projectId = getProjectIdFromApiKey(token);
     const [protocol, origin] = server.split('://');
-    const primaryKey = formConsolePrimaryKey(projectId, server);
     await consoleClient.insert('projects', {
       displayName,
       token,
       projectId,
       server: origin,
       secure: protocol === 'https',
-      id: primaryKey,
+      id: origin,
     });
-    return primaryKey;
+    return origin;
   } catch (e) {
     console.error(e);
     throw new TokenReadError();

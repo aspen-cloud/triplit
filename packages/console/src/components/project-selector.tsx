@@ -3,27 +3,22 @@ import { DownloadSimple } from '@phosphor-icons/react';
 import { useMemo } from 'react';
 import { useProjectState } from './project-provider';
 import { useProjects } from '../hooks/useProject';
+import { useNavigate } from 'react-router-dom';
 
 export function ProjectSelector({
   onPressImportProject,
-  onSelectProject,
 }: {
   onPressImportProject: () => void;
-  onSelectProject: (projectId: string) => void;
 }) {
   const [currentProjectId] = useProjectState();
   const projectEntities = useProjects();
 
   const projectList = useMemo(
-    () =>
-      projectEntities
-        ? Array.from(projectEntities).map(([id, data]) => ({
-            id,
-            ...data,
-          }))
-        : [],
+    () => (projectEntities ? Array.from(projectEntities.values()) : []),
     [projectEntities]
   );
+
+  const navigate = useNavigate();
 
   return (
     <div className="flex flex-col gap-3">
@@ -32,7 +27,7 @@ export function ProjectSelector({
         <Button
           key={id}
           style={{ height: 50 }}
-          onClick={() => onSelectProject(id)}
+          onClick={() => navigate('/' + id)}
           variant={
             currentProjectId && currentProjectId === id ? 'default' : 'ghost'
           }

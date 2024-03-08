@@ -16,7 +16,6 @@ import { Plus } from 'lucide-react';
 import {
   SchemaAttributeSheet,
   addOrUpdateAttributeFormOpenAtom,
-  attributeToUpdateAtom,
 } from './schema-attribute-sheet';
 import { ColumnMenu } from './column-menu';
 import { DeleteAttributeDialog } from './delete-attribute-dialog';
@@ -303,7 +302,7 @@ export function DataViewer({
                   queryDef={typeDef}
                   onClickRelationLink={() => {
                     const where = typeDef?.query?.where;
-                    const whereWithVariablesReplaced = where.map(
+                    const whereWithVariablesReplaced = where?.map(
                       ([attribute, operator, value]) => {
                         let parsedVal = value;
                         if (typeof value === 'string' && value.startsWith('$'))
