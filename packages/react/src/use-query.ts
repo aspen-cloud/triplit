@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   ClientFetchResult,
   TriplitClient,
@@ -26,11 +26,9 @@ export function useQuery<
     ClientFetchResult<ClientQuery<M, CN>> | undefined
   >(undefined);
   const [fetching, setFetching] = useState(true);
-  const [fetchingRemote, setFetchingRemote] = useState(
-    client.syncEngine.connectionStatus === 'CONNECTING' ||
-      client.syncEngine.connectionStatus === 'OPEN'
-  );
+  const [fetchingRemote, setFetchingRemote] = useState(true);
   const [error, setError] = useState<any>(undefined);
+  const hasResponseFromServer = useRef(false);
 
   const builtQuery = query && query.build();
   const stringifiedQuery = builtQuery && JSON.stringify(builtQuery);
@@ -39,8 +37,13 @@ export function useQuery<
     const unsub = client.syncEngine.onConnectionStatusChange((status) => {
       if (status === 'CLOSING' || status === 'CLOSED') {
         setFetchingRemote(false);
+        return;
       }
-    });
+      if (status === 'OPEN' && hasResponseFromServer.current === false) {
+        setFetchingRemote(true);
+        return;
+      }
+    }, true);
     return () => {
       unsub();
     };
@@ -68,6 +71,7 @@ export function useQuery<
         : {
             localOnly: false,
             onRemoteFulfilled: () => {
+              hasResponseFromServer.current = true;
               setFetchingRemote(false);
             },
           }
