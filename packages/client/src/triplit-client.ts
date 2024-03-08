@@ -402,10 +402,6 @@ export class TriplitClient<M extends ClientSchema | undefined = undefined> {
     let results: FetchResult<CQ>;
     const clientSubscriptionCallback = (newResults: FetchResult<CQ>) => {
       results = newResults;
-      if (fulfilledTimeout !== null) {
-        clearTimeout(fulfilledTimeout);
-        fulfilledTimeout = null;
-      }
       onResults(results as ClientFetchResult<CQ>, { hasRemoteFulfilled });
     };
     unsubscribeLocal = this.db.subscribe(
