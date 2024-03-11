@@ -1,5 +1,5 @@
 import path from 'path';
-import fs from 'fs';
+import fs, { existsSync, readFileSync } from 'fs';
 import ts from 'typescript';
 
 export function createDirIfNotExists(dir: string) {
@@ -107,4 +107,16 @@ export async function loadTsModule(filepath: string) {
   } finally {
     fs.rmSync(tmpDir, { recursive: true, force: true });
   }
+}
+
+export function inferProjectName() {
+  let name = path.basename(CWD);
+  const packageJsonPath = CWD + '/package.json';
+  if (existsSync(packageJsonPath)) {
+    const packageJson = JSON.parse(readFileSync(packageJsonPath, 'utf8'));
+    if (packageJson.name) {
+      name = packageJson.name;
+    }
+  }
+  return name;
 }

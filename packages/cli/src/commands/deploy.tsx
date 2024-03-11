@@ -12,10 +12,10 @@ import {
 import { getOrganization } from '../organization-state.js';
 import { selectOrCreateAnOrganization } from '../remote-utils.js';
 import { createConfig, getConfig } from '../project-config.js';
-import { CWD } from '../filesystem.js';
+import { CWD, inferProjectName } from '../filesystem.js';
 import { existsSync, readFileSync } from 'fs';
 import { supabase } from '../supabase.js';
-import { blue, bold } from 'ansis/colors';
+import { blue, bold, green } from 'ansis/colors';
 import ora from 'ora';
 
 export default Command({
@@ -77,65 +77,71 @@ export default Command({
 
     let config = getConfig();
     if (!config) {
-      console.log("It looks like you haven't deployed this project before.");
-      const possibleProjectName = inferProjectName();
-      const { data: existingProject, error: fetchExistingProjectError } =
-        await supabase
-          .from('projects')
-          .select('id, name, organization_id')
-          .eq('organization_id', organization.id)
-          .eq('name', possibleProjectName)
-          .single();
+      console.log(
+        "\nIt looks like your current workspace isn't linked to a Triplit Cloud project.\n"
+      );
+      console.log(
+        `Run ${green('`triplit link`')} to link this workspace to a project.\n`
+      );
+      return;
+      // const possibleProjectName = inferProjectName();
+      // const { data: existingProject, error: fetchExistingProjectError } =
+      //   await supabase
+      //     .from('projects')
+      //     .select('id, name, organization_id')
+      //     .eq('organization_id', organization.id)
+      //     .eq('name', possibleProjectName)
+      //     .single();
 
-      const shouldUseExistingProject = async () => {
-        console.log(
-          `A project with the name ${bold(
-            possibleProjectName
-          )} already exists in this organization.`
-        );
-        const { proceed } = await prompts({
-          type: 'confirm',
-          name: 'proceed',
-          message: 'Would you like to deploy to this exiting project?',
-        });
-        return proceed;
-      };
+      // const shouldUseExistingProject = async () => {
+      //   console.log(
+      //     `A project with the name ${bold(
+      //       possibleProjectName
+      //     )} already exists in this organization.`
+      //   );
+      //   const { proceed } = await prompts({
+      //     type: 'confirm',
+      //     name: 'proceed',
+      //     message: 'Would you like to deploy to this exiting project?',
+      //   });
+      //   return proceed;
+      // };
 
-      if (existingProject && (await shouldUseExistingProject())) {
-        // TODO: possibly early return if this is a v1 project
-        config = createConfig({
-          id: existingProject.id,
-          name: existingProject.name,
-        });
-      } else {
-        const { proceed } = await prompts({
-          type: 'confirm',
-          name: 'proceed',
-          message: 'Would you like to deploy to a new project?',
-        });
-        if (!proceed) return;
-        const { name } = await prompts({
-          type: 'text',
-          name: 'name',
-          message: 'Enter a name for this project',
-          initial: inferProjectName(),
-          validate: (value: string) =>
-            value.length > 0 ? true : 'Project name must not be empty',
-        });
-        const { data: newProject, error: projectCreationError } = await supabase
-          .from('projects')
-          .insert({ name: name, organization_id: organization.id, version: 2 })
-          .select()
-          .single();
-        if (projectCreationError) {
-          console.error('Error creating project', projectCreationError);
-          return;
-        }
-        config = createConfig({
-          id: newProject.id,
-          name: newProject.name,
-        });
-      }
+      // if (existingProject && (await shouldUseExistingProject())) {
+      //   // TODO: possibly early return if this is a v1 project
+      //   config = createConfig({
+      //     id: existingProject.id,
+      //     name: existingProject.name,
+      //   });
+      // } else {
+      //   const { proceed } = await prompts({
+      //     type: 'confirm',
+      //     name: 'proceed',
+      //     message: 'Would you like to deploy to a new project?',
+      //   });
+      //   if (!proceed) return;
+      //   const { name } = await prompts({
+      //     type: 'text',
+      //     name: 'name',
+      //     message: 'Enter a name for this project',
+      //     initial: inferProjectName(),
+      //     validate: (value: string) =>
+      //       value.length > 0 ? true : 'Project name must not be empty',
+      //   });
+      //   const { data: newProject, error: projectCreationError } = await supabase
+      //     .from('projects')
+      //     .insert({ name: name, organization_id: organization.id, version: 2 })
+      //     .select()
+      //     .single();
+      //   if (projectCreationError) {
+      //     console.error('Error creating project', projectCreationError);
+      //     return;
+      //   }
+      //   config = createConfig({
+      //     id: newProject.id,
+      //     name: newProject.name,
+      //   });
+      // }
     }
     const buildingSpinner = ora('Building project');
     buildingSpinner.start();
@@ -200,15 +206,3 @@ export default Command({
     }
   },
 });
-
-function inferProjectName() {
-  let name = path.basename(CWD);
-  const packageJsonPath = CWD + '/package.json';
-  if (existsSync(packageJsonPath)) {
-    const packageJson = JSON.parse(readFileSync(packageJsonPath, 'utf8'));
-    if (packageJson.name) {
-      name = packageJson.name;
-    }
-  }
-  return name;
-}
