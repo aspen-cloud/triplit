@@ -33,6 +33,9 @@
     },
     {
       "path": "../react/tsconfig.json"
+    },
+    {
+      "path": "../server-core/tsconfig.json"
     }
   ]
 }

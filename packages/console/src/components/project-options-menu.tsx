@@ -1,11 +1,10 @@
-import { ImportProjectForm, addProjectToConsole } from './import-project-form';
+import { ImportProjectForm } from './import-project-form';
 import { ProjectInfoForm } from './project-info-form';
 import { ProjectSelector } from './project-selector';
 import { DownloadSimple, FolderOpen, Info, Trash } from '@phosphor-icons/react';
 import { useState } from 'react';
 import { useProjectState } from './project-provider';
 import { useProject } from '../hooks/useProject';
-import { useSelectedCollection } from 'src/hooks/useSelectedCollection.js';
 import {
   Modal,
   DropdownMenu,
@@ -15,13 +14,13 @@ import {
   DropdownMenuTrigger,
 } from '@triplit/ui';
 import { DeleteProjectDialog } from './delete-project-dialog';
+import { addProjectToConsole } from 'src/utils/project.js';
 
 export function ProjectOptionsMenu({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const [_selectedCollection, setSelectedCollection] = useSelectedCollection();
   const [projectPrimaryKey, setSelectedProjectId] = useProjectState();
   const [infoModalIsOpen, setInfoModalIsOpen] = useState(false);
   const [selectModalIsOpen, setSelectModalIsOpen] = useState(false);

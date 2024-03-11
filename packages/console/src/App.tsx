@@ -1,4 +1,3 @@
-import { consoleClient } from '../triplit/client';
 import { useState } from 'react';
 import { JWTPayloadIsOfCorrectForm } from './utils/server';
 import { Modal } from '@triplit/ui';
@@ -6,9 +5,9 @@ import {
   ImportProjectForm,
   ProjectSelector,
   FullScreenWrapper,
-  addProjectToConsole,
 } from './components';
 import { useNavigate } from 'react-router-dom';
+import { addProjectToConsole } from './utils/project.js';
 
 async function initializeFromUrl() {
   if (typeof window === 'undefined') return;
