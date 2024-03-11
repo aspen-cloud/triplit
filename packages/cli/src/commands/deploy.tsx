@@ -43,37 +43,37 @@ export default Command({
       );
       return;
     }
-    const subscriptionStatusSpinner = ora(
-      `Checking ${organization.name} subscription status`
-    );
-    subscriptionStatusSpinner.start();
-    const { data: subscription, error: subscriptionError } = await supabase
-      .from('subscriptions')
-      .select('id, stripe_subscription_id, status, subscription_type_id')
-      .eq('organization_id', organization.id)
-      .neq('status', 'canceled')
-      .maybeSingle();
-    if (subscriptionError) {
-      subscriptionStatusSpinner.fail();
-      console.error('Error fetching subscription', subscriptionError);
-      return;
-    }
-    if (!subscription) {
-      subscriptionStatusSpinner.fail();
+    // const subscriptionStatusSpinner = ora(
+    //   `Checking ${organization.name} subscription status`
+    // );
+    // subscriptionStatusSpinner.start();
+    // const { data: subscription, error: subscriptionError } = await supabase
+    //   .from('subscriptions')
+    //   .select('id, stripe_subscription_id, status, subscription_type_id')
+    //   .eq('organization_id', organization.id)
+    //   .neq('status', 'canceled')
+    //   .maybeSingle();
+    // if (subscriptionError) {
+    //   subscriptionStatusSpinner.fail();
+    //   console.error('Error fetching subscription', subscriptionError);
+    //   return;
+    // }
+    // if (!subscription) {
+    //   subscriptionStatusSpinner.fail();
 
-      console.log(
-        `${blue(
-          organization.name
-        )} is not subscribed to a Triplit plan with hosted deployments.`
-      );
-      console.log(
-        `Run ${blue(
-          '`triplit upgrade`'
-        )} to upgrade your organization and enable cloud deployments.`
-      );
-      return;
-    }
-    subscriptionStatusSpinner.succeed();
+    //   console.log(
+    //     `${blue(
+    //       organization.name
+    //     )} is not subscribed to a Triplit plan with hosted deployments.`
+    //   );
+    //   console.log(
+    //     `Run ${blue(
+    //       '`triplit upgrade`'
+    //     )} to upgrade your organization and enable cloud deployments.`
+    //   );
+    //   return;
+    // }
+    // subscriptionStatusSpinner.succeed();
 
     let config = getConfig();
     if (!config) {
@@ -102,6 +102,7 @@ export default Command({
       };
 
       if (existingProject && (await shouldUseExistingProject())) {
+        // TODO: possibly early return if this is a v1 project
         config = createConfig({
           id: existingProject.id,
           name: existingProject.name,
