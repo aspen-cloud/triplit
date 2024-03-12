@@ -42,7 +42,8 @@ async function selectProject(organization: Organization) {
   const { data: projects, error } = await supabase
     .from('projects')
     .select('id, name')
-    .eq('organization_id', organization.id);
+    .eq('organization_id', organization.id)
+    .eq('version', 2);
   if (error) {
     fetchingSpinner.fail('Error fetching projects');
     console.error(error);
