@@ -21,6 +21,7 @@ import {
   CollectionDefinition,
   CollectionsDefinition,
   SchemaDefinition,
+  UserTypeOptions,
 } from './data-types/serialization.js';
 import { StringType } from './data-types/string.js';
 import { NumberType } from './data-types/number.js';
@@ -34,6 +35,7 @@ import {
   ExtractTimestampedType,
 } from './data-types/type.js';
 import { QueryType, SubQuery } from './data-types/query.js';
+import { Value as TBValue } from '@sinclair/typebox/value';
 
 // We infer TObject as a return type of some funcitons and this causes issues with consuming packages
 // Using solution 3.1 described in this comment as a fix: https://github.com/microsoft/TypeScript/issues/47663#issuecomment-1519138189
@@ -470,3 +472,222 @@ function stringHash(str: string, base = 31, mod = 1e9 + 9) {
   }
   return hashValue;
 }
+
+type ChangeToAttribute =
+  | {
+      type: 'update';
+      changes: {
+        type?: string;
+        options?: any;
+        optional?: boolean;
+      };
+    }
+  | {
+      type: 'insert';
+      metadata: {
+        type: string;
+        options: any;
+        optional: boolean;
+      };
+    }
+  | {
+      type: 'delete';
+    };
+
+type AttributeDiff = {
+  attribute: string[];
+} & ChangeToAttribute;
+
+type CollectionAttributeDiff = {
+  collection: string;
+} & AttributeDiff;
+// type AttributeDiff = AttributeChange;
+
+export function diffCollections(
+  modelA: Model<any> | undefined,
+  modelB: Model<any> | undefined,
+  attributePathPrefix: string[] = []
+): AttributeDiff[] {
+  if (modelA === undefined && modelB === undefined) return [];
+  const propertiesA = modelA?.properties ?? {};
+  const propertiesB = modelB?.properties ?? {};
+  const allProperties = new Set([
+    ...Object.keys(propertiesA),
+    ...Object.keys(propertiesB),
+  ]);
+
+  const diff: AttributeDiff[] = [];
+
+  for (const prop of allProperties) {
+    if (!(prop in propertiesA)) {
+      // Added in modelB
+      const path = [...attributePathPrefix, prop];
+      diff.push({
+        type: 'insert',
+        attribute: path,
+        metadata: {
+          type: propertiesB[prop].type,
+          options: propertiesB[prop].options,
+          optional: modelB?.optional?.includes(prop) ?? false,
+        },
+      });
+      continue;
+    }
+    if (!(prop in propertiesB)) {
+      // Deleted in modelB
+      const path = [...attributePathPrefix, prop];
+      diff.push({
+        type: 'delete',
+        attribute: path,
+      });
+      continue;
+    }
+    if (prop in propertiesA && prop in propertiesB) {
+      if (
+        TBValue.Equal(propertiesA[prop].toJSON(), propertiesB[prop].toJSON()) &&
+        (modelA?.optional?.includes(prop) ?? false) ===
+          (modelB?.optional?.includes(prop) ?? false)
+      )
+        continue;
+      const path = [...attributePathPrefix, prop];
+
+      if (
+        propertiesA[prop].type === 'record' &&
+        propertiesB[prop].type === 'record'
+      ) {
+        console.log('diffing record', propertiesA[prop], propertiesB[prop]);
+        diff.push(
+          ...diffCollections(propertiesA[prop], propertiesB[prop], path)
+        );
+        continue;
+      }
+      const attrDiff: AttributeDiff = {
+        type: 'update',
+        attribute: path,
+        changes: {},
+      };
+
+      // Check if type has changed
+      if (propertiesA[prop].type !== propertiesB[prop].type) {
+        attrDiff.changes.type = propertiesB[prop].type;
+      }
+
+      // Check if Set item type has changed
+      if (propertiesA[prop].type === 'set') {
+        if (propertiesA[prop].items.type !== propertiesB[prop].items.type) {
+          attrDiff.changes.options.items = {
+            type: propertiesB[prop].items.type,
+          };
+        }
+      }
+
+      // Check if optionality has changed
+      const isOptionalInA = modelA?.optional?.includes(prop) ?? false;
+      const isOptionalInB = modelB?.optional?.includes(prop) ?? false;
+      if (isOptionalInA !== isOptionalInB) {
+        attrDiff.changes.optional = isOptionalInB;
+      }
+
+      // Check if type options has changed
+      attrDiff.changes.options = diffAttributeOptions(
+        propertiesA[prop].options ?? {},
+        propertiesB[prop].options ?? {}
+      );
+      diff.push(attrDiff);
+      continue;
+    }
+  }
+  return diff;
+}
+
+function diffAttributeOptions(attr1: UserTypeOptions, attr2: UserTypeOptions) {
+  const diff: Partial<UserTypeOptions> = {};
+  if (attr1.nullable !== attr2.nullable) {
+    diff.nullable = attr2.nullable;
+  }
+  if (attr1.default !== attr2.default) {
+    diff.default = attr2.default;
+  }
+  return diff;
+}
+
+export function diffSchemas(
+  schemaA: StoreSchema<Models<any, any>>,
+  schemaB: StoreSchema<Models<any, any>>
+): CollectionAttributeDiff[] {
+  const allCollections = new Set([
+    ...Object.keys(schemaA.collections),
+    ...Object.keys(schemaB.collections),
+  ]);
+  const diff: CollectionAttributeDiff[] = [];
+  for (const collection of allCollections) {
+    const collectionA = schemaA.collections[collection];
+    const collectionB = schemaB.collections[collection];
+    diff.push(
+      ...diffCollections(collectionA.schema, collectionB.schema).map(
+        (change) =>
+          ({
+            collection,
+            ...change,
+          } as CollectionAttributeDiff)
+      )
+    );
+  }
+  return diff;
+}
+
+export function getDestructiveEdits(schemaDiff: CollectionAttributeDiff[]) {
+  return schemaDiff.reduce((acc, curr) => {
+    const maybeDangerousEdit = DANGEROUS_EDITS.find((check) =>
+      check.matchesDiff(curr)
+    );
+    if (maybeDangerousEdit) {
+      acc.push({ issue: maybeDangerousEdit.description, context: curr });
+    }
+    return acc;
+  }, [] as { issue: string; context: CollectionAttributeDiff }[]);
+}
+
+const DANGEROUS_EDITS = [
+  {
+    description: 'removed an existing attribute',
+    matchesDiff: (diff: CollectionAttributeDiff) => {
+      return diff.type === 'delete';
+    },
+  },
+  {
+    description: 'changed a attribute from optional to required',
+    matchesDiff: (diff: CollectionAttributeDiff) => {
+      if (diff.type === 'update') {
+        return diff.changes.optional === false;
+      }
+      return false;
+    },
+  },
+  {
+    description: 'changed the type of an attribute',
+    matchesDiff: (diff: CollectionAttributeDiff) => {
+      if (diff.type === 'update') {
+        return diff.changes.type !== undefined;
+      }
+      return false;
+    },
+  },
+  {
+    description: 'added an attribute where optional is not set',
+    matchesDiff: (diff: CollectionAttributeDiff) => {
+      if (diff.type === 'insert' && diff.metadata.optional === false)
+        return true;
+      return false;
+    },
+  },
+  {
+    description: 'changed an attribute from nullable to non-nullable',
+    matchesDiff: (diff: CollectionAttributeDiff) => {
+      if (diff.type === 'update') {
+        return diff.changes.options?.nullable === false;
+      }
+      return false;
+    },
+  },
+];

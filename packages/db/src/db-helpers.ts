@@ -17,6 +17,8 @@ import {
 import {
   Model,
   Models,
+  diffSchemas,
+  getDestructiveEdits,
   getSchemaFromPath,
   schemaToTriples,
   triplesToSchema,
@@ -192,9 +194,32 @@ export type StoreSchema<M extends Models<any, any> | undefined> =
 
 export async function overrideStoredSchema(
   tripleStore: TripleStore,
-  schema: StoreSchema<Models<any, any>>
+  schema: StoreSchema<Models<any, any>>,
+  safeMode = false
 ) {
   await tripleStore.transact(async (tx) => {
+    const currentSchema = await readSchemaFromTripleStore(tx);
+
+    if (currentSchema.schema && safeMode) {
+      const diff = diffSchemas(currentSchema.schema, schema);
+      const issues = getDestructiveEdits(diff);
+      if (issues.length > 0) {
+        console.error(
+          'Cannot apply new schema because it might be destructive',
+          issues.reduce((acc, issue) => {
+            const collection = issue.context.collection;
+            if (!(collection in acc)) {
+              acc[collection] = {};
+            }
+            acc[collection][issue.context.attribute.join('.')] = issue.issue;
+            return acc;
+          }, {} as Record<string, Record<string, string>>)
+        );
+        return;
+      }
+      console.log(`applying ${diff.length} attribute changes to schema`);
+    }
+
     const existingTriples = await tx.findByEntity(
       appendCollectionToId('_metadata', '_schema')
     );
