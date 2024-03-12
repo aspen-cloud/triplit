@@ -1,5 +1,13 @@
 # @triplit/cli
 
+## 0.3.32
+
+### Patch Changes
+
+- Updated dependencies [aff9054]
+  - @triplit/client@0.3.27
+  - @triplit/console@0.3.30
+
 ## 0.3.31
 
 ### Patch Changes
