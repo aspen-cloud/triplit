@@ -687,8 +687,8 @@ it('fetchOne gets first match or null', async () => {
 });
 
 describe('OR queries', () => {
-  const db = new DB({ source: new InMemoryTupleStorage() });
   it('supports OR queries', async () => {
+    const db = new DB({ source: new InMemoryTupleStorage() });
     // storage.data = [];
     await db.insert('roster', { id: '1', name: 'Alice', age: 22 });
 
@@ -742,6 +742,59 @@ describe('OR queries', () => {
         [1, 2, 3].map((id) => expect.stringContaining(id.toString()))
       )
     );
+  });
+
+  it('can use Sets in or queries', async () => {
+    const db = new DB({
+      schema: {
+        collections: {
+          characters: {
+            schema: S.Schema({
+              id: S.Id(),
+              name: S.String(),
+              playedBy: S.Set(S.String()),
+            }),
+          },
+        },
+      },
+    });
+    await db.insert('characters', {
+      id: '1',
+      name: 'Jon Snow',
+      playedBy: new Set(['Kit Harington']),
+    });
+    await db.insert('characters', {
+      id: '2',
+      name: 'Arya Stark',
+      playedBy: new Set(['Maisie Williams']),
+    });
+    await db.insert('characters', {
+      id: '3',
+      name: 'Sansa Stark',
+      playedBy: new Set(['Sophie Turner']),
+    });
+    await db.insert('characters', {
+      id: '4',
+      name: 'Daenerys Targaryen',
+      playedBy: new Set(['Emilia Clarke']),
+    });
+    await db.insert('characters', {
+      id: '5',
+      name: 'Tyrion Lannister',
+      playedBy: new Set(['Peter Dinklage']),
+    });
+    const result = await db.fetch(
+      db
+        .query('characters')
+        .where(
+          or([
+            ['name', 'like', '%Stark'],
+            ['playedBy', 'has', 'Peter Dinklage'],
+          ])
+        )
+        .build()
+    );
+    expect(result.size).toBe(3);
   });
 });
 

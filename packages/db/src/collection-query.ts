@@ -799,9 +799,8 @@ export function doesEntityObjMatchWhere<Q extends CollectionQuery<any, any>>(
   if (!matchesBasicFilters) return false;
 
   const matchesOrFilters = orStatements.every(({ filters }) =>
-    filters.some(
-      (filter) => doesEntityObjMatchWhere(entityObj, [filter]),
-      schema
+    filters.some((filter) =>
+      doesEntityObjMatchWhere(entityObj, [filter], schema)
     )
   );
   if (!matchesOrFilters) return false;
