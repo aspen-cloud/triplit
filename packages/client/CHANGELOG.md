@@ -1,5 +1,11 @@
 # @triplit/client
 
+## 0.3.27
+
+### Patch Changes
+
+- aff9054: Fix update proxy to pass in correctly shaped entity data
+
 ## 0.3.26
 
 ### Patch Changes
