@@ -1,25 +1,19 @@
 import { Command } from '../../command.js';
 import { accessTokenMiddleware } from '../../middleware/account-auth.js';
-import { getOrganization } from '../../organization-state.js';
 import prompts from 'prompts';
 import { createConfig } from '../../project-config.js';
 import { supabase } from '../../supabase.js';
 import ora from 'ora';
 import { inferProjectName } from '../../filesystem.js';
+import { organizationMiddleware } from '../../middleware/organization.js';
 
 export default Command({
   description: 'Create a new Triplit Cloud project',
   flags: {},
   preRelease: false,
-  middleware: [accessTokenMiddleware],
+  middleware: [accessTokenMiddleware, organizationMiddleware],
   async run({ ctx }) {
-    const organization = getOrganization();
-    if (!organization) {
-      console.log(
-        'In order to create a project, you need to be working with an organization. Run `triplit org` to select or create an organization.'
-      );
-      return;
-    }
+    const { organization } = ctx;
     const project = await createProject(organization.id);
     createConfig(project);
   },
