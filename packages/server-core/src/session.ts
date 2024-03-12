@@ -6,8 +6,7 @@ import {
   CollectionQuery,
   Attribute,
   Value,
-  getSchemaFromPath,
-  Timestamp,
+  appendCollectionToId,
   EntityId,
 } from '@triplit/db';
 import {
@@ -583,34 +582,27 @@ export class Session {
     patches: (['set', Attribute, Value] | ['delete', Attribute])[]
   ) {
     try {
-      const schema = await this.db.getSchema();
-      const collectionSchema = schema?.collections[collectionName]?.schema;
-      if (collectionSchema) {
-        patches.forEach((p) => {
-          if (p[0] === 'set') {
-            const attrSchema = getSchemaFromPath(collectionSchema, p[1]);
-            // @ts-expect-error
-            p[2] = attrSchema.convertJSONToJS(p[2]);
-          }
-        });
-      }
-
-      const txResult = await this.db.update(
-        collectionName,
-        entityId,
-        (entity) => {
+      const txResult = await this.db.transact(
+        async (tx) => {
+          const id = appendCollectionToId(collectionName, entityId);
+          const timestamp = await tx.storeTx.getTransactionTimestamp();
           for (const patch of patches) {
-            const path = patch[1];
-            let current = entity;
-            for (let i = 0; i < path.length - 1; i++) {
-              current = current[path[i]];
-            }
             if (patch[0] === 'delete') {
-              delete current[path[path.length - 1]];
+              tx.storeTx.insertTriple({
+                id,
+                attribute: [collectionName, ...patch[1]],
+                value: null,
+                timestamp,
+                expired: true,
+              });
             } else if (patch[0] === 'set') {
-              current[path[path.length - 1]] = patch[2];
-            } else {
-              throw new TriplitError(`Invalid patch type: ${patch[0]}`);
+              tx.storeTx.insertTriple({
+                id,
+                attribute: [collectionName, ...patch[1]],
+                value: patch[2],
+                timestamp,
+                expired: false,
+              });
             }
           }
         },

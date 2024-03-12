@@ -40,7 +40,7 @@ export {
 } from './query.js';
 // TS issue occurs if we dont export FilterGroup (i think due to an infered return type somewhere)
 export type { Query, FilterGroup, CollectionQuery } from './query.js';
-export { stripCollectionFromId } from './db-helpers.js';
+export { stripCollectionFromId, appendCollectionToId } from './db-helpers.js';
 export type {
   TripleRow,
   EntityId,

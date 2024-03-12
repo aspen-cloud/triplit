@@ -11,6 +11,10 @@ import {
   Value,
   TriplitError,
   EntityId,
+  constructEntity,
+  TripleRow,
+  timestampedObjectToPlainObject,
+  appendCollectionToId,
 } from '@triplit/db';
 import {
   ClientFetchResult,
@@ -64,6 +68,16 @@ export class RemoteClient<M extends ClientSchema | undefined> {
     });
     if (error) throw error;
     return deserializeHTTPFetchResult(query, data.result, this.options.schema);
+  }
+
+  private async queryTriples<CQ extends ClientQuery<M, any>>(
+    query: CQ
+  ): Promise<TripleRow[]> {
+    const { data, error } = await this.sendRequest('/queryTriples', 'POST', {
+      query,
+    });
+    if (error) throw error;
+    return data;
   }
 
   async fetchOne<CQ extends ClientQuery<M, any>>(
@@ -176,9 +190,21 @@ export class RemoteClient<M extends ClientSchema | undefined> {
       entity: UpdateTypeFromModel<ModelFromModels<M, CN>>
     ) => void | Promise<void>
   ) {
+    /**
+     * This queries the current entity so we can construct "patches"
+     * Patches are basically tuples (ie triples w/o timestamps), so we should just call them tuples
+     * The way our updater works right now, non assignment operations (ie set.add(), etc) should have their value loaded as to not conflict with possibly "undefined" values in the proxy
+     * We should refactor this though, because we shouldnt require pre-loading data to make an update (@wernst has some ideas)
+     */
     const collectionSchema = this.options.schema?.[collectionName]?.schema;
-    const entity = {};
-    const changes = new ChangeTracker(entity);
+    const entityQuery = prepareFetchByIdQuery<M, CN>(collectionName, entityId);
+    const triples = await this.queryTriples(entityQuery);
+    const entity = constructEntity(
+      triples,
+      appendCollectionToId(collectionName, entityId)
+    );
+    const entityData = timestampedObjectToPlainObject(entity?.data as any);
+    const changes = new ChangeTracker(entityData);
     const updateProxy: any = createUpdateProxy(
       changes,
       entity,

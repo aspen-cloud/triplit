@@ -1067,7 +1067,7 @@ export function createUpdateProxy<M extends Model<any> | undefined>(
       const parentPropPointer = [prefix, prop].join('/');
       const currentValue = changeTracker.get(parentPropPointer);
 
-      // Non exitent values should be read as undefined
+      // Undefined values should be read as undefined
       if (currentValue === undefined) return undefined;
       // Null values will be returned as null (essentially the base case of "return currentValue")
       if (currentValue === null) return null;
