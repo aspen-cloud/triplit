@@ -1,5 +1,13 @@
 # @triplit/server-core
 
+## 0.3.26
+
+### Patch Changes
+
+- a049f47: Fix bug with remote update
+- Updated dependencies [a049f47]
+  - @triplit/db@0.3.23
+
 ## 0.3.25
 
 ### Patch Changes

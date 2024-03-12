@@ -1,5 +1,18 @@
 # @triplit/console
 
+## 0.3.29
+
+### Patch Changes
+
+- 66705ae: allow deep-linking to console, allowing current state to persist through refreshes
+- Updated dependencies [a049f47]
+- Updated dependencies [a049f47]
+- Updated dependencies [a049f47]
+  - @triplit/server-core@0.3.26
+  - @triplit/client@0.3.26
+  - @triplit/db@0.3.23
+  - @triplit/react@0.3.26
+
 ## 0.3.28
 
 ### Patch Changes
