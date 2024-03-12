@@ -5,7 +5,7 @@ import prompts from 'prompts';
 import * as Flag from '../flags.js';
 
 export default Command({
-  description: 'Runs up migrations on the remote database',
+  description: "Clears the sync server's database",
   middleware: [serverRequesterMiddleware],
   flags: {
     full: Flag.Boolean({

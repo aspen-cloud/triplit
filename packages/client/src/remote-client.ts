@@ -199,6 +199,7 @@ export class RemoteClient<M extends ClientSchema | undefined> {
     const collectionSchema = this.options.schema?.[collectionName]?.schema;
     const entityQuery = prepareFetchByIdQuery<M, CN>(collectionName, entityId);
     const triples = await this.queryTriples(entityQuery);
+    // TODO we should handle errors or non-existent entities
     const entity = constructEntity(
       triples,
       appendCollectionToId(collectionName, entityId)
@@ -207,7 +208,7 @@ export class RemoteClient<M extends ClientSchema | undefined> {
     const changes = new ChangeTracker(entityData);
     const updateProxy: any = createUpdateProxy(
       changes,
-      entity,
+      entityData,
       collectionSchema
     );
     await updater(updateProxy);
