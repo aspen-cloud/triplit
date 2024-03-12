@@ -18,7 +18,7 @@ describe('query root permutations', () => {
       ],
     };
     const permutations = generateQueryRootPermutations<any, any>(query);
-    prettyPrint(permutations);
+    // prettyPrint(permutations);
     expect(permutations).toHaveLength(2);
   });
   it('can generate a permutation for each subquery filter', () => {
@@ -39,7 +39,7 @@ describe('query root permutations', () => {
       ],
     };
     const permutations = generateQueryRootPermutations<any, any>(query);
-    prettyPrint(permutations);
+    // prettyPrint(permutations);
     expect(permutations).toHaveLength(2);
   });
 });

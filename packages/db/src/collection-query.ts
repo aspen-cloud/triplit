@@ -212,7 +212,9 @@ export async function fetchDeltaTriples<
   M extends Models<any, any> | undefined,
   Q extends CollectionQuery<M, any>
 >(tx: TripleStoreApi, query: Q, newTriples: TripleRow[], schema?: M) {
-  const queryPermutations = generateQueryRootPermutations(query);
+  const queryPermutations = generateQueryRootPermutations(
+    replaceVariablesInQuery(query)
+  );
 
   const changedEntityTriples = newTriples.reduce((entities, trip) => {
     if (!entities.has(trip.id)) {
@@ -239,29 +241,29 @@ export async function fetchDeltaTriples<
       entityTriples,
       stateVector
     ).get(changedEntityId)?.data;
-    const entityAfterStateVector =
-      getEntitiesAtStateVector(entityTriples).get(changedEntityId)?.data;
+    const entityAndTriplesAfterStateVector =
+      getEntitiesAtStateVector(entityTriples).get(changedEntityId);
+    const entityAfterStateVector = entityAndTriplesAfterStateVector?.data;
 
     for (const q of queryPermutations) {
       if (q.collectionName !== splitIdParts(changedEntityId)[0]) {
         continue;
       }
-      const matchesBefore =
+      const matchesSimpleFiltersBefore =
         !!entityBeforeStateVector &&
         doesEntityObjMatchWhere(
           entityBeforeStateVector,
           q.where,
           schema && schema[q.collectionName].schema
         );
-      const matchesAfter =
+      const matchesSimpleFiltersAfter =
         !!entityAfterStateVector &&
         doesEntityObjMatchWhere(
           entityAfterStateVector,
           q.where,
           schema && schema[q.collectionName].schema
         );
-
-      if (!matchesBefore && !matchesAfter) {
+      if (!matchesSimpleFiltersBefore && !matchesSimpleFiltersAfter) {
         continue;
       }
 
@@ -269,7 +271,7 @@ export async function fetchDeltaTriples<
         (filter) => 'exists' in filter
       ) as SubQueryFilter<M>[];
       let matchesWithSubqueriesBefore = true;
-      if (matchesBefore) {
+      if (matchesSimpleFiltersBefore) {
         for (const { exists: subQuery } of subQueries) {
           const subQueryResult = await fetchOne(
             tx,
@@ -301,7 +303,7 @@ export async function fetchDeltaTriples<
       } else {
         matchesWithSubqueriesBefore = false;
       }
-      if (!matchesWithSubqueriesBefore && !matchesAfter) {
+      if (!matchesWithSubqueriesBefore && !matchesSimpleFiltersAfter) {
         continue;
       }
       const afterTriplesMatch = [];
@@ -335,10 +337,40 @@ export async function fetchDeltaTriples<
         }
         afterTriplesMatch.push(...[...subQueryResult.triples.values()].flat());
       }
+
       if (!matchesWithSubqueriesBefore && !matchesWithSubqueriesAfter) {
         continue;
       }
+
       if (!matchesWithSubqueriesBefore) {
+        if (subQueries.length === 0) {
+          // Basically where including the whole entity if it is new to the result set
+          // but we also want to filter any triples that will be included in the
+          // final step of adding changed triples for the given entity
+          // An example is if we insert a net new entity it will not match before
+          // so it need's the whole entity to be sent but that will fully overlap
+          // with the last step.
+          const alreadyIncludedTriples =
+            changedEntityTriples.get(changedEntityId)!;
+          const tripleKeys = new Set(
+            alreadyIncludedTriples.map(
+              (t) =>
+                t.id + JSON.stringify(t.attribute) + JSON.stringify(t.timestamp)
+            )
+          );
+          afterTriplesMatch.push(
+            ...Object.values(entityAndTriplesAfterStateVector!.triples)
+              .flat()
+              .filter(
+                (t) =>
+                  !tripleKeys.has(
+                    t.id +
+                      JSON.stringify(t.attribute) +
+                      JSON.stringify(t.timestamp)
+                  )
+              )
+          );
+        }
         deltaTriples.push(...afterTriplesMatch);
       }
       deltaTriples.push(...changedEntityTriples.get(changedEntityId)!);
@@ -835,7 +867,6 @@ function entitySatisfiesAllFilters(
     },
     new Map()
   );
-
   return (
     groupedFilters.size === 0 ||
     [...groupedFilters.entries()].every(([path, filters]) => {
