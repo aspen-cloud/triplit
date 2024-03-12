@@ -1,5 +1,22 @@
 # @triplit/cli
 
+## 0.3.31
+
+### Patch Changes
+
+- 2916748: disable subscription check for deploy command
+- 1c2a894: add clear remote db command
+- 99c705a: add link and project create commands
+- Updated dependencies [a049f47]
+- Updated dependencies [a049f47]
+- Updated dependencies [66705ae]
+- Updated dependencies [a049f47]
+  - @triplit/server-core@0.3.26
+  - @triplit/client@0.3.26
+  - @triplit/console@0.3.29
+  - @triplit/db@0.3.23
+  - @triplit/server@0.3.26
+
 ## 0.3.30
 
 ### Patch Changes

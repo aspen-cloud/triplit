@@ -1,5 +1,11 @@
 # @triplit/db
 
+## 0.3.23
+
+### Patch Changes
+
+- a049f47: export appendCollectionToId
+
 ## 0.3.22
 
 ### Patch Changes

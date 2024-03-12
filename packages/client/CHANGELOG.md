@@ -1,5 +1,13 @@
 # @triplit/client
 
+## 0.3.26
+
+### Patch Changes
+
+- a049f47: preload entity on remote update, hotfix for remote non assignment updates
+- Updated dependencies [a049f47]
+  - @triplit/db@0.3.23
+
 ## 0.3.25
 
 ### Patch Changes
