@@ -1,9 +1,10 @@
 import { readFileSync, existsSync, writeFileSync } from 'fs';
 import { CWD } from './filesystem.js';
+import { blue } from 'ansis/colors';
 
 const CONFIG_PATH = CWD + '/triplit.config.json';
 
-type ProjectConfig = {
+export type ProjectConfig = {
   name: string;
   id: string;
 };
@@ -26,4 +27,12 @@ export function createConfig(config: ProjectConfig) {
   writeFileSync(CONFIG_PATH, data);
   console.log(`Created config at ${CONFIG_PATH}`);
   return config;
+}
+
+export function printDashboardLink(config: ProjectConfig) {
+  console.log(
+    `\nManage this project at:\n\n${blue(
+      `https://triplit.dev/dashboard/project/${config.id}`
+    )}\n`
+  );
 }

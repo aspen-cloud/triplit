@@ -1,7 +1,7 @@
 import { Command } from '../../command.js';
 import { accessTokenMiddleware } from '../../middleware/account-auth.js';
 import prompts from 'prompts';
-import { createConfig } from '../../project-config.js';
+import { createConfig, printDashboardLink } from '../../project-config.js';
 import { supabase } from '../../supabase.js';
 import ora from 'ora';
 import { inferProjectName } from '../../filesystem.js';
@@ -16,6 +16,7 @@ export default Command({
     const { organization } = ctx;
     const project = await createProject(organization.id);
     createConfig(project);
+    printDashboardLink(project);
   },
 });
 

@@ -1,5 +1,5 @@
 import { Command } from '../../command.js';
-import { getConfig } from '../../project-config.js';
+import { getConfig, printDashboardLink } from '../../project-config.js';
 import { blue, green } from 'ansis/colors';
 
 export default Command({
@@ -19,10 +19,6 @@ export default Command({
       );
       return;
     }
-    console.log(
-      `\nManage this project at:\n\n${blue(
-        `https://triplit.dev/dashboard/project/${config.id}`
-      )}\n`
-    );
+    printDashboardLink(config);
   },
 });
