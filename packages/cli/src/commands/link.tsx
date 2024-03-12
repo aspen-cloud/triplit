@@ -6,20 +6,15 @@ import prompts from 'prompts';
 import { createConfig, getConfig } from '../project-config.js';
 import { supabase } from '../supabase.js';
 import ora from 'ora';
+import { organizationMiddleware } from '../middleware/organization.js';
 
 export default Command({
   description: 'Link your local workspace to a Triplit Cloud project',
   flags: {},
   preRelease: false,
-  middleware: [accessTokenMiddleware],
+  middleware: [accessTokenMiddleware, organizationMiddleware],
   async run({ ctx }) {
-    const organization = getOrganization();
-    if (!organization) {
-      console.log(
-        'In order to link to a Triplit Cloud project, you need to be working with an organization. Run `triplit org` to select or create an organization.'
-      );
-      return;
-    }
+    const { organization } = ctx;
     let config = getConfig();
     if (config) {
       console.log(

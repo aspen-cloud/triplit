@@ -1,6 +1,7 @@
 import { Command } from '../command.js';
 import { clearSession, getSession, storeSession } from '../auth-state.js';
 import { clearOrganization } from '../organization-state.js';
+import { blue } from 'ansis/colors';
 
 export default Command({
   description: 'Sign out of Triplit Cloud',
@@ -8,11 +9,11 @@ export default Command({
   async run({ flags, ctx, args }) {
     const existingSession = getSession();
     if (!existingSession) {
-      console.log('You are not logged in.');
+      console.error('\nYou are not logged in.\n');
       return;
     }
     clearSession();
     clearOrganization();
-    console.log('You have been logged out.');
+    console.log(blue('\nYou have been logged out.\n'));
   },
 });

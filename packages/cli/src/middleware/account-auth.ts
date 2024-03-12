@@ -1,3 +1,4 @@
+import { blue, green } from 'ansis/colors';
 import { getSession, storeSession } from '../auth-state.js';
 import { Middleware } from '../middleware.js';
 import { supabase } from '../supabase.js';
@@ -11,7 +12,9 @@ export const accessTokenMiddleware = Middleware({
   run: async ({ flags, args }) => {
     let session = getSession();
     if (!session) {
-      return 'No session found. Run `triplit login` and then retry.';
+      return `\nNo session found. Run ${green(
+        '`triplit login`'
+      )} and then retry.\n`;
     }
     // Check if session is expired
     const now = new Date();
@@ -58,7 +61,9 @@ function makeAPIRequester(token: string) {
       if (e.response) {
         throw e.response.data;
       } else if (e.request) {
-        throw `No response was received from server: ${url}. Please ensure you are connected to the internet and are pointing to the correct server.`;
+        throw `No response was received from server: ${blue(
+          url
+        )}. Please ensure you are connected to the internet and are pointing to the correct server.`;
       }
       throw `An error occurred while requesting the remote database: ${e.message}`;
     }
