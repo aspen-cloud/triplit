@@ -1,0 +1,144 @@
+import { Callout } from 'nextra/components';
+import Image from 'next/image';
+import dashboardOverview from '../../../public/dashboard-overview.png';
+import dashboardDeployments from '../../../public/dashboard-deployments.png';
+
+# Getting Started with Triplit Cloud v2
+
+<Callout type="warning" emoji="⚠️">
+  Triplit Cloud is currently in preview. There may be bugs, breaking changes,
+  and other issues. Please report any issues you encounter or any feedback you
+  have to our [Github](https://triplit.dev/github) or
+  [Discord](https://triplit.dev/discord).
+</Callout>
+<Callout type="info" emoji="ℹ️">
+  To get access to Triplit Cloud, join our
+  [waitlist](https://triplit.dev/waitlist).
+</Callout>
+
+This tutorial will show you how to deploy a project to Triplit Cloud. It will cover
+
+- How to authenticate with Triplit Cloud using the CLI
+- How to deploy a project to Triplit Cloud
+- How to monitor your deployment with the Triplit dashboard
+
+## Prerequisites
+
+- A Triplit project. If you don't have one, you can create one by following the
+  [Getting Started with Triplit](/getting-started) guide.
+- The Triplit CLI. You can install it by running `npm install -g @triplit/cli`.
+
+## Authenticate with Triplit Cloud
+
+To authenticate with Triplit Cloud, run the following command from inside your project directory:
+
+```bash copy
+triplit login
+```
+
+This will ask you to enter an email, and will send a one-time password to your email. After entering the one-time password, you will be authenticated with Triplit Cloud.
+
+<Callout type="info" emoji="ℹ️">
+  If you already have access to the [Triplit
+  Dashboard](https://triplit.dev/dashboard), make sure you enter the same email
+  you used to sign up for the dashboard.
+</Callout>
+
+You'll also be asked to select an organization or create a new one. If you're part of an organization, you can select it from the list. If you're not part of an organization, you can create a new one.
+
+```stdout
+Choose an organization to work with:
+
+? Select an organization › - Use arrow-keys. Return to submit.
+❯   Create a new organization
+```
+
+You can then run `triplit whoami` to verify that you are authenticated.
+
+```
+You're logged in as phil@superdev.com
+You're currently working with the organization Super Dev Team
+```
+
+<Callout type="info" emoji="ℹ️">
+  If you want to set up multiple organizations and switch between them, run
+  `triplit org`.
+</Callout>
+
+## Create and link to a cloud project
+
+<Callout type="warning" emoji="⚠️">
+  This version of Triplit Cloud is incompatible with the previous version. If
+  you created a project with the previous version, you will need to create a new
+  project and link your local project to it. If you have any questions or need
+  help, please reach out to us on [Discord](https://triplit.dev/discord).
+</Callout>
+
+To deploy a project to Triplit Cloud, you need to create a cloud project. To create a cloud project, run the following command:
+
+```bash copy
+triplit project create
+```
+
+This will create a project in Triplit Cloud that will be associated with the current organization you're working with. This command will also create a `triplit.config.json` file in your project directory that looks like this:
+
+```json filename="triplit.config.json"
+{
+  "id": "project-1234",
+  "name": "my-project"
+}
+```
+
+<Callout type="info" emoji="ℹ️">
+  If at any time you want to change the cloud project that your local project is
+  linked to, run `triplit project link`.
+</Callout>
+
+## Copy in your environment variables
+
+To connect the Triplit Client in your App to the Triplit Cloud project you created, you'll need to have a properly configured `.env` file in your project. You can view the environment variables from the Triplit Cloud project by running the following command:
+
+```bash copy
+triplit project manage
+```
+
+This will print a url to the Triplit Cloud dashboard where you can manage your project. You can then copy the environment variables from the dashboard and paste them into your `.env` file.
+
+<Image
+  src={dashboardOverview}
+  style={{ borderRadius: 8, marginTop: 16 }}
+  width={800}
+  height={800}
+  alt="The Triplit Dashboard (overview page)"
+/>
+
+## Deploy your project
+
+This part's easy: just run `triplit deploy`. This will bundle your project, including it's `triplit/schema.ts` file, and deploy it to Triplit Cloud.
+
+```bash copy
+triplit deploy
+```
+
+If you've used a previous iteration of Triplit Cloud and are expecting to run
+various `triplit migrate` commands, you can ignore that step. If you update
+your schema, simply run `triplit deploy` again and your changes will be
+reflected in the cloud.
+
+## Viewing your deployments
+
+You can view your deployments in the Triplit Cloud dashboard. To open the dashboard, run the following command again:
+
+```bash copy
+triplit project manage
+```
+
+Go to the "Deployments" tab to see all of your deployments.
+
+<Image
+  src={dashboardDeployments}
+  style={{ borderRadius: 8, marginTop: 16 }}
+  width={800}
+  height={800}
+  alt="The Triplit Dashboard (deployments page)"
+/>

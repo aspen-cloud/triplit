@@ -4,5 +4,9 @@
   "migrations": "Migrations",
   "seeding": "Seeding a database",
   "triplit-cloud": "Triplit Cloud",
-  "auth": "Auth"
+  "auth": "Auth",
+  "v2": {
+    "title": "V2",
+    "display": "hidden"
+  }
 }
