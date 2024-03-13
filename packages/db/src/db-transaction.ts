@@ -205,7 +205,9 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
          * from the store to validate the rule
          */
         const insertedEntities: Set<string> = new Set();
-        const updatedEntities: Set<string> = new Set();
+        const updatedEntities: Set<string> = new Set([
+          ...triples.map((t) => t.id),
+        ]);
         for (const triple of triples) {
           if (triple.attribute[0] === '_collection' && !triple.expired) {
             insertedEntities.add(triple.id);
@@ -220,14 +222,15 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
               this.variables,
               this.schema
             );
-          } else {
-            updatedEntities.add(triple.id);
           }
         }
         // for each updatedEntity, load triples, construct entity, and check write rules
         for (const id of updatedEntities) {
           const entityTriples = await tx.findByEntity(id);
-          const entity = constructEntity(entityTriples, id);
+          const entity = constructEntity(
+            [...triples.filter((t) => t.id === id), ...entityTriples],
+            id
+          );
           checkWriteRules(id, entity?.data, this.variables, this.schema);
         }
       });
