@@ -24,7 +24,7 @@
     "@triplit/db": "^0.3.24",
     "@triplit/react": "^0.3.28",
     "bcryptjs": "^2.4.3",
-    "class-variance-authority": "^0.4.0",
+    "class-variance-authority": "^0.7.0",
     "clsx": "^1.2.1",
     "cmdk": "^0.2.0",
     "jose": "^5.0.1",

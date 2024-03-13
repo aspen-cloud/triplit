@@ -7164,18 +7164,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"class-variance-authority@npm:^0.4.0":
-  version: 0.4.0
-  resolution: "class-variance-authority@npm:0.4.0"
-  peerDependencies:
-    typescript: ">= 4.5.5 < 5"
-  peerDependenciesMeta:
-    typescript:
-      optional: true
-  checksum: 86037e5baa231a0c36a6dc2f260f6c18daa66bdccb6f4c1baee7112abd3dd2a11f412cfb3a0377b65357cc41ec6cb2f9cc70e9f64275109703fd6839ed50a450
-  languageName: node
-  linkType: hard
-
 "class-variance-authority@npm:^0.7.0":
   version: 0.7.0
   resolution: "class-variance-authority@npm:0.7.0"
@@ -14169,7 +14157,7 @@ __metadata:
     "@typescript-eslint/parser": ^5.61.0
     autoprefixer: ^10.4.14
     bcryptjs: ^2.4.3
-    class-variance-authority: ^0.4.0
+    class-variance-authority: ^0.7.0
     clsx: ^1.2.1
     cmdk: ^0.2.0
     eslint: ^8.44.0
