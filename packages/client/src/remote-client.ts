@@ -31,7 +31,7 @@ function parseError(error: string) {
     const jsonError = JSON.parse(error);
     return TriplitError.fromJson(jsonError);
   } catch (e) {
-    return new TriplitError(error);
+    return new TriplitError(`Failed to parse remote error response: ${error}`);
   }
 }
 
