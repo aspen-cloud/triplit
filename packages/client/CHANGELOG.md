@@ -1,5 +1,14 @@
 # @triplit/client
 
+## 0.3.28
+
+### Patch Changes
+
+- 10b4249: allow for async schema initializaion in remote client
+- 3989757: Fixup bugs with subquery deserialization
+- Updated dependencies [3989757]
+  - @triplit/db@0.3.24
+
 ## 0.3.27
 
 ### Patch Changes

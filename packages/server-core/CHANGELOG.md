@@ -1,5 +1,13 @@
 # @triplit/server-core
 
+## 0.3.27
+
+### Patch Changes
+
+- 3989757: Fixup bugs in subquery serialization
+- Updated dependencies [3989757]
+  - @triplit/db@0.3.24
+
 ## 0.3.26
 
 ### Patch Changes
