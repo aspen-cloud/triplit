@@ -2188,7 +2188,9 @@ describe('subscriptions', () => {
     let i = 0;
     const assertions = [
       (data) => expect(data.length).toBe(10),
-      (data) => expect(data.length).toBe(6),
+      (data) => {
+        expect(data.length).toBe(5);
+      },
     ];
     const unsubscribe = db.subscribeTriples(
       CollectionQueryBuilder('students')

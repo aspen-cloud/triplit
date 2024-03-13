@@ -270,8 +270,8 @@ export async function fetchDeltaTriples<
       const subQueries = (q.where ?? []).filter(
         (filter) => 'exists' in filter
       ) as SubQueryFilter<M>[];
-      let matchesWithSubqueriesBefore = true;
-      if (matchesSimpleFiltersBefore) {
+      let matchesBefore = matchesSimpleFiltersBefore;
+      if (matchesSimpleFiltersBefore && subQueries.length > 0) {
         for (const { exists: subQuery } of subQueries) {
           const subQueryResult = await fetchOne(
             tx,
@@ -296,53 +296,52 @@ export async function fetchDeltaTriples<
             { includeTriples: true, schema }
           );
           if (subQueryResult.results === null) {
-            matchesWithSubqueriesBefore = false;
+            matchesBefore = false;
             continue;
           }
         }
-      } else {
-        matchesWithSubqueriesBefore = false;
-      }
-      if (!matchesWithSubqueriesBefore && !matchesSimpleFiltersAfter) {
-        continue;
       }
       const afterTriplesMatch = [];
-      let matchesWithSubqueriesAfter = true;
-      for (const { exists: subQuery } of subQueries) {
-        const subQueryResult = await fetchOne(
-          tx,
-          {
-            ...subQuery,
-            vars: {
-              ...q.vars,
-              ...subQuery.vars,
-              ...(schema
-                ? schema![q.collectionName].schema?.convertDBValueToJS(
-                    timestampedObjectToPlainObject(
+      let matchesAfter = matchesSimpleFiltersAfter;
+      if (matchesSimpleFiltersAfter && subQueries.length > 0) {
+        for (const { exists: subQuery } of subQueries) {
+          const subQueryResult = await fetchOne(
+            tx,
+            {
+              ...subQuery,
+              vars: {
+                ...q.vars,
+                ...subQuery.vars,
+                ...(schema
+                  ? schema![q.collectionName].schema?.convertDBValueToJS(
+                      timestampedObjectToPlainObject(
+                        entityAfterStateVector as any,
+                        true
+                      )
+                    )
+                  : timestampedObjectToPlainObject(
                       entityAfterStateVector as any,
                       true
-                    )
-                  )
-                : timestampedObjectToPlainObject(
-                    entityAfterStateVector as any,
-                    true
-                  )),
-            },
-          } as CollectionQuery<M, any>,
-          { includeTriples: true, schema }
-        );
-        if (subQueryResult.results === null) {
-          matchesWithSubqueriesAfter = false;
-          continue;
+                    )),
+              },
+            } as CollectionQuery<M, any>,
+            { includeTriples: true, schema }
+          );
+          if (subQueryResult.results === null) {
+            matchesAfter = false;
+            continue;
+          }
+          afterTriplesMatch.push(
+            ...[...subQueryResult.triples.values()].flat()
+          );
         }
-        afterTriplesMatch.push(...[...subQueryResult.triples.values()].flat());
       }
 
-      if (!matchesWithSubqueriesBefore && !matchesWithSubqueriesAfter) {
+      if (!matchesBefore && !matchesAfter) {
         continue;
       }
 
-      if (!matchesWithSubqueriesBefore) {
+      if (!matchesBefore) {
         if (subQueries.length === 0) {
           // Basically where including the whole entity if it is new to the result set
           // but we also want to filter any triples that will be included in the
