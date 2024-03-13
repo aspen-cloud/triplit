@@ -35,6 +35,7 @@ export async function insertTriplesByTransaction(
           if (isTriplitError(e)) {
             failures.push([txId, e]);
           } else {
+            console.error(e);
             failures.push([
               txId,
               new TriplitError(
