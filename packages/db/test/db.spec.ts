@@ -2188,26 +2188,34 @@ describe('subscriptions', () => {
     let i = 0;
     const assertions = [
       (data) => expect(data.length).toBe(10),
-      (data) => {
-        expect(data.length).toBe(5);
-      },
+      (data) => expect(data.length).toBe(5),
     ];
-    const unsubscribe = db.subscribeTriples(
-      CollectionQueryBuilder('students')
-        .select(['name', 'major'])
-        .where([['dorm', '=', 'Battell']])
-        .build(),
-      (students) => {
-        assertions[i](students);
-        i++;
-      }
-    );
+    const subDone = new Promise<void>((resolve, reject) => {
+      db.subscribeTriples(
+        CollectionQueryBuilder('students')
+          .select(['name', 'major'])
+          .where([['dorm', '=', 'Battell']])
+          .build(),
+        (students) => {
+          try {
+            assertions[i](students);
+            i++;
+            if (i === assertions.length) resolve();
+          } catch (e) {
+            reject(e);
+          }
+        },
+        (error) => {
+          reject(error);
+        }
+      );
+    });
 
     await db.update('students', '1', async (entity) => {
       entity.dorm = 'Battell';
     });
 
-    await unsubscribe();
+    await subDone;
   });
 
   it('handles data leaving query', async () => {
