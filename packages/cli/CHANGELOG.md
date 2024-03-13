@@ -1,5 +1,21 @@
 # @triplit/cli
 
+## 0.3.33
+
+### Patch Changes
+
+- 4844c5d: add project manage command
+- be76fc9: fixup description for clear command
+- Updated dependencies [10b4249]
+- Updated dependencies [3989757]
+- Updated dependencies [3989757]
+- Updated dependencies [3989757]
+  - @triplit/client@0.3.28
+  - @triplit/db@0.3.24
+  - @triplit/server-core@0.3.27
+  - @triplit/console@0.3.31
+  - @triplit/server@0.3.27
+
 ## 0.3.32
 
 ### Patch Changes

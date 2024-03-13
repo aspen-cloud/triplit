@@ -1,5 +1,11 @@
 # @triplit/db
 
+## 0.3.24
+
+### Patch Changes
+
+- 3989757: Improve support for query type conversions
+
 ## 0.3.23
 
 ### Patch Changes
