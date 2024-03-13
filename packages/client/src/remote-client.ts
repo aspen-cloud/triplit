@@ -34,13 +34,24 @@ function parseError(error: string) {
     return new TriplitError(error);
   }
 }
+
+export type RemoteClientOptions<M extends ClientSchema | undefined> = {
+  server?: string;
+  token?: string;
+  schema?: M;
+  schemaFactory?: () => M | Promise<M>;
+};
+
 // Interact with remote via http api, totally separate from your local database
 export class RemoteClient<M extends ClientSchema | undefined> {
-  constructor(
-    public options: { server?: string; token?: string; schema?: M }
-  ) {}
+  constructor(private options: RemoteClientOptions<M>) {}
 
-  updateOptions(options: { server?: string; token?: string; schema?: M }) {
+  // Hack: use schemaFactory to get schema if it's not ready from provider
+  private async schema() {
+    return this.options.schema || (await this.options.schemaFactory?.());
+  }
+
+  updateOptions(options: RemoteClientOptions<M>) {
     this.options = { ...this.options, ...options };
   }
 
@@ -67,7 +78,7 @@ export class RemoteClient<M extends ClientSchema | undefined> {
       query,
     });
     if (error) throw error;
-    return deserializeHTTPFetchResult(query, data.result, this.options.schema);
+    return deserializeHTTPFetchResult(query, data.result, await this.schema());
   }
 
   private async queryTriples<CQ extends ClientQuery<M, any>>(
@@ -91,7 +102,7 @@ export class RemoteClient<M extends ClientSchema | undefined> {
     const deserialized = deserializeHTTPFetchResult(
       query,
       data.result,
-      this.options.schema
+      await this.schema()
     );
     const entity = [...deserialized.values()][0];
     if (!entity) return null;
@@ -111,7 +122,7 @@ export class RemoteClient<M extends ClientSchema | undefined> {
     const deserialized = deserializeHTTPFetchResult(
       query,
       data.result,
-      this.options.schema
+      await this.schema()
     );
     return deserialized.get(id);
   }
@@ -121,7 +132,7 @@ export class RemoteClient<M extends ClientSchema | undefined> {
     object: InsertTypeFromModel<ModelFromModels<M, CN>>
   ) {
     // we need to convert Sets to arrays before sending to the server
-    const schema = this.options.schema;
+    const schema = await this.schema();
     const collectionSchema = schema?.[collectionName]?.schema;
     const jsonEntity = collectionSchema
       ? Object.fromEntries(
@@ -144,7 +155,7 @@ export class RemoteClient<M extends ClientSchema | undefined> {
 
   async bulkInsert(bulk: BulkInsert<M>) {
     // we need to convert Sets to arrays before sending to the server
-    const schema = this.options.schema;
+    const schema = await this.schema();
     const jsonBulkInsert = schema
       ? Object.fromEntries(
           Object.entries(bulk).map(([collectionName, entities]) => [
@@ -201,7 +212,7 @@ export class RemoteClient<M extends ClientSchema | undefined> {
      * The way our updater works right now, non assignment operations (ie set.add(), etc) should have their value loaded as to not conflict with possibly "undefined" values in the proxy
      * We should refactor this though, because we shouldnt require pre-loading data to make an update (@wernst has some ideas)
      */
-    const schema = this.options.schema;
+    const schema = await this.schema();
     const collectionSchema = schema?.[collectionName]?.schema;
     const entityQuery = prepareFetchByIdQuery<M, CN>(collectionName, entityId);
     const triples = await this.queryTriples(entityQuery);
