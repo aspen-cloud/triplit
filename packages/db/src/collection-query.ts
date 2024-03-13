@@ -551,7 +551,7 @@ export async function fetch<
     stateVector?: Map<string, number>;
   } = {}
 ) {
-  const collectionSchema = schema && schema[query.collectionName]?.schema;
+  const collectionSchema = schema?.[query.collectionName]?.schema;
   if (cache && VariableAwareCache.canCacheQuery(query, collectionSchema)) {
     const cacheResult = await cache!.resolveFromCache(query);
     if (!includeTriples) return cacheResult.results;
@@ -600,7 +600,7 @@ export async function fetch<
             ...subQuery.vars,
             // Ensure we pass in all keys from the entity (2nd param true)
             // Kind of a hack to get around issues with deleted data
-            ...extractSubqueryVarsFromEntity(entity, collectionSchema),
+            ...extractSubqueryVarsFromEntity(entity, schema, collectionName),
           },
           limit: 1,
         } as CollectionQuery<typeof schema, any>;
@@ -686,7 +686,7 @@ export async function fetch<
           const combinedVars = {
             ...query.vars,
             ...subquery.vars,
-            ...extractSubqueryVarsFromEntity(entity, collectionSchema),
+            ...extractSubqueryVarsFromEntity(entity, schema, collectionName),
           };
           let fullSubquery = {
             ...subquery,
@@ -735,7 +735,7 @@ export async function fetch<
   return new Map(
     entities.map(([id, entity]) => [
       id,
-      convertEntityToJS(entity, collectionSchema),
+      convertEntityToJS(entity, schema, collectionName),
     ])
   ) as FetchResult<Q>;
 }
@@ -1028,7 +1028,9 @@ function subscribeSingleEntity<
         : null;
       triples = fetchResult.triples;
       const results = new Map(
-        entity ? [[entityId, convertEntityToJS(entity, collectionSchema)]] : []
+        entity
+          ? [[entityId, convertEntityToJS(entity, schema, collectionName)]]
+          : []
       ) as FetchResult<Q>;
 
       const unsub = tripleStore.onWrite(async (storeWrites) => {
@@ -1101,7 +1103,11 @@ function subscribeSingleEntity<
                   const combinedVars = {
                     ...query.vars,
                     ...subquery.vars,
-                    ...extractSubqueryVarsFromEntity(entity, collectionSchema),
+                    ...extractSubqueryVarsFromEntity(
+                      entity,
+                      schema,
+                      collectionName
+                    ),
                   };
                   let fullSubquery = {
                     ...subquery,
@@ -1141,7 +1147,7 @@ function subscribeSingleEntity<
               }
               results.set(
                 entityId,
-                convertEntityToJS(entity, collectionSchema) as any
+                convertEntityToJS(entity, schema, collectionName) as any
               );
             } else {
               results.delete(entityId);
@@ -1214,10 +1220,7 @@ export function subscribeResultsAndTriples<
               new Map(
                 [...results].map(([id, entity]) => [
                   id,
-                  convertEntityToJS(
-                    entity,
-                    schema && schema[query.collectionName]?.schema
-                  ),
+                  convertEntityToJS(entity, schema, query.collectionName),
                 ])
               ) as FetchResult<Q>,
               triples,
@@ -1366,10 +1369,7 @@ export function subscribeResultsAndTriples<
             new Map(
               [...results].map(([id, entity]) => [
                 id,
-                convertEntityToJS(
-                  entity,
-                  schema && schema[query.collectionName]?.schema
-                ),
+                convertEntityToJS(entity, schema, query.collectionName),
               ])
             ) as FetchResult<Q>,
             triples,
@@ -1383,10 +1383,7 @@ export function subscribeResultsAndTriples<
         new Map(
           [...results].map(([id, entity]) => [
             id,
-            convertEntityToJS(
-              entity,
-              schema && schema[query.collectionName]?.schema
-            ),
+            convertEntityToJS(entity, schema, query.collectionName),
           ])
         ) as FetchResult<Q>,
         triples,
@@ -1532,9 +1529,14 @@ export function subscribeTriples<
 // Subquery variables should include attr: undefined if the entity does not have a value for a given attribute
 // This is because the subquery may depend on that variable key existing
 // This is worth refactoring, but for now this works
-function extractSubqueryVarsFromEntity(entity: any, collectionSchema: any) {
+function extractSubqueryVarsFromEntity(
+  entity: any,
+  schema: Models<any, any> | undefined,
+  collectionName: string
+) {
   let obj: any = {};
-  if (collectionSchema) {
+  if (schema) {
+    const collectionSchema = schema[collectionName]?.schema;
     const emptyObj = Object.keys(collectionSchema.properties).reduce<any>(
       (obj, k) => {
         obj[k] = undefined;
@@ -1542,7 +1544,8 @@ function extractSubqueryVarsFromEntity(entity: any, collectionSchema: any) {
       },
       {}
     );
-    obj = { ...emptyObj, ...convertEntityToJS(entity, collectionSchema) };
+    // TODO: schema, collectionName
+    obj = { ...emptyObj, ...convertEntityToJS(entity, schema, collectionName) };
   } else {
     obj = { ...timestampedObjectToPlainObject(entity as any, true) };
   }

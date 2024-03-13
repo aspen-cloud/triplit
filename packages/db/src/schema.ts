@@ -1,6 +1,10 @@
 import { TObject } from '@sinclair/typebox';
 import { InvalidSchemaPathError } from './errors.js';
-import type { CollectionNameFromModels, CollectionRules } from './db.js';
+import type {
+  CollectionNameFromModels,
+  CollectionRules,
+  ModelFromModels,
+} from './db.js';
 import { Timestamp } from './timestamp.js';
 import type { Attribute, EAV, TripleRow } from './triple-store-utils.js';
 import { dbDocumentToTuples, objectToTuples } from './utils.js';
@@ -264,19 +268,25 @@ export type UnTimestampedObject<T extends TimestampedObject> = {
     : never;
 };
 
-export function convertEntityToJS<M extends Model<any>>(
-  entity: TimestampedTypeFromModel<M>,
-  schema?: M
+export function convertEntityToJS<
+  M extends Models<any, any>,
+  CN extends CollectionNameFromModels<M>
+>(
+  entity: TimestampedTypeFromModel<ModelFromModels<M, CN>>,
+  schema?: M,
+  collectionName?: CN
 ) {
   // remove timestamps
   const untimestampedEntity = timestampedObjectToPlainObject(entity);
-
   // Clean internal fields from entities
   delete untimestampedEntity._collection;
 
+  // @ts-expect-error - weird types here
+  const collectionSchema = schema?.[collectionName]?.schema;
+
   // convert values based on schema
-  return schema
-    ? schema.convertDBValueToJS(untimestampedEntity)
+  return collectionSchema
+    ? collectionSchema.convertDBValueToJS(untimestampedEntity, schema)
     : untimestampedEntity;
 }
 

@@ -614,10 +614,11 @@ export class SyncEngine {
       // Simpler to serialize triples and reconstruct entities on the client
       const triples = await this.getRemoteTriples(query);
       const entities = constructEntities(triples);
+      const schema = (await this.db.getSchema())?.collections;
       return new Map(
         [...entities].map(([id, entity]) => [
           stripCollectionFromId(id),
-          convertEntityToJS(entity.data as any),
+          convertEntityToJS(entity.data as any, schema),
         ])
       ) as ClientFetchResult<CQ>;
     } catch (e) {

@@ -482,7 +482,9 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
       throw new InvalidInsertDocumentError(
         `The document being inserted must be an object.`
       );
-    const collectionSchema = await getCollectionSchema(this, collectionName);
+
+    const schema = (await this.getSchema())?.collections;
+    const collectionSchema = schema?.[collectionName];
 
     // prep the doc for insert to db
     const defaultValues = collectionSchema
@@ -533,7 +535,8 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
     if (!insertedEntity) throw new Error('Malformed id');
     return convertEntityToJS(
       insertedEntity.data as any,
-      collectionSchema?.schema
+      schema,
+      collectionName
     ) as MaybeReturnTypeFromQuery<M, CN>;
   }
 
@@ -544,12 +547,7 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
       entity: UpdateTypeFromModel<ModelFromModels<M, CN>>
     ) => void | Promise<void>
   ) {
-    const collection =
-      collectionName !== '_metadata'
-        ? ((await this.getSchema())?.collections[
-            collectionName
-          ] as CollectionFromModels<M, CN>)
-        : undefined;
+    const schema = (await this.getSchema())?.collections as M;
 
     // TODO: Would be great to plug into the pipeline at any point
     // In this case I want untimestamped values, valid values
@@ -569,13 +567,11 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
     }
 
     // Collect changes
-    const collectionSchema = collection?.schema;
     const changes = new ChangeTracker(entity);
-    const updateProxy = createUpdateProxy<typeof collectionSchema>(
-      changes,
-      entity,
-      collectionSchema
-    );
+    const updateProxy =
+      collectionName === '_metadata'
+        ? createUpdateProxy<M, CN>(changes, entity)
+        : createUpdateProxy<M, CN>(changes, entity, schema, collectionName);
 
     // Run updater (runs serialization of values)
     await updater(updateProxy);
@@ -956,7 +952,7 @@ function validatePath(path: string[]) {
 function validateCollectionName(collections: any, collectionName: string) {
   const collectionAttributes = collections[collectionName];
   if (!collectionAttributes?.schema) {
-    throw new CollectionNotFoundError(collectionName, Object.keys(collections));
+    throw new CollectionNotFoundError(collectionName, collections);
   }
 }
 
@@ -1004,12 +1000,16 @@ export class ChangeTracker {
   }
 }
 
-export function createUpdateProxy<M extends Model<any> | undefined>(
+export function createUpdateProxy<
+  M extends Models<any, any> | undefined,
+  CN extends CollectionNameFromModels<M>
+>(
   changeTracker: ChangeTracker,
   entityObj: any, // TODO: type this properly, should be an untimestamped entity
   schema?: M,
+  collectionName?: CN,
   prefix: string = ''
-): UpdateTypeFromModel<M> {
+): UpdateTypeFromModel<ModelFromModels<M, CN>> {
   function proxyDeleteProperty(prop: string) {
     const propPointer = [prefix, prop].join('/');
     // ValuePointer.Set(changeTracker, propPointer, undefined);
@@ -1017,21 +1017,26 @@ export function createUpdateProxy<M extends Model<any> | undefined>(
     ValuePointer.Delete(entityObj, prop as string);
     return true;
   }
+
+  // @ts-expect-error - weird types here
+  const collectionSchema = schema?.[collectionName]?.schema;
+
   const convertedForRead = convertEntityToJS(
     entityObj,
-    schema
-  ) as UpdateTypeFromModel<M>;
+    schema,
+    collectionName
+  ) as UpdateTypeFromModel<ModelFromModels<M, CN>>;
   return new Proxy(convertedForRead, {
     set: (_target, prop, value) => {
       if (typeof prop === 'symbol') return true;
       const propPointer = [prefix, prop].join('/');
-      if (!schema) {
+      if (!collectionSchema) {
         if (value === undefined) return proxyDeleteProperty(prop);
         changeTracker.set(propPointer, value);
         return true;
       }
       const propPath = propPointer.slice(1).split('/');
-      const propSchema = getSchemaFromPath(schema, propPath);
+      const propSchema = getSchemaFromPath(collectionSchema, propPath);
       if (!propSchema) {
         throw new UnrecognizedPropertyInUpdateError(propPointer, value);
       }
@@ -1047,11 +1052,11 @@ export function createUpdateProxy<M extends Model<any> | undefined>(
     },
     deleteProperty: (_target, prop) => {
       if (typeof prop === 'symbol') return true;
-      if (schema) {
+      if (collectionSchema) {
         const propPointer = [prefix, prop].join('/');
         const propPath = propPointer.slice(1).split('/');
         const propSchema = getSchemaFromPath(
-          schema,
+          collectionSchema,
           propPath
         ) as RecordType<any>;
         if (!propSchema.context.optional) {
@@ -1066,15 +1071,17 @@ export function createUpdateProxy<M extends Model<any> | undefined>(
       if (typeof prop === 'symbol') return undefined;
       const parentPropPointer = [prefix, prop].join('/');
       const currentValue = changeTracker.get(parentPropPointer);
-
-      // Undefined values should be read as undefined
+      // Non exitent values should be read as undefined
       if (currentValue === undefined) return undefined;
       // Null values will be returned as null (essentially the base case of "return currentValue")
       if (currentValue === null) return null;
 
       const propSchema =
-        schema &&
-        getSchemaFromPath(schema, parentPropPointer.slice(1).split('/'));
+        collectionSchema &&
+        getSchemaFromPath(
+          collectionSchema,
+          parentPropPointer.slice(1).split('/')
+        );
 
       // Handle sets
       if (propSchema && propSchema.type === 'set') {
@@ -1087,16 +1094,14 @@ export function createUpdateProxy<M extends Model<any> | undefined>(
           changeTracker,
           currentValue,
           schema,
+          collectionName,
           parentPropPointer
         );
       }
 
       // TODO: fixup access to 'constructor' and other props
       return propSchema
-        ? propSchema.convertDBValueToJS(
-            // @ts-expect-error
-            currentValue
-          )
+        ? propSchema.convertDBValueToJS(currentValue)
         : currentValue;
     },
   });

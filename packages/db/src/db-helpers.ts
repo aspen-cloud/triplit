@@ -232,7 +232,7 @@ export function validateTriple(
 
   const model = schema[modelName];
   if (!model) {
-    throw new CollectionNotFoundError(modelName as string, Object.keys(schema));
+    throw new CollectionNotFoundError(modelName as string, schema);
   }
 
   const valueSchema = getSchemaFromPath(model.schema, path);

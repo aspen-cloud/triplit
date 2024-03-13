@@ -46,7 +46,7 @@ export function StringType<TypeOptions extends UserTypeOptions = {}>(
     convertDBValueToJS(val) {
       return val;
     },
-    // @ts-ignore
+    // @ts-expect-error
     convertJSONToJS(val) {
       if (options.nullable && val === null) return null;
       if (typeof val !== 'string') throw new JSONValueParseError('string', val);

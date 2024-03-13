@@ -463,13 +463,15 @@ export class Session {
       const result = await this.db.fetch(query, {
         skipRules: hasAdminAccess(this.token),
       });
-      const schema = await this.db.getSchema();
+      const schema = (await this.db.getSchema())?.collections;
       const { collectionName } = query;
-      const collectionSchema = schema?.collections[collectionName]?.schema;
+      const collectionSchema = schema?.[collectionName]?.schema;
       const data = new Map(
         [...result.entries()].map(([id, entity]) => [
           id,
-          collectionSchema ? collectionSchema.convertJSToJSON(entity) : entity,
+          collectionSchema
+            ? collectionSchema.convertJSToJSON(entity, schema)
+            : entity,
         ])
       );
       return ServerResponse(200, {
@@ -482,10 +484,10 @@ export class Session {
 
   async insert(collectionName: string, entity: any) {
     try {
-      const schema = await this.db.getSchema();
-      const collectionSchema = schema?.collections[collectionName]?.schema;
+      const schema = (await this.db.getSchema())?.collections;
+      const collectionSchema = schema?.[collectionName]?.schema;
       const insertEntity = collectionSchema
-        ? collectionSchema.convertJSONToJS(entity)
+        ? collectionSchema.convertJSONToJS(entity, schema)
         : entity;
       const txResult = await this.db.insert(collectionName, insertEntity, {
         skipRules: hasAdminAccess(this.token),
@@ -493,7 +495,7 @@ export class Session {
       const serializableResult = {
         ...txResult,
         output: collectionSchema
-          ? collectionSchema.convertJSToJSON(txResult.output)
+          ? collectionSchema.convertJSToJSON(txResult.output, schema)
           : txResult.output,
       };
       return ServerResponse(200, serializableResult);
@@ -506,7 +508,7 @@ export class Session {
 
   async bulkInsert(inserts: Record<string, any[]>) {
     try {
-      const schema = await this.db.getSchema();
+      const schema = (await this.db.getSchema())?.collections;
       const txResult = await this.db.transact(
         async (tx) => {
           const output = Object.keys(inserts).reduce(
@@ -514,11 +516,10 @@ export class Session {
             {}
           ) as Record<string, any[]>;
           for (const [collectionName, entities] of Object.entries(inserts)) {
-            const collectionSchema =
-              schema?.collections[collectionName]?.schema;
+            const collectionSchema = schema?.[collectionName]?.schema;
             for (const entity of entities) {
               const insertEntity = collectionSchema
-                ? collectionSchema.convertJSONToJS(entity)
+                ? collectionSchema.convertJSONToJS(entity, schema)
                 : entity;
               const insertedEntity = await tx.insert(
                 collectionName,
@@ -526,7 +527,7 @@ export class Session {
               );
               output[collectionName].push(
                 collectionSchema
-                  ? collectionSchema.convertJSToJSON(insertedEntity)
+                  ? collectionSchema.convertJSToJSON(insertedEntity, schema)
                   : insertedEntity
               );
             }

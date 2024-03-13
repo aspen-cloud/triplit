@@ -121,12 +121,16 @@ export class RemoteClient<M extends ClientSchema | undefined> {
     object: InsertTypeFromModel<ModelFromModels<M, CN>>
   ) {
     // we need to convert Sets to arrays before sending to the server
-    const schema = this.options.schema?.[collectionName]?.schema;
-    const jsonEntity = schema
+    const schema = this.options.schema;
+    const collectionSchema = schema?.[collectionName]?.schema;
+    const jsonEntity = collectionSchema
       ? Object.fromEntries(
           Object.entries(object).map(([attribute, value]) => [
             attribute,
-            schema.properties[attribute].convertJSToJSON(value),
+            collectionSchema.properties[attribute].convertJSToJSON(
+              value,
+              schema
+            ),
           ])
         )
       : object;
@@ -140,7 +144,8 @@ export class RemoteClient<M extends ClientSchema | undefined> {
 
   async bulkInsert(bulk: BulkInsert<M>) {
     // we need to convert Sets to arrays before sending to the server
-    const jsonBulkInsert = this.options.schema
+    const schema = this.options.schema;
+    const jsonBulkInsert = schema
       ? Object.fromEntries(
           Object.entries(bulk).map(([collectionName, entities]) => [
             collectionName,
@@ -148,9 +153,9 @@ export class RemoteClient<M extends ClientSchema | undefined> {
               Object.fromEntries(
                 Object.entries(entity).map(([attribute, value]) => [
                   attribute,
-                  this.options.schema![collectionName]?.schema.properties[
+                  schema[collectionName]?.schema.properties[
                     attribute
-                  ].convertJSToJSON(value),
+                  ].convertJSToJSON(value, schema),
                 ])
               )
             ),
@@ -196,7 +201,8 @@ export class RemoteClient<M extends ClientSchema | undefined> {
      * The way our updater works right now, non assignment operations (ie set.add(), etc) should have their value loaded as to not conflict with possibly "undefined" values in the proxy
      * We should refactor this though, because we shouldnt require pre-loading data to make an update (@wernst has some ideas)
      */
-    const collectionSchema = this.options.schema?.[collectionName]?.schema;
+    const schema = this.options.schema;
+    const collectionSchema = schema?.[collectionName]?.schema;
     const entityQuery = prepareFetchByIdQuery<M, CN>(collectionName, entityId);
     const triples = await this.queryTriples(entityQuery);
     // TODO we should handle errors or non-existent entities
@@ -209,7 +215,8 @@ export class RemoteClient<M extends ClientSchema | undefined> {
     const updateProxy: any = createUpdateProxy(
       changes,
       entityData,
-      collectionSchema
+      schema,
+      collectionName
     );
     await updater(updateProxy);
     const changeTuples = changes.getTuples();
@@ -269,33 +276,11 @@ function deserializeHTTPEntity<CQ extends ClientQuery<any, any>>(
   const collectionSchema = schema?.[collectionName]?.schema;
 
   const deserializedEntity = collectionSchema
-    ? (collectionSchema.convertJSONToJS(entity) as ClientFetchResultEntity<CQ>)
+    ? (collectionSchema.convertJSONToJS(
+        entity,
+        schema
+      ) as ClientFetchResultEntity<CQ>)
     : entity;
-  if (!include) return deserializedEntity;
-  const includeKeys = Object.keys(include);
-  if (includeKeys.length === 0) return deserializedEntity;
-  for (const key of includeKeys) {
-    // Get query from schema or from include
-    let cardinality: any;
-    let query: any;
-    if (include[key] === null) {
-      const schemaItem = schema?.[collectionName]?.schema?.properties?.[key];
-      query = schemaItem?.query;
-      cardinality = schemaItem?.cardinality;
-    } else {
-      query = include[key];
-    }
-    if (!query) continue;
-    const relationData =
-      cardinality === 'one'
-        ? deserializeHTTPEntity(query, deserializedEntity[key], schema)
-        : deserializeHTTPFetchResult(
-            query, // could be null (part of the schema)
-            deserializedEntity[key],
-            schema
-          );
-    deserializedEntity[key] = relationData;
-  }
   return deserializedEntity;
 }
 

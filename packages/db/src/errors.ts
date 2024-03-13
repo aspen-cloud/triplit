@@ -2,6 +2,7 @@ import {
   COLLECTION_TYPE_KEYS,
   VALUE_TYPE_KEYS,
 } from './data-types/serialization.js';
+import { Models } from './schema.js';
 
 export const STATUS_CODES = {
   Success: 200,
@@ -194,10 +195,16 @@ export class NoSchemaRegisteredError extends TriplitError {
 }
 
 export class CollectionNotFoundError extends TriplitError {
-  constructor(collectionName: string, existingKeys: string[], ...args: any[]) {
+  constructor(
+    collectionName: string,
+    collections: Models<any, any>,
+    ...args: any[]
+  ) {
     super(...args);
     this.name = 'CollectionNotFoundError';
-    this.baseMessage = `Could not find a collection with name ${collectionName} in your schema. Valid collections are: [${existingKeys
+    this.baseMessage = `Could not find a collection with name ${collectionName} in your schema. Valid collections are: [${Object.keys(
+      collections
+    )
       .map((k) => `'${k}'`)
       .join(', ')}].`;
     this.status = STATUS_CODES['Bad Request'];
@@ -458,6 +465,15 @@ export class JSToJSONValueParseError extends TriplitError {
     this.baseMessage = `Failed to tranform to JSON from the provided ${type} input: ${JSON.stringify(
       value
     )}`;
+    this.status = STATUS_CODES['Bad Request'];
+  }
+}
+
+export class InvalidQueryCardinalityError extends TriplitError {
+  constructor(cardinality: string, ...args: any[]) {
+    super(...args);
+    this.name = 'InvalidQueryCardinalityError';
+    this.baseMessage = `The cardinality ${cardinality} is not valid for the query type.`;
     this.status = STATUS_CODES['Bad Request'];
   }
 }

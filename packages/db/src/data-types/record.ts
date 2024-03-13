@@ -106,7 +106,7 @@ export function RecordType<
           })
       ) as { [K in keyof Properties]: ExtractDBType<Properties[K]> };
     },
-    convertDBValueToJS(val) {
+    convertDBValueToJS(val, schema) {
       const result: Partial<RecordJSType<Properties>> = {};
       for (const k in val) {
         if (Object.prototype.hasOwnProperty.call(val, k)) {
@@ -114,7 +114,7 @@ export function RecordType<
           // TODO this should be removed instead our entity reducer should return
           // null for undefined entities and we should handle that in the properties types
           if (v === undefined) continue;
-          if (!properties[k] || properties[k].type === 'query') {
+          if (!properties[k]) {
             // @ts-expect-error
             result[k] = v;
             continue;
@@ -123,24 +123,25 @@ export function RecordType<
           // @ts-expect-error
           result[k] = properties[k].convertDBValueToJS(
             // @ts-expect-error
-            v
+            v,
+            schema
           );
         }
       }
       return result as RecordJSType<Properties>;
     },
-    convertJSONToJS(val) {
+    convertJSONToJS(val, schema) {
       if (typeof val !== 'object') throw new JSONValueParseError('record', val);
       return Object.fromEntries(
         Object.entries(val).map(([k, v]) => {
           const propDef = properties[k];
           if (!propDef)
             throw new TriplitError(`Invalid property ${k} for record`);
-          return [k, propDef.convertJSONToJS(v)];
+          return [k, propDef.convertJSONToJS(v, schema)];
         })
       ) as RecordJSType<Properties>;
     },
-    convertJSToJSON(val) {
+    convertJSToJSON(val, schema) {
       return Object.fromEntries(
         Object.entries(properties)
           .filter(
@@ -157,7 +158,8 @@ export function RecordType<
               k,
               propDef.convertJSToJSON(
                 // @ts-expect-error
-                val[k]
+                val[k],
+                schema
               ),
             ];
           })

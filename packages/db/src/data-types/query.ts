@@ -1,5 +1,11 @@
 import { FetchResult } from '../collection-query.js';
 import { CollectionNameFromModels } from '../db.js';
+import {
+  CollectionNotFoundError,
+  InvalidCollectionNameError,
+  InvalidQueryCardinalityError,
+  TriplitError,
+} from '../errors.js';
 import { CollectionQuery } from '../query.js';
 import { Models } from '../schema.js';
 import { TypeInterface } from './type.js';
@@ -42,24 +48,86 @@ export function QueryType<
       return { type: this.type, query, cardinality };
     },
     convertInputToDBValue(val: any) {
-      return JSON.stringify(val);
+      // TODO: this is a placeholder, this could be a place where we could support insertions with relationships
+      throw new TriplitError(
+        'Invalid Operation - Inserting relational data is not supported'
+      );
     },
-    convertDBValueToJS(val) {
-      return val as FetchResult<Q>;
-    },
-    convertJSONToJS(val) {
-      // TODO we likely need to recurse into the subquery
-      // collection type and continue conversion
-      return val;
-    },
-    convertJSToJSON(val) {
+    // There isnt exactly a "DB value" for queries, but this makes sense to use with the fetch method
+    convertDBValueToJS(val, schema) {
+      if (!schema)
+        throw new TriplitError(
+          'A schema is required to convert DB value to JS'
+        );
+      const relationSchema = schema?.[query.collectionName]?.schema;
+      if (!relationSchema)
+        throw new CollectionNotFoundError(query.collectionName, schema);
+
+      // TODO: determine when we would see this
       if (!val) return val;
-      // Serialize data, cardinality could be one or many
-      if (cardinality === 'one') return val;
-      return Array.from(val.entries());
+
+      if (cardinality === 'one') {
+        return relationSchema.convertDBValueToJS(val, schema);
+      } else if (cardinality === 'many') {
+        // TODO: confirm map
+        // if (val === undefined) return undefined;
+        // const entries = JSON.parse(val);
+        return new Map(
+          Array.from(val.entries()).map(([k, v]: any) => [
+            k,
+            relationSchema.convertDBValueToJS(v, schema),
+          ])
+        );
+      } else {
+        throw new InvalidQueryCardinalityError(cardinality);
+      }
     },
-    // TODO: determine proper value and type here
-    // Type should go extract the deserialized type of each of its keys
+    convertJSONToJS(val, schema) {
+      if (!schema)
+        throw new TriplitError(
+          'A schema is required to convert JSON value to JS'
+        );
+      const relationSchema = schema?.[query.collectionName]?.schema;
+      if (!relationSchema)
+        throw new CollectionNotFoundError(query.collectionName, schema);
+
+      if (!val) return val;
+      if (cardinality === 'one') {
+        return relationSchema.convertJSONToJS(val, schema);
+      } else if (cardinality === 'many') {
+        return new Map(
+          val.map(([k, v]: any) => [
+            k,
+            relationSchema.convertJSONToJS(v, schema),
+          ])
+        );
+      } else {
+        throw new InvalidQueryCardinalityError(cardinality);
+      }
+    },
+    convertJSToJSON(val, schema) {
+      if (!schema)
+        throw new TriplitError(
+          'A schema is required to convert JSON value to JS'
+        );
+      const relationSchema = schema?.[query.collectionName]?.schema;
+      if (!relationSchema)
+        throw new CollectionNotFoundError(query.collectionName, schema);
+
+      if (!val) return val;
+
+      if (cardinality === 'one') {
+        // @ts-expect-error Need to fixup type to understand that this is a single value
+        return relationSchema.convertJSToJSON(val, schema);
+      } else if (cardinality === 'many') {
+        return Array.from(val.entries()).map(([k, v]: any) => [
+          k,
+          relationSchema.convertJSToJSON(v, schema),
+        ]);
+      } else {
+        throw new InvalidQueryCardinalityError(cardinality);
+      }
+    },
     defaultInput() {
       return undefined;
     },
@@ -67,7 +135,7 @@ export function QueryType<
       return undefined; // TODO
     },
     validateTripleValue(_val: any) {
-      return true; // TODO
+      return false;
     },
   };
 }
