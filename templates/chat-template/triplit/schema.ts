@@ -18,6 +18,11 @@ export const schema = {
           filter: [["convo.members", "=", "$SESSION_USER_ID"]],
         },
       },
+      write: {
+        isSender: {
+          filter: [["sender_id", "=", "$SESSION_USER_ID"]],
+        },
+      },
     },
   },
   conversations: {
