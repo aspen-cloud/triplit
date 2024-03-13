@@ -293,11 +293,14 @@ export class SyncEngine {
           // this.queryFulfillmentCallbacks.delete(qId);
         }
         if (triples.length !== 0) {
-          await this.db.transact(async (dbTx) => {
-            await dbTx.storeTx
-              .withScope({ read: ['cache'], write: ['cache'] })
-              .insertTriples(triples);
-          });
+          await this.db.transact(
+            async (dbTx) => {
+              await dbTx.storeTx
+                .withScope({ read: ['cache'], write: ['cache'] })
+                .insertTriples(triples);
+            },
+            { skipRules: true }
+          );
         }
       }
 
@@ -545,21 +548,24 @@ export class SyncEngine {
    */
   async rollback(txIds: string | string[]) {
     const txIdList = Array.isArray(txIds) ? txIds : [txIds];
-    await this.db.transact(async (tx) => {
-      const scopedTx = tx.storeTx.withScope({
-        read: ['outbox'],
-        write: ['outbox'],
-      });
-      for (const txId of txIdList) {
-        const timestamp = JSON.parse(txId);
-        const triples = await scopedTx.findByClientTimestamp(
-          await this.db.getClientId(),
-          'eq',
-          timestamp
-        );
-        await scopedTx.deleteTriples(triples);
-      }
-    });
+    await this.db.transact(
+      async (tx) => {
+        const scopedTx = tx.storeTx.withScope({
+          read: ['outbox'],
+          write: ['outbox'],
+        });
+        for (const txId of txIdList) {
+          const timestamp = JSON.parse(txId);
+          const triples = await scopedTx.findByClientTimestamp(
+            await this.db.getClientId(),
+            'eq',
+            timestamp
+          );
+          await scopedTx.deleteTriples(triples);
+        }
+      },
+      { skipRules: true }
+    );
   }
 
   /**
@@ -594,11 +600,14 @@ export class SyncEngine {
   async syncQuery(query: ClientQuery<any, any>) {
     try {
       const triples = await this.getRemoteTriples(query);
-      await this.db.transact(async (dbTx) => {
-        await dbTx.storeTx
-          .withScope({ read: ['cache'], write: ['cache'] })
-          .insertTriples(triples);
-      });
+      await this.db.transact(
+        async (dbTx) => {
+          await dbTx.storeTx
+            .withScope({ read: ['cache'], write: ['cache'] })
+            .insertTriples(triples);
+        },
+        { skipRules: true }
+      );
     } catch (e) {
       if (e instanceof TriplitError) throw e;
       if (e instanceof Error) throw new RemoteSyncFailedError(query, e.message);
