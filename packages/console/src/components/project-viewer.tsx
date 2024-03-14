@@ -5,7 +5,7 @@ import { CaretDown, GridFour, Selection } from '@phosphor-icons/react';
 import { DataViewer, FullScreenWrapper, Project } from '.';
 import { Button } from '@triplit/ui';
 import { ProjectOptionsMenu } from './project-options-menu';
-import { useEntity } from '@triplit/react';
+import { useConnectionStatus, useEntity } from '@triplit/react';
 import { CreateCollectionDialog } from './create-collection-dialog';
 import { CollectionStats, fetchCollectionStats } from '../utils/server';
 import { useSelectedCollection } from '../hooks/useSelectedCollection';
@@ -54,7 +54,13 @@ export function ProjectViewer() {
 
   window.appClient = client;
   const [selectedCollection, setSelectedCollection] = useSelectedCollection();
-  const { results: schema } = useEntity(client, '_metadata', '_schema');
+  const {
+    results: schema,
+    fetching,
+    fetchingRemote,
+  } = useEntity(client, '_metadata', '_schema');
+  const connectionStatus = useConnectionStatus(client);
+  console.log({ schema, connectionStatus, fetching, fetchingRemote });
   const collectionsTolist = schema
     ? Object.keys(schema.collections)
     : collectionStats.map(({ collection }) => collection);
