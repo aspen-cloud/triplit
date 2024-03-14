@@ -270,7 +270,9 @@ export class SyncEngine {
    * Initiate a sync connection with the server
    */
   async connect() {
-    this.closeConnection({ type: 'CONNECTION_OVERRIDE', retry: false });
+    if (this.transport.connectionStatus !== 'CLOSED') {
+      this.closeConnection({ type: 'CONNECTION_OVERRIDE', retry: false });
+    }
     const params = await this.getConnectionParams();
     this.transport.connect(params);
     this.transport.onMessage(async (evt) => {

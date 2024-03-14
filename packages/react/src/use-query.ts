@@ -26,7 +26,9 @@ export function useQuery<
     ClientFetchResult<ClientQuery<M, CN>> | undefined
   >(undefined);
   const [fetching, setFetching] = useState(true);
-  const [fetchingRemote, setFetchingRemote] = useState(true);
+  const [fetchingRemote, setFetchingRemote] = useState(
+    client.syncEngine.connectionStatus === 'OPEN'
+  );
   const [error, setError] = useState<any>(undefined);
   const hasResponseFromServer = useRef(false);
 
