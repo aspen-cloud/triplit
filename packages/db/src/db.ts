@@ -1028,19 +1028,23 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
     return maxVersion;
   }
 
-  async getCollectionStats() {
+  async getCollectionStats(): Promise<Map<string, number>> {
+    // Each entity has a hidden _collection attribute which the value
+    // is just the name of the collection it belongs to
+    // e.g. { id: '123', name: 'alice', _collection: 'users'}
     const collectionMetaTriples = await this.tripleStore.findByAttribute([
       '_collection',
     ]);
-    // Aggregates each collection my entity count
-    const stats = collectionMetaTriples.reduce((acc, t) => {
-      const collectionName = t.value;
-      if (!acc.has(collectionName)) {
-        acc.set(collectionName, 0);
-      }
-      acc.set(collectionName, acc.get(collectionName) + 1);
-      return acc;
-    }, new Map());
+
+    const stats = new Map();
+    for (let trip of collectionMetaTriples) {
+      // TODO handle expired indexes e.g. where there are multiple _collection triples
+      // for the same entity
+      if (trip.expired) continue; // Skip expired/deleted entities
+      const collectionName = trip.value as string;
+      stats.set(collectionName, (stats.get(collectionName) ?? 0) + 1);
+    }
+
     return stats;
   }
 
