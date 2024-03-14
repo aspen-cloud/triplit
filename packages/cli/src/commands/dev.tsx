@@ -82,11 +82,8 @@ export default Command({
       process.env.JWT_SECRET,
       { noTimestamp: true }
     );
-    let schema = undefined;
-    if (flags.watch) {
-      const collections = await readLocalSchema();
-      if (collections) schema = { collections, version: 0 };
-    }
+    const collections = await readLocalSchema();
+    const schema = collections ? { collections, version: 0 } : undefined;
     const startDBServer = createDBServer({
       storage: flags.storage || 'memory',
       dbOptions: {
@@ -98,6 +95,10 @@ export default Command({
     let watcher: chokidar.FSWatcher | undefined = undefined;
     let remoteSchemaUnsubscribe = undefined;
     const dbServer = startDBServer(dbPort, async () => {
+      const schemaPath = path.join(getTriplitDir(), 'schema.ts');
+      watcher = chokidar.watch(schemaPath, {
+        awaitWriteFinish: true,
+      });
       if (flags.watch) {
         const client = new TriplitClient({
           serverUrl: `http://localhost:${dbPort}`,
@@ -112,10 +113,6 @@ export default Command({
           // Avoid firing on optimistic changes
           .syncStatus('confirmed')
           .build();
-
-        watcher = chokidar.watch(schemaPath, {
-          awaitWriteFinish: true,
-        });
 
         /**
          * There's a few problems here:
@@ -171,6 +168,12 @@ export default Command({
             delete entity.collections;
             entity.collections = schema.collections;
           });
+        });
+      } else {
+        watcher.on('change', async () => {
+          console.warn(
+            'Schema file changed. Restart the dev server to apply changes.'
+          );
         });
       }
     });
