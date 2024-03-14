@@ -380,8 +380,10 @@ export class TriplitClient<M extends ClientSchema | undefined = undefined> {
       try {
         return this.db.subscribe(
           query,
-          // @ts-ignore TODO: include hasRemoteFulfilled
-          onResults,
+          (results) =>
+            onResults(results as ClientFetchResult<CQ>, {
+              hasRemoteFulfilled: false,
+            }),
           onError,
           {
             scope,
