@@ -43,6 +43,11 @@ export default Command({
       description: 'Verbose logging',
       hidden: true,
     }),
+    initWithSchema: Flag.Boolean({
+      char: 'i',
+      description: 'Initialize the database with the local schema',
+      default: false,
+    }),
   },
   async run({ flags }) {
     const consolePort = flags.consolePort || 6542;
@@ -83,7 +88,10 @@ export default Command({
       { noTimestamp: true }
     );
     const collections = await readLocalSchema();
-    const schema = collections ? { collections, version: 0 } : undefined;
+    const schema =
+      collections && flags.initWithSchema
+        ? { collections, version: 0 }
+        : undefined;
     const startDBServer = createDBServer({
       storage: flags.storage || 'memory',
       dbOptions: {
