@@ -491,6 +491,7 @@ export class SyncEngine {
 
   private async handleErrorMessage(message: any) {
     const { error, metadata } = message.payload;
+    console.error(error, metadata);
     switch (error.name) {
       case 'MalformedMessagePayloadError':
       case 'UnrecognizedMessageTypeError':
