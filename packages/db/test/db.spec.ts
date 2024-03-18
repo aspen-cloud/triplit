@@ -3351,6 +3351,22 @@ describe('ORDER & LIMIT & Pagination', () => {
     );
   });
 
+  it('limit ignores deleted entities', async () => {
+    const db = new DB();
+    await db.insert('test', { id: '1', name: 'alice' });
+    await db.insert('test', { id: '4', name: 'david' });
+    await db.insert('test', { id: '3', name: 'charlie' });
+    await db.insert('test', { id: '5', name: 'eve' });
+    await db.insert('test', { id: '2', name: 'bob' });
+
+    await db.delete('test', '3');
+
+    const query = db.query('test').order(['name', 'ASC']).limit(3).build();
+    const result = await db.fetch(query);
+    expect(result.size).toBe(3);
+    expect([...result.keys()]).toEqual(['1', '2', '4']);
+  });
+
   it('can handle secondary sorts on values with runs of equal primary values', async () => {
     const db = new DB();
     for (let i = 0; i < 20; i++) {

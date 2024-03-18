@@ -638,6 +638,8 @@ export async function fetch<
       }
       return [id, entity] as [string, any];
     })
+    // We need to make sure that all the triples are accounted for before we filter out deleted entities
+    .filter(async ([, entity]) => !isTimestampedEntityDeleted(entity))
     .take(limit && (!order || order.length <= 1) ? limit : Infinity)
     .takeWhile(async ([, entity]) => {
       if (!order || order.length <= 1) return true;
@@ -649,8 +651,6 @@ export async function fetch<
       if (entityCount > limit!) return false;
       return true;
     })
-    // We need to make sure that all the triples are accounted for before we filter out deleted entities
-    .filter(async ([, entity]) => !isTimestampedEntityDeleted(entity))
     .toArray();
 
   if (order && order.length > 1) {
