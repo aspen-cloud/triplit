@@ -8,7 +8,7 @@ import type {
 import { Timestamp } from './timestamp.js';
 import type { Attribute, EAV, TripleRow } from './triple-store-utils.js';
 import { dbDocumentToTuples, objectToTuples } from './utils.js';
-import { constructEntity } from './query.js';
+import { Entity, EntityPointer, constructEntity } from './query.js';
 import { appendCollectionToId, StoreSchema } from './db-helpers.js';
 import {
   typeFromJSON,
@@ -36,6 +36,7 @@ import {
 } from './data-types/type.js';
 import { QueryType, SubQuery } from './data-types/query.js';
 import { Value as TBValue } from '@sinclair/typebox/value';
+import { DBTransaction } from './db-transaction.js';
 
 // We infer TObject as a return type of some funcitons and this causes issues with consuming packages
 // Using solution 3.1 described in this comment as a fix: https://github.com/microsoft/TypeScript/issues/47663#issuecomment-1519138189
@@ -454,7 +455,6 @@ export function getDefaultValuesForCollection(
 // Schema versions are harder to manage with console updates
 // Using this hash as a way to check if schemas mismatch since its easy to send as a url param
 export function hashSchemaJSON(collections: CollectionsDefinition | undefined) {
-  // console.log('CALLING HASH SCHEMA JSON');
   if (!collections) return undefined;
   // TODO: dont use this method if avoidable...trying to deprecate
   const tuples = objectToTuples(collections);
@@ -477,6 +477,7 @@ type ChangeToAttribute =
   | {
       type: 'update';
       changes: {
+        items?: { type: string };
         type?: string;
         options?: any;
         optional?: boolean;
@@ -555,7 +556,7 @@ export function diffCollections(
         propertiesA[prop].type === 'record' &&
         propertiesB[prop].type === 'record'
       ) {
-        console.log('diffing record', propertiesA[prop], propertiesB[prop]);
+        // console.log('diffing record', propertiesA[prop], propertiesB[prop]);
         diff.push(
           ...diffCollections(propertiesA[prop], propertiesB[prop], path)
         );
@@ -564,7 +565,8 @@ export function diffCollections(
       const attrDiff: AttributeDiff = {
         type: 'update',
         attribute: path,
-        changes: {},
+        // TODO: show matt this
+        changes: { options: {} },
       };
 
       // Check if type has changed
@@ -574,8 +576,9 @@ export function diffCollections(
 
       // Check if Set item type has changed
       if (propertiesA[prop].type === 'set') {
+        // console.log(propertiesA[prop], propertiesB[prop]);
         if (propertiesA[prop].items.type !== propertiesB[prop].items.type) {
-          attrDiff.changes.options.items = {
+          attrDiff.changes.items = {
             type: propertiesB[prop].items.type,
           };
         }
@@ -603,7 +606,8 @@ export function diffCollections(
 function diffAttributeOptions(attr1: UserTypeOptions, attr2: UserTypeOptions) {
   const diff: Partial<UserTypeOptions> = {};
   if (attr1.nullable !== attr2.nullable) {
-    diff.nullable = attr2.nullable;
+    // TODO: determine how strict we want to be here about false vs. undefined
+    diff.nullable = !!attr2.nullable;
   }
   if (attr1.default !== attr2.default) {
     diff.default = attr2.default;
@@ -624,7 +628,7 @@ export function diffSchemas(
     const collectionA = schemaA.collections[collection];
     const collectionB = schemaB.collections[collection];
     diff.push(
-      ...diffCollections(collectionA.schema, collectionB.schema).map(
+      ...diffCollections(collectionA?.schema, collectionB?.schema).map(
         (change) =>
           ({
             collection,
@@ -636,16 +640,32 @@ export function diffSchemas(
   return diff;
 }
 
-export function getDestructiveEdits(schemaDiff: CollectionAttributeDiff[]) {
+type ALLOWABLE_DATA_CONSTRAINTS =
+  | 'never'
+  | 'collection_empty'
+  | 'attribute_has_no_undefined'
+  | 'attribute_has_no_null';
+
+type DangerousEdits = {
+  issue: string;
+  allowedIf: ALLOWABLE_DATA_CONSTRAINTS;
+  context: CollectionAttributeDiff;
+};
+
+export function getDangerousEdits(schemaDiff: CollectionAttributeDiff[]) {
   return schemaDiff.reduce((acc, curr) => {
     const maybeDangerousEdit = DANGEROUS_EDITS.find((check) =>
       check.matchesDiff(curr)
     );
     if (maybeDangerousEdit) {
-      acc.push({ issue: maybeDangerousEdit.description, context: curr });
+      acc.push({
+        issue: maybeDangerousEdit.description,
+        allowedIf: maybeDangerousEdit.allowedIf,
+        context: curr,
+      });
     }
     return acc;
-  }, [] as { issue: string; context: CollectionAttributeDiff }[]);
+  }, [] as DangerousEdits[]);
 }
 
 const DANGEROUS_EDITS = [
@@ -654,6 +674,7 @@ const DANGEROUS_EDITS = [
     matchesDiff: (diff: CollectionAttributeDiff) => {
       return diff.type === 'delete';
     },
+    allowedIf: 'attribute_has_no_undefined',
   },
   {
     description: 'changed a attribute from optional to required',
@@ -663,6 +684,7 @@ const DANGEROUS_EDITS = [
       }
       return false;
     },
+    allowedIf: 'attribute_has_no_undefined',
   },
   {
     description: 'changed the type of an attribute',
@@ -672,6 +694,17 @@ const DANGEROUS_EDITS = [
       }
       return false;
     },
+    allowedIf: 'never',
+  },
+  {
+    description: "changed the type of a set's items",
+    matchesDiff: (diff: CollectionAttributeDiff) => {
+      if (diff.type === 'update') {
+        return diff.changes.items !== undefined;
+      }
+      return false;
+    },
+    allowedIf: 'never',
   },
   {
     description: 'added an attribute where optional is not set',
@@ -680,6 +713,7 @@ const DANGEROUS_EDITS = [
         return true;
       return false;
     },
+    allowedIf: 'collection_empty',
   },
   {
     description: 'changed an attribute from nullable to non-nullable',
@@ -689,5 +723,79 @@ const DANGEROUS_EDITS = [
       }
       return false;
     },
+    allowedIf: 'attribute_has_no_undefined',
   },
-];
+] satisfies {
+  allowedIf: ALLOWABLE_DATA_CONSTRAINTS;
+  description: string;
+  matchesDiff: (diff: CollectionAttributeDiff) => boolean;
+}[];
+
+async function isDestructiveEditSafe(
+  tx: DBTransaction<any>,
+  attributeDiff: CollectionAttributeDiff,
+  allowedIf: ALLOWABLE_DATA_CONSTRAINTS
+) {
+  return await DANGEROUS_EDITS_MAP[allowedIf](
+    tx,
+    attributeDiff.collection,
+    attributeDiff.attribute
+  );
+}
+
+const DANGEROUS_EDITS_MAP: Record<
+  ALLOWABLE_DATA_CONSTRAINTS,
+  (
+    tx: DBTransaction<any>,
+    collection: string,
+    attribute: string[]
+  ) => Promise<boolean>
+> = {
+  never: async () => false,
+  collection_empty: detectCollectionIsEmpty,
+  attribute_has_no_undefined: detectAttributeHasNoUndefined,
+  attribute_has_no_null: detectAttributeHasNoNull,
+};
+
+async function detectAttributeHasNoUndefined(
+  tx: DBTransaction<any>,
+  collectionName: string,
+  attribute: string[]
+) {
+  const allEntities = await tx.fetch(
+    tx.db
+      .query(collectionName)
+      .select([attribute.join('.')])
+      .build()
+  );
+  return !Array.from(allEntities.values()).some(
+    (entity) =>
+      EntityPointer.Get(entity, '/' + attribute.join('/')) === undefined
+  );
+}
+
+async function detectAttributeHasNoNull(
+  tx: DBTransaction<any>,
+  collectionName: string,
+  attribute: string[]
+) {
+  const allEntities = await tx.fetch(
+    tx.db
+      .query(collectionName)
+      .select([attribute.join('.')])
+      .where(attribute.join('.'), '=', null)
+      .limit(1)
+      .build()
+  );
+  return allEntities.size === 0;
+}
+
+async function detectCollectionIsEmpty(
+  tx: DBTransaction<any>,
+  collectionName: string
+) {
+  const allEntities = await tx.fetch(
+    tx.db.query(collectionName).select([]).limit(1).build()
+  );
+  return allEntities.size === 0;
+}
