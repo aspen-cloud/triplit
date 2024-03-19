@@ -36,6 +36,7 @@ export interface SyncOptions {
   secure?: boolean;
   syncSchema?: boolean;
   transport?: SyncTransport;
+  logger: Logger;
 }
 
 // Not totally sold on passing in the token here, but it felt awkward to have it in the sync options since its also relevant to the database
@@ -118,6 +119,79 @@ function getClientStorage(storageOption: StorageOptions) {
 
 const DEFAULT_STORAGE_OPTION = 'memory';
 
+export interface Logger {
+  info: (message: any, ...args: any[]) => void;
+  warn: (message: any, ...args: any[]) => void;
+  error: (message: any, ...args: any[]) => void;
+  debug: (message: any, ...args: any[]) => void;
+}
+
+type LogCapturer = ((log: any) => void) | undefined;
+
+class DefaultLogger implements Logger {
+  constructor(
+    readonly logScope?: string,
+    readonly capture: LogCapturer = () => {}
+  ) {}
+
+  private constructLogObj(message: any, ...args: any[]) {
+    const logMsg = {
+      args,
+      scope: this.logScope,
+      message,
+      timestamp: Date.now(),
+    };
+    this.capture(logMsg);
+    return logMsg;
+  }
+
+  scope(logScope: string) {
+    return new DefaultLogger(logScope, this.capture);
+  }
+
+  info(message: any, ...args: any[]) {
+    console.info(this.constructLogObj(message, ...args));
+  }
+
+  warn(message: any, ...args: any[]) {
+    console.warn(this.constructLogObj(message, ...args));
+  }
+
+  error(message: any, ...args: any[]) {
+    console.error(this.constructLogObj(message, ...args));
+  }
+
+  debug(message: any, ...args: any[]) {
+    const obj = this.constructLogObj(message, ...args);
+    if (obj.scope === 'sync') {
+      if (obj.message === 'sent') {
+        console.debug(
+          '%c OUT ',
+          'background: #228; color: #51acff',
+          args[0].type,
+          args[0].payload
+        );
+        return;
+      }
+      if (obj.message === 'received') {
+        console.debug(
+          '%c IN ',
+          'background: #ccc; color: #333',
+          args[0].type,
+          args[0].payload
+        );
+        return;
+      }
+    }
+    console.debug(
+      `%c${obj.scope}`,
+      'color: rgba(255,255,200,0.5)',
+      obj.message,
+      obj.args
+    );
+  }
+}
+
 export interface ClientOptions<M extends ClientSchema | undefined> {
   schema?: M;
   token?: string;
@@ -138,6 +212,7 @@ export interface ClientOptions<M extends ClientSchema | undefined> {
   };
 
   autoConnect?: boolean;
+  logger: Logger;
 }
 
 // default policy is local-and-remote and no timeout
@@ -158,6 +233,8 @@ export class TriplitClient<M extends ClientSchema | undefined = undefined> {
   private defaultFetchOptions: {
     fetch: FetchOptions;
   };
+  logger: Logger;
+  private logs: any[] = [];
 
   constructor(options?: ClientOptions<M>) {
     const {
@@ -172,7 +249,11 @@ export class TriplitClient<M extends ClientSchema | undefined = undefined> {
       variables,
       storage,
       defaultQueryOptions,
+      logger,
     } = options ?? {};
+    this.logger =
+      logger ?? new DefaultLogger('client', (log) => this.logs.push(log));
+
     const autoConnect = options?.autoConnect ?? true;
     const clock = new DurableClock('cache', clientId);
     this.authOptions = { token, claimsPath };
@@ -187,6 +268,7 @@ export class TriplitClient<M extends ClientSchema | undefined = undefined> {
         : undefined,
       variables,
       sources: getClientStorage(storage ?? DEFAULT_STORAGE_OPTION),
+      logger: this.logger.scope('db'),
     });
 
     this.defaultFetchOptions = {
@@ -197,6 +279,7 @@ export class TriplitClient<M extends ClientSchema | undefined = undefined> {
     const syncOptions: SyncOptions = {
       syncSchema,
       transport,
+      logger: this.logger.scope('sync'),
       ...(serverUrl ? mapServerUrlToSyncOptions(serverUrl) : {}),
     };
 
@@ -291,7 +374,9 @@ export class TriplitClient<M extends ClientSchema | undefined = undefined> {
     query: CQ
   ): Promise<ClientFetchResult<CQ>> {
     const scope = parseScope(query);
+    this.logger.debug('fetchLocal START', query, scope);
     const res = await this.db.fetch(query, { scope, skipRules: SKIP_RULES });
+    this.logger.debug('fetchLocal END', res);
     return res as ClientFetchResult<CQ>;
   }
 
@@ -301,9 +386,23 @@ export class TriplitClient<M extends ClientSchema | undefined = undefined> {
     queryParams?: FetchByIdQueryParams<M, CN>,
     options?: FetchOptions
   ) {
+    this.logger.debug(
+      'fetchById START',
+      collectionName,
+      id,
+      queryParams,
+      options
+    );
     const query = prepareFetchByIdQuery(collectionName, id, queryParams);
     const results = await this.fetch(
       query as ClientQuery<M, CollectionNameFromModels<M>>,
+      options
+    );
+    this.logger.debug(
+      'fetchById END',
+      collectionName,
+      id,
+      queryParams,
       options
     );
     return results.get(id);
@@ -373,9 +472,9 @@ export class TriplitClient<M extends ClientSchema | undefined = undefined> {
     options?: SubscriptionOptions
   ) {
     const opts: SubscriptionOptions = { localOnly: false, ...options };
-
+    query.id = query.id ?? Math.random().toString().slice(2);
     const scope = parseScope(query);
-
+    this.logger.debug('subscribe start', query, scope);
     if (opts.localOnly) {
       try {
         return this.db.subscribe(
@@ -404,6 +503,7 @@ export class TriplitClient<M extends ClientSchema | undefined = undefined> {
     let results: FetchResult<CQ>;
     const clientSubscriptionCallback = (newResults: FetchResult<CQ>) => {
       results = newResults;
+      this.logger.debug('subscription callback', results);
       onResults(results as ClientFetchResult<CQ>, { hasRemoteFulfilled });
     };
     unsubscribeLocal = this.db.subscribe(

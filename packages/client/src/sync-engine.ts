@@ -9,7 +9,7 @@ import DB, {
   convertEntityToJS,
   Timestamp,
 } from '@triplit/db';
-import { SyncOptions } from './triplit-client.js';
+import { Logger, SyncOptions } from './triplit-client.js';
 import { Subject } from 'rxjs';
 import {
   ConnectionStatus,
@@ -65,6 +65,7 @@ export class SyncEngine {
   private messageSentSubscribers: Set<OnMessageSentCallback> = new Set();
 
   private awaitingAck: Set<string> = new Set();
+  logger: Logger;
 
   /**
    *
@@ -72,6 +73,7 @@ export class SyncEngine {
    * @param db the client database to be synced
    */
   constructor(options: SyncOptions, db: DB<any>) {
+    this.logger = options.logger;
     this.syncOptions = options;
     this.syncOptions.secure = options.secure ?? true;
     this.syncOptions.syncSchema = options.syncSchema ?? false;
@@ -277,6 +279,7 @@ export class SyncEngine {
     this.transport.connect(params);
     this.transport.onMessage(async (evt) => {
       const message: ServerSyncMessage = JSON.parse(evt.data);
+      this.logger.debug('received', message);
       for (const handler of this.messageReceivedSubscribers) {
         handler(message);
       }
@@ -378,7 +381,7 @@ export class SyncEngine {
       }
     });
     this.transport.onOpen(async () => {
-      console.info('sync connection has opened');
+      this.logger.debug('sync connection has opened');
       this.resetReconnectTimeout();
       // Cut down on message sending by only signaling if there are triples to send
       const outboxTriples = await this.getTriplesToSend(
@@ -528,6 +531,7 @@ export class SyncEngine {
 
   private sendMessage(message: ClientSyncMessage) {
     this.transport.sendMessage(message);
+    this.logger.debug('sent', message);
     for (const handler of this.messageSentSubscribers) {
       handler(message);
     }

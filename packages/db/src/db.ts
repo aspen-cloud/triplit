@@ -139,6 +139,7 @@ export interface DBConfig<M extends Models<any, any> | undefined> {
   tenantId?: string;
   clock?: Clock;
   variables?: Record<string, any>;
+  logger?: Logger;
 }
 
 export const DEFAULT_STORE_KEY = 'default';
@@ -421,7 +422,9 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
     migrations,
     clock,
     variables,
+    logger,
   }: DBConfig<M> = {}) {
+    this.logger = logger ?? console;
     this.variables = variables ?? {};
     // If only one source is provided, use the default key
     const sourcesMap = sources ?? {
@@ -648,6 +651,7 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
     query: Q,
     options: DBFetchOptions = { noCache: true }
   ) {
+    this.logger.debug('fetch START', { query });
     await this.ensureMigrated;
     const schema = (await this.getSchema())?.collections as M;
     const fetchQuery = prepareQuery(query, schema, {
@@ -655,7 +659,7 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
       variables: this.variables,
     });
 
-    return await fetch<M, Q>(
+    const result = await fetch<M, Q>(
       options.scope
         ? this.tripleStore.setStorageScope(options.scope)
         : this.tripleStore,
@@ -668,6 +672,8 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
         skipRules: options.skipRules,
       }
     );
+    this.logger.debug('fetch END', { query, result });
+    return result;
   }
 
   async fetchTriples<Q extends CollectionQuery<M, any>>(
@@ -756,13 +762,17 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
         skipRules: options.skipRules,
         variables: this.variables,
       });
+      this.logger.debug('subscribe START', { query });
 
       const unsub = subscribe<M, Q>(
         options.scope
           ? this.tripleStore.setStorageScope(options.scope)
           : this.tripleStore,
         subscriptionQuery,
-        onResults,
+        (...args) => {
+          this.logger.debug('subscribe RESULTS', { query, results: args });
+          onResults(...args);
+        },
         onError,
         schema,
         { skipRules: options.skipRules, stateVector: options.stateVector }
@@ -773,6 +783,7 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
     const unsubPromise = startSubscription();
 
     return async () => {
+      this.logger.debug('subscribe END', { query });
       const unsub = await unsubPromise;
       return unsub();
     };
