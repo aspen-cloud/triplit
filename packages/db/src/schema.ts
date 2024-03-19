@@ -35,7 +35,7 @@ import {
   ExtractTimestampedType,
 } from './data-types/type.js';
 import { QueryType, SubQuery } from './data-types/query.js';
-import { Value as TBValue } from '@sinclair/typebox/value';
+import { Value as TBValue, ValuePointer } from '@sinclair/typebox/value';
 import { DBTransaction } from './db-transaction.js';
 
 // We infer TObject as a return type of some funcitons and this causes issues with consuming packages
@@ -493,6 +493,11 @@ type ChangeToAttribute =
     }
   | {
       type: 'delete';
+      metadata: {
+        type: string;
+        options: any;
+        optional: boolean;
+      };
     };
 
 type AttributeDiff = {
@@ -540,6 +545,11 @@ export function diffCollections(
       diff.push({
         type: 'delete',
         attribute: path,
+        metadata: {
+          type: propertiesA[prop].type,
+          options: propertiesA[prop].options,
+          optional: modelA?.optional?.includes(prop) ?? false,
+        },
       });
       continue;
     }
@@ -642,7 +652,8 @@ export function diffSchemas(
 
 type ALLOWABLE_DATA_CONSTRAINTS =
   | 'never'
-  | 'collection_empty'
+  | 'collection_is_empty'
+  | 'attribute_is_empty' // undefined
   | 'attribute_has_no_undefined'
   | 'attribute_has_no_null';
 
@@ -652,7 +663,9 @@ type DangerousEdits = {
   context: CollectionAttributeDiff;
 };
 
-export function getDangerousEdits(schemaDiff: CollectionAttributeDiff[]) {
+export function getBackwardsIncompatibleEdits(
+  schemaDiff: CollectionAttributeDiff[]
+) {
   return schemaDiff.reduce((acc, curr) => {
     const maybeDangerousEdit = DANGEROUS_EDITS.find((check) =>
       check.matchesDiff(curr)
@@ -670,11 +683,18 @@ export function getDangerousEdits(schemaDiff: CollectionAttributeDiff[]) {
 
 const DANGEROUS_EDITS = [
   {
-    description: 'removed an existing attribute',
+    description: 'removed an optional attribute',
+    matchesDiff: (diff: CollectionAttributeDiff) => {
+      return diff.type === 'delete' && diff.metadata.optional === true;
+    },
+    allowedIf: 'attribute_is_empty',
+  },
+  {
+    description: 'removed a non-optional attribute',
     matchesDiff: (diff: CollectionAttributeDiff) => {
       return diff.type === 'delete';
     },
-    allowedIf: 'attribute_has_no_undefined',
+    allowedIf: 'collection_is_empty',
   },
   {
     description: 'changed a attribute from optional to required',
@@ -694,7 +714,7 @@ const DANGEROUS_EDITS = [
       }
       return false;
     },
-    allowedIf: 'never',
+    allowedIf: 'attribute_is_empty',
   },
   {
     description: "changed the type of a set's items",
@@ -704,7 +724,7 @@ const DANGEROUS_EDITS = [
       }
       return false;
     },
-    allowedIf: 'never',
+    allowedIf: 'attribute_is_empty',
   },
   {
     description: 'added an attribute where optional is not set',
@@ -713,7 +733,7 @@ const DANGEROUS_EDITS = [
         return true;
       return false;
     },
-    allowedIf: 'collection_empty',
+    allowedIf: 'collection_is_empty',
   },
   {
     description: 'changed an attribute from nullable to non-nullable',
@@ -723,7 +743,7 @@ const DANGEROUS_EDITS = [
       }
       return false;
     },
-    allowedIf: 'attribute_has_no_undefined',
+    allowedIf: 'attribute_has_no_null',
   },
 ] satisfies {
   allowedIf: ALLOWABLE_DATA_CONSTRAINTS;
@@ -731,19 +751,40 @@ const DANGEROUS_EDITS = [
   matchesDiff: (diff: CollectionAttributeDiff) => boolean;
 }[];
 
-async function isDestructiveEditSafe(
+async function willEditCorruptData(
   tx: DBTransaction<any>,
   attributeDiff: CollectionAttributeDiff,
   allowedIf: ALLOWABLE_DATA_CONSTRAINTS
 ) {
-  return await DANGEROUS_EDITS_MAP[allowedIf](
+  return await DATA_CONSTRAINT_CHECKS[allowedIf](
     tx,
     attributeDiff.collection,
     attributeDiff.attribute
   );
 }
 
-const DANGEROUS_EDITS_MAP: Record<
+export async function evaluateDangerousEdits(
+  tx: DBTransaction<any>,
+  schemaDiff: CollectionAttributeDiff[]
+) {
+  const backwardsIncompatibleEdits = getBackwardsIncompatibleEdits(schemaDiff);
+  const results = await Promise.all(
+    backwardsIncompatibleEdits.map(async (edit) => {
+      const willCorruptExistingData = !(await willEditCorruptData(
+        tx,
+        edit.context,
+        edit.allowedIf
+      ));
+      return {
+        ...edit,
+        willCorruptExistingData,
+      };
+    })
+  );
+  return results;
+}
+
+const DATA_CONSTRAINT_CHECKS: Record<
   ALLOWABLE_DATA_CONSTRAINTS,
   (
     tx: DBTransaction<any>,
@@ -752,7 +793,8 @@ const DANGEROUS_EDITS_MAP: Record<
   ) => Promise<boolean>
 > = {
   never: async () => false,
-  collection_empty: detectCollectionIsEmpty,
+  collection_is_empty: detectCollectionIsEmpty,
+  attribute_is_empty: detectAttributeIsEmpty,
   attribute_has_no_undefined: detectAttributeHasNoUndefined,
   attribute_has_no_null: detectAttributeHasNoNull,
 };
@@ -770,8 +812,24 @@ async function detectAttributeHasNoUndefined(
   );
   return !Array.from(allEntities.values()).some(
     (entity) =>
-      EntityPointer.Get(entity, '/' + attribute.join('/')) === undefined
+      ValuePointer.Get(entity, '/' + attribute.join('/')) === undefined
   );
+}
+
+async function detectAttributeIsEmpty(
+  tx: DBTransaction<any>,
+  collectionName: string,
+  attribute: string[]
+) {
+  const allEntities = await tx.fetch(
+    tx.db
+      .query(collectionName)
+      .select([attribute.join('.')])
+      .build()
+  );
+  return Array.from(allEntities.values()).every((entity) => {
+    return ValuePointer.Get(entity, '/' + attribute.join('/')) === undefined;
+  });
 }
 
 async function detectAttributeHasNoNull(
