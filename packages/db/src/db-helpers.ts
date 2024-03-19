@@ -18,7 +18,8 @@ import {
   Model,
   Models,
   diffSchemas,
-  getDestructiveEdits,
+  getBackwardsIncompatibleEdits,
+  getSchemaDiffIssues,
   getSchemaFromPath,
   schemaToTriples,
   triplesToSchema,
@@ -193,29 +194,44 @@ export type StoreSchema<M extends Models<any, any> | undefined> =
     : never;
 
 export async function overrideStoredSchema(
-  tripleStore: TripleStore,
+  db: DB,
   schema: StoreSchema<Models<any, any>>,
   safeMode = false
 ) {
+  let tripleStore = db.tripleStore;
   await tripleStore.transact(async (tx) => {
     const currentSchema = await readSchemaFromTripleStore(tx);
 
-    if (currentSchema.schema && safeMode) {
+    if (currentSchema.schema) {
       const diff = diffSchemas(currentSchema.schema, schema);
-      const issues = getDestructiveEdits(diff);
+      const issues = await getSchemaDiffIssues(db, diff);
       if (issues.length > 0) {
         console.error(
-          'Cannot apply new schema because it might be destructive',
-          issues.reduce((acc, issue) => {
-            const collection = issue.context.collection;
+          'The DB received an updated schema. It may be backwards incompatible with existing data. Please resolve the following issues:',
+          issues.reduce((acc, { issue, willCorruptExistingData, context }) => {
+            const collection = context.collection;
             if (!(collection in acc)) {
               acc[collection] = {};
             }
-            acc[collection][issue.context.attribute.join('.')] = issue.issue;
+            acc[collection][context.attribute.join('.')] = {
+              issue,
+              willCorruptExistingData,
+            };
             return acc;
-          }, {} as Record<string, Record<string, string>>)
+          }, {} as Record<string, Record<string, { willCorruptExistingData: boolean; issue: string }>>)
         );
-        return;
+        if (safeMode) {
+          console.error(
+            'The DB is in safe mode and will not apply the schema update.'
+          );
+          return;
+        }
+        if (issues.some((issue) => issue.willCorruptExistingData)) {
+          console.error(
+            'Some of the changes in the new schema will lead to data corruption. The schema update will not be applied.'
+          );
+          return;
+        }
       }
       console.log(`applying ${diff.length} attribute changes to schema`);
     }

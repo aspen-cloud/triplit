@@ -1,7 +1,7 @@
 import { describe, expect, it, beforeEach, beforeAll, vi } from 'vitest';
 import {
   diffSchemas,
-  evaluateDangerousEdits,
+  getSchemaDiffIssues,
   getBackwardsIncompatibleEdits,
   Schema as S,
 } from '../src/schema.js';
@@ -254,25 +254,20 @@ describe('detecting dangerous edits', () => {
       filledRecord: S.Record({ b: S.Number(), c: S.String(), d: S.String() }), // 3 x dangerous, but ok based on DB
     });
     const db = new DB({ schema: original });
-    let results;
-    await db.transact(async (tx) => {
-      results = await evaluateDangerousEdits(
-        tx,
-        diffSchemas(original, different)
-      );
-    });
+    let results = await getSchemaDiffIssues(
+      db,
+      diffSchemas(original, different)
+    );
     // happiest case, nothing in the database
     // TODO: changing types should be allowed with empty databases? tbd
     expect(
       results.map(({ willCorruptExistingData }) => willCorruptExistingData)
     ).toStrictEqual([false, false, false, false, false, false, false]);
-    let reverseResults;
-    await db.transact(async (tx) => {
-      reverseResults = await evaluateDangerousEdits(
-        tx,
-        diffSchemas(different, original)
-      );
-    });
+    let reverseResults = await getSchemaDiffIssues(
+      db,
+      diffSchemas(different, original)
+    );
+
     expect(
       reverseResults.map(
         ({ willCorruptExistingData }) => willCorruptExistingData
@@ -302,12 +297,8 @@ describe('detecting dangerous edits', () => {
       emptyRecord: {},
       filledRecord: { a: 'string', b: 1, c: true },
     });
-    await db.transact(async (tx) => {
-      results = await evaluateDangerousEdits(
-        tx,
-        diffSchemas(original, different)
-      );
-    });
+
+    results = await getSchemaDiffIssues(db, diffSchemas(original, different));
     expect(
       results.map(({ willCorruptExistingData }) => willCorruptExistingData)
     ).toStrictEqual([true, true, true, true, true, true, true]);
@@ -323,12 +314,10 @@ describe('detecting dangerous edits', () => {
       emptyRecord: { a: 'string' },
       filledRecord: { b: 1, c: 'string', d: 'string' },
     });
-    await db2.transact(async (tx) => {
-      reverseResults = await evaluateDangerousEdits(
-        tx,
-        diffSchemas(different, original)
-      );
-    });
+    reverseResults = await getSchemaDiffIssues(
+      db2,
+      diffSchemas(different, original)
+    );
     expect(
       reverseResults.map(
         ({ willCorruptExistingData }) => willCorruptExistingData

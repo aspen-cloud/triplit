@@ -37,6 +37,7 @@ import {
 import { QueryType, SubQuery } from './data-types/query.js';
 import { Value as TBValue, ValuePointer } from '@sinclair/typebox/value';
 import { DBTransaction } from './db-transaction.js';
+import DB from './db.js';
 
 // We infer TObject as a return type of some funcitons and this causes issues with consuming packages
 // Using solution 3.1 described in this comment as a fix: https://github.com/microsoft/TypeScript/issues/47663#issuecomment-1519138189
@@ -657,7 +658,7 @@ type ALLOWABLE_DATA_CONSTRAINTS =
   | 'attribute_has_no_undefined'
   | 'attribute_has_no_null';
 
-type DangerousEdits = {
+type BackwardsIncompatibleEdits = {
   issue: string;
   allowedIf: ALLOWABLE_DATA_CONSTRAINTS;
   context: CollectionAttributeDiff;
@@ -678,7 +679,7 @@ export function getBackwardsIncompatibleEdits(
       });
     }
     return acc;
-  }, [] as DangerousEdits[]);
+  }, [] as BackwardsIncompatibleEdits[]);
 }
 
 const DANGEROUS_EDITS = [
@@ -763,25 +764,29 @@ async function willEditCorruptData(
   );
 }
 
-export async function evaluateDangerousEdits(
-  tx: DBTransaction<any>,
+export async function getSchemaDiffIssues(
+  db: DB<any>,
   schemaDiff: CollectionAttributeDiff[]
 ) {
   const backwardsIncompatibleEdits = getBackwardsIncompatibleEdits(schemaDiff);
-  const results = await Promise.all(
-    backwardsIncompatibleEdits.map(async (edit) => {
-      const willCorruptExistingData = !(await willEditCorruptData(
-        tx,
-        edit.context,
-        edit.allowedIf
-      ));
-      return {
-        ...edit,
-        willCorruptExistingData,
-      };
-    })
-  );
-  return results;
+  const results = await db.transact(async (tx) => {
+    return await Promise.all(
+      backwardsIncompatibleEdits.map(async (edit) => {
+        const willCorruptExistingData = !(await willEditCorruptData(
+          tx,
+          edit.context,
+          edit.allowedIf
+        ));
+        return {
+          ...edit,
+          willCorruptExistingData,
+        };
+      })
+    );
+  });
+  return results.output as (BackwardsIncompatibleEdits & {
+    willCorruptExistingData: boolean;
+  })[];
 }
 
 const DATA_CONSTRAINT_CHECKS: Record<

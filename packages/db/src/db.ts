@@ -480,7 +480,7 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
           //   console.error(e);
           // })
           tripleStoreSchema
-          ? overrideStoredSchema(this.tripleStore, tripleStoreSchema)
+          ? overrideStoredSchema(this as DB<any>, tripleStoreSchema)
           : Promise.resolve()
       )
       // Setup schema subscription
