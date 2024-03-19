@@ -4385,10 +4385,17 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@sinclair/typebox@npm:^0.27.4, @sinclair/typebox@npm:^0.27.8":
+"@sinclair/typebox@npm:^0.27.8":
   version: 0.27.8
   resolution: "@sinclair/typebox@npm:0.27.8"
   checksum: 00bd7362a3439021aa1ea51b0e0d0a0e8ca1351a3d54c606b115fdcc49b51b16db6e5f43b4fe7a28c38688523e22a94d49dd31168868b655f0d4d50f032d07a1
+  languageName: node
+  linkType: hard
+
+"@sinclair/typebox@npm:^0.32.15":
+  version: 0.32.15
+  resolution: "@sinclair/typebox@npm:0.32.15"
+  checksum: ec90229e836be331482977e8b8929af27356102370c2050f2e8fd68e60a408489a682a41b9a51046695d1e15a508b741b11e2f6e70cec5ee6d1f32c983b1616f
   languageName: node
   linkType: hard
 
@@ -4724,7 +4731,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@triplit/client@workspace:packages/client"
   dependencies:
-    "@sinclair/typebox": ^0.27.4
+    "@sinclair/typebox": ^0.32.15
     "@triplit/db": "workspace:^"
     "@triplit/types": "workspace:^"
     "@types/node": ^20.4.0
@@ -4792,7 +4799,7 @@ __metadata:
   resolution: "@triplit/db@workspace:packages/db"
   dependencies:
     "@cloudflare/workers-types": ^4.20240129.0
-    "@sinclair/typebox": ^0.27.4
+    "@sinclair/typebox": ^0.32.15
     "@stryker-mutator/core": ^7.3.0
     "@stryker-mutator/vitest-runner": ^7.3.0
     "@triplit/tuple-database": ^2.2.12
