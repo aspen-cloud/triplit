@@ -752,7 +752,7 @@ const DANGEROUS_EDITS = [
   matchesDiff: (diff: CollectionAttributeDiff) => boolean;
 }[];
 
-async function willEditCorruptData(
+async function isEditSafeWithExistingData(
   tx: DBTransaction<any>,
   attributeDiff: CollectionAttributeDiff,
   allowedIf: ALLOWABLE_DATA_CONSTRAINTS
@@ -770,9 +770,9 @@ export async function getSchemaDiffIssues(
 ) {
   const backwardsIncompatibleEdits = getBackwardsIncompatibleEdits(schemaDiff);
   const results = await db.transact(async (tx) => {
-    return await Promise.all(
+    return Promise.all(
       backwardsIncompatibleEdits.map(async (edit) => {
-        const willCorruptExistingData = !(await willEditCorruptData(
+        const willCorruptExistingData = !(await isEditSafeWithExistingData(
           tx,
           edit.context,
           edit.allowedIf
