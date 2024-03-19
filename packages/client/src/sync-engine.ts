@@ -372,7 +372,7 @@ export class SyncEngine {
 
       if (message.type === 'CLOSE') {
         const { payload } = message;
-        console.warn(
+        this.logger.info(
           `Closing connection${payload?.message ? `: ${payload.message}` : '.'}`
         );
         const { type, retry } = payload;
@@ -381,7 +381,7 @@ export class SyncEngine {
       }
     });
     this.transport.onOpen(async () => {
-      this.logger.debug('sync connection has opened');
+      this.logger.info('sync connection has opened');
       this.resetReconnectTimeout();
       // Cut down on message sending by only signaling if there are triples to send
       const outboxTriples = await this.getTriplesToSend(
@@ -424,14 +424,14 @@ export class SyncEngine {
         }
 
         if (type === 'SCHEMA_MISMATCH') {
-          console.error(
+          this.logger.error(
             'The server has closed the connection because the client schema does not match the server schema. Please update your client schema.'
           );
         }
 
         if (!retry) {
           // early return to prevent reconnect
-          console.warn('Connection will not automatically retry.');
+          this.logger.warn('Connection will not automatically retry.');
           return;
         }
       }
@@ -449,7 +449,7 @@ export class SyncEngine {
     });
     this.transport.onError((evt) => {
       // console.log('error ws', evt);
-      console.error(evt);
+      this.logger.error('transport error', evt);
       // on error, close the connection and attempt to reconnect
       this.transport.close();
     });
@@ -494,11 +494,11 @@ export class SyncEngine {
 
   private async handleErrorMessage(message: any) {
     const { error, metadata } = message.payload;
-    console.error(error, metadata);
+    this.logger.error(error.name, metadata);
     switch (error.name) {
       case 'MalformedMessagePayloadError':
       case 'UnrecognizedMessageTypeError':
-        console.warn(
+        this.logger.warn(
           'You sent a malformed message to the server. This might occur if your client is not up to date with the server. Please ensure your client is updated.'
         );
         // TODO: If the message that fails is a triple insert, we should handle that specifically depending on the case

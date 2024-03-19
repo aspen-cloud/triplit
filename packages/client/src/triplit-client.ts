@@ -29,6 +29,8 @@ import {
   prepareFetchOneQuery,
 } from './utils/query.js';
 import { RemoteClient } from './remote-client.js';
+import { Logger } from '@triplit/types/logger.js';
+import { DefaultLogger } from './client-logger.js';
 
 export interface SyncOptions {
   server?: string;
@@ -119,79 +121,6 @@ function getClientStorage(storageOption: StorageOptions) {
 
 const DEFAULT_STORAGE_OPTION = 'memory';
 
-export interface Logger {
-  info: (message: any, ...args: any[]) => void;
-  warn: (message: any, ...args: any[]) => void;
-  error: (message: any, ...args: any[]) => void;
-  debug: (message: any, ...args: any[]) => void;
-}
-
-type LogCapturer = ((log: any) => void) | undefined;
-
-class DefaultLogger implements Logger {
-  constructor(
-    readonly logScope?: string,
-    readonly capture: LogCapturer = () => {}
-  ) {}
-
-  private constructLogObj(message: any, ...args: any[]) {
-    const logMsg = {
-      args,
-      scope: this.logScope,
-      message,
-      timestamp: Date.now(),
-    };
-    this.capture(logMsg);
-    return logMsg;
-  }
-
-  scope(logScope: string) {
-    return new DefaultLogger(logScope, this.capture);
-  }
-
-  info(message: any, ...args: any[]) {
-    console.info(this.constructLogObj(message, ...args));
-  }
-
-  warn(message: any, ...args: any[]) {
-    console.warn(this.constructLogObj(message, ...args));
-  }
-
-  error(message: any, ...args: any[]) {
-    console.error(this.constructLogObj(message, ...args));
-  }
-
-  debug(message: any, ...args: any[]) {
-    const obj = this.constructLogObj(message, ...args);
-    if (obj.scope === 'sync') {
-      if (obj.message === 'sent') {
-        console.debug(
-          '%c OUT ',
-          'background: #228; color: #51acff',
-          args[0].type,
-          args[0].payload
-        );
-        return;
-      }
-      if (obj.message === 'received') {
-        console.debug(
-          '%c IN ',
-          'background: #ccc; color: #333',
-          args[0].type,
-          args[0].payload
-        );
-        return;
-      }
-    }
-    console.debug(
-      `%c${obj.scope}`,
-      'color: rgba(255,255,200,0.5)',
-      obj.message,
-      obj.args
-    );
-  }
-}
-
 export interface ClientOptions<M extends ClientSchema | undefined> {
   schema?: M;
   token?: string;
@@ -252,7 +181,11 @@ export class TriplitClient<M extends ClientSchema | undefined = undefined> {
       logger,
     } = options ?? {};
     this.logger =
-      logger ?? new DefaultLogger('client', (log) => this.logs.push(log));
+      logger ??
+      new DefaultLogger({
+        scope: 'client',
+        capture: (log) => this.logs.push(log),
+      });
 
     const autoConnect = options?.autoConnect ?? true;
     const clock = new DurableClock('cache', clientId);
