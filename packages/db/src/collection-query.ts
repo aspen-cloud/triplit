@@ -35,6 +35,7 @@ import {
   replaceVariablesInQuery,
   someFilterStatements,
   prepareQuery,
+  fetchResultToJS,
 } from './db-helpers.js';
 import { Operator } from './data-types/base.js';
 import { VariableAwareCache } from './variable-aware-cache.js';
@@ -108,7 +109,6 @@ export type FetchResultEntity<C extends CollectionQuery<any, any>> =
     : 'bad fetch result';
 
 export interface FetchOptions {
-  includeTriples?: boolean;
   schema?: Models<any, any>;
   skipRules?: boolean;
 }
@@ -293,7 +293,7 @@ export async function fetchDeltaTriples<
                     )),
               },
             } as CollectionQuery<M, any>,
-            { includeTriples: true, schema }
+            { schema }
           );
           if (subQueryResult.results === null) {
             matchesBefore = false;
@@ -325,7 +325,7 @@ export async function fetchDeltaTriples<
                     )),
               },
             } as CollectionQuery<M, any>,
-            { includeTriples: true, schema }
+            { schema }
           );
           if (subQueryResult.results === null) {
             matchesAfter = false;
@@ -516,32 +516,7 @@ export async function fetch<
 >(
   tx: TripleStoreApi,
   query: Q,
-  options?: FetchOptions & {
-    includeTriples: false;
-    cache?: VariableAwareCache<any>;
-    stateVector?: Map<string, number>;
-  }
-): Promise<FetchResult<Q>>;
-export async function fetch<
-  M extends Models<any, any> | undefined,
-  Q extends CollectionQuery<M, any>
->(
-  tx: TripleStoreApi,
-  query: Q,
-  options?: FetchOptions & {
-    includeTriples: true;
-    cache?: VariableAwareCache<any>;
-    stateVector?: Map<string, number>;
-  }
-): Promise<{ results: FetchResult<Q>; triples: Map<string, TripleRow[]> }>;
-export async function fetch<
-  M extends Models<any, any> | undefined,
-  Q extends CollectionQuery<M, any>
->(
-  tx: TripleStoreApi,
-  query: Q,
   {
-    includeTriples = false,
     schema,
     cache,
     stateVector,
@@ -550,12 +525,10 @@ export async function fetch<
     cache?: VariableAwareCache<any>;
     stateVector?: Map<string, number>;
   } = {}
-) {
+): Promise<{ results: FetchResult<Q>; triples: Map<string, TripleRow[]> }> {
   const collectionSchema = schema?.[query.collectionName]?.schema;
   if (cache && VariableAwareCache.canCacheQuery(query, collectionSchema)) {
-    const cacheResult = await cache!.resolveFromCache(query);
-    if (!includeTriples) return cacheResult.results;
-    return cacheResult;
+    return cache!.resolveFromCache(query);
   }
   const queryWithInsertedVars = replaceVariablesInQuery(query);
   const { order, limit, select, where, entityId, collectionName, after } =
@@ -572,9 +545,6 @@ export async function fetch<
       const entityTriples = await tx.findByEntity(id);
       const entity = triplesToEntities(entityTriples).get(id)?.data;
       const externalId = stripCollectionFromId(id);
-      if (!includeTriples) {
-        return [externalId, { entity, triples: [] }] as const;
-      }
       return [externalId, { triples: entityTriples, entity }] as const;
     })
     // Apply where filters
@@ -611,7 +581,6 @@ export async function fetch<
           tx,
           existsSubQuery,
           {
-            includeTriples: true,
             schema,
             cache,
             skipRules,
@@ -696,13 +665,11 @@ export async function fetch<
           const subqueryResult =
             cardinality === 'one'
               ? await fetchOne<M, typeof subquery>(tx, fullSubquery, {
-                  includeTriples: true,
                   schema,
                   cache,
                   skipRules,
                 })
               : await fetch<M, typeof subquery>(tx, fullSubquery, {
-                  includeTriples: true,
                   schema,
                   cache,
                   skipRules,
@@ -725,19 +692,10 @@ export async function fetch<
       })
       .toArray();
   }
-
-  if (includeTriples) {
-    return {
-      results: new Map(entities), // TODO: also need to deserialize data?
-      triples: resultTriples,
-    };
-  }
-  return new Map(
-    entities.map(([id, entity]) => [
-      id,
-      convertEntityToJS(entity, schema, collectionName),
-    ])
-  ) as FetchResult<Q>;
+  return {
+    results: new Map(entities), // TODO: also need to deserialize data?
+    triples: resultTriples,
+  };
 }
 
 export async function fetchOne<
@@ -746,59 +704,25 @@ export async function fetchOne<
 >(
   tx: TripleStoreApi,
   query: Q,
-  options?: FetchOptions & {
-    includeTriples: true;
-    cache?: VariableAwareCache<any>;
-  }
-): Promise<{
-  results: FetchResultEntity<Q> | null;
-  triples: Map<string, TripleRow[]>;
-}>;
-export async function fetchOne<
-  M extends Models<any, any> | undefined,
-  Q extends CollectionQuery<M, any>
->(
-  tx: TripleStoreApi,
-  query: Q,
-  options?: FetchOptions & {
-    includeTriples: false;
-    cache?: VariableAwareCache<any>;
-  }
-): Promise<FetchResultEntity<Q> | null>;
-export async function fetchOne<
-  M extends Models<any, any> | undefined,
-  Q extends CollectionQuery<M, any>
->(
-  tx: TripleStoreApi,
-  query: Q,
   {
-    includeTriples = false,
     schema,
     cache,
   }: FetchOptions & {
     cache?: VariableAwareCache<any>;
   } = {}
-) {
-  if (includeTriples) {
-    const fetchResult = await fetch(tx, query, {
-      includeTriples: true,
-      schema,
-      cache,
-    });
-    const { results, triples } = fetchResult;
-    return {
-      results: [...results.values()][0] ?? null,
-      triples,
-    };
-  }
+): Promise<{
+  results: FetchResultEntity<Q> | null;
+  triples: Map<string, TripleRow[]>;
+}> {
   const fetchResult = await fetch(tx, query, {
-    includeTriples: false,
     schema,
     cache,
   });
-  const entity = [...fetchResult.values()][0];
-  if (!entity) return null;
-  return entity;
+  const { results, triples } = fetchResult;
+  return {
+    results: [...results.values()][0] ?? null,
+    triples,
+  };
 }
 
 export function doesEntityObjMatchWhere<Q extends CollectionQuery<any, any>>(
@@ -1018,7 +942,6 @@ function subscribeSingleEntity<
       if (!entityId) throw new EntityIdMissingError();
       const internalEntityId = appendCollectionToId(collectionName, entityId);
       const fetchResult = await fetch<M, Q>(tripleStore, query, {
-        includeTriples: true,
         schema,
         skipRules: options.skipRules,
         stateVector: options.stateVector,
@@ -1060,7 +983,6 @@ function subscribeSingleEntity<
             // if we have deletes, need to re-fetch the entity
             if (entityDeletes.length) {
               const fetchResult = await fetch<M, Q>(tripleStore, query, {
-                includeTriples: true,
                 schema,
               });
               entity = fetchResult.results.has(entityId)
@@ -1122,7 +1044,6 @@ function subscribeSingleEntity<
                           tripleStore,
                           fullSubquery,
                           {
-                            includeTriples: true,
                             schema,
                             skipRules: options.skipRules,
                           }
@@ -1131,7 +1052,6 @@ function subscribeSingleEntity<
                           tripleStore,
                           fullSubquery,
                           {
-                            includeTriples: true,
                             schema,
                             skipRules: options.skipRules,
                           }
@@ -1195,7 +1115,6 @@ export function subscribeResultsAndTriples<
     let triples: Map<string, TripleRow[]> = new Map();
     try {
       const fetchResult = await fetch<M, Q>(tripleStore, query, {
-        includeTriples: true,
         schema,
         skipRules: options.skipRules,
         stateVector: options.stateVector,
@@ -1211,7 +1130,6 @@ export function subscribeResultsAndTriples<
             (select && select.some((sel) => typeof sel !== 'string'))
           ) {
             const fetchResult = await fetch<M, Q>(tripleStore, query, {
-              includeTriples: true,
               schema,
             });
             results = fetchResult.results;
@@ -1332,7 +1250,6 @@ export function subscribeResultsAndTriples<
                 backFillQuery,
                 {
                   schema,
-                  includeTriples: true,
                   skipRules: options.skipRules,
                   // State vector needed in backfill?
                 }
@@ -1481,7 +1398,6 @@ export function subscribeTriples<
         }, new Map<string, TripleRow[]>());
       } else {
         const fetchResult = await fetch<M, Q>(tripleStore, query, {
-          includeTriples: true,
           schema,
           stateVector: options.stateVector,
         });

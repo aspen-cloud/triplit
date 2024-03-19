@@ -33,6 +33,7 @@ import {
   StoreSchema,
   prepareQuery,
   getSchemaTriples,
+  fetchResultToJS,
 } from './db-helpers.js';
 import { VariableAwareCache } from './variable-aware-cache.js';
 
@@ -695,21 +696,20 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
       variables: this.variables,
     });
 
-    const result = await fetch<M, Q>(
+    const { results } = await fetch<M, Q>(
       options.scope
         ? this.tripleStore.setStorageScope(options.scope)
         : this.tripleStore,
       fetchQuery,
       {
         schema,
-        includeTriples: false,
         cache:
           QUERY_CACHE_ENABLED && !options?.noCache ? this.cache : undefined,
         skipRules: options.skipRules,
       }
     );
-    this.logger.debug('fetch END', { query, result });
-    return result;
+    this.logger.debug('fetch END', { query, result: results });
+    return fetchResultToJS(results, schema, fetchQuery.collectionName);
   }
 
   async fetchTriples<Q extends CollectionQuery<M, any>>(
@@ -731,7 +731,6 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
           fetchQuery,
           {
             schema: schema,
-            includeTriples: true,
             stateVector: options.stateVector,
           }
         )

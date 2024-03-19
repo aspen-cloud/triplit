@@ -59,6 +59,7 @@ import {
   splitIdParts,
   getCollectionSchema,
   prepareQuery,
+  fetchResultToJS,
 } from './db-helpers.js';
 import {
   CollectionQuery,
@@ -644,10 +645,10 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
     });
     // TODO: read scope?
     // See difference between this fetch and db fetch
-    return fetch<M, Q>(this.storeTx, fetchQuery, {
+    const { results } = await fetch<M, Q>(this.storeTx, fetchQuery, {
       schema,
-      includeTriples: false,
     });
+    return fetchResultToJS(results, schema, fetchQuery.collectionName);
   }
 
   // maybe make it public? Keeping private bc its only used internally

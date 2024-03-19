@@ -20,6 +20,7 @@ import {
   diffSchemas,
   getBackwardsIncompatibleEdits,
   getSchemaDiffIssues,
+  convertEntityToJS,
   getSchemaFromPath,
   schemaToTriples,
   triplesToSchema,
@@ -34,6 +35,7 @@ import DB, {
 import { DBTransaction } from './db-transaction.js';
 import { DataType } from './data-types/base.js';
 import { Attribute, Value } from './triple-store-utils.js';
+import { FetchResult } from './collection-query.js';
 
 const ID_SEPARATOR = '#';
 
@@ -444,4 +446,14 @@ function addSubsSelectsFromIncludes<
     query.select.push(subquerySelection);
   }
   return query;
+}
+
+export function fetchResultToJS<
+  M extends Models<any, any> | undefined,
+  Q extends CollectionQuery<M, any>
+>(results: Map<string, any>, schema: M, collectionName: string) {
+  results.forEach((entity, id) => {
+    results.set(id, convertEntityToJS(entity, schema, collectionName));
+  });
+  return results as FetchResult<Q>;
 }
