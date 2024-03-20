@@ -254,14 +254,14 @@ export async function fetchDeltaTriples<
         doesEntityObjMatchWhere(
           entityBeforeStateVector,
           q.where,
-          schema && schema[q.collectionName].schema
+          schema && schema[q.collectionName]?.schema
         );
       const matchesSimpleFiltersAfter =
         !!entityAfterStateVector &&
         doesEntityObjMatchWhere(
           entityAfterStateVector,
           q.where,
-          schema && schema[q.collectionName].schema
+          schema && schema[q.collectionName]?.schema
         );
       if (!matchesSimpleFiltersBefore && !matchesSimpleFiltersAfter) {
         continue;
