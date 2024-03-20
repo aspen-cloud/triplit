@@ -13,8 +13,11 @@
   "scripts": {
     "dev": "vite",
     "build": "yarn build:web && yarn build:server",
+    "build:watch": "yarn build:web:watch & yarn build:server:watch",
     "build:web": "vite build --outDir dist/public",
+    "build:web:watch": "vite build --outDir dist/public",
     "build:server": "yarn tsx build-server.ts",
+    "build:server:watch": "yarn tsx watch build-server.ts",
     "build:types": "tsc -p tsconfig.server.json",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "preview": "vite preview",

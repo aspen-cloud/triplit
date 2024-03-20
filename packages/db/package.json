@@ -21,6 +21,7 @@
   "type": "module",
   "scripts": {
     "build": "tsc  --build --pretty",
+    "build:watch": "tsc -w",
     "lint:build": "npx publint",
     "lint": "tsc --noEmit",
     "test": "yarn test:unit && yarn typecheck",

@@ -9,6 +9,7 @@
   ],
   "scripts": {
     "build": "tsc",
+    "build:watch": "tsc -w",
     "lint": "tsc --noEmit",
     "publish-pkg": "node ../../scripts/npm-check-version-and-publish.js"
   },

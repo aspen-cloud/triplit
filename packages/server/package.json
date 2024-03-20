@@ -19,6 +19,7 @@
   ],
   "scripts": {
     "build": "tsc",
+    "build:watch": "tsc -w",
     "lint": "tsc --noEmit",
     "lint:build": "npx publint",
     "util:gentoken": "node ./dev/scripts/createToken.cjs",
