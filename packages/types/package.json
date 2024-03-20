@@ -13,8 +13,5 @@
   },
   "devDependencies": {
     "typescript": "^5.2.2"
-  },
-  "dependencies": {
-    "@triplit/db": "^0.3.0"
   }
 }

@@ -141,7 +141,8 @@ export interface ClientOptions<M extends ClientSchema | undefined> {
   };
 
   autoConnect?: boolean;
-  logger: Logger;
+  logger?: Logger;
+  logLevel?: 'info' | 'warn' | 'error' | 'debug';
 }
 
 // default policy is local-and-remote and no timeout
@@ -179,11 +180,13 @@ export class TriplitClient<M extends ClientSchema | undefined = undefined> {
       storage,
       defaultQueryOptions,
       logger,
+      logLevel = 'info',
     } = options ?? {};
     this.logger =
       logger ??
       new DefaultLogger({
         scope: 'client',
+        level: logLevel,
         capture: (log) => this.logs.push(log),
       });
 
@@ -262,6 +265,10 @@ export class TriplitClient<M extends ClientSchema | undefined = undefined> {
     query: CQ,
     options?: FetchOptions
   ): Promise<ClientFetchResult<CQ>> {
+    // ID is currently used to trace the lifecycle of a query/subscription across logs
+    // @ts-ignore
+    query.id = query.id ?? Math.random().toString().slice(2);
+
     const opts = options ?? this.defaultFetchOptions.fetch;
     if (opts.policy === 'local-only') {
       return this.fetchLocal(query);
@@ -345,6 +352,9 @@ export class TriplitClient<M extends ClientSchema | undefined = undefined> {
     query: CQ,
     options?: FetchOptions
   ): Promise<ClientFetchResultEntity<CQ> | null> {
+    // ID is currently used to trace the lifecycle of a query/subscription across logs
+    // @ts-ignore
+    query.id = query.id ?? Math.random().toString().slice(2);
     query = prepareFetchOneQuery(query);
     const result = await this.fetch(query, options);
     const entity = [...result.values()][0];
@@ -405,6 +415,8 @@ export class TriplitClient<M extends ClientSchema | undefined = undefined> {
     options?: SubscriptionOptions
   ) {
     const opts: SubscriptionOptions = { localOnly: false, ...options };
+    // ID is currently used to trace the lifecycle of a query/subscription across logs
+    // @ts-ignore
     query.id = query.id ?? Math.random().toString().slice(2);
     const scope = parseScope(query);
     this.logger.debug('subscribe start', query, scope);

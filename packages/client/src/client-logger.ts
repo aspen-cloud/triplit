@@ -7,13 +7,25 @@ export interface LoggerOptions {
   level?: LogLevel;
 }
 
+const LOG_LEVELS: LogLevel[] = ['error', 'warn', 'info', 'debug'];
 export class DefaultLogger implements Logger {
   onLog: (log: any) => void;
   logScope: string | undefined;
-  level: LogLevel = 'info';
+  levelIndex: number;
+
   constructor(opts: LoggerOptions) {
     this.logScope = opts.scope;
     this.onLog = opts.capture ?? (() => {});
+    this.level = opts.level ?? 'info';
+    this.levelIndex = LOG_LEVELS.indexOf(this.level);
+  }
+
+  set level(level: LogLevel) {
+    this.levelIndex = LOG_LEVELS.indexOf(level);
+  }
+
+  get level() {
+    return LOG_LEVELS[this.levelIndex];
   }
 
   private constructLogObj(level: LogLevel, message: any, ...args: any[]) {
@@ -38,19 +50,24 @@ export class DefaultLogger implements Logger {
 
   info(message: any, ...args: any[]) {
     const log = this.constructLogObj('info', message, ...args);
+    if (this.levelIndex < 2) return;
     console.info(`%c${log.scope}`, 'color: #888', log.message, log.args);
   }
 
   warn(message: any, ...args: any[]) {
-    console.warn(this.constructLogObj('warn', message, ...args));
+    const log = this.constructLogObj('warn', message, ...args);
+    if (this.levelIndex < 1) return;
+    console.warn(log.scope, log.message, log.args);
   }
 
   error(message: any, ...args: any[]) {
-    console.error(this.constructLogObj('error', message, ...args));
+    const log = this.constructLogObj('error', message, ...args);
+    console.error(log.scope, log.message, log.args);
   }
 
   debug(message: any, ...args: any[]) {
     const obj = this.constructLogObj('debug', message, ...args);
+    if (this.levelIndex < 3) return;
     if (obj.scope === 'sync') {
       if (obj.message === 'sent') {
         console.debug(

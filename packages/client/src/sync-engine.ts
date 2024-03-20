@@ -9,7 +9,7 @@ import DB, {
   convertEntityToJS,
   Timestamp,
 } from '@triplit/db';
-import { Logger, SyncOptions } from './triplit-client.js';
+import { SyncOptions } from './triplit-client.js';
 import { Subject } from 'rxjs';
 import {
   ConnectionStatus,
@@ -30,6 +30,7 @@ import {
 import { Value } from '@sinclair/typebox/value';
 import { ClientFetchResult, ClientQuery } from './utils/query.js';
 import { TripleStoreApi } from 'packages/db/src/triple-store.js';
+import { Logger } from '@triplit/types/logger';
 
 type OnMessageReceivedCallback = (message: ServerSyncMessage) => void;
 type OnMessageSentCallback = (message: ClientSyncMessage) => void;

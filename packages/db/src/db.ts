@@ -43,6 +43,7 @@ import {
 import { copyHooks, triplesToObject } from './utils.js';
 import { EAV, indexToTriple, TripleRow } from './triple-store-utils.js';
 import { TripleStore } from './triple-store.js';
+import { Logger } from '@triplit/types/src/logger.js';
 
 export interface Rule<M extends Model<any>> {
   filter: QueryWhere<M>;
@@ -413,6 +414,7 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
     beforeDelete: [],
   };
   private _pendingSchemaRequest: Promise<void> | null;
+  logger: Logger | Console;
 
   constructor({
     schema,

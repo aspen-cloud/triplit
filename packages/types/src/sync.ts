@@ -1,4 +1,4 @@
-import { CollectionQuery, Timestamp, TripleRow } from '@triplit/db';
+import type { CollectionQuery, Timestamp, TripleRow } from '@triplit/db';
 
 type SyncMessage<Type extends string, Payload extends any> = {
   type: Type;
