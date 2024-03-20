@@ -669,8 +669,10 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
     this.variables = { ...this.variables, ...variables };
   }
 
-  overrideSchema(schema: Exclude<StoreSchema<M>, undefined>, safeMode = false) {
-    overrideStoredSchema(this as DB<any>, schema, safeMode);
+  overrideSchema(schema: StoreSchema<M>) {
+    if (!schema) return;
+    // @ts-expect-error
+    overrideStoredSchema(this, schema);
   }
 
   async fetch<Q extends CollectionQuery<M, any>>(

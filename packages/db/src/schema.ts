@@ -813,7 +813,8 @@ async function detectAttributeHasNoUndefined(
     tx.db
       .query(collectionName)
       .select([attribute.join('.')])
-      .build()
+      .build(),
+    { skipRules: true }
   );
   return !Array.from(allEntities.values()).some(
     (entity) =>
@@ -830,7 +831,8 @@ async function detectAttributeIsEmpty(
     tx.db
       .query(collectionName)
       .select([attribute.join('.')])
-      .build()
+      .build(),
+    { skipRules: true }
   );
   return Array.from(allEntities.values()).every((entity) => {
     return ValuePointer.Get(entity, '/' + attribute.join('/')) === undefined;
@@ -848,7 +850,8 @@ async function detectAttributeHasNoNull(
       .select([attribute.join('.')])
       .where(attribute.join('.'), '=', null)
       .limit(1)
-      .build()
+      .build(),
+    { skipRules: true }
   );
   return allEntities.size === 0;
 }
@@ -858,7 +861,8 @@ async function detectCollectionIsEmpty(
   collectionName: string
 ) {
   const allEntities = await tx.fetch(
-    tx.db.query(collectionName).select([]).limit(1).build()
+    tx.db.query(collectionName).select([]).limit(1).build(),
+    { skipRules: true }
   );
   return allEntities.size === 0;
 }

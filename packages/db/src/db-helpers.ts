@@ -193,10 +193,9 @@ export type StoreSchema<M extends Models<any, any> | undefined> =
     ? undefined
     : never;
 
-export async function overrideStoredSchema(
-  db: DB,
-  schema: StoreSchema<Models<any, any>>,
-  safeMode = false
+export async function overrideStoredSchema<M extends Models<any, any>>(
+  db: DB<M>,
+  schema: StoreSchema<M>
 ) {
   let tripleStore = db.tripleStore;
   await tripleStore.transact(async (tx) => {
@@ -220,12 +219,6 @@ export async function overrideStoredSchema(
             return acc;
           }, {} as Record<string, Record<string, { willCorruptExistingData: boolean; issue: string }>>)
         );
-        if (safeMode) {
-          console.error(
-            'The DB is in safe mode and will not apply the schema update.'
-          );
-          return;
-        }
         if (issues.some((issue) => issue.willCorruptExistingData)) {
           console.error(
             'Some of the changes in the new schema will lead to data corruption. The schema update will not be applied.'
@@ -233,7 +226,8 @@ export async function overrideStoredSchema(
           return;
         }
       }
-      console.log(`applying ${diff.length} attribute changes to schema`);
+      diff.length > 0 &&
+        console.log(`applying ${diff.length} attribute changes to schema`);
     }
 
     const existingTriples = await tx.findByEntity(
