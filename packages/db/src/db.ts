@@ -463,6 +463,11 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
       (this.schema = schema);
     this.onSchemaChangeCallbacks = new Set([updateCachedSchemaOnChange]);
 
+    this.logger.debug('Initializing', {
+      schema,
+      migrations,
+      tripleStoreSchema,
+    });
     this.ensureMigrated = this.tripleStore
       .ensureStorageIsMigrated()
       // Apply migrations or overwrite schema
@@ -513,6 +518,9 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
             }
           }
         );
+      })
+      .then(() => {
+        this.logger.debug('Ready');
       });
   }
 
@@ -633,22 +641,26 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
     callback: (tx: DBTransaction<M>) => Promise<Output>,
     options: TransactOptions = {}
   ) {
+    this.logger.debug('transact START', { options });
     await this.ensureMigrated;
     const schema = await this.getSchema();
-    return await this.tripleStore.transact(async (tripTx) => {
-      const tx = new DBTransaction<M>(this, tripTx, this.hooks, {
-        variables: this.variables,
-        schema,
-        skipRules: options.skipRules,
-      });
-      try {
+    try {
+      const resp = await this.tripleStore.transact(async (tripTx) => {
+        const tx = new DBTransaction<M>(this, tripTx, this.hooks, {
+          variables: this.variables,
+          schema,
+          skipRules: options.skipRules,
+        });
         return await callback(tx);
-      } catch (e) {
-        console.error(e);
-        await tx.cancel();
-        throw e;
-      }
-    }, options.storeScope);
+      }, options.storeScope);
+      this.logger.debug('transact RESULT', resp);
+      return resp;
+    } catch (e) {
+      this.logger.error('transact ERROR', e);
+      throw e;
+    } finally {
+      this.logger.debug('transact END');
+    }
   }
 
   updateVariables(variables: Record<string, any>) {

@@ -246,13 +246,16 @@ export class TriplitClient<M extends ClientSchema | undefined = undefined> {
   }
 
   async transact<Output>(callback: (tx: DBTransaction<M>) => Promise<Output>) {
-    return this.db.transact(callback, {
+    this.logger.debug('transact START');
+    const resp = await this.db.transact(callback, {
       skipRules: SKIP_RULES,
       storeScope: {
         read: ['outbox', 'cache'],
         write: ['outbox'],
       },
     });
+    this.logger.debug('transact END', resp);
+    return resp;
   }
 
   // TODO: is this better done with generics?
@@ -449,7 +452,7 @@ export class TriplitClient<M extends ClientSchema | undefined = undefined> {
     let results: FetchResult<CQ>;
     const clientSubscriptionCallback = (newResults: FetchResult<CQ>) => {
       results = newResults;
-      this.logger.debug('subscription callback', results);
+      this.logger.debug('subscribe RESULTS', results);
       onResults(results as ClientFetchResult<CQ>, { hasRemoteFulfilled });
     };
     unsubscribeLocal = this.db.subscribe(
