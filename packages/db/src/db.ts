@@ -477,11 +477,9 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
             ? this.migrate(migrations, 'up')
             : this.migrate(migrations.definitions, 'up', migrations.scopes)
           : // .catch((e) => {
-          //   console.error(e);
-          // })
-          tripleStoreSchema
-          ? overrideStoredSchema(this as DB<any>, tripleStoreSchema)
-          : Promise.resolve()
+            //   console.error(e);
+            // })
+            Promise.resolve()
       )
       // Setup schema subscription
       .then(() => {
@@ -522,6 +520,10 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
       .then(() => {
         this.logger.debug('Ready');
       });
+    this.ensureMigrated.then(
+      // @ts-expect-error
+      () => tripleStoreSchema && this.overrideSchema(tripleStoreSchema)
+    );
   }
 
   addTrigger(on: AfterCommitOptions<M>, callback: AfterCommitCallback<M>): void;
@@ -665,6 +667,10 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
 
   updateVariables(variables: Record<string, any>) {
     this.variables = { ...this.variables, ...variables };
+  }
+
+  overrideSchema(schema: Exclude<StoreSchema<M>, undefined>, safeMode = false) {
+    overrideStoredSchema(this as DB<any>, schema, safeMode);
   }
 
   async fetch<Q extends CollectionQuery<M, any>>(
