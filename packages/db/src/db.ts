@@ -414,7 +414,7 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
     beforeDelete: [],
   };
   private _pendingSchemaRequest: Promise<void> | null;
-  logger: Logger | Console;
+  logger: Logger;
 
   constructor({
     schema,
@@ -426,7 +426,13 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
     variables,
     logger,
   }: DBConfig<M> = {}) {
-    this.logger = logger ?? console;
+    this.logger = logger ?? {
+      info: console.info,
+      warn: console.warn,
+      error: console.error,
+      debug: () => {},
+      scope: () => this.logger,
+    };
     this.variables = variables ?? {};
     // If only one source is provided, use the default key
     const sourcesMap = sources ?? {

@@ -187,7 +187,8 @@ export class TriplitClient<M extends ClientSchema | undefined = undefined> {
       new DefaultLogger({
         scope: 'client',
         level: logLevel,
-        capture: (log) => this.logs.push(log),
+        // Use debug mode as a proxy for dev mode
+        onLog: logLevel === 'debug' ? (log) => this.logs.push(log) : () => {},
       });
 
     const autoConnect = options?.autoConnect ?? true;

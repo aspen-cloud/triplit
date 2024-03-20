@@ -1,9 +1,9 @@
 import { LogLevel, Logger } from '@triplit/types/logger.js';
 
-export type LogCapturer = ((log: any) => void) | undefined;
+export type LogListener = ((log: any) => void) | undefined;
 export interface LoggerOptions {
   scope?: string;
-  capture?: LogCapturer;
+  onLog?: LogListener;
   level?: LogLevel;
 }
 
@@ -15,7 +15,7 @@ export class DefaultLogger implements Logger {
 
   constructor(opts: LoggerOptions) {
     this.logScope = opts.scope;
-    this.onLog = opts.capture ?? (() => {});
+    this.onLog = opts.onLog ?? (() => {});
     this.level = opts.level ?? 'info';
     this.levelIndex = LOG_LEVELS.indexOf(this.level);
   }
@@ -43,7 +43,7 @@ export class DefaultLogger implements Logger {
   scope(logScope: string) {
     return new DefaultLogger({
       scope: logScope,
-      capture: this.onLog,
+      onLog: this.onLog,
       level: this.level,
     });
   }
