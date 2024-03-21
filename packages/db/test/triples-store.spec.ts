@@ -357,10 +357,20 @@ describe('search/scan functionality', async () => {
       });
       expect(gtRes).toHaveLength(4);
 
+      const gteRes = await op.findValuesInRange(['cats', 'height'], {
+        greaterThanOrEqual: [6, 'cats#2'],
+      });
+      expect(gteRes).toHaveLength(5);
+
       const ltRes = await op.findValuesInRange(['cats', 'height'], {
         lessThan: [8, 'cats#4'],
       });
       expect(ltRes).toHaveLength(4);
+
+      const lteRes = await op.findValuesInRange(['cats', 'height'], {
+        lessThanOrEqual: [8, 'cats#4'],
+      });
+      expect(lteRes).toHaveLength(5);
 
       const rangeRes = await op.findValuesInRange(['cats', 'height'], {
         greaterThan: [6, 'cats#2'],

@@ -95,6 +95,14 @@ export type TripleStoreHooks = {
   afterCommit: TripleStoreAfterCommitHook[];
 };
 
+export type RangeContraints = {
+  greaterThan?: ValueCursor;
+  greaterThanOrEqual?: ValueCursor;
+  lessThan?: ValueCursor;
+  lessThanOrEqual?: ValueCursor;
+  direction?: 'ASC' | 'DESC';
+};
+
 // TODO: figure out prefix issue
 export function indexToTriple(
   index: TupleIndex,
@@ -192,13 +200,11 @@ export function findValuesInRange(
   attribute: Attribute,
   {
     greaterThan,
+    greaterThanOrEqual,
     lessThan,
+    lessThanOrEqual,
     direction,
-  }: {
-    greaterThan?: ValueCursor;
-    lessThan?: ValueCursor;
-    direction?: 'ASC' | 'DESC';
-  } = {}
+  }: RangeContraints = {}
 ) {
   const prefix = ['AVE', attribute];
   const TUPLE_LENGTH = 5;
@@ -208,9 +214,21 @@ export function findValuesInRange(
       ...greaterThan,
       ...new Array(TUPLE_LENGTH - prefix.length - greaterThan.length).fill(MAX),
     ],
+    gte: greaterThanOrEqual && [
+      ...greaterThanOrEqual,
+      ...new Array(
+        TUPLE_LENGTH - prefix.length - greaterThanOrEqual.length
+      ).fill(MIN),
+    ],
     lt: lessThan && [
       ...lessThan,
       ...new Array(TUPLE_LENGTH - prefix.length - lessThan.length).fill(MIN),
+    ],
+    lte: lessThanOrEqual && [
+      ...lessThanOrEqual,
+      ...new Array(TUPLE_LENGTH - prefix.length - lessThanOrEqual.length).fill(
+        MAX
+      ),
     ],
     reverse: direction === 'DESC',
   };

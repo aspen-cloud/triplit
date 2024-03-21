@@ -32,6 +32,7 @@ import {
   TripleStoreAfterCommitHook,
   indexToTriple,
   findAllClientIds,
+  RangeContraints,
 } from './triple-store-utils.js';
 import { copyHooks } from './utils.js';
 
@@ -101,13 +102,7 @@ export class TripleStoreTransaction implements TripleStoreApi {
 
   async findValuesInRange(
     attribute: Attribute,
-    constraints:
-      | {
-          greaterThan?: ValueCursor;
-          lessThan?: ValueCursor;
-          direction?: 'ASC' | 'DESC';
-        }
-      | undefined
+    constraints: RangeContraints | undefined
   ) {
     return findValuesInRange(this.tupleTx, attribute, constraints);
   }
