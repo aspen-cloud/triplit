@@ -1,4 +1,9 @@
-import type { CollectionQuery, Timestamp, TripleRow } from '@triplit/db';
+// TODO: add these types back
+// import type { CollectionQuery, Timestamp, TripleRow } from '@triplit/db';
+
+type CollectionQuery<T, U> = any;
+type Timestamp = [sequence: number, client: string];
+type TripleRow = any;
 
 type SyncMessage<Type extends string, Payload extends any> = {
   type: Type;
