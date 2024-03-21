@@ -481,13 +481,24 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
             // })
             Promise.resolve()
       )
+      .then(async () => {
+        if (!tripleStoreSchema) return;
+        const currentSchema = await readSchemaFromTripleStore(this.tripleStore);
+        if (!currentSchema.schema) {
+          //@ts-expect-error
+          await this.overrideSchema(tripleStoreSchema);
+        } else {
+          //@ts-expect-error
+          this.overrideSchema(tripleStoreSchema);
+        }
+      })
       // Setup schema subscription
       .then(() => {
         this.tripleStore.tupleStore.subscribe(
           { prefix: ['EAT', appendCollectionToId('_metadata', '_schema')] },
           async (storeWrites) => {
             // If there are deletes clear cached data and update if there are sets
-            // NOTE: IF WE ADD GARBAGE COLLECITON ENSURE THIS IS STILL CORRECT
+            // NOTE: IF WE ADD GARBAGE COLLECTION ENSURE THIS IS STILL CORRECT
             if (Object.values(storeWrites).some((w) => !!w.remove?.length)) {
               this.schema = undefined;
               this._schema = undefined;
@@ -520,10 +531,6 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
       .then(() => {
         this.logger.debug('Ready');
       });
-    this.ensureMigrated.then(
-      // @ts-expect-error
-      () => tripleStoreSchema && this.overrideSchema(tripleStoreSchema)
-    );
   }
 
   addTrigger(on: AfterCommitOptions<M>, callback: AfterCommitCallback<M>): void;
@@ -670,10 +677,10 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
     this.variables = { ...this.variables, ...variables };
   }
 
-  overrideSchema(schema: StoreSchema<M>) {
+  async overrideSchema(schema: StoreSchema<M>) {
     if (!schema) return;
     // @ts-expect-error
-    overrideStoredSchema(this, schema);
+    return overrideStoredSchema(this, schema);
   }
 
   async fetch<Q extends CollectionQuery<M, any>>(

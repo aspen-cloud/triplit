@@ -205,7 +205,7 @@ export async function overrideStoredSchema<M extends Models<any, any>>(
       const diff = diffSchemas(currentSchema.schema, schema);
       const issues = await getSchemaDiffIssues(db, diff);
       if (issues.length > 0) {
-        console.error(
+        db.logger.warn(
           'The DB received an updated schema. It may be backwards incompatible with existing data. Please resolve the following issues:',
           issues.reduce((acc, { issue, willCorruptExistingData, context }) => {
             const collection = context.collection;
@@ -220,14 +220,14 @@ export async function overrideStoredSchema<M extends Models<any, any>>(
           }, {} as Record<string, Record<string, { willCorruptExistingData: boolean; issue: string }>>)
         );
         if (issues.some((issue) => issue.willCorruptExistingData)) {
-          console.error(
+          db.logger.warn(
             'Some of the changes in the new schema will lead to data corruption. The schema update will not be applied.'
           );
           return;
         }
       }
       diff.length > 0 &&
-        console.log(`applying ${diff.length} attribute changes to schema`);
+        db.logger.info(`applying ${diff.length} attribute changes to schema`);
     }
 
     const existingTriples = await tx.findByEntity(
