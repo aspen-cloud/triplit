@@ -19,10 +19,36 @@ const unsubscribe = client.subscribe(
   {
     localOnly: false,
     onRemoteFulfilled: () => {
-      console.log('server has sent back results for the subscription')
-    }
+      console.log('server has sent back results for the subscription');
+    },
   }
 );
 ```
 
 If a subscription query fails on the server then syncing for that query will stop. However, the subscription will remain active and updates to the local database will still be available. As well, the syncing of other queries will not be impacted. Although you will not receive updates from the server, updates that you make via [mutations](/updating-data) will be sent.
+
+## `infiniteSubscribe`
+
+`infiniteSubscribe` is a special type of subscription that is used to fetch paginated data. It is similar to `subscribe` but it has a few differences:
+
+- It expects the query to have an initial `limit` defined.
+- It returns a `loadMore(pageSize?: number)` function to fetch more data. By default, it fetches the next page of data based on the initial `limit` defined in the query.
+
+```typescript
+const { unsubscribe, loadMore } = client.infiniteSubscribe(
+  query,
+  (results, info) => {
+    // handle results
+  },
+  (error) => {
+    // handle error
+  },
+  // Optional
+  {
+    localOnly: false,
+    onRemoteFulfilled: () => {
+      console.log('server has sent back results for the subscription');
+    },
+  }
+);
+```

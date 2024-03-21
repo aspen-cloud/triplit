@@ -33,7 +33,7 @@ The result of the hook is an object with the following properties:
 - `fetching`: A boolean indicating whether the query is currently fetching.
 - `error`: An error object if the query failed to fetch.
 
-```tsx
+```tsx filename="app.tsx"
 import { useQuery } from '@triplit/react';
 
 const client = new TriplitClient();
@@ -61,7 +61,7 @@ The `useEntity` hook subscribes to the provided entity inside your react compone
 
 The result of the hook is the same as the result of `useQuery`, but the `results` property will only contain the entity you subscribed to.
 
-```tsx
+```tsx copy filename="app.tsx"
 import { useEntity } from '@triplit/react';
 
 const client = new TriplitClient();
@@ -73,11 +73,40 @@ function App() {
 }
 ```
 
+## useInfiniteQuery
+
+The `useInfiniteQuery` hook subscribes to the provided query, and exposes helper functions for loading more results. It is useful for patterns that continously load more data while keeping around the existing results. Chat applications or content browsing applications that load more data as the user scrolls are good use cases for `useInfiniteQuery`.
+
+```tsx copy filename="app.tsx"
+import { useInfiniteQuery } from '@triplit/react';
+
+const client = new TriplitClient();
+
+function App() {
+  const { results, fetchingMore, hasMore, loadMore } = useInfiniteQuery(
+    client,
+    client.query('todos').limit(10).orderBy('created_at', 'desc')
+  );
+
+  return (
+    <div>
+      {results.entries().map((item) => (
+        <div>{item.text}</div>
+      ))}
+      {fetchingMore && <div>Loading more...</div>}
+      {hasMore && <button onClick={loadMore}>Load more</button>}
+    </div>
+  );
+}
+```
+
+For `useInfiniteQuery` to function properly the provided query must have a `limit` set. By default `loadMore` will increase the limit by the initial limit set in the query. You can also provide a argument to `loadMore` denoting if you want to increment the limit by a different amount.
+
 ## useConnectionStatus
 
 The `useConnectionStatus` hook subscribes to changes to the connection status of the client and will automatically unsubscribe when the component unmounts.
 
-```tsx
+```tsx copy filename="app.tsx"
 import { useConnectionStatus } from '@triplit/react';
 
 const client = new TriplitClient();
