@@ -652,6 +652,7 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
           variables: this.variables,
           schema,
           skipRules: options.skipRules,
+          logger: this.logger.scope('tx'),
         });
         return await callback(tx);
       }, options.storeScope);

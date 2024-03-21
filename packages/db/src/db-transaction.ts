@@ -84,6 +84,7 @@ import {
 } from './triple-store-utils.js';
 import { TripleStoreApi } from './triple-store.js';
 import { RecordType } from './data-types/record.js';
+import { Logger } from '@triplit/types/src/logger.js';
 
 interface TransactionOptions<
   M extends Models<any, any> | undefined = undefined
@@ -91,6 +92,7 @@ interface TransactionOptions<
   variables?: Record<string, any>;
   schema?: StoreSchema<M>;
   skipRules?: boolean;
+  logger?: Logger;
 }
 
 const EXEMPT_FROM_WRITE_RULES = new Set(['_metadata']);
@@ -183,6 +185,7 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
   private _schema: Entity | undefined;
   readonly variables?: Record<string, any>;
   private _permissionCache: Map<string, boolean> = new Map();
+  logger: Logger;
 
   constructor(
     readonly db: DB<M>,
@@ -190,6 +193,7 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
     private readonly hooks: DBHooks<M>,
     readonly options: TransactionOptions<M> = {}
   ) {
+    this.logger = options.logger ?? db.logger;
     this.schema = options.schema;
     this.variables = options.variables;
     this.storeTx.beforeInsert(this.ValidateTripleSchema);
@@ -485,6 +489,7 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
       throw new InvalidInsertDocumentError(
         `The document being inserted must be an object.`
       );
+    this.logger.debug('insert START', collectionName, doc);
 
     const schema = (await this.getSchema())?.collections;
     const collectionSchema = schema?.[collectionName];
@@ -536,11 +541,13 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
     await this.storeTx.insertTriples(triples);
     const insertedEntity = constructEntity(triples, storeId);
     if (!insertedEntity) throw new Error('Malformed id');
-    return convertEntityToJS(
+    const insertedEntityJS = convertEntityToJS(
       insertedEntity.data as any,
       schema,
       collectionName
     ) as MaybeReturnTypeFromQuery<M, CN>;
+    this.logger.debug('insert END', collectionName, insertedEntityJS);
+    return insertedEntityJS;
   }
 
   async update<CN extends CollectionNameFromModels<M>>(
@@ -550,6 +557,7 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
       entity: UpdateTypeFromModel<ModelFromModels<M, CN>>
     ) => void | Promise<void>
   ) {
+    this.logger.debug('update START', collectionName, entityId);
     const schema = (await this.getSchema())?.collections as M;
 
     // TODO: Would be great to plug into the pipeline at any point
@@ -606,6 +614,8 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
 
     // Apply changes
     await this.storeTx.setValues(updateValues);
+
+    this.logger.debug('update END', collectionName, entityId, changeTuples);
   }
 
   async delete<CN extends CollectionNameFromModels<M>>(
@@ -617,8 +627,10 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
         collectionName,
         'Collection name must be defined'
       );
+    this.logger.debug('delete START', collectionName, id);
     const storeId = appendCollectionToId(collectionName, id);
     await this.storeTx.expireEntity(storeId);
+    this.logger.debug('delete END', collectionName, id);
   }
 
   async fetch<Q extends CollectionQuery<M, any>>(

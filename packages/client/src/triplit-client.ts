@@ -366,46 +366,55 @@ export class TriplitClient<M extends ClientSchema | undefined = undefined> {
     return entity;
   }
 
-  insert<CN extends CollectionNameFromModels<M>>(
+  async insert<CN extends CollectionNameFromModels<M>>(
     collectionName: CN,
     object: InsertTypeFromModel<ModelFromModels<M, CN>>
   ) {
-    return this.db.insert(collectionName, object, {
+    this.logger.debug('insert START', collectionName, object);
+    const resp = await this.db.insert(collectionName, object, {
       skipRules: SKIP_RULES,
       storeScope: {
         read: ['outbox', 'cache'],
         write: ['outbox'],
       },
     });
+    this.logger.debug('insert END', resp);
+    return resp;
   }
 
-  update<CN extends CollectionNameFromModels<M>>(
+  async update<CN extends CollectionNameFromModels<M>>(
     collectionName: CN,
     entityId: string,
     updater: (
       entity: UpdateTypeFromModel<ModelFromModels<M, CN>>
     ) => void | Promise<void>
   ) {
-    return this.db.update(collectionName, entityId, updater, {
+    this.logger.debug('update START', collectionName, entityId);
+    const resp = await this.db.update(collectionName, entityId, updater, {
       skipRules: SKIP_RULES,
       storeScope: {
         read: ['outbox', 'cache'],
         write: ['outbox'],
       },
     });
+    this.logger.debug('update END', resp);
+    return resp;
   }
 
-  delete<CN extends CollectionNameFromModels<M>>(
+  async delete<CN extends CollectionNameFromModels<M>>(
     collectionName: CN,
     entityId: string
   ) {
-    return this.db.delete(collectionName, entityId, {
+    this.logger.debug('delete START', collectionName, entityId);
+    const resp = await this.db.delete(collectionName, entityId, {
       skipRules: SKIP_RULES,
       storeScope: {
         read: ['outbox', 'cache'],
         write: ['outbox'],
       },
     });
+    this.logger.debug('delete END', resp);
+    return resp;
   }
 
   // TODO: refactor so some logic is shared across policies (ex starting a local and remote sub is verbose and repetitive)
