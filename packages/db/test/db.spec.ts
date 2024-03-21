@@ -5469,7 +5469,7 @@ describe('Rules', () => {
         ).resolves.not.toThrowError();
       });
 
-      it.skip("throws an error when updating a obj that doesn't match filter", async () => {
+      it("throws an error when updating a obj that doesn't match filter", async () => {
         await expect(
           db.transact(async (tx) => {
             await tx.update('posts', POST_ID, async (entity) => {

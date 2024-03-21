@@ -213,20 +213,19 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
         const updatedEntities: Set<string> = new Set([
           ...triples.map((t) => t.id),
         ]);
+        const deletedEntities: Set<string> = new Set();
         for (const triple of triples) {
+          if (deletedEntities.has(triple.id) || insertedEntities.has(triple.id))
+            continue;
+          if (triple.attribute[0] === '_collection' && triple.expired) {
+            updatedEntities.delete(triple.id);
+            deletedEntities.add(triple.id);
+            continue;
+          }
           if (triple.attribute[0] === '_collection' && !triple.expired) {
             insertedEntities.add(triple.id);
             updatedEntities.delete(triple.id);
-            const entityTriples = triples.filter(
-              (t) => t.id === triple.id && t.expired === false
-            );
-            const entity = constructEntity(entityTriples, triple.id);
-            checkWriteRules(
-              triple.id,
-              entity?.data,
-              this.variables,
-              this.schema
-            );
+            continue;
           }
         }
         // for each updatedEntity, load triples, construct entity, and check write rules
@@ -234,6 +233,23 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
           const entityTriples = await tx.findByEntity(id);
           const entity = constructEntity(
             [...triples.filter((t) => t.id === id), ...entityTriples],
+            id
+          );
+
+          checkWriteRules(id, entity?.data, this.variables, this.schema);
+        }
+        for (const id of insertedEntities) {
+          const entityTriples = triples.filter(
+            (t) => t.id === id && t.expired === false
+          );
+          const entity = constructEntity(entityTriples, id);
+          checkWriteRules(id, entity?.data, this.variables, this.schema);
+        }
+        for (const id of deletedEntities) {
+          const entityTriples = await tx.findByEntity(id);
+          const tripsInTx = new Set(triples.filter((t) => t.id === id));
+          const entity = constructEntity(
+            entityTriples.filter((t) => !tripsInTx.has(t)),
             id
           );
           checkWriteRules(id, entity?.data, this.variables, this.schema);
