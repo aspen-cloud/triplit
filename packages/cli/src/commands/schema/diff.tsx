@@ -35,7 +35,7 @@ export default Command({
     const migration = createMigration(localSchema, serverSchema, 0, 0, 'diff');
     console.log('Operations to sync schemas:');
     console.log(
-      migration.up.length
+      migration?.up?.length
         ? migration.up
         : blue`No operations needed. Schemas are in sync.`
     );
