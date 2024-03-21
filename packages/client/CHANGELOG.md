@@ -1,5 +1,18 @@
 # @triplit/client
 
+## 0.3.29
+
+### Patch Changes
+
+- 11b811d: Include hasRemoteFulfilled on local only subscriptions
+- 3ddaac3: add utilities for infinite scrolling
+- f911d72: improve error message on remote client parse errors
+- Updated dependencies [654c256]
+- Updated dependencies [3ddaac3]
+- Updated dependencies [da425e6]
+- Updated dependencies [d20f7b4]
+  - @triplit/db@0.3.25
+
 ## 0.3.28
 
 ### Patch Changes

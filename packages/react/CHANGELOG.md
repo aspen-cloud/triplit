@@ -1,5 +1,15 @@
 # @triplit/react
 
+## 0.3.29
+
+### Patch Changes
+
+- 3ddaac3: add utilities for infinite scrolling
+- Updated dependencies [11b811d]
+- Updated dependencies [3ddaac3]
+- Updated dependencies [f911d72]
+  - @triplit/client@0.3.29
+
 ## 0.3.28
 
 ### Patch Changes

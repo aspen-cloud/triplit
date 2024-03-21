@@ -1,5 +1,15 @@
 # @triplit/db
 
+## 0.3.25
+
+### Patch Changes
+
+- 654c256: addressed a bug that errored out fetchDeltaTriples when subscribing to the 'schema' entity in the '\_metadata' collection
+- 3ddaac3: - ensure deletes work properly with limit in fetch and subscription
+  - add gte and lte options for range queries
+- da425e6: fixup schema loading for initially schemaless dbs
+- d20f7b4: add checks for dangerous schema updates when passed directly into the database constructor
+
 ## 0.3.24
 
 ### Patch Changes

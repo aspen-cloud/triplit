@@ -1,5 +1,26 @@
 # @triplit/cli
 
+## 0.3.34
+
+### Patch Changes
+
+- c430a9b: add initWithSchema flag to `dev` command
+- 1b28ca7: fixup handling of cli flags with defaults
+- 6ccc68c: split seed into 'run' and 'create' commands
+- a5d593d: load schema to dev server by default
+- Updated dependencies [11b811d]
+- Updated dependencies [654c256]
+- Updated dependencies [3ddaac3]
+- Updated dependencies [3ddaac3]
+- Updated dependencies [da425e6]
+- Updated dependencies [d20f7b4]
+- Updated dependencies [f911d72]
+  - @triplit/client@0.3.29
+  - @triplit/db@0.3.25
+  - @triplit/console@0.3.32
+  - @triplit/server@0.3.28
+  - @triplit/server-core@0.3.28
+
 ## 0.3.33
 
 ### Patch Changes
