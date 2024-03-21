@@ -1,5 +1,13 @@
 # @triplit/client
 
+## 0.3.30
+
+### Patch Changes
+
+- 7e2fdb1: fixup client logs readability
+- Updated dependencies [b5744e9]
+  - @triplit/db@0.3.26
+
 ## 0.3.29
 
 ### Patch Changes

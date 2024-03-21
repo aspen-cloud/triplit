@@ -1,5 +1,11 @@
 # @triplit/db
 
+## 0.3.26
+
+### Patch Changes
+
+- b5744e9: fix bug for manage deletes with write rules
+
 ## 0.3.25
 
 ### Patch Changes
