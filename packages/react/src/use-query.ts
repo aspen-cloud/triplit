@@ -91,3 +91,56 @@ export function useQuery<
     error,
   };
 }
+
+export function useInfiniteQuery<
+  M extends Models<any, any> | undefined,
+  CN extends CollectionNameFromModels<M>
+>(client: TriplitClient<any>, query: ClientQuery<M, CN>) {
+  const [hasMore, setHasMore] = useState(false);
+  const [results, setResults] = useState<
+    ClientFetchResult<ClientQuery<M, CN>> | undefined
+  >(undefined);
+  const [error, setError] = useState<any>(undefined);
+  const [fetching, setFetching] = useState(true);
+  const [fetchingMore, setFetchingMore] = useState(false);
+
+  const loadMoreRef = useRef<() => void>();
+  const disconnectRef = useRef<() => void>();
+
+  useEffect(() => {
+    const { unsubscribe, loadMore } = client.infiniteSubscribe(
+      query,
+      (results, info) => {
+        setFetching(false);
+        setError(undefined);
+        setFetchingMore(false);
+        setHasMore(info.hasMore);
+        setResults(new Map(results) as ClientFetchResult<ClientQuery<M, CN>>);
+      }
+    );
+    loadMoreRef.current = loadMore;
+    disconnectRef.current = unsubscribe;
+    return () => {
+      unsubscribe();
+    };
+  }, [query]);
+
+  const loadMore = useCallback(() => {
+    setFetchingMore(true);
+    loadMoreRef.current?.();
+  }, []);
+
+  const disconnect = useCallback(() => {
+    disconnectRef.current?.();
+  }, []);
+
+  return {
+    results,
+    fetching,
+    fetchingMore,
+    error,
+    hasMore,
+    loadMore,
+    disconnect,
+  };
+}

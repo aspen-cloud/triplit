@@ -494,6 +494,67 @@ export class TriplitClient<M extends ClientSchema | undefined = undefined> {
     };
   }
 
+  infiniteSubscribe<CQ extends ClientQuery<M, any>>(
+    query: CQ,
+    onResults: (
+      results: ClientFetchResult<CQ>,
+      info: {
+        hasRemoteFulfilled: boolean;
+        hasMore: boolean;
+      }
+    ) => void | Promise<void>,
+    onError?: (error: any) => void | Promise<void>,
+    options?: SubscriptionOptions
+  ): InfiniteSubscription {
+    const returnValue: Partial<InfiniteSubscription> = {};
+    let subscriptionResultHandler = (results: any, info: any) => {
+      onResults(results, {
+        ...info,
+        hasMore: false,
+      });
+    };
+    returnValue.loadMore = () => {
+      console.warn(
+        'There is no limit set on the query, so loadMore is a no-op'
+      );
+    };
+    if (query.limit) {
+      const originalPageSize = query.limit;
+      query.limit = query.limit + 1;
+      subscriptionResultHandler = (
+        results: ClientFetchResult<CQ>,
+        info: { hasRemoteFulfilled: boolean }
+      ) => {
+        const hasMore = results.size >= query.limit!;
+        let entries = Array.from(results.entries());
+        if (hasMore) entries = entries.slice(0, -1);
+        onResults(new Map(entries) as ClientFetchResult<CQ>, {
+          hasRemoteFulfilled: info.hasRemoteFulfilled,
+          hasMore,
+        });
+      };
+
+      returnValue.loadMore = (pageSize?: number) => {
+        returnValue.unsubscribe?.();
+        query.limit = (query.limit ?? 1) + (pageSize ?? originalPageSize);
+        returnValue.unsubscribe = this.subscribe(
+          query,
+          subscriptionResultHandler,
+          onError,
+          options
+        );
+      };
+    }
+    returnValue.unsubscribe = this.subscribe(
+      query,
+      subscriptionResultHandler,
+      onError,
+      options
+    );
+
+    return returnValue as InfiniteSubscription;
+  }
+
   updateOptions(options: Pick<ClientOptions<M>, 'token' | 'serverUrl'>) {
     const { token, serverUrl } = options;
     const hasToken = options.hasOwnProperty('token');
@@ -548,3 +609,8 @@ function warnError(e: any) {
     console.warn(e);
   }
 }
+
+type InfiniteSubscription = {
+  unsubscribe: () => void;
+  loadMore: (pageSize?: number) => void;
+};
