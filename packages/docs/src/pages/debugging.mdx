@@ -1,0 +1,49 @@
+import Image from 'next/image';
+import BrowserConsoleClientImage from '../../public/browser-console-client.png';
+
+# Debugging
+
+## Logging
+
+Triplit uses a configurable logger to log information about the client and underlying database's state, as well as the results of fetches and mutations. By default the logger is set to `'info'` level, but supports `'warn' | 'error' | 'debug'` as well.
+
+You can set the logger level by passing a `logLevel` option to the `TriplitClient` constructor:
+
+```ts
+import { TriplitClient } from '@triplit/client';
+
+const client = new TriplitClient({
+  logLevel: 'debug',
+});
+```
+
+If you'd like to save and export logs, you must set the `logLevel` to `'debug'`. You can then access the logs and relevant metadata from the `TriplitClient` instance:
+
+```ts
+const logs = client.logs; // an array of log objects
+
+// copy the logs to the clipboard when in the browser
+copy(JSON.stringify(logs));
+
+// or save the logs to a file when in Node.js
+import fs from 'fs';
+fs.writeFileSync('logs.json', JSON.stringify(logs));
+```
+
+## Inspecting a client in the browser
+
+The `TriplitClient` class can be accessed from your browser console by adding the following code to an application that uses the `TriplitClient`:
+
+```ts copy filename="App.tsx"
+const client = new TriplitClient();
+
+if (typeof window !== 'undefined') window.client = client;
+```
+
+This will make the `client` object available in the browser console, allowing you to inspect the state of the client and call methods on it, e.g. with `client.fetch`.
+
+<Image
+  style={{ marginTop: 10 }}
+  alt="browser console"
+  src={BrowserConsoleClientImage}
+/>
