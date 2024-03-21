@@ -164,7 +164,7 @@ export class TriplitClient<M extends ClientSchema | undefined = undefined> {
     fetch: FetchOptions;
   };
   logger: Logger;
-  private logs: any[] = [];
+  readonly logs: any[] = [];
 
   constructor(options?: ClientOptions<M>) {
     const {
