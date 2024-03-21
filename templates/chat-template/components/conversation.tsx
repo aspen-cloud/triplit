@@ -1,6 +1,15 @@
 "use client"
 
-import { ChangeEvent, useMemo, useState } from "react"
+import {
+  ChangeEvent,
+  ForwardedRef,
+  RefObject,
+  forwardRef,
+  useCallback,
+  useMemo,
+  useRef,
+  useState,
+} from "react"
 import { useConnectionStatus } from "@triplit/react"
 import {
   CheckCircle,
@@ -28,7 +37,6 @@ export function Conversation({ id }: { id: string }) {
     <div className="flex h-full flex-col items-stretch overflow-hidden">
       <ConversationHeader convoId={id} />
       <MessageList convoId={id} />
-      <MessageInput convoId={id} />
     </div>
   )
 }
@@ -69,7 +77,13 @@ function ConversationHeader({ convoId }: { convoId: string }) {
   )
 }
 
-function MessageInput({ convoId }: { convoId: string }) {
+function MessageInput({
+  convoId,
+  scrollRef,
+}: {
+  convoId: string
+  scrollRef: RefObject<HTMLSpanElement>
+}) {
   const { data: session } = useSession()
   const [draftMsg, setDraftMsg] = useState("")
 
@@ -89,6 +103,9 @@ function MessageInput({ convoId }: { convoId: string }) {
             .then(() => {
               setDraftMsg("")
             })
+          setTimeout(() => {
+            scrollRef.current?.scrollIntoView({ behavior: "smooth" })
+          }, 0)
         }}
         className="flex items-center justify-center gap-4 p-5"
       >
@@ -120,6 +137,9 @@ function MessageList({ convoId }: { convoId: string }) {
     pendingMessages,
     error: messagesError,
     fetching: isFetchingMessages,
+    fetchingMore,
+    hasMore,
+    loadMore,
   } = useMessages(convoId)
   const messageArray = useMemo(() => {
     if (!messages) return []
@@ -131,60 +151,83 @@ function MessageList({ convoId }: { convoId: string }) {
     return Array.from(pendingMessages).map(([_id, message]) => message)
   }, [pendingMessages])
 
+  const scroll = useRef<HTMLSpanElement>(null)
+  const messagesConainerRef = useRef<HTMLDivElement>(null)
+  const onScroll = useCallback(() => {
+    // using flex-col-reverse, so slightly different logic
+    // otherwise scrollTop === 0 would be the condition
+    const atEnd =
+      messagesConainerRef.current &&
+      messagesConainerRef.current.scrollTop +
+        messagesConainerRef.current.scrollHeight ===
+        messagesConainerRef.current.clientHeight
+    if (atEnd && !fetchingMore && hasMore) {
+      loadMore()
+    }
+  }, [hasMore, fetchingMore])
+
   return (
-    <div className="flex grow flex-col-reverse gap-2 overflow-y-auto px-6 py-3 relative">
-      {pendingMessageArray.map((message, index) => (
-        <ChatBubble
-          key={message.id}
-          message={message}
-          delivered={false}
-          isOwnMessage={true}
-          showSentIndicator={index === 0}
-        />
-      ))}
-      {isFetchingMessages ? (
-        <div>Loading...</div>
-      ) : messagesError ? (
-        <div>
-          <h4>Could not load messages</h4>
-          <p>Error: {messagesError.message}</p>
-        </div>
-      ) : (
-        messageArray.map((message, index) => {
-          // @ts-ignore
-          const isOwnMessage = message.sender_id === session.user.id
-          const isFirstMessageInABlockFromThisDay =
-            index === messageArray.length - 1 ||
-            new Date(
-              messageArray[index + 1]?.created_at
-            ).toLocaleDateString() !==
-              new Date(message.created_at).toLocaleDateString()
-          return (
-            <>
-              <ChatBubble
-                key={message.id}
-                message={message}
-                delivered={true}
-                isOwnMessage={isOwnMessage}
-                showSentIndicator={index === 0}
-              />
-              {isFirstMessageInABlockFromThisDay && (
-                <div
-                  className="text-center text-sm text-muted-foreground"
-                  key={message.created_at}
-                >
-                  {new Date(message.created_at).toLocaleDateString([], {
-                    weekday: "long",
-                    month: "long",
-                    day: "numeric",
-                  })}
-                </div>
-              )}
-            </>
-          )
-        })
-      )}
-    </div>
+    <>
+      <div
+        className="flex grow flex-col-reverse gap-2 overflow-auto px-6 py-3 relative"
+        ref={messagesConainerRef}
+        onScroll={onScroll}
+      >
+        <span ref={scroll}></span>
+        {pendingMessageArray.map((message, index) => (
+          <ChatBubble
+            key={message.id}
+            message={message}
+            delivered={false}
+            isOwnMessage={true}
+            showSentIndicator={index === 0}
+          />
+        ))}
+        {isFetchingMessages ? (
+          <div>Loading...</div>
+        ) : messagesError ? (
+          <div>
+            <h4>Could not load messages</h4>
+            <p>Error: {messagesError.message}</p>
+          </div>
+        ) : (
+          messageArray.map((message, index) => {
+            // @ts-ignore
+            const isOwnMessage = message.sender_id === session.user.id
+            const isFirstMessageInABlockFromThisDay =
+              index === messageArray.length - 1 ||
+              new Date(
+                messageArray[index + 1]?.created_at
+              ).toLocaleDateString() !==
+                new Date(message.created_at).toLocaleDateString()
+            return (
+              <>
+                <ChatBubble
+                  key={message.id}
+                  message={message}
+                  delivered={true}
+                  isOwnMessage={isOwnMessage}
+                  showSentIndicator={index === 0}
+                />
+                {isFirstMessageInABlockFromThisDay && (
+                  <div
+                    className="text-center text-sm text-muted-foreground"
+                    key={message.created_at}
+                  >
+                    {new Date(message.created_at).toLocaleDateString([], {
+                      weekday: "long",
+                      month: "long",
+                      day: "numeric",
+                    })}
+                  </div>
+                )}
+              </>
+            )
+          })
+        )}
+      </div>
+      <MessageInput convoId={convoId} scrollRef={scroll} />
+    </>
   )
 }
 
@@ -199,7 +242,6 @@ function ChatBubble({
   isOwnMessage: boolean
   showSentIndicator?: boolean
 }) {
-  console.log(message)
   return (
     <div className={cn(isOwnMessage && "self-end")}>
       <div

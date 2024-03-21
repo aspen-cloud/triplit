@@ -17,6 +17,7 @@ export default async function IndexPage() {
             Sent/unsent indicators for messages using Triplit&apos;s{" "}
             <code>syncStatus</code> query filter
           </li>
+          <li>Infinite scrolling with Triplit&apos;s React hooks</li>
           <li>
             Offline support using Triplit&apos;s built-in offline cache and
             optimistic updates

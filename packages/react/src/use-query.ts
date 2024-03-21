@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ClientFetchResult,
   TriplitClient,
@@ -95,13 +95,15 @@ export function useQuery<
 export function useInfiniteQuery<
   M extends Models<any, any> | undefined,
   CN extends CollectionNameFromModels<M>
->(client: TriplitClient<any>, query: ClientQuery<M, CN>) {
+>(client: TriplitClient<any>, query: ClientQueryBuilder<M, CN>) {
+  const builtQuery = useMemo(() => query.build(), [query]);
   const [hasMore, setHasMore] = useState(false);
   const [results, setResults] = useState<
     ClientFetchResult<ClientQuery<M, CN>> | undefined
   >(undefined);
   const [error, setError] = useState<any>(undefined);
   const [fetching, setFetching] = useState(true);
+  const [fetchingRemote, setFetchingRemote] = useState(true);
   const [fetchingMore, setFetchingMore] = useState(false);
 
   const loadMoreRef = useRef<() => void>();
@@ -109,9 +111,10 @@ export function useInfiniteQuery<
 
   useEffect(() => {
     const { unsubscribe, loadMore } = client.infiniteSubscribe(
-      query,
+      builtQuery,
       (results, info) => {
         setFetching(false);
+        setFetchingRemote(info.hasRemoteFulfilled);
         setError(undefined);
         setFetchingMore(false);
         setHasMore(info.hasMore);
@@ -123,7 +126,7 @@ export function useInfiniteQuery<
     return () => {
       unsubscribe();
     };
-  }, [query]);
+  }, [builtQuery]);
 
   const loadMore = useCallback(() => {
     setFetchingMore(true);
@@ -137,6 +140,7 @@ export function useInfiniteQuery<
   return {
     results,
     fetching,
+    fetchingRemote,
     fetchingMore,
     error,
     hasMore,
