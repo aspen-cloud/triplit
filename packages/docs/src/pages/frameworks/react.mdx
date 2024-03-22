@@ -85,7 +85,7 @@ const client = new TriplitClient();
 function App() {
   const { results, fetchingMore, hasMore, loadMore } = useInfiniteQuery(
     client,
-    client.query('todos').limit(10).orderBy('created_at', 'desc')
+    client.query('todos').limit(10).orderBy('created_at', 'DESC')
   );
 
   return (
