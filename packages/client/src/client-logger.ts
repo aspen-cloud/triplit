@@ -1,4 +1,5 @@
 import { LogLevel, Logger } from '@triplit/types/logger.js';
+import superjson from 'superjson';
 
 export type LogListener = ((log: any) => void) | undefined;
 export interface LoggerOptions {
@@ -30,7 +31,7 @@ export class DefaultLogger implements Logger {
 
   private constructLogObj(level: LogLevel, message: any, ...args: any[]) {
     const logMsg = {
-      args,
+      args: args.map(superjson.serialize),
       scope: this.logScope,
       message,
       timestamp: Date.now(),
@@ -51,18 +52,18 @@ export class DefaultLogger implements Logger {
   info(message: any, ...args: any[]) {
     const log = this.constructLogObj('info', message, ...args);
     if (this.levelIndex < 2) return;
-    console.info(`%c${log.scope}`, 'color: #888', log.message, log.args);
+    console.info(`%c${log.scope}`, 'color: #888', message, args);
   }
 
   warn(message: any, ...args: any[]) {
     const log = this.constructLogObj('warn', message, ...args);
     if (this.levelIndex < 1) return;
-    console.warn(log.scope, log.message, log.args);
+    console.warn(log.scope, message, args);
   }
 
   error(message: any, ...args: any[]) {
     const log = this.constructLogObj('error', message, ...args);
-    console.error(log.scope, log.message, log.args);
+    console.error(log.scope, message, args);
   }
 
   debug(message: any, ...args: any[]) {
@@ -92,7 +93,7 @@ export class DefaultLogger implements Logger {
       `%c${obj.scope}`,
       'color: rgba(255,255,200,0.5)',
       obj.message,
-      obj.args
+      args
     );
   }
 }
