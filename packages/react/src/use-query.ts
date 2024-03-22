@@ -110,7 +110,7 @@ export function useInfiniteQuery<
   const disconnectRef = useRef<() => void>();
 
   useEffect(() => {
-    const { unsubscribe, loadMore } = client.infiniteSubscribe(
+    const { unsubscribe, loadMore } = client.subscribeWithExpand(
       builtQuery,
       (results, info) => {
         setFetching(false);

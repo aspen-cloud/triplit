@@ -494,7 +494,7 @@ export class TriplitClient<M extends ClientSchema | undefined = undefined> {
     };
   }
 
-  infiniteSubscribe<CQ extends ClientQuery<M, any>>(
+  subscribeWithExpand<CQ extends ClientQuery<M, any>>(
     query: CQ,
     onResults: (
       results: ClientFetchResult<CQ>,

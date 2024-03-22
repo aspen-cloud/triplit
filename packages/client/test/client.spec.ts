@@ -25,7 +25,7 @@ async function testInfiniteSubscription<Q extends ClientQuery<any, any>>(
 ) {
   return new Promise<void>((resolve, reject) => {
     let stepIndex = 0;
-    const sub = client.infiniteSubscribe(query, async (...args) => {
+    const sub = client.subscribeWithExpand(query, async (...args) => {
       try {
         await steps[stepIndex].check(args, sub);
         stepIndex++;
