@@ -125,17 +125,28 @@ export function DataViewer({
     where: undefined,
     order: undefined,
   });
+  const selectedEntitiesQuery = useMemo(
+    () =>
+      consoleClient.query('selections').where([
+        ['collectionName', '=', selectedCollection],
+        ['projectId', '=', projectId],
+      ]),
+    [selectedCollection, projectId]
+  );
   const [limit, setLimit] = useState(PAGE_SIZE);
   const { results: selectedEntities } = useQuery(
     consoleClient,
-    consoleClient.query('selections').where([
-      ['collectionName', '=', selectedCollection],
-      ['projectId', '=', projectId],
-    ])
+    selectedEntitiesQuery
   );
   const collectionSchema = schema?.collections?.[selectedCollection];
-  const filters = JSON.parse(urlQueryState.where ?? '[]');
-  const order = JSON.parse(urlQueryState.order ?? '[]');
+  const filters = useMemo(
+    () => JSON.parse(urlQueryState.where ?? '[]'),
+    [urlQueryState.where]
+  );
+  const order = useMemo(
+    () => JSON.parse(urlQueryState.order ?? '[]'),
+    [urlQueryState.order]
+  );
   const noFilters = filters.length === 0;
 
   const query = useMemo(
@@ -144,8 +155,8 @@ export function DataViewer({
         .query(selectedCollection)
         .order(...order)
         .where(filters)
-        .limit(noFilters ? limit : Infinity),
-    // only apply a limit if we have no filters
+        // only apply a limit if we have no filters
+        .limit(noFilters ? limit : undefined),
     [selectedCollection, order, filters, limit, noFilters]
   );
 
