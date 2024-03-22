@@ -772,20 +772,20 @@ export async function getSchemaDiffIssues(
   const results = await db.transact(async (tx) => {
     return Promise.all(
       backwardsIncompatibleEdits.map(async (edit) => {
-        const willCorruptExistingData = !(await isEditSafeWithExistingData(
+        const violatesExistingData = !(await isEditSafeWithExistingData(
           tx,
           edit.context,
           edit.allowedIf
         ));
         return {
           ...edit,
-          willCorruptExistingData,
+          violatesExistingData,
         };
       })
     );
   });
   return results.output as (BackwardsIncompatibleEdits & {
-    willCorruptExistingData: boolean;
+    violatesExistingData: boolean;
   })[];
 }
 

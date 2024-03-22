@@ -209,19 +209,19 @@ export async function overrideStoredSchema<M extends Models<any, any>>(
       if (issues.length > 0) {
         db.logger.warn(
           'The DB received an updated schema. It may be backwards incompatible with existing data. Please resolve the following issues:',
-          issues.reduce((acc, { issue, willCorruptExistingData, context }) => {
+          issues.reduce((acc, { issue, violatesExistingData, context }) => {
             const collection = context.collection;
             if (!(collection in acc)) {
               acc[collection] = {};
             }
             acc[collection][context.attribute.join('.')] = {
               issue,
-              willCorruptExistingData,
+              violatesExistingData,
             };
             return acc;
-          }, {} as Record<string, Record<string, { willCorruptExistingData: boolean; issue: string }>>)
+          }, {} as Record<string, Record<string, { violatesExistingData: boolean; issue: string }>>)
         );
-        if (issues.some((issue) => issue.willCorruptExistingData)) {
+        if (issues.some((issue) => issue.violatesExistingData)) {
           db.logger.warn(
             'Some of the changes in the new schema will lead to data corruption. The schema update will not be applied.'
           );

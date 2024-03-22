@@ -261,7 +261,7 @@ describe('detecting dangerous edits', () => {
     // happiest case, nothing in the database
     // TODO: changing types should be allowed with empty databases? tbd
     expect(
-      results.map(({ willCorruptExistingData }) => willCorruptExistingData)
+      results.map(({ violatesExistingData }) => violatesExistingData)
     ).toStrictEqual([false, false, false, false, false, false, false]);
     let reverseResults = await getSchemaDiffIssues(
       db,
@@ -269,9 +269,7 @@ describe('detecting dangerous edits', () => {
     );
 
     expect(
-      reverseResults.map(
-        ({ willCorruptExistingData }) => willCorruptExistingData
-      )
+      reverseResults.map(({ violatesExistingData }) => violatesExistingData)
     ).toStrictEqual([
       false,
       false,
@@ -300,7 +298,7 @@ describe('detecting dangerous edits', () => {
 
     results = await getSchemaDiffIssues(db, diffSchemas(original, different));
     expect(
-      results.map(({ willCorruptExistingData }) => willCorruptExistingData)
+      results.map(({ violatesExistingData }) => violatesExistingData)
     ).toStrictEqual([true, true, true, true, true, true, true]);
     const db2 = new DB({ schema: different });
     await db2.insert('stressTest', {
@@ -319,9 +317,7 @@ describe('detecting dangerous edits', () => {
       diffSchemas(different, original)
     );
     expect(
-      reverseResults.map(
-        ({ willCorruptExistingData }) => willCorruptExistingData
-      )
+      reverseResults.map(({ violatesExistingData }) => violatesExistingData)
     ).toStrictEqual([
       false, // string always has a value
       false, // number always has a value, is not null
