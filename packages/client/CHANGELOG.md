@@ -1,5 +1,11 @@
 # @triplit/client
 
+## 0.3.31
+
+### Patch Changes
+
+- 64349f8: serialize log args with superjson
+
 ## 0.3.30
 
 ### Patch Changes
