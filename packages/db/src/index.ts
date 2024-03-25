@@ -46,7 +46,11 @@ export type {
   CollectionQuery,
   ValueCursor,
 } from './query.js';
-export { stripCollectionFromId, appendCollectionToId } from './db-helpers.js';
+export {
+  stripCollectionFromId,
+  appendCollectionToId,
+  logSchemaChangeViolations,
+} from './db-helpers.js';
 export type {
   TripleRow,
   EntityId,

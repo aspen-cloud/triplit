@@ -764,6 +764,10 @@ async function isEditSafeWithExistingData(
   );
 }
 
+export type PossibleDataViolations = {
+  violatesExistingData: boolean;
+} & BackwardsIncompatibleEdits;
+
 export async function getSchemaDiffIssues(
   db: DB<any>,
   schemaDiff: CollectionAttributeDiff[]
@@ -784,9 +788,7 @@ export async function getSchemaDiffIssues(
       })
     );
   });
-  return results.output as (BackwardsIncompatibleEdits & {
-    violatesExistingData: boolean;
-  })[];
+  return results.output as PossibleDataViolations[];
 }
 
 const DATA_CONSTRAINT_CHECKS: Record<

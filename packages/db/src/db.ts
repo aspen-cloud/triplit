@@ -34,6 +34,7 @@ import {
   prepareQuery,
   getSchemaTriples,
   fetchResultToJS,
+  logSchemaChangeViolations,
 } from './db-helpers.js';
 import { VariableAwareCache } from './variable-aware-cache.js';
 
@@ -678,9 +679,10 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
   }
 
   async overrideSchema(schema: StoreSchema<M>) {
-    if (!schema) return;
     // @ts-expect-error
-    return overrideStoredSchema(this, schema);
+    const { successful, issues } = await overrideStoredSchema(this, schema);
+    logSchemaChangeViolations(successful, issues, this.logger);
+    return { successful, issues };
   }
 
   async fetch<Q extends CollectionQuery<M, any>>(

@@ -18,24 +18,21 @@ import {
   Model,
   Models,
   diffSchemas,
-  getBackwardsIncompatibleEdits,
   getSchemaDiffIssues,
   convertEntityToJS,
   getSchemaFromPath,
   schemaToTriples,
   triplesToSchema,
+  PossibleDataViolations,
 } from './schema.js';
-import { TripleStore, TripleStoreApi } from './triple-store.js';
+import { TripleStoreApi } from './triple-store.js';
 import { VALUE_TYPE_KEYS } from './data-types/serialization.js';
-import DB, {
-  CollectionFromModels,
-  CollectionNameFromModels,
-  DBFetchOptions,
-} from './db.js';
+import DB, { CollectionFromModels, CollectionNameFromModels } from './db.js';
 import { DBTransaction } from './db-transaction.js';
 import { DataType } from './data-types/base.js';
 import { Attribute, Value } from './triple-store-utils.js';
 import { FetchResult, TimestampedFetchResult } from './collection-query.js';
+import { Logger } from '@triplit/types/src/logger.js';
 
 const ID_SEPARATOR = '#';
 
@@ -206,36 +203,24 @@ export type StoreSchema<M extends Models<any, any> | undefined> =
 export async function overrideStoredSchema<M extends Models<any, any>>(
   db: DB<M>,
   schema: StoreSchema<M>
-) {
+): Promise<{
+  successful: boolean;
+  issues: PossibleDataViolations[];
+}> {
+  if (!schema) return { successful: false, issues: [] };
   let tripleStore = db.tripleStore;
-  await tripleStore.transact(async (tx) => {
+  const result = await tripleStore.transact(async (tx) => {
     const currentSchema = await readSchemaFromTripleStore(tx);
-
+    let issues: PossibleDataViolations[] = [];
     if (currentSchema.schema) {
       const diff = diffSchemas(currentSchema.schema, schema);
-      const issues = await getSchemaDiffIssues(db, diff);
-      if (issues.length > 0) {
-        db.logger.warn(
-          'The DB received an updated schema. It may be backwards incompatible with existing data. Please resolve the following issues:',
-          issues.reduce((acc, { issue, violatesExistingData, context }) => {
-            const collection = context.collection;
-            if (!(collection in acc)) {
-              acc[collection] = {};
-            }
-            acc[collection][context.attribute.join('.')] = {
-              issue,
-              violatesExistingData,
-            };
-            return acc;
-          }, {} as Record<string, Record<string, { violatesExistingData: boolean; issue: string }>>)
-        );
-        if (issues.some((issue) => issue.violatesExistingData)) {
-          db.logger.warn(
-            'Some of the changes in the new schema will lead to data corruption. The schema update will not be applied.'
-          );
-          return;
-        }
-      }
+      issues = await getSchemaDiffIssues(db, diff);
+      if (
+        issues.length > 0 &&
+        issues.some((issue) => issue.violatesExistingData)
+      )
+        return { successful: false, issues };
+
       diff.length > 0 &&
         db.logger.info(`applying ${diff.length} attribute changes to schema`);
     }
@@ -256,7 +241,38 @@ export async function overrideStoredSchema<M extends Models<any, any>>(
       expired: false,
     }));
     await tx.insertTriples(normalizedTriples);
+    return { successful: true, issues };
   });
+  return result?.output ?? { successful: false, issues: [] };
+}
+
+export function logSchemaChangeViolations(
+  successful: boolean,
+  issues: PossibleDataViolations[],
+  logger?: Logger
+) {
+  const log = logger ?? console;
+  if (issues.length > 0) {
+    log.warn(
+      'The DB received an updated schema. It may be backwards incompatible with existing data. Please resolve the following issues:',
+      issues.reduce((acc, { issue, violatesExistingData, context }) => {
+        const collection = context.collection;
+        if (!(collection in acc)) {
+          acc[collection] = {};
+        }
+        acc[collection][context.attribute.join('.')] = {
+          issue,
+          violatesExistingData,
+        };
+        return acc;
+      }, {} as Record<string, Record<string, { violatesExistingData: boolean; issue: string }>>)
+    );
+  }
+  if (successful) {
+    log.info('Schema update successful');
+  } else {
+    log.error('Schema update failed');
+  }
 }
 
 export function validateTriple(
