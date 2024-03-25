@@ -3,7 +3,6 @@ import {
   ClientFetchResult,
   TriplitClient,
   ClientQuery,
-  SubscriptionOptions,
   CollectionNameFromModels,
   Models,
   ClientQueryBuilder,
@@ -89,6 +88,71 @@ export function useQuery<
     fetchingRemote,
     results,
     error,
+  };
+}
+
+export function usePaginatedQuery<
+  M extends Models<any, any> | undefined,
+  CN extends CollectionNameFromModels<M>
+>(client: TriplitClient<any>, query: ClientQueryBuilder<M, CN>) {
+  const builtQuery = useMemo(() => query.build(), [query]);
+  const [hasNextPage, setHasNextPage] = useState(false);
+  const [hasPreviousPage, setHasPreviousPage] = useState(false);
+  const [results, setResults] = useState<
+    ClientFetchResult<ClientQuery<M, CN>> | undefined
+  >(undefined);
+  const [error, setError] = useState<any>(undefined);
+  const [fetching, setFetching] = useState(true);
+  const [fetchingPage, setFetchingPage] = useState(false);
+
+  const nextPageRef = useRef<() => void>();
+  const prevPageRef = useRef<() => void>();
+  const disconnectRef = useRef<() => void>();
+
+  useEffect(() => {
+    const { unsubscribe, nextPage, prevPage } = client.subscribeWithPagination(
+      builtQuery,
+      (results, info) => {
+        setFetching(false);
+        setError(undefined);
+        setFetchingPage(false);
+        setHasNextPage(info.hasNextPage);
+        setHasPreviousPage(info.hasPreviousPage);
+        setResults(new Map(results) as ClientFetchResult<ClientQuery<M, CN>>);
+      }
+    );
+    nextPageRef.current = nextPage;
+    prevPageRef.current = prevPage;
+    disconnectRef.current = unsubscribe;
+    return () => {
+      unsubscribe();
+    };
+  }, [builtQuery]);
+
+  const nextPage = useCallback(() => {
+    setFetchingPage(true);
+    nextPageRef.current?.();
+  }, []);
+
+  const prevPage = useCallback(() => {
+    setFetchingPage(true);
+    prevPageRef.current?.();
+  }, []);
+
+  const disconnect = useCallback(() => {
+    disconnectRef.current?.();
+  }, []);
+
+  return {
+    results,
+    fetching,
+    fetchingPage,
+    error,
+    hasNextPage,
+    hasPreviousPage,
+    nextPage,
+    prevPage,
+    disconnect,
   };
 }
 

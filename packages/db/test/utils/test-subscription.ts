@@ -29,18 +29,22 @@ export async function testSubscription<Q extends CollectionQuery<any, any>>(
 ) {
   return new Promise<void>((resolve, reject) => {
     let stepIndex = 0;
-    db.subscribe(query, async (results) => {
-      try {
-        await steps[stepIndex].check(results);
-        stepIndex++;
-        if (stepIndex >= steps.length) {
-          return resolve();
+    db.subscribe(
+      query,
+      async (results) => {
+        try {
+          await steps[stepIndex].check(results);
+          stepIndex++;
+          if (stepIndex >= steps.length) {
+            return resolve();
+          }
+          await steps[stepIndex].action(results);
+        } catch (e) {
+          reject(e);
         }
-        await steps[stepIndex].action(results);
-      } catch (e) {
-        reject(e);
-      }
-    });
+      },
+      (error) => reject(error)
+    );
   });
 }
 
@@ -49,17 +53,21 @@ export async function testSubscriptionTriples<
 >(db: DB<any>, query: Q, steps: TriplesStep[]) {
   return new Promise<void>((resolve, reject) => {
     let stepIndex = 0;
-    db.subscribeTriples(query, async (results) => {
-      try {
-        await steps[stepIndex].check(results);
-        stepIndex++;
-        if (stepIndex >= steps.length) {
-          return resolve();
+    db.subscribeTriples(
+      query,
+      async (results) => {
+        try {
+          await steps[stepIndex].check(results);
+          stepIndex++;
+          if (stepIndex >= steps.length) {
+            return resolve();
+          }
+          await steps[stepIndex].action(results);
+        } catch (e) {
+          reject(e);
         }
-        await steps[stepIndex].action(results);
-      } catch (e) {
-        reject(e);
-      }
-    });
+      },
+      (error) => reject(error)
+    );
   });
 }

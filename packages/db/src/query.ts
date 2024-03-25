@@ -10,6 +10,7 @@ import { RecordType } from './data-types/record.js';
 import { QueryType } from './data-types/query.js';
 import { EntityId, TripleRow } from './triple-store-utils.js';
 import { ReturnTypeFromQuery } from './index.js';
+import { encodeValue } from '@triplit/tuple-database';
 
 type Path = string;
 // Should be friendly types that we pass into queries
@@ -128,7 +129,7 @@ export type CollectionQuery<
   // | [string, CollectionQuery<M, any>]
   order?: QueryOrder<ModelFromModels<M, CN>>[];
   limit?: number;
-  after?: ValueCursor;
+  after?: [ValueCursor, boolean];
   entityId?: string;
   vars?: Record<string, any>;
   collectionName: CN;
@@ -533,20 +534,28 @@ export const QUERY_INPUT_TRANSFORMERS = <
       [relationName]: query ?? null,
     };
   },
-  after(q: Query<M, CN>, args: AfterInput<M, CN>): ValueCursor | undefined {
-    if (!args) return undefined;
-    if (!q.order) throw new AfterClauseWithNoOrderError(args);
+  after(
+    q: Query<M, CN>,
+    after: AfterInput<M, CN>,
+    inclusive?: boolean
+  ): [ValueCursor, boolean] | undefined {
+    if (!after) return undefined;
+    if (!q.order) throw new AfterClauseWithNoOrderError(after);
     const attributeToOrderBy = q.order[0][0];
-    if (args instanceof Array && args.length === 2) return args;
+    if (after instanceof Array && after.length === 2)
+      return [after, inclusive ?? false];
     if (
-      typeof args === 'object' &&
-      !(args instanceof Array) &&
-      Object.hasOwn(args, 'id') &&
-      Object.hasOwn(args, attributeToOrderBy)
+      typeof after === 'object' &&
+      !(after instanceof Array) &&
+      Object.hasOwn(after, 'id') &&
+      Object.hasOwn(after, attributeToOrderBy)
     ) {
-      return [args[attributeToOrderBy] as Value, args.id as string];
+      return [
+        [after[attributeToOrderBy] as Value, after.id as string],
+        inclusive ?? false,
+      ];
     }
-    throw new QueryClauseFormattingError('after', args);
+    throw new QueryClauseFormattingError('after', after);
   },
 });
 
@@ -554,3 +563,21 @@ export type QueryBuilderInputs<M extends Model<any> | undefined> = {
   where: FilterInput<M>;
   order: OrderInput<M>;
 };
+
+export function compareCursors(
+  cursor1: ValueCursor | undefined,
+  cursor2: ValueCursor | undefined
+) {
+  if (!cursor1 && !cursor2) return 0;
+  if (!cursor1) return -1;
+  if (!cursor2) return 1;
+  let cursor1Value = cursor1[0];
+  let cursor2Value = cursor2[0];
+  // hack
+  if (cursor1Value instanceof Date) cursor1Value = cursor1Value.getTime();
+  if (cursor2Value instanceof Date) cursor2Value = cursor2Value.getTime();
+  if (cursor1Value !== cursor2Value)
+    return encodeValue(cursor1Value) > encodeValue(cursor2Value) ? 1 : -1;
+  if (cursor1[1] !== cursor2[1]) return cursor1[1] > cursor2[1] ? 1 : -1;
+  return 0;
+}

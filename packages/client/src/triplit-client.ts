@@ -12,6 +12,8 @@ import {
   Storage,
   FetchByIdQueryParams,
   FetchResult,
+  compareCursors,
+  ValueCursor,
 } from '@triplit/db';
 import { getUserId } from './token.js';
 import { UnrecognizedFetchPolicyError } from './errors.js';
@@ -427,6 +429,7 @@ export class TriplitClient<M extends ClientSchema | undefined = undefined> {
     onError?: (error: any) => void | Promise<void>,
     options?: SubscriptionOptions
   ) {
+    let unsubscribed = false;
     const opts: SubscriptionOptions = { localOnly: false, ...options };
     // ID is currently used to trace the lifecycle of a query/subscription across logs
     // @ts-ignore
@@ -459,6 +462,20 @@ export class TriplitClient<M extends ClientSchema | undefined = undefined> {
     let hasRemoteFulfilled = false;
     let fulfilledTimeout: NodeJS.Timeout | number | null = null;
     let results: FetchResult<CQ>;
+    const userResultsCallback = onResults;
+    const userErrorCallback = onError;
+    onResults = (results, info) => {
+      // Ensure we dont re-fire the callback if we've already unsubscribed
+      if (unsubscribed) return;
+      userResultsCallback(results as ClientFetchResult<CQ>, info);
+    };
+    onError = userErrorCallback
+      ? (error) => {
+          // Ensure we dont re-fire the callback if we've already unsubscribed
+          if (unsubscribed) return;
+          userErrorCallback(error);
+        }
+      : undefined;
     const clientSubscriptionCallback = (newResults: FetchResult<CQ>) => {
       results = newResults;
       this.logger.debug('subscribe RESULTS', results);
@@ -489,9 +506,201 @@ export class TriplitClient<M extends ClientSchema | undefined = undefined> {
       unsubscribeRemote = this.syncEngine.subscribe(query, onFulfilled);
     }
     return () => {
+      unsubscribed = true;
       unsubscribeLocal();
       unsubscribeRemote();
     };
+  }
+
+  /**
+   * Subscribe to a query with helpers for pagination
+   * This query will "oversubscribe" by 1 on either side of the current page to determine if there are "next" or "previous" pages
+   * The window generally looks like [buffer, ...page..., buffer]
+   * Depending on the current paging direction, the query may have its orignal order reversed
+   *
+   * The pagination will also do its best to always return full pages
+   */
+  subscribeWithPagination<CQ extends ClientQuery<M, any>>(
+    query: CQ,
+    onResults: (
+      results: ClientFetchResult<CQ>,
+      info: {
+        hasRemoteFulfilled: boolean;
+        hasNextPage: boolean;
+        hasPreviousPage: boolean;
+      }
+    ) => void | Promise<void>,
+    onError?: (error: any) => void | Promise<void>,
+    options?: SubscriptionOptions
+  ): PaginatedSubscription {
+    const returnValue: Partial<PaginatedSubscription> = {};
+    const requestedLimit = query.limit;
+    let subscriptionResultHandler = (results: any, info: any) => {
+      onResults(results, {
+        ...info,
+        hasNextPage: false,
+        hasPreviousPage: false,
+      });
+    };
+    returnValue.nextPage = () => {
+      console.warn(
+        'There is no limit set on the query, so nextPage() is a no-op'
+      );
+    };
+    returnValue.prevPage = () => {
+      console.warn(
+        'There is no limit set on the query, so prevPage() is a no-op'
+      );
+    };
+
+    // Range of the current page
+    let rangeStart: ValueCursor | undefined = undefined;
+    let rangeEnd: ValueCursor | undefined = undefined;
+
+    // The current paging direction of the query
+    // If we are paging backwards, we need to reverse the order of the query (flip order of query, reverse results to maintain original query order)
+    let pagingDirection: 'forward' | 'reversed' = 'forward';
+
+    // If we have a limit, handle pagination
+    if (query.limit) {
+      // If we have an after, the limit will increase by 1
+      query.limit = requestedLimit! + 1 + (query.after ? 1 : 0);
+      subscriptionResultHandler = (
+        results: ClientFetchResult<CQ>,
+        info: { hasRemoteFulfilled: boolean }
+      ) => {
+        const cursorAttr = query.order?.[0]?.[0];
+
+        // TODO: maybe use onError?
+        if (!cursorAttr)
+          throw new TriplitError('No cursor attribute found in query order');
+
+        let entries = Array.from(results.entries());
+        const firstEntry = entries.at(0);
+
+        // Calculate if can move the window forward or backward
+        // This is forward/backward from the perspective of the current paging direction (not the original query)
+        // If there is an after param (ie not at the start of the data), and the first entry (prev page buffer) is lte the after cursor
+        const canMoveWindowBackward =
+          !!query.after &&
+          !!firstEntry &&
+          compareCursors(query.after[0], [
+            firstEntry[1][cursorAttr], // TODO need to translate things like dates
+            firstEntry[0],
+          ]) > -1;
+
+        // If we have overflowing data, we can move the window forward
+        const canMoveWindowForward = results.size >= query.limit!; // Pretty sure this cant be gt, but still
+
+        // If we can page forward or backward (from the perspective of the original query)
+        const hasPreviousPage =
+          pagingDirection === 'reversed'
+            ? canMoveWindowForward
+            : canMoveWindowBackward;
+        const hasNextPage =
+          pagingDirection === 'forward'
+            ? canMoveWindowForward
+            : canMoveWindowBackward;
+
+        // Remove buffered data
+        entries = entries.slice(
+          canMoveWindowBackward ? 1 : 0,
+          canMoveWindowForward ? -1 : undefined
+        );
+
+        const firstDataEntry = entries.at(0);
+        const lastDataEntry = entries.at(requestedLimit! - 1);
+
+        // Track range of the current page for pagination functions
+        rangeStart = firstDataEntry
+          ? [firstDataEntry[1][cursorAttr], firstDataEntry[0]]
+          : undefined;
+        rangeEnd = lastDataEntry
+          ? [lastDataEntry[1][cursorAttr], lastDataEntry[0]]
+          : undefined;
+
+        // To keep order consistent with the orignial query, reverse the entries if we are paging backwards
+        if (pagingDirection === 'reversed') entries = entries.reverse();
+
+        // If we have paged back to the start, drop the after cursor to "reset" the query
+        // This helps us ensure we always have a full page of data
+        if (!hasPreviousPage && !!query.after) {
+          returnValue.unsubscribe?.();
+          query = { ...query };
+          query.after = undefined;
+          query.limit = requestedLimit! + 1;
+          if (pagingDirection === 'reversed')
+            query.order = flipOrder(query.order);
+          pagingDirection = 'forward';
+          returnValue.unsubscribe = this.subscribe(
+            query,
+            subscriptionResultHandler,
+            onError,
+            options
+          );
+        } else {
+          onResults(new Map(entries) as ClientFetchResult<CQ>, {
+            ...info,
+            hasNextPage: hasNextPage,
+            hasPreviousPage: hasPreviousPage,
+          });
+        }
+      };
+
+      returnValue.nextPage = () => {
+        // Unsubscribe from the current subscription
+        returnValue.unsubscribe?.();
+        query = { ...query };
+        // Handle direction change
+        if (pagingDirection === 'reversed') {
+          query.order = flipOrder(query.order);
+          query.after = rangeStart ? [rangeStart, true] : undefined;
+        } else {
+          // If moving off of first page (ie no after), update limit
+          if (!query.after) query.limit = query.limit! + 1;
+          query.after = rangeEnd ? [rangeEnd, true] : undefined;
+        }
+        pagingDirection = 'forward';
+
+        // resubscribe with the new query
+        returnValue.unsubscribe = this.subscribe(
+          query,
+          subscriptionResultHandler,
+          onError,
+          options
+        );
+      };
+      returnValue.prevPage = () => {
+        // Unsubscribe from the current subscription
+        returnValue.unsubscribe?.();
+        query = { ...query };
+        // Handle direction change
+        if (pagingDirection === 'forward') {
+          query.order = flipOrder(query.order);
+          query.after = rangeStart ? [rangeStart, true] : undefined;
+        } else {
+          query.after = rangeEnd ? [rangeEnd, true] : undefined;
+        }
+        pagingDirection = 'reversed';
+
+        // resubscribe with the new query
+        returnValue.unsubscribe = this.subscribe(
+          query,
+          subscriptionResultHandler,
+          onError,
+          options
+        );
+      };
+    }
+
+    returnValue.unsubscribe = this.subscribe(
+      query,
+      subscriptionResultHandler,
+      onError,
+      options
+    );
+
+    return returnValue as PaginatedSubscription;
   }
 
   subscribeWithExpand<CQ extends ClientQuery<M, any>>(
@@ -536,6 +745,7 @@ export class TriplitClient<M extends ClientSchema | undefined = undefined> {
 
       returnValue.loadMore = (pageSize?: number) => {
         returnValue.unsubscribe?.();
+        query = { ...query };
         query.limit = (query.limit ?? 1) + (pageSize ?? originalPageSize);
         returnValue.unsubscribe = this.subscribe(
           query,
@@ -610,7 +820,18 @@ function warnError(e: any) {
   }
 }
 
+type PaginatedSubscription = {
+  unsubscribe: () => void;
+  nextPage: () => void;
+  prevPage: () => void;
+};
+
 type InfiniteSubscription = {
   unsubscribe: () => void;
   loadMore: (pageSize?: number) => void;
 };
+
+function flipOrder(order: any) {
+  if (!order) return undefined;
+  return order.map((o: any) => [o[0], o[1] === 'ASC' ? 'DESC' : 'ASC']);
+}

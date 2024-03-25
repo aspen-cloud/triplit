@@ -790,6 +790,7 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
     onError?: (error: any) => void | Promise<void>,
     options: DBFetchOptions = {}
   ) {
+    let unsubscribed = false;
     const startSubscription = async () => {
       await this.ensureMigrated;
       const schema = (await this.getSchema())?.collections as M;
@@ -805,10 +806,14 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
           : this.tripleStore,
         subscriptionQuery,
         (...args) => {
+          if (unsubscribed) return;
           this.logger.debug('subscribe RESULTS', { query, results: args });
           onResults(...args);
         },
-        onError,
+        (...args) => {
+          if (unsubscribed) return;
+          onError?.(...args);
+        },
         schema,
         { skipRules: options.skipRules, stateVector: options.stateVector }
       );
@@ -818,6 +823,8 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
     const unsubPromise = startSubscription();
 
     return async () => {
+      // Immedaitely set unsubscribed to true to prevent any new results from being processed
+      unsubscribed = true;
       this.logger.debug('subscribe END', { query });
       const unsub = await unsubPromise;
       return unsub();

@@ -2127,129 +2127,81 @@ describe('subscriptions', () => {
   });
 
   it('handles selection updates', async (done) => {
-    return new Promise<void>(async (resolve, reject) => {
-      let i = 0;
-      const assertions = [
-        (data) => expect(data.get('1').major).toBe('Computer Science'),
-        (data) => {
-          try {
-            expect(data.get('1').major).toBe('Math');
-            resolve();
-          } catch (e) {
-            reject(e);
-          }
+    const query = db
+      .query('students')
+      .select(['major'])
+      .where([['name', '=', 'Alice']])
+      .build();
+    await testSubscription(db, query, [
+      { check: (data) => expect(data.get('1').major).toBe('Computer Science') },
+      {
+        action: async () => {
+          await db.update('students', 1, async (entity) => {
+            entity.major = 'Math';
+          });
         },
-      ];
-
-      const unsubscribe = db.subscribe(
-        CollectionQueryBuilder('students')
-          .select(['major'])
-          .where([['name', '=', 'Alice']])
-          .build(),
-        async (students) => {
-          assertions[i](students);
-          i++;
-        }
-      );
-      setTimeout(async () => {
-        await db.update('students', 1, async (entity) => {
-          entity.major = 'Math';
-        });
-        await unsubscribe();
-      }, 20);
-    });
+        check: (data) => expect(data.get('1').major).toBe('Math'),
+      },
+    ]);
   });
 
   it('handles data entering query', async () => {
-    let i = 0;
-    const assertions = [
-      (data) => expect(data.size).toBe(2),
-      (data) => expect(data.size).toBe(3),
-    ];
-    const unsubscribe = db.subscribe(
-      CollectionQueryBuilder('students')
-        .select(['name', 'major'])
-        .where([['dorm', '=', 'Battell']])
-        .build(),
-      (students) => {
-        assertions[i](students);
-        i++;
-      }
-    );
-
-    await db.update('students', '1', async (entity) => {
-      entity.dorm = 'Battell';
-    });
-
-    await unsubscribe();
+    const query = db
+      .query('students')
+      .select(['name', 'major'])
+      .where([['dorm', '=', 'Battell']])
+      .build();
+    await testSubscription(db, query, [
+      { check: (data) => expect(data.size).toBe(2) },
+      {
+        action: async () => {
+          await db.update('students', '1', async (entity) => {
+            entity.dorm = 'Battell';
+          });
+        },
+        check: (data) => expect(data.size).toBe(3),
+      },
+    ]);
   });
 
   it('can subscribe to Triples', async () => {
-    let i = 0;
-    const assertions = [
-      (data) => expect(data.length).toBe(10),
-      (data) => expect(data.length).toBe(5),
-    ];
-    const subDone = new Promise<void>((resolve, reject) => {
-      db.subscribeTriples(
-        CollectionQueryBuilder('students')
-          .select(['name', 'major'])
-          .where([['dorm', '=', 'Battell']])
-          .build(),
-        (students) => {
-          try {
-            assertions[i](students);
-            i++;
-            if (i === assertions.length) resolve();
-          } catch (e) {
-            reject(e);
-          }
+    const query = db
+      .query('students')
+      .select(['name', 'major'])
+      .where([['dorm', '=', 'Battell']])
+      .build();
+    await testSubscriptionTriples(db, query, [
+      { check: (data) => expect(data.length).toBe(10) },
+      {
+        action: async () => {
+          await db.update('students', '1', async (entity) => {
+            entity.dorm = 'Battell';
+          });
         },
-        (error) => {
-          reject(error);
-        }
-      );
-    });
-
-    await db.update('students', '1', async (entity) => {
-      entity.dorm = 'Battell';
-    });
-
-    await subDone;
+        check: (data) => expect(data.length).toBe(5),
+      },
+    ]);
   });
 
   it('handles data leaving query', async () => {
-    return new Promise<void>(async (resolve, reject) => {
-      let i = 0;
-      const assertions = [
-        (data) => expect(data.size).toBe(3),
-        (data) => {
-          try {
-            expect(data.size).toBe(2);
-            resolve();
-          } catch (e) {
-            reject(e);
-          }
+    const query = db
+      .query('students')
+      .select(['name', 'dorm'])
+      .where([['dorm', '=', 'Allen']])
+      .build();
+    await testSubscription(db, query, [
+      {
+        check: (data) => expect(data.size).toBe(3),
+      },
+      {
+        action: async () => {
+          await db.update('students', '1', async (entity) => {
+            entity.dorm = 'Battell';
+          });
         },
-      ];
-
-      const unsubscribe = db.subscribe(
-        CollectionQueryBuilder('students')
-          .select(['name', 'dorm'])
-          .where([['dorm', '=', 'Allen']])
-          .build(),
-        (students) => {
-          assertions[i](students);
-          i++;
-        }
-      );
-
-      await db.update('students', '1', async (entity) => {
-        entity.dorm = 'Battell';
-      });
-
-      await unsubscribe();
-    });
+        check: (data) => expect(data.size).toBe(2),
+      },
+    ]);
   });
 
   it('emits triples even when entity is removed from query', async () => {
@@ -2284,49 +2236,43 @@ describe('subscriptions', () => {
     await unsubscribe();
   });
 
-  it('data properly backfills with order and limit', () => {
-    return new Promise<void>(async (resolve, reject) => {
-      let i = 0;
-      const assertions = [
-        (data) => expect(data.size).toBe(2), // initial data
-        (data) => expect(data.size).toBe(2), // backfills after delete
-        (data) => expect(data.size).toBe(1), // cant backfill, no more matching data
-        (data) => {
-          try {
-            expect(data.size).toBe(0); // handles down to zero
-            resolve();
-          } catch (e) {
-            reject(e);
-          }
+  it('data properly backfills with order and limit', async () => {
+    const query = db
+      .query('students')
+      .limit(2)
+      .order('major', 'ASC')
+      .where([['dorm', '=', 'Allen']])
+      .build();
+
+    await testSubscription(db, query, [
+      {
+        check: (data) => expect(data.size).toBe(2), // initial data
+      },
+      {
+        action: async () => {
+          await db.update('students', '1', async (entity) => {
+            entity.dorm = 'Battell';
+          });
         },
-      ];
-
-      const unsubscribe = db.subscribe(
-        CollectionQueryBuilder('students')
-          .limit(2)
-          .order('major', 'ASC')
-          .where([['dorm', '=', 'Allen']])
-          .build(),
-        (students) => {
-          assertions[i](students);
-          i++;
-        }
-      );
-
-      await db.update('students', '1', async (entity) => {
-        entity.dorm = 'Battell';
-      });
-
-      await db.update('students', '4', async (entity) => {
-        entity.dorm = 'Battell';
-      });
-
-      await db.update('students', '5', async (entity) => {
-        entity.dorm = 'Battell';
-      });
-
-      await unsubscribe();
-    });
+        check: (data) => expect(data.size).toBe(2), // backfills after delete
+      },
+      {
+        action: async () => {
+          await db.update('students', '4', async (entity) => {
+            entity.dorm = 'Battell';
+          });
+        },
+        check: (data) => expect(data.size).toBe(1), // cant backfill, no more matching data
+      },
+      {
+        action: async () => {
+          await db.update('students', '5', async (entity) => {
+            entity.dorm = 'Battell';
+          });
+        },
+        check: (data) => expect(data.size).toBe(0), // handles down to zero
+      },
+    ]);
   });
 
   it('handles order and limit', async () => {

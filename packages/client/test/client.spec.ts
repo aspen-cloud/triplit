@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { TriplitClient } from '../src/triplit-client.js';
 import { ClientFetchResult, ClientQuery } from '../src/utils/query.js';
+import { Schema as S } from '@triplit/db';
 
 interface Step<Q extends ClientQuery<any, any>> {
   action: (
@@ -18,25 +19,61 @@ type Steps<Q extends ClientQuery<any, any>> = [
   ...Step<Q>[]
 ];
 
-async function testInfiniteSubscription<Q extends ClientQuery<any, any>>(
+async function testSubscribeWithExpand<Q extends ClientQuery<any, any>>(
   client: TriplitClient<any>,
   query: Q,
   steps: Steps<Q>
 ) {
   return new Promise<void>((resolve, reject) => {
     let stepIndex = 0;
-    const sub = client.subscribeWithExpand(query, async (...args) => {
-      try {
-        await steps[stepIndex].check(args, sub);
-        stepIndex++;
-        if (stepIndex >= steps.length) {
-          return resolve();
+    const sub = client.subscribeWithExpand(
+      query,
+      async (...args) => {
+        try {
+          await steps[stepIndex].check(args, sub);
+          stepIndex++;
+          if (stepIndex >= steps.length) {
+            return resolve();
+          }
+          await steps[stepIndex].action(args, sub);
+        } catch (e) {
+          reject(e);
         }
-        await steps[stepIndex].action(args, sub);
-      } catch (e) {
-        reject(e);
+      },
+      (error) => {
+        reject(error);
       }
-    });
+    );
+  });
+}
+
+async function testSubscribeWithPagination<Q extends ClientQuery<any, any>>(
+  client: TriplitClient<any>,
+  query: Q,
+  steps: Steps<Q>
+) {
+  return new Promise<void>((resolve, reject) => {
+    let stepIndex = 0;
+    const sub = client.subscribeWithPagination(
+      query,
+      async (...args) => {
+        try {
+          console.log('running step', stepIndex);
+          await steps[stepIndex].check(args, sub);
+          stepIndex++;
+          if (stepIndex >= steps.length) {
+            return resolve();
+          }
+          console.log('running action', stepIndex);
+          await steps[stepIndex].action(args, sub);
+        } catch (e) {
+          reject(e);
+        }
+      },
+      (error) => {
+        reject(error);
+      }
+    );
   });
 }
 
@@ -53,7 +90,7 @@ describe('infinite subscribe', () => {
     await client.insert('test', { id: '6', name: 'frank', age: 18 });
     await client.insert('test', { id: '7', name: 'grace', age: 20 });
     const query = client.query('test').order(['age', 'ASC']).limit(3).build();
-    await testInfiniteSubscription(client, query, [
+    await testSubscribeWithExpand(client, query, [
       {
         check: ([results, info], sub) => {
           expect(info.hasMore).toBe(true);
@@ -111,7 +148,7 @@ describe('infinite subscribe', () => {
     await client.insert('test', { id: '6', name: 'frank', age: 18 });
     await client.insert('test', { id: '7', name: 'grace', age: 20 });
     const query = client.query('test').order(['age', 'ASC']).limit(3).build();
-    await testInfiniteSubscription(client, query, [
+    await testSubscribeWithExpand(client, query, [
       {
         check: ([results, info], sub) => {
           expect(info.hasMore).toBe(true);
@@ -154,7 +191,7 @@ describe('infinite subscribe', () => {
     await client.insert('test', { id: '2', name: 'bob', age: 21 });
     await client.insert('test', { id: '3', name: 'carol', age: 19 });
     const query = client.query('test').order(['age', 'ASC']).limit(3).build();
-    await testInfiniteSubscription(client, query, [
+    await testSubscribeWithExpand(client, query, [
       {
         check: ([results, info], sub) => {
           expect(info.hasMore).toBe(false);
@@ -200,7 +237,7 @@ describe('infinite subscribe', () => {
     await client.insert('test', { id: '2', name: 'bob', age: 21 });
     await client.insert('test', { id: '3', name: 'carol', age: 19 });
     const query = client.query('test').order(['age', 'ASC']).limit(3).build();
-    await testInfiniteSubscription(client, query, [
+    await testSubscribeWithExpand(client, query, [
       {
         check: ([results, info], sub) => {
           expect(info.hasMore).toBe(false);
@@ -245,7 +282,7 @@ describe('infinite subscribe', () => {
     await client.insert('test', { id: '3', name: 'carol', age: 19 });
     await client.insert('test', { id: '4', name: 'dave', age: 30 });
     const query = client.query('test').order(['age', 'ASC']).limit(3).build();
-    await testInfiniteSubscription(client, query, [
+    await testSubscribeWithExpand(client, query, [
       {
         check: ([results, info], sub) => {
           expect(info.hasMore).toBe(true);
@@ -278,7 +315,7 @@ describe('infinite subscribe', () => {
     await client.insert('test', { id: '3', name: 'carol', age: 19 });
     await client.insert('test', { id: '4', name: 'dave', age: 20 });
     const query = client.query('test').order(['age', 'ASC']).limit(3).build();
-    await testInfiniteSubscription(client, query, [
+    await testSubscribeWithExpand(client, query, [
       {
         check: ([results, info], sub) => {
           expect(info.hasMore).toBe(true);
@@ -297,6 +334,555 @@ describe('infinite subscribe', () => {
           expect(results.size).toBe(3);
           const ids = Array.from(results.values()).map((r) => r.id);
           expect(ids).toEqual(['3', '1', '2']);
+        },
+      },
+    ]);
+  });
+});
+
+describe('paginated subscription', () => {
+  it('initializes properly with an empty page', async () => {
+    const client = new TriplitClient({
+      autoConnect: false,
+    });
+    const query = client.query('test').order(['age', 'ASC']).limit(3).build();
+    await testSubscribeWithPagination(client, query, [
+      {
+        check: ([results, info], sub) => {
+          expect(info.hasPreviousPage).toBe(false);
+          expect(info.hasNextPage).toBe(false);
+          expect(results.size).toBe(0);
+        },
+      },
+    ]);
+  });
+  it('initializes properly with a non full page', async () => {
+    const client = new TriplitClient({
+      autoConnect: false,
+    });
+    await client.insert('test', { id: '1', name: 'alice', age: 20 });
+    const query = client.query('test').order(['age', 'ASC']).limit(3).build();
+    await testSubscribeWithPagination(client, query, [
+      {
+        check: ([results, info], sub) => {
+          expect(info.hasPreviousPage).toBe(false);
+          expect(info.hasNextPage).toBe(false);
+          expect(results.size).toBe(1);
+        },
+      },
+    ]);
+  });
+  it('can paginate forward and backward until cursor runs out of room', async () => {
+    const client = new TriplitClient({
+      autoConnect: false,
+    });
+    await client.insert('test', { id: '1', name: 'alice', age: 20 });
+    await client.insert('test', { id: '2', name: 'bob', age: 21 });
+    await client.insert('test', { id: '3', name: 'carol', age: 19 });
+    await client.insert('test', { id: '4', name: 'dave', age: 20 });
+    await client.insert('test', { id: '5', name: 'eve', age: 22 });
+    await client.insert('test', { id: '6', name: 'frank', age: 18 });
+    await client.insert('test', { id: '7', name: 'grace', age: 20 });
+    const query = client.query('test').order(['age', 'ASC']).limit(3).build();
+    await testSubscribeWithPagination(client, query, [
+      {
+        check: ([results, info], sub) => {
+          expect(info.hasPreviousPage).toBe(false);
+          expect(info.hasNextPage).toBe(true);
+          expect(results.size).toBe(3);
+          const ids = Array.from(results.values()).map((r) => r.id);
+          expect(ids).toEqual(['6', '3', '1']);
+        },
+      },
+      {
+        action: async ([results, info], sub) => {
+          sub.nextPage();
+          await new Promise((res) => setTimeout(res, 100));
+        },
+        check: ([results, info], sub) => {
+          expect(info.hasPreviousPage).toBe(true);
+          expect(info.hasNextPage).toBe(true);
+          expect(results.size).toBe(3);
+          const ids = Array.from(results.values()).map((r) => r.id);
+          expect(ids).toEqual(['4', '7', '2']);
+        },
+      },
+      {
+        action: async ([results, info], sub) => {
+          sub.nextPage();
+          await new Promise((res) => setTimeout(res, 100));
+        },
+        check: ([results, info], sub) => {
+          expect(info.hasPreviousPage).toBe(true);
+          expect(info.hasNextPage).toBe(false);
+          expect(results.size).toBe(1);
+          const ids = Array.from(results.values()).map((r) => r.id);
+          expect(ids).toEqual(['5']);
+        },
+      },
+      {
+        action: async ([results, info], sub) => {
+          sub.prevPage();
+          await new Promise((res) => setTimeout(res, 100));
+        },
+        check: ([results, info], sub) => {
+          expect(info.hasPreviousPage).toBe(true);
+          expect(info.hasNextPage).toBe(true);
+          expect(results.size).toBe(3);
+          const ids = Array.from(results.values()).map((r) => r.id);
+          expect(ids).toEqual(['4', '7', '2']);
+        },
+      },
+      {
+        action: async ([results, info], sub) => {
+          sub.prevPage();
+          await new Promise((res) => setTimeout(res, 100));
+        },
+        check: ([results, info], sub) => {
+          expect(info.hasPreviousPage).toBe(false);
+          expect(info.hasNextPage).toBe(true);
+          expect(results.size).toBe(3);
+          const ids = Array.from(results.values()).map((r) => r.id);
+          expect(ids).toEqual(['6', '3', '1']);
+        },
+      },
+    ]);
+  });
+  it('hasNextPage should update if relevant data is added out of range', async () => {
+    const client = new TriplitClient({
+      autoConnect: false,
+    });
+    await client.insert('test', { id: '1', name: 'alice', age: 20 });
+    await client.insert('test', { id: '2', name: 'bob', age: 21 });
+    await client.insert('test', { id: '3', name: 'carol', age: 19 });
+    const query = client.query('test').order(['age', 'ASC']).limit(3).build();
+    await testSubscribeWithPagination(client, query, [
+      {
+        check: ([results, info], sub) => {
+          expect(info.hasNextPage).toBe(false);
+          expect(results.size).toBe(3);
+          const ids = Array.from(results.values()).map((r) => r.id);
+          expect(ids).toEqual(['3', '1', '2']);
+        },
+      },
+      {
+        action: async ([results, info], sub) => {
+          await client.insert('test', { id: '4', name: 'dave', age: 30 });
+        },
+        check: ([results, info], sub) => {
+          expect(info.hasNextPage).toBe(true);
+          expect(results.size).toBe(3);
+          const ids = Array.from(results.values()).map((r) => r.id);
+          expect(ids).toEqual(['3', '1', '2']);
+        },
+      },
+    ]);
+  });
+  it('hasNextPage should update if relevant data is added in range', async () => {
+    const client = new TriplitClient({
+      autoConnect: false,
+    });
+    await client.insert('test', { id: '1', name: 'alice', age: 20 });
+    await client.insert('test', { id: '2', name: 'bob', age: 21 });
+    await client.insert('test', { id: '3', name: 'carol', age: 19 });
+    const query = client.query('test').order(['age', 'ASC']).limit(3).build();
+    await testSubscribeWithPagination(client, query, [
+      {
+        check: ([results, info], sub) => {
+          expect(info.hasNextPage).toBe(false);
+          expect(results.size).toBe(3);
+          const ids = Array.from(results.values()).map((r) => r.id);
+          expect(ids).toEqual(['3', '1', '2']);
+        },
+      },
+      {
+        action: async ([results, info], sub) => {
+          await client.insert('test', { id: '4', name: 'dave', age: 20 });
+        },
+        check: ([results, info], sub) => {
+          expect(info.hasNextPage).toBe(true);
+          expect(results.size).toBe(3);
+          const ids = Array.from(results.values()).map((r) => r.id);
+          expect(ids).toEqual(['3', '1', '4']);
+        },
+      },
+    ]);
+  });
+  it('hasNextPage should update if relevant data is removed out of range', async () => {
+    const client = new TriplitClient({
+      autoConnect: false,
+    });
+    await client.insert('test', { id: '1', name: 'alice', age: 20 });
+    await client.insert('test', { id: '2', name: 'bob', age: 21 });
+    await client.insert('test', { id: '3', name: 'carol', age: 19 });
+    await client.insert('test', { id: '4', name: 'dave', age: 30 });
+    const query = client.query('test').order(['age', 'ASC']).limit(3).build();
+    await testSubscribeWithPagination(client, query, [
+      {
+        check: ([results, info], sub) => {
+          expect(info.hasNextPage).toBe(true);
+          expect(results.size).toBe(3);
+          const ids = Array.from(results.values()).map((r) => r.id);
+          expect(ids).toEqual(['3', '1', '2']);
+        },
+      },
+      {
+        action: async ([results, info], sub) => {
+          await client.delete('test', '4');
+        },
+        check: ([results, info], sub) => {
+          expect(info.hasNextPage).toBe(false);
+          expect(results.size).toBe(3);
+          const ids = Array.from(results.values()).map((r) => r.id);
+          expect(ids).toEqual(['3', '1', '2']);
+        },
+      },
+    ]);
+  });
+  it('hasNextPage should update if relevant data is removed in range', async () => {
+    const client = new TriplitClient({
+      autoConnect: false,
+    });
+    await client.insert('test', { id: '1', name: 'alice', age: 20 });
+    await client.insert('test', { id: '2', name: 'bob', age: 21 });
+    await client.insert('test', { id: '3', name: 'carol', age: 19 });
+    await client.insert('test', { id: '4', name: 'dave', age: 20 });
+    const query = client.query('test').order(['age', 'ASC']).limit(3).build();
+    await testSubscribeWithPagination(client, query, [
+      {
+        check: ([results, info], sub) => {
+          expect(info.hasNextPage).toBe(true);
+          expect(results.size).toBe(3);
+          const ids = Array.from(results.values()).map((r) => r.id);
+          expect(ids).toEqual(['3', '1', '4']);
+        },
+      },
+      {
+        action: async ([results, info], sub) => {
+          await client.delete('test', '4');
+        },
+        check: ([results, info], sub) => {
+          expect(info.hasNextPage).toBe(false);
+          expect(results.size).toBe(3);
+          const ids = Array.from(results.values()).map((r) => r.id);
+          expect(ids).toEqual(['3', '1', '2']);
+        },
+      },
+    ]);
+  });
+
+  // Edge cases for previous page
+  // 1. Adding data behind range on first page...its on the "first page" so data probably shifts...
+  // 2. If on second page, if you delete all data on the first page, that should update hasPrevPage
+  // 3. If on second page, if you delete some data on the first page, paging back should give you a full result (probs with no after?) ... like a reset...
+
+  // I guess if we determine you dont have a prev page, reset after i guess
+
+  it('on initial load, adding data before current set shifts results', async () => {
+    const client = new TriplitClient({
+      autoConnect: false,
+    });
+    await client.insert('test', { id: '1', name: 'alice', age: 20 });
+    await client.insert('test', { id: '2', name: 'bob', age: 21 });
+    await client.insert('test', { id: '3', name: 'carol', age: 19 });
+    const query = client.query('test').order(['age', 'ASC']).limit(3).build();
+    await testSubscribeWithPagination(client, query, [
+      {
+        check: ([results, info], sub) => {
+          expect(info.hasPreviousPage).toBe(false);
+          expect(info.hasNextPage).toBe(false);
+          expect(results.size).toBe(3);
+          const ids = Array.from(results.values()).map((r) => r.id);
+          expect(ids).toEqual(['3', '1', '2']);
+        },
+      },
+      {
+        action: async ([results, info], sub) => {
+          await client.insert('test', { id: '4', name: 'dave', age: 10 });
+        },
+        check: ([results, info], sub) => {
+          expect(info.hasPreviousPage).toBe(false);
+          expect(info.hasNextPage).toBe(true);
+          expect(results.size).toBe(3);
+          const ids = Array.from(results.values()).map((r) => r.id);
+          expect(ids).toEqual(['4', '3', '1']);
+        },
+      },
+    ]);
+  });
+
+  it('after page back, adding data before current set shifts results', async () => {
+    const client = new TriplitClient({
+      autoConnect: false,
+    });
+    await client.insert('test', { id: '1', name: 'alice', age: 20 });
+    await client.insert('test', { id: '2', name: 'bob', age: 21 });
+    await client.insert('test', { id: '3', name: 'carol', age: 19 });
+    await client.insert('test', { id: '4', name: 'dave', age: 20 });
+    await client.insert('test', { id: '5', name: 'eve', age: 22 });
+    await client.insert('test', { id: '6', name: 'frank', age: 18 });
+    await client.insert('test', { id: '7', name: 'grace', age: 20 });
+
+    const query = client.query('test').order(['age', 'ASC']).limit(3).build();
+    await testSubscribeWithPagination(client, query, [
+      {
+        check: ([results, info], sub) => {
+          expect(info.hasPreviousPage).toBe(false);
+          expect(info.hasNextPage).toBe(true);
+          expect(results.size).toBe(3);
+          const ids = Array.from(results.values()).map((r) => r.id);
+          expect(ids).toEqual(['6', '3', '1']);
+        },
+      },
+      {
+        action: async ([results, info], sub) => {
+          sub.nextPage();
+          await new Promise((res) => setTimeout(res, 100));
+        },
+        check: ([results, info], sub) => {
+          expect(info.hasPreviousPage).toBe(true);
+          expect(info.hasNextPage).toBe(true);
+          expect(results.size).toBe(3);
+          const ids = Array.from(results.values()).map((r) => r.id);
+          expect(ids).toEqual(['4', '7', '2']);
+        },
+      },
+      {
+        action: async ([results, info], sub) => {
+          sub.prevPage();
+          await new Promise((res) => setTimeout(res, 100));
+        },
+        check: ([results, info], sub) => {
+          expect(info.hasPreviousPage).toBe(false);
+          expect(info.hasNextPage).toBe(true);
+          expect(results.size).toBe(3);
+          const ids = Array.from(results.values()).map((r) => r.id);
+          expect(ids).toEqual(['6', '3', '1']);
+        },
+      },
+      {
+        action: async ([results, info], sub) => {
+          await client.insert('test', { id: '8', name: 'hayley', age: 17 });
+        },
+        check: ([results, info], sub) => {
+          expect(info.hasPreviousPage).toBe(false);
+          expect(info.hasNextPage).toBe(true);
+          expect(results.size).toBe(3);
+          const ids = Array.from(results.values()).map((r) => r.id);
+          expect(ids).toEqual(['8', '6', '3']);
+        },
+      },
+    ]);
+  });
+
+  it('on second page, deleting all data on first page should update hasPrevPage', async () => {
+    const client = new TriplitClient({
+      autoConnect: false,
+    });
+    await client.insert('test', { id: '1', name: 'alice', age: 20 });
+    await client.insert('test', { id: '2', name: 'bob', age: 21 });
+    await client.insert('test', { id: '3', name: 'carol', age: 19 });
+    await client.insert('test', { id: '4', name: 'dave', age: 20 });
+    const query = client.query('test').order(['age', 'ASC']).limit(3).build();
+    await testSubscribeWithPagination(client, query, [
+      {
+        check: ([results, info], sub) => {
+          expect(info.hasPreviousPage).toBe(false);
+          expect(info.hasNextPage).toBe(true);
+          expect(results.size).toBe(3);
+          const ids = Array.from(results.values()).map((r) => r.id);
+          expect(ids).toEqual(['3', '1', '4']);
+        },
+      },
+      {
+        action: async ([results, info], sub) => {
+          sub.nextPage();
+          await new Promise((res) => setTimeout(res, 100));
+        },
+        check: ([results, info], sub) => {
+          expect(info.hasPreviousPage).toBe(true);
+          expect(info.hasNextPage).toBe(false);
+          expect(results.size).toBe(1);
+          const ids = Array.from(results.values()).map((r) => r.id);
+          expect(ids).toEqual(['2']);
+        },
+      },
+      {
+        action: async ([results, info], sub) => {
+          await client.delete('test', '1');
+          await client.delete('test', '3');
+          await client.delete('test', '4');
+        },
+        check: ([results, info], sub) => {
+          expect(info.hasPreviousPage).toBe(false);
+          expect(info.hasNextPage).toBe(false);
+          expect(results.size).toBe(1);
+          const ids = Array.from(results.values()).map((r) => r.id);
+          expect(ids).toEqual(['2']);
+        },
+      },
+    ]);
+  });
+
+  it('on second page, deleting some data on first page and going back to prev page should result in full page', async () => {
+    const client = new TriplitClient({
+      autoConnect: false,
+    });
+    await client.insert('test', { id: '1', name: 'alice', age: 20 });
+    await client.insert('test', { id: '2', name: 'bob', age: 21 });
+    await client.insert('test', { id: '3', name: 'carol', age: 19 });
+    await client.insert('test', { id: '4', name: 'dave', age: 20 });
+    const query = client.query('test').order(['age', 'ASC']).limit(3).build();
+    await testSubscribeWithPagination(client, query, [
+      {
+        check: ([results, info], sub) => {
+          expect(info.hasPreviousPage).toBe(false);
+          expect(info.hasNextPage).toBe(true);
+          expect(results.size).toBe(3);
+          const ids = Array.from(results.values()).map((r) => r.id);
+          expect(ids).toEqual(['3', '1', '4']);
+        },
+      },
+      {
+        action: async ([results, info], sub) => {
+          sub.nextPage();
+          await new Promise((res) => setTimeout(res, 100));
+        },
+        check: ([results, info], sub) => {
+          expect(info.hasPreviousPage).toBe(true);
+          expect(info.hasNextPage).toBe(false);
+          expect(results.size).toBe(1);
+          const ids = Array.from(results.values()).map((r) => r.id);
+          expect(ids).toEqual(['2']);
+        },
+      },
+      {
+        action: async ([results, info], sub) => {
+          await client.delete('test', '1');
+          sub.prevPage();
+          await new Promise((res) => setTimeout(res, 100));
+        },
+        check: ([results, info], sub) => {
+          expect(info.hasPreviousPage).toBe(false);
+          expect(info.hasNextPage).toBe(false);
+          expect(results.size).toBe(3);
+          const ids = Array.from(results.values()).map((r) => r.id);
+          expect(ids).toEqual(['3', '4', '2']);
+        },
+      },
+    ]);
+  });
+
+  it('can perform basic paging with dates', async () => {
+    const client = new TriplitClient({
+      autoConnect: false,
+      schema: {
+        test: {
+          schema: S.Schema({
+            id: S.Id(),
+            name: S.String(),
+            dob: S.Date(),
+          }),
+        },
+      },
+    });
+    await client.insert('test', {
+      id: '1',
+      name: 'alice',
+      dob: new Date('1995-07-15'),
+    });
+    await client.insert('test', {
+      id: '2',
+      name: 'bob',
+      dob: new Date('1995-07-16'),
+    });
+    await client.insert('test', {
+      id: '3',
+      name: 'carol',
+      dob: new Date('1995-07-14'),
+    });
+    await client.insert('test', {
+      id: '4',
+      name: 'dave',
+      dob: new Date('1995-07-15'),
+    });
+    await client.insert('test', {
+      id: '5',
+      name: 'eve',
+      dob: new Date('1995-07-17'),
+    });
+    await client.insert('test', {
+      id: '6',
+      name: 'frank',
+      dob: new Date('1995-07-13'),
+    });
+    await client.insert('test', {
+      id: '7',
+      name: 'grace',
+      dob: new Date('1995-07-15'),
+    });
+
+    const query = client.query('test').order(['dob', 'ASC']).limit(3).build();
+    await testSubscribeWithPagination(client, query, [
+      {
+        check: ([results, info], sub) => {
+          expect(info.hasPreviousPage).toBe(false);
+          expect(info.hasNextPage).toBe(true);
+          expect(results.size).toBe(3);
+          const ids = Array.from(results.values()).map((r) => r.id);
+          expect(ids).toEqual(['6', '3', '1']);
+        },
+      },
+      {
+        action: async ([results, info], sub) => {
+          sub.nextPage();
+          await new Promise((res) => setTimeout(res, 100));
+        },
+        check: ([results, info], sub) => {
+          expect(info.hasPreviousPage).toBe(true);
+          expect(info.hasNextPage).toBe(true);
+          expect(results.size).toBe(3);
+          const ids = Array.from(results.values()).map((r) => r.id);
+          expect(ids).toEqual(['4', '7', '2']);
+        },
+      },
+      {
+        action: async ([results, info], sub) => {
+          sub.nextPage();
+          await new Promise((res) => setTimeout(res, 100));
+        },
+        check: ([results, info], sub) => {
+          expect(info.hasPreviousPage).toBe(true);
+          expect(info.hasNextPage).toBe(false);
+          expect(results.size).toBe(1);
+          const ids = Array.from(results.values()).map((r) => r.id);
+          expect(ids).toEqual(['5']);
+        },
+      },
+      {
+        action: async ([results, info], sub) => {
+          sub.prevPage();
+          await new Promise((res) => setTimeout(res, 100));
+        },
+        check: ([results, info], sub) => {
+          expect(info.hasPreviousPage).toBe(true);
+          expect(info.hasNextPage).toBe(true);
+          expect(results.size).toBe(3);
+          const ids = Array.from(results.values()).map((r) => r.id);
+          expect(ids).toEqual(['4', '7', '2']);
+        },
+      },
+      {
+        action: async ([results, info], sub) => {
+          sub.prevPage();
+          await new Promise((res) => setTimeout(res, 100));
+        },
+        check: ([results, info], sub) => {
+          expect(info.hasPreviousPage).toBe(false);
+          expect(info.hasNextPage).toBe(true);
+          expect(results.size).toBe(3);
+          const ids = Array.from(results.values()).map((r) => r.id);
+          expect(ids).toEqual(['6', '3', '1']);
         },
       },
     ]);

@@ -12,6 +12,7 @@ import {
   RelationSubquery,
   EntityPointer,
   QueryOrder,
+  ValueCursor,
 } from './query.js';
 import {
   convertEntityToJS,
@@ -45,7 +46,7 @@ import { isTimestampedEntityDeleted } from './entity.js';
 import { CollectionNameFromModels, ModelFromModels } from './db.js';
 import { QueryResultCardinality, QueryType } from './data-types/query.js';
 import { ExtractJSType } from './data-types/type.js';
-import { TripleRow, Value } from './triple-store-utils.js';
+import { RangeContraints, TripleRow, Value } from './triple-store-utils.js';
 
 export default function CollectionQueryBuilder<
   M extends Models<any, any> | undefined,
@@ -172,23 +173,47 @@ async function getOrderedIdsForQuery<
   if (entityId) {
     return [entityId];
   }
+
+  if (order?.length) {
+    const direction = order[0][1];
+    const [cursor, inclusive] = after ?? [undefined, false];
+    const gtArg =
+      order.length === 1
+        ? direction === 'ASC'
+          ? cursor
+          : undefined
+        : undefined;
+    const ltArg =
+      order.length === 1
+        ? direction === 'ASC'
+          ? undefined
+          : cursor
+        : undefined;
+
+    const rangeParams: RangeContraints = {
+      direction,
+      greaterThan: inclusive ? undefined : gtArg,
+      greaterThanOrEqual: inclusive ? gtArg : undefined,
+      lessThan: inclusive ? undefined : ltArg,
+      lessThanOrEqual: inclusive ? ltArg : undefined,
+    };
+    return Array.from(
+      new Set(
+        (
+          await tx.findValuesInRange(
+            [query.collectionName, ...(order[0][0] as string).split('.')],
+            rangeParams
+          )
+        ).map((t) => t.id)
+      )
+    );
+  }
+
   return Array.from(
     new Set(
-      (
-        await (order
-          ? tx.findValuesInRange(
-              [query.collectionName, ...(order[0][0] as string).split('.')],
-              {
-                direction: order[0][1],
-                ...(after && (!order || order.length <= 1)
-                  ? order[0][1] === 'DESC'
-                    ? { lessThan: after }
-                    : { greaterThan: after }
-                  : {}),
-              }
-            )
-          : tx.findByAVE([['_collection'], query.collectionName]))
-      ).map((t) => t.id)
+      (await tx.findByAVE([['_collection'], query.collectionName])).map(
+        (t) => t.id
+      )
     )
   );
 }
@@ -643,10 +668,11 @@ export async function fetch<
     sortEntities(order, entities);
     let startIndex = 0;
     if (after) {
+      const [cursor, inclusive] = after;
       let afterIndex = entities.findIndex(
-        ([id]) => id === stripCollectionFromId(after![1])
+        ([id]) => id === stripCollectionFromId(cursor![1])
       );
-      if (afterIndex !== -1) startIndex = afterIndex + 1;
+      if (afterIndex !== -1) startIndex = afterIndex + (inclusive ? 0 : 1);
     }
     if (limit) entities = entities.slice(startIndex, startIndex + limit);
   }
@@ -1134,6 +1160,7 @@ export function subscribeResultsAndTriples<
   const asyncUnSub = async () => {
     let results: FetchResult<Q> = new Map() as FetchResult<Q>;
     let triples: Map<string, TripleRow[]> = new Map();
+    let unsub = () => {};
     try {
       const fetchResult = await fetch<M, Q>(tripleStore, query, {
         schema,
@@ -1142,7 +1169,7 @@ export function subscribeResultsAndTriples<
       });
       results = fetchResult.results;
       triples = fetchResult.triples;
-      const unsub = tripleStore.onWrite(async (storeWrites) => {
+      unsub = tripleStore.onWrite(async (storeWrites) => {
         try {
           // Handle queries with nested queries as a special case for now
           if (
@@ -1194,6 +1221,43 @@ export function subscribeResultsAndTriples<
               appendCollectionToId(query.collectionName, entity)
             );
 
+            function entityMatchesAfter(
+              entity: any,
+              query: CollectionQuery<any, any>
+            ) {
+              if (!query.after) return true;
+              if (!query.order?.length) return true;
+              const orderAttr = query.order[0][0];
+              const orderDir = query.order[0][1];
+              const [cursor, inclusive] = query.after;
+              const [afterEntityValue, afterEntityId] = cursor;
+              const entityValue = entity[orderAttr][0];
+              // TODO: need to perform encoding at least I think...
+              if (orderDir === 'ASC') {
+                if (entityValue === afterEntityValue) {
+                  return inclusive
+                    ? entity.id[0] >= stripCollectionFromId(afterEntityId)
+                    : entity.id[0] > stripCollectionFromId(afterEntityId);
+                }
+                return (
+                  entityValue >
+                  // @ts-expect-error - handle encoding / null / dates / etc
+                  afterEntityValue
+                );
+              } else {
+                if (entityValue === afterEntityValue) {
+                  return inclusive
+                    ? entity.id[0] <= stripCollectionFromId(afterEntityId)
+                    : entity.id[0] < stripCollectionFromId(afterEntityId);
+                }
+                return (
+                  entityValue <
+                  // @ts-expect-error - handle encoding / null / dates / etc
+                  afterEntityValue
+                );
+              }
+            }
+
             const entityWrapper = new Entity();
             updateEntity(entityWrapper, entityTriples);
             const entityObj = entityWrapper.data as FetchResultEntity<Q>;
@@ -1206,7 +1270,8 @@ export function subscribeResultsAndTriples<
                 entityObj,
                 where ?? [],
                 schema && schema[query.collectionName]?.schema
-              );
+              ) &&
+              entityMatchesAfter(entityObj, query);
 
             // Check if the result stays within the current range of the query based on the limit
             // If it doesnt, we'll remove and might add it back when we backfill
@@ -1259,10 +1324,13 @@ export function subscribeResultsAndTriples<
                 // If there is no explicit order, then order by Id is assumed
                 after: lastResultEntryId
                   ? [
-                      order
-                        ? lastResultEntry[1][order![0][0]][0]
-                        : lastResultEntryId,
-                      lastResultEntryId,
+                      [
+                        order
+                          ? lastResultEntry[1][order![0][0]][0]
+                          : lastResultEntryId,
+                        lastResultEntryId,
+                      ],
+                      false,
                     ]
                   : undefined,
               };
@@ -1311,12 +1379,11 @@ export function subscribeResultsAndTriples<
         ) as FetchResult<Q>,
         triples,
       ]);
-      return unsub;
     } catch (e) {
       console.error(e);
       onError && (await onError(e));
     }
-    return () => {};
+    return unsub;
   };
 
   const unsubPromise = asyncUnSub();
