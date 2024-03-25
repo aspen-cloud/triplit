@@ -681,9 +681,11 @@ export function DataTable<TData, TValue>({
   data,
   onLoadMore,
   showLoadMore,
+  loadMoreDisabled,
 }: DataTableProps<TData, TValue> & {
   onLoadMore?: () => void;
   showLoadMore?: boolean;
+  loadMoreDisabled?: boolean;
 }) {
   const table = useReactTable({
     data,
@@ -762,6 +764,7 @@ export function DataTable<TData, TValue>({
             className="w-full rounded-none"
             variant={'secondary'}
             onClick={onLoadMore}
+            disabled={loadMoreDisabled}
           >
             Load more
           </Button>

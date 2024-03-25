@@ -1,5 +1,5 @@
 import { TriplitClient } from '@triplit/client';
-import { useQuery } from '@triplit/react';
+import { useInfiniteQuery, useQuery } from '@triplit/react';
 import { useMemo, useState, useCallback, useEffect } from 'react';
 import '@glideapps/glide-data-grid/dist/index.css';
 import { CreateEntitySheet } from '.';
@@ -105,10 +105,12 @@ export function DataViewer({
   client,
   schema,
   projectId,
+  stats,
 }: {
   projectId: string;
   client: TriplitClient<any>;
   schema?: SchemaDefinition;
+  stats?: { numEntities: number };
 }) {
   const [deleteCollectionDialogOpen, setDeleteCollectionDialogOpen] =
     useState(false);
@@ -147,7 +149,6 @@ export function DataViewer({
     () => JSON.parse(urlQueryState.order ?? '[]'),
     [urlQueryState.order]
   );
-  const noFilters = filters.length === 0;
 
   const query = useMemo(
     () =>
@@ -155,9 +156,8 @@ export function DataViewer({
         .query(selectedCollection)
         .order(...order)
         .where(filters)
-        // only apply a limit if we have no filters
-        .limit(noFilters ? limit : undefined),
-    [selectedCollection, order, filters, limit, noFilters]
+        .limit(PAGE_SIZE),
+    [selectedCollection, order, filters]
   );
 
   // TODO remove localOnly when we get rid of the whole-collection query above
@@ -165,22 +165,15 @@ export function DataViewer({
     results: orderedAndFilteredResults,
     fetchingRemote,
     fetching,
-  } = useQuery(client, query, { localOnly: true });
+    fetchingMore,
+    hasMore,
+    loadMore,
+  } = useInfiniteQuery(client, query);
 
-  const { results: allResults } = useQuery(
-    client,
-    client.query(selectedCollection)
-  );
   const sortedAndFilteredEntities = useMemo(
     () => Array.from(orderedAndFilteredResults ?? []),
     [orderedAndFilteredResults]
   );
-
-  const hasMoreEntitiesToShow =
-    noFilters &&
-    allResults &&
-    orderedAndFilteredResults &&
-    allResults.size > orderedAndFilteredResults.size;
 
   const uniqueAttributes: Set<string> = useMemo(() => {
     const attributes = new Set<string>();
@@ -189,9 +182,11 @@ export function DataViewer({
       // handle the case where we have a collection but no attributes
       return new Set(Object.keys(collectionSchema.schema.properties ?? {}));
     }
-    if (!allResults) return attributes;
+
+    // Best we can do for now with schemaless is to load all attributes from the current set of entities
+    if (!sortedAndFilteredEntities) return attributes;
     // otherwise construct a set of all attributes from all entities
-    allResults.forEach((data) => {
+    sortedAndFilteredEntities.forEach((data) => {
       Object.keys(data).forEach((key: string) => {
         if (!attributes.has(key) && key !== '_collection') {
           attributes.add(key);
@@ -200,7 +195,7 @@ export function DataViewer({
     });
 
     return attributes;
-  }, [allResults, collectionSchema]);
+  }, [sortedAndFilteredEntities, collectionSchema]);
 
   const allVisibleEntitiesAreSelected = useMemo(() => {
     if (!selectedEntities || selectedEntities.size === 0) return false;
@@ -226,10 +221,6 @@ export function DataViewer({
     projectId,
     allVisibleEntitiesAreSelected,
   ]);
-
-  useEffect(() => {
-    setLimit(PAGE_SIZE);
-  }, [selectedCollection]);
 
   const idColumn: ColumnDef<any> = useMemo(
     () => ({
@@ -490,7 +481,11 @@ export function DataViewer({
         />
         <div className="text-sm px-2">{`Showing ${
           sortedAndFilteredEntities.length
-        } of ${allResults?.size ?? 0}`}</div>
+        }${
+          stats && !filters?.length
+            ? ` of ${parseTotalEstimate(stats.numEntities)}`
+            : ''
+        } entities`}</div>
 
         <CreateEntitySheet
           key={selectedCollection}
@@ -503,11 +498,27 @@ export function DataViewer({
       <DataTable
         columns={columns}
         data={flatFilteredEntities}
-        showLoadMore={hasMoreEntitiesToShow}
+        showLoadMore={hasMore}
+        loadMoreDisabled={fetchingMore || !hasMore}
         onLoadMore={() => {
-          setLimit((prev) => prev + PAGE_SIZE);
+          loadMore();
         }}
       />
     </div>
   );
+}
+
+function parseTotalEstimate(numEntities: number) {
+  if (!numEntities || numEntities < 100) return '< 100';
+  if (numEntities < 1000) {
+    const ceil = Math.ceil(numEntities / 100) * 100;
+    return `< ${formatGt1k(ceil)}`;
+  }
+
+  return `~ ${formatGt1k(numEntities)}`;
+}
+
+function formatGt1k(number: number) {
+  if (number < 1000) return number;
+  return `${(number / 1000).toFixed(1)}k`;
 }
