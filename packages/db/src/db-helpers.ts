@@ -52,12 +52,13 @@ export function validateExternalId(id: string): Error | undefined {
   if (String(id).includes(ID_SEPARATOR)) {
     return new InvalidEntityIdError(id, `Id cannot include ${ID_SEPARATOR}.`);
   }
-  if (id.match(ID_REGEX) === null) {
-    return new InvalidEntityIdError(
-      id,
-      `Id must match regex ${ID_REGEX.toString()}.`
-    );
-  }
+  // TODO enable this check when we have a better understanding of what is allowed
+  // if (id.match(ID_REGEX) === null) {
+  //   return new InvalidEntityIdError(
+  //     id,
+  //     `Id must match regex ${ID_REGEX.toString()}.`
+  //   );
+  // }
   return;
 }
 
