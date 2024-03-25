@@ -1,6 +1,7 @@
 import {
   CollectionQuerySchema,
   FetchResult,
+  TimestampedFetchResult,
   subscribeResultsAndTriples,
 } from './collection-query.js';
 import { ModelFromModels } from './db.js';
@@ -85,7 +86,7 @@ export class VariableAwareCache<Schema extends Models<any, any>> {
   async resolveFromCache<Q extends CollectionQuery<Schema, any>>(
     query: Q
   ): Promise<{
-    results: FetchResult<Q>;
+    results: TimestampedFetchResult<Q>;
     triples: Map<string, TripleRow[]>;
   }> {
     const { views, variableFilters } = this.queryToViews(query);
@@ -154,7 +155,7 @@ export class VariableAwareCache<Schema extends Models<any, any>> {
         ...viewResultEntries.slice(end),
       ];
       return {
-        results: new Map(resultEntries) as FetchResult<Q>,
+        results: new Map(resultEntries) as TimestampedFetchResult<Q>,
         triples: new Map(
           resultEntries.map(([id, _]) => [id, view.triples.get(id)!])
         ),
@@ -175,7 +176,7 @@ export class VariableAwareCache<Schema extends Models<any, any>> {
     const resultEntries = viewResultEntries.slice(start, end + 1);
 
     return {
-      results: new Map(resultEntries) as FetchResult<Q>,
+      results: new Map(resultEntries) as TimestampedFetchResult<Q>,
       triples: new Map(
         resultEntries.map(([id, _]) => [id, view.triples.get(id)!])
       ),

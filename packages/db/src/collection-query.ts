@@ -20,6 +20,7 @@ import {
   Model,
   Models,
   timestampedObjectToPlainObject,
+  TimestampedTypeFromModel,
 } from './schema.js';
 import { Timestamp } from './timestamp.js';
 import { TripleStore, TripleStoreApi } from './triple-store.js';
@@ -70,6 +71,18 @@ export type FetchResult<C extends CollectionQuery<any, any>> = Map<
   FetchResultEntity<C>
 >;
 
+export type TimestampedFetchResult<C extends CollectionQuery<any, any>> = Map<
+  string,
+  TimestampedFetchResultEntity<C>
+>;
+
+export type TimestampedFetchResultEntity<C extends CollectionQuery<any, any>> =
+  C extends CollectionQuery<infer M, infer CN>
+    ? M extends Models<any, any>
+      ? TimestampedTypeFromModel<ModelFromModels<M, CN>>
+      : any
+    : never;
+
 export type CollectionNameFromQuery<Q extends CollectionQuery<any, any>> =
   Q extends CollectionQuery<infer _M, infer CN> ? CN : never;
 
@@ -107,7 +120,7 @@ export type FetchResultEntity<C extends CollectionQuery<any, any>> =
     ? M extends Models<any, any>
       ? ReturnTypeFromQuery<M, CN>
       : any
-    : 'bad fetch result';
+    : never;
 
 export interface FetchOptions {
   schema?: Models<any, any>;
@@ -526,7 +539,10 @@ export async function fetch<
     cache?: VariableAwareCache<any>;
     stateVector?: Map<string, number>;
   } = {}
-): Promise<{ results: FetchResult<Q>; triples: Map<string, TripleRow[]> }> {
+): Promise<{
+  results: TimestampedFetchResult<Q>;
+  triples: Map<string, TripleRow[]>;
+}> {
   const collectionSchema = schema?.[query.collectionName]?.schema;
   if (cache && VariableAwareCache.canCacheQuery(query, collectionSchema)) {
     return cache!.resolveFromCache(query);
