@@ -12,7 +12,7 @@ function isLeapYear(year: number): boolean {
   return year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0);
 }
 
-const DATE = /^(\d\d\d\d)-(\d\d)-(\d\d)$/;
+const DATE = /^[\+\-]?([\d]{4,6})-(\d\d)-(\d\d)$/;
 const DAYS = [0, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
 
 function isDate(str: string): boolean {
