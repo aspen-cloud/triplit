@@ -95,14 +95,14 @@ export function SetType<
     },
     convertJSToJSON(val) {
       if (options.nullable && val === null) return null;
-      if (!(val instanceof Set))
+      if (!(val instanceof Set) && !(val instanceof Array))
         throw new JSToJSONValueParseError(`set<${this.items.type}>`, val);
       return [...val.values()];
     },
     validateInput(val: any) {
       if (options.nullable === true && val === null) return;
       // must be a set
-      if (!(val instanceof Set))
+      if (!(val instanceof Set) && !(val instanceof Array))
         return `Expected Set, got ${betterTypeOf(val)}`;
       const values = Array.from(val.values());
       // cannot have null values
