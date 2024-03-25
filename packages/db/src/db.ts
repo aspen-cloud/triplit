@@ -145,7 +145,6 @@ export interface DBConfig<M extends Models<any, any> | undefined> {
 }
 
 export const DEFAULT_STORE_KEY = 'default';
-const QUERY_CACHE_ENABLED = false;
 
 export type CollectionFromModels<
   M extends Models<any, any> | undefined,
@@ -686,7 +685,7 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
 
   async fetch<Q extends CollectionQuery<M, any>>(
     query: Q,
-    options: DBFetchOptions = { noCache: true }
+    options: DBFetchOptions = {}
   ) {
     this.logger.debug('fetch START', { query });
     await this.ensureMigrated;
@@ -696,6 +695,8 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
       variables: this.variables,
     });
 
+    const noCache = options.noCache === undefined ? true : options.noCache;
+
     const { results } = await fetch<M, Q>(
       options.scope
         ? this.tripleStore.setStorageScope(options.scope)
@@ -703,8 +704,7 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
       fetchQuery,
       {
         schema,
-        cache:
-          QUERY_CACHE_ENABLED && !options?.noCache ? this.cache : undefined,
+        cache: noCache ? undefined : this.cache,
         skipRules: options.skipRules,
       }
     );
