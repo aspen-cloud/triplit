@@ -44,7 +44,7 @@ export interface QueryPreparationOptions {
   variables?: Record<string, any>;
 }
 
-const ID_REGEX = `^[a-zA-Z0-9_-]+$`;
+const ID_REGEX = /^[a-zA-Z0-9_\-:.]+$/;
 export function validateExternalId(id: string): Error | undefined {
   if (!id) {
     return new InvalidEntityIdError(id, 'id cannot be undefined.');
@@ -53,7 +53,10 @@ export function validateExternalId(id: string): Error | undefined {
     return new InvalidEntityIdError(id, `Id cannot include ${ID_SEPARATOR}.`);
   }
   if (id.match(ID_REGEX) === null) {
-    return new InvalidEntityIdError(id, `Id must match regex ${ID_REGEX}.`);
+    return new InvalidEntityIdError(
+      id,
+      `Id must match regex ${ID_REGEX.toString()}.`
+    );
   }
   return;
 }
