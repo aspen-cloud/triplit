@@ -101,6 +101,8 @@ export const logger = new Logger();
 logger.verbose = false;
 
 function formatResponseError({ name, message, status }: any) {
+  if (name === undefined && message === undefined && status === undefined)
+    return '';
   return `\n      ${red(String(status))} ${bold(red(name))}
       ${red(message)}`;
 }

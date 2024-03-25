@@ -8,6 +8,7 @@ import {
   Value,
   appendCollectionToId,
   EntityId,
+  JSONToSchema,
 } from '@triplit/db';
 import {
   QuerySyncError,
@@ -439,6 +440,11 @@ export class Session {
 
     // TODO: better message (maybe error about invalid parameters?)
     return ServerResponse(400, new TriplitError('Invalid format').toJSON());
+  }
+  async overrideSchema(params: { schema: any }) {
+    if (!hasAdminAccess(this.token)) return NotAdminResponse();
+    const result = await this.db.overrideSchema(JSONToSchema(params.schema));
+    return ServerResponse(result.successful ? 200 : 409, result);
   }
 
   async queryTriples({ query }: { query: CollectionQuery<any, any> }) {

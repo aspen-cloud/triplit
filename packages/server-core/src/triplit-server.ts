@@ -109,6 +109,10 @@ export class Server {
           resp = await session.getSchema(params);
           break;
         }
+        case 'override-schema': {
+          resp = await session.overrideSchema(params);
+          break;
+        }
         default:
           resp = routeNotFoundResponse(route);
           break;
@@ -139,6 +143,7 @@ const TRIPLIT_SEGEMENTS = [
   'queryTriples',
   'clear',
   'stats',
+  'override-schema',
   'schema',
   'fetch',
   'insert',
