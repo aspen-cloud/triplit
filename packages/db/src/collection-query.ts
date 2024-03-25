@@ -11,6 +11,7 @@ import {
   updateEntity,
   RelationSubquery,
   EntityPointer,
+  QueryOrder,
 } from './query.js';
 import {
   convertEntityToJS,
@@ -623,14 +624,7 @@ export async function fetch<
     .toArray();
 
   if (order && order.length > 1) {
-    entities.sort(([_aId, a], [_bId, b]) => {
-      for (const [prop, dir] of order) {
-        const direction =
-          a[prop][0] < b[prop][0] ? -1 : a[prop][0] == b[prop][0] ? 0 : 1;
-        if (direction !== 0) return dir === 'ASC' ? direction : direction * -1;
-      }
-      return 0;
-    });
+    sortEntities(order, entities);
     let startIndex = 0;
     if (after) {
       let afterIndex = entities.findIndex(
@@ -696,6 +690,17 @@ export async function fetch<
     results: new Map(entities), // TODO: also need to deserialize data?
     triples: resultTriples,
   };
+}
+
+function sortEntities(order: any, entities: [string, any][]) {
+  entities.sort(([_aId, a], [_bId, b]) => {
+    for (const [prop, dir] of order) {
+      const direction =
+        a[prop][0] < b[prop][0] ? -1 : a[prop][0] == b[prop][0] ? 0 : 1;
+      if (direction !== 0) return dir === 'ASC' ? direction : direction * -1;
+    }
+    return 0;
+  });
 }
 
 export async function fetchOne<
@@ -1258,22 +1263,7 @@ export function subscribeResultsAndTriples<
             }
 
             if (order) {
-              // const [prop, dir] = order;
-              entries.sort(([_aId, a], [_bId, b]) => {
-                for (const [prop, dir] of order) {
-                  // TODO support multi-level props probably using TypeBox json pointer
-                  const direction =
-                    a[prop][0] < b[prop][0]
-                      ? -1
-                      : a[prop][0] == b[prop][0]
-                      ? 0
-                      : 1;
-
-                  if (direction !== 0)
-                    return dir === 'ASC' ? direction : direction * -1;
-                }
-                return 0;
-              });
+              sortEntities(order, entries);
             }
 
             nextResult = new Map(entries.slice(0, limit));
