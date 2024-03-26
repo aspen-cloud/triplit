@@ -761,6 +761,7 @@ export async function fetchOne<
   results: FetchResultEntity<Q> | null;
   triples: Map<string, TripleRow[]>;
 }> {
+  query = { ...query, limit: 1 };
   const fetchResult = await fetch(tx, query, {
     schema,
     cache,
