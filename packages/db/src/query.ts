@@ -500,11 +500,6 @@ export const QUERY_INPUT_TRANSFORMERS = <
       (args as any[]).every((arg) => typeof arg === 'string')
     ) {
       newOrder = [[...args] as QueryOrder<ModelFromModels<M, CN>>];
-    } else if (args.every((arg) => arg instanceof Array)) {
-      /**
-       * E.g. order(["id", "ASC"], ["name", "DESC"])
-       */
-      newOrder = args as NonNullable<Query<M, CN>['order']>;
     } else if (
       /**
        * E.g. order([["id", "ASC"], ["name", "DESC"]])
@@ -514,6 +509,11 @@ export const QUERY_INPUT_TRANSFORMERS = <
       args[0].every((arg) => arg instanceof Array)
     ) {
       newOrder = args[0] as NonNullable<Query<M, CN>['order']>;
+    } else if (args.every((arg) => arg instanceof Array)) {
+      /**
+       * E.g. order(["id", "ASC"], ["name", "DESC"])
+       */
+      newOrder = args as NonNullable<Query<M, CN>['order']>;
     } else {
       throw new QueryClauseFormattingError('order', args);
     }

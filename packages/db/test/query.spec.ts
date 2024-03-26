@@ -1,5 +1,6 @@
 import { describe, expect, it, beforeEach, beforeAll, vi } from 'vitest';
 import { generateQueryRootPermutations } from '../src/collection-query.js';
+import DB from '../src/index.js';
 
 describe('query root permutations', () => {
   it('can generate a permutation for each subquery filter', () => {
@@ -41,6 +42,42 @@ describe('query root permutations', () => {
     const permutations = generateQueryRootPermutations<any, any>(query);
     // prettyPrint(permutations);
     expect(permutations).toHaveLength(2);
+  });
+});
+
+describe('query builder', () => {
+  it.only('properly formats order clauses', () => {
+    const db = new DB();
+    const query1 = db.query('test').order('name', 'ASC').build();
+    expect(query1.order).toEqual([['name', 'ASC']]);
+    const query2 = db
+      .query('test')
+      .order(['name', 'ASC'], ['age', 'ASC'])
+      .build();
+    expect(query2.order).toEqual([
+      ['name', 'ASC'],
+      ['age', 'ASC'],
+    ]);
+    const query3 = db
+      .query('test')
+      .order([
+        ['name', 'ASC'],
+        ['age', 'ASC'],
+      ])
+      .build();
+    expect(query3.order).toEqual([
+      ['name', 'ASC'],
+      ['age', 'ASC'],
+    ]);
+    const query4 = db
+      .query('test')
+      .order('name', 'ASC')
+      .order('age', 'ASC')
+      .build();
+    expect(query4.order).toEqual([
+      ['name', 'ASC'],
+      ['age', 'ASC'],
+    ]);
   });
 });
 

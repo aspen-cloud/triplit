@@ -3055,7 +3055,6 @@ describe('ORDER & LIMIT & Pagination', () => {
       expect([...resultsDESC.keys()]).toEqual(['3', '2', '1']);
     }
   });
-
   it('order by multiple properties', async () => {
     const descendingScoresResults = await db.fetch(
       db.query('TestScores').order(['score', 'ASC'], ['date', 'DESC']).build()
@@ -3074,6 +3073,8 @@ describe('ORDER & LIMIT & Pagination', () => {
     });
     expect(areAllScoresDescending).toBeTruthy();
   });
+
+  // Note: builder unit test + test above make this test a little repetitive
   it('order by multiple properties (additive)', async () => {
     const descendingScoresResults = await db.fetch(
       db
