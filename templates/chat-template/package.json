@@ -20,7 +20,7 @@
     "@radix-ui/react-dropdown-menu": "^2.0.6",
     "@radix-ui/react-slot": "^1.0.2",
     "@triplit/authjs-adapter": "^0.1.0",
-    "@triplit/client": "workspace:^",
+    "@triplit/client": "^0.3.31",
     "@triplit/db": "^0.3.26",
     "@triplit/react": "^0.3.31",
     "bcryptjs": "^2.4.3",
