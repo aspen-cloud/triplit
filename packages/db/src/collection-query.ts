@@ -47,6 +47,7 @@ import { CollectionNameFromModels, ModelFromModels } from './db.js';
 import { QueryResultCardinality, QueryType } from './data-types/query.js';
 import { ExtractJSType } from './data-types/type.js';
 import { RangeContraints, TripleRow, Value } from './triple-store-utils.js';
+import { Equal } from '@sinclair/typebox/value';
 
 export default function CollectionQueryBuilder<
   M extends Models<any, any> | undefined,
@@ -1292,20 +1293,23 @@ export function subscribeResultsAndTriples<
 
             // Add to result or prune as needed
             if (isInResult && satisfiesLimitRange) {
-              // Adding to result set
-              nextResult.set(entity, entityObj);
-              matchedTriples.set(entity, Object.values(entityWrapper.triples));
-              queryShouldRefire = true;
-            } else {
-              if (nextResult.has(entity)) {
-                // prune from a result set
-                nextResult.delete(entity);
+              if (
+                !nextResult.has(entity) ||
+                !Equal(nextResult.get(entity), entityObj)
+              ) {
+                // Adding to result set
+                nextResult.set(entity, entityObj);
                 matchedTriples.set(
                   entity,
                   Object.values(entityWrapper.triples)
                 );
                 queryShouldRefire = true;
               }
+            } else if (nextResult.has(entity)) {
+              // prune from a result set
+              nextResult.delete(entity);
+              matchedTriples.set(entity, Object.values(entityWrapper.triples));
+              queryShouldRefire = true;
             }
           }
           // No change to result, return early

@@ -825,7 +825,7 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
     const unsubPromise = startSubscription();
 
     return async () => {
-      // Immedaitely set unsubscribed to true to prevent any new results from being processed
+      // Immediately set unsubscribed to true to prevent any new results from being processed
       unsubscribed = true;
       this.logger.debug('subscribe END', { query });
       const unsub = await unsubPromise;
