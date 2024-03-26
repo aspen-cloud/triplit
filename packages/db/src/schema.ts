@@ -730,7 +730,11 @@ const DANGEROUS_EDITS = [
   {
     description: 'added an attribute where optional is not set',
     matchesDiff: (diff: CollectionAttributeDiff) => {
-      if (diff.type === 'insert' && diff.metadata.optional === false)
+      if (
+        diff.type === 'insert' &&
+        diff.metadata.optional === false &&
+        diff.metadata.type !== 'query'
+      )
         return true;
       return false;
     },
