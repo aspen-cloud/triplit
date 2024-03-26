@@ -108,8 +108,7 @@ export type RemoteClientQueryBuilder<
 export function prepareFetchOneQuery<CQ extends ClientQuery<any, any>>(
   query: CQ
 ): CQ {
-  query.limit = 1;
-  return query;
+  return { ...query, limit: 1 };
 }
 
 export function prepareFetchByIdQuery<

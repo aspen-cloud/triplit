@@ -130,6 +130,7 @@ export interface FetchOptions {
 }
 
 interface SubscriptionOptions {
+  cache?: VariableAwareCache<any>;
   skipRules?: boolean;
   stateVector?: Map<string, number>;
 }
@@ -571,7 +572,7 @@ export async function fetch<
 }> {
   const collectionSchema = schema?.[query.collectionName]?.schema;
   if (cache && VariableAwareCache.canCacheQuery(query, collectionSchema)) {
-    return cache!.resolveFromCache(query);
+    return cache!.resolveFromCache(query, collectionSchema);
   }
   const queryWithInsertedVars = replaceVariablesInQuery(query);
   const { order, limit, select, where, entityId, collectionName, after } =
@@ -994,6 +995,7 @@ function subscribeSingleEntity<
         schema,
         skipRules: options.skipRules,
         stateVector: options.stateVector,
+        cache: options.cache,
       });
       entity = fetchResult.results.has(entityId)
         ? fetchResult.results.get(entityId)
@@ -1033,6 +1035,7 @@ function subscribeSingleEntity<
             if (entityDeletes.length) {
               const fetchResult = await fetch<M, Q>(tripleStore, query, {
                 schema,
+                cache: options.cache,
               });
               entity = fetchResult.results.has(entityId)
                 ? fetchResult.results.get(entityId)
@@ -1095,6 +1098,7 @@ function subscribeSingleEntity<
                           {
                             schema,
                             skipRules: options.skipRules,
+                            cache: options.cache,
                           }
                         )
                       : await fetch<M, typeof subquery>(
@@ -1103,6 +1107,7 @@ function subscribeSingleEntity<
                           {
                             schema,
                             skipRules: options.skipRules,
+                            cache: options.cache,
                           }
                         );
                   entity[attributeName] = subqueryResult.results;
@@ -1168,6 +1173,7 @@ export function subscribeResultsAndTriples<
         schema,
         skipRules: options.skipRules,
         stateVector: options.stateVector,
+        cache: options.cache,
       });
       results = fetchResult.results;
       triples = fetchResult.triples;
@@ -1181,6 +1187,8 @@ export function subscribeResultsAndTriples<
           ) {
             const fetchResult = await fetch<M, Q>(tripleStore, query, {
               schema,
+              skipRules: options.skipRules,
+              cache: options.cache,
             });
             results = fetchResult.results;
             triples = fetchResult.triples;
@@ -1346,6 +1354,7 @@ export function subscribeResultsAndTriples<
                   schema,
                   skipRules: options.skipRules,
                   // State vector needed in backfill?
+                  cache: options.cache,
                 }
               );
               entries.push(...backFilledResults.results);
@@ -1478,6 +1487,7 @@ export function subscribeTriples<
         const fetchResult = await fetch<M, Q>(tripleStore, query, {
           schema,
           stateVector: options.stateVector,
+          cache: options.cache,
         });
         triples = fetchResult.triples;
       }

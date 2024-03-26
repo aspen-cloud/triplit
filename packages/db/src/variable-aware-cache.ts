@@ -65,7 +65,10 @@ export class VariableAwareCache<Schema extends Models<any, any>> {
     return true;
   }
 
-  async createView<Q extends CollectionQuery<Schema, any>>(viewQuery: Q) {
+  async createView<Q extends CollectionQuery<Schema, any>>(
+    viewQuery: Q,
+    schema: Schema
+  ) {
     return new Promise<void>((resolve) => {
       const id = this.viewQueryToId(viewQuery);
       subscribeResultsAndTriples<Schema, Q>(
@@ -74,6 +77,14 @@ export class VariableAwareCache<Schema extends Models<any, any>> {
         ([results, triples]) => {
           this.cache.set(id, { results, triples });
           resolve();
+        },
+        (err) => {
+          console.error('error in view', err);
+          this.cache.delete(id);
+        },
+        schema,
+        {
+          skipRules: true,
         }
       );
     });
@@ -84,7 +95,8 @@ export class VariableAwareCache<Schema extends Models<any, any>> {
   }
 
   async resolveFromCache<Q extends CollectionQuery<Schema, any>>(
-    query: Q
+    query: Q,
+    schema: Schema
   ): Promise<{
     results: TimestampedFetchResult<Q>;
     triples: Map<string, TripleRow[]>;
@@ -94,7 +106,7 @@ export class VariableAwareCache<Schema extends Models<any, any>> {
     const id = this.viewQueryToId(views[0]);
     // console.log('attempting to use index for', id);
     if (!this.cache.has(id)) {
-      await this.createView(views[0]);
+      await this.createView(views[0], schema);
     }
     // TODO support multiple variable clauses
     const [prop, op, varStr] = variableFilters[0];

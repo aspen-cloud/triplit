@@ -26,6 +26,7 @@ export type {
   SetAttributeOptionalOperation,
   DBConfig,
   FetchByIdQueryParams,
+  DBFetchOptions,
 } from './db.js';
 export { ChangeTracker, createUpdateProxy } from './db-transaction.js';
 export type { DBTransaction } from './db-transaction.js';

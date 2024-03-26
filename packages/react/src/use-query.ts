@@ -6,6 +6,7 @@ import {
   CollectionNameFromModels,
   Models,
   ClientQueryBuilder,
+  SubscriptionOptions,
 } from '@triplit/client';
 
 export function useQuery<
@@ -14,7 +15,7 @@ export function useQuery<
 >(
   client: TriplitClient<any>,
   query: ClientQueryBuilder<M, CN>,
-  options?: { localOnly?: boolean }
+  options?: Partial<SubscriptionOptions>
 ): {
   fetching: boolean;
   fetchingRemote: boolean;
@@ -67,15 +68,13 @@ export function useQuery<
         setFetching(false);
         setError(error);
       },
-      options?.localOnly
-        ? { localOnly: true }
-        : {
-            localOnly: false,
-            onRemoteFulfilled: () => {
-              hasResponseFromServer.current = true;
-              setFetchingRemote(false);
-            },
-          }
+      {
+        ...(options ?? {}),
+        onRemoteFulfilled: () => {
+          hasResponseFromServer.current = true;
+          setFetchingRemote(false);
+        },
+      }
     );
 
     return () => {
@@ -94,7 +93,11 @@ export function useQuery<
 export function usePaginatedQuery<
   M extends Models<any, any> | undefined,
   CN extends CollectionNameFromModels<M>
->(client: TriplitClient<any>, query: ClientQueryBuilder<M, CN>) {
+>(
+  client: TriplitClient<any>,
+  query: ClientQueryBuilder<M, CN>,
+  options?: Partial<SubscriptionOptions>
+) {
   const builtQuery = useMemo(() => query.build(), [query]);
   const [hasNextPage, setHasNextPage] = useState(false);
   const [hasPreviousPage, setHasPreviousPage] = useState(false);
@@ -119,7 +122,13 @@ export function usePaginatedQuery<
         setHasNextPage(info.hasNextPage);
         setHasPreviousPage(info.hasPreviousPage);
         setResults(new Map(results) as ClientFetchResult<ClientQuery<M, CN>>);
-      }
+      },
+      (error) => {
+        setFetching(false);
+        setFetchingPage(false);
+        setError(error);
+      },
+      options
     );
     nextPageRef.current = nextPage;
     prevPageRef.current = prevPage;
@@ -159,7 +168,11 @@ export function usePaginatedQuery<
 export function useInfiniteQuery<
   M extends Models<any, any> | undefined,
   CN extends CollectionNameFromModels<M>
->(client: TriplitClient<any>, query: ClientQueryBuilder<M, CN>) {
+>(
+  client: TriplitClient<any>,
+  query: ClientQueryBuilder<M, CN>,
+  options?: Partial<SubscriptionOptions>
+) {
   const builtQuery = useMemo(() => query.build(), [query]);
   const [hasMore, setHasMore] = useState(false);
   const [results, setResults] = useState<
@@ -183,7 +196,14 @@ export function useInfiniteQuery<
         setFetchingMore(false);
         setHasMore(info.hasMore);
         setResults(new Map(results) as ClientFetchResult<ClientQuery<M, CN>>);
-      }
+      },
+      (error) => {
+        setFetching(false);
+        setFetchingRemote(false);
+        setFetchingMore(false);
+        setError(error);
+      },
+      options
     );
     loadMoreRef.current = loadMore;
     disconnectRef.current = unsubscribe;

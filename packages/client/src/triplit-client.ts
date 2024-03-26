@@ -14,6 +14,7 @@ import {
   FetchResult,
   compareCursors,
   ValueCursor,
+  DBFetchOptions as AllDBFetchOptions,
 } from '@triplit/db';
 import { getUserId } from './token.js';
 import { UnrecognizedFetchPolicyError } from './errors.js';
@@ -65,6 +66,8 @@ function parseScope(query: ClientQuery<any, any>) {
   }
 }
 
+type DBFetchOptions = Pick<AllDBFetchOptions, 'noCache'>;
+
 export type LocalFirstFetchOptions = {
   policy: 'local-first';
 };
@@ -81,16 +84,20 @@ export type LocalAndRemoteFetchOptions = {
   policy: 'local-and-remote';
   timeout?: number;
 };
-export type FetchOptions =
-  | LocalFirstFetchOptions
-  | LocalOnlyFetchOptions
-  | RemoteFirstFetchOptions
-  | RemoteOnlyFetchOptions
-  | LocalAndRemoteFetchOptions;
+export type FetchOptions = DBFetchOptions &
+  (
+    | LocalFirstFetchOptions
+    | LocalOnlyFetchOptions
+    | RemoteFirstFetchOptions
+    | RemoteOnlyFetchOptions
+    | LocalAndRemoteFetchOptions
+  );
 
-export type SubscriptionOptions =
-  | { localOnly: true }
-  | { localOnly: undefined | false; onRemoteFulfilled?: () => void };
+type ClientSubscriptionOptions = {
+  localOnly: boolean;
+  onRemoteFulfilled?: () => void;
+};
+export type SubscriptionOptions = DBFetchOptions & ClientSubscriptionOptions;
 
 type StorageOptions =
   | { cache: Storage; outbox: Storage }
@@ -269,26 +276,26 @@ export class TriplitClient<M extends ClientSchema | undefined = undefined> {
 
   async fetch<CQ extends ClientQuery<M, any>>(
     query: CQ,
-    options?: FetchOptions
+    options?: Partial<FetchOptions>
   ): Promise<ClientFetchResult<CQ>> {
     // ID is currently used to trace the lifecycle of a query/subscription across logs
     // @ts-ignore
     query.id = query.id ?? Math.random().toString().slice(2);
 
-    const opts = options ?? this.defaultFetchOptions.fetch;
+    const opts = { ...this.defaultFetchOptions.fetch, ...(options ?? {}) };
     if (opts.policy === 'local-only') {
-      return this.fetchLocal(query);
+      return this.fetchLocal(query, opts);
     }
 
     if (opts.policy === 'local-first') {
-      const localResults = await this.fetchLocal(query);
+      const localResults = await this.fetchLocal(query, opts);
       if (localResults.size > 0) return localResults;
       try {
         await this.syncEngine.syncQuery(query);
       } catch (e) {
         warnError(e);
       }
-      return this.fetchLocal(query);
+      return this.fetchLocal(query, opts);
     }
 
     if (opts.policy === 'remote-first') {
@@ -297,7 +304,7 @@ export class TriplitClient<M extends ClientSchema | undefined = undefined> {
       } catch (e) {
         warnError(e);
       }
-      return this.fetchLocal(query);
+      return this.fetchLocal(query, opts);
     }
 
     if (opts.policy === 'remote-only') {
@@ -310,18 +317,23 @@ export class TriplitClient<M extends ClientSchema | undefined = undefined> {
         this.syncEngine.syncQuery(query),
         new Promise((res) => setTimeout(res, timeout)),
       ]).catch(warnError);
-      return this.fetchLocal(query);
+      return this.fetchLocal(query, opts);
     }
 
     throw new UnrecognizedFetchPolicyError((opts as FetchOptions).policy);
   }
 
   private async fetchLocal<CQ extends ClientQuery<M, any>>(
-    query: CQ
+    query: CQ,
+    options?: Partial<DBFetchOptions>
   ): Promise<ClientFetchResult<CQ>> {
     const scope = parseScope(query);
     this.logger.debug('fetchLocal START', query, scope);
-    const res = await this.db.fetch(query, { scope, skipRules: SKIP_RULES });
+    const res = await this.db.fetch(query, {
+      scope,
+      skipRules: SKIP_RULES,
+      ...(options ?? {}),
+    });
     this.logger.debug('fetchLocal END', res);
     return res as ClientFetchResult<CQ>;
   }
@@ -330,7 +342,7 @@ export class TriplitClient<M extends ClientSchema | undefined = undefined> {
     collectionName: CN,
     id: string,
     queryParams?: FetchByIdQueryParams<M, CN>,
-    options?: FetchOptions
+    options?: Partial<FetchOptions>
   ) {
     this.logger.debug(
       'fetchById START',
@@ -356,7 +368,7 @@ export class TriplitClient<M extends ClientSchema | undefined = undefined> {
 
   async fetchOne<CQ extends ClientQuery<M, any>>(
     query: CQ,
-    options?: FetchOptions
+    options?: Partial<FetchOptions>
   ): Promise<ClientFetchResultEntity<CQ> | null> {
     // ID is currently used to trace the lifecycle of a query/subscription across logs
     // @ts-ignore
@@ -427,10 +439,10 @@ export class TriplitClient<M extends ClientSchema | undefined = undefined> {
       info: { hasRemoteFulfilled: boolean }
     ) => void | Promise<void>,
     onError?: (error: any) => void | Promise<void>,
-    options?: SubscriptionOptions
+    options?: Partial<SubscriptionOptions>
   ) {
     let unsubscribed = false;
-    const opts: SubscriptionOptions = { localOnly: false, ...options };
+    const opts: SubscriptionOptions = { localOnly: false, ...(options ?? {}) };
     // ID is currently used to trace the lifecycle of a query/subscription across logs
     // @ts-ignore
     query.id = query.id ?? Math.random().toString().slice(2);
@@ -448,6 +460,7 @@ export class TriplitClient<M extends ClientSchema | undefined = undefined> {
           {
             scope,
             skipRules: SKIP_RULES,
+            ...opts,
           }
         );
       } catch (e) {
@@ -488,6 +501,7 @@ export class TriplitClient<M extends ClientSchema | undefined = undefined> {
       {
         scope,
         skipRules: SKIP_RULES,
+        ...opts,
       }
     );
     if (scope.includes('cache')) {
@@ -531,7 +545,7 @@ export class TriplitClient<M extends ClientSchema | undefined = undefined> {
       }
     ) => void | Promise<void>,
     onError?: (error: any) => void | Promise<void>,
-    options?: SubscriptionOptions
+    options?: Partial<SubscriptionOptions>
   ): PaginatedSubscription {
     const returnValue: Partial<PaginatedSubscription> = {};
     const requestedLimit = query.limit;
@@ -713,7 +727,7 @@ export class TriplitClient<M extends ClientSchema | undefined = undefined> {
       }
     ) => void | Promise<void>,
     onError?: (error: any) => void | Promise<void>,
-    options?: SubscriptionOptions
+    options?: Partial<SubscriptionOptions>
   ): InfiniteSubscription {
     const returnValue: Partial<InfiniteSubscription> = {};
     let subscriptionResultHandler = (results: any, info: any) => {
