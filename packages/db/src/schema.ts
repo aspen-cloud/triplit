@@ -146,6 +146,71 @@ export function getSchemaFromPath(
   return scope;
 }
 
+export function createSchemaIterator<
+  M extends Models<any, any>,
+  CN extends CollectionNameFromModels<M>
+>(path: string[], schema: M, collectionName: CN) {
+  let pathIndex = 0;
+  let schemaTraverser = createSchemaTraverser(schema, collectionName);
+  const schemaIterator = {
+    next() {
+      if (pathIndex >= path.length) {
+        return { done: true, value: schemaTraverser.current };
+      }
+      const part = path[pathIndex];
+      schemaTraverser = schemaTraverser.get(part);
+      pathIndex++;
+      return { done: false, value: schemaTraverser.current };
+    },
+    [Symbol.iterator]() {
+      return this;
+    },
+  };
+  return schemaIterator;
+}
+
+type Traverser = {
+  get(attribute: string): Traverser;
+  current: DataType | undefined;
+};
+
+export function createSchemaTraverser<
+  M extends Models<any, any>,
+  CN extends CollectionNameFromModels<M>
+>(schema: M, collectionName: CN): Traverser {
+  // @ts-expect-error
+  let current: DataType | undefined = schema[collectionName]?.schema;
+  const getter = (attribute: string): Traverser => {
+    let next: DataType | undefined = current;
+    if (current?.type === 'record') {
+      next = current.properties[attribute];
+    } else if (current?.type === 'query') {
+      const { query } = current;
+      return createSchemaTraverser(schema, query.collectionName).get(attribute);
+    } else {
+      next = undefined;
+    }
+    current = next;
+    return { get: getter, current };
+  };
+  return {
+    get: getter,
+    current: schema[collectionName]?.schema as DataType | undefined,
+  };
+}
+
+export function getAttributeFromSchema<
+  M extends Models<any, any>,
+  CN extends CollectionNameFromModels<M>
+>(attribute: string[], schema: M, collectionName: CN) {
+  let iter = createSchemaIterator(attribute, schema, collectionName);
+  let result = iter.next();
+  while (!result.done) {
+    result = iter.next();
+  }
+  return result.value;
+}
+
 export type UpdateTypeFromModel<M extends Model<any> | undefined> =
   M extends Model<any>
     ? // If properties are required by the schema, they are required in the update type

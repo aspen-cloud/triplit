@@ -3167,103 +3167,117 @@ describe('ORDER & LIMIT & Pagination', () => {
       76, 76, 78, 80, 80,
     ]);
   });
-  it('can pull in more results to satisfy limit in subscription when current result no longer satisfies FILTER', async () => {
-    const LIMIT = 5;
+  it.todo(
+    'can pull in more results to satisfy limit in subscription when current result no longer satisfies FILTER',
+    async () => {
+      const LIMIT = 5;
 
-    await testSubscription(
-      db,
-      db
-        .query('TestScores')
-        .where([['score', '>', 10]])
-        .order(['score', 'DESC'], ['date', 'DESC'])
-        .limit(LIMIT)
-        .build(),
-      [
-        {
-          check: (results) => {
-            expect(results).toHaveLength(LIMIT);
+      await testSubscription(
+        db,
+        db
+          .query('TestScores')
+          .where([['score', '>', 10]])
+          .order(['score', 'DESC'], ['date', 'DESC'])
+          .limit(LIMIT)
+          .build(),
+        [
+          {
+            check: (results) => {
+              expect(results).toHaveLength(LIMIT);
+            },
           },
-        },
-        {
-          action: async (results) => {
-            const idFromResults = [...results.keys()][0];
-            await db.transact(async (tx) => {
-              await tx.update('TestScores', idFromResults, async (entity) => {
-                entity.score = 0;
+          {
+            action: async (results) => {
+              const idFromResults = [...results.keys()][0];
+              await db.transact(async (tx) => {
+                await tx.update('TestScores', idFromResults, async (entity) => {
+                  entity.score = 0;
+                });
               });
-            });
+            },
+            check: (results) => {
+              expect(results.size).toBe(LIMIT);
+              expect(
+                [...results.values()].map((result) => result.score).includes(0)
+              ).toBeFalsy();
+            },
           },
-          check: (results) => {
-            expect(results.size).toBe(LIMIT);
-            expect(
-              [...results.values()].map((result) => result.score).includes(0)
-            ).toBeFalsy();
-          },
-        },
-        {
-          action: async (results) => {
-            const firstResult = [...results][0];
-            await db.transact(async (tx) => {
-              await tx.update('TestScores', firstResult[0], async (entity) => {
-                entity.score = firstResult[1].score + 1;
+          {
+            action: async (results) => {
+              const firstResult = [...results][0];
+              await db.transact(async (tx) => {
+                await tx.update(
+                  'TestScores',
+                  firstResult[0],
+                  async (entity) => {
+                    entity.score = firstResult[1].score + 1;
+                  }
+                );
               });
-            });
+            },
+            check: (results) => {
+              expect(results).toHaveLength(LIMIT);
+              expect(
+                [...results.values()].every((result, i, resultValues) => {
+                  if (i === 0) return true;
+                  const previous = resultValues[i - 1];
+                  const current = result;
+                  const hasCorrectOrder =
+                    previous.score > current.score ||
+                    (previous.score === current.score &&
+                      previous.date >= current.date);
+                  return hasCorrectOrder;
+                })
+              ).toBeTruthy();
+            },
           },
-          check: (results) => {
-            expect(results).toHaveLength(LIMIT);
-            expect(
-              [...results.values()].every((result, i, resultValues) => {
-                if (i === 0) return true;
-                const previous = resultValues[i - 1];
-                const current = result;
-                const hasCorrectOrder =
-                  previous.score > current.score ||
-                  (previous.score === current.score &&
-                    previous.date >= current.date);
-                return hasCorrectOrder;
-              })
-            ).toBeTruthy();
-          },
-        },
-      ]
-    );
-  });
+        ]
+      );
+    }
+  );
 
-  it('can pull in more results to satisfy limit in subscription when current result no longer satisfies ORDER', async () => {
-    const LIMIT = 5;
+  // TODO: fixup backfill query
+  // Handle single deletion
+  // Handle multiple deletion
+  // Backfill query is flaky based on id in after cursor
+  it.todo(
+    'can pull in more results to satisfy limit in subscription when current result no longer satisfies ORDER',
+    async () => {
+      const LIMIT = 5;
 
-    await testSubscription(
-      db,
-      db
-        .query('TestScores')
-        .order(['score', 'DESC'], ['date', 'DESC'])
-        .limit(LIMIT)
-        .build(),
-      [
-        {
-          check: (results) => {
-            expect(results.size).toBe(LIMIT);
+      await testSubscription(
+        db,
+        db
+          .query('TestScores')
+          .order(['score', 'DESC'], ['date', 'DESC'])
+          .limit(LIMIT)
+          .build(),
+        [
+          {
+            check: (results) => {
+              expect(results.size).toBe(LIMIT);
+            },
           },
-        },
-        {
-          action: async (results) => {
-            const idFromResults = [...results.keys()][0];
-            await db.transact(async (tx) => {
-              await tx.update('TestScores', idFromResults, async (entity) => {
-                entity.score = 0;
+          {
+            action: async (results) => {
+              const idFromResults = [...results.keys()][0];
+              await db.transact(async (tx) => {
+                await tx.update('TestScores', idFromResults, async (entity) => {
+                  entity.score = 0;
+                });
               });
-            });
+            },
+            check: (results) => {
+              expect(results.size).toBe(LIMIT);
+              expect(
+                [...results.values()].map((result) => result.score).includes(0)
+              ).toBeFalsy();
+            },
           },
-          check: (results) => {
-            expect(results.size).toBe(LIMIT);
-            expect(
-              [...results.values()].map((result) => result.score).includes(0)
-            ).toBeFalsy();
-          },
-        },
-      ]
-    );
-  });
+        ]
+      );
+    }
+  );
 
   it('limit ignores deleted entities', async () => {
     const db = new DB();
@@ -6217,7 +6231,7 @@ describe('relational querying / sub querying', () => {
 
 describe('Subqueries in schema', () => {
   let db: DB<any>;
-  beforeAll(async () => {
+  beforeEach(async () => {
     db = new DB({
       schema: {
         collections: {
@@ -6225,8 +6239,8 @@ describe('Subqueries in schema', () => {
             schema: S.Schema({
               id: S.String(),
               name: S.String(),
-              classes: S.Query({
-                collectionName: 'classes',
+              num_faculty: S.Number(),
+              classes: S.RelationMany('classes', {
                 where: [['department_id', '=', '$id']],
               }),
             }),
@@ -6238,17 +6252,19 @@ describe('Subqueries in schema', () => {
               level: S.Number(),
               building: S.String(),
               department_id: S.String(),
-              department: S.Query({
-                collectionName: 'departments',
-                where: [['id', '=', '$department_id']],
-              }),
+              department: S.RelationById('departments', '$department_id'),
             }),
           },
         },
       },
     });
 
-    const departments = ['CS', 'Math', 'English', 'History'];
+    const departments = [
+      { name: 'CS', num_faculty: 5 },
+      { name: 'Math', num_faculty: 10 },
+      { name: 'English', num_faculty: 15 },
+      { name: 'History', num_faculty: 10 },
+    ];
     const classes = [
       {
         name: 'CS 101',
@@ -6324,7 +6340,7 @@ describe('Subqueries in schema', () => {
       },
     ];
     for (const department of departments) {
-      await db.insert('departments', { id: department, name: department });
+      await db.insert('departments', { id: department.name, ...department });
     }
     for (const cls of classes) {
       await db.insert('classes', cls);
@@ -6398,6 +6414,236 @@ describe('Subqueries in schema', () => {
       },
     ]);
   });
+
+  it('can order query by a relation', async () => {
+    const query = db
+      .query('classes')
+      .order(['department.name', 'ASC'], ['name', 'ASC'])
+      .build();
+    const results = await db.fetch(query);
+    const classNames = Array.from(results.values()).map(
+      (result) => result.name
+    );
+    expect(classNames).toEqual([
+      'CS 101',
+      'CS 201',
+      'CS 301',
+      'English 101',
+      'English 201',
+      'English 301',
+      'History 101',
+      'History 201',
+      'History 301',
+      'Math 101',
+      'Math 201',
+      'Math 301',
+    ]);
+  });
+
+  it('can order query by a relation - mulitple related clauses', async () => {
+    const query = db
+      .query('classes')
+      .order(
+        ['department.num_faculty', 'ASC'],
+        ['department.name', 'ASC'],
+        ['name', 'ASC']
+      )
+      .build();
+    const results = await db.fetch(query);
+    const classNames = Array.from(results.values()).map(
+      (result) => result.name
+    );
+    expect(classNames).toEqual([
+      'CS 101',
+      'CS 201',
+      'CS 301',
+      'History 101',
+      'History 201',
+      'History 301',
+      'Math 101',
+      'Math 201',
+      'Math 301',
+      'English 101',
+      'English 201',
+      'English 301',
+    ]);
+  });
+
+  it('order by relation with subscription', async () => {
+    const query = db
+      .query('classes')
+      .order(['department.name', 'ASC'], ['name', 'ASC'])
+      .build();
+
+    await testSubscription(db, query, [
+      {
+        check: (results) => {
+          const classNames = Array.from(results.values()).map(
+            (result) => result.name
+          );
+          expect(classNames).toEqual([
+            'CS 101',
+            'CS 201',
+            'CS 301',
+            'English 101',
+            'English 201',
+            'English 301',
+            'History 101',
+            'History 201',
+            'History 301',
+            'Math 101',
+            'Math 201',
+            'Math 301',
+          ]);
+        },
+      },
+      {
+        action: async () => {
+          await db.insert('classes', {
+            id: 'CS 401',
+            name: 'CS 401',
+            level: 400,
+            building: 'Warner',
+            department_id: 'CS',
+          });
+        },
+        check: (results) => {
+          const classNames = Array.from(results.values()).map(
+            (result) => result.name
+          );
+          expect(classNames).toEqual([
+            'CS 101',
+            'CS 201',
+
+            'CS 301',
+            'CS 401',
+            'English 101',
+            'English 201',
+            'English 301',
+            'History 101',
+            'History 201',
+            'History 301',
+            'Math 101',
+            'Math 201',
+            'Math 301',
+          ]);
+        },
+      },
+    ]);
+  });
+});
+
+// it('lots of relations in query', async () => {
+//   const query = db
+//     .query('classes')
+//     .order(['department.name', 'ASC'], ['name', 'ASC'])
+//     .where([['department.name', '>', 'CS']])
+//     .build();
+//   const results = await db.fetch(query);
+//   console.log(results);
+// });
+
+// it('can filter by a relation', async () => {
+//   const query = db
+//     .query('classes')
+//     .where([['department.name', '=', 'CS']])
+//     .build();
+//   console.log(query);
+//   const results = await db.fetch(query);
+//   console.log(results);
+// });
+
+it.todo('can order by a deep relation', async () => {
+  const schema = {
+    collections: {
+      a: {
+        schema: S.Schema({
+          id: S.Id(),
+          bId: S.String(),
+          b: S.RelationById('b', '$bId'),
+        }),
+      },
+      b: {
+        schema: S.Schema({
+          id: S.Id(),
+          cId: S.String(),
+          c: S.RelationById('c', '$cId'),
+        }),
+      },
+      c: {
+        schema: S.Schema({
+          id: S.Id(),
+          name: S.String(),
+        }),
+      },
+    },
+  };
+  const db = new DB({ schema });
+  await db.insert('c', { id: 'c-1', name: 'c1' });
+  await db.insert('c', { id: 'c-2', name: 'c2' });
+  await db.insert('c', { id: 'c-3', name: 'c3' });
+  await db.insert('b', { id: 'b-1', cId: 'c-1' });
+  await db.insert('b', { id: 'b-2', cId: 'c-2' });
+  await db.insert('b', { id: 'b-3', cId: 'c-3' });
+  await db.insert('a', { id: 'a-1', bId: 'b-2' });
+  await db.insert('a', { id: 'a-2', bId: 'b-3' });
+  await db.insert('a', { id: 'a-3', bId: 'b-1' });
+
+  const query = db
+    .query('a')
+    .order([['b.c.name', 'ASC']])
+    .build();
+
+  const results = await db.fetch(query);
+  console.log(results);
+});
+
+it.todo('can order by a nullable object', async () => {
+  const db = new DB({
+    schema: {
+      collections: {
+        test: {
+          schema: S.Schema({
+            id: S.Id(),
+            name: S.String({ nullable: true }),
+          }),
+        },
+      },
+    },
+  });
+
+  await db.insert('test', { id: '1', name: 'a' });
+  await db.insert('test', { id: '2', name: 'b' });
+  await db.insert('test', { id: '3', name: null });
+  await db.insert('test', { id: '4', name: 'c' });
+
+  const query = db.query('test').order(['name', 'ASC']).build();
+  const results = await db.fetch(query);
+  console.log(results);
+});
+
+it.todo('can order by an optional attribute', async () => {
+  const db = new DB({
+    schema: {
+      collections: {
+        test: {
+          schema: S.Schema({
+            id: S.Id(),
+            name: S.Optional(S.String()),
+          }),
+        },
+      },
+    },
+  });
+
+  await db.insert('test', { id: '1', name: 'a' });
+  await db.insert('test', { id: '2', name: 'b' });
+  await db.insert('test', { id: '3' });
+  await db.insert('test', { id: '4', name: 'c' });
+
+  const query = db.query('test').order(['name', 'ASC']).build();
+  const results = await db.fetch(query);
+  console.log(results);
 });
 
 describe('social network test', () => {

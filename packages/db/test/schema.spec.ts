@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { Schema as S, getSchemaFromPath } from '../src/schema.js';
+import {
+  Schema as S,
+  createSchemaIterator,
+  createSchemaTraverser,
+  getSchemaFromPath,
+} from '../src/schema.js';
 import {
   CollectionNotFoundError,
   DBSerializationError,
@@ -318,4 +323,137 @@ it('should prevent an invalid accession in a schema', () => {
   expect(() => getSchemaFromPath(StudentSchema, ['grade', 'foo'])).toThrow(
     InvalidSchemaPathError
   );
+});
+
+describe('traversal', () => {
+  const schema = {
+    a: {
+      schema: S.Schema({
+        id: S.Id(),
+        attr: S.String(),
+        record: S.Record({
+          innerAttr: S.String(),
+        }),
+        bId: S.String(),
+        b: S.RelationById('b', '$bId'),
+      }),
+    },
+    b: {
+      schema: S.Schema({
+        id: S.Id(),
+        attr: S.String(),
+      }),
+    },
+  };
+
+  it('traverser initializes to proper schema', () => {
+    const schemaTraverser = createSchemaTraverser(schema, 'a');
+    expect(schemaTraverser.current).toBe(schema.a.schema);
+  });
+
+  it('traverser can traverse to an attribute', () => {
+    let schemaTraverser = createSchemaTraverser(schema, 'a');
+    schemaTraverser = schemaTraverser.get('attr');
+    expect(schemaTraverser.current).toBe(schema.a.schema.properties.attr);
+  });
+
+  it('traverser can traverse to a record attribute', () => {
+    let schemaTraverser = createSchemaTraverser(schema, 'a');
+    schemaTraverser = schemaTraverser.get('record').get('innerAttr');
+    expect(schemaTraverser.current).toBe(
+      schema.a.schema.properties.record.properties.innerAttr
+    );
+  });
+
+  it('traverser can traverse to a relation', () => {
+    let schemaTraverser = createSchemaTraverser(schema, 'a');
+    schemaTraverser = schemaTraverser.get('b');
+    expect(schemaTraverser.current).toBe(schema.a.schema.properties.b);
+  });
+
+  it('traverser can traverse to a relation attribute', () => {
+    let schemaTraverser = createSchemaTraverser(schema, 'a');
+    schemaTraverser = schemaTraverser.get('b').get('attr');
+    expect(schemaTraverser.current).toBe(schema.b.schema.properties.attr);
+  });
+
+  it('traverser sets current to undefined if path doesnt exist', () => {
+    let schemaTraverser = createSchemaTraverser(schema, 'a');
+    schemaTraverser = schemaTraverser.get('non-existent');
+    expect(schemaTraverser.current).toBe(undefined);
+    // can continue traversing
+    schemaTraverser = schemaTraverser.get('non-existent');
+    expect(schemaTraverser.current).toBe(undefined);
+  });
+
+  it('can handle non existent initial collection', () => {
+    const schemaTraverser = createSchemaTraverser(schema, 'non-existent');
+    expect(schemaTraverser.current).toBe(undefined);
+  });
+});
+
+describe('iterator', () => {
+  const schema = {
+    a: {
+      schema: S.Schema({
+        id: S.Id(),
+        attr: S.String(),
+        record: S.Record({
+          innerAttr: S.String(),
+        }),
+        bId: S.String(),
+        b: S.RelationById('b', '$bId'),
+      }),
+    },
+    b: {
+      schema: S.Schema({
+        id: S.Id(),
+        attr: S.String(),
+      }),
+    },
+  };
+
+  it('can iterate over schema properties', () => {
+    const schemaTraverser = createSchemaIterator(['attr'], schema, 'a');
+    const properties = [...schemaTraverser];
+    expect(properties).toEqual([schema.a.schema.properties.attr]);
+  });
+  it('can iterate over record properties', () => {
+    const schemaTraverser = createSchemaIterator(
+      ['record', 'innerAttr'],
+      schema,
+      'a'
+    );
+    const properties = [...schemaTraverser];
+    expect(properties).toEqual([
+      schema.a.schema.properties.record,
+      schema.a.schema.properties.record.properties.innerAttr,
+    ]);
+  });
+  it('can iterate over relation properties', () => {
+    const schemaTraverser = createSchemaIterator(['b', 'attr'], schema, 'a');
+    const properties = [...schemaTraverser];
+    expect(properties).toEqual([
+      schema.a.schema.properties.b,
+      schema.b.schema.properties.attr,
+    ]);
+  });
+  it('returns undefined if path doenst exist', () => {
+    const schemaTraverser = createSchemaIterator(
+      ['no', 'path', 'here'],
+      schema,
+      'a'
+    );
+    const properties = [...schemaTraverser];
+    expect(properties).toEqual([undefined, undefined, undefined]);
+  });
+  it('can handle non existent initial collection', () => {
+    const schemaTraverser = createSchemaIterator(
+      ['attr'],
+      schema,
+      'non-existent'
+    );
+    const properties = [...schemaTraverser];
+    expect(properties).toEqual([undefined]);
+  });
 });

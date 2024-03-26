@@ -1,21 +1,38 @@
-type MapFunc<I, O> = (item: I, index: number) => Promise<O>;
-type FilterFunc<I> = (item: I, index: number) => Promise<boolean>;
+export type MapFunc<I, O> = (item: I, index: number) => O | Promise<O>;
+type MapTuple = ['map', MapFunc<any, any>];
 
-export class Pipeline<T> {
+export type FilterFunc<I> = (
+  item: I,
+  index: number
+) => boolean | Promise<boolean>;
+type FilterTuple = ['filter', FilterFunc<any>];
+
+type AggregateFunc<I> = (items: I[]) => I[] | Promise<I[]>;
+type AggregateTuple = [
+  'aggregate',
+  AggregateFunc<any>,
+  { limit: number; takeWhile?: FilterFunc<any> }
+];
+
+type SortFunc<I> = (a: I, b: I) => number;
+
+type StageTuple = MapTuple | FilterTuple | AggregateTuple;
+
+export class Pipeline<T, R = T> {
   limit = Infinity;
-  stages: (['map', MapFunc<any, any>] | ['filter', FilterFunc<any>])[];
-  takeWhileFilter?: FilterFunc<T>;
+  stages: StageTuple[];
+  takeWhileFilter?: FilterFunc<R>;
   constructor(
     // readonly source: Iterable<T>,
-    readonly source: Array<T>, // TODO add iterator/generator suppr
+    // readonly source: Array<T>, // TODO add iterator/generator suppr
     {
       stages,
       limit,
       takeWhile,
     }: {
-      stages?: (['map', MapFunc<any, any>] | ['filter', FilterFunc<any>])[];
+      stages?: StageTuple[];
       limit?: number;
-      takeWhile?: FilterFunc<T>;
+      takeWhile?: FilterFunc<R>;
     } = {}
   ) {
     this.stages = stages ?? [];
@@ -23,16 +40,15 @@ export class Pipeline<T> {
     this.takeWhileFilter = takeWhile;
   }
 
-  map<O>(mapFunc: MapFunc<T, O>) {
-    // @ts-ignore not sure about best to store type info about original source
-    return new Pipeline<O>(this.source, {
+  map<O>(mapFunc: MapFunc<R, O>) {
+    return new Pipeline<T, O>({
       stages: this.stages.concat([['map', mapFunc]]),
       limit: this.limit,
     });
   }
 
-  tap(tapFunc: (item: T, index: number) => Promise<void> | void) {
-    return new Pipeline<T>(this.source, {
+  tap(tapFunc: (item: R, index: number) => Promise<void> | void) {
+    return new Pipeline<T, R>({
       stages: this.stages.concat([
         [
           'map',
@@ -46,25 +62,39 @@ export class Pipeline<T> {
     });
   }
 
-  takeWhile(filterFunc: FilterFunc<T>) {
-    return new Pipeline<T>(this.source, {
+  takeWhile(filterFunc: FilterFunc<R>) {
+    return new Pipeline<T, R>({
       takeWhile: filterFunc,
       stages: this.stages,
       limit: this.limit,
     });
   }
 
-  filter(filterFunc: FilterFunc<T>) {
-    return new Pipeline<T>(this.source, {
+  filter(filterFunc: FilterFunc<R>) {
+    return new Pipeline<T, R>({
       stages: this.stages.concat([['filter', filterFunc]]),
       limit: this.limit,
     });
   }
 
   take(limit: number) {
-    return new Pipeline<T>(this.source, {
+    return new Pipeline<T, R>({
       stages: this.stages,
       limit,
+    });
+  }
+
+  sort(sortFunc: SortFunc<R>) {
+    return new Pipeline<T, R>({
+      stages: this.stages.concat([
+        [
+          'aggregate',
+          async (items: R[]) => {
+            return items.slice().sort(sortFunc);
+          },
+          { limit: this.limit, takeWhile: this.takeWhileFilter },
+        ],
+      ]),
     });
   }
 
@@ -82,34 +112,75 @@ export class Pipeline<T> {
   //   });
   // }
 
-  async toArray(): Promise<T[]> {
-    let result = [];
-    const limit = Math.min(this.source.length ?? Infinity, this.limit);
-    itemLoop: for (let i = 0; i < this.source.length; i++) {
-      let item = this.source[i];
-      stageLoop: for (const stage of this.stages) {
-        const [stageType, func] = stage;
-        if (stageType === 'map') {
-          item = await func(item, i);
-          continue;
-        }
-        if (stageType === 'filter') {
-          if (await func(item, i)) {
-            continue stageLoop;
+  async run(source: T[]) {
+    this.stages.push([
+      'aggregate',
+      async (items: any[]) => items,
+      { limit: this.limit, takeWhile: this.takeWhileFilter },
+    ]);
+
+    // Groups = [[...steps, aggregate], [...steps, aggregate], ...]
+    const stageGroups = this.stages.reduce<StageTuple[][]>(
+      (acc, stage, i, stages) => {
+        const prev = stages[i - 1];
+        if (prev && prev[0] === 'aggregate') {
+          acc.push([stage]);
+        } else {
+          if (acc.length === 0) {
+            acc.push([stage]);
           } else {
-            continue itemLoop;
+            acc[acc.length - 1].push(stage);
           }
         }
-      }
-      if (this.takeWhileFilter && !this.takeWhileFilter(item, i)) {
-        break itemLoop;
-      }
-      result.push(item);
+        return acc;
+      },
+      []
+    );
 
-      if (result.length >= limit) {
-        break itemLoop;
+    async function runStages(
+      source: T[],
+      stages: StageTuple[],
+      context: { limit: number; takeWhile?: FilterFunc<T> }
+    ) {
+      let result = [];
+      const limit = Math.min(source.length ?? Infinity, context.limit);
+      itemLoop: for (let i = 0; i < source.length; i++) {
+        let item = source[i];
+        stageLoop: for (const stage of stages) {
+          const [stageType, func] = stage;
+          if (stageType === 'map') {
+            item = await func(item, i);
+            continue;
+          }
+          if (stageType === 'filter') {
+            if (await func(item, i)) {
+              continue stageLoop;
+            } else {
+              continue itemLoop;
+            }
+          }
+        }
+        if (context.takeWhile && !context.takeWhile(item, i)) {
+          break itemLoop;
+        }
+        result.push(item);
+
+        if (result.length >= limit) {
+          break itemLoop;
+        }
       }
+      return result;
     }
-    return result;
+
+    let result: any[] = source;
+    for (const stageGroup of stageGroups) {
+      const [_, aggregateor, aggContext] = stageGroup.at(-1) as AggregateTuple;
+      const pipeStages = stageGroup.slice(0, -1);
+      result = await aggregateor(
+        await runStages(result, pipeStages, aggContext)
+      );
+    }
+
+    return result as R[];
   }
 }
