@@ -231,6 +231,21 @@ function MessageList({ convoId }: { convoId: string }) {
   )
 }
 
+function toggleReaction(message: Message, userId: string) {
+  const usersExistingReactionId = Array.from(message?.reactions?.values()).find(
+    (reaction) => reaction.userId === userId
+  )?.id
+  if (usersExistingReactionId) {
+    client.delete("reactions", usersExistingReactionId)
+  } else {
+    client.insert("reactions", {
+      messageId: message.id,
+      userId,
+      emoji: "👍",
+    })
+  }
+}
+
 function ChatBubble({
   message,
   delivered,
@@ -242,30 +257,54 @@ function ChatBubble({
   isOwnMessage: boolean
   showSentIndicator?: boolean
 }) {
+  const { data: session } = useSession()
+
   return (
-    <div className={cn(isOwnMessage && "self-end")}>
-      <div
-        className={cn(
-          "text-secondary-foreground w-max rounded-lg px-4 py-3 flex flex-col gap-1",
-          delivered ? "bg-secondary" : "border border-dashed",
-          isOwnMessage && "items-end"
+    <div className="flex flex-col gap-1">
+      <div className={cn(isOwnMessage && "self-end")}>
+        <button
+          type="button"
+          className={cn(
+            "text-secondary-foreground w-max rounded-lg px-4 py-3 flex flex-col gap-1",
+            delivered ? "bg-secondary" : "border border-dashed",
+            isOwnMessage && "items-end"
+          )}
+          onDoubleClick={() => {
+            session?.user?.id && toggleReaction(message, session?.user?.id)
+          }}
+        >
+          {!isOwnMessage && (
+            <div className="text-sm font-bold">{message.sender?.name}</div>
+          )}
+          <div>{message.text}</div>
+          <div className="text-xs text-muted-foregrounopenMemberModal">
+            {new Date(message.created_at).toLocaleTimeString([], {
+              hour: "2-digit",
+              minute: "2-digit",
+              hour12: true,
+            })}
+          </div>
+        </button>
+        {showSentIndicator && isOwnMessage && (
+          <SentIndicator delivered={delivered} />
         )}
-      >
-        {!isOwnMessage && (
-          <div className="text-sm font-bold">{message.sender?.name}</div>
-        )}
-        <div>{message.text}</div>
-        <div className="text-xs text-muted-foregrounopenMemberModal">
-          {new Date(message.created_at).toLocaleTimeString([], {
-            hour: "2-digit",
-            minute: "2-digit",
-            hour12: true,
-          })}
-        </div>
       </div>
-      {showSentIndicator && isOwnMessage && (
-        <SentIndicator delivered={delivered} />
-      )}
+      <div className={cn("flex flex-row gap-1", isOwnMessage && "self-end")}>
+        {Object.entries(
+          Array.from(message.reactions.values()).reduce((prev, reaction) => {
+            prev[reaction.emoji] = (prev[reaction.emoji] || 0) + 1
+            return prev
+          }, {} as Record<string, number>)
+        ).map(([reaction, count]) => (
+          <div
+            key={reaction}
+            className="flex flex-row gap-1 items-center rounded-lg px-2 py-0.5 text-sm"
+          >
+            {reaction}
+            <span className="text-muted-foreground">{count}</span>
+          </div>
+        ))}
+      </div>
     </div>
   )
 }

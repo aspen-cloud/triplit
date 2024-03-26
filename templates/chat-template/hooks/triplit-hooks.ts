@@ -8,7 +8,7 @@ import { schema } from "../triplit/schema.js"
 
 export type Conversation = Entity<typeof schema, "conversations">
 export type Message = Entity<typeof schema, "messages">
-
+export type Reaction = Entity<typeof schema, "reactions">
 // Populate the conversation sidebar (or full screen on mobile) and applies
 // the search filter to the query results.
 export function useFilteredConversations(query: string) {
@@ -67,7 +67,8 @@ export function useMessages(convoId: string) {
         .where("conversationId", "=", convoId)
         .order("created_at", "DESC")
         .limit(30)
-        .include("sender"),
+        .include("sender")
+        .include("reactions"),
     [convoId]
   )
 

@@ -10,6 +10,9 @@ export const schema = {
       text: S.String(),
       created_at: S.String({ default: S.Default.now() }),
       likes: S.Set(S.String()),
+      reactions: S.RelationMany("reactions", {
+        where: [["messageId", "=", "$id"]],
+      }),
       convo: S.RelationById("conversations", "$conversationId"),
     }),
     rules: {
@@ -42,7 +45,22 @@ export const schema = {
       },
     },
   },
-
+  reactions: {
+    schema: S.Schema({
+      id: S.Id(),
+      createdAt: S.Date({ default: S.Default.now() }),
+      messageId: S.String(),
+      userId: S.String(),
+      emoji: S.String(),
+    }),
+    rules: {
+      write: {
+        isSender: {
+          filter: [["userId", "=", "$SESSION_USER_ID"]],
+        },
+      },
+    },
+  },
   credentials: {
     schema: S.Schema({
       id: S.Id(),
