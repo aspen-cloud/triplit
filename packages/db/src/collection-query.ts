@@ -1496,7 +1496,10 @@ export function subscribeTriples<
           }
           return acc;
         }, new Map<string, TripleRow[]>());
-        onResults(triplesMap);
+
+        if (triplesMap.size > 0) {
+          onResults(triplesMap);
+        }
       });
       await onResults(triples);
       return unsub;
