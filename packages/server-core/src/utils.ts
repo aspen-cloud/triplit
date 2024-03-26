@@ -16,7 +16,8 @@ function getTxId(triple: TripleRow): string {
 
 export async function insertTriplesByTransaction(
   db: DB<Models<any, any> | undefined>,
-  triplesByTransaction: Record<string, TripleRow[]>
+  triplesByTransaction: Record<string, TripleRow[]>,
+  skipRules = false
 ): Promise<{
   successes: string[];
   failures: [string, TriplitError][];
@@ -25,27 +26,30 @@ export async function insertTriplesByTransaction(
   const failures: [string, TriplitError][] = [];
   try {
     // This plays weird with hooks, because everything is in a single transaciton here, so one failing client tx in a hook will fail all of them
-    await db.transact(async (dbTx) => {
-      const tx = dbTx.storeTx;
-      for (const txId in triplesByTransaction) {
-        try {
-          await tx.insertTriples(triplesByTransaction[txId]);
-          successes.push(txId);
-        } catch (e) {
-          if (isTriplitError(e)) {
-            failures.push([txId, e]);
-          } else {
-            console.error(e);
-            failures.push([
-              txId,
-              new TriplitError(
-                'An unknown error occurred while inserting triples'
-              ),
-            ]);
+    await db.transact(
+      async (dbTx) => {
+        const tx = dbTx.storeTx;
+        for (const txId in triplesByTransaction) {
+          try {
+            await tx.insertTriples(triplesByTransaction[txId]);
+            successes.push(txId);
+          } catch (e) {
+            if (isTriplitError(e)) {
+              failures.push([txId, e]);
+            } else {
+              console.error(e);
+              failures.push([
+                txId,
+                new TriplitError(
+                  'An unknown error occurred while inserting triples'
+                ),
+              ]);
+            }
           }
         }
-      }
-    });
+      },
+      { skipRules }
+    );
     return { successes, failures };
 
     // Catch in case of some error while actually inserting the data into the DB

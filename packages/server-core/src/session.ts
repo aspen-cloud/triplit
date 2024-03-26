@@ -185,7 +185,11 @@ export class Connection {
     );
     try {
       // If we fail here handle individual failures
-      const resp = await insertTriplesByTransaction(this.session.db, txTriples);
+      const resp = await insertTriplesByTransaction(
+        this.session.db,
+        txTriples,
+        hasAdminAccess(this.session.token)
+      );
       successes = resp.successes;
       failures.push(...resp.failures);
 
