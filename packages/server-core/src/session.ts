@@ -93,6 +93,7 @@ export class Connection {
     const clientStates = new Map(
       (state ?? []).map(([sequence, client]) => [client, sequence])
     );
+    let serverHasRespondedOnce = false;
     const unsubscribe = this.session.db.subscribeTriples(
       this.session.db.query(collectionName, parsedQuery).build(),
       (results) => {
@@ -100,12 +101,15 @@ export class Connection {
         const triplesForClient = triples.filter(
           ({ timestamp: [_t, client] }) => client !== this.options.clientId
         );
-        // We should always send triples to client even if there are none
+        // We should send triples to client even if there are none
         // so that the client knows that the query has been fulfilled by the remote
+        // for the initial query response
+        if (serverHasRespondedOnce && triplesForClient.length === 0) return;
         this.sendResponse('TRIPLES', {
           triples: triplesForClient,
           forQueries: [queryKey],
         });
+        serverHasRespondedOnce = true;
       },
       (error) => {
         console.error(error);
