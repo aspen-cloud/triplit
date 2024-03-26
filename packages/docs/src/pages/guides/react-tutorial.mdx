@@ -83,10 +83,10 @@ This schema defines a single collection, `todos`, with the following fields:
 Triplit provides a development server that you can use to test your app locally. To start the development server, run the following command:
 
 ```bash copy
-npx triplit dev
+npx triplit dev -i
 ```
 
-This will start the sync server on port `6543` and a database console on port `6542`. It will also output API tokens that your app will use to connect to the sync server.
+This will start the sync server on port `6543` and a database console on port `6542`. It will also output API tokens that your app will use to connect to the sync server. The `-i` option will cause the sync server to load the `schema` on startup.
 
 <Callout emoji="💡">
   If you're using our hosted service, Triplit Cloud, you can use the API tokens
@@ -108,32 +108,6 @@ VITE_TRIPLIT_TOKEN=$TRIPLIT_ANON_TOKEN
 ```
 
 Now restart the development server by pressing `Ctrl + C` and running `npx triplit dev` again.
-
-### Migrate the sync server
-
-Now that we've defined the schema and started the development server, we need to "push" the schema to the sync server. This will allow the sync server to validate the data that we send to it.
-
-First, make sure that the development server is running. Then, in a seperate terminal, in the `todos` directory, run the following commands to migrate the sync server:
-
-```bash copy
-npx triplit migrate create initial
-npx triplit migrate up
-```
-
-You should see some output that looks like this:
-
-```bash copy
-npx triplit migrate create initial
-> Migration file created at ~/todos/triplit/migrations/1705354911962_initial.json
-npx triplit migrate up
-> Migrating up the sync server:  http://localhost:6543
-> applying up migration with id 1705354911962
-```
-
-Here's what we just did:
-
-1. We created a new migration file called `1705354911962_initial.json` in the `triplit/migrations` directory. This file translates our initial `schema.ts` to a series of steps that the sync server will use to migrate its database.
-2. We applied the migration to the sync server. This will update the sync server's database to match the schema in `schema.ts`. The server will now expect all future clients that connect to it to have the same schema.
 
 We're basically done setting up Triplit. Now we can start building the app.
 
@@ -305,12 +279,7 @@ The console allows you to view and edit the contents of your database. You can u
 
 <Callout emoji="💡">
   The Triplit console is super powerful. Not only can you mutate data, but you
-  can apply filters, sorts, navigate relations and more. You can even edit your
-  schema, either by adding new columns or updating/deleting existing ones. Be
-  careful - if you make any changes to your schema, they'll go into effect _just
-  on the server_ and you'll need to `npx triplit migrate pull` to get your
-  client's schema in sync. Read more about migrations
-  [here](/guides/migrations).
+  can apply filters, sorts, navigate relations and more.
 </Callout>
 
 ### Creating a todo component

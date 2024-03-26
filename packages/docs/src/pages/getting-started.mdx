@@ -224,10 +224,12 @@ So far we've covered how to set up a local database and query it. But what if yo
 Triplit has a robust local development environment that you can set up with a single command.
 
 ```bash
-triplit dev
+triplit dev -i
 ```
 
-This will start a local development server that you can use to test syncing. The default URL for the local development server is `http://localhost:6543`. It will also generate a Service Token and an Anonymous Token that your client app will use to authorize with the server.
+This will start a local development server that you can use to test syncing. The `-i` flag will ensure the development server loads the schema defined at `/triplit/schema.ts`.
+
+The default URL for the local development server is `http://localhost:6543`. It will also generate a Service Token and an Anonymous Token that your client app will use to authorize with the server.
 
 We recommend setting up a `.env` file in your project to store these.
 
@@ -250,14 +252,7 @@ const client = new TriplitClient({
 });
 ```
 
-If you're using a schema **your client will not sync with the server until you migrate it**. You migrate with the Triplit CLI:
-
-```bash copy
-triplit migrate create --name=my-first-migration
-triplit migrate up
-```
-
-With the appropriate environment variables set, the Triplit CLI will let you push schema changes to the server or even [seed](/guides/seeding) it with data. Read more about migrations [here](/guides/migrations).
+If you change your schema while the development server is running, you can either restart the server or run `triplit schema push` to update it "live".
 
 ### Syncing with Triplit Cloud
 
@@ -286,14 +281,16 @@ const client = new TriplitClient({
 });
 ```
 
-If you're using a schema **your client will not sync with the server until you migrate it**. You migrate with the Triplit CLI:
+If you're using a schema **your client will not sync with the server until you apply the schema to it**. You can do this with the Triplit CLI:
 
 ```bash copy
-triplit migrate create my-first-migration
-triplit migrate up
+triplit schema push
 ```
 
-With the appropriate environment variables set, the Triplit CLI will let you push schema changes to the server or even [seed](/guides/seeding) it with data. Read more about migrations [here](/guides/migrations).
+<Callout emoji="⚠️">
+  Changing the schema of your database can lead to data corruption. Triplit will
+  attempt to detect and prevent these backwards-incompatible schema changes.
+</Callout>
 
 ## Next steps
 
