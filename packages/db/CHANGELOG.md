@@ -1,5 +1,11 @@
 # @triplit/db
 
+## 0.3.28
+
+### Patch Changes
+
+- f944c0b: allow access to noCache param to toggle experimental VAC
+
 ## 0.3.27
 
 ### Patch Changes
