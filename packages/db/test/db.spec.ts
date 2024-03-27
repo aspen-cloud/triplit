@@ -3124,16 +3124,9 @@ describe('ORDER & LIMIT & Pagination', () => {
         .limit(5)
         .build()
     );
-    expect(firstPageResults.size).toBe(5);
-    const areAllScoresDescending = Array.from(firstPageResults.values()).every(
-      (result, i, arr) => {
-        if (i === 0) return true;
-        const previousScore = arr[i - 1].score;
-        const currentScore = result.score;
-        return previousScore >= currentScore;
-      }
-    );
-    expect(areAllScoresDescending).toBeTruthy();
+    expect([...firstPageResults.values()].map((r) => r.score)).toEqual([
+      99, 99, 98, 96, 96,
+    ]);
 
     const lastDoc = [...firstPageResults.entries()][4];
 
@@ -3145,18 +3138,9 @@ describe('ORDER & LIMIT & Pagination', () => {
         .build()
     );
 
-    const areAllScoresDescendingAfterSecondPage = [
-      ...firstPageResults.values(),
-      ...secondPageResults.values(),
-    ].every((result, i, arr) => {
-      if (i === 0) return true;
-      const previousScore = arr[i - 1].score;
-      const currentScore = result.score;
-      return previousScore >= currentScore;
-    });
-
-    expect(secondPageResults.size).toBe(5);
-    expect(areAllScoresDescendingAfterSecondPage).toBeTruthy();
+    expect([...secondPageResults.values()].map((r) => r.score)).toEqual([
+      95, 91, 87, 87, 87,
+    ]);
   });
 
   it('can paginate ASC', async () => {
@@ -3166,16 +3150,9 @@ describe('ORDER & LIMIT & Pagination', () => {
         .limit(5)
         .build()
     );
-    expect(firstPageResults.size).toBe(5);
-    const areAllScoresAscending = Array.from(firstPageResults.values()).every(
-      (result, i, arr) => {
-        if (i === 0) return true;
-        const previousScore = arr[i - 1].score;
-        const currentScore = result.score;
-        return previousScore <= currentScore;
-      }
-    );
-    expect(areAllScoresAscending).toBeTruthy();
+    expect([...firstPageResults.values()].map((r) => r.score)).toEqual([
+      70, 70, 73, 75, 75,
+    ]);
 
     const lastDoc = [...firstPageResults.entries()][4];
 
@@ -3186,19 +3163,9 @@ describe('ORDER & LIMIT & Pagination', () => {
         .after([lastDoc[1].score, lastDoc[0]])
         .build()
     );
-
-    const areAllScoresAscendingAfterSecondPage = [
-      ...firstPageResults.values(),
-      ...secondPageResults.values(),
-    ].every((result, i, arr) => {
-      if (i === 0) return true;
-      const previousScore = arr[i - 1].score;
-      const currentScore = result.score;
-      return previousScore <= currentScore;
-    });
-
-    expect(secondPageResults.size).toBe(5);
-    expect(areAllScoresAscendingAfterSecondPage).toBeTruthy();
+    expect([...secondPageResults.values()].map((r) => r.score)).toEqual([
+      76, 76, 78, 80, 80,
+    ]);
   });
   it('can pull in more results to satisfy limit in subscription when current result no longer satisfies FILTER', async () => {
     const LIMIT = 5;
