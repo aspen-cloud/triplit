@@ -46,7 +46,7 @@ describe('query root permutations', () => {
 });
 
 describe('query builder', () => {
-  it.only('properly formats order clauses', () => {
+  it('properly formats order clauses', () => {
     const db = new DB();
     const query1 = db.query('test').order('name', 'ASC').build();
     expect(query1.order).toEqual([['name', 'ASC']]);
