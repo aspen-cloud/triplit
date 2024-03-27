@@ -1,5 +1,13 @@
 # @triplit/client
 
+## 0.3.33
+
+### Patch Changes
+
+- f944c0b: allow access to noCache param to toggle experimental VAC
+- Updated dependencies [f944c0b]
+  - @triplit/db@0.3.28
+
 ## 0.3.32
 
 ### Patch Changes
