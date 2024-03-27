@@ -662,6 +662,7 @@ type BackwardsIncompatibleEdits = {
   issue: string;
   allowedIf: ALLOWABLE_DATA_CONSTRAINTS;
   context: CollectionAttributeDiff;
+  attributeCure: (collection: string, attribute: string[]) => string | null;
 };
 
 export function getBackwardsIncompatibleEdits(
@@ -676,6 +677,7 @@ export function getBackwardsIncompatibleEdits(
         issue: maybeDangerousEdit.description,
         allowedIf: maybeDangerousEdit.allowedIf,
         context: curr,
+        attributeCure: maybeDangerousEdit.attributeCure,
       });
     }
     return acc;
@@ -689,6 +691,7 @@ const DANGEROUS_EDITS = [
       return diff.type === 'delete' && diff.metadata.optional === true;
     },
     allowedIf: 'attribute_is_empty',
+    attributeCure: () => null,
   },
   {
     description: 'removed a non-optional attribute',
@@ -696,6 +699,8 @@ const DANGEROUS_EDITS = [
       return diff.type === 'delete';
     },
     allowedIf: 'collection_is_empty',
+    attributeCure: (_collection, attribute) =>
+      `make '${attribute.join('.')}' optional`,
   },
   {
     description: 'changed a attribute from optional to required',
@@ -706,6 +711,7 @@ const DANGEROUS_EDITS = [
       return false;
     },
     allowedIf: 'attribute_has_no_undefined',
+    attributeCure: () => null,
   },
   {
     description: 'changed the type of an attribute',
@@ -716,6 +722,10 @@ const DANGEROUS_EDITS = [
       return false;
     },
     allowedIf: 'attribute_is_empty',
+    attributeCure: (_collection, attribute) =>
+      `revert the change to '${attribute.join(
+        '.'
+      )}' and create a different, optional, attribute with the new type`,
   },
   {
     description: "changed the type of a set's items",
@@ -726,6 +736,10 @@ const DANGEROUS_EDITS = [
       return false;
     },
     allowedIf: 'attribute_is_empty',
+    attributeCure: (_collection, attribute) =>
+      `revert the change to '${attribute.join(
+        '.'
+      )}' and create a different, optional, attribute with the new type`,
   },
   {
     description: 'added an attribute where optional is not set',
@@ -739,6 +753,8 @@ const DANGEROUS_EDITS = [
       return false;
     },
     allowedIf: 'collection_is_empty',
+    attributeCure: (_collection, attribute) =>
+      `make '${attribute.join('.')}' optional`,
   },
   {
     description: 'changed an attribute from nullable to non-nullable',
@@ -749,11 +765,13 @@ const DANGEROUS_EDITS = [
       return false;
     },
     allowedIf: 'attribute_has_no_null',
+    attributeCure: () => null,
   },
 ] satisfies {
   allowedIf: ALLOWABLE_DATA_CONSTRAINTS;
   description: string;
   matchesDiff: (diff: CollectionAttributeDiff) => boolean;
+  attributeCure: (collection: string, attribute: string[]) => string | null;
 }[];
 
 async function isEditSafeWithExistingData(
@@ -790,7 +808,7 @@ export async function getSchemaDiffIssues(
           edit.context.collection,
           edit.context.attribute
         );
-        const attributeCure = ATTRIBUTE_CHANGE_CURES[edit.issue](
+        const attributeCure = edit.attributeCure(
           edit.context.collection,
           edit.context.attribute
         );
@@ -827,41 +845,18 @@ const DATA_CHANGE_CURES: Record<
   never: () => 'This edit is never allowed',
   collection_is_empty: (collection) =>
     `delete all entities in '${collection}' to allow this edit`,
-  attribute_is_empty: (collection, attribute) =>
+  attribute_is_empty: (_collection, attribute) =>
     `set all values of '${attribute.join(
       '.'
     )}' to undefined to allow this edit`,
-  attribute_has_no_undefined: (collection, attribute) =>
+  attribute_has_no_undefined: (_collection, attribute) =>
     `ensure all values of '${attribute.join(
       '.'
     )}' are not undefined to allow this edit`,
-  attribute_has_no_null: (collection, attribute) =>
+  attribute_has_no_null: (_collection, attribute) =>
     `ensure all values of '${attribute.join(
       '.'
     )}' are not null to allow this edit`,
-};
-
-type DangerousEdits = (typeof DANGEROUS_EDITS)[number]['description'];
-
-const ATTRIBUTE_CHANGE_CURES: Record<
-  DangerousEdits,
-  (collection: string, attribute: string[]) => string | null
-> = {
-  'removed an optional attribute': (_collection, _attribute) => null,
-  'removed a non-optional attribute': (_collection, attribute) =>
-    `make '${attribute.join('.')}' optional`,
-  'changed a attribute from optional to required': () => null,
-  'changed the type of an attribute': (_collection, attribute) =>
-    `leave '${attribute.join(
-      '.'
-    )}' unchanged and create a different, optional, attribute with the new type`,
-  "changed the type of a set's items": (_collection, attribute) =>
-    `leave '${attribute.join(
-      '.'
-    )}' unchanged and create a different, optional, attribute with the new type`,
-  'added an attribute where optional is not set': (_collection, attribute) =>
-    `make '${attribute.join('.')}' optional`,
-  'changed an attribute from nullable to non-nullable': () => null,
 };
 
 async function detectAttributeHasNoUndefined(
