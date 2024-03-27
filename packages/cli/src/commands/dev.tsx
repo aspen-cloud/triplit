@@ -180,7 +180,7 @@ export default Command({
       } else {
         watcher.on('change', async () => {
           console.warn(
-            'Schema file changed. Restart the dev server to apply changes.'
+            'Schema file changed. Restart the dev server or run\n\n`triplit schema push`\n\nto apply the new schema.'
           );
         });
       }
