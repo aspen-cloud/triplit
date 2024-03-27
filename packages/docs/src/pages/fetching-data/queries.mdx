@@ -63,9 +63,7 @@ const query = client.query('messages').include('sender');
   id: '1',
   text: 'hello world!',
   sender_id: 'bob',
-  sender: new Map([
-    ['bob', { id: 'bob', name: 'Bob Jones', email: 'bob@triplit.com' }],
-  ]),
+  sender: { id: 'bob', name: 'Bob Jones', email: 'bob@triplit.com' },
 };
 */
 ```
