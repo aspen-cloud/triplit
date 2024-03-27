@@ -1,0 +1,116 @@
+import { Callout } from 'nextra-theme-docs';
+
+# Schema Management
+
+[Schemas](/schemas) can make your life as Triplit developer significantly easier, by providing data validation at runtime, type-hinting, and access to some of Triplit's more advanced features, like relations.
+
+As your app changes, your data model will also change, and the schema for your Triplit databases will need to change as well. This can be highly challenging in a distributed system like Triplit, where certain clients may be using older schemas than the server or may go offline for significant periods of time. In this guide we'll go over the best practices for updating the Triplit schema of a live app with a very simple north star: **avoid corrupting existing user data at all costs**.
+
+<Callout emoji="💡">
+  This guide assumes some working knowledge of Triplit [schemas](/schemas),
+  including the options available to them, client-server [syncing](/sync), and
+  the Triplit CLI.
+</Callout>
+
+## Schemas in development
+
+### Starting the dev server
+
+Let start with a simple schema, defined at `triplit/schema.ts` in your project directory.
+
+```typescript filename="triplit/schema.ts" copy
+import { Schema as S } from '@triplit/db';
+import { ClientSchema } from '@triplit/client';
+
+export const schema = {
+  todos: {
+    schema: S.Schema({
+      id: S.Id(),
+      text: S.String(),
+      completed: S.Boolean({ default: false }),
+    }),
+  },
+} satisfies ClientSchema;
+```
+
+You can start the development server with the schema pre-loaded with the `--initWithSchema` or `-i` option.
+
+```bash copy
+triplit dev --initWithSchema
+```
+
+By default, the server will use in-memory storage, meaning that if you shut down the server, all of your data will be lost. This can be useful when you're early in development and frequently iterating on your schema. If you like this quick feedback loop but don't want to repeatedly re-insert test data by hand, you can use Triplit's [`seed` commands](/guides/seeding). Combining the two:
+
+```bash copy
+triplit dev -i && triplit seed run my-seed
+```
+
+If you want a development environment that's more constrained and closer to production, consider using the [SQLite](https://www.sqlite.org/) persistent storage option for the development server:
+
+```bash copy
+triplit dev -i -s=sqlite
+```
+
+Your database will be saved to `triplit/.data`. You can delete this folder to clear your database.
+
+### Updating your schema
+
+Let's assume you've run some version of `triplit dev -i` shown above and have a server up and running with an initial schema. You've also [properly configured your `.env`](/getting-started#syncing-in-local-development) such that Triplit CLI commands will be pointing at it. Let's also assume you've added some initial todos:
+
+```ts copy filename="App.tsx"
+import { TriplitClient } from '@triplit/client';
+import { schema } from '../triplit';
+
+const client = new TriplitClient({
+  schema,
+  serverUrl: import.meta.env.VITE_TRIPLIT_SERVER_URL,
+  token: import.meta.env.VITE_TRIPLIT_TOKEN,
+});
+
+client.insert('todos', { text: 'Get groceries' });
+client.insert('todos', { text: 'Do laundry' });
+client.insert('todos', { text: 'Work on project' });
+```
+
+Now let's edit our schema by adding a new `tagIds` attribute to `todos`, in anticipation of letting users assign various grouping tags.
+
+```typescript filename="triplit/schema.ts" copy {7}
+export const schema = {
+  todos: {
+    schema: S.Schema({
+      id: S.Id(),
+      text: S.String(),
+      completed: S.Boolean({ default: false }),
+      tagId: S.String(),
+    }),
+  },
+} satisfies ClientSchema;
+```
+
+We're trying to mimic production patterns as much as possible, so we're not going to restart the server to apply this change (and in fact, that would cause problems, as we'll soon see). Instead let's use a new command:
+
+```bash
+triplit schema push
+```
+
+This will look at the schema defined at `triplit/schema.ts` and attempt to apply it to the server while it's still running. In our case, it fails, and we get an error like this:
+
+```
+✖ Failed to push schema to server
+Found 1 backwards incompatible schema changes.
+Schema update failed. Please resolve the following issues:
+
+Collection: 'todos'
+        'tagIds'
+                Issue: added an attribute where optional is not set
+                Fix:   make 'tagIds' optional or delete all entities in 'todos' to allow this edit
+```
+
+What's at issue here is that we **tried to change the shape of a todo while one was in the database**. All attributes in Triplit are required by default, and by adding a new attribute without updating the existing todos, we would be violating the contract between the schema and the data.
+
+Thankfully, the error gives us some instructions. We can either
+
+1. Make `tagId` optional e.g. `tagIds: S.Optional(S.String())` and permit existing todos to have a `tagId` that's `undefined`.
+2. Delete all of the todos in the collection so that there isn't any stale data.
+
+While 2. might be acceptable in development, 1. is the obvious choice in production. Once we have an optional attribute, we can backfill it for existing entities with calls to `client.update` while we create new todos with `tagId`.
