@@ -6,7 +6,7 @@ import { logSchemaChangeViolations, schemaToJSON } from '@triplit/db';
 import ora from 'ora';
 
 export default Command({
-  description: 'Show the diff between local and remote schema',
+  description: 'Apply the local schema to the server',
   middleware: [serverRequesterMiddleware],
   run: async ({ ctx }) => {
     const localSchema = schemaToJSON({
@@ -24,7 +24,6 @@ export default Command({
       pushSpinner.fail('Failed to push schema to server');
       data = e;
     }
-    console.error('this is a test');
     logSchemaChangeViolations(data.successful, data.issues, {
       warn: (message, ...args) => console.log(c.yellow(message), ...args),
       info: (message, ...args) => console.log(c.blue(message), ...args),

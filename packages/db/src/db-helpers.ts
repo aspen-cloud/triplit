@@ -257,10 +257,22 @@ export function logSchemaChangeViolations(
     log.info('Schema update successful');
   } else {
     log.error('Schema update failed. Please resolve the following issues:');
-    issues.forEach(({ issue, violatesExistingData, context }) => {
-      if (!violatesExistingData) return;
-      const collection = context.collection;
-      log.error(`${collection}.${context.attribute.join('.')} - ${issue}`);
+    const collectionIssueMap = issues.reduce((acc, issue) => {
+      const collection = issue.context.collection;
+      const existingIssues = acc.get(collection) ?? [];
+      acc.set(collection, [...existingIssues, issue]);
+      return acc;
+    }, new Map<string, PossibleDataViolations[]>());
+    collectionIssueMap.forEach((issues, collection) => {
+      log.info(`\nCollection: '${collection}'`);
+      issues.forEach(({ issue, violatesExistingData, context, cure }) => {
+        if (!violatesExistingData) return;
+        log.error(
+          `\nAttribute: '${context.attribute.join('.')}'
+\tIssue: ${issue}
+\tFix:   ${cure}`
+        );
+      });
     });
     log.info('');
   }

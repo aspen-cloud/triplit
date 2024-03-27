@@ -770,6 +770,7 @@ async function isEditSafeWithExistingData(
 
 export type PossibleDataViolations = {
   violatesExistingData: boolean;
+  cure: string;
 } & BackwardsIncompatibleEdits;
 
 export async function getSchemaDiffIssues(
@@ -785,9 +786,18 @@ export async function getSchemaDiffIssues(
           edit.context,
           edit.allowedIf
         ));
+        const dataCure = DATA_CHANGE_CURES[edit.allowedIf](
+          edit.context.collection,
+          edit.context.attribute
+        );
+        const attributeCure = ATTRIBUTE_CHANGE_CURES[edit.issue](
+          edit.context.collection,
+          edit.context.attribute
+        );
         return {
           ...edit,
           violatesExistingData,
+          cure: attributeCure ? attributeCure + ' or ' + dataCure : dataCure,
         };
       })
     );
@@ -808,6 +818,50 @@ const DATA_CONSTRAINT_CHECKS: Record<
   attribute_is_empty: detectAttributeIsEmpty,
   attribute_has_no_undefined: detectAttributeHasNoUndefined,
   attribute_has_no_null: detectAttributeHasNoNull,
+};
+
+const DATA_CHANGE_CURES: Record<
+  ALLOWABLE_DATA_CONSTRAINTS,
+  (collection: string, attribute: string[]) => string
+> = {
+  never: () => 'This edit is never allowed',
+  collection_is_empty: (collection) =>
+    `delete all entities in '${collection}' to allow this edit`,
+  attribute_is_empty: (collection, attribute) =>
+    `set all values of '${attribute.join(
+      '.'
+    )}' to undefined to allow this edit`,
+  attribute_has_no_undefined: (collection, attribute) =>
+    `ensure all values of '${attribute.join(
+      '.'
+    )}' are not undefined to allow this edit`,
+  attribute_has_no_null: (collection, attribute) =>
+    `ensure all values of '${attribute.join(
+      '.'
+    )}' are not null to allow this edit`,
+};
+
+type DangerousEdits = (typeof DANGEROUS_EDITS)[number]['description'];
+
+const ATTRIBUTE_CHANGE_CURES: Record<
+  DangerousEdits,
+  (collection: string, attribute: string[]) => string | null
+> = {
+  'removed an optional attribute': (_collection, _attribute) => null,
+  'removed a non-optional attribute': (_collection, attribute) =>
+    `make '${attribute.join('.')}' optional`,
+  'changed a attribute from optional to required': () => null,
+  'changed the type of an attribute': (_collection, attribute) =>
+    `leave '${attribute.join(
+      '.'
+    )}' unchanged and create a different, optional, attribute with the new type`,
+  "changed the type of a set's items": (_collection, attribute) =>
+    `leave '${attribute.join(
+      '.'
+    )}' unchanged and create a different, optional, attribute with the new type`,
+  'added an attribute where optional is not set': (_collection, attribute) =>
+    `make '${attribute.join('.')}' optional`,
+  'changed an attribute from nullable to non-nullable': () => null,
 };
 
 async function detectAttributeHasNoUndefined(
