@@ -172,7 +172,9 @@ export class SyncEngine {
    * @hidden
    */
   subscribe(params: CollectionQuery<any, any>, onQueryFulfilled?: () => void) {
-    const queryHash = Value.Hash(params).toString();
+    // @ts-expect-error
+    const { id: requestId, ...queryParams } = params;
+    const queryHash = Value.Hash(queryParams).toString();
     const id = queryHash;
     this.getQueryState(id).then((queryState) => {
       this.sendMessage({
