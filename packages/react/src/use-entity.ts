@@ -16,7 +16,7 @@ export function useEntity<
   collectionName: CN,
   id: string,
   queryParams?: FetchByIdQueryParams<M, CN>,
-  options?: SubscriptionOptions
+  options?: Partial<SubscriptionOptions>
 ): {
   fetching: boolean;
   fetchingRemote: boolean;
