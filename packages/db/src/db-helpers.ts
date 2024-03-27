@@ -252,26 +252,17 @@ export function logSchemaChangeViolations(
   logger?: Logger
 ) {
   const log = logger ?? console;
-  if (issues.length > 0) {
-    log.warn(
-      'The DB received an updated schema. It may be backwards incompatible with existing data. Please resolve the following issues:',
-      issues.reduce((acc, { issue, violatesExistingData, context }) => {
-        const collection = context.collection;
-        if (!(collection in acc)) {
-          acc[collection] = {};
-        }
-        acc[collection][context.attribute.join('.')] = {
-          issue,
-          violatesExistingData,
-        };
-        return acc;
-      }, {} as Record<string, Record<string, { violatesExistingData: boolean; issue: string }>>)
-    );
-  }
+  log.warn(`Found ${issues.length} backwards incompatible schema changes.`);
   if (successful) {
     log.info('Schema update successful');
   } else {
-    log.error('Schema update failed');
+    log.error('Schema update failed. Please resolve the following issues:');
+    issues.forEach(({ issue, violatesExistingData, context }) => {
+      if (!violatesExistingData) return;
+      const collection = context.collection;
+      log.error(`${collection}.${context.attribute.join('.')} - ${issue}`);
+    });
+    log.info('');
   }
 }
 

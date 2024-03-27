@@ -1,3 +1,4 @@
+import c from 'ansi-colors';
 import { Command } from '../../command.js';
 import { serverRequesterMiddleware } from '../../middleware/add-server-requester.js';
 import { readLocalSchema } from '../../schema.js';
@@ -23,7 +24,13 @@ export default Command({
       pushSpinner.fail('Failed to push schema to server');
       data = e;
     }
-
-    logSchemaChangeViolations(data.successful, data.issues);
+    console.error('this is a test');
+    logSchemaChangeViolations(data.successful, data.issues, {
+      warn: (message, ...args) => console.log(c.yellow(message), ...args),
+      info: (message, ...args) => console.log(c.blue(message), ...args),
+      error: (message, ...args) => console.log(c.red(message), ...args),
+      debug: () => {},
+      scope: () => this,
+    });
   },
 });
