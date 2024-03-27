@@ -1,5 +1,18 @@
 # @triplit/server-core
 
+## 0.3.30
+
+### Patch Changes
+
+- dea15f5: add overrideSchema endpoint to server
+- d71b6f6: skip rules for TRIPLES messages operations
+- Updated dependencies [5b36d92]
+- Updated dependencies [eddc659]
+- Updated dependencies [753e546]
+- Updated dependencies [7408dca]
+- Updated dependencies [26397d4]
+  - @triplit/db@0.3.27
+
 ## 0.3.29
 
 ### Patch Changes

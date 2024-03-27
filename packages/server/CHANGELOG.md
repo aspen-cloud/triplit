@@ -1,5 +1,20 @@
 # @triplit/server
 
+## 0.3.30
+
+### Patch Changes
+
+- dea15f5: add overrideSchema endpoint to server
+- Updated dependencies [dea15f5]
+- Updated dependencies [5b36d92]
+- Updated dependencies [eddc659]
+- Updated dependencies [753e546]
+- Updated dependencies [d71b6f6]
+- Updated dependencies [7408dca]
+- Updated dependencies [26397d4]
+  - @triplit/server-core@0.3.30
+  - @triplit/db@0.3.27
+
 ## 0.3.29
 
 ### Patch Changes

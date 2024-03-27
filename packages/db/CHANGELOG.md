@@ -1,5 +1,16 @@
 # @triplit/db
 
+## 0.3.27
+
+### Patch Changes
+
+- 5b36d92: update added attribute matching logic to ignore new relations
+- eddc659: - support inclusive after cursors
+  - synchronously ensure unsubscribed queries dont refire
+- 753e546: refactor overrideStoredSchema to return informational object
+- 7408dca: support array of clauses in order by
+- 26397d4: fix bug with replacing variables in filter statements
+
 ## 0.3.26
 
 ### Patch Changes

@@ -1,5 +1,17 @@
 # @triplit/client
 
+## 0.3.32
+
+### Patch Changes
+
+- eddc659: Add utilities for paginated subscriptions
+- Updated dependencies [5b36d92]
+- Updated dependencies [eddc659]
+- Updated dependencies [753e546]
+- Updated dependencies [7408dca]
+- Updated dependencies [26397d4]
+  - @triplit/db@0.3.27
+
 ## 0.3.31
 
 ### Patch Changes

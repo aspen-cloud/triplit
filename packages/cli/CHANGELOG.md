@@ -1,5 +1,24 @@
 # @triplit/cli
 
+## 0.3.38
+
+### Patch Changes
+
+- a51bee8: add schema push command
+- Updated dependencies [dea15f5]
+- Updated dependencies [5b36d92]
+- Updated dependencies [eddc659]
+- Updated dependencies [eddc659]
+- Updated dependencies [753e546]
+- Updated dependencies [d71b6f6]
+- Updated dependencies [7408dca]
+- Updated dependencies [26397d4]
+  - @triplit/server-core@0.3.30
+  - @triplit/server@0.3.30
+  - @triplit/db@0.3.27
+  - @triplit/client@0.3.32
+  - @triplit/console@0.3.35
+
 ## 0.3.37
 
 ### Patch Changes
