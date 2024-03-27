@@ -84,11 +84,15 @@ export function replaceVariablesInFilterStatements<
   return statements.map((filter) => {
     if ('exists' in filter) return filter;
     if (!(filter instanceof Array)) {
-      filter.filters = replaceVariablesInFilterStatements(
-        filter.filters,
-        variables
-      );
-      return filter;
+      if (!(filter instanceof Array)) {
+        return {
+          ...filter,
+          filters: replaceVariablesInFilterStatements(
+            filter.filters,
+            variables
+          ),
+        };
+      }
     }
     const replacedValue = replaceVariable(filter[2], variables);
     return [filter[0], filter[1], replacedValue] as FilterStatement<M>;
