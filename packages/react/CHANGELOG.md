@@ -1,5 +1,13 @@
 # @triplit/react
 
+## 0.3.32
+
+### Patch Changes
+
+- eddc659: Add utilities for paginated subscriptions
+- Updated dependencies [eddc659]
+  - @triplit/client@0.3.32
+
 ## 0.3.31
 
 ### Patch Changes
