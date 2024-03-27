@@ -4727,7 +4727,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@triplit/client@workspace:^, @triplit/client@workspace:packages/client":
+"@triplit/client@^0.3.31, @triplit/client@workspace:^, @triplit/client@workspace:packages/client":
   version: 0.0.0-use.local
   resolution: "@triplit/client@workspace:packages/client"
   dependencies:
@@ -14225,7 +14225,7 @@ __metadata:
     "@tailwindcss/typography": ^0.5.10
     "@triplit/authjs-adapter": ^0.1.0
     "@triplit/cli": ^0.3.37
-    "@triplit/client": "workspace:^"
+    "@triplit/client": ^0.3.31
     "@triplit/db": ^0.3.26
     "@triplit/react": ^0.3.31
     "@types/bcryptjs": ^2
