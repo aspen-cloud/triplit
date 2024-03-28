@@ -16,6 +16,7 @@ import {
   schemaFileContentFromJSON,
   writeSchemaFile,
 } from './migrate/codegen.js';
+import { insertSeeds } from './seed/run.js';
 
 export default Command({
   description: 'Starts the Triplit development environment',
@@ -41,12 +42,15 @@ export default Command({
     verbose: Flag.Boolean({
       char: 'v',
       description: 'Verbose logging',
-      hidden: true,
     }),
     initWithSchema: Flag.Boolean({
       char: 'i',
       description: 'Initialize the database with the local schema',
       default: false,
+    }),
+    seed: Flag.String({
+      char: 'S',
+      description: 'Seed the database with data',
     }),
   },
   async run({ flags }) {
@@ -201,6 +205,10 @@ export default Command({
       process.exit();
     });
 
+    const dbUrl = `http://localhost:${dbPort}`;
+    const consoleUrl = `http://localhost:${consolePort}`;
+    if (flags.seed) await insertSeeds(dbUrl, serviceKey, flags.seed);
+
     return (
       <>
         <Newline />
@@ -222,12 +230,12 @@ export default Command({
               <Box>
                 <Text bold>🟢 Console</Text>
                 <Spacer />
-                <Text color="cyan">{`http://localhost:${consolePort}`}</Text>
+                <Text color="cyan">{consoleUrl}</Text>
               </Box>
               <Box>
                 <Text bold>🟢 Database</Text>
                 <Spacer />
-                <Text color="cyan">{`http://localhost:${dbPort}`}</Text>
+                <Text color="cyan">{dbUrl}</Text>
               </Box>
             </Box>
           </Box>

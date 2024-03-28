@@ -40,7 +40,7 @@ const { _: args, ...flags } = argv;
 
 await execute(args, flags);
 
-async function execute(args: string[], flags: {}) {
+export async function execute(args: string[], flags: {}) {
   const commands = findCommands(
     fileURLToPath(new URL('.', import.meta.url)) + '/commands'
   );
