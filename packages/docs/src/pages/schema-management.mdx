@@ -4,7 +4,7 @@ import { Callout } from 'nextra-theme-docs';
 
 [Schemas](/schemas) can make your life as Triplit developer significantly easier, by providing data validation at runtime, type-hinting, and access to some of Triplit's more advanced features, like relations.
 
-As your app changes, your data model will also change, and the schema for your Triplit databases will need to change as well. This can be highly challenging in a distributed system like Triplit, where certain clients may be using older schemas than the server or may go offline for significant periods of time. In this guide we'll go over the best practices for updating the Triplit schema of a live app with a very simple north star: **avoid corrupting existing user data at all costs**.
+As your app changes, your data model will also change, and the schema for your Triplit databases will need to change as well. This can be a major challenge of any distributed system including Triplit. It is inevitable that some clients may be using older schemas than the server or may go offline for significant periods of time. In this guide we'll go over the best practices for updating the Triplit schema of a live app with a very simple goal: **prevent the server and clients from getting into incompatible states**.
 
 <Callout emoji="💡">
   This guide assumes some working knowledge of Triplit [schemas](/schemas),
@@ -70,7 +70,7 @@ client.insert('todos', { text: 'Do laundry' });
 client.insert('todos', { text: 'Work on project' });
 ```
 
-Now let's edit our schema by adding a new `tagIds` attribute to `todos`, in anticipation of letting users assign various grouping tags.
+Now let's edit our schema by adding a new `tagId` attribute to `todos`, in anticipation of letting users group their todos by tag.
 
 ```typescript filename="triplit/schema.ts" copy {7}
 export const schema = {
@@ -104,16 +104,16 @@ Collection: 'todos'
                 Fix:   make 'tagIds' optional or delete all entities in 'todos' to allow this edit
 ```
 
-What's at issue here is that we **tried to change the shape of a todo while one was in the database**. All attributes in Triplit are required by default, and by adding a new attribute without updating the existing todos, we would be violating the contract between the schema and the data.
+What's at issue here is that we **tried to change the shape/schema of a todo to one that no longer matches those in the database**. All attributes in Triplit are required by default, and by adding a new attribute without updating the existing todos, we would be violating the contract between the schema and the data.
 
 Thankfully, the error gives us some instructions. We can either
 
 1. Make `tagId` optional e.g. `tagIds: S.Optional(S.String())` and permit existing todos to have a `tagId` that's `undefined`.
-2. Delete all of the todos in the collection so that there isn't any stale data.
+2. Delete all of the todos in the collection so that there isn't any conflicting data.
 
-While 2. might be acceptable in development, 1. is the obvious choice in production. Once we have an optional attribute, we can backfill it for existing entities with calls to `client.update` while we create new todos with `tagId`.
+While 2. might be acceptable in development, 1. is the obvious choice in production. In production, we would first add the attribute as optional, backfill it for existing entities with calls to `client.update`, as well as upgrade any clients to start creating new todos with `tagId` defined. Only when you're confident that all clients have been updated to handle the new schema and all existing data has been updated to reflect the target schema, should you proceed with a backwards incompatible change.
 
-Whenever you try to `triplit schema push`, the recieving database will run a diff between the current schema and the one attempting to be applied and surface issues like these. Here are all possible conflicts that may arise.
+Whenever you try to `triplit schema push`, the receiving database will run a diff between the current schema and the one attempting to be applied and surface issues like these. Here are all possible conflicts that may arise.
 
 ### Adding an attribute where optional is not set
 
@@ -125,7 +125,7 @@ This is a backwards incompatible change, as it would leave existing entities in 
 
 ### Removing an optional attribute
 
-This is a backwards incompatible change, as it would leave existing entities in the collection with stranded attributes. In production, delete the attribute from all existing entities (set it to `undefined`), and then you will be allowed to remove it from the schema.
+While not technically a backwards incompatible change, it would lead to data loss. In production, delete the attribute from all existing entities first (set it to `undefined`) and then it will be possible to remove it from the schema.
 
 ### Changing an attribute from optional to required
 
@@ -141,4 +141,4 @@ This is similar to changing the type of an attribute, but for sets. In productio
 
 ### Changing an attribute from nullable to non-nullable
 
-Triplit will prevent you from changing an attribute from nullable to non-nullable if there are existing entities in the collection for which the attribute is `null`. In production, update all of the existing entities to have a non-null value for the attribute, and then you will be able to make is non-nullable.
+Triplit will prevent you from changing an attribute from nullable to non-nullable if there are existing entities in the collection for which the attribute is `null`. In production, update all of the existing entities to have a non-null value for the attribute and take care that no clients will continue writing `null` values to the attribute, then you will be able to make it non-nullable.
