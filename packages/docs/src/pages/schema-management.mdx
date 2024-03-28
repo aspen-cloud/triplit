@@ -12,9 +12,7 @@ As your app changes, your data model will also change, and the schema for your T
   the Triplit CLI.
 </Callout>
 
-## Schemas in development
-
-### Starting the dev server
+## Getting started
 
 Let start with a simple schema, defined at `triplit/schema.ts` in your project directory.
 
@@ -53,7 +51,7 @@ triplit dev -i -s=sqlite
 
 Your database will be saved to `triplit/.data`. You can delete this folder to clear your database.
 
-### Updating your schema
+## Updating your schema
 
 Let's assume you've run some version of `triplit dev -i` shown above and have a server up and running with an initial schema. You've also [properly configured your `.env`](/getting-started#syncing-in-local-development) such that Triplit CLI commands will be pointing at it. Let's also assume you've added some initial todos:
 
@@ -114,3 +112,33 @@ Thankfully, the error gives us some instructions. We can either
 2. Delete all of the todos in the collection so that there isn't any stale data.
 
 While 2. might be acceptable in development, 1. is the obvious choice in production. Once we have an optional attribute, we can backfill it for existing entities with calls to `client.update` while we create new todos with `tagId`.
+
+Whenever you try to `triplit schema push`, the recieving database will run a diff between the current schema and the one attempting to be applied and surface issues like these. Here are all possible conflicts that may arise.
+
+### Adding an attribute where optional is not set
+
+Like in the example above, these changes will be backwards incompatible if you have existing entities in that collection. In production, only add _optional_ attributes, and backfill that attribute for existing entities.
+
+### Removing a non-optional attribute
+
+This is a backwards incompatible change, as it would leave existing entities in the collection with a missing attribute. In production, deprecate the attribute by making it optional, delete the attribute from all existing entities (set it to `undefined`), and then you be allowed to remove it from the schema.
+
+### Removing an optional attribute
+
+This is a backwards incompatible change, as it would leave existing entities in the collection with stranded attributes. In production, delete the attribute from all existing entities (set it to `undefined`), and then you will be allowed to remove it from the schema.
+
+### Changing an attribute from optional to required
+
+This is a backwards incompatible change, as existing entities with this attribute set to `undefined` will violate the schema. In production, update all existing entities to have a non-null value for the attribute, and then you will be able to make it required.
+
+### Changing the type of an attribute
+
+Triplit will prevent you from changing the type of an attribute if there are existing entities in the collection. In production, create a new optional attribute with the desired type, backfill it for existing entities, and then remove the old attribute following the procedure described above ("Removing an optional attribute").
+
+### Changing the type of a set's items
+
+This is similar to changing the type of an attribute, but for sets. In production, create a new optional set attribute with the desired type, backfill it for existing entities, and then remove the old set following the procedure described above ("Removing an optional attribute").
+
+### Changing an attribute from nullable to non-nullable
+
+Triplit will prevent you from changing an attribute from nullable to non-nullable if there are existing entities in the collection for which the attribute is `null`. In production, update all of the existing entities to have a non-null value for the attribute, and then you will be able to make is non-nullable.
