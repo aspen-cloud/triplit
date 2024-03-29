@@ -1,5 +1,11 @@
 # @triplit/react
 
+## 0.3.34
+
+### Patch Changes
+
+- 06d302e: fixup useEntity subscription options type
+
 ## 0.3.33
 
 ### Patch Changes
