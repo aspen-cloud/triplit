@@ -2,9 +2,10 @@ import { Callout } from 'nextra-theme-docs';
 
 # Migrations
 
-<Callout emoji="⚠️">
-  The process for managing migrations may change. Please report any issues you
-  encounter.
+<Callout type="warning">
+  This migration process is deprecated and the related commands will be removed
+  soon. Please refer to the [schema management guide](/guides/schema-management)
+  instead.
 </Callout>
 
 The `@triplit/cli` package provides a CLI tool for generating migrations.
@@ -23,13 +24,13 @@ This command checks the current state of your project's schema and migrations an
 
 ### Local creation
 
-To create a migration, you must first create or edit your schema file, located at `triplit/schema.ts`. Once you have made your changes, run the following command:
+To create a migration, you must first create or edit your schema file, located at `./triplit/schema.ts`. Once you have made your changes, run the following command:
 
 ```bash
 triplit create some_migration_name
 ```
 
-Based on the changes made in `triplit/schema.ts`, this command creates a new file containing a migration definition inside your app's directory at `triplit/migrations`. It will not run any migrations.
+Based on the changes made in `./triplit/schema.ts`, this command creates a new file containing a migration definition inside your app's directory at `triplit/migrations`. It will not run any migrations.
 
 Migration files are written in JSON and contain the following fields:
 
@@ -113,7 +114,7 @@ This command applies all down migrations to your server until you reach the spec
 
 ## Passing migrations to the client
 
-When applying migrations to the server, Triplit will generate a schema for you at `triplit/schema.ts`.
+When applying migrations to the server, Triplit will generate a schema for you at `./triplit/schema.ts`.
 
 To apply migrations to your client database, they must be passed to your client on instantiation. Unfortunately types cannot be inferred from migrations alone, so you will also need to pass the schema type to the client as a generic.
 
