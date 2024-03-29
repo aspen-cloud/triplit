@@ -1,5 +1,12 @@
 # @triplit/cli
 
+## 0.3.40
+
+### Patch Changes
+
+- bc94991: add --seed option to dev command
+  - @triplit/console@0.3.37
+
 ## 0.3.39
 
 ### Patch Changes
