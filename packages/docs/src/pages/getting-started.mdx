@@ -6,7 +6,7 @@ import { Callout, Tabs, Tab } from 'nextra-theme-docs';
 
 ### Templating
 
-If you would like to scaffold a complete full stack application with Triplit, you can use the create comamnd:
+If you would like to scaffold a complete full stack application with Triplit, you can use the create command:
 
 <Tabs items={['npm', 'pnpm', 'yarn', 'bun']}>
   <Tab>
@@ -95,13 +95,13 @@ If you have an existing project, Triplit also provides a CLI for creating and ma
     </Tab>
 </Tabs>
 
-All commands in the CLI are inspectable by adding the `--help` flag. For example, to see the available commands:
+All commands in the CLI can be inspected by adding the `--help` flag. For example, to see the available commands:
 
 ```bash
 triplit --help
 ```
 
-Once you have the CLI installed you can initialize a new Triplit project, which will create the files and folders for a Triplit project and install the required dependencies:
+Once you have the CLI installed you can initialize a new Triplit project, which will create the necessary files and folders and install the required dependencies:
 
 ```bash
 triplit init
@@ -176,11 +176,11 @@ If you are using a framework like React, Vue (coming soon), or Svelte (coming so
 
 ## Schemas and Typescript
 
-Triplit uses a schema to define the structure of your data. This schema is used to validate your data and to generate typescript types for client methods. Though you can technically define your schema anywhere, we recommend you save it at the `/triplit/schema.ts` path in your project folder. If you used one of the [initialization commands](/getting-started#installation) this file should have been created for you.
+Triplit uses a schema to define the structure of your data. This schema is used to validate your data and to generate typescript types for client methods. Though you can technically define your schema anywhere, we recommend you save it at the `./triplit/schema.ts` path in your project folder. If you used one of the [initialization commands](/getting-started#installation) this file should have been created for you.
 
 You can define a schema for your data like this:
 
-```typescript filename="/triplit/schema.ts" copy
+```typescript filename="./triplit/schema.ts" copy
 import { Schema as S } from '@triplit/db';
 import { ClientSchema } from '@triplit/client';
 
@@ -195,7 +195,7 @@ export const schema = {
 } satisfies ClientSchema;
 ```
 
-And pass it as a paramter to the client constructor:
+And pass it as a parameter to the client constructor:
 
 ```typescript copy {2,4}
 import { TriplitClient } from '@triplit/client';
@@ -206,30 +206,34 @@ const client = new TriplitClient({ schema });
 
 You can extract types from the schema to use in your app:
 
-```typescript copy
+```tsx copy
 import { Entity } from '@triplit/client';
 import { schema } from './schema';
 
 type Todo = Entity<typeof schema, 'todos'>;
+
+function TodoComponent({ todo }: { todo: Todo }) {
+  return <div>{todo.text}</div>;
+}
 ```
 
 Read about all the data types and options available in a schema [here](/schemas).
 
 ## Syncing
 
-So far we've covered how to set up a local database and query it. But what if you want to sync your data across devices? Triplit provides a powerful sync engine that can be used to sync your data across devices in real-time. You can read more about syncing [here](/sync).
+So far we've covered how to set up a local database and query it. Triplit provides a powerful sync engine that can be used to sync your data across devices in real-time. You can read more about syncing [here](/sync).
 
 ### Syncing in local development
 
 Triplit has a robust local development environment that you can set up with a single command.
 
 ```bash
-triplit dev -i
+triplit dev --initWithSchema
 ```
 
-This will start a local development server that you can use to test syncing. The `-i` flag will ensure the development server loads the schema defined at `/triplit/schema.ts`.
+This will start a local development server that you can use to test syncing. The `--initWithSchema` flag will ensure the development server loads the schema defined at `./triplit/schema.ts`.
 
-The default URL for the local development server is `http://localhost:6543`. It will also generate a Service Token and an Anonymous Token that your client app will use to authorize with the server.
+The default URL for the local development server is `http://localhost:6543`. It will also generate a Service Token and an Anonymous Token that your client app can use to authorize with the server.
 
 We recommend setting up a `.env` file in your project to store these.
 
@@ -252,13 +256,21 @@ const client = new TriplitClient({
 });
 ```
 
-If you change your schema while the development server is running, you can either restart the server or run `triplit schema push` to update it "live".
+<Callout>
+  If you're using a framework like [Vite](https://vitejs.dev/guide/) or
+  [Next.js](https://nextjs.org/docs) you should add additional environmental
+  variables prepended with `VITE_` or `NEXT_PUBLIC_` respectively for the
+  `DB_URL` and `ANONYMOUS_TOKEN`. For example, `TRIPLIT_DB_URL` would become
+  `VITE_TRIPLIT_DB_URL` or `NEXT_PUBLIC_TRIPLIT_DB_URL`.
+</Callout>
+
+To test that sync is working, you can open up your App in another browser window and observe the data converging.
 
 ### Syncing with Triplit Cloud
 
 Triplit Cloud is a managed service that provides a scalable and secure way to sync your data across devices. You can sign up for the waitlist for Triplit Cloud in our [Discord](https://discord.gg/q89sGWHqQ5) with the `/waitlist` command.
 
-Once you have access to Triplit Cloud, you can create a project. That project will have a unique database host url, a Service Token and an Anonymouos Token. Your client app will use these to authorize with the server.
+Once you have access to Triplit Cloud, you can create a project. That project will have a unique database host URL, a Service Token and an Anonymous Token. Your client app will use these to authorize with the server.
 
 We recommend setting up a `.env` file in your project to store these.
 
@@ -281,7 +293,7 @@ const client = new TriplitClient({
 });
 ```
 
-If you're using a schema **your client will not sync with the server until you apply the schema to it**. You can do this with the Triplit CLI:
+A Triplit Cloud instance will initially load without a schema. If your client is using a schema **you must keep the server schema in sync with it** or you will run into bugs and undefined behaviors. First, ensure that `TRIPLIT_DB_URL` and `TRIPLIT_SERVICE_TOKEN` are set in your `.env` file to point to the Triplit Cloud instance. Then use the Triplit CLI to "push" your schema to the server:
 
 ```bash copy
 triplit schema push
@@ -291,6 +303,8 @@ triplit schema push
   Changing the schema of your database can lead to data corruption. Triplit will
   attempt to detect and prevent these backwards-incompatible schema changes.
 </Callout>
+
+For more information on safely updating your schema in a production database, see the [schema management guide](/guides/schema-management).
 
 ## Next steps
 
