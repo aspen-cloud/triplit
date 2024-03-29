@@ -97,7 +97,7 @@ In your `triplit/schema.ts` file, add the following collections:
 }
 ```
 
-In [local development](https://www.triplit.dev/docs/guides/local-development), the Auth.js models should be available for use.
+In [local development](https://www.triplit.dev/docs/local-development), the Auth.js models should be available for use.
 
 ### Managing user JWTs
 

@@ -2,17 +2,36 @@
   "index": "Welcome",
   "getting-started": "Getting started",
   "faq": "FAQ",
-  "client-database": "Database",
+  "-1": {
+    "type": "separator"
+  },
+  "database": "Database",
   "fetching-data": "Fetching data",
   "updating-data": "Updating data",
-  "sync": "Syncing data",
-  "schemas": "Schemas",
-  "remote-api": "Remote API",
+  "syncing-data": "Syncing data",
   "access-control": "Access control",
-  "client-options": "Client options",
   "debugging": "Debugging",
+  "-2": {
+    "type": "separator"
+  },
   "frameworks": "Frameworks",
-  "guides": "Guides",
-  "whats-next": "What's next",
-  "reference": "API reference"
+  "react-tutorial": "React + Vite tutorial",
+  "-3": {
+    "type": "separator"
+  },
+  "local-development": "Local development",
+  "schema-management": "Schema management",
+  "seeding": "Seeding a database",
+  "triplit-cloud": "Triplit Cloud",
+  "auth": "Auth",
+  "migrations": "Migrations",
+  "v2": {
+    "title": "V2",
+    "display": "hidden"
+  },
+  "-4": {
+    "type": "separator"
+  },
+  "reference": "API reference",
+  "whats-next": { "display": "hidden" }
 }

@@ -10,7 +10,7 @@ import { Callout } from 'nextra-theme-docs';
 
 Access control in Triplit occurs at the entity level. Although this is an improvement over membership/room based apis, access control does not extends to individual properties.
 
-Typically a user's id is used to determine access. The user's id is accessible by providing a custom token to Triplit, as explained in the [Auth guide](/guides/auth).
+Typically a user's id is used to determine access. The user's id is accessible by providing a custom token to Triplit, as explained in the [Auth guide](/auth).
 
 Access control checks run exclusively on the server, and are not enforced on the client. This means that a user can still read and write to a document they do not have access to, but the server will reject the request.
 

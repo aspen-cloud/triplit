@@ -14,7 +14,7 @@ await client.insert('employee', { id: 'Fry', name: 'Philip Fry' });
 
 The `id` field in Triplit is a special field that is used to uniquely identify records and is required on entities. If you do not provide an id, one will be generated for you.
 
-The `insert` method may also be used to upsert an existing record when used in a schemaless database or in conjuction with [optional attributes](/schemas#optional). For example:
+The `insert` method may also be used to upsert an existing record when used in a schemaless database or in conjuction with [optional attributes](/database/schemas#optional). For example:
 
 ```typescript
 const schema = {
@@ -58,7 +58,7 @@ await client.update('employee', 'Fry', async (entity) => {
 
 If possible, `update` will look at the schema you have provided to provide proper type hints for interacting with you data. If no schema is provided, all fields are treated as `any`.
 
-See [here](/schemas#data-types) for more information on data types.
+See [here](/database/schemas#data-types) for more information on data types.
 
 ### Delete
 

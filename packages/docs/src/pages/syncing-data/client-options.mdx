@@ -4,9 +4,9 @@
 
 These options define your local cache.
 
-- `migrations` is a list of migrations to run on the local cache (which will define a schema, see [Schema](/schemas))
+- `migrations` is a list of migrations to run on the local cache (which will define a schema, see [Schema](/database/schemas))
 - `schema` is a hard coded schema for your local cache
-- `storage` determines the storage engines for your local cache (see [Storage](/client-database/storage))
+- `storage` determines the storage engines for your local cache (see [Storage](/database/storage))
 
 ## Sync options
 
@@ -20,7 +20,7 @@ The `serverUrl` can be updated with the `client.updateServerUrl` method.
 
 These options define how you authenticate with your client database and remote database.
 
-- `token` is a jwt that is used to identify the user to the client database and remote databases (see the [Auth guide](/guides/auth)). Providing a `token` will set the variable `$SESSION_USER_ID` on the database, which is used for authorization rules.
+- `token` is a jwt that is used to identify the user to the client database and remote databases (see the [Auth guide](/auth)). Providing a `token` will set the variable `$SESSION_USER_ID` on the database, which is used for authorization rules.
 - `claimsPath` is the path to the Triplit claims on the token. It should be a `.` separated string like `path.to.claims`. This should match the value set on your project in the Triplit Dashboard.
 
 The `token` can be updated with the `client.updateToken` method.

@@ -2,14 +2,15 @@ import { Callout } from 'nextra-theme-docs';
 
 # Schema Management
 
-[Schemas](/schemas) can make your life as Triplit developer significantly easier, by providing data validation at runtime, type-hinting, and access to some of Triplit's more advanced features, like relations.
+[Schemas](/database/schemas) can make your life as Triplit developer significantly easier, by providing data validation at runtime, type-hinting, and access to some of Triplit's more advanced features, like relations.
 
 As your app changes, your data model will also change, and the schema for your Triplit databases will need to change as well. This can be a major challenge of any distributed system including Triplit. It is inevitable that some clients may be using older schemas than the server or may go offline for significant periods of time. In this guide we'll go over the best practices for updating the Triplit schema of a live app with a very simple goal: **prevent the server and clients from getting into incompatible states**.
 
 <Callout emoji="💡">
-  This guide assumes some working knowledge of Triplit [schemas](/schemas),
-  including the options available to them, client-server [syncing](/sync), and
-  the Triplit CLI (`@triplit/cli`) installed.
+  This guide assumes some working knowledge of Triplit
+  [schemas](/database/schemas), including the options available to them,
+  client-server [syncing](/syncing-data), and the Triplit CLI (`@triplit/cli`)
+  installed.
 </Callout>
 
 ## Getting setup
@@ -37,7 +38,7 @@ You can start the development server with the schema pre-loaded with the `--init
 triplit dev --initWithSchema
 ```
 
-By default, the server will use in-memory storage, meaning that if you shut down the server, all of your data will be lost. This can be useful when you're early in development and frequently iterating on your schema. If you like this quick feedback loop but don't want to repeatedly re-insert test data by hand, you can use Triplit's [`seed` commands](/guides/seeding). You can use seed command on its own:
+By default, the server will use in-memory storage, meaning that if you shut down the server, all of your data will be lost. This can be useful when you're early in development and frequently iterating on your schema. If you like this quick feedback loop but don't want to repeatedly re-insert test data by hand, you can use Triplit's [`seed` commands](/seeding). You can use seed command on its own:
 
 ```bash copy
 triplit seed run my-seed

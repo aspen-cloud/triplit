@@ -175,7 +175,7 @@ const SchemaFileContent =
  * - Directly import your schema into your app
  * - Run 'triplit migrate create' to generate migrations (recommended for production apps)
  *
- * For more information on schemas, see the docs: https://www.triplit.dev/docs/schemas
+ * For more information on schemas, see the docs: https://www.triplit.dev/docs/database/schemas
  */
 export const schema = {
     // todos: {

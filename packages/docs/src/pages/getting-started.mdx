@@ -111,7 +111,7 @@ Alternatively, you may manually install the packages you need.
 
 ## Setting up your client
 
-A Triplit Client instance will set up a local database for your data and ([if turned on](/sync)) will set up the required network connections for syncing. The specifics of your local database and syncing can be configured by passing in options to the client, which are described in the [client options reference](/client-options). For now we will not pass in any options, which will just set up an in-memory local database.
+A Triplit Client instance will set up a local database for your data and ([if turned on](/syncing-data)) will set up the required network connections for syncing. The specifics of your local database and syncing can be configured by passing in options to the client, which are described in the [client options reference](/syncing-data/client-options). For now we will not pass in any options, which will just set up an in-memory local database.
 
 ```typescript copy
 import { TriplitClient } from '@triplit/client';
@@ -217,11 +217,11 @@ function TodoComponent({ todo }: { todo: Todo }) {
 }
 ```
 
-Read about all the data types and options available in a schema [here](/schemas).
+Read about all the data types and options available in a schema [here](/database/schemas).
 
 ## Syncing
 
-So far we've covered how to set up a local database and query it. Triplit provides a powerful sync engine that can be used to sync your data across devices in real-time. You can read more about syncing [here](/sync).
+So far we've covered how to set up a local database and query it. Triplit provides a powerful sync engine that can be used to sync your data across devices in real-time. You can read more about syncing [here](/syncing-data).
 
 ### Syncing in local development
 
@@ -304,7 +304,7 @@ triplit schema push
   attempt to detect and prevent these backwards-incompatible schema changes.
 </Callout>
 
-For more information on safely updating your schema in a production database, see the [schema management guide](/guides/schema-management).
+For more information on safely updating your schema in a production database, see the [schema management guide](/schema-management).
 
 ## Next steps
 
@@ -312,7 +312,7 @@ This is Triplit in its most basic form - a syncing database for your app with re
 
 ## Additional resources
 
-- [Simple example app: Todos with Triplit, React and Vite](/guides/react-tutorial)
+- [Simple example app: Todos with Triplit, React and Vite](/react-tutorial)
 - [Advanced example app: Chat with Triplit, NextAuth and Next.js](https://github.com/aspen-cloud/triplit/tree/main/templates/chat-template#readme)
 - [Adding access control](/access-control)
-- [Remote API, if you prefer HTTP to Websockets](/remote-api)
+- [Remote API, if you prefer HTTP to Websockets](/syncing-data/remote-api)

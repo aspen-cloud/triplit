@@ -24,7 +24,7 @@ To get syncing working between multiple clients, you'll need to start a local Tr
 yarn triplit dev
 ```
 
-This will spin up both the server responsible for syncing and a developer console for inspecting the data on the server. [Check out the docs](https://www.triplit.dev/docs/guides/local-development#start-triplit-services) for more info on local development with Triplit.
+This will spin up both the server responsible for syncing and a developer console for inspecting the data on the server. [Check out the docs](https://www.triplit.dev/docs/local-development#start-triplit-services) for more info on local development with Triplit.
 
 ### Configure your `.env`
 
@@ -84,7 +84,7 @@ conversations: {
   },
 ```
 
-For more information on schemas and migrations, check out the [schema](https://www.triplit.dev/docs/schemas) and [migrations](https://www.triplit.dev/docs/guides/migrations) docs.
+For more information on schemas and migrations, check out the [schema](https://www.triplit.dev/docs/database/schemas) and [migrations](https://www.triplit.dev/docs/migrations) docs.
 
 ### Queries
 

@@ -116,7 +116,7 @@ const query = client.query('users').where('address.city', '=', 'New York');
 
 ### Operators
 
-See the list of [data types](/schemas#data-types) for more information on the operators that can be used in a where clause.
+See the list of [data types](/database/schemas#data-types) for more information on the operators that can be used in a where clause.
 
 ## Order
 
@@ -202,7 +202,7 @@ Certain variables are used internally by Triplit to aid with authorization and o
 
 ## Sync state
 
-Triplit's client [storage](/client-database/storage) is split into two areas - an outbox for unsynced updates and a cache for synced updates. Sometimes you may want to indicate that to a user that data has not yet been saved to the server. To do this, you can use the `syncStatus` method. This method accepts a single sync state (`pending`, `confirmed`, `all`) as an argument.
+Triplit's client [storage](/database/storage) is split into two areas - an outbox for unsynced updates and a cache for synced updates. Sometimes you may want to indicate that to a user that data has not yet been saved to the server. To do this, you can use the `syncStatus` method. This method accepts a single sync state (`pending`, `confirmed`, `all`) as an argument.
 
 For example, a messaging app could use two queries to build message sent indicators. In [React](/frameworks/react):
 
