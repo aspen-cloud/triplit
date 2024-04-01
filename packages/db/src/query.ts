@@ -200,7 +200,7 @@ export type CollectionQuery<
       M extends Models<any, any>
         ? RelationAttributes<ModelFromModels<M, CN>>
         : string,
-      Query<M, any> | null
+      CollectionQuery<M, any> | null
     >
   >;
 };

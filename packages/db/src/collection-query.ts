@@ -280,24 +280,70 @@ function identifierIncludesRelation<
   M extends Models<any, any>,
   CN extends CollectionNameFromModels<M>
 >(identifier: string, schema: M, collectionName: CN) {
-  return !!getRelationPathFromIdentifier(identifier, schema, collectionName);
+  return !!getRelationPathsFromIdentifier(identifier, schema, collectionName)
+    .length;
 }
 
-function getRelationPathFromIdentifier<
+function getRelationPathsFromIdentifier<
+  M extends Models<any, any>,
+  CN extends CollectionNameFromModels<M>
+>(identifier: string, schema: M, collectionName: CN): string[] {
+  let schemaTraverser = createSchemaTraverser(schema, collectionName);
+  const attrPath = identifier.split('.');
+  let relationPath: string[] = [];
+  const relationshipPaths: string[] = [];
+  for (const attr of attrPath) {
+    relationPath.push(attr);
+    schemaTraverser = schemaTraverser.get(attr);
+    if (schemaTraverser.current?.type === 'query') {
+      relationshipPaths.push(relationPath.join('.'));
+    }
+  }
+  return relationshipPaths;
+}
+
+function getRootRelationAlias<
   M extends Models<any, any>,
   CN extends CollectionNameFromModels<M>
 >(identifier: string, schema: M, collectionName: CN) {
   let schemaTraverser = createSchemaTraverser(schema, collectionName);
   const attrPath = identifier.split('.');
-  let relationPath: string[] = [];
+  const relationPath: string[] = [];
   for (const attr of attrPath) {
-    relationPath.push(attr);
     schemaTraverser = schemaTraverser.get(attr);
+    relationPath.push(attr);
     if (schemaTraverser.current?.type === 'query') {
       return relationPath.join('.');
     }
   }
   return undefined;
+}
+
+function groupIdentifiersBySubquery<
+  M extends Models<any, any>,
+  CN extends CollectionNameFromModels<M>
+>(identifiers: string[], schema: M, collectionName: CN) {
+  const groupedIdentifiers: Record<string, Set<string>> = {};
+  for (const identifier of identifiers) {
+    const relations = getRelationPathsFromIdentifier(
+      identifier,
+      schema,
+      collectionName
+    );
+    if (!relations.length) continue;
+    // Root should be the first relation in the traversal
+    const rootRelation = relations.shift()!;
+    if (!groupedIdentifiers[rootRelation]) {
+      groupedIdentifiers[rootRelation] = new Set();
+    }
+    for (let relation of relations) {
+      // remove rootRelation from relation
+      relation = relation.slice(rootRelation.length + 1);
+      // add to groupedIdentifiers
+      groupedIdentifiers[rootRelation].add(relation);
+    }
+  }
+  return groupedIdentifiers;
 }
 
 function getEntitiesAtStateVector(
@@ -718,33 +764,49 @@ function ApplyExistsFilters<
   };
 }
 
+// Assumes ordered fully
+// Unless we
 function FilterAfterCursor<
   M extends Models<any, any>,
   Q extends CollectionQuery<M, any>
 >(query: Q): FilterFunc<[string, QueryPipelineData]> {
   const { order, after, collectionName } = query;
+  let cursorValueReached = false;
+  let cursorValuePassed = false;
+  let idReached = false;
   return async ([id, { entity }]) => {
     if (!after) return true;
+    const [cursor, inclusive] = after;
+    if ((cursorValueReached && idReached) || cursorValuePassed) return true;
     const [orderAttr, orderDir] = order![0];
     const entityVal = entity[orderAttr][0];
-    const [cursor, inclusive] = after;
     const [cursorVal, cursorId] = cursor;
     const encodedCursorVal = encodeValue(cursorVal);
     const encodedEntityVal = encodeValue(entityVal);
+
     if (encodedEntityVal === encodedCursorVal) {
+      cursorValueReached = true;
       const storeId = appendCollectionToId(collectionName, id);
-      return (
-        // I feel like this is wrong, should be storeId > cursorId : storeId < cursorId
-        (orderDir === 'ASC' ? storeId > cursorId : storeId < cursorId) ||
-        (inclusive && storeId === cursorId)
-      );
+      if (storeId === cursorId) {
+        idReached = true;
+      }
+    } else if (
+      orderDir === 'ASC'
+        ? encodedEntityVal > encodedCursorVal
+        : encodedEntityVal < encodedCursorVal
+    ) {
+      cursorValuePassed = true;
     }
-    return orderDir === 'ASC'
-      ? encodedEntityVal > encodedCursorVal
-      : encodedEntityVal < encodedCursorVal;
+
+    // If inclusive, return immediately
+    return (
+      inclusive && ((cursorValueReached && idReached) || cursorValuePassed)
+    );
   };
 }
 
+// TODO: Handle relationships inside record or disallow that
+// TODO: Handle conflicting includes statements
 function loadOrderRelationships<
   M extends Models<any, any> | undefined,
   Q extends CollectionQuery<M, any>
@@ -755,38 +817,55 @@ function loadOrderRelationships<
 ): MapFunc<[string, QueryPipelineData], [string, QueryPipelineData]> {
   const { order, collectionName } = query;
   const { schema, skipRules, cache, stateVector } = options;
-  const orderClauseRelationPaths = (order ?? [])
-    .map((clause) =>
-      schema
-        ? getRelationPathFromIdentifier(clause[0], schema, collectionName)
-        : undefined
-    )
-    .filter((p) => !!p) as string[];
+
+  const subqueryIncludeGroups = schema
+    ? groupIdentifiersBySubquery(
+        (order ?? []).map((c) => c[0]),
+        schema,
+        collectionName
+      )
+    : {};
+
   return async ([
     entId,
     { entity, relationships, triples, existsFilterTriples },
   ]) => {
-    if (!orderClauseRelationPaths.length)
+    if (!Object.keys(subqueryIncludeGroups).length)
       return [entId, { entity, relationships, triples, existsFilterTriples }];
-    for (const path of orderClauseRelationPaths) {
+    for (const [relationRoot, includedRelations] of Object.entries(
+      subqueryIncludeGroups
+    )) {
       // If we have already loaded this relationship, skip
-      if (!!relationships[path]) continue;
+      if (!!relationships[relationRoot]) continue;
+
       // TODO: move subquery to shared function
       const combinedVars = {
         ...query.vars,
         ...extractSubqueryVarsFromEntity(entity, schema, collectionName),
       };
       const relationshipInfo = schema
-        ? getAttributeFromSchema(path.split('.'), schema, query.collectionName)
+        ? getAttributeFromSchema(
+            relationRoot.split('.'),
+            schema,
+            query.collectionName
+          )
         : undefined;
 
       if (!relationshipInfo || relationshipInfo?.type !== 'query') {
-        throw new Error(`Could not find relationship info for ${path}`);
+        throw new Error(`Could not find relationship info for ${relationRoot}`);
       }
       const relationshipQuery = relationshipInfo.query;
+      // TODO: this might confict with query includes
+      const inclusions = Array.from(includedRelations.values()).reduce<
+        Record<string, null>
+      >((inc, rel) => {
+        inc[rel] = null;
+        return inc;
+      }, {});
       let fullSubquery = {
         ...relationshipQuery,
         vars: combinedVars,
+        include: { ...(relationshipQuery.include ?? {}), ...inclusions },
       } as CollectionQuery<typeof schema, any>;
       fullSubquery = prepareQuery(fullSubquery, schema, { skipRules });
       const subqueryResult =
@@ -802,9 +881,11 @@ function loadOrderRelationships<
               skipRules,
               stateVector,
             });
-      // TODO: handle deep...
-      entity[path] = subqueryResult.results;
-      relationships[path] = Array.from(subqueryResult.triples.values()).flat();
+      // TODO: technically we should handle a relationship inside a record type...like I think thats possible
+      entity[relationRoot] = subqueryResult.results;
+      relationships[relationRoot] = Array.from(
+        subqueryResult.triples.values()
+      ).flat();
     }
     return [entId, { entity, relationships, triples, existsFilterTriples }];
   };
@@ -923,12 +1004,6 @@ export async function fetch<
     // We need to make sure that all the triples are accounted for before we filter out deleted entities
     .filter(async ([, { entity }]) => !isTimestampedEntityDeleted(entity));
 
-  if (after && !clausesFulfilled.after) {
-    pipeline = pipeline.filter(FilterAfterCursor(query));
-    clausesFulfilled.after = true;
-  }
-
-  // My guess is this blows up the order clause (which has implicit id ordering...)
   if (order && !clausesFulfilled.order.every((f) => f)) {
     pipeline = pipeline
       .map(loadOrderRelationships(tx, query, options))
@@ -937,11 +1012,16 @@ export async function fetch<
       );
   }
 
+  // After filter algorithm requires that we have sorted the entities
+  if (after && !clausesFulfilled.after) {
+    pipeline = pipeline.filter(FilterAfterCursor(query));
+    clausesFulfilled.after = true;
+  }
+
   if (limit) {
     pipeline = pipeline.take(limit);
   }
 
-  // TODO: the tap shouldnt be in here...
   if (select && select.length > 0) {
     // Load include relationships
     pipeline = pipeline
@@ -1006,8 +1086,6 @@ function sortEntities<
   entities.sort((a, b) => querySorter(query)(a[1], b[1]));
 }
 
-// TODO: I doubt this works for deep objects
-// TODO:
 function querySorter<
   M extends Models<any, any> | undefined,
   CQ extends CollectionQuery<M, any>
@@ -1025,6 +1103,7 @@ function querySorter<
   };
 }
 
+// Expect that data is already loaded on entity
 function getPropertyFromPath(entity: any, path: string[]) {
   return path.reduce((acc, key) => acc[key], entity);
 }
@@ -1576,15 +1655,9 @@ export function subscribeResultsAndTriples<
             let satisfiesLimitRange = true;
             if (order && limit && nextResult.size >= limit) {
               const allValues = [...nextResult.values()];
-              const valueRange = [
-                allValues.at(0)![order[0][0]][0],
-                allValues.at(-1)![order[0][0]][0],
-              ];
-              const entityValue = entityObj[order[0][0]][0];
-              satisfiesLimitRange =
-                order[0][1] === 'ASC'
-                  ? entityValue <= valueRange[1]
-                  : entityValue >= valueRange[1];
+              const endOfRange = allValues.at(-1);
+              const sortFn = querySorter(query);
+              satisfiesLimitRange = sortFn(entityObj, endOfRange) < 1;
             }
 
             // Add to result or prune as needed
