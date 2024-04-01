@@ -110,7 +110,8 @@ export type Model<T extends SchemaConfig> = RecordType<T>;
 
 export type Collection<T extends SchemaConfig = SchemaConfig> = {
   schema: Model<T>;
-  rules?: CollectionRules<Model<T>>;
+  // TODO: possible to not use <any, any> here?
+  rules?: CollectionRules<any, any>;
 };
 
 export type Models<

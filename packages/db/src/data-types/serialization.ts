@@ -53,7 +53,7 @@ export interface CollectionDefinition {
   schema: RecordAttributeDefinition<{
     id: ReturnType<typeof Schema.Id>;
   }>;
-  rules?: CollectionRules<any>;
+  rules?: CollectionRules<any, any>;
 }
 
 export interface CollectionsDefinition {

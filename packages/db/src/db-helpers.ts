@@ -79,8 +79,12 @@ export function stripCollectionFromId(id: string): string {
 }
 
 export function replaceVariablesInFilterStatements<
-  M extends Model<any> | undefined
->(statements: QueryWhere<M>, variables: Record<string, any>): QueryWhere<M> {
+  M extends Models<any, any> | undefined,
+  CN extends CollectionNameFromModels<M>
+>(
+  statements: QueryWhere<M, CN>,
+  variables: Record<string, any>
+): QueryWhere<M, CN> {
   return statements.map((filter) => {
     if ('exists' in filter) return filter;
     if (!(filter instanceof Array)) {
@@ -95,7 +99,7 @@ export function replaceVariablesInFilterStatements<
       }
     }
     const replacedValue = replaceVariable(filter[2], variables);
-    return [filter[0], filter[1], replacedValue] as FilterStatement<M>;
+    return [filter[0], filter[1], replacedValue] as FilterStatement<M, CN>;
   });
 }
 
@@ -129,9 +133,12 @@ export function replaceVariablesInQuery<
   return { ...query, where, entityId };
 }
 
-export function* filterStatementIterator<M extends Model<any> | undefined>(
-  statements: QueryWhere<M>
-): Generator<FilterStatement<M> | SubQueryFilter> {
+export function* filterStatementIterator<
+  M extends Models<any, any> | undefined,
+  CN extends CollectionNameFromModels<M>
+>(
+  statements: QueryWhere<M, CN>
+): Generator<FilterStatement<M, CN> | SubQueryFilter> {
   for (const statement of statements) {
     if (!(statement instanceof Array) && 'filters' in statement) {
       yield* filterStatementIterator(statement.filters);
@@ -141,9 +148,12 @@ export function* filterStatementIterator<M extends Model<any> | undefined>(
   }
 }
 
-export function someFilterStatements<M extends Model<any> | undefined>(
-  statements: QueryWhere<M>,
-  someFunction: (statement: SubQueryFilter | FilterStatement<M>) => boolean
+export function someFilterStatements<
+  M extends Models<any, any> | undefined,
+  CN extends CollectionNameFromModels<M>
+>(
+  statements: QueryWhere<M, CN>,
+  someFunction: (statement: SubQueryFilter | FilterStatement<M, CN>) => boolean
 ): boolean {
   for (const statement of filterStatementIterator(statements)) {
     if (someFunction(statement)) return true;
@@ -151,24 +161,30 @@ export function someFilterStatements<M extends Model<any> | undefined>(
   return false;
 }
 
-export function mapFilterStatements<M extends Model<any> | undefined>(
-  statements: QueryWhere<M>,
+export function mapFilterStatements<
+  M extends Models<any, any> | undefined,
+  CN extends CollectionNameFromModels<M>
+>(
+  statements: QueryWhere<M, CN>,
   mapFunction: (
-    statement: SubQueryFilter | FilterStatement<M>
-  ) => SubQueryFilter | FilterStatement<M>
-): QueryWhere<M> {
+    statement: SubQueryFilter | FilterStatement<M, CN>
+  ) => SubQueryFilter | FilterStatement<M, CN>
+): QueryWhere<M, CN> {
   return statements.map((statement) => {
     if ('exists' in statement) return statement;
     if (!(statement instanceof Array) && 'filters' in statement) {
       statement.filters = mapFilterStatements(statement.filters, mapFunction);
     }
-    return mapFunction(statement as FilterStatement<M>);
+    return mapFunction(statement as FilterStatement<M, CN>);
   });
 }
 
-export function everyFilterStatement(
-  statements: QueryWhere<any>,
-  everyFunction: (statement: FilterStatement<any>) => boolean
+export function everyFilterStatement<
+  M extends Models<any, any> | undefined,
+  CN extends CollectionNameFromModels<M>
+>(
+  statements: QueryWhere<M, CN>,
+  everyFunction: (statement: FilterStatement<M, CN>) => boolean
 ): boolean {
   return statements.every((filter) => {
     if (!(filter instanceof Array) && 'filters' in filter) {

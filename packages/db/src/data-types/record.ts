@@ -121,11 +121,7 @@ export function RecordType<
           }
           // This is mostly to catch when "_collection" is included in the entity
           // @ts-expect-error
-          result[k] = properties[k].convertDBValueToJS(
-            // @ts-expect-error
-            v,
-            schema
-          );
+          result[k] = properties[k].convertDBValueToJS(v, schema);
         }
       }
       return result as RecordJSType<Properties>;

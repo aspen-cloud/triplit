@@ -1,4 +1,4 @@
-import Builder from './utils/builder.js';
+import Builder, { toBuilder } from './utils/builder.js';
 import {
   Query,
   FilterStatement,
@@ -54,7 +54,14 @@ import { MIN, encodeValue } from '@triplit/tuple-database';
 export default function CollectionQueryBuilder<
   M extends Models<any, any> | undefined,
   CN extends CollectionNameFromModels<M>
->(collectionName: CN, params?: Query<M, CN>) {
+>(
+  collectionName: CN,
+  params?: Query<M, CN>
+): toBuilder<
+  CollectionQuery<M, CN>,
+  'collectionName',
+  QUERY_INPUT_TRANSFORMERS<M, CN>
+> {
   const query: CollectionQuery<M, CN> = {
     collectionName,
     ...params,
@@ -145,7 +152,7 @@ function getIdFilterFromQuery(query: CollectionQuery<any, any>): string | null {
   const idEqualityFilters = where?.filter(
     (filter) =>
       filter instanceof Array && filter[0] === 'id' && filter[1] === '='
-  ) as FilterStatement<Model<any>>[];
+  ) as FilterStatement<any, any>[];
 
   if (idEqualityFilters.length > 0) {
     return appendCollectionToId(
@@ -530,7 +537,7 @@ function queryChainToQuery<
       filter instanceof Array &&
       typeof filter[2] === 'string' &&
       filter[2].startsWith('$')
-  ) as FilterStatement<Model<any>>[];
+  ) as FilterStatement<any, any>[];
   const nonVariableFilters = (first.where ?? []).filter(
     (filter) =>
       !(
@@ -538,7 +545,7 @@ function queryChainToQuery<
         typeof filter[2] === 'string' &&
         filter[2].startsWith('$')
       )
-  ) as FilterStatement<Model<any>>[];
+  ) as FilterStatement<any, any>[];
   const next = queryChainToQuery(
     rest,
     variableFilters.map(reverseRelationFilter)
@@ -1057,17 +1064,17 @@ export function doesEntityObjMatchWhere<Q extends CollectionQuery<any, any>>(
 ) {
   if (!where) return true;
   const basicStatements = where.filter(
-    (statement): statement is FilterStatement<Model<any>> =>
+    (statement): statement is FilterStatement<any, any> =>
       statement instanceof Array
   );
 
   const orStatements = where.filter(
-    (statement): statement is FilterGroup<Model<any>> =>
+    (statement): statement is FilterGroup<any, any> =>
       'mod' in statement && statement.mod === 'or'
   );
 
   const andStatements = where.filter(
-    (statement): statement is FilterGroup<Model<any>> =>
+    (statement): statement is FilterGroup<any, any> =>
       'mod' in statement && statement.mod === 'and'
   );
   const matchesBasicFilters = entitySatisfiesAllFilters(
@@ -1100,7 +1107,7 @@ export function doesEntityObjMatchWhere<Q extends CollectionQuery<any, any>>(
  */
 function entitySatisfiesAllFilters(
   entity: any,
-  filters: FilterStatement<Model<any>>[],
+  filters: FilterStatement<any, any>[],
   schema?: Model<any>
 ): boolean {
   const groupedFilters: Map<string, [Operator, any][]> = filters.reduce(

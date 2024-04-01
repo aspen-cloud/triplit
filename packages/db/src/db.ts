@@ -47,14 +47,20 @@ import { EAV, indexToTriple, TripleRow } from './triple-store-utils.js';
 import { TripleStore } from './triple-store.js';
 import { Logger } from '@triplit/types/src/logger.js';
 
-export interface Rule<M extends Model<any>> {
-  filter: QueryWhere<M>;
+export interface Rule<
+  M extends Models<any, any>,
+  CN extends CollectionNameFromModels<M>
+> {
+  filter: QueryWhere<M, CN>;
   description?: string;
 }
 
-export interface CollectionRules<M extends Model<any>> {
-  read?: Record<string, Rule<M>>;
-  write?: Record<string, Rule<M>>;
+export interface CollectionRules<
+  M extends Models<any, any>,
+  CN extends CollectionNameFromModels<M>
+> {
+  read?: Record<string, Rule<M, CN>>;
+  write?: Record<string, Rule<M, CN>>;
   // insert?: Rule<M>[];
   // update?: Rule<M>[];
 }
@@ -69,7 +75,7 @@ export type CreateCollectionOperation = [
   {
     name: string;
     schema: { [path: string]: AttributeDefinition };
-    rules?: CollectionRules<any>;
+    rules?: CollectionRules<any, any>;
     optional?: string[];
   }
 ];
@@ -97,7 +103,7 @@ export type DropAttributeOptionOperation = [
 ];
 export type AddRuleOperation = [
   'add_rule',
-  { collection: string; scope: string; id: string; rule: Rule<any> }
+  { collection: string; scope: string; id: string; rule: Rule<any, any> }
 ];
 export type DropRuleOperation = [
   'drop_rule',
@@ -188,9 +194,9 @@ export interface DBFetchOptions {
 
 export function ruleToTuple(
   collectionName: string,
-  ruleType: keyof CollectionRules<any>,
+  ruleType: keyof CollectionRules<any, any>,
   index: number,
-  rule: Rule<any>
+  rule: Rule<any, any>
 ) {
   return Object.entries(rule).map<EAV>(([key, value]) => [
     '_schema',

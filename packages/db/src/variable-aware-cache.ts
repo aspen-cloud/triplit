@@ -4,7 +4,7 @@ import {
   TimestampedFetchResult,
   subscribeResultsAndTriples,
 } from './collection-query.js';
-import { ModelFromModels } from './db.js';
+import { CollectionNameFromModels, ModelFromModels } from './db.js';
 import { mapFilterStatements } from './db-helpers.js';
 import {
   CollectionQuery,
@@ -32,8 +32,9 @@ export class VariableAwareCache<Schema extends Models<any, any>> {
 
   static canCacheQuery<
     M extends Models<any, any> | undefined,
-    Q extends CollectionQuery<any, any>
-  >(query: Q, model?: ModelFromModels<M> | undefined) {
+    CN extends CollectionNameFromModels<M>,
+    Q extends CollectionQuery<M, CN>
+  >(query: Q, model?: ModelFromModels<M, CN> | undefined) {
     // if (!model) return false;
     if (
       query.where &&
@@ -46,11 +47,10 @@ export class VariableAwareCache<Schema extends Models<any, any>> {
 
     const statements = mapFilterStatements(query.where ?? [], (f) => f).filter(
       isFilterStatement
-    ) as FilterStatement<ModelFromModels<M>>[];
-    const variableStatements: FilterStatement<ModelFromModels<M>>[] =
-      statements.filter(
-        ([, , v]) => typeof v === 'string' && v.startsWith('$')
-      );
+    ) as FilterStatement<M, CN>[];
+    const variableStatements: FilterStatement<M, CN>[] = statements.filter(
+      ([, , v]) => typeof v === 'string' && v.startsWith('$')
+    );
     if (variableStatements.length !== 1) return false;
 
     if (!['=', '<', '<=', '>', '>=', '!='].includes(variableStatements[0][1]))
@@ -195,16 +195,17 @@ export class VariableAwareCache<Schema extends Models<any, any>> {
     };
   }
 
-  queryToViews<Q extends CollectionQuery<Schema, any>>(query: Q) {
-    const variableFilters: FilterStatement<
-      CollectionQuerySchema<Q> | undefined
-    >[] = [];
+  queryToViews<
+    CN extends CollectionNameFromModels<Schema>,
+    Q extends CollectionQuery<Schema, CN>
+  >(query: Q) {
+    const variableFilters: FilterStatement<Schema, CN>[] = [];
     const nonVariableFilters = query.where
       ? query.where.filter((filter) => {
           if (!(filter instanceof Array)) return true;
           const [prop, _op, val] = filter;
           if (typeof val === 'string' && val.startsWith('$')) {
-            variableFilters.push([prop as string, _op, val]);
+            variableFilters.push([prop, _op, val]);
             return false;
           }
           return true;

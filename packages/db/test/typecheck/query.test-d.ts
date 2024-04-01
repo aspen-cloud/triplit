@@ -603,9 +603,8 @@ describe('query builder', () => {
           | 'attr1.inner2'
           | 'attr1.inner2.inner2A'
           | 'attr2'
-          | 'query'
-          | WhereFilter<ModelFromModels<(typeof schema)['collections'], 'test'>>
-          | QueryWhere<ModelFromModels<(typeof schema)['collections'], 'test'>>
+          | WhereFilter<(typeof schema)['collections'], 'test'>
+          | QueryWhere<(typeof schema)['collections'], 'test'>
         >();
     }
     {
@@ -614,7 +613,7 @@ describe('query builder', () => {
       expectTypeOf(query.where)
         .parameter(0)
         .toMatchTypeOf<
-          string | WhereFilter<undefined> | QueryWhere<undefined>
+          string | WhereFilter<undefined, any> | QueryWhere<undefined, any>
         >();
     }
   });
@@ -635,8 +634,13 @@ describe('query builder', () => {
               }),
             }),
             attr2: S.Boolean(),
-            // should not include query
-            query: S.Query({ collectionName: 'test2' as const, where: [] }),
+
+            relationById: S.RelationById('test2', 'test-id'),
+          }),
+        },
+        test2: {
+          schema: S.Schema({
+            id: S.Id(),
           }),
         },
       },
@@ -655,19 +659,18 @@ describe('query builder', () => {
           | 'attr1.inner2'
           | 'attr1.inner2.inner2A'
           | 'attr2'
-          | QueryOrder<ModelFromModels<(typeof schema)['collections'], 'test'>>
-          | QueryOrder<
-              ModelFromModels<(typeof schema)['collections'], 'test'>
-            >[]
+          | 'relationById.id'
+          | QueryOrder<(typeof schema)['collections'], 'test'>
+          | QueryOrder<(typeof schema)['collections'], 'test'>[]
         >();
     }
     {
       const db = new DB();
       const query = db.query('test');
-      expectTypeOf(query.where)
+      expectTypeOf(query.order)
         .parameter(0)
         .toMatchTypeOf<
-          string | WhereFilter<undefined> | QueryWhere<undefined>
+          string | QueryOrder<undefined, any> | QueryOrder<undefined, any>[]
         >();
     }
   });
@@ -732,11 +735,9 @@ describe('query builder', () => {
     {
       const db = new DB();
       const query = db.query('test');
-      expectTypeOf(query.where)
+      expectTypeOf(query.after)
         .parameter(0)
-        .toMatchTypeOf<
-          string | WhereFilter<undefined> | QueryWhere<undefined>
-        >();
+        .toMatchTypeOf<ValueCursor | undefined>();
     }
   });
 });
