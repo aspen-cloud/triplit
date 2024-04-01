@@ -15,6 +15,9 @@ import {
   compareCursors,
   ValueCursor,
   DBFetchOptions as AllDBFetchOptions,
+  Attribute,
+  Value,
+  schemaToJSON,
 } from '@triplit/db';
 import { getUserId } from './token.js';
 import { UnrecognizedFetchPolicyError } from './errors.js';
@@ -254,6 +257,10 @@ export class TriplitClient<M extends ClientSchema | undefined = undefined> {
     });
   }
 
+  async getSchema() {
+    return schemaToJSON(await this.db.getSchema());
+  }
+
   async transact<Output>(callback: (tx: DBTransaction<M>) => Promise<Output>) {
     this.logger.debug('transact START');
     const resp = await this.db.transact(callback, {
@@ -412,6 +419,30 @@ export class TriplitClient<M extends ClientSchema | undefined = undefined> {
       },
     });
     this.logger.debug('update END', resp);
+    return resp;
+  }
+
+  async updateRaw<CN extends CollectionNameFromModels<M>>(
+    collectionName: CN,
+    entityId: string,
+    updater: (
+      entity: UpdateTypeFromModel<ModelFromModels<M, CN>>
+    ) => [Attribute, Value][] | Promise<[Attribute, Value][]>
+  ) {
+    this.logger.debug('updateRaw START', collectionName, entityId);
+    const resp = await this.db.transact(
+      async (tx) => {
+        await tx.updateRaw(collectionName, entityId, updater);
+      },
+      {
+        skipRules: true,
+        storeScope: {
+          read: ['outbox', 'cache'],
+          write: ['outbox'],
+        },
+      }
+    );
+    this.logger.debug('updateRaw END', resp);
     return resp;
   }
 
@@ -816,6 +847,19 @@ export class TriplitClient<M extends ClientSchema | undefined = undefined> {
 
   updateServerUrl(serverUrl: string | undefined) {
     this.updateOptions({ serverUrl });
+  }
+
+  onTxCommitRemote(...args: Parameters<typeof this.syncEngine.onTxCommit>) {
+    return this.syncEngine.onTxCommit(...args);
+  }
+  onTxFailureRemote(txId: string, callback: () => void) {
+    return this.syncEngine.onTxFailure(txId, callback);
+  }
+
+  onConnectionStatusChange(
+    ...args: Parameters<typeof this.syncEngine.onConnectionStatusChange>
+  ) {
+    return this.syncEngine.onConnectionStatusChange(...args);
   }
 }
 

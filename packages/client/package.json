@@ -28,6 +28,7 @@
   "dependencies": {
     "@sinclair/typebox": "^0.32.15",
     "@triplit/db": "workspace:^",
+    "comlink": "^4.4.1",
     "rxjs": "^7.8.1",
     "superjson": "^2.2.1"
   },

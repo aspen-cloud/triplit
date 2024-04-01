@@ -27,7 +27,8 @@ export function useQuery<
   >(undefined);
   const [fetching, setFetching] = useState(true);
   const [fetchingRemote, setFetchingRemote] = useState(
-    client.syncEngine.connectionStatus === 'OPEN'
+    // client.syncEngine.connectionStatus === 'OPEN'
+    false
   );
   const [error, setError] = useState<any>(undefined);
   const hasResponseFromServer = useRef(false);
@@ -36,7 +37,7 @@ export function useQuery<
   const stringifiedQuery = builtQuery && JSON.stringify(builtQuery);
 
   useEffect(() => {
-    const unsub = client.syncEngine.onConnectionStatusChange((status) => {
+    const unsub = client.onConnectionStatusChange((status) => {
       if (status === 'CLOSING' || status === 'CLOSED') {
         setFetchingRemote(false);
         return;

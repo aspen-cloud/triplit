@@ -63,7 +63,9 @@ export class DefaultLogger implements Logger {
 
   error(message: any, ...args: any[]) {
     const log = this.constructLogObj('error', message, ...args);
-    console.error(log.scope, message, args);
+    // console.error(log.scope, message, args);
+    console.error(log.scope, log.message);
+    console.error(...args);
   }
 
   debug(message: any, ...args: any[]) {

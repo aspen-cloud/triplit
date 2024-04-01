@@ -581,13 +581,38 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
     this.logger.debug('update START', collectionName, entityId);
     const schema = (await this.getSchema())?.collections as M;
 
-    // TODO: Would be great to plug into the pipeline at any point
-    // In this case I want untimestamped values, valid values
+    await this.updateRaw(collectionName, entityId, async (entity) => {
+      const changes = new ChangeTracker(entity);
+      const updateProxy =
+        collectionName === '_metadata'
+          ? createUpdateProxy<M, CN>(changes, entity)
+          : createUpdateProxy<M, CN>(changes, entity, schema, collectionName);
+      await updater(updateProxy);
+      // return dbDocumentToTuples(updateProxy);
+      return changes.getTuples();
+    });
+
+    this.logger.debug('update END', collectionName, entityId);
+  }
+
+  /**
+   * In contrast to `update`, `updateRaw` does not use a proxy to allow
+   * for direct manipulation of the entity. Instead a ReadOnly version of the entity
+   * is passed into the updater function which is expected to return low level
+   * triples ([attribute, value]) to be inserted into the store.
+   */
+  async updateRaw<CN extends CollectionNameFromModels<M>>(
+    collectionName: CN,
+    entityId: string,
+    callback: (
+      entity: any
+    ) => [Attribute, Value][] | Promise<[Attribute, Value][]>
+  ) {
+    this.logger.debug('updateRaw START');
     const storeId = appendCollectionToId(collectionName, entityId);
     const entityTriples = await this.storeTx.findByEntity(storeId);
     const timestampedEntity = constructEntity(entityTriples, storeId);
     const entity = timestampedObjectToPlainObject(timestampedEntity!.data);
-
     // If entity doesn't exist or is deleted, throw error
     // Schema/metadata does not have _collection attribute
     if (collectionName !== '_metadata' && !entity?._collection) {
@@ -597,17 +622,7 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
         "Cannot perform an update on an entity that doesn't exist"
       );
     }
-
-    // Collect changes
-    const changes = new ChangeTracker(entity);
-    const updateProxy =
-      collectionName === '_metadata'
-        ? createUpdateProxy<M, CN>(changes, entity)
-        : createUpdateProxy<M, CN>(changes, entity, schema, collectionName);
-
-    // Run updater (runs serialization of values)
-    await updater(updateProxy);
-    const changeTuples = changes.getTuples();
+    const changeTuples = await callback(entity);
     for (const [attr, value] of changeTuples) {
       if (attr.at(0) === 'id') {
         throw new InvalidOperationError(
@@ -636,7 +651,7 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
     // Apply changes
     await this.storeTx.setValues(updateValues);
 
-    this.logger.debug('update END', collectionName, entityId, changeTuples);
+    this.logger.debug('updateRaw END', updateValues);
   }
 
   async delete<CN extends CollectionNameFromModels<M>>(
@@ -1111,19 +1126,16 @@ export function createUpdateProxy<
       if (currentValue === undefined) return undefined;
       // Null values will be returned as null (essentially the base case of "return currentValue")
       if (currentValue === null) return null;
-
       const propSchema =
         collectionSchema &&
         getSchemaFromPath(
           collectionSchema,
           parentPropPointer.slice(1).split('/')
         );
-
       // Handle sets
       if (propSchema && propSchema.type === 'set') {
         return createSetProxy(changeTracker, parentPropPointer, propSchema);
       }
-
       // Handle deep objects
       if (typeof currentValue === 'object' && currentValue !== null) {
         return createUpdateProxy(
@@ -1134,7 +1146,6 @@ export function createUpdateProxy<
           parentPropPointer
         );
       }
-
       // TODO: fixup access to 'constructor' and other props
       return propSchema
         ? propSchema.convertDBValueToJS(currentValue)
