@@ -23,6 +23,7 @@ import {
   CollectionNotFoundError,
   InvalidSchemaPathError,
   SessionVariableNotFoundError,
+  InvalidOrderClauseError,
 } from '../src';
 import { Models, hashSchemaJSON } from '../src/schema.js';
 import { classes, students, departments } from './sample_data/school.js';
@@ -6495,6 +6496,19 @@ describe('Subqueries in schema', () => {
       'CS 201',
       'CS 301',
     ]);
+  });
+
+  it('order by cardinality many will throw error', async () => {
+    const query = db
+      .query('departments')
+      .order(['classes.name', 'ASC'])
+      .build();
+    await expect(db.fetch(query)).rejects.toThrow(InvalidOrderClauseError);
+  });
+
+  it('order by non leaf will throw error', async () => {
+    const query = db.query('classes').order(['department', 'ASC']).build();
+    await expect(db.fetch(query)).rejects.toThrow(InvalidOrderClauseError);
   });
 
   it('order by relation with subscription', async () => {

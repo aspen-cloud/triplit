@@ -6,6 +6,7 @@ import {
   NoSchemaRegisteredError,
   SessionVariableNotFoundError,
   ValueSchemaMismatchError,
+  InvalidOrderClauseError,
 } from './errors.js';
 import {
   QueryWhere,
@@ -31,7 +32,11 @@ import DB, { CollectionFromModels, CollectionNameFromModels } from './db.js';
 import { DBTransaction } from './db-transaction.js';
 import { DataType } from './data-types/base.js';
 import { Attribute, Value } from './triple-store-utils.js';
-import { FetchResult, TimestampedFetchResult } from './collection-query.js';
+import {
+  FetchResult,
+  TimestampedFetchResult,
+  validateIdentifier,
+} from './collection-query.js';
 import { Logger } from '@triplit/types/src/logger.js';
 
 const ID_SEPARATOR = '#';
@@ -457,6 +462,44 @@ export function prepareQuery<
         exists: prepareQuery(subquery, schema, options),
       };
     });
+
+    if (fetchQuery.order) {
+      // Validate that the order by fields
+      fetchQuery.order.every(([field, _direction]) => {
+        if (!schema) return true;
+        const { valid, path, reason } = validateIdentifier(
+          field,
+          schema,
+          fetchQuery.collectionName,
+          (dataType, i, path) => {
+            if (!dataType) return { valid: false, reason: 'Path not found' };
+            if (
+              i === path.length - 1 &&
+              (dataType.type === 'query' ||
+                dataType.type === 'set' ||
+                dataType.type === 'record')
+            ) {
+              return {
+                valid: false,
+                reason: 'Order by field is not sortable',
+              };
+            }
+            if (dataType.type === 'query' && dataType.cardinality !== 'one')
+              return {
+                valid: false,
+                reason:
+                  'Order by field is a query with cardinality not equal to one',
+              };
+            return { valid: true };
+          }
+        );
+        if (!valid) {
+          throw new InvalidOrderClauseError(
+            `Order by field ${field} is not valid: ${reason} at path ${path}`
+          );
+        }
+      });
+    }
 
     if (fetchQuery.include) {
       addSubsSelectsFromIncludes(fetchQuery, schema);

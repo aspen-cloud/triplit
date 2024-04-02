@@ -41,7 +41,7 @@ import {
   prepareQuery,
   fetchResultToJS,
 } from './db-helpers.js';
-import { Operator } from './data-types/base.js';
+import { DataType, Operator } from './data-types/base.js';
 import { VariableAwareCache } from './variable-aware-cache.js';
 import { isTimestampedEntityDeleted } from './entity.js';
 import { CollectionNameFromModels, ModelFromModels } from './db.js';
@@ -300,6 +300,37 @@ function getRelationPathsFromIdentifier<
     }
   }
   return relationshipPaths;
+}
+
+export function validateIdentifier<
+  M extends Models<any, any>,
+  CN extends CollectionNameFromModels<M>
+>(
+  identifier: string,
+  schema: M,
+  collectionName: CN,
+  validator: (
+    dataType: DataType | undefined,
+    i: number,
+    path: string[]
+  ) => {
+    valid: boolean;
+    reason?: string;
+  }
+): { valid: boolean; path?: string; reason?: string } {
+  let schemaTraverser = createSchemaTraverser(schema, collectionName);
+  const attrPath = identifier.split('.');
+  let traversedPath: string[] = [];
+  for (let i = 0; i < attrPath.length; i++) {
+    const attr = attrPath[i];
+    schemaTraverser = schemaTraverser.get(attr);
+    traversedPath.push(attr);
+    const { valid, reason } = validator(schemaTraverser.current, i, attrPath);
+    if (!valid) {
+      return { valid, path: traversedPath.join('.'), reason };
+    }
+  }
+  return { valid: true };
 }
 
 function getRootRelationAlias<
@@ -852,8 +883,11 @@ function loadOrderRelationships<
         : undefined;
 
       if (!relationshipInfo || relationshipInfo?.type !== 'query') {
-        throw new Error(`Could not find relationship info for ${relationRoot}`);
+        throw new TriplitError(
+          `Could not find relationship info for ${relationRoot} in the schema.`
+        );
       }
+
       const relationshipQuery = relationshipInfo.query;
       // TODO: this might confict with query includes
       const inclusions = Array.from(includedRelations.values()).reduce<

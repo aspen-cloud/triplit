@@ -477,3 +477,12 @@ export class InvalidQueryCardinalityError extends TriplitError {
     this.status = STATUS_CODES['Bad Request'];
   }
 }
+
+export class InvalidOrderClauseError extends TriplitError {
+  constructor(...args: any[]) {
+    super(...args);
+    this.name = 'InvalidOrderClauseError';
+    this.baseMessage = `An order clause has been determined to be invalid.`;
+    this.status = STATUS_CODES['Bad Request'];
+  }
+}
