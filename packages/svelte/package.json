@@ -17,7 +17,7 @@
     }
   },
   "scripts": {
-    "build": "svelte-package",
+    "build": "svelte-package -t=false && tsc",
     "build:watch": "svelte-package -w",
     "lint:build": "npx publint",
     "publish-pkg": "node ../../scripts/npm-check-version-and-publish.js",
