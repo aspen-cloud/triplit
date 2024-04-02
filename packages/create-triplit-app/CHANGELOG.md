@@ -1,5 +1,11 @@
 # create-triplit-app
 
+## 0.0.7
+
+### Patch Changes
+
+- c63eb36: add svelte option
+
 ## 0.0.6
 
 ### Patch Changes
