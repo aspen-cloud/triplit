@@ -1,0 +1,94 @@
+import { Tabs, Tab, Callout } from 'nextra-theme-docs';
+
+# Svelte
+
+<Callout type="warning">
+  In anticipation of the release of Svelte 5, Triplit's Svelte bindings use
+  [runes](https://svelte.dev/blog/runes). You must be using one of the
+  pre-release versions of Svelte 5. You can force the compiler into "runes mode"
+  [like this](https://svelte-5-preview.vercel.app/docs/runes#how-to-opt-in).
+</Callout>
+
+If you are using Svelte, you can use the hooks provided by `@triplit/svelte`:
+
+<Tabs items={['npm', 'pnpm', 'yarn']}>
+
+  <Tab>
+    ```bash copy
+    npm i @triplit/svelte
+    ```
+  </Tab>
+    <Tab>
+    ```bash copy
+    pnpm add @triplit/svelte
+    ```
+  </Tab>
+  <Tab>
+    ```bash copy
+    yarn add @triplit/svelte
+    ```
+  </Tab>
+</Tabs>
+
+## useQuery
+
+The `useQuery` hook subscribes to the provided query inside your Svelte component and will automatically unsubscribe from the query when the component unmounts.
+
+The result of the hook is an object with the following properties:
+
+- `results`: A Map containing the results of the query, with entity ids as keys and entities as values.
+- `fetching`: A boolean indicating whether the query is currently fetching.
+- `fetchingRemote`: A boolean indicating whether the query is currently fetching from the server.
+- `error`: An error object if the query failed to fetch.
+
+```svelte filename="App.svelte"
+<script lang="ts">
+  import { useQuery } from '@triplit/svelte'
+  import { TriplitClient } from '@triplit/client'
+  import { schema } from '../triplit/schema';
+
+  const client = new TriplitClient({ schema });
+
+  let data = useQuery(client, client.query('todos'));
+  let todosArray = $derived(data.results ? Array.from(data.results): [])
+</script>
+<div>
+  {#if data.fetching}
+    <p>Loading...</p>
+  {:else if data.error}
+    <p>Error: {data.error.message}</p>
+  {:else}
+    <div>
+      {#each todosArray as [_id, todo]}
+        <div>{todo.text}</div>
+      {/each}
+    </div>
+  {/if}
+</div>
+```
+
+## useConnectionStatus
+
+The `useConnectionStatus` hook subscribes to changes to the connection status of the client and will automatically unsubscribe when the component unmounts.
+
+```svelte copy filename="App.svelte"
+<script lang='ts'>
+  import { useConnectionStatus } from '@triplit/svelte';
+  import { TriplitClient } from '@triplit/client'
+
+  const client = new TriplitClient({
+    schema,
+    serverUrl: import.meta.env.VITE_TRIPLIT_SERVER_URL,
+    token: import.meta.env.VITE_TRIPLIT_TOKEN,
+  });
+
+  const connectionStatus = useConnectionStatus(client);
+</script>
+<div>
+{#if connectionStatus === 'OPEN'}
+  <p>The client is connected</p>
+{:else}
+  <p>The client is not connected</p>
+{/if}
+</div>
+```

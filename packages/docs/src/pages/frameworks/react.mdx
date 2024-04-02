@@ -25,12 +25,13 @@ If you are using React, you can use the hooks provided by `@triplit/react`:
 
 ## useQuery
 
-The `useQuery` hook subscribes to the provided query inside your react component will automatically unsubscribe from the query when the component unmounts.
+The `useQuery` hook subscribes to the provided query inside your React component and will automatically unsubscribe from the query when the component unmounts.
 
 The result of the hook is an object with the following properties:
 
 - `results`: A Map containing the results of the query, with entity ids as keys and entities as values.
 - `fetching`: A boolean indicating whether the query is currently fetching.
+- `fetchingRemote`: A boolean indicating whether the query is currently fetching from the server.
 - `error`: An error object if the query failed to fetch.
 
 ```tsx filename="app.tsx"
@@ -57,7 +58,7 @@ function App() {
 
 ## useEntity
 
-The `useEntity` hook subscribes to the provided entity inside your react component and will automatically unsubscribe from updates to the entity when the component unmounts.
+The `useEntity` hook subscribes to the provided entity inside your React component and will automatically unsubscribe from updates to the entity when the component unmounts.
 
 The result of the hook is the same as the result of `useQuery`, but the `results` property will only contain the entity you subscribed to.
 
