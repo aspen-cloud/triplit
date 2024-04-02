@@ -58,13 +58,11 @@ async function testSubscribeWithPagination<Q extends ClientQuery<any, any>>(
       query,
       async (...args) => {
         try {
-          console.log('running step', stepIndex);
           await steps[stepIndex].check(args, sub);
           stepIndex++;
           if (stepIndex >= steps.length) {
             return resolve();
           }
-          console.log('running action', stepIndex);
           await steps[stepIndex].action(args, sub);
         } catch (e) {
           reject(e);
