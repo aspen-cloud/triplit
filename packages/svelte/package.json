@@ -17,10 +17,9 @@
     }
   },
   "scripts": {
-    "build": "tsc",
-    "build:watch": "tsc -w",
+    "build": "svelte-package",
+    "build:watch": "svelte-package -w",
     "lint:build": "npx publint",
-    "lint": "tsc --noEmit",
     "publish-pkg": "node ../../scripts/npm-check-version-and-publish.js",
     "check": "svelte-check --tsconfig ./tsconfig.json"
   },
