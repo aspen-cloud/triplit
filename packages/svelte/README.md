@@ -1,3 +1,3 @@
-# @triplit/react
+# @triplit/svelte
 
-React bindings for @triplit/client.
+Svelte bindings for @triplit/client.
