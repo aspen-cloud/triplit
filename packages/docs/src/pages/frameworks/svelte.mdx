@@ -82,10 +82,10 @@ The `useConnectionStatus` hook subscribes to changes to the connection status of
     token: import.meta.env.VITE_TRIPLIT_TOKEN,
   });
 
-  const connectionStatus = useConnectionStatus(client);
+  const connection = useConnectionStatus(client);
 </script>
 <div>
-{#if connectionStatus === 'OPEN'}
+{#if connection.status === 'OPEN'}
   <p>The client is connected</p>
 {:else}
   <p>The client is not connected</p>
