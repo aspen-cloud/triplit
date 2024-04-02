@@ -7,7 +7,7 @@
   ],
   "scripts": {
     "build:packages": "turbo build --filter=\"@triplit/*\" --force",
-    "release:packages": "yarn build:packages && yarn workspace @triplit/db run publish-pkg && yarn workspace @triplit/client run publish-pkg && yarn workspace @triplit/react run publish-pkg && yarn workspace @triplit/server-core run publish-pkg  && yarn workspace @triplit/server run publish-pkg && yarn workspace @triplit/console run publish-pkg && yarn workspace @triplit/cli run publish-pkg && yarn tag:packages",
+    "release:packages": "yarn build:packages && yarn workspace @triplit/db run publish-pkg && yarn workspace @triplit/client run publish-pkg && yarn workspace @triplit/react run publish-pkg && yarn workspace @triplit/svelte run publish-pkg && yarn workspace @triplit/server-core run publish-pkg  && yarn workspace @triplit/server run publish-pkg && yarn workspace @triplit/console run publish-pkg && yarn workspace @triplit/cli run publish-pkg && yarn tag:packages",
     "tag:packages": "git pull --tags -f && yarn changeset tag",
     "lint": "yarn workspaces foreach --all run lint",
     "version": "yarn changeset version && yarn install --mode update-lockfile",
