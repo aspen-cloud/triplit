@@ -4899,6 +4899,7 @@ __metadata:
     "@tsconfig/svelte": ^5.0.2
     svelte: ^5.0.0-next.90
     svelte-check: ^3.6.7
+    tslib: ^2.6.2
     typescript: ^5.2.2
   languageName: unknown
   linkType: soft
@@ -18303,7 +18304,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"tslib@npm:2.6.2, tslib@npm:^2.0.0, tslib@npm:^2.0.3, tslib@npm:^2.4.1, tslib@npm:^2.5.0, tslib@npm:~2.6.0":
+"tslib@npm:2.6.2, tslib@npm:^2.0.0, tslib@npm:^2.0.3, tslib@npm:^2.4.1, tslib@npm:^2.5.0, tslib@npm:^2.6.2, tslib@npm:~2.6.0":
   version: 2.6.2
   resolution: "tslib@npm:2.6.2"
   checksum: 329ea56123005922f39642318e3d1f0f8265d1e7fcb92c633e0809521da75eeaca28d2cf96d7248229deb40e5c19adf408259f4b9640afd20d13aecc1430f3ad

@@ -1,3 +1,5 @@
+/// <reference types="svelte" />
+
 import type {
   ClientFetchResult,
   ClientQuery,
