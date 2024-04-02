@@ -73,6 +73,43 @@ function App() {
 }
 ```
 
+## usePaginatedQuery
+
+The `usePaginatedQuery` hook subscribes to the provided query, and exposes helper functions to load the next or previous page of results. It is useful for patterns that load data in pages, such as paginated lists or content browsing applications.
+
+```tsx copy filename="app.tsx"
+import { usePaginatedQuery } from '@triplit/react';
+
+const client = new TriplitClient();
+
+function App() {
+  const {
+    results,
+    fetchingPage,
+    hasNextPage,
+    hasPreviousPage,
+    nextPage,
+    prevPage,
+  } = usePaginatedQuery(
+    client,
+    client.query('todos').limit(10).orderBy('created_at', 'DESC')
+  );
+
+  return (
+    <div>
+      {results.entries().map((item) => (
+        <div>{item.text}</div>
+      ))}
+      {fetchingPage && <div>Loading page...</div>}
+      {hasPreviousPage && <button onClick={prevPage}>Previous page</button>}
+      {hasNextPage && <button onClick={nextPage}>Next page</button>}
+    </div>
+  );
+}
+```
+
+For `usePaginatedQuery` to function properly the provided query must have a `limit` set.
+
 ## useInfiniteQuery
 
 The `useInfiniteQuery` hook subscribes to the provided query, and exposes helper functions for loading more results. It is useful for patterns that continously load more data in addition to the existing result set. Chat applications or content browsing applications that load more data as the user scrolls are good use cases for `useInfiniteQuery`.

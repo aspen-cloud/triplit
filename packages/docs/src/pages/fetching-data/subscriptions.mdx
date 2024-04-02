@@ -27,9 +27,36 @@ const unsubscribe = client.subscribe(
 
 If a subscription query fails on the server then syncing for that query will stop. However, the subscription will remain active and updates to the local database will still be available. As well, the syncing of other queries will not be impacted. Although you will not receive updates from the server, updates that you make via [mutations](/updating-data) will be sent.
 
+## `subscribeWithPagination`
+
+`subscribeWithPagination` is a special type of subscription that is used to fetch data in pages. It is similar to `subscribe` but it has a few differences:
+
+- It expects the query to have a `limit` defined.
+- It returns `nextPage` and `prevPage` functions to fetch the next and previous pages of data.
+- The subscription callback will have `hasNextPage` and `hasPreviousPage` booleans to indicate if there are more pages to fetch.
+
+```typescript
+const { unsubscribe, nextPage, prevPage } = client.subscribeWithPagination(
+  query,
+  (results, { hasRemoteFulfilled, hasNextPage, hasPreviousPage }) => {
+    // handle results
+  },
+  (error) => {
+    // handle error
+  },
+  // Optional
+  {
+    localOnly: false,
+    onRemoteFulfilled: () => {
+      console.log('server has sent back results for the subscription');
+    },
+  }
+);
+```
+
 ## `subscribeWithExpand`
 
-`subscribeWithExpand` is a special type of subscription that is used to fetch paginated data. It is similar to `subscribe` but it has a few differences:
+`subscribeWithExpand` is a special type of subscription that is used to fetch a window of data that can programmatically grow in size. It is similar to `subscribe` but it has a few differences:
 
 - It expects the query to have an initial `limit` defined.
 - It returns a `loadMore(pageSize?: number)` function to fetch more data. By default, it fetches the next page of data based on the initial `limit` defined in the query.
