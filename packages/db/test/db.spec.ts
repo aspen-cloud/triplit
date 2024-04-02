@@ -3229,48 +3229,41 @@ describe('ORDER & LIMIT & Pagination', () => {
     );
   });
 
-  // TODO: fixup backfill query
-  // Handle single deletion
-  // Handle multiple deletion
-  // Backfill query is flaky based on id in after cursor
-  it.todo(
-    'can pull in more results to satisfy limit in subscription when current result no longer satisfies ORDER',
-    async () => {
-      const LIMIT = 5;
+  it('can pull in more results to satisfy limit in subscription when current result no longer satisfies ORDER', async () => {
+    const LIMIT = 5;
 
-      await testSubscription(
-        db,
-        db
-          .query('TestScores')
-          .order(['score', 'DESC'], ['date', 'DESC'])
-          .limit(LIMIT)
-          .build(),
-        [
-          {
-            check: (results) => {
-              expect(results.size).toBe(LIMIT);
-            },
+    await testSubscription(
+      db,
+      db
+        .query('TestScores')
+        .order(['score', 'DESC'], ['date', 'DESC'])
+        .limit(LIMIT)
+        .build(),
+      [
+        {
+          check: (results) => {
+            expect(results.size).toBe(LIMIT);
           },
-          {
-            action: async (results) => {
-              const idFromResults = [...results.keys()][0];
-              await db.transact(async (tx) => {
-                await tx.update('TestScores', idFromResults, async (entity) => {
-                  entity.score = 0;
-                });
+        },
+        {
+          action: async (results) => {
+            const idFromResults = [...results.keys()][0];
+            await db.transact(async (tx) => {
+              await tx.update('TestScores', idFromResults, async (entity) => {
+                entity.score = 0;
               });
-            },
-            check: (results) => {
-              expect(results.size).toBe(LIMIT);
-              expect(
-                [...results.values()].map((result) => result.score).includes(0)
-              ).toBeFalsy();
-            },
+            });
           },
-        ]
-      );
-    }
-  );
+          check: (results) => {
+            expect(results.size).toBe(LIMIT);
+            expect(
+              [...results.values()].map((result) => result.score).includes(0)
+            ).toBeFalsy();
+          },
+        },
+      ]
+    );
+  });
 
   it('limit ignores deleted entities', async () => {
     const db = new DB();
