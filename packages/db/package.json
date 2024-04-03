@@ -1,6 +1,6 @@
 {
   "name": "@triplit/db",
-  "version": "0.3.28",
+  "version": "0.3.29",
   "source": "./src/index.ts",
   "main": "./dist/index.js",
   "module": "./dist/index.js",

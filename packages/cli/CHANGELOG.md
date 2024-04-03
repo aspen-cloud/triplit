@@ -1,5 +1,19 @@
 # @triplit/cli
 
+## 0.3.41
+
+### Patch Changes
+
+- dc979ae: catch early return for "real" errors in schema push
+- 17b4a79: add file upload support to v2 worker
+- Updated dependencies [1d78145]
+- Updated dependencies [6c75805]
+  - @triplit/db@0.3.29
+  - @triplit/client@0.3.34
+  - @triplit/server@0.3.32
+  - @triplit/console@0.3.38
+  - @triplit/server-core@0.3.32
+
 ## 0.3.40
 
 ### Patch Changes
