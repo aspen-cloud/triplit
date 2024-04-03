@@ -561,7 +561,7 @@ export class TriplitClient<M extends ClientSchema | undefined = undefined> {
    * Subscribe to a query with helpers for pagination
    * This query will "oversubscribe" by 1 on either side of the current page to determine if there are "next" or "previous" pages
    * The window generally looks like [buffer, ...page..., buffer]
-   * Depending on the current paging direction, the query may have its orignal order reversed
+   * Depending on the current paging direction, the query may have its original order reversed
    *
    * The pagination will also do its best to always return full pages
    */
@@ -878,13 +878,13 @@ function warnError(e: any) {
   }
 }
 
-type PaginatedSubscription = {
+export type PaginatedSubscription = {
   unsubscribe: () => void;
   nextPage: () => void;
   prevPage: () => void;
 };
 
-type InfiniteSubscription = {
+export type InfiniteSubscription = {
   unsubscribe: () => void;
   loadMore: (pageSize?: number) => void;
 };

@@ -2,36 +2,42 @@ import * as ComLink from 'comlink';
 import type {
   TriplitClient as Client,
   ClientOptions,
+  FetchOptions,
+  InfiniteSubscription,
+  PaginatedSubscription,
   SubscriptionOptions,
 } from './triplit-client.js';
 import {
   ChangeTracker,
   CollectionNameFromModels,
   DBTransaction,
+  FetchByIdQueryParams,
+  InsertTypeFromModel,
   JSONToSchema,
+  ModelFromModels,
   UpdateTypeFromModel,
   createUpdateProxy,
   schemaToJSON,
 } from '@triplit/db';
 import {
   ClientFetchResult,
+  ClientFetchResultEntity,
   ClientQuery,
   ClientQueryBuilder,
   ClientSchema,
 } from './utils/query.js';
 import { ConnectionStatus } from './index.js';
 
-export class BrowserClient<M extends ClientSchema | undefined> {
-  clientWorker: Client;
+export class WorkerClient<M extends ClientSchema | undefined> {
+  clientWorker: Client<M>;
   initialized: Promise<void>;
   syncEngine = {
     connectionStatus: 'open',
     onConnectionStatusChange: () => () => {},
   };
   constructor(options?: ClientOptions<M>) {
-    // const worker = new SharedWorker('./client-worker.js');
     const worker = new SharedWorker(
-      new URL('./client-worker.ts', import.meta.url),
+      new URL('./worker-client-operator.ts', import.meta.url),
       { type: 'module' }
     );
     // @ts-ignore
@@ -55,41 +61,50 @@ export class BrowserClient<M extends ClientSchema | undefined> {
     // @ts-ignore
     return this.clientWorker.fetch(...args);
   }
-  //   async transact(...args) {
   async transact<Output>(callback: (tx: DBTransaction<M>) => Promise<Output>) {
     await this.initialized;
-    // @ts-ignore
     return this.clientWorker.transact(ComLink.proxy(callback));
   }
-  // @ts-ignore
-  async fetchById(...args) {
+  async fetchById<CN extends CollectionNameFromModels<M>>(
+    collectionName: CN,
+    id: string,
+    queryParams?: FetchByIdQueryParams<M, CN>,
+    options?: Partial<FetchOptions>
+  ) {
     await this.initialized;
-    // @ts-ignore
-    return this.clientWorker.fetchById(...args);
+    return this.clientWorker.fetchById(
+      collectionName,
+      id,
+      queryParams,
+      options
+    );
   }
-  // @ts-ignore
-  async fetchOne(...args) {
+  async fetchOne<CQ extends ClientQuery<M, any>>(
+    query: CQ,
+    options?: Partial<FetchOptions>
+  ): Promise<ClientFetchResultEntity<CQ> | null> {
     await this.initialized;
-    // @ts-ignore
-    return this.clientWorker.fetchOne(...args);
+    return this.clientWorker.fetchOne(query, options);
   }
-  // @ts-ignore
-  async insert(...args) {
+  async insert<CN extends CollectionNameFromModels<M>>(
+    collectionName: CN,
+    entity: InsertTypeFromModel<ModelFromModels<M, CN>>
+  ) {
     await this.initialized;
-    // @ts-ignore
-    return this.clientWorker.insert(...args);
+    return this.clientWorker.insert(collectionName, entity);
   }
-  // @ts-ignore
-  async update<CN extends CollectionNameFromModels<any>>(
+  async update<CN extends CollectionNameFromModels<M>>(
     collectionName: CN,
     entityId: string,
-    updater: (entity: UpdateTypeFromModel<any>) => void | Promise<void>
-  ): Promise<{ txId: string | undefined; output: void | undefined }> {
+    updater: (
+      entity: UpdateTypeFromModel<ModelFromModels<M, CN>>
+    ) => void | Promise<void>
+  ) {
     await this.initialized;
-    // const schema = (await this.clientOperator.getSchema())?.collections as M;
+
     const schemaJSON = await this.clientWorker.getSchema();
     const schema = schemaJSON && JSONToSchema(schemaJSON)?.collections;
-    // @ts-ignore
+
     return this.updateRaw(collectionName, entityId, async (entity) => {
       const changes = new ChangeTracker(entity);
       const updateProxy =
@@ -97,7 +112,6 @@ export class BrowserClient<M extends ClientSchema | undefined> {
           ? createUpdateProxy<M, any>(changes, entity)
           : createUpdateProxy<M, any>(changes, entity, schema, collectionName);
       await updater(updateProxy);
-      // return dbDocumentToTuples(updateProxy);
       return changes.getTuples();
     });
   }
@@ -108,7 +122,6 @@ export class BrowserClient<M extends ClientSchema | undefined> {
     updater: (entity: any) => any
   ) {
     await this.initialized;
-    // @ts-ignore
     return this.clientWorker.updateRaw(
       collectionName,
       entityId,
@@ -116,11 +129,12 @@ export class BrowserClient<M extends ClientSchema | undefined> {
     );
   }
 
-  // @ts-ignore
-  async delete(...args) {
+  async delete<CN extends CollectionNameFromModels<M>>(
+    collectionName: CN,
+    entityId: string
+  ) {
     await this.initialized;
-    // @ts-ignore
-    return this.clientWorker.delete(...args);
+    return this.clientWorker.delete(collectionName, entityId);
   }
   subscribe<CQ extends ClientQuery<M, any>>(
     query: CQ,
@@ -146,36 +160,71 @@ export class BrowserClient<M extends ClientSchema | undefined> {
       unsubPromise.then((unsub) => unsub());
     };
   }
-  // @ts-ignore
-  async subscribeWithPagination(...args) {
+  /**
+   * Subscribe to a query with helpers for pagination
+   * This query will "oversubscribe" by 1 on either side of the current page to determine if there are "next" or "previous" pages
+   * The window generally looks like [buffer, ...page..., buffer]
+   * Depending on the current paging direction, the query may have its original order reversed
+   *
+   * The pagination will also do its best to always return full pages
+   */
+  async subscribeWithPagination<CQ extends ClientQuery<M, any>>(
+    query: CQ,
+    onResults: (
+      results: ClientFetchResult<CQ>,
+      info: {
+        hasRemoteFulfilled: boolean;
+        hasNextPage: boolean;
+        hasPreviousPage: boolean;
+      }
+    ) => void | Promise<void>,
+    onError?: (error: any) => void | Promise<void>,
+    options?: Partial<SubscriptionOptions>
+  ): Promise<PaginatedSubscription> {
     await this.initialized;
-    // @ts-ignore
-    return this.clientWorker.subscribeWithPagination(...args);
+    return this.clientWorker.subscribeWithPagination(
+      query,
+      onResults,
+      onError,
+      options
+    );
   }
-  // @ts-ignore
-  async subscribeWithExpand(...args) {
+
+  async subscribeWithExpand<CQ extends ClientQuery<M, any>>(
+    query: CQ,
+    onResults: (
+      results: ClientFetchResult<CQ>,
+      info: {
+        hasRemoteFulfilled: boolean;
+        hasMore: boolean;
+      }
+    ) => void | Promise<void>,
+    onError?: (error: any) => void | Promise<void>,
+    options?: Partial<SubscriptionOptions>
+  ): Promise<InfiniteSubscription> {
     await this.initialized;
-    // @ts-ignore
-    return this.clientWorker.subscribeWithExpand(...args);
+    return this.clientWorker.subscribeWithExpand(
+      query,
+      onResults,
+      onError,
+      options
+    );
   }
-  // @ts-ignore
-  async updateOptions(...args) {
+
+  async updateOptions(
+    options: Pick<ClientOptions<undefined>, 'token' | 'serverUrl'>
+  ) {
     await this.initialized;
-    // @ts-ignore
-    return this.clientWorker.updateOptions(...args);
+    return this.clientWorker.updateOptions(options);
   }
-  // @ts-ignore
-  // @ts-ignore
-  async updateToken(...args) {
+  async updateToken(token?: string) {
     await this.initialized;
-    // @ts-ignore
-    return this.clientWorker.updateToken(...args);
+    return this.clientWorker.updateToken(token);
   }
-  // @ts-ignore
-  async updateServerUrl(...args) {
+
+  async updateServerUrl(serverUrl: string) {
     await this.initialized;
-    // @ts-ignore
-    return this.clientWorker.updateServerUrl(...args);
+    return this.clientWorker.updateServerUrl(serverUrl);
   }
 
   onTxCommitRemote(txId: string, callback: () => void) {
@@ -190,9 +239,12 @@ export class BrowserClient<M extends ClientSchema | undefined> {
     callback: (status: ConnectionStatus) => void,
     runImmediately?: boolean
   ) {
-    return this.clientWorker.onConnectionStatusChange(
+    const unSubPromise = this.clientWorker.onConnectionStatusChange(
       ComLink.proxy(callback),
       runImmediately
     );
+    return async () => {
+      (await unSubPromise)();
+    };
   }
 }
