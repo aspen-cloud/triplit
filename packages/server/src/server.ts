@@ -256,26 +256,6 @@ export function createServer(options?: ServerOptions) {
       req.token!
     );
     res.status(statusCode).json(payload);
-    // let body = '';
-    // req.on('data', (chunk) => {
-    //   body += chunk.toString();
-    // });
-    // req.on('end', async () => {
-    //   try {
-    //     console.log(body);
-    //     body.split;
-    //     const parsed = JSON.parse(body);
-    //     await triplitServer.handleRequest(
-    //       ['bulk-insert'],
-    //       parsed['triples'],
-    //       req.token!
-    //     );
-    //     return res.sendStatus(200);
-    //   } catch (e) {
-    //     console.error(e);
-    //     return res.sendStatus(500);
-    //   }
-    // });
   });
   authenticated.post('*', async (req, res) => {
     const path = req.path.split('/').slice(1) as Route; // ignore first empty string from split
