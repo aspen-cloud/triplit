@@ -97,7 +97,19 @@ export class TriplitDurableObject implements DurableObject {
     }
     if (request.method === 'POST') {
       let path = new URL(request.url).pathname.slice(1).split('/');
-      const body = await parseBodyIfExists(request);
+      let body;
+      if (path[0] === 'bulk-insert-file') {
+        path = ['bulk-insert'];
+        body = await request.formData();
+        if (body.has('data')) body = JSON.parse(body.get('data') as string);
+        else {
+          return new Response('No data provided for file upload', {
+            status: 400,
+          });
+        }
+      } else {
+        body = await parseBodyIfExists(request);
+      }
       const { statusCode, payload } = await this.triplitServer.handleRequest(
         path as Route,
         body,
