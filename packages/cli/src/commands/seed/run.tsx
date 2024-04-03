@@ -14,6 +14,7 @@ import { BulkInsert, RemoteClient } from '@triplit/client';
 import { serverRequesterMiddleware } from '../../middleware/add-server-requester.js';
 import { TriplitError } from '@triplit/db';
 import { seedDirExists } from './create.js';
+import ora from 'ora';
 
 export async function loadSeedModule(seedPath: string) {
   const module = await loadTsModule(seedPath);
@@ -122,11 +123,11 @@ export async function insertSeeds(
   for (const seed of seeds) {
     const seedFn = await loadSeedModule(seed);
     if (seedFn) {
-      console.log(grey(`Running seed file: ${path.basename(seed)}`));
+      const spinner = ora(`Uploading seed: ${path.basename(seed)}`).start();
       try {
         const response = await client.bulkInsert(await seedFn());
         const { output } = response;
-        console.log(green(`Successfully seeded with ${path.basename(seed)}`));
+        spinner.succeed(`Successfully seeded with ${path.basename(seed)}`);
 
         for (const collectionName in output) {
           const collection = output[collectionName];
@@ -139,7 +140,7 @@ export async function insertSeeds(
           );
         }
       } catch (e) {
-        console.error(red(`Failed to seed with ${path.basename(seed)}`));
+        spinner.fail(`Failed to seed with ${path.basename(seed)}`);
         logError(e);
       }
     }
