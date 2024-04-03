@@ -23,7 +23,9 @@ import { parseAndValidateToken } from '@triplit/server-core/token';
 import { logger } from './logger.js';
 import { Route } from '@triplit/server-core/triplit-server';
 import path from 'path';
+import multer from 'multer';
 
+const upload = multer();
 // ESM override for __dirname
 const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
 
@@ -246,7 +248,35 @@ export function createServer(options?: ServerOptions) {
       return res.sendStatus(500);
     }
   });
-
+  authenticated.post('/bulk-insert-file', upload.none(), async (req, res) => {
+    const jsonBody = JSON.parse(req.body.data);
+    const { statusCode, payload } = await triplitServer.handleRequest(
+      ['bulk-insert'],
+      jsonBody,
+      req.token!
+    );
+    res.status(statusCode).json(payload);
+    // let body = '';
+    // req.on('data', (chunk) => {
+    //   body += chunk.toString();
+    // });
+    // req.on('end', async () => {
+    //   try {
+    //     console.log(body);
+    //     body.split;
+    //     const parsed = JSON.parse(body);
+    //     await triplitServer.handleRequest(
+    //       ['bulk-insert'],
+    //       parsed['triples'],
+    //       req.token!
+    //     );
+    //     return res.sendStatus(200);
+    //   } catch (e) {
+    //     console.error(e);
+    //     return res.sendStatus(500);
+    //   }
+    // });
+  });
   authenticated.post('*', async (req, res) => {
     const path = req.path.split('/').slice(1) as Route; // ignore first empty string from split
     const { statusCode, payload } = await triplitServer.handleRequest(

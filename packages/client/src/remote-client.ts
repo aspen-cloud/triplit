@@ -55,17 +55,33 @@ export class RemoteClient<M extends ClientSchema | undefined> {
     this.options = { ...this.options, ...options };
   }
 
-  private async sendRequest(uri: string, method: string, body: any) {
+  private async sendRequest(
+    uri: string,
+    method: string,
+    body: any,
+    options: { isFile?: boolean } = { isFile: false }
+  ) {
     if (!this.options.server) throw new TriplitError('No server url provided');
     if (!this.options.token) throw new TriplitError('No token provided');
+    const headers: HeadersInit = {
+      Authorization: 'Bearer ' + this.options.token,
+      'Content-Type': 'application/json',
+    };
+    const stringifiedBody = JSON.stringify(body);
+
+    let form;
+    if (options.isFile) {
+      form = new FormData();
+      form.append('data', stringifiedBody);
+      delete headers['Content-Type'];
+    }
+
     const res = await fetch(this.options.server + uri, {
       method,
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: 'Bearer ' + this.options.token,
-      },
-      body: JSON.stringify(body),
+      headers,
+      body: options.isFile ? form : stringifiedBody,
     });
+
     if (!res.ok)
       return { data: undefined, error: parseError(await res.text()) };
     return { data: await res.json(), error: undefined };
@@ -175,9 +191,10 @@ export class RemoteClient<M extends ClientSchema | undefined> {
       : bulk;
 
     const { data, error } = await this.sendRequest(
-      '/bulk-insert',
+      '/bulk-insert-file',
       'POST',
-      jsonBulkInsert
+      jsonBulkInsert,
+      { isFile: true }
     );
     if (error) throw error;
     return data;
