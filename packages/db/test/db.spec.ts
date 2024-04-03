@@ -5301,6 +5301,121 @@ describe('Rules', () => {
         ).resolves.not.toThrowError();
       });
     });
+
+    describe('rules with relationships', async () => {
+      const schema = {
+        collections: {
+          posts: {
+            schema: S.Schema({
+              id: S.Id(),
+              text: S.String(),
+              author_id: S.String(),
+              author: S.RelationById('users', '$author_id'),
+            }),
+            rules: {
+              write: {
+                'admin-write': {
+                  description: 'Only admin users can create posts',
+                  filter: [
+                    ['author.admin', '=', true],
+                    ['author_id', '=', '$user_id'],
+                  ],
+                },
+              },
+            },
+          },
+          users: {
+            schema: S.Schema({
+              id: S.Id(),
+              name: S.String(),
+              admin: S.Boolean(),
+            }),
+          },
+        },
+      };
+      it('insert with relationship in rule', async () => {
+        const db = new DB({ schema });
+
+        const aliceDB = db.withVars({ user_id: 'user-1' });
+        const bobDB = db.withVars({ user_id: 'user-2' });
+
+        await db.insert('users', { id: 'user-1', name: 'Alice', admin: true });
+        await db.insert('users', { id: 'user-2', name: 'Bob', admin: false });
+
+        await expect(
+          aliceDB.insert('posts', {
+            id: 'post-1',
+            text: 'post-1',
+            author_id: 'user-1',
+          })
+        ).resolves.not.toThrowError();
+        await expect(
+          bobDB.insert('posts', {
+            id: 'post-2',
+            text: 'post-2',
+            author_id: 'user-2',
+          })
+        ).rejects.toThrowError(WriteRuleError);
+      });
+
+      it('update with relationship in rule', async () => {
+        const db = new DB({ schema });
+        const aliceDB = db.withVars({ user_id: 'user-1' });
+        const bobDB = db.withVars({ user_id: 'user-2' });
+
+        await db.insert('users', { id: 'user-1', name: 'Alice', admin: true });
+        await db.insert('users', { id: 'user-2', name: 'Bob', admin: false });
+
+        await aliceDB.insert('posts', {
+          id: 'post-1',
+          text: 'post-1',
+          author_id: 'user-1',
+        });
+        await aliceDB.insert('posts', {
+          id: 'post-2',
+          text: 'post-2',
+          author_id: 'user-1',
+        });
+
+        await expect(
+          aliceDB.update('posts', 'post-1', async (entity) => {
+            entity.text = 'post-1 updated';
+          })
+        ).resolves.not.toThrowError();
+        await expect(
+          bobDB.update('posts', 'post-2', async (entity) => {
+            entity.text = 'post-2 updated';
+          })
+        ).rejects.toThrowError(WriteRuleError);
+      });
+
+      it('delete with relationship in rule', async () => {
+        const db = new DB({ schema });
+        const aliceDB = db.withVars({ user_id: 'user-1' });
+        const bobDB = db.withVars({ user_id: 'user-2' });
+
+        await db.insert('users', { id: 'user-1', name: 'Alice', admin: true });
+        await db.insert('users', { id: 'user-2', name: 'Bob', admin: false });
+
+        await aliceDB.insert('posts', {
+          id: 'post-1',
+          text: 'post-1',
+          author_id: 'user-1',
+        });
+        await aliceDB.insert('posts', {
+          id: 'post-2',
+          text: 'post-2',
+          author_id: 'user-1',
+        });
+
+        await expect(
+          aliceDB.delete('posts', 'post-1')
+        ).resolves.not.toThrowError();
+        await expect(bobDB.delete('posts', 'post-2')).rejects.toThrowError(
+          WriteRuleError
+        );
+      });
+    });
   });
 
   describe('Update', () => {

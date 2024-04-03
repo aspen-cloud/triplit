@@ -15,6 +15,7 @@ import { nanoid } from 'nanoid';
 import CollectionQueryBuilder, {
   doesEntityObjMatchWhere,
   fetch,
+  fetchOne,
   FetchResult,
   MaybeReturnTypeFromQuery,
 } from './collection-query.js';
@@ -98,31 +99,38 @@ interface TransactionOptions<
 
 const EXEMPT_FROM_WRITE_RULES = new Set(['_metadata']);
 
-function checkWriteRules<M extends Models<any, any> | undefined>(
+async function checkWriteRules<M extends Models<any, any> | undefined>(
+  tx: TripleStoreApi,
   id: EntityId,
-  timestampedEntity: any,
   variables: Record<string, any> | undefined,
   schema: StoreSchema<M> | undefined
 ) {
-  const [collectionName, _entityId] = splitIdParts(id);
-
+  const [collectionName, entityId] = splitIdParts(id);
   if (EXEMPT_FROM_WRITE_RULES.has(collectionName)) return;
-
+  const collections = schema?.collections;
+  if (!collections) return;
   const collection = schema?.collections[collectionName];
+  if (!collection) return;
+
   const writeRules = Object.values(collection?.rules?.write ?? {});
   if (writeRules.length) {
-    const filters = writeRules.flatMap((r) => r.filter);
-    let query = {
-      where: filters,
-      vars: variables,
-    } as CollectionQuery<M, any>;
-    query = replaceVariablesInQuery(query);
-    const satisfiedRule = doesEntityObjMatchWhere(
-      timestampedEntity,
-      query.where,
-      collection?.schema
+    const rulesWhere = writeRules.flatMap((r) => r.filter);
+    const query = prepareQuery(
+      {
+        collectionName,
+        where: [['id', '=', entityId], ...rulesWhere],
+        vars: variables,
+      } as CollectionQuery<M, any>,
+      collections,
+      {
+        variables: variables,
+        skipRules: false,
+      }
     );
-    if (!satisfiedRule) {
+    const { results } = await fetchOne<M, any>(tx, query, {
+      schema: collections,
+    });
+    if (!results) {
       // TODO add better error that uses rule description
       throw new WriteRuleError(`Update does not match write rules`);
     }
@@ -200,59 +208,55 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
     this.storeTx.beforeInsert(this.ValidateTripleSchema);
     if (!options?.skipRules) {
       // Pre-update write checks
-      this.storeTx.beforeInsert(async (triples, tx) => {
+      this.storeTx.beforeCommit(async (triplesByStorage, tx) => {
         /**
-         * This will check writes rules on every insert
+         * This will check writes rules before we commit the transaction
          * it will look for a _collection attribute to indicate an insert
          * which means looking only at the inserted triples is sufficient
          * to validate the rule.
          * Otherwise treat any triples as an update/delete and fetch the entity
          * from the store to validate the rule
          */
-        const insertedEntities: Set<string> = new Set();
-        const updatedEntities: Set<string> = new Set([
-          ...triples.map((t) => t.id),
-        ]);
-        const deletedEntities: Set<string> = new Set();
-        for (const triple of triples) {
-          if (deletedEntities.has(triple.id) || insertedEntities.has(triple.id))
-            continue;
-          if (triple.attribute[0] === '_collection' && triple.expired) {
-            updatedEntities.delete(triple.id);
-            deletedEntities.add(triple.id);
-            continue;
+        for (const [storageId, triples] of Object.entries(triplesByStorage)) {
+          const insertedEntities: Set<string> = new Set();
+          const updatedEntities: Set<string> = new Set([
+            ...triples.map((t) => t.id),
+          ]);
+          const deletedEntities: Set<string> = new Set();
+          for (const triple of triples) {
+            if (
+              deletedEntities.has(triple.id) ||
+              insertedEntities.has(triple.id)
+            )
+              continue;
+            if (triple.attribute[0] === '_collection' && triple.expired) {
+              updatedEntities.delete(triple.id);
+              deletedEntities.add(triple.id);
+              continue;
+            }
+            if (triple.attribute[0] === '_collection' && !triple.expired) {
+              insertedEntities.add(triple.id);
+              updatedEntities.delete(triple.id);
+              continue;
+            }
           }
-          if (triple.attribute[0] === '_collection' && !triple.expired) {
-            insertedEntities.add(triple.id);
-            updatedEntities.delete(triple.id);
-            continue;
+          // for each updatedEntity, load triples, construct entity, and check write rules
+          for (const id of updatedEntities) {
+            await checkWriteRules(tx, id, this.variables, this.schema);
           }
-        }
-        // for each updatedEntity, load triples, construct entity, and check write rules
-        for (const id of updatedEntities) {
-          const entityTriples = await tx.findByEntity(id);
-          const entity = constructEntity(
-            [...triples.filter((t) => t.id === id), ...entityTriples],
-            id
-          );
-
-          checkWriteRules(id, entity?.data, this.variables, this.schema);
-        }
-        for (const id of insertedEntities) {
-          const entityTriples = triples.filter(
-            (t) => t.id === id && t.expired === false
-          );
-          const entity = constructEntity(entityTriples, id);
-          checkWriteRules(id, entity?.data, this.variables, this.schema);
-        }
-        for (const id of deletedEntities) {
-          const entityTriples = await tx.findByEntity(id);
-          const tripsInTx = new Set(triples.filter((t) => t.id === id));
-          const entity = constructEntity(
-            entityTriples.filter((t) => !tripsInTx.has(t)),
-            id
-          );
-          checkWriteRules(id, entity?.data, this.variables, this.schema);
+          for (const id of insertedEntities) {
+            await checkWriteRules(tx, id, this.variables, this.schema);
+          }
+          for (const id of deletedEntities) {
+            // Notably deletes use the original triples (using tx wont have data)
+            // We may not be able to differentiate between a delete elsewhere and a write rule failure
+            await checkWriteRules(
+              this.db.tripleStore,
+              id,
+              this.variables,
+              this.schema
+            );
+          }
         }
       });
     }
