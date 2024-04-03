@@ -28,20 +28,19 @@ import {
 } from './utils/query.js';
 import { ConnectionStatus } from './index.js';
 
-export class WorkerClient<M extends ClientSchema | undefined> {
-  clientWorker: Client<M>;
+export class WorkerClient<M extends ClientSchema | undefined = undefined> {
   initialized: Promise<void>;
   syncEngine = {
     connectionStatus: 'open',
     onConnectionStatusChange: () => () => {},
   };
+  clientWorker: ComLink.Remote<Client<M>>;
   constructor(options?: ClientOptions<M>) {
     const worker = new SharedWorker(
       new URL('./worker-client-operator.ts', import.meta.url),
       { type: 'module' }
     );
-    // @ts-ignore
-    this.clientWorker = ComLink.wrap(worker.port);
+    this.clientWorker = ComLink.wrap<Client<M>>(worker.port);
     const { schema } = options || {};
     // @ts-ignore
     this.initialized = this.clientWorker.init({
@@ -55,11 +54,14 @@ export class WorkerClient<M extends ClientSchema | undefined> {
   ): ClientQueryBuilder<M, CN> {
     return ClientQueryBuilder<M, CN>(collectionName);
   }
-  // @ts-ignore
-  async fetch(...args) {
+
+  async fetch<CQ extends ClientQuery<M, any>>(
+    query: CQ,
+    options?: Partial<FetchOptions>
+  ): Promise<ClientFetchResult<CQ>> {
     await this.initialized;
-    // @ts-ignore
-    return this.clientWorker.fetch(...args);
+    // @ts-expect-error
+    return this.clientWorker.fetch(query, options);
   }
   async transact<Output>(callback: (tx: DBTransaction<M>) => Promise<Output>) {
     await this.initialized;
@@ -73,6 +75,7 @@ export class WorkerClient<M extends ClientSchema | undefined> {
   ) {
     await this.initialized;
     return this.clientWorker.fetchById(
+      // @ts-ignore
       collectionName,
       id,
       queryParams,
@@ -91,7 +94,11 @@ export class WorkerClient<M extends ClientSchema | undefined> {
     entity: InsertTypeFromModel<ModelFromModels<M, CN>>
   ) {
     await this.initialized;
-    return this.clientWorker.insert(collectionName, entity);
+    return this.clientWorker.insert(
+      // @ts-ignore
+      collectionName,
+      entity
+    );
   }
   async update<CN extends CollectionNameFromModels<M>>(
     collectionName: CN,
@@ -123,6 +130,7 @@ export class WorkerClient<M extends ClientSchema | undefined> {
   ) {
     await this.initialized;
     return this.clientWorker.updateRaw(
+      // @ts-ignore
       collectionName,
       entityId,
       ComLink.proxy(updater)
@@ -134,7 +142,11 @@ export class WorkerClient<M extends ClientSchema | undefined> {
     entityId: string
   ) {
     await this.initialized;
-    return this.clientWorker.delete(collectionName, entityId);
+    return this.clientWorker.delete(
+      // @ts-ignore
+      collectionName,
+      entityId
+    );
   }
   subscribe<CQ extends ClientQuery<M, any>>(
     query: CQ,
@@ -147,10 +159,9 @@ export class WorkerClient<M extends ClientSchema | undefined> {
   ) {
     const unsubPromise = (async () => {
       await this.initialized;
-      // @ts-ignore
       return this.clientWorker.subscribe(
-        // @ts-ignore
         query,
+        // @ts-ignore
         ComLink.proxy(onResults),
         onError && ComLink.proxy(onError),
         options && ComLink.proxy(options)
@@ -184,7 +195,8 @@ export class WorkerClient<M extends ClientSchema | undefined> {
     await this.initialized;
     return this.clientWorker.subscribeWithPagination(
       query,
-      onResults,
+      // @ts-ignore
+      ComLink.proxy(onResults),
       onError,
       options
     );
@@ -205,7 +217,8 @@ export class WorkerClient<M extends ClientSchema | undefined> {
     await this.initialized;
     return this.clientWorker.subscribeWithExpand(
       query,
-      onResults,
+      // @ts-ignore
+      ComLink.proxy(onResults),
       onError,
       options
     );
