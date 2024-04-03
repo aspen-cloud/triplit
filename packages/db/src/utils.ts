@@ -99,6 +99,7 @@ export function triplesToObject<T>(triples: TuplePrefix<EAV>[]) {
   return result as T;
 }
 
+// TODO: refactor how hooks are passed to transactions (probably want to call this in constructor of tx classes)
 export function copyHooks<Hooks extends Record<string, any[]>>(
   hooks: Hooks
 ): Hooks {

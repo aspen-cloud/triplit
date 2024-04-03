@@ -662,7 +662,7 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
     const schema = await this.getSchema();
     try {
       const resp = await this.tripleStore.transact(async (tripTx) => {
-        const tx = new DBTransaction<M>(this, tripTx, this.hooks, {
+        const tx = new DBTransaction<M>(this, tripTx, copyHooks(this.hooks), {
           variables: this.variables,
           schema,
           skipRules: options.skipRules,
