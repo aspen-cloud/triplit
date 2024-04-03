@@ -14,11 +14,8 @@ import MultiTupleStore, {
 } from './multi-tuple-store.js';
 import { Clock } from './clocks/clock.js';
 import { MemoryClock } from './clocks/memory-clock.js';
-import { ValueCursor } from './query.js';
 import { TripleStoreOptionsError, WriteRuleError } from './errors.js';
 import { TripleStoreTransaction } from './triple-store-transaction.js';
-import { performInBatches } from './utils/performance.js';
-// import { TripleRow, EntityId, Attribute } from './index.js';
 import {
   EAV,
   TupleIndex,
@@ -134,35 +131,29 @@ async function addIndexesToTransaction(
     if (set.length === 0) continue;
     const scopedTx = tupleTx.withScope({ read: [store], write: [store] });
     // To maintain interactivity on large inserts, we should batch these
-    await performInBatches(
-      (batch) => {
-        for (const { key, value: tupleValue } of batch) {
-          const [_client, indexType, ...indexKey] = key;
-          if (indexType !== 'EAT') continue;
+    for (const { key, value: tupleValue } of set) {
+      const [_client, indexType, ...indexKey] = key;
+      if (indexType !== 'EAT') continue;
 
-          const [id, attribute, timestamp] = indexKey;
-          const [value, isExpired] = tupleValue;
-          scopedTx.set(['AVE', attribute, value, id, timestamp], {
-            expired: isExpired,
-          });
-          scopedTx.set(
-            [
-              'clientTimestamp',
-              (timestamp as Timestamp)[1],
-              timestamp,
-              id,
-              attribute,
-              value,
-            ],
-            {
-              expired: isExpired,
-            }
-          );
+      const [id, attribute, timestamp] = indexKey;
+      const [value, isExpired] = tupleValue;
+      scopedTx.set(['AVE', attribute, value, id, timestamp], {
+        expired: isExpired,
+      });
+      scopedTx.set(
+        [
+          'clientTimestamp',
+          (timestamp as Timestamp)[1],
+          timestamp,
+          id,
+          attribute,
+          value,
+        ],
+        {
+          expired: isExpired,
         }
-      },
-      set,
-      10000 // batch size is fairly arbitrary, okay to edit if needed
-    );
+      );
+    }
   }
 }
 
