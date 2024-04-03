@@ -1,5 +1,14 @@
 # @triplit/server
 
+## 0.3.32
+
+### Patch Changes
+
+- 6c75805: add support for bulk inserts using file upload
+- Updated dependencies [1d78145]
+  - @triplit/db@0.3.29
+  - @triplit/server-core@0.3.32
+
 ## 0.3.31
 
 ### Patch Changes

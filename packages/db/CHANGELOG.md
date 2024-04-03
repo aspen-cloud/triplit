@@ -1,5 +1,11 @@
 # @triplit/db
 
+## 0.3.29
+
+### Patch Changes
+
+- 1d78145: remove insert batching for speed up
+
 ## 0.3.28
 
 ### Patch Changes
