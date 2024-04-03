@@ -24,6 +24,10 @@ export default Command({
       pushSpinner.fail('Failed to push schema to server');
       data = e;
     }
+    if (!Object.hasOwn(data, 'successful') || !Object.hasOwn(data, 'issues')) {
+      console.error(data);
+      return;
+    }
     logSchemaChangeViolations(data.successful, data.issues, {
       warn: (message, ...args) => console.log(c.yellow(message), ...args),
       info: (message, ...args) => console.log(c.blue(message), ...args),
