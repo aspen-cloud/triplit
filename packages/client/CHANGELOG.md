@@ -1,5 +1,11 @@
 # @triplit/client
 
+## 0.3.35
+
+### Patch Changes
+
+- 49c8848: fixup worker-client export
+
 ## 0.3.34
 
 ### Patch Changes
