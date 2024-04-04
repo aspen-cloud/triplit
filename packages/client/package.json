@@ -12,6 +12,11 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
       "default": "./dist/index.js"
+    },
+    "./worker-client": {
+      "types": "./dist/worker-client.d.ts",
+      "import": "./dist/worker-client.js",
+      "default": "./dist/worker-client.js"
     }
   },
   "scripts": {
