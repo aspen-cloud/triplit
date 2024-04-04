@@ -37,7 +37,7 @@ export class WorkerClient<M extends ClientSchema | undefined = undefined> {
   clientWorker: ComLink.Remote<Client<M>>;
   constructor(options?: ClientOptions<M>) {
     const worker = new SharedWorker(
-      new URL('./worker-client-operator.ts', import.meta.url),
+      new URL('worker-client-operator.js', import.meta.url),
       { type: 'module' }
     );
     this.clientWorker = ComLink.wrap<Client<M>>(worker.port);
