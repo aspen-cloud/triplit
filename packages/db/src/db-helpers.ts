@@ -498,6 +498,7 @@ export function prepareQuery<
             `Order by field ${field} is not valid: ${reason} at path ${path}`
           );
         }
+        return true;
       });
     }
 
