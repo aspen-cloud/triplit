@@ -6,7 +6,7 @@ import {
   InvalidQueryCardinalityError,
   TriplitError,
 } from '../errors.js';
-import { CollectionQuery } from '../query.js';
+import { CollectionQuery, QueryResultCardinality } from '../query.js';
 import { Models } from '../schema.js';
 import { TypeInterface } from './type.js';
 
@@ -17,8 +17,6 @@ export type SubQuery<
   CollectionQuery<M, CN>,
   'collectionName' | 'where' | 'limit' | 'order'
 >;
-
-export type QueryResultCardinality = 'one' | 'many';
 
 export type QueryType<
   Query extends SubQuery<any, any>,

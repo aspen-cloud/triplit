@@ -247,7 +247,8 @@ export class TriplitClient<M extends ClientSchema | undefined = undefined> {
         this.authOptions.token,
         this.authOptions.claimsPath
       );
-      this.db.updateVariables({ SESSION_USER_ID: userId });
+      // TODO: properly use sessions
+      this.db.updateGlobalVariables({ SESSION_USER_ID: userId });
     }
 
     this.syncEngine = new SyncEngine(syncOptions, this.db);
@@ -821,7 +822,8 @@ export class TriplitClient<M extends ClientSchema | undefined = undefined> {
       this.authOptions = { ...this.authOptions, token };
       const { claimsPath } = this.authOptions;
       const userId = token ? getUserId(token, claimsPath) : undefined;
-      this.db.updateVariables({ SESSION_USER_ID: userId });
+      // TODO: properly use sessions
+      this.db.updateGlobalVariables({ SESSION_USER_ID: userId });
 
       // and update the sync engine
       updatedSyncOptions = { ...updatedSyncOptions, token };

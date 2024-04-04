@@ -17,6 +17,7 @@ import CollectionQueryBuilder, {
   fetch,
   fetchOne,
   FetchResult,
+  initialFetchExecutionContext,
   MaybeReturnTypeFromQuery,
 } from './collection-query.js';
 import {
@@ -53,12 +54,10 @@ import DB, {
 import {
   validateExternalId,
   appendCollectionToId,
-  replaceVariablesInQuery,
   validateTriple,
   readSchemaFromTripleStore,
   StoreSchema,
   splitIdParts,
-  getCollectionSchema,
   prepareQuery,
   fetchResultToJS,
 } from './db-helpers.js';
@@ -91,7 +90,6 @@ import { Logger } from '@triplit/types/src/logger.js';
 interface TransactionOptions<
   M extends Models<any, any> | undefined = undefined
 > {
-  variables?: Record<string, any>;
   schema?: StoreSchema<M>;
   skipRules?: boolean;
   logger?: Logger;
@@ -103,7 +101,6 @@ async function checkWriteRules<M extends Models<any, any> | undefined>(
   caller: DBTransaction<M>,
   tx: TripleStoreApi,
   id: EntityId,
-  variables: Record<string, any> | undefined,
   schema: StoreSchema<M> | undefined
 ) {
   const [collectionName, entityId] = splitIdParts(id);
@@ -120,17 +117,23 @@ async function checkWriteRules<M extends Models<any, any> | undefined>(
       {
         collectionName,
         where: [['id', '=', entityId], ...rulesWhere],
-        vars: variables,
       } as CollectionQuery<M, any>,
       collections,
       {
-        variables: variables,
         skipRules: false,
       }
     );
-    const { results } = await fetchOne<M, any>(caller.db, tx, query, {
-      schema: collections,
-    });
+    console.log('FINAL QUERY');
+    console.dir(query, { depth: null });
+    const { results } = await fetchOne<M, any>(
+      caller.db,
+      tx,
+      query,
+      initialFetchExecutionContext(),
+      {
+        schema: collections,
+      }
+    );
     if (!results) {
       // TODO add better error that uses rule description
       throw new WriteRuleError(`Update does not match write rules`);
@@ -193,7 +196,6 @@ async function triplesToEntityOpSet(
 export class DBTransaction<M extends Models<any, any> | undefined> {
   schema: StoreSchema<M> | undefined;
   private _schema: Entity | undefined;
-  readonly variables?: Record<string, any>;
   private _permissionCache: Map<string, boolean> = new Map();
   logger: Logger;
 
@@ -205,7 +207,6 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
   ) {
     this.logger = options.logger ?? db.logger;
     this.schema = options.schema;
-    this.variables = options.variables;
     this.storeTx.beforeInsert(this.ValidateTripleSchema);
     if (!options?.skipRules) {
       // Pre-update write checks
@@ -243,10 +244,10 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
           }
           // for each updatedEntity, load triples, construct entity, and check write rules
           for (const id of updatedEntities) {
-            await checkWriteRules(this, tx, id, this.variables, this.schema);
+            await checkWriteRules(this, tx, id, this.schema);
           }
           for (const id of insertedEntities) {
-            await checkWriteRules(this, tx, id, this.variables, this.schema);
+            await checkWriteRules(this, tx, id, this.schema);
           }
           for (const id of deletedEntities) {
             // Notably deletes use the original triples (using tx wont have data)
@@ -255,7 +256,7 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
               this,
               this.db.tripleStore,
               id,
-              this.variables,
+
               this.schema
             );
           }
@@ -677,14 +678,19 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
   ): Promise<FetchResult<Q>> {
     const schema = (await this.getSchema())?.collections as M;
     const fetchQuery = prepareQuery(query, schema, {
-      variables: this.variables,
       skipRules: options.skipRules,
     });
     // TODO: read scope?
     // See difference between this fetch and db fetch
-    const { results } = await fetch<M, Q>(this.db, this.storeTx, fetchQuery, {
-      schema,
-    });
+    const { results } = await fetch<M, Q>(
+      this.db,
+      this.storeTx,
+      fetchQuery,
+      initialFetchExecutionContext(),
+      {
+        schema,
+      }
+    );
     return fetchResultToJS(results, schema, fetchQuery.collectionName);
   }
 

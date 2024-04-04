@@ -39,7 +39,10 @@ import {
 } from '../src/db-helpers.js';
 import { TripleRow } from '../dist/types/triple-store-utils.js';
 import { triplesToStateVector } from '../src/triple-store-utils.js';
-import { fetchDeltaTriples } from '../src/collection-query.js';
+import {
+  fetchDeltaTriples,
+  initialFetchExecutionContext,
+} from '../src/collection-query.js';
 
 const pause = async (ms: number = 100) =>
   new Promise((resolve) => setTimeout(resolve, ms));
@@ -5019,7 +5022,7 @@ describe('DB Variables', () => {
     const preUpdateResult = await db.fetch(query);
     expect(preUpdateResult.size).toBe(3);
 
-    db.updateVariables({ DEPARTMENT: 'dep-2' });
+    db.updateGlobalVariables({ DEPARTMENT: 'dep-2' });
 
     const postUpdateResult = await db.fetch(query);
     expect(postUpdateResult.size).toBe(2);
@@ -5318,7 +5321,7 @@ describe('Rules', () => {
                   description: 'Only admin users can create posts',
                   filter: [
                     ['author.admin', '=', true],
-                    ['author_id', '=', '$user_id'],
+                    ['author_id', '=', '$session.user_id'],
                   ],
                 },
               },
@@ -5336,8 +5339,8 @@ describe('Rules', () => {
       it('insert with relationship in rule', async () => {
         const db = new DB({ schema });
 
-        const aliceDB = db.withVars({ user_id: 'user-1' });
-        const bobDB = db.withVars({ user_id: 'user-2' });
+        const aliceDB = db.withSessionVars({ user_id: 'user-1' });
+        const bobDB = db.withSessionVars({ user_id: 'user-2' });
 
         await db.insert('users', { id: 'user-1', name: 'Alice', admin: true });
         await db.insert('users', { id: 'user-2', name: 'Bob', admin: false });
@@ -5360,8 +5363,8 @@ describe('Rules', () => {
 
       it('update with relationship in rule', async () => {
         const db = new DB({ schema });
-        const aliceDB = db.withVars({ user_id: 'user-1' });
-        const bobDB = db.withVars({ user_id: 'user-2' });
+        const aliceDB = db.withSessionVars({ user_id: 'user-1' });
+        const bobDB = db.withSessionVars({ user_id: 'user-2' });
 
         await db.insert('users', { id: 'user-1', name: 'Alice', admin: true });
         await db.insert('users', { id: 'user-2', name: 'Bob', admin: false });
@@ -5391,8 +5394,8 @@ describe('Rules', () => {
 
       it('delete with relationship in rule', async () => {
         const db = new DB({ schema });
-        const aliceDB = db.withVars({ user_id: 'user-1' });
-        const bobDB = db.withVars({ user_id: 'user-2' });
+        const aliceDB = db.withSessionVars({ user_id: 'user-1' });
+        const bobDB = db.withSessionVars({ user_id: 'user-2' });
 
         await db.insert('users', { id: 'user-1', name: 'Alice', admin: true });
         await db.insert('users', { id: 'user-2', name: 'Bob', admin: false });
@@ -5424,11 +5427,7 @@ describe('Rules', () => {
     const POST_ID = 'post-1';
     const POST = { id: POST_ID, author_id: USER_ID, content: 'before' };
     beforeEach(async () => {
-      db = new DB({
-        variables: {
-          user_id: USER_ID,
-        },
-      });
+      db = new DB().withSessionVars({ user_id: USER_ID });
 
       await db.createCollection({
         name: 'posts',
@@ -5441,7 +5440,7 @@ describe('Rules', () => {
           write: {
             'post-author': {
               description: 'Users can only post posts they authored',
-              filter: [['author_id', '=', '$user_id']],
+              filter: [['author_id', '=', '$session.user_id']],
             },
           },
         },
@@ -5462,7 +5461,7 @@ describe('Rules', () => {
       it("throws an error when updating an obj that doesn't match filter", async () => {
         await expect(
           db
-            .withVars({ user_id: 'not the user' })
+            .withSessionVars({ user_id: 'not the user' })
             .update('posts', POST_ID, async (entity) => {
               entity.content = 'hax0r';
             })
@@ -6756,10 +6755,10 @@ describe('social network test', () => {
   });
 
   it('can query posts from friends', async () => {
-    const userDb = db.withVars({ USER_ID: 'user-1' });
+    const userDb = db.withSessionVars({ USER_ID: 'user-1' });
     const query = userDb
       .query('posts')
-      .where([['author.friend_ids', '=', '$USER_ID']])
+      .where([['author.friend_ids', '=', '$session.USER_ID']])
       .build();
     const results = await userDb.fetch(query);
     expect(results).toHaveLength(2);
@@ -6781,7 +6780,7 @@ describe('state vector querying', () => {
               read: {
                 'post-author': {
                   description: 'Users can only read posts they authored',
-                  filter: [['author_id', '=', '$user_id']],
+                  filter: [['author_id', '=', '$session.user_id']],
                 },
               },
             },
@@ -6800,7 +6799,7 @@ describe('state vector querying', () => {
       content: '',
     });
     const query = db.query('posts').build();
-    const userDB = db.withVars({ user_id });
+    const userDB = db.withSessionVars({ user_id });
     const results = await userDB.fetchTriples(query);
     const resultEntities = results.reduce(
       (entitySet: Set<string>, triple: TripleRow) => {
@@ -6951,6 +6950,7 @@ describe('delta querying', async () => {
         db.tripleStore,
         query,
         addedTriples,
+        initialFetchExecutionContext(),
         {
           schema: (await db.getSchema())?.collections,
         }
@@ -6975,6 +6975,7 @@ describe('delta querying', async () => {
         db.tripleStore,
         query,
         addedTriples,
+        initialFetchExecutionContext(),
         { schema: (await db.getSchema())?.collections }
       );
       expect(deltaTriples.length).toBeGreaterThan(0);
@@ -6999,6 +7000,7 @@ describe('delta querying', async () => {
         db.tripleStore,
         query,
         addedTriples,
+        initialFetchExecutionContext(),
         { schema: (await db.getSchema())?.collections }
       );
       expect(deltaTriples.length).toBeGreaterThan(0);
@@ -7024,6 +7026,7 @@ describe('delta querying', async () => {
         db.tripleStore,
         query,
         addedTriples,
+        initialFetchExecutionContext(),
         { schema: (await db.getSchema())?.collections }
       );
       expect(deltaTriples).toHaveLength(0);
@@ -7123,6 +7126,7 @@ describe('delta querying', async () => {
         db.tripleStore,
         fetchQuery,
         addedTriples,
+        initialFetchExecutionContext(),
         { schema: (await db.getSchema())?.collections }
       );
       expect(deltaTriples.length).toBeGreaterThan(0);
@@ -7160,6 +7164,7 @@ describe('delta querying', async () => {
         db.tripleStore,
         fetchQuery,
         addedTriples,
+        initialFetchExecutionContext(),
         { schema: (await db.getSchema())?.collections }
       );
 
@@ -7341,6 +7346,7 @@ describe('delta querying', async () => {
           serverDB.tripleStore,
           fetchQuery,
           addedTriples,
+          initialFetchExecutionContext(),
           { schema: (await serverDB.getSchema())?.collections }
         );
 
@@ -7484,28 +7490,52 @@ describe('Graph-like queries', () => {
 });
 
 describe('sessions', () => {
-  it('can create scoped variables with sessions that leave the original variables unaffected', () => {
-    const db = new DB();
-    expect(db.variables).toEqual({});
+  it('can create scoped variables with sessions', () => {
+    const db = new DB({ variables: { test: 'variable' } });
+    expect(db.systemVars).toEqual({
+      global: { test: 'variable' },
+      session: {},
+    });
     {
-      const session = db.withVars({ foo: 'bar' });
-      expect(session.variables).toEqual({ foo: 'bar' });
-      expect(db.variables).toEqual({});
+      const session = db.withSessionVars({ foo: 'bar' });
+      expect(session.systemVars).toEqual({
+        global: { test: 'variable' },
+        session: { foo: 'bar' },
+      });
+      expect(db.systemVars).toEqual({
+        global: { test: 'variable' },
+        session: {},
+      });
     }
     {
-      const session = db
-        .withVars({ foo: 'bar' })
-        .withVars({ bar: 'baz' })
-        .withVars({ foo: 'baz' });
-      expect(session.variables).toEqual({ foo: 'baz', bar: 'baz' });
-      expect(db.variables).toEqual({});
+      const session1 = db.withSessionVars({ foo: 'bar' });
+
+      expect(session1.systemVars).toEqual({
+        global: { test: 'variable' },
+        session: {
+          foo: 'bar',
+        },
+      });
+
+      const session2 = session1.withSessionVars({ bar: 'baz' });
+      expect(session2.systemVars).toEqual({
+        global: { test: 'variable' },
+        session: {
+          bar: 'baz',
+        },
+      });
+
+      expect(db.systemVars).toEqual({
+        global: { test: 'variable' },
+        session: {},
+      });
     }
   });
 
   it('can create multiple sessions and use their variables in queries independently', async () => {
     const db = new DB();
-    const sessionFoo = db.withVars({ name: 'foo' });
-    const sessionBar = db.withVars({ name: 'bar' });
+    const sessionFoo = db.withSessionVars({ name: 'foo' });
+    const sessionBar = db.withSessionVars({ name: 'bar' });
 
     // Insert some data
     await sessionFoo.insert('test', { id: '1', name: 'bar', visible: false });
@@ -7514,7 +7544,7 @@ describe('sessions', () => {
 
     const query = db
       .query('test')
-      .where(['name', '=', '$name'], ['visible', '=', true])
+      .where(['name', '=', '$session.name'], ['visible', '=', true])
       .build();
 
     {
@@ -7795,7 +7825,7 @@ describe('selecting subqueries from schema', () => {
           rules: {
             read: {
               'read your own posts': {
-                filter: [['author_id', '=', '$USER_ID']],
+                filter: [['author_id', '=', '$session.USER_ID']],
               },
             },
           },
@@ -7860,7 +7890,7 @@ describe('selecting subqueries from schema', () => {
     });
   });
 
-  const user1DB = db.withVars({ USER_ID: 'user-1' });
+  const user1DB = db.withSessionVars({ USER_ID: 'user-1' });
 
   it('can select subqueries', async () => {
     const query = user1DB
@@ -8308,4 +8338,341 @@ it('can upsert data with optional properties', async () => {
 
   const result = await db.fetchById('test', '1');
   expect(result).toStrictEqual({ id: '1', name: 'alice', age: 30 });
+});
+
+describe('variable conflicts', () => {
+  const baseDB = new DB({
+    variables: {
+      name: 'CS101',
+    },
+    schema: {
+      collections: {
+        classes: {
+          schema: S.Schema({
+            id: S.String(),
+            name: S.String(),
+            department_id: S.String(),
+            department: S.RelationById('departments', '$1.department_id'),
+          }),
+        },
+        departments: {
+          schema: S.Schema({
+            id: S.String(),
+            name: S.String(),
+            head_id: S.String(),
+            head: S.RelationById('faculty', '$1.head_id'),
+            faculty: S.RelationMany('faculty', {
+              where: [['department_id', '=', '$1.id']],
+            }),
+          }),
+          rules: {
+            write: {
+              head_in_department: {
+                description: 'Head must be in the department',
+                filter: [['head.department_id', '=', '$0.id']],
+              },
+            },
+          },
+        },
+        faculty: {
+          schema: S.Schema({
+            id: S.String(),
+            name: S.String(),
+            department_id: S.String(),
+            department: S.RelationById('departments', '$1.department_id'),
+          }),
+        },
+      },
+    },
+  });
+
+  it('handles conflicting variable names', async () => {
+    const db = baseDB.withSessionVars({ name: 'MATH101' });
+    await db.insert('faculty', { id: '1', name: 'Alice', department_id: 'CS' });
+    await db.insert('faculty', { id: '2', name: 'Bob', department_id: 'MATH' });
+    await db.insert('faculty', {
+      id: '3',
+      name: 'Charlie',
+      department_id: 'CS',
+    });
+    await db.insert('faculty', {
+      id: '4',
+      name: 'David',
+      department_id: 'MATH',
+    });
+    await db.insert('departments', {
+      id: 'CS',
+      name: 'Computer Science',
+      head_id: '1',
+    });
+    await db.insert('departments', {
+      id: 'MATH',
+      name: 'Mathematics',
+      head_id: '2',
+    });
+    await db.insert('classes', { id: '1', name: 'CS101', department_id: 'CS' });
+    await db.insert('classes', {
+      id: '2',
+      name: 'MATH101',
+      department_id: 'MATH',
+    });
+    await db.insert('classes', { id: '3', name: 'CS102', department_id: 'CS' });
+    await db.insert('classes', {
+      id: '4',
+      name: 'MATH102',
+      department_id: 'MATH',
+    });
+
+    // Can query with global variables
+    {
+      const query = db
+        .query('classes')
+        .where(['name', '=', '$global.name'])
+        .build();
+      const result = await db.fetch(query);
+      expect(result.size).toBe(1);
+      expect(Array.from(result.keys())).toStrictEqual(['1']);
+    }
+
+    // Can query with session variables
+    {
+      const query = db
+        .query('classes')
+        .where(['name', '=', '$session.name'])
+        .build();
+      const result = await db.fetch(query);
+      expect(result.size).toBe(1);
+      expect(Array.from(result.keys())).toStrictEqual(['2']);
+    }
+
+    // Can query with query variables
+    {
+      const query = db
+        .query('classes')
+        .vars({ name: 'CS102' })
+        .where(['name', '=', '$query.name'])
+        .build();
+      const result = await db.fetch(query);
+      expect(result.size).toBe(1);
+      expect(Array.from(result.keys())).toStrictEqual(['3']);
+    }
+
+    // Can query with subquery variables (each colletion has a 'name' field)
+    {
+      await db.insert('classes', {
+        id: '5',
+        name: 'Bob',
+        department_id: 'MATH',
+      });
+      // This is a funky query to be clear
+      const query = db
+        .query('classes')
+        .where(['department.head.name', '=', '$0.name'])
+        .build(); // Name of the class matches the name of the department head
+      const result = await db.fetch(query);
+      expect(result.size).toBe(1);
+      expect(Array.from(result.keys())).toStrictEqual(['5']);
+    }
+  });
+
+  describe('backwards compatibility', () => {
+    it('$SESSION_USER_ID is translated to $session.SESSION_USER_ID', async () => {
+      const db = new DB({
+        schema: {
+          collections: {
+            users: {
+              schema: S.Schema({
+                id: S.String(),
+                name: S.String(),
+              }),
+              rules: {
+                read: {
+                  self_read: {
+                    filter: [['id', '=', '$SESSION_USER_ID']],
+                  },
+                },
+              },
+            },
+          },
+        },
+      });
+      await db.insert('users', { id: '1', name: 'Alice' });
+      await db.insert('users', { id: '2', name: 'Bob' });
+
+      const aliceDB = db.withSessionVars({ SESSION_USER_ID: '1' });
+      const bobDB = db.withSessionVars({ SESSION_USER_ID: '2' });
+      {
+        const result = await aliceDB.fetch(aliceDB.query('users').build());
+        expect(result.size).toBe(1);
+        expect(result.get('1')).toMatchObject({ id: '1', name: 'Alice' });
+      }
+
+      {
+        const result = await bobDB.fetch(db.query('users').build());
+        expect(result.size).toBe(1);
+        expect(result.get('2')).toMatchObject({ id: '2', name: 'Bob' });
+      }
+    });
+    it('rules properly reference current entity', async () => {
+      const db = new DB({
+        schema: {
+          collections: {
+            departments: {
+              schema: S.Schema({
+                id: S.String(),
+                name: S.String(),
+                head_id: S.String(),
+                head: S.RelationById('faculty', '$head_id'),
+              }),
+              rules: {
+                write: {
+                  head_in_department: {
+                    description: 'Head must be in the department',
+                    filter: [['head.department_id', '=', '$id']],
+                  },
+                },
+              },
+            },
+            faculty: {
+              schema: S.Schema({
+                id: S.String(),
+                name: S.String(),
+                department_id: S.String(),
+              }),
+            },
+            posts: {
+              schema: S.Schema({
+                id: S.String(),
+                content: S.String(),
+                author_id: S.String(),
+                author: S.RelationById('faculty', '$author_id'),
+              }),
+              rules: {
+                write: {
+                  current_user_posts: {
+                    filter: [['author_id', '=', '$SESSION_USER_ID']],
+                  },
+                },
+              },
+            },
+          },
+        },
+      });
+
+      await db.insert('faculty', {
+        id: '1',
+        name: 'Alice',
+        department_id: 'CS',
+      });
+      await db.insert('faculty', {
+        id: '2',
+        name: 'Bob',
+        department_id: 'MATH',
+      });
+
+      await expect(
+        db.insert('departments', {
+          id: 'CS',
+          name: 'Computer Science',
+          head_id: '1',
+        })
+      ).resolves.not.toThrow();
+      await expect(
+        db.insert('departments', {
+          id: 'MATH',
+          name: 'Mathematics',
+          head_id: '1',
+        })
+      ).rejects.toThrow(WriteRuleError);
+      await expect(
+        db.insert('departments', {
+          id: 'MATH',
+          name: 'Mathematics',
+          head_id: '2',
+        })
+      ).resolves.not.toThrow();
+
+      const aliceDB = db.withSessionVars({ SESSION_USER_ID: '1' });
+      {
+        await expect(
+          aliceDB.insert('posts', { id: '1', content: 'Hello', author_id: '1' })
+        ).resolves.not.toThrow();
+        await expect(
+          aliceDB.insert('posts', { id: '2', content: 'Hello', author_id: '2' })
+        ).rejects.toThrow(WriteRuleError);
+      }
+    });
+    it('Subqueries properly reference parent entity', async () => {
+      const db = new DB({
+        schema: {
+          collections: {
+            users: {
+              schema: S.Schema({
+                id: S.String(),
+                name: S.String(),
+                posts: S.RelationMany('posts', {
+                  where: [['author_id', '=', '$id']],
+                }),
+              }),
+            },
+            posts: {
+              schema: S.Schema({
+                id: S.String(),
+                content: S.String(),
+                author_id: S.String(),
+                author: S.RelationById('users', '$author_id'),
+              }),
+            },
+          },
+        },
+      });
+
+      await db.insert('users', { id: '1', name: 'Alice' });
+      await db.insert('users', { id: '2', name: 'Bob' });
+      await db.insert('posts', { id: '1', content: 'Hello1', author_id: '1' });
+      await db.insert('posts', { id: '2', content: 'Hello2', author_id: '1' });
+      await db.insert('posts', { id: '3', content: 'Hello3', author_id: '2' });
+      await db.insert('posts', { id: '4', content: 'Hello4', author_id: '2' });
+
+      {
+        const result = await db.fetch(
+          db.query('users').include('posts').build()
+        );
+        expect(result.get('1')?.posts).toStrictEqual(
+          new Map([
+            ['1', { id: '1', content: 'Hello1', author_id: '1' }],
+            ['2', { id: '2', content: 'Hello2', author_id: '1' }],
+          ])
+        );
+        expect(result.get('2')?.posts).toStrictEqual(
+          new Map([
+            ['3', { id: '3', content: 'Hello3', author_id: '2' }],
+            ['4', { id: '4', content: 'Hello4', author_id: '2' }],
+          ])
+        );
+      }
+
+      {
+        const result = await db.fetch(
+          db.query('posts').include('author').build()
+        );
+        expect(result.get('1')?.author).toStrictEqual({
+          id: '1',
+          name: 'Alice',
+        });
+        expect(result.get('2')?.author).toStrictEqual({
+          id: '1',
+          name: 'Alice',
+        });
+        expect(result.get('3')?.author).toStrictEqual({
+          id: '2',
+          name: 'Bob',
+        });
+        expect(result.get('4')?.author).toStrictEqual({
+          id: '2',
+          name: 'Bob',
+        });
+      }
+    });
+  });
 });

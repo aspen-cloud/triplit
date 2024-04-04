@@ -15,7 +15,7 @@ import { encodeValue } from '@triplit/tuple-database';
 type Path = string;
 // Should be friendly types that we pass into queries
 // Not to be confused with the Value type that we store in the triple store
-type Value =
+export type Value =
   | number
   | string
   | boolean
@@ -171,10 +171,12 @@ type RelationAttributes<M extends Model<any>> = {
     : never;
 }[keyof M['properties']];
 
+export type QueryResultCardinality = 'one' | 'many';
+
 export type RelationSubquery<M extends Models<any, any> | undefined> = {
   attributeName: string;
   subquery: CollectionQuery<M, any>;
-  cardinality: 'one' | 'many';
+  cardinality: QueryResultCardinality;
 };
 
 export type CollectionQuery<

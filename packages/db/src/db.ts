@@ -10,6 +10,7 @@ import CollectionQueryBuilder, {
   fetch,
   FetchResult,
   FetchResultEntity,
+  initialFetchExecutionContext,
   subscribe,
   subscribeTriples,
 } from './collection-query.js';
@@ -42,7 +43,7 @@ import {
   AttributeDefinition,
   UserTypeOptions,
 } from './data-types/serialization.js';
-import { copyHooks, triplesToObject } from './utils.js';
+import { copyHooks, prefixVariables, triplesToObject } from './utils.js';
 import { EAV, indexToTriple, TripleRow } from './triple-store-utils.js';
 import { TripleStore } from './triple-store.js';
 import { Logger } from '@triplit/types/src/logger.js';
@@ -400,10 +401,15 @@ export type DBHooks<M extends Models<any, any> | undefined> = {
   ][];
 };
 
+export type SystemVariables = {
+  global: Record<string, any>;
+  session: Record<string, any>;
+};
+
 export default class DB<M extends Models<any, any> | undefined = undefined> {
   tripleStore: TripleStore;
   ensureMigrated: Promise<void | void[]>;
-  variables: Record<string, any>;
+  systemVars: SystemVariables;
   cache: VariableAwareCache<M>;
 
   _schema?: Entity; // Timestamped Object
@@ -440,7 +446,10 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
       debug: () => {},
       scope: () => this.logger,
     };
-    this.variables = variables ?? {};
+    this.systemVars = {
+      global: variables ?? {},
+      session: {},
+    };
     // If only one source is provided, use the default key
     const sourcesMap = sources ?? {
       [DEFAULT_STORE_KEY]: source ?? new MemoryBTreeStorage(),
@@ -616,7 +625,7 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
     }
   }
 
-  withVars(variables: Record<string, any>): DB<M> {
+  withSessionVars(variables: Record<string, any>): DB<M> {
     return Session(this, variables);
   }
 
@@ -663,7 +672,6 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
     try {
       const resp = await this.tripleStore.transact(async (tripTx) => {
         const tx = new DBTransaction<M>(this, tripTx, copyHooks(this.hooks), {
-          variables: this.variables,
           schema,
           skipRules: options.skipRules,
           logger: this.logger.scope('tx'),
@@ -680,8 +688,8 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
     }
   }
 
-  updateVariables(variables: Record<string, any>) {
-    this.variables = { ...this.variables, ...variables };
+  updateGlobalVariables(variables: Record<string, any>) {
+    this.systemVars.global = { ...this.systemVars.global, ...variables };
   }
 
   async overrideSchema(schema: StoreSchema<M>) {
@@ -700,7 +708,6 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
     const schema = (await this.getSchema())?.collections as M;
     const fetchQuery = prepareQuery(query, schema, {
       skipRules: options.skipRules,
-      variables: this.variables,
     });
 
     const noCache = options.noCache === undefined ? true : options.noCache;
@@ -711,6 +718,7 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
         ? this.tripleStore.setStorageScope(options.scope)
         : this.tripleStore,
       fetchQuery,
+      initialFetchExecutionContext(),
       {
         schema,
         cache: noCache ? undefined : this.cache,
@@ -729,7 +737,6 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
     const schema = (await this.getSchema())?.collections as M;
     const fetchQuery = prepareQuery(query, schema, {
       skipRules: options.skipRules,
-      variables: this.variables,
     });
     return [
       ...(
@@ -739,6 +746,7 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
             ? this.tripleStore.setStorageScope(options.scope)
             : this.tripleStore,
           fetchQuery,
+          initialFetchExecutionContext(),
           {
             schema: schema,
             stateVector: options.stateVector,
@@ -806,7 +814,6 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
       const schema = (await this.getSchema())?.collections as M;
       let subscriptionQuery = prepareQuery(query, schema, {
         skipRules: options.skipRules,
-        variables: this.variables,
       });
       this.logger.debug('subscribe START', { query });
       const noCache = options.noCache === undefined ? true : options.noCache;
@@ -857,7 +864,6 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
       const schema = (await this.getSchema())?.collections as M;
       let subscriptionQuery = prepareQuery(query, schema, {
         skipRules: options.skipRules,
-        variables: this.variables,
       });
       const noCache = options.noCache === undefined ? true : options.noCache;
 
@@ -973,7 +979,6 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
     await this.tripleStore.transact(
       async (tripTx) => {
         const tx = new DBTransaction(this, tripTx, copyHooks(this.hooks), {
-          variables: this.variables,
           // @ts-expect-error storeSchema issue
           schema,
         });
@@ -1145,10 +1150,11 @@ function canMigrate(
 }
 
 function Session<T extends DB<any>>(db: T, vars: Record<string, any>): T {
+  const sessionVars = { global: db.systemVars.global, session: vars };
   return new Proxy<T>(db, {
     get(target, prop, receiver) {
-      if (prop === 'variables') {
-        return { ...db.variables, ...vars };
+      if (prop === 'systemVars') {
+        return sessionVars;
       }
       return Reflect.get(target, prop, receiver);
     },

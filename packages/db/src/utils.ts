@@ -110,3 +110,29 @@ export function copyHooks<Hooks extends Record<string, any[]>>(
     return acc;
   }, {} as Hooks);
 }
+
+export function prefixVariables(
+  variables: Record<string, any>,
+  prefix: string,
+  options: { mode?: 'set' | 'append' } = {}
+) {
+  let mode = options.mode ?? 'set';
+  return Object.entries(variables).reduce<Record<string, any>>(
+    (acc, [key, value]) => {
+      if (mode === 'append') {
+        acc[`${prefix}.${key}`] = value;
+        return acc;
+      } else {
+        const splitKey = key.split('.');
+        if (splitKey.length > 1) {
+          const [_, ...rest] = splitKey;
+          acc[`${prefix}.${rest.join('.')}`] = value;
+        } else {
+          acc[`${prefix}.${key}`] = value;
+        }
+      }
+      return acc;
+    },
+    {}
+  );
+}

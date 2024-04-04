@@ -340,7 +340,7 @@ export class Session {
       // @ts-expect-error
       variables['SESSION_USER_ID'] = token.userId;
 
-    this.db = server.db.withVars(variables);
+    this.db = server.db.withSessionVars(variables);
   }
 
   createConnection(connectionParams: ConnectionOptions) {

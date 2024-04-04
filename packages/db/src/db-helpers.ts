@@ -7,6 +7,7 @@ import {
   SessionVariableNotFoundError,
   ValueSchemaMismatchError,
   InvalidOrderClauseError,
+  TriplitError,
 } from './errors.js';
 import {
   QueryWhere,
@@ -14,6 +15,7 @@ import {
   SubQueryFilter,
   CollectionQuery,
   RelationSubquery,
+  Value as QueryValue,
 } from './query.js';
 import {
   Model,
@@ -28,22 +30,28 @@ import {
 } from './schema.js';
 import { TripleStoreApi } from './triple-store.js';
 import { VALUE_TYPE_KEYS } from './data-types/serialization.js';
-import DB, { CollectionFromModels, CollectionNameFromModels } from './db.js';
+import DB, {
+  CollectionFromModels,
+  CollectionNameFromModels,
+  SystemVariables,
+} from './db.js';
 import { DBTransaction } from './db-transaction.js';
 import { DataType } from './data-types/base.js';
 import { Attribute, Value } from './triple-store-utils.js';
 import {
+  FetchExecutionContext,
   FetchResult,
   TimestampedFetchResult,
+  bumpSubqueryVar,
   validateIdentifier,
 } from './collection-query.js';
 import { Logger } from '@triplit/types/src/logger.js';
+import { prefixVariables } from './utils.js';
 
 const ID_SEPARATOR = '#';
 
 export interface QueryPreparationOptions {
   skipRules?: boolean;
-  variables?: Record<string, any>;
 }
 
 const ID_REGEX = /^[a-zA-Z0-9_\-:.]+$/;
@@ -112,8 +120,7 @@ export function replaceVariable(
   target: any,
   variables: Record<string, any> = {}
 ) {
-  if (typeof target !== 'string') return target;
-  if (!target.startsWith('$')) return target;
+  if (!isValueVariable(target)) return target;
   const varKey = target.slice(1);
   if (!(varKey in variables)) {
     console.warn(new SessionVariableNotFoundError(target));
@@ -127,12 +134,39 @@ export function replaceVariablesInQuery<
   Q extends Partial<
     Pick<CollectionQuery<any, any>, 'where' | 'entityId' | 'vars'>
   >
->(query: Q): Q {
+>(
+  query: Q,
+  systemVars: SystemVariables | undefined,
+  executionContext: FetchExecutionContext
+): Q {
+  // For backwards compatability we are including non-scoped variables, these values may conflict and cause issues
+  const conflictingVariables = {
+    ...(systemVars?.global ?? {}),
+    ...(systemVars?.session ?? {}),
+    ...(query.vars ?? {}),
+    ...(executionContext?.queriedDataStack ?? []).reduce((acc, val) => {
+      return { ...acc, ...val };
+    }, {}),
+  };
+  // Prefix variables with their scopes to prevent conflicts
+  const scopedVariables = {
+    ...prefixVariables(systemVars?.global ?? {}, 'global'),
+    ...prefixVariables(systemVars?.session ?? {}, 'session'),
+    ...prefixVariables(query.vars ?? {}, 'query'),
+    ...(executionContext?.queriedDataStack ?? []).reduce((acc, val, i, arr) => {
+      const prefixed = prefixVariables(val, `${arr.length - i}`);
+      return { ...acc, ...prefixed };
+    }, {}),
+  };
+  const vars = {
+    ...scopedVariables,
+    ...conflictingVariables,
+  };
   const where = query.where
-    ? replaceVariablesInFilterStatements(query.where, query.vars ?? {})
+    ? replaceVariablesInFilterStatements(query.where, vars)
     : undefined;
   const entityId = query.entityId
-    ? replaceVariable(query.entityId, query.vars ?? {})
+    ? replaceVariable(query.entityId, vars)
     : undefined;
 
   return { ...query, where, entityId };
@@ -407,15 +441,31 @@ export function prepareQuery<
   if (collectionSchema && !options.skipRules) {
     fetchQuery = addReadRulesToQuery<M, Q>(fetchQuery, collectionSchema);
   }
-  fetchQuery.vars = {
-    ...(options.variables ?? {}),
-    ...(fetchQuery.vars ?? {}),
-  };
+
   fetchQuery.where = mapFilterStatements(
     fetchQuery.where ?? [],
     (statement) => {
       if (!Array.isArray(statement)) return statement;
-      const [prop, op, val] = statement;
+      let [prop, op, val] = statement;
+
+      if (collectionSchema) {
+        const attributeType = getSchemaFromPath(
+          collectionSchema.schema,
+          (prop as string).split('.')
+        );
+        if (attributeType.type === 'query') {
+          const [_collectionName, ...path] = (prop as string).split('.');
+          const subquery = { ...attributeType.query };
+          // As we expand subqueries, "bump" the variable names
+          if (isValueVariable(val)) {
+            val = '$' + bumpSubqueryVar(val.slice(1));
+          }
+          subquery.where = [...subquery.where, [path.join('.'), op, val]];
+          return {
+            exists: prepareQuery(subquery, schema, options),
+          };
+        }
+      }
       // TODO: should be integrated into type system
       return [prop, op, val instanceof Date ? val.toISOString() : val];
     }
@@ -443,25 +493,6 @@ export function prepareQuery<
       //@ts-expect-error
       fetchQuery.select = selectAllProps;
     }
-
-    // Convert any filters that use relations from schema to *exists* queries
-    fetchQuery.where = mapFilterStatements(fetchQuery.where, (statement) => {
-      if (!Array.isArray(statement)) return statement;
-      const [prop, op, val] = statement;
-      const attributeType = getSchemaFromPath(
-        collectionSchema.schema,
-        (prop as string).split('.')
-      );
-      if (attributeType.type !== 'query') {
-        return [prop, op, val];
-      }
-      const [_collectionName, ...path] = (prop as string).split('.');
-      const subquery = { ...attributeType.query };
-      subquery.where = [...subquery.where, [path.join('.'), op, val]];
-      return {
-        exists: prepareQuery(subquery, schema, options),
-      };
-    });
 
     if (fetchQuery.order) {
       // Validate that the order by fields
@@ -506,6 +537,7 @@ export function prepareQuery<
       addSubsSelectsFromIncludes(fetchQuery, schema);
     }
   }
+
   return fetchQuery;
 }
 
@@ -558,4 +590,20 @@ export function fetchResultToJS<
     results.set(id, convertEntityToJS(entity, schema, collectionName));
   });
   return results as FetchResult<Q>;
+}
+
+export function isValueVariable(value: QueryValue): value is string {
+  return typeof value === 'string' && value.startsWith('$');
+}
+
+export function getVariableComponents(
+  variable: string
+): [scope: string | undefined, key: string] {
+  const components = variable.slice(1).split('.');
+  if (components.length < 1)
+    throw new TriplitError(`Invalid variable: ${variable}`);
+  if (components.length === 1) return [undefined, components[0]];
+  if (components.length === 2) return components as [string, string];
+  const last = components.pop();
+  return [components.join('.'), last as string];
 }
