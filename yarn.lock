@@ -4695,7 +4695,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@triplit/cli@^0.3.37, @triplit/cli@workspace:packages/cli":
+"@triplit/cli@0.3.42, @triplit/cli@workspace:packages/cli":
   version: 0.0.0-use.local
   resolution: "@triplit/cli@workspace:packages/cli"
   dependencies:
@@ -4744,7 +4744,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@triplit/client@^0.3.31, @triplit/client@workspace:^, @triplit/client@workspace:packages/client":
+"@triplit/client@0.3.35, @triplit/client@^0.3.34, @triplit/client@workspace:^, @triplit/client@workspace:packages/client":
   version: 0.0.0-use.local
   resolution: "@triplit/client@workspace:packages/client"
   dependencies:
@@ -4814,7 +4814,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@triplit/db@^0.3.26, @triplit/db@workspace:^, @triplit/db@workspace:packages/db":
+"@triplit/db@0.3.29, @triplit/db@workspace:^, @triplit/db@workspace:packages/db":
   version: 0.0.0-use.local
   resolution: "@triplit/db@workspace:packages/db"
   dependencies:
@@ -4838,7 +4838,19 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@triplit/react@^0.3.31, @triplit/react@workspace:^, @triplit/react@workspace:packages/react":
+"@triplit/react@npm:0.3.35":
+  version: 0.3.35
+  resolution: "@triplit/react@npm:0.3.35"
+  dependencies:
+    "@triplit/client": ^0.3.34
+  peerDependencies:
+    react: "*"
+    react-dom: "*"
+  checksum: 1ba7007f4de1a0ce02dc410b87bbd58dd1c795959d14ff1a407ee8e24291f7f52c7f5dc2941c05a5d9d96d623366d235889483b2e409fd601a503fc77e29b906
+  languageName: node
+  linkType: hard
+
+"@triplit/react@workspace:^, @triplit/react@workspace:packages/react":
   version: 0.0.0-use.local
   resolution: "@triplit/react@workspace:packages/react"
   dependencies:
@@ -14475,10 +14487,10 @@ __metadata:
     "@radix-ui/react-slot": ^1.0.2
     "@tailwindcss/typography": ^0.5.10
     "@triplit/authjs-adapter": ^0.1.0
-    "@triplit/cli": ^0.3.37
-    "@triplit/client": ^0.3.31
-    "@triplit/db": ^0.3.26
-    "@triplit/react": ^0.3.31
+    "@triplit/cli": 0.3.42
+    "@triplit/client": 0.3.35
+    "@triplit/db": 0.3.29
+    "@triplit/react": 0.3.35
     "@types/bcryptjs": ^2
     "@types/jsonwebtoken": ^9.0.2
     "@types/node": ^17.0.45
