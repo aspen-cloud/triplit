@@ -17,6 +17,11 @@
       "types": "./dist/worker-client.d.ts",
       "import": "./dist/worker-client.js",
       "default": "./dist/worker-client.js"
+    },
+    "./worker-client-operator": {
+      "types": "./dist/worker-client-operator.d.ts",
+      "import": "./dist/worker-client-operator.js",
+      "default": "./dist/worker-client-operator.js"
     }
   },
   "scripts": {

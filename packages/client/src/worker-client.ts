@@ -35,10 +35,11 @@ export class WorkerClient<M extends ClientSchema | undefined = undefined> {
     onConnectionStatusChange: () => () => {},
   };
   clientWorker: ComLink.Remote<Client<M>>;
-  constructor(options?: ClientOptions<M>) {
+  constructor(options?: ClientOptions<M> & { workerUrl?: string }) {
     const worker = new SharedWorker(
-      new URL('worker-client-operator.js', import.meta.url),
-      { type: 'module' }
+      options?.workerUrl ??
+        new URL('worker-client-operator.js', import.meta.url),
+      { type: 'module', name: 'triplit-client' }
     );
     this.clientWorker = ComLink.wrap<Client<M>>(worker.port);
     const { schema } = options || {};
