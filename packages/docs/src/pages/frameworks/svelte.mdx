@@ -30,6 +30,24 @@ If you are using Svelte, you can use the hooks provided by `@triplit/svelte`:
   </Tab>
 </Tabs>
 
+## SvelteKit
+
+If you are using SvelteKit, you can use the hooks described below, but you will need to ensure that the client only attempts to connect to the sync server over WebSockets when in the browser. You can do this by checking if the `browser` variable from `$app/environment` is `true`.
+
+```ts filename="src/lib/client.ts"
+import { TriplitClient } from '@triplit/client';
+import { browser } from '$app/environment';
+import { PUBLIC_TRIPLIT_URL, PUBLIC_TRIPLIT_TOKEN } from '$env/static/public';
+
+export const client = new TriplitClient({
+  serverUrl: PUBLIC_TRIPLIT_URL,
+  token: PUBLIC_TRIPLIT_TOKEN,
+  autoConnect: browser,
+});
+```
+
+The suggested pattern is to create a client instance in a module and import it into your components.
+
 ## useQuery
 
 The `useQuery` hook subscribes to the provided query inside your Svelte component and will automatically unsubscribe from the query when the component unmounts.
