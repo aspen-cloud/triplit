@@ -1,5 +1,11 @@
 # @triplit/client
 
+## 0.3.36
+
+### Patch Changes
+
+- 2ec5ecd: support passing in customer Web Worker url
+
 ## 0.3.35
 
 ### Patch Changes
