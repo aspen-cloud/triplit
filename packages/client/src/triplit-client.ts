@@ -544,7 +544,7 @@ export class TriplitClient<M extends ClientSchema | undefined = undefined> {
         // This is a hack to make sure we don't call onRemoteFulfilled before
         // the local subscription callback has had a chance to refire
         fulfilledTimeout = setTimeout(() => {
-          onResults(results as ClientFetchResult<CQ>, { hasRemoteFulfilled });
+          clientSubscriptionCallback(results as ClientFetchResult<CQ>);
           opts.onRemoteFulfilled?.();
         }, 250);
       };
