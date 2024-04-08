@@ -51,7 +51,7 @@ In `triplit/packages` you can find the various projects that power Triplit:
 - [Types](https://github.com/aspen-cloud/triplit/tree/main/packages/types) - Shared types for various Triplit projects.
 - [UI](https://github.com/aspen-cloud/triplit/tree/main/packages/ui) - Shared UI components for Triplit frontend projects, built with [shadcn](https://ui.shadcn.com/).
 
-# Getting Started
+# Quick Start
 
 Start a new project:
 
@@ -131,7 +131,7 @@ function App() {
 
 Start your app, open another browser tab, and watch the data sync in real-time.
 
-Read the full docs [here](https://www.triplit.dev/docs). For a more detailed tutorial, check out this guide on [building a real-time todo app with Triplit, Vite, and React](https://www.triplit.dev/docs/react-tutorial).
+Read the full getting started guide [here](https://www.triplit.dev/docs/getting-started). For an even more detailed and explanatory tutorial, check out this step-by-step guide to [building a real-time todo app with Triplit, Vite, and React](https://www.triplit.dev/docs/react-tutorial).
 
 # Contact us
 
