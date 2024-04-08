@@ -13,11 +13,11 @@ import {
 } from './query.js';
 import { Models, getSchemaFromPath } from './schema.js';
 import * as TB from '@sinclair/typebox/value';
-import { TripleStore } from './triple-store.js';
+import type DB from './db.js';
 import { QueryCacheError } from './errors.js';
 import { TripleRow } from './triple-store-utils.js';
 
-export class VariableAwareCache<Schema extends Models<any, any>> {
+export class VariableAwareCache<Schema extends Models<any, any> | undefined> {
   cache: Map<
     BigInt,
     {
@@ -26,7 +26,7 @@ export class VariableAwareCache<Schema extends Models<any, any>> {
     }
   >;
 
-  constructor(readonly tripleStore: TripleStore) {
+  constructor(readonly db: DB<Schema>) {
     this.cache = new Map();
   }
 
@@ -72,7 +72,8 @@ export class VariableAwareCache<Schema extends Models<any, any>> {
     return new Promise<void>((resolve) => {
       const id = this.viewQueryToId(viewQuery);
       subscribeResultsAndTriples<Schema, Q>(
-        this.tripleStore,
+        this.db,
+        this.db.tripleStore,
         viewQuery,
         ([results, triples]) => {
           this.cache.set(id, { results, triples });

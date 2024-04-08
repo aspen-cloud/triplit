@@ -404,7 +404,7 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
   tripleStore: TripleStore;
   ensureMigrated: Promise<void | void[]>;
   variables: Record<string, any>;
-  cache: VariableAwareCache<Models<any, any>>;
+  cache: VariableAwareCache<M>;
 
   _schema?: Entity; // Timestamped Object
   schema?: StoreSchema<M>;
@@ -463,7 +463,7 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
       clock,
     });
 
-    this.cache = new VariableAwareCache(this.tripleStore);
+    this.cache = new VariableAwareCache(this);
 
     // Add listener to update in memory schema
     const updateCachedSchemaOnChange: SchemaChangeCallback<M> = (schema) =>
@@ -706,6 +706,7 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
     const noCache = options.noCache === undefined ? true : options.noCache;
 
     const { results } = await fetch<M, Q>(
+      this,
       options.scope
         ? this.tripleStore.setStorageScope(options.scope)
         : this.tripleStore,
@@ -733,6 +734,7 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
     return [
       ...(
         await fetch<M, Q>(
+          this,
           options.scope
             ? this.tripleStore.setStorageScope(options.scope)
             : this.tripleStore,
@@ -809,6 +811,7 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
       this.logger.debug('subscribe START', { query });
       const noCache = options.noCache === undefined ? true : options.noCache;
       const unsub = subscribe<M, Q>(
+        this,
         options.scope
           ? this.tripleStore.setStorageScope(options.scope)
           : this.tripleStore,
@@ -859,6 +862,7 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
       const noCache = options.noCache === undefined ? true : options.noCache;
 
       const unsub = subscribeTriples<M, Q>(
+        this,
         options.scope
           ? this.tripleStore.setStorageScope(options.scope)
           : this.tripleStore,

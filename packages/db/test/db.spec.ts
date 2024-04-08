@@ -6947,12 +6947,13 @@ describe('delta querying', async () => {
       });
 
       const deltaTriples = await fetchDeltaTriples(
+        db,
         db.tripleStore,
         query,
         addedTriples,
-        (
-          await db.getSchema()
-        )?.collections
+        {
+          schema: (await db.getSchema())?.collections,
+        }
       );
       expect(deltaTriples.length).toBeGreaterThan(0);
       expect(
@@ -6970,12 +6971,11 @@ describe('delta querying', async () => {
       await db.delete('posts', post_id);
 
       const deltaTriples = await fetchDeltaTriples(
+        db,
         db.tripleStore,
         query,
         addedTriples,
-        (
-          await db.getSchema()
-        )?.collections
+        { schema: (await db.getSchema())?.collections }
       );
       expect(deltaTriples.length).toBeGreaterThan(0);
       expect(
@@ -6995,12 +6995,11 @@ describe('delta querying', async () => {
         entity.author_id = user_id2;
       });
       const deltaTriples = await fetchDeltaTriples(
+        db,
         db.tripleStore,
         query,
         addedTriples,
-        (
-          await db.getSchema()
-        )?.collections
+        { schema: (await db.getSchema())?.collections }
       );
       expect(deltaTriples.length).toBeGreaterThan(0);
       expect(
@@ -7021,12 +7020,11 @@ describe('delta querying', async () => {
         content: '',
       });
       const deltaTriples = await fetchDeltaTriples(
+        db,
         db.tripleStore,
         query,
         addedTriples,
-        (
-          await db.getSchema()
-        )?.collections
+        { schema: (await db.getSchema())?.collections }
       );
       expect(deltaTriples).toHaveLength(0);
     });
@@ -7121,12 +7119,11 @@ describe('delta querying', async () => {
       });
       const fetchQuery = prepareQuery(query, schema['collections'], {});
       const deltaTriples = await fetchDeltaTriples(
+        db,
         db.tripleStore,
         fetchQuery,
         addedTriples,
-        (
-          await db.getSchema()
-        )?.collections
+        { schema: (await db.getSchema())?.collections }
       );
       expect(deltaTriples.length).toBeGreaterThan(0);
       expect(deltaTriples).toEqual(
@@ -7159,12 +7156,11 @@ describe('delta querying', async () => {
 
       const fetchQuery = prepareQuery(query, schema['collections'], {});
       const deltaTriples = await fetchDeltaTriples(
+        db,
         db.tripleStore,
         fetchQuery,
         addedTriples,
-        (
-          await db.getSchema()
-        )?.collections
+        { schema: (await db.getSchema())?.collections }
       );
 
       expect(deltaTriples.length).toBe(0);
@@ -7341,6 +7337,7 @@ describe('delta querying', async () => {
           {}
         );
         const deltaTriples = await fetchDeltaTriples(
+          serverDB,
           serverDB.tripleStore,
           fetchQuery,
           addedTriples,

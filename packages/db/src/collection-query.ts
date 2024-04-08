@@ -45,6 +45,7 @@ import { DataType, Operator } from './data-types/base.js';
 import { VariableAwareCache } from './variable-aware-cache.js';
 import { isTimestampedEntityDeleted } from './entity.js';
 import { CollectionNameFromModels, ModelFromModels } from './db.js';
+import type DB from './db.js';
 import { QueryResultCardinality, QueryType } from './data-types/query.js';
 import { ExtractJSType } from './data-types/type.js';
 import { RangeContraints, TripleRow, Value } from './triple-store-utils.js';
@@ -401,6 +402,7 @@ export async function fetchDeltaTriples<
   M extends Models<any, any> | undefined,
   Q extends CollectionQuery<M, any>
 >(
+  caller: DB<M>,
   tx: TripleStoreApi,
   query: Q,
   newTriples: TripleRow[],
@@ -468,6 +470,7 @@ export async function fetchDeltaTriples<
       if (matchesSimpleFiltersBefore && subQueries.length > 0) {
         for (const { exists: subQuery } of subQueries) {
           const subQueryResult = await fetchOne(
+            caller,
             tx,
             {
               ...subQuery,
@@ -502,6 +505,7 @@ export async function fetchDeltaTriples<
       if (matchesSimpleFiltersAfter && subQueries.length > 0) {
         for (const { exists: subQuery } of subQueries) {
           const subQueryResult = await fetchOne(
+            caller,
             tx,
             {
               ...subQuery,
@@ -752,9 +756,10 @@ function ApplyBasicFilters<
 }
 
 function ApplyExistsFilters<
-  M extends Models<any, any>,
+  M extends Models<any, any> | undefined,
   Q extends CollectionQuery<M, any>
 >(
+  caller: DB<M>,
   tx: TripleStoreApi,
   query: Q,
   options: FetchFromStorageOptions
@@ -784,6 +789,7 @@ function ApplyExistsFilters<
         skipRules,
       });
       const subQueryFetch = await fetch<M, typeof existsSubQuery>(
+        caller,
         tx,
         existsSubQuery,
         {
@@ -853,6 +859,7 @@ function loadOrderRelationships<
   M extends Models<any, any> | undefined,
   Q extends CollectionQuery<M, any>
 >(
+  caller: DB<M>,
   tx: TripleStoreApi,
   query: Q,
   options: FetchFromStorageOptions
@@ -915,12 +922,17 @@ function loadOrderRelationships<
       fullSubquery = prepareQuery(fullSubquery, schema, { skipRules });
       const subqueryResult =
         relationshipInfo.cardinality === 'one'
-          ? await fetchOne<M, typeof relationshipQuery>(tx, fullSubquery, {
-              schema,
-              cache,
-              skipRules,
-            })
-          : await fetch<M, typeof relationshipQuery>(tx, fullSubquery, {
+          ? await fetchOne<M, typeof relationshipQuery>(
+              caller,
+              tx,
+              fullSubquery,
+              {
+                schema,
+                cache,
+                skipRules,
+              }
+            )
+          : await fetch<M, typeof relationshipQuery>(caller, tx, fullSubquery, {
               schema,
               cache,
               skipRules,
@@ -937,9 +949,10 @@ function loadOrderRelationships<
 }
 
 function LoadIncludeRelationships<
-  M extends Models<any, any>,
+  M extends Models<any, any> | undefined,
   Q extends CollectionQuery<M, any>
 >(
+  caller: DB<M>,
   tx: TripleStoreApi,
   query: Q,
   options: FetchFromStorageOptions
@@ -968,12 +981,12 @@ function LoadIncludeRelationships<
       fullSubquery = prepareQuery(fullSubquery, schema, { skipRules });
       const subqueryResult =
         cardinality === 'one'
-          ? await fetchOne<M, typeof subquery>(tx, fullSubquery, {
+          ? await fetchOne<M, typeof subquery>(caller, tx, fullSubquery, {
               schema,
               cache,
               skipRules,
             })
-          : await fetch<M, typeof subquery>(tx, fullSubquery, {
+          : await fetch<M, typeof subquery>(caller, tx, fullSubquery, {
               schema,
               cache,
               skipRules,
@@ -1012,6 +1025,7 @@ export async function fetch<
   M extends Models<any, any> | undefined,
   Q extends CollectionQuery<M, any>
 >(
+  caller: DB<M>,
   tx: TripleStoreApi,
   query: Q,
   options: FetchFromStorageOptions = {}
@@ -1039,7 +1053,7 @@ export async function fetch<
     .map(LoadCandidateEntities(tx))
     // Apply where filters
     .filter(ApplyBasicFilters(queryWithInsertedVars, options))
-    .filter(ApplyExistsFilters(tx, queryWithInsertedVars, options))
+    .filter(ApplyExistsFilters(caller, tx, queryWithInsertedVars, options))
     // Capture entity triples
     .tap(async ([id, { triples }]) => {
       if (!resultTriples.has(id)) {
@@ -1053,7 +1067,7 @@ export async function fetch<
 
   if (order && !clausesFulfilled.order.every((f) => f)) {
     pipeline = pipeline
-      .map(loadOrderRelationships(tx, query, options))
+      .map(loadOrderRelationships(caller, tx, query, options))
       .sort(([_aId, { entity: aEntity }], [_bId, { entity: bEntity }]) =>
         querySorter(query)(aEntity, bEntity)
       );
@@ -1072,7 +1086,7 @@ export async function fetch<
   if (select && select.length > 0) {
     // Load include relationships
     pipeline = pipeline
-      .map(LoadIncludeRelationships(tx, query, options))
+      .map(LoadIncludeRelationships(caller, tx, query, options))
       .map(
         async ([
           entId,
@@ -1159,6 +1173,7 @@ export async function fetchOne<
   M extends Models<any, any> | undefined,
   Q extends CollectionQuery<M, any>
 >(
+  caller: DB<M>,
   tx: TripleStoreApi,
   query: Q,
   options: FetchFromStorageOptions = {}
@@ -1167,7 +1182,7 @@ export async function fetchOne<
   triples: Map<string, TripleRow[]>;
 }> {
   query = { ...query, limit: 1 };
-  const fetchResult = await fetch(tx, query, options);
+  const fetchResult = await fetch(caller, tx, query, options);
   const { results, triples } = fetchResult;
   return {
     results: [...results.values()][0] ?? null,
@@ -1374,6 +1389,7 @@ function subscribeSingleEntity<
   M extends Models<any, any> | undefined,
   Q extends CollectionQuery<M, any>
 >(
+  caller: DB<M>,
   tripleStore: TripleStore,
   query: Q,
   onResults: (
@@ -1391,7 +1407,12 @@ function subscribeSingleEntity<
     try {
       if (!entityId) throw new EntityIdMissingError();
       const internalEntityId = appendCollectionToId(collectionName, entityId);
-      const fetchResult = await fetch<M, Q>(tripleStore, query, options);
+      const fetchResult = await fetch<M, Q>(
+        caller,
+        tripleStore,
+        query,
+        options
+      );
       entity = fetchResult.results.has(entityId)
         ? fetchResult.results.get(entityId)
         : null;
@@ -1433,12 +1454,17 @@ function subscribeSingleEntity<
 
             // if we have deletes, need to re-fetch the entity
             if (entityDeletes.length) {
-              const fetchResult = await fetch<M, Q>(tripleStore, query, {
-                schema: options.schema,
-                cache: options.cache,
-                skipRules: options.skipRules,
-                // TODO: do we need to pass state vector here?
-              });
+              const fetchResult = await fetch<M, Q>(
+                caller,
+                tripleStore,
+                query,
+                {
+                  schema: options.schema,
+                  cache: options.cache,
+                  skipRules: options.skipRules,
+                  // TODO: do we need to pass state vector here?
+                }
+              );
               entity = fetchResult.results.has(entityId)
                 ? fetchResult.results.get(entityId)
                 : null;
@@ -1495,6 +1521,7 @@ function subscribeSingleEntity<
                   const subqueryResult =
                     cardinality === 'one'
                       ? await fetchOne<M, typeof subquery>(
+                          caller,
                           tripleStore,
                           fullSubquery,
                           {
@@ -1505,6 +1532,7 @@ function subscribeSingleEntity<
                           }
                         )
                       : await fetch<M, typeof subquery>(
+                          caller,
                           tripleStore,
                           fullSubquery,
                           {
@@ -1556,6 +1584,7 @@ export function subscribeResultsAndTriples<
   M extends Models<any, any> | undefined,
   Q extends CollectionQuery<M, any>
 >(
+  caller: DB<M>,
   tripleStore: TripleStore,
   query: Q,
   onResults: (
@@ -1572,7 +1601,12 @@ export function subscribeResultsAndTriples<
     let triples: Map<string, TripleRow[]> = new Map();
     let unsub = () => {};
     try {
-      const fetchResult = await fetch<M, Q>(tripleStore, query, options);
+      const fetchResult = await fetch<M, Q>(
+        caller,
+        tripleStore,
+        query,
+        options
+      );
       results = fetchResult.results;
       triples = fetchResult.triples;
       unsub = tripleStore.onWrite(async (storeWrites) => {
@@ -1593,7 +1627,7 @@ export function subscribeResultsAndTriples<
                   )
               ))
           ) {
-            const fetchResult = await fetch<M, Q>(tripleStore, query, {
+            const fetchResult = await fetch<M, Q>(caller, tripleStore, query, {
               schema: options.schema,
               skipRules: options.skipRules,
               cache: options.cache,
@@ -1755,6 +1789,7 @@ export function subscribeResultsAndTriples<
                   : undefined,
               };
               const backFilledResults = await fetch<M, Q>(
+                caller,
                 tripleStore,
                 backFillQuery,
                 {
@@ -1822,6 +1857,7 @@ export function subscribe<
   M extends Models<any, any> | undefined,
   Q extends CollectionQuery<M, any>
 >(
+  caller: DB<M>,
   tripleStore: TripleStore,
   query: Q,
   onResults: (results: FetchResult<Q>) => void | Promise<void>,
@@ -1830,6 +1866,7 @@ export function subscribe<
 ) {
   if (query.entityId) {
     return subscribeSingleEntity(
+      caller,
       tripleStore,
       query,
       ([results]) => onResults(results),
@@ -1838,6 +1875,7 @@ export function subscribe<
     );
   }
   return subscribeResultsAndTriples(
+    caller,
     tripleStore,
     query,
     ([results]) => onResults(results),
@@ -1850,6 +1888,7 @@ export function subscribeTriples<
   M extends Models<any, any> | undefined,
   Q extends CollectionQuery<M, any>
 >(
+  caller: DB<M>,
   tripleStore: TripleStore,
   query: Q,
   onResults: (results: Map<string, TripleRow[]>) => void | Promise<void>,
@@ -1858,6 +1897,7 @@ export function subscribeTriples<
 ) {
   if (query.entityId) {
     return subscribeSingleEntity(
+      caller,
       tripleStore,
       query,
       ([_results, triples]) => onResults(triples),
@@ -1875,6 +1915,7 @@ export function subscribeTriples<
           options.stateVector
         );
         const deltaTriples = await fetchDeltaTriples(
+          caller,
           tripleStore,
           query,
           triplesAfterStateVector,
@@ -1889,7 +1930,7 @@ export function subscribeTriples<
           return acc;
         }, new Map<string, TripleRow[]>());
       } else {
-        const fetchResult = await fetch<M, Q>(tripleStore, query, {
+        const fetchResult = await fetch<M, Q>(caller, tripleStore, query, {
           schema: options.schema,
           stateVector: options.stateVector,
           cache: options.cache,
@@ -1903,6 +1944,7 @@ export function subscribeTriples<
           (ops) => ops.inserts
         );
         const deltaTriples = await fetchDeltaTriples(
+          caller,
           tripleStore,
           query,
           allInserts,

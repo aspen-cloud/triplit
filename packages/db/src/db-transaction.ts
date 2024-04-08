@@ -100,6 +100,7 @@ interface TransactionOptions<
 const EXEMPT_FROM_WRITE_RULES = new Set(['_metadata']);
 
 async function checkWriteRules<M extends Models<any, any> | undefined>(
+  caller: DBTransaction<M>,
   tx: TripleStoreApi,
   id: EntityId,
   variables: Record<string, any> | undefined,
@@ -127,7 +128,7 @@ async function checkWriteRules<M extends Models<any, any> | undefined>(
         skipRules: false,
       }
     );
-    const { results } = await fetchOne<M, any>(tx, query, {
+    const { results } = await fetchOne<M, any>(caller.db, tx, query, {
       schema: collections,
     });
     if (!results) {
@@ -242,15 +243,16 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
           }
           // for each updatedEntity, load triples, construct entity, and check write rules
           for (const id of updatedEntities) {
-            await checkWriteRules(tx, id, this.variables, this.schema);
+            await checkWriteRules(this, tx, id, this.variables, this.schema);
           }
           for (const id of insertedEntities) {
-            await checkWriteRules(tx, id, this.variables, this.schema);
+            await checkWriteRules(this, tx, id, this.variables, this.schema);
           }
           for (const id of deletedEntities) {
             // Notably deletes use the original triples (using tx wont have data)
             // We may not be able to differentiate between a delete elsewhere and a write rule failure
             await checkWriteRules(
+              this,
               this.db.tripleStore,
               id,
               this.variables,
@@ -680,7 +682,7 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
     });
     // TODO: read scope?
     // See difference between this fetch and db fetch
-    const { results } = await fetch<M, Q>(this.storeTx, fetchQuery, {
+    const { results } = await fetch<M, Q>(this.db, this.storeTx, fetchQuery, {
       schema,
     });
     return fetchResultToJS(results, schema, fetchQuery.collectionName);
