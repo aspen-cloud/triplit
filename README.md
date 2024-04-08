@@ -51,6 +51,88 @@ In `triplit/packages` you can find the various projects that power Triplit:
 - [Types](https://github.com/aspen-cloud/triplit/tree/main/packages/types) - Shared types for various Triplit projects.
 - [UI](https://github.com/aspen-cloud/triplit/tree/main/packages/ui) - Shared UI components for Triplit frontend projects, built with [shadcn](https://ui.shadcn.com/).
 
+# Getting Started
+
+Start a new project:
+
+```bash
+npm create triplit-app@latest my-app
+```
+
+Or add the dependencies to an existing project:
+
+```bash
+npm install --save-dev @triplit/cli
+npm run triplit init
+```
+
+Define a [schema](https://www.triplit.dev/docs/database/schemas) in `my-app/triplit/schema.ts`
+
+```ts
+import { Schema as S } from '@triplit/db';
+import { ClientSchema } from '@triplit/client';
+
+export const schema = {
+  todos: {
+    schema: S.Schema({
+      id: S.Id(),
+      text: S.String(),
+      completed: S.Boolean({ default: false }),
+    }),
+  },
+} satisfies ClientSchema;
+```
+
+Start the Triplit development [sync server](https://www.triplit.dev/docs/syncing-data):
+
+```bash
+npm run triplit dev --initWithSchema
+```
+
+This will output some important [environmental variables](https://www.triplit.dev/docs/local-development#additional-environment-variables) that your app will need to sync with the server. Add them to your `.env` file (Vite example below):
+
+```bash
+VITE_TRIPLIT_SERVER_URL=http://localhost:6543
+VITE_TRIPLIT_TOKEN=copied-in-from-triplit-dev
+```
+
+Define a [query](https://www.triplit.dev/docs/fetching-data/queries) in your App (React example):
+
+```tsx
+import { TriplitClient } from '@triplit/client';
+import { useQuery } from '@triplit/react';
+import { schema } from '../triplit/schema';
+
+const client = new TriplitClient({ schema });
+
+function App() {
+  const { data } = useQuery(client.query('todos'));
+
+  return (
+    <div>
+      {Array.from(todos.values()).map((todo) => (
+        <div key={todo.id}>
+          <input
+            type="checkbox"
+            checked={todo.completed}
+            onChange={() =>
+              client.update('todos', todo.id, (todo) => ({
+                todo.completed = !todo.completed,
+              })
+            }
+          />
+          {todo.text}
+        </div>
+      ))}
+    </div>
+  );
+}
+```
+
+Start your app, open another browser tab, and watch the data sync in real-time.
+
+For a more detailed tutorial, check out this guide on [building a real-time todo app with Triplit, Vite, and React](https://www.triplit.dev/docs/react-tutorial).
+
 # Contact us
 
 If you're interested in getting early access to Triplit Cloud (currently in developer preview), sign up [here](https://www.triplit.dev/waitlist) to join the waitlist.
