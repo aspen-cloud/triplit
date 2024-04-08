@@ -110,7 +110,7 @@ const client = new TriplitClient({
 });
 
 function App() {
-  const { data } = useQuery(client.query('todos'));
+  const { results: todos } = useQuery(client.query('todos'));
 
   return (
     <div>
