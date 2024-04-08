@@ -96,7 +96,7 @@ VITE_TRIPLIT_SERVER_URL=http://localhost:6543
 VITE_TRIPLIT_TOKEN=copied-in-from-triplit-dev
 ```
 
-Define a [query](https://www.triplit.dev/docs/fetching-data/queries) in your App (React example):
+Define a [query](https://www.triplit.dev/docs/fetching-data/queries) in your App (React example below):
 
 ```tsx
 import { TriplitClient } from '@triplit/client';
@@ -131,7 +131,7 @@ function App() {
 
 Start your app, open another browser tab, and watch the data sync in real-time.
 
-For a more detailed tutorial, check out this guide on [building a real-time todo app with Triplit, Vite, and React](https://www.triplit.dev/docs/react-tutorial).
+Read the full docs [here](https://www.triplit.dev/docs). For a more detailed tutorial, check out this guide on [building a real-time todo app with Triplit, Vite, and React](https://www.triplit.dev/docs/react-tutorial).
 
 # Contact us
 
