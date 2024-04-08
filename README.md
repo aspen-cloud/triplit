@@ -53,20 +53,20 @@ In `triplit/packages` you can find the various projects that power Triplit:
 
 # Quick Start
 
-Start a new project:
+Start a new project.
 
 ```bash
 npm create triplit-app@latest my-app
 ```
 
-Or add the dependencies to an existing project:
+Or add the dependencies to an existing project.
 
 ```bash
 npm install --save-dev @triplit/cli
 npm run triplit init
 ```
 
-Define a [schema](https://www.triplit.dev/docs/database/schemas) in `my-app/triplit/schema.ts`
+Define a [schema](https://www.triplit.dev/docs/database/schemas) in `my-app/triplit/schema.ts`.
 
 ```ts
 import { Schema as S } from '@triplit/db';
@@ -83,27 +83,31 @@ export const schema = {
 } satisfies ClientSchema;
 ```
 
-Start the Triplit development [sync server](https://www.triplit.dev/docs/syncing-data):
+Start the Triplit development [sync server](https://www.triplit.dev/docs/syncing-data).
 
 ```bash
 npm run triplit dev --initWithSchema
 ```
 
-This will output some important [environmental variables](https://www.triplit.dev/docs/local-development#additional-environment-variables) that your app will need to sync with the server. Add them to your `.env` file (Vite example below):
+This will output some important [environmental variables](https://www.triplit.dev/docs/local-development#additional-environment-variables) that your app will need to sync with the server. Add them to your `.env` file (Vite example below).
 
 ```bash
 VITE_TRIPLIT_SERVER_URL=http://localhost:6543
 VITE_TRIPLIT_TOKEN=copied-in-from-triplit-dev
 ```
 
-Define a [query](https://www.triplit.dev/docs/fetching-data/queries) in your App (React example below):
+Define a [query](https://www.triplit.dev/docs/fetching-data/queries) in your App (React example below).
 
 ```tsx
 import { TriplitClient } from '@triplit/client';
 import { useQuery } from '@triplit/react';
 import { schema } from '../triplit/schema';
 
-const client = new TriplitClient({ schema });
+const client = new TriplitClient({
+  schema,
+  serverUrl: import.meta.env.VITE_TRIPLIT_SERVER_URL,
+  token: import.meta.env.VITE_TRIPLIT_TOKEN,
+});
 
 function App() {
   const { data } = useQuery(client.query('todos'));
