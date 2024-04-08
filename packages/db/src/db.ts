@@ -822,8 +822,8 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
           if (unsubscribed) return;
           onError?.(...args);
         },
-        schema,
         {
+          schema,
           cache: noCache ? undefined : this.cache,
           skipRules: options.skipRules,
           stateVector: options.stateVector,
@@ -865,8 +865,8 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
         subscriptionQuery,
         (tripMap) => onResults([...tripMap.values()].flat()),
         onError,
-        schema,
         {
+          schema,
           skipRules: options.skipRules,
           stateVector: options.stateVector,
           cache: noCache ? undefined : this.cache,

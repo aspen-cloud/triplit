@@ -82,8 +82,8 @@ export class VariableAwareCache<Schema extends Models<any, any>> {
           console.error('error in view', err);
           this.cache.delete(id);
         },
-        schema,
         {
+          schema,
           skipRules: true,
         }
       );

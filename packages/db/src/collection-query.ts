@@ -133,17 +133,6 @@ export type FetchResultEntity<C extends CollectionQuery<any, any>> =
       : any
     : never;
 
-export interface FetchOptions {
-  schema?: Models<any, any>;
-  skipRules?: boolean;
-}
-
-interface SubscriptionOptions {
-  cache?: VariableAwareCache<any>;
-  skipRules?: boolean;
-  stateVector?: Map<string, number>;
-}
-
 function getIdFilterFromQuery(query: CollectionQuery<any, any>): string | null {
   const { where, entityId, collectionName } = query;
 
@@ -411,7 +400,12 @@ async function getTriplesAfterStateVector(
 export async function fetchDeltaTriples<
   M extends Models<any, any> | undefined,
   Q extends CollectionQuery<M, any>
->(tx: TripleStoreApi, query: Q, newTriples: TripleRow[], schema?: M) {
+>(
+  tx: TripleStoreApi,
+  query: Q,
+  newTriples: TripleRow[],
+  options: FetchFromStorageOptions = {}
+) {
   const queryPermutations = generateQueryRootPermutations(
     replaceVariablesInQuery(query)
   );
@@ -454,14 +448,14 @@ export async function fetchDeltaTriples<
         doesEntityObjMatchWhere(
           entityBeforeStateVector,
           q.where,
-          schema && schema[q.collectionName]?.schema
+          options.schema && options.schema[q.collectionName]?.schema
         );
       const matchesSimpleFiltersAfter =
         !!entityAfterStateVector &&
         doesEntityObjMatchWhere(
           entityAfterStateVector,
           q.where,
-          schema && schema[q.collectionName]?.schema
+          options.schema && options.schema[q.collectionName]?.schema
         );
       if (!matchesSimpleFiltersBefore && !matchesSimpleFiltersAfter) {
         continue;
@@ -480,8 +474,10 @@ export async function fetchDeltaTriples<
               vars: {
                 ...q.vars,
                 ...subQuery.vars,
-                ...(schema
-                  ? schema![q.collectionName].schema?.convertDBValueToJS(
+                ...(options.schema
+                  ? options.schema![
+                      q.collectionName
+                    ].schema?.convertDBValueToJS(
                       timestampedObjectToPlainObject(
                         entityBeforeStateVector,
                         true
@@ -493,7 +489,7 @@ export async function fetchDeltaTriples<
                     )),
               },
             } as CollectionQuery<M, any>,
-            { schema }
+            options
           );
           if (subQueryResult.results === null) {
             matchesBefore = false;
@@ -512,8 +508,10 @@ export async function fetchDeltaTriples<
               vars: {
                 ...q.vars,
                 ...subQuery.vars,
-                ...(schema
-                  ? schema![q.collectionName].schema?.convertDBValueToJS(
+                ...(options.schema
+                  ? options.schema![
+                      q.collectionName
+                    ].schema?.convertDBValueToJS(
                       timestampedObjectToPlainObject(
                         entityAfterStateVector as any,
                         true
@@ -525,7 +523,7 @@ export async function fetchDeltaTriples<
                     )),
               },
             } as CollectionQuery<M, any>,
-            { schema }
+            options
           );
           if (subQueryResult.results === null) {
             matchesAfter = false;
@@ -739,7 +737,7 @@ function ApplyBasicFilters<
   Q extends CollectionQuery<M, any>
 >(
   query: Q,
-  options: InternalFetchOptions
+  options: FetchFromStorageOptions
 ): FilterFunc<[string, QueryPipelineData]> {
   const { where, collectionName } = query;
   const collectionSchema = options.schema?.[collectionName]?.schema;
@@ -759,7 +757,7 @@ function ApplyExistsFilters<
 >(
   tx: TripleStoreApi,
   query: Q,
-  options: InternalFetchOptions
+  options: FetchFromStorageOptions
 ): FilterFunc<[string, QueryPipelineData]> {
   const { where, collectionName } = query;
   const { schema, cache, skipRules, stateVector } = options;
@@ -857,7 +855,7 @@ function loadOrderRelationships<
 >(
   tx: TripleStoreApi,
   query: Q,
-  options: InternalFetchOptions
+  options: FetchFromStorageOptions
 ): MapFunc<[string, QueryPipelineData], [string, QueryPipelineData]> {
   const { order, collectionName } = query;
   const { schema, skipRules, cache, stateVector } = options;
@@ -944,7 +942,7 @@ function LoadIncludeRelationships<
 >(
   tx: TripleStoreApi,
   query: Q,
-  options: InternalFetchOptions
+  options: FetchFromStorageOptions
 ): MapFunc<[string, QueryPipelineData], [string, QueryPipelineData]> {
   const { select, collectionName } = query;
   const { schema, skipRules, cache, stateVector } = options;
@@ -994,13 +992,15 @@ function LoadIncludeRelationships<
 }
 
 // TODO: rename, also maybe rename Fetch
-type InternalFetchOptions = FetchOptions & {
+type FetchFromStorageOptions = {
+  schema?: Models<any, any>;
+  skipRules?: boolean;
   cache?: VariableAwareCache<any>;
   stateVector?: Map<string, number>;
 };
 
 /**
- * Fetch
+ * fetch
  * @summary This function is used to fetch entities from the database. It can be used to fetch a single entity or a collection of entities.
  * @description This function tries to consult TripleStore indexes to efficiently fetch entities. If the query is not supported by the indexes, it will fall back to scanning the entire database.
  * This can happen for queries that use multiple order clauses, LIKE filters, etc.
@@ -1014,7 +1014,7 @@ export async function fetch<
 >(
   tx: TripleStoreApi,
   query: Q,
-  options: InternalFetchOptions = {}
+  options: FetchFromStorageOptions = {}
 ): Promise<{
   results: TimestampedFetchResult<Q>;
   triples: Map<string, TripleRow[]>;
@@ -1161,21 +1161,13 @@ export async function fetchOne<
 >(
   tx: TripleStoreApi,
   query: Q,
-  {
-    schema,
-    cache,
-  }: FetchOptions & {
-    cache?: VariableAwareCache<any>;
-  } = {}
+  options: FetchFromStorageOptions = {}
 ): Promise<{
   results: FetchResultEntity<Q> | null;
   triples: Map<string, TripleRow[]>;
 }> {
   query = { ...query, limit: 1 };
-  const fetchResult = await fetch(tx, query, {
-    schema,
-    cache,
-  });
+  const fetchResult = await fetch(tx, query, options);
   const { results, triples } = fetchResult;
   return {
     results: [...results.values()][0] ?? null,
@@ -1388,30 +1380,30 @@ function subscribeSingleEntity<
     args: [results: FetchResult<Q>, newTriples: Map<string, TripleRow[]>]
   ) => void | Promise<void>,
   onError?: (error: any) => void | Promise<void>,
-  schema?: M,
-  options: SubscriptionOptions = {}
+  options: FetchFromStorageOptions = {}
 ) {
   const asyncUnSub = async () => {
     const { collectionName, entityId, select } = query;
     let entity: any;
     let triples: Map<string, TripleRow[]> = new Map();
-    const collectionSchema = schema && schema[query.collectionName]?.schema;
+    const collectionSchema =
+      options.schema && options.schema[query.collectionName]?.schema;
     try {
       if (!entityId) throw new EntityIdMissingError();
       const internalEntityId = appendCollectionToId(collectionName, entityId);
-      const fetchResult = await fetch<M, Q>(tripleStore, query, {
-        schema,
-        skipRules: options.skipRules,
-        stateVector: options.stateVector,
-        cache: options.cache,
-      });
+      const fetchResult = await fetch<M, Q>(tripleStore, query, options);
       entity = fetchResult.results.has(entityId)
         ? fetchResult.results.get(entityId)
         : null;
       triples = fetchResult.triples;
       const results = new Map(
         entity
-          ? [[entityId, convertEntityToJS(entity, schema, collectionName)]]
+          ? [
+              [
+                entityId,
+                convertEntityToJS(entity, options.schema, collectionName),
+              ],
+            ]
           : []
       ) as FetchResult<Q>;
 
@@ -1442,8 +1434,10 @@ function subscribeSingleEntity<
             // if we have deletes, need to re-fetch the entity
             if (entityDeletes.length) {
               const fetchResult = await fetch<M, Q>(tripleStore, query, {
-                schema,
+                schema: options.schema,
                 cache: options.cache,
+                skipRules: options.skipRules,
+                // TODO: do we need to pass state vector here?
               });
               entity = fetchResult.results.has(entityId)
                 ? fetchResult.results.get(entityId)
@@ -1487,15 +1481,15 @@ function subscribeSingleEntity<
                     ...subquery.vars,
                     ...extractSubqueryVarsFromEntity(
                       entity,
-                      schema,
+                      options.schema,
                       collectionName
                     ),
                   };
                   let fullSubquery = {
                     ...subquery,
                     vars: combinedVars,
-                  } as CollectionQuery<typeof schema, any>;
-                  fullSubquery = prepareQuery(fullSubquery, schema, {
+                  } as CollectionQuery<M, any>;
+                  fullSubquery = prepareQuery(fullSubquery, options.schema, {
                     skipRules: options.skipRules,
                   });
                   const subqueryResult =
@@ -1504,18 +1498,20 @@ function subscribeSingleEntity<
                           tripleStore,
                           fullSubquery,
                           {
-                            schema,
+                            schema: options.schema,
                             skipRules: options.skipRules,
                             cache: options.cache,
+                            // TODO: do we need to pass state vector here?
                           }
                         )
                       : await fetch<M, typeof subquery>(
                           tripleStore,
                           fullSubquery,
                           {
-                            schema,
+                            schema: options.schema,
                             skipRules: options.skipRules,
                             cache: options.cache,
+                            // TODO: do we need to pass state vector here?
                           }
                         );
                   entity[attributeName] = subqueryResult.results;
@@ -1529,7 +1525,7 @@ function subscribeSingleEntity<
               }
               results.set(
                 entityId,
-                convertEntityToJS(entity, schema, collectionName) as any
+                convertEntityToJS(entity, options.schema, collectionName) as any
               );
             } else {
               results.delete(entityId);
@@ -1566,8 +1562,7 @@ export function subscribeResultsAndTriples<
     args: [results: FetchResult<Q>, newTriples: Map<string, TripleRow[]>]
   ) => void | Promise<void>,
   onError?: (error: any) => void | Promise<void>,
-  schema?: M,
-  options: SubscriptionOptions = {}
+  options: FetchFromStorageOptions = {}
 ) {
   const { select, order, limit } = query;
   const queryWithInsertedVars = replaceVariablesInQuery(query);
@@ -1577,12 +1572,7 @@ export function subscribeResultsAndTriples<
     let triples: Map<string, TripleRow[]> = new Map();
     let unsub = () => {};
     try {
-      const fetchResult = await fetch<M, Q>(tripleStore, query, {
-        schema,
-        skipRules: options.skipRules,
-        stateVector: options.stateVector,
-        cache: options.cache,
-      });
+      const fetchResult = await fetch<M, Q>(tripleStore, query, options);
       results = fetchResult.results;
       triples = fetchResult.triples;
       unsub = tripleStore.onWrite(async (storeWrites) => {
@@ -1595,14 +1585,19 @@ export function subscribeResultsAndTriples<
             (order &&
               order.some(
                 (o) =>
-                  schema &&
-                  identifierIncludesRelation(o[0], schema, query.collectionName)
+                  options.schema &&
+                  identifierIncludesRelation(
+                    o[0],
+                    options.schema,
+                    query.collectionName
+                  )
               ))
           ) {
             const fetchResult = await fetch<M, Q>(tripleStore, query, {
-              schema,
+              schema: options.schema,
               skipRules: options.skipRules,
               cache: options.cache,
+              // TODO: do we need to pass state vector here?
             });
             results = fetchResult.results;
             triples = fetchResult.triples;
@@ -1610,7 +1605,11 @@ export function subscribeResultsAndTriples<
               new Map(
                 [...results].map(([id, entity]) => [
                   id,
-                  convertEntityToJS(entity, schema, query.collectionName),
+                  convertEntityToJS(
+                    entity,
+                    options.schema,
+                    query.collectionName
+                  ),
                 ])
               ) as FetchResult<Q>,
               triples,
@@ -1693,7 +1692,7 @@ export function subscribeResultsAndTriples<
               doesEntityObjMatchWhere(
                 entityObj,
                 where ?? [],
-                schema && schema[query.collectionName]?.schema
+                options.schema && options.schema[query.collectionName]?.schema
               ) &&
               entityMatchesAfter(entityObj, query);
 
@@ -1759,7 +1758,7 @@ export function subscribeResultsAndTriples<
                 tripleStore,
                 backFillQuery,
                 {
-                  schema,
+                  schema: options.schema,
                   skipRules: options.skipRules,
                   // State vector needed in backfill?
                   cache: options.cache,
@@ -1785,7 +1784,7 @@ export function subscribeResultsAndTriples<
             new Map(
               [...results].map(([id, entity]) => [
                 id,
-                convertEntityToJS(entity, schema, query.collectionName),
+                convertEntityToJS(entity, options.schema, query.collectionName),
               ])
             ) as FetchResult<Q>,
             triples,
@@ -1799,7 +1798,7 @@ export function subscribeResultsAndTriples<
         new Map(
           [...results].map(([id, entity]) => [
             id,
-            convertEntityToJS(entity, schema, query.collectionName),
+            convertEntityToJS(entity, options.schema, query.collectionName),
           ])
         ) as FetchResult<Q>,
         triples,
@@ -1827,8 +1826,7 @@ export function subscribe<
   query: Q,
   onResults: (results: FetchResult<Q>) => void | Promise<void>,
   onError?: (error: any) => void | Promise<void>,
-  schema?: M,
-  options: SubscriptionOptions = {}
+  options: FetchFromStorageOptions = {}
 ) {
   if (query.entityId) {
     return subscribeSingleEntity(
@@ -1836,7 +1834,6 @@ export function subscribe<
       query,
       ([results]) => onResults(results),
       onError,
-      schema,
       options
     );
   }
@@ -1845,7 +1842,6 @@ export function subscribe<
     query,
     ([results]) => onResults(results),
     onError,
-    schema,
     options
   );
 }
@@ -1858,8 +1854,7 @@ export function subscribeTriples<
   query: Q,
   onResults: (results: Map<string, TripleRow[]>) => void | Promise<void>,
   onError?: (error: any) => void | Promise<void>,
-  schema?: M,
-  options: SubscriptionOptions = {}
+  options: FetchFromStorageOptions = {}
 ) {
   if (query.entityId) {
     return subscribeSingleEntity(
@@ -1867,7 +1862,6 @@ export function subscribeTriples<
       query,
       ([_results, triples]) => onResults(triples),
       onError,
-      schema,
       options
     );
   }
@@ -1884,7 +1878,7 @@ export function subscribeTriples<
           tripleStore,
           query,
           triplesAfterStateVector,
-          schema
+          options
         );
         triples = deltaTriples.reduce((acc, t) => {
           if (acc.has(t.id)) {
@@ -1896,9 +1890,10 @@ export function subscribeTriples<
         }, new Map<string, TripleRow[]>());
       } else {
         const fetchResult = await fetch<M, Q>(tripleStore, query, {
-          schema,
+          schema: options.schema,
           stateVector: options.stateVector,
           cache: options.cache,
+          // TODO: do we need to pass state vector here?
         });
         triples = fetchResult.triples;
       }
@@ -1911,7 +1906,7 @@ export function subscribeTriples<
           tripleStore,
           query,
           allInserts,
-          schema
+          options
         );
 
         const triplesMap = deltaTriples.reduce((acc, t) => {

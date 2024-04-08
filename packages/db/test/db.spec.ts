@@ -7344,9 +7344,7 @@ describe('delta querying', async () => {
           serverDB.tripleStore,
           fetchQuery,
           addedTriples,
-          (
-            await serverDB.getSchema()
-          )?.collections
+          { schema: (await serverDB.getSchema())?.collections }
         );
 
         await clientDB.tripleStore.insertTriples(deltaTriples);
