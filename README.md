@@ -44,7 +44,8 @@ In `triplit/packages` you can find the various projects that power Triplit:
 - [Client](https://github.com/aspen-cloud/triplit/tree/main/packages/client) - Browser library to interact with local and remote TriplitDBs.
 - [CLI](https://github.com/aspen-cloud/triplit/tree/main/packages/cli) - CLI tool with commands to scaffold a project, run the full-stack development environment, migrate a server, and more.
 - [React](https://github.com/aspen-cloud/triplit/tree/main/packages/react) - React bindings for @triplit/client.
-- [Console](https://github.com/aspen-cloud/triplit/tree/main/packages/console) - React app for viewing and mutating data in Triplit projects and managing their schemas.
+- [Svelte](https://github.com/aspen-cloud/triplit/tree/main/packages/svelte) - Svelte bindings for @triplit/client.
+- [Console](https://github.com/aspen-cloud/triplit/tree/main/packages/console) - App for viewing and mutating data in Triplit projects and managing their schemas.
 - [Server](https://github.com/aspen-cloud/triplit/tree/main/packages/server) - Node server for syncing data between Triplit clients.
 - [Server-core](https://github.com/aspen-cloud/triplit/tree/main/packages/server-core) - Protocol agnostic library for building servers running Triplit.
 - [Docs](https://github.com/aspen-cloud/triplit/tree/main/packages/docs) - Triplit docs, built with Nextra.
