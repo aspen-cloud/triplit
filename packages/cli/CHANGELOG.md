@@ -1,5 +1,11 @@
 # @triplit/cli
 
+## 0.3.44
+
+### Patch Changes
+
+- @triplit/console@0.3.41
+
 ## 0.3.43
 
 ### Patch Changes
