@@ -27,8 +27,7 @@ export function useQuery<
   >(undefined);
   const [fetching, setFetching] = useState(true);
   const [fetchingRemote, setFetchingRemote] = useState(
-    // client.syncEngine.connectionStatus === 'OPEN'
-    false
+    client.syncEngine.connectionStatus !== 'CLOSED'
   );
   const [error, setError] = useState<any>(undefined);
   const hasResponseFromServer = useRef(false);
@@ -175,24 +174,43 @@ export function useInfiniteQuery<
   options?: Partial<SubscriptionOptions>
 ) {
   const builtQuery = useMemo(() => query.build(), [query]);
+  const stringifiedQuery = builtQuery && JSON.stringify(builtQuery);
   const [hasMore, setHasMore] = useState(false);
   const [results, setResults] = useState<
     ClientFetchResult<ClientQuery<M, CN>> | undefined
   >(undefined);
   const [error, setError] = useState<any>(undefined);
   const [fetching, setFetching] = useState(true);
-  const [fetchingRemote, setFetchingRemote] = useState(true);
+  const [fetchingRemote, setFetchingRemote] = useState(
+    client.syncEngine.connectionStatus !== 'CLOSED'
+  );
   const [fetchingMore, setFetchingMore] = useState(false);
 
   const loadMoreRef = useRef<() => void>();
   const disconnectRef = useRef<() => void>();
+  const hasResponseFromServer = useRef(false);
+
+  useEffect(() => {
+    const unsub = client.onConnectionStatusChange((status) => {
+      if (status === 'CLOSING' || status === 'CLOSED') {
+        setFetchingRemote(false);
+        return;
+      }
+      if (status === 'OPEN' && hasResponseFromServer.current === false) {
+        setFetchingRemote(true);
+        return;
+      }
+    }, true);
+    return () => {
+      unsub();
+    };
+  }, [stringifiedQuery, client]);
 
   useEffect(() => {
     const { unsubscribe, loadMore } = client.subscribeWithExpand(
       builtQuery,
       (results, info) => {
         setFetching(false);
-        setFetchingRemote(info.hasRemoteFulfilled);
         setError(undefined);
         setFetchingMore(false);
         setHasMore(info.hasMore);
@@ -204,7 +222,13 @@ export function useInfiniteQuery<
         setFetchingMore(false);
         setError(error);
       },
-      options
+      {
+        ...(options ?? {}),
+        onRemoteFulfilled: () => {
+          hasResponseFromServer.current = true;
+          setFetchingRemote(false);
+        },
+      }
     );
     loadMoreRef.current = loadMore;
     disconnectRef.current = unsubscribe;

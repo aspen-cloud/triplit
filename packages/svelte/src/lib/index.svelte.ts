@@ -27,7 +27,7 @@ export function useQuery<
   let results: ClientFetchResult<ClientQuery<M, CN>> | undefined =
     $state(undefined);
   let fetching = $state(false);
-  let fetchingRemote = $state(client.syncEngine.connectionStatus === 'OPEN');
+  let fetchingRemote = $state(client.syncEngine.connectionStatus !== 'CLOSED');
   let error: any = $state(undefined);
   let hasResponseFromServer = false;
   let builtQuery = $state(query && query.build());
