@@ -1,5 +1,11 @@
 # @triplit/svelte
 
+## 0.1.8
+
+### Patch Changes
+
+- a74030c: fixup fetchingRemote
+
 ## 0.1.7
 
 ### Patch Changes

@@ -1,5 +1,12 @@
 # @triplit/console
 
+## 0.3.41
+
+### Patch Changes
+
+- Updated dependencies [a74030c]
+  - @triplit/react@0.3.38
+
 ## 0.3.40
 
 ### Patch Changes

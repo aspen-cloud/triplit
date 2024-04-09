@@ -1,5 +1,11 @@
 # @triplit/react
 
+## 0.3.38
+
+### Patch Changes
+
+- a74030c: fixup fetchingRemote
+
 ## 0.3.37
 
 ### Patch Changes
