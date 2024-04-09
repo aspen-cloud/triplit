@@ -100,7 +100,7 @@ export function useQuery<
 }
 
 export function useConnectionStatus(client: TriplitClient<any>) {
-  let status = $state(client.syncEngine.connectionStatus);
+  let status = $state('CONNECTING');
 
   $effect(() => {
     const unsub = client.syncEngine.onConnectionStatusChange((newStatus) => {
