@@ -4,12 +4,17 @@
   "private": true,
   "type": "module",
   "version": "0.3.32",
+  "scripts": {
+    "start": "node ./run.js",
+    "build": "./scripts/build.sh",
+    "publish": "./scripts/publish.sh",
+    "check-and-publish": "node ./scripts/check-and-publish.js"
+  },
   "dependencies": {
     "@triplit/server": "0.3.32"
   },
-  "scripts": {
-    "start": "node ./run.js",
-    "build": "docker build . -t aspencloud/triplit-db:latest",
-    "release": "docker push aspencloud/triplit-db:latest"
+  "devDependencies": {
+    "@types/semver": "^7",
+    "semver": "^7.6.0"
   }
 }
