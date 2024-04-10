@@ -101,7 +101,7 @@ export default Command({
     const projectId = flags.projectId ?? config.id;
     try {
       const response = await axios.post(
-        `${MANAGEMENT_API_URL}/deploy/${flags.projectId ?? config.id}`,
+        `${MANAGEMENT_API_URL}/user/deploy/${flags.projectId ?? config.id}`,
         result.outputFiles[0].text,
         {
           headers: {
