@@ -2,6 +2,7 @@
   "name": "node-server",
   "packageManager": "yarn@3.4.1",
   "type": "module",
+  "version": "0.3.32",
   "dependencies": {
     "@triplit/server": "^0.3.32"
   },
