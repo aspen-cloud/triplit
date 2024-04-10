@@ -1,0 +1,13 @@
+{
+  "name": "node-server",
+  "packageManager": "yarn@3.4.1",
+  "type": "module",
+  "dependencies": {
+    "@triplit/server": "^0.3.32"
+  },
+  "scripts": {
+    "start": "node ./run.js",
+    "build": "docker build . -t aspencloud/triplit-db:latest",
+    "release": "docker push aspencloud/triplit-db:latest"
+  }
+}

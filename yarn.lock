@@ -4864,7 +4864,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@triplit/server@workspace:^, @triplit/server@workspace:packages/server":
+"@triplit/server@^0.3.32, @triplit/server@workspace:^, @triplit/server@workspace:packages/server":
   version: 0.0.0-use.local
   resolution: "@triplit/server@workspace:packages/server"
   dependencies:
@@ -14812,6 +14812,14 @@ __metadata:
   checksum: 59443a2f77acac854c42d321bf1b43dea0aef55cd544c6a686e9816a697300458d4e82239e2d794ea05f7bbbc8a94500332e2d3ac3f11f52e4b16cbe638b3c41
   languageName: node
   linkType: hard
+
+"node-server@workspace:packages/node-server":
+  version: 0.0.0-use.local
+  resolution: "node-server@workspace:packages/node-server"
+  dependencies:
+    "@triplit/server": ^0.3.32
+  languageName: unknown
+  linkType: soft
 
 "non-layered-tidy-tree-layout@npm:^2.0.2":
   version: 2.0.2

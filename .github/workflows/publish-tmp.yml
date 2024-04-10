@@ -1,0 +1,37 @@
+name: Publish TEMP
+on:
+  push:
+    branches:
+      - 'we/docker'
+
+concurrency: ${{ github.workflow }}-${{ github.ref }}
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 16.x
+          cache: 'yarn'
+
+      - name: Setup .yarnrc.yml
+        run: |
+          yarn config set npmAuthToken $NPM_TOKEN
+          yarn config set npmAlwaysAuth true
+        env:
+          NPM_TOKEN: ${{ secrets.CI_NPM_TOKEN }}
+
+      - name: Install
+        run: yarn install --immutable
+
+      - name: Create Release Pull Request or Publish
+        id: changesets
+        uses: changesets/action@v1
+        with:
+          version: yarn run version
+          publish: yarn run release:packages
+        env:
+          NPM_TOKEN: ${{ secrets.CI_NPM_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.CI_ACCESS_TOKEN }}
