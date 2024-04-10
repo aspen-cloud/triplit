@@ -1,5 +1,11 @@
 # @triplit/db
 
+## 0.3.30
+
+### Patch Changes
+
+- 557e263: Testing for branch
+
 ## 0.3.29
 
 ### Patch Changes
