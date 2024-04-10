@@ -8,7 +8,7 @@
     "start": "node ./run.js",
     "build": "./scripts/build.sh",
     "publish": "./scripts/publish.sh",
-    "check-and-publish": "node ./scripts/check-and-publish.js"
+    "check-and-publish": "node ./scripts/docker-check-version-and-publish.js"
   },
   "dependencies": {
     "@triplit/server": "0.3.32"
