@@ -4864,7 +4864,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@triplit/server@^0.3.32, @triplit/server@workspace:^, @triplit/server@workspace:packages/server":
+"@triplit/server@0.3.32, @triplit/server@workspace:^, @triplit/server@workspace:packages/server":
   version: 0.0.0-use.local
   resolution: "@triplit/server@workspace:packages/server"
   dependencies:
@@ -14817,7 +14817,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "node-server@workspace:packages/node-server"
   dependencies:
-    "@triplit/server": ^0.3.32
+    "@triplit/server": 0.3.32
   languageName: unknown
   linkType: soft
 
