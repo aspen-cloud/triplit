@@ -294,44 +294,46 @@ export async function findByClientTimestamp(
   scanDirection: 'lt' | 'lte' | 'gt' | 'gte' | 'eq',
   timestamp: Timestamp | undefined
 ) {
-  const indexPrefix = ['clientTimestamp', clientId];
-  if (scanDirection === 'lt') {
-    if (!timestamp) return [];
-    return await scanToTriples(tx, {
-      prefix: indexPrefix,
-      lt: [timestamp],
-    });
+  if (!timestamp && !scanDirection.startsWith('gt')) {
+    return [];
   }
-  if (scanDirection === 'lte') {
-    if (!timestamp) return [];
-    return await scanToTriples(tx, {
-      prefix: indexPrefix,
-      lte: [[...timestamp, MAX]],
-    });
+  let scanParams: Parameters<MultiTupleStoreOrTransaction['scan']>[0];
+  switch (scanDirection) {
+    case 'lt':
+      scanParams = {
+        lt: [timestamp!],
+      };
+      break;
+    case 'lte':
+      scanParams = {
+        lte: [[...timestamp!, MAX]],
+      };
+      break;
+    case 'gt':
+      scanParams = {
+        gt: [[...(timestamp ?? []), MIN]],
+      };
+      break;
+    case 'gte':
+      scanParams = {
+        gte: [[...(timestamp ?? [])]],
+      };
+      break;
+    case 'eq':
+      scanParams = {
+        gte: [timestamp!],
+        lt: [[...timestamp!, MAX]],
+      };
+      break;
+    default:
+      throw new InvalidTimestampIndexScanError(
+        `Cannot perform a scan with direction ${scanDirection}.`
+      );
   }
-  if (scanDirection === 'gt') {
-    return scanToTriples(tx, {
-      prefix: indexPrefix,
-      gt: [[...(timestamp ?? []), MIN]],
-    });
-  }
-  if (scanDirection === 'gte') {
-    return scanToTriples(tx, {
-      prefix: indexPrefix,
-      gte: [[...(timestamp ?? [])]],
-    });
-  }
-  if (scanDirection === 'eq') {
-    if (!timestamp) return [];
-    return await scanToTriples(tx, {
-      prefix: indexPrefix,
-      gte: [timestamp],
-      lt: [[...timestamp, MAX]],
-    });
-  }
-  throw new InvalidTimestampIndexScanError(
-    `Cannot perfom a scan with direction ${scanDirection}.`
-  );
+  return await scanToTriples(tx, {
+    prefix: ['clientTimestamp', clientId],
+    ...scanParams,
+  });
 }
 
 export async function findMaxClientTimestamp(
