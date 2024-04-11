@@ -253,7 +253,10 @@ export class Entity {
     }
 
     const [_collectionName, ...path] = attribute;
-    const pointer = '/' + path.join('/');
+    const escapedPath = path.map((part) =>
+      part.toString().replaceAll('/', '~')
+    );
+    const pointer = '/' + escapedPath.join('/');
 
     this.tripleHistory[pointer]
       ? this.tripleHistory[pointer].push(triple)
@@ -353,7 +356,7 @@ export namespace EntityPointer {
   }
   /** Formats the given pointer into navigable key components */
   export function* Format(pointer: string): IterableIterator<string> {
-    if (pointer === '') return;
+    if (pointer === '') throw new Error(`Invalid pointer: "${pointer}"`);
     let [start, end] = [0, 0];
     for (let i = 0; i < pointer.length; i++) {
       const char = pointer.charAt(i);
