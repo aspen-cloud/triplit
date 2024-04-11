@@ -2008,6 +2008,17 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@fast-check/vitest@npm:^0.1.0":
+  version: 0.1.0
+  resolution: "@fast-check/vitest@npm:0.1.0"
+  dependencies:
+    fast-check: ^3.0.0
+  peerDependencies:
+    vitest: ">=0.28.1 <1.0.0 || ^1"
+  checksum: 0d21643e6eb0514e826120d8d99cb085f593a9d15e92617390a49f17c2120aa401148352a2a19a12586b77c93d3c1bc43c230ece68ce70cc23cf44b97e9ed72a
+  languageName: node
+  linkType: hard
+
 "@firebase/analytics-compat@npm:0.2.6":
   version: 0.2.6
   resolution: "@firebase/analytics-compat@npm:0.2.6"
@@ -4819,6 +4830,7 @@ __metadata:
   resolution: "@triplit/db@workspace:packages/db"
   dependencies:
     "@cloudflare/workers-types": ^4.20240129.0
+    "@fast-check/vitest": ^0.1.0
     "@sinclair/typebox": ^0.32.15
     "@stryker-mutator/core": ^7.3.0
     "@stryker-mutator/vitest-runner": ^7.3.0
@@ -4827,6 +4839,7 @@ __metadata:
     "@vitest/coverage-c8": ^0.29.2
     "@vitest/coverage-v8": ^0.33.0
     "@vitest/ui": ^0.33.0
+    fast-check: ^3.16.0
     idb: ^7.1.1
     nanoid: ^3.0.0
     pino: ^8.11.0
@@ -10123,6 +10136,15 @@ __metadata:
     iconv-lite: ^0.4.24
     tmp: ^0.0.33
   checksum: 1c2a616a73f1b3435ce04030261bed0e22d4737e14b090bb48e58865da92529c9f2b05b893de650738d55e692d071819b45e1669259b2b354bc3154d27a698c7
+  languageName: node
+  linkType: hard
+
+"fast-check@npm:^3.0.0, fast-check@npm:^3.16.0":
+  version: 3.16.0
+  resolution: "fast-check@npm:3.16.0"
+  dependencies:
+    pure-rand: ^6.0.0
+  checksum: 4917b09a74049cc123b68477971215a0f3427e20a436fa1877c696b2506e37ef956493b18ee03a40bfae2a78e75b0e8936d63dd94e8d21c32df48058a65d6056
   languageName: node
   linkType: hard
 
@@ -15923,6 +15945,13 @@ __metadata:
   version: 2.3.0
   resolution: "punycode@npm:2.3.0"
   checksum: 39f760e09a2a3bbfe8f5287cf733ecdad69d6af2fe6f97ca95f24b8921858b91e9ea3c9eeec6e08cede96181b3bb33f95c6ffd8c77e63986508aa2e8159fa200
+  languageName: node
+  linkType: hard
+
+"pure-rand@npm:^6.0.0":
+  version: 6.1.0
+  resolution: "pure-rand@npm:6.1.0"
+  checksum: 8d53bc02bed99eca0b65b505090152ee7e9bd67dd74f8ff32ba1c883b87234067c5bf68d2614759fb217d82594d7a92919e6df80f97885e7b12b42af4bd3316a
   languageName: node
   linkType: hard
 
