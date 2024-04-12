@@ -1,4 +1,4 @@
-import { Tabs, Tab } from 'nextra-theme-docs';
+import { Tabs, Tab, Callout } from 'nextra-theme-docs';
 
 # React
 
@@ -30,7 +30,8 @@ The `useQuery` hook subscribes to the provided query inside your React component
 The result of the hook is an object with the following properties:
 
 - `results`: A Map containing the results of the query, with entity ids as keys and entities as values.
-- `fetching`: A boolean indicating whether the query is currently fetching.
+- `fetching`: A boolean that will be `true` initially, and then turn `false` when either the local fetch returns cached results or if there were no cached results and the remote fetch has completed.
+- `fetchingLocal`: A boolean indicating whether the query is currently fetching from the local cache.
 - `fetchingRemote`: A boolean indicating whether the query is currently fetching from the server.
 - `error`: An error object if the query failed to fetch.
 
@@ -55,6 +56,13 @@ function App() {
   );
 }
 ```
+
+<Callout>
+  If you're looking for the most multi-purpose loading state, `fetching` is the
+  one to use. If you want to ensure that you're only showing the most up-to-date
+  data from the server, you can use `fetchingRemote`. If your app is offline and
+  should only wait for the cache, use `fetchingLocal`.
+</Callout>
 
 ## useEntity
 
