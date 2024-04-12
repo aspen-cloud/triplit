@@ -19,6 +19,7 @@ export function useQuery<
   options?: Partial<SubscriptionOptions>
 ): {
   fetching: boolean;
+  fetchingLocal: boolean;
   fetchingRemote: boolean;
   results: ClientFetchResult<ClientQuery<M, CN>> | undefined;
   error: any;
@@ -26,8 +27,10 @@ export function useQuery<
 } {
   let results: ClientFetchResult<ClientQuery<M, CN>> | undefined =
     $state(undefined);
-  let fetching = $state(false);
+  let isInitialFetch = $state(true);
+  let fetchingLocal = $state(false);
   let fetchingRemote = $state(client.syncEngine.connectionStatus !== 'CLOSED');
+  let fetching = $derived(isInitialFetch && fetchingRemote);
   let error: any = $state(undefined);
   let hasResponseFromServer = false;
   let builtQuery = $state(query && query.build());
@@ -35,11 +38,16 @@ export function useQuery<
   function updateQuery(query: ClientQueryBuilder<M, CN>) {
     builtQuery = query.build();
     results = undefined;
-    fetching = true;
+    fetchingLocal = true;
     hasResponseFromServer = false;
   }
 
   $effect(() => {
+    client.syncEngine
+      .isFirstTimeFetchingQuery(builtQuery)
+      .then((isFirstFetch) => {
+        isInitialFetch = isFirstFetch;
+      });
     const unsub = client.syncEngine.onConnectionStatusChange((status) => {
       if (status === 'CLOSING' || status === 'CLOSED') {
         fetchingRemote = false;
@@ -59,14 +67,14 @@ export function useQuery<
     const unsubscribe = client.subscribe(
       builtQuery,
       (localResults) => {
-        fetching = false;
+        fetchingLocal = false;
         error = undefined;
         results = new Map(localResults) as ClientFetchResult<
           ClientQuery<M, CN>
         >;
       },
       (error) => {
-        fetching = false;
+        fetchingLocal = false;
         error = error;
       },
       {
@@ -85,6 +93,9 @@ export function useQuery<
   return {
     get fetching() {
       return fetching;
+    },
+    get fetchingLocal() {
+      return fetchingLocal;
     },
     get fetchingRemote() {
       return fetchingRemote;

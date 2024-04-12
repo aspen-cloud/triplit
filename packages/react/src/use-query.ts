@@ -18,15 +18,15 @@ export function useQuery<
   options?: Partial<SubscriptionOptions>
 ): {
   fetching: boolean;
+  fetchingLocal: boolean;
   fetchingRemote: boolean;
-  shouldWaitForServer: boolean;
   results: ClientFetchResult<ClientQuery<M, CN>> | undefined;
   error: any;
 } {
   const [results, setResults] = useState<
     ClientFetchResult<ClientQuery<M, CN>> | undefined
   >(undefined);
-  const [fetching, setFetching] = useState(true);
+  const [fetchingLocal, setFetchingLocal] = useState(true);
   const [fetchingRemote, setFetchingRemote] = useState(
     client.syncEngine.connectionStatus !== 'CLOSED'
   );
@@ -35,7 +35,7 @@ export function useQuery<
 
   const hasResponseFromServer = useRef(false);
   const builtQuery = query && query.build();
-  const shouldWaitForServer = isInitialFetch && fetchingRemote;
+  const fetching = fetchingLocal || (isInitialFetch && fetchingRemote);
   const stringifiedQuery = builtQuery && JSON.stringify(builtQuery);
 
   useEffect(() => {
@@ -62,18 +62,18 @@ export function useQuery<
   useEffect(() => {
     if (!client) return;
     setResults(undefined);
-    setFetching(true);
+    setFetchingLocal(true);
     const unsubscribe = client.subscribe(
       builtQuery,
       (localResults) => {
-        setFetching(false);
+        setFetchingLocal(false);
         setError(undefined);
         setResults(
           new Map(localResults) as ClientFetchResult<ClientQuery<M, CN>>
         );
       },
       (error) => {
-        setFetching(false);
+        setFetchingLocal(false);
         setError(error);
       },
       {
@@ -91,9 +91,9 @@ export function useQuery<
   }, [stringifiedQuery, client]);
 
   return {
-    shouldWaitForServer,
     fetching,
     fetchingRemote,
+    fetchingLocal,
     results,
     error,
   };
