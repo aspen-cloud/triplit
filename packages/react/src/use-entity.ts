@@ -20,6 +20,7 @@ export function useEntity<
 ): {
   fetching: boolean;
   fetchingRemote: boolean;
+  fetchingLocal: boolean;
   results: MaybeReturnTypeFromQuery<M, CN> | undefined;
   error: any;
 } {
@@ -40,7 +41,7 @@ export function useEntity<
         );
     }
   }
-  const { fetching, fetchingRemote, results, error } = useQuery(
+  const { fetching, fetchingRemote, fetchingLocal, results, error } = useQuery(
     client,
     query,
     options
@@ -48,6 +49,7 @@ export function useEntity<
   return {
     fetching,
     fetchingRemote,
+    fetchingLocal,
     results: results ? results.get(id) : undefined,
     error,
   };
