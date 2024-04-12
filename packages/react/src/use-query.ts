@@ -19,6 +19,7 @@ export function useQuery<
 ): {
   fetching: boolean;
   fetchingRemote: boolean;
+  shouldWaitForServer: boolean;
   results: ClientFetchResult<ClientQuery<M, CN>> | undefined;
   error: any;
 } {
@@ -30,12 +31,19 @@ export function useQuery<
     client.syncEngine.connectionStatus !== 'CLOSED'
   );
   const [error, setError] = useState<any>(undefined);
-  const hasResponseFromServer = useRef(false);
+  const [isInitialFetch, setIsInitialFetch] = useState(true);
 
+  const hasResponseFromServer = useRef(false);
   const builtQuery = query && query.build();
+  const shouldWaitForServer = isInitialFetch && fetchingRemote;
   const stringifiedQuery = builtQuery && JSON.stringify(builtQuery);
 
   useEffect(() => {
+    client.syncEngine
+      .isFirstTimeFetchingQuery(builtQuery)
+      .then((isFirstFetch) => {
+        setIsInitialFetch(isFirstFetch);
+      });
     const unsub = client.onConnectionStatusChange((status) => {
       if (status === 'CLOSING' || status === 'CLOSED') {
         setFetchingRemote(false);
@@ -83,6 +91,7 @@ export function useQuery<
   }, [stringifiedQuery, client]);
 
   return {
+    shouldWaitForServer,
     fetching,
     fetchingRemote,
     results,

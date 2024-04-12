@@ -287,7 +287,7 @@ export class TriplitClient<M extends ClientSchema | undefined = undefined> {
   ): Promise<ClientFetchResult<CQ>> {
     // ID is currently used to trace the lifecycle of a query/subscription across logs
     // @ts-ignore
-    query.id = query.id ?? Math.random().toString().slice(2);
+    query = addLoggingIdToQuery(query);
 
     const opts = { ...this.defaultFetchOptions.fetch, ...(options ?? {}) };
     if (opts.policy === 'local-only') {
@@ -379,7 +379,7 @@ export class TriplitClient<M extends ClientSchema | undefined = undefined> {
   ): Promise<ClientFetchResultEntity<CQ> | null> {
     // ID is currently used to trace the lifecycle of a query/subscription across logs
     // @ts-ignore
-    query.id = query.id ?? Math.random().toString().slice(2);
+    query = addLoggingIdToQuery(query);
     query = prepareFetchOneQuery(query);
     const result = await this.fetch(query, options);
     const entity = [...result.values()][0];
@@ -476,7 +476,7 @@ export class TriplitClient<M extends ClientSchema | undefined = undefined> {
     const opts: SubscriptionOptions = { localOnly: false, ...(options ?? {}) };
     // ID is currently used to trace the lifecycle of a query/subscription across logs
     // @ts-ignore
-    query.id = query.id ?? Math.random().toString().slice(2);
+    query = addLoggingIdToQuery(query);
     const scope = parseScope(query);
     this.logger.debug('subscribe start', query, scope);
     if (opts.localOnly) {
@@ -861,6 +861,10 @@ export class TriplitClient<M extends ClientSchema | undefined = undefined> {
   ) {
     return this.syncEngine.onConnectionStatusChange(...args);
   }
+}
+
+function addLoggingIdToQuery(query: any) {
+  return { id: Math.random().toString().slice(2), ...query };
 }
 
 function mapServerUrlToSyncOptions(serverUrl: string) {

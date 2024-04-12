@@ -162,20 +162,29 @@ export class SyncEngine {
     return stateVector;
   }
 
+  async isFirstTimeFetchingQuery(query: CollectionQuery<any, any>) {
+    await this.db.ensureMigrated;
+    const hash = this.getQueryHash(query);
+    const state = await this.getQueryState(hash);
+    return state === undefined;
+  }
+
   private async setQueryState(queryId: string, stateVector: Timestamp[]) {
     await this.db.tripleStore.updateMetadataTuples([
       [QUERY_STATE_KEY, [queryId], JSON.stringify(stateVector)],
     ]);
+  }
+  private getQueryHash(params: CollectionQuery<any, any>) {
+    // @ts-expect-error
+    const { id, ...queryParams } = params;
+    return Value.Hash(queryParams).toString();
   }
 
   /**
    * @hidden
    */
   subscribe(params: CollectionQuery<any, any>, onQueryFulfilled?: () => void) {
-    // @ts-expect-error
-    const { id: requestId, ...queryParams } = params;
-    const queryHash = Value.Hash(queryParams).toString();
-    const id = queryHash;
+    const id = this.getQueryHash(params);
     this.getQueryState(id).then((queryState) => {
       this.sendMessage({
         type: 'CONNECT_QUERY',
