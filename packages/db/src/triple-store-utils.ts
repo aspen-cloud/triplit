@@ -351,9 +351,9 @@ export async function findMaxClientTimestamp(
 export async function findAllClientIds(
   tx: MultiTupleStoreOrTransaction
 ): Promise<string[]> {
-  const clientIds: string[] = [];
+  const clientIds: Set<string> = new Set();
+  let lastClientId: string | typeof MIN = MIN;
   while (true) {
-    const lastClientId = clientIds.at(-1) ?? MIN;
     const res = await tx.scan({
       prefix: ['clientTimestamp'],
       gt: [lastClientId, MAX, MAX, MAX, MAX],
@@ -363,9 +363,17 @@ export async function findAllClientIds(
       break;
     }
     const tuple = res[0] as ClientTimestampIndex;
-    clientIds.push(tuple.key[1]);
+    const clientId = tuple.key[1];
+    if (!clientId) {
+      throw new Error('Empty client ID found in clientTimestamp index');
+    }
+    if (clientIds.has(clientId)) {
+      throw new Error('Duplicate client ID found in clientTimestamp index');
+    }
+    clientIds.add(tuple.key[1]);
+    lastClientId = clientId;
   }
-  return clientIds;
+  return Array.from(clientIds);
 }
 
 // We use the _collection tuple to indicate if an entity delete should occur
