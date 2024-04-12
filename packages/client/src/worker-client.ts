@@ -33,6 +33,7 @@ export class WorkerClient<M extends ClientSchema | undefined = undefined> {
   syncEngine = {
     connectionStatus: 'open',
     onConnectionStatusChange: () => () => {},
+    isFirstTimeFetchingQuery: () => Promise.resolve(true),
   };
   clientWorker: ComLink.Remote<Client<M>>;
   constructor(options?: ClientOptions<M> & { workerUrl?: string }) {
