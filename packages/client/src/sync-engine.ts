@@ -185,7 +185,7 @@ export class SyncEngine {
    */
   subscribe(params: CollectionQuery<any, any>, onQueryFulfilled?: () => void) {
     const id = this.getQueryHash(params);
-    this.getQueryState(id).then((queryState) => {
+    this.getQueryState(id).then((queryState: Timestamp[]) => {
       this.sendMessage({
         type: 'CONNECT_QUERY',
         payload: {
@@ -199,7 +199,19 @@ export class SyncEngine {
         const { triples } = resp;
         if (triples.length > 0) {
           const stateVector = this.triplesToStateVector(triples);
-          this.setQueryState(id, stateVector);
+          const nextQueryState = new Map(
+            (queryState ?? []).map(([t, c]) => [c, t])
+          );
+          stateVector.forEach(([t, c]) => {
+            const current = nextQueryState.get(c);
+            if (!current || t > current) {
+              nextQueryState.set(c, t);
+            }
+          });
+          this.setQueryState(
+            id,
+            [...nextQueryState.entries()].map(([c, t]) => [t, c])
+          );
         }
         this.queries.set(id, { params, fulfilled: true });
         if (onQueryFulfilled) onQueryFulfilled();
