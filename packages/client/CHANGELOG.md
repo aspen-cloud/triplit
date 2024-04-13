@@ -1,5 +1,12 @@
 # @triplit/client
 
+## 0.3.37
+
+### Patch Changes
+
+- 826acd1: add shouldWaitForServer helper to useQuery
+- 3d08941: make query state correctly adapt to new data
+
 ## 0.3.36
 
 ### Patch Changes

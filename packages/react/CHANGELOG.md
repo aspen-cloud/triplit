@@ -1,5 +1,15 @@
 # @triplit/react
 
+## 0.3.39
+
+### Patch Changes
+
+- 826acd1: add shouldWaitForServer helper to useQuery
+- 3d08941: rename shouldWaitForServer to fetching and add fetchingLocal
+- Updated dependencies [826acd1]
+- Updated dependencies [3d08941]
+  - @triplit/client@0.3.37
+
 ## 0.3.38
 
 ### Patch Changes
