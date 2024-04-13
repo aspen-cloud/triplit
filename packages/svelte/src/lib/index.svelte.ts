@@ -30,7 +30,7 @@ export function useQuery<
   let isInitialFetch = $state(true);
   let fetchingLocal = $state(false);
   let fetchingRemote = $state(client.syncEngine.connectionStatus !== 'CLOSED');
-  let fetching = $derived(isInitialFetch && fetchingRemote);
+  let fetching = $derived(fetchingLocal || (isInitialFetch && fetchingRemote));
   let error: any = $state(undefined);
   let hasResponseFromServer = false;
   let builtQuery = $state(query && query.build());
