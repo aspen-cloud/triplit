@@ -1,5 +1,11 @@
 # @triplit/svelte
 
+## 0.1.10
+
+### Patch Changes
+
+- 368a0fb: have fetching depend on fetchingLocal
+
 ## 0.1.9
 
 ### Patch Changes
