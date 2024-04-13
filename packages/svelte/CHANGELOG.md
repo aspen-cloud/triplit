@@ -1,5 +1,14 @@
 # @triplit/svelte
 
+## 0.1.9
+
+### Patch Changes
+
+- 3d08941: add fetchingLocal state
+- Updated dependencies [826acd1]
+- Updated dependencies [3d08941]
+  - @triplit/client@0.3.37
+
 ## 0.1.8
 
 ### Patch Changes
