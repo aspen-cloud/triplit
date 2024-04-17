@@ -401,7 +401,7 @@ async function getTriplesAfterStateVector(
       tick,
       clientId,
     ]);
-    allTriples.push(...triples);
+    allTriples.concat(triples);
   }
   return allTriples;
 }
