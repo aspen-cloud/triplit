@@ -326,7 +326,7 @@ export class TripleStoreTransaction implements TripleStoreApi {
     const allExistingTriples: TripleRow[] = [];
     for (const { id, attribute } of values) {
       const existingTriples = await this.findByEntityAttribute(id, attribute);
-      allExistingTriples.push(...existingTriples);
+      allExistingTriples.concat(existingTriples);
     }
     const timestamp = await this.getTransactionTimestamp();
     // We need to overwrite any existing writes to that attribute that

@@ -568,9 +568,9 @@ export async function fetchDeltaTriples<
               )
           );
         }
-        deltaTriples.push(...afterTriplesMatch);
+        deltaTriples.concat(afterTriplesMatch);
       }
-      deltaTriples.push(...changedEntityTriples.get(changedEntityId)!);
+      deltaTriples.concat(changedEntityTriples.get(changedEntityId)!);
     }
   }
   return deltaTriples;
@@ -789,7 +789,7 @@ function ApplyExistsFilters<
       const { results: subQueryResult, triples } = subQueryFetch;
       const exists = subQueryResult.size > 0;
       if (!exists) return false;
-      existsFilterTriples.push(...[...triples.values()].flat());
+      existsFilterTriples.concat([...triples.values()].flat());
     }
     return true;
   };
@@ -1752,7 +1752,7 @@ export function subscribeResultsAndTriples<
                   cache: options.cache,
                 }
               );
-              entries.push(...backFilledResults.results);
+              entries.concat(Array.from(backFilledResults.results));
             }
 
             if (order) {

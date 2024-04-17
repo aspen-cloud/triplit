@@ -191,7 +191,7 @@ export class Connection {
         hasAdminAccess(this.session.token)
       );
       successes = resp.successes;
-      failures.push(...resp.failures);
+      failures.concat(resp.failures);
 
       if (failures.length > 0) {
         this.sendErrorResponse('TRIPLES', new TriplesInsertError(), {
