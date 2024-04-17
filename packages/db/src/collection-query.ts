@@ -499,7 +499,7 @@ export async function fetchDeltaTriples<
           }
         }
       }
-      const afterTriplesMatch = [];
+      const afterTriplesMatch: TripleRow[] = [];
       let matchesAfter = matchesSimpleFiltersAfter;
       if (matchesSimpleFiltersAfter && subQueries.length > 0) {
         for (const { exists: subQuery } of subQueries) {
@@ -529,9 +529,7 @@ export async function fetchDeltaTriples<
             matchesAfter = false;
             continue;
           }
-          afterTriplesMatch.push(
-            ...[...subQueryResult.triples.values()].flat()
-          );
+          afterTriplesMatch.concat([...subQueryResult.triples.values()].flat());
         }
       }
 
@@ -555,8 +553,8 @@ export async function fetchDeltaTriples<
                 t.id + JSON.stringify(t.attribute) + JSON.stringify(t.timestamp)
             )
           );
-          afterTriplesMatch.push(
-            ...Object.values(entityAndTriplesAfterStateVector!.triples)
+          afterTriplesMatch.concat(
+            Object.values(entityAndTriplesAfterStateVector!.triples)
               .flat()
               .filter(
                 (t) =>
