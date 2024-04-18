@@ -57,4 +57,4 @@ jobs:
           password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
 
       - name: Build and push Docker image
-        run: cd packages/node-server && yarn check-and-publish
+        run: cd packages/node-server && PROJECTS_ADMIN_API_URL=${{secrets.PROJECTS_ADMIN_API_URL}} PROJECTS_ADMIN_API_KEY=${{secrets.PROJECTS_ADMIN_API_KEY}} yarn check-and-publish
