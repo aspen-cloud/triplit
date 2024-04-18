@@ -58,7 +58,7 @@ async function recordImagePublish(args) {
 
   try {
     const response = await fetch(
-      `${process.env.PROJECTS_ADMIN_API_URL}/server_deploys`,
+      `${process.env.PROJECTS_ADMIN_API_URL}/server_builds`,
       {
         method: 'POST',
         headers: {
