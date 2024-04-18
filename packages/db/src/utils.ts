@@ -33,11 +33,12 @@ export function dbDocumentToTuples(
   }
   const result: [Attribute, Value][] = [];
   if (prefix.length) result.push([prefix, '{}']);
-  result.concat(
-    Object.keys(object).flatMap((key) =>
-      dbDocumentToTuples(object[key], [...prefix, key])
-    )
+  const objTuples = Object.keys(object).flatMap((key) =>
+    dbDocumentToTuples(object[key], [...prefix, key])
   );
+  for (const tuple of objTuples) {
+    result.push(tuple);
+  }
   return result;
 }
 

@@ -401,7 +401,9 @@ async function getTriplesAfterStateVector(
       tick,
       clientId,
     ]);
-    allTriples.concat(triples);
+    for (const triple of triples) {
+      allTriples.push(triple);
+    }
   }
   return allTriples;
 }
@@ -499,7 +501,7 @@ export async function fetchDeltaTriples<
           }
         }
       }
-      const afterTriplesMatch: TripleRow[] = [];
+      const afterTriplesMatch = [];
       let matchesAfter = matchesSimpleFiltersAfter;
       if (matchesSimpleFiltersAfter && subQueries.length > 0) {
         for (const { exists: subQuery } of subQueries) {
@@ -529,7 +531,11 @@ export async function fetchDeltaTriples<
             matchesAfter = false;
             continue;
           }
-          afterTriplesMatch.concat([...subQueryResult.triples.values()].flat());
+          for (const tripleSet of subQueryResult.triples.values()) {
+            for (const triple of tripleSet) {
+              afterTriplesMatch.push(triple);
+            }
+          }
         }
       }
 
@@ -553,22 +559,27 @@ export async function fetchDeltaTriples<
                 t.id + JSON.stringify(t.attribute) + JSON.stringify(t.timestamp)
             )
           );
-          afterTriplesMatch.concat(
-            Object.values(entityAndTriplesAfterStateVector!.triples)
-              .flat()
-              .filter(
-                (t) =>
-                  !tripleKeys.has(
-                    t.id +
-                      JSON.stringify(t.attribute) +
-                      JSON.stringify(t.timestamp)
-                  )
-              )
-          );
+          const trips = Object.values(entityAndTriplesAfterStateVector!.triples)
+            .flat()
+            .filter(
+              (t) =>
+                !tripleKeys.has(
+                  t.id +
+                    JSON.stringify(t.attribute) +
+                    JSON.stringify(t.timestamp)
+                )
+            );
+          for (const triple of trips) {
+            afterTriplesMatch.push(triple);
+          }
         }
-        deltaTriples.concat(afterTriplesMatch);
+        for (const triple of afterTriplesMatch) {
+          deltaTriples.push(triple);
+        }
       }
-      deltaTriples.concat(changedEntityTriples.get(changedEntityId)!);
+      for (const triple of changedEntityTriples.get(changedEntityId)!) {
+        deltaTriples.push(triple);
+      }
     }
   }
   return deltaTriples;
@@ -787,7 +798,11 @@ function ApplyExistsFilters<
       const { results: subQueryResult, triples } = subQueryFetch;
       const exists = subQueryResult.size > 0;
       if (!exists) return false;
-      existsFilterTriples.concat([...triples.values()].flat());
+      for (const tripleSet of triples.values()) {
+        for (const triple of tripleSet) {
+          existsFilterTriples.push(triple);
+        }
+      }
     }
     return true;
   };
@@ -1750,7 +1765,9 @@ export function subscribeResultsAndTriples<
                   cache: options.cache,
                 }
               );
-              entries.concat(Array.from(backFilledResults.results));
+              for (const entry of backFilledResults.results) {
+                entries.push(entry);
+              }
             }
 
             if (order) {

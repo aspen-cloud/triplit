@@ -528,12 +528,12 @@ class TaskQueue {
   async schedule(callbacks: any[], args: any) {
     if (this.isRunning) {
       setTimeout(() => {
-        this.queue.concat(callbacks.map((cb) => [cb, args] as [any, any]));
+        this.queue.push(...callbacks.map((cb) => [cb, args] as [any, any]));
         this.run();
       });
       return;
     }
-    this.queue.concat(callbacks.map((cb) => [cb, args] as [any, any]));
+    this.queue.push(...callbacks.map((cb) => [cb, args] as [any, any]));
     this.run();
   }
 
