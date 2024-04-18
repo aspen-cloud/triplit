@@ -37,17 +37,23 @@ import {
   stripCollectionFromId,
   appendCollectionToId,
   splitIdParts,
-  replaceVariablesInQuery,
   someFilterStatements,
   prepareQuery,
   fetchResultToJS,
   QueryPreparationOptions,
   isValueVariable,
+  replaceVariablesInFilterStatements,
+  replaceVariable,
+  getVariableComponents,
 } from './db-helpers.js';
 import { DataType, Operator } from './data-types/base.js';
 import { VariableAwareCache } from './variable-aware-cache.js';
 import { isTimestampedEntityDeleted } from './entity.js';
-import { CollectionNameFromModels, ModelFromModels } from './db.js';
+import {
+  CollectionNameFromModels,
+  ModelFromModels,
+  SystemVariables,
+} from './db.js';
 import type DB from './db.js';
 import { QueryType } from './data-types/query.js';
 import { ExtractJSType } from './data-types/type.js';
@@ -277,22 +283,34 @@ function identifierIncludesRelation<
     .length;
 }
 
-function getRelationPathsFromIdentifier<
+export function getRelationsFromIdentifier<
   M extends Models<any, any>,
   CN extends CollectionNameFromModels<M>
->(identifier: string, schema: M, collectionName: CN): string[] {
+>(
+  identifier: string,
+  schema: M,
+  collectionName: CN
+): Record<string, QueryType<any, any>> {
   let schemaTraverser = createSchemaTraverser(schema, collectionName);
   const attrPath = identifier.split('.');
-  let relationPath: string[] = [];
-  const relationshipPaths: string[] = [];
+  const relationPath: string[] = [];
+  const relations: Record<string, QueryType<any, any>> = {};
   for (const attr of attrPath) {
     relationPath.push(attr);
     schemaTraverser = schemaTraverser.get(attr);
     if (schemaTraverser.current?.type === 'query') {
-      relationshipPaths.push(relationPath.join('.'));
+      relations[relationPath.join('.')] = schemaTraverser.current;
     }
   }
-  return relationshipPaths;
+  return relations;
+}
+export function getRelationPathsFromIdentifier<
+  M extends Models<any, any>,
+  CN extends CollectionNameFromModels<M>
+>(identifier: string, schema: M, collectionName: CN): string[] {
+  return Object.keys(
+    getRelationsFromIdentifier(identifier, schema, collectionName)
+  );
 }
 
 export function validateIdentifier<
@@ -413,7 +431,14 @@ export async function fetchDeltaTriples<
   options: FetchFromStorageOptions = {}
 ) {
   const queryPermutations = generateQueryRootPermutations(
-    replaceVariablesInQuery(query, caller.systemVars, executionContext) // TODO: subquery vars
+    await replaceVariablesInQuery(
+      caller,
+      tx,
+      query,
+      caller.systemVars,
+      executionContext,
+      options
+    ) // TODO: subquery vars
   );
 
   const changedEntityTriples = newTriples.reduce((entities, trip) => {
@@ -1066,10 +1091,13 @@ export async function fetch<
   if (cache && VariableAwareCache.canCacheQuery(query, collectionSchema)) {
     return cache!.resolveFromCache(query, collectionSchema);
   }
-  const queryWithInsertedVars = replaceVariablesInQuery(
+  const queryWithInsertedVars = await replaceVariablesInQuery(
+    caller,
+    tx,
     query,
     caller.systemVars,
-    executionContext
+    executionContext,
+    options
   );
   const { order, limit, select, where, entityId, collectionName, after } =
     queryWithInsertedVars;
@@ -1659,10 +1687,13 @@ export function subscribeResultsAndTriples<
       results = fetchResult.results;
       triples = fetchResult.triples;
 
-      const { where } = replaceVariablesInQuery(
+      const { where } = await replaceVariablesInQuery(
+        caller,
+        tripleStore,
         query,
         caller.systemVars,
-        executionContext
+        executionContext,
+        options
       );
 
       unsub = tripleStore.onWrite(async (storeWrites) => {
@@ -2062,9 +2093,14 @@ function extractSubqueryVarsFromEntity(
   let vars: any = {};
   if (schema) {
     const collectionSchema = schema[collectionName]?.schema;
-    const emptyObj = Object.keys(collectionSchema.properties).reduce<any>(
-      (v, k) => {
-        v[k] = undefined;
+    const emptyObj = Object.entries(collectionSchema.properties).reduce<any>(
+      (v, [propName, typeDef]) => {
+        if (
+          // @ts-expect-error
+          typeDef.type === 'query'
+        )
+          return v;
+        v[propName] = undefined;
         return v;
       },
       {}
@@ -2076,7 +2112,8 @@ function extractSubqueryVarsFromEntity(
   } else {
     vars = { ...timestampedObjectToPlainObject(entity as any, true) };
   }
-  delete vars['_collection'];
+  vars['_collection'] = collectionName;
+  // delete vars['_collection'];
   return vars;
 }
 
@@ -2095,4 +2132,123 @@ function selectParser(entity: any) {
 
     return acc;
   };
+}
+
+async function replaceVariablesInQuery<
+  M extends Models<any, any> | undefined,
+  CN extends CollectionNameFromModels<M>,
+  Q extends Partial<Pick<CollectionQuery<M, CN>, 'where' | 'entityId' | 'vars'>>
+>(
+  caller: DB<M>,
+  tx: TripleStoreApi,
+  query: Q,
+  systemVars: SystemVariables | undefined,
+  executionContext: FetchExecutionContext,
+  options: FetchFromStorageOptions
+): Promise<Q> {
+  // Check that where clause statements have variables loaded
+  // Performance: we may load this earlier than needed if it could be filtered out by another statement
+  const clauses = (query.where ?? [])
+    .filter((statement) => Array.isArray(statement))
+    .map((statment) => statment as FilterStatement<M, CN>);
+  for (const clause of clauses) {
+    const [prop, op, val] = clause;
+    if (isValueVariable(val)) {
+      await loadRelationshipsIntoContextFromVarialbe(
+        val,
+        caller,
+        tx,
+        executionContext,
+        options
+      );
+    }
+  }
+
+  // For backwards compatability we are including non-scoped variables, these values may conflict and cause issues
+  const conflictingVariables = {
+    ...(systemVars?.global ?? {}),
+    ...(systemVars?.session ?? {}),
+    ...(query.vars ?? {}),
+    ...(executionContext?.queriedDataStack ?? []).reduce((acc, val) => {
+      return { ...acc, ...val };
+    }, {}),
+  };
+  // Prefix variables with their scopes to prevent conflicts
+  const scopedVariables = {
+    global: systemVars?.global ?? {},
+    session: systemVars?.session ?? {},
+    query: query.vars ?? {},
+    ...(executionContext?.queriedDataStack ?? []).reduce((acc, val, i, arr) => {
+      return { ...acc, [arr.length - i]: val };
+    }, {}),
+  };
+  const vars = {
+    ...scopedVariables,
+    ...conflictingVariables,
+  };
+
+  const where = query.where
+    ? replaceVariablesInFilterStatements(query.where, vars)
+    : undefined;
+
+  // Check that entityId has variables loaded
+  const entityId = query.entityId
+    ? replaceVariable(query.entityId, vars)
+    : undefined;
+  // TODO: might be variables in select too
+
+  return { ...query, where, entityId };
+}
+
+// TODO: refactor this to support nested relationships (would be a helpful time to implement a normalized cache during querying, in executionContext)
+async function loadRelationshipsIntoContextFromVarialbe<
+  M extends Models<any, any> | undefined
+>(
+  variable: string,
+  caller: DB<M>,
+  tx: TripleStoreApi,
+  executionContext: FetchExecutionContext,
+  options: FetchFromStorageOptions
+) {
+  if (!options.schema) return;
+  const [scope, key] = getVariableComponents(variable);
+  const parsedScope = parseInt(scope ?? '');
+  if (!isNaN(parsedScope)) {
+    const stackLocation =
+      executionContext.queriedDataStack.length - parsedScope;
+    const referenceEntity = executionContext.queriedDataStack[stackLocation];
+    // If path is subquery, need to load that data
+    const relations = getRelationsFromIdentifier(
+      key,
+      options.schema,
+      referenceEntity._collection
+    );
+    const relationEntries = Object.entries(relations);
+    if (relationEntries.length > 0) {
+      // Load the data from the relation path
+      // NOTE THIS ONLY LOADS THE MOST SHALLOW RELATIONSHIP
+      const [path, dataType] = relationEntries[0];
+      if (path.split('.').length > 1)
+        throw new TriplitError(
+          'Cannot load a nested relationship from a variable'
+        );
+      if (dataType.cardinality !== 'one')
+        throw new TriplitError('Cannot load variables with cardinality "many"');
+
+      const { results: subqueryResult } = await loadSubquery(
+        caller,
+        tx,
+        { collectionName: referenceEntity._collection },
+        dataType.query,
+        dataType.cardinality,
+        initialFetchExecutionContext(),
+        options,
+        referenceEntity
+      );
+      referenceEntity[path] = timestampedObjectToPlainObject(
+        // @ts-expect-error
+        subqueryResult
+      );
+    }
+  }
 }

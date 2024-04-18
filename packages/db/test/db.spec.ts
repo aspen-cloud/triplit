@@ -8459,19 +8459,143 @@ describe('variable conflicts', () => {
 
     // Can query with subquery variables (each colletion has a 'name' field)
     {
+      await db.insert('faculty', {
+        id: '5',
+        name: 'Eve',
+        department_id: 'EVE',
+      });
+      await db.insert('departments', {
+        id: 'EVE',
+        name: 'Eve',
+        head_id: '5',
+      });
       await db.insert('classes', {
         id: '5',
-        name: 'Bob',
-        department_id: 'MATH',
+        name: 'Eve',
+        department_id: 'EVE',
       });
-      // This is a funky query to be clear
-      const query = db
-        .query('classes')
-        .where(['department.head.name', '=', '$0.name'])
-        .build(); // Name of the class matches the name of the department head
+      await db.insert('classes', {
+        id: '6',
+        name: 'EVE101',
+        department_id: 'EVE',
+      });
+      await db.insert('classes', {
+        id: '7',
+        name: 'EVE102',
+        department_id: 'EVE',
+      });
+
+      // These are odd queries to be clear
+      {
+        // Classes where name of the class matches the name of the department head
+        const query = db
+          .query('classes')
+          .where(['department.head.name', '=', '$0.name'])
+          .build();
+        const result = await db.fetch(query);
+        expect(result.size).toBe(1);
+        expect(Array.from(result.keys())).toStrictEqual(['5']);
+      }
+
+      {
+        // Classes where name of the department matches the name of the department head
+        const query = db
+          .query('classes')
+          .where(['department.head.name', '=', '$0.department.name'])
+          .build();
+        const result = await db.fetch(query);
+        expect(result.size).toBe(3);
+        expect(Array.from(result.keys())).toStrictEqual(['5', '6', '7']);
+      }
+
+      // TODO: support nested relationship paths
+      // {
+      //   // Classes where name of the department head matches the name of the department head
+      //   const query = db
+      //     .query('classes')
+      //     .where(['department.head.name', '=', '$0.department.head.name'])
+      //     .build();
+      //   const result = await db.fetch(query);
+      //   expect(result.size).toBe(7);
+      // }
+    }
+  });
+
+  it('can access a nested data and record types via a variable', async () => {
+    const db = new DB({
+      schema: {
+        collections: {
+          users: {
+            schema: S.Schema({
+              id: S.String(),
+              name: S.String(),
+              address: S.Record({
+                street: S.String(),
+                city_id: S.String(),
+              }),
+              city: S.RelationById('cities', '$1.address.city_id'),
+            }),
+          },
+          cities: {
+            schema: S.Schema({
+              id: S.String(),
+              name: S.String(),
+              state: S.String(),
+            }),
+          },
+        },
+      },
+    });
+    await db.insert('cities', { id: '1', name: 'Springfield', state: 'IL' });
+    await db.insert('cities', { id: '2', name: 'Chicago', state: 'IL' });
+    await db.insert('users', {
+      id: '1',
+      name: 'Alice',
+      address: {
+        street: '123 Main St',
+        city_id: '1',
+      },
+    });
+    await db.insert('users', {
+      id: '2',
+      name: 'Bob',
+      address: {
+        street: '456 Elm St',
+        city_id: '2',
+      },
+    });
+
+    // Access nested paths in subqueries
+    {
+      const query = db.query('users').select(['id']).include('city').build();
       const result = await db.fetch(query);
+      expect(result.get('1')).toMatchObject({
+        id: '1',
+        city: { id: '1', name: 'Springfield', state: 'IL' },
+      });
+      expect(result.get('2')).toMatchObject({
+        id: '2',
+        city: { id: '2', name: 'Chicago', state: 'IL' },
+      });
+    }
+
+    // Access nested paths in variables
+    {
+      const sessionDB = db.withSessionVars({ city: { id: '2' } });
+      const query = sessionDB
+        .query('users')
+        .where(['address.city_id', '=', '$session.city.id'])
+        .build();
+      const result = await sessionDB.fetch(query);
       expect(result.size).toBe(1);
-      expect(Array.from(result.keys())).toStrictEqual(['5']);
+      expect(result.get('2')).toMatchObject({
+        id: '2',
+        name: 'Bob',
+        address: {
+          street: '456 Elm St',
+          city_id: '2',
+        },
+      });
     }
   });
 

@@ -27,6 +27,7 @@ import {
   schemaToTriples,
   triplesToSchema,
   PossibleDataViolations,
+  getAttributeFromSchema,
 } from './schema.js';
 import { TripleStoreApi } from './triple-store.js';
 import { VALUE_TYPE_KEYS } from './data-types/serialization.js';
@@ -43,6 +44,7 @@ import {
   FetchResult,
   TimestampedFetchResult,
   bumpSubqueryVar,
+  getRelationPathsFromIdentifier,
   validateIdentifier,
 } from './collection-query.js';
 import { Logger } from '@triplit/types/src/logger.js';
@@ -116,60 +118,36 @@ export function replaceVariablesInFilterStatements<
   });
 }
 
+async function loadVariableValue(executionContext: FetchExecutionContext) {}
+
 export function replaceVariable(
   target: any,
   variables: Record<string, any> = {}
 ) {
   if (!isValueVariable(target)) return target;
-  const varKey = target.slice(1);
-  if (!(varKey in variables)) {
-    console.warn(new SessionVariableNotFoundError(target));
-    // TODO should we throw here? or will there be other issues with undefined
+  const [scope, key] = getVariableComponents(target);
+  if (scope) {
+    // new variables will have a scope
+    const scopeVars = variables[scope];
+    // Traverse scopeVars to find the variable
+    const path = key.split('.');
+    let current = scopeVars;
+    for (const part of path) {
+      if (current == null) {
+        // console.warn(new SessionVariableNotFoundError(target));
+        throw new SessionVariableNotFoundError(target);
+        return undefined;
+      }
+      current = current[part];
+    }
+    return current;
+  } else {
+    // old variables will not
+    if (key in variables) return variables[key];
+    // console.warn(new SessionVariableNotFoundError(target));
+    throw new SessionVariableNotFoundError(target);
     return undefined;
   }
-  return variables[varKey];
-}
-
-export function replaceVariablesInQuery<
-  Q extends Partial<
-    Pick<CollectionQuery<any, any>, 'where' | 'entityId' | 'vars'>
-  >
->(
-  query: Q,
-  systemVars: SystemVariables | undefined,
-  executionContext: FetchExecutionContext
-): Q {
-  // For backwards compatability we are including non-scoped variables, these values may conflict and cause issues
-  const conflictingVariables = {
-    ...(systemVars?.global ?? {}),
-    ...(systemVars?.session ?? {}),
-    ...(query.vars ?? {}),
-    ...(executionContext?.queriedDataStack ?? []).reduce((acc, val) => {
-      return { ...acc, ...val };
-    }, {}),
-  };
-  // Prefix variables with their scopes to prevent conflicts
-  const scopedVariables = {
-    ...prefixVariables(systemVars?.global ?? {}, 'global'),
-    ...prefixVariables(systemVars?.session ?? {}, 'session'),
-    ...prefixVariables(query.vars ?? {}, 'query'),
-    ...(executionContext?.queriedDataStack ?? []).reduce((acc, val, i, arr) => {
-      const prefixed = prefixVariables(val, `${arr.length - i}`);
-      return { ...acc, ...prefixed };
-    }, {}),
-  };
-  const vars = {
-    ...scopedVariables,
-    ...conflictingVariables,
-  };
-  const where = query.where
-    ? replaceVariablesInFilterStatements(query.where, vars)
-    : undefined;
-  const entityId = query.entityId
-    ? replaceVariable(query.entityId, vars)
-    : undefined;
-
-  return { ...query, where, entityId };
 }
 
 export function* filterStatementIterator<
@@ -596,6 +574,8 @@ export function isValueVariable(value: QueryValue): value is string {
   return typeof value === 'string' && value.startsWith('$');
 }
 
+const VARIABLE_SCOPES = ['global', 'session', 'query'];
+
 export function getVariableComponents(
   variable: string
 ): [scope: string | undefined, key: string] {
@@ -603,7 +583,15 @@ export function getVariableComponents(
   if (components.length < 1)
     throw new TriplitError(`Invalid variable: ${variable}`);
   if (components.length === 1) return [undefined, components[0]];
-  if (components.length === 2) return components as [string, string];
-  const last = components.pop();
-  return [components.join('.'), last as string];
+
+  // For backwards compatability, we allow non-scoped variables
+  if (isScopedVariable(components[0])) {
+    return [components[0], components.slice(1).join('.')];
+  } else {
+    return [undefined, components.join('.')];
+  }
+}
+
+function isScopedVariable(scope: string | undefined): scope is string {
+  return VARIABLE_SCOPES.includes(scope ?? '') || !isNaN(parseInt(scope ?? ''));
 }
