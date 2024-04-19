@@ -123,8 +123,6 @@ async function checkWriteRules<M extends Models<any, any> | undefined>(
         skipRules: false,
       }
     );
-    console.log('FINAL QUERY');
-    console.dir(query, { depth: null });
     const { results } = await fetchOne<M, any>(
       caller.db,
       tx,
