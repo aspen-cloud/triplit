@@ -4,7 +4,7 @@ import dbPackageJson from '../../db/package.json' assert { type: 'json' };
 import { execSync } from 'child_process';
 
 // I think this is only the 100 latest published tags, however that should be enough for our purposes
-const TAGS_URI = `https://hub.docker.com/v2/repositories/aspencloud/triplit-db/tags`;
+const TAGS_URI = `https://hub.docker.com/v2/repositories/aspencloud/triplit-server/tags`;
 
 async function getLatestImageTags() {
   try {
@@ -34,7 +34,7 @@ async function publishIfNewVersion() {
     await recordImagePublish({
       server_version: currentVersion,
       db_version: dbPackageJson.version,
-      image: `aspencloud/triplit-db:${currentVersion}`,
+      image: `aspencloud/triplit-server:${currentVersion}`,
     });
   } else {
     console.log('Current version is already published. Skipping publish...');
