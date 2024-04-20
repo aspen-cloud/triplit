@@ -9,6 +9,15 @@ const TAGS_URI = `https://hub.docker.com/v2/repositories/aspencloud/triplit-serv
 async function getLatestImageTags() {
   try {
     const response = await fetch(TAGS_URI, { method: 'GET' });
+    if (!response.ok) {
+      if (response.status === 404) {
+        console.error('No published tags found.');
+        return [];
+      }
+      throw new Error(
+        `Error fetching tags: ${response.status} ${await response.text()}`
+      );
+    }
     const payload = await response.json();
     return payload.results.map((tag) => tag.name);
   } catch (error) {
