@@ -31,13 +31,13 @@ const schema = {
       read: {
         'author-is-user': {
           description: 'Users can only post todos they authored',
-          filter: [['author_id', '=', '$SESSION_USER_ID']],
+          filter: [['author_id', '=', '$session.SESSION_USER_ID']],
         },
       },
       write: {
         'author-is-user': {
           description: 'Users can only edit their own todos',
-          filter: [['author_id', '=', '$SESSION_USER_ID']],
+          filter: [['author_id', '=', '$session.SESSION_USER_ID']],
         },
       },
     },
@@ -45,4 +45,4 @@ const schema = {
 };
 ```
 
-`$SESSION_USER_ID` is a special variable injected by Triplit. It is the user id of the user that is authenticated with the current session.
+`$session.SESSION_USER_ID` is a special variable injected by Triplit. It is the user id of the user that is authenticated with the current session.

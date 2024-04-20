@@ -11,12 +11,12 @@ A token must have the following claims:
 - `x-triplit-user-id`: The user's unique identifier
 - `x-triplit-project-id`: The project's unique identifier
 
-With these claims, Triplit can assign the special variable `$SESSION_USER_ID` in its queries, which can be used to filter data based on the user making the request.
+With these claims, Triplit can assign the special variable `$session.SESSION_USER_ID` in its queries, which can be used to filter data based on the user making the request.
 
 ## Authorization
 
 Triplit allows you to define rules on your collections that determine who can read and write data. These rules are defined in the `rules` property of your collection's schema.
 
-Rules are defined as [filter clauses](/fetching-data/queries#filtering) that are applied to a query's result. For example, a write rule `[['author', '=', '$SESSION_USER_ID']]` on a collection `todos` would only allow users to assign themselves as the author of a todo.
+Rules are defined as [filter clauses](/fetching-data/queries#filtering) that are applied to a query's result. For example, a write rule `[['author', '=', '$session.SESSION_USER_ID']]` on a collection `todos` would only allow users to assign themselves as the author of a todo.
 
 Rules can be defined in your [schema](/access-control) or in your project's [Dashboard](https://www.triplit.dev/dashboard) (coming soon).
