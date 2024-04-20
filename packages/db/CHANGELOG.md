@@ -1,5 +1,11 @@
 # @triplit/db
 
+## 0.3.30
+
+### Patch Changes
+
+- d1b274b: Support variable prefixes to prevent overriding variable assignments across various injection scopes
+
 ## 0.3.29
 
 ### Patch Changes
