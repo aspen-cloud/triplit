@@ -25,6 +25,14 @@ And prints a usable Service Token and Anonymous Token for connecting to the data
 
 If your project has a `.env` file, you may set the following environment variables to configure the Triplit Database server:
 
+<Callout>
+  If you're using a framework like [Vite](https://vitejs.dev/guide/) or
+  [Next.js](https://nextjs.org/docs) you should add additional environmental
+  variables prepended with `VITE_` or `NEXT_PUBLIC_` respectively for the
+  `DB_URL` and `ANONYMOUS_TOKEN`. For example, `TRIPLIT_DB_URL` would become
+  `VITE_TRIPLIT_DB_URL` or `NEXT_PUBLIC_TRIPLIT_DB_URL`.
+</Callout>
+
 - `TRIPLIT_SERVICE_TOKEN` - The Service Token to use for connecting to the database for CLI commands. If not set, you may use a flag in the CLI (which takes precedent) or the CLI will prompt you for a key.
 - `TRIPLIT_DB_URL` - The URL to use for connecting to the database. If not set, you may use a flag in the CLI (which takes precedent) or use the default URL for the local database.
 - `TRIPLIT_PROJECT_ID` - Sets the project identifier used on the local api tokens.
