@@ -408,6 +408,8 @@ export function mergeQueries<M extends Models<any, any> | undefined>(
   return { ...queryA, ...queryB, where: mergedWhere, select: mergedSelect };
 }
 
+// At some point it would be good to have a clear pipeline of data shapes for query builder -> query json -> query the execution engine reads
+// Ex. things like .entityId are more sugar for users than valid values used by the execution engine
 export function prepareQuery<
   M extends Models<any, any> | undefined,
   Q extends CollectionQuery<M, any>

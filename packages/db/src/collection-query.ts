@@ -144,9 +144,7 @@ export type FetchResultEntity<C extends CollectionQuery<any, any>> =
     : never;
 
 function getIdFilterFromQuery(query: CollectionQuery<any, any>): string | null {
-  const { where, entityId, collectionName } = query;
-
-  if (entityId) return appendCollectionToId(collectionName, entityId);
+  const { where, collectionName } = query;
 
   const idEqualityFilters = where?.filter(
     (filter) =>
@@ -160,18 +158,6 @@ function getIdFilterFromQuery(query: CollectionQuery<any, any>): string | null {
     );
   }
   return null;
-}
-
-async function getCandidateTriplesForQuery<
-  M extends Models<any, any> | undefined,
-  Q extends CollectionQuery<M, any>
->(tx: TripleStoreApi, query: Q) {
-  const entityId = getIdFilterFromQuery(query);
-
-  if (entityId) {
-    return tx.findByEntity(entityId);
-  }
-  return tx.findByCollection(query.collectionName);
 }
 
 async function getCandidateEntityIds<
@@ -1099,7 +1085,7 @@ export async function fetch<
     executionContext,
     options
   );
-  const { order, limit, select, where, entityId, collectionName, after } =
+  const { order, limit, select, where, collectionName, after } =
     queryWithInsertedVars;
 
   // Load possible entity ids from indexes
@@ -1915,7 +1901,7 @@ function selectParser(entity: any) {
 async function replaceVariablesInQuery<
   M extends Models<any, any> | undefined,
   CN extends CollectionNameFromModels<M>,
-  Q extends Partial<Pick<CollectionQuery<M, CN>, 'where' | 'entityId' | 'vars'>>
+  Q extends Partial<Pick<CollectionQuery<M, CN>, 'where' | 'vars'>>
 >(
   caller: DB<M>,
   tx: TripleStoreApi,
@@ -1969,13 +1955,9 @@ async function replaceVariablesInQuery<
     ? replaceVariablesInFilterStatements(query.where, vars)
     : undefined;
 
-  // Check that entityId has variables loaded
-  const entityId = query.entityId
-    ? replaceVariable(query.entityId, vars)
-    : undefined;
   // TODO: might be variables in select too
 
-  return { ...query, where, entityId };
+  return { ...query, where };
 }
 
 // TODO: refactor this to support nested relationships (would be a helpful time to implement a normalized cache during querying, in executionContext)

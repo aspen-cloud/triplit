@@ -194,7 +194,7 @@ export type CollectionQuery<
   order?: QueryOrder<M, CN>[];
   limit?: number;
   after?: [ValueCursor, boolean];
-  entityId?: string;
+  entityId?: string; // Syntactic sugar for where("id", "=", entityId), should not be relied on in query engine
   vars?: Record<string, any>;
   collectionName: CN;
   include?: Partial<
