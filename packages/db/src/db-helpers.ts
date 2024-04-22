@@ -420,6 +420,15 @@ export function prepareQuery<
     fetchQuery = addReadRulesToQuery<M, Q>(fetchQuery, collectionSchema);
   }
 
+  // Translate entityId helper to where clause filter
+  if (fetchQuery.entityId) {
+    fetchQuery.where = [
+      // @ts-expect-error
+      ['id', '=', fetchQuery.entityId],
+      ...(fetchQuery.where ?? []),
+    ];
+  }
+
   fetchQuery.where = mapFilterStatements(
     fetchQuery.where ?? [],
     (statement) => {
