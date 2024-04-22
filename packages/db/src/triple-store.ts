@@ -120,7 +120,11 @@ export interface TripleStoreApi {
   ): Promise<void>;
 }
 
-// A helper class for scoping, basically what a transaction does without commit/cancel
+type RemoveFirstFromTuple<T extends any[]> = T['length'] extends 0
+  ? never
+  : ((...b: T) => void) extends (a: any, ...b: infer I) => void
+  ? I
+  : [];
 
 async function addIndexesToTransaction(
   tupleTx: MultiTupleTransaction<TupleIndex>
@@ -135,11 +139,15 @@ async function addIndexesToTransaction(
       const [_client, indexType, ...indexKey] = key;
       if (indexType !== 'EAT') continue;
 
-      const [id, attribute, timestamp] = indexKey;
+      const [id, attribute, timestamp] = indexKey as RemoveFirstFromTuple<
+        EATIndex['key']
+      >;
       const [value, isExpired] = tupleValue;
-      scopedTx.set(['AVE', attribute, value, id, timestamp], {
-        expired: isExpired,
-      });
+      if (isExpired) {
+        scopedTx.remove(['AVE', attribute, value, id, timestamp]);
+      } else {
+        scopedTx.set(['AVE', attribute, value, id, timestamp], null);
+      }
       scopedTx.set(
         [
           'clientTimestamp',

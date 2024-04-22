@@ -136,7 +136,7 @@ export function indexToTriple(
     value: v,
     timestamp: t,
     // @ts-ignore
-    expired: indexType === 'EAT' ? index.value[1] : index.value.expired,
+    expired: indexType === 'EAT' ? index.value[1] : indexType === 'AVE' ? false : index.value.expired,
   };
 }
 
