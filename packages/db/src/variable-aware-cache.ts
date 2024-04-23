@@ -1,11 +1,16 @@
 import {
-  CollectionQuerySchema,
-  FetchResult,
+  FetchExecutionContext,
+  FetchFromStorageOptions,
   TimestampedFetchResult,
+  getQueryVariables,
   subscribeResultsAndTriples,
 } from './collection-query.js';
-import { CollectionNameFromModels, ModelFromModels } from './db.js';
-import { mapFilterStatements } from './db-helpers.js';
+import {
+  CollectionNameFromModels,
+  ModelFromModels,
+  SystemVariables,
+} from './db.js';
+import { isValueVariable, mapFilterStatements } from './db-helpers.js';
 import {
   CollectionQuery,
   FilterStatement,
@@ -97,22 +102,24 @@ export class VariableAwareCache<Schema extends Models<any, any> | undefined> {
 
   async resolveFromCache<Q extends CollectionQuery<Schema, any>>(
     query: Q,
-    schema: Schema
+    systemVars: SystemVariables | undefined,
+    executionContext: FetchExecutionContext,
+    options: FetchFromStorageOptions
   ): Promise<{
     results: TimestampedFetchResult<Q>;
     triples: Map<string, TripleRow[]>;
   }> {
     const { views, variableFilters } = this.queryToViews(query);
-
     const id = this.viewQueryToId(views[0]);
-    // console.log('attempting to use index for', id);
     if (!this.cache.has(id)) {
-      await this.createView(views[0], schema);
+      // NOTE: dangerously setting ! on options.schema (not sure if schema is actually required or not)
+      await this.createView(views[0], options.schema!);
     }
     // TODO support multiple variable clauses
     const [prop, op, varStr] = variableFilters[0];
     const varKey = (varStr as string).slice(1);
-    const varValue = query.vars![varKey];
+    const vars = getQueryVariables(query, systemVars, executionContext);
+    const varValue = vars![varKey];
     const view = this.cache.get(id)!;
     const viewResultEntries = [...view.results.entries()];
     let start, end;
@@ -205,7 +212,7 @@ export class VariableAwareCache<Schema extends Models<any, any> | undefined> {
       ? query.where.filter((filter) => {
           if (!(filter instanceof Array)) return true;
           const [prop, _op, val] = filter;
-          if (typeof val === 'string' && val.startsWith('$')) {
+          if (isValueVariable(val)) {
             variableFilters.push([prop, _op, val]);
             return false;
           }

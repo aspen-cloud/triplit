@@ -1032,8 +1032,7 @@ async function loadSubquery<
   return result;
 }
 
-// TODO: rename, also maybe rename Fetch
-type FetchFromStorageOptions = {
+export type FetchFromStorageOptions = {
   schema?: Models<any, any>;
   skipRules?: boolean;
   cache?: VariableAwareCache<any>;
@@ -1075,7 +1074,12 @@ export async function fetch<
   const { schema, cache } = options;
   const collectionSchema = schema?.[query.collectionName]?.schema;
   if (cache && VariableAwareCache.canCacheQuery(query, collectionSchema)) {
-    return cache!.resolveFromCache(query, collectionSchema);
+    return cache!.resolveFromCache(
+      query,
+      caller.systemVars,
+      executionContext,
+      options
+    );
   }
   const queryWithInsertedVars = await replaceVariablesInQuery(
     caller,
@@ -1928,6 +1932,26 @@ async function replaceVariablesInQuery<
     }
   }
 
+  const vars = getQueryVariables(query, systemVars, executionContext);
+
+  const where = query.where
+    ? replaceVariablesInFilterStatements(query.where, vars)
+    : undefined;
+
+  // TODO: might be variables in select too
+
+  return { ...query, where };
+}
+
+export function getQueryVariables<
+  M extends Models<any, any> | undefined,
+  CN extends CollectionNameFromModels<M>,
+  Q extends Partial<Pick<CollectionQuery<M, CN>, 'vars'>>
+>(
+  query: Q,
+  systemVars: SystemVariables | undefined,
+  executionContext: FetchExecutionContext
+) {
   // For backwards compatability we are including non-scoped variables, these values may conflict and cause issues
   const conflictingVariables = {
     ...(systemVars?.global ?? {}),
@@ -1946,18 +1970,10 @@ async function replaceVariablesInQuery<
       return { ...acc, [arr.length - i]: val };
     }, {}),
   };
-  const vars = {
+  return {
     ...scopedVariables,
     ...conflictingVariables,
   };
-
-  const where = query.where
-    ? replaceVariablesInFilterStatements(query.where, vars)
-    : undefined;
-
-  // TODO: might be variables in select too
-
-  return { ...query, where };
 }
 
 // TODO: refactor this to support nested relationships (would be a helpful time to implement a normalized cache during querying, in executionContext)
