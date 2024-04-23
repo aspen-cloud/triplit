@@ -32,7 +32,6 @@ type ProjectJWT = TriplitJWT | ExternalJWT;
 
 async function getJwtKey(rawPublicKey: string): Promise<KeyLike | Uint8Array> {
   if (rawPublicKey.startsWith('-----BEGIN PUBLIC KEY-----')) {
-    console.log('using rsa public key');
     return importSPKI(rawPublicKey, 'RS256');
   }
   let parsedKey;
