@@ -48,6 +48,8 @@ import { EAV, indexToTriple, TripleRow } from './triple-store-utils.js';
 import { TripleStore } from './triple-store.js';
 import { Logger } from '@triplit/types/src/logger.js';
 
+const DEFAULT_CACHE_DISABLED = true;
+
 export interface Rule<
   M extends Models<any, any>,
   CN extends CollectionNameFromModels<M>
@@ -710,7 +712,8 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
       skipRules: options.skipRules,
     });
 
-    const noCache = options.noCache === undefined ? true : options.noCache;
+    const noCache =
+      options.noCache === undefined ? DEFAULT_CACHE_DISABLED : options.noCache;
 
     const { results } = await fetch<M, Q>(
       this,
@@ -816,7 +819,10 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
         skipRules: options.skipRules,
       });
       this.logger.debug('subscribe START', { query });
-      const noCache = options.noCache === undefined ? true : options.noCache;
+      const noCache =
+        options.noCache === undefined
+          ? DEFAULT_CACHE_DISABLED
+          : options.noCache;
       const unsub = subscribe<M, Q>(
         this,
         options.scope
@@ -865,7 +871,10 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
       let subscriptionQuery = prepareQuery(query, schema, {
         skipRules: options.skipRules,
       });
-      const noCache = options.noCache === undefined ? true : options.noCache;
+      const noCache =
+        options.noCache === undefined
+          ? DEFAULT_CACHE_DISABLED
+          : options.noCache;
 
       const unsub = subscribeTriples<M, Q>(
         this,
