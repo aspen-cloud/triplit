@@ -8509,15 +8509,16 @@ describe('variable conflicts', () => {
       }
 
       // TODO: support nested relationship paths
-      // {
-      //   // Classes where name of the department head matches the name of the department head
-      //   const query = db
-      //     .query('classes')
-      //     .where(['department.head.name', '=', '$0.department.head.name'])
-      //     .build();
-      //   const result = await db.fetch(query);
-      //   expect(result.size).toBe(7);
-      // }
+      {
+        // Classes where name of the department head matches the name of the department head
+        const query = db
+          .query('classes')
+          .where(['department.head.name', '=', '$0.department.head.name'])
+          .build();
+        console.log('\n\n RUNNING QUERY \n\n');
+        const result = await db.fetch(query);
+        expect(result.size).toBe(7);
+      }
     }
   });
 

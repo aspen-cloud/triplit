@@ -1922,7 +1922,7 @@ async function replaceVariablesInQuery<
   for (const clause of clauses) {
     const [prop, op, val] = clause;
     if (isValueVariable(val)) {
-      await loadRelationshipsIntoContextFromVarialbe(
+      await loadRelationshipsIntoContextFromVariable(
         val,
         caller,
         tx,
@@ -1977,7 +1977,7 @@ export function getQueryVariables<
 }
 
 // TODO: refactor this to support nested relationships (would be a helpful time to implement a normalized cache during querying, in executionContext)
-async function loadRelationshipsIntoContextFromVarialbe<
+async function loadRelationshipsIntoContextFromVariable<
   M extends Models<any, any> | undefined
 >(
   variable: string,
@@ -2002,26 +2002,38 @@ async function loadRelationshipsIntoContextFromVarialbe<
     const relationEntries = Object.entries(relations);
     if (relationEntries.length > 0) {
       // Load the data from the relation path
-      // NOTE THIS ONLY LOADS THE MOST SHALLOW RELATIONSHIP
-      const [path, dataType] = relationEntries[0];
-      if (path.split('.').length > 1)
-        throw new TriplitError(
-          'Cannot load a nested relationship from a variable'
-        );
-      if (dataType.cardinality !== 'one')
+      const rootRelation = relationEntries.at(0)!;
+      const deepestRelation = relationEntries.at(-1)!;
+      const pathToLoad = deepestRelation[0];
+      const rootRelationQueryType = rootRelation[1];
+      const pathParts = pathToLoad.split('.');
+      if (rootRelationQueryType.cardinality !== 'one')
         throw new TriplitError('Cannot load variables with cardinality "many"');
+
+      const includeStatement = pathParts
+        .slice(1)
+        .reverse()
+        .reduce<any>((include, key) => {
+          return {
+            [key]: include,
+          };
+        }, null);
+      let subquery = { ...rootRelationQueryType.query };
+      if (includeStatement !== null) {
+        subquery.include = includeStatement;
+      }
 
       const { results: subqueryResult } = await loadSubquery(
         caller,
         tx,
         { collectionName: referenceEntity._collection },
-        dataType.query,
-        dataType.cardinality,
+        subquery,
+        rootRelationQueryType.cardinality,
         initialFetchExecutionContext(),
         options,
         referenceEntity
       );
-      referenceEntity[path] = timestampedObjectToPlainObject(
+      referenceEntity[pathParts[0]] = timestampedObjectToPlainObject(
         // @ts-expect-error
         subqueryResult
       );
