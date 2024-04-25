@@ -46,7 +46,7 @@ const FRAMEWORKS: Framework[] = [
     color: cyan,
     variants: [],
     dependencies: {
-      '@triplit/react': '^0.3.1',
+      '@triplit/react': 'latest',
     },
   },
   {
@@ -55,7 +55,7 @@ const FRAMEWORKS: Framework[] = [
     color: red,
     variants: [],
     dependencies: {
-      '@triplit/svelte': '^0.1.3',
+      '@triplit/svelte': 'latest',
     },
   },
 ];
@@ -222,10 +222,10 @@ async function createTriplitAppWithVite() {
   pkgJson = addToPackageJson(
     pkgJson,
     {
-      '@triplit/client': '^0.3.1',
+      '@triplit/client': 'latest',
     },
     {
-      '@triplit/cli': '^0.3.1',
+      '@triplit/cli': 'latest',
     }
   );
   if (framework.dependencies || framework.devDependencies) {
