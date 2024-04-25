@@ -91,15 +91,15 @@ export default Command({
 });
 
 const SchemaFileContent =
-  `
+  `import { ClientSchema } from "@triplit/client";
 // import { Schema as S } from '@triplit/db';
 
 /**
- * Define your schema here. To use your schema, you can either:
- * - Directly import your schema into your app
- * - Run 'triplit migrate create' to generate migrations (recommended for production apps)
+ * Define your schema here. After:
+ * - Pass your schema to your Triplit client
+ * - Push your schema to your Triplit server with 'triplit schema push'
  *
- * For more information on schemas, see the docs: https://www.triplit.dev/docs/database/schemas
+ * For more information about schemas, see the docs: https://www.triplit.dev/docs/database/schemas
  */
 export const schema = {
     // todos: {
@@ -109,4 +109,6 @@ export const schema = {
     //     description: S.String(),
     //   }),
     // },
-};`.trim() + '\n';
+} satisfies ClientSchema;
+
+`.trim() + '\n';
