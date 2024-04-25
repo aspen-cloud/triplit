@@ -160,6 +160,151 @@ function getIdFilterFromQuery(query: CollectionQuery<any, any>): string | null {
   return null;
 }
 
+type QueryFulfillmentTracker = {
+  where: boolean[];
+  order: boolean[];
+  after: boolean;
+};
+
+async function getOrderSetForQuery<
+  M extends Models<any, any> | undefined,
+  Q extends CollectionQuery<M, any>
+>(tx: TripleStoreApi, query: Q, schema: M, fulfilled: QueryFulfillmentTracker) {
+  const { order, after } = query;
+  if (!order?.length) return undefined;
+  const singleOrder = order.length === 1;
+  const [firstOrderAttr, firstOrderDirection] = order[0];
+  const attrPath = firstOrderAttr.split('.');
+  let firstOrderHasRelation = false;
+  let firstOrderUndefined = false;
+  if (schema) {
+    const schemaIterator = createSchemaIterator(
+      attrPath,
+      schema,
+      query.collectionName
+    );
+    for (const dataType of schemaIterator) {
+      if (!dataType) {
+        firstOrderUndefined = true;
+        break;
+      }
+      if (dataType.type === 'query') {
+        firstOrderHasRelation = true;
+        break;
+      }
+    }
+  }
+  if (!firstOrderHasRelation && !firstOrderUndefined) {
+    const [cursor, inclusive] = after ?? [undefined, false];
+
+    const gtArg = singleOrder
+      ? firstOrderDirection === 'ASC'
+        ? cursor
+        : undefined
+      : undefined;
+    const ltArg = singleOrder
+      ? firstOrderDirection === 'DESC'
+        ? cursor
+        : undefined
+      : undefined;
+
+    fulfilled.after = after ? !!gtArg || !!ltArg : true;
+    fulfilled.order[0] = true;
+
+    const rangeParams: RangeContraints = {
+      direction: firstOrderDirection,
+      greaterThan: inclusive ? undefined : gtArg,
+      greaterThanOrEqual: inclusive ? gtArg : undefined,
+      lessThan: inclusive ? undefined : ltArg,
+      lessThanOrEqual: inclusive ? ltArg : undefined,
+    };
+    return new Set(
+      (
+        await tx.findValuesInRange(
+          [query.collectionName, ...attrPath],
+          rangeParams
+        )
+      ).map((t) => t.id)
+    );
+  }
+}
+
+async function getFilterSetForQuery<
+  M extends Models<any, any> | undefined,
+  Q extends CollectionQuery<M, any>
+>(tx: TripleStoreApi, query: Q, schema: M, fulfilled: QueryFulfillmentTracker) {
+  const { collectionName, where } = query;
+  if (where) {
+    let filterMatch: FilterStatement<M, any> | undefined = undefined;
+    let i = 0;
+    let isSet = false;
+    for (i; i < where.length; i++) {
+      const filter = where[i];
+      if ('exists' in filter || 'mod' in filter) continue;
+      const [path, op, value] = filter;
+      // TODO: support additional operators
+      if (op !== '=') continue;
+      if (schema) {
+        const dataType = getAttributeFromSchema(
+          path.split('.'),
+          schema,
+          collectionName
+        );
+        if (!dataType) continue;
+        if (dataType.type === 'query' || dataType.type === 'record') continue;
+        if (dataType.type === 'set') {
+          isSet = true;
+        }
+      }
+      filterMatch = filter;
+      break;
+    }
+    if (!filterMatch) return undefined;
+    const res = isSet
+      ? await performSetEqualityScan(tx, query, filterMatch)
+      : await performValueEqualityScany(tx, query, filterMatch);
+
+    // Not used yet, i think some parts of AVE scan imply we still need to re-evaluate the filter
+    fulfilled.where[i] = true;
+    return new Set(res.map((t) => t.id));
+  }
+  return undefined;
+}
+
+async function performValueEqualityScany<
+  M extends Models<any, any> | undefined,
+  Q extends CollectionQuery<M, any>
+>(tx: TripleStoreApi, query: Q, filter: FilterStatement<M, any>) {
+  return await tx.findByAVE([
+    [query.collectionName, ...filter[0].split('.')],
+    // @ts-expect-error
+    filter[2],
+  ]);
+}
+
+async function performSetEqualityScan<
+  M extends Models<any, any> | undefined,
+  Q extends CollectionQuery<M, any>
+>(tx: TripleStoreApi, query: Q, filter: FilterStatement<M, any>) {
+  return await tx.findByAVE([
+    [query.collectionName, ...filter[0].split('.'), filter[2]],
+    true,
+  ]);
+}
+
+export async function getCollectionIds<
+  M extends Models<any, any> | undefined,
+  Q extends CollectionQuery<M, any>
+>(tx: TripleStoreApi, query: Q) {
+  return Array.from(
+    new Set(
+      (await tx.findByAVE([['_collection'], query.collectionName])).map(
+        (t) => t.id
+      )
+    )
+  );
+}
+
 async function getCandidateEntityIds<
   M extends Models<any, any> | undefined,
   Q extends CollectionQuery<M, any>
@@ -169,94 +314,33 @@ async function getCandidateEntityIds<
   schema?: M
 ): Promise<{
   candidates: string[];
-  fulfilled: {
-    where: boolean[];
-    order: boolean[];
-    after: boolean;
-  };
+  fulfilled: QueryFulfillmentTracker;
 }> {
-  const fulfilled = {
+  const fulfilled: QueryFulfillmentTracker = {
     where: query.where ? new Array(query.where.length).fill(false) : [],
     order: query.order ? new Array(query.order.length).fill(false) : [],
     after: !query.after,
   };
-  const { order, limit, after } = query;
   const entityId = getIdFilterFromQuery(query);
   if (entityId) {
     return { candidates: [entityId], fulfilled };
   }
 
-  if (order?.length) {
-    const singleOrder = order.length === 1;
-    const [firstOrderAttr, firstOrderDirection] = order[0];
-    const attrPath = firstOrderAttr.split('.');
-    let firstOrderHasRelation = false;
-    let firstOrderUndefined = false;
-    if (schema) {
-      const schemaIterator = createSchemaIterator(
-        attrPath,
-        schema,
-        query.collectionName
-      );
-      for (const dataType of schemaIterator) {
-        if (!dataType) {
-          firstOrderUndefined = true;
-          break;
-        }
-        if (dataType.type === 'query') {
-          firstOrderHasRelation = true;
-          break;
-        }
-      }
-    }
-    if (!firstOrderHasRelation && !firstOrderUndefined) {
-      const [cursor, inclusive] = after ?? [undefined, false];
-
-      const gtArg = singleOrder
-        ? firstOrderDirection === 'ASC'
-          ? cursor
-          : undefined
-        : undefined;
-      const ltArg = singleOrder
-        ? firstOrderDirection === 'DESC'
-          ? cursor
-          : undefined
-        : undefined;
-
-      fulfilled.after = after ? !!gtArg || !!ltArg : true;
-      fulfilled.order[0] = true;
-
-      const rangeParams: RangeContraints = {
-        direction: firstOrderDirection,
-        greaterThan: inclusive ? undefined : gtArg,
-        greaterThanOrEqual: inclusive ? gtArg : undefined,
-        lessThan: inclusive ? undefined : ltArg,
-        lessThanOrEqual: inclusive ? ltArg : undefined,
-      };
-      return {
-        candidates: Array.from(
-          new Set(
-            (
-              await tx.findValuesInRange(
-                [query.collectionName, ...attrPath],
-                rangeParams
-              )
-            ).map((t) => t.id)
-          )
-        ),
-        fulfilled,
-      };
-    }
+  const filterSet = await getFilterSetForQuery(tx, query, schema, fulfilled);
+  if (filterSet) {
+    return { candidates: Array.from(filterSet), fulfilled };
   }
 
+  const orderSet = await getOrderSetForQuery(tx, query, schema, fulfilled);
+  if (orderSet) {
+    return { candidates: Array.from(orderSet), fulfilled };
+  }
+
+  // TODO: evaluate performing both order and filter scans
+  // Initial observations are that order scans are slow / longer, should investigate further
+
   return {
-    candidates: Array.from(
-      new Set(
-        (await tx.findByAVE([['_collection'], query.collectionName])).map(
-          (t) => t.id
-        )
-      )
-    ),
+    candidates: await getCollectionIds(tx, query),
     fulfilled,
   };
 }
@@ -1102,6 +1186,7 @@ export async function fetch<
   let pipeline = new Pipeline<string>()
     .map(LoadCandidateEntities(tx))
     // Apply where filters
+    // TODO: dont refilter if already applied
     .filter(ApplyBasicFilters(queryWithInsertedVars, options))
     .filter(
       ApplyExistsFilters(
