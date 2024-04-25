@@ -4,9 +4,9 @@ import { CWD, TRIPLIT_DIR, createDirIfNotExists } from '../filesystem.js';
 import * as Flag from '../flags.js';
 import fs from 'fs';
 import path from 'path';
-import { spawn } from 'child_process';
 import { blue, green, red, yellow } from 'ansis/colors';
 import degit from 'degit';
+import { addDependency } from 'nypm';
 
 function isProjectSetup() {
   return fs.existsSync(TRIPLIT_DIR);
@@ -14,17 +14,6 @@ function isProjectSetup() {
 
 function hasPackageJson() {
   return fs.existsSync('package.json');
-}
-
-function inferPackageManager() {
-  if (fs.existsSync('package-lock.json')) {
-    return 'npm';
-  } else if (fs.existsSync('yarn.lock')) {
-    return 'yarn';
-  } else if (fs.existsSync('pnpm-lock.yaml')) {
-    return 'pnpm';
-  }
-  return undefined;
 }
 
 const packageToInstall = ['@triplit/client'];
@@ -81,73 +70,8 @@ export default Command({
           break;
       }
     }
-
-    // Get package manager
-    let packageManager: string | undefined =
-      flags.packageManager?.toLowerCase();
-    if (!packageManager) {
-      console.log('No package manager specified, inferring...');
-      packageManager = inferPackageManager();
-      if (packageManager) {
-        console.log(`Inferred package manager: ${packageManager}`);
-      }
-    }
-
-    let installCommand: string;
-    let args: string[] = [];
-    switch (packageManager) {
-      case 'npm':
-        installCommand = `npm`;
-        args = ['install', ...packageToInstall];
-        break;
-      case 'yarn':
-        installCommand = `yarn`;
-        args = ['add', ...packageToInstall];
-        break;
-      case 'pnpm':
-        installCommand = `pnpm`;
-        args = ['add', ...packageToInstall];
-        break;
-      default:
-        console.log(
-          yellow(
-            `Could not determine a package manager to use. Please install dependencies manually: ${packageToInstall.join(
-              ' '
-            )}`
-          )
-        );
-        break;
-    }
-    console.log();
-
-    // install dependencies
-    const installPromise = new Promise<void>((resolve, reject) => {
-      if (installCommand) {
-        console.log('Installing dependencies...');
-        const child = spawn(installCommand, args);
-        child.stdout.pipe(process.stdout);
-        child.stderr.pipe(process.stderr);
-        child.on('error', (err) => {
-          console.error(err);
-          reject();
-        });
-        child.on('close', (code) => {
-          if (code !== 0) {
-            console.error(red(`Install process exited with code ${code}`));
-            reject();
-          } else {
-            // Run your subsequent code here
-            console.log(green('Package installation completed successfully.'));
-            resolve();
-          }
-        });
-      } else {
-        console.log('Skipping package installation...');
-        resolve();
-      }
-    });
-
-    await installPromise;
+    console.log(`Installing packages: ${packageToInstall.join(', ')}`);
+    await addDependency(packageToInstall);
     console.log();
 
     // create directories and files

@@ -57,6 +57,7 @@
     "jsonwebtoken": "^9.0.2",
     "minimist": "^1.2.8",
     "node-fetch": "^3.3.2",
+    "nypm": "^0.3.8",
     "ora": "^8.0.1",
     "prettier": "^3.0.3",
     "prompts": "^2.4.2",
