@@ -281,7 +281,7 @@ export class InvalidMigrationOperationError extends TriplitError {
 export class WriteRuleError extends TriplitError {
   constructor(...args: any[]) {
     super(...args);
-    this.name = 'RuleError';
+    this.name = 'WriteRuleError';
     this.baseMessage = `Write failed because it didn't pass a Rule.`;
     this.status = STATUS_CODES.Unauthorized;
   }
@@ -483,6 +483,15 @@ export class InvalidOrderClauseError extends TriplitError {
     super(...args);
     this.name = 'InvalidOrderClauseError';
     this.baseMessage = `An order clause has been determined to be invalid.`;
+    this.status = STATUS_CODES['Bad Request'];
+  }
+}
+
+export class InvalidWhereClauseError extends TriplitError {
+  constructor(...args: any[]) {
+    super(...args);
+    this.name = 'InvalidWhereClauseError';
+    this.baseMessage = `A where clause has been determined to be invalid.`;
     this.status = STATUS_CODES['Bad Request'];
   }
 }

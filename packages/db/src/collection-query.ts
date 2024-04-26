@@ -12,6 +12,7 @@ import {
   RelationSubquery,
   EntityPointer,
   QueryResultCardinality,
+  QueryWhere,
 } from './query.js';
 import {
   convertEntityToJS,
@@ -59,7 +60,7 @@ import { QueryType } from './data-types/query.js';
 import { ExtractJSType } from './data-types/type.js';
 import { RangeContraints, TripleRow } from './triple-store-utils.js';
 import { Equal } from '@sinclair/typebox/value';
-import { MIN, encodeValue } from '@triplit/tuple-database';
+import { MAX, MIN, encodeValue } from '@triplit/tuple-database';
 
 export default function CollectionQueryBuilder<
   M extends Models<any, any> | undefined,
@@ -146,7 +147,7 @@ export type FetchResultEntity<C extends CollectionQuery<any, any>> =
 function getIdFilterFromQuery(query: CollectionQuery<any, any>): string | null {
   const { where, collectionName } = query;
 
-  const idEqualityFilters = where?.filter(
+  const idEqualityFilters = (where ?? []).filter(
     (filter) =>
       filter instanceof Array && filter[0] === 'id' && filter[1] === '='
   ) as FilterStatement<any, any>[];
@@ -233,45 +234,163 @@ async function getFilterSetForQuery<
   M extends Models<any, any> | undefined,
   Q extends CollectionQuery<M, any>
 >(tx: TripleStoreApi, query: Q, schema: M, fulfilled: QueryFulfillmentTracker) {
-  const { collectionName, where } = query;
-  if (where) {
-    let filterMatch: FilterStatement<M, any> | undefined = undefined;
-    let i = 0;
-    let isSet = false;
-    for (i; i < where.length; i++) {
-      const filter = where[i];
-      if ('exists' in filter || 'mod' in filter) continue;
-      const [path, op, value] = filter;
-      // TODO: support additional operators
-      if (op !== '=') continue;
-      if (schema) {
-        const dataType = getAttributeFromSchema(
-          path.split('.'),
-          schema,
-          collectionName
-        );
-        if (!dataType) continue;
-        if (dataType.type === 'query' || dataType.type === 'record') continue;
-        if (dataType.type === 'set') {
-          isSet = true;
-        }
-      }
-      filterMatch = filter;
-      break;
+  const { where } = query;
+  const [filterIdx, filterType, dataType] = findCandidateFilter(query, schema);
+  if (filterIdx === -1) return undefined;
+  const filterMatch = where![filterIdx] as FilterStatement<M, any>;
+  if (filterType === 'range') {
+    fulfilled.where[filterIdx] = true;
+    let rangePair: FilterStatement<M, any> | undefined = undefined;
+    const rangePairIndex = findRangeFilter(
+      query,
+      filterMatch[0],
+      filterIdx,
+      GT_OPS.includes(filterMatch[1]) ? 'lt' : 'gt'
+    );
+    if (rangePairIndex !== -1) {
+      rangePair = where![rangePairIndex] as FilterStatement<M, any>;
+      fulfilled.where[rangePairIndex] = true;
     }
-    if (!filterMatch) return undefined;
-    const res = isSet
-      ? await performSetEqualityScan(tx, query, filterMatch)
-      : await performValueEqualityScany(tx, query, filterMatch);
-
-    // Not used yet, i think some parts of AVE scan imply we still need to re-evaluate the filter
-    fulfilled.where[i] = true;
-    return new Set(res.map((t) => t.id));
+    return new Set(
+      (await performRangeScan(tx, query, [filterMatch, rangePair])).map(
+        (t) => t.id
+      )
+    );
   }
+  if (filterType === 'equality') {
+    // Not used yet, i think some parts of AVE scan imply we still need to re-evaluate the filter
+    fulfilled.where[filterIdx] = true;
+    return new Set(
+      (await performEqualityScan(tx, query, filterMatch, dataType)).map(
+        (t) => t.id
+      )
+    );
+  }
+
   return undefined;
 }
 
-async function performValueEqualityScany<
+// get one range filter, search for other
+// perform query within range
+const EQUALITY_OPS = ['='] as const;
+const GT_OPS = ['>', '>='] as const;
+const LT_OPS = ['<', '<='] as const;
+const RANGE_OPS = [...GT_OPS, ...LT_OPS] as const;
+
+async function performRangeScan<
+  M extends Models<any, any> | undefined,
+  Q extends CollectionQuery<M, any>
+>(
+  tx: TripleStoreApi,
+  query: Q,
+  filters: [FilterStatement<M, any>, FilterStatement<M, any> | undefined]
+) {
+  const { collectionName } = query;
+  const [filter, rangePair] = filters;
+  const attribute = filter[0].split('.');
+
+  const gtFilter = GT_OPS.includes(filter[1]) ? filter : rangePair;
+  const ltFilter = LT_OPS.includes(filter[1]) ? filter : rangePair;
+
+  const rangeParams: RangeContraints = {
+    greaterThan: gtFilter?.[1] === '>' ? gtFilter[2] : undefined,
+    greaterThanOrEqual: gtFilter?.[1] === '>=' ? gtFilter[2] : undefined,
+    lessThan: ltFilter?.[1] === '<' ? ltFilter[2] : undefined,
+    lessThanOrEqual: ltFilter?.[1] === '<=' ? ltFilter[2] : undefined,
+  };
+
+  return await tx.findValuesInRange(
+    [collectionName, ...attribute],
+    rangeParams
+  );
+}
+
+async function performEqualityScan<
+  M extends Models<any, any> | undefined,
+  Q extends CollectionQuery<M, any>
+>(
+  tx: TripleStoreApi,
+  query: Q,
+  filter: FilterStatement<M, any>,
+  dataType: DataType | undefined
+) {
+  if (dataType?.type === 'query' || dataType?.type === 'record') return [];
+  if (dataType?.type === 'set') {
+    return await performSetEqualityScan(tx, query, filter);
+  }
+  return await performValueEqualityScan(tx, query, filter);
+}
+
+function findRangeFilter<
+  M extends Models<any, any> | undefined,
+  Q extends CollectionQuery<M, any>
+>(query: Q, path: string, after: number, type: 'gt' | 'lt') {
+  const { where } = query;
+  if (!where) return -1;
+  for (let i = after + 1; i < where.length; i++) {
+    const filter = where[i];
+    if ('exists' in filter || 'mod' in filter) continue;
+    const [filterPath, op, value] = filter;
+    if (filterPath === path) {
+      if (type === 'gt' && GT_OPS.includes(op)) return i;
+      if (type === 'lt' && LT_OPS.includes(op)) return i;
+    }
+  }
+  return -1;
+}
+
+function findCandidateFilter<
+  M extends Models<any, any> | undefined,
+  Q extends CollectionQuery<M, any>
+>(
+  query: Q,
+  schema: M
+):
+  | [-1, undefined, undefined]
+  | [idx: number, 'equality' | 'range', dataType: DataType | undefined] {
+  const { where, collectionName } = query;
+  function getCandidateDataTypeFromPath(
+    path: string,
+    schema: M,
+    collectionName: CollectionNameFromModels<M>
+  ): DataType | undefined {
+    if (!schema) return undefined;
+    const dataType = getAttributeFromSchema(
+      path.split('.'),
+      schema,
+      collectionName as any
+    );
+    if (!dataType) return undefined;
+    if (dataType.type === 'query' || dataType.type === 'record')
+      return undefined;
+    return dataType;
+  }
+
+  if (where) {
+    for (let i = 0; i < where.length; i++) {
+      const filter = where[i];
+      if ('exists' in filter || 'mod' in filter) continue;
+      const [path, op, value] = filter;
+      if (EQUALITY_OPS.includes(op)) {
+        return [
+          i,
+          'equality',
+          getCandidateDataTypeFromPath(path, schema, collectionName),
+        ];
+      }
+      if (RANGE_OPS.includes(op)) {
+        return [
+          i,
+          'range',
+          getCandidateDataTypeFromPath(path, schema, collectionName),
+        ];
+      }
+    }
+  }
+  return [-1, undefined, undefined];
+}
+
+async function performValueEqualityScan<
   M extends Models<any, any> | undefined,
   Q extends CollectionQuery<M, any>
 >(tx: TripleStoreApi, query: Q, filter: FilterStatement<M, any>) {
@@ -305,7 +424,7 @@ export async function getCollectionIds<
   );
 }
 
-async function getCandidateEntityIds<
+export async function getCandidateEntityIds<
   M extends Models<any, any> | undefined,
   Q extends CollectionQuery<M, any>
 >(
@@ -1356,6 +1475,7 @@ export function doesEntityObjMatchWhere<Q extends CollectionQuery<any, any>>(
     (statement): statement is FilterGroup<any, any> =>
       'mod' in statement && statement.mod === 'and'
   );
+
   const matchesBasicFilters = entitySatisfiesAllFilters(
     entityObj,
     basicStatements,
@@ -1471,13 +1591,14 @@ function satisfiesRegisterFilter(
     isTimestampedValue &&
     (typeof maybeValue[0] !== 'object' || typeof maybeValue[0] === null);
   if (!!maybeValue && (!isTimestampedValue || !isTerminalValue)) {
-    throw new InvalidFilterError(
+    console.warn(
       `Received an unexpected value at path '${path}' in entity ${JSON.stringify(
         entity
       )} which could not be interpreted as a register when reading filter ${JSON.stringify(
         [path, op, filterValue]
       )}. This is likely caused by (1) the database not properly loading its schema and attempting to interpret a value that is not a regsiter as a register, (2) a schemaless database attempting to interpret a value that is not properly formatted as a register, or (3) a query with a path that does not lead to a leaf attribute in the entity.`
     );
+    return false;
   }
   const [value, _ts] = maybeValue ?? [undefined, undefined];
   return isOperatorSatisfied(op, value, filterValue);

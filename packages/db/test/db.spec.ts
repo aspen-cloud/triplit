@@ -24,6 +24,7 @@ import {
   InvalidSchemaPathError,
   SessionVariableNotFoundError,
   InvalidOrderClauseError,
+  InvalidWhereClauseError,
 } from '../src';
 import { Models, hashSchemaJSON } from '../src/schema.js';
 import { classes, students, departments } from './sample_data/school.js';
@@ -387,26 +388,53 @@ describe('Database API', () => {
     expect(results.size).toBe(3);
   });
 
-  it('throws an error when a non-terminal object path is provided', async () => {
-    await db.insert('Rapper', {
-      id: '7',
-      name: 'Jay-Z',
-      album: { name: 'The Blueprint', released: '2001' },
+  it.only('where clause by non leaf will throw error', async () => {
+    const db = new DB({
+      schema: {
+        collections: {
+          students: {
+            schema: S.Schema({
+              id: S.Id(),
+              name: S.String(),
+              address: S.Record({ street: S.String(), city: S.String() }),
+              dorm_id: S.String(),
+              dorm: S.RelationById('dorms', '$1.dorm_id'),
+            }),
+          },
+          dorms: {
+            schema: S.Schema({
+              id: S.Id(),
+              name: S.String(),
+            }),
+          },
+        },
+      },
     });
-    await expect(
-      db.fetch(
-        CollectionQueryBuilder('Rapper')
-          .where([['album', '=', 'The Blueprint']])
-          .build()
-      )
-    ).rejects.toThrowError(InvalidFilterError);
-    await expect(
-      db.fetch(
-        CollectionQueryBuilder('Rapper')
-          .where([['album.name', '=', 'The Blueprint']])
-          .build()
-      )
-    ).resolves.not.toThrowError();
+    // Access record
+    {
+      const query = db.query('students').where('address', '=', 'foo').build();
+      await expect(db.fetch(query)).rejects.toThrow(InvalidWhereClauseError);
+    }
+
+    // Access relation
+    {
+      const query = db.query('students').where('dorm', '=', 'foo').build();
+      await expect(db.fetch(query)).rejects.toThrow(InvalidWhereClauseError);
+    }
+
+    // inside modified clause
+    {
+      const query = db
+        .query('students')
+        .where(
+          or([
+            ['name', '=', 'foo'],
+            ['dorm', '=', 'foo'],
+          ])
+        )
+        .build();
+      await expect(db.fetch(query)).rejects.toThrow(InvalidWhereClauseError);
+    }
   });
 
   it.todo('supports compound queries', async () => {

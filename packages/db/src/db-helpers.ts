@@ -8,6 +8,7 @@ import {
   ValueSchemaMismatchError,
   InvalidOrderClauseError,
   TriplitError,
+  InvalidWhereClauseError,
 } from './errors.js';
 import {
   QueryWhere,
@@ -16,6 +17,7 @@ import {
   CollectionQuery,
   RelationSubquery,
   QueryValue,
+  WhereFilter,
 } from './query.js';
 import {
   Model,
@@ -431,17 +433,26 @@ export function prepareQuery<
     ];
   }
 
+  const whereValidator = whereFilterValidator(
+    schema,
+    fetchQuery.collectionName
+  );
   fetchQuery.where = mapFilterStatements(
     fetchQuery.where ?? [],
     (statement) => {
+      // Validate filter
+      whereValidator(statement);
       if (!Array.isArray(statement)) return statement;
-      let [prop, op, val] = statement;
 
-      if (collectionSchema) {
-        const attributeType = getSchemaFromPath(
-          collectionSchema.schema,
-          (prop as string).split('.')
-        );
+      // Expand subquery statements
+      let [prop, op, val] = statement;
+      if (schema && fetchQuery.collectionName !== '_metadata') {
+        // Validation should handle this existing
+        const attributeType = getAttributeFromSchema(
+          [(prop as string).split('.')[0]], // TODO: properly handle query in record...
+          schema,
+          fetchQuery.collectionName
+        )!;
         if (attributeType.type === 'query') {
           const [_collectionName, ...path] = (prop as string).split('.');
           const subquery = { ...attributeType.query };
@@ -482,7 +493,6 @@ export function prepareQuery<
       //@ts-expect-error
       fetchQuery.select = selectAllProps;
     }
-
     if (fetchQuery.order) {
       // Validate that the order by fields
       fetchQuery.order.every(([field, _direction]) => {
@@ -521,13 +531,58 @@ export function prepareQuery<
         return true;
       });
     }
+  }
 
-    if (fetchQuery.include) {
-      addSubsSelectsFromIncludes(fetchQuery, schema);
-    }
+  if (fetchQuery.include) {
+    addSubsSelectsFromIncludes(fetchQuery, schema);
   }
 
   return fetchQuery;
+}
+
+function whereFilterValidator<M extends Models<any, any> | undefined>(
+  schema: M,
+  collectionName: string
+): (fitler: WhereFilter<M, any>) => boolean {
+  return (statement) => {
+    // TODO: add helper function to determine when we should(n't) schema check (ie schemaless and _metadata)
+    if (!schema) return true;
+    if (collectionName === '_metadata') return true;
+    if ('exists' in statement) return true;
+    // I believe these are handled as we expand statements in the mapFilterStatements function
+    if ('mod' in statement) return true;
+
+    const [prop, op, val] = statement;
+    const { valid, path, reason } = validateIdentifier(
+      prop,
+      schema,
+      collectionName,
+      (dataType, i, path) => {
+        if (!dataType) return { valid: false, reason: 'Path not found' };
+        // TODO: check if operator is valid for the type and use that to determine if it's valid
+        if (
+          i === path.length - 1 &&
+          (dataType.type === 'query' || dataType.type === 'record')
+        ) {
+          return {
+            valid: false,
+            reason: 'Where filter is not operable',
+          };
+        }
+        return { valid: true };
+      }
+    );
+    if (!valid) {
+      throw new InvalidWhereClauseError(
+        `Where filter ${JSON.stringify([
+          prop,
+          op,
+          val,
+        ])} is not valid: ${reason} at path ${path}`
+      );
+    }
+    return true;
+  };
 }
 
 function addSubsSelectsFromIncludes<
