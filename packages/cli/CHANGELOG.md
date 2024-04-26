@@ -1,5 +1,18 @@
 # @triplit/cli
 
+## 0.3.47
+
+### Patch Changes
+
+- e8de390: update default schema in `init` command support more package managers
+- Updated dependencies [5a0f993]
+- Updated dependencies [1a8c0ea]
+  - @triplit/db@0.3.32
+  - @triplit/server-core@0.3.34
+  - @triplit/client@0.3.40
+  - @triplit/console@0.3.44
+  - @triplit/server@0.3.34
+
 ## 0.3.46
 
 ### Patch Changes
