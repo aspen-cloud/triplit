@@ -147,7 +147,9 @@ async function addIndexesToTransaction(
         // TODO: defer removes until all sets are done or alter tuple db implementation for improved performance when setting and then removing in the same transaction
         scopedTx.remove(['AVE', attribute, value, id, timestamp]);
       } else {
-        scopedTx.set(['AVE', attribute, value, id, timestamp], null);
+        scopedTx.set(['AVE', attribute, value, id, timestamp], {
+          isExpired: true,
+        });
       }
       scopedTx.set(
         [
