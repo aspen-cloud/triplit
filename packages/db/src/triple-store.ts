@@ -135,7 +135,7 @@ async function addIndexesToTransaction(
     if (set.length === 0) continue;
     const scopedTx = tupleTx.withScope({ read: [store], write: [store] });
     // To maintain interactivity on large inserts, we should batch these
-    for (const { key, value: tupleValue } of set) {
+    for (const { key, value: tupleValue } of set.slice()) {
       const [_client, indexType, ...indexKey] = key;
       if (indexType !== 'EAT') continue;
 
@@ -144,6 +144,7 @@ async function addIndexesToTransaction(
       >;
       const [value, isExpired] = tupleValue;
       if (isExpired) {
+        // TODO: defer removes until all sets are done or alter tuple db implementation for improved performance when setting and then removing in the same transaction
         scopedTx.remove(['AVE', attribute, value, id, timestamp]);
       } else {
         scopedTx.set(['AVE', attribute, value, id, timestamp], null);
