@@ -1,5 +1,12 @@
 # @triplit/db
 
+## 0.3.32
+
+### Patch Changes
+
+- 5a0f993: handle filter clauses in candidate selection
+- 1a8c0ea: Update conflicting type names for @triplit/db Value
+
 ## 0.3.30
 
 ### Patch Changes

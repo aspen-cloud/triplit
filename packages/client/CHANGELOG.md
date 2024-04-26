@@ -1,5 +1,14 @@
 # @triplit/client
 
+## 0.3.40
+
+### Patch Changes
+
+- 1a8c0ea: Update conflicting type names for @triplit/db Value
+- Updated dependencies [5a0f993]
+- Updated dependencies [1a8c0ea]
+  - @triplit/db@0.3.32
+
 ## 0.3.38
 
 ### Patch Changes
