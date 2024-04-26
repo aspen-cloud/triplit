@@ -556,7 +556,7 @@ function whereFilterValidator<M extends Models<any, any> | undefined>(
     const { valid, path, reason } = validateIdentifier(
       prop,
       schema,
-      collectionName,
+      collectionName as CollectionNameFromModels<NonNullable<M>>,
       (dataType, i, path) => {
         if (!dataType) return { valid: false, reason: 'Path not found' };
         // TODO: check if operator is valid for the type and use that to determine if it's valid

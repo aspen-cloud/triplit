@@ -388,7 +388,7 @@ describe('Database API', () => {
     expect(results.size).toBe(3);
   });
 
-  it.only('where clause by non leaf will throw error', async () => {
+  it('where clause by non leaf will throw error', async () => {
     const db = new DB({
       schema: {
         collections: {

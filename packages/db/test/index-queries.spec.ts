@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import DB from '../src/db.ts';
 import { getCandidateEntityIds } from '../src/collection-query.ts';
-
+import { Schema as S } from '../src/schema.ts';
 const testData = [
   { name: 'Alice', score: 100, age: 25 },
   { name: 'Bob', score: 90, age: 25 },
@@ -132,7 +132,7 @@ describe('candidate selection', () => {
     }
   });
 
-  it.only('uses multiple range filters if operators and attributes match', async () => {
+  it('uses multiple range filters if operators and attributes match', async () => {
     const db = new DB();
     await Promise.all(
       testData.map((data, i) => db.insert('tests', { id: `${i}`, ...data }))
@@ -230,5 +230,36 @@ describe('candidate selection', () => {
         );
       });
     }
+  });
+});
+
+it('range filter handles dates', async () => {
+  const db = new DB({
+    schema: {
+      collections: {
+        tests: {
+          schema: S.Schema({
+            id: S.Id(),
+            date: S.Date(),
+          }),
+        },
+      },
+    },
+  });
+  await db.insert('tests', { id: '0', date: new Date('2021-01-01') });
+  await db.insert('tests', { id: '1', date: new Date('2021-01-02') });
+  await db.insert('tests', { id: '2', date: new Date('2021-01-03') });
+  await db.insert('tests', { id: '3', date: new Date('2021-01-04') });
+  await db.insert('tests', { id: '4', date: new Date('2021-01-05') });
+  const query = db
+    .query('tests')
+    .where([
+      ['date', '>', new Date('2021-01-01')],
+      ['date', '<', new Date('2021-01-05')],
+    ])
+    .build();
+  await db.transact(async (tx) => {
+    const { candidates } = await getCandidateEntityIds(tx.storeTx, query);
+    expectUnorderedArrayEquality(candidates, ['tests#1', 'tests#2', 'tests#3']);
   });
 });

@@ -5,7 +5,7 @@ import {
 import MultiTupleStore, {
   ScopedMultiTupleOperator,
 } from './multi-tuple-store.js';
-import { ValueCursor } from './query.js';
+import { QueryValue, ValueCursor } from './query.js';
 import { Timestamp } from './timestamp.js';
 import { TripleStoreTransaction } from './triple-store-transaction.js';
 import { KeyValuePair, MIN, MAX } from '@triplit/tuple-database';
@@ -95,11 +95,16 @@ export type TripleStoreHooks = {
   afterCommit: TripleStoreAfterCommitHook[];
 };
 
+// TODO: This really should be TupleValue
 export type RangeContraints = {
-  greaterThan?: ValueCursor | Value;
-  greaterThanOrEqual?: ValueCursor | Value;
-  lessThan?: ValueCursor | Value;
-  lessThanOrEqual?: ValueCursor | Value;
+  greaterThan?: QueryValue;
+  greaterThanCursor?: ValueCursor;
+  greaterThanOrEqual?: QueryValue;
+  greaterThanOrEqualCursor?: ValueCursor;
+  lessThan?: QueryValue;
+  lessThanCursor?: ValueCursor;
+  lessThanOrEqual?: QueryValue;
+  lessThanOrEqualCursor?: ValueCursor;
   direction?: 'ASC' | 'DESC';
 };
 
@@ -203,45 +208,39 @@ export function findByAVE(
 export function findValuesInRange(
   tx: MultiTupleStoreOrTransaction,
   attribute: Attribute,
-  {
-    greaterThan,
-    greaterThanOrEqual,
-    lessThan,
-    lessThanOrEqual,
-    direction,
-  }: RangeContraints = {}
+  constraints: RangeContraints = {}
 ) {
   const prefix = ['AVE', attribute];
   const TUPLE_LENGTH = 5;
 
   // Args accept either a cursor or a value, use min/max if cursor not provided
-  const greaterThanCurson = !!greaterThan
-    ? Array.isArray(greaterThan)
-      ? greaterThan
-      : ([greaterThan, MAX] as ValueCursor)
+  const greaterThanCursor = !!constraints.greaterThanCursor
+    ? constraints.greaterThanCursor
+    : constraints.greaterThan
+    ? ([constraints.greaterThan, MAX] as const)
     : undefined;
-  const greaterThanOrEqualCursor = !!greaterThanOrEqual
-    ? Array.isArray(greaterThanOrEqual)
-      ? greaterThanOrEqual
-      : ([greaterThanOrEqual, MIN] as ValueCursor)
+  const greaterThanOrEqualCursor = !!constraints.greaterThanOrEqualCursor
+    ? constraints.greaterThanOrEqualCursor
+    : constraints.greaterThanOrEqual
+    ? ([constraints.greaterThanOrEqual, MIN] as const)
     : undefined;
-  const lessThanCursor = !!lessThan
-    ? Array.isArray(lessThan)
-      ? lessThan
-      : ([lessThan, MIN] as ValueCursor)
+  const lessThanCursor = !!constraints.lessThanCursor
+    ? constraints.lessThanCursor
+    : constraints.lessThan
+    ? ([constraints.lessThan, MIN] as const)
     : undefined;
-  const lessThanOrEqualCursor = !!lessThanOrEqual
-    ? Array.isArray(lessThanOrEqual)
-      ? lessThanOrEqual
-      : ([lessThanOrEqual, MAX] as ValueCursor)
+  const lessThanOrEqualCursor = !!constraints.lessThanOrEqualCursor
+    ? constraints.lessThanOrEqualCursor
+    : constraints.lessThanOrEqual
+    ? ([constraints.lessThanOrEqual, MAX] as const)
     : undefined;
 
   const scanArgs = {
     prefix,
-    gt: greaterThanCurson && [
-      ...greaterThanCurson,
+    gt: greaterThanCursor && [
+      ...greaterThanCursor,
       ...new Array(
-        TUPLE_LENGTH - prefix.length - greaterThanCurson.length
+        TUPLE_LENGTH - prefix.length - greaterThanCursor.length
       ).fill(MAX),
     ],
     gte: greaterThanOrEqualCursor && [
@@ -262,7 +261,7 @@ export function findValuesInRange(
         TUPLE_LENGTH - prefix.length - lessThanOrEqualCursor.length
       ).fill(MAX),
     ],
-    reverse: direction === 'DESC',
+    reverse: constraints.direction === 'DESC',
   };
   return scanToTriples(tx, scanArgs);
 }

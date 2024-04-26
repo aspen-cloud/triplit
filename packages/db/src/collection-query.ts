@@ -13,6 +13,7 @@ import {
   EntityPointer,
   QueryResultCardinality,
   QueryWhere,
+  QueryValue,
 } from './query.js';
 import {
   convertEntityToJS,
@@ -58,7 +59,11 @@ import {
 import type DB from './db.js';
 import { QueryType } from './data-types/query.js';
 import { ExtractJSType } from './data-types/type.js';
-import { RangeContraints, TripleRow } from './triple-store-utils.js';
+import {
+  RangeContraints,
+  TripleRow,
+  TupleValue,
+} from './triple-store-utils.js';
 import { Equal } from '@sinclair/typebox/value';
 import { MAX, MIN, encodeValue } from '@triplit/tuple-database';
 
@@ -214,10 +219,10 @@ async function getOrderSetForQuery<
 
     const rangeParams: RangeContraints = {
       direction: firstOrderDirection,
-      greaterThan: inclusive ? undefined : gtArg,
-      greaterThanOrEqual: inclusive ? gtArg : undefined,
-      lessThan: inclusive ? undefined : ltArg,
-      lessThanOrEqual: inclusive ? ltArg : undefined,
+      greaterThanCursor: inclusive ? undefined : gtArg,
+      greaterThanOrEqualCursor: inclusive ? gtArg : undefined,
+      lessThanCursor: inclusive ? undefined : ltArg,
+      lessThanOrEqualCursor: inclusive ? ltArg : undefined,
     };
     return new Set(
       (
@@ -272,9 +277,9 @@ async function getFilterSetForQuery<
 
 // get one range filter, search for other
 // perform query within range
-const EQUALITY_OPS = ['='] as const;
-const GT_OPS = ['>', '>='] as const;
-const LT_OPS = ['<', '<='] as const;
+const EQUALITY_OPS = ['='];
+const GT_OPS = ['>', '>='];
+const LT_OPS = ['<', '<='];
 const RANGE_OPS = [...GT_OPS, ...LT_OPS] as const;
 
 async function performRangeScan<
@@ -293,16 +298,37 @@ async function performRangeScan<
   const ltFilter = LT_OPS.includes(filter[1]) ? filter : rangePair;
 
   const rangeParams: RangeContraints = {
-    greaterThan: gtFilter?.[1] === '>' ? gtFilter[2] : undefined,
-    greaterThanOrEqual: gtFilter?.[1] === '>=' ? gtFilter[2] : undefined,
-    lessThan: ltFilter?.[1] === '<' ? ltFilter[2] : undefined,
-    lessThanOrEqual: ltFilter?.[1] === '<=' ? ltFilter[2] : undefined,
+    greaterThan:
+      gtFilter?.[1] === '>'
+        ? safeFilterRangeConstraint(gtFilter[2])
+        : undefined,
+    greaterThanOrEqual:
+      gtFilter?.[1] === '>='
+        ? safeFilterRangeConstraint(gtFilter[2])
+        : undefined,
+    lessThan:
+      ltFilter?.[1] === '<'
+        ? safeFilterRangeConstraint(ltFilter[2])
+        : undefined,
+    lessThanOrEqual:
+      ltFilter?.[1] === '<='
+        ? safeFilterRangeConstraint(ltFilter[2])
+        : undefined,
   };
 
   return await tx.findValuesInRange(
     [collectionName, ...attribute],
     rangeParams
   );
+}
+
+// TODO: move this to data types, similar hack as compareCursors
+function safeFilterRangeConstraint(value: QueryValue): TupleValue {
+  // if value is date, convert to timestamp
+  if (value instanceof Date) return value.toISOString();
+  if (Array.isArray(value))
+    return JSON.stringify(value.map(safeFilterRangeConstraint));
+  return value;
 }
 
 async function performEqualityScan<

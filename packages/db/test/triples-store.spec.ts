@@ -1,14 +1,10 @@
 import { InMemoryTupleStorage } from '@triplit/tuple-database';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { TripleRow, TripleStore } from '../src/triple-store.js';
-import { Schema as S } from '../src/schema.js';
+import { TripleStore } from '../src/triple-store.js';
 import { MemoryBTreeStorage as MemoryStorage } from '../src/storage/memory-btree.js';
-import {
-  overrideStoredSchema,
-  readSchemaFromTripleStore,
-} from '../src/db-helpers.js';
-import { timestampCompare } from '../src/timestamp.js';
+import { Timestamp, timestampCompare } from '../src/timestamp.js';
 import { TripleStoreTransaction } from '../src/triple-store-transaction.js';
+import { TripleRow } from '../src/triple-store-utils.js';
 
 // const storage = new InMemoryTupleStorage();
 const storage = new MemoryStorage();
@@ -85,7 +81,7 @@ describe('triple updates', () => {
       expired: false,
     });
     for (let i = 1; i < 10; i++) {
-      const timestamp = [1 + i, 'A'];
+      const timestamp: Timestamp = [1 + i, 'A'];
       await store.insertTriple({
         id,
         attribute,
@@ -369,7 +365,7 @@ describe('search/scan functionality', async () => {
     await store.insertTriples(data);
     await testStoreAndTx(store, async (op) => {
       const gtRes = await op.findValuesInRange(['cats', 'height'], {
-        greaterThan: [6, 'cats#2'],
+        greaterThanCursor: [6, 'cats#2'],
       });
       expect(gtRes).toHaveLength(5);
       const gtValueRes = await op.findValuesInRange(['cats', 'height'], {
@@ -378,7 +374,7 @@ describe('search/scan functionality', async () => {
       expect(gtValueRes).toHaveLength(4);
 
       const gteRes = await op.findValuesInRange(['cats', 'height'], {
-        greaterThanOrEqual: [6, 'cats#2'],
+        greaterThanOrEqualCursor: [6, 'cats#2'],
       });
       expect(gteRes).toHaveLength(6);
       const gteValueRes = await op.findValuesInRange(['cats', 'height'], {
@@ -387,7 +383,7 @@ describe('search/scan functionality', async () => {
       expect(gteValueRes).toHaveLength(6);
 
       const ltRes = await op.findValuesInRange(['cats', 'height'], {
-        lessThan: [8, 'cats#4'],
+        lessThanCursor: [8, 'cats#4'],
       });
       expect(ltRes).toHaveLength(5);
       const ltValueRes = await op.findValuesInRange(['cats', 'height'], {
@@ -396,7 +392,7 @@ describe('search/scan functionality', async () => {
       expect(ltValueRes).toHaveLength(4);
 
       const lteRes = await op.findValuesInRange(['cats', 'height'], {
-        lessThanOrEqual: [8, 'cats#4'],
+        lessThanOrEqualCursor: [8, 'cats#4'],
       });
       expect(lteRes).toHaveLength(6);
       const lteValueRes = await op.findValuesInRange(['cats', 'height'], {
@@ -405,17 +401,17 @@ describe('search/scan functionality', async () => {
       expect(lteValueRes).toHaveLength(6);
 
       const rangeRes = await op.findValuesInRange(['cats', 'height'], {
-        greaterThan: [6, 'cats#2'],
-        lessThan: [8, 'cats#4'],
+        greaterThanCursor: [6, 'cats#2'],
+        lessThanCursor: [8, 'cats#4'],
       });
       expect(rangeRes).toHaveLength(3);
 
       const outOfRangeGT = await op.findValuesInRange(['cats', 'height'], {
-        greaterThan: [9, 'cats#7'],
+        greaterThanCursor: [9, 'cats#7'],
       });
       expect(outOfRangeGT).toHaveLength(0);
       const outOfRangeLT = await op.findValuesInRange(['cats', 'height'], {
-        lessThan: [5, 'cats#6'],
+        lessThanCursor: [5, 'cats#6'],
       });
       expect(outOfRangeLT).toHaveLength(0);
     });
