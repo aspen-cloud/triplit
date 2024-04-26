@@ -233,6 +233,7 @@ async function getOrderSetForQuery<
       ).map((t) => t.id)
     );
   }
+  return undefined;
 }
 
 async function getFilterSetForQuery<
