@@ -9,7 +9,7 @@ import {
   JSONToSchema,
   ModelFromModels,
   UpdateTypeFromModel,
-  Value,
+  TupleValue,
 } from '@triplit/db';
 
 // onconnect = function (event) {
@@ -83,7 +83,7 @@ const workerOperator: ClientWorker = {
     entityId: string,
     updater: (
       entity: UpdateTypeFromModel<ModelFromModels<any, CN>>
-    ) => [Attribute, Value][] | Promise<[Attribute, Value][]>
+    ) => [Attribute, TupleValue][] | Promise<[Attribute, TupleValue][]>
   ): Promise<{ txId: string | undefined; output: void | undefined }> {
     return await clientOperator.updateRaw(collectionName, entityId, updater);
   },

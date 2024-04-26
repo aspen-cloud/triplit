@@ -15,7 +15,7 @@ import {
   SubQueryFilter,
   CollectionQuery,
   RelationSubquery,
-  Value as QueryValue,
+  QueryValue,
 } from './query.js';
 import {
   Model,
@@ -38,7 +38,7 @@ import DB, {
 } from './db.js';
 import { DBTransaction } from './db-transaction.js';
 import { DataType } from './data-types/base.js';
-import { Attribute, Value } from './triple-store-utils.js';
+import { Attribute, TupleValue } from './triple-store-utils.js';
 import {
   FetchExecutionContext,
   FetchResult,
@@ -321,7 +321,7 @@ export function logSchemaChangeViolations(
 export function validateTriple(
   schema: Models<any, any>,
   attribute: Attribute,
-  value: Value
+  value: TupleValue
 ) {
   if (schema == undefined) {
     throw new NoSchemaRegisteredError(

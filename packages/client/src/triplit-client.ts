@@ -16,7 +16,7 @@ import {
   ValueCursor,
   DBFetchOptions as AllDBFetchOptions,
   Attribute,
-  Value,
+  TupleValue,
   schemaToJSON,
 } from '@triplit/db';
 import { getUserId } from './token.js';
@@ -428,7 +428,7 @@ export class TriplitClient<M extends ClientSchema | undefined = undefined> {
     entityId: string,
     updater: (
       entity: UpdateTypeFromModel<ModelFromModels<M, CN>>
-    ) => [Attribute, Value][] | Promise<[Attribute, Value][]>
+    ) => [Attribute, TupleValue][] | Promise<[Attribute, TupleValue][]>
   ) {
     this.logger.debug('updateRaw START', collectionName, entityId);
     const resp = await this.db.transact(

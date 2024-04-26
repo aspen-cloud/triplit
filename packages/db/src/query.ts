@@ -15,7 +15,7 @@ import { encodeValue } from '@triplit/tuple-database';
 type Path = string;
 // Should be friendly types that we pass into queries
 // Not to be confused with the Value type that we store in the triple store
-export type Value =
+export type QueryValue =
   | number
   | string
   | boolean
@@ -36,7 +36,7 @@ export type FilterStatement<
   M extends Models<any, any>
     ? ExtractOperators<ExtractTypeAtPath<ModelFromModels<M, CN>, K>>
     : string,
-  Value // TODO: We could make this tighter by inspecting the type
+  QueryValue // TODO: We could make this tighter by inspecting the type
 ];
 
 type ExtractTypeAtPath<
@@ -92,7 +92,7 @@ export type QueryWhere<
   CN extends CollectionNameFromModels<M>
 > = WhereFilter<M, CN>[];
 
-export type ValueCursor = [value: Value, entityId: EntityId];
+export type ValueCursor = [value: QueryValue, entityId: EntityId];
 
 type PrefixedUnion<
   Union extends string,
@@ -213,7 +213,7 @@ export type Query<
 > = Omit<CollectionQuery<M, CN>, 'collectionName'>;
 
 type TimestampedData =
-  | [Value, Timestamp]
+  | [QueryValue, Timestamp]
   | [Record<string, TimestampedData>, Timestamp];
 type EntityData = Record<string, TimestampedData>;
 
@@ -621,7 +621,7 @@ export const QUERY_INPUT_TRANSFORMERS = <
       Object.hasOwn(after, attributeToOrderBy)
     ) {
       return [
-        [after[attributeToOrderBy] as Value, after.id as string],
+        [after[attributeToOrderBy] as QueryValue, after.id as string],
         inclusive ?? false,
       ];
     }

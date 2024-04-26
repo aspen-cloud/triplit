@@ -12,19 +12,19 @@ import { KeyValuePair, MIN, MAX } from '@triplit/tuple-database';
 
 // Value should be serializable, this is what goes into triples
 // Not to be confused with the Value type we define on queries
-export type Value = number | string | boolean | null;
+export type TupleValue = number | string | boolean | null;
 export type EntityId = string;
 export type AttributeItem = string | number;
 export type Attribute = AttributeItem[];
 export type Expired = boolean;
 export type TenantId = string;
 
-export type EAV = [EntityId, Attribute, Value];
-export type TripleKey = [EntityId, Attribute, Value, Timestamp];
+export type EAV = [EntityId, Attribute, TupleValue];
+export type TripleKey = [EntityId, Attribute, TupleValue, Timestamp];
 export type TripleRow = {
   id: EntityId;
   attribute: Attribute;
-  value: Value;
+  value: TupleValue;
   timestamp: Timestamp;
   expired: Expired;
 };
@@ -33,21 +33,21 @@ export type TripleMetadata = { expired: Expired };
 
 export type EATIndex = {
   key: ['EAT', EntityId, Attribute, Timestamp];
-  value: [Value, TripleMetadata['expired']];
+  value: [TupleValue, TripleMetadata['expired']];
 };
 
 export type AVEIndex = {
-  key: ['AVE', Attribute, Value, EntityId, Timestamp];
+  key: ['AVE', Attribute, TupleValue, EntityId, Timestamp];
   value: TripleMetadata;
 };
 
 export type VAEIndex = {
-  key: ['VAE', Value, Attribute, EntityId, Timestamp];
+  key: ['VAE', TupleValue, Attribute, EntityId, Timestamp];
   value: TripleMetadata;
 };
 
 export type ClientTimestampIndex = {
-  key: ['clientTimestamp', string, Timestamp, EntityId, Attribute, Value]; // [tenant, 'clientTimestamp', client]
+  key: ['clientTimestamp', string, Timestamp, EntityId, Attribute, TupleValue]; // [tenant, 'clientTimestamp', client]
   value: TripleMetadata;
 };
 
@@ -136,7 +136,12 @@ export function indexToTriple(
     value: v,
     timestamp: t,
     // @ts-ignore
-    expired: indexType === 'EAT' ? index.value[1] : indexType === 'AVE' ? false : index.value.expired,
+    expired:
+      indexType === 'EAT'
+        ? index.value[1]
+        : indexType === 'AVE'
+        ? false
+        : index.value.expired,
   };
 }
 
@@ -181,7 +186,7 @@ export function findByAVE(
   tx: MultiTupleStoreOrTransaction,
   [attribute, value, entityId]: [
     attribute?: Attribute,
-    value?: Value,
+    value?: TupleValue,
     entityId?: EntityId
   ] = [],
   direction?: 'ASC' | 'DESC'

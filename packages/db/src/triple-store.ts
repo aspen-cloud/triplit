@@ -36,7 +36,7 @@ import {
   findByCollection,
   findByAVE,
   findByEAT,
-  Value,
+  TupleValue,
   findValuesInRange,
   mapStaticTupleToEAV,
   TripleStoreBeforeCommitHook,
@@ -92,7 +92,7 @@ export interface TripleStoreApi {
   findByAVE(
     [attribute, value, entityId]: [
       attribute?: Attribute,
-      value?: Value,
+      value?: TupleValue,
       entityId?: EntityId
     ],
     direction?: 'ASC' | 'DESC'
@@ -297,7 +297,7 @@ export class TripleStore implements TripleStoreApi {
   findByAVE(
     [attribute, value, entityId]: [
       attribute?: Attribute | undefined,
-      value?: Value | undefined,
+      value?: TupleValue | undefined,
       entityId?: string | undefined
     ],
     direction?: 'ASC' | 'DESC' | undefined
@@ -404,7 +404,7 @@ export class TripleStore implements TripleStoreApi {
   async setValue(
     entity: string,
     attribute: Attribute,
-    value: Value
+    value: TupleValue
   ): Promise<void> {
     await this.transact(async (tx) => {
       await tx.setValue(entity, attribute, value);

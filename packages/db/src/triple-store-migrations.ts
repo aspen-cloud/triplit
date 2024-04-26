@@ -6,7 +6,7 @@ import type {
   EntityId,
   TripleMetadata,
   TupleIndex,
-  Value,
+  TupleValue,
 } from './triple-store-utils.js';
 
 export const TRIPLE_STORE_MIGRATIONS: ((
@@ -18,7 +18,7 @@ export const TRIPLE_STORE_MIGRATIONS: ((
     const existingTuples = (await tupleStore.scan({
       prefix: ['EAV'],
     })) as {
-      key: ['EAV', EntityId, Attribute, Value, Timestamp];
+      key: ['EAV', EntityId, Attribute, TupleValue, Timestamp];
       value: TripleMetadata;
     }[];
 

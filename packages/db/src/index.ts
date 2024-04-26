@@ -56,7 +56,7 @@ export type {
   TripleRow,
   EntityId,
   Attribute,
-  Value,
+  TupleValue,
 } from './triple-store-utils.js';
 export {
   Schema,

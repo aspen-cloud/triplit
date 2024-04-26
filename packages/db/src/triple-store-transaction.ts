@@ -26,7 +26,7 @@ import {
   mapStaticTupleToEAV,
   EAV,
   EntityId,
-  Value,
+  TupleValue,
   TripleStoreBeforeCommitHook,
   TripleStoreBeforeInsertHook,
   TripleStoreAfterCommitHook,
@@ -119,7 +119,7 @@ export class TripleStoreTransaction implements TripleStoreApi {
   findByAVE(
     tupleArgs: [
       attribute?: Attribute | undefined,
-      value?: Value | undefined,
+      value?: TupleValue | undefined,
       entityId?: string | undefined
     ],
     direction?: 'ASC' | 'DESC' | undefined
@@ -264,7 +264,7 @@ export class TripleStoreTransaction implements TripleStoreApi {
     };
   }
 
-  async setValue(id: EntityId, attribute: Attribute, value: Value) {
+  async setValue(id: EntityId, attribute: Attribute, value: TupleValue) {
     return await this.setValues([[id, attribute, value]]);
   }
 

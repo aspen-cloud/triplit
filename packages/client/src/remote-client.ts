@@ -8,7 +8,7 @@ import {
   ChangeTracker,
   createUpdateProxy,
   Attribute,
-  Value,
+  TupleValue,
   TriplitError,
   EntityId,
   constructEntity,
@@ -248,11 +248,11 @@ export class RemoteClient<M extends ClientSchema | undefined> {
     );
     await updater(updateProxy);
     const changeTuples = changes.getTuples();
-    const patches: (['delete', Attribute] | ['set', Attribute, Value])[] =
+    const patches: (['delete', Attribute] | ['set', Attribute, TupleValue])[] =
       changeTuples.map((tuple) => {
         if (tuple[1] === undefined)
           return ['delete', tuple[0]] as ['delete', Attribute];
-        return ['set', tuple[0], tuple[1]] as ['set', Attribute, Value];
+        return ['set', tuple[0], tuple[1]] as ['set', Attribute, TupleValue];
       });
     const { data, error } = await this.sendRequest('/update', 'POST', {
       collectionName,

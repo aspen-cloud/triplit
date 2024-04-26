@@ -80,7 +80,7 @@ import {
   TripleRow,
   EAV,
   Attribute,
-  Value,
+  TupleValue,
   TripleStoreAfterCommitHook,
 } from './triple-store-utils.js';
 import { TripleStoreApi } from './triple-store.js';
@@ -607,7 +607,7 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
     entityId: string,
     callback: (
       entity: any
-    ) => [Attribute, Value][] | Promise<[Attribute, Value][]>
+    ) => [Attribute, TupleValue][] | Promise<[Attribute, TupleValue][]>
   ) {
     this.logger.debug('updateRaw START');
     const storeId = appendCollectionToId(collectionName, entityId);
@@ -1015,7 +1015,7 @@ function validateCollectionName(collections: any, collectionName: string) {
 
 export class ChangeTracker {
   // On assignment, set proper tuples
-  private tuplesTracker: Record<string, Value> = {};
+  private tuplesTracker: Record<string, TupleValue> = {};
 
   // Track updated values with ValuePointer
   changes: Record<string, any> = {};
@@ -1049,7 +1049,7 @@ export class ChangeTracker {
     return this.changes;
   }
 
-  getTuples(): [Attribute, Value][] {
+  getTuples(): [Attribute, TupleValue][] {
     return Object.entries(this.tuplesTracker).map(([attr, value]) => [
       attr.split('/'),
       value,

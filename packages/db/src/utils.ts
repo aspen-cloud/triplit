@@ -1,5 +1,5 @@
 import { UnserializableValueError } from './errors.js';
-import { Attribute, EAV, Value } from './triple-store-utils.js';
+import { Attribute, EAV, TupleValue } from './triple-store-utils.js';
 import { TuplePrefix } from './utility-types.js';
 
 function setToJSON(val: Set<string>) {
@@ -12,12 +12,12 @@ function setToJSON(val: Set<string>) {
 export function dbDocumentToTuples(
   object: any,
   prefix: Attribute = []
-): [Attribute, Value][] {
+): [Attribute, TupleValue][] {
   if (object == null || typeof object !== 'object') {
-    return [[prefix, object as Value]];
+    return [[prefix, object as TupleValue]];
   }
   if (Object.keys(object).length === 0) {
-    return [[prefix, '{}' as Value]];
+    return [[prefix, '{}' as TupleValue]];
   }
   // Although we dont strictly support arrays, we have them in schema rules
   // Currently need a way to serialize them...so we need to handle arrays
@@ -31,7 +31,7 @@ export function dbDocumentToTuples(
       ],
     ];
   }
-  const result: [Attribute, Value][] = [];
+  const result: [Attribute, TupleValue][] = [];
   if (prefix.length) result.push([prefix, '{}']);
   const objTuples = Object.keys(object).flatMap((key) =>
     dbDocumentToTuples(object[key], [...prefix, key])
