@@ -96,10 +96,10 @@ export type TripleStoreHooks = {
 };
 
 export type RangeContraints = {
-  greaterThan?: ValueCursor;
-  greaterThanOrEqual?: ValueCursor;
-  lessThan?: ValueCursor;
-  lessThanOrEqual?: ValueCursor;
+  greaterThan?: ValueCursor | Value;
+  greaterThanOrEqual?: ValueCursor | Value;
+  lessThan?: ValueCursor | Value;
+  lessThanOrEqual?: ValueCursor | Value;
   direction?: 'ASC' | 'DESC';
 };
 
@@ -213,27 +213,54 @@ export function findValuesInRange(
 ) {
   const prefix = ['AVE', attribute];
   const TUPLE_LENGTH = 5;
+
+  // Args accept either a cursor or a value, use min/max if cursor not provided
+  const greaterThanCurson = !!greaterThan
+    ? Array.isArray(greaterThan)
+      ? greaterThan
+      : ([greaterThan, MAX] as ValueCursor)
+    : undefined;
+  const greaterThanOrEqualCursor = !!greaterThanOrEqual
+    ? Array.isArray(greaterThanOrEqual)
+      ? greaterThanOrEqual
+      : ([greaterThanOrEqual, MIN] as ValueCursor)
+    : undefined;
+  const lessThanCursor = !!lessThan
+    ? Array.isArray(lessThan)
+      ? lessThan
+      : ([lessThan, MIN] as ValueCursor)
+    : undefined;
+  const lessThanOrEqualCursor = !!lessThanOrEqual
+    ? Array.isArray(lessThanOrEqual)
+      ? lessThanOrEqual
+      : ([lessThanOrEqual, MAX] as ValueCursor)
+    : undefined;
+
   const scanArgs = {
     prefix,
-    gt: greaterThan && [
-      ...greaterThan,
-      ...new Array(TUPLE_LENGTH - prefix.length - greaterThan.length).fill(MAX),
-    ],
-    gte: greaterThanOrEqual && [
-      ...greaterThanOrEqual,
+    gt: greaterThanCurson && [
+      ...greaterThanCurson,
       ...new Array(
-        TUPLE_LENGTH - prefix.length - greaterThanOrEqual.length
+        TUPLE_LENGTH - prefix.length - greaterThanCurson.length
+      ).fill(MAX),
+    ],
+    gte: greaterThanOrEqualCursor && [
+      ...greaterThanOrEqualCursor,
+      ...new Array(
+        TUPLE_LENGTH - prefix.length - greaterThanOrEqualCursor.length
       ).fill(MIN),
     ],
-    lt: lessThan && [
-      ...lessThan,
-      ...new Array(TUPLE_LENGTH - prefix.length - lessThan.length).fill(MIN),
-    ],
-    lte: lessThanOrEqual && [
-      ...lessThanOrEqual,
-      ...new Array(TUPLE_LENGTH - prefix.length - lessThanOrEqual.length).fill(
-        MAX
+    lt: lessThanCursor && [
+      ...lessThanCursor,
+      ...new Array(TUPLE_LENGTH - prefix.length - lessThanCursor.length).fill(
+        MIN
       ),
+    ],
+    lte: lessThanOrEqualCursor && [
+      ...lessThanOrEqualCursor,
+      ...new Array(
+        TUPLE_LENGTH - prefix.length - lessThanOrEqualCursor.length
+      ).fill(MAX),
     ],
     reverse: direction === 'DESC',
   };

@@ -343,6 +343,22 @@ describe('search/scan functionality', async () => {
         expired: false,
       },
       {
+        // actual min
+        id: 'cats#6',
+        attribute: ['cats', 'height'],
+        value: 5,
+        timestamp: [6, 'A'],
+        expired: false,
+      },
+      {
+        // acutal max
+        id: 'cats#7',
+        attribute: ['cats', 'height'],
+        value: 9,
+        timestamp: [7, 'A'],
+        expired: false,
+      },
+      {
         id: 'dogs#1',
         attribute: ['dogs', 'height'],
         value: 6,
@@ -355,22 +371,38 @@ describe('search/scan functionality', async () => {
       const gtRes = await op.findValuesInRange(['cats', 'height'], {
         greaterThan: [6, 'cats#2'],
       });
-      expect(gtRes).toHaveLength(4);
+      expect(gtRes).toHaveLength(5);
+      const gtValueRes = await op.findValuesInRange(['cats', 'height'], {
+        greaterThan: 6,
+      });
+      expect(gtValueRes).toHaveLength(4);
 
       const gteRes = await op.findValuesInRange(['cats', 'height'], {
         greaterThanOrEqual: [6, 'cats#2'],
       });
-      expect(gteRes).toHaveLength(5);
+      expect(gteRes).toHaveLength(6);
+      const gteValueRes = await op.findValuesInRange(['cats', 'height'], {
+        greaterThanOrEqual: 6,
+      });
+      expect(gteValueRes).toHaveLength(6);
 
       const ltRes = await op.findValuesInRange(['cats', 'height'], {
         lessThan: [8, 'cats#4'],
       });
-      expect(ltRes).toHaveLength(4);
+      expect(ltRes).toHaveLength(5);
+      const ltValueRes = await op.findValuesInRange(['cats', 'height'], {
+        lessThan: 8,
+      });
+      expect(ltValueRes).toHaveLength(4);
 
       const lteRes = await op.findValuesInRange(['cats', 'height'], {
         lessThanOrEqual: [8, 'cats#4'],
       });
-      expect(lteRes).toHaveLength(5);
+      expect(lteRes).toHaveLength(6);
+      const lteValueRes = await op.findValuesInRange(['cats', 'height'], {
+        lessThanOrEqual: 8,
+      });
+      expect(lteValueRes).toHaveLength(6);
 
       const rangeRes = await op.findValuesInRange(['cats', 'height'], {
         greaterThan: [6, 'cats#2'],
@@ -379,11 +411,11 @@ describe('search/scan functionality', async () => {
       expect(rangeRes).toHaveLength(3);
 
       const outOfRangeGT = await op.findValuesInRange(['cats', 'height'], {
-        greaterThan: [8, 'cats#4'],
+        greaterThan: [9, 'cats#7'],
       });
       expect(outOfRangeGT).toHaveLength(0);
       const outOfRangeLT = await op.findValuesInRange(['cats', 'height'], {
-        lessThan: [6, 'cats#2'],
+        lessThan: [5, 'cats#6'],
       });
       expect(outOfRangeLT).toHaveLength(0);
     });
