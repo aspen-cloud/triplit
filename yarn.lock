@@ -5243,6 +5243,27 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@radix-ui/react-progress@npm:^1.0.3":
+  version: 1.0.3
+  resolution: "@radix-ui/react-progress@npm:1.0.3"
+  dependencies:
+    "@babel/runtime": ^7.13.10
+    "@radix-ui/react-context": 1.0.1
+    "@radix-ui/react-primitive": 1.0.3
+  peerDependencies:
+    "@types/react": "*"
+    "@types/react-dom": "*"
+    react: ^16.8 || ^17.0 || ^18.0
+    react-dom: ^16.8 || ^17.0 || ^18.0
+  peerDependenciesMeta:
+    "@types/react":
+      optional: true
+    "@types/react-dom":
+      optional: true
+  checksum: a4398812315ae5b25f8637a6553daf85bd36e6e08d15f7486248538a994a99268752e2c21e4af15277c17e861c1825fdd7292938c515c112dc2cdce63ec1a892
+  languageName: node
+  linkType: hard
+
 "@radix-ui/react-roving-focus@npm:1.0.4":
   version: 1.0.4
   resolution: "@radix-ui/react-roving-focus@npm:1.0.4"
@@ -6143,7 +6164,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@triplit/client@0.3.38, @triplit/client@workspace:^, @triplit/client@workspace:packages/client":
+"@triplit/client@^0.3.38, @triplit/client@workspace:^, @triplit/client@workspace:packages/client":
   version: 0.0.0-use.local
   resolution: "@triplit/client@workspace:packages/client"
   dependencies:
@@ -6158,6 +6179,19 @@ __metadata:
     vitest: ^1.4.0
   languageName: unknown
   linkType: soft
+
+"@triplit/client@npm:0.3.38":
+  version: 0.3.38
+  resolution: "@triplit/client@npm:0.3.38"
+  dependencies:
+    "@sinclair/typebox": ^0.32.15
+    "@triplit/db": ^0.3.30
+    comlink: ^4.4.1
+    rxjs: ^7.8.1
+    superjson: ^2.2.1
+  checksum: e33e6a97a27918ed86c9201c31e78174f7ee04cf4cddaaf4d0ea3fa64dba2dc14fc1d340c82ce9046a5d583b46b99baaa0553c567093da28f9e20fdb94c5968c
+  languageName: node
+  linkType: hard
 
 "@triplit/console@workspace:^, @triplit/console@workspace:packages/console":
   version: 0.0.0-use.local
@@ -6213,7 +6247,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@triplit/db@0.3.30, @triplit/db@workspace:^, @triplit/db@workspace:packages/db":
+"@triplit/db@^0.3.30, @triplit/db@workspace:^, @triplit/db@workspace:packages/db":
   version: 0.0.0-use.local
   resolution: "@triplit/db@workspace:packages/db"
   dependencies:
@@ -6239,7 +6273,33 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@triplit/react@0.3.40, @triplit/react@workspace:^, @triplit/react@workspace:packages/react":
+"@triplit/db@npm:0.3.30":
+  version: 0.3.30
+  resolution: "@triplit/db@npm:0.3.30"
+  dependencies:
+    "@sinclair/typebox": ^0.32.15
+    "@triplit/tuple-database": ^2.2.12
+    idb: ^7.1.1
+    nanoid: ^3.0.0
+    pino: ^8.11.0
+    tinybench: ^2.5.0
+  checksum: afef99714a47eea967b8f47aff95ff79d0fb727dbd320d6c862bda8110b9d541f43c32c054e36436f0fb086c812804b15109a1525823538be7a94d0ad5028cef
+  languageName: node
+  linkType: hard
+
+"@triplit/react@npm:0.3.40":
+  version: 0.3.40
+  resolution: "@triplit/react@npm:0.3.40"
+  dependencies:
+    "@triplit/client": ^0.3.38
+  peerDependencies:
+    react: "*"
+    react-dom: "*"
+  checksum: 4483ef4871d8b83659afdafd0a2f9cda9790264b1c9bbde0e571aae17fef95695dfcea909ea7db8d1192a93eb937d6ee432af5b7f8da18a1bee15d2c048772d4
+  languageName: node
+  linkType: hard
+
+"@triplit/react@workspace:^, @triplit/react@workspace:packages/react":
   version: 0.0.0-use.local
   resolution: "@triplit/react@workspace:packages/react"
   dependencies:
@@ -6346,6 +6406,7 @@ __metadata:
     "@radix-ui/react-dropdown-menu": ^2.0.6
     "@radix-ui/react-label": ^2.0.2
     "@radix-ui/react-popover": ^1.0.7
+    "@radix-ui/react-progress": ^1.0.3
     "@radix-ui/react-select": ^2.0.0
     "@radix-ui/react-separator": ^1.0.3
     "@radix-ui/react-slot": ^1.0.2
