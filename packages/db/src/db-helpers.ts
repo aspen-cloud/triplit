@@ -590,7 +590,9 @@ function addSubsSelectsFromIncludes<
   CN extends CollectionNameFromModels<M>
 >(query: CollectionQuery<M, CN>, schema: M) {
   if (!query.include) return query;
-  const collectionSchema = schema[query.collectionName];
+  // TODO: typescript should handle schema = undefined, but it isn't
+  const collectionSchema = schema?.[query.collectionName];
+  if (!collectionSchema) return query;
   for (const [relationName, extraQuery] of Object.entries(
     query.include as Record<string, CollectionQuery<M, any>>
   )) {
