@@ -3130,6 +3130,47 @@ describe('ORDER & LIMIT & Pagination', () => {
     expect(areAllScoresDescending).toBeTruthy();
   });
 
+  it('properly orders after update', async () => {
+    const initialOrdered = await db.fetch(
+      CollectionQueryBuilder('TestScores').order(['score', 'ASC']).build()
+    );
+    expect(initialOrdered.size).toBe(TEST_SCORES.length);
+    const areAllScoresDescending = Array.from(initialOrdered.values()).every(
+      (result, i, arr) => {
+        if (i === 0) return true;
+        const previousScore = arr[i - 1].score;
+        const currentScore = result.score;
+        return previousScore <= currentScore;
+      }
+    );
+    expect(areAllScoresDescending).toBeTruthy();
+
+    // Move first item to the end
+    await db.update(
+      'TestScores',
+      [...initialOrdered.keys()][0],
+      async (entity) => {
+        entity.score = [...initialOrdered.values()][0].score + 1;
+      }
+    );
+
+    after: {
+      const ascendingResults = await db.fetch(
+        CollectionQueryBuilder('TestScores').order(['score', 'ASC']).build()
+      );
+      expect(ascendingResults.size).toBe(TEST_SCORES.length);
+      const areAllScoresDescending = Array.from(
+        ascendingResults.values()
+      ).every((result, i, arr) => {
+        if (i === 0) return true;
+        const previousScore = arr[i - 1].score;
+        const currentScore = result.score;
+        return previousScore <= currentScore;
+      });
+      expect(areAllScoresDescending).toBeTruthy();
+    }
+  });
+
   it('limit', async () => {
     const descendingScoresResults = await db.fetch(
       CollectionQueryBuilder('TestScores')

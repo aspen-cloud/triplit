@@ -27,7 +27,7 @@ import {
   timestampedObjectToPlainObject,
   TimestampedTypeFromModel,
 } from './schema.js';
-import { Timestamp } from './timestamp.js';
+import { Timestamp, timestampCompare } from './timestamp.js';
 import { TripleStore, TripleStoreApi } from './triple-store.js';
 import { FilterFunc, MapFunc, Pipeline } from './utils/pipeline.js';
 import {
@@ -224,14 +224,28 @@ async function getOrderSetForQuery<
       lessThanCursor: inclusive ? undefined : ltArg,
       lessThanOrEqualCursor: inclusive ? ltArg : undefined,
     };
-    return new Set(
-      (
-        await tx.findValuesInRange(
-          [query.collectionName, ...attrPath],
-          rangeParams
-        )
-      ).map((t) => t.id)
+    const orderedTriples = await tx.findValuesInRange(
+      [query.collectionName, ...attrPath],
+      rangeParams
     );
+    // Only take max timestamps for each entity-attribute because there could be dupes
+    const entityAttributes = new Map<string, Timestamp>();
+    const entityIds = new Set<string>();
+    for (let trip of orderedTriples) {
+      const entityAttrStr = [trip.id, ...trip.attribute].join('-');
+      if (!entityAttributes.has(entityAttrStr)) {
+        entityAttributes.set(entityAttrStr, trip.timestamp);
+        entityIds.add(trip.id);
+      } else {
+        const currentTimestamp = entityAttributes.get(entityAttrStr);
+        if (timestampCompare(trip.timestamp, currentTimestamp) > 0) {
+          entityAttributes.set(entityAttrStr, trip.timestamp);
+          entityIds.delete(trip.id);
+          entityIds.add(trip.id);
+        }
+      }
+    }
+    return entityIds;
   }
   return undefined;
 }
