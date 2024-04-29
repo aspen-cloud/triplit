@@ -1,5 +1,12 @@
 # @triplit/react
 
+## 0.3.43
+
+### Patch Changes
+
+- 53adad8: remove react-dom from peer dependencies
+  - @triplit/client@0.3.41
+
 ## 0.3.42
 
 ### Patch Changes
