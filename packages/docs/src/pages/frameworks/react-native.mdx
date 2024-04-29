@@ -69,11 +69,14 @@ Some Triplit packages use [Package Exports](https://nodejs.org/docs/latest-v18.x
   but we found it broke other parts of the package resolution process.
 </Callout>
 
-To handle these imports, you will need to add a `metro.config.js` file to the root of your project with the following content:
+To handle these imports, you will need to customize the Metro bundler. If you have not already created a `metro.config.js` file, please see the Expo docs on properly [configuring Metro](https://docs.expo.dev/guides/customizing-metro/). Once you have created a `metro.config.js` file, you can add the following code to resolve the exports from the Triplit packages:
 
 ```javascript
 const { getDefaultConfig } = require('expo/metro-config');
 const path = require('path');
+const config = getDefaultConfig(__dirname);
+
+// additional configuration steps
 
 // Resolve exports from @triplit/db
 function customResolver(context, moduleName, platform) {
