@@ -14,6 +14,7 @@ import {
   QueryResult,
   ReturnTypeFromQuery,
 } from '../../src/collection-query.js';
+import { DBTransaction } from '../../src/db-transaction.js';
 
 type TransactionAPI<TxDB extends DB<any>> = TxDB extends DB<infer M>
   ? Parameters<Parameters<DB<M>['transact']>[0]>[0]
@@ -22,6 +23,7 @@ type TransactionAPI<TxDB extends DB<any>> = TxDB extends DB<infer M>
 // Want to figure out the best way to test various data types + operation combos
 // Right now im reusing this exhaustive schema (also defined in cli tests)
 
+// TODO: unify structure to either split by schemaful/schemaless or by operation
 describe('schemaful', () => {
   test('insert: collection param includes all collections', () => {
     const schema = {
@@ -767,25 +769,65 @@ describe('fetching', () => {
     },
   };
 
-  test('fetch', async () => {
+  test('fetch', () => {
     // Schemaful
     {
       const db = new DB({ schema });
       const query = db.query('test').build();
-      const res = await db.fetch(query);
+      {
+        const res = db.fetch(query);
+        expectTypeOf(res).resolves.toEqualTypeOf<
+          Map<
+            string,
+            {
+              id: string;
+              attr1: string;
+              attr2: boolean;
+              attr3: number;
+              subquery: QueryResult<
+                CollectionQuery<typeof schema.collections, 'test2'>,
+                'many'
+              >;
+            }
+          >
+        >();
+      }
 
-      expectTypeOf<MapKey<typeof res>>().toEqualTypeOf<string>();
-      const expectValueTypeOf = expectTypeOf<MapValue<typeof res>>();
-      expectValueTypeOf.toHaveProperty('attr1').toEqualTypeOf<string>();
-      expectValueTypeOf.toHaveProperty('attr2').toEqualTypeOf<boolean>();
-      expectValueTypeOf.toHaveProperty('attr3').toEqualTypeOf<number>();
-      expectValueTypeOf.toHaveProperty('subquery');
+      {
+        let tx: DBTransaction<typeof schema.collections>;
+        const res = tx!.fetch(query);
+        expectTypeOf(res).resolves.toEqualTypeOf<
+          Map<
+            string,
+            {
+              id: string;
+              attr1: string;
+              attr2: boolean;
+              attr3: number;
+              subquery: QueryResult<
+                CollectionQuery<typeof schema.collections, 'test2'>,
+                'many'
+              >;
+            }
+          >
+        >();
+      }
     }
     // schemaless
     {
       const db = new DB();
       const query = db.query('test').build();
-      expectTypeOf(db.fetch(query)).resolves.toEqualTypeOf<Map<string, any>>();
+
+      {
+        const res = db.fetch(query);
+        expectTypeOf(res).resolves.toEqualTypeOf<Map<string, any>>();
+      }
+
+      {
+        let tx: DBTransaction<undefined>;
+        const res = tx!.fetch(query);
+        expectTypeOf(res).resolves.toEqualTypeOf<Map<string, any>>();
+      }
     }
   });
 
@@ -793,22 +835,48 @@ describe('fetching', () => {
     // Schemaful
     {
       const db = new DB({ schema });
-      type TestType = QueryResult<
-        CollectionQuery<typeof schema.collections, 'test2'>,
-        'many'
-      >;
-      expectTypeOf(db.fetchById('test', 'id')).resolves.toEqualTypeOf<{
-        id: string;
-        attr1: string;
-        attr2: boolean;
-        attr3: number;
-        subquery: TestType;
-      } | null>();
+
+      {
+        const res = db.fetchById('test', 'id');
+        expectTypeOf(res).resolves.toEqualTypeOf<{
+          id: string;
+          attr1: string;
+          attr2: boolean;
+          attr3: number;
+          subquery: QueryResult<
+            CollectionQuery<typeof schema.collections, 'test2'>,
+            'many'
+          >;
+        } | null>();
+      }
+
+      {
+        let tx: DBTransaction<typeof schema.collections>;
+        const res = tx!.fetchById('test', 'id');
+        expectTypeOf(res).resolves.toEqualTypeOf<{
+          id: string;
+          attr1: string;
+          attr2: boolean;
+          attr3: number;
+          subquery: QueryResult<
+            CollectionQuery<typeof schema.collections, 'test2'>,
+            'many'
+          >;
+        } | null>();
+      }
     }
     // schemaless
     {
       const db = new DB();
-      expectTypeOf(db.fetchById('test', 'id')).resolves.toBeAny();
+      {
+        const res = db.fetchById('test', 'id');
+        expectTypeOf(res).resolves.toBeAny();
+      }
+      {
+        let tx: DBTransaction<undefined>;
+        const res = tx!.fetchById('test', 'id');
+        expectTypeOf(res).resolves.toBeAny();
+      }
     }
   });
 
@@ -817,27 +885,50 @@ describe('fetching', () => {
     {
       const db = new DB({ schema });
       const query = db.query('test').build();
-      type TestType = QueryResult<
-        CollectionQuery<typeof schema.collections, 'test'>,
-        'many'
-      >;
+      {
+        const res = db.fetchOne(query);
+        expectTypeOf(res).resolves.toEqualTypeOf<{
+          id: string;
+          attr1: string;
+          attr2: boolean;
+          attr3: number;
+          subquery: QueryResult<
+            CollectionQuery<typeof schema.collections, 'test2'>,
+            'many'
+          >;
+        } | null>();
+      }
 
-      expectTypeOf(db.fetchOne(query)).resolves.toEqualTypeOf<{
-        id: string;
-        attr1: string;
-        attr2: boolean;
-        attr3: number;
-        subquery: QueryResult<
-          CollectionQuery<typeof schema.collections, 'test2'>,
-          'many'
-        >;
-      } | null>();
+      {
+        let tx: DBTransaction<typeof schema.collections>;
+        const res = tx!.fetchOne(query);
+        expectTypeOf(res).resolves.toEqualTypeOf<{
+          id: string;
+          attr1: string;
+          attr2: boolean;
+          attr3: number;
+          subquery: QueryResult<
+            CollectionQuery<typeof schema.collections, 'test2'>,
+            'many'
+          >;
+        } | null>();
+      }
     }
     // schemaless
     {
       const db = new DB();
       const query = db.query('test').build();
-      expectTypeOf(db.fetchOne(query)).resolves.toEqualTypeOf<any>();
+
+      {
+        const res = db.fetchOne(query);
+        expectTypeOf(res).resolves.toBeAny();
+      }
+
+      {
+        let tx: DBTransaction<undefined>;
+        const res = tx!.fetchOne(query);
+        expectTypeOf(res).resolves.toBeAny();
+      }
     }
   });
 });

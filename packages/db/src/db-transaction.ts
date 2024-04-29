@@ -17,6 +17,7 @@ import CollectionQueryBuilder, {
   fetch,
   fetchOne,
   FetchResult,
+  FetchResultEntity,
   initialFetchExecutionContext,
   MaybeReturnTypeFromQuery,
 } from './collection-query.js';
@@ -717,7 +718,7 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
   async fetchOne<Q extends CollectionQuery<M, any>>(
     query: Q,
     options: DBFetchOptions = {}
-  ) {
+  ): Promise<FetchResultEntity<Q> | null> {
     query.limit = 1;
     const result = await this.fetch(query, options);
     const entity = [...result.values()][0];
