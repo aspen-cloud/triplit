@@ -1,5 +1,12 @@
 # @triplit/db
 
+## 0.3.33
+
+### Patch Changes
+
+- 0470537: fix bug in order by candidate selection
+- 8d029fd: properly type db transaction fetchOne
+
 ## 0.3.32
 
 ### Patch Changes
