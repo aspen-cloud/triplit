@@ -10,6 +10,7 @@ import { Command } from '../../command.js';
 export default Command({
   description: 'Runs up migrations on the remote database',
   middleware: [serverRequesterMiddleware],
+  preRelease: true,
   args: [
     {
       name: 'version',

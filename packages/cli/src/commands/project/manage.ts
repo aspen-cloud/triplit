@@ -5,7 +5,7 @@ import { blue, green } from 'ansis/colors';
 export default Command({
   description: 'Manage a Triplit Cloud project',
   flags: {},
-  preRelease: false,
+  preRelease: true,
   middleware: [],
   async run({ ctx }) {
     const config = getConfig();

@@ -10,7 +10,7 @@ import { organizationMiddleware } from '../../middleware/organization.js';
 export default Command({
   description: 'Create a new Triplit Cloud project',
   flags: {},
-  preRelease: false,
+  preRelease: true,
   middleware: [accessTokenMiddleware, organizationMiddleware],
   async run({ ctx }) {
     const { organization } = ctx;

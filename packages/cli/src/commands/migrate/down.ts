@@ -11,6 +11,7 @@ export default Command({
   description: 'Runs down migrations on the remote database',
   middleware: [serverRequesterMiddleware],
   args: [{ name: 'version', description: 'The version to migrate down to' }],
+  preRelease: true,
   run: async ({ args, ctx }) => {
     const endVersion = +args.version;
     if (endVersion == undefined) throw new Error('No version specified');

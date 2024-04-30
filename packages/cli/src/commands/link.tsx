@@ -11,7 +11,7 @@ import { organizationMiddleware } from '../middleware/organization.js';
 export default Command({
   description: 'Link your local workspace to a Triplit Cloud project',
   flags: {},
-  preRelease: false,
+  preRelease: true,
   middleware: [accessTokenMiddleware, organizationMiddleware],
   async run({ ctx }) {
     const { organization } = ctx;

@@ -20,6 +20,7 @@ import { Command } from '../../command.js';
 export default Command({
   description: 'Generates a schema file based on your current migrations',
   middleware: [serverRequesterMiddleware],
+  preRelease: true,
   run: async ({ ctx }) => {
     const res = await getMigrationsStatus({ ctx });
     const migrations = res.project.migrations.filter((m) => {
