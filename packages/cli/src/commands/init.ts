@@ -27,7 +27,7 @@ export default Command({
       description: 'Package manager to use',
     }),
     framework: Flag.Enum({
-      options: ['react'] as const,
+      options: ['react', 'svelte'] as const,
       char: 'f',
       description: 'Frontend framework helpers to install',
     }),
@@ -67,6 +67,9 @@ export default Command({
       switch (flags.framework) {
         case 'react':
           packageToInstall.push('@triplit/react');
+          break;
+        case 'svelte':
+          packageToInstall.push('@triplit/svelte');
           break;
       }
     }
