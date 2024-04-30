@@ -24,6 +24,7 @@ import { logger } from './logger.js';
 import { Route } from '@triplit/server-core/triplit-server';
 import path from 'path';
 import multer from 'multer';
+import * as Sentry from '@sentry/node';
 
 const upload = multer();
 // ESM override for __dirname
@@ -63,6 +64,21 @@ export type ServerOptions = {
   verboseLogs?: boolean;
 };
 
+function initSentry() {
+  if (process.env.SENTRY_DSN) {
+    Sentry.init({
+      dsn: process.env.SENTRY_DSN,
+      release: '1.0.0',
+    });
+  }
+}
+
+function captureException(e: any) {
+  if (Sentry.isInitialized() && e instanceof Error) {
+    Sentry.captureException(e);
+  }
+}
+
 export function createServer(options?: ServerOptions) {
   const dbSource =
     options?.storage === 'sqlite' ? setupSqliteStorage() : new MemoryStorage();
@@ -82,7 +98,14 @@ export function createServer(options?: ServerOptions) {
     triplitServers.set(projectId, server);
     return server;
   }
-
+  initSentry();
+  setTimeout(() => {
+    try {
+      throw new Error('Test Sentry');
+    } catch (e) {
+      captureException(e);
+    }
+  }, 99);
   const app = express();
   app.use(express.json());
   app.use((req, res, next) => {
@@ -91,9 +114,6 @@ export function createServer(options?: ServerOptions) {
     res.send = (c) => {
       const end = new Date();
       let body = c;
-      try {
-        body = JSON.parse(c);
-      } catch (e) {}
       const resWithBody = {
         ...res,
         body,
@@ -220,6 +240,7 @@ export function createServer(options?: ServerOptions) {
     });
 
     socket.on('error', (err) => {
+      captureException(err);
       closeSocket(socket, { type: 'INTERNAL_ERROR', retry: false }, 1011);
     });
 
@@ -245,6 +266,7 @@ export function createServer(options?: ServerOptions) {
       return res.sendStatus(200);
     } catch (e) {
       console.error(e);
+      captureException(e);
       return res.sendStatus(500);
     }
   });
@@ -281,6 +303,7 @@ export function createServer(options?: ServerOptions) {
       }
     );
     if (error) {
+      captureException(error);
       return res.sendStatus(401);
     }
 
@@ -323,8 +346,14 @@ export function createServer(options?: ServerOptions) {
 
   app.use('/', authenticated);
 
+  app.on('error', (err) => {
+    console.error(err);
+    captureException(err);
+  });
+
   wss.on('error', (err) => {
-    console.log(err);
+    console.error(err);
+    captureException(err);
   });
   wss.on('close', () => {
     clearInterval(heartbeatInterval);
@@ -341,6 +370,7 @@ export function createServer(options?: ServerOptions) {
           if (tokenRes.error) throw tokenRes.error;
           token = tokenRes.data;
         } catch (e) {
+          captureException(e);
           closeSocket(
             socket,
             {
@@ -377,6 +407,7 @@ export function createServer(options?: ServerOptions) {
             }
           }
         } catch (e) {
+          captureException(e);
           closeSocket(
             socket,
             {
