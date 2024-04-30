@@ -21,11 +21,6 @@ const packageToInstall = ['@triplit/client'];
 export default Command({
   description: 'Initialize a Triplit project',
   flags: {
-    packageManager: Flag.Enum({
-      options: ['npm', 'pnpm', 'yarn'] as const,
-      char: 'm',
-      description: 'Package manager to use',
-    }),
     framework: Flag.Enum({
       options: ['react', 'svelte'] as const,
       char: 'f',
