@@ -14,6 +14,7 @@
   "-2": {
     "type": "separator"
   },
+  "cli": "CLI",
   "frameworks": "Frameworks",
   "react-tutorial": "React + Vite tutorial",
   "-3": {

@@ -1,0 +1,41 @@
+# `triplit schema`
+
+Read our guide on [how to update a schema](/schema-management) for more information.
+
+## `triplit schema push`
+
+```
+triplit schema push
+Apply the local schema to the server
+
+Flags:
+--token, -t Service Token
+--remote, -r Remote URL to connect to
+```
+
+## `triplit schema print`
+
+```
+triplit schema print
+View the schema of the current project
+
+Flags:
+--location, -l Location of the schema file
+    Options: local, remote, both
+--raw, -r Print exclusively the requested schema (useful for exporting to file)
+--format, -f Format of the output
+    Options: json, file
+--token, -t Service Token
+--remote, -r Remote URL to connect to
+```
+
+## `triplit schema diff`
+
+```
+triplit schema diff
+Show the diff between local and remote schema
+
+Flags:
+--token, -t Service Token
+--remote, -r Remote URL to connect to
+```
