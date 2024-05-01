@@ -1,5 +1,11 @@
 # @triplit/db
 
+## 0.3.34
+
+### Patch Changes
+
+- b3315c3: default to id order in after cursor calculation
+
 ## 0.3.33
 
 ### Patch Changes
