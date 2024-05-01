@@ -19,6 +19,7 @@ export default Command({
   description:
     'Fetches the remote database schema and generates a migration based on any changes',
   middleware: [serverRequesterMiddleware],
+  preRelease: true,
   run: async ({ ctx }) => {
     console.log(`Pulling latest migrations from sync server: `, blue(ctx.url));
     console.log();

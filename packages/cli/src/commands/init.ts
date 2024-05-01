@@ -21,13 +21,8 @@ const packageToInstall = ['@triplit/client'];
 export default Command({
   description: 'Initialize a Triplit project',
   flags: {
-    packageManager: Flag.Enum({
-      options: ['npm', 'pnpm', 'yarn'] as const,
-      char: 'm',
-      description: 'Package manager to use',
-    }),
     framework: Flag.Enum({
-      options: ['react'] as const,
+      options: ['react', 'svelte'] as const,
       char: 'f',
       description: 'Frontend framework helpers to install',
     }),
@@ -67,6 +62,9 @@ export default Command({
       switch (flags.framework) {
         case 'react':
           packageToInstall.push('@triplit/react');
+          break;
+        case 'svelte':
+          packageToInstall.push('@triplit/svelte');
           break;
       }
     }

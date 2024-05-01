@@ -1,0 +1,38 @@
+import { Tabs, Tab } from 'nextra-theme-docs';
+
+# Installing the Triplit CLI
+
+Install the CLI in your project:
+
+<Tabs items={['npm', 'pnpm', 'yarn', 'bun']}>
+  <Tab>
+    ```bash copy
+    npm install --save-dev @triplit/cli
+    ```
+
+  </Tab>
+  <Tab>
+    ```bash copy
+    pnpm add --save-dev @triplit/cli
+    ```
+
+  </Tab>
+  <Tab>
+    ```bash copy
+    yarn add --dev @triplit/cli 
+    ```
+
+  </Tab>
+  <Tab>
+    ```bash copy
+    bun add --dev @triplit/cli 
+    ```
+    
+    </Tab>
+</Tabs>
+
+All commands in the CLI can be inspected by adding the `--help` flag. For example, to see the available commands:
+
+```bash
+triplit --help
+```

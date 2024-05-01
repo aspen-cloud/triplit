@@ -43,7 +43,7 @@ async function writeSeedFile(
 }
 
 export default Command({
-  description: 'Seeds a Triplit project with data',
+  description: 'Creates a new seed file',
   args: [
     {
       name: 'filename',

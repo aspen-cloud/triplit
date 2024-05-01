@@ -5785,6 +5785,68 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@sentry-internal/tracing@npm:7.112.2":
+  version: 7.112.2
+  resolution: "@sentry-internal/tracing@npm:7.112.2"
+  dependencies:
+    "@sentry/core": 7.112.2
+    "@sentry/types": 7.112.2
+    "@sentry/utils": 7.112.2
+  checksum: 80e8ce37a1c0f6ad5ddd9f93896ec649eab12cad1e13ddad38d03944a586e3e3a454420005ef800ca8f371b185b5df3d7c2f2fa26df4f7a739a933c113f51b43
+  languageName: node
+  linkType: hard
+
+"@sentry/core@npm:7.112.2":
+  version: 7.112.2
+  resolution: "@sentry/core@npm:7.112.2"
+  dependencies:
+    "@sentry/types": 7.112.2
+    "@sentry/utils": 7.112.2
+  checksum: 59a7abc899ffa91ac40957159fbe368db53331683899b57605ed8b1ec41b90cac27399150ff4f8a0f1bebca4ef1fd475e2f79de7a7f0f0ca30a17f030b21f568
+  languageName: node
+  linkType: hard
+
+"@sentry/integrations@npm:7.112.2":
+  version: 7.112.2
+  resolution: "@sentry/integrations@npm:7.112.2"
+  dependencies:
+    "@sentry/core": 7.112.2
+    "@sentry/types": 7.112.2
+    "@sentry/utils": 7.112.2
+    localforage: ^1.8.1
+  checksum: 9a1fd2eeb138a8b320c5e7c3df3566e838c5ff68e9ed8e87401467cffc5f925fc4ef0d8cf82c2253bb085eb520939e096c7f52a07c69ce0bdbffffe25385b656
+  languageName: node
+  linkType: hard
+
+"@sentry/node@npm:^7.112.2":
+  version: 7.112.2
+  resolution: "@sentry/node@npm:7.112.2"
+  dependencies:
+    "@sentry-internal/tracing": 7.112.2
+    "@sentry/core": 7.112.2
+    "@sentry/integrations": 7.112.2
+    "@sentry/types": 7.112.2
+    "@sentry/utils": 7.112.2
+  checksum: ae48d83631c4ad9c8c5f6ec0ecde3199fdb3b7ddd1d819641703009a5252316e757d93e4e2aba46eb49dd592dde963af605ce3a722ee845e50dafe954a1eced9
+  languageName: node
+  linkType: hard
+
+"@sentry/types@npm:7.112.2":
+  version: 7.112.2
+  resolution: "@sentry/types@npm:7.112.2"
+  checksum: 8f04880d64b35b0a9b4f82f3f14624dbcf35060295fd000afff587d933bcb489db64a68f32baf595f4478ffa6a4a710a6eacfafa465b0291ab082bedda64b710
+  languageName: node
+  linkType: hard
+
+"@sentry/utils@npm:7.112.2":
+  version: 7.112.2
+  resolution: "@sentry/utils@npm:7.112.2"
+  dependencies:
+    "@sentry/types": 7.112.2
+  checksum: 4feb6d82614742a677a50765198c142325be8dbf516e51e3fd58bfa4e0db315ef44fd1d7195ddcfdf03731ae16623c45c2a156d5b5001de0a8760c9eea0a5739
+  languageName: node
+  linkType: hard
+
 "@sinclair/typebox@npm:^0.27.8":
   version: 0.27.8
   resolution: "@sinclair/typebox@npm:0.27.8"
@@ -6114,7 +6176,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@triplit/cli@0.3.48, @triplit/cli@workspace:^, @triplit/cli@workspace:packages/cli":
+"@triplit/cli@0.3.49, @triplit/cli@workspace:^, @triplit/cli@workspace:packages/cli":
   version: 0.0.0-use.local
   resolution: "@triplit/cli@workspace:packages/cli"
   dependencies:
@@ -6285,10 +6347,11 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@triplit/server@0.3.35, @triplit/server@workspace:^, @triplit/server@workspace:packages/server":
+"@triplit/server@0.3.36, @triplit/server@workspace:^, @triplit/server@workspace:packages/server":
   version: 0.0.0-use.local
   resolution: "@triplit/server@workspace:packages/server"
   dependencies:
+    "@sentry/node": ^7.112.2
     "@triplit/db": "workspace:^"
     "@triplit/server-core": "workspace:^"
     "@types/better-sqlite3": ^7.6.4
@@ -14950,7 +15013,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"localforage@npm:^1.10.0":
+"localforage@npm:^1.10.0, localforage@npm:^1.8.1":
   version: 1.10.0
   resolution: "localforage@npm:1.10.0"
   dependencies:
@@ -16745,7 +16808,7 @@ __metadata:
     "@radix-ui/react-slot": ^1.0.2
     "@tailwindcss/typography": ^0.5.10
     "@triplit/authjs-adapter": ^0.1.0
-    "@triplit/cli": 0.3.48
+    "@triplit/cli": 0.3.49
     "@triplit/client": 0.3.41
     "@triplit/db": 0.3.33
     "@triplit/react": 0.3.43
@@ -17087,7 +17150,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "node-server@workspace:packages/node-server"
   dependencies:
-    "@triplit/server": 0.3.35
+    "@triplit/server": 0.3.36
     "@types/semver": ^7
     semver: ^7.6.0
   languageName: unknown

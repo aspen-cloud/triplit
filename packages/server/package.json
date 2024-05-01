@@ -1,7 +1,7 @@
 {
   "name": "@triplit/server",
   "packageManager": "yarn@3.4.1",
-  "version": "0.3.35",
+  "version": "0.3.36",
   "source": "./src/index.ts",
   "main": "./dist/index.js",
   "type": "module",
@@ -26,6 +26,7 @@
     "publish-pkg": "node ../../scripts/npm-check-version-and-publish.js"
   },
   "dependencies": {
+    "@sentry/node": "^7.112.2",
     "@triplit/db": "workspace:^",
     "@triplit/server-core": "workspace:^",
     "better-sqlite3": "^8.3.0",

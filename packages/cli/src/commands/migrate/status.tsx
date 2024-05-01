@@ -16,6 +16,7 @@ export default Command({
       description: 'Show all migrations',
     }),
   },
+  preRelease: true,
   middleware: [serverRequesterMiddleware],
   run: async ({ flags, ctx }) => {
     // console.log(`\nGetting migration status of the sync server: `, blue(ctx.url));

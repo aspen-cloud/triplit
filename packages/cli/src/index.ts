@@ -76,7 +76,7 @@ export async function execute(args: string[], flags: {}) {
   }
   // @ts-ignore
   if (flags.help || flags.h) {
-    printCommandHelp(cmdDef.name, cmdDef);
+    printCommandHelp(argv._.join(' '), cmdDef);
     return;
   }
 

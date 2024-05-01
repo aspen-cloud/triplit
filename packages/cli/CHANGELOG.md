@@ -1,5 +1,13 @@
 # @triplit/cli
 
+## 0.3.49
+
+### Patch Changes
+
+- d692339: hide prerelease commands
+- Updated dependencies [fc6feb1]
+  - @triplit/server@0.3.36
+
 ## 0.3.48
 
 ### Patch Changes

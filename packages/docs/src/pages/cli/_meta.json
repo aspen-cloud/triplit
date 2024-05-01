@@ -1,0 +1,9 @@
+{
+  "index": "Installation",
+  "clear": "clear",
+  "dev": "dev",
+  "init": "init",
+  "repl": "repl",
+  "schema": "schema",
+  "seed": "seed"
+}

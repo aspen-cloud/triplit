@@ -12,7 +12,8 @@ export default Command({
   flags: {
     full: Flag.Boolean({
       char: 'f',
-      description: 'Create a new seed file',
+      description:
+        'Will also clear all metadata from the database, including the schema.',
       default: false,
     }),
   },

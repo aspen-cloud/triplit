@@ -1,5 +1,11 @@
 # @triplit/server
 
+## 0.3.36
+
+### Patch Changes
+
+- fc6feb1: add Sentry
+
 ## 0.3.35
 
 ### Patch Changes
