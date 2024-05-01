@@ -1039,7 +1039,9 @@ function FilterAfterCursor<
     if (!after) return true;
     const [cursor, inclusive] = after;
     if ((cursorValueReached && idReached) || cursorValuePassed) return true;
-    const [orderAttr, orderDir] = order![0];
+    // TODO: properly handle no order by clause
+    const [orderAttr, orderDir] =
+      order && order.length > 0 ? order[0] : ['id', 'ASC'];
     const entityVal = entity[orderAttr][0];
     const [cursorVal, cursorId] = cursor;
     const encodedCursorVal = encodeValue(cursorVal);
