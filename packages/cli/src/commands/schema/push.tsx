@@ -1,4 +1,4 @@
-import c from 'ansi-colors';
+import * as Colors from 'ansis/colors';
 import { Command } from '../../command.js';
 import { serverRequesterMiddleware } from '../../middleware/add-server-requester.js';
 import { readLocalSchema } from '../../schema.js';
@@ -29,9 +29,9 @@ export default Command({
       return;
     }
     logSchemaChangeViolations(data.successful, data.issues, {
-      warn: (message, ...args) => console.log(c.yellow(message), ...args),
-      info: (message, ...args) => console.log(c.blue(message), ...args),
-      error: (message, ...args) => console.log(c.red(message), ...args),
+      warn: (message, ...args) => console.log(Colors.yellow(message), ...args),
+      info: (message, ...args) => console.log(Colors.blue(message), ...args),
+      error: (message, ...args) => console.log(Colors.red(message), ...args),
       debug: () => {},
       scope: () => this,
     });
