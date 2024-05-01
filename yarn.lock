@@ -6176,7 +6176,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@triplit/cli@0.3.48, @triplit/cli@workspace:^, @triplit/cli@workspace:packages/cli":
+"@triplit/cli@0.3.49, @triplit/cli@workspace:^, @triplit/cli@workspace:packages/cli":
   version: 0.0.0-use.local
   resolution: "@triplit/cli@workspace:packages/cli"
   dependencies:
@@ -6347,7 +6347,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@triplit/server@0.3.35, @triplit/server@workspace:^, @triplit/server@workspace:packages/server":
+"@triplit/server@0.3.36, @triplit/server@workspace:^, @triplit/server@workspace:packages/server":
   version: 0.0.0-use.local
   resolution: "@triplit/server@workspace:packages/server"
   dependencies:
@@ -16808,7 +16808,7 @@ __metadata:
     "@radix-ui/react-slot": ^1.0.2
     "@tailwindcss/typography": ^0.5.10
     "@triplit/authjs-adapter": ^0.1.0
-    "@triplit/cli": 0.3.48
+    "@triplit/cli": 0.3.49
     "@triplit/client": 0.3.41
     "@triplit/db": 0.3.33
     "@triplit/react": 0.3.43
@@ -17150,7 +17150,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "node-server@workspace:packages/node-server"
   dependencies:
-    "@triplit/server": 0.3.35
+    "@triplit/server": 0.3.36
     "@types/semver": ^7
     semver: ^7.6.0
   languageName: unknown
