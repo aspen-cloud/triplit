@@ -18,10 +18,12 @@
     "react-dom": "^18.2.0"
   },
   "devDependencies": {
+    "@types/node": "^20.12.8",
     "@types/react": "^18",
     "@types/react-dom": "^18",
     "next-sitemap": "^4.2.3",
     "typedoc": "^0.25.3",
-    "typedoc-plugin-markdown": "^3.17.0"
+    "typedoc-plugin-markdown": "^3.17.0",
+    "typescript": "^5.4.5"
   }
 }
