@@ -73,6 +73,7 @@ async function recordImagePublish(args) {
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${process.env.PROJECTS_ADMIN_API_KEY}`,
+          apiKey: process.env.PROJECTS_ADMIN_API_KEY,
         },
         body: JSON.stringify(args),
       }
