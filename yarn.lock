@@ -6176,7 +6176,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@triplit/cli@0.3.50, @triplit/cli@workspace:^, @triplit/cli@workspace:packages/cli":
+"@triplit/cli@0.3.51, @triplit/cli@workspace:^, @triplit/cli@workspace:packages/cli":
   version: 0.0.0-use.local
   resolution: "@triplit/cli@workspace:packages/cli"
   dependencies:
@@ -6226,7 +6226,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@triplit/client@0.3.42, @triplit/client@workspace:^, @triplit/client@workspace:packages/client":
+"@triplit/client@0.3.43, @triplit/client@workspace:^, @triplit/client@workspace:packages/client":
   version: 0.0.0-use.local
   resolution: "@triplit/client@workspace:packages/client"
   dependencies:
@@ -6322,7 +6322,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@triplit/react@0.3.44, @triplit/react@workspace:^, @triplit/react@workspace:packages/react":
+"@triplit/react@0.3.45, @triplit/react@workspace:^, @triplit/react@workspace:packages/react":
   version: 0.0.0-use.local
   resolution: "@triplit/react@workspace:packages/react"
   dependencies:
@@ -16819,10 +16819,10 @@ __metadata:
     "@radix-ui/react-slot": ^1.0.2
     "@tailwindcss/typography": ^0.5.10
     "@triplit/authjs-adapter": ^0.1.0
-    "@triplit/cli": 0.3.50
-    "@triplit/client": 0.3.42
+    "@triplit/cli": 0.3.51
+    "@triplit/client": 0.3.43
     "@triplit/db": 0.3.34
-    "@triplit/react": 0.3.44
+    "@triplit/react": 0.3.45
     "@types/bcryptjs": ^2
     "@types/jsonwebtoken": ^9.0.2
     "@types/node": ^17.0.45
