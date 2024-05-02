@@ -35,5 +35,8 @@ export default Command({
       debug: () => {},
       scope: () => this,
     });
+    if (!data.successful) {
+      process.exit(1);
+    }
   },
 });
