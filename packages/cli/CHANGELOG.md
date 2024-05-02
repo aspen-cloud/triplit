@@ -1,5 +1,11 @@
 # @triplit/cli
 
+## 0.3.52
+
+### Patch Changes
+
+- b4f7f26: exit unsuccessful schema push with exit code 1
+
 ## 0.3.51
 
 ### Patch Changes
