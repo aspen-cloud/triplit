@@ -25,13 +25,10 @@
   "seeding": "Seeding a database",
   "triplit-cloud": "Triplit Cloud",
   "auth": "Auth",
-  "migrations": "Migrations",
+  "migrations": { "title": "Migrations", "display": "hidden" },
   "v2": {
     "title": "V2",
     "display": "hidden"
-  },
-  "-4": {
-    "type": "separator"
   },
   "whats-next": { "display": "hidden" }
 }
