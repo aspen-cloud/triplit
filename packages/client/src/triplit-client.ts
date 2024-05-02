@@ -351,7 +351,7 @@ export class TriplitClient<M extends ClientSchema | undefined = undefined> {
     id: string,
     queryParams?: FetchByIdQueryParams<M, CN>,
     options?: Partial<FetchOptions>
-  ) {
+  ): Promise<ClientFetchResultEntity<ClientQuery<M, CN>> | null> {
     this.logger.debug(
       'fetchById START',
       collectionName,
@@ -371,7 +371,9 @@ export class TriplitClient<M extends ClientSchema | undefined = undefined> {
       queryParams,
       options
     );
-    return results.get(id);
+    const entity = results.get(id);
+    if (!entity) return null;
+    return entity;
   }
 
   async fetchOne<CQ extends ClientQuery<M, any>>(
