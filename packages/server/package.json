@@ -23,9 +23,11 @@
     "lint": "tsc --noEmit",
     "lint:build": "npx publint",
     "util:gentoken": "node ./dev/scripts/createToken.cjs",
-    "publish-pkg": "node ../../scripts/npm-check-version-and-publish.js"
+    "publish-pkg": "node ../../scripts/npm-check-version-and-publish.js && yarn sentry:sourcemaps",
+    "sentry:sourcemaps": "sentry-cli sourcemaps inject --org aspen --project triplit-server ./dist && sentry-cli sourcemaps upload --release=$npm_package_version --org aspen --project triplit-server ./dist"
   },
   "dependencies": {
+    "@sentry/cli": "^2.31.2",
     "@sentry/node": "^7.112.2",
     "@triplit/db": "workspace:^",
     "@triplit/server-core": "workspace:^",

@@ -25,6 +25,8 @@ import { Route } from '@triplit/server-core/triplit-server';
 import path from 'path';
 import multer from 'multer';
 import * as Sentry from '@sentry/node';
+// @ts-ignore
+import pjson from '../package.json' assert { type: 'json' };
 
 const upload = multer();
 // ESM override for __dirname
@@ -68,7 +70,7 @@ function initSentry() {
   if (process.env.SENTRY_DSN) {
     Sentry.init({
       dsn: process.env.SENTRY_DSN,
-      release: '1.0.0',
+      release: pjson.version,
     });
   }
 }
@@ -99,13 +101,6 @@ export function createServer(options?: ServerOptions) {
     return server;
   }
   initSentry();
-  setTimeout(() => {
-    try {
-      throw new Error('Test Sentry');
-    } catch (e) {
-      captureException(e);
-    }
-  }, 99);
   const app = express();
   app.use(express.json());
   app.use((req, res, next) => {
