@@ -26,7 +26,7 @@ export default Command({
     }
     if (!Object.hasOwn(data, 'successful') || !Object.hasOwn(data, 'issues')) {
       console.error(data);
-      return;
+      process.exit(1);
     }
     logSchemaChangeViolations(data.successful, data.issues, {
       warn: (message, ...args) => console.log(Colors.yellow(message), ...args),
