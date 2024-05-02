@@ -1,5 +1,11 @@
 # @triplit/client
 
+## 0.3.43
+
+### Patch Changes
+
+- 02284c0: Properly type fetchById and ensure returns null if not found
+
 ## 0.3.42
 
 ### Patch Changes
