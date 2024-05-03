@@ -1,8 +1,20 @@
 # Self-hosting Triplit
 
-## The server
+To enable sync, you need to run a Triplit server. The server is a Node.js application that talks to various Triplit clients over WebSockets and HTTP.
 
-To enable sync, you need to run a Triplit server. The server is a Node.js application that talks to various Triplit clients over WebSockets and HTTP. The server is published as an NPM package, and you can install it by running:
+You have several options for running the server:
+
+- A local [development server](/local-development)
+- Use [Docker](#docker) and a cloud provider that supports container deployments
+- Build [a custom server](#building-a-custom-server) and use a cloud provider that supports Git-based deploys
+
+## Docker
+
+Each release of the server is [published as a Docker image](https://hub.docker.com/r/aspencloud/triplit-server/tags). You can deploy the server to a cloud provider like [fly.io](https://fly.io/docs/languages-and-frameworks/dockerfile/), [DigitalOcean](https://docs.digitalocean.com/products/app-platform/how-to/deploy-from-container-images/), or AWS. You'll also want to setup a volume to persist the database.
+
+## Building a custom server
+
+The server is published as an NPM package, and you can install it by running:
 
 ```bash copy
 npm install @triplit/server
@@ -31,7 +43,7 @@ process.on('SIGINT', function () {
 });
 ```
 
-The server will start listening on the specified port, and you can now connect your clients to it. The `verboseLogs` option will log all incoming and outgoing messages and requests, which can be useful for debugging.
+You can now deploy the server to a cloud provider that supports Git deploys, like [Vercel](https://vercel.com/docs/git), [Netlify](https://docs.netlify.com/configure-builds/get-started/), or [Render](https://docs.render.com/deploys).
 
 ## Secrets
 
@@ -71,20 +83,14 @@ const serviceKey = jwt.sign(
 
 For more complicate authentication schemes, refer to our [authentication guide](/auth).
 
-### `LOCAL_DATABASE_URL`
+### `LOCAL_DATABASE_URL` (optional)
 
 If you use the `sqlite` storage adapter, the server will create the database file at `./app.db` in the server's directory. If you want to override this (as is sometimes necessary for Cloud providers with their own separately managed storage volumes) you can set the `LOCAL_DATABASE_URL` environment variable.
 
-### `SENTRY_DSN`
+### `SENTRY_DSN` (optional)
 
 If you want to log errors to Sentry, you can set the `SENTRY_DSN` environment variable. The server will automatically log errors to Sentry.
 
-## Docker
+### `VERBOSE_LOGS` (optional)
 
-Each release of the server is [published as a Docker image](https://hub.docker.com/r/aspencloud/triplit-server/tags). You can run the server in a docker container by running:
-
-```bash copy
-docker run -p 8080:8080 -e JWT_SECRET=your-secret -e PROJECT_ID=your-project-id aspencloud/triplit-server
-```
-
-You can also use a hosted service like [fly.io](https://fly.io/docs/languages-and-frameworks/dockerfile/) to run the server using the docker container.
+If you want to log all incoming and outgoing messages and requests, you can set the `VERBOSE_LOGS` environment variable. This can be useful for debugging.
