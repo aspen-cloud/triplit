@@ -1,0 +1,82 @@
+# Self-hosting Triplit
+
+## The server
+
+To enable sync, you need to run a Triplit server. The server is a Node.js application that talks to various Triplit clients over WebSockets and HTTP. The server is published as an NPM package, and you can install it by running:
+
+```bash copy
+npm install @triplit/server
+```
+
+The server also contains the remote Triplit database, which will persist data synced from your clients. The server supports different storage adapters, such as SQLite. Using the `createServer` function, you can create and configure a new server instance:
+
+```typescript copy
+import { createServer } from '@triplit/server';
+
+const port = +(process.env.PORT || 8080);
+
+const startServer = createServer({
+  storage: 'sqlite',
+  verboseLogs: true,
+});
+
+const dbServer = startServer(port);
+
+console.log('running on port', port);
+process.on('SIGINT', function () {
+  dbServer.close(() => {
+    console.log('Shutting down server... ');
+    process.exit();
+  });
+});
+```
+
+The server will start listening on the specified port, and you can now connect your clients to it. The `verboseLogs` option will log all incoming and outgoing messages and requests, which can be useful for debugging.
+
+## Secrets
+
+There are a few secrets that you need to provide to the server to enable certain features.
+
+### `JWT_SECRET`
+
+The server uses JWT tokens to authenticate clients, and you need to provide a secret to sign and verify these tokens. You can set the secret by setting the `JWT_SECRET` environment variable. Triplit supports both symmetric (HS256) and asymmetric (RS256) encryption algorithms for JWTs. You will need to generate client tokens signed with the appropriate algorithm. With PROJECT_ID and JWT_SECRETS set, you can also use the [`triplit dev`](/cli/dev) CLI to generate these tokens for you. You can also do it with the `jsonwebtoken` package (e.g. if you wanted to use asymmetric encryption) :
+
+```typescript copy
+import jwt from 'jsonwebtoken';
+
+const anonKey = jwt.sign(
+  {
+    'x-triplit-token-type': 'anon',
+    'x-triplit-project-id': process.env.PROJECT_ID,
+  },
+  process.env.PUBLIC_KEY,
+  { algorithm: 'RS256' }
+);
+
+const serviceKey = jwt.sign(
+  {
+    'x-triplit-token-type': 'secret',
+    'x-triplit-project-id': process.env.PROJECT_ID,
+  },
+  process.env.PUBLIC_KEY,
+  { algorithm: 'RS256' }
+);
+```
+
+For more complicate authentication schemes, refer to our [authentication guide](/auth).
+
+### `LOCAL_DATABASE_URL`
+
+If you use the `sqlite` storage adapter, the server will create the database file at `./app.db` in the server's directory. If you want to override this (as is sometimes necessary for Cloud providers with their own separately managed storage volumes) you can set the `LOCAL_DATABASE_URL` environment variable.
+
+### `SENTRY_DSN`
+
+If you want to log errors to Sentry, you can set the `SENTRY_DSN` environment variable. The server will automatically log errors to Sentry.
+
+## Docker
+
+Each release of the server is [published as a Docker image](https://hub.docker.com/r/aspencloud/triplit-server/tags). You can run the server in a Docker container by running:
+
+```bash copy
+docker run -p 8080:8080 -e JWT_SECRET=your-secret -e PROJECT_ID=your-project-id aspencloud/triplit-server
+```

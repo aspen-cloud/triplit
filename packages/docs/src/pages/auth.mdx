@@ -10,6 +10,7 @@ A token must have the following claims:
 
 - `x-triplit-user-id`: The user's unique identifier
 - `x-triplit-project-id`: The project's unique identifier
+- `x-triplit-token-type`: `'external'`
 
 With these claims, Triplit can assign the special variable `$session.SESSION_USER_ID` in its queries, which can be used to filter data based on the user making the request.
 
