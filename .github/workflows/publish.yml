@@ -37,6 +37,7 @@ jobs:
         env:
           NPM_TOKEN: ${{ secrets.CI_NPM_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.CI_ACCESS_TOKEN }}
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
 
   publish-docker:
     needs: publish-npm
