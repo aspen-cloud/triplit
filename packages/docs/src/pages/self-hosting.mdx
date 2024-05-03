@@ -10,7 +10,7 @@ npm install @triplit/server
 
 The server also contains the remote Triplit database, which will persist data synced from your clients. The server supports different storage adapters, such as SQLite. Using the `createServer` function, you can create and configure a new server instance:
 
-```typescript copy
+```js filename="run.js" copy
 import { createServer } from '@triplit/server';
 
 const port = +(process.env.PORT || 8080);
@@ -39,7 +39,13 @@ There are a few secrets that you need to provide to the server to enable certain
 
 ### `JWT_SECRET`
 
-The server uses JWT tokens to authenticate clients, and you need to provide a secret to sign and verify these tokens. You can set the secret by setting the `JWT_SECRET` environment variable. Triplit supports both symmetric (HS256) and asymmetric (RS256) encryption algorithms for JWTs. You will need to generate client tokens signed with the appropriate algorithm. With PROJECT_ID and JWT_SECRETS set, you can also use the [`triplit dev`](/cli/dev) CLI to generate these tokens for you. You can also do it with the `jsonwebtoken` package (e.g. if you wanted to use asymmetric encryption) :
+The server uses JWT tokens to authenticate clients, and you need to provide a secret to sign and verify these tokens. You can set the secret by setting the `JWT_SECRET` environment variable. Triplit supports both symmetric (HS256) and asymmetric (RS256) encryption algorithms for JWTs. You will need to generate client tokens signed with the appropriate algorithm. With the `PROJECT_ID` and `JWT_SECRET` set, you can also use the [`triplit dev`](/cli/dev) CLI to generate these tokens for you.
+
+```bash copy
+PROJECT_ID=your-project-id JWT_SECRET=your-secret triplit dev
+```
+
+You can also do it with the `jsonwebtoken` package (e.g. if you wanted to use asymmetric encryption) :
 
 ```typescript copy
 import jwt from 'jsonwebtoken';
@@ -75,8 +81,10 @@ If you want to log errors to Sentry, you can set the `SENTRY_DSN` environment va
 
 ## Docker
 
-Each release of the server is [published as a Docker image](https://hub.docker.com/r/aspencloud/triplit-server/tags). You can run the server in a Docker container by running:
+Each release of the server is [published as a Docker image](https://hub.docker.com/r/aspencloud/triplit-server/tags). You can run the server in a docker container by running:
 
 ```bash copy
 docker run -p 8080:8080 -e JWT_SECRET=your-secret -e PROJECT_ID=your-project-id aspencloud/triplit-server
 ```
+
+You can also use a hosted service like [fly.io](https://fly.io/docs/languages-and-frameworks/dockerfile/) to run the server using the docker container.

@@ -20,6 +20,7 @@
   "-3": {
     "type": "separator"
   },
+  "self-hosting": "Self-hosting",
   "local-development": "Local development",
   "schema-management": "Schema management",
   "seeding": "Seeding a database",
