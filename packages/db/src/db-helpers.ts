@@ -291,7 +291,12 @@ export function logSchemaChangeViolations(
   logger?: Logger
 ) {
   const log = logger ?? console;
-  log.warn(`Found ${issues.length} backwards incompatible schema changes.`);
+  const compatibleIssuesMessage = `Found ${issues.length} backwards incompatible schema changes.`;
+  if (issues.length > 0) {
+    log.warn(compatibleIssuesMessage);
+  } else {
+    log.info(compatibleIssuesMessage);
+  }
   if (successful) {
     log.info('Schema update successful');
   } else {
