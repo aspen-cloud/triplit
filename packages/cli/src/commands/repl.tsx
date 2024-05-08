@@ -24,7 +24,7 @@ export default Command({
     repl.defineCommand('fetch', {
       action: async (query) => {
         const parsed = parseQuery(query);
-        if (!parsed.isOk) {
+        if (parsed.kind !== 'OK') {
           console.error(parsed.reason);
           return;
         }
@@ -32,7 +32,8 @@ export default Command({
         const [collectionName, { where }] = parsed.value;
         const results = await triplit.fetch({
           collectionName,
-          where,
+          // TODO: properly assign types in the parser
+          where: where as any,
           limit: 20,
         });
         console.log(console.table([...results.values()]));
