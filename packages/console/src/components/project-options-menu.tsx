@@ -28,7 +28,7 @@ export function ProjectOptionsMenu({
   const [deleteProjectDialogIsOpen, setDeleteProjectDialogIsOpen] =
     useState(false);
   const { results: project } = useProject(projectPrimaryKey);
-  if (!(project && projectPrimaryKey)) return null;
+  if (!(project && projectPrimaryKey)) return children;
   return (
     <>
       <DeleteProjectDialog

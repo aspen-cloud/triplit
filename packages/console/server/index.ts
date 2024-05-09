@@ -17,8 +17,9 @@ export function createServer(_assetPath, consoleParams) {
     const extname = path.extname(filePath);
 
     if (consoleParams && req.url === '/') {
+      const id = consoleParams.server.split('://')[1];
       res.writeHead(302, {
-        Location: '/?' + new URLSearchParams(consoleParams).toString(),
+        Location: `/${id}?` + new URLSearchParams(consoleParams).toString(),
       });
       res.end();
       return;

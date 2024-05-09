@@ -52,7 +52,6 @@
     "tailwind-merge": "^1.14.0",
     "tailwindcss-animate": "^1.0.7"
   },
-  "@triplit/ui": "workspace:^",
   "devDependencies": {
     "@triplit/ui": "workspace:^",
     "@types/lodash": "^4",

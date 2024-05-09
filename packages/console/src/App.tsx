@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { JWTPayloadIsOfCorrectForm } from './utils/server';
+import { initializeFromUrl } from './utils/project';
 import { Modal } from '@triplit/ui';
 import {
   ImportProjectForm,
@@ -9,24 +9,11 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { addProjectToConsole } from './utils/project.js';
 
-async function initializeFromUrl() {
-  if (typeof window === 'undefined') return;
-  const url = new URL(window.location.href);
-  const params = new URLSearchParams(url.search);
-  const token = params.get('token');
-  if (!(token && JWTPayloadIsOfCorrectForm(token))) return;
-  const server = params.get('server');
-  if (!server) return;
-  const projName = params.get('projName');
-  const projId = await addProjectToConsole({
-    server,
-    token,
-    displayName: projName ?? 'triplit-project',
-  });
-  window.location.href = '/' + projId;
-}
-
-initializeFromUrl();
+initializeFromUrl().then((importedProjectId) => {
+  if (importedProjectId) {
+    window.location.href = '/' + importedProjectId;
+  }
+});
 
 function App() {
   const navigate = useNavigate();

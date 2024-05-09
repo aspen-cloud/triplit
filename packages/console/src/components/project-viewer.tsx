@@ -5,20 +5,23 @@ import { CaretDown, GridFour, Selection } from '@phosphor-icons/react';
 import { DataViewer, FullScreenWrapper, Project } from '.';
 import { Button } from '@triplit/ui';
 import { ProjectOptionsMenu } from './project-options-menu';
-import { useConnectionStatus, useEntity } from '@triplit/react';
+import { useEntity } from '@triplit/react';
 import { CreateCollectionDialog } from './create-collection-dialog';
 import { CollectionStats, fetchCollectionStats } from '../utils/server';
 import { useSelectedCollection } from '../hooks/useSelectedCollection';
 import { useLoaderData, redirect } from 'react-router-dom';
 import { consoleClient } from 'triplit/client.js';
+import { initializeFromUrl } from 'src/utils/project.js';
 
 const projectClients = new Map<string, TriplitClient<any>>();
 
-export async function loader(projectId: string) {
-  const projectEntities = await consoleClient.fetch(
-    consoleClient.query('projects').build()
-  );
-  const project = projectEntities?.get(projectId);
+const initFromUrlPromise = initializeFromUrl();
+
+export async function loader(slugProjectId?: string) {
+  const importedProjectId = await initFromUrlPromise;
+  const projectId = slugProjectId ?? importedProjectId;
+  if (!projectId) return redirect('/');
+  const project = await consoleClient.fetchById('projects', projectId);
   if (!project) return redirect('/');
   const collectionStats = await fetchCollectionStats(project);
   const savedClient = projectClients.get(projectId);
@@ -44,7 +47,6 @@ export function ProjectViewer() {
     project: Project;
     collectionStats: CollectionStats[];
   };
-
   useEffect(() => {
     client?.syncEngine.connect();
     return () => {
@@ -74,13 +76,12 @@ export function ProjectViewer() {
   if (!client) return <FullScreenWrapper>Loading...</FullScreenWrapper>;
   const shouldShowCreateCollectionButton =
     schema || collectionsTolist.length === 0;
-
   // If client, render hooks that rely on client safely
   return (
     <div className="flex bg-popover max-w-[100vw] overflow-hidden">
       <div className=" border-r h-screen flex flex-col p-4 w-[250px] shrink-0 overflow-y-auto">
         <ProjectOptionsMenu>
-          <Button variant="secondary" className="w-full">
+          <Button variant="secondary" className="w-full h-[2.5rem]">
             <div className="font-bold truncate">{project?.displayName}</div>
             <CaretDown className="ml-2 shrink-0" />
           </Button>
