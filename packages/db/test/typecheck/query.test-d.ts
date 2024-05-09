@@ -597,6 +597,7 @@ describe('query builder', () => {
       expectTypeOf(query.where)
         .parameter(0)
         .toMatchTypeOf<
+          | undefined
           | 'id'
           | 'attr1'
           | 'attr1.inner1'
@@ -612,10 +613,14 @@ describe('query builder', () => {
     {
       const db = new DB();
       const query = db.query('test');
+
       expectTypeOf(query.where)
         .parameter(0)
         .toMatchTypeOf<
-          string | WhereFilter<undefined, any> | QueryWhere<undefined, any>
+          | undefined
+          | string
+          | WhereFilter<undefined, any>
+          | QueryWhere<undefined, any>
         >();
     }
   });

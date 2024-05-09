@@ -507,7 +507,7 @@ export class TriplitClient<M extends ClientSchema | undefined = undefined> {
     let unsubscribeLocal = () => {};
     let unsubscribeRemote = () => {};
     let hasRemoteFulfilled = false;
-    let fulfilledTimeout: NodeJS.Timeout | number | null = null;
+    let fulfilledTimeout: ReturnType<typeof setTimeout> | null = null;
     let results: FetchResult<CQ>;
     const userResultsCallback = onResults;
     const userErrorCallback = onError;

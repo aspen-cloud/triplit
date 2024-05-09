@@ -5,7 +5,7 @@ import {
 } from './errors.js';
 import { Timestamp, timestampCompare } from './timestamp.js';
 import { CollectionNameFromModels, ModelFromModels } from './db.js';
-import { ExtractOperators } from './data-types/type.js';
+import { ExtractOperators, ExtractValueInputs } from './data-types/type.js';
 import { RecordType } from './data-types/record.js';
 import { QueryType } from './data-types/query.js';
 import { EntityId, TripleRow } from './triple-store-utils.js';
@@ -36,7 +36,9 @@ export type FilterStatement<
   M extends Models<any, any>
     ? ExtractOperators<ExtractTypeAtPath<ModelFromModels<M, CN>, K>>
     : string,
-  QueryValue // TODO: We could make this tighter by inspecting the type
+  M extends Models<any, any>
+    ? ExtractValueInputs<ExtractTypeAtPath<ModelFromModels<M, CN>, K>>
+    : QueryValue
 ];
 
 type ExtractTypeAtPath<
@@ -504,8 +506,14 @@ export function and<
 
 type FilterInput<
   M extends Models<any, any> | undefined,
-  CN extends CollectionNameFromModels<M>
-> = FilterStatement<M, CN> | WhereFilter<M, CN>[] | [QueryWhere<M, CN>];
+  CN extends CollectionNameFromModels<M>,
+  P extends M extends Models<any, any> ? SchemaPaths<M, CN> : Path
+> =
+  | [typeof undefined]
+  | FilterStatement<M, CN, P>
+  | [FilterStatement<M, CN, P>]
+  | WhereFilter<M, CN>[]
+  | [QueryWhere<M, CN>];
 
 type OrderInput<
   M extends Models<any, any> | undefined,
@@ -530,8 +538,12 @@ export const QUERY_INPUT_TRANSFORMERS = <
   M extends Models<any, any> | undefined,
   CN extends CollectionNameFromModels<M>
 >() => ({
-  where: (q: Query<M, CN>, ...args: FilterInput<M, CN>): QueryWhere<M, CN> => {
+  where: <A extends FilterInput<M, CN, any>>(
+    q: Query<M, CN>,
+    ...args: A
+  ): QueryWhere<M, CN> => {
     let newWhere: QueryWhere<M, CN> = [];
+    if (args[0] == undefined) return q.where ?? [];
     if (typeof args[0] === 'string') {
       /**
        * E.g. where("id", "=", "123")
@@ -545,7 +557,7 @@ export const QUERY_INPUT_TRANSFORMERS = <
       /**
        *  E.g. where([["id", "=", "123"], ["name", "=", "foo"]])
        */
-      newWhere = args[0] as QueryWhere<M, CN>;
+      newWhere = args[0] as FilterStatement<M, CN>[];
     } else if (args.every((arg) => typeof arg === 'object')) {
       /**
        * E.g. where(["id", "=", "123"], ["name", "=", "foo"]);
@@ -628,14 +640,6 @@ export const QUERY_INPUT_TRANSFORMERS = <
     throw new QueryClauseFormattingError('after', after);
   },
 });
-
-export type QueryBuilderInputs<
-  M extends Models<any, any> | undefined,
-  CN extends CollectionNameFromModels<M>
-> = {
-  where: FilterInput<M, CN>;
-  order: OrderInput<M, CN>;
-};
 
 export function compareCursors(
   cursor1: ValueCursor | undefined,

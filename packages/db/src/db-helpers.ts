@@ -444,6 +444,7 @@ export function prepareQuery<
   );
   fetchQuery.where = mapFilterStatements(
     fetchQuery.where ?? [],
+    // @ts-expect-error
     (statement) => {
       // Validate filter
       whereValidator(statement);
@@ -463,6 +464,7 @@ export function prepareQuery<
           const subquery = { ...attributeType.query };
           // As we expand subqueries, "bump" the variable names
           if (isValueVariable(val)) {
+            // @ts-expect-error
             val = '$' + bumpSubqueryVar(val.slice(1));
           }
           subquery.where = [...subquery.where, [path.join('.'), op, val]];
