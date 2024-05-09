@@ -15,6 +15,7 @@ import { useState } from 'react';
 
 type CreateCollectionDialogProps = {
   onSubmit: (collectionName: string) => void;
+  disabled?: boolean;
 };
 
 export function CreateCollectionDialog(props: CreateCollectionDialogProps) {
@@ -24,6 +25,7 @@ export function CreateCollectionDialog(props: CreateCollectionDialogProps) {
     <Dialog onOpenChange={setOpen} open={open}>
       <DialogTrigger asChild>
         <Button
+          disabled={props.disabled}
           className="h-auto py-1 px-3 flex flex-row gap-1"
           variant="secondary"
         >

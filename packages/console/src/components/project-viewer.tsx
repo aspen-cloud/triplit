@@ -5,7 +5,7 @@ import { CaretDown, GridFour, Selection } from '@phosphor-icons/react';
 import { DataViewer, FullScreenWrapper, Project } from '.';
 import { Button } from '@triplit/ui';
 import { ProjectOptionsMenu } from './project-options-menu';
-import { useEntity } from '@triplit/react';
+import { useConnectionStatus, useEntity } from '@triplit/react';
 import { CreateCollectionDialog } from './create-collection-dialog';
 import { CollectionStats, fetchCollectionStats } from '../utils/server';
 import { useSelectedCollection } from '../hooks/useSelectedCollection';
@@ -47,6 +47,7 @@ export function ProjectViewer() {
     project: Project;
     collectionStats: CollectionStats[];
   };
+  const connectionStatus = useConnectionStatus(client);
   useEffect(() => {
     client?.syncEngine.connect();
     return () => {
@@ -56,11 +57,12 @@ export function ProjectViewer() {
 
   window.appClient = client;
   const [selectedCollection, setSelectedCollection] = useSelectedCollection();
-  const {
-    results: schema,
-    fetching,
-    fetchingRemote,
-  } = useEntity(client, '_metadata', '_schema');
+  const { results: schema, fetching } = useEntity(
+    client,
+    '_metadata',
+    '_schema'
+  );
+
   const collectionsTolist = schema
     ? Object.keys(schema.collections)
     : collectionStats.map(({ collection }) => collection);
@@ -74,7 +76,7 @@ export function ProjectViewer() {
 
   // if loading render loading state
   if (!client) return <FullScreenWrapper>Loading...</FullScreenWrapper>;
-  const shouldShowCreateCollectionButton =
+  const shouldEnableCreateCollectionButton =
     schema || collectionsTolist.length === 0;
   // If client, render hooks that rely on client safely
   return (
@@ -90,46 +92,49 @@ export function ProjectViewer() {
           <span className="truncate text-sm md:text-lg font-semibold">
             Collections
           </span>
-          {shouldShowCreateCollectionButton && (
-            <CreateCollectionDialog
-              onSubmit={async (collectionName) => {
-                try {
-                  await client.db.createCollection({
-                    name: collectionName,
-                    schema: { id: Schema.Id().toJSON() },
-                  });
-                  setSelectedCollection(collectionName);
-                } catch (e) {
-                  console.error(e);
-                }
-              }}
-            />
-          )}
-        </div>
-        {collectionsTolist.map((collection) => (
-          <Button
-            key={collection}
-            onClick={() => {
-              setSelectedCollection(collection);
+          <CreateCollectionDialog
+            disabled={!shouldEnableCreateCollectionButton}
+            onSubmit={async (collectionName) => {
+              try {
+                await client.db.createCollection({
+                  name: collectionName,
+                  schema: { id: Schema.Id().toJSON() },
+                });
+                setSelectedCollection(collectionName);
+              } catch (e) {
+                console.error(e);
+              }
             }}
-            variant={selectedCollection === collection ? 'default' : 'ghost'}
-            className={`truncate flex h-auto px-2 py-1 flex-row items-center gap-2 justify-start shrink-0`}
-          >
-            <GridFour
-              weight="light"
-              className="shrink-0 hidden md:inline-block"
-              size={24}
-            />
-            <span className="text-xs md:text-sm truncate">{`${collection}`}</span>
-          </Button>
-        ))}
-        {collectionsTolist.length === 0 && (
-          <div className="text-xs">
-            {
-              'Looks like you haven’t added any data yet. Once there is data saved in your Triplit instance, your collections will show up here.'
-            }
-          </div>
-        )}
+          />
+        </div>
+        {!fetching &&
+          connectionStatus !== 'CONNECTING' &&
+          collectionsTolist.map((collection) => (
+            <Button
+              key={collection}
+              onClick={() => {
+                setSelectedCollection(collection);
+              }}
+              variant={selectedCollection === collection ? 'default' : 'ghost'}
+              className={`truncate flex h-auto px-2 py-1 flex-row items-center gap-2 justify-start shrink-0`}
+            >
+              <GridFour
+                weight="light"
+                className="shrink-0 hidden md:inline-block"
+                size={24}
+              />
+              <span className="text-xs md:text-sm truncate">{`${collection}`}</span>
+            </Button>
+          ))}
+        {!fetching &&
+          connectionStatus !== 'CONNECTING' &&
+          collectionsTolist.length === 0 && (
+            <div className="text-xs">
+              {
+                'Looks like you haven’t added any data yet. Once there is data saved in your Triplit instance, your collections will show up here.'
+              }
+            </div>
+          )}
       </div>
       <div className="flex-grow flex flex-col min-w-0">
         {selectedCollection ? (
