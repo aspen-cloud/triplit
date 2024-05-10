@@ -87,7 +87,7 @@ export const schema = {
 Start the Triplit development [sync server](https://www.triplit.dev/docs/syncing-data).
 
 ```bash
-npm run triplit dev --initWithSchema
+npm run triplit dev
 ```
 
 This will output some important [environmental variables](https://www.triplit.dev/docs/local-development#additional-environment-variables) that your app will need to sync with the server. Add them to your `.env` file (Vite example below).

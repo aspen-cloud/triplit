@@ -32,10 +32,10 @@ export const schema = {
 } satisfies ClientSchema;
 ```
 
-You can start the development server with the schema pre-loaded with the `--initWithSchema` or `-i` option.
+You can start the development server with the schema pre-loaded.
 
 ```bash copy
-triplit dev --initWithSchema
+triplit dev
 ```
 
 By default, the server will use in-memory storage, meaning that if you shut down the server, all of your data will be lost. This can be useful when you're early in development and frequently iterating on your schema. If you like this quick feedback loop but don't want to repeatedly re-insert test data by hand, you can use Triplit's [`seed` commands](/seeding). You can use seed command on its own:
@@ -47,20 +47,20 @@ triplit seed run my-seed
 Or use the `--seed` flag with `triplit dev`:
 
 ```bash copy
-triplit dev --initWithSchema --seed=my-seed
+triplit dev --seed=my-seed
 ```
 
 If you want a development environment that's more constrained and closer to production, consider using the [SQLite](https://www.sqlite.org/) persistent storage option for the development server:
 
 ```bash copy
-triplit dev --initWithSchema --storage=sqlite
+triplit dev --storage=sqlite
 ```
 
 Your database will be saved to `triplit/.data`. You can delete this folder to clear your database.
 
 ## Updating your schema
 
-Let's assume you've run some version of `triplit dev --initWithSchema` shown above and have a server up and running with a schema. You've also [properly configured your `.env`](/getting-started#syncing-in-local-development) such that Triplit CLI commands will be pointing at it. Let's also assume you've added some initial todos:
+Let's assume you've run some version of `triplit dev` shown above and have a server up and running with a schema. You've also [properly configured your `.env`](/getting-started#syncing-in-local-development) such that Triplit CLI commands will be pointing at it. Let's also assume you've added some initial todos:
 
 ```ts copy filename="App.tsx"
 import { TriplitClient } from '@triplit/client';

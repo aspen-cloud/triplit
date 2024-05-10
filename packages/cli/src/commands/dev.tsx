@@ -46,7 +46,7 @@ export default Command({
     initWithSchema: Flag.Boolean({
       char: 'i',
       description: 'Initialize the database with the local schema',
-      default: false,
+      default: true,
     }),
     seed: Flag.String({
       char: 'S',
