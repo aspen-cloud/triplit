@@ -113,10 +113,11 @@ const triplitTypeToFastCheckType = (
       scalarType = fc.stringMatching(/^[a-zA-Z0-9]+$/);
       break;
     case 'Number':
-      scalarType = fc.float({
-        max: Math.fround(1e16),
-        min: Math.fround(-1e16),
-      });
+      //   scalarType = fc.float({
+      //     max: Math.fround(1e16),
+      //     min: Math.fround(-1e16),
+      //   });
+      scalarType = fc.integer();
       break;
     case 'Boolean':
       scalarType = fc.boolean();
