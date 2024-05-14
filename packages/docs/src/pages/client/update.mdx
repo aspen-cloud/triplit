@@ -1,0 +1,13 @@
+# update
+
+`update()` updates an existing record in a collection. For example:
+
+```typescript
+await client.update('employee', 'Fry', async (entity) => {
+  entity.name = 'Philip J. Fry';
+});
+```
+
+If possible, `update` will look at the schema you have provided to provide proper type hints for interacting with you data. If no schema is provided, all fields are treated as `any`.
+
+See [here](/database/schemas#data-types) for more information on data types.

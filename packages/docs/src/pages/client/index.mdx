@@ -1,4 +1,12 @@
-# Overview
+# Triplit Client
+
+Triplit is most powerful when it is used to sync data across multiple devices and users. Every Triplit Client is equipped with a sync engine that is responsible for managing the connection to the server and syncing data between your local database and remote database.
+
+## Installation
+
+```bash
+npm install @triplit/client
+```
 
 ## Client and Server model
 
@@ -6,7 +14,7 @@ As the monicker, "a full-stack database" implies, Triplit has components that ru
 
 Along with reads, every client is able to write to its database and Triplit ensures the write is propagated to the remote database and other listening clients. Because writes go directly to the client database, your application gets an optimistic effect to all of its writes.
 
-## Client Database
+### Client Database
 
 On the client, Triplit keeps your data in two storage areas: an `outbox` and a `cache`. The outbox is a queue of data that is waiting to be sent to the server. The cache is a local copy of the data that has been confirmed to have been received by the server.
 
@@ -14,6 +22,49 @@ Although the outbox acts as a queue, it is actually a separate part of the datab
 
 If a client is offline or is not connected to the remote database for any reason, then the data will remain in the outbox so you can sync that data can be synced at a later time.
 
-## Server Database
+### Server Database
 
 The server database provides durable centralized storage for clients and handles propagating writes to other listening clients. As well, the server acts as an authoritative figure for data as needed. For example, access control rules are checked on the server and unauthorized updates are rejected and not propagated.
+
+## Setting up sync
+
+To set up syncing, you need to tell your Triplit Client how to connect to the remote database with the `sync` options in the constructor. Additional options can be found [here](/syncing-data/client-options).
+
+```typescript
+const client = new TriplitClient({
+  serverUrl: '<remote database URL>',
+  token: '<access token>',
+});
+```
+
+## Example
+
+[Once you've installed](/getting-started) the Triplit CLI, you can run the following command to start a local Triplit Server (and remote database):
+
+```bash
+triplit dev
+```
+
+By default this will set up a server at `http://localhost:6543`, and should display an access token for your database.
+
+You can run this script in multiple browser tabs to simulate multiple users/devices connecting and sending data.
+
+```typescript
+import { TriplitClient } from '@triplit/client';
+
+const client = new TriplitClient({
+  serverUrl: 'http://localhost:6543',
+  token: '<access token>',
+});
+
+const query = client.query('todos').build();
+
+client.subscribe(query, (todos) => {
+  console.log(todos);
+});
+
+client.insert('todos', {
+  text: 'My Todo',
+  createdAt: new Date().toISOString(),
+});
+```

@@ -1,0 +1,43 @@
+import { Callout } from 'nextra-theme-docs';
+
+# insert
+
+`insert()` inserts a new record into a collection. For example:
+
+```typescript
+await client.insert('employee', { id: 'Fry', name: 'Philip Fry' });
+```
+
+The `id` field in Triplit is a special field that is used to uniquely identify records and is required on entities. If you do not provide an id, one will be generated for you.
+
+The `insert` method may also be used to upsert an existing record when used in a schemaless database or in conjuction with [optional attributes](/database/schemas#optional). For example:
+
+```typescript
+const schema = {
+  employee: {
+    schema: S.Schema({
+      id: S.Id(),
+      name: S.String(),
+      title: S.Optional(S.String()),
+      year_hired: S.Optional(S.Number()),
+    }),
+  },
+} satisfies ClientSchema;
+await client.insert('employee', { id: 'Fry', name: 'Philip J. Fry' });
+await client.insert('employee', {
+  id: 'Fry',
+  name: 'Philip J. Fry',
+  title: 'Pizza Delivery Boy',
+});
+await client.insert('employee', {
+  id: 'Fry',
+  name: 'Philip J. Fry',
+  title: 'Package Delivery Boy',
+  year_hired: 3000,
+});
+```
+
+<Callout emoji="⚠️">
+  When using `insert` to upsert an existing record, any defaults on the schema
+  will be applied even if the record already exists.
+</Callout>

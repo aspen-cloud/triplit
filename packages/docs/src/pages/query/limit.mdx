@@ -1,0 +1,15 @@
+# limit
+
+Many times you will want to limit the number of results returned by a query. To do this, you can use the `limit` method.
+
+For example, the following query will return the 10 most recently created users.
+
+```typescript
+const query = client
+  .query('users')
+  .select(['id', 'name', 'email', 'dob'])
+  .order('created_at', 'DESC')
+  .limit(10);
+```
+
+As a convenience, Triplit also provides a method [fetchOne](/fetching-data/fetch#fetchone) to fetch just the first entity of a query result.

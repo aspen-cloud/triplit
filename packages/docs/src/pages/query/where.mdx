@@ -1,0 +1,49 @@
+# where
+
+To filter results based on conditions, you can use the `where` method. This method accepts a list of clauses as arguments. A clause is a tuple that takes the form `[attribute, operator, value]`.
+
+For example the following query will return all registered users.
+
+```typescript
+const query = client
+  .query('users')
+  .select(['id', 'name', 'email', 'dob'])
+  .where('is_registered', '=', true);
+```
+
+Clauses can be passed to `where` as a single clause or an array of clauses:
+
+- `.where('is_registered', '=', true)`
+- `.where(['is_registered', '=', true])`
+- `.where([['is_registered', '=', true]])`
+
+If multiple clauses are provided, all clauses are joined with a logical AND. However, you may use `or` and `and` methods within the clause array to specify how clauses should be logically grouped and joined.
+
+For example the following query will return all registered users who are either an admin or an owner.
+
+```typescript
+import { or } from '@triplit/client';
+
+const query = client
+  .query('users')
+  .select(['id', 'name', 'email', 'dob'])
+  .where([
+    [
+      ['is_registered', '=', true],
+      or([
+        ['role', '=', 'admin'],
+        ['role', '=', 'owner'],
+      ]),
+    ],
+  ]);
+```
+
+You may use dot notation to filter by attributes of a record.
+
+```typescript
+const query = client.query('users').where('address.city', '=', 'New York');
+```
+
+### Operators
+
+See the list of [data types](/database/schemas#data-types) for more information on the operators that can be used in a where clause.

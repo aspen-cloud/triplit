@@ -1,0 +1,12 @@
+{
+  "index": "Overview",
+  "variables": "Variables",
+  "-1": {
+    "type": "separator"
+  },
+  "select": "select",
+  "where": "where",
+  "order": "order",
+  "limit": "limit",
+  "sync-status": "syncStatus"
+}

@@ -1,10 +1,6 @@
 import { Callout } from 'nextra-theme-docs';
 
-# Fetching
-
-Data for a query can be requested at a single moment in time. The Triplit Client provides the methods `fetch`, `fetchOne`, and `fetchById` which will make a single request to your database.
-
-## Fetch
+# fetch
 
 `fetch()` executes the specified query and returns a Map with entity ids as keys and the associated entities as values. For example:
 
@@ -15,41 +11,6 @@ await client.insert('employees', { id: 'Leela', name: 'Turanga Leela' });
 const query = client.query('employees').build();
 const result = await client.fetch(query, options); // Map<string, { name: string }>
 ```
-
-## FetchOne
-
-`fetchOne` is similar to `fetch()` but will return a tuple `[id, entity]` of the first entity in the result set or `null` if the result set is empty. For example:
-
-```typescript
-await client.insert('employees', { id: 'Fry', name: 'Philip J. Fry' });
-await client.insert('employees', { id: 'Leela', name: 'Turanga Leela' });
-
-const query = client.query('employees').build();
-const result = await client.fetchOne(query, options); // ['Fry', { name: 'Philip J. Fry' }]
-
-const queryEmpty = client
-  .query('employees')
-  .where('name', '=', 'Bender')
-  .build();
-const resultEmpty = await client.fetchOne(queryEmpty); // null
-```
-
-This is a convenient shorthand for using the [limit parameter](/fetching-data/queries#limit) `.limit(1)` and extracting the result from the result set.
-
-## FetchById
-
-`fetchById()` queries for a single entity by its id and returns the entity if it is found or `null` if it is not. For example:
-
-```typescript
-await client.insert('employees', { id: 'Fry', name: 'Philip J. Fry' });
-await client.insert('employees', { id: 'Leela', name: 'Turanga Leela' });
-
-const fry = await client.fetchById('employees', 'Fry', options); // { name: 'Philip J. Fry' }
-const leela = await client.fetchById('employees', 'Leela', options); // { name: 'Turanga Leela' }
-const bender = await client.fetchById('employees', 'Bender', options); // null
-```
-
-This is a convenient shorthand for using the [entityId parameter](/fetching-data/queries#entity-id) `.entityId(id)` and extracting the result from the result set.
 
 ## Fetch options
 

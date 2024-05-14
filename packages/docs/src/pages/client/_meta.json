@@ -1,0 +1,20 @@
+{
+  "index": "Installation",
+  "storage": "Storage",
+  "sync-engine": "Sync engine",
+  "options": "Options",
+  "debugging": "Debugging",
+  "-1": {
+    "type": "separator"
+  },
+  "insert": "insert",
+  "update": "update",
+  "delete": "delete",
+  "transact": "transact",
+  "fetch": "fetch",
+  "fetch-one": "fetchOne",
+  "fetch-by-id": "fetchById",
+  "subscribe": "subscribe",
+  "subscribe-with-pagination": "subscribeWithPagination",
+  "subscribe-with-expand": "subscribeWithExpand"
+}

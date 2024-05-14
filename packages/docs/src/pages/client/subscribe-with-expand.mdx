@@ -1,0 +1,25 @@
+# subscribeWithExpand
+
+`subscribeWithExpand` is a special type of subscription that is used to fetch a window of data that can programmatically grow in size. It is similar to `subscribe` but it has a few differences:
+
+- It expects the query to have an initial `limit` defined.
+- It returns a `loadMore(pageSize?: number)` function to fetch more data. By default, it fetches the next page of data based on the initial `limit` defined in the query.
+
+```typescript
+const { unsubscribe, loadMore } = client.subscribeWithExpand(
+  query,
+  (results, info) => {
+    // handle results
+  },
+  (error) => {
+    // handle error
+  },
+  // Optional
+  {
+    localOnly: false,
+    onRemoteFulfilled: () => {
+      console.log('server has sent back results for the subscription');
+    },
+  }
+);
+```
