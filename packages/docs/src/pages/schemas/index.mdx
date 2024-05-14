@@ -11,7 +11,7 @@ Limitations of schemaless mode include:
 
 - You are limited to exclusively using storing value types that are supported by JSON: string, number, boolean, objects, null.
 - If you use Typescript, you will not get type checking for your queries and results.
-- [Access control rules](/access-control) are defined in schemas, and thus are not supported in schemaless mode.
+- [Access control rules](/schemas/rules) are defined in schemas, and thus are not supported in schemaless mode.
 
 ## Defining your schema
 
@@ -50,7 +50,7 @@ const client = new TriplitClient({
 });
 ```
 
-Passing a schema to the client constructor will override any schema currently stored in your cache. This can cause data corruption, if the new schema is not compatible with existing data in the shape of the old schema. Refer to the [schema management guide](/schema-management) for more information.
+Passing a schema to the client constructor will override any schema currently stored in your cache. This can cause data corruption, if the new schema is not compatible with existing data in the shape of the old schema. Refer to the [schema management guide](/schemas/updating) for more information.
 
 ### id
 

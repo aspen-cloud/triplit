@@ -51,9 +51,9 @@ The directory structure for your new project should look like this:
 
 ### Define the database schema
 
-Triplit uses a [schema](/database/schemas) to define the structure of your data. By using a schema, Triplit can validate your data at runtime and provide autocompletion in your editor.
+Triplit uses a [schema](/schemas) to define the structure of your data. By using a schema, Triplit can validate your data at runtime and provide autocompletion in your editor.
 
-We're going to set up a [schema](/database/schemas) for the Todos app in the `./triplit/schema.ts` file. Open the file and replace its contents with the following code:
+We're going to set up a [schema](/schemas) for the Todos app in the `./triplit/schema.ts` file. Open the file and replace its contents with the following code:
 
 ```ts filename="./triplit/schema.ts" copy
 import { Schema as S } from '@triplit/db';
@@ -384,7 +384,7 @@ The `useQuery` hook takes two arguments: a Triplit client and a query. The query
   means that the most recently created todos will be at the top of the list.
   Triplit's query API supports a wide range of clauses, including `where`,
   `limit`, `offset`, `order`, and more. You can learn more about the query API
-  [here](/fetching-data/queries).
+  [here](/query).
 </Callout>
 
 Now we're going to render the todos in the `App` component. Add the following lines to the `App` component:
@@ -455,7 +455,7 @@ Here we've:
 
 ## Persisting data
 
-So far, Triplit has been storing data in-memory (the default for `TriplitClient`). That means that if you refresh the page and go offline, you'll lose your data. Triplit supports a variety of [storage options](/database/storage) that you can use to persist your data even between refreshes or if you go offline.
+So far, Triplit has been storing data in-memory (the default for `TriplitClient`). That means that if you refresh the page and go offline, you'll lose your data. Triplit supports a variety of [storage options](/client/storage) that you can use to persist your data even between refreshes or if you go offline.
 
 [IndexedDB](https://developer.mozilla.org/en-US/docs/Web/API/IndexedDB_API) is a low level durable storage API built into all modern browsers. Update the `client.ts` file to use the `indexeddb` storage option:
 
@@ -488,10 +488,10 @@ We've built a simple Todos app with React, Vite and Triplit. We've learned how t
 
 And there are still a lot of things that we haven't covered.
 
-- The rest of Triplit's [query API](/fetching-data/queries) to select, filter and paginate data
-- Triplit's [access control rules](/access-control) to control who can read and write data
-- Triplit's [transaction API](/updating-data#transactions)
-- Triplit's [relational API](/database/schemas#relationships) to establish relationships between collections and then [select data across those relationships](/fetching-data/queries#selecting-related-entities)
-- The various [storage options](/database/storage) for your Triplit client's cache
+- The rest of Triplit's [query API](/query) to select, filter and paginate data
+- Triplit's [access control rules](/schemas/rules) to control who can read and write data
+- Triplit's [transaction API](/client/transact)
+- Triplit's [relational API](/schemas/relations) to establish relationships between collections and then [select data across those relationships](/query/select#selecting-related-entities)
+- The various [storage options](/client/storage) for your Triplit client's cache
 
 If you have any questions, feel free to reach out to us on [Discord](https://discord.gg/q89sGWHqQ5) or [Twitter](https://twitter.com/triplit_dev).

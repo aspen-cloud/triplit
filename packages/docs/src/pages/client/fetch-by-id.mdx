@@ -11,4 +11,4 @@ const leela = await client.fetchById('employees', 'Leela', options); // { name: 
 const bender = await client.fetchById('employees', 'Bender', options); // null
 ```
 
-This is a convenient shorthand for using the [entityId parameter](/fetching-data/queries#entity-id) `.entityId(id)` and extracting the result from the result set.
+This is a convenient shorthand for applying a `where('id', '=', id)` filter and extracting the result from the result set.
