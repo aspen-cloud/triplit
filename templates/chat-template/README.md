@@ -84,15 +84,15 @@ conversations: {
   },
 ```
 
-For more information on schemas and migrations, check out the [schema](https://www.triplit.dev/docs/database/schemas) and [migrations](https://www.triplit.dev/docs/migrations) docs.
+For more information on schemas and migrations, check out the [schema](https://www.triplit.dev/docs/schemas) and [migrations](https://www.triplit.dev/docs/migrations) docs.
 
 ### Queries
 
-In `lib/triplit-hooks.ts` we define several queries for populating the ui with messages and conversations. These queries are live updating, so our components can read directly from the queries and react to data changes. For more information on querying data and the full list of filters and policies Triplit supports, check out the [fetching data docs](https://www.triplit.dev/docs/fetching-data/queries).
+In `lib/triplit-hooks.ts` we define several queries for populating the ui with messages and conversations. These queries are live updating, so our components can read directly from the queries and react to data changes. For more information on querying data and the full list of filters and policies Triplit supports, check out the [fetching data docs](https://www.triplit.dev/docs/query).
 
 ### Mutations
 
-We provide some simple helper functions in `lib/triplit-mutations.ts` for mutating data with Triplit. For more information on mutations check out the [mutation docs](https://www.triplit.dev/docs/updating-data).
+We provide some simple helper functions in `lib/triplit-mutations.ts` for mutating data with Triplit. For more information on mutations check out the [mutation docs](https://www.triplit.dev/docs/client/insert).
 
 ### Connection status
 

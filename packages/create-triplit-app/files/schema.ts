@@ -2,7 +2,7 @@
 
 /**
  * Define your schema here.
- * For more information on schemas, see the docs: https://www.triplit.dev/docs/database/schemas
+ * For more information on schemas, see the docs: https://www.triplit.dev/docs/schemas
  */
 export const schema = {
   // todos: {

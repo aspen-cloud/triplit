@@ -67,7 +67,7 @@ npm install --save-dev @triplit/cli
 npm run triplit init
 ```
 
-Define a [schema](https://www.triplit.dev/docs/database/schemas) in `my-app/triplit/schema.ts`.
+Define a [schema](https://www.triplit.dev/docs/schemas) in `my-app/triplit/schema.ts`.
 
 ```ts
 import { Schema as S } from '@triplit/db';
@@ -84,7 +84,7 @@ export const schema = {
 } satisfies ClientSchema;
 ```
 
-Start the Triplit development [sync server](https://www.triplit.dev/docs/syncing-data).
+Start the Triplit development [sync server](https://www.triplit.dev/docs/local-development).
 
 ```bash
 npm run triplit dev
@@ -97,7 +97,7 @@ VITE_TRIPLIT_SERVER_URL=http://localhost:6543
 VITE_TRIPLIT_TOKEN=copied-in-from-triplit-dev
 ```
 
-Define a [query](https://www.triplit.dev/docs/fetching-data/queries) in your App (React example below).
+Define a [query](https://www.triplit.dev/docs/query) in your App (React example below).
 
 ```tsx
 import { TriplitClient } from '@triplit/client';

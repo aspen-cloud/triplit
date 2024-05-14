@@ -1,7 +1,7 @@
 # TriplitDB
 
 [![npm badge](https://img.shields.io/npm/v/@triplit/db)](https://www.npmjs.com/package/@triplit/db)
-[![types badge](https://img.shields.io/npm/types/@triplit/db)](https://www.triplit.dev/docs/database/schemas)
+[![types badge](https://img.shields.io/npm/types/@triplit/db)](https://www.triplit.dev/docs/schemas)
 ![build badge](https://github.com/aspen-cloud/triplit/actions/workflows/build-db.yml/badge.svg)
 ![coverage badge](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/pbohlman/f5f2c109373b081a8d894d8289f135e3/raw/triplit_coverage.json)
 [![twitter badge](https://img.shields.io/badge/twitter-%40triplit__dev-1DA1F2)](https://twitter.com/triplit_dev)
@@ -99,7 +99,7 @@ function fetchTodos() {
 }
 ```
 
-TriplitDB queries support several filter operations. Read the docs for our [client](https://www.triplit.dev/docs/fetching-data/queries) for more information.
+TriplitDB queries support several filter operations. Read the docs for our [client](https://www.triplit.dev/docs/client) for more information.
 
 # How it works
 
@@ -109,10 +109,10 @@ Under the hood, TriplitDB utilizes a timestamped [Triple Store](https://en.wikip
 
 For more information and examples of TriplitDB in action, please refer to the official [Triplit documentation](https://wwww.triplit.dev/docs). For the features listed below, the client exposes the same API as TriplitDB.
 
-- [Queries](https://www.triplit.dev/docs/fetching-data/queries)
-- [Mutations](https://www.triplit.dev/docs/updating-data)
-- [Schemas](https://www.triplit.dev/docs/database/schemas)
-- [Storage](https://www.triplit.dev/docs/database/storage)
+- [Queries](https://www.triplit.dev/docs/query)
+- [Mutations](https://www.triplit.dev/docs/client/insert)
+- [Schemas](https://www.triplit.dev/docs/schemas)
+- [Storage](https://www.triplit.dev/docs/client/storage)
 
 # Contact us
 
