@@ -7,3 +7,7 @@ For example, if you want to query the `users` collection, you would write the fo
 ```typescript
 const query = client.query('users');
 ```
+
+## Using queries
+
+This query object is a builder that allows you to specify (and then reuse) a query. To fetch data you must use a method like [`fetch`](/client/fetch) or [`subscribe`](/client/subscribe), or if you're using a query in a frontend component, you can [use one of the Triplit-provided hooks](/frameworks).
