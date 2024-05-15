@@ -1,12 +1,6 @@
 {
   "index": "Installation",
-  "storage": "Storage",
-  "sync-engine": "Sync engine",
-  "options": "Options",
-  "debugging": "Debugging",
-  "-1": {
-    "type": "`separator"
-  },
+  "query": "`query`",
   "insert": "`insert`",
   "update": "`update`",
   "delete": "`delete`",
@@ -16,5 +10,9 @@
   "fetch-by-id": "`fetchById`",
   "subscribe": "`subscribe`",
   "subscribe-with-pagination": "`subscribeWithPagination`",
-  "subscribe-with-expand": "`subscribeWithExpand`"
+  "subscribe-with-expand": "`subscribeWithExpand`",
+  "storage": "Storage",
+  "sync-engine": "Sync engine",
+  "options": "Options",
+  "debugging": "Debugging"
 }

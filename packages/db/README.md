@@ -109,7 +109,7 @@ Under the hood, TriplitDB utilizes a timestamped [Triple Store](https://en.wikip
 
 For more information and examples of TriplitDB in action, please refer to the official [Triplit documentation](https://wwww.triplit.dev/docs). For the features listed below, the client exposes the same API as TriplitDB.
 
-- [Queries](https://www.triplit.dev/docs/query)
+- [Queries](https://www.triplit.dev/docs/client/query)
 - [Mutations](https://www.triplit.dev/docs/client/insert)
 - [Schemas](https://www.triplit.dev/docs/schemas)
 - [Storage](https://www.triplit.dev/docs/client/storage)

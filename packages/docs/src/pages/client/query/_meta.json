@@ -1,9 +1,9 @@
 {
   "index": "Overview",
-  "variables": "Variables",
   "select": "`select`",
   "where": "`where`",
   "order": "`order`",
   "limit": "`limit`",
-  "sync-status": "`syncStatus`"
+  "sync-status": "`syncStatus`",
+  "variables": "`vars`"
 }

@@ -97,7 +97,7 @@ VITE_TRIPLIT_SERVER_URL=http://localhost:6543
 VITE_TRIPLIT_TOKEN=copied-in-from-triplit-dev
 ```
 
-Define a [query](https://www.triplit.dev/docs/query) in your App (React example below).
+Define a [query](https://www.triplit.dev/docs/client/query) in your App (React example below).
 
 ```tsx
 import { TriplitClient } from '@triplit/client';

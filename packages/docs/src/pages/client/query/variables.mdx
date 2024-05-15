@@ -1,0 +1,34 @@
+# Variables
+
+Variables in Triplit allow you to pass in preset values into queries. They consist of a scope (to prevent collisions) and a dot (`.`) separated path to reference data in the variable.
+
+### Query variables
+
+Query variables are prefixed with the `query` scope and are accessible just to the query they are defined on. They are defined with the `vars` method in the query builder. For example:
+
+```typescript
+const baseQuery = client.query('employees').where([
+  ['team', '=', 'Delivery Crew'],
+  ['name', '=', '$query.name'],
+]);
+const fryQuery = baseQuery.vars({ name: 'Philip J. Fry' });
+const leelaQuery = baseQuery.vars({ name: 'Turanga Leela' });
+```
+
+This can help prevent writing the same query multiple times with different values.
+
+### Global variables
+
+Global variables are prefixed with the `global` scope and are accessible to all queries in the database. They are defined in the client constructor or via the `updateGlobalVariables` method. For example:
+
+```typescript
+const client = new TriplitClient({ variables: { name: 'Philip J. Fry' } });
+let query = client.query('employees').where('name', '=', '$global.name'); // resolves to 'Philip J. Fry'
+
+client.db.updateGlobalVariables({ name: 'Turanga Leela' });
+query = client.query('employees').where('name', '=', '$global.name'); // resolves to 'Turanga Leela'
+```
+
+### Session variables
+
+Session variables are prefixed with the `session` scope and are accessible to all queries in that database session. Triplit exposes a `$session.SESSION_USER_ID` variable to help write authorization rules. You can [read more about writing rules](/schemas/rules) and [how to set the session user](/auth).

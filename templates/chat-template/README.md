@@ -88,7 +88,7 @@ For more information on schemas and migrations, check out the [schema](https://w
 
 ### Queries
 
-In `lib/triplit-hooks.ts` we define several queries for populating the ui with messages and conversations. These queries are live updating, so our components can read directly from the queries and react to data changes. For more information on querying data and the full list of filters and policies Triplit supports, check out the [fetching data docs](https://www.triplit.dev/docs/query).
+In `lib/triplit-hooks.ts` we define several queries for populating the ui with messages and conversations. These queries are live updating, so our components can read directly from the queries and react to data changes. For more information on querying data and the full list of filters and policies Triplit supports, check out the [fetching data docs](https://www.triplit.dev/docs/client/query).
 
 ### Mutations
 
