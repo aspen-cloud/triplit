@@ -7,7 +7,6 @@
     "type": "separator"
   },
   "client": "Client",
-  "query": "Query",
   "schemas": "Schemas",
   "cli": "CLI",
   "frameworks": "Frameworks",
