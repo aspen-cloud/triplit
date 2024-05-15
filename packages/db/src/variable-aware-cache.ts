@@ -41,6 +41,7 @@ export class VariableAwareCache<Schema extends Models<any, any> | undefined> {
     Q extends CollectionQuery<M, CN>
   >(query: Q, model?: ModelFromModels<M, CN> | undefined) {
     // if (!model) return false;
+    if (query.limit !== undefined) return false;
     if (
       query.where &&
       query.where.some((f) => !(f instanceof Array) && !('exists' in f))
