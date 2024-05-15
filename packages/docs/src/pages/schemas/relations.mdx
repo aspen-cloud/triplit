@@ -1,9 +1,16 @@
 # Relations
 
-To define a relationship between two collections, you define a subquery that describes the relationship with `RelationMany`, `RelationOne` or `RelationById`. A `RelationMany` attribute will be in the shape `Map<string, Entity>` while `RelationOne` and `RelationById` are designed for singleton relations and will be directly nested or a sub-object or `null` if an applicable entity doesn't exist. Within a relation, either in a where clause or the `RelationById` id, parameter, you can reference the current collection's attributes with `$`.
+To define a relationship between two collections, you define a subquery that describes the relationship with `RelationMany`, `RelationOne` or `RelationById`. while `RelationOne` and `RelationById` are designed for singleton relations and will be directly nested or a sub-object or `null` if an applicable entity doesn't exist. Within a relation, either in a where clause or the `RelationById` id, parameter, you can reference the current collection's attributes with `$`.
 
-```typescript
+## RelationMany
+
+A `RelationMany` attribute will be in the shape `Map<string, Entity>`. It's designed to model a one-to-many relationship between two collections. The `RelationMany` attribute will be a map of the related entities keyed by their id. If no related entities are found, the attribute will be an empty map.
+
+In this example schema, we are modeling a school, where departments have many classes. The `departments` collection has a `classes` attribute that is a `RelationMany` to the `classes` collection.
+
+```typescript {8-10}
 import { Schema as S } from '@triplit/db';
+
 const schema = {
   departments: {
     schema: S.Schema({
@@ -21,13 +28,86 @@ const schema = {
       level: S.Number(),
       building: S.String(),
       department_id: S.String(),
-      department: S.RelationById('department', '$department_id'),
     }),
   },
 };
-
-const query = client
-  .query('departments')
-  .where([['classes.building', '=', 'Voter']])
-  .build();
 ```
+
+## RelationOne
+
+A `RelationOne` attribute will be an `Entity` or `null`. It's designed to model a one-to-one relationship between two collections. The `RelationOne` attribute will be the related entity or `null` if no related entity is found.
+
+We can update our model of a school, so that a class has a relation to its department.
+
+```typescript {20-22}
+import { Schema as S } from '@triplit/db';
+
+const schema = {
+  departments: {
+    schema: S.Schema({
+      id: S.Id(),
+      name: S.String(),
+      classes: S.RelationMany('classes', {
+        where: [['department_id', '=', '$id']],
+      }),
+    }),
+  },
+  classes: {
+    schema: S.Schema({
+      id: S.Id(),
+      name: S.String(),
+      level: S.Number(),
+      building: S.String(),
+      department_id: S.String(),
+      department: S.RelationOne('departments', {
+        where: [['id', '=', '$department_id']],
+      }),
+    }),
+  },
+};
+```
+
+## RelationById
+
+RelationById is a special case of `RelationOne` that is used to define a relationship by a foreign key. The `RelationById` attribute will be the related entity or `null` if no related entity is found.
+
+We can update the previous example to use `RelationById` instead of `RelationOne`.
+
+```typescript {20}
+import { Schema as S } from '@triplit/db';
+
+const schema = {
+  departments: {
+    schema: S.Schema({
+      id: S.Id(),
+      name: S.String(),
+      classes: S.RelationMany('classes', {
+        where: [['department_id', '=', '$id']],
+      }),
+    }),
+  },
+  classes: {
+    schema: S.Schema({
+      id: S.Id(),
+      name: S.String(),
+      level: S.Number(),
+      building: S.String(),
+      department_id: S.String(),
+      department: S.RelationById('departments', '$department_id'),
+    }),
+  },
+};
+```
+
+## Querying collections with relations
+
+By default, queries on collections with relations will _not_ return related data. You can use the `include` method to specify which relations you want to include in the query.
+
+```typescript
+const classesQuery = client.query('classes').include('department');
+const departmentsQuery = client.query('departments').include('classes');
+```
+
+## Defining relations with referential variables
+
+TODO
