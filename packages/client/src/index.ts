@@ -5,8 +5,8 @@ export type {
   MaybeReturnTypeFromQuery,
   ModelFromModels,
   FetchByIdQueryParams,
-  Schema,
 } from '@triplit/db';
+export { Schema } from '@triplit/db';
 export * from './triplit-client.js';
 export * from './remote-client.js';
 export * from './sync-engine.js';
