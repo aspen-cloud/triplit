@@ -89,8 +89,7 @@ export default Command({
 });
 
 const SchemaFileContent =
-  `import { ClientSchema } from "@triplit/client";
-// import { Schema as S } from '@triplit/db';
+  `import { ClientSchema, Schema as S } from '@triplit/client';
 
 /**
  * Define your schema here. After:

@@ -70,8 +70,7 @@ npm run triplit init
 Define a [schema](https://www.triplit.dev/docs/schemas) in `my-app/triplit/schema.ts`.
 
 ```ts
-import { Schema as S } from '@triplit/db';
-import { ClientSchema } from '@triplit/client';
+import { Schema as S, ClientSchema } from '@triplit/client';
 
 export const schema = {
   todos: {

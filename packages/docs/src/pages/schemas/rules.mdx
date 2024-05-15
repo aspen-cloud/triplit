@@ -19,7 +19,7 @@ Access control checks run exclusively on the server, and are not enforced on the
 Rules for access control are defined in the `rules` property of a schema. Both `read` and `write` rules are defined with a unique identifier, an optional `description`, and a `filter`. The `filter` is a [filter clause](/client/query/where) that is appended any query for that collection.
 
 ```typescript
-import { Schema as S } from '@triplit/db';
+import { Schema as S } from '@triplit/client';
 const schema = {
   todos: {
     schema: S.Schema({

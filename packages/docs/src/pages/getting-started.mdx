@@ -181,8 +181,7 @@ Triplit uses a schema to define the structure of your data. This schema is used 
 You can define a schema for your data like this:
 
 ```typescript filename="./triplit/schema.ts" copy
-import { Schema as S } from '@triplit/db';
-import { ClientSchema } from '@triplit/client';
+import { Schema as S, ClientSchema } from '@triplit/client';
 
 export const schema = {
   todos: {

@@ -7,8 +7,7 @@ import { Callout } from 'nextra-theme-docs';
 Let start with a simple schema, defined at `./triplit/schema.ts` in your project directory.
 
 ```typescript filename="./triplit/schema.ts" copy
-import { Schema as S } from '@triplit/db';
-import { ClientSchema } from '@triplit/client';
+import { Schema as S, ClientSchema } from '@triplit/client';
 
 export const schema = {
   todos: {

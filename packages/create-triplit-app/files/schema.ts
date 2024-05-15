@@ -1,4 +1,4 @@
-// import { Schema as S } from '@triplit/db';
+import { Schema as S, ClientSchema } from '@triplit/client';
 
 /**
  * Define your schema here.
@@ -12,4 +12,4 @@ export const schema = {
   //     description: S.String(),
   //   }),
   // },
-};
+} satisfies ClientSchema;

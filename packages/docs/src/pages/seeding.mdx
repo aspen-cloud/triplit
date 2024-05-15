@@ -15,8 +15,7 @@ This will create a file called `my-first-seed.ts` in the `triplit/seeds` directo
 For example, a schema file might look like this:
 
 ```ts filename="./triplit/schema.ts" copy
-import { Schema as S } from '@triplit/db';
-import { ClientSchema } from '@triplit/client';
+import { Schema as S, ClientSchema } from '@triplit/client';
 
 export const schema = {
   todos: {

@@ -9,7 +9,7 @@ A `RelationMany` attribute will be in the shape `Map<string, Entity>`. It's desi
 In this example schema, we are modeling a school, where departments have many classes. The `departments` collection has a `classes` attribute that is a `RelationMany` to the `classes` collection.
 
 ```typescript {8-10}
-import { Schema as S } from '@triplit/db';
+import { Schema as S } from '@triplit/client';
 
 const schema = {
   departments: {
@@ -40,7 +40,7 @@ A `RelationOne` attribute will be an `Entity` or `null`. It's designed to model 
 We can update our model of a school, so that a class has a relation to its department.
 
 ```typescript {20-22}
-import { Schema as S } from '@triplit/db';
+import { Schema as S } from '@triplit/client';
 
 const schema = {
   departments: {
@@ -74,7 +74,7 @@ RelationById is a special case of `RelationOne` that is used to define a relatio
 We can update the previous example to use `RelationById` instead of `RelationOne`.
 
 ```typescript {20}
-import { Schema as S } from '@triplit/db';
+import { Schema as S } from '@triplit/client';
 
 const schema = {
   departments: {

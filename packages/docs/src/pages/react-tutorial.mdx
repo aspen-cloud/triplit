@@ -56,8 +56,7 @@ Triplit uses a [schema](/schemas) to define the structure of your data. By using
 We're going to set up a [schema](/schemas) for the Todos app in the `./triplit/schema.ts` file. Open the file and replace its contents with the following code:
 
 ```ts filename="./triplit/schema.ts" copy
-import { Schema as S } from '@triplit/db';
-import { ClientSchema } from '@triplit/client';
+import { Schema as S, ClientSchema } from '@triplit/client';
 
 export const schema = {
   todos: {
