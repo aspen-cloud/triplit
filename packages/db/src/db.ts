@@ -4,7 +4,7 @@ import {
   Models,
   InsertTypeFromModel,
   timestampedSchemaToSchema,
-} from './schema.js';
+} from './schema/schema.js';
 import { AsyncTupleStorageApi, TupleStorageApi } from '@triplit/tuple-database';
 import CollectionQueryBuilder, {
   fetch,

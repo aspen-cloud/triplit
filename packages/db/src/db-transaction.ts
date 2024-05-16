@@ -10,7 +10,7 @@ import {
   clientInputToDbModel,
   InsertTypeFromModel,
   convertEntityToJS,
-} from './schema.js';
+} from './schema/schema.js';
 import { nanoid } from 'nanoid';
 import CollectionQueryBuilder, {
   doesEntityObjMatchWhere,

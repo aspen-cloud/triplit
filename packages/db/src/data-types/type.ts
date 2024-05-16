@@ -1,5 +1,5 @@
 import { QueryValue } from '../query.js';
-import { Models } from '../schema.js';
+import { Models } from '../schema/schema.js';
 import { Timestamp } from '../timestamp.js';
 import { Operator } from './base.js';
 import { AttributeDefinition } from './serialization.js';

@@ -16,7 +16,7 @@ import {
   FilterStatement,
   isFilterStatement,
 } from './query.js';
-import { Models, getSchemaFromPath } from './schema.js';
+import { Models, getSchemaFromPath } from './schema/schema.js';
 import * as TB from '@sinclair/typebox/value';
 import type DB from './db.js';
 import { QueryCacheError } from './errors.js';

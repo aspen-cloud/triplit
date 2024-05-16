@@ -7,7 +7,7 @@ import {
   TriplitError,
 } from '../errors.js';
 import { CollectionQuery, QueryResultCardinality } from '../query.js';
-import { Models } from '../schema.js';
+import { Models } from '../schema/schema.js';
 import { TypeInterface } from './type.js';
 
 export type SubQuery<

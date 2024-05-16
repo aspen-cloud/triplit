@@ -1,4 +1,9 @@
-import { Model, Models, SelectModelFromModel, Schema } from './schema.js';
+import {
+  Model,
+  Models,
+  SelectModelFromModel,
+  Schema,
+} from './schema/schema.js';
 import {
   AfterClauseWithNoOrderError,
   QueryClauseFormattingError,

@@ -22,15 +22,17 @@ import {
 import {
   Model,
   Models,
-  diffSchemas,
-  getSchemaDiffIssues,
   convertEntityToJS,
   getSchemaFromPath,
   schemaToTriples,
   triplesToSchema,
-  PossibleDataViolations,
   getAttributeFromSchema,
-} from './schema.js';
+} from './schema/schema.js';
+import {
+  diffSchemas,
+  getSchemaDiffIssues,
+  PossibleDataViolations,
+} from './schema/diff.js';
 import { TripleStoreApi } from './triple-store.js';
 import { VALUE_TYPE_KEYS } from './data-types/serialization.js';
 import DB, {

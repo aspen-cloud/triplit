@@ -67,11 +67,11 @@ export {
   hashSchemaJSON,
   convertEntityToJS,
   getSchemaFromPath,
-} from './schema.js';
+} from './schema/schema.js';
 export type {
   TObject,
   TimestampedTypeFromModel as TypeFromModel, // TODO: dont alias
-} from './schema.js';
+} from './schema/schema.js';
 export type {
   InsertTypeFromModel,
   UpdateTypeFromModel,
@@ -79,7 +79,7 @@ export type {
   Models,
   TimestampedObject,
   UnTimestampedObject,
-} from './schema.js';
+} from './schema/schema.js';
 export type {
   AttributeDefinition,
   CollectionAttributeDefinition,

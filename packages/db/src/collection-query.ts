@@ -26,7 +26,7 @@ import {
   Models,
   timestampedObjectToPlainObject,
   TimestampedTypeFromModel,
-} from './schema.js';
+} from './schema/schema.js';
 import { Timestamp, timestampCompare } from './timestamp.js';
 import { TripleStore, TripleStoreApi } from './triple-store.js';
 import { FilterFunc, MapFunc, Pipeline } from './utils/pipeline.js';
