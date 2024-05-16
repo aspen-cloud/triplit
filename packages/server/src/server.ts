@@ -11,7 +11,6 @@ import cors from 'cors';
 import { useHttpToken, readWSToken } from './middleware/token-reader.js';
 import { rateLimiterMiddlewareWs } from './middleware/rate-limiter.js';
 import url from 'url';
-import sqlite from 'better-sqlite3';
 import {
   Server as TriplitServer,
   ServerCloseReason,
@@ -27,7 +26,9 @@ import multer from 'multer';
 import * as Sentry from '@sentry/node';
 // @ts-ignore
 import pjson from '../package.json' assert { type: 'json' };
+import { createRequire } from 'node:module';
 
+const require = createRequire(import.meta.url);
 const upload = multer();
 // ESM override for __dirname
 const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
@@ -49,6 +50,7 @@ function parseClientMessage(
 
 function setupSqliteStorage() {
   const dbPath = process.env.LOCAL_DATABASE_URL || __dirname + '/app.db';
+  const sqlite = require('better-sqlite3');
   const db = sqlite(dbPath);
   db.exec(`
     PRAGMA journal_mode = WAL;

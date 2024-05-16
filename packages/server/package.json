@@ -31,7 +31,6 @@
     "@sentry/node": "^7.112.2",
     "@triplit/db": "workspace:^",
     "@triplit/server-core": "workspace:^",
-    "better-sqlite3": "^8.3.0",
     "consola": "^3.2.3",
     "cors": "^2.8.5",
     "dotenv": "^16.0.3",
@@ -43,15 +42,23 @@
     "ws": "^8.13.0"
   },
   "devDependencies": {
-    "@types/better-sqlite3": "^7.6.4",
     "@types/cors": "^2",
     "@types/express": "^4.17.17",
     "@types/jsonwebtoken": "^9",
     "@types/multer": "^1",
     "@types/node": "^18.15.2",
     "@types/ws": "^8.5.4",
+    "better-sqlite3": "^8.3.0",
     "esbuild": "^0.19.3",
     "tsx": "^3.12.10",
     "typescript": "^5.2.2"
+  },
+  "peerDependenciesMeta": {
+    "better-sqlite3": {
+      "optional": true
+    }
+  },
+  "peerDependencies": {
+    "better-sqlite3": "*"
   }
 }

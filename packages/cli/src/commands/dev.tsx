@@ -66,6 +66,15 @@ export default Command({
       process.env.EXTERNAL_JWT_SECRET = process.env.TRIPLIT_EXTERNAL_JWT_SECRET;
 
     if (flags.storage === 'sqlite') {
+      try {
+        import.meta.resolve('better-sqlite3');
+      } catch (e) {
+        console.error(
+          'To use SQLite storage, you must install the better-sqlite3 package:'
+        );
+        console.error('npm install better-sqlite3');
+        process.exit(1);
+      }
       const dataDir = getDataDir();
       const sqlitePath = path.join(dataDir, 'sqlite', 'app.db');
       if (!fs.existsSync(path.dirname(sqlitePath))) {
