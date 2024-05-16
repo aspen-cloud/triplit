@@ -12,6 +12,8 @@ import {
   QueryResultCardinality,
   QueryWhere,
   QueryValue,
+  QuerySelection,
+  QuerySelectionValue,
 } from './query.js';
 import {
   createSchemaIterator,
@@ -19,7 +21,14 @@ import {
   getAttributeFromSchema,
   getSchemaFromPath,
 } from './schema/schema.js';
-import { IsPropertyOptional, Model, Models } from './schema/types';
+import {
+  IsPropertyOptional,
+  Model,
+  ModelPaths,
+  Models,
+  PathFilteredTypeFromModel,
+  QuerySelectionFitleredTypeFromModel,
+} from './schema/types';
 import { timestampedObjectToPlainObject } from './utils.js';
 import { Timestamp, timestampCompare } from './timestamp.js';
 import { TripleStore, TripleStoreApi } from './triple-store.js';
@@ -116,21 +125,22 @@ export type MaybeReturnTypeFromQuery<
 
 export type ReturnTypeFromQuery<
   M extends Models<any, any>,
-  CN extends CollectionNameFromModels<M>
-> = ModelFromModels<M, CN> extends Model<any>
-  ? {
-      [k in keyof ModelFromModels<M, CN>['properties']]: JSTypeOrRelation<
-        M,
-        ModelFromModels<M, CN>,
-        k
-      >;
-    }
+  CN extends CollectionNameFromModels<M>,
+  Selection extends QuerySelection<M, CN> | undefined
+> = M extends Models<any, any>
+  ? ModelFromModels<M, CN> extends Model<any>
+    ? Selection extends undefined
+      ? PathFilteredTypeFromModel<ModelFromModels<M, CN>, ModelPaths<M, CN>>
+      : Selection extends QuerySelectionValue<M, CN>[]
+      ? QuerySelectionFitleredTypeFromModel<M, CN, Selection>
+      : never
+    : any
   : any;
 
 export type FetchResultEntity<C extends CollectionQuery<any, any>> =
-  C extends CollectionQuery<infer M, infer CN>
+  C extends CollectionQuery<infer M, infer CN, infer Selection>
     ? M extends Models<any, any>
-      ? ReturnTypeFromQuery<M, CN>
+      ? ReturnTypeFromQuery<M, CN, Selection>
       : any
     : never;
 

@@ -1,9 +1,22 @@
+import { QueryResult } from '../../collection-query.js';
 import { DataType, Optional } from '../../data-types/base.js';
 import { QueryType } from '../../data-types/query.js';
 import { RecordType } from '../../data-types/record.js';
 import { ExtractDBType, ExtractJSType } from '../../data-types/type.js';
-import { CollectionRules } from '../../db.js';
+import {
+  CollectionNameFromModels,
+  CollectionRules,
+  ModelFromModels,
+} from '../../db.js';
+import {
+  CollectionQuery,
+  QuerySelection,
+  QuerySelectionValue,
+  RelationSubquery,
+} from '../../query.js';
+import { Intersection } from '../../utility-types.js';
 import { Schema } from '../builder.js';
+import { ExtractBasePaths, ModelPaths, ShiftPath } from './paths.js';
 import {
   IsPropertyInsertOptional,
   IsPropertyInsertRequired,
@@ -123,6 +136,56 @@ export type DBTypeFromModel<M extends Model<any> | undefined> =
       }
     : any;
 
+/**
+ * A JS type from a model filtered by a union of paths
+ */
+export type PathFilteredTypeFromModel<
+  Record extends RecordType<any>,
+  Paths extends string
+> = {
+  [K in keyof Record['properties'] & ExtractBasePaths<Paths>]: K extends Paths
+    ? // If the exact path matches, include it as is.
+      IsPropertyOptional<Record['properties'][K]> extends true
+      ? ExtractJSType<Record['properties'][K]> | undefined
+      : ExtractJSType<Record['properties'][K]>
+    : PathFilteredTypeFromModel<Record['properties'][K], ShiftPath<Paths>>; // Otherwise, recurse into sub-properties
+};
+
+/**
+ * A JS type from a model filtered by a QuerySelection type
+ */
+export type QuerySelectionFitleredTypeFromModel<
+  M extends Models<any, any>,
+  CN extends CollectionNameFromModels<M>,
+  Selection extends NonNullable<QuerySelection<M, CN>>
+> =
+  // Path selections
+  PathFilteredTypeFromModel<
+    ModelFromModels<M, CN>,
+    Intersection<ModelPaths<M, CN>, Selection[number]>
+  > & {
+    // Subquery selections
+    [S in Selection[number] as S extends RelationSubquery<M>
+      ? S['attributeName']
+      : never]: S extends RelationSubquery<M>
+      ? ExtractRelationSubqueryType<M, S>
+      : never;
+  };
+
+/**
+ * Extract the type from a RelationSubquery
+ */
+type ExtractRelationSubqueryType<
+  M extends Models<any, any>,
+  Selection extends RelationSubquery<M>
+> = QueryResult<
+  CollectionQuery<
+    M,
+    Selection['subquery']['collectionName'],
+    Selection['subquery']['select']
+  >,
+  Selection['cardinality']
+>;
 /**
  * A type matching the properties of a model that are relations
  */

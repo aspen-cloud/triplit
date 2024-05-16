@@ -33,9 +33,14 @@ export class QueryBuilder<
     return this.query;
   }
 
-  select(selection: SelectInput<M, CN>) {
+  select<Selection extends QuerySelection<M, CN> | undefined>(
+    selection: Selection
+  ) {
     this.query = { ...this.query, select: selection };
-    return this;
+
+    // TODO: I think this is going to break higher level builders, ensure it doenst (@triplit/react probably has error)
+    // @ts-expect-error
+    return this as QueryBuilder<M, CN, CollectionQuery<M, CN, Selection>>;
   }
 
   where(...args: FilterInput<M, CN, any>) {

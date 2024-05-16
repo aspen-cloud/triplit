@@ -125,10 +125,13 @@ export type QuerySelectionValue<
 
 export type CollectionQuery<
   M extends Models<any, any> | undefined,
-  CN extends CollectionNameFromModels<M>
+  CN extends CollectionNameFromModels<M>,
+  S extends QuerySelection<M, CN> | undefined =
+    | QuerySelection<M, CN>
+    | undefined
 > = {
   where?: QueryWhere<M, CN>;
-  select?: QuerySelection<M, CN>;
+  select?: S;
   // | [string, CollectionQuery<M, any>]
   order?: QueryOrder<M, CN>[];
   limit?: number;

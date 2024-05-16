@@ -86,3 +86,16 @@ export type ModelPaths<
   SelectModelFromModel<ModelFromModels<M, CN>>,
   M
 >;
+
+/**
+ * Get the base key of a path or union of paths
+ */
+export type ExtractBasePaths<P extends string> =
+  P extends `${infer Key}.${string}` ? Key : P;
+
+/**
+ * Shift a path to the next level by removing the first key
+ */
+export type ShiftPath<P extends string> = P extends `${string}.${infer Rest}`
+  ? Rest
+  : never;

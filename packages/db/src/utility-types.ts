@@ -42,6 +42,11 @@ export type PrefixedUnion<
 > = `${Prefix}${Union}`;
 
 /**
+ * Intersection of two union types
+ */
+export type Intersection<U1, U2> = U1 extends U2 ? U1 : never;
+
+/**
  * Basic interface for a functional builder
  */
 export type BuilderBase<

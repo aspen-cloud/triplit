@@ -5816,3 +5816,69 @@ describe('variable conflicts', () => {
     });
   });
 });
+
+it('', async () => {
+  const schema = {
+    user: {
+      schema: S.Schema({
+        id: S.Id(),
+        name: S.String(),
+        email: S.String(),
+        address: S.Record({
+          street: S.String(),
+          city: S.String(),
+          state: S.String(),
+          zip: S.String(),
+        }),
+        posts: S.RelationMany('posts', {
+          where: [['author_id', '=', '$id']],
+        }),
+      }),
+    },
+    posts: {
+      schema: S.Schema({
+        id: S.Id(),
+        content: S.String(),
+        title: S.String(),
+        author_id: S.String(),
+      }),
+    },
+  } satisfies Models<any, any>;
+  const db = new DB({
+    schema: {
+      collections: schema,
+    },
+  });
+
+  const query1 = db.query('user').build();
+  const query2 = db.query('user').select(['id', 'name']).build();
+  const query3 = db.query('user').select(['id', 'address']).build();
+  const query4 = db
+    .query('user')
+    .select(['id', 'address.street', 'address.city'])
+    .build();
+  const query5 = db.query('user').include('posts').build();
+  const query6 = db
+    .query('user')
+    .include('posts2', { collectionName: 'posts' })
+    .build();
+  const query7 = db
+    .query('user')
+    .include('posts2', { collectionName: 'posts', select: ['id', 'title'] })
+    .build();
+
+  const result1 = await db.fetch(query1);
+  const item1 = result1.get('1')!;
+  const result2 = await db.fetch(query2);
+  const item2 = result2.get('1')!;
+  const result3 = await db.fetch(query3);
+  const item3 = result3.get('1')!;
+  const result4 = await db.fetch(query4);
+  const item4 = result4.get('1')!;
+  const result5 = await db.fetch(query5);
+  const item5 = result5.get('1')!;
+  const result6 = await db.fetch(query6);
+  const item6 = result6.get('1')!;
+  const result7 = await db.fetch(query7);
+  const item7 = result7.get('1')!;
+});
