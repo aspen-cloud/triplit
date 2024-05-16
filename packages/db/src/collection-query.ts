@@ -1,9 +1,7 @@
-import Builder, { toBuilder } from './utils/builder.js';
 import {
   Query,
   FilterStatement,
   FilterGroup,
-  QUERY_INPUT_TRANSFORMERS,
   SubQueryFilter,
   CollectionQuery,
   triplesToEntities,
@@ -62,26 +60,17 @@ import {
 } from './triple-store-utils.js';
 import { Equal } from '@sinclair/typebox/value';
 import { MAX, MIN, encodeValue } from '@triplit/tuple-database';
+import { QueryBuilder } from './query/builder.js';
 
 export default function CollectionQueryBuilder<
   M extends Models<any, any> | undefined,
   CN extends CollectionNameFromModels<M>
->(
-  collectionName: CN,
-  params?: Query<M, CN>
-): toBuilder<
-  CollectionQuery<M, CN>,
-  'collectionName',
-  QUERY_INPUT_TRANSFORMERS<M, CN>
-> {
+>(collectionName: CN, params?: Query<M, CN>) {
   const query: CollectionQuery<M, CN> = {
     collectionName,
     ...params,
   };
-  return Builder(query, {
-    protectedFields: ['collectionName'],
-    inputTransformers: QUERY_INPUT_TRANSFORMERS<M, CN>(),
-  });
+  return new QueryBuilder<M, CN, CollectionQuery<M, CN>>(query);
 }
 
 export type QueryResult<

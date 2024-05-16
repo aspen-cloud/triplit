@@ -4,9 +4,8 @@ import {
   CollectionQuery,
   FetchByIdQueryParams,
   Models,
-  QUERY_INPUT_TRANSFORMERS,
+  QueryBuilder,
   ReturnTypeFromQuery,
-  toBuilder,
 } from '@triplit/db';
 
 //  There is some odd behavior when using infer with intersection types
@@ -49,50 +48,42 @@ export type ClientQuery<
   syncStatus?: SyncStatus;
 } & CollectionQuery<M, CN>;
 
+class ClientQueryBuilderClass<
+  M extends ClientSchema | undefined,
+  CN extends CollectionNameFromModels<M>,
+  CQ extends ClientQuery<M, CN>
+> extends QueryBuilder<M, CN, ClientQuery<M, CN>> {
+  constructor(query: CQ) {
+    super(query);
+  }
+
+  syncStatus(status: SyncStatus) {
+    this.query.syncStatus = status;
+    return this as ClientQueryBuilderClass<M, CN, CQ>;
+  }
+}
+
 export function ClientQueryBuilder<
   M extends ClientSchema | undefined,
   CN extends CollectionNameFromModels<M>
->(
-  collectionName: CN,
-  params?: Omit<ClientQuery<M, CN>, 'collectionName'>
-): toBuilder<
-  ClientQuery<M, CN>,
-  'collectionName',
-  QUERY_INPUT_TRANSFORMERS<M, CN>
-> {
+>(collectionName: CN, params?: Omit<ClientQuery<M, CN>, 'collectionName'>) {
   const query: ClientQuery<M, CN> = {
     collectionName,
     ...params,
-    syncStatus: params?.syncStatus ?? 'all',
   };
-  const transformers = QUERY_INPUT_TRANSFORMERS<M, CN>();
-  return Builder(query, {
-    protectedFields: ['collectionName'],
-    inputTransformers: transformers,
-  });
+  return new ClientQueryBuilderClass<M, CN, ClientQuery<M, CN>>(query);
 }
 
 export function RemoteClientQueryBuilder<
   M extends ClientSchema | undefined,
   CN extends CollectionNameFromModels<M>
   // syncStatus doesn't apply for the remote client
->(
-  collectionName: CN,
-  params?: Omit<CollectionQuery<M, CN>, 'collectionName'>
-): toBuilder<
-  CollectionQuery<M, CN>,
-  'collectionName',
-  QUERY_INPUT_TRANSFORMERS<M, CN>
-> {
+>(collectionName: CN, params?: Omit<CollectionQuery<M, CN>, 'collectionName'>) {
   const query: CollectionQuery<M, CN> = {
     collectionName,
     ...params,
   };
-  const transformers = QUERY_INPUT_TRANSFORMERS<M, CN>();
-  return Builder(query, {
-    protectedFields: ['collectionName'],
-    inputTransformers: transformers,
-  });
+  return new QueryBuilder<M, CN, CollectionQuery<M, CN>>(query);
 }
 
 export type ClientQueryBuilder<

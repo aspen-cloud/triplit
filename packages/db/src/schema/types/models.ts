@@ -122,3 +122,12 @@ export type DBTypeFromModel<M extends Model<any> | undefined> =
         [k in keyof M['properties']]: ExtractDBType<M['properties'][k]>;
       }
     : any;
+
+/**
+ * A type matching the properties of a model that are relations
+ */
+export type RelationAttributes<M extends Model<any>> = {
+  [K in keyof M['properties']]: M['properties'][K] extends QueryType<any, any>
+    ? K
+    : never;
+}[keyof M['properties']];

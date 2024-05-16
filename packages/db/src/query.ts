@@ -1,18 +1,17 @@
-import { Model, Models, SelectModelFromModel } from './schema/types';
 import {
-  AfterClauseWithNoOrderError,
-  QueryClauseFormattingError,
-} from './errors.js';
+  ModelPaths,
+  Models,
+  Path,
+  RelationAttributes,
+  SchemaPaths,
+} from './schema/types';
 import { Timestamp, timestampCompare } from './timestamp.js';
 import { CollectionNameFromModels, ModelFromModels } from './db.js';
 import { ExtractOperators, ExtractValueInputs } from './data-types/type.js';
 import { RecordType } from './data-types/record.js';
-import { QueryType } from './data-types/query.js';
 import { EntityId, TripleRow } from './triple-store-utils.js';
-import { ReturnTypeFromQuery } from './index.js';
 import { encodeValue } from '@triplit/tuple-database';
 
-type Path = string;
 // Should be friendly types that we pass into queries
 // Not to be confused with the Value type that we store in the triple store
 export type QueryValue =
@@ -96,69 +95,6 @@ export type QueryWhere<
 
 export type ValueCursor = [value: QueryValue, entityId: EntityId];
 
-type PrefixedUnion<
-  Union extends string,
-  Prefix extends string = ''
-> = `${Prefix}${Union}`;
-
-type MAX_RELATIONSHIP_DEPTH = 6;
-
-// Expands a record type into a union of all possible paths
-// This does most of the heavy lifting
-type RecordPaths<
-  R extends RecordType<any>,
-  M extends Models<any, any>,
-  TDepth extends any[] = []
-> = R extends RecordType<any>
-  ? {
-      [K in keyof R['properties']]: R['properties'][K] extends RecordType<any>
-        ? // Record root
-          | `${string & K}`
-            // Record children
-            | PrefixedUnion<
-                RecordPaths<
-                  // @ts-expect-error
-                  R['properties'][K],
-                  M,
-                  TDepth
-                >,
-                `${string & K}.`
-              >
-        : R['properties'][K] extends QueryType<any, any>
-        ? // Basically start back at top of schema but add prefix
-          PrefixedUnion<
-            // Track max depth as relationships are expanded
-            TDepth['length'] extends MAX_RELATIONSHIP_DEPTH
-              ? any
-              : QueryPaths<
-                  // @ts-expect-error
-                  R['properties'][K],
-                  M,
-                  [...TDepth, any]
-                >,
-            `${string & K}.`
-          >
-        : // Base case for values
-          `${string & K}`;
-    }[keyof R['properties']]
-  : never;
-
-// Expands a query type into a union of all possible paths
-type QueryPaths<
-  Q extends QueryType<any, any>,
-  M extends Models<any, any>,
-  TDepth extends any[] = []
-> = Q extends QueryType<infer CQ, any>
-  ? SchemaPaths<M, CQ['collectionName'], TDepth>
-  : never;
-
-// Expands a schema into a union of all possible paths
-type SchemaPaths<
-  M extends Models<any, any>,
-  CN extends CollectionNameFromModels<M>,
-  TDepth extends any[] = []
-> = RecordPaths<M[CN]['schema'], M, TDepth>;
-
 export type QueryOrder<
   M extends Models<any, any> | undefined,
   CN extends CollectionNameFromModels<M>
@@ -166,12 +102,6 @@ export type QueryOrder<
   property: M extends Models<any, any> ? SchemaPaths<M, CN> : Path,
   direction: 'ASC' | 'DESC'
 ];
-
-type RelationAttributes<M extends Model<any>> = {
-  [K in keyof M['properties']]: M['properties'][K] extends QueryType<any, any>
-    ? K
-    : never;
-}[keyof M['properties']];
 
 export type QueryResultCardinality = 'one' | 'many';
 
@@ -181,17 +111,24 @@ export type RelationSubquery<M extends Models<any, any> | undefined> = {
   cardinality: QueryResultCardinality;
 };
 
+export type QuerySelection<
+  M extends Models<any, any> | undefined,
+  CN extends CollectionNameFromModels<M>
+> = QuerySelectionValue<M, CN>[];
+
+export type QuerySelectionValue<
+  M extends Models<any, any> | undefined,
+  CN extends CollectionNameFromModels<M>
+> =
+  | (M extends Models<any, any> ? ModelPaths<M, CN> : Path)
+  | RelationSubquery<M>;
+
 export type CollectionQuery<
   M extends Models<any, any> | undefined,
   CN extends CollectionNameFromModels<M>
 > = {
   where?: QueryWhere<M, CN>;
-  select?: (
-    | (M extends Models<any, any>
-        ? RecordPaths<SelectModelFromModel<ModelFromModels<M, CN>>, M>
-        : Path)
-    | RelationSubquery<M>
-  )[];
+  select?: QuerySelection<M, CN>;
   // | [string, CollectionQuery<M, any>]
   order?: QueryOrder<M, CN>[];
   limit?: number;
@@ -503,143 +440,6 @@ export function and<
 >(where: QueryWhere<M, CN>) {
   return { mod: 'and' as const, filters: where };
 }
-
-type FilterInput<
-  M extends Models<any, any> | undefined,
-  CN extends CollectionNameFromModels<M>,
-  P extends M extends Models<any, any> ? SchemaPaths<M, CN> : Path
-> =
-  | [typeof undefined]
-  | FilterStatement<M, CN, P>
-  | [FilterStatement<M, CN, P>]
-  | WhereFilter<M, CN>[]
-  | [QueryWhere<M, CN>];
-
-type OrderInput<
-  M extends Models<any, any> | undefined,
-  CN extends CollectionNameFromModels<M>
-> = QueryOrder<M, CN> | QueryOrder<M, CN>[] | [QueryOrder<M, CN>[]];
-
-type AfterInput<
-  M extends Models<any, any> | undefined,
-  CN extends CollectionNameFromModels<M>
-> =
-  | ValueCursor
-  | (M extends Models<any, any> ? ReturnTypeFromQuery<M, CN> : undefined)
-  | undefined;
-
-export type QUERY_INPUT_TRANSFORMERS<
-  M extends Models<any, any> | undefined,
-  CN extends CollectionNameFromModels<M>
-> = ReturnType<typeof QUERY_INPUT_TRANSFORMERS<M, CN>>;
-
-// TODO: add functional type guards for conditionals
-export const QUERY_INPUT_TRANSFORMERS = <
-  M extends Models<any, any> | undefined,
-  CN extends CollectionNameFromModels<M>
->() => ({
-  where: <A extends FilterInput<M, CN, any>>(
-    q: Query<M, CN>,
-    ...args: A
-  ): QueryWhere<M, CN> => {
-    let newWhere: QueryWhere<M, CN> = [];
-    if (args[0] == undefined) return q.where ?? [];
-    if (typeof args[0] === 'string') {
-      /**
-       * E.g. where("id", "=", "123")
-       */
-      newWhere = [args as FilterStatement<M, CN>];
-    } else if (
-      args.length === 1 &&
-      args[0] instanceof Array &&
-      args[0].every((filter) => typeof filter === 'object')
-    ) {
-      /**
-       *  E.g. where([["id", "=", "123"], ["name", "=", "foo"]])
-       */
-      newWhere = args[0] as FilterStatement<M, CN>[];
-    } else if (args.every((arg) => typeof arg === 'object')) {
-      /**
-       * E.g. where(["id", "=", "123"], ["name", "=", "foo"]);
-       */
-      newWhere = args as QueryWhere<M, CN>;
-    } else {
-      throw new QueryClauseFormattingError('where', args);
-    }
-    return [...(q.where ?? []), ...newWhere];
-  },
-  order: (
-    q: Query<M, CN>,
-    ...args: OrderInput<M, CN>
-  ): QueryOrder<M, CN>[] | undefined => {
-    if (!args[0]) return undefined;
-    let newOrder: QueryOrder<M, CN>[] = [];
-    /**
-     * E.g. order("id", "ASC")
-     */
-    if (
-      args.length === 2 &&
-      (args as any[]).every((arg) => typeof arg === 'string')
-    ) {
-      newOrder = [[...args] as QueryOrder<M, CN>];
-    } else if (
-      /**
-       * E.g. order([["id", "ASC"], ["name", "DESC"]])
-       */
-      args.length === 1 &&
-      args[0] instanceof Array &&
-      args[0].every((arg) => arg instanceof Array)
-    ) {
-      newOrder = args[0] as NonNullable<Query<M, CN>['order']>;
-    } else if (args.every((arg) => arg instanceof Array)) {
-      /**
-       * E.g. order(["id", "ASC"], ["name", "DESC"])
-       */
-      newOrder = args as NonNullable<Query<M, CN>['order']>;
-    } else {
-      throw new QueryClauseFormattingError('order', args);
-    }
-    return [...(q.order ?? []), ...newOrder];
-  },
-  include<
-    RName extends M extends Models<any, any>
-      ? RelationAttributes<ModelFromModels<M, CN>>
-      : never
-  >(
-    q: Query<M, CN>,
-    relationName: RName,
-    query?: Query<M, RName>
-  ): Record<string, any> {
-    return {
-      ...q.include,
-      // Set to null so the inclusion of the key can be serialized
-      [relationName]: query ?? null,
-    };
-  },
-  after(
-    q: Query<M, CN>,
-    after: AfterInput<M, CN>,
-    inclusive?: boolean
-  ): [ValueCursor, boolean] | undefined {
-    if (!after) return undefined;
-    if (!q.order) throw new AfterClauseWithNoOrderError(after);
-    const attributeToOrderBy = q.order[0][0];
-    if (after instanceof Array && after.length === 2)
-      return [after, inclusive ?? false];
-    if (
-      typeof after === 'object' &&
-      !(after instanceof Array) &&
-      Object.hasOwn(after, 'id') &&
-      Object.hasOwn(after, attributeToOrderBy)
-    ) {
-      return [
-        [after[attributeToOrderBy] as QueryValue, after.id as string],
-        inclusive ?? false,
-      ];
-    }
-    throw new QueryClauseFormattingError('after', after);
-  },
-});
 
 export function compareCursors(
   cursor1: ValueCursor | undefined,

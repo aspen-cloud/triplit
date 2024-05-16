@@ -38,8 +38,8 @@ export {
   // TODO
   triplesToEntities as constructEntities,
   compareCursors,
-  QUERY_INPUT_TRANSFORMERS,
 } from './query.js';
+export { QUERY_INPUT_TRANSFORMERS } from './query/builder.js';
 // TS issue occurs if we dont export FilterGroup (i think due to an infered return type somewhere)
 export type {
   Query,
@@ -89,6 +89,7 @@ export {
   default as CollectionQueryBuilder,
   convertEntityToJS,
 } from './collection-query.js';
+export { QueryBuilder } from './query/builder.js';
 export type {
   FetchResult,
   FetchResultEntity,
