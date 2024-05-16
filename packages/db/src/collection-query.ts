@@ -12,7 +12,6 @@ import {
   QueryResultCardinality,
   QueryWhere,
   QueryValue,
-  QuerySelection,
   QuerySelectionValue,
 } from './query.js';
 import {
@@ -107,16 +106,6 @@ export type TimestampedFetchResultEntity<C extends CollectionQuery<any, any>> =
 export type CollectionNameFromQuery<Q extends CollectionQuery<any, any>> =
   Q extends CollectionQuery<infer _M, infer CN> ? CN : never;
 
-export type JSTypeOrRelation<
-  Ms extends Models<any, any>,
-  M extends Model<any>,
-  propName extends keyof M['properties']
-> = M['properties'][propName] extends QueryType<infer Q, infer Cardinality>
-  ? QueryResult<CollectionQuery<Ms, Q['collectionName']>, Cardinality>
-  : IsPropertyOptional<M['properties'][propName]> extends true
-  ? ExtractJSType<M['properties'][propName]> | undefined
-  : ExtractJSType<M['properties'][propName]>;
-
 // Trying this out, having types that know and dont know the schema exists might be a useful pattern
 export type MaybeReturnTypeFromQuery<
   M extends Models<any, any> | undefined,
@@ -126,14 +115,10 @@ export type MaybeReturnTypeFromQuery<
 export type ReturnTypeFromQuery<
   M extends Models<any, any>,
   CN extends CollectionNameFromModels<M>,
-  Selection extends QuerySelection<M, CN> | undefined
+  Selection extends QuerySelectionValue<M, CN>
 > = M extends Models<any, any>
   ? ModelFromModels<M, CN> extends Model<any>
-    ? Selection extends undefined
-      ? PathFilteredTypeFromModel<ModelFromModels<M, CN>, ModelPaths<M, CN>>
-      : Selection extends QuerySelectionValue<M, CN>[]
-      ? QuerySelectionFitleredTypeFromModel<M, CN, Selection>
-      : never
+    ? QuerySelectionFitleredTypeFromModel<M, CN, Selection>
     : any
   : any;
 

@@ -111,10 +111,10 @@ export type RelationSubquery<M extends Models<any, any> | undefined> = {
   cardinality: QueryResultCardinality;
 };
 
-export type QuerySelection<
-  M extends Models<any, any> | undefined,
-  CN extends CollectionNameFromModels<M>
-> = QuerySelectionValue<M, CN>[];
+// export type QuerySelection<
+//   M extends Models<any, any> | undefined,
+//   CN extends CollectionNameFromModels<M>
+// > = QuerySelectionValue<M, CN>[];
 
 export type QuerySelectionValue<
   M extends Models<any, any> | undefined,
@@ -126,12 +126,10 @@ export type QuerySelectionValue<
 export type CollectionQuery<
   M extends Models<any, any> | undefined,
   CN extends CollectionNameFromModels<M>,
-  S extends QuerySelection<M, CN> | undefined =
-    | QuerySelection<M, CN>
-    | undefined
+  S extends QuerySelectionValue<M, CN> = QuerySelectionValue<M, CN>
 > = {
   where?: QueryWhere<M, CN>;
-  select?: S;
+  select?: S[];
   // | [string, CollectionQuery<M, any>]
   order?: QueryOrder<M, CN>[];
   limit?: number;

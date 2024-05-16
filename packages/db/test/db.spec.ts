@@ -25,6 +25,7 @@ import {
   SessionVariableNotFoundError,
   InvalidOrderClauseError,
   InvalidWhereClauseError,
+  CollectionQuery,
 } from '../src';
 import { hashSchemaJSON } from '../src/schema/schema.js';
 import { Models } from '../src/schema/types';

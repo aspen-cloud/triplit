@@ -10,7 +10,6 @@ import {
 } from '../../db.js';
 import {
   CollectionQuery,
-  QuerySelection,
   QuerySelectionValue,
   RelationSubquery,
 } from '../../query.js';
@@ -157,15 +156,15 @@ export type PathFilteredTypeFromModel<
 export type QuerySelectionFitleredTypeFromModel<
   M extends Models<any, any>,
   CN extends CollectionNameFromModels<M>,
-  Selection extends NonNullable<QuerySelection<M, CN>>
+  Selection extends QuerySelectionValue<M, CN>
 > =
   // Path selections
   PathFilteredTypeFromModel<
     ModelFromModels<M, CN>,
-    Intersection<ModelPaths<M, CN>, Selection[number]>
+    Intersection<ModelPaths<M, CN>, Selection>
   > & {
     // Subquery selections
-    [S in Selection[number] as S extends RelationSubquery<M>
+    [S in Selection as S extends RelationSubquery<M>
       ? S['attributeName']
       : never]: S extends RelationSubquery<M>
       ? ExtractRelationSubqueryType<M, S>
@@ -182,7 +181,13 @@ type ExtractRelationSubqueryType<
   CollectionQuery<
     M,
     Selection['subquery']['collectionName'],
-    Selection['subquery']['select']
+    // TODO: check if this is right? Fixes a type issue but might be wrong
+    Selection['subquery']['select'] extends QuerySelectionValue<
+      M,
+      Selection['subquery']['collectionName']
+    >
+      ? Selection['subquery']['select']
+      : never
   >,
   Selection['cardinality']
 >;

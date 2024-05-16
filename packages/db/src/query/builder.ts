@@ -4,7 +4,7 @@ import {
   FilterStatement,
   Query,
   QueryOrder,
-  QuerySelection,
+  QuerySelectionValue,
   QueryValue,
   QueryWhere,
   ValueCursor,
@@ -33,8 +33,8 @@ export class QueryBuilder<
     return this.query;
   }
 
-  select<Selection extends QuerySelection<M, CN> | undefined>(
-    selection: Selection
+  select<Selection extends QuerySelectionValue<M, CN>>(
+    selection: Selection[] | undefined
   ) {
     this.query = { ...this.query, select: selection };
 
@@ -102,11 +102,6 @@ export class QueryBuilder<
     return this;
   }
 }
-
-type SelectInput<
-  M extends Models<any, any> | undefined,
-  CN extends CollectionNameFromModels<M>
-> = QuerySelection<M, CN> | undefined;
 
 type FilterInput<
   M extends Models<any, any> | undefined,
