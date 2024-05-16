@@ -1,14 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { TripleRow } from '../src/triple-store.js';
+import { TripleRow } from '../src/triple-store-utils.js';
 import { Timestamp } from '../src/timestamp.js';
-import {
-  Entity,
-  EntityPointer,
-  cleanTimestampedData,
-  triplesToEntities,
-} from '../src/query.js';
+import { Entity, triplesToEntities } from '../src/query.js';
 import DB from '../src/db.js';
-import { timestampedObjectToPlainObject } from '../src/schema.js';
 
 function extractEntityData(entities: Map<string, Entity>): Map<string, any> {
   return new Map(

@@ -1,7 +1,7 @@
 import { Static, Type } from '@sinclair/typebox';
 import { CollectionRules } from '../db.js';
 import { SubQuery } from './query.js';
-import { Schema } from '../schema/schema.js';
+import { Schema } from '../schema/builder.js';
 import { DataType } from './base.js';
 import { QueryResultCardinality } from '../query.js';
 

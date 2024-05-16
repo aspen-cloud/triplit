@@ -1,16 +1,15 @@
 import { TripleStoreTransaction } from './triple-store-transaction.js';
 import {
   getSchemaFromPath,
-  UpdateTypeFromModel,
-  Model,
-  Models,
   getDefaultValuesForCollection,
-  timestampedObjectToPlainObject,
   collectionsDefinitionToSchema,
   clientInputToDbModel,
-  InsertTypeFromModel,
-  convertEntityToJS,
 } from './schema/schema.js';
+import {
+  UpdateTypeFromModel,
+  InsertTypeFromModel,
+  Models,
+} from './schema/types';
 import { nanoid } from 'nanoid';
 import CollectionQueryBuilder, {
   doesEntityObjMatchWhere,
@@ -20,6 +19,7 @@ import CollectionQueryBuilder, {
   FetchResultEntity,
   initialFetchExecutionContext,
   MaybeReturnTypeFromQuery,
+  convertEntityToJS,
 } from './collection-query.js';
 import {
   DBSerializationError,
@@ -70,7 +70,7 @@ import {
   updateEntity,
   triplesToEntities,
 } from './query.js';
-import { dbDocumentToTuples } from './utils.js';
+import { dbDocumentToTuples, timestampedObjectToPlainObject } from './utils.js';
 import { typeFromJSON } from './data-types/base.js';
 import { SchemaDefinition } from './data-types/serialization.js';
 import { createSetProxy } from './data-types/set.js';

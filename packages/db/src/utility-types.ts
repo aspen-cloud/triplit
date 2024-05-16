@@ -9,3 +9,13 @@ export type FilteredRecord<
 > = K extends ReadonlyArray<string> ? { [Key in K[number]]: R[Key] } : never;
 
 export type IsAny<T> = 0 extends 1 & T ? true : false;
+
+// Check if a type is unknown or undefined
+export type IsUnknownOrUndefined<T> = unknown extends T
+  ? true
+  : undefined extends T
+  ? true
+  : false;
+
+// Flips a boolean
+export type Not<T extends boolean> = T extends true ? false : true;

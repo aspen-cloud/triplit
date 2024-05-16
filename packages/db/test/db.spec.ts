@@ -26,7 +26,8 @@ import {
   InvalidOrderClauseError,
   InvalidWhereClauseError,
 } from '../src';
-import { Models, hashSchemaJSON } from '../src/schema.js';
+import { hashSchemaJSON } from '../src/schema/schema.js';
+import { Models } from '../src/schema/types';
 import { classes, students, departments } from './sample_data/school.js';
 import { MemoryBTreeStorage as MemoryStorage } from '../src/storage/memory-btree.js';
 import { testSubscription } from './utils/test-subscription.js';

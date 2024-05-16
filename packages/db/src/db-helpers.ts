@@ -20,14 +20,12 @@ import {
   WhereFilter,
 } from './query.js';
 import {
-  Model,
-  Models,
-  convertEntityToJS,
   getSchemaFromPath,
   schemaToTriples,
   triplesToSchema,
   getAttributeFromSchema,
 } from './schema/schema.js';
+import { Model, Models } from './schema/types';
 import {
   diffSchemas,
   getSchemaDiffIssues,
@@ -50,6 +48,7 @@ import {
   bumpSubqueryVar,
   getRelationPathsFromIdentifier,
   validateIdentifier,
+  convertEntityToJS,
 } from './collection-query.js';
 import { Logger } from '@triplit/types/src/logger.js';
 import { prefixVariables } from './utils.js';

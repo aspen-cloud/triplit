@@ -16,17 +16,13 @@ import {
   QueryValue,
 } from './query.js';
 import {
-  convertEntityToJS,
   createSchemaIterator,
   createSchemaTraverser,
   getAttributeFromSchema,
   getSchemaFromPath,
-  IsPropertyOptional,
-  Model,
-  Models,
-  timestampedObjectToPlainObject,
-  TimestampedTypeFromModel,
 } from './schema/schema.js';
+import { IsPropertyOptional, Model, Models } from './schema/types';
+import { timestampedObjectToPlainObject } from './utils.js';
 import { Timestamp, timestampCompare } from './timestamp.js';
 import { TripleStore, TripleStoreApi } from './triple-store.js';
 import { FilterFunc, MapFunc, Pipeline } from './utils/pipeline.js';
@@ -58,7 +54,7 @@ import {
 } from './db.js';
 import type DB from './db.js';
 import { QueryType } from './data-types/query.js';
-import { ExtractJSType } from './data-types/type.js';
+import { ExtractJSType, ExtractTimestampedType } from './data-types/type.js';
 import {
   RangeContraints,
   TripleRow,
@@ -2288,4 +2284,30 @@ async function loadRelationshipsIntoContextFromVariable<
       );
     }
   }
+}
+
+// Used for entity reducer
+export type TimestampedTypeFromModel<M extends Model<any>> =
+  ExtractTimestampedType<M>;
+
+export function convertEntityToJS<
+  M extends Models<any, any>,
+  CN extends CollectionNameFromModels<M>
+>(
+  entity: TimestampedTypeFromModel<ModelFromModels<M, CN>>,
+  schema?: M,
+  collectionName?: CN
+) {
+  // remove timestamps
+  const untimestampedEntity = timestampedObjectToPlainObject(entity);
+  // Clean internal fields from entities
+  delete untimestampedEntity._collection;
+
+  // @ts-expect-error - weird types here
+  const collectionSchema = schema?.[collectionName]?.schema;
+
+  // convert values based on schema
+  return collectionSchema
+    ? collectionSchema.convertDBValueToJS(untimestampedEntity, schema)
+    : untimestampedEntity;
 }

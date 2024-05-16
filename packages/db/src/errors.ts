@@ -2,7 +2,7 @@ import {
   COLLECTION_TYPE_KEYS,
   VALUE_TYPE_KEYS,
 } from './data-types/serialization.js';
-import { Models } from './schema/schema.js';
+import { Models } from './schema/types';
 
 export const STATUS_CODES = {
   Success: 200,

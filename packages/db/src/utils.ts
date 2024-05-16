@@ -1,4 +1,6 @@
+import { TimestampType } from './data-types/base.js';
 import { UnserializableValueError } from './errors.js';
+import { Timestamp } from './timestamp.js';
 import { Attribute, EAV, TupleValue } from './triple-store-utils.js';
 import { TuplePrefix } from './utility-types.js';
 
@@ -134,5 +136,64 @@ export function prefixVariables(
       return acc;
     },
     {}
+  );
+}
+
+export type TimestampedObject = Timestamped<object>;
+
+export type Timestamped<T> = T extends { [key: string]: any }
+  ? { [K in keyof T]: Timestamped<T[K]> }
+  : [T, Timestamp];
+
+export type UnTimestampedObject<T extends TimestampedObject> = {
+  [k in keyof T]: T[k] extends TimestampedObject
+    ? UnTimestampedObject<T[k]>
+    : T[k] extends [value: infer V, timestamp: TimestampType]
+    ? V
+    : never;
+};
+
+// TODO: perform a pass on this to see how we can improve its types
+export function timestampedObjectToPlainObject<O extends TimestampedObject>(
+  obj: O,
+  maintainKeys?: boolean
+): UnTimestampedObject<O> {
+  if (typeof obj !== 'object' || obj === null) {
+    return obj;
+  }
+  if (isTimestampedVal(obj)) {
+    // @ts-expect-error
+    return timestampedObjectToPlainObject(obj[0]);
+  }
+  if (obj instanceof Array) {
+    // @ts-expect-error
+    return obj
+      .map((v) => timestampedObjectToPlainObject(v))
+      .filter((v) => !!maintainKeys || v !== undefined);
+  }
+  if (obj instanceof Map) {
+    // @ts-expect-error
+    return new Map(
+      Array.from(obj.entries()).map(([key, val]) => {
+        return [key, timestampedObjectToPlainObject(val)];
+      })
+    );
+  }
+  const entries = Object.entries(obj)
+    .map(([key, val]) => {
+      return [key, timestampedObjectToPlainObject(val)];
+    })
+    .filter(([_key, val]) => !!maintainKeys || val !== undefined);
+  //TODO: result statically typed as any
+  const result = Object.fromEntries(entries);
+  return result;
+}
+
+function isTimestampedVal(val: any) {
+  return (
+    val instanceof Array &&
+    val.length === 2 &&
+    val[1] instanceof Array &&
+    val[1].length === 2
   );
 }

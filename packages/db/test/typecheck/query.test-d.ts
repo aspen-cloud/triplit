@@ -1,6 +1,6 @@
 import { expectTypeOf, test, describe, expect } from 'vitest';
 import DB, { ModelFromModels } from '../../src/db.js';
-import { Schema as S } from '../../src/schema.js';
+import { Schema as S } from '../../src/schema/builder.js';
 import {
   CollectionQuery,
   QueryOrder,

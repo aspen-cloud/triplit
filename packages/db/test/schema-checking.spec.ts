@@ -3,8 +3,8 @@ import {
   diffSchemas,
   getSchemaDiffIssues,
   getBackwardsIncompatibleEdits,
-  Schema as S,
-} from '../src/schema.js';
+} from '../src/schema/diff.js';
+import { Schema as S } from '../src/schema/builder.js';
 import DB from '../src/index.js';
 
 function wrapSchema(definition: any) {

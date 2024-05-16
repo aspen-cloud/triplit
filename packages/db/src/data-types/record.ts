@@ -3,20 +3,16 @@ import {
   JSONValueParseError,
   TriplitError,
 } from '../errors.js';
+import {
+  IsPropertyOptional,
+  IsPropertyRequired,
+} from '../schema/types/properties.js';
 import { DataType, Optional } from './base.js';
 import {
   AttributeDefinition,
   RecordAttributeDefinition,
 } from './serialization.js';
 import { ExtractJSType, ExtractDBType, TypeInterface } from './type.js';
-
-type BooleanNot<T extends boolean> = T extends true ? false : true;
-type IsPropertyOptional<T extends DataType> = T extends DataType
-  ? T extends Optional<T>
-    ? true
-    : false
-  : never;
-type IsPropertyRequired<T extends DataType> = BooleanNot<IsPropertyOptional<T>>;
 
 type RecordJSType<
   Properties extends { [k: string]: DataType | Optional<DataType> }

@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
+import { Schema as S } from '../src/schema/builder.js';
 import {
-  Schema as S,
   createSchemaIterator,
   createSchemaTraverser,
   getSchemaFromPath,
-} from '../src/schema.js';
+} from '../src/schema/schema.js';
 import {
   CollectionNotFoundError,
   DBSerializationError,

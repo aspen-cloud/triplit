@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import DB from '../src/db.ts';
 import { getCandidateEntityIds } from '../src/collection-query.ts';
-import { Schema as S } from '../src/schema.ts';
+import { Schema as S } from '../src/schema/builder.ts';
 const testData = [
   { name: 'Alice', score: 100, age: 25 },
   { name: 'Bob', score: 90, age: 25 },

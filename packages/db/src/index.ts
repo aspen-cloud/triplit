@@ -59,27 +59,20 @@ export type {
   TupleValue,
 } from './triple-store-utils.js';
 export {
-  Schema,
   triplesToSchema,
   schemaToJSON,
   JSONToSchema,
-  timestampedObjectToPlainObject,
   hashSchemaJSON,
-  convertEntityToJS,
   getSchemaFromPath,
 } from './schema/schema.js';
-export type {
-  TObject,
-  TimestampedTypeFromModel as TypeFromModel, // TODO: dont alias
-} from './schema/schema.js';
+export { Schema } from './schema/builder.js';
+export type { TObject } from './schema/schema.js';
 export type {
   InsertTypeFromModel,
   UpdateTypeFromModel,
   Model,
   Models,
-  TimestampedObject,
-  UnTimestampedObject,
-} from './schema/schema.js';
+} from './schema/types';
 export type {
   AttributeDefinition,
   CollectionAttributeDefinition,
@@ -92,14 +85,20 @@ export { timestampCompare } from './timestamp.js';
 export type { Timestamp } from './timestamp.js';
 export { DurableClock } from './clocks/durable-clock.js';
 export { MemoryClock } from './clocks/memory-clock.js';
-export { default as CollectionQueryBuilder } from './collection-query.js';
+export {
+  default as CollectionQueryBuilder,
+  convertEntityToJS,
+} from './collection-query.js';
 export type {
   FetchResult,
   FetchResultEntity,
   ReturnTypeFromQuery,
   MaybeReturnTypeFromQuery,
+  TimestampedTypeFromModel as TypeFromModel, // TODO: dont alias
 } from './collection-query.js';
 export { default as Builder } from './utils/builder.js';
 export type { toBuilder } from './utils/builder.js';
+export { timestampedObjectToPlainObject } from './utils.js';
+export type { TimestampedObject, UnTimestampedObject } from './utils.js';
 export type { IsAny } from './utility-types.js';
 export * from './errors.js';
