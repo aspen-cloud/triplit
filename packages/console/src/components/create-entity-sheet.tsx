@@ -4,9 +4,7 @@ import {
   Model,
 } from '@triplit/db';
 import { useEffect, useMemo, useState } from 'react';
-import '@glideapps/glide-data-grid/dist/index.css';
 
-import { randomId } from '@mantine/hooks';
 import { useForm } from '@mantine/form';
 import {
   CollectionTypeKeys,
@@ -35,6 +33,7 @@ import {
 } from '@triplit/ui';
 import { TriplitClient } from '@triplit/client';
 import { Plus } from 'lucide-react';
+import { nanoid } from 'nanoid';
 
 interface FormValues {
   id: string;
@@ -475,7 +474,7 @@ export function CreateEntitySheet({
                       : '',
                   definition: { type: 'string' },
                   fieldValue: '',
-                  key: randomId(),
+                  key: nanoid(),
                 });
               }}
             >

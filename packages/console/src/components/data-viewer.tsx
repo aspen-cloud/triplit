@@ -1,7 +1,6 @@
 import { TriplitClient } from '@triplit/client';
 import { useInfiniteQuery, useQuery } from '@triplit/react';
 import { useMemo, useState, useCallback, useEffect } from 'react';
-import '@glideapps/glide-data-grid/dist/index.css';
 import { CreateEntitySheet } from '.';
 import { consoleClient } from '../../triplit/client';
 import { ColumnDef } from '@tanstack/react-table';

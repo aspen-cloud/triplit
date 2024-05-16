@@ -32,7 +32,7 @@ import {
   ValueAttributeDefinition,
   ValueTypeKeys,
 } from '../../../db/src/data-types/serialization';
-import { randomId } from '@mantine/hooks';
+import { nanoid } from 'nanoid';
 
 export type AttributesForm = {
   [key: string]: AttributeDefinition;
@@ -370,7 +370,7 @@ export function SchemaAttributeSheet({
                       onClick={() => {
                         setRecordKeyTypes((prev) => {
                           const next = { ...prev };
-                          next[randomId()] = ['', 'string'];
+                          next[nanoid()] = ['', 'string'];
                           return next;
                         });
                       }}

@@ -10,7 +10,7 @@ import {
 } from '@triplit/ui';
 import { typeFromJSON } from '../../../db/src/data-types/base';
 import { QueryWhere } from '../../../db/src/query';
-import { randomId } from '@mantine/hooks';
+import { nanoid } from 'nanoid';
 
 type FiltersPopoverProps = {
   collection: string;
@@ -32,7 +32,7 @@ function mapFilterArraysToFilterObjects(
       : typeof value,
     operator,
     value,
-    id: randomId(),
+    id: nanoid(),
   }));
 }
 
@@ -67,7 +67,7 @@ export function FiltersPopover(props: FiltersPopoverProps) {
         asType: defaultType,
         operator: defaultOperator,
         value: defaultValue,
-        id: randomId(),
+        id: nanoid(),
       };
       setDraftFilters((prev) => [...prev, filterObj]);
     },

@@ -36,7 +36,6 @@ import {
   ValueAttributeDefinition,
 } from '@triplit/db/src/data-types/serialization';
 import { ArrowSquareOut } from '@phosphor-icons/react';
-import { set } from 'lodash';
 
 async function updateTriplitValue(
   attribute: string,
