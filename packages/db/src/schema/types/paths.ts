@@ -1,6 +1,7 @@
 import { QueryType } from '../../data-types/query.js';
 import { RecordType } from '../../data-types/record.js';
 import { CollectionNameFromModels, ModelFromModels } from '../../db.js';
+import { CollectionQuery } from '../../query.js';
 import { PrefixedUnion } from '../../utility-types.js';
 import { Models, SelectModelFromModel } from './models.js';
 
@@ -63,7 +64,9 @@ export type QueryPaths<
   M extends Models<any, any>,
   TDepth extends any[] = []
 > = Q extends QueryType<infer CQ, any>
-  ? SchemaPaths<M, CQ['collectionName'], TDepth>
+  ? CQ extends CollectionQuery<any, any>
+    ? SchemaPaths<M, CQ['collectionName'], TDepth>
+    : never
   : never;
 
 /**

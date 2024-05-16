@@ -47,12 +47,6 @@ export type PrefixedUnion<
 export type Intersection<U1, U2> = U1 extends U2 ? U1 : never;
 
 /**
- * Basic interface for a functional builder
+ * A relaxed union type that allows for any string
  */
-export type BuilderBase<
-  T,
-  Ignore extends string = never,
-  Extend extends string = never
-> = {
-  [K in keyof Omit<T, Ignore> | Extend]-?: (...args: any) => any;
-} & { build: () => T };
+export type SoftUnion<T extends string> = T | (string & {});

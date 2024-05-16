@@ -111,6 +111,14 @@ export type RelationSubquery<M extends Models<any, any> | undefined> = {
   cardinality: QueryResultCardinality;
 };
 
+export type RelationSubquery2<
+  M extends Models<any, any> | undefined,
+  CN extends CollectionNameFromModels<M>
+> = {
+  subquery: CollectionQuery<M, CN>;
+  cardinality: QueryResultCardinality;
+};
+
 // export type QuerySelection<
 //   M extends Models<any, any> | undefined,
 //   CN extends CollectionNameFromModels<M>
@@ -119,17 +127,22 @@ export type RelationSubquery<M extends Models<any, any> | undefined> = {
 export type QuerySelectionValue<
   M extends Models<any, any> | undefined,
   CN extends CollectionNameFromModels<M>
-> =
-  | (M extends Models<any, any> ? ModelPaths<M, CN> : Path)
-  | RelationSubquery<M>;
+> = M extends Models<any, any> ? ModelPaths<M, CN> : Path;
+
+export type QueryIncludeValue<M extends Models<any, any> | undefined> =
+  RelationSubquery<M>;
 
 export type CollectionQuery<
   M extends Models<any, any> | undefined,
   CN extends CollectionNameFromModels<M>,
-  S extends QuerySelectionValue<M, CN> = QuerySelectionValue<M, CN>
+  Selection extends QuerySelectionValue<M, CN> = QuerySelectionValue<M, CN>,
+  Inclusions extends Record<string, RelationSubquery2<M, any>> = Record<
+    string,
+    RelationSubquery2<M, any>
+  >
 > = {
   where?: QueryWhere<M, CN>;
-  select?: S[];
+  select?: Selection[];
   // | [string, CollectionQuery<M, any>]
   order?: QueryOrder<M, CN>[];
   limit?: number;
@@ -137,20 +150,14 @@ export type CollectionQuery<
   entityId?: string; // Syntactic sugar for where("id", "=", entityId), should not be relied on in query engine
   vars?: Record<string, any>;
   collectionName: CN;
-  include?: Partial<
-    Record<
-      M extends Models<any, any>
-        ? RelationAttributes<ModelFromModels<M, CN>>
-        : string,
-      CollectionQuery<M, any> | null
-    >
-  >;
+  include?: Inclusions;
 };
 
 export type Query<
   M extends Models<any, any> | undefined,
-  CN extends CollectionNameFromModels<M>
-> = Omit<CollectionQuery<M, CN>, 'collectionName'>;
+  CN extends CollectionNameFromModels<M>,
+  Selection extends QuerySelectionValue<M, CN> = QuerySelectionValue<M, CN>
+> = Omit<CollectionQuery<M, CN, Selection>, 'collectionName'>;
 
 type TimestampedData =
   | [QueryValue, Timestamp]

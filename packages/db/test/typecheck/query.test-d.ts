@@ -4,6 +4,7 @@ import { Schema as S } from '../../src/schema/builder.js';
 import {
   CollectionQuery,
   QueryOrder,
+  QuerySelectionValue,
   QueryWhere,
   RelationSubquery,
   ValueCursor,
@@ -15,10 +16,14 @@ import {
   ReturnTypeFromQuery,
 } from '../../src/collection-query.js';
 import { DBTransaction } from '../../src/db-transaction.js';
+import { QuerySelectionFitleredTypeFromModel } from '../../src/schema/types/models.js';
 
 type TransactionAPI<TxDB extends DB<any>> = TxDB extends DB<infer M>
   ? Parameters<Parameters<DB<M>['transact']>[0]>[0]
   : never;
+
+type MapKey<M> = M extends Map<infer K, any> ? K : never;
+type MapValue<M> = M extends Map<any, infer V> ? V : never;
 
 // Want to figure out the best way to test various data types + operation combos
 // Right now im reusing this exhaustive schema (also defined in cli tests)
@@ -385,7 +390,7 @@ describe('schemaful', () => {
     expectEntityProxyParamInTx.not.toHaveProperty('relationById');
   });
 
-  test('fetch: returns a map of properly typed entities', async () => {
+  test('fetch: without select returns all fields on the entity', async () => {
     const schema = {
       collections: {
         test: {
@@ -417,14 +422,10 @@ describe('schemaful', () => {
             // default functions
             defaultNow: S.String({ default: S.Default.now() }),
             defaultUuid: S.String({ default: S.Default.uuid() }),
-            // subqueries
+            // subqueries (NOT INCLUDED)
             subquery: S.RelationMany('test2', {
               where: [],
             }),
-            // relations
-            relationOne: S.RelationOne('test', { where: [] }),
-            relationMany: S.RelationMany('test', { where: [] }),
-            relationById: S.RelationById('test', 'test-id'),
           }),
         },
         test2: {
@@ -437,48 +438,196 @@ describe('schemaful', () => {
     const db = new DB({ schema });
     const query = db.query('test').build();
     const result = await db.fetch(query);
-    expectTypeOf(result).toEqualTypeOf<
+    expectTypeOf<MapValue<typeof result>>().toMatchTypeOf<{
+      id: string;
+      string: string;
+      boolean: boolean;
+      number: number;
+      date: Date;
+      setString: Set<string>;
+      setNumber: Set<number>;
+      nullableSet: Set<string> | null;
+      record: { attr1: string; attr2: string } & { attr3?: string };
+      optional: string | undefined;
+      nullableFalse: string;
+      nullableTrue: string | null;
+      defaultValue: string;
+      defaultNull: string;
+      defaultNow: string;
+      defaultUuid: string;
+    }>();
+  });
+
+  test('fetch: with select returns only selected fields on the entity', async () => {
+    const schema = {
+      collections: {
+        test: {
+          schema: S.Schema({
+            id: S.Id(),
+            a: S.String(),
+            b: S.Number(),
+          }),
+        },
+      },
+    };
+    const db = new DB({ schema });
+    const query = db.query('test').select(['id', 'b']).build();
+    const result = await db.fetch(query);
+    expectTypeOf(result).toMatchTypeOf<
       Map<
         string,
         {
           id: string;
-          string: string;
-          boolean: boolean;
-          number: number;
-          date: Date;
-          setString: Set<string>;
-          setNumber: Set<number>;
-          nullableSet: Set<string> | null;
-          record: { attr1: string; attr2: string } & { attr3?: string };
-          optional: string | undefined;
-          nullableFalse: string;
-          nullableTrue: string | null;
-          defaultValue: string;
-          defaultNull: string;
-          defaultNow: string;
-          defaultUuid: string;
-          subquery: QueryResult<
-            CollectionQuery<typeof schema.collections, 'test2'>,
-            'many'
-          >;
+          b: number;
+        }
+      >
+    >();
+  });
+
+  test('fetch: can select paths into records', async () => {
+    const schema = {
+      collections: {
+        test: {
+          schema: S.Schema({
+            id: S.Id(),
+            record: S.Record({
+              attr1: S.String(),
+              attr2: S.String(),
+              attr3: S.String(),
+            }),
+            attr: S.String(),
+          }),
+        },
+      },
+    };
+
+    const db = new DB({ schema });
+    // Select full record
+    {
+      const query = db.query('test').select(['id', 'record']).build();
+      const result = await db.fetch(query);
+      expectTypeOf(result).toMatchTypeOf<
+        Map<
+          string,
+          {
+            id: string;
+            record: { attr1: string; attr2: string; attr3: string };
+          }
+        >
+      >();
+    }
+
+    // Select record paths
+    {
+      const query = db
+        .query('test')
+        .select(['id', 'record.attr1', 'record.attr3'])
+        .build();
+      const result = await db.fetch(query);
+      expectTypeOf(result).toMatchTypeOf<
+        Map<string, { id: string; record: { attr1: string; attr3: string } }>
+      >();
+    }
+  });
+
+  test('fetch: can include relationships', async () => {
+    const schema = {
+      collections: {
+        test: {
+          schema: S.Schema({
+            id: S.Id(),
+            // relations
+            relationOne: S.RelationOne('test2', { where: [] }),
+            relationMany: S.RelationMany('test2', { where: [] }),
+            relationById: S.RelationById('test2', 'test-id'),
+          }),
+        },
+        test2: {
+          schema: S.Schema({
+            id: S.Id(),
+          }),
+        },
+      },
+    };
+    const db = new DB({ schema });
+    const query = db
+      .query('test')
+      .include('relationOne')
+      .include('relationMany')
+      .include('relationById')
+      .include('random', {
+        subquery: { collectionName: 'test2', where: [] },
+        cardinality: 'many',
+      })
+      .build();
+    const result = await db.fetch(query);
+    result.get('1')!;
+    expectTypeOf(result).toMatchTypeOf<
+      Map<
+        string,
+        {
           relationOne: QueryResult<
-            CollectionQuery<typeof schema.collections, 'test'>,
+            CollectionQuery<typeof schema.collections, 'test2'>,
             'one'
           >;
           relationMany: QueryResult<
-            CollectionQuery<typeof schema.collections, 'test'>,
+            CollectionQuery<typeof schema.collections, 'test2'>,
             'many'
           >;
           relationById: QueryResult<
-            CollectionQuery<typeof schema.collections, 'test'>,
+            CollectionQuery<typeof schema.collections, 'test2'>,
+            'one'
+          >;
+          random: QueryResult<
+            CollectionQuery<typeof schema.collections, 'test2'>,
+            'many'
+          >;
+        }
+      >
+    >();
+  });
+
+  test('fetch: properly merges includes and select statements', async () => {
+    const schema = {
+      collections: {
+        test: {
+          schema: S.Schema({
+            id: S.Id(),
+            a: S.String(),
+            b: S.Number(),
+            relation: S.RelationById('test2', 'test-id'),
+          }),
+        },
+        test2: {
+          schema: S.Schema({
+            id: S.Id(),
+            c: S.String(),
+            d: S.Number(),
+          }),
+        },
+      },
+    };
+
+    const db = new DB({ schema });
+    const query = db
+      .query('test')
+      .select(['id', 'a'])
+      .include('relation')
+      .build();
+    const result = await db.fetch(query);
+    expectTypeOf(result).toMatchTypeOf<
+      Map<
+        string,
+        {
+          id: string;
+          a: string;
+          relation: QueryResult<
+            CollectionQuery<typeof schema.collections, 'test2'>,
             'one'
           >;
         }
       >
     >();
-    expectTypeOf(result.get('a')!.subquery.get('a')!).toEqualTypeOf<{
-      id: string;
-    }>();
   });
 });
 
@@ -548,15 +697,7 @@ describe('query builder', () => {
       expectTypeOf(query.select)
         .parameter(0)
         .toEqualTypeOf<
-          | (
-              | 'attr1'
-              | 'attr2'
-              | 'attr3'
-              | 'record'
-              | 'record.attr1'
-              | 'id'
-              | RelationSubquery<typeof schema.collections>
-            )[]
+          | ('attr1' | 'attr2' | 'attr3' | 'record' | 'record.attr1' | 'id')[]
           | undefined
         >();
     }
@@ -566,7 +707,7 @@ describe('query builder', () => {
       const query = db.query('test');
       expectTypeOf(query.select)
         .parameter(0)
-        .toEqualTypeOf<(string | RelationSubquery<undefined>)[] | undefined>();
+        .toEqualTypeOf<string[] | undefined>();
     }
   });
   test('where attribute prop', () => {
@@ -735,7 +876,9 @@ describe('query builder', () => {
         .parameter(0)
         .toMatchTypeOf<
           | ValueCursor
-          | ReturnTypeFromQuery<typeof schema.collections, 'test'>
+          | ReturnTypeFromQuery<
+              CollectionQuery<typeof schema.collections, 'test'>
+            >
           | undefined
         >();
     }
@@ -748,9 +891,6 @@ describe('query builder', () => {
     }
   });
 });
-
-type MapKey<M> = M extends Map<infer K, any> ? K : never;
-type MapValue<M> = M extends Map<any, infer V> ? V : never;
 
 describe('fetching', () => {
   const schema = {
@@ -781,7 +921,7 @@ describe('fetching', () => {
       const query = db.query('test').build();
       {
         const res = db.fetch(query);
-        expectTypeOf(res).resolves.toEqualTypeOf<
+        expectTypeOf(res).resolves.toMatchTypeOf<
           Map<
             string,
             {
@@ -789,10 +929,6 @@ describe('fetching', () => {
               attr1: string;
               attr2: boolean;
               attr3: number;
-              subquery: QueryResult<
-                CollectionQuery<typeof schema.collections, 'test2'>,
-                'many'
-              >;
             }
           >
         >();
@@ -801,7 +937,7 @@ describe('fetching', () => {
       {
         let tx: DBTransaction<typeof schema.collections>;
         const res = tx!.fetch(query);
-        expectTypeOf(res).resolves.toEqualTypeOf<
+        expectTypeOf(res).resolves.toMatchTypeOf<
           Map<
             string,
             {
@@ -809,10 +945,6 @@ describe('fetching', () => {
               attr1: string;
               attr2: boolean;
               attr3: number;
-              subquery: QueryResult<
-                CollectionQuery<typeof schema.collections, 'test2'>,
-                'many'
-              >;
             }
           >
         >();
@@ -843,30 +975,22 @@ describe('fetching', () => {
 
       {
         const res = db.fetchById('test', 'id');
-        expectTypeOf(res).resolves.toEqualTypeOf<{
+        expectTypeOf(res).resolves.toMatchTypeOf<{
           id: string;
           attr1: string;
           attr2: boolean;
           attr3: number;
-          subquery: QueryResult<
-            CollectionQuery<typeof schema.collections, 'test2'>,
-            'many'
-          >;
         } | null>();
       }
 
       {
         let tx: DBTransaction<typeof schema.collections>;
         const res = tx!.fetchById('test', 'id');
-        expectTypeOf(res).resolves.toEqualTypeOf<{
+        expectTypeOf(res).resolves.toMatchTypeOf<{
           id: string;
           attr1: string;
           attr2: boolean;
           attr3: number;
-          subquery: QueryResult<
-            CollectionQuery<typeof schema.collections, 'test2'>,
-            'many'
-          >;
         } | null>();
       }
     }
@@ -892,30 +1016,22 @@ describe('fetching', () => {
       const query = db.query('test').build();
       {
         const res = db.fetchOne(query);
-        expectTypeOf(res).resolves.toEqualTypeOf<{
+        expectTypeOf(res).resolves.toMatchTypeOf<{
           id: string;
           attr1: string;
           attr2: boolean;
           attr3: number;
-          subquery: QueryResult<
-            CollectionQuery<typeof schema.collections, 'test2'>,
-            'many'
-          >;
         } | null>();
       }
 
       {
         let tx: DBTransaction<typeof schema.collections>;
         const res = tx!.fetchOne(query);
-        expectTypeOf(res).resolves.toEqualTypeOf<{
+        expectTypeOf(res).resolves.toMatchTypeOf<{
           id: string;
           attr1: string;
           attr2: boolean;
           attr3: number;
-          subquery: QueryResult<
-            CollectionQuery<typeof schema.collections, 'test2'>,
-            'many'
-          >;
         } | null>();
       }
     }

@@ -14,20 +14,20 @@ export type SubQuery<
   M extends Models<any, any>,
   CN extends CollectionNameFromModels<M>
 > = Pick<
-  CollectionQuery<M, CN>,
+  CollectionQuery<M, CN, any, any>,
   'collectionName' | 'where' | 'limit' | 'order'
 >;
 
 export type QueryType<
-  Query extends SubQuery<any, any>,
+  Q extends SubQuery<any, any>,
   C extends QueryResultCardinality
 > = TypeInterface<
   'query',
-  FetchResult<Query>,
+  FetchResult<Q>,
   any, //TODO: is this even applicable? ... might need to break it out into its own concepts we slowly add to
   readonly []
 > & {
-  query: Query;
+  query: Q;
   cardinality: C;
 };
 

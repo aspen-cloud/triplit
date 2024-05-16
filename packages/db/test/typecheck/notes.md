@@ -10,5 +10,9 @@
 
 ## Writing Tests
 
-- Prefer using `toEqualTypeOf` over `toMatchTypeOf` since the former is stricter
+- Prefer using `toEqualTypeOf` over `toMatchTypeOf` since the former is stricter - `toMatchTypeOf` will match any subset of the object
 - For object types, `toEqualTypeOf` might be too strict, so `toHaveProperty` is a nice alternative to test properties individually
+
+## TODOs
+
+- Refactor: `QuerySelectionFitleredTypeFromModel` which when trying to merge path and subquery types causes really weird typing in our tests and requires us to use `toMatchTypeOf` instead of `toEqualTypeOf`

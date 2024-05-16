@@ -28,18 +28,14 @@ export type ClientFetchResult<C extends ClientQuery<any, any>> = Map<
 export type ClientSchema = Models<any, any>;
 
 export type ClientFetchResultEntity<C extends ClientQuery<any, any>> =
-  C extends ClientQuery<infer M, infer CN>
-    ? M extends ClientSchema
-      ? ReturnTypeFromQuery<M, CN>
-      : any
-    : never;
+  ReturnTypeFromQuery<C>;
 
 export type SyncStatus = 'pending' | 'confirmed' | 'all';
 
 export type Entity<
   M extends ClientSchema,
   CN extends CollectionNameFromModels<M>
-> = ReturnTypeFromQuery<M, CN>;
+> = ReturnTypeFromQuery<ClientQuery<M, CN>>;
 
 export type ClientQuery<
   M extends ClientSchema | undefined,
@@ -48,6 +44,11 @@ export type ClientQuery<
   syncStatus?: SyncStatus;
 } & CollectionQuery<M, CN>;
 
+// The fact that builder methods will update generics makes it tough to re-use the builder from the db
+// - DB builder returns specific type QueryBuilder<...Params>
+// - The client builder needs to return ClientQueryBuilder<...Params>
+// - cant return 'this' because we need to update generics
+// TODO: fix this
 class ClientQueryBuilderClass<
   M extends ClientSchema | undefined,
   CN extends CollectionNameFromModels<M>,
@@ -113,8 +114,13 @@ export function prepareFetchByIdQuery<
   let query = ClientQueryBuilder(collectionName).entityId(id);
   if (queryParams?.include) {
     for (const [relation, subquery] of Object.entries(queryParams.include)) {
-      if (subquery) query = query.include(relation, subquery);
-      else query = query.include(relation);
+      if (subquery) {
+        // @ts-expect-error TODO: fixup builder type
+        query = query.include(relation, subquery);
+      } else {
+        // @ts-expect-error TODO: fixup builder type
+        query = query.include(relation);
+      }
     }
   }
   return query.build() as ClientQuery<M, CN>;

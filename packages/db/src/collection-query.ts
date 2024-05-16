@@ -13,6 +13,7 @@ import {
   QueryWhere,
   QueryValue,
   QuerySelectionValue,
+  RelationSubquery2,
 } from './query.js';
 import {
   createSchemaIterator,
@@ -78,7 +79,11 @@ export default function CollectionQueryBuilder<
     collectionName,
     ...params,
   };
-  return new QueryBuilder<M, CN, CollectionQuery<M, CN>>(query);
+  return new QueryBuilder<
+    M,
+    CN,
+    CollectionQuery<M, CN, QuerySelectionValue<M, CN>, {}>
+  >(query);
 }
 
 export type QueryResult<
@@ -106,28 +111,24 @@ export type TimestampedFetchResultEntity<C extends CollectionQuery<any, any>> =
 export type CollectionNameFromQuery<Q extends CollectionQuery<any, any>> =
   Q extends CollectionQuery<infer _M, infer CN> ? CN : never;
 
-// Trying this out, having types that know and dont know the schema exists might be a useful pattern
-export type MaybeReturnTypeFromQuery<
-  M extends Models<any, any> | undefined,
-  CN extends CollectionNameFromModels<M>
-> = M extends Models<any, any> ? ReturnTypeFromQuery<M, CN> : any;
+export type ReturnTypeFromQuery<Q extends CollectionQuery<any, any, any>> =
+  Q extends CollectionQuery<infer M, infer CN, infer S, infer I>
+    ? ReturnTypeFromParts<M, CN, S, I>
+    : any;
 
-export type ReturnTypeFromQuery<
-  M extends Models<any, any>,
+export type ReturnTypeFromParts<
+  M extends Models<any, any> | undefined,
   CN extends CollectionNameFromModels<M>,
-  Selection extends QuerySelectionValue<M, CN>
+  Selection extends QuerySelectionValue<M, CN> = QuerySelectionValue<M, CN>,
+  Inclusion extends Record<string, RelationSubquery2<M, any>> = {}
 > = M extends Models<any, any>
   ? ModelFromModels<M, CN> extends Model<any>
-    ? QuerySelectionFitleredTypeFromModel<M, CN, Selection>
+    ? QuerySelectionFitleredTypeFromModel<M, CN, Selection, Inclusion>
     : any
   : any;
 
 export type FetchResultEntity<C extends CollectionQuery<any, any>> =
-  C extends CollectionQuery<infer M, infer CN, infer Selection>
-    ? M extends Models<any, any>
-      ? ReturnTypeFromQuery<M, CN, Selection>
-      : any
-    : never;
+  ReturnTypeFromQuery<C>;
 
 function getIdFilterFromQuery(query: CollectionQuery<any, any>): string | null {
   const { where, collectionName } = query;
@@ -863,12 +864,10 @@ function* generateQueryChains<
   const subQueryFilters = (query.where ?? []).filter(
     (filter) => 'exists' in filter
   ) as SubQueryFilter<M>[];
-  const subQuerySelects = (query.select ?? []).filter(
-    (select) => typeof select !== 'string'
-  ) as RelationSubquery<M>[];
+  const subQueryInclusions = Object.values(query.include ?? {});
   const subQueries = [
     ...subQueryFilters.map((f) => f.exists),
-    ...subQuerySelects.map((s) => s.subquery),
+    ...subQueryInclusions.map((i) => i.subquery),
   ];
   for (const subQuery of subQueries) {
     // yield [query, subQuery] as const;
@@ -876,9 +875,6 @@ function* generateQueryChains<
       ...query,
       where: (query.where ?? []).filter(
         (f) => !('exists' in f) || f.exists !== subQuery
-      ),
-      select: (query.select ?? []).filter(
-        (s) => typeof s !== 'object' || s.subquery !== subQuery
       ),
     };
     yield* generateQueryChains(subQuery as Q, [
@@ -1108,7 +1104,7 @@ function loadOrderRelationships<
       let fullSubquery = {
         ...relationshipQuery,
         include: { ...(relationshipQuery.include ?? {}), ...inclusions },
-      } as CollectionQuery<typeof schema, any>;
+      } as CollectionQuery<M, any>;
       const subqueryResult = await loadSubquery(
         caller,
         tx,
@@ -1140,15 +1136,13 @@ function LoadIncludeRelationships<
   executionContext: FetchExecutionContext,
   options: FetchFromStorageOptions
 ): MapFunc<[string, QueryPipelineData], [string, QueryPipelineData]> {
-  const { select } = query;
-  const subqueries = (select ?? []).filter(
-    (sel) => typeof sel !== 'string'
-  ) as RelationSubquery<M>[];
+  const { include } = query;
+  const subqueries = Object.entries(include ?? {});
   return async ([
     entId,
     { entity, relationships, triples, existsFilterTriples },
   ]) => {
-    for (const { attributeName, subquery, cardinality } of subqueries) {
+    for (const [attributeName, { subquery, cardinality }] of subqueries) {
       // If we have already loaded this relationship, skip
       if (!!relationships[attributeName]) continue;
       const subqueryResult = await loadSubquery(
@@ -1228,7 +1222,7 @@ async function loadSubquery<
   let fullSubquery = {
     ...subquery,
     vars: { ...(parentQuery.vars ?? {}), ...(subquery.vars ?? {}) },
-  } as CollectionQuery<typeof schema, any>;
+  } as CollectionQuery<M, any>;
 
   fullSubquery = prepareQuery(fullSubquery, schema, {
     skipRules: options.skipRules,
@@ -1368,7 +1362,10 @@ export async function fetch<
     pipeline = pipeline.take(limit);
   }
 
-  if (select && select.length > 0) {
+  if (
+    (select && select.length > 0) ||
+    (query.include && Object.keys(query.include).length > 0)
+  ) {
     // Load include relationships
     pipeline = pipeline
       .map(
@@ -1379,14 +1376,8 @@ export async function fetch<
           entId,
           { entity, relationships, triples, existsFilterTriples },
         ]) => {
-          const selectedAttributes = select.filter(
-            (sel) => typeof sel === 'string'
-          ) as string[];
-          const includedRelationships = (
-            select.filter(
-              (sel) => typeof sel !== 'string'
-            ) as RelationSubquery<M>[]
-          ).map((sel) => sel.attributeName);
+          const selectedAttributes: string[] = select ?? [];
+          const includedRelationships = Object.keys(query.include ?? {});
           const selectedEntity = selectedAttributes
             .concat(includedRelationships)
             .reduce<any>(selectParser(entity), {});
@@ -1686,7 +1677,7 @@ export function subscribeResultsAndTriples<
   onError?: (error: any) => void | Promise<void>,
   options: FetchFromStorageOptions = {}
 ) {
-  const { select, order, limit } = query;
+  const { select, order, limit, include } = query;
   const executionContext = initialFetchExecutionContext();
   const asyncUnSub = async () => {
     let results: FetchResult<Q> = new Map() as FetchResult<Q>;
@@ -1718,7 +1709,7 @@ export function subscribeResultsAndTriples<
           if (
             (where &&
               someFilterStatements(where, (filter) => 'exists' in filter)) ||
-            (select && select.some((sel) => typeof sel !== 'string')) ||
+            (include && Object.keys(include).length > 0) ||
             (order &&
               order.some(
                 (o) =>

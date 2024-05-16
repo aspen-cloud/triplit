@@ -7,21 +7,38 @@ import {
   QuerySelectionValue,
   QueryValue,
   QueryWhere,
+  RelationSubquery,
   ValueCursor,
   WhereFilter,
+  RelationSubquery2,
 } from '../query.js';
 import { CollectionNameFromModels, ModelFromModels } from '../db.js';
-import { BuilderBase } from '../utility-types.js';
 import { ReturnTypeFromQuery } from '../collection-query.js';
 import {
   AfterClauseWithNoOrderError,
   QueryClauseFormattingError,
 } from '../errors.js';
+import { Schema } from '../schema/builder.js';
+import {
+  ExtractCollectionQueryInclusion,
+  ExtractCollectionQuerySelection,
+} from './types';
+
+/**
+ * Basic interface for a functional builder
+ */
+export type BuilderBase<
+  T,
+  Ignore extends string = never,
+  Extend extends string = never
+> = {
+  [K in keyof Omit<T, Ignore> | Extend]-?: (...args: any) => any;
+} & { build: () => T };
 
 export class QueryBuilder<
   M extends Models<any, any> | undefined,
   CN extends CollectionNameFromModels<M>,
-  Q extends CollectionQuery<M, CN>
+  Q extends CollectionQuery<M, CN, any, any>
 > implements BuilderBase<CollectionQuery<M, CN>, 'collectionName'>
 {
   protected query: Q;
@@ -39,7 +56,6 @@ export class QueryBuilder<
     this.query = { ...this.query, select: selection };
 
     // TODO: I think this is going to break higher level builders, ensure it doenst (@triplit/react probably has error)
-    // @ts-expect-error
     return this as QueryBuilder<M, CN, CollectionQuery<M, CN, Selection>>;
   }
 
@@ -70,12 +86,44 @@ export class QueryBuilder<
     };
     return this;
   }
-
-  include<
-    RName extends M extends Models<any, any>
-      ? RelationAttributes<ModelFromModels<M, CN>>
-      : never
-  >(relationName: RName, query?: Query<M, RName>) {
+  // TODO: these get typed as 'any' in result types
+  include<RName extends string, SQ extends RelationSubquery2<M, any>>(
+    relationName: RName,
+    query: RelationSubquery2<M, any>
+  ): QueryBuilder<
+    M,
+    CN,
+    CollectionQuery<
+      M,
+      CN,
+      // @ts-expect-error TODO: not sure why this has error (maybe defaults)
+      ExtractCollectionQuerySelection<Q>,
+      ExtractCollectionQueryInclusion<Q> & {
+        [K in RName]: SQ;
+      }
+    >
+  >;
+  include<RName extends RelationAttributes<ModelFromModels<M, CN>>>(
+    relationName: RName,
+    query?: PartialQuery<
+      M,
+      // @ts-expect-error Doesn't know that Model['RName'] is a query type
+      ModelFromModels<M, CN>['properties'][RName]['query']['collectionName']
+    >
+  ): QueryBuilder<
+    M,
+    CN,
+    CollectionQuery<
+      M,
+      CN,
+      // @ts-expect-error TODO: not sure why this has error (maybe defaults)
+      ExtractCollectionQuerySelection<Q>,
+      ExtractCollectionQueryInclusion<Q> & {
+        [K in RName]: InclusionFromArgs<M, CN, RName, null>;
+      }
+    >
+  >;
+  include(relationName: any, query?: any) {
     this.query = {
       ...this.query,
       include: QUERY_INPUT_TRANSFORMERS<M, CN>().include(
@@ -103,6 +151,61 @@ export class QueryBuilder<
   }
 }
 
+const schema = {
+  users: {
+    schema: Schema.Schema({
+      id: Schema.Id(),
+      name: Schema.String(),
+      posts: Schema.RelationMany('posts', {
+        where: [['author_id', '=', '$id']],
+      }),
+    }),
+  },
+  posts: {
+    schema: Schema.Schema({
+      id: Schema.Id(),
+      title: Schema.String(),
+      author_id: Schema.String(),
+      author: Schema.RelationById('users', '$author_id'),
+    }),
+  },
+};
+
+type PartialQuery<
+  M extends Models<any, any> | undefined,
+  CN extends CollectionNameFromModels<M>
+> = Pick<
+  CollectionQuery<M, CN>,
+  'select' | 'order' | 'where' | 'limit' | 'include'
+>;
+
+type InclusionFromArgs<
+  M extends Models<any, any> | undefined,
+  CN extends CollectionNameFromModels<M>,
+  RName extends string,
+  Inclusion extends RelationSubquery2<M, any> | null
+> = M extends Models<any, any>
+  ? Inclusion extends null
+    ? // Look up in Models
+      RName extends RelationAttributes<ModelFromModels<M, CN>>
+      ? {
+          // Colleciton query with params based on the relation
+          subquery: CollectionQuery<
+            M,
+            ModelFromModels<
+              M,
+              CN
+            >['properties'][RName]['query']['collectionName']
+          >;
+          cardinality: ModelFromModels<
+            M,
+            CN
+          >['properties'][RName]['cardinality'];
+        }
+      : never
+    : Inclusion
+  : Inclusion;
+
 type FilterInput<
   M extends Models<any, any> | undefined,
   CN extends CollectionNameFromModels<M>,
@@ -124,7 +227,9 @@ type AfterInput<
   CN extends CollectionNameFromModels<M>
 > =
   | ValueCursor
-  | (M extends Models<any, any> ? ReturnTypeFromQuery<M, CN> : undefined)
+  | (M extends Models<any, any>
+      ? ReturnTypeFromQuery<CollectionQuery<M, CN>>
+      : undefined)
   | undefined;
 
 export type QUERY_INPUT_TRANSFORMERS<
@@ -209,6 +314,7 @@ export const QUERY_INPUT_TRANSFORMERS = <
     relationName: RName,
     query?: Query<M, RName>
   ): Record<string, any> {
+    // TODO: include should be typed as a set of subqueries
     return {
       ...q.include,
       // Set to null so the inclusion of the key can be serialized
@@ -232,6 +338,7 @@ export const QUERY_INPUT_TRANSFORMERS = <
       Object.hasOwn(after, attributeToOrderBy)
     ) {
       return [
+        // @ts-expect-error
         [after[attributeToOrderBy] as QueryValue, after.id as string],
         inclusive ?? false,
       ];

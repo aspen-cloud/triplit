@@ -18,6 +18,7 @@ import {
   RelationSubquery,
   QueryValue,
   WhereFilter,
+  RelationSubquery2,
 } from './query.js';
 import {
   getSchemaFromPath,
@@ -545,6 +546,8 @@ export function prepareQuery<
     addSubsSelectsFromIncludes(fetchQuery, schema);
   }
 
+  if (!query.select) query.select = [];
+
   return fetchQuery;
 }
 
@@ -594,40 +597,46 @@ function whereFilterValidator<M extends Models<any, any> | undefined>(
 }
 
 function addSubsSelectsFromIncludes<
-  M extends Models<any, any>,
+  M extends Models<any, any> | undefined,
   CN extends CollectionNameFromModels<M>
 >(query: CollectionQuery<M, CN>, schema: M) {
   if (!query.include) return query;
   // TODO: typescript should handle schema = undefined, but it isn't
   const collectionSchema = schema?.[query.collectionName];
   if (!collectionSchema) return query;
-  for (const [relationName, extraQuery] of Object.entries(
-    query.include as Record<string, CollectionQuery<M, any>>
+  for (const [relationName, relation] of Object.entries(
+    query.include as Record<string, RelationSubquery2<M, any> | null>
   )) {
-    const attributeType = getSchemaFromPath(collectionSchema.schema!, [
-      relationName,
-    ]);
-    if (attributeType.type !== 'query') {
-      throw new Error(
-        `${relationName} is not an existing relationship in ${query.collectionName} schema`
-      );
+    const attributeType = getAttributeFromSchema(
+      relationName.split('.'),
+      schema,
+      // @ts-expect-error TODO: figure out proper typing of collectionName
+      query.collectionName
+    );
+    if (attributeType && attributeType.type === 'query') {
+      let additionalQuery =
+        // @ts-expect-error TODO: figure out proper typing of include here, this is where it would be helpful to know the difference between a CollectionQuery and Prepared<CollectionQuery>
+        relation as CollectionQuery<M, any> | undefined;
+      if (additionalQuery && additionalQuery.include) {
+        additionalQuery = addSubsSelectsFromIncludes(
+          {
+            ...additionalQuery,
+            collectionName: attributeType.query.collectionName,
+          },
+          schema
+        );
+      }
+      const merged = mergeQueries(attributeType.query, additionalQuery);
+      const subquerySelection = {
+        subquery: merged,
+        cardinality: attributeType.cardinality,
+      };
+      query.include[relationName] = subquerySelection;
+    } else {
+      if (relation?.subquery) {
+        query.include[relationName] = relation;
+      }
     }
-    if (!query.select) query.select = [];
-    let additionalQuery = extraQuery;
-    if (additionalQuery && additionalQuery.include) {
-      additionalQuery = addSubsSelectsFromIncludes(
-        { ...extraQuery, collectionName: attributeType.query.collectionName },
-        schema
-      );
-    }
-    const merged = mergeQueries(attributeType.query, additionalQuery);
-    const subquerySelection: RelationSubquery<M> = {
-      attributeName: relationName,
-      subquery: merged,
-      cardinality: attributeType.cardinality,
-    };
-
-    query.select.push(subquerySelection);
   }
   return query;
 }

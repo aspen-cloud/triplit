@@ -708,9 +708,11 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
     this.logger.debug('fetch START', { query });
     await this.ensureMigrated;
     const schema = (await this.getSchema())?.collections as M;
+    console.log(query);
     const fetchQuery = prepareQuery(query, schema, {
       skipRules: options.skipRules,
     });
+    console.log(fetchQuery);
 
     const noCache =
       options.noCache === undefined ? DEFAULT_CACHE_DISABLED : options.noCache;

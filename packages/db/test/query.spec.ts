@@ -25,9 +25,8 @@ describe('query root permutations', () => {
   it('can generate a permutation for each subquery filter', () => {
     const query = {
       collectionName: 'manufacturers',
-      select: [
-        {
-          attributeName: 'suvs',
+      include: {
+        suvs: {
           cardinality: 'many',
           subquery: {
             collectionName: 'cars',
@@ -37,7 +36,7 @@ describe('query root permutations', () => {
             ],
           },
         },
-      ],
+      },
     };
     const permutations = generateQueryRootPermutations<any, any>(query);
     // prettyPrint(permutations);

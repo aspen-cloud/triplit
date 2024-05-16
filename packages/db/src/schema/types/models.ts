@@ -11,7 +11,7 @@ import {
 import {
   CollectionQuery,
   QuerySelectionValue,
-  RelationSubquery,
+  RelationSubquery2,
 } from '../../query.js';
 import { Intersection } from '../../utility-types.js';
 import { Schema } from '../builder.js';
@@ -156,7 +156,8 @@ export type PathFilteredTypeFromModel<
 export type QuerySelectionFitleredTypeFromModel<
   M extends Models<any, any>,
   CN extends CollectionNameFromModels<M>,
-  Selection extends QuerySelectionValue<M, CN>
+  Selection extends QuerySelectionValue<M, CN>,
+  Inclusion extends Record<string, RelationSubquery2<M, any>>
 > =
   // Path selections
   PathFilteredTypeFromModel<
@@ -164,11 +165,7 @@ export type QuerySelectionFitleredTypeFromModel<
     Intersection<ModelPaths<M, CN>, Selection>
   > & {
     // Subquery selections
-    [S in Selection as S extends RelationSubquery<M>
-      ? S['attributeName']
-      : never]: S extends RelationSubquery<M>
-      ? ExtractRelationSubqueryType<M, S>
-      : never;
+    [I in keyof Inclusion]: ExtractRelationSubqueryType<M, Inclusion[I]>;
   };
 
 /**
@@ -176,26 +173,27 @@ export type QuerySelectionFitleredTypeFromModel<
  */
 type ExtractRelationSubqueryType<
   M extends Models<any, any>,
-  Selection extends RelationSubquery<M>
+  Subquery extends RelationSubquery2<M, any>
 > = QueryResult<
   CollectionQuery<
     M,
-    Selection['subquery']['collectionName'],
-    // TODO: check if this is right? Fixes a type issue but might be wrong
-    Selection['subquery']['select'] extends QuerySelectionValue<
-      M,
-      Selection['subquery']['collectionName']
-    >
-      ? Selection['subquery']['select']
-      : never
+    Subquery['subquery']['collectionName'],
+    // TODO: probably want to properly type selection
+    QuerySelectionValue<M, Subquery['subquery']['collectionName']>
   >,
-  Selection['cardinality']
+  Subquery['cardinality']
 >;
 /**
  * A type matching the properties of a model that are relations
  */
-export type RelationAttributes<M extends Model<any>> = {
-  [K in keyof M['properties']]: M['properties'][K] extends QueryType<any, any>
-    ? K
+export type RelationAttributes<M extends Model<any> | undefined> =
+  M extends Model<any>
+    ? {
+        [K in keyof M['properties']]: M['properties'][K] extends QueryType<
+          any,
+          any
+        >
+          ? K
+          : never;
+      }[keyof M['properties']]
     : never;
-}[keyof M['properties']];

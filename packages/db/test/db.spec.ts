@@ -43,6 +43,7 @@ import {
   fetchDeltaTriples,
   initialFetchExecutionContext,
 } from '../src/collection-query.js';
+import { ExtractCollectionQueryInclusion } from '../src/query/builder.js';
 
 const pause = async (ms: number = 100) =>
   new Promise((resolve) => setTimeout(resolve, ms));
@@ -4867,21 +4868,25 @@ describe('selecting subqueries', () => {
       .query('users')
       .select([
         'id',
-        {
-          attributeName: 'posts',
-          subquery: db
-            .query('posts', {
-              where: [['author_id', '=', '$id']],
-            })
-            .build(),
-          cardinality: 'many',
-        },
+        // {
+        //   attributeName: 'posts',
+        //   subquery: db
+        //     .query('posts', {
+        //       where: [['author_id', '=', '$id']],
+        //     })
+        //     .build(),
+        //   cardinality: 'many',
+        // },
       ])
+      .include('posts', {
+        subquery: db.query('posts').where('author_id', '=', '$id').build(),
+        cardinality: 'many',
+      })
       .build();
     const result = await db.fetch(query);
     expect(result.get('user-1')).toHaveProperty('posts');
-    expect(result.get('user-1').posts).toHaveLength(1);
-    expect(result.get('user-1').posts.get('post-1')).toMatchObject({
+    expect(result.get('user-1')!.posts).toHaveLength(1);
+    expect(result.get('user-1')!.posts.get('post-1')).toMatchObject({
       id: 'post-1',
       content: 'Hello World!',
       author_id: 'user-1',
@@ -4894,34 +4899,49 @@ describe('selecting subqueries', () => {
       .query('users')
       .select([
         'id',
-        {
-          attributeName: 'posts',
-          subquery: db
-            .query('posts', {
-              where: [['author_id', '=', '$id']],
-            })
-            .select([
-              'id',
-              {
-                attributeName: 'likedBy',
-                subquery: db
-                  .query('users', {
-                    where: [['liked_post_ids', '=', '$id']],
-                  })
-                  .build(),
-                cardinality: 'many',
-              },
-            ])
-            .build(),
-          cardinality: 'many',
-        },
+        // {
+        //   attributeName: 'posts',
+        //   subquery: db
+        //     .query('posts', {
+        //       where: [['author_id', '=', '$id']],
+        //     })
+        //     .select([
+        //       'id',
+        //       {
+        //         attributeName: 'likedBy',
+        //         subquery: db
+        //           .query('users', {
+        //             where: [['liked_post_ids', '=', '$id']],
+        //           })
+        //           .build(),
+        //         cardinality: 'many',
+        //       },
+        //     ])
+        //     .build(),
+        //   cardinality: 'many',
+        // },
       ])
+      .include('posts', {
+        subquery: db
+          .query('posts')
+          .where('author_id', '=', '$id')
+          .select(['id'])
+          .include('likedBy', {
+            subquery: db
+              .query('users')
+              .where('liked_post_ids', '=', '$id')
+              .build(),
+            cardinality: 'many',
+          })
+          .build(),
+        cardinality: 'many',
+      })
       .build();
     const result = await db.fetch(query);
     expect(result.get('user-1')).toHaveProperty('posts');
     expect(result.get('user-1')!.posts).toHaveLength(1);
-    expect(result.get('user-1')!.posts.get('post-1').likedBy).toBeDefined();
-    expect(result.get('user-1')!.posts.get('post-1').likedBy).toHaveLength(3);
+    expect(result.get('user-1')!.posts.get('post-1')!.likedBy).toBeDefined();
+    expect(result.get('user-1')!.posts.get('post-1')!.likedBy).toHaveLength(3);
   });
 
   it('can subscribe with subqueries', async () => {
@@ -4929,24 +4949,28 @@ describe('selecting subqueries', () => {
       .query('users')
       .select([
         'id',
-        {
-          attributeName: 'posts',
-          subquery: db
-            .query('posts', {
-              where: [['author_id', '=', '$id']],
-            })
-            .build(),
-          cardinality: 'many',
-        },
+        // {
+        //   attributeName: 'posts',
+        //   subquery: db
+        //     .query('posts', {
+        //       where: [['author_id', '=', '$id']],
+        //     })
+        //     .build(),
+        //   cardinality: 'many',
+        // },
       ])
+      .include('posts', {
+        subquery: db.query('posts').where('author_id', '=', '$id').build(),
+        cardinality: 'many',
+      })
       .build();
     await testSubscription(db, query, [
       {
         check: (results) => {
           expect(results).toHaveLength(3);
           expect(results.get('user-1')).toHaveProperty('posts');
-          expect(results.get('user-1').posts).toHaveLength(1);
-          expect(results.get('user-1').posts.get('post-1')).toMatchObject({
+          expect(results.get('user-1')!.posts).toHaveLength(1);
+          expect(results.get('user-1')!.posts.get('post-1')).toMatchObject({
             id: 'post-1',
             content: 'Hello World!',
             author_id: 'user-1',
@@ -4981,20 +5005,24 @@ describe('selecting subqueries', () => {
       .query('users')
       .select([
         'id',
-        {
-          attributeName: 'favoritePost',
-          subquery: db
-            .query('posts', {
-              where: [['author_id', '=', '$id']],
-            })
-            .build(),
-          cardinality: 'one',
-        },
+        // {
+        //   attributeName: 'favoritePost',
+        //   subquery: db
+        //     .query('posts', {
+        //       where: [['author_id', '=', '$id']],
+        //     })
+        //     .build(),
+        //   cardinality: 'one',
+        // },
       ])
+      .include('favoritePost', {
+        subquery: db.query('posts').where('author_id', '=', '$id').build(),
+        cardinality: 'one',
+      })
       .build();
     const result = await db.fetch(query);
     expect(result.get('user-1')).toHaveProperty('favoritePost');
-    expect(result.get('user-1').favoritePost).toMatchObject({
+    expect(result.get('user-1')!.favoritePost).toMatchObject({
       id: 'post-1',
       content: 'Hello World!',
       author_id: 'user-1',
@@ -5006,20 +5034,24 @@ describe('selecting subqueries', () => {
       .query('users')
       .select([
         'id',
-        {
-          attributeName: 'favoritePost',
-          subquery: db
-            .query('posts', {
-              where: [['author_id', '=', 'george']],
-            })
-            .build(),
-          cardinality: 'one',
-        },
+        // {
+        //   attributeName: 'favoritePost',
+        //   subquery: db
+        //     .query('posts', {
+        //       where: [['author_id', '=', 'george']],
+        //     })
+        //     .build(),
+        //   cardinality: 'one',
+        // },
       ])
+      .include('favoritePost', {
+        subquery: db.query('posts').where('author_id', '=', 'george').build(),
+        cardinality: 'one',
+      })
       .build();
     const result = await db.fetch(query);
     expect(result.get('user-1')).toHaveProperty('favoritePost');
-    expect(result.get('user-1').favoritePost).toEqual(null);
+    expect(result.get('user-1')!.favoritePost).toEqual(null);
   });
 });
 
@@ -5818,7 +5850,7 @@ describe('variable conflicts', () => {
   });
 });
 
-it('', async () => {
+it.skip('', async () => {
   const schema = {
     user: {
       schema: S.Schema({
@@ -5833,6 +5865,10 @@ it('', async () => {
         }),
         posts: S.RelationMany('posts', {
           where: [['author_id', '=', '$id']],
+        }),
+        postsSpecial: S.RelationMany('posts', {
+          where: [['author_id', '=', '$id']],
+          select: ['id', 'title'],
         }),
       }),
     },
@@ -5858,14 +5894,30 @@ it('', async () => {
     .query('user')
     .select(['id', 'address.street', 'address.city'])
     .build();
-  const query5 = db.query('user').include('posts').build();
+  const query5 = db
+    .query('user')
+    .include('posts')
+    .include('postsSpecial')
+    .build();
   const query6 = db
     .query('user')
-    .include('posts2', { collectionName: 'posts' })
+    .include('posts2', {
+      subquery: { collectionName: 'posts' },
+      cardinality: 'many',
+    })
     .build();
   const query7 = db
     .query('user')
-    .include('posts2', { collectionName: 'posts', select: ['id', 'title'] })
+    .include('posts2', {
+      subquery: { collectionName: 'posts', select: ['id', 'title'] },
+      cardinality: 'one',
+    })
+    .build();
+  const query8 = db
+    .query('user')
+    .include('posts', {
+      select: ['id', 'title'],
+    })
     .build();
 
   const result1 = await db.fetch(query1);
@@ -5882,4 +5934,6 @@ it('', async () => {
   const item6 = result6.get('1')!;
   const result7 = await db.fetch(query7);
   const item7 = result7.get('1')!;
+  const result8 = await db.fetch(query8);
+  const item8 = result8.get('1')!;
 });

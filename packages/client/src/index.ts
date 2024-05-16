@@ -2,7 +2,7 @@
 export type {
   CollectionNameFromModels,
   Models,
-  MaybeReturnTypeFromQuery,
+  ReturnTypeFromQuery,
   ModelFromModels,
   FetchByIdQueryParams,
 } from '@triplit/db';

@@ -18,8 +18,9 @@ import CollectionQueryBuilder, {
   FetchResult,
   FetchResultEntity,
   initialFetchExecutionContext,
-  MaybeReturnTypeFromQuery,
+  ReturnTypeFromQuery,
   convertEntityToJS,
+  ReturnTypeFromParts,
 } from './collection-query.js';
 import {
   DBSerializationError,
@@ -568,7 +569,7 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
       insertedEntity.data as any,
       schema,
       collectionName
-    ) as MaybeReturnTypeFromQuery<M, CN>;
+    ) as ReturnTypeFromParts<M, CN>;
     this.logger.debug('insert END', collectionName, insertedEntityJS);
     return insertedEntityJS;
   }
