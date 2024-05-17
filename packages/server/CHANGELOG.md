@@ -1,5 +1,15 @@
 # @triplit/server
 
+## 0.3.38
+
+### Patch Changes
+
+- d023639: clean up sqlite dependencies
+- Updated dependencies [8d35085]
+- Updated dependencies [42392cc]
+  - @triplit/db@0.3.35
+  - @triplit/server-core@0.3.37
+
 ## 0.3.37
 
 ### Patch Changes

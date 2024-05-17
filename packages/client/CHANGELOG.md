@@ -1,5 +1,15 @@
 # @triplit/client
 
+## 0.3.44
+
+### Patch Changes
+
+- 8d35085: Update fetch return types to reflect query selections
+- 87f429a: reexport schema from db
+- Updated dependencies [8d35085]
+- Updated dependencies [42392cc]
+  - @triplit/db@0.3.35
+
 ## 0.3.43
 
 ### Patch Changes

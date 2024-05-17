@@ -1,5 +1,22 @@
 # @triplit/cli
 
+## 0.3.53
+
+### Patch Changes
+
+- 7672ecb: The dev command will now initialize the dev server with a schema (--initWithSchema) by default
+- d023639: clean up sqlite dependencies
+- Updated dependencies [8d35085]
+- Updated dependencies [87f429a]
+- Updated dependencies [42392cc]
+- Updated dependencies [8437e8c]
+- Updated dependencies [d023639]
+  - @triplit/client@0.3.44
+  - @triplit/db@0.3.35
+  - @triplit/console@0.3.48
+  - @triplit/server@0.3.38
+  - @triplit/server-core@0.3.37
+
 ## 0.3.52
 
 ### Patch Changes

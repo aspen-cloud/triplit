@@ -1,5 +1,14 @@
 # @triplit/react
 
+## 0.3.46
+
+### Patch Changes
+
+- 8d35085: Update fetch return types to reflect query selections
+- Updated dependencies [8d35085]
+- Updated dependencies [87f429a]
+  - @triplit/client@0.3.44
+
 ## 0.3.45
 
 ### Patch Changes

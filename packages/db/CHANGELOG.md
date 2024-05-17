@@ -1,5 +1,12 @@
 # @triplit/db
 
+## 0.3.35
+
+### Patch Changes
+
+- 8d35085: Update fetch return types to reflect query selections
+- 42392cc: Remove unnecessary warning messages with optional and nullable relations
+
 ## 0.3.34
 
 ### Patch Changes
