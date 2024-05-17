@@ -17,7 +17,6 @@ import {
   AfterClauseWithNoOrderError,
   QueryClauseFormattingError,
 } from '../errors.js';
-import { Schema } from '../schema/builder.js';
 import {
   ExtractCollectionQueryInclusion,
   ExtractCollectionQuerySelection,
@@ -149,26 +148,6 @@ export class QueryBuilder<
     return this;
   }
 }
-
-const schema = {
-  users: {
-    schema: Schema.Schema({
-      id: Schema.Id(),
-      name: Schema.String(),
-      posts: Schema.RelationMany('posts', {
-        where: [['author_id', '=', '$id']],
-      }),
-    }),
-  },
-  posts: {
-    schema: Schema.Schema({
-      id: Schema.Id(),
-      title: Schema.String(),
-      author_id: Schema.String(),
-      author: Schema.RelationById('users', '$author_id'),
-    }),
-  },
-};
 
 type PartialQuery<
   M extends Models<any, any> | undefined,
