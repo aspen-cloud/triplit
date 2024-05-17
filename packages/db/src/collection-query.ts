@@ -1626,8 +1626,9 @@ function satisfiesRegisterFilter(
   const isTerminalValue =
     !!maybeValue &&
     isTimestampedValue &&
-    (typeof maybeValue[0] !== 'object' || typeof maybeValue[0] === null);
+    (typeof maybeValue[0] !== 'object' || maybeValue[0] === null);
   if (!!maybeValue && (!isTimestampedValue || !isTerminalValue)) {
+    console.log('maybeValue', maybeValue);
     console.warn(
       `Received an unexpected value at path '${path}' in entity ${JSON.stringify(
         entity
