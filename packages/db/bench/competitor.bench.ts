@@ -1,8 +1,7 @@
 import { addRxPlugin, createRxDatabase } from 'rxdb';
 import { getRxStorageMemory } from 'rxdb/plugins/storage-memory';
 import Bench from 'tinybench';
-import { DB } from '../src/index.js';
-import { Schema as S } from '../src/schema.js';
+import { DB, Schema as S } from '../src/index.js';
 import { RxDBQueryBuilderPlugin } from 'rxdb/plugins/query-builder';
 import { MemoryBTreeStorage as MemoryBTree } from '../src/storage/memory-btree.js';
 addRxPlugin(RxDBQueryBuilderPlugin);
@@ -140,7 +139,8 @@ bench
       triplit
         .query('classes')
         .vars({ level })
-        .where([['level', '<', `$level`]])
+        // .where([['level', '<', `$level`]])
+        .where('level', '<', level)
         .build()
     );
     // if (resp.size !== CLASSES.filter((c) => c.level === level).length)
