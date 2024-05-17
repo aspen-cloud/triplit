@@ -1618,8 +1618,6 @@ function satisfiesRegisterFilter(
   filterValue: any
 ) {
   const maybeValue = EntityPointer.Get(entity, '/' + path.replace('.', '/'));
-  if (!maybeValue)
-    console.warn(`${path} not found in ${JSON.stringify(entity)}`);
 
   // maybeValue is expected to be of shape [value, timestamp]
   // this may happen if a schema is expected but not there and we're reading a value that cant be parsed, the schema is incorrect somehow, or if the provided path is incorrect
