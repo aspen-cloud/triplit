@@ -13,7 +13,7 @@ module.exports = withNextra({
     },
     {
       source: '/fetching-data/queries',
-      destination: '/query',
+      destination: '/client/query',
       permanent: true,
     },
     {
