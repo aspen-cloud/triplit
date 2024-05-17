@@ -29,17 +29,16 @@ export function useEntity<
   let query = client.query(collectionName).where('id', '=', id).limit(1);
   if (queryParams?.include) {
     for (const [relation, subquery] of Object.entries(queryParams.include)) {
-      if (subquery)
+      if (subquery) {
+        // @ts-expect-error
+        query = query.include(relation, subquery);
+      } else {
+        // @ts-expect-error TODO: fixup builder type
         query = query.include(
-          // @ts-expect-error
-          relation,
-          subquery
-        );
-      else
-        query = query.include(
-          // @ts-expect-error
+          // @ts-expect-error expecting typed as relationship from schema
           relation
         );
+      }
     }
   }
   const { fetching, fetchingRemote, fetchingLocal, results, error } = useQuery(

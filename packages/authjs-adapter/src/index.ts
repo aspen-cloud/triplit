@@ -61,8 +61,12 @@ export function TriplitAdapter(
           ['providerAccountId', '=', providerAccountId],
         ],
         // We could make schema optional and do a manual join here
-        include: { user: null },
+        include: {
+          // @ts-expect-error needs to read schema to do this
+          user: null,
+        },
       });
+      // @ts-expect-error
       return account?.user?.get(account.userId) ?? null;
     },
     async updateUser(user) {
@@ -100,13 +104,22 @@ export function TriplitAdapter(
       const sessionWithUser = await client.fetchOne({
         collectionName: collectionNames.session,
         where: [['sessionToken', '=', sessionToken]],
-        include: { user: null },
+        include: {
+          // @ts-expect-error needs to read schema to do this
+          user: null,
+        },
       });
       if (!sessionWithUser) return null;
       const { user: userMap, ...session } = sessionWithUser;
+      // @ts-expect-error
       const user = userMap?.get(session.userId);
       if (!user) return null;
-      return { session, user };
+
+      // @ts-expect-error
+      return { session, user } as {
+        session: AdapterSession;
+        user: AdapterUser;
+      };
     },
     async updateSession(newSession) {
       const session = await client.fetchOne({
