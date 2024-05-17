@@ -105,13 +105,7 @@ export type QueryOrder<
 
 export type QueryResultCardinality = 'one' | 'many';
 
-export type RelationSubquery<M extends Models<any, any> | undefined> = {
-  attributeName: string;
-  subquery: CollectionQuery<M, any>;
-  cardinality: QueryResultCardinality;
-};
-
-export type RelationSubquery2<
+export type RelationSubquery<
   M extends Models<any, any> | undefined,
   CN extends CollectionNameFromModels<M>
 > = {
@@ -119,26 +113,18 @@ export type RelationSubquery2<
   cardinality: QueryResultCardinality;
 };
 
-// export type QuerySelection<
-//   M extends Models<any, any> | undefined,
-//   CN extends CollectionNameFromModels<M>
-// > = QuerySelectionValue<M, CN>[];
-
 export type QuerySelectionValue<
   M extends Models<any, any> | undefined,
   CN extends CollectionNameFromModels<M>
 > = M extends Models<any, any> ? ModelPaths<M, CN> : Path;
 
-export type QueryIncludeValue<M extends Models<any, any> | undefined> =
-  RelationSubquery<M>;
-
 export type CollectionQuery<
   M extends Models<any, any> | undefined,
   CN extends CollectionNameFromModels<M>,
   Selection extends QuerySelectionValue<M, CN> = QuerySelectionValue<M, CN>,
-  Inclusions extends Record<string, RelationSubquery2<M, any>> = Record<
+  Inclusions extends Record<string, RelationSubquery<M, any>> = Record<
     string,
-    RelationSubquery2<M, any>
+    RelationSubquery<M, any>
   >
 > = {
   where?: QueryWhere<M, CN>;

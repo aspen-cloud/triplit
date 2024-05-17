@@ -46,6 +46,8 @@ export type {
   FilterGroup,
   CollectionQuery,
   ValueCursor,
+  RelationSubquery,
+  QuerySelectionValue,
 } from './query.js';
 export {
   stripCollectionFromId,

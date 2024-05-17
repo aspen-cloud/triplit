@@ -15,10 +15,9 @@ import {
   FilterStatement,
   SubQueryFilter,
   CollectionQuery,
-  RelationSubquery,
   QueryValue,
   WhereFilter,
-  RelationSubquery2,
+  RelationSubquery,
 } from './query.js';
 import {
   getSchemaFromPath,
@@ -605,7 +604,7 @@ function addSubsSelectsFromIncludes<
   const collectionSchema = schema?.[query.collectionName];
   if (!collectionSchema) return query;
   for (const [relationName, relation] of Object.entries(
-    query.include as Record<string, RelationSubquery2<M, any> | null>
+    query.include as Record<string, RelationSubquery<M, any> | null>
   )) {
     const attributeType = getAttributeFromSchema(
       relationName.split('.'),

@@ -6,6 +6,8 @@ import {
   Models,
   QueryBuilder,
   ReturnTypeFromQuery,
+  QuerySelectionValue,
+  RelationSubquery,
 } from '@triplit/db';
 
 //  There is some odd behavior when using infer with intersection types
@@ -39,10 +41,15 @@ export type Entity<
 
 export type ClientQuery<
   M extends ClientSchema | undefined,
-  CN extends CollectionNameFromModels<M>
+  CN extends CollectionNameFromModels<M>,
+  Selection extends QuerySelectionValue<M, CN> = QuerySelectionValue<M, CN>,
+  Inclusions extends Record<string, RelationSubquery<M, any>> = Record<
+    string,
+    RelationSubquery<M, any>
+  >
 > = {
   syncStatus?: SyncStatus;
-} & CollectionQuery<M, CN>;
+} & CollectionQuery<M, CN, Selection, Inclusions>;
 
 // The fact that builder methods will update generics makes it tough to re-use the builder from the db
 // - DB builder returns specific type QueryBuilder<...Params>

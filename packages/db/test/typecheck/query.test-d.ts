@@ -4,9 +4,7 @@ import { Schema as S } from '../../src/schema/builder.js';
 import {
   CollectionQuery,
   QueryOrder,
-  QuerySelectionValue,
   QueryWhere,
-  RelationSubquery,
   ValueCursor,
   WhereFilter,
 } from '../../src/query.js';
@@ -16,7 +14,6 @@ import {
   ReturnTypeFromQuery,
 } from '../../src/collection-query.js';
 import { DBTransaction } from '../../src/db-transaction.js';
-import { QuerySelectionFitleredTypeFromModel } from '../../src/schema/types/models.js';
 
 type TransactionAPI<TxDB extends DB<any>> = TxDB extends DB<infer M>
   ? Parameters<Parameters<DB<M>['transact']>[0]>[0]

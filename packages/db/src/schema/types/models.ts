@@ -11,7 +11,7 @@ import {
 import {
   CollectionQuery,
   QuerySelectionValue,
-  RelationSubquery2,
+  RelationSubquery,
 } from '../../query.js';
 import { Intersection } from '../../utility-types.js';
 import { Schema } from '../builder.js';
@@ -157,7 +157,7 @@ export type QuerySelectionFitleredTypeFromModel<
   M extends Models<any, any>,
   CN extends CollectionNameFromModels<M>,
   Selection extends QuerySelectionValue<M, CN>,
-  Inclusion extends Record<string, RelationSubquery2<M, any>>
+  Inclusion extends Record<string, RelationSubquery<M, any>>
 > =
   // Path selections
   PathFilteredTypeFromModel<
@@ -173,7 +173,7 @@ export type QuerySelectionFitleredTypeFromModel<
  */
 type ExtractRelationSubqueryType<
   M extends Models<any, any>,
-  Subquery extends RelationSubquery2<M, any>
+  Subquery extends RelationSubquery<M, any>
 > = QueryResult<
   CollectionQuery<
     M,

@@ -7,10 +7,9 @@ import {
   QuerySelectionValue,
   QueryValue,
   QueryWhere,
-  RelationSubquery,
   ValueCursor,
   WhereFilter,
-  RelationSubquery2,
+  RelationSubquery,
 } from '../query.js';
 import { CollectionNameFromModels, ModelFromModels } from '../db.js';
 import { ReturnTypeFromQuery } from '../collection-query.js';
@@ -87,9 +86,9 @@ export class QueryBuilder<
     return this;
   }
   // TODO: these get typed as 'any' in result types
-  include<RName extends string, SQ extends RelationSubquery2<M, any>>(
+  include<RName extends string, SQ extends RelationSubquery<M, any>>(
     relationName: RName,
-    query: RelationSubquery2<M, any>
+    query: RelationSubquery<M, any>
   ): QueryBuilder<
     M,
     CN,
@@ -183,7 +182,7 @@ type InclusionFromArgs<
   M extends Models<any, any> | undefined,
   CN extends CollectionNameFromModels<M>,
   RName extends string,
-  Inclusion extends RelationSubquery2<M, any> | null
+  Inclusion extends RelationSubquery<M, any> | null
 > = M extends Models<any, any>
   ? Inclusion extends null
     ? // Look up in Models

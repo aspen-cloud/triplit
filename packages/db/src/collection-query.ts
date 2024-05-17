@@ -7,13 +7,12 @@ import {
   triplesToEntities,
   Entity,
   updateEntity,
-  RelationSubquery,
   EntityPointer,
   QueryResultCardinality,
   QueryWhere,
   QueryValue,
   QuerySelectionValue,
-  RelationSubquery2,
+  RelationSubquery,
 } from './query.js';
 import {
   createSchemaIterator,
@@ -120,7 +119,7 @@ export type ReturnTypeFromParts<
   M extends Models<any, any> | undefined,
   CN extends CollectionNameFromModels<M>,
   Selection extends QuerySelectionValue<M, CN> = QuerySelectionValue<M, CN>,
-  Inclusion extends Record<string, RelationSubquery2<M, any>> = {}
+  Inclusion extends Record<string, RelationSubquery<M, any>> = {}
 > = M extends Models<any, any>
   ? ModelFromModels<M, CN> extends Model<any>
     ? QuerySelectionFitleredTypeFromModel<M, CN, Selection, Inclusion>
