@@ -1,5 +1,13 @@
 # node-server
 
+## 0.3.38
+
+### Patch Changes
+
+- d023639: clean up sqlite dependencies
+- Updated dependencies [d023639]
+  - @triplit/server@0.3.38
+
 ## 0.3.37
 
 ### Patch Changes

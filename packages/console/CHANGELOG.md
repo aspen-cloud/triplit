@@ -1,5 +1,18 @@
 # @triplit/console
 
+## 0.3.48
+
+### Patch Changes
+
+- 8437e8c: more efficiently route to the project view
+- Updated dependencies [8d35085]
+- Updated dependencies [87f429a]
+- Updated dependencies [42392cc]
+  - @triplit/client@0.3.44
+  - @triplit/react@0.3.46
+  - @triplit/db@0.3.35
+  - @triplit/server-core@0.3.37
+
 ## 0.3.47
 
 ### Patch Changes

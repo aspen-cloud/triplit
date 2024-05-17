@@ -6120,7 +6120,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@triplit/cli@0.3.52, @triplit/cli@workspace:^, @triplit/cli@workspace:packages/cli":
+"@triplit/cli@0.3.53, @triplit/cli@workspace:^, @triplit/cli@workspace:packages/cli":
   version: 0.0.0-use.local
   resolution: "@triplit/cli@workspace:packages/cli"
   dependencies:
@@ -6171,7 +6171,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@triplit/client@0.3.43, @triplit/client@workspace:^, @triplit/client@workspace:packages/client":
+"@triplit/client@0.3.44, @triplit/client@workspace:^, @triplit/client@workspace:packages/client":
   version: 0.0.0-use.local
   resolution: "@triplit/client@workspace:packages/client"
   dependencies:
@@ -6228,7 +6228,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@triplit/db@0.3.34, @triplit/db@workspace:^, @triplit/db@workspace:packages/db":
+"@triplit/db@0.3.35, @triplit/db@workspace:^, @triplit/db@workspace:packages/db":
   version: 0.0.0-use.local
   resolution: "@triplit/db@workspace:packages/db"
   dependencies:
@@ -6254,7 +6254,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@triplit/react@0.3.45, @triplit/react@workspace:^, @triplit/react@workspace:packages/react":
+"@triplit/react@0.3.46, @triplit/react@workspace:^, @triplit/react@workspace:packages/react":
   version: 0.0.0-use.local
   resolution: "@triplit/react@workspace:packages/react"
   dependencies:
@@ -6279,7 +6279,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@triplit/server@0.3.37, @triplit/server@workspace:^, @triplit/server@workspace:packages/server":
+"@triplit/server@0.3.38, @triplit/server@workspace:^, @triplit/server@workspace:packages/server":
   version: 0.0.0-use.local
   resolution: "@triplit/server@workspace:packages/server"
   dependencies:
@@ -16672,10 +16672,10 @@ __metadata:
     "@radix-ui/react-slot": ^1.0.2
     "@tailwindcss/typography": ^0.5.10
     "@triplit/authjs-adapter": ^0.1.0
-    "@triplit/cli": 0.3.52
-    "@triplit/client": 0.3.43
-    "@triplit/db": 0.3.34
-    "@triplit/react": 0.3.45
+    "@triplit/cli": 0.3.53
+    "@triplit/client": 0.3.44
+    "@triplit/db": 0.3.35
+    "@triplit/react": 0.3.46
     "@types/bcryptjs": ^2
     "@types/jsonwebtoken": ^9.0.2
     "@types/node": ^17.0.45
@@ -17037,7 +17037,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "node-server@workspace:packages/node-server"
   dependencies:
-    "@triplit/server": 0.3.37
+    "@triplit/server": 0.3.38
     "@types/semver": ^7
     better-sqlite3: ^8.3.0
     semver: ^7.6.0

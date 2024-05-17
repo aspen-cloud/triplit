@@ -1,5 +1,11 @@
 # create-triplit-app
 
+## 0.0.9
+
+### Patch Changes
+
+- 9df4a5b: update generated schema file
+
 ## 0.0.7
 
 ### Patch Changes
