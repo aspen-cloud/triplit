@@ -33,7 +33,9 @@ import { Schema as S } from '@triplit/client';
 const stringType = S.String();
 ```
 
-Strings support `=`, `!=`, `like` and `nlike` operators in `where` statements.
+Strings support `=`, `!=`, `like`, `nlike`, `in`, and `nin` operators in `where` statements.
+
+##### `like` and `nlike`
 
 You can use the `like` operator in a where clause to do simple filtering with string similarity. A `like` expression is true if the supplied attribute matches the supplied filter pattern.
 
@@ -48,6 +50,17 @@ For example:
 ['triplit', 'like', 'trip']       false
 ```
 
+##### `in` and `nin`
+
+You can use the `in` operator in a where clause to check if an attribute is in a set of values. The `nin` operator is the opposite of `in`.
+
+For example:
+
+```typescript
+['triplit', 'in', new Set(['triplit', 'hello'])]    true
+['triplit', 'nin', new Set(['triplit', 'hello'])]   false
+```
+
 #### Number
 
 The number data type is used to store integer or float numbers.
@@ -57,7 +70,7 @@ import { Schema as S } from '@triplit/client';
 const numberType = S.Number();
 ```
 
-Numbers support `=`, `!=`, `>`, `>=`, `<`, `<=` operators in `where` statements.
+Numbers support `=`, `!=`, `>`, `>=`, `<`, `<=`, `in`, and `nin` operators in `where` statements.
 
 #### Boolean
 
