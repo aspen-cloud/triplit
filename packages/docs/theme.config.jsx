@@ -1,5 +1,6 @@
 import { useRouter } from 'next/router';
 import { METADATA } from '@/components/SEOMetadata';
+import { useConfig } from 'nextra-theme-docs';
 
 const { DESCRIPTION, URL, TWITTER_HANDLE, TWITTER_CARD_TYPE } = METADATA;
 
@@ -42,11 +43,18 @@ export default {
   },
   head: () => {
     const { asPath } = useRouter();
+    const { frontMatter } = useConfig();
     return (
       <>
-        <meta name="description" content={DESCRIPTION} />
+        <meta
+          name="description"
+          content={frontMatter.description ?? DESCRIPTION}
+        />
         <meta property="og:url" content={URL + asPath} />
-        <meta property="og:description" content={DESCRIPTION} />
+        <meta
+          property="og:description"
+          content={frontMatter.description ?? DESCRIPTION}
+        />
         <meta property="og:image" content={URL + '/opengraph-image.png'} />
         <meta property="og:image:alt" content="Triplit Logo" />
         <meta property="og:image:type" content="image/png" />

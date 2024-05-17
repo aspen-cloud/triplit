@@ -1,3 +1,7 @@
+---
+description: Learn how to model relational data in a Triplit schema.
+---
+
 # Relations
 
 To define a relationship between two collections, you define a subquery that describes the relationship with `RelationMany`, `RelationOne` or `RelationById`. while `RelationOne` and `RelationById` are designed for singleton relations and will be directly nested or a sub-object or `null` if an applicable entity doesn't exist. Within a relation, either in a where clause or the `RelationById` id, parameter, you can reference the current collection's attributes with `$`.

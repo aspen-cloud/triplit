@@ -1,3 +1,7 @@
+---
+description: The syncStatus clause is used to filter results in Triplit query based on if they've synced with the server.
+---
+
 # syncStatus
 
 Triplit's client [storage](/client/storage) is split into two areas - an outbox for unsynced updates and a cache for synced updates. Sometimes you may want to indicate that to a user that data has not yet been saved to the server. To do this, you can use the `syncStatus` method. This method accepts a single sync state (`pending`, `confirmed`, `all`) as an argument.
