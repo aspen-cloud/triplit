@@ -54,7 +54,11 @@ export class QueryBuilder<
     this.query = { ...this.query, select: selection };
 
     // TODO: I think this is going to break higher level builders, ensure it doenst (@triplit/react probably has error)
-    return this as QueryBuilder<M, CN, CollectionQuery<M, CN, Selection>>;
+    return this as QueryBuilder<
+      M,
+      CN,
+      CollectionQuery<M, CN, Selection, ExtractCollectionQueryInclusion<Q>>
+    >;
   }
 
   where(...args: FilterInput<M, CN, any>) {
