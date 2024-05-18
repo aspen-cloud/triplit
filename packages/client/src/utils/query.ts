@@ -59,8 +59,8 @@ export type ClientQuery<
 class ClientQueryBuilderClass<
   M extends ClientSchema | undefined,
   CN extends CollectionNameFromModels<M>,
-  CQ extends ClientQuery<M, CN>
-> extends QueryBuilder<M, CN, ClientQuery<M, CN>> {
+  CQ extends ClientQuery<M, CN, any, any>
+> extends QueryBuilder<M, CN, CQ> {
   constructor(query: CQ) {
     super(query);
   }
@@ -79,7 +79,11 @@ export function ClientQueryBuilder<
     collectionName,
     ...params,
   };
-  return new ClientQueryBuilderClass<M, CN, ClientQuery<M, CN>>(query);
+  return new ClientQueryBuilderClass<
+    M,
+    CN,
+    ClientQuery<M, CN, QuerySelectionValue<M, CN>, {}>
+  >(query);
 }
 
 export function RemoteClientQueryBuilder<
