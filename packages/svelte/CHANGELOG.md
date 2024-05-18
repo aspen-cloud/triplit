@@ -1,5 +1,12 @@
 # @triplit/svelte
 
+## 0.1.17
+
+### Patch Changes
+
+- Updated dependencies [3202e60]
+  - @triplit/client@0.3.45
+
 ## 0.1.16
 
 ### Patch Changes

@@ -1,5 +1,13 @@
 # @triplit/client
 
+## 0.3.45
+
+### Patch Changes
+
+- 3202e60: fixup selection types
+- Updated dependencies [3202e60]
+  - @triplit/db@0.3.36
+
 ## 0.3.44
 
 ### Patch Changes
