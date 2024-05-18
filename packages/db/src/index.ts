@@ -60,6 +60,7 @@ export type {
   Attribute,
   TupleValue,
 } from './triple-store-utils.js';
+export type { TripleStoreApi } from './triple-store.js';
 export {
   triplesToSchema,
   schemaToJSON,

@@ -8,6 +8,7 @@ import DB, {
   stripCollectionFromId,
   convertEntityToJS,
   Timestamp,
+  TripleStoreApi,
 } from '@triplit/db';
 import { SyncOptions } from './triplit-client.js';
 import { Subject } from 'rxjs';
@@ -29,7 +30,6 @@ import {
 } from './errors.js';
 import { Value } from '@sinclair/typebox/value';
 import { ClientFetchResult, ClientQuery } from './utils/query.js';
-import { TripleStoreApi } from 'packages/db/src/triple-store.js';
 import { Logger } from '@triplit/types/logger';
 
 type OnMessageReceivedCallback = (message: ServerSyncMessage) => void;
