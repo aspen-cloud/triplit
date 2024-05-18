@@ -1,5 +1,11 @@
 # @triplit/db
 
+## 0.3.36
+
+### Patch Changes
+
+- 3202e60: fixup selection types
+
 ## 0.3.35
 
 ### Patch Changes
