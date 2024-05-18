@@ -1,5 +1,11 @@
 # @triplit/db
 
+## 0.3.37
+
+### Patch Changes
+
+- 5b2e55d: export TripleStoreApi
+
 ## 0.3.36
 
 ### Patch Changes
