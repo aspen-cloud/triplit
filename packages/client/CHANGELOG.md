@@ -1,5 +1,13 @@
 # @triplit/client
 
+## 0.3.46
+
+### Patch Changes
+
+- 5b2e55d: fixup types
+- Updated dependencies [5b2e55d]
+  - @triplit/db@0.3.37
+
 ## 0.3.45
 
 ### Patch Changes
