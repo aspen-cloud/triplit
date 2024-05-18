@@ -275,11 +275,10 @@ export class TriplitClient<M extends ClientSchema | undefined = undefined> {
     return resp;
   }
 
-  // TODO: is this better done with generics?
   query<CN extends CollectionNameFromModels<M>>(
     collectionName: CN
-  ): ClientQueryBuilder<M, CN> {
-    return ClientQueryBuilder<M, CN>(collectionName);
+  ): ReturnType<typeof ClientQueryBuilder<M, CN>> {
+    return ClientQueryBuilder(collectionName);
   }
 
   async fetch<CQ extends ClientQuery<M, any>>(
