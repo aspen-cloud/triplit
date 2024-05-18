@@ -278,7 +278,7 @@ export class TriplitClient<M extends ClientSchema | undefined = undefined> {
   query<CN extends CollectionNameFromModels<M>>(
     collectionName: CN
   ): ReturnType<typeof ClientQueryBuilder<M, CN>> {
-    return ClientQueryBuilder(collectionName);
+    return ClientQueryBuilder<M, CN>(collectionName);
   }
 
   async fetch<CQ extends ClientQuery<M, any>>(
