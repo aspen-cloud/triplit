@@ -56,6 +56,14 @@ const client = new TriplitClient({
 
 Passing a schema to the client constructor will override any schema currently stored in your cache. This can cause data corruption, if the new schema is not compatible with existing data in the shape of the old schema. Refer to the [schema management guide](/schemas/updating) for more information.
 
+<Callout>
+  By default, your schema file will be created by `triplit init` or `npm create
+  triplit-app` in your project directory at `triplit/schema.ts`. If you need to
+  save your schema file somewhere else, you can specify that path with the
+  `TRIPLIT_SCHEMA_PATH` environmental variable and the Triplit CLI commands will
+  refer to it there.
+</Callout>
+
 ### id
 
 Every collection in Triplit must define an `id` field in its schema. The `S.Id()` data type will generate a random `id` by default upon insertion. If you want to specify the `id` for each entity, you may pass it **as a string** in to the `insert` method as shown below.
