@@ -1,5 +1,11 @@
 # @triplit/cli
 
+## 0.3.57
+
+### Patch Changes
+
+- a391c35: support TRIPLIT_SCHEMA_PATH env var and --schemaPath CLI option
+
 ## 0.3.56
 
 ### Patch Changes
