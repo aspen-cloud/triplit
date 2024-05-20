@@ -3,8 +3,7 @@
 import type {
   ClientFetchResult,
   ClientQuery,
-  ClientQueryBuilder,
-  CollectionNameFromModels,
+  QueryBuilder,
   Models,
   SubscriptionOptions,
   TriplitClient,
@@ -12,21 +11,20 @@ import type {
 
 export function useQuery<
   M extends Models<any, any> | undefined,
-  CN extends CollectionNameFromModels<M>
+  Q extends ClientQuery<M, any, any, any>
 >(
   client: TriplitClient<any>,
-  query: ClientQueryBuilder<M, CN>,
+  query: QueryBuilder<Q>,
   options?: Partial<SubscriptionOptions>
 ): {
   fetching: boolean;
   fetchingLocal: boolean;
   fetchingRemote: boolean;
-  results: ClientFetchResult<ClientQuery<M, CN>> | undefined;
+  results: ClientFetchResult<Q> | undefined;
   error: any;
-  updateQuery: (query: ClientQueryBuilder<M, CN>) => void;
+  updateQuery: (query: QueryBuilder<Q>) => void;
 } {
-  let results: ClientFetchResult<ClientQuery<M, CN>> | undefined =
-    $state(undefined);
+  let results: ClientFetchResult<Q> | undefined = $state(undefined);
   let isInitialFetch = $state(true);
   let fetchingLocal = $state(false);
   let fetchingRemote = $state(client.syncEngine.connectionStatus !== 'CLOSED');
@@ -35,7 +33,7 @@ export function useQuery<
   let hasResponseFromServer = false;
   let builtQuery = $state(query && query.build());
 
-  function updateQuery(query: ClientQueryBuilder<M, CN>) {
+  function updateQuery(query: QueryBuilder<Q>) {
     builtQuery = query.build();
     results = undefined;
     fetchingLocal = true;
@@ -69,9 +67,7 @@ export function useQuery<
       (localResults) => {
         fetchingLocal = false;
         error = undefined;
-        results = new Map(localResults) as ClientFetchResult<
-          ClientQuery<M, CN>
-        >;
+        results = new Map(localResults);
       },
       (error) => {
         fetchingLocal = false;

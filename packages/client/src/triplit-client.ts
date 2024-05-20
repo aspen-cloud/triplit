@@ -29,8 +29,8 @@ import {
   ClientFetchResult,
   ClientFetchResultEntity,
   ClientQuery,
-  ClientQueryBuilder,
   ClientSchema,
+  clientQueryBuilder,
   prepareFetchByIdQuery,
   prepareFetchOneQuery,
 } from './utils/query.js';
@@ -277,8 +277,8 @@ export class TriplitClient<M extends ClientSchema | undefined = undefined> {
 
   query<CN extends CollectionNameFromModels<M>>(
     collectionName: CN
-  ): ReturnType<typeof ClientQueryBuilder<M, CN>> {
-    return ClientQueryBuilder<M, CN>(collectionName);
+  ): ReturnType<typeof clientQueryBuilder<M, CN>> {
+    return clientQueryBuilder<M, CN>(collectionName);
   }
 
   async fetch<CQ extends ClientQuery<M, any>>(
@@ -465,7 +465,7 @@ export class TriplitClient<M extends ClientSchema | undefined = undefined> {
   }
 
   // TODO: refactor so some logic is shared across policies (ex starting a local and remote sub is verbose and repetitive)
-  subscribe<CQ extends ClientQuery<M, any>>(
+  subscribe<CQ extends ClientQuery<M, any, any, any>>(
     query: CQ,
     onResults: (
       results: ClientFetchResult<CQ>,

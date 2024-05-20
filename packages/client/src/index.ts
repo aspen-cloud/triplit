@@ -5,6 +5,7 @@ export type {
   ReturnTypeFromQuery,
   ModelFromModels,
   FetchByIdQueryParams,
+  QueryBuilder,
 } from '@triplit/db';
 export { Schema } from '@triplit/db';
 export * from './triplit-client.js';
@@ -15,7 +16,7 @@ export * from './transport/transport.js';
 export type {
   ClientFetchResult,
   ClientQuery,
-  ClientQueryBuilder,
+  ClientQueryDefault,
   ClientSchema,
   Entity,
 } from './utils/query.js';

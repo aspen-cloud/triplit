@@ -55,38 +55,44 @@ export type ClientQuery<
 // - DB builder returns specific type QueryBuilder<...Params>
 // - The client builder needs to return ClientQueryBuilder<...Params>
 // - cant return 'this' because we need to update generics
-// TODO: fix this
-class ClientQueryBuilderClass<
-  M extends ClientSchema | undefined,
-  CN extends CollectionNameFromModels<M>,
-  CQ extends ClientQuery<M, CN, any, any>
-> extends QueryBuilder<M, CN, CQ> {
+export class ClientQueryBuilder<
+  CQ extends ClientQuery<any, any, any, any>
+> extends QueryBuilder<CQ> {
   constructor(query: CQ) {
     super(query);
   }
 
   syncStatus(status: SyncStatus) {
     this.query.syncStatus = status;
-    return this as ClientQueryBuilderClass<M, CN, CQ>;
+    return this as ClientQueryBuilder<CQ>;
   }
 }
 
-export function ClientQueryBuilder<
+export type ClientQueryDefault<
+  M extends ClientSchema | undefined,
+  CN extends CollectionNameFromModels<M>
+> = ClientQuery<M, CN, QuerySelectionValue<M, CN>, {}>;
+
+export function clientQueryBuilder<
   M extends ClientSchema | undefined,
   CN extends CollectionNameFromModels<M>
 >(collectionName: CN, params?: Omit<ClientQuery<M, CN>, 'collectionName'>) {
-  const query: ClientQuery<M, CN> = {
+  const query = {
     collectionName,
     ...params,
   };
-  return new ClientQueryBuilderClass<
-    M,
-    CN,
-    ClientQuery<M, CN, QuerySelectionValue<M, CN>, {}>
-  >(query);
+  return new ClientQueryBuilder<ClientQueryDefault<M, CN>>(query);
 }
 
-export function RemoteClientQueryBuilder<
+export class RemoteClientQueryBuilder<
+  CQ extends CollectionQuery<any, any, any, any>
+> extends QueryBuilder<CQ> {
+  constructor(query: CQ) {
+    super(query);
+  }
+}
+
+export function remoteClientQueryBuilder<
   M extends ClientSchema | undefined,
   CN extends CollectionNameFromModels<M>
   // syncStatus doesn't apply for the remote client
@@ -95,18 +101,10 @@ export function RemoteClientQueryBuilder<
     collectionName,
     ...params,
   };
-  return new QueryBuilder<M, CN, CollectionQuery<M, CN>>(query);
+  return new QueryBuilder<
+    CollectionQuery<M, CN, QuerySelectionValue<M, CN>, {}>
+  >(query);
 }
-
-export type ClientQueryBuilder<
-  M extends ClientSchema | undefined,
-  CN extends CollectionNameFromModels<M>
-> = ReturnType<typeof ClientQueryBuilder<M, CN>>;
-
-export type RemoteClientQueryBuilder<
-  M extends ClientSchema | undefined,
-  CN extends CollectionNameFromModels<M>
-> = ReturnType<typeof RemoteClientQueryBuilder<M, CN>>;
 
 export function prepareFetchOneQuery<CQ extends ClientQuery<any, any>>(
   query: CQ
@@ -117,12 +115,8 @@ export function prepareFetchOneQuery<CQ extends ClientQuery<any, any>>(
 export function prepareFetchByIdQuery<
   M extends ClientSchema | undefined,
   CN extends CollectionNameFromModels<M>
->(
-  collectionName: CN,
-  id: string,
-  queryParams?: FetchByIdQueryParams<M, CN>
-): ClientQuery<M, CN> {
-  let query = ClientQueryBuilder(collectionName).entityId(id);
+>(collectionName: CN, id: string, queryParams?: FetchByIdQueryParams<M, CN>) {
+  let query = clientQueryBuilder<M, CN>(collectionName).entityId(id);
   if (queryParams?.include) {
     for (const [relation, subquery] of Object.entries(queryParams.include)) {
       if (subquery) {
@@ -134,5 +128,5 @@ export function prepareFetchByIdQuery<
       }
     }
   }
-  return query.build() as ClientQuery<M, CN>;
+  return query.build();
 }

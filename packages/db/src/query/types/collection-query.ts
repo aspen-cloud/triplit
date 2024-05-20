@@ -13,7 +13,7 @@ export type ExtractCollectionQueryModels<Q extends BaseCollectionQuery> =
  */
 export type ExtractCollectionQueryCollectionName<
   Q extends BaseCollectionQuery
-> = Q extends CollectionQuery<any, infer CN, any, any> ? CN : never;
+> = Q extends CollectionQuery<infer M, infer CN, any, any> ? CN : never;
 
 /**
  * Extracts the selection of a collection query.

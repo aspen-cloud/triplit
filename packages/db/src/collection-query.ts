@@ -79,8 +79,6 @@ export default function CollectionQueryBuilder<
     ...params,
   };
   return new QueryBuilder<
-    M,
-    CN,
     CollectionQuery<M, CN, QuerySelectionValue<M, CN>, {}>
   >(query);
 }

@@ -25,6 +25,7 @@ import {
   ClientQuery,
   ClientQueryBuilder,
   ClientSchema,
+  clientQueryBuilder,
 } from './utils/query.js';
 import { ConnectionStatus } from './index.js';
 
@@ -53,8 +54,8 @@ export class WorkerClient<M extends ClientSchema | undefined = undefined> {
 
   query<CN extends CollectionNameFromModels<M>>(
     collectionName: CN
-  ): ClientQueryBuilder<M, CN> {
-    return ClientQueryBuilder<M, CN>(collectionName);
+  ): ReturnType<typeof clientQueryBuilder<M, CN>> {
+    return clientQueryBuilder<M, CN>(collectionName);
   }
 
   async fetch<CQ extends ClientQuery<M, any>>(

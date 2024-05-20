@@ -3,29 +3,28 @@ import {
   ClientFetchResult,
   TriplitClient,
   ClientQuery,
-  CollectionNameFromModels,
   Models,
-  ClientQueryBuilder,
+  QueryBuilder,
   SubscriptionOptions,
 } from '@triplit/client';
 
 export function useQuery<
   M extends Models<any, any> | undefined,
-  CN extends CollectionNameFromModels<M>
+  Q extends ClientQuery<M, any, any, any>
 >(
-  client: TriplitClient<any>,
-  query: ClientQueryBuilder<M, CN>,
+  client: TriplitClient<M>,
+  query: QueryBuilder<Q>,
   options?: Partial<SubscriptionOptions>
 ): {
   fetching: boolean;
   fetchingLocal: boolean;
   fetchingRemote: boolean;
-  results: ClientFetchResult<ClientQuery<M, CN>> | undefined;
+  results: ClientFetchResult<Q> | undefined;
   error: any;
 } {
-  const [results, setResults] = useState<
-    ClientFetchResult<ClientQuery<M, CN>> | undefined
-  >(undefined);
+  const [results, setResults] = useState<ClientFetchResult<Q> | undefined>(
+    undefined
+  );
   const [fetchingLocal, setFetchingLocal] = useState(true);
   const [fetchingRemote, setFetchingRemote] = useState(
     client.syncEngine.connectionStatus !== 'CLOSED'
@@ -68,9 +67,7 @@ export function useQuery<
       (localResults) => {
         setFetchingLocal(false);
         setError(undefined);
-        setResults(
-          new Map(localResults) as ClientFetchResult<ClientQuery<M, CN>>
-        );
+        setResults(new Map(localResults));
       },
       (error) => {
         setFetchingLocal(false);
@@ -101,18 +98,18 @@ export function useQuery<
 
 export function usePaginatedQuery<
   M extends Models<any, any> | undefined,
-  CN extends CollectionNameFromModels<M>
+  Q extends ClientQuery<M, any, any, any>
 >(
   client: TriplitClient<any>,
-  query: ClientQueryBuilder<M, CN>,
+  query: QueryBuilder<Q>,
   options?: Partial<SubscriptionOptions>
 ) {
   const builtQuery = useMemo(() => query.build(), [query]);
   const [hasNextPage, setHasNextPage] = useState(false);
   const [hasPreviousPage, setHasPreviousPage] = useState(false);
-  const [results, setResults] = useState<
-    ClientFetchResult<ClientQuery<M, CN>> | undefined
-  >(undefined);
+  const [results, setResults] = useState<ClientFetchResult<Q> | undefined>(
+    undefined
+  );
   const [error, setError] = useState<any>(undefined);
   const [fetching, setFetching] = useState(true);
   const [fetchingPage, setFetchingPage] = useState(false);
@@ -130,7 +127,7 @@ export function usePaginatedQuery<
         setFetchingPage(false);
         setHasNextPage(info.hasNextPage);
         setHasPreviousPage(info.hasPreviousPage);
-        setResults(new Map(results) as ClientFetchResult<ClientQuery<M, CN>>);
+        setResults(new Map(results));
       },
       (error) => {
         setFetching(false);
@@ -176,18 +173,18 @@ export function usePaginatedQuery<
 
 export function useInfiniteQuery<
   M extends Models<any, any> | undefined,
-  CN extends CollectionNameFromModels<M>
+  Q extends ClientQuery<M, any, any, any>
 >(
   client: TriplitClient<any>,
-  query: ClientQueryBuilder<M, CN>,
+  query: QueryBuilder<Q>,
   options?: Partial<SubscriptionOptions>
 ) {
   const builtQuery = useMemo(() => query.build(), [query]);
   const stringifiedQuery = builtQuery && JSON.stringify(builtQuery);
   const [hasMore, setHasMore] = useState(false);
-  const [results, setResults] = useState<
-    ClientFetchResult<ClientQuery<M, CN>> | undefined
-  >(undefined);
+  const [results, setResults] = useState<ClientFetchResult<Q> | undefined>(
+    undefined
+  );
   const [error, setError] = useState<any>(undefined);
   const [fetching, setFetching] = useState(true);
   const [fetchingRemote, setFetchingRemote] = useState(
@@ -223,7 +220,7 @@ export function useInfiniteQuery<
         setError(undefined);
         setFetchingMore(false);
         setHasMore(info.hasMore);
-        setResults(new Map(results) as ClientFetchResult<ClientQuery<M, CN>>);
+        setResults(new Map(results));
       },
       (error) => {
         setFetching(false);

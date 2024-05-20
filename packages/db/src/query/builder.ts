@@ -18,7 +18,9 @@ import {
   QueryClauseFormattingError,
 } from '../errors.js';
 import {
+  ExtractCollectionQueryCollectionName,
   ExtractCollectionQueryInclusion,
+  ExtractCollectionQueryModels,
   ExtractCollectionQuerySelection,
 } from './types';
 
@@ -34,10 +36,11 @@ export type BuilderBase<
 } & { build: () => T };
 
 export class QueryBuilder<
-  M extends Models<any, any> | undefined,
-  CN extends CollectionNameFromModels<M>,
-  Q extends CollectionQuery<M, CN, any, any>
-> implements BuilderBase<CollectionQuery<M, CN>, 'collectionName'>
+  Q extends CollectionQuery<any, any, any, any>,
+  M extends Models<any, any> | undefined = ExtractCollectionQueryModels<Q>,
+  // @ts-expect-error
+  CN extends CollectionNameFromModels<M> = ExtractCollectionQueryCollectionName<Q>
+> implements BuilderBase<CollectionQuery<any, any>, 'collectionName'>
 {
   protected query: Q;
   constructor(query: Q) {
@@ -55,8 +58,6 @@ export class QueryBuilder<
 
     // TODO: I think this is going to break higher level builders, ensure it doenst (@triplit/react probably has error)
     return this as QueryBuilder<
-      M,
-      CN,
       CollectionQuery<M, CN, Selection, ExtractCollectionQueryInclusion<Q>>
     >;
   }
@@ -64,7 +65,11 @@ export class QueryBuilder<
   where(...args: FilterInput<M, CN, any>) {
     this.query = {
       ...this.query,
-      where: QUERY_INPUT_TRANSFORMERS<M, CN>().where(this.query, ...args),
+      where: QUERY_INPUT_TRANSFORMERS<M, CN>().where(
+        // @ts-expect-error
+        this.query,
+        ...args
+      ),
     };
     return this;
   }
@@ -72,7 +77,12 @@ export class QueryBuilder<
   order(...args: OrderInput<M, CN>) {
     this.query = {
       ...this.query,
-      order: QUERY_INPUT_TRANSFORMERS<M, CN>().order(this.query, ...args),
+      order: QUERY_INPUT_TRANSFORMERS<M, CN>().order(
+        // @ts-expect-error
+
+        this.query,
+        ...args
+      ),
     };
     return this;
   }
@@ -81,6 +91,8 @@ export class QueryBuilder<
     this.query = {
       ...this.query,
       after: QUERY_INPUT_TRANSFORMERS<M, CN>().after(
+        // @ts-expect-error
+
         this.query,
         after,
         inclusive
@@ -93,8 +105,6 @@ export class QueryBuilder<
     relationName: RName,
     query: RelationSubquery<M, any>
   ): QueryBuilder<
-    M,
-    CN,
     CollectionQuery<
       M,
       CN,
@@ -113,8 +123,6 @@ export class QueryBuilder<
       ModelFromModels<M, CN>['properties'][RName]['query']['collectionName']
     >
   ): QueryBuilder<
-    M,
-    CN,
     CollectionQuery<
       M,
       CN,
@@ -129,6 +137,7 @@ export class QueryBuilder<
     this.query = {
       ...this.query,
       include: QUERY_INPUT_TRANSFORMERS<M, CN>().include(
+        // @ts-expect-error
         this.query,
         relationName,
         query
