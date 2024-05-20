@@ -4,7 +4,7 @@ description: Learn how to self host Triplit using Docker, and how to deploy it t
 
 # Self-hosting Triplit
 
-To enable sync, you need to run a Triplit server. The server is a Node.js application that talks to various Triplit clients over WebSockets and HTTP.
+To enable sync, you need to run a Triplit servezr. The server is a Node.js application that talks to various Triplit clients over WebSockets and HTTP.
 
 You have several options for running the server:
 
@@ -86,6 +86,10 @@ const serviceKey = jwt.sign(
 ```
 
 For more complicate authentication schemes, refer to our [authentication guide](/auth).
+
+### `CLAIMS_PATH` (optional)
+
+If you are using custom JWTs with nested Triplit-related claims, you can set the `CLAIMS_PATH` environment variable. The server will read the Triplit claims at the path specified by `CLAIMS_PATH`. The JWT should also have the `x-triplit-token-type` claim set to `external`. Read the [authentication guide](/auth) for more information.
 
 ### `LOCAL_DATABASE_URL` (optional)
 
