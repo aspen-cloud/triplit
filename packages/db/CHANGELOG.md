@@ -1,5 +1,11 @@
 # @triplit/db
 
+## 0.3.38
+
+### Patch Changes
+
+- f826e50: Simplify query builder and query generics
+
 ## 0.3.37
 
 ### Patch Changes
