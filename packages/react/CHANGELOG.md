@@ -1,5 +1,13 @@
 # @triplit/react
 
+## 0.3.49
+
+### Patch Changes
+
+- f826e50: Simplify query builder and query generics
+- Updated dependencies [f826e50]
+  - @triplit/client@0.3.47
+
 ## 0.3.48
 
 ### Patch Changes

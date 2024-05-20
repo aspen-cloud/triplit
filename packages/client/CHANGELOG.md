@@ -1,5 +1,13 @@
 # @triplit/client
 
+## 0.3.47
+
+### Patch Changes
+
+- f826e50: Simplify query builder and query generics
+- Updated dependencies [f826e50]
+  - @triplit/db@0.3.38
+
 ## 0.3.46
 
 ### Patch Changes

@@ -1,5 +1,13 @@
 # @triplit/svelte
 
+## 0.1.19
+
+### Patch Changes
+
+- f826e50: Simplify query builder and query generics
+- Updated dependencies [f826e50]
+  - @triplit/client@0.3.47
+
 ## 0.1.18
 
 ### Patch Changes
