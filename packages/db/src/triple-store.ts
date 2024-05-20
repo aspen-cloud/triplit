@@ -148,7 +148,7 @@ async function addIndexesToTransaction(
         scopedTx.remove(['AVE', attribute, value, id, timestamp]);
       } else {
         scopedTx.set(['AVE', attribute, value, id, timestamp], {
-          isExpired: true,
+          expired: isExpired,
         });
       }
       scopedTx.set(
