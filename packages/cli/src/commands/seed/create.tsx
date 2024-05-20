@@ -1,13 +1,12 @@
 import { Command } from '../../command.js';
-import { blue, red } from 'ansis/colors';
+import { blue } from 'ansis/colors';
 import { format } from 'prettier';
 import prompts from 'prompts';
-import { SEED_DIR, getSeedsDir, loadTsModule } from '../../filesystem.js';
+import { SEED_DIR, getSeedsDir } from '../../filesystem.js';
 import fs from 'fs';
 import path from 'node:path';
-import { readLocalSchema } from '../../schema.js';
-import { BulkInsert } from '@triplit/client';
-import { Models, TriplitError } from '@triplit/db';
+import { Models } from '@triplit/db';
+import { projectSchemaMiddleware } from '../../middleware/project-schema.js';
 
 export function seedDirExists() {
   return fs.existsSync(SEED_DIR);
@@ -50,10 +49,10 @@ export default Command({
       description: 'Name for your seed file',
     },
   ],
-
-  async run({ args }) {
+  middleware: [projectSchemaMiddleware],
+  async run({ args, ctx }) {
     // Check if seed directory exists, prompt user to create it
-    const schema = await readLocalSchema();
+    const schema = ctx.schema;
     const seedTemplate = getSeedTemplate(schema);
     let filename = args.filename;
     if (!filename) {

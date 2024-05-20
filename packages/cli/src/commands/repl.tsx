@@ -4,20 +4,20 @@ import * as Triplit from '@triplit/client';
 import WebSocket from 'ws';
 import { Command } from '../command.js';
 import { serverRequesterMiddleware } from '../middleware/add-server-requester.js';
-import { readLocalSchema } from '../schema.js';
 import { parseQuery } from '../parser.js';
 import { schemaToJSON } from '@triplit/db';
+import { projectSchemaMiddleware } from '../middleware/project-schema.js';
 
 // @ts-ignore
 global.WebSocket = WebSocket;
 export default Command({
   description: 'Start a REPL with the Triplit client',
-  middleware: [serverRequesterMiddleware],
+  middleware: [serverRequesterMiddleware, projectSchemaMiddleware],
   run: async ({ ctx }) => {
     const triplit = new Triplit.TriplitClient({
       serverUrl: ctx.url,
       token: ctx.token,
-      schema: await readLocalSchema(),
+      schema: ctx.schema,
     });
     global.triplit = triplit;
     const repl = Repl.start(`db> `);

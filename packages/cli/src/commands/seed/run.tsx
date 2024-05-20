@@ -9,12 +9,12 @@ import {
 } from '../../filesystem.js';
 import fs from 'fs';
 import path from 'node:path';
-import { readLocalSchema } from '../../schema.js';
 import { BulkInsert, RemoteClient } from '@triplit/client';
 import { serverRequesterMiddleware } from '../../middleware/add-server-requester.js';
 import { TriplitError } from '@triplit/db';
 import { seedDirExists } from './create.js';
 import ora from 'ora';
+import { projectSchemaMiddleware } from '../../middleware/project-schema.js';
 
 export async function loadSeedModule(seedPath: string) {
   const module = await loadTsModule(seedPath);
@@ -35,9 +35,9 @@ export default Command({
       description: 'Run a specific seed file',
     },
   ],
-  middleware: [serverRequesterMiddleware],
+  middleware: [serverRequesterMiddleware, projectSchemaMiddleware],
   async run({ flags, ctx, args }) {
-    await insertSeeds(ctx.url, ctx.token, args.file, flags.all);
+    await insertSeeds(ctx.url, ctx.token, args.file, flags.all, ctx.schema);
   },
 });
 
@@ -54,7 +54,8 @@ export async function insertSeeds(
   url: string,
   token: string,
   file: string,
-  runAll: boolean = false
+  runAll: boolean = false,
+  schema: any
 ) {
   // Check if seed directory exists, prompt user to create it
   if (!seedDirExists()) {
@@ -114,7 +115,6 @@ export async function insertSeeds(
     console.log('No seed files selected');
     return;
   }
-  const schema = await readLocalSchema();
   const client = new RemoteClient({
     server: url,
     token: token,

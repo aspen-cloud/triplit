@@ -1,16 +1,16 @@
 import * as Colors from 'ansis/colors';
 import { Command } from '../../command.js';
 import { serverRequesterMiddleware } from '../../middleware/add-server-requester.js';
-import { readLocalSchema } from '../../schema.js';
 import { logSchemaChangeViolations, schemaToJSON } from '@triplit/db';
 import ora from 'ora';
+import { projectSchemaMiddleware } from '../../middleware/project-schema.js';
 
 export default Command({
   description: 'Apply the local schema to the server',
-  middleware: [serverRequesterMiddleware],
+  middleware: [serverRequesterMiddleware, projectSchemaMiddleware],
   run: async ({ ctx }) => {
     const localSchema = schemaToJSON({
-      collections: await readLocalSchema(),
+      collections: ctx.schema,
       version: 0,
     });
     const pushSpinner = ora('Pushing schema to server').start();

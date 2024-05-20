@@ -1,12 +1,10 @@
 import { Command } from '../../command.js';
 import * as Flag from '../../flags.js';
 import { serverRequesterMiddleware } from '../../middleware/add-server-requester.js';
-import { Box, Newline, Text } from 'ink';
-import React from 'react';
-import { readLocalSchema } from '../../schema.js';
 import { JSONToSchema, schemaToJSON } from '@triplit/db';
 import { schemaFileContentFromSchema } from '../migrate/codegen.js';
 import { format as formatFile } from 'prettier';
+import { projectSchemaMiddleware } from '../../middleware/project-schema.js';
 
 const DISPLAY_FORMATS = ['json', 'file'] as const;
 type SchemaFormat = (typeof DISPLAY_FORMATS)[number];
@@ -32,7 +30,7 @@ export default Command({
       default: 'json',
     }),
   },
-  middleware: [serverRequesterMiddleware],
+  middleware: [serverRequesterMiddleware, projectSchemaMiddleware],
   run: async ({ flags, ctx }) => {
     const alwaysLog = console.log;
     if (flags.raw) console.log = () => {};
@@ -40,7 +38,7 @@ export default Command({
       flags.location === 'both' ? ['local', 'remote'] : [flags.location];
     if (locations.includes('local')) {
       console.log('Local schema:');
-      const schema = await readLocalSchema();
+      const schema = ctx.schema;
       if (!schema) return;
       const formattedSchema = await formatSchemaForDisplay(
         { collections: schema, version: 0 },

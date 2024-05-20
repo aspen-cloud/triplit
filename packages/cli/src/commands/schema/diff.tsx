@@ -1,17 +1,17 @@
-import { blue, green, yellow } from 'ansis/colors';
+import { blue, yellow } from 'ansis/colors';
 import { Command } from '../../command.js';
 import { serverRequesterMiddleware } from '../../middleware/add-server-requester.js';
-import { readLocalSchema } from '../../schema.js';
-import { JSONToSchema, schemaToJSON } from '@triplit/db';
+import { schemaToJSON } from '@triplit/db';
 import jsondiffpatch from 'jsondiffpatch';
 import { createMigration } from '../../migration.js';
+import { projectSchemaMiddleware } from '../../middleware/project-schema.js';
 
 export default Command({
   description: 'Show the diff between local and remote schema',
-  middleware: [serverRequesterMiddleware],
+  middleware: [serverRequesterMiddleware, projectSchemaMiddleware],
   run: async ({ ctx }) => {
     const localSchema = schemaToJSON({
-      collections: await readLocalSchema(),
+      collections: ctx.schema,
       version: 0,
     })?.collections;
     const serverSchemaResponse = await ctx.requestServer('POST', '/schema', {
