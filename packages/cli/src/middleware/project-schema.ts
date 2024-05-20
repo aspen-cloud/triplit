@@ -12,8 +12,13 @@ export const projectSchemaMiddleware = Middleware({
       required: false,
       char: 'P',
     }),
+    noSchema: Flag.Boolean({
+      description: 'Do not load a schema file',
+      char: 'N',
+    }),
   },
   run: async ({ flags }) => {
+    if (flags.noSchema) return { schema: undefined };
     let schemaPath =
       flags.schemaPath ??
       process.env.TRIPLIT_SCHEMA_PATH ??
