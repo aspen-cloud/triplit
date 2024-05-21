@@ -6321,10 +6321,12 @@ __metadata:
     "@sveltejs/package": ^2.3.0
     "@triplit/client": "workspace:^"
     "@tsconfig/svelte": ^5.0.2
-    svelte: ^5.0.0-next.90
+    svelte: ^5.0.0-next.137
     svelte-check: ^3.6.7
     tslib: ^2.6.2
     typescript: ^5.2.2
+  peerDependencies:
+    svelte: ^5.0.0-next.137
   languageName: unknown
   linkType: soft
 
@@ -11780,13 +11782,13 @@ __metadata:
   languageName: node
   linkType: hard
 
-"esrap@npm:^1.2.1":
-  version: 1.2.1
-  resolution: "esrap@npm:1.2.1"
+"esrap@npm:^1.2.2":
+  version: 1.2.2
+  resolution: "esrap@npm:1.2.2"
   dependencies:
     "@jridgewell/sourcemap-codec": ^1.4.15
     "@types/estree": ^1.0.1
-  checksum: f85bc760947786d826e952eb07f58886820b14344a204553f8ea021701ca96f3a26108bc9f57b51a29fb32fc4a96cd8a11c0b9a59ca7592ae4a8f4159c8b0c33
+  checksum: 23327761d9fa3a4389007f354b6217725b63dcf09601debcf0ccfd04efc28da88949f411800059c151a81d61bfa2bcd929b578b3cee5015f68072e804dff2c5c
   languageName: node
   linkType: hard
 
@@ -20519,9 +20521,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"svelte@npm:^5.0.0-next.90":
-  version: 5.0.0-next.90
-  resolution: "svelte@npm:5.0.0-next.90"
+"svelte@npm:^5.0.0-next.137":
+  version: 5.0.0-next.137
+  resolution: "svelte@npm:5.0.0-next.137"
   dependencies:
     "@ampproject/remapping": ^2.2.1
     "@jridgewell/sourcemap-codec": ^1.4.15
@@ -20531,12 +20533,12 @@ __metadata:
     aria-query: ^5.3.0
     axobject-query: ^4.0.0
     esm-env: ^1.0.0
-    esrap: ^1.2.1
+    esrap: ^1.2.2
     is-reference: ^3.0.2
     locate-character: ^3.0.0
     magic-string: ^0.30.5
     zimmerframe: ^1.1.2
-  checksum: dd44c061abf105a34690b61c06e162860955914617141553cfa3f42fae528b8e51047c9ddd93d91ce5515c0a7b3f0ce0c8ef76c9bd4ac548cdaafa76cb3c8fbb
+  checksum: 76553c142aa10cbda3608b7004fa86bee97726688f07abeaf929b1f4c9a98ba60935a1ed6def4a30fe435ed2c16d0da7b44998bbe14b4314b8e7d8909d1c4d3c
   languageName: node
   linkType: hard
 
