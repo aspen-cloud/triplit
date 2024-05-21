@@ -49,6 +49,7 @@ import {
   replaceVariablesInFilterStatements,
   replaceVariable,
   getVariableComponents,
+  isValueReferentialVariable,
 } from './db-helpers.js';
 import { DataType, Operator } from './data-types/base.js';
 import { VariableAwareCache } from './variable-aware-cache.js';
@@ -831,20 +832,21 @@ function queryChainToQuery<
       ...first,
       where: [...(first.where ?? []), ...additionalFilters],
     };
-  const variableFilters = (first.where ?? []).filter(
-    (filter) => filter instanceof Array && isValueVariable(filter[2])
+  const refVariableFilters = (first.where ?? []).filter(
+    (filter) => filter instanceof Array && isValueReferentialVariable(filter[2])
   ) as FilterStatement<any, any>[];
-  const nonVariableFilters = (first.where ?? []).filter(
-    (filter) => !(filter instanceof Array && isValueVariable(filter[2]))
+  const nonRefVariableFilters = (first.where ?? []).filter(
+    (filter) =>
+      !(filter instanceof Array && isValueReferentialVariable(filter[2]))
   ) as FilterStatement<any, any>[];
   const next = queryChainToQuery(
     rest,
-    variableFilters.map(reverseRelationFilter)
+    refVariableFilters.map(reverseRelationFilter)
   );
   return {
     ...first,
     where: [
-      ...nonVariableFilters,
+      ...nonRefVariableFilters,
       ...additionalFilters,
       {
         exists: next,

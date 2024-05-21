@@ -653,6 +653,14 @@ export function isValueVariable(value: QueryValue): value is string {
   return typeof value === 'string' && value.startsWith('$');
 }
 
+export function isValueReferentialVariable(value: QueryValue): value is string {
+  if (!isValueVariable(value)) return false;
+  const [scope, key] = getVariableComponents(value);
+
+  if (scope === undefined && key !== 'SESSION_USER_ID') return true;
+  return !isNaN(parseInt(scope ?? ''));
+}
+
 const VARIABLE_SCOPES = ['global', 'session', 'query'];
 
 export function getVariableComponents(
