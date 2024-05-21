@@ -1,0 +1,15 @@
+diff --git a/package.json b/package.json
+index 45817ba57eff1e1ab5c6ece36265a919cb43aad0..5425a91b1e1ef10f50b0d9c3fe88ea14f968e8fb 100644
+--- a/package.json
++++ b/package.json
+@@ -174,8 +174,5 @@
+     "typedoc-plugin-internal-external": "2.2.0",
+     "typescript": "5.3.3"
+   },
+-  "packageManager": "yarn@4.1.1",
+-  "engines": {
+-    "node": "^18.13.0 || ^20.9.0"
+-  }
++  "packageManager": "yarn@4.1.1"
+ }
+\ No newline at end of file
