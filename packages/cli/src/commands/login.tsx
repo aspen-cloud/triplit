@@ -22,7 +22,7 @@ export default Command({
       console.log('Already logged in!');
       return;
     }
-    let email = args.email;
+    let email = args.email as string;
     if (!email) {
       const answer = await prompts({
         message: 'Enter your email address',

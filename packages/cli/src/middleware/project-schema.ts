@@ -35,6 +35,6 @@ export const projectSchemaMiddleware = Middleware({
       return `${schemaPath} does not export an object named 'schema'`;
     }
 
-    return { schema: result.schema };
+    return { schema: result.schema } as const;
   },
 });

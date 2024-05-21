@@ -2,25 +2,6 @@ import { ReactElement } from 'react';
 import { Flag, FlagsToTypes } from './flags.js';
 import { Middleware, MiddlewareDefinition } from './middleware.js';
 
-type MiddlewareArgs<M> = M extends CommandDefinition<infer A, any, any>
-  ? A
-  : never;
-type UnionOfMiddlewareArgs<M extends any[]> = M[number] extends never
-  ? never
-  : MiddlewareArgs<M[number]>;
-
-type UnionOfMiddlewareFlags<M extends MiddlewareDefinition<any, any, any>[]> =
-  M[number] extends never ? never : M[number]['flags'];
-
-type UnionOfMiddlewareCtx<M extends MiddlewareDefinition<any, any, any>[]> =
-  M[number] extends MiddlewareDefinition<any, any, infer Ctx> ? Ctx : never;
-
-type UnionToIntersection<U> = (U extends any ? (k: U) => void : never) extends (
-  k: infer I
-) => void
-  ? I
-  : never;
-
 type ArgDefinition = {
   name: string;
   description: string;
@@ -45,36 +26,62 @@ type ArgDefinitionsToValues<Args extends ArgDefinitions> = Args extends {
 
 export interface CommandDefinition<
   Args extends ArgDefinitions | undefined,
-  Flags extends { [key: string]: Flag } | undefined,
-  Middleware extends MiddlewareDefinition<any, any, any>[] = []
+  Flags extends AllowedFlags<Middleware>,
+  Middleware extends MiddlewareDefinition<any, any, any, any> | undefined
 > {
   description?: string;
   examples?: { usage: string; description?: string }[];
   args?: Args;
   flags?: Flags;
-  middleware?: Middleware;
+  middleware?: Middleware[];
   preRelease?: boolean;
   run: RunCommand<Args, Flags, Middleware>;
 }
 
+type MergeUnion<U> = {
+  [K in U extends any ? keyof U : never]: U extends Record<K, infer T>
+    ? T
+    : never;
+};
+
 type RunCommand<
   Args extends ArgDefinitions | undefined,
-  Flags extends Record<string, any>,
-  Middleware extends MiddlewareDefinition<any, any, any>[]
+  Flags extends AllowedFlags<Middleware> | undefined,
+  Middleware extends MiddlewareDefinition<any, any, any, any>
 > = (params: {
-  args: ArgDefinitionsToValues<
-    Args & UnionToIntersection<UnionOfMiddlewareArgs<Middleware>>
-  >;
-  flags: FlagsToTypes<
-    Flags & UnionToIntersection<UnionOfMiddlewareFlags<Middleware>>
-  >;
-  ctx: UnionToIntersection<UnionOfMiddlewareCtx<Middleware>>;
+  args: ArgDefinitionsToValues<Args & ArgsFromMiddleware<Middleware>>;
+  flags: FlagsToTypes<Flags & FlagsFromMiddleware<Middleware>>;
+  ctx: MergeUnion<CtxFromMiddleware<Middleware>>;
 }) => Promise<ReactElement> | ReactElement | Promise<void> | void;
 
 export function Command<
   Args extends ArgDefinitions,
-  Flags extends Record<string, Flag> = Record<string, Flag>,
-  M extends MiddlewareDefinition<any, any, any>[] = []
->(def: CommandDefinition<Args, Flags, M>): CommandDefinition<Args, Flags, M> {
+  Flags extends AllowedFlags<Middleware>,
+  Middleware extends MiddlewareDefinition<any, any, any, any>
+>(
+  def: CommandDefinition<Args, Flags, Middleware>
+): CommandDefinition<Args, Flags, Middleware> {
   return def;
 }
+
+// This type helps handle when Middleware flags aren't defined. Otherwise, you can end
+// up with a type that's like {[k: any]: never} which we don't want
+type AllowedFlags<Middleware extends MiddlewareDefinition<any, any, any, any>> =
+  keyof FlagsFromMiddleware<Middleware> extends string
+    ? string extends keyof FlagsFromMiddleware<Middleware>
+      ? { [K: string]: Flag<any> }
+      : { [K: string]: Flag<any> } & Partial<{
+          [K in keyof FlagsFromMiddleware<Middleware>]: 'USED BY MIDDLEWARE';
+        }>
+    : { [K: string]: Flag<any> };
+
+type FlagsFromMiddleware<M extends MiddlewareDefinition<any, any, any, any>> =
+  M extends MiddlewareDefinition<any, infer MFlags, any, any> ? MFlags : never;
+
+type ArgsFromMiddleware<M extends MiddlewareDefinition<any, any, any, any>> =
+  M extends MiddlewareDefinition<infer Args, any, any, any> ? Args : never;
+
+type CtxFromMiddleware<M extends MiddlewareDefinition<any, any, any, any>> =
+  M extends MiddlewareDefinition<any, any, any, infer Run>
+    ? Exclude<Awaited<ReturnType<Run>>, string>
+    : never;

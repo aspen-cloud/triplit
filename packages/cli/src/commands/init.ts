@@ -4,7 +4,7 @@ import { CWD, TRIPLIT_DIR, createDirIfNotExists } from '../filesystem.js';
 import * as Flag from '../flags.js';
 import fs from 'fs';
 import path from 'path';
-import { blue, green, red, yellow } from 'ansis/colors';
+import { blue } from 'ansis/colors';
 import degit from 'degit';
 import { addDependency } from 'nypm';
 
@@ -20,6 +20,7 @@ const packageToInstall = ['@triplit/client'];
 
 export default Command({
   description: 'Initialize a Triplit project',
+  middleware: [],
   flags: {
     framework: Flag.Enum({
       options: ['react', 'svelte'] as const,
