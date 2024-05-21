@@ -49,6 +49,9 @@ export class VariableAwareCache<Schema extends Models<any, any> | undefined> {
     )
       return false;
 
+    if (query.include && Object.keys(query.include).length > 0) return false;
+
+    // This is shouldn't be the case anymore (since we use include for sub relations)
     if (query.select && query.select.some((s) => typeof s === 'object'))
       return false;
 
