@@ -10,7 +10,7 @@ import DB, {
   Timestamp,
   TripleStoreApi,
 } from '@triplit/db';
-import { SyncOptions } from './triplit-client.js';
+import { SyncOptions, TriplitClient } from './triplit-client.js';
 import { Subject } from 'rxjs';
 import {
   ConnectionStatus,
@@ -51,7 +51,7 @@ export class SyncEngine {
   private reconnectTimeoutDelay = 250;
   private reconnectTimeout: any;
 
-  private db: DB<any>;
+  private client: TriplitClient<any>;
   private syncOptions: SyncOptions;
 
   private connectionChangeHandlers: Set<(status: ConnectionStatus) => void> =
@@ -73,12 +73,12 @@ export class SyncEngine {
    * @param options configuration options for the sync engine
    * @param db the client database to be synced
    */
-  constructor(options: SyncOptions, db: DB<any>) {
+  constructor(client: TriplitClient<any>, options: SyncOptions) {
+    this.client = client;
     this.logger = options.logger;
     this.syncOptions = options;
     this.syncOptions.secure = options.secure ?? true;
     this.syncOptions.syncSchema = options.syncSchema ?? false;
-    this.db = db;
     this.transport = options.transport ?? new WebSocketTransport();
     this.txCommits$.subscribe((txId) => {
       const callbacks = this.commitCallbacks.get(txId);
@@ -113,6 +113,10 @@ export class SyncEngine {
    */
   get token() {
     return this.syncOptions.token;
+  }
+
+  get db() {
+    return this.client.db;
   }
 
   private get httpUri() {

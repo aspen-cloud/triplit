@@ -247,11 +247,10 @@ export class TriplitClient<M extends ClientSchema | undefined = undefined> {
         this.authOptions.token,
         this.authOptions.claimsPath
       );
-      // TODO: properly use sessions
-      this.db.updateGlobalVariables({ SESSION_USER_ID: userId });
+      this.db = this.db.withSessionVars({ SESSION_USER_ID: userId });
     }
 
-    this.syncEngine = new SyncEngine(syncOptions, this.db);
+    this.syncEngine = new SyncEngine(this, syncOptions);
     // Look into how calling connect / disconnect early is handled
     this.db.ensureMigrated.then(() => {
       if (autoConnect) this.syncEngine.connect();
@@ -823,8 +822,8 @@ export class TriplitClient<M extends ClientSchema | undefined = undefined> {
       this.authOptions = { ...this.authOptions, token };
       const { claimsPath } = this.authOptions;
       const userId = token ? getUserId(token, claimsPath) : undefined;
-      // TODO: properly use sessions
-      this.db.updateGlobalVariables({ SESSION_USER_ID: userId });
+
+      this.db = this.db.withSessionVars({ SESSION_USER_ID: userId });
 
       // and update the sync engine
       updatedSyncOptions = { ...updatedSyncOptions, token };
