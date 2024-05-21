@@ -625,15 +625,15 @@ function addSubsSelectsFromIncludes<
           schema
         );
       }
-      const merged = mergeQueries(attributeType.query, additionalQuery);
+      const merged = mergeQueries({ ...attributeType.query }, additionalQuery);
       const subquerySelection = {
         subquery: merged,
         cardinality: attributeType.cardinality,
       };
-      query.include[relationName] = subquerySelection;
+      query.include = { ...query.include, [relationName]: subquerySelection };
     } else {
       if (relation?.subquery) {
-        query.include[relationName] = relation;
+        query.include = { ...query.include, [relationName]: relation };
       }
     }
   }
