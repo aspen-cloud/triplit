@@ -1,5 +1,13 @@
 # @triplit/client
 
+## 0.3.48
+
+### Patch Changes
+
+- c8fadd2: use session variables for token in client db
+- Updated dependencies [cae769a]
+  - @triplit/db@0.3.39
+
 ## 0.3.47
 
 ### Patch Changes

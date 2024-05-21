@@ -1,5 +1,11 @@
 # @triplit/db
 
+## 0.3.39
+
+### Patch Changes
+
+- cae769a: Overwrite include field in prep query
+
 ## 0.3.38
 
 ### Patch Changes
