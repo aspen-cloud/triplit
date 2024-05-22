@@ -518,10 +518,14 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
       : Promise.resolve();
   }
 
-  private initializeDBWithSchema(schema: StoreSchema<M> | undefined) {
-    return schema
-      ? this.overrideSchema(schema).then(() => {})
-      : Promise.resolve();
+  private async initializeDBWithSchema(schema: StoreSchema<M> | undefined) {
+    if (!schema) return;
+    const currentSchema = await readSchemaFromTripleStore(this.tripleStore);
+    if (!currentSchema.schema) {
+      await this.overrideSchema(schema);
+    } else {
+      this.overrideSchema(schema);
+    }
   }
 
   private setupSchemaListener() {
