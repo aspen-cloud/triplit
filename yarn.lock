@@ -4783,6 +4783,31 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@radix-ui/react-context-menu@npm:^2.1.5":
+  version: 2.1.5
+  resolution: "@radix-ui/react-context-menu@npm:2.1.5"
+  dependencies:
+    "@babel/runtime": ^7.13.10
+    "@radix-ui/primitive": 1.0.1
+    "@radix-ui/react-context": 1.0.1
+    "@radix-ui/react-menu": 2.0.6
+    "@radix-ui/react-primitive": 1.0.3
+    "@radix-ui/react-use-callback-ref": 1.0.1
+    "@radix-ui/react-use-controllable-state": 1.0.1
+  peerDependencies:
+    "@types/react": "*"
+    "@types/react-dom": "*"
+    react: ^16.8 || ^17.0 || ^18.0
+    react-dom: ^16.8 || ^17.0 || ^18.0
+  peerDependenciesMeta:
+    "@types/react":
+      optional: true
+    "@types/react-dom":
+      optional: true
+  checksum: ae89af766bd976103663e36a22178c25ca729f9bb0bb8a20cf9b9db19314ca9a0e3fcd8a58202aa14965961caa1e4e2e96e14d5701dacfa1881ca75a80d83e1f
+  languageName: node
+  linkType: hard
+
 "@radix-ui/react-context@npm:1.0.0":
   version: 1.0.0
   resolution: "@radix-ui/react-context@npm:1.0.0"
@@ -6541,6 +6566,7 @@ __metadata:
     react: ^18.2.0
     react-dom: ^18.2.0
     react-router-dom: ^6.17.0
+    superjson: ^2.2.1
     tailwind-merge: ^1.14.0
     tailwindcss: ^3.3.3
     tailwindcss-animate: ^1.0.7
@@ -6698,6 +6724,7 @@ __metadata:
   dependencies:
     "@radix-ui/react-alert-dialog": ^1.0.5
     "@radix-ui/react-checkbox": ^1.0.4
+    "@radix-ui/react-context-menu": ^2.1.5
     "@radix-ui/react-dialog": ^1.0.5
     "@radix-ui/react-dropdown-menu": ^2.0.6
     "@radix-ui/react-label": ^2.0.2

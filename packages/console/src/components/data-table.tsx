@@ -27,6 +27,7 @@ import {
   Code,
 } from '@triplit/ui';
 import { PARSE_FUNCS } from './create-entity-sheet';
+import { CopyValueMenu } from './copy-value-menu.js';
 import { TriplitClient } from '@triplit/client';
 import { AttributeDefinition } from '@triplit/db';
 import {
@@ -36,6 +37,7 @@ import {
   ValueAttributeDefinition,
 } from '@triplit/db/src/data-types/serialization';
 import { ArrowSquareOut } from '@phosphor-icons/react';
+import { Copy } from 'lucide-react';
 
 async function updateTriplitValue(
   attribute: string,
@@ -310,23 +312,24 @@ export function DataCell({
     if (!selected) setIsEditing(false);
   }, [selected]);
   return (
-    <Popover open={isEditing} onOpenChange={setIsEditing}>
-      <PopoverTrigger
-        onClick={() => {
-          onSelectCell();
-          selected && setIsEditing(!isEditing);
-        }}
-        disabled={!editable}
-        // setting height manually until we can figure out how to get these to fill the row
-        className={`text-left px-3 py-2 border truncate w-full h-[38px] ${
-          selected ? 'border-blue-600' : 'border-transparent'
-        }`}
-      >
-        <CellValue
-          definition={attributeDef ?? { type: 'string', options: {} }}
-          value={value}
-        />
-      </PopoverTrigger>
+    <Popover open={isEditing && editable} onOpenChange={setIsEditing}>
+      <CopyValueMenu value={value}>
+        <PopoverTrigger
+          onClick={() => {
+            onSelectCell();
+            if (selected && editable) setIsEditing(!isEditing);
+          }}
+          // setting height manually until we can figure out how to get these to fill the row
+          className={`text-left px-3 py-2 border truncate w-full h-[38px] ${
+            selected ? 'border-blue-600' : 'border-transparent'
+          }`}
+        >
+          <CellValue
+            definition={attributeDef ?? { type: 'string', options: {} }}
+            value={value}
+          />
+        </PopoverTrigger>
+      </CopyValueMenu>
 
       <PopoverContent className="text-xs p-1.5" align="start">
         {attributeDef?.type === 'set' ? (
