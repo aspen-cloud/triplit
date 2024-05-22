@@ -410,7 +410,7 @@ export function CreateEntitySheet({
         <Button
           size={'sm'}
           variant={'secondary'}
-          className="bg-green-200 text-green-800 hover:bg-green-300 dark:bg-green-950 dark:hover:bg-green-900 dark:text-green-400 gap-1 py-1 h-auto"
+          className="bg-green-950 hover:bg-green-900 text-green-400 gap-1 py-1 h-auto"
         >
           <Plus className="h-4 w-4" />
           Insert
