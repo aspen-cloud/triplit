@@ -486,69 +486,78 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
       migrations,
       tripleStoreSchema,
     });
+
     this.ensureMigrated = this.tripleStore
       .ensureStorageIsMigrated()
       // Apply migrations or overwrite schema
+      .then(() => this.initializeDBWithMigrations(migrations))
       .then(() =>
-        migrations
-          ? Array.isArray(migrations)
-            ? this.migrate(migrations, 'up')
-            : this.migrate(migrations.definitions, 'up', migrations.scopes)
-          : // .catch((e) => {
-            //   console.error(e);
-            // })
-            Promise.resolve()
+        this.initializeDBWithSchema(
+          // @ts-expect-error
+          tripleStoreSchema
+        )
       )
-      .then(async () => {
-        if (!tripleStoreSchema) return;
-        const currentSchema = await readSchemaFromTripleStore(this.tripleStore);
-        if (!currentSchema.schema) {
-          //@ts-expect-error
-          await this.overrideSchema(tripleStoreSchema);
-        } else {
-          //@ts-expect-error
-          this.overrideSchema(tripleStoreSchema);
-        }
-      })
       // Setup schema subscription
-      .then(() => {
-        this.tripleStore.tupleStore.subscribe(
-          { prefix: ['EAT', appendCollectionToId('_metadata', '_schema')] },
-          async (storeWrites) => {
-            // If there are deletes clear cached data and update if there are sets
-            // NOTE: IF WE ADD GARBAGE COLLECTION ENSURE THIS IS STILL CORRECT
-            if (Object.values(storeWrites).some((w) => !!w.remove?.length)) {
-              this.schema = undefined;
-              this._schema = undefined;
-            }
+      .then(this.setupSchemaListener)
+      .then(() => this.logger.debug('Ready'));
+  }
 
-            // This assumes we are properly using tombstoning, so only looking at set operations
-            const schemaTriples = Object.values(storeWrites).flatMap(
-              (w) => w.set?.map((s) => indexToTriple(s)) ?? []
-            );
-            if (!schemaTriples.length) return;
+  private initializeDBWithMigrations(
+    migrations:
+      | Migration[]
+      | {
+          definitions: Migration[];
+          scopes?: string[] | undefined;
+        }
+      | undefined
+  ): Promise<void> {
+    return migrations
+      ? Array.isArray(migrations)
+        ? this.migrate(migrations, 'up')
+        : this.migrate(migrations.definitions, 'up', migrations.scopes)
+      : Promise.resolve();
+  }
 
-            // Initialize schema entity
-            if (!this._schema) {
-              await this.loadSchemaData();
-            }
+  private initializeDBWithSchema(schema: StoreSchema<M> | undefined) {
+    return schema
+      ? this.overrideSchema(schema).then(() => {})
+      : Promise.resolve();
+  }
 
-            // Update schema
-            updateEntity(this._schema!, schemaTriples);
-            const newSchema = timestampedSchemaToSchema(
-              this._schema!.data
-            ) as StoreSchema<M>;
+  private setupSchemaListener() {
+    return this.tripleStore.tupleStore.subscribe(
+      { prefix: ['EAT', appendCollectionToId('_metadata', '_schema')] },
+      async (storeWrites) => {
+        // If there are deletes clear cached data and update if there are sets
+        // NOTE: IF WE ADD GARBAGE COLLECTION ENSURE THIS IS STILL CORRECT
+        if (Object.values(storeWrites).some((w) => !!w.remove?.length)) {
+          this.schema = undefined;
+          this._schema = undefined;
+        }
 
-            // Call any listeners
-            for (const cb of this.onSchemaChangeCallbacks) {
-              cb(newSchema);
-            }
-          }
+        // This assumes we are properly using tombstoning, so only looking at set operations
+        const schemaTriples = Object.values(storeWrites).flatMap(
+          (w) => w.set?.map((s) => indexToTriple(s)) ?? []
         );
-      })
-      .then(() => {
-        this.logger.debug('Ready');
-      });
+        if (!schemaTriples.length) return;
+
+        // Initialize schema entity
+        if (!this._schema) {
+          await this.loadSchemaData();
+        }
+
+        // Update schema
+        updateEntity(this._schema!, schemaTriples);
+        const newSchema = timestampedSchemaToSchema(
+          this._schema!.data
+        ) as StoreSchema<M>;
+
+        // Call any listeners
+        for (const cb of this.onSchemaChangeCallbacks) {
+          cb(newSchema);
+        }
+      }
+    );
   }
 
   addTrigger(on: AfterCommitOptions<M>, callback: AfterCommitCallback<M>): void;
