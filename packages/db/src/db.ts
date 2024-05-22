@@ -498,7 +498,7 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
         )
       )
       // Setup schema subscription
-      .then(this.setupSchemaListener)
+      .then(() => this.setupSchemaListener())
       .then(() => this.logger.debug('Ready'));
   }
 
