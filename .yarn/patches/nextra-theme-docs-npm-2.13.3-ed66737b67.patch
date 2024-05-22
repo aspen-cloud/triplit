@@ -1,0 +1,13 @@
+diff --git a/dist/index.js b/dist/index.js
+index 4e514210d0afbb3e384a49d953e0e591d90ed7ae..8e5cf8af62957bfda0ed4bb82f0851b8a8d395c6 100644
+--- a/dist/index.js
++++ b/dist/index.js
+@@ -1627,7 +1627,7 @@ var Folder = memo2(function FolderInner(props) {
+ });
+ var classes3 = {
+   link: cn12(
+-    "nx-flex nx-rounded nx-px-2 nx-py-1.5 nx-text-sm nx-transition-colors [word-break:break-word]",
++    "nx-flex nx-rounded nx-px-1.5 nx-py-0.5 nx-text-sm nx-transition-colors [word-break:break-word]",
+     "nx-cursor-pointer [-webkit-tap-highlight-color:transparent] [-webkit-touch-callout:none] contrast-more:nx-border"
+   ),
+   inactive: cn12(

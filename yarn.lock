@@ -17400,7 +17400,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"nextra-theme-docs@npm:^2.13.3":
+"nextra-theme-docs@npm:2.13.3":
   version: 2.13.3
   resolution: "nextra-theme-docs@npm:2.13.3"
   dependencies:
@@ -17423,6 +17423,32 @@ __metadata:
     react: ">=16.13.1"
     react-dom: ">=16.13.1"
   checksum: 1150aa07095b6c2adfb02e1ee0872d16e7c71617275388b9bf75646d879561ba5c9bcaad972a30ebd6a94ce406cfd487a09c61644def69530a138a2c1544dd52
+  languageName: node
+  linkType: hard
+
+"nextra-theme-docs@patch:nextra-theme-docs@npm%3A2.13.3#./.yarn/patches/nextra-theme-docs-npm-2.13.3-ed66737b67.patch::locator=triplit%40workspace%3A.":
+  version: 2.13.3
+  resolution: "nextra-theme-docs@patch:nextra-theme-docs@npm%3A2.13.3#./.yarn/patches/nextra-theme-docs-npm-2.13.3-ed66737b67.patch::version=2.13.3&hash=da35d1&locator=triplit%40workspace%3A."
+  dependencies:
+    "@headlessui/react": ^1.7.17
+    "@popperjs/core": ^2.11.8
+    clsx: ^2.0.0
+    escape-string-regexp: ^5.0.0
+    flexsearch: ^0.7.31
+    focus-visible: ^5.2.0
+    git-url-parse: ^13.1.0
+    intersection-observer: ^0.12.2
+    match-sorter: ^6.3.1
+    next-seo: ^6.0.0
+    next-themes: ^0.2.1
+    scroll-into-view-if-needed: ^3.1.0
+    zod: ^3.22.3
+  peerDependencies:
+    next: ">=9.5.3"
+    nextra: 2.13.3
+    react: ">=16.13.1"
+    react-dom: ">=16.13.1"
+  checksum: 039557af338bc07c525e2c184a25d73e98cd87e1b0b4bc4bba043035c0da920885a739e50ede25321402e6b5efc01fb3e082e918fdcee1f0fe77ce0729071df1
   languageName: node
   linkType: hard
 
