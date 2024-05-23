@@ -25,12 +25,13 @@
     }
   },
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && yarn build-worker",
     "build:watch": "tsc -w",
     "lint:build": "npx publint",
     "lint": "tsc --noEmit",
     "test": "vitest run",
-    "publish-pkg": "node ../../scripts/npm-check-version-and-publish.js"
+    "publish-pkg": "node ../../scripts/npm-check-version-and-publish.js",
+    "build-worker": "esbuild ./src/worker-client-operator.ts --bundle --minify --platform=browser --outfile=./dist/worker-client-operator.js --format=esm --sourcemap"
   },
   "files": [
     "/dist"
@@ -45,6 +46,7 @@
   "devDependencies": {
     "@triplit/types": "workspace:^",
     "@types/node": "^20.4.0",
+    "esbuild": "^0.21.3",
     "typescript": "^5.2.2",
     "vitest": "^1.4.0"
   },

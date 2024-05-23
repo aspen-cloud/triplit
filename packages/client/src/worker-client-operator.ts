@@ -64,16 +64,12 @@ const workerOperator: ClientWorker = {
     entityId: string,
     updater: (entity: UpdateTypeFromModel<any>) => void | Promise<void>
   ): Promise<{ txId: string | undefined; output: void | undefined }> {
-    console.log('update', collectionName, entityId, updater);
     // @ts-ignore
     return await clientOperator.update(
       collectionName,
       entityId,
       async (ent) => {
-        console.log('updater', updater);
-        console.log('ent', ent);
         const proxyOfProxy = ComLink.proxy(ent);
-        console.log('proxyOfProxy', proxyOfProxy);
         await updater(proxyOfProxy);
       }
     );
@@ -99,10 +95,18 @@ const workerOperator: ClientWorker = {
   },
   subscribe: function <CQ extends ClientQuery<undefined, any>>(
     // @ts-ignore
-    ...args
+    query,
+    // @ts-ignore
+    onResults,
+    // @ts-ignore
+    onError,
+    // @ts-ignore
+    onRemoteFulfilled
   ): () => void {
     // @ts-ignore
-    return ComLink.proxy(clientOperator.subscribe(...args));
+    return ComLink.proxy(
+      clientOperator.subscribe(query, onResults, onError, { onRemoteFulfilled })
+    );
   },
   subscribeWithPagination: function <CQ extends ClientQuery<undefined, any>>(
     // @ts-ignore

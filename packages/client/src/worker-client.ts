@@ -6,6 +6,7 @@ import type {
   InfiniteSubscription,
   PaginatedSubscription,
   SubscriptionOptions,
+  TriplitClient,
 } from './triplit-client.js';
 import {
   ChangeTracker,
@@ -30,6 +31,7 @@ import {
 import { ConnectionStatus } from './index.js';
 
 export class WorkerClient<M extends ClientSchema | undefined = undefined> {
+  // implements TriplitClient<M>
   initialized: Promise<void>;
   syncEngine = {
     connectionStatus: 'open',
@@ -151,7 +153,7 @@ export class WorkerClient<M extends ClientSchema | undefined = undefined> {
       entityId
     );
   }
-  subscribe<CQ extends ClientQuery<M, any>>(
+  subscribe<CQ extends ClientQuery<M, any, any, any>>(
     query: CQ,
     onResults: (
       results: ClientFetchResult<CQ>,
@@ -167,7 +169,10 @@ export class WorkerClient<M extends ClientSchema | undefined = undefined> {
         // @ts-ignore
         ComLink.proxy(onResults),
         onError && ComLink.proxy(onError),
-        options && ComLink.proxy(options)
+        // CURRENTLY ONLY SUPPORTS onRemoteFulfilled
+        // Comlink is having trouble either just proxying the callback
+        // inside options or proxying the whole options object
+        options?.onRemoteFulfilled && ComLink.proxy(options.onRemoteFulfilled)
       );
     })();
     return () => {
