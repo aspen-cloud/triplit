@@ -243,41 +243,50 @@ export async function overrideStoredSchema<M extends Models<any, any>>(
   issues: PossibleDataViolations[];
 }> {
   if (!schema) return { successful: false, issues: [] };
-  let tripleStore = db.tripleStore;
-  const result = await tripleStore.transact(async (tx) => {
-    const currentSchema = await readSchemaFromTripleStore(tx);
-    let issues: PossibleDataViolations[] = [];
-    if (currentSchema.schema) {
-      const diff = diffSchemas(currentSchema.schema, schema);
-      issues = await getSchemaDiffIssues(db, diff);
-      if (
-        issues.length > 0 &&
-        issues.some((issue) => issue.violatesExistingData)
-      )
-        return { successful: false, issues };
+  const result = await db.transact(
+    async (tx) => {
+      const currentSchema = await tx.getSchema();
+      let issues: PossibleDataViolations[] = [];
+      if (currentSchema) {
+        const diff = diffSchemas(currentSchema, schema);
 
-      diff.length > 0 &&
-        db.logger.info(`applying ${diff.length} attribute changes to schema`);
+        // If no differences, return early
+        if (diff.length === 0) return { successful: true, issues };
+
+        issues = await getSchemaDiffIssues(tx, diff);
+        if (
+          issues.length > 0 &&
+          issues.some((issue) => issue.violatesExistingData)
+        )
+          return { successful: false, issues };
+
+        diff.length > 0 &&
+          db.logger.info(`applying ${diff.length} attribute changes to schema`);
+      }
+
+      const existingTriples = await tx.storeTx.findByEntity(
+        appendCollectionToId('_metadata', '_schema')
+      );
+      await tx.storeTx.deleteTriples(existingTriples);
+
+      const triples = schemaToTriples(schema);
+      // TODO use tripleStore.setValues
+      const ts = await tx.storeTx.clock.getNextTimestamp();
+      const normalizedTriples = triples.map(([e, a, v]) => ({
+        id: e,
+        attribute: a,
+        value: v,
+        timestamp: ts,
+        expired: false,
+      }));
+      await tx.storeTx.insertTriples(normalizedTriples);
+      return { successful: true, issues };
+    },
+    {
+      // This basically ensures we use the old schema to perform data checks before we apply the new schema
+      dangerouslyBypassSchemaInitialization: true,
     }
-
-    const existingTriples = await tx.findByEntity(
-      appendCollectionToId('_metadata', '_schema')
-    );
-    await tx.deleteTriples(existingTriples);
-
-    const triples = schemaToTriples(schema);
-    // TODO use tripleStore.setValues
-    const ts = await tx.clock.getNextTimestamp();
-    const normalizedTriples = triples.map(([e, a, v]) => ({
-      id: e,
-      attribute: a,
-      value: v,
-      timestamp: ts,
-      expired: false,
-    }));
-    await tx.insertTriples(normalizedTriples);
-    return { successful: true, issues };
-  });
+  );
   return result?.output ?? { successful: false, issues: [] };
 }
 

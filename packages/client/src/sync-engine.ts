@@ -167,7 +167,7 @@ export class SyncEngine {
   }
 
   async isFirstTimeFetchingQuery(query: CollectionQuery<any, any>) {
-    await this.db.ensureMigrated;
+    await this.db.ready;
     const hash = this.getQueryHash(query);
     const state = await this.getQueryState(hash);
     return state === undefined;

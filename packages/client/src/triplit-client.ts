@@ -252,7 +252,7 @@ export class TriplitClient<M extends ClientSchema | undefined = undefined> {
 
     this.syncEngine = new SyncEngine(this, syncOptions);
     // Look into how calling connect / disconnect early is handled
-    this.db.ensureMigrated.then(() => {
+    this.db.ready.then(() => {
       if (autoConnect) this.syncEngine.connect();
     });
   }

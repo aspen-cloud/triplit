@@ -93,7 +93,7 @@ export async function getMigrationsStatus({ ctx }): Promise<{
       serverMigrationIds.includes(m.version)
     ),
   });
-  await serverMigrationsDB.ensureMigrated;
+  await serverMigrationsDB.ready;
   const serverMigrationsSchema = await serverMigrationsDB.getSchema();
   const serverMigrationsSchemaJSON = schemaToJSON(serverMigrationsSchema);
   const serverMigrationsHash = hashSchemaJSON(
@@ -104,7 +104,7 @@ export async function getMigrationsStatus({ ctx }): Promise<{
   const projectMigrationsDB = new DB<any>({
     migrations: projectMigrations,
   });
-  await projectMigrationsDB.ensureMigrated;
+  await projectMigrationsDB.ready;
   const projectMigrationsSchema = await projectMigrationsDB.getSchema();
   const projectMigrationsSchemaJSON = schemaToJSON(projectMigrationsSchema);
   const projectMigrationsHash = hashSchemaJSON(

@@ -1703,7 +1703,7 @@ describe('database transactions', () => {
       },
     });
     // Adding this check to ensure the onInsert isn't called with schema/metadata triples
-    await db.ensureMigrated;
+    await db.ready;
     const insertSpy = vi.fn();
     db.tripleStore.onInsert(insertSpy);
     await db.transact(async (tx) => {
@@ -2832,7 +2832,7 @@ describe('schema changes', async () => {
       },
     };
     const dbOne = new DB({ source: dataSource, schema: schemaOne });
-    await dbOne.ensureMigrated;
+    await dbOne.ready;
     const beforeSchema = await dbOne.getSchema();
     expect(beforeSchema).toBeDefined();
     expect(beforeSchema.collections.students).toBeDefined();
@@ -2894,7 +2894,7 @@ describe('migrations', () => {
 
   it('migrating updates migrations tracker', async () => {
     const db = new DB();
-    await db.ensureMigrated;
+    await db.ready;
     {
       const appliedMigrations = Object.values(await db.getAppliedMigrations());
       expect(appliedMigrations.length).toEqual(0);
@@ -2932,9 +2932,7 @@ describe('migrations', () => {
       },
     ]);
     const db = new DB({ migrations: migrationsCopy });
-    await expect(db.ensureMigrated).rejects.toThrowError(
-      InvalidMigrationOperationError
-    );
+    await expect(db.ready).rejects.toThrowError(InvalidMigrationOperationError);
     // const db = new DB({ migrations: migrationsCopy });
 
     // const dbSchema = await db.getSchema();
@@ -5370,7 +5368,7 @@ it('clearing a database resets the schema', async () => {
     version: 0,
   };
   const db = new DB({ schema });
-  await db.ensureMigrated;
+  await db.ready;
 
   // Should load schema into cache
   const resultSchema = await db.getSchema();

@@ -127,7 +127,7 @@ export default Command({
           token: serviceKey,
           syncSchema: true,
         });
-        await client.db.ensureMigrated;
+        await client.db.ready;
         const schemaPath = path.join(getTriplitDir(), 'schema.ts');
         const schemaQuery = client
           .query('_metadata')

@@ -47,7 +47,7 @@ export async function writeSchemaFile(
 // Currently using this in tests
 export async function schemaFileContentFromMigrations(migrations: Migration[]) {
   const db = new DB<any>({ migrations: migrations });
-  await db.ensureMigrated;
+  await db.ready;
   const schema = await db.getSchema();
   return schemaFileContentFromSchema(schema);
 }

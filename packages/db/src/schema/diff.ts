@@ -323,35 +323,33 @@ export type PossibleDataViolations = {
 } & BackwardsIncompatibleEdits;
 
 export async function getSchemaDiffIssues(
-  db: DB<any>,
+  tx: DBTransaction<any>,
   schemaDiff: CollectionAttributeDiff[]
 ) {
   const backwardsIncompatibleEdits = getBackwardsIncompatibleEdits(schemaDiff);
-  const results = await db.transact(async (tx) => {
-    return Promise.all(
-      backwardsIncompatibleEdits.map(async (edit) => {
-        const violatesExistingData = !(await isEditSafeWithExistingData(
-          tx,
-          edit.context,
-          edit.allowedIf
-        ));
-        const dataCure = DATA_CHANGE_CURES[edit.allowedIf](
-          edit.context.collection,
-          edit.context.attribute
-        );
-        const attributeCure = edit.attributeCure(
-          edit.context.collection,
-          edit.context.attribute
-        );
-        return {
-          ...edit,
-          violatesExistingData,
-          cure: attributeCure ? attributeCure + ' or ' + dataCure : dataCure,
-        };
-      })
-    );
-  });
-  return results.output as PossibleDataViolations[];
+  const results = await Promise.all(
+    backwardsIncompatibleEdits.map(async (edit) => {
+      const violatesExistingData = !(await isEditSafeWithExistingData(
+        tx,
+        edit.context,
+        edit.allowedIf
+      ));
+      const dataCure = DATA_CHANGE_CURES[edit.allowedIf](
+        edit.context.collection,
+        edit.context.attribute
+      );
+      const attributeCure = edit.attributeCure(
+        edit.context.collection,
+        edit.context.attribute
+      );
+      return {
+        ...edit,
+        violatesExistingData,
+        cure: attributeCure ? attributeCure + ' or ' + dataCure : dataCure,
+      };
+    })
+  );
+  return results as PossibleDataViolations[];
 }
 
 const DATA_CONSTRAINT_CHECKS: Record<

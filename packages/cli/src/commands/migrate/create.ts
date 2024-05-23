@@ -38,7 +38,7 @@ export default Command({
     const db = new DB<any>({
       migrations: migrationFiles.map((mf) => mf.migration),
     });
-    await db.ensureMigrated;
+    await db.ready;
 
     const dbSchema = await db.getSchema();
     if (dbSchema && dbSchema.version !== latest)

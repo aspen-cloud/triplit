@@ -71,6 +71,7 @@ export interface CollectionRules<
 interface TransactOptions {
   storeScope?: { read: string[]; write: string[] };
   skipRules?: boolean;
+  dangerouslyBypassSchemaInitialization?: boolean;
 }
 
 export type CreateCollectionOperation = [
@@ -410,9 +411,13 @@ export type SystemVariables = {
 
 export default class DB<M extends Models<any, any> | undefined = undefined> {
   tripleStore: TripleStore;
-  ensureMigrated: Promise<void | void[]>;
   systemVars: SystemVariables;
   cache: VariableAwareCache<M>;
+
+  // DB setup
+  private storageReady: Promise<void>;
+  private schemaInitialized: Promise<void>;
+  ready: Promise<void>;
 
   _schema?: Entity; // Timestamped Object
   schema?: StoreSchema<M>;
@@ -487,8 +492,12 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
       tripleStoreSchema,
     });
 
-    this.ensureMigrated = this.tripleStore
-      .ensureStorageIsMigrated()
+    this.storageReady = this.tripleStore.ensureStorageIsMigrated();
+    this.schemaInitialized = this.storageReady
+      // Setup schema subscription
+      .then(() => {
+        this.setupSchemaListener();
+      })
       // Apply migrations or overwrite schema
       .then(() => this.initializeDBWithMigrations(migrations))
       .then(() =>
@@ -496,10 +505,11 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
           // @ts-expect-error
           tripleStoreSchema
         )
-      )
-      // Setup schema subscription
-      .then(() => this.setupSchemaListener())
-      .then(() => this.logger.debug('Ready'));
+      );
+
+    this.ready = Promise.all([this.storageReady, this.schemaInitialized]).then(
+      () => this.logger.debug('Ready')
+    );
   }
 
   private initializeDBWithMigrations(
@@ -518,16 +528,15 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
       : Promise.resolve();
   }
 
-  private async initializeDBWithSchema(schema: StoreSchema<M> | undefined) {
-    if (!schema) return;
-    const currentSchema = await readSchemaFromTripleStore(this.tripleStore);
-    if (!currentSchema.schema) {
-      await this.overrideSchema(schema);
-    } else {
-      this.overrideSchema(schema);
-    }
+  private initializeDBWithSchema(schema: StoreSchema<M> | undefined) {
+    return schema
+      ? this.overrideSchema(schema).then(() => {})
+      : Promise.resolve();
   }
 
+  /**
+   * Sets up a subscription to changes to the schema in the triple store
+   */
   private setupSchemaListener() {
     return this.tripleStore.tupleStore.subscribe(
       { prefix: ['EAT', appendCollectionToId('_metadata', '_schema')] },
@@ -650,8 +659,8 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
   }
 
   private async loadSchemaData() {
-    await this.ensureMigrated;
     const triples = await getSchemaTriples(this.tripleStore);
+
     this._schema =
       constructEntity(triples, appendCollectionToId('_metadata', '_schema')) ??
       new Entity();
@@ -664,8 +673,15 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
     }
   }
 
-  async getSchema(): Promise<StoreSchema<M> | undefined> {
-    await this.ensureMigrated;
+  async getSchema(
+    dangerouslyBypassSchemaInitialization = false
+  ): Promise<StoreSchema<M> | undefined> {
+    // If we are bypassing schema initialization, we don't need to wait for the schema to be initialized
+    // This will result in the "old" schema being loaded
+    await (dangerouslyBypassSchemaInitialization
+      ? this.storageReady
+      : this.schemaInitialized);
+
     if (this._pendingSchemaRequest) await this._pendingSchemaRequest;
     if (!this._schema) {
       this._pendingSchemaRequest = this.loadSchemaData();
@@ -682,8 +698,10 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
     options: TransactOptions = {}
   ) {
     this.logger.debug('transact START', { options });
-    await this.ensureMigrated;
-    const schema = await this.getSchema();
+    await this.storageReady;
+    const schema = await this.getSchema(
+      options.dangerouslyBypassSchemaInitialization
+    );
     try {
       const resp = await this.tripleStore.transact(async (tripTx) => {
         const tx = new DBTransaction<M>(this, tripTx, copyHooks(this.hooks), {
@@ -719,7 +737,7 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
     options: DBFetchOptions = {}
   ) {
     this.logger.debug('fetch START', { query });
-    await this.ensureMigrated;
+    await this.storageReady;
     const schema = (await this.getSchema())?.collections as M;
     const fetchQuery = prepareQuery(query, schema, {
       skipRules: options.skipRules,
@@ -749,7 +767,7 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
     query: Q,
     options: DBFetchOptions = {}
   ) {
-    await this.ensureMigrated;
+    await this.storageReady;
     const schema = (await this.getSchema())?.collections as M;
     const fetchQuery = prepareQuery(query, schema, {
       skipRules: options.skipRules,
@@ -791,7 +809,7 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
     options: DBFetchOptions = {}
   ): Promise<FetchResultEntity<Q> | null> {
     query.limit = 1;
-    await this.ensureMigrated;
+    await this.storageReady;
     const result = await this.fetch(query, options);
     const entity = [...result.values()][0];
     if (!entity) return null;
@@ -826,7 +844,7 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
   ) {
     let unsubscribed = false;
     const startSubscription = async () => {
-      await this.ensureMigrated;
+      await this.storageReady;
       const schema = (await this.getSchema())?.collections as M;
       let subscriptionQuery = prepareQuery(query, schema, {
         skipRules: options.skipRules,
@@ -879,7 +897,7 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
     options: DBFetchOptions = {}
   ) {
     const startSubscription = async () => {
-      await this.ensureMigrated;
+      await this.storageReady;
       const schema = (await this.getSchema())?.collections as M;
       let subscriptionQuery = prepareQuery(query, schema, {
         skipRules: options.skipRules,
@@ -923,7 +941,6 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
     ) => void | Promise<void>,
     options: TransactOptions = {}
   ) {
-    await this.ensureMigrated;
     return await this.transact(async (tx) => {
       await tx.update(collectionName, entityId, updater);
     }, options);
