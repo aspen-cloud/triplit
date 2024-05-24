@@ -493,19 +493,28 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
     });
 
     this.storageReady = this.tripleStore.ensureStorageIsMigrated();
-    this.schemaInitialized = this.storageReady
-      // Setup schema subscription
-      .then(() => {
-        this.setupSchemaListener();
-      })
-      // Apply migrations or overwrite schema
-      .then(() => this.initializeDBWithMigrations(migrations))
-      .then(() =>
-        this.initializeDBWithSchema(
-          // @ts-expect-error
-          tripleStoreSchema
-        )
-      );
+    this.schemaInitialized = !!tripleStoreSchema
+      ? this.storageReady
+          // Setup schema subscription
+          .then(() => {
+            this.setupSchemaListener();
+          })
+          .then(() =>
+            this.initializeDBWithSchema(
+              // @ts-expect-error
+              tripleStoreSchema
+            )
+          )
+      : !!migrations
+      ? this.storageReady
+          // TODO: look into why test fails if we setup listener first for migrations
+          .then(() => this.initializeDBWithMigrations(migrations))
+          .then(() => {
+            this.setupSchemaListener();
+          })
+      : this.storageReady.then(() => {
+          this.setupSchemaListener();
+        });
 
     this.ready = Promise.all([this.storageReady, this.schemaInitialized]).then(
       () => this.logger.debug('Ready')
