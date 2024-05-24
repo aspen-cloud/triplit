@@ -863,6 +863,47 @@ export class TriplitClient<M extends ClientSchema | undefined = undefined> {
   ) {
     return this.syncEngine.onConnectionStatusChange(...args);
   }
+
+  connect() {
+    return this.syncEngine.connect();
+  }
+
+  disconnect() {
+    return this.syncEngine.disconnect();
+  }
+
+  get token() {
+    return this.syncEngine.token;
+  }
+
+  onSyncMessageReceived(
+    ...args: Parameters<typeof this.syncEngine.onSyncMessageReceived>
+  ) {
+    return this.syncEngine.onSyncMessageReceived(...args);
+  }
+  onSyncMessageSent(
+    ...args: Parameters<typeof this.syncEngine.onSyncMessageSent>
+  ) {
+    return this.syncEngine.onSyncMessageSent(...args);
+  }
+
+  retry(...args: Parameters<typeof this.syncEngine.retry>) {
+    return this.syncEngine.retry(...args);
+  }
+
+  rollback(...args: Parameters<typeof this.syncEngine.rollback>) {
+    return this.syncEngine.rollback(...args);
+  }
+
+  get connectionStatus() {
+    return this.syncEngine.connectionStatus;
+  }
+
+  isFirstTimeFetchingQuery(
+    ...args: Parameters<typeof this.syncEngine.isFirstTimeFetchingQuery>
+  ) {
+    return this.syncEngine.isFirstTimeFetchingQuery(...args);
+  }
 }
 
 function addLoggingIdToQuery(query: any) {

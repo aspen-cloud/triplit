@@ -27,7 +27,7 @@ export function useQuery<
   );
   const [fetchingLocal, setFetchingLocal] = useState(true);
   const [fetchingRemote, setFetchingRemote] = useState(
-    client.syncEngine.connectionStatus !== 'CLOSED'
+    client.connectionStatus !== 'CLOSED'
   );
   const [error, setError] = useState<any>(undefined);
   const [isInitialFetch, setIsInitialFetch] = useState(true);
@@ -38,11 +38,9 @@ export function useQuery<
   const stringifiedQuery = builtQuery && JSON.stringify(builtQuery);
 
   useEffect(() => {
-    client.syncEngine
-      .isFirstTimeFetchingQuery(builtQuery)
-      .then((isFirstFetch) => {
-        setIsInitialFetch(isFirstFetch);
-      });
+    client.isFirstTimeFetchingQuery(builtQuery).then((isFirstFetch) => {
+      setIsInitialFetch(isFirstFetch);
+    });
     const unsub = client.onConnectionStatusChange((status) => {
       if (status === 'CLOSING' || status === 'CLOSED') {
         setFetchingRemote(false);
@@ -188,7 +186,7 @@ export function useInfiniteQuery<
   const [error, setError] = useState<any>(undefined);
   const [fetching, setFetching] = useState(true);
   const [fetchingRemote, setFetchingRemote] = useState(
-    client.syncEngine.connectionStatus !== 'CLOSED'
+    client.connectionStatus !== 'CLOSED'
   );
   const [fetchingMore, setFetchingMore] = useState(false);
 
@@ -232,6 +230,7 @@ export function useInfiniteQuery<
         ...(options ?? {}),
         onRemoteFulfilled: () => {
           hasResponseFromServer.current = true;
+          console.log('remote fulfilled');
           setFetchingRemote(false);
         },
       }
