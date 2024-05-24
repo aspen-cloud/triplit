@@ -82,21 +82,27 @@ const workerOperator: ClientWorker = {
   },
   // @ts-ignore
   async subscribe(...args: Parameters<typeof clientOperator.subscribe>) {
-    args[3] = await normalizeSubscriptionOptions(args[3]);
+    args[3] = await normalizeSubscriptionOptions(
+      args[3] as ComLink.Remote<(typeof args)[3]>
+    );
     return ComLink.proxy(clientOperator.subscribe(...args));
   },
   // @ts-ignore
   async subscribeWithPagination(
     ...args: Parameters<typeof clientOperator.subscribe>
   ) {
-    args[3] = await normalizeSubscriptionOptions(args[3]);
+    args[3] = await normalizeSubscriptionOptions(
+      args[3] as ComLink.Remote<(typeof args)[3]>
+    );
     return ComLink.proxy(clientOperator.subscribeWithPagination(...args));
   },
   // @ts-ignore
   async subscribeWithExpand(
     ...args: Parameters<typeof clientOperator.subscribe>
   ) {
-    args[3] = await normalizeSubscriptionOptions(args[3]);
+    args[3] = await normalizeSubscriptionOptions(
+      args[3] as ComLink.Remote<(typeof args)[3]>
+    );
     return ComLink.proxy(clientOperator.subscribeWithExpand(...args));
   },
   updateOptions(
@@ -130,11 +136,12 @@ const workerOperator: ClientWorker = {
 };
 
 async function normalizeSubscriptionOptions(
-  options: any
+  options: ComLink.Remote<Partial<SubscriptionOptions>>
 ): Promise<Partial<SubscriptionOptions>> {
   return {
     localOnly: await options.localOnly,
     noCache: await options.noCache,
+    // @ts-ignore
     onRemoteFulfilled: options.onRemoteFulfilled,
   };
 }
