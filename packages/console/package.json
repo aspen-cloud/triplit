@@ -1,6 +1,6 @@
 {
   "name": "@triplit/console",
-  "version": "0.3.53",
+  "version": "0.3.54",
   "type": "module",
   "files": [
     "dist"

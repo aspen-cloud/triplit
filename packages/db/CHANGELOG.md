@@ -1,5 +1,11 @@
 # @triplit/db
 
+## 0.3.40
+
+### Patch Changes
+
+- 3f633a1: prevent additional schema checks
+
 ## 0.3.39
 
 ### Patch Changes
