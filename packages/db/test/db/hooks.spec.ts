@@ -123,6 +123,9 @@ describe('hooks API', async () => {
         },
       },
     });
+    // Await db ready to not trigger any callbacks during schema init
+    await db.ready;
+
     const afterCommitFn = vi.fn();
     db.addTrigger({ when: 'afterCommit' }, afterCommitFn);
     const afterInsertFn = vi.fn();

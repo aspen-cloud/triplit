@@ -225,7 +225,7 @@ describe('detecting dangerous edits', () => {
     }
     expect(destructiveEdits.length).toBe(7);
   });
-  it('can evaluate if an edit will lead to data corruption', async () => {
+  it.only('can evaluate if an edit will lead to data corruption', async () => {
     const original = wrapSchema({
       // IN THE REVERSE DIRECTION (i.e. from different to original)
       id: S.Id(), // safe
@@ -254,35 +254,40 @@ describe('detecting dangerous edits', () => {
       filledRecord: S.Record({ b: S.Number(), c: S.String(), d: S.String() }), // 3 x dangerous, but ok based on DB
     });
     const db = new DB({ schema: original });
-    let results = await getSchemaDiffIssues(
-      db,
-      diffSchemas(original, different)
-    );
-    // happiest case, nothing in the database
-    // TODO: changing types should be allowed with empty databases? tbd
-    expect(
-      results.map(({ violatesExistingData }) => violatesExistingData)
-    ).toStrictEqual([false, false, false, false, false, false, false]);
-    let reverseResults = await getSchemaDiffIssues(
-      db,
-      diffSchemas(different, original)
-    );
+    let results;
+    await db.transact(async (tx) => {
+      results = await getSchemaDiffIssues(tx, diffSchemas(original, different));
+      // happiest case, nothing in the database
+      // TODO: changing types should be allowed with empty databases? tbd
+      expect(
+        results.map(({ violatesExistingData }) => violatesExistingData)
+      ).toStrictEqual([false, false, false, false, false, false, false]);
+    });
 
-    expect(
-      reverseResults.map(({ violatesExistingData }) => violatesExistingData)
-    ).toStrictEqual([
-      false,
-      false,
-      false,
-      false,
-      false,
-      false,
-      false,
-      false,
-      false,
-      false,
-      false,
-    ]);
+    let reverseResults;
+    await db.transact(async (tx) => {
+      reverseResults = await getSchemaDiffIssues(
+        tx,
+        diffSchemas(different, original)
+      );
+
+      expect(
+        reverseResults.map(({ violatesExistingData }) => violatesExistingData)
+      ).toStrictEqual([
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+      ]);
+    });
+
     await db.insert('stressTest', {
       string: 'string',
       number: 1,
@@ -296,10 +301,13 @@ describe('detecting dangerous edits', () => {
       filledRecord: { a: 'string', b: 1, c: true },
     });
 
-    results = await getSchemaDiffIssues(db, diffSchemas(original, different));
-    expect(
-      results.map(({ violatesExistingData }) => violatesExistingData)
-    ).toStrictEqual([true, true, true, true, true, true, true]);
+    await db.transact(async (tx) => {
+      results = await getSchemaDiffIssues(tx, diffSchemas(original, different));
+      expect(
+        results.map(({ violatesExistingData }) => violatesExistingData)
+      ).toStrictEqual([true, true, true, true, true, true, true]);
+    });
+
     const db2 = new DB({ schema: different });
     await db2.insert('stressTest', {
       string: 'string',
@@ -312,24 +320,26 @@ describe('detecting dangerous edits', () => {
       emptyRecord: { a: 'string' },
       filledRecord: { b: 1, c: 'string', d: 'string' },
     });
-    reverseResults = await getSchemaDiffIssues(
-      db2,
-      diffSchemas(different, original)
-    );
-    expect(
-      reverseResults.map(({ violatesExistingData }) => violatesExistingData)
-    ).toStrictEqual([
-      false, // string always has a value
-      false, // number always has a value, is not null
-      false, // date always has a value
-      true, // changedType is not empty
-      false, // no entities have setString as null
-      true, // setNumber has value, can't change the type
-      true, // emptyRecord.a has an entity with a value, can't remove it
-      true, // filledRecord.c has a value, can't change the type
-      true, // filledRecord.d has a value, can't remove it
-      true, // filledRecord.a can't be added, entities already exist
-      true, // missingAttribute can't be added without Optional because entities already exist
-    ]);
+    await db2.transact(async (tx) => {
+      reverseResults = await getSchemaDiffIssues(
+        tx,
+        diffSchemas(different, original)
+      );
+      expect(
+        reverseResults.map(({ violatesExistingData }) => violatesExistingData)
+      ).toStrictEqual([
+        false, // string always has a value
+        false, // number always has a value, is not null
+        false, // date always has a value
+        true, // changedType is not empty
+        false, // no entities have setString as null
+        true, // setNumber has value, can't change the type
+        true, // emptyRecord.a has an entity with a value, can't remove it
+        true, // filledRecord.c has a value, can't change the type
+        true, // filledRecord.d has a value, can't remove it
+        true, // filledRecord.a can't be added, entities already exist
+        true, // missingAttribute can't be added without Optional because entities already exist
+      ]);
+    });
   });
 });
