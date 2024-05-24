@@ -1,5 +1,13 @@
 # @triplit/client
 
+## 0.3.51
+
+### Patch Changes
+
+- 19e147e: update query hook types to accept WorkerClient
+- Updated dependencies [74500fd]
+  - @triplit/db@0.3.41
+
 ## 0.3.50
 
 ### Patch Changes

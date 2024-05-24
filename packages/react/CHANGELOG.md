@@ -1,5 +1,13 @@
 # @triplit/react
 
+## 0.3.53
+
+### Patch Changes
+
+- 19e147e: update query hook types to accept WorkerClient
+- Updated dependencies [19e147e]
+  - @triplit/client@0.3.51
+
 ## 0.3.52
 
 ### Patch Changes

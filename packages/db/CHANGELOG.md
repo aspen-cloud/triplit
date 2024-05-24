@@ -1,5 +1,11 @@
 # @triplit/db
 
+## 0.3.41
+
+### Patch Changes
+
+- 74500fd: fixup initialization promises
+
 ## 0.3.40
 
 ### Patch Changes
