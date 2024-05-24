@@ -1,5 +1,13 @@
 # @triplit/client
 
+## 0.3.50
+
+### Patch Changes
+
+- 3f633a1: fix connection status for worker-client
+- Updated dependencies [3f633a1]
+  - @triplit/db@0.3.40
+
 ## 0.3.49
 
 ### Patch Changes
