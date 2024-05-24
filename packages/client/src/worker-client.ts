@@ -281,7 +281,10 @@ export class WorkerClient<M extends ClientSchema | undefined = undefined>
     return this.clientWorker.updateServerUrl(serverUrl);
   }
 
-  isFirstTimeFetchingQuery(query: CollectionQuery<any, any>): Promise<boolean> {
+  async isFirstTimeFetchingQuery(
+    query: CollectionQuery<any, any>
+  ): Promise<boolean> {
+    await this.initialized;
     return this.clientWorker.isFirstTimeFetchingQuery(query);
   }
 
@@ -294,9 +297,8 @@ export class WorkerClient<M extends ClientSchema | undefined = undefined>
   }
 
   onTxFailureRemote(txId: string, callback: () => void) {
-    const asyncUnsub = this.clientWorker.onTxFailureRemote(
-      txId,
-      ComLink.proxy(callback)
+    const asyncUnsub = this.initialized.then(() =>
+      this.clientWorker.onTxFailureRemote(txId, ComLink.proxy(callback))
     );
     return () => asyncUnsub.then((unsub) => unsub());
   }
@@ -305,10 +307,29 @@ export class WorkerClient<M extends ClientSchema | undefined = undefined>
     callback: (status: ConnectionStatus) => void,
     runImmediately?: boolean
   ) {
-    const unSubPromise = this.clientWorker.onConnectionStatusChange(
-      ComLink.proxy(callback),
-      runImmediately
+    const unSubPromise = this.initialized.then(() =>
+      this.clientWorker.onConnectionStatusChange(
+        ComLink.proxy(callback),
+        runImmediately
+      )
     );
     return () => unSubPromise.then((unsub) => unsub());
+  }
+
+  async connect() {
+    await this.initialized;
+    return this.clientWorker.connect();
+  }
+  async disconnect() {
+    await this.initialized;
+    return this.clientWorker.disconnect();
+  }
+  async retry(txId: string) {
+    await this.initialized;
+    return this.clientWorker.retry(txId);
+  }
+  async rollback(txIds: string | string[]) {
+    await this.initialized;
+    return this.clientWorker.rollback(txIds);
   }
 }

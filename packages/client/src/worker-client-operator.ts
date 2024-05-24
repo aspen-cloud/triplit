@@ -134,6 +134,18 @@ const workerOperator: ClientWorker = {
   ) {
     return ComLink.proxy(clientOperator.onConnectionStatusChange(...args));
   },
+  connect() {
+    return clientOperator.connect();
+  },
+  disconnect() {
+    return clientOperator.disconnect();
+  },
+  retry(...args: Parameters<typeof clientOperator.retry>) {
+    return clientOperator.retry(...args);
+  },
+  rollback(...args: Parameters<typeof clientOperator.rollback>) {
+    return clientOperator.rollback(...args);
+  },
   isFirstTimeFetchingQuery(query: CollectionQuery<any, any>): Promise<boolean> {
     return clientOperator.isFirstTimeFetchingQuery(query);
   },
