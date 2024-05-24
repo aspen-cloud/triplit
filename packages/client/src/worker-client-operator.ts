@@ -1,5 +1,8 @@
 import * as ComLink from 'comlink';
-import { TriplitClient as Client } from './triplit-client.js';
+import {
+  TriplitClient as Client,
+  SubscriptionOptions,
+} from './triplit-client.js';
 import { ClientQuery } from './index.js';
 import { ClientFetchResultEntity } from './utils/query.js';
 import {
@@ -12,19 +15,12 @@ import {
   TupleValue,
 } from '@triplit/db';
 
-// onconnect = function (event) {
-//   const port = event.ports[0];
-
-//   Comlink.expose(obj, port);
-// };
-
 let clientOperator: Client;
 
 interface ClientWorker extends Client {
   init: (options: any) => void;
 }
 
-// @ts-ignore
 const workerOperator: ClientWorker = {
   init: (options) => {
     if (clientOperator != undefined) return;
@@ -34,29 +30,23 @@ const workerOperator: ClientWorker = {
       schema: JSONToSchema(schema)?.collections,
     });
   },
-  fetch: async (...args) => await clientOperator.fetch(...args),
+  fetch: async (...args: Parameters<typeof clientOperator.fetch>) =>
+    await clientOperator.fetch(...args),
   // @ts-ignore
-  async transact<Output>(callback: (tx: DBTransaction<M>) => Promise<Output>) {
-    // @ts-ignore
-    return await clientOperator.transact((tx) => callback(ComLink.proxy(tx)));
+  async transact(...args: Parameters<typeof clientOperator.transact>) {
+    return await clientOperator.transact((tx) => args[0](ComLink.proxy(tx)));
   },
-  // @ts-ignore
-  fetchById: async function <CN extends string>(...args): Promise<any> {
-    // @ts-ignore
+  async fetchById(
+    ...args: Parameters<typeof clientOperator.fetchById>
+  ): Promise<any> {
     return await clientOperator.fetchById(...args);
   },
-  fetchOne: async function <CQ extends ClientQuery<undefined, any>>(
-    // @ts-ignore
-    ...args
-  ): Promise<ClientFetchResultEntity<CQ> | null> {
-    // @ts-ignore
+  async fetchOne(...args: Parameters<typeof clientOperator.fetchOne>) {
     return await clientOperator.fetchOne(...args);
   },
-  insert: async function <CN extends string>(
-    // @ts-ignore
-    ...args
+  async insert(
+    ...args: Parameters<typeof clientOperator.insert>
   ): Promise<{ txId: string | undefined; output: any }> {
-    // @ts-ignore
     return await clientOperator.insert(...args);
   },
   async update<CN extends CollectionNameFromModels<any>>(
@@ -64,7 +54,6 @@ const workerOperator: ClientWorker = {
     entityId: string,
     updater: (entity: UpdateTypeFromModel<any>) => void | Promise<void>
   ): Promise<{ txId: string | undefined; output: void | undefined }> {
-    // @ts-ignore
     return await clientOperator.update(
       collectionName,
       entityId,
@@ -83,63 +72,55 @@ const workerOperator: ClientWorker = {
   ): Promise<{ txId: string | undefined; output: void | undefined }> {
     return await clientOperator.updateRaw(collectionName, entityId, updater);
   },
-  getSchema: async function (): Promise<any> {
+  async getSchema() {
     return await clientOperator.getSchema();
   },
-  delete: async function <CN extends string>(
-    // @ts-ignore
-    ...args
+  async delete(
+    ...args: Parameters<typeof clientOperator.delete>
   ): Promise<{ txId: string | undefined; output: void | undefined }> {
-    // @ts-ignore
     return await clientOperator.delete(...args);
   },
-  subscribe: function <CQ extends ClientQuery<undefined, any>>(
-    // @ts-ignore
-    query,
-    // @ts-ignore
-    onResults,
-    // @ts-ignore
-    onError,
-    // @ts-ignore
-    onRemoteFulfilled
-  ): () => void {
-    // @ts-ignore
-    return ComLink.proxy(
-      clientOperator.subscribe(query, onResults, onError, { onRemoteFulfilled })
-    );
+  // @ts-ignore
+  async subscribe(...args: Parameters<typeof clientOperator.subscribe>) {
+    args[3] = await normalizeSubscriptionOptions(args[3]);
+    return ComLink.proxy(clientOperator.subscribe(...args));
   },
-  subscribeWithPagination: function <CQ extends ClientQuery<undefined, any>>(
-    // @ts-ignore
-    ...args
-  ): { unsubscribe: () => void; nextPage: () => void; prevPage: () => void } {
-    // @ts-ignore
-    return clientOperator.subscribeWithPagination(...args);
+  // @ts-ignore
+  async subscribeWithPagination(
+    ...args: Parameters<typeof clientOperator.subscribe>
+  ) {
+    args[3] = await normalizeSubscriptionOptions(args[3]);
+    return ComLink.proxy(clientOperator.subscribeWithPagination(...args));
   },
-  subscribeWithExpand: function <CQ extends ClientQuery<undefined, any>>(
-    // @ts-ignore
-    ...args
-  ): {
-    unsubscribe: () => void;
-    loadMore: (pageSize?: number | undefined) => void;
-  } {
-    // @ts-ignore
-    return clientOperator.subscribeWithExpand(...args);
+  // @ts-ignore
+  async subscribeWithExpand(
+    ...args: Parameters<typeof clientOperator.subscribe>
+  ) {
+    args[3] = await normalizeSubscriptionOptions(args[3]);
+    return ComLink.proxy(clientOperator.subscribeWithExpand(...args));
   },
-  updateOptions: function (...args): void {
+  updateOptions(
+    ...args: Parameters<typeof clientOperator.updateOptions>
+  ): void {
     clientOperator.updateOptions(...args);
   },
-  updateToken: function (...args): void {
+  updateToken(...args: Parameters<typeof clientOperator.updateToken>): void {
     clientOperator.updateToken(...args);
   },
-  updateServerUrl: function (...args): void {
+  updateServerUrl(
+    ...args: Parameters<typeof clientOperator.updateServerUrl>
+  ): void {
     clientOperator.updateServerUrl(...args);
   },
-
-  onTxCommitRemote(txId: string, callback: () => void) {
-    return ComLink.proxy(clientOperator.onTxCommitRemote(txId, callback));
+  onTxCommitRemote(
+    ...args: Parameters<typeof clientOperator.onTxCommitRemote>
+  ) {
+    return ComLink.proxy(clientOperator.onTxCommitRemote(...args));
   },
-  onTxFailureRemote(txId: string, callback: () => void) {
-    return ComLink.proxy(clientOperator.onTxFailureRemote(txId, callback));
+  onTxFailureRemote(
+    ...args: Parameters<typeof clientOperator.onTxFailureRemote>
+  ) {
+    return ComLink.proxy(clientOperator.onTxFailureRemote(...args));
   },
   onConnectionStatusChange(
     ...args: Parameters<typeof this.syncEngine.onConnectionStatusChange>
@@ -147,6 +128,16 @@ const workerOperator: ClientWorker = {
     return ComLink.proxy(clientOperator.onConnectionStatusChange(...args));
   },
 };
+
+async function normalizeSubscriptionOptions(
+  options: any
+): Promise<Partial<SubscriptionOptions>> {
+  return {
+    localOnly: await options.localOnly,
+    noCache: await options.noCache,
+    onRemoteFulfilled: options.onRemoteFulfilled,
+  };
+}
 
 // @ts-ignore
 self.addEventListener('connect', (evt: MessageEvent) => {

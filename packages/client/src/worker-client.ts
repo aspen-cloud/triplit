@@ -11,6 +11,7 @@ import type {
 import {
   ChangeTracker,
   CollectionNameFromModels,
+  CollectionQuery,
   DBTransaction,
   FetchByIdQueryParams,
   InsertTypeFromModel,
@@ -34,11 +35,6 @@ export class WorkerClient<M extends ClientSchema | undefined = undefined>
   implements TriplitClient<M>
 {
   initialized: Promise<void>;
-  syncEngine = {
-    connectionStatus: 'open',
-    onConnectionStatusChange: () => () => {},
-    isFirstTimeFetchingQuery: () => Promise.resolve(true),
-  };
   clientWorker: ComLink.Remote<Client<M>>;
   constructor(options?: ClientOptions<M> & { workerUrl?: string }) {
     const worker = new SharedWorker(
@@ -69,6 +65,7 @@ export class WorkerClient<M extends ClientSchema | undefined = undefined>
     // @ts-expect-error
     return this.clientWorker.fetch(query, options);
   }
+  // @ts-ignore
   async transact<Output>(callback: (tx: DBTransaction<M>) => Promise<Output>) {
     await this.initialized;
     return this.clientWorker.transact(ComLink.proxy(callback));
@@ -173,7 +170,8 @@ export class WorkerClient<M extends ClientSchema | undefined = undefined>
         // CURRENTLY ONLY SUPPORTS onRemoteFulfilled
         // Comlink is having trouble either just proxying the callback
         // inside options or proxying the whole options object
-        options?.onRemoteFulfilled && ComLink.proxy(options.onRemoteFulfilled)
+        // @ts-ignore
+        ComLink.proxy(options)
       );
     })();
     return () => {
@@ -206,8 +204,10 @@ export class WorkerClient<M extends ClientSchema | undefined = undefined>
         query,
         // @ts-ignore
         ComLink.proxy(onResults),
-        onError,
-        options
+        // @ts-ignore
+        onError && ComLink.proxy(onError),
+        // @ts-ignore
+        ComLink.proxy(options)
       )
     );
     const unsubscribe = () => {
@@ -235,15 +235,15 @@ export class WorkerClient<M extends ClientSchema | undefined = undefined>
     onError?: (error: any) => void | Promise<void>,
     options?: Partial<SubscriptionOptions>
   ): InfiniteSubscription {
-    // let unsubscribe = () => {},
-    //   loadMore = (pageSize?: number) => {};
     const subscriptionPromise = this.initialized.then(() =>
       this.clientWorker.subscribeWithExpand(
         query,
         // @ts-ignore
         ComLink.proxy(onResults),
-        onError,
-        options
+        // @ts-ignore
+        onError && ComLink.proxy(onError),
+        // @ts-ignore
+        ComLink.proxy(options)
       )
     );
     const unsubscribe = () => {
@@ -271,6 +271,14 @@ export class WorkerClient<M extends ClientSchema | undefined = undefined>
     return this.clientWorker.updateServerUrl(serverUrl);
   }
 
+  // async get connectionStatus(){
+  //   return this.clientWorker.connectionStatus;
+  // }
+
+  isFirstTimeFetchingQuery(query: CollectionQuery<any, any>): Promise<boolean> {
+    return this.clientWorker.isFirstTimeFetchingQuery(query);
+  }
+
   onTxCommitRemote(txId: string, callback: () => void) {
     const asyncUnsub = this.clientWorker.onTxCommitRemote(
       txId,
@@ -295,8 +303,6 @@ export class WorkerClient<M extends ClientSchema | undefined = undefined>
       ComLink.proxy(callback),
       runImmediately
     );
-    return async () => {
-      (await unSubPromise)();
-    };
+    return () => unSubPromise.then((unsub) => unsub());
   }
 }
