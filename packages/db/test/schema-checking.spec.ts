@@ -225,7 +225,7 @@ describe('detecting dangerous edits', () => {
     }
     expect(destructiveEdits.length).toBe(7);
   });
-  it.only('can evaluate if an edit will lead to data corruption', async () => {
+  it('can evaluate if an edit will lead to data corruption', async () => {
     const original = wrapSchema({
       // IN THE REVERSE DIRECTION (i.e. from different to original)
       id: S.Id(), // safe
