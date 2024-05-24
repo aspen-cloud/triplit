@@ -36,6 +36,7 @@ export class WorkerClient<M extends ClientSchema | undefined = undefined>
 {
   initialized: Promise<void>;
   clientWorker: ComLink.Remote<Client<M>>;
+  private _connectionStatus: ConnectionStatus;
   constructor(options?: ClientOptions<M> & { workerUrl?: string }) {
     const worker = new SharedWorker(
       options?.workerUrl ??
@@ -49,6 +50,15 @@ export class WorkerClient<M extends ClientSchema | undefined = undefined>
       ...options,
       schema: schema && schemaToJSON({ collections: schema, version: 0 }),
     });
+    this._connectionStatus = 'CLOSED';
+    this.onConnectionStatusChange((status) => {
+      console.log('connection status:', status);
+      this._connectionStatus = status;
+    }, true);
+  }
+
+  get connectionStatus() {
+    return this._connectionStatus;
   }
 
   query<CN extends CollectionNameFromModels<M>>(
@@ -270,10 +280,6 @@ export class WorkerClient<M extends ClientSchema | undefined = undefined>
     await this.initialized;
     return this.clientWorker.updateServerUrl(serverUrl);
   }
-
-  // async get connectionStatus(){
-  //   return this.clientWorker.connectionStatus;
-  // }
 
   isFirstTimeFetchingQuery(query: CollectionQuery<any, any>): Promise<boolean> {
     return this.clientWorker.isFirstTimeFetchingQuery(query);

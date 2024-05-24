@@ -13,6 +13,7 @@ import {
   ModelFromModels,
   UpdateTypeFromModel,
   TupleValue,
+  CollectionQuery,
 } from '@triplit/db';
 
 let clientOperator: Client;
@@ -132,6 +133,9 @@ const workerOperator: ClientWorker = {
     ...args: Parameters<typeof this.syncEngine.onConnectionStatusChange>
   ) {
     return ComLink.proxy(clientOperator.onConnectionStatusChange(...args));
+  },
+  isFirstTimeFetchingQuery(query: CollectionQuery<any, any>): Promise<boolean> {
+    return clientOperator.isFirstTimeFetchingQuery(query);
   },
 };
 
