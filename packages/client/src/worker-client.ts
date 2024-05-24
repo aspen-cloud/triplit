@@ -171,7 +171,7 @@ export class WorkerClient<M extends ClientSchema | undefined = undefined>
         // Comlink is having trouble either just proxying the callback
         // inside options or proxying the whole options object
         // @ts-ignore
-        ComLink.proxy(options)
+        options && ComLink.proxy(options)
       );
     })();
     return () => {
@@ -207,7 +207,7 @@ export class WorkerClient<M extends ClientSchema | undefined = undefined>
         // @ts-ignore
         onError && ComLink.proxy(onError),
         // @ts-ignore
-        ComLink.proxy(options)
+        options && ComLink.proxy(options)
       )
     );
     const unsubscribe = () => {
@@ -243,7 +243,7 @@ export class WorkerClient<M extends ClientSchema | undefined = undefined>
         // @ts-ignore
         onError && ComLink.proxy(onError),
         // @ts-ignore
-        ComLink.proxy(options)
+        options && ComLink.proxy(options)
       )
     );
     const unsubscribe = () => {

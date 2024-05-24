@@ -138,6 +138,7 @@ const workerOperator: ClientWorker = {
 async function normalizeSubscriptionOptions(
   options: ComLink.Remote<Partial<SubscriptionOptions>>
 ): Promise<Partial<SubscriptionOptions>> {
+  if (options == undefined) return {};
   return {
     localOnly: await options.localOnly,
     noCache: await options.noCache,
