@@ -7,12 +7,13 @@ import {
   QueryBuilder,
   SubscriptionOptions,
 } from '@triplit/client';
+import { WorkerClient } from '@triplit/client/worker-client';
 
 export function useQuery<
   M extends Models<any, any> | undefined,
   Q extends ClientQuery<M, any, any, any>
 >(
-  client: TriplitClient<M>,
+  client: TriplitClient<M> | WorkerClient<M>,
   query: QueryBuilder<Q>,
   options?: Partial<SubscriptionOptions>
 ): {
@@ -98,7 +99,7 @@ export function usePaginatedQuery<
   M extends Models<any, any> | undefined,
   Q extends ClientQuery<M, any, any, any>
 >(
-  client: TriplitClient<any>,
+  client: TriplitClient<M> | WorkerClient<M>,
   query: QueryBuilder<Q>,
   options?: Partial<SubscriptionOptions>
 ) {
@@ -173,7 +174,7 @@ export function useInfiniteQuery<
   M extends Models<any, any> | undefined,
   Q extends ClientQuery<M, any, any, any>
 >(
-  client: TriplitClient<any>,
+  client: TriplitClient<M> | WorkerClient<M>,
   query: QueryBuilder<Q>,
   options?: Partial<SubscriptionOptions>
 ) {

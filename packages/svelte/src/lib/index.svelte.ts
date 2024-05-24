@@ -8,12 +8,13 @@ import type {
   SubscriptionOptions,
   TriplitClient,
 } from '@triplit/client';
+import { WorkerClient } from '@triplit/client/worker-client';
 
 export function useQuery<
   M extends Models<any, any> | undefined,
   Q extends ClientQuery<M, any, any, any>
 >(
-  client: TriplitClient<any>,
+  client: TriplitClient<any> | WorkerClient<any>,
   query: QueryBuilder<Q>,
   options?: Partial<SubscriptionOptions>
 ): {
@@ -27,7 +28,7 @@ export function useQuery<
   let results: ClientFetchResult<Q> | undefined = $state(undefined);
   let isInitialFetch = $state(true);
   let fetchingLocal = $state(false);
-  let fetchingRemote = $state(client.syncEngine.connectionStatus !== 'CLOSED');
+  let fetchingRemote = $state(client.connectionStatus !== 'CLOSED');
   let fetching = $derived(fetchingLocal || (isInitialFetch && fetchingRemote));
   let error: any = $state(undefined);
   let hasResponseFromServer = false;
@@ -41,12 +42,10 @@ export function useQuery<
   }
 
   $effect(() => {
-    client.syncEngine
-      .isFirstTimeFetchingQuery(builtQuery)
-      .then((isFirstFetch) => {
-        isInitialFetch = isFirstFetch;
-      });
-    const unsub = client.syncEngine.onConnectionStatusChange((status) => {
+    client.isFirstTimeFetchingQuery(builtQuery).then((isFirstFetch) => {
+      isInitialFetch = isFirstFetch;
+    });
+    const unsub = client.onConnectionStatusChange((status) => {
       if (status === 'CLOSING' || status === 'CLOSED') {
         fetchingRemote = false;
         return;
@@ -106,11 +105,13 @@ export function useQuery<
   };
 }
 
-export function useConnectionStatus(client: TriplitClient<any>) {
+export function useConnectionStatus(
+  client: TriplitClient<any> | WorkerClient<any>
+) {
   let status = $state('CONNECTING');
 
   $effect(() => {
-    const unsub = client.syncEngine.onConnectionStatusChange((newStatus) => {
+    const unsub = client.onConnectionStatusChange((newStatus) => {
       status = newStatus;
     }, true);
     return () => {

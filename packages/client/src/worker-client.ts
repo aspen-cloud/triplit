@@ -31,9 +31,7 @@ import {
 } from './utils/query.js';
 import { ConnectionStatus } from './index.js';
 
-export class WorkerClient<M extends ClientSchema | undefined = undefined>
-  implements TriplitClient<M>
-{
+export class WorkerClient<M extends ClientSchema | undefined = undefined> {
   initialized: Promise<void>;
   clientWorker: ComLink.Remote<Client<M>>;
   private _connectionStatus: ConnectionStatus;
