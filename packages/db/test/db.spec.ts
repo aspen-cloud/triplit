@@ -101,6 +101,24 @@ describe('Database API', () => {
     ).rejects.toThrowError(InvalidEntityIdError);
   });
 
+  it('wont allow multiple transactions to have same transaction id', async () => {
+    const db = new DB();
+    const numTransactions = 10;
+    const txPromises = Array.from(
+      { length: numTransactions },
+      async (_, index) => {
+        const tx = db.transact(async (tx) => {
+          await pause(100 * Math.random());
+          await tx.insert('Student', { name: 'John Doe', id: `${index + 1}` });
+        });
+        return tx;
+      }
+    );
+    const txResults = await Promise.all(txPromises);
+    const txIds = txResults.map(({ txId }) => txId);
+    expect(new Set(txIds).size).toBe(numTransactions);
+  });
+
   it('will throw an error when it parses an ID with a # in it', async () => {
     expect(() => stripCollectionFromId('Student#john#1')).toThrowError(
       InvalidInternalEntityIdError
