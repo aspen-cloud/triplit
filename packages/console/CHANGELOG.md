@@ -1,5 +1,14 @@
 # @triplit/console
 
+## 0.3.53
+
+### Patch Changes
+
+- e1bae7b: add right click copy context menu
+- Updated dependencies [e1bae7b]
+  - @triplit/client@0.3.49
+  - @triplit/react@0.3.51
+
 ## 0.3.52
 
 ### Patch Changes

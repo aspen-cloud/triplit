@@ -1,5 +1,11 @@
 # @triplit/client
 
+## 0.3.49
+
+### Patch Changes
+
+- e1bae7b: worker-client improvements
+
 ## 0.3.48
 
 ### Patch Changes
