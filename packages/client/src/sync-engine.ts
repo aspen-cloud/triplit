@@ -484,9 +484,7 @@ export class SyncEngine {
 
     // NOTE: this comes from proxy in websocket.ts
     this.transport.onConnectionChange((state: ConnectionStatus) => {
-      console.log('connection status change', state);
       for (const handler of this.connectionChangeHandlers) {
-        console.log('status change handler', handler);
         handler(state);
       }
     });
