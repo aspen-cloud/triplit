@@ -4,9 +4,11 @@ import { usePageId } from './use-query-params.js';
 import { useMemo } from 'react';
 
 export const client = new TriplitClient({
+  storage: 'indexeddb',
   serverUrl: import.meta.env.VITE_TRIPLIT_SERVER_URL,
   token: import.meta.env.VITE_TRIPLIT_TOKEN,
 });
+window.triplit = client;
 
 export function usePages() {
   return useQuery(client, client.query('pages').order(['createdAt', 'DESC']));

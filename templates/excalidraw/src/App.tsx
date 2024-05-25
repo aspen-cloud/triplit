@@ -54,9 +54,12 @@ function App() {
         elem.groupIds = [];
       }
       if (elem.points) {
-        elem.points = Object.values(elem.points).map((point) =>
-          Object.values(point)
-        );
+        // elem.points = Object.values(elem.points).map((point) =>
+        //   Object.values(point)
+        // );
+        console.log('stored points', elem.points);
+        elem.points = JSON.parse(elem.points);
+        console.log('elem with points', elem);
       }
       return elem;
     });
@@ -102,19 +105,39 @@ function App() {
       try {
         await client.transact(async (tx) => {
           for (const change of changes) {
+            // hack to handle inserts that are actually updates like
+            // {type: 'insert', path: '/BpjfOZcnTuWfH0p3OA48L/points/2', value: Array(2)}
+            if (change.type === 'insert' && change.path.split('/').length > 2) {
+              change.type = 'update';
+            }
             if (change.type === 'insert') {
               const elementDoc = Value.Patch({}, [change]);
               const [id, element] = Object.entries(elementDoc)[0];
-              await tx.insert('elements', { ...element, pageId }, id);
+              if ('points' in element) {
+                element.points = JSON.stringify(element.points);
+                console.log('inserting elem', element);
+              }
+              await tx.insert('elements', { ...element, pageId, id });
             } else if (change.type === 'update') {
+              // console.log('change', change);
               const [entityId, ...pathArr] = change.path.split('/').slice(1);
               const lastPath = pathArr.pop();
               await tx.update('elements', entityId, async (entity) => {
                 let scope = entity;
+                let points;
                 for (const path of pathArr) {
-                  scope = scope[path];
+                  if (path === 'points') {
+                    points = JSON.parse(scope[path]);
+                    scope = points;
+                  } else {
+                    scope = scope[path];
+                  }
                 }
                 scope[lastPath] = change.value;
+
+                if (points) {
+                  entity.points = JSON.stringify(points);
+                }
               });
             }
           }
