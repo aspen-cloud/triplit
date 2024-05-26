@@ -1,5 +1,11 @@
 # @triplit/client
 
+## 0.3.52
+
+### Patch Changes
+
+- d890707: hotfix updateGobalVars
+
 ## 0.3.51
 
 ### Patch Changes
