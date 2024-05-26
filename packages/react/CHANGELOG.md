@@ -1,5 +1,12 @@
 # @triplit/react
 
+## 0.3.54
+
+### Patch Changes
+
+- Updated dependencies [d890707]
+  - @triplit/client@0.3.52
+
 ## 0.3.53
 
 ### Patch Changes
