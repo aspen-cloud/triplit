@@ -7,7 +7,7 @@ import {
   QueryBuilder,
   SubscriptionOptions,
 } from '@triplit/client';
-import { WorkerClient } from '@triplit/client/worker-client';
+import type { WorkerClient } from '@triplit/client/worker-client';
 
 export function useQuery<
   M extends Models<any, any> | undefined,

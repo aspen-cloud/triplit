@@ -8,12 +8,13 @@ import {
   ClientQueryDefault,
 } from '@triplit/client';
 import { useQuery } from './use-query.js';
+import type { WorkerClient } from '@triplit/client/worker-client';
 
 export function useEntity<
   M extends Models<any, any> | undefined,
   CN extends CollectionNameFromModels<M>
 >(
-  client: TriplitClient<M>,
+  client: TriplitClient<M> | WorkerClient<M>,
   collectionName: CN,
   id: string,
   queryParams?: FetchByIdQueryParams<M, CN>,

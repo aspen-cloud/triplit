@@ -1,5 +1,5 @@
 import { ConnectionStatus, TriplitClient } from '@triplit/client';
-import { WorkerClient } from '@triplit/client/worker-client';
+import type { WorkerClient } from '@triplit/client/worker-client';
 import { useEffect, useState } from 'react';
 
 export function useConnectionStatus(
