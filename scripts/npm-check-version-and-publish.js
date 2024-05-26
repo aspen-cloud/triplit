@@ -5,7 +5,7 @@ const semver = require('semver');
 
 const publishedVersion = getPublishedVersion();
 const currentVersion = packageJson.version;
-
+console.log({ package: packageJson.name, publishedVersion, currentVersion });
 if (!publishedVersion || semver.gt(currentVersion, publishedVersion)) {
   console.log('New version detected. Publishing...');
   execSync('yarn npm publish --access public', { stdio: 'inherit' });
@@ -16,15 +16,12 @@ if (!publishedVersion || semver.gt(currentVersion, publishedVersion)) {
 function getPublishedVersion() {
   try {
     const publishedVersionsString = execSync(
-      `yarn npm info ${packageJson.name} --fields versions`,
+      `yarn npm info ${packageJson.name} --fields version --json`,
       {
         encoding: 'utf-8',
       }
-    ).trim();
-    const publishedVersions = publishedVersionsString
-      .match(/'([^']+)'/g)
-      .map((version) => version.replace(/'/g, '')); // extracts versions and removes quotes
-    return semver.maxSatisfying(publishedVersions, '*'); // gets the highest version using semver
+    );
+    return JSON.parse(publishedVersionsString).version;
   } catch (e) {
     // Catch 404 which has no published version
     if (
