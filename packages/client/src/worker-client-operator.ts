@@ -149,6 +149,11 @@ const workerOperator: ClientWorker = {
   isFirstTimeFetchingQuery(query: CollectionQuery<any, any>): Promise<boolean> {
     return clientOperator.isFirstTimeFetchingQuery(query);
   },
+  updateGlobalVariables(
+    ...args: Parameters<typeof clientOperator.db.updateGlobalVariables>
+  ) {
+    return clientOperator.db.updateGlobalVariables(...args);
+  },
 };
 
 async function normalizeSubscriptionOptions(

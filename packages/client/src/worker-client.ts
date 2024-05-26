@@ -34,6 +34,8 @@ import { ConnectionStatus } from './index.js';
 export class WorkerClient<M extends ClientSchema | undefined = undefined> {
   initialized: Promise<void>;
   clientWorker: ComLink.Remote<Client<M>>;
+  db: { updateGlobalVariables: (variables: Record<string, any>) => void } =
+    {} as any;
   private _connectionStatus: ConnectionStatus;
   constructor(options?: ClientOptions<M> & { workerUrl?: string }) {
     const worker = new SharedWorker(
@@ -53,6 +55,10 @@ export class WorkerClient<M extends ClientSchema | undefined = undefined> {
       console.log('connection status:', status);
       this._connectionStatus = status;
     }, true);
+    this.db.updateGlobalVariables = (variables) => {
+      //@ts-expect-error
+      this.clientWorker.updateGlobalVariables(variables);
+    };
   }
 
   get connectionStatus() {
