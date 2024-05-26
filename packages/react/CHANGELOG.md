@@ -1,5 +1,11 @@
 # @triplit/react
 
+## 0.3.55
+
+### Patch Changes
+
+- ea392af: Fix useEntity type to support WorkerClient
+
 ## 0.3.54
 
 ### Patch Changes
