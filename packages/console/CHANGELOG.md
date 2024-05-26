@@ -1,5 +1,12 @@
 # @triplit/console
 
+## 0.3.57
+
+### Patch Changes
+
+- Updated dependencies [ea392af]
+  - @triplit/react@0.3.55
+
 ## 0.3.56
 
 ### Patch Changes
