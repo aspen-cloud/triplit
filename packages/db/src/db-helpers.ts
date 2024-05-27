@@ -9,6 +9,8 @@ import {
   InvalidOrderClauseError,
   TriplitError,
   InvalidWhereClauseError,
+  RelationDoesNotExistError,
+  IncludedNonRelationError,
 } from './errors.js';
 import {
   QueryWhere,
@@ -616,6 +618,7 @@ function addSubsSelectsFromIncludes<
       // @ts-expect-error TODO: figure out proper typing of collectionName
       query.collectionName
     );
+
     if (attributeType && attributeType.type === 'query') {
       let additionalQuery =
         // @ts-expect-error TODO: figure out proper typing of include here, this is where it would be helpful to know the difference between a CollectionQuery and Prepared<CollectionQuery>
@@ -635,10 +638,13 @@ function addSubsSelectsFromIncludes<
         cardinality: attributeType.cardinality,
       };
       query.include = { ...query.include, [relationName]: subquerySelection };
+    } else if (relation?.subquery) {
+      query.include = { ...query.include, [relationName]: relation };
     } else {
-      if (relation?.subquery) {
-        query.include = { ...query.include, [relationName]: relation };
+      if (!attributeType) {
+        throw new RelationDoesNotExistError(relationName, query.collectionName);
       }
+      throw new IncludedNonRelationError(relationName, query.collectionName);
     }
   }
   return query;
