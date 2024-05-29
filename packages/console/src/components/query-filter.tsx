@@ -7,13 +7,14 @@ import {
   CollectionTypeKeys,
   ValueTypeKeys,
 } from '../../../db/src/data-types/serialization';
+import { CollectionDefinition } from '@triplit/db';
 
 export function QueryFilter({
   filter,
   onUpdate,
   attributes,
   onPressRemove,
-  schema,
+  collectionDefinition,
 }: {
   filter: {
     attribute: string;
@@ -27,16 +28,20 @@ export function QueryFilter({
   ) => void;
   attributes: string[];
   onPressRemove: () => void;
-  schema?: Model<any>;
+  collectionDefinition?: CollectionDefinition;
 }) {
   const { attribute, operator, value, asType } = filter;
-  const attributeDefinition = (schema?.properties[attribute] ?? {
+  const attributeDefinition = (collectionDefinition?.schema?.properties[
+    attribute
+  ] ?? {
     type: asType,
   }) as AttributeDefinition;
 
   const onChangeAttribute = useCallback(
     (attr: string) => {
-      const newAttributeDefinition = schema?.properties?.[attr] ?? {
+      const newAttributeDefinition = collectionDefinition?.schema?.properties?.[
+        attr
+      ] ?? {
         type: 'string',
       };
       if (newAttributeDefinition.type !== asType) {
@@ -49,7 +54,7 @@ export function QueryFilter({
       }
       onUpdate('attribute', attr);
     },
-    [schema, asType, onUpdate]
+    [collectionDefinition, asType, onUpdate]
   );
 
   const onChangeType = useCallback(
@@ -71,66 +76,61 @@ export function QueryFilter({
       ? attributeDefinition.items.type
       : asType;
   return (
-    <div className="flex flex-row gap-3 p-1 items-end">
-      <FormField label="attribute">
+    <>
+      <Select
+        className="col-span-3"
+        value={attribute}
+        onValueChange={onChangeAttribute}
+        data={attributes}
+      />
+      {!collectionDefinition && (
         <Select
-          value={attribute}
-          onValueChange={onChangeAttribute}
-          data={attributes}
-        />
-      </FormField>
-      <FormField label="type">
-        <Select
-          disabled={!!schema}
+          className="col-span-2"
           value={asType}
           onValueChange={onChangeType}
-          data={
-            schema
-              ? ALL_TYPES
-              : ALL_TYPES.filter((t) => t !== 'set' && t !== 'date')
-          }
+          data={ALL_TYPES.filter((t) => t !== 'set' && t !== 'date')}
         />
-      </FormField>
-      <FormField label="operator">
+      )}
+      <Select
+        className="col-span-2"
+        value={operator}
+        onValueChange={(value) => onUpdate('operator', value ?? '')}
+        data={typeFromJSON(attributeDefinition).supportedOperations}
+      />
+      {valueInputType === 'string' && (
+        <Input
+          className="col-span-3"
+          type="text"
+          value={value as string}
+          onChange={(e) => onUpdate('value', e.target.value)}
+        />
+      )}
+      {valueInputType === 'number' && (
+        <Input
+          className="col-span-3"
+          type="number"
+          value={value as number}
+          onChange={(value) => onUpdate('value', value.target.valueAsNumber)}
+        />
+      )}
+      {valueInputType === 'boolean' && (
         <Select
-          value={operator}
-          onValueChange={(value) => onUpdate('operator', value ?? '')}
-          data={typeFromJSON(attributeDefinition).supportedOperations}
+          className="col-span-3"
+          defaultValue="true"
+          value={String(value)}
+          onValueChange={(value) => onUpdate('value', value === 'true')}
+          data={['true', 'false']}
         />
-      </FormField>
-      <FormField label="value">
-        {valueInputType === 'string' && (
-          <Input
-            type="text"
-            value={value as string}
-            onChange={(e) => onUpdate('value', e.target.value)}
-          />
-        )}
-        {valueInputType === 'number' && (
-          <Input
-            type="number"
-            value={value as number}
-            onChange={(value) => onUpdate('value', value.target.valueAsNumber)}
-          />
-        )}
-        {valueInputType === 'boolean' && (
-          <Select
-            defaultValue="true"
-            value={String(value)}
-            onValueChange={(value) => onUpdate('value', value === 'true')}
-            data={['true', 'false']}
-          />
-        )}
-        {valueInputType === 'date' && (
-          <Input
-            className="w-[150px]"
-            type="datetime-local"
-            value={value}
-            onChange={(e) => onUpdate('value', e.target.value)}
-          />
-        )}
-      </FormField>
-      <CloseButton className="mb-2" onClick={onPressRemove} />
-    </div>
+      )}
+      {valueInputType === 'date' && (
+        <Input
+          className="col-span-3"
+          type="datetime-local"
+          value={value}
+          onChange={(e) => onUpdate('value', e.target.value)}
+        />
+      )}
+      <CloseButton className="h-full col-span-1" onClick={onPressRemove} />
+    </>
   );
 }

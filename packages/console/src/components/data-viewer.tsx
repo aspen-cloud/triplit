@@ -27,6 +27,7 @@ import useUrlState from '@ahooksjs/use-url-state';
 import { DeleteEntitiesDialog } from './delete-entities-dialog.js';
 import { CollectionMenu } from './collection-menu.js';
 import { DeleteCollectionDialog } from './delete-collection-dialog.js';
+import { flattenSchema } from 'src/utils/flatten-schema.js';
 
 const deleteAttributeDialogIsOpenAtom = atom(false);
 
@@ -118,7 +119,9 @@ export function DataViewer({
   );
   const [addOrUpdateAttributeFormOpen, setAddOrUpdateAttributeFormOpen] =
     useAtom(addOrUpdateAttributeFormOpenAtom);
-  const [attributeToUpdate, setAttributeToUpdate] = useState(null);
+  const [attributeToUpdateName, setAttributeToUpdateName] = useState<
+    string | null
+  >(null);
   const [selectedAttribute, setSelectedAttribute] = useState<string>('');
   const [selectedCell, setSelectedCell] = useState<string | null>(null);
   const [selectedCollection, _setSelectedCollection] = useSelectedCollection();
@@ -134,7 +137,6 @@ export function DataViewer({
       ]),
     [selectedCollection, projectId]
   );
-  const [limit, setLimit] = useState(PAGE_SIZE);
   const { results: selectedEntities } = useQuery(
     consoleClient,
     selectedEntitiesQuery
@@ -168,18 +170,25 @@ export function DataViewer({
     hasMore,
     loadMore,
   } = useInfiniteQuery(client, query);
-
+  console.log({ orderedAndFilteredResults, fetchingRemote, schema });
   const sortedAndFilteredEntities = useMemo(
     () => Array.from(orderedAndFilteredResults ?? []),
     [orderedAndFilteredResults]
   );
 
+  const flattenedCollectionSchema = useMemo(() => {
+    if (!collectionSchema) return null;
+    return flattenSchema(collectionSchema);
+  }, [collectionSchema]);
+
   const uniqueAttributes: Set<string> = useMemo(() => {
     const attributes = new Set<string>();
     // if we have a schema, use it
-    if (collectionSchema) {
+    if (flattenedCollectionSchema) {
       // handle the case where we have a collection but no attributes
-      return new Set(Object.keys(collectionSchema.schema.properties ?? {}));
+      return new Set(
+        Object.keys(flattenedCollectionSchema.schema.properties ?? {})
+      );
     }
 
     // Best we can do for now with schemaless is to load all attributes from the current set of entities
@@ -194,7 +203,7 @@ export function DataViewer({
     });
 
     return attributes;
-  }, [sortedAndFilteredEntities, collectionSchema]);
+  }, [sortedAndFilteredEntities, flattenedCollectionSchema]);
 
   const allVisibleEntitiesAreSelected = useMemo(() => {
     if (!selectedEntities || selectedEntities.size === 0) return false;
@@ -281,14 +290,12 @@ export function DataViewer({
       selectedEntities,
     ]
   );
+
   const dataColumns: ColumnDef<any>[] = useMemo(() => {
     return Array.from(uniqueAttributes)
       .filter((attr) => attr !== 'id')
       .map((attr) => {
-        const typeDef =
-          collectionSchema?.schema?.properties?.[
-            attr as keyof (typeof collectionSchema)['schema']['properties']
-          ];
+        const typeDef = flattenedCollectionSchema?.schema.properties[attr];
         const isQueryColumn = typeDef && typeDef.type === 'query';
         return {
           cell: ({ row, column }) => {
@@ -351,10 +358,7 @@ export function DataViewer({
                       }}
                       onEdit={() => {
                         setAddOrUpdateAttributeFormOpen(true);
-                        setAttributeToUpdate({
-                          name: attr,
-                          ...collectionSchema?.schema?.properties?.[attr],
-                        });
+                        setAttributeToUpdateName(attr);
                       }}
                     />
                   )
@@ -362,12 +366,14 @@ export function DataViewer({
               />
             );
           },
-          accessorKey: attr,
+          accessorFn: (row) => row[attr],
+          id: attr,
         };
       });
   }, [
     uniqueAttributes,
     collectionSchema,
+    flattenedCollectionSchema,
     selectedCell,
     toggleSelectAllEntities,
     idColumn,
@@ -385,7 +391,7 @@ export function DataViewer({
               <Button
                 onClick={() => {
                   setAddOrUpdateAttributeFormOpen(true);
-                  setAttributeToUpdate(null);
+                  setAttributeToUpdateName(null);
                 }}
                 variant={'ghost'}
                 className="h-auto py-1"
@@ -402,22 +408,49 @@ export function DataViewer({
     } as ColumnDef<any>,
   ];
 
-  const flatFilteredEntities = useMemo(
-    () => sortedAndFilteredEntities.map(([id, entity]) => ({ id, ...entity })),
-    [sortedAndFilteredEntities]
-  );
+  function flattenEntity(entity: any) {
+    if (!entity) return {};
+    const flatEntity: Record<string, any> = {};
+    Object.entries(entity).forEach(([key, value]) => {
+      if (
+        typeof value === 'object' &&
+        value !== null &&
+        !(value instanceof Set) &&
+        !(value instanceof Date)
+      ) {
+        Object.entries(flattenEntity(value)).forEach(
+          ([nestedKey, nestedValue]) => {
+            flatEntity[`${key}.${nestedKey}`] = nestedValue;
+          }
+        );
+      } else {
+        flatEntity[key] = value;
+      }
+    });
+    return flatEntity;
+  }
+
+  const flatFilteredEntities = useMemo(() => {
+    const flattened = sortedAndFilteredEntities.map(([id, entity]) => ({
+      id,
+      ...flattenEntity(entity),
+    }));
+    // console.log({ flattened });
+    return flattened;
+  }, [sortedAndFilteredEntities]);
+
   return (
     <div className="flex flex-col max-w-full items-start h-screen overflow-hidden">
       {collectionSchema && (
         <>
           <SchemaAttributeSheet
-            attributeToUpdate={attributeToUpdate}
-            key={attributeToUpdate ? attributeToUpdate.name : 'new'}
+            attributeToUpdateName={attributeToUpdateName}
+            key={attributeToUpdateName ?? 'new'}
             open={addOrUpdateAttributeFormOpen}
             onOpenChange={setAddOrUpdateAttributeFormOpen}
             collectionName={selectedCollection}
             client={client}
-            collectionSchema={collectionSchema}
+            collectionSchema={flattenedCollectionSchema}
           />
 
           <DeleteCollectionDialog
@@ -464,7 +497,7 @@ export function DataViewer({
           uniqueAttributes={uniqueAttributes}
           projectId={projectId}
           collection={selectedCollection}
-          collectionSchema={collectionSchema}
+          collectionSchema={flattenedCollectionSchema}
           onSubmit={(filters) => {
             setUrlQueryState({ where: JSON.stringify(filters) });
           }}
@@ -472,7 +505,7 @@ export function DataViewer({
         <OrderPopover
           uniqueAttributes={uniqueAttributes}
           collection={selectedCollection}
-          collectionSchema={collectionSchema}
+          collectionSchema={flattenedCollectionSchema}
           order={order}
           onSubmit={(order) => {
             setUrlQueryState({ order: JSON.stringify(order) });
@@ -488,7 +521,7 @@ export function DataViewer({
 
         <CreateEntitySheet
           key={selectedCollection}
-          collectionDefinition={collectionSchema}
+          collectionSchema={flattenedCollectionSchema}
           collection={selectedCollection}
           inferredAttributes={Array.from(uniqueAttributes)}
           client={client}

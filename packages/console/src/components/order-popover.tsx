@@ -21,6 +21,7 @@ type OrderPopoverProps = {
 export function OrderPopover(props: OrderPopoverProps) {
   const { collection, uniqueAttributes, collectionSchema, order, onSubmit } =
     props;
+  const [key, setKey] = useState(+new Date());
 
   const [draftOrder, setDraftOrder] = useState<Map<string, string>>(
     new Map(order)
@@ -29,7 +30,7 @@ export function OrderPopover(props: OrderPopoverProps) {
     const nonSetAttributes = collectionSchema
       ? [...uniqueAttributes].filter(
           (attr) =>
-            !collectionSchema.schema?.properties?.[attr].type.startsWith('set_')
+            !collectionSchema?.properties?.[attr].type.startsWith('set_')
         )
       : [...uniqueAttributes];
     const notAlreadyOrdered = nonSetAttributes.filter(
@@ -101,17 +102,13 @@ export function OrderPopover(props: OrderPopoverProps) {
           }}
         >
           <Select
-            value={
-              orderableAttributes.length > 0
-                ? `Pick an${
-                    draftOrder.size > 0 ? 'other' : ''
-                  } attribute to order by`
-                : 'No attributes to order by'
-            }
+            key={key}
+            placeholder="Select an attribute"
             data={orderableAttributes}
             disabled={orderableAttributes.length === 0}
             onValueChange={(value) => {
               if (!value) return;
+              setKey(+new Date());
               setDraftOrder((prev) => {
                 const newOrder = new Map(prev);
                 newOrder.set(value, 'ASC');

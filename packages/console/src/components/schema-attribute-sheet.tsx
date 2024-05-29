@@ -46,7 +46,7 @@ async function addAttributeToSchema(
 ) {
   await client.db.addAttribute({
     collection: collectionName,
-    path: [attributeName],
+    path: attributeName.split('.'),
     attribute: newAttribute,
   });
 }
@@ -59,7 +59,7 @@ async function updateAttributeOptions(
 ) {
   await client.db.alterAttributeOption({
     collection: collectionName,
-    path: [attributeName],
+    path: attributeName.split('.'),
     options,
   });
 }
@@ -71,7 +71,7 @@ async function dropDefaultOption(
 ) {
   await client.db.dropAttributeOption({
     collection: collectionName,
-    path: [attributeName],
+    path: attributeName.split('.'),
     option: 'default',
   });
 }
@@ -98,28 +98,23 @@ type NewAttributeFormProps = {
   client: TriplitClient<any>;
   collectionName: string;
   collectionSchema: CollectionDefinition;
-  attributeToUpdate:
-    | null
-    | ((
-        | ValueAttributeDefinition
-        | CollectionAttributeDefinition
-        | RecordAttributeDefinition
-      ) & {
-        name: string;
-      });
+  attributeToUpdateName: string | null;
 };
 export const addOrUpdateAttributeFormOpenAtom = atom(false);
 
 export function SchemaAttributeSheet({
-  attributeToUpdate,
+  attributeToUpdateName,
   client,
   collectionName,
   collectionSchema,
 }: NewAttributeFormProps & ComponentProps<typeof Sheet>) {
-  const editing = !!attributeToUpdate;
+  const editing = attributeToUpdateName;
+  const attributeToUpdate = attributeToUpdateName
+    ? collectionSchema?.schema.properties[attributeToUpdateName]
+    : null;
   const [open, setOpen] = useAtom(addOrUpdateAttributeFormOpenAtom);
   const [attributeName, setAttributeName] = useState(
-    attributeToUpdate?.name ?? ''
+    attributeToUpdateName ?? ''
   );
   const [attributeBaseType, setAttributeBaseType] = useState<AllTypes>(
     attributeToUpdate?.type ?? 'string'
@@ -138,7 +133,7 @@ export function SchemaAttributeSheet({
   const [isOptional, setIsOptional] = useState(
     !!(
       collectionSchema.schema.optional &&
-      collectionSchema.schema.optional.includes(attributeToUpdate?.name)
+      collectionSchema.schema.optional.includes(attributeToUpdateName)
     )
   );
   const [recordKeyTypes, setRecordKeyTypes] = useState<
@@ -265,7 +260,7 @@ export function SchemaAttributeSheet({
           <SheetTitle>
             {attributeToUpdate ? (
               <span>
-                Update <Code>{attributeToUpdate.name}</Code>
+                Update <Code>{attributeToUpdateName}</Code>
               </span>
             ) : (
               'Insert attribute'
@@ -274,7 +269,7 @@ export function SchemaAttributeSheet({
           <SheetDescription>
             {attributeToUpdate ? (
               <span>
-                Update <Code>{attributeToUpdate.name}</Code> on{' '}
+                Update <Code>{attributeToUpdateName}</Code> on{' '}
                 <Code>{collectionName}</Code>
               </span>
             ) : (
@@ -401,7 +396,7 @@ export function SchemaAttributeSheet({
                     attributeToUpdate &&
                     collectionSchema.schema.optional?.includes(
                       // @ts-expect-error
-                      attributeToUpdate.name
+                      attributeToUpdateName
                     )
                   )
                 }

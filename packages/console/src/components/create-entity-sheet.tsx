@@ -7,6 +7,7 @@ import { useEffect, useMemo, useState } from 'react';
 
 import { useForm } from '@mantine/form';
 import {
+  CollectionDefinition,
   CollectionTypeKeys,
   RecordAttributeDefinition,
   ValueTypeKeys,
@@ -34,6 +35,7 @@ import {
 import { TriplitClient } from '@triplit/client';
 import { Plus } from 'lucide-react';
 import { nanoid } from 'nanoid';
+import { flattenSchema } from 'src/utils/flatten-schema.js';
 
 interface FormValues {
   id: string;
@@ -82,7 +84,15 @@ function convertFormToEntity(
       definition,
       optional
     );
-    if (triplitValue !== undefined) entity[fieldName] = triplitValue;
+    if (triplitValue === undefined) return;
+    const path = fieldName.split('.');
+    let current = entity;
+    while (path.length > 1) {
+      const key = path.shift();
+      if (!current[key]) current[key] = {};
+      current = current[key];
+    }
+    current[path[0]] = triplitValue;
   });
   console.log('ENTITY', entity);
   return entity;
@@ -108,8 +118,8 @@ function getDefaultFormValueForAttribute(definition: AttributeDefinition): any {
   return '';
 }
 
-function initializeNewEntityForm(model?: Collection<any>): FormValues {
-  if (!model) return { id: '', attributes: [] };
+function initializeNewEntityForm(model?: CollectionDefinition): FormValues {
+  if (!model || !model?.schema?.properties) return { id: '', attributes: [] };
   const attributes = (
     Object.entries(model.schema.properties) as [
       string,
@@ -161,17 +171,17 @@ function TypeLabel({
 export function CreateEntitySheet({
   collection,
   inferredAttributes,
-  collectionDefinition,
+  collectionSchema,
   client,
 }: {
   collection: string;
   inferredAttributes?: string[];
-  collectionDefinition?: Collection<any>;
+  collectionSchema?: Collection<any>;
   client: TriplitClient<any>;
 }) {
   const [open, setOpen] = useState(false);
   const form = useForm<FormValues>({
-    initialValues: initializeNewEntityForm(collectionDefinition),
+    initialValues: initializeNewEntityForm(collectionSchema),
   });
 
   const [customAttributes, setCustomAttributes] = useState<string[]>([]);
@@ -180,15 +190,13 @@ export function CreateEntitySheet({
     ...customAttributes,
   ];
   const unselectedAttributes = useMemo(() => {
-    if (allAttributes.length === 0 || collectionDefinition) return [];
+    if (allAttributes.length === 0 || collectionSchema) return [];
     return allAttributes.filter(
       (attr) => !form.values.attributes.find((item) => item.fieldName === attr)
     );
-  }, [form.values.attributes, collectionDefinition, allAttributes]);
+  }, [form.values.attributes, collectionSchema, allAttributes]);
 
-  const optionalAttributes = new Set(
-    collectionDefinition?.schema?.optional ?? []
-  );
+  const optionalAttributes = new Set(collectionSchema?.schema?.optional ?? []);
   const allFields =
     // useMemo(
     //   () =>
@@ -203,10 +211,10 @@ export function CreateEntitySheet({
         <div
           key={item.key}
           className={`flex w-full flex-row ${
-            collectionDefinition ? 'items-center' : 'items-start'
+            collectionSchema ? 'items-center' : 'items-start'
           } gap-2`}
         >
-          {!collectionDefinition && (
+          {!collectionSchema && (
             <>
               <Combobox
                 placeholder="Add an attribute..."
@@ -237,7 +245,7 @@ export function CreateEntitySheet({
           )}
           <FormField
             label={
-              collectionDefinition && (
+              collectionSchema && (
                 <TypeLabel
                   name={item.fieldName}
                   type={item.definition.type}
@@ -366,7 +374,7 @@ export function CreateEntitySheet({
               <div className="text-muted-foreground">{`Default: ${item?.definition?.options?.default?.func}()`}</div>
             )}
           </FormField>
-          {(item.definition?.options?.nullable || !collectionDefinition) && (
+          {(item.definition?.options?.nullable || !collectionSchema) && (
             <div className="flex flex-col gap-2 self-end items-center mb-[10px]">
               <p className="text-sm mb-2">Null?</p>
               <Checkbox
@@ -380,7 +388,7 @@ export function CreateEntitySheet({
               />
             </div>
           )}
-          {!collectionDefinition && (
+          {!collectionSchema && (
             <CloseButton
               onClick={() => form.removeListItem('attributes', index)}
             />
@@ -446,9 +454,7 @@ export function CreateEntitySheet({
               {...form.getInputProps('id')}
             />
           </FormField>
-          {!collectionDefinition && (
-            <div className="text-xs -mb-3">Attributes</div>
-          )}
+          {!collectionSchema && <div className="text-xs -mb-3">Attributes</div>}
           {requiredFields}
           {optionalFields.length > 0 && (
             <>
@@ -462,7 +468,7 @@ export function CreateEntitySheet({
               {optionalFields}
             </>
           )}
-          {!collectionDefinition && (
+          {!collectionSchema && (
             <Button
               variant={'default'}
               type="button"
