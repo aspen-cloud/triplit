@@ -3091,22 +3091,40 @@ describe('Nested Properties', () => {
       for (const [id, data] of Object.entries(defaultData)) {
         await db.insert('Businesses', data);
       }
+      {
+        const positiveResults = await db.fetch(
+          db
+            .query('Businesses')
+            .where([['address.city', '=', 'San Francisco']])
+            .build()
+        );
+        expect(positiveResults).toHaveLength(1);
 
-      const positiveResults = await db.fetch(
-        db
-          .query('Businesses')
-          .where([['address.city', '=', 'San Francisco']])
-          .build()
-      );
-      expect(positiveResults).toHaveLength(1);
+        const negativeResults = await db.fetch(
+          db
+            .query('Businesses')
+            .where([['address.state', '=', 'TX']])
+            .build()
+        );
+        expect(negativeResults).toHaveLength(0);
+      }
+      {
+        const positiveResults = await db.fetch(
+          db
+            .query('Businesses')
+            .where([['address.street.number', '=', '123']])
+            .build()
+        );
+        expect(positiveResults).toHaveLength(1);
 
-      const negativeResults = await db.fetch(
-        db
-          .query('Businesses')
-          .where([['address.state', '=', 'TX']])
-          .build()
-      );
-      expect(negativeResults).toHaveLength(0);
+        const negativeResults = await db.fetch(
+          db
+            .query('Businesses')
+            .where([['address.street.name', '=', 'noExist']])
+            .build()
+        );
+        expect(negativeResults).toHaveLength(0);
+      }
     });
 
     it('can select specific nested properties', async () => {
@@ -3208,22 +3226,40 @@ describe('Nested Properties', () => {
       for (const [id, data] of Object.entries(defaultData)) {
         await db.insert('Businesses', data);
       }
+      {
+        const positiveResults = await db.fetch(
+          db
+            .query('Businesses')
+            .where([['address.city', '=', 'San Francisco']])
+            .build()
+        );
+        expect(positiveResults).toHaveLength(1);
 
-      const positiveResults = await db.fetch(
-        db
-          .query('Businesses')
-          .where([['address.city', '=', 'San Francisco']])
-          .build()
-      );
-      expect(positiveResults).toHaveLength(1);
+        const negativeResults = await db.fetch(
+          db
+            .query('Businesses')
+            .where([['address.state', '=', 'TX']])
+            .build()
+        );
+        expect(negativeResults).toHaveLength(0);
+      }
+      {
+        const positiveResults = await db.fetch(
+          db
+            .query('Businesses')
+            .where([['address.street.number', '=', '123']])
+            .build()
+        );
+        expect(positiveResults).toHaveLength(1);
 
-      const negativeResults = await db.fetch(
-        db
-          .query('Businesses')
-          .where([['address.state', '=', 'TX']])
-          .build()
-      );
-      expect(negativeResults).toHaveLength(0);
+        const negativeResults = await db.fetch(
+          db
+            .query('Businesses')
+            .where([['address.street.name', '=', 'noExist']])
+            .build()
+        );
+        expect(negativeResults).toHaveLength(0);
+      }
     });
   });
 });
