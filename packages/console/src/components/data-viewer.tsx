@@ -170,7 +170,6 @@ export function DataViewer({
     hasMore,
     loadMore,
   } = useInfiniteQuery(client, query);
-  console.log({ orderedAndFilteredResults, fetchingRemote, schema });
   const sortedAndFilteredEntities = useMemo(
     () => Array.from(orderedAndFilteredResults ?? []),
     [orderedAndFilteredResults]
@@ -194,14 +193,14 @@ export function DataViewer({
     // Best we can do for now with schemaless is to load all attributes from the current set of entities
     if (!sortedAndFilteredEntities) return attributes;
     // otherwise construct a set of all attributes from all entities
-    sortedAndFilteredEntities.forEach((data) => {
-      Object.keys(data).forEach((key: string) => {
+    console.log({ sortedAndFilteredEntities });
+    sortedAndFilteredEntities.forEach(([_id, entity]) => {
+      Object.keys(entity).forEach((key: string) => {
         if (!attributes.has(key) && key !== '_collection') {
           attributes.add(key);
         }
       });
     });
-
     return attributes;
   }, [sortedAndFilteredEntities, flattenedCollectionSchema]);
 
