@@ -12,6 +12,7 @@ import { useSelectedCollection } from '../hooks/useSelectedCollection';
 import { useLoaderData, redirect } from 'react-router-dom';
 import { consoleClient } from 'triplit/client.js';
 import { initializeFromUrl } from 'src/utils/project.js';
+import { ModeToggle } from './mode-toggle.js';
 
 const projectClients = new Map<string, TriplitClient<any>>();
 
@@ -135,6 +136,8 @@ export function ProjectViewer() {
               }
             </div>
           )}
+        <div className="grow" />
+        <ModeToggle className="" />
       </div>
       <div className="flex-grow flex flex-col min-w-0">
         {selectedCollection && !fetchingSchema ? (

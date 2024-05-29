@@ -92,7 +92,9 @@ export function FiltersPopover(props: FiltersPopoverProps) {
           size={'sm'}
           variant={'secondary'}
           className={`${
-            hasFilters ? 'bg-blue-500 hover:bg-blue-600' : ''
+            hasFilters
+              ? 'bg-blue-300 hover:bg-blue-200 dark:bg-blue-500 dark:hover:bg-blue-600'
+              : ''
           } py-1 h-auto`}
         >
           <span className="mr-2">Filters</span>
