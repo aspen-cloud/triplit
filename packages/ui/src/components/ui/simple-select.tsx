@@ -23,11 +23,15 @@ type SelectWithLabelProps = {
 } & ComponentProps<typeof BaseSelect> &
   ComponentProps<typeof SelectTrigger>;
 
-export function Select({ className, ...props }: SelectWithLabelProps) {
+export function Select({
+  className,
+  placeholder,
+  ...props
+}: SelectWithLabelProps) {
   let baseInput = (
     <BaseSelect {...props}>
       <SelectTrigger className={className}>
-        <SelectValue />
+        <SelectValue placeholder={placeholder} />
       </SelectTrigger>
       <SelectContent className="overflow-y-auto max-h-[50vh]">
         {props.data &&
