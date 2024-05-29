@@ -193,7 +193,6 @@ export function DataViewer({
     // Best we can do for now with schemaless is to load all attributes from the current set of entities
     if (!sortedAndFilteredEntities) return attributes;
     // otherwise construct a set of all attributes from all entities
-    console.log({ sortedAndFilteredEntities });
     sortedAndFilteredEntities.forEach(([_id, entity]) => {
       Object.keys(entity).forEach((key: string) => {
         if (!attributes.has(key) && key !== '_collection') {
