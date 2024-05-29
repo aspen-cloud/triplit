@@ -25,13 +25,23 @@ export async function addProjectToConsole(formValues: ImportProjectFormValues) {
 
 export async function initializeFromUrl() {
   if (typeof window === 'undefined') return null;
+  let token,
+    server,
+    projName = null;
   const url = new URL(window.location.href);
-  const params = new URLSearchParams(url.search);
-  const token = params.get('token');
-  if (!(token && JWTPayloadIsOfCorrectForm(token))) return null;
-  const server = params.get('server');
-  if (!server) return null;
-  const projName = params.get('projName');
+  if (url.pathname === '/local') {
+    token =
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ4LXRyaXBsaXQtdG9rZW4tdHlwZSI6InNlY3JldCIsIngtdHJpcGxpdC1wcm9qZWN0LWlkIjoibG9jYWwtcHJvamVjdC1pZCJ9.8Z76XXPc9esdlZb2b7NDC7IVajNXKc4eVcPsO7Ve0ug';
+    server = 'http://localhost:6543';
+    projName = 'local-project';
+  } else {
+    const params = new URLSearchParams(url.search);
+    token = params.get('token');
+    if (!(token && JWTPayloadIsOfCorrectForm(token))) return null;
+    server = params.get('server');
+    if (!server) return null;
+    projName = params.get('projName');
+  }
   const projId = await addProjectToConsole({
     server,
     token,

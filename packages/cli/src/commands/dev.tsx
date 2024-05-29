@@ -5,7 +5,7 @@ import { createServer as createDBServer } from '@triplit/server';
 import jwt from 'jsonwebtoken';
 import path from 'path';
 import fs from 'fs';
-import { getDataDir, getTriplitDir } from '../filesystem.js';
+import { CWD, getDataDir, getTriplitDir } from '../filesystem.js';
 import { Command } from '../command.js';
 import * as Flag from '../flags.js';
 import chokidar from 'chokidar';
@@ -200,23 +200,27 @@ export default Command({
       }
     });
 
-    const consoleServer = createConsoleServer('../../console', {
-      token: serviceKey,
-      projName: 'triplit-test',
-      server: `http://localhost:${dbPort}`,
-    });
-    consoleServer.listen(consolePort);
-
     process.on('SIGINT', function () {
       remoteSchemaUnsubscribe?.();
       watcher?.close();
       dbServer.close();
-      consoleServer.close();
       process.exit();
     });
 
     const dbUrl = `http://localhost:${dbPort}`;
-    const consoleUrl = `http://localhost:${consolePort}`;
+    const isDefaultToken =
+      serviceKey ===
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ4LXRyaXBsaXQtdG9rZW4tdHlwZSI6InNlY3JldCIsIngtdHJpcGxpdC1wcm9qZWN0LWlkIjoibG9jYWwtcHJvamVjdC1pZCJ9.8Z76XXPc9esdlZb2b7NDC7IVajNXKc4eVcPsO7Ve0ug';
+    const consoleUrl = isDefaultToken
+      ? 'https://console.triplit.dev/local'
+      : `https://console.triplit.dev/localhost:${consolePort}?${new URLSearchParams(
+          {
+            server: dbUrl,
+            token: serviceKey,
+            projName: CWD.split('/').pop() + '-local',
+          }
+        ).toString()}`;
+
     if (flags.seed)
       await insertSeeds(dbUrl, serviceKey, flags.seed, true, ctx.schema);
 
@@ -227,30 +231,21 @@ export default Command({
           <Text bold underline color={'magenta'}>
             Triplit Development Environment
           </Text>
-          <Box flexDirection="column">
+          <Box flexDirection="column" gap={1}>
             <Text>
               You can access your local Triplit services at the following local
               URLs:
             </Text>
-            <Box
-              width={48}
-              flexDirection="column"
-              borderStyle="single"
-              paddingX={1}
-            >
-              <Box>
-                <Text bold>🟢 Console</Text>
-                <Spacer />
-                <Text color="cyan">{consoleUrl}</Text>
-              </Box>
-              <Box>
-                <Text bold>🟢 Database</Text>
-                <Spacer />
-                <Text color="cyan">{dbUrl}</Text>
-              </Box>
+            <Box flexDirection="column">
+              <Text bold>🟢 Console</Text>
+              <Text color="cyan" wrap="end">
+                {consoleUrl}
+              </Text>
             </Box>
-          </Box>
-          <Box flexDirection="column" gap={1}>
+            <Box flexDirection="column">
+              <Text bold>🟢 Database</Text>
+              <Text color="cyan">{dbUrl}</Text>
+            </Box>
             <Box flexDirection="column">
               <Text bold underline>
                 Service Token
