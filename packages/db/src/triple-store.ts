@@ -43,6 +43,7 @@ import {
   TripleStoreAfterCommitHook,
   findAllClientIds,
   RangeContraints,
+  AVEIndex,
 } from './triple-store-utils.js';
 import { copyHooks } from './utils.js';
 import { TRIPLE_STORE_MIGRATIONS } from './triple-store-migrations.js';
@@ -134,6 +135,10 @@ async function addIndexesToTransaction(
     const { set = [] } = writes;
     if (set.length === 0) continue;
     const scopedTx = tupleTx.withScope({ read: [store], write: [store] });
+
+    // NOTE: based on the current implementation of the tuple store, it's faster to perform removes at the end
+    let expiredAVE: AVEIndex['key'][] = [];
+
     // To maintain interactivity on large inserts, we should batch these
     for (const { key, value: tupleValue } of set.slice()) {
       const [_client, indexType, ...indexKey] = key;
@@ -144,8 +149,7 @@ async function addIndexesToTransaction(
       >;
       const [value, isExpired] = tupleValue;
       if (isExpired) {
-        // TODO: defer removes until all sets are done or alter tuple db implementation for improved performance when setting and then removing in the same transaction
-        scopedTx.remove(['AVE', attribute, value, id, timestamp]);
+        expiredAVE.push(['AVE', attribute, value, id, timestamp]);
       } else {
         scopedTx.set(['AVE', attribute, value, id, timestamp], {
           expired: isExpired,
@@ -164,6 +168,10 @@ async function addIndexesToTransaction(
           expired: isExpired,
         }
       );
+    }
+
+    for (const tuple of expiredAVE) {
+      scopedTx.remove(tuple);
     }
   }
 }
