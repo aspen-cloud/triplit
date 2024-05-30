@@ -13,7 +13,7 @@ const router = createBrowserRouter([
   },
   {
     path: ':projectId',
-    loader: ({ params }) => loader(params.projectId),
+    loader: loader,
     element: <ProjectViewer />,
     // we have to disable revalidation because otherwise it's re-mounting
     // the component and re-running the loader whenever the query params change

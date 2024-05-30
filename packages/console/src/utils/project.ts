@@ -23,7 +23,10 @@ export async function addProjectToConsole(formValues: ImportProjectFormValues) {
   }
 }
 
+let initializedProjectId = '';
+
 export async function initializeFromUrl() {
+  if (initializedProjectId) return initializedProjectId;
   if (typeof window === 'undefined') return null;
   let token,
     server,
@@ -47,5 +50,6 @@ export async function initializeFromUrl() {
     token,
     displayName: projName ?? 'triplit-project',
   });
+  initializedProjectId = projId;
   return projId;
 }

@@ -16,9 +16,14 @@ import { ModeToggle } from './mode-toggle.js';
 
 const projectClients = new Map<string, TriplitClient<any>>();
 
-const initFromUrlPromise = initializeFromUrl();
+const initFromUrlPromise = initializeFromUrl().then((importedProjectId) => {
+  if (importedProjectId) {
+    window.history.replaceState({}, '', '/' + importedProjectId);
+  }
+});
 
-export async function loader(slugProjectId?: string) {
+export async function loader({ params }: { params: { projectId?: string } }) {
+  const { projectId: slugProjectId } = params;
   const importedProjectId = await initFromUrlPromise;
   const projectId = slugProjectId ?? importedProjectId;
   if (!projectId) return redirect('/');

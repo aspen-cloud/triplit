@@ -8,4 +8,5 @@ export function formConsolePrimaryKey(projectId: string, server: string) {
 export const consoleClient = new TriplitClient({
   schema: DBConsoleSchemaObject,
   storage: 'memory',
+  autoConnect: false,
 });

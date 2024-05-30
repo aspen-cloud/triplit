@@ -9,12 +9,6 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { addProjectToConsole } from './utils/project.js';
 
-initializeFromUrl().then((importedProjectId) => {
-  if (importedProjectId) {
-    window.location.href = '/' + importedProjectId;
-  }
-});
-
 function App() {
   const navigate = useNavigate();
   const [importModalIsOpen, setImportModalIsOpen] = useState(false);
