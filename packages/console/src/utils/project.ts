@@ -23,15 +23,12 @@ export async function addProjectToConsole(formValues: ImportProjectFormValues) {
   }
 }
 
-let initializedProjectId = '';
-
 export const DEFAULT_HOSTNAME = 'localhost:6543';
 const DEFAULT_PROJECT_ID = 'local-project';
 const DEFAULT_TOKEN =
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ4LXRyaXBsaXQtdG9rZW4tdHlwZSI6InNlY3JldCIsIngtdHJpcGxpdC1wcm9qZWN0LWlkIjoibG9jYWwtcHJvamVjdC1pZCJ9.8Z76XXPc9esdlZb2b7NDC7IVajNXKc4eVcPsO7Ve0ug';
 
 export async function initializeFromUrl() {
-  if (initializedProjectId) return initializedProjectId;
   if (typeof window === 'undefined') return null;
   let token,
     server,
@@ -56,8 +53,5 @@ export async function initializeFromUrl() {
     token,
     displayName: projName ?? 'triplit-project',
   });
-  window.history.replaceState({}, '', '/' + isLocalRoute ? 'local' : projId);
-
-  initializedProjectId = projId;
   return projId;
 }
