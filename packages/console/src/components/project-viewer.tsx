@@ -11,21 +11,18 @@ import { CollectionStats, fetchCollectionStats } from '../utils/server';
 import { useSelectedCollection } from '../hooks/useSelectedCollection';
 import { useLoaderData, redirect } from 'react-router-dom';
 import { consoleClient } from 'triplit/client.js';
-import { initializeFromUrl } from 'src/utils/project.js';
+import { DEFAULT_HOSTNAME, initializeFromUrl } from 'src/utils/project.js';
 import { ModeToggle } from './mode-toggle.js';
 
 const projectClients = new Map<string, TriplitClient<any>>();
 
-const initFromUrlPromise = initializeFromUrl().then((importedProjectId) => {
-  if (importedProjectId) {
-    window.history.replaceState({}, '', '/' + importedProjectId);
-  }
-});
+const initFromUrlPromise = initializeFromUrl();
 
 export async function loader({ params }: { params: { projectId?: string } }) {
   const { projectId: slugProjectId } = params;
   const importedProjectId = await initFromUrlPromise;
-  const projectId = slugProjectId ?? importedProjectId;
+  const projectId =
+    slugProjectId === 'local' ? DEFAULT_HOSTNAME : importedProjectId;
   if (!projectId) return redirect('/');
   const project = await consoleClient.fetchById('projects', projectId);
   if (!project) return redirect('/');
