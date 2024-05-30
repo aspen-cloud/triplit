@@ -26,10 +26,6 @@ export default Command({
       char: 's',
       description: 'Database storage type',
     }),
-    consolePort: Flag.Number({
-      char: 'c',
-      description: 'Port to run the console server on',
-    }),
     dbPort: Flag.Number({
       char: 'd',
       description: 'Port to run the database server on',
@@ -54,7 +50,6 @@ export default Command({
     }),
   },
   async run({ flags, ctx }) {
-    const consolePort = flags.consolePort || 6542;
     const dbPort = flags.dbPort || 6543;
     process.env.JWT_SECRET =
       process.env.TRIPLIT_JWT_SECRET ?? 'jwt-key-for-development-only';
@@ -210,15 +205,14 @@ export default Command({
     const isDefaultToken =
       serviceKey ===
       'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ4LXRyaXBsaXQtdG9rZW4tdHlwZSI6InNlY3JldCIsIngtdHJpcGxpdC1wcm9qZWN0LWlkIjoibG9jYWwtcHJvamVjdC1pZCJ9.8Z76XXPc9esdlZb2b7NDC7IVajNXKc4eVcPsO7Ve0ug';
-    const consoleUrl = isDefaultToken
-      ? 'https://console.triplit.dev/local'
-      : `https://console.triplit.dev/localhost:${consolePort}?${new URLSearchParams(
-          {
+    const consoleUrl =
+      'https://console.triplit.dev' + isDefaultToken
+        ? '/local'
+        : `/localhost:${dbPort}?${new URLSearchParams({
             server: dbUrl,
             token: serviceKey,
             projName: CWD.split('/').pop() + '-local',
-          }
-        ).toString()}`;
+          }).toString()}`;
 
     if (flags.seed)
       await insertSeeds(dbUrl, serviceKey, flags.seed, true, ctx.schema);
