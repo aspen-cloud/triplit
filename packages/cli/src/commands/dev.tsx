@@ -1,6 +1,5 @@
 import React from 'react';
-import { Box, Newline, Spacer, Text } from 'ink';
-import { createServer as createConsoleServer } from '@triplit/console';
+import { Box, Newline, Text } from 'ink';
 import { createServer as createDBServer } from '@triplit/server';
 import jwt from 'jsonwebtoken';
 import path from 'path';

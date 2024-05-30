@@ -40,7 +40,6 @@
   "dependencies": {
     "@supabase/supabase-js": "^2.39.3",
     "@triplit/client": "workspace:^",
-    "@triplit/console": "workspace:^",
     "@triplit/db": "workspace:^",
     "@triplit/server": "workspace:^",
     "@triplit/server-core": "workspace:^",
