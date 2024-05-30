@@ -6586,7 +6586,6 @@ __metadata:
     "@cloudflare/workers-types": "npm:^4.20240117.0"
     "@supabase/supabase-js": "npm:^2.39.3"
     "@triplit/client": "workspace:^"
-    "@triplit/console": "workspace:^"
     "@triplit/db": "workspace:^"
     "@triplit/server": "workspace:^"
     "@triplit/server-core": "workspace:^"
@@ -6697,7 +6696,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@triplit/console@npm:^0.3.52, @triplit/console@workspace:^, @triplit/console@workspace:packages/console":
+"@triplit/console@npm:^0.3.52, @triplit/console@workspace:packages/console":
   version: 0.0.0-use.local
   resolution: "@triplit/console@workspace:packages/console"
   dependencies:
