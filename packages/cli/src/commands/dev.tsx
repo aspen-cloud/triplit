@@ -215,7 +215,7 @@ export default Command({
             projName: CWD.split('/').pop() + '-local',
           }).toString()}`);
 
-    if (flags.seed)
+    if (flags.seed !== undefined)
       await insertSeeds(dbUrl, serviceKey, flags.seed, false, ctx.schema);
 
     return (
