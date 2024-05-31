@@ -25,7 +25,10 @@ export function Boolean(opts: BuiltInFlagOpts): Flag<boolean> {
 export function String(opts: BuiltInFlagOpts): Flag<string> {
   return {
     ...opts,
-    parse: (input) => input.toString(),
+    parse: (input) => {
+      if (input === true) return '';
+      return input.toString();
+    },
   };
 }
 
