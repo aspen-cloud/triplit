@@ -206,16 +206,17 @@ export default Command({
       serviceKey ===
       'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ4LXRyaXBsaXQtdG9rZW4tdHlwZSI6InNlY3JldCIsIngtdHJpcGxpdC1wcm9qZWN0LWlkIjoibG9jYWwtcHJvamVjdC1pZCJ9.8Z76XXPc9esdlZb2b7NDC7IVajNXKc4eVcPsO7Ve0ug';
     const consoleUrl =
-      'https://console.triplit.dev' + isDefaultToken
+      'https://console.triplit.dev' +
+      (isDefaultToken
         ? '/local'
         : `/localhost:${dbPort}?${new URLSearchParams({
             server: dbUrl,
             token: serviceKey,
             projName: CWD.split('/').pop() + '-local',
-          }).toString()}`;
+          }).toString()}`);
 
     if (flags.seed)
-      await insertSeeds(dbUrl, serviceKey, flags.seed, true, ctx.schema);
+      await insertSeeds(dbUrl, serviceKey, flags.seed, false, ctx.schema);
 
     return (
       <>
