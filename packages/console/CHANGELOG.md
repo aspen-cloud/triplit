@@ -1,5 +1,17 @@
 # @triplit/console
 
+## 0.3.58
+
+### Patch Changes
+
+- d0c9ea9: add /local route to console for local dev and use in triplit dev command
+- Updated dependencies [3897fc7]
+- Updated dependencies [8ccc77e]
+  - @triplit/db@0.3.42
+  - @triplit/client@0.3.53
+  - @triplit/server-core@0.3.44
+  - @triplit/react@0.3.56
+
 ## 0.3.57
 
 ### Patch Changes
