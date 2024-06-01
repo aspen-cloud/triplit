@@ -1,5 +1,12 @@
 # @triplit/db
 
+## 0.3.42
+
+### Patch Changes
+
+- 3897fc7: Add storage providers for expo-sqlite
+- 8ccc77e: fixup filters on values nested 3 or more levels down
+
 ## 0.3.41
 
 ### Patch Changes
