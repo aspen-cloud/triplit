@@ -67,7 +67,10 @@ export function OrderPopover(props: OrderPopoverProps) {
           </span>
         </Button>
       </PopoverTrigger>
-      <PopoverContent align="start" className="flex flex-col gap-3 w-full">
+      <PopoverContent
+        align="start"
+        className="flex flex-col gap-3 min-w-[280px]"
+      >
         {draftOrder.size > 0 ? (
           Array.from(draftOrder).map(([attribute, direction]) => (
             <div key={attribute} className="flex flex-row gap-1 items-center">
