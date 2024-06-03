@@ -14,7 +14,7 @@ import { CollectionDefinition } from '@triplit/db';
 type OrderPopoverProps = {
   collection: string;
   uniqueAttributes: Set<string>;
-  collectionSchema: CollectionDefinition;
+  collectionSchema?: CollectionDefinition;
   order: QueryOrder<any, any>;
   onSubmit: (order: QueryOrder<any, any>) => void;
 };

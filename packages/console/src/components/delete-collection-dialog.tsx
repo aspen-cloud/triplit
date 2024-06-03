@@ -10,18 +10,24 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@triplit/ui';
-import { useSelectedCollection } from 'src/hooks/useSelectedCollection.js';
 import { ComponentProps } from 'react';
 
 type DeleteCollectionDialogProps = {
   client: TriplitClient<any>;
+  collection: string;
+  onDeleteCollection: () => void;
 };
 
 export function DeleteCollectionDialog(
   props: DeleteCollectionDialogProps & ComponentProps<typeof AlertDialog>
 ) {
-  const { onOpenChange, client, ...dialogProps } = props;
-  const [collection, setSelectedCollection] = useSelectedCollection();
+  const {
+    onOpenChange,
+    client,
+    collection,
+    onDeleteCollection,
+    ...dialogProps
+  } = props;
   return (
     <AlertDialog onOpenChange={onOpenChange} {...dialogProps}>
       <AlertDialogContent>
@@ -39,7 +45,7 @@ export function DeleteCollectionDialog(
           <AlertDialogAction
             onClick={async () => {
               await client.db.dropCollection({ name: collection });
-              setSelectedCollection(undefined);
+              onDeleteCollection();
               onOpenChange && onOpenChange(false);
             }}
           >

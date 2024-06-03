@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { initializeFromUrl } from './utils/project';
 import { Modal } from '@triplit/ui';
 import {
   ImportProjectForm,

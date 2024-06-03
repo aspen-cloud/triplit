@@ -1,6 +1,6 @@
 import { Schema } from '@triplit/db';
 import { TriplitClient } from '@triplit/client';
-import { useEffect, useMemo } from 'react';
+import { useCallback, useEffect, useMemo } from 'react';
 import { CaretDown, GridFour, Selection } from '@phosphor-icons/react';
 import { DataViewer, FullScreenWrapper, Project } from '.';
 import { Button } from '@triplit/ui';
@@ -8,11 +8,12 @@ import { ProjectOptionsMenu } from './project-options-menu';
 import { useConnectionStatus, useEntity } from '@triplit/react';
 import { CreateCollectionDialog } from './create-collection-dialog';
 import { CollectionStats, fetchCollectionStats } from '../utils/server';
-import { useSelectedCollection } from '../hooks/useSelectedCollection';
 import { useLoaderData, redirect } from 'react-router-dom';
 import { consoleClient } from 'triplit/client.js';
 import { DEFAULT_HOSTNAME, initializeFromUrl } from 'src/utils/project.js';
 import { ModeToggle } from './mode-toggle.js';
+import useUrlState from '@ahooksjs/use-url-state';
+import { QueryOrder, QueryWhere } from '@triplit/db/src/query.js';
 
 const projectClients = new Map<string, TriplitClient<any>>();
 
@@ -44,12 +45,74 @@ export async function loader({ params }: { params: { projectId?: string } }) {
   return { client, project, collectionStats };
 }
 
-export function ProjectViewer() {
-  const { client, project, collectionStats } = useLoaderData() as {
+export type ConsoleQuery = {
+  collection: string;
+  where: QueryWhere<any, any>;
+  order: QueryOrder<any, any>;
+};
+
+export type SetConsoleQuery = (newQuery: Partial<ConsoleQuery>) => void;
+
+export function ProjectViewerPage() {
+  const { client, collectionStats, project } = useLoaderData() as {
     client: TriplitClient<any>;
     project: Project;
     collectionStats: CollectionStats[];
   };
+
+  const [urlQueryState, setUrlQueryState] = useUrlState({
+    collection: undefined,
+    where: undefined,
+    order: undefined,
+  });
+
+  const query: ConsoleQuery = useMemo(
+    () => ({
+      collection: urlQueryState.collection,
+      where: JSON.parse(urlQueryState.where ?? '[]'),
+      order: JSON.parse(urlQueryState.order ?? '[]'),
+    }),
+    [urlQueryState]
+  );
+
+  const setQuery: SetConsoleQuery = useCallback(
+    (newQuery) => {
+      const newState = { ...query, ...newQuery };
+      for (const [key, val] of Object.entries(newState)) {
+        if (val !== undefined && typeof val !== 'string')
+          // @ts-expect-error
+          newState[key as keyof ConsoleQuery] = JSON.stringify(
+            newState[key as keyof ConsoleQuery]
+          );
+      }
+      setUrlQueryState(newState);
+    },
+    [query, setUrlQueryState]
+  );
+  return (
+    <ProjectViewer
+      client={client}
+      collectionStats={collectionStats}
+      project={project}
+      query={query}
+      setQuery={setQuery}
+    />
+  );
+}
+
+export function ProjectViewer({
+  client,
+  collectionStats,
+  project,
+  query,
+  setQuery,
+}: {
+  client: TriplitClient<any>;
+  collectionStats: CollectionStats[];
+  project?: Project;
+  query: ConsoleQuery;
+  setQuery: SetConsoleQuery;
+}) {
   const connectionStatus = useConnectionStatus(client);
   useEffect(() => {
     client?.syncEngine.connect();
@@ -59,7 +122,6 @@ export function ProjectViewer() {
   }, [client]);
 
   window.appClient = client;
-  const [selectedCollection, setSelectedCollection] = useSelectedCollection();
   const {
     results: schema,
     fetching: fetchingSchema,
@@ -77,7 +139,7 @@ export function ProjectViewer() {
     }, {} as Record<string, { numEntities: number }>);
   }, [collectionStats]);
 
-  const selectedCollectionStats = statsByCollection[selectedCollection];
+  const selectedCollectionStats = statsByCollection[query.collection];
 
   // if loading render loading state
   if (!client) return <FullScreenWrapper>Loading...</FullScreenWrapper>;
@@ -87,13 +149,15 @@ export function ProjectViewer() {
   return (
     <div className="flex bg-popover max-w-[100vw] overflow-hidden">
       <div className=" border-r h-screen flex flex-col p-4 w-[250px] shrink-0 overflow-y-auto">
-        <ProjectOptionsMenu>
-          <Button variant="secondary" className="w-full h-[2.5rem]">
-            <div className="font-bold truncate">{project?.displayName}</div>
-            <CaretDown className="ml-2 shrink-0" />
-          </Button>
-        </ProjectOptionsMenu>
-        <div className="flex flex-row items-center justify-between gap-2 md:gap-4 my-4">
+        {project && (
+          <ProjectOptionsMenu>
+            <Button variant="secondary" className="w-full h-[2.5rem] mb-4">
+              <div className="font-bold truncate">{project?.displayName}</div>
+              <CaretDown className="ml-2 shrink-0" />
+            </Button>
+          </ProjectOptionsMenu>
+        )}
+        <div className="flex flex-row items-center justify-between gap-2 md:gap-4 mb-4">
           <span className="truncate text-sm md:text-lg font-semibold">
             Collections
           </span>
@@ -105,7 +169,7 @@ export function ProjectViewer() {
                   name: collectionName,
                   schema: { id: Schema.Id().toJSON() },
                 });
-                setSelectedCollection(collectionName);
+                setQuery({ collection: collectionName });
               } catch (e) {
                 console.error(e);
               }
@@ -118,9 +182,9 @@ export function ProjectViewer() {
             <Button
               key={collection}
               onClick={() => {
-                setSelectedCollection(collection);
+                setQuery({ collection });
               }}
-              variant={selectedCollection === collection ? 'default' : 'ghost'}
+              variant={query.collection === collection ? 'default' : 'ghost'}
               className={`truncate flex h-auto px-2 py-1 flex-row items-center gap-2 justify-start shrink-0`}
             >
               <GridFour
@@ -144,12 +208,14 @@ export function ProjectViewer() {
         <ModeToggle className="" />
       </div>
       <div className="flex-grow flex flex-col min-w-0">
-        {!fetchingSchema ? (
+        {!fetchingSchema && query.collection ? (
           <DataViewer
-            key={selectedCollection}
+            key={query.collection}
             client={client}
             schema={schema}
             stats={selectedCollectionStats}
+            query={query}
+            setQuery={setQuery}
           />
         ) : (
           <div className="flex flex-col h-full justify-center items-center gap-6">

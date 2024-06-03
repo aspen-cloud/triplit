@@ -1,7 +1,7 @@
 import { TriplitClient } from '@triplit/client';
-import { useInfiniteQuery, useQuery } from '@triplit/react';
-import { useMemo, useState, useCallback, useEffect } from 'react';
-import { CreateEntitySheet } from '.';
+import { useInfiniteQuery } from '@triplit/react';
+import { useMemo, useState } from 'react';
+import { ConsoleQuery, CreateEntitySheet, SetConsoleQuery } from '.';
 import { consoleClient } from '../../triplit/client';
 import { ColumnDef } from '@tanstack/react-table';
 import {
@@ -21,9 +21,7 @@ import { DeleteAttributeDialog } from './delete-attribute-dialog';
 import { atom, useAtom } from 'jotai';
 import { FiltersPopover } from './filters-popover';
 import { OrderPopover } from './order-popover';
-import { useSelectedCollection } from '../hooks/useSelectedCollection';
 import { SchemaDefinition } from '../../../db/src/data-types/serialization';
-import useUrlState from '@ahooksjs/use-url-state';
 import { DeleteEntitiesDialog } from './delete-entities-dialog.js';
 import { CollectionMenu } from './collection-menu.js';
 import { DeleteCollectionDialog } from './delete-collection-dialog.js';
@@ -54,10 +52,14 @@ export function DataViewer({
   client,
   schema,
   stats,
+  query,
+  setQuery,
 }: {
   client: TriplitClient<any>;
   schema?: SchemaDefinition;
   stats?: { numEntities: number };
+  query: ConsoleQuery;
+  setQuery: SetConsoleQuery;
 }) {
   const [deleteCollectionDialogOpen, setDeleteCollectionDialogOpen] =
     useState(false);
@@ -71,25 +73,15 @@ export function DataViewer({
   >(null);
   const [selectedAttribute, setSelectedAttribute] = useState<string>('');
   const [selectedCell, setSelectedCell] = useState<string | null>(null);
-  const [selectedCollection, _setSelectedCollection] = useSelectedCollection();
-  const [urlQueryState, setUrlQueryState] = useUrlState({
-    where: undefined,
-    order: undefined,
-  });
+  const selectedCollection = query?.collection;
   const [selectedEntities, setSelectedEntities] = useState<Set<string>>(
     new Set()
   );
   const collectionSchema = schema?.collections?.[selectedCollection];
-  const filters = useMemo(
-    () => JSON.parse(urlQueryState.where ?? '[]'),
-    [urlQueryState.where]
-  );
-  const order = useMemo(
-    () => JSON.parse(urlQueryState.order ?? '[]'),
-    [urlQueryState.order]
-  );
+  const filters = query.where;
+  const order = query.order;
 
-  const query = useMemo(
+  const triplitQuery = useMemo(
     () =>
       client
         .query(selectedCollection)
@@ -107,7 +99,7 @@ export function DataViewer({
     fetchingMore,
     hasMore,
     loadMore,
-  } = useInfiniteQuery(client, query);
+  } = useInfiniteQuery(client, triplitQuery);
   const sortedAndFilteredEntities = useMemo(
     () => Array.from(orderedAndFilteredResults ?? []),
     [orderedAndFilteredResults]
@@ -270,9 +262,9 @@ export function DataViewer({
                         return [attribute, operator, parsedVal];
                       }
                     );
-                    setUrlQueryState({
-                      where: JSON.stringify(whereWithVariablesReplaced),
-                      collectionName: typeDef?.query?.collectionName,
+                    setQuery({
+                      where: whereWithVariablesReplaced,
+                      collection: typeDef?.query?.collectionName,
                     });
                   }}
                 />
@@ -403,6 +395,10 @@ export function DataViewer({
 
           <DeleteCollectionDialog
             open={deleteCollectionDialogOpen}
+            collection={query.collection}
+            onDeleteCollection={() => {
+              setQuery({});
+            }}
             onOpenChange={setDeleteCollectionDialogOpen}
             client={client}
           />
@@ -446,7 +442,7 @@ export function DataViewer({
           collection={selectedCollection}
           collectionSchema={flattenedCollectionSchema}
           onSubmit={(filters) => {
-            setUrlQueryState({ where: JSON.stringify(filters) });
+            setQuery({ where: filters });
           }}
         />
         <OrderPopover
@@ -455,7 +451,7 @@ export function DataViewer({
           collectionSchema={flattenedCollectionSchema}
           order={order}
           onSubmit={(order) => {
-            setUrlQueryState({ order: JSON.stringify(order) });
+            setQuery({ order });
           }}
         />
         <div className="text-sm px-2">{`Showing ${
