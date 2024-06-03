@@ -1,7 +1,7 @@
 import { AttributeDefinition, Model } from '@triplit/db';
 import { useCallback } from 'react';
 import { Select, Input, FormField, CloseButton } from '@triplit/ui';
-import { typeFromJSON } from '../../../db/src/data-types/base';
+import { Operator, typeFromJSON } from '../../../db/src/data-types/base';
 import {
   ALL_TYPES,
   CollectionTypeKeys,
@@ -18,9 +18,10 @@ export function QueryFilter({
 }: {
   filter: {
     attribute: string;
-    operator: string;
+    operator: Operator;
     value: string;
     asType: string;
+    id: string;
   };
   onUpdate: (
     filterField: string,
@@ -31,18 +32,20 @@ export function QueryFilter({
   collectionDefinition?: CollectionDefinition;
 }) {
   const { attribute, operator, value, asType } = filter;
-  const attributeDefinition = (collectionDefinition?.schema?.properties[
-    attribute
+  const attributeDefinition = collectionDefinition?.schema?.properties[
+    attribute as keyof (typeof collectionDefinition)['schema']['properties']
   ] ?? {
     type: asType,
-  }) as AttributeDefinition;
+    options: {},
+  };
 
   const onChangeAttribute = useCallback(
     (attr: string) => {
       const newAttributeDefinition = collectionDefinition?.schema?.properties?.[
-        attr
+        attr as keyof (typeof collectionDefinition)['schema']['properties']
       ] ?? {
         type: 'string',
+        options: {},
       };
       if (newAttributeDefinition.type !== asType) {
         onUpdate('value', '');
@@ -63,7 +66,7 @@ export function QueryFilter({
       onUpdate('asType', type);
       const newOperatorOptions = typeFromJSON({
         type,
-        items: { type: 'string' },
+        items: { type: 'string', options: {} },
       }).supportedOperations;
       if (!newOperatorOptions.includes(operator))
         onUpdate('operator', newOperatorOptions[0]);
@@ -72,13 +75,14 @@ export function QueryFilter({
   );
 
   const valueInputType =
-    asType === 'set' && attributeDefinition
+    attributeDefinition && attributeDefinition.type === 'set'
       ? attributeDefinition.items.type
       : asType;
   return (
     <>
       <Select
         className="col-span-3"
+        key={`attribute-${filter.id}`}
         value={attribute}
         onValueChange={onChangeAttribute}
         data={attributes}
@@ -86,6 +90,7 @@ export function QueryFilter({
       {!collectionDefinition && (
         <Select
           className="col-span-2"
+          key={`type-${filter.id}`}
           value={asType}
           onValueChange={onChangeType}
           data={ALL_TYPES.filter((t) => t !== 'set' && t !== 'date')}
@@ -93,28 +98,32 @@ export function QueryFilter({
       )}
       <Select
         className="col-span-2"
+        key={`operator-${filter.id}`}
         value={operator}
         onValueChange={(value) => onUpdate('operator', value ?? '')}
         data={typeFromJSON(attributeDefinition).supportedOperations}
       />
       {valueInputType === 'string' && (
         <Input
+          key={`value-${filter.id}`}
           className="col-span-3"
           type="text"
-          value={value as string}
+          value={value}
           onChange={(e) => onUpdate('value', e.target.value)}
         />
       )}
       {valueInputType === 'number' && (
         <Input
+          key={`value-${filter.id}`}
           className="col-span-3"
           type="number"
-          value={value as number}
+          value={value}
           onChange={(value) => onUpdate('value', value.target.valueAsNumber)}
         />
       )}
       {valueInputType === 'boolean' && (
         <Select
+          key={`value-${filter.id}`}
           className="col-span-3"
           defaultValue="true"
           value={String(value)}
@@ -124,13 +133,18 @@ export function QueryFilter({
       )}
       {valueInputType === 'date' && (
         <Input
+          key={`value-${filter.id}`}
           className="col-span-3"
           type="datetime-local"
           value={value}
           onChange={(e) => onUpdate('value', e.target.value)}
         />
       )}
-      <CloseButton className="h-full col-span-1" onClick={onPressRemove} />
+      <CloseButton
+        key={`remove-btn-${filter.id}`}
+        className="h-full col-span-1"
+        onClick={onPressRemove}
+      />
     </>
   );
 }

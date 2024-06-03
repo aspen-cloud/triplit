@@ -77,6 +77,8 @@ export function ProjectViewer() {
     }, {} as Record<string, { numEntities: number }>);
   }, [collectionStats]);
 
+  const selectedCollectionStats = statsByCollection[selectedCollection];
+
   // if loading render loading state
   if (!client) return <FullScreenWrapper>Loading...</FullScreenWrapper>;
   const shouldEnableCreateCollectionButton =
@@ -142,13 +144,12 @@ export function ProjectViewer() {
         <ModeToggle className="" />
       </div>
       <div className="flex-grow flex flex-col min-w-0">
-        {selectedCollection && !fetchingSchema ? (
+        {!fetchingSchema ? (
           <DataViewer
-            projectId={project.id}
-            collection={selectedCollection}
+            key={selectedCollection}
             client={client}
             schema={schema}
-            stats={statsByCollection[selectedCollection]}
+            stats={selectedCollectionStats}
           />
         ) : (
           <div className="flex flex-col h-full justify-center items-center gap-6">

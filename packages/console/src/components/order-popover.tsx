@@ -7,15 +7,16 @@ import {
   CloseButton,
   Button,
 } from '@triplit/ui';
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { QueryOrder } from '../../../db/src/query';
+import { CollectionDefinition } from '@triplit/db';
 
 type OrderPopoverProps = {
   collection: string;
   uniqueAttributes: Set<string>;
-  collectionSchema: any;
-  order: QueryOrder<any>;
-  onSubmit: (order: QueryOrder<any>) => void;
+  collectionSchema: CollectionDefinition;
+  order: QueryOrder<any, any>;
+  onSubmit: (order: QueryOrder<any, any>) => void;
 };
 
 export function OrderPopover(props: OrderPopoverProps) {
@@ -26,18 +27,23 @@ export function OrderPopover(props: OrderPopoverProps) {
   const [draftOrder, setDraftOrder] = useState<Map<string, string>>(
     new Map(order)
   );
-  const orderableAttributes: string[] = useMemo(() => {
-    const nonSetAttributes = collectionSchema
-      ? [...uniqueAttributes].filter(
-          (attr) =>
-            !collectionSchema?.properties?.[attr].type.startsWith('set_')
+
+  const orderableAttributes = Array.from(
+    collectionSchema
+      ? Object.entries(collectionSchema.schema.properties).reduce(
+          (prev, [name, def]) => {
+            if (
+              def.type !== 'query' &&
+              def.type !== 'set' &&
+              !draftOrder.has(name)
+            )
+              prev.push(name);
+            return prev;
+          },
+          [] as string[]
         )
-      : [...uniqueAttributes];
-    const notAlreadyOrdered = nonSetAttributes.filter(
-      (attr) => !draftOrder?.has(attr)
-    );
-    return notAlreadyOrdered;
-  }, [uniqueAttributes, collectionSchema, draftOrder]);
+      : uniqueAttributes
+  );
   const hasOrders = order.length > 0;
   return (
     <Popover

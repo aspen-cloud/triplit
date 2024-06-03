@@ -15,10 +15,9 @@ import { CollectionDefinition } from '@triplit/db';
 
 type FiltersPopoverProps = {
   collection: string;
-  projectId: string;
   onSubmit: (filters: QueryWhere<any, any>) => void;
   uniqueAttributes: Set<string>;
-  collectionSchema: CollectionDefinition;
+  collectionSchema?: CollectionDefinition;
   filters: QueryWhere<any, any>;
 };
 
@@ -37,7 +36,13 @@ function mapFilterArraysToFilterObjects(
   }));
 }
 
-function mapFilterObjectsToFilterArrays(filters: any[]) {
+function mapFilterObjectsToFilterArrays(
+  filters: {
+    attribute: string;
+    operator: string;
+    value: any;
+  }[]
+): QueryWhere<any, any> {
   return filters.map(({ attribute, operator, value }) => [
     attribute,
     operator,
@@ -77,7 +82,17 @@ export function FiltersPopover(props: FiltersPopoverProps) {
     },
     [collectionSchema]
   );
-  const filterAttributes = Array.from(uniqueAttributes);
+  const filterAttributes = Array.from(
+    collectionSchema
+      ? Object.entries(collectionSchema.schema.properties).reduce(
+          (prev, [name, def]) => {
+            if (def.type !== 'query') prev.push(name);
+            return prev;
+          },
+          [] as string[]
+        )
+      : uniqueAttributes
+  );
   const hasFilters = filters.length > 0;
   return (
     <Popover
@@ -116,6 +131,7 @@ export function FiltersPopover(props: FiltersPopoverProps) {
           >
             {draftFilters.map((data, index) => (
               <QueryFilter
+                key={data.id}
                 filter={data}
                 onUpdate={(filterField, newValue) => {
                   setDraftFilters((prev) =>
