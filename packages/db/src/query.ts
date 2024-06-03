@@ -133,6 +133,7 @@ export type CollectionQuery<
   order?: QueryOrder<M, CN>[];
   limit?: number;
   after?: [ValueCursor, boolean];
+  // Deprecated: remove this and references on next major version
   entityId?: string; // Syntactic sugar for where("id", "=", entityId), should not be relied on in query engine
   vars?: Record<string, any>;
   collectionName: CN;

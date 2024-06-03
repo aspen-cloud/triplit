@@ -111,7 +111,7 @@ export class RemoteClient<M extends ClientSchema | undefined> {
   async fetchOne<CQ extends ClientQuery<M, any>>(
     query: CQ
   ): Promise<ClientFetchResultEntity<CQ> | null> {
-    query = prepareFetchOneQuery(query);
+    query = { ...query, limit: 1 };
     const { data, error } = await this.sendRequest('/fetch', 'POST', {
       query,
     });
@@ -128,20 +128,10 @@ export class RemoteClient<M extends ClientSchema | undefined> {
 
   async fetchById<CN extends CollectionNameFromModels<M>>(
     collectionName: CN,
-    id: string,
-    queryParams?: FetchByIdQueryParams<M, CN>
+    id: string
   ) {
-    const query = prepareFetchByIdQuery(collectionName, id, queryParams);
-    const { data, error } = await this.sendRequest('/fetch', 'POST', {
-      query,
-    });
-    if (error) throw error;
-    const deserialized = deserializeHTTPFetchResult(
-      query,
-      data.result,
-      await this.schema()
-    );
-    return deserialized.get(id);
+    const query = this.query(collectionName).id(id).build();
+    return this.fetchOne(query);
   }
 
   async insert<CN extends CollectionNameFromModels<M>>(

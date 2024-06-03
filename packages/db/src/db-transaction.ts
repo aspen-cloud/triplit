@@ -706,21 +706,17 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
   async fetchById<CN extends CollectionNameFromModels<M>>(
     collectionName: CN,
     id: string,
-    queryParams: FetchByIdQueryParams<M, CN> = {},
     options: DBFetchOptions = {}
   ) {
-    return this.fetchOne(
-      // @ts-ignore
-      this.query(collectionName, queryParams).where('id', '=', id).build(),
-      options
-    );
+    const query = this.query(collectionName).id(id).build();
+    return this.fetchOne(query, options);
   }
 
   async fetchOne<Q extends CollectionQuery<M, any>>(
     query: Q,
     options: DBFetchOptions = {}
   ): Promise<FetchResultEntity<Q> | null> {
-    query.limit = 1;
+    query = { ...query, limit: 1 };
     const result = await this.fetch(query, options);
     const entity = [...result.values()][0];
     if (!entity) return null;

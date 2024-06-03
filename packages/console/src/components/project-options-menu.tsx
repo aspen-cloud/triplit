@@ -27,7 +27,7 @@ export function ProjectOptionsMenu({
   const [importModalIsOpen, setImportModalIsOpen] = useState(false);
   const [deleteProjectDialogIsOpen, setDeleteProjectDialogIsOpen] =
     useState(false);
-  const { results: project } = useProject(projectPrimaryKey);
+  const { result: project } = useProject(projectPrimaryKey);
   if (!(project && projectPrimaryKey)) return children;
   return (
     <>

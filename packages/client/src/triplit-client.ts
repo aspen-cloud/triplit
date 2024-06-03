@@ -347,31 +347,13 @@ export class TriplitClient<M extends ClientSchema | undefined = undefined> {
   async fetchById<CN extends CollectionNameFromModels<M>>(
     collectionName: CN,
     id: string,
-    queryParams?: FetchByIdQueryParams<M, CN>,
     options?: Partial<FetchOptions>
   ): Promise<ClientFetchResultEntity<ClientQuery<M, CN>> | null> {
-    this.logger.debug(
-      'fetchById START',
-      collectionName,
-      id,
-      queryParams,
-      options
-    );
-    const query = prepareFetchByIdQuery(collectionName, id, queryParams);
-    const results = await this.fetch(
-      query as ClientQuery<M, CollectionNameFromModels<M>>,
-      options
-    );
-    this.logger.debug(
-      'fetchById END',
-      collectionName,
-      id,
-      queryParams,
-      options
-    );
-    const entity = results.get(id);
-    if (!entity) return null;
-    return entity;
+    this.logger.debug('fetchById START', collectionName, id, options);
+    const query = this.query(collectionName).id(id).build();
+    const result = await this.fetchOne(query, options);
+    this.logger.debug('fetchById END', collectionName, id, options);
+    return result;
   }
 
   async fetchOne<CQ extends ClientQuery<M, any>>(
@@ -381,7 +363,7 @@ export class TriplitClient<M extends ClientSchema | undefined = undefined> {
     // ID is currently used to trace the lifecycle of a query/subscription across logs
     // @ts-ignore
     query = addLoggingIdToQuery(query);
-    query = prepareFetchOneQuery(query);
+    query = { ...query, limit: 1 };
     const result = await this.fetch(query, options);
     const entity = [...result.values()][0];
     if (!entity) return null;

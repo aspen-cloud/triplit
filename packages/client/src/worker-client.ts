@@ -87,7 +87,6 @@ export class WorkerClient<M extends ClientSchema | undefined = undefined> {
   async fetchById<CN extends CollectionNameFromModels<M>>(
     collectionName: CN,
     id: string,
-    queryParams?: FetchByIdQueryParams<M, CN>,
     options?: Partial<FetchOptions>
   ) {
     await this.initialized;
@@ -95,7 +94,6 @@ export class WorkerClient<M extends ClientSchema | undefined = undefined> {
       // @ts-ignore
       collectionName,
       id,
-      queryParams,
       options
     );
   }

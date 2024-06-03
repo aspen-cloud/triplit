@@ -40,7 +40,7 @@ export class QueryBuilder<
   M extends Models<any, any> | undefined = ExtractCollectionQueryModels<Q>,
   // @ts-expect-error
   CN extends CollectionNameFromModels<M> = ExtractCollectionQueryCollectionName<Q>
-> implements BuilderBase<CollectionQuery<any, any>, 'collectionName'>
+> implements BuilderBase<CollectionQuery<any, any>, 'collectionName', 'id'>
 {
   protected query: Q;
   constructor(query: Q) {
@@ -72,6 +72,13 @@ export class QueryBuilder<
       ),
     };
     return this;
+  }
+
+  id(id: string) {
+    return this.where(
+      // @ts-expect-error
+      ['id', '=', id]
+    );
   }
 
   order(...args: OrderInput<M, CN>) {
@@ -156,9 +163,11 @@ export class QueryBuilder<
     return this;
   }
 
+  /**
+   * @deprecated Use 'id()' instead.
+   */
   entityId(entityId: string) {
-    this.query = { ...this.query, entityId };
-    return this;
+    return this.id(entityId);
   }
 }
 

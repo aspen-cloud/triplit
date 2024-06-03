@@ -12,7 +12,7 @@ export function PageManagementMenu({ pages: pages }: { pages: any[] }) {
     pageId: string;
     prevName: string;
   } | null>(null);
-  const { results: currentPage } = useEntity(
+  const { result: currentPage } = useEntity(
     client,
     'pages',
     currentPageId ?? ''

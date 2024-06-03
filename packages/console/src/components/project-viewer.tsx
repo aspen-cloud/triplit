@@ -123,7 +123,7 @@ export function ProjectViewer({
 
   window.appClient = client;
   const {
-    results: schema,
+    result: schema,
     fetching: fetchingSchema,
     fetchingRemote: schemaFetchingRemote,
   } = useEntity(client, '_metadata', '_schema');

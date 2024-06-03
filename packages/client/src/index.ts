@@ -15,6 +15,7 @@ export * from './errors.js';
 export * from './transport/transport.js';
 export type {
   ClientFetchResult,
+  ClientFetchResultEntity,
   ClientQuery,
   ClientQueryDefault,
   ClientSchema,

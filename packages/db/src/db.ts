@@ -799,17 +799,12 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
     ].flat();
   }
 
-  // TODO: we could probably infer a type here
   async fetchById<CN extends CollectionNameFromModels<M>>(
     collectionName: CN,
     id: string,
-    queryParams: FetchByIdQueryParams<M, CN> = {},
     options: DBFetchOptions = {}
   ) {
-    const query = this.query(collectionName, queryParams)
-      // @ts-expect-error ModelFromModels<M, CN> doesnt pass through that 'id' is a property
-      .where('id', '=', id)
-      .build();
+    const query = this.query(collectionName).id(id).build();
     return this.fetchOne(query, options);
   }
 
@@ -817,8 +812,7 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
     query: Q,
     options: DBFetchOptions = {}
   ): Promise<FetchResultEntity<Q> | null> {
-    query.limit = 1;
-    await this.storageReady;
+    query = { ...query, limit: 1 };
     const result = await this.fetch(query, options);
     const entity = [...result.values()][0];
     if (!entity) return null;
@@ -959,6 +953,7 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
     collectionName: CN,
     params?: Query<M, CN>
   ) {
+    // TODO: Properly type with 'params'
     return CollectionQueryBuilder(collectionName, params);
   }
 
