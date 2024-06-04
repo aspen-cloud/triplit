@@ -1,3 +1,5 @@
+import '../../../ui/globals.css';
+
 import { Schema } from '@triplit/db';
 import { TriplitClient } from '@triplit/client';
 import { useCallback, useEffect, useMemo } from 'react';
@@ -11,7 +13,7 @@ import { CollectionStats, fetchCollectionStats } from '../utils/server';
 import { useLoaderData, redirect } from 'react-router-dom';
 import { consoleClient } from 'triplit/client.js';
 import { DEFAULT_HOSTNAME, initializeFromUrl } from 'src/utils/project.js';
-import { ModeToggle } from './mode-toggle.js';
+import { ModeToggle } from '@triplit/ui';
 import useUrlState from '@ahooksjs/use-url-state';
 import { QueryOrder, QueryWhere } from '@triplit/db/src/query.js';
 
@@ -121,7 +123,7 @@ export function ProjectViewer({
     };
   }, [client]);
 
-  window.appClient = client;
+  if (typeof window !== 'undefined') window.appClient = client;
   const {
     result: schema,
     fetching: fetchingSchema,

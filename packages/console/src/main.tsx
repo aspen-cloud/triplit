@@ -4,7 +4,7 @@ import App from './App';
 import { createBrowserRouter, RouterProvider } from 'react-router-dom';
 import '../../ui/globals.css';
 import { ProjectViewerPage, loader } from './components/project-viewer.js';
-import { ThemeProvider } from './components/theme-provider.js';
+import { ThemeProvider } from '@triplit/ui';
 
 const router = createBrowserRouter([
   {

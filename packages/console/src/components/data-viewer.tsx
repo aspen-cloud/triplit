@@ -29,7 +29,7 @@ import { flattenSchema } from 'src/utils/flatten-schema.js';
 
 const deleteAttributeDialogIsOpenAtom = atom(false);
 
-window.client = consoleClient;
+if (typeof window !== 'undefined') window.client = consoleClient;
 
 async function deleteAttribute(
   client: TriplitClient<any>,
