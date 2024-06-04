@@ -21,5 +21,12 @@ export function useEntity<
   options?: Partial<SubscriptionOptions>
 ) {
   let builder = client.query(collectionName).id(id);
-  return useQueryOne(client, builder, options);
+  const queryData = useQueryOne(client, builder, options);
+  return {
+    ...queryData,
+    /**
+     * @deprecated use `result` instead
+     */
+    results: queryData.result,
+  };
 }
