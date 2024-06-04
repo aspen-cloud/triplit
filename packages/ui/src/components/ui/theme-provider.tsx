@@ -75,7 +75,7 @@ export const useTheme = () => {
   return context;
 };
 
-function storageAvailable(type: string) {
+function storageAvailable(type: keyof Window) {
   let storage;
   try {
     storage = window[type];
