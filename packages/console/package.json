@@ -1,11 +1,13 @@
 {
   "name": "@triplit/console",
   "version": "0.3.58",
-  "type": "module",
   "files": [
     "dist"
   ],
+  "type": "module",
   "module": "./dist/components/console.js",
+  "types": "./dist/components/index.d.ts",
+  "main": "./dist/components/console.js",
   "exports": {
     ".": {
       "import": "./dist/components/console.js",
