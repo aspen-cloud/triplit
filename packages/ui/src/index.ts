@@ -24,4 +24,6 @@ export * from './components/ui/tooltip-simple.jsx';
 export * from './components/ui/tabs.jsx';
 export * from './components/ui/progress.jsx';
 export * from './components/ui/context-menu.jsx';
+export * from './components/ui/mode-toggle.jsx';
+export * from './components/ui/theme-provider.jsx';
 export { cn } from './lib/utils.js';

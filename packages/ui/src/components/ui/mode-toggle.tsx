@@ -1,17 +1,17 @@
 import { Moon, Sun } from 'lucide-react';
 
 import {
-  Button,
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from '@triplit/ui';
+} from './dropdown-menu.jsx';
+import { Button } from './button.jsx';
+
 import { useTheme } from './theme-provider';
 
 export function ModeToggle({ className }: { className?: string }) {
   const { setTheme } = useTheme();
-
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
