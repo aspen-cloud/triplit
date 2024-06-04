@@ -1,5 +1,19 @@
 {
   "name": "@triplit/client",
+  "repository": "github:aspen-cloud/triplit",
+  "homepage": "https://triplit.dev",
+  "license": "AGPL-3.0-only",
+  "keywords": [
+    "triplit",
+    "react",
+    "vue",
+    "indexeddb",
+    "crdt",
+    "fullstack",
+    "database",
+    "offline",
+    "sqlite"
+  ],
   "packageManager": "yarn@3.4.1",
   "version": "0.3.53",
   "source": "./src/index.ts",
