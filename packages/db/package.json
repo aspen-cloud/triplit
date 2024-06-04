@@ -1,5 +1,8 @@
 {
   "name": "@triplit/db",
+  "repository": "github:aspen-cloud/triplit",
+  "homepage": "https://triplit.dev",
+  "license": "AGPL-3.0-only",
   "version": "0.3.42",
   "source": "./src/index.ts",
   "main": "./dist/index.js",
