@@ -25,7 +25,9 @@ export async function loader({ params }: { params: { projectId?: string } }) {
   const { projectId: slugProjectId } = params;
   const importedProjectId = await initFromUrlPromise;
   const projectId =
-    slugProjectId === 'local' ? DEFAULT_HOSTNAME : importedProjectId;
+    slugProjectId === 'local'
+      ? DEFAULT_HOSTNAME
+      : importedProjectId ?? slugProjectId;
   if (!projectId) return redirect('/');
   const project = await consoleClient.fetchById('projects', projectId);
   if (!project) return redirect('/');
@@ -48,7 +50,7 @@ export async function loader({ params }: { params: { projectId?: string } }) {
 }
 
 export type ConsoleQuery = {
-  collection: string;
+  collection?: string;
   where: QueryWhere<any, any>;
   order: QueryOrder<any, any>;
 };
@@ -200,14 +202,18 @@ export function ProjectViewer({
         {!fetchingSchema &&
           connectionStatus !== 'CONNECTING' &&
           collectionsTolist.length === 0 && (
-            <div className="text-xs">
+            <p className="text-xs">
               {
                 'Looks like you haven’t added any data yet. Once there is data saved in your Triplit instance, your collections will show up here.'
               }
-            </div>
+            </p>
           )}
-        <div className="grow" />
-        <ModeToggle className="" />
+        {project && (
+          <>
+            <div className="grow" />
+            <ModeToggle className="" />
+          </>
+        )}
       </div>
       <div className="flex-grow flex flex-col min-w-0">
         {!fetchingSchema && query.collection ? (
