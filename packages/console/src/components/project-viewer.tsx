@@ -94,13 +94,15 @@ export function ProjectViewerPage() {
     [query, setUrlQueryState]
   );
   return (
-    <ProjectViewer
-      client={client}
-      collectionStats={collectionStats}
-      project={project}
-      query={query}
-      setQuery={setQuery}
-    />
+    <div className="w-screen h-screen overflow-hidden">
+      <ProjectViewer
+        client={client}
+        collectionStats={collectionStats}
+        project={project}
+        query={query}
+        setQuery={setQuery}
+      />
+    </div>
   );
 }
 
@@ -151,8 +153,8 @@ export function ProjectViewer({
     schema || collectionsTolist.length === 0;
   // If client, render hooks that rely on client safely
   return (
-    <div className="flex bg-popover max-w-[100vw] overflow-hidden">
-      <div className=" border-r h-screen flex flex-col p-4 w-[250px] shrink-0 overflow-y-auto">
+    <div className="flex bg-popover w-full overflow-hidden h-full">
+      <div className=" border-r flex flex-col p-4 w-[250px] shrink-0 overflow-y-auto">
         {project && (
           <ProjectOptionsMenu>
             <Button variant="secondary" className="w-full h-[2.5rem] mb-4">
