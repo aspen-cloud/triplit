@@ -70,6 +70,7 @@ import {
 import { Equal } from '@sinclair/typebox/value';
 import { MAX, MIN, encodeValue } from '@triplit/tuple-database';
 import { QueryBuilder } from './query/builder.js';
+import { FetchResult, FetchResultEntity, QueryResult } from './query/types';
 
 export default function CollectionQueryBuilder<
   M extends Models<any, any> | undefined,
@@ -84,49 +85,17 @@ export default function CollectionQueryBuilder<
   >(query);
 }
 
-export type QueryResult<
-  Q extends CollectionQuery<any, any>,
-  C extends QueryResultCardinality
-> = C extends 'one' ? FetchResultEntity<Q> : FetchResult<Q>;
-
-export type FetchResult<C extends CollectionQuery<any, any>> = Map<
-  string,
-  FetchResultEntity<C>
->;
-
 export type TimestampedFetchResult<C extends CollectionQuery<any, any>> = Map<
   string,
   TimestampedFetchResultEntity<C>
 >;
 
-export type TimestampedFetchResultEntity<C extends CollectionQuery<any, any>> =
+type TimestampedFetchResultEntity<C extends CollectionQuery<any, any>> =
   C extends CollectionQuery<infer M, infer CN>
     ? M extends Models<any, any>
       ? TimestampedTypeFromModel<ModelFromModels<M, CN>>
       : any
     : never;
-
-export type CollectionNameFromQuery<Q extends CollectionQuery<any, any>> =
-  Q extends CollectionQuery<infer _M, infer CN> ? CN : never;
-
-export type ReturnTypeFromQuery<Q extends CollectionQuery<any, any, any>> =
-  Q extends CollectionQuery<infer M, infer CN, infer S, infer I>
-    ? ReturnTypeFromParts<M, CN, S, I>
-    : any;
-
-export type ReturnTypeFromParts<
-  M extends Models<any, any> | undefined,
-  CN extends CollectionNameFromModels<M>,
-  Selection extends QuerySelectionValue<M, CN> = QuerySelectionValue<M, CN>,
-  Inclusion extends Record<string, RelationSubquery<M, any>> = {}
-> = M extends Models<any, any>
-  ? ModelFromModels<M, CN> extends Model<any>
-    ? QuerySelectionFitleredTypeFromModel<M, CN, Selection, Inclusion>
-    : any
-  : any;
-
-export type FetchResultEntity<C extends CollectionQuery<any, any>> =
-  ReturnTypeFromQuery<C>;
 
 function getIdFilterFromQuery(query: CollectionQuery<any, any>): string | null {
   const { where, collectionName } = query;
@@ -1456,7 +1425,7 @@ export async function fetchOne<
   executionContext: FetchExecutionContext,
   options: FetchFromStorageOptions = {}
 ): Promise<{
-  results: FetchResultEntity<Q> | null;
+  results: QueryResult<Q, 'one'>;
   triples: Map<string, TripleRow[]>;
 }> {
   query = { ...query, limit: 1 };

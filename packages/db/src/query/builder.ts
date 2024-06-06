@@ -12,7 +12,6 @@ import {
   RelationSubquery,
 } from '../query.js';
 import { CollectionNameFromModels, ModelFromModels } from '../db.js';
-import { ReturnTypeFromQuery } from '../collection-query.js';
 import {
   AfterClauseWithNoOrderError,
   QueryClauseFormattingError,
@@ -22,6 +21,7 @@ import {
   ExtractCollectionQueryInclusion,
   ExtractCollectionQueryModels,
   ExtractCollectionQuerySelection,
+  FetchResultEntity,
 } from './types';
 
 /**
@@ -228,7 +228,7 @@ type AfterInput<
 > =
   | ValueCursor
   | (M extends Models<any, any>
-      ? ReturnTypeFromQuery<CollectionQuery<M, CN>>
+      ? FetchResultEntity<CollectionQuery<M, CN>>
       : undefined)
   | undefined;
 

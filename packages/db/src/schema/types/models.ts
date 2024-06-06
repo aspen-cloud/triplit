@@ -1,4 +1,3 @@
-import { QueryResult } from '../../collection-query.js';
 import { DataType, Optional } from '../../data-types/base.js';
 import { QueryType } from '../../data-types/query.js';
 import { RecordType } from '../../data-types/record.js';
@@ -22,6 +21,7 @@ import {
   IsPropertyOptional,
   IsPropertyRequired,
 } from './properties.js';
+import { QueryResult } from '../../query/types';
 
 export type SchemaConfig = { id: ReturnType<typeof Schema.Id> } & Record<
   string,
@@ -178,8 +178,9 @@ type ExtractRelationSubqueryType<
   CollectionQuery<
     M,
     Subquery['subquery']['collectionName'],
-    // TODO: probably want to properly type selection
-    QuerySelectionValue<M, Subquery['subquery']['collectionName']>
+    // TODO: Typing for select and inclusion within subquery is not supported
+    QuerySelectionValue<M, Subquery['subquery']['collectionName']>,
+    {}
   >,
   Subquery['cardinality']
 >;

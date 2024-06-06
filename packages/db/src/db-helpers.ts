@@ -45,7 +45,6 @@ import { DataType } from './data-types/base.js';
 import { Attribute, TupleValue } from './triple-store-utils.js';
 import {
   FetchExecutionContext,
-  FetchResult,
   TimestampedFetchResult,
   bumpSubqueryVar,
   getRelationPathsFromIdentifier,
@@ -54,6 +53,7 @@ import {
 } from './collection-query.js';
 import { Logger } from '@triplit/types/src/logger.js';
 import { prefixVariables } from './utils.js';
+import { FetchResult } from './query/types';
 
 const ID_SEPARATOR = '#';
 

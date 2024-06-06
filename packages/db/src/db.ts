@@ -8,8 +8,6 @@ import {
 import { AsyncTupleStorageApi, TupleStorageApi } from '@triplit/tuple-database';
 import CollectionQueryBuilder, {
   fetch,
-  FetchResult,
-  FetchResultEntity,
   initialFetchExecutionContext,
   subscribe,
   subscribeTriples,
@@ -47,6 +45,8 @@ import { copyHooks, prefixVariables, triplesToObject } from './utils.js';
 import { EAV, indexToTriple, TripleRow } from './triple-store-utils.js';
 import { TripleStore } from './triple-store.js';
 import { Logger } from '@triplit/types/src/logger.js';
+import { isAnyOrUndefined } from './utility-types.js';
+import { TSify, FetchResult, FetchResultEntity } from './query/types';
 
 const DEFAULT_CACHE_DISABLED = true;
 
@@ -174,13 +174,6 @@ export type ModelFromModels<
   : M extends undefined
   ? undefined
   : never;
-
-type IsAny<T> = 0 extends 1 & T ? true : false;
-type isAnyOrUndefined<T> = IsAny<T> extends true
-  ? true
-  : undefined extends T
-  ? true
-  : false;
 
 export type CollectionNameFromModels<M extends Models<any, any> | undefined> =
   isAnyOrUndefined<M> extends true
@@ -744,7 +737,7 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
   async fetch<Q extends CollectionQuery<M, any>>(
     query: Q,
     options: DBFetchOptions = {}
-  ) {
+  ): Promise<TSify<FetchResult<Q>>> {
     this.logger.debug('fetch START', { query });
     await this.storageReady;
     const schema = (await this.getSchema())?.collections as M;
@@ -811,7 +804,7 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
   async fetchOne<Q extends CollectionQuery<M, any>>(
     query: Q,
     options: DBFetchOptions = {}
-  ): Promise<FetchResultEntity<Q> | null> {
+  ): Promise<TSify<FetchResultEntity<Q> | null>> {
     query = { ...query, limit: 1 };
     const result = await this.fetch(query, options);
     const entity = [...result.values()][0];
@@ -821,7 +814,7 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
 
   async insert<CN extends CollectionNameFromModels<M>>(
     collectionName: CN,
-    doc: InsertTypeFromModel<ModelFromModels<M, CN>>,
+    doc: TSify<InsertTypeFromModel<ModelFromModels<M, CN>>>,
     options: TransactOptions = {}
   ) {
     return this.transact(async (tx) => {
@@ -841,7 +834,7 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
 
   subscribe<Q extends CollectionQuery<M, any>>(
     query: Q,
-    onResults: (results: FetchResult<Q>) => void | Promise<void>,
+    onResults: (results: TSify<FetchResult<Q>>) => void | Promise<void>,
     onError?: (error: any) => void | Promise<void>,
     options: DBFetchOptions = {}
   ) {
@@ -940,7 +933,7 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
     collectionName: CN,
     entityId: string,
     updater: (
-      entity: UpdateTypeFromModel<ModelFromModels<M, CN>>
+      entity: TSify<UpdateTypeFromModel<ModelFromModels<M, CN>>>
     ) => void | Promise<void>,
     options: TransactOptions = {}
   ) {

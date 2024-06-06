@@ -15,12 +15,8 @@ import CollectionQueryBuilder, {
   doesEntityObjMatchWhere,
   fetch,
   fetchOne,
-  FetchResult,
-  FetchResultEntity,
   initialFetchExecutionContext,
-  ReturnTypeFromQuery,
   convertEntityToJS,
-  ReturnTypeFromParts,
 } from './collection-query.js';
 import {
   DBSerializationError,
@@ -88,6 +84,12 @@ import {
 import { TripleStoreApi } from './triple-store.js';
 import { RecordType } from './data-types/record.js';
 import { Logger } from '@triplit/types/src/logger.js';
+import {
+  TSify,
+  FetchResultEntityFromParts,
+  FetchResult,
+  FetchResultEntity,
+} from './query/types';
 
 interface TransactionOptions<
   M extends Models<any, any> | undefined = undefined
@@ -498,7 +500,7 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
 
   async insert<CN extends CollectionNameFromModels<M>>(
     collectionName: CN,
-    doc: InsertTypeFromModel<ModelFromModels<M, CN>>
+    doc: TSify<InsertTypeFromModel<ModelFromModels<M, CN>>>
   ) {
     if (!collectionName)
       throw new InvalidCollectionNameError(
@@ -569,7 +571,7 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
       insertedEntity.data as any,
       schema,
       collectionName
-    ) as ReturnTypeFromParts<M, CN>;
+    ) as TSify<FetchResultEntityFromParts<M, CN>>;
     this.logger.debug('insert END', collectionName, insertedEntityJS);
     return insertedEntityJS;
   }
@@ -578,7 +580,7 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
     collectionName: CN,
     entityId: string,
     updater: (
-      entity: UpdateTypeFromModel<ModelFromModels<M, CN>>
+      entity: TSify<UpdateTypeFromModel<ModelFromModels<M, CN>>>
     ) => void | Promise<void>
   ) {
     this.logger.debug('update START', collectionName, entityId);
@@ -590,7 +592,9 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
         collectionName === '_metadata'
           ? createUpdateProxy<M, CN>(changes, entity)
           : createUpdateProxy<M, CN>(changes, entity, schema, collectionName);
-      await updater(updateProxy);
+      await updater(
+        updateProxy as TSify<UpdateTypeFromModel<ModelFromModels<M, CN>>>
+      );
       // return dbDocumentToTuples(updateProxy);
       return changes.getTuples();
     });
@@ -675,7 +679,7 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
   async fetch<Q extends CollectionQuery<M, any>>(
     query: Q,
     options: DBFetchOptions = {}
-  ): Promise<FetchResult<Q>> {
+  ): Promise<TSify<FetchResult<Q>>> {
     const schema = (await this.getSchema())?.collections as M;
     const fetchQuery = prepareQuery(query, schema, {
       skipRules: options.skipRules,
@@ -715,7 +719,7 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
   async fetchOne<Q extends CollectionQuery<M, any>>(
     query: Q,
     options: DBFetchOptions = {}
-  ): Promise<FetchResultEntity<Q> | null> {
+  ): Promise<TSify<FetchResultEntity<Q> | null>> {
     query = { ...query, limit: 1 };
     const result = await this.fetch(query, options);
     const entity = [...result.values()][0];

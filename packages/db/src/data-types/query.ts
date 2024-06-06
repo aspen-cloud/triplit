@@ -1,4 +1,3 @@
-import { FetchResult } from '../collection-query.js';
 import { CollectionNameFromModels } from '../db.js';
 import {
   CollectionNotFoundError,
@@ -9,6 +8,7 @@ import {
 import { CollectionQuery, QueryResultCardinality } from '../query.js';
 import { Models } from '../schema/types';
 import { TypeInterface } from './type.js';
+import { FetchResult } from '../query/types';
 
 export type SubQuery<
   M extends Models<any, any>,

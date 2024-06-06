@@ -94,11 +94,12 @@ export {
 } from './collection-query.js';
 export { QueryBuilder } from './query/builder.js';
 export type {
-  FetchResult,
-  FetchResultEntity,
-  ReturnTypeFromQuery,
   TimestampedTypeFromModel as TypeFromModel, // TODO: dont alias
 } from './collection-query.js';
+export type {
+  FetchResult,
+  FetchResultEntity as ReturnTypeFromQuery,
+} from './query/types';
 export { default as Builder } from './utils/builder.js';
 export type { toBuilder } from './utils/builder.js';
 export type { BuilderBase } from './query/builder.js';

@@ -20,6 +20,15 @@ export type FilteredRecord<
 export type IsAny<T> = 0 extends 1 & T ? true : false;
 
 /**
+ * Check if a type is any or undefined. Similar to IsAny but also checks for undefined.
+ */
+export type isAnyOrUndefined<T> = IsAny<T> extends true
+  ? true
+  : undefined extends T
+  ? true
+  : false;
+
+/**
  * Check if a type is unknown or undefined
  */
 export type IsUnknownOrUndefined<T> = unknown extends T
