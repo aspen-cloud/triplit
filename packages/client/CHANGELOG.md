@@ -1,5 +1,15 @@
 # @triplit/client
 
+## 0.3.54
+
+### Patch Changes
+
+- 2c2a4d3: Improve type intellisense readability
+- 352b619: refactor fetchById to use fetchOne and simplify params, add id() to builder
+- Updated dependencies [2c2a4d3]
+- Updated dependencies [352b619]
+  - @triplit/db@0.3.43
+
 ## 0.3.53
 
 ### Patch Changes
