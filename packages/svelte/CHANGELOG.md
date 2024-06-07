@@ -1,5 +1,14 @@
 # @triplit/svelte
 
+## 0.1.26
+
+### Patch Changes
+
+- 2c2a4d3: Improve type intellisense readability
+- Updated dependencies [2c2a4d3]
+- Updated dependencies [352b619]
+  - @triplit/client@0.3.54
+
 ## 0.1.25
 
 ### Patch Changes
