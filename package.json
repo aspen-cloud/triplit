@@ -19,10 +19,10 @@
     "esbuild": "0.17.18",
     "prettier": "^2.6.2",
     "semver": "^7.5.4",
-    "turbo": "^2.0.3",
+    "turbo": "^1.13.1",
     "typescript": "^5.2.2"
   },
-  "packageManager": "yarn@3.4.1",
+  "packageManager": "yarn@4.2.2",
   "resolutions": {
     "parjs@^1.3.2": "patch:parjs@npm%3A1.3.2#./.yarn/patches/parjs-npm-1.3.2-7ab761bbfc.patch",
     "nextra-theme-docs@^2.13.3": "patch:nextra-theme-docs@npm%3A2.13.3#./.yarn/patches/nextra-theme-docs-npm-2.13.3-ed66737b67.patch"
