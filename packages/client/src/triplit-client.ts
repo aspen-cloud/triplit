@@ -28,6 +28,7 @@ import {
   ClientFetchResult,
   ClientFetchResultEntity,
   ClientQuery,
+  ClientQueryDefault,
   ClientSchema,
   clientQueryBuilder,
 } from './utils/query.js';
@@ -345,7 +346,9 @@ export class TriplitClient<M extends ClientSchema | undefined = undefined> {
     collectionName: CN,
     id: string,
     options?: Partial<FetchOptions>
-  ) {
+  ): Promise<Unalias<
+    ClientFetchResultEntity<ClientQueryDefault<M, CN>>
+  > | null> {
     this.logger.debug('fetchById START', collectionName, id, options);
     const query = this.query(collectionName).id(id).build();
     const result = await this.fetchOne(query, options);
@@ -370,7 +373,12 @@ export class TriplitClient<M extends ClientSchema | undefined = undefined> {
   async insert<CN extends CollectionNameFromModels<M>>(
     collectionName: CN,
     object: Unalias<InsertTypeFromModel<ModelFromModels<M, CN>>>
-  ) {
+  ): Promise<{
+    txId: string | undefined;
+    output:
+      | Unalias<ClientFetchResultEntity<ClientQueryDefault<M, CN>>>
+      | undefined;
+  }> {
     this.logger.debug('insert START', collectionName, object);
     const resp = await this.db.insert(collectionName, object, {
       skipRules: SKIP_RULES,
