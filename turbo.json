@@ -2,30 +2,15 @@
   "$schema": "https://turbo.build/schema.json",
   "tasks": {
     "build": {
-      "dependsOn": [
-        "^build"
-      ],
-      "outputs": [
-        "./dist"
-      ]
+      "dependsOn": ["^build"],
+      "outputs": ["./dist"]
     },
     "deploy": {
-      "dependsOn": [
-        "build",
-        "test",
-        "lint"
-      ]
+      "dependsOn": ["build", "test", "lint"]
     },
     "test": {
-      "dependsOn": [
-        "build"
-      ],
-      "inputs": [
-        "src/**/*.tsx",
-        "src/**/*.ts",
-        "test/**/*.ts",
-        "test/**/*.tsx"
-      ]
+      "dependsOn": ["build"],
+      "inputs": ["src/**/*.tsx", "src/**/*.ts", "test/**/*.ts", "test/**/*.tsx"]
     },
     "lint": {},
     "dev": {
