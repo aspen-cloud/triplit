@@ -1,5 +1,15 @@
 # @triplit/react
 
+## 0.3.57
+
+### Patch Changes
+
+- 352b619: add hook useQueryOne
+- 2c2a4d3: Improve type intellisense readability
+- Updated dependencies [2c2a4d3]
+- Updated dependencies [352b619]
+  - @triplit/client@0.3.54
+
 ## 0.3.56
 
 ### Patch Changes
