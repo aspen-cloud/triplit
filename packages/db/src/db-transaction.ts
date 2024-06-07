@@ -719,7 +719,7 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
   async fetchOne<Q extends CollectionQuery<M, any>>(
     query: Q,
     options: DBFetchOptions = {}
-  ): Promise<Unalias<FetchResultEntity<Q> | null>> {
+  ): Promise<Unalias<FetchResultEntity<Q>> | null> {
     query = { ...query, limit: 1 };
     const result = await this.fetch(query, options);
     const entity = [...result.values()][0];

@@ -3,11 +3,10 @@ import {
   Models,
   CollectionNameFromModels,
   SubscriptionOptions,
-  ReturnTypeFromQuery,
-  FetchByIdQueryParams,
+  Unalias,
+  ClientFetchResultEntity,
   ClientQueryDefault,
 } from '@triplit/client';
-import { useQuery } from './use-query.js';
 import type { WorkerClient } from '@triplit/client/worker-client';
 import { useQueryOne } from './use-query-one.js';
 
@@ -19,7 +18,14 @@ export function useEntity<
   collectionName: CN,
   id: string,
   options?: Partial<SubscriptionOptions>
-) {
+): {
+  fetching: boolean;
+  fetchingLocal: boolean;
+  fetchingRemote: boolean;
+  result: Unalias<ClientFetchResultEntity<ClientQueryDefault<M, CN>>> | null;
+  results: Unalias<ClientFetchResultEntity<ClientQueryDefault<M, CN>>> | null;
+  error: any;
+} {
   let builder = client.query(collectionName).id(id);
   const queryData = useQueryOne(client, builder, options);
   return {

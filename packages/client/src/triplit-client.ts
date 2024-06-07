@@ -2,7 +2,6 @@ import {
   DB,
   Migration,
   UpdateTypeFromModel,
-  Models,
   CollectionNameFromModels,
   DBTransaction,
   ModelFromModels,
@@ -10,7 +9,6 @@ import {
   TriplitError,
   InsertTypeFromModel,
   Storage,
-  FetchByIdQueryParams,
   FetchResult,
   compareCursors,
   ValueCursor,
@@ -18,6 +16,7 @@ import {
   Attribute,
   TupleValue,
   schemaToJSON,
+  Unalias,
 } from '@triplit/db';
 import { getUserId } from './token.js';
 import { UnrecognizedFetchPolicyError } from './errors.js';
@@ -31,8 +30,6 @@ import {
   ClientQuery,
   ClientSchema,
   clientQueryBuilder,
-  prepareFetchByIdQuery,
-  prepareFetchOneQuery,
 } from './utils/query.js';
 import { RemoteClient } from './remote-client.js';
 import { Logger } from '@triplit/types/logger.js';
@@ -283,7 +280,7 @@ export class TriplitClient<M extends ClientSchema | undefined = undefined> {
   async fetch<CQ extends ClientQuery<M, any>>(
     query: CQ,
     options?: Partial<FetchOptions>
-  ): Promise<ClientFetchResult<CQ>> {
+  ): Promise<Unalias<ClientFetchResult<CQ>>> {
     // ID is currently used to trace the lifecycle of a query/subscription across logs
     // @ts-ignore
     query = addLoggingIdToQuery(query);
@@ -332,7 +329,7 @@ export class TriplitClient<M extends ClientSchema | undefined = undefined> {
   private async fetchLocal<CQ extends ClientQuery<M, any>>(
     query: CQ,
     options?: Partial<DBFetchOptions>
-  ): Promise<ClientFetchResult<CQ>> {
+  ): Promise<Unalias<ClientFetchResult<CQ>>> {
     const scope = parseScope(query);
     this.logger.debug('fetchLocal START', query, scope);
     const res = await this.db.fetch(query, {
@@ -341,14 +338,14 @@ export class TriplitClient<M extends ClientSchema | undefined = undefined> {
       ...(options ?? {}),
     });
     this.logger.debug('fetchLocal END', res);
-    return res as ClientFetchResult<CQ>;
+    return res;
   }
 
   async fetchById<CN extends CollectionNameFromModels<M>>(
     collectionName: CN,
     id: string,
     options?: Partial<FetchOptions>
-  ): Promise<ClientFetchResultEntity<ClientQuery<M, CN>> | null> {
+  ) {
     this.logger.debug('fetchById START', collectionName, id, options);
     const query = this.query(collectionName).id(id).build();
     const result = await this.fetchOne(query, options);
@@ -359,7 +356,7 @@ export class TriplitClient<M extends ClientSchema | undefined = undefined> {
   async fetchOne<CQ extends ClientQuery<M, any>>(
     query: CQ,
     options?: Partial<FetchOptions>
-  ): Promise<ClientFetchResultEntity<CQ> | null> {
+  ) {
     // ID is currently used to trace the lifecycle of a query/subscription across logs
     // @ts-ignore
     query = addLoggingIdToQuery(query);
@@ -372,7 +369,7 @@ export class TriplitClient<M extends ClientSchema | undefined = undefined> {
 
   async insert<CN extends CollectionNameFromModels<M>>(
     collectionName: CN,
-    object: InsertTypeFromModel<ModelFromModels<M, CN>>
+    object: Unalias<InsertTypeFromModel<ModelFromModels<M, CN>>>
   ) {
     this.logger.debug('insert START', collectionName, object);
     const resp = await this.db.insert(collectionName, object, {
@@ -390,7 +387,7 @@ export class TriplitClient<M extends ClientSchema | undefined = undefined> {
     collectionName: CN,
     entityId: string,
     updater: (
-      entity: UpdateTypeFromModel<ModelFromModels<M, CN>>
+      entity: Unalias<UpdateTypeFromModel<ModelFromModels<M, CN>>>
     ) => void | Promise<void>
   ) {
     this.logger.debug('update START', collectionName, entityId);
@@ -449,7 +446,7 @@ export class TriplitClient<M extends ClientSchema | undefined = undefined> {
   subscribe<CQ extends ClientQuery<M, any, any, any>>(
     query: CQ,
     onResults: (
-      results: ClientFetchResult<CQ>,
+      results: Unalias<ClientFetchResult<CQ>>,
       info: { hasRemoteFulfilled: boolean }
     ) => void | Promise<void>,
     onError?: (error: any) => void | Promise<void>,
@@ -467,7 +464,7 @@ export class TriplitClient<M extends ClientSchema | undefined = undefined> {
         return this.db.subscribe(
           query,
           (results) =>
-            onResults(results as ClientFetchResult<CQ>, {
+            onResults(results, {
               hasRemoteFulfilled: false,
             }),
           onError,
@@ -488,13 +485,13 @@ export class TriplitClient<M extends ClientSchema | undefined = undefined> {
     let unsubscribeRemote = () => {};
     let hasRemoteFulfilled = false;
     let fulfilledTimeout: ReturnType<typeof setTimeout> | null = null;
-    let results: FetchResult<CQ>;
+    let results: Unalias<FetchResult<CQ>>;
     const userResultsCallback = onResults;
     const userErrorCallback = onError;
     onResults = (results, info) => {
       // Ensure we dont re-fire the callback if we've already unsubscribed
       if (unsubscribed) return;
-      userResultsCallback(results as ClientFetchResult<CQ>, info);
+      userResultsCallback(results, info);
     };
     onError = userErrorCallback
       ? (error) => {
@@ -503,10 +500,12 @@ export class TriplitClient<M extends ClientSchema | undefined = undefined> {
           userErrorCallback(error);
         }
       : undefined;
-    const clientSubscriptionCallback = (newResults: FetchResult<CQ>) => {
+    const clientSubscriptionCallback = (
+      newResults: Unalias<FetchResult<CQ>>
+    ) => {
       results = newResults;
       this.logger.debug('subscribe RESULTS', results);
-      onResults(results as ClientFetchResult<CQ>, { hasRemoteFulfilled });
+      onResults(results, { hasRemoteFulfilled });
     };
     unsubscribeLocal = this.db.subscribe(
       query,
@@ -527,7 +526,7 @@ export class TriplitClient<M extends ClientSchema | undefined = undefined> {
         // This is a hack to make sure we don't call onRemoteFulfilled before
         // the local subscription callback has had a chance to refire
         fulfilledTimeout = setTimeout(() => {
-          clientSubscriptionCallback(results as ClientFetchResult<CQ>);
+          clientSubscriptionCallback(results);
           opts.onRemoteFulfilled?.();
         }, 250);
       };
@@ -551,7 +550,7 @@ export class TriplitClient<M extends ClientSchema | undefined = undefined> {
   subscribeWithPagination<CQ extends ClientQuery<M, any>>(
     query: CQ,
     onResults: (
-      results: ClientFetchResult<CQ>,
+      results: Unalias<ClientFetchResult<CQ>>,
       info: {
         hasRemoteFulfilled: boolean;
         hasNextPage: boolean;
@@ -594,7 +593,7 @@ export class TriplitClient<M extends ClientSchema | undefined = undefined> {
       // If we have an after, the limit will increase by 1
       query.limit = requestedLimit! + 1 + (query.after ? 1 : 0);
       subscriptionResultHandler = (
-        results: ClientFetchResult<CQ>,
+        results: Unalias<ClientFetchResult<CQ>>,
         info: { hasRemoteFulfilled: boolean }
       ) => {
         const cursorAttr = query.order?.[0]?.[0];
@@ -667,7 +666,7 @@ export class TriplitClient<M extends ClientSchema | undefined = undefined> {
             options
           );
         } else {
-          onResults(new Map(entries) as ClientFetchResult<CQ>, {
+          onResults(new Map(entries), {
             ...info,
             hasNextPage: hasNextPage,
             hasPreviousPage: hasPreviousPage,
@@ -734,7 +733,7 @@ export class TriplitClient<M extends ClientSchema | undefined = undefined> {
   subscribeWithExpand<CQ extends ClientQuery<M, any>>(
     query: CQ,
     onResults: (
-      results: ClientFetchResult<CQ>,
+      results: Unalias<ClientFetchResult<CQ>>,
       info: {
         hasRemoteFulfilled: boolean;
         hasMore: boolean;
@@ -759,13 +758,13 @@ export class TriplitClient<M extends ClientSchema | undefined = undefined> {
       const originalPageSize = query.limit;
       query.limit = query.limit + 1;
       subscriptionResultHandler = (
-        results: ClientFetchResult<CQ>,
+        results: Unalias<ClientFetchResult<CQ>>,
         info: { hasRemoteFulfilled: boolean }
       ) => {
         const hasMore = results.size >= query.limit!;
         let entries = Array.from(results.entries());
         if (hasMore) entries = entries.slice(0, -1);
-        onResults(new Map(entries) as ClientFetchResult<CQ>, {
+        onResults(new Map(entries), {
           hasRemoteFulfilled: info.hasRemoteFulfilled,
           hasMore,
         });

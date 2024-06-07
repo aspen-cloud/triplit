@@ -6,6 +6,7 @@ import {
   Models,
   QueryBuilder,
   SubscriptionOptions,
+  Unalias,
 } from '@triplit/client';
 import type { WorkerClient } from '@triplit/client/worker-client';
 
@@ -20,12 +21,12 @@ export function useQuery<
   fetching: boolean;
   fetchingLocal: boolean;
   fetchingRemote: boolean;
-  results: ClientFetchResult<Q> | undefined;
+  results: Unalias<ClientFetchResult<Q>> | undefined;
   error: any;
 } {
-  const [results, setResults] = useState<ClientFetchResult<Q> | undefined>(
-    undefined
-  );
+  const [results, setResults] = useState<
+    Unalias<ClientFetchResult<Q>> | undefined
+  >(undefined);
   const [fetchingLocal, setFetchingLocal] = useState(true);
   const [fetchingRemote, setFetchingRemote] = useState(
     client.connectionStatus !== 'CLOSED'
@@ -106,9 +107,9 @@ export function usePaginatedQuery<
   const builtQuery = useMemo(() => query.build(), [query]);
   const [hasNextPage, setHasNextPage] = useState(false);
   const [hasPreviousPage, setHasPreviousPage] = useState(false);
-  const [results, setResults] = useState<ClientFetchResult<Q> | undefined>(
-    undefined
-  );
+  const [results, setResults] = useState<
+    Unalias<ClientFetchResult<Q>> | undefined
+  >(undefined);
   const [error, setError] = useState<any>(undefined);
   const [fetching, setFetching] = useState(true);
   const [fetchingPage, setFetchingPage] = useState(false);
@@ -181,9 +182,9 @@ export function useInfiniteQuery<
   const builtQuery = useMemo(() => query.build(), [query]);
   const stringifiedQuery = builtQuery && JSON.stringify(builtQuery);
   const [hasMore, setHasMore] = useState(false);
-  const [results, setResults] = useState<ClientFetchResult<Q> | undefined>(
-    undefined
-  );
+  const [results, setResults] = useState<
+    Unalias<ClientFetchResult<Q>> | undefined
+  >(undefined);
   const [error, setError] = useState<any>(undefined);
   const [fetching, setFetching] = useState(true);
   const [fetchingRemote, setFetchingRemote] = useState(

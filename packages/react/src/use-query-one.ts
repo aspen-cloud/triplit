@@ -1,11 +1,11 @@
 import {
   ClientFetchResultEntity,
   ClientQuery,
-  CollectionNameFromModels,
   Models,
   QueryBuilder,
   SubscriptionOptions,
   TriplitClient,
+  Unalias,
 } from '@triplit/client';
 import { WorkerClient } from '@triplit/client/worker-client';
 import { useMemo } from 'react';
@@ -22,7 +22,7 @@ export function useQueryOne<
   fetching: boolean;
   fetchingLocal: boolean;
   fetchingRemote: boolean;
-  result: ClientFetchResultEntity<Q> | null;
+  result: Unalias<ClientFetchResultEntity<Q>> | null;
   error: any;
 } {
   const fetchOneQuery = query.limit(1);

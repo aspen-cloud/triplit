@@ -7,6 +7,7 @@ import type {
   Models,
   SubscriptionOptions,
   TriplitClient,
+  Unalias,
 } from '@triplit/client';
 import { WorkerClient } from '@triplit/client/worker-client';
 
@@ -21,11 +22,11 @@ export function useQuery<
   fetching: boolean;
   fetchingLocal: boolean;
   fetchingRemote: boolean;
-  results: ClientFetchResult<Q> | undefined;
+  results: Unalias<ClientFetchResult<Q>> | undefined;
   error: any;
   updateQuery: (query: QueryBuilder<Q>) => void;
 } {
-  let results: ClientFetchResult<Q> | undefined = $state(undefined);
+  let results: Unalias<ClientFetchResult<Q>> | undefined = $state(undefined);
   let isInitialFetch = $state(true);
   let fetchingLocal = $state(false);
   let fetchingRemote = $state(client.connectionStatus !== 'CLOSED');

@@ -29,7 +29,7 @@ export type ClientFetchResult<C extends ClientQuery<any, any>> = Map<
 
 export type ClientSchema = Models<any, any>;
 
-export type ClientFetchResultEntity<C extends ClientQuery<any, any>> =
+export type ClientFetchResultEntity<C extends ClientQuery<any, any, any, any>> =
   ReturnTypeFromQuery<C>;
 
 export type SyncStatus = 'pending' | 'confirmed' | 'all';

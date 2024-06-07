@@ -6,17 +6,16 @@ import type {
   InfiniteSubscription,
   PaginatedSubscription,
   SubscriptionOptions,
-  TriplitClient,
 } from './triplit-client.js';
 import {
   ChangeTracker,
   CollectionNameFromModels,
   CollectionQuery,
   DBTransaction,
-  FetchByIdQueryParams,
   InsertTypeFromModel,
   JSONToSchema,
   ModelFromModels,
+  Unalias,
   UpdateTypeFromModel,
   createUpdateProxy,
   schemaToJSON,
@@ -25,7 +24,7 @@ import {
   ClientFetchResult,
   ClientFetchResultEntity,
   ClientQuery,
-  ClientQueryBuilder,
+  ClientQueryDefault,
   ClientSchema,
   clientQueryBuilder,
 } from './utils/query.js';
@@ -74,7 +73,7 @@ export class WorkerClient<M extends ClientSchema | undefined = undefined> {
   async fetch<CQ extends ClientQuery<M, any>>(
     query: CQ,
     options?: Partial<FetchOptions>
-  ): Promise<ClientFetchResult<CQ>> {
+  ): Promise<Unalias<ClientFetchResult<CQ>>> {
     await this.initialized;
     // @ts-expect-error
     return this.clientWorker.fetch(query, options);
@@ -88,26 +87,33 @@ export class WorkerClient<M extends ClientSchema | undefined = undefined> {
     collectionName: CN,
     id: string,
     options?: Partial<FetchOptions>
-  ) {
+  ): Promise<Unalias<
+    ClientFetchResultEntity<ClientQueryDefault<M, CN>>
+  > | null> {
     await this.initialized;
     return this.clientWorker.fetchById(
-      // @ts-ignore
+      // @ts-expect-error
       collectionName,
       id,
       options
     );
   }
-  async fetchOne<CQ extends ClientQuery<M, any>>(
+  async fetchOne<CQ extends ClientQuery<M, any, any, any>>(
     query: CQ,
     options?: Partial<FetchOptions>
-  ): Promise<ClientFetchResultEntity<CQ> | null> {
+  ): Promise<Unalias<ClientFetchResultEntity<CQ>> | null> {
     await this.initialized;
     return this.clientWorker.fetchOne(query, options);
   }
   async insert<CN extends CollectionNameFromModels<M>>(
     collectionName: CN,
-    entity: InsertTypeFromModel<ModelFromModels<M, CN>>
-  ) {
+    entity: Unalias<InsertTypeFromModel<ModelFromModels<M, CN>>>
+  ): Promise<{
+    txId: string | undefined;
+    output:
+      | Unalias<ClientFetchResultEntity<ClientQueryDefault<M, CN>>>
+      | undefined;
+  }> {
     await this.initialized;
     return this.clientWorker.insert(
       // @ts-ignore
@@ -119,7 +125,7 @@ export class WorkerClient<M extends ClientSchema | undefined = undefined> {
     collectionName: CN,
     entityId: string,
     updater: (
-      entity: UpdateTypeFromModel<ModelFromModels<M, CN>>
+      entity: Unalias<UpdateTypeFromModel<ModelFromModels<M, CN>>>
     ) => void | Promise<void>
   ) {
     await this.initialized;
@@ -133,7 +139,9 @@ export class WorkerClient<M extends ClientSchema | undefined = undefined> {
         collectionName === '_metadata'
           ? createUpdateProxy<M, any>(changes, entity)
           : createUpdateProxy<M, any>(changes, entity, schema, collectionName);
-      await updater(updateProxy);
+      await updater(
+        updateProxy as Unalias<UpdateTypeFromModel<ModelFromModels<M, CN>>>
+      );
       return changes.getTuples();
     });
   }
@@ -166,7 +174,7 @@ export class WorkerClient<M extends ClientSchema | undefined = undefined> {
   subscribe<CQ extends ClientQuery<M, any, any, any>>(
     query: CQ,
     onResults: (
-      results: ClientFetchResult<CQ>,
+      results: Unalias<ClientFetchResult<CQ>>,
       info: { hasRemoteFulfilled: boolean }
     ) => void | Promise<void>,
     onError?: (error: any) => void | Promise<void>,
@@ -201,7 +209,7 @@ export class WorkerClient<M extends ClientSchema | undefined = undefined> {
   subscribeWithPagination<CQ extends ClientQuery<M, any>>(
     query: CQ,
     onResults: (
-      results: ClientFetchResult<CQ>,
+      results: Unalias<ClientFetchResult<CQ>>,
       info: {
         hasRemoteFulfilled: boolean;
         hasNextPage: boolean;
@@ -238,7 +246,7 @@ export class WorkerClient<M extends ClientSchema | undefined = undefined> {
   subscribeWithExpand<CQ extends ClientQuery<M, any>>(
     query: CQ,
     onResults: (
-      results: ClientFetchResult<CQ>,
+      results: Unalias<ClientFetchResult<CQ>>,
       info: {
         hasRemoteFulfilled: boolean;
         hasMore: boolean;
