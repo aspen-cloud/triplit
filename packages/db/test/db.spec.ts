@@ -5248,7 +5248,8 @@ describe('selecting subqueries from schema', () => {
     expect(result.get('user-1')).not.toHaveProperty('friends');
   });
 
-  it('can include subqueries in fetch by id', async () => {
+  // TODO: determine if we want to support this
+  it.skip('can include subqueries in fetch by id', async () => {
     const result = (await user1DB.fetchById('users', 'user-1', {
       include: { posts: null },
     }))!;

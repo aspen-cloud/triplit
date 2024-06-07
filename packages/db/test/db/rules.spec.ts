@@ -89,14 +89,9 @@ describe('Rules', () => {
       await testDBAndTransaction(
         () => db,
         async (db) => {
-          const nonEnrolledClass = await db.fetchById(
-            'classes',
-            'class-2',
-            {},
-            {
-              skipRules: true,
-            }
-          );
+          const nonEnrolledClass = await db.fetchById('classes', 'class-2', {
+            skipRules: true,
+          });
           expect(nonEnrolledClass).not.toBeNull();
           const enrolledClass = await db.fetchById(
             'classes',
