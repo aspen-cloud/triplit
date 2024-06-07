@@ -85,7 +85,7 @@ import { TripleStoreApi } from './triple-store.js';
 import { RecordType } from './data-types/record.js';
 import { Logger } from '@triplit/types/src/logger.js';
 import {
-  TSify,
+  Unalias,
   FetchResultEntityFromParts,
   FetchResult,
   FetchResultEntity,
@@ -500,7 +500,7 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
 
   async insert<CN extends CollectionNameFromModels<M>>(
     collectionName: CN,
-    doc: TSify<InsertTypeFromModel<ModelFromModels<M, CN>>>
+    doc: Unalias<InsertTypeFromModel<ModelFromModels<M, CN>>>
   ) {
     if (!collectionName)
       throw new InvalidCollectionNameError(
@@ -571,7 +571,7 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
       insertedEntity.data as any,
       schema,
       collectionName
-    ) as TSify<FetchResultEntityFromParts<M, CN>>;
+    ) as Unalias<FetchResultEntityFromParts<M, CN>>;
     this.logger.debug('insert END', collectionName, insertedEntityJS);
     return insertedEntityJS;
   }
@@ -580,7 +580,7 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
     collectionName: CN,
     entityId: string,
     updater: (
-      entity: TSify<UpdateTypeFromModel<ModelFromModels<M, CN>>>
+      entity: Unalias<UpdateTypeFromModel<ModelFromModels<M, CN>>>
     ) => void | Promise<void>
   ) {
     this.logger.debug('update START', collectionName, entityId);
@@ -593,7 +593,7 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
           ? createUpdateProxy<M, CN>(changes, entity)
           : createUpdateProxy<M, CN>(changes, entity, schema, collectionName);
       await updater(
-        updateProxy as TSify<UpdateTypeFromModel<ModelFromModels<M, CN>>>
+        updateProxy as Unalias<UpdateTypeFromModel<ModelFromModels<M, CN>>>
       );
       // return dbDocumentToTuples(updateProxy);
       return changes.getTuples();
@@ -679,7 +679,7 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
   async fetch<Q extends CollectionQuery<M, any>>(
     query: Q,
     options: DBFetchOptions = {}
-  ): Promise<TSify<FetchResult<Q>>> {
+  ): Promise<Unalias<FetchResult<Q>>> {
     const schema = (await this.getSchema())?.collections as M;
     const fetchQuery = prepareQuery(query, schema, {
       skipRules: options.skipRules,
@@ -719,7 +719,7 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
   async fetchOne<Q extends CollectionQuery<M, any>>(
     query: Q,
     options: DBFetchOptions = {}
-  ): Promise<TSify<FetchResultEntity<Q> | null>> {
+  ): Promise<Unalias<FetchResultEntity<Q> | null>> {
     query = { ...query, limit: 1 };
     const result = await this.fetch(query, options);
     const entity = [...result.values()][0];

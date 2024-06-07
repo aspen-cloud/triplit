@@ -46,7 +46,7 @@ import { EAV, indexToTriple, TripleRow } from './triple-store-utils.js';
 import { TripleStore } from './triple-store.js';
 import { Logger } from '@triplit/types/src/logger.js';
 import { isAnyOrUndefined } from './utility-types.js';
-import { TSify, FetchResult, FetchResultEntity } from './query/types';
+import { Unalias, FetchResult, FetchResultEntity } from './query/types';
 
 const DEFAULT_CACHE_DISABLED = true;
 
@@ -737,7 +737,7 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
   async fetch<Q extends CollectionQuery<M, any>>(
     query: Q,
     options: DBFetchOptions = {}
-  ): Promise<TSify<FetchResult<Q>>> {
+  ): Promise<Unalias<FetchResult<Q>>> {
     this.logger.debug('fetch START', { query });
     await this.storageReady;
     const schema = (await this.getSchema())?.collections as M;
@@ -804,7 +804,7 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
   async fetchOne<Q extends CollectionQuery<M, any>>(
     query: Q,
     options: DBFetchOptions = {}
-  ): Promise<TSify<FetchResultEntity<Q> | null>> {
+  ): Promise<Unalias<FetchResultEntity<Q> | null>> {
     query = { ...query, limit: 1 };
     const result = await this.fetch(query, options);
     const entity = [...result.values()][0];
@@ -814,7 +814,7 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
 
   async insert<CN extends CollectionNameFromModels<M>>(
     collectionName: CN,
-    doc: TSify<InsertTypeFromModel<ModelFromModels<M, CN>>>,
+    doc: Unalias<InsertTypeFromModel<ModelFromModels<M, CN>>>,
     options: TransactOptions = {}
   ) {
     return this.transact(async (tx) => {
@@ -834,7 +834,7 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
 
   subscribe<Q extends CollectionQuery<M, any>>(
     query: Q,
-    onResults: (results: TSify<FetchResult<Q>>) => void | Promise<void>,
+    onResults: (results: Unalias<FetchResult<Q>>) => void | Promise<void>,
     onError?: (error: any) => void | Promise<void>,
     options: DBFetchOptions = {}
   ) {
@@ -933,7 +933,7 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
     collectionName: CN,
     entityId: string,
     updater: (
-      entity: TSify<UpdateTypeFromModel<ModelFromModels<M, CN>>>
+      entity: Unalias<UpdateTypeFromModel<ModelFromModels<M, CN>>>
     ) => void | Promise<void>,
     options: TransactOptions = {}
   ) {

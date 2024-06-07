@@ -14,14 +14,14 @@ import {
 /**
  * Transforms a complex nested type to a readable type
  */
-export type TSify<T> = T extends Map<infer K, infer V>
-  ? Map<K, TSify<V>>
+export type Unalias<T> = T extends Map<infer K, infer V>
+  ? Map<K, Unalias<V>>
   : T extends Set<infer V>
-  ? Set<TSify<V>>
+  ? Set<Unalias<V>>
   : T extends Date
   ? T
   : T extends Object
-  ? { [K in keyof T]: TSify<T[K]> }
+  ? { [K in keyof T]: Unalias<T[K]> }
   : T;
 
 /**

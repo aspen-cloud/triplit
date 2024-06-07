@@ -99,6 +99,7 @@ export type {
 export type {
   FetchResult,
   FetchResultEntity as ReturnTypeFromQuery,
+  Unalias,
 } from './query/types';
 export { default as Builder } from './utils/builder.js';
 export type { toBuilder } from './utils/builder.js';
