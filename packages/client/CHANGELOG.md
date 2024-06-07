@@ -1,5 +1,11 @@
 # @triplit/client
 
+## 0.3.55
+
+### Patch Changes
+
+- 3664595: ts fixes
+
 ## 0.3.54
 
 ### Patch Changes
