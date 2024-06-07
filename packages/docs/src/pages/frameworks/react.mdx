@@ -73,21 +73,21 @@ function App() {
   should only wait for the cache, use `fetchingLocal`.
 </Callout>
 
-## useEntity
+## useQueryOne
 
-The `useEntity` hook subscribes to the provided entity inside your React component and will automatically unsubscribe from updates to the entity when the component unmounts.
+The `useQueryOne` hook subscribes to a single entity that matches the provided query. You can use this hook inside your React component and it will automatically unsubscribe from updates to the entity when the component unmounts.
 
-The result of the hook is the same as the result of `useQuery`, but the `results` property will only contain the entity you subscribed to.
+The result of the hook is the same as the result of `useQuery`, but the `result` property will only have a single the entity or null.
 
 ```tsx copy filename="app.tsx"
-import { useEntity } from '@triplit/react';
+import { useQueryOne } from '@triplit/react';
 
 const client = new TriplitClient();
 
 function App() {
-  const { results: entity } = useEntity(client, 'todos', '1');
+  const { result: todo } = useQueryOne(client, client.query('todos').id('todo-id'));
 
-  return <div>{entity.text}</div>;
+  return <div>{todo.text}</div>;
 }
 ```
 
