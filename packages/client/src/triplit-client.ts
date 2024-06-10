@@ -359,7 +359,7 @@ export class TriplitClient<M extends ClientSchema | undefined = undefined> {
   async fetchOne<CQ extends ClientQuery<M, any>>(
     query: CQ,
     options?: Partial<FetchOptions>
-  ) {
+  ): Promise<Unalias<ClientFetchResultEntity<CQ>> | null> {
     // ID is currently used to trace the lifecycle of a query/subscription across logs
     // @ts-ignore
     query = addLoggingIdToQuery(query);
