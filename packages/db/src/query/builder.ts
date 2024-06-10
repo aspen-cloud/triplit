@@ -23,6 +23,7 @@ import {
   ExtractCollectionQuerySelection,
   FetchResultEntity,
 } from './types';
+import { Schema } from '../schema/builder.js';
 
 /**
  * Basic interface for a functional builder
@@ -62,7 +63,7 @@ export class QueryBuilder<
     >;
   }
 
-  where(...args: FilterInput<M, CN, any>) {
+  where(...args: FilterInput<M, CN>) {
     this.query = {
       ...this.query,
       where: QUERY_INPUT_TRANSFORMERS<M, CN>().where(
@@ -209,7 +210,9 @@ type InclusionFromArgs<
 type FilterInput<
   M extends Models<any, any> | undefined,
   CN extends CollectionNameFromModels<M>,
-  P extends M extends Models<any, any> ? SchemaPaths<M, CN> : Path
+  P extends M extends Models<any, any>
+    ? SchemaPaths<M, CN>
+    : Path = M extends Models<any, any> ? SchemaPaths<M, CN> : Path
 > =
   | [typeof undefined]
   | FilterStatement<M, CN, P>

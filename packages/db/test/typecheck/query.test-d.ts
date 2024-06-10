@@ -657,7 +657,7 @@ describe('query builder', () => {
       const query = db.query('test');
       expectTypeOf(query.where)
         .parameter(0)
-        .toMatchTypeOf<
+        .toEqualTypeOf<
           | undefined
           | 'id'
           | 'attr1'
@@ -677,11 +677,11 @@ describe('query builder', () => {
 
       expectTypeOf(query.where)
         .parameter(0)
-        .toMatchTypeOf<
+        .toEqualTypeOf<
           | undefined
           | string
-          | WhereFilter<undefined, any>
-          | QueryWhere<undefined, any>
+          | WhereFilter<undefined, 'test'>
+          | QueryWhere<undefined, 'test'>
         >();
     }
   });
@@ -718,7 +718,7 @@ describe('query builder', () => {
       const query = db.query('test');
       expectTypeOf(query.order)
         .parameter(0)
-        .toMatchTypeOf<
+        .toEqualTypeOf<
           | 'id'
           | 'attr1'
           | 'attr1.inner1'
@@ -737,8 +737,10 @@ describe('query builder', () => {
       const query = db.query('test');
       expectTypeOf(query.order)
         .parameter(0)
-        .toMatchTypeOf<
-          string | QueryOrder<undefined, any> | QueryOrder<undefined, any>[]
+        .toEqualTypeOf<
+          | string
+          | QueryOrder<undefined, 'test'>
+          | QueryOrder<undefined, 'test'>[]
         >();
     }
   });
@@ -794,7 +796,7 @@ describe('query builder', () => {
       const query = db.query('test');
       expectTypeOf(query.after)
         .parameter(0)
-        .toMatchTypeOf<
+        .toEqualTypeOf<
           | ValueCursor
           | FetchResultEntity<
               CollectionQuery<typeof schema.collections, 'test'>
@@ -807,7 +809,7 @@ describe('query builder', () => {
       const query = db.query('test');
       expectTypeOf(query.after)
         .parameter(0)
-        .toMatchTypeOf<ValueCursor | undefined>();
+        .toEqualTypeOf<ValueCursor | undefined>();
     }
   });
 });
