@@ -17,10 +17,10 @@ import {
   QueryClauseFormattingError,
 } from '../errors.js';
 import {
-  ExtractCollectionQueryCollectionName,
-  ExtractCollectionQueryInclusion,
-  ExtractCollectionQueryModels,
-  ExtractCollectionQuerySelection,
+  CollectionQueryCollectionName,
+  CollectionQueryInclusion,
+  CollectionQueryModels,
+  CollectionQuerySelection,
   FetchResultEntity,
 } from './types';
 import { Schema } from '../schema/builder.js';
@@ -38,9 +38,9 @@ export type BuilderBase<
 
 export class QueryBuilder<
   Q extends CollectionQuery<any, any, any, any>,
-  M extends Models<any, any> | undefined = ExtractCollectionQueryModels<Q>,
+  M extends Models<any, any> | undefined = CollectionQueryModels<Q>,
   // @ts-expect-error
-  CN extends CollectionNameFromModels<M> = ExtractCollectionQueryCollectionName<Q>
+  CN extends CollectionNameFromModels<M> = CollectionQueryCollectionName<Q>
 > implements BuilderBase<CollectionQuery<any, any>, 'collectionName', 'id'>
 {
   protected query: Q;
@@ -59,7 +59,7 @@ export class QueryBuilder<
 
     // TODO: I think this is going to break higher level builders, ensure it doenst (@triplit/react probably has error)
     return this as QueryBuilder<
-      CollectionQuery<M, CN, Selection, ExtractCollectionQueryInclusion<Q>>
+      CollectionQuery<M, CN, Selection, CollectionQueryInclusion<Q>>
     >;
   }
 
@@ -117,8 +117,8 @@ export class QueryBuilder<
       M,
       CN,
       // @ts-expect-error TODO: not sure why this has error (maybe defaults)
-      ExtractCollectionQuerySelection<Q>,
-      ExtractCollectionQueryInclusion<Q> & {
+      CollectionQuerySelection<Q>,
+      CollectionQueryInclusion<Q> & {
         [K in RName]: SQ;
       }
     >
@@ -135,8 +135,8 @@ export class QueryBuilder<
       M,
       CN,
       // @ts-expect-error TODO: not sure why this has error (maybe defaults)
-      ExtractCollectionQuerySelection<Q>,
-      ExtractCollectionQueryInclusion<Q> & {
+      CollectionQuerySelection<Q>,
+      CollectionQueryInclusion<Q> & {
         [K in RName]: InclusionFromArgs<M, CN, RName, null>;
       }
     >

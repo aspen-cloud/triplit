@@ -43,7 +43,7 @@ import {
   fetchDeltaTriples,
   initialFetchExecutionContext,
 } from '../src/collection-query.js';
-import { ExtractCollectionQueryInclusion } from '../src/query/builder.js';
+import { CollectionQueryInclusion } from '../src/query/builder.js';
 
 const pause = async (ms: number = 100) =>
   new Promise((resolve) => setTimeout(resolve, ms));
