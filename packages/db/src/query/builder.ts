@@ -1,4 +1,4 @@
-import { Models, Path, RelationAttributes, SchemaPaths } from '../schema/types';
+import { Models, RelationAttributes } from '../schema/types';
 import {
   CollectionQuery,
   FilterStatement,
@@ -8,7 +8,6 @@ import {
   QueryValue,
   QueryWhere,
   ValueCursor,
-  WhereFilter,
   RelationSubquery,
 } from '../query.js';
 import { CollectionNameFromModels, ModelFromModels } from '../db.js';
@@ -21,20 +20,13 @@ import {
   CollectionQueryInclusion,
   CollectionQueryModels,
   CollectionQuerySelection,
-  FetchResultEntity,
+  BuilderBase,
+  FilterInput,
+  OrderInput,
+  AfterInput,
+  IncludeSubquery,
+  InclusionFromArgs,
 } from './types';
-import { Schema } from '../schema/builder.js';
-
-/**
- * Basic interface for a functional builder
- */
-export type BuilderBase<
-  T,
-  Ignore extends string = never,
-  Extend extends string = never
-> = {
-  [K in keyof Omit<T, Ignore> | Extend]-?: (...args: any) => any;
-} & { build: () => T };
 
 export class QueryBuilder<
   Q extends CollectionQuery<any, any, any, any>,
@@ -56,8 +48,6 @@ export class QueryBuilder<
     selection: Selection[] | undefined
   ) {
     this.query = { ...this.query, select: selection };
-
-    // TODO: I think this is going to break higher level builders, ensure it doenst (@triplit/react probably has error)
     return this as QueryBuilder<
       CollectionQuery<M, CN, Selection, CollectionQueryInclusion<Q>>
     >;
@@ -108,7 +98,6 @@ export class QueryBuilder<
     };
     return this;
   }
-  // TODO: these get typed as 'any' in result types
   include<RName extends string, SQ extends RelationSubquery<M, any>>(
     relationName: RName,
     query: RelationSubquery<M, any>
@@ -125,7 +114,7 @@ export class QueryBuilder<
   >;
   include<RName extends RelationAttributes<ModelFromModels<M, CN>>>(
     relationName: RName,
-    query?: PartialQuery<
+    query?: IncludeSubquery<
       M,
       // @ts-expect-error Doesn't know that Model['RName'] is a query type
       ModelFromModels<M, CN>['properties'][RName]['query']['collectionName']
@@ -171,69 +160,6 @@ export class QueryBuilder<
     return this.id(entityId);
   }
 }
-
-type PartialQuery<
-  M extends Models<any, any> | undefined,
-  CN extends CollectionNameFromModels<M>
-> = Pick<
-  CollectionQuery<M, CN>,
-  'select' | 'order' | 'where' | 'limit' | 'include'
->;
-
-type InclusionFromArgs<
-  M extends Models<any, any> | undefined,
-  CN extends CollectionNameFromModels<M>,
-  RName extends string,
-  Inclusion extends RelationSubquery<M, any> | null
-> = M extends Models<any, any>
-  ? Inclusion extends null
-    ? // Look up in Models
-      RName extends RelationAttributes<ModelFromModels<M, CN>>
-      ? {
-          // Colleciton query with params based on the relation
-          subquery: CollectionQuery<
-            M,
-            ModelFromModels<
-              M,
-              CN
-            >['properties'][RName]['query']['collectionName']
-          >;
-          cardinality: ModelFromModels<
-            M,
-            CN
-          >['properties'][RName]['cardinality'];
-        }
-      : never
-    : Inclusion
-  : Inclusion;
-
-type FilterInput<
-  M extends Models<any, any> | undefined,
-  CN extends CollectionNameFromModels<M>,
-  P extends M extends Models<any, any>
-    ? SchemaPaths<M, CN>
-    : Path = M extends Models<any, any> ? SchemaPaths<M, CN> : Path
-> =
-  | [typeof undefined]
-  | FilterStatement<M, CN, P>
-  | [FilterStatement<M, CN, P>]
-  | WhereFilter<M, CN>[]
-  | [QueryWhere<M, CN>];
-
-type OrderInput<
-  M extends Models<any, any> | undefined,
-  CN extends CollectionNameFromModels<M>
-> = QueryOrder<M, CN> | QueryOrder<M, CN>[] | [QueryOrder<M, CN>[]];
-
-type AfterInput<
-  M extends Models<any, any> | undefined,
-  CN extends CollectionNameFromModels<M>
-> =
-  | ValueCursor
-  | (M extends Models<any, any>
-      ? FetchResultEntity<CollectionQuery<M, CN>>
-      : undefined)
-  | undefined;
 
 export type QUERY_INPUT_TRANSFORMERS<
   M extends Models<any, any> | undefined,
@@ -341,7 +267,6 @@ export const QUERY_INPUT_TRANSFORMERS = <
       Object.hasOwn(after, attributeToOrderBy)
     ) {
       return [
-        // @ts-expect-error
         [after[attributeToOrderBy] as QueryValue, after.id as string],
         inclusive ?? false,
       ];

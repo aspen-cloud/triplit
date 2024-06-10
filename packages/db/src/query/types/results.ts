@@ -49,6 +49,12 @@ export type FetchResultEntity<Q extends CollectionQuery<any, any, any, any>> =
     : any;
 
 /**
+ * Alias for FetchResultEntity
+ */
+export type ReturnTypeFromQuery<Q extends CollectionQuery<any, any, any, any>> =
+  FetchResultEntity<Q>;
+
+/**
  * An entity fetched form the database, based on the paramters of CollectionQuery
  */
 export type FetchResultEntityFromParts<

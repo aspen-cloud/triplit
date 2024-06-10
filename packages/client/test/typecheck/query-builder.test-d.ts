@@ -2,6 +2,62 @@ import { expectTypeOf, test, describe } from 'vitest';
 import { TriplitClient } from '../../dist/triplit-client';
 import { Schema as S } from '@triplit/db';
 
+test('Builder API', () => {
+  const client = new TriplitClient({
+    schema: {
+      a: {
+        schema: S.Schema({
+          id: S.Id(),
+          attr: S.String(),
+        }),
+      },
+    },
+  });
+  type BuilderKeys =
+    | 'after'
+    | 'build'
+    | 'id'
+    | 'include'
+    | 'limit'
+    | 'order'
+    | 'select'
+    | 'syncStatus'
+    | 'vars'
+    | 'where'
+    | 'entityId';
+
+  const builder = client.query('a');
+  expectTypeOf<keyof typeof builder>().toEqualTypeOf<BuilderKeys>();
+
+  const builderWithAfter = builder.after('1');
+  expectTypeOf<keyof typeof builderWithAfter>().toEqualTypeOf<BuilderKeys>();
+
+  const builderWithId = builder.id('1');
+  expectTypeOf<keyof typeof builderWithId>().toEqualTypeOf<BuilderKeys>();
+
+  const builderWithInclude = builder.include('subcollection');
+  expectTypeOf<keyof typeof builderWithInclude>().toEqualTypeOf<BuilderKeys>();
+
+  const builderWithLimit = builder.limit(1);
+  expectTypeOf<keyof typeof builderWithLimit>().toEqualTypeOf<BuilderKeys>();
+
+  const builderWithOrder = builder.order('attr');
+  expectTypeOf<keyof typeof builderWithOrder>().toEqualTypeOf<BuilderKeys>();
+
+  const builderWithSelect = builder.select(['id', 'attr']);
+  expectTypeOf<keyof typeof builderWithSelect>().toEqualTypeOf<BuilderKeys>();
+
+  const builderWithSyncStatus = builder.syncStatus('all');
+  expectTypeOf<keyof typeof builderWithSyncStatus>().toEqualTypeOf<BuilderKeys>;
+
+  // TODO: this shoudl fail? Look into this when adding tests
+  const builderWithWhere = builder.where([['asd', '=', 'foo']]);
+  expectTypeOf<keyof typeof builderWithWhere>().toEqualTypeOf<BuilderKeys>();
+
+  const builderWithEntityId = builder.entityId('1');
+  expectTypeOf<keyof typeof builderWithEntityId>().toEqualTypeOf<BuilderKeys>();
+});
+
 describe('Collection name', () => {
   describe('schemaful', () => {
     test('client.query() is typed as colleciton names in schema', () => {

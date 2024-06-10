@@ -70,7 +70,12 @@ import {
 import { Equal } from '@sinclair/typebox/value';
 import { MAX, MIN, encodeValue } from '@triplit/tuple-database';
 import { QueryBuilder } from './query/builder.js';
-import { FetchResult, FetchResultEntity, QueryResult } from './query/types';
+import {
+  CollectionQueryDefault,
+  FetchResult,
+  FetchResultEntity,
+  QueryResult,
+} from './query/types';
 
 export default function CollectionQueryBuilder<
   M extends Models<any, any> | undefined,
@@ -80,9 +85,7 @@ export default function CollectionQueryBuilder<
     collectionName,
     ...params,
   };
-  return new QueryBuilder<
-    CollectionQuery<M, CN, QuerySelectionValue<M, CN>, {}>
-  >(query);
+  return new QueryBuilder<CollectionQueryDefault<M, CN>>(query);
 }
 
 export type TimestampedFetchResult<C extends CollectionQuery<any, any>> = Map<

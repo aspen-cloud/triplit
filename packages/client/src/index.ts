@@ -5,7 +5,6 @@ export type {
   ReturnTypeFromQuery,
   ModelFromModels,
   FetchByIdQueryParams,
-  QueryBuilder,
   Unalias,
 } from '@triplit/db';
 export { Schema } from '@triplit/db';
@@ -18,6 +17,7 @@ export type {
   ClientFetchResult,
   ClientFetchResultEntity,
   ClientQuery,
+  ClientQueryBuilder,
   ClientQueryDefault,
   ClientSchema,
   Entity,

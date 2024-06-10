@@ -75,6 +75,7 @@ export type {
   UpdateTypeFromModel,
   Model,
   Models,
+  RelationAttributes,
 } from './schema/types';
 export type {
   AttributeDefinition,
@@ -96,14 +97,9 @@ export { QueryBuilder } from './query/builder.js';
 export type {
   TimestampedTypeFromModel as TypeFromModel, // TODO: dont alias
 } from './collection-query.js';
-export type {
-  FetchResult,
-  FetchResultEntity as ReturnTypeFromQuery,
-  Unalias,
-} from './query/types';
+export type * from './query/types';
 export { default as Builder } from './utils/builder.js';
 export type { toBuilder } from './utils/builder.js';
-export type { BuilderBase } from './query/builder.js';
 export { timestampedObjectToPlainObject } from './utils.js';
 export type { TimestampedObject, UnTimestampedObject } from './utils.js';
 export type { IsAny } from './utility-types.js';

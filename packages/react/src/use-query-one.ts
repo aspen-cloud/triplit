@@ -2,7 +2,7 @@ import {
   ClientFetchResultEntity,
   ClientQuery,
   Models,
-  QueryBuilder,
+  ClientQueryBuilder,
   SubscriptionOptions,
   TriplitClient,
   Unalias,
@@ -16,7 +16,7 @@ export function useQueryOne<
   Q extends ClientQuery<M, any, any, any>
 >(
   client: TriplitClient<M> | WorkerClient<M>,
-  query: QueryBuilder<Q>,
+  query: ClientQueryBuilder<Q>,
   options?: Partial<SubscriptionOptions>
 ): {
   fetching: boolean;

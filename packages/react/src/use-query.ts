@@ -4,7 +4,7 @@ import {
   TriplitClient,
   ClientQuery,
   Models,
-  QueryBuilder,
+  ClientQueryBuilder,
   SubscriptionOptions,
   Unalias,
 } from '@triplit/client';
@@ -15,7 +15,7 @@ export function useQuery<
   Q extends ClientQuery<M, any, any, any>
 >(
   client: TriplitClient<M> | WorkerClient<M>,
-  query: QueryBuilder<Q>,
+  query: ClientQueryBuilder<Q>,
   options?: Partial<SubscriptionOptions>
 ): {
   fetching: boolean;
@@ -101,7 +101,7 @@ export function usePaginatedQuery<
   Q extends ClientQuery<M, any, any, any>
 >(
   client: TriplitClient<M> | WorkerClient<M>,
-  query: QueryBuilder<Q>,
+  query: ClientQueryBuilder<Q>,
   options?: Partial<SubscriptionOptions>
 ) {
   const builtQuery = useMemo(() => query.build(), [query]);
@@ -176,7 +176,7 @@ export function useInfiniteQuery<
   Q extends ClientQuery<M, any, any, any>
 >(
   client: TriplitClient<M> | WorkerClient<M>,
-  query: QueryBuilder<Q>,
+  query: ClientQueryBuilder<Q>,
   options?: Partial<SubscriptionOptions>
 ) {
   const builtQuery = useMemo(() => query.build(), [query]);

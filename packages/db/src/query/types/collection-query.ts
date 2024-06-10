@@ -1,6 +1,13 @@
-import { CollectionQuery } from '../../query.js';
+import { CollectionNameFromModels } from '../../db.js';
+import { CollectionQuery, QuerySelectionValue } from '../../query.js';
+import { Models } from '../../schema/types';
 
 type BaseCollectionQuery = CollectionQuery<any, any, any, any>;
+
+export type CollectionQueryDefault<
+  M extends Models<any, any> | undefined,
+  CN extends CollectionNameFromModels<M>
+> = CollectionQuery<M, CN, QuerySelectionValue<M, CN>, {}>;
 
 /**
  * Extracts the schema type from a collection query.

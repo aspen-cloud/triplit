@@ -3,7 +3,7 @@
 import type {
   ClientFetchResult,
   ClientQuery,
-  QueryBuilder,
+  ClientQueryBuilder,
   Models,
   SubscriptionOptions,
   TriplitClient,
@@ -16,7 +16,7 @@ export function useQuery<
   Q extends ClientQuery<M, any, any, any>
 >(
   client: TriplitClient<any> | WorkerClient<any>,
-  query: QueryBuilder<Q>,
+  query: ClientQueryBuilder<Q>,
   options?: Partial<SubscriptionOptions>
 ): {
   fetching: boolean;
@@ -24,7 +24,7 @@ export function useQuery<
   fetchingRemote: boolean;
   results: Unalias<ClientFetchResult<Q>> | undefined;
   error: any;
-  updateQuery: (query: QueryBuilder<Q>) => void;
+  updateQuery: (query: ClientQueryBuilder<Q>) => void;
 } {
   let results: Unalias<ClientFetchResult<Q>> | undefined = $state(undefined);
   let isInitialFetch = $state(true);
@@ -35,7 +35,7 @@ export function useQuery<
   let hasResponseFromServer = false;
   let builtQuery = $state(query && query.build());
 
-  function updateQuery(query: QueryBuilder<Q>) {
+  function updateQuery(query: ClientQueryBuilder<Q>) {
     builtQuery = query.build();
     results = undefined;
     fetchingLocal = true;
