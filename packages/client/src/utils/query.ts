@@ -8,6 +8,7 @@ import {
   ReturnTypeFromQuery,
   QuerySelectionValue,
   RelationSubquery,
+  Unalias,
 } from '@triplit/db';
 
 //  There is some odd behavior when using infer with intersection types
@@ -37,7 +38,7 @@ export type SyncStatus = 'pending' | 'confirmed' | 'all';
 export type Entity<
   M extends ClientSchema,
   CN extends CollectionNameFromModels<M>
-> = ReturnTypeFromQuery<ClientQuery<M, CN>>;
+> = Unalias<ReturnTypeFromQuery<ClientQueryDefault<M, CN>>>;
 
 export type ClientQuery<
   M extends ClientSchema | undefined,
