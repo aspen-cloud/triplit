@@ -10,11 +10,10 @@ import { ProjectOptionsMenu } from './project-options-menu';
 import { useConnectionStatus, useEntity } from '@triplit/react';
 import { CreateCollectionDialog } from './create-collection-dialog';
 import { CollectionStats, fetchCollectionStats } from '../utils/server';
-import { useLoaderData, redirect } from 'react-router-dom';
+import { useLoaderData, redirect, useSearchParams } from 'react-router-dom';
 import { consoleClient } from 'triplit/client.js';
 import { DEFAULT_HOSTNAME, initializeFromUrl } from 'src/utils/project.js';
 import { ModeToggle } from '@triplit/ui';
-import useUrlState from '@ahooksjs/use-url-state';
 import { QueryOrder, QueryWhere } from '@triplit/db/src/query.js';
 
 const projectClients = new Map<string, TriplitClient<any>>();
@@ -55,7 +54,10 @@ export type ConsoleQuery = {
   order: QueryOrder<any, any>;
 };
 
-export type SetConsoleQuery = (newQuery: Partial<ConsoleQuery>) => void;
+export type SetConsoleQuery = (
+  newQuery: Partial<ConsoleQuery>,
+  merge?: boolean
+) => void;
 
 export function ProjectViewerPage() {
   const { client, collectionStats, project } = useLoaderData() as {
@@ -64,23 +66,23 @@ export function ProjectViewerPage() {
     collectionStats: CollectionStats[];
   };
 
-  const [urlQueryState, setUrlQueryState] = useUrlState({
-    collection: undefined,
-    where: undefined,
-    order: undefined,
-  });
+  const [urlQueryState, setUrlQueryState] = useSearchParams();
 
   const query: ConsoleQuery = useMemo(
     () => ({
-      collection: urlQueryState.collection,
-      where: JSON.parse(urlQueryState.where ?? '[]'),
-      order: JSON.parse(urlQueryState.order ?? '[]'),
+      collection: urlQueryState.get('collection'),
+      where: JSON.parse(urlQueryState.get('where') ?? '[]'),
+      order: JSON.parse(urlQueryState.get('order') ?? '[]'),
     }),
     [urlQueryState]
   );
 
   const setQuery: SetConsoleQuery = useCallback(
-    (newQuery) => {
+    (newQuery, merge = true) => {
+      if (!merge) {
+        setUrlQueryState(newQuery);
+        return;
+      }
       const newState = { ...query, ...newQuery };
       for (const [key, val] of Object.entries(newState)) {
         if (val !== undefined && typeof val !== 'string')
@@ -175,7 +177,7 @@ export function ProjectViewer({
                   name: collectionName,
                   schema: { id: Schema.Id().toJSON() },
                 });
-                setQuery({ collection: collectionName });
+                setQuery({ collection: collectionName }, false);
               } catch (e) {
                 console.error(e);
               }
@@ -188,7 +190,7 @@ export function ProjectViewer({
             <Button
               key={collection}
               onClick={() => {
-                setQuery({ collection });
+                setQuery({ collection }, false);
               }}
               variant={query.collection === collection ? 'default' : 'ghost'}
               className={`truncate flex h-auto px-2 py-1 flex-row items-center gap-2 justify-start shrink-0`}
