@@ -1241,6 +1241,46 @@ describe('ORDER & LIMIT & Pagination', () => {
     }
   });
 
+  it.only('orders correctly with deleted entity', async () => {
+    const db = new DB({
+      schema: {
+        collections: {
+          TestScores: {
+            schema: S.Schema({
+              id: S.Id(),
+              score: S.Optional(S.Number()),
+              date: S.String(),
+            }),
+          },
+        },
+      },
+    });
+    const scores = [
+      { score: 99, date: '2023-04-16' },
+      { score: 98, date: '2023-04-16' },
+      { score: 97, date: '2023-04-16' },
+      { score: 96, date: '2023-04-16' },
+      { score: 95, date: '2023-04-16' },
+    ];
+    let i = 0;
+    for (const score of scores) {
+      await db.insert('TestScores', { ...score, id: (i++).toString() });
+    }
+    await db.delete('TestScores', '0');
+    // simulate a client syncing a triple to the deleted entity for the optional field
+    await db.tripleStore.insertTriple({
+      id: appendCollectionToId('TestScores', '0'),
+      attribute: ['TestScores', 'score'],
+      value: 99,
+      timestamp: [1, 'external-client'],
+      expired: false,
+    });
+    const results = await db.fetch(
+      CollectionQueryBuilder('TestScores').order(['score', 'ASC']).build()
+    );
+    expect([...results.values()].map((r) => r.score)).toEqual([95, 96, 97, 98]);
+  });
+
   it('limit', async () => {
     const descendingScoresResults = await db.fetch(
       CollectionQueryBuilder('TestScores')
