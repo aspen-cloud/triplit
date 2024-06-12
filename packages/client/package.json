@@ -43,7 +43,9 @@
     "build:watch": "tsc -w",
     "lint:build": "npx publint",
     "lint": "tsc --noEmit",
-    "test": "vitest run",
+    "test": "yarn test:unit && yarn typecheck",
+    "test:unit": "vitest run",
+    "typecheck": "vitest --typecheck.only --no-watch",
     "publish-pkg": "node ../../scripts/npm-check-version-and-publish.js",
     "build-worker": "esbuild ./src/worker-client-operator.ts --bundle --minify --platform=browser --outfile=./dist/worker-client-operator.js --format=esm --sourcemap"
   },
