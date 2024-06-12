@@ -1241,7 +1241,7 @@ describe('ORDER & LIMIT & Pagination', () => {
     }
   });
 
-  it.only('orders correctly with deleted entity', async () => {
+  it('orders correctly with deleted entity', async () => {
     const db = new DB({
       schema: {
         collections: {
