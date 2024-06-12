@@ -12,7 +12,7 @@ import { Callout } from 'nextra-theme-docs';
   [roadmap](https://triplit.dev/roadmap).
 </Callout>
 
-Access control in Triplit occurs at the entity level. Although this is an improvement over membership/room based apis, access control does not extends to individual properties.
+Access control  in Triplit occurs at the entity level. Although this is an improvement over membership/room based apis, access control does not extends to individual properties.
 
 Typically a user's id is used to determine access. The user's id is accessible by providing a custom token to Triplit, as explained in the [Auth guide](/auth).
 
@@ -20,7 +20,7 @@ Access control checks run exclusively on the server, and are not enforced on the
 
 ## Access control rules
 
-Rules for access control are defined in the `rules` property of a schema. Both `read` and `write` rules are defined with a unique identifier, an optional `description`, and a `filter`. The `filter` is a [filter clause](/client/query/where) that is appended any query for that collection.
+Permissions for a collection are defined in the `rules` property of a schema. Both `read` and `write` rules are defined with a unique identifier, an optional `description`, and a `filter`. The `filter` is a [filter clause](/client/query/where) that is appended any query for that collection.
 
 ```typescript
 import { Schema as S } from '@triplit/client';
