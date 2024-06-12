@@ -5,7 +5,7 @@ import { TriplitClient } from '@triplit/client';
 import { useCallback, useEffect, useMemo } from 'react';
 import { CaretDown, GridFour, Selection } from '@phosphor-icons/react';
 import { DataViewer, FullScreenWrapper, Project } from '.';
-import { Button } from '@triplit/ui';
+import { Button, cn } from '@triplit/ui';
 import { ProjectOptionsMenu } from './project-options-menu';
 import { useConnectionStatus, useEntity } from '@triplit/react';
 import { CreateCollectionDialog } from './create-collection-dialog';
@@ -165,6 +165,16 @@ export function ProjectViewer({
             </Button>
           </ProjectOptionsMenu>
         )}
+        <div
+          className={cn(
+            'text-xs py-1 px-2 w-max rounded transition-all',
+            connectionStatus === 'OPEN'
+              ? 'bg-green-100 text-green-500 scale-100 mb-2'
+              : 'bg-yellow-100 text-yellow-500 animate-pulse scale-125 mb-3'
+          )}
+        >
+          {connectionStatus === 'OPEN' ? 'Connected' : 'Connecting'}
+        </div>
         <div className="flex flex-row items-center justify-between gap-2 md:gap-4 mb-4">
           <span className="truncate text-sm md:text-lg font-semibold">
             Collections

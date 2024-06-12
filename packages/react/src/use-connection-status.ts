@@ -14,7 +14,7 @@ export function useConnectionStatus(
     return () => {
       unsub();
     };
-  }, []);
+  }, [client]);
 
   return connectionStatus;
 }
