@@ -7,19 +7,23 @@ test('Entity', () => {
     a: {
       schema: S.Schema({
         id: S.Id(),
-        attr: S.String(),
+        a_attr: S.String(),
         rel: S.RelationById('b', '$bId'),
       }),
     },
     b: {
       schema: S.Schema({
         id: S.Id(),
-        attr: S.String(),
+        b_attr: S.String(),
       }),
     },
   };
   expectTypeOf<Entity<typeof schema, 'a'>>().toEqualTypeOf<{
     id: string;
-    attr: string;
+    a_attr: string;
+  }>();
+  expectTypeOf<Entity<typeof schema, 'b'>>().toEqualTypeOf<{
+    id: string;
+    b_attr: string;
   }>();
 });
