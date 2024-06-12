@@ -14,5 +14,5 @@
     "skipLibCheck": true,
     "useDefineForClassFields": true
   },
-  "include": ["./src/**/*.ts", "./test/**/*.test-d.ts"]
+  "include": ["./test/**/*.test-d.ts"]
 }
