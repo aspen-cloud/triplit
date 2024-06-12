@@ -1,5 +1,12 @@
 # @triplit/db
 
+## 0.3.44
+
+### Patch Changes
+
+- f6468bf: fixup spread params type in where() in query builder
+- 7fac5a4: various types fixes and refactors
+
 ## 0.3.43
 
 ### Patch Changes

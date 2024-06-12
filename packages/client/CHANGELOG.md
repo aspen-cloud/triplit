@@ -1,5 +1,15 @@
 # @triplit/client
 
+## 0.3.56
+
+### Patch Changes
+
+- 7fac5a4: various types fixes and refactors
+- 42c4d0f: Properly unalias Entity helper type
+- Updated dependencies [f6468bf]
+- Updated dependencies [7fac5a4]
+  - @triplit/db@0.3.44
+
 ## 0.3.55
 
 ### Patch Changes

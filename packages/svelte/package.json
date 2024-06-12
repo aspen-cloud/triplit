@@ -1,7 +1,7 @@
 {
   "name": "@triplit/svelte",
   "packageManager": "yarn@3.4.1",
-  "version": "0.1.27",
+  "version": "0.1.28",
   "source": "./src/index.svelte.ts",
   "main": "./dist/index.svelte.js",
   "module": "./dist/index.svelte.js",

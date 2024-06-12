@@ -1,5 +1,17 @@
 # @triplit/cli
 
+## 0.3.67
+
+### Patch Changes
+
+- Updated dependencies [f6468bf]
+- Updated dependencies [7fac5a4]
+- Updated dependencies [42c4d0f]
+  - @triplit/db@0.3.44
+  - @triplit/client@0.3.56
+  - @triplit/server@0.3.47
+  - @triplit/server-core@0.3.46
+
 ## 0.3.66
 
 ### Patch Changes
