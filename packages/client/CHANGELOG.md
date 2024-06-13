@@ -1,5 +1,11 @@
 # @triplit/client
 
+## 0.3.57
+
+### Patch Changes
+
+- d17db78: Fix connection status tracking in certain environments like Vite
+
 ## 0.3.56
 
 ### Patch Changes
