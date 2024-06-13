@@ -37,7 +37,6 @@
     "@triplit/client": "workspace:^",
     "@triplit/db": "workspace:^",
     "@triplit/react": "workspace:^",
-    "@triplit/server-core": "workspace:^",
     "jotai": "^2.4.2",
     "lucide-react": "^0.276.0",
     "nanoid": "^4.0.2",

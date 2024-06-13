@@ -1,6 +1,5 @@
 import { ImportProjectFormValues } from 'src/components/import-project-form.js';
 import { JWTPayloadIsOfCorrectForm, getProjectIdFromApiKey } from './server.js';
-import { TokenReadError } from '@triplit/server-core';
 import { consoleClient } from 'triplit/client.js';
 
 export async function addProjectToConsole(formValues: ImportProjectFormValues) {
@@ -19,7 +18,9 @@ export async function addProjectToConsole(formValues: ImportProjectFormValues) {
     return origin;
   } catch (e) {
     console.error(e);
-    throw new TokenReadError();
+    throw new Error(
+      "Failed to read token. Please make sure you've entered a valid token."
+    );
   }
 }
 
