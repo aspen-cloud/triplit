@@ -48,6 +48,14 @@ You may use dot notation to filter by attributes of a record.
 const query = client.query('users').where('address.city', '=', 'New York');
 ```
 
+If you define relationships in your schema you may also access those via dot notation. Triplit will autocomplete up to 3 levels of depth, but arbitrary depth is supported.
+
+```typescript
+const query = client
+  .query('test_scores')
+  .where('class.instructor.name', '=', 'Dr. Smith');
+```
+
 ### Operators
 
 See the list of [data types](/schemas/types) for more information on the operators that can be used in a where clause.
