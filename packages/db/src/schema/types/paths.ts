@@ -13,7 +13,7 @@ export type Path = string;
 /**
  * The maximum depth of relationships to expand in path search
  */
-export type MAX_RELATIONSHIP_DEPTH = 6;
+export type MAX_RELATIONSHIP_DEPTH = 3;
 
 /**
  * Expand a record type into a union of all possible paths, including relationships and nested records
