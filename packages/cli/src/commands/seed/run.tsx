@@ -9,7 +9,7 @@ import {
 } from '../../filesystem.js';
 import fs from 'fs';
 import path from 'node:path';
-import { BulkInsert, RemoteClient } from '@triplit/client';
+import { BulkInsert, HttpClient } from '@triplit/client';
 import { serverRequesterMiddleware } from '../../middleware/add-server-requester.js';
 import { TriplitError } from '@triplit/db';
 import { seedDirExists } from './create.js';
@@ -115,7 +115,7 @@ export async function insertSeeds(
     console.log('No seed files selected');
     return;
   }
-  const client = new RemoteClient({
+  const client = new HttpClient({
     server: url,
     token: token,
     schema,

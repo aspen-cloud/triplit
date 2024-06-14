@@ -21,10 +21,8 @@ import {
   ClientFetchResultEntity,
   ClientQuery,
   ClientSchema,
-  RemoteClientQueryBuilder,
   prepareFetchByIdQuery,
-  prepareFetchOneQuery,
-  remoteClientQueryBuilder,
+  httpClientQueryBuilder,
 } from './utils/query.js';
 
 function parseError(error: string) {
@@ -36,7 +34,7 @@ function parseError(error: string) {
   }
 }
 
-export type RemoteClientOptions<M extends ClientSchema | undefined> = {
+export type HttpClientOptions<M extends ClientSchema | undefined> = {
   server?: string;
   token?: string;
   schema?: M;
@@ -44,15 +42,15 @@ export type RemoteClientOptions<M extends ClientSchema | undefined> = {
 };
 
 // Interact with remote via http api, totally separate from your local database
-export class RemoteClient<M extends ClientSchema | undefined> {
-  constructor(private options: RemoteClientOptions<M>) {}
+export class HttpClient<M extends ClientSchema | undefined> {
+  constructor(private options: HttpClientOptions<M>) {}
 
   // Hack: use schemaFactory to get schema if it's not ready from provider
   private async schema() {
     return this.options.schema || (await this.options.schemaFactory?.());
   }
 
-  updateOptions(options: RemoteClientOptions<M>) {
+  updateOptions(options: HttpClientOptions<M>) {
     this.options = { ...this.options, ...options };
   }
 
@@ -95,7 +93,7 @@ export class RemoteClient<M extends ClientSchema | undefined> {
       query,
     });
     if (error) throw error;
-    return deserializeHTTPFetchResult(query, data.result, await this.schema());
+    return deserializeHttpFetchResult(query, data.result, await this.schema());
   }
 
   private async queryTriples<CQ extends ClientQuery<M, any, any, any>>(
@@ -116,7 +114,7 @@ export class RemoteClient<M extends ClientSchema | undefined> {
       query,
     });
     if (error) throw error;
-    const deserialized = deserializeHTTPFetchResult(
+    const deserialized = deserializeHttpFetchResult(
       query,
       data.result,
       await this.schema()
@@ -268,12 +266,19 @@ export class RemoteClient<M extends ClientSchema | undefined> {
 
   query<CN extends CollectionNameFromModels<M>>(
     collectionName: CN
-  ): ReturnType<typeof remoteClientQueryBuilder<M, CN>> {
-    return remoteClientQueryBuilder<M, CN>(collectionName);
+  ): ReturnType<typeof httpClientQueryBuilder<M, CN>> {
+    return httpClientQueryBuilder<M, CN>(collectionName);
   }
 }
 
-function deserializeHTTPFetchResult<CQ extends ClientQuery<any, any>>(
+export {
+  /**
+   *  @deprecated Use 'HttpClient' instead.
+   */
+  HttpClient as RemoteClient,
+};
+
+function deserializeHttpFetchResult<CQ extends ClientQuery<any, any>>(
   query: CQ,
   result: [string, any][],
   schema?: any
@@ -281,12 +286,12 @@ function deserializeHTTPFetchResult<CQ extends ClientQuery<any, any>>(
   return new Map(
     result.map((entry) => [
       entry[0],
-      deserializeHTTPEntity(query, entry[1], schema),
+      deserializeHttpEntity(query, entry[1], schema),
     ])
   );
 }
 
-function deserializeHTTPEntity<CQ extends ClientQuery<any, any>>(
+function deserializeHttpEntity<CQ extends ClientQuery<any, any>>(
   query: CQ,
   entity: any,
   schema?: any

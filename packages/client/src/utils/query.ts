@@ -224,7 +224,7 @@ export function clientQueryBuilder<
   return new ClientQueryBuilder<ClientQueryDefault<M, CN>>(query);
 }
 
-export class RemoteClientQueryBuilder<
+export class HttpClientQueryBuilder<
   CQ extends CollectionQuery<any, any, any, any>
 > extends QueryBuilder<CQ> {
   constructor(query: CQ) {
@@ -232,7 +232,7 @@ export class RemoteClientQueryBuilder<
   }
 }
 
-export function remoteClientQueryBuilder<
+export function httpClientQueryBuilder<
   M extends ClientSchema | undefined,
   CN extends CollectionNameFromModels<M>
   // syncStatus doesn't apply for the remote client

@@ -32,7 +32,7 @@ import {
   ClientSchema,
   clientQueryBuilder,
 } from './utils/query.js';
-import { RemoteClient } from './remote-client.js';
+import { HttpClient } from './http-client.js';
 import { Logger } from '@triplit/types/logger.js';
 import { DefaultLogger } from './client-logger.js';
 
@@ -168,7 +168,12 @@ export class TriplitClient<M extends ClientSchema | undefined = undefined> {
    */
   syncEngine: SyncEngine;
   authOptions: AuthOptions;
-  remote: RemoteClient<M>;
+
+  /**
+   * @deprecated use `http` instead
+   */
+  remote: HttpClient<M>;
+  http: HttpClient<M>;
 
   private defaultFetchOptions: {
     fetch: FetchOptions;
@@ -230,13 +235,13 @@ export class TriplitClient<M extends ClientSchema | undefined = undefined> {
       ...(serverUrl ? mapServerUrlToSyncOptions(serverUrl) : {}),
     };
 
-    this.remote = new RemoteClient<M>({
+    this.http = this.remote = new HttpClient<M>({
       server: serverUrl,
       token,
       schemaFactory: async () => (await this.db.getSchema())?.collections as M,
     });
     this.db.onSchemaChange((schema) => {
-      this.remote.updateOptions({ schema: schema?.collections });
+      this.http.updateOptions({ schema: schema?.collections });
     });
 
     if (this.authOptions.token) {
@@ -828,7 +833,7 @@ export class TriplitClient<M extends ClientSchema | undefined = undefined> {
 
     if (hasToken || hasServerUrl) {
       this.syncEngine.updateConnection(updatedSyncOptions);
-      this.remote.updateOptions(updatedSyncOptions);
+      this.http.updateOptions(updatedSyncOptions);
     }
   }
 

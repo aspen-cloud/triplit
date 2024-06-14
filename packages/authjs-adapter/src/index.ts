@@ -1,5 +1,5 @@
 import type { Adapter, AdapterSession, AdapterUser } from '@auth/core/adapters';
-import { RemoteClient } from '@triplit/client';
+import { HttpClient } from '@triplit/client';
 import { Models } from '@triplit/db';
 
 export type TriplitAdapterConnectionOptions = {
@@ -19,7 +19,7 @@ export type TriplitAdapterConnectionOptions = {
 export function TriplitAdapter(
   options: TriplitAdapterConnectionOptions
 ): Adapter {
-  const client = new RemoteClient({
+  const client = new HttpClient({
     server: options.server,
     token: options.token,
     schema: options.schema,

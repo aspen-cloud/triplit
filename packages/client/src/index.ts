@@ -9,7 +9,7 @@ export type {
 } from '@triplit/db';
 export { Schema } from '@triplit/db';
 export * from './triplit-client.js';
-export * from './remote-client.js';
+export * from './http-client.js';
 export * from './sync-engine.js';
 export * from './errors.js';
 export * from './transport/transport.js';
