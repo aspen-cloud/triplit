@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { TriplitClient } from '../src/triplit-client.js';
+import { TriplitClient } from '../src/client/triplit-client.js';
 import { ClientFetchResult, ClientQuery } from '../src/utils/query.js';
 import { Schema as S } from '@triplit/db';
 

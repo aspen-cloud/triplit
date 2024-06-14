@@ -18,12 +18,12 @@ import {
   schemaToJSON,
   Unalias,
 } from '@triplit/db';
-import { getUserId } from './token.js';
-import { UnrecognizedFetchPolicyError } from './errors.js';
+import { getUserId } from '../token.js';
+import { UnrecognizedFetchPolicyError } from '../errors.js';
 import { MemoryBTreeStorage } from '@triplit/db/storage/memory-btree';
 import { IndexedDbStorage } from '@triplit/db/storage/indexed-db';
-import { SyncTransport } from './transport/transport.js';
-import { SyncEngine } from './sync-engine.js';
+import { SyncTransport } from '../transport/transport.js';
+import { SyncEngine } from '../sync-engine.js';
 import {
   ClientFetchResult,
   ClientFetchResultEntity,
@@ -31,10 +31,10 @@ import {
   ClientQueryDefault,
   ClientSchema,
   clientQueryBuilder,
-} from './utils/query.js';
-import { HttpClient } from './http-client.js';
+} from '../utils/query.js';
+import { HttpClient } from '../http-client/http-client.js';
 import { Logger } from '@triplit/types/logger.js';
-import { DefaultLogger } from './client-logger.js';
+import { DefaultLogger } from '../client-logger.js';
 
 export interface SyncOptions {
   server?: string;

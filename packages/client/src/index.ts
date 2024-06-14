@@ -8,8 +8,8 @@ export type {
   Unalias,
 } from '@triplit/db';
 export { Schema } from '@triplit/db';
-export * from './triplit-client.js';
-export * from './http-client.js';
+export * from './client/triplit-client.js';
+export * from './http-client/http-client.js';
 export * from './sync-engine.js';
 export * from './errors.js';
 export * from './transport/transport.js';

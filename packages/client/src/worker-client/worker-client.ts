@@ -6,7 +6,7 @@ import type {
   InfiniteSubscription,
   PaginatedSubscription,
   SubscriptionOptions,
-} from './triplit-client.js';
+} from '../client/triplit-client.js';
 import {
   ChangeTracker,
   CollectionNameFromModels,
@@ -27,8 +27,8 @@ import {
   ClientQueryDefault,
   ClientSchema,
   clientQueryBuilder,
-} from './utils/query.js';
-import { ConnectionStatus } from './index.js';
+} from '../utils/query.js';
+import { ConnectionStatus } from '../transport/transport.js';
 
 export class WorkerClient<M extends ClientSchema | undefined = undefined> {
   initialized: Promise<void>;

@@ -10,7 +10,7 @@ import DB, {
   Timestamp,
   TripleStoreApi,
 } from '@triplit/db';
-import { SyncOptions, TriplitClient } from './triplit-client.js';
+import { SyncOptions, TriplitClient } from './client/triplit-client.js';
 import { Subject } from 'rxjs';
 import {
   ConnectionStatus,

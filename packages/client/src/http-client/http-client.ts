@@ -23,7 +23,7 @@ import {
   ClientSchema,
   prepareFetchByIdQuery,
   httpClientQueryBuilder,
-} from './utils/query.js';
+} from '../utils/query.js';
 
 function parseError(error: string) {
   try {

@@ -2,9 +2,7 @@ import * as ComLink from 'comlink';
 import {
   TriplitClient as Client,
   SubscriptionOptions,
-} from './triplit-client.js';
-import { ClientQuery } from './index.js';
-import { ClientFetchResultEntity } from './utils/query.js';
+} from '../client/triplit-client.js';
 import {
   Attribute,
   CollectionNameFromModels,
