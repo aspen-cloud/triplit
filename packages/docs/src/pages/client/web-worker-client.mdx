@@ -36,4 +36,4 @@ const client = new WorkerClient({
 
 ## Debugging a `WorkerClient`
 
-Because the `WorkerClient` runs in a Shared Worker, you can't directly access the client in the browser's console. Instead, navigate to `chrome://inspect/#workers` to view the logs for the Shared Worker.
+Because the `WorkerClient` runs in a Shared Worker you can't immediately view the Triplit-specific logs it produces. Instead, navigate to `chrome://inspect/#workers` to view the logs for the Shared Worker. We plan to add better debugging support for the `WorkerClient` in the future.
