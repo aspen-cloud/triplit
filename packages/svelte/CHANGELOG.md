@@ -1,5 +1,14 @@
 # @triplit/svelte
 
+## 0.1.30
+
+### Patch Changes
+
+- 0e4d5d2: fix useQuery hook to work with WorkerClient
+- Updated dependencies [353976a]
+- Updated dependencies [e531de6]
+  - @triplit/client@0.3.58
+
 ## 0.1.29
 
 ### Patch Changes

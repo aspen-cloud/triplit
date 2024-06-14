@@ -1,5 +1,14 @@
 # @triplit/client
 
+## 0.3.58
+
+### Patch Changes
+
+- 353976a: deprecate RemoteClient and client.remote in favor of HttpClient and client.http
+- e531de6: Fixup client query builder types so syncStatus() is always accessible
+- Updated dependencies [2c71802]
+  - @triplit/db@0.3.45
+
 ## 0.3.57
 
 ### Patch Changes
