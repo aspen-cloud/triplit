@@ -1,0 +1,58 @@
+# HTTP clients
+
+## `TriplitClient.http`
+
+You can access the HTTP API through the `http` property on the `TriplitClient` instance. It provides methods for fetching, inserting, updating, and deleting entities in your database. Any queries using this API will bypass the local cache and and mutations will not cause optimistic updates. If you have live queries syncing with the remote database, the Remote API will trigger these queries to update once the server confirms the changes.
+
+```ts
+import { TriplitClient } from '@triplit/client';
+
+const client = new TriplitClient({
+  serverUrl: 'https://<project-id>.triplit.io',
+  token: TRIPLIT_TOKEN,
+});
+
+// client.http is an instance of HttpClient
+
+// Fetch all entities in the "todos" collection
+const todos = await client.http.fetch({
+  collectionName: 'todos',
+});
+
+// Insert a new entity into the "todos" collection
+await client.http.insert('todos', {
+  id: '123',
+  title: 'Buy milk',
+  completed: false,
+});
+
+// Update an entity in the "todos" collection
+await client.http.update('todos', '123', (entity) => {
+  entity.completed = true;
+});
+
+// Delete an entity in the "todos" collection
+await client.http.delete('todos', '123');
+
+// Fetch the entity with the ID "123" in the "todos" collection
+await client.http.fetchById('todos', '123');
+
+// Fetch just one entity in the "todos" collection
+await client.http.fetchOne({
+  collectionName: 'todos',
+  where: [['completed', '=', false]],
+});
+```
+
+## `HttpClient`
+
+If you're only interested in talking to Triplit with the Remote API, and forgo local caching and optimistic updates altogether, you can use the `HttpClient` class directly.
+
+```ts
+import { HttpClient } from '@triplit/client';
+
+const httpClient = new HttpClient({
+  serverUrl: 'https://<project-id>.triplit.io',
+  token: TRIPLIT_TOKEN,
+});
+```

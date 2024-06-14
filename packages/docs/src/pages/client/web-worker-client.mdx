@@ -1,0 +1,35 @@
+# Web Worker Client
+
+Triplit supports running the client in a Web Worker (specifically, a [`SharedWorker`](https://developer.mozilla.org/en-US/docs/Web/API/SharedWorker), which can connect to multiple tabs running a script from the same domain). While running a Web Worker, data syncs between browser tabs without having to sync with server. This reduces network traffic for Triplit apps running in the multiple tabs, move Triplit local database computation to a separate thread, and allow for robust multi-tab offline support.
+
+## `WorkerClient`
+
+The `WorkerClient` is a drop-in replacement for the `TriplitClient` that runs in a Web Worker. It provides the same API as the `TriplitClient`. To use it, import `WorkerClient` from `@triplit/client/worker-client` and create a new instance of the client:
+
+```ts copy
+import { WorkerClient } from '@triplit/client/worker-client';
+import { schema } from './schema';
+
+const client = new WorkerClient({
+  schema,
+  serverUrl: import.meta.env.VITE_TRIPLIT_SERVER_URL,
+  token: import.meta.env.VITE_TRIPLIT_TOKEN,
+});
+```
+
+### With Vite
+
+To use it in Vite, you need to import an additional parameter `workerUrl`, which helps the Vite build process to correctly bundle the Web Worker:
+
+```ts {3,6} copy
+import { WorkerClient } from '@triplit/client';
+import { schema } from './schema';
+import workerUrl from '@triplit/client/worker-client-operator?worker&url';
+
+const client = new WorkerClient({
+  workerUrl,
+  schema,
+  serverUrl: import.meta.env.VITE_TRIPLIT_SERVER_URL,
+  token: import.meta.env.VITE_TRIPLIT_TOKEN,
+});
+```

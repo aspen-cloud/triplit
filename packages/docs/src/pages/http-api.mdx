@@ -2,15 +2,15 @@
 description: Learn how to interact with a Triplit sync server over HTTP.
 ---
 
-# Remote API
+# HTTP API
 
 ## Overview
 
-The Remote API is a RESTful API that allows you to interact with a Triplit Cloud production server or the Triplit [Node server](https://github.com/aspen-cloud/triplit/tree/main/packages/server) that you can host yourself. It's useful if your client can't connect over WebSockets, or if your application wants to forgo the local cache and optimistic updates that the Triplit sync protocol provides. This can be useful for applications that need certainty about the state of the database, or for migrating data to Triplit from other services.
+The HTTP API is a RESTful API that allows you to interact with a Triplit Cloud production server or the Triplit [Node server](https://github.com/aspen-cloud/triplit/tree/main/packages/server) that you can host yourself. It's useful if your client can't connect over WebSockets, or if your application wants to forgo the local cache and optimistic updates that the Triplit sync protocol provides. This can be useful for applications that need certainty about the state of the database, or for migrating data to Triplit from other services.
 
 ## Authentication
 
-The Remote API, like the Triplit sync protocol, uses [JSON Web Tokens](https://jwt.io/) (JWT) for authentication. If you're communicating with a Triplit Cloud production server, you'll need to use your project's Service or Anonymous Token from the [Triplit Cloud dashboard](https://triplit.dev/dashboard) for your project. If you're communicating with a Node server that you control, you'll need a properly formed JWT with the correct claims. Using the [Triplit CLI](/local-development) and `triplit dev` command will automatically generate acceptable Service and Anonymous tokens for you.
+The HTTP API, like the Triplit sync protocol, uses [JSON Web Tokens](https://jwt.io/) (JWT) for authentication. If you're communicating with a Triplit Cloud production server, you'll need to use your project's Service or Anonymous Token from the [Triplit Cloud dashboard](https://triplit.dev/dashboard) for your project. If you're communicating with a Node server that you control, you'll need a properly formed JWT with the correct claims. Using the [Triplit CLI](/local-development) and `triplit dev` command will automatically generate acceptable Service and Anonymous tokens for you.
 
 With your token in hand, set up your HTTP client to send the token in the `Authorization` header with the `Bearer` scheme. Using the `Fetch` API, it would look like this:
 
@@ -24,51 +24,9 @@ await fetch('https://<project-id>.triplit.io/<route>', {
 });
 ```
 
-## `TriplitClient.remote`
+## `TriplitClient.http` and `HttpClient`
 
-You can access the Remote API through the `remote` property on the `TriplitClient` instance. It provides methods for fetching, inserting, updating, and deleting entities in your database. Any queries using this API will bypass the local cache and and mutations will not cause optimistic updates. If you have live queries syncing with the remote database, the Remote API will trigger these queries to update once the server confirms the changes.
-
-If you're only interested in talking to Triplit with the Remote API, and forgo local caching and optimistic updates altogether, you can use the `RemoteClient` class directly.
-
-```ts
-import { TriplitClient } from '@triplit/client';
-
-const client = new TriplitClient({
-  serverUrl: 'https://<project-id>.triplit.io',
-  token: TRIPLIT_TOKEN,
-});
-
-// client.remote is an instance of RemoteClient
-
-// Fetch all entities in the "todos" collection
-const todos = await client.remote.fetch({
-  collectionName: 'todos',
-});
-
-// Insert a new entity into the "todos" collection
-await client.remote.insert('todos', {
-  id: '123',
-  title: 'Buy milk',
-  completed: false,
-});
-
-// Update an entity in the "todos" collection
-await client.remote.update('todos', '123', (entity) => {
-  entity.completed = true;
-});
-
-// Delete an entity in the "todos" collection
-await client.remote.delete('todos', '123');
-
-// Fetch the entity with the ID "123" in the "todos" collection
-await client.remote.fetchById('todos', '123');
-
-// Fetch just one entity in the "todos" collection
-await client.remote.fetchOne({
-  collectionName: 'todos',
-  where: [['completed', '=', false]],
-});
-```
+Triplit provides helpful abstractions for interacting with the HTTP API. Read more about it in the [Triplit Client documentation](/docs/client/http-api).
 
 ## Routes
 
