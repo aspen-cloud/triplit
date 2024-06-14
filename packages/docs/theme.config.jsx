@@ -46,15 +46,15 @@ export default {
     const { frontMatter } = useConfig();
     return (
       <>
-        <meta
+        <meta property="og:url" content={URL + asPath} />
+        {/* <meta
           name="description"
           content={frontMatter.description ?? DESCRIPTION}
         />
-        <meta property="og:url" content={URL + asPath} />
         <meta
           property="og:description"
           content={frontMatter.description ?? DESCRIPTION}
-        />
+        /> */}
         <meta property="og:image" content={URL + '/opengraph-image.png'} />
         <meta property="og:image:alt" content="Triplit Logo" />
         <meta property="og:image:type" content="image/png" />
