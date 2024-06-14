@@ -29,5 +29,6 @@ jobs:
           cache: 'yarn'
       - name: Install dependencies
         run: yarn install
+      - run: cd packages/types && yarn build
       - name: Build
         run: yarn build
