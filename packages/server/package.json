@@ -18,13 +18,14 @@
     "dist"
   ],
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && yarn validate:types",
     "build:watch": "tsc -w",
     "lint": "tsc --noEmit",
     "lint:build": "npx publint",
     "util:gentoken": "node ./dev/scripts/createToken.cjs",
     "publish-pkg": "node ../../scripts/npm-check-version-and-publish.js && yarn sentry:sourcemaps",
-    "sentry:sourcemaps": "sentry-cli sourcemaps inject --org aspen --project triplit-server ./dist && sentry-cli sourcemaps upload --release=$npm_package_version --org aspen --project triplit-server ./dist"
+    "sentry:sourcemaps": "sentry-cli sourcemaps inject --org aspen --project triplit-server ./dist && sentry-cli sourcemaps upload --release=$npm_package_version --org aspen --project triplit-server ./dist",
+    "validate:types": "node ../../scripts/check-for-local-references-in-declarations.js dist"
   },
   "dependencies": {
     "@sentry/cli": "^2.31.2",

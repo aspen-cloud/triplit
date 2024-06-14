@@ -2,8 +2,9 @@
   "name": "@triplit/types",
   "packageManager": "yarn@3.4.1",
   "scripts": {
-    "build": "tsc",
-    "build:watch": "tsc -w"
+    "build": "tsc && yarn validate:types",
+    "build:watch": "tsc -w",
+    "validate:types": "node ../../scripts/check-for-local-references-in-declarations.js dist"
   },
   "exports": {
     "./*": {

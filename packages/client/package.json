@@ -39,7 +39,7 @@
     }
   },
   "scripts": {
-    "build": "tsc && yarn build-worker",
+    "build": "tsc && yarn validate:types && yarn build-worker",
     "build:watch": "tsc -w",
     "lint:build": "npx publint",
     "lint": "tsc --noEmit",
@@ -47,7 +47,8 @@
     "test:unit": "vitest run",
     "typecheck": "vitest --typecheck.only --no-watch",
     "publish-pkg": "node ../../scripts/npm-check-version-and-publish.js",
-    "build-worker": "esbuild ./src/worker-client/worker-client-operator.ts --bundle --minify --platform=browser --outfile=./dist/worker-client/worker-client-operator.js --format=esm --sourcemap"
+    "build-worker": "esbuild ./src/worker-client/worker-client-operator.ts --bundle --minify --platform=browser --outfile=./dist/worker-client/worker-client-operator.js --format=esm --sourcemap",
+    "validate:types": "node ../../scripts/check-for-local-references-in-declarations.js dist"
   },
   "files": [
     "/dist"

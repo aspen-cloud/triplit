@@ -17,11 +17,12 @@
     }
   },
   "scripts": {
-    "build": "svelte-package -t=false && tsc",
+    "build": "svelte-package -t=false && tsc && yarn validate:types",
     "build:watch": "svelte-package -w",
     "lint:build": "npx publint",
     "publish-pkg": "node ../../scripts/npm-check-version-and-publish.js",
-    "check": "svelte-check --tsconfig ./tsconfig.json"
+    "check": "svelte-check --tsconfig ./tsconfig.json",
+    "validate:types": "node ../../scripts/check-for-local-references-in-declarations.js dist"
   },
   "files": [
     "/dist"

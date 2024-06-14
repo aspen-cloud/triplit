@@ -10,6 +10,46 @@ import {
 } from '@triplit/client';
 import type { WorkerClient } from '@triplit/client/worker-client';
 
+type useQueryPayload<
+  M extends Models<any, any> | undefined,
+  Q extends ClientQuery<M, any, any, any>
+> = {
+  results: Unalias<ClientFetchResult<Q>> | undefined;
+  fetching: boolean;
+  fetchingLocal: boolean;
+  fetchingRemote: boolean;
+  error: any;
+};
+
+type usePaginatedQueryPayload<
+  M extends Models<any, any> | undefined,
+  Q extends ClientQuery<M, any, any, any>
+> = {
+  results: Unalias<ClientFetchResult<Q>> | undefined;
+  fetching: boolean;
+  fetchingPage: boolean;
+  error: any;
+  hasNextPage: boolean;
+  hasPreviousPage: boolean;
+  nextPage: () => void;
+  prevPage: () => void;
+  disconnect: () => void;
+};
+
+type useInfiniteQueryPayload<
+  M extends Models<any, any> | undefined,
+  Q extends ClientQuery<M, any, any, any>
+> = {
+  results: Unalias<ClientFetchResult<Q>> | undefined;
+  fetching: boolean;
+  fetchingRemote: boolean;
+  fetchingMore: boolean;
+  error: any;
+  hasMore: boolean;
+  loadMore: () => void;
+  disconnect: () => void;
+};
+
 export function useQuery<
   M extends Models<any, any> | undefined,
   Q extends ClientQuery<M, any, any, any>
@@ -17,13 +57,7 @@ export function useQuery<
   client: TriplitClient<M> | WorkerClient<M>,
   query: ClientQueryBuilder<Q>,
   options?: Partial<SubscriptionOptions>
-): {
-  fetching: boolean;
-  fetchingLocal: boolean;
-  fetchingRemote: boolean;
-  results: Unalias<ClientFetchResult<Q>> | undefined;
-  error: any;
-} {
+): useQueryPayload<M, Q> {
   const [results, setResults] = useState<
     Unalias<ClientFetchResult<Q>> | undefined
   >(undefined);
@@ -103,7 +137,7 @@ export function usePaginatedQuery<
   client: TriplitClient<M> | WorkerClient<M>,
   query: ClientQueryBuilder<Q>,
   options?: Partial<SubscriptionOptions>
-) {
+): usePaginatedQueryPayload<M, Q> {
   const builtQuery = useMemo(() => query.build(), [query]);
   const [hasNextPage, setHasNextPage] = useState(false);
   const [hasPreviousPage, setHasPreviousPage] = useState(false);
@@ -178,7 +212,7 @@ export function useInfiniteQuery<
   client: TriplitClient<M> | WorkerClient<M>,
   query: ClientQueryBuilder<Q>,
   options?: Partial<SubscriptionOptions>
-) {
+): useInfiniteQueryPayload<M, Q> {
   const builtQuery = useMemo(() => query.build(), [query]);
   const stringifiedQuery = builtQuery && JSON.stringify(builtQuery);
   const [hasMore, setHasMore] = useState(false);

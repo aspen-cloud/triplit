@@ -50,12 +50,13 @@
     }
   },
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && yarn validate:types",
     "build:watch": "tsc -w",
     "test": "vitest",
     "lint": "tsc --noEmit",
     "lint:build": "npx publint",
-    "publish-pkg": "node ../../scripts/npm-check-version-and-publish.js"
+    "publish-pkg": "node ../../scripts/npm-check-version-and-publish.js",
+    "validate:types": "node ../../scripts/check-for-local-references-in-declarations.js dist"
   },
   "dependencies": {
     "@triplit/db": "workspace:^",

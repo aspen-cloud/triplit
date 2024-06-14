@@ -84,6 +84,7 @@ export type {
   CollectionsDefinition,
   QueryAttributeDefinition,
   UserTypeOptions,
+  SchemaDefinition as SchemaJSON,
 } from './data-types/serialization.js';
 export { timestampCompare } from './timestamp.js';
 export type { Timestamp } from './timestamp.js';

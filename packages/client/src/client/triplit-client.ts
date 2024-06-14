@@ -17,6 +17,7 @@ import {
   TupleValue,
   schemaToJSON,
   Unalias,
+  SchemaJSON,
 } from '@triplit/db';
 import { getUserId } from '../token.js';
 import { UnrecognizedFetchPolicyError } from '../errors.js';
@@ -260,7 +261,7 @@ export class TriplitClient<M extends ClientSchema | undefined = undefined> {
     });
   }
 
-  async getSchema() {
+  async getSchema(): Promise<SchemaJSON | undefined> {
     return schemaToJSON(await this.db.getSchema());
   }
 

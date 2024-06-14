@@ -33,7 +33,7 @@
   },
   "type": "module",
   "scripts": {
-    "build": "tsc  --build --pretty",
+    "build": "tsc  --build --pretty && yarn validate:types",
     "build:watch": "tsc -w",
     "lint:build": "npx publint",
     "lint": "tsc --noEmit",
@@ -46,7 +46,8 @@
     "typecheck": "vitest --typecheck.only --no-watch",
     "bench": "vitest bench",
     "coverage": "stryker run",
-    "publish-pkg": "node ../../scripts/npm-check-version-and-publish.js"
+    "publish-pkg": "node ../../scripts/npm-check-version-and-publish.js",
+    "validate:types": "node ../../scripts/check-for-local-references-in-declarations.js dist"
   },
   "files": [
     "/dist"
