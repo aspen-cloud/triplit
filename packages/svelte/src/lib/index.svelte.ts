@@ -43,9 +43,11 @@ export function useQuery<
   }
 
   $effect(() => {
-    client.isFirstTimeFetchingQuery(builtQuery).then((isFirstFetch) => {
-      isInitialFetch = isFirstFetch;
-    });
+    client
+      .isFirstTimeFetchingQuery($state.snapshot(builtQuery))
+      .then((isFirstFetch) => {
+        isInitialFetch = isFirstFetch;
+      });
     const unsub = client.onConnectionStatusChange((status) => {
       if (status === 'CLOSING' || status === 'CLOSED') {
         fetchingRemote = false;
@@ -63,7 +65,7 @@ export function useQuery<
 
   $effect(() => {
     const unsubscribe = client.subscribe(
-      builtQuery,
+      $state.snapshot(builtQuery),
       (localResults) => {
         fetchingLocal = false;
         error = undefined;
