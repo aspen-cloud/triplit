@@ -45,7 +45,8 @@
     "react-router-dom": "^6.17.0",
     "superjson": "^2.2.1",
     "tailwind-merge": "^1.14.0",
-    "tailwindcss-animate": "^1.0.7"
+    "tailwindcss-animate": "^1.0.7",
+    "turbo": "^2.0.4"
   },
   "devDependencies": {
     "@triplit/ui": "workspace:^",

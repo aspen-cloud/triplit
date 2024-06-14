@@ -6856,6 +6856,7 @@ __metadata:
     tailwindcss: "npm:^3.3.3"
     tailwindcss-animate: "npm:^1.0.7"
     tsx: "npm:^4.7.1"
+    turbo: "npm:^2.0.4"
     typescript: "npm:^5.2.2"
     vite: "npm:^5.1.5"
     vite-plugin-dts: "npm:^3.9.1"
@@ -11347,6 +11348,7 @@ __metadata:
     nextra-theme-docs: "npm:^2.13.3"
     react: "npm:^18.2.0"
     react-dom: "npm:^18.2.0"
+    turbo: "npm:^2.0.4"
     typedoc: "npm:^0.25.3"
     typedoc-plugin-markdown: "npm:^3.17.0"
     typescript: "npm:^5.4.5"
@@ -22406,9 +22408,23 @@ __metadata:
   languageName: node
   linkType: hard
 
+"turbo-darwin-64@npm:2.0.4":
+  version: 2.0.4
+  resolution: "turbo-darwin-64@npm:2.0.4"
+  conditions: os=darwin & cpu=x64
+  languageName: node
+  linkType: hard
+
 "turbo-darwin-arm64@npm:2.0.3":
   version: 2.0.3
   resolution: "turbo-darwin-arm64@npm:2.0.3"
+  conditions: os=darwin & cpu=arm64
+  languageName: node
+  linkType: hard
+
+"turbo-darwin-arm64@npm:2.0.4":
+  version: 2.0.4
+  resolution: "turbo-darwin-arm64@npm:2.0.4"
   conditions: os=darwin & cpu=arm64
   languageName: node
   linkType: hard
@@ -22420,9 +22436,23 @@ __metadata:
   languageName: node
   linkType: hard
 
+"turbo-linux-64@npm:2.0.4":
+  version: 2.0.4
+  resolution: "turbo-linux-64@npm:2.0.4"
+  conditions: os=linux & cpu=x64
+  languageName: node
+  linkType: hard
+
 "turbo-linux-arm64@npm:2.0.3":
   version: 2.0.3
   resolution: "turbo-linux-arm64@npm:2.0.3"
+  conditions: os=linux & cpu=arm64
+  languageName: node
+  linkType: hard
+
+"turbo-linux-arm64@npm:2.0.4":
+  version: 2.0.4
+  resolution: "turbo-linux-arm64@npm:2.0.4"
   conditions: os=linux & cpu=arm64
   languageName: node
   linkType: hard
@@ -22434,9 +22464,23 @@ __metadata:
   languageName: node
   linkType: hard
 
+"turbo-windows-64@npm:2.0.4":
+  version: 2.0.4
+  resolution: "turbo-windows-64@npm:2.0.4"
+  conditions: os=win32 & cpu=x64
+  languageName: node
+  linkType: hard
+
 "turbo-windows-arm64@npm:2.0.3":
   version: 2.0.3
   resolution: "turbo-windows-arm64@npm:2.0.3"
+  conditions: os=win32 & cpu=arm64
+  languageName: node
+  linkType: hard
+
+"turbo-windows-arm64@npm:2.0.4":
+  version: 2.0.4
+  resolution: "turbo-windows-arm64@npm:2.0.4"
   conditions: os=win32 & cpu=arm64
   languageName: node
   linkType: hard
@@ -22467,6 +22511,35 @@ __metadata:
   bin:
     turbo: bin/turbo
   checksum: 10/b4073faa921865c5ff8efef6c3527cca7c04d60feda12e3bb4a1ce404c3a4a5665407e735c4bee3d530b9b88307f07ad6dc28352b1593ab32fdafe3a96f70449
+  languageName: node
+  linkType: hard
+
+"turbo@npm:^2.0.4":
+  version: 2.0.4
+  resolution: "turbo@npm:2.0.4"
+  dependencies:
+    turbo-darwin-64: "npm:2.0.4"
+    turbo-darwin-arm64: "npm:2.0.4"
+    turbo-linux-64: "npm:2.0.4"
+    turbo-linux-arm64: "npm:2.0.4"
+    turbo-windows-64: "npm:2.0.4"
+    turbo-windows-arm64: "npm:2.0.4"
+  dependenciesMeta:
+    turbo-darwin-64:
+      optional: true
+    turbo-darwin-arm64:
+      optional: true
+    turbo-linux-64:
+      optional: true
+    turbo-linux-arm64:
+      optional: true
+    turbo-windows-64:
+      optional: true
+    turbo-windows-arm64:
+      optional: true
+  bin:
+    turbo: bin/turbo
+  checksum: 10/689b54d58c04ef04c81ade5f91edbab0805ec270d55f8d878f6958024e216ec06a82bea3246e117d631f408e3c2b5dba3e5d58df0fba80470c231cfd5d698793
   languageName: node
   linkType: hard
 
