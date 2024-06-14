@@ -57,6 +57,20 @@ export const client = new TriplitClient({
 
 The suggested pattern is to create a client instance in a module and import it into your components.
 
+### `vite.config.ts`
+
+With the default SvelteKit configuration Vite will not be able to bundle files outside of the `src` or `node_modules` directory. To allow Vite to bundle the files in the `triplit` directory created with `triplit init`, you can add the following configuration to your `vite.config.ts` file:
+
+```ts filename="vite.config.ts" {6} copy
+import { sveltekit } from '@sveltejs/kit/vite';
+import { defineConfig } from 'vite';
+
+export default defineConfig({
+  plugins: [sveltekit()],
+  server: { fs: { allow: ['./triplit'] } },
+});
+```
+
 ## useQuery
 
 The `useQuery` hook subscribes to the provided query inside your Svelte component and will automatically unsubscribe from the query when the component unmounts.
