@@ -1,5 +1,11 @@
 # @triplit/db
 
+## 0.3.45
+
+### Patch Changes
+
+- 2c71802: Cut max relationship type completion depth to 3
+
 ## 0.3.44
 
 ### Patch Changes
