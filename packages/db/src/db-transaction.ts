@@ -83,7 +83,7 @@ import {
 } from './triple-store-utils.js';
 import { TripleStoreApi } from './triple-store.js';
 import { RecordType } from './data-types/record.js';
-import { Logger } from '@triplit/types/src/logger.js';
+import { Logger } from '@triplit/types/logger';
 import {
   Unalias,
   FetchResultEntityFromParts,

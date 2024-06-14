@@ -10,7 +10,10 @@ import {
   WhereFilter,
 } from '../../src/query.js';
 import { DBTransaction } from '../../src/db-transaction.js';
-import { FetchResultEntity } from '../../src/query/types';
+import {
+  CollectionQueryDefault,
+  FetchResultEntity,
+} from '../../src/query/types';
 
 function fakeTx<M extends Models<any, any> | undefined>(
   db: DB<M>
@@ -799,7 +802,7 @@ describe('query builder', () => {
         .toEqualTypeOf<
           | ValueCursor
           | FetchResultEntity<
-              CollectionQuery<typeof schema.collections, 'test'>
+              CollectionQueryDefault<typeof schema.collections, 'test'>
             >
           | undefined
         >();

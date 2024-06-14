@@ -44,7 +44,7 @@ import {
 import { copyHooks, prefixVariables, triplesToObject } from './utils.js';
 import { EAV, indexToTriple, TripleRow } from './triple-store-utils.js';
 import { TripleStore } from './triple-store.js';
-import { Logger } from '@triplit/types/src/logger.js';
+import { Logger } from '@triplit/types/logger';
 import { isAnyOrUndefined } from './utility-types.js';
 import { Unalias, FetchResult, FetchResultEntity } from './query/types';
 

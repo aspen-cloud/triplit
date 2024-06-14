@@ -51,7 +51,7 @@ import {
   validateIdentifier,
   convertEntityToJS,
 } from './collection-query.js';
-import { Logger } from '@triplit/types/src/logger.js';
+import { Logger } from '@triplit/types/logger';
 import { prefixVariables } from './utils.js';
 import { FetchResult } from './query/types';
 
