@@ -1,10 +1,8 @@
 import {
   UpdateTypeFromModel,
-  Models,
   CollectionNameFromModels,
   ModelFromModels,
   InsertTypeFromModel,
-  FetchByIdQueryParams,
   ChangeTracker,
   createUpdateProxy,
   Attribute,
@@ -21,9 +19,8 @@ import {
   ClientFetchResultEntity,
   ClientQuery,
   ClientSchema,
-  prepareFetchByIdQuery,
-  httpClientQueryBuilder,
-} from '../utils/query.js';
+} from '../client/types';
+import { httpClientQueryBuilder } from './query-builder.js';
 
 function parseError(error: string) {
   try {
@@ -220,7 +217,7 @@ export class HttpClient<M extends ClientSchema | undefined> {
      */
     const schema = await this.schema();
     const collectionSchema = schema?.[collectionName]?.schema;
-    const entityQuery = prepareFetchByIdQuery<M, CN>(collectionName, entityId);
+    const entityQuery = this.query(collectionName).id(entityId).build();
     const triples = await this.queryTriples(entityQuery);
     // TODO we should handle errors or non-existent entities
     const entity = constructEntity(

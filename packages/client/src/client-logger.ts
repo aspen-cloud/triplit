@@ -1,4 +1,4 @@
-import { LogLevel, Logger } from '@triplit/types/logger.js';
+import { LogLevel, Logger } from '@triplit/types/logger';
 import superjson from 'superjson';
 
 export type LogListener = ((log: any) => void) | undefined;

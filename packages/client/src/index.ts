@@ -17,8 +17,8 @@ export type {
   ClientFetchResult,
   ClientFetchResultEntity,
   ClientQuery,
-  ClientQueryBuilder,
   ClientQueryDefault,
   ClientSchema,
   Entity,
-} from './utils/query.js';
+} from './client/types';
+export type { ClientQueryBuilder } from './client/query-builder.js';

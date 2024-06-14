@@ -20,15 +20,15 @@ import {
   createUpdateProxy,
   schemaToJSON,
 } from '@triplit/db';
+import { ConnectionStatus } from '../transport/transport.js';
 import {
   ClientFetchResult,
   ClientFetchResultEntity,
   ClientQuery,
   ClientQueryDefault,
   ClientSchema,
-  clientQueryBuilder,
-} from '../utils/query.js';
-import { ConnectionStatus } from '../transport/transport.js';
+} from '../client/types';
+import { clientQueryBuilder } from '../client/query-builder.js';
 
 export class WorkerClient<M extends ClientSchema | undefined = undefined> {
   initialized: Promise<void>;

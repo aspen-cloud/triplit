@@ -12,6 +12,13 @@
       "types": "./dist/*.d.ts"
     }
   },
+  "typesVersions": {
+    "*": {
+      "*": [
+        "./dist/*.d.ts"
+      ]
+    }
+  },
   "devDependencies": {
     "typescript": "^5.2.2"
   }

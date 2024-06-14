@@ -21,6 +21,16 @@
       "import": "./dist/storage/*.js"
     }
   },
+  "typesVersions": {
+    "*": {
+      "storage/*": [
+        "./dist/types/storage/*.d.ts"
+      ],
+      ".": [
+        "./dist/types/index.d.ts"
+      ]
+    }
+  },
   "type": "module",
   "scripts": {
     "build": "tsc  --build --pretty",

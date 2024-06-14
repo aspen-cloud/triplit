@@ -29,7 +29,7 @@ import {
   RemoteSyncFailedError,
 } from './errors.js';
 import { Value } from '@sinclair/typebox/value';
-import { ClientFetchResult, ClientQuery } from './utils/query.js';
+import { ClientFetchResult, ClientQuery } from './client/types';
 import { Logger } from '@triplit/types/logger';
 
 type OnMessageReceivedCallback = (message: ServerSyncMessage) => void;

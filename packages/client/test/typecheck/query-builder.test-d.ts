@@ -1,11 +1,18 @@
 import { expectTypeOf, test, describe } from 'vitest';
-import { TriplitClient } from '../../dist/triplit-client';
+import { TriplitClient } from '../../dist/client/triplit-client.js';
 import { Schema as S } from '@triplit/db';
 
 test('Builder API', () => {
   const client = new TriplitClient({
     schema: {
       a: {
+        schema: S.Schema({
+          id: S.Id(),
+          attr: S.String(),
+          b: S.RelationById('b', '$id'),
+        }),
+      },
+      b: {
         schema: S.Schema({
           id: S.Id(),
           attr: S.String(),
@@ -29,19 +36,19 @@ test('Builder API', () => {
   const builder = client.query('a');
   expectTypeOf<keyof typeof builder>().toEqualTypeOf<BuilderKeys>();
 
-  const builderWithAfter = builder.after('1');
+  const builderWithAfter = builder.after(['1', '1']);
   expectTypeOf<keyof typeof builderWithAfter>().toEqualTypeOf<BuilderKeys>();
 
   const builderWithId = builder.id('1');
   expectTypeOf<keyof typeof builderWithId>().toEqualTypeOf<BuilderKeys>();
 
-  const builderWithInclude = builder.include('subcollection');
+  const builderWithInclude = builder.include('b');
   expectTypeOf<keyof typeof builderWithInclude>().toEqualTypeOf<BuilderKeys>();
 
   const builderWithLimit = builder.limit(1);
   expectTypeOf<keyof typeof builderWithLimit>().toEqualTypeOf<BuilderKeys>();
 
-  const builderWithOrder = builder.order('attr');
+  const builderWithOrder = builder.order('attr', 'ASC');
   expectTypeOf<keyof typeof builderWithOrder>().toEqualTypeOf<BuilderKeys>();
 
   const builderWithSelect = builder.select(['id', 'attr']);
@@ -50,8 +57,7 @@ test('Builder API', () => {
   const builderWithSyncStatus = builder.syncStatus('all');
   expectTypeOf<keyof typeof builderWithSyncStatus>().toEqualTypeOf<BuilderKeys>;
 
-  // TODO: this shoudl fail? Look into this when adding tests
-  const builderWithWhere = builder.where([['asd', '=', 'foo']]);
+  const builderWithWhere = builder.where([['attr', '=', 'foo']]);
   expectTypeOf<keyof typeof builderWithWhere>().toEqualTypeOf<BuilderKeys>();
 
   const builderWithEntityId = builder.entityId('1');

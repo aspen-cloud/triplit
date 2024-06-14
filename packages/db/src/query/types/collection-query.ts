@@ -4,6 +4,9 @@ import { Models } from '../../schema/types';
 
 type BaseCollectionQuery = CollectionQuery<any, any, any, any>;
 
+/**
+ * A collection query with default selection and inclusion.
+ */
 export type CollectionQueryDefault<
   M extends Models<any, any> | undefined,
   CN extends CollectionNameFromModels<M>

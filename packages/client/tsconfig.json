@@ -2,13 +2,14 @@
   "extends": "../../tsconfig.json",
   "compilerOptions": {
     "lib": ["ESNext", "DOM"],
-    "target": "ESNext", // You can adjust the target as needed.
-    "module": "Node16", // This will be overridden in npm scripts
-    "outDir": "./dist", // Output directory
+    "target": "ESNext",
+    "module": "ESNext",
+    "outDir": "./dist",
     "tsBuildInfoFile": "./dist/tsconfig.tsbuildinfo",
+    "moduleResolution": "node",
     "strict": true,
     "esModuleInterop": true,
-    "declaration": true, // This is important to generate type declarations
+    "declaration": true,
     "isolatedModules": true,
     "skipLibCheck": true,
     "rootDir": "./src/"
