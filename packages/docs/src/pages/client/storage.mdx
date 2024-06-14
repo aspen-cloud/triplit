@@ -55,3 +55,47 @@ const client = new TriplitClient({
 ```
 
 Note that passing storage: `'indexeddb'` to the constructor will create IndexedDB databases using the names `'triplit-outbox'` and `'triplit-cache'`. If your application connects to multiple projects with separate clients, we recommend you create your own custom-named instances of `IndexedDBStorage` so that naming conflicts do not occur.
+
+## Sqlite
+
+### In the browser
+
+Triplit does not currently provide a Sqlite storage adapter for the browser. The Triplit server, which runs in node environments, can use the `sqlite` storage engine.
+
+### In React Native
+
+Triplit provides an `expo-sqlite` storage adapter for React Native applications. This adapter uses the [`expo-sqlite`](https://docs.expo.dev/versions/latest/sdk/sqlite/) package to store data on the device. Users of Expo 51 or greater can get started by importing the storage provider from `@triplit/db/storage/expo-sqlite`:
+
+```ts
+import { ExpoSQLiteStorage } from '@triplit/db/storage/expo-sqlite';
+import { TriplitClient } from '@triplit/client';
+
+new TriplitClient({
+  storage: {
+    cache: new ExpoSQLiteStorage('cache.db'),
+    outbox: new ExpoSQLiteStorage('outbox.db'),
+  },
+});
+```
+
+You may also instantiate the storage provider with an existing database instance:
+
+```ts
+import { ExpoSQLiteStorage } from '@triplit/db/storage/expo-sqlite';
+import * as SQLite from 'expo-sqlite';
+import { TriplitClient } from '@triplit/client';
+
+const cacheDB = SQLite.openDatabaseSync('cache.db');
+const outboxDB = SQLite.openDatabaseSync('outbox.db');
+
+new TriplitClient({
+  storage: {
+    cache: new ExpoSQLiteStorage(cacheDB),
+    outbox: new ExpoSQLiteStorage(outboxDB),
+  },
+});
+```
+
+Users of Expo 50 or below can use the storage provider exported by `@triplit/db/storage/expo-sqlite-legacy`.
+
+As well if there is a SQLite library that we don't yet have a storage provider for, you can create your own by implementing the `SQLiteAdapter` interface and providing that to `AdapterSQLiteStorage` available in `@triplit/db/storage/adapter-sqlite`. Here is a [gist](https://gist.github.com/wernst/9a1a42a7bb95bc2268b38612e9ee4339) implementing an adapter for `op-sqlite`, another SQLite library for React Native.
