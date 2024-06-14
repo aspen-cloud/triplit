@@ -33,3 +33,7 @@ const client = new WorkerClient({
   token: import.meta.env.VITE_TRIPLIT_TOKEN,
 });
 ```
+
+## Debugging a `WorkerClient`
+
+Because the `WorkerClient` runs in a Shared Worker, you can't directly access the client in the browser's console. Instead, navigate to `chrome://inspect/#workers` to view the logs for the Shared Worker.
