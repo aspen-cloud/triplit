@@ -1,5 +1,13 @@
 # @triplit/console
 
+## 0.3.64
+
+### Patch Changes
+
+- Updated dependencies [fef88d1]
+  - @triplit/client@0.3.59
+  - @triplit/react@0.3.62
+
 ## 0.3.63
 
 ### Patch Changes
