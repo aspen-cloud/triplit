@@ -1,5 +1,11 @@
 # @triplit/client
 
+## 0.3.59
+
+### Patch Changes
+
+- fef88d1: Fix connection status listening when using web worker client
+
 ## 0.3.58
 
 ### Patch Changes

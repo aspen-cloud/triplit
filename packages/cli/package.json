@@ -1,6 +1,6 @@
 {
   "name": "@triplit/cli",
-  "version": "0.3.69",
+  "version": "0.3.70",
   "type": "module",
   "scripts": {
     "build": "tsc && yarn validate:types",
