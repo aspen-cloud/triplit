@@ -51,7 +51,6 @@ export class WorkerClient<M extends ClientSchema | undefined = undefined> {
     });
     this._connectionStatus = 'CLOSED';
     this.onConnectionStatusChange((status) => {
-      console.log('connection status:', status);
       this._connectionStatus = status;
     }, true);
     this.db.updateGlobalVariables = (variables) => {
