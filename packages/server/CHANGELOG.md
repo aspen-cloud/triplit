@@ -1,5 +1,11 @@
 # @triplit/server
 
+## 0.3.49
+
+### Patch Changes
+
+- bfb1193: Manual bump
+
 ## 0.3.48
 
 ### Patch Changes

@@ -1,5 +1,12 @@
 # @triplit/cli
 
+## 0.3.71
+
+### Patch Changes
+
+- Updated dependencies [bfb1193]
+  - @triplit/server@0.3.49
+
 ## 0.3.70
 
 ### Patch Changes
