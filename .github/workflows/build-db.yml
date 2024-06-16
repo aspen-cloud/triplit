@@ -28,7 +28,6 @@ jobs:
           node-version: ${{ matrix.node-version }}
           cache: 'yarn'
       - name: Install dependencies
-        run: yarn install
-      - run: cd packages/types && yarn build
+        run: yarn workspaces focus
       - name: Build
         run: yarn build
