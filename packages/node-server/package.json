@@ -6,7 +6,6 @@
   "version": "0.3.49",
   "scripts": {
     "start": "node ./run.js",
-    "build": "./scripts/build.sh",
     "publish": "./scripts/publish.sh",
     "check-and-publish": "node ./scripts/docker-check-version-and-publish.js"
   },
