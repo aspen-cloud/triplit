@@ -43,7 +43,7 @@ jobs:
     needs: publish-npm
     runs-on: ubuntu-latest
     # TODO: only run if publish was made to @triplit/server
-    # if: needs.publish-npm.outputs.published == 'true'
+    if: needs.publish-npm.outputs.published == 'true'
     steps:
       - name: Checkout
         uses: actions/checkout@v4

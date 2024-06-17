@@ -38,9 +38,7 @@ async function publishIfNewVersion() {
   ) {
     console.log('New version detected. Publishing...');
     // working directory is package root
-    // Will publish too
-    execSync('yarn build', { stdio: 'inherit' });
-    // execSync('yarn publish', { stdio: 'inherit' });
+    execSync('yarn publish', { stdio: 'inherit' });
     await recordImagePublish({
       server_version: currentVersion,
       db_version: dbPackageJson.version,
