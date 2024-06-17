@@ -9,7 +9,7 @@ Transactions are a way to group multiple mutations into a single atomic operatio
 A transaction can be created by calling `client.transact()`. For example:
 
 ```typescript
-await client.transact((tx) => {
+await client.transact(async (tx) => {
   await tx.insert('employee', { id: 'Fry', name: 'Philip J. Fry' });
   await tx.insert('employee', { id: 'Leela', name: 'Turanga Leela' });
   await tx.insert('employee', {
@@ -22,7 +22,7 @@ await client.transact((tx) => {
 If you decide you need to abort a transaction, you can call `cancel` inside your transaction. For example:
 
 ```typescript
-await client.transact((tx) => {
+await client.transact(async (tx) => {
   await tx.insert('employee', { id: 'Hermes', name: 'Hermes Conrad' });
   await tx.cancel();
 });
