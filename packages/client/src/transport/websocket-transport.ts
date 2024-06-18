@@ -158,7 +158,11 @@ function friendlyReadyState(conn: WebSocket): ConnectionStatus {
   }
 }
 
-if (typeof WebSocket !== 'undefined') {
+if (
+  typeof WebSocket !== 'undefined' &&
+  typeof self !== 'undefined' &&
+  !!Object.getOwnPropertyDescriptor(self, 'WebSocket')?.writable
+) {
   // Add any changes to the WebSocket type here (ex more event handlers)
   var WebSocketProxy = new Proxy(WebSocket, {
     construct: function (target, args) {
