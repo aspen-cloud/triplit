@@ -3,6 +3,7 @@ import { describe, expect, it, beforeEach, beforeAll } from 'vitest';
 import { DB, Schema as S, WriteRuleError } from '../../src';
 import { classes } from '../sample_data/school.js';
 import { testDBAndTransaction } from '../db.spec';
+import { Models } from '../../src/schema/types';
 
 describe('Rules', () => {
   describe('Read', () => {
@@ -26,6 +27,7 @@ describe('Rules', () => {
           enrolled_students: {
             type: 'set',
             items: { type: 'string', options: {} },
+            options: {},
           },
         },
         rules: {
@@ -93,14 +95,9 @@ describe('Rules', () => {
             skipRules: true,
           });
           expect(nonEnrolledClass).not.toBeNull();
-          const enrolledClass = await db.fetchById(
-            'classes',
-            'class-1',
-            {},
-            {
-              skipRules: true,
-            }
-          );
+          const enrolledClass = await db.fetchById('classes', 'class-1', {
+            skipRules: true,
+          });
           expect(enrolledClass).not.toBeNull();
         }
       );
@@ -226,11 +223,10 @@ describe('Rules', () => {
       it("throws an error when inserting a obj that doesn't match filter", async () => {
         expect(
           db.transact(async (tx) => {
-            await tx.insert(
-              'posts',
-              { id: 'post-1', author_id: 'Not-the-current-user' },
-              'post-2'
-            );
+            await tx.insert('posts', {
+              id: 'post-1',
+              author_id: 'Not-the-current-user',
+            });
           })
         ).rejects.toThrowError(WriteRuleError);
       });
@@ -251,36 +247,35 @@ describe('Rules', () => {
     });
 
     describe('rules with relationships', async () => {
-      const schema = {
-        collections: {
-          posts: {
-            schema: S.Schema({
-              id: S.Id(),
-              text: S.String(),
-              author_id: S.String(),
-              author: S.RelationById('users', '$author_id'),
-            }),
-            rules: {
-              write: {
-                'admin-write': {
-                  description: 'Only admin users can create posts',
-                  filter: [
-                    ['author.admin', '=', true],
-                    ['author_id', '=', '$session.user_id'],
-                  ],
-                },
+      const collections = {
+        posts: {
+          schema: S.Schema({
+            id: S.Id(),
+            text: S.String(),
+            author_id: S.String(),
+            author: S.RelationById('users', '$author_id'),
+          }),
+          rules: {
+            write: {
+              'admin-write': {
+                description: 'Only admin users can create posts',
+                filter: [
+                  ['author.admin', '=', true],
+                  ['author_id', '=', '$session.user_id'],
+                ],
               },
             },
           },
-          users: {
-            schema: S.Schema({
-              id: S.Id(),
-              name: S.String(),
-              admin: S.Boolean(),
-            }),
-          },
         },
-      };
+        users: {
+          schema: S.Schema({
+            id: S.Id(),
+            name: S.String(),
+            admin: S.Boolean(),
+          }),
+        },
+      } satisfies Models<any, any>;
+      const schema = { collections };
       it('insert with relationship in rule', async () => {
         const db = new DB({ schema });
 
@@ -458,24 +453,23 @@ describe('Rules', () => {
   });
 
   describe('Delete', () => {
-    const schema = {
-      collections: {
-        posts: {
-          schema: S.Schema({
-            id: S.String(),
-            author_id: S.String(),
-          }),
-          rules: {
-            write: {
-              'post-author': {
-                description: 'Users can only post posts they authored',
-                filter: [['author_id', '=', '$user_id']],
-              },
+    const collections = {
+      posts: {
+        schema: S.Schema({
+          id: S.String(),
+          author_id: S.String(),
+        }),
+        rules: {
+          write: {
+            'post-author': {
+              description: 'Users can only post posts they authored',
+              filter: [['author_id', '=', '$user_id']],
             },
           },
         },
       },
-    };
+    } satisfies Models<any, any>;
+    const schema = { collections };
 
     const user_id = 'user-1';
 
@@ -506,7 +500,7 @@ describe('Rules', () => {
         },
         source: storage,
       });
-      await db1.insert('posts', { id: 'post-1', author_id: user_id }, 'post-1');
+      await db1.insert('posts', { id: 'post-1', author_id: user_id });
       await expect(db2.delete('posts', 'post-1')).rejects.toThrowError(
         WriteRuleError
       );
@@ -528,7 +522,7 @@ describe('Rules', () => {
         },
         source: storage,
       });
-      await db1.insert('posts', { id: 'post-1', author_id: user_id }, 'post-1');
+      await db1.insert('posts', { id: 'post-1', author_id: user_id });
       await expect(
         db2.delete('posts', 'post-1', { skipRules: true })
       ).resolves.not.toThrowError();
