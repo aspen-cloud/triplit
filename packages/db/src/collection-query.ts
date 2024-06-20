@@ -7,12 +7,9 @@ import {
   triplesToEntities,
   Entity,
   updateEntity,
-  EntityPointer,
   QueryResultCardinality,
-  QueryWhere,
   QueryValue,
-  QuerySelectionValue,
-  RelationSubquery,
+  WhereFilter,
 } from './query.js';
 import {
   createSchemaIterator,
@@ -20,34 +17,20 @@ import {
   getAttributeFromSchema,
   getSchemaFromPath,
 } from './schema/schema.js';
-import {
-  IsPropertyOptional,
-  Model,
-  ModelPaths,
-  Models,
-  PathFilteredTypeFromModel,
-  QuerySelectionFitleredTypeFromModel,
-} from './schema/types';
+import { Model, Models } from './schema/types';
 import { timestampedObjectToPlainObject } from './utils.js';
 import { Timestamp, timestampCompare } from './timestamp.js';
 import { TripleStore, TripleStoreApi } from './triple-store.js';
 import { FilterFunc, MapFunc, Pipeline } from './utils/pipeline.js';
-import {
-  EntityIdMissingError,
-  InvalidFilterError,
-  TriplitError,
-} from './errors.js';
+import { TriplitError } from './errors.js';
 import {
   stripCollectionFromId,
   appendCollectionToId,
   splitIdParts,
   someFilterStatements,
   prepareQuery,
-  fetchResultToJS,
-  QueryPreparationOptions,
   isValueVariable,
   replaceVariablesInFilterStatements,
-  replaceVariable,
   getVariableComponents,
   isValueReferentialVariable,
 } from './db-helpers.js';
@@ -61,14 +44,14 @@ import {
 } from './db.js';
 import type DB from './db.js';
 import { QueryType } from './data-types/query.js';
-import { ExtractJSType, ExtractTimestampedType } from './data-types/type.js';
+import { ExtractTimestampedType } from './data-types/type.js';
 import {
   RangeContraints,
   TripleRow,
   TupleValue,
 } from './triple-store-utils.js';
 import { Equal } from '@sinclair/typebox/value';
-import { MAX, MIN, encodeValue } from '@triplit/tuple-database';
+import { MIN, encodeValue } from '@triplit/tuple-database';
 import { QueryBuilder } from './query/builder.js';
 import {
   CollectionQueryDefault,
@@ -76,6 +59,12 @@ import {
   FetchResultEntity,
   QueryResult,
 } from './query/types';
+import {
+  getFilterPriorityOrder,
+  satisfiesFilter,
+  satisfiesRegisterFilter,
+  satisfiesSetFilter,
+} from './query/filters.js';
 
 export default function CollectionQueryBuilder<
   M extends Models<any, any> | undefined,
@@ -659,7 +648,7 @@ export async function fetchDeltaTriples<
       }
       const matchesSimpleFiltersBefore =
         !!entityBeforeStateVector &&
-        doesEntityObjMatchWhere(
+        doesEntityObjMatchBasicWhere(
           entityBeforeStateVector,
           queryPermutation.where,
           options.schema &&
@@ -667,7 +656,7 @@ export async function fetchDeltaTriples<
         );
       const matchesSimpleFiltersAfter =
         !!entityAfterStateVector &&
-        doesEntityObjMatchWhere(
+        doesEntityObjMatchBasicWhere(
           entityAfterStateVector,
           queryPermutation.where,
           options.schema &&
@@ -882,7 +871,7 @@ function reverseRelationFilter(filter: FilterStatement<any, any>) {
   ] as FilterStatement<any, any>;
 }
 
-type QueryPipelineData = {
+export type QueryPipelineData = {
   entity: any;
   triples: TripleRow[];
   relationships: Record<string, TripleRow[]>;
@@ -908,65 +897,39 @@ function LoadCandidateEntities(
   };
 }
 
-function ApplyBasicFilters<
-  M extends Models<any, any>,
-  Q extends CollectionQuery<M, any>
->(
-  query: Q,
-  options: FetchFromStorageOptions
-): FilterFunc<[string, QueryPipelineData]> {
-  const { where, collectionName } = query;
-  const collectionSchema = options.schema?.[collectionName]?.schema;
-  return async ([id, { entity }]) => {
-    if (!entity) return false;
-    const basicFilters = (where ?? []).filter(
-      (filter) => !('exists' in filter)
-    );
-    if (!basicFilters.length) return true;
-    return doesEntityObjMatchWhere(entity, basicFilters, collectionSchema);
-  };
-}
-
-function ApplyExistsFilters<
+function ApplyFilters<
   M extends Models<any, any> | undefined,
   Q extends CollectionQuery<M, any>
 >(
-  caller: DB<M>,
+  db: DB<M>,
   tx: TripleStoreApi,
   query: Q,
   executionContext: FetchExecutionContext,
   options: FetchFromStorageOptions
 ): FilterFunc<[string, QueryPipelineData]> {
   const { where } = query;
-  return async ([id, { entity, existsFilterTriples }]) => {
+
+  // Apply filters in order of priority (if a filter is faster to run we'll run that first)
+  const filterOrder = getFilterPriorityOrder(query);
+
+  return async ([id, pipelineItem]) => {
+    const { entity } = pipelineItem;
     if (!entity) return false;
     if (!where) return true;
-    const subQueries = where.filter(
-      (filter) => 'exists' in filter
-    ) as SubQueryFilter<M>[];
-    for (const { exists: subQuery } of subQueries) {
-      const existsSubQuery = {
-        ...subQuery,
-        limit: 1,
-      };
 
-      const { results: subQueryResult, triples } = await loadSubquery(
-        caller,
+    // Must satisfy all filters for inclusion
+    for (const filterIdx of filterOrder) {
+      const filter = where[filterIdx];
+      const satisfied = await satisfiesFilter(
+        db,
         tx,
         query,
-        existsSubQuery,
-        'one',
         executionContext,
         options,
-        entity
+        pipelineItem,
+        filter
       );
-      const exists = !!subQueryResult;
-      if (!exists) return false;
-      for (const tripleSet of triples.values()) {
-        for (const triple of tripleSet) {
-          existsFilterTriples.push(triple);
-        }
-      }
+      if (!satisfied) return false;
     }
     return true;
   };
@@ -1161,7 +1124,7 @@ export function bumpSubqueryVar(varName: string) {
   return `${intPrefix + 1}.${rest}`;
 }
 
-async function loadSubquery<
+export async function loadSubquery<
   M extends Models<any, any> | undefined,
   CN extends CollectionNameFromModels<M>
 >(
@@ -1294,15 +1257,8 @@ export async function fetch<
     .map(LoadCandidateEntities(tx))
     // Apply where filters
     // TODO: dont refilter if already applied
-    .filter(ApplyBasicFilters(queryWithInsertedVars, options))
     .filter(
-      ApplyExistsFilters(
-        caller,
-        tx,
-        queryWithInsertedVars,
-        executionContext,
-        options
-      )
+      ApplyFilters(caller, tx, queryWithInsertedVars, executionContext, options)
     )
     // Capture entity triples
     .tap(async ([id, { triples }]) => {
@@ -1440,11 +1396,11 @@ export async function fetchOne<
   };
 }
 
-export function doesEntityObjMatchWhere<Q extends CollectionQuery<any, any>>(
-  entityObj: any,
-  where: Q['where'],
-  schema?: CollectionQuerySchema<Q>
-) {
+// NOTE: this only matches simple filters, not relational
+// TODO: evaluate proper handling of relational filters
+export function doesEntityObjMatchBasicWhere<
+  Q extends CollectionQuery<any, any>
+>(entityObj: any, where: Q['where'], schema?: CollectionQuerySchema<Q>) {
   if (!where) return true;
   const basicStatements = where.filter(
     (statement): statement is FilterStatement<any, any> =>
@@ -1471,13 +1427,13 @@ export function doesEntityObjMatchWhere<Q extends CollectionQuery<any, any>>(
 
   const matchesOrFilters = orStatements.every(({ filters }) =>
     filters.some((filter) =>
-      doesEntityObjMatchWhere(entityObj, [filter], schema)
+      doesEntityObjMatchBasicWhere(entityObj, [filter], schema)
     )
   );
   if (!matchesOrFilters) return false;
 
   const matchesAndFilters = andStatements.every(({ filters }) =>
-    doesEntityObjMatchWhere(entityObj, filters, schema)
+    doesEntityObjMatchBasicWhere(entityObj, filters, schema)
   );
   if (!matchesAndFilters) return false;
 
@@ -1520,116 +1476,6 @@ function entitySatisfiesAllFilters(
       });
     })
   );
-}
-
-// TODO: this should probably go into the set defintion
-// TODO: handle possible errors with sets
-function satisfiesSetFilter(
-  entity: any,
-  path: string,
-  op: Operator,
-  filterValue: any
-) {
-  const pointer = '/' + path.replaceAll('.', '/');
-  const value: Record<string, [boolean, Timestamp]> = EntityPointer.Get(
-    entity,
-    pointer
-  );
-  // We dont really support "deleting" sets, but they can appear deleted if the entity is deleted
-  // Come back to this after refactoring triple reducer to handle nested data betters
-  if (Array.isArray(value)) {
-    // indicates set is deleted
-    if (value[0] === undefined) {
-      return false;
-    }
-  }
-
-  const setData = timestampedObjectToPlainObject(value);
-  if (!setData) return false;
-  const filteredSet = Object.entries(setData).filter(([_v, inSet]) => inSet);
-  if (op === 'has') {
-    return filteredSet.some(([v]) => v === filterValue);
-  }
-  if (op === '!has') {
-    return filteredSet.every(([v]) => v !== filterValue);
-  }
-
-  return filteredSet.some(([v]) => isOperatorSatisfied(op, v, filterValue));
-}
-
-function satisfiesRegisterFilter(
-  entity: any,
-  path: string,
-  op: Operator,
-  filterValue: any
-) {
-  const maybeValue = EntityPointer.Get(entity, '/' + path.replaceAll('.', '/'));
-
-  // maybeValue is expected to be of shape [value, timestamp]
-  // this may happen if a schema is expected but not there and we're reading a value that cant be parsed, the schema is incorrect somehow, or if the provided path is incorrect
-  const isTimestampedValue =
-    !!maybeValue && maybeValue instanceof Array && maybeValue.length === 2;
-  const isTerminalValue =
-    !!maybeValue &&
-    isTimestampedValue &&
-    (typeof maybeValue[0] !== 'object' || maybeValue[0] === null);
-  if (!!maybeValue && (!isTimestampedValue || !isTerminalValue)) {
-    console.warn(
-      `Received an unexpected value at path '${path}' in entity ${JSON.stringify(
-        entity
-      )} which could not be interpreted as a register when reading filter ${JSON.stringify(
-        [path, op, filterValue]
-      )}. This is likely caused by (1) the database not properly loading its schema and attempting to interpret a value that is not a regsiter as a register, (2) a schemaless database attempting to interpret a value that is not properly formatted as a register, or (3) a query with a path that does not lead to a leaf attribute in the entity.`
-    );
-    return false;
-  }
-  const [value, _ts] = maybeValue ?? [undefined, undefined];
-  return isOperatorSatisfied(op, value, filterValue);
-}
-
-function ilike(text: string, pattern: string): boolean {
-  // Escape special regex characters in the pattern
-  pattern = pattern.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&');
-  // Replace SQL LIKE wildcards (%) with equivalent regex wildcards (.*)
-  pattern = pattern.replace(/%/g, '.*');
-
-  // Replace SQL LIKE single-character wildcards (_) with equivalent regex wildcards (.)
-  pattern = pattern.replace(/_/g, '.');
-
-  // Create a RegExp object from the pattern
-  const regex = new RegExp(`^${pattern}$`, 'i');
-
-  // Test the text against the regex
-  return regex.test(text);
-}
-
-function isOperatorSatisfied(op: Operator, value: any, filterValue: any) {
-  switch (op) {
-    case '=':
-      return value == filterValue;
-    case '!=':
-      return value !== filterValue;
-    case '>':
-      return value > filterValue;
-    case '>=':
-      return value >= filterValue;
-    case '<':
-      return value < filterValue;
-    case '<=':
-      return value <= filterValue;
-
-    //TODO: move regex initialization outside of the scan loop to improve performance
-    case 'like':
-      return ilike(value, filterValue);
-    case 'nlike':
-      return !ilike(value, filterValue);
-    case 'in':
-      return new Set(filterValue).has(value);
-    case 'nin':
-      return !new Set(filterValue).has(value);
-    default:
-      throw new InvalidFilterError(`The operator ${op} is not recognized.`);
-  }
 }
 
 export type CollectionQuerySchema<Q extends CollectionQuery<any, any>> =
@@ -1794,7 +1640,7 @@ export function subscribeResultsAndTriples<
               entityObj['_collection'][0] === query.collectionName;
             const isInResult =
               isInCollection &&
-              doesEntityObjMatchWhere(
+              doesEntityObjMatchBasicWhere(
                 entityObj,
                 where ?? [],
                 options.schema && options.schema[query.collectionName]?.schema

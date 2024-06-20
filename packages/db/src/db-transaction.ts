@@ -12,7 +12,6 @@ import {
 } from './schema/types';
 import { nanoid } from 'nanoid';
 import CollectionQueryBuilder, {
-  doesEntityObjMatchWhere,
   fetch,
   fetchOne,
   initialFetchExecutionContext,

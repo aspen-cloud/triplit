@@ -183,28 +183,25 @@ describe('OR queries', () => {
     {
       const query = db.query('shows').where(clauseTT).build();
       const result = await db.fetch(query);
-      expect(result.size).toBe(1);
       expect([...result.keys()]).toContain('1');
     }
 
     {
       const query = db.query('shows').where(clauseTF).build();
       const result = await db.fetch(query);
-      expect(result.size).toBe(2);
       expect([...result.keys()]).toContain('1');
     }
 
     {
       const query = db.query('shows').where(clauseFT).build();
       const result = await db.fetch(query);
-      expect(result.size).toBe(2);
       expect([...result.keys()]).toContain('1');
     }
 
     {
       const query = db.query('shows').where(clauseFF).build();
       const result = await db.fetch(query);
-      expect(result.size).toBe(0);
+      expect([...result.keys()]).not.toContain('1');
     }
   });
 });

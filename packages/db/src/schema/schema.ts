@@ -31,6 +31,9 @@ export type { TObject };
 
 // This will generally be what we store in the DB for a path
 // Maybe refactor this to throw InvalidSchemaPathError more efficiently
+/**
+ * @deprecated use getAttributeFromSchema instead
+ */
 export function getSchemaFromPath(
   model: Model<any>,
   path: Attribute
