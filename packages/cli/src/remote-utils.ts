@@ -29,7 +29,7 @@ export async function selectOrCreateAnOrganization() {
       value.length > 0 ? true : 'Organization name cannot be empty',
   });
   const { error: orgError, data: newId } = await supabase.rpc(
-    'insert_organization_and_member',
+    'rpc_create_organization',
     { org_name: organizationName }
   );
 
