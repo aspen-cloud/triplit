@@ -59,6 +59,13 @@ export function isExistsFilter<
   );
 }
 
+export function isBooleanFilter<
+  M extends Models<any, any> | undefined,
+  CN extends CollectionNameFromModels<M>
+>(filter: WhereFilter<M, CN>): filter is boolean {
+  return typeof filter === 'boolean';
+}
+
 type TimestampedData =
   | [QueryValue, Timestamp]
   | [Record<string, TimestampedData>, Timestamp];

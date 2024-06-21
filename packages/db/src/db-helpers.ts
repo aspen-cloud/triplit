@@ -25,6 +25,7 @@ import {
 } from './query/types';
 import {
   isSubQueryFilter,
+  isBooleanFilter,
   isFilterGroup,
   isFilterStatement,
   isExistsFilter,
@@ -164,7 +165,10 @@ export function* filterStatementIterator<
 >(
   statements: QueryWhere<M, CN>
 ): Generator<
-  FilterStatement<M, CN> | SubQueryFilter | RelationshipExistsFilter<M, CN>
+  | FilterStatement<M, CN>
+  | SubQueryFilter
+  | RelationshipExistsFilter<M, CN>
+  | boolean
 > {
   for (const statement of statements) {
     if (isFilterGroup(statement)) {
@@ -185,6 +189,7 @@ export function someFilterStatements<
       | SubQueryFilter
       | FilterStatement<M, CN>
       | RelationshipExistsFilter<M, CN>
+      | boolean
   ) => boolean
 ): boolean {
   for (const statement of filterStatementIterator(statements)) {
@@ -203,7 +208,12 @@ export function mapFilterStatements<
       | FilterStatement<M, CN>
       | SubQueryFilter
       | RelationshipExistsFilter<M, CN>
-  ) => FilterStatement<M, CN> | SubQueryFilter | RelationshipExistsFilter<M, CN>
+      | boolean
+  ) =>
+    | FilterStatement<M, CN>
+    | SubQueryFilter
+    | RelationshipExistsFilter<M, CN>
+    | boolean
 ): QueryWhere<M, CN> {
   return statements.map((statement) => {
     if (isFilterGroup(statement)) {
@@ -609,8 +619,10 @@ function whereFilterValidator<M extends Models<any, any> | undefined>(
     if (collectionName === '_metadata') return true;
     if (isSubQueryFilter(statement)) return true;
     if (isExistsFilter(statement)) return true;
+
     // I believe these are handled as we expand statements in the mapFilterStatements function
     if (isFilterGroup(statement)) return true;
+    if (isBooleanFilter(statement)) return true;
 
     const [prop, op, val] = statement;
     const { valid, path, reason } = validateIdentifier(

@@ -11,8 +11,14 @@ import {
   CollectionQuery,
   QueryResultCardinality,
   QueryValue,
+  WhereFilter,
 } from './query/types';
-import { isSubQueryFilter, isFilterGroup, isFilterStatement } from './query.js';
+import {
+  isBooleanFilter,
+  isSubQueryFilter,
+  isFilterGroup,
+  isFilterStatement,
+} from './query.js';
 import {
   createSchemaIterator,
   createSchemaTraverser,
@@ -311,6 +317,7 @@ function findRangeFilter<
   if (!where) return -1;
   for (let i = after + 1; i < where.length; i++) {
     const filter = where[i];
+    if (isBooleanFilter(filter)) continue;
     if (isSubQueryFilter(filter)) continue;
     if (isFilterGroup(filter)) continue;
     if (isExistsFilter(filter)) continue;
@@ -353,6 +360,7 @@ function findCandidateFilter<
   if (where) {
     for (let i = 0; i < where.length; i++) {
       const filter = where[i];
+      if (isBooleanFilter(filter)) continue;
       if (isSubQueryFilter(filter)) continue;
       if (isFilterGroup(filter)) continue;
       if (isExistsFilter(filter)) continue;

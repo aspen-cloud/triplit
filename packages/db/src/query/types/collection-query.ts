@@ -151,7 +151,8 @@ export type WhereFilter<
   | FilterStatement<M, CN>
   | FilterGroup<M, CN>
   | SubQueryFilter<M, CN>
-  | RelationshipExistsFilter<M, CN>;
+  | RelationshipExistsFilter<M, CN>
+  | boolean;
 
 /**
  * A single filter statement of the shape [path, operator, value].

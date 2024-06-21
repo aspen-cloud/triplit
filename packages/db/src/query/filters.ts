@@ -9,6 +9,7 @@ import DB from '../db.js';
 import { InvalidFilterError, QueryNotPreparedError } from '../errors.js';
 import {
   EntityPointer,
+  isBooleanFilter,
   isExistsFilter,
   isFilterGroup,
   isSubQueryFilter,
@@ -41,6 +42,7 @@ export async function satisfiesFilter<
   pipelineItem: QueryPipelineData,
   filter: WhereFilter<M, Q['collectionName']>
 ): Promise<boolean> {
+  if (isBooleanFilter(filter)) return filter;
   if (isFilterGroup(filter)) {
     const { mod, filters } = filter;
     if (mod === 'and') {

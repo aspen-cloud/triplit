@@ -176,7 +176,9 @@ export const QUERY_INPUT_TRANSFORMERS = <
   ): QueryWhere<M, CN> => {
     let newWhere: QueryWhere<M, CN> = [];
     if (args[0] == undefined) return q.where ?? [];
-    if (typeof args[0] === 'string') {
+    if (typeof args[0] === 'boolean') {
+      newWhere = [args[0]];
+    } else if (typeof args[0] === 'string') {
       /**
        * E.g. where("id", "=", "123")
        */
