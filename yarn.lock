@@ -6732,7 +6732,6 @@ __metadata:
     degit: "npm:^2.8.4"
     dotenv: "npm:^16.3.1"
     dotenv-expand: "npm:^10.0.0"
-    esbuild: "npm:^0.20.0"
     ink: "npm:^4.4.0"
     jsondiffpatch: "npm:^0.5.0"
     jsonwebtoken: "npm:^9.0.2"

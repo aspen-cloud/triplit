@@ -2,9 +2,9 @@ import { Command } from '../../command.js';
 import * as Flag from '../../flags.js';
 import { serverRequesterMiddleware } from '../../middleware/add-server-requester.js';
 import { JSONToSchema, schemaToJSON } from '@triplit/db';
-import { schemaFileContentFromSchema } from '../migrate/codegen.js';
 import { format as formatFile } from 'prettier';
 import { projectSchemaMiddleware } from '../../middleware/project-schema.js';
+import { schemaFileContentFromSchema } from '../../schema.js';
 
 const DISPLAY_FORMATS = ['json', 'file'] as const;
 type SchemaFormat = (typeof DISPLAY_FORMATS)[number];

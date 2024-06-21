@@ -10,12 +10,9 @@ import * as Flag from '../flags.js';
 import chokidar from 'chokidar';
 import { hashSchemaJSON, schemaToJSON } from '@triplit/db';
 import { TriplitClient } from '@triplit/client';
-import {
-  schemaFileContentFromJSON,
-  writeSchemaFile,
-} from './migrate/codegen.js';
 import { insertSeeds } from './seed/run.js';
 import { projectSchemaMiddleware } from '../middleware/project-schema.js';
+import { schemaFileContentFromJSON, writeSchemaFile } from '../schema.js';
 
 export default Command({
   description: 'Starts the Triplit development environment',
