@@ -40,7 +40,7 @@ export async function selectOrCreateAnOrganization() {
   const { error: fetchError, data: newOrg } = await supabase
     .from('organizations')
     .select('*')
-    .eq('name', organizationName)
+    .eq('id', newId)
     .single();
   if (fetchError) {
     console.error('Error fetching new organization', fetchError);
