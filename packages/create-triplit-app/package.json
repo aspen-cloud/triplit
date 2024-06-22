@@ -11,7 +11,7 @@
   ],
   "type": "module",
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && node ./copy-templates.mjs",
     "lint": "tsc --noEmit",
     "publish-pkg": "node ../../scripts/npm-check-version-and-publish.js"
   },
@@ -23,8 +23,10 @@
   },
   "devDependencies": {
     "@types/degit": "^2",
+    "@types/fs-extra": "^11",
     "@types/minimist": "^1.2.4",
     "@types/prompts": "^2",
+    "fs-extra": "^11.2.0",
     "typescript": "^5.3.3"
   }
 }
