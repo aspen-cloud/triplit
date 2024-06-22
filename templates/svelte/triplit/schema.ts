@@ -1,4 +1,4 @@
-import { ClientSchema, Schema as S, Entity } from '@triplit/client';
+import { Schema as S, type ClientSchema, type Entity } from '@triplit/client';
 
 // This is your schema definition.
 //

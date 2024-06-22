@@ -236,7 +236,7 @@ async function createTriplitAppWithVite() {
     );
   }
   fs.writeFileSync(pkgJsonPath, JSON.stringify(pkgJson, null, 2) + '\n');
-
+  createEnvFile(root, DEFAULT_VARIABLES);
   // Add Triplit specific files
   const triplitDir = path.join(root, 'triplit');
   createDirIfNotExists(triplitDir);
@@ -261,6 +261,22 @@ async function loadTemplate(template: string, targetDir: string) {
     console.log('Invalid template specified.');
     return;
   }
+}
+
+const DEFAULT_VARIABLES = {
+  TRIPLIT_DB_URL: '',
+  TRIPLIT_SERVICE_TOKEN: '',
+  TRIPLIT_ANON_TOKEN: '',
+  VITE_TRIPLIT_SERVER_URL: '$TRIPLIT_SERVER_URL',
+  VITE_TRIPLIT_TOKEN: '$TRIPLIT_ANON_TOKEN',
+};
+
+function createEnvFile(targetDir: string, env: Record<string, string>) {
+  const envPath = path.join(targetDir, '.env');
+  const envContent = Object.entries(env)
+    .map(([key, value]) => `${key}=${value}`)
+    .join('\n');
+  fs.writeFileSync(envPath, envContent);
 }
 
 function pkgFromUserAgent(userAgent: string | undefined) {
