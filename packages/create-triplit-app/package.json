@@ -6,7 +6,8 @@
   "files": [
     "index.js",
     "/dist",
-    "/files"
+    "/files",
+    "/templates"
   ],
   "type": "module",
   "scripts": {
