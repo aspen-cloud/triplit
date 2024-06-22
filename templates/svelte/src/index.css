@@ -83,5 +83,14 @@
   display: block;
 }
 
-.connection-status {
+pre {
+  background-color: black;
+  padding: 12px;
+  border-radius: 4px;
+}
+
+code {
+  background-color: black;
+  padding: 2px 4px;
+  border-radius: 4px;
 }

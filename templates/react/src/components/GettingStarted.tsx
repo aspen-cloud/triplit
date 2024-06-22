@@ -29,14 +29,13 @@ export function GettingStarted() {
       </p>
       <h2>Run the sync server</h2>
       <p>In a separate terminal window, run the sync server:</p>
-      <pre>
-        <code>npm run triplit dev</code>
-      </pre>
+      <pre>npm run triplit dev</pre>
       <h2>Watch it sync</h2>
       <p>
-        Open a new browser window or tab and navigate to{' '}
-        <a href="http://localhost:3000">http://localhost:3000</a>. You should
-        see the todos you added in the other window.
+        <a target="_blank" href="http://localhost:5173">
+          Open the app in a new tab
+        </a>
+        . You should see the todos you added in the other window.
       </p>
       <h2>Go offline</h2>
       <p>
