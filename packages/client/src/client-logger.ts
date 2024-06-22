@@ -1,4 +1,5 @@
 import { LogLevel, Logger } from '@triplit/types/logger';
+import { TriplitError } from '@triplit/db';
 import superjson from 'superjson';
 
 export type LogListener = ((log: any) => void) | undefined;
@@ -62,10 +63,12 @@ export class DefaultLogger implements Logger {
   }
 
   error(message: any, ...args: any[]) {
+    const errorArgs =
+      args.length === 1 && args[0] instanceof TriplitError
+        ? args[0].toJSON()
+        : args;
     const log = this.constructLogObj('error', message, ...args);
-    // console.error(log.scope, message, args);
-    console.error(log.scope, log.message);
-    console.error(...args);
+    console.error(log.scope, log.message, errorArgs);
   }
 
   debug(message: any, ...args: any[]) {
