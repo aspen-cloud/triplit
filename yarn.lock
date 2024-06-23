@@ -7350,7 +7350,18 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@triplit/svelte@workspace:^, @triplit/svelte@workspace:packages/svelte":
+"@triplit/svelte@npm:latest":
+  version: 0.1.31
+  resolution: "@triplit/svelte@npm:0.1.31"
+  dependencies:
+    "@triplit/client": "npm:^0.3.59"
+  peerDependencies:
+    svelte: ^5.0.0-next.137
+  checksum: 10/b3ad1c87bf7112def600b7446fc8c033ce04dda4b3a3da90da276f56c8c5d419975e49f88d288c412ee24519dcb701d44653627b93ec6c9793557a224482042a
+  languageName: node
+  linkType: hard
+
+"@triplit/svelte@workspace:packages/svelte":
   version: 0.0.0-use.local
   resolution: "@triplit/svelte@workspace:packages/svelte"
   dependencies:
@@ -22741,9 +22752,9 @@ __metadata:
     "@sveltejs/adapter-auto": "npm:^3.0.0"
     "@sveltejs/kit": "npm:^2.0.0"
     "@sveltejs/vite-plugin-svelte": "npm:^3.0.0"
-    "@triplit/cli": "workspace:^"
-    "@triplit/client": "workspace:^"
-    "@triplit/svelte": "workspace:^"
+    "@triplit/cli": "npm:latest"
+    "@triplit/client": "npm:latest"
+    "@triplit/svelte": "npm:latest"
     "@types/eslint": "npm:^8.56.7"
     eslint: "npm:^9.0.0"
     eslint-plugin-svelte: "npm:^2.36.0"
