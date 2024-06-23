@@ -1,8 +1,7 @@
 <script lang="ts">
-import { triplit } from '$lib/client';
-import { type Todo } from '../../triplit/schema';
-export let todo: Todo;
-
+  import { triplit } from '$lib/client';
+  import { type Todo } from '../../triplit/schema';
+  export let todo: Todo;
 </script>
 
 <div class="todo">
@@ -15,8 +14,7 @@ export let todo: Todo;
       //  the entity ID, and a callback function that updates the entity
       await triplit.update('todos', todo.id, async (entity) => {
         entity.completed = !todo.completed;
-      })
-    }
+      })}
   />
   {todo.text}
   <button
@@ -29,4 +27,3 @@ export let todo: Todo;
     ❌
   </button>
 </div>
-

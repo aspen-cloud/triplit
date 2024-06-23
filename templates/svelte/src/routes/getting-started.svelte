@@ -1,25 +1,24 @@
-<script lang='ts'>
-const FOLDER_STRUCTURE = `/triplit
+<script lang="ts">
+  const FOLDER_STRUCTURE = `/triplit
     schema.ts
 /src/lib
     triplit.ts
 `;
 
-const ROOT = 'https://triplit.dev';
+  const ROOT = 'https://triplit.dev';
 </script>
 
 <div class="getting-started">
   <h1>Getting familiar with Triplit</h1>
   <p>
-    This is a simple todo app that uses Triplit. You can add,
-    complete, and delete todos.
+    This is a simple todo app that uses Triplit. You can add, complete, and
+    delete todos.
   </p>
   <h2>Explore the project</h2>
   <p>
     This app is built with <a href={ROOT}>Triplit</a>,{' '}
     <a href="https://kit.svelte.dev">SvelteKit</a> and{' '}
-    <a href="https://vitejs.dev">Vite</a>. There are two Triplit specific
-    files:
+    <a href="https://vitejs.dev">Vite</a>. There are two Triplit specific files:
   </p>
   <pre>{FOLDER_STRUCTURE}</pre>
   <p>
@@ -30,16 +29,14 @@ const ROOT = 'https://triplit.dev';
   </p>
   <h2>Run the sync server</h2>
   <p>In a separate terminal window, run the sync server:</p>
-    <pre>npm run triplit dev</pre>
+  <pre>npm run triplit dev</pre>
   <h2>Watch it sync</h2>
   <p>
-    <a target="_blank" href="http://localhost:5173">Open the app in a new tab</a>. You should
-    see the todos you added in the other window.
+    <a target="_blank" href="http://localhost:5173">Open the app in a new tab</a
+    >. You should see the todos you added in the other window.
   </p>
   <h2>Go offline</h2>
-  <p>
-    Put your browser in offline mode and add, complete, and delete todos.
-  </p>
+  <p>Put your browser in offline mode and add, complete, and delete todos.</p>
   <h2>Go online</h2>
   <p>
     ... and you should see everything sync up again. That's the magic of{' '}
@@ -47,7 +44,7 @@ const ROOT = 'https://triplit.dev';
   </p>
   <h2>Read more</h2>
   <p>
-    Read our <a href="https://triplit.dev/docs">docs</a> to learn more about
-    everything you can do with Triplit.
+    Read our <a href="https://triplit.dev/docs">docs</a> to learn more about everything
+    you can do with Triplit.
   </p>
 </div>

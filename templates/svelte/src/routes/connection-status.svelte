@@ -1,11 +1,8 @@
-
 <script lang="ts">
+  import { useConnectionStatus } from '@triplit/svelte';
+  import { triplit } from '$lib/client';
 
-import { useConnectionStatus } from '@triplit/svelte';
-import { triplit } from '$lib/client';
-
-const connection = useConnectionStatus(triplit);
-
+  const connection = useConnectionStatus(triplit);
 </script>
 
 <div class="connection-status">
@@ -17,5 +14,3 @@ const connection = useConnectionStatus(triplit);
     Disconnected
   {/if}
 </div>
-
-
