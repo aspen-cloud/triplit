@@ -6,6 +6,7 @@ import prompts from 'prompts';
 import { yellow, blue, cyan, red, green } from 'ansis/colors';
 import degit from 'degit';
 import { spawn } from 'child_process';
+import { copy as fsExtraCopy, move } from 'fs-extra';
 
 const DEFAULT_TARGET_DIRECTORY = 'triplit-app';
 
@@ -60,7 +61,7 @@ const FRAMEWORKS: Framework[] = [
   },
 ];
 
-const TEMPLATES = ['chat'];
+const TEMPLATES = ['chat', 'react', 'svelte'];
 
 function getViteCreateArgs(
   pkgManager: string,
@@ -100,7 +101,7 @@ async function createTriplitAppWithVite() {
   let template = argTemplate;
 
   // If invalid template, show choices
-  if (argTemplate && !TEMPLATES.includes(argTemplate)) {
+  if (!(argTemplate && TEMPLATES.includes(argTemplate))) {
     let templateChoice: prompts.Answers<'template'>;
     try {
       templateChoice = await prompts(
@@ -108,17 +109,16 @@ async function createTriplitAppWithVite() {
           {
             type: 'select',
             name: 'template',
-            message:
-              'Invalid template specified. Please select a template or select "None" scaffold an empty project:',
+            message: 'Please select a template:',
             initial: 0,
             choices: [
               {
-                title: 'None',
-                value: null,
+                title: 'React',
+                value: 'react',
               },
               {
-                title: 'Chat',
-                value: 'chat',
+                title: 'Svelte',
+                value: 'svelte',
               },
             ],
           },
@@ -249,16 +249,32 @@ async function createTriplitAppWithVite() {
 async function loadTemplate(template: string, targetDir: string) {
   // TODO: put templates info into a json obj
   // TOOD: handle renaming based on package name
+  const relativeTargetDir = path.relative(process.cwd(), targetDir);
   if (!isEmpty(targetDir))
     throw new Error(
       `Target directory ${targetDir} must be empty to load template`
     );
   if (template === 'chat') {
     await degit('aspen-cloud/triplit/templates/chat-template').clone(targetDir);
-    console.log(`Created project with chat template at ${targetDir}`);
+    console.log(`Created project with chat template at ${relativeTargetDir}`);
     return;
   } else {
-    console.log('Invalid template specified.');
+    await fsExtraCopy(
+      path.resolve(fileURLToPath(import.meta.url), '../templates/' + template),
+      targetDir
+    );
+    await move(targetDir + '/.env.example', targetDir + '/.env');
+    console.log(
+      blue`Created project with ${template} template at ./${relativeTargetDir}`
+    );
+    console.log();
+    console.log(green`To get started, run:`);
+    console.log();
+    console.log(cyan`    cd ${relativeTargetDir}`);
+    console.log(cyan`    npm install`);
+    console.log(cyan`    npm run dev`);
+    console.log();
+
     return;
   }
 }
