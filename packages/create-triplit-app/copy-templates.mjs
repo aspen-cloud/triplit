@@ -13,7 +13,12 @@ async function copyTemplates() {
     for (const template of TEMPLATE_NAMES) {
       await copy(
         resolve(pwd, SOURCE_DIR, template),
-        resolve(pwd, DEST_DIR, template)
+        resolve(pwd, DEST_DIR, template),
+        {
+          filter: (src, _dest) => {
+            return !src.includes('node_modules') && !src.endsWith('.env');
+          },
+        }
       );
       console.log(`Copied ${template} to ${DEST_DIR}`);
     }
