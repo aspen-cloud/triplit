@@ -13,9 +13,10 @@
   let todosArray = $derived(todos.results ? Array.from(todos.results) : []);
 </script>
 
-<div class="app">
+<div class="main-container">
   <GettingStarted />
-  <div class="todos-container">
+  <div class="app-container">
+    <h1>Todos</h1>
     <ConnectionStatus />
     <form
       onsubmit={async (e) => {
@@ -36,7 +37,7 @@
       <p>Loading...</p>
     {/if}
     {#if todos.results}
-      <div>
+      <div class="todos-container">
         {#each todosArray as [_key, todo]}
           <Todo {todo} />
         {/each}

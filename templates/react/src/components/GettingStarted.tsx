@@ -29,7 +29,7 @@ export function GettingStarted() {
       </p>
       <h2>Run the sync server</h2>
       <p>In a separate terminal window, run the sync server:</p>
-      <pre>npm run triplit dev</pre>
+      <pre>npx triplit dev</pre>
       <h2>Watch it sync</h2>
       <p>
         <a target="_blank" href="http://localhost:5173">

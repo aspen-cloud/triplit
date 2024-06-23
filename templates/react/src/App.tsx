@@ -21,9 +21,10 @@ export default function App() {
   };
 
   return (
-    <div className="app">
+    <div className="main-container">
       <GettingStarted />
-      <div className="todos-container">
+      <div className="app-container">
+        <h1>Todos</h1>
         <ConnectionStatus />
         <form onSubmit={handleSubmit}>
           <input
@@ -39,7 +40,7 @@ export default function App() {
         </form>
         {fetching && <p>Loading...</p>}
         {todos && (
-          <div>
+          <div className="todos-container">
             {Array.from(todos).map(([id, todo]) => (
               <Todo key={id} todo={todo} />
             ))}

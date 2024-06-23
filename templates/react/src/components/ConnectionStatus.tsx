@@ -5,11 +5,12 @@ export function ConnectionStatus() {
   const status = useConnectionStatus(triplit);
   return (
     <div className="connection-status">
-      {status === 'OPEN'
-        ? 'Connected'
+      <div className={`indicator ${status.toLowerCase()}`}></div>
+      {status === 'CLOSED'
+        ? 'Offline'
         : status === 'CONNECTING'
-        ? 'Connecting...'
-        : 'Disconnected'}
+        ? 'Connecting'
+        : 'Online'}
     </div>
   );
 }

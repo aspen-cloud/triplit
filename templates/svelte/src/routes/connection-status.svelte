@@ -6,11 +6,10 @@
 </script>
 
 <div class="connection-status">
-  {#if connection.status === 'OPEN'}
-    Connected
-  {:else if connection.status === 'CONNECTING'}
-    Connecting...
-  {:else}
-    Disconnected
-  {/if}
+  <div class={`indicator ${connection.status.toLowerCase()}`}></div>
+  {connection.status === 'CLOSED'
+    ? 'Offline'
+    : connection.status === 'CONNECTING'
+      ? 'Connecting'
+      : 'Online'}
 </div>
