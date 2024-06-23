@@ -1,5 +1,11 @@
 # create-triplit-app
 
+## 0.0.11
+
+### Patch Changes
+
+- e9f0a61: Add new react and svelte templates
+
 ## 0.0.9
 
 ### Patch Changes
