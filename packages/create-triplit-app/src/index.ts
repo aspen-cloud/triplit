@@ -3,7 +3,7 @@ import path from 'path';
 import { fileURLToPath } from 'node:url';
 import minimist from 'minimist';
 import prompts, { override } from 'prompts';
-import { yellow, blue, cyan, red, green } from 'ansis/colors';
+import { yellow, blue, cyan, red, green, grey } from 'ansis/colors';
 import degit from 'degit';
 import { spawn } from 'child_process';
 import { copy as fsExtraCopy, move } from 'fs-extra';
@@ -171,7 +171,6 @@ async function createTriplitAppWithVite() {
   }
 
   if (template) {
-    console.log('Loading template: ' + template);
     const root = path.join(process.cwd(), targetDir);
     createDirIfNotExists(root);
     await loadTemplate(template, root);
@@ -287,7 +286,9 @@ async function loadTemplate(template: string, targetDir: string) {
     throw new Error(
       `Target directory ${targetDir} must be empty to load template`
     );
+  console.log();
   if (template === 'chat') {
+    console.log(grey`Creating project with chat template...`);
     await degit('aspen-cloud/triplit/templates/chat-template').clone(targetDir);
     console.log(`Created project with chat template at ${relativeTargetDir}`);
     return;
@@ -300,10 +301,10 @@ async function loadTemplate(template: string, targetDir: string) {
       overwrite: true,
     });
     console.log(
-      blue`Created project with ${template} template at ./${relativeTargetDir}`
+      grey`Created project with ${template} template at ./${relativeTargetDir}`
     );
     console.log();
-    console.log(green`To get started, run:`);
+    console.log(grey`To get started, run:`);
     console.log();
     console.log(cyan`    cd ${relativeTargetDir}`);
     console.log(cyan`    npm install`);
