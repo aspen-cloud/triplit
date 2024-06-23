@@ -1,5 +1,11 @@
 # @triplit/cli
 
+## 0.4.0
+
+### Minor Changes
+
+- 052c918: Majorly improve install speed
+
 ## 0.3.71
 
 ### Patch Changes

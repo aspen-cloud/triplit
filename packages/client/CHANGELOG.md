@@ -1,5 +1,15 @@
 # @triplit/client
 
+## 0.3.60
+
+### Patch Changes
+
+- 98a0adf: Improve error logging
+- 922d93a: Fix websocket check to be even safer
+- Updated dependencies [98a0adf]
+- Updated dependencies [7fd83f6]
+  - @triplit/db@0.3.46
+
 ## 0.3.59
 
 ### Patch Changes
