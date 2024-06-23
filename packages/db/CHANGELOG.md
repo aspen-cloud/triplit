@@ -1,5 +1,12 @@
 # @triplit/db
 
+## 0.3.46
+
+### Patch Changes
+
+- 98a0adf: Improve error logging
+- 7fd83f6: Support relations in filter groups (ie and/or clauses)
+
 ## 0.3.45
 
 ### Patch Changes
