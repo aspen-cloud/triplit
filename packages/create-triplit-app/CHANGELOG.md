@@ -1,5 +1,11 @@
 # create-triplit-app
 
+## 0.0.12
+
+### Patch Changes
+
+- 3a4f79d: fixup copy process
+
 ## 0.0.11
 
 ### Patch Changes
