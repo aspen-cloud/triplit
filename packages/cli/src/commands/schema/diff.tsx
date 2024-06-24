@@ -34,10 +34,11 @@ export default Command({
     console.log();
     const migration = createMigration(localSchema, serverSchema, 0, 0, 'diff');
     console.log('Operations to sync schemas:');
-    console.log(
+    console.dir(
       migration?.up?.length
         ? migration.up
-        : blue`No operations needed. Schemas are in sync.`
+        : blue`No operations needed. Schemas are in sync.`,
+      { depth: null }
     );
   },
 });

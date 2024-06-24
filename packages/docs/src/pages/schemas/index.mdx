@@ -118,3 +118,13 @@ Todo will be a simple type:
 } 
 */
 ```
+
+### Reading your schema
+
+Your schema is available in your codebase in the `triplit/schema.ts` file. However you may locally edit the schema, or you may not be aware of remote edits that have happened to the schema. To view the current state of the server's schema, run:
+
+```bash
+triplit schema print -l remote -f file
+```
+
+See [CLI docs](/cli/schema#triplit-schema-print) or run `triplit schema print --help` for more options.
