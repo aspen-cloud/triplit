@@ -5,6 +5,7 @@ import { createBrowserRouter, RouterProvider } from 'react-router-dom';
 import '../../ui/globals.css';
 import { ProjectViewerPage, loader } from './components/project-viewer.js';
 import { ThemeProvider } from '@triplit/ui';
+import { Toaster } from './components/toaster.js';
 
 const router = createBrowserRouter([
   {
@@ -26,6 +27,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <ThemeProvider>
       <RouterProvider router={router} />
+      <Toaster />
     </ThemeProvider>
   </React.StrictMode>
 );

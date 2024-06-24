@@ -69,6 +69,7 @@ export {
   getSchemaFromPath,
 } from './schema/schema.js';
 export { Schema } from './schema/builder.js';
+export { diffSchemas, getSchemaDiffIssues } from './schema/diff.js';
 export type { TObject } from './schema/schema.js';
 export type {
   InsertTypeFromModel,

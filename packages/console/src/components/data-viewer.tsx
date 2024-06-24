@@ -26,6 +26,9 @@ import { DeleteEntitiesDialog } from './delete-entities-dialog.js';
 import { CollectionMenu } from './collection-menu.js';
 import { DeleteCollectionDialog } from './delete-collection-dialog.js';
 import { flattenSchema } from 'src/utils/flatten-schema.js';
+import { diffSchemas, getSchemaDiffIssues } from '@triplit/db';
+import { parseIssue, safeSchemaEdit } from 'src/utils/schema.js';
+import { useToast } from 'src/hooks/useToast.js';
 
 const deleteAttributeDialogIsOpenAtom = atom(false);
 
@@ -34,15 +37,27 @@ if (typeof window !== 'undefined') window.client = consoleClient;
 async function deleteAttribute(
   client: TriplitClient<any>,
   collectionName: string,
-  attributeName: string
+  attributeName: string,
+  onError: (message: string) => void
 ) {
   try {
-    await client.db.dropAttribute({
-      collection: collectionName,
-      path: [attributeName],
+    const issues = await safeSchemaEdit(client, async (tx) => {
+      await tx.dropAttribute({
+        collection: collectionName,
+        path: [attributeName],
+      });
     });
+    if (!issues || issues.length === 0) return;
+    if (issues) {
+      console.log(issues);
+      const parsedIssue = parseIssue(issues[0]);
+      onError(
+        `Deleting '${attributeName}' failed because: '${parsedIssue}'. Please see the Triplit docs for more information.`
+      );
+    }
   } catch (e) {
     console.error(e);
+    onError(`An unknown error occurred deleting '${attributeName}'.`);
   }
 }
 
@@ -61,6 +76,7 @@ export function DataViewer({
   query: ConsoleQuery;
   setQuery: SetConsoleQuery;
 }) {
+  const { toast } = useToast();
   const [deleteCollectionDialogOpen, setDeleteCollectionDialogOpen] =
     useState(false);
   const [deleteAttributeDialogIsOpen, setDeleteAttributeDialogIsOpen] = useAtom(
@@ -414,7 +430,15 @@ export function DataViewer({
               await deleteAttribute(
                 client,
                 selectedCollection,
-                selectedAttribute
+                selectedAttribute,
+                (message) => {
+                  console.error(message);
+                  toast({
+                    title: 'Error',
+                    description: message,
+                    variant: 'destructive',
+                  });
+                }
               );
               setDeleteAttributeDialogIsOpen(false);
             }}
