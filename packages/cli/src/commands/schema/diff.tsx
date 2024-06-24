@@ -1,9 +1,8 @@
-import { blue, yellow } from 'ansis/colors';
+import { yellow } from 'ansis/colors';
 import { Command } from '../../command.js';
 import { serverRequesterMiddleware } from '../../middleware/add-server-requester.js';
 import { schemaToJSON } from '@triplit/db';
 import jsondiffpatch from 'jsondiffpatch';
-import { createMigration } from '../../migration.js';
 import { projectSchemaMiddleware } from '../../middleware/project-schema.js';
 
 export default Command({
@@ -25,20 +24,15 @@ export default Command({
     if (!localSchema) console.log(yellow`Local project is schemaless`);
     if (!serverSchema) console.log(yellow`Remote database is schemaless`);
     const delta = jsondiffpatch.diff(localSchema ?? {}, serverSchema ?? {});
+    if (!delta) {
+      console.log('Local and remote schemas are in sync (no difference)');
+      return;
+    }
     console.log('Schema diff:');
     console.log(
       jsondiffpatch.formatters.console
         // @ts-expect-error
         .format(delta)
-    );
-    console.log();
-    const migration = createMigration(localSchema, serverSchema, 0, 0, 'diff');
-    console.log('Operations to sync schemas:');
-    console.dir(
-      migration?.up?.length
-        ? migration.up
-        : blue`No operations needed. Schemas are in sync.`,
-      { depth: null }
     );
   },
 });
