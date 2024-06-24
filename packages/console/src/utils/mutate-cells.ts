@@ -1,4 +1,5 @@
 import { TriplitClient } from '@triplit/client';
+import { TriplitError } from '@triplit/db';
 
 export type TriplitDataTypes =
   | string
@@ -26,7 +27,12 @@ export async function updateTriplitValue(
       entityCopy[path[0]] = value;
     });
   } catch (e) {
-    console.error(e);
+    if (e instanceof TriplitError) {
+      return e.message;
+    } else {
+      console.error(e);
+      return `An unknown error occurred updating entity '${entityId}'.`;
+    }
   }
 }
 
@@ -47,7 +53,12 @@ export async function deleteTriplitValue(
       delete entityCopy[path[0]];
     });
   } catch (e) {
-    console.error(e);
+    if (e instanceof TriplitError) {
+      return e.message;
+    } else {
+      console.error(e);
+      return `An unknown error occurred deleting entity '${entityId}'.`;
+    }
   }
 }
 
@@ -92,6 +103,11 @@ export async function updateTriplitSet(
       }
     });
   } catch (e) {
-    console.error(e);
+    if (e instanceof TriplitError) {
+      return e.message;
+    } else {
+      console.error(e);
+      return `An unknown error occurred updating entity '${entityId}'.`;
+    }
   }
 }

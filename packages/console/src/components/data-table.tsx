@@ -43,6 +43,7 @@ import {
   updateTriplitSet,
   updateTriplitValue,
 } from 'src/utils/mutate-cells.js';
+import { useToast } from 'src/hooks/useToast.js';
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
@@ -230,6 +231,7 @@ export function DataCell({
   editable = true,
   optional = false,
 }: TriplitDataCellProps) {
+  const { toast } = useToast();
   const [isEditing, setIsEditing] = useState(false);
   const nullable = !!attributeDef?.options?.nullable;
   useEffect(() => {
@@ -261,8 +263,8 @@ export function DataCell({
           <SetCellEditor
             set={value}
             definition={attributeDef}
-            onChangeSet={(value, action) => {
-              updateTriplitSet(
+            onChangeSet={async (value, action) => {
+              const error = await updateTriplitSet(
                 attribute,
                 client,
                 collection,
@@ -270,20 +272,36 @@ export function DataCell({
                 value,
                 action
               );
+              if (error) {
+                toast({
+                  title: 'Error',
+                  description: error,
+                  variant: 'destructive',
+                });
+                return;
+              }
             }}
           />
         ) : attributeDef?.type === 'record' ? (
           <RecordCellEditor
             value={value}
             definition={attributeDef}
-            onSubmit={(newValue) => {
-              updateTriplitValue(
+            onSubmit={async (newValue) => {
+              const error = await updateTriplitValue(
                 attribute,
                 client,
                 collection,
                 entityId,
                 newValue
               );
+              if (error) {
+                toast({
+                  title: 'Error',
+                  description: error,
+                  variant: 'destructive',
+                });
+                return;
+              }
               setIsEditing(false);
             }}
             onBlur={() => setIsEditing(false)}
@@ -293,15 +311,24 @@ export function DataCell({
             value={value}
             definition={attributeDef as ValueAttributeDefinition}
             onBlur={() => setIsEditing(false)}
-            onSubmit={(newValue: TriplitDataTypes) => {
-              if (newValue !== value)
-                updateTriplitValue(
+            onSubmit={async (newValue: TriplitDataTypes) => {
+              if (newValue !== value) {
+                const error = await updateTriplitValue(
                   attribute,
                   client,
                   collection,
                   entityId,
                   newValue
                 );
+                if (error) {
+                  toast({
+                    title: 'Error',
+                    description: error,
+                    variant: 'destructive',
+                  });
+                  return;
+                }
+              }
               setIsEditing(false);
             }}
           />
@@ -313,14 +340,22 @@ export function DataCell({
                 className="text-xs h-auto py-1 px-2 justify-self-start"
                 variant={'ghost'}
                 disabled={value === null}
-                onClick={(e) => {
-                  updateTriplitValue(
+                onClick={async (e) => {
+                  const error = await updateTriplitValue(
                     attribute,
                     client,
                     collection,
                     entityId,
                     null
                   );
+                  if (error) {
+                    toast({
+                      title: 'Error',
+                      description: error,
+                      variant: 'destructive',
+                    });
+                    return;
+                  }
                 }}
               >
                 Set to <Code className="text-xs ml-1">null</Code>
@@ -331,8 +366,21 @@ export function DataCell({
                 className="text-xs h-auto py-1 px-2 justify-self-start"
                 disabled={value === undefined}
                 variant={'ghost'}
-                onClick={(e) => {
-                  deleteTriplitValue(attribute, client, collection, entityId);
+                onClick={async (e) => {
+                  const error = await deleteTriplitValue(
+                    attribute,
+                    client,
+                    collection,
+                    entityId
+                  );
+                  if (error) {
+                    toast({
+                      title: 'Error',
+                      description: error,
+                      variant: 'destructive',
+                    });
+                    return;
+                  }
                 }}
               >
                 Delete{' '}

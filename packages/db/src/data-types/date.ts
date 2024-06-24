@@ -64,12 +64,11 @@ export function DateType<TypeOptions extends UserTypeOptions = {}>(
       return new Date(dateString);
     },
     validateInput(val: any) {
-      if (
-        val instanceof Date ||
-        !Number.isNaN(Date.parse(val)) ||
-        (options.nullable && val === null)
-      )
-        return;
+      const isValidDate = val instanceof Date && !Number.isNaN(val.getTime());
+      const isValidDateString =
+        typeof val === 'string' && !Number.isNaN(Date.parse(val));
+      const isNullAndValid = options.nullable && val === null;
+      if (isValidDate || isValidDateString || isNullAndValid) return;
       return valueMismatchMessage('date', options, val);
     },
     validateTripleValue(val: any) {
