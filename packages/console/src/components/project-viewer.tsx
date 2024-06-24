@@ -172,8 +172,8 @@ export function ProjectViewer({
           className={cn(
             'text-xs py-1 px-2 w-max rounded transition-all',
             connectionStatus === 'OPEN'
-              ? 'bg-green-100 text-green-500 scale-100 mb-2'
-              : 'bg-yellow-100 text-yellow-500 animate-pulse scale-125 mb-3'
+              ? 'bg-green-200 text-green-700 dark:bg-green-950 dark:text-green-400 scale-100 mb-2'
+              : 'bg-yellow-200 dark:bg-yellow-900 text-yellow-700 dark:text-yellow-400 animate-pulse scale-125 mb-3'
           )}
         >
           {connectionStatus === 'OPEN' ? 'Connected' : 'Connecting'}
