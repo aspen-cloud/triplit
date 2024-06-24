@@ -17,7 +17,9 @@ import { Callout, Tabs, Tab } from 'nextra-theme-docs';
 
 ## Installation
 
-### Templating
+### Client
+
+#### New projects
 
 If you would like to scaffold a complete full stack application with Triplit, you can use the create command:
 
@@ -50,7 +52,22 @@ If you would like to scaffold a complete full stack application with Triplit, yo
 
 You'll be presented with the option to choose either the React or Svelte template. The template is a todos app that includes a Triplit client instance, a simple schema, a default `.env` for connecting to the local development server, and examples of querying and mutating data with the relevant framework's bindings.
 
-### Existing projects
+To see your app in action, navigate to the project directory and start the development server:
+
+```bash
+cd my-app
+npm run dev
+```
+
+and the sync server in another terminal:
+
+```bash
+npx triplit dev
+```
+
+You've now got a fully functional Triplit app. If you want to learn more about how it works, read on.
+
+#### Existing projects
 
 If you have an existing project, Triplit also provides a CLI for creating and managing Triplit projects. Install the CLI in your project:
 
@@ -91,78 +108,54 @@ Once you have the CLI installed you can initialize a new Triplit project, which 
 
 ```bash
 triplit init
+
+# or if you're using a framework
+triplit init --framework react
 ```
 
 Alternatively, you may manually install the packages you need.
 
-## Setting up your client
+### Server
 
-A Triplit Client instance will set up a local database for your data and ([if turned on](/client)) will set up the required network connections for syncing. The specifics of your local database and syncing can be configured by passing in options to the client, which are described in the [client options reference](/client/options). For now we will not pass in any options, which will just set up an in-memory local database.
+#### Local development
 
-```typescript copy
+Triplit has a robust local development environment that you can set up with a single command.
+
+```bash
+triplit dev
+```
+
+The default URL for the local development server is `http://localhost:6543`. It will also generate a Service Token and an Anonymous Token that your client app can use to authorize with the server.
+
+We recommend setting up a `.env` file in your project to store these. If you used `npm create triplit-app`, this file should have been created for you.
+
+```bash filename=".env" copy
+TRIPLIT_DB_URL=http://localhost:6543
+TRIPLIT_SERVICE_TOKEN=generated-by-triplit-dev
+TRIPLIT_ANONYMOUS_TOKEN=generated-by-triplit-dev
+
+# If you're using a framework like Vite or Next.js, you should add additional
+# environmental variables prepended with VITE_ or NEXT_PUBLIC_ respectively.
+VITE_TRIPLIT_DB_URL=$TRIPLIT_DB_URL
+VITE_TRIPLIT_TOKEN=$TRIPLIT_ANONYMOUS_TOKEN
+```
+
+Then, you can use these environment variables to initialize your client:
+
+```typescript filename="./triplit/client.ts" copy {4-5}
 import { TriplitClient } from '@triplit/client';
 
-const client = new TriplitClient();
-```
-
-Triplit organizes your data into collections, which are like tables in a relational database. You can insert, update, and delete entities in a collection. As well, you can execute arbitrary queries on the database and subscribe to changes to query results over time.
-
-For example, you can insert some data into a collection and then query for it.
-
-```typescript copy
-// Define a query
-const completedTodosQuery = client
-  .query('todos')
-  .where('completed', '=', true)
-  .build();
-
-// Insert data
-await client.insert('todos', { text: 'Buy milk', completed: true });
-await client.insert('todos', { text: 'Buy eggs', completed: false });
-await client.insert('todos', { text: 'Buy bread', completed: true });
-
-// Execute the query
-const completedTodos = await client.fetch(completedTodosQuery);
-console.log(completedTodos);
-```
-
-You can also subscribe to data changes over time.
-
-```typescript copy
-// Define a query
-const completedTodosQuery = client
-  .query('todos')
-  .where('completed', '=', true)
-  .build();
-
-// Subscribe to query result updates
-const unsubscribe = client.subscribe(completedTodosQuery, (data) => {
-  // do something with data
-  console.log(data);
+const client = new TriplitClient({
+  serverUrl: process.env.VITE_TRIPLIT_DB_URL,
+  token: process.env.VITE_TRIPLIT_TOKEN,
 });
-
-// Insert data over time
-setTimeout(
-  () => client.insert('todos', { text: 'Buy milk', completed: true }),
-  1000
-);
-setTimeout(
-  () => client.insert('todos', { text: 'Buy eggs', completed: false }),
-  2000
-);
-setTimeout(
-  () => client.insert('todos', { text: 'Buy bread', completed: true }),
-  3000
-);
 ```
 
-## Framework support
+## Triplit in your app
 
-If you are using a framework like React, Svelte, or Vue (coming soon), you can use the Triplit framework bindings to make it easier to work with Triplit in your framework. See [frameworks](/frameworks) for more information.
+### Schemas and Typescript
 
-## Schemas and Typescript
-
-Triplit uses a schema to define the structure of your data. This schema is used to validate your data and to generate typescript types for client methods. Though you can technically define your schema anywhere, we recommend you save it at the `./triplit/schema.ts` path in your project folder. If you used one of the [initialization commands](/getting-started#installation) this file should have been created for you.
+Triplit uses a schema to define the structure of your data. This schema is used to validate your data and to generate Typescript types for client methods. Though you can technically define your schema anywhere, we recommend you save it at the `./triplit/schema.ts` path in your project folder. If you used one of the [initialization commands](/getting-started#installation) this file should have been created for you.
 
 You can define a schema for your data like this:
 
@@ -175,6 +168,7 @@ export const schema = {
       id: S.Id(),
       text: S.String(),
       completed: S.Boolean({ default: false }),
+      created_at: S.Date({ default: S.Default.now() }),
     }),
   },
 } satisfies ClientSchema;
@@ -182,103 +176,73 @@ export const schema = {
 
 And pass it as a parameter to the client constructor:
 
-```typescript copy {2,4}
+```typescript copy {2,5}
 import { TriplitClient } from '@triplit/client';
 import { schema } from './schema.js';
 
-const client = new TriplitClient({ schema });
+const client = new TriplitClient({
+  schema,
+  serverUrl: process.env.VITE_TRIPLIT_DB_URL,
+  token: process.env.VITE_TRIPLIT_TOKEN,
+});
 ```
 
 You can extract types from the schema to use in your app:
 
 ```tsx copy
 import { Entity } from '@triplit/client';
-import { schema } from './schema';
 
-type Todo = Entity<typeof schema, 'todos'>;
-
-function TodoComponent({ todo }: { todo: Todo }) {
-  return <div>{todo.text}</div>;
-}
+export type Todo = Entity<typeof schema, 'todos'>;
+// {
+//   id: string;
+//   text: string;
+//   completed: boolean;
+//   created_at: Date;
+// }
 ```
 
 Read about all the data types and options available in a schema [here](/schemas).
 
-## Syncing
+### Queries and Mutations TODO TODO TODO
 
-So far we've covered how to set up a local database and query it. Triplit provides a powerful sync engine that can be used to sync your data across devices in real-time. You can read more about syncing [here](/client).
+Triplit organizes your data into collections, which are like tables in a relational database. You can insert, update, and delete entities in a collection. As well, you can execute arbitrary queries on the database and subscribe to changes to query results over time.
 
-### Syncing in local development
+For example, you might have a todos list.
 
-Triplit has a robust local development environment that you can set up with a single command.
+```typescript copy
+// Define a query
+const completedTodosQuery = client
+  .query('todos')
+  .where('completed', '=', true)
+  .build();
 
-```bash
-triplit dev
+// Insert data
+await client.insert('todos', { text: 'Buy milk' });
+await client.insert('todos', { text: 'Buy eggs' });
+await client.insert('todos', { text: 'Buy bread' });
+
+// Execute the query
+const completedTodos = await client.fetch(completedTodosQuery);
+console.log(completedTodos);
 ```
 
-This will start a local development server that you can use to test syncing. The development server will automatically load the schema defined at `./triplit/schema.ts`.
+You can also subscribe to data changes over time.
 
-The default URL for the local development server is `http://localhost:6543`. It will also generate a Service Token and an Anonymous Token that your client app can use to authorize with the server.
-
-We recommend setting up a `.env` file in your project to store these.
-
-```bash filename=".env" copy
-TRIPLIT_DB_URL=http://localhost:6543
-TRIPLIT_SERVICE_TOKEN=generated-by-triplit-dev
-TRIPLIT_ANONYMOUS_TOKEN=generated-by-triplit-dev
-```
-
-Then, you can use these environment variables to initialize your client:
-
-```typescript copy {6-7}
-import { TriplitClient } from '@triplit/client';
-import { schema } from './schema.js';
-
-const client = new TriplitClient({
-  schema,
-  serverUrl: process.env.TRIPLIT_DB_URL,
-  token: process.env.TRIPLIT_ANONYMOUS_TOKEN,
+```typescript copy
+// Subscribe to query result updates
+const unsubscribe = client.subscribe(completedTodosQuery, (data) => {
+  // do something with data
+  console.log(data);
 });
 ```
 
-<Callout>
-  If you're using a framework like [Vite](https://vitejs.dev/guide/) or
-  [Next.js](https://nextjs.org/docs) you should add additional environmental
-  variables prepended with `VITE_` or `NEXT_PUBLIC_` respectively for the
-  `DB_URL` and `ANONYMOUS_TOKEN`. For example, `TRIPLIT_DB_URL` would become
-  `VITE_TRIPLIT_DB_URL` or `NEXT_PUBLIC_TRIPLIT_DB_URL`.
-</Callout>
+## Deploying
 
-To test that sync is working, you can open up your App in another browser window and observe the data converging.
+You can [self-host](/self-hosting) your Triplit server, or purchase a managed [Triplit Cloud machine](https://triplit.dev/pricing). In either case you can connect your deployment to the [Triplit Dashboard](https://triplit.dev/dashboard), which provides a web interface for managing your database.
 
-### Syncing with Triplit Cloud
+In Triplit Dashboard, you can create a projects. That project will have a unique database host URL, a Service Token and an Anonymous Token.
 
-Triplit Cloud is a managed service that provides a scalable and secure way to sync your data across devices.
-
-Once you have access to Triplit Cloud, you can create a project. That project will have a unique database host URL, a Service Token and an Anonymous Token. Your client app will use these to authorize with the server.
-
-We recommend setting up a `.env` file in your project to store these.
-
-```bash filename=".env" copy
-TRIPLIT_DB_URL=https://project-id.triplit.io
-TRIPLIT_SERVICE_TOKEN=taken-from-triplit-cloud
-TRIPLIT_ANONYMOUS_TOKEN=taken-from-triplit-cloud
-```
-
-Then, you can use these environment variables to initialize your client:
-
-```typescript copy {6-7}
-import { TriplitClient } from '@triplit/client';
-import { schema } from './schema.js';
-
-const client = new TriplitClient({
-  schema,
-  serverUrl: process.env.TRIPLIT_DB_URL,
-  token: process.env.TRIPLIT_ANONYMOUS_TOKEN,
-});
-```
-
-A Triplit Cloud instance will initially load without a schema. If your client is using a schema **you must keep the server schema in sync with it** or you will run into bugs and undefined behaviors. First, ensure that `TRIPLIT_DB_URL` and `TRIPLIT_SERVICE_TOKEN` are set in your `.env` file to point to the Triplit Cloud instance. Then use the Triplit CLI to "push" your schema to the server:
+Any Triplit server will initially load without a schema. If your client is using a schema **you must keep the server schema in sync with it** or you will run into bugs and undefined behaviors. First, ensure that `TRIPLIT_DB_URL` and `TRIPLIT_SERVICE_TOKEN` are set in your `.env` file to point to the deployed server. Then use the Triplit CLI to "push" your schema to the server:
 
 ```bash copy
 triplit schema push
