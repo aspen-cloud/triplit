@@ -1,5 +1,11 @@
 # @triplit/cli
 
+## 0.4.1
+
+### Patch Changes
+
+- 1a343ae: Fix fsevents dep causing issues on non-Mac OSes
+
 ## 0.4.0
 
 ### Minor Changes
