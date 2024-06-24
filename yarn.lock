@@ -7387,7 +7387,7 @@ __metadata:
     node-fetch: "npm:^3.3.2"
     nypm: "npm:^0.3.8"
     ora: "npm:^8.0.1"
-    parjs: "npm:^1.3.2"
+    parjs: "npm:^1.3.4"
     prettier: "npm:^3.0.3"
     prompts: "npm:^2.4.2"
     react: "npm:^18.2.0"
@@ -10614,12 +10614,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"char-info@npm:0.3.2":
-  version: 0.3.2
-  resolution: "char-info@npm:0.3.2"
+"char-info@npm:0.3.*":
+  version: 0.3.3
+  resolution: "char-info@npm:0.3.3"
   dependencies:
     node-interval-tree: "npm:^1.3.3"
-  checksum: 10/bd80ff2883855875cd8fee04310f9ea2f2e4ff384f5571190705130bcb66b00e49cef0a92265876dbdcb6bb1b80eec84cff8647a9d1232e12dd82ca79333a152
+  checksum: 10/018aaf98e077d874dfeea806cdf833297c7c9e8363415f81f029fe5c0b4d5b59d166231f997dabda79fae4ddca7e5ac27d441681377506c223628cbab964528c
   languageName: node
   linkType: hard
 
@@ -19702,21 +19702,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"parjs@npm:1.3.2":
-  version: 1.3.2
-  resolution: "parjs@npm:1.3.2"
+"parjs@npm:^1.3.2, parjs@npm:^1.3.4":
+  version: 1.3.4
+  resolution: "parjs@npm:1.3.4"
   dependencies:
-    char-info: "npm:0.3.2"
-  checksum: 10/a85e1b559a70839692320ccf89f92e6c552ff1573a3ef45b9f67e56b25628325a2ac92ea0496b9c61fe05070c54aa88a21cae36575e71576a6e34e5e5d9aa21b
-  languageName: node
-  linkType: hard
-
-"parjs@patch:parjs@npm%3A1.3.2#./.yarn/patches/parjs-npm-1.3.2-7ab761bbfc.patch::locator=triplit%40workspace%3A.":
-  version: 1.3.2
-  resolution: "parjs@patch:parjs@npm%3A1.3.2#./.yarn/patches/parjs-npm-1.3.2-7ab761bbfc.patch::version=1.3.2&hash=0766d8&locator=triplit%40workspace%3A."
-  dependencies:
-    char-info: "npm:0.3.2"
-  checksum: 10/81a9fe5162e3dda45c93ae1b7a5b9ab67b95dcb94d0365ad1567fc17db4c97920ec30fe3b0bdfd63735928878718d078123f5f2d2a14547f197532ef5c00bbfc
+    char-info: "npm:0.3.*"
+  checksum: 10/59fd4cff019a744ed4c65a308455f24e001999e84b132aa642e850dadcafd363bec5f7a74fc56f422e5b9df64ec132fa039ce779d75289c79987e91744c30432
   languageName: node
   linkType: hard
 
