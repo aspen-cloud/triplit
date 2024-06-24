@@ -184,11 +184,18 @@ export function CreateEntitySheet({
     initialValues: initializeNewEntityForm(collectionSchema),
   });
 
+  useEffect(() => {
+    form.setValues(initializeNewEntityForm(collectionSchema));
+  }, [collectionSchema]);
+
   const [customAttributes, setCustomAttributes] = useState<string[]>([]);
-  const allAttributes = [
-    ...(inferredAttributes ? inferredAttributes : []),
-    ...customAttributes,
-  ];
+  const allAttributes = useMemo(
+    () => [
+      ...(inferredAttributes ? inferredAttributes : []),
+      ...customAttributes,
+    ],
+    [inferredAttributes, customAttributes]
+  );
   const unselectedAttributes = useMemo(() => {
     if (allAttributes.length === 0 || collectionSchema) return [];
     return allAttributes.filter(
