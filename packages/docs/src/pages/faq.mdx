@@ -4,41 +4,14 @@ description: Frequently asked questions about Triplit.
 
 # Frequently asked questions
 
-## How does Triplit handle multiple writers?
-
-Every entity inserted into Triplit is broken down at the attribute level, and each attribute is assigned a unique timestamp. This means when multiple users change different attributes of the same entity, they don't conflict or collide. When two users do update the same attribute at the same time, we use these timestamps to decide which value will be kept. In the literature this type of data structure is called a CRDT or more specifically a Last Writer Wins Register that uses Lamport timestamps.
-
-A [CRDT](https://en.wikipedia.org/wiki/Conflict-free_replicated_data_type) is a Conflict-Free Replicated Data Type. It's a name for a family of data structures that can handle updates from multiple independent writers and converge to a consistent, usable state.
-
-## Does Triplit support partial replication?
-
-Yes. We believe that partial replication is the only practical way to make applications fast over the network. When Triplit clients subscribe to specific queries the Triplit servers only send data to the clients that are listening for it and that have not yet received it. Triplit's sync protocol sends only 'deltas' between the client and server to minimize latency and network traffic.
-
-## Why does Triplit support sets but not arrays?
-
-Every data structure that Triplit can store is designed to support multiple concurrent writers. Sets are able to handle concurrent additions and removals without problem, but arrays lose many nice properties under collaboration. Consider the push method: if two people concurrently push to an array they will end up adding an element to the same index, ultimately causing one item to overwrite the other. In the future, Triplit will expose a List datatype that will support pushing to the beginning and end of a list and assignment operations to specific indices. In most cases using a Set or a List in place of an Array will suffice.
-
-## What’s the difference between the Client and DB?
-
-The [DB](https://github.com/aspen-cloud/triplit/tree/main/packages/db) is the Client's underlying storage layer and provides:
-
-- A reactive query engine
-- Built-in storage providers for in-memory, IndexedDB, and Sqlite
-- Automatic indexing of object properties
-- Transactions with rollback
-- Schemas for validation and type hinting
-
-The Client extends the DB with functionality for syncing over the network and authenticating with Triplit servers. In most cases (unless you're designing your own syncing protocol!) you'll want to use the Client, even if you're only using Triplit as a local cache.
+## Why should I choose Triplit over a traditional database?
+Triplit is designed to have the best developer experience possible right out of the box. It was created to make building apps with real-time, local-first user experiences much easier than with existing tools. So if you aspire to have your app to feel native while supporting collaborative features expected of modern web apps, then Triplit is probably the right choice for you.
 
 ## Why should I care about offline support?
 
-We believe that app behavior should be deterministic in all network conditions, whether your users take your product on an airplane or if your servers go down. Apps that work well offline also happen to be fast and responsive, thanks to caching and optimistic updates.
+By adding offline support to your app, you end up making it fast in *all* network conditions. Even if your users are on fast internet and you've fully optimized your server, you can't beat the speed of light. Having a robust cache on device will just improve your user experience by making each interaction feel instant and not delayed by a roundtrip to the server. This is same strategy employed by some of the most loved apps like Linear, Figma, and Superhuman.
 
-## Why do ordinary databases struggle with collaborative applications?
-
-Many popular databases do not implement real-time query subscriptions, which are the foundation for collaborative apps. Developers generally end up replicating the functionality of their remote database on the client to create the illusion of live updating queries.
-
-## How is Triplit a relational database if it doesn't use joins?
+## How can Triplit be a relational database if it doesn't use joins?
 
 In Triplit, relationships are simply sub-queries. They allow you to connect entities across collections (or even within the same collection) with the expressiveness of a query. Triplit's support for set attributes allows it to establish complex relations without join tables. Sets can be used to "embed" the related ids directly on the entity. For example, a schema for a chat app with users and messages could be defined as follows:
 
@@ -63,3 +36,31 @@ const schema = {
   },
 };
 ```
+
+Check out [relations in your schema](/schemas/relations) to learn more.
+
+## How does Triplit handle multiple writers / collaboration / multiplayer?
+
+Every entity inserted into Triplit is broken down at the attribute level, and each attribute is assigned a unique timestamp. This means when multiple users change different attributes of the same entity, they don't conflict or collide. When two users do update the same attribute at the same time, we use these timestamps to decide which value will be kept. In the literature this type of data structure is called a CRDT or more specifically a Last Writer Wins Register that uses Lamport timestamps.
+
+A [CRDT](https://en.wikipedia.org/wiki/Conflict-free_replicated_data_type) is a Conflict-Free Replicated Data Type. It's a name for a family of data structures that can handle updates from multiple independent writers and converge to a consistent, usable state.
+
+## Does Triplit support partial replication?
+
+Yes. We believe that partial replication is the only practical way to make applications fast over the network. When Triplit clients subscribe to specific queries the Triplit servers only send data to the clients that are listening for it and that have not yet received it. Triplit's sync protocol sends only 'deltas' between the client and server to minimize latency and network traffic.
+
+## How do I connect to Triplit from a server?
+
+You can use the [HTTP Client](/client/http-client) to query and update data from a server, serverless function, command line interface, or anywhere that supports HTTP. You can also interface with the [HTTP REST endpoints](/http-api) directly.
+
+## Why does Triplit support sets but not arrays?
+
+Every data structure that Triplit can store is designed to support multiple concurrent writers. Sets are able to handle concurrent additions and removals without problem, but arrays lose many nice properties under collaboration. Consider the push method: if two people concurrently push to an array they will end up adding an element to the same index, ultimately causing one item to overwrite the other. In the future, Triplit will expose a List datatype that will support pushing to the beginning and end of a list and assignment operations to specific indices. In most cases using a Set or a List in place of an Array will suffice.
+
+
+## Why do ordinary databases struggle with collaborative applications?
+
+Many popular databases do not implement real-time query subscriptions, which are the foundation for collaborative apps. Developers generally end up replicating the functionality of their remote database on the client to create the illusion of live updating queries.
+
+
+
