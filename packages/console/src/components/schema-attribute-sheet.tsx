@@ -33,60 +33,17 @@ import {
   ValueTypeKeys,
 } from '../../../db/src/data-types/serialization';
 import { nanoid } from 'nanoid';
+import {
+  addAttribute,
+  alterAttributeOption,
+  parseIssue,
+  safeSchemaEdit,
+} from 'src/utils/schema.js';
+import { useToast } from 'src/hooks/useToast.js';
 
 export type AttributesForm = {
   [key: string]: AttributeDefinition;
 };
-
-async function addAttributeToSchema(
-  client: TriplitClient<any>,
-  collectionName: string,
-  attributeName: string,
-  newAttribute: AttributeDefinition
-) {
-  await client.db.addAttribute({
-    collection: collectionName,
-    path: attributeName.split('.'),
-    attribute: newAttribute,
-  });
-}
-
-async function updateAttributeOptions(
-  client: TriplitClient<any>,
-  collectionName: string,
-  attributeName: string,
-  options: UserTypeOptions
-) {
-  await client.db.alterAttributeOption({
-    collection: collectionName,
-    path: attributeName.split('.'),
-    options,
-  });
-}
-
-async function dropDefaultOption(
-  client: TriplitClient<any>,
-  collectionName: string,
-  attributeName: string
-) {
-  await client.db.dropAttributeOption({
-    collection: collectionName,
-    path: attributeName.split('.'),
-    option: 'default',
-  });
-}
-
-async function makeAttributeOptional(
-  client: TriplitClient<any>,
-  collectionName: string,
-  attributeName: string
-) {
-  await client.db.setAttributeOptional({
-    collection: collectionName,
-    path: [attributeName],
-    optional: true,
-  });
-}
 
 function getDefaultOptionsFromType(type: ValueTypeKeys) {
   if (type === 'date') return ['Value', 'now'];
@@ -108,6 +65,7 @@ export function SchemaAttributeSheet({
   collectionName,
   collectionSchema,
 }: NewAttributeFormProps & ComponentProps<typeof Sheet>) {
+  const { toast } = useToast();
   const editing = attributeToUpdateName;
   const attributeToUpdate = attributeToUpdateName
     ? collectionSchema?.schema.properties[attributeToUpdateName]
@@ -208,35 +166,65 @@ export function SchemaAttributeSheet({
     const updatedAttribute =
       formToAttributeDefinition() as ValueAttributeDefinition;
     if (!attributeToUpdate) {
-      await addAttributeToSchema(
+      const error = await addAttribute(
         client,
         collectionName,
-        attributeName,
-        updatedAttribute
+        attributeName.split('.'),
+        updatedAttribute,
+        isOptional
       );
+
+      if (error) {
+        toast({
+          title: 'Error',
+          description: error,
+          variant: 'destructive',
+        });
+        return;
+      }
+
       setOpen(false);
       return;
     }
-    if (
-      updatedAttribute.options.default === undefined &&
-      attributeToUpdate.options?.default !== undefined
-    ) {
-      await dropDefaultOption(client, collectionName, attributeName);
-    }
-    const isAlreadyOptional = collectionSchema.schema.optional?.includes(
-      // @ts-expect-error
-      attributeName
-    );
-    if (!isAlreadyOptional && isOptional) {
-      await makeAttributeOptional(client, collectionName, attributeName);
-    }
-    await updateAttributeOptions(
-      client,
-      collectionName,
-      attributeName,
-      updatedAttribute.options
-    );
 
+    const issues = await safeSchemaEdit(client, async (tx) => {
+      if (
+        updatedAttribute.options.default === undefined &&
+        attributeToUpdate.options?.default !== undefined
+      ) {
+        await tx.dropAttributeOption({
+          collection: collectionName,
+          path: attributeName.split('.'),
+          option: 'default',
+        });
+      }
+      const isAlreadyOptional = collectionSchema.schema.optional?.includes(
+        // @ts-expect-error
+        attributeName
+      );
+      if (!isAlreadyOptional && isOptional) {
+        await tx.setAttributeOptional({
+          collection: collectionName,
+          path: attributeName.split('.'),
+          optional: true,
+        });
+      }
+      await tx.alterAttributeOption({
+        collection: collectionName,
+        path: attributeName.split('.'),
+        options: updatedAttribute.options,
+      });
+    });
+
+    if (issues && issues.length > 0) {
+      const parsedIssue = parseIssue(issues[0]);
+      toast({
+        title: 'Error',
+        description: `Altering attribute '${attributeName}' failed because: '${parsedIssue}'. Please see the Triplit docs for more information.`,
+        variant: 'destructive',
+      });
+      return;
+    }
     setOpen(false);
   }, [
     attributeToUpdate,

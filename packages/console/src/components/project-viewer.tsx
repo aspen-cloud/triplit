@@ -15,6 +15,8 @@ import { consoleClient } from 'triplit/client.js';
 import { DEFAULT_HOSTNAME, initializeFromUrl } from 'src/utils/project.js';
 import { ModeToggle } from '@triplit/ui';
 import { QueryOrder, QueryWhere } from '@triplit/db/src/query.js';
+import { createCollection } from 'src/utils/schema.js';
+import { useToast } from 'src/hooks/useToast.js';
 
 const projectClients = new Map<string, TriplitClient<any>>();
 
@@ -121,6 +123,7 @@ export function ProjectViewer({
   query: ConsoleQuery;
   setQuery: SetConsoleQuery;
 }) {
+  const { toast } = useToast();
   const connectionStatus = useConnectionStatus(client);
   useEffect(() => {
     client?.syncEngine.connect();
@@ -183,10 +186,17 @@ export function ProjectViewer({
             disabled={!shouldEnableCreateCollectionButton}
             onSubmit={async (collectionName) => {
               try {
-                await client.db.createCollection({
-                  name: collectionName,
-                  schema: { id: Schema.Id().toJSON() },
+                const error = await createCollection(client, collectionName, {
+                  id: Schema.Id().toJSON(),
                 });
+                if (error) {
+                  toast({
+                    title: 'Error',
+                    description: error,
+                    variant: 'destructive',
+                  });
+                  return;
+                }
                 setQuery({ collection: collectionName }, false);
               } catch (e) {
                 console.error(e);
