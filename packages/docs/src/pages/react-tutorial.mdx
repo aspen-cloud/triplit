@@ -4,6 +4,11 @@ description: A full tutorial for building a Todos app with React, Vite and Tripl
 
 import { Callout } from 'nextra/components';
 
+<Callout emoji="💡">
+  If you're not interested in building the app from scratch, you can get a fully
+  working demo app by running `npm create triplit-app`.
+</Callout>
+
 # Build a Todos app with React, Vite and Triplit
 
 This tutorial will show you how to build a simple Todos app with React, Vite and Triplit. It will cover the following topics:
@@ -25,21 +30,31 @@ If at any time you want to check your progress against the finished app, or if y
 
 ## Project setup
 
-### Create a new Triplit project
+### Create a new project
 
-Before we start building the app, we need to create a new Triplit project. You can do this by running the following command:
-
-```bash copy
-npm create triplit-app@latest todos
-```
-
-This command will guide you through the new project setup process. When given the option, select `react` as the UI framework.
-
-Once the project setup is complete, you'll have a new directory, `todos`, that contains a basic Vite + Triplit app. Next, install the dependencies:
+Let's use Vite to create a new React app. Run the following command in your terminal:
 
 ```bash copy
-cd todos && npm install
+npm create vite@latest todos -- --template react
 ```
+
+Follow the prompts to create a new project. Once it's been created, navigate to the project directory:
+
+```bash copy
+cd todos
+```
+
+### Add in Triplit
+
+Before we start building the app, we need to integrate Triplit and its dependencies project. You can do this by installing the [Triplit CLI](/cli), the [React bindings](/frameworks/react), and running the `init` command.
+
+```bash copy
+npm install -D @triplit/cli
+npm install @triplit/react
+npx triplit init
+```
+
+This will will create some Triplit-specific files and add the necessary dependencies.
 
 The directory structure for your new project should look like this:
 
