@@ -30,7 +30,10 @@ function getCmdFilePaths() {
 // Reads package.json for dependencies
 function getDeps() {
   const pkg = JSON.parse(readFileSync('package.json', 'utf8'));
-  return Object.keys(pkg.dependencies || {});
+  return [
+    ...Object.keys(pkg.dependencies || {}),
+    ...Object.keys(pkg.optionalDependencies || {}),
+  ];
 }
 
 const nativeNodeModulesPlugin = {

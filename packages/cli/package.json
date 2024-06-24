@@ -64,7 +64,7 @@
     "vitest": "^1.3.1",
     "ws": "^8.14.1"
   },
-  "dependencies": {
+  "optionalDependencies": {
     "fsevents": "^2.3.3"
   }
 }

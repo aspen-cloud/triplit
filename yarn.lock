@@ -7139,6 +7139,9 @@ __metadata:
     typescript: "npm:^5.2.2"
     vitest: "npm:^1.3.1"
     ws: "npm:^8.14.1"
+  dependenciesMeta:
+    fsevents:
+      optional: true
   bin:
     triplit: ./dist/index.js
   languageName: unknown
@@ -14352,7 +14355,6 @@ __metadata:
   resolution: "fsevents@patch:fsevents@npm%3A2.3.3#optional!builtin<compat/fsevents>::version=2.3.3&hash=df0bf1"
   dependencies:
     node-gyp: "npm:latest"
-  checksum: 10/9c18c4d71a273ca6e83c898f201478d62178a33ae4c4151af9120dea4ab3c3c0407936cbe07c77642851ec678dddf6abb5d664ed162b299396e53063f59ebec5
   conditions: os=darwin
   languageName: node
   linkType: hard
