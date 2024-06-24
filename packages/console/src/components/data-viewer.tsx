@@ -386,7 +386,7 @@ export function DataViewer({
             open={deleteCollectionDialogOpen}
             collection={query.collection}
             onDeleteCollection={() => {
-              setQuery({});
+              setQuery({}, false);
             }}
             onOpenChange={setDeleteCollectionDialogOpen}
             client={client}
