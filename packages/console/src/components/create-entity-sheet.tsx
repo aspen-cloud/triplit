@@ -47,20 +47,43 @@ interface FormValues {
   }[];
 }
 
+/**
+ * Convert string values to Triplit values as needed
+ */
 function convertFormValueToTriplitValue(
-  value: string | Record<string, any>,
-  definition: AttributeDefinition,
-  optional: boolean = false
-) {
+  value: string | Record<string, any> | null | undefined,
+  definition: AttributeDefinition
+): any {
+  // If we have a default function, let DB handle and return undefined
   const hasDefaultFunction = !!definition?.options?.default?.func;
-  if ((hasDefaultFunction || optional) && !value) return undefined;
-  if (definition?.options?.nullable && value === null) return null;
-  if (definition.type === 'boolean') return value === 'true';
-  if (definition.type === 'number') return Number(value);
+  if (hasDefaultFunction && value == undefined) return undefined;
+
+  // Undefined and null are valid triplit values (for inputs)
+  if (value === undefined) return undefined;
+  if (value === null) return null;
+
+  // Convert strings to booleans
+  if (definition.type === 'boolean') {
+    if (value === 'true') return true;
+    if (value === 'false') return false;
+    return undefined;
+  }
+
+  // Convert strings to numbers
+  if (definition.type === 'number') {
+    const num = Number(value);
+    if (isNaN(num)) return undefined;
+    return num;
+  }
+
+  // Convert strings to dates
   if (definition.type === 'date') {
     const val = new Date(value);
     if (String(val) === 'Invalid Date') return undefined;
+    return val;
   }
+
+  // recurse in records
   if (definition.type === 'record')
     return Object.fromEntries(
       Object.entries(value).map(([name, value]) => [
@@ -71,19 +94,11 @@ function convertFormValueToTriplitValue(
   return value;
 }
 
-function convertFormToEntity(
-  attributes: FormValues['attributes'],
-  model?: Model<any>
-) {
+function convertFormToEntity(attributes: FormValues['attributes']) {
   const entity: any = {};
   attributes.forEach((attr) => {
     const { definition, fieldValue, fieldName } = attr;
-    const optional = model?.optional && model.optional.includes(fieldName);
-    const triplitValue = convertFormValueToTriplitValue(
-      fieldValue,
-      definition,
-      optional
-    );
+    const triplitValue = convertFormValueToTriplitValue(fieldValue, definition);
     if (triplitValue === undefined) return;
     const path = fieldName.split('.');
     let current = entity;
@@ -94,34 +109,16 @@ function convertFormToEntity(
     }
     current[path[0]] = triplitValue;
   });
-  console.log('ENTITY', entity);
   return entity;
 }
 
-function getDefaultFormValueForAttribute(definition: AttributeDefinition): any {
-  const hasDefaultValue =
-    definition?.options?.default !== undefined &&
-    typeof definition?.options?.default !== 'object';
-  if (hasDefaultValue) return definition.options.default;
-  if (definition.type === 'record')
-    return Object.fromEntries(
-      Object.entries(definition.properties).map(([name, definition]) => [
-        name,
-        getDefaultFormValueForAttribute(definition),
-      ])
-    );
-  if (definition.type === 'set') return new Set();
-  if (definition.type === 'boolean') return 'false';
-  if (definition.type === 'number') return '';
-  if (definition.type === 'date') return '';
-  if (definition.type === 'string') return '';
-  return '';
-}
-
-function initializeNewEntityForm(model?: CollectionDefinition): FormValues {
-  if (!model || !model?.schema?.properties) return { id: '', attributes: [] };
+function initializeNewEntityForm(
+  collection?: CollectionDefinition
+): FormValues {
+  if (!collection || !collection?.schema?.properties)
+    return { id: '', attributes: [] };
   const attributes = (
-    Object.entries(model.schema.properties) as [
+    Object.entries(collection.schema.properties) as [
       string,
       Exclude<AttributeDefinition, RecordAttributeDefinition>
     ][]
@@ -133,7 +130,7 @@ function initializeNewEntityForm(model?: CollectionDefinition): FormValues {
       return {
         definition,
         fieldName: attr,
-        fieldValue: getDefaultFormValueForAttribute(definition),
+        fieldValue: undefined,
         key: attr,
       };
     });
