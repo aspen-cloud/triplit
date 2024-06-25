@@ -1,0 +1,41 @@
+---
+description: Learn about connecting a self-hosted server to Triplit Cloud.
+---
+
+import Image from 'next/image';
+import selfHosting from '../../../public/dashboard-screenshots/self-hosting.png';
+import machineWidget from '../../../public/dashboard-screenshots/machine-widget.png';
+
+# Self-hosted deployments
+
+Triplit Cloud is fully compatible with self-hosted Triplit servers. This means you can deploy your own Triplit server and connect it to the Triplit Cloud dashboard, and reap the benefits of easier server management and use of the Triplit Console.
+
+## Deploying a self-hosted machine
+
+You have two options for deploying a self-hosted machine:
+
+- **Railway**: One-click-deply a Triplit server using Railway. This is the easiest way to get started with a self-hosted machine.
+- **Docker**: Deploy a Triplit server using Docker. [Read our self-hosting guide for more information](/self-hosting).
+
+We plan on adding many more one-click-deploy options in the future, so stay tuned!
+
+## Connecting your self-hosted machine to Triplit Cloud
+
+Once you've [created a project](/triplit-cloud), you'll be presented with some instructions under the **Self Host** tab:
+
+<Image
+  src={selfHosting}
+  alt="Self hosting instructions"
+  width={'100%'}
+  style={{ borderRadius: 16, marginTop: 32 }}
+/>
+
+Once you have a Triplit server running and properly configured, enter its hostname into the form and click **Connect**.
+
+## Connecting to your self-hosted machine
+
+To connect your Triplit client to your server, you'll need to update your `.env` file with the URL and API key on the **Overview** tab. The beauty of using a self-hosted server with the Triplit dashboard is that:
+
+- It will mint API keys for you (and let you rotate them)
+- You can authorize with external tokens with the server without needing to modify your server's code
+- you can manage your data and schema with the Triplit Console

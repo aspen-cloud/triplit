@@ -1,0 +1,63 @@
+---
+description: Learn about using the Triplit Console to manage your data.
+---
+
+import Image from 'next/image';
+import console from '../../../public/dashboard-screenshots/console-main.png';
+import createCollection from '../../../public/dashboard-screenshots/create-collection.png';
+import insertAttribute from '../../../public/dashboard-screenshots/insert-attribute.png';
+import insertEntity from '../../../public/dashboard-screenshots/insert-Entity.png';
+
+# Triplit Console
+
+<Image
+  src={console}
+  alt="The Triplit Console"
+  width={'100%'}
+  style={{ borderRadius: 16, marginTop: 32 }}
+/>
+
+The Triplit Console is a graphical interface for managing your data and schema. It's available for Triplit Cloud projects, whether they're connected to a managed machine or a self-hosted one.
+
+## Features
+
+The Triplit Console offers a range of features to help you manage your data and schema:
+
+### Manage your schema
+
+You can create collections from the Console.
+
+<Image
+  src={createCollection}
+  alt="Creating a collection"
+  width={'100%'}
+  style={{ borderRadius: 16, marginTop: 32 }}
+/>
+
+And you can create attributes too.
+
+<Image
+  src={insertAttribute}
+  alt="Inserting an attribute"
+  width={'100%'}
+  style={{ borderRadius: 16, marginTop: 32 }}
+/>
+
+When your schema is ready, you can save it as a file to a local directory by running
+
+```bash copy
+npx triplit schema print --format=file --location=remote --raw > triplit/schema.ts
+```
+
+### Manage your data
+
+You can insert entities into your collections.
+
+<Image
+  src={insertEntity}
+  alt="Inserting an entity"
+  width={'100%'}
+  style={{ borderRadius: 16, marginTop: 32 }}
+/>
+
+And update them inline.
