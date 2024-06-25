@@ -15,7 +15,7 @@
     "sqlite"
   ],
   "packageManager": "yarn@3.4.1",
-  "version": "0.3.61",
+  "version": "0.3.62",
   "source": "./src/index.ts",
   "main": "./dist/index.js",
   "type": "module",
