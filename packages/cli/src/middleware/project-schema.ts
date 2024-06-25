@@ -24,15 +24,15 @@ export const projectSchemaMiddleware = Middleware({
       process.env.TRIPLIT_SCHEMA_PATH ??
       path.join(getTriplitDir(), 'schema.ts');
     if (!fs.existsSync(schemaPath)) {
-      return `Schema file not found at ${schemaPath}`;
+      return `Schema file not found at ${schemaPath}. If you would like to run without a schema file, use the --noSchema flag.`;
     }
     const result = await loadTsModule(schemaPath);
 
     if (!result) {
-      return `Failed to load schema file at ${schemaPath}`;
+      return `Failed to load schema file at ${schemaPath}. If you would like to run without a schema file, use the --noSchema flag.`;
     }
     if (!result.schema) {
-      return `${schemaPath} does not export an object named 'schema'`;
+      return `${schemaPath} does not export an object named 'schema'. Please export one. If you would like to run without a schema file, use the --noSchema flag.`;
     }
 
     return { schema: result.schema } as const;
