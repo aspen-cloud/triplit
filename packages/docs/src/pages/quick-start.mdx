@@ -115,8 +115,9 @@ To run a query and subscribe to changes to that query, you can use [`subscribe`]
 ```typescript
 import { triplit } from '../triplit/client.ts';
 
-const todos = triplit.query('todos', { where: [['completed', '=', false]] });
-todos.subscribe((data) => {
+const query = triplit.query('todos', { where: [['completed', '=', false]] }).build();
+
+const unsubscribe = triplit.subscribe(query, (data) => {
   console.log(data);
 });
 ```
