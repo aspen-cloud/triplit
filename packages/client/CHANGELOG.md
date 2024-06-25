@@ -1,5 +1,11 @@
 # @triplit/client
 
+## 0.3.62
+
+### Patch Changes
+
+- d7b2190: add `clear` method to client and workerclient
+
 ## 0.3.61
 
 ### Patch Changes
