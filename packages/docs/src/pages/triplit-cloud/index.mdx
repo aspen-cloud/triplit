@@ -1,0 +1,37 @@
+---
+description: Learn how to create Triplit Cloud projects.
+---
+
+import { Callout } from 'nextra-theme-docs';
+import Image from 'next/image';
+import signIn from '../../../public/dashboard-screenshots/sign-in.png';
+import authentication from '../../../public/dashboard-screenshots/authentication.png';
+import dataManagement from '../../../public/dashboard-screenshots/data-management.png';
+import quickstart from '../../../public/dashboard-screenshots/quickstart.png';
+import createProject from '../../../public/dashboard-screenshots/create-project.png';
+
+# Triplit Cloud
+
+Triplit Cloud is a service for managing your Triplit projects. It's free for individuals to use, and integrates with your Triplit server, whether it's managed by us or self-hosted. When you integrate with Triplit Cloud you get access to a range of features, including:
+
+- **The Triplit Console**: A graphical interface for managing your data and schema.
+- **Authorization**: Configure access to your server without needing to modify your server's code.
+
+## Creating a project
+
+To create a project:
+
+- [Sign-in or sign-up for a Triplit account](https://triplit.dev/dashboard)
+- Click the **Create Project** button
+- Provide a name for your project. This will act as a friendly alias for your project throughout the dashboard.
+  <Image
+    src={createProject}
+    alt="Project creation page"
+    width={'100%'}
+    style={{ borderRadius: 16, marginTop: 32 }}
+  />
+
+Once you've created a project, you'll be taken to the deployment page. Here you can choose to deploy a managed Triplit Cloud instance, or connect your project to an existing instance.
+
+- [Learn more about deploying a managed instance](/triplit-cloud/managed-machines)
+- [Learn more about connecting to a self-hosted instance](/triplit-cloud/self-hosted-deployments)

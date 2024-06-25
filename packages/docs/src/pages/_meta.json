@@ -10,13 +10,13 @@
   "schemas": "Schemas",
   "cli": "CLI",
   "frameworks": "Frameworks",
+  "triplit-cloud": "Triplit Cloud",
   "-3": {
     "type": "separator"
   },
   "self-hosting": "Self-hosting",
   "local-development": "Local development",
   "seeding": "Seeding a database",
-  "triplit-cloud": "Triplit Cloud",
   "auth": "Auth",
   "migrations": { "title": "Migrations", "display": "hidden" },
   "v2": {
