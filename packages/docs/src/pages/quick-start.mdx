@@ -1,0 +1,131 @@
+---
+description: Learn how to get up and running with a simple Triplit app.
+---
+
+import { Callout, Tabs, Tab, Steps, Collapse, FileTree } from 'nextra-theme-docs';
+
+# Quick Start
+
+<Steps>
+### Install Triplit to your app
+
+#### New projects
+The fast way to get started with Triplit is to use Create Triplit App which will scaffold a full stack application with Triplit.
+
+<Tabs items={['npm', 'pnpm', 'yarn', 'bun']}>
+  <Tab>
+    ```bash copy
+    npm create triplit-app@latest my-app
+    ```
+
+  </Tab>
+  <Tab>
+    ```bash copy
+    pnpm create triplit-app my-app
+    ```
+
+  </Tab>
+  <Tab>
+    ```bash copy
+    yarn create triplit-app my-app
+    ```
+
+  </Tab>
+  <Tab>
+    ```bash copy
+    bun create triplit-app my-app
+    ```
+    
+    </Tab>
+</Tabs>
+
+
+#### Existing projects
+If you have an existing project, you can install the `triplit init` command to create the necessary files and folders and install the required dependencies.
+
+<Tabs items={['npm', 'pnpm', 'yarn', 'bun']}>
+  <Tab>
+    ```bash copy
+    npm install --save-dev @triplit/cli
+    ```
+
+  </Tab>
+  <Tab>
+    ```bash copy
+    pnpm add --save-dev @triplit/cli
+    ```
+
+  </Tab>
+  <Tab>
+    ```bash copy
+    yarn add --dev @triplit/cli 
+    ```
+
+  </Tab>
+  <Tab>
+    ```bash copy
+    bun add --dev @triplit/cli 
+    ```
+    
+    </Tab>
+</Tabs>
+
+Follow the instructions in the [React + Vite turorial](/react-tutorial) to finish your setup. The tutorial uses React but is applicable to any framework.
+
+### Create your Schema
+<FileTree>
+  <FileTree.Folder name="triplit" defaultOpen>
+    <FileTree.File name="schema.ts" />
+  </FileTree.Folder>
+</FileTree>
+
+You'll find a schema already setup in your project. You can modify this file to define the collections in your database. To learn more about schemas, check out the [schema guide](/schemas).
+
+### Setup your dev server
+
+Triplit has a robust local development environment that you can set up with a single command.
+
+```bash copy
+triplit dev
+```
+
+The `dev` command will start a local Triplit server with your schema applied. To learn more about the dev server, check out the [local development guide](/local-development). 
+
+
+### Insert and Query Data
+
+To add data to your database you can use the pre-configured client to [`insert`](/client/insert) data. 
+
+```typescript
+import { triplit } from '../triplit/client.ts';
+
+await triplit.insert('todos', { text });
+```
+
+To run a query and subscribe to changes to that query, you can use [`subscribe`](/client/subscribe).
+```typescript
+import { triplit } from '../triplit/client.ts';
+
+const todos = triplit.query('todos', { where: [['completed', '=', false]] });
+todos.subscribe((data) => {
+  console.log(data);
+});
+
+```
+
+There also framework specific bindings for [React](/frameworks/react) and [Svelte](/frameworks/svelte) that you can use to interact with your data.
+
+
+
+### Deploy
+When you're ready to go live, you'll need Triplit Server running. Check out the [deployment guide](/deployment) to learn how you can self host your own instance or deploy on Triplit Cloud.
+
+With your server running and your .env setup, you can now push your schema to the server
+```bash copy
+triplit schema push
+```
+
+That's it! Well there's a lot more you can do with Triplit. Check out the rest of the docs to learn more about how to define [relations in your schema](/schemas/relations), [write transactions](/client/transact), add [access control](/schemas/rules), and more.
+</Steps>
+
+
