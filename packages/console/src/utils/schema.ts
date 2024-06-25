@@ -155,15 +155,15 @@ export async function safeSchemaEdit(
   client: TriplitClient<any>,
   callback: (tx: DBTransaction<any>) => Promise<void>
 ) {
-  const schema = await client.db.getSchema();
-  if (!schema) return;
+  const originalSchema = await client.db.getSchema();
   return (
     await client.transact(async (tx) => {
       try {
         await callback(tx);
+        if (!originalSchema) return;
         const updatedSchema = await tx.getSchema();
         if (!updatedSchema) return;
-        const diff = diffSchemas(schema!, updatedSchema);
+        const diff = diffSchemas(originalSchema, updatedSchema);
 
         // If no differences, return early
         if (diff.length === 0) return;
