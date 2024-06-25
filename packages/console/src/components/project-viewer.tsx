@@ -17,6 +17,7 @@ import { ModeToggle } from '@triplit/ui';
 import { QueryOrder, QueryWhere } from '@triplit/db/src/query.js';
 import { createCollection } from 'src/utils/schema.js';
 import { useToast } from 'src/hooks/useToast.js';
+import { Toaster } from './toaster.js';
 
 const projectClients = new Map<string, TriplitClient<any>>();
 
@@ -159,6 +160,7 @@ export function ProjectViewer({
   // If client, render hooks that rely on client safely
   return (
     <div className="flex bg-popover w-full overflow-hidden h-full">
+      <Toaster />
       <div className=" border-r flex flex-col p-4 w-[250px] shrink-0 overflow-y-auto">
         {project && (
           <ProjectOptionsMenu>
