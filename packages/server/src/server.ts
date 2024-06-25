@@ -292,8 +292,8 @@ export function createServer(options?: ServerOptions) {
     const { schema, client, syncSchema, token: rawToken } = req.query;
     const { data: token, error } = await parseAndValidateToken(
       rawToken as string,
-      process.env.JWT_SECRET!,
-      process.env.PROJECT_ID!,
+      process.env.JWT_SECRET,
+      process.env.PROJECT_ID,
       {
         payloadPath: process.env.CLAIMS_PATH,
         externalSecret: process.env.EXTERNAL_JWT_SECRET,

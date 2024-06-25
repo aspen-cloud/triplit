@@ -30,8 +30,8 @@ export async function useHttpToken(
   try {
     const { data, error } = await parseAndValidateToken(
       token,
-      process.env.JWT_SECRET!,
-      process.env.PROJECT_ID!,
+      process.env.JWT_SECRET,
+      process.env.PROJECT_ID,
       {
         payloadPath: process.env.CLAIMS_PATH,
         externalSecret: process.env.EXTERNAL_JWT_SECRET,
@@ -59,8 +59,8 @@ export async function readWSToken(request: IncomingMessage) {
   const token = url.searchParams.get('token');
   return parseAndValidateToken(
     token!,
-    process.env.JWT_SECRET!,
-    process.env.PROJECT_ID!,
+    process.env.JWT_SECRET,
+    process.env.PROJECT_ID,
     {
       payloadPath: process.env.CLAIMS_PATH,
       externalSecret: process.env.EXTERNAL_JWT_SECRET,

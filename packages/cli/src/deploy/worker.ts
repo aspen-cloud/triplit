@@ -79,8 +79,8 @@ export class TriplitDurableObject implements DurableObject {
 
     const { data: token, error } = await parseAndValidateToken(
       xTriplitToken,
-      jwt_secret!,
-      projectId!,
+      jwt_secret,
+      projectId,
       {
         payloadPath: external_jwt_path,
         externalSecret: external_jwt_secret,

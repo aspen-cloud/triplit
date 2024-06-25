@@ -46,8 +46,8 @@ async function getJwtKey(rawPublicKey: string): Promise<KeyLike | Uint8Array> {
 
 export async function parseAndValidateToken(
   token: string | null | undefined,
-  triplitSecret: string, // Signing secret for triplit tokens
-  projectId: string,
+  triplitSecret: string | undefined, // Signing secret for triplit tokens
+  projectId: string | undefined,
   options: {
     payloadPath?: string;
     externalSecret?: string; // optional signing secret for external tokens
@@ -98,6 +98,14 @@ export async function parseAndValidateToken(
     tokenType === 'external'
       ? options.externalSecret ?? triplitSecret
       : triplitSecret;
+  if (!secretKey) {
+    return {
+      data: undefined,
+      error: new TokenVerificationError(
+        'No secret provided for token verification'
+      ),
+    };
+  }
   const encodedKey = await getJwtKey(secretKey);
   let verified;
   try {
@@ -135,6 +143,15 @@ export async function parseAndValidateToken(
         ),
       };
     }
+  }
+
+  if (!projectId) {
+    return {
+      data: undefined,
+      error: new TokenVerificationError(
+        'No project id provided for token verification'
+      ),
+    };
   }
 
   if (payload['x-triplit-project-id'] !== projectId) {
