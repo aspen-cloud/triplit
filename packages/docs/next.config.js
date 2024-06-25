@@ -66,5 +66,10 @@ module.exports = withNextra({
       destination: '/client',
       permanent: true,
     },
+    {
+      source: '/getting-started',
+      destination: '/quick-start',
+      permanent: true,
+    },
   ],
 });
