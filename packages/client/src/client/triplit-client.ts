@@ -362,6 +362,10 @@ export class TriplitClient<M extends ClientSchema | undefined = undefined> {
     return result;
   }
 
+  async clear() {
+    return this.db.clear();
+  }
+
   async fetchOne<CQ extends ClientQuery<M, any>>(
     query: CQ,
     options?: Partial<FetchOptions>

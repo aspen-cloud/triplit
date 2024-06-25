@@ -152,6 +152,9 @@ const workerOperator: ClientWorker = {
   ) {
     return clientOperator.db.updateGlobalVariables(...args);
   },
+  async clear() {
+    return await clientOperator.clear();
+  },
 };
 
 async function normalizeSubscriptionOptions(

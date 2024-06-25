@@ -341,4 +341,9 @@ export class WorkerClient<M extends ClientSchema | undefined = undefined> {
     await this.initialized;
     return this.clientWorker.rollback(txIds);
   }
+
+  async clear() {
+    await this.initialized;
+    return this.clientWorker.clear();
+  }
 }
