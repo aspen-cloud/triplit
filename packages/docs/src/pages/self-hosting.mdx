@@ -53,6 +53,10 @@ You can now deploy the server to a cloud provider that supports Git deploys, lik
 
 There are a few secrets that you need to provide to the server to enable certain features.
 
+### `PROJECT_ID`
+
+The server uses a `PROJECT_ID` to identify your project. You can set the `PROJECT_ID` environment variable to a unique identifier for your project. If you would like to connect to the Triplit Dashboard, this value should be the unique identifier for your project. You can find this value in the dashboard in your project's settings.
+
 ### `JWT_SECRET`
 
 The server uses JWT tokens to authenticate clients, and you need to provide a secret to sign and verify these tokens. You can set the secret by setting the `JWT_SECRET` environment variable. Triplit supports both symmetric (HS256) and asymmetric (RS256) encryption algorithms for JWTs. You will need to generate client tokens signed with the appropriate algorithm. With the `PROJECT_ID` and `JWT_SECRET` set, you can also use the [`triplit dev`](/cli/dev) CLI to generate these tokens for you.
