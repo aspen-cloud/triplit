@@ -1,5 +1,12 @@
 # @triplit/cli
 
+## 0.4.2
+
+### Patch Changes
+
+- 45f8d5e: Update parjs
+- d2ff9fb: Improve schema diff output
+
 ## 0.4.1
 
 ### Patch Changes

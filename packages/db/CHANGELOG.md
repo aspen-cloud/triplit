@@ -1,5 +1,11 @@
 # @triplit/db
 
+## 0.3.47
+
+### Patch Changes
+
+- 753a72c: bug fix: properly parse date input
+
 ## 0.3.46
 
 ### Patch Changes
