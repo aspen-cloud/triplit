@@ -99,3 +99,18 @@ new TriplitClient({
 Users of Expo 50 or below can use the storage provider exported by `@triplit/db/storage/expo-sqlite-legacy`.
 
 As well if there is a SQLite library that we don't yet have a storage provider for, you can create your own by implementing the `SQLiteAdapter` interface and providing that to `AdapterSQLiteStorage` available in `@triplit/db/storage/adapter-sqlite`. Here is a [gist](https://gist.github.com/wernst/9a1a42a7bb95bc2268b38612e9ee4339) implementing an adapter for `op-sqlite`, another SQLite library for React Native.
+
+## Clearing the cache
+
+To clear a `TriplitClient`'s cache, you can call the `clear` method. This will clear everything in the cache, including any data that has not been sent to the server.
+
+```typescript copy {7}
+const client = new TriplitClient({
+  storage: 'indexeddb',
+});
+
+async function clearCacheAndSignOut() {
+  await auth.signOut();
+  await client.clear();
+}
+```
