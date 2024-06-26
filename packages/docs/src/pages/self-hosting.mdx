@@ -47,6 +47,20 @@ process.on('SIGINT', function () {
 });
 ```
 
+You may specify the storage adapter you want to use by setting the `storage` option. Triplit provides some default configurations of our storage adapters, which you can use by setting the `storage` option to the appropriate string value for the adapter. Typically this will use your `LOCAL_DATABASE_URL` environment variable so you'll want to make sure that's set. See the [source code](https://github.com/aspen-cloud/triplit/tree/main/packages/server) for the server for available options.
+
+You can also pass in an instance of an adapter or a function that returns an instance of an adapter.
+
+```typescript
+function createAdapter() {
+  return new MyCustomAdapter();
+}
+
+const startServer = createServer({
+  storage: createAdapter,
+});
+```
+
 You can now deploy the server to a cloud provider that supports Git deploys, like [Vercel](https://vercel.com/docs/git), [Netlify](https://docs.netlify.com/configure-builds/get-started/), or [Render](https://docs.render.com/deploys).
 
 ## Secrets
