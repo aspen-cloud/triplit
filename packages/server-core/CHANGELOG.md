@@ -1,5 +1,12 @@
 # @triplit/server-core
 
+## 0.3.50
+
+### Patch Changes
+
+- Updated dependencies [fddc883]
+  - @triplit/db@0.3.48
+
 ## 0.3.49
 
 ### Patch Changes

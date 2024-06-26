@@ -1,5 +1,11 @@
 # @triplit/cli
 
+## 0.4.3
+
+### Patch Changes
+
+- fddc883: Add additional storage options to the dev command
+
 ## 0.4.2
 
 ### Patch Changes

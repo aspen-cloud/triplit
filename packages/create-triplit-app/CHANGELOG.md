@@ -1,5 +1,11 @@
 # create-triplit-app
 
+## 0.0.15
+
+### Patch Changes
+
+- 0538b79: Include gitignore in published templates
+
 ## 0.0.12
 
 ### Patch Changes

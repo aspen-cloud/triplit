@@ -1,5 +1,11 @@
 # @triplit/db
 
+## 0.3.48
+
+### Patch Changes
+
+- fddc883: Bump @triplit/tuple-database version
+
 ## 0.3.47
 
 ### Patch Changes
