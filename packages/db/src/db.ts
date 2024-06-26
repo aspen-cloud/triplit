@@ -12,14 +12,7 @@ import CollectionQueryBuilder, {
   subscribe,
   subscribeTriples,
 } from './collection-query.js';
-import {
-  CollectionQuery,
-  Entity,
-  Query,
-  QueryWhere,
-  constructEntity,
-  updateEntity,
-} from './query.js';
+import { Entity, constructEntity, updateEntity } from './query.js';
 import { MemoryBTreeStorage } from './storage/memory-btree.js';
 import { DBOptionsError, InvalidMigrationOperationError } from './errors.js';
 import { Clock } from './clocks/clock.js';
@@ -46,7 +39,14 @@ import { EAV, indexToTriple, TripleRow } from './triple-store-utils.js';
 import { TripleStore } from './triple-store.js';
 import { Logger } from '@triplit/types/logger';
 import { isAnyOrUndefined } from './utility-types.js';
-import { Unalias, FetchResult, FetchResultEntity } from './query/types';
+import {
+  Unalias,
+  FetchResult,
+  FetchResultEntity,
+  CollectionQuery,
+  Query,
+  QueryWhere,
+} from './query/types';
 
 const DEFAULT_CACHE_DISABLED = true;
 

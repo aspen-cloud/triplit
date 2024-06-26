@@ -5,7 +5,7 @@ import {
 import MultiTupleStore, {
   ScopedMultiTupleOperator,
 } from './multi-tuple-store.js';
-import { QueryValue, ValueCursor } from './query.js';
+import { QueryValue, ValueCursor } from './query/types/collection-query.js';
 import { Timestamp } from './timestamp.js';
 import { TripleStoreTransaction } from './triple-store-transaction.js';
 import { KeyValuePair, MIN, MAX } from '@triplit/tuple-database';

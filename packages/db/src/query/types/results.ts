@@ -4,7 +4,7 @@ import {
   QueryResultCardinality,
   QuerySelectionValue,
   RelationSubquery,
-} from '../../query.js';
+} from './collection-query.js';
 import {
   Model,
   Models,

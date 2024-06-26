@@ -5,10 +5,13 @@ import {
   InvalidQueryCardinalityError,
   TriplitError,
 } from '../errors.js';
-import { CollectionQuery, QueryResultCardinality } from '../query.js';
 import { Models } from '../schema/types';
 import { TypeInterface } from './type.js';
-import { FetchResult } from '../query/types';
+import {
+  CollectionQuery,
+  FetchResult,
+  QueryResultCardinality,
+} from '../query/types';
 
 export type SubQuery<
   M extends Models<any, any>,

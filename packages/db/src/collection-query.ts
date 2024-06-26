@@ -1,16 +1,13 @@
+import { triplesToEntities, Entity, updateEntity } from './query.js';
 import {
   Query,
   FilterStatement,
   FilterGroup,
   SubQueryFilter,
   CollectionQuery,
-  triplesToEntities,
-  Entity,
-  updateEntity,
   QueryResultCardinality,
   QueryValue,
-  WhereFilter,
-} from './query.js';
+} from './query/types';
 import {
   createSchemaIterator,
   createSchemaTraverser,

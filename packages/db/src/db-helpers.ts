@@ -20,7 +20,7 @@ import {
   QueryValue,
   WhereFilter,
   RelationSubquery,
-} from './query.js';
+} from './query/types';
 import {
   getSchemaFromPath,
   schemaToTriples,

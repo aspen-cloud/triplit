@@ -7,11 +7,6 @@ import {
   CollectionRules,
   ModelFromModels,
 } from '../../db.js';
-import {
-  CollectionQuery,
-  QuerySelectionValue,
-  RelationSubquery,
-} from '../../query.js';
 import { Intersection } from '../../utility-types.js';
 import { Schema } from '../builder.js';
 import { ExtractBasePaths, ModelPaths, ShiftPath } from './paths.js';
@@ -21,7 +16,12 @@ import {
   IsPropertyOptional,
   IsPropertyRequired,
 } from './properties.js';
-import { QueryResult } from '../../query/types';
+import {
+  CollectionQuery,
+  QueryResult,
+  QuerySelectionValue,
+  RelationSubquery,
+} from '../../query/types';
 
 export type SchemaConfig = { id: ReturnType<typeof Schema.Id> } & Record<
   string,

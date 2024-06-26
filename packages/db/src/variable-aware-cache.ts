@@ -11,11 +11,8 @@ import {
   SystemVariables,
 } from './db.js';
 import { isValueVariable, mapFilterStatements } from './db-helpers.js';
-import {
-  CollectionQuery,
-  FilterStatement,
-  isFilterStatement,
-} from './query.js';
+import { isFilterStatement } from './query.js';
+import { CollectionQuery, FilterStatement } from './query/types';
 import { getSchemaFromPath } from './schema/schema.js';
 import { Models } from './schema/types';
 import * as TB from '@sinclair/typebox/value';

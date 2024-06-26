@@ -1,61 +1,17 @@
-import {
-  ModelPaths,
-  Models,
-  Path,
-  RelationAttributes,
-  SchemaPaths,
-} from './schema/types';
+import { Models } from './schema/types';
 import { Timestamp, timestampCompare } from './timestamp.js';
-import { CollectionNameFromModels, ModelFromModels } from './db.js';
-import { ExtractOperators, ExtractValueInputs } from './data-types/type.js';
-import { RecordType } from './data-types/record.js';
-import { EntityId, TripleRow } from './triple-store-utils.js';
+import { CollectionNameFromModels } from './db.js';
+import { TripleRow } from './triple-store-utils.js';
 import { encodeValue } from '@triplit/tuple-database';
-
-// Should be friendly types that we pass into queries
-// Not to be confused with the Value type that we store in the triple store
-export type QueryValue =
-  | number
-  | string
-  | boolean
-  | Date
-  | null
-  | number[]
-  | boolean[]
-  | string[];
-
-export type FilterStatement<
-  M extends Models<any, any> | undefined,
-  CN extends CollectionNameFromModels<M>,
-  K extends M extends Models<any, any>
-    ? SchemaPaths<M, CN>
-    : Path = M extends Models<any, any> ? SchemaPaths<M, CN> : Path
-> = [
-  K,
-  M extends Models<any, any>
-    ? ExtractOperators<ExtractTypeAtPath<ModelFromModels<M, CN>, K>>
-    : string,
-  M extends Models<any, any>
-    ? ExtractValueInputs<ExtractTypeAtPath<ModelFromModels<M, CN>, K>>
-    : QueryValue
-];
-
-type ExtractTypeAtPath<
-  M extends RecordType<any>,
-  P extends any // should be a dot notation path
-> = P extends `${infer K}.${infer Rest}` // if path is nested
-  ? K extends keyof M['properties'] // if key is a valid key
-    ? M['properties'][K] extends RecordType<any> // if value at key is a record type
-      ? ExtractTypeAtPath<
-          // @ts-ignore
-          M['properties'][K],
-          Rest
-        > // recurse
-      : never // if value at key is not a record type
-    : never // if key is not a valid key
-  : P extends keyof M['properties'] // if path is not nested
-  ? M['properties'][P] // return value at path
-  : never; // if path is not valid
+import {
+  AndFilterGroup,
+  FilterStatement,
+  OrFilterGroup,
+  QueryValue,
+  QueryWhere,
+  ValueCursor,
+  WhereFilter,
+} from './query/types';
 
 export function isFilterStatement(
   filter: WhereFilter<any, any>
@@ -67,86 +23,6 @@ export function isFilterStatement(
     typeof filter[1] === 'string'
   );
 }
-
-export type FilterGroup<
-  M extends Models<any, any> | undefined,
-  CN extends CollectionNameFromModels<M>
-> = {
-  mod: 'or' | 'and';
-  filters: WhereFilter<M, CN>[];
-};
-
-export type SubQueryFilter<
-  M extends Models<any, any> | undefined = any,
-  CN extends CollectionNameFromModels<M> = any
-> = {
-  exists: CollectionQuery<M, CN>;
-};
-
-export type WhereFilter<
-  M extends Models<any, any> | undefined,
-  CN extends CollectionNameFromModels<M>
-> = FilterStatement<M, CN> | FilterGroup<M, CN> | SubQueryFilter;
-
-export type QueryWhere<
-  M extends Models<any, any> | undefined,
-  CN extends CollectionNameFromModels<M>
-> = WhereFilter<M, CN>[];
-
-export type ValueCursor = [value: QueryValue, entityId: EntityId];
-
-export type QueryOrder<
-  M extends Models<any, any> | undefined,
-  CN extends CollectionNameFromModels<M>
-> = [
-  property: M extends Models<any, any> ? SchemaPaths<M, CN> : Path,
-  direction: 'ASC' | 'DESC'
-];
-
-export type QueryResultCardinality = 'one' | 'many';
-
-export type RelationSubquery<
-  M extends Models<any, any> | undefined,
-  CN extends CollectionNameFromModels<M>
-> = {
-  subquery: CollectionQuery<M, CN>;
-  cardinality: QueryResultCardinality;
-};
-
-export type QuerySelectionValue<
-  M extends Models<any, any> | undefined,
-  CN extends CollectionNameFromModels<M>
-> = M extends Models<any, any> ? ModelPaths<M, CN> : Path;
-
-export type CollectionQuery<
-  M extends Models<any, any> | undefined,
-  CN extends CollectionNameFromModels<M>,
-  Selection extends QuerySelectionValue<M, CN> = QuerySelectionValue<M, CN>,
-  Inclusions extends Record<string, RelationSubquery<M, any>> = Record<
-    string,
-    RelationSubquery<M, any>
-  >
-> = {
-  where?: QueryWhere<M, CN>;
-  select?: Selection[];
-  // | [string, CollectionQuery<M, any>]
-  order?: QueryOrder<M, CN>[];
-  limit?: number;
-  after?: [ValueCursor, boolean];
-  /**
-   * @deprecated define a where filter instead
-   */
-  entityId?: string; // Syntactic sugar for where("id", "=", entityId), should not be relied on in query engine
-  vars?: Record<string, any>;
-  collectionName: CN;
-  include?: Inclusions;
-};
-
-export type Query<
-  M extends Models<any, any> | undefined,
-  CN extends CollectionNameFromModels<M>,
-  Selection extends QuerySelectionValue<M, CN> = QuerySelectionValue<M, CN>
-> = Omit<CollectionQuery<M, CN, Selection>, 'collectionName'>;
 
 type TimestampedData =
   | [QueryValue, Timestamp]
@@ -427,14 +303,14 @@ function setRecordToArrayRecord(
 export function or<
   M extends Models<any, any> | undefined,
   CN extends CollectionNameFromModels<M>
->(where: QueryWhere<M, CN>) {
+>(where: QueryWhere<M, CN>): OrFilterGroup<M, CN> {
   return { mod: 'or' as const, filters: where };
 }
 
 export function and<
   M extends Models<any, any> | undefined,
   CN extends CollectionNameFromModels<M>
->(where: QueryWhere<M, CN>) {
+>(where: QueryWhere<M, CN>): AndFilterGroup<M, CN> {
   return { mod: 'and' as const, filters: where };
 }
 

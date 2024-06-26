@@ -1,15 +1,4 @@
 import { Models, RelationAttributes } from '../schema/types';
-import {
-  CollectionQuery,
-  FilterStatement,
-  Query,
-  QueryOrder,
-  QuerySelectionValue,
-  QueryValue,
-  QueryWhere,
-  ValueCursor,
-  RelationSubquery,
-} from '../query.js';
 import { CollectionNameFromModels, ModelFromModels } from '../db.js';
 import {
   AfterClauseWithNoOrderError,
@@ -26,6 +15,15 @@ import {
   AfterInput,
   IncludeSubquery,
   InclusionFromArgs,
+  CollectionQuery,
+  FilterStatement,
+  Query,
+  QueryOrder,
+  QuerySelectionValue,
+  QueryValue,
+  QueryWhere,
+  ValueCursor,
+  RelationSubquery,
 } from './types';
 
 export class QueryBuilder<

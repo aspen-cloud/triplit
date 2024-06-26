@@ -7,19 +7,19 @@ import {
 import { Operator } from '../data-types/base.js';
 import DB from '../db.js';
 import { InvalidFilterError } from '../errors.js';
-import {
-  CollectionQuery,
-  EntityPointer,
-  FilterStatement,
-  SubQueryFilter,
-  WhereFilter,
-} from '../query.js';
+import { EntityPointer } from '../query.js';
 import { getAttributeFromSchema } from '../schema/schema.js';
-import { Models } from '../schema/types/models.js';
+import { Models } from '../schema/types';
 import { Timestamp } from '../timestamp.js';
 import { TripleStoreApi } from '../triple-store.js';
 import { timestampedObjectToPlainObject } from '../utils.js';
 import { everyAsync, someAsync } from '../utils/async.js';
+import {
+  FilterStatement,
+  SubQueryFilter,
+  WhereFilter,
+  CollectionQuery,
+} from './types';
 
 /**
  * During query execution, determine if an entity satisfies a filter

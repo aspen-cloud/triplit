@@ -1,20 +1,20 @@
 import { CollectionNameFromModels, ModelFromModels } from '../../db.js';
 import {
+  Models,
+  Path,
+  RelationAttributes,
+  SchemaPaths,
+} from '../../schema/types';
+import {
   CollectionQuery,
+  CollectionQueryDefault,
   FilterStatement,
   QueryOrder,
   QueryWhere,
   RelationSubquery,
   ValueCursor,
   WhereFilter,
-} from '../../query.js';
-import {
-  Models,
-  Path,
-  RelationAttributes,
-  SchemaPaths,
-} from '../../schema/types';
-import { CollectionQueryDefault } from './collection-query.js';
+} from './collection-query.js';
 import { FetchResultEntity } from './results.js';
 
 /**

@@ -59,9 +59,7 @@ import {
   fetchResultToJS,
 } from './db-helpers.js';
 import {
-  CollectionQuery,
   Entity,
-  Query,
   constructEntity,
   updateEntity,
   triplesToEntities,
@@ -88,6 +86,8 @@ import {
   FetchResultEntityFromParts,
   FetchResult,
   FetchResultEntity,
+  CollectionQuery,
+  Query,
 } from './query/types';
 
 interface TransactionOptions<

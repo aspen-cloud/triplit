@@ -1,4 +1,4 @@
-import { QueryValue } from '../query.js';
+import { QueryValue } from '../query/types';
 import { Models } from '../schema/types';
 import { Timestamp } from '../timestamp.js';
 import { Operator } from './base.js';

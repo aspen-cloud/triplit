@@ -5,7 +5,6 @@ import {
   StorageScope,
 } from './multi-tuple-store.js';
 import { Clock } from './clocks/clock.js';
-import { ValueCursor } from './query.js';
 import { TripleStoreApi } from './triple-store.js';
 import { InvalidTripleStoreValueError } from './errors.js';
 import {

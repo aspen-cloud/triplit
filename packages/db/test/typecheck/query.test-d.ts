@@ -1,14 +1,13 @@
-import { expectTypeOf, test, describe, expect } from 'vitest';
-import DB, { ModelFromModels } from '../../src/db.js';
+import { expectTypeOf, test, describe } from 'vitest';
+import DB from '../../src/db.js';
 import { Models } from '../../src/schema/types';
 import { Schema as S } from '../../src/schema/builder.js';
 import {
-  CollectionQuery,
   QueryOrder,
   QueryWhere,
   ValueCursor,
   WhereFilter,
-} from '../../src/query.js';
+} from '../../src/query/types';
 import { DBTransaction } from '../../src/db-transaction.js';
 import {
   CollectionQueryDefault,

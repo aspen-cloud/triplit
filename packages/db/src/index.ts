@@ -40,15 +40,6 @@ export {
   compareCursors,
 } from './query.js';
 export { QUERY_INPUT_TRANSFORMERS } from './query/builder.js';
-// TS issue occurs if we dont export FilterGroup (i think due to an infered return type somewhere)
-export type {
-  Query,
-  FilterGroup,
-  CollectionQuery,
-  ValueCursor,
-  RelationSubquery,
-  QuerySelectionValue,
-} from './query.js';
 export {
   stripCollectionFromId,
   appendCollectionToId,

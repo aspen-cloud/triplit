@@ -1,7 +1,7 @@
 import { QueryType } from '../../data-types/query.js';
 import { RecordType } from '../../data-types/record.js';
 import { CollectionNameFromModels, ModelFromModels } from '../../db.js';
-import { CollectionQuery } from '../../query.js';
+import { CollectionQuery } from '../../query/types';
 import { PrefixedUnion } from '../../utility-types.js';
 import { Models, SelectModelFromModel } from './models.js';
 
