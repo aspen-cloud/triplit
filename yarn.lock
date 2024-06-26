@@ -7608,7 +7608,7 @@ __metadata:
     "@sinclair/typebox": "npm:^0.32.15"
     "@stryker-mutator/core": "npm:^7.3.0"
     "@stryker-mutator/vitest-runner": "npm:^7.3.0"
-    "@triplit/tuple-database": "npm:2.2.22"
+    "@triplit/tuple-database": "npm:2.2.23"
     "@triplit/types": "workspace:^"
     "@vitest/coverage-c8": "npm:^0.29.2"
     "@vitest/coverage-v8": "npm:^0.33.0"
@@ -7731,9 +7731,9 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@triplit/tuple-database@npm:2.2.22":
-  version: 2.2.22
-  resolution: "@triplit/tuple-database@npm:2.2.22"
+"@triplit/tuple-database@npm:2.2.23":
+  version: 2.2.23
+  resolution: "@triplit/tuple-database@npm:2.2.23"
   dependencies:
     elen: "npm:^1.0.10"
     fractional-indexing: "npm:^3.1.0"
@@ -7747,7 +7747,7 @@ __metadata:
   peerDependenciesMeta:
     react:
       optional: true
-  checksum: 10/5802e847d7f2d837157b9d23d5b2d2122fce0513c049776edd9775fad9156d3c4c11232a1c2777399d30e767daa186c573215f7b7dd5b9d5d6baf9d49d2ff5b9
+  checksum: 10/118586f88dceb5a8a295420159d5ee63715e6dc1fd2e8bd5f25d1523ec111ad653716bde3c40efd47881da5bb6748c7acaac4837948256759b4e9bce9ca0da7d
   languageName: node
   linkType: hard
 
