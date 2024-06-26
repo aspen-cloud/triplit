@@ -51,15 +51,25 @@
     "@types/ws": "^8.5.4",
     "better-sqlite3": "^8.3.0",
     "esbuild": "^0.19.3",
+    "level": "^8.0.1",
+    "lmdb": "^3.0.12",
     "tsx": "^3.12.10",
     "typescript": "^5.2.2"
   },
   "peerDependenciesMeta": {
     "better-sqlite3": {
       "optional": true
+    },
+    "level": {
+      "optional": true
+    },
+    "lmdb": {
+      "optional": true
     }
   },
   "peerDependencies": {
-    "better-sqlite3": "*"
+    "better-sqlite3": "*",
+    "level": "*",
+    "lmdb": "*"
   }
 }

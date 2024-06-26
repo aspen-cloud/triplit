@@ -1,8 +1,6 @@
 import WS, { WebSocketServer } from 'ws';
 import express from 'express';
-import { DB, DBConfig, DurableClock, TriplitError } from '@triplit/db';
-import { MemoryBTreeStorage as MemoryStorage } from '@triplit/db/storage/memory-btree';
-import { SQLiteTupleStorage as SqliteStorage } from '@triplit/db/storage/sqlite';
+import { DB, DBConfig, DurableClock, Storage, TriplitError } from '@triplit/db';
 import {
   MalformedMessagePayloadError,
   RateLimitExceededError,
@@ -21,17 +19,22 @@ import {
 import { parseAndValidateToken } from '@triplit/server-core/token';
 import { logger } from './logger.js';
 import { Route } from '@triplit/server-core/triplit-server';
-import path from 'path';
 import multer from 'multer';
 import * as Sentry from '@sentry/node';
 // @ts-ignore
 import pjson from '../package.json' assert { type: 'json' };
-import { createRequire } from 'node:module';
+import {
+  StoreKeys,
+  defaultArrayStorage,
+  defaultBTreeStorage,
+  defaultFileStorage,
+  defaultLMDBStorage,
+  defaultLevelDBStorage,
+  defaultMemoryStorage,
+  defaultSQLiteStorage,
+} from './storage.js';
 
-const require = createRequire(import.meta.url);
 const upload = multer();
-// ESM override for __dirname
-const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
 
 function parseClientMessage(
   message: WS.RawData
@@ -46,23 +49,8 @@ function parseClientMessage(
   }
 }
 
-// Set up database
-
-function setupSqliteStorage() {
-  const dbPath = process.env.LOCAL_DATABASE_URL || __dirname + '/app.db';
-  const sqlite = require('better-sqlite3');
-  const db = sqlite(dbPath);
-  db.exec(`
-    PRAGMA journal_mode = WAL;
-    PRAGMA synchronous = NORMAL;
-    PRAGMA temp_store = memory;
-    PRAGMA mmap_size = 30000000000;
-  `);
-  return new SqliteStorage(db);
-}
-
 export type ServerOptions = {
-  storage?: 'sqlite' | 'memory';
+  storage?: StoreKeys | (() => Storage);
   dbOptions?: DBConfig<any>;
   watchMode?: boolean;
   verboseLogs?: boolean;
@@ -83,9 +71,33 @@ function captureException(e: any) {
   }
 }
 
+function resolveStorageStringOption(storage: StoreKeys): Storage {
+  switch (storage) {
+    case 'file':
+      return defaultFileStorage();
+    case 'leveldb':
+      return defaultLevelDBStorage();
+    case 'lmdb':
+      return defaultLMDBStorage();
+    case 'memory':
+      return defaultMemoryStorage();
+    case 'memory-array':
+      return defaultBTreeStorage();
+    case 'memory-btree':
+      return defaultArrayStorage();
+    case 'sqlite':
+      return defaultSQLiteStorage();
+    default:
+      throw new TriplitError(`Invalid storage option: ${storage}`);
+  }
+}
+
 export function createServer(options?: ServerOptions) {
-  const dbSource =
-    options?.storage === 'sqlite' ? setupSqliteStorage() : new MemoryStorage();
+  const dbSource = !!options?.storage
+    ? typeof options.storage === 'string'
+      ? resolveStorageStringOption(options.storage)
+      : options.storage()
+    : undefined;
   if (options?.verboseLogs) logger.verbose = true;
   const triplitServers = new Map<string, TriplitServer>();
 

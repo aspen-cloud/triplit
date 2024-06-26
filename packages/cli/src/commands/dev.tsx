@@ -1,6 +1,10 @@
 import React from 'react';
 import { Box, Newline, Text } from 'ink';
-import { createServer as createDBServer } from '@triplit/server';
+import {
+  createServer as createDBServer,
+  durableStoreKeys,
+  storeKeys,
+} from '@triplit/server';
 import jwt from 'jsonwebtoken';
 import path from 'path';
 import fs from 'fs';
@@ -19,7 +23,7 @@ export default Command({
   middleware: [projectSchemaMiddleware],
   flags: {
     storage: Flag.Enum({
-      options: ['memory', 'sqlite'] as const,
+      options: storeKeys,
       char: 's',
       description: 'Database storage type',
     }),
@@ -57,22 +61,27 @@ export default Command({
     if (process.env.TRIPLIT_EXTERNAL_JWT_SECRET)
       process.env.EXTERNAL_JWT_SECRET = process.env.TRIPLIT_EXTERNAL_JWT_SECRET;
 
-    if (flags.storage === 'sqlite') {
-      try {
-        import.meta.resolve('better-sqlite3');
-      } catch (e) {
-        console.error(
-          'To use SQLite storage, you must install the better-sqlite3 package:'
-        );
-        console.error('npm install better-sqlite3');
-        process.exit(1);
+    // If we have durable storage, setup db path
+    if (durableStoreKeys.includes(flags.storage as any)) {
+      // Check dependenies as needed
+      switch (flags.storage as (typeof durableStoreKeys)[number]) {
+        case 'leveldb':
+          checkLevelDBDependency();
+        case 'lmdb':
+          checkLMDBDependency();
+        case 'sqlite':
+          checkSQLiteDependency();
+        default:
+          break;
       }
+
+      // Setup the database path
       const dataDir = getDataDir();
-      const sqlitePath = path.join(dataDir, 'sqlite', 'app.db');
-      if (!fs.existsSync(path.dirname(sqlitePath))) {
-        fs.mkdirSync(path.dirname(sqlitePath), { recursive: true });
+      const storagePath = path.join(dataDir, flags.storage, 'app.db');
+      if (!fs.existsSync(path.dirname(storagePath))) {
+        fs.mkdirSync(path.dirname(storagePath), { recursive: true });
       }
-      process.env.LOCAL_DATABASE_URL = sqlitePath;
+      process.env.LOCAL_DATABASE_URL = storagePath;
     }
 
     const serviceKey = jwt.sign(
@@ -260,3 +269,40 @@ export default Command({
     );
   },
 });
+
+function checkLevelDBDependency() {
+  try {
+    import.meta.resolve('level');
+  } catch (e) {
+    console.log(e);
+    console.error(
+      "To use LevelDB storage, you must install 'level' as a dev dependency:"
+    );
+    console.error('npm install level --save-dev');
+    process.exit(1);
+  }
+}
+
+function checkLMDBDependency() {
+  try {
+    import.meta.resolve('lmdb');
+  } catch (e) {
+    console.error(
+      "To use LMDB storage, you must install 'lmdb' as a dev dependency:"
+    );
+    console.error('npm install lmdb --save-dev');
+    process.exit(1);
+  }
+}
+
+function checkSQLiteDependency() {
+  try {
+    import.meta.resolve('better-sqlite3');
+  } catch (e) {
+    console.error(
+      "To use SQLite storage, you must install 'better-sqlite3' as a dev dependency:"
+    );
+    console.error('npm install better-sqlite3 --save-dev');
+    process.exit(1);
+  }
+}
