@@ -1,5 +1,12 @@
 # node-server
 
+## 0.3.52
+
+### Patch Changes
+
+- Updated dependencies [fddc883]
+  - @triplit/server@0.3.52
+
 ## 0.3.51
 
 ### Patch Changes

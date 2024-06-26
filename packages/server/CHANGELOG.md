@@ -1,5 +1,14 @@
 # @triplit/server
 
+## 0.3.52
+
+### Patch Changes
+
+- fddc883: Add shorthands for additional storage types and support a custom storage function in constructor
+- Updated dependencies [fddc883]
+  - @triplit/db@0.3.48
+  - @triplit/server-core@0.3.50
+
 ## 0.3.51
 
 ### Patch Changes

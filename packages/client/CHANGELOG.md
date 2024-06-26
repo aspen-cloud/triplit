@@ -1,5 +1,12 @@
 # @triplit/client
 
+## 0.3.63
+
+### Patch Changes
+
+- Updated dependencies [fddc883]
+  - @triplit/db@0.3.48
+
 ## 0.3.62
 
 ### Patch Changes
