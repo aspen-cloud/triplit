@@ -21,6 +21,7 @@ import {
   WhereFilter,
   RelationSubquery,
 } from './query/types';
+import { isSubQueryFilter, isFilterGroup, isFilterStatement } from './query.js';
 import {
   getSchemaFromPath,
   schemaToTriples,
@@ -106,19 +107,18 @@ export function replaceVariablesInFilterStatements<
   variables: Record<string, any>
 ): QueryWhere<M, CN> {
   return statements.map((filter) => {
-    if ('exists' in filter) return filter;
-    if (!(filter instanceof Array)) {
+    if (isFilterGroup(filter))
       return {
         ...filter,
         filters: replaceVariablesInFilterStatements(filter.filters, variables),
       };
+    if (isFilterStatement(filter)) {
+      const replacedValue = replaceVariable(filter[2], variables);
+      return [filter[0], filter[1], replacedValue];
     }
-    const replacedValue = replaceVariable(filter[2], variables);
-    return [filter[0], filter[1], replacedValue] as FilterStatement<M, CN>;
+    return filter;
   });
 }
-
-async function loadVariableValue(executionContext: FetchExecutionContext) {}
 
 export function replaceVariable(
   target: any,
@@ -157,7 +157,7 @@ export function* filterStatementIterator<
   statements: QueryWhere<M, CN>
 ): Generator<FilterStatement<M, CN> | SubQueryFilter> {
   for (const statement of statements) {
-    if (!(statement instanceof Array) && 'filters' in statement) {
+    if (isFilterGroup(statement)) {
       yield* filterStatementIterator(statement.filters);
     } else {
       yield statement;
@@ -188,8 +188,8 @@ export function mapFilterStatements<
   ) => SubQueryFilter | FilterStatement<M, CN>
 ): QueryWhere<M, CN> {
   return statements.map((statement) => {
-    if ('exists' in statement) return statement;
-    if (!(statement instanceof Array) && 'filters' in statement) {
+    if (isSubQueryFilter(statement)) return statement;
+    if (isFilterGroup(statement)) {
       statement.filters = mapFilterStatements(statement.filters, mapFunction);
     }
     return mapFunction(statement as FilterStatement<M, CN>);
@@ -204,12 +204,12 @@ export function everyFilterStatement<
   everyFunction: (statement: FilterStatement<M, CN>) => boolean
 ): boolean {
   return statements.every((filter) => {
-    if (!(filter instanceof Array) && 'filters' in filter) {
+    // TODO should this traverse sub-queries?
+    if (isSubQueryFilter(filter)) return true;
+    if (isFilterGroup(filter)) {
       return everyFilterStatement(filter.filters, everyFunction);
     }
-    // TODO should this traverse sub-queries?
-    if ('exists' in filter) return true;
-    return everyFunction(filter);
+    return everyFunction(filter as FilterStatement<M, CN>);
   });
 }
 
@@ -564,9 +564,9 @@ function whereFilterValidator<M extends Models<any, any> | undefined>(
     // TODO: add helper function to determine when we should(n't) schema check (ie schemaless and _metadata)
     if (!schema) return true;
     if (collectionName === '_metadata') return true;
-    if ('exists' in statement) return true;
+    if (isSubQueryFilter(statement)) return true;
     // I believe these are handled as we expand statements in the mapFilterStatements function
-    if ('mod' in statement) return true;
+    if (isFilterGroup(statement)) return true;
 
     const [prop, op, val] = statement;
     const { valid, path, reason } = validateIdentifier(

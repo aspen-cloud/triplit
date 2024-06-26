@@ -5,23 +5,40 @@ import { TripleRow } from './triple-store-utils.js';
 import { encodeValue } from '@triplit/tuple-database';
 import {
   AndFilterGroup,
+  FilterGroup,
   FilterStatement,
   OrFilterGroup,
   QueryValue,
   QueryWhere,
+  SubQueryFilter,
   ValueCursor,
   WhereFilter,
 } from './query/types';
 
-export function isFilterStatement(
-  filter: WhereFilter<any, any>
-): filter is FilterStatement<any, any> {
+export function isFilterStatement<
+  M extends Models<any, any> | undefined,
+  CN extends CollectionNameFromModels<M>
+>(filter: WhereFilter<M, CN>): filter is FilterStatement<M, CN> {
   return (
     filter instanceof Array &&
     filter.length === 3 &&
     typeof filter[0] === 'string' &&
     typeof filter[1] === 'string'
   );
+}
+
+export function isFilterGroup<
+  M extends Models<any, any> | undefined,
+  CN extends CollectionNameFromModels<M>
+>(filter: WhereFilter<M, CN>): filter is FilterGroup<M, CN> {
+  return filter instanceof Object && 'mod' in filter;
+}
+
+export function isSubQueryFilter<
+  M extends Models<any, any> | undefined,
+  CN extends CollectionNameFromModels<M>
+>(filter: WhereFilter<M, CN>): filter is SubQueryFilter<M, CN> {
+  return filter instanceof Object && 'exists' in filter;
 }
 
 type TimestampedData =

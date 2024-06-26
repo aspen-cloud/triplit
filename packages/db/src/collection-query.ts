@@ -7,7 +7,9 @@ import {
   CollectionQuery,
   QueryResultCardinality,
   QueryValue,
+  WhereFilter,
 } from './query/types';
+import { isSubQueryFilter, isFilterGroup, isFilterStatement } from './query.js';
 import {
   createSchemaIterator,
   createSchemaTraverser,
@@ -89,10 +91,9 @@ type TimestampedFetchResultEntity<C extends CollectionQuery<any, any>> =
 function getIdFilterFromQuery(query: CollectionQuery<any, any>): string | null {
   const { where, collectionName } = query;
 
-  const idEqualityFilters = (where ?? []).filter(
-    (filter) =>
-      filter instanceof Array && filter[0] === 'id' && filter[1] === '='
-  ) as FilterStatement<any, any>[];
+  const idEqualityFilters = (where ?? [])
+    .filter(isFilterStatement)
+    .filter((filter) => filter[0] === 'id' && filter[1] === '=');
 
   if (idEqualityFilters.length > 0) {
     return appendCollectionToId(
@@ -307,7 +308,8 @@ function findRangeFilter<
   if (!where) return -1;
   for (let i = after + 1; i < where.length; i++) {
     const filter = where[i];
-    if ('exists' in filter || 'mod' in filter) continue;
+    if (isSubQueryFilter(filter)) continue;
+    if (isFilterGroup(filter)) continue;
     const [filterPath, op, value] = filter;
     if (filterPath === path) {
       if (type === 'gt' && GT_OPS.includes(op)) return i;
@@ -347,7 +349,8 @@ function findCandidateFilter<
   if (where) {
     for (let i = 0; i < where.length; i++) {
       const filter = where[i];
-      if ('exists' in filter || 'mod' in filter) continue;
+      if (isSubQueryFilter(filter)) continue;
+      if (isFilterGroup(filter)) continue;
       const [path, op, value] = filter;
       if (EQUALITY_OPS.includes(op)) {
         return [
@@ -663,8 +666,8 @@ export async function fetchDeltaTriples<
         continue;
       }
 
-      const subQueries = (queryPermutation.where ?? []).filter(
-        (filter) => 'exists' in filter
+      const subQueries = (queryPermutation.where ?? []).filter((filter) =>
+        isSubQueryFilter(filter)
       ) as SubQueryFilter<M>[];
       let matchesBefore = matchesSimpleFiltersBefore;
       if (matchesSimpleFiltersBefore && subQueries.length > 0) {
@@ -790,13 +793,12 @@ function queryChainToQuery<
       ...first,
       where: [...(first.where ?? []), ...additionalFilters],
     };
-  const refVariableFilters = (first.where ?? []).filter(
-    (filter) => filter instanceof Array && isValueReferentialVariable(filter[2])
-  ) as FilterStatement<any, any>[];
-  const nonRefVariableFilters = (first.where ?? []).filter(
-    (filter) =>
-      !(filter instanceof Array && isValueReferentialVariable(filter[2]))
-  ) as FilterStatement<any, any>[];
+  const refVariableFilters = (first.where ?? [])
+    .filter(isFilterStatement)
+    .filter((filter) => isValueReferentialVariable(filter[2]));
+  const nonRefVariableFilters = (first.where ?? [])
+    .filter(isFilterStatement)
+    .filter((filter) => !isValueReferentialVariable(filter[2]));
   const next = queryChainToQuery(
     rest,
     refVariableFilters.map(reverseRelationFilter)
@@ -818,8 +820,8 @@ function* generateQueryChains<
   Q extends CollectionQuery<M, any>
 >(query: Q, prefix: Q[] = []): Generator<Q[]> {
   yield [...prefix, query];
-  const subQueryFilters = (query.where ?? []).filter(
-    (filter) => 'exists' in filter
+  const subQueryFilters = (query.where ?? []).filter((filter) =>
+    isSubQueryFilter(filter)
   ) as SubQueryFilter<M>[];
   const subQueryInclusions = Object.values(query.include ?? {});
   const subQueries = [
@@ -831,7 +833,7 @@ function* generateQueryChains<
     const queryWithoutSubQuery = {
       ...query,
       where: (query.where ?? []).filter(
-        (f) => !('exists' in f) || f.exists !== subQuery
+        (f) => !isSubQueryFilter(f) || f.exists !== subQuery
       ),
     };
     yield* generateQueryChains(subQuery as Q, [
@@ -1399,20 +1401,15 @@ export function doesEntityObjMatchBasicWhere<
   Q extends CollectionQuery<any, any>
 >(entityObj: any, where: Q['where'], schema?: CollectionQuerySchema<Q>) {
   if (!where) return true;
-  const basicStatements = where.filter(
-    (statement): statement is FilterStatement<any, any> =>
-      statement instanceof Array
-  );
+  const basicStatements = where.filter(isFilterStatement);
 
-  const orStatements = where.filter(
-    (statement): statement is FilterGroup<any, any> =>
-      'mod' in statement && statement.mod === 'or'
-  );
+  const orStatements = where
+    .filter(isFilterGroup)
+    .filter((f) => f.mod === 'or');
 
-  const andStatements = where.filter(
-    (statement): statement is FilterGroup<any, any> =>
-      'mod' in statement && statement.mod === 'and'
-  );
+  const andStatements = where
+    .filter(isFilterGroup)
+    .filter((f) => f.mod === 'and');
 
   const matchesBasicFilters = entitySatisfiesAllFilters(
     entityObj,
@@ -1522,7 +1519,9 @@ export function subscribeResultsAndTriples<
           // Handle queries with nested queries as a special case for now
           if (
             (where &&
-              someFilterStatements(where, (filter) => 'exists' in filter)) ||
+              someFilterStatements(where, (filter) =>
+                isSubQueryFilter(filter)
+              )) ||
             (include && Object.keys(include).length > 0) ||
             (order &&
               order.some(

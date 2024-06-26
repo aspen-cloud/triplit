@@ -7,7 +7,7 @@ import {
 import { Operator } from '../data-types/base.js';
 import DB from '../db.js';
 import { InvalidFilterError } from '../errors.js';
-import { EntityPointer } from '../query.js';
+import { EntityPointer, isFilterGroup, isSubQueryFilter } from '../query.js';
 import { getAttributeFromSchema } from '../schema/schema.js';
 import { Models } from '../schema/types';
 import { Timestamp } from '../timestamp.js';
@@ -36,7 +36,7 @@ export async function satisfiesFilter<
   pipelineItem: QueryPipelineData,
   filter: WhereFilter<M, Q['collectionName']>
 ): Promise<boolean> {
-  if ('mod' in filter) {
+  if (isFilterGroup(filter)) {
     const { mod, filters } = filter;
     if (mod === 'and') {
       return await everyAsync(filters, (f) =>
@@ -65,7 +65,8 @@ export async function satisfiesFilter<
       );
     }
     return false;
-  } else if ('exists' in filter) {
+  }
+  if (isSubQueryFilter(filter)) {
     return await satisfiesRelationalFilter(
       db,
       tx,
@@ -76,7 +77,12 @@ export async function satisfiesFilter<
       filter
     );
   }
-  return satisfiesFilterStatement(query, options, pipelineItem, filter);
+  return satisfiesFilterStatement(
+    query,
+    options,
+    pipelineItem,
+    filter as FilterStatement<M, any>
+  );
 }
 
 async function satisfiesRelationalFilter<
@@ -268,10 +274,10 @@ function ilike(text: string, pattern: string): boolean {
 function determineFilterType(
   filter: WhereFilter<any, any>
 ): 'basic' | 'relational' {
-  if ('exists' in filter) {
+  if (isSubQueryFilter(filter)) {
     return 'relational';
   }
-  if ('mod' in filter) {
+  if (isFilterGroup(filter)) {
     const { filters } = filter;
     const groupingTypes = filters.map((f) => determineFilterType(f));
     if (groupingTypes.includes('relational')) {

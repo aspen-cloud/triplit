@@ -40,10 +40,7 @@ export class VariableAwareCache<Schema extends Models<any, any> | undefined> {
   >(query: Q, model?: ModelFromModels<M, CN> | undefined) {
     // if (!model) return false;
     if (query.limit !== undefined) return false;
-    if (
-      query.where &&
-      query.where.some((f) => !(f instanceof Array) && !('exists' in f))
-    )
+    if (query.where && query.where.some((f) => !isFilterStatement(f)))
       return false;
 
     if (query.include && Object.keys(query.include).length > 0) return false;
