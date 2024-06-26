@@ -10,11 +10,18 @@ You have several options for running the server:
 
 - A local [development server](/local-development)
 - Use [Docker](#docker) and a cloud provider that supports container deployments
+- Use a [one-click deploy](#one-click-deploy) to a cloud provider that is integrated with Triplit.
 - Build [a custom server](#building-a-custom-server) and use a cloud provider that supports Git-based deploys
 
 ## Docker
 
 Each release of the server is [published as a Docker image](https://hub.docker.com/r/aspencloud/triplit-server/tags). You can deploy the server to a cloud provider like [fly.io](https://fly.io/docs/languages-and-frameworks/dockerfile/), [DigitalOcean](https://docs.digitalocean.com/products/app-platform/how-to/deploy-from-container-images/), or AWS. You'll also want to setup a volume to persist the database.
+
+## One-click deploy
+
+Triplit is integrated with [Railway](https://railway.app/), a cloud provider that supports one-click deploys. Read about how to deploy a Triplit server using Railway in our [Triplit Cloud guide](/triplit-cloud/self-hosted-deployments).
+
+We plan on adding support for more cloud providers in the future. If you have a favorite cloud provider that you'd like to see integrated with Triplit, let us know by [joining our Discord](https://discord.gg/q89sGWHqQ5).
 
 ## Building a custom server
 
@@ -65,7 +72,7 @@ You can now deploy the server to a cloud provider that supports Git deploys, lik
 
 ## Secrets
 
-There are a few secrets that you need to provide to the server to enable certain features.
+There are a few secrets that you need to provide to the server to enable certain features. **If you are planning on using the Triplit Dashboard, you will need to set `PROJECT_ID` and `JWT_SECRET` to specific values associated with your project.** Read the [Triplit Cloud guide](/triplit-cloud/self-hosted-deployments#configuration) for more information.
 
 ### `PROJECT_ID`
 
