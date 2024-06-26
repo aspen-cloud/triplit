@@ -11,6 +11,7 @@ import {
   InvalidWhereClauseError,
   RelationDoesNotExistError,
   IncludedNonRelationError,
+  InvalidFilterError,
 } from './errors.js';
 import {
   QueryWhere,
@@ -20,8 +21,15 @@ import {
   QueryValue,
   WhereFilter,
   RelationSubquery,
+  RelationshipExistsFilter,
 } from './query/types';
-import { isSubQueryFilter, isFilterGroup, isFilterStatement } from './query.js';
+import {
+  isSubQueryFilter,
+  isFilterGroup,
+  isFilterStatement,
+  isExistsFilter,
+  exists,
+} from './query.js';
 import {
   getSchemaFromPath,
   schemaToTriples,
@@ -155,7 +163,9 @@ export function* filterStatementIterator<
   CN extends CollectionNameFromModels<M>
 >(
   statements: QueryWhere<M, CN>
-): Generator<FilterStatement<M, CN> | SubQueryFilter> {
+): Generator<
+  FilterStatement<M, CN> | SubQueryFilter | RelationshipExistsFilter<M, CN>
+> {
   for (const statement of statements) {
     if (isFilterGroup(statement)) {
       yield* filterStatementIterator(statement.filters);
@@ -170,7 +180,12 @@ export function someFilterStatements<
   CN extends CollectionNameFromModels<M>
 >(
   statements: QueryWhere<M, CN>,
-  someFunction: (statement: SubQueryFilter | FilterStatement<M, CN>) => boolean
+  someFunction: (
+    statement:
+      | SubQueryFilter
+      | FilterStatement<M, CN>
+      | RelationshipExistsFilter<M, CN>
+  ) => boolean
 ): boolean {
   for (const statement of filterStatementIterator(statements)) {
     if (someFunction(statement)) return true;
@@ -455,6 +470,48 @@ export function prepareQuery<
     (statement) => {
       // Validate filter
       whereValidator(statement);
+      // Turn exists filter into a subquery
+      if (isExistsFilter(statement)) {
+        const { relationship, query } = statement;
+        if (!schema)
+          throw new InvalidFilterError(
+            'A schema is required to execute an exists filter'
+          );
+
+        const relationshipPath = relationship.split('.');
+        const [first, ...rest] = relationshipPath;
+        const isPropertyNested = rest.length > 0;
+        const attributeType = getAttributeFromSchema(
+          [first],
+          schema,
+          fetchQuery.collectionName
+        );
+        if (!attributeType)
+          throw new InvalidFilterError(
+            `Could not find property '${relationship}' in the schema`
+          );
+
+        if (attributeType.type !== 'query')
+          throw new InvalidFilterError(
+            'Cannot execute an exists filter on a non-relation property'
+          );
+
+        const subquery = { ...attributeType.query };
+
+        // If property is nested, create a new exists filter for the subquery
+        const filterToAdd = isPropertyNested
+          ? [exists(rest.join('.'), query)]
+          : query?.where;
+
+        subquery.where = [
+          ...(attributeType.query.where ?? []),
+          ...(filterToAdd ?? []),
+        ];
+
+        return {
+          exists: prepareQuery(subquery, schema, options),
+        };
+      }
       if (!Array.isArray(statement)) return statement;
 
       // Expand subquery statements
@@ -565,6 +622,7 @@ function whereFilterValidator<M extends Models<any, any> | undefined>(
     if (!schema) return true;
     if (collectionName === '_metadata') return true;
     if (isSubQueryFilter(statement)) return true;
+    if (isExistsFilter(statement)) return true;
     // I believe these are handled as we expand statements in the mapFilterStatements function
     if (isFilterGroup(statement)) return true;
 

@@ -1,13 +1,16 @@
-import { triplesToEntities, Entity, updateEntity } from './query.js';
+import {
+  triplesToEntities,
+  Entity,
+  updateEntity,
+  isExistsFilter,
+} from './query.js';
 import {
   Query,
   FilterStatement,
-  FilterGroup,
   SubQueryFilter,
   CollectionQuery,
   QueryResultCardinality,
   QueryValue,
-  WhereFilter,
 } from './query/types';
 import { isSubQueryFilter, isFilterGroup, isFilterStatement } from './query.js';
 import {
@@ -310,6 +313,7 @@ function findRangeFilter<
     const filter = where[i];
     if (isSubQueryFilter(filter)) continue;
     if (isFilterGroup(filter)) continue;
+    if (isExistsFilter(filter)) continue;
     const [filterPath, op, value] = filter;
     if (filterPath === path) {
       if (type === 'gt' && GT_OPS.includes(op)) return i;
@@ -351,6 +355,7 @@ function findCandidateFilter<
       const filter = where[i];
       if (isSubQueryFilter(filter)) continue;
       if (isFilterGroup(filter)) continue;
+      if (isExistsFilter(filter)) continue;
       const [path, op, value] = filter;
       if (EQUALITY_OPS.includes(op)) {
         return [

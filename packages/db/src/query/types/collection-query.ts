@@ -1,7 +1,14 @@
-import { RecordType } from '../../data-types/record.js';
 import { ExtractOperators, ExtractValueInputs } from '../../data-types/type.js';
 import { CollectionNameFromModels, ModelFromModels } from '../../db.js';
-import { ModelPaths, Models, Path, SchemaPaths } from '../../schema/types';
+import {
+  ExtractTypeFromRecord,
+  ModelPaths,
+  Models,
+  Path,
+  RelationPaths,
+  RelationshipCollectionName,
+  SchemaPaths,
+} from '../../schema/types';
 import { EntityId } from '../../triple-store-utils.js';
 
 /**
@@ -136,10 +143,15 @@ export type QueryWhere<
 /**
  * A single filter, which may have various structures.
  */
+// I've done this with ExistsFilter, but adding a 'type' property to each type for narrowing would be helpful. Should still support old props for backwards compatibility.
 export type WhereFilter<
   M extends Models<any, any> | undefined,
   CN extends CollectionNameFromModels<M>
-> = FilterStatement<M, CN> | FilterGroup<M, CN> | SubQueryFilter<M, CN>;
+> =
+  | FilterStatement<M, CN>
+  | FilterGroup<M, CN>
+  | SubQueryFilter<M, CN>
+  | RelationshipExistsFilter<M, CN>;
 
 /**
  * A single filter statement of the shape [path, operator, value].
@@ -153,10 +165,10 @@ export type FilterStatement<
 > = [
   K,
   M extends Models<any, any>
-    ? ExtractOperators<ExtractTypeAtPath<ModelFromModels<M, CN>, K>>
+    ? ExtractOperators<ExtractTypeFromRecord<ModelFromModels<M, CN>, M, K>>
     : string,
   M extends Models<any, any>
-    ? ExtractValueInputs<ExtractTypeAtPath<ModelFromModels<M, CN>, K>>
+    ? ExtractValueInputs<ExtractTypeFromRecord<ModelFromModels<M, CN>, M, K>>
     : QueryValue
 ];
 
@@ -176,7 +188,7 @@ export type AndFilterGroup<
   CN extends CollectionNameFromModels<M>
 > = {
   mod: 'and';
-  filters: WhereFilter<M, CN>[];
+  filters: QueryWhere<M, CN>;
 };
 
 /**
@@ -187,7 +199,7 @@ export type OrFilterGroup<
   CN extends CollectionNameFromModels<M>
 > = {
   mod: 'or';
-  filters: WhereFilter<M, CN>[];
+  filters: QueryWhere<M, CN>;
 };
 
 /**
@@ -198,6 +210,26 @@ export type SubQueryFilter<
   CN extends CollectionNameFromModels<M> = any
 > = {
   exists: CollectionQuery<M, CN>;
+};
+
+/**
+ * An exists filter that will check if a relationship in the schema returns any results.
+ */
+export type RelationshipExistsFilter<
+  M extends Models<any, any> | undefined,
+  CN extends CollectionNameFromModels<M>,
+  P extends M extends Models<any, any>
+    ? RelationPaths<ModelFromModels<M, CN>, M>
+    : Path = M extends Models<any, any>
+    ? RelationPaths<ModelFromModels<M, CN>, M>
+    : Path
+> = {
+  type: 'relationshipExists';
+  relationship: P;
+  query?: Pick<
+    CollectionQuery<M, RelationshipCollectionName<M, CN, P>>,
+    'where'
+  >;
 };
 
 // ====== Order Types ======
@@ -222,24 +254,3 @@ export type OrderStatement<
 
 // ====== Pagination Types ======
 export type ValueCursor = [value: QueryValue, entityId: EntityId];
-
-// === Utilities ===
-/**
- * Gets the Triplit data type at a path
- */
-type ExtractTypeAtPath<
-  M extends RecordType<any>,
-  P extends any // should be a dot notation path
-> = P extends `${infer K}.${infer Rest}` // if path is nested
-  ? K extends keyof M['properties'] // if key is a valid key
-    ? M['properties'][K] extends RecordType<any> // if value at key is a record type
-      ? ExtractTypeAtPath<
-          // @ts-ignore
-          M['properties'][K],
-          Rest
-        > // recurse
-      : never // if value at key is not a record type
-    : never // if key is not a valid key
-  : P extends keyof M['properties'] // if path is not nested
-  ? M['properties'][P] // return value at path
-  : never; // if path is not valid

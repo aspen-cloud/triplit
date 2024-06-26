@@ -1,15 +1,22 @@
-import { Models } from './schema/types';
+import {
+  Models,
+  Path,
+  RelationPaths,
+  RelationshipCollectionName,
+} from './schema/types';
 import { Timestamp, timestampCompare } from './timestamp.js';
-import { CollectionNameFromModels } from './db.js';
+import { CollectionNameFromModels, ModelFromModels } from './db.js';
 import { TripleRow } from './triple-store-utils.js';
 import { encodeValue } from '@triplit/tuple-database';
 import {
   AndFilterGroup,
+  CollectionQuery,
   FilterGroup,
   FilterStatement,
   OrFilterGroup,
   QueryValue,
   QueryWhere,
+  RelationshipExistsFilter,
   SubQueryFilter,
   ValueCursor,
   WhereFilter,
@@ -39,6 +46,17 @@ export function isSubQueryFilter<
   CN extends CollectionNameFromModels<M>
 >(filter: WhereFilter<M, CN>): filter is SubQueryFilter<M, CN> {
   return filter instanceof Object && 'exists' in filter;
+}
+
+export function isExistsFilter<
+  M extends Models<any, any> | undefined,
+  CN extends CollectionNameFromModels<M>
+>(filter: WhereFilter<M, CN>): filter is RelationshipExistsFilter<M, CN> {
+  return (
+    filter instanceof Object &&
+    'type' in filter &&
+    filter['type'] === 'relationshipExists'
+  );
 }
 
 type TimestampedData =
@@ -329,6 +347,24 @@ export function and<
   CN extends CollectionNameFromModels<M>
 >(where: QueryWhere<M, CN>): AndFilterGroup<M, CN> {
   return { mod: 'and' as const, filters: where };
+}
+
+export function exists<
+  M extends Models<any, any> | undefined,
+  CN extends CollectionNameFromModels<M>,
+  P extends M extends Models<any, any>
+    ? RelationPaths<ModelFromModels<M, CN>, M>
+    : Path = M extends Models<any, any>
+    ? RelationPaths<ModelFromModels<M, CN>, M>
+    : Path
+>(
+  relationship: P,
+  query?: Pick<
+    CollectionQuery<M, RelationshipCollectionName<M, CN, P>>,
+    'where'
+  >
+): RelationshipExistsFilter<M, CN, P> {
+  return { type: 'relationshipExists', relationship, query };
 }
 
 export function compareCursors(

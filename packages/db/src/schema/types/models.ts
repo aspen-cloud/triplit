@@ -184,9 +184,13 @@ type ExtractRelationSubqueryType<
   >,
   Subquery['cardinality']
 >;
+
 /**
  * A type matching the properties of a model that are relations
  */
+// TODO: use <M, CN> pattern
+// TODO: move to paths.ts?
+// TODO: possibly make recursive / add depth
 export type RelationAttributes<M extends Model<any> | undefined> =
   M extends Model<any>
     ? {
