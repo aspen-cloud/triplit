@@ -50,7 +50,7 @@ function parseClientMessage(
 }
 
 export type ServerOptions = {
-  storage?: StoreKeys | (() => Storage);
+  storage?: StoreKeys | Storage | (() => Storage);
   dbOptions?: DBConfig<any>;
   watchMode?: boolean;
   verboseLogs?: boolean;
@@ -96,7 +96,9 @@ export function createServer(options?: ServerOptions) {
   const dbSource = !!options?.storage
     ? typeof options.storage === 'string'
       ? resolveStorageStringOption(options.storage)
-      : options.storage()
+      : typeof options.storage === 'function'
+      ? options.storage()
+      : options.storage
     : undefined;
   if (options?.verboseLogs) logger.verbose = true;
   const triplitServers = new Map<string, TriplitServer>();
