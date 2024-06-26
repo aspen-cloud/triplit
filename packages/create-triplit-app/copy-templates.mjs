@@ -13,30 +13,19 @@ async function copyTemplates() {
   await remove(DEST_DIR);
   try {
     for (const template of TEMPLATE_NAMES) {
-      await copy(
-        resolve(pwd, SOURCE_DIR, template),
-        resolve(pwd, DEST_DIR, template),
-        {
-          filter: (src, _dest) => {
-            return !src.includes('node_modules') && !src.endsWith('.env');
-          },
-        }
-      );
-      // await writeNpmIgnoreFile(template);
+      const srcPath = resolve(pwd, SOURCE_DIR, template);
+      const destPath = resolve(pwd, DEST_DIR, template);
+      await copy(srcPath, destPath, {
+        filter: (src, _dest) => {
+          return !src.includes('node_modules') && !src.endsWith('.env');
+        },
+      });
       console.log(`Copied ${template} to ${DEST_DIR}`);
+      await move(destPath + '/.gitignore', destPath + '/.gitignore.example', {
+        overwrite: true,
+      });
     }
     // rename the .gitignore files in the destination directory to .gitignore.template
-    for (const template of TEMPLATE_NAMES) {
-      const gitIgnorePath = resolve(pwd, DEST_DIR, template, '.gitignore');
-      const gitIgnoreTemplatePath = resolve(
-        pwd,
-        DEST_DIR,
-        template,
-        '.gitignore.example'
-      );
-      await move(gitIgnorePath, gitIgnoreTemplatePath, { overwrite: true });
-      console.log(`Renamed .gitignore to .gitignore.example in ${template}`);
-    }
 
     console.log('Templates copied successfully!');
   } catch (error) {
