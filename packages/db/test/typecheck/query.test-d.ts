@@ -3,6 +3,7 @@ import DB from '../../src/db.js';
 import { Models } from '../../src/schema/types';
 import { Schema as S } from '../../src/schema/builder.js';
 import {
+  OrderStatement,
   QueryOrder,
   QueryWhere,
   ValueCursor,
@@ -730,8 +731,8 @@ describe('query builder', () => {
           | 'attr1.inner2.inner2A'
           | 'attr2'
           | 'relationById.id'
+          | OrderStatement<(typeof schema)['collections'], 'test'>
           | QueryOrder<(typeof schema)['collections'], 'test'>
-          | QueryOrder<(typeof schema)['collections'], 'test'>[]
         >();
     }
     {
@@ -741,8 +742,8 @@ describe('query builder', () => {
         .parameter(0)
         .toEqualTypeOf<
           | string
+          | OrderStatement<undefined, 'test'>
           | QueryOrder<undefined, 'test'>
-          | QueryOrder<undefined, 'test'>[]
         >();
     }
   });

@@ -28,7 +28,7 @@ export type CollectionQuery<
   where?: QueryWhere<M, CN>;
   select?: Selection[];
   // | [string, CollectionQuery<M, any>]
-  order?: QueryOrder<M, CN>[];
+  order?: QueryOrder<M, CN>;
   limit?: number;
   after?: [ValueCursor, boolean];
   /**
@@ -204,8 +204,15 @@ export type SubQueryFilter<
 /**
  * A query order, which is a collection of many orders.
  */
-// TODO: rename to mirror QueryWhere (should be multiple statements)
 export type QueryOrder<
+  M extends Models<any, any> | undefined,
+  CN extends CollectionNameFromModels<M>
+> = OrderStatement<M, CN>[];
+
+/**
+ * A single order statement of the shape [path, direction].
+ */
+export type OrderStatement<
   M extends Models<any, any> | undefined,
   CN extends CollectionNameFromModels<M>
 > = [

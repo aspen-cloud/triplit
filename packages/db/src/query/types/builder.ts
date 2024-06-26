@@ -9,6 +9,7 @@ import {
   CollectionQuery,
   CollectionQueryDefault,
   FilterStatement,
+  OrderStatement,
   QueryOrder,
   QueryWhere,
   RelationSubquery,
@@ -50,7 +51,7 @@ export type FilterInput<
 export type OrderInput<
   M extends Models<any, any> | undefined,
   CN extends CollectionNameFromModels<M>
-> = QueryOrder<M, CN> | QueryOrder<M, CN>[] | [QueryOrder<M, CN>[]];
+> = OrderStatement<M, CN> | [OrderStatement<M, CN>] | [QueryOrder<M, CN>];
 
 /**
  * Input for builder after() clauses

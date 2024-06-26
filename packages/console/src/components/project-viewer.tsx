@@ -1,6 +1,6 @@
 import '../../../ui/globals.css';
 
-import { Schema } from '@triplit/db';
+import { OrderStatement, Schema, QueryWhere } from '@triplit/db';
 import { TriplitClient } from '@triplit/client';
 import { useCallback, useEffect, useMemo } from 'react';
 import { CaretDown, GridFour, Selection } from '@phosphor-icons/react';
@@ -14,7 +14,6 @@ import { useLoaderData, redirect, useSearchParams } from 'react-router-dom';
 import { consoleClient } from 'triplit/client.js';
 import { DEFAULT_HOSTNAME, initializeFromUrl } from 'src/utils/project.js';
 import { ModeToggle } from '@triplit/ui';
-import { QueryOrder, QueryWhere } from '@triplit/db/src/query.js';
 import { createCollection } from 'src/utils/schema.js';
 import { useToast } from 'src/hooks/useToast.js';
 import { Toaster } from './toaster.js';
@@ -54,7 +53,7 @@ export async function loader({ params }: { params: { projectId?: string } }) {
 export type ConsoleQuery = {
   collection?: string;
   where: QueryWhere<any, any>;
-  order: QueryOrder<any, any>;
+  order: OrderStatement<any, any>;
 };
 
 export type SetConsoleQuery = (

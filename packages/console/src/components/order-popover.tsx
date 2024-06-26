@@ -8,15 +8,14 @@ import {
   Button,
 } from '@triplit/ui';
 import { useState } from 'react';
-import { QueryOrder } from '../../../db/src/query';
-import { CollectionDefinition } from '@triplit/db';
+import { CollectionDefinition, OrderStatement } from '@triplit/db';
 
 type OrderPopoverProps = {
   collection: string;
   uniqueAttributes: Set<string>;
   collectionSchema?: CollectionDefinition;
-  order: QueryOrder<any, any>;
-  onSubmit: (order: QueryOrder<any, any>) => void;
+  order: OrderStatement<any, any>;
+  onSubmit: (order: OrderStatement<any, any>) => void;
 };
 
 export function OrderPopover(props: OrderPopoverProps) {
