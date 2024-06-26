@@ -300,6 +300,9 @@ async function loadTemplate(template: string, targetDir: string) {
     await move(targetDir + '/.env.example', targetDir + '/.env', {
       overwrite: true,
     });
+    await move(targetDir + '/.gitignore.example', targetDir + '/.gitignore', {
+      overwrite: true,
+    });
     console.log(
       grey`Created project with ${template} template at ./${relativeTargetDir}`
     );

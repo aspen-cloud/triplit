@@ -1,4 +1,4 @@
-import { copy, remove } from 'fs-extra';
+import { copy, remove, move } from 'fs-extra';
 import { readFileSync, writeFileSync } from 'fs';
 import { join, resolve } from 'path';
 import { fileURLToPath } from 'url';
@@ -22,9 +22,22 @@ async function copyTemplates() {
           },
         }
       );
-      await writeNpmIgnoreFile(template);
+      // await writeNpmIgnoreFile(template);
       console.log(`Copied ${template} to ${DEST_DIR}`);
     }
+    // rename the .gitignore files in the destination directory to .gitignore.template
+    for (const template of TEMPLATE_NAMES) {
+      const gitIgnorePath = resolve(pwd, DEST_DIR, template, '.gitignore');
+      const gitIgnoreTemplatePath = resolve(
+        pwd,
+        DEST_DIR,
+        template,
+        '.gitignore.example'
+      );
+      await move(gitIgnorePath, gitIgnoreTemplatePath, { overwrite: true });
+      console.log(`Renamed .gitignore to .gitignore.example in ${template}`);
+    }
+
     console.log('Templates copied successfully!');
   } catch (error) {
     console.error('An error occurred while copying templates:', error);
