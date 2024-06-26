@@ -1,5 +1,11 @@
 # create-triplit-app
 
+## 0.0.16
+
+### Patch Changes
+
+- 77f68b2: rename gitignore in build and executions
+
 ## 0.0.15
 
 ### Patch Changes
