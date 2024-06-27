@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { and, DB, or, Schema as S, CollectionQueryBuilder } from '../../src';
+import {
+  and,
+  DB,
+  or,
+  Schema as S,
+  CollectionQueryBuilder,
+  WhereFilter,
+} from '../../src';
 
 const characterSchema = {
   collections: {
@@ -33,6 +40,8 @@ const characterSchema = {
     },
   },
 };
+
+type ShowFilter = WhereFilter<typeof characterSchema.collections, 'shows'>;
 
 async function seedCharacterSchema(db: DB<typeof characterSchema.collections>) {
   await db.transact(async (tx) => {
@@ -163,16 +172,20 @@ describe('OR queries', () => {
     await seedCharacterSchema(db);
 
     // True for Breaking Bad
-    const trueRelationalClause = ['characters.playedBy.name', '=', 'Anna Gunn'];
-    const trueBasicClause = ['name', '=', 'Breaking Bad'];
+    const trueRelationalClause: ShowFilter = [
+      'characters.playedBy.name',
+      '=',
+      'Anna Gunn',
+    ];
+    const trueBasicClause: ShowFilter = ['name', '=', 'Breaking Bad'];
 
     // False for Breaking Bad
-    const falseRelationalClause = [
+    const falseRelationalClause: ShowFilter = [
       'characters.playedBy.name',
       '=',
       'Rhea Seehorn',
     ];
-    const falseBasicClause = ['name', '=', 'Better Call Saul'];
+    const falseBasicClause: ShowFilter = ['name', '=', 'Better Call Saul'];
 
     // clauses
     const clauseTT = or([trueRelationalClause, trueBasicClause]);

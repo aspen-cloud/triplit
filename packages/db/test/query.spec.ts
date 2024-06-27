@@ -51,6 +51,7 @@ describe('query builder', () => {
     expect(query1.order).toEqual([['name', 'ASC']]);
     const query2 = db
       .query('test')
+      // TODO: This should be an error?
       .order(['name', 'ASC'], ['age', 'ASC'])
       .build();
     expect(query2.order).toEqual([
