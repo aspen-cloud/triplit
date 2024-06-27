@@ -2,24 +2,37 @@
 description: Learn about connecting a self-hosted server to Triplit Cloud.
 ---
 
+import { Steps } from 'nextra-theme-docs';
+
 import Image from 'next/image';
 import selfHosting from '../../../public/dashboard-screenshots/self-hosting.png';
 import machineWidget from '../../../public/dashboard-screenshots/machine-widget.png';
+import createProject from '../../../public/dashboard-screenshots/create-project.png';
 
 # Self-hosted deployments
 
 Triplit Cloud is fully compatible with self-hosted Triplit servers. This means you can deploy your own Triplit server and connect it to the Triplit Cloud dashboard, and reap the benefits of easier server management and use of the Triplit Console.
 
-## Deploying a self-hosted machine
+<Steps>
 
-You have two options for deploying a self-hosted machine:
+### Create a project
 
-- **Railway**: One-click-deply a Triplit server using Railway. This is the easiest way to get started with a self-hosted machine.
-- **Docker**: Deploy a Triplit server using Docker. [Read our self-hosting guide for more information](/self-hosting).
+- [Sign-in or sign-up for a Triplit account](https://triplit.dev/dashboard)
+- Click the **Create Project** button
+- Provide a name for your project. This will act as a friendly alias for your project throughout the dashboard.
 
-We plan on adding many more one-click-deploy options in the future, so stay tuned!
+  <Image
+    src={createProject}
+    alt="Project creation page"
+    width={'100%'}
+    style={{ borderRadius: 16, marginTop: 32 }}
+  />
 
-Once you've [created a project](/triplit-cloud), you'll be presented with some instructions under the **Self Host** tab:
+### Deploy your project
+
+After creating your project, you'll be shown some information about your project, and instructions for deploying a self-hosted machine.
+
+{' '}
 
 <Image
   src={selfHosting}
@@ -28,15 +41,20 @@ Once you've [created a project](/triplit-cloud), you'll be presented with some i
   style={{ borderRadius: 16, marginTop: 32 }}
 />
 
-Once you have a Triplit server running and [properly configured](#configuration), enter its hostname into the form and click **Connect**.
+You have two options for deploying a self-hosted machine:
 
-### Configuration
+- **Railway**: One-click-deply a Triplit server using Railway. This is the easiest way to get started with a self-hosted machine, and won't require any configuration.
+- **Docker**: Deploy a Triplit server using Docker on a platform of your choice. This will require you to configure your server with the necessary environment variables.
+
+We plan on adding many more one-click-deploy options in the future, so stay tuned!
+
+#### Configure your server (Docker only)
 
 If you're not using one of the one-click deploy options, you'll need to configure your server to accept requests from the Triplit Dashboard.
 
-- **`PROJECT_ID`**: The unique identifier for your project. You can find this on the deploy instructions screen pictured [above](#deploying-a-self-hosted-machine). Once you're past the creation step, you can find the Project Id in the Triplit Dashboard under your project's settings.
+- **`PROJECT_ID`**: The unique identifier for your project. You can find this on the deploy instructions screen pictured above. Once you're past the creation step, you can find the Project Id in the Triplit Dashboard under your project's settings.
 
-![Project id in the dashboard](/dashboard-screenshots/project-id.png)
+{/* ![Project id in the dashboard](/dashboard-screenshots/project-id.png) */}
 
 - **`JWT_SECRET`**: The secret used to sign and verify JWT tokens. To use the Triplit Dashboard, set this to the Triplit public key. If you're deploying with Railway, this is configured for you.
 
@@ -46,16 +64,22 @@ If you're not using one of the one-click deploy options, you'll need to configur
 
 - Other secrets: If you are **not** using a one-click deployment option, like Railway, there are other secrets you may need to configure, including `LOCAL_DATABASE_URL`, `EXTERNAL_JWT_SECRET` and `CLAIMS_PATH`. You can read more about them in the [self-hosting guide](/self-hosting).
 
-## Connecting your app to your self-hosted machine
+### Add hostname to project
 
-The beauty of using a self-hosted server with the Triplit dashboard is that:
+Once you have a Triplit server running and [properly configured](#configuration), enter its hostname into the form and click **Connect**.
 
-- It will mint API keys for you (and let you rotate them)
-- You can authorize with external tokens with the server without needing to modify your server's code
-- you can manage your data and schema with the Triplit Console
+### Use the dashboard
+
+You can use the Triplit dashboard to:
+
+- Mint API keys and rotate them as needed
+- Allow your server to accept external tokens signed with different secrets without modifying your server's code
+- Manage your data and schema with the [Triplit Console](/docs/triplit-cloud/triplit-console)
 
 To enable these benefits, your app will connect to a `https://<project-id>.triplit.io` URL. This will route your requests to your self-hosted server.
 
 Copy the secrets from the **Overview** tab (pictured below) into your app's `.env` file.
 
 ![Overview tab information](/dashboard-screenshots/quickstart.png)
+
+</Steps>
