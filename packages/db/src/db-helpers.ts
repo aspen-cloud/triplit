@@ -199,32 +199,18 @@ export function mapFilterStatements<
 >(
   statements: QueryWhere<M, CN>,
   mapFunction: (
-    statement: SubQueryFilter | FilterStatement<M, CN>
-  ) => SubQueryFilter | FilterStatement<M, CN>
+    statement:
+      | FilterStatement<M, CN>
+      | SubQueryFilter
+      | RelationshipExistsFilter<M, CN>
+  ) => FilterStatement<M, CN> | SubQueryFilter | RelationshipExistsFilter<M, CN>
 ): QueryWhere<M, CN> {
   return statements.map((statement) => {
-    if (isSubQueryFilter(statement)) return statement;
     if (isFilterGroup(statement)) {
       statement.filters = mapFilterStatements(statement.filters, mapFunction);
+      return statement;
     }
-    return mapFunction(statement as FilterStatement<M, CN>);
-  });
-}
-
-export function everyFilterStatement<
-  M extends Models<any, any> | undefined,
-  CN extends CollectionNameFromModels<M>
->(
-  statements: QueryWhere<M, CN>,
-  everyFunction: (statement: FilterStatement<M, CN>) => boolean
-): boolean {
-  return statements.every((filter) => {
-    // TODO should this traverse sub-queries?
-    if (isSubQueryFilter(filter)) return true;
-    if (isFilterGroup(filter)) {
-      return everyFilterStatement(filter.filters, everyFunction);
-    }
-    return everyFunction(filter as FilterStatement<M, CN>);
+    return mapFunction(statement);
   });
 }
 
@@ -500,7 +486,7 @@ export function prepareQuery<
 
         // If property is nested, create a new exists filter for the subquery
         const filterToAdd = isPropertyNested
-          ? [exists(rest.join('.'), query)]
+          ? [exists(rest.join('.') as string as any, query)]
           : query?.where;
 
         subquery.where = [

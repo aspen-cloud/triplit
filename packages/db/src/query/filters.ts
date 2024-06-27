@@ -6,8 +6,13 @@ import {
 } from '../collection-query.js';
 import { Operator } from '../data-types/base.js';
 import DB from '../db.js';
-import { InvalidFilterError } from '../errors.js';
-import { EntityPointer, isFilterGroup, isSubQueryFilter } from '../query.js';
+import { InvalidFilterError, QueryNotPreparedError } from '../errors.js';
+import {
+  EntityPointer,
+  isExistsFilter,
+  isFilterGroup,
+  isSubQueryFilter,
+} from '../query.js';
 import { getAttributeFromSchema } from '../schema/schema.js';
 import { Models } from '../schema/types';
 import { Timestamp } from '../timestamp.js';
@@ -77,12 +82,14 @@ export async function satisfiesFilter<
       filter
     );
   }
-  return satisfiesFilterStatement(
-    query,
-    options,
-    pipelineItem,
-    filter as FilterStatement<M, any>
-  );
+
+  // TODO: we need to refactor our types have a clearer distinction between query inputs and prepared queries
+  // Ex. CollectionQuery<M, CN> vs Prepared<CollectionQuery<M, CN>>
+  if (isExistsFilter(filter)) {
+    throw new QueryNotPreparedError('Untranslated exists filter');
+  }
+
+  return satisfiesFilterStatement(query, options, pipelineItem, filter);
 }
 
 async function satisfiesRelationalFilter<

@@ -513,3 +513,12 @@ export class InvalidWhereClauseError extends TriplitError {
     this.status = STATUS_CODES['Bad Request'];
   }
 }
+
+export class QueryNotPreparedError extends TriplitError {
+  constructor(...args: any[]) {
+    super(...args);
+    this.name = 'QueryNotPreparedError';
+    this.baseMessage = `The query has not been prepared yet. This indicates a bug. Please inform the Triplit team.`;
+    this.status = STATUS_CODES['Internal Server Error'];
+  }
+}

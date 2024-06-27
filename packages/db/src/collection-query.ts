@@ -1952,9 +1952,8 @@ async function replaceVariablesInQuery<
 ): Promise<Q> {
   // Check that where clause statements have variables loaded
   // Performance: we may load this earlier than needed if it could be filtered out by another statement
-  const clauses = (query.where ?? [])
-    .filter((statement) => Array.isArray(statement))
-    .map((statment) => statment as FilterStatement<M, CN>);
+  const clauses = (query.where ?? []).filter(isFilterStatement);
+
   for (const clause of clauses) {
     const [prop, op, val] = clause;
     if (isValueVariable(val)) {
