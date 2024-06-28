@@ -1,5 +1,11 @@
 # @triplit/cli
 
+## 0.4.4
+
+### Patch Changes
+
+- 311a156: add vue as option to triplit init
+
 ## 0.4.3
 
 ### Patch Changes

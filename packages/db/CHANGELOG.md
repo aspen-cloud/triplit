@@ -1,5 +1,12 @@
 # @triplit/db
 
+## 0.3.49
+
+### Patch Changes
+
+- 0e9b4c4: Add helper for exists queries
+- b68787d: export return types
+
 ## 0.3.48
 
 ### Patch Changes
