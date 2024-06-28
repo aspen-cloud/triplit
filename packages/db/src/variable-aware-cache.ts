@@ -10,7 +10,7 @@ import {
   ModelFromModels,
   SystemVariables,
 } from './db.js';
-import { isValueVariable, mapFilterStatements } from './db-helpers.js';
+import { isValueVariable } from './db-helpers.js';
 import { isFilterStatement } from './query.js';
 import { CollectionQuery, FilterStatement } from './query/types';
 import { getSchemaFromPath } from './schema/schema.js';

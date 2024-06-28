@@ -34,7 +34,6 @@ import { MemoryBTreeStorage as MemoryStorage } from '../src/storage/memory-btree
 import { testSubscription } from './utils/test-subscription.js';
 import {
   appendCollectionToId,
-  prepareQuery,
   stripCollectionFromId,
 } from '../src/db-helpers.js';
 import { TripleRow } from '../dist/types/triple-store-utils.js';
@@ -44,6 +43,7 @@ import {
   initialFetchExecutionContext,
 } from '../src/collection-query.js';
 import { CollectionQueryInclusion } from '../src/query/builder.js';
+import { prepareQuery } from '../src/query/prepare.js';
 
 const pause = async (ms: number = 100) =>
   new Promise((resolve) => setTimeout(resolve, ms));

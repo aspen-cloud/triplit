@@ -55,7 +55,6 @@ import {
   readSchemaFromTripleStore,
   StoreSchema,
   splitIdParts,
-  prepareQuery,
   fetchResultToJS,
 } from './db-helpers.js';
 import {
@@ -89,6 +88,7 @@ import {
   CollectionQuery,
   Query,
 } from './query/types';
+import { prepareQuery } from './query/prepare.js';
 
 interface TransactionOptions<
   M extends Models<any, any> | undefined = undefined

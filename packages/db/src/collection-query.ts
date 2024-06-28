@@ -36,7 +36,6 @@ import {
   appendCollectionToId,
   splitIdParts,
   someFilterStatements,
-  prepareQuery,
   isValueVariable,
   replaceVariablesInFilterStatements,
   getVariableComponents,
@@ -73,6 +72,7 @@ import {
   satisfiesRegisterFilter,
   satisfiesSetFilter,
 } from './query/filters.js';
+import { prepareQuery } from './query/prepare.js';
 
 export default function CollectionQueryBuilder<
   M extends Models<any, any> | undefined,

@@ -23,7 +23,6 @@ import {
   readSchemaFromTripleStore,
   overrideStoredSchema,
   StoreSchema,
-  prepareQuery,
   getSchemaTriples,
   fetchResultToJS,
   logSchemaChangeViolations,
@@ -47,6 +46,7 @@ import {
   Query,
   QueryWhere,
 } from './query/types';
+import { prepareQuery } from './query/prepare.js';
 
 const DEFAULT_CACHE_DISABLED = true;
 
