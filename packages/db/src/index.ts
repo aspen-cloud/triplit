@@ -98,3 +98,5 @@ export { timestampedObjectToPlainObject } from './utils.js';
 export type { TimestampedObject, UnTimestampedObject } from './utils.js';
 export type { IsAny } from './utility-types.js';
 export * from './errors.js';
+// See ./data-types/index.ts for why this is necessary
+export type * from './data-types';

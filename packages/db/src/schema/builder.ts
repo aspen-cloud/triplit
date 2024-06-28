@@ -9,6 +9,9 @@ import { QueryType, SubQuery } from '../data-types/query.js';
 import type { SchemaConfig } from './types/models.js';
 import { DataType, Optional } from '../data-types/base.js';
 
+// NOTE: when adding new return types they should be exported in the index.ts file
+// https://github.com/microsoft/TypeScript/issues/42873
+// https://github.com/microsoft/TypeScript/pull/58176#issuecomment-2052698294
 export class Schema {
   static Id = () =>
     StringType({ nullable: false, default: this.Default.uuid() });
