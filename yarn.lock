@@ -25697,6 +25697,21 @@ __metadata:
   languageName: node
   linkType: hard
 
+"vue-template@workspace:templates/vue":
+  version: 0.0.0-use.local
+  resolution: "vue-template@workspace:templates/vue"
+  dependencies:
+    "@triplit/cli": "workspace:^"
+    "@triplit/client": "workspace:^"
+    "@triplit/vue": "workspace:^"
+    "@vitejs/plugin-vue": "npm:^5.0.5"
+    typescript: "npm:^5.2.2"
+    vite: "npm:^5.3.1"
+    vue: "npm:^3.4.29"
+    vue-tsc: "npm:^2.0.21"
+  languageName: unknown
+  linkType: soft
+
 "vue-tsc@npm:^1.8.27":
   version: 1.8.27
   resolution: "vue-tsc@npm:1.8.27"
@@ -25744,21 +25759,6 @@ __metadata:
   checksum: 10/74b213aab495dfdeea19d211c23371d8751055363b48bf424dd4664f5c19743086bdaab19516de612e98d077279966dab1a19b6bb9c651c64c07ab2070b6e9ba
   languageName: node
   linkType: hard
-
-"vue@workspace:templates/vue":
-  version: 0.0.0-use.local
-  resolution: "vue@workspace:templates/vue"
-  dependencies:
-    "@triplit/cli": "workspace:^"
-    "@triplit/client": "workspace:^"
-    "@triplit/vue": "workspace:^"
-    "@vitejs/plugin-vue": "npm:^5.0.5"
-    typescript: "npm:^5.2.2"
-    vite: "npm:^5.3.1"
-    vue: "npm:^3.4.29"
-    vue-tsc: "npm:^2.0.21"
-  languageName: unknown
-  linkType: soft
 
 "watchpack@npm:2.4.0":
   version: 2.4.0
