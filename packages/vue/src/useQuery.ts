@@ -1,4 +1,4 @@
-import { Ref, computed, ref, watchEffect } from "vue";
+import { Ref, computed, ref, watchEffect } from 'vue';
 import type {
   ClientFetchResult,
   ClientQuery,
@@ -7,8 +7,8 @@ import type {
   SubscriptionOptions,
   TriplitClient,
   Unalias,
-} from "@triplit/client";
-import { WorkerClient } from "@triplit/client/worker-client";
+} from '@triplit/client';
+import { WorkerClient } from '@triplit/client/worker-client';
 
 export function useQuery<
   M extends Models<any, any> | undefined,
@@ -18,18 +18,14 @@ export function useQuery<
   query: ClientQueryBuilder<Q>,
   options?: Partial<SubscriptionOptions>
 ) {
-  const results = ref<
-    Unalias<ClientFetchResult<Q>> | undefined
-  >(undefined) as Ref<Unalias<ClientFetchResult<Q>> | undefined>;
+  const results = ref<Unalias<ClientFetchResult<Q>> | undefined>(
+    undefined
+  ) as Ref<Unalias<ClientFetchResult<Q>> | undefined>;
   const isInitialFetch = ref(true);
   const fetchingLocal = ref(false);
-  const fetchingRemote = ref(
-    client.connectionStatus !== "CLOSED"
-  );
+  const fetchingRemote = ref(client.connectionStatus !== 'CLOSED');
   const fetching = computed(
-    () =>
-      fetchingLocal.value ||
-      (isInitialFetch.value && fetchingRemote.value)
+    () => fetchingLocal.value || (isInitialFetch.value && fetchingRemote.value)
   );
   const error = ref<unknown>(undefined);
   let hasResponseFromServer = false;
@@ -44,27 +40,19 @@ export function useQuery<
   }
 
   watchEffect(() => {
-    client
-      .isFirstTimeFetchingQuery(builtQuery.value)
-      .then((isFirstFetch) => {
-        isInitialFetch.value = isFirstFetch;
-      });
-    const unsub = client.onConnectionStatusChange(
-      (status) => {
-        if (status === "CLOSING" || status === "CLOSED") {
-          fetchingRemote.value = false;
-          return;
-        }
-        if (
-          status === "OPEN" &&
-          hasResponseFromServer === false
-        ) {
-          fetchingRemote.value = true;
-          return;
-        }
-      },
-      true
-    );
+    client.isFirstTimeFetchingQuery(builtQuery.value).then((isFirstFetch) => {
+      isInitialFetch.value = isFirstFetch;
+    });
+    const unsub = client.onConnectionStatusChange((status) => {
+      if (status === 'CLOSING' || status === 'CLOSED') {
+        fetchingRemote.value = false;
+        return;
+      }
+      if (status === 'OPEN' && hasResponseFromServer === false) {
+        fetchingRemote.value = true;
+        return;
+      }
+    }, true);
     return () => {
       unsub();
     };
@@ -97,6 +85,8 @@ export function useQuery<
 
   return {
     fetching,
+    fetchingLocal: computed(() => fetchingLocal.value),
+    fetchingRemote: computed(() => fetchingRemote.value),
     results: computed(() => results.value),
     error: computed(() => error.value),
     updateQuery,
