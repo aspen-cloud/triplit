@@ -24,11 +24,7 @@ function getPublishedVersion() {
     return JSON.parse(publishedVersionsString).version;
   } catch (e) {
     // Catch 404 which has no published version
-    if (
-      e.output[1]
-        .toString('utf-8')
-        .includes('The remote server failed to provide the requested resource')
-    ) {
+    if (e.output[1].toString('utf-8').includes('Package not found')) {
       return undefined;
     }
     throw e;
