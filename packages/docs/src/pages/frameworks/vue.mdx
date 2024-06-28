@@ -1,0 +1,97 @@
+---
+description: Learn how use Vue bindings for the Triplit client in your app.
+---
+
+import { Tabs, Tab, Callout } from 'nextra-theme-docs';
+
+# Vue
+
+If you are using Vue, you can use the hooks provided by `@triplit/vue`:
+
+<Tabs items={['npm', 'pnpm', 'yarn', 'bun']}>
+
+  <Tab>
+    ```bash copy
+    npm i @triplit/vue
+    ```
+  </Tab>
+    <Tab>
+    ```bash copy
+    pnpm add @triplit/vue
+    ```
+  </Tab>
+  <Tab>
+    ```bash copy
+    yarn add @triplit/vue
+    ```
+  </Tab>
+    <Tab>
+    ```bash copy
+    bun add @triplit/vue
+    ```
+  </Tab>
+</Tabs>
+
+## useQuery
+
+The `useQuery` hook subscribes to the provided query inside your Vue component and will automatically unsubscribe from the query when the component unmounts.
+
+The result of the hook is an object with the following properties:
+
+- `results`: A Map containing the results of the query, with entity ids as keys and entities as values.
+- `fetching`: A boolean that will be `true` initially, and then turn `false` when either the local fetch returns cached results or if there were no cached results and the remote fetch has completed.
+- `fetchingLocal`: A boolean indicating whether the query is currently fetching from the local cache.
+- `fetchingRemote`: A boolean indicating whether the query is currently fetching from the server.
+- `error`: An error object if the query failed to fetch.
+- `updateQuery`: A function that can be called to update the query.
+
+```vue filename="App.vue"
+<script setup lang="ts">
+import { useQuery } from '@triplit/vue';
+import Todo from './components/Todo.vue';
+import { computed } from 'vue';
+import { client } from './triplit';
+
+const { fetching, results, error } = useQuery(client, client.query('todos'));
+const todos = computed(() =>
+  results.value ? [...results.value.values()] : []
+);
+</script>
+
+<template>
+  <div>
+    <h1>Todos</h1>
+    <span v-if="fetching">Loading...</span>
+    <span v-else-if="error">Error: {{ error.message }}</span>
+    <ul v-else>
+      <Todo
+        v-for="todo in todos"
+        :key="todo.id"
+        :id="todo.id"
+        :text="todo.text"
+        :completed="todo.completed"
+      />
+    </ul>
+  </div>
+</template>
+```
+
+## useConnectionStatus
+
+The `useConnectionStatus` hook subscribes to changes to the connection status of the client and will automatically unsubscribe when the component unmounts.
+
+```vue filename="ConnectionStatus.vue"
+<script lang="ts">
+import { useConnectionStatus } from '@triplit/vue';
+import { client } from './triplit';
+
+const connection = useConnectionStatus(client);
+</script>
+<template>
+  <div>
+    <span v-if="connectionStatus === 'OPEN'">🟢</span>
+    <span v-else-if="connectionStatus === 'CLOSED'">🔴</span>
+    <span v-else>🟡</span>
+  </div>
+</template>
+```
