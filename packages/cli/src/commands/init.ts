@@ -23,7 +23,7 @@ export default Command({
   middleware: [],
   flags: {
     framework: Flag.Enum({
-      options: ['react', 'svelte'] as const,
+      options: ['react', 'svelte', 'vue'] as const,
       char: 'f',
       description: 'Frontend framework helpers to install',
     }),
@@ -66,6 +66,9 @@ export default Command({
           break;
         case 'svelte':
           packageToInstall.push('@triplit/svelte');
+          break;
+        case 'vue':
+          packageToInstall.push('@triplit/vue');
           break;
       }
     }
