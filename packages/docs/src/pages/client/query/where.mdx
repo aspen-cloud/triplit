@@ -2,6 +2,8 @@
 description: The `where` clause is used to filter results in a Triplit query based on conditions.
 ---
 
+import { Callout } from 'nextra/components';
+
 # where
 
 To filter results based on conditions, you can use the `where` method. This method accepts a list of clauses as arguments. A clause is a tuple that takes the form `[attribute, operator, value]`.
@@ -19,7 +21,7 @@ Clauses can be passed to `where` as a single clause or an array of clauses:
 
 - `.where('is_registered', '=', true)`
 - `.where(['is_registered', '=', true])`
-- `.where([['is_registered', '=', true]])`
+- `.where([['is_registered', '=', true], ...additional clauses])`
 
 If multiple clauses are provided, all clauses are joined with a logical AND. However, you may use `or` and `and` methods within the clause array to specify how clauses should be logically grouped and joined.
 
@@ -55,6 +57,51 @@ const query = client
   .query('test_scores')
   .where('class.instructor.name', '=', 'Dr. Smith');
 ```
+
+### Exists filters
+
+You may also define a filter to check if related data exists. Triplit provides an `exists` method to help build subqueries that reference your schema.
+
+```typescript
+import { Schema as S, exists } from '@triplit/client';
+const schema = {
+  todos: {
+    schema: S.Schema({
+      id: S.Id(),
+      text: S.String(),
+      assignee_ids: S.Set(S.String()),
+      assignees: S.RelationMany('users', {
+        where: ['id', 'in', '$assignee_ids'],
+      }),
+    }),
+  },
+  users: {
+    schema: S.Schema({
+      id: S.Id(),
+      name: S.String(),
+      team: S.String(),
+      title: S.String(),
+    }),
+  },
+};
+
+// Todos where at least one assignee is on the engineering team and has the title of manager
+const query = client.query('todos').where(
+  exists('assignees', {
+    where: [
+      ['team', '=', 'engineering'],
+      ['title', '=', 'manager'],
+    ],
+  })
+);
+```
+
+<Callout type="warning" emoji="⚠️">
+  You may be tempted to write the query above as: `.where('assignees.team', '=',
+  'engineering').where('assignees.title', '=', 'manager')`. However, this will
+  instead query for todos where at least one assignee is on the engineering team
+  and where at least one assignee has the title of manager.
+</Callout>
 
 ### Operators
 

@@ -34,6 +34,7 @@ export {
   queryResultToJson,
   or,
   and,
+  exists,
   constructEntity,
   // TODO
   triplesToEntities as constructEntities,
