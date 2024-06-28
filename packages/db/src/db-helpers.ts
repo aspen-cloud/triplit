@@ -612,7 +612,7 @@ export function prepareQuery<
 function whereFilterValidator<M extends Models<any, any> | undefined>(
   schema: M,
   collectionName: string
-): (fitler: WhereFilter<M, any>) => boolean {
+): (filter: WhereFilter<M, any>) => boolean {
   return (statement) => {
     // TODO: add helper function to determine when we should(n't) schema check (ie schemaless and _metadata)
     if (!schema) return true;

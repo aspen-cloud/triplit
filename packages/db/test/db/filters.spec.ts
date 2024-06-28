@@ -378,7 +378,7 @@ describe('exists filters', () => {
     expect(keys).toHaveLength(1);
     expect(keys).toContain('1');
   });
-  it('can fitler on deep relationships', async () => {
+  it('can filter on deep relationships', async () => {
     const db = new DB({ schema: messagingSchema });
     await seedMessagingSchema(db);
 
