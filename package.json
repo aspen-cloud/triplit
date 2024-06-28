@@ -8,7 +8,7 @@
   "scripts": {
     "build:packages": "turbo build --filter=\"@triplit/*\" --filter=create-triplit-app --force",
     "focus:packages": "yarn workspaces focus @triplit/db @triplit/client @triplit/react @triplit/svelte @triplit/server-core @triplit/server @triplit/console @triplit/cli create-triplit-app",
-    "release:packages": "yarn build:packages && yarn workspace @triplit/db run publish-pkg && yarn workspace @triplit/client run publish-pkg && yarn workspace @triplit/react run publish-pkg && yarn workspace @triplit/svelte run publish-pkg && yarn workspace @triplit/server-core run publish-pkg  && yarn workspace @triplit/server run publish-pkg && yarn workspace @triplit/console run publish-pkg && yarn workspace @triplit/cli run publish-pkg && yarn workspace create-triplit-app run publish-pkg && yarn tag:packages",
+    "release:packages": "yarn build:packages && yarn workspace @triplit/db run publish-pkg && yarn workspace @triplit/client run publish-pkg && yarn workspace @triplit/react run publish-pkg && yarn workspace @triplit/svelte run publish-pkg && yarn workspace @triplit/vue run publish-pkg && yarn workspace @triplit/server-core run publish-pkg  && yarn workspace @triplit/server run publish-pkg && yarn workspace @triplit/console run publish-pkg && yarn workspace @triplit/cli run publish-pkg && yarn workspace create-triplit-app run publish-pkg && yarn tag:packages",
     "tag:packages": "git pull --tags -f && yarn changeset tag",
     "lint": "yarn workspaces foreach --all run lint",
     "version": "yarn changeset version && yarn install --mode update-lockfile",
