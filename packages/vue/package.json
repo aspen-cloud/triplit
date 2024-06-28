@@ -1,0 +1,39 @@
+{
+  "name": "@triplit/vue",
+  "packageManager": "yarn@3.4.1",
+  "version": "0.3.66",
+  "source": "./src/index.ts",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "require": "./dist/index.js",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc && yarn validate:types",
+    "build:watch": "tsc -w",
+    "lint:build": "npx publint",
+    "lint": "tsc --noEmit",
+    "publish-pkg": "node ../../scripts/npm-check-version-and-publish.js",
+    "validate:types": "node ../../scripts/check-for-local-references-in-declarations.js dist"
+  },
+  "files": [
+    "/dist"
+  ],
+  "dependencies": {
+    "@triplit/client": "workspace:^"
+  },
+  "devDependencies": {
+    "typescript": "^5.2.2",
+    "vue": "^3.4.21"
+  },
+  "peerDependencies": {
+    "vue": "*"
+  }
+}
