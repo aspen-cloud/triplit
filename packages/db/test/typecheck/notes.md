@@ -15,4 +15,4 @@
 
 ## TODOs
 
-- Refactor: `QuerySelectionFitleredTypeFromModel` which when trying to merge path and subquery types causes really weird typing in our tests and requires us to use `toMatchTypeOf` instead of `toEqualTypeOf`
+- Refactor: `QuerySelectionFilteredTypeFromModel` which when trying to merge path and subquery types causes really weird typing in our tests and requires us to use `toMatchTypeOf` instead of `toEqualTypeOf`

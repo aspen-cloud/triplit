@@ -153,7 +153,7 @@ export type PathFilteredTypeFromModel<
 /**
  * A JS type from a model filtered by a QuerySelection type
  */
-export type QuerySelectionFitleredTypeFromModel<
+export type QuerySelectionFilteredTypeFromModel<
   M extends Models<any, any>,
   CN extends CollectionNameFromModels<M>,
   Selection extends QuerySelectionValue<M, CN>,

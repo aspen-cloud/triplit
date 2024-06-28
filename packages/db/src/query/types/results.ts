@@ -8,7 +8,7 @@ import {
 import {
   Model,
   Models,
-  QuerySelectionFitleredTypeFromModel,
+  QuerySelectionFilteredTypeFromModel,
 } from '../../schema/types';
 
 /**
@@ -64,6 +64,6 @@ export type FetchResultEntityFromParts<
   Inclusion extends Record<string, RelationSubquery<M, any>> = {}
 > = M extends Models<any, any>
   ? ModelFromModels<M, CN> extends Model<any>
-    ? QuerySelectionFitleredTypeFromModel<M, CN, Selection, Inclusion>
+    ? QuerySelectionFilteredTypeFromModel<M, CN, Selection, Inclusion>
     : any
   : any;
