@@ -1,4 +1,4 @@
-import { Ref, computed, ref, watchEffect } from 'vue';
+import { Ref, computed, ref, watchEffect, type ComputedRef } from 'vue';
 import type {
   ClientFetchResult,
   ClientQuery,
@@ -17,7 +17,14 @@ export function useQuery<
   client: TriplitClient<any> | WorkerClient<any>,
   query: ClientQueryBuilder<Q>,
   options?: Partial<SubscriptionOptions>
-) {
+): {
+  fetching: ComputedRef<boolean>;
+  fetchingLocal: ComputedRef<boolean>;
+  fetchingRemote: ComputedRef<boolean>;
+  results: ComputedRef<Unalias<ClientFetchResult<Q>> | undefined>;
+  error: ComputedRef<unknown>;
+  updateQuery: (query: ClientQueryBuilder<Q>) => void;
+} {
   const results = ref<Unalias<ClientFetchResult<Q>> | undefined>(
     undefined
   ) as Ref<Unalias<ClientFetchResult<Q>> | undefined>;
