@@ -85,7 +85,7 @@ The `useConnectionStatus` hook subscribes to changes to the connection status of
 import { useConnectionStatus } from '@triplit/vue';
 import { client } from './triplit';
 
-const connection = useConnectionStatus(client);
+const { connectionStatus } = useConnectionStatus(client);
 </script>
 <template>
   <div>
