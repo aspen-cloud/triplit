@@ -1,13 +1,16 @@
-import { validateIdentifier } from '../collection-query.js';
+import { bumpSubqueryVar } from '../collection-query.js';
 import { DataType } from '../data-types/base.js';
 import { appendCollectionToId, isValueVariable } from '../db-helpers.js';
 import { CollectionFromModels, CollectionNameFromModels } from '../db.js';
 import {
   IncludedNonRelationError,
+  InvalidCollectionNameError,
   InvalidFilterError,
   InvalidOrderClauseError,
+  InvalidSelectClauseError,
   InvalidWhereClauseError,
   RelationDoesNotExistError,
+  TriplitError,
 } from '../errors.js';
 import {
   exists,
@@ -16,7 +19,10 @@ import {
   isFilterGroup,
   isSubQueryFilter,
 } from '../query.js';
-import { getAttributeFromSchema } from '../schema/schema.js';
+import {
+  createSchemaTraverser,
+  getAttributeFromSchema,
+} from '../schema/schema.js';
 import { Models } from '../schema/types';
 import {
   CollectionQuery,
@@ -40,52 +46,170 @@ export function prepareQuery<
 >(query: Q, schema: M, options: QueryPreparationOptions = {}) {
   let fetchQuery = { ...query };
 
+  // Validate collection name
+  validateCollectionName(fetchQuery, schema);
+
   // Determine selects
-  // Filter down selects based on permissions
-  // Validate selects
-  // If undefined, leave as undefined (supports schemaless, check if this works...)
+  const select = getQuerySelects(fetchQuery, schema, options);
+  const include = getQueryInclude(fetchQuery, schema, options);
 
   // Determine filters
-  // Add filters based on permissions
-  // Validate filters
-  // Parse filters as needed
+  const where = getQueryFilters(fetchQuery, schema, options);
 
   // Determine order
-  // Filter down order based on permissions (throw or ignore?)
-  // Validate order
+  const order = getQueryOrder(fetchQuery, schema, options);
 
   // Determine after
-  // Parse after as needed
+  const after = getQueryAfter(fetchQuery, schema, options);
 
-  const collectionSchema = schema?.[
-    fetchQuery.collectionName
-  ] as CollectionFromModels<M, any>;
-  if (collectionSchema && !options.skipRules) {
-    fetchQuery = addReadRulesToQuery<M, Q>(fetchQuery, collectionSchema);
+  return {
+    ...query,
+    select,
+    include,
+    where,
+    order,
+    after,
+  };
+}
+
+function getQuerySelects<
+  M extends Models<any, any> | undefined,
+  Q extends CollectionQuery<M, any>
+>(query: Q, schema: M, _options: QueryPreparationOptions) {
+  // If undefined, treat as select all
+  if (!query.select) return query.select as undefined;
+
+  // If no schema, return the select as is
+  if (!schema) return [...query.select];
+
+  // Validate selects
+  for (const select of query.select) {
+    const { valid, path, reason } = validateIdentifier(
+      select,
+      schema,
+      query.collectionName,
+      (dataType, i, path) => {
+        if (!dataType) return { valid: false, reason: 'Path not found' };
+        if (dataType.type === 'query') {
+          return {
+            valid: false,
+            reason:
+              "Cannot select into relationships, please use 'include' instead",
+          };
+        }
+
+        return { valid: true };
+      }
+    );
+    if (!valid) {
+      throw new InvalidSelectClauseError(
+        `Select field ${select} is not valid: ${reason} at path ${path}`
+      );
+    }
   }
+
+  return [...query.select];
+}
+
+function isSystemCollection(collectionName: string) {
+  return collectionName === '_metadata';
+}
+
+function validateCollectionName<
+  M extends Models<any, any> | undefined,
+  Q extends CollectionQuery<M, any>
+>(query: Q, schema: M) {
+  const collectionName = query.collectionName;
+  const isString = typeof collectionName === 'string';
+  if (!isString)
+    throw new InvalidCollectionNameError(
+      collectionName,
+      'Collection name must be a string'
+    );
+  if (!!schema) {
+    if (!schema[collectionName] && !isSystemCollection(collectionName))
+      throw new InvalidCollectionNameError(
+        collectionName,
+        `Collection '${collectionName}' does not exist in the schema`
+      );
+  }
+}
+
+function getQueryInclude<
+  M extends Models<any, any> | undefined,
+  Q extends CollectionQuery<M, any>
+>(query: Q, schema: M, options: QueryPreparationOptions) {
+  if (!schema) return query.include;
+  if (!query.include) return query.include;
+  //   addSubsSelectsFromIncludes(query, schema);
+  const inclusions: any = {}; // TODO: type this
+  for (const [relationName, relation] of Object.entries(
+    query.include as Record<string, RelationSubquery<M, any> | null>
+  )) {
+    const attributeType = getAttributeFromSchema(
+      relationName.split('.'),
+      schema,
+      query.collectionName
+    );
+
+    if (attributeType && attributeType.type === 'query') {
+      // TODO: this might be wrong
+      let additionalQuery =
+        // @ts-expect-error TODO: figure out proper typing of include here, this is where it would be helpful to know the difference between a CollectionQuery and Prepared<CollectionQuery>
+        relation as CollectionQuery<M, any> | undefined;
+      const merged = mergeQueries({ ...attributeType.query }, additionalQuery);
+      const subquerySelection = {
+        subquery: prepareQuery(merged, schema, options),
+        cardinality: attributeType.cardinality,
+      };
+      inclusions[relationName] = subquerySelection;
+      //   query.include = { ...query.include, [relationName]: subquerySelection };
+    } else if (relation?.subquery) {
+      inclusions[relationName] = relation;
+      //   query.include = { ...query.include, [relationName]: relation };
+    } else {
+      if (!attributeType) {
+        throw new RelationDoesNotExistError(relationName, query.collectionName);
+      }
+      throw new IncludedNonRelationError(relationName, query.collectionName);
+    }
+  }
+  return inclusions;
+}
+
+function getQueryFilters<
+  M extends Models<any, any> | undefined,
+  Q extends CollectionQuery<M, any>
+>(query: Q, schema: M, options: QueryPreparationOptions): QueryWhere<M, any> {
+  const filters: QueryWhere<M, any> = query.where ? [...query.where] : [];
 
   // Translate entityId helper to where clause filter
-  if (fetchQuery.entityId) {
-    fetchQuery.where = [
+  if (query.entityId) {
+    filters.push(
       // @ts-expect-error
-      ['id', '=', fetchQuery.entityId],
-      ...(fetchQuery.where ?? []),
-    ];
+      ['id', '=', query.entityId]
+    );
   }
 
-  const whereValidator = whereFilterValidator(
-    schema,
-    fetchQuery.collectionName
-  );
-  fetchQuery.where = mapFilterStatements(
-    fetchQuery.where ?? [],
+  if (schema && !options.skipRules) {
+    const ruleFilters = getReadRuleFilters(schema, query.collectionName);
+    if (ruleFilters?.length > 0)
+      filters.push(
+        // @ts-expect-error
+        ...ruleFilters
+      );
+  }
+
+  const whereValidator = whereFilterValidator(schema, query.collectionName);
+  return mapFilterStatements(
+    filters,
     // @ts-expect-error
     (statement) => {
       // Validate filter
       whereValidator(statement);
       // Turn exists filter into a subquery
       if (isExistsFilter(statement)) {
-        const { relationship, query } = statement;
+        const { relationship, query: statementQuery } = statement;
         if (!schema)
           throw new InvalidFilterError(
             'A schema is required to execute an exists filter'
@@ -97,7 +221,7 @@ export function prepareQuery<
         const attributeType = getAttributeFromSchema(
           [first],
           schema,
-          fetchQuery.collectionName
+          query.collectionName
         );
         if (!attributeType)
           throw new InvalidFilterError(
@@ -113,8 +237,8 @@ export function prepareQuery<
 
         // If property is nested, create a new exists filter for the subquery
         const filterToAdd = isPropertyNested
-          ? [exists(rest.join('.') as string as any, query)]
-          : query?.where;
+          ? [exists(rest.join('.') as string as any, statementQuery)]
+          : statementQuery?.where;
 
         subquery.where = [
           ...(attributeType.query.where ?? []),
@@ -129,12 +253,12 @@ export function prepareQuery<
 
       // Expand subquery statements
       let [prop, op, val] = statement;
-      if (schema && fetchQuery.collectionName !== '_metadata') {
+      if (schema && !isSystemCollection(query.collectionName)) {
         // Validation should handle this existing
         const attributeType = getAttributeFromSchema(
           [(prop as string).split('.')[0]], // TODO: properly handle query in record...
           schema,
-          fetchQuery.collectionName
+          query.collectionName
         )!;
         if (attributeType.type === 'query') {
           const [_collectionName, ...path] = (prop as string).split('.');
@@ -154,90 +278,83 @@ export function prepareQuery<
       return [prop, op, val instanceof Date ? val.toISOString() : val];
     }
   );
-  // TODO: need to find a better place to apply schema transformations (see where too)
-  if (fetchQuery.after) {
-    const [cursor, inclusive] = fetchQuery.after;
-    fetchQuery.after = [
-      [
-        cursor[0] instanceof Date ? cursor[0].toISOString() : cursor[0],
-        appendCollectionToId(fetchQuery.collectionName, cursor[1]),
-      ],
-      inclusive,
-    ];
-  }
-  if (collectionSchema) {
-    // If we dont have a field selection, select all fields
-    // Helps guard against 'include' injection causing issues as well
-    if (!fetchQuery.select) {
-      const selectAllProps = Object.entries(
-        collectionSchema.schema.properties as Record<string, DataType>
-      )
-        .filter(([_key, definition]) => definition.type !== 'query')
-        .map(([key, _definition]) => key);
-      //@ts-expect-error
-      fetchQuery.select = selectAllProps;
-    }
-    if (fetchQuery.order) {
-      // Validate that the order by fields
-      fetchQuery.order.every(([field, _direction]) => {
-        if (!schema) return true;
-        const { valid, path, reason } = validateIdentifier(
-          field,
-          schema,
-          fetchQuery.collectionName,
-          (dataType, i, path) => {
-            if (!dataType) return { valid: false, reason: 'Path not found' };
-            if (
-              i === path.length - 1 &&
-              (dataType.type === 'query' ||
-                dataType.type === 'set' ||
-                dataType.type === 'record')
-            ) {
-              return {
-                valid: false,
-                reason: 'Order by field is not sortable',
-              };
-            }
-            if (dataType.type === 'query' && dataType.cardinality !== 'one')
-              return {
-                valid: false,
-                reason:
-                  'Order by field is a query with cardinality not equal to one',
-              };
-            return { valid: true };
-          }
-        );
-        if (!valid) {
-          throw new InvalidOrderClauseError(
-            `Order by field ${field} is not valid: ${reason} at path ${path}`
-          );
-        }
-        return true;
-      });
-    }
-  }
-
-  if (fetchQuery.include) {
-    addSubsSelectsFromIncludes(fetchQuery, schema);
-  }
-
-  if (!query.select) query.select = [];
-
-  return fetchQuery;
 }
 
-function addReadRulesToQuery<
+function getReadRuleFilters(
+  schema: Models<any, any>,
+  collectionName: CollectionFromModels<any, any>
+) {
+  return Object.values(schema?.[collectionName]?.rules?.read ?? {}).flatMap(
+    (rule) => rule.filter
+  );
+}
+
+function getQueryOrder<
   M extends Models<any, any> | undefined,
   Q extends CollectionQuery<M, any>
->(query: Q, collection: CollectionFromModels<M>): Q {
-  if (collection?.rules?.read) {
-    const updatedWhere = [
-      ...(query.where ?? []),
-      ...Object.values(collection.rules.read).flatMap((rule) => rule.filter),
-    ];
-    return { ...query, where: updatedWhere };
+>(query: Q, schema: M, _options: QueryPreparationOptions) {
+  if (!query.order) return query.order as undefined;
+  if (!schema) return [...query.order];
+  // Validate that the order by fields exist and are sortable
+  for (const [field, _direction] of query.order) {
+    const { valid, path, reason } = validateIdentifier(
+      field,
+      schema,
+      query.collectionName,
+      (dataType, i, path) => {
+        if (!dataType) return { valid: false, reason: 'Path not found' };
+        if (
+          i === path.length - 1 &&
+          (dataType.type === 'query' ||
+            dataType.type === 'set' ||
+            dataType.type === 'record')
+        ) {
+          return {
+            valid: false,
+            reason: 'Order by field is not sortable',
+          };
+        }
+        if (dataType.type === 'query' && dataType.cardinality !== 'one')
+          return {
+            valid: false,
+            reason:
+              'Order by field is a query with cardinality not equal to one',
+          };
+        return { valid: true };
+      }
+    );
+    if (!valid) {
+      throw new InvalidOrderClauseError(
+        `Order by field ${field} is not valid: ${reason} at path ${path}`
+      );
+    }
   }
-  return query;
+  return [...query.order];
+}
+
+function getQueryAfter<
+  M extends Models<any, any> | undefined,
+  Q extends CollectionQuery<M, any>
+>(query: Q, _schema: M, _options: QueryPreparationOptions) {
+  if (!query.after) return query.after as undefined;
+  if (!query.order || query.order.length === 0) {
+    // TODO: make more specific
+    // TODO: check to make sure this is correct?
+    throw new TriplitError('Cannot use after without an order clause');
+  }
+  // Could validate the cursor matches the order by field type
+  // If we support multiple cursors we could validate that there is a cursor for each order by field
+
+  const [cursor, inclusive] = query.after;
+  const after = [
+    [
+      // TODO: need to find a better place to apply schema transformations (see where too)
+      cursor[0] instanceof Date ? cursor[0].toISOString() : cursor[0],
+      appendCollectionToId(query.collectionName, cursor[1]),
+    ],
+    inclusive,
+  ];
+  return after;
 }
 
 function whereFilterValidator<M extends Models<any, any> | undefined>(
@@ -254,7 +371,6 @@ function whereFilterValidator<M extends Models<any, any> | undefined>(
     // I believe these are handled as we expand statements in the mapFilterStatements function
     if (isFilterGroup(statement)) return true;
     if (isBooleanFilter(statement)) return true;
-
     const [prop, op, val] = statement;
     const { valid, path, reason } = validateIdentifier(
       prop,
@@ -286,55 +402,6 @@ function whereFilterValidator<M extends Models<any, any> | undefined>(
     }
     return true;
   };
-}
-
-function addSubsSelectsFromIncludes<
-  M extends Models<any, any> | undefined,
-  CN extends CollectionNameFromModels<M>
->(query: CollectionQuery<M, CN>, schema: M) {
-  if (!query.include) return query;
-  // TODO: typescript should handle schema = undefined, but it isn't
-  const collectionSchema = schema?.[query.collectionName];
-  if (!collectionSchema) return query;
-  for (const [relationName, relation] of Object.entries(
-    query.include as Record<string, RelationSubquery<M, any> | null>
-  )) {
-    const attributeType = getAttributeFromSchema(
-      relationName.split('.'),
-      schema,
-      // @ts-expect-error TODO: figure out proper typing of collectionName
-      query.collectionName
-    );
-
-    if (attributeType && attributeType.type === 'query') {
-      let additionalQuery =
-        // @ts-expect-error TODO: figure out proper typing of include here, this is where it would be helpful to know the difference between a CollectionQuery and Prepared<CollectionQuery>
-        relation as CollectionQuery<M, any> | undefined;
-      if (additionalQuery && additionalQuery.include) {
-        additionalQuery = addSubsSelectsFromIncludes(
-          {
-            ...additionalQuery,
-            collectionName: attributeType.query.collectionName,
-          },
-          schema
-        );
-      }
-      const merged = mergeQueries({ ...attributeType.query }, additionalQuery);
-      const subquerySelection = {
-        subquery: merged,
-        cardinality: attributeType.cardinality,
-      };
-      query.include = { ...query.include, [relationName]: subquerySelection };
-    } else if (relation?.subquery) {
-      query.include = { ...query.include, [relationName]: relation };
-    } else {
-      if (!attributeType) {
-        throw new RelationDoesNotExistError(relationName, query.collectionName);
-      }
-      throw new IncludedNonRelationError(relationName, query.collectionName);
-    }
-  }
-  return query;
 }
 
 function mergeQueries<M extends Models<any, any> | undefined>(
@@ -371,4 +438,38 @@ function mapFilterStatements<
     }
     return mapFunction(statement);
   });
+}
+
+/**
+ * Validates an identifier path based on a validator function. The validator function is called for each part of the path.
+ */
+function validateIdentifier<
+  M extends Models<any, any>,
+  CN extends CollectionNameFromModels<M>
+>(
+  identifier: string,
+  schema: M,
+  collectionName: CN,
+  validator: (
+    dataType: DataType | undefined,
+    i: number,
+    path: string[]
+  ) => {
+    valid: boolean;
+    reason?: string;
+  }
+): { valid: boolean; path?: string; reason?: string } {
+  let schemaTraverser = createSchemaTraverser(schema, collectionName);
+  const attrPath = identifier.split('.');
+  let traversedPath: string[] = [];
+  for (let i = 0; i < attrPath.length; i++) {
+    const attr = attrPath[i];
+    schemaTraverser = schemaTraverser.get(attr);
+    traversedPath.push(attr);
+    const { valid, reason } = validator(schemaTraverser.current, i, attrPath);
+    if (!valid) {
+      return { valid, path: traversedPath.join('.'), reason };
+    }
+  }
+  return { valid: true };
 }

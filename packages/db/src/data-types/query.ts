@@ -1,7 +1,6 @@
 import { CollectionNameFromModels } from '../db.js';
 import {
   CollectionNotFoundError,
-  InvalidCollectionNameError,
   InvalidQueryCardinalityError,
   TriplitError,
 } from '../errors.js';

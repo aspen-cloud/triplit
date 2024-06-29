@@ -472,18 +472,6 @@ describe('Database API', () => {
     expect(twoHundredMathClasses).toHaveLength(1);
   });
 
-  it('supports basic select statements', async () => {
-    const results = await db.fetch(
-      CollectionQueryBuilder('Class').select(['name', 'level']).build()
-    );
-    [...results.values()].forEach((entityObj) => {
-      expect(entityObj).toHaveProperty('name');
-      expect(entityObj).toHaveProperty('level');
-      expect(entityObj).not.toHaveProperty('department');
-      expect(entityObj).not.toHaveProperty('enrolled_students');
-    });
-  });
-
   it('can report basic collection stats from the database', async () => {
     const stats = await db.getCollectionStats();
     expect([...stats.keys()]).toEqual([

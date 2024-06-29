@@ -496,37 +496,6 @@ export function getRelationPathsFromIdentifier<
   );
 }
 
-export function validateIdentifier<
-  M extends Models<any, any>,
-  CN extends CollectionNameFromModels<M>
->(
-  identifier: string,
-  schema: M,
-  collectionName: CN,
-  validator: (
-    dataType: DataType | undefined,
-    i: number,
-    path: string[]
-  ) => {
-    valid: boolean;
-    reason?: string;
-  }
-): { valid: boolean; path?: string; reason?: string } {
-  let schemaTraverser = createSchemaTraverser(schema, collectionName);
-  const attrPath = identifier.split('.');
-  let traversedPath: string[] = [];
-  for (let i = 0; i < attrPath.length; i++) {
-    const attr = attrPath[i];
-    schemaTraverser = schemaTraverser.get(attr);
-    traversedPath.push(attr);
-    const { valid, reason } = validator(schemaTraverser.current, i, attrPath);
-    if (!valid) {
-      return { valid, path: traversedPath.join('.'), reason };
-    }
-  }
-  return { valid: true };
-}
-
 function getRootRelationAlias<
   M extends Models<any, any>,
   CN extends CollectionNameFromModels<M>
@@ -1215,6 +1184,10 @@ export function initialFetchExecutionContext(): FetchExecutionContext {
   };
 }
 
+function isSystemKey(key: string) {
+  return key === '_collection';
+}
+
 /**
  * fetch
  * @summary This function is used to fetch entities from the database. It can be used to fetch a single entity or a collection of entities.
@@ -1302,7 +1275,8 @@ export async function fetch<
   }
 
   if (
-    (select && select.length > 0) ||
+    !select ||
+    select.length > 0 ||
     (query.include && Object.keys(query.include).length > 0)
   ) {
     // Load include relationships
@@ -1315,11 +1289,21 @@ export async function fetch<
           entId,
           { entity, relationships, triples, existsFilterTriples },
         ]) => {
-          const selectedAttributes: string[] = select ?? [];
+          const selectedAttributes: string[] = select
+            ? select // If we have a selection use that
+            : schema && query.collectionName !== '_metadata'
+            ? Object.entries<DataType>(
+                schema[query.collectionName].schema.properties
+              )
+                .filter(([_key, dataType]) => dataType.type !== 'query')
+                .map(([key]) => key) // If schema, use those props
+            : // If schemaless, use any props queried, without system keys
+              Object.keys(entity).filter((key) => !isSystemKey(key));
           const includedRelationships = Object.keys(query.include ?? {});
           const selectedEntity = selectedAttributes
             .concat(includedRelationships)
             .reduce<any>(selectParser(entity), {});
+
           return [
             entId,
             {

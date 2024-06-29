@@ -514,6 +514,15 @@ export class InvalidWhereClauseError extends TriplitError {
   }
 }
 
+export class InvalidSelectClauseError extends TriplitError {
+  constructor(...args: any[]) {
+    super(...args);
+    this.name = 'InvalidSelectClauseError';
+    this.baseMessage = `The select clause of this query has been determined to be invalid.`;
+    this.status = STATUS_CODES['Bad Request'];
+  }
+}
+
 export class QueryNotPreparedError extends TriplitError {
   constructor(...args: any[]) {
     super(...args);
