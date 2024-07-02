@@ -29,10 +29,40 @@ import { WebSocket } from 'ws';
 import fetch from 'node-fetch';
 import { Flag } from './flags.js';
 import { ArgDefinitions, CommandDefinition } from './command.js';
+import { PostHog } from 'posthog-node';
+import { readFileSync } from 'node:fs';
+import * as Path from 'node:path';
+import { getInstallId, getTelemetryEnabled } from './config.js';
+
 // @ts-ignore
 global.WebSocket = WebSocket;
 // @ts-ignore
 global.fetch = fetch;
+
+// reads the package.json file and gets the version
+const cliVersion = JSON.parse(
+  readFileSync(
+    Path.resolve(fileURLToPath(import.meta.url), '../../package.json'),
+    'utf-8'
+  )
+).version;
+
+const posthog = new PostHog('phc_wqlg7bicph69twhGZbS7vPW5V73UoWWz0pppf24x6WN', {
+  host: 'https://us.i.posthog.com',
+});
+
+if (!getTelemetryEnabled()) {
+  await posthog.disable();
+}
+
+let installId = getInstallId();
+
+posthog.identify({
+  distinctId: installId,
+  properties: {
+    cliVersion,
+  },
+});
 
 const argv = minimist(process.argv.slice(2), { stopEarly: false });
 
@@ -166,7 +196,15 @@ export async function execute(args: string[], flags: {}) {
   } else {
     parsedCommandArgs = commandArgs;
   }
-
+  posthog.capture({
+    distinctId: installId,
+    event: 'cli_command_run',
+    properties: {
+      command: cmdDef.name,
+      flags: unaliasedFlags,
+      args: parsedCommandArgs,
+    },
+  });
   const result = await cmdDef.run({
     flags: unaliasedFlags,
     args: parsedCommandArgs,
@@ -175,6 +213,7 @@ export async function execute(args: string[], flags: {}) {
   if (result && React.isValidElement(result)) {
     render(result, { patchConsole: false });
   }
+  await posthog.shutdown();
 }
 
 async function printDirectoryHelp(name: string, commands: CommandTree) {
