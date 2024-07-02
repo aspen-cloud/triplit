@@ -211,63 +211,65 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
     this.storeTx.beforeInsert(this.ValidateTripleSchema);
     if (!options?.skipRules) {
       // Pre-update write checks
-      this.storeTx.beforeCommit(async (triplesByStorage, tx) => {
-        /**
-         * This will check writes rules before we commit the transaction
-         * it will look for a _collection attribute to indicate an insert
-         * which means looking only at the inserted triples is sufficient
-         * to validate the rule.
-         * Otherwise treat any triples as an update/delete and fetch the entity
-         * from the store to validate the rule
-         */
-        for (const [storageId, triples] of Object.entries(triplesByStorage)) {
-          const insertedEntities: Set<string> = new Set();
-          const updatedEntities: Set<string> = new Set([
-            ...triples.map((t) => t.id),
-          ]);
-          const deletedEntities: Set<string> = new Set();
-          for (const triple of triples) {
-            if (
-              deletedEntities.has(triple.id) ||
-              insertedEntities.has(triple.id)
-            )
-              continue;
-            if (triple.attribute[0] === '_collection' && triple.expired) {
-              updatedEntities.delete(triple.id);
-              deletedEntities.add(triple.id);
-              continue;
-            }
-            if (triple.attribute[0] === '_collection' && !triple.expired) {
-              insertedEntities.add(triple.id);
-              updatedEntities.delete(triple.id);
-              continue;
-            }
-          }
-          // for each updatedEntity, load triples, construct entity, and check write rules
-          for (const id of updatedEntities) {
-            await checkWriteRules(this, tx, id, this.schema);
-          }
-          for (const id of insertedEntities) {
-            await checkWriteRules(this, tx, id, this.schema);
-          }
-          for (const id of deletedEntities) {
-            // Notably deletes use the original triples (using tx wont have data)
-            // We may not be able to differentiate between a delete elsewhere and a write rule failure
-            await checkWriteRules(
-              this,
-              this.db.tripleStore,
-              id,
-
-              this.schema
-            );
-          }
-        }
-      });
+      this.storeTx.beforeCommit(this.CheckWritePermissions);
     }
     this.storeTx.beforeInsert(this.UpdateLocalSchema);
     this.storeTx.beforeCommit(this.CallBeforeCommitDBHooks);
     this.storeTx.afterCommit(this.CallAfterCommitDBHooks);
   }
+
+  private CheckWritePermissions: TripleStoreBeforeCommitHook = async (
+    triplesByStorage,
+    tx
+  ) => {
+    /**
+     * This will check writes rules before we commit the transaction
+     * it will look for a _collection attribute to indicate an insert
+     * which means looking only at the inserted triples is sufficient
+     * to validate the rule.
+     * Otherwise treat any triples as an update/delete and fetch the entity
+     * from the store to validate the rule
+     */
+    for (const [storageId, triples] of Object.entries(triplesByStorage)) {
+      const insertedEntities: Set<string> = new Set();
+      const updatedEntities: Set<string> = new Set([
+        ...triples.map((t) => t.id),
+      ]);
+      const deletedEntities: Set<string> = new Set();
+      for (const triple of triples) {
+        if (deletedEntities.has(triple.id) || insertedEntities.has(triple.id))
+          continue;
+        if (triple.attribute[0] === '_collection' && triple.expired) {
+          updatedEntities.delete(triple.id);
+          deletedEntities.add(triple.id);
+          continue;
+        }
+        if (triple.attribute[0] === '_collection' && !triple.expired) {
+          insertedEntities.add(triple.id);
+          updatedEntities.delete(triple.id);
+          continue;
+        }
+      }
+      // for each updatedEntity, load triples, construct entity, and check write rules
+      for (const id of updatedEntities) {
+        await checkWriteRules(this, tx, id, this.schema);
+      }
+      for (const id of insertedEntities) {
+        await checkWriteRules(this, tx, id, this.schema);
+      }
+      for (const id of deletedEntities) {
+        // Notably deletes use the original triples (using tx wont have data)
+        // We may not be able to differentiate between a delete elsewhere and a write rule failure
+        await checkWriteRules(
+          this,
+          this.db.tripleStore,
+          id,
+
+          this.schema
+        );
+      }
+    }
+  };
 
   private ValidateTripleSchema: TripleStoreBeforeInsertHook = async (
     triples
