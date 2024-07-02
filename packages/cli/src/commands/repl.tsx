@@ -5,8 +5,65 @@ import WebSocket from 'ws';
 import { Command } from '../command.js';
 import { serverRequesterMiddleware } from '../middleware/add-server-requester.js';
 import { parseQuery } from '../parser.js';
-import { schemaToJSON } from '@triplit/db';
+import { TriplitError, schemaToJSON } from '@triplit/db';
 import { projectSchemaMiddleware } from '../middleware/project-schema.js';
+import ora from 'ora';
+import { Logger } from '@triplit/types/logger';
+
+async function awaitConnect(client: Triplit.TriplitClient) {
+  return new Promise<void>((resolve) => {
+    // client.syncEngine.onConnectionStatusChange((status) => {
+    //   console.log('STATUS', status);
+    //   if (status === 'OPEN') {
+    //     resolve();
+    //   }
+    // }, true);
+    if (client.syncEngine.connectionStatus === 'OPEN') {
+      resolve();
+    }
+    setInterval(() => {
+      if (client.syncEngine.connectionStatus === 'OPEN') {
+        resolve();
+      }
+    }, 300);
+  });
+}
+
+class CliLogger implements Logger {
+  private _scope: string;
+  constructor({ scope }: { scope?: string }) {
+    this._scope = scope ?? '';
+  }
+  log(msg: string) {
+    // console.log(msg);
+  }
+  info(msg: string) {
+    // console.info(msg);
+  }
+  error(msg: any, err: unknown) {
+    console.log('logging error', typeof msg, typeof err);
+    if (this._scope === 'sync') return;
+    if (msg instanceof TriplitError) {
+      console.error(msg.message);
+      return;
+    }
+    if (err instanceof TriplitError) {
+      console.log('TRIPLIT ERROR');
+      console.error(err.message);
+      return;
+    }
+    console.error(msg, err);
+  }
+  debug(msg: string) {
+    // console.debug(msg);
+  }
+  warn(msg: string) {
+    // console.warn(msg);
+  }
+  scope(scope: string) {
+    return new CliLogger({ scope });
+  }
+}
 
 // @ts-ignore
 global.WebSocket = WebSocket;
@@ -18,7 +75,16 @@ export default Command({
       serverUrl: ctx.url,
       token: ctx.token,
       schema: ctx.schema,
+      logger: new CliLogger({}),
     });
+    const spinner = ora('Connecting to Triplit server').start();
+    setTimeout(() => {
+      spinner.text =
+        'Still trying to connect... Make sure the server is running and your ENV is configured correctly.';
+    }, 3000);
+    await awaitConnect(triplit);
+    spinner.stop();
+    triplit.onConnectionStatusChange((status) => {});
     global.triplit = triplit;
     const repl = Repl.start(`db> `);
     repl.defineCommand('fetch', {
