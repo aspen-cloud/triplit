@@ -1,5 +1,11 @@
 # @triplit/cli
 
+## 0.4.5
+
+### Patch Changes
+
+- 7912cba: Hide ugly connection errors in REPL
+
 ## 0.4.4
 
 ### Patch Changes
