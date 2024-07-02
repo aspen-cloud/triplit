@@ -27,4 +27,6 @@ export * from './components/ui/context-menu.jsx';
 export * from './components/ui/mode-toggle.jsx';
 export * from './components/ui/theme-provider.jsx';
 export * from './components/ui/toast.jsx';
+export * from './components/ui/toaster.jsx';
+export * from './lib/useToast.js';
 export { cn } from './lib/utils.js';
