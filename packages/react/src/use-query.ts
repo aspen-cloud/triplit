@@ -152,6 +152,8 @@ export function usePaginatedQuery<
   const prevPageRef = useRef<() => void>();
   const disconnectRef = useRef<() => void>();
 
+  const stringifiedQuery = builtQuery && JSON.stringify(builtQuery);
+
   useEffect(() => {
     const { unsubscribe, nextPage, prevPage } = client.subscribeWithPagination(
       builtQuery,
@@ -176,7 +178,7 @@ export function usePaginatedQuery<
     return () => {
       unsubscribe();
     };
-  }, [builtQuery]);
+  }, [stringifiedQuery]);
 
   const nextPage = useCallback(() => {
     setFetchingPage(true);
@@ -276,7 +278,7 @@ export function useInfiniteQuery<
     return () => {
       unsubscribe();
     };
-  }, [builtQuery]);
+  }, [stringifiedQuery]);
 
   const loadMore = useCallback(() => {
     setFetchingMore(true);
