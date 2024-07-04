@@ -51,9 +51,12 @@ export async function loader({ params }: { params: { projectId?: string } }) {
 }
 
 export type ConsoleQuery = {
-  collection?: string;
-  where: QueryWhere<any, any>;
-  order: OrderStatement<any, any>;
+  collection?: string | null;
+  where?: QueryWhere<any, any> | null;
+  order?: OrderStatement<any, any> | null;
+  server?: string | null;
+  token?: string | null;
+  projName?: string | null;
 };
 
 export type SetConsoleQuery = (
@@ -75,6 +78,9 @@ export function ProjectViewerPage() {
       collection: urlQueryState.get('collection'),
       where: JSON.parse(urlQueryState.get('where') ?? '[]'),
       order: JSON.parse(urlQueryState.get('order') ?? '[]'),
+      server: urlQueryState.get('server'),
+      token: urlQueryState.get('token'),
+      projName: urlQueryState.get('projName'),
     }),
     [urlQueryState]
   );
@@ -82,7 +88,8 @@ export function ProjectViewerPage() {
   const setQuery: SetConsoleQuery = useCallback(
     (newQuery, merge = true) => {
       if (!merge) {
-        setUrlQueryState(newQuery);
+        const { server, token, projName } = query;
+        setUrlQueryState({ server, token, projName, ...newQuery });
         return;
       }
       const newState = { ...query, ...newQuery };
