@@ -7626,7 +7626,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@triplit/react@npm:0.3.67, @triplit/react@workspace:^, @triplit/react@workspace:packages/react":
+"@triplit/react@npm:0.3.68, @triplit/react@workspace:^, @triplit/react@workspace:packages/react":
   version: 0.0.0-use.local
   resolution: "@triplit/react@workspace:packages/react"
   dependencies:
@@ -19310,7 +19310,7 @@ __metadata:
     "@triplit/cli": "npm:0.4.5"
     "@triplit/client": "npm:0.3.64"
     "@triplit/db": "npm:0.3.49"
-    "@triplit/react": "npm:0.3.67"
+    "@triplit/react": "npm:0.3.68"
     "@types/bcryptjs": "npm:^2"
     "@types/jsonwebtoken": "npm:^9.0.2"
     "@types/node": "npm:^17.0.45"
