@@ -22,7 +22,7 @@
     "@triplit/authjs-adapter": "^0.1.0",
     "@triplit/client": "0.3.64",
     "@triplit/db": "0.3.49",
-    "@triplit/react": "0.3.67",
+    "@triplit/react": "0.3.68",
     "bcryptjs": "^2.4.3",
     "class-variance-authority": "^0.7.0",
     "clsx": "^1.2.1",

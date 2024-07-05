@@ -1,5 +1,11 @@
 # @triplit/react
 
+## 0.3.68
+
+### Patch Changes
+
+- 8b90ba1: Fix memoizaton of query in usePaginatedQuery
+
 ## 0.3.67
 
 ### Patch Changes
