@@ -1,5 +1,13 @@
 # @triplit/console
 
+## 0.3.70
+
+### Patch Changes
+
+- 0f97270: fixup url merging with local dev params
+- Updated dependencies [8b90ba1]
+  - @triplit/react@0.3.68
+
 ## 0.3.69
 
 ### Patch Changes
