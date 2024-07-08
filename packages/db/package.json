@@ -70,7 +70,7 @@
   },
   "dependencies": {
     "@sinclair/typebox": "^0.32.15",
-    "@triplit/tuple-database": "2.2.23",
+    "@triplit/tuple-database": "^2.2.24",
     "idb": "^7.1.1",
     "nanoid": "^3.0.0",
     "pino": "^8.11.0",
