@@ -1,5 +1,11 @@
 # @triplit/db
 
+## 0.3.50
+
+### Patch Changes
+
+- 76b3751: Upgrade @triplit/tuple-database, fixing Expo Sqlite typo
+
 ## 0.3.49
 
 ### Patch Changes
