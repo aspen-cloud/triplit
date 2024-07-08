@@ -58,6 +58,15 @@ const query = client
   .where('class.instructor.name', '=', 'Dr. Smith');
 ```
 
+### Boolean clauses
+
+You may also pass in a boolean value as a clause. These statements are particularly useful when defining [permissions](/schemas/permissions).
+
+```typescript
+const query = client.query('users').where([true]); // 'true' is a no-op, will return all users
+const query = client.query('users').where([false]); // 'false' filters out all results, will return no users
+```
+
 ### Exists filters
 
 You may also define a filter to check if related data exists. Triplit provides an `exists` method to help build subqueries that reference your schema.

@@ -1,18 +1,17 @@
 ---
-description: How to manage access control rules with a Triplit schema.
+description: Deprecated rules API.
 ---
 
 import { Callout } from 'nextra-theme-docs';
 
 # Access control
 
-<Callout type="info" emoji="ℹ️">
-  Although usable, access control is still a feature in development and the API
-  is planned to expand from here. More information is on the
-  [roadmap](https://triplit.dev/roadmap).
+<Callout type="error">
+  The rules API is deprecated and will be removed in a future release. Please
+  use the new [permissions API](/schemas/permissions) instead.
 </Callout>
 
-Access control  in Triplit occurs at the entity level. Although this is an improvement over membership/room based apis, access control does not extends to individual properties.
+Access control in Triplit occurs at the entity level. Although this is an improvement over membership/room based apis, access control does not extends to individual properties.
 
 Typically a user's id is used to determine access. The user's id is accessible by providing a custom token to Triplit, as explained in the [Auth guide](/auth).
 

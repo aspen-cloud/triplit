@@ -35,4 +35,8 @@ query = client.query('employees').where('name', '=', '$global.name'); // resolve
 
 ### Session variables
 
-Session variables are prefixed with the `session` scope and are accessible to all queries in that database session. Triplit exposes a `$session.SESSION_USER_ID` variable to help write authorization rules. You can [read more about writing rules](/schemas/rules) and [how to set the session user](/auth).
+Session variables are prefixed with the `session` scope and are accessible to all queries in that database session. When [authenticating](/auth) with a Triplit server, the server will assign all claims on the JWT to session variables.
+
+### Role variables
+
+When determining access control rules with [roles](/schemas/permissions#roles), you can use role variables to assigned values from the token in your permission definitions. Role variables are prefixed with the `role` scope.
