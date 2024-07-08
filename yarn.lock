@@ -7527,7 +7527,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@triplit/client@npm:0.3.65, @triplit/client@npm:^0.3.59, @triplit/client@workspace:^, @triplit/client@workspace:packages/client":
+"@triplit/client@npm:0.3.66, @triplit/client@npm:^0.3.59, @triplit/client@workspace:^, @triplit/client@workspace:packages/client":
   version: 0.0.0-use.local
   resolution: "@triplit/client@workspace:packages/client"
   dependencies:
@@ -7600,7 +7600,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@triplit/db@npm:0.3.50, @triplit/db@npm:^0.3.45, @triplit/db@workspace:^, @triplit/db@workspace:packages/db":
+"@triplit/db@npm:0.3.51, @triplit/db@npm:^0.3.45, @triplit/db@workspace:^, @triplit/db@workspace:packages/db":
   version: 0.0.0-use.local
   resolution: "@triplit/db@workspace:packages/db"
   dependencies:
@@ -7626,7 +7626,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@triplit/react@npm:0.3.69, @triplit/react@workspace:^, @triplit/react@workspace:packages/react":
+"@triplit/react@npm:0.3.70, @triplit/react@workspace:^, @triplit/react@workspace:packages/react":
   version: 0.0.0-use.local
   resolution: "@triplit/react@workspace:packages/react"
   dependencies:
@@ -7662,7 +7662,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@triplit/server@npm:0.3.54, @triplit/server@npm:^0.3.49, @triplit/server@workspace:^, @triplit/server@workspace:packages/server":
+"@triplit/server@npm:0.3.55, @triplit/server@npm:^0.3.49, @triplit/server@workspace:^, @triplit/server@workspace:packages/server":
   version: 0.0.0-use.local
   resolution: "@triplit/server@workspace:packages/server"
   dependencies:
@@ -19308,9 +19308,9 @@ __metadata:
     "@tailwindcss/typography": "npm:^0.5.10"
     "@triplit/authjs-adapter": "npm:^0.1.0"
     "@triplit/cli": "npm:0.4.5"
-    "@triplit/client": "npm:0.3.65"
-    "@triplit/db": "npm:0.3.50"
-    "@triplit/react": "npm:0.3.69"
+    "@triplit/client": "npm:0.3.66"
+    "@triplit/db": "npm:0.3.51"
+    "@triplit/react": "npm:0.3.70"
     "@types/bcryptjs": "npm:^2"
     "@types/jsonwebtoken": "npm:^9.0.2"
     "@types/node": "npm:^17.0.45"
@@ -19731,7 +19731,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "node-server@workspace:packages/node-server"
   dependencies:
-    "@triplit/server": "npm:0.3.54"
+    "@triplit/server": "npm:0.3.55"
     "@types/semver": "npm:^7"
     better-sqlite3: "npm:^8.3.0"
     semver: "npm:^7.6.0"

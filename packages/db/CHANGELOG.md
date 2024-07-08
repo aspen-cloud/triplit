@@ -1,5 +1,11 @@
 # @triplit/db
 
+## 0.3.51
+
+### Patch Changes
+
+- 1b128fb: fixup package config
+
 ## 0.3.50
 
 ### Patch Changes
