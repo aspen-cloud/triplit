@@ -1,5 +1,11 @@
 # @triplit/client
 
+## 0.3.67
+
+### Patch Changes
+
+- 6914e65: add optional messagePort parameter to WorkerClient constructor
+
 ## 0.3.66
 
 ### Patch Changes
