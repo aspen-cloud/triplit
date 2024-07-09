@@ -4515,7 +4515,7 @@ describe('delta querying', async () => {
         content: '',
         created_at: new Date('2022-06-02'),
       });
-      const fetchQuery = prepareQuery(query, schema['collections'], {});
+      const fetchQuery = prepareQuery(query, schema['collections'], {}, {});
       const deltaTriples = await fetchDeltaTriples(
         db,
         db.tripleStore,
@@ -4553,7 +4553,7 @@ describe('delta querying', async () => {
         created_at: new Date('2022-01-02'),
       });
 
-      const fetchQuery = prepareQuery(query, schema['collections'], {});
+      const fetchQuery = prepareQuery(query, schema['collections'], {}, {});
       const deltaTriples = await fetchDeltaTriples(
         db,
         db.tripleStore,
@@ -4734,6 +4734,7 @@ describe('delta querying', async () => {
         const fetchQuery = prepareQuery(
           query(clientDB),
           schema['collections'],
+          {},
           {}
         );
         const deltaTriples = await fetchDeltaTriples(

@@ -4,6 +4,7 @@ import { SubQuery } from './query.js';
 import { Schema } from '../schema/builder.js';
 import { DataType } from './base.js';
 import { QueryResultCardinality } from '../query/types';
+import { RolePermissions, Roles } from '../schema/types';
 
 export const VALUE_TYPE_KEYS = ['string', 'number', 'boolean', 'date'] as const;
 export type ValueTypeKeys = (typeof VALUE_TYPE_KEYS)[number];
@@ -55,6 +56,7 @@ export interface CollectionDefinition {
     id: ReturnType<typeof Schema.Id>;
   }>;
   rules?: CollectionRules<any, any>;
+  permissions: RolePermissions<any, any>;
 }
 
 export interface CollectionsDefinition {
@@ -64,6 +66,7 @@ export interface CollectionsDefinition {
 export type SchemaDefinition = {
   version: number;
   collections: CollectionsDefinition;
+  roles?: Roles;
 };
 
 // Could be nice to get a generic to determine the expected value of default

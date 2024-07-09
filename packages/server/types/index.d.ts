@@ -1,27 +1,20 @@
-import { ParsedToken, Session, Connection } from '@triplit/server-core';
+import type { Session, Connection } from '@triplit/server-core';
+import type { ProjectJWT } from '@triplit/server-core/token';
 
 declare module 'ws' {
   class _WS extends WebSocket {}
   export interface WebSocket extends _WS {
     isAlive: boolean;
-    token?: ParsedToken;
+    token?: ProjectJWT;
     clientId?: string;
     session?: Connection;
   }
 }
 
-// declare global {
-//   namespace Express {
-//     interface Request {
-//       token?: ParsedToken;
-//     }
-//   }
-// }
-
 declare global {
   namespace Express {
     export interface Request {
-      token?: ParsedToken;
+      token?: ProjectJWT;
     }
   }
 }

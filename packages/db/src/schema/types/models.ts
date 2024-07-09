@@ -20,6 +20,7 @@ import {
   CollectionQuery,
   QueryResult,
   QuerySelectionValue,
+  QueryWhere,
   RelationSubquery,
 } from '../../query/types';
 
@@ -39,16 +40,75 @@ export type Model<T extends SchemaConfig> = RecordType<T>;
 export type Collection<T extends SchemaConfig = SchemaConfig> = {
   schema: Model<T>;
   // TODO: possible to not use <any, any> here?
+  /**
+   * @deprecated use `permissions` instead
+   */
   rules?: CollectionRules<any, any>;
+  permissions?: RolePermissions<any, any>;
 };
+
+export type RolePermissions<
+  M extends Models<any, any> | undefined,
+  CN extends CollectionNameFromModels<M>
+> = Record<string, CollectionPermissions<M, CN>>;
+
+export type CollectionPermissions<
+  M extends Models<any, any> | undefined,
+  CN extends CollectionNameFromModels<M>
+> = {
+  read?: CollectionPermission<M, CN>;
+  insert?: CollectionPermission<M, CN>;
+  update?: CollectionPermission<M, CN>;
+  postUpdate?: CollectionPermission<M, CN>;
+  delete?: CollectionPermission<M, CN>;
+};
+
+export type PermissionOperations = keyof CollectionPermissions<any, any>;
+export type PermissionWriteOperations = Exclude<PermissionOperations, 'read'>;
+
+type CollectionPermission<
+  M extends Models<any, any> | undefined,
+  CN extends CollectionNameFromModels<M>
+> = {
+  filter?: QueryWhere<M, CN>;
+  // attributes?: Array<QuerySelectionValue<M, CN>>;
+  // attributesExclude?: Array<QuerySelectionValue<M, CN>>;
+};
+
+// TODO: we could maybe try to make this more type safe, should be valid JSON
+/**
+ * An object that will be matched against a JWT payload to determine if a user has a role
+ * A value prefixed with '$' indicates a wildcard that will be replaced with the value from the JWT payload
+ */
+export type PermissionMatcher = Record<string, any>;
+/**
+ * Requisite information related to a role
+ */
+export type Role = {
+  match: PermissionMatcher;
+};
+/**
+ * Collection of roles for a database
+ */
+export type Roles = Record<string, Role>;
+
+export type StoreSchema<M extends Models<any, any> | undefined> =
+  M extends Models<any, any>
+    ? {
+        version: number;
+        collections: M;
+        roles?: Roles;
+      }
+    : M extends undefined
+    ? undefined
+    : never;
 
 /**
  * The set of collections that define a schema
  */
-export type Models<
-  CollectionName extends string,
-  T extends SchemaConfig
-> = Record<CollectionName, Collection<T>>;
+export type Models<CollectionName extends string, T extends SchemaConfig> = {
+  [K in CollectionName]: Collection<T>;
+};
 
 /**
  * A subset of a model with properties that are available for selection

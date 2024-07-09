@@ -5,7 +5,7 @@ import {
   getBackwardsIncompatibleEdits,
 } from '../src/schema/diff.js';
 import { Schema as S } from '../src/schema/builder.js';
-import DB, { DBTransaction } from '../src/index.js';
+import DB, { DBTransaction, Models } from '../src/index.js';
 
 function wrapSchema(definition: any) {
   return {
@@ -102,6 +102,7 @@ describe('Schema diffing', () => {
     );
     expect(result).toStrictEqual([
       {
+        _diff: 'collectionAttribute',
         collection: 'stressTest',
         type: 'delete',
         attribute: ['id'],
@@ -118,6 +119,7 @@ describe('Schema diffing', () => {
     );
     expect(reverseResult).toStrictEqual([
       {
+        _diff: 'collectionAttribute',
         collection: 'stressTest',
         type: 'insert',
         attribute: ['id'],
@@ -179,6 +181,7 @@ describe('Schema diffing', () => {
     const diff = diffSchemas(schemaB, schemaA);
     expect(diff).toStrictEqual([
       {
+        _diff: 'collectionAttribute',
         collection: 'second',
         type: 'delete',
         attribute: ['id'],
@@ -192,6 +195,7 @@ describe('Schema diffing', () => {
     const reverseDiff = diffSchemas(schemaA, schemaB);
     expect(reverseDiff).toStrictEqual([
       {
+        _diff: 'collectionAttribute',
         collection: 'second',
         type: 'insert',
         attribute: ['id'],
@@ -362,7 +366,8 @@ describe('detecting dangerous edits', () => {
   const withEnum = S.String({ enum: ['a', 'b', 'c'] });
   const withDangerouslyChangedEnum = S.String({ enum: ['a', 'b', 'd'] });
   const withSafeChangedEnum = S.String({ enum: ['a', 'b', 'c', 'd'] });
-  it.only('can detect dangerous changes to an enum', async () => {
+
+  it('can detect dangerous changes to an enum', async () => {
     const db = new DB({ schema: wrapSchema({ id: S.Id(), enum: noEnum }) });
     await db.transact(async (tx) => {
       const results = await diffEnumAttributes(tx, noEnum, withEnum);
@@ -427,3 +432,281 @@ describe('detecting dangerous edits', () => {
 function pause(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
+
+describe('rules', () => {
+  it('can detect changes to rules', () => {
+    const schemaA = {
+      version: 0,
+      collections: {
+        test: {
+          schema: S.Schema({ id: S.Id() }),
+          rules: {
+            read: { 'can-read': { filter: [false] } },
+          },
+        },
+      },
+    };
+    const schemaB = {
+      version: 0,
+      collections: {
+        test: {
+          schema: S.Schema({ id: S.Id() }),
+          rules: {
+            read: { 'cant-read': { filter: [false] } },
+          },
+        },
+      } satisfies Models<any, any>,
+    };
+
+    const diff = diffSchemas(schemaA, schemaB);
+    expect(diff).toStrictEqual([
+      {
+        _diff: 'collectionRules',
+        collection: 'test',
+      },
+    ]);
+  });
+  it('can add rules', () => {
+    const schemaA = {
+      version: 0,
+      collections: {
+        test: {
+          schema: S.Schema({ id: S.Id() }),
+        },
+      },
+    };
+    const schemaB = {
+      version: 0,
+      collections: {
+        test: {
+          schema: S.Schema({ id: S.Id() }),
+          rules: {
+            read: { 'cant-read': { filter: [false] } },
+          },
+        },
+      } satisfies Models<any, any>,
+    };
+
+    const diff = diffSchemas(schemaA, schemaB);
+    expect(diff).toStrictEqual([
+      {
+        _diff: 'collectionRules',
+        collection: 'test',
+      },
+    ]);
+  });
+  it('can remove rules', () => {
+    const schemaA = {
+      version: 0,
+      collections: {
+        test: {
+          schema: S.Schema({ id: S.Id() }),
+          rules: {
+            read: { 'can-read': { filter: [false] } },
+          },
+        },
+      },
+    };
+    const schemaB = {
+      version: 0,
+      collections: {
+        test: {
+          schema: S.Schema({ id: S.Id() }),
+        },
+      } satisfies Models<any, any>,
+    };
+
+    const diff = diffSchemas(schemaA, schemaB);
+    expect(diff).toStrictEqual([
+      {
+        _diff: 'collectionRules',
+        collection: 'test',
+      },
+    ]);
+  });
+});
+
+describe('roles', () => {
+  it('can detect changes to roles', () => {
+    const schemaA = {
+      version: 0,
+      collections: {
+        test: {
+          schema: S.Schema({ id: S.Id() }),
+        },
+      },
+      roles: {
+        user: { match: { type: 'user' } },
+      },
+    };
+    const schemaB = {
+      version: 0,
+      collections: {
+        test: {
+          schema: S.Schema({ id: S.Id() }),
+        },
+      },
+      roles: {
+        user: { match: { role: 'user' } },
+      },
+    };
+    const diff = diffSchemas(schemaA, schemaB);
+    expect(diff).toStrictEqual([
+      {
+        _diff: 'roles',
+      },
+    ]);
+  });
+  it('can add roles', () => {
+    const schemaA = {
+      version: 0,
+      collections: {
+        test: {
+          schema: S.Schema({ id: S.Id() }),
+        },
+      },
+    };
+    const schemaB = {
+      version: 0,
+      collections: {
+        test: {
+          schema: S.Schema({ id: S.Id() }),
+        },
+      },
+      roles: {
+        user: { match: { role: 'user' } },
+      },
+    };
+    const diff = diffSchemas(schemaA, schemaB);
+    expect(diff).toStrictEqual([
+      {
+        _diff: 'roles',
+      },
+    ]);
+  });
+  it('can remove roles', () => {
+    const schemaA = {
+      version: 0,
+      collections: {
+        test: {
+          schema: S.Schema({ id: S.Id() }),
+        },
+      },
+      roles: {
+        user: { match: { role: 'user' } },
+      },
+    };
+    const schemaB = {
+      version: 0,
+      collections: {
+        test: {
+          schema: S.Schema({ id: S.Id() }),
+        },
+      },
+    };
+    const diff = diffSchemas(schemaA, schemaB);
+    expect(diff).toStrictEqual([
+      {
+        _diff: 'roles',
+      },
+    ]);
+  });
+});
+
+describe('permissions', () => {
+  it('can detect changes to permissions', () => {
+    const schemaA = {
+      version: 0,
+      collections: {
+        test: {
+          schema: S.Schema({ id: S.Id() }),
+          permissions: {
+            user: {
+              read: { filter: [true] },
+            },
+          },
+        },
+      } satisfies Models<any, any>,
+    };
+    const schemaB = {
+      version: 0,
+      collections: {
+        test: {
+          schema: S.Schema({ id: S.Id() }),
+          permissions: {
+            user: {
+              read: { filter: [false] },
+            },
+          },
+        },
+      } satisfies Models<any, any>,
+    };
+    const diff = diffSchemas(schemaA, schemaB);
+    expect(diff).toStrictEqual([
+      {
+        _diff: 'collectionPermissions',
+        collection: 'test',
+      },
+    ]);
+  });
+  it('can add permissions', () => {
+    const schemaA = {
+      version: 0,
+      collections: {
+        test: {
+          schema: S.Schema({ id: S.Id() }),
+        },
+      } satisfies Models<any, any>,
+    };
+    const schemaB = {
+      version: 0,
+      collections: {
+        test: {
+          schema: S.Schema({ id: S.Id() }),
+          permissions: {
+            user: {
+              read: { filter: [true] },
+            },
+          },
+        },
+      } satisfies Models<any, any>,
+    };
+    const diff = diffSchemas(schemaA, schemaB);
+    expect(diff).toStrictEqual([
+      {
+        _diff: 'collectionPermissions',
+        collection: 'test',
+      },
+    ]);
+  });
+  it('can remove permissions', () => {
+    const schemaA = {
+      version: 0,
+      collections: {
+        test: {
+          schema: S.Schema({ id: S.Id() }),
+          permissions: {
+            user: {
+              read: { filter: [true] },
+            },
+          },
+        },
+      } satisfies Models<any, any>,
+    };
+    const schemaB = {
+      version: 0,
+      collections: {
+        test: {
+          schema: S.Schema({ id: S.Id() }),
+        },
+      } satisfies Models<any, any>,
+    };
+    const diff = diffSchemas(schemaA, schemaB);
+    expect(diff).toStrictEqual([
+      {
+        _diff: 'collectionPermissions',
+        collection: 'test',
+      },
+    ]);
+  });
+});

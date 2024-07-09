@@ -2,6 +2,7 @@ import {
   COLLECTION_TYPE_KEYS,
   VALUE_TYPE_KEYS,
 } from './data-types/serialization.js';
+import { SessionRole } from './schema/permissions.js';
 import { Models } from './schema/types';
 
 export const STATUS_CODES = {
@@ -301,6 +302,23 @@ export class WriteRuleError extends TriplitError {
     super(...args);
     this.name = 'WriteRuleError';
     this.baseMessage = `Write failed because it didn't pass a Rule.`;
+    this.status = STATUS_CODES.Unauthorized;
+  }
+}
+
+export class WritePermissionError extends TriplitError {
+  constructor(
+    collection: string,
+    entityId: string,
+    operation: string,
+    sessionRoles: SessionRole[],
+    ...args: any[]
+  ) {
+    super(...args);
+    this.name = 'WritePermissionError';
+    this.baseMessage = `Write to collection '${collection}' with id '${entityId}' is not permitted. Failed operation: ${operation}. Session roles: [${sessionRoles
+      .map((m) => m.key)
+      .join(', ')}].`;
     this.status = STATUS_CODES.Unauthorized;
   }
 }

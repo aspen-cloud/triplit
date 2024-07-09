@@ -69,9 +69,14 @@ export function collectionsDefinitionToFileContent(
   for (let collectionKey in collectionsDefinition) {
     result += indent;
     result += `'${collectionKey}': {\n`;
-    const { schema: attributes, rules } = collectionsDefinition[collectionKey];
+    const {
+      schema: attributes,
+      rules,
+      permissions,
+    } = collectionsDefinition[collectionKey];
     result += generateAttributesSection(attributes, indent + indentation);
     result += generateRulesSection(rules, indent + indentation);
+    result += generatePermissionsSection(permissions, indent + indentation);
     result += indent + '},\n';
   }
   return result + indent.slice(0, -2) + '}';
@@ -113,6 +118,19 @@ function generateRulesSection(
         .join(`\n${indent}`)}`;
   }
 
+  return result;
+}
+
+function generatePermissionsSection(
+  permissions: CollectionDefinition['permissions'],
+  indent: string
+) {
+  let result = '';
+  result +=
+    indent +
+    `permissions: ${JSON.stringify(permissions, null, 2)
+      .split('\n')
+      .join(`\n${indent}`)}`;
   return result;
 }
 

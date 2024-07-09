@@ -295,7 +295,6 @@ export function useInfiniteQuery<
         ...(options ?? {}),
         onRemoteFulfilled: () => {
           hasResponseFromServer.current = true;
-          console.log('remote fulfilled');
           setFetchingRemote(false);
         },
       }

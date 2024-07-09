@@ -115,7 +115,14 @@ export class VariableAwareCache<Schema extends Models<any, any> | undefined> {
     // TODO support multiple variable clauses
     const [prop, op, varStr] = variableFilters[0];
     const varKey = (varStr as string).slice(1);
-    const vars = getQueryVariables(query, systemVars, executionContext);
+    const vars = getQueryVariables(
+      query,
+      {
+        systemVars: this.db.systemVars,
+        roles: this.db.sessionRoles,
+      },
+      executionContext
+    );
     const varValue = vars![varKey];
     const view = this.cache.get(id)!;
     const viewResultEntries = [...view.results.entries()];

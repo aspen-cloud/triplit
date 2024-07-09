@@ -87,12 +87,6 @@ export type ClientSyncMessage =
   | ClientTriplesMessage
   | ClientChunkMessage;
 
-export type ParsedToken = {
-  projectId: string;
-  type: string;
-  userId?: string;
-};
-
 type SuccessResult<T> = { data: T; error?: undefined };
 type ErrorResult<E> = { data?: undefined; error: E };
 export type ParseResult<T, E = Error> = SuccessResult<T> | ErrorResult<E>;

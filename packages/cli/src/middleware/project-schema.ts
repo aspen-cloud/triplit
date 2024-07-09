@@ -35,6 +35,6 @@ export const projectSchemaMiddleware = Middleware({
       return `${schemaPath} does not export an object named 'schema'. Please export one. If you would like to run without a schema file, use the --noSchema flag.`;
     }
 
-    return { schema: result.schema } as const;
+    return { ...result } as { schema: any; roles?: any };
   },
 });

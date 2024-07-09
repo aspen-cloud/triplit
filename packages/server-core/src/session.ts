@@ -25,13 +25,13 @@ import {
 import {
   ServerSyncMessage,
   ClientSyncMessage,
-  ParsedToken,
   ServerCloseReason,
   ClientConnectQueryMessage,
   ClientDisconnectQueryMessage,
   ClientTriplesMessage,
 } from '@triplit/types/sync';
 import { Server as TriplitServer } from './triplit-server.js';
+import { ProjectJWT } from './token.js';
 
 export interface ConnectionOptions {
   clientId: string;
@@ -125,7 +125,7 @@ export class Connection {
         return;
       },
       {
-        skipRules: this.session.token.type === 'secret',
+        skipRules: hasAdminAccess(this.session.token),
         stateVector: clientStates,
       }
     );
@@ -326,19 +326,23 @@ export function routeNotFoundResponse(route: string[]) {
   return ServerResponse(error.status, error.toJSON());
 }
 
-function hasAdminAccess(token: ParsedToken) {
-  return token && token.type === 'secret';
+function hasAdminAccess(token: ProjectJWT) {
+  return token && token['x-triplit-token-type'] === 'secret';
 }
 
 export class Session {
   db: TriplitDB<any>;
-  constructor(public server: TriplitServer, public token: ParsedToken) {
-    if (!token) throw new Error('Token is required');
+  constructor(public server: TriplitServer, public token: ProjectJWT) {
+    if (!token) throw new TriplitError('Token is required');
     // TODO: figure out admin middleware
-    const variables = {};
-    if (token.userId)
-      // @ts-expect-error
-      variables['SESSION_USER_ID'] = token.userId;
+    const variables: Record<string, any> = {};
+
+    // For backwards compatibility assign to SESSION_USER_ID
+    if ('x-triplit-user-id' in token)
+      variables['SESSION_USER_ID'] = token['x-triplit-user-id'];
+
+    // Assign token to session vars
+    Object.assign(variables, token);
 
     this.db = server.db.withSessionVars(variables);
   }

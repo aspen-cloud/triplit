@@ -13,9 +13,8 @@ import {
   ServerCloseReason,
   ClientSyncMessage,
   ParseResult,
-  ParsedToken,
 } from '@triplit/server-core';
-import { parseAndValidateToken } from '@triplit/server-core/token';
+import { parseAndValidateToken, ProjectJWT } from '@triplit/server-core/token';
 import { logger } from './logger.js';
 import { Route } from '@triplit/server-core/triplit-server';
 import multer from 'multer';
@@ -365,7 +364,7 @@ export function createServer(options?: ServerOptions) {
 
     server.on('upgrade', (request, socket, head) => {
       wss.handleUpgrade(request, socket, head, async (socket) => {
-        let token: ParsedToken | undefined = undefined;
+        let token: ProjectJWT | undefined = undefined;
         try {
           const tokenRes = await readWSToken(request);
           if (tokenRes.error) throw tokenRes.error;

@@ -1,4 +1,12 @@
-import { Models, Schema as S } from "@triplit/db"
+import { Models, Roles, Schema as S, or } from "@triplit/db"
+
+export const roles: Roles = {
+  user: {
+    match: {
+      "x-triplit-user-id": "$userId",
+    },
+  },
+}
 
 export const schema = {
   messages: {
@@ -9,21 +17,24 @@ export const schema = {
       sender: S.RelationById("users", "$sender_id"),
       text: S.String(),
       created_at: S.String({ default: S.Default.now() }),
-      likes: S.Set(S.String()),
+      likes: S.Optional(S.Set(S.String())),
       reactions: S.RelationMany("reactions", {
         where: [["messageId", "=", "$id"]],
       }),
       convo: S.RelationById("conversations", "$conversationId"),
     }),
-    rules: {
-      read: {
-        inConvo: {
-          filter: [["convo.members", "=", "$SESSION_USER_ID"]],
+    permissions: {
+      user: {
+        read: {
+          // You may only read messages in conversations you are a member of
+          filter: [["convo.members", "=", "$role.userId"]],
         },
-      },
-      write: {
-        isSender: {
-          filter: [["sender_id", "=", "$SESSION_USER_ID"]],
+        insert: {
+          // You may only author your own message and must be a member of the conversation
+          filter: [
+            ["convo.members", "=", "$role.userId"],
+            ["sender_id", "=", "$role.userId"],
+          ],
         },
       },
     },
@@ -37,10 +48,19 @@ export const schema = {
         where: [["id", "in", "$members"]],
       }),
     }),
-    rules: {
-      read: {
-        isMember: {
-          filter: [["members", "=", "$SESSION_USER_ID"]],
+    permissions: {
+      user: {
+        read: {
+          // You may only read conversations you are a member of
+          filter: [["members", "=", "$role.userId"]],
+        },
+        insert: {
+          // You may only create a conversation you are a member of it
+          filter: [["members", "=", "$role.userId"]],
+        },
+        update: {
+          // You may only update a conversation you are a member of it
+          filter: [["members", "=", "$role.userId"]],
         },
       },
     },
@@ -50,13 +70,29 @@ export const schema = {
       id: S.Id(),
       createdAt: S.Date({ default: S.Default.now() }),
       messageId: S.String(),
+      message: S.RelationById("messages", "$messageId"),
       userId: S.String(),
       emoji: S.String(),
     }),
-    rules: {
-      write: {
-        isSender: {
-          filter: [["userId", "=", "$SESSION_USER_ID"]],
+    permissions: {
+      user: {
+        read: {
+          // You may only read reactions to messages you are a member of
+          filter: [["message.convo.members", "=", "$role.userId"]],
+        },
+        insert: {
+          // You may only react to messages in conversations you are a member of
+          filter: [
+            ["message.convo.members", "=", "$role.userId"],
+            ["userId", "=", "$role.userId"],
+          ],
+        },
+        delete: {
+          // You may only delete your own reactions
+          filter: [
+            ["message.convo.members", "=", "$role.userId"],
+            ["userId", "=", "$role.userId"],
+          ],
         },
       },
     },
@@ -68,6 +104,7 @@ export const schema = {
       username: S.String({ nullable: true, default: null }),
       password: S.String({ nullable: true, default: null }),
     }),
+    permissions: {},
   },
   /* users, sessions, verificationTokens, and accounts are models defined by
    * NextAuth.js (https://authjs.dev/getting-started/adapters#models).
@@ -86,7 +123,18 @@ export const schema = {
       email: S.String({ nullable: true, default: null }),
       emailVerified: S.Date({ nullable: true, default: null }),
       image: S.String({ nullable: true, default: null }),
+      conversations: S.RelationMany("conversations", {
+        where: [["members", "contains", "$id"]],
+      }),
     }),
+    permissions: {
+      user: {
+        // For the sake of demo, allow all users to read all users
+        read: {
+          filter: [true],
+        },
+      },
+    },
   },
   accounts: {
     schema: S.Schema({
@@ -104,6 +152,7 @@ export const schema = {
       id_token: S.String({ nullable: true, default: null }),
       session_state: S.String({ nullable: true, default: null }),
     }),
+    permissions: {},
   },
   sessions: {
     schema: S.Schema({
@@ -113,6 +162,7 @@ export const schema = {
       expires: S.Date(),
       sessionToken: S.String(),
     }),
+    permissions: {},
   },
   verificationTokens: {
     schema: S.Schema({
@@ -121,5 +171,6 @@ export const schema = {
       token: S.String(),
       expires: S.Date(),
     }),
+    permissions: {},
   },
 } satisfies Models<any, any>

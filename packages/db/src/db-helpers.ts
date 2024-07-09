@@ -22,7 +22,7 @@ import {
   schemaToTriples,
   triplesToSchema,
 } from './schema/schema.js';
-import { Models } from './schema/types';
+import { Models, StoreSchema } from './schema/types';
 import {
   diffSchemas,
   getSchemaDiffIssues,
@@ -183,16 +183,6 @@ export async function readSchemaFromTripleStore(tripleStores: TripleStoreApi) {
   };
 }
 
-export type StoreSchema<M extends Models<any, any> | undefined> =
-  M extends Models<any, any>
-    ? {
-        version: number;
-        collections: M;
-      }
-    : M extends undefined
-    ? undefined
-    : never;
-
 export async function overrideStoredSchema<M extends Models<any, any>>(
   db: DB<M>,
   schema: StoreSchema<M>
@@ -219,7 +209,7 @@ export async function overrideStoredSchema<M extends Models<any, any>>(
           return { successful: false, issues };
 
         diff.length > 0 &&
-          db.logger.info(`applying ${diff.length} attribute changes to schema`);
+          db.logger.info(`applying ${diff.length} changes to schema`);
       }
 
       const existingTriples = await tx.storeTx.findByEntity(
@@ -380,7 +370,7 @@ export function isValueReferentialVariable(value: QueryValue): value is string {
   return !isNaN(parseInt(scope ?? ''));
 }
 
-const VARIABLE_SCOPES = ['global', 'session', 'query'];
+const VARIABLE_SCOPES = ['global', 'session', 'role', 'query'];
 
 export function getVariableComponents(
   variable: string

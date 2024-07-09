@@ -1,9 +1,9 @@
 import { timestampedSchemaToSchema } from './schema/schema.js';
 import {
   UpdateTypeFromModel,
-  Model,
   Models,
   InsertTypeFromModel,
+  StoreSchema,
 } from './schema/types';
 import { AsyncTupleStorageApi, TupleStorageApi } from '@triplit/tuple-database';
 import CollectionQueryBuilder, {
@@ -14,7 +14,11 @@ import CollectionQueryBuilder, {
 } from './collection-query.js';
 import { Entity, constructEntity, updateEntity } from './query.js';
 import { MemoryBTreeStorage } from './storage/memory-btree.js';
-import { DBOptionsError, InvalidMigrationOperationError } from './errors.js';
+import {
+  DBOptionsError,
+  InvalidMigrationOperationError,
+  TriplitError,
+} from './errors.js';
 import { Clock } from './clocks/clock.js';
 
 import { DBTransaction } from './db-transaction.js';
@@ -22,7 +26,6 @@ import {
   appendCollectionToId,
   readSchemaFromTripleStore,
   overrideStoredSchema,
-  StoreSchema,
   getSchemaTriples,
   fetchResultToJS,
   logSchemaChangeViolations,
@@ -47,6 +50,7 @@ import {
   QueryWhere,
 } from './query/types';
 import { prepareQuery } from './query/prepare.js';
+import { getRolesFromSession } from './schema/permissions.js';
 
 const DEFAULT_CACHE_DISABLED = true;
 
@@ -140,7 +144,7 @@ export type Migration = {
 type StorageSource = AsyncTupleStorageApi | TupleStorageApi;
 
 export interface DBConfig<M extends Models<any, any> | undefined> {
-  schema?: { collections: NonNullable<M>; version?: number };
+  schema?: { collections: M; version?: number; roles?: Record<string, any> };
   migrations?:
     | Migration[]
     | {
@@ -235,10 +239,13 @@ type TriggerWhen =
   | 'beforeInsert'
   | 'beforeUpdate';
 
-export type EntityOpSet = {
-  inserts: [string, any][];
-  updates: [string, any][];
-  deletes: [string, any][];
+// TODO: type this better
+export type EntityOpSet = OpSet<any>;
+
+export type OpSet<T> = {
+  inserts: [string, T][];
+  updates: [string, T][];
+  deletes: [string, T][];
 };
 
 interface AfterCommitOptions<M extends Models<any, any> | undefined> {
@@ -410,6 +417,7 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
   // DB setup
   private storageReady: Promise<void>;
   private schemaInitialized: Promise<void>;
+  private isSchemaInitialized: boolean = false;
   ready: Promise<void>;
 
   _schema?: Entity; // Timestamped Object
@@ -462,7 +470,11 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
 
     // If a schema is provided, assume using schema but no migrations (keep at version 0)
     const tripleStoreSchema = schema
-      ? { version: schema.version ?? 0, collections: schema.collections }
+      ? {
+          ...schema,
+          version: (schema.version ?? 0) as number,
+          collections: schema.collections,
+        }
       : undefined;
 
     this._pendingSchemaRequest = null;
@@ -509,9 +521,24 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
           this.setupSchemaListener();
         });
 
+    this.schemaInitialized
+      .then(() => (this.isSchemaInitialized = true))
+      .catch(() => {});
+
     this.ready = Promise.all([this.storageReady, this.schemaInitialized]).then(
       () => this.logger.debug('Ready')
     );
+  }
+
+  get sessionRoles() {
+    const schema = this.getSchemaSync(true);
+    return getRolesFromSession(schema, this.systemVars.session);
+  }
+
+  private getSchemaSync(dangerouslyBypassSchemaInitialization = false) {
+    if (!dangerouslyBypassSchemaInitialization && !this.isSchemaInitialized)
+      throw new TriplitError('Schema not initialized');
+    return this.schema;
   }
 
   private initializeDBWithMigrations(
@@ -741,9 +768,14 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
     this.logger.debug('fetch START', { query });
     await this.storageReady;
     const schema = (await this.getSchema())?.collections as M;
-    const fetchQuery = prepareQuery(query, schema, {
-      skipRules: options.skipRules,
-    });
+    const fetchQuery = prepareQuery(
+      query,
+      schema,
+      { roles: this.sessionRoles },
+      {
+        skipRules: options.skipRules,
+      }
+    );
 
     const noCache =
       options.noCache === undefined ? DEFAULT_CACHE_DISABLED : options.noCache;
@@ -771,9 +803,14 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
   ) {
     await this.storageReady;
     const schema = (await this.getSchema())?.collections as M;
-    const fetchQuery = prepareQuery(query, schema, {
-      skipRules: options.skipRules,
-    });
+    const fetchQuery = prepareQuery(
+      query,
+      schema,
+      { roles: this.sessionRoles },
+      {
+        skipRules: options.skipRules,
+      }
+    );
     return [
       ...(
         await fetch<M, Q>(
@@ -842,9 +879,14 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
     const startSubscription = async () => {
       await this.storageReady;
       const schema = (await this.getSchema())?.collections as M;
-      let subscriptionQuery = prepareQuery(query, schema, {
-        skipRules: options.skipRules,
-      });
+      let subscriptionQuery = prepareQuery(
+        query,
+        schema,
+        { roles: this.sessionRoles },
+        {
+          skipRules: options.skipRules,
+        }
+      );
       this.logger.debug('subscribe START', { query });
       const noCache =
         options.noCache === undefined
@@ -895,9 +937,14 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
     const startSubscription = async () => {
       await this.storageReady;
       const schema = (await this.getSchema())?.collections as M;
-      let subscriptionQuery = prepareQuery(query, schema, {
-        skipRules: options.skipRules,
-      });
+      let subscriptionQuery = prepareQuery(
+        query,
+        schema,
+        { roles: this.sessionRoles },
+        {
+          skipRules: options.skipRules,
+        }
+      );
       const noCache =
         options.noCache === undefined
           ? DEFAULT_CACHE_DISABLED

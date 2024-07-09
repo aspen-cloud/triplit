@@ -20,6 +20,10 @@ import {
   isSubQueryFilter,
 } from '../query.js';
 import {
+  getCollectionPermissions,
+  SessionRole,
+} from '../schema/permissions.js';
+import {
   createSchemaTraverser,
   getAttributeFromSchema,
 } from '../schema/schema.js';
@@ -38,12 +42,21 @@ export interface QueryPreparationOptions {
   skipRules?: boolean;
 }
 
+interface Session {
+  roles?: SessionRole[];
+}
+
 // At some point it would be good to have a clear pipeline of data shapes for query builder -> query json -> query the execution engine reads
 // Ex. things like .entityId are more sugar for users than valid values used by the execution engine
 export function prepareQuery<
   M extends Models<any, any> | undefined,
   Q extends CollectionQuery<M, any>
->(query: Q, schema: M, options: QueryPreparationOptions = {}) {
+>(
+  query: Q,
+  schema: M,
+  session: Session,
+  options: QueryPreparationOptions = {}
+) {
   let fetchQuery = { ...query };
 
   // Validate collection name
@@ -51,10 +64,10 @@ export function prepareQuery<
 
   // Determine selects
   const select = getQuerySelects(fetchQuery, schema, options);
-  const include = getQueryInclude(fetchQuery, schema, options);
+  const include = getQueryInclude(fetchQuery, schema, session, options);
 
   // Determine filters
-  const where = getQueryFilters(fetchQuery, schema, options);
+  const where = getQueryFilters(fetchQuery, schema, session, options);
 
   // Determine order
   const order = getQueryOrder(fetchQuery, schema, options);
@@ -63,12 +76,15 @@ export function prepareQuery<
   const after = getQueryAfter(fetchQuery, schema, options);
 
   return {
-    ...query,
+    ...fetchQuery,
     select,
     include,
     where,
     order,
     after,
+    vars: {
+      ...(fetchQuery.vars ?? {}),
+    },
   };
 }
 
@@ -138,7 +154,7 @@ function validateCollectionName<
 function getQueryInclude<
   M extends Models<any, any> | undefined,
   Q extends CollectionQuery<M, any>
->(query: Q, schema: M, options: QueryPreparationOptions) {
+>(query: Q, schema: M, session: Session, options: QueryPreparationOptions) {
   if (!schema) return query.include;
   if (!query.include) return query.include;
   //   addSubsSelectsFromIncludes(query, schema);
@@ -159,7 +175,7 @@ function getQueryInclude<
         relation as CollectionQuery<M, any> | undefined;
       const merged = mergeQueries({ ...attributeType.query }, additionalQuery);
       const subquerySelection = {
-        subquery: prepareQuery(merged, schema, options),
+        subquery: prepareQuery(merged, schema, session, options),
         cardinality: attributeType.cardinality,
       };
       inclusions[relationName] = subquerySelection;
@@ -180,7 +196,12 @@ function getQueryInclude<
 function getQueryFilters<
   M extends Models<any, any> | undefined,
   Q extends CollectionQuery<M, any>
->(query: Q, schema: M, options: QueryPreparationOptions): QueryWhere<M, any> {
+>(
+  query: Q,
+  schema: M,
+  session: Session,
+  options: QueryPreparationOptions
+): QueryWhere<M, any> {
   const filters: QueryWhere<M, any> = query.where ? [...query.where] : [];
 
   // Translate entityId helper to where clause filter
@@ -191,13 +212,47 @@ function getQueryFilters<
     );
   }
 
-  if (schema && !options.skipRules) {
+  if (
+    schema &&
+    !isSystemCollection(query.collectionName) &&
+    !options.skipRules
+  ) {
+    // Old permission system
     const ruleFilters = getReadRuleFilters(schema, query.collectionName);
     if (ruleFilters?.length > 0)
       filters.push(
         // @ts-expect-error
         ...ruleFilters
       );
+
+    // New permission system
+    const collectionPermissions = getCollectionPermissions(
+      schema,
+      query.collectionName
+    );
+    // If we have collection permissions, we should apply them, otherwise its permissionless
+    if (collectionPermissions) {
+      let permissionFilters: QueryWhere<M, any> = [];
+      let hasMatch = false;
+      if (session.roles) {
+        for (const sessionRole of session.roles) {
+          const permission = collectionPermissions[sessionRole.key]?.read;
+          if (permission?.filter) {
+            // Must opt in to the permission
+            hasMatch = true;
+            // TODO: handle empty arrays
+            if (Array.isArray(permission.filter)) {
+              permissionFilters.push(
+                // @ts-expect-error
+                ...permission.filter
+              );
+            }
+          }
+        }
+      }
+      if (!hasMatch) permissionFilters = [false];
+      filters.push(...permissionFilters);
+    }
   }
 
   const whereValidator = whereFilterValidator(schema, query.collectionName);
@@ -246,7 +301,7 @@ function getQueryFilters<
         ];
 
         return {
-          exists: prepareQuery(subquery, schema, options),
+          exists: prepareQuery(subquery, schema, session, options),
         };
       }
       if (!Array.isArray(statement)) return statement;
@@ -270,7 +325,7 @@ function getQueryFilters<
           }
           subquery.where = [...subquery.where, [path.join('.'), op, val]];
           return {
-            exists: prepareQuery(subquery, schema, options),
+            exists: prepareQuery(subquery, schema, session, options),
           };
         }
       }
@@ -283,10 +338,13 @@ function getQueryFilters<
 function getReadRuleFilters(
   schema: Models<any, any>,
   collectionName: CollectionFromModels<any, any>
-) {
-  return Object.values(schema?.[collectionName]?.rules?.read ?? {}).flatMap(
-    (rule) => rule.filter
-  );
+): QueryWhere<any, any> {
+  if (schema?.[collectionName]?.rules?.read)
+    return Object.values(schema[collectionName].rules?.read ?? {}).flatMap(
+      (rule) => rule.filter
+    );
+
+  return [];
 }
 
 function getQueryOrder<

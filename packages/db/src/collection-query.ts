@@ -73,6 +73,7 @@ import {
   satisfiesSetFilter,
 } from './query/filters.js';
 import { prepareQuery } from './query/prepare.js';
+import { SessionRole } from './schema/permissions.js';
 
 export default function CollectionQueryBuilder<
   M extends Models<any, any> | undefined,
@@ -583,14 +584,7 @@ export async function fetchDeltaTriples<
   options: FetchFromStorageOptions = {}
 ) {
   const queryPermutations = generateQueryRootPermutations(
-    await replaceVariablesInQuery(
-      caller,
-      tx,
-      query,
-      caller.systemVars,
-      executionContext,
-      options
-    ) // TODO: subquery vars
+    await replaceVariablesInQuery(caller, tx, query, executionContext, options) // TODO: subquery vars
   );
 
   const changedEntityTriples = newTriples.reduce((entities, trip) => {
@@ -1139,9 +1133,14 @@ export async function loadSubquery<
     vars: { ...(parentQuery.vars ?? {}), ...(subquery.vars ?? {}) },
   } as CollectionQuery<M, any>;
 
-  fullSubquery = prepareQuery(fullSubquery, schema, {
-    skipRules: options.skipRules,
-  });
+  fullSubquery = prepareQuery(
+    fullSubquery,
+    schema as M,
+    { roles: caller.sessionRoles },
+    {
+      skipRules: options.skipRules,
+    }
+  );
 
   // Perform fetch
   const result =
@@ -1224,7 +1223,6 @@ export async function fetch<
     caller,
     tx,
     query,
-    caller.systemVars,
     executionContext,
     options
   );
@@ -1506,7 +1504,6 @@ export function subscribeResultsAndTriples<
         caller,
         tripleStore,
         query,
-        caller.systemVars,
         executionContext,
         options
       );
@@ -1938,7 +1935,6 @@ async function replaceVariablesInQuery<
   caller: DB<M>,
   tx: TripleStoreApi,
   query: Q,
-  systemVars: SystemVariables | undefined,
   executionContext: FetchExecutionContext,
   options: FetchFromStorageOptions
 ): Promise<Q> {
@@ -1959,7 +1955,11 @@ async function replaceVariablesInQuery<
     }
   }
 
-  const vars = getQueryVariables(query, systemVars, executionContext);
+  const vars = getQueryVariables(
+    query,
+    { systemVars: caller.systemVars, roles: caller.sessionRoles },
+    executionContext
+  );
 
   const where = query.where
     ? replaceVariablesInFilterStatements(query.where, vars)
@@ -1973,16 +1973,19 @@ async function replaceVariablesInQuery<
 export function getQueryVariables<
   M extends Models<any, any> | undefined,
   CN extends CollectionNameFromModels<M>,
-  Q extends Partial<Pick<CollectionQuery<M, CN>, 'vars'>>
+  Q extends Partial<Pick<CollectionQuery<M, CN>, 'collectionName' | 'vars'>>
 >(
   query: Q,
-  systemVars: SystemVariables | undefined,
+  session: {
+    systemVars?: SystemVariables;
+    roles?: SessionRole[];
+  },
   executionContext: FetchExecutionContext
 ) {
   // For backwards compatability we are including non-scoped variables, these values may conflict and cause issues
   const conflictingVariables = {
-    ...(systemVars?.global ?? {}),
-    ...(systemVars?.session ?? {}),
+    ...(session.systemVars?.global ?? {}),
+    ...(session.systemVars?.session ?? {}),
     ...(query.vars ?? {}),
     ...(executionContext?.queriedDataStack ?? []).reduce((acc, val) => {
       return { ...acc, ...val };
@@ -1990,16 +1993,24 @@ export function getQueryVariables<
   };
   // Prefix variables with their scopes to prevent conflicts
   const scopedVariables = {
-    global: systemVars?.global ?? {},
-    session: systemVars?.session ?? {},
+    global: session.systemVars?.global ?? {},
+    session: session.systemVars?.session ?? {},
     query: query.vars ?? {},
+    role:
+      // Small hack to prevent role variables from being accessed when loading schema initially
+      // TODO: Address when refactoring schema storage / loading
+      query.collectionName === '_metadata'
+        ? undefined
+        : session.roles?.reduce((acc, val) => {
+            return { ...acc, ...val.roleVars };
+          }, {}),
     ...(executionContext?.queriedDataStack ?? []).reduce((acc, val, i, arr) => {
       return { ...acc, [arr.length - i]: val };
     }, {}),
   };
   return {
-    ...scopedVariables,
     ...conflictingVariables,
+    ...scopedVariables,
   };
 }
 

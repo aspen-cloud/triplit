@@ -8,7 +8,7 @@ import {
   timestampedObjectToPlainObject,
 } from '../utils.js';
 import { constructEntity } from '../query.js';
-import { appendCollectionToId, StoreSchema } from '../db-helpers.js';
+import { appendCollectionToId } from '../db-helpers.js';
 import { typeFromJSON, DataType, TimestampType } from '../data-types/base.js';
 import {
   CollectionDefinition,
@@ -23,6 +23,7 @@ import {
   Models,
   SchemaConfig,
   Collection,
+  StoreSchema,
 } from './types';
 
 // We infer TObject as a return type of some funcitons and this causes issues with consuming packages
@@ -185,9 +186,12 @@ export function timestampedSchemaToSchema(
   schema: Record<string, any>
 ): StoreSchema<Models<any, any>> | undefined {
   const schemaData = timestampedObjectToPlainObject(schema);
+  delete schemaData['_collection'];
+  delete schemaData['id'];
   const version = (schemaData.version as number) || 0;
   const collections = (schemaData.collections as CollectionsDefinition) || {};
   return JSONToSchema({
+    ...schemaData,
     version,
     collections,
   });
@@ -198,7 +202,7 @@ export function JSONToSchema(
 ): StoreSchema<Models<any, any>> | undefined {
   if (!schemaJSON) return undefined;
   const collections = collectionsDefinitionToSchema(schemaJSON.collections);
-  return { version: schemaJSON.version, collections };
+  return { ...schemaJSON, version: schemaJSON.version, collections };
 }
 
 export function schemaToJSON(
@@ -217,17 +221,21 @@ export function schemaToJSON(
     const collection = collectionSchemaToJSON(model);
     collections[collectionName] = collection;
   }
-  return { version: schema.version, collections };
+  return { ...schema, version: schema.version, collections };
 }
 
 function collectionSchemaToJSON(
   collection: Collection<any>
 ): CollectionDefinition {
   const rulesObj = collection.rules ? { rules: collection.rules } : {};
+  const permissionsObj = collection.permissions
+    ? { permissions: collection.permissions }
+    : {};
   return {
     // @ts-expect-error need to refactor SchemaConfig type + id constant I think
     schema: collection.schema.toJSON() as Model<any>,
     ...rulesObj,
+    ...permissionsObj,
   };
 }
 

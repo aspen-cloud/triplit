@@ -15,7 +15,7 @@ export function dbDocumentToTuples(
   object: any,
   prefix: Attribute = []
 ): [Attribute, TupleValue][] {
-  if (object == null || typeof object !== 'object') {
+  if (object === null || typeof object !== 'object') {
     return [[prefix, object as TupleValue]];
   }
   if (Object.keys(object).length === 0) {

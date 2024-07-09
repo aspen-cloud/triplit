@@ -251,9 +251,10 @@ export class TriplitClient<M extends ClientSchema | undefined = undefined> {
     const autoConnect = options?.autoConnect ?? true;
     const clock = new DurableClock('cache', clientId);
     this.authOptions = { token, claimsPath };
-    this.db = new DB({
+    const dbSchema = schema ? { collections: schema, version: 0 } : undefined;
+    this.db = new DB<M>({
       clock,
-      schema: schema ? { collections: schema, version: 0 } : undefined,
+      schema: dbSchema,
       migrations: migrations
         ? {
             definitions: migrations,

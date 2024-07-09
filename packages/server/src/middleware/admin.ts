@@ -7,7 +7,7 @@ export function adminAccessRequired(
   next: NextFunction
 ) {
   const token = req.token;
-  if (token?.type !== 'secret') {
+  if (token?.['x-triplit-token-type'] !== 'secret') {
     const error = new ServiceKeyRequiredError();
     res.status(error.status).send(error.toJSON());
     return;

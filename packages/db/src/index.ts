@@ -69,6 +69,7 @@ export type {
   Model,
   Models,
   RelationAttributes,
+  Roles,
 } from './schema/types';
 export type {
   AttributeDefinition,

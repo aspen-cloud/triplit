@@ -102,9 +102,10 @@ export default Command({
       { noTimestamp: true }
     );
     const collections = ctx.schema;
+    const roles = ctx.roles;
     const schema =
       collections && flags.initWithSchema
-        ? { collections, version: 0 }
+        ? { collections, roles, version: 0 }
         : undefined;
     const startDBServer = createDBServer({
       storage: flags.storage || 'memory',

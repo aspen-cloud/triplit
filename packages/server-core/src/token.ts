@@ -1,4 +1,4 @@
-import { ParsedToken, ParseResult } from '@triplit/types/sync';
+import { ParseResult } from '@triplit/types/sync';
 import {
   JWTPayload,
   jwtVerify,
@@ -16,19 +16,19 @@ import {
 import { TriplitError } from '@triplit/db';
 
 const TriplitJWTType = ['test', 'anon', 'secret'] as const;
-type TriplitJWTType = (typeof TriplitJWTType)[number];
-type TriplitJWT = {
+export type TriplitJWTType = (typeof TriplitJWTType)[number];
+export type TriplitJWT = {
   'x-triplit-token-type': 'test' | 'anon' | 'secret';
   'x-triplit-project-id': string;
 };
 
-type ExternalJWT = {
+export type ExternalJWT = {
   'x-triplit-token-type': 'external';
   'x-triplit-project-id': string;
-  'x-triplit-user-id': string;
+  'x-triplit-user-id'?: string;
 };
 
-type ProjectJWT = TriplitJWT | ExternalJWT;
+export type ProjectJWT = TriplitJWT | ExternalJWT;
 
 async function getJwtKey(rawPublicKey: string): Promise<KeyLike | Uint8Array> {
   if (rawPublicKey.startsWith('-----BEGIN PUBLIC KEY-----')) {
@@ -52,7 +52,7 @@ export async function parseAndValidateToken(
     payloadPath?: string;
     externalSecret?: string; // optional signing secret for external tokens
   } = {}
-): Promise<ParseResult<ParsedToken, TriplitError>> {
+): Promise<ParseResult<ProjectJWT, TriplitError>> {
   if (!token)
     return {
       data: undefined,
@@ -162,20 +162,7 @@ export async function parseAndValidateToken(
   }
 
   return {
-    data: tokenFieldsToMetadata(payload as ProjectJWT),
+    data: payload as ProjectJWT,
     error: undefined,
   };
-}
-
-export function tokenFieldsToMetadata(
-  jwt: JWTPayload & ProjectJWT
-): ParsedToken {
-  const metadata: ParsedToken = {
-    projectId: jwt['x-triplit-project-id'],
-    type: jwt['x-triplit-token-type'],
-  };
-  if ('x-triplit-user-id' in jwt) {
-    metadata.userId = jwt['x-triplit-user-id'] as string;
-  }
-  return metadata;
 }

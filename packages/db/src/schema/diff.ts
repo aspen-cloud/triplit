@@ -1,7 +1,6 @@
-import { Model, Models } from './types';
-import { Value as TBValue, ValuePointer } from '@sinclair/typebox/value';
+import { Model, Models, StoreSchema } from './types';
+import { Value as TBValue, ValuePointer, Diff } from '@sinclair/typebox/value';
 import { UserTypeOptions } from '../data-types/serialization.js';
-import { StoreSchema } from '../db-helpers.js';
 import { DBTransaction } from '../db-transaction.js';
 
 type ChangeToAttribute =
@@ -37,11 +36,39 @@ type AttributeDiff = {
 } & ChangeToAttribute;
 
 type CollectionAttributeDiff = {
+  _diff: 'collectionAttribute';
   collection: string;
 } & AttributeDiff;
+
+type CollectionRulesDiff = {
+  _diff: 'collectionRules';
+  collection: string;
+};
+
+type CollectionPermissionsDiff = {
+  _diff: 'collectionPermissions';
+  collection: string;
+};
+
+type RolesDiff = {
+  _diff: 'roles';
+};
+
+type Diff =
+  | CollectionAttributeDiff
+  | CollectionRulesDiff
+  | CollectionPermissionsDiff
+  | RolesDiff;
+
 // type AttributeDiff = AttributeChange;
 
-export function diffCollections(
+function isCollectionAttributeDiff(
+  diff: Diff
+): diff is CollectionAttributeDiff {
+  return diff._diff === 'collectionAttribute';
+}
+
+function diffCollectionSchemas(
   modelA: Model<any> | undefined,
   modelB: Model<any> | undefined,
   attributePathPrefix: string[] = []
@@ -100,7 +127,7 @@ export function diffCollections(
       ) {
         // console.log('diffing record', propertiesA[prop], propertiesB[prop]);
         diff.push(
-          ...diffCollections(propertiesA[prop], propertiesB[prop], path)
+          ...diffCollectionSchemas(propertiesA[prop], propertiesB[prop], path)
         );
         continue;
       }
@@ -171,25 +198,50 @@ function diffAttributeOptions(
 export function diffSchemas(
   schemaA: StoreSchema<Models<any, any>>,
   schemaB: StoreSchema<Models<any, any>>
-): CollectionAttributeDiff[] {
+): Diff[] {
   const allCollections = new Set([
     ...Object.keys(schemaA.collections),
     ...Object.keys(schemaB.collections),
   ]);
-  const diff: CollectionAttributeDiff[] = [];
+  const diff: Diff[] = [];
   for (const collection of allCollections) {
     const collectionA = schemaA.collections[collection];
     const collectionB = schemaB.collections[collection];
+    // Diff schemas
     diff.push(
-      ...diffCollections(collectionA?.schema, collectionB?.schema).map(
-        (change) =>
-          ({
-            collection,
-            ...change,
-          } as CollectionAttributeDiff)
-      )
+      ...diffCollectionSchemas(
+        collectionA?.schema,
+        collectionB?.schema
+      ).map<CollectionAttributeDiff>((change) => ({
+        _diff: 'collectionAttribute',
+        collection,
+        ...change,
+      }))
     );
+    // Diff rules
+    const isRuleDiff = Diff(collectionA?.rules, collectionB?.rules).length > 0;
+    if (isRuleDiff)
+      diff.push({
+        _diff: 'collectionRules',
+        collection,
+      });
+    // Diff permissions
+    const isPermissionDiff =
+      Diff(collectionA?.permissions, collectionB?.permissions).length > 0;
+    if (isPermissionDiff)
+      diff.push({
+        _diff: 'collectionPermissions',
+        collection,
+      });
   }
+
+  // Diff roles
+  const isRoleDiff = Diff(schemaA.roles, schemaB.roles).length > 0;
+  if (isRoleDiff)
+    diff.push({
+      _diff: 'roles',
+    });
+
   return diff;
 }
 
@@ -212,10 +264,9 @@ type BackwardsIncompatibleEdits = {
   ) => string | null;
 };
 
-export function getBackwardsIncompatibleEdits(
-  schemaDiff: CollectionAttributeDiff[]
-) {
+export function getBackwardsIncompatibleEdits(schemaDiff: Diff[]) {
   return schemaDiff.reduce((acc, curr) => {
+    if (!isCollectionAttributeDiff(curr)) return acc;
     const maybeDangerousEdit = DANGEROUS_EDITS.find((check) =>
       check.matchesDiff(curr)
     );
@@ -365,7 +416,7 @@ export type PossibleDataViolations = {
 
 export async function getSchemaDiffIssues(
   tx: DBTransaction<any>,
-  schemaDiff: CollectionAttributeDiff[]
+  schemaDiff: Diff[]
 ) {
   const backwardsIncompatibleEdits = getBackwardsIncompatibleEdits(schemaDiff);
   const results = await Promise.all(
