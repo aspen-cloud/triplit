@@ -6,7 +6,6 @@ import {
 import {
   Attribute,
   CollectionNameFromModels,
-  DBTransaction,
   JSONToSchema,
   ModelFromModels,
   UpdateTypeFromModel,

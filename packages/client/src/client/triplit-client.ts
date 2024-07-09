@@ -133,26 +133,61 @@ function getClientStorage(storageOption: StorageOptions) {
 const DEFAULT_STORAGE_OPTION = 'memory';
 
 export interface ClientOptions<M extends ClientSchema | undefined> {
+  /**
+   * The schema used to validate database operations and provide type-hinting. Read more about schemas {@link https://www.triplit.dev/docs/schemas | here }
+   */
   schema?: M;
+  /**
+   * The token used to authenticate with the server. If not provided, the client will not connect to a server. Read more about tokens {@link https://www.triplit.dev/docs/auth | here }
+   */
   token?: string;
+  /**
+   * The path to the claims in the token, if they are nested.
+   */
   claimsPath?: string;
 
+  /**
+   * The URL of the server to connect to. If not provided, the client will not connect to a server.
+   */
   serverUrl?: string;
+  /**
+   * @deprecated use `schema` instead
+   */
   migrations?: Migration[];
   syncSchema?: boolean;
   transport?: SyncTransport;
-
+  /**
+   * Variables to initialized the database with. Read more about variables {@link https://www.triplit.dev/docs/client/query/variables | here }
+   */
   variables?: Record<string, any>;
   clientId?: string;
+
+  /**
+   * The storage for the client cache. Can be `memory`, `indexeddb` or an object with `cache` and `outbox` properties. Defaults to `memory`. Read more about storage {@link https://www.triplit.dev/docs/client/storage | here }
+   */
   storage?: StorageOptions;
 
+  /**
+   * Default options for fetch queries. Read more about fetch options {@link https://www.triplit.dev/docs/client/fetch#policy | here }
+   */
   defaultQueryOptions?: {
     fetch?: FetchOptions;
     subscription?: SubscriptionOptions;
   };
 
+  /**
+   * Whether the client should automatically connect to the server on initialization.
+   */
   autoConnect?: boolean;
   logger?: Logger;
+
+  /**
+   * The log level for the client.
+   * - `info`: Logs all messages
+   * - `warn`: Logs warnings and errors
+   * - `error`: Logs errors
+   * - `debug`: Logs all messages and additional debug information
+   */
   logLevel?: 'info' | 'warn' | 'error' | 'debug';
 }
 
@@ -180,8 +215,14 @@ export class TriplitClient<M extends ClientSchema | undefined = undefined> {
     fetch: FetchOptions;
   };
   logger: Logger;
+  /**
+   * Logs are only stored in `debug` mode
+   */
   readonly logs: any[] = [];
-
+  /**
+   *
+   * @param options - The {@link ClientOptions | options} for the client
+   */
   constructor(options?: ClientOptions<M>) {
     const {
       schema,
@@ -261,10 +302,21 @@ export class TriplitClient<M extends ClientSchema | undefined = undefined> {
     });
   }
 
+  /**
+   * Gets the schema of the database
+   *
+   * @returns The schema of the database as a JSON object
+   */
   async getSchema(): Promise<SchemaJSON | undefined> {
     return schemaToJSON(await this.db.getSchema());
   }
 
+  /**
+   * Run a transaction with the client.
+   *
+   * @param callback - The callback to run within the transaction
+   * @returns An object with the transaction ID and the output of the transaction
+   */
   async transact<Output>(callback: (tx: DBTransaction<M>) => Promise<Output>) {
     this.logger.debug('transact START');
     const resp = await this.db.transact(callback, {
@@ -278,12 +330,25 @@ export class TriplitClient<M extends ClientSchema | undefined = undefined> {
     return resp;
   }
 
+  /**
+   * Initializes a query builder for a collection. Chain methods such as `where`, `order`, `limit`, etc. to build a query.
+   *
+   * @param collectionName - The name of the collection to query
+   * @returns A query builder for the collection
+   */
   query<CN extends CollectionNameFromModels<M>>(
     collectionName: CN
   ): ReturnType<typeof clientQueryBuilder<M, CN>> {
     return clientQueryBuilder<M, CN>(collectionName);
   }
 
+  /**
+   * Fetches data from the database.
+   *
+   * @param query - The query to fetch
+   * @param options - The fetch options
+   * @returns The fetched data as a map of entities
+   */
   async fetch<CQ extends ClientQuery<M, any>>(
     query: CQ,
     options?: Partial<FetchOptions>
@@ -348,6 +413,14 @@ export class TriplitClient<M extends ClientSchema | undefined = undefined> {
     return res;
   }
 
+  /**
+   * Fetches a single entity by its id from the database.
+   *
+   * @param collectionName - The name of the collection to fetch from
+   * @param id - The id of the entity to fetch
+   * @param options - The fetch options
+   * @returns The fetched entity or null if it does not exist
+   */
   async fetchById<CN extends CollectionNameFromModels<M>>(
     collectionName: CN,
     id: string,
@@ -362,10 +435,22 @@ export class TriplitClient<M extends ClientSchema | undefined = undefined> {
     return result;
   }
 
+  /**
+   * Clears the local database of the client. Does not affect the server.
+   *
+   * @returns a promise that resolves when the database has been cleared
+   */
   async clear() {
     return this.db.clear();
   }
 
+  /**
+   * Fetches the first entity in the database that matches the query.
+   *
+   * @param query - The query to fetch
+   * @param options - The fetch options
+   * @returns The fetched entity or null if it does not exist
+   */
   async fetchOne<CQ extends ClientQuery<M, any>>(
     query: CQ,
     options?: Partial<FetchOptions>
@@ -380,6 +465,13 @@ export class TriplitClient<M extends ClientSchema | undefined = undefined> {
     return entity;
   }
 
+  /**
+   * Inserts an entity into the database.
+   *
+   * @param collectionName - The name of the collection to insert into
+   * @param object - The entity to insert
+   * @returns The transaction ID and the inserted entity, if successful
+   */
   async insert<CN extends CollectionNameFromModels<M>>(
     collectionName: CN,
     object: Unalias<InsertTypeFromModel<ModelFromModels<M, CN>>>
@@ -401,6 +493,14 @@ export class TriplitClient<M extends ClientSchema | undefined = undefined> {
     return resp;
   }
 
+  /**
+   * Updates an entity in the database.
+   *
+   * @param collectionName - The name of the collection to update
+   * @param entityId - The id of the entity to update
+   * @param updater - A function that provides the current entity and allows you to modify it
+   * @returns The transaction ID
+   */
   async update<CN extends CollectionNameFromModels<M>>(
     collectionName: CN,
     entityId: string,
@@ -444,6 +544,13 @@ export class TriplitClient<M extends ClientSchema | undefined = undefined> {
     return resp;
   }
 
+  /**
+   * Deletes an entity from the database.
+   *
+   * @param collectionName - The name of the collection to delete from
+   * @param entityId - The id of the entity to delete
+   * @returns The transaction ID
+   */
   async delete<CN extends CollectionNameFromModels<M>>(
     collectionName: CN,
     entityId: string
@@ -461,6 +568,15 @@ export class TriplitClient<M extends ClientSchema | undefined = undefined> {
   }
 
   // TODO: refactor so some logic is shared across policies (ex starting a local and remote sub is verbose and repetitive)
+  /**
+   * Subscribes to a client query and receives the results asynchronously.
+   *
+   * @param query - The client query to subscribe to.
+   * @param onResults - The callback function to handle the results of the subscription.
+   * @param onError - The callback function to handle any errors that occur during the subscription.
+   * @param options - The options for the subscription.
+   * @returns - A function that can be called to unsubscribe from the subscription.
+   */
   subscribe<CQ extends ClientQuery<M, any, any, any>>(
     query: CQ,
     onResults: (
@@ -564,6 +680,11 @@ export class TriplitClient<M extends ClientSchema | undefined = undefined> {
    * Depending on the current paging direction, the query may have its original order reversed
    *
    * The pagination will also do its best to always return full pages
+   * @param query - The query, which should have a `limit`, to subscribe to.
+   * @param onResults - The callback function to handle the results of the subscription.
+   * @param onError - The callback function to handle any errors that occur during the subscription.
+   * @param options - The options for the subscription.
+   * @returns An object containing functions that can be called to unsubscribe from the subscription and query the previous and next pages.
    */
   subscribeWithPagination<CQ extends ClientQuery<M, any>>(
     query: CQ,
@@ -748,6 +869,15 @@ export class TriplitClient<M extends ClientSchema | undefined = undefined> {
     return returnValue as PaginatedSubscription;
   }
 
+  /**
+   * Subscribes to a client query with the ability to expand size of the results.
+   *
+   * @param query - The query, which should have a `limit` set, to subscribe to.
+   * @param onResults - The callback function to handle the query results.
+   * @param onError - The callback function to handle any errors that occur during the subscription.
+   * @param options - The options for the subscription.
+   * @returns An object containing functions to load more data and to unsubscribe from the subscription.
+   */
   subscribeWithExpand<CQ extends ClientQuery<M, any>>(
     query: CQ,
     onResults: (
@@ -809,7 +939,11 @@ export class TriplitClient<M extends ClientSchema | undefined = undefined> {
 
     return returnValue as InfiniteSubscription;
   }
-
+  /**
+   * Updates the `token` and/or `serverUrl` of the client. This will cause the client to close its current connection to the server and attempt reopen a new one with the provided options.
+   *
+   * @param options - The options to update the client with
+   */
   updateOptions(options: Pick<ClientOptions<M>, 'token' | 'serverUrl'>) {
     const { token, serverUrl } = options;
     const hasToken = options.hasOwnProperty('token');
@@ -842,35 +976,73 @@ export class TriplitClient<M extends ClientSchema | undefined = undefined> {
     }
   }
 
+  /**
+   * Updates the `token` of the client. This will cause the client to close its current connection to the server and attempt reopen a new one with the provided token.
+   *
+   * @param token
+   */
   updateToken(token: string | undefined) {
     this.updateOptions({ token });
   }
 
+  /**
+   * Updates the `serverUrl` of the client. This will cause the client to close its current connection to the server and attempt reopen a new one with the provided server URL.
+   *
+   * @param serverUrl
+   */
   updateServerUrl(serverUrl: string | undefined) {
     this.updateOptions({ serverUrl });
   }
 
+  /**
+   * When a transaction has been confirmed by the remote database, the callback will be called
+   * @param txId
+   * @param callback
+   * @returns a function removing the listener callback
+   */
   onTxCommitRemote(...args: Parameters<typeof this.syncEngine.onTxCommit>) {
     return this.syncEngine.onTxCommit(...args);
   }
+
+  /**
+   * If a transaction fails to commit on the remote database, the callback will be called
+   * @param txId
+   * @param callback
+   * @returns a function removing the listener callback
+   */
   onTxFailureRemote(txId: string, callback: () => void) {
     return this.syncEngine.onTxFailure(txId, callback);
   }
 
+  /**
+   * Sets up a listener for connection status changes
+   * @param callback A callback that will be called when the connection status changes
+   * @param runImmediately Run the callback immediately with the current connection status
+   * @returns A function that removes the callback from the connection status change listeners
+   */
   onConnectionStatusChange(
     ...args: Parameters<typeof this.syncEngine.onConnectionStatusChange>
   ) {
     return this.syncEngine.onConnectionStatusChange(...args);
   }
 
+  /**
+   * Attempts to connect the client to the server. This will start the client syncing data with the server.
+   */
   connect() {
     return this.syncEngine.connect();
   }
 
+  /**
+   * Disconnects the client from the server. This will stop the client from syncing data with the server.
+   */
   disconnect() {
     return this.syncEngine.disconnect();
   }
 
+  /**
+   * The token used to authenticate with the server
+   */
   get token() {
     return this.syncEngine.token;
   }
@@ -886,14 +1058,25 @@ export class TriplitClient<M extends ClientSchema | undefined = undefined> {
     return this.syncEngine.onSyncMessageSent(...args);
   }
 
+  /**
+   * Retry sending a transaction to the remote database. This is commonly used when a transaction fails to commit on the remote database in the `onTxFailure` callback.
+   * @param txId
+   */
   retry(...args: Parameters<typeof this.syncEngine.retry>) {
     return this.syncEngine.retry(...args);
   }
 
+  /**
+   * Rollback a transaction from the client database. It will no longer be sent to the remote database as a part of the syncing process. This is commonly used when a transaction fails to commit on the remote database in the `onTxFailure` callback.
+   * @param txIds
+   */
   rollback(...args: Parameters<typeof this.syncEngine.rollback>) {
     return this.syncEngine.rollback(...args);
   }
 
+  /**
+   * The connection status of the client with the server
+   */
   get connectionStatus() {
     return this.syncEngine.connectionStatus;
   }
