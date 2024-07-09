@@ -39,7 +39,6 @@
     "jsonwebtoken": "^9.0.0",
     "multer": "^1.4.5-lts.1",
     "node-cache": "^5.1.2",
-    "rate-limiter-flexible": "^2.4.1",
     "ws": "^8.13.0"
   },
   "devDependencies": {

@@ -7687,7 +7687,6 @@ __metadata:
     lmdb: "npm:^3.0.12"
     multer: "npm:^1.4.5-lts.1"
     node-cache: "npm:^5.1.2"
-    rate-limiter-flexible: "npm:^2.4.1"
     tsx: "npm:^3.12.10"
     typescript: "npm:^5.2.2"
     ws: "npm:^8.13.0"
@@ -21050,13 +21049,6 @@ __metadata:
   version: 1.2.1
   resolution: "range-parser@npm:1.2.1"
   checksum: 10/ce21ef2a2dd40506893157970dc76e835c78cf56437e26e19189c48d5291e7279314477b06ac38abd6a401b661a6840f7b03bd0b1249da9b691deeaa15872c26
-  languageName: node
-  linkType: hard
-
-"rate-limiter-flexible@npm:^2.4.1":
-  version: 2.4.2
-  resolution: "rate-limiter-flexible@npm:2.4.2"
-  checksum: 10/5e0997fd8ab76370a5a557eba1e1a882869399f9f78777141bffcd9be44a5df124574c78cc5895f41560f9fef1bef9cf1b66fabc289718e92ae42cd89f3447d4
   languageName: node
   linkType: hard
 

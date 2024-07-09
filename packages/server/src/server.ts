@@ -7,7 +7,6 @@ import {
 } from '@triplit/server-core/errors';
 import cors from 'cors';
 import { useHttpToken, readWSToken } from './middleware/token-reader.js';
-import { rateLimiterMiddlewareWs } from './middleware/rate-limiter.js';
 import url from 'url';
 import {
   Server as TriplitServer,
@@ -231,15 +230,6 @@ export function createServer(options?: ServerOptions) {
           }
         );
 
-      // Assign for usage in catch
-      const overLimit = !(await rateLimiterMiddlewareWs(socket));
-      if (overLimit) {
-        return sendErrorMessage(
-          socket,
-          parsedMessage,
-          new RateLimitExceededError()
-        );
-      }
       logger.logMessage('received', parsedMessage);
       session!.dispatchCommand(parsedMessage!);
     });
