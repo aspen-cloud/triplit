@@ -13,9 +13,9 @@ import { useQuery } from './use-query.js';
 /**
  * A React hook that subscribes to a query and fetches only one result
  *
- * @param client The client instance to query with
- * @param query The query to subscribe to
- * @param options Additional options for the subscription
+ * @param client - The client instance to query with
+ * @param query - The query to subscribe to
+ * @param options - Additional options for the subscription
  * @returns An object containing the fetching state, the result of the query, and any error that occurred
  */
 export function useQueryOne<

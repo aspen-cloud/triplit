@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 /**
  * A React hook that subscribes to the connection status of a client with the server
  *
- * @param client The client instance to get the connection status of
+ * @param client - The client instance to get the connection status of
  * @returns The current connection status of the client with the server
  */
 export function useConnectionStatus(
