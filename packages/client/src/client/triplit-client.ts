@@ -438,10 +438,12 @@ export class TriplitClient<M extends ClientSchema | undefined = undefined> {
   /**
    * Clears the local database of the client. Does not affect the server.
    *
+   * @param options - The clear options
+   * - `full`: If true, clears the entire database. If false, only clears your application data. Defaults to `false`.
    * @returns a promise that resolves when the database has been cleared
    */
-  async clear() {
-    return this.db.clear();
+  clear(options: { full?: boolean } = {}) {
+    return this.db.clear(options);
   }
 
   /**

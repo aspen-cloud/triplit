@@ -351,20 +351,7 @@ export class Session {
   async clearDB({ full }: { full?: boolean }) {
     if (!hasAdminAccess(this.token)) return NotAdminResponse();
     try {
-      if (full) {
-        // Delete all data associated with this tenant
-        await this.db.clear();
-      } else {
-        // Just delete triples
-        await this.db.tripleStore.transact(async (tx) => {
-          const allTriples = await tx.findByEntity();
-          // Filter out synced metadata
-          const dataTriples = allTriples.filter(
-            ({ id }) => !id.includes('_metadata')
-          );
-          await tx.deleteTriples(dataTriples);
-        });
-      }
+      await this.db.clear({ full });
       return ServerResponse(200);
     } catch (e) {
       if (isTriplitError(e)) return errorResponse(e);

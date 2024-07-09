@@ -1163,8 +1163,21 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
     return stats;
   }
 
-  async clear() {
-    await this.tripleStore.clear();
+  async clear({ full }: { full?: boolean } = {}) {
+    if (full) {
+      // Delete all data associated with this tenant
+      await this.tripleStore.clear();
+    } else {
+      // Just delete triples
+      await this.tripleStore.transact(async (tx) => {
+        const allTriples = await tx.findByEntity();
+        // Filter out synced metadata
+        const dataTriples = allTriples.filter(
+          ({ id }) => !id.includes('_metadata')
+        );
+        await tx.deleteTriples(dataTriples);
+      });
+    }
   }
 
   onSchemaChange(cb: SchemaChangeCallback<M>) {
