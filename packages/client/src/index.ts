@@ -6,11 +6,8 @@ export type {
   ModelFromModels,
   FetchByIdQueryParams,
   Unalias,
-  or,
-  and,
-  exists,
 } from '@triplit/db';
-export { Schema } from '@triplit/db';
+export { Schema, or, and, exists } from '@triplit/db';
 export * from './client/triplit-client.js';
 export * from './http-client/http-client.js';
 export * from './sync-engine.js';
