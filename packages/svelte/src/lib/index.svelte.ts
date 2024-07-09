@@ -11,6 +11,14 @@ import type {
 } from '@triplit/client';
 import { WorkerClient } from '@triplit/client/worker-client';
 
+/**
+ * A hook that subscribes to a query
+ *
+ * @param client - The client instance to query with
+ * @param query - The query to subscribe to
+ * @param options - Additional options for the subscription
+ * @returns An object containing the fetching state, the result of the query, any error that occurred, and a function to update the query
+ */
 export function useQuery<
   M extends Models<any, any> | undefined,
   Q extends ClientQuery<M, any, any, any>
@@ -108,6 +116,12 @@ export function useQuery<
   };
 }
 
+/**
+ * A hook that subscribes to the connection status of a client with the server
+ *
+ * @param client - The client instance to get the connection status of
+ * @returns An object containing `status`, the current connection status of the client with the server
+ */
 export function useConnectionStatus(
   client: TriplitClient<any> | WorkerClient<any>
 ) {
