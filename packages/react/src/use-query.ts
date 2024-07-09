@@ -49,7 +49,14 @@ type useInfiniteQueryPayload<
   loadMore: () => void;
   disconnect: () => void;
 };
-
+/**
+ * A React hook that subscribes to a query
+ *
+ * @param client The client instance to query with
+ * @param query The query to subscribe to
+ * @param options Additional options for the subscription
+ * @returns An object containing the fetching state, the result of the query, and any error that occurred
+ */
 export function useQuery<
   M extends Models<any, any> | undefined,
   Q extends ClientQuery<M, any, any, any>
@@ -129,7 +136,14 @@ export function useQuery<
     error,
   };
 }
-
+/**
+ * A React hook that subscribes to a query in a paginated manner
+ *
+ * @param client The client instance to query with
+ * @param query The query, with a limit set, to subscribe to
+ * @param options Additional options for the subscription
+ * @returns An object containing functions to load the previous and next pages, the fetching state, the result of the query, and any error that occurred
+ */
 export function usePaginatedQuery<
   M extends Models<any, any> | undefined,
   Q extends ClientQuery<M, any, any, any>
@@ -207,6 +221,14 @@ export function usePaginatedQuery<
   };
 }
 
+/**
+ * A React hook that subscribes to a query with an initial limit and allows for loading more results
+ *
+ * @param client The client instance to query with
+ * @param query The query, with a limit set, to subscribe to
+ * @param options Additional options for the subscription
+ * @returns An object containing a function to load more results, the fetching state, the result of the query, and any error that occurred
+ */
 export function useInfiniteQuery<
   M extends Models<any, any> | undefined,
   Q extends ClientQuery<M, any, any, any>
