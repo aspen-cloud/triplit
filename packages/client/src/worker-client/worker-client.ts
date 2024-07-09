@@ -30,11 +30,14 @@ import {
 } from '../client/types';
 import { clientQueryBuilder } from '../client/query-builder.js';
 
-export function createTriplitSharedWorker(workerUrl?: string): SharedWorker {
-  return new SharedWorker(
+export function getTriplitSharedWorkerPort(
+  workerUrl?: string
+): SharedWorker['port'] {
+  const worker = new SharedWorker(
     workerUrl ?? new URL('worker-client-operator.js', import.meta.url),
     { type: 'module', name: 'triplit-client' }
   );
+  return worker.port;
 }
 
 export class WorkerClient<M extends ClientSchema | undefined = undefined> {
@@ -50,8 +53,7 @@ export class WorkerClient<M extends ClientSchema | undefined = undefined> {
     sharedWorkerPort?: MessagePort
   ) {
     if (!sharedWorkerPort) {
-      const worker = createTriplitSharedWorker(options?.workerUrl);
-      sharedWorkerPort = worker.port;
+      sharedWorkerPort = getTriplitSharedWorkerPort(options?.workerUrl);
     }
     this.clientWorker = ComLink.wrap<Client<M>>(sharedWorkerPort);
     const { schema } = options || {};
