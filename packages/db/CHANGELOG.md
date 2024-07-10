@@ -1,5 +1,12 @@
 # @triplit/db
 
+## 0.3.53
+
+### Patch Changes
+
+- 784b82f: Fix erroneous back-copat check for new collections
+- 199684b: ensure query builder can be built incrementally without overwritinga
+
 ## 0.3.52
 
 ### Patch Changes
