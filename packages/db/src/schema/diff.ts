@@ -22,6 +22,7 @@ type ChangeToAttribute =
         options: any;
         optional: boolean;
       };
+      isNewCollection: boolean;
     }
   | {
       type: 'delete';
@@ -68,6 +69,7 @@ export function diffCollections(
           options: propertiesB[prop].options,
           optional: modelB?.optional?.includes(prop) ?? false,
         },
+        isNewCollection: modelA === undefined,
       });
       continue;
     }
@@ -277,6 +279,7 @@ const DANGEROUS_EDITS = [
     matchesDiff: (diff: CollectionAttributeDiff) => {
       if (
         diff.type === 'insert' &&
+        !diff.isNewCollection &&
         diff.metadata.optional === false &&
         diff.metadata.type !== 'query'
       )
