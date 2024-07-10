@@ -4,6 +4,16 @@
 
 ### Patch Changes
 
+- Updated dependencies [784b82f]
+- Updated dependencies [199684b]
+  - @triplit/db@0.3.53
+  - @triplit/client@0.3.69
+  - @triplit/react@0.3.73
+
+## null
+
+### Patch Changes
+
 - Updated dependencies [20b8bca]
 - Updated dependencies [546bda7]
   - @triplit/client@0.3.68
