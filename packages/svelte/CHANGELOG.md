@@ -1,5 +1,13 @@
 # @triplit/svelte
 
+## 0.1.40
+
+### Patch Changes
+
+- 7279628: add JSDoc comments
+- Updated dependencies [20b8bca]
+  - @triplit/client@0.3.68
+
 ## 0.1.39
 
 ### Patch Changes

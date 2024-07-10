@@ -1,5 +1,13 @@
 # @triplit/client
 
+## 0.3.68
+
+### Patch Changes
+
+- 20b8bca: Use copy of query when mutating limits during pagination
+- Updated dependencies [546bda7]
+  - @triplit/db@0.3.52
+
 ## 0.3.67
 
 ### Patch Changes
