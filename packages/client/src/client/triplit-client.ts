@@ -731,6 +731,7 @@ export class TriplitClient<M extends ClientSchema | undefined = undefined> {
 
     // If we have a limit, handle pagination
     if (query.limit) {
+      query = { ...query };
       // If we have an after, the limit will increase by 1
       query.limit = requestedLimit! + 1 + (query.after ? 1 : 0);
       subscriptionResultHandler = (
@@ -906,7 +907,8 @@ export class TriplitClient<M extends ClientSchema | undefined = undefined> {
     };
     if (query.limit) {
       const originalPageSize = query.limit;
-      query.limit = query.limit + 1;
+      query = { ...query };
+      query.limit = query.limit! + 1;
       subscriptionResultHandler = (
         results: Unalias<ClientFetchResult<CQ>>,
         info: { hasRemoteFulfilled: boolean }
