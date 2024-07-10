@@ -1,5 +1,11 @@
 # @triplit/db
 
+## 0.3.52
+
+### Patch Changes
+
+- 546bda7: Add option to db.clear() to clear all data vs application data
+
 ## 0.3.51
 
 ### Patch Changes
