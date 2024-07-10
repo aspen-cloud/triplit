@@ -59,33 +59,40 @@ export class ClientQueryBuilder<
   select<Selection extends QuerySelectionValue<M, CN>>(
     selection: Selection[] | undefined
   ) {
-    this.query = { ...this.query, select: selection };
-    return this as ClientQueryBuilder<
+    return new ClientQueryBuilder({
+      ...this.query,
+      select: selection,
+    }) as ClientQueryBuilder<
       ClientQuery<M, CN, Selection, CollectionQueryInclusion<Q>>
     >;
   }
 
   where(...args: FilterInput<M, CN, any>) {
-    this.query = {
+    return new ClientQueryBuilder<Q>({
       ...this.query,
       where: QUERY_INPUT_TRANSFORMERS<M, CN>().where(
         // @ts-expect-error
         this.query,
         ...args
       ),
-    };
-    return this;
+    });
   }
 
   id(id: string) {
-    return this.where(
-      // @ts-expect-error
-      ['id', '=', id]
-    );
+    const nextWhere = [
+      ['id', '=', id],
+      ...(this.query.where ?? []).filter(
+        (w) => !Array.isArray(w) || w[0] !== 'id'
+      ),
+    ];
+    return new ClientQueryBuilder<Q>({
+      ...this.query,
+      where: nextWhere,
+    });
   }
 
   order(...args: OrderInput<M, CN>) {
-    this.query = {
+    return new ClientQueryBuilder<Q>({
       ...this.query,
       order: QUERY_INPUT_TRANSFORMERS<M, CN>().order(
         // @ts-expect-error
@@ -93,12 +100,11 @@ export class ClientQueryBuilder<
         this.query,
         ...args
       ),
-    };
-    return this;
+    });
   }
 
   after(after: AfterInput<M, CN>, inclusive?: boolean) {
-    this.query = {
+    return new ClientQueryBuilder<Q>({
       ...this.query,
       after: QUERY_INPUT_TRANSFORMERS<M, CN>().after(
         // @ts-expect-error
@@ -107,8 +113,7 @@ export class ClientQueryBuilder<
         after,
         inclusive
       ),
-    };
-    return this;
+    });
   }
 
   include<RName extends string, SQ extends RelationSubquery<M, any>>(
@@ -144,7 +149,7 @@ export class ClientQueryBuilder<
     >
   >;
   include(relationName: any, query?: any): any {
-    this.query = {
+    return new ClientQueryBuilder({
       ...this.query,
       include: QUERY_INPUT_TRANSFORMERS<M, CN>().include(
         // @ts-expect-error
@@ -152,18 +157,15 @@ export class ClientQueryBuilder<
         relationName,
         query
       ),
-    };
-    return this;
+    });
   }
 
   limit(limit: number) {
-    this.query = { ...this.query, limit };
-    return this;
+    return new ClientQueryBuilder<Q>({ ...this.query, limit });
   }
 
   vars(vars: Record<string, any>) {
-    this.query = { ...this.query, vars };
-    return this;
+    return new ClientQueryBuilder<Q>({ ...this.query, vars });
   }
 
   /**
@@ -174,7 +176,6 @@ export class ClientQueryBuilder<
   }
 
   syncStatus(status: SyncStatus) {
-    this.query.syncStatus = status;
-    return this;
+    return new ClientQueryBuilder<Q>({ ...this.query, syncStatus: status });
   }
 }

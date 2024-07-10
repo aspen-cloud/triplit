@@ -46,33 +46,40 @@ export class QueryBuilder<
   select<Selection extends QuerySelectionValue<M, CN>>(
     selection: Selection[] | undefined
   ) {
-    this.query = { ...this.query, select: selection };
-    return this as QueryBuilder<
+    return new QueryBuilder({
+      ...this.query,
+      select: selection,
+    }) as QueryBuilder<
       CollectionQuery<M, CN, Selection, CollectionQueryInclusion<Q>>
     >;
   }
 
   where(...args: FilterInput<M, CN>) {
-    this.query = {
+    return new QueryBuilder<Q>({
       ...this.query,
       where: QUERY_INPUT_TRANSFORMERS<M, CN>().where(
         // @ts-expect-error
         this.query,
         ...args
       ),
-    };
-    return this;
+    });
   }
 
   id(id: string) {
-    return this.where(
-      // @ts-expect-error
-      ['id', '=', id]
-    );
+    const nextWhere = [
+      ['id', '=', id],
+      ...(this.query.where ?? []).filter(
+        (w) => !Array.isArray(w) || w[0] !== 'id'
+      ),
+    ];
+    return new QueryBuilder<Q>({
+      ...this.query,
+      where: nextWhere,
+    });
   }
 
   order(...args: OrderInput<M, CN>) {
-    this.query = {
+    return new QueryBuilder<Q>({
       ...this.query,
       order: QUERY_INPUT_TRANSFORMERS<M, CN>().order(
         // @ts-expect-error
@@ -80,12 +87,11 @@ export class QueryBuilder<
         this.query,
         ...args
       ),
-    };
-    return this;
+    });
   }
 
   after(after: AfterInput<M, CN>, inclusive?: boolean) {
-    this.query = {
+    return new QueryBuilder<Q>({
       ...this.query,
       after: QUERY_INPUT_TRANSFORMERS<M, CN>().after(
         // @ts-expect-error
@@ -94,9 +100,9 @@ export class QueryBuilder<
         after,
         inclusive
       ),
-    };
-    return this;
+    });
   }
+
   include<RName extends string, SQ extends RelationSubquery<M, any>>(
     relationName: RName,
     query: RelationSubquery<M, any>
@@ -130,7 +136,7 @@ export class QueryBuilder<
     >
   >;
   include(relationName: any, query?: any) {
-    this.query = {
+    return new QueryBuilder<CollectionQuery<any, any, any, any>>({
       ...this.query,
       include: QUERY_INPUT_TRANSFORMERS<M, CN>().include(
         // @ts-expect-error
@@ -138,18 +144,15 @@ export class QueryBuilder<
         relationName,
         query
       ),
-    };
-    return this;
+    });
   }
 
   limit(limit: number) {
-    this.query = { ...this.query, limit };
-    return this;
+    return new QueryBuilder<Q>({ ...this.query, limit });
   }
 
   vars(vars: Record<string, any>) {
-    this.query = { ...this.query, vars };
-    return this;
+    return new QueryBuilder<Q>({ ...this.query, vars });
   }
 
   /**
