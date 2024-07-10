@@ -1,5 +1,14 @@
 # @triplit/client
 
+## 0.3.69
+
+### Patch Changes
+
+- 199684b: ensure query builder can be built incrementally without overwritinga
+- Updated dependencies [784b82f]
+- Updated dependencies [199684b]
+  - @triplit/db@0.3.53
+
 ## 0.3.68
 
 ### Patch Changes
