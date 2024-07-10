@@ -3052,7 +3052,7 @@ describe('migrations', () => {
 
       expect(storage.data.length).not.toBe(0);
 
-      await db.clear();
+      await db.clear({ full: true });
 
       expect(storage.data.length).toBe(0);
     });
@@ -5441,7 +5441,7 @@ it('clearing a database resets the schema', async () => {
   expect(schemaToJSON(resultSchema)).toEqual(schemaToJSON(schema));
   expect(schemaToJSON(cacheSchema)).toEqual(schemaToJSON(schema));
 
-  await db.clear();
+  await db.clear({ full: true });
 
   // Should reset schema cache
   const schemaAfterClear = await db.getSchema();
