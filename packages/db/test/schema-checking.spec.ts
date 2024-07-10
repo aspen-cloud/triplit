@@ -126,6 +126,7 @@ describe('Schema diffing', () => {
           options: { nullable: false, default: { args: null, func: 'uuid' } },
           optional: false,
         },
+        isNewCollection: false,
       },
     ]);
   });
@@ -199,6 +200,7 @@ describe('Schema diffing', () => {
           options: { nullable: false, default: { args: null, func: 'uuid' } },
           optional: false,
         },
+        isNewCollection: true,
       },
     ]);
   });
