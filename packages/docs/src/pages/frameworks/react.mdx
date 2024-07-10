@@ -85,7 +85,10 @@ import { useQueryOne } from '@triplit/react';
 const client = new TriplitClient();
 
 function App() {
-  const { result: todo } = useQueryOne(client, client.query('todos').id('todo-id'));
+  const { result: todo } = useQueryOne(
+    client,
+    client.query('todos').id('todo-id')
+  );
 
   return <div>{todo.text}</div>;
 }
@@ -110,7 +113,7 @@ function App() {
     prevPage,
   } = usePaginatedQuery(
     client,
-    client.query('todos').limit(10).orderBy('created_at', 'DESC')
+    client.query('todos').limit(10).order('created_at', 'DESC')
   );
 
   return (
@@ -140,7 +143,7 @@ const client = new TriplitClient();
 function App() {
   const { results, fetchingMore, hasMore, loadMore } = useInfiniteQuery(
     client,
-    client.query('todos').limit(10).orderBy('created_at', 'DESC')
+    client.query('todos').limit(10).order('created_at', 'DESC')
   );
 
   return (
