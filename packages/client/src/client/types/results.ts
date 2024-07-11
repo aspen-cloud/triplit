@@ -31,6 +31,15 @@ export type ClientFetchResultEntity<C extends ClientQuery<any, any, any, any>> =
 
 /**
  * The fully selected type of an entity, including all fields but not relations
+ * 
+ * @template M The type of the defined schema
+ * @template CN The collection name
+ * 
+ * @example
+ * ```ts
+ * type MyEntity = Entity<typeof schema, 'myCollection'>
+ * ```
+
  */
 export type Entity<
   M extends ClientSchema,

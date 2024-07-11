@@ -17,6 +17,8 @@ import { WorkerClient } from '@triplit/client/worker-client';
  * @param client - The client instance to query with
  * @param query - The query to subscribe to
  * @param options - Additional options for the subscription
+ * @param options.localOnly - If true, the subscription will only use the local cache. Defaults to false.
+ * @param options.onRemoteFulfilled - An optional callback that is called when the remote query has been fulfilled.
  * @returns An object containing the fetching state, the result of the query, any error that occurred, and a function to update the query
  */
 export function useQuery<

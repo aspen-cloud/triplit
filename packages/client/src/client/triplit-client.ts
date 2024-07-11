@@ -347,6 +347,7 @@ export class TriplitClient<M extends ClientSchema | undefined = undefined> {
    *
    * @param query - The query to fetch
    * @param options - The fetch options
+   * @param options.policy - The fetch policy to use. Determines if the operation will retrieve data from the cache and/or the server. Defaults to `local-first`.
    * @returns The fetched data as a map of entities
    */
   async fetch<CQ extends ClientQuery<M, any>>(
@@ -577,6 +578,8 @@ export class TriplitClient<M extends ClientSchema | undefined = undefined> {
    * @param onResults - The callback function to handle the results of the subscription.
    * @param onError - The callback function to handle any errors that occur during the subscription.
    * @param options - The options for the subscription.
+   * @param options.localOnly - If true, the subscription will only use the local cache. Defaults to false.
+   * @param options.onRemoteFulfilled - An optional callback that is called when the remote query has been fulfilled.
    * @returns - A function that can be called to unsubscribe from the subscription.
    */
   subscribe<CQ extends ClientQuery<M, any, any, any>>(

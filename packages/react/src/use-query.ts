@@ -55,6 +55,8 @@ type useInfiniteQueryPayload<
  * @param client - The client instance to query with
  * @param query - The query to subscribe to
  * @param options - Additional options for the subscription
+ * @param options.localOnly - If true, the subscription will only use the local cache. Defaults to false.
+ * @param options.onRemoteFulfilled - An optional callback that is called when the remote query has been fulfilled.
  * @returns An object containing the fetching state, the result of the query, and any error that occurred
  */
 export function useQuery<
@@ -142,6 +144,8 @@ export function useQuery<
  * @param client - The client instance to query with
  * @param query - The query, with a limit set, to subscribe to
  * @param options - Additional options for the subscription
+ * @param options.localOnly - If true, the subscription will only use the local cache. Defaults to false.
+ * @param options.onRemoteFulfilled - An optional callback that is called when the remote query has been fulfilled.
  * @returns An object containing functions to load the previous and next pages, the fetching state, the result of the query, and any error that occurred
  */
 export function usePaginatedQuery<
@@ -227,7 +231,8 @@ export function usePaginatedQuery<
  * @param client - The client instance to query with
  * @param query - The query, with a limit set, to subscribe to
  * @param options - Additional options for the subscription
- * @returns An object containing a function to load more results, the fetching state, the result of the query, and any error that occurred
+ * @param options.localOnly - If true, the subscription will only use the local cache. Defaults to false.
+ * @param options.onRemoteFulfilled - An optional callback that is called when the remote query has been fulfilled. * @returns An object containing a function to load more results, the fetching state, the result of the query, and any error that occurred
  */
 export function useInfiniteQuery<
   M extends Models<any, any> | undefined,
