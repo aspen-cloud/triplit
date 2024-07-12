@@ -2,17 +2,7 @@
 import dotenv from 'dotenv';
 import dotenvExpand from 'dotenv-expand';
 dotenvExpand.expand(dotenv.config());
-import {
-  bgGreenBright,
-  bold,
-  dim,
-  green,
-  inverse,
-  italic,
-  red,
-  white,
-  whiteBright,
-} from 'ansis/colors';
+import { bold, dim, red } from 'ansis/colors';
 import React from 'react';
 import { render } from 'ink';
 import {
@@ -51,7 +41,12 @@ const posthog = new PostHog('phc_wqlg7bicph69twhGZbS7vPW5V73UoWWz0pppf24x6WN', {
   host: 'https://us.i.posthog.com',
 });
 
-if (!getTelemetryEnabled()) {
+const isInteractiveSession = process.stdout.isTTY && process.stdin.isTTY;
+
+// Heuristic to determine if the CLI is being used by a person rather than in CI/CD
+const isBeingUsedByHuman = isInteractiveSession;
+
+if (!getTelemetryEnabled() || !isBeingUsedByHuman) {
   await posthog.disable();
 }
 
@@ -77,12 +72,14 @@ export async function execute(args: string[], flags: {}) {
 
   let command: CommandTree | CommandInfo = commands;
 
+  let fullCmdPath: string[] = [];
   let i: number;
   for (i = 0; i < argv._.length; i++) {
     const part: string = argv._[i];
     if (isCommandInfo(command) || !command[part]) {
       break;
     }
+    fullCmdPath.push(part);
     command = command[part];
   }
 
@@ -196,11 +193,12 @@ export async function execute(args: string[], flags: {}) {
   } else {
     parsedCommandArgs = commandArgs;
   }
+  const cmdFullName = fullCmdPath.join(':');
   posthog.capture({
     distinctId: installId,
     event: 'cli_command_run',
     properties: {
-      command: cmdDef.name,
+      command: cmdFullName ?? cmdDef.name,
       flags: unaliasedFlags,
       args: parsedCommandArgs,
     },
