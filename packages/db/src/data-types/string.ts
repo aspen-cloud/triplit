@@ -14,7 +14,7 @@ import {
 const STRING_OPERATORS = ['=', '!=', 'like', 'nlike', 'in', 'nin'] as const;
 type StringOperators = typeof STRING_OPERATORS;
 
-export type StringType<TypeOptions extends UserTypeOptions = {}> =
+export type StringType<TypeOptions extends StringTypeOptions = {}> =
   ValueInterface<
     'string',
     TypeWithOptions<string, TypeOptions>,
@@ -22,7 +22,11 @@ export type StringType<TypeOptions extends UserTypeOptions = {}> =
     StringOperators
   >;
 
-export function StringType<TypeOptions extends UserTypeOptions = {}>(
+type StringTypeOptions = UserTypeOptions & {
+  enums?: string[];
+};
+
+export function StringType<TypeOptions extends StringTypeOptions = {}>(
   options: TypeOptions = {} as TypeOptions
 ): StringType<TypeOptions> {
   if (options && !userTypeOptionsAreValid(options)) {
@@ -59,15 +63,28 @@ export function StringType<TypeOptions extends UserTypeOptions = {}>(
       return calcDefaultValue(options) as string | undefined;
     },
     validateInput(val: any) {
-      if (typeof val === 'string' || (!!options.nullable && val === null))
-        return;
-      return valueMismatchMessage('string', options, val);
+      if (!!options.nullable && val === null) return;
+      if (typeof val !== 'string')
+        return valueMismatchMessage('string', options, val);
+      if (options.enums && !options.enums.includes(val))
+        return enumMismatchMessage(options.enums, val);
+      return;
     },
     validateTripleValue(val) {
-      return typeof val === 'string' || (!!options.nullable && val === null);
+      return (
+        (typeof val === 'string' &&
+          (!options.enums || options.enums.includes(val))) ||
+        (!!options.nullable && val === null)
+      );
     },
     fromString(val: string) {
       return val;
     },
   };
+}
+
+function enumMismatchMessage(enums: string[], val: any) {
+  return `Expected a value in the enum [${enums.join(
+    ', '
+  )}], but got ${val} instead.`;
 }
