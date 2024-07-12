@@ -141,10 +141,12 @@ function TypeLabel({
   name,
   type,
   setItemsType,
+  isEnum = false,
 }: {
   name: string;
   type: ValueTypeKeys | CollectionTypeKeys;
   setItemsType?: ValueTypeKeys;
+  isEnum?: boolean;
 }) {
   return (
     <div className="flex flex-row gap-2 items-center w-full">
@@ -159,6 +161,7 @@ function TypeLabel({
               {'>'}
             </span>
           )}
+          {isEnum && ' (enum)'}
         </div>
       }
     </div>
@@ -210,7 +213,7 @@ export function CreateEntitySheet({
         !hasDefault &&
         !optionalAttributes.has(item.fieldName) &&
         (!item.definition?.options?.nullable || item.fieldValue !== null);
-
+      const isEnum = item.definition?.options?.enums;
       return (
         <div
           key={item.key}
@@ -258,11 +261,23 @@ export function CreateEntitySheet({
                       ? item.definition.items.type
                       : undefined
                   }
+                  isEnum={isEnum}
                 />
               )
             }
           >
-            {item.definition.type === 'string' && (
+            {item.definition.type === 'string' && isEnum && (
+              <Select
+                required={isRequired}
+                data={item.definition.options.enums}
+                disabled={item.fieldValue === null}
+                value={item.fieldValue ?? ''}
+                onValueChange={(value) => {
+                  form.setFieldValue(`attributes.${index}.fieldValue`, value);
+                }}
+              />
+            )}
+            {item.definition.type === 'string' && !isEnum && (
               <Textarea
                 required={isRequired}
                 disabled={item.fieldValue === null}
