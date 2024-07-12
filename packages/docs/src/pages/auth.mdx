@@ -19,15 +19,15 @@ A token must have the following claims:
 }
 ```
 
-For backwards compatability, Triplit reads the following claims:
+For backwards compatibility, Triplit reads the following claims:
 
-- `x-triplit-user-id`: The user's unique identifier. This is assigned to the varaible `$session.SESSION_USER_ID` in queries.
+- `x-triplit-user-id`: The user's unique identifier. This is assigned to the variable `$session.SESSION_USER_ID` in queries.
 
 As well, the JWT will need to be signed with a proper signature. If you are using Triplit's hosted offering [Triplit Cloud](/triplit-cloud), then you will need to provide the signing secret of your JWT to Triplit in the `External JWT secret` field in your project's settings. If you are self-hosting Triplit, you will need to provide the signing secret to Triplit when you start the server via an environment variable `EXTERNAL_JWT_SECRET`.
 
 ### Tokens
 
-When connecting to a Triplit server, you can provide identification information by passing in a token to your Triplit Client. This token is used to determine what data the connection has access to.
+When connecting to a Triplit server, you can provide identification information by passing in a token to your Triplit Client. This token is used to determine what data the client has access to.
 
 ```typescript
 import { TriplitClient } from '@triplit/client';
@@ -40,9 +40,9 @@ const client = new TriplitClient({
 Triplit provides two basic tokens that are available in your project [dashboard](https://www.triplit.dev/dashboard):
 
 - `anon` token: A token that represents an anonymous user. This token is safe to use on a client side device and should be used when no user is logged in.
-- `service` token: This token is used for administrative purposes and should only be used in trusted environemnts like a server you control. This token will bypass all access control checks.
+- `service` token: This token is used for administrative purposes and should only be used in trusted environments like a server you control. This token will bypass all access control checks.
 
-When getting started with Triplit these are fine to use, but they don't provide information like which applicaiton user is accessing the database. However this information can be configured by providing a JWT with the proper claims and signature (see previous section). Triplit's flexible design allows you to define any JWT claims you would like.
+When getting started with Triplit these are fine to use, but they don't specify which application user is accessing the database, or if they have a distinct access role. This information can be configured by providing a JWT with the proper claims and signature (see previous section). Triplit's flexible design allows you to define any JWT claims you would like.
 
 ## Authorization
 

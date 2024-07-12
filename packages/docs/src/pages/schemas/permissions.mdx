@@ -16,9 +16,9 @@ Triplit provides a flexible way to define access control rules for your database
 
 ### Roles
 
-When you authenticate with a Triplit server and begin a session, you provide a token that contains some information about who you are (see [authentication](/auth) for more information on tokens). You can define `roles` to access information from your token to inform permissions decisions, like 'Can this user read this todo?'.
+When a client authenticates with a Triplit server and begins a session, it provides a token that contains some information about itself (see [authentication](/auth) for more information on tokens). You can define `roles` to access information from a token to inform permissions decisions, like 'Can this user read this todo?'.
 
-Each role has an identifier and a `match` object. When you authenticate with a Triplit server, Triplit will check if the token matches any defined roles in the schema. And if it does, the role is considered to be present in the token and can be used in your permission definitions.
+Each role has an identifier and a `match` object. When a client authenticates with a Triplit server, Triplit will check if the token matches any defined roles in the schema. If it does, the client is granted that role and will be subject to any permissions that have been defined for that it.
 
 For example, you may author `admin` and `user` tokens with the following structure:
 
@@ -43,7 +43,7 @@ const schema = {
 };
 ```
 
-Wildcards in the `match` object (prefixed with `$`) will be assigned to [variables](/client/query/variables) with the prefix `$role`. For example, a JWT with the following structure would match the `user` role and assign the value `123` to `$role.userId` variable for use in your permission definitions:
+Wildcards in the `match` object (prefixed with `$`) will be assigned to [variables](/client/query/variables) with the prefix `$role`. For example, a JWT with the following structure would match the `user` role and assign the value `123` to the `$role.userId` variable for use in your application's permission definitions:
 
 ```typescript
 // match object
@@ -103,7 +103,7 @@ Collection permissions are defined for each operation and role. If a role is not
 
 #### Read
 
-To allow users to read data, you must define what roles may read data and the shape of that data with the `read` permission. The following example allows users to read todos that they authored and admin users to read any todo:
+To allow clients to read data, you must define a `read` permission that specifies the roles that may read data and any additional restrictions. The following example allows a `user` to read the todos that they authored and an `admin` to read any todo:
 
 ```typescript
 const schema = {
@@ -136,7 +136,7 @@ const schema = {
 
 #### Insert
 
-To allow users to insert data, you must define what roles may insert data and the shape of that data with the `insert` permission. The following example allows users to insert todos that they authored and admin users to insert any todo:
+To allow clients to insert data, you must define an `insert` permission that specifies the roles that may insert data and any additional restrictions. The following example allows a `user` to insert a todo that they author and an `admin` to insert any todo:
 
 ```typescript
 const schema = {
@@ -169,7 +169,7 @@ const schema = {
 
 #### Update
 
-To allow users to update data, you must define what roles may update data and the shape of that data with the `update` permission. This will run the boolean check against the data before the update has occured. The following example allows users to update todos that they authored and admin users to update any todo:
+To allow users to update data, you must define an `update` permission that specifies the roles that may update data and any additional restrictions. For updates, the permission is checked against the "old" state of the entity, before it has been updated. The following example allows a `user` to update todos that they authored and an `admin` to update any todo:
 
 ```typescript
 const schema = {
@@ -202,7 +202,7 @@ const schema = {
 
 #### Post update
 
-You may also optionally define a `postUpdate` permission that will be run after an update operation has been completed. This is useful for confirming that updated data is valid. For example, this checks that a user has not re-assigned a todo to another user:
+You may also optionally define a `postUpdate` permission that will be run after an update operation has been completed. This is useful for confirming that updated data is valid. For example, this checks that a `user` has not re-assigned a todo to another `user`:
 
 ```typescript
 const schema = {
@@ -237,7 +237,7 @@ const schema = {
 
 #### Delete
 
-To allow users to delete data, you must define what roles may delete data and the shape of that data with the `delete` permission. The following example allows users to delete todos that they authored and admin users to delete any todo:
+To allow users to delete data, you must define a `delete` permission that specifies the roles that may delete data and any additional restrictions. The following example allows a `user` to delete todos that they authored and an `admin` to delete any todo:
 
 ```typescript
 const schema = {
