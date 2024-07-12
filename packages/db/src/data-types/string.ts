@@ -14,21 +14,24 @@ import {
 const STRING_OPERATORS = ['=', '!=', 'like', 'nlike', 'in', 'nin'] as const;
 type StringOperators = typeof STRING_OPERATORS;
 
-export type StringType<TypeOptions extends StringTypeOptions = {}> =
-  ValueInterface<
-    'string',
-    TypeWithOptions<string, TypeOptions>,
-    TypeWithOptions<string, TypeOptions>,
-    StringOperators
-  >;
+export type StringType<TypeOptions extends StringTypeOptions<any> = {}> =
+  TypeOptions extends StringTypeOptions<infer E>
+    ? ValueInterface<
+        'string',
+        TypeWithOptions<E, TypeOptions>,
+        TypeWithOptions<E, TypeOptions>,
+        StringOperators,
+        TypeOptions
+      >
+    : never;
 
-type StringTypeOptions = UserTypeOptions & {
-  enums?: string[];
+type StringTypeOptions<E extends string> = UserTypeOptions & {
+  enums?: ReadonlyArray<E>;
 };
 
-export function StringType<TypeOptions extends StringTypeOptions = {}>(
-  options: TypeOptions = {} as TypeOptions
-): StringType<TypeOptions> {
+export function StringType<
+  TypeOptions extends StringTypeOptions<any> = UserTypeOptions
+>(options: TypeOptions = {} as TypeOptions): StringType<TypeOptions> {
   if (options && !userTypeOptionsAreValid(options)) {
     throw new InvalidTypeOptionsError(options);
   }
@@ -50,7 +53,6 @@ export function StringType<TypeOptions extends StringTypeOptions = {}>(
     convertDBValueToJS(val) {
       return val;
     },
-    // @ts-expect-error
     convertJSONToJS(val) {
       if (options.nullable && val === null) return null;
       if (typeof val !== 'string') throw new JSONValueParseError('string', val);
@@ -83,7 +85,7 @@ export function StringType<TypeOptions extends StringTypeOptions = {}>(
   };
 }
 
-function enumMismatchMessage(enums: string[], val: any) {
+function enumMismatchMessage(enums: readonly string[], val: any) {
   return `Expected a value in the enum [${enums.join(
     ', '
   )}], but got ${val} instead.`;

@@ -36,6 +36,8 @@ const EXHAUSTIVE_SCHEMA = {
         boolean: S.Boolean(),
         number: S.Number(),
         date: S.Date(),
+        // enum string
+        enumString: S.String({ enums: ['a', 'b', 'c'] as const }),
         // set type
         setString: S.Set(S.String()),
         setNumber: S.Set(S.Number()),
@@ -116,13 +118,13 @@ describe('insert', () => {
       const expectEntityParamInTx = expectTypeOf(tx.insert<'test'>).parameter(
         1
       );
-
       // TODO: properly opt in to optional sets and records
       expectEntityParam.toEqualTypeOf<{
         id?: string;
         string: string;
         boolean: boolean;
         number: number;
+        enumString: 'a' | 'b' | 'c';
         date: Date;
         setString?: Set<string>;
         setNumber?: Set<number>;
@@ -142,6 +144,7 @@ describe('insert', () => {
         string: string;
         boolean: boolean;
         number: number;
+        enumString: 'a' | 'b' | 'c';
         date: Date;
         setString?: Set<string>;
         setNumber?: Set<number>;
@@ -224,6 +227,7 @@ describe('update', () => {
             string: string;
             boolean: boolean;
             number: number;
+            enumString: 'a' | 'b' | 'c';
             date: Date;
             setString: Set<string>;
             setNumber: Set<number>;
@@ -246,6 +250,7 @@ describe('update', () => {
             string: string;
             boolean: boolean;
             number: number;
+            enumString: 'a' | 'b' | 'c';
             date: Date;
             setString: Set<string>;
             setNumber: Set<number>;
@@ -292,6 +297,7 @@ describe('fetch', () => {
         string: string;
         boolean: boolean;
         number: number;
+        enumString: 'a' | 'b' | 'c';
         date: Date;
         setString: Set<string>;
         setNumber: Set<number>;
@@ -312,6 +318,7 @@ describe('fetch', () => {
         string: string;
         boolean: boolean;
         number: number;
+        enumString: 'a' | 'b' | 'c';
         date: Date;
         setString: Set<string>;
         setNumber: Set<number>;
@@ -536,6 +543,7 @@ describe('fetchById', () => {
           string: string;
           number: number;
           boolean: boolean;
+          enumString: 'a' | 'b' | 'c';
           date: Date;
           setString: Set<string>;
           setNumber: Set<number>;
@@ -557,6 +565,7 @@ describe('fetchById', () => {
           id: string;
           string: string;
           number: number;
+          enumString: 'a' | 'b' | 'c';
           boolean: boolean;
           date: Date;
           setString: Set<string>;
