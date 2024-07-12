@@ -16,10 +16,9 @@ export type ValueInterface<
   TypeId extends ValueTypeKeys = ValueTypeKeys, // possibly specify known value types
   JSType = any,
   JsonType = any, // string, number, boolean, array, object
-  Operators extends readonly Operator[] = readonly Operator[],
-  TypeOptions extends UserTypeOptions = {}
+  Operators extends readonly Operator[] = readonly Operator[]
 > = TypeInterface<TypeId, JSType, JsonType, Operators> & {
-  readonly options: TypeOptions;
+  readonly options: UserTypeOptions;
   // Our current rule is that values can go into collections, need this for working with collections
   fromString(val: string): JSType;
 };
