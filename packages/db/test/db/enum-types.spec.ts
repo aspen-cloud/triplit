@@ -7,7 +7,7 @@ describe('Enum properties in a schema', () => {
       Todos: {
         schema: S.Schema({
           id: S.Id(),
-          text: S.String({ enums: ['a', 'b', 'c'] }),
+          text: S.String({ enum: ['a', 'b', 'c'] }),
         }),
       },
     },

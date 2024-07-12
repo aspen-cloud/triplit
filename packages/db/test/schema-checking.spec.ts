@@ -359,9 +359,9 @@ describe('detecting dangerous edits', () => {
     );
   }
   const noEnum = S.String();
-  const withEnum = S.String({ enums: ['a', 'b', 'c'] });
-  const withDangerouslyChangedEnum = S.String({ enums: ['a', 'b', 'd'] });
-  const withSafeChangedEnum = S.String({ enums: ['a', 'b', 'c', 'd'] });
+  const withEnum = S.String({ enum: ['a', 'b', 'c'] });
+  const withDangerouslyChangedEnum = S.String({ enum: ['a', 'b', 'd'] });
+  const withSafeChangedEnum = S.String({ enum: ['a', 'b', 'c', 'd'] });
   it.only('can detect dangerous changes to an enum', async () => {
     const db = new DB({ schema: wrapSchema({ id: S.Id(), enum: noEnum }) });
     await db.transact(async (tx) => {

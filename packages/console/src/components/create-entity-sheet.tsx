@@ -213,7 +213,7 @@ export function CreateEntitySheet({
         !hasDefault &&
         !optionalAttributes.has(item.fieldName) &&
         (!item.definition?.options?.nullable || item.fieldValue !== null);
-      const isEnum = item.definition?.options?.enums;
+      const isEnum = item.definition?.options?.enum;
       return (
         <div
           key={item.key}
@@ -269,7 +269,7 @@ export function CreateEntitySheet({
             {item.definition.type === 'string' && isEnum && (
               <Select
                 required={isRequired}
-                data={item.definition.options.enums}
+                data={item.definition.options.enum}
                 disabled={item.fieldValue === null}
                 value={item.fieldValue ?? ''}
                 onValueChange={(value) => {

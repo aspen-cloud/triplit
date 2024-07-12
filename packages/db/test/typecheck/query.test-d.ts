@@ -37,7 +37,7 @@ const EXHAUSTIVE_SCHEMA = {
         number: S.Number(),
         date: S.Date(),
         // enum string
-        enumString: S.String({ enums: ['a', 'b', 'c'] as const }),
+        enumString: S.String({ enum: ['a', 'b', 'c'] as const }),
         // set type
         setString: S.Set(S.String()),
         setNumber: S.Set(S.Number()),

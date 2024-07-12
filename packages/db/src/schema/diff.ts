@@ -146,8 +146,8 @@ export function diffCollections(
 }
 
 function diffAttributeOptions(
-  attr1: UserTypeOptions & { enums?: string[] },
-  attr2: UserTypeOptions & { enums?: string[] }
+  attr1: UserTypeOptions & { enum?: string[] },
+  attr2: UserTypeOptions & { enum?: string[] }
 ) {
   const diff: any = {};
   if (attr1.nullable !== attr2.nullable) {
@@ -157,13 +157,13 @@ function diffAttributeOptions(
   if (attr1.default !== attr2.default) {
     diff.default = attr2.default;
   }
-  const changedFromAnyToAnEnum = attr2.enums && !attr1.enums;
+  const changedFromAnyToAnEnum = attr2.enum && !attr1.enum;
   const removedAnEnumOption =
-    attr1.enums &&
-    attr2.enums &&
-    !attr1.enums?.every((val) => attr2.enums?.includes(val));
+    attr1.enum &&
+    attr2.enum &&
+    !attr1.enum?.every((val) => attr2.enum?.includes(val));
   if (changedFromAnyToAnEnum || removedAnEnumOption) {
-    diff.enums = attr2.enums;
+    diff.enum = attr2.enum;
   }
   return diff;
 }
@@ -320,7 +320,7 @@ const DANGEROUS_EDITS = [
       'added an enum to an attribute or removed an option from an existing enum',
     matchesDiff: (diff: CollectionAttributeDiff) => {
       if (diff.type === 'update') {
-        return diff.changes.options.enums !== undefined;
+        return diff.changes.options.enum !== undefined;
       }
       return false;
     },
@@ -353,7 +353,7 @@ async function isEditSafeWithExistingData(
     attributeDiff.collection,
     attributeDiff.attribute,
     attributeDiff?.type === 'update'
-      ? attributeDiff.changes.options.enums
+      ? attributeDiff.changes.options.enum
       : undefined
   );
 }

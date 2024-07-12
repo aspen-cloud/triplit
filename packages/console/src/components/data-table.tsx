@@ -478,7 +478,7 @@ function ValueCellEditor(props: ValueCellEditorProps) {
     if (type === 'date') return DateInput;
     if (type === 'boolean') return BooleanInput;
     if (type === 'number') return NumberInput;
-    if (type === 'string' && definition.options?.enums) return EnumInput;
+    if (type === 'string' && definition.options?.enum) return EnumInput;
     return StringInput;
   }, [type]);
 
@@ -501,7 +501,7 @@ function ValueCellEditor(props: ValueCellEditorProps) {
           setError('');
         }}
         value={draftValue}
-        options={definition.options?.enums}
+        options={definition.options?.enum}
       />
       {error && <div className="text-red-500 my-1 text-xs">{error}</div>}
       <div className="flex flex-row gap-1 justify-end mt-1">
@@ -550,7 +550,7 @@ function RecordCellEditor(props: RecordCellEditorProps) {
       if (type === 'date') return DateInput;
       if (type === 'boolean') return BooleanInput;
       if (type === 'number') return NumberInput;
-      if (type === 'string' && properties[key].options?.enums) return EnumInput;
+      if (type === 'string' && properties[key].options?.enum) return EnumInput;
       return StringInput;
     });
   }, [properties]);
@@ -571,7 +571,7 @@ function RecordCellEditor(props: RecordCellEditorProps) {
                 });
               }}
               value={draftValue[key]}
-              options={properties[key]?.options?.enums}
+              options={properties[key]?.options?.enum}
             />
           </div>
         );

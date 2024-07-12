@@ -26,7 +26,7 @@ export type StringType<TypeOptions extends StringTypeOptions<any> = {}> =
     : never;
 
 type StringTypeOptions<E extends string> = UserTypeOptions & {
-  enums?: ReadonlyArray<E>;
+  enum?: ReadonlyArray<E>;
 };
 
 export function StringType<
@@ -35,7 +35,7 @@ export function StringType<
   if (options && !userTypeOptionsAreValid(options)) {
     throw new InvalidTypeOptionsError(options);
   }
-
+  // @ts-expect-error
   return {
     type: 'string',
     supportedOperations: STRING_OPERATORS,
@@ -68,14 +68,14 @@ export function StringType<
       if (!!options.nullable && val === null) return;
       if (typeof val !== 'string')
         return valueMismatchMessage('string', options, val);
-      if (options.enums && !options.enums.includes(val))
-        return enumMismatchMessage(options.enums, val);
+      if (options.enum && !options.enum.includes(val))
+        return enumMismatchMessage(options.enum, val);
       return;
     },
     validateTripleValue(val) {
       return (
         (typeof val === 'string' &&
-          (!options.enums || options.enums.includes(val))) ||
+          (!options.enum || options.enum.includes(val))) ||
         (!!options.nullable && val === null)
       );
     },
