@@ -179,3 +179,7 @@ This is similar to changing the type of an attribute, but for sets. In productio
 ### Changing an attribute from nullable to non-nullable
 
 Triplit will prevent you from changing an attribute from nullable to non-nullable if there are existing entities in the collection for which the attribute is `null`. In production, update all of the existing entities to have a non-null value for the attribute and take care that no clients will continue writing `null` values to the attribute. Then you will be able to make it non-nullable.
+
+### Changing a string to an enum string or updating an enum
+
+Triplit will prevent you from changing a string to an enum string or updating an enum if there are existing entities in the collection with values that are not in the new enum. In production, update all of the existing entities to have a value that is in the new enum and then you will be able to make the change.

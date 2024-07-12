@@ -152,6 +152,24 @@ await client.insert('test', {});
 // { id: <uuid>, text: 'hello', sent_at: '2021-03-01T00:00:00.000Z' }
 ```
 
+##### `enums` (String only)
+
+You can provide an array of strings to the `enums` option to restrict the possible values of a string attribute.
+
+```typescript
+import { Schema as S } from '@triplit/client';
+const schema = {
+  test: {
+    schema: S.Schema({
+      id: S.Id(),
+      status: S.String({ enums: ['active', 'inactive'] as const }),
+    }),
+  },
+};
+```
+
+This will both perform runtime validation and provide autocomplete in your editor. **Note: you must add `as const` to the array to enable Typescript support for the enum values.**
+
 ### Set
 
 Set types are used to store a collection of non nullable value types. Sets are unordered and do not allow duplicate values.
