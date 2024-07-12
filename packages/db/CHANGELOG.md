@@ -1,5 +1,12 @@
 # @triplit/db
 
+## 0.3.54
+
+### Patch Changes
+
+- 55ae69b: Add permissions api
+- a8c6f75: add supports for string enums
+
 ## 0.3.53
 
 ### Patch Changes

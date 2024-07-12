@@ -1,5 +1,13 @@
 # @triplit/vue
 
+## 0.1.8
+
+### Patch Changes
+
+- 2d2b360: add JSDoc comments
+- Updated dependencies [2d2b360]
+  - @triplit/client@0.3.70
+
 ## 0.1.7
 
 ### Patch Changes

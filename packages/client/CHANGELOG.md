@@ -1,5 +1,14 @@
 # @triplit/client
 
+## 0.3.70
+
+### Patch Changes
+
+- 2d2b360: add JSDoc comments
+- Updated dependencies [55ae69b]
+- Updated dependencies [a8c6f75]
+  - @triplit/db@0.3.54
+
 ## 0.3.69
 
 ### Patch Changes
