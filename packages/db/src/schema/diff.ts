@@ -3,7 +3,6 @@ import { Value as TBValue, ValuePointer } from '@sinclair/typebox/value';
 import { UserTypeOptions } from '../data-types/serialization.js';
 import { StoreSchema } from '../db-helpers.js';
 import { DBTransaction } from '../db-transaction.js';
-import DB from '../db.js';
 
 type ChangeToAttribute =
   | {
@@ -54,7 +53,6 @@ export function diffCollections(
     ...Object.keys(propertiesA),
     ...Object.keys(propertiesB),
   ]);
-
   const diff: AttributeDiff[] = [];
 
   for (const prop of allProperties) {
@@ -147,14 +145,25 @@ export function diffCollections(
   return diff;
 }
 
-function diffAttributeOptions(attr1: UserTypeOptions, attr2: UserTypeOptions) {
-  const diff: Partial<UserTypeOptions> = {};
+function diffAttributeOptions(
+  attr1: UserTypeOptions & { enums?: string[] },
+  attr2: UserTypeOptions & { enums?: string[] }
+) {
+  const diff: any = {};
   if (attr1.nullable !== attr2.nullable) {
     // TODO: determine how strict we want to be here about false vs. undefined
     diff.nullable = !!attr2.nullable;
   }
   if (attr1.default !== attr2.default) {
     diff.default = attr2.default;
+  }
+  const changedFromAnyToAnEnum = attr2.enums && !attr1.enums;
+  const removedAnEnumOption =
+    attr1.enums &&
+    attr2.enums &&
+    !attr1.enums?.every((val) => attr2.enums?.includes(val));
+  if (changedFromAnyToAnEnum || removedAnEnumOption) {
+    diff.enums = attr2.enums;
   }
   return diff;
 }
@@ -189,13 +198,18 @@ type ALLOWABLE_DATA_CONSTRAINTS =
   | 'collection_is_empty'
   | 'attribute_is_empty' // undefined
   | 'attribute_has_no_undefined'
-  | 'attribute_has_no_null';
+  | 'attribute_has_no_null'
+  | 'attribute_satisfies_enum';
 
 type BackwardsIncompatibleEdits = {
   issue: string;
   allowedIf: ALLOWABLE_DATA_CONSTRAINTS;
   context: CollectionAttributeDiff;
-  attributeCure: (collection: string, attribute: string[]) => string | null;
+  attributeCure: (
+    collection: string,
+    attribute: string[],
+    enums?: string[]
+  ) => string | null;
 };
 
 export function getBackwardsIncompatibleEdits(
@@ -301,11 +315,32 @@ const DANGEROUS_EDITS = [
     allowedIf: 'attribute_has_no_null',
     attributeCure: () => null,
   },
+  {
+    description:
+      'added an enum to an attribute or removed an option from an existing enum',
+    matchesDiff: (diff: CollectionAttributeDiff) => {
+      if (diff.type === 'update') {
+        return diff.changes.options.enums !== undefined;
+      }
+      return false;
+    },
+    allowedIf: 'attribute_satisfies_enum',
+    attributeCure: (_collection, attribute, enumArray) =>
+      `revert the change to '${attribute.join(
+        '.'
+      )}' and create a different, optional, attribute with the new enum OR ensure all values of '${attribute.join(
+        '.'
+      )} are in the new enum: ${enumArray}`,
+  },
 ] satisfies {
   allowedIf: ALLOWABLE_DATA_CONSTRAINTS;
   description: string;
   matchesDiff: (diff: CollectionAttributeDiff) => boolean;
-  attributeCure: (collection: string, attribute: string[]) => string | null;
+  attributeCure: (
+    collection: string,
+    attribute: string[],
+    enumArray?: string[]
+  ) => string | null;
 }[];
 
 async function isEditSafeWithExistingData(
@@ -316,7 +351,10 @@ async function isEditSafeWithExistingData(
   return await DATA_CONSTRAINT_CHECKS[allowedIf](
     tx,
     attributeDiff.collection,
-    attributeDiff.attribute
+    attributeDiff.attribute,
+    attributeDiff?.type === 'update'
+      ? attributeDiff.changes.options.enums
+      : undefined
   );
 }
 
@@ -360,7 +398,8 @@ const DATA_CONSTRAINT_CHECKS: Record<
   (
     tx: DBTransaction<any>,
     collection: string,
-    attribute: string[]
+    attribute: string[],
+    enumArray: string[]
   ) => Promise<boolean>
 > = {
   never: async () => false,
@@ -368,6 +407,7 @@ const DATA_CONSTRAINT_CHECKS: Record<
   attribute_is_empty: detectAttributeIsEmpty,
   attribute_has_no_undefined: detectAttributeHasNoUndefined,
   attribute_has_no_null: detectAttributeHasNoNull,
+  attribute_satisfies_enum: detectAttributeSatisfiesEnum,
 };
 
 const DATA_CHANGE_CURES: Record<
@@ -389,7 +429,28 @@ const DATA_CHANGE_CURES: Record<
     `ensure all values of '${attribute.join(
       '.'
     )}' are not null to allow this edit`,
+  attribute_satisfies_enum: (_collection, attribute) =>
+    `ensure all values of '${attribute.join(
+      '.'
+    )}' are in the enum to allow this edit`,
 };
+
+async function detectAttributeSatisfiesEnum(
+  tx: DBTransaction<any>,
+  collectionName: string,
+  attribute: string[],
+  enumArray: string[]
+) {
+  const allEntities = await tx.fetch(
+    tx.db
+      .query(collectionName)
+      .select([attribute.join('.')])
+      .where(attribute.join('.'), 'nin', enumArray)
+      .build(),
+    { skipRules: true }
+  );
+  return allEntities.size === 0;
+}
 
 async function detectAttributeHasNoUndefined(
   tx: DBTransaction<any>,

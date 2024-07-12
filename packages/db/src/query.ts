@@ -97,6 +97,8 @@ export class Entity {
     // Set tombstones as undefined, so we can continue to reduce and check timestamp
     let value: any = isExpired ? undefined : rawValue;
 
+    if (Array.isArray(value)) value = [...value];
+
     // Handle _collection attribute
     if (attribute[0] === '_collection') {
       const pointer = '/_collection';

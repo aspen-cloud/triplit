@@ -5,7 +5,7 @@ import {
   getBackwardsIncompatibleEdits,
 } from '../src/schema/diff.js';
 import { Schema as S } from '../src/schema/builder.js';
-import DB from '../src/index.js';
+import DB, { DBTransaction } from '../src/index.js';
 
 function wrapSchema(definition: any) {
   return {
@@ -344,4 +344,86 @@ describe('detecting dangerous edits', () => {
       ]);
     });
   });
+
+  async function diffEnumAttributes(
+    tx: DBTransaction<any>,
+    original: any,
+    different: any
+  ) {
+    return await getSchemaDiffIssues(
+      tx,
+      diffSchemas(
+        wrapSchema({ id: S.Id(), enum: original }),
+        wrapSchema({ id: S.Id(), enum: different })
+      )
+    );
+  }
+  const noEnum = S.String();
+  const withEnum = S.String({ enums: ['a', 'b', 'c'] });
+  const withDangerouslyChangedEnum = S.String({ enums: ['a', 'b', 'd'] });
+  const withSafeChangedEnum = S.String({ enums: ['a', 'b', 'c', 'd'] });
+  it.only('can detect dangerous changes to an enum', async () => {
+    const db = new DB({ schema: wrapSchema({ id: S.Id(), enum: noEnum }) });
+    await db.transact(async (tx) => {
+      const results = await diffEnumAttributes(tx, noEnum, withEnum);
+      expect(results[0].violatesExistingData).toBe(false);
+    });
+    // add a value that's not in the enum
+    await db.insert('stressTest', { id: 'test', enum: 'e' });
+    await db.transact(async (tx) => {
+      const results = await diffEnumAttributes(tx, noEnum, withEnum);
+      expect(results[0].violatesExistingData).toBe(true);
+    });
+    // update the value that's in the enum
+    await db.update('stressTest', 'test', (entity) => {
+      entity.enum = 'a';
+    });
+    await db.transact(async (tx) => {
+      const results = await diffEnumAttributes(tx, noEnum, withEnum);
+      expect(results[0].violatesExistingData).toBe(false);
+    });
+    // can now update the schema safely
+    await db.overrideSchema(wrapSchema({ id: S.Id(), enum: withEnum }));
+    await pause(100);
+    // changing the enum value to a non-super set is dangerous, but safe in this case
+    await db.transact(async (tx) => {
+      const results = await diffEnumAttributes(
+        tx,
+        withEnum,
+        withDangerouslyChangedEnum
+      );
+      expect(results[0].violatesExistingData).toBe(false);
+    });
+    await db.insert('stressTest', { id: 'test', enum: 'c' });
+
+    // change the enum value to a super set is safe
+    await db.transact(async (tx) => {
+      const results = await diffEnumAttributes(
+        tx,
+        withEnum,
+        withSafeChangedEnum
+      );
+      expect(results.length).toBe(0);
+    });
+
+    // but it is dangerous when there's not in the new enum
+    await db.transact(async (tx) => {
+      const results = await diffEnumAttributes(
+        tx,
+        withEnum,
+        withDangerouslyChangedEnum
+      );
+      expect(results[0].violatesExistingData).toBe(true);
+    });
+
+    // going from an enum to no enum is always safe
+    await db.transact(async (tx) => {
+      const results = await diffEnumAttributes(tx, withEnum, noEnum);
+      expect(results.length).toBe(0);
+    });
+  });
 });
+
+function pause(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
