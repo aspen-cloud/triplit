@@ -76,7 +76,7 @@ We're going to set up a [schema](/schemas) for the Todos app in the `./triplit/s
 ```ts filename="./triplit/schema.ts" copy
 import { Schema as S, ClientSchema } from '@triplit/client';
 
-export const schema = {
+export const schema: ClientSchema = {
   todos: {
     schema: S.Schema({
       id: S.Id(),
