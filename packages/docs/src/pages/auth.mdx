@@ -8,7 +8,7 @@ Authentication is the process of verifying the identity of a user. This usually 
 
 ## Authentication
 
-Triplit uses [JWTs](https://en.wikipedia.org/wiki/JSON_Web_Token) to communicate user identity. Authentication (that is the validation that a user is who they say they are, and the generation of a JWT identifying the user) itself should be handled by an authentication service outside of Triplit. This could be a third-party service like [Auth0](https://auth0.com/), [Firebase Auth](https://firebase.google.com/products/auth), [AWS Cognito](https://aws.amazon.com/cognito/), [Supabase Auth](https://supabase.com/docs/auth), etc or a custom service built by your team. The authentication service should provide a way to generate a token with Triplit specific claims that can be used to identify the user.
+Triplit uses [JWTs](https://en.wikipedia.org/wiki/JSON_Web_Token) to communicate user identity. Authentication (that is the validation that a user is who they say they are, and the generation of a JWT identifying the user) itself should be handled by an authentication service outside of Triplit. This could be a third-party service like [Clerk](https://clerk.com/), [Auth0](https://auth0.com/), [Firebase Auth](https://firebase.google.com/products/auth), [AWS Cognito](https://aws.amazon.com/cognito/), [Supabase Auth](https://supabase.com/docs/auth), etc or a custom service built by your team. The authentication service should provide a way to generate a token with Triplit specific claims that can be used to identify the user.
 
 A token must have the following claims:
 
