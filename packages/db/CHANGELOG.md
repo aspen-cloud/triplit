@@ -1,5 +1,11 @@
 # @triplit/db
 
+## 0.3.55
+
+### Patch Changes
+
+- b65160e: Support undefined roles in db constructor
+
 ## 0.3.54
 
 ### Patch Changes

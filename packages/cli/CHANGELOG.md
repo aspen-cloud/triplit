@@ -1,5 +1,11 @@
 # @triplit/cli
 
+## 0.4.7
+
+### Patch Changes
+
+- b65160e: Manual version bump for CLI dependencies
+
 ## 0.4.5
 
 ### Patch Changes
