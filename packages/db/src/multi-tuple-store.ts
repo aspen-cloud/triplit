@@ -84,6 +84,15 @@ export default class MultiTupleStore<TupleSchema extends KeyValuePair> {
     this.reactivity = reactivity ?? new MultiTupleReactivity();
   }
 
+  withStorageScope(scope: StorageScope) {
+    return new MultiTupleStore({
+      storage: this.storage,
+      storageScope: scope,
+      hooks: this.hooks,
+      reactivity: this.reactivity,
+    });
+  }
+
   getStorageClients(context?: 'read' | 'write') {
     if (context && this.storageScope && this.storageScope[context]) {
       return this.storageScope[context]!.map(
