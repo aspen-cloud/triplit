@@ -29,9 +29,6 @@ import {
   defaultMemoryStorage,
   defaultSQLiteStorage,
 } from './storage.js';
-import { require } from './utils/esm.js';
-
-const packageDotJson = require('../package.json');
 
 const upload = multer();
 
@@ -56,9 +53,10 @@ export type ServerOptions = {
 };
 function initSentry() {
   if (process.env.SENTRY_DSN) {
+    // const packageDotJson = require('../package.json');
     Sentry.init({
       dsn: process.env.SENTRY_DSN,
-      release: packageDotJson.version,
+      release: '0.3.60',
     });
   }
 }
