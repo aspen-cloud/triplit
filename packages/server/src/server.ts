@@ -19,8 +19,6 @@ import { logger } from './logger.js';
 import { Route } from '@triplit/server-core/triplit-server';
 import multer from 'multer';
 import * as Sentry from '@sentry/node';
-// @ts-ignore
-import pjson from '../package.json' assert { type: 'json' };
 import {
   StoreKeys,
   defaultArrayStorage,
@@ -31,6 +29,10 @@ import {
   defaultMemoryStorage,
   defaultSQLiteStorage,
 } from './storage.js';
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
+
+const packageDotJson = require('../package.json');
 
 const upload = multer();
 
@@ -53,12 +55,11 @@ export type ServerOptions = {
   watchMode?: boolean;
   verboseLogs?: boolean;
 };
-
 function initSentry() {
   if (process.env.SENTRY_DSN) {
     Sentry.init({
       dsn: process.env.SENTRY_DSN,
-      release: pjson.version,
+      release: packageDotJson.version,
     });
   }
 }
