@@ -1,5 +1,11 @@
 # @triplit/cli
 
+## 0.4.9
+
+### Patch Changes
+
+- 709fad1: Manual version bump for CLI dependencies
+
 ## 0.4.8
 
 ### Patch Changes
