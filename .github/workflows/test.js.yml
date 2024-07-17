@@ -19,7 +19,7 @@ jobs:
           cache: 'yarn'
 
       - run: yarn install --immutable
-      - run: cd packages/types && yarn build
+      - run: yarn build:packages
       - run: yarn workspaces foreach -A run test
     env:
       GITHUB_TOKEN: ${{ secrets.CI_ACCESS_TOKEN }}
