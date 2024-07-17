@@ -29,8 +29,7 @@ import {
   defaultMemoryStorage,
   defaultSQLiteStorage,
 } from './storage.js';
-import { createRequire } from 'module';
-const require = createRequire(import.meta.url);
+import { require } from './utils/esm.js';
 
 const packageDotJson = require('../package.json');
 
