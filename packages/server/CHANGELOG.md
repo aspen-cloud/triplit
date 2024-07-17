@@ -1,5 +1,13 @@
 # @triplit/server
 
+## 0.3.60
+
+### Patch Changes
+
+- 3c7404e: use require to load package.json
+- Updated dependencies [b410f2c]
+  - @triplit/server-core@0.3.58
+
 ## 0.3.59
 
 ### Patch Changes

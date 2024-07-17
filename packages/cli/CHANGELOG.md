@@ -1,5 +1,12 @@
 # @triplit/cli
 
+## 0.4.8
+
+### Patch Changes
+
+- 42a81e2: Add version command to CLI
+- 3c7404e: Manual version bump for CLI dependencies
+
 ## 0.4.7
 
 ### Patch Changes
