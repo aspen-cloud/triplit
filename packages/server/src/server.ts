@@ -56,7 +56,7 @@ function initSentry() {
     // const packageDotJson = require('../package.json');
     Sentry.init({
       dsn: process.env.SENTRY_DSN,
-      release: '0.3.60',
+      release: '0.3.61',
     });
   }
 }
