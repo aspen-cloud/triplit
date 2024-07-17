@@ -1,5 +1,11 @@
 # @triplit/server
 
+## 0.3.61
+
+### Patch Changes
+
+- 709fad1: hotfix: hardcode version in sentry
+
 ## 0.3.60
 
 ### Patch Changes
