@@ -29,6 +29,8 @@ import {
   defaultMemoryStorage,
   defaultSQLiteStorage,
 } from './storage.js';
+import path from 'path';
+import { createRequire } from 'module';
 
 const upload = multer();
 
@@ -54,9 +56,13 @@ export type ServerOptions = {
 function initSentry() {
   if (process.env.SENTRY_DSN) {
     // Warning: this is not bundler friendly
-    // Adding this with node 22 dropping support for assert (https://v8.dev/features/import-attributes#deprecation-and-eventual-removal-of-assert)
+    // Adding this with node 22 dropping support for assert (https://v8.dev/features/import-attributes#deprecation-and-eventual-removal-of-assert), preferring 'with'
+    // Issue: https://github.com/nodejs/node/issues/51622
     // TODO: properly import package.json so in a way that works with bundlers, typescript, and all versions of node
-    const packageDotJson = require('../package.json');
+    // You may also need to upgrade typescript to support 'with' syntax
+    const require = createRequire(import.meta.url);
+    const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
+    const packageDotJson = require(path.join(__dirname, '../package.json'));
     Sentry.init({
       dsn: process.env.SENTRY_DSN,
       release: packageDotJson.version,

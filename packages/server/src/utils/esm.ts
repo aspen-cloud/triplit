@@ -1,8 +1,6 @@
 import { createRequire } from 'node:module';
-import path from 'path';
-import url from 'url';
 
+// WARNING: import.meta.url may be inside the current dir of this file, unsure if this is problematic for local path resolution
 const require = createRequire(import.meta.url);
-const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
 
-export { require, __dirname };
+export { require };

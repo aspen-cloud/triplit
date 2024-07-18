@@ -4,7 +4,7 @@ import { LMDBTupleStorage } from '@triplit/db/storage/lmdb';
 import { MemoryArrayStorage } from '@triplit/db/storage/memory-array';
 import { MemoryBTreeStorage } from '@triplit/db/storage/memory-btree';
 import { SQLiteTupleStorage } from '@triplit/db/storage/sqlite';
-import { require, __dirname } from './utils/esm.js';
+import { require } from './utils/esm.js';
 import { TriplitError } from '@triplit/db';
 
 export const durableStoreKeys = ['file', 'leveldb', 'lmdb', 'sqlite'] as const;
