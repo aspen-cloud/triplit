@@ -1,5 +1,11 @@
 # @triplit/client
 
+## 0.3.72
+
+### Patch Changes
+
+- 607e020: Export Roles type
+
 ## 0.3.71
 
 ### Patch Changes

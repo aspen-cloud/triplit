@@ -1,5 +1,12 @@
 # @triplit/cli
 
+## 0.4.12
+
+### Patch Changes
+
+- 607e020: Manual version bump for CLI dependencies
+- 607e020: Push roles with schema
+
 ## 0.4.11
 
 ### Patch Changes
