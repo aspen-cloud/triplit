@@ -2,7 +2,6 @@
 
 [![npm badge](https://img.shields.io/npm/v/@triplit/db)](https://www.npmjs.com/package/@triplit/db)
 [![types badge](https://img.shields.io/npm/types/@triplit/db)](https://www.triplit.dev/docs/schemas)
-![build badge](https://github.com/aspen-cloud/triplit/actions/workflows/build-db.yml/badge.svg)
 ![coverage badge](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/pbohlman/f5f2c109373b081a8d894d8289f135e3/raw/triplit_coverage.json)
 [![twitter badge](https://img.shields.io/badge/twitter-%40triplit__dev-1DA1F2)](https://twitter.com/triplit_dev)
 [![discord badge](https://img.shields.io/discord/1138467878623006720?label=discord&color=5969EA)](https://discord.gg/q89sGWHqQ5)
