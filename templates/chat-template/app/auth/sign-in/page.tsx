@@ -1,8 +1,8 @@
 "use client"
 
-import { ChangeEvent, useState } from "react"
+import { ChangeEvent, useEffect, useState } from "react"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
+import { useSearchParams } from "next/navigation"
 import { signIn } from "next-auth/react"
 
 import { Button } from "@/components/ui/button.js"
@@ -13,22 +13,31 @@ function onClickGitHubSignIn() {
 }
 
 export default function NewUserPage() {
-  const router = useRouter()
+  const searchParams = useSearchParams()
   const [username, setUsername] = useState("")
   const [password, setPassword] = useState("")
+  const [isAuthenticating, setIsAuthenticating] = useState(false)
+
+  const error = searchParams.get("error")
+
   return (
     <div className="p-6 rounded-md border">
       <h1 className="mb-5 font-bold text-xl">Sign in</h1>
       <form
         className="flex flex-col gap-5"
         onSubmit={async (e) => {
-          e.preventDefault()
-          signIn("credentials", {
-            username,
-            password,
-            redirect: true,
-            callbackUrl: "/convo",
-          })
+          try {
+            e.preventDefault()
+            setIsAuthenticating(true)
+            signIn("credentials", {
+              username,
+              password,
+              redirect: true,
+              callbackUrl: "/convo",
+            })
+          } finally {
+            setIsAuthenticating(false)
+          }
         }}
       >
         <div>
@@ -59,9 +68,16 @@ export default function NewUserPage() {
             }
           />
         </div>
+        {error && (
+          <div className="text-red-500 text-sm">
+            {error === "CredentialsSignin"
+              ? "Invalid username or password"
+              : "An error occurred"}
+          </div>
+        )}
         <div>
           <Button
-            disabled={!(password && username)}
+            disabled={!(password && username) || isAuthenticating}
             type="submit"
             className="w-full"
           >
