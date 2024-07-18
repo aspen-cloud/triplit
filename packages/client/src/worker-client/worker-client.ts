@@ -93,7 +93,55 @@ export class WorkerClient<M extends ClientSchema | undefined = undefined> {
   // @ts-ignore
   async transact<Output>(callback: (tx: DBTransaction<M>) => Promise<Output>) {
     await this.initialized;
-    return this.clientWorker.transact(ComLink.proxy(callback));
+    const wrappedTxCallback = async (tx: DBTransaction<M>) => {
+      // create a proxy wrapper around TX that intercepts calls to tx.update that
+      // normally takes a callback so instead we wrap with ComLink.proxy
+      const proxiedTx = new Proxy(tx, {
+        get(target, prop) {
+          if (prop === 'update') {
+            return async (
+              collectionName: any,
+              entityId: string,
+              updater: any
+            ) => {
+              const schemaJSON = await tx.getSchemaJson();
+              const schema =
+                // @ts-ignore
+                schemaJSON && JSONToSchema(schemaJSON)?.collections;
+
+              await tx.updateRaw(
+                collectionName,
+                entityId,
+                ComLink.proxy(async (entity) => {
+                  const changes = new ChangeTracker(entity);
+                  const updateProxy =
+                    collectionName === '_metadata'
+                      ? createUpdateProxy<M, any>(changes, entity)
+                      : createUpdateProxy<M, any>(
+                          changes,
+                          entity,
+                          schema,
+                          collectionName
+                        );
+                  await updater(
+                    updateProxy as Unalias<
+                      // @ts-ignore
+                      UpdateTypeFromModel<ModelFromModels<M, CN>>
+                    >
+                  );
+                  const changedTuples = changes.getTuples();
+                  return changedTuples;
+                })
+              );
+            };
+          }
+          // @ts-ignore
+          return target[prop];
+        },
+      });
+      return await callback(proxiedTx);
+    };
+    return this.clientWorker.transact(ComLink.proxy(wrappedTxCallback));
   }
   async fetchById<CN extends CollectionNameFromModels<M>>(
     collectionName: CN,
