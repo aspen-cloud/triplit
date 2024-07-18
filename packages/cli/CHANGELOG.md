@@ -1,5 +1,11 @@
 # @triplit/cli
 
+## 0.4.11
+
+### Patch Changes
+
+- f2beb55: Manual version bump for CLI dependencies
+
 ## 0.4.10
 
 ### Patch Changes
