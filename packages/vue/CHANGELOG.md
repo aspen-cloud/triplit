@@ -1,5 +1,12 @@
 # @triplit/vue
 
+## 0.1.11
+
+### Patch Changes
+
+- Updated dependencies [c3fb0be]
+  - @triplit/client@0.3.73
+
 ## 0.1.10
 
 ### Patch Changes
