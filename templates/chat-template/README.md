@@ -34,16 +34,6 @@ This is a good time to set up your `.env`, which needs to be properly configured
 - Update the `TRIPLIT_SERVICE_TOKEN` with the `Service Token` in the CLI output after you run `yarn triplit dev`
 - Optionally, register your app with [Github](https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/creating-an-oauth-app) and update the `GITHUB_ID and GITHUB_SECRET` to add oauth support to the demo.
 
-### Migrate your sync server
-
-You'll also need to apply the migrations defined in `/triplit/migrations` to this server.
-
-```bash
-yarn triplit migrate up
-```
-
-If you want to try a hosted solution for the sync server, join the waitlist on [our Discord](https://discord.gg/q89sGWHqQ5) with the `/waitlist` command in any channel and we'll grant you access to the Triplit Cloud beta.
-
 ## Features
 
 - Sent/unsent indicators for messages using Triplit's `syncStatus` query filter
@@ -57,38 +47,46 @@ Thanks to Triplit, we're able to build a fully-functional chat app with minimal 
 
 ### Schema
 
-In `triplit/schema.ts` we define the various collections for our app. Some are related to the chat functionality (`messages`, `conversations`) and others store the data for auth. You'll notice that some collections have relations defined by subqueries (`S.Query()`) to other collections in the schema.
+In `triplit/schema.ts` we define the various collections for our app. Some are related to the chat functionality (`messages`, `conversations`) and others store the data for auth. You'll notice that some collections have relations defined by subqueries (`S.RelationMany(), S.RelationById()`) to other collections in the schema.
 
-We can also enforce read and write rules from the schema to make sure that users can only see chat messages in the conversations they're members of.
+We can also enforce read and write permissions from the schema to make sure that users can only see chat messages in the conversations they're members of.
 
-In the example below, our conversations collection has a rule allowing only members of a conversation to read it from the database, and a relation on the user collection so that we can easily query profile data (like a user's name) when we query a conversation.
+In the example below, our conversations collection has permissions defined that allow only members of a conversation to read it from the database, and a relation on the user collection so that we can easily query profile data (like a user's name) when we query a conversation.
 
-```typescript
-conversations: {
+```ts
+  conversations: {
     schema: S.Schema({
       id: S.Id(),
       name: S.String(),
       members: S.Set(S.String()),
-      membersInfo: S.Query({
-        collectionName: "users",
+      membersInfo: S.RelationMany("users", {
         where: [["id", "in", "$members"]],
       }),
     }),
-    rules: {
-      read: {
-        isMember: {
-          filter: [["members", "=", "$SESSION_USER_ID"]],
+    permissions: {
+      user: {
+        read: {
+          // You may only read conversations you are a member of
+          filter: [["members", "=", "$role.userId"]],
+        },
+        insert: {
+          // You may only create a conversation you are a member of it
+          filter: [["members", "=", "$role.userId"]],
+        },
+        update: {
+          // You may only update a conversation you are a member of it
+          filter: [["members", "=", "$role.userId"]],
         },
       },
     },
   },
 ```
 
-For more information on schemas and migrations, check out the [schema](https://www.triplit.dev/docs/schemas) and [migrations](https://www.triplit.dev/docs/migrations) docs.
+For more information on schemas and permissions, [check out the docs.](https://www.triplit.dev/docs/schemas)
 
 ### Queries
 
-In `lib/triplit-hooks.ts` we define several queries for populating the ui with messages and conversations. These queries are live updating, so our components can read directly from the queries and react to data changes. For more information on querying data and the full list of filters and policies Triplit supports, check out the [fetching data docs](https://www.triplit.dev/docs/client/query).
+In `lib/triplit-hooks.ts` we define several queries for populating the ui with messages and conversations. These queries are live updating, so our components can read directly from the queries and react to data changes. For more information on querying data and the full list of filters and policies Triplit supports, check out the [client docs](https://www.triplit.dev/docs/client/query).
 
 ### Mutations
 
