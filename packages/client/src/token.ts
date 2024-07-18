@@ -1,7 +1,4 @@
-export function getUserId(
-  token: string,
-  claimsPath?: string
-): string | undefined {
+export function decodeToken(token: string, claimsPath?: string) {
   const decoded = decodeJwt(token);
   if (!decoded) {
     return undefined;
@@ -13,7 +10,7 @@ export function getUserId(
     }
     return undefined;
   }, decoded);
-  return claimsArea['x-triplit-user-id'];
+  return claimsArea;
 }
 
 function decodeJwt(token: string) {

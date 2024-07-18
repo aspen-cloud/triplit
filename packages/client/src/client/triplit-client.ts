@@ -21,7 +21,7 @@ import {
   TransactionResult,
   TransactOptions,
 } from '@triplit/db';
-import { getUserId } from '../token.js';
+import { decodeToken } from '../token.js';
 import { UnrecognizedFetchPolicyError } from '../errors.js';
 import { MemoryBTreeStorage } from '@triplit/db/storage/memory-btree';
 import { IndexedDbStorage } from '@triplit/db/storage/indexed-db';
@@ -293,11 +293,19 @@ export class TriplitClient<M extends ClientSchema | undefined = undefined> {
 
     if (this.authOptions.token) {
       syncOptions.token = this.authOptions.token;
-      const userId = getUserId(
+      const variables: Record<string, any> = {};
+      const decoded = decodeToken(
         this.authOptions.token,
         this.authOptions.claimsPath
       );
-      this.db = this.db.withSessionVars({ SESSION_USER_ID: userId });
+      // For backwards compatibility assign to SESSION_USER_ID
+      if ('x-triplit-user-id' in decoded)
+        variables['SESSION_USER_ID'] = decoded['x-triplit-user-id'];
+
+      // Assign token to session vars
+      Object.assign(variables, decoded);
+
+      this.db = this.db.withSessionVars(variables);
     }
 
     this.syncEngine = new SyncEngine(this, syncOptions);
@@ -969,9 +977,20 @@ export class TriplitClient<M extends ClientSchema | undefined = undefined> {
     if (hasToken) {
       this.authOptions = { ...this.authOptions, token };
       const { claimsPath } = this.authOptions;
-      const userId = token ? getUserId(token, claimsPath) : undefined;
 
-      this.db = this.db.withSessionVars({ SESSION_USER_ID: userId });
+      const variables: Record<string, any> = {};
+      const decoded = decodeToken(
+        this.authOptions.token!,
+        this.authOptions.claimsPath
+      );
+      // For backwards compatibility assign to SESSION_USER_ID
+      if ('x-triplit-user-id' in decoded)
+        variables['SESSION_USER_ID'] = decoded['x-triplit-user-id'];
+
+      // Assign token to session vars
+      Object.assign(variables, token);
+
+      this.db = this.db.withSessionVars(variables);
 
       // and update the sync engine
       updatedSyncOptions = { ...updatedSyncOptions, token };
