@@ -53,10 +53,13 @@ export type ServerOptions = {
 };
 function initSentry() {
   if (process.env.SENTRY_DSN) {
-    // const packageDotJson = require('../package.json');
+    // Warning: this is not bundler friendly
+    // Adding this with node 22 dropping support for assert (https://v8.dev/features/import-attributes#deprecation-and-eventual-removal-of-assert)
+    // TODO: properly import package.json so in a way that works with bundlers, typescript, and all versions of node
+    const packageDotJson = require('../package.json');
     Sentry.init({
       dsn: process.env.SENTRY_DSN,
-      release: '0.3.61',
+      release: packageDotJson.version,
     });
   }
 }
