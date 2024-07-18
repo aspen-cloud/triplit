@@ -1,5 +1,11 @@
 # @triplit/server
 
+## 0.3.63
+
+### Patch Changes
+
+- f2beb55: Safely import version for sentry plugin
+
 ## 0.3.62
 
 ### Patch Changes
