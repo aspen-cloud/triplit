@@ -3,6 +3,7 @@ description: Learn how use Svelte bindings for the Triplit client in your app.
 ---
 
 import { Tabs, Tab, Callout } from 'nextra-theme-docs';
+import CreateTriplitAppTabs from '../../components/CreateTriplitAppTabs.mdx';
 
 # Svelte
 
@@ -13,7 +14,15 @@ import { Tabs, Tab, Callout } from 'nextra-theme-docs';
   [like this](https://svelte-5-preview.vercel.app/docs/runes#how-to-opt-in).
 </Callout>
 
-If you are using Svelte, you can use the hooks provided by `@triplit/svelte`:
+### New projects
+
+The fast way to get started with Triplit is to use Create Triplit App which will scaffold a SvelteKit application with Triplit. Choose `Svelte` when prompted for the frontend framework.
+
+<CreateTriplitAppTabs />
+
+### Existing projects
+
+If you have an existing Svelte or Svelte project, you can add the hooks provided by `@triplit/svelte`:
 
 <Tabs items={['npm', 'pnpm', 'yarn', 'bun']}>
 
