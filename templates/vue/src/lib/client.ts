@@ -1,10 +1,5 @@
-import { TriplitClient } from '@triplit/client';
-import { schema } from '../../triplit/schema';
-import {
-  PUBLIC_TRIPLIT_SERVER_URL,
-  PUBLIC_TRIPLIT_TOKEN,
-} from '$env/static/public';
-import { browser } from '$app/environment';
+import { TriplitClient } from '@triplit/client'
+import { schema } from '../../triplit/schema'
 
 // The TriplitClient has 4 main options
 // - storage: The storage engine you want to use. This can be
@@ -21,7 +16,6 @@ import { browser } from '$app/environment';
 export const triplit = new TriplitClient({
   storage: 'memory',
   schema,
-  serverUrl: PUBLIC_TRIPLIT_SERVER_URL,
-  token: PUBLIC_TRIPLIT_TOKEN,
-  autoConnect: browser,
-});
+  serverUrl: import.meta.env.VITE_PUBLIC_TRIPLIT_SERVER_URL,
+  token: import.meta.env.VITE_PUBLIC_TRIPLIT_TOKEN
+})

@@ -1,28 +1,23 @@
 <script setup lang="ts">
-import { client } from "../triplit";
+import { triplit } from '../lib/client'
 
-const props = defineProps<{ id: string, text: string, completed: boolean }>()
+const props = defineProps<{ id: string; completed: boolean; text: string }>()
 
-
-function toggleStatus(id) {
-    console.log
-    client.update('todos', id, (todo) => {
-        todo.completed = !todo.completed;
-    });
+function toggleStatus(id: string) {
+  triplit.update('todos', id, (todo) => {
+    todo.completed = !todo.completed
+  })
 }
 
+function deleteTodo(id: string) {
+  triplit.delete('todos', id)
+}
 </script>
 
 <template>
-    <div>
-        <input @click="toggleStatus(props.id)" type="checkbox" :checked="props.completed" />
-        <!-- <input type="checkbox" /> -->
-        <span :class="{ 'completed': props.completed }">{{ props.text }}</span>
-    </div>
+  <div class="todo">
+    <input @click="toggleStatus(props.id)" type="checkbox" :checked="props.completed" />
+    {{ props.text }}
+    <button class="x-button" @click="deleteTodo(props.id)">❌</button>
+  </div>
 </template>
-
-<style scoped>
-.completed {
-    text-decoration: line-through;
-}
-</style>

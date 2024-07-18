@@ -1,7 +1,7 @@
 import { TriplitClient } from '@triplit/client';
 import { schema } from './schema';
 
-// The TriplitClient has 3 main options
+// The TriplitClient has 4 main options
 // - storage: The storage engine you want to use. This can be
 //   'memory' or 'indexeddb'.
 // - schema: The schema you defined for your app, which

@@ -1,47 +1,39 @@
 <script setup lang="ts">
-import Todo from './components/Todo.vue';
-import { schema } from '../triplit/schema';
-import { useQuery, useConnectionStatus } from '@triplit/vue';
-import { computed } from 'vue';
+import { useQuery } from '@triplit/vue'
+import { triplit } from '@/lib/client'
+import GettingStarted from '@/components/GettingStarted.vue'
+import ConnectionStatus from '@/components/ConnectionStatus.vue'
+import Todo from '@/components/Todo.vue'
+import { ref } from 'vue'
 
-import { client } from './triplit';
-const { fetching, results, error } = useQuery(client, client.query('todos'));
-const { status: connectionStatus } = useConnectionStatus(client);
-const todos = computed(() =>
-  results.value ? [...results.value.values()] : []
-);
+let text = ref('')
+const { results, fetching } = useQuery(triplit, triplit.query('todos').order('created_at', 'DESC'))
+function onSubmit() {
+  triplit.insert('todos', { text: text.value })
+  text.value = ''
+}
 </script>
 
 <template>
-  <div>
-    <div class="title">
+  <main class="main-container">
+    <GettingStarted />
+    <div class="app-container">
       <h1>Todos</h1>
-      <span v-if="connectionStatus === 'OPEN'">🟢</span>
-      <span v-else-if="connectionStatus === 'CLOSED'">🔴</span>
-      <span v-else>🟡</span>
+      <ConnectionStatus />
+      <form @submit.prevent="onSubmit">
+        <input v-model="text" placeholder="What needs to be done?" class="todo-input" />
+        <button class="btn" type="submit" :disabled="!text">Add Todo</button>
+      </form>
+      <p v-if="fetching">Loading...</p>
+      <div v-if="results" class="todos-container">
+        <Todo
+          v-for="[_id, todo] in Array.from(results)"
+          :id="todo.id"
+          :text="todo.text"
+          :completed="todo.completed"
+          :created_at="todo.created_at"
+        />
+      </div>
     </div>
-    <span v-if="fetching">Loading...</span>
-    <span v-else-if="error">Error: {{ error.message }}</span>
-    <!-- We can assume by this point that `isSuccess === true` -->
-    <ul v-else>
-      <!-- <li v-for="todo in todos" :key="todo.id">{{ todo.text }}</li> -->
-      <Todo
-        v-for="todo in todos"
-        :key="todo.id"
-        :id="todo.id"
-        :text="todo.text"
-        :completed="todo.completed"
-      />
-    </ul>
-  </div>
-  <!-- <HelloWorld msg="Vite + Vue + Triplit" /> -->
+  </main>
 </template>
-
-<style scoped>
-.title {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 1em;
-}
-</style>
