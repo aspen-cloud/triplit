@@ -1,5 +1,14 @@
 # @triplit/client
 
+## 0.3.74
+
+### Patch Changes
+
+- 5353395: Redirect logs from SharedWorker to console in tab
+- eb66825: Properly type worker client .transact()
+- Updated dependencies [eb66825]
+  - @triplit/db@0.3.57
+
 ## 0.3.73
 
 ### Patch Changes
