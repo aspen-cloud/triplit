@@ -1,0 +1,24 @@
+{
+  "name": "integration-tests",
+  "packageManager": "yarn@3.4.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "yarn test:transport && yarn test:cli && yarn test:http-client && yarn test:http",
+    "test:http-client": "vitest run tests/http-client.spec.ts",
+    "test:http": "vitest run tests/http.spec.ts",
+    "test:transport": "vitest run --dir simulated",
+    "test:cli": "(cd cli-tests/project && vitest run --dir ../)"
+  },
+  "devDependencies": {
+    "@triplit/cli": "workspace:^",
+    "@triplit/client": "workspace:^",
+    "@triplit/db": "workspace:^",
+    "@triplit/server": "workspace:^",
+    "@triplit/server-core": "workspace:^",
+    "@types/fs-extra": "^11",
+    "execa": "^8.0.1",
+    "fs-extra": "^11.1.1",
+    "vitest": "^0.34.6"
+  }
+}
