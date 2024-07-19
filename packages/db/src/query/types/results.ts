@@ -70,6 +70,8 @@ export type FetchResultEntityFromParts<
 
 /**
  * The result of a transaction
+ * @prop `txId` The transaction ID assigned to the transaction, if completed
+ * @prop `output` The output of the transaction callback, if completed
  */
 export type TransactionResult<Output> = {
   txId: string | undefined;
