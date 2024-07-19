@@ -280,7 +280,7 @@ export class TriplitClient<M extends ClientSchema | undefined = undefined> {
     };
 
     this.http = this.remote = new HttpClient<M>({
-      server: serverUrl,
+      serverUrl,
       token,
       schemaFactory: async () => (await this.db.getSchema())?.collections as M,
     });
