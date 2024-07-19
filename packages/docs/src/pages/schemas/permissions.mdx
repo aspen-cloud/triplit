@@ -4,6 +4,12 @@ description: How to manage access control rules with a Triplit schema.
 
 import { Callout } from 'nextra-theme-docs';
 
+<Callout type="info">
+  This feature is available for all hosted [Triplit Cloud](/triplit-cloud)
+  users. If you are self-hosting Triplit, this feature is available in Triplit
+  0.3.58 and higher.
+</Callout>
+
 ## Authorization and access control
 
 Triplit provides a flexible way to define access control rules for your database, ensuring that your application data is secure without the need for complex server-side logic.
@@ -23,22 +29,20 @@ Each role has an identifier and a `match` object. When a client authenticates wi
 For example, you may author `admin` and `user` tokens with the following structure:
 
 ```typescript
-const schema = {
-  roles: {
-    admin: {
-      match: {
-        type: 'admin',
-      },
-    },
-    user: {
-      match: {
-        type: 'user',
-        uid: '$userId',
-      },
+// schema.ts
+import { Roles } from '@triplit/client';
+
+const roles: Roles = {
+  admin: {
+    match: {
+      type: 'admin',
     },
   },
-  collections: {
-    // Collection definitions
+  user: {
+    match: {
+      type: 'user',
+      uid: '$userId',
+    },
   },
 };
 ```
@@ -72,19 +76,19 @@ By default, there are no access controls on the database and they must be config
 The following example turns off all access to the `todos` collection so it is only accessible with your [`service` token](/auth#tokens):
 
 ```typescript
+// schema.ts
+const roles = {
+  // Role definitions
+};
+
 const schema = {
-  roles: {
-    // Role definitions
-  },
-  collections: {
-    todos: {
-      schema: S.Schema({
-        id: S.Id(),
-        text: S.String(),
-        authorId: S.String(),
-      }),
-      permissions: {},
-    },
+  todos: {
+    schema: S.Schema({
+      id: S.Id(),
+      text: S.String(),
+      authorId: S.String(),
+    }),
+    permissions: {},
   },
 };
 ```
@@ -106,27 +110,27 @@ Collection permissions are defined for each operation and role. If a role is not
 To allow clients to read data, you must define a `read` permission that specifies the roles that may read data and any additional restrictions. The following example allows a `user` to read the todos that they authored and an `admin` to read any todo:
 
 ```typescript
+// schema.ts
+const roles = {
+  // Role definitions
+};
+
 const schema = {
-  roles: {
-    // Role definitions
-  },
-  collections: {
-    todos: {
-      schema: S.Schema({
-        id: S.Id(),
-        text: S.String(),
-        authorId: S.String(),
-      }),
-      permissions: {
-        read: {
-          admin: {
-            // Allow all reads
-            filter: [true],
-          },
-          user: {
-            // Allow reads where authorId is the user's id
-            filter: [['authorId', '=', '$role.userId']],
-          },
+  todos: {
+    schema: S.Schema({
+      id: S.Id(),
+      text: S.String(),
+      authorId: S.String(),
+    }),
+    permissions: {
+      read: {
+        admin: {
+          // Allow all reads
+          filter: [true],
+        },
+        user: {
+          // Allow reads where authorId is the user's id
+          filter: [['authorId', '=', '$role.userId']],
         },
       },
     },
@@ -139,27 +143,27 @@ const schema = {
 To allow clients to insert data, you must define an `insert` permission that specifies the roles that may insert data and any additional restrictions. The following example allows a `user` to insert a todo that they author and an `admin` to insert any todo:
 
 ```typescript
+// schema.ts
+const roles = {
+  // Role definitions
+};
+
 const schema = {
-  roles: {
-    // Role definitions
-  },
-  collections: {
-    todos: {
-      schema: S.Schema({
-        id: S.Id(),
-        text: S.String(),
-        authorId: S.String(),
-      }),
-      permissions: {
-        insert: {
-          admin: {
-             // Allow all inserts
-            filter: [true],
-          }
-          user: {
-             // Allow inserts where authorId is the user's id
-            filter: [['authorId', '=', '$role.userId']],
-          },
+  todos: {
+    schema: S.Schema({
+      id: S.Id(),
+      text: S.String(),
+      authorId: S.String(),
+    }),
+    permissions: {
+      insert: {
+        admin: {
+            // Allow all inserts
+          filter: [true],
+        }
+        user: {
+            // Allow inserts where authorId is the user's id
+          filter: [['authorId', '=', '$role.userId']],
         },
       },
     },
@@ -172,27 +176,27 @@ const schema = {
 To allow users to update data, you must define an `update` permission that specifies the roles that may update data and any additional restrictions. For updates, the permission is checked against the "old" state of the entity, before it has been updated. The following example allows a `user` to update todos that they authored and an `admin` to update any todo:
 
 ```typescript
+// schema.ts
+const roles = {
+  // Role definitions
+};
+
 const schema = {
-  roles: {
-    // Role definitions
-  },
-  collections: {
-    todos: {
-      schema: S.Schema({
-        id: S.Id(),
-        text: S.String(),
-        authorId: S.String(),
-      }),
-      permissions: {
-        update: {
-          admin: {
-            // Allow all updates
-            filter: [true],
-          },
-          user: {
-            // Allow updates where authorId is the user's id
-            filter: [['authorId', '=', '$role.userId']],
-          },
+  todos: {
+    schema: S.Schema({
+      id: S.Id(),
+      text: S.String(),
+      authorId: S.String(),
+    }),
+    permissions: {
+      update: {
+        admin: {
+          // Allow all updates
+          filter: [true],
+        },
+        user: {
+          // Allow updates where authorId is the user's id
+          filter: [['authorId', '=', '$role.userId']],
         },
       },
     },
@@ -205,29 +209,29 @@ const schema = {
 You may also optionally define a `postUpdate` permission that will be run after an update operation has been completed. This is useful for confirming that updated data is valid. For example, this checks that a `user` has not re-assigned a todo to another `user`:
 
 ```typescript
+// schema.ts
+const roles = {
+  // Role definitions
+};
+
 const schema = {
-  roles: {
-    // Role definitions
-  },
-  collections: {
-    todos: {
-      schema: S.Schema({
-        id: S.Id(),
-        text: S.String(),
-        authorId: S.String(),
-      }),
-      permissions: {
-        update: {
-          user: {
-            // Allow updates where authorId is the user's id
-            filter: [['authorId', '=', '$role.userId']],
-          },
+  todos: {
+    schema: S.Schema({
+      id: S.Id(),
+      text: S.String(),
+      authorId: S.String(),
+    }),
+    permissions: {
+      update: {
+        user: {
+          // Allow updates where authorId is the user's id
+          filter: [['authorId', '=', '$role.userId']],
         },
-        postUpdate: {
-          user: {
-            // Check that the authorId has not changed
-            filter: [['authorId', '=', '$role.userId']],
-          },
+      },
+      postUpdate: {
+        user: {
+          // Check that the authorId has not changed
+          filter: [['authorId', '=', '$role.userId']],
         },
       },
     },
@@ -240,27 +244,27 @@ const schema = {
 To allow users to delete data, you must define a `delete` permission that specifies the roles that may delete data and any additional restrictions. The following example allows a `user` to delete todos that they authored and an `admin` to delete any todo:
 
 ```typescript
+// schema.ts
+const roles = {
+  // Role definitions
+};
+
 const schema = {
-  roles: {
-    // Role definitions
-  },
-  collections: {
-    todos: {
-      schema: S.Schema({
-        id: S.Id(),
-        text: S.String(),
-        authorId: S.String(),
-      }),
-      permissions: {
-        delete: {
-          admin: {
-            // Allow all deletes
-            filter: [true],
-          },
-          user: {
-            // Allow deletes where authorId is the user's id
-            filter: [['authorId', '=', '$role.userId']],
-          },
+  todos: {
+    schema: S.Schema({
+      id: S.Id(),
+      text: S.String(),
+      authorId: S.String(),
+    }),
+    permissions: {
+      delete: {
+        admin: {
+          // Allow all deletes
+          filter: [true],
+        },
+        user: {
+          // Allow deletes where authorId is the user's id
+          filter: [['authorId', '=', '$role.userId']],
         },
       },
     },

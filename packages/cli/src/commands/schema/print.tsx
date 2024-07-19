@@ -30,9 +30,10 @@ export default Command({
     const location = flags.location;
     if (location === 'local') {
       const schema = ctx.schema;
+      const roles = ctx.roles;
       if (!schema) return;
       const formattedSchema = await formatSchemaForDisplay(
-        { collections: schema, version: 0 },
+        { collections: schema, roles, version: 0 },
         flags.format as SchemaFormat
       );
       console.log(formattedSchema);
@@ -63,7 +64,7 @@ async function formatSchemaForDisplay(
   format: SchemaFormat
 ): Promise<string> {
   if (format === 'json') {
-    return JSON.stringify(schemaToJSON(schema).collections, null, 2);
+    return JSON.stringify(schemaToJSON(schema), null, 2);
   }
   if (format === 'file' || format === 'typescript') {
     return await formatFile(schemaFileContentFromSchema(schema), {

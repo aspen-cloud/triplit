@@ -1,5 +1,25 @@
 # @triplit/server-core
 
+## 0.3.59
+
+### Patch Changes
+
+- Updated dependencies [c3fb0be]
+  - @triplit/db@0.3.56
+
+## 0.3.58
+
+### Patch Changes
+
+- b410f2c: Remove (now) erroneous check on user id claim
+
+## 0.3.57
+
+### Patch Changes
+
+- Updated dependencies [b65160e]
+  - @triplit/db@0.3.55
+
 ## 0.3.56
 
 ### Patch Changes

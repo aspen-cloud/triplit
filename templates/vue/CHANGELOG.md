@@ -1,5 +1,28 @@
 # vue-template
 
+## 0.0.11
+
+### Patch Changes
+
+- Updated dependencies [c3fb0be]
+  - @triplit/client@0.3.73
+  - @triplit/vue@0.1.11
+
+## 0.0.10
+
+### Patch Changes
+
+- Updated dependencies [607e020]
+  - @triplit/client@0.3.72
+  - @triplit/vue@0.1.10
+
+## 0.0.9
+
+### Patch Changes
+
+- @triplit/client@0.3.71
+- @triplit/vue@0.1.9
+
 ## 0.0.8
 
 ### Patch Changes

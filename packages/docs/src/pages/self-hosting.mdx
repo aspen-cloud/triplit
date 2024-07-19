@@ -131,6 +131,10 @@ const serviceKey = jwt.sign(
 
 For more complicated authentication schemes, refer to our [authentication guide](/auth).
 
+### `LOCAL_DATABASE_URL` (required for durable storage)
+
+An absolute path on the server's file system to a directory where the server will store any database files. This is required for durable storage options: `file`, `leveldb`, `lmdb`, and `sqlite`.
+
 ### `EXTERNAL_JWT_SECRET` (optional)
 
 If you want your server to support JWTs signed by a second issuer, you can also set `EXTERNAL_JWT_SECRET` to that signing secret (or public key). The server will only authenticate signatures with this secret if the JWT has the `x-triplit-token-type` claim set to `external`. Any JWT that does not have this claim set will be authenticated with `JWT_SECRET`.
@@ -138,10 +142,6 @@ If you want your server to support JWTs signed by a second issuer, you can also 
 ### `CLAIMS_PATH` (optional)
 
 If you are using custom JWTs with nested Triplit-related claims, you can set the `CLAIMS_PATH` environment variable. The server will read the Triplit claims at the path specified by `CLAIMS_PATH`. The JWT should also have the `x-triplit-token-type` claim set to `external`. Read the [authentication guide](/auth) for more information.
-
-### `LOCAL_DATABASE_URL` (optional)
-
-If you use the `sqlite` storage adapter, the server will create the database file at `./app.db` in the server's directory. If you want to override this (as is sometimes necessary for Cloud providers with their own separately managed storage volumes) you can set the `LOCAL_DATABASE_URL` environment variable.
 
 ### `SENTRY_DSN` (optional)
 

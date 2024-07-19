@@ -176,11 +176,9 @@ async function addIndexesToTransaction(
   }
 }
 
-export class TripleStore implements TripleStoreApi {
-  stores: Record<
-    string,
-    AsyncTupleDatabaseClient<WithTenantIdPrefix<TupleIndex>>
-  >;
+export class TripleStore<StoreKeys extends string = any>
+  implements TripleStoreApi
+{
   storageScope: string[];
   tupleStore: MultiTupleStore<TupleIndex>;
   clock: Clock;
@@ -189,21 +187,28 @@ export class TripleStore implements TripleStoreApi {
   reactivity: MultiTupleReactivity;
 
   constructor({
-    storage,
-    stores,
     tenantId,
     clock,
     reactivity,
     storageScope = [],
     enableGarbageCollection = false,
-  }: {
-    storage?:
-      | (TupleStorageApi | AsyncTupleStorageApi)
-      | Record<string, TupleStorageApi | AsyncTupleStorageApi>;
-    stores?: Record<
-      string,
-      AsyncTupleDatabaseClient<WithTenantIdPrefix<TupleIndex>>
-    >;
+    ...opts
+  }: (
+    | {
+        storage:
+          | (TupleStorageApi | AsyncTupleStorageApi)
+          | Record<StoreKeys, TupleStorageApi | AsyncTupleStorageApi>;
+      }
+    | {
+        stores: Record<
+          StoreKeys,
+          AsyncTupleDatabaseClient<WithTenantIdPrefix<TupleIndex>>
+        >;
+      }
+    | {
+        tupleStore: MultiTupleStore<TupleIndex>;
+      }
+  ) & {
     reactivity?: MultiTupleReactivity;
     tenantId?: string;
     storageScope?: string[];
@@ -215,44 +220,47 @@ export class TripleStore implements TripleStoreApi {
       beforeInsert: [],
       afterCommit: [],
     };
-    if (!stores && !storage)
-      throw new TripleStoreOptionsError(
-        'Must provide either storage or stores'
-      );
-    if (stores && storage)
-      throw new TripleStoreOptionsError(
-        'Cannot provide both storage and stores'
-      );
 
     this.storageScope = storageScope;
-    let normalizedStores;
-    if (stores) {
-      normalizedStores = stores;
+
+    // Server side database should provide a tenantId (project id)
+    this.tenantId = tenantId ?? 'client';
+    this.reactivity = reactivity ?? new MultiTupleReactivity();
+
+    if ('tupleStore' in opts) {
+      this.tupleStore = opts.tupleStore;
     } else {
-      const confirmedStorage = storage!;
-      normalizedStores = isTupleStorage(confirmedStorage)
-        ? {
+      if (!('stores' in opts) && !('storage' in opts)) {
+        throw new TripleStoreOptionsError(
+          'Must provide either storage or stores'
+        );
+      }
+      let normalizedStores;
+      if ('stores' in opts) {
+        normalizedStores = opts.stores;
+      } else {
+        if (isTupleStorage(opts.storage)) {
+          normalizedStores = {
             primary: new AsyncTupleDatabaseClient<
               WithTenantIdPrefix<TupleIndex>
-            >(new AsyncTupleDatabase(confirmedStorage)),
-          }
-        : Object.fromEntries(
-            Object.entries(confirmedStorage).map(([k, v]) => [
+            >(new AsyncTupleDatabase(opts.storage)),
+          };
+        } else {
+          normalizedStores = Object.fromEntries(
+            Object.entries(opts.storage).map(([k, v]) => [
               k,
               new AsyncTupleDatabaseClient<WithTenantIdPrefix<TupleIndex>>(
                 new AsyncTupleDatabase(v)
               ),
             ])
           );
+        }
+      }
+      this.tupleStore = new MultiTupleStore<WithTenantIdPrefix<TupleIndex>>({
+        storage: normalizedStores,
+        reactivity: this.reactivity,
+      }).subspace([this.tenantId]) as MultiTupleStore<TupleIndex>;
     }
-    // Server side database should provide a tenantId (project id)
-    this.stores = normalizedStores;
-    this.tenantId = tenantId ?? 'client';
-    this.reactivity = reactivity ?? new MultiTupleReactivity();
-    this.tupleStore = new MultiTupleStore<WithTenantIdPrefix<TupleIndex>>({
-      storage: normalizedStores,
-      reactivity: this.reactivity,
-    }).subspace([this.tenantId]) as MultiTupleStore<TupleIndex>;
 
     this.clock = clock ?? new MemoryClock();
     this.clock.assignToStore(this);
@@ -395,13 +403,12 @@ export class TripleStore implements TripleStoreApi {
     };
   }
 
-  setStorageScope(storageKeys: (keyof typeof this.stores)[]) {
+  setStorageScope(storageKeys: StoreKeys[]) {
     return new TripleStore({
-      stores: Object.fromEntries(
-        Object.entries(this.stores).filter(([storagekey]) =>
-          storageKeys.includes(storagekey as keyof typeof this.stores)
-        )
-      ),
+      tupleStore: this.tupleStore.withStorageScope({
+        read: [...storageKeys],
+        write: [...storageKeys],
+      }),
       storageScope: storageKeys,
       tenantId: this.tenantId,
       clock: this.clock,
