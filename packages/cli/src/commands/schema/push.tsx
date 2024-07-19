@@ -10,6 +10,7 @@ export default Command({
   middleware: [serverRequesterMiddleware, projectSchemaMiddleware],
   run: async ({ ctx }) => {
     const localSchema = schemaToJSON({
+      roles: ctx.roles,
       collections: ctx.schema,
       version: 0,
     });

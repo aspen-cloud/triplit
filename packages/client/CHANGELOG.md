@@ -1,5 +1,26 @@
 # @triplit/client
 
+## 0.3.73
+
+### Patch Changes
+
+- c3fb0be: Fix executing update callbacks in transaction in worker
+- Updated dependencies [c3fb0be]
+  - @triplit/db@0.3.56
+
+## 0.3.72
+
+### Patch Changes
+
+- 607e020: Export Roles type
+
+## 0.3.71
+
+### Patch Changes
+
+- Updated dependencies [b65160e]
+  - @triplit/db@0.3.55
+
 ## 0.3.70
 
 ### Patch Changes

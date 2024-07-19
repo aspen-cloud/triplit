@@ -4,6 +4,7 @@ import {
   getDefaultValuesForCollection,
   collectionsDefinitionToSchema,
   clientInputToDbModel,
+  schemaToJSON,
 } from './schema/schema.js';
 import {
   UpdateTypeFromModel,
@@ -618,6 +619,10 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
 
   async getSchema() {
     return this.schema;
+  }
+
+  async getSchemaJson() {
+    return schemaToJSON(await this.getSchema());
   }
 
   async commit() {

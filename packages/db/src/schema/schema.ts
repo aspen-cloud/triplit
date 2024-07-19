@@ -221,7 +221,13 @@ export function schemaToJSON(
     const collection = collectionSchemaToJSON(model);
     collections[collectionName] = collection;
   }
-  return { ...schema, version: schema.version, collections };
+
+  // Remove any undefined properties
+  const santizedSchema = JSON.parse(
+    JSON.stringify({ ...schema, version: schema.version, collections })
+  );
+
+  return santizedSchema;
 }
 
 function collectionSchemaToJSON(

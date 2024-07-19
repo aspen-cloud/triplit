@@ -1,5 +1,43 @@
 # @triplit/cli
 
+## 0.4.12
+
+### Patch Changes
+
+- 607e020: Manual version bump for CLI dependencies
+- 607e020: Push roles with schema
+
+## 0.4.11
+
+### Patch Changes
+
+- f2beb55: Manual version bump for CLI dependencies
+
+## 0.4.10
+
+### Patch Changes
+
+- 5621dcc: Manual version bump for CLI dependencies
+
+## 0.4.9
+
+### Patch Changes
+
+- 709fad1: Manual version bump for CLI dependencies
+
+## 0.4.8
+
+### Patch Changes
+
+- 42a81e2: Add version command to CLI
+- 3c7404e: Manual version bump for CLI dependencies
+
+## 0.4.7
+
+### Patch Changes
+
+- b65160e: Manual version bump for CLI dependencies
+
 ## 0.4.5
 
 ### Patch Changes

@@ -134,17 +134,6 @@ export async function parseAndValidateToken(
     };
   }
 
-  if (payload['x-triplit-token-type'] === 'external') {
-    if (!('x-triplit-user-id' in payload)) {
-      return {
-        data: undefined,
-        error: new InvalidTokenPayloadError(
-          'There is no user id assigned to this token.'
-        ),
-      };
-    }
-  }
-
   if (!projectId) {
     return {
       data: undefined,

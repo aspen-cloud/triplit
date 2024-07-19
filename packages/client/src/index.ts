@@ -6,6 +6,7 @@ export type {
   ModelFromModels,
   FetchByIdQueryParams,
   Unalias,
+  Roles,
 } from '@triplit/db';
 export { Schema, or, and, exists } from '@triplit/db';
 export * from './client/triplit-client.js';

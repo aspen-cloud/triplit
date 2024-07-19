@@ -1,5 +1,17 @@
 # @triplit/db
 
+## 0.3.56
+
+### Patch Changes
+
+- c3fb0be: Add method to get schema as json in a transaction
+
+## 0.3.55
+
+### Patch Changes
+
+- b65160e: Support undefined roles in db constructor
+
 ## 0.3.54
 
 ### Patch Changes

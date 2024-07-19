@@ -1,14 +1,12 @@
 {
   "name": "@triplit/cli",
-  "version": "0.4.5",
+  "version": "0.4.12",
   "type": "module",
   "scripts": {
     "build": "yarn lint && node ./build.mjs",
     "build:watch": "tsc -w",
     "lint": "tsc --noEmit",
     "lint:strict": "tsc --noEmit --strict",
-    "test": "vitest run",
-    "test:watch": "vitest watch",
     "publish-pkg": "node ../../scripts/npm-check-version-and-publish.js",
     "validate:types": "node ../../scripts/check-for-local-references-in-declarations.js dist"
   },
