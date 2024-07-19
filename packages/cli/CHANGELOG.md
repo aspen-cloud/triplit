@@ -1,5 +1,12 @@
 # @triplit/cli
 
+## 0.4.13
+
+### Patch Changes
+
+- eb66825: Manual version bump for CLI dependencies
+- 8360dd7: Fixup schema print with no permissions
+
 ## 0.4.12
 
 ### Patch Changes

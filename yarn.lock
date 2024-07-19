@@ -7448,7 +7448,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@triplit/cli@npm:0.4.12, @triplit/cli@workspace:^, @triplit/cli@workspace:packages/cli":
+"@triplit/cli@npm:0.4.13, @triplit/cli@workspace:^, @triplit/cli@workspace:packages/cli":
   version: 0.0.0-use.local
   resolution: "@triplit/cli@workspace:packages/cli"
   dependencies:
@@ -7541,20 +7541,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@triplit/client@npm:0.3.73, @triplit/client@npm:^0.3.73":
-  version: 0.3.73
-  resolution: "@triplit/client@npm:0.3.73"
-  dependencies:
-    "@sinclair/typebox": "npm:^0.32.15"
-    "@triplit/db": "npm:^0.3.56"
-    comlink: "npm:^4.4.1"
-    rxjs: "npm:^7.8.1"
-    superjson: "npm:^2.2.1"
-  checksum: 10/d53a13d7d453de79c731558f3a2c34c1687576991f2fab6f74100b44adea4fd93247adc2d65af481cafe8b9f2e90edf3494437a0b7e158544dd88f0cc8e21d54
-  languageName: node
-  linkType: hard
-
-"@triplit/client@npm:^0.3.59, @triplit/client@workspace:^, @triplit/client@workspace:packages/client":
+"@triplit/client@npm:0.3.74, @triplit/client@npm:^0.3.59, @triplit/client@workspace:^, @triplit/client@workspace:packages/client":
   version: 0.0.0-use.local
   resolution: "@triplit/client@workspace:packages/client"
   dependencies:
@@ -7570,6 +7557,19 @@ __metadata:
     vitest: "npm:^1.4.0"
   languageName: unknown
   linkType: soft
+
+"@triplit/client@npm:^0.3.73":
+  version: 0.3.73
+  resolution: "@triplit/client@npm:0.3.73"
+  dependencies:
+    "@sinclair/typebox": "npm:^0.32.15"
+    "@triplit/db": "npm:^0.3.56"
+    comlink: "npm:^4.4.1"
+    rxjs: "npm:^7.8.1"
+    superjson: "npm:^2.2.1"
+  checksum: 10/d53a13d7d453de79c731558f3a2c34c1687576991f2fab6f74100b44adea4fd93247adc2d65af481cafe8b9f2e90edf3494437a0b7e158544dd88f0cc8e21d54
+  languageName: node
+  linkType: hard
 
 "@triplit/client@npm:latest":
   version: 0.3.59
@@ -7627,21 +7627,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@triplit/db@npm:0.3.56, @triplit/db@npm:^0.3.56":
-  version: 0.3.56
-  resolution: "@triplit/db@npm:0.3.56"
-  dependencies:
-    "@sinclair/typebox": "npm:^0.32.15"
-    "@triplit/tuple-database": "npm:2.2.25"
-    idb: "npm:^7.1.1"
-    nanoid: "npm:^3.0.0"
-    pino: "npm:^8.11.0"
-    tinybench: "npm:^2.5.0"
-  checksum: 10/bc61547702c3171a08b841120ba3e293f7b5258b73c76173f29e40e9713f948fe0c67d8f7aaf42192319d492692e8285a94b0d06f5a872f137489286961a959e
-  languageName: node
-  linkType: hard
-
-"@triplit/db@npm:^0.3.45, @triplit/db@workspace:^, @triplit/db@workspace:packages/db":
+"@triplit/db@npm:0.3.57, @triplit/db@npm:^0.3.45, @triplit/db@workspace:^, @triplit/db@workspace:packages/db":
   version: 0.0.0-use.local
   resolution: "@triplit/db@workspace:packages/db"
   dependencies:
@@ -7667,7 +7653,21 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@triplit/react@npm:0.3.77, @triplit/react@workspace:^, @triplit/react@workspace:packages/react":
+"@triplit/db@npm:^0.3.56":
+  version: 0.3.56
+  resolution: "@triplit/db@npm:0.3.56"
+  dependencies:
+    "@sinclair/typebox": "npm:^0.32.15"
+    "@triplit/tuple-database": "npm:2.2.25"
+    idb: "npm:^7.1.1"
+    nanoid: "npm:^3.0.0"
+    pino: "npm:^8.11.0"
+    tinybench: "npm:^2.5.0"
+  checksum: 10/bc61547702c3171a08b841120ba3e293f7b5258b73c76173f29e40e9713f948fe0c67d8f7aaf42192319d492692e8285a94b0d06f5a872f137489286961a959e
+  languageName: node
+  linkType: hard
+
+"@triplit/react@npm:0.3.78, @triplit/react@workspace:^, @triplit/react@workspace:packages/react":
   version: 0.0.0-use.local
   resolution: "@triplit/react@workspace:packages/react"
   dependencies:
@@ -7703,7 +7703,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@triplit/server@npm:0.3.64, @triplit/server@npm:^0.3.49, @triplit/server@workspace:^, @triplit/server@workspace:packages/server":
+"@triplit/server@npm:0.3.65, @triplit/server@npm:^0.3.49, @triplit/server@workspace:^, @triplit/server@workspace:packages/server":
   version: 0.0.0-use.local
   resolution: "@triplit/server@workspace:packages/server"
   dependencies:
@@ -19763,10 +19763,10 @@ __metadata:
     "@radix-ui/react-slot": "npm:^1.0.2"
     "@tailwindcss/typography": "npm:^0.5.10"
     "@triplit/authjs-adapter": "npm:^0.1.0"
-    "@triplit/cli": "npm:0.4.12"
-    "@triplit/client": "npm:0.3.73"
-    "@triplit/db": "npm:0.3.56"
-    "@triplit/react": "npm:0.3.77"
+    "@triplit/cli": "npm:0.4.13"
+    "@triplit/client": "npm:0.3.74"
+    "@triplit/db": "npm:0.3.57"
+    "@triplit/react": "npm:0.3.78"
     "@types/bcryptjs": "npm:^2"
     "@types/jsonwebtoken": "npm:^9.0.2"
     "@types/node": "npm:^17.0.45"
@@ -20187,7 +20187,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "node-server@workspace:packages/node-server"
   dependencies:
-    "@triplit/server": "npm:0.3.64"
+    "@triplit/server": "npm:0.3.65"
     "@types/semver": "npm:^7"
     better-sqlite3: "npm:^8.3.0"
     semver: "npm:^7.6.0"

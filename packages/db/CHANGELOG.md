@@ -1,5 +1,11 @@
 # @triplit/db
 
+## 0.3.57
+
+### Patch Changes
+
+- eb66825: Add type TransactionResult
+
 ## 0.3.56
 
 ### Patch Changes
