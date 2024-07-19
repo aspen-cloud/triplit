@@ -45,4 +45,6 @@ The `token` can be updated with the `client.updateToken` method.
 
 Use the `client.updateOptions` method if you need to update the `serverUrl` and `token` atomically.
 
-Using `client.updateOptions`, `client.updateServerUrl` or `client.updateOptions` will result in the client closing its existing Websocket connection and attempting to open a new one with the provided URL/token.
+It is recommended that your client is disconnected before calling `client.updateOptions`, `client.updateServerUrl` or `client.updateOptions`. If the connection is open, the client will disconnect automatically and you will need to call `client.connect()` again to reconnect.
+
+For best practices on using these APIs and updating user sessions, see the [Auth guide](/auth#changing-users).

@@ -56,8 +56,19 @@ Your Triplit client needs to send the JWT token issued by Clerk with each reques
 ```ts copy
 // get the Clerk client or session using your framework
 // e.g. `const auth = useAuth()` from @clerk/clerk-react
-auth.getToken().then((token) => {
-  token && client.updateToken(token);
+auth.getToken().then(async (token) => {
+  // If token has changed, update the client
+  if (token !== client.token) {
+    client.disconnect();
+    client.updateToken(token);
+    if (!client.token) {
+      // If no token, we are unauthenticated, reset the client in case there is any data for the previous session stored
+      await client.reset();
+    } else {
+      // If we have a token, connect to the server with new information
+      client.connect();
+    }
+  }
 });
 ```
 

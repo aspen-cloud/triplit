@@ -27,6 +27,7 @@ import {
   CollectionQueryDefault,
   FetchResultEntityFromParts,
   StoreSchema,
+  ClearOptions,
 } from '@triplit/db';
 import { decodeToken } from '../token.js';
 import {
@@ -490,8 +491,13 @@ export class TriplitClient<M extends ClientSchema = ClientSchema> {
    * - `full`: If true, clears the entire database. If false, only clears your application data. Defaults to `false`.
    * @returns a promise that resolves when the database has been cleared
    */
-  clear(options: { full?: boolean } = {}) {
+  clear(options: ClearOptions = {}) {
     return this.db.clear(options);
+  }
+
+  async reset(options: ClearOptions = {}) {
+    await this.syncEngine.reset();
+    await this.clear(options);
   }
 
   /**
@@ -1101,7 +1107,7 @@ export class TriplitClient<M extends ClientSchema = ClientSchema> {
     return returnValue as InfiniteSubscription;
   }
   /**
-   * Updates the `token` and/or `serverUrl` of the client. This will cause the client to close its current connection to the server and attempt reopen a new one with the provided options.
+   * Updates the `token` or `serverUrl` of the client. If the connection is currently open, it will be closed and you will need to call `connect()` again.
    *
    * @param options - The options to update the client with
    */
@@ -1114,14 +1120,10 @@ export class TriplitClient<M extends ClientSchema = ClientSchema> {
     // handle updating the token and variables for auth purposes
     if (hasToken) {
       this.authOptions = { ...this.authOptions, token };
-
-      const decoded = decodeToken(
-        this.authOptions.token!,
-        this.authOptions.claimsPath
-      );
-
+      const decoded = this.authOptions.token
+        ? decodeToken(this.authOptions.token, this.authOptions.claimsPath)
+        : {};
       this.db = this.db.withSessionVars(decoded);
-
       // and update the sync engine
       updatedSyncOptions = { ...updatedSyncOptions, token };
     }

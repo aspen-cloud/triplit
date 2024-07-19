@@ -7,6 +7,7 @@ import { ChevronDown, Loader2, LogOut, PenBox } from "lucide-react"
 import { signOut, useSession } from "next-auth/react"
 
 import { addConversation } from "@/lib/triplit-mutations.js"
+import { client } from "@/lib/triplit.js"
 import { cn } from "@/lib/utils.js"
 import {
   useConversationSnippet,
@@ -184,6 +185,7 @@ function ConvoSkeleton() {
 }
 
 function UserDropdownMenu() {
+  const router = useRouter()
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -194,7 +196,13 @@ function UserDropdownMenu() {
       </DropdownMenuTrigger>
       <DropdownMenuContent className="w-20">
         <DropdownMenuItem
-          onSelect={() => signOut()}
+          onSelect={async () => {
+            const data = await signOut({
+              redirect: false,
+              callbackUrl: "/auth/sign-in",
+            })
+            router.push(data.url)
+          }}
           className="text-sm flex flex-row gap-3 px-2 py-1 items-center"
         >
           <LogOut className="w-4 h-4" /> <span>Sign out</span>

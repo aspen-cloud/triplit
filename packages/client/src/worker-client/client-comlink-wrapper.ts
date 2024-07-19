@@ -13,6 +13,7 @@ import {
   TupleValue,
   CollectionQuery,
   TransactionResult,
+  ClearOptions,
 } from '@triplit/db';
 import { LogLevel } from '@triplit/types/logger';
 import { DefaultLogger } from '../client-logger.js';
@@ -218,9 +219,13 @@ export class ClientComlinkWrapper implements ClientWorker {
     if (!this.client) throw new WorkerInternalClientNotInitializedError();
     return this.client.db.updateGlobalVariables(...args);
   }
-  async clear() {
+  async clear(options: ClearOptions = {}) {
     if (!this.client) throw new WorkerInternalClientNotInitializedError();
-    return await this.client.clear();
+    return await this.client.clear(options);
+  }
+  async reset(options: ClearOptions = {}) {
+    if (!this.client) throw new WorkerInternalClientNotInitializedError();
+    return await this.client.reset(options);
   }
 }
 

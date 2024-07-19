@@ -9,6 +9,7 @@ import type {
 } from '../client/triplit-client.js';
 import {
   ChangeTracker,
+  ClearOptions,
   CollectionNameFromModels,
   CollectionQuery,
   CollectionQueryDefault,
@@ -454,8 +455,13 @@ export class WorkerClient<M extends ClientSchema = ClientSchema> {
     return this.clientWorker.rollback(txIds);
   }
 
-  async clear() {
+  async clear(options: ClearOptions = {}) {
     await this.initialized;
-    return this.clientWorker.clear();
+    return this.clientWorker.clear(options);
+  }
+
+  async reset(options: ClearOptions = {}) {
+    await this.initialized;
+    return this.clientWorker.reset(options);
   }
 }

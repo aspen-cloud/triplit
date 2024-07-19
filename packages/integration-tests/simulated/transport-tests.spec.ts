@@ -16,6 +16,7 @@ import { describe, vi, it, expect } from 'vitest';
 import DB, { Models, Schema as S, genToArr, or } from '@triplit/db';
 import { MemoryBTreeStorage as MemoryStorage } from '@triplit/db/storage/memory-btree';
 import { CloseReason } from '@triplit/types/sync';
+import { hashQuery } from '../../client/src/utils/query.js';
 
 function parseJWT(token: string | undefined) {
   if (!token) throw new Error('No token provided');
@@ -2224,6 +2225,77 @@ describe('deduping subscriptions', () => {
     expect(sub2).toHaveBeenCalledOnce();
     expect(sub2.mock.lastCall[1].hasRemoteFulfilled).toBe(true);
   });
+});
+
+it('running reset will disconnect and reset the client sync state and clear all data', async () => {
+  const db = new DB();
+  const server = new TriplitServer(db);
+  await db.insert('collection_a', { id: 'a1' });
+  await db.insert('collection_b', { id: 'b1' });
+  const alice = createTestClient(server, SERVICE_KEY, {
+    clientId: 'alice',
+  });
+  const query1 = alice.query('collection_a').build();
+  const query2 = alice.query('collection_b').build();
+  const qh1 = hashQuery(query1);
+  const qh2 = hashQuery(query2);
+  alice.subscribe(query1, () => {});
+  alice.subscribe(query2, () => {});
+  await pause(300);
+
+  {
+    // check state
+    expect(alice.syncEngine.connectionStatus).toBe('OPEN');
+    // awaiting ack state is difficult to test
+    expect(
+      // @ts-expect-error (not exposed)
+      alice.syncEngine.queries.size
+    ).toBe(2);
+    await expect(
+      alice.syncEngine
+        // @ts-expect-error (not exposed)
+        .getQueryState(qh1)
+    ).resolves.toBeDefined();
+    await expect(
+      alice.syncEngine
+        // @ts-expect-error (not exposed)
+        .getQueryState(qh2)
+    ).resolves.toBeDefined();
+
+    const results = await alice.fetch(query1);
+    expect(results.length).toBe(1);
+  }
+
+  // reset
+  alice.disconnect();
+  await alice.reset();
+  await pause(300);
+  {
+    // check state
+    // disconnected
+    expect(alice.syncEngine.connectionStatus).toBe('CLOSED');
+
+    expect(
+      // @ts-expect-error (not exposed)
+      alice.syncEngine.awaitingAck.size
+    ).toBe(0);
+    expect(
+      // @ts-expect-error (not exposed)
+      alice.syncEngine.queries.size
+    ).toBe(0);
+    await expect(
+      alice.syncEngine
+        // @ts-expect-error (not exposed)
+        .getQueryState(qh1)
+    ).resolves.toBeUndefined();
+    await expect(
+      alice.syncEngine
+        // @ts-expect-error (not exposed)
+        .getQueryState(qh2)
+    ).resolves.toBeUndefined();
+    const results = await alice.fetch(query1);
+    expect(results.length).toBe(0);
+  }
 });
 
 class TestTransport implements SyncTransport {

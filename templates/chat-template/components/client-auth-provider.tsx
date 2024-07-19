@@ -11,13 +11,18 @@ export function ClientAuthProvider({
   children: React.ReactNode
 }) {
   const { data: session } = useSession()
-  const jwtRef = useRef<string | undefined>()
   useEffect(() => {
-    // @ts-ignore
-    if (session?.token !== jwtRef.current) {
-      // @ts-ignore
-      jwtRef.current = session?.token ?? undefined
-      client.updateToken(jwtRef.current)
+    // @ts-expect-error
+    const token = session?.token
+    if (token !== client.token) {
+      client.disconnect()
+      client.updateToken(token)
+      if (!client.token) {
+        // Note: this is async
+        client.reset()
+      } else {
+        client.connect()
+      }
     }
   }, [session])
 

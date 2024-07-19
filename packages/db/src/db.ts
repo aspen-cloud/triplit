@@ -36,7 +36,7 @@ import { VariableAwareCache } from './variable-aware-cache.js';
 import { UserTypeOptions } from './data-types/types/index.js';
 import { copyHooks, prefixVariables, triplesToObject } from './utils.js';
 import { EAV, indexToTriple, TripleRow } from './triple-store-utils.js';
-import { TripleStore } from './triple-store.js';
+import { ClearOptions, TripleStore } from './triple-store.js';
 import { Logger } from '@triplit/types/logger';
 import { isAnyOrUndefined } from './utility-types.js';
 import {
@@ -1228,7 +1228,7 @@ export default class DB<M extends Models = Models> {
     return stats;
   }
 
-  async clear(options: { full?: boolean } = {}) {
+  async clear(options: ClearOptions = {}) {
     return this.tripleStore.clear(options);
   }
 

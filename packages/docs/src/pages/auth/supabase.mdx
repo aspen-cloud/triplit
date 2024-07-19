@@ -58,20 +58,30 @@ const triplit = new TriplitClient({
   serverUrl: 'http://localhost:6543',
 });
 
-function updateTriplitWithAuthSession(session) {
-  if (session?.access_token !== triplit.token) {
-    triplit.updateToken(session?.access_token);
+async function updateTriplitWithAuthSession(session) {
+  const newToken = session?.access_token;
+  // if the token has changed, update the client
+  if (newToken !== triplit.token) {
+    triplit.disconnect();
+    triplit.updateToken(newToken);
+    if (!triplit.token) {
+      // If no token, we are unauthenticated, reset the client in case there is any data for the previous session stored
+      await triplit.reset();
+    } else {
+      // If we have a token, connect to the server with new information
+      triplit.connect();
+    }
   }
 }
 
 // Get initial session data on page load and subscribe to changes
 function getSessionAndSubscribe() {
-  supabase.auth.getSession().then(({ data: { session } }) => {
-    updateTriplitWithAuthSession(session);
+  supabase.auth.getSession().then(async ({ data: { session } }) => {
+    await updateTriplitWithAuthSession(session);
   });
   const { data: session } = supabase.auth.onAuthStateChange(
-    (_event, session) => {
-      updateTriplitWithAuthSession(session);
+    async (_event, session) => {
+      await updateTriplitWithAuthSession(session);
     }
   );
   return session.subscription.unsubscribe;

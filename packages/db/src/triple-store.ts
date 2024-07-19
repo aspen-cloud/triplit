@@ -4,7 +4,6 @@ import {
   WriteOps,
   AsyncTupleDatabase,
   TupleStorageApi,
-  compareTuple,
 } from '@triplit/tuple-database';
 import { Timestamp } from './timestamp.js';
 import MultiTupleStore, {
@@ -14,13 +13,12 @@ import MultiTupleStore, {
 } from './multi-tuple-store.js';
 import { Clock } from './clocks/clock.js';
 import { MemoryClock } from './clocks/memory-clock.js';
-import { TripleStoreOptionsError, WriteRuleError } from './errors.js';
+import { TripleStoreOptionsError } from './errors.js';
 import { TripleStoreTransaction } from './triple-store-transaction.js';
 import {
   EAV,
   TupleIndex,
   TripleStoreHooks,
-  TripleMetadata,
   EATIndex,
   TripleStoreBeforeInsertHook,
   findByEntity,
@@ -59,6 +57,10 @@ function isTupleStorage(object: any): object is AsyncTupleStorageApi {
   ];
   return storageKeys.every((objKey) => objKey in object);
 }
+
+export type ClearOptions = {
+  full?: boolean;
+};
 
 export interface TripleStoreApi {
   // Mutation methods
@@ -582,27 +584,58 @@ export class TripleStore<StoreKeys extends string = any>
     });
   }
 
-  async clear({ full }: { full?: boolean } = {}) {
+  async clear({ full }: ClearOptions = {}) {
     if (full) {
       await this.tupleStore.clear();
     } else {
       // Load metadata for restore
-      const syncedMetadataScan = await genToArr(
-        this.findByCollection('_metadata')
-      );
-      const localMetadataScan = await genToArr(
-        this.tupleStore.scan({
-          prefix: ['metadata'],
-        })
-      );
+      const restoreData: Record<
+        string,
+        {
+          synced: TripleRow[];
+          local: TupleIndex[];
+        }
+      > = {};
+
+      const writeKeys =
+        this.tupleStore.storageScope?.write ??
+        Object.keys(this.tupleStore.storage);
+
+      // For each write key, retrieve data to keep, clear, then write data back
+      for (const storageKey of writeKeys) {
+        const scopedTripleStore = this.setStorageScope([
+          storageKey as StoreKeys,
+        ]);
+        const syncedMetadata = await genToArr(
+          scopedTripleStore.findByCollection('_metadata')
+        );
+        const localMetadataScan = await genToArr(
+          scopedTripleStore.tupleStore.scan({
+            prefix: ['metadata'],
+          })
+        );
+        restoreData[storageKey] = {
+          synced: syncedMetadata,
+          local: localMetadataScan,
+        };
+      }
       await this.tupleStore.clear();
       // Restore metadata
       await this.transact(async (tx) => {
-        for (const triple of syncedMetadataScan) {
-          await tx.insertTriple(triple);
-        }
-        for (const kv of localMetadataScan) {
-          await tx.tupleTx.set(kv.key, kv.value);
+        for (const [
+          storageKey,
+          { synced: syncedMetadataScan, local: localMetadataScan },
+        ] of Object.entries(restoreData)) {
+          const scopedTx = tx.withScope({
+            read: [storageKey],
+            write: [storageKey],
+          });
+          for (const triple of syncedMetadataScan) {
+            await scopedTx.insertTriple(triple);
+          }
+          for (const kv of localMetadataScan) {
+            await scopedTx.tupleTx.set(kv.key, kv.value);
+          }
         }
       });
     }
