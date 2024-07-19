@@ -57,3 +57,9 @@ const query = client.query('messages').include('sender');
 };
 */
 ```
+
+If a collection has multiple relations, you can select them by chaining multiple `include` calls.
+
+```typescript
+const query = client.query('messages').include('sender').include('receiver');
+```
