@@ -100,12 +100,31 @@ export async function loadTsModule(filepath: string) {
   try {
     if (!fs.existsSync(absolutePath)) return undefined;
     const transpiledJs = transpileTsFile(absolutePath);
-    fs.mkdirSync(path.dirname(transpiledJsPath), { recursive: true });
-    fs.writeFileSync(transpiledJsPath, transpiledJs, 'utf8');
-    const result = await importFresh('file:///' + transpiledJsPath);
-    return result;
+    return await evalJSString(transpiledJs, { tmpFile: transpiledJsPath });
   } finally {
     fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
+}
+
+export async function evalJSString(
+  source: string,
+  options: { tmpFile?: string } = {}
+) {
+  let transpiledJsPath = options.tmpFile;
+  try {
+    // If no tmpFile is provided, create a temporary file and cleanup after
+    if (!options.tmpFile) {
+      const cwd = process.cwd();
+      const tmpDir = path.join(cwd, 'tmp');
+      transpiledJsPath = path.join(tmpDir, `_temp.js`);
+    }
+    fs.mkdirSync(path.dirname(transpiledJsPath), { recursive: true });
+    fs.writeFileSync(transpiledJsPath, source, 'utf8');
+    return await importFresh('file:///' + transpiledJsPath);
+  } finally {
+    if (!options.tmpFile) {
+      fs.rmSync(transpiledJsPath, { recursive: true, force: true });
+    }
   }
 }
 
