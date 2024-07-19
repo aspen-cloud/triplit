@@ -47,6 +47,7 @@ import {
 } from './triple-store-utils.js';
 import { copyHooks } from './utils.js';
 import { TRIPLE_STORE_MIGRATIONS } from './triple-store-migrations.js';
+import { TransactionResult } from './query/types';
 
 function isTupleStorage(object: any): object is AsyncTupleStorageApi {
   if (typeof object !== 'object') return false;
@@ -365,7 +366,7 @@ export class TripleStore<StoreKeys extends string = any>
   async transact<Output>(
     callback: (tx: TripleStoreTransaction) => Promise<Output>,
     scope?: StorageScope
-  ) {
+  ): Promise<TransactionResult<Output>> {
     let isCanceled = false;
     const { tx, output } = await this.tupleStore.autoTransact(
       async (tupleTx) => {

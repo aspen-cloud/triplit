@@ -15,6 +15,7 @@ import {
   InsertTypeFromModel,
   JSONToSchema,
   ModelFromModels,
+  TransactionResult,
   Unalias,
   UpdateTypeFromModel,
   createUpdateProxy,
@@ -57,7 +58,7 @@ export class WorkerClient<M extends ClientSchema | undefined = undefined> {
     }
     this.clientWorker = ComLink.wrap<Client<M>>(sharedWorkerPort);
     const { schema } = options || {};
-    // @ts-ignore
+    // @ts-expect-error
     this.initialized = this.clientWorker.init({
       ...options,
       schema: schema && schemaToJSON({ collections: schema, version: 0 }),
@@ -90,8 +91,10 @@ export class WorkerClient<M extends ClientSchema | undefined = undefined> {
     // @ts-expect-error
     return this.clientWorker.fetch(query, options);
   }
-  // @ts-ignore
-  async transact<Output>(callback: (tx: DBTransaction<M>) => Promise<Output>) {
+
+  async transact<Output>(
+    callback: (tx: DBTransaction<M>) => Promise<Output>
+  ): Promise<TransactionResult<Output>> {
     await this.initialized;
     const wrappedTxCallback = async (tx: DBTransaction<M>) => {
       // create a proxy wrapper around TX that intercepts calls to tx.update that
@@ -106,7 +109,6 @@ export class WorkerClient<M extends ClientSchema | undefined = undefined> {
             ) => {
               const schemaJSON = await tx.getSchemaJson();
               const schema =
-                // @ts-ignore
                 schemaJSON && JSONToSchema(schemaJSON)?.collections;
 
               await tx.updateRaw(
@@ -125,7 +127,7 @@ export class WorkerClient<M extends ClientSchema | undefined = undefined> {
                         );
                   await updater(
                     updateProxy as Unalias<
-                      // @ts-ignore
+                      // @ts-expect-error
                       UpdateTypeFromModel<ModelFromModels<M, CN>>
                     >
                   );
@@ -135,13 +137,15 @@ export class WorkerClient<M extends ClientSchema | undefined = undefined> {
               );
             };
           }
-          // @ts-ignore
+          // @ts-expect-error
           return target[prop];
         },
       });
       return await callback(proxiedTx);
     };
-    return this.clientWorker.transact(ComLink.proxy(wrappedTxCallback));
+    return this.clientWorker.transact(
+      ComLink.proxy(wrappedTxCallback)
+    ) as Promise<TransactionResult<Output>>;
   }
   async fetchById<CN extends CollectionNameFromModels<M>>(
     collectionName: CN,
@@ -176,7 +180,7 @@ export class WorkerClient<M extends ClientSchema | undefined = undefined> {
   }> {
     await this.initialized;
     return this.clientWorker.insert(
-      // @ts-ignore
+      // @ts-expect-error
       collectionName,
       entity
     );
@@ -213,7 +217,7 @@ export class WorkerClient<M extends ClientSchema | undefined = undefined> {
   ) {
     await this.initialized;
     return this.clientWorker.updateRaw(
-      // @ts-ignore
+      // @ts-expect-error
       collectionName,
       entityId,
       ComLink.proxy(updater)
@@ -226,7 +230,7 @@ export class WorkerClient<M extends ClientSchema | undefined = undefined> {
   ) {
     await this.initialized;
     return this.clientWorker.delete(
-      // @ts-ignore
+      // @ts-expect-error
       collectionName,
       entityId
     );
@@ -244,13 +248,12 @@ export class WorkerClient<M extends ClientSchema | undefined = undefined> {
       await this.initialized;
       return this.clientWorker.subscribe(
         query,
-        // @ts-ignore
+        // @ts-expect-error
         ComLink.proxy(onResults),
         onError && ComLink.proxy(onError),
         // CURRENTLY ONLY SUPPORTS onRemoteFulfilled
         // Comlink is having trouble either just proxying the callback
         // inside options or proxying the whole options object
-        // @ts-ignore
         options && ComLink.proxy(options)
       );
     })();
@@ -282,11 +285,9 @@ export class WorkerClient<M extends ClientSchema | undefined = undefined> {
     const subscriptionPromise = this.initialized.then(() =>
       this.clientWorker.subscribeWithPagination(
         query,
-        // @ts-ignore
+        // @ts-expect-error
         ComLink.proxy(onResults),
-        // @ts-ignore
         onError && ComLink.proxy(onError),
-        // @ts-ignore
         options && ComLink.proxy(options)
       )
     );
@@ -318,11 +319,9 @@ export class WorkerClient<M extends ClientSchema | undefined = undefined> {
     const subscriptionPromise = this.initialized.then(() =>
       this.clientWorker.subscribeWithExpand(
         query,
-        // @ts-ignore
+        // @ts-expect-error
         ComLink.proxy(onResults),
-        // @ts-ignore
         onError && ComLink.proxy(onError),
-        // @ts-ignore
         options && ComLink.proxy(options)
       )
     );

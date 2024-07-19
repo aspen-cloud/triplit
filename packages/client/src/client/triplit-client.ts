@@ -18,6 +18,7 @@ import {
   schemaToJSON,
   Unalias,
   SchemaJSON,
+  TransactionResult,
 } from '@triplit/db';
 import { getUserId } from '../token.js';
 import { UnrecognizedFetchPolicyError } from '../errors.js';
@@ -318,7 +319,9 @@ export class TriplitClient<M extends ClientSchema | undefined = undefined> {
    * @param callback - The callback to run within the transaction
    * @returns An object with the transaction ID and the output of the transaction
    */
-  async transact<Output>(callback: (tx: DBTransaction<M>) => Promise<Output>) {
+  async transact<Output>(
+    callback: (tx: DBTransaction<M>) => Promise<Output>
+  ): Promise<TransactionResult<Output>> {
     this.logger.debug('transact START');
     const resp = await this.db.transact(callback, {
       skipRules: SKIP_RULES,
