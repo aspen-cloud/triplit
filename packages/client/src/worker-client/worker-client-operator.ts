@@ -1,6 +1,7 @@
 import * as ComLink from 'comlink';
 import {
   TriplitClient as Client,
+  ClientOptions,
   SubscriptionOptions,
 } from '../client/triplit-client.js';
 import {
@@ -11,7 +12,10 @@ import {
   UpdateTypeFromModel,
   TupleValue,
   CollectionQuery,
+  TriplitError,
 } from '@triplit/db';
+import { LogLevel } from '@triplit/types/logger';
+import { DefaultLogger } from '../client-logger.js';
 
 let clientOperator: Client;
 
@@ -19,13 +23,46 @@ interface ClientWorker extends Client {
   init: (options: any) => void;
 }
 
+class WorkerLogger {
+  logScope: string | undefined;
+  constructor(opts: { scope?: string; level: LogLevel }) {
+    this.logScope = opts.scope;
+  }
+}
+
 const workerOperator: ClientWorker = {
-  init: (options) => {
+  // @ts-expect-error
+  init: (options: ClientOptions<any>, logger) => {
     if (clientOperator != undefined) return;
     const { schema } = options;
+    const workerLogger = new DefaultLogger({
+      level: options.logLevel,
+      onLog: (log) => {
+        if (!logger) return;
+        if (log.scope == undefined) {
+          log.scope = '';
+        }
+        switch (log.level) {
+          case 'error':
+            logger.error(log);
+            break;
+          case 'warn':
+            logger.warn(log);
+            break;
+          case 'info':
+            logger.info(log);
+            break;
+          case 'debug':
+            logger.debug(log);
+            break;
+        }
+      },
+    });
+    // @ts-expect-error
     clientOperator = new Client({
       ...options,
       schema: JSONToSchema(schema)?.collections,
+      logger: workerLogger,
     });
   },
   fetch: async (...args: Parameters<typeof clientOperator.fetch>) =>

@@ -51,14 +51,14 @@ export class DefaultLogger implements Logger {
   }
 
   info(message: any, ...args: any[]) {
-    const log = this.constructLogObj('info', message, ...args);
     if (this.levelIndex < 2) return;
+    const log = this.constructLogObj('info', message, ...args);
     console.info(`%c${log.scope}`, 'color: #888', message, args);
   }
 
   warn(message: any, ...args: any[]) {
-    const log = this.constructLogObj('warn', message, ...args);
     if (this.levelIndex < 1) return;
+    const log = this.constructLogObj('warn', message, ...args);
     console.warn(log.scope, message, args);
   }
 
@@ -72,8 +72,8 @@ export class DefaultLogger implements Logger {
   }
 
   debug(message: any, ...args: any[]) {
-    const obj = this.constructLogObj('debug', message, ...args);
     if (this.levelIndex < 3) return;
+    const obj = this.constructLogObj('debug', message, ...args);
     if (obj.scope === 'sync') {
       if (obj.message === 'sent') {
         console.debug(

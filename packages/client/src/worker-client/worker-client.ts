@@ -30,6 +30,7 @@ import {
   ClientSchema,
 } from '../client/types';
 import { clientQueryBuilder } from '../client/query-builder.js';
+import SuperJSON from 'superjson';
 
 export function getTriplitSharedWorkerPort(
   workerUrl?: string
@@ -39,6 +40,28 @@ export function getTriplitSharedWorkerPort(
     { type: 'module', name: 'triplit-client' }
   );
   return worker.port;
+}
+
+function logObjToMessage(lobObj: any) {
+  const message = lobObj.scope
+    ? [`%c${lobObj.scope}`, 'color: #888', lobObj.message]
+    : [lobObj.message];
+  return [...message, ...lobObj.args.map(SuperJSON.deserialize)];
+}
+
+class WorkerLogger {
+  error(log: any) {
+    console.error(...logObjToMessage(log));
+  }
+  warn(log: any) {
+    console.warn(...logObjToMessage(log));
+  }
+  info(log: any) {
+    console.info(...logObjToMessage(log));
+  }
+  debug(log: any) {
+    console.debug(...logObjToMessage(log));
+  }
 }
 
 export class WorkerClient<M extends ClientSchema | undefined = undefined> {
@@ -59,10 +82,13 @@ export class WorkerClient<M extends ClientSchema | undefined = undefined> {
     this.clientWorker = ComLink.wrap<Client<M>>(sharedWorkerPort);
     const { schema } = options || {};
     // @ts-expect-error
-    this.initialized = this.clientWorker.init({
-      ...options,
-      schema: schema && schemaToJSON({ collections: schema, version: 0 }),
-    });
+    this.initialized = this.clientWorker.init(
+      {
+        ...options,
+        schema: schema && schemaToJSON({ collections: schema, version: 0 }),
+      },
+      ComLink.proxy(new WorkerLogger())
+    );
     this._connectionStatus = 'CLOSED';
     this.onConnectionStatusChange((status) => {
       this._connectionStatus = status;
