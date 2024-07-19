@@ -130,11 +130,13 @@ function generatePermissionsSection(
   indent: string
 ) {
   let result = '';
-  result +=
-    indent +
-    `permissions: ${JSON.stringify(permissions, null, 2)
-      .split('\n')
-      .join(`\n${indent}`)}`;
+  if (permissions) {
+    result +=
+      indent +
+      `permissions: ${JSON.stringify(permissions, null, 2)
+        .split('\n')
+        .join(`\n${indent}`)}`;
+  }
   return result;
 }
 
