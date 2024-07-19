@@ -1,6 +1,7 @@
 {
   "index": "Overview",
   "select": "`select`",
+  "include": "`include`",
   "where": "`where`",
   "order": "`order`",
   "limit": "`limit`",

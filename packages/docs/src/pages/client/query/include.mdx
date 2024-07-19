@@ -1,0 +1,48 @@
+---
+description: The `include` clause is used to specify the relations on an entity that should be included in a query.
+---
+
+# include
+
+If you have defined a [relation in your schema](/schemas/relations) using `RelationById`, `RelationOne`, or `RelationMany`, you can include those related entities in a query.
+
+For example, the following schema defines a relation between `users` and `messages`
+
+```typescript
+const schema = {
+  users: S.Schema({
+    id: S.Id(),
+    name: S.Id(),
+    email: S.String(),
+  }),
+  messages: S.Schema({
+    id: S.Id(),
+    text: S.String(),
+    sender_id: S.String(),
+    sender: S.RelationById('users', '$sender_id'),
+  }),
+};
+```
+
+By default, a query on `messages` will not include the `sender` as an attribute. To include the sender, use the `include` method in the query builder.
+
+```typescript
+const query = client.query('messages').include('sender');
+
+/*
+{
+  id: '1',
+  text: 'hello world!',
+  sender_id: 'bob',
+  sender: { id: 'bob', name: 'Bob Jones', email: 'bob@triplit.com' },
+};
+*/
+```
+
+## Including multiple relations
+
+If a collection has multiple relations, you can select them by chaining multiple `include` calls.
+
+```typescript
+const query = client.query('messages').include('sender').include('receiver');
+```
