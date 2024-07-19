@@ -4,7 +4,7 @@ import { useInfiniteQuery, useQuery } from "@triplit/react"
 
 import { client } from "@/lib/triplit.js"
 
-import { schema } from "../triplit/schema.js"
+import { schema } from '@/triplit/schema'
 
 export type Conversation = Entity<typeof schema, "conversations">
 export type Message = Entity<typeof schema, "messages">

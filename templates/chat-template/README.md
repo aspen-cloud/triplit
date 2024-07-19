@@ -39,7 +39,7 @@ This is a good time to set up your `.env`, which needs to be properly configured
 You'll also need to apply the migrations defined in `/triplit/migrations` to this server.
 
 ```bash
-yarn triplit migrate up
+yarn triplit schema push
 ```
 
 If you want to try a hosted solution for the sync server, join the waitlist on [our Discord](https://discord.gg/q89sGWHqQ5) with the `/waitlist` command in any channel and we'll grant you access to the Triplit Cloud beta.

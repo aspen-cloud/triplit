@@ -1,4 +1,4 @@
-import { NextFunction, Response, Request } from 'express';
+import  { NextFunction, Response, Request } from 'express';
 import { ServiceKeyRequiredError } from '@triplit/server-core/errors';
 
 export function adminAccessRequired(

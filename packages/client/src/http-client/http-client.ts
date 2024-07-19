@@ -32,7 +32,7 @@ function parseError(error: string) {
 }
 
 export type HttpClientOptions<M extends ClientSchema | undefined> = {
-  server?: string;
+  serverUrl?: string;
   token?: string;
   schema?: M;
   schemaFactory?: () => M | Promise<M>;
@@ -57,7 +57,7 @@ export class HttpClient<M extends ClientSchema | undefined> {
     body: any,
     options: { isFile?: boolean } = { isFile: false }
   ) {
-    if (!this.options.server) throw new TriplitError('No server url provided');
+    if (!this.options.serverUrl) throw new TriplitError('No server url provided');
     if (!this.options.token) throw new TriplitError('No token provided');
     const headers: HeadersInit = {
       Authorization: 'Bearer ' + this.options.token,
@@ -72,7 +72,7 @@ export class HttpClient<M extends ClientSchema | undefined> {
       delete headers['Content-Type'];
     }
 
-    const res = await fetch(this.options.server + uri, {
+    const res = await fetch(this.options.serverUrl + uri, {
       method,
       headers,
       body: options.isFile ? form : stringifiedBody,
