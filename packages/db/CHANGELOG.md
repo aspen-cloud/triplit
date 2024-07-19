@@ -1,5 +1,11 @@
 # @triplit/db
 
+## 0.3.56
+
+### Patch Changes
+
+- c3fb0be: Add method to get schema as json in a transaction
+
 ## 0.3.55
 
 ### Patch Changes
