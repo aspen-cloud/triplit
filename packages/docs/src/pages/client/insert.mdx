@@ -6,10 +6,13 @@ import { Callout } from 'nextra-theme-docs';
 
 # insert
 
-`insert()` inserts a new record into a collection. For example:
+`insert()` inserts a new record into a collection and returns the inserted record, if successful. For example:
 
 ```typescript
-await client.insert('employee', { id: 'Fry', name: 'Philip Fry' });
+const { txId, output } = await client.insert('employee', {
+  id: 'Fry',
+  name: 'Philip Fry',
+});
 ```
 
 The `id` field in Triplit is a special field that is used to uniquely identify records and is required on entities. If you do not provide an id, one will be generated for you.
