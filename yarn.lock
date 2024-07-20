@@ -7611,9 +7611,11 @@ __metadata:
     "@stryker-mutator/vitest-runner": "npm:^7.3.0"
     "@triplit/tuple-database": "npm:2.2.25"
     "@triplit/types": "workspace:^"
+    "@types/json-schema": "npm:^7.0.15"
     "@vitest/coverage-c8": "npm:^0.29.2"
     "@vitest/coverage-v8": "npm:^0.33.0"
     "@vitest/ui": "npm:^0.33.0"
+    ajv-formats: "npm:^3.0.1"
     fast-check: "npm:^3.16.0"
     idb: "npm:^7.1.1"
     nanoid: "npm:^3.0.0"
@@ -8148,7 +8150,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/json-schema@npm:*, @types/json-schema@npm:^7.0.9":
+"@types/json-schema@npm:*, @types/json-schema@npm:^7.0.15, @types/json-schema@npm:^7.0.9":
   version: 7.0.15
   resolution: "@types/json-schema@npm:7.0.15"
   checksum: 10/1a3c3e06236e4c4aab89499c428d585527ce50c24fe8259e8b3926d3df4cfbbbcf306cfc73ddfb66cbafc973116efd15967020b0f738f63e09e64c7d260519e7
@@ -9804,6 +9806,20 @@ __metadata:
     ajv:
       optional: true
   checksum: 10/70c263ded219bf277ffd9127f793b625f10a46113b2e901e150da41931fcfd7f5592da6d66862f4449bb157ffe65867c3294a7df1d661cc232c4163d5a1718ed
+  languageName: node
+  linkType: hard
+
+"ajv-formats@npm:^3.0.1":
+  version: 3.0.1
+  resolution: "ajv-formats@npm:3.0.1"
+  dependencies:
+    ajv: "npm:^8.0.0"
+  peerDependencies:
+    ajv: ^8.0.0
+  peerDependenciesMeta:
+    ajv:
+      optional: true
+  checksum: 10/5679b9f9ced9d0213a202a37f3aa91efcffe59a6de1a6e3da5c873344d3c161820a1f11cc29899661fee36271fd2895dd3851b6461c902a752ad661d1c1e8722
   languageName: node
   linkType: hard
 
