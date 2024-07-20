@@ -14,9 +14,8 @@ const ROOT = 'https://triplit.dev'
     <p>This is a simple todo app that uses Triplit. You can add, complete, and delete todos.</p>
     <h2>Explore the project</h2>
     <p>
-      This app is built with <a :href="ROOT">Triplit</a>,
-      <a href="https://kit.svelte.dev">SvelteKit</a> and <a href="https://vitejs.dev">Vite</a>.
-      There are two Triplit specific files:
+      This app is built with <a :href="ROOT">Triplit</a>, <a href="https://vuejs.org/">Vue</a> and
+      <a href="https://vitejs.dev">Vite</a>. There are two Triplit specific files:
     </p>
     <pre>{{ FOLDER_STRUCTURE }}</pre>
     <p>
