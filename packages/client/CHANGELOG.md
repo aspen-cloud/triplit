@@ -1,5 +1,11 @@
 # @triplit/client
 
+## 0.3.75
+
+### Patch Changes
+
+- f636418: add serverUrl option to HttpClient
+
 ## 0.3.74
 
 ### Patch Changes
