@@ -51,6 +51,7 @@ export class Server {
       const session = this.createSession(token);
       const firstSegment = route[0];
       switch (firstSegment) {
+        case 'query-triples':
         case 'queryTriples':
           resp = await session.queryTriples(params);
           break;
@@ -140,18 +141,19 @@ export class Server {
 }
 
 const TRIPLIT_SEGEMENTS = [
-  'queryTriples',
+  'bulk-insert',
   'clear',
-  'stats',
-  'override-schema',
-  'schema',
+  'delete',
+  'delete-triples',
   'fetch',
   'insert',
-  'bulk-insert',
   'insert-triples',
-  'delete-triples',
+  'override-schema',
+  'queryTriples',
+  'query-triples',
+  'schema',
+  'stats',
   'update',
-  'delete',
 ] as const;
 
 const MIGRATION_SEGMENTS = ['status', 'apply'] as const;
