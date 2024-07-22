@@ -18,7 +18,7 @@ jobs:
           node-version: 20.x
           cache: 'yarn'
 
-      - run: yarn install --immutable
+      - run: yarn install --immutable --refresh-lockfile
       - run: yarn build:packages
       - run: yarn workspaces foreach -A run test
     env:
