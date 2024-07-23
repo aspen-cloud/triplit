@@ -1,4 +1,4 @@
-import { Models, StoreSchema } from '../types/index.js';
+import { Models } from '../types';
 
 import { JSONSchema7 } from 'json-schema';
 
@@ -32,7 +32,7 @@ addFormats(ajv);
  * (JSON schema can be used by most popular data validation libs)
  **/
 export function exportCollectionAsJSONSchema(
-  schema: StoreSchema<Models<any, any> | undefined>,
+  schema: Models<any, any>,
   collectionName: string
 ): JSONSchema7 {
   const triplitCollectionJsonData = schemaToJSON({
@@ -51,7 +51,7 @@ export function exportCollectionAsJSONSchema(
  * Use `exportCollectionAsJSONSchema` for single collections
  **/
 export function exportSchemaAsJSONSchema(
-  schema: StoreSchema<Models<any, any> | undefined>
+  schema: Models<any, any>
 ): JSONSchema7 | undefined {
   //
   if (!schema) return undefined;
