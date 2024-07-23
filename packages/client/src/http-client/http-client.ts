@@ -13,6 +13,7 @@ import {
   TripleRow,
   timestampedObjectToPlainObject,
   appendCollectionToId,
+  EntityNotFoundError,
 } from '@triplit/db';
 import {
   ClientFetchResult,
@@ -224,7 +225,12 @@ export class HttpClient<M extends ClientSchema | undefined> {
     const collectionSchema = schema?.[collectionName]?.schema;
     const entityQuery = this.query(collectionName).id(entityId).build();
     const triples = await this.queryTriples(entityQuery);
-    // TODO we should handle errors or non-existent entities
+    if (!triples.length)
+      throw new EntityNotFoundError(
+        entityId,
+        collectionName,
+        "Cannot perform an update on an entity that doesn't exist"
+      );
     const entity = constructEntity(
       triples,
       appendCollectionToId(collectionName, entityId)
