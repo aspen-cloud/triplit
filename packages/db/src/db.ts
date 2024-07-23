@@ -1,4 +1,4 @@
-import { timestampedSchemaToSchema } from './schema/schema.js';
+import { schemaToJSON, timestampedSchemaToSchema } from './schema/schema.js';
 import {
   UpdateTypeFromModel,
   Models,
@@ -492,9 +492,10 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
     this.onSchemaChangeCallbacks = new Set([updateCachedSchemaOnChange]);
 
     this.logger.debug('Initializing', {
-      schema,
-      migrations,
-      tripleStoreSchema,
+      //@ts-expect-error
+      schema: schema && schemaToJSON(schema),
+      // @ts-expect-error
+      tripleStoreSchema: tripleStoreSchema && schemaToJSON(tripleStoreSchema),
     });
 
     this.storageReady = this.tripleStore.ensureStorageIsMigrated();
