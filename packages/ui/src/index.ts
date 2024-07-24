@@ -29,4 +29,5 @@ export * from './components/ui/theme-provider.jsx';
 export * from './components/ui/toast.jsx';
 export * from './components/ui/toaster.jsx';
 export * from './lib/useToast.js';
+export * from './components/ui/carousel.jsx';
 export { cn } from './lib/utils.js';

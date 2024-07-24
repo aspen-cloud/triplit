@@ -10061,6 +10061,7 @@ __metadata:
     class-variance-authority: "npm:^0.7.0"
     clsx: "npm:^2.0.0"
     cmdk: "npm:^0.2.0"
+    embla-carousel-react: "npm:^8.1.7"
     lucide-react: "npm:^0.292.0"
     tailwind-merge: "npm:^2.0.0"
     tailwindcss: "npm:^3.3.5"
@@ -16211,6 +16212,34 @@ __metadata:
   version: 0.8.2
   resolution: "elkjs@npm:0.8.2"
   checksum: 10/0076f3b41ab874144eaab5e9edd3a592006cff154425d9d9adc8201614caa6673babc0ca9bd0ea2e8bae2a16ac87c07c2d4d4cc04f22d660928e50886481143e
+  languageName: node
+  linkType: hard
+
+"embla-carousel-react@npm:^8.1.7":
+  version: 8.1.7
+  resolution: "embla-carousel-react@npm:8.1.7"
+  dependencies:
+    embla-carousel: "npm:8.1.7"
+    embla-carousel-reactive-utils: "npm:8.1.7"
+  peerDependencies:
+    react: ^16.8.0 || ^17.0.1 || ^18.0.0
+  checksum: 10/623a903e04d4707dabb8e7ce18b326be610b0394eb9237a78c738477c945f32fee4b5a3681289227080ace467a037ea5fabdae2f36cc8c02a9e5afc0e421308a
+  languageName: node
+  linkType: hard
+
+"embla-carousel-reactive-utils@npm:8.1.7":
+  version: 8.1.7
+  resolution: "embla-carousel-reactive-utils@npm:8.1.7"
+  peerDependencies:
+    embla-carousel: 8.1.7
+  checksum: 10/ad6b24dca37e7918dae32cc490e2fdcfa2ccbbc9f3059c7c76fd3b0ce8e5e2d6e9aa5fcd5338a20cf6908ae7dffeeec7547c798acda8bb7011ddfbb148a6f965
+  languageName: node
+  linkType: hard
+
+"embla-carousel@npm:8.1.7":
+  version: 8.1.7
+  resolution: "embla-carousel@npm:8.1.7"
+  checksum: 10/9721d494c35a576254eb69d3d6cc6dea320a335ffd45dd1c71be54af29e5d2db616777d3808affad209cc4c5a1e488a0f2fc641ef8df83ea0f28c9720bf2c464
   languageName: node
   linkType: hard
 
