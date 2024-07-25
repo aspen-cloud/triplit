@@ -266,7 +266,7 @@ export class TripleStore<StoreKeys extends string = any>
     this.clock = clock ?? new MemoryClock();
     this.clock.assignToStore(this);
 
-    this.tupleStore.beforeCommit(addIndexesToTransaction);
+    // this.tupleStore.beforeCommit(addIndexesToTransaction);
 
     if (enableGarbageCollection) {
       this.afterCommit(
@@ -370,6 +370,7 @@ export class TripleStore<StoreKeys extends string = any>
     let isCanceled = false;
     const { tx, output } = await this.tupleStore.autoTransact(
       async (tupleTx) => {
+        tupleTx.beforeCommit(addIndexesToTransaction);
         tupleTx.beforeScan(async (args, tx) => {
           // We scan when checking write rules and repeated indexing is a bottleneck on large inserts
           // This is a bandaid fix, but we should try to prevent repeated indexing

@@ -411,6 +411,10 @@ export class MultiTupleTransaction<
     this.hooks.beforeScan.push(callback);
   }
 
+  beforeCommit(callback: MultiTupleStoreBeforeCommitHook<TupleSchema>) {
+    this.hooks.beforeCommit.push(callback);
+  }
+
   async scan<T extends Tuple, P extends TuplePrefix<T>>(
     args?: ScanArgs<T, P> | undefined
   ): Promise<TupleSchema[]> {
@@ -434,7 +438,12 @@ export class MultiTupleTransaction<
         read: readKeys.map((storageKey) => this.txs[storageKey]),
         write: writeKeys.map((storageKey) => this.txs[storageKey]),
       },
-      hooks: this.hooks,
+      hooks: {
+        beforeCommit: [...this.hooks.beforeCommit],
+        beforeInsert: [...this.hooks.beforeInsert],
+        beforeScan: [...this.hooks.beforeScan],
+        afterCommit: [...this.hooks.afterCommit],
+      },
     });
   }
 
