@@ -4,8 +4,8 @@ import {
   getDefaultValuesForCollection,
   collectionsDefinitionToSchema,
   clientInputToDbModel,
-  schemaToJSON,
 } from './schema/schema.js';
+import { schemaToJSON } from './schema/export/index.js';
 import {
   UpdateTypeFromModel,
   InsertTypeFromModel,

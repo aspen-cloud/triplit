@@ -1,5 +1,5 @@
-import type { ClientSchema } from '../../../../client/src/client/types/query.ts';
-import { Schema as S } from '../../../src/schema/builder.ts';
+import type { ClientSchema } from '../../../../client/src/client/types/query.js';
+import { Schema as S } from '../../../src/schema/builder.js';
 
 export const schema = {
   plain: {

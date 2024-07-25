@@ -55,7 +55,6 @@ export type {
 export type { TripleStoreApi } from './triple-store.js';
 export {
   triplesToSchema,
-  schemaToJSON,
   JSONToSchema,
   hashSchemaJSON,
   getSchemaFromPath,
@@ -101,3 +100,4 @@ export type { IsAny } from './utility-types.js';
 export * from './errors.js';
 // See ./data-types/index.ts for why this is necessary
 export type * from './data-types';
+export * from './schema/export/index.js';

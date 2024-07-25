@@ -7,10 +7,9 @@ import {
   transformOptions,
   deleteRelationFields,
   transformPropertiesOptionalToRequired,
-} from '../../../src/schema/export/transformFuncs';
-
-import { transformObjectDeeply } from '../../../src/schema/export/transformObjectDeeply';
-import { transformFunctions } from '../../../src/schema/export/export';
+} from '../../../src/schema/export/json-schema/transform-funcs.js';
+import { transformObjectDeeply } from '../../../src/schema/export/json-schema/transform-object-deeply.js';
+import { transformFunctions } from '../../../src/schema/export/json-schema/export.js';
 
 describe('transformDate', () => {
   test('transforms only date type', () => {

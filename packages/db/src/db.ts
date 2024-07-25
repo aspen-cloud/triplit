@@ -1,4 +1,5 @@
-import { schemaToJSON, timestampedSchemaToSchema } from './schema/schema.js';
+import { timestampedSchemaToSchema } from './schema/schema.js';
+import { schemaToJSON } from './schema/export/index.js';
 import {
   UpdateTypeFromModel,
   Models,

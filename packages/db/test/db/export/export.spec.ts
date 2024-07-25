@@ -5,9 +5,9 @@ import { JSONSchema7 } from 'json-schema';
 import {
   exportSchemaAsJSONSchema,
   exportCollectionAsJSONSchema,
-} from '../../../src/schema/export/export';
+} from '../../../src/schema/export/json-schema/export.js';
 
-import { schema } from './exhaustiveTestSchema';
+import { schema } from './exhaustive-test-schema';
 
 import Ajv from 'ajv';
 import addFormats from 'ajv-formats';

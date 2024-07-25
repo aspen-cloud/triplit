@@ -56,7 +56,7 @@ export interface CollectionDefinition {
     id: ReturnType<typeof Schema.Id>;
   }>;
   rules?: CollectionRules<any, any>;
-  permissions: RolePermissions<any, any>;
+  permissions?: RolePermissions<any, any>;
 }
 
 export interface CollectionsDefinition {

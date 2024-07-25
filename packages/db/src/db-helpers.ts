@@ -17,11 +17,8 @@ import {
   RelationshipExistsFilter,
 } from './query/types';
 import { isFilterGroup, isFilterStatement } from './query.js';
-import {
-  getSchemaFromPath,
-  schemaToTriples,
-  triplesToSchema,
-} from './schema/schema.js';
+import { getSchemaFromPath, triplesToSchema } from './schema/schema.js';
+import { schemaToTriples } from './schema/export/index.js';
 import { Models, StoreSchema } from './schema/types';
 import {
   diffSchemas,
