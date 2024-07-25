@@ -1,5 +1,12 @@
 # @triplit/db
 
+## 0.3.58
+
+### Patch Changes
+
+- aa9e562: serialize schema before logging
+- 2decc7f: Fix issue where index hooks were over registering
+
 ## 0.3.57
 
 ### Patch Changes

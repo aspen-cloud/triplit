@@ -1,5 +1,13 @@
 # @triplit/server-core
 
+## 0.3.61
+
+### Patch Changes
+
+- Updated dependencies [aa9e562]
+- Updated dependencies [2decc7f]
+  - @triplit/db@0.3.58
+
 ## 0.3.60
 
 ### Patch Changes
