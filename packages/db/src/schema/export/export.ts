@@ -87,10 +87,10 @@ export const transformFunctions = [
   // PRE: needs to run first as it might delete keys
   deleteRelationFields,
   // Mid:
-  transformOptions,
   transformDate,
   transformRecord,
   transformSet,
+  transformOptions,
   // POST: must run last since other functions might delete keys
   transformPropertiesOptionalToRequired,
 ];

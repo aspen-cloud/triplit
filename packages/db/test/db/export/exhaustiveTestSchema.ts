@@ -28,6 +28,32 @@ export const schema = {
     }),
   },
 
+  nullalbe: {
+    schema: S.Schema({
+      id: S.Id(),
+      boolean: S.Boolean({ nullable: true }),
+      string: S.String({ nullable: true }),
+      number: S.Number({ nullable: true }),
+      date: S.Date({ nullable: true }),
+      set_string: S.Set(S.String(), { nullable: true }),
+      set_number: S.Set(S.Number(), { nullable: true }),
+      set_boolean: S.Set(S.Boolean(), { nullable: true }),
+      set_date: S.Set(S.Date(), { nullable: true }),
+
+      object: S.Record({
+        id: S.Id(),
+        boolean: S.Boolean({ nullable: true }),
+        string: S.String({ nullable: true }),
+        number: S.Number({ nullable: true }),
+        date: S.Date({ nullable: true }),
+        set_string: S.Set(S.String(), { nullable: true }),
+        set_number: S.Set(S.Number(), { nullable: true }),
+        set_boolean: S.Set(S.Boolean(), { nullable: true }),
+        set_date: S.Set(S.Date(), { nullable: true }),
+      }),
+    }),
+  },
+
   defaults: {
     schema: S.Schema({
       id: S.Id(),
