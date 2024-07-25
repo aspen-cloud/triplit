@@ -1,12 +1,16 @@
 import { Command } from '../../command.js';
 import * as Flag from '../../flags.js';
 import { serverRequesterMiddleware } from '../../middleware/add-server-requester.js';
-import { JSONToSchema, schemaToJSON } from '@triplit/db';
+import {
+  JSONToSchema,
+  schemaToJSON,
+  exportSchemaAsJSONSchema,
+} from '@triplit/db';
 import { format as formatFile } from 'prettier';
 import { projectSchemaMiddleware } from '../../middleware/project-schema.js';
 import { schemaFileContentFromSchema } from '../../schema.js';
 
-const DISPLAY_FORMATS = ['json', 'typescript', 'file'] as const;
+const DISPLAY_FORMATS = ['json', 'typescript', 'file', 'json-schema'] as const;
 type SchemaFormat = (typeof DISPLAY_FORMATS)[number];
 
 export default Command({
@@ -65,6 +69,13 @@ async function formatSchemaForDisplay(
 ): Promise<string> {
   if (format === 'json') {
     return JSON.stringify(schemaToJSON(schema), null, 2);
+  }
+  if (format === 'json-schema') {
+    return JSON.stringify(
+      exportSchemaAsJSONSchema(schema.collections),
+      null,
+      2
+    );
   }
   if (format === 'file' || format === 'typescript') {
     return await formatFile(schemaFileContentFromSchema(schema), {
