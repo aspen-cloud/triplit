@@ -55,6 +55,6 @@ export class GettingStartedComponent {
   root = 'https://triplit.dev';
   folderStructure = `/triplit
     schema.ts
-    triplit.ts
+    client.ts
 `;
 }
