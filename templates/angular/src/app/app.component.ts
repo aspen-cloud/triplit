@@ -1,13 +1,62 @@
-import { Component } from '@angular/core';
-import { RouterOutlet } from '@angular/router';
-
+import { Component, computed, effect } from '@angular/core';
+import { ConnectionStatusComponent } from './connection-status/connection-status.component.js';
+import { GettingStartedComponent } from './getting-started/getting-started.component.js';
+import { TodoComponent } from './todo/todo.component.js';
+import { triplit } from '../../triplit/client.js';
+import { FormControl, ReactiveFormsModule } from '@angular/forms';
+import { injectQuery } from '@triplit/angular';
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [RouterOutlet],
-  templateUrl: './app.component.html',
-  styleUrl: './app.component.css'
+  imports: [
+    ConnectionStatusComponent,
+    GettingStartedComponent,
+    TodoComponent,
+    ReactiveFormsModule,
+  ],
+  template: `
+    <div class="main-container">
+      <app-getting-started />
+      <div class="app-container">
+        <h1>Todos</h1>
+        <app-connection-status />
+        <form (submit)="handleSubmit($event)">
+          <input
+            type="text"
+            placeholder="What needs to be done?"
+            class="todo-input"
+            [formControl]="draftTodo"
+          />
+          <button class="btn" type="submit">Add Todo</button>
+        </form>
+        @if(queryResults.fetching()){
+        <p>Loading...</p>
+        }
+        <div class="todos-container">
+          @for ( todo of todosArray(); track todo.id) {
+          <app-todo [todo]="todo" />
+          }
+        </div>
+      </div>
+    </div>
+  `,
 })
 export class AppComponent {
-  title = 'angular';
+  draftTodo = new FormControl('');
+  handleSubmit = async (e: Event) => {
+    e.preventDefault();
+    if (!this.draftTodo.value) return;
+    await triplit.insert('todos', { text: this.draftTodo.value });
+    this.draftTodo.setValue('');
+  };
+  queryResults = injectQuery(() => ({
+    client: triplit,
+    query: triplit.query('todos').order('created_at', 'DESC'),
+  }));
+  todosArray = computed(() => {
+    const results = this.queryResults.results();
+    if (!results) return [];
+    results;
+    return Array.from(results.values());
+  });
 }

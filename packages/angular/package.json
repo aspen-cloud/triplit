@@ -1,0 +1,27 @@
+{
+  "name": "@triplit/angular",
+  "version": "0.0.1",
+  "type": "module",
+  "scripts": {
+    "build": "ng-packagr -p ng-package.json -c tsconfig.build.json",
+    "publish-pkg": "node ../../scripts/npm-check-version-and-publish.js",
+    "validate:types": "node ../../scripts/check-for-local-references-in-declarations.js dist"
+  },
+  "sideEffects": false,
+  "devDependencies": {
+    "@angular/common": "^18.1.2",
+    "@angular/compiler": "^18.1.2",
+    "@angular/compiler-cli": "^18.1.2",
+    "@angular/core": "^18.1.2",
+    "ng-packagr": "^18.1.0",
+    "typescript": "^5.5.4"
+  },
+  "peerDependencies": {
+    "@angular/common": "^18.1.0",
+    "@angular/core": "^18.1.0"
+  },
+  "dependencies": {
+    "@triplit/client": "workspace:^",
+    "tslib": "^2.3.0"
+  }
+}
