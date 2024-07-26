@@ -3,7 +3,7 @@ import { readFileSync, writeFileSync } from 'fs';
 import { resolve } from 'path';
 import { fileURLToPath } from 'url';
 
-const TEMPLATE_NAMES = ['react', 'svelte', 'vue'];
+const TEMPLATE_NAMES = ['react', 'svelte', 'vue', 'angular'];
 const SOURCE_DIR = '../../templates';
 const DEST_DIR = './dist/templates';
 

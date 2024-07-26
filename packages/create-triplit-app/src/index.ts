@@ -61,7 +61,7 @@ const FRAMEWORKS: Framework[] = [
   },
 ];
 
-const TEMPLATES = ['chat', 'react', 'svelte', 'vue'];
+const TEMPLATES = ['chat', 'react', 'svelte', 'vue', 'angular'];
 
 function getViteCreateArgs(
   pkgManager: string,
@@ -157,6 +157,10 @@ async function createTriplitAppWithVite() {
               {
                 title: green('Vue'),
                 value: 'vue',
+              },
+              {
+                title: yellow('Angular'),
+                value: 'angular',
               },
             ],
           },
