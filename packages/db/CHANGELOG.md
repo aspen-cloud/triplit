@@ -1,5 +1,12 @@
 # @triplit/db
 
+## 0.3.59
+
+### Patch Changes
+
+- 7c5105d: export schema export methods
+- 6c24a2c: fixup nullable transform for json schema export
+
 ## 0.3.58
 
 ### Patch Changes

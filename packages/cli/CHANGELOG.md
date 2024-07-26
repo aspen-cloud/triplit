@@ -1,5 +1,12 @@
 # @triplit/cli
 
+## 0.4.16
+
+### Patch Changes
+
+- 294a9b8: Add json-schema format to schema print
+- 6c24a2c: Manual version bump for CLI dependencies
+
 ## 0.4.15
 
 ### Patch Changes

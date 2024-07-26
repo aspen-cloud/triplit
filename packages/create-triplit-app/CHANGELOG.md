@@ -1,5 +1,11 @@
 # create-triplit-app
 
+## 0.0.19
+
+### Patch Changes
+
+- c118a1d: add angular to create-triplit-app
+
 ## 0.0.18
 
 ### Patch Changes
