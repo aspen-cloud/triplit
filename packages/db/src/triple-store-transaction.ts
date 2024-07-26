@@ -72,13 +72,13 @@ export class TripleStoreTransaction implements TripleStoreApi {
 
     // register tuple store hooks
     this.hooks.beforeCommit.forEach((hook) => {
-      this.tupleTx.hooks.beforeCommit.push((tx) => {
+      this.tupleTx.beforeCommit((tx) => {
         const triples = extractTriplesFromTx(tx);
         return hook(triples, this);
       });
     });
     this.hooks.afterCommit.forEach((hook) => {
-      this.tupleTx.hooks.afterCommit.push((tx) => {
+      this.tupleTx.afterCommit((tx) => {
         const triples = extractTriplesFromTx(tx);
         return hook(triples, this);
       });
@@ -372,14 +372,10 @@ export class TripleStoreTransaction implements TripleStoreApi {
   }
 
   beforeCommit(callback: TripleStoreBeforeCommitHook) {
-    this.tupleTx.hooks.beforeCommit.push((tx) =>
-      callback(extractTriplesFromTx(tx), this)
-    );
+    this.tupleTx.beforeCommit((tx) => callback(extractTriplesFromTx(tx), this));
   }
 
   afterCommit(callback: TripleStoreAfterCommitHook) {
-    this.tupleTx.hooks.afterCommit.push((tx) =>
-      callback(extractTriplesFromTx(tx), this)
-    );
+    this.tupleTx.afterCommit((tx) => callback(extractTriplesFromTx(tx), this));
   }
 }
