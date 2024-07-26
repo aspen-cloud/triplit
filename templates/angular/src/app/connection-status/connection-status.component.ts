@@ -12,5 +12,6 @@ import { triplit } from '../../../triplit/client.js';
   </div>`,
 })
 export class ConnectionStatusComponent {
+  //@ts-ignore
   status = injectConnectionStatus(triplit);
 }

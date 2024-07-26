@@ -50,7 +50,9 @@ export class AppComponent {
     this.draftTodo.setValue('');
   };
   queryResults = injectQuery(() => ({
+    //@ts-ignore
     client: triplit,
+    //@ts-ignore
     query: triplit.query('todos').order('created_at', 'DESC'),
   }));
   todosArray = computed(() => {
