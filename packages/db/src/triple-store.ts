@@ -45,9 +45,9 @@ import {
   RangeContraints,
   AVEIndex,
 } from './triple-store-utils.js';
-import { copyHooks } from './utils.js';
 import { TRIPLE_STORE_MIGRATIONS } from './triple-store-migrations.js';
 import { TransactionResult } from './query/types';
+import { MirroredArray } from './utils/mirrored-array.js';
 
 function isTupleStorage(object: any): object is AsyncTupleStorageApi {
   if (typeof object !== 'object') return false;
@@ -184,8 +184,9 @@ export class TripleStore<StoreKeys extends string = any>
   tupleStore: MultiTupleStore<TupleIndex>;
   clock: Clock;
   tenantId: string;
-  hooks: TripleStoreHooks;
-  reactivity: MultiTupleReactivity;
+  readonly hooks: TripleStoreHooks;
+  private _inheritedHooks: TripleStoreHooks;
+  private _ownHooks: TripleStoreHooks;
 
   constructor({
     tenantId,
@@ -215,7 +216,32 @@ export class TripleStore<StoreKeys extends string = any>
     storageScope?: string[];
     clock?: Clock;
     enableGarbageCollection?: boolean;
+    hooks?: TripleStoreHooks;
   }) {
+    this._inheritedHooks = opts.hooks ?? {
+      beforeCommit: [],
+      beforeInsert: [],
+      afterCommit: [],
+    };
+    this._ownHooks = {
+      beforeCommit: [],
+      beforeInsert: [],
+      afterCommit: [],
+    };
+    this.hooks = {
+      beforeCommit: MirroredArray(
+        this._inheritedHooks.beforeCommit,
+        this._ownHooks.beforeCommit
+      ),
+      beforeInsert: MirroredArray(
+        this._inheritedHooks.beforeInsert,
+        this._ownHooks.beforeInsert
+      ),
+      afterCommit: MirroredArray(
+        this._inheritedHooks.afterCommit,
+        this._ownHooks.afterCommit
+      ),
+    };
     this.hooks = {
       beforeCommit: [],
       beforeInsert: [],
@@ -226,7 +252,6 @@ export class TripleStore<StoreKeys extends string = any>
 
     // Server side database should provide a tenantId (project id)
     this.tenantId = tenantId ?? 'client';
-    this.reactivity = reactivity ?? new MultiTupleReactivity();
 
     if ('tupleStore' in opts) {
       this.tupleStore = opts.tupleStore;
@@ -259,7 +284,6 @@ export class TripleStore<StoreKeys extends string = any>
       }
       this.tupleStore = new MultiTupleStore<WithTenantIdPrefix<TupleIndex>>({
         storage: normalizedStores,
-        reactivity: this.reactivity,
       }).subspace([this.tenantId]) as MultiTupleStore<TupleIndex>;
     }
 
@@ -380,7 +404,7 @@ export class TripleStore<StoreKeys extends string = any>
         const tx = new TripleStoreTransaction({
           tupleTx: tupleTx,
           clock: this.clock,
-          hooks: copyHooks(this.hooks),
+          hooks: this.hooks,
         });
         let output: Output | undefined;
         if (isCanceled) return { tx, output };
@@ -414,7 +438,7 @@ export class TripleStore<StoreKeys extends string = any>
       storageScope: storageKeys,
       tenantId: this.tenantId,
       clock: this.clock,
-      reactivity: this.reactivity,
+      hooks: this.hooks,
     });
   }
 
