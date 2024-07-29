@@ -1,0 +1,162 @@
+---
+description: Learn how use Angular bindings for the Triplit client in your app.
+---
+
+import { Tabs, Tab, Callout } from 'nextra-theme-docs';
+import CreateTriplitAppTabs from '../../components/CreateTriplitAppTabs.mdx';
+
+# Angular
+
+### New projects
+
+The fast way to get started with Triplit is to use Create Triplit App which will scaffold a Angular application with Triplit. Choose `Angular` when prompted for the frontend framework.
+
+<CreateTriplitAppTabs />
+
+### Existing projects
+
+If have an existing Angular project, you install the hooks provided by `@triplit/angular`:
+
+<Tabs items={['npm', 'pnpm', 'yarn', 'bun']}>
+
+  <Tab>
+    ```bash copy
+    npm i @triplit/angular
+    ```
+  </Tab>
+    <Tab>
+    ```bash copy
+    pnpm add @triplit/angular
+    ```
+  </Tab>
+  <Tab>
+    ```bash copy
+    yarn add @triplit/angular
+    ```
+  </Tab>
+    <Tab>
+    ```bash copy
+    bun add @triplit/angular
+    ```
+  </Tab>
+</Tabs>
+
+## Signal-based hooks
+
+### injectQuery
+
+The `injectQuery` hook subscribes to the provided query inside your Angular component and will automatically unsubscribe from the query when the component unmounts.
+
+The result of the hook is an object with the following `Signal` properties:
+
+- `results`: A Map containing the results of the query, with entity ids as keys and entities as values.
+- `fetching`: A boolean that will be `true` initially, and then turn `false` when either the local fetch returns cached results or if there were no cached results and the remote fetch has completed.
+- `fetchingLocal`: A boolean indicating whether the query is currently fetching from the local cache.
+- `fetchingRemote`: A boolean indicating whether the query is currently fetching from the server.
+- `error`: An error object if the query failed to fetch.
+
+```ts filename="app.component.ts"
+import { triplit } from '@/triplit/client.js';
+import { injectQuery } from '@triplit/angular';
+import { Component, computed } from '@angular/core';
+import { TodoComponent } from './todo/todo.component.js';
+
+@Component({
+  selector: 'app-root',
+  standalone: true,
+  imports: [TodoComponent],
+  template: `
+    <div>
+      @if(queryResults.fetching()){
+      <p>Loading...</p>
+      } @else {
+      <div>
+        @for (todo of todosArray(); track todo.id) {
+        <app-todo [todo]="todo" />
+        }
+      </div>
+      }
+    </div>
+  `,
+})
+export class AppComponent {
+  queryResults = injectQuery(() => ({
+    client: triplit,
+    query: triplit.query('todos').order('created_at', 'DESC'),
+  }));
+  todosArray = computed(() => {
+    const results = this.queryResults.results();
+    if (!results) return [];
+    results;
+    return Array.from(results.values());
+  });
+}
+```
+
+### injectConnectionStatus
+
+The `injectConnectionStatus` hook subscribes to changes to the connection status of the client and will automatically unsubscribe when the component unmounts.
+
+```ts filename="connection-status.component.ts"
+import { Component } from '@angular/core';
+import { injectConnectionStatus } from '@triplit/angular';
+import { triplit } from '../../../triplit/client.js';
+
+@Component({
+  selector: 'app-connection-status',
+  standalone: true,
+  template: `<div>
+    <div class="{{ 'indicator ' + status().toLowerCase() }}"></div>
+    @if (status() === 'CLOSED') {Offline} @else if (status() === 'CONNECTING')
+    {Connecting} @else {Online}
+  </div>`,
+})
+export class ConnectionStatusComponent {
+  status = injectConnectionStatus(triplit);
+}
+```
+
+## Observable-based hooks
+
+### createQuery
+
+The `createQuery` hook return an object with observable properties that contain the results of the query, fetching states and error states. It has the same properties as the `injectQuery` hook, but the properties are `Observable` values instead of `Signal` values.
+
+```ts filename="app.component.ts"
+import { triplit } from '@/triplit/client.js';
+import { injectQuery } from '@triplit/angular';
+import { Component } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { TodoComponent } from './todo/todo.component.js';
+import { map } from 'rxjs';
+
+@Component({
+  selector: 'app-root',
+  standalone: true,
+  imports: [TodoComponent, CommonModule],
+  template: `
+    <div>
+      @if(queryResults.fetching$ | async) {
+      <p>Loading...</p>
+      } @else {
+      <div>
+        @for (todo of (todosArray$ | async); track todo.id) {
+        <app-todo [todo]="todo" />
+        }
+      </div>
+      }
+    </div>
+  `,
+})
+export class AppComponent {
+  queryResults = createQuery(() => ({
+    client: triplit,
+    query: triplit.query('todos').order('created_at', 'DESC'),
+  }));
+  todosArray$ = this.queryResults.results$.pipe(
+    map((results) => {
+      return results ? [...results.values()] : undefined;
+    })
+  );
+}
+```
