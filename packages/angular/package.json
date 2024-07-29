@@ -18,11 +18,13 @@
     "@angular/compiler-cli": "^18.1.2",
     "@angular/core": "^18.1.2",
     "ng-packagr": "^18.1.0",
+    "rxjs": "^7.8.1",
     "typescript": "^5.5.4"
   },
   "peerDependencies": {
     "@angular/common": "^18.1.0",
-    "@angular/core": "^18.1.0"
+    "@angular/core": "^18.1.0",
+    "rxjs": "^7.8.1"
   },
   "dependencies": {
     "@triplit/client": "workspace:^",
