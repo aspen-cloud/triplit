@@ -9660,11 +9660,13 @@ __metadata:
     "@angular/core": "npm:^18.1.2"
     "@triplit/client": "workspace:^"
     ng-packagr: "npm:^18.1.0"
+    rxjs: "npm:^7.8.1"
     tslib: "npm:^2.3.0"
     typescript: "npm:^5.5.4"
   peerDependencies:
     "@angular/common": ^18.1.0
     "@angular/core": ^18.1.0
+    rxjs: ^7.8.1
   languageName: unknown
   linkType: soft
 
