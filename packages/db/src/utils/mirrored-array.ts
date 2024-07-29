@@ -15,18 +15,17 @@ export function MirroredArray<T>(...arrays: T[][]): T[] {
       }
       return Reflect.get(target, prop, receiver);
     },
-    set(target, prop, value, receiver) {
+    has(target, prop) {
       if (typeof prop === 'string' && !isNaN(+prop)) {
         let index = Number(prop);
         for (let arr of arrays) {
           if (index < arr.length) {
-            arr[index] = value;
             return true;
           }
           index -= arr.length;
         }
       }
-      return Reflect.set(target, prop, value, receiver);
+      return prop in target;
     },
   });
 }
