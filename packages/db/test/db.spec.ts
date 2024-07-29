@@ -5184,6 +5184,7 @@ describe('selecting subqueries from schema', () => {
             id: S.Id(),
             user_id: S.String(),
             post_id: S.String(),
+            post: S.RelationById('posts', '$post_id'),
           }),
         },
       },
@@ -5267,6 +5268,23 @@ describe('selecting subqueries from schema', () => {
       name: 'Charlie',
       friend_ids: new Set(['user-1', 'user-2']),
     });
+  });
+
+  it('can have multiple results have the same entity as a relation', async () => {
+    const query = user1DB.query('likes').include('post').build();
+    const results = await user1DB.fetch(query);
+    console.log(results);
+    expect(results.size).toBe(3);
+    const postsMap = new Map();
+    for (const result of results.values()) {
+      expect(result.post).not.toBeNull();
+      if (postsMap.has(result.post.id)) {
+        // TODO use the exact same object reference
+        expect(postsMap.get(result.post.id)).toEqual(result.post);
+      } else {
+        postsMap.set(result.post.id, result.post);
+      }
+    }
   });
 
   it('must use include to select subqueries', async () => {
