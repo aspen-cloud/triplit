@@ -43,11 +43,10 @@ export function transpileTsFile(filename: string) {
 }
 
 export function transpileTsString(source: string) {
-  const isModule = isCallerModule();
   const result = ts.transpileModule(source, {
     compilerOptions: {
       target: ts.ScriptTarget.ESNext,
-      module: isModule ? ts.ModuleKind.ESNext : ts.ModuleKind.CommonJS,
+      module: ts.ModuleKind.ESNext,
     },
   });
   return result.outputText;
@@ -79,7 +78,7 @@ function getModuleType(callerPath: string) {
   return packageJson.type === 'module' ? 'esm' : 'commonjs';
 }
 
-function isCallerModule() {
+function isCallerESM() {
   return getModuleType(process.cwd()) === 'esm';
 }
 
@@ -96,7 +95,8 @@ export async function loadTsModule(filepath: string) {
   const dir = path.dirname(absolutePath);
   const filename = path.basename(absolutePath, '.ts');
   const tmpDir = path.join(dir, 'tmp');
-  const transpiledJsPath = path.join(tmpDir, `_${filename}.js`);
+  const ext = isCallerESM() ? 'js' : 'mjs';
+  const transpiledJsPath = path.join(tmpDir, `_${filename}.${ext}`);
   try {
     if (!fs.existsSync(absolutePath)) return undefined;
     const transpiledJs = transpileTsFile(absolutePath);
@@ -120,6 +120,7 @@ export async function evalJSString(
     }
     fs.mkdirSync(path.dirname(transpiledJsPath), { recursive: true });
     fs.writeFileSync(transpiledJsPath, source, 'utf8');
+
     return await importFresh('file:///' + transpiledJsPath);
   } finally {
     if (!options.tmpFile) {
