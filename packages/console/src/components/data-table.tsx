@@ -693,6 +693,7 @@ export function DataTable<TData, TValue>({
   return (
     <Table
       className="bg-popover text-xs border-r border-t flex flex-col h-full"
+      wrapperClassName="pb-8"
       style={{ width: table.getCenterTotalSize() }}
     >
       <TableHeader>
