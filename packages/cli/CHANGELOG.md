@@ -1,5 +1,11 @@
 # @triplit/cli
 
+## 0.4.17
+
+### Patch Changes
+
+- ae7357f: Fixup cjs file reads
+
 ## 0.4.16
 
 ### Patch Changes
