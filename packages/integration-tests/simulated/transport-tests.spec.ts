@@ -1344,6 +1344,56 @@ describe('subquery syncing', () => {
     expect(aliceSub.mock.calls.at(-1)[0].get('test1')).toBeUndefined();
     expect(bobSub.mock.calls.at(-1)[0].get('test1')).toBeUndefined();
   });
+
+  it('Can evict multiple items from windowed subscription', async () => {
+    const schema = {
+      users: {
+        schema: S.Schema({ id: S.Id(), number: S.Number() }),
+      },
+    } satisfies ClientSchema;
+    const serverDb = new DB({ schema: { collections: schema, version: 0 } });
+    const server = new TriplitServer(serverDb);
+    const alice = createTestClient(server, SERVICE_KEY, {
+      clientId: 'alice',
+      schema: schema,
+    });
+    // Initialize db data
+    await serverDb.transact(async (tx) => {
+      await tx.insert('users', { id: '1', number: 3 });
+      await tx.insert('users', { id: '2', number: 2 });
+      await tx.insert('users', { id: '3', number: 1 });
+    });
+    const query = alice
+      .query('users')
+      .order([['number', 'DESC']])
+      .limit(2);
+    const sub = vi.fn();
+    alice.subscribe(query.build(), sub);
+    await pause();
+
+    // Data has loaded
+    {
+      const lastCall = sub.mock.calls.at(-1)[0];
+      expect(lastCall).toHaveLength(2);
+      expect([...lastCall.values()].map((e) => e.id)).toEqual(['1', '2']);
+    }
+
+    // Insert new data on the server that evicts the current data (multiple matches in limit window)
+    await serverDb.transact(async (tx) => {
+      // insertion order should be higher number first to trigger windowing issue
+      await tx.insert('users', { id: '4', number: 6 });
+      await tx.insert('users', { id: '5', number: 5 });
+      await tx.insert('users', { id: '6', number: 4 });
+    });
+    await pause();
+
+    // new data has loaded into the subscription window
+    {
+      const lastCall = sub.mock.calls.at(-1)[0];
+      expect(lastCall).toHaveLength(2);
+      expect([...lastCall.values()].map((e) => e.id)).toEqual(['4', '5']);
+    }
+  });
 });
 
 describe('pagination syncing', () => {
@@ -1930,96 +1980,6 @@ describe('rules', () => {
     const lastCallVal = bobCallback.mock.calls.at(-1)[0];
     expect(lastCallVal).toHaveLength(1);
     expect(lastCallVal.has('good-post')).toBe(true);
-  });
-});
-
-describe.only('will return correct results for a second subscription on the same collection (Dates)', () => {
-  it('will not use stale data from the cache', async () => {
-    const schema = {
-      users: {
-        schema: S.Schema({ id: S.Id(), date: S.Date() }),
-      },
-    } satisfies ClientSchema;
-    const serverDb = new DB({ schema: { collections: schema, version: 0 } });
-    const server = new TriplitServer(serverDb);
-    const alice = createTestClient(server, SERVICE_KEY, {
-      clientId: 'alice',
-      schema: schema,
-    });
-    const bob = createTestClient(server, SERVICE_KEY, {
-      clientId: 'bob',
-      schema: schema,
-    });
-    await alice.insert('users', { id: '1', date: new Date('2021-01-02') });
-    await alice.insert('users', { id: '2', date: new Date('2021-01-01') });
-    await alice.insert('users', { id: '3', date: new Date('2021-01-04') });
-    await alice.insert('users', { id: '4', date: new Date('2021-01-03') });
-
-    const query = bob.query('users').limit(2);
-
-    const bobSub = vi.fn();
-    bob.subscribe(query.build(), bobSub);
-    await pause(200);
-    expect(bobSub).toHaveBeenCalled();
-    const lastCallVal = bobSub.mock.calls.at(-1)[0];
-    expect(lastCallVal).toHaveLength(2);
-    console.log(lastCallVal);
-    expect([...lastCallVal.values()].map((e) => e.id)).toEqual(['1', '2']);
-
-    const bobSubWithOrder = vi.fn();
-    bob.subscribe(query.order(['date', 'DESC']).build(), bobSubWithOrder);
-    await pause(200);
-    expect(bobSubWithOrder).toHaveBeenCalled();
-    const orderedSubLastResult = bobSubWithOrder.mock.calls.at(-1)[0];
-    console.log(orderedSubLastResult);
-    expect([...orderedSubLastResult.values()].map((e) => e.id)).toEqual([
-      '3',
-      '4',
-    ]);
-  });
-  it('will return correct results for a second subscription on the same collection (numbers)', async () => {
-    const schema = {
-      users: {
-        schema: S.Schema({ id: S.Id(), number: S.Number() }),
-      },
-    } satisfies ClientSchema;
-    const serverDb = new DB({ schema: { collections: schema, version: 0 } });
-    const server = new TriplitServer(serverDb);
-    const alice = createTestClient(server, SERVICE_KEY, {
-      clientId: 'alice',
-      schema: schema,
-    });
-    const bob = createTestClient(server, SERVICE_KEY, {
-      clientId: 'bob',
-      schema: schema,
-    });
-    await alice.insert('users', { id: '1', number: 3 });
-    await alice.insert('users', { id: '2', number: 2 });
-    await alice.insert('users', { id: '3', number: 5 });
-    await alice.insert('users', { id: '4', number: 6 });
-    await alice.insert('users', { id: '5', number: 4 });
-
-    const query = bob.query('users').limit(2);
-
-    const bobSub = vi.fn();
-    bob.subscribe(query.build(), bobSub);
-    await pause(200);
-    expect(bobSub).toHaveBeenCalled();
-    const lastCallVal = bobSub.mock.calls.at(-1)[0];
-    expect(lastCallVal).toHaveLength(2);
-    console.log(lastCallVal);
-    expect([...lastCallVal.values()].map((e) => e.id)).toEqual(['1', '2']);
-
-    const bobSubWithOrder = vi.fn();
-    bob.subscribe(query.order(['number', 'DESC']).build(), bobSubWithOrder);
-    await pause(200);
-    expect(bobSubWithOrder).toHaveBeenCalled();
-    const orderedSubLastResult = bobSubWithOrder.mock.calls.at(-1)[0];
-    console.log(orderedSubLastResult);
-    expect([...orderedSubLastResult.values()].map((e) => e.id)).toEqual([
-      '4',
-      '3',
-    ]);
   });
 });
 

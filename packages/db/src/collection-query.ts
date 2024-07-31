@@ -1580,6 +1580,11 @@ export function subscribeResultsAndTriples<
           if (!updatedEntitiesForQuery.size) return;
 
           let queryShouldRefire = false;
+
+          // Helpers for limit window
+          const endOfWindow = [...nextResult.values()].at(-1);
+          const windowSize = nextResult.size;
+
           for (const entity of updatedEntitiesForQuery) {
             const entityTriples = await tripleStore.findByEntity(
               appendCollectionToId(query.collectionName, entity)
@@ -1640,11 +1645,9 @@ export function subscribeResultsAndTriples<
             // Check if the result stays within the current range of the query based on the limit
             // If it doesnt, we'll remove and might add it back when we backfill
             let satisfiesLimitRange = true;
-            if (order && limit && nextResult.size >= limit) {
-              const allValues = [...nextResult.values()];
-              const endOfRange = allValues.at(-1);
+            if (order && limit && windowSize >= limit) {
               const sortFn = querySorter(query);
-              satisfiesLimitRange = sortFn(entityObj, endOfRange) < 1;
+              satisfiesLimitRange = sortFn(entityObj, endOfWindow) < 1;
             }
 
             // Add to result or prune as needed
