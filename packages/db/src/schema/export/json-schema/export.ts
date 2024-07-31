@@ -58,8 +58,6 @@ export function exportSchemaAsJSONSchema(
     version: 0,
   });
 
-  console.dir(triplitSchemaJsonData, { depth: null });
-
   for (const collectionKey in triplitSchemaJsonData?.collections) {
     //
     const collectionJsonSchema: JSONSchema7 =
@@ -105,7 +103,7 @@ function transformTriplitJsonDataInJsonSchema(
   transformFunctions.map((transformFunc) => {
     transformObjectDeeply(cloneToTransform, transformFunc);
   });
-  console.dir(cloneToTransform, { depth: null });
+
   // evaluate to ensure it compiles
   // e.g. if triplit changes their format
   const schemaEvaluation = ajv.compile(cloneToTransform);
