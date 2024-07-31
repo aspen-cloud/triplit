@@ -375,7 +375,7 @@ export class MultiTupleTransaction<
 > extends ScopedMultiTupleOperator<TupleSchema> {
   readonly txs: Record<string, AsyncTupleRootTransactionApi<TupleSchema>>;
   readonly store: MultiTupleStore<TupleSchema>;
-  isCanceled = false;
+  isCancelled = false;
   readonly hooks: MultiTupleStoreHooks<TupleSchema>;
   private _inheritedHooks: MultiTupleStoreHooks<TupleSchema>;
   private _ownHooks: MultiTupleStoreHooks<TupleSchema>;
@@ -487,7 +487,7 @@ export class MultiTupleTransaction<
   }
 
   async commit() {
-    if (this.isCanceled) {
+    if (this.isCancelled) {
       console.warn('Cannot commit already canceled transaction.');
       return;
     }
@@ -508,12 +508,12 @@ export class MultiTupleTransaction<
     this.store.reactivity.emit(this.id);
   }
   async cancel() {
-    if (this.isCanceled) {
+    if (this.isCancelled) {
       console.warn('Attempted to cancel already canceled transaction.');
       return;
     }
     await Promise.all(Object.values(this.txs).map((tx) => tx.cancel()));
-    this.isCanceled = true;
+    this.isCancelled = true;
   }
 }
 

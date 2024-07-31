@@ -633,6 +633,10 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
     await this.storeTx.cancel();
   }
 
+  get isCancelled() {
+    return this.storeTx.isCancelled;
+  }
+
   async insert<CN extends CollectionNameFromModels<M>>(
     collectionName: CN,
     doc: Unalias<InsertTypeFromModel<ModelFromModels<M, CN>>>

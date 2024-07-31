@@ -76,4 +76,5 @@ export type FetchResultEntityFromParts<
 export type TransactionResult<Output> = {
   txId: string | undefined;
   output: Output | undefined;
+  isCancelled: boolean;
 };

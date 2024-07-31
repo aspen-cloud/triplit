@@ -391,7 +391,6 @@ export class TripleStore<StoreKeys extends string = any>
     callback: (tx: TripleStoreTransaction) => Promise<Output>,
     scope?: StorageScope
   ): Promise<TransactionResult<Output>> {
-    let isCanceled = false;
     const { tx, output } = await this.tupleStore.autoTransact(
       async (tupleTx) => {
         tupleTx.beforeCommit(addIndexesToTransaction);
@@ -407,12 +406,11 @@ export class TripleStore<StoreKeys extends string = any>
           hooks: this.hooks,
         });
         let output: Output | undefined;
-        if (isCanceled) return { tx, output };
+        if (tx.isCancelled) return { tx, output };
         try {
           output = await callback(tx);
         } catch (e) {
           if (e instanceof WriteRuleError) {
-            isCanceled = true;
             await tx.cancel();
           }
           throw e;
@@ -426,6 +424,7 @@ export class TripleStore<StoreKeys extends string = any>
         ? JSON.stringify(tx.assignedTimestamp)
         : undefined,
       output,
+      isCancelled: tx.isCancelled,
     };
   }
 
