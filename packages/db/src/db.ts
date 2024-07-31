@@ -919,14 +919,14 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
       return unsub;
     };
 
-    const unsubPromise = startSubscription();
+    const unsubPromise = startSubscription().catch(onError);
 
     return async () => {
       // Immediately set unsubscribed to true to prevent any new results from being processed
       unsubscribed = true;
       this.logger.debug('subscribe END', { query });
       const unsub = await unsubPromise;
-      return unsub();
+      return unsub?.();
     };
   }
 
@@ -970,11 +970,11 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
       return unsub;
     };
 
-    const unsubPromise = startSubscription();
+    const unsubPromise = startSubscription().catch(onError);
 
     return async () => {
       const unsub = await unsubPromise;
-      return unsub();
+      return unsub?.();
     };
   }
 
