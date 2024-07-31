@@ -159,9 +159,13 @@ function getQueryInclude<
   if (!query.include) return query.include;
   //   addSubsSelectsFromIncludes(query, schema);
   const inclusions: any = {}; // TODO: type this
-  for (const [relationName, relation] of Object.entries(
-    query.include as Record<string, RelationSubquery<M, any> | null>
-  )) {
+  for (const [relationName, relation] of Object.entries(query.include)) {
+    // We have already prepared this statement
+    if (relation?.subquery) {
+      inclusions[relationName] = relation;
+      continue;
+    }
+
     const attributeType = getAttributeFromSchema(
       relationName.split('.'),
       schema,
@@ -169,10 +173,8 @@ function getQueryInclude<
     );
 
     if (attributeType && attributeType.type === 'query') {
-      // TODO: this might be wrong
-      let additionalQuery =
-        // @ts-expect-error TODO: figure out proper typing of include here, this is where it would be helpful to know the difference between a CollectionQuery and Prepared<CollectionQuery>
-        relation as CollectionQuery<M, any> | undefined;
+      // @ts-expect-error this is improperly typed because we dont differentiate between a user query and prepared query
+      let additionalQuery = relation as CollectionQuery<M, any>;
       const merged = mergeQueries({ ...attributeType.query }, additionalQuery);
       const subquerySelection = {
         subquery: prepareQuery(merged, schema, session, options),
@@ -180,9 +182,6 @@ function getQueryInclude<
       };
       inclusions[relationName] = subquerySelection;
       //   query.include = { ...query.include, [relationName]: subquerySelection };
-    } else if (relation?.subquery) {
-      inclusions[relationName] = relation;
-      //   query.include = { ...query.include, [relationName]: relation };
     } else {
       if (!attributeType) {
         throw new RelationDoesNotExistError(relationName, query.collectionName);
