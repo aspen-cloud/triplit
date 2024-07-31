@@ -1,5 +1,11 @@
 # @triplit/db
 
+## 0.3.60
+
+### Patch Changes
+
+- 41692f0: Fixup subscription order bug
+
 ## 0.3.59
 
 ### Patch Changes
