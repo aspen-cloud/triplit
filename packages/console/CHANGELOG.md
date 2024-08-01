@@ -1,5 +1,15 @@
 # @triplit/console
 
+## 0.3.86
+
+### Patch Changes
+
+- 3d3d9b1: fixup issue with dropping collection
+- Updated dependencies [40e2e50]
+  - @triplit/client@0.3.80
+  - @triplit/db@0.3.62
+  - @triplit/react@0.3.84
+
 ## 0.3.85
 
 ### Patch Changes
