@@ -12,7 +12,8 @@
     "tag:packages": "git pull --tags -f && changeset tag",
     "lint": "yarn workspaces foreach --all run lint",
     "version": "changeset version && yarn install --mode update-lockfile",
-    "changeset": "changeset && node ./scripts/generate-cli-dependency-changeset.js"
+    "changeset": "changeset && node ./scripts/generate-cli-dependency-changeset.js",
+    "test": "yarn workspaces foreach --all run test"
   },
   "devDependencies": {
     "@changesets/cli": "^2.26.1",
