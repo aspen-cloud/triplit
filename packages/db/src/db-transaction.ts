@@ -31,6 +31,7 @@ import {
   CollectionNotFoundError,
   InvalidSchemaPathError,
   WritePermissionError,
+  TriplitError,
 } from './errors.js';
 import { ValuePointer } from '@sinclair/typebox/value';
 import DB, {
@@ -101,6 +102,7 @@ interface TransactionOptions<
   schema?: StoreSchema<M>;
   skipRules?: boolean;
   logger?: Logger;
+  manualSchemaRefresh?: boolean;
 }
 
 const EXEMPT_FROM_WRITE_RULES = new Set(['_metadata']);
@@ -322,7 +324,9 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
       // After we perform writes, check permissions
       this.storeTx.beforeCommit(this.PostCheckWritePermissions);
     }
-    this.storeTx.beforeInsert(this.UpdateLocalSchema);
+    if (!options.manualSchemaRefresh)
+      this.storeTx.beforeInsert(this.UpdateLocalSchema);
+
     this.storeTx.beforeCommit(this.CallBeforeCommitDBHooks);
     this.storeTx.afterCommit(this.CallAfterCommitDBHooks);
   }
@@ -617,8 +621,37 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
   readonly METADATA_COLLECTION_NAME =
     '_metadata' as CollectionNameFromModels<M>;
 
+  // The original current schema operating on the transaction
   async getSchema() {
     return this.schema;
+  }
+
+  // Read the current schema based on stored data
+  async getSchemaFromStore() {
+    const { schemaTriples } = await readSchemaFromTripleStore(this.storeTx);
+    const entity = new Entity();
+    updateEntity(entity, schemaTriples);
+    // Type definitions are kinda ugly here
+    // @ts-expect-error - Probably want a way to override the output type of this
+    const schemaDefinition = timestampedObjectToPlainObject(entity.data) as
+      | SchemaDefinition
+      | undefined;
+
+    return {
+      version: schemaDefinition?.version ?? 0,
+      collections:
+        schemaDefinition?.collections &&
+        collectionsDefinitionToSchema(schemaDefinition.collections),
+    } as StoreSchema<M>;
+  }
+
+  // If you would like to update the schema within a transaction (data may not be queryable after this)
+  async refreshSchema() {
+    if (!this.options.manualSchemaRefresh)
+      throw new TriplitError(
+        'Schema refresh is disabled by default. To enable, set manualSchemaRefresh to true in the transaction options.'
+      );
+    this.schema = await this.getSchemaFromStore();
   }
 
   async getSchemaJson() {

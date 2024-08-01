@@ -19,6 +19,7 @@ import {
   Unalias,
   SchemaJSON,
   TransactionResult,
+  TransactOptions,
 } from '@triplit/db';
 import { getUserId } from '../token.js';
 import { UnrecognizedFetchPolicyError } from '../errors.js';
@@ -132,6 +133,8 @@ function getClientStorage(storageOption: StorageOptions) {
 }
 
 const DEFAULT_STORAGE_OPTION = 'memory';
+
+type ClientTransactOptions = Pick<TransactOptions, 'manualSchemaRefresh'>;
 
 export interface ClientOptions<M extends ClientSchema | undefined> {
   /**
@@ -320,10 +323,12 @@ export class TriplitClient<M extends ClientSchema | undefined = undefined> {
    * @returns An object with the transaction ID and the output of the transaction
    */
   async transact<Output>(
-    callback: (tx: DBTransaction<M>) => Promise<Output>
+    callback: (tx: DBTransaction<M>) => Promise<Output>,
+    options: ClientTransactOptions = {}
   ): Promise<TransactionResult<Output>> {
     this.logger.debug('transact START');
     const resp = await this.db.transact(callback, {
+      ...options,
       skipRules: SKIP_RULES,
       storeScope: {
         read: ['outbox', 'cache'],

@@ -73,10 +73,11 @@ export interface CollectionRules<
   // update?: Rule<M>[];
 }
 
-interface TransactOptions {
+export interface TransactOptions {
   storeScope?: { read: string[]; write: string[] };
   skipRules?: boolean;
   dangerouslyBypassSchemaInitialization?: boolean;
+  manualSchemaRefresh?: boolean;
 }
 
 export type CreateCollectionOperation = [
@@ -739,6 +740,7 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
           schema,
           skipRules: options.skipRules,
           logger: this.logger.scope('tx'),
+          manualSchemaRefresh: options.manualSchemaRefresh,
         });
         return await callback(tx);
       }, options.storeScope);
