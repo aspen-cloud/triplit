@@ -1,5 +1,11 @@
 # @triplit/db
 
+## 0.3.64
+
+### Patch Changes
+
+- c8c955a5: Fixup prepare query inclusion merging
+
 ## 0.3.63
 
 ### Patch Changes
