@@ -156,27 +156,32 @@ export async function safeSchemaEdit(
   callback: (tx: DBTransaction<any>) => Promise<void>
 ) {
   const originalSchema = await client.db.getSchema();
-  const transaction = await client.transact(async (tx) => {
-    try {
-      await callback(tx);
-      if (!originalSchema) return;
-      const updatedSchema = await tx.getSchema();
-      if (!updatedSchema) return;
-      const diff = diffSchemas(originalSchema, updatedSchema);
+  const transaction = await client.transact(
+    async (tx) => {
+      try {
+        await callback(tx);
+        if (!originalSchema) return;
+        const updatedSchema = await tx.getSchemaFromStore();
+        if (!updatedSchema) return;
+        const diff = diffSchemas(originalSchema, updatedSchema);
 
-      // If no differences, return early
-      if (diff.length === 0) return;
+        // If no differences, return early
+        if (diff.length === 0) return;
 
-      const issues = await getSchemaDiffIssues(tx, diff);
-      const violations = issues.filter((issue) => issue.violatesExistingData);
-      if (!violations.length) return;
-      await tx.cancel();
-      return violations;
-    } catch (e) {
-      console.error(e);
-      throw e;
+        const issues = await getSchemaDiffIssues(tx, diff);
+        const violations = issues.filter((issue) => issue.violatesExistingData);
+        if (!violations.length) return;
+        await tx.cancel();
+        return violations;
+      } catch (e) {
+        console.error(e);
+        throw e;
+      }
+    },
+    {
+      manualSchemaRefresh: true,
     }
-  });
+  );
   // Wait for transaction to commit remotely so we can start subscription on new collection
   // Otherwise we get errors that the collection doesn't exist
   // TODO: NEED better API for handling this kind of situation
