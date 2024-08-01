@@ -13,6 +13,7 @@ import {
   TupleValue,
   CollectionQuery,
   TriplitError,
+  TransactionResult,
 } from '@triplit/db';
 import { LogLevel } from '@triplit/types/logger';
 import { DefaultLogger } from '../client-logger.js';
@@ -81,14 +82,14 @@ const workerOperator: ClientWorker = {
   },
   async insert(
     ...args: Parameters<typeof clientOperator.insert>
-  ): Promise<{ txId: string | undefined; output: any }> {
+  ): Promise<TransactionResult<any>> {
     return await clientOperator.insert(...args);
   },
   async update<CN extends CollectionNameFromModels<any>>(
     collectionName: CN,
     entityId: string,
     updater: (entity: UpdateTypeFromModel<any>) => void | Promise<void>
-  ): Promise<{ txId: string | undefined; output: void | undefined }> {
+  ): Promise<TransactionResult<void>> {
     return await clientOperator.update(
       collectionName,
       entityId,
@@ -104,7 +105,7 @@ const workerOperator: ClientWorker = {
     updater: (
       entity: UpdateTypeFromModel<ModelFromModels<any, CN>>
     ) => [Attribute, TupleValue][] | Promise<[Attribute, TupleValue][]>
-  ): Promise<{ txId: string | undefined; output: void | undefined }> {
+  ): Promise<TransactionResult<void>> {
     return await clientOperator.updateRaw(collectionName, entityId, updater);
   },
   async getSchema() {
@@ -112,7 +113,7 @@ const workerOperator: ClientWorker = {
   },
   async delete(
     ...args: Parameters<typeof clientOperator.delete>
-  ): Promise<{ txId: string | undefined; output: void | undefined }> {
+  ): Promise<TransactionResult<void>> {
     return await clientOperator.delete(...args);
   },
   // @ts-ignore

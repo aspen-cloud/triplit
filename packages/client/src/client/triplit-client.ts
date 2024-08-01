@@ -482,12 +482,11 @@ export class TriplitClient<M extends ClientSchema | undefined = undefined> {
   async insert<CN extends CollectionNameFromModels<M>>(
     collectionName: CN,
     object: Unalias<InsertTypeFromModel<ModelFromModels<M, CN>>>
-  ): Promise<{
-    txId: string | undefined;
-    output:
-      | Unalias<ClientFetchResultEntity<ClientQueryDefault<M, CN>>>
-      | undefined;
-  }> {
+  ): Promise<
+    TransactionResult<
+      Unalias<ClientFetchResultEntity<ClientQueryDefault<M, CN>>>
+    >
+  > {
     this.logger.debug('insert START', collectionName, object);
     const resp = await this.db.insert(collectionName, object, {
       skipRules: SKIP_RULES,
