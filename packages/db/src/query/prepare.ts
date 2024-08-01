@@ -466,8 +466,14 @@ function mergeQueries<M extends Models<any, any> | undefined>(
   queryB?: CollectionQuery<M, any>
 ) {
   if (!queryB) return queryA;
-  const mergedWhere = [...(queryA.where ?? []), ...(queryB.where ?? [])];
-  const mergedSelect = [...(queryA.select ?? []), ...(queryB.select ?? [])];
+  const mergedWhere =
+    !!queryA.where || !!queryB.where
+      ? [...(queryA.where ?? []), ...(queryB.where ?? [])]
+      : undefined;
+  const mergedSelect =
+    !!queryA.select || !!queryB.select
+      ? [...(queryA.select ?? []), ...(queryB.select ?? [])]
+      : undefined;
   return { ...queryA, ...queryB, where: mergedWhere, select: mergedSelect };
 }
 
