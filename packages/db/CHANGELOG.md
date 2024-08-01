@@ -1,5 +1,11 @@
 # @triplit/db
 
+## 0.3.63
+
+### Patch Changes
+
+- 48bdee2: Fixup query preparation with deep inclusions
+
 ## 0.3.62
 
 ### Patch Changes
