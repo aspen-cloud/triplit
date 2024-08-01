@@ -1,5 +1,12 @@
 # @triplit/db
 
+## 0.3.61
+
+### Patch Changes
+
+- c78aa65: Fixup errors not catching on initial subscription
+- 6ccbbd5: Add isCancelled to transaction output
+
 ## 0.3.60
 
 ### Patch Changes

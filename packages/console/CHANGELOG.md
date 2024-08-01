@@ -1,5 +1,17 @@
 # @triplit/console
 
+## 0.3.85
+
+### Patch Changes
+
+- 89107bc: Await schema sync on new collection creation
+- Updated dependencies [c78aa65]
+- Updated dependencies [1c0bdf7]
+- Updated dependencies [6ccbbd5]
+  - @triplit/db@0.3.61
+  - @triplit/client@0.3.79
+  - @triplit/react@0.3.83
+
 ## 0.3.84
 
 ### Patch Changes
