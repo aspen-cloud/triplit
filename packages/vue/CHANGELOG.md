@@ -1,5 +1,11 @@
 # @triplit/vue
 
+## 0.1.20
+
+### Patch Changes
+
+- @triplit/client@0.3.82
+
 ## 0.1.19
 
 ### Patch Changes
