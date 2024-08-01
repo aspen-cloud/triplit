@@ -1,5 +1,14 @@
 # @triplit/client
 
+## 0.3.79
+
+### Patch Changes
+
+- 1c0bdf7: Fixup transaction types
+- Updated dependencies [c78aa65]
+- Updated dependencies [6ccbbd5]
+  - @triplit/db@0.3.61
+
 ## 0.3.78
 
 ### Patch Changes
