@@ -1,5 +1,11 @@
 # @triplit/db
 
+## 0.3.62
+
+### Patch Changes
+
+- 40e2e50: add transaction option manualSchemaRefresh
+
 ## 0.3.61
 
 ### Patch Changes

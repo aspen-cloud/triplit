@@ -1,5 +1,13 @@
 # @triplit/client
 
+## 0.3.80
+
+### Patch Changes
+
+- 40e2e50: add transaction option manualSchemaRefresh
+- Updated dependencies [40e2e50]
+  - @triplit/db@0.3.62
+
 ## 0.3.79
 
 ### Patch Changes
