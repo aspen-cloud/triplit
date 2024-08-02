@@ -1,5 +1,12 @@
 # @triplit/client
 
+## 0.3.83
+
+### Patch Changes
+
+- bb7c67ab: pass full token to client session
+- d3f0ea94: use Worker if SharedWorker not available in WorkerClient
+
 ## 0.3.82
 
 ### Patch Changes
