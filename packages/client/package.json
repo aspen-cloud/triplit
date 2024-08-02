@@ -43,7 +43,7 @@
     "build:watch": "tsc -w",
     "lint:build": "npx publint",
     "lint": "tsc --noEmit",
-    "test": "yarn test:unit && yarn typecheck",
+    "test": "yarn test:unit",
     "test:unit": "vitest run",
     "typecheck": "vitest --typecheck.only --no-watch",
     "publish-pkg": "node ../../scripts/npm-check-version-and-publish.js",

@@ -13,12 +13,13 @@ import {
 } from './serialization.js';
 import { StringType } from './string.js';
 import { DateType } from './date.js';
-import { RecordType } from './record.js';
+import { RecordProps, RecordType } from './record.js';
 import { NumberType } from './number.js';
 import { BooleanType } from './boolean.js';
 import { SetType } from './set.js';
 import { ValueSchemaType } from './value.js';
 import { QueryType } from './query.js';
+import { CollectionNameFromModels } from '../db.js';
 
 export type Operator =
   | '='
@@ -44,8 +45,8 @@ export type ValueType<TO extends UserTypeOptions> =
 export type DataType =
   | ValueType<any>
   | SetType<ValueType<any>, any>
-  | RecordType<{ [k: string]: DataType | Optional<DataType> }>
-  | QueryType<any, any>;
+  | QueryType<any, any, any>
+  | RecordType<RecordProps<any, any>>;
 
 export const Nullable = <T extends ValueSchemaType>(type: T) =>
   Type.Union([type, Type.Null()]);

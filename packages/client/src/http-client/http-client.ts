@@ -15,13 +15,14 @@ import {
   appendCollectionToId,
   EntityNotFoundError,
   Unalias,
+  SchemaQueries,
+  FetchResult,
+  ToQuery,
+  FetchResultEntity,
+  CollectionQueryDefault,
+  CollectionQuery,
 } from '@triplit/db';
-import {
-  ClientFetchResult,
-  ClientFetchResultEntity,
-  ClientQuery,
-  ClientSchema,
-} from '../client/types';
+import { ClientSchema } from '../client/types';
 import { httpClientQueryBuilder } from './query-builder.js';
 
 function parseError(error: string) {
@@ -90,9 +91,9 @@ export class HttpClient<M extends ClientSchema | undefined> {
     return { data: await res.json(), error: undefined };
   }
 
-  async fetch<CQ extends ClientQuery<M, any>>(
+  async fetch<CQ extends SchemaQueries<M>>(
     query: CQ
-  ): Promise<Unalias<ClientFetchResult<CQ>>> {
+  ): Promise<Unalias<FetchResult<ToQuery<M, CQ>>>> {
     const { data, error } = await this.sendRequest('/fetch', 'POST', {
       query,
     });
@@ -100,7 +101,7 @@ export class HttpClient<M extends ClientSchema | undefined> {
     return deserializeHttpFetchResult(query, data.result, await this.schema());
   }
 
-  private async queryTriples<CQ extends ClientQuery<M, any, any, any>>(
+  private async queryTriples<CQ extends SchemaQueries<M>>(
     query: CQ
   ): Promise<TripleRow[]> {
     const { data, error } = await this.sendRequest('/queryTriples', 'POST', {
@@ -110,9 +111,9 @@ export class HttpClient<M extends ClientSchema | undefined> {
     return data;
   }
 
-  async fetchOne<CQ extends ClientQuery<M, any>>(
+  async fetchOne<CQ extends SchemaQueries<M>>(
     query: CQ
-  ): Promise<Unalias<ClientFetchResultEntity<CQ>> | null> {
+  ): Promise<Unalias<FetchResultEntity<CQ>> | null> {
     query = { ...query, limit: 1 };
     const { data, error } = await this.sendRequest('/fetch', 'POST', {
       query,
@@ -131,8 +132,10 @@ export class HttpClient<M extends ClientSchema | undefined> {
   async fetchById<CN extends CollectionNameFromModels<M>>(
     collectionName: CN,
     id: string
-  ) {
-    const query = this.query(collectionName).id(id).build();
+  ): Promise<Unalias<
+    FetchResultEntity<ToQuery<M, CollectionQueryDefault<M, CN>>>
+  > | null> {
+    const query = this.query(collectionName).id(id).build() as SchemaQueries<M>;
     return this.fetchOne(query);
   }
 
@@ -224,7 +227,9 @@ export class HttpClient<M extends ClientSchema | undefined> {
      */
     const schema = await this.schema();
     const collectionSchema = schema?.[collectionName]?.schema;
-    const entityQuery = this.query(collectionName).id(entityId).build();
+    const entityQuery = this.query(collectionName)
+      .id(entityId)
+      .build() as SchemaQueries<M>;
     const triples = await this.queryTriples(entityQuery);
     if (!triples.length)
       throw new EntityNotFoundError(
@@ -287,11 +292,9 @@ export {
   HttpClient as RemoteClient,
 };
 
-function deserializeHttpFetchResult<CQ extends ClientQuery<any, any>>(
-  query: CQ,
-  result: [string, any][],
-  schema?: any
-): ClientFetchResult<CQ> {
+function deserializeHttpFetchResult<
+  CQ extends CollectionQuery<any, any, any, any>
+>(query: CQ, result: [string, any][], schema?: any): FetchResult<CQ> {
   return new Map(
     result.map((entry) => [
       entry[0],
@@ -300,11 +303,11 @@ function deserializeHttpFetchResult<CQ extends ClientQuery<any, any>>(
   );
 }
 
-function deserializeHttpEntity<CQ extends ClientQuery<any, any>>(
+function deserializeHttpEntity<CQ extends CollectionQuery<any, any, any, any>>(
   query: CQ,
   entity: any,
   schema?: any
-): ClientFetchResultEntity<CQ> {
+): FetchResultEntity<CQ> {
   const { include, collectionName } = query;
   const collectionSchema = schema?.[collectionName]?.schema;
 
@@ -312,7 +315,7 @@ function deserializeHttpEntity<CQ extends ClientQuery<any, any>>(
     ? (collectionSchema.convertJSONToJS(
         entity,
         schema
-      ) as ClientFetchResultEntity<CQ>)
+      ) as FetchResultEntity<CQ>)
     : entity;
   return deserializedEntity;
 }

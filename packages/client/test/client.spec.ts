@@ -1,15 +1,15 @@
 import { describe, it, expect } from 'vitest';
 import { TriplitClient } from '../src/client/triplit-client.js';
-import { ClientFetchResult, ClientQuery } from '../src/utils/query.js';
-import { Schema as S } from '@triplit/db';
+import { ClientFetchResult, ClientQuery } from '../src/client/types';
+import { Schema as S, Unalias } from '@triplit/db';
 
 interface Step<Q extends ClientQuery<any, any>> {
   action: (
-    results: [results: ClientFetchResult<Q>, info: any],
+    results: [results: Unalias<ClientFetchResult<Q>>, info: any],
     sub: any
   ) => Promise<void> | void;
   check: (
-    results: [results: ClientFetchResult<Q>, info: any],
+    results: [results: Unalias<ClientFetchResult<Q>>, info: any],
     sub: any
   ) => Promise<void> | void;
 }

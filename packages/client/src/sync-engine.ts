@@ -9,6 +9,11 @@ import DB, {
   convertEntityToJS,
   Timestamp,
   TripleStoreApi,
+  FetchResult,
+  SchemaQueries,
+  Models,
+  Unalias,
+  ToQuery,
 } from '@triplit/db';
 import { SyncOptions, TriplitClient } from './client/triplit-client.js';
 import { Subject } from 'rxjs';
@@ -29,7 +34,7 @@ import {
   RemoteSyncFailedError,
 } from './errors.js';
 import { Value } from '@sinclair/typebox/value';
-import { ClientFetchResult, ClientQuery } from './client/types';
+import { ClientQuery, SchemaClientQueries } from './client/types';
 import { Logger } from '@triplit/types/logger';
 
 type OnMessageReceivedCallback = (message: ServerSyncMessage) => void;
@@ -653,7 +658,10 @@ export class SyncEngine {
   /**
    * @hidden
    */
-  async fetchQuery<CQ extends ClientQuery<any, any>>(query: CQ) {
+  async fetchQuery<
+    M extends Models<any, any> | undefined,
+    CQ extends SchemaClientQueries<M>
+  >(query: CQ) {
     try {
       // Simpler to serialize triples and reconstruct entities on the client
       const triples = await this.getRemoteTriples(query);
@@ -664,7 +672,7 @@ export class SyncEngine {
           stripCollectionFromId(id),
           convertEntityToJS(entity.data as any, schema),
         ])
-      ) as ClientFetchResult<CQ>;
+      ) as Unalias<FetchResult<ToQuery<M, CQ>>>;
     } catch (e) {
       if (e instanceof TriplitError) throw e;
       if (e instanceof Error)

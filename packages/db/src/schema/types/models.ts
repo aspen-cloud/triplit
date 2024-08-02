@@ -1,13 +1,13 @@
 import { DataType, Optional } from '../../data-types/base.js';
 import { QueryType } from '../../data-types/query.js';
-import { RecordType } from '../../data-types/record.js';
+import { RecordProps, RecordType } from '../../data-types/record.js';
 import { ExtractDBType, ExtractJSType } from '../../data-types/type.js';
 import {
   CollectionNameFromModels,
   CollectionRules,
   ModelFromModels,
 } from '../../db.js';
-import { Intersection } from '../../utility-types.js';
+import { Coalesce, Intersection } from '../../utility-types.js';
 import { Schema } from '../builder.js';
 import { ExtractBasePaths, ModelPaths, ShiftPath } from './paths.js';
 import {
@@ -20,15 +20,23 @@ import {
   CollectionQuery,
   CollectionQueryInclusion,
   CollectionQuerySelection,
+  MergeQueryInclusion,
+  ParseSelect,
+  SchemaQueries,
+  QueryInclusion,
+  QueryInclusions,
   QueryResult,
+  QueryResultCardinality,
   QuerySelectionValue,
   QueryWhere,
+  RefSubquery,
   RelationSubquery,
+  ToQuery,
 } from '../../query/types';
 
-export type SchemaConfig = { id: ReturnType<typeof Schema.Id> } & Record<
-  string,
-  DataType | Optional<DataType>
+export type SchemaConfig = { id: ReturnType<typeof Schema.Id> } & RecordProps<
+  any,
+  any
 >;
 
 /**
@@ -120,7 +128,7 @@ export type SelectModelFromModel<M extends Model<any> | undefined> =
     ? Config extends SchemaConfig
       ? Model<//@ts-expect-error
         {
-          [k in keyof Config as Config[k] extends QueryType<any, any>
+          [k in keyof Config as Config[k] extends QueryType<any, any, any>
             ? never
             : k]: Config[k];
         }>
@@ -219,7 +227,7 @@ export type QuerySelectionFilteredTypeFromModel<
   M extends Models<any, any>,
   CN extends CollectionNameFromModels<M>,
   Selection extends ReadonlyArray<QuerySelectionValue<M, CN>>,
-  Inclusion extends Record<string, RelationSubquery<M, any>>
+  Inclusion extends QueryInclusions<M, CN>
 > =
   // Path selections
   PathFilteredTypeFromModel<
@@ -227,7 +235,9 @@ export type QuerySelectionFilteredTypeFromModel<
     Intersection<ModelPaths<M, CN>, Selection[number]>
   > & {
     // Subquery selections
-    [I in keyof Inclusion]: ExtractRelationSubqueryType<M, Inclusion[I]>;
+    [I in keyof Inclusion]: I extends string
+      ? ExtractRelationSubqueryType<M, CN, I, Inclusion[I]>
+      : never;
   };
 
 /**
@@ -235,16 +245,34 @@ export type QuerySelectionFilteredTypeFromModel<
  */
 type ExtractRelationSubqueryType<
   M extends Models<any, any>,
-  Subquery extends RelationSubquery<M, any>
-> = QueryResult<
-  CollectionQuery<
-    M,
-    Subquery['subquery']['collectionName'],
-    CollectionQuerySelection<Subquery['subquery']>,
-    CollectionQueryInclusion<Subquery['subquery']>
-  >,
-  Subquery['cardinality']
->;
+  CN extends CollectionNameFromModels<M>,
+  Alias extends string,
+  Inclusion extends QueryInclusion<M, CN>
+> = Inclusion extends RelationSubquery<any, any, any>
+  ? QueryResult<ToQuery<M, Inclusion['subquery']>, Inclusion['cardinality']>
+  : Inclusion extends RefSubquery<any, any>
+  ? QueryResult<
+      MergeQueryInclusion<
+        M,
+        NonNullable<
+          ModelFromModels<M, CN>
+        >['properties'][Inclusion['_rel']]['query']['collectionName'],
+        ModelFromModels<M, CN>['properties'][Inclusion['_rel']]['query'],
+        Inclusion
+      >,
+      ModelFromModels<M, CN>['properties'][Inclusion['_rel']]['cardinality']
+    >
+  : Inclusion extends true
+  ? QueryResult<
+      ToQuery<M, ModelFromModels<M, CN>['properties'][Alias]['query']>,
+      ModelFromModels<M, CN>['properties'][Alias]['cardinality']
+    >
+  : Inclusion extends null
+  ? QueryResult<
+      ToQuery<M, ModelFromModels<M, CN>['properties'][Alias]['query']>,
+      ModelFromModels<M, CN>['properties'][Alias]['cardinality']
+    >
+  : never;
 
 /**
  * A type matching the properties of a model that are relations
@@ -256,6 +284,7 @@ export type RelationAttributes<M extends Model<any> | undefined> =
   M extends Model<any>
     ? {
         [K in keyof M['properties']]: M['properties'][K] extends QueryType<
+          any,
           any,
           any
         >

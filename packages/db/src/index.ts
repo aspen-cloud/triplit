@@ -41,7 +41,11 @@ export {
   triplesToEntities as constructEntities,
   compareCursors,
 } from './query.js';
-export { QUERY_INPUT_TRANSFORMERS } from './query/builder.js';
+export {
+  QUERY_INPUT_TRANSFORMERS,
+  RelationBuilder,
+  relationBuilder,
+} from './query/builder.js';
 export {
   stripCollectionFromId,
   appendCollectionToId,

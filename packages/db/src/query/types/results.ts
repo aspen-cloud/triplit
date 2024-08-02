@@ -1,6 +1,8 @@
 import { CollectionNameFromModels, ModelFromModels } from '../../db.js';
 import {
   CollectionQuery,
+  SchemaQueries,
+  QueryInclusions,
   QueryResultCardinality,
   QuerySelectionValue,
   RelationSubquery,
@@ -63,7 +65,7 @@ export type FetchResultEntityFromParts<
   Selection extends ReadonlyArray<QuerySelectionValue<M, CN>> = ReadonlyArray<
     QuerySelectionValue<M, CN>
   >,
-  Inclusion extends Record<string, RelationSubquery<M, any>> = {}
+  Inclusion extends QueryInclusions<M, CN> = {}
 > = M extends Models<any, any>
   ? ModelFromModels<M, CN> extends Model<any>
     ? QuerySelectionFilteredTypeFromModel<M, CN, Selection, Inclusion>

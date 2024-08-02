@@ -47,8 +47,10 @@ import {
   FetchResult,
   FetchResultEntity,
   CollectionQuery,
-  Query,
   QueryWhere,
+  SchemaQueries,
+  ToQuery,
+  CollectionQueryDefault,
 } from './query/types';
 import { prepareQuery } from './query/prepare.js';
 import { getRolesFromSession } from './schema/permissions.js';
@@ -221,7 +223,7 @@ export function ruleToTuple(
 export type FetchByIdQueryParams<
   M extends Models<any, any> | undefined,
   CN extends CollectionNameFromModels<M>
-> = Pick<Query<M, CN>, 'include'>;
+> = Pick<CollectionQuery<M, CN>, 'include'>;
 
 type SchemaChangeCallback<M extends Models<any, any> | undefined> = (
   schema: StoreSchema<M> | undefined
@@ -769,10 +771,10 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
     return { successful, issues };
   }
 
-  async fetch<Q extends CollectionQuery<M, any>>(
+  async fetch<Q extends SchemaQueries<M>>(
     query: Q,
     options: DBFetchOptions = {}
-  ): Promise<Unalias<FetchResult<Q>>> {
+  ): Promise<Unalias<FetchResult<ToQuery<M, Q>>>> {
     this.logger.debug('fetch START', { query });
     await this.storageReady;
     const schema = (await this.getSchema())?.collections as M;
@@ -802,10 +804,14 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
       }
     );
     this.logger.debug('fetch END', { query, result: results });
-    return fetchResultToJS(results, schema, fetchQuery.collectionName);
+    return fetchResultToJS(
+      results,
+      schema,
+      fetchQuery.collectionName
+    ) as Unalias<FetchResult<ToQuery<M, Q>>>;
   }
 
-  async fetchTriples<Q extends CollectionQuery<M, any>>(
+  async fetchTriples<Q extends SchemaQueries<M>>(
     query: Q,
     options: DBFetchOptions = {}
   ) {
@@ -841,15 +847,17 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
     collectionName: CN,
     id: string,
     options: DBFetchOptions = {}
-  ) {
-    const query = this.query(collectionName).id(id).build();
+  ): Promise<Unalias<
+    FetchResultEntity<ToQuery<M, CollectionQueryDefault<M, CN>>>
+  > | null> {
+    const query = this.query(collectionName).id(id).build() as SchemaQueries<M>;
     return this.fetchOne(query, options);
   }
 
-  async fetchOne<Q extends CollectionQuery<M, any>>(
+  async fetchOne<Q extends SchemaQueries<M>>(
     query: Q,
     options: DBFetchOptions = {}
-  ): Promise<Unalias<FetchResultEntity<Q> | null>> {
+  ): Promise<Unalias<FetchResultEntity<ToQuery<M, Q>>> | null> {
     query = { ...query, limit: 1 };
     const result = await this.fetch(query, options);
     const entity = [...result.values()][0];
@@ -877,9 +885,11 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
     }, options);
   }
 
-  subscribe<Q extends CollectionQuery<M, any>>(
+  subscribe<Q extends SchemaQueries<M>>(
     query: Q,
-    onResults: (results: Unalias<FetchResult<Q>>) => void | Promise<void>,
+    onResults: (
+      results: Unalias<FetchResult<ToQuery<M, Q>>>
+    ) => void | Promise<void>,
     onError?: (error: any) => void | Promise<void>,
     options: DBFetchOptions = {}
   ) {
@@ -999,10 +1009,9 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
 
   query<CN extends CollectionNameFromModels<M>>(
     collectionName: CN,
-    params?: Query<M, CN>
+    params?: Omit<CollectionQuery<M, CN>, 'collectionName'>
   ) {
-    // TODO: Properly type with 'params'
-    return CollectionQueryBuilder(collectionName, params);
+    return CollectionQueryBuilder<M, CN>(collectionName, params);
   }
 
   async createCollection(params: CreateCollectionOperation[1]) {

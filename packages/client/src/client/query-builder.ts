@@ -5,7 +5,6 @@ import {
   BuilderBase,
   FilterInput,
   IncludeSubquery,
-  InclusionFromArgs,
   OrderInput,
   CollectionQueryCollectionName,
   CollectionQueryInclusion,
@@ -16,6 +15,12 @@ import {
   QuerySelectionValue,
   Models,
   RelationSubquery,
+  RefSubquery,
+  RelationBuilder,
+  InclusionByRName,
+  relationBuilder,
+  SchemaQueries,
+  QueryResultCardinality,
 } from '@triplit/db';
 import {
   ClientSchema,
@@ -56,8 +61,8 @@ export class ClientQueryBuilder<
     return this.query;
   }
 
-  select<Selection extends QuerySelectionValue<M, CN>>(
-    selection: Selection[] | undefined
+  select<Selection extends ReadonlyArray<QuerySelectionValue<M, CN>>>(
+    selection: Selection | undefined
   ) {
     return new ClientQueryBuilder({
       ...this.query,
@@ -67,7 +72,7 @@ export class ClientQueryBuilder<
     >;
   }
 
-  where(...args: FilterInput<M, CN, any>) {
+  where(...args: FilterInput<M, CN>) {
     return new ClientQueryBuilder<Q>({
       ...this.query,
       where: QUERY_INPUT_TRANSFORMERS<M, CN>().where(
@@ -116,46 +121,104 @@ export class ClientQueryBuilder<
     });
   }
 
-  include<RName extends string, SQ extends RelationSubquery<M, any>>(
-    relationName: RName,
-    query: RelationSubquery<M, any>
+  /**
+   * Include data from a relation in the query and extend the relation with additional query parameters
+   * @param alias - the alias to use for the included relation
+   * @param queryExt - the query to extend the included relation
+   */
+  include<Alias extends string, RQ extends RefSubquery<M, CN>>(
+    alias: Alias,
+    queryExt: RQ
   ): ClientQueryBuilder<
     ClientQuery<
       M,
       CN,
-      // @ts-expect-error TODO: not sure why this has error (maybe defaults)
       CollectionQuerySelection<Q>,
       CollectionQueryInclusion<Q> & {
-        [K in RName]: SQ;
+        [K in Alias]: RQ;
       }
     >
   >;
+  /**
+   * Include data from a relation in the query and extend the relation with additional query parameters
+   * @param alias - the alias to use for the included relation
+   * @param builder - a function returning a query builder to extend the included relation
+   */
+  include<Alias extends string, RQ extends RefSubquery<M, CN>>(
+    alias: Alias,
+    builder: (
+      rel: <RName extends RelationAttributes<ModelFromModels<M, CN>>>(
+        relationName: RName
+      ) => RelationBuilder<M, CN, RName>
+    ) => RQ
+  ): ClientQueryBuilder<
+    ClientQuery<
+      M,
+      CN,
+      CollectionQuerySelection<Q>,
+      CollectionQueryInclusion<Q> & {
+        [K in Alias]: RQ;
+      }
+    >
+  >;
+  /**
+   * Include data from a relation in the query
+   * @param relationName - the name of the relation to include
+   */
   include<RName extends RelationAttributes<ModelFromModels<M, CN>>>(
-    relationName: RName,
-    query?: IncludeSubquery<
-      M,
-      // @ts-expect-error Doesn't know that Model['RName'] is a query type
-      ModelFromModels<M, CN>['properties'][RName]['query']['collectionName']
-    >
+    relationName: RName
   ): ClientQueryBuilder<
     ClientQuery<
       M,
       CN,
-      // @ts-expect-error TODO: not sure why this has error (maybe defaults)
       CollectionQuerySelection<Q>,
       CollectionQueryInclusion<Q> & {
-        [K in RName]: InclusionFromArgs<M, CN, RName, null>;
+        [K in RName]: InclusionByRName<M, CN, RName>;
       }
     >
   >;
-  include(relationName: any, query?: any): any {
-    return new ClientQueryBuilder({
+  include(relationName: any, queryExt?: any) {
+    if (typeof queryExt === 'function') {
+      queryExt = queryExt(relationBuilder);
+    }
+    return new ClientQueryBuilder<ClientQuery<any, any, any, any>>({
       ...this.query,
       include: QUERY_INPUT_TRANSFORMERS<M, CN>().include(
-        // @ts-expect-error
         this.query,
         relationName,
-        query
+        queryExt
+      ),
+    });
+  }
+
+  subquery<
+    Alias extends string,
+    PQ extends SchemaQueries<M>,
+    Cardinality extends QueryResultCardinality = 'many'
+  >(
+    relationName: Alias,
+    query: PQ,
+    cardinality: Cardinality = 'many' as Cardinality
+  ): ClientQueryBuilder<
+    ClientQuery<
+      M,
+      CN,
+      CollectionQuerySelection<Q>,
+      CollectionQueryInclusion<Q> & {
+        [K in Alias]: RelationSubquery<M, PQ, Cardinality>;
+      }
+    >
+  > {
+    //@ts-expect-error
+    return new ClientQueryBuilder<ClientQuery<any, any, any, any>>({
+      ...this.query,
+      include: QUERY_INPUT_TRANSFORMERS<M, CN>().include(
+        this.query,
+        relationName,
+        {
+          subquery: query,
+          cardinality,
+        }
       ),
     });
   }

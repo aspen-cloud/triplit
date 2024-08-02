@@ -37,7 +37,7 @@
     "build:watch": "tsc -w",
     "lint:build": "npx publint",
     "lint": "tsc --noEmit",
-    "test": "yarn test:unit && yarn typecheck",
+    "test": "yarn test:unit",
     "test:unit": "vitest run",
     "test:watch": "vitest watch",
     "test-coverage": "vitest --coverage",

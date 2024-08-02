@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  ClientFetchResult,
   TriplitClient,
   ClientQuery,
   Models,
   ClientQueryBuilder,
   SubscriptionOptions,
   Unalias,
+  FetchResult,
 } from '@triplit/client';
 import type { WorkerClient } from '@triplit/client/worker-client';
 
@@ -14,7 +14,7 @@ type useQueryPayload<
   M extends Models<any, any> | undefined,
   Q extends ClientQuery<M, any, any, any>
 > = {
-  results: Unalias<ClientFetchResult<Q>> | undefined;
+  results: Unalias<FetchResult<Q>> | undefined;
   fetching: boolean;
   fetchingLocal: boolean;
   fetchingRemote: boolean;
@@ -25,7 +25,7 @@ type usePaginatedQueryPayload<
   M extends Models<any, any> | undefined,
   Q extends ClientQuery<M, any, any, any>
 > = {
-  results: Unalias<ClientFetchResult<Q>> | undefined;
+  results: Unalias<FetchResult<Q>> | undefined;
   fetching: boolean;
   fetchingPage: boolean;
   error: any;
@@ -40,7 +40,7 @@ type useInfiniteQueryPayload<
   M extends Models<any, any> | undefined,
   Q extends ClientQuery<M, any, any, any>
 > = {
-  results: Unalias<ClientFetchResult<Q>> | undefined;
+  results: Unalias<FetchResult<Q>> | undefined;
   fetching: boolean;
   fetchingRemote: boolean;
   fetchingMore: boolean;
@@ -67,9 +67,9 @@ export function useQuery<
   query: ClientQueryBuilder<Q>,
   options?: Partial<SubscriptionOptions>
 ): useQueryPayload<M, Q> {
-  const [results, setResults] = useState<
-    Unalias<ClientFetchResult<Q>> | undefined
-  >(undefined);
+  const [results, setResults] = useState<Unalias<FetchResult<Q>> | undefined>(
+    undefined
+  );
   const [fetchingLocal, setFetchingLocal] = useState(true);
   const [fetchingRemote, setFetchingRemote] = useState(
     client.connectionStatus !== 'CLOSED'
@@ -106,11 +106,13 @@ export function useQuery<
     setResults(undefined);
     setFetchingLocal(true);
     const unsubscribe = client.subscribe(
+      // @ts-expect-error TODO: fix types to match
       builtQuery,
       (localResults) => {
         setFetchingLocal(false);
         setError(undefined);
-        setResults(new Map(localResults));
+        // TODO: fix types to match
+        setResults(new Map(localResults as any));
       },
       (error) => {
         setFetchingLocal(false);
@@ -159,9 +161,9 @@ export function usePaginatedQuery<
   const builtQuery = useMemo(() => query.build(), [query]);
   const [hasNextPage, setHasNextPage] = useState(false);
   const [hasPreviousPage, setHasPreviousPage] = useState(false);
-  const [results, setResults] = useState<
-    Unalias<ClientFetchResult<Q>> | undefined
-  >(undefined);
+  const [results, setResults] = useState<Unalias<FetchResult<Q>> | undefined>(
+    undefined
+  );
   const [error, setError] = useState<any>(undefined);
   const [fetching, setFetching] = useState(true);
   const [fetchingPage, setFetchingPage] = useState(false);
@@ -174,6 +176,7 @@ export function usePaginatedQuery<
 
   useEffect(() => {
     const { unsubscribe, nextPage, prevPage } = client.subscribeWithPagination(
+      // @ts-expect-error TODO: fix types to match
       builtQuery,
       (results, info) => {
         setFetching(false);
@@ -181,7 +184,8 @@ export function usePaginatedQuery<
         setFetchingPage(false);
         setHasNextPage(info.hasNextPage);
         setHasPreviousPage(info.hasPreviousPage);
-        setResults(new Map(results));
+        // TODO: fix types to match
+        setResults(new Map(results as any));
       },
       (error) => {
         setFetching(false);
@@ -245,9 +249,9 @@ export function useInfiniteQuery<
   const builtQuery = useMemo(() => query.build(), [query]);
   const stringifiedQuery = builtQuery && JSON.stringify(builtQuery);
   const [hasMore, setHasMore] = useState(false);
-  const [results, setResults] = useState<
-    Unalias<ClientFetchResult<Q>> | undefined
-  >(undefined);
+  const [results, setResults] = useState<Unalias<FetchResult<Q>> | undefined>(
+    undefined
+  );
   const [error, setError] = useState<any>(undefined);
   const [fetching, setFetching] = useState(true);
   const [fetchingRemote, setFetchingRemote] = useState(
@@ -277,13 +281,17 @@ export function useInfiniteQuery<
 
   useEffect(() => {
     const { unsubscribe, loadMore } = client.subscribeWithExpand(
+      // @ts-expect-error TODO: fix types to match
       builtQuery,
       (results, info) => {
         setFetching(false);
         setError(undefined);
         setFetchingMore(false);
         setHasMore(info.hasMore);
-        setResults(new Map(results));
+        setResults(
+          // TODO: fix types to match
+          new Map(results as any)
+        );
       },
       (error) => {
         setFetching(false);

@@ -87,10 +87,12 @@ import { RecordType } from './data-types/record.js';
 import { Logger } from '@triplit/types/logger';
 import {
   CollectionQuery,
+  CollectionQueryDefault,
   FetchResult,
   FetchResultEntity,
   FetchResultEntityFromParts,
-  Query,
+  SchemaQueries,
+  ToQuery,
   Unalias,
 } from './query/types';
 import { prepareQuery } from './query/prepare.js';
@@ -156,7 +158,7 @@ async function checkWritePermissions<M extends Models<any, any> | undefined>(
       collectionName,
       where: [['id', '=', entityId], ...permissionsStatements],
     } as CollectionQuery<M, any>,
-    schema.collections,
+    schema.collections as M,
     {
       roles: dbTx.db.sessionRoles,
     },
@@ -206,7 +208,7 @@ async function checkWriteRules<M extends Models<any, any> | undefined>(
         collectionName,
         where: [['id', '=', entityId], ...rulesWhere],
       } as CollectionQuery<M, any>,
-      collections,
+      collections as M,
       {
         roles: caller.db.sessionRoles,
       },
@@ -673,7 +675,7 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
   async insert<CN extends CollectionNameFromModels<M>>(
     collectionName: CN,
     doc: Unalias<InsertTypeFromModel<ModelFromModels<M, CN>>>
-  ) {
+  ): Promise<Unalias<FetchResultEntityFromParts<M, CN>>> {
     if (!collectionName)
       throw new InvalidCollectionNameError(
         collectionName,
@@ -743,7 +745,7 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
       insertedEntity.data as any,
       schema,
       collectionName
-    ) as Unalias<FetchResultEntityFromParts<M, CN>>;
+    );
     this.logger.debug('insert END', collectionName, insertedEntityJS);
     return insertedEntityJS;
   }
@@ -754,7 +756,7 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
     updater: (
       entity: Unalias<UpdateTypeFromModel<ModelFromModels<M, CN>>>
     ) => void | Promise<void>
-  ) {
+  ): Promise<void> {
     this.logger.debug('update START', collectionName, entityId);
     const schema = (await this.getSchema())?.collections as M;
 
@@ -850,10 +852,10 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
     this.logger.debug('delete END', collectionName, id);
   }
 
-  async fetch<Q extends CollectionQuery<M, any>>(
+  async fetch<Q extends SchemaQueries<M>>(
     query: Q,
     options: DBFetchOptions = {}
-  ): Promise<Unalias<FetchResult<Q>>> {
+  ): Promise<Unalias<FetchResult<ToQuery<M, Q>>>> {
     const schema = (await this.getSchema())?.collections as M;
     const fetchQuery = prepareQuery(
       query,
@@ -874,31 +876,33 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
         schema,
       }
     );
-    return fetchResultToJS(results, schema, fetchQuery.collectionName);
+    return fetchResultToJS(
+      results,
+      schema,
+      fetchQuery.collectionName
+    ) as Unalias<FetchResult<Q>>;
   }
 
   // maybe make it public? Keeping private bc its only used internally
-  private query<CN extends CollectionNameFromModels<M>>(
-    collectionName: CN,
-    params?: Query<M, CN>
-  ) {
-    // TODO: When fixing the type here, ensure the built output looks correct (had to manually assign this to work in the past)
-    return CollectionQueryBuilder(collectionName, params);
+  private query<CN extends CollectionNameFromModels<M>>(collectionName: CN) {
+    return CollectionQueryBuilder<M, CN>(collectionName);
   }
 
   async fetchById<CN extends CollectionNameFromModels<M>>(
     collectionName: CN,
     id: string,
     options: DBFetchOptions = {}
-  ) {
-    const query = this.query(collectionName).id(id).build();
+  ): Promise<Unalias<
+    FetchResultEntity<ToQuery<M, CollectionQueryDefault<M, CN>>>
+  > | null> {
+    const query = this.query(collectionName).id(id).build() as SchemaQueries<M>;
     return this.fetchOne(query, options);
   }
 
-  async fetchOne<Q extends CollectionQuery<M, any>>(
+  async fetchOne<Q extends SchemaQueries<M>>(
     query: Q,
     options: DBFetchOptions = {}
-  ): Promise<Unalias<FetchResultEntity<Q>> | null> {
+  ): Promise<Unalias<FetchResultEntity<ToQuery<M, Q>>> | null> {
     query = { ...query, limit: 1 };
     const result = await this.fetch(query, options);
     const entity = [...result.values()][0];

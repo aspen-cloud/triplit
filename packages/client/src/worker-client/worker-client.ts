@@ -11,10 +11,16 @@ import {
   ChangeTracker,
   CollectionNameFromModels,
   CollectionQuery,
+  CollectionQueryDefault,
   DBTransaction,
+  FetchResult,
+  FetchResultEntity,
+  FetchResultEntityFromParts,
   InsertTypeFromModel,
   JSONToSchema,
   ModelFromModels,
+  SchemaQueries,
+  ToQuery,
   TransactionResult,
   Unalias,
   UpdateTypeFromModel,
@@ -23,11 +29,9 @@ import {
 } from '@triplit/db';
 import { ConnectionStatus } from '../transport/transport.js';
 import {
-  ClientFetchResult,
-  ClientFetchResultEntity,
-  ClientQuery,
   ClientQueryDefault,
   ClientSchema,
+  SchemaClientQueries,
 } from '../client/types';
 import { clientQueryBuilder } from '../client/query-builder.js';
 import SuperJSON from 'superjson';
@@ -122,10 +126,10 @@ export class WorkerClient<M extends ClientSchema | undefined = undefined> {
     return clientQueryBuilder<M, CN>(collectionName);
   }
 
-  async fetch<CQ extends ClientQuery<M, any>>(
+  async fetch<CQ extends SchemaClientQueries<M>>(
     query: CQ,
     options?: Partial<FetchOptions>
-  ): Promise<Unalias<ClientFetchResult<CQ>>> {
+  ): Promise<Unalias<FetchResult<ToQuery<M, CQ>>>> {
     await this.initialized;
     // @ts-expect-error
     return this.clientWorker.fetch(query, options);
@@ -191,7 +195,7 @@ export class WorkerClient<M extends ClientSchema | undefined = undefined> {
     id: string,
     options?: Partial<FetchOptions>
   ): Promise<Unalias<
-    ClientFetchResultEntity<ClientQueryDefault<M, CN>>
+    FetchResultEntity<ToQuery<M, ClientQueryDefault<M, CN>>>
   > | null> {
     await this.initialized;
     return this.clientWorker.fetchById(
@@ -201,23 +205,23 @@ export class WorkerClient<M extends ClientSchema | undefined = undefined> {
       options
     );
   }
-  async fetchOne<CQ extends ClientQuery<M, any, any, any>>(
+  async fetchOne<CQ extends SchemaClientQueries<M>>(
     query: CQ,
     options?: Partial<FetchOptions>
-  ): Promise<Unalias<ClientFetchResultEntity<CQ>> | null> {
+  ): Promise<Unalias<FetchResultEntity<ToQuery<M, CQ>>> | null> {
     await this.initialized;
-    return this.clientWorker.fetchOne(query, options);
+    return this.clientWorker.fetchOne(
+      // @ts-expect-error
+      query,
+      options
+    );
   }
   async insert<CN extends CollectionNameFromModels<M>>(
     collectionName: CN,
     entity: Unalias<InsertTypeFromModel<ModelFromModels<M, CN>>>
-  ): Promise<{
-    txId: string | undefined;
-    output:
-      | Unalias<ClientFetchResultEntity<ClientQueryDefault<M, CN>>>
-      | undefined;
-  }> {
+  ): Promise<TransactionResult<Unalias<FetchResultEntityFromParts<M, CN>>>> {
     await this.initialized;
+    // @ts-expect-error
     return this.clientWorker.insert(
       // @ts-expect-error
       collectionName,
@@ -274,10 +278,10 @@ export class WorkerClient<M extends ClientSchema | undefined = undefined> {
       entityId
     );
   }
-  subscribe<CQ extends ClientQuery<M, any, any, any>>(
+  subscribe<CQ extends SchemaClientQueries<M>>(
     query: CQ,
     onResults: (
-      results: Unalias<ClientFetchResult<CQ>>,
+      results: Unalias<FetchResult<ToQuery<M, CQ>>>,
       info: { hasRemoteFulfilled: boolean }
     ) => void | Promise<void>,
     onError?: (error: any) => void | Promise<void>,
@@ -286,8 +290,8 @@ export class WorkerClient<M extends ClientSchema | undefined = undefined> {
     const unsubPromise = (async () => {
       await this.initialized;
       return this.clientWorker.subscribe(
-        query,
         // @ts-expect-error
+        query,
         ComLink.proxy(onResults),
         onError && ComLink.proxy(onError),
         // CURRENTLY ONLY SUPPORTS onRemoteFulfilled
@@ -308,10 +312,10 @@ export class WorkerClient<M extends ClientSchema | undefined = undefined> {
    *
    * The pagination will also do its best to always return full pages
    */
-  subscribeWithPagination<CQ extends ClientQuery<M, any>>(
+  subscribeWithPagination<CQ extends SchemaClientQueries<M>>(
     query: CQ,
     onResults: (
-      results: Unalias<ClientFetchResult<CQ>>,
+      results: Unalias<FetchResult<ToQuery<M, CQ>>>,
       info: {
         hasRemoteFulfilled: boolean;
         hasNextPage: boolean;
@@ -323,8 +327,8 @@ export class WorkerClient<M extends ClientSchema | undefined = undefined> {
   ): PaginatedSubscription {
     const subscriptionPromise = this.initialized.then(() =>
       this.clientWorker.subscribeWithPagination(
-        query,
         // @ts-expect-error
+        query,
         ComLink.proxy(onResults),
         onError && ComLink.proxy(onError),
         options && ComLink.proxy(options)
@@ -343,10 +347,10 @@ export class WorkerClient<M extends ClientSchema | undefined = undefined> {
     return { unsubscribe, nextPage, prevPage };
   }
 
-  subscribeWithExpand<CQ extends ClientQuery<M, any>>(
+  subscribeWithExpand<CQ extends SchemaClientQueries<M>>(
     query: CQ,
     onResults: (
-      results: Unalias<ClientFetchResult<CQ>>,
+      results: Unalias<FetchResult<ToQuery<M, CQ>>>,
       info: {
         hasRemoteFulfilled: boolean;
         hasMore: boolean;
@@ -357,8 +361,8 @@ export class WorkerClient<M extends ClientSchema | undefined = undefined> {
   ): InfiniteSubscription {
     const subscriptionPromise = this.initialized.then(() =>
       this.clientWorker.subscribeWithExpand(
-        query,
         // @ts-expect-error
+        query,
         ComLink.proxy(onResults),
         onError && ComLink.proxy(onError),
         options && ComLink.proxy(options)

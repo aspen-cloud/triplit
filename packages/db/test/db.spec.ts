@@ -42,7 +42,6 @@ import {
   fetchDeltaTriples,
   initialFetchExecutionContext,
 } from '../src/collection-query.js';
-import { CollectionQueryInclusion } from '../src/query/builder.js';
 import { prepareQuery } from '../src/query/prepare.js';
 
 const pause = async (ms: number = 100) =>
@@ -5246,7 +5245,10 @@ describe('selecting subqueries from schema', () => {
     const query = user1DB
       .query('users')
       .include('posts')
-      .include('friends', { where: [['name', 'like', '%e']] })
+      .include('friends', {
+        _rel: 'friends',
+        where: [['name', 'like', '%e']],
+      })
       .build();
 
     const result = await user1DB.fetch(query);
@@ -5256,7 +5258,7 @@ describe('selecting subqueries from schema', () => {
 
     expect(result.get('user-1')).toHaveProperty('posts');
     expect(result.get('user-1')!.posts).toHaveLength(1);
-    expect(result.get('user-1')!.posts.get('post-1')).toMatchObject({
+    expect(result.get('user-1')!.posts!.get('post-1')).toMatchObject({
       id: 'post-1',
       content: 'Hello World!',
       author_id: 'user-1',
@@ -5312,7 +5314,7 @@ describe('selecting subqueries from schema', () => {
   it('can select subsubqueries', async () => {
     const query = user1DB
       .query('users')
-      .include('posts', { include: { likes: null } })
+      .include('posts', { _rel: 'posts', include: { likes: null } })
       .build();
     const result = await user1DB.fetch(query);
     // Other fields are included in the selection
@@ -5396,7 +5398,10 @@ describe('selecting subqueries from schema', () => {
   it('will return null if a singleton subquery has no results', async () => {
     const query = user1DB
       .query('posts')
-      .include('author', { where: [['id', '=', 'george']] })
+      .include('author', {
+        _rel: 'author',
+        where: [['id', '=', 'george']],
+      })
       .build();
     const result = await user1DB.fetch(query);
     expect(result.get('post-1')).toHaveProperty('author');

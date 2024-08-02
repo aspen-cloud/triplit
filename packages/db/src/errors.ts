@@ -260,19 +260,29 @@ export class InvalidSchemaPathError extends TriplitError {
 }
 
 export class RelationDoesNotExistError extends TriplitError {
-  constructor(attribute: string, collectionName: string, ...args: any[]) {
+  constructor(
+    relationName: string,
+    alias: string,
+    collectionName: string,
+    ...args: any[]
+  ) {
     super(...args);
     this.name = 'RelationDoesNotExistError';
-    this.baseMessage = `The attribute \'${attribute}\' does not exist in the schema for the \'${collectionName}\' collection.`;
+    this.baseMessage = `Your attempt to load \'${relationName}\' at alias \'${alias}\' failed because \'${relationName}\' does not exist in the schema for the collection \'${collectionName}\'.`;
     this.status = STATUS_CODES['Bad Request'];
   }
 }
 
 export class IncludedNonRelationError extends TriplitError {
-  constructor(attribute: string, collectionName: string, ...args: any[]) {
+  constructor(
+    relationName: string,
+    alias: string,
+    collectionName: string,
+    ...args: any[]
+  ) {
     super(...args);
     this.name = 'IncludedNonRelationError';
-    this.baseMessage = `The attribute \'${attribute}\' in the \'${collectionName}\' can not be used in the \'include\' clause as it is not a relation.`;
+    this.baseMessage = `Your attempt to load \'${relationName}\' at alias \'${alias}\' failed because \'${relationName}\' in the collection \'${collectionName}\' in not a query type.`;
     this.status = STATUS_CODES['Bad Request'];
   }
 }

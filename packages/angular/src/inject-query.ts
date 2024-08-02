@@ -114,7 +114,6 @@ function createBaseQuery<
         (localResults) => {
           fetchingLocalSignal.set(false);
           errorSignal.set(undefined);
-          // @ts-expect-error
           resultSignal.set(new Map(localResults));
         },
         (error) => {

@@ -5,11 +5,18 @@ import {
   ModelPaths,
   Models,
   Path,
+  RelationAttributes,
   RelationPaths,
   RelationshipCollectionName,
   SchemaPaths,
 } from '../../schema/types';
 import { EntityId } from '../../triple-store-utils.js';
+import {
+  Coalesce,
+  isAnyOrUndefined,
+  IsUnknown,
+  Not,
+} from '../../utility-types.js';
 
 /**
  * A query that fetches data from a collection
@@ -29,7 +36,7 @@ export type CollectionQuery<
   Selection extends ReadonlyArray<QuerySelectionValue<M, CN>> = ReadonlyArray<
     QuerySelectionValue<M, CN>
   >,
-  Inclusions extends Record<string, RelationSubquery<M, any>> = {}
+  Inclusions extends QueryInclusions<M, CN> = QueryInclusions<M, CN>
 > = {
   where?: QueryWhere<M, CN>;
   select?: Selection;
@@ -45,29 +52,6 @@ export type CollectionQuery<
   collectionName: CN;
   include?: Inclusions;
 };
-
-export type GenericCollectionQuery<
-  M extends Models<any, any> | undefined,
-  CN extends CollectionNameFromModels<M>,
-  Selection extends ReadonlyArray<QuerySelectionValue<M, CN>> = ReadonlyArray<
-    QuerySelectionValue<M, CN>
-  >,
-  Inclusions extends Record<string, RelationSubquery<M, any>> = Record<
-    string,
-    RelationSubquery<M, any>
-  >
-> = CollectionQuery<M, CN, Selection, Inclusions>;
-
-/**
- * A collection query without the collection name.
- */
-export type Query<
-  M extends Models<any, any> | undefined,
-  CN extends CollectionNameFromModels<M>,
-  Selection extends ReadonlyArray<QuerySelectionValue<M, CN>> = ReadonlyArray<
-    QuerySelectionValue<M, CN>
-  >
-> = Omit<CollectionQuery<M, CN, Selection>, 'collectionName'>;
 
 // Should be friendly types that we pass into queries
 // Not to be confused with the Value type that we store in the triple store
@@ -108,13 +92,13 @@ export type CollectionQueryCollectionName<Q extends BaseCollectionQuery> =
  * Extracts the selection of a collection query.
  */
 export type CollectionQuerySelection<Q extends BaseCollectionQuery> =
-  Q extends CollectionQuery<any, any, infer S, any> ? S : never;
+  Q extends CollectionQuery<infer M, infer CN, infer S, any> ? S : never;
 
 /**
  * Extracts the inclusion of a collection query.
  */
 export type CollectionQueryInclusion<Q extends BaseCollectionQuery> =
-  Q extends CollectionQuery<any, any, any, infer I> ? I : never;
+  Q extends CollectionQuery<infer M, infer CN, infer S, infer I> ? I : never;
 
 // === Query Types ===
 // ====== Selection Types ======
@@ -125,17 +109,6 @@ export type QuerySelectionValue<
   M extends Models<any, any> | undefined,
   CN extends CollectionNameFromModels<M>
 > = M extends Models<any, any> ? ModelPaths<M, CN> : Path;
-
-/**
- * A subquery defining a relationship, specifying the subquery and cardinality of the result.
- */
-export type RelationSubquery<
-  M extends Models<any, any> | undefined,
-  CN extends CollectionNameFromModels<M>
-> = {
-  subquery: CollectionQuery<M, CN>;
-  cardinality: QueryResultCardinality;
-};
 
 /**
  * Cardinality of a query result:
@@ -268,3 +241,224 @@ export type OrderStatement<
 
 // ====== Pagination Types ======
 export type ValueCursor = [value: QueryValue, entityId: EntityId];
+
+// ====== Inclusion Types ======
+/**
+ * A map of inclusions, keyed by alias.
+ */
+export type QueryInclusions<
+  M extends Models<any, any> | undefined,
+  CN extends CollectionNameFromModels<M>
+> = {
+  [alias: string]: QueryInclusion<M, CN>;
+};
+
+/**
+ * A possible inclusion value in a query.
+ */
+export type QueryInclusion<
+  M extends Models<any, any> | undefined,
+  CN extends CollectionNameFromModels<M>
+> =
+  | RefShorthand
+  | RelationSubquery<M, SchemaQueries<M>, QueryResultCardinality>
+  | RefSubquery<M, CN>;
+
+/**
+ * A shorthand for including a reference.
+ */
+// Should document 'true', but accept null to support existing (stored) queries
+type RefShorthand = true | null;
+
+// ========= Ref Subquery Types =========
+/**
+ * A referential subquery, extending a subquery defined in the schema.
+ */
+export type RefSubquery<
+  M extends Models<any, any> | undefined,
+  CN extends CollectionNameFromModels<M>
+
+  // RefName extends RelationAttributes<ModelFromModels<M, CN>>,
+  // Q extends KeyedModelQueries<M, CN>[RefName] = KeyedModelQueries<
+  //   M,
+  //   CN
+  // >[RefName]
+> = ModelRefSubQueries<M, CN>;
+
+/**
+ * An extension of a referential subquery, specifying additional query parameters.
+ */
+export type RefQueryExtension<
+  M extends Models<any, any> | undefined,
+  CN extends CollectionNameFromModels<M>,
+  Q extends ModelQueries<M, CN>
+> = Pick<Q, 'select' | 'include' | 'limit' | 'where' | 'order'>;
+
+/**
+ * The base query for a referential subquery extension.
+ */
+export type RefQueryExtensionBase<
+  M extends Models<any, any> | undefined,
+  CN extends CollectionNameFromModels<M>,
+  Q extends ModelQueries<M, CN>
+> = Q;
+
+/**
+ * A reference to a subquery type defined in the schema.
+ */
+export type Ref<
+  M extends Models<any, any> | undefined,
+  CN extends CollectionNameFromModels<M>,
+  RefName extends RelationAttributes<ModelFromModels<M, CN>>
+> = NonNullable<ModelFromModels<M, CN>>['properties'][RefName];
+
+/**
+ * The query type of a referential subquery.
+ */
+export type RefQuery<
+  M extends Models<any, any> | undefined,
+  CN extends CollectionNameFromModels<M>,
+  RefName extends RelationAttributes<ModelFromModels<M, CN>>
+> = Ref<M, CN, RefName>['query'];
+
+/**
+ * The collection name of a referential subquery.
+ */
+export type RefCollectionName<
+  M extends Models<any, any> | undefined,
+  CN extends CollectionNameFromModels<M>,
+  RefName extends RelationAttributes<ModelFromModels<M, CN>>
+> = RefQuery<M, CN, RefName>['collectionName'];
+
+// ========= Relational Subquery Types =========
+/**
+ * A subquery defining a relationship, specifying the subquery and cardinality of the result.
+ */
+export type RelationSubquery<
+  M extends Models<any, any> | undefined,
+  Q extends SchemaQueries<M>,
+  Cardinality extends QueryResultCardinality
+> = {
+  subquery: Q;
+  cardinality: Cardinality;
+};
+
+// === Query Helpers ===
+/**
+ * All possible queries for a schema, keyed by collection name.
+ */
+export type KeyedSchemaQueries<M extends Models<any, any> | undefined> = {
+  [CN in keyof M]: CN extends CollectionNameFromModels<M>
+    ? CollectionQuery<M, CN>
+    : never;
+};
+
+/**
+ * Union of all possible queries for a schema.
+ */
+export type SchemaQueries<M extends Models<any, any> | undefined> =
+  M extends Models<any, any>
+    ? KeyedSchemaQueries<M>[keyof M]
+    : CollectionQuery<M, any>;
+
+/**
+ * All related queries for a model, keyed by relation name.
+ */
+export type KeyedModelQueries<
+  M extends Models<any, any> | undefined,
+  CN extends CollectionNameFromModels<M>
+> = {
+  [K in RelationAttributes<ModelFromModels<M, CN>>]: ToQueryWithDefaults<
+    M,
+    NonNullable<ModelFromModels<M, CN>>['properties'][K]['query']
+  >;
+};
+
+/**
+ * All related queries for a model.
+ */
+export type ModelQueries<
+  M extends Models<any, any> | undefined,
+  CN extends CollectionNameFromModels<M>
+> = KeyedModelQueries<M, CN>[RelationAttributes<ModelFromModels<M, CN>>];
+
+/**
+ * All ref subqueries for a model.
+ */
+export type ModelRefSubQueries<
+  M extends Models<any, any> | undefined,
+  CN extends CollectionNameFromModels<M>
+> = {
+  [K in keyof KeyedModelQueries<M, CN>]: {
+    _rel: K;
+  } & RefQueryExtension<M, CN, KeyedModelQueries<M, CN>[K]>;
+}[keyof KeyedModelQueries<M, CN>];
+
+/**
+ * Converts an array to a query selection value.
+ */
+export type ParseSelect<
+  M extends Models<any, any> | undefined,
+  CN extends CollectionNameFromModels<M>,
+  Selection extends ReadonlyArray<QuerySelectionValue<M, CN>>
+> = unknown extends Selection
+  ? ReadonlyArray<QuerySelectionValue<M, CN>>
+  : Selection;
+
+/**
+ * Converts an object to a query inclusion.
+ */
+export type ParseInclusions<
+  M extends Models<any, any> | undefined,
+  CN extends CollectionNameFromModels<M>,
+  Inclusions extends QueryInclusions<M, CN>
+> = unknown extends Inclusions ? {} : Inclusions;
+
+/**
+ * Converts a query object to a query type.
+ */
+export type ToQuery<
+  M extends Models<any, any> | undefined,
+  Q extends Record<string, any>
+> = CollectionQuery<
+  M,
+  Q['collectionName'],
+  ParseSelect<M, Q['collectionName'], Q['select']>,
+  ParseInclusions<M, Q['collectionName'], Q['include']>
+>;
+
+/**
+ * Converts a query object to a query type with default values.
+ */
+export type ToQueryWithDefaults<
+  M extends Models<any, any> | undefined,
+  Q extends Record<string, any>
+> = CollectionQuery<M, Q['collectionName']>;
+
+/**
+ * Merges a query with an inclusion extension
+ */
+export type MergeQueryInclusion<
+  M extends Models<any, any> | undefined,
+  CN extends CollectionNameFromModels<M>,
+  Q extends CollectionQuery<M, CN, any, any>,
+  Inc extends Pick<CollectionQuery<M, CN, any, any>, 'select' | 'include'>
+> = CollectionQuery<
+  M,
+  CN,
+  // @ts-expect-error
+  ParseSelect<
+    M,
+    CN,
+    // @ts-expect-error
+    Coalesce<
+      Coalesce<
+        // TODO: This is a hack to help differentiate between no selection and select([]) on a query
+        Inc['select'] extends [] | undefined ? unknown : Inc['select'],
+        Q['select']
+      >,
+      ReadonlyArray<QuerySelectionValue<M, CN>>
+    >
+  >,
+  ParseInclusions<M, CN, Coalesce<Inc['include'], Q['include']>>
+>;

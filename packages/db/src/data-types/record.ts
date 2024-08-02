@@ -8,6 +8,7 @@ import {
   IsPropertyRequired,
 } from '../schema/types/properties.js';
 import { DataType, Optional } from './base.js';
+import { QueryType } from './query.js';
 import {
   AttributeDefinition,
   RecordAttributeDefinition,
@@ -26,22 +27,25 @@ type RecordJSType<
     : never]?: ExtractJSType<Properties[k]>;
 };
 
-export type RecordType<
-  Properties extends { [k: string]: DataType | Optional<DataType> }
-> = TypeInterface<
-  'record',
-  RecordJSType<Properties>,
-  { [k in keyof Properties]: ExtractDBType<Properties[k]> },
-  // { [k in keyof Properties]: ExtractTimestampedType<Properties[k]> },
-  readonly []
-> & {
-  properties: Properties;
-  optional?: (keyof Properties)[];
+export type RecordProps<Key extends string, DT extends DataType> = {
+  [K in Key]: DT;
 };
 
-export function RecordType<
-  Properties extends { [k: string]: DataType | Optional<DataType> }
->(properties: Properties): RecordType<Properties> {
+export type RecordType<Properties extends RecordProps<any, any>> =
+  TypeInterface<
+    'record',
+    RecordJSType<Properties>,
+    { [k in keyof Properties]: ExtractDBType<Properties[k]> },
+    // { [k in keyof Properties]: ExtractTimestampedType<Properties[k]> },
+    readonly []
+  > & {
+    properties: Properties;
+    optional?: (keyof Properties)[];
+  };
+
+export function RecordType<Properties extends RecordProps<any, any>>(
+  properties: Properties
+): RecordType<Properties> {
   const optional = (
     Object.entries(properties)
       .filter(([_k, v]) => !!v.context.optional)
@@ -92,13 +96,7 @@ export function RecordType<
             return !isQuery && !optionalAndNoValue;
           })
           .map(([k, propDef]) => {
-            return [
-              k,
-              propDef.convertInputToDBValue(
-                // @ts-expect-error
-                val[k]
-              ),
-            ];
+            return [k, propDef.convertInputToDBValue(val[k])];
           })
       ) as { [K in keyof Properties]: ExtractDBType<Properties[K]> };
     },

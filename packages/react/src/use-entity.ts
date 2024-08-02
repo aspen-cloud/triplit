@@ -4,8 +4,8 @@ import {
   CollectionNameFromModels,
   SubscriptionOptions,
   Unalias,
-  ClientFetchResultEntity,
   ClientQueryDefault,
+  FetchResultEntity,
 } from '@triplit/client';
 import type { WorkerClient } from '@triplit/client/worker-client';
 import { useQueryOne } from './use-query-one.js';
@@ -31,17 +31,17 @@ export function useEntity<
   fetching: boolean;
   fetchingLocal: boolean;
   fetchingRemote: boolean;
-  result: Unalias<ClientFetchResultEntity<ClientQueryDefault<M, CN>>> | null;
-  results: Unalias<ClientFetchResultEntity<ClientQueryDefault<M, CN>>> | null;
+  result: Unalias<FetchResultEntity<ClientQueryDefault<M, CN>>> | null;
+  /**
+   * @deprecated use `result` instead
+   */
+  results: Unalias<FetchResultEntity<ClientQueryDefault<M, CN>>> | null;
   error: any;
 } {
   let builder = client.query(collectionName).id(id);
   const queryData = useQueryOne(client, builder, options);
   return {
     ...queryData,
-    /**
-     * @deprecated use `result` instead
-     */
     results: queryData.result,
   };
 }

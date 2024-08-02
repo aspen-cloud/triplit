@@ -80,11 +80,11 @@ export class Schema {
    */
   static RelationMany = <
     C extends CollectionNameFromModels<any>,
-    Q extends Omit<SubQuery<any, C>, 'collectionName'>
+    Q extends SubQuery<any, C>
   >(
     collectionName: C,
-    query: Q
-  ) => QueryType({ collectionName, ...query }, 'many');
+    query: Omit<Q, 'collectionName'>
+  ) => QueryType<C, Q, 'many'>({ collectionName, ...query } as Q, 'many');
 
   /**
    * A RelationOne models a one-to-one relationship between two collections. The attribute, when included in a query, will return the first `Entity` that matches to the `query` or `null` if none were found. {@link https://triplit.dev/schemas/relations#relationone Read more in the docs.}
@@ -94,11 +94,12 @@ export class Schema {
    */
   static RelationOne = <
     C extends CollectionNameFromModels<any>,
-    Q extends Omit<SubQuery<any, C>, 'collectionName'>
+    Q extends SubQuery<any, C>
   >(
     collectionName: C,
-    query: Q
-  ) => QueryType({ collectionName, ...query, limit: 1 }, 'one');
+    query: Omit<Q, 'collectionName'>
+  ) =>
+    QueryType<C, Q, 'one'>({ collectionName, ...query, limit: 1 } as Q, 'one');
 
   /**
    * A RelationById models a one-to-one relationship between two collections. The attribute, when included in a query, will return the entity with the provided id or `null` if none were found. {@link https://triplit.dev/schemas/relations#relationbyid Read more in the docs.}

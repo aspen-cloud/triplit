@@ -14,7 +14,7 @@ import { isValueVariable } from './db-helpers.js';
 import { isFilterStatement } from './query.js';
 import { CollectionQuery, FilterStatement } from './query/types';
 import { getSchemaFromPath } from './schema/schema.js';
-import { Models } from './schema/types';
+import { Model, Models } from './schema/types';
 import * as TB from '@sinclair/typebox/value';
 import type DB from './db.js';
 import { QueryCacheError } from './errors.js';
@@ -33,11 +33,10 @@ export class VariableAwareCache<Schema extends Models<any, any> | undefined> {
     this.cache = new Map();
   }
 
-  static canCacheQuery<
-    M extends Models<any, any> | undefined,
-    CN extends CollectionNameFromModels<M>,
-    Q extends CollectionQuery<M, CN>
-  >(query: Q, model?: ModelFromModels<M, CN> | undefined) {
+  static canCacheQuery(
+    query: CollectionQuery<any, any>,
+    model?: Model<any> | undefined
+  ) {
     // if (!model) return false;
     if (query.limit !== undefined) return false;
     if (query.where && query.where.some((f) => !isFilterStatement(f)))
@@ -50,7 +49,7 @@ export class VariableAwareCache<Schema extends Models<any, any> | undefined> {
       return false;
 
     const statements = (query.where ?? []).filter(isFilterStatement);
-    const variableStatements: FilterStatement<M, CN>[] = statements.filter(
+    const variableStatements: FilterStatement<any, any>[] = statements.filter(
       ([, , v]) => typeof v === 'string' && v.startsWith('$')
     );
     if (variableStatements.length !== 1) return false;

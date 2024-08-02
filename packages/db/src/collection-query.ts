@@ -5,14 +5,14 @@ import {
   isExistsFilter,
 } from './query.js';
 import {
-  Query,
   FilterStatement,
   SubQueryFilter,
   CollectionQuery,
   QueryResultCardinality,
   QueryValue,
-  WhereFilter,
-  GenericCollectionQuery,
+  RelationSubquery,
+  QueryInclusion,
+  RefSubquery,
 } from './query/types';
 import {
   isBooleanFilter,
@@ -31,7 +31,7 @@ import { timestampedObjectToPlainObject } from './utils.js';
 import { Timestamp, timestampCompare } from './timestamp.js';
 import { TripleStore, TripleStoreApi } from './triple-store.js';
 import { FilterFunc, MapFunc, Pipeline } from './utils/pipeline.js';
-import { TriplitError } from './errors.js';
+import { QueryNotPreparedError, TriplitError } from './errors.js';
 import {
   stripCollectionFromId,
   appendCollectionToId,
@@ -79,8 +79,8 @@ import { SessionRole } from './schema/permissions.js';
 export default function CollectionQueryBuilder<
   M extends Models<any, any> | undefined,
   CN extends CollectionNameFromModels<M>
->(collectionName: CN, params?: Query<M, CN>) {
-  const query: CollectionQuery<M, CN> = {
+>(collectionName: CN, params?: Omit<CollectionQuery<M, CN>, 'collectionName'>) {
+  const query: CollectionQueryDefault<M, CN> = {
     collectionName,
     ...params,
   };
@@ -121,10 +121,12 @@ type QueryFulfillmentTracker = {
   after: boolean;
 };
 
-async function getOrderSetForQuery<
-  M extends Models<any, any> | undefined,
-  Q extends CollectionQuery<M, any>
->(tx: TripleStoreApi, query: Q, schema: M, fulfilled: QueryFulfillmentTracker) {
+async function getOrderSetForQuery(
+  tx: TripleStoreApi,
+  query: CollectionQuery<any, any>,
+  schema: Models<any, any> | undefined,
+  fulfilled: QueryFulfillmentTracker
+) {
   const { order, after } = query;
   if (!order?.length) return undefined;
   const singleOrder = order.length === 1;
@@ -199,17 +201,19 @@ async function getOrderSetForQuery<
   return undefined;
 }
 
-async function getFilterSetForQuery<
-  M extends Models<any, any> | undefined,
-  Q extends CollectionQuery<M, any>
->(tx: TripleStoreApi, query: Q, schema: M, fulfilled: QueryFulfillmentTracker) {
+async function getFilterSetForQuery(
+  tx: TripleStoreApi,
+  query: CollectionQuery<any, any>,
+  schema: Models<any, any> | undefined,
+  fulfilled: QueryFulfillmentTracker
+) {
   const { where } = query;
   const [filterIdx, filterType, dataType] = findCandidateFilter(query, schema);
   if (filterIdx === -1) return undefined;
-  const filterMatch = where![filterIdx] as FilterStatement<M, any>;
+  const filterMatch = where![filterIdx] as FilterStatement<any, any>;
   if (filterType === 'range') {
     fulfilled.where[filterIdx] = true;
-    let rangePair: FilterStatement<M, any> | undefined = undefined;
+    let rangePair: FilterStatement<any, any> | undefined = undefined;
     const rangePairIndex = findRangeFilter(
       query,
       filterMatch[0],
@@ -217,7 +221,7 @@ async function getFilterSetForQuery<
       GT_OPS.includes(filterMatch[1]) ? 'lt' : 'gt'
     );
     if (rangePairIndex !== -1) {
-      rangePair = where![rangePairIndex] as FilterStatement<M, any>;
+      rangePair = where![rangePairIndex] as FilterStatement<any, any>;
       fulfilled.where[rangePairIndex] = true;
     }
     return new Set(
@@ -311,10 +315,12 @@ async function performEqualityScan<
   return await performValueEqualityScan(tx, query, filter);
 }
 
-function findRangeFilter<
-  M extends Models<any, any> | undefined,
-  Q extends CollectionQuery<M, any>
->(query: Q, path: string, after: number, type: 'gt' | 'lt') {
+function findRangeFilter(
+  query: CollectionQuery<any, any>,
+  path: string,
+  after: number,
+  type: 'gt' | 'lt'
+) {
   const { where } = query;
   if (!where) return -1;
   for (let i = after + 1; i < where.length; i++) {
@@ -332,20 +338,17 @@ function findRangeFilter<
   return -1;
 }
 
-function findCandidateFilter<
-  M extends Models<any, any> | undefined,
-  Q extends CollectionQuery<M, any>
->(
-  query: Q,
-  schema: M
+function findCandidateFilter(
+  query: CollectionQuery<any, any>,
+  schema: Models<any, any> | undefined
 ):
   | [-1, undefined, undefined]
   | [idx: number, 'equality' | 'range', dataType: DataType | undefined] {
   const { where, collectionName } = query;
   function getCandidateDataTypeFromPath(
     path: string,
-    schema: M,
-    collectionName: CollectionNameFromModels<M>
+    schema: Models<any, any> | undefined,
+    collectionName: string
   ): DataType | undefined {
     if (!schema) return undefined;
     const dataType = getAttributeFromSchema(
@@ -386,10 +389,11 @@ function findCandidateFilter<
   return [-1, undefined, undefined];
 }
 
-async function performValueEqualityScan<
-  M extends Models<any, any> | undefined,
-  Q extends CollectionQuery<M, any>
->(tx: TripleStoreApi, query: Q, filter: FilterStatement<M, any>) {
+async function performValueEqualityScan(
+  tx: TripleStoreApi,
+  query: CollectionQuery<any, any>,
+  filter: FilterStatement<any, any>
+) {
   return await tx.findByAVE([
     [query.collectionName, ...filter[0].split('.')],
     // @ts-expect-error
@@ -397,20 +401,21 @@ async function performValueEqualityScan<
   ]);
 }
 
-async function performSetEqualityScan<
-  M extends Models<any, any> | undefined,
-  Q extends CollectionQuery<M, any>
->(tx: TripleStoreApi, query: Q, filter: FilterStatement<M, any>) {
+async function performSetEqualityScan(
+  tx: TripleStoreApi,
+  query: CollectionQuery<any, any>,
+  filter: FilterStatement<any, any>
+) {
   return await tx.findByAVE([
     [query.collectionName, ...filter[0].split('.'), filter[2]],
     true,
   ]);
 }
 
-export async function getCollectionIds<
-  M extends Models<any, any> | undefined,
-  Q extends CollectionQuery<M, any>
->(tx: TripleStoreApi, query: Q) {
+export async function getCollectionIds(
+  tx: TripleStoreApi,
+  query: CollectionQuery<any, any>
+) {
   return Array.from(
     new Set(
       (await tx.findByAVE([['_collection'], query.collectionName])).map(
@@ -420,13 +425,10 @@ export async function getCollectionIds<
   );
 }
 
-export async function getCandidateEntityIds<
-  M extends Models<any, any> | undefined,
-  Q extends CollectionQuery<M, any>
->(
+export async function getCandidateEntityIds(
   tx: TripleStoreApi,
-  query: Q,
-  schema?: M
+  query: CollectionQuery<any, any>,
+  schema?: Models<any, any> | undefined
 ): Promise<{
   candidates: string[];
   fulfilled: QueryFulfillmentTracker;
@@ -475,11 +477,11 @@ export function getRelationsFromIdentifier<
   identifier: string,
   schema: M,
   collectionName: CN
-): Record<string, QueryType<any, any>> {
+): Record<string, QueryType<any, any, any>> {
   let schemaTraverser = createSchemaTraverser(schema, collectionName);
   const attrPath = identifier.split('.');
   const relationPath: string[] = [];
-  const relations: Record<string, QueryType<any, any>> = {};
+  const relations: Record<string, QueryType<any, any, any>> = {};
   for (const attr of attrPath) {
     relationPath.push(attr);
     schemaTraverser = schemaTraverser.get(attr);
@@ -743,10 +745,9 @@ export async function fetchDeltaTriples<
  * E.g. If the query is like "Users with posts created in the last week" it will generate permutations like "Posts created in the last week with their users"
  * @param query The query to generate permutations for
  */
-export function generateQueryRootPermutations<
-  M extends Models<any, any> | undefined,
-  Q extends CollectionQuery<M, any>
->(query: Q) {
+export function generateQueryRootPermutations(
+  query: CollectionQuery<any, any>
+) {
   const queries = [];
   for (const chain of generateQueryChains(query)) {
     queries.push(queryChainToQuery(chain.slice().reverse()));
@@ -760,10 +761,10 @@ export function generateQueryRootPermutations<
  * each query at pos 0 will have add an exists filter to the next query
  * @param chain
  */
-function queryChainToQuery<
-  M extends Models<any, any> | undefined,
-  Q extends CollectionQuery<M, any>
->(chain: Q[], additionalFilters: FilterStatement<any, any>[] = []): Q {
+function queryChainToQuery(
+  chain: CollectionQuery<any, any>[],
+  additionalFilters: FilterStatement<any, any>[] = []
+): CollectionQuery<any, any> {
   const [first, ...rest] = chain;
   if (rest.length === 0)
     return {
@@ -792,15 +793,24 @@ function queryChainToQuery<
   };
 }
 
-function* generateQueryChains<
-  M extends Models<any, any> | undefined,
-  Q extends GenericCollectionQuery<M, any>
->(query: Q, prefix: Q[] = []): Generator<Q[]> {
+function* generateQueryChains(
+  query: CollectionQuery<any, any>,
+  prefix: CollectionQuery<any, any>[] = []
+): Generator<CollectionQuery<any, any>[]> {
   yield [...prefix, query];
   const subQueryFilters = (query.where ?? []).filter((filter) =>
     isSubQueryFilter(filter)
-  ) as SubQueryFilter<M>[];
-  const subQueryInclusions = Object.values(query.include ?? {});
+  ) as SubQueryFilter<any>[];
+  const subQueryInclusions = Object.values(query.include ?? {}).reduce<
+    RelationSubquery<any, any, any>[]
+  >((acc, inc) => {
+    if (isQueryInclusionSubquery(inc)) {
+      acc.push(inc);
+    } else {
+      throw new QueryNotPreparedError('An inclusion is not prepared');
+    }
+    return acc;
+  }, []);
   const subQueries = [
     ...subQueryFilters.map((f) => f.exists),
     ...subQueryInclusions.map((i) => i.subquery),
@@ -813,10 +823,7 @@ function* generateQueryChains<
         (f) => !isSubQueryFilter(f) || f.exists !== subQuery
       ),
     };
-    yield* generateQueryChains(subQuery as Q, [
-      ...prefix,
-      queryWithoutSubQuery,
-    ]);
+    yield* generateQueryChains(subQuery, [...prefix, queryWithoutSubQuery]);
   }
 }
 
@@ -873,13 +880,10 @@ function LoadCandidateEntities(
   };
 }
 
-function ApplyFilters<
-  M extends Models<any, any> | undefined,
-  Q extends CollectionQuery<M, any>
->(
-  db: DB<M>,
+function ApplyFilters(
+  db: DB<any>,
   tx: TripleStoreApi,
-  query: Q,
+  query: CollectionQuery<any, any>,
   executionContext: FetchExecutionContext,
   options: FetchFromStorageOptions
 ): FilterFunc<[string, QueryPipelineData]> {
@@ -913,10 +917,9 @@ function ApplyFilters<
 
 // Assumes ordered fully
 // Unless we
-function FilterAfterCursor<
-  M extends Models<any, any>,
-  Q extends CollectionQuery<M, any>
->(query: Q): FilterFunc<[string, QueryPipelineData]> {
+function FilterAfterCursor(
+  query: CollectionQuery<any, any>
+): FilterFunc<[string, QueryPipelineData]> {
   const { order, after, collectionName } = query;
   let cursorValueReached = false;
   let cursorValuePassed = false;
@@ -956,13 +959,10 @@ function FilterAfterCursor<
 
 // TODO: Handle relationships inside record or disallow that
 // TODO: Handle conflicting includes statements
-function loadOrderRelationships<
-  M extends Models<any, any> | undefined,
-  Q extends CollectionQuery<M, any>
->(
-  caller: DB<M>,
+function loadOrderRelationships(
+  caller: DB<any>,
   tx: TripleStoreApi,
-  query: Q,
+  query: CollectionQuery<any, any>,
   executionContext: FetchExecutionContext,
   options: FetchFromStorageOptions
 ): MapFunc<[string, QueryPipelineData], [string, QueryPipelineData]> {
@@ -1014,7 +1014,7 @@ function loadOrderRelationships<
       let fullSubquery = {
         ...relationshipQuery,
         include: { ...(relationshipQuery.include ?? {}), ...inclusions },
-      } as CollectionQuery<M, any>;
+      } as CollectionQuery<any, any>;
       const subqueryResult = await loadSubquery(
         caller,
         tx,
@@ -1036,13 +1036,10 @@ function loadOrderRelationships<
   };
 }
 
-function LoadIncludeRelationships<
-  M extends Models<any, any> | undefined,
-  Q extends GenericCollectionQuery<M, any>
->(
-  caller: DB<M>,
+function LoadIncludeRelationships(
+  caller: DB<any>,
   tx: TripleStoreApi,
-  query: Q,
+  query: CollectionQuery<any, any>,
   executionContext: FetchExecutionContext,
   options: FetchFromStorageOptions
 ): MapFunc<[string, QueryPipelineData], [string, QueryPipelineData]> {
@@ -1052,7 +1049,11 @@ function LoadIncludeRelationships<
     entId,
     { entity, relationships, triples, existsFilterTriples },
   ]) => {
-    for (const [attributeName, { subquery, cardinality }] of subqueries) {
+    for (const [attributeName, inclusion] of subqueries) {
+      if (!isQueryInclusionSubquery(inclusion)) {
+        throw new QueryNotPreparedError('An inclusion is not prepared');
+      }
+      const { subquery, cardinality } = inclusion;
       // If we have already loaded this relationship, skip
       if (!!relationships[attributeName]) continue;
       const subqueryResult = await loadSubquery(
@@ -1100,14 +1101,11 @@ export function bumpSubqueryVar(varName: string) {
   return `${intPrefix + 1}.${rest}`;
 }
 
-export async function loadSubquery<
-  M extends Models<any, any> | undefined,
-  CN extends CollectionNameFromModels<M>
->(
-  caller: DB<M>,
+export async function loadSubquery(
+  caller: DB<any>,
   tx: TripleStoreApi,
-  parentQuery: CollectionQuery<M, any>,
-  subquery: CollectionQuery<M, CN>,
+  parentQuery: CollectionQuery<any, any>,
+  subquery: CollectionQuery<any, any>,
   cardinality: QueryResultCardinality,
   executionContext: FetchExecutionContext,
   options: FetchFromStorageOptions,
@@ -1132,11 +1130,11 @@ export async function loadSubquery<
   let fullSubquery = {
     ...subquery,
     vars: { ...(parentQuery.vars ?? {}), ...(subquery.vars ?? {}) },
-  } as CollectionQuery<M, any>;
+  } as CollectionQuery<any, any>;
 
   fullSubquery = prepareQuery(
     fullSubquery,
-    schema as M,
+    schema,
     { roles: caller.sessionRoles },
     {
       skipRules: options.skipRules,
@@ -1146,20 +1144,8 @@ export async function loadSubquery<
   // Perform fetch
   const result =
     cardinality === 'one'
-      ? await fetchOne<M, typeof subquery>(
-          caller,
-          tx,
-          fullSubquery,
-          executionContext,
-          options
-        )
-      : await fetch<M, typeof subquery>(
-          caller,
-          tx,
-          fullSubquery,
-          executionContext,
-          options
-        );
+      ? await fetchOne(caller, tx, fullSubquery, executionContext, options)
+      : await fetch(caller, tx, fullSubquery, executionContext, options);
 
   // Remove entity from context stack
   // I think this is safe, but be careful this reference is shared through the query execution
@@ -1339,18 +1325,15 @@ export async function fetch<
 
 // Entities are have db values
 // This can be probably be faster if we know we are partially sorted already
-function sortEntities<
-  M extends Models<any, any> | undefined,
-  CQ extends CollectionQuery<M, any>
->(query: CQ, entities: [string, any][]) {
+function sortEntities(
+  query: CollectionQuery<any, any>,
+  entities: [string, any][]
+) {
   if (!query.order) return;
   entities.sort((a, b) => querySorter(query)(a[1], b[1]));
 }
 
-function querySorter<
-  M extends Models<any, any> | undefined,
-  CQ extends CollectionQuery<M, any>
->(query: CQ) {
+function querySorter(query: CollectionQuery<any, any>) {
   return (a: any, b: any) => {
     for (const [prop, dir] of query.order!) {
       const valueA = getPropertyFromPath(a, prop.split('.'))?.[0];
@@ -1931,12 +1914,8 @@ function selectParser(entity: any) {
   };
 }
 
-async function replaceVariablesInQuery<
-  M extends Models<any, any> | undefined,
-  CN extends CollectionNameFromModels<M>,
-  Q extends Partial<Pick<CollectionQuery<M, CN>, 'where' | 'vars'>>
->(
-  caller: DB<M>,
+async function replaceVariablesInQuery<Q extends CollectionQuery<any, any>>(
+  caller: DB<any>,
   tx: TripleStoreApi,
   query: Q,
   executionContext: FetchExecutionContext,
@@ -1971,7 +1950,7 @@ async function replaceVariablesInQuery<
 
   // TODO: might be variables in select too
 
-  return { ...query, where };
+  return { ...query, where } as Q;
 }
 
 export function getQueryVariables<
@@ -2075,10 +2054,8 @@ async function loadRelationshipsIntoContextFromVariable<
         options,
         referenceEntity
       );
-      referenceEntity[pathParts[0]] = timestampedObjectToPlainObject(
-        // @ts-expect-error
-        subqueryResult
-      );
+      referenceEntity[pathParts[0]] =
+        timestampedObjectToPlainObject(subqueryResult);
     }
   }
 }
@@ -2107,4 +2084,32 @@ export function convertEntityToJS<
   return collectionSchema
     ? collectionSchema.convertDBValueToJS(untimestampedEntity, schema)
     : untimestampedEntity;
+}
+
+export function isQueryInclusionSubquery<
+  M extends Models<any, any> | undefined
+>(
+  inclusion: QueryInclusion<M, any>
+): inclusion is RelationSubquery<M, any, any> {
+  return (
+    !isQueryInclusionShorthand(inclusion) &&
+    typeof inclusion === 'object' &&
+    'subquery' in inclusion
+  );
+}
+
+export function isQueryInclusionShorthand<
+  M extends Models<any, any> | undefined
+>(inclusion: QueryInclusion<M, any>): inclusion is true | null {
+  return inclusion === true || inclusion === null;
+}
+
+export function isQueryInclusionReference<
+  M extends Models<any, any> | undefined
+>(inclusion: QueryInclusion<M, any>): inclusion is RefSubquery<M, any> {
+  return (
+    !isQueryInclusionShorthand(inclusion) &&
+    typeof inclusion === 'object' &&
+    '_rel' in inclusion
+  );
 }

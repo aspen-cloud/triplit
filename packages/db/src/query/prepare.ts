@@ -1,4 +1,9 @@
-import { bumpSubqueryVar } from '../collection-query.js';
+import {
+  bumpSubqueryVar,
+  isQueryInclusionReference,
+  isQueryInclusionShorthand,
+  isQueryInclusionSubquery,
+} from '../collection-query.js';
 import { DataType } from '../data-types/base.js';
 import { appendCollectionToId, isValueVariable } from '../db-helpers.js';
 import { CollectionFromModels, CollectionNameFromModels } from '../db.js';
@@ -31,9 +36,8 @@ import { Models } from '../schema/types';
 import {
   CollectionQuery,
   FilterStatement,
-  GenericCollectionQuery,
   QueryWhere,
-  RelationSubquery,
+  RefQueryExtension,
   RelationshipExistsFilter,
   SubQueryFilter,
   WhereFilter,
@@ -154,17 +158,38 @@ function validateCollectionName<
 
 function getQueryInclude<
   M extends Models<any, any> | undefined,
-  Q extends GenericCollectionQuery<M, any>
+  Q extends CollectionQuery<M, any>
 >(query: Q, schema: M, session: Session, options: QueryPreparationOptions) {
   if (!schema) return query.include;
   if (!query.include) return query.include;
   //   addSubsSelectsFromIncludes(query, schema);
   const inclusions: any = {}; // TODO: type this
-  for (const [relationName, relation] of Object.entries(query.include)) {
+  for (const [alias, relation] of Object.entries(query.include)) {
     // We have already prepared this statement
-    if (relation?.subquery) {
-      inclusions[relationName] = relation;
+    if (isQueryInclusionSubquery(relation)) {
+      inclusions[alias] = {
+        subquery: prepareQuery(
+          relation.subquery,
+          schema as M,
+          session,
+          options
+        ),
+        cardinality: relation.cardinality,
+      };
       continue;
+    }
+
+    let relationName: string;
+    let additionalQuery: RefQueryExtension<M, any, any> | null;
+    if (isQueryInclusionReference(relation)) {
+      const { _rel, ...queryExt } = relation;
+      relationName = _rel;
+      additionalQuery = queryExt as RefQueryExtension<M, any, any>;
+    } else if (isQueryInclusionShorthand(relation)) {
+      relationName = alias;
+      additionalQuery = null;
+    } else {
+      throw new TriplitError('Invalid inclusion format');
     }
 
     const attributeType = getAttributeFromSchema(
@@ -174,20 +199,31 @@ function getQueryInclude<
     );
 
     if (attributeType && attributeType.type === 'query') {
-      // @ts-expect-error this is improperly typed because we dont differentiate between a user query and prepared query
-      let additionalQuery = relation as CollectionQuery<M, any>;
-      const merged = mergeQueries({ ...attributeType.query }, additionalQuery);
+      const merged = mergeQueries<M>(
+        { ...attributeType.query },
+        // @ts-expect-error this is improperly typed because RefQueryExtension is a subset of CollectionQuery
+        additionalQuery
+      );
       const subquerySelection = {
-        subquery: prepareQuery(merged, schema, session, options),
+        subquery: prepareQuery(merged, schema as M, session, options),
         cardinality: attributeType.cardinality,
       };
-      inclusions[relationName] = subquerySelection;
+      inclusions[alias] = subquerySelection;
       //   query.include = { ...query.include, [relationName]: subquerySelection };
     } else {
       if (!attributeType) {
-        throw new RelationDoesNotExistError(relationName, query.collectionName);
+        throw new RelationDoesNotExistError(
+          relationName,
+          alias,
+          query.collectionName
+        );
       }
-      throw new IncludedNonRelationError(relationName, query.collectionName);
+
+      throw new IncludedNonRelationError(
+        relationName,
+        alias,
+        query.collectionName
+      );
     }
   }
   return inclusions;

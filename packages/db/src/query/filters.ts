@@ -299,10 +299,9 @@ function determineFilterType(
 /**
  * Based on the type of filter, determine its priority in execution
  */
-export function getFilterPriorityOrder<
-  M extends Models<any, any> | undefined,
-  Q extends CollectionQuery<M, any>
->(query: Q): number[] {
+export function getFilterPriorityOrder(
+  query: CollectionQuery<any, any>
+): number[] {
   const { where = [] } = query;
   const basicFilters = [];
   const relationalFilters = [];

@@ -348,11 +348,11 @@ export function fetchResultToJS<
   results: TimestampedFetchResult<Q>,
   schema: M,
   collectionName: CollectionNameFromModels<M>
-) {
+): FetchResult<Q> {
   results.forEach((entity, id) => {
     results.set(id, convertEntityToJS(entity, schema, collectionName));
   });
-  return results as FetchResult<Q>;
+  return results;
 }
 
 export function isValueVariable(value: QueryValue): value is string {

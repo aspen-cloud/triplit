@@ -31,7 +31,8 @@ test('Builder API', () => {
     | 'syncStatus'
     | 'vars'
     | 'where'
-    | 'entityId';
+    | 'entityId'
+    | 'subquery';
 
   const builder = client.query('a');
   expectTypeOf<keyof typeof builder>().toEqualTypeOf<BuilderKeys>();

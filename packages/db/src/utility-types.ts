@@ -29,6 +29,16 @@ export type isAnyOrUndefined<T> = IsAny<T> extends true
   : false;
 
 /**
+ * Check if a type is unknown, if so return the fallback type
+ */
+export type Coalesce<T, U> = IsUnknown<T> extends true ? U : T;
+
+/**
+ * Check if a type is unknown
+ */
+export type IsUnknown<T> = unknown extends T ? true : false;
+
+/**
  * Check if a type is unknown or undefined
  */
 export type IsUnknownOrUndefined<T> = unknown extends T

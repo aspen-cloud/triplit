@@ -17,6 +17,7 @@ import {
   QueryValue,
   QueryWhere,
   RelationshipExistsFilter,
+  RelationSubquery,
   SubQueryFilter,
   ValueCursor,
   WhereFilter,

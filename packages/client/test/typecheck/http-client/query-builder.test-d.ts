@@ -30,9 +30,11 @@ test('Builder API', () => {
     | 'select'
     | 'vars'
     | 'where'
-    | 'entityId';
+    | 'entityId'
+    | 'subquery';
 
   const builder = client.query('a');
+  type Foo = keyof typeof builder;
   expectTypeOf<keyof typeof builder>().toEqualTypeOf<BuilderKeys>();
 
   const builderWithAfter = builder.after(['1', '1']);

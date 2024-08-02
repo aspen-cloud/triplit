@@ -10,7 +10,9 @@ import {
   CollectionQueryDefault,
   FilterStatement,
   OrderStatement,
+  SchemaQueries,
   QueryOrder,
+  QueryResultCardinality,
   QueryWhere,
   RelationSubquery,
   ValueCursor,
@@ -69,33 +71,22 @@ export type AfterInput<
 /**
  * Helper type to extract the subquery information from a relation name based on include() inputs
  */
-export type InclusionFromArgs<
+export type InclusionByRName<
   M extends Models<any, any> | undefined,
   CN extends CollectionNameFromModels<M>,
-  RName extends string,
-  Inclusion extends RelationSubquery<M, any> | null
+  RName extends RelationAttributes<ModelFromModels<M, CN>>
 > = M extends Models<any, any>
-  ? Inclusion extends null
-    ? // Look up in Models
-      RName extends RelationAttributes<ModelFromModels<M, CN>>
-      ? {
-          // Colleciton query with params based on the relation
-          subquery: CollectionQuery<
-            M,
-            ModelFromModels<
-              M,
-              CN
-            >['properties'][RName]['query']['collectionName']
-          >;
-          cardinality: ModelFromModels<
-            M,
-            CN
-          >['properties'][RName]['cardinality'];
-        }
-      : never
-    : Inclusion
-  : Inclusion;
-
+  ? RName extends RelationAttributes<ModelFromModels<M, CN>>
+    ? {
+        // Colleciton query with params based on the relation
+        subquery: CollectionQueryDefault<
+          M,
+          ModelFromModels<M, CN>['properties'][RName]['query']['collectionName']
+        >;
+        cardinality: ModelFromModels<M, CN>['properties'][RName]['cardinality'];
+      }
+    : never
+  : never;
 /**
  * A collection query with just allowed params for a subquery in an include() clause
  */

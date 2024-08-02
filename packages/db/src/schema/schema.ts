@@ -88,7 +88,6 @@ export function createSchemaTraverser<
   M extends Models<any, any>,
   CN extends CollectionNameFromModels<M>
 >(schema: M, collectionName: CN): Traverser {
-  // @ts-expect-error
   let current: DataType | undefined = schema[collectionName]?.schema;
   const getter = (attribute: string): Traverser => {
     let next: DataType | undefined = current;

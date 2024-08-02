@@ -24,6 +24,6 @@ export function httpClientQueryBuilder<
     ...params,
   };
   return new QueryBuilder<
-    CollectionQuery<M, CN, QuerySelectionValue<M, CN>, {}>
+    CollectionQuery<M, CN, ReadonlyArray<QuerySelectionValue<M, CN>>, {}>
   >(query);
 }

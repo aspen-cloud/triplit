@@ -13,11 +13,9 @@ import {
   FilterInput,
   OrderInput,
   AfterInput,
-  IncludeSubquery,
-  InclusionFromArgs,
+  InclusionByRName,
   CollectionQuery,
   FilterStatement,
-  Query,
   QueryOrder,
   QuerySelectionValue,
   QueryValue,
@@ -25,6 +23,12 @@ import {
   ValueCursor,
   RelationSubquery,
   OrderStatement,
+  SchemaQueries,
+  QueryResultCardinality,
+  RefSubquery,
+  RefQueryExtension,
+  QueryInclusions,
+  RefCollectionName,
 } from './types';
 
 export class QueryBuilder<
@@ -103,44 +107,103 @@ export class QueryBuilder<
     });
   }
 
-  include<RName extends string, SQ extends RelationSubquery<M, any>>(
-    relationName: RName,
-    query: RelationSubquery<M, any>
+  /**
+   * Include data from a relation in the query and extend the relation with additional query parameters
+   * @param alias - the alias to use for the included relation
+   * @param queryExt - the query to extend the included relation
+   */
+  include<Alias extends string, RQ extends RefSubquery<M, CN>>(
+    alias: Alias,
+    queryExt: RQ
   ): QueryBuilder<
     CollectionQuery<
       M,
       CN,
       CollectionQuerySelection<Q>,
       CollectionQueryInclusion<Q> & {
-        [K in RName]: SQ;
+        [K in Alias]: RQ;
       }
     >
   >;
+  /**
+   * Include data from a relation in the query and extend the relation with additional query parameters
+   * @param alias - the alias to use for the included relation
+   * @param builder - a function returning a query builder to extend the included relation
+   */
+  include<Alias extends string, RQ extends RefSubquery<M, CN>>(
+    alias: Alias,
+    builder: (
+      rel: <RName extends RelationAttributes<ModelFromModels<M, CN>>>(
+        relationName: RName
+      ) => RelationBuilder<M, CN, RName>
+    ) => RQ
+  ): QueryBuilder<
+    CollectionQuery<
+      M,
+      CN,
+      CollectionQuerySelection<Q>,
+      CollectionQueryInclusion<Q> & {
+        [K in Alias]: RQ;
+      }
+    >
+  >;
+  /**
+   * Include data from a relation in the query
+   * @param relationName - the name of the relation to include
+   */
   include<RName extends RelationAttributes<ModelFromModels<M, CN>>>(
-    relationName: RName,
-    query?: IncludeSubquery<
-      M,
-      // @ts-expect-error Doesn't know that Model['RName'] is a query type
-      ModelFromModels<M, CN>['properties'][RName]['query']['collectionName']
-    >
+    relationName: RName
   ): QueryBuilder<
     CollectionQuery<
       M,
       CN,
       CollectionQuerySelection<Q>,
       CollectionQueryInclusion<Q> & {
-        [K in RName]: InclusionFromArgs<M, CN, RName, null>;
+        [K in RName]: InclusionByRName<M, CN, RName>;
       }
     >
   >;
-  include(relationName: any, query?: any) {
+  include(relationName: any, queryExt?: any) {
+    if (typeof queryExt === 'function') {
+      queryExt = queryExt(relationBuilder);
+    }
     return new QueryBuilder<CollectionQuery<any, any, any, any>>({
       ...this.query,
       include: QUERY_INPUT_TRANSFORMERS<M, CN>().include(
-        // @ts-expect-error
         this.query,
         relationName,
-        query
+        queryExt
+      ),
+    });
+  }
+
+  subquery<
+    Alias extends string,
+    PQ extends SchemaQueries<M>,
+    Cardinality extends QueryResultCardinality = 'many'
+  >(
+    relationName: Alias,
+    query: PQ,
+    cardinality: Cardinality = 'many' as Cardinality
+  ): QueryBuilder<
+    CollectionQuery<
+      M,
+      CN,
+      CollectionQuerySelection<Q>,
+      CollectionQueryInclusion<Q> & {
+        [K in Alias]: RelationSubquery<M, PQ, Cardinality>;
+      }
+    >
+  > {
+    return new QueryBuilder<CollectionQuery<any, any, any, any>>({
+      ...this.query,
+      include: QUERY_INPUT_TRANSFORMERS<M, CN>().include(
+        this.query,
+        relationName,
+        {
+          subquery: query,
+          cardinality,
+        }
       ),
     });
   }
@@ -161,6 +224,136 @@ export class QueryBuilder<
   }
 }
 
+export function relationBuilder<
+  M extends Models<any, any> | undefined,
+  CN extends CollectionNameFromModels<M>,
+  RName extends RelationAttributes<ModelFromModels<M, CN>>
+>(relationName: RName) {
+  return new RelationBuilder<M, CN, RName>(relationName);
+}
+
+export class RelationBuilder<
+  M extends Models<any, any> | undefined,
+  CN extends CollectionNameFromModels<M>,
+  RName extends RelationAttributes<ModelFromModels<M, CN>>,
+  RelSelection extends ReadonlyArray<
+    QuerySelectionValue<M, RefCollectionName<M, CN, RName>>
+  > = [], // TODO: this is a small hack to help when creating a merged result type, should figure out how to differentiate between no selection and select: [] (bot defined as never[])
+  RelInclusions extends QueryInclusions<M, RefCollectionName<M, CN, RName>> = {}
+> {
+  private relationName: RName;
+  private ext: RefQueryExtension<
+    M,
+    CN,
+    CollectionQuery<
+      M,
+      RefCollectionName<M, CN, RName>,
+      RelSelection,
+      RelInclusions
+    >
+  >;
+  constructor(relationName: RName) {
+    this.relationName = relationName;
+    this.ext = {};
+  }
+
+  build() {
+    return {
+      _rel: this.relationName,
+      ...this.ext,
+    };
+  }
+
+  select<
+    Selection extends ReadonlyArray<
+      QuerySelectionValue<M, RefCollectionName<M, CN, RName>>
+    >
+  >(selection: Selection) {
+    // @ts-expect-error
+    this.ext.select = selection;
+    // @ts-expect-error
+    return this as RelationBuilder<M, CN, RName, Selection, RelInclusions>;
+  }
+
+  order(...args: OrderInput<M, RefCollectionName<M, CN, RName>>) {
+    this.ext.order = QUERY_INPUT_TRANSFORMERS<M, CN>().order(this.ext, ...args);
+    return this;
+  }
+
+  where(...args: FilterInput<M, CN, RefCollectionName<M, CN, RName>>) {
+    this.ext.where = QUERY_INPUT_TRANSFORMERS<M, CN>().where(this.ext, ...args);
+    return this;
+  }
+
+  limit(limit: number) {
+    this.ext.limit = limit;
+    return this;
+  }
+
+  include<
+    Alias extends string,
+    RQ extends RefSubquery<M, RefCollectionName<M, CN, RName>>
+  >(
+    alias: Alias,
+    refQuery: RQ
+  ): RelationBuilder<
+    M,
+    CN,
+    RName,
+    RelSelection,
+    RelInclusions & { [K in Alias]: RQ }
+  >;
+  include<
+    Alias extends string,
+    RQ extends RefSubquery<M, RefCollectionName<M, CN, RName>>
+  >(
+    alias: Alias,
+    builder: (
+      rel: <
+        InclusionRName extends RelationAttributes<
+          ModelFromModels<M, RefCollectionName<M, CN, RName>>
+        >
+      >(
+        relationName: InclusionRName
+      ) => RelationBuilder<M, RefCollectionName<M, CN, RName>, InclusionRName>
+    ) => RQ
+  ): RelationBuilder<
+    M,
+    CN,
+    RName,
+    RelSelection,
+    RelInclusions & { [K in Alias]: RQ }
+  >;
+  // @ts-expect-error
+  include<
+    Alias extends RelationAttributes<
+      ModelFromModels<M, RefCollectionName<M, CN, RName>>
+    >
+  >(
+    alias: Alias
+  ): RelationBuilder<
+    M,
+    CN,
+    RName,
+    RelSelection,
+    RelInclusions & {
+      [K in Alias]: InclusionByRName<M, RefCollectionName<M, CN, RName>, Alias>;
+    }
+  >;
+  include(alias: any, queryExt?: any) {
+    if (typeof queryExt === 'function') {
+      queryExt = queryExt(relationBuilder);
+    }
+    // @ts-expect-error
+    this.ext.include = QUERY_INPUT_TRANSFORMERS<M, CN>().include(
+      this.ext,
+      alias,
+      queryExt
+    );
+    return this;
+  }
+}
+
 export type QUERY_INPUT_TRANSFORMERS<
   M extends Models<any, any> | undefined,
   CN extends CollectionNameFromModels<M>
@@ -172,7 +365,7 @@ export const QUERY_INPUT_TRANSFORMERS = <
   CN extends CollectionNameFromModels<M>
 >() => ({
   where: <A extends FilterInput<M, CN, any>>(
-    q: Query<M, CN>,
+    q: Pick<CollectionQuery<M, CN>, 'where'>,
     ...args: A
   ): QueryWhere<M, CN> => {
     let newWhere: QueryWhere<M, CN> = [];
@@ -204,7 +397,7 @@ export const QUERY_INPUT_TRANSFORMERS = <
     return [...(q.where ?? []), ...newWhere];
   },
   order: (
-    q: Query<M, CN>,
+    q: Pick<CollectionQuery<M, CN>, 'order'>,
     ...args: OrderInput<M, CN>
   ): QueryOrder<M, CN> | undefined => {
     if (!args[0]) return undefined;
@@ -236,24 +429,20 @@ export const QUERY_INPUT_TRANSFORMERS = <
     }
     return [...(q.order ?? []), ...newOrder];
   },
-  include<
-    RName extends M extends Models<any, any>
-      ? RelationAttributes<ModelFromModels<M, CN>>
-      : never
-  >(
-    q: Query<M, CN>,
-    relationName: RName,
-    query?: Query<M, RName>
+  include<Alias extends string>(
+    q: Pick<CollectionQuery<M, CN>, 'include'>,
+    alias: Alias,
+    query?: any
   ): Record<string, any> {
     // TODO: include should be typed as a set of subqueries
     return {
       ...q.include,
       // Set to null so the inclusion of the key can be serialized
-      [relationName]: query ?? null,
+      [alias]: query ?? null,
     };
   },
   after(
-    q: Query<M, CN>,
+    q: Pick<CollectionQuery<M, CN>, 'after' | 'order'>,
     after: AfterInput<M, CN>,
     inclusive?: boolean
   ): [ValueCursor, boolean] | undefined {

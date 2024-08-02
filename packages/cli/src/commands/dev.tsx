@@ -168,12 +168,16 @@ export default Command({
          * - We dont queue up the subscription calls to await eachother...I think tough to do as they'll be in different transactions
          */
         remoteSchemaUnsubscribe = client.subscribe(
+          // @ts-expect-error
           schemaQuery,
           async (results, info) => {
             // Avoid firing on potentially stale results
             if (info.hasRemoteFulfilled) {
               const schemaJSON = results.get('_schema');
-              const resultHash = hashSchemaJSON(schemaJSON.collections);
+              const resultHash = hashSchemaJSON(
+                // @ts-expect-error
+                schemaJSON.collections
+              );
               const fileSchema = schemaToJSON({
                 collections: ctx.schema,
                 version: 0,

@@ -37,7 +37,7 @@ export type RecordPaths<
                 >,
                 `${Path & K}.`
               >
-        : R['properties'][K] extends QueryType<any, any>
+        : R['properties'][K] extends QueryType<any, any, any>
         ? // Basically start back at top of schema but add prefix
           PrefixedUnion<
             // Track max depth as relationships are expanded
@@ -68,6 +68,7 @@ export type RelationPaths<
   ? {
       [K in keyof R['properties']]: R['properties'][K] extends QueryType<
         any,
+        any,
         any
       >
         ? // Basically start back at top of schema but add prefix
@@ -97,13 +98,11 @@ export type RelationPaths<
  * Expand a query type into a union of all possible paths
  */
 export type QueryPaths<
-  Q extends QueryType<any, any>,
+  QType extends QueryType<any, any, any>,
   M extends Models<any, any>,
   TDepth extends any[] = []
-> = Q extends QueryType<infer CQ, any>
-  ? CQ extends CollectionQuery<any, any>
-    ? SchemaPaths<M, CQ['collectionName'], TDepth>
-    : never
+> = QType extends QueryType<any, infer Q, any>
+  ? SchemaPaths<M, Q['collectionName'], TDepth>
   : never;
 
 /**
@@ -152,6 +151,7 @@ export type RelationshipCollectionName<
 > = M extends Models<any, any>
   ? ExtractTypeFromRecord<ModelFromModels<M, CN>, M, P> extends QueryType<
       any,
+      any,
       any
     >
     ? ExtractTypeFromRecord<
@@ -178,7 +178,7 @@ export type ExtractTypeFromRecord<
           M,
           Rest
         > // recurse
-      : R['properties'][K] extends QueryType<any, any> // if value at key is a query type
+      : R['properties'][K] extends QueryType<any, any, any> // if value at key is a query type
       ? ExtractTypeFromSchema<
           M,
           R['properties'][K]['query']['collectionName'],

@@ -20,9 +20,11 @@ export type SubQuery<
   'collectionName' | 'where' | 'limit' | 'order'
 >;
 
+// In practice, we are able to infer the collection name from the query Q['collectionName'] (not CN)
 export type QueryType<
-  Q extends SubQuery<any, any>,
-  C extends QueryResultCardinality
+  CN extends CollectionNameFromModels<any>,
+  Q extends SubQuery<any, CN>,
+  C extends QueryResultCardinality = 'many'
 > = TypeInterface<
   'query',
   FetchResult<Q>,
@@ -34,9 +36,10 @@ export type QueryType<
 };
 
 export function QueryType<
-  Q extends SubQuery<any, any>,
-  C extends QueryResultCardinality
->(query: Q, cardinality: C = 'many' as C): QueryType<Q, C> {
+  CN extends CollectionNameFromModels<any>,
+  Q extends SubQuery<any, CN>,
+  C extends QueryResultCardinality = 'many'
+>(query: Q, cardinality: C = 'many' as C): QueryType<CN, Q, C> {
   return {
     type: 'query' as const,
     supportedOperations: [] as const, // 'hasKey', etc
