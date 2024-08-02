@@ -211,3 +211,5 @@ self.addEventListener('connect', (evt: MessageEvent) => {
   const port = evt.ports[0];
   ComLink.expose(workerOperator, port);
 });
+
+ComLink.expose(workerOperator);

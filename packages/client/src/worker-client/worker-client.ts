@@ -32,15 +32,18 @@ import {
 import { clientQueryBuilder } from '../client/query-builder.js';
 import SuperJSON from 'superjson';
 
-export function getTriplitSharedWorkerPort(
-  workerUrl?: string
-): SharedWorker['port'] {
-  const worker = new SharedWorker(
-    workerUrl ?? new URL('worker-client-operator.js', import.meta.url),
-    { type: 'module', name: 'triplit-client' }
-  );
-  return worker.port;
+export function getTriplitWorkerEndpoint(workerUrl?: string): ComLink.Endpoint {
+  const url =
+    workerUrl ?? new URL('worker-client-operator.js', import.meta.url);
+  const options: WorkerOptions = { type: 'module', name: 'triplit-client' };
+  const isSharedWorker = typeof SharedWorker !== 'undefined';
+  return isSharedWorker
+    ? new SharedWorker(url, options).port
+    : new Worker(url, options);
+  //
 }
+
+export const getTriplitSharedWorkerPort = getTriplitWorkerEndpoint;
 
 function logObjToMessage(lobObj: any) {
   const message = lobObj.scope
@@ -74,12 +77,14 @@ export class WorkerClient<M extends ClientSchema | undefined = undefined> {
     options?: ClientOptions<M> & {
       workerUrl?: string;
     },
+    workerEndpoint?: ComLink.Endpoint,
     sharedWorkerPort?: MessagePort
   ) {
-    if (!sharedWorkerPort) {
-      sharedWorkerPort = getTriplitSharedWorkerPort(options?.workerUrl);
-    }
-    this.clientWorker = ComLink.wrap<Client<M>>(sharedWorkerPort);
+    workerEndpoint =
+      workerEndpoint ??
+      sharedWorkerPort ??
+      getTriplitWorkerEndpoint(options?.workerUrl);
+    this.clientWorker = ComLink.wrap<Client<M>>(workerEndpoint);
     const { schema } = options || {};
     // @ts-expect-error
     this.initialized = this.clientWorker.init(
