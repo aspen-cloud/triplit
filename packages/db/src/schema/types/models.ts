@@ -18,6 +18,8 @@ import {
 } from './properties.js';
 import {
   CollectionQuery,
+  CollectionQueryInclusion,
+  CollectionQuerySelection,
   QueryResult,
   QuerySelectionValue,
   QueryWhere,
@@ -238,11 +240,8 @@ type ExtractRelationSubqueryType<
   CollectionQuery<
     M,
     Subquery['subquery']['collectionName'],
-    // TODO: Typing for select and inclusion within subquery is not supported
-    ReadonlyArray<
-      QuerySelectionValue<M, Subquery['subquery']['collectionName']>
-    >,
-    {}
+    CollectionQuerySelection<Subquery['subquery']>,
+    CollectionQueryInclusion<Subquery['subquery']>
   >,
   Subquery['cardinality']
 >;
