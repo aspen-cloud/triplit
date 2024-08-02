@@ -26,11 +26,13 @@ import { EntityId } from '../../triple-store-utils.js';
 export type CollectionQuery<
   M extends Models<any, any> | undefined,
   CN extends CollectionNameFromModels<M>,
-  Selection extends QuerySelectionValue<M, CN> = QuerySelectionValue<M, CN>,
+  Selection extends ReadonlyArray<QuerySelectionValue<M, CN>> = ReadonlyArray<
+    QuerySelectionValue<M, CN>
+  >,
   Inclusions extends Record<string, RelationSubquery<M, any>> = {}
 > = {
   where?: QueryWhere<M, CN>;
-  select?: Selection[];
+  select?: Selection;
   // | [string, CollectionQuery<M, any>]
   order?: QueryOrder<M, CN>;
   limit?: number;
@@ -47,7 +49,9 @@ export type CollectionQuery<
 export type GenericCollectionQuery<
   M extends Models<any, any> | undefined,
   CN extends CollectionNameFromModels<M>,
-  Selection extends QuerySelectionValue<M, CN> = QuerySelectionValue<M, CN>,
+  Selection extends ReadonlyArray<QuerySelectionValue<M, CN>> = ReadonlyArray<
+    QuerySelectionValue<M, CN>
+  >,
   Inclusions extends Record<string, RelationSubquery<M, any>> = Record<
     string,
     RelationSubquery<M, any>
@@ -60,7 +64,9 @@ export type GenericCollectionQuery<
 export type Query<
   M extends Models<any, any> | undefined,
   CN extends CollectionNameFromModels<M>,
-  Selection extends QuerySelectionValue<M, CN> = QuerySelectionValue<M, CN>
+  Selection extends ReadonlyArray<QuerySelectionValue<M, CN>> = ReadonlyArray<
+    QuerySelectionValue<M, CN>
+  >
 > = Omit<CollectionQuery<M, CN, Selection>, 'collectionName'>;
 
 // Should be friendly types that we pass into queries
@@ -84,7 +90,7 @@ type BaseCollectionQuery = CollectionQuery<any, any, any, any>;
 export type CollectionQueryDefault<
   M extends Models<any, any> | undefined,
   CN extends CollectionNameFromModels<M>
-> = CollectionQuery<M, CN, QuerySelectionValue<M, CN>, {}>;
+> = CollectionQuery<M, CN, ReadonlyArray<QuerySelectionValue<M, CN>>, {}>;
 
 /**
  * Extracts the schema type from a collection query.

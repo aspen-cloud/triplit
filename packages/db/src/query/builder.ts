@@ -43,8 +43,8 @@ export class QueryBuilder<
     return this.query;
   }
 
-  select<Selection extends QuerySelectionValue<M, CN>>(
-    selection: Selection[] | undefined
+  select<Selection extends ReadonlyArray<QuerySelectionValue<M, CN>>>(
+    selection: Selection | undefined
   ) {
     return new QueryBuilder({
       ...this.query,
@@ -110,7 +110,6 @@ export class QueryBuilder<
     CollectionQuery<
       M,
       CN,
-      // @ts-expect-error TODO: not sure why this has error (maybe defaults)
       CollectionQuerySelection<Q>,
       CollectionQueryInclusion<Q> & {
         [K in RName]: SQ;
@@ -128,7 +127,6 @@ export class QueryBuilder<
     CollectionQuery<
       M,
       CN,
-      // @ts-expect-error TODO: not sure why this has error (maybe defaults)
       CollectionQuerySelection<Q>,
       CollectionQueryInclusion<Q> & {
         [K in RName]: InclusionFromArgs<M, CN, RName, null>;

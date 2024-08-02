@@ -1289,7 +1289,7 @@ export async function fetch<
           { entity, relationships, triples, existsFilterTriples },
         ]) => {
           const selectedAttributes: string[] = select
-            ? select // If we have a selection use that
+            ? (select as unknown as string[]) // If we have a selection use that
             : schema && query.collectionName !== '_metadata'
             ? Object.entries<DataType>(
                 schema[query.collectionName].schema.properties

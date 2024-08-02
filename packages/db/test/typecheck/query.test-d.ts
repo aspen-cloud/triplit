@@ -629,7 +629,9 @@ describe('query builder', () => {
       expectTypeOf(query.select)
         .parameter(0)
         .toEqualTypeOf<
-          | ('attr1' | 'attr2' | 'attr3' | 'record' | 'record.attr1' | 'id')[]
+          | ReadonlyArray<
+              'attr1' | 'attr2' | 'attr3' | 'record' | 'record.attr1' | 'id'
+            >
           | undefined
         >();
     }
@@ -639,7 +641,7 @@ describe('query builder', () => {
       const query = db.query('test');
       expectTypeOf(query.select)
         .parameter(0)
-        .toEqualTypeOf<string[] | undefined>();
+        .toEqualTypeOf<ReadonlyArray<string> | undefined>();
     }
   });
   test('where attribute prop', () => {

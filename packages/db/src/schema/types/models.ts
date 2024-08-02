@@ -216,13 +216,13 @@ export type PathFilteredTypeFromModel<
 export type QuerySelectionFilteredTypeFromModel<
   M extends Models<any, any>,
   CN extends CollectionNameFromModels<M>,
-  Selection extends QuerySelectionValue<M, CN>,
+  Selection extends ReadonlyArray<QuerySelectionValue<M, CN>>,
   Inclusion extends Record<string, RelationSubquery<M, any>>
 > =
   // Path selections
   PathFilteredTypeFromModel<
     ModelFromModels<M, CN>,
-    Intersection<ModelPaths<M, CN>, Selection>
+    Intersection<ModelPaths<M, CN>, Selection[number]>
   > & {
     // Subquery selections
     [I in keyof Inclusion]: ExtractRelationSubqueryType<M, Inclusion[I]>;
@@ -239,7 +239,9 @@ type ExtractRelationSubqueryType<
     M,
     Subquery['subquery']['collectionName'],
     // TODO: Typing for select and inclusion within subquery is not supported
-    QuerySelectionValue<M, Subquery['subquery']['collectionName']>,
+    ReadonlyArray<
+      QuerySelectionValue<M, Subquery['subquery']['collectionName']>
+    >,
     {}
   >,
   Subquery['cardinality']

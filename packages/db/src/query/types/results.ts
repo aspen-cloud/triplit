@@ -60,7 +60,9 @@ export type ReturnTypeFromQuery<Q extends CollectionQuery<any, any, any, any>> =
 export type FetchResultEntityFromParts<
   M extends Models<any, any> | undefined,
   CN extends CollectionNameFromModels<M>,
-  Selection extends QuerySelectionValue<M, CN> = QuerySelectionValue<M, CN>,
+  Selection extends ReadonlyArray<QuerySelectionValue<M, CN>> = ReadonlyArray<
+    QuerySelectionValue<M, CN>
+  >,
   Inclusion extends Record<string, RelationSubquery<M, any>> = {}
 > = M extends Models<any, any>
   ? ModelFromModels<M, CN> extends Model<any>
