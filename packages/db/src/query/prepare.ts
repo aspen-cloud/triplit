@@ -31,6 +31,7 @@ import { Models } from '../schema/types';
 import {
   CollectionQuery,
   FilterStatement,
+  GenericCollectionQuery,
   QueryWhere,
   RelationSubquery,
   RelationshipExistsFilter,
@@ -153,7 +154,7 @@ function validateCollectionName<
 
 function getQueryInclude<
   M extends Models<any, any> | undefined,
-  Q extends CollectionQuery<M, any>
+  Q extends GenericCollectionQuery<M, any>
 >(query: Q, schema: M, session: Session, options: QueryPreparationOptions) {
   if (!schema) return query.include;
   if (!query.include) return query.include;

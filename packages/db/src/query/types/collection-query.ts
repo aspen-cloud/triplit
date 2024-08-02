@@ -27,10 +27,7 @@ export type CollectionQuery<
   M extends Models<any, any> | undefined,
   CN extends CollectionNameFromModels<M>,
   Selection extends QuerySelectionValue<M, CN> = QuerySelectionValue<M, CN>,
-  Inclusions extends Record<string, RelationSubquery<M, any>> = Record<
-    string,
-    RelationSubquery<M, any>
-  >
+  Inclusions extends Record<string, RelationSubquery<M, any>> = {}
 > = {
   where?: QueryWhere<M, CN>;
   select?: Selection[];
@@ -46,6 +43,16 @@ export type CollectionQuery<
   collectionName: CN;
   include?: Inclusions;
 };
+
+export type GenericCollectionQuery<
+  M extends Models<any, any> | undefined,
+  CN extends CollectionNameFromModels<M>,
+  Selection extends QuerySelectionValue<M, CN> = QuerySelectionValue<M, CN>,
+  Inclusions extends Record<string, RelationSubquery<M, any>> = Record<
+    string,
+    RelationSubquery<M, any>
+  >
+> = CollectionQuery<M, CN, Selection, Inclusions>;
 
 /**
  * A collection query without the collection name.

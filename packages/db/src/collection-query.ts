@@ -12,6 +12,7 @@ import {
   QueryResultCardinality,
   QueryValue,
   WhereFilter,
+  GenericCollectionQuery,
 } from './query/types';
 import {
   isBooleanFilter,
@@ -793,7 +794,7 @@ function queryChainToQuery<
 
 function* generateQueryChains<
   M extends Models<any, any> | undefined,
-  Q extends CollectionQuery<M, any>
+  Q extends GenericCollectionQuery<M, any>
 >(query: Q, prefix: Q[] = []): Generator<Q[]> {
   yield [...prefix, query];
   const subQueryFilters = (query.where ?? []).filter((filter) =>
@@ -1037,7 +1038,7 @@ function loadOrderRelationships<
 
 function LoadIncludeRelationships<
   M extends Models<any, any> | undefined,
-  Q extends CollectionQuery<M, any>
+  Q extends GenericCollectionQuery<M, any>
 >(
   caller: DB<M>,
   tx: TripleStoreApi,
