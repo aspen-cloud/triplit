@@ -43,7 +43,14 @@ export function getTriplitWorkerEndpoint(workerUrl?: string): ComLink.Endpoint {
   //
 }
 
-export const getTriplitSharedWorkerPort = getTriplitWorkerEndpoint;
+export function getTriplitSharedWorkerPort(
+  workerUrl?: string
+): SharedWorker['port'] {
+  const url =
+    workerUrl ?? new URL('worker-client-operator.js', import.meta.url);
+  const options: WorkerOptions = { type: 'module', name: 'triplit-client' };
+  return new SharedWorker(url, options).port;
+}
 
 function logObjToMessage(lobObj: any) {
   const message = lobObj.scope
