@@ -64,6 +64,8 @@ Wildcards in the `match` object (prefixed with `$`) will be assigned to [variabl
 db.query('todos').where('authorId', '=', '$role.userId');
 ```
 
+Your schema file should export the `roles` object for use in your schema definitions.
+
 ### Permissions
 
 <Callout type="warning">
@@ -91,6 +93,8 @@ const schema = {
     permissions: {},
   },
 };
+
+export { schema, roles };
 ```
 
 Collection permissions are defined for each operation and role. If a role is not included, it will not be allowed to perform that operation. When performing each operation, Triplit will check the set of set of [filter clauses](/client/query/where) that must be satisfied for the operation to be allowed.
@@ -123,12 +127,14 @@ const schema = {
       authorId: S.String(),
     }),
     permissions: {
-      read: {
-        admin: {
+      admin: {
+        read: {
           // Allow all reads
           filter: [true],
         },
-        user: {
+      },
+      user: {
+        read: {
           // Allow reads where authorId is the user's id
           filter: [['authorId', '=', '$role.userId']],
         },
@@ -136,6 +142,8 @@ const schema = {
     },
   },
 };
+
+export { schema, roles };
 ```
 
 #### Insert
@@ -156,19 +164,23 @@ const schema = {
       authorId: S.String(),
     }),
     permissions: {
-      insert: {
-        admin: {
-            // Allow all inserts
+      admin: {
+        insert: {
+          // Allow all inserts
           filter: [true],
-        }
-        user: {
-            // Allow inserts where authorId is the user's id
+        },
+      },
+      user: {
+        insert: {
+          // Allow inserts where authorId is the user's id
           filter: [['authorId', '=', '$role.userId']],
         },
       },
     },
   },
 };
+
+export { schema, roles };
 ```
 
 #### Update
@@ -189,12 +201,14 @@ const schema = {
       authorId: S.String(),
     }),
     permissions: {
-      update: {
-        admin: {
+      admin: {
+        update: {
           // Allow all updates
           filter: [true],
         },
-        user: {
+      },
+      user: {
+        update: {
           // Allow updates where authorId is the user's id
           filter: [['authorId', '=', '$role.userId']],
         },
@@ -202,6 +216,8 @@ const schema = {
     },
   },
 };
+
+export { schema, roles };
 ```
 
 #### Post update
@@ -222,14 +238,12 @@ const schema = {
       authorId: S.String(),
     }),
     permissions: {
-      update: {
-        user: {
+      user: {
+        update: {
           // Allow updates where authorId is the user's id
           filter: [['authorId', '=', '$role.userId']],
         },
-      },
-      postUpdate: {
-        user: {
+        postUpdate: {
           // Check that the authorId has not changed
           filter: [['authorId', '=', '$role.userId']],
         },
@@ -237,6 +251,8 @@ const schema = {
     },
   },
 };
+
+export { schema, roles };
 ```
 
 #### Delete
@@ -257,12 +273,14 @@ const schema = {
       authorId: S.String(),
     }),
     permissions: {
-      delete: {
-        admin: {
+      admin: {
+        delete: {
           // Allow all deletes
           filter: [true],
         },
-        user: {
+      },
+      user: {
+        delete: {
           // Allow deletes where authorId is the user's id
           filter: [['authorId', '=', '$role.userId']],
         },
@@ -270,6 +288,8 @@ const schema = {
     },
   },
 };
+
+export { schema, roles };
 ```
 
 ### Editing permissions
