@@ -14,6 +14,7 @@ import {
   timestampedObjectToPlainObject,
   appendCollectionToId,
   EntityNotFoundError,
+  Unalias,
 } from '@triplit/db';
 import {
   ClientFetchResult,
@@ -45,7 +46,7 @@ export type HttpClientOptions<M extends ClientSchema | undefined> = {
 
 // Interact with remote via http api, totally separate from your local database
 export class HttpClient<M extends ClientSchema | undefined> {
-  constructor(private options: HttpClientOptions<M>) {}
+  constructor(private options: HttpClientOptions<M> = {}) {}
 
   // Hack: use schemaFactory to get schema if it's not ready from provider
   private async schema() {
@@ -91,7 +92,7 @@ export class HttpClient<M extends ClientSchema | undefined> {
 
   async fetch<CQ extends ClientQuery<M, any>>(
     query: CQ
-  ): Promise<ClientFetchResult<CQ>> {
+  ): Promise<Unalias<ClientFetchResult<CQ>>> {
     const { data, error } = await this.sendRequest('/fetch', 'POST', {
       query,
     });
@@ -111,7 +112,7 @@ export class HttpClient<M extends ClientSchema | undefined> {
 
   async fetchOne<CQ extends ClientQuery<M, any>>(
     query: CQ
-  ): Promise<ClientFetchResultEntity<CQ> | null> {
+  ): Promise<Unalias<ClientFetchResultEntity<CQ>> | null> {
     query = { ...query, limit: 1 };
     const { data, error } = await this.sendRequest('/fetch', 'POST', {
       query,
@@ -137,7 +138,7 @@ export class HttpClient<M extends ClientSchema | undefined> {
 
   async insert<CN extends CollectionNameFromModels<M>>(
     collectionName: CN,
-    object: InsertTypeFromModel<ModelFromModels<M, CN>>
+    object: Unalias<InsertTypeFromModel<ModelFromModels<M, CN>>>
   ) {
     // we need to convert Sets to arrays before sending to the server
     const schema = await this.schema();
@@ -212,7 +213,7 @@ export class HttpClient<M extends ClientSchema | undefined> {
     collectionName: CN,
     entityId: string,
     updater: (
-      entity: UpdateTypeFromModel<ModelFromModels<M, CN>>
+      entity: Unalias<UpdateTypeFromModel<ModelFromModels<M, CN>>>
     ) => void | Promise<void>
   ) {
     /**

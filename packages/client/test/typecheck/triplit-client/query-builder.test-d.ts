@@ -1,5 +1,5 @@
 import { expectTypeOf, test, describe } from 'vitest';
-import { TriplitClient } from '../../dist/client/triplit-client.js';
+import { TriplitClient } from '../../../dist/client/triplit-client.js';
 import { Schema as S } from '@triplit/db';
 
 test('Builder API', () => {
@@ -92,5 +92,116 @@ describe('Collection name', () => {
       const client = new TriplitClient();
       expectTypeOf<typeof client.query>().parameter(0).toEqualTypeOf<string>();
     });
+  });
+});
+
+describe('Queries', () => {
+  // TODO: add more specific tests
+  test('Basic fetch', async () => {
+    const schema = {
+      a: {
+        schema: S.Schema({
+          id: S.Id(),
+          attrA: S.String(),
+        }),
+      },
+      b: {
+        schema: S.Schema({
+          id: S.Id(),
+          attrB: S.String(),
+        }),
+      },
+    };
+    const client = new TriplitClient({ schema });
+    const queryA = client.query('a').build();
+    {
+      const result = await client.fetch(queryA);
+      expectTypeOf<typeof result>().toEqualTypeOf<
+        Map<
+          string,
+          {
+            id: string;
+            attrA: string;
+          }
+        >
+      >();
+    }
+    const queryB = client.query('b').build();
+    {
+      const result = await client.fetch(queryB);
+      expectTypeOf<typeof result>().toEqualTypeOf<
+        Map<
+          string,
+          {
+            id: string;
+            attrB: string;
+          }
+        >
+      >();
+    }
+  });
+  test('Basic fetchOne', async () => {
+    const schema = {
+      a: {
+        schema: S.Schema({
+          id: S.Id(),
+          attrA: S.String(),
+        }),
+      },
+      b: {
+        schema: S.Schema({
+          id: S.Id(),
+          attrB: S.String(),
+        }),
+      },
+    };
+    const client = new TriplitClient({ schema });
+    const queryA = client.query('a').build();
+    {
+      const result = await client.fetchOne(queryA);
+      expectTypeOf<typeof result>().toEqualTypeOf<{
+        id: string;
+        attrA: string;
+      } | null>();
+    }
+    const queryB = client.query('b').build();
+    {
+      const result = await client.fetchOne(queryB);
+      expectTypeOf<typeof result>().toEqualTypeOf<{
+        id: string;
+        attrB: string;
+      } | null>();
+    }
+  });
+  test('Basic fetchById', async () => {
+    const schema = {
+      a: {
+        schema: S.Schema({
+          id: S.Id(),
+          attrA: S.String(),
+        }),
+      },
+      b: {
+        schema: S.Schema({
+          id: S.Id(),
+          attrB: S.String(),
+        }),
+      },
+    };
+    const client = new TriplitClient({ schema });
+    {
+      const result = await client.fetchById('a', '1');
+      expectTypeOf<typeof result>().toEqualTypeOf<{
+        id: string;
+        attrA: string;
+      } | null>();
+    }
+    {
+      const result = await client.fetchById('b', '1');
+      expectTypeOf<typeof result>().toEqualTypeOf<{
+        id: string;
+        attrB: string;
+      } | null>();
+    }
   });
 });
