@@ -15,6 +15,7 @@
     "type": "separator"
   },
   "self-hosting": "Self-hosting",
+  "offline-mode": "Offline mode",
   "local-development": "Local development",
   "seeding": "Seeding a database",
   "auth": "Auth",

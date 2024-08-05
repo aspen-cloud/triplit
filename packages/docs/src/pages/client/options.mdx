@@ -2,6 +2,8 @@
 description: Learn the options available to configure your TriplitClient.
 ---
 
+import { Callout } from 'nextra/components';
+
 # Client configuration
 
 ## DB options
@@ -17,6 +19,18 @@ These options define your local cache.
 These options define how you want to sync with the server.
 
 - `serverUrl` is the url of the server where your project lives e.g. `https://<project-id>.triplit.io`
+- `autoConnect` determines whether the client should connect to the server immediately upon instantiation. If set to `false`, you can manually connect with the `client.connect()` method.
+
+<Callout type="warning" emoji="⚠️">
+  The client connects over
+  [WebSockets](https://developer.mozilla.org/en-US/docs/Web/API/WebSockets_API),
+  so you if you are instantiating a client in code that may run in an
+  environment where WebSockets are not available (e.g. the server during
+  server-side rendering), you should set `autoConnect` to `false` or preferably
+  to an [environmental
+  variable](https://kit.svelte.dev/docs/modules#$app-environment-browser) that
+  indicates whether the client should connect.
+</Callout>
 
 The `serverUrl` can be updated with the `client.updateServerUrl` method.
 

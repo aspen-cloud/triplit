@@ -1,0 +1,43 @@
+---
+description: No extra configuration is needed for a Triplit app to work offline.
+---
+
+# Offline mode
+
+Apps that use Triplit work offline by default. No extra configuration is needed. All Triplit clients save data to a local cache and mutate that cache optimistically without waiting for the server to respond. Mutations that are made offline queue in an "outbox" and are sent to the server when the client comes back online. Triplit's CRDT-based sync protocol ensures that data is eventually consistent across all clients, even those that have been offline for an extended period.
+
+## Storage
+
+By default, Triplit clients use memory storage for the local cache. While offline, an app using memory storage will make optimistic reads and writes, and be fully functional. However, when the page is refreshed is closed or refreshed, data saved in memory storage is lost, as are any pending changes in the client's outbox. To persist data across sessions, including the outbox, you can use the [`IndexedDB` storage adapter](/client/storage#indexeddb).
+
+```ts
+import { TriplitClient } from '@triplit/client';
+
+const client = new TriplitClient({
+  storage: 'indexeddb',
+  serverUrl: VITE_TRIPLIT_SERVER,
+  token: VITE_TRIPLIT_TOKEN,
+});
+```
+
+Now not only will a user's cache be persisted across app loads, leading to faster startup times, but if users make offline changes and then close the tab, their changes will be saved and sent to the server whenever they next use the app in a connected state.
+
+## Syncing
+
+### Partial replication
+
+Triplit clients uses a partial replication strategy to sync data with the server. This leads to faster load times, a small storage footprint in the browser, and less data transferred over the network. Triplit clients will request the latest data from the server only for the those queries that they are [subscribed to](/client/subscribe) and have [permission to view](/schemas/permissions). When the server has new data to share, it will send only the attribute-level changes that the client has not yet seen.
+
+### Connected states
+
+Triplit clients expose their current connection status with `connectionStatus` and `onConnectionStatusChange` properties, or in a given framework using the appropriate hook (e.g. [`useConnectionStatus`](/frameworks/react#useconnectionstatus) in `@triplit/react`). These can be used to render UI elements that indicate whether the client is online or offline.
+
+The Triplit client also exposes methods `connect()` and `disconnect()` that can be used to manually control the client's connection status.
+
+### Sync statuses
+
+TODO
+
+## Local-only mode
+
+If you want to use Triplit without syncing data to a server, you can set the [`autoConnect`](/client/options#sync-options) option to `false` or omit the `serverUrl` and `token` options when creating a client. In this mode, the client will still save data to a local cache and make optimistic updates, and no data will be sent to the server. If you are using a form of durable storage, such as `indexeddb`, data will persist across app loads, and can eventually be synced to a server in a later iteration of your app.
