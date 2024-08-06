@@ -1,5 +1,11 @@
 # @triplit/client
 
+## 0.3.84
+
+### Patch Changes
+
+- 9857d9de: prettify HttpClient inputs and outputs
+
 ## 0.3.83
 
 ### Patch Changes
