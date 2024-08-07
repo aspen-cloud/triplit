@@ -18,6 +18,7 @@
   "offline-mode": "Offline mode",
   "local-development": "Local development",
   "seeding": "Seeding a database",
+  "ssr": "Server-side rendering",
   "auth": "Auth",
   "migrations": { "title": "Migrations", "display": "hidden" },
   "v2": {

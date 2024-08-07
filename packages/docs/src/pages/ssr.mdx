@@ -1,0 +1,65 @@
+# Server-side rendering
+
+Triplit is designed to work in a client-side environment, but it can work in a server-side rendering (SSR) environment as well.
+
+## The HTTP client
+
+When working with Triplit data in a server environment (e.g. to hydrate a pre-rendered page), the `TriplitClient`'s default query and mutation methods will not work. They rely on establishing a sync connection over `WebSockets`, which is not possible in many stateless server-rendering environments. Instead, use the [`HttpClient`](/client/http-client), a stateless Triplit client that can perform operations on a remote Triplit server over HTTP. It is fully-typed and has a broadly similar API to the core Triplit Client.
+
+```ts filename="server-action.ts"
+// This code runs on the server
+import { HttpClient } from '@triplit/client';
+import { PUBLIC_TRIPLIT_URL, PUBLIC_TRIPLIT_TOKEN } from '$env/static/public';
+
+const httpClient = new HttpClient({
+  serverUrl: PUBLIC_TRIPLIT_URL,
+  token: PUBLIC_TRIPLIT_TOKEN,
+});
+
+const results = await httpClient.fetch(httpClient.query('allPosts'));
+```
+
+## Client configuration
+
+Though we recommend only using the [`HttpClient`](/client/http-client) to _fetch or mutate data_ in a server-rendering environment, a `TriplitClient` can be instantiated in code that runs on a server with some specific configuration. You will often want to do this if you have a single `TriplitClient` instance that is shared between server and client code.
+
+### WebSockets and auto-connect
+
+By default, a new client attempts to open up a sync connection over [WebSockets](https://developer.mozilla.org/en-US/docs/Web/API/WebSocket) with the provided `serverUrl` and `token`. This auto-connecting behavior is controlled with the `autoConnect` client parameter. If you are instantiating a client in code that may run in an environment where WebSockets are not available (e.g. during server-side rendering), you should set `autoConnect` to `false` or preferably to an [environmental variable](https://kit.svelte.dev/docs/modules#$app-environment-browser) that indicates whether the client should connect. Allowing the client to attempt to connect to the server over WebSockets in a server-side rendering environment will result in an error or undefined behavior.
+
+Here's an example in SvelteKit:
+
+```ts filename="src/lib/client.ts" {2, 8}
+import { TriplitClient } from '@triplit/client';
+import { browser } from '$app/environment';
+import { PUBLIC_TRIPLIT_URL, PUBLIC_TRIPLIT_TOKEN } from '$env/static/public';
+
+export const client = new TriplitClient({
+  serverUrl: PUBLIC_TRIPLIT_URL,
+  token: PUBLIC_TRIPLIT_TOKEN,
+  autoConnect: browser,
+});
+```
+
+### Storage
+
+You may chose to use a storage provider like IndexedDB to provide a durable cache for your client. IndexedDB is not available in a server-side rendering environment, so you should use a different storage provider in that case. Attempting to use IndexedDB in a server-side rendering environment will result in an error or undefined behavior.
+
+Continuing the SvelteKit example:
+
+```ts filename="src/lib/client.ts" {9}
+import { TriplitClient } from '@triplit/client';
+import { browser } from '$app/environment';
+import { PUBLIC_TRIPLIT_URL, PUBLIC_TRIPLIT_TOKEN } from '$env/static/public';
+
+export const client = new TriplitClient({
+  serverUrl: PUBLIC_TRIPLIT_URL,
+  token: PUBLIC_TRIPLIT_TOKEN,
+  autoConnect: browser,
+  storage: browser ? 'indexeddb' : 'memory',
+});
+```
+
+## Looking ahead
+
+In the future, we plan to provide a more robust solution for server-side rendering with Triplit. Keep an eye on [our roadmap](https://triplit.dev/roadmap) and [Discord](https://triplit.dev/discord) to stay updated.
