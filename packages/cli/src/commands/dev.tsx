@@ -49,6 +49,12 @@ export default Command({
       char: 'S',
       description: 'Seed the database with data',
     }),
+    upstreamUrl: Flag.String({
+      description: 'URL of the upstream server',
+    }),
+    upstreamToken: Flag.String({
+      description: 'URL of the upstream server',
+    }),
   },
   async run({ flags, ctx }) {
     const dbPort = flags.dbPort || 6543;
@@ -107,6 +113,18 @@ export default Command({
       collections && flags.initWithSchema
         ? { collections, roles, version: 0 }
         : undefined;
+
+    let upstream = undefined;
+    if (!!flags.upstreamUrl) {
+      if (!flags.upstreamToken) {
+        throw new Error('Both upstreamUrl and upstreamToken must be provided');
+      }
+      upstream = {
+        url: flags.upstreamUrl,
+        token: flags.upstreamToken,
+      };
+    }
+
     const startDBServer = createDBServer({
       storage: flags.storage || 'memory',
       dbOptions: {
@@ -114,6 +132,7 @@ export default Command({
       },
       watchMode: !!flags.watch,
       verboseLogs: !!flags.verbose,
+      upstream,
     });
     let watcher: chokidar.FSWatcher | undefined = undefined;
     let remoteSchemaUnsubscribe = undefined;

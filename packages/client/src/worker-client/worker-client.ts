@@ -232,7 +232,7 @@ export class WorkerClient<M extends ClientSchema | undefined = undefined> {
   ) {
     await this.initialized;
 
-    const schemaJSON = await this.clientWorker.getSchema();
+    const schemaJSON = await this.clientWorker.getSchemaJson();
     const schema = schemaJSON && JSONToSchema(schemaJSON)?.collections;
 
     return this.updateRaw(collectionName, entityId, async (entity) => {

@@ -31,6 +31,7 @@ import {
 } from './storage.js';
 import path from 'path';
 import { createRequire } from 'module';
+import { TriplitClient } from '@triplit/client';
 
 const upload = multer();
 
@@ -52,6 +53,10 @@ export type ServerOptions = {
   dbOptions?: DBConfig<any>;
   watchMode?: boolean;
   verboseLogs?: boolean;
+  upstream?: {
+    url: string;
+    token: string;
+  };
 };
 function initSentry() {
   if (process.env.SENTRY_DSN) {
@@ -108,16 +113,24 @@ export function createServer(options?: ServerOptions) {
   if (options?.verboseLogs) logger.verbose = true;
   const triplitServers = new Map<string, TriplitServer>();
 
-  function getServer(projectId: string) {
+  function getServer(projectId: string, upstream?: ServerOptions['upstream']) {
     if (triplitServers.has(projectId)) return triplitServers.get(projectId)!;
-    const server = new TriplitServer(
-      new DB({
-        source: dbSource,
-        tenantId: projectId,
-        clock: new DurableClock(),
-        ...(options?.dbOptions ?? {}),
-      })
-    );
+    const db = upstream
+      ? new TriplitClient({
+          clientId: projectId,
+          serverUrl: upstream.url,
+          token: upstream.token,
+          syncSchema: true,
+          skipRules: false,
+        })
+      : new DB({
+          source: dbSource,
+          tenantId: projectId,
+          clock: new DurableClock(),
+          ...(options?.dbOptions ?? {}),
+        });
+    // @ts-expect-error
+    const server = new TriplitServer(db);
     triplitServers.set(projectId, server);
     return server;
   }
@@ -259,7 +272,7 @@ export function createServer(options?: ServerOptions) {
   const authenticated = express.Router();
   authenticated.use(useHttpToken);
   // app.use(rateLimiterMiddleware);
-  const triplitServer = getServer(process.env.PROJECT_ID!);
+  const triplitServer = getServer(process.env.PROJECT_ID!, options?.upstream);
 
   authenticated.post('/message', async (req, res) => {
     try {
@@ -397,7 +410,10 @@ export function createServer(options?: ServerOptions) {
               ? parseInt(parsedUrl.query.schema as string)
               : undefined;
             const syncSchema = parsedUrl.query['sync-schema'] === 'true';
-            const server = getServer(process.env.PROJECT_ID!);
+            const server = getServer(
+              process.env.PROJECT_ID!,
+              options?.upstream
+            );
             const connection = server.openConnection(token!, {
               clientId,
               clientSchemaHash: clientHash,
@@ -414,6 +430,7 @@ export function createServer(options?: ServerOptions) {
             }
           }
         } catch (e) {
+          console.error(e);
           captureException(e);
           closeSocket(
             socket,

@@ -263,6 +263,7 @@ export class Connection {
           );
       }
     } catch (e) {
+      console.error(e);
       return this.sendErrorResponse(
         message.type,
         isTriplitError(e)
@@ -327,6 +328,7 @@ export function routeNotFoundResponse(route: string[]) {
 }
 
 function hasAdminAccess(token: ProjectJWT) {
+  console.log('hasAdminAccess', token);
   return token && token['x-triplit-token-type'] === 'secret';
 }
 

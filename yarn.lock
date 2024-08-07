@@ -9948,6 +9948,7 @@ __metadata:
   dependencies:
     "@sentry/cli": "npm:^2.31.2"
     "@sentry/node": "npm:^7.112.2"
+    "@triplit/client": "workspace:^"
     "@triplit/db": "workspace:^"
     "@triplit/server-core": "workspace:^"
     "@types/cors": "npm:^2"

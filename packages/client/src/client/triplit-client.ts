@@ -19,6 +19,7 @@ import {
   Unalias,
   SchemaJSON,
   TransactionResult,
+  TripleRow,
   TransactOptions,
 } from '@triplit/db';
 import { decodeToken } from '../token.js';
@@ -140,7 +141,10 @@ function getClientStorage(storageOption: StorageOptions) {
 
 const DEFAULT_STORAGE_OPTION = 'memory';
 
-type ClientTransactOptions = Pick<TransactOptions, 'manualSchemaRefresh'>;
+type ClientTransactOptions = Pick<
+  TransactOptions,
+  'manualSchemaRefresh' | 'skipRules'
+>;
 
 export interface ClientOptions<M extends ClientSchema | undefined> {
   /**
@@ -199,6 +203,7 @@ export interface ClientOptions<M extends ClientSchema | undefined> {
    * - `debug`: Logs all messages and additional debug information
    */
   logLevel?: 'info' | 'warn' | 'error' | 'debug';
+  skipRules?: boolean;
 }
 
 // default policy is local-and-remote and no timeout
@@ -229,6 +234,7 @@ export class TriplitClient<M extends ClientSchema | undefined = undefined> {
    * Logs are only stored in `debug` mode
    */
   readonly logs: any[] = [];
+  readonly options: ClientOptions<M> | undefined;
   /**
    *
    * @param options - The {@link ClientOptions | options} for the client
@@ -257,6 +263,8 @@ export class TriplitClient<M extends ClientSchema | undefined = undefined> {
         // Use debug mode as a proxy for dev mode
         onLog: logLevel === 'debug' ? (log) => this.logs.push(log) : () => {},
       });
+
+    this.options = options;
 
     const autoConnect = options?.autoConnect ?? true;
     const clock = new DurableClock('cache', clientId);
@@ -319,6 +327,13 @@ export class TriplitClient<M extends ClientSchema | undefined = undefined> {
     this.db.ready.then(() => {
       if (autoConnect) this.syncEngine.connect();
     });
+
+    if (syncSchema) {
+      this.syncEngine.subscribe(
+        // @ts-ignore
+        this.db.query('_metadata').id('_schema').build()
+      );
+    }
   }
 
   /**
@@ -326,8 +341,17 @@ export class TriplitClient<M extends ClientSchema | undefined = undefined> {
    *
    * @returns The schema of the database as a JSON object
    */
-  async getSchema(): Promise<SchemaJSON | undefined> {
+  async getSchemaJson() {
     return schemaToJSON(await this.db.getSchema());
+  }
+
+  /**
+   * Gets the schema of the database
+   *
+   * @returns The schema of the database as a Javascript object
+   */
+  async getSchema() {
+    await this.db.getSchema();
   }
 
   /**
@@ -343,7 +367,7 @@ export class TriplitClient<M extends ClientSchema | undefined = undefined> {
     this.logger.debug('transact START');
     const resp = await this.db.transact(callback, {
       ...options,
-      skipRules: SKIP_RULES,
+      skipRules: options.skipRules ?? this.options?.skipRules ?? SKIP_RULES,
       storeScope: {
         read: ['outbox', 'cache'],
         write: ['outbox'],
@@ -430,7 +454,7 @@ export class TriplitClient<M extends ClientSchema | undefined = undefined> {
     this.logger.debug('fetchLocal START', query, scope);
     const res = await this.db.fetch(query, {
       scope,
-      skipRules: SKIP_RULES,
+      skipRules: this.options?.skipRules ?? SKIP_RULES,
       ...(options ?? {}),
     });
     this.logger.debug('fetchLocal END', res);
@@ -508,7 +532,7 @@ export class TriplitClient<M extends ClientSchema | undefined = undefined> {
   > {
     this.logger.debug('insert START', collectionName, object);
     const resp = await this.db.insert(collectionName, object, {
-      skipRules: SKIP_RULES,
+      skipRules: this.options?.skipRules ?? SKIP_RULES,
       storeScope: {
         read: ['outbox', 'cache'],
         write: ['outbox'],
@@ -535,7 +559,7 @@ export class TriplitClient<M extends ClientSchema | undefined = undefined> {
   ) {
     this.logger.debug('update START', collectionName, entityId);
     const resp = await this.db.update(collectionName, entityId, updater, {
-      skipRules: SKIP_RULES,
+      skipRules: this.options?.skipRules ?? SKIP_RULES,
       storeScope: {
         read: ['outbox', 'cache'],
         write: ['outbox'],
@@ -582,7 +606,7 @@ export class TriplitClient<M extends ClientSchema | undefined = undefined> {
   ) {
     this.logger.debug('delete START', collectionName, entityId);
     const resp = await this.db.delete(collectionName, entityId, {
-      skipRules: SKIP_RULES,
+      skipRules: this.options?.skipRules ?? SKIP_RULES,
       storeScope: {
         read: ['outbox', 'cache'],
         write: ['outbox'],
@@ -631,7 +655,7 @@ export class TriplitClient<M extends ClientSchema | undefined = undefined> {
           onError,
           {
             scope,
-            skipRules: SKIP_RULES,
+            skipRules: this.options?.skipRules ?? SKIP_RULES,
             ...opts,
           }
         );
@@ -674,7 +698,102 @@ export class TriplitClient<M extends ClientSchema | undefined = undefined> {
       onError,
       {
         scope,
-        skipRules: SKIP_RULES,
+        skipRules: this.options?.skipRules ?? SKIP_RULES,
+        ...opts,
+      }
+    );
+    if (scope.includes('cache')) {
+      const onFulfilled = () => {
+        hasRemoteFulfilled = true;
+        if (fulfilledTimeout !== null) {
+          clearTimeout(fulfilledTimeout);
+        }
+        // This is a hack to make sure we don't call onRemoteFulfilled before
+        // the local subscription callback has had a chance to refire
+        fulfilledTimeout = setTimeout(() => {
+          clientSubscriptionCallback(results);
+          opts.onRemoteFulfilled?.();
+        }, 250);
+      };
+      unsubscribeRemote = this.syncEngine.subscribe(query, onFulfilled);
+    }
+    return () => {
+      unsubscribed = true;
+      unsubscribeLocal();
+      unsubscribeRemote();
+    };
+  }
+
+  subscribeTriples<CQ extends ClientQuery<M, any, any, any>>(
+    query: CQ,
+    onResults: (
+      results: TripleRow[],
+      info: { hasRemoteFulfilled: boolean }
+    ) => void | Promise<void>,
+    onError?: (error: any) => void | Promise<void>,
+    options?: Partial<SubscriptionOptions>
+  ) {
+    let unsubscribed = false;
+    const opts: SubscriptionOptions = { localOnly: false, ...(options ?? {}) };
+    // ID is currently used to trace the lifecycle of a query/subscription across logs
+    // @ts-ignore
+    query = addLoggingIdToQuery(query);
+    const scope = parseScope(query);
+    this.logger.debug('subscribeTriples start', query, scope);
+    console.log('skipRules?', this.options?.skipRules ?? SKIP_RULES);
+    if (opts.localOnly) {
+      try {
+        return this.db.subscribeTriples(
+          query,
+          (results) =>
+            onResults(results, {
+              hasRemoteFulfilled: false,
+            }),
+          onError,
+          {
+            scope,
+            skipRules: this.options?.skipRules ?? SKIP_RULES,
+            ...opts,
+          }
+        );
+      } catch (e) {
+        if (onError) onError(e);
+        else warnError(e);
+        return () => {};
+      }
+    }
+
+    let unsubscribeLocal = () => {};
+    let unsubscribeRemote = () => {};
+    let hasRemoteFulfilled = false;
+    let fulfilledTimeout: ReturnType<typeof setTimeout> | null = null;
+    let results: TripleRow[];
+    const userResultsCallback = onResults;
+    const userErrorCallback = onError;
+    onResults = (results, info) => {
+      // Ensure we dont re-fire the callback if we've already unsubscribed
+      if (unsubscribed) return;
+      userResultsCallback(results, info);
+    };
+    onError = userErrorCallback
+      ? (error) => {
+          // Ensure we dont re-fire the callback if we've already unsubscribed
+          if (unsubscribed) return;
+          userErrorCallback(error);
+        }
+      : undefined;
+    const clientSubscriptionCallback = (newResults: TripleRow[]) => {
+      results = newResults;
+      this.logger.debug('subscribeTriples RESULTS', results);
+      onResults(results, { hasRemoteFulfilled });
+    };
+    unsubscribeLocal = this.db.subscribeTriples(
+      query,
+      clientSubscriptionCallback,
+      onError,
+      {
+        scope,
+        skipRules: this.options?.skipRules ?? SKIP_RULES,
         ...opts,
       }
     );
@@ -1014,6 +1133,12 @@ export class TriplitClient<M extends ClientSchema | undefined = undefined> {
       this.syncEngine.updateConnection(updatedSyncOptions);
       this.http.updateOptions(updatedSyncOptions);
     }
+  }
+
+  withSessionVars(session: any) {
+    const newClient = new TriplitClient<M>(this.options);
+    newClient.db = this.db.withSessionVars(session);
+    return newClient;
   }
 
   /**
