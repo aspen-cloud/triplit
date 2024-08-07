@@ -740,7 +740,6 @@ export class TriplitClient<M extends ClientSchema | undefined = undefined> {
     query = addLoggingIdToQuery(query);
     const scope = parseScope(query);
     this.logger.debug('subscribeTriples start', query, scope);
-    console.log('skipRules?', this.options?.skipRules ?? SKIP_RULES);
     if (opts.localOnly) {
       try {
         return this.db.subscribeTriples(
