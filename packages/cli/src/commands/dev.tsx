@@ -53,7 +53,7 @@ export default Command({
       description: 'URL of the upstream server',
     }),
     upstreamToken: Flag.String({
-      description: 'URL of the upstream server',
+      description: 'Token to be used with the upstream server',
     }),
   },
   async run({ flags, ctx }) {
