@@ -22,7 +22,10 @@ import {
   TransactOptions,
 } from '@triplit/db';
 import { decodeToken } from '../token.js';
-import { UnrecognizedFetchPolicyError } from '../errors.js';
+import {
+  IndexedDbUnavailableError,
+  UnrecognizedFetchPolicyError,
+} from '../errors.js';
 import { MemoryBTreeStorage } from '@triplit/db/storage/memory-btree';
 import { IndexedDbStorage } from '@triplit/db/storage/indexed-db';
 import { SyncTransport } from '../transport/transport.js';
@@ -125,6 +128,9 @@ function getClientStorage(storageOption: StorageOptions) {
     };
 
   if (storageOption === 'indexeddb') {
+    if (typeof indexedDB === 'undefined') {
+      throw new IndexedDbUnavailableError();
+    }
     return {
       cache: new IndexedDbStorage('triplit-cache'),
       outbox: new IndexedDbStorage('triplit-outbox'),

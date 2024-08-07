@@ -4,6 +4,7 @@ import {
   SyncTransport,
   TransportConnectParams,
 } from './transport.js';
+import { WebSocketsUnavailableError } from '../errors.js';
 
 const DEFAULT_PAYLOAD_SIZE_LIMIT = (1024 * 1024) / 2;
 
@@ -16,6 +17,10 @@ export class WebSocketTransport implements SyncTransport {
   private connectionListeners: Set<(state: ConnectionStatus) => void> =
     new Set();
   constructor(private options: WebSocketTransportOptions = {}) {
+    if (typeof WebSocket === 'undefined') {
+      throw new WebSocketsUnavailableError();
+    }
+
     this.options.messagePayloadSizeLimit =
       // allow 0 to disable the limit
       this.options.messagePayloadSizeLimit == undefined
