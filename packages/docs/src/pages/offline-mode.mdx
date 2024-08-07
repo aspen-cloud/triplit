@@ -34,10 +34,6 @@ Triplit clients expose their current connection status with `connectionStatus` a
 
 The Triplit client also exposes methods `connect()` and `disconnect()` that can be used to manually control the client's connection status.
 
-### Sync statuses
-
-TODO
-
 ## Local-only mode
 
 If you want to use Triplit without syncing data to a server, you can set the [`autoConnect`](/client/options#sync-options) option to `false` or omit the `serverUrl` and `token` options when creating a client. In this mode, the client will still save data to a local cache and make optimistic updates, and no data will be sent to the server. If you are using a form of durable storage, such as `indexeddb`, data will persist across app loads, and can eventually be synced to a server in a later iteration of your app.
