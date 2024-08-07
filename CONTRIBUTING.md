@@ -1,6 +1,6 @@
 # Contributing to Triplit
 
-We welcome contributions to Triplit! This document outlines the steps to contribute to the Triplit project.
+We welcome contributions to Triplit! If you have an idea for a feature or change to Triplit, please open a GitHub discussion. If you have a bug to report, please open a GitHub issue. You can also come to our [Discord server](https://discord.gg/q89sGWHqQ5) to get help with a bug, discuss a feature or see what others are building.
 
 ## About the monorepo
 
