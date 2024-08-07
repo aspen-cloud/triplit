@@ -26,7 +26,7 @@ jobs:
           NPM_TOKEN: ${{ secrets.CI_NPM_TOKEN }}
 
       - name: Install
-        run: yarn install --immutable
+        run: yarn install --immutable --refresh-lockfile
 
       - name: Create Release Pull Request or Publish
         id: changesets
