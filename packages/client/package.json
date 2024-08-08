@@ -64,6 +64,7 @@
     "@triplit/types": "workspace:^",
     "@types/node": "^20.4.0",
     "esbuild": "^0.21.3",
+    "tinybench": "^2.9.0",
     "typescript": "^5.2.2",
     "vitest": "^1.4.0"
   },

@@ -9789,6 +9789,7 @@ __metadata:
     esbuild: "npm:^0.21.3"
     rxjs: "npm:^7.8.1"
     superjson: "npm:^2.2.1"
+    tinybench: "npm:^2.9.0"
     typescript: "npm:^5.2.2"
     vitest: "npm:^1.4.0"
   languageName: unknown
@@ -29847,6 +29848,13 @@ __metadata:
   version: 2.5.1
   resolution: "tinybench@npm:2.5.1"
   checksum: 10/f64ea142e048edc5010027eca36aff5aef74cd849ab9c6ba6e39475f911309694cb5a7ff894d47216ab4a3abcf4291e4bdc7a57796e96bf5b06e67452b5ac54d
+  languageName: node
+  linkType: hard
+
+"tinybench@npm:^2.9.0":
+  version: 2.9.0
+  resolution: "tinybench@npm:2.9.0"
+  checksum: 10/cfa1e1418e91289219501703c4693c70708c91ffb7f040fd318d24aef419fb5a43e0c0160df9471499191968b2451d8da7f8087b08c3133c251c40d24aced06c
   languageName: node
   linkType: hard
 
