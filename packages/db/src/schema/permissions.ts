@@ -19,7 +19,6 @@ export function getRolesFromSession<
   if (!schema) return undefined;
 
   const roles = schema.roles;
-  console.log('schema roles', roles);
   if (!roles) return [];
 
   const sessionRoles: SessionRole[] = [];
