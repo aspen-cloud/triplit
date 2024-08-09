@@ -12,15 +12,15 @@ interface WebSocketTransportOptions {
   messagePayloadSizeLimit?: number;
 }
 
+function webSocketsAreAvailable(): boolean {
+  return typeof WebSocket !== 'undefined';
+}
+
 export class WebSocketTransport implements SyncTransport {
   ws: WebSocket | undefined = undefined;
   private connectionListeners: Set<(state: ConnectionStatus) => void> =
     new Set();
   constructor(private options: WebSocketTransportOptions = {}) {
-    if (typeof WebSocket === 'undefined') {
-      throw new WebSocketsUnavailableError();
-    }
-
     this.options.messagePayloadSizeLimit =
       // allow 0 to disable the limit
       this.options.messagePayloadSizeLimit == undefined
@@ -98,6 +98,9 @@ export class WebSocketTransport implements SyncTransport {
     const wsUri = `${
       secure ? 'wss' : 'ws'
     }://${server}?${wsOptions.toString()}`;
+    if (!webSocketsAreAvailable()) {
+      throw new WebSocketsUnavailableError();
+    }
     this.ws = new WebSocket(wsUri);
     this.ws.onconnectionchange = (status) => {
       this.connectionListeners.forEach((listener) => listener(status));
