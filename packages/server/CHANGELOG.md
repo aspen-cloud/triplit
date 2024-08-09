@@ -1,5 +1,18 @@
 # @triplit/server
 
+## 0.4.0
+
+### Minor Changes
+
+- f9470ad1: Add basic support for syncing server with an upstream server
+
+### Patch Changes
+
+- Updated dependencies [ba9f0d6c]
+- Updated dependencies [6d249ce2]
+- Updated dependencies [f9470ad1]
+  - @triplit/client@0.4.0
+
 ## 0.3.72
 
 ### Patch Changes
