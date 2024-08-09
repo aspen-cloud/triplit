@@ -101,7 +101,8 @@ export class WorkerClient<M extends ClientSchema | undefined = undefined> {
       },
       ComLink.proxy(new WorkerLogger())
     );
-    this._connectionStatus = 'CLOSED';
+    this._connectionStatus =
+      options?.autoConnect === false ? 'CLOSED' : 'CONNECTING';
     this.onConnectionStatusChange((status) => {
       this._connectionStatus = status;
     }, true);
