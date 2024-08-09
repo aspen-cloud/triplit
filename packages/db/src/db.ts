@@ -52,6 +52,7 @@ import {
 } from './query/types';
 import { prepareQuery } from './query/prepare.js';
 import { getRolesFromSession } from './schema/permissions.js';
+import { diffSchemas } from './schema/diff.js';
 
 const DEFAULT_CACHE_DISABLED = true;
 
@@ -560,10 +561,13 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
       : Promise.resolve();
   }
 
-  private initializeDBWithSchema(schema: StoreSchema<M> | undefined) {
-    return schema
-      ? this.overrideSchema(schema).then(() => {})
-      : Promise.resolve();
+  private async initializeDBWithSchema(schema: StoreSchema<M> | undefined) {
+    if (!schema) return;
+    const existingSchema = await this.getSchema(true);
+    // exit of exiting schema matches provided schema
+    if (existingSchema && diffSchemas(existingSchema, schema).length === 0)
+      return;
+    await this.overrideSchema(schema);
   }
 
   /**
