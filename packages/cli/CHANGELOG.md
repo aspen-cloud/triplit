@@ -1,5 +1,15 @@
 # @triplit/cli
 
+## 0.5.0
+
+### Minor Changes
+
+- f9470ad1: Add basic support for syncing server with an upstream server
+
+### Patch Changes
+
+- 6d249ce2: Manual version bump for CLI dependencies
+
 ## 0.4.24
 
 ### Patch Changes
