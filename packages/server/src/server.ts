@@ -32,6 +32,7 @@ import {
 import path from 'path';
 import { createRequire } from 'module';
 import { TriplitClient } from '@triplit/client';
+import PublicRouter from './routes/public.js';
 
 const upload = multer();
 
@@ -268,6 +269,8 @@ export function createServer(options?: ServerOptions) {
   });
 
   app.use(cors({ origin: true }));
+
+  app.use(PublicRouter);
 
   const authenticated = express.Router();
   authenticated.use(useHttpToken);
