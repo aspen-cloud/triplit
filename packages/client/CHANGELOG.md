@@ -1,5 +1,14 @@
 # @triplit/client
 
+## 0.4.1
+
+### Patch Changes
+
+- 0139e1a4: Improve support for nested queries and results, add subquery to query builder"
+- Updated dependencies [28d32b51]
+- Updated dependencies [0139e1a4]
+  - @triplit/db@0.3.65
+
 ## 0.4.0
 
 ### Minor Changes

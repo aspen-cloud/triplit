@@ -1,5 +1,12 @@
 # @triplit/db
 
+## 0.3.65
+
+### Patch Changes
+
+- 28d32b51: Improved initialization speed especially with durable storage
+- 0139e1a4: Improve support for nested queries and results, add subquery to query builder"
+
 ## 0.3.64
 
 ### Patch Changes
