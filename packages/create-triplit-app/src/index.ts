@@ -112,7 +112,7 @@ async function createTriplitAppWithVite() {
         ],
         {
           onCancel: () => {
-            throw new Error(red('✖') + ' Operation cancelled');
+            throw new Error(red('✖') + ' Operation canceled');
           },
         }
       );
@@ -120,8 +120,8 @@ async function createTriplitAppWithVite() {
         throw new Error(red('✖') + ' Invalid directory name');
       }
       argTargetDir = targetDirChoice.targetDir;
-    } catch (cancelled: any) {
-      console.log(cancelled.message);
+    } catch (canceled: any) {
+      console.log(canceled.message);
       return;
     }
   }
@@ -167,13 +167,13 @@ async function createTriplitAppWithVite() {
         ],
         {
           onCancel: () => {
-            throw new Error(red('✖') + ' Operation cancelled');
+            throw new Error(red('✖') + ' Operation canceled');
           },
         }
       );
       template = templateChoice.template;
-    } catch (cancelled: any) {
-      console.log(cancelled.message);
+    } catch (canceled: any) {
+      console.log(canceled.message);
       return;
     }
   }
@@ -209,13 +209,13 @@ async function createTriplitAppWithVite() {
         ],
         {
           onCancel: () => {
-            throw new Error(red('✖') + ' Operation cancelled');
+            throw new Error(red('✖') + ' Operation canceled');
           },
         }
       );
       framework = frameworkChoice.framework;
-    } catch (cancelled: any) {
-      console.log(cancelled.message);
+    } catch (canceled: any) {
+      console.log(canceled.message);
       return;
     }
   } else {

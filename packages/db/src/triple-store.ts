@@ -406,7 +406,7 @@ export class TripleStore<StoreKeys extends string = any>
           hooks: this.hooks,
         });
         let output: Output | undefined;
-        if (tx.isCancelled) return { tx, output };
+        if (tx.isCanceled) return { tx, output };
         try {
           output = await callback(tx);
         } catch (e) {
@@ -424,7 +424,7 @@ export class TripleStore<StoreKeys extends string = any>
         ? JSON.stringify(tx.assignedTimestamp)
         : undefined,
       output,
-      isCancelled: tx.isCancelled,
+      isCanceled: tx.isCanceled,
     };
   }
 

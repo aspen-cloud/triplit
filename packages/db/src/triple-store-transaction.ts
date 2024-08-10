@@ -384,8 +384,8 @@ export class TripleStoreTransaction implements TripleStoreApi {
     await this.tupleTx.cancel();
   }
 
-  get isCancelled() {
-    return this.tupleTx.isCancelled;
+  get isCanceled() {
+    return this.tupleTx.isCanceled;
   }
 
   withScope(scope: StorageScope) {

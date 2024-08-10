@@ -668,8 +668,8 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
     await this.storeTx.cancel();
   }
 
-  get isCancelled() {
-    return this.storeTx.isCancelled;
+  get isCanceled() {
+    return this.storeTx.isCanceled;
   }
 
   async insert<CN extends CollectionNameFromModels<M>>(
