@@ -5,6 +5,7 @@
   "where": "`where`",
   "order": "`order`",
   "limit": "`limit`",
+  "subquery": "`subquery`",
   "sync-status": "`syncStatus`",
   "variables": "`vars`"
 }
