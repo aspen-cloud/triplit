@@ -1,5 +1,16 @@
 # @triplit/server
 
+## 0.4.1
+
+### Patch Changes
+
+- f2e5cc21: Add healthcheck endpoint
+- Updated dependencies [28d32b51]
+- Updated dependencies [0139e1a4]
+  - @triplit/db@0.3.65
+  - @triplit/client@0.4.1
+  - @triplit/server-core@0.3.68
+
 ## 0.4.0
 
 ### Minor Changes
