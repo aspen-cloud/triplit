@@ -46,3 +46,47 @@ If a collection has multiple relations, you can select them by chaining multiple
 ```typescript
 const query = client.query('messages').include('sender').include('receiver');
 ```
+
+## Aliasing and extending relations
+
+You can extend and alias relations with the `include` method. Given a schema with a relation from `directors` to `films`:
+
+```typescript
+const schema = {
+  films: S.Schema({
+    id: S.Id(),
+    title: S.Id(),
+    rating: S.Number(),
+    directorId: S.String(),
+  }),
+  directors: S.Schema({
+    id: S.Id(),
+    name: S.String(),
+    allFilms: S.RelationMany('films', {
+      where: [['directorId', '=', '$1.id']],
+    }),
+  }),
+};
+```
+
+You can write an adhoc query that narrows down a director's films to just their top 3, building off the existing `allFilms` relation.
+
+```typescript
+const query = client
+  .query('directors')
+  .include('bestFilms', (rel) =>
+    rel('allFilms').order('rating', 'DESC').limit(3).build()
+  )
+  .build();
+
+const result = await client.fetch(query);
+
+// And the result will be fully typed
+// {
+//   id: string;
+//   name: string;
+//   bestFilms: Map<string, { id: string; title: string; rating: number; directorId: string }>;
+// }
+```
+
+The extending query can use any valid query builder method, such as `order`, `limit`, `where`, etc.

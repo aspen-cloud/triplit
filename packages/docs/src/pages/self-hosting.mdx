@@ -89,6 +89,10 @@ const startServer = createServer({
 });
 ```
 
+## Health checks
+
+The server exposes a health check endpoint at `/healthcheck`. This endpoint will return a 200 status code if the server is running and healthy.
+
 ## Secrets
 
 There are a few secrets that you need to provide to the server to enable certain features. **If you are planning on using the Triplit Dashboard, you will need to set `PROJECT_ID` and `JWT_SECRET` to specific values associated with your project.** Read the [Triplit Cloud guide](/triplit-cloud/self-hosted-deployments#configuration) for more information.

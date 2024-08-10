@@ -1,0 +1,63 @@
+---
+description: The `subquery` clause can be used to include a nested query in a Triplit query.
+---
+
+import { Callout } from 'nextra/components';
+
+# subquery
+
+The `subquery` method can be used to add an ad-hoc query on related data to an entity. [Relations](/schemas/relations) are formalized subqueries that are defined in the schema. But a `subquery` is a way to add any nested query to a Triplit query at runtime, regardless of relations in the schema.
+
+For example, the following schema has two collections, `users` and `blogs`, where each todo has a `user_id` attribute that references a user:
+
+```typescript
+const schema = {
+  users: S.Schema({
+    id: S.Id(),
+    name: S.String(),
+  }),
+  blogs: S.Schema({
+    id: S.Id(),
+    title: S.String(),
+    text: S.String(),
+    author: S.String(),
+    created_at: S.Date({ default: S.Default.now() }),
+  }),
+};
+```
+
+To query all blogs with their associated user, you can use the `subquery` method:
+
+```typescript
+const query = client
+  .query('users')
+  .subquery(
+    'userBlogs', // key
+    client // query
+      .query('blogs')
+      .where(['author', '=', '123'])
+      .select(['title', 'text'])
+      .build(),
+    'many' // cardinality
+  )
+  .build();
+```
+
+The subquery method takes three arguments: the key to store the result of the subquery, the subquery itself, and the cardinality of the relation. The cardinality can be either `one` or `many`. In the example above, the cardinality is `many` because a user can have many blogs. If the cardinality is `one`, the subquery will return a single result. The following query will return the last todo created by the user:
+
+```typescript
+const query = client
+  .query('users')
+  .subquery(
+    'mostRecentBlog',
+    client
+      .query('blogs')
+      .select(['text'])
+      .where(['author', '=', '123'])
+      .orderBy('created_at', 'DESC')
+      .limit(1)
+      .build(),
+    'one'
+  )
+  .build();
+```
