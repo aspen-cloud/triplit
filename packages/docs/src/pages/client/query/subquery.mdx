@@ -43,7 +43,7 @@ const query = client
   .build();
 ```
 
-The subquery method takes three arguments: the key to store the result of the subquery, the subquery itself, and the cardinality of the relation. The cardinality can be either `one` or `many`. In the example above, the cardinality is `many` because a user can have many blogs. If the cardinality is `one`, the subquery will return a single result. The following query will return the last todo created by the user:
+The subquery method takes three arguments: the key to store the result of the subquery, the subquery itself, and the cardinality of the relation. The cardinality can be either `one` or `many` and if none is provided it will default to `many`. In the example above, the cardinality is `many` because a user can have many blogs. If the cardinality is `one`, the subquery will return a single result. The following query will return the last todo created by the user:
 
 ```typescript
 const query = client

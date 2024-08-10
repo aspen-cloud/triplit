@@ -89,4 +89,19 @@ const result = await client.fetch(query);
 // }
 ```
 
+This is also useful for querying nested data. For example:
+
+```typescript
+const query = client
+  .query('directors')
+  .include('allFilms', (rel) => rel('allFilms').include('actors').build())
+  .build();
+
+// {
+//   id: string;
+//   name: string;
+//   allFilms: Map<string, { id: string; title: string; rating: number; directorId: string, actors: Map<string, { ... }> }>;
+// }
+```
+
 The extending query can use any valid query builder method, such as `order`, `limit`, `where`, etc.
