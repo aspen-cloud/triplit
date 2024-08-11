@@ -14,7 +14,13 @@ import {
   TupleToObject,
   RemoveTupleValuePairPrefix,
 } from '@triplit/tuple-database/database/typeHelpers';
-import { DBScanFailureError, NotImplementedError } from './errors.js';
+import {
+  DBScanFailureError,
+  NotImplementedError,
+  TransactionAlreadyCanceledError,
+  TransactionAlreadyCommittedError,
+  TriplitError,
+} from './errors.js';
 import { MirroredArray } from './utils/mirrored-array.js';
 
 export type StorageScope = {
@@ -255,10 +261,10 @@ export default class MultiTupleStore<TupleSchema extends KeyValuePair> {
         exponentialBackoff: true,
         jitter: true,
       })(
-        // @ts-ignore
+        // @ts-expect-error
         callback
       )(
-        // @ts-ignore
+        // @ts-expect-error
         scope
           ? new MultiTupleStore({
               storage: this.storage,
@@ -269,7 +275,7 @@ export default class MultiTupleStore<TupleSchema extends KeyValuePair> {
           : this
       );
     } catch (e) {
-      throw e;
+      throw mapTupleDatabaseErrorToTriplitError(e);
     }
   }
 
@@ -332,8 +338,11 @@ export class ScopedMultiTupleOperator<TupleSchema extends KeyValuePair> {
       : never
   ) {
     for (const beforeHook of this.hooks.beforeInsert) {
-      // @ts-ignore
-      await beforeHook({ key: tuple, value }, this);
+      await beforeHook(
+        // @ts-expect-error
+        { key: tuple, value },
+        this
+      );
     }
     this.txScope.write.forEach((tx) => tx.set(tuple, value));
   }
@@ -376,6 +385,7 @@ export class MultiTupleTransaction<
   readonly txs: Record<string, AsyncTupleRootTransactionApi<TupleSchema>>;
   readonly store: MultiTupleStore<TupleSchema>;
   isCanceled = false;
+  isCommitted = false;
   readonly hooks: MultiTupleStoreHooks<TupleSchema>;
   private _inheritedHooks: MultiTupleStoreHooks<TupleSchema>;
   private _ownHooks: MultiTupleStoreHooks<TupleSchema>;
@@ -499,6 +509,8 @@ export class MultiTupleTransaction<
     // perform commit
     await Promise.all(Object.values(this.txs).map((tx) => tx.commit()));
 
+    this.isCommitted = true;
+
     // run after hooks
     for (const afterHook of this.hooks.afterCommit) {
       await afterHook(this);
@@ -607,4 +619,20 @@ class TaskQueue {
     }
     this.isRunning = false;
   }
+}
+
+function mapTupleDatabaseErrorToTriplitError(
+  error: unknown
+): unknown | Error | TriplitError {
+  if (error instanceof Error) {
+    switch (error.message) {
+      case 'Transaction already committed':
+        return new TransactionAlreadyCommittedError();
+      case 'Transaction already canceled':
+        return new TransactionAlreadyCanceledError();
+      default:
+        return error;
+    }
+  }
+  return error;
 }

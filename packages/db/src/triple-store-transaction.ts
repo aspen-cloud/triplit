@@ -195,12 +195,9 @@ export class TripleStoreTransaction implements TripleStoreApi {
     for (const hook of this.hooks.beforeInsert) {
       await hook(triplesInput, this);
     }
-    for (const triple of triplesInput) {
-      if (triple.value === undefined) {
-        throw new InvalidTripleStoreValueError(undefined);
-      }
-      await this.addTripleToIndex(this.tupleTx, triple);
-    }
+    await Promise.all(
+      triplesInput.map((t) => this.addTripleToIndex(this.tupleTx, t))
+    );
   }
 
   private async addTripleToIndex(
@@ -208,6 +205,10 @@ export class TripleStoreTransaction implements TripleStoreApi {
     tripleInput: TripleRow
   ) {
     const { id: id, attribute, value, timestamp, expired } = tripleInput;
+
+    if (value === undefined) {
+      throw new InvalidTripleStoreValueError(undefined);
+    }
 
     // If we already have this triple, skip it (performance optimization)
     // const existingTriples = await tx.scan({
@@ -226,7 +227,7 @@ export class TripleStoreTransaction implements TripleStoreApi {
     //   }
     // }
 
-    tx.set(['EAT', id, attribute, timestamp], [value, expired]);
+    await tx.set(['EAT', id, attribute, timestamp], [value, expired]);
   }
 
   async deleteTriple(trip: TripleRow) {
@@ -260,7 +261,7 @@ export class TripleStoreTransaction implements TripleStoreApi {
 
   async updateMetadataTuples(updates: EAV[]) {
     for (const [entityId, attribute, value] of updates) {
-      this.tupleTx.set(['metadata', entityId, ...attribute], value);
+      await this.tupleTx.set(['metadata', entityId, ...attribute], value);
     }
     await Promise.all(
       [...this.txMetadataListeners].map((cb) => cb({ updates, deletes: [] }))
