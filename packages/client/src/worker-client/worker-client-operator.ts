@@ -111,6 +111,9 @@ const workerOperator: ClientWorker = {
   async getSchema() {
     return await clientOperator.getSchema();
   },
+  async getSchemaJson() {
+    return await clientOperator.getSchemaJson();
+  },
   async delete(
     ...args: Parameters<typeof clientOperator.delete>
   ): Promise<TransactionResult<void>> {
