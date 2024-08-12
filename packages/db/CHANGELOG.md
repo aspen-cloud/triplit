@@ -1,5 +1,11 @@
 # @triplit/db
 
+## 0.3.66
+
+### Patch Changes
+
+- 73d638ec: Fixup async bugs
+
 ## 0.3.65
 
 ### Patch Changes
