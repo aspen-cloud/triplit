@@ -1,5 +1,11 @@
 # @triplit/svelte
 
+## 0.1.60
+
+### Patch Changes
+
+- @triplit/client@0.4.3
+
 ## 0.1.59
 
 ### Patch Changes

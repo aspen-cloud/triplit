@@ -1,5 +1,11 @@
 # @triplit/db
 
+## 0.3.67
+
+### Patch Changes
+
+- 38bdff77: temporarily loosen restrictions on filter inputs
+
 ## 0.3.66
 
 ### Patch Changes
