@@ -18,7 +18,7 @@ describe('commit transaction', () => {
   });
 
   // TODO: add warning for user
-  it.only('failing to await commands will still run, but not commit changes', async () => {
+  it('failing to await commands will still run, but not commit changes', async () => {
     const db = new DB();
     // const consoleSpy = vi.spyOn(console, 'warn');
     await db.transact(async (tx) => {
