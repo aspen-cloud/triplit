@@ -46,7 +46,7 @@ export type HttpClientOptions<M extends ClientSchema | undefined> = {
 };
 
 // Interact with remote via http api, totally separate from your local database
-export class HttpClient<M extends ClientSchema | undefined> {
+export class HttpClient<M extends ClientSchema | undefined = undefined> {
   constructor(private options: HttpClientOptions<M> = {}) {}
 
   // Hack: use schemaFactory to get schema if it's not ready from provider
@@ -323,8 +323,8 @@ function deserializeHttpEntity<CQ extends CollectionQuery<any, any, any, any>>(
 export type BulkInsert<M extends ClientSchema | undefined> =
   M extends ClientSchema
     ? {
-        [CN in CollectionNameFromModels<M>]?: InsertTypeFromModel<
-          ModelFromModels<M, CN>
+        [CN in CollectionNameFromModels<M>]?: Unalias<
+          InsertTypeFromModel<ModelFromModels<M, CN>>
         >[];
       }
-    : Record<string, any>;
+    : Record<string, any[]>;
