@@ -33,6 +33,14 @@ export type TransactionScope<TupleSchema extends KeyValuePair> = {
   write: AsyncTupleRootTransactionApi<TupleSchema>[];
 };
 
+type TransactionStatus =
+  | 'open'
+  | 'commit-called'
+  | 'committing'
+  | 'committed'
+  | 'canceling'
+  | 'canceled';
+
 type MultiTupleStoreBeforeCommitHook<TupleSchema extends KeyValuePair> = (
   tx: MultiTupleTransaction<TupleSchema>
 ) => void | Promise<void>;
@@ -294,13 +302,17 @@ export default class MultiTupleStore<TupleSchema extends KeyValuePair> {
 export class ScopedMultiTupleOperator<TupleSchema extends KeyValuePair> {
   readonly txScope: TransactionScope<TupleSchema>;
   hooks: MultiTupleStoreHooks<TupleSchema>;
+  readonly state: { status: TransactionStatus };
   constructor({
+    state,
     txScope,
     hooks,
   }: {
+    state: { status: TransactionStatus };
     txScope: TransactionScope<TupleSchema>;
     hooks: MultiTupleStoreHooks<TupleSchema>;
   }) {
+    this.state = state;
     this.txScope = txScope;
     this.hooks = hooks;
   }
@@ -326,6 +338,19 @@ export class ScopedMultiTupleOperator<TupleSchema extends KeyValuePair> {
   // get: <T extends Tuple>(tuple: T) => (Extract<TupleSchema, { key: TupleToObject<T>; }> extends unknown ? Extract<TupleSchema, { key: TupleToObject<T>; }>['value'] : never) | undefined;
   // exists: <T extends Tuple>(tuple: T) => boolean;
   remove(tuple: TupleSchema['key']) {
+    if (
+      this.state.status === 'committing' ||
+      this.state.status === 'committed'
+    ) {
+      console.warn(
+        'You are attempting to perform an operation on an already committed transaction - changes may not be committed. Please ensure you are awaiting async operations within a transaction.'
+      );
+    }
+    if (this.state.status === 'canceling' || this.state.status === 'canceled') {
+      console.warn(
+        'You are attempting to perform an operation on an already canceled transaction - changes may not be committed. Please ensure you are awaiting async operations within a transaction.'
+      );
+    }
     this.txScope.write.forEach((tx) => tx.remove(tuple));
   }
 
@@ -337,6 +362,21 @@ export class ScopedMultiTupleOperator<TupleSchema extends KeyValuePair> {
       ? Extract<TupleSchema, { key: TupleToObject<Key> }>['value']
       : never
   ) {
+    // To prevent beforeCommit hooks from triggering warning, dont include 'commit-called' status
+    // But that would help catch users not awaiting async operations
+    if (
+      this.state.status === 'committing' ||
+      this.state.status === 'committed'
+    ) {
+      console.warn(
+        'You are attempting to perform an operation on an already committed transaction - changes may not be committed. Please ensure you are awaiting async operations within a transaction.'
+      );
+    }
+    if (this.state.status === 'canceling' || this.state.status === 'canceled') {
+      console.warn(
+        'You are attempting to perform an operation on an already canceled transaction - changes may not be committed. Please ensure you are awaiting async operations within a transaction.'
+      );
+    }
     for (const beforeHook of this.hooks.beforeInsert) {
       await beforeHook(
         // @ts-expect-error
@@ -379,14 +419,13 @@ function mergeMultipleSortedArrays<T>(
   return result;
 }
 
+type TransactionState = { status: TransactionStatus };
+
 export class MultiTupleTransaction<
   TupleSchema extends KeyValuePair
 > extends ScopedMultiTupleOperator<TupleSchema> {
   readonly txs: Record<string, AsyncTupleRootTransactionApi<TupleSchema>>;
   readonly store: MultiTupleStore<TupleSchema>;
-  isCanceled = false;
-  isCommitted = false;
-  readonly hooks: MultiTupleStoreHooks<TupleSchema>;
   private _inheritedHooks: MultiTupleStoreHooks<TupleSchema>;
   private _ownHooks: MultiTupleStoreHooks<TupleSchema>;
 
@@ -407,7 +446,10 @@ export class MultiTupleTransaction<
     const txs = Object.fromEntries(txEntries);
     const readKeys = scope?.read ?? Object.keys(store.storage);
     const writeKeys = scope?.write ?? Object.keys(store.storage);
+    // Storing state in an object so it can be passed by reference to scope objects (but dont love this pattern)
+    const state: TransactionState = { status: 'open' };
     super({
+      state,
       txScope: {
         read: readKeys.map((storageKey) => txs[storageKey]),
         write: writeKeys.map((storageKey) => txs[storageKey]),
@@ -451,6 +493,30 @@ export class MultiTupleTransaction<
     };
   }
 
+  private get status() {
+    return this.state.status;
+  }
+
+  get isOpen() {
+    return this.status === 'open';
+  }
+
+  get isCommitting() {
+    return this.status === 'committing';
+  }
+
+  get isCommitted() {
+    return this.status === 'committed';
+  }
+
+  get isCancelling() {
+    return this.status === 'canceling';
+  }
+
+  get isCanceled() {
+    return this.status === 'canceled';
+  }
+
   get writes() {
     return Object.fromEntries(
       Object.entries(this.txs).map(([id, tx]) => [id, tx.writes])
@@ -488,6 +554,7 @@ export class MultiTupleTransaction<
     const readKeys = scope.read ?? Object.keys(this.store.storage);
     const writeKeys = scope.write ?? Object.keys(this.store.storage);
     return new ScopedMultiTupleOperator({
+      state: this.state,
       txScope: {
         read: readKeys.map((storageKey) => this.txs[storageKey]),
         write: writeKeys.map((storageKey) => this.txs[storageKey]),
@@ -496,36 +563,133 @@ export class MultiTupleTransaction<
     });
   }
 
-  async commit() {
-    if (this.isCanceled) {
-      console.warn('Cannot commit already canceled transaction.');
-      return;
+  /**
+   * States: open, committing, committed, canceling, canceled
+   *
+   * // state: [valid transitions]
+   * - open: [commit-called, canceling]
+   * - commit-called: [committing, canceling]
+   * - committing: [committed]
+   * - committed: []
+   * - canceling: [canceled]
+   * - canceled: []
+   *
+   */
+  private setStatus(status: TransactionStatus) {
+    switch (this.status) {
+      case 'open':
+        if (status !== 'commit-called' && status !== 'canceling')
+          throw new Error('Invalid transaction status transition');
+        break;
+      case 'commit-called':
+        if (status !== 'committing' && status !== 'canceling')
+          throw new Error('Invalid transaction status transition');
+        break;
+      case 'committing':
+        if (status !== 'committed')
+          throw new Error('Invalid transaction status transition');
+        break;
+      case 'committed':
+        throw new Error('Invalid transaction status transition');
+      case 'canceling':
+        if (status !== 'canceled')
+          throw new Error('Invalid transaction status transition');
+        break;
+      case 'canceled':
+        throw new Error('Invalid transaction status transition');
+      default:
+        // TODO: maybe throw if unknown status?
+        break;
     }
+    this.state.status = status;
+  }
+
+  private async _commit() {
+    this.setStatus('commit-called');
     // Run before hooks
     for (const beforeHook of this.hooks.beforeCommit) {
       await beforeHook(this);
     }
 
-    // perform commit
-    await Promise.all(Object.values(this.txs).map((tx) => tx.commit()));
+    // Check if transaction was canceled during before hooks
+    if (this.status === 'canceled') {
+      return;
+    }
 
-    this.isCommitted = true;
+    // perform commit
+    this.setStatus('committing');
+    await Promise.all(Object.values(this.txs).map((tx) => tx.commit()));
+    this.setStatus('committed');
+
+    // schedule reactivity callbacks
+    this.store.reactivity.emit(this.id);
 
     // run after hooks
     for (const afterHook of this.hooks.afterCommit) {
       await afterHook(this);
     }
-
-    // schedule reactivity callbacks
-    this.store.reactivity.emit(this.id);
   }
-  async cancel() {
-    if (this.isCanceled) {
-      console.warn('Attempted to cancel already canceled transaction.');
-      return;
+
+  async commit() {
+    switch (this.status) {
+      case 'commit-called':
+      case 'committing':
+        return console.warn(
+          'Cannot commit a transaction that is currently being committed.'
+        );
+      case 'committed':
+        return console.warn(
+          'Cannot commit a transaction that is already committed.'
+        );
+      case 'canceling':
+        return console.warn(
+          'Cannot commit a transaction that is currently being canceled.'
+        );
+      case 'canceled':
+        return console.warn(
+          'Cannot commit a transaction that is already canceled.'
+        );
+      case 'open':
+        return this._commit();
+      default:
+        throw new Error('Invalid transaction status');
     }
+  }
+
+  private async _cancel() {
+    this.setStatus('canceling');
     await Promise.all(Object.values(this.txs).map((tx) => tx.cancel()));
-    this.isCanceled = true;
+    this.setStatus('canceled');
+  }
+
+  async cancel() {
+    switch (this.status) {
+      case 'committing':
+        return console.warn(
+          'Cannot cancel a transaction that is currently being committed.'
+        );
+      case 'committed':
+        return console.warn(
+          'Cannot cancel a transaction that is already committed.'
+        );
+
+      case 'canceling':
+        return console.warn(
+          'Cannot cancel a transaction that is currently being canceled.'
+        );
+
+      case 'canceled':
+        return console.warn(
+          'Cannot cancel a transaction that is already canceled.'
+        );
+
+      // If we have triggered a commit, we can still cancel it and abort the commit
+      case 'commit-called':
+      case 'open':
+        return this._cancel();
+      default:
+        throw new Error('Invalid transaction status');
+    }
   }
 }
 

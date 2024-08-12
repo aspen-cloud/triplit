@@ -1665,14 +1665,6 @@ describe('database transactions', () => {
     });
     expect((await db.fetchById('TestScores', DOC_ID))?.score).toBe(80);
   });
-  it("can't commit inside the transaction callback", async () => {
-    const db = new DB({});
-    expect(
-      db.transact(async (tx) => {
-        tx.commit();
-      })
-    ).rejects.toThrowError();
-  });
   it('can fetch by id in a transaction', async () => {
     const db = new DB({});
     await db.transact(async (tx) => {
