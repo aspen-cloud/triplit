@@ -1,5 +1,15 @@
 # @triplit/client
 
+## 0.4.2
+
+### Patch Changes
+
+- bbc64ede: Extend Entity type to include selection and inclusions
+- 12650423: Fix update method not working with WorkerClient
+- bbc64ede: Add helper type for QueryResult
+- Updated dependencies [73d638ec]
+  - @triplit/db@0.3.66
+
 ## 0.4.1
 
 ### Patch Changes
