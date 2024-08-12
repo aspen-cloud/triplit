@@ -61,7 +61,8 @@ export type QueryValue =
   | null
   | number[]
   | boolean[]
-  | string[];
+  | string[]
+  | Date[];
 
 // === Generics Helpers ===
 type BaseCollectionQuery = CollectionQuery<any, any, any, any>;

@@ -34,17 +34,19 @@ export type ExtractOperators<T extends TypeInterface> = T extends TypeInterface<
 >
   ? Operators[number]
   : never;
-export type ExtractValueInputs<T extends TypeInterface> =
-  T extends TypeInterface<
-    infer _TypeId,
-    infer JSType,
-    infer _JsonType,
-    infer _Operators
-  >
-    ? JSType extends QueryValue // This is to protect against JSType being 'unknown'
-      ? JSType
-      : QueryValue
-    : never;
+
+// TODO: improve type inference based on operator
+export type ExtractValueInputs<T extends TypeInterface> = QueryValue;
+// T extends TypeInterface<
+//   infer _TypeId,
+//   infer JSType,
+//   infer _JsonType,
+//   infer _Operators
+// >
+//   ? JSType extends QueryValue // This is to protect against JSType being 'unknown'
+//     ? JSType
+//     : QueryValue
+//   : never;
 
 /**
  * This represents a definition of a type that can be used in a collection
