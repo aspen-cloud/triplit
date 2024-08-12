@@ -1,11 +1,9 @@
 import { CollectionNameFromModels, ModelFromModels } from '../../db.js';
 import {
   CollectionQuery,
-  SchemaQueries,
   QueryInclusions,
   QueryResultCardinality,
-  QuerySelectionValue,
-  RelationSubquery,
+  QuerySelection,
 } from './collection-query.js';
 import {
   Model,
@@ -62,9 +60,7 @@ export type ReturnTypeFromQuery<Q extends CollectionQuery<any, any, any, any>> =
 export type FetchResultEntityFromParts<
   M extends Models<any, any> | undefined,
   CN extends CollectionNameFromModels<M>,
-  Selection extends ReadonlyArray<QuerySelectionValue<M, CN>> = ReadonlyArray<
-    QuerySelectionValue<M, CN>
-  >,
+  Selection extends QuerySelection<M, CN> = QuerySelection<M, CN>,
   Inclusion extends QueryInclusions<M, CN> = {}
 > = M extends Models<any, any>
   ? ModelFromModels<M, CN> extends Model<any>

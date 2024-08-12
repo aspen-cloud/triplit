@@ -17,7 +17,6 @@ import {
   CollectionQuery,
   FilterStatement,
   QueryOrder,
-  QuerySelectionValue,
   QueryValue,
   QueryWhere,
   ValueCursor,
@@ -29,6 +28,7 @@ import {
   RefQueryExtension,
   QueryInclusions,
   RefCollectionName,
+  QuerySelection,
 } from './types';
 
 export class QueryBuilder<
@@ -47,7 +47,7 @@ export class QueryBuilder<
     return this.query;
   }
 
-  select<Selection extends ReadonlyArray<QuerySelectionValue<M, CN>>>(
+  select<Selection extends QuerySelection<M, CN>>(
     selection: Selection | undefined
   ) {
     return new QueryBuilder({
@@ -236,9 +236,7 @@ export class RelationBuilder<
   M extends Models<any, any> | undefined,
   CN extends CollectionNameFromModels<M>,
   RName extends RelationAttributes<ModelFromModels<M, CN>>,
-  RelSelection extends ReadonlyArray<
-    QuerySelectionValue<M, RefCollectionName<M, CN, RName>>
-  > = [], // TODO: this is a small hack to help when creating a merged result type, should figure out how to differentiate between no selection and select: [] (bot defined as never[])
+  RelSelection extends QuerySelection<M, RefCollectionName<M, CN, RName>> = [], // TODO: this is a small hack to help when creating a merged result type, should figure out how to differentiate between no selection and select: [] (bot defined as never[])
   RelInclusions extends QueryInclusions<M, RefCollectionName<M, CN, RName>> = {}
 > {
   private relationName: RName;
@@ -264,11 +262,9 @@ export class RelationBuilder<
     };
   }
 
-  select<
-    Selection extends ReadonlyArray<
-      QuerySelectionValue<M, RefCollectionName<M, CN, RName>>
-    >
-  >(selection: Selection) {
+  select<Selection extends QuerySelection<M, RefCollectionName<M, CN, RName>>>(
+    selection: Selection
+  ) {
     // @ts-expect-error
     this.ext.select = selection;
     // @ts-expect-error

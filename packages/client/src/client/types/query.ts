@@ -4,8 +4,7 @@ import type {
   CollectionQueryDefault,
   Models,
   QueryInclusions,
-  QuerySelectionValue,
-  RelationSubquery,
+  QuerySelection,
   SchemaQueries,
 } from '@triplit/db';
 
@@ -27,9 +26,7 @@ type ClientQueryExtensions = {
 export type ClientQuery<
   M extends ClientSchema | undefined,
   CN extends CollectionNameFromModels<M>,
-  Selection extends ReadonlyArray<QuerySelectionValue<M, CN>> = ReadonlyArray<
-    QuerySelectionValue<M, CN>
-  >,
+  Selection extends QuerySelection<M, CN> = QuerySelection<M, CN>,
   Inclusions extends QueryInclusions<M, CN> = QueryInclusions<M, CN>
 > = CollectionQuery<M, CN, Selection, Inclusions> & ClientQueryExtensions;
 

@@ -33,9 +33,7 @@ import {
 export type CollectionQuery<
   M extends Models<any, any> | undefined,
   CN extends CollectionNameFromModels<M>,
-  Selection extends ReadonlyArray<QuerySelectionValue<M, CN>> = ReadonlyArray<
-    QuerySelectionValue<M, CN>
-  >,
+  Selection extends QuerySelection<M, CN> = QuerySelection<M, CN>,
   Inclusions extends QueryInclusions<M, CN> = QueryInclusions<M, CN>
 > = {
   where?: QueryWhere<M, CN>;
@@ -74,7 +72,7 @@ type BaseCollectionQuery = CollectionQuery<any, any, any, any>;
 export type CollectionQueryDefault<
   M extends Models<any, any> | undefined,
   CN extends CollectionNameFromModels<M>
-> = CollectionQuery<M, CN, ReadonlyArray<QuerySelectionValue<M, CN>>, {}>;
+> = CollectionQuery<M, CN, QuerySelection<M, CN>, {}>;
 
 /**
  * Extracts the schema type from a collection query.
@@ -109,6 +107,14 @@ export type QuerySelectionValue<
   M extends Models<any, any> | undefined,
   CN extends CollectionNameFromModels<M>
 > = M extends Models<any, any> ? ModelPaths<M, CN> : Path;
+
+/**
+ * A query selection, which is an array of values to select.
+ */
+export type QuerySelection<
+  M extends Models<any, any> | undefined,
+  CN extends CollectionNameFromModels<M>
+> = ReadonlyArray<QuerySelectionValue<M, CN>>;
 
 /**
  * Cardinality of a query result:
@@ -400,10 +406,8 @@ export type ModelRefSubQueries<
 export type ParseSelect<
   M extends Models<any, any> | undefined,
   CN extends CollectionNameFromModels<M>,
-  Selection extends ReadonlyArray<QuerySelectionValue<M, CN>>
-> = unknown extends Selection
-  ? ReadonlyArray<QuerySelectionValue<M, CN>>
-  : Selection;
+  Selection extends QuerySelection<M, CN>
+> = unknown extends Selection ? QuerySelection<M, CN> : Selection;
 
 /**
  * Converts an object to a query inclusion.
@@ -457,7 +461,7 @@ export type MergeQueryInclusion<
         Inc['select'] extends [] | undefined ? unknown : Inc['select'],
         Q['select']
       >,
-      ReadonlyArray<QuerySelectionValue<M, CN>>
+      QuerySelection<M, CN>
     >
   >,
   ParseInclusions<M, CN, Coalesce<Inc['include'], Q['include']>>

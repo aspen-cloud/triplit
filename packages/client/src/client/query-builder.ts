@@ -12,7 +12,6 @@ import {
   CollectionQuerySelection,
   RelationAttributes,
   CollectionNameFromModels,
-  QuerySelectionValue,
   Models,
   RelationSubquery,
   RefSubquery,
@@ -21,6 +20,7 @@ import {
   relationBuilder,
   SchemaQueries,
   QueryResultCardinality,
+  QuerySelection,
 } from '@triplit/db';
 import {
   ClientSchema,
@@ -61,7 +61,7 @@ export class ClientQueryBuilder<
     return this.query;
   }
 
-  select<Selection extends ReadonlyArray<QuerySelectionValue<M, CN>>>(
+  select<Selection extends QuerySelection<M, CN>>(
     selection: Selection | undefined
   ) {
     return new ClientQueryBuilder({

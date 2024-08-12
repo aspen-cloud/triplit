@@ -2,7 +2,7 @@ import {
   CollectionNameFromModels,
   CollectionQuery,
   QueryBuilder,
-  QuerySelectionValue,
+  QuerySelection,
 } from '@triplit/db';
 import { ClientSchema } from '../client/types';
 
@@ -23,7 +23,7 @@ export function httpClientQueryBuilder<
     collectionName,
     ...params,
   };
-  return new QueryBuilder<
-    CollectionQuery<M, CN, ReadonlyArray<QuerySelectionValue<M, CN>>, {}>
-  >(query);
+  return new QueryBuilder<CollectionQuery<M, CN, QuerySelection<M, CN>, {}>>(
+    query
+  );
 }

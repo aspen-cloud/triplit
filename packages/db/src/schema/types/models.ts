@@ -1,4 +1,4 @@
-import { DataType, Optional } from '../../data-types/base.js';
+import { DataType } from '../../data-types/base.js';
 import { QueryType } from '../../data-types/query.js';
 import { RecordProps, RecordType } from '../../data-types/record.js';
 import { ExtractDBType, ExtractJSType } from '../../data-types/type.js';
@@ -7,7 +7,7 @@ import {
   CollectionRules,
   ModelFromModels,
 } from '../../db.js';
-import { Coalesce, Intersection } from '../../utility-types.js';
+import { Intersection } from '../../utility-types.js';
 import { Schema } from '../builder.js';
 import { ExtractBasePaths, ModelPaths, ShiftPath } from './paths.js';
 import {
@@ -17,17 +17,11 @@ import {
   IsPropertyRequired,
 } from './properties.js';
 import {
-  CollectionQuery,
-  CollectionQueryInclusion,
-  CollectionQuerySelection,
   MergeQueryInclusion,
-  ParseSelect,
-  SchemaQueries,
   QueryInclusion,
   QueryInclusions,
   QueryResult,
-  QueryResultCardinality,
-  QuerySelectionValue,
+  QuerySelection,
   QueryWhere,
   RefSubquery,
   RelationSubquery,
@@ -226,7 +220,7 @@ export type PathFilteredTypeFromModel<
 export type QuerySelectionFilteredTypeFromModel<
   M extends Models<any, any>,
   CN extends CollectionNameFromModels<M>,
-  Selection extends ReadonlyArray<QuerySelectionValue<M, CN>>,
+  Selection extends QuerySelection<M, CN>,
   Inclusion extends QueryInclusions<M, CN>
 > =
   // Path selections
