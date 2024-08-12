@@ -16,6 +16,7 @@ import {
 } from '@triplit/tuple-database/database/typeHelpers';
 import {
   DBScanFailureError,
+  InvalidTransactionStateError,
   NotImplementedError,
   TransactionAlreadyCanceledError,
   TransactionAlreadyCommittedError,
@@ -579,27 +580,38 @@ export class MultiTupleTransaction<
     switch (this.status) {
       case 'open':
         if (status !== 'commit-called' && status !== 'canceling')
-          throw new Error('Invalid transaction status transition');
+          throw new InvalidTransactionStateError(
+            `Attempting to transition status from 'open' to '${status}'`
+          );
         break;
       case 'commit-called':
         if (status !== 'committing' && status !== 'canceling')
-          throw new Error('Invalid transaction status transition');
+          throw new InvalidTransactionStateError(
+            `Attempting to transition status from 'commit-called' to '${status}'`
+          );
         break;
       case 'committing':
         if (status !== 'committed')
-          throw new Error('Invalid transaction status transition');
+          throw new InvalidTransactionStateError(
+            `Attempting to transition status from 'committing' to '${status}'`
+          );
         break;
       case 'committed':
-        throw new Error('Invalid transaction status transition');
+        throw new InvalidTransactionStateError(
+          `Attempting to transition status from 'committed' to '${status}'`
+        );
       case 'canceling':
         if (status !== 'canceled')
-          throw new Error('Invalid transaction status transition');
+          throw new InvalidTransactionStateError(
+            `Attempting to transition status from 'canceling' to '${status}'`
+          );
         break;
       case 'canceled':
-        throw new Error('Invalid transaction status transition');
+        throw new InvalidTransactionStateError(
+          `Attempting to transition status from 'canceled' to '${status}'`
+        );
       default:
-        // TODO: maybe throw if unknown status?
-        break;
+        throw new InvalidTransactionStateError('Invalid transaction status');
     }
     this.state.status = status;
   }
@@ -652,7 +664,7 @@ export class MultiTupleTransaction<
       case 'open':
         return this._commit();
       default:
-        throw new Error('Invalid transaction status');
+        throw new InvalidTransactionStateError('Invalid transaction status');
     }
   }
 
@@ -688,7 +700,7 @@ export class MultiTupleTransaction<
       case 'open':
         return this._cancel();
       default:
-        throw new Error('Invalid transaction status');
+        throw new InvalidTransactionStateError('Invalid transaction status');
     }
   }
 }

@@ -577,3 +577,12 @@ export class TransactionAlreadyCanceledError extends TriplitError {
     this.status = STATUS_CODES['Bad Request'];
   }
 }
+
+export class InvalidTransactionStateError extends TriplitError {
+  constructor(...args: any[]) {
+    super(...args);
+    this.name = 'InvalidTransactionStateError';
+    this.baseMessage = `This transaction is in an invalid state. This indicates a bug. Please inform the Triplit team.`;
+    this.status = STATUS_CODES['Internal Server Error'];
+  }
+}
