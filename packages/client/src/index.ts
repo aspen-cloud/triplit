@@ -23,5 +23,6 @@ export type {
   ClientQueryDefault,
   ClientSchema,
   Entity,
+  QueryResult,
 } from './client/types';
 export type { ClientQueryBuilder } from './client/query-builder.js';
