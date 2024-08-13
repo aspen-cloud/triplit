@@ -43,6 +43,18 @@ it('instantiating a client with a token sets session variables', async () => {
   });
 });
 
+it('updating a client with a token sets session variables', async () => {
+  const client = new TriplitClient({ autoConnect: false });
+  expect(client.db.systemVars.session).toStrictEqual({});
+  client.updateToken(EXTERNAL_TOKEN_V2);
+  expect(client.db.systemVars.session).toStrictEqual({
+    hello: 'world',
+    'x-triplit-project-id': 'project',
+    'x-triplit-token-type': 'external',
+    userId: 'Meatwad',
+  });
+});
+
 it('instantiating a client with token with claim "x-triplit-user-id" sets SESSION_USER_ID var', async () => {
   const client = new TriplitClient({
     token: EXTERNAL_TOKEN_V1,

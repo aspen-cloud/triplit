@@ -1113,7 +1113,7 @@ export class TriplitClient<M extends ClientSchema | undefined = undefined> {
         variables['SESSION_USER_ID'] = decoded['x-triplit-user-id'];
 
       // Assign token to session vars
-      Object.assign(variables, token);
+      Object.assign(variables, decoded);
 
       this.db = this.db.withSessionVars(variables);
 
