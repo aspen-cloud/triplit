@@ -45,7 +45,7 @@ function createTestClient<M extends Models<any, any> | undefined>(
   options: ClientOptions<M> = {}
 ) {
   return new TriplitClient({
-    storage: { cache: new MemoryStorage(), outbox: new MemoryStorage() },
+    storage: 'memory',
     transport: new TestTransport(server),
     token: apiKey,
     logLevel: 'error',
