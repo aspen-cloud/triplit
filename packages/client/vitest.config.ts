@@ -6,5 +6,6 @@ export default defineConfig({
       ignoreSourceErrors: false,
       tsconfig: './tsconfig.test.json',
     },
+    setupFiles: ['@vitest/web-worker'],
   },
 });

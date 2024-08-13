@@ -215,4 +215,4 @@ self.addEventListener('connect', (evt: MessageEvent) => {
   ComLink.expose(workerOperator, port);
 });
 
-ComLink.expose(workerOperator);
+ComLink.expose(workerOperator, self as ComLink.Endpoint);

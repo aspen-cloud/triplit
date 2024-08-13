@@ -9785,6 +9785,7 @@ __metadata:
     "@triplit/db": "workspace:^"
     "@triplit/types": "workspace:^"
     "@types/node": "npm:^20.4.0"
+    "@vitest/web-worker": "npm:^2.0.5"
     comlink: "npm:^4.4.1"
     esbuild: "npm:^0.21.3"
     rxjs: "npm:^7.8.1"
@@ -12123,6 +12124,17 @@ __metadata:
     loupe: "npm:^2.3.7"
     pretty-format: "npm:^29.7.0"
   checksum: 10/2261705e2edc10376f2524a4bf6616688680094d94fff683681a1ef8d3d59271dee2d80893efad8e6437bbdb00390e2edd754d94cf42100db86f2cfd9c44826f
+  languageName: node
+  linkType: hard
+
+"@vitest/web-worker@npm:^2.0.5":
+  version: 2.0.5
+  resolution: "@vitest/web-worker@npm:2.0.5"
+  dependencies:
+    debug: "npm:^4.3.5"
+  peerDependencies:
+    vitest: 2.0.5
+  checksum: 10/8f2539225183bd396ad29531e262acbdbcc88e3296155e64926e80bd59f99d562b2f73d1f0a60140e14a81843932da65f3b10ab55534784bc0bc960a0c38a924
   languageName: node
   linkType: hard
 
@@ -15675,6 +15687,18 @@ __metadata:
   dependencies:
     ms: "npm:^2.1.1"
   checksum: 10/d86fd7be2b85462297ea16f1934dc219335e802f629ca9a69b63ed8ed041dda492389bb2ee039217c02e5b54792b1c51aa96ae954cf28634d363a2360c7a1639
+  languageName: node
+  linkType: hard
+
+"debug@npm:^4.3.5":
+  version: 4.3.6
+  resolution: "debug@npm:4.3.6"
+  dependencies:
+    ms: "npm:2.1.2"
+  peerDependenciesMeta:
+    supports-color:
+      optional: true
+  checksum: 10/d3adb9af7d57a9e809a68f404490cf776122acca16e6359a2702c0f462e510e91f9765c07f707b8ab0d91e03bad57328f3256f5082631cefb5393d0394d50fb7
   languageName: node
   linkType: hard
 

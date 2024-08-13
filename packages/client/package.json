@@ -63,6 +63,7 @@
   "devDependencies": {
     "@triplit/types": "workspace:^",
     "@types/node": "^20.4.0",
+    "@vitest/web-worker": "^2.0.5",
     "esbuild": "^0.21.3",
     "tinybench": "^2.9.0",
     "typescript": "^5.2.2",
