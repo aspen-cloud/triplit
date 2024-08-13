@@ -1,5 +1,11 @@
 # @triplit/client
 
+## 0.4.4
+
+### Patch Changes
+
+- e6e07458: export QueryResult type helper
+
 ## 0.4.3
 
 ### Patch Changes
