@@ -11,6 +11,7 @@
   "cli": "CLI",
   "frameworks": "Frameworks",
   "triplit-cloud": "Triplit Cloud",
+  "auth": "Authentication",
   "-3": {
     "type": "separator"
   },
@@ -19,7 +20,6 @@
   "local-development": "Local development",
   "seeding": "Seeding a database",
   "ssr": "Server-side rendering",
-  "auth": "Auth",
   "migrations": { "title": "Migrations", "display": "hidden" },
   "v2": {
     "title": "V2",
