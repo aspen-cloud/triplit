@@ -1,52 +1,43 @@
-import { hashPassword } from "@/lib/crypt.js"
+import { hashPassword } from "@/lib/crypt.js";
+import { TriplitClient } from '@triplit/client';
+
+const client = new TriplitClient({
+  serverUrl: process.env.TRIPLIT_DB_URL,
+  token: process.env.TRIPLIT_SERVICE_TOKEN,
+});
 
 export async function POST(request: Request) {
-  const { username, password, email } = await request.json()
+  const { username, password, email } = await request.json();
 
-  const userCheckResponse = await fetch(process.env.TRIPLIT_DB_URL + "/fetch", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: "Bearer " + process.env.TRIPLIT_SERVICE_TOKEN,
-    },
-    body: JSON.stringify({
-      query: {
-        collectionName: "users",
-        where: [["user", "=", username]],
-        limit: 1,
-      },
-    }),
-  })
-  const userCheck = await userCheckResponse.json()
-  if (userCheck.length > 0) {
-    return Response.json({ message: "User already exists" }, { status: 422 })
+  console.log("envs", process.env.TRIPLIT_DB_URL, process.env.TRIPLIT_SERVICE_TOKEN);
+
+  const userCheck = await client.http.fetchOne({
+    collectionName: "users",
+    where: [["name", "=", username]],
+  });
+
+  if (userCheck) {
+    return Response.json({ message: "User already exists" }, { status: 422 });
   }
 
-  const hashedPassword = await hashPassword(password)
+  const hashedPassword = await hashPassword(password);
 
-  const id = crypto.randomUUID()
+  const id = crypto.randomUUID();
 
   const credential = {
     userId: id,
     username,
     password: hashedPassword,
-  }
+  };
+
   const user = {
     id,
     name: username,
     email,
-  }
-  const res = await fetch(process.env.TRIPLIT_DB_URL + "/bulk-insert", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: "Bearer " + process.env.TRIPLIT_SERVICE_TOKEN,
-    },
-    body: JSON.stringify({
-      credentials: [credential],
-      users: [user],
-    }),
-  })
-  const result = await res.json()
-  return Response.json({ result }, { status: 200 })
+  };
+
+  const { txId: credentialTxId } = await client.http.insert("credentials", credential);
+  const { txId: userTxId, output: userOutput } = await client.http.insert("users", user);
+
+  return Response.json({ credentialTxId, userTxId, user: userOutput }, { status: 200 });
 }
