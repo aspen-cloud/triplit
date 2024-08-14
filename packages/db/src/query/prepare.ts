@@ -124,7 +124,7 @@ function getQuerySelects<
     );
     if (!valid) {
       throw new InvalidSelectClauseError(
-        `Select field ${select} is not valid: ${reason} at path ${path}`
+        `Select field '${select}' is not valid: ${reason} at path '${path}'`
       );
     }
   }
@@ -419,7 +419,7 @@ function getQueryOrder<
     );
     if (!valid) {
       throw new InvalidOrderClauseError(
-        `Order by field ${field} is not valid: ${reason} at path ${path}`
+        `Order by field '${field}' is not valid: ${reason} at path '${path}'`
       );
     }
   }
@@ -491,7 +491,7 @@ function whereFilterValidator<M extends Models<any, any> | undefined>(
           prop,
           op,
           val,
-        ])} is not valid: ${reason} at path ${path}`
+        ])} is not valid: ${reason} at path '${path}'`
       );
     }
     return true;
