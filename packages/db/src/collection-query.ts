@@ -41,6 +41,7 @@ import {
   replaceVariablesInFilterStatements,
   getVariableComponents,
   isValueReferentialVariable,
+  createVariable,
 } from './db-helpers.js';
 import { DataType, Operator } from './data-types/base.js';
 import { VariableAwareCache } from './variable-aware-cache.js';
@@ -841,16 +842,17 @@ const REVERSE_OPERATOR_MAPPINGS = {
 };
 function reverseRelationFilter(filter: FilterStatement<any, any>) {
   const [path, op, value] = filter;
-  if (!isValueVariable(value)) {
+  if (!isValueReferentialVariable(value)) {
     throw new TriplitError(
       `Expected filter value to be a relation variable, but got ${value}`
     );
   }
+  const [scope, key] = getVariableComponents(value);
   return [
-    value.slice(1),
+    key,
     // @ts-expect-error
     REVERSE_OPERATOR_MAPPINGS[op],
-    '$' + path,
+    createVariable(scope, path),
   ] as FilterStatement<any, any>;
 }
 

@@ -12,7 +12,7 @@ describe('query root permutations', () => {
             collectionName: 'cars',
             where: [
               ['type', '=', 'SUV'],
-              ['manufacturer', '=', '$id'],
+              ['manufacturer', '=', '$1.id'],
             ],
           },
         },
@@ -32,7 +32,7 @@ describe('query root permutations', () => {
             collectionName: 'cars',
             where: [
               ['type', '=', 'SUV'],
-              ['manufacturer', '=', '$id'],
+              ['manufacturer', '=', '$1.id'],
             ],
           },
         },

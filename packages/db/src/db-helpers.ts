@@ -388,3 +388,10 @@ export function getVariableComponents(
 function isScopedVariable(scope: string | undefined): scope is string {
   return VARIABLE_SCOPES.includes(scope ?? '') || !isNaN(parseInt(scope ?? ''));
 }
+
+export function createVariable(
+  scope: string | undefined,
+  ...keys: string[]
+): string {
+  return `$${scope ? `${scope}.` : ''}${keys.join('.')}`;
+}
