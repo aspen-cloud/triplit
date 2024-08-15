@@ -1,5 +1,13 @@
 # @triplit/client
 
+## 0.4.5
+
+### Patch Changes
+
+- 51cde34e: fix bug where updating token wouldn't add session vars
+- Updated dependencies [79df5162]
+  - @triplit/db@0.3.68
+
 ## 0.4.4
 
 ### Patch Changes
