@@ -1,43 +1,43 @@
-import { hashPassword } from "@/lib/crypt.js";
-import { TriplitClient } from '@triplit/client';
+import { HttpClient } from "@triplit/client"
 
-const client = new TriplitClient({
+import { hashPassword } from "@/lib/crypt.js"
+
+const client = new HttpClient({
   serverUrl: process.env.TRIPLIT_DB_URL,
   token: process.env.TRIPLIT_SERVICE_TOKEN,
-});
+})
 
 export async function POST(request: Request) {
-  const { username, password, email } = await request.json();
+  const { username, password, email } = await request.json()
 
-  console.log("envs", process.env.TRIPLIT_DB_URL, process.env.TRIPLIT_SERVICE_TOKEN);
-
-  const userCheck = await client.http.fetchOne({
+  const userCheck = await client.fetchOne({
     collectionName: "users",
     where: [["name", "=", username]],
-  });
+  })
 
   if (userCheck) {
-    return Response.json({ message: "User already exists" }, { status: 422 });
+    return Response.json({ message: "User already exists" }, { status: 422 })
   }
 
-  const hashedPassword = await hashPassword(password);
+  const hashedPassword = await hashPassword(password)
 
-  const id = crypto.randomUUID();
+  const id = crypto.randomUUID()
 
   const credential = {
     userId: id,
     username,
     password: hashedPassword,
-  };
+  }
 
   const user = {
     id,
     name: username,
     email,
-  };
+  }
+  const result = await client.bulkInsert({
+    credentials: [credential],
+    users: [user],
+  })
 
-  const { txId: credentialTxId } = await client.http.insert("credentials", credential);
-  const { txId: userTxId, output: userOutput } = await client.http.insert("users", user);
-
-  return Response.json({ credentialTxId, userTxId, user: userOutput }, { status: 200 });
+  return Response.json(result, { status: 200 })
 }
