@@ -1,5 +1,11 @@
 # @triplit/db
 
+## 0.3.68
+
+### Patch Changes
+
+- 79df5162: Fix bug with referential var prefixes in delta triples query
+
 ## 0.3.67
 
 ### Patch Changes
