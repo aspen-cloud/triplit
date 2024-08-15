@@ -874,6 +874,7 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
       initialFetchExecutionContext(),
       {
         schema,
+        skipIndex: options.skipIndex,
       }
     );
     return fetchResultToJS(

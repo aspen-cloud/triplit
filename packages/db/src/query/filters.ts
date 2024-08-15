@@ -192,16 +192,19 @@ export function satisfiesSetFilter(
   }
 
   const setData = timestampedObjectToPlainObject(value);
-  if (!setData) return false;
-  const filteredSet = Object.entries(setData).filter(([_v, inSet]) => inSet);
   if (op === 'has') {
+    if (!setData) return false;
+    const filteredSet = Object.entries(setData).filter(([_v, inSet]) => inSet);
     return filteredSet.some(([v]) => v === filterValue);
-  }
-  if (op === '!has') {
+  } else if (op === '!has') {
+    if (!setData) return true;
+    const filteredSet = Object.entries(setData).filter(([_v, inSet]) => inSet);
     return filteredSet.every(([v]) => v !== filterValue);
+  } else {
+    if (!setData) return false;
+    const filteredSet = Object.entries(setData).filter(([_v, inSet]) => inSet);
+    return filteredSet.some(([v]) => isOperatorSatisfied(op, v, filterValue));
   }
-
-  return filteredSet.some(([v]) => isOperatorSatisfied(op, v, filterValue));
 }
 
 export function satisfiesRegisterFilter(
@@ -241,12 +244,24 @@ function isOperatorSatisfied(op: Operator, value: any, filterValue: any) {
     case '!=':
       return value !== filterValue;
     case '>':
+      // Null is not greater than anything
+      if (value === null) return false;
+      // Null is less than everything
+      if (filterValue === null) return true;
       return value > filterValue;
     case '>=':
+      if (value === null) return filterValue === null;
+      if (filterValue === null) return true;
       return value >= filterValue;
     case '<':
+      // Null is not less than anything
+      if (filterValue === null) return false;
+      // Null is less than everything
+      if (value === null) return true;
       return value < filterValue;
     case '<=':
+      if (filterValue === null) return value === null;
+      if (value === null) return true;
       return value <= filterValue;
 
     //TODO: move regex initialization outside of the scan loop to improve performance

@@ -429,34 +429,37 @@ export async function getCollectionIds(
 export async function getCandidateEntityIds(
   tx: TripleStoreApi,
   query: CollectionQuery<any, any>,
-  schema?: Models<any, any> | undefined
+  options: FetchFromStorageOptions = {}
 ): Promise<{
   candidates: string[];
   fulfilled: QueryFulfillmentTracker;
 }> {
+  const { schema, skipIndex } = options;
   const fulfilled: QueryFulfillmentTracker = {
     where: query.where ? new Array(query.where.length).fill(false) : [],
     order: query.order ? new Array(query.order.length).fill(false) : [],
     after: !query.after,
   };
-  const entityId = getIdFilterFromQuery(query);
-  if (entityId) {
-    return { candidates: [entityId], fulfilled };
+
+  if (!skipIndex) {
+    const entityId = getIdFilterFromQuery(query);
+    if (entityId) {
+      return { candidates: [entityId], fulfilled };
+    }
+
+    const filterSet = await getFilterSetForQuery(tx, query, schema, fulfilled);
+    if (filterSet) {
+      return { candidates: Array.from(filterSet), fulfilled };
+    }
+
+    const orderSet = await getOrderSetForQuery(tx, query, schema, fulfilled);
+    if (orderSet) {
+      return { candidates: Array.from(orderSet), fulfilled };
+    }
+
+    // TODO: evaluate performing both order and filter scans
+    // Initial observations are that order scans are slow / longer, should investigate further
   }
-
-  const filterSet = await getFilterSetForQuery(tx, query, schema, fulfilled);
-  if (filterSet) {
-    return { candidates: Array.from(filterSet), fulfilled };
-  }
-
-  const orderSet = await getOrderSetForQuery(tx, query, schema, fulfilled);
-  if (orderSet) {
-    return { candidates: Array.from(orderSet), fulfilled };
-  }
-
-  // TODO: evaluate performing both order and filter scans
-  // Initial observations are that order scans are slow / longer, should investigate further
-
   return {
     candidates: await getCollectionIds(tx, query),
     fulfilled,
@@ -1160,6 +1163,7 @@ export type FetchFromStorageOptions = {
   skipRules?: boolean;
   cache?: VariableAwareCache<any>;
   stateVector?: Map<string, number>;
+  skipIndex?: boolean;
 };
 
 export type FetchExecutionContext = {
@@ -1221,7 +1225,7 @@ export async function fetch<
   // Load possible entity ids from indexes
   // TODO lazy load as needed using a cursor or iterator rather than loading entire index at once
   const { candidates, fulfilled: clausesFulfilled } =
-    await getCandidateEntityIds(tx, queryWithInsertedVars, schema);
+    await getCandidateEntityIds(tx, queryWithInsertedVars, options);
 
   const resultTriples: Map<string, TripleRow[]> = new Map();
 
@@ -1523,6 +1527,7 @@ export function subscribeResultsAndTriples<
                 schema: options.schema,
                 skipRules: options.skipRules,
                 cache: options.cache,
+                skipIndex: options.skipIndex,
                 // TODO: do we need to pass state vector here?
               }
             );
@@ -1694,6 +1699,7 @@ export function subscribeResultsAndTriples<
                   skipRules: options.skipRules,
                   // State vector needed in backfill?
                   cache: options.cache,
+                  skipIndex: options.skipIndex,
                 }
               );
               for (const entry of backFilledResults.results) {

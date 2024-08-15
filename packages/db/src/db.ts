@@ -196,6 +196,7 @@ export interface DBFetchOptions {
   scope?: string[];
   stateVector?: Map<string, number>;
   noCache?: boolean;
+  skipIndex?: boolean;
 }
 
 export function ruleToTuple(
@@ -801,6 +802,7 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
         schema,
         cache: noCache ? undefined : this.cache,
         skipRules: options.skipRules,
+        skipIndex: options.skipIndex,
       }
     );
     this.logger.debug('fetch END', { query, result: results });
@@ -837,6 +839,7 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
           {
             schema: schema,
             stateVector: options.stateVector,
+            skipRules: options.skipRules,
           }
         )
       ).triples.values(),
@@ -930,6 +933,7 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
           cache: noCache ? undefined : this.cache,
           skipRules: options.skipRules,
           stateVector: options.stateVector,
+          skipIndex: options.skipIndex,
         }
       );
       return unsub;
@@ -981,6 +985,7 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
           skipRules: options.skipRules,
           stateVector: options.stateVector,
           cache: noCache ? undefined : this.cache,
+          skipIndex: options.skipIndex,
         }
       );
       return unsub;
