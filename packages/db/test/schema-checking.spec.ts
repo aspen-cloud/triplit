@@ -455,7 +455,7 @@ describe('rules', () => {
             read: { 'cant-read': { filter: [false] } },
           },
         },
-      } satisfies Models<any, any>,
+      } satisfies Models,
     };
 
     const diff = diffSchemas(schemaA, schemaB);
@@ -484,7 +484,7 @@ describe('rules', () => {
             read: { 'cant-read': { filter: [false] } },
           },
         },
-      } satisfies Models<any, any>,
+      } satisfies Models,
     };
 
     const diff = diffSchemas(schemaA, schemaB);
@@ -513,7 +513,7 @@ describe('rules', () => {
         test: {
           schema: S.Schema({ id: S.Id() }),
         },
-      } satisfies Models<any, any>,
+      } satisfies Models,
     };
 
     const diff = diffSchemas(schemaA, schemaB);
@@ -626,7 +626,7 @@ describe('permissions', () => {
             },
           },
         },
-      } satisfies Models<any, any>,
+      } satisfies Models,
     };
     const schemaB = {
       version: 0,
@@ -639,7 +639,7 @@ describe('permissions', () => {
             },
           },
         },
-      } satisfies Models<any, any>,
+      } satisfies Models,
     };
     const diff = diffSchemas(schemaA, schemaB);
     expect(diff).toStrictEqual([
@@ -656,7 +656,7 @@ describe('permissions', () => {
         test: {
           schema: S.Schema({ id: S.Id() }),
         },
-      } satisfies Models<any, any>,
+      } satisfies Models,
     };
     const schemaB = {
       version: 0,
@@ -669,7 +669,7 @@ describe('permissions', () => {
             },
           },
         },
-      } satisfies Models<any, any>,
+      } satisfies Models,
     };
     const diff = diffSchemas(schemaA, schemaB);
     expect(diff).toStrictEqual([
@@ -691,7 +691,7 @@ describe('permissions', () => {
             },
           },
         },
-      } satisfies Models<any, any>,
+      } satisfies Models,
     };
     const schemaB = {
       version: 0,
@@ -699,7 +699,7 @@ describe('permissions', () => {
         test: {
           schema: S.Schema({ id: S.Id() }),
         },
-      } satisfies Models<any, any>,
+      } satisfies Models,
     };
     const diff = diffSchemas(schemaA, schemaB);
     expect(diff).toStrictEqual([

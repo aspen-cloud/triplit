@@ -51,9 +51,7 @@ const pause = async (ms: number = 100) =>
 // const storage = new InMemoryTupleStorage();
 const storage = new MemoryStorage();
 
-export async function testDBAndTransaction<
-  M extends Models<any, any> | undefined
->(
+export async function testDBAndTransaction<M extends Models>(
   // should return a new instance if you are performing writes in your test
   dbFactory: () => DB<M> | Promise<DB<M>>,
   test: (db: DB<M> | DBTransaction<M>) => void | Promise<void>,
@@ -69,7 +67,7 @@ export async function testDBAndTransaction<
 }
 
 describe('Database API', () => {
-  let db: DB<any>;
+  let db: DB;
   beforeEach(async () => {
     db = new DB({});
     for (const student of students) {
@@ -3017,7 +3015,7 @@ describe('migrations', () => {
 // When updating tests, please keep the deep nesting in the test data
 describe('Nested Properties', () => {
   describe('Schemaless', () => {
-    let db: DB<undefined>;
+    let db: DB;
     const ENTITY_ID = 'business-1';
     beforeEach(async () => {
       db = new DB();
@@ -3681,7 +3679,7 @@ describe('relational querying / sub querying', () => {
 });
 
 describe('Subqueries in schema', () => {
-  let db: DB<any>;
+  let db: DB;
   beforeEach(async () => {
     db = new DB({
       schema: {
@@ -4040,7 +4038,7 @@ describe('Subqueries in schema', () => {
 });
 
 describe('social network test', () => {
-  let db: DB<any>;
+  let db: DB;
   beforeAll(async () => {
     db = new DB({
       schema: {

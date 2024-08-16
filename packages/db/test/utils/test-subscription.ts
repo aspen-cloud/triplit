@@ -23,7 +23,7 @@ type Steps<Q extends CollectionQuery<any, any>> = [
 ];
 
 export async function testSubscription<Q extends CollectionQuery<any, any>>(
-  db: DB<any>,
+  db: DB,
   query: Q,
   steps: Steps<Q>
 ) {
@@ -50,7 +50,7 @@ export async function testSubscription<Q extends CollectionQuery<any, any>>(
 
 export async function testSubscriptionTriples<
   Q extends CollectionQuery<any, any>
->(db: DB<any>, query: Q, steps: TriplesStep[]) {
+>(db: DB, query: Q, steps: TriplesStep[]) {
   return new Promise<void>((resolve, reject) => {
     let stepIndex = 0;
     db.subscribeTriples(

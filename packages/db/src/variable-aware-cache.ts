@@ -20,7 +20,7 @@ import type DB from './db.js';
 import { QueryCacheError } from './errors.js';
 import { TripleRow } from './triple-store-utils.js';
 
-export class VariableAwareCache<Schema extends Models<any, any> | undefined> {
+export class VariableAwareCache<Schema extends Models> {
   cache: Map<
     BigInt,
     {
@@ -35,7 +35,7 @@ export class VariableAwareCache<Schema extends Models<any, any> | undefined> {
 
   static canCacheQuery(
     query: CollectionQuery<any, any>,
-    model?: Model<any> | undefined
+    model?: Model | undefined
   ) {
     // if (!model) return false;
     if (query.limit !== undefined) return false;
@@ -109,7 +109,7 @@ export class VariableAwareCache<Schema extends Models<any, any> | undefined> {
     const id = this.viewQueryToId(views[0]);
     if (!this.cache.has(id)) {
       // NOTE: dangerously setting ! on options.schema (not sure if schema is actually required or not)
-      await this.createView(views[0], options.schema!);
+      await this.createView(views[0], options.schema! as Schema);
     }
     // TODO support multiple variable clauses
     const [prop, op, varStr] = variableFilters[0];

@@ -121,7 +121,7 @@ const messagingSchema = {
     },
   },
   version: 0,
-} satisfies StoreSchema<Models<any, any>>;
+} satisfies StoreSchema<Models>;
 
 async function seedMessagingData(db: DB<typeof messagingSchema.collections>) {
   await db.transact(
@@ -370,7 +370,7 @@ describe('Read', () => {
         },
       },
       version: 0,
-    } satisfies StoreSchema<Models<any, any>>;
+    } satisfies StoreSchema<Models>;
     const db = new DB({ schema });
     await db.insert('permissioned', { id: '1' }, { skipRules: true });
     await db.insert('permissionless', { id: '1' }, { skipRules: true });
@@ -493,7 +493,7 @@ describe('Insert', () => {
         },
       },
       version: 0,
-    } satisfies StoreSchema<Models<any, any>>;
+    } satisfies StoreSchema<Models>;
 
     const db = new DB({ schema });
     await expect(db.insert('permissioned', { id: '1' })).rejects.toThrow(
@@ -595,7 +595,7 @@ describe('Update', () => {
         },
       },
       version: 0,
-    } satisfies StoreSchema<Models<any, any>>;
+    } satisfies StoreSchema<Models>;
 
     const db = new DB({ schema });
     await db.insert(
@@ -668,7 +668,7 @@ describe('Update', () => {
         },
       },
       version: 0,
-    } satisfies StoreSchema<Models<any, any>>;
+    } satisfies StoreSchema<Models>;
 
     const db = new DB({ schema });
     await db.insert(
@@ -780,7 +780,7 @@ describe('Delete', () => {
         },
       },
       version: 0,
-    } satisfies StoreSchema<Models<any, any>>;
+    } satisfies StoreSchema<Models>;
 
     const db = new DB({ schema });
     await db.insert('permissioned', { id: '1' }, { skipRules: true });
@@ -825,7 +825,7 @@ it('can migrate from a schema with rules to a schema with permissions', async ()
           },
         },
       },
-    } satisfies Models<any, any>,
+    } satisfies Models,
   };
   const storage = new InMemoryTupleStorage();
   const db1 = new DB({ schema: rulesSchema, source: storage });

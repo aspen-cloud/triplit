@@ -12,10 +12,10 @@ export type SessionRole = {
  * return undefined to indicate no permissions defined (so can skip)
  * return [] to indicate no roles match the token
  */
-export function getRolesFromSession<
-  M extends Models<any, any> | undefined,
-  S extends StoreSchema<M>
->(schema: S, token: Record<string, any>): SessionRole[] | undefined {
+export function getRolesFromSession<M extends Models, S extends StoreSchema<M>>(
+  schema: S | undefined,
+  token: Record<string, any>
+): SessionRole[] | undefined {
   if (!schema) return undefined;
 
   const roles = schema.roles;
@@ -31,7 +31,7 @@ export function getRolesFromSession<
 }
 
 export function getCollectionPermissions<
-  M extends Models<any, any> | undefined,
+  M extends Models,
   CN extends CollectionNameFromModels<M>
 >(schema: M, collectionName: CN) {
   if (!schema) return undefined;

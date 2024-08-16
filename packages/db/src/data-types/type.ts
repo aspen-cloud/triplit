@@ -70,14 +70,11 @@ export type TypeInterface<
   // How to convert the input (e.g. from db.insert(..)) to the internal value
   convertInputToDBValue(val: JSType): DBType;
 
-  convertDBValueToJS(
-    val: DBType,
-    schema?: Models<any, any> | undefined
-  ): JSType;
+  convertDBValueToJS(val: DBType, schema?: Models): JSType;
 
-  convertJSONToJS(val: any, schema?: Models<any, any> | undefined): JSType;
+  convertJSONToJS(val: any, schema?: Models): JSType;
 
-  convertJSToJSON(val: JSType, schema?: Models<any, any> | undefined): any;
+  convertJSToJSON(val: JSType, schema?: Models): any;
 
   // Should return a possible user input value
   defaultInput(): JSType | undefined;

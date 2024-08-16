@@ -1,5 +1,11 @@
 import { describe, test, expectTypeOf } from 'vitest';
-import DB, { Schema as S } from '../../src/index.js';
+import DB, {
+  ModelFromModels,
+  Models,
+  Schema as S,
+  Unalias,
+  UpdateTypeFromModel,
+} from '../../src/index.js';
 import { EXHAUSTIVE_SCHEMA } from '../utils/exhaustive-schema.js';
 import { fakeTx } from './utils.js';
 
@@ -90,10 +96,16 @@ describe('schemaless', () => {
     expectTypeOf(tx.update).parameter(0).toEqualTypeOf<string>();
   });
 
-  test('entity param in updater is any', () => {
+  test('entity param in updater is {[x:string]: any, readonly id: string }', () => {
     const db = new DB();
     const tx = fakeTx(db);
-    expectTypeOf(db.update).parameter(2).parameter(0).toEqualTypeOf<any>();
-    expectTypeOf(tx.update).parameter(2).parameter(0).toEqualTypeOf<any>();
+    expectTypeOf(db.update)
+      .parameter(2)
+      .parameter(0)
+      .toEqualTypeOf<{ [x: string]: any; readonly id: string }>();
+    expectTypeOf(tx.update)
+      .parameter(2)
+      .parameter(0)
+      .toEqualTypeOf<{ [x: string]: any; readonly id: string }>();
   });
 });

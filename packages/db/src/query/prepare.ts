@@ -53,12 +53,9 @@ interface Session {
 
 // At some point it would be good to have a clear pipeline of data shapes for query builder -> query json -> query the execution engine reads
 // Ex. things like .entityId are more sugar for users than valid values used by the execution engine
-export function prepareQuery<
-  M extends Models<any, any> | undefined,
-  Q extends CollectionQuery<M, any>
->(
+export function prepareQuery<M extends Models, Q extends CollectionQuery<M>>(
   query: Q,
-  schema: M,
+  schema: M | undefined,
   session: Session,
   options: QueryPreparationOptions = {}
 ) {
@@ -93,10 +90,11 @@ export function prepareQuery<
   };
 }
 
-function getQuerySelects<
-  M extends Models<any, any> | undefined,
-  Q extends CollectionQuery<M, any>
->(query: Q, schema: M, _options: QueryPreparationOptions) {
+function getQuerySelects<M extends Models, Q extends CollectionQuery<M>>(
+  query: Q,
+  schema: M | undefined,
+  _options: QueryPreparationOptions
+) {
   // If undefined, treat as select all
   if (!query.select) return query.select as undefined;
 
@@ -136,10 +134,10 @@ function isSystemCollection(collectionName: string) {
   return collectionName === '_metadata';
 }
 
-function validateCollectionName<
-  M extends Models<any, any> | undefined,
-  Q extends CollectionQuery<M, any>
->(query: Q, schema: M) {
+function validateCollectionName<M extends Models, Q extends CollectionQuery<M>>(
+  query: Q,
+  schema: M | undefined
+) {
   const collectionName = query.collectionName;
   const isString = typeof collectionName === 'string';
   if (!isString)
@@ -156,10 +154,12 @@ function validateCollectionName<
   }
 }
 
-function getQueryInclude<
-  M extends Models<any, any> | undefined,
-  Q extends CollectionQuery<M, any>
->(query: Q, schema: M, session: Session, options: QueryPreparationOptions) {
+function getQueryInclude<M extends Models, Q extends CollectionQuery<M>>(
+  query: Q,
+  schema: M | undefined,
+  session: Session,
+  options: QueryPreparationOptions
+) {
   if (!schema) return query.include;
   if (!query.include) return query.include;
   //   addSubsSelectsFromIncludes(query, schema);
@@ -180,11 +180,11 @@ function getQueryInclude<
     }
 
     let relationName: string;
-    let additionalQuery: RefQueryExtension<M, any, any> | null;
+    let additionalQuery: RefQueryExtension<M> | null;
     if (isQueryInclusionReference(relation)) {
       const { _rel, ...queryExt } = relation;
       relationName = _rel;
-      additionalQuery = queryExt as RefQueryExtension<M, any, any>;
+      additionalQuery = queryExt as RefQueryExtension<M>;
     } else if (isQueryInclusionShorthand(relation)) {
       relationName = alias;
       additionalQuery = null;
@@ -229,16 +229,13 @@ function getQueryInclude<
   return inclusions;
 }
 
-function getQueryFilters<
-  M extends Models<any, any> | undefined,
-  Q extends CollectionQuery<M, any>
->(
+function getQueryFilters<M extends Models, Q extends CollectionQuery<M>>(
   query: Q,
-  schema: M,
+  schema: M | undefined,
   session: Session,
   options: QueryPreparationOptions
-): QueryWhere<M, any> {
-  const filters: QueryWhere<M, any> = query.where ? [...query.where] : [];
+): QueryWhere<M> {
+  const filters: QueryWhere<M> = query.where ? [...query.where] : [];
 
   // Translate entityId helper to where clause filter
   if (query.entityId) {
@@ -292,88 +289,83 @@ function getQueryFilters<
   }
 
   const whereValidator = whereFilterValidator(schema, query.collectionName);
-  return mapFilterStatements(
-    filters,
-    // @ts-expect-error
-    (statement) => {
-      // Validate filter
-      whereValidator(statement);
-      // Turn exists filter into a subquery
-      if (isExistsFilter(statement)) {
-        const { relationship, query: statementQuery } = statement;
-        if (!schema)
-          throw new InvalidFilterError(
-            'A schema is required to execute an exists filter'
-          );
-
-        const relationshipPath = relationship.split('.');
-        const [first, ...rest] = relationshipPath;
-        const isPropertyNested = rest.length > 0;
-        const attributeType = getAttributeFromSchema(
-          [first],
-          schema,
-          query.collectionName
+  return mapFilterStatements(filters, (statement) => {
+    // Validate filter
+    whereValidator(statement);
+    // Turn exists filter into a subquery
+    if (isExistsFilter(statement)) {
+      const { relationship, query: statementQuery } = statement;
+      if (!schema)
+        throw new InvalidFilterError(
+          'A schema is required to execute an exists filter'
         );
-        if (!attributeType)
-          throw new InvalidFilterError(
-            `Could not find property '${relationship}' in the schema`
-          );
 
-        if (attributeType.type !== 'query')
-          throw new InvalidFilterError(
-            'Cannot execute an exists filter on a non-relation property'
-          );
+      const relationshipPath = relationship.split('.');
+      const [first, ...rest] = relationshipPath;
+      const isPropertyNested = rest.length > 0;
+      const attributeType = getAttributeFromSchema(
+        [first],
+        schema,
+        query.collectionName
+      );
+      if (!attributeType)
+        throw new InvalidFilterError(
+          `Could not find property '${relationship}' in the schema`
+        );
 
+      if (attributeType.type !== 'query')
+        throw new InvalidFilterError(
+          'Cannot execute an exists filter on a non-relation property'
+        );
+
+      const subquery = { ...attributeType.query };
+
+      // If property is nested, create a new exists filter for the subquery
+      const filterToAdd = isPropertyNested
+        ? [exists(rest.join('.') as string as any, statementQuery)]
+        : statementQuery?.where;
+
+      subquery.where = [
+        ...(attributeType.query.where ?? []),
+        ...(filterToAdd ?? []),
+      ];
+
+      return {
+        exists: prepareQuery(subquery, schema, session, options),
+      };
+    }
+    if (!Array.isArray(statement)) return statement;
+
+    // Expand subquery statements
+    let [prop, op, val] = statement;
+    if (schema && !isSystemCollection(query.collectionName)) {
+      // Validation should handle this existing
+      const attributeType = getAttributeFromSchema(
+        [(prop as string).split('.')[0]], // TODO: properly handle query in record...
+        schema,
+        query.collectionName
+      )!;
+      if (attributeType.type === 'query') {
+        const [_collectionName, ...path] = (prop as string).split('.');
         const subquery = { ...attributeType.query };
-
-        // If property is nested, create a new exists filter for the subquery
-        const filterToAdd = isPropertyNested
-          ? [exists(rest.join('.') as string as any, statementQuery)]
-          : statementQuery?.where;
-
-        subquery.where = [
-          ...(attributeType.query.where ?? []),
-          ...(filterToAdd ?? []),
-        ];
-
+        // As we expand subqueries, "bump" the variable names
+        if (isValueVariable(val)) {
+          val = '$' + bumpSubqueryVar(val.slice(1));
+        }
+        subquery.where = [...subquery.where, [path.join('.'), op, val]];
         return {
           exists: prepareQuery(subquery, schema, session, options),
         };
       }
-      if (!Array.isArray(statement)) return statement;
-
-      // Expand subquery statements
-      let [prop, op, val] = statement;
-      if (schema && !isSystemCollection(query.collectionName)) {
-        // Validation should handle this existing
-        const attributeType = getAttributeFromSchema(
-          [(prop as string).split('.')[0]], // TODO: properly handle query in record...
-          schema,
-          query.collectionName
-        )!;
-        if (attributeType.type === 'query') {
-          const [_collectionName, ...path] = (prop as string).split('.');
-          const subquery = { ...attributeType.query };
-          // As we expand subqueries, "bump" the variable names
-          if (isValueVariable(val)) {
-            // @ts-expect-error
-            val = '$' + bumpSubqueryVar(val.slice(1));
-          }
-          subquery.where = [...subquery.where, [path.join('.'), op, val]];
-          return {
-            exists: prepareQuery(subquery, schema, session, options),
-          };
-        }
-      }
-      // TODO: should be integrated into type system
-      return [prop, op, val instanceof Date ? val.toISOString() : val];
     }
-  );
+    // TODO: should be integrated into type system
+    return [prop, op, val instanceof Date ? val.toISOString() : val];
+  });
 }
 
 function getReadRuleFilters(
-  schema: Models<any, any>,
-  collectionName: CollectionFromModels<any, any>
+  schema: Models,
+  collectionName: CollectionNameFromModels
 ): QueryWhere<any, any> {
   if (schema?.[collectionName]?.rules?.read)
     return Object.values(schema[collectionName].rules?.read ?? {}).flatMap(
@@ -383,10 +375,11 @@ function getReadRuleFilters(
   return [];
 }
 
-function getQueryOrder<
-  M extends Models<any, any> | undefined,
-  Q extends CollectionQuery<M, any>
->(query: Q, schema: M, _options: QueryPreparationOptions) {
+function getQueryOrder<M extends Models, Q extends CollectionQuery<M>>(
+  query: Q,
+  schema: M | undefined,
+  _options: QueryPreparationOptions
+) {
   if (!query.order) return query.order as undefined;
   if (!schema) return [...query.order];
   // Validate that the order by fields exist and are sortable
@@ -426,10 +419,11 @@ function getQueryOrder<
   return [...query.order];
 }
 
-function getQueryAfter<
-  M extends Models<any, any> | undefined,
-  Q extends CollectionQuery<M, any>
->(query: Q, _schema: M, _options: QueryPreparationOptions) {
+function getQueryAfter<M extends Models, Q extends CollectionQuery<M>>(
+  query: Q,
+  _schema: M | undefined,
+  _options: QueryPreparationOptions
+) {
   if (!query.after) return query.after as undefined;
   if (!query.order || query.order.length === 0) {
     // TODO: make more specific
@@ -451,10 +445,13 @@ function getQueryAfter<
   return after;
 }
 
-function whereFilterValidator<M extends Models<any, any> | undefined>(
-  schema: M,
-  collectionName: string
-): (filter: WhereFilter<M, any>) => boolean {
+function whereFilterValidator<
+  M extends Models,
+  CN extends CollectionNameFromModels<M>
+>(
+  schema: M | undefined,
+  collectionName: CN
+): (filter: WhereFilter<M, CN>) => boolean {
   return (statement) => {
     // TODO: add helper function to determine when we should(n't) schema check (ie schemaless and _metadata)
     if (!schema) return true;
@@ -469,7 +466,7 @@ function whereFilterValidator<M extends Models<any, any> | undefined>(
     const { valid, path, reason } = validateIdentifier(
       prop,
       schema,
-      collectionName as CollectionNameFromModels<NonNullable<M>>,
+      collectionName,
       (dataType, i, path) => {
         if (!dataType) return { valid: false, reason: 'Path not found' };
         // TODO: check if operator is valid for the type and use that to determine if it's valid
@@ -498,7 +495,7 @@ function whereFilterValidator<M extends Models<any, any> | undefined>(
   };
 }
 
-function mergeQueries<M extends Models<any, any> | undefined>(
+function mergeQueries<M extends Models>(
   queryA: CollectionQuery<M, any>,
   queryB?: CollectionQuery<M, any>
 ) {
@@ -515,19 +512,19 @@ function mergeQueries<M extends Models<any, any> | undefined>(
 }
 
 function mapFilterStatements<
-  M extends Models<any, any> | undefined,
+  M extends Models,
   CN extends CollectionNameFromModels<M>
 >(
   statements: QueryWhere<M, CN>,
   mapFunction: (
     statement:
       | FilterStatement<M, CN>
-      | SubQueryFilter
+      | SubQueryFilter<M>
       | RelationshipExistsFilter<M, CN>
       | boolean
   ) =>
     | FilterStatement<M, CN>
-    | SubQueryFilter
+    | SubQueryFilter<M>
     | RelationshipExistsFilter<M, CN>
     | boolean
 ): QueryWhere<M, CN> {
@@ -544,7 +541,7 @@ function mapFilterStatements<
  * Validates an identifier path based on a validator function. The validator function is called for each part of the path.
  */
 function validateIdentifier<
-  M extends Models<any, any>,
+  M extends Models,
   CN extends CollectionNameFromModels<M>
 >(
   identifier: string,

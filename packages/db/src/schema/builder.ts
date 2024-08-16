@@ -6,8 +6,9 @@ import { DateType } from '../data-types/date.js';
 import { RecordType } from '../data-types/record.js';
 import { SetType } from '../data-types/set.js';
 import { QueryType, SubQuery } from '../data-types/query.js';
-import type { SchemaConfig } from './types/models.js';
+import type { Models, SchemaConfig } from './types/models.js';
 import { DataType, Optional } from '../data-types/base.js';
+import { TypeInterface } from '../data-types/type.js';
 
 // NOTE: when adding new return types they should be exported in the index.ts file
 // https://github.com/microsoft/TypeScript/issues/42873
@@ -79,8 +80,8 @@ export class Schema {
    * @param query - the query to filter the related collection
    */
   static RelationMany = <
-    C extends CollectionNameFromModels<any>,
-    Q extends SubQuery<any, C>
+    C extends CollectionNameFromModels,
+    Q extends SubQuery<Models, C>
   >(
     collectionName: C,
     query: Omit<Q, 'collectionName'>
@@ -93,8 +94,8 @@ export class Schema {
    * @param query - the query to filter the related collection
    */
   static RelationOne = <
-    C extends CollectionNameFromModels<any>,
-    Q extends SubQuery<any, C>
+    C extends CollectionNameFromModels,
+    Q extends SubQuery<Models, C>
   >(
     collectionName: C,
     query: Omit<Q, 'collectionName'>
@@ -107,7 +108,7 @@ export class Schema {
    * @param collectionName - the name of the related collection
    * @param query - the query to filter the related collection
    */
-  static RelationById = <C extends CollectionNameFromModels<any>>(
+  static RelationById = <C extends CollectionNameFromModels>(
     collectionName: C,
     entityId: string
   ) => QueryType({ collectionName, where: [['id', '=', entityId]] }, 'one');
@@ -146,7 +147,7 @@ export class Schema {
    *
    * @param type - the data type of the field
    */
-  static Optional<T extends DataType>(type: T): Optional<T> {
+  static Optional<T extends TypeInterface>(type: T): Optional<T> {
     type.context.optional = true;
     return type as Optional<T>;
   }

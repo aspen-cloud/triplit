@@ -168,7 +168,7 @@ describe('Rules', () => {
   });
 
   describe('Insert', () => {
-    let db: DB<undefined>;
+    let db: DB;
     const USER_ID = 'the-user-id';
     beforeAll(async () => {
       db = new DB({
@@ -274,7 +274,7 @@ describe('Rules', () => {
             admin: S.Boolean(),
           }),
         },
-      } satisfies Models<any, any>;
+      } satisfies Models;
       const schema = { collections };
       it('insert with relationship in rule', async () => {
         const db = new DB({ schema });
@@ -362,7 +362,7 @@ describe('Rules', () => {
   });
 
   describe('Update', () => {
-    let db: DB<any>;
+    let db: DB;
     const USER_ID = 'the-user-id';
     const POST_ID = 'post-1';
     const POST = { id: POST_ID, author_id: USER_ID, content: 'before' };
@@ -468,7 +468,7 @@ describe('Rules', () => {
           },
         },
       },
-    } satisfies Models<any, any>;
+    } satisfies Models;
     const schema = { collections };
 
     const user_id = 'user-1';

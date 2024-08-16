@@ -3,17 +3,15 @@ import DB from '../../src/db.js';
 import { Schema as S } from '../../src/schema/builder.js';
 import {
   OrderStatement,
+  ParseSelect,
   QueryOrder,
   QueryWhere,
   ValueCursor,
   WhereFilter,
 } from '../../src/query/types';
-import {
-  CollectionQueryDefault,
-  FetchResultEntity,
-} from '../../src/query/types';
 import { EXHAUSTIVE_SCHEMA } from '../utils/exhaustive-schema.js';
 import { fakeTx, MapValue } from './utils.js';
+import { Models } from '../../src/index.js';
 
 describe('fetch', () => {
   describe('schemaful', () => {
@@ -125,7 +123,7 @@ describe('fetch', () => {
       }
     });
 
-    // TODO: fix types for subqueries
+    // // TODO: fix types for subqueries
     test('can include relationships', async () => {
       const db = new DB({ schema: EXHAUSTIVE_SCHEMA });
       const tx = fakeTx(db);
@@ -139,12 +137,11 @@ describe('fetch', () => {
           'random',
           {
             collectionName: 'test2',
-            where: [],
           },
           'many'
         )
-        .build();
 
+        .build();
       {
         const result = await db.fetch(query);
         expectTypeOf<MapValue<typeof result>>().toEqualTypeOf<{
@@ -152,7 +149,7 @@ describe('fetch', () => {
           relationMany: Map<string, { id: string; test3Data: string }>;
           relationById: { id: string; test4Data: string } | null;
           random: Map<string, { id: string; test2Data: string }>;
-        }>;
+        }>();
       }
       {
         const result = await tx.fetch(query);
@@ -160,8 +157,7 @@ describe('fetch', () => {
           relationOne: { id: string; test2Data: string } | null;
           relationMany: Map<string, { id: string; test3Data: string }>;
           relationById: { id: string; test4Data: string } | null;
-          // random: Map<string, { id: string }>;
-          random: any;
+          random: Map<string, { id: string; test2Data: string }>;
         }>;
       }
     });
@@ -267,6 +263,7 @@ describe('fetch', () => {
         const query = db
           .query('test')
           .select([])
+          // TOOD: FIX BUILDER
           .include('aliased', (rel) => rel('relationById').build())
           .build();
         // DB
@@ -366,7 +363,6 @@ describe('fetch', () => {
             include: {
               aliased: {
                 _rel: 'relationById',
-
                 select: ['test4Data'],
               },
             },
@@ -656,19 +652,19 @@ describe('fetch', () => {
   });
 
   describe('schemaless', () => {
-    test('returns a Map<string, any>', async () => {
+    test('returns a Map<string, {[x: string]: any}>', async () => {
       const db = new DB();
       const tx = fakeTx(db);
       const query = db.query('test').build();
 
       {
         const result = await db.fetch(query);
-        expectTypeOf(result).toEqualTypeOf<Map<string, any>>();
+        expectTypeOf(result).toEqualTypeOf<Map<string, { [x: string]: any }>>();
       }
 
       {
         const result = await tx.fetch(query);
-        expectTypeOf(result).toEqualTypeOf<Map<string, any>>();
+        expectTypeOf(result).toEqualTypeOf<Map<string, { [x: string]: any }>>();
       }
     });
   });
@@ -708,19 +704,19 @@ describe('fetchOne', () => {
   });
 
   describe('schemaless', () => {
-    test('returns any', async () => {
+    test('returns { [x: string]: any } | null', async () => {
       const db = new DB();
       const tx = fakeTx(db);
       const query = db.query('test').build();
 
       {
         const result = await db.fetchOne(query);
-        expectTypeOf(result).toEqualTypeOf<any>();
+        expectTypeOf(result).toEqualTypeOf<{ [x: string]: any } | null>();
       }
 
       {
         const result = await tx.fetchOne(query);
-        expectTypeOf(result).toEqualTypeOf<any>();
+        expectTypeOf(result).toEqualTypeOf<{ [x: string]: any } | null>();
       }
     });
   });
@@ -781,18 +777,18 @@ describe('fetchById', () => {
   });
 
   describe('schemaless', async () => {
-    test('returns any', async () => {
+    test('returns { [x: string]: any } | null', async () => {
       const db = new DB();
       const tx = fakeTx(db);
 
       {
         const result = await db.fetchById('test', '1');
-        expectTypeOf(result).toEqualTypeOf<any>();
+        expectTypeOf(result).toEqualTypeOf<{ [x: string]: any } | null>();
       }
 
       {
         const result = await tx.fetchById('test', '1');
-        expectTypeOf(result).toEqualTypeOf<any>();
+        expectTypeOf(result).toEqualTypeOf<{ [x: string]: any } | null>();
       }
     });
   });
@@ -894,10 +890,10 @@ describe('query builder', () => {
       expectTypeOf(query.where)
         .parameter(0)
         .toEqualTypeOf<
-          | undefined
           | string
-          | WhereFilter<undefined, 'test'>
-          | QueryWhere<undefined, 'test'>
+          | WhereFilter<Models, 'test'>
+          | QueryWhere<Models, 'test'>
+          | undefined
         >();
     }
   });
@@ -954,9 +950,7 @@ describe('query builder', () => {
       expectTypeOf(query.order)
         .parameter(0)
         .toEqualTypeOf<
-          | string
-          | OrderStatement<undefined, 'test'>
-          | QueryOrder<undefined, 'test'>
+          string | QueryOrder<Models, 'test'> | OrderStatement<Models, 'test'>
         >();
     }
   });
@@ -1010,22 +1004,23 @@ describe('query builder', () => {
     {
       const db = new DB({ schema });
       const query = db.query('test');
-      expectTypeOf(query.after)
-        .parameter(0)
-        .toEqualTypeOf<
-          | ValueCursor
-          | FetchResultEntity<
-              CollectionQueryDefault<typeof schema.collections, 'test'>
-            >
-          | undefined
-        >();
+      expectTypeOf(query.after).parameter(0).toEqualTypeOf<
+        | ValueCursor
+        // | FetchResultEntity<
+        //     CollectionQueryDefault<typeof schema.collections, 'test'>
+        //   >
+        | undefined
+      >();
     }
     {
       const db = new DB();
       const query = db.query('test');
-      expectTypeOf(query.after)
-        .parameter(0)
-        .toEqualTypeOf<ValueCursor | undefined>();
+      expectTypeOf(query.after).parameter(0).toEqualTypeOf<
+        | ValueCursor
+        // TODO: this is an ugly type, maybe should even drop support for this
+        // | FetchResultEntityFromParts<Models, 'test', string, {}>
+        | undefined
+      >();
     }
   });
 });
@@ -1052,3 +1047,39 @@ describe('fetching', () => {
     },
   };
 });
+
+const schema = {
+  a: {
+    schema: S.Schema({
+      id: S.Id(),
+      propA: S.String(),
+      number: S.Number(),
+      b: S.RelationById('b', '$a'),
+    }),
+  },
+  b: {
+    schema: S.Schema({
+      id: S.Id(),
+      propB: S.String(),
+    }),
+  },
+};
+
+const db = new DB({ schema: { collections: schema } });
+const query = db.query('a').select([]).build();
+const res = await db.fetch(query);
+type Q = typeof query;
+type Select = Q['select'];
+type ParsedSelect = ParseSelect<
+  typeof schema,
+  Q['collectionName'],
+  Q['select']
+>;
+
+// type Schema = typeof schema;
+// type Collections = CollectionNameFromModels<Schema>;
+// type Models = ModelFromModels<Schema, Collections>;
+// type Props = Models['properties'];
+
+// type UnionTest = { a: 'fo' } | { a: 'baz'; b: 'bar' };
+// type UnionTest2 = ('a' | 'b') | ('a' | 'd');

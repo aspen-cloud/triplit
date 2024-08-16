@@ -90,10 +90,14 @@ describe('schemaless', () => {
     expectTypeOf(tx.insert).parameter(0).toEqualTypeOf<string>();
   });
 
-  test('entity param is any', () => {
+  test('entity param is {[x:string]: any, id?: string }', () => {
     const db = new DB();
     const tx = fakeTx(db);
-    expectTypeOf(db.insert).parameter(1).toEqualTypeOf<any>();
-    expectTypeOf(tx.insert).parameter(1).toEqualTypeOf<any>();
+    expectTypeOf(db.insert)
+      .parameter(1)
+      .toEqualTypeOf<{ [x: string]: any; id?: string }>();
+    expectTypeOf(tx.insert)
+      .parameter(1)
+      .toEqualTypeOf<{ [x: string]: any; id?: string }>();
   });
 });

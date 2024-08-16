@@ -2,7 +2,7 @@ import { describe, expect, it, beforeAll } from 'vitest';
 import { DB, Schema as S } from '../../src';
 
 describe('Music app queries', () => {
-  let db: DB<any>;
+  let db: DB;
   beforeAll(async () => {
     db = new DB({
       schema: {

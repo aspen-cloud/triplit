@@ -13,7 +13,7 @@ import {
 } from '../query/types';
 
 export type SubQuery<
-  M extends Models<any, any>,
+  M extends Models,
   CN extends CollectionNameFromModels<M>
 > = Pick<
   CollectionQuery<M, CN, any, any>,
@@ -22,12 +22,12 @@ export type SubQuery<
 
 // In practice, we are able to infer the collection name from the query Q['collectionName'] (not CN)
 export type QueryType<
-  CN extends CollectionNameFromModels<any>,
-  Q extends SubQuery<any, CN>,
+  CN extends CollectionNameFromModels,
+  Q extends SubQuery<Models, CN>,
   C extends QueryResultCardinality = 'many'
 > = TypeInterface<
   'query',
-  FetchResult<Q>,
+  FetchResult<Models, Q>,
   any, //TODO: is this even applicable? ... might need to break it out into its own concepts we slowly add to
   readonly []
 > & {
@@ -36,8 +36,8 @@ export type QueryType<
 };
 
 export function QueryType<
-  CN extends CollectionNameFromModels<any>,
-  Q extends SubQuery<any, CN>,
+  CN extends CollectionNameFromModels,
+  Q extends SubQuery<Models, CN>,
   C extends QueryResultCardinality = 'many'
 >(query: Q, cardinality: C = 'many' as C): QueryType<CN, Q, C> {
   return {
@@ -120,8 +120,11 @@ export function QueryType<
       if (!val) return val;
 
       if (cardinality === 'one') {
-        // @ts-expect-error Need to fixup type to understand that this is a single value
-        return relationSchema.convertJSToJSON(val, schema);
+        return relationSchema.convertJSToJSON(
+          // @ts-expect-error Need to fixup type to understand that this is a single value
+          val,
+          schema
+        );
       } else if (cardinality === 'many') {
         return Array.from(val.entries()).map(([k, v]: any) => [
           k,

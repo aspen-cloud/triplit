@@ -28,7 +28,7 @@ addFormats(ajv);
  * (JSON schema can be used by most popular data validation libs)
  **/
 export function exportCollectionAsJSONSchema(
-  schema: Models<any, any>,
+  schema: Models,
   collectionName: string
 ): JSONSchema7 {
   const triplitCollectionJsonData = schemaToJSON({
@@ -47,7 +47,7 @@ export function exportCollectionAsJSONSchema(
  * Use `exportCollectionAsJSONSchema` for single collections
  **/
 export function exportSchemaAsJSONSchema(
-  schema: Models<any, any>
+  schema: Models
 ): JSONSchema7 | undefined {
   //
   if (!schema) return undefined;

@@ -69,3 +69,8 @@ export type Intersection<U1, U2> = U1 extends U2 ? U1 : never;
  * A relaxed union type that allows for any string
  */
 export type SoftUnion<T extends string> = T | (string & {});
+
+/**
+ * String key
+ */
+export type StringKey<T> = T & string;

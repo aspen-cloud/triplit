@@ -1,12 +1,11 @@
-import { CollectionNameFromModels, ModelFromModels } from '../../db.js';
+import { CollectionNameFromModels } from '../../db.js';
 import {
-  CollectionQuery,
   QueryInclusions,
   QueryResultCardinality,
   QuerySelection,
+  SchemaQueries,
 } from './collection-query.js';
 import {
-  Model,
   Models,
   QuerySelectionFilteredTypeFromModel,
 } from '../../schema/types';
@@ -28,45 +27,57 @@ export type Unalias<T> = T extends Map<infer K, infer V>
  * The expected result of a query given its cardinality
  */
 export type QueryResult<
-  Q extends CollectionQuery<any, any, any, any>,
+  M extends Models,
+  Q extends SchemaQueries<M>,
   C extends QueryResultCardinality
-> = C extends 'one' ? FetchResultEntity<Q> | null : FetchResult<Q>;
+> = C extends 'one' ? FetchResultEntity<M, Q> | null : FetchResult<M, Q>;
 
 /**
  * A map containing the results of a database fetch
  */
-export type FetchResult<Q extends CollectionQuery<any, any, any, any>> = Map<
+export type FetchResult<M extends Models, Q extends SchemaQueries<M>> = Map<
   string,
-  FetchResultEntity<Q>
+  FetchResultEntity<M, Q>
 >;
 
 /**
  * An entity fetched from the database, based on a CollectionQuery
  */
-export type FetchResultEntity<Q extends CollectionQuery<any, any, any, any>> =
-  Q extends CollectionQuery<infer M, infer CN, infer S, infer I>
-    ? FetchResultEntityFromParts<M, CN, S, I>
-    : any;
+// NOTE: Optimally we wouldnt need to provide Models and could get it from collection query, however that breaks our typechecking (not statically, only at runtime)
+// That may indicate a bug with our typechecking library, but for now we'll provide the schema as a parameter
+export type FetchResultEntity<
+  M extends Models,
+  Q extends SchemaQueries<M>
+> = FetchResultEntityFromParts<
+  M,
+  Q['collectionName'],
+  NonNullable<Q['select']>[number],
+  NonNullable<Q['include']>
+>;
+
+// TODO: we can expose this to users, but it breaks our typechecking if used in internal typing
+// export type FetchResultEntity<Q extends CollectionQuery<any, any, any, any>> =
+// Q extends CollectionQuery<infer M, infer CN, infer S, infer I>
+//   ? FetchResultEntityFromParts<M, CN, S, I>
+//   : never;
 
 /**
  * Alias for FetchResultEntity
  */
-export type ReturnTypeFromQuery<Q extends CollectionQuery<any, any, any, any>> =
-  FetchResultEntity<Q>;
+export type ReturnTypeFromQuery<
+  M extends Models,
+  Q extends SchemaQueries<M>
+> = FetchResultEntity<M, Q>;
 
 /**
  * An entity fetched form the database, based on the paramters of CollectionQuery
  */
 export type FetchResultEntityFromParts<
-  M extends Models<any, any> | undefined,
+  M extends Models,
   CN extends CollectionNameFromModels<M>,
   Selection extends QuerySelection<M, CN> = QuerySelection<M, CN>,
   Inclusion extends QueryInclusions<M, CN> = {}
-> = M extends Models<any, any>
-  ? ModelFromModels<M, CN> extends Model<any>
-    ? QuerySelectionFilteredTypeFromModel<M, CN, Selection, Inclusion>
-    : any
-  : any;
+> = QuerySelectionFilteredTypeFromModel<M, CN, Selection, Inclusion>;
 
 /**
  * The result of a transaction

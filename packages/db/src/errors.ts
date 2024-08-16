@@ -196,11 +196,7 @@ export class NoSchemaRegisteredError extends TriplitError {
 }
 
 export class CollectionNotFoundError extends TriplitError {
-  constructor(
-    collectionName: string,
-    collections: Models<any, any>,
-    ...args: any[]
-  ) {
+  constructor(collectionName: string, collections: Models, ...args: any[]) {
     super(...args);
     this.name = 'CollectionNotFoundError';
     this.baseMessage = `Could not find a collection with name ${collectionName} in your schema. Valid collections are: [${Object.keys(

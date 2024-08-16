@@ -7,8 +7,7 @@ import {
   IsPropertyOptional,
   IsPropertyRequired,
 } from '../schema/types/properties.js';
-import { DataType, Optional } from './base.js';
-import { QueryType } from './query.js';
+import { Optional } from './base.js';
 import {
   AttributeDefinition,
   RecordAttributeDefinition,
@@ -16,7 +15,7 @@ import {
 import { ExtractJSType, ExtractDBType, TypeInterface } from './type.js';
 
 type RecordJSType<
-  Properties extends { [k: string]: DataType | Optional<DataType> }
+  Properties extends { [k: string]: TypeInterface | Optional<TypeInterface> }
 > = {
   [k in keyof Properties as IsPropertyRequired<Properties[k]> extends true
     ? k
@@ -27,11 +26,14 @@ type RecordJSType<
     : never]?: ExtractJSType<Properties[k]>;
 };
 
-export type RecordProps<Key extends string, DT extends DataType> = {
+export type RecordProps<
+  Key extends string = string,
+  DT extends TypeInterface = TypeInterface
+> = {
   [K in Key]: DT;
 };
 
-export type RecordType<Properties extends RecordProps<any, any>> =
+export type RecordType<Properties extends RecordProps = RecordProps> =
   TypeInterface<
     'record',
     RecordJSType<Properties>,

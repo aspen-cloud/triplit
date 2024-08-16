@@ -11,15 +11,13 @@ import {
   StoreSchema,
 } from '../../types';
 
-export function schemaToJSON(
-  schema: StoreSchema<Models<any, any>>
-): SchemaDefinition;
+export function schemaToJSON(schema: StoreSchema<Models>): SchemaDefinition;
 export function schemaToJSON(schema: undefined): undefined;
 export function schemaToJSON(
-  schema: StoreSchema<Models<any, any> | undefined>
+  schema: StoreSchema<Models> | undefined
 ): SchemaDefinition | undefined;
 export function schemaToJSON(
-  schema: StoreSchema<Models<any, any> | undefined>
+  schema: StoreSchema<Models> | undefined
 ): SchemaDefinition | undefined {
   if (!schema) return undefined;
   const collections: CollectionsDefinition = {};
@@ -45,7 +43,7 @@ function collectionSchemaToJSON(
     : {};
   return {
     // @ts-expect-error need to refactor SchemaConfig type + id constant I think
-    schema: collection.schema.toJSON() as Model<any>,
+    schema: collection.schema.toJSON() as Model,
     ...rulesObj,
     ...permissionsObj,
   };

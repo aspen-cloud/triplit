@@ -1,8 +1,6 @@
 import DB, { DBTransaction, Models } from '../../src/index.js';
 
-export function fakeTx<M extends Models<any, any> | undefined>(
-  db: DB<M>
-): DBTransaction<M> {
+export function fakeTx<M extends Models>(db: DB<M>): DBTransaction<M> {
   return {} as DBTransaction<M>;
 }
 

@@ -20,7 +20,7 @@ export type MAX_RELATIONSHIP_DEPTH = 3;
  */
 export type RecordPaths<
   R extends RecordType<any>,
-  M extends Models<any, any>,
+  M extends Models,
   TDepth extends any[] = []
 > = R extends RecordType<any>
   ? {
@@ -62,7 +62,7 @@ export type RecordPaths<
 // Note: this what we should edit to support relationships inside records (expand records to find relationships)
 export type RelationPaths<
   R extends RecordType<any>,
-  M extends Models<any, any>,
+  M extends Models,
   TDepth extends any[] = []
 > = R extends RecordType<any>
   ? {
@@ -99,7 +99,7 @@ export type RelationPaths<
  */
 export type QueryPaths<
   QType extends QueryType<any, any, any>,
-  M extends Models<any, any>,
+  M extends Models,
   TDepth extends any[] = []
 > = QType extends QueryType<any, infer Q, any>
   ? SchemaPaths<M, Q['collectionName'], TDepth>
@@ -109,7 +109,7 @@ export type QueryPaths<
  * Expand a schema into a union of all possible paths
  */
 export type SchemaPaths<
-  M extends Models<any, any>,
+  M extends Models,
   CN extends CollectionNameFromModels<M>,
   TDepth extends any[] = []
 > = RecordPaths<M[CN]['schema'], M, TDepth>;
@@ -118,7 +118,7 @@ export type SchemaPaths<
  * Expand a Model into a union of all possible paths, non inclusive of relationships
  */
 export type ModelPaths<
-  M extends Models<any, any>,
+  M extends Models,
   CN extends CollectionNameFromModels<M>
 > = RecordPaths<
   // Use SelectModelFromModel to remove relationships
@@ -143,23 +143,19 @@ export type ShiftPath<P extends string> = P extends `${string}.${infer Rest}`
  * Get the collection name of a relationship at a path
  */
 export type RelationshipCollectionName<
-  M extends Models<any, any> | undefined,
+  M extends Models,
   CN extends CollectionNameFromModels<M>,
-  P extends M extends Models<any, any>
-    ? RelationPaths<ModelFromModels<M, CN>, M>
-    : Path
-> = M extends Models<any, any>
-  ? ExtractTypeFromRecord<ModelFromModels<M, CN>, M, P> extends QueryType<
-      any,
-      any,
-      any
-    >
-    ? ExtractTypeFromRecord<
-        ModelFromModels<M, CN>,
-        M,
-        P
-      >['query']['collectionName']
-    : never
+  P extends RelationPaths<ModelFromModels<M, CN>, M>
+> = ExtractTypeFromRecord<ModelFromModels<M, CN>, M, P> extends QueryType<
+  any,
+  any,
+  any
+>
+  ? ExtractTypeFromRecord<
+      ModelFromModels<M, CN>,
+      M,
+      P
+    >['query']['collectionName']
   : never;
 
 /**
@@ -167,7 +163,7 @@ export type RelationshipCollectionName<
  */
 export type ExtractTypeFromRecord<
   R extends RecordType<any>,
-  M extends Models<any, any>,
+  M extends Models,
   P extends Path // should be a dot notation path
 > = P extends `${infer K}.${infer Rest}` // if path is nested
   ? K extends keyof R['properties'] // if key is a valid key
@@ -194,9 +190,7 @@ export type ExtractTypeFromRecord<
  * Gets the Triplit data type at a path for a schema
  */
 export type ExtractTypeFromSchema<
-  M extends Models<any, any> | undefined,
+  M extends Models,
   CN extends CollectionNameFromModels<M>,
   P extends Path
-> = M extends Models<any, any>
-  ? ExtractTypeFromRecord<ModelFromModels<M, CN>, M, P>
-  : never;
+> = ExtractTypeFromRecord<ModelFromModels<M, CN>, M, P>;

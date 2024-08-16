@@ -31,7 +31,7 @@ import {
  * During query execution, determine if an entity satisfies a filter
  */
 export async function satisfiesFilter<
-  M extends Models<any, any> | undefined,
+  M extends Models,
   Q extends CollectionQuery<M, any>
 >(
   db: DB<M>,
@@ -95,7 +95,7 @@ export async function satisfiesFilter<
 }
 
 async function satisfiesRelationalFilter<
-  M extends Models<any, any> | undefined,
+  M extends Models,
   Q extends CollectionQuery<M, any>
 >(
   db: DB<M>,
@@ -104,7 +104,7 @@ async function satisfiesRelationalFilter<
   executionContext: FetchExecutionContext,
   options: FetchFromStorageOptions,
   pipelineItem: QueryPipelineData,
-  filter: SubQueryFilter
+  filter: SubQueryFilter<M, Q['collectionName']>
 ) {
   const { exists: subQuery } = filter;
   const existsSubQuery = {
@@ -134,7 +134,7 @@ async function satisfiesRelationalFilter<
 }
 
 function satisfiesFilterStatement<
-  M extends Models<any, any> | undefined,
+  M extends Models,
   Q extends CollectionQuery<M, any>
 >(
   query: Q,
@@ -151,22 +151,10 @@ function satisfiesFilterStatement<
     : undefined;
   // If we have a schema handle specific cases
   if (dataType && dataType.type === 'set') {
-    return satisfiesSetFilter(
-      entity,
-      path,
-      // @ts-expect-error
-      op,
-      filterValue
-    );
+    return satisfiesSetFilter(entity, path, op, filterValue);
   }
   // Use register as default
-  return satisfiesRegisterFilter(
-    entity,
-    path,
-    // @ts-expect-error
-    op,
-    filterValue
-  );
+  return satisfiesRegisterFilter(entity, path, op, filterValue);
 }
 
 // TODO: this should probably go into the set defintion

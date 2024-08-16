@@ -69,13 +69,14 @@ function isCollectionAttributeDiff(
 }
 
 function diffCollectionSchemas(
-  modelA: Model<any> | undefined,
-  modelB: Model<any> | undefined,
+  modelA: Model | undefined,
+  modelB: Model | undefined,
   attributePathPrefix: string[] = []
 ): AttributeDiff[] {
   if (modelA === undefined && modelB === undefined) return [];
-  const propertiesA = modelA?.properties ?? {};
-  const propertiesB = modelB?.properties ?? {};
+  // TODO: properly type these
+  const propertiesA: any = modelA?.properties ?? {};
+  const propertiesB: any = modelB?.properties ?? {};
   const allProperties = new Set([
     ...Object.keys(propertiesA),
     ...Object.keys(propertiesB),
@@ -196,8 +197,8 @@ function diffAttributeOptions(
 }
 
 export function diffSchemas(
-  schemaA: StoreSchema<Models<any, any>>,
-  schemaB: StoreSchema<Models<any, any>>
+  schemaA: StoreSchema<Models>,
+  schemaB: StoreSchema<Models>
 ): Diff[] {
   const allCollections = new Set([
     ...Object.keys(schemaA.collections),

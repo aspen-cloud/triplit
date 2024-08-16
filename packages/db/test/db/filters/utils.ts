@@ -32,7 +32,7 @@ function originalIdxs(data: Map<string, any>) {
   return Array.from(data.values()).map((v) => v._idx);
 }
 
-export async function testEq<M extends Models<any, any>>(
+export async function testEq<M extends Models>(
   schema: Pick<StoreSchema<M>, 'collections'>,
   data: any[],
   test: TestDefinition,
@@ -41,7 +41,7 @@ export async function testEq<M extends Models<any, any>>(
   await testFilterOp('=', schema, data, test, options);
 }
 
-export async function testNEq<M extends Models<any, any>>(
+export async function testNEq<M extends Models>(
   schema: Pick<StoreSchema<M>, 'collections'>,
   data: any[],
   test: TestDefinition,
@@ -50,7 +50,7 @@ export async function testNEq<M extends Models<any, any>>(
   await testFilterOp('!=', schema, data, test, options);
 }
 
-export async function testGt<M extends Models<any, any>>(
+export async function testGt<M extends Models>(
   schema: Pick<StoreSchema<M>, 'collections'>,
   data: any[],
   test: TestDefinition,
@@ -59,7 +59,7 @@ export async function testGt<M extends Models<any, any>>(
   await testFilterOp('>', schema, data, test, options);
 }
 
-export async function testGte<M extends Models<any, any>>(
+export async function testGte<M extends Models>(
   schema: Pick<StoreSchema<M>, 'collections'>,
   data: any[],
   test: TestDefinition,
@@ -68,7 +68,7 @@ export async function testGte<M extends Models<any, any>>(
   await testFilterOp('>=', schema, data, test, options);
 }
 
-export async function testLt<M extends Models<any, any>>(
+export async function testLt<M extends Models>(
   schema: Pick<StoreSchema<M>, 'collections'>,
   data: any[],
   test: TestDefinition,
@@ -77,7 +77,7 @@ export async function testLt<M extends Models<any, any>>(
   await testFilterOp('<', schema, data, test, options);
 }
 
-export async function testLte<M extends Models<any, any>>(
+export async function testLte<M extends Models>(
   schema: Pick<StoreSchema<M>, 'collections'>,
   data: any[],
   test: TestDefinition,
@@ -86,7 +86,7 @@ export async function testLte<M extends Models<any, any>>(
   await testFilterOp('<=', schema, data, test, options);
 }
 
-export async function testIn<M extends Models<any, any>>(
+export async function testIn<M extends Models>(
   schema: Pick<StoreSchema<M>, 'collections'>,
   data: any[],
   test: TestDefinition,
@@ -95,7 +95,7 @@ export async function testIn<M extends Models<any, any>>(
   await testFilterOp('in', schema, data, test, options);
 }
 
-export async function testNIn<M extends Models<any, any>>(
+export async function testNIn<M extends Models>(
   schema: Pick<StoreSchema<M>, 'collections'>,
   data: any[],
   test: TestDefinition,
@@ -104,7 +104,7 @@ export async function testNIn<M extends Models<any, any>>(
   await testFilterOp('nin', schema, data, test, options);
 }
 
-export async function testFilterOp<M extends Models<any, any>>(
+export async function testFilterOp<M extends Models>(
   operation: string,
   schema: Pick<StoreSchema<M>, 'collections'>,
   data: any[],

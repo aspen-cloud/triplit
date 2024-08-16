@@ -20,6 +20,7 @@ import { SetType } from './set.js';
 import { ValueSchemaType } from './value.js';
 import { QueryType } from './query.js';
 import { CollectionNameFromModels } from '../db.js';
+import { TypeInterface } from './type.js';
 
 export type Operator =
   | '='
@@ -36,7 +37,9 @@ export type Operator =
   | '!has'
   | 'isDefined';
 
-export type Optional<T extends DataType> = T & { context: { optional: true } };
+export type Optional<T extends TypeInterface> = T & {
+  context: { optional: true };
+};
 
 export type ValueType<TO extends UserTypeOptions> =
   | StringType<TO>

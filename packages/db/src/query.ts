@@ -24,7 +24,7 @@ import {
 } from './query/types';
 
 export function isFilterStatement<
-  M extends Models<any, any> | undefined,
+  M extends Models,
   CN extends CollectionNameFromModels<M>
 >(filter: WhereFilter<M, CN>): filter is FilterStatement<M, CN> {
   return (
@@ -36,21 +36,21 @@ export function isFilterStatement<
 }
 
 export function isFilterGroup<
-  M extends Models<any, any> | undefined,
+  M extends Models,
   CN extends CollectionNameFromModels<M>
 >(filter: WhereFilter<M, CN>): filter is FilterGroup<M, CN> {
   return filter instanceof Object && 'mod' in filter;
 }
 
 export function isSubQueryFilter<
-  M extends Models<any, any> | undefined,
+  M extends Models,
   CN extends CollectionNameFromModels<M>
->(filter: WhereFilter<M, CN>): filter is SubQueryFilter<M, CN> {
+>(filter: WhereFilter<M, CN>): filter is SubQueryFilter<M> {
   return filter instanceof Object && 'exists' in filter;
 }
 
 export function isExistsFilter<
-  M extends Models<any, any> | undefined,
+  M extends Models,
   CN extends CollectionNameFromModels<M>
 >(filter: WhereFilter<M, CN>): filter is RelationshipExistsFilter<M, CN> {
   return (
@@ -61,7 +61,7 @@ export function isExistsFilter<
 }
 
 export function isBooleanFilter<
-  M extends Models<any, any> | undefined,
+  M extends Models,
   CN extends CollectionNameFromModels<M>
 >(filter: WhereFilter<M, CN>): filter is boolean {
   return typeof filter === 'boolean';
@@ -347,28 +347,25 @@ function setRecordToArrayRecord(
   );
 }
 
-export function or<
-  M extends Models<any, any> | undefined,
-  CN extends CollectionNameFromModels<M>
->(where: QueryWhere<M, CN>): OrFilterGroup<M, CN> {
+export function or<M extends Models, CN extends CollectionNameFromModels<M>>(
+  where: QueryWhere<M, CN>
+): OrFilterGroup<M, CN> {
   return { mod: 'or' as const, filters: where };
 }
 
-export function and<
-  M extends Models<any, any> | undefined,
-  CN extends CollectionNameFromModels<M>
->(where: QueryWhere<M, CN>): AndFilterGroup<M, CN> {
+export function and<M extends Models, CN extends CollectionNameFromModels<M>>(
+  where: QueryWhere<M, CN>
+): AndFilterGroup<M, CN> {
   return { mod: 'and' as const, filters: where };
 }
 
 export function exists<
-  M extends Models<any, any> | undefined,
+  M extends Models,
   CN extends CollectionNameFromModels<M>,
-  P extends M extends Models<any, any>
-    ? RelationPaths<ModelFromModels<M, CN>, M>
-    : Path = M extends Models<any, any>
-    ? RelationPaths<ModelFromModels<M, CN>, M>
-    : Path
+  P extends RelationPaths<ModelFromModels<M, CN>, M> = RelationPaths<
+    ModelFromModels<M, CN>,
+    M
+  >
 >(
   relationship: P,
   query?: Pick<

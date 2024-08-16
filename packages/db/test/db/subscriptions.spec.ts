@@ -8,7 +8,7 @@ import {
 import { genToArr } from '../../src/utils/generator.js';
 
 describe('subscriptions', () => {
-  let db: DB<any>;
+  let db: DB;
   beforeEach(async () => {
     db = new DB({ source: new InMemoryTupleStorage() });
     const docs = [

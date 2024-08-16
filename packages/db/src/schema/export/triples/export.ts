@@ -4,7 +4,7 @@ import { Models, StoreSchema } from '../../types/models.js';
 import { schemaToJSON } from '../json/export.js';
 import { appendCollectionToId } from '../../../db-helpers.js';
 
-export function schemaToTriples(schema: StoreSchema<Models<any, any>>): EAV[] {
+export function schemaToTriples(schema: StoreSchema<Models>): EAV[] {
   const schemaData = schemaToJSON(schema);
   const tuples = dbDocumentToTuples(schemaData);
   const id = appendCollectionToId('_metadata', '_schema');

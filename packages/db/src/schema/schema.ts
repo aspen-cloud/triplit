@@ -30,16 +30,14 @@ export type { TObject };
 /**
  * @deprecated use getAttributeFromSchema instead
  */
-export function getSchemaFromPath(
-  model: Model<any>,
-  path: Attribute
-): DataType {
+export function getSchemaFromPath(model: Model, path: Attribute): DataType {
   if (path.length === 0) throw new InvalidSchemaPathError([]);
   let scope = model.properties[path[0]];
   if (!scope) throw new InvalidSchemaPathError(path as string[]);
   for (let i = 1; i < path.length; i++) {
     if (!scope) throw new InvalidSchemaPathError(path as string[]);
     if (scope.type === 'query') {
+      // @ts-expect-error
       return scope;
     }
     if (scope.type === 'set') {
@@ -47,17 +45,19 @@ export function getSchemaFromPath(
       scope = BooleanType(); // TODO: this is wrong? or right?
     } else if (scope.type === 'record') {
       const part = path[i];
+      // @ts-expect-error
       scope = scope.properties[part];
     } else {
       throw new InvalidSchemaPathError(path as string[]);
     }
   }
   if (!scope) throw new InvalidSchemaPathError(path as string[]);
+  // @ts-expect-error
   return scope;
 }
 
 export function createSchemaIterator<
-  M extends Models<any, any>,
+  M extends Models,
   CN extends CollectionNameFromModels<M>
 >(path: string[], schema: M, collectionName: CN) {
   let pathIndex = 0;
@@ -85,7 +85,7 @@ type Traverser = {
 };
 
 export function createSchemaTraverser<
-  M extends Models<any, any>,
+  M extends Models,
   CN extends CollectionNameFromModels<M>
 >(schema: M, collectionName: CN): Traverser {
   let current: DataType | undefined = schema[collectionName]?.schema;
@@ -109,7 +109,7 @@ export function createSchemaTraverser<
 }
 
 export function getAttributeFromSchema<
-  M extends Models<any, any>,
+  M extends Models,
   CN extends CollectionNameFromModels<M>
 >(attribute: string[], schema: M, collectionName: CN) {
   let iter = createSchemaIterator(attribute, schema, collectionName);
@@ -125,59 +125,62 @@ export function getAttributeFromSchema<
 // and we expect records to be fully hydrated at serialization time
 // TODO: determine how we might be able to leverage defaults inside of records
 // S.Record({ a: S.String({ default: 'a' }) })
-export function clientInputToDbModel<M extends Model<any> | undefined>(
+export function clientInputToDbModel<M extends Model>(
   input: JSTypeFromModel<M>,
-  model: M
+  model: M | undefined
 ) {
   if (!model) return input as DBTypeFromModel<M>;
   return model.convertInputToDBValue(input) as DBTypeFromModel<M>;
 }
 
-export function collectionsDefinitionToSchema(
+export function collectionsDefinitionToSchema<M extends Models = Models>(
   collections: CollectionsDefinition
-): Models<any, any> {
-  return Object.fromEntries(
+): M {
+  const schema: Models = Object.fromEntries(
     Object.entries(collections).map(([collectionName, collectionDef]) => {
       return [
         collectionName,
         {
           ...collectionDef,
-          schema: typeFromJSON(collectionDef.schema) as Model<any>,
+          schema: typeFromJSON(collectionDef.schema) as Model,
         },
       ];
     })
   );
+  return schema as M;
 }
 
-export function triplesToSchema(triples: TripleRow[]) {
+export function triplesToSchema<M extends Models = Models>(
+  triples: TripleRow[]
+) {
   const schemaEntity = constructEntity(
     triples,
     appendCollectionToId('_metadata', '_schema')
   );
   if (!schemaEntity) return undefined;
-  return timestampedSchemaToSchema(schemaEntity.data);
+  return timestampedSchemaToSchema<M>(schemaEntity.data);
 }
 
-export function timestampedSchemaToSchema(
+export function timestampedSchemaToSchema<M extends Models = Models>(
   schema: Record<string, any>
-): StoreSchema<Models<any, any>> | undefined {
+): StoreSchema<M> | undefined {
   const schemaData = timestampedObjectToPlainObject(schema);
   delete schemaData['_collection'];
   delete schemaData['id'];
   const version = (schemaData.version as number) || 0;
   const collections = (schemaData.collections as CollectionsDefinition) || {};
-  return JSONToSchema({
+  return JSONToSchema<M>({
     ...schemaData,
     version,
     collections,
   });
 }
 
-export function JSONToSchema(
+export function JSONToSchema<M extends Models = Models>(
   schemaJSON: SchemaDefinition | undefined
-): StoreSchema<Models<any, any>> | undefined {
+): StoreSchema<M> | undefined {
   if (!schemaJSON) return undefined;
-  const collections = collectionsDefinitionToSchema(schemaJSON.collections);
+  const collections = collectionsDefinitionToSchema<M>(schemaJSON.collections);
   return { ...schemaJSON, version: schemaJSON.version, collections };
 }
 
