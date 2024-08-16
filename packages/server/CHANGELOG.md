@@ -1,5 +1,11 @@
 # @triplit/server
 
+## 0.4.7
+
+### Patch Changes
+
+- c28904d5: truncate large logs
+
 ## 0.4.6
 
 ### Patch Changes
