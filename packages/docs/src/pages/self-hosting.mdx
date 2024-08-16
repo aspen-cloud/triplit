@@ -103,10 +103,10 @@ The server uses a `PROJECT_ID` to identify your project. You can set the `PROJEC
 
 ### `JWT_SECRET`
 
-The server uses JWT tokens to authenticate clients, and you need to provide a secret to sign and verify these tokens. You can set the secret by setting the `JWT_SECRET` environment variable. Triplit supports both symmetric (HS256) and asymmetric (RS256) encryption algorithms for JWTs. You will need to generate client tokens signed with the appropriate algorithm. With the `PROJECT_ID` and `JWT_SECRET` set, you can also use the [`triplit dev`](/cli/dev) CLI to generate these tokens for you.
+The server uses JWT tokens to authenticate clients, and you need to provide a symmetric secret or public key to verify these tokens that it receives. The `JWT_SECRET` environment variable should be assigned to this validation secret. Triplit supports both symmetric (HS256) and asymmetric (RS256) encryption algorithms for JWTs. You will need to generate client tokens signed with the appropriate algorithm. With the `TRIPLIT_JWT_SECRET` set, you can also use the [`triplit dev`](/cli/dev) CLI to generate these tokens for you.
 
 ```bash copy
-PROJECT_ID=your-project-id JWT_SECRET=your-secret triplit dev
+TRIPLIT_JWT_SECRET=your-secret triplit dev
 ```
 
 You can also do it with the `jsonwebtoken` package (e.g. if you wanted to use asymmetric encryption) :
@@ -117,7 +117,6 @@ import jwt from 'jsonwebtoken';
 const anonKey = jwt.sign(
   {
     'x-triplit-token-type': 'anon',
-    'x-triplit-project-id': process.env.PROJECT_ID,
   },
   process.env.PUBLIC_KEY,
   { algorithm: 'RS256' }
@@ -126,7 +125,6 @@ const anonKey = jwt.sign(
 const serviceKey = jwt.sign(
   {
     'x-triplit-token-type': 'secret',
-    'x-triplit-project-id': process.env.PROJECT_ID,
   },
   process.env.PUBLIC_KEY,
   { algorithm: 'RS256' }
@@ -141,11 +139,11 @@ An absolute path on the server's file system to a directory where the server wil
 
 ### `EXTERNAL_JWT_SECRET` (optional)
 
-If you want your server to support JWTs signed by a second issuer, you can also set `EXTERNAL_JWT_SECRET` to that signing secret (or public key). The server will only authenticate signatures with this secret if the JWT has the `x-triplit-token-type` claim set to `external`. Any JWT that does not have this claim set will be authenticated with `JWT_SECRET`.
+If you want your server to support JWTs signed by a second issuer, you can also set `EXTERNAL_JWT_SECRET` to that signing secret (or public key). For the server to recognize a JWT as "external", it must **not** have the `x-triplit-token-type` claim or if that claim is set, it must **not** have the value of `anon` or `secret`. Those specific combinations of claims are reserved for "internal" JWTs, e.g. the special `anon` and `secret` tokens.
 
 ### `CLAIMS_PATH` (optional)
 
-If you are using custom JWTs with nested Triplit-related claims, you can set the `CLAIMS_PATH` environment variable. The server will read the Triplit claims at the path specified by `CLAIMS_PATH`. The JWT should also have the `x-triplit-token-type` claim set to `external`. Read the [authentication guide](/auth) for more information.
+If you are using custom JWTs with nested Triplit-related claims, you can set the `CLAIMS_PATH` environment variable. The server will read the claims at the path specified by `CLAIMS_PATH`. Read the [authentication guide](/auth) for more information.
 
 ### `SENTRY_DSN` (optional)
 

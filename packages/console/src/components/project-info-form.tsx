@@ -19,7 +19,7 @@ export function ProjectInfoForm({
   projectId: string;
   project: Project;
 }) {
-  const { displayName, token, server, projectId } = project;
+  const { displayName, token, server } = project;
   const [draftName, setDraftName] = useState(displayName);
 
   const cleanName = draftName.trim();
@@ -62,9 +62,6 @@ export function ProjectInfoForm({
           Save
         </Button>
       </div>
-      <FormField label="id">
-        <Input value={projectId} readOnly />
-      </FormField>
       <div className="flex flex-row gap-2 items-end">
         <FormField label="Service Token">
           <PasswordInput

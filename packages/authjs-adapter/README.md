@@ -139,8 +139,6 @@ export default NextAuth({
       if (user) {
         token["x-triplit-user-id"] = user.id
       }
-      token["x-triplit-project-id"] = process.env.TRIPLIT_PROJECT_ID
-      token["x-triplit-token-type"] = "external"
       return token
     },
     async session({ session, token, user }) {

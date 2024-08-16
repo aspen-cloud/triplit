@@ -1,6 +1,11 @@
 import { describe, it, expect } from 'vitest';
 import { parseAndValidateToken } from '../src/token.js';
 import { SignJWT, importPKCS8 } from 'jose';
+import {
+  InvalidTokenPayloadError,
+  InvalidTokenSignatureError,
+  TokenVerificationError,
+} from '../src/errors.js';
 
 describe('RSA256', async () => {
   const PROJECT_ID = 'test-project';
@@ -92,5 +97,78 @@ describe('HS256', async () => {
   it('can parse and validate a token with symetrical key', async () => {
     const result = await parseAndValidateToken(jwt, secret, PROJECT_ID);
     expect(result.error).toBeUndefined();
+  });
+});
+
+describe('Error states', async () => {
+  it('should an return error when no token is provided', async () => {
+    const result = await parseAndValidateToken(null, 'secret', 'project-id');
+    expect(result.error).toBeInstanceOf(TokenVerificationError);
+  });
+
+  it("should return an error when the token can't be decoded as a proper JWT", async () => {
+    const result = await parseAndValidateToken(
+      'token',
+      'secret',
+      'project-id',
+      {
+        externalSecret: undefined,
+      }
+    );
+    expect(result.error).toBeInstanceOf(InvalidTokenPayloadError);
+  });
+  const PROJECT_ID = 'test-project';
+  const secret =
+    'cc7e0d44fd473002f1c42167459001140ec6389b7353f8088f4d9a95f2f596f2';
+  const tokenPayload = {
+    'x-triplit-token-type': 'test',
+    'x-triplit-project-id': PROJECT_ID,
+  };
+  const internalJwt = await new SignJWT(tokenPayload)
+    .setProtectedHeader({ alg: 'HS256' })
+    .setIssuedAt()
+    .setExpirationTime('1 hr')
+    .sign(new TextEncoder().encode(secret));
+
+  it('should return an error when no secrets are provided', async () => {
+    //@ts-expect-error
+    const result = await parseAndValidateToken(internalJwt, null, 'project-id');
+    expect(result.error).toBeInstanceOf(TokenVerificationError);
+  });
+
+  it('should return an error when the wrong secret is provided for validation', async () => {
+    const result = await parseAndValidateToken(
+      internalJwt,
+      'wrong-secret',
+      undefined
+    );
+    expect(result.error).toBeInstanceOf(InvalidTokenSignatureError);
+  });
+
+  it('should fallback to the internal secret when the token is "external" but no external secret is provided', async () => {
+    const secret =
+      'cc7e0d44fd473002f1c42167459001140ec6389b7353f8088f4d9a95f2f596f2';
+    const tokenPayload = {};
+    const externalJwt = await new SignJWT(tokenPayload)
+      .setProtectedHeader({ alg: 'HS256' })
+      .setIssuedAt()
+      .setExpirationTime('1 hr')
+      .sign(new TextEncoder().encode(secret));
+    const result = await parseAndValidateToken(externalJwt, secret, undefined, {
+      externalSecret: undefined,
+    });
+    expect(result.error).toBeUndefined();
+    expect(result.data).toBeInstanceOf(Object);
+  });
+  it('should return an error when the token is "internal" but no internal secret is provided', async () => {
+    const result = await parseAndValidateToken(
+      internalJwt,
+      undefined,
+      undefined,
+      {
+        externalSecret: secret,
+      }
+    );
+    expect(result.error).toBeInstanceOf(TokenVerificationError);
   });
 });

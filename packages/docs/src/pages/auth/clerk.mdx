@@ -19,26 +19,6 @@ import { Steps, Callout, Tabs, Tab } from 'nextra/components';
 
 Follow the official [Clerk documentation](https://docs.clerk.dev/) to create an account and application in their dashboard.
 
-### Create a JWT Template in Clerk
-
-Triplit authenticates users using JWT tokens. Clerk issues JWT tokens when a user logs in. In order for Triplit to validate these tokens, the JWT token must be in a specific format.
-
-In the Clerk dashboard, go to the **JWT Templates** section and click **New template** and then select the **Blank** preset.
-
-![Clerk JWT Template options](/clerk-auth-guide/jwt-template-selection.png)
-
-Then add the following claims, where `<my-project-id>` is your Triplit project ID:
-
-![Clerk JWT Template Claims](/clerk-auth-guide/jwt-template-claims.png)
-
-If you created your Triplit project in the [Dashboard](https://triplit.dev/dashboard), you can find your project on the **Settings** tab of your project.
-
-![Triplit Project ID](/dashboard-screenshots/project-id.png)
-
-If you're not using the Dashboard yet, you can make up a project ID. It just needs to be a unique string.
-
-Note that we've also included the `{{user.id}}` shortcode in the `userId` claim. This will be replaced with the user's Clerk ID when the token is issued, which will be useful when we add permissions to our Triplit schema. [Read more about Clerk shortcodes here](https://clerk.com/docs/backend-requests/making/jwt-templates#shortcodes).
-
 ### Get your Clerk public key
 
 We also need to configure Triplit to validate the JWT tokens issued by Clerk. To do this, we need the RSA public key for your Clerk application. You can find this in the **API Keys** section of the Clerk dashboard.
@@ -49,10 +29,9 @@ Then click on the **Show JWT Public Key** button to reveal the public key.
 
 ![Clerk JWT Public Key](/clerk-auth-guide/api-keys-public-key.png)
 
-For local dev, add this, and the project id you used above, to your `.env` file in your Triplit app, making sure to remove any newlines:
+For local dev, add this to your `.env` file in your Triplit app, making sure to remove any newlines:
 
-```env
-TRIPLIT_PROJECT_ID=your-project-id
+```env copy
 TRIPLIT_EXTERNAL_JWT_SECRET=-----BEGIN PUBLIC KEY-----<some-encoded-stuff>-----END PUBLIC KEY-----
 ```
 
@@ -77,15 +56,14 @@ Your Triplit client needs to send the JWT token issued by Clerk with each reques
 ```ts copy
 // get the Clerk client or session using your framework
 // e.g. `const auth = useAuth()` from @clerk/clerk-react
-// then load the token using the template you created
-auth.getToken({ template: 'triplit' }).then((token) => {
+auth.getToken().then((token) => {
   token && client.updateToken(token);
 });
 ```
 
 ### Test locally
 
-Run you Triplit app and sign in with Clerk. If you’re setup correctly, you should see the connection is established and your data is syncing with your server. If you can't connect, ensure that you set the `TRIPLIT_PROJECT_ID` and `TRIPLIT_EXTERNAL_JWT_SECRET` environmental variables correctly.
+Run you Triplit app and sign in with Clerk. If you’re setup correctly, you should see the connection is established and your data is syncing with your server. If you can't connect, ensure that you set the `TRIPLIT_EXTERNAL_JWT_SECRET` environmental variables correctly.
 
 ### Configure your Triplit dashboard
 
@@ -99,6 +77,20 @@ If you're using a custom self-hosted server, you need to set the `EXTERNAL_JWT_S
 
 ### Add access control to your schema
 
-Now that you have a user auth system set up, you can add roles and permissions to your Triplit schema. [Read more about roles and permissions](/docs/roles-and-permissions).
+Now that you have a user auth system set up, you can add roles and permissions to your Triplit schema. By default, the JWT issued by Clerk will set the `sub` claim to the authenticated user's unique identifier. In Triplit, you can use it to set up a simple `user` role:
+
+```ts copy
+import { Role } from '@triplit/client';
+
+export const roles: Roles = {
+  user: {
+    match: {
+      sub: '$userId',
+    },
+  },
+};
+```
+
+[Read here to see how you can use this Role to define a permission.](/docs/roles-and-permissions).
 
 </Steps>

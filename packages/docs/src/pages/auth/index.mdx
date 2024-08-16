@@ -8,22 +8,13 @@ Authentication is the process of verifying the identity of a user. This usually 
 
 ## Authentication
 
-Triplit uses [JWTs](https://en.wikipedia.org/wiki/JSON_Web_Token) to communicate user identity. Authentication (that is the validation that a user is who they say they are, and the generation of a JWT identifying the user) itself should be handled by an authentication service outside of Triplit. This could be a third-party service like [Clerk](https://clerk.com/), [Auth0](https://auth0.com/), [Firebase Auth](https://firebase.google.com/products/auth), [AWS Cognito](https://aws.amazon.com/cognito/), [Supabase Auth](https://supabase.com/docs/auth), etc or a custom service built by your team. The authentication service should provide a way to generate a token with Triplit specific claims that can be used to identify the user.
+Triplit uses [JWTs](https://en.wikipedia.org/wiki/JSON_Web_Token) to communicate user identity. Authentication (that is the validation that a user is who they say they are, and the generation of a JWT identifying the user) itself should be handled by an authentication service outside of Triplit. This could be a third-party service like [Clerk](https://clerk.com/), [Auth0](https://auth0.com/), [Firebase Auth](https://firebase.google.com/products/auth), [AWS Cognito](https://aws.amazon.com/cognito/), [Supabase Auth](https://supabase.com/docs/auth), etc or a custom service built by your team.
 
-A token must have the following claims:
+The JWT will need to be signed with a proper signature. Triplit supports both symmetric (HS256) and asymmetric (RS256) encryption algorithms for JWTs. If you are using Triplit's hosted offering [Triplit Cloud](/triplit-cloud), then you will need to provide the JWT's signing secret or public key to Triplit in the `External JWT secret` field in your project's settings. If you are self-hosting Triplit, you will need to provide the signing secret or public key when you start the server with the `EXTERNAL_JWT_SECRET` environmental variable.
 
-```json
-{
-  "x-triplit-project-id": "<your-project-id>",
-  "x-triplit-token-type": "external"
-}
-```
-
-For backwards compatibility, Triplit reads the following claims:
+The JWT should usually have some user-identifying information (e.g. the [`sub` claim](https://datatracker.ietf.org/doc/html/rfc7519#section-4.1.2)), which can be accessed by Triplit to handle [access control](/schemas/permissions) that user. For backwards compatibility, Triplit reads the following claims:
 
 - `x-triplit-user-id`: The user's unique identifier. This is assigned to the variable `$session.SESSION_USER_ID` in queries.
-
-As well, the JWT will need to be signed with a proper signature. If you are using Triplit's hosted offering [Triplit Cloud](/triplit-cloud), then you will need to provide the signing secret of your JWT to Triplit in the `External JWT secret` field in your project's settings. If you are self-hosting Triplit, you will need to provide the signing secret to Triplit when you start the server via an environment variable `EXTERNAL_JWT_SECRET`.
 
 ### Tokens
 

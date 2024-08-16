@@ -1,10 +1,7 @@
 import { Button, PasswordInput, Input, FormField } from '@triplit/ui';
 import { useForm } from '@mantine/form';
 import { useCallback, useState } from 'react';
-import {
-  getProjectIdFromApiKey,
-  JWTPayloadIsOfCorrectForm,
-} from '../utils/server';
+import { JWTPayloadIsOfCorrectForm } from '../utils/server';
 
 export interface ImportProjectFormValues {
   token: string;
@@ -60,8 +57,6 @@ export function ImportProjectForm({
         form.setFieldError('token', error);
         return;
       }
-      const projectId = getProjectIdFromApiKey(form.values.token);
-      form.setValues({ server: `https://${projectId}.triplit.io` });
       setImported(true);
     } catch (e) {
       form.setFieldError(

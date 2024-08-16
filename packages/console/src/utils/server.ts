@@ -25,18 +25,13 @@ export function JWTPayloadIsOfCorrectForm(token: string) {
   try {
     const parsedPayload = parseJWT(token);
     return (
-      Object.hasOwn(parsedPayload, 'x-triplit-project-id') &&
-      Object.hasOwn(parsedPayload, 'x-triplit-token-type')
+      Object.hasOwn(parsedPayload, 'x-triplit-token-type') &&
+      parsedPayload['x-triplit-token-type'] === 'secret'
     );
   } catch (e) {
     console.error(e);
     return false;
   }
-}
-
-export function getProjectIdFromApiKey(apiKey: string): string {
-  const payload = parseJWT(apiKey);
-  return payload['x-triplit-project-id'];
 }
 
 async function queryServer(route: string, project: Project) {

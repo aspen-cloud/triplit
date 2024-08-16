@@ -1,4 +1,4 @@
-import { Schema as S } from '@triplit/db';
+import { Schema as S } from '@triplit/client';
 
 export const schemaObject = {
   filters: {
@@ -29,7 +29,7 @@ export const schemaObject = {
     schema: S.Schema({
       id: S.Id(),
       displayName: S.String(),
-      projectId: S.String(),
+      projectId: S.Optional(S.String()),
       token: S.String(),
       server: S.String(),
       secure: S.Boolean(),
