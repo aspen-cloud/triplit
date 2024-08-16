@@ -110,7 +110,11 @@ function formatResponseError({ name, message, status }: any) {
 function formatBody(body: any) {
   if (body === undefined) return '';
   try {
-    return JSON.stringify(body, null, 2);
+    let stringified = JSON.stringify(body, null, 2);
+    if (stringified.length > 100) {
+      stringified = `${stringified.slice(0, 100)}...`;
+    }
+    return stringified;
   } catch (e) {
     return body;
   }
