@@ -8,6 +8,7 @@ import type {
   TupleIndex,
   TupleValue,
 } from './triple-store-utils.js';
+import { genToArr } from './utils/generator.js';
 
 export const TRIPLE_STORE_MIGRATIONS: ((
   tupleStore: MultiTupleStore<TupleIndex>
@@ -15,9 +16,11 @@ export const TRIPLE_STORE_MIGRATIONS: ((
   async function migrateFromEAVtoEAT(tupleStore: MultiTupleStore<TupleIndex>) {
     // Check if any EAV tuples exist and migrate them to EAT
     // @ts-ignore
-    const existingTuples = (await tupleStore.scan({
-      prefix: ['EAV'],
-    })) as {
+    const existingTuples = (await genToArr(
+      tupleStore.scan({
+        prefix: ['EAV'],
+      })
+    )) as {
       key: ['EAV', EntityId, Attribute, TupleValue, Timestamp];
       value: TripleMetadata;
     }[];

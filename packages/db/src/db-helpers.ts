@@ -36,6 +36,7 @@ import {
 } from './collection-query.js';
 import { Logger } from '@triplit/types/logger';
 import { FetchResult } from './query/types';
+import { genToArr } from './utils/generator.js';
 
 const ID_SEPARATOR = '#';
 
@@ -167,7 +168,9 @@ export function someFilterStatements<
 }
 
 export async function getSchemaTriples(tripleStore: TripleStoreApi) {
-  return tripleStore.findByEntity(appendCollectionToId('_metadata', '_schema'));
+  return genToArr(
+    tripleStore.findByEntity(appendCollectionToId('_metadata', '_schema'))
+  );
 }
 
 export async function readSchemaFromTripleStore(tripleStores: TripleStoreApi) {
@@ -212,7 +215,7 @@ export async function overrideStoredSchema<M extends Models<any, any>>(
       const existingTriples = await tx.storeTx.findByEntity(
         appendCollectionToId('_metadata', '_schema')
       );
-      await tx.storeTx.deleteTriples(existingTriples);
+      await tx.storeTx.deleteTriples(await genToArr(existingTriples));
 
       const triples = schemaToTriples(schema);
       // TODO use tripleStore.setValues

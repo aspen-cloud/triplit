@@ -97,6 +97,7 @@ import {
 } from './query/types';
 import { prepareQuery } from './query/prepare.js';
 import { getCollectionPermissions } from './schema/permissions.js';
+import { genToArr } from './utils/generator.js';
 
 interface TransactionOptions<
   M extends Models<any, any> | undefined = undefined
@@ -271,7 +272,10 @@ async function triplesToEntityOpSet(
     }
 
     // Get the full entities from the triple store
-    const entity = constructEntity(await tripleStore.findByEntity(id), id);
+    const entity = constructEntity(
+      await genToArr(tripleStore.findByEntity(id)),
+      id
+    );
     if (!entity) continue;
     switch (operation) {
       case 'insert':
@@ -793,7 +797,7 @@ export class DBTransaction<M extends Models<any, any> | undefined> {
 
     const storeId = appendCollectionToId(collectionName, entityId);
 
-    const entityTriples = await this.storeTx.findByEntity(storeId);
+    const entityTriples = await genToArr(this.storeTx.findByEntity(storeId));
     const timestampedEntity = constructEntity(entityTriples, storeId);
     const entity = timestampedObjectToPlainObject(timestampedEntity!.data);
     // If entity doesn't exist or is deleted, throw error

@@ -13,7 +13,7 @@ import {
   ClientSchema,
 } from '@triplit/client';
 import { describe, vi, it, expect } from 'vitest';
-import DB, { Models, Schema as S, or } from '@triplit/db';
+import DB, { Models, Schema as S, genToArr, or } from '@triplit/db';
 import { MemoryBTreeStorage as MemoryStorage } from '@triplit/db/storage/memory-btree';
 import { CloseReason } from '@triplit/types/sync';
 
@@ -1600,30 +1600,30 @@ describe('outbox', () => {
 
     // Alice before sync
     {
-      const outboxTriples = await aliceOutbox.findByEntity();
-      const cacheTriples = await aliceCache.findByEntity();
+      const outboxTriples = await genToArr(aliceOutbox.findByEntity());
+      const cacheTriples = await genToArr(aliceCache.findByEntity());
       expect(outboxTriples).toHaveLength(3);
       expect(cacheTriples).toHaveLength(0);
     }
     // Bob before sync
     {
-      const outboxTriples = await bobOutbox.findByEntity();
-      const cacheTriples = await bobCache.findByEntity();
+      const outboxTriples = await genToArr(bobOutbox.findByEntity());
+      const cacheTriples = await genToArr(bobCache.findByEntity());
       expect(outboxTriples).toHaveLength(0);
       expect(cacheTriples).toHaveLength(0);
     }
     await pause();
     // Alice after sync
     {
-      const outboxTriples = await aliceOutbox.findByEntity();
-      const cacheTriples = await aliceCache.findByEntity();
+      const outboxTriples = await genToArr(aliceOutbox.findByEntity());
+      const cacheTriples = await genToArr(aliceCache.findByEntity());
       expect(outboxTriples).toHaveLength(0);
       expect(cacheTriples).toHaveLength(3);
     }
     // Bob after sync
     {
-      const outboxTriples = await aliceOutbox.findByEntity();
-      const cacheTriples = await aliceCache.findByEntity();
+      const outboxTriples = await genToArr(aliceOutbox.findByEntity());
+      const cacheTriples = await genToArr(aliceCache.findByEntity());
       expect(outboxTriples).toHaveLength(0);
       expect(cacheTriples).toHaveLength(3);
     }

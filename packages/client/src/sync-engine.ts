@@ -36,6 +36,7 @@ import {
 import { Value } from '@sinclair/typebox/value';
 import { ClientQuery, SchemaClientQueries } from './client/types';
 import { Logger } from '@triplit/types/logger';
+import { genToArr } from '@triplit/db';
 
 type OnMessageReceivedCallback = (message: ServerSyncMessage) => void;
 type OnMessageSentCallback = (message: ClientSyncMessage) => void;
@@ -360,10 +361,12 @@ export class SyncEngine {
             // move all commited outbox triples to cache
             for (const clientTxId of txIds) {
               const timestamp = JSON.parse(clientTxId);
-              const triplesToEvict = await outboxOperator.findByClientTimestamp(
-                await this.db.getClientId(),
-                'eq',
-                timestamp
+              const triplesToEvict = await genToArr(
+                outboxOperator.findByClientTimestamp(
+                  await this.db.getClientId(),
+                  'eq',
+                  timestamp
+                )
               );
               if (triplesToEvict.length > 0) {
                 await cacheOperator.insertTriples(triplesToEvict);
@@ -576,9 +579,11 @@ export class SyncEngine {
    */
   async retry(txId: string) {
     const timestamp: Timestamp = JSON.parse(txId);
-    const triplesToSend = await this.db.tripleStore
-      .setStorageScope(['outbox'])
-      .findByClientTimestamp(await this.db.getClientId(), 'eq', timestamp);
+    const triplesToSend = await genToArr(
+      this.db.tripleStore
+        .setStorageScope(['outbox'])
+        .findByClientTimestamp(await this.db.getClientId(), 'eq', timestamp)
+    );
     if (triplesToSend.length > 0) this.sendTriples(triplesToSend);
   }
 
@@ -596,10 +601,12 @@ export class SyncEngine {
         });
         for (const txId of txIdList) {
           const timestamp = JSON.parse(txId);
-          const triples = await scopedTx.findByClientTimestamp(
-            await this.db.getClientId(),
-            'eq',
-            timestamp
+          const triples = await genToArr(
+            scopedTx.findByClientTimestamp(
+              await this.db.getClientId(),
+              'eq',
+              timestamp
+            )
           );
           await scopedTx.deleteTriples(triples);
         }
@@ -722,7 +729,9 @@ export class SyncEngine {
   }
 
   private async getTriplesToSend(store: TripleStoreApi) {
-    return (await store.findByEntity()).filter((t) => this.shouldSendTriple(t));
+    return (await genToArr(store.findByEntity())).filter((t) =>
+      this.shouldSendTriple(t)
+    );
   }
 
   private shouldSendTriple(t: TripleRow) {

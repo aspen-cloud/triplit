@@ -106,3 +106,4 @@ export * from './errors.js';
 // See ./data-types/index.ts for why this is necessary
 export type * from './data-types';
 export * from './schema/export/index.js';
+export * from './utils/generator.js';

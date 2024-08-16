@@ -32,6 +32,7 @@ import {
 } from '@triplit/types/sync';
 import { Server as TriplitServer } from './triplit-server.js';
 import { ProjectJWT } from './token.js';
+import { genToArr } from '@triplit/db';
 
 export interface ConnectionOptions {
   clientId: string;
@@ -571,7 +572,7 @@ export class Session {
       await this.db.tripleStore.transact(async (tx) => {
         for (const [entityId, attribute] of entityAttributes) {
           await tx.deleteTriples(
-            await tx.findByEntityAttribute(entityId, attribute)
+            await genToArr(tx.findByEntityAttribute(entityId, attribute))
           );
         }
       });

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import DB from '../src/db.ts';
 import { getCandidateEntityIds } from '../src/collection-query.ts';
 import { Schema as S } from '../src/schema/builder.ts';
+import { genToArr } from '../src/utils/generator.js';
 const testData = [
   { name: 'Alice', score: 100, age: 25 },
   { name: 'Bob', score: 90, age: 25 },
@@ -39,7 +40,7 @@ describe('candidate selection', () => {
       const query = db.query('tests').where('name', '=', 'Alice').build();
       await db.transact(async (tx) => {
         const { candidates } = await getCandidateEntityIds(tx.storeTx, query);
-        expectUnorderedArrayEquality(candidates, ['tests#0']);
+        expectUnorderedArrayEquality(await genToArr(candidates), ['tests#0']);
       });
     }
 
@@ -48,7 +49,7 @@ describe('candidate selection', () => {
       const query = db.query('tests').where('age', '=', 24).build();
       await db.transact(async (tx) => {
         const { candidates } = await getCandidateEntityIds(tx.storeTx, query);
-        expectUnorderedArrayEquality(candidates, [
+        expectUnorderedArrayEquality(await genToArr(candidates), [
           'tests#3',
           'tests#4',
           'tests#5',
@@ -73,7 +74,7 @@ describe('candidate selection', () => {
         .build();
       await db.transact(async (tx) => {
         const { candidates } = await getCandidateEntityIds(tx.storeTx, query);
-        expectUnorderedArrayEquality(candidates, ['tests#0']);
+        expectUnorderedArrayEquality(await genToArr(candidates), ['tests#0']);
       });
     }
   });
@@ -88,7 +89,7 @@ describe('candidate selection', () => {
       const query = db.query('tests').where('score', '<', 70).build();
       await db.transact(async (tx) => {
         const { candidates } = await getCandidateEntityIds(tx.storeTx, query);
-        expectUnorderedArrayEquality(candidates, [
+        expectUnorderedArrayEquality(await genToArr(candidates), [
           'tests#11',
           'tests#13',
           'tests#14',
@@ -100,7 +101,7 @@ describe('candidate selection', () => {
       const query = db.query('tests').where('score', '<=', 70).build();
       await db.transact(async (tx) => {
         const { candidates } = await getCandidateEntityIds(tx.storeTx, query);
-        expectUnorderedArrayEquality(candidates, [
+        expectUnorderedArrayEquality(await genToArr(candidates), [
           'tests#9',
           'tests#11',
           'tests#12',
@@ -114,7 +115,10 @@ describe('candidate selection', () => {
       const query = db.query('tests').where('score', '>', 90).build();
       await db.transact(async (tx) => {
         const { candidates } = await getCandidateEntityIds(tx.storeTx, query);
-        expectUnorderedArrayEquality(candidates, ['tests#0', 'tests#2']);
+        expectUnorderedArrayEquality(await genToArr(candidates), [
+          'tests#0',
+          'tests#2',
+        ]);
       });
     }
     // gte
@@ -122,7 +126,7 @@ describe('candidate selection', () => {
       const query = db.query('tests').where('score', '>=', 90).build();
       await db.transact(async (tx) => {
         const { candidates } = await getCandidateEntityIds(tx.storeTx, query);
-        expectUnorderedArrayEquality(candidates, [
+        expectUnorderedArrayEquality(await genToArr(candidates), [
           'tests#0',
           'tests#1',
           'tests#2',
@@ -148,7 +152,7 @@ describe('candidate selection', () => {
         .build();
       await db.transact(async (tx) => {
         const { candidates } = await getCandidateEntityIds(tx.storeTx, query);
-        expectUnorderedArrayEquality(candidates, [
+        expectUnorderedArrayEquality(await genToArr(candidates), [
           'tests#1',
           'tests#3',
           'tests#4',
@@ -168,7 +172,7 @@ describe('candidate selection', () => {
         .build();
       await db.transact(async (tx) => {
         const { candidates } = await getCandidateEntityIds(tx.storeTx, query);
-        expectUnorderedArrayEquality(candidates, [
+        expectUnorderedArrayEquality(await genToArr(candidates), [
           'tests#0',
           'tests#1',
           'tests#2',
@@ -190,7 +194,7 @@ describe('candidate selection', () => {
         .build();
       await db.transact(async (tx) => {
         const { candidates } = await getCandidateEntityIds(tx.storeTx, query);
-        expectUnorderedArrayEquality(candidates, [
+        expectUnorderedArrayEquality(await genToArr(candidates), [
           'tests#0',
           'tests#1',
           'tests#2',
@@ -213,7 +217,7 @@ describe('candidate selection', () => {
       await db.transact(async (tx) => {
         const { candidates } = await getCandidateEntityIds(tx.storeTx, query);
         expectUnorderedArrayEquality(
-          candidates,
+          await genToArr(candidates),
           testData.map((_, i) => `tests#${i}`)
         );
       });
@@ -225,7 +229,7 @@ describe('candidate selection', () => {
       await db.transact(async (tx) => {
         const { candidates } = await getCandidateEntityIds(tx.storeTx, query);
         expectUnorderedArrayEquality(
-          candidates,
+          await genToArr(candidates),
           testData.map((_, i) => `tests#${i}`)
         );
       });
@@ -260,6 +264,10 @@ it('range filter handles dates', async () => {
     .build();
   await db.transact(async (tx) => {
     const { candidates } = await getCandidateEntityIds(tx.storeTx, query);
-    expectUnorderedArrayEquality(candidates, ['tests#1', 'tests#2', 'tests#3']);
+    expectUnorderedArrayEquality(await genToArr(candidates), [
+      'tests#1',
+      'tests#2',
+      'tests#3',
+    ]);
   });
 });

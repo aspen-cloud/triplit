@@ -43,6 +43,7 @@ import {
   initialFetchExecutionContext,
 } from '../src/collection-query.js';
 import { prepareQuery } from '../src/query/prepare.js';
+import { DEFAULT_PAGE_SIZE as TUPLE_DB_DEFAULT_PAGE_SIZE } from '../src/multi-tuple-store.js';
 
 const pause = async (ms: number = 100) =>
   new Promise((resolve) => setTimeout(resolve, ms));
@@ -132,55 +133,78 @@ describe('Database API', () => {
     expect(notAStudent).toBeNull();
   });
 
-  it('supports basic queries with filters', async () => {
-    const eq = await db.fetch(
-      CollectionQueryBuilder('Class')
-        .where([['level', '=', 100]])
-        .build()
-    );
-    expect(eq.size).toBe(classes.filter((cls) => cls.level === 100).length);
-    const neq = await db.fetch(
-      CollectionQueryBuilder('Class')
-        .where([['level', '!=', 100]])
-        .build()
-    );
-    expect(neq.size).toBe(classes.filter((cls) => cls.level !== 100).length);
-    const gt = await db.fetch(
-      CollectionQueryBuilder('Class')
-        .where([['level', '>', 100]])
-        .build()
-    );
-    expect(gt.size).toBe(classes.filter((cls) => cls.level > 100).length);
-    const gte = await db.fetch(
-      CollectionQueryBuilder('Class')
-        .where([['level', '>=', 100]])
-        .build()
-    );
-    expect(gte.size).toBe(classes.filter((cls) => cls.level >= 100).length);
-    const lt = await db.fetch(
-      CollectionQueryBuilder('Class')
-        .where([['level', '<', 200]])
-        .build()
-    );
-    expect(lt.size).toBe(classes.filter((cls) => cls.level < 200).length);
-    const lte = await db.fetch(
-      CollectionQueryBuilder('Class')
-        .where([['level', '<=', 200]])
-        .build()
-    );
-    expect(lte.size).toBe(classes.filter((cls) => cls.level <= 200).length);
-    const _in = await db.fetch(
-      CollectionQueryBuilder('Class')
-        .where([['level', 'in', [100, 200]]])
-        .build()
-    );
-    expect(_in.size).toBe(4);
-    const nin = await db.fetch(
-      CollectionQueryBuilder('Class')
-        .where([['level', 'nin', [100, 200]]])
-        .build()
-    );
-    expect(nin.size).toBe(1);
+  describe('Supports basic queries with filters', () => {
+    it('supports equality operator', async () => {
+      const eq = await db.fetch(
+        CollectionQueryBuilder('Class')
+          .where([['level', '=', 100]])
+          .build()
+      );
+      expect(eq.size).toBe(classes.filter((cls) => cls.level === 100).length);
+    });
+
+    it('supports inequality operator', async () => {
+      const neq = await db.fetch(
+        CollectionQueryBuilder('Class')
+          .where([['level', '!=', 100]])
+          .build()
+      );
+      expect(neq.size).toBe(classes.filter((cls) => cls.level !== 100).length);
+    });
+
+    it('supports greater than operator', async () => {
+      const gt = await db.fetch(
+        CollectionQueryBuilder('Class')
+          .where([['level', '>', 100]])
+          .build()
+      );
+      expect(gt.size).toBe(classes.filter((cls) => cls.level > 100).length);
+    });
+
+    it('supports greater than or equal operator', async () => {
+      const gte = await db.fetch(
+        CollectionQueryBuilder('Class')
+          .where([['level', '>=', 100]])
+          .build()
+      );
+      expect(gte.size).toBe(classes.filter((cls) => cls.level >= 100).length);
+    });
+
+    it('supports less than operator', async () => {
+      const lt = await db.fetch(
+        CollectionQueryBuilder('Class')
+          .where([['level', '<', 200]])
+          .build()
+      );
+      expect(lt.size).toBe(classes.filter((cls) => cls.level < 200).length);
+    });
+
+    it('supports less than or equal operator', async () => {
+      const lte = await db.fetch(
+        CollectionQueryBuilder('Class')
+          .where([['level', '<=', 200]])
+          .build()
+      );
+      expect(lte.size).toBe(classes.filter((cls) => cls.level <= 200).length);
+    });
+
+    it('supports "in" operator', async () => {
+      const _in = await db.fetch(
+        CollectionQueryBuilder('Class')
+          .where([['level', 'in', [100, 200]]])
+          .build()
+      );
+      expect(_in.size).toBe(4);
+    });
+
+    it('supports "nin" operator', async () => {
+      const nin = await db.fetch(
+        CollectionQueryBuilder('Class')
+          .where([['level', 'nin', [100, 200]]])
+          .build()
+      );
+      expect(nin.size).toBe(1);
+    });
   });
   it('treats "in" operations on sets as a defacto "intersects"', async () => {
     const newDb = new DB({
@@ -932,92 +956,29 @@ it('safely handles multiple subscriptions', async () => {
   await db.insert('bands', { name: 'The Who', genre: 'Rock', founded: 1964 });
 });
 
-const TEST_SCORES = [
-  {
-    score: 80,
-    date: '2023-04-16',
-  },
-  {
-    score: 76,
-    date: '2023-03-06',
-  },
-  {
-    score: 95,
-    date: '2023-04-20',
-  },
-  {
-    score: 87,
-    date: '2023-04-21',
-  },
-  {
-    score: 75,
-    date: '2023-04-09',
-  },
-  {
-    score: 70,
-    date: '2023-05-28',
-  },
-  {
-    score: 80,
-    date: '2023-03-16',
-  },
-  {
-    score: 78,
-    date: '2023-05-01',
-  },
-  {
-    score: 70,
-    date: '2023-04-23',
-  },
-  {
-    score: 76,
-    date: '2023-04-06',
-  },
-  {
-    score: 99,
-    date: '2023-03-24',
-  },
-  {
-    score: 73,
-    date: '2023-03-13',
-  },
-  {
-    score: 87,
-    date: '2023-04-12',
-  },
-  {
-    score: 99,
-    date: '2023-03-17',
-  },
-  {
-    score: 87,
-    date: '2023-04-24',
-  },
-  {
-    score: 96,
-    date: '2023-03-26',
-  },
-  {
-    score: 91,
-    date: '2023-05-07',
-  },
-  {
-    score: 75,
-    date: '2023-04-17',
-  },
-  {
-    score: 98,
-    date: '2023-05-28',
-  },
-  {
-    score: 96,
-    date: '2023-05-24',
-  },
-];
+function generateTestScores(numScores: number) {
+  const scores = [];
+  for (let i = 0; i < numScores; i++) {
+    const score = Math.floor(Math.random() * 100) + 1;
+    const date = generateRandomDate();
+    scores.push({ score, date });
+  }
+  return scores;
+}
+
+function generateRandomDate(): string {
+  const start = new Date(2022, 0, 1);
+  const end = new Date();
+  const randomDate = new Date(
+    start.getTime() + Math.random() * (end.getTime() - start.getTime())
+  );
+  return randomDate.toISOString().split('T')[0];
+}
+
+let TEST_SCORES = generateTestScores(TUPLE_DB_DEFAULT_PAGE_SIZE * 4);
 
 describe('ORDER & LIMIT & Pagination', () => {
   const db = new DB({
-    source: storage,
     schema: {
       collections: {
         TestScores: {
@@ -1031,7 +992,8 @@ describe('ORDER & LIMIT & Pagination', () => {
     },
   });
   beforeEach(async () => {
-    storage.wipe();
+    await db.clear();
+    console.log(`inserting ${TEST_SCORES.length} test scores`);
     for (const result of TEST_SCORES) {
       await db.insert('TestScores', result);
     }
@@ -1039,7 +1001,7 @@ describe('ORDER & LIMIT & Pagination', () => {
 
   it('order by DESC', async () => {
     const descendingScoresResults = await db.fetch(
-      CollectionQueryBuilder('TestScores').order(['score', 'DESC']).build()
+      db.query('TestScores').order('score', 'DESC').build()
     );
     expect(descendingScoresResults.size).toBe(TEST_SCORES.length);
     const areAllScoresDescending = Array.from(
@@ -1189,7 +1151,7 @@ describe('ORDER & LIMIT & Pagination', () => {
 
   it('properly orders after update', async () => {
     const initialOrdered = await db.fetch(
-      CollectionQueryBuilder('TestScores').order(['score', 'ASC']).build()
+      db.query('TestScores').order('score', 'ASC').build()
     );
     expect(initialOrdered.size).toBe(TEST_SCORES.length);
     const areAllScoresDescending = Array.from(initialOrdered.values()).every(
@@ -1270,11 +1232,9 @@ describe('ORDER & LIMIT & Pagination', () => {
 
   it('limit', async () => {
     const descendingScoresResults = await db.fetch(
-      CollectionQueryBuilder('TestScores')
-        .order(['score', 'DESC'])
-        .limit(5)
-        .build()
+      db.query('TestScores').order('score', 'DESC').limit(5).build()
     );
+    console.log(await db.fetch(db.query('TestScores').limit(5).build()));
     expect(descendingScoresResults.size).toBe(5);
     const areAllScoresDescending = Array.from(
       descendingScoresResults.values()
@@ -1288,54 +1248,58 @@ describe('ORDER & LIMIT & Pagination', () => {
   });
 
   it('can paginate DESC', async () => {
+    const PAGE_SIZE = Math.round(TUPLE_DB_DEFAULT_PAGE_SIZE * 1.5);
     const firstPageResults = await db.fetch(
-      CollectionQueryBuilder('TestScores')
-        .order(['score', 'DESC'])
-        .limit(5)
-        .build()
+      db.query('TestScores').order('score', 'DESC').limit(PAGE_SIZE).build()
     );
-    expect([...firstPageResults.values()].map((r) => r.score)).toEqual([
-      99, 99, 98, 96, 96,
-    ]);
+    const sortedScoresDesc = TEST_SCORES.map((r) => r.score).sort(
+      (a, b) => b - a
+    );
+    expect([...firstPageResults.values()].map((r) => r.score)).toEqual(
+      sortedScoresDesc.slice(0, PAGE_SIZE)
+    );
 
-    const lastDoc = [...firstPageResults.entries()][4];
+    const lastDoc = [...firstPageResults.entries()].at(-1);
 
     const secondPageResults = await db.fetch(
-      CollectionQueryBuilder('TestScores')
-        .order(['score', 'DESC'])
-        .limit(5)
+      db
+        .query('TestScores')
+        .order('score', 'DESC')
+        .limit(PAGE_SIZE)
         .after([lastDoc[1].score, lastDoc[0]])
         .build()
     );
 
-    expect([...secondPageResults.values()].map((r) => r.score)).toEqual([
-      95, 91, 87, 87, 87,
-    ]);
+    expect([...secondPageResults.values()].map((r) => r.score)).toEqual(
+      sortedScoresDesc.slice(PAGE_SIZE, PAGE_SIZE * 2)
+    );
   });
 
   it('can paginate ASC', async () => {
+    const PAGE_SIZE = Math.round(TUPLE_DB_DEFAULT_PAGE_SIZE * 1.5);
     const firstPageResults = await db.fetch(
-      CollectionQueryBuilder('TestScores')
-        .order(['score', 'ASC'])
-        .limit(5)
-        .build()
+      db.query('TestScores').order('score', 'ASC').limit(PAGE_SIZE).build()
     );
-    expect([...firstPageResults.values()].map((r) => r.score)).toEqual([
-      70, 70, 73, 75, 75,
-    ]);
+    const sortedScoresAsc = TEST_SCORES.map((r) => r.score).sort(
+      (a, b) => a - b
+    );
+    expect([...firstPageResults.values()].map((r) => r.score)).toEqual(
+      sortedScoresAsc.slice(0, PAGE_SIZE)
+    );
 
-    const lastDoc = [...firstPageResults.entries()][4];
+    const lastDoc = [...firstPageResults.entries()].at(-1);
 
     const secondPageResults = await db.fetch(
-      CollectionQueryBuilder('TestScores')
-        .order(['score', 'ASC'])
-        .limit(5)
+      db
+        .query('TestScores')
+        .order('score', 'ASC')
+        .limit(PAGE_SIZE)
         .after([lastDoc[1].score, lastDoc[0]])
         .build()
     );
-    expect([...secondPageResults.values()].map((r) => r.score)).toEqual([
-      76, 76, 78, 80, 80,
-    ]);
+    expect([...secondPageResults.values()].map((r) => r.score)).toEqual(
+      sortedScoresAsc.slice(PAGE_SIZE, PAGE_SIZE * 2)
+    );
   });
   it('can pull in more results to satisfy limit in subscription when current result no longer satisfies FILTER', async () => {
     const LIMIT = 5;

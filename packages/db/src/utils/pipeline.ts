@@ -112,7 +112,7 @@ export class Pipeline<T, R = T> {
   //   });
   // }
 
-  async run(source: T[]) {
+  async run(source: T[] | Iterable<T> | AsyncIterable<T>) {
     this.stages.push([
       'aggregate',
       async (items: any[]) => items,
@@ -138,14 +138,17 @@ export class Pipeline<T, R = T> {
     );
 
     async function runStages(
-      source: T[],
+      source: T[] | Iterable<T> | AsyncIterable<T>,
       stages: StageTuple[],
       context: { limit: number; takeWhile?: FilterFunc<T> }
     ) {
       let result = [];
-      const limit = Math.min(source.length ?? Infinity, context.limit);
-      itemLoop: for (let i = 0; i < source.length; i++) {
-        let item = source[i];
+      const limit = Math.min(
+        source instanceof Array ? source.length : Infinity,
+        context.limit
+      );
+      let i = 0;
+      itemLoop: for await (let item of source) {
         stageLoop: for (const stage of stages) {
           const [stageType, func] = stage;
           if (stageType === 'map') {
@@ -164,23 +167,23 @@ export class Pipeline<T, R = T> {
           break itemLoop;
         }
         result.push(item);
-
         if (result.length >= limit) {
           break itemLoop;
         }
+        i++;
       }
       return result;
     }
 
-    let result: any[] = source;
+    let result = source;
     for (const stageGroup of stageGroups) {
-      const [_, aggregateor, aggContext] = stageGroup.at(-1) as AggregateTuple;
+      const [_, aggregator, aggContext] = stageGroup.at(-1) as AggregateTuple;
       const pipeStages = stageGroup.slice(0, -1);
-      result = await aggregateor(
+      result = await aggregator(
         await runStages(result, pipeStages, aggContext)
       );
     }
 
-    return result as R[];
+    return result;
   }
 }

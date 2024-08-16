@@ -55,6 +55,7 @@ import {
 import { prepareQuery } from './query/prepare.js';
 import { getRolesFromSession } from './schema/permissions.js';
 import { diffSchemas } from './schema/diff.js';
+import { genToArr } from './utils/generator.js';
 
 const DEFAULT_CACHE_DISABLED = true;
 
@@ -1216,9 +1217,9 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
     // Each entity has a hidden _collection attribute which the value
     // is just the name of the collection it belongs to
     // e.g. { id: '123', name: 'alice', _collection: 'users'}
-    const collectionMetaTriples = await this.tripleStore.findByAttribute([
-      '_collection',
-    ]);
+    const collectionMetaTriples = await genToArr(
+      this.tripleStore.findByAttribute(['_collection'])
+    );
 
     const stats = new Map();
     for (let trip of collectionMetaTriples) {
@@ -1239,7 +1240,7 @@ export default class DB<M extends Models<any, any> | undefined = undefined> {
     } else {
       // Just delete triples
       await this.tripleStore.transact(async (tx) => {
-        const allTriples = await tx.findByEntity();
+        const allTriples = await genToArr(tx.findByEntity());
         // Filter out synced metadata
         const dataTriples = allTriples.filter(
           ({ id }) => !id.includes('_metadata')

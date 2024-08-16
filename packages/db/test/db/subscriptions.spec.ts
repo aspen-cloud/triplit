@@ -5,6 +5,7 @@ import {
   testSubscription,
   testSubscriptionTriples,
 } from '../utils/test-subscription.js';
+import { genToArr } from '../../src/utils/generator.js';
 
 describe('subscriptions', () => {
   let db: DB<any>;
@@ -489,7 +490,7 @@ describe('single entity subscriptions', async () => {
       },
     ]);
   });
-  it("can should return nothing if the entity doesn't exist, and then update when it is inserted and deleted", async () => {
+  it("should return nothing if the entity doesn't exist, and then update when it is inserted and deleted", async () => {
     await Promise.all(defaultData.map((doc) => db.insert('students', doc)));
     await testSubscription(db, db.query('students').entityId('6').build(), [
       {
@@ -519,7 +520,7 @@ describe('single entity subscriptions', async () => {
       },
       {
         action: async () => {
-          const allTriples = await db.tripleStore.findByEntity();
+          const allTriples = await genToArr(db.tripleStore.findByEntity());
           await db.tripleStore.deleteTriples(allTriples);
         },
         check: async (results) => {

@@ -23,6 +23,7 @@ import {
   TriplitError,
 } from './errors.js';
 import { MirroredArray } from './utils/mirrored-array.js';
+import { genToArr } from './utils/generator.js';
 
 export type StorageScope = {
   read?: string[];
@@ -70,6 +71,70 @@ type MultiTupleStoreHooks<TupleSchema extends KeyValuePair> = {
   // Runs after committing a transaction (notably different from reactivity hooks, which are fire and forget in the event loop)
   afterCommit: MultiTupleStoreAfterCommitHook<TupleSchema>[];
 };
+
+export const DEFAULT_PAGE_SIZE = 100;
+
+async function* lazyScan<
+  TupleSchema extends KeyValuePair,
+  T extends Tuple,
+  P extends TuplePrefix<T>
+>(
+  stores:
+    | AsyncTupleDatabaseClient<TupleSchema>[]
+    | AsyncTupleRootTransactionApi<TupleSchema>[],
+  args?: ScanArgs<T, P> | undefined,
+  batchSize: number = 100
+): AsyncGenerator<
+  Extract<TupleSchema, { key: TupleToObject<P> }>,
+  void,
+  undefined
+> {
+  const comparer = (a: TupleSchema, b: TupleSchema) =>
+    (compareTuple(a.key, b.key) * (args?.reverse ? -1 : 1)) as 1 | -1 | 0;
+
+  // let cursorKey: (TupleToObject<P> & Tuple) | undefined;
+  let cursorKey: (TupleToObject<P> & Tuple) | undefined;
+  let remainingLimit = args?.limit ?? Infinity;
+
+  while (remainingLimit > 0) {
+    const batchLimit = Math.min(batchSize, remainingLimit);
+    const batchArgs = {
+      limit: batchLimit || args?.limit,
+    };
+    if (!args?.reverse) {
+      Object.assign(batchArgs, {
+        gt: cursorKey ?? args?.gt,
+        gte: cursorKey ? undefined : args?.gte,
+      });
+    } else {
+      Object.assign(batchArgs, {
+        lt: cursorKey ?? args?.lt,
+        lte: cursorKey ? undefined : args?.lte,
+      });
+    }
+    const results = mergeMultipleSortedArrays(
+      await Promise.all(
+        stores.map((store) => store.scan({ ...args, ...batchArgs }))
+      ),
+      comparer
+    );
+    if (results.length === 0) {
+      break;
+    }
+
+    for (const result of results) {
+      yield result;
+      remainingLimit--;
+      cursorKey = result.key.slice(
+        args?.prefix?.length ?? 0
+      ) as TupleToObject<P> & Tuple;
+    }
+
+    if (results.length < batchLimit) {
+      break;
+    }
+  }
+}
 
 export default class MultiTupleStore<TupleSchema extends KeyValuePair> {
   readonly storageScope?: StorageScope;
@@ -169,19 +234,18 @@ export default class MultiTupleStore<TupleSchema extends KeyValuePair> {
     this._ownHooks.beforeScan.push(callback);
   }
 
-  async scan<T extends Tuple, P extends TuplePrefix<T>>(
+  async *scan<T extends Tuple, P extends TuplePrefix<T>>(
     args?: ScanArgs<T, P> | undefined,
-    txId?: string | undefined
-  ): Promise<Extract<TupleSchema, { key: TupleToObject<P> }>[]> {
+    txId?: string | undefined,
+    batchSize: number = DEFAULT_PAGE_SIZE
+  ): AsyncGenerator<
+    Extract<TupleSchema, { key: TupleToObject<P> }>,
+    void,
+    undefined
+  > {
     const storages = this.getStorageClients('read');
 
-    const comparer = (a: TupleSchema, b: TupleSchema) =>
-      (compareTuple(a.key, b.key) * (args?.reverse ? -1 : 1)) as 1 | -1 | 0;
-
-    return mergeMultipleSortedArrays(
-      await Promise.all(storages.map((store) => store.scan(args, txId))),
-      comparer
-    );
+    yield* lazyScan(storages, args, batchSize);
   }
 
   subscribe<T extends Tuple, P extends TuplePrefix<T>>(
@@ -290,7 +354,7 @@ export default class MultiTupleStore<TupleSchema extends KeyValuePair> {
 
   async clear() {
     await this.autoTransact(async (tx) => {
-      const allData = await tx.scan();
+      const allData = await genToArr(tx.scan());
       allData.forEach((data) => tx.remove(data.key));
     }, this.storageScope);
   }
@@ -318,16 +382,15 @@ export class ScopedMultiTupleOperator<TupleSchema extends KeyValuePair> {
     this.hooks = hooks;
   }
 
-  async scan<T extends Tuple, P extends TuplePrefix<T>>(
-    args?: ScanArgs<T, P> | undefined
-  ): Promise<TupleSchema[]> {
-    const comparer = (a: TupleSchema, b: TupleSchema) =>
-      (compareTuple(a.key, b.key) * (args?.reverse ? -1 : 1)) as 1 | -1 | 0;
-
-    return mergeMultipleSortedArrays(
-      await Promise.all(this.txScope.read.map((store) => store.scan(args))),
-      comparer
-    );
+  async *scan<T extends Tuple, P extends TuplePrefix<T>>(
+    args?: ScanArgs<T, P> | undefined,
+    batchSize: number = DEFAULT_PAGE_SIZE
+  ): AsyncGenerator<
+    Extract<TupleSchema, { key: TupleToObject<P> }>,
+    void,
+    undefined
+  > {
+    yield* lazyScan<TupleSchema, T, P>(this.txScope.read, args, batchSize);
   }
 
   async exists<T extends Tuple>(tuple: T): Promise<boolean> {
@@ -536,19 +599,19 @@ export class MultiTupleTransaction<
     this._ownHooks.afterCommit.push(callback);
   }
 
-  async scan<T extends Tuple, P extends TuplePrefix<T>>(
-    args?: ScanArgs<T, P> | undefined
-  ): Promise<TupleSchema[]> {
+  async *scan<T extends Tuple, P extends TuplePrefix<T>>(
+    args?: ScanArgs<T, P> | undefined,
+    batchSize: number = DEFAULT_PAGE_SIZE
+  ): AsyncGenerator<
+    Extract<TupleSchema, { key: TupleToObject<P> }>,
+    void,
+    undefined
+  > {
     for (const beforeHook of this.hooks.beforeScan) {
       await beforeHook(args, this);
     }
-    const comparer = (a: TupleSchema, b: TupleSchema) =>
-      (compareTuple(a.key, b.key) * (args?.reverse ? -1 : 1)) as 1 | -1 | 0;
 
-    return mergeMultipleSortedArrays(
-      await Promise.all(this.txScope.read.map((store) => store.scan(args))),
-      comparer
-    );
+    yield* lazyScan(this.txScope.read, args, batchSize);
   }
 
   withScope(scope: StorageScope) {
