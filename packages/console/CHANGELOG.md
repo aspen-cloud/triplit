@@ -1,5 +1,17 @@
 # @triplit/console
 
+## 0.3.97
+
+### Patch Changes
+
+- a6caa166: simplify token scheme
+- Updated dependencies [96d4d8ff]
+- Updated dependencies [d11d57e2]
+- Updated dependencies [ffb00f68]
+  - @triplit/db@0.3.69
+  - @triplit/client@0.4.6
+  - @triplit/react@0.3.95
+
 ## 0.3.96
 
 ### Patch Changes

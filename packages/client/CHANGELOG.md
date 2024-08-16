@@ -1,5 +1,15 @@
 # @triplit/client
 
+## 0.4.6
+
+### Patch Changes
+
+- d11d57e2: Use async generators for tuple scans rather than arrays for lazy pagination of indexes that will reduce memory and increase performance on large datasets
+- Updated dependencies [96d4d8ff]
+- Updated dependencies [d11d57e2]
+- Updated dependencies [ffb00f68]
+  - @triplit/db@0.3.69
+
 ## 0.4.5
 
 ### Patch Changes

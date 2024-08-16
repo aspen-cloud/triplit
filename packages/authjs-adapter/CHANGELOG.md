@@ -1,5 +1,13 @@
 # @triplit/authjs-adapter
 
+## 1.0.1
+
+### Patch Changes
+
+- a6caa166: simplify token scheme
+- Updated dependencies [d11d57e2]
+  - @triplit/client@0.4.6
+
 ## 1.0.0
 
 ### Patch Changes

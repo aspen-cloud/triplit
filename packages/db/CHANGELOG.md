@@ -1,5 +1,13 @@
 # @triplit/db
 
+## 0.3.69
+
+### Patch Changes
+
+- 96d4d8ff: Fix filter bugs
+- d11d57e2: Use async generators for tuple scans rather than arrays for lazy pagination of indexes that will reduce memory and increase performance on large datasets
+- ffb00f68: Add exists operator for filtering optional / undefined values
+
 ## 0.3.68
 
 ### Patch Changes
