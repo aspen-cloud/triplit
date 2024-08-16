@@ -238,3 +238,23 @@ Will also be valid:
 }
 */
 ```
+
+Optional attributes support the `isDefined` operator, which checks if the specified attribute is defined.
+
+```typescript
+import { Schema as S } from '@triplit/client';
+const schema = {
+  profiles: {
+    schema: S.Schema({
+      id: S.Id(),
+      name: S.String(),
+      email: S.Optional(S.String()),
+    }),
+  },
+};
+
+const query = client
+  .query('profiles')
+  .where('email', 'isDefined', true)
+  .build();
+```
