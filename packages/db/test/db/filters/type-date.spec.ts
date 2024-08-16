@@ -4,6 +4,7 @@ import {
   genData,
   shuffleArray,
   testEq,
+  testFilterOp,
   testGt,
   testGte,
   testLt,
@@ -14,7 +15,7 @@ import {
 // If this fails, add tests for the missing operations
 it('expected operations are tested', () => {
   expect(new Set(S.Date().supportedOperations)).toEqual(
-    new Set(['=', '!=', '>', '>=', '<', '<='])
+    new Set(['=', '!=', '>', '>=', '<', '<=', 'exists'])
   );
 });
 
@@ -679,6 +680,77 @@ describe.each([{ skipIndex: false }, { skipIndex: true }])(
           {
             cmp: new Date(2020, 1, 1),
             expected: [],
+          },
+          { skipIndex }
+        );
+      });
+    });
+    describe('exists', () => {
+      it('required', async () => {
+        const data = genData([new Date(2021, 1, 1)]);
+        shuffleArray(data);
+
+        // date values exist
+        await testFilterOp(
+          'exists',
+          requiredSchema,
+          data,
+          { cmp: true, expected: [0] },
+          { skipIndex }
+        );
+        await testFilterOp(
+          'exists',
+          requiredSchema,
+          data,
+          {
+            cmp: false,
+            expected: [],
+          },
+          { skipIndex }
+        );
+      });
+      it('nullable', async () => {
+        const data = genData([null]);
+        shuffleArray(data);
+
+        // null values exist
+        await testFilterOp(
+          'exists',
+          nullableSchema,
+          data,
+          { cmp: true, expected: [0] },
+          { skipIndex }
+        );
+        await testFilterOp(
+          'exists',
+          nullableSchema,
+          data,
+          {
+            cmp: false,
+            expected: [],
+          },
+          { skipIndex }
+        );
+      });
+      it('optional', async () => {
+        const data = genData([undefined]);
+        shuffleArray(data);
+
+        // undefined values dont exist
+        await testFilterOp(
+          'exists',
+          optionalSchema,
+          data,
+          { cmp: true, expected: [] },
+          { skipIndex }
+        );
+        await testFilterOp(
+          'exists',
+          optionalSchema,
+          data,
+          {
+            cmp: false,
+            expected: [0],
           },
           { skipIndex }
         );

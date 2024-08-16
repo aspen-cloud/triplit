@@ -33,7 +33,8 @@ export type Operator =
   | 'in'
   | 'nin'
   | 'has'
-  | '!has';
+  | '!has'
+  | 'exists';
 
 export type Optional<T extends DataType> = T & { context: { optional: true } };
 

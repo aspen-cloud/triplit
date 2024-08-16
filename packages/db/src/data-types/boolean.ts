@@ -11,7 +11,7 @@ import {
   JSONValueParseError,
 } from '../errors.js';
 
-const BOOLEAN_OPERATORS = ['=', '!='] as const;
+const BOOLEAN_OPERATORS = ['=', '!=', 'exists'] as const;
 type BooleanOperators = typeof BOOLEAN_OPERATORS;
 
 export type BooleanType<TypeOptions extends UserTypeOptions = {}> =

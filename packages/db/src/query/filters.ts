@@ -200,6 +200,8 @@ export function satisfiesSetFilter(
     if (!setData) return true;
     const filteredSet = Object.entries(setData).filter(([_v, inSet]) => inSet);
     return filteredSet.every(([v]) => v !== filterValue);
+  } else if (op === 'exists') {
+    return filterValue ? setData !== undefined : setData === undefined;
   } else {
     if (!setData) return false;
     const filteredSet = Object.entries(setData).filter(([_v, inSet]) => inSet);
@@ -273,6 +275,9 @@ function isOperatorSatisfied(op: Operator, value: any, filterValue: any) {
       return new Set(filterValue).has(value);
     case 'nin':
       return !new Set(filterValue).has(value);
+
+    case 'exists':
+      return filterValue ? value !== undefined : value === undefined;
     default:
       throw new InvalidFilterError(`The operator ${op} is not recognized.`);
   }

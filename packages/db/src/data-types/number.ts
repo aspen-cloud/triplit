@@ -20,6 +20,7 @@ const NUMBER_OPERATORS = [
   '>=',
   'in',
   'nin',
+  'exists',
 ] as const;
 type NumberOperators = typeof NUMBER_OPERATORS;
 

@@ -18,7 +18,7 @@ import { ExtractJSType } from './type.js';
 import { ChangeTracker } from '../db-transaction.js';
 import { TypeWithOptions } from './value.js';
 
-const SET_OPERATORS = ['=', '!=', 'has', '!has'] as const;
+const SET_OPERATORS = ['=', '!=', 'has', '!has', 'exists'] as const;
 type SetOperators = typeof SET_OPERATORS;
 
 export type SetType<

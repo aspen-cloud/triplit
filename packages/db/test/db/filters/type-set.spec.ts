@@ -5,7 +5,7 @@ import { genData, shuffleArray, testFilterOp } from './utils.js';
 // If this fails, add tests for the missing operations
 it('expected operations are tested', () => {
   expect(new Set(S.Set(S.String()).supportedOperations)).toEqual(
-    new Set(['=', '!=', 'has', '!has'])
+    new Set(['=', '!=', 'has', '!has', 'exists'])
   );
 });
 
@@ -210,6 +210,77 @@ describe.each([{ skipIndex: false }, { skipIndex: true }])(
           optionalSchema,
           data,
           { cmp: 'e', expected: [0, 1, 2, 3] },
+          { skipIndex }
+        );
+      });
+    });
+    describe('exists', () => {
+      it('required', async () => {
+        const data = genData([new Set(['a', 'b'])]);
+        shuffleArray(data);
+
+        // set values exist
+        await testFilterOp(
+          'exists',
+          requiredSchema,
+          data,
+          { cmp: true, expected: [0] },
+          { skipIndex }
+        );
+        await testFilterOp(
+          'exists',
+          requiredSchema,
+          data,
+          {
+            cmp: false,
+            expected: [],
+          },
+          { skipIndex }
+        );
+      });
+      it('nullable', async () => {
+        const data = genData([null]);
+        shuffleArray(data);
+
+        // null values exist
+        await testFilterOp(
+          'exists',
+          nullableSchema,
+          data,
+          { cmp: true, expected: [0] },
+          { skipIndex }
+        );
+        await testFilterOp(
+          'exists',
+          nullableSchema,
+          data,
+          {
+            cmp: false,
+            expected: [],
+          },
+          { skipIndex }
+        );
+      });
+      it('optional', async () => {
+        const data = genData([undefined]);
+        shuffleArray(data);
+
+        // undefined values dont exist
+        await testFilterOp(
+          'exists',
+          optionalSchema,
+          data,
+          { cmp: true, expected: [] },
+          { skipIndex }
+        );
+        await testFilterOp(
+          'exists',
+          optionalSchema,
+          data,
+          {
+            cmp: false,
+            expected: [0],
+          },
           { skipIndex }
         );
       });
