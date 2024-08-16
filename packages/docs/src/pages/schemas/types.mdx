@@ -37,7 +37,7 @@ import { Schema as S } from '@triplit/client';
 const stringType = S.String();
 ```
 
-Strings support `=`, `!=`, `like`, `nlike`, `in`, and `nin` operators in `where` statements.
+Strings support `=`, `!=`, `like`, `nlike`, `in`, `nin`, and `isDefined` operators in `where` statements.
 
 ##### `like` and `nlike`
 
@@ -74,7 +74,7 @@ import { Schema as S } from '@triplit/client';
 const numberType = S.Number();
 ```
 
-Numbers support `=`, `!=`, `>`, `>=`, `<`, `<=`, `in`, and `nin` operators in `where` statements.
+Numbers support `=`, `!=`, `>`, `>=`, `<`, `<=`, `in`, `nin`, and `isDefined` operators in `where` statements.
 
 #### Boolean
 
@@ -85,7 +85,7 @@ import { Schema as S } from '@triplit/client';
 const booleanType = S.Boolean();
 ```
 
-Booleans support `=`, `!=` operators in `where` statements.
+Booleans support `=`, `!=`, and `isDefined` operators in `where` statements.
 
 #### Date
 
@@ -96,7 +96,7 @@ import { Schema as S } from '@triplit/client';
 const dateType = S.Date();
 ```
 
-Dates support `=`, `!=`, `>`, `>=`, `<`, `<=` operators in `where` statements.
+Dates support `=`, `!=`, `>`, `>=`, `<`, `<=`, and `isDefined` operators in `where` statements.
 
 #### Options
 
@@ -184,7 +184,7 @@ import { Schema as S } from '@triplit/client';
 const stringSet = S.Set(S.String());
 ```
 
-Sets support `has` and `!has` operators in `where` statements, which check if the set does or does not contain the value.
+Sets support `has` and `!has` operators in `where` statements, which check if the set does or does not contain the value. They also support the `isDefined` operator.
 
 ### Record
 
