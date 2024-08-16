@@ -18,7 +18,7 @@ const STRING_OPERATORS = [
   'nlike',
   'in',
   'nin',
-  'exists',
+  'isDefined',
 ] as const;
 type StringOperators = typeof STRING_OPERATORS;
 

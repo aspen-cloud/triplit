@@ -12,7 +12,7 @@ import {
 } from '../errors.js';
 import { isDateTime } from '../utils/date.js';
 
-const DATE_OPERATORS = ['=', '!=', '<', '>', '<=', '>=', 'exists'] as const;
+const DATE_OPERATORS = ['=', '!=', '<', '>', '<=', '>=', 'isDefined'] as const;
 type DateOperators = typeof DATE_OPERATORS;
 
 export type DateType<TypeOptions extends UserTypeOptions = {}> = ValueInterface<

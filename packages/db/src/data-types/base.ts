@@ -34,7 +34,7 @@ export type Operator =
   | 'nin'
   | 'has'
   | '!has'
-  | 'exists';
+  | 'isDefined';
 
 export type Optional<T extends DataType> = T & { context: { optional: true } };
 

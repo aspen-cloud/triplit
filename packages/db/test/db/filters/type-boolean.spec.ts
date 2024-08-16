@@ -11,7 +11,7 @@ import {
 // If this fails, add tests for the missing operations
 it('expected operations are tested', () => {
   expect(new Set(S.Boolean().supportedOperations)).toEqual(
-    new Set(['=', '!=', 'exists'])
+    new Set(['=', '!=', 'isDefined'])
   );
 });
 
@@ -199,21 +199,21 @@ describe.each([{ skipIndex: false }, { skipIndex: true }])(
         );
       });
     });
-    describe('exists', () => {
+    describe('isDefined', () => {
       it('required', async () => {
         const data = genData([true, false]);
         shuffleArray(data);
 
         // boolean values exist
         await testFilterOp(
-          'exists',
+          'isDefined',
           requiredSchema,
           data,
           { cmp: true, expected: [0, 1] },
           { skipIndex }
         );
         await testFilterOp(
-          'exists',
+          'isDefined',
           requiredSchema,
           data,
           {
@@ -229,14 +229,14 @@ describe.each([{ skipIndex: false }, { skipIndex: true }])(
 
         // null values exist
         await testFilterOp(
-          'exists',
+          'isDefined',
           nullableSchema,
           data,
           { cmp: true, expected: [0] },
           { skipIndex }
         );
         await testFilterOp(
-          'exists',
+          'isDefined',
           nullableSchema,
           data,
           {
@@ -252,14 +252,14 @@ describe.each([{ skipIndex: false }, { skipIndex: true }])(
 
         // undefined values dont exist
         await testFilterOp(
-          'exists',
+          'isDefined',
           optionalSchema,
           data,
           { cmp: true, expected: [] },
           { skipIndex }
         );
         await testFilterOp(
-          'exists',
+          'isDefined',
           optionalSchema,
           data,
           {
