@@ -74,7 +74,31 @@ describe('transformOptions', () => {
       },
     };
     const output = transformOptions(input);
-    expect(output).toEqual({ type: ['string', 'null'] });
+    expect(output).toEqual({ type: ['string', 'null'], default: 'uuid' });
+  });
+
+  test('handle special Triplit default values: uuid', () => {
+    const input = {
+      type: 'string',
+      options: {
+        nullable: true,
+        default: { func: 'uuid', args: null },
+      },
+    };
+    const output = transformOptions(input);
+    expect(output).toEqual({ type: ['string', 'null'], default: 'uuid' });
+  });
+
+  test('handle special Triplit default values: now', () => {
+    const input = {
+      type: 'string',
+      options: {
+        nullable: true,
+        default: { func: 'now', args: null },
+      },
+    };
+    const output = transformOptions(input);
+    expect(output).toEqual({ type: ['string', 'null'], default: 'now' });
   });
 });
 
@@ -297,6 +321,7 @@ describe('Test all Transforms together', () => {
         obj: { type: 'string', format: 'date-time' },
         id: {
           type: ['string', 'null'],
+          default: 'uuid',
         },
 
         set_string: {
@@ -366,6 +391,7 @@ describe('Test all Transforms together', () => {
       properties: {
         id: {
           type: ['string', 'null'],
+          default: 'uuid',
         },
         recordType: { value: 1, obj: { type: 'object' } },
       },

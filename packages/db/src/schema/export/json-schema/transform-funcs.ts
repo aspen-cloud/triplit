@@ -67,10 +67,12 @@ function transformDefault(object: any) {
       typeof object?.options?.default === 'number'
     ) {
       object.default = object.options.default;
-    } else {
-      // Handle complex default values (e.g., functions) if needed
-      // triplit uses: default: { func: 'uuid', args: null }
-      // Currently, we're not handling these cases
+      return;
+    }
+
+    if (object?.options?.default?.func != null) {
+      // Handle  triplit's special cases: 'now' and 'uuid'
+      object.default = object.options.default.func;
     }
   }
 }
