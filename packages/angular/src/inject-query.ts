@@ -2,6 +2,7 @@ import type {
   ClientFetchResult,
   ClientQuery,
   ClientQueryBuilder,
+  CollectionNameFromModels,
   Models,
   SubscriptionOptions,
   TriplitClient,
@@ -21,42 +22,46 @@ import {
 import { assertInjector } from './util/assert-injector';
 
 type QueryResults<
-  M extends Models<any, any> | undefined,
-  Q extends ClientQuery<M, any, any, any>
+  M extends Models,
+  CN extends CollectionNameFromModels<M>,
+  Q extends ClientQuery<M, CN>
 > = {
   fetching: Signal<boolean>;
   fetchingLocal: Signal<boolean>;
   fetchingRemote: Signal<boolean>;
-  results: Signal<Unalias<ClientFetchResult<Q>> | undefined>;
+  results: Signal<Unalias<ClientFetchResult<M, Q>> | undefined>;
   error: Signal<any>;
 };
 
 type QueryParams<
-  M extends Models<any, any> | undefined,
-  Q extends ClientQuery<M, any, any, any>
+  M extends Models,
+  CN extends CollectionNameFromModels<M>,
+  Q extends ClientQuery<M, CN>
 > = () => {
-  client: TriplitClient<any>;
-  query: ClientQueryBuilder<Q>;
+  client: TriplitClient<M>;
+  query: ClientQueryBuilder<M, CN, Q>;
   options?: Partial<SubscriptionOptions>;
 };
 
 export function injectQuery<
-  M extends Models<any, any> | undefined,
-  Q extends ClientQuery<M, any, any, any>
+  M extends Models,
+  CN extends CollectionNameFromModels<M>,
+  Q extends ClientQuery<M, CN>
 >(
   // TODO: make add WorkerClient to type
-  queryFn: QueryParams<M, Q>,
+  queryFn: QueryParams<M, CN, Q>,
   injector?: Injector
-): QueryResults<M, Q> {
+): QueryResults<M, CN, Q> {
   return assertInjector(injectQuery, injector, () => {
     return createBaseQuery(queryFn);
   });
 }
 
 function createBaseQuery<
-  M extends Models<any, any> | undefined,
-  Q extends ClientQuery<M, any, any, any>
->(queryFn: QueryParams<M, Q>): QueryResults<M, Q> {
+  M extends Models,
+  CN extends CollectionNameFromModels<M>,
+  Q extends ClientQuery<M, CN>
+>(queryFn: QueryParams<M, CN, Q>): QueryResults<M, CN, Q> {
   const injector = inject(Injector);
   const destroyRef = injector.get(DestroyRef);
 
@@ -69,7 +74,7 @@ function createBaseQuery<
     return runInInjectionContext(injector, () => queryFn());
   });
 
-  const resultSignal = signal<ClientFetchResult<Q> | undefined>(undefined);
+  const resultSignal = signal<ClientFetchResult<M, Q> | undefined>(undefined);
   const fetchingLocalSignal = signal(true);
   const fetchingRemoteSignal = signal(
     queryParamsSignal().client.connectionStatus !== 'CLOSED'
@@ -114,7 +119,7 @@ function createBaseQuery<
         (localResults) => {
           fetchingLocalSignal.set(false);
           errorSignal.set(undefined);
-          resultSignal.set(new Map(localResults));
+          resultSignal.set(new Map(localResults as any));
         },
         (error) => {
           fetchingLocalSignal.set(false);

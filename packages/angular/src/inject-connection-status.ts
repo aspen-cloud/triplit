@@ -3,7 +3,7 @@ import { assertInjector } from './util/assert-injector';
 import { Injector, signal, DestroyRef, Signal, inject } from '@angular/core';
 
 export function injectConnectionStatus(
-  client: TriplitClient<any>,
+  client: TriplitClient,
   injector?: Injector
 ): Signal<ConnectionStatus> {
   return assertInjector(injectConnectionStatus, injector, () => {

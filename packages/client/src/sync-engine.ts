@@ -1,4 +1,4 @@
-import DB, {
+import {
   CollectionQuery,
   TripleRow,
   TriplitError,
@@ -10,7 +10,6 @@ import DB, {
   Timestamp,
   TripleStoreApi,
   FetchResult,
-  SchemaQueries,
   Models,
   Unalias,
   ToQuery,
@@ -57,7 +56,7 @@ export class SyncEngine {
   private reconnectTimeoutDelay = 250;
   private reconnectTimeout: any;
 
-  private client: TriplitClient<any>;
+  private client: TriplitClient;
   private syncOptions: SyncOptions;
 
   private connectionChangeHandlers: Set<(status: ConnectionStatus) => void> =
@@ -79,7 +78,7 @@ export class SyncEngine {
    * @param options configuration options for the sync engine
    * @param db the client database to be synced
    */
-  constructor(client: TriplitClient<any>, options: SyncOptions) {
+  constructor(client: TriplitClient, options: SyncOptions) {
     this.client = client;
     this.logger = options.logger;
     this.syncOptions = options;

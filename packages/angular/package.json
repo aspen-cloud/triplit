@@ -7,7 +7,8 @@
   "module": "./dist/esm2022/index.mjs",
   "types": "./dist/index.d.ts",
   "scripts": {
-    "build": "ng-packagr -p ng-package.json -c tsconfig.build.json",
+    "build": "yarn lint && ng-packagr -p ng-package.json -c tsconfig.build.json",
+    "lint": "tsc --noEmit",
     "publish-pkg": "node ../../scripts/npm-check-version-and-publish.js",
     "validate:types": "node ../../scripts/check-for-local-references-in-declarations.js dist"
   },
