@@ -3,6 +3,7 @@ import type {
   ClientFetchResult,
   ClientQuery,
   ClientQueryBuilder,
+  CollectionNameFromModels,
   Models,
   SubscriptionOptions,
   TriplitClient,
@@ -20,23 +21,24 @@ import { WorkerClient } from '@triplit/client/worker-client';
  * @param options.onRemoteFulfilled - An optional callback that is called when the remote query has been fulfilled. * @returns An object containing the fetching state, the result of the query, any error that occurred, and a function to update the query
  */
 export function useQuery<
-  M extends Models<any, any> | undefined,
-  Q extends ClientQuery<M, any, any, any>
+  M extends Models,
+  CN extends CollectionNameFromModels<M>,
+  Q extends ClientQuery<M>
 >(
-  client: TriplitClient<any> | WorkerClient<any>,
-  query: ClientQueryBuilder<Q>,
+  client: TriplitClient<M> | WorkerClient<M>,
+  query: ClientQueryBuilder<M, CN, Q>,
   options?: Partial<SubscriptionOptions>
 ): {
   fetching: ComputedRef<boolean>;
   fetchingLocal: ComputedRef<boolean>;
   fetchingRemote: ComputedRef<boolean>;
-  results: ComputedRef<Unalias<ClientFetchResult<Q>> | undefined>;
+  results: ComputedRef<Unalias<ClientFetchResult<M, Q>> | undefined>;
   error: ComputedRef<unknown>;
-  updateQuery: (query: ClientQueryBuilder<Q>) => void;
+  updateQuery: (query: ClientQueryBuilder<M, CN, Q>) => void;
 } {
-  const results = ref<Unalias<ClientFetchResult<Q>> | undefined>(
+  const results = ref<Unalias<ClientFetchResult<M, Q>> | undefined>(
     undefined
-  ) as Ref<Unalias<ClientFetchResult<Q>> | undefined>;
+  ) as Ref<Unalias<ClientFetchResult<M, Q>> | undefined>;
   const isInitialFetch = ref(true);
   const fetchingLocal = ref(false);
   const fetchingRemote = ref(client.connectionStatus !== 'CLOSED');
@@ -48,7 +50,7 @@ export function useQuery<
 
   const builtQuery = ref(query && query.build()) as Ref<Q>;
 
-  function updateQuery(query: ClientQueryBuilder<Q>) {
+  function updateQuery(query: ClientQueryBuilder<M, CN, Q>) {
     builtQuery.value = query.build();
     results.value = undefined;
     fetchingLocal.value = true;
