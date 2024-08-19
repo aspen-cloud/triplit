@@ -25,7 +25,7 @@ type ClientQueryExtensions = {
  */
 export type ClientQuery<
   M extends ClientSchema,
-  CN extends CollectionNameFromModels<M>,
+  CN extends CollectionNameFromModels<M> = CollectionNameFromModels<M>,
   Selection extends QuerySelection<M, CN> = QuerySelection<M, CN>,
   Inclusions extends QueryInclusions<M, CN> = QueryInclusions<M, CN>
 > = CollectionQuery<M, CN, Selection, Inclusions> & ClientQueryExtensions;

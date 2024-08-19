@@ -6,6 +6,7 @@ import {
   TriplitClient,
   Unalias,
   FetchResultEntity,
+  CollectionNameFromModels,
 } from '@triplit/client';
 import { WorkerClient } from '@triplit/client/worker-client';
 import { useMemo } from 'react';
@@ -19,17 +20,18 @@ import { useQuery } from './use-query.js';
  * @returns An object containing the fetching state, the result of the query, and any error that occurred
  */
 export function useQueryOne<
-  M extends Models<any, any> | undefined,
-  Q extends ClientQuery<M, any, any, any>
+  M extends Models,
+  CN extends CollectionNameFromModels<M>,
+  Q extends ClientQuery<M, CN>
 >(
   client: TriplitClient<M> | WorkerClient<M>,
-  query: ClientQueryBuilder<Q>,
+  query: ClientQueryBuilder<M, CN, Q>,
   options?: Partial<SubscriptionOptions>
 ): {
   fetching: boolean;
   fetchingLocal: boolean;
   fetchingRemote: boolean;
-  result: Unalias<FetchResultEntity<Q>> | null;
+  result: Unalias<FetchResultEntity<M, Q>> | null;
   error: any;
 } {
   const fetchOneQuery = query.limit(1);
@@ -38,7 +40,7 @@ export function useQueryOne<
     fetchOneQuery,
     options
   );
-  const result = useMemo<FetchResultEntity<Q> | null>(() => {
+  const result = useMemo(() => {
     return Array.from(results?.values() ?? [])[0] ?? null;
   }, [results]);
   return { fetching, fetchingLocal, fetchingRemote, result, error };
