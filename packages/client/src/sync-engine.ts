@@ -78,7 +78,7 @@ export class SyncEngine {
    * @param options configuration options for the sync engine
    * @param db the client database to be synced
    */
-  constructor(client: TriplitClient, options: SyncOptions) {
+  constructor(client: TriplitClient<any>, options: SyncOptions) {
     this.client = client;
     this.logger = options.logger;
     this.syncOptions = options;
