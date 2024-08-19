@@ -1,6 +1,6 @@
 import { expectTypeOf, test } from 'vitest';
 import { Schema as S } from '@triplit/db';
-import { Entity } from '../../dist/client/types';
+import { Entity } from '../../src/client/types';
 
 test('Entity', () => {
   const schema = {

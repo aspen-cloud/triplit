@@ -78,7 +78,7 @@ class WorkerLogger {
   }
 }
 
-export class WorkerClient<M extends ClientSchema | undefined = undefined> {
+export class WorkerClient<M extends ClientSchema = ClientSchema> {
   initialized: Promise<void>;
   clientWorker: ComLink.Remote<Client<M>>;
   db: { updateGlobalVariables: (variables: Record<string, any>) => void } =
@@ -129,7 +129,7 @@ export class WorkerClient<M extends ClientSchema | undefined = undefined> {
   async fetch<CQ extends SchemaClientQueries<M>>(
     query: CQ,
     options?: Partial<FetchOptions>
-  ): Promise<Unalias<FetchResult<ToQuery<M, CQ>>>> {
+  ): Promise<Unalias<FetchResult<M, ToQuery<M, CQ>>>> {
     await this.initialized;
     // @ts-expect-error
     return this.clientWorker.fetch(query, options);
@@ -161,8 +161,8 @@ export class WorkerClient<M extends ClientSchema | undefined = undefined> {
                   const changes = new ChangeTracker(entity);
                   const updateProxy =
                     collectionName === '_metadata'
-                      ? createUpdateProxy<M, any>(changes, entity)
-                      : createUpdateProxy<M, any>(
+                      ? createUpdateProxy(changes, entity)
+                      : createUpdateProxy(
                           changes,
                           entity,
                           schema,
@@ -195,7 +195,7 @@ export class WorkerClient<M extends ClientSchema | undefined = undefined> {
     id: string,
     options?: Partial<FetchOptions>
   ): Promise<Unalias<
-    FetchResultEntity<ToQuery<M, ClientQueryDefault<M, CN>>>
+    FetchResultEntity<M, ToQuery<M, ClientQueryDefault<M, CN>>>
   > | null> {
     await this.initialized;
     return this.clientWorker.fetchById(
@@ -203,25 +203,26 @@ export class WorkerClient<M extends ClientSchema | undefined = undefined> {
       collectionName,
       id,
       options
-    );
+    ) as Unalias<
+      FetchResultEntity<M, ToQuery<M, ClientQueryDefault<M, CN>>>
+    > | null;
   }
   async fetchOne<CQ extends SchemaClientQueries<M>>(
     query: CQ,
     options?: Partial<FetchOptions>
-  ): Promise<Unalias<FetchResultEntity<ToQuery<M, CQ>>> | null> {
+  ): Promise<Unalias<FetchResultEntity<M, ToQuery<M, CQ>>> | null> {
     await this.initialized;
     return this.clientWorker.fetchOne(
       // @ts-expect-error
       query,
       options
-    );
+    ) as Unalias<FetchResultEntity<M, ToQuery<M, CQ>>> | null;
   }
   async insert<CN extends CollectionNameFromModels<M>>(
     collectionName: CN,
     entity: Unalias<InsertTypeFromModel<ModelFromModels<M, CN>>>
   ): Promise<TransactionResult<Unalias<FetchResultEntityFromParts<M, CN>>>> {
     await this.initialized;
-    // @ts-expect-error
     return this.clientWorker.insert(
       // @ts-expect-error
       collectionName,
@@ -244,8 +245,8 @@ export class WorkerClient<M extends ClientSchema | undefined = undefined> {
       const changes = new ChangeTracker(entity);
       const updateProxy =
         collectionName === '_metadata'
-          ? createUpdateProxy<M, any>(changes, entity)
-          : createUpdateProxy<M, any>(changes, entity, schema, collectionName);
+          ? createUpdateProxy(changes, entity)
+          : createUpdateProxy(changes, entity, schema, collectionName);
       await updater(
         updateProxy as Unalias<UpdateTypeFromModel<ModelFromModels<M, CN>>>
       );
@@ -281,7 +282,7 @@ export class WorkerClient<M extends ClientSchema | undefined = undefined> {
   subscribe<CQ extends SchemaClientQueries<M>>(
     query: CQ,
     onResults: (
-      results: Unalias<FetchResult<ToQuery<M, CQ>>>,
+      results: Unalias<FetchResult<M, ToQuery<M, CQ>>>,
       info: { hasRemoteFulfilled: boolean }
     ) => void | Promise<void>,
     onError?: (error: any) => void | Promise<void>,
@@ -315,7 +316,7 @@ export class WorkerClient<M extends ClientSchema | undefined = undefined> {
   subscribeWithPagination<CQ extends SchemaClientQueries<M>>(
     query: CQ,
     onResults: (
-      results: Unalias<FetchResult<ToQuery<M, CQ>>>,
+      results: Unalias<FetchResult<M, ToQuery<M, CQ>>>,
       info: {
         hasRemoteFulfilled: boolean;
         hasNextPage: boolean;
@@ -350,7 +351,7 @@ export class WorkerClient<M extends ClientSchema | undefined = undefined> {
   subscribeWithExpand<CQ extends SchemaClientQueries<M>>(
     query: CQ,
     onResults: (
-      results: Unalias<FetchResult<ToQuery<M, CQ>>>,
+      results: Unalias<FetchResult<M, ToQuery<M, CQ>>>,
       info: {
         hasRemoteFulfilled: boolean;
         hasMore: boolean;
@@ -377,9 +378,7 @@ export class WorkerClient<M extends ClientSchema | undefined = undefined> {
     return { loadMore, unsubscribe };
   }
 
-  async updateOptions(
-    options: Pick<ClientOptions<undefined>, 'token' | 'serverUrl'>
-  ) {
+  async updateOptions(options: Pick<ClientOptions, 'token' | 'serverUrl'>) {
     await this.initialized;
     return this.clientWorker.updateOptions(options);
   }

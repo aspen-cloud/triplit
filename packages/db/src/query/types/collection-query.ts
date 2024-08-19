@@ -409,7 +409,8 @@ export type ParseSelect<
   // Untyped query literals will have unknonw select
   unknown extends Selection
     ? QuerySelection<M, CN>
-    : NonNullable<Selection>[number];
+    : // Intersect with the schema paths to ensure the selection is valid
+      NonNullable<Selection>[number] & QuerySelection<M, CN>;
 
 /**
  * Converts an object to a query inclusion.

@@ -20,7 +20,7 @@ import {
   ToQuery,
   FetchResultEntity,
   CollectionQueryDefault,
-  CollectionQuery,
+  Models,
 } from '@triplit/db';
 import { ClientSchema } from '../client/types';
 import { httpClientQueryBuilder } from './query-builder.js';
@@ -34,7 +34,7 @@ function parseError(error: string) {
   }
 }
 
-export type HttpClientOptions<M extends ClientSchema | undefined> = {
+export type HttpClientOptions<M extends ClientSchema> = {
   /**
    * @deprecated Use 'serverUrl' instead.
    */
@@ -46,7 +46,7 @@ export type HttpClientOptions<M extends ClientSchema | undefined> = {
 };
 
 // Interact with remote via http api, totally separate from your local database
-export class HttpClient<M extends ClientSchema | undefined = undefined> {
+export class HttpClient<M extends ClientSchema = ClientSchema> {
   constructor(private options: HttpClientOptions<M> = {}) {}
 
   // Hack: use schemaFactory to get schema if it's not ready from provider
@@ -93,12 +93,16 @@ export class HttpClient<M extends ClientSchema | undefined = undefined> {
 
   async fetch<CQ extends SchemaQueries<M>>(
     query: CQ
-  ): Promise<Unalias<FetchResult<ToQuery<M, CQ>>>> {
+  ): Promise<Unalias<FetchResult<M, ToQuery<M, CQ>>>> {
     const { data, error } = await this.sendRequest('/fetch', 'POST', {
       query,
     });
     if (error) throw error;
-    return deserializeHttpFetchResult(query, data.result, await this.schema());
+    return deserializeHttpFetchResult<M, CQ>(
+      query,
+      data.result,
+      await this.schema()
+    ) as Unalias<FetchResult<M, ToQuery<M, CQ>>>;
   }
 
   private async queryTriples<CQ extends SchemaQueries<M>>(
@@ -113,27 +117,27 @@ export class HttpClient<M extends ClientSchema | undefined = undefined> {
 
   async fetchOne<CQ extends SchemaQueries<M>>(
     query: CQ
-  ): Promise<Unalias<FetchResultEntity<CQ>> | null> {
+  ): Promise<Unalias<FetchResultEntity<M, ToQuery<M, CQ>>> | null> {
     query = { ...query, limit: 1 };
     const { data, error } = await this.sendRequest('/fetch', 'POST', {
       query,
     });
     if (error) throw error;
-    const deserialized = deserializeHttpFetchResult(
+    const deserialized = deserializeHttpFetchResult<M, CQ>(
       query,
       data.result,
       await this.schema()
     );
     const entity = [...deserialized.values()][0];
     if (!entity) return null;
-    return entity;
+    return entity as Unalias<FetchResultEntity<M, ToQuery<M, CQ>>>;
   }
 
   async fetchById<CN extends CollectionNameFromModels<M>>(
     collectionName: CN,
     id: string
   ): Promise<Unalias<
-    FetchResultEntity<ToQuery<M, CollectionQueryDefault<M, CN>>>
+    FetchResultEntity<M, ToQuery<M, CollectionQueryDefault<M, CN>>>
   > | null> {
     const query = this.query(collectionName).id(id).build() as SchemaQueries<M>;
     return this.fetchOne(query);
@@ -293,8 +297,9 @@ export {
 };
 
 function deserializeHttpFetchResult<
-  CQ extends CollectionQuery<any, any, any, any>
->(query: CQ, result: [string, any][], schema?: any): FetchResult<CQ> {
+  M extends Models,
+  Q extends SchemaQueries<M>
+>(query: Q, result: [string, any][], schema?: any): FetchResult<M, Q> {
   return new Map(
     result.map((entry) => [
       entry[0],
@@ -303,28 +308,25 @@ function deserializeHttpFetchResult<
   );
 }
 
-function deserializeHttpEntity<CQ extends CollectionQuery<any, any, any, any>>(
-  query: CQ,
+function deserializeHttpEntity<M extends Models, Q extends SchemaQueries<M>>(
+  query: Q,
   entity: any,
   schema?: any
-): FetchResultEntity<CQ> {
+): FetchResultEntity<M, Q> {
   const { include, collectionName } = query;
   const collectionSchema = schema?.[collectionName]?.schema;
 
   const deserializedEntity = collectionSchema
-    ? (collectionSchema.convertJSONToJS(
-        entity,
-        schema
-      ) as FetchResultEntity<CQ>)
+    ? (collectionSchema.convertJSONToJS(entity, schema) as FetchResultEntity<
+        M,
+        Q
+      >)
     : entity;
   return deserializedEntity;
 }
 
-export type BulkInsert<M extends ClientSchema | undefined> =
-  M extends ClientSchema
-    ? {
-        [CN in CollectionNameFromModels<M>]?: Unalias<
-          InsertTypeFromModel<ModelFromModels<M, CN>>
-        >[];
-      }
-    : Record<string, any[]>;
+export type BulkInsert<M extends ClientSchema> = {
+  [CN in CollectionNameFromModels<M>]?: Unalias<
+    InsertTypeFromModel<ModelFromModels<M, CN>>
+  >[];
+};

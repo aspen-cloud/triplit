@@ -24,7 +24,7 @@ type ClientQueryExtensions = {
  * Query that can be passed to a Triplit Client.
  */
 export type ClientQuery<
-  M extends ClientSchema | undefined,
+  M extends ClientSchema,
   CN extends CollectionNameFromModels<M>,
   Selection extends QuerySelection<M, CN> = QuerySelection<M, CN>,
   Inclusions extends QueryInclusions<M, CN> = QueryInclusions<M, CN>
@@ -34,18 +34,18 @@ export type ClientQueryFromCollectionQuery<
   Q extends CollectionQuery<any, any, any, any>
 > = Q & ClientQueryExtensions;
 
-export type SchemaClientQueries<M extends ClientSchema | undefined> =
+export type SchemaClientQueries<M extends ClientSchema> =
   ClientQueryFromCollectionQuery<SchemaQueries<M>>;
 
 /**
  * A client query with default selection and inclusion.
  */
 export type ClientQueryDefault<
-  M extends ClientSchema | undefined,
+  M extends ClientSchema,
   CN extends CollectionNameFromModels<M>
 > = ClientQueryFromCollectionQuery<CollectionQueryDefault<M, CN>>;
 
 /**
  * Friendly alias for Models type.
  */
-export type ClientSchema = Models<any, any>;
+export type ClientSchema = Models;

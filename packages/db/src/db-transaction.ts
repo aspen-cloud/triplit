@@ -1276,7 +1276,7 @@ export class ChangeTracker {
 
 export function createUpdateProxy<
   M extends Models,
-  CN extends CollectionNameFromModels<M>
+  CN extends CollectionNameFromModels<M> = CollectionNameFromModels<M>
 >(
   changeTracker: ChangeTracker,
   entityObj: any, // TODO: type this properly, should be an untimestamped entity

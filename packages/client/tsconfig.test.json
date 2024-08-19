@@ -1,18 +1,7 @@
-// TODO: combine with tsconfigs
 {
+  "extends": "./tsconfig.json",
   "compilerOptions": {
-    "lib": ["ESNext"],
-    "target": "ESNext", // You can adjust the target as needed.
-    "module": "ESNext", // This will be overridden in npm scripts
-    "moduleResolution": "node",
-    "strict": true,
-    "resolveJsonModule": true,
-    "isolatedModules": true,
-    // "noUnusedLocals": true,
-    // "noUnusedParameters": true,
-    "noImplicitReturns": true,
-    "skipLibCheck": true,
-    "useDefineForClassFields": true
+    "rootDir": "."
   },
-  "include": ["./test/**/*.test-d.ts"]
+  "include": ["./test/typecheck", "src"]
 }

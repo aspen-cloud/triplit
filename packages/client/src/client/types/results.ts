@@ -11,26 +11,29 @@
 import {
   CollectionNameFromModels,
   CollectionQuery,
+  Models,
   QueryInclusions,
   QuerySelection,
   ReturnTypeFromQuery,
   Unalias,
 } from '@triplit/db';
-import { ClientQuery, ClientSchema } from './query.js';
+import { ClientQuery, ClientSchema, SchemaClientQueries } from './query.js';
 
 /**
  * Results from a query based on the query's model in the format `Map<id, entity>`
  */
-export type ClientFetchResult<C extends ClientQuery<any, any>> = Map<
-  string,
-  ClientFetchResultEntity<C>
->;
+export type ClientFetchResult<
+  M extends Models,
+  C extends SchemaClientQueries<M>
+> = Map<string, ClientFetchResultEntity<M, C>>;
 
 /**
  * Entity from a query based on the query's model
  */
-export type ClientFetchResultEntity<C extends ClientQuery<any, any, any, any>> =
-  ReturnTypeFromQuery<C>;
+export type ClientFetchResultEntity<
+  M extends Models,
+  C extends SchemaClientQueries<M>
+> = ReturnTypeFromQuery<M, C>;
 
 /**
  * The fully selected type of an entity, including all fields but not relations
@@ -47,19 +50,16 @@ export type ClientFetchResultEntity<C extends ClientQuery<any, any, any, any>> =
 export type Entity<
   M extends ClientSchema,
   CN extends CollectionNameFromModels<M>,
-  Selection extends QuerySelection<M, CN>[number] = QuerySelection<
-    M,
-    CN
-  >[number],
+  Selection extends QuerySelection<M, CN> = QuerySelection<M, CN>,
   Inclusion extends QueryInclusions<M, CN> = {}
 > = Unalias<
-  ReturnTypeFromQuery<
-    CollectionQuery<M, CN, ReadonlyArray<Selection>, Inclusion>
-  >
+  ReturnTypeFromQuery<M, CollectionQuery<M, CN, Selection, Inclusion>>
 >;
 
 /**
  * The type for the result returned from a query
  */
-export type QueryResult<Q extends CollectionQuery<any, any, any, any>> =
-  Unalias<ReturnTypeFromQuery<Q>>;
+export type QueryResult<
+  M extends Models,
+  C extends SchemaClientQueries<M>
+> = Unalias<ReturnTypeFromQuery<M, C>>;

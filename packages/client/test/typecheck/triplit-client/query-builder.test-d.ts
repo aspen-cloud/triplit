@@ -1,5 +1,5 @@
 import { expectTypeOf, test, describe } from 'vitest';
-import { TriplitClient } from '../../../dist/client/triplit-client.js';
+import { TriplitClient } from '../../../src/client/triplit-client.js';
 import { Schema as S } from '@triplit/db';
 
 test('Builder API', () => {

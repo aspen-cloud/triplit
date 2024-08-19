@@ -43,7 +43,7 @@
     "build:watch": "tsc -w",
     "lint:build": "npx publint",
     "lint": "tsc --noEmit",
-    "test": "yarn test:unit",
+    "test": "yarn test:unit && yarn typecheck",
     "test:unit": "vitest run",
     "typecheck": "vitest --typecheck.only --no-watch",
     "publish-pkg": "node ../../scripts/npm-check-version-and-publish.js",
@@ -67,7 +67,7 @@
     "esbuild": "^0.21.3",
     "tinybench": "^2.9.0",
     "typescript": "^5.2.2",
-    "vitest": "^1.4.0"
+    "vitest": "^2.0.5"
   },
   "engines": {
     "node": ">=18.0.0"

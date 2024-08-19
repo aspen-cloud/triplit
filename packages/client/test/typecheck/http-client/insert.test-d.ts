@@ -1,6 +1,6 @@
 import { expectTypeOf, test, describe } from 'vitest';
 import { Schema as S } from '@triplit/db';
-import { HttpClient } from '../../../dist/http-client/http-client.js';
+import { HttpClient } from '../../../src/http-client/http-client.js';
 
 describe('.insert()', () => {
   describe('schemaful', () => {
@@ -43,11 +43,11 @@ describe('.insert()', () => {
         expectTypeOf(client.insert).parameter(0).toEqualTypeOf<string>();
       });
 
-      test('entity arg is typed as any', () => {
+      test('entity arg is typed as {[x: string]: any, id?: string}', () => {
         const client = new HttpClient();
         expectTypeOf(client.insert<'a'>)
           .parameter(1)
-          .toEqualTypeOf<any>();
+          .toEqualTypeOf<{ [x: string]: any; id?: string }>();
       });
     });
   });
@@ -86,9 +86,14 @@ describe('.insert()', () => {
     describe('schemaless', () => {
       test('bulk arg is typed as Record<', () => {
         const client = new HttpClient();
-        expectTypeOf(client.bulkInsert)
-          .parameter(0)
-          .toEqualTypeOf<Record<string, any[]>>();
+        expectTypeOf(client.bulkInsert).parameter(0).toEqualTypeOf<{
+          [x: string]:
+            | {
+                [x: string]: any;
+                id?: string | undefined;
+              }[]
+            | undefined;
+        }>();
       });
     });
   });

@@ -150,7 +150,7 @@ type ClientTransactOptions = Pick<
   'manualSchemaRefresh' | 'skipRules'
 >;
 
-export interface ClientOptions<M extends ClientSchema | undefined> {
+export interface ClientOptions<M extends ClientSchema = ClientSchema> {
   /**
    * The schema used to validate database operations and provide type-hinting. Read more about schemas {@link https://www.triplit.dev/docs/schemas | here }
    */
@@ -215,7 +215,7 @@ const DEFAULT_FETCH_OPTIONS = {
   policy: 'local-first',
 } as const;
 
-export class TriplitClient<M extends ClientSchema | undefined = undefined> {
+export class TriplitClient<M extends ClientSchema = ClientSchema> {
   db: DB<M>;
 
   /**
@@ -404,7 +404,7 @@ export class TriplitClient<M extends ClientSchema | undefined = undefined> {
   async fetch<CQ extends SchemaClientQueries<M>>(
     query: CQ,
     options?: Partial<FetchOptions>
-  ): Promise<Unalias<FetchResult<ToQuery<M, CQ>>>> {
+  ): Promise<Unalias<FetchResult<M, ToQuery<M, CQ>>>> {
     // ID is currently used to trace the lifecycle of a query/subscription across logs
     // @ts-ignore
     query = addLoggingIdToQuery(query);
@@ -453,7 +453,7 @@ export class TriplitClient<M extends ClientSchema | undefined = undefined> {
   private async fetchLocal<CQ extends SchemaClientQueries<M>>(
     query: CQ,
     options?: Partial<DBFetchOptions>
-  ): Promise<Unalias<FetchResult<ToQuery<M, CQ>>>> {
+  ): Promise<Unalias<FetchResult<M, ToQuery<M, CQ>>>> {
     const scope = parseScope(query);
     this.logger.debug('fetchLocal START', query, scope);
     const res = await this.db.fetch(query, {
@@ -478,7 +478,7 @@ export class TriplitClient<M extends ClientSchema | undefined = undefined> {
     id: string,
     options?: Partial<FetchOptions>
   ): Promise<Unalias<
-    FetchResultEntity<ToQuery<M, ClientQueryDefault<M, CN>>>
+    FetchResultEntity<M, ToQuery<M, ClientQueryDefault<M, CN>>>
   > | null> {
     this.logger.debug('fetchById START', collectionName, id, options);
     const query = this.query(collectionName)
@@ -510,7 +510,7 @@ export class TriplitClient<M extends ClientSchema | undefined = undefined> {
   async fetchOne<CQ extends SchemaClientQueries<M>>(
     query: CQ,
     options?: Partial<FetchOptions>
-  ): Promise<Unalias<FetchResultEntity<ToQuery<M, CQ>>> | null> {
+  ): Promise<Unalias<FetchResultEntity<M, ToQuery<M, CQ>>> | null> {
     // ID is currently used to trace the lifecycle of a query/subscription across logs
     query = addLoggingIdToQuery(query);
     query = { ...query, limit: 1 };
@@ -632,7 +632,7 @@ export class TriplitClient<M extends ClientSchema | undefined = undefined> {
   subscribe<CQ extends SchemaClientQueries<M>>(
     query: CQ,
     onResults: (
-      results: Unalias<FetchResult<ToQuery<M, CQ>>>,
+      results: Unalias<FetchResult<M, ToQuery<M, CQ>>>,
       info: { hasRemoteFulfilled: boolean }
     ) => void | Promise<void>,
     onError?: (error: any) => void | Promise<void>,
@@ -671,7 +671,7 @@ export class TriplitClient<M extends ClientSchema | undefined = undefined> {
     let unsubscribeRemote = () => {};
     let hasRemoteFulfilled = false;
     let fulfilledTimeout: ReturnType<typeof setTimeout> | null = null;
-    let results: Unalias<FetchResult<ToQuery<M, CQ>>>;
+    let results: Unalias<FetchResult<M, ToQuery<M, CQ>>>;
     const userResultsCallback = onResults;
     const userErrorCallback = onError;
     onResults = (results, info) => {
@@ -687,7 +687,7 @@ export class TriplitClient<M extends ClientSchema | undefined = undefined> {
         }
       : undefined;
     const clientSubscriptionCallback = (
-      newResults: Unalias<FetchResult<ToQuery<M, CQ>>>
+      newResults: Unalias<FetchResult<M, ToQuery<M, CQ>>>
     ) => {
       results = newResults;
       this.logger.debug('subscribe RESULTS', results);
@@ -835,7 +835,7 @@ export class TriplitClient<M extends ClientSchema | undefined = undefined> {
   subscribeWithPagination<CQ extends SchemaClientQueries<M>>(
     query: CQ,
     onResults: (
-      results: Unalias<FetchResult<ToQuery<M, CQ>>>,
+      results: Unalias<FetchResult<M, ToQuery<M, CQ>>>,
       info: {
         hasRemoteFulfilled: boolean;
         hasNextPage: boolean;
@@ -879,7 +879,7 @@ export class TriplitClient<M extends ClientSchema | undefined = undefined> {
       // If we have an after, the limit will increase by 1
       query.limit = requestedLimit! + 1 + (query.after ? 1 : 0);
       subscriptionResultHandler = (
-        results: Unalias<FetchResult<ToQuery<M, CQ>>>,
+        results: Unalias<FetchResult<M, ToQuery<M, CQ>>>,
         info: { hasRemoteFulfilled: boolean }
       ) => {
         const cursorAttr = query.order?.[0]?.[0];
@@ -898,6 +898,7 @@ export class TriplitClient<M extends ClientSchema | undefined = undefined> {
           !!query.after &&
           !!firstEntry &&
           compareCursors(query.after[0], [
+            // @ts-expect-error
             firstEntry[1][cursorAttr], // TODO need to translate things like dates
             firstEntry[0],
           ]) > -1;
@@ -926,10 +927,18 @@ export class TriplitClient<M extends ClientSchema | undefined = undefined> {
 
         // Track range of the current page for pagination functions
         rangeStart = firstDataEntry
-          ? [firstDataEntry[1][cursorAttr], firstDataEntry[0]]
+          ? [
+              // @ts-expect-error
+              firstDataEntry[1][cursorAttr],
+              firstDataEntry[0],
+            ]
           : undefined;
         rangeEnd = lastDataEntry
-          ? [lastDataEntry[1][cursorAttr], lastDataEntry[0]]
+          ? [
+              // @ts-expect-error
+              lastDataEntry[1][cursorAttr],
+              lastDataEntry[0],
+            ]
           : undefined;
 
         // To keep order consistent with the orignial query, reverse the entries if we are paging backwards
@@ -1028,7 +1037,7 @@ export class TriplitClient<M extends ClientSchema | undefined = undefined> {
   subscribeWithExpand<CQ extends SchemaClientQueries<M>>(
     query: CQ,
     onResults: (
-      results: Unalias<FetchResult<ToQuery<M, CQ>>>,
+      results: Unalias<FetchResult<M, ToQuery<M, CQ>>>,
       info: {
         hasRemoteFulfilled: boolean;
         hasMore: boolean;
@@ -1054,7 +1063,7 @@ export class TriplitClient<M extends ClientSchema | undefined = undefined> {
       query = { ...query };
       query.limit = query.limit! + 1;
       subscriptionResultHandler = (
-        results: Unalias<FetchResult<ToQuery<M, CQ>>>,
+        results: Unalias<FetchResult<M, ToQuery<M, CQ>>>,
         info: { hasRemoteFulfilled: boolean }
       ) => {
         const hasMore = results.size >= query.limit!;

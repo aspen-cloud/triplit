@@ -1,14 +1,10 @@
 import {
   QUERY_INPUT_TRANSFORMERS,
-  ModelFromModels,
   AfterInput,
   BuilderBase,
   FilterInput,
-  IncludeSubquery,
   OrderInput,
-  CollectionQueryCollectionName,
   CollectionQueryInclusion,
-  CollectionQueryModels,
   CollectionQuerySelection,
   RelationAttributes,
   CollectionNameFromModels,
@@ -21,6 +17,7 @@ import {
   SchemaQueries,
   QueryResultCardinality,
   QuerySelection,
+  ModelQueries,
 } from '@triplit/db';
 import {
   ClientSchema,
@@ -30,14 +27,14 @@ import {
 } from './types';
 
 export function clientQueryBuilder<
-  M extends ClientSchema | undefined,
+  M extends ClientSchema,
   CN extends CollectionNameFromModels<M>
 >(collectionName: CN, params?: Omit<ClientQuery<M, CN>, 'collectionName'>) {
   const query = {
     collectionName,
     ...params,
   };
-  return new ClientQueryBuilder<ClientQueryDefault<M, CN>>(query);
+  return new ClientQueryBuilder<M, CN, ClientQueryDefault<M, CN>>(query);
 }
 
 // The fact that builder methods will update generics makes it tough to re-use the builder from the db
@@ -45,10 +42,9 @@ export function clientQueryBuilder<
 // - The client builder needs to return ClientQueryBuilder<...Params>
 // - cant return 'this' because we need to update generics
 export class ClientQueryBuilder<
-  Q extends ClientQuery<any, any, any, any>,
-  M extends Models<any, any> | undefined = CollectionQueryModels<Q>,
-  // @ts-expect-error
-  CN extends CollectionNameFromModels<M> = CollectionQueryCollectionName<Q>
+  M extends Models,
+  CN extends CollectionNameFromModels<M>,
+  Q extends ModelQueries<M, CN> = ClientQueryDefault<M, CN>
 > implements
     BuilderBase<ClientQuery<any, any, any, any>, 'collectionName', 'id'>
 {
@@ -62,24 +58,22 @@ export class ClientQueryBuilder<
   }
 
   select<Selection extends QuerySelection<M, CN>>(
-    selection: Selection | undefined
+    selection: Selection[] | undefined
   ) {
     return new ClientQueryBuilder({
       ...this.query,
       select: selection,
     }) as ClientQueryBuilder<
-      ClientQuery<M, CN, Selection, CollectionQueryInclusion<Q>>
+      M,
+      CN,
+      ClientQuery<M, CN, Selection, CollectionQueryInclusion<M, CN, Q>>
     >;
   }
 
   where(...args: FilterInput<M, CN>) {
-    return new ClientQueryBuilder<Q>({
+    return new ClientQueryBuilder<M, CN, Q>({
       ...this.query,
-      where: QUERY_INPUT_TRANSFORMERS<M, CN>().where(
-        // @ts-expect-error
-        this.query,
-        ...args
-      ),
+      where: QUERY_INPUT_TRANSFORMERS<M, CN>().where(this.query, ...args),
     });
   }
 
@@ -90,30 +84,23 @@ export class ClientQueryBuilder<
         (w) => !Array.isArray(w) || w[0] !== 'id'
       ),
     ];
-    return new ClientQueryBuilder<Q>({
+    return new ClientQueryBuilder<M, CN, Q>({
       ...this.query,
       where: nextWhere,
     });
   }
 
   order(...args: OrderInput<M, CN>) {
-    return new ClientQueryBuilder<Q>({
+    return new ClientQueryBuilder<M, CN, Q>({
       ...this.query,
-      order: QUERY_INPUT_TRANSFORMERS<M, CN>().order(
-        // @ts-expect-error
-
-        this.query,
-        ...args
-      ),
+      order: QUERY_INPUT_TRANSFORMERS<M, CN>().order(this.query, ...args),
     });
   }
 
   after(after: AfterInput<M, CN>, inclusive?: boolean) {
-    return new ClientQueryBuilder<Q>({
+    return new ClientQueryBuilder<M, CN, Q>({
       ...this.query,
       after: QUERY_INPUT_TRANSFORMERS<M, CN>().after(
-        // @ts-expect-error
-
         this.query,
         after,
         inclusive
@@ -130,11 +117,13 @@ export class ClientQueryBuilder<
     alias: Alias,
     queryExt: RQ
   ): ClientQueryBuilder<
+    M,
+    CN,
     ClientQuery<
       M,
       CN,
-      CollectionQuerySelection<Q>,
-      CollectionQueryInclusion<Q> & {
+      CollectionQuerySelection<M, CN, Q>,
+      CollectionQueryInclusion<M, CN, Q> & {
         [K in Alias]: RQ;
       }
     >
@@ -147,16 +136,18 @@ export class ClientQueryBuilder<
   include<Alias extends string, RQ extends RefSubquery<M, CN>>(
     alias: Alias,
     builder: (
-      rel: <RName extends RelationAttributes<ModelFromModels<M, CN>>>(
+      rel: <RName extends RelationAttributes<M, CN>>(
         relationName: RName
       ) => RelationBuilder<M, CN, RName>
     ) => RQ
   ): ClientQueryBuilder<
+    M,
+    CN,
     ClientQuery<
       M,
       CN,
-      CollectionQuerySelection<Q>,
-      CollectionQueryInclusion<Q> & {
+      CollectionQuerySelection<M, CN, Q>,
+      CollectionQueryInclusion<M, CN, Q> & {
         [K in Alias]: RQ;
       }
     >
@@ -165,14 +156,16 @@ export class ClientQueryBuilder<
    * Include data from a relation in the query
    * @param relationName - the name of the relation to include
    */
-  include<RName extends RelationAttributes<ModelFromModels<M, CN>>>(
+  include<RName extends RelationAttributes<M, CN>>(
     relationName: RName
   ): ClientQueryBuilder<
+    M,
+    CN,
     ClientQuery<
       M,
       CN,
-      CollectionQuerySelection<Q>,
-      CollectionQueryInclusion<Q> & {
+      CollectionQuerySelection<M, CN, Q>,
+      CollectionQueryInclusion<M, CN, Q> & {
         [K in RName]: InclusionByRName<M, CN, RName>;
       }
     >
@@ -181,7 +174,7 @@ export class ClientQueryBuilder<
     if (typeof queryExt === 'function') {
       queryExt = queryExt(relationBuilder);
     }
-    return new ClientQueryBuilder<ClientQuery<any, any, any, any>>({
+    return new ClientQueryBuilder<M, CN>({
       ...this.query,
       include: QUERY_INPUT_TRANSFORMERS<M, CN>().include(
         this.query,
@@ -200,17 +193,19 @@ export class ClientQueryBuilder<
     query: PQ,
     cardinality: Cardinality = 'many' as Cardinality
   ): ClientQueryBuilder<
+    M,
+    CN,
     ClientQuery<
       M,
       CN,
-      CollectionQuerySelection<Q>,
-      CollectionQueryInclusion<Q> & {
+      CollectionQuerySelection<M, CN, Q>,
+      CollectionQueryInclusion<M, CN, Q> & {
         [K in Alias]: RelationSubquery<M, PQ, Cardinality>;
       }
     >
   > {
     //@ts-expect-error
-    return new ClientQueryBuilder<ClientQuery<any, any, any, any>>({
+    return new ClientQueryBuilder<M, CN>({
       ...this.query,
       include: QUERY_INPUT_TRANSFORMERS<M, CN>().include(
         this.query,
@@ -224,11 +219,11 @@ export class ClientQueryBuilder<
   }
 
   limit(limit: number) {
-    return new ClientQueryBuilder<Q>({ ...this.query, limit });
+    return new ClientQueryBuilder<M, CN, Q>({ ...this.query, limit });
   }
 
   vars(vars: Record<string, any>) {
-    return new ClientQueryBuilder<Q>({ ...this.query, vars });
+    return new ClientQueryBuilder<M, CN, Q>({ ...this.query, vars });
   }
 
   /**
@@ -239,6 +234,9 @@ export class ClientQueryBuilder<
   }
 
   syncStatus(status: SyncStatus) {
-    return new ClientQueryBuilder<Q>({ ...this.query, syncStatus: status });
+    return new ClientQueryBuilder<M, CN, Q>({
+      ...this.query,
+      syncStatus: status,
+    });
   }
 }

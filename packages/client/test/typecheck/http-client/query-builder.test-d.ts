@@ -1,6 +1,6 @@
 import { expectTypeOf, test, describe } from 'vitest';
 import { Schema as S } from '@triplit/db';
-import { HttpClient } from '../../../dist/http-client/http-client.js';
+import { HttpClient } from '../../../src/http-client/http-client.js';
 
 test('Builder API', () => {
   const client = new HttpClient({

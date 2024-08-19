@@ -33,7 +33,7 @@ class WorkerLogger {
 
 const workerOperator: ClientWorker = {
   // @ts-expect-error
-  init: (options: ClientOptions<any>, logger) => {
+  init: (options: ClientOptions, logger) => {
     if (clientOperator != undefined) return;
     const { schema } = options;
     const workerLogger = new DefaultLogger({
@@ -59,16 +59,17 @@ const workerOperator: ClientWorker = {
         }
       },
     });
-    // @ts-expect-error
     clientOperator = new Client({
       ...options,
-      schema: JSONToSchema(schema)?.collections,
+      // TODO - Is the schema in a json format here? Its not typed that way...
+      schema: JSONToSchema(schema as any)?.collections,
       logger: workerLogger,
     });
   },
+  // @ts-expect-error
   fetch: async (...args: Parameters<typeof clientOperator.fetch>) =>
     await clientOperator.fetch(...args),
-  // @ts-ignore
+  // @ts-expect-error
   async transact(...args: Parameters<typeof clientOperator.transact>) {
     return await clientOperator.transact((tx) => args[0](ComLink.proxy(tx)));
   },
@@ -77,6 +78,7 @@ const workerOperator: ClientWorker = {
   ): Promise<any> {
     return await clientOperator.fetchById(...args);
   },
+  // @ts-expect-error
   async fetchOne(...args: Parameters<typeof clientOperator.fetchOne>) {
     return await clientOperator.fetchOne(...args);
   },
@@ -119,14 +121,14 @@ const workerOperator: ClientWorker = {
   ): Promise<TransactionResult<void>> {
     return await clientOperator.delete(...args);
   },
-  // @ts-ignore
+  // @ts-expect-error
   async subscribe(...args: Parameters<typeof clientOperator.subscribe>) {
     args[3] = await normalizeSubscriptionOptions(
       args[3] as ComLink.Remote<(typeof args)[3]>
     );
     return ComLink.proxy(clientOperator.subscribe(...args));
   },
-  // @ts-ignore
+  // @ts-expect-error
   async subscribeWithPagination(
     ...args: Parameters<typeof clientOperator.subscribe>
   ) {
@@ -135,7 +137,7 @@ const workerOperator: ClientWorker = {
     );
     return ComLink.proxy(clientOperator.subscribeWithPagination(...args));
   },
-  // @ts-ignore
+  // @ts-expect-error
   async subscribeWithExpand(
     ...args: Parameters<typeof clientOperator.subscribe>
   ) {
@@ -204,12 +206,12 @@ async function normalizeSubscriptionOptions(
   return {
     localOnly: await options.localOnly,
     noCache: await options.noCache,
-    // @ts-ignore
+    // @ts-expect-error
     onRemoteFulfilled: options.onRemoteFulfilled,
   };
 }
 
-// @ts-ignore
+// @ts-expect-error
 self.addEventListener('connect', (evt: MessageEvent) => {
   const port = evt.ports[0];
   ComLink.expose(workerOperator, port);
