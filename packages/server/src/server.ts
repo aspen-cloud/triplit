@@ -51,7 +51,7 @@ function parseClientMessage(
 
 export type ServerOptions = {
   storage?: StoreKeys | Storage | (() => Storage);
-  dbOptions?: DBConfig<any>;
+  dbOptions?: DBConfig;
   watchMode?: boolean;
   verboseLogs?: boolean;
   upstream?: {
