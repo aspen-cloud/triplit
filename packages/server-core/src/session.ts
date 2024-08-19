@@ -333,7 +333,7 @@ function hasAdminAccess(token: ProjectJWT) {
 }
 
 export class Session {
-  db: TriplitDB<any>;
+  db: TriplitDB;
   constructor(public server: TriplitServer, public token: ProjectJWT) {
     if (!token) throw new TriplitError('Token is required');
     // TODO: figure out admin middleware
@@ -448,7 +448,7 @@ export class Session {
     return ServerResponse(result.successful ? 200 : 409, result);
   }
 
-  async queryTriples({ query }: { query: CollectionQuery<any, any> }) {
+  async queryTriples({ query }: { query: CollectionQuery }) {
     if (!query)
       return errorResponse(
         new TriplitError('{ query: CollectionQuery } missing from request body')
@@ -465,7 +465,7 @@ export class Session {
     }
   }
 
-  async fetch(query: CollectionQuery<any, any>) {
+  async fetch(query: CollectionQuery) {
     try {
       const result = await this.db.fetch(query, {
         skipRules: hasAdminAccess(this.token),
@@ -477,7 +477,11 @@ export class Session {
         [...result.entries()].map(([id, entity]) => [
           id,
           collectionSchema
-            ? collectionSchema.convertJSToJSON(entity, schema)
+            ? collectionSchema.convertJSToJSON(
+                // @ts-expect-error - need id in query selection
+                entity,
+                schema
+              )
             : entity,
         ])
       );
@@ -502,7 +506,11 @@ export class Session {
       const serializableResult = {
         ...txResult,
         output: collectionSchema
-          ? collectionSchema.convertJSToJSON(txResult.output, schema)
+          ? collectionSchema.convertJSToJSON(
+              // @ts-expect-error - need id in query selection
+              txResult.output,
+              schema
+            )
           : txResult.output,
       };
       return ServerResponse(200, serializableResult);
@@ -534,7 +542,11 @@ export class Session {
               );
               output[collectionName].push(
                 collectionSchema
-                  ? collectionSchema.convertJSToJSON(insertedEntity, schema)
+                  ? collectionSchema.convertJSToJSON(
+                      // @ts-expect-error - need id in query selection
+                      insertedEntity,
+                      schema
+                    )
                   : insertedEntity
               );
             }

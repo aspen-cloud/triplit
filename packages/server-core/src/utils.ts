@@ -15,7 +15,7 @@ function getTxId(triple: TripleRow): string {
 }
 
 export async function insertTriplesByTransaction(
-  db: DB<Models<any, any> | undefined>,
+  db: DB,
   triplesByTransaction: Record<string, TripleRow[]>,
   skipRules = false
 ): Promise<{

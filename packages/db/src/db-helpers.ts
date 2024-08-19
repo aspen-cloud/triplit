@@ -187,7 +187,7 @@ export async function readSchemaFromTripleStore<M extends Models = Models>(
 
 export async function overrideStoredSchema<M extends Models>(
   db: DB<M>,
-  schema: StoreSchema<M>
+  schema: StoreSchema<M> | undefined
 ): Promise<{
   successful: boolean;
   issues: PossibleDataViolations[];
