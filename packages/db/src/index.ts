@@ -50,6 +50,8 @@ export {
   stripCollectionFromId,
   appendCollectionToId,
   logSchemaChangeViolations,
+  getVariableComponents,
+  isValueVariable,
 } from './db-helpers.js';
 export type {
   TripleRow,
