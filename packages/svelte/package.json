@@ -19,6 +19,7 @@
   "scripts": {
     "build": "svelte-package -t=false && tsc && yarn validate:types",
     "build:watch": "svelte-package -w",
+    "lint": "yarn check",
     "lint:build": "npx publint",
     "publish-pkg": "node ../../scripts/npm-check-version-and-publish.js",
     "check": "svelte-check --tsconfig ./tsconfig.json",

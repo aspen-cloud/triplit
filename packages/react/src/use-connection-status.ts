@@ -7,7 +7,9 @@ import { useEffect, useState } from 'react';
  * @param client - The client instance to get the connection status of
  * @returns The current connection status of the client with the server
  */
-export function useConnectionStatus(client: TriplitClient | WorkerClient) {
+export function useConnectionStatus(
+  client: TriplitClient<any> | WorkerClient<any>
+) {
   const [connectionStatus, setConnectionStatus] =
     useState<ConnectionStatus>('CONNECTING');
   useEffect(() => {

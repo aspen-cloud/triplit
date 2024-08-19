@@ -4,6 +4,7 @@ import type {
   ClientFetchResult,
   ClientQuery,
   ClientQueryBuilder,
+  CollectionNameFromModels,
   Models,
   SubscriptionOptions,
   TriplitClient,
@@ -22,21 +23,22 @@ import { WorkerClient } from '@triplit/client/worker-client';
  * @returns An object containing the fetching state, the result of the query, any error that occurred, and a function to update the query
  */
 export function useQuery<
-  M extends Models<any, any> | undefined,
-  Q extends ClientQuery<M, any, any, any>
+  M extends Models,
+  CN extends CollectionNameFromModels<M>,
+  Q extends ClientQuery<M, CN>
 >(
-  client: TriplitClient<any> | WorkerClient<any>,
-  query: ClientQueryBuilder<Q>,
+  client: TriplitClient<M> | WorkerClient<M>,
+  query: ClientQueryBuilder<M, CN, Q>,
   options?: Partial<SubscriptionOptions>
 ): {
   fetching: boolean;
   fetchingLocal: boolean;
   fetchingRemote: boolean;
-  results: Unalias<ClientFetchResult<Q>> | undefined;
+  results: Unalias<ClientFetchResult<M, Q>> | undefined;
   error: any;
-  updateQuery: (query: ClientQueryBuilder<Q>) => void;
+  updateQuery: (query: ClientQueryBuilder<M, CN, Q>) => void;
 } {
-  let results: Unalias<ClientFetchResult<Q>> | undefined = $state(undefined);
+  let results: Unalias<ClientFetchResult<M, Q>> | undefined = $state(undefined);
   let isInitialFetch = $state(true);
   let fetchingLocal = $state(false);
   let fetchingRemote = $state(client.connectionStatus !== 'CLOSED');
@@ -45,7 +47,7 @@ export function useQuery<
   let hasResponseFromServer = false;
   let builtQuery = $state(query && query.build());
 
-  function updateQuery(query: ClientQueryBuilder<Q>) {
+  function updateQuery(query: ClientQueryBuilder<M, CN, Q>) {
     builtQuery = query.build();
     results = undefined;
     fetchingLocal = true;
@@ -79,7 +81,7 @@ export function useQuery<
       (localResults) => {
         fetchingLocal = false;
         error = undefined;
-        results = new Map(localResults);
+        results = new Map(localResults as any);
       },
       (error) => {
         fetchingLocal = false;
