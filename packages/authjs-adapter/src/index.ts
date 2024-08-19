@@ -1,11 +1,17 @@
-import type { Adapter, AdapterSession, AdapterUser } from '@auth/core/adapters';
+import type {
+  Adapter,
+  AdapterAccount,
+  AdapterSession,
+  AdapterUser,
+  VerificationToken,
+} from '@auth/core/adapters';
 import { HttpClient } from '@triplit/client';
 import { Models } from '@triplit/db';
 
 export type TriplitAdapterConnectionOptions = {
   server: string;
   token: string;
-  schema?: Models<any, any>;
+  schema?: Models;
   sessionCollectionName?: string;
   userCollectionName?: string;
   accountCollectionName?: string;
@@ -34,11 +40,7 @@ export function TriplitAdapter(
 
   return {
     async createUser(user) {
-      const result = await client.insert(
-        collectionNames.user,
-        // @ts-expect-error
-        user
-      );
+      const result = await client.insert(collectionNames.user, user);
       return result?.output;
     },
     async getUser(id) {
@@ -47,10 +49,10 @@ export function TriplitAdapter(
       return user;
     },
     async getUserByEmail(email) {
-      const user = await client.fetchOne({
+      const user = (await client.fetchOne({
         collectionName: collectionNames.user,
         where: [['email', '=', email]],
-      });
+      })) as AdapterUser | null;
       return user;
     },
     async getUserByAccount({ providerAccountId, provider }) {
@@ -62,10 +64,14 @@ export function TriplitAdapter(
         ],
         // We could make schema optional and do a manual join here
         include: {
-          user: null,
+          user: true,
         },
       });
-      return account?.user?.get(account.userId) ?? null;
+      return (
+        (account?.user as unknown as Map<string, AdapterUser>)?.get(
+          (account as unknown as AdapterAccount)?.userId
+        ) ?? null
+      );
     },
     async updateUser(user) {
       const { id, ...rest } = user;
@@ -83,15 +89,20 @@ export function TriplitAdapter(
       return result?.output;
     },
     async unlinkAccount({ providerAccountId, provider }) {
-      const account = await client.fetchOne({
+      const account = (await client.fetchOne({
         collectionName: collectionNames.account,
         where: [
           ['provider', '=', provider],
           ['providerAccountId', '=', providerAccountId],
         ],
-      });
+      })) as AdapterAccount | null;
       if (!account) return;
-      await client.delete(collectionNames.account, account.id);
+
+      await client.delete(
+        collectionNames.account,
+        // @ts-expect-error - id is specific to triplit
+        account.id
+      );
       return account;
     },
     async createSession(session) {
@@ -108,6 +119,7 @@ export function TriplitAdapter(
       });
       if (!sessionWithUser) return null;
       const { user: userMap, ...session } = sessionWithUser;
+      // @ts-expect-error - need some schema to help with model types
       const user = userMap?.get(session.userId);
       if (!user) return null;
 
@@ -136,10 +148,11 @@ export function TriplitAdapter(
       return updatedSession;
     },
     async deleteSession(sessionToken) {
-      const session = await client.fetchOne({
+      const session = (await client.fetchOne({
         collectionName: collectionNames.session,
         where: [['sessionToken', '=', sessionToken]],
-      });
+      })) as AdapterSession | null;
+      // @ts-expect-error - id is specific to triplit
       const sessionId = session?.id;
       if (!sessionId) return null;
       await client.delete(collectionNames.session, sessionId);
@@ -153,14 +166,15 @@ export function TriplitAdapter(
       return result?.output;
     },
     async useVerificationToken({ identifier, token }) {
-      const result = await client.fetchOne({
+      const result = (await client.fetchOne({
         collectionName: collectionNames.verificationRequest,
         where: [
           ['identifier', '=', identifier],
           ['token', '=', token],
         ],
-      });
+      })) as VerificationToken | null;
       if (!result) return null;
+      // @ts-expect-error - id is specific to triplit
       const { id, ...tokenResult } = result;
       await client.delete(collectionNames.verificationRequest, id);
       return tokenResult;
