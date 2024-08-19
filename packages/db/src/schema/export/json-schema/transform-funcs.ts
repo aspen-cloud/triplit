@@ -34,47 +34,6 @@ export function deleteRelationFields(
   return object;
 }
 
-// export function transformOptions(object: any, overlyingObj?: any) {
-//   // --- guard from undefined/null
-//   if (object.options == null) return object;
-
-//   // --- nullable
-//   if (object?.options?.nullable === true) {
-//     // nullable values are indicated as type: ["null"] in JSON schema
-//     if (Array.isArray(object.type) === false) {
-//       object.type = [object.type, 'null'];
-//     } else {
-//       // normally triplit's schema should just be a string, but
-//       // just in case it changes to allow array of types
-//       object.type.push('null');
-//     }
-//   }
-//   // --- default
-//   if (object?.options?.default) {
-//     // we set the default, though JSON Schema notes that it should be
-//     // only used for documentation / example values, not as form default
-//     if (
-//       typeof object?.options?.default === 'string' ||
-//       typeof object?.options?.default === 'number'
-//     ) {
-//       object.default = String(object.options.default);
-//     } else {
-//       // we do nothing
-//       // as if it's object to define a function
-//       // triplit uses: default: { func: 'uuid', args: null }
-//     }
-//   }
-
-//   // --- enum
-//   if (object?.options?.enum != null) {
-//     object.enum = object?.options?.enum;
-//   }
-
-//   delete object?.options;
-
-//   return object;
-// }
-
 export function transformOptions(object: any, overlyingObj?: any) {
   if (object.options == null) return object;
 
@@ -107,7 +66,7 @@ function transformDefault(object: any) {
       typeof object?.options?.default === 'string' ||
       typeof object?.options?.default === 'number'
     ) {
-      object.default = String(object.options.default);
+      object.default = object.options.default;
     } else {
       // Handle complex default values (e.g., functions) if needed
       // triplit uses: default: { func: 'uuid', args: null }
