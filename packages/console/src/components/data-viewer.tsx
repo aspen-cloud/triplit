@@ -26,7 +26,11 @@ import { DeleteEntitiesDialog } from './delete-entities-dialog.js';
 import { CollectionMenu } from './collection-menu.js';
 import { DeleteCollectionDialog } from './delete-collection-dialog.js';
 import { flattenSchema } from 'src/utils/flatten-schema.js';
-import { diffSchemas, getSchemaDiffIssues } from '@triplit/db';
+import {
+  TriplitError,
+  getVariableComponents,
+  isValueVariable,
+} from '@triplit/db';
 import { deleteAttribute } from 'src/utils/schema.js';
 import { useToast } from 'src/hooks/useToast.js';
 
@@ -239,21 +243,35 @@ export function DataViewer({
                   queryDef={typeDef}
                   onClickRelationLink={() => {
                     const where = typeDef?.query?.where;
-                    const whereWithVariablesReplaced = where?.map(
-                      ([attribute, operator, value]) => {
-                        let parsedVal = value;
-                        if (typeof value === 'string' && value.startsWith('$'))
-                          parsedVal =
-                            // for the "new" reference syntax of $1.attribute
-                            // for the old reference syntax of $attribute
-                            row.getValue(
-                              value.split('$1.')[1] ?? value.split('$')[1]
-                            );
-                        if (parsedVal instanceof Set)
-                          parsedVal = Array.from(parsedVal);
-                        return [attribute, operator, parsedVal];
-                      }
-                    );
+                    let whereWithVariablesReplaced = where;
+                    try {
+                      whereWithVariablesReplaced = where?.map(
+                        ([attribute, operator, value]) => {
+                          let parsedVal = value;
+                          if (isValueVariable(value)) {
+                            const [scope, key] = getVariableComponents(value);
+                            if (scope === undefined || scope === '1') {
+                              parsedVal = row.getValue(key);
+                            } else {
+                              throw new TriplitError(
+                                `${value} could not be handled in the filter [${attribute}, ${operator}, ${value}]. Only variables with the \'$1\' scope are supported.`
+                              );
+                            }
+                          }
+                          if (parsedVal instanceof Set)
+                            parsedVal = Array.from(parsedVal);
+                          return [attribute, operator, parsedVal];
+                        }
+                      );
+                    } catch (e) {
+                      if (e instanceof TriplitError)
+                        toast({
+                          title: 'Error',
+                          description: e.contextMessage,
+                          variant: 'destructive',
+                        });
+                      return;
+                    }
                     setQuery({
                       where: whereWithVariablesReplaced,
                       collection: typeDef?.query?.collectionName,
