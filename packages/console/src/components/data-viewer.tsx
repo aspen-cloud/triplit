@@ -243,9 +243,12 @@ export function DataViewer({
                       ([attribute, operator, value]) => {
                         let parsedVal = value;
                         if (typeof value === 'string' && value.startsWith('$'))
-                          parsedVal = row.getValue(
-                            value.split('$')[1] as string
-                          );
+                          parsedVal =
+                            // for the "new" reference syntax of $1.attribute
+                            // for the old reference syntax of $attribute
+                            row.getValue(
+                              value.split('$1.')[1] ?? value.split('$')[1]
+                            );
                         if (parsedVal instanceof Set)
                           parsedVal = Array.from(parsedVal);
                         return [attribute, operator, parsedVal];
