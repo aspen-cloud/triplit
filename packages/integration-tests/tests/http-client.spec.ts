@@ -481,9 +481,9 @@ it('fetch can properly deserialize subqueries with schema', async () => {
           collectionName: 'test',
           include: { relationshipOne: null, relationshipMany: null },
         });
-        const relOne = result.get('test1').relationshipOne;
+        const relOne = result.get('test1')!.relationshipOne;
         expect(relOne).toEqual(expectedRel1);
-        const relMany = result.get('test1').relationshipMany;
+        const relMany = result.get('test1')!.relationshipMany;
         expect(relMany.size).toEqual(2);
         expect(relMany.get('rel1')).toEqual(expectedRel1);
         expect(relMany.get('rel2')).toEqual(expectedRel2);
@@ -496,9 +496,9 @@ it('fetch can properly deserialize subqueries with schema', async () => {
           include: { relationshipOne: null, relationshipMany: null },
         });
 
-        const relOne = result.relationshipOne;
+        const relOne = result!.relationshipOne;
         expect(relOne).toEqual(expectedRel1);
-        const relMany = result.relationshipMany;
+        const relMany = result!.relationshipMany;
         expect(relMany.size).toEqual(2);
         expect(relMany.get('rel1')).toEqual(expectedRel1);
         expect(relMany.get('rel2')).toEqual(expectedRel2);
@@ -547,21 +547,25 @@ it.todo(
           collectionName: 'test',
           include: {
             relationshipOne: {
-              collectionName: 'relationship' as const,
-              where: [['testId', '=', '$id']],
+              subquery: {
+                collectionName: 'relationship',
+                where: [['testId', '=', '$id']],
+              },
               cardinality: 'one',
             },
             relationshipMany: {
-              collectionName: 'relationship' as const,
-              where: [['testId', '=', '$id']],
+              subquery: {
+                collectionName: 'relationship',
+                where: [['testId', '=', '$id']],
+              },
               cardinality: 'many',
             },
           },
         });
 
-        const relOne = result.get('test1').relationshipOne;
+        const relOne = result.get('test1')!.relationshipOne;
         expect(relOne).toEqual(expectedRel1);
-        const relMany = result.get('test1').relationshipMany;
+        const relMany = result.get('test1')!.relationshipMany;
         expect(relMany.size).toEqual(2);
         expect(relMany.get('rel1')).toEqual(expectedRel1);
         expect(relMany.get('rel2')).toEqual(expectedRel2);

@@ -17,7 +17,7 @@ import { ProjectJWT } from './token.js';
 export class Server {
   private connections: Map<string, Connection> = new Map();
 
-  constructor(public db: TriplitDB, public logger: Logger = NullLogger) {}
+  constructor(public db: TriplitDB<any>, public logger: Logger = NullLogger) {}
 
   createSession(token: ProjectJWT) {
     return new Session(this, token);

@@ -333,7 +333,7 @@ function hasAdminAccess(token: ProjectJWT) {
 }
 
 export class Session {
-  db: TriplitDB;
+  db: TriplitDB<any>;
   constructor(public server: TriplitServer, public token: ProjectJWT) {
     if (!token) throw new TriplitError('Token is required');
     // TODO: figure out admin middleware
@@ -477,11 +477,7 @@ export class Session {
         [...result.entries()].map(([id, entity]) => [
           id,
           collectionSchema
-            ? collectionSchema.convertJSToJSON(
-                // @ts-expect-error - need id in query selection
-                entity,
-                schema
-              )
+            ? collectionSchema.convertJSToJSON(entity, schema)
             : entity,
         ])
       );
@@ -506,11 +502,7 @@ export class Session {
       const serializableResult = {
         ...txResult,
         output: collectionSchema
-          ? collectionSchema.convertJSToJSON(
-              // @ts-expect-error - need id in query selection
-              txResult.output,
-              schema
-            )
+          ? collectionSchema.convertJSToJSON(txResult.output, schema)
           : txResult.output,
       };
       return ServerResponse(200, serializableResult);
@@ -542,11 +534,7 @@ export class Session {
               );
               output[collectionName].push(
                 collectionSchema
-                  ? collectionSchema.convertJSToJSON(
-                      // @ts-expect-error - need id in query selection
-                      insertedEntity,
-                      schema
-                    )
+                  ? collectionSchema.convertJSToJSON(insertedEntity, schema)
                   : insertedEntity
               );
             }

@@ -10828,6 +10828,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@types/node@npm:^22.4.1":
+  version: 22.4.1
+  resolution: "@types/node@npm:22.4.1"
+  dependencies:
+    undici-types: "npm:~6.19.2"
+  checksum: 10/cce9221aea24688bccc3d7c25afd26d95c1bdab73a32ee5c43bb456e070116abf6ba537a9ff19c728bc06fe054e69a2c7ec8e5d818e34a3bf9567eae2cb20059
+  languageName: node
+  linkType: hard
+
 "@types/normalize-package-data@npm:^2.4.0":
   version: 2.4.1
   resolution: "@types/normalize-package-data@npm:2.4.1"
@@ -20411,6 +20420,7 @@ __metadata:
     "@triplit/server": "workspace:^"
     "@triplit/server-core": "workspace:^"
     "@types/fs-extra": "npm:^11"
+    "@types/node": "npm:^22.4.1"
     execa: "npm:^8.0.1"
     fs-extra: "npm:^11.1.1"
     vitest: "npm:^0.34.6"
@@ -30989,6 +30999,13 @@ __metadata:
   version: 5.26.5
   resolution: "undici-types@npm:5.26.5"
   checksum: 10/0097779d94bc0fd26f0418b3a05472410408877279141ded2bd449167be1aed7ea5b76f756562cb3586a07f251b90799bab22d9019ceba49c037c76445f7cddd
+  languageName: node
+  linkType: hard
+
+"undici-types@npm:~6.19.2":
+  version: 6.19.8
+  resolution: "undici-types@npm:6.19.8"
+  checksum: 10/cf0b48ed4fc99baf56584afa91aaffa5010c268b8842f62e02f752df209e3dea138b372a60a963b3b2576ed932f32329ce7ddb9cb5f27a6c83040d8cd74b7a70
   languageName: node
   linkType: hard
 

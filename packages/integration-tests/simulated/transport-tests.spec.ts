@@ -39,7 +39,7 @@ function parseJWT(token: string | undefined) {
 const pause = async (ms: number = 100) =>
   new Promise((resolve) => setTimeout(resolve, ms));
 
-function createTestClient<M extends Models<any, any> | undefined>(
+function createTestClient<M extends Models>(
   server: TriplitServer,
   apiKey: string,
   options: ClientOptions<M> = {}
@@ -74,7 +74,7 @@ describe('TestTransport', () => {
   });
 });
 
-async function clientSchemaAttributes<M extends Models<any, any> | undefined>(
+async function clientSchemaAttributes<M extends Models>(
   client: TriplitClient<M>
 ) {
   return (await client.db.getSchema())?.collections.students.schema.properties;
@@ -103,29 +103,41 @@ describe('schema syncing', () => {
     });
     const bobCallback = vi.fn();
     alice.subscribe(
-      alice.query('_metadata').entityId('_schema').build(),
+      alice
+        .query(
+          // @ts-expect-error - metadata not in schema
+          '_metadata'
+        )
+        .entityId('_schema')
+        .build(),
       () => {}
     );
     bob.subscribe(
-      bob.query('_metadata').entityId('_schema').build(),
+      bob
+        .query(
+          // @ts-expect-error - metadata not in schema
+          '_metadata'
+        )
+        .entityId('_schema')
+        .build(),
       bobCallback
     );
     await pause();
-    expect((await clientSchemaAttributes(alice)).name).toBeDefined();
-    expect((await clientSchemaAttributes(bob)).name).toBeDefined();
+    expect((await clientSchemaAttributes(alice))?.name).toBeDefined();
+    expect((await clientSchemaAttributes(bob))?.name).toBeDefined();
     await alice.db.addAttribute({
       collection: 'students',
       path: ['age'],
       attribute: { type: 'number', options: {} },
     });
 
-    expect((await clientSchemaAttributes(alice)).name).toBeDefined();
-    expect((await clientSchemaAttributes(alice)).age).toBeDefined();
+    expect((await clientSchemaAttributes(alice))?.name).toBeDefined();
+    expect((await clientSchemaAttributes(alice))?.age).toBeDefined();
 
     await pause(); // idk why this needs to be this long
     expect(bobCallback).toHaveBeenCalled();
     const bobSchema = await clientSchemaAttributes(bob);
-    expect(bobSchema.age).toBeDefined();
+    expect(bobSchema?.age).toBeDefined();
   });
   it('should not sync the schema if the client sending updates has a service token but the option disabled', async () => {
     const schema = {
@@ -148,20 +160,29 @@ describe('schema syncing', () => {
     });
     const callback = vi.fn();
 
-    bob.subscribe(bob.query('_metadata').entityId('_schema').build(), callback);
-    expect((await clientSchemaAttributes(alice)).name).toBeDefined();
-    expect((await clientSchemaAttributes(bob)).name).toBeDefined();
+    bob.subscribe(
+      bob
+        .query(
+          // @ts-expect-error - metadata not in schema
+          '_metadata'
+        )
+        .entityId('_schema')
+        .build(),
+      callback
+    );
+    expect((await clientSchemaAttributes(alice))?.name).toBeDefined();
+    expect((await clientSchemaAttributes(bob))?.name).toBeDefined();
     await alice.db.addAttribute({
       collection: 'students',
       path: ['age'],
       attribute: { type: 'number', options: {} },
     });
 
-    expect((await clientSchemaAttributes(alice)).name).toBeDefined();
-    expect((await clientSchemaAttributes(alice)).age).toBeDefined();
+    expect((await clientSchemaAttributes(alice))?.name).toBeDefined();
+    expect((await clientSchemaAttributes(alice))?.age).toBeDefined();
     await pause();
 
-    expect((await clientSchemaAttributes(bob)).age).toBeUndefined();
+    expect((await clientSchemaAttributes(bob))?.age).toBeUndefined();
   });
   it('should not sync the schema if the client sneding updates does not have a service token', async () => {
     const schema = {
@@ -184,20 +205,29 @@ describe('schema syncing', () => {
     });
     const callback = vi.fn();
 
-    bob.subscribe(bob.query('_metadata').entityId('_schema').build(), callback);
-    expect((await clientSchemaAttributes(alice)).name).toBeDefined();
-    expect((await clientSchemaAttributes(bob)).name).toBeDefined();
+    bob.subscribe(
+      bob
+        .query(
+          // @ts-expect-error - metadata not in schema
+          '_metadata'
+        )
+        .entityId('_schema')
+        .build(),
+      callback
+    );
+    expect((await clientSchemaAttributes(alice))?.name).toBeDefined();
+    expect((await clientSchemaAttributes(bob))?.name).toBeDefined();
     await alice.db.addAttribute({
       collection: 'students',
       path: ['age'],
       attribute: { type: 'number', options: {} },
     });
 
-    expect((await clientSchemaAttributes(alice)).name).toBeDefined();
-    expect((await clientSchemaAttributes(alice)).age).toBeDefined();
+    expect((await clientSchemaAttributes(alice))?.name).toBeDefined();
+    expect((await clientSchemaAttributes(alice))?.age).toBeDefined();
     await pause();
 
-    expect((await clientSchemaAttributes(bob)).age).toBeUndefined();
+    expect((await clientSchemaAttributes(bob))?.age).toBeUndefined();
   });
 });
 
@@ -335,9 +365,9 @@ describe('Conflicts', () => {
     bobBestRapper = bobRappers.get('best-rapper');
     charlieBestRapper = charlieRappers.get('best-rapper');
 
-    expect(aliceBestRapper.name).toEqual('Eminem');
-    expect(bobBestRapper.name).toEqual('Eminem');
-    expect(charlieBestRapper.name).toEqual('Eminem');
+    expect(aliceBestRapper?.name).toEqual('Eminem');
+    expect(bobBestRapper?.name).toEqual('Eminem');
+    expect(charlieBestRapper?.name).toEqual('Eminem');
   });
 });
 
@@ -621,8 +651,7 @@ describe('Server API', () => {
   it('can sync an insert on one client to another client', async () => {
     const server = new TriplitServer(new DB({ source: new MemoryStorage() }));
     const sesh = server.createSession({
-      type: 'secret',
-      projectId: 'todos',
+      'x-triplit-token-type': 'secret',
     });
     const bob = createTestClient(server, NOT_SERVICE_KEY, { clientId: 'bob' });
     const callback = vi.fn();
@@ -1673,9 +1702,11 @@ describe('outbox', () => {
                       )
                     ).toBe(true);
                     // Hard to nail down exactly when the outbox will be between TRIPLES and ACK messages
-                    const outboxTriples = await alice.db.tripleStore
-                      .setStorageScope(['outbox'])
-                      .findByEntity();
+                    const outboxTriples = await genToArr(
+                      alice.db.tripleStore
+                        .setStorageScope(['outbox'])
+                        .findByEntity()
+                    );
                     expect(
                       outboxTriples.filter(
                         (t) => JSON.stringify(t.timestamp) === txId1
@@ -1899,13 +1930,12 @@ describe('rules', () => {
       collaborators: new Set(),
     });
     // insert a post with Bob as a collaborator
-    const {
-      output: { id: secondPostId },
-    } = await alice.insert('posts', {
+    const { output } = await alice.insert('posts', {
       text: 'Hello, Bob!',
       author_id: 'alice',
       collaborators: new Set(['bob']),
     });
+    const secondPostId = output?.id;
     await pause(200);
     expect(bobCallback).toHaveBeenCalledTimes(2);
     const lastCallVal = bobCallback.mock.calls.at(-1)[0];

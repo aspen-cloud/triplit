@@ -1,7 +1,7 @@
 import { beforeEach, expect, it, describe } from 'vitest';
 import { withServer } from '../utils/server.js';
 import { HttpClient } from '@triplit/client';
-import { Schema as S } from '@triplit/db';
+import { Schema as S, TripleRow } from '@triplit/db';
 
 const PORT = 8888;
 
@@ -34,7 +34,7 @@ async function fetchServerSyncedMetadata() {
   if (!res.ok) {
     throw new Error(await res.text());
   }
-  return await res.json();
+  return (await res.json()) as TripleRow[];
 }
 
 describe('/clear', async () => {
