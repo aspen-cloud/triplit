@@ -8,7 +8,7 @@ export const projectSchemaMiddleware = Middleware({
   name: 'Project Schema',
   flags: {
     schemaPath: Flag.String({
-      description: 'File path to the schema file',
+      description: 'File path to the local schema file',
       required: false,
       char: 'P',
     }),
@@ -27,7 +27,6 @@ export const projectSchemaMiddleware = Middleware({
       return `Schema file not found at ${schemaPath}. If you would like to run without a schema file, use the --noSchema flag.`;
     }
     const result = await loadTsModule(schemaPath);
-
     if (!result) {
       return `Failed to load schema file at ${schemaPath}. If you would like to run without a schema file, use the --noSchema flag.`;
     }
