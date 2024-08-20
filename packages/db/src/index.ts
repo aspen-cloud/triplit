@@ -66,6 +66,7 @@ export {
   hashSchemaJSON,
   getSchemaFromPath,
 } from './schema/schema.js';
+export { getRolesFromSession } from './schema/permissions.js';
 export { Schema } from './schema/builder.js';
 export { diffSchemas, getSchemaDiffIssues } from './schema/diff.js';
 export type { TObject } from './schema/schema.js';
