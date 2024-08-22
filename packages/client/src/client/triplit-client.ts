@@ -26,6 +26,7 @@ import {
   FetchResultEntity,
   CollectionQueryDefault,
   FetchResultEntityFromParts,
+  StoreSchema,
 } from '@triplit/db';
 import { decodeToken } from '../token.js';
 import {
@@ -354,7 +355,7 @@ export class TriplitClient<M extends ClientSchema = ClientSchema> {
    *
    * @returns The schema of the database as a Javascript object
    */
-  async getSchema() {
+  async getSchema(): Promise<StoreSchema<M> | undefined> {
     return await this.db.getSchema();
   }
 
