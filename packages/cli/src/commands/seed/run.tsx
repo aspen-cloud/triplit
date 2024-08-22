@@ -92,8 +92,18 @@ export async function insertSeeds(
       if (fs.existsSync(file)) {
         seeds = [file];
       } else {
-        console.log('File not found');
-        return;
+        console.error(red('\nUnable to find seed file:\n\n' + file));
+        allSeeds.length > 0 &&
+          console.error(
+            `\nAvailable seed files in /triplit/seeds:\n\n\t` +
+              allSeeds.map((f) => path.basename(f)).join('\n\t')
+          );
+        console.error(
+          `\nIf you want to create a new seed file, run\n\n\t${blue(
+            '`npx triplit seed create`'
+          )}\n`
+        );
+        process.exit(1);
       }
     }
   } else if (allSeeds.length > 0) {
