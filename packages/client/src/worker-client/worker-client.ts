@@ -378,6 +378,16 @@ export class WorkerClient<M extends ClientSchema = ClientSchema> {
     return { loadMore, unsubscribe };
   }
 
+  async getSchemaJson() {
+    await this.initialized;
+    return await this.clientWorker.getSchemaJson();
+  }
+
+  async getSchema() {
+    await this.initialized;
+    return JSONToSchema(await this.clientWorker.getSchemaJson());
+  }
+
   async updateOptions(options: Pick<ClientOptions, 'token' | 'serverUrl'>) {
     await this.initialized;
     return this.clientWorker.updateOptions(options);

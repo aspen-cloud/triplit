@@ -355,7 +355,7 @@ export class TriplitClient<M extends ClientSchema = ClientSchema> {
    * @returns The schema of the database as a Javascript object
    */
   async getSchema() {
-    await this.db.getSchema();
+    return await this.db.getSchema();
   }
 
   /**
