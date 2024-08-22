@@ -25,7 +25,7 @@ export class VariableAwareCache<Schema extends Models> {
     BigInt,
     {
       results: Map<string, any>;
-      triples: Map<string, TripleRow[]>;
+      triples: TripleRow[];
     }
   >;
 
@@ -73,20 +73,26 @@ export class VariableAwareCache<Schema extends Models> {
     return new Promise<void>((resolve) => {
       const id = this.viewQueryToId(viewQuery);
       subscribeResultsAndTriples<Schema, Q>(
-        this.db,
         this.db.tripleStore,
         viewQuery,
+        {
+          schema,
+          skipRules: true,
+          session: {
+            roles: this.db.sessionRoles,
+            systemVars: this.db.systemVars,
+          },
+        },
         ([results, triples]) => {
-          this.cache.set(id, { results, triples });
+          this.cache.set(id, {
+            results,
+            triples: Array.from(triples.values()).flat(),
+          });
           resolve();
         },
         (err) => {
           console.error('error in view', err);
           this.cache.delete(id);
-        },
-        {
-          schema,
-          skipRules: true,
         }
       );
     });
@@ -98,12 +104,11 @@ export class VariableAwareCache<Schema extends Models> {
 
   async resolveFromCache<Q extends CollectionQuery<Schema, any>>(
     query: Q,
-    systemVars: SystemVariables | undefined,
     executionContext: FetchExecutionContext,
     options: FetchFromStorageOptions
   ): Promise<{
     results: TimestampedFetchResult<Q>;
-    triples: Map<string, TripleRow[]>;
+    triples: TripleRow[];
   }> {
     const { views, variableFilters } = this.queryToViews(query);
     const id = this.viewQueryToId(views[0]);
@@ -114,14 +119,7 @@ export class VariableAwareCache<Schema extends Models> {
     // TODO support multiple variable clauses
     const [prop, op, varStr] = variableFilters[0];
     const varKey = (varStr as string).slice(1);
-    const vars = getQueryVariables(
-      query,
-      {
-        systemVars: this.db.systemVars,
-        roles: this.db.sessionRoles,
-      },
-      executionContext
-    );
+    const vars = getQueryVariables(query, executionContext, options);
     const varValue = vars![varKey];
     const view = this.cache.get(id)!;
     const viewResultEntries = [...view.results.entries()];
@@ -179,9 +177,7 @@ export class VariableAwareCache<Schema extends Models> {
       ];
       return {
         results: new Map(resultEntries) as TimestampedFetchResult<Q>,
-        triples: new Map(
-          resultEntries.map(([id, _]) => [id, view.triples.get(id)!])
-        ),
+        triples: [...view.triples],
       };
     }
     if (start == undefined || end == undefined) {
@@ -200,9 +196,7 @@ export class VariableAwareCache<Schema extends Models> {
 
     return {
       results: new Map(resultEntries) as TimestampedFetchResult<Q>,
-      triples: new Map(
-        resultEntries.map(([id, _]) => [id, view.triples.get(id)!])
-      ),
+      triples: [...view.triples],
     };
   }
 

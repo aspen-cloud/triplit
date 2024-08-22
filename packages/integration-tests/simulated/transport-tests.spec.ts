@@ -1460,12 +1460,12 @@ describe('pagination syncing', () => {
       '2021-01-08T00:00:00.000Z',
       '2021-01-09T00:00:00.000Z',
       '2021-01-10T00:00:00.000Z',
-    ];
-    for (const date of datesInASCOrder) {
+    ].map((date, i) => [`${i}`, new Date(date)] as const);
+    for (const [id, created_at] of datesInASCOrder) {
       await alice.insert('todos', {
         text: 'todo',
-        created_at: new Date(date),
-        id: date,
+        created_at,
+        id,
       });
     }
     const bobSub = vi.fn();
@@ -1474,34 +1474,47 @@ describe('pagination syncing', () => {
         .query('todos')
         .order(['created_at', 'DESC'])
         .limit(5)
-        .after([datesInASCOrder[5], datesInASCOrder[5]])
+        .after([datesInASCOrder[5][1], datesInASCOrder[5][0]])
         .build(),
       bobSub
     );
     await pause();
     expect(bobSub.mock.calls.at(-1)[0]).toHaveLength(5);
     expect([...bobSub.mock.calls.at(-1)[0].keys()]).toEqual(
-      datesInASCOrder.slice().reverse().slice(5, 10)
+      datesInASCOrder
+        .slice()
+        .reverse()
+        .slice(5, 10)
+        .map(([id]) => id)
     );
     // insert new todo
+    const new_id = 'inserted';
     const date = '2021-01-05T00:00:00.001Z';
     await alice.insert('todos', {
       text: 'todo',
       created_at: new Date(date),
-      id: date,
+      id: new_id,
     });
     await pause();
     expect(bobSub.mock.calls.at(-1)[0]).toHaveLength(5);
     expect([...bobSub.mock.calls.at(-1)[0].keys()]).toEqual([
-      date,
-      ...datesInASCOrder.slice().reverse().slice(5, 9),
+      new_id,
+      ...datesInASCOrder
+        .slice()
+        .reverse()
+        .slice(5, 9)
+        .map(([id]) => id),
     ]);
     // delete a todo
-    await alice.delete('todos', date);
+    await alice.delete('todos', new_id);
     await pause();
     expect(bobSub.mock.calls.at(-1)[0]).toHaveLength(5);
     expect([...bobSub.mock.calls.at(-1)[0].keys()]).toEqual(
-      datesInASCOrder.slice().reverse().slice(5, 10)
+      datesInASCOrder
+        .slice()
+        .reverse()
+        .slice(5, 10)
+        .map(([id]) => id)
     );
   });
 });

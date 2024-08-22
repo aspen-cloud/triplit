@@ -168,12 +168,15 @@ async function checkWritePermissions<M extends Models>(
   );
 
   const { results } = await fetchOne<M, any>(
-    dbTx.db,
     storeTx,
     query,
     initialFetchExecutionContext(),
     {
       schema: schema.collections,
+      session: {
+        systemVars: dbTx.db.systemVars,
+        roles: dbTx.db.sessionRoles,
+      },
     }
   );
   if (!results) {
@@ -187,7 +190,7 @@ async function checkWritePermissions<M extends Models>(
 }
 
 async function checkWriteRules<M extends Models>(
-  caller: DBTransaction<M>,
+  dbTx: DBTransaction<M>,
   tx: TripleStoreApi,
   id: EntityId,
   schema: StoreSchema<M> | undefined
@@ -209,19 +212,22 @@ async function checkWriteRules<M extends Models>(
       } as CollectionQuery<M, any>,
       collections as M,
       {
-        roles: caller.db.sessionRoles,
+        roles: dbTx.db.sessionRoles,
       },
       {
         skipRules: false,
       }
     );
     const { results } = await fetchOne<M, any>(
-      caller.db,
       tx,
       query,
       initialFetchExecutionContext(),
       {
         schema: collections,
+        session: {
+          systemVars: dbTx.db.systemVars,
+          roles: dbTx.db.sessionRoles,
+        },
       }
     );
     if (!results) {
@@ -870,13 +876,16 @@ export class DBTransaction<M extends Models> {
     // TODO: read scope?
     // See difference between this fetch and db fetch
     const { results } = await fetch<M, Q>(
-      this.db,
       this.storeTx,
       fetchQuery,
       initialFetchExecutionContext(),
       {
         schema,
         skipIndex: options.skipIndex,
+        session: {
+          systemVars: this.db.systemVars,
+          roles: this.db.sessionRoles,
+        },
       }
     );
     return fetchResultToJS(

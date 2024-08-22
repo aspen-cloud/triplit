@@ -39,7 +39,12 @@ describe('candidate selection', () => {
     {
       const query = db.query('tests').where('name', '=', 'Alice').build();
       await db.transact(async (tx) => {
-        const { candidates } = await getCandidateEntityIds(tx.storeTx, query);
+        const { candidates } = await getCandidateEntityIds(tx.storeTx, query, {
+          session: {
+            roles: db.sessionRoles,
+            systemVars: db.systemVars,
+          },
+        });
         expectUnorderedArrayEquality(await genToArr(candidates), ['tests#0']);
       });
     }
@@ -48,7 +53,12 @@ describe('candidate selection', () => {
     {
       const query = db.query('tests').where('age', '=', 24).build();
       await db.transact(async (tx) => {
-        const { candidates } = await getCandidateEntityIds(tx.storeTx, query);
+        const { candidates } = await getCandidateEntityIds(tx.storeTx, query, {
+          session: {
+            roles: db.sessionRoles,
+            systemVars: db.systemVars,
+          },
+        });
         expectUnorderedArrayEquality(await genToArr(candidates), [
           'tests#3',
           'tests#4',
@@ -73,7 +83,12 @@ describe('candidate selection', () => {
         ])
         .build();
       await db.transact(async (tx) => {
-        const { candidates } = await getCandidateEntityIds(tx.storeTx, query);
+        const { candidates } = await getCandidateEntityIds(tx.storeTx, query, {
+          session: {
+            roles: db.sessionRoles,
+            systemVars: db.systemVars,
+          },
+        });
         expectUnorderedArrayEquality(await genToArr(candidates), ['tests#0']);
       });
     }
@@ -88,7 +103,12 @@ describe('candidate selection', () => {
     {
       const query = db.query('tests').where('score', '<', 70).build();
       await db.transact(async (tx) => {
-        const { candidates } = await getCandidateEntityIds(tx.storeTx, query);
+        const { candidates } = await getCandidateEntityIds(tx.storeTx, query, {
+          session: {
+            roles: db.sessionRoles,
+            systemVars: db.systemVars,
+          },
+        });
         expectUnorderedArrayEquality(await genToArr(candidates), [
           'tests#11',
           'tests#13',
@@ -100,7 +120,12 @@ describe('candidate selection', () => {
     {
       const query = db.query('tests').where('score', '<=', 70).build();
       await db.transact(async (tx) => {
-        const { candidates } = await getCandidateEntityIds(tx.storeTx, query);
+        const { candidates } = await getCandidateEntityIds(tx.storeTx, query, {
+          session: {
+            roles: db.sessionRoles,
+            systemVars: db.systemVars,
+          },
+        });
         expectUnorderedArrayEquality(await genToArr(candidates), [
           'tests#9',
           'tests#11',
@@ -114,7 +139,12 @@ describe('candidate selection', () => {
     {
       const query = db.query('tests').where('score', '>', 90).build();
       await db.transact(async (tx) => {
-        const { candidates } = await getCandidateEntityIds(tx.storeTx, query);
+        const { candidates } = await getCandidateEntityIds(tx.storeTx, query, {
+          session: {
+            roles: db.sessionRoles,
+            systemVars: db.systemVars,
+          },
+        });
         expectUnorderedArrayEquality(await genToArr(candidates), [
           'tests#0',
           'tests#2',
@@ -125,7 +155,12 @@ describe('candidate selection', () => {
     {
       const query = db.query('tests').where('score', '>=', 90).build();
       await db.transact(async (tx) => {
-        const { candidates } = await getCandidateEntityIds(tx.storeTx, query);
+        const { candidates } = await getCandidateEntityIds(tx.storeTx, query, {
+          session: {
+            roles: db.sessionRoles,
+            systemVars: db.systemVars,
+          },
+        });
         expectUnorderedArrayEquality(await genToArr(candidates), [
           'tests#0',
           'tests#1',
@@ -151,7 +186,12 @@ describe('candidate selection', () => {
         ])
         .build();
       await db.transact(async (tx) => {
-        const { candidates } = await getCandidateEntityIds(tx.storeTx, query);
+        const { candidates } = await getCandidateEntityIds(tx.storeTx, query, {
+          session: {
+            roles: db.sessionRoles,
+            systemVars: db.systemVars,
+          },
+        });
         expectUnorderedArrayEquality(await genToArr(candidates), [
           'tests#1',
           'tests#3',
@@ -171,7 +211,12 @@ describe('candidate selection', () => {
         ])
         .build();
       await db.transact(async (tx) => {
-        const { candidates } = await getCandidateEntityIds(tx.storeTx, query);
+        const { candidates } = await getCandidateEntityIds(tx.storeTx, query, {
+          session: {
+            roles: db.sessionRoles,
+            systemVars: db.systemVars,
+          },
+        });
         expectUnorderedArrayEquality(await genToArr(candidates), [
           'tests#0',
           'tests#1',
@@ -193,7 +238,12 @@ describe('candidate selection', () => {
         ])
         .build();
       await db.transact(async (tx) => {
-        const { candidates } = await getCandidateEntityIds(tx.storeTx, query);
+        const { candidates } = await getCandidateEntityIds(tx.storeTx, query, {
+          session: {
+            roles: db.sessionRoles,
+            systemVars: db.systemVars,
+          },
+        });
         expectUnorderedArrayEquality(await genToArr(candidates), [
           'tests#0',
           'tests#1',
@@ -215,7 +265,12 @@ describe('candidate selection', () => {
     {
       const query = db.query('tests').build();
       await db.transact(async (tx) => {
-        const { candidates } = await getCandidateEntityIds(tx.storeTx, query);
+        const { candidates } = await getCandidateEntityIds(tx.storeTx, query, {
+          session: {
+            roles: db.sessionRoles,
+            systemVars: db.systemVars,
+          },
+        });
         expectUnorderedArrayEquality(
           await genToArr(candidates),
           testData.map((_, i) => `tests#${i}`)
@@ -227,7 +282,12 @@ describe('candidate selection', () => {
     {
       const query = db.query('tests').where('name', '!=', 'Alice').build();
       await db.transact(async (tx) => {
-        const { candidates } = await getCandidateEntityIds(tx.storeTx, query);
+        const { candidates } = await getCandidateEntityIds(tx.storeTx, query, {
+          session: {
+            roles: db.sessionRoles,
+            systemVars: db.systemVars,
+          },
+        });
         expectUnorderedArrayEquality(
           await genToArr(candidates),
           testData.map((_, i) => `tests#${i}`)
@@ -263,7 +323,12 @@ it('range filter handles dates', async () => {
     ])
     .build();
   await db.transact(async (tx) => {
-    const { candidates } = await getCandidateEntityIds(tx.storeTx, query);
+    const { candidates } = await getCandidateEntityIds(tx.storeTx, query, {
+      session: {
+        roles: db.sessionRoles,
+        systemVars: db.systemVars,
+      },
+    });
     expectUnorderedArrayEquality(await genToArr(candidates), [
       'tests#1',
       'tests#2',

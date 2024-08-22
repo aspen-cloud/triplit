@@ -26,6 +26,7 @@ import {
   InvalidOrderClauseError,
   InvalidWhereClauseError,
   CollectionQuery,
+  genToArr,
 } from '../src';
 import { hashSchemaJSON } from '../src/schema/schema.js';
 import { Models } from '../src/schema/types';
@@ -34,6 +35,7 @@ import { MemoryBTreeStorage as MemoryStorage } from '../src/storage/memory-btree
 import { testSubscription } from './utils/test-subscription.js';
 import {
   appendCollectionToId,
+  fetchResultToJS,
   stripCollectionFromId,
 } from '../src/db-helpers.js';
 import { TripleRow } from '../dist/types/triple-store-utils.js';
@@ -44,6 +46,7 @@ import {
 } from '../src/collection-query.js';
 import { prepareQuery } from '../src/query/prepare.js';
 import { DEFAULT_PAGE_SIZE as TUPLE_DB_DEFAULT_PAGE_SIZE } from '../src/multi-tuple-store.js';
+import { triplesToEntities } from '../src/query.js';
 
 const pause = async (ms: number = 100) =>
   new Promise((resolve) => setTimeout(resolve, ms));
@@ -3118,9 +3121,9 @@ describe('Nested Properties', () => {
       );
       expect(results).toHaveLength(1);
       const result = results.get(ENTITY_ID);
-      expect(result).toHaveProperty('address.city');
-      expect(result).toHaveProperty('address.state');
-      expect(result).not.toHaveProperty('address.street');
+      expect(result.address.city).toBe('San Francisco');
+      expect(result.address.state).toBe('CA');
+      expect(result.address).not.toHaveProperty('street');
     });
   });
   describe('Schemafull', async () => {
@@ -4294,13 +4297,16 @@ describe('delta querying', async () => {
       });
 
       const deltaTriples = await fetchDeltaTriples(
-        db,
         db.tripleStore,
         query,
         addedTriples,
         initialFetchExecutionContext(),
         {
           schema: (await db.getSchema())?.collections,
+          session: {
+            roles: db.sessionRoles,
+            systemVars: db.systemVars,
+          },
         }
       );
       expect(deltaTriples.length).toBeGreaterThan(0);
@@ -4319,12 +4325,17 @@ describe('delta querying', async () => {
       await db.delete('posts', post_id);
 
       const deltaTriples = await fetchDeltaTriples(
-        db,
         db.tripleStore,
         query,
         addedTriples,
         initialFetchExecutionContext(),
-        { schema: (await db.getSchema())?.collections }
+        {
+          schema: (await db.getSchema())?.collections,
+          session: {
+            roles: db.sessionRoles,
+            systemVars: db.systemVars,
+          },
+        }
       );
       expect(deltaTriples.length).toBeGreaterThan(0);
       expect(
@@ -4344,12 +4355,17 @@ describe('delta querying', async () => {
         entity.author_id = user_id2;
       });
       const deltaTriples = await fetchDeltaTriples(
-        db,
         db.tripleStore,
         query,
         addedTriples,
         initialFetchExecutionContext(),
-        { schema: (await db.getSchema())?.collections }
+        {
+          schema: (await db.getSchema())?.collections,
+          session: {
+            roles: db.sessionRoles,
+            systemVars: db.systemVars,
+          },
+        }
       );
       expect(deltaTriples.length).toBeGreaterThan(0);
       expect(
@@ -4370,12 +4386,17 @@ describe('delta querying', async () => {
         content: '',
       });
       const deltaTriples = await fetchDeltaTriples(
-        db,
         db.tripleStore,
         query,
         addedTriples,
         initialFetchExecutionContext(),
-        { schema: (await db.getSchema())?.collections }
+        {
+          schema: (await db.getSchema())?.collections,
+          session: {
+            roles: db.sessionRoles,
+            systemVars: db.systemVars,
+          },
+        }
       );
       expect(deltaTriples).toHaveLength(0);
     });
@@ -4470,12 +4491,17 @@ describe('delta querying', async () => {
       });
       const fetchQuery = prepareQuery(query, schema['collections'], {}, {});
       const deltaTriples = await fetchDeltaTriples(
-        db,
         db.tripleStore,
         fetchQuery,
         addedTriples,
         initialFetchExecutionContext(),
-        { schema: (await db.getSchema())?.collections }
+        {
+          schema: (await db.getSchema())?.collections,
+          session: {
+            roles: db.sessionRoles,
+            systemVars: db.systemVars,
+          },
+        }
       );
       expect(deltaTriples.length).toBeGreaterThan(0);
       expect(deltaTriples).toEqual(
@@ -4508,12 +4534,17 @@ describe('delta querying', async () => {
 
       const fetchQuery = prepareQuery(query, schema['collections'], {}, {});
       const deltaTriples = await fetchDeltaTriples(
-        db,
         db.tripleStore,
         fetchQuery,
         addedTriples,
         initialFetchExecutionContext(),
-        { schema: (await db.getSchema())?.collections }
+        {
+          schema: (await db.getSchema())?.collections,
+          session: {
+            roles: db.sessionRoles,
+            systemVars: db.systemVars,
+          },
+        }
       );
 
       expect(deltaTriples.length).toBe(0);
@@ -4691,12 +4722,17 @@ describe('delta querying', async () => {
           {}
         );
         const deltaTriples = await fetchDeltaTriples(
-          serverDB,
           serverDB.tripleStore,
           fetchQuery,
           addedTriples,
           initialFetchExecutionContext(),
-          { schema: (await serverDB.getSchema())?.collections }
+          {
+            schema: (await serverDB.getSchema())?.collections,
+            session: {
+              roles: serverDB.sessionRoles,
+              systemVars: serverDB.systemVars,
+            },
+          }
         );
 
         await clientDB.tripleStore.insertTriples(deltaTriples);
@@ -4900,6 +4936,7 @@ describe('selecting subqueries', () => {
   it('can select subqueries', async () => {
     const query = db
       .query('users')
+      .select(['id'])
       .select([
         'id',
         // {
@@ -5206,7 +5243,6 @@ describe('selecting subqueries from schema', () => {
       .build();
 
     const result = await user1DB.fetch(query);
-
     // Other fields are included in the selection
     expect(result.get('user-1')).toHaveProperty('name');
 
@@ -5615,14 +5651,12 @@ describe('variable conflicts', () => {
         expect(Array.from(result.keys())).toStrictEqual(['5', '6', '7']);
       }
 
-      // TODO: support nested relationship paths
       {
         // Classes where name of the department head matches the name of the department head
         const query = db
           .query('classes')
           .where(['department.head.name', '=', '$0.department.head.name'])
           .build();
-        console.log('\n\n RUNNING QUERY \n\n');
         const result = await db.fetch(query);
         expect(result.size).toBe(7);
       }

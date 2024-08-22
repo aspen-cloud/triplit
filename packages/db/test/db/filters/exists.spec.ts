@@ -209,7 +209,12 @@ it('will throw error if used with schemaless db', async () => {
     db
   );
 
-  const query = db.query('groups').where(exists('members'));
+  const query = db.query('groups').where(
+    exists(
+      // @ts-expect-error
+      'members'
+    )
+  );
   await expect(() => db.fetch(query.build())).rejects.toThrowError(
     InvalidFilterError
   );

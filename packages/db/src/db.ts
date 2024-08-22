@@ -769,7 +769,6 @@ export default class DB<M extends Models = Models> {
       options.noCache === undefined ? DEFAULT_CACHE_DISABLED : options.noCache;
 
     const { results } = await fetch<M, Q>(
-      this,
       options.scope
         ? this.tripleStore.setStorageScope(options.scope)
         : this.tripleStore,
@@ -780,6 +779,10 @@ export default class DB<M extends Models = Models> {
         cache: noCache ? undefined : this.cache,
         skipRules: options.skipRules,
         skipIndex: options.skipIndex,
+        session: {
+          systemVars: this.systemVars,
+          roles: this.sessionRoles,
+        },
       }
     );
     this.logger.debug('fetch END', { query, result: results });
@@ -807,7 +810,6 @@ export default class DB<M extends Models = Models> {
     return [
       ...(
         await fetch<M, Q>(
-          this,
           options.scope
             ? this.tripleStore.setStorageScope(options.scope)
             : this.tripleStore,
@@ -817,10 +819,14 @@ export default class DB<M extends Models = Models> {
             schema: schema,
             stateVector: options.stateVector,
             skipRules: options.skipRules,
+            session: {
+              systemVars: this.systemVars,
+              roles: this.sessionRoles,
+            },
           }
         )
-      ).triples.values(),
-    ].flat();
+      ).triples,
+    ];
   }
 
   async fetchById<CN extends CollectionNameFromModels<M>>(
@@ -893,11 +899,21 @@ export default class DB<M extends Models = Models> {
           ? DEFAULT_CACHE_DISABLED
           : options.noCache;
       const unsub = subscribe<M, Q>(
-        this,
         options.scope
           ? this.tripleStore.setStorageScope(options.scope)
           : this.tripleStore,
         subscriptionQuery,
+        {
+          schema,
+          cache: noCache ? undefined : this.cache,
+          skipRules: options.skipRules,
+          stateVector: options.stateVector,
+          skipIndex: options.skipIndex,
+          session: {
+            systemVars: this.systemVars,
+            roles: this.sessionRoles,
+          },
+        },
         (...args) => {
           if (unsubscribed) return;
           this.logger.debug('subscribe RESULTS', { query, results: args });
@@ -908,13 +924,6 @@ export default class DB<M extends Models = Models> {
         (...args) => {
           if (unsubscribed) return;
           onError?.(...args);
-        },
-        {
-          schema,
-          cache: noCache ? undefined : this.cache,
-          skipRules: options.skipRules,
-          stateVector: options.stateVector,
-          skipIndex: options.skipIndex,
         }
       );
       return unsub;
@@ -954,20 +963,23 @@ export default class DB<M extends Models = Models> {
           : options.noCache;
 
       const unsub = subscribeTriples<M, Q>(
-        this,
         options.scope
           ? this.tripleStore.setStorageScope(options.scope)
           : this.tripleStore,
         subscriptionQuery,
-        (tripMap) => onResults([...tripMap.values()].flat()),
-        onError,
         {
           schema,
           skipRules: options.skipRules,
           stateVector: options.stateVector,
           cache: noCache ? undefined : this.cache,
           skipIndex: options.skipIndex,
-        }
+          session: {
+            systemVars: this.systemVars,
+            roles: this.sessionRoles,
+          },
+        },
+        onResults,
+        onError
       );
       return unsub;
     };

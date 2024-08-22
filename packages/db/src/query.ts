@@ -67,10 +67,10 @@ export function isBooleanFilter<
   return typeof filter === 'boolean';
 }
 
-type TimestampedData =
+export type TimestampedData =
   | [QueryValue, Timestamp]
   | [Record<string, TimestampedData>, Timestamp];
-type EntityData = Record<string, TimestampedData>;
+export type EntityData = Record<string, TimestampedData>;
 
 // TODO: although at one point this was a servicable abstraction, we can probably do better
 export class Entity {

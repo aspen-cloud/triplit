@@ -351,7 +351,7 @@ export function fetchResultToJS<
   Q extends CollectionQuery<M, CollectionNameFromModels<M>>
 >(
   results: TimestampedFetchResult<Q>,
-  schema: M,
+  schema: M | undefined,
   collectionName: CollectionNameFromModels<M>
 ): FetchResult<M, Q> {
   results.forEach((entity, id) => {
