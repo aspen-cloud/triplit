@@ -1,5 +1,20 @@
 # @triplit/server
 
+## 0.4.8
+
+### Patch Changes
+
+- e0a7ba6e: Update server types
+- Updated dependencies [104027d8]
+- Updated dependencies [b5374280]
+- Updated dependencies [22b3e245]
+- Updated dependencies [39183482]
+- Updated dependencies [833b69c9]
+- Updated dependencies [ecc5a959]
+  - @triplit/db@0.3.70
+  - @triplit/client@0.4.7
+  - @triplit/server-core@0.3.73
+
 ## 0.4.7
 
 ### Patch Changes

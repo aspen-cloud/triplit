@@ -1,5 +1,14 @@
 # @triplit/svelte
 
+## 0.1.64
+
+### Patch Changes
+
+- 3809e4aa: Update svelte types
+- Updated dependencies [b5374280]
+- Updated dependencies [22b3e245]
+  - @triplit/client@0.4.7
+
 ## 0.1.63
 
 ### Patch Changes

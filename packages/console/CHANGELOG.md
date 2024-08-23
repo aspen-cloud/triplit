@@ -1,5 +1,20 @@
 # @triplit/console
 
+## 0.3.98
+
+### Patch Changes
+
+- 833b69c9: better handle relations with variables
+- Updated dependencies [104027d8]
+- Updated dependencies [59d9c3bc]
+- Updated dependencies [b5374280]
+- Updated dependencies [22b3e245]
+- Updated dependencies [833b69c9]
+- Updated dependencies [ecc5a959]
+  - @triplit/db@0.3.70
+  - @triplit/react@0.3.96
+  - @triplit/client@0.4.7
+
 ## 0.3.97
 
 ### Patch Changes
