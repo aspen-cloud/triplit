@@ -1287,6 +1287,14 @@ async function loadQuery<M extends Models, Q extends CollectionQuery<M, any>>(
   executionContext: FetchExecutionContext,
   options: FetchFromStorageOptions
 ): Promise<string[]> {
+  const collectionSchema = options.schema?.[query.collectionName]?.schema;
+  if (
+    options.cache &&
+    VariableAwareCache.canCacheQuery(query, collectionSchema)
+  ) {
+    return options.cache!.resolveFromCache(query, executionContext, options);
+  }
+
   const queryWithInsertedVars = await replaceVariablesInQuery(
     tx,
     query,
@@ -1463,12 +1471,6 @@ export async function fetch<
   results: TimestampedFetchResult<Q>;
   triples: TripleRow[];
 }> {
-  const { schema, cache } = options;
-  const collectionSchema = schema?.[query.collectionName]?.schema;
-  if (cache && VariableAwareCache.canCacheQuery(query, collectionSchema)) {
-    return cache!.resolveFromCache(query, executionContext, options);
-  }
-
   const entityOrder = await loadQuery<M, typeof query>(
     tx,
     query,
