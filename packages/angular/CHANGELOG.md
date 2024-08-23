@@ -1,5 +1,14 @@
 # @triplit/angular
 
+## 0.0.18
+
+### Patch Changes
+
+- 08e47491: Update angular types
+- Updated dependencies [b5374280]
+- Updated dependencies [22b3e245]
+  - @triplit/client@0.4.7
+
 ## 0.0.17
 
 ### Patch Changes

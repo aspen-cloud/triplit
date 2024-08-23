@@ -1,5 +1,13 @@
 # @triplit/db
 
+## 0.3.70
+
+### Patch Changes
+
+- 104027d8: update types to use less conditionals, fix typecheck
+- 833b69c9: export more helpers
+- ecc5a959: Store query componenets and intermediate results during execution
+
 ## 0.3.69
 
 ### Patch Changes

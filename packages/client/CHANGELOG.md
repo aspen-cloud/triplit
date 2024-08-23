@@ -1,5 +1,16 @@
 # @triplit/client
 
+## 0.4.7
+
+### Patch Changes
+
+- b5374280: Update client types
+- 22b3e245: add getSchema methods to WorkerClient
+- Updated dependencies [104027d8]
+- Updated dependencies [833b69c9]
+- Updated dependencies [ecc5a959]
+  - @triplit/db@0.3.70
+
 ## 0.4.6
 
 ### Patch Changes

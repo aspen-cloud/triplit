@@ -1,5 +1,14 @@
 # @triplit/react
 
+## 0.3.96
+
+### Patch Changes
+
+- 59d9c3bc: Update react types
+- Updated dependencies [b5374280]
+- Updated dependencies [22b3e245]
+  - @triplit/client@0.4.7
+
 ## 0.3.95
 
 ### Patch Changes

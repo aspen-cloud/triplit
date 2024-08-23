@@ -1,5 +1,13 @@
 # @triplit/cli
 
+## 0.5.8
+
+### Patch Changes
+
+- e7ff3fed: Update CLI types
+- 22b3e245: improve error messaging for nonexistent seeds
+- 104027d8: Manual version bump for CLI dependencies
+
 ## 0.5.7
 
 ### Patch Changes

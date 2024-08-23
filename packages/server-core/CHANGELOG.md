@@ -1,5 +1,15 @@
 # @triplit/server-core
 
+## 0.3.73
+
+### Patch Changes
+
+- 39183482: Update server-core types
+- Updated dependencies [104027d8]
+- Updated dependencies [833b69c9]
+- Updated dependencies [ecc5a959]
+  - @triplit/db@0.3.70
+
 ## 0.3.72
 
 ### Patch Changes

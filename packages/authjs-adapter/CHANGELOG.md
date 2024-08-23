@@ -1,5 +1,14 @@
 # @triplit/authjs-adapter
 
+## 1.0.2
+
+### Patch Changes
+
+- c1efa697: Update authjs-adapter types
+- Updated dependencies [b5374280]
+- Updated dependencies [22b3e245]
+  - @triplit/client@0.4.7
+
 ## 1.0.1
 
 ### Patch Changes

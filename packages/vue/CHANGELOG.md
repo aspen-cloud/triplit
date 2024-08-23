@@ -1,5 +1,14 @@
 # @triplit/vue
 
+## 0.1.30
+
+### Patch Changes
+
+- 51114dc7: Update vue types
+- Updated dependencies [b5374280]
+- Updated dependencies [22b3e245]
+  - @triplit/client@0.4.7
+
 ## 0.1.29
 
 ### Patch Changes
