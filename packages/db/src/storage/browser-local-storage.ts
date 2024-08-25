@@ -1,1 +1,1 @@
-export { BrowserTupleStorage as BrowserLocalStorage } from '@triplit/tuple-database/storage/BrowserTupleStorage.js';
+export { BrowserTupleStorage as BrowserLocalStorage } from '@triplit/tuple-database/storage/BrowserTupleStorage';

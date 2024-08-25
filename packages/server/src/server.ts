@@ -106,7 +106,10 @@ function resolveStorageStringOption(storage: StoreKeys): Storage {
 export function createServer(options?: ServerOptions) {
   const dbSource = !!options?.storage
     ? typeof options.storage === 'string'
-      ? resolveStorageStringOption(options.storage)
+      ? resolveStorageStringOption(
+          // @ts-expect-error TODO: check why this is not working...might be module resolution issue?
+          options.storage
+        )
       : typeof options.storage === 'function'
       ? options.storage()
       : options.storage

@@ -1,1 +1,1 @@
-export * from '@triplit/tuple-database/storage/LMDBTupleStorage.js';
+export * from '@triplit/tuple-database/storage/LMDBTupleStorage';

@@ -64,13 +64,14 @@
     "fast-check": "^3.16.0",
     "rxdb": "^14.14.2",
     "rxjs": "^7.8.1",
+    "sorted-btree": "^1.8.1",
     "tinybench": "^2.5.0",
     "typescript": "^5.2.2",
     "vitest": "^2.0.5"
   },
   "dependencies": {
     "@sinclair/typebox": "^0.32.15",
-    "@triplit/tuple-database": "2.2.25",
+    "@triplit/tuple-database": "workspace:^",
     "ajv": "^8.17.1",
     "ajv-formats": "^3.0.1",
     "idb": "^7.1.1",

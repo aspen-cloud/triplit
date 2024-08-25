@@ -1,1 +1,1 @@
-export * from '@triplit/tuple-database/storage/LevelTupleStorage.js';
+export * from '@triplit/tuple-database/storage/LevelTupleStorage';

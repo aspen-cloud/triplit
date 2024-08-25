@@ -1,0 +1,91 @@
+{
+	"name": "@triplit/tuple-database",
+	"version": "2.2.25",
+	"description": "An optimized fork of ccorcos/tuple-database",
+	"repository": "github:aspen-cloud/tuple-database",
+	"source": "./src/main.ts",
+	"main": "./dist/main.js",
+	"typings": "./dist/main.d.ts",
+	"module": "./dist/main.js",
+	"type": "module",
+	"exports": {
+		".": {
+			"import": "./dist/main.js",
+			"require": "./dist/main.js",
+			"types": "./dist/main.d.ts",
+			"default": "./dist/main.js"
+		},
+		"./*": {
+			"import": "./dist/*.js",
+			"require": "./dist/*.js",
+			"types": "./dist/*.d.ts",
+			"default": "./dist/*.js"
+		}
+	},
+	"typesVersions": {
+		"*": {
+			".": [
+				"./dist/index.d.ts"
+			],
+			"./*": [
+				"./dist/*.d.ts"
+			]
+		}
+	},
+	"scripts": {
+		"build": "run-s build:macros build:tsc",
+		"build:tsc": "tsc",
+		"build:macros": "bun src/tools/compileMacros.ts",
+		"watch": "tsc -w",
+		"test": "bun test",
+		"test:clean": "rm -rf tmp",
+		"test:watch": "npm test -- --watch --watch-extensions ts",
+		"typecheck": "tsc --project tsconfig.json --noEmit",
+		"prettier": "prettier -w src",
+		"release": "./release.sh",
+		"pack": "./pack.sh"
+	},
+	"devDependencies": {
+		"@types/better-sqlite3": "^7.6.3",
+		"@types/bun": "^1.0.12",
+		"@types/fs-extra": "^11.0.1",
+		"@types/level": "^6.0.1",
+		"@types/lodash": "^4.14.191",
+		"@types/md5": "^2.3.5",
+		"@types/mocha": "whitecolor/mocha-types",
+		"@types/node": "^18.11.18",
+		"@types/react": "^18.0.26",
+		"@types/uuid": "^10.0.0",
+		"better-sqlite3": "^9.5.0",
+		"expo-sqlite": "^14.0.3",
+		"fake-indexeddb": "^4.0.1",
+		"idb": "^7.1.1",
+		"level": "^8.0.0",
+		"lmdb": "^3.0.11",
+		"mocha": "^10.2.0",
+		"npm-run-all": "^4.1.5",
+		"organize-imports-cli": "^0.10.0",
+		"prettier": "^2.8.2",
+		"react": "^18.2.0",
+		"ts-node": "^10.9.1",
+		"typescript": "^5.4.5"
+	},
+	"peerDependencies": {
+		"react": "*"
+	},
+	"peerDependenciesMeta": {
+		"react": {
+			"optional": true
+		}
+	},
+	"dependencies": {
+		"elen": "^1.0.10",
+		"fractional-indexing": "^3.1.0",
+		"fs-extra": "^11.1.0",
+		"md5": "^2.3.0",
+		"remeda": "^1.37.0",
+		"sorted-btree": "^1.8.1",
+		"uuid": "^9.0.0"
+	},
+	"license": "MIT"
+}

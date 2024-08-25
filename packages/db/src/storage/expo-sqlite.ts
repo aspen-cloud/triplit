@@ -1,1 +1,1 @@
-export { ExpoSQLiteTupleStorage as ExpoSQLiteStorage } from '@triplit/tuple-database/storage/ExpoSQLiteStorage.js';
+export { ExpoSQLiteTupleStorage as ExpoSQLiteStorage } from '@triplit/tuple-database/storage/ExpoSQLiteStorage';

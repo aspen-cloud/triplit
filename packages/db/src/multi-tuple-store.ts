@@ -8,7 +8,7 @@ import {
   transactionalReadWriteAsync,
   WriteOps,
 } from '@triplit/tuple-database';
-import { compareTuple } from '@triplit/tuple-database/helpers/compareTuple.js';
+import { compareTuple } from '@triplit/tuple-database/helpers/compareTuple';
 import {
   TuplePrefix,
   TupleToObject,

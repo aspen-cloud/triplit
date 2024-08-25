@@ -1,1 +1,1 @@
-export { MemoryBTreeStorage as MemoryBTreeStorage } from '@triplit/tuple-database/storage/MemoryBTreeTupleStorage.js';
+export { MemoryBTreeStorage as MemoryBTreeStorage } from '@triplit/tuple-database/storage/MemoryBTreeTupleStorage';

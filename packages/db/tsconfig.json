@@ -7,7 +7,7 @@
     "outDir": "./dist", // Output directory
     "tsBuildInfoFile": "./dist/tsconfig.tsbuildinfo",
     "strict": true,
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",
     "esModuleInterop": true,
     "declaration": true, // This is important to generate type declarations
     "declarationDir": "./dist/types", // Directory for type declarations

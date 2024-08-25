@@ -1,1 +1,1 @@
-export * from '@triplit/tuple-database/storage/AdapterSQLiteStorage.js';
+export * from '@triplit/tuple-database/storage/AdapterSQLiteStorage';

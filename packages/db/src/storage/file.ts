@@ -1,1 +1,1 @@
-export * from '@triplit/tuple-database/storage/FileTupleStorage.js';
+export * from '@triplit/tuple-database/storage/FileTupleStorage';

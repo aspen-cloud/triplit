@@ -36,6 +36,7 @@ import {
 import { copyHooks } from './utils.js';
 import { MirroredArray } from './utils/mirrored-array.js';
 import { genToArr } from './utils/generator.js';
+import * as tv from '@triplit/tuple-database/helpers/sortedTupleValuePairs';
 
 function extractTriplesFromTx(tx: MultiTupleTransaction<TupleIndex>) {
   return Object.fromEntries(
@@ -227,6 +228,36 @@ export class TripleStoreTransaction implements TripleStoreApi {
     // }
 
     await tx.set(['EAT', id, attribute, timestamp], [value, expired]);
+  }
+
+  async insertTxTriples(
+    triplesInput: TripleRow[],
+    txId: string
+  ): Promise<void> {
+    const defaultTx = this.tupleTx.txs['default'];
+    const existingTxWrites = tv.scan(defaultTx.writes.set, {
+      prefix: ['client', 'inbox', txId],
+      limit: 1,
+    });
+
+    if (existingTxWrites.length > 0) {
+      const write = existingTxWrites[0]!;
+      await this.tupleTx.set(
+        ['inbox', txId],
+        [...write.value, ...triplesInput]
+      );
+    } else {
+      await this.tupleTx.set(['inbox', txId], triplesInput);
+    }
+
+    // if(this.tupleTx.exists)
+    // if (!triplesInput.length) return;
+    // for (const hook of this.hooks.beforeInsert) {
+    //   await hook(triplesInput, this);
+    // }
+    // await Promise.all(
+    //   triplesInput.map((t) => this.addTripleToIndex(this.tupleTx, t))
+    // );
   }
 
   async deleteTriple(trip: TripleRow) {
