@@ -741,7 +741,7 @@ export class SyncEngine {
       const entities = constructEntities(triples);
       const schema = (await this.db.getSchema())?.collections;
       return [...entities].map(([, entity]) =>
-        convertEntityToJS(entity.data as any, schema)
+        convertEntityToJS(entity.data, schema)
       ) as Unalias<FetchResult<M, ToQuery<M, CQ>>>;
     } catch (e) {
       if (e instanceof TriplitError) throw e;

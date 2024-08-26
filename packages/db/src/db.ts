@@ -1,4 +1,4 @@
-import { timestampedSchemaToSchema } from './schema/schema.js';
+import { schemaEntityToSchemaObject } from './schema/schema.js';
 import { schemaToJSON } from './schema/export/index.js';
 import {
   UpdateTypeFromModel,
@@ -14,8 +14,9 @@ import CollectionQueryBuilder, {
   initialFetchExecutionContext,
   subscribe,
   subscribeTriples,
+  loadQuery,
 } from './collection-query.js';
-import { Entity, constructEntity, updateEntity } from './query.js';
+import { COLLECTION_ATTRIBUTE, Entity, updateEntity } from './entity.js';
 import { MemoryBTreeStorage } from './storage/memory-btree.js';
 import { DBOptionsError, TriplitError } from './errors.js';
 import { Clock } from './clocks/clock.js';
@@ -61,6 +62,10 @@ import {
   SetAttributeOptionalPayload,
 } from './db/types/operations.js';
 import { generatePsuedoRandomId } from './utils/random.js';
+import {
+  getResultTriplesFromContext,
+  getSyncTriplesFromContext,
+} from './query/result-parsers.js';
 
 const DEFAULT_CACHE_DISABLED = true;
 export interface TransactOptions {
@@ -105,6 +110,10 @@ export interface DBFetchOptions {
   skipIndex?: boolean;
 }
 
+interface TriplesFetchOptions extends DBFetchOptions {
+  sync?: boolean;
+}
+
 export function ruleToTuple(
   collectionName: string,
   ruleType: keyof CollectionRules<any, any>,
@@ -143,12 +152,12 @@ type TriggerWhen =
   | 'beforeUpdate';
 
 // TODO: type this better
-export type EntityOpSet = OpSet<any>;
+export type EntityOpSet = OpSet<[string, any]>;
 
 export type OpSet<T> = {
-  inserts: [string, T][];
-  updates: [string, T][];
-  deletes: [string, T][];
+  inserts: T[];
+  updates: T[];
+  deletes: T[];
 };
 
 interface AfterCommitOptions<M extends Models> {
@@ -323,7 +332,7 @@ export default class DB<M extends Models = Models> {
   private isSchemaInitialized: boolean = false;
   ready: Promise<void>;
 
-  _schema?: Entity; // Timestamped Object
+  _schema?: Entity;
   schema?: StoreSchema<M>;
   private onSchemaChangeCallbacks: Set<SchemaChangeCallback<M>>;
 
@@ -477,7 +486,7 @@ export default class DB<M extends Models = Models> {
 
         // Update schema
         updateEntity(this._schema!, schemaTriples);
-        const newSchema = timestampedSchemaToSchema(
+        const newSchema = schemaEntityToSchemaObject(
           this._schema!.data
         ) as StoreSchema<M>;
 
@@ -576,14 +585,10 @@ export default class DB<M extends Models = Models> {
 
   private async loadSchemaData() {
     const triples = await getSchemaTriples(this.tripleStore);
-
-    this._schema =
-      constructEntity(triples, appendCollectionToId('_metadata', '_schema')) ??
-      new Entity();
-
+    this._schema = new Entity(triples);
     // Schema should remain undefined if no triples
     if (triples.length) {
-      this.schema = timestampedSchemaToSchema(
+      this.schema = schemaEntityToSchemaObject(
         this._schema.data
       ) as StoreSchema<M>;
     }
@@ -668,12 +673,13 @@ export default class DB<M extends Models = Models> {
     const noCache =
       options.noCache === undefined ? DEFAULT_CACHE_DISABLED : options.noCache;
 
-    const { results } = await fetch<M, Q>(
+    const executionContext = initialFetchExecutionContext();
+    const results = await fetch<M, Q>(
       options.scope
         ? this.tripleStore.setStorageScope(options.scope)
         : this.tripleStore,
       fetchQuery,
-      initialFetchExecutionContext(),
+      executionContext,
       {
         schema,
         cache: noCache ? undefined : this.cache,
@@ -695,7 +701,7 @@ export default class DB<M extends Models = Models> {
 
   async fetchTriples<Q extends SchemaQueries<M>>(
     query: Q,
-    options: DBFetchOptions = {}
+    options: TriplesFetchOptions = {}
   ) {
     await this.storageReady;
     const schema = (await this.getSchema())?.collections as M;
@@ -707,26 +713,38 @@ export default class DB<M extends Models = Models> {
         skipRules: options.skipRules,
       }
     );
-    return [
-      ...(
-        await fetch<M, Q>(
-          options.scope
-            ? this.tripleStore.setStorageScope(options.scope)
-            : this.tripleStore,
-          fetchQuery,
-          initialFetchExecutionContext(),
-          {
-            schema: schema,
-            stateVector: options.stateVector,
-            skipRules: options.skipRules,
-            session: {
-              systemVars: this.systemVars,
-              roles: this.sessionRoles,
-            },
-          }
-        )
-      ).triples,
-    ];
+    const executionContext = initialFetchExecutionContext();
+    const entityOrder = await loadQuery<M, Q>(
+      options.scope
+        ? this.tripleStore.setStorageScope(options.scope)
+        : this.tripleStore,
+      fetchQuery,
+      executionContext,
+      {
+        schema: schema,
+        stateVector: options.stateVector,
+        skipRules: options.skipRules,
+        session: {
+          systemVars: this.systemVars,
+          roles: this.sessionRoles,
+        },
+      }
+    );
+
+    if (options.sync) {
+      return getSyncTriplesFromContext<M, Q>(
+        fetchQuery,
+        entityOrder,
+        executionContext
+      );
+    }
+    return Array.from(
+      getResultTriplesFromContext<M, Q>(
+        fetchQuery,
+        entityOrder,
+        executionContext
+      ).values()
+    ).flat();
   }
 
   async fetchById<CN extends CollectionNameFromModels<M>>(
@@ -987,7 +1005,7 @@ export default class DB<M extends Models = Models> {
     // is just the name of the collection it belongs to
     // e.g. { id: '123', name: 'alice', _collection: 'users'}
     const collectionMetaTriples = await genToArr(
-      this.tripleStore.findByAttribute(['_collection'])
+      this.tripleStore.findByAttribute(COLLECTION_ATTRIBUTE)
     );
 
     const stats = new Map();

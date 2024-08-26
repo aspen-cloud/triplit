@@ -375,10 +375,13 @@ describe('Set operations', () => {
     });
 
     await testSubscription(db, query, [
-      { check: (data) => expect(data.map((e) => e.id)).toEqual(['1']) },
+      {
+        check: (data) => expect(data.map((e) => e.id)).toEqual(['1']),
+      },
       // Insert
       {
         action: async () => {
+          console.log('inser');
           await db.transact(async (tx) => {
             await tx.insert('students', {
               id: '2',
@@ -397,6 +400,7 @@ describe('Set operations', () => {
       // Update
       {
         action: async () => {
+          console.log('update');
           await db.transact(async (tx) => {
             await tx.update('students', '2', async (entity) => {
               entity.classes.add('math');
@@ -411,6 +415,7 @@ describe('Set operations', () => {
       // Delete
       {
         action: async () => {
+          console.log('delete');
           await db.delete('students', '1');
         },
         check: (data) => expect(data.map((e) => e.id)).toEqual(['2']),

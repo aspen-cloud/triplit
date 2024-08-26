@@ -48,7 +48,11 @@ export function typeFromJSON(
       baseType = QueryType(serializedType.query, serializedType.cardinality);
       break;
     case 'record':
-      const optional = serializedType.optional || [];
+      let optional = serializedType.optional || [];
+      // We dont handle empty arrays well, optional if empty comes back as empty object
+      if (!Array.isArray(optional)) {
+        optional = Object.keys(optional);
+      }
       baseType = RecordType(
         Object.fromEntries(
           Object.entries(serializedType.properties).map(([key, val]) => [

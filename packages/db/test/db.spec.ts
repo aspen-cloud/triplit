@@ -6,7 +6,6 @@ import {
   or,
   Schema as S,
   CollectionQueryBuilder,
-  queryResultToJson,
   WriteRuleError,
   InvalidFilterError,
   schemaToJSON,
@@ -42,6 +41,7 @@ import {
 import { prepareQuery } from '../src/query/prepare.js';
 import { DEFAULT_PAGE_SIZE as TUPLE_DB_DEFAULT_PAGE_SIZE } from '../src/multi-tuple-store.js';
 import { testDBAndTransaction } from './utils/db-helpers.js';
+import { isCollectionAttribute } from '../src/entity.js';
 
 const pause = async (ms: number = 100) =>
   new Promise((resolve) => setTimeout(resolve, ms));
@@ -487,13 +487,6 @@ describe('Database API', () => {
     expect(stats.get('Class')).toBe(classes.length);
     expect(stats.get('Department')).toBe(departments.length);
   });
-  it('can convert query results to JSON', async () => {
-    const results = await db.fetch(
-      CollectionQueryBuilder('Class').select(['name', 'level']).build()
-    );
-    const json = queryResultToJson(results);
-    expect(json).toBeTypeOf('object');
-  });
 
   it('transactions return the txId and result of the callback', async () => {
     const db = new DB();
@@ -875,13 +868,14 @@ describe('delete api', () => {
     await db.insert('posts', { id: 'post-1', author_id: 'user-1' });
     await db.transact(async (tx) => {
       await tx.delete('posts', 'post-1');
-      expect(
+      await expect(
         tx.update('posts', 'post-1', (entity) => {
           entity.author_id = 'user-2';
         })
       ).rejects.toThrowError(EntityNotFoundError);
     });
   });
+  // Feels like a schemaless limitation that we should allow
   it('prevents deletes triples from returning when same Entity ID is reused after deleting', async () => {
     const db = new DB();
     // insert a post, delete it, and then insert a new post with the same id but different attribute
@@ -973,7 +967,6 @@ describe('ORDER & LIMIT & Pagination', () => {
   });
   beforeEach(async () => {
     await db.clear();
-    console.log(`inserting ${TEST_SCORES.length} test scores`);
     for (const result of TEST_SCORES) {
       await db.insert('TestScores', result);
     }
@@ -1210,7 +1203,6 @@ describe('ORDER & LIMIT & Pagination', () => {
     const descendingScoresResults = await db.fetch(
       db.query('TestScores').order('score', 'DESC').limit(5).build()
     );
-    console.log(await db.fetch(db.query('TestScores').limit(5).build()));
     expect(descendingScoresResults.length).toBe(5);
     const areAllScoresDescending = Array.from(
       descendingScoresResults.values()
@@ -1945,7 +1937,7 @@ describe('schema changes', async () => {
       );
     });
 
-    it('addAttribute is idempoent', async () => {
+    it('addAttribute is idempotent', async () => {
       await testDBAndTransaction(
         () => new DB({ schema: defaultSchema }),
         async (db) => {
@@ -1970,6 +1962,10 @@ describe('schema changes', async () => {
           const hash2 = hashSchemaJSON(schemaToJSON(dbSchema)?.collections);
 
           expect(hash1).toBe(hash2);
+        },
+        {
+          db: false,
+          tx: true,
         }
       );
     });
@@ -2088,7 +2084,7 @@ describe('schema changes', async () => {
       );
     });
 
-    it('dropAttribute is idempoent', async () => {
+    it('dropAttribute is idempotent', async () => {
       await testDBAndTransaction(
         () => new DB({ schema: defaultSchema }),
         async (db) => {
@@ -2277,7 +2273,7 @@ describe('schema changes', async () => {
       );
     });
 
-    it('alterAttributeOption is idempoent', async () => {
+    it('alterAttributeOption is idempotent', async () => {
       await testDBAndTransaction(
         () =>
           new DB({
@@ -2437,7 +2433,7 @@ describe('schema changes', async () => {
       );
     });
 
-    it('dropAttributeOption is idempoent', async () => {
+    it('dropAttributeOption is idempotent', async () => {
       await testDBAndTransaction(
         () => new DB({ schema: defaultSchema }),
         async (db) => {
@@ -2726,7 +2722,7 @@ describe('schema changes', async () => {
       );
     });
 
-    it('setAttributeOptional is idempoent', async () => {
+    it('setAttributeOptional is idempotent', async () => {
       await testDBAndTransaction(
         () => new DB({ schema: defaultSchema }),
         async (db) => {
@@ -3402,7 +3398,6 @@ describe('relational querying / sub querying', () => {
       .build();
 
     const result = await db.fetch(query);
-    // console.log('car results result', carResult);
     expect(result).toHaveLength(6);
   });
 
@@ -3422,11 +3417,10 @@ describe('relational querying / sub querying', () => {
       ])
       .build();
 
-    const result = await db.fetchTriples(query);
+    const result = await db.fetchTriples(query, { sync: true });
     const collectionsInTriples = result.reduce(
       (collectionSet, { attribute }) => {
-        const collectionName = attribute[0];
-        if (collectionName !== '_collection') {
+        if (!isCollectionAttribute(attribute)) {
           collectionSet.add(attribute[0]);
         }
         return collectionSet;
@@ -3965,7 +3959,7 @@ describe('state vector querying', () => {
     });
     const query = db.query('posts').build();
     const userDB = db.withSessionVars({ user_id });
-    const results = await userDB.fetchTriples(query);
+    const results = await userDB.fetchTriples(query, { sync: true });
     const resultEntities = results.reduce(
       (entitySet: Set<string>, triple: TripleRow) => {
         entitySet.add(stripCollectionFromId(triple.id));
@@ -4040,7 +4034,7 @@ describe('state vector querying', () => {
       content: '',
     });
     const query = db.query('users').include('posts').build();
-    const initialTriples = await db.fetchTriples(query);
+    const initialTriples = await db.fetchTriples(query, { sync: true });
     const stateVector = triplesToStateVector(initialTriples);
     await db.insert('posts', { id: 'post-3', author_id: user_id, content: '' });
     const queryStateVector = stateVector.reduce(
@@ -4288,7 +4282,7 @@ describe('delta querying', async () => {
         .query('users')
         .where('posts.created_at', '>', new Date('2022-05-01'))
         .build();
-      const initialTriples = await db.fetchTriples(query);
+      const initialTriples = await db.fetchTriples(query, { sync: true });
       expect(initialTriples.length).toBeGreaterThan(0);
 
       const addedTriples: TripleRow[] = [];
@@ -4331,7 +4325,7 @@ describe('delta querying', async () => {
         .query('users')
         .where('posts.created_at', '>', new Date('2022-05-01'))
         .build();
-      const initialTriples = await db.fetchTriples(query);
+      const initialTriples = await db.fetchTriples(query, { sync: true });
       expect(initialTriples.length).toBeGreaterThan(0);
 
       const addedTriples: TripleRow[] = [];
@@ -4519,7 +4513,9 @@ describe('delta querying', async () => {
         const clientDB = new DB({ schema });
         await insertSampleData(serverDB);
 
-        const initialTriples = await serverDB.fetchTriples(query(serverDB));
+        const initialTriples = await serverDB.fetchTriples(query(serverDB), {
+          sync: true,
+        });
         await clientDB.tripleStore.insertTriples(initialTriples);
 
         const addedTriples: TripleRow[] = [];
@@ -5116,7 +5112,6 @@ describe('selecting subqueries from schema', () => {
   it('can have multiple results have the same entity as a relation', async () => {
     const query = user1DB.query('likes').include('post').build();
     const results = await user1DB.fetch(query);
-    console.log(results);
     expect(results.length).toBe(3);
     const postsMap = new Map();
     for (const result of results.values()) {

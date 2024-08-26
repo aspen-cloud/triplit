@@ -36,7 +36,6 @@ export type RecordType<Properties extends RecordProps = RecordProps> =
     'record',
     RecordJSType<Properties>,
     { [k in keyof Properties]: ExtractDBType<Properties[k]> },
-    // { [k in keyof Properties]: ExtractTimestampedType<Properties[k]> },
     readonly []
   > & {
     properties: Properties;

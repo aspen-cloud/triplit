@@ -474,7 +474,6 @@ describe('record operations', () => {
         const result = await db.fetch(
           db.query('test').select(['optionalAttr', 'id']).build()
         );
-        console.log(result);
         expect(result.find((e) => e.id === 'item1')).toEqual({ id: 'item1' });
       }
       {

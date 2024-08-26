@@ -110,7 +110,7 @@ export class ClientComlinkWrapper implements ClientWorker {
     collectionName: CN,
     entityId: string,
     updater: (
-      entity: UpdateTypeFromModel<ModelFromModels<any, CN>>
+      entity: Record<string, any>
     ) => [Attribute, TupleValue][] | Promise<[Attribute, TupleValue][]>
   ): Promise<TransactionResult<void>> {
     if (!this.client) throw new WorkerInternalClientNotInitializedError();

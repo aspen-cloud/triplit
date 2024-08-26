@@ -126,7 +126,6 @@ function diffCollectionSchemas(
         propertiesA[prop].type === 'record' &&
         propertiesB[prop].type === 'record'
       ) {
-        // console.log('diffing record', propertiesA[prop], propertiesB[prop]);
         diff.push(
           ...diffCollectionSchemas(propertiesA[prop], propertiesB[prop], path)
         );
@@ -146,7 +145,6 @@ function diffCollectionSchemas(
 
       // Check if Set item type has changed
       if (propertiesA[prop].type === 'set') {
-        // console.log(propertiesA[prop], propertiesB[prop]);
         if (propertiesA[prop].items.type !== propertiesB[prop].items.type) {
           attrDiff.changes.items = {
             type: propertiesB[prop].items.type,

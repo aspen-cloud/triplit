@@ -1,13 +1,11 @@
 import { TriplitError } from '../errors.js';
-import { EntityData, TimestampedData } from '../query.js';
-import { TripleRow } from '../triple-store-utils.js';
+import { Entity } from '../entity.js';
 
-type DataCacheEntry = {
-  triples: TripleRow[];
-  entity: EntityData;
+export type DataCacheEntry = {
+  entity: Entity;
 };
 
-type QueryComponentCacheEntry = {
+export type QueryComponentCacheEntry = {
   entityId: string;
   relationships: {
     [alias: string]: string | string[];
@@ -78,7 +76,7 @@ export class QueryExecutionCache {
   getComponentValueAtPath(
     componentId: string,
     path: string[]
-  ): TimestampedData | undefined {
+  ): any | undefined {
     let entity = undefined;
     for (const key of path) {
       //   if (!this.hasComponent(componentId)) {
@@ -89,8 +87,8 @@ export class QueryExecutionCache {
         // if (!componentData) {
         //   throw new Error("Could not resolve path, entity doesn't exist");
         // }
-        if (key in componentData) {
-          entity = componentData[key];
+        if (key in componentData.data) {
+          entity = componentData.data[key];
         } else {
           const component = this.getComponent(componentId)!;
           if (key in component.relationships) {
@@ -105,7 +103,6 @@ export class QueryExecutionCache {
         }
       } else {
         // If we've resolved to an entity, just use that
-        // @ts-expect-error - TODO
         entity = entity[key];
       }
     }
@@ -120,7 +117,9 @@ export class QueryExecutionCache {
   buildComponentData(componentId: string) {
     const component = this.getComponent(componentId);
     const entityData = this.getData(component.entityId);
-    const resolved: Record<string, any> = { ...(entityData?.entity ?? {}) };
+    const resolved: Record<string, any> = {
+      ...(entityData?.entity.data ?? {}),
+    };
     for (const [key, value] of Object.entries(component.relationships)) {
       if (Array.isArray(value)) {
         resolved[key] = new Map(
@@ -138,4 +137,8 @@ export class QueryExecutionCache {
   }
 
   static KeySeparator = '>';
+}
+
+export function entityIdFromComponentId(componentId: string) {
+  return componentId.split(QueryExecutionCache.KeySeparator).at(-1)!;
 }

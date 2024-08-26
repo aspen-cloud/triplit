@@ -31,20 +31,18 @@ describe('hooks API', async () => {
     expect(beforeCommitFn).toHaveBeenCalledTimes(1);
     expect(beforeCommitFn.mock.calls[0][0].opSet).toStrictEqual({
       inserts: [
-        ['users#1', { _collection: 'users', id: '1', name: 'alice' }],
-        ['users#2', { _collection: 'users', id: '2', name: 'bob' }],
+        ['users#1', { id: '1', name: 'alice' }],
+        ['users#2', { id: '2', name: 'bob' }],
       ],
       updates: [],
       deletes: [],
     });
     expect(beforeInsertFn).toHaveBeenCalledTimes(2);
     expect(beforeInsertFn.mock.calls[0][0].entity).toStrictEqual({
-      _collection: 'users',
       id: '1',
       name: 'alice',
     });
     expect(beforeInsertFn.mock.calls[1][0].entity).toStrictEqual({
-      _collection: 'users',
       id: '2',
       name: 'bob',
     });
@@ -62,20 +60,18 @@ describe('hooks API', async () => {
     expect(beforeCommitFn.mock.calls[1][0].opSet).toStrictEqual({
       inserts: [],
       updates: [
-        ['users#1', { _collection: 'users', id: '1', name: 'aaron' }],
-        ['users#2', { _collection: 'users', id: '2', name: 'blair' }],
+        ['users#1', { id: '1', name: 'aaron' }],
+        ['users#2', { id: '2', name: 'blair' }],
       ],
       deletes: [],
     });
     expect(beforeInsertFn).toHaveBeenCalledTimes(2);
     expect(beforeUpdateFn).toHaveBeenCalledTimes(2);
     expect(beforeUpdateFn.mock.calls[0][0].entity).toStrictEqual({
-      _collection: 'users',
       id: '1',
       name: 'aaron',
     });
     expect(beforeUpdateFn.mock.calls[1][0].entity).toStrictEqual({
-      _collection: 'users',
       id: '2',
       name: 'blair',
     });
@@ -89,18 +85,14 @@ describe('hooks API', async () => {
     expect(inserts).toStrictEqual([]);
     expect(updates).toStrictEqual([]);
     expect(deletes).toMatchObject([
-      ['users#1', { id: '1' }],
-      ['users#2', { id: '2' }],
+      ['users#1', undefined],
+      ['users#2', undefined],
     ]);
     expect(beforeInsertFn).toHaveBeenCalledTimes(2);
     expect(beforeUpdateFn).toHaveBeenCalledTimes(2);
     expect(beforeDeleteFn).toHaveBeenCalledTimes(2);
-    expect(beforeDeleteFn.mock.calls[0][0].entity).toMatchObject({
-      id: '1',
-    });
-    expect(beforeDeleteFn.mock.calls[1][0].entity).toMatchObject({
-      id: '2',
-    });
+    expect(beforeDeleteFn.mock.calls[0][0].entity).toBe(undefined);
+    expect(beforeDeleteFn.mock.calls[1][0].entity).toBe(undefined);
   });
   it('after write hooks will run on transaction', async () => {
     const db = new DB({
@@ -151,20 +143,18 @@ describe('hooks API', async () => {
     expect(afterCommitFn).toHaveBeenCalledTimes(1);
     expect(afterCommitFn.mock.calls[0][0].opSet).toStrictEqual({
       inserts: [
-        ['users#1', { _collection: 'users', id: '1', name: 'alice' }],
-        ['users#2', { _collection: 'users', id: '2', name: 'bob' }],
+        ['users#1', { id: '1', name: 'alice' }],
+        ['users#2', { id: '2', name: 'bob' }],
       ],
       updates: [],
       deletes: [],
     });
     expect(afterInsertFn).toHaveBeenCalledTimes(2);
     expect(afterInsertFn.mock.calls[0][0].entity).toStrictEqual({
-      _collection: 'users',
       id: '1',
       name: 'alice',
     });
     expect(afterInsertFn.mock.calls[1][0].entity).toStrictEqual({
-      _collection: 'users',
       id: '2',
       name: 'bob',
     });
@@ -182,20 +172,18 @@ describe('hooks API', async () => {
     expect(afterCommitFn.mock.calls[1][0].opSet).toStrictEqual({
       inserts: [],
       updates: [
-        ['users#1', { _collection: 'users', id: '1', name: 'aaron' }],
-        ['users#2', { _collection: 'users', id: '2', name: 'blair' }],
+        ['users#1', { id: '1', name: 'aaron' }],
+        ['users#2', { id: '2', name: 'blair' }],
       ],
       deletes: [],
     });
     expect(afterInsertFn).toHaveBeenCalledTimes(2);
     expect(afterUpdateFn).toHaveBeenCalledTimes(2);
     expect(afterUpdateFn.mock.calls[0][0].entity).toStrictEqual({
-      _collection: 'users',
       id: '1',
       name: 'aaron',
     });
     expect(afterUpdateFn.mock.calls[1][0].entity).toStrictEqual({
-      _collection: 'users',
       id: '2',
       name: 'blair',
     });
@@ -209,17 +197,13 @@ describe('hooks API', async () => {
     expect(inserts).toStrictEqual([]);
     expect(updates).toStrictEqual([]);
     expect(deletes).toMatchObject([
-      ['users#1', { id: '1' }],
-      ['users#2', { id: '2' }],
+      ['users#1', undefined],
+      ['users#2', undefined],
     ]);
     expect(afterInsertFn).toHaveBeenCalledTimes(2);
     expect(afterUpdateFn).toHaveBeenCalledTimes(2);
     expect(afterDeleteFn).toHaveBeenCalledTimes(2);
-    expect(afterDeleteFn.mock.calls[0][0].entity).toMatchObject({
-      id: '1',
-    });
-    expect(afterDeleteFn.mock.calls[1][0].entity).toMatchObject({
-      id: '2',
-    });
+    expect(afterDeleteFn.mock.calls[0][0].entity).toBe(undefined);
+    expect(afterDeleteFn.mock.calls[1][0].entity).toBe(undefined);
   });
 });

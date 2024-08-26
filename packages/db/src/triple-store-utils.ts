@@ -410,13 +410,6 @@ export async function findAllClientIds(
   return Array.from(clientIds);
 }
 
-// We use the _collection tuple to indicate if an entity delete should occur
-export function isTupleEntityDeleteMarker(tuple: TupleIndex) {
-  // @ts-ignore TODO: need to fix to support subspaces
-  const collectionMarker = tuple.key[3][0];
-  return collectionMarker === '_collection' && tuple.value.expired;
-}
-
 export function triplesToStateVector(triples: TripleRow[]): Timestamp[] {
   const clientClocks = new Map<string, number>();
   triples.forEach((t) => {

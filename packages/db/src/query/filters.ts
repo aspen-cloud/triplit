@@ -1,3 +1,4 @@
+import { ValuePointer } from '@sinclair/typebox/value';
 import {
   FetchExecutionContext,
   FetchFromStorageOptions,
@@ -5,18 +6,15 @@ import {
 } from '../collection-query.js';
 import { InvalidFilterError, QueryNotPreparedError } from '../errors.js';
 import {
-  EntityData,
-  EntityPointer,
   isBooleanFilter,
   isExistsFilter,
   isFilterGroup,
   isSubQueryFilter,
 } from '../query.js';
+import { Entity } from '../entity.js';
 import { getAttributeFromSchema } from '../schema/schema.js';
 import { Models } from '../schema/types/index.js';
-import { Timestamp } from '../timestamp.js';
 import { TripleStoreApi } from '../triple-store.js';
-import { timestampedObjectToPlainObject } from '../utils.js';
 import { everyAsync, someAsync } from '../utils/async.js';
 import {
   FilterStatement,
@@ -34,7 +32,7 @@ export async function satisfiesFilter<Q extends CollectionQuery>(
   query: Q,
   executionContext: FetchExecutionContext,
   options: FetchFromStorageOptions,
-  entityEntry: [entityId: string, entity: EntityData],
+  entityEntry: [entityId: string, entity: Entity],
   filter: WhereFilter<any, any>
 ): Promise<boolean> {
   if (isBooleanFilter(filter)) return filter;
@@ -80,7 +78,7 @@ async function satisfiesRelationalFilter<
   query: Q,
   executionContext: FetchExecutionContext,
   options: FetchFromStorageOptions,
-  entityEntry: [entityId: string, entity: EntityData],
+  entityEntry: [entityId: string, entity: Entity],
   filter: SubQueryFilter<M, Q['collectionName']>
 ) {
   const { exists: subQuery } = filter;
@@ -110,7 +108,7 @@ function satisfiesFilterStatement<
 >(
   query: Q,
   options: FetchFromStorageOptions,
-  entity: EntityData,
+  entity: Entity,
   filter: FilterStatement<M, Q['collectionName']>
 ) {
   const { collectionName } = query;
@@ -121,35 +119,20 @@ function satisfiesFilterStatement<
     : undefined;
   // If we have a schema handle specific cases
   if (dataType && dataType.type === 'set') {
-    return satisfiesSetFilter(entity, path, op, filterValue);
+    return satisfiesSetFilter(entity.data, path, op, filterValue);
   }
   // Use register as default
-  return satisfiesRegisterFilter(entity, path, op, filterValue);
+  return satisfiesRegisterFilter(entity.data, path, op, filterValue);
 }
 
-// TODO: this should probably go into the set defintion
-// TODO: handle possible errors with sets
 export function satisfiesSetFilter(
-  entity: any,
+  data: Record<string, any>,
   path: string,
   op: Operator,
   filterValue: any
 ) {
   const pointer = '/' + path.replaceAll('.', '/');
-  const value: Record<string, [boolean, Timestamp]> = EntityPointer.Get(
-    entity,
-    pointer
-  );
-  // We dont really support "deleting" sets, but they can appear deleted if the entity is deleted
-  // Come back to this after refactoring triple reducer to handle nested data betters
-  if (Array.isArray(value)) {
-    // indicates set is deleted
-    if (value[0] === undefined) {
-      return false;
-    }
-  }
-
-  const setData = timestampedObjectToPlainObject(value);
+  const setData: Record<string, boolean> = ValuePointer.Get(data, pointer);
   if (op === 'has') {
     if (!setData) return false;
     const filteredSet = Object.entries(setData).filter(([_v, inSet]) => inSet);
@@ -168,32 +151,12 @@ export function satisfiesSetFilter(
 }
 
 export function satisfiesRegisterFilter(
-  entity: any,
+  data: Record<string, any>,
   path: string,
   op: Operator,
   filterValue: any
 ) {
-  const maybeValue = EntityPointer.Get(entity, '/' + path.replaceAll('.', '/'));
-
-  // maybeValue is expected to be of shape [value, timestamp]
-  // this may happen if a schema is expected but not there and we're reading a value that cant be parsed, the schema is incorrect somehow, or if the provided path is incorrect
-  const isTimestampedValue =
-    !!maybeValue && maybeValue instanceof Array && maybeValue.length === 2;
-  const isTerminalValue =
-    !!maybeValue &&
-    isTimestampedValue &&
-    (typeof maybeValue[0] !== 'object' || maybeValue[0] === null);
-  if (!!maybeValue && (!isTimestampedValue || !isTerminalValue)) {
-    console.warn(
-      `Received an unexpected value at path '${path}' in entity ${JSON.stringify(
-        entity
-      )} which could not be interpreted as a register when reading filter ${JSON.stringify(
-        [path, op, filterValue]
-      )}. This is likely caused by (1) the database not properly loading its schema and attempting to interpret a value that is not a regsiter as a register, (2) a schemaless database attempting to interpret a value that is not properly formatted as a register, or (3) a query with a path that does not lead to a leaf attribute in the entity.`
-    );
-    return false;
-  }
-  const [value, _ts] = maybeValue ?? [undefined, undefined];
+  const value = ValuePointer.Get(data, '/' + path.replaceAll('.', '/'));
   return isOperatorSatisfied(op, value, filterValue);
 }
 

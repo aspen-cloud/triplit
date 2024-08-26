@@ -579,3 +579,12 @@ export class InvalidTransactionStateError extends TriplitError {
     this.status = STATUS_CODES['Internal Server Error'];
   }
 }
+
+export class InvalidTripleApplicationError extends TriplitError {
+  constructor(...args: any[]) {
+    super(...args);
+    this.name = 'InvalidTripleApplicationError';
+    this.baseMessage = `An invalid triple was applied to an entity.`;
+    this.status = STATUS_CODES['Internal Server Error'];
+  }
+}

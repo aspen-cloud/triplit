@@ -1,3 +1,4 @@
+import { OBJECT_MARKER } from './entity.js';
 import { UnserializableValueError } from './errors.js';
 import { Timestamp } from './timestamp.js';
 import { Attribute, EAV, TupleValue } from './triple-store-utils.js';
@@ -18,7 +19,7 @@ export function dbDocumentToTuples(
     return [[prefix, object as TupleValue]];
   }
   if (Object.keys(object).length === 0) {
-    return [[prefix, '{}' as TupleValue]];
+    return [[prefix, OBJECT_MARKER as TupleValue]];
   }
   // Although we dont strictly support arrays, we have them in schema rules
   // Currently need a way to serialize them...so we need to handle arrays
@@ -33,7 +34,7 @@ export function dbDocumentToTuples(
     ];
   }
   const result: [Attribute, TupleValue][] = [];
-  if (prefix.length) result.push([prefix, '{}']);
+  if (prefix.length) result.push([prefix, OBJECT_MARKER]);
   const objTuples = Object.keys(object).flatMap((key) =>
     dbDocumentToTuples(object[key], [...prefix, key])
   );
@@ -138,59 +139,17 @@ export function prefixVariables(
   );
 }
 
-export type TimestampedObject = Timestamped<object>;
-
-export type Timestamped<T> = T extends { [key: string]: any }
-  ? { [K in keyof T]: Timestamped<T[K]> }
-  : [T, Timestamp];
-
-export type UnTimestampedObject<T extends TimestampedObject> = {
-  [k in keyof T]: T[k] extends TimestampedObject
-    ? UnTimestampedObject<T[k]>
-    : T[k] extends [value: infer V, timestamp: Timestamp]
-    ? V
-    : never;
-};
-
-// TODO: perform a pass on this to see how we can improve its types
-export function timestampedObjectToPlainObject<O extends TimestampedObject>(
-  obj: O,
-  maintainKeys?: boolean
-): UnTimestampedObject<O> {
-  if (typeof obj !== 'object' || obj === null) {
-    return obj;
-  }
-  if (isTimestampedVal(obj)) {
-    // @ts-expect-error
-    return timestampedObjectToPlainObject(obj[0]);
-  }
-  if (obj instanceof Array) {
-    // @ts-expect-error
-    return obj
-      .map((v) => timestampedObjectToPlainObject(v))
-      .filter((v) => !!maintainKeys || v !== undefined);
-  }
-  if (obj instanceof Map) {
-    // @ts-expect-error
-    return Array.from(obj.entries()).map(([, val]) => {
-      return timestampedObjectToPlainObject(val);
-    });
-  }
-  const entries = Object.entries(obj)
-    .map(([key, val]) => {
-      return [key, timestampedObjectToPlainObject(val)];
-    })
-    .filter(([_key, val]) => !!maintainKeys || val !== undefined);
-  //TODO: result statically typed as any
-  const result = Object.fromEntries(entries);
-  return result;
-}
-
-function isTimestampedVal(val: any) {
+// Escape '~' as '~0' and '/' as '~1'
+// https://tools.ietf.org/html/rfc6901
+export function attributeToJsonPointer(attribute: Attribute) {
   return (
-    val instanceof Array &&
-    val.length === 2 &&
-    val[1] instanceof Array &&
-    val[1].length === 2
+    '/' +
+    attribute
+      .map((key) =>
+        typeof key === 'string'
+          ? key.replace(/~/g, '~0').replace(/\//g, '~1')
+          : key
+      )
+      .join('/')
   );
 }

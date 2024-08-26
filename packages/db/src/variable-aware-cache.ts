@@ -2,7 +2,7 @@ import {
   FetchExecutionContext,
   FetchFromStorageOptions,
   getQueryVariables,
-  subscribeResultsAndTriples,
+  subscribeEntities,
 } from './collection-query.js';
 import { CollectionNameFromModels } from './db.js';
 import {
@@ -72,7 +72,7 @@ export class VariableAwareCache<Schema extends Models> {
   ) {
     return new Promise<void>((resolve) => {
       const id = this.viewQueryToId(viewQuery);
-      subscribeResultsAndTriples<Schema, Q>(
+      subscribeEntities<Schema, Q>(
         this.db.tripleStore,
         viewQuery,
         {
@@ -83,10 +83,13 @@ export class VariableAwareCache<Schema extends Models> {
             systemVars: this.db.systemVars,
           },
         },
-        ([results, triples]) => {
+        (entities) => {
+          const entries = Array.from(entities.entries());
           this.cache.set(id, {
-            results: new Map(results.map((e) => [e.id as string, e])),
-            triples: Array.from(triples.values()).flat(),
+            results: new Map(
+              entries.map(([entityId, entity]) => [entityId, entity.data])
+            ),
+            triples: entries.map(([entityId, entity]) => entity.triples).flat(),
           });
           resolve();
         },
@@ -255,7 +258,7 @@ function loadViewResultIntoExecutionCache<M extends Models>(
     if (!executionContext.executionCache.hasData(entityId)) {
       executionContext.executionCache.setData(entityId, {
         entity: entity,
-        triples: view.triples.filter((t) => t.id === entityId),
+        // triples: view.triples.filter((t) => t.id === entityId),
       });
     }
 

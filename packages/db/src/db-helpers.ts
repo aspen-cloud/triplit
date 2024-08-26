@@ -15,6 +15,7 @@ import {
   CollectionQuery,
   QueryValue,
   RelationshipExistsFilter,
+  FetchResultEntity,
 } from './query/types/index.js';
 import { isFilterGroup, isFilterStatement } from './query.js';
 import { getSchemaFromPath, triplesToSchema } from './schema/schema.js';
@@ -30,13 +31,11 @@ import { VALUE_TYPE_KEYS } from './data-types/constants.js';
 import DB, { CollectionFromModels, CollectionNameFromModels } from './db.js';
 import { DBTransaction } from './db-transaction.js';
 import { Attribute, TupleValue } from './triple-store-utils.js';
-import {
-  TimestampedFetchResult,
-  convertEntityToJS,
-} from './collection-query.js';
+import { convertEntityToJS } from './collection-query.js';
 import { Logger } from '@triplit/types/logger';
 import { FetchResult } from './query/types/index.js';
 import { genToArr } from './utils/generator.js';
+import { COLLECTION_MARKER, OBJECT_MARKER } from './entity.js';
 
 const ID_SEPARATOR = '#';
 
@@ -112,18 +111,18 @@ export function replaceVariable(
     let current = scopeVars;
     for (const part of path) {
       if (current == null) {
-        // console.warn(new SessionVariableNotFoundError(target));
+        // Allow referential variables to be undefined
+        if (varScopeType(scope) === 'referential') return undefined;
         throw new SessionVariableNotFoundError(target);
-        return undefined;
       }
       current = current[part];
     }
     return current;
   } else {
-    // old variables will not
+    // if no scope, allow missing variable
     if (key in variables) return variables[key];
     // console.warn(new SessionVariableNotFoundError(target));
-    throw new SessionVariableNotFoundError(target);
+    // throw new SessionVariableNotFoundError(target);
     return undefined;
   }
 }
@@ -293,7 +292,7 @@ export function validateTriple(
   const [modelName, ...path] = attribute;
 
   // TODO: remove this hack
-  if (modelName === '_collection') return;
+  if (modelName === COLLECTION_MARKER) return;
   if (modelName === '_metadata') return;
 
   const model = schema[modelName];
@@ -303,7 +302,8 @@ export function validateTriple(
 
   const valueSchema = getSchemaFromPath(model.schema, path);
   // allow record marker for certain types
-  if (value === '{}' && ['record', 'set'].includes(valueSchema.type)) return;
+  if (value === OBJECT_MARKER && ['record', 'set'].includes(valueSchema.type))
+    return;
   // We expect you to set values at leaf nodes
   // Our leafs should be value types, so use that as check
   const isLeaf = (VALUE_TYPE_KEYS as unknown as string[]).includes(
@@ -350,14 +350,13 @@ export function fetchResultToJS<
   M extends Models,
   Q extends CollectionQuery<M, CollectionNameFromModels<M>>
 >(
-  results: TimestampedFetchResult<Q>,
+  results: Map<string, FetchResultEntity<M, Q>>,
   schema: M | undefined,
   collectionName: CollectionNameFromModels<M>
 ): FetchResult<M, Q> {
-  results.forEach((entity, id) => {
-    results.set(id, convertEntityToJS(entity as any, schema, collectionName));
-  });
-  return Array.from(results.values()) as unknown as FetchResult<M, Q>;
+  return Array.from(results.values()).map((entity) =>
+    convertEntityToJS(entity, schema, collectionName)
+  );
 }
 
 export function isValueVariable(value: QueryValue): value is string {
@@ -372,7 +371,7 @@ export function isValueReferentialVariable(value: QueryValue): value is string {
   return !isNaN(parseInt(scope ?? ''));
 }
 
-const VARIABLE_SCOPES = ['global', 'session', 'role', 'query'];
+const VARIABLE_SCOPES = ['global', 'session', 'role', 'query']; // 'referential' is a type, but denoted by integers
 
 export function getVariableComponents(
   variable: string
@@ -392,6 +391,11 @@ export function getVariableComponents(
 
 function isScopedVariable(scope: string | undefined): scope is string {
   return VARIABLE_SCOPES.includes(scope ?? '') || !isNaN(parseInt(scope ?? ''));
+}
+
+export function varScopeType(scope: string): string {
+  if (!isNaN(parseInt(scope))) return 'referential';
+  return scope;
 }
 
 export function createVariable(

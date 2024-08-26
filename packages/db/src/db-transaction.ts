@@ -53,12 +53,14 @@ import {
   fetchResultToJS,
 } from './db-helpers.js';
 import {
-  Entity,
   constructEntity,
   updateEntity,
-  triplesToEntities,
-} from './query.js';
-import { dbDocumentToTuples, timestampedObjectToPlainObject } from './utils.js';
+  Entity,
+  OBJECT_MARKER,
+  COLLECTION_ATTRIBUTE,
+  constructEntities,
+} from './entity.js';
+import { dbDocumentToTuples } from './utils.js';
 import { createSetProxy } from './data-types/definitions/set.js';
 import {
   EntityId,
@@ -166,7 +168,7 @@ async function checkWritePermissions<M extends Models>(
     }
   );
 
-  const { results } = await fetchOne<M, any>(
+  const results = await fetchOne<M, any>(
     storeTx,
     query,
     initialFetchExecutionContext(),
@@ -217,7 +219,7 @@ async function checkWriteRules<M extends Models>(
         skipRules: false,
       }
     );
-    const { results } = await fetchOne<M, any>(
+    const results = await fetchOne<M, any>(
       tx,
       query,
       initialFetchExecutionContext(),
@@ -236,23 +238,21 @@ async function checkWriteRules<M extends Models>(
   }
 }
 
-function triplesToDeltaOpSet(triples: TripleRow[]): OpSet<any> {
-  const deltas = Array.from(triplesToEntities(triples).entries());
+function mapTxTriplesToOperations(triples: TripleRow[]): OpSet<string> {
+  const deltas = constructEntities(triples);
   const opSet: OpSet<any> = { inserts: [], updates: [], deletes: [] };
   for (const [id, delta] of deltas) {
     // default to update
     let operation: 'insert' | 'update' | 'delete' = 'update';
     // Inserts and deletes will include the _collection attribute
-    if ('_collection' in delta.data) {
-      // Deletes will set _collection to undefined
-      const isDelete = delta.data._collection[0] === undefined;
-      if (isDelete) operation = 'delete';
+    const collectionTriple = delta.findTriple('_collection');
+    if (collectionTriple) {
+      if (delta.isDeleted) operation = 'delete';
       else operation = 'insert';
     }
-
-    if (operation === 'insert') opSet.inserts.push([id, delta.data]);
-    else if (operation === 'update') opSet.updates.push([id, delta.data]);
-    else if (operation === 'delete') opSet.deletes.push([id, delta.data]);
+    if (operation === 'insert') opSet.inserts.push(id);
+    else if (operation === 'update') opSet.updates.push(id);
+    else if (operation === 'delete') opSet.deletes.push(id);
   }
   return opSet;
 }
@@ -261,19 +261,17 @@ async function triplesToEntityOpSet(
   triples: TripleRow[],
   tripleStore: TripleStoreApi
 ): Promise<EntityOpSet> {
-  const deltas = Array.from(triplesToEntities(triples).entries());
+  const deltas = constructEntities(triples);
   const opSet: EntityOpSet = { inserts: [], updates: [], deletes: [] };
   for (const [id, delta] of deltas) {
     // default to update
     let operation: 'insert' | 'update' | 'delete' = 'update';
     // Inserts and deletes will include the _collection attribute
-    if ('_collection' in delta.data) {
-      // Deletes will set _collection to undefined
-      const isDelete = delta.data._collection[0] === undefined;
-      if (isDelete) operation = 'delete';
+    const collectionTriple = delta.findTriple('_collection');
+    if (collectionTriple) {
+      if (delta.isDeleted) operation = 'delete';
       else operation = 'insert';
     }
-
     // Get the full entities from the triple store
     const entity = constructEntity(
       await genToArr(tripleStore.findByEntity(id)),
@@ -282,30 +280,14 @@ async function triplesToEntityOpSet(
     if (!entity) continue;
     switch (operation) {
       case 'insert':
-        opSet.inserts.push([
-          id,
-          timestampedObjectToPlainObject(entity.data) as any,
-        ]);
+        opSet.inserts.push([id, entity.data]);
         break;
       case 'update':
         // TODO: add deltas to update
-        opSet.updates.push([
-          id,
-          timestampedObjectToPlainObject(entity.data) as any,
-        ]);
+        opSet.updates.push([id, entity.data]);
         break;
       case 'delete':
-        const [collection, externalId] = splitIdParts(id);
-        opSet.deletes.push([
-          id,
-          {
-            id: externalId,
-            _collection: collection,
-            // I don't expect an entity to have any data here as the
-            // triples are already tombstoned
-            ...(timestampedObjectToPlainObject(entity.data) as any),
-          },
-        ]);
+        opSet.deletes.push([id, undefined]);
         break;
     }
   }
@@ -345,9 +327,9 @@ export class DBTransaction<M extends Models> {
     triples,
     tx
   ) => {
-    const deltas = triplesToDeltaOpSet(triples);
+    const tripleOps = mapTxTriplesToOperations(triples);
     // Check permissions for updates before we've written
-    for (const [id, _delta] of deltas.updates) {
+    for (const id of tripleOps.updates) {
       await checkWritePermissions(this, tx, id, this.schema, 'update');
     }
   };
@@ -431,27 +413,23 @@ export class DBTransaction<M extends Models> {
     triples,
     tx
   ) => {
-    const metadataTriples = triples.filter(
-      ({ attribute }) => attribute[0] === '_metadata'
+    const newSchemaTriples = triples.filter(
+      ({ id }) => id === '_metadata#_schema'
     );
-    if (metadataTriples.length === 0) return;
+    if (newSchemaTriples.length === 0) return;
 
     /**
      * If for whatever reason we havent loaded the schema yet, load it
      */
     if (!this._schema) {
       const { schemaTriples } = await readSchemaFromTripleStore(tx);
-      metadataTriples.unshift(...schemaTriples);
+      newSchemaTriples.unshift(...schemaTriples);
     }
 
     this._schema = this._schema ?? new Entity();
-    updateEntity(this._schema, metadataTriples);
-
+    updateEntity(this._schema, newSchemaTriples);
     // Type definitions are kinda ugly here
-    // @ts-expect-error - Probably want a way to override the output type of this
-    const schemaDefinition = timestampedObjectToPlainObject(
-      this._schema.data
-    ) as SchemaDefinition | undefined;
+    const schemaDefinition = this._schema?.data as SchemaDefinition | undefined;
 
     this.schema = {
       version: schemaDefinition?.version ?? 0,
@@ -636,13 +614,10 @@ export class DBTransaction<M extends Models> {
   // Read the current schema based on stored data
   async getSchemaFromStore() {
     const { schemaTriples } = await readSchemaFromTripleStore(this.storeTx);
-    const entity = new Entity();
-    updateEntity(entity, schemaTriples);
+    const entity = new Entity(schemaTriples);
     // Type definitions are kinda ugly here
-    // @ts-expect-error - Probably want a way to override the output type of this
-    const schemaDefinition = timestampedObjectToPlainObject(entity.data) as
-      | SchemaDefinition
-      | undefined;
+    // // @ts-expect-error - Probably want a way to override the output type of this
+    const schemaDefinition = entity.data as SchemaDefinition | undefined;
 
     return {
       version: schemaDefinition?.version ?? 0,
@@ -737,7 +712,7 @@ export class DBTransaction<M extends Models> {
     );
     triples.push({
       id: storeId,
-      attribute: ['_collection'],
+      attribute: COLLECTION_ATTRIBUTE,
       value: collectionName,
       timestamp,
       expired: false,
@@ -792,7 +767,7 @@ export class DBTransaction<M extends Models> {
     collectionName: CN,
     entityId: string,
     callback: (
-      entity: any
+      entity: Record<string, any>
     ) => [Attribute, TupleValue][] | Promise<[Attribute, TupleValue][]>
   ) {
     this.logger.debug('updateRaw START');
@@ -800,18 +775,16 @@ export class DBTransaction<M extends Models> {
     const storeId = appendCollectionToId(collectionName, entityId);
 
     const entityTriples = await genToArr(this.storeTx.findByEntity(storeId));
-    const timestampedEntity = constructEntity(entityTriples, storeId);
-    const entity = timestampedObjectToPlainObject(timestampedEntity!.data);
-    // If entity doesn't exist or is deleted, throw error
-    // Schema/metadata does not have _collection attribute
-    if (collectionName !== '_metadata' && !entity?._collection) {
+    const entity = constructEntity(entityTriples, storeId);
+    if (entityTriples.length === 0 || !entity || entity.isDeleted) {
       throw new EntityNotFoundError(
         entityId,
         collectionName,
         "Cannot perform an update on an entity that doesn't exist"
       );
     }
-    const changeTuples = await callback(entity);
+    const materializedData = entity.data;
+    const changeTuples = await callback(materializedData);
     for (const [attr, value] of changeTuples) {
       if (attr.at(0) === 'id') {
         throw new InvalidOperationError(
@@ -825,7 +798,7 @@ export class DBTransaction<M extends Models> {
       const [attr, value] = tuple;
       const storeAttribute = [collectionName, ...attr];
       // undefined is treated as a delete
-      if (value === undefined || value === '{}') {
+      if (value === undefined || value === OBJECT_MARKER) {
         await this.storeTx.expireEntityAttributes([
           { id: storeId, attribute: storeAttribute },
         ]);
@@ -873,7 +846,7 @@ export class DBTransaction<M extends Models> {
     );
     // TODO: read scope?
     // See difference between this fetch and db fetch
-    const { results } = await fetch<M, Q>(
+    const results = await fetch<M, Q>(
       this.storeTx,
       fetchQuery,
       initialFetchExecutionContext(),
@@ -1286,7 +1259,7 @@ export function createUpdateProxy<
   CN extends CollectionNameFromModels<M> = CollectionNameFromModels<M>
 >(
   changeTracker: ChangeTracker,
-  entityObj: any, // TODO: type this properly, should be an untimestamped entity
+  entityObj: Record<string, any>,
   schema?: M,
   collectionName?: CN,
   prefix: string = ''

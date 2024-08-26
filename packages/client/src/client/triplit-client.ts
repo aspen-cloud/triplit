@@ -553,7 +553,7 @@ export class TriplitClient<M extends ClientSchema = ClientSchema> {
     collectionName: CN,
     entityId: string,
     updater: (
-      entity: UpdateTypeFromModel<ModelFromModels<M, CN>>
+      entity: Record<string, any>
     ) => [Attribute, TupleValue][] | Promise<[Attribute, TupleValue][]>
   ) {
     this.logger.debug('updateRaw START', collectionName, entityId);

@@ -2,8 +2,8 @@ import { TObject } from '@sinclair/typebox';
 import { InvalidSchemaPathError } from '../errors.js';
 import type { CollectionNameFromModels } from '../db.js';
 import type { Attribute, TripleRow } from '../triple-store-utils.js';
-import { objectToTuples, timestampedObjectToPlainObject } from '../utils.js';
-import { constructEntity } from '../query.js';
+import { objectToTuples } from '../utils.js';
+import { constructEntity } from '../entity.js';
 import { appendCollectionToId } from '../db-helpers.js';
 import { DataType } from '../data-types/types/index.js';
 import { typeFromJSON } from './serialization.js';
@@ -157,14 +157,17 @@ export function triplesToSchema<M extends Models = Models>(
     appendCollectionToId('_metadata', '_schema')
   );
   if (!schemaEntity) return undefined;
-  return timestampedSchemaToSchema<M>(schemaEntity.data);
+  return schemaEntityToSchemaObject<M>(schemaEntity.data);
 }
 
-export function timestampedSchemaToSchema<M extends Models = Models>(
+/**
+ * Ensures that a materialized schema has the correct fields
+ * TODO: this is a bit of a hack, we should probably just use the schema as is and change code to handle that
+ */
+export function schemaEntityToSchemaObject<M extends Models = Models>(
   schema: Record<string, any>
 ): StoreSchema<M> | undefined {
-  const schemaData = timestampedObjectToPlainObject(schema);
-  delete schemaData['_collection'];
+  const schemaData = { ...schema };
   delete schemaData['id'];
   const version = (schemaData.version as number) || 0;
   const collections = (schemaData.collections as CollectionsDefinition) || {};

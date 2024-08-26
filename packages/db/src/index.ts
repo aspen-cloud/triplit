@@ -23,14 +23,11 @@ export type * from './db/types/index.js';
 export type { PermissionOperations } from './schema/types/models.js';
 export { ChangeTracker, createUpdateProxy } from './db-transaction.js';
 export type { DBTransaction } from './db-transaction.js';
+export { constructEntity, constructEntities } from './entity.js';
 export {
-  queryResultToJson,
   or,
   and,
   exists,
-  constructEntity,
-  // TODO
-  triplesToEntities as constructEntities,
   compareCursors,
   isFilterGroup,
   isFilterStatement,
@@ -83,12 +80,9 @@ export {
   convertEntityToJS,
 } from './collection-query.js';
 export { QueryBuilder } from './query/builder.js';
-export type { TimestampedTypeFromModel } from './collection-query.js';
 export type * from './query/types/index.js';
 export { default as Builder } from './utils/builder.js';
 export type { toBuilder } from './utils/builder.js';
-export { timestampedObjectToPlainObject } from './utils.js';
-export type { TimestampedObject, UnTimestampedObject } from './utils.js';
 export type { IsAny } from './utility-types.js';
 export * from './errors.js';
 // See ./data-types/index.ts for why this is necessary

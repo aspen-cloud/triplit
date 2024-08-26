@@ -46,13 +46,6 @@ export type ExtractDBType<T> = T extends TypeInterface<
   ? DBType
   : never;
 
-export type ExtractTimestampedType<T extends TypeInterface> =
-  T extends TypeInterface<infer _TypeId, infer _JSType, infer DBType, any>
-    ? DBType extends Record<string, infer Value>
-      ? Record<string, ExtractJSType<Value>>
-      : [DBType, Timestamp]
-    : never;
-
 export type ExtractOperators<T extends TypeInterface> = T extends TypeInterface<
   infer _TypeId,
   infer _JSType,

@@ -532,8 +532,13 @@ export class TripleStore<StoreKeys extends string = any>
             const { set = [], remove = [] } = writes;
             const inserts = set.map((w) => indexToTriple(w));
             const deletes = remove.map((w) =>
-              //@ts-ignore
-              indexToTriple({ key: w, value: { expired: false } })
+              indexToTriple(
+                // @ts-expect-error
+                {
+                  key: w,
+                  value: { expired: false },
+                }
+              )
             );
             return [store, { inserts, deletes }];
           })

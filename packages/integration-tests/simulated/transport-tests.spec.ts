@@ -847,6 +847,7 @@ describe('Sync situations', () => {
     });
   });
 
+  // TODO: look into the validity of this test...seeing mixed results depending on pause time
   it('subscriptions dont overfire', async () => {
     const server = new TriplitServer(new DB());
     const alice = createTestClient(server, SERVICE_KEY, { clientId: 'alice' });
@@ -1130,7 +1131,10 @@ describe('Sync situations', () => {
 describe('sync status', () => {
   it('subscriptions are scoped via syncStatus', async () => {
     const server = new TriplitServer(new DB());
-    const alice = createTestClient(server, SERVICE_KEY, { clientId: 'alice' });
+    const alice = createTestClient(server, SERVICE_KEY, {
+      clientId: 'alice',
+      autoConnect: false,
+    });
     const aliceSubPending = vi.fn();
     const aliceSubConfirmed = vi.fn();
     const aliceSubAll = vi.fn();
@@ -1143,12 +1147,12 @@ describe('sync status', () => {
       aliceSubConfirmed
     );
     alice.subscribe(alice.query('test').syncStatus('all').build(), aliceSubAll);
-    await pause();
-    await pause();
     await alice.insert('test', { id: 'test1', name: 'test1' });
     await pause();
+    alice.connect();
+    await pause(1000);
     expect(aliceSubPending.mock.calls.length).toBe(3); // initial, optimistic insert, outbox clear
-    expect(aliceSubConfirmed.mock.calls.length).toBe(3); // initial, cache update, hacky remote response
+    expect(aliceSubConfirmed.mock.calls.length).toBe(3); // initial, cache update
     expect(aliceSubAll.mock.calls.length).toBe(3); // initial, optimistic insert, outbox clear + cache update
 
     // Sync status is kind of a weird abstraction, doenst work well with updates
