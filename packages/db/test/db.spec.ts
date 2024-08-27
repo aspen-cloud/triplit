@@ -47,27 +47,10 @@ import {
 import { prepareQuery } from '../src/query/prepare.js';
 import { DEFAULT_PAGE_SIZE as TUPLE_DB_DEFAULT_PAGE_SIZE } from '../src/multi-tuple-store.js';
 import { triplesToEntities } from '../src/query.js';
+import { testDBAndTransaction } from './utils/db-helpers.js';
 
 const pause = async (ms: number = 100) =>
   new Promise((resolve) => setTimeout(resolve, ms));
-
-// const storage = new InMemoryTupleStorage();
-const storage = new MemoryStorage();
-
-export async function testDBAndTransaction<M extends Models>(
-  // should return a new instance if you are performing writes in your test
-  dbFactory: () => DB<M> | Promise<DB<M>>,
-  test: (db: DB<M> | DBTransaction<M>) => void | Promise<void>,
-  scope: { db: boolean; tx: boolean } = { db: true, tx: true }
-) {
-  if (scope.db) await test(await dbFactory());
-  if (scope.tx)
-    await (
-      await dbFactory()
-    ).transact(async (tx) => {
-      await test(tx);
-    });
-}
 
 describe('Database API', () => {
   let db: DB;

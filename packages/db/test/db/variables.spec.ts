@@ -2,7 +2,7 @@ import { InMemoryTupleStorage } from '@triplit/tuple-database';
 import { describe, expect, it, beforeAll } from 'vitest';
 import { DB } from '../../src';
 import { classes, departments } from '../sample_data/school.js';
-import { testDBAndTransaction } from '../db.spec';
+import { testDBAndTransaction } from '../utils/db-helpers.js';
 
 describe('DB Variables', () => {
   const storage = new InMemoryTupleStorage();

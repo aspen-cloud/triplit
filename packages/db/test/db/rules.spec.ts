@@ -2,8 +2,8 @@ import { InMemoryTupleStorage } from '@triplit/tuple-database';
 import { describe, expect, it, beforeEach, beforeAll } from 'vitest';
 import { DB, Schema as S, WriteRuleError } from '../../src';
 import { classes } from '../sample_data/school.js';
-import { testDBAndTransaction } from '../db.spec';
 import { Models } from '../../src/schema/types';
+import { testDBAndTransaction } from '../utils/db-helpers.js';
 
 describe('Rules', () => {
   describe('Read', () => {
