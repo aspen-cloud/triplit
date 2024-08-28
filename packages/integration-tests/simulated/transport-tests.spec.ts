@@ -2026,6 +2026,80 @@ describe('rules', () => {
   });
 });
 
+describe('deduping subscriptions', () => {
+  it('sends only one CONNECT_QUERY message for multiple subscriptions to the same query', async () => {
+    const server = new TriplitServer(new DB());
+    const alice = createTestClient(server, SERVICE_KEY, { clientId: 'alice' });
+    const query = alice.query('test').build();
+    const sub1Callback = vi.fn();
+    const sub2Callback = vi.fn();
+    const syncMessageCallback = vi.fn();
+    alice.syncEngine.onSyncMessageSent(syncMessageCallback);
+    const unsub1 = alice.subscribe(query, sub1Callback);
+
+    await pause();
+    expect(syncMessageCallback).toHaveBeenCalledTimes(2);
+    // console.dir(syncMessageCallback.mock.calls, { depth: 10 });
+    const unsub2 = alice.subscribe(query, sub2Callback);
+    await pause();
+
+    expect(syncMessageCallback).toHaveBeenCalledTimes(2);
+    unsub1();
+    await pause();
+    expect(syncMessageCallback).toHaveBeenCalledTimes(2);
+    expect(syncMessageCallback.mock.lastCall[0].type).toBe('CONNECT_QUERY');
+    unsub2();
+    await pause();
+    expect(syncMessageCallback).toHaveBeenCalledTimes(3);
+    expect(syncMessageCallback.mock.lastCall[0].type).toBe('DISCONNECT_QUERY');
+  });
+  it("will send updates to all subscribers that haven't been unsubscribed", async () => {
+    const server = new TriplitServer(new DB());
+    const alice = createTestClient(server, SERVICE_KEY, { clientId: 'alice' });
+    const query = alice.query('test').build();
+    const sub1 = vi.fn();
+    const sub2 = vi.fn();
+    const unsub1 = alice.subscribe(query, sub1);
+    const unsub2 = alice.subscribe(query, sub2);
+    await pause();
+    await alice.insert('test', { id: 'test1', name: 'test1' });
+    await pause();
+    expect(sub1).toHaveBeenCalled();
+    expect(sub2).toHaveBeenCalled();
+    sub1.mockClear();
+    sub2.mockClear();
+    unsub1();
+    alice.update('test', 'test1', (entity) => {
+      entity.name = 'test2';
+    });
+    await pause();
+    expect(sub1).not.toHaveBeenCalled();
+    expect(sub2).toHaveBeenCalled();
+    sub2.mockClear();
+
+    unsub2();
+    alice.delete('test', 'test1');
+    await pause();
+    expect(sub1).not.toHaveBeenCalled();
+    expect(sub2).not.toHaveBeenCalled();
+  });
+  it('subsequent subscriptions initiated after the first resolves should be immediately fulfilled', async () => {
+    const server = new TriplitServer(new DB());
+    const alice = createTestClient(server, SERVICE_KEY, { clientId: 'alice' });
+    const query = alice.query('test').build();
+    const sub1 = vi.fn();
+    const sub2 = vi.fn();
+    const unsub1 = alice.subscribe(query, sub1);
+    await pause();
+    await alice.insert('test', { id: 'test1', name: 'test1' });
+    await pause();
+    const unsub2 = alice.subscribe(query, sub2);
+    await pause();
+    expect(sub2).toHaveBeenCalledOnce();
+    expect(sub2.mock.lastCall[1].hasRemoteFulfilled).toBe(true);
+  });
+});
+
 class TestTransport implements SyncTransport {
   private connection: Connection | null = null;
   clientId: string | undefined;

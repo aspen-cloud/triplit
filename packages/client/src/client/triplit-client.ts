@@ -706,6 +706,7 @@ export class TriplitClient<M extends ClientSchema = ClientSchema> {
     );
     if (scope.includes('cache')) {
       const onFulfilled = () => {
+        if (hasRemoteFulfilled) return;
         hasRemoteFulfilled = true;
         if (fulfilledTimeout !== null) {
           clearTimeout(fulfilledTimeout);

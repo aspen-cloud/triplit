@@ -50,7 +50,12 @@ export class SyncEngine {
 
   private queries: Map<
     string,
-    { params: CollectionQuery<any, any>; fulfilled: boolean }
+    {
+      params: CollectionQuery<any, any>;
+      fulfilled: boolean;
+      responseCallbacks: Set<(response: any) => void>;
+      subCount: number;
+    }
   > = new Map();
 
   private reconnectTimeoutDelay = 250;
@@ -62,7 +67,6 @@ export class SyncEngine {
   private connectionChangeHandlers: Set<(status: ConnectionStatus) => void> =
     new Set();
 
-  private queryFulfillmentCallbacks: Map<string, (response: any) => void>;
   private txCommits$ = new Subject<string>();
   private txFailures$ = new Subject<{ txId: string; error: unknown }>();
 
@@ -103,7 +107,6 @@ export class SyncEngine {
         }
       }
     });
-    this.queryFulfillmentCallbacks = new Map();
 
     // Signal the server when there are triples to send
     const throttledSignal = throttle(() => this.signalOutboxTriples(), 100);
@@ -194,41 +197,41 @@ export class SyncEngine {
    */
   subscribe(params: CollectionQuery<any, any>, onQueryFulfilled?: () => void) {
     const id = this.getQueryHash(params);
-    this.getQueryState(id).then((queryState: Timestamp[]) => {
-      this.sendMessage({
-        type: 'CONNECT_QUERY',
-        payload: {
-          id: id,
-          params,
-          state: queryState,
-        },
+    if (!this.queries.has(id)) {
+      this.queries.set(id, {
+        params,
+        fulfilled: false,
+        responseCallbacks: new Set(),
+        subCount: 0,
       });
-      this.queries.set(id, { params, fulfilled: false });
-      this.onQueryFulfilled(id, (resp) => {
-        const { triples } = resp;
-        if (triples.length > 0) {
-          const stateVector = this.triplesToStateVector(triples);
-          const nextQueryState = new Map(
-            (queryState ?? []).map(([t, c]) => [c, t])
-          );
-          stateVector.forEach(([t, c]) => {
-            const current = nextQueryState.get(c);
-            if (!current || t > current) {
-              nextQueryState.set(c, t);
-            }
-          });
-          this.setQueryState(
-            id,
-            [...nextQueryState.entries()].map(([c, t]) => [t, c])
-          );
-        }
-        this.queries.set(id, { params, fulfilled: true });
-        if (onQueryFulfilled) onQueryFulfilled();
+      this.getQueryState(id).then((queryState: Timestamp[]) => {
+        this.sendMessage({
+          type: 'CONNECT_QUERY',
+          payload: {
+            id: id,
+            params,
+            state: queryState,
+          },
+        });
       });
-    });
+    }
+    const query = this.queries.get(id);
+    query!.subCount++;
+    if (onQueryFulfilled) {
+      query?.fulfilled && onQueryFulfilled();
+      query?.responseCallbacks.add(onQueryFulfilled);
+    }
 
     return () => {
-      this.disconnectQuery(id);
+      const query = this.queries.get(id);
+      query!.subCount--;
+      if (query!.subCount === 0) {
+        this.disconnectQuery(id);
+        return;
+      }
+      if (onQueryFulfilled) {
+        query?.responseCallbacks.delete(onQueryFulfilled);
+      }
     };
   }
 
@@ -246,10 +249,6 @@ export class SyncEngine {
       timestamp,
       clientId,
     ]);
-  }
-
-  onQueryFulfilled(queryId: string, callback: (response: any) => void) {
-    this.queryFulfillmentCallbacks.set(queryId, callback);
   }
 
   hasQueryBeenFulfilled(queryId: string) {
@@ -323,10 +322,15 @@ export class SyncEngine {
         const { payload } = message;
         const triples = payload.triples;
         const queryIds = payload.forQueries;
+
         for (const qId of queryIds) {
-          const callback = this.queryFulfillmentCallbacks.get(qId);
-          if (callback) {
-            callback(payload);
+          await this.updateQueryStateVector(qId, triples);
+          const query = this.queries.get(qId);
+          if (!query) continue;
+          query.fulfilled = true;
+          const callbackSet = query?.responseCallbacks;
+          if (callbackSet) {
+            for (const callback of callbackSet) callback(payload);
           }
           // this.queryFulfillmentCallbacks.delete(qId);
         }
@@ -502,6 +506,26 @@ export class SyncEngine {
    */
   get connectionStatus() {
     return this.transport.connectionStatus;
+  }
+
+  private async updateQueryStateVector(queryId: string, triples: any) {
+    const queryState: Timestamp[] = await this.getQueryState(queryId);
+    if (triples.length > 0) {
+      const stateVector = this.triplesToStateVector(triples);
+      const nextQueryState = new Map(
+        (queryState ?? []).map(([t, c]) => [c, t])
+      );
+      stateVector.forEach(([t, c]) => {
+        const current = nextQueryState.get(c);
+        if (!current || t > current) {
+          nextQueryState.set(c, t);
+        }
+      });
+      this.setQueryState(
+        queryId,
+        [...nextQueryState.entries()].map(([c, t]) => [t, c])
+      );
+    }
   }
 
   /**
