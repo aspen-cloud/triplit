@@ -80,7 +80,7 @@ If you're using a custom self-hosted server, you need to set the `EXTERNAL_JWT_S
 Now that you have a user auth system set up, you can add roles and permissions to your Triplit schema. By default, the JWT issued by Clerk will set the `sub` claim to the authenticated user's unique identifier. In Triplit, you can use it to set up a simple `user` role:
 
 ```ts copy
-import { Role } from '@triplit/client';
+import { Roles } from '@triplit/client';
 
 export const roles: Roles = {
   user: {
@@ -91,6 +91,6 @@ export const roles: Roles = {
 };
 ```
 
-[Read here to see how you can use this Role to define a permission.](/docs/roles-and-permissions).
+[Read here to see how you can use this Role to define a permission.](/docs/schemas/permissions).
 
 </Steps>
