@@ -27,6 +27,7 @@ import {
   InvalidWhereClauseError,
   CollectionQuery,
   genToArr,
+  DurableClock,
 } from '../src';
 import { hashSchemaJSON } from '../src/schema/schema.js';
 import { Models } from '../src/schema/types';
@@ -48,6 +49,7 @@ import { prepareQuery } from '../src/query/prepare.js';
 import { DEFAULT_PAGE_SIZE as TUPLE_DB_DEFAULT_PAGE_SIZE } from '../src/multi-tuple-store.js';
 import { triplesToEntities } from '../src/query.js';
 import { testDBAndTransaction } from './utils/db-helpers.js';
+import { not } from 'ajv/dist/compile/codegen/index.js';
 
 const pause = async (ms: number = 100) =>
   new Promise((resolve) => setTimeout(resolve, ms));
@@ -4248,7 +4250,7 @@ describe('delta querying', async () => {
     const post_id = 'post-1';
     const post_id2 = 'post-2';
     beforeEach(async () => {
-      db.clear();
+      await db.clear();
       await db.insert('posts', {
         id: post_id,
         author_id: user_id,
@@ -5417,32 +5419,105 @@ describe('selecting subqueries from schema', () => {
   });
 });
 
-it('clearing a database resets the schema', async () => {
-  const schema = {
-    collections: {
-      test: {
-        schema: S.Schema({
-          id: S.String(),
-          name: S.String(),
-        }),
+describe('db.clear()', () => {
+  it('full clear deletes all data and metadata and resets state', async () => {
+    const schema = {
+      collections: {
+        test: {
+          schema: S.Schema({
+            id: S.String(),
+            name: S.String(),
+          }),
+        },
       },
-    },
-    version: 0,
-  };
-  const db = new DB({ schema });
-  await db.ready;
+      version: 0,
+    };
+    const clock = new DurableClock('default', 'test');
+    const db = new DB({ schema, clock });
+    await db.insert('test', { id: '1', name: 'alice' });
+    await db.insert('test', { id: '2', name: 'bob' });
 
-  // Should load schema into cache
-  const resultSchema = await db.getSchema();
-  const cacheSchema = db.schema!;
-  expect(schemaToJSON(resultSchema)).toEqual(schemaToJSON(schema));
-  expect(schemaToJSON(cacheSchema)).toEqual(schemaToJSON(schema));
+    const originalMetadata = JSON.parse(
+      JSON.stringify(
+        await genToArr(
+          db.tripleStore.tupleStore.scan({
+            prefix: ['metadata'],
+          })
+        )
+      )
+    );
 
-  await db.clear({ full: true });
+    // State is defined
+    {
+      const result = await db.fetch({ collectionName: 'test' });
+      expect(result.size).toBe(2);
 
-  // Should reset schema cache
-  const schemaAfterClear = await db.getSchema();
-  expect(schemaAfterClear).toEqual(undefined);
+      const schema = await db.getSchema();
+      expect(schema).not.toEqual(undefined);
+    }
+
+    await db.clear({ full: true });
+
+    {
+      const result = await db.fetch({ collectionName: 'test' });
+      expect(result.size).toBe(0);
+
+      const schema = await db.getSchema();
+      expect(schema).toEqual(undefined);
+
+      const metadataTuples = await genToArr(
+        db.tripleStore.tupleStore.scan({ prefix: ['metadata'] })
+      );
+      expect(metadataTuples).not.toEqual(originalMetadata);
+    }
+  });
+  it('partial clear deletes all data, but retains metadata and state', async () => {
+    const schema = {
+      collections: {
+        test: {
+          schema: S.Schema({
+            id: S.String(),
+            name: S.String(),
+          }),
+        },
+      },
+      version: 0,
+    };
+    const clock = new DurableClock('default', 'test');
+    const db = new DB({ schema, clock });
+    await db.insert('test', { id: '1', name: 'alice' });
+    await db.insert('test', { id: '2', name: 'bob' });
+
+    const originalMetadata = JSON.parse(
+      JSON.stringify(
+        await genToArr(db.tripleStore.tupleStore.scan({ prefix: ['metadata'] }))
+      )
+    );
+
+    // State is defined
+    {
+      const result = await db.fetch({ collectionName: 'test' });
+      expect(result.size).toBe(2);
+
+      const schema = await db.getSchema();
+      expect(schema).not.toEqual(undefined);
+    }
+
+    await db.clear();
+
+    {
+      const result = await db.fetch({ collectionName: 'test' });
+      expect(result.size).toBe(0);
+
+      const schema = await db.getSchema();
+      expect(schema).not.toEqual(undefined);
+
+      const metadataTuples = await genToArr(
+        db.tripleStore.tupleStore.scan({ prefix: ['metadata'] })
+      );
+      expect(metadataTuples).toEqual(originalMetadata);
+    }
+  });
 });
 
 it('can upsert data with optional properties', async () => {

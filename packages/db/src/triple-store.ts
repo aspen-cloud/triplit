@@ -582,9 +582,47 @@ export class TripleStore<StoreKeys extends string = any>
     });
   }
 
-  async clear() {
-    await this.tupleStore.clear();
+  async clear({ full }: { full?: boolean } = {}) {
+    if (full) {
+      await this.tupleStore.clear();
+    } else {
+      // Load metadata for restore
+      const syncedMetadataScan = await genToArr(
+        this.findByCollection('_metadata')
+      );
+      const localMetadataScan = await genToArr(
+        this.tupleStore.scan({
+          prefix: ['metadata'],
+        })
+      );
+      await this.tupleStore.clear();
+      // Restore metadata
+      await this.transact(async (tx) => {
+        for (const triple of syncedMetadataScan) {
+          await tx.insertTriple(triple);
+        }
+        for (const kv of localMetadataScan) {
+          await tx.tupleTx.set(kv.key, kv.value);
+        }
+      });
+    }
+
+    // Inform listeners
+    for (const callback of this.onClearCallbacks) {
+      await callback();
+    }
   }
+
+  onClear(callback: () => void | Promise<void>) {
+    this.onClearCallbacks.push(callback);
+    return () => {
+      this.onClearCallbacks = this.onClearCallbacks.filter(
+        (cb) => cb !== callback
+      );
+    };
+  }
+
+  private onClearCallbacks: (() => void | Promise<void>)[] = [];
 }
 
 function throttle(callback: () => void, delay: number) {

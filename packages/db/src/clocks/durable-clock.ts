@@ -74,6 +74,16 @@ export class DurableClock implements Clock {
         ]);
       }
     });
+    store.onClear(async () => {
+      this.assigned = false;
+      this.clientId = nanoid();
+      this.clockReady = new Promise(async (res, rej) => {
+        // Await for clock.start to be called
+        // This is admitedly a bit of an odd pattern
+        this.readyCallbacks = [res, rej];
+      });
+      this.assignToStore(store);
+    });
   }
 
   async getCurrentTimestamp() {

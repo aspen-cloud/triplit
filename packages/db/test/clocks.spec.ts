@@ -2,6 +2,7 @@ import { describe, expect, it, beforeEach, beforeAll, vi } from 'vitest';
 import { MemoryBTreeStorage as MemoryStorage } from '../src/storage/memory-btree.js';
 import { DurableClock } from '../src/clocks/durable-clock.js';
 import { TripleStore } from '../src/triple-store.js';
+import DB from '../src/db.js';
 
 describe('DurableClock', () => {
   it('creates a fresh clock if no relevant metadata', async () => {
@@ -75,6 +76,48 @@ describe('DurableClock', () => {
     });
     currentTick = await clock.getCurrentTimestamp();
     expect(currentTick[0]).toBe(16);
+  });
+  it('will reset on full clear', async () => {
+    const clock = new DurableClock('store', 'alice');
+    const db = new DB({ sources: { store: new MemoryStorage() }, clock });
+    let currentTick = await clock.getCurrentTimestamp();
+    await db.tripleStore.transact(async (tx) => {
+      const ts = await tx.getTransactionTimestamp();
+      await tx.insertTriple({
+        id: 'a',
+        attribute: ['b'],
+        value: 'c',
+        expired: false,
+        timestamp: ts,
+      });
+    });
+    currentTick = await clock.getCurrentTimestamp();
+    expect(currentTick).toEqual([1, 'alice']);
+    await db.clear({ full: true });
+    currentTick = await clock.getCurrentTimestamp();
+    expect(currentTick[0]).toBe(0);
+    expect(typeof currentTick[1] === 'string').toBe(true);
+    expect(currentTick[1]).not.toBe('alice');
+  });
+  it('will maintain clock on partial clear', async () => {
+    const clock = new DurableClock('store', 'alice');
+    const db = new DB({ sources: { store: new MemoryStorage() }, clock });
+    let currentTick = await clock.getCurrentTimestamp();
+    await db.tripleStore.transact(async (tx) => {
+      const ts = await tx.getTransactionTimestamp();
+      await tx.insertTriple({
+        id: 'a',
+        attribute: ['b'],
+        value: 'c',
+        expired: false,
+        timestamp: ts,
+      });
+    });
+    currentTick = await clock.getCurrentTimestamp();
+    expect(currentTick).toEqual([1, 'alice']);
+    await db.clear();
+    currentTick = await clock.getCurrentTimestamp();
+    expect(currentTick).toEqual([1, 'alice']);
   });
   it.todo(
     "throws an error when it's assigned to something other than a TripleStore",

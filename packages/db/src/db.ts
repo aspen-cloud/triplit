@@ -469,6 +469,10 @@ export default class DB<M extends Models = Models> {
       tenantId,
       clock,
     });
+    this.tripleStore.onClear(() => {
+      this.schema = undefined;
+      this._schema = undefined;
+    });
 
     this.cache = new VariableAwareCache(this);
 
@@ -1224,21 +1228,8 @@ export default class DB<M extends Models = Models> {
     return stats;
   }
 
-  async clear({ full }: { full?: boolean } = {}) {
-    if (full) {
-      // Delete all data associated with this tenant
-      await this.tripleStore.clear();
-    } else {
-      // Just delete triples
-      await this.tripleStore.transact(async (tx) => {
-        const allTriples = await genToArr(tx.findByEntity());
-        // Filter out synced metadata
-        const dataTriples = allTriples.filter(
-          ({ id }) => !id.includes('_metadata')
-        );
-        await tx.deleteTriples(dataTriples);
-      });
-    }
+  async clear(options: { full?: boolean } = {}) {
+    return this.tripleStore.clear(options);
   }
 
   onSchemaChange(cb: SchemaChangeCallback<M>) {

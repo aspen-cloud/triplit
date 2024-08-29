@@ -10,9 +10,9 @@ import { genToArr } from '../src/utils/generator.js';
 // const storage = new InMemoryTupleStorage();
 const storage = new MemoryStorage();
 
-beforeEach(() => {
+beforeEach(async () => {
   // storage.data = [];
-  storage.wipe();
+  await storage.clear();
 });
 
 // Helper function to test both methods on both store and transaction
@@ -271,7 +271,7 @@ describe('search/scan functionality', async () => {
     },
   ];
   beforeEach(async () => {
-    storage.wipe();
+   await storage.clear();
   });
   it('can find by attribute', async () => {
     await store.insertTriples(defaultData);
