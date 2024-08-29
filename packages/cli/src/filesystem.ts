@@ -1,6 +1,7 @@
 import path from 'path';
 import fs, { existsSync, readFileSync } from 'fs';
 import ts from 'typescript';
+import esbuild from 'esbuild';
 
 export function createDirIfNotExists(dir: string) {
   if (!fs.existsSync(dir)) {
@@ -94,13 +95,20 @@ export async function loadTsModule(filepath: string) {
   const absolutePath = path.resolve(filepath);
   const dir = path.dirname(absolutePath);
   const filename = path.basename(absolutePath, '.ts');
-  const tmpDir = path.join(dir, 'tmp');
+  const tmpDir = path.join(dir, '.temp');
   const ext = isCallerESM() ? 'js' : 'mjs';
   const transpiledJsPath = path.join(tmpDir, `_${filename}.${ext}`);
   try {
-    if (!fs.existsSync(absolutePath)) return undefined;
-    const transpiledJs = transpileTsFile(absolutePath);
-    return await evalJSString(transpiledJs, { tmpFile: transpiledJsPath });
+    await esbuild.build({
+      entryPoints: [absolutePath],
+      bundle: true,
+      format: 'esm',
+      platform: 'node',
+      target: 'node16',
+      outfile: transpiledJsPath,
+    });
+    const mod = await importFresh('file:///' + transpiledJsPath);
+    return mod;
   } finally {
     fs.rmSync(tmpDir, { recursive: true, force: true });
   }
