@@ -38,6 +38,10 @@ export class ExpoSQLiteLegacyTupleStorage implements AsyncTupleStorageApi {
 		return this.store.commit(ops)
 	}
 
+	clear: AsyncTupleStorageApi["clear"] = async () => {
+		return this.store.clear()
+	}
+
 	close: AsyncTupleStorageApi["close"] = async () => {
 		return this.store.close()
 	}

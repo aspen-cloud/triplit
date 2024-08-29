@@ -19,6 +19,7 @@ import { ScanArgs, TxId, Unsubscribe } from "../types.js"
 export type TupleStorageApi = {
 	scan: (args?: ScanStorageArgs) => Identity<KeyValuePair[]>
 	commit: (writes: WriteOps) => Identity<void>
+	clear: () => Identity<void>
 	close: () => Identity<void>
 }
 

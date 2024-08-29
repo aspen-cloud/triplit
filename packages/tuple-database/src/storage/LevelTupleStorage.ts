@@ -57,6 +57,10 @@ export class LevelTupleStorage implements AsyncTupleStorageApi {
 		await this.db.batch(ops)
 	}
 
+	async clear(): Promise<void> {
+		await this.db.clear()
+	}
+
 	async close(): Promise<void> {
 		return this.db.close()
 	}

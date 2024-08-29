@@ -51,11 +51,10 @@ export class MemoryBTreeStorage implements TupleStorageApi {
 			this.btree.set(key, value, true)
 		}
 	}
-	close(): void {}
-
-	wipe(): void {
+	clear(): void {
 		this.btree =
 			// @ts-expect-error
 			new BTreeClass<Tuple, any>(undefined, compareTuple)
 	}
+	close(): void {}
 }

@@ -11,6 +11,7 @@ import { ScanArgs, TxId, Unsubscribe } from "../types.js"
 export type AsyncTupleStorageApi = {
 	scan: (args?: ScanStorageArgs) => Promise<KeyValuePair[]>
 	commit: (writes: WriteOps) => Promise<void>
+	clear: () => Promise<void>
 	close: () => Promise<void>
 }
 

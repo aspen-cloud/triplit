@@ -37,6 +37,11 @@ export class ExpoSQLiteTupleStorage implements AsyncTupleStorageApi {
 		return store.commit(ops)
 	}
 
+	clear: AsyncTupleStorageApi["clear"] = async () => {
+		const store = await this.storeReady
+		return store.clear()
+	}
+
 	close: AsyncTupleStorageApi["close"] = async () => {
 		const store = await this.storeReady
 		return store.close()

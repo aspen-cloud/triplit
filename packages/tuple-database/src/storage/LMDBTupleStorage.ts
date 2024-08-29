@@ -105,6 +105,10 @@ export class LMDBTupleStorage implements AsyncTupleStorageApi {
 		})
 	}
 
+	async clear(): Promise<void> {
+		await this.db.clearAsync()
+	}
+
 	async close(): Promise<void> {
 		return this.db.close()
 	}

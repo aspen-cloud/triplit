@@ -102,6 +102,10 @@ export class SQLiteTupleStorage implements TupleStorageApi {
 		this.writeFactsQuery({ inserts, deletes })
 	}
 
+	clear() {
+		this.db.prepare(`delete from data`).run()
+	}
+
 	close() {
 		this.db.close()
 	}

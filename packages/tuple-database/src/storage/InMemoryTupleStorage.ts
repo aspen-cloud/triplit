@@ -25,5 +25,9 @@ export class InMemoryTupleStorage implements TupleStorageApi {
 		}
 	}
 
+	clear() {
+		this.data = []
+	}
+
 	close() {}
 }

@@ -77,6 +77,13 @@ export class IndexedDbTupleStorage implements AsyncTupleStorageApi {
 		await tx.done
 	}
 
+	async clear() {
+		const db = await this.db
+		const tx = db.transaction(storeName, "readwrite", { durability: "relaxed" })
+		tx.store.clear()
+		await tx.done
+	}
+
 	async close() {
 		const db = await this.db
 		db.close()

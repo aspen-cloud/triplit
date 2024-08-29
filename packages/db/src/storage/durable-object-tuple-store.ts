@@ -61,6 +61,11 @@ export default class DurableObjectStore implements AsyncTupleStorageApi {
       });
     }
   }
+
+  async clear(): Promise<void> {
+    await this.doStore.deleteAll();
+  }
+
   async close(): Promise<void> {}
 }
 

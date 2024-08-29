@@ -34,6 +34,17 @@ export class SQLiteAsyncTupleStorage implements AsyncTupleStorageApi {
 		})
 	}
 
+	async clear() {
+		return new Promise<void>((res, rej) => {
+			try {
+				this._storage.clear()
+				res()
+			} catch (e) {
+				rej(e)
+			}
+		})
+	}
+
 	async close() {
 		return new Promise<void>((res, rej) => {
 			try {

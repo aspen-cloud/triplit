@@ -95,6 +95,9 @@ export class AdapterSQLiteStorage implements TupleStorageApi {
 			}
 		})
 	}
+	clear(): void {
+		this.adapter.execute(`DELETE FROM ${this.options.tableName}`)
+	}
 	close(): void {
 		this.adapter.close()
 	}
@@ -141,6 +144,10 @@ export class AsyncAdapterSQLiteStorage implements AsyncTupleStorageApi {
 				)
 			}
 		})
+	}
+	async clear(): Promise<void> {
+		await this.dbReady
+		await this.adapter.execute(`DELETE FROM ${this.options.tableName}`)
 	}
 	async close(): Promise<void> {
 		await this.dbReady

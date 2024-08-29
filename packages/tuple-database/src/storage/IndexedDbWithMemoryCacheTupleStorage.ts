@@ -38,6 +38,14 @@ export class CachedIndexedDbStorage implements AsyncTupleStorageApi {
 			await this._indexedDB.commit(writes)
 		}
 	}
+
+	async clear(): Promise<void> {
+		if (this.options.cache) {
+			this._cache.clear()
+		}
+		await this._indexedDB.clear()
+	}
+
 	async close(): Promise<void> {
 		if (this._cache) this._cache.close()
 		await this._indexedDB.close()
