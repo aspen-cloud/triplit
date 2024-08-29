@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import dotenv from 'dotenv';
 import dotenvExpand from 'dotenv-expand';
-dotenvExpand.expand(dotenv.config());
+dotenvExpand.expand(dotenv.config({ path: ['.env', '.env.local'] }));
 import { bold, dim, red } from 'ansis/colors';
 import React from 'react';
 import { render } from 'ink';
