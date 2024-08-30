@@ -1,5 +1,12 @@
 # @triplit/cli
 
+## 0.5.9
+
+### Patch Changes
+
+- 7ea2a0a9: Manual version bump for CLI dependencies
+- e81a0619: Support multi-file schemas
+
 ## 0.5.8
 
 ### Patch Changes

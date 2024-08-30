@@ -1,5 +1,11 @@
 # @triplit/client
 
+## 0.4.8
+
+### Patch Changes
+
+- 7ea2a0a9: dedupe queries in sync engine
+
 ## 0.4.7
 
 ### Patch Changes
