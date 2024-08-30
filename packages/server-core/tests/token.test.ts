@@ -172,3 +172,25 @@ describe('Error states', async () => {
     expect(result.error).toBeInstanceOf(TokenVerificationError);
   });
 });
+
+// While we dont support fuctions in queries split scope in token so users can use it as an array in queries
+it('parses scope claim', async () => {
+  const secret = 'secret';
+  // Assigns _scope claim to array if not taken
+  {
+    const jwt = await new SignJWT({ scope: 'a b c' })
+      .setProtectedHeader({ alg: 'HS256' })
+      .sign(new TextEncoder().encode(secret));
+    const { data } = await parseAndValidateToken(jwt, secret, undefined);
+    expect(data).toEqual({ scope: 'a b c', _scope: ['a', 'b', 'c'] });
+  }
+
+  // Does not assign _scope claim if already taken
+  {
+    const jwt = await new SignJWT({ scope: 'a b c', _scope: 'taken' })
+      .setProtectedHeader({ alg: 'HS256' })
+      .sign(new TextEncoder().encode(secret));
+    const { data } = await parseAndValidateToken(jwt, secret, undefined);
+    expect(data).toEqual({ scope: 'a b c', _scope: 'taken' });
+  }
+});
