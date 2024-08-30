@@ -61,8 +61,8 @@ You can use the `in` operator in a where clause to check if an attribute is in a
 For example:
 
 ```typescript
-['triplit', 'in', new Set(['triplit', 'hello'])]    true
-['triplit', 'nin', new Set(['triplit', 'hello'])]   false
+['triplit', 'in', ['triplit', 'hello']]    true
+['triplit', 'nin', ['triplit', 'hello']]   false
 ```
 
 #### Number
