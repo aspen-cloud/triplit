@@ -8,7 +8,7 @@ import {
 import {
   Models,
   QuerySelectionFilteredTypeFromModel,
-} from '../../schema/types';
+} from '../../schema/types/index.js';
 
 /**
  * Transforms a complex nested type to a readable type

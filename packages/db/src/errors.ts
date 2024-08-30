@@ -3,7 +3,7 @@ import {
   VALUE_TYPE_KEYS,
 } from './data-types/serialization.js';
 import { SessionRole } from './schema/permissions.js';
-import { Models } from './schema/types';
+import { Models } from './schema/types/index.js';
 
 export const STATUS_CODES = {
   Success: 200,

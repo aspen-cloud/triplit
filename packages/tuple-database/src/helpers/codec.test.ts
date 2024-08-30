@@ -1,15 +1,15 @@
 import { describe, it, expect } from "bun:test"
-import { Tuple } from "../storage/types"
-import { sortedValues as allSortedValues } from "../test/fixtures"
+import { Tuple } from "../storage/types.js"
+import { sortedValues as allSortedValues } from "../test/fixtures.js"
 import {
 	EncodingOptions,
 	decodeTuple,
 	decodeValue,
 	encodeTuple,
 	encodeValue,
-} from "./codec"
-import { compare } from "./compare"
-import { randomInt } from "./random"
+} from "./codec.js"
+import { compare } from "./compare.js"
+import { randomInt } from "./random.js"
 
 const ENCODING_OPTIONS: [string, EncodingOptions | undefined][] = [
 	["defaults", undefined],

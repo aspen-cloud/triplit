@@ -1,6 +1,6 @@
 import { describe, it, expect } from "bun:test"
-import { Assert } from "../database/typeHelpers"
-import { namedTupleToObject } from "./namedTupleToObject"
+import { Assert } from "../database/typeHelpers.js"
+import { namedTupleToObject } from "./namedTupleToObject.js"
 
 describe("namedTupleToObject", () => {
 	it("works", () => {

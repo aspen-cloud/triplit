@@ -1,7 +1,7 @@
 import * as _ from "remeda"
 import { describe, it, expect } from "bun:test"
-import { KeyValuePair } from "../storage/types"
-import { get, remove, scan, set } from "./sortedTupleValuePairs"
+import { KeyValuePair } from "../storage/types.js"
+import { get, remove, scan, set } from "./sortedTupleValuePairs.js"
 
 describe("sortedTupleValuePairs", () => {
 	const items: KeyValuePair[] = [

@@ -10,16 +10,14 @@
 	"type": "module",
 	"exports": {
 		".": {
-			"import": "./dist/main.js",
-			"require": "./dist/main.js",
 			"types": "./dist/main.d.ts",
-			"default": "./dist/main.js"
+			"import": "./dist/main.js",
+			"require": "./dist/main.js"
 		},
 		"./*": {
-			"import": "./dist/*.js",
-			"require": "./dist/*.js",
 			"types": "./dist/*.d.ts",
-			"default": "./dist/*.js"
+			"import": "./dist/*.js",
+			"require": "./dist/*.js"
 		}
 	},
 	"typesVersions": {
@@ -33,9 +31,10 @@
 		}
 	},
 	"scripts": {
-		"build": "run-s build:macros build:tsc",
+		"build": "run-s build:tsc",
 		"build:tsc": "tsc",
 		"build:macros": "bun src/tools/compileMacros.ts",
+		"lint": "tsc --noEmit",
 		"watch": "tsc -w",
 		"test": "bun test",
 		"test:clean": "rm -rf tmp",

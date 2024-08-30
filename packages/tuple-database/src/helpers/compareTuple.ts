@@ -1,8 +1,8 @@
-import { isPlainObject } from "./isPlainObject"
-import { Tuple, Value } from "../storage/types"
-import { encodingRank, encodingTypeOf } from "./codec"
-import { compare } from "./compare"
-import { UnreachableError } from "./Unreachable"
+import { isPlainObject } from "./isPlainObject.js"
+import { Tuple, Value } from "../storage/types.js"
+import { encodingRank, encodingTypeOf } from "./codec.js"
+import { compare } from "./compare.js"
+import { UnreachableError } from "./Unreachable.js"
 
 export function compareValue(a: Value, b: Value): number {
 	const at = encodingTypeOf(a)

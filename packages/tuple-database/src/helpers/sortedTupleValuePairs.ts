@@ -1,8 +1,8 @@
-import { ScanArgs } from "../database/types"
-import { KeyValuePair, Tuple } from "../storage/types"
-import { compareTuple } from "./compareTuple"
-import * as sortedList from "./sortedList"
-import { normalizeTupleBounds } from "./sortedTupleArray"
+import { ScanArgs } from "../database/types.js"
+import { KeyValuePair, Tuple } from "../storage/types.js"
+import { compareTuple } from "./compareTuple.js"
+import * as sortedList from "./sortedList.js"
+import { normalizeTupleBounds } from "./sortedTupleArray.js"
 
 export function compareTupleValuePair(a: KeyValuePair, b: KeyValuePair) {
 	return compareTuple(a.key, b.key)

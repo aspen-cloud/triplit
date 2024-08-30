@@ -1,6 +1,6 @@
 import { CollectionNameFromModels } from '../db.js';
 import { matchPattern } from '../utils/pattern-matcher.js';
-import { Models, StoreSchema } from './types';
+import { Models, StoreSchema } from './types/index.js';
 
 export type SessionRole = {
   key: string;

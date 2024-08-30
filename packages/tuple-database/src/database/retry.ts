@@ -6,7 +6,7 @@ This file is generated from async/retryAsync.ts
 
 type Identity<T> = T
 
-import { ReadWriteConflictError } from "./ConcurrencyLog"
+import { ReadWriteConflictError } from "./ConcurrencyLog.js"
 
 export function retry<O>(retries: number, fn: () => Identity<O>) {
 	while (true) {

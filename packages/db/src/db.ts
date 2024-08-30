@@ -5,7 +5,7 @@ import {
   Models,
   InsertTypeFromModel,
   StoreSchema,
-} from './schema/types';
+} from './schema/types/index.js';
 import { AsyncTupleStorageApi, TupleStorageApi } from '@triplit/tuple-database';
 import CollectionQueryBuilder, {
   fetch,
@@ -51,7 +51,7 @@ import {
   SchemaQueries,
   ToQuery,
   CollectionQueryDefault,
-} from './query/types';
+} from './query/types/index.js';
 import { prepareQuery } from './query/prepare.js';
 import { getRolesFromSession } from './schema/permissions.js';
 import { diffSchemas } from './schema/diff.js';

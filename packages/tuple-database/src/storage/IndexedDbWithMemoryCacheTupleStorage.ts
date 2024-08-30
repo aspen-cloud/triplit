@@ -1,7 +1,7 @@
-import { AsyncTupleStorageApi } from "../database/async/asyncTypes"
-import { IndexedDbTupleStorage } from "./IndexedDbTupleStorage"
-import { MemoryBTreeStorage } from "./MemoryBTreeTupleStorage"
-import { KeyValuePair, ScanStorageArgs, WriteOps } from "./types"
+import { AsyncTupleStorageApi } from "../database/async/asyncTypes.js"
+import { IndexedDbTupleStorage } from "./IndexedDbTupleStorage.js"
+import { MemoryBTreeStorage } from "./MemoryBTreeTupleStorage.js"
+import { KeyValuePair, ScanStorageArgs, WriteOps } from "./types.js"
 
 export class CachedIndexedDbStorage implements AsyncTupleStorageApi {
 	private _indexedDB: IndexedDbTupleStorage

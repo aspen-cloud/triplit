@@ -1,7 +1,7 @@
 import * as fs from "fs-extra"
 import * as path from "path"
-import { InMemoryTupleStorage } from "./InMemoryTupleStorage"
-import { KeyValuePair, WriteOps } from "./types"
+import { InMemoryTupleStorage } from "./InMemoryTupleStorage.js"
+import { KeyValuePair, WriteOps } from "./types.js"
 
 export function parseFile(str: string): KeyValuePair[] {
 	if (str === "") {

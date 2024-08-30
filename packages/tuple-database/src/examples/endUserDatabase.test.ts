@@ -1,10 +1,10 @@
 import { describe, it, expect } from "bun:test"
-import { transactionalReadWrite } from "../database/sync/transactionalReadWrite"
-import { TupleDatabase } from "../database/sync/TupleDatabase"
-import { TupleDatabaseClient } from "../database/sync/TupleDatabaseClient"
-import { compareTuple } from "../helpers/compareTuple"
-import { ReadOnlyTupleDatabaseClientApi, SchemaSubspace } from "../main"
-import { InMemoryTupleStorage } from "../storage/InMemoryTupleStorage"
+import { transactionalReadWrite } from "../database/sync/transactionalReadWrite.js"
+import { TupleDatabase } from "../database/sync/TupleDatabase.js"
+import { TupleDatabaseClient } from "../database/sync/TupleDatabaseClient.js"
+import { compareTuple } from "../helpers/compareTuple.js"
+import { ReadOnlyTupleDatabaseClientApi, SchemaSubspace } from "../main.js"
+import { InMemoryTupleStorage } from "../storage/InMemoryTupleStorage.js"
 import {
 	$,
 	evaluateQuery,
@@ -14,7 +14,7 @@ import {
 	TriplestoreSchema,
 	Value,
 	writeFact,
-} from "./triplestore"
+} from "./triplestore.js"
 
 // We're going to build off of the triplestore example.
 // So read triplestore.ts and triplestore.test.ts first.

@@ -1,10 +1,10 @@
-import { KeyValuePair } from "../../storage/types"
-import { retry } from "../retry"
+import { KeyValuePair } from "../../storage/types.js"
+import { retry } from "../retry.js"
 import {
 	AsyncTupleDatabaseClientApi,
 	AsyncTupleTransactionApi,
 	ReadOnlyAsyncTupleDatabaseClientApi,
-} from "./asyncTypes"
+} from "./asyncTypes.js"
 
 /**
  * Similar to transactionalReadWrite and transactionalWrite but only allows reads.

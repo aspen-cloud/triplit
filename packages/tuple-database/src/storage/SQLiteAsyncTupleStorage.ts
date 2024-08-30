@@ -1,7 +1,7 @@
 import { Database } from "better-sqlite3"
-import { KeyValuePair, ScanStorageArgs, WriteOps } from "./types"
-import { AsyncTupleStorageApi } from "../main"
-import { SQLiteTupleStorage } from "./SQLiteTupleStorage"
+import { KeyValuePair, ScanStorageArgs, WriteOps } from "./types.js"
+import { AsyncTupleStorageApi } from "../main.js"
+import { SQLiteTupleStorage } from "./SQLiteTupleStorage.js"
 
 export class SQLiteAsyncTupleStorage implements AsyncTupleStorageApi {
 	/**

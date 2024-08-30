@@ -1,5 +1,9 @@
 import { CollectionNameFromModels } from '../../db.js';
-import { Models, RelationAttributes, SchemaPaths } from '../../schema/types';
+import {
+  Models,
+  RelationAttributes,
+  SchemaPaths,
+} from '../../schema/types/index.js';
 import {
   CollectionQueryDefault,
   FilterStatement,

@@ -1,6 +1,6 @@
-import { TupleStorageApi } from "../database/sync/types"
-import * as tv from "../helpers/sortedTupleValuePairs"
-import { KeyValuePair, ScanStorageArgs, WriteOps } from "./types"
+import { TupleStorageApi } from "../database/sync/types.js"
+import * as tv from "../helpers/sortedTupleValuePairs.js"
+import { KeyValuePair, ScanStorageArgs, WriteOps } from "./types.js"
 
 export class InMemoryTupleStorage implements TupleStorageApi {
 	data: KeyValuePair[]

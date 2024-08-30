@@ -12,7 +12,7 @@ import {
   Models,
   StoreSchema,
   PermissionWriteOperations,
-} from './schema/types';
+} from './schema/types/index.js';
 import { nanoid } from 'nanoid';
 import CollectionQueryBuilder, {
   fetch,
@@ -94,7 +94,7 @@ import {
   SchemaQueries,
   ToQuery,
   Unalias,
-} from './query/types';
+} from './query/types/index.js';
 import { prepareQuery } from './query/prepare.js';
 import { getCollectionPermissions } from './schema/permissions.js';
 import { genToArr } from './utils/generator.js';

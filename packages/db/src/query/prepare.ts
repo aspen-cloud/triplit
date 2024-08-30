@@ -32,7 +32,7 @@ import {
   createSchemaTraverser,
   getAttributeFromSchema,
 } from '../schema/schema.js';
-import { Models } from '../schema/types';
+import { Models } from '../schema/types/index.js';
 import {
   CollectionQuery,
   FilterStatement,

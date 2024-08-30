@@ -1,5 +1,5 @@
 import { describe, it, expect } from "bun:test"
-import { mutableFilter } from "./mutableFilter"
+import { mutableFilter } from "./mutableFilter.js"
 
 describe("mutableFilter", () => {
 	it("works", () => {

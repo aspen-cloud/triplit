@@ -15,11 +15,11 @@ import {
   CollectionQuery,
   QueryValue,
   RelationshipExistsFilter,
-} from './query/types';
+} from './query/types/index.js';
 import { isFilterGroup, isFilterStatement } from './query.js';
 import { getSchemaFromPath, triplesToSchema } from './schema/schema.js';
 import { schemaToTriples } from './schema/export/index.js';
-import { Models, StoreSchema } from './schema/types';
+import { Models, StoreSchema } from './schema/types/index.js';
 import {
   diffSchemas,
   getSchemaDiffIssues,
@@ -35,7 +35,7 @@ import {
   convertEntityToJS,
 } from './collection-query.js';
 import { Logger } from '@triplit/types/logger';
-import { FetchResult } from './query/types';
+import { FetchResult } from './query/types/index.js';
 import { genToArr } from './utils/generator.js';
 
 const ID_SEPARATOR = '#';

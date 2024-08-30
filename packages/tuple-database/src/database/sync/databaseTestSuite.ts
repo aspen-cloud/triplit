@@ -9,14 +9,14 @@ type Identity<T> = T
 import { describe, expect, it } from "bun:test"
 import * as _ from "remeda"
 import { sumBy } from "remeda"
-import { randomId } from "../../helpers/randomId"
-import { KeyValuePair, MAX, MIN, WriteOps } from "../../storage/types"
-import { sortedValues } from "../../test/fixtures"
-import { transactionalWrite } from "../transactionalWrite"
-import { Assert } from "../typeHelpers"
-import { subscribeQuery } from "./subscribeQuery"
-import { transactionalReadWrite } from "./transactionalReadWrite"
-import { TupleDatabaseClientApi, TupleTransactionApi } from "./types"
+import { randomId } from "../../helpers/randomId.js"
+import { KeyValuePair, MAX, MIN, WriteOps } from "../../storage/types.js"
+import { sortedValues } from "../../test/fixtures.js"
+import { transactionalWrite } from "../transactionalWrite.js"
+import { Assert } from "../typeHelpers.js"
+import { subscribeQuery } from "./subscribeQuery.js"
+import { transactionalReadWrite } from "./transactionalReadWrite.js"
+import { TupleDatabaseClientApi, TupleTransactionApi } from "./types.js"
 
 const isSync = true
 

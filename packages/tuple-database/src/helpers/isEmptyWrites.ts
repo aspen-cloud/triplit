@@ -1,4 +1,4 @@
-import { WriteOps } from "../storage/types"
+import { WriteOps } from "../storage/types.js"
 
 export function isEmptyWrites(writes: WriteOps) {
 	if (writes.remove?.length) return false

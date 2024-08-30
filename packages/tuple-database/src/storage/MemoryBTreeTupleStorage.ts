@@ -6,17 +6,20 @@ import {
 	ScanStorageArgs,
 	Tuple,
 	WriteOps,
-} from "./types"
-import { compareTuple } from "../helpers/compareTuple"
-import { TupleStorageApi } from "../database/sync/types"
+} from "./types.js"
+import { compareTuple } from "../helpers/compareTuple.js"
+import { TupleStorageApi } from "../database/sync/types.js"
+
+type BTreeInstance = typeof BTree.EmptyBTree
 
 // Hack for https://github.com/qwertie/btree-typescript/issues/36
-// @ts-ignore
 const BTreeClass = (BTree.default ? BTree.default : BTree) as typeof BTree
 export class MemoryBTreeStorage implements TupleStorageApi {
-	btree: BTree<any, any>
+	btree: BTreeInstance
 	constructor() {
-		this.btree = new BTreeClass<Tuple, any>(undefined, compareTuple)
+		this.btree =
+			// @ts-expect-error
+			new BTreeClass<Tuple, any>(undefined, compareTuple)
 	}
 	scan(args?: ScanStorageArgs | undefined): KeyValuePair[] {
 		const low = args?.gte ?? args?.gt ?? MIN
@@ -51,6 +54,8 @@ export class MemoryBTreeStorage implements TupleStorageApi {
 	close(): void {}
 
 	wipe(): void {
-		this.btree = new BTreeClass<Tuple, any>(undefined, compareTuple)
+		this.btree =
+			// @ts-expect-error
+			new BTreeClass<Tuple, any>(undefined, compareTuple)
 	}
 }

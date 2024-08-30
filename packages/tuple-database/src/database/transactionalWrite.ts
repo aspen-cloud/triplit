@@ -1,15 +1,15 @@
-import { KeyValuePair, WriteOps } from "../storage/types"
+import { KeyValuePair, WriteOps } from "../storage/types.js"
 import {
 	AsyncTupleDatabaseClientApi,
 	AsyncTupleTransactionApi,
-} from "./async/asyncTypes"
-import { retry } from "./retry"
-import { TupleDatabaseClientApi, TupleTransactionApi } from "./sync/types"
+} from "./async/asyncTypes.js"
+import { retry } from "./retry.js"
+import { TupleDatabaseClientApi, TupleTransactionApi } from "./sync/types.js"
 import {
 	RemoveTupleValuePairPrefix,
 	TuplePrefix,
 	ValueForTuple,
-} from "./typeHelpers"
+} from "./typeHelpers.js"
 
 export type TransactionWriteApi<S extends KeyValuePair> = {
 	set: <T extends S["key"]>(

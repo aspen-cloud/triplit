@@ -6,8 +6,8 @@
 */
 
 import { describe, it, expect } from "bun:test"
-import { binarySearch, binarySearchAssociativeList } from "./binarySearch"
-import { compare } from "./compare"
+import { binarySearch, binarySearchAssociativeList } from "./binarySearch.js"
+import { compare } from "./compare.js"
 
 describe("binarySearch", () => {
 	const list = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]

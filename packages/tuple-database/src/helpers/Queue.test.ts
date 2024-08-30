@@ -1,5 +1,5 @@
 import { describe, it, expect } from "bun:test"
-import { Queue } from "./Queue"
+import { Queue } from "./Queue.js"
 
 describe("Queue", () => {
 	it("evaluates synchronously", () => {

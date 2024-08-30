@@ -1,8 +1,8 @@
 import { describe, it, expect } from "bun:test"
-import { InMemoryTupleStorage } from "../../main"
-import { subscribeQuery } from "./subscribeQuery"
-import { TupleDatabase } from "./TupleDatabase"
-import { TupleDatabaseClient } from "./TupleDatabaseClient"
+import { InMemoryTupleStorage } from "../../main.js"
+import { subscribeQuery } from "./subscribeQuery.js"
+import { TupleDatabase } from "./TupleDatabase.js"
+import { TupleDatabaseClient } from "./TupleDatabaseClient.js"
 
 describe("subscribeQuery", () => {
 	it("works", async () => {

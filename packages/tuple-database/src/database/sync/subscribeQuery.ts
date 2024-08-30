@@ -6,12 +6,12 @@ This file is generated from async/subscribeQueryAsync.ts
 
 type Identity<T> = T
 
-import { isEmptyWrites } from "../../helpers/isEmptyWrites"
-import { Queue } from "../../helpers/Queue"
-import { KeyValuePair } from "../../storage/types"
-import { TxId } from "../types"
-import { TupleDatabaseClient } from "./TupleDatabaseClient"
-import { TupleDatabaseClientApi } from "./types"
+import { isEmptyWrites } from "../../helpers/isEmptyWrites.js"
+import { Queue } from "../../helpers/Queue.js"
+import { KeyValuePair } from "../../storage/types.js"
+import { TxId } from "../types.js"
+import { TupleDatabaseClient } from "./TupleDatabaseClient.js"
+import { TupleDatabaseClientApi } from "./types.js"
 
 const throwError = () => {
 	throw new Error()

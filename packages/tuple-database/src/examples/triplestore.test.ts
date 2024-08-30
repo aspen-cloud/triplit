@@ -1,14 +1,14 @@
 import { describe, it, expect } from "bun:test"
-import { TupleDatabase } from "../database/sync/TupleDatabase"
-import { TupleDatabaseClient } from "../database/sync/TupleDatabaseClient"
-import { InMemoryTupleStorage } from "../storage/InMemoryTupleStorage"
+import { TupleDatabase } from "../database/sync/TupleDatabase.js"
+import { TupleDatabaseClient } from "../database/sync/TupleDatabaseClient.js"
+import { InMemoryTupleStorage } from "../storage/InMemoryTupleStorage.js"
 import {
 	$,
 	evaluateQuery,
 	Fact,
 	TriplestoreSchema,
 	writeFact,
-} from "./triplestore"
+} from "./triplestore.js"
 
 // Read triplestore.ts first to understand this this test.
 

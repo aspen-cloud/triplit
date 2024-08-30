@@ -1,6 +1,6 @@
-import { TupleStorageApi } from "../database/sync/types"
-import { InMemoryTupleStorage } from "./InMemoryTupleStorage"
-import { WriteOps } from "./types"
+import { TupleStorageApi } from "../database/sync/types.js"
+import { InMemoryTupleStorage } from "./InMemoryTupleStorage.js"
+import { WriteOps } from "./types.js"
 
 function load(key: string) {
 	const result = localStorage.getItem(key)

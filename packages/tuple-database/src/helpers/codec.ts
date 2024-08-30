@@ -3,10 +3,10 @@
 // @ts-expect-error
 import * as elen from "elen"
 import { invert, sortBy } from "remeda"
-import { isPlainObject } from "./isPlainObject"
-import { Tuple, Value } from "../storage/types"
-import { compare } from "./compare"
-import { UnreachableError } from "./Unreachable"
+import { isPlainObject } from "./isPlainObject.js"
+import { Tuple, Value } from "../storage/types.js"
+import { compare } from "./compare.js"
+import { UnreachableError } from "./Unreachable.js"
 
 export type EncodingOptions = {
 	delimiter?: string

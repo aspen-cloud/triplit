@@ -1,4 +1,4 @@
-import { Model, Models, StoreSchema } from './types';
+import { Model, Models, StoreSchema } from './types/index.js';
 import { Value as TBValue, ValuePointer, Diff } from '@sinclair/typebox/value';
 import { UserTypeOptions } from '../data-types/serialization.js';
 import { DBTransaction } from '../db-transaction.js';

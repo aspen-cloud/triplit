@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useRef } from "react"
-import { subscribeQuery } from "./database/sync/subscribeQuery"
-import { TupleDatabaseClientApi } from "./database/sync/types"
-import { shallowEqual } from "./helpers/shallowEqual"
-import { useRerender } from "./helpers/useRerender"
-import { KeyValuePair } from "./storage/types"
+import { subscribeQuery } from "./database/sync/subscribeQuery.js"
+import { TupleDatabaseClientApi } from "./database/sync/types.js"
+import { shallowEqual } from "./helpers/shallowEqual.js"
+import { useRerender } from "./helpers/useRerender.js"
+import { KeyValuePair } from "./storage/types.js"
 
 /** Useful for managing UI state for React with a TupleDatabase. */
 export function useTupleDatabase<S extends KeyValuePair, T, A extends any[]>(

@@ -6,13 +6,13 @@ This file is generated from async/transactionalReadAsync.ts
 
 type Identity<T> = T
 
-import { KeyValuePair } from "../../storage/types"
-import { retry } from "../retry"
+import { KeyValuePair } from "../../storage/types.js"
+import { retry } from "../retry.js"
 import {
 	ReadOnlyTupleDatabaseClientApi,
 	TupleDatabaseClientApi,
 	TupleTransactionApi,
-} from "./types"
+} from "./types.js"
 
 /**
  * Similar to transactionalReadWrite and transactionalWrite but only allows reads.

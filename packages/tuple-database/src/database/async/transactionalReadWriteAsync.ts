@@ -1,9 +1,9 @@
-import { KeyValuePair } from "../../main"
+import { KeyValuePair } from "../../main.js"
 import {
 	AsyncTupleDatabaseClientApi,
 	AsyncTupleTransactionApi,
-} from "./asyncTypes"
-import { RetryOptions, retryAsync } from "./retryAsync"
+} from "./asyncTypes.js"
+import { RetryOptions, retryAsync } from "./retryAsync.js"
 
 // Similar to FoundationDb's abstraction: https://apple.github.io/foundationdb/class-scheduling.html
 // Accepts a transaction or a database and allows you to compose transactions together.

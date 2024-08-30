@@ -11,9 +11,9 @@ import {
   replaceVariable,
 } from './db-helpers.js';
 import { isFilterStatement } from './query.js';
-import { CollectionQuery, FilterStatement } from './query/types';
+import { CollectionQuery, FilterStatement } from './query/types/index.js';
 import { getSchemaFromPath } from './schema/schema.js';
-import { Model, Models } from './schema/types';
+import { Model, Models } from './schema/types/index.js';
 import * as TB from '@sinclair/typebox/value';
 import type DB from './db.js';
 import { QueryCacheError } from './errors.js';

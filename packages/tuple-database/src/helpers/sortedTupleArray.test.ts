@@ -1,6 +1,6 @@
 import * as _ from "remeda"
 import { describe, it, expect } from "bun:test"
-import { MAX, MIN, Tuple } from "../storage/types"
+import { MAX, MIN, Tuple } from "../storage/types.js"
 import {
 	getPrefixContainingBounds,
 	isTupleWithinBounds,
@@ -8,7 +8,7 @@ import {
 	normalizeTupleBounds,
 	scan,
 	set,
-} from "./sortedTupleArray"
+} from "./sortedTupleArray.js"
 
 describe("sortedTupleArray", () => {
 	describe("prefix basics", () => {

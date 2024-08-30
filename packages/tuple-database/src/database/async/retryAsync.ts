@@ -1,4 +1,4 @@
-import { ReadWriteConflictError } from "../../database/ConcurrencyLog"
+import { ReadWriteConflictError } from "../../database/ConcurrencyLog.js"
 
 export type RetryOptions = {
 	exponentialBackoff?: boolean

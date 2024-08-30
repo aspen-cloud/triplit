@@ -6,17 +6,17 @@ This file is generated from async/AsyncReactivityTracker.ts
 
 type Identity<T> = T
 
-import { maybePromiseAll } from "../../helpers/maybeWaitForPromises"
-import * as SortedTuple from "../../helpers/sortedTupleArray"
-import { Bounds } from "../../helpers/sortedTupleArray"
+import { maybePromiseAll } from "../../helpers/maybeWaitForPromises.js"
+import * as SortedTuple from "../../helpers/sortedTupleArray.js"
+import { Bounds } from "../../helpers/sortedTupleArray.js"
 import {
 	KeyValuePair,
 	ScanStorageArgs,
 	Tuple,
 	WriteOps,
-} from "../../storage/types"
-import { TxId } from "../types"
-import { Callback } from "./types"
+} from "../../storage/types.js"
+import { TxId } from "../types.js"
+import { Callback } from "./types.js"
 
 type Listeners = Map<Callback, Bounds>
 

@@ -3,14 +3,14 @@
 
 import { flatten, range } from "remeda"
 import { describe, it, expect } from "bun:test"
-import { transactionalReadWrite } from "../database/sync/transactionalReadWrite"
-import { ReadOnlyTupleDatabaseClientApi } from "../database/sync/types"
-import { SchemaSubspace } from "../database/typeHelpers"
+import { transactionalReadWrite } from "../database/sync/transactionalReadWrite.js"
+import { ReadOnlyTupleDatabaseClientApi } from "../database/sync/types.js"
+import { SchemaSubspace } from "../database/typeHelpers.js"
 import {
 	InMemoryTupleStorage,
 	TupleDatabase,
 	TupleDatabaseClient,
-} from "../main"
+} from "../main.js"
 
 // Generate 1,620 classes like '9:00 chem for dummies'
 const levels = [

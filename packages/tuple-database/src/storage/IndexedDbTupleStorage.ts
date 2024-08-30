@@ -1,7 +1,7 @@
 import { IDBPDatabase, openDB } from "idb/with-async-ittr"
-import { decodeTuple, encodeTuple } from "../helpers/codec"
-import { AsyncTupleStorageApi, ScanStorageArgs, WriteOps } from "../main"
-import { KeyValuePair } from "./types"
+import { decodeTuple, encodeTuple } from "../helpers/codec.js"
+import { AsyncTupleStorageApi, ScanStorageArgs, WriteOps } from "../main.js"
+import { KeyValuePair } from "./types.js"
 
 const version = 1
 

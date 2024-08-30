@@ -1,9 +1,9 @@
-import { isEmptyWrites } from "../../helpers/isEmptyWrites"
-import { Queue } from "../../helpers/Queue"
-import { KeyValuePair } from "../../storage/types"
-import { TxId } from "../types"
-import { AsyncTupleDatabaseClient } from "./AsyncTupleDatabaseClient"
-import { AsyncTupleDatabaseClientApi } from "./asyncTypes"
+import { isEmptyWrites } from "../../helpers/isEmptyWrites.js"
+import { Queue } from "../../helpers/Queue.js"
+import { KeyValuePair } from "../../storage/types.js"
+import { TxId } from "../types.js"
+import { AsyncTupleDatabaseClient } from "./AsyncTupleDatabaseClient.js"
+import { AsyncTupleDatabaseClientApi } from "./asyncTypes.js"
 
 const throwError = () => {
 	throw new Error()

@@ -1,7 +1,7 @@
 import { describe, it, expect } from "bun:test"
-import { InMemoryTupleStorage } from "../../main"
-import { TupleDatabase } from "./TupleDatabase"
-import { TupleDatabaseClient } from "./TupleDatabaseClient"
+import { InMemoryTupleStorage } from "../../main.js"
+import { TupleDatabase } from "./TupleDatabase.js"
+import { TupleDatabaseClient } from "./TupleDatabaseClient.js"
 
 type TestSchema =
 	| {

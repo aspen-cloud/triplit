@@ -1,4 +1,4 @@
-import { Compare } from "./compare"
+import { Compare } from "./compare.js"
 
 export type BinarySearchResult =
 	| { found: number; closest?: undefined }

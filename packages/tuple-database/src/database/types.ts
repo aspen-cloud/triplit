@@ -1,5 +1,5 @@
-import { MAX, MIN, Tuple } from "../storage/types"
-import { RemoveTuplePrefix, TuplePrefix } from "./typeHelpers"
+import { MAX, MIN, Tuple } from "../storage/types.js"
+import { RemoveTuplePrefix, TuplePrefix } from "./typeHelpers.js"
 
 export type ScanArgs<
 	T extends Tuple,

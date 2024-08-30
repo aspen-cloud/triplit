@@ -2,15 +2,15 @@ import {
 	FilterTupleValuePairByPrefix,
 	RemoveTupleValuePairPrefix,
 	TuplePrefix,
-} from "../database/typeHelpers"
+} from "../database/typeHelpers.js"
 import {
 	AsyncTupleDatabaseClientApi,
 	AsyncTupleTransactionApi,
 	ScanArgs,
 	TupleDatabaseClientApi,
 	TupleTransactionApi,
-} from "../main"
-import { KeyValuePair, WriteOps } from "../storage/types"
+} from "../main.js"
+import { KeyValuePair, WriteOps } from "../storage/types.js"
 
 export class QueryResult<T> {
 	constructor(public ops: any[] = []) {}

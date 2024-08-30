@@ -1,7 +1,7 @@
 import { describe, it, expect } from "bun:test"
 // import { assert } from "../test/assertHelpers"
-import { isBoundsWithinBounds } from "./isBoundsWithinBounds"
-import { Bounds } from "./sortedTupleArray"
+import { isBoundsWithinBounds } from "./isBoundsWithinBounds.js"
+import { Bounds } from "./sortedTupleArray.js"
 
 const testWithinBounds = (container: Bounds) => ({
 	true: (bounds: Bounds) => {

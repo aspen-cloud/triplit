@@ -11,7 +11,7 @@ import {
   RelationPaths,
   RelationshipCollectionName,
   SchemaPaths,
-} from '../../schema/types';
+} from '../../schema/types/index.js';
 import { EntityId } from '../../triple-store-utils.js';
 import { Coalesce } from '../../utility-types.js';
 

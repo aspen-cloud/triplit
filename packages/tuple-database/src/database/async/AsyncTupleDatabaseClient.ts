@@ -1,6 +1,6 @@
-import { randomId } from "../../helpers/randomId"
-import * as t from "../../helpers/sortedTupleArray"
-import * as tv from "../../helpers/sortedTupleValuePairs"
+import { randomId } from "../../helpers/randomId.js"
+import * as t from "../../helpers/sortedTupleArray.js"
+import * as tv from "../../helpers/sortedTupleValuePairs.js"
 import {
 	normalizeSubspaceScanArgs,
 	prependPrefixToTuple,
@@ -8,24 +8,24 @@ import {
 	removePrefixFromTuple,
 	removePrefixFromTupleValuePairs,
 	removePrefixFromWriteOps,
-} from "../../helpers/subspaceHelpers"
-import { compareTuple } from "../../main"
-import { KeyValuePair, Tuple, WriteOps } from "../../storage/types"
-import { TupleDatabaseApi } from "../sync/types"
+} from "../../helpers/subspaceHelpers.js"
+import { compareTuple } from "../../main.js"
+import { KeyValuePair, Tuple, WriteOps } from "../../storage/types.js"
+import { TupleDatabaseApi } from "../sync/types.js"
 import {
 	FilterTupleValuePairByPrefix,
 	RemoveTupleValuePairPrefix,
 	TuplePrefix,
 	ValueForTuple,
-} from "../typeHelpers"
-import { ScanArgs, TxId, Unsubscribe } from "../types"
+} from "../typeHelpers.js"
+import { ScanArgs, TxId, Unsubscribe } from "../types.js"
 import {
 	AsyncCallback,
 	AsyncTupleDatabaseApi,
 	AsyncTupleDatabaseClientApi,
 	AsyncTupleRootTransactionApi,
 	AsyncTupleTransactionApi,
-} from "./asyncTypes"
+} from "./asyncTypes.js"
 
 export class AsyncTupleDatabaseClient<S extends KeyValuePair = KeyValuePair>
 	implements AsyncTupleDatabaseClientApi<S>

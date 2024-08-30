@@ -1,5 +1,5 @@
-import { isPlainObject } from "./isPlainObject"
-import { Tuple, Value } from "../storage/types"
+import { isPlainObject } from "./isPlainObject.js"
+import { Tuple, Value } from "../storage/types.js"
 
 // It is convenient to use named tuples when defining a schema so that you
 // don't get confused what [string, number] is and can instead write something

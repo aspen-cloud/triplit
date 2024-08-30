@@ -1,4 +1,4 @@
-import { Tuple } from "../storage/types"
+import { Tuple } from "../storage/types.js"
 
 export const sortedValues: Tuple = [
 	null,

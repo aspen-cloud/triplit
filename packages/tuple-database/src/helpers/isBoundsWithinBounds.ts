@@ -1,6 +1,6 @@
-import { Tuple } from "../storage/types"
-import { compareTuple } from "./compareTuple"
-import { Bounds } from "./sortedTupleArray"
+import { Tuple } from "../storage/types.js"
+import { compareTuple } from "./compareTuple.js"
+import { Bounds } from "./sortedTupleArray.js"
 
 function isLessThanOrEqualTo(a: Tuple, b: Tuple) {
 	return compareTuple(a, b) !== 1

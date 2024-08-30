@@ -3,8 +3,8 @@ import { CollectionRules } from '../db.js';
 import { SubQuery } from './query.js';
 import { Schema } from '../schema/builder.js';
 import { DataType } from './base.js';
-import { QueryResultCardinality } from '../query/types';
-import { RolePermissions, Roles } from '../schema/types';
+import { QueryResultCardinality } from '../query/types/index.js';
+import { RolePermissions, Roles } from '../schema/types/index.js';
 
 export const VALUE_TYPE_KEYS = ['string', 'number', 'boolean', 'date'] as const;
 export type ValueTypeKeys = (typeof VALUE_TYPE_KEYS)[number];

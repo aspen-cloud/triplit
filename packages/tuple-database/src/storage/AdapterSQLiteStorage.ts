@@ -1,10 +1,10 @@
 import {
 	encodeTuple as _encodeTuple,
 	decodeTuple as _decodeTuple,
-} from "../helpers/codec"
-import { TupleStorageApi } from "../database/sync/types"
-import { AsyncTupleStorageApi } from "../database/async/asyncTypes"
-import { KeyValuePair, ScanStorageArgs, WriteOps } from "./types"
+} from "../helpers/codec.js"
+import { TupleStorageApi } from "../database/sync/types.js"
+import { AsyncTupleStorageApi } from "../database/async/asyncTypes.js"
+import { KeyValuePair, ScanStorageArgs, WriteOps } from "./types.js"
 
 const NULL_BYTE = "\x00"
 const DELIMITER_BYTE = "\x01"

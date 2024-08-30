@@ -1,7 +1,7 @@
 import type { Database, Transaction } from "better-sqlite3"
-import { TupleStorageApi } from "../database/sync/types"
-import { decodeTuple, encodeTuple } from "../helpers/codec"
-import { KeyValuePair, ScanStorageArgs, Tuple, WriteOps } from "./types"
+import { TupleStorageApi } from "../database/sync/types.js"
+import { decodeTuple, encodeTuple } from "../helpers/codec.js"
+import { KeyValuePair, ScanStorageArgs, Tuple, WriteOps } from "./types.js"
 
 export class SQLiteTupleStorage implements TupleStorageApi {
 	/**

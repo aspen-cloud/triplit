@@ -16,7 +16,7 @@ import {
   QueryInclusion,
   RefSubquery,
   SchemaQueries,
-} from './query/types';
+} from './query/types/index.js';
 import {
   isBooleanFilter,
   isSubQueryFilter,
@@ -30,7 +30,7 @@ import {
   getAttributeFromSchema,
   getSchemaFromPath,
 } from './schema/schema.js';
-import { Model, Models } from './schema/types';
+import { Model, Models } from './schema/types/index.js';
 import { timestampedObjectToPlainObject } from './utils.js';
 import { Timestamp, timestampCompare } from './timestamp.js';
 import { TripleStore, TripleStoreApi } from './triple-store.js';
@@ -72,7 +72,7 @@ import {
   FetchResult,
   FetchResultEntity,
   QueryResult,
-} from './query/types';
+} from './query/types/index.js';
 import {
   getFilterPriorityOrder,
   satisfiesFilter,

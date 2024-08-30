@@ -1,5 +1,5 @@
 import { describe, test, expect } from "bun:test"
-import { outdent } from "./outdent"
+import { outdent } from "./outdent.js"
 
 describe("outdent", () => {
 	test("works", () => {

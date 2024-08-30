@@ -6,7 +6,7 @@ This file is generated from async/retryAsync.ts
 
 type Identity<T> = T
 
-import { ReadWriteConflictError } from "../../database/ConcurrencyLog"
+import { ReadWriteConflictError } from "../../database/ConcurrencyLog.js"
 
 export type RetryOptions = {
 	exponentialBackoff?: boolean

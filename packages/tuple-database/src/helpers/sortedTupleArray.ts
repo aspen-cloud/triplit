@@ -1,8 +1,8 @@
 import { omitBy } from "remeda"
-import { ScanArgs } from "../database/types"
-import { MAX, Tuple } from "../storage/types"
-import { compareTuple } from "./compareTuple"
-import * as sortedList from "./sortedList"
+import { ScanArgs } from "../database/types.js"
+import { MAX, Tuple } from "../storage/types.js"
+import { compareTuple } from "./compareTuple.js"
+import * as sortedList from "./sortedList.js"
 
 export function set(data: Array<Tuple>, tuple: Tuple) {
 	return sortedList.set(data, tuple, compareTuple)

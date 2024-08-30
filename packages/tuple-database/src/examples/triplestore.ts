@@ -1,4 +1,4 @@
-import { transactionalReadWrite } from "../database/sync/transactionalReadWrite"
+import { transactionalReadWrite } from "../database/sync/transactionalReadWrite.js"
 
 export type Value = string | number | boolean
 export type Fact = [string, string, Value]

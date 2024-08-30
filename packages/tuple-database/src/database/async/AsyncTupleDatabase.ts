@@ -1,15 +1,15 @@
-import { iterateWrittenTuples } from "../../helpers/iterateTuples"
-import { randomId } from "../../helpers/randomId"
-import { KeyValuePair, ScanStorageArgs, WriteOps } from "../../storage/types"
-import { ConcurrencyLog } from "../ConcurrencyLog"
-import { TupleStorageApi } from "../sync/types"
-import { TxId, Unsubscribe } from "../types"
-import { AsyncReactivityTracker } from "./AsyncReactivityTracker"
+import { iterateWrittenTuples } from "../../helpers/iterateTuples.js"
+import { randomId } from "../../helpers/randomId.js"
+import { KeyValuePair, ScanStorageArgs, WriteOps } from "../../storage/types.js"
+import { ConcurrencyLog } from "../ConcurrencyLog.js"
+import { TupleStorageApi } from "../sync/types.js"
+import { TxId, Unsubscribe } from "../types.js"
+import { AsyncReactivityTracker } from "./AsyncReactivityTracker.js"
 import {
 	AsyncCallback,
 	AsyncTupleDatabaseApi,
 	AsyncTupleStorageApi,
-} from "./asyncTypes"
+} from "./asyncTypes.js"
 
 export class AsyncTupleDatabase implements AsyncTupleDatabaseApi {
 	constructor(private storage: TupleStorageApi | AsyncTupleStorageApi) {}

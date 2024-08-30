@@ -1,12 +1,12 @@
 import type * as LMDB from "lmdb"
-import { AsyncTupleStorageApi } from "../database/async/asyncTypes"
+import { AsyncTupleStorageApi } from "../database/async/asyncTypes.js"
 import {
 	decodeTuple,
 	decodeValue,
 	encodeTuple,
 	encodeValue,
-} from "../helpers/codec"
-import { KeyValuePair, MIN, ScanStorageArgs, Tuple, WriteOps } from "./types"
+} from "../helpers/codec.js"
+import { KeyValuePair, MIN, ScanStorageArgs, Tuple, WriteOps } from "./types.js"
 
 const MIN_TUPLE = encodeTuple([MIN])
 

@@ -1,4 +1,4 @@
-import { Models, RelationAttributes } from '../schema/types';
+import { Models, RelationAttributes } from '../schema/types/index.js';
 import { CollectionNameFromModels, ModelFromModels } from '../db.js';
 import {
   AfterClauseWithNoOrderError,
@@ -30,7 +30,7 @@ import {
   CollectionQueryDefault,
   KeyedModelQueries,
   ModelQueries,
-} from './types';
+} from './types/index.js';
 
 export class QueryBuilder<
   M extends Models,

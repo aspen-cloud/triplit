@@ -1,7 +1,7 @@
 import * as _ from "remeda"
 import { describe, it, expect } from "bun:test"
-import { compare } from "./compare"
-import { remove, scan, set } from "./sortedList"
+import { compare } from "./compare.js"
+import { remove, scan, set } from "./sortedList.js"
 
 describe("sortedList", () => {
 	it("inserts in correct order", () => {

@@ -15,7 +15,7 @@ import {
   isSubQueryFilter,
 } from '../query.js';
 import { getAttributeFromSchema } from '../schema/schema.js';
-import { Models } from '../schema/types';
+import { Models } from '../schema/types/index.js';
 import { Timestamp } from '../timestamp.js';
 import { TripleStoreApi } from '../triple-store.js';
 import { timestampedObjectToPlainObject } from '../utils.js';
@@ -25,7 +25,7 @@ import {
   SubQueryFilter,
   WhereFilter,
   CollectionQuery,
-} from './types';
+} from './types/index.js';
 
 /**
  * During query execution, determine if an entity satisfies a filter

@@ -1,8 +1,8 @@
-import { mutableFilter } from "../helpers/mutableFilter"
-import { outdent } from "../helpers/outdent"
-import { Bounds, isTupleWithinBounds } from "../helpers/sortedTupleArray"
-import { Tuple } from "../storage/types"
-import { TxId } from "./types"
+import { mutableFilter } from "../helpers/mutableFilter.js"
+import { outdent } from "../helpers/outdent.js"
+import { Bounds, isTupleWithinBounds } from "../helpers/sortedTupleArray.js"
+import { Tuple } from "../storage/types.js"
+import { TxId } from "./types.js"
 
 type ReadItem = { type: "read"; bounds: Bounds; txId: TxId }
 type WriteItem = { type: "write"; tuple: Tuple; txId: TxId | undefined }

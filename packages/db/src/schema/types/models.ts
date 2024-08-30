@@ -32,7 +32,7 @@ import {
   RefSubquery,
   RelationSubquery,
   ToQuery,
-} from '../../query/types';
+} from '../../query/types/index.js';
 
 export type SchemaConfig = { id: ReturnType<typeof Schema.Id> } & RecordProps;
 

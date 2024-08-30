@@ -1,11 +1,11 @@
 import { describe, it, expect } from "bun:test"
-import { AsyncTupleDatabaseClient } from "../database/async/AsyncTupleDatabaseClient"
-import { TupleDatabase } from "../database/sync/TupleDatabase"
-import { TupleDatabaseClient } from "../database/sync/TupleDatabaseClient"
-import { InMemoryTupleStorage } from "../storage/InMemoryTupleStorage"
-import { Value } from "../storage/types"
-import { DelayDb } from "./DelayDb"
-import { execute, QueryBuilder } from "./queryBuilder"
+import { AsyncTupleDatabaseClient } from "../database/async/AsyncTupleDatabaseClient.js"
+import { TupleDatabase } from "../database/sync/TupleDatabase.js"
+import { TupleDatabaseClient } from "../database/sync/TupleDatabaseClient.js"
+import { InMemoryTupleStorage } from "../storage/InMemoryTupleStorage.js"
+import { Value } from "../storage/types.js"
+import { DelayDb } from "./DelayDb.js"
+import { execute, QueryBuilder } from "./queryBuilder.js"
 
 export type Order = number
 export type Fact = [string, string, Order, Value]

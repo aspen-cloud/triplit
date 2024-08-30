@@ -46,7 +46,7 @@ import {
   AVEIndex,
 } from './triple-store-utils.js';
 import { TRIPLE_STORE_MIGRATIONS } from './triple-store-migrations.js';
-import { TransactionResult } from './query/types';
+import { TransactionResult } from './query/types/index.js';
 import { MirroredArray } from './utils/mirrored-array.js';
 import { genToArr } from './utils/generator.js';
 

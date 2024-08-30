@@ -1,4 +1,4 @@
-import { WriteOps } from "../storage/types"
+import { WriteOps } from "../storage/types.js"
 
 export function* iterateWrittenTuples(write: WriteOps) {
 	for (const { key } of write.set || []) {

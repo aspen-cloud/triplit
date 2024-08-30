@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react"
-import { AsyncTupleDatabaseClientApi } from "./database/async/asyncTypes"
-import { shallowEqual } from "./helpers/shallowEqual"
-import { subscribeQueryAsync } from "./main"
-import { KeyValuePair } from "./storage/types"
+import { AsyncTupleDatabaseClientApi } from "./database/async/asyncTypes.js"
+import { shallowEqual } from "./helpers/shallowEqual.js"
+import { subscribeQueryAsync } from "./main.js"
+import { KeyValuePair } from "./storage/types.js"
 
 /** Useful for managing UI state for React with a TupleDatabase. */
 export function useAsyncTupleDatabase<

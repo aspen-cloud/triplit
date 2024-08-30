@@ -1,10 +1,10 @@
 import { describe, it, expect } from "bun:test"
-import { transactionalReadWrite } from "../database/sync/transactionalReadWrite"
-import { TupleDatabase } from "../database/sync/TupleDatabase"
-import { TupleDatabaseClient } from "../database/sync/TupleDatabaseClient"
-import { namedTupleToObject } from "../helpers/namedTupleToObject"
-import { ReadOnlyTupleDatabaseClientApi } from "../main"
-import { InMemoryTupleStorage } from "../storage/InMemoryTupleStorage"
+import { transactionalReadWrite } from "../database/sync/transactionalReadWrite.js"
+import { TupleDatabase } from "../database/sync/TupleDatabase.js"
+import { TupleDatabaseClient } from "../database/sync/TupleDatabaseClient.js"
+import { namedTupleToObject } from "../helpers/namedTupleToObject.js"
+import { ReadOnlyTupleDatabaseClientApi } from "../main.js"
+import { InMemoryTupleStorage } from "../storage/InMemoryTupleStorage.js"
 
 type User = { username: string; bio: string }
 

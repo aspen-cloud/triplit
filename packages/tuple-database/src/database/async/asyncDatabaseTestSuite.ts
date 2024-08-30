@@ -1,17 +1,17 @@
 import * as _ from "remeda"
 import { sumBy } from "remeda"
 import { describe, it, expect } from "bun:test"
-import { randomId } from "../../helpers/randomId"
-import { KeyValuePair, MAX, MIN, WriteOps } from "../../storage/types"
-import { sortedValues } from "../../test/fixtures"
-import { transactionalWrite } from "../transactionalWrite"
-import { Assert } from "../typeHelpers"
+import { randomId } from "../../helpers/randomId.js"
+import { KeyValuePair, MAX, MIN, WriteOps } from "../../storage/types.js"
+import { sortedValues } from "../../test/fixtures.js"
+import { transactionalWrite } from "../transactionalWrite.js"
+import { Assert } from "../typeHelpers.js"
 import {
 	AsyncTupleDatabaseClientApi,
 	AsyncTupleTransactionApi,
-} from "./asyncTypes"
-import { subscribeQueryAsync } from "./subscribeQueryAsync"
-import { transactionalReadWriteAsync } from "./transactionalReadWriteAsync"
+} from "./asyncTypes.js"
+import { subscribeQueryAsync } from "./subscribeQueryAsync.js"
+import { transactionalReadWriteAsync } from "./transactionalReadWriteAsync.js"
 
 const isSync = false
 

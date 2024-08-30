@@ -1,4 +1,4 @@
-import { Models } from '../../types';
+import { Models } from '../../types/index.js';
 import { JSONSchema7 } from 'json-schema';
 import { schemaToJSON } from '../json/export.js';
 import {
@@ -9,7 +9,7 @@ import {
   deleteRelationFields,
   transformPropertiesOptionalToRequired,
 } from './transform-funcs.js';
-import Ajv from 'ajv';
+import { Ajv } from 'ajv';
 import addFormats from 'ajv-formats';
 import { transformObjectDeeply } from './transform-object-deeply.js';
 
@@ -20,6 +20,7 @@ const ajv = new Ajv({
   strict: true,
 });
 
+// @ts-expect-error (weird typing here)
 addFormats(ajv);
 
 /**

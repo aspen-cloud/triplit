@@ -1,5 +1,5 @@
 import { describe, it, expect } from "bun:test"
-import { invertString } from "./invertString"
+import { invertString } from "./invertString.js"
 
 type ParseTest = [string, number]
 

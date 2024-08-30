@@ -1,5 +1,5 @@
-import { binarySearch } from "./binarySearch"
-import { Compare } from "./compare"
+import { binarySearch } from "./binarySearch.js"
+import { Compare } from "./compare.js"
 
 export function set<T>(list: T[], item: T, cmp: Compare<T>) {
 	const result = binarySearch(list, item, cmp)

@@ -1,7 +1,7 @@
 import { describe, it, expect } from "bun:test"
-import { normalizeTupleBounds } from "../helpers/sortedTupleArray"
-import { Tuple } from "../storage/types"
-import { ConcurrencyLog } from "./ConcurrencyLog"
+import { normalizeTupleBounds } from "../helpers/sortedTupleArray.js"
+import { Tuple } from "../storage/types.js"
+import { ConcurrencyLog } from "./ConcurrencyLog.js"
 
 function bounds(prefix: Tuple) {
 	return normalizeTupleBounds({ prefix })

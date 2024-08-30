@@ -1,5 +1,5 @@
-import { AsyncTupleDatabaseApi } from "../database/async/asyncTypes"
-import { TupleDatabaseApi } from "../database/sync/types"
+import { AsyncTupleDatabaseApi } from "../database/async/asyncTypes.js"
+import { TupleDatabaseApi } from "../database/sync/types.js"
 
 function sleep(ms = 0) {
 	return new Promise<void>((resolve) => setTimeout(resolve, ms))

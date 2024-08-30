@@ -1,12 +1,12 @@
 import { equals, omitBy } from "remeda"
-import { ScanArgs } from "../database/types"
+import { ScanArgs } from "../database/types.js"
 import {
 	KeyValuePair,
 	ScanStorageArgs,
 	Tuple,
 	WriteOps,
-} from "../storage/types"
-import { normalizeTupleBounds } from "./sortedTupleArray"
+} from "../storage/types.js"
+import { normalizeTupleBounds } from "./sortedTupleArray.js"
 
 export function prependPrefixToTuple(prefix: Tuple, tuple: Tuple): Tuple {
 	if (!prefix.length) return tuple

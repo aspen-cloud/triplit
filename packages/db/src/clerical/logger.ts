@@ -1,4 +1,4 @@
-import createLogger from 'pino';
+import { pino as createLogger } from 'pino';
 
 const logger = createLogger();
 

@@ -1,10 +1,10 @@
 import { describe, it, expect } from "bun:test"
-import { MaxTuple } from "./sortedTupleArray"
+import { MaxTuple } from "./sortedTupleArray.js"
 import {
 	normalizeSubspaceScanArgs,
 	prependPrefixToWriteOps,
 	removePrefixFromWriteOps,
-} from "./subspaceHelpers"
+} from "./subspaceHelpers.js"
 
 describe("subspaceHelpers", () => {
 	describe("prependPrefixToWrites", () => {

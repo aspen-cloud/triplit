@@ -6,9 +6,9 @@ This file is generated from async/transactionalReadWriteAsync.ts
 
 type Identity<T> = T
 
-import { KeyValuePair } from "../../main"
-import { retry, RetryOptions } from "./retry"
-import { TupleDatabaseClientApi, TupleTransactionApi } from "./types"
+import { KeyValuePair } from "../../main.js"
+import { retry, RetryOptions } from "./retry.js"
+import { TupleDatabaseClientApi, TupleTransactionApi } from "./types.js"
 
 // Similar to FoundationDb's abstraction: https://apple.github.io/foundationdb/class-scheduling.html
 // Accepts a transaction or a database and allows you to compose transactions together.

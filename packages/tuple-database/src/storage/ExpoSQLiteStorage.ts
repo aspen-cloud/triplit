@@ -4,8 +4,8 @@ import {
 	AsyncSQLiteExecutor,
 	AsyncAdapterSQLiteStorage,
 	AdapterSQLiteOptions,
-} from "./AdapterSQLiteStorage"
-import { AsyncTupleStorageApi } from "../database/async/asyncTypes"
+} from "./AdapterSQLiteStorage.js"
+import { AsyncTupleStorageApi } from "../database/async/asyncTypes.js"
 
 export class ExpoSQLiteTupleStorage implements AsyncTupleStorageApi {
 	private storeReady: Promise<AsyncAdapterSQLiteStorage>

@@ -9,7 +9,7 @@ import {
   Models,
   RolePermissions,
   StoreSchema,
-} from '../../types';
+} from '../../types/index.js';
 
 export function schemaToJSON(schema: StoreSchema<Models>): SchemaDefinition;
 export function schemaToJSON(schema: undefined): undefined;

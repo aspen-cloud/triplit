@@ -1,15 +1,15 @@
-import { maybePromiseAll } from "../../helpers/maybeWaitForPromises"
-import { Bounds } from "../../helpers/sortedTupleArray"
+import { maybePromiseAll } from "../../helpers/maybeWaitForPromises.js"
+import { Bounds } from "../../helpers/sortedTupleArray.js"
 import {
 	KeyValuePair,
 	ScanStorageArgs,
 	Tuple,
 	WriteOps,
-} from "../../storage/types"
-import { TxId } from "../types"
-import { AsyncCallback } from "./asyncTypes"
-import * as SortedTupleValue from "../../helpers/sortedTupleValuePairs"
-import * as SortedTuple from "../../helpers/sortedTupleArray"
+} from "../../storage/types.js"
+import { TxId } from "../types.js"
+import { AsyncCallback } from "./asyncTypes.js"
+import * as SortedTupleValue from "../../helpers/sortedTupleValuePairs.js"
+import * as SortedTuple from "../../helpers/sortedTupleArray.js"
 
 type Listeners = Map<AsyncCallback, Bounds>
 

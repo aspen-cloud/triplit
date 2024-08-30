@@ -4,13 +4,13 @@ import {
   InvalidQueryCardinalityError,
   TriplitError,
 } from '../errors.js';
-import { Models } from '../schema/types';
+import { Models } from '../schema/types/index.js';
 import { TypeInterface } from './type.js';
 import {
   CollectionQuery,
   FetchResult,
   QueryResultCardinality,
-} from '../query/types';
+} from '../query/types/index.js';
 
 export type SubQuery<
   M extends Models,

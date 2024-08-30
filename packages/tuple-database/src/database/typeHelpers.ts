@@ -1,4 +1,4 @@
-import { KeyValuePair, Tuple } from "../storage/types"
+import { KeyValuePair, Tuple } from "../storage/types.js"
 
 export type Assert<Actual extends Expected, Expected> = Actual
 

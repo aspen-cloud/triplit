@@ -6,14 +6,14 @@ This file is generated from async/asyncTypes.ts
 
 type Identity<T> = T
 
-import { KeyValuePair, ScanStorageArgs, WriteOps } from "../../storage/types"
+import { KeyValuePair, ScanStorageArgs, WriteOps } from "../../storage/types.js"
 import {
 	FilterTupleValuePairByPrefix,
 	RemoveTupleValuePairPrefix,
 	TuplePrefix,
 	ValueForTuple,
-} from "../typeHelpers"
-import { ScanArgs, TxId, Unsubscribe } from "../types"
+} from "../typeHelpers.js"
+import { ScanArgs, TxId, Unsubscribe } from "../types.js"
 
 /** The low-level API for implementing new storage layers. */
 export type TupleStorageApi = {

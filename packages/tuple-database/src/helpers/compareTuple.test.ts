@@ -1,14 +1,14 @@
 import { shuffle } from "remeda"
 import { describe, it, expect } from "bun:test"
-import { Tuple } from "../storage/types"
-import { sortedValues } from "../test/fixtures"
+import { Tuple } from "../storage/types.js"
+import { sortedValues } from "../test/fixtures.js"
 import {
 	compareTuple,
 	compareValue,
 	TupleToString,
 	ValueToString,
-} from "./compareTuple"
-import { randomInt } from "./random"
+} from "./compareTuple.js"
+import { randomInt } from "./random.js"
 
 describe("compareValue", () => {
 	it("sorting is correct", () => {
