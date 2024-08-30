@@ -1,5 +1,12 @@
 # @triplit/server-core
 
+## 0.3.74
+
+### Patch Changes
+
+- cb72c28c: better errors for failed token verifications
+- b1127b7b: Write scope claim to array on tokens
+
 ## 0.3.73
 
 ### Patch Changes
