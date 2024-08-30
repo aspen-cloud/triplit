@@ -4,15 +4,13 @@ description: How to manage access control rules with a Triplit schema.
 
 import { Callout } from 'nextra-theme-docs';
 
+# Authorization and access control
+
 <Callout type="info">
   This feature is available for all hosted [Triplit Cloud](/triplit-cloud)
   users. If you are self-hosting Triplit, this feature is available in Triplit
   0.3.58 and higher.
 </Callout>
-
-## Authorization and access control
-
-Triplit provides a flexible way to define access control rules for your database, ensuring that your application data is secure without the need for complex server-side logic.
 
 <Callout type="warning" emoji="⚠️">
   Access control checks run exclusively on the server, and are not enforced on
@@ -20,7 +18,9 @@ Triplit provides a flexible way to define access control rules for your database
   the server.
 </Callout>
 
-### Roles
+Triplit provides a flexible way to define access control rules for your database, ensuring that your application data is secure without the need for complex server-side logic.
+
+## Roles
 
 When a client authenticates with a Triplit server and begins a session, it provides a token that contains some information about itself (see [authentication](/auth) for more information on tokens). You can define `roles` to access information from a token to inform permissions decisions, like 'Can this user read this todo?'.
 
@@ -28,8 +28,7 @@ Each role has an identifier and a `match` object. When a client authenticates wi
 
 For example, you may author `admin` and `user` tokens with the following structure:
 
-```typescript
-// schema.ts
+```typescript filename="schema.ts" copy
 import { Roles } from '@triplit/client';
 
 const roles: Roles = {
@@ -66,7 +65,7 @@ db.query('todos').where('authorId', '=', '$role.userId');
 
 Your schema file should export the `roles` object for use in your schema definitions.
 
-### Permissions
+## Permissions
 
 <Callout type="warning">
   Access control at the attribute level is not yet supported, but will be in a
@@ -77,8 +76,7 @@ By default, there are no access controls on the database and they must be config
 
 The following example turns off all access to the `todos` collection so it is only accessible with your [`service` token](/auth#tokens):
 
-```typescript
-// schema.ts
+```typescript filename="schema.ts" copy
 const roles = {
   // Role definitions
 };
@@ -109,13 +107,14 @@ Collection permissions are defined for each operation and role. If a role is not
 }
 ```
 
-#### Read
+### Read
 
 To allow clients to read data, you must define a `read` permission that specifies the roles that may read data and any additional restrictions. The following example allows a `user` to read the todos that they authored and an `admin` to read any todo:
 
-```typescript
-// schema.ts
-const roles = {
+```typescript filename="schema.ts" copy
+import { type Roles, Schema as S } from '@triplit/client';
+
+const roles: Roles = {
   // Role definitions
 };
 
@@ -146,13 +145,14 @@ const schema = {
 export { schema, roles };
 ```
 
-#### Insert
+### Insert
 
 To allow clients to insert data, you must define an `insert` permission that specifies the roles that may insert data and any additional restrictions. The following example allows a `user` to insert a todo that they author and an `admin` to insert any todo:
 
-```typescript
-// schema.ts
-const roles = {
+```typescript filename="schema.ts" copy
+import { type Roles, Schema as S } from '@triplit/client';
+
+const roles: Roles = {
   // Role definitions
 };
 
@@ -183,12 +183,13 @@ const schema = {
 export { schema, roles };
 ```
 
-#### Update
+### Update
 
 To allow users to update data, you must define an `update` permission that specifies the roles that may update data and any additional restrictions. For updates, the permission is checked against the "old" state of the entity, before it has been updated. The following example allows a `user` to update todos that they authored and an `admin` to update any todo:
 
-```typescript
-// schema.ts
+```typescript filename="schema.ts" copy
+import { type Roles, Schema as S } from '@triplit/client';
+
 const roles = {
   // Role definitions
 };
@@ -220,13 +221,14 @@ const schema = {
 export { schema, roles };
 ```
 
-#### Post update
+### Post update
 
 You may also optionally define a `postUpdate` permission that will be run after an update operation has been completed. This is useful for confirming that updated data is valid. For example, this checks that a `user` has not re-assigned a todo to another `user`:
 
-```typescript
-// schema.ts
-const roles = {
+```typescript filename="schema.ts" copy
+import { type Roles, Schema } from '@triplit/client';
+
+const roles: Roles = {
   // Role definitions
 };
 
@@ -255,13 +257,15 @@ const schema = {
 export { schema, roles };
 ```
 
-#### Delete
+### Delete
 
 To allow users to delete data, you must define a `delete` permission that specifies the roles that may delete data and any additional restrictions. The following example allows a `user` to delete todos that they authored and an `admin` to delete any todo:
 
 ```typescript
+import { type Roles, Schema } from '@triplit/client';
+
 // schema.ts
-const roles = {
+const roles: Roles = {
   // Role definitions
 };
 
@@ -292,6 +296,68 @@ const schema = {
 export { schema, roles };
 ```
 
-### Editing permissions
+## Editing permissions
 
 Permissions are a part of your schema and can be added or updated by [modifying your schema](/schemas/updating). In a future release, you will be able to manage permissions in your project's [Dashboard](https://www.triplit.dev/dashboard).
+
+## Modeling permissions with external authentication
+
+When using an external authentication provider like [Clerk](/auth/clerk), the provider is the source of truth for identifying users. This means that in your Triplit database you might not need a traditional users collection. Permissions that restrict access to specific authenticated should use the ids provided by the auth service. If you want to store additional information about a user in Triplit, we recommend using a `profiles` collection that uses the same ID as the user ID provided from your auth provider. When your app loads and a user authenticates, you can fetch their profile or create it if it doesn't exist. Here’s an example schema:
+
+```typescript filename="schema.ts" copy
+import { type Roles, Schema } from '@triplit/client';
+
+const roles: Roles = {
+  user: {
+    match: {
+      sub: '$userId',
+    },
+  },
+};
+
+const schema = {
+  profiles: {
+    schema: S.Schema({
+      id: S.Id(), // Use the user ID from your auth provider when inserting
+      nickname: S.String(),
+      created_at: S.Date({ default: S.Default.now() }),
+    }),
+    permissions: {
+      user: {
+        read: {
+          filter: [['id', '=', '$role.userId']],
+        },
+        update: {
+          filter: [['id', '=', '$role.userId']],
+        },
+        insert: {
+          filter: [['id', '=', '$role.userId']],
+        },
+      },
+    },
+  },
+  todos: {
+    schema: S.Schema({
+      id: S.Id(),
+      text: S.String(),
+      authorId: S.String(),
+    }),
+    permissions: {
+      user: {
+        read: {
+          filter: [['authorId', '=', '$role.userId']],
+        },
+        insert: {
+          filter: [['authorId', '=', '$role.userId']],
+        },
+        update: {
+          filter: [['authorId', '=', '$role.userId']],
+        },
+        delete: {
+          filter: [['authorId', '=', '$role.userId']],
+        },
+      },
+    },
+  },
+};
+```
