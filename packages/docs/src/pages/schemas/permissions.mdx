@@ -302,7 +302,7 @@ Permissions are a part of your schema and can be added or updated by [modifying 
 
 ## Modeling permissions with external authentication
 
-When using an external authentication provider like [Clerk](/auth/clerk), the provider is the source of truth for identifying users. This means that in your Triplit database you might not need a traditional users collection. Permissions that restrict access to specific authenticated should use the ids provided by the auth service. If you want to store additional information about a user in Triplit, we recommend using a `profiles` collection that uses the same ID as the user ID provided from your auth provider. When your app loads and a user authenticates, you can fetch their profile or create it if it doesn't exist. Here’s an example schema:
+When using an external authentication provider like [Clerk](/auth/clerk), the provider is the source of truth for identifying users. This means that in your Triplit database you might not need a traditional users collection. Permissions that restrict access to specific authenticated users should use the ids provided by the auth service. If you want to store additional information about a user in Triplit, we recommend using a `profiles` collection that uses the same ID as the user ID provided from your auth provider. When your app loads and a user authenticates, you can fetch their profile or create it if it doesn't exist. Here’s an example schema:
 
 ```typescript filename="schema.ts" copy
 import { type Roles, Schema } from '@triplit/client';
