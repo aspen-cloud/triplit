@@ -35,6 +35,16 @@ Triplit provides two basic tokens that are available in your project [dashboard]
 
 When getting started with Triplit these are fine to use, but they don't specify which application user is accessing the database, or if they have a distinct access role. This information can be configured by providing a JWT with the proper claims and signature (see previous section). Triplit's flexible design allows you to define any JWT claims you would like.
 
+### Updating your session
+
+If you need to update the token you are using (for example when signing out or signing in a new user), you can call the `updateToken` method on your client.
+
+```typescript
+client.updateToken('<new token>');
+```
+
+More information on updating client options can be found in the [client documentation](client/options#auth-options).
+
 ## Authorization
 
 Triplit allows you to define rules on your collections that determine who can read and write data. This is usually based on the tokens you provide. See [permissions](/schemas/permissions) for more information on reading your tokens in queries and access control definitions.
