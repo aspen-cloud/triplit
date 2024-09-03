@@ -4,6 +4,7 @@
   "dev": "`dev`",
   "init": "`init`",
   "repl": "`repl`",
+  "roles": "`roles`",
   "schema": "`schema`",
   "seed": "`seed`"
 }
