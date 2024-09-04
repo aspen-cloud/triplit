@@ -337,16 +337,8 @@ export class Session {
   constructor(public server: TriplitServer, public token: ProjectJWT) {
     if (!token) throw new TriplitError('Token is required');
     // TODO: figure out admin middleware
-    const variables: Record<string, any> = {};
 
-    // For backwards compatibility assign to SESSION_USER_ID
-    if ('x-triplit-user-id' in token)
-      variables['SESSION_USER_ID'] = token['x-triplit-user-id'];
-
-    // Assign token to session vars
-    Object.assign(variables, token);
-
-    this.db = server.db.withSessionVars(variables);
+    this.db = server.db.withSessionVars(token);
   }
 
   createConnection(connectionParams: ConnectionOptions) {

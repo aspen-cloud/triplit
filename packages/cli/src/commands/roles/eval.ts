@@ -1,8 +1,13 @@
+import { normalize, parse } from 'node:path';
 import { Command } from '../../command.js';
 import * as Flag from '../../flags.js';
 import { serverRequesterMiddleware } from '../../middleware/add-server-requester.js';
 import { projectSchemaMiddleware } from '../../middleware/project-schema.js';
-import { JSONToSchema, getRolesFromSession } from '@triplit/db';
+import {
+  JSONToSchema,
+  getRolesFromSession,
+  normalizeSessionVars,
+} from '@triplit/db';
 
 import * as JWT from 'jsonwebtoken';
 
@@ -36,6 +41,7 @@ export default Command({
       console.error('Input could not be parsed as JSON');
       return;
     }
+    parsedClaims = normalizeSessionVars(parsedClaims);
     let schema;
     if (flags.location === 'remote') {
       const serverSchemaResponse = await ctx.requestServer('POST', '/schema', {

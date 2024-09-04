@@ -64,16 +64,6 @@ export async function parseAndValidateToken(
     };
   }
 
-  // Translate 'scope' claim to array: https://datatracker.ietf.org/doc/html/rfc8693#name-scope-scopes-claim
-  // remove this when we support functions in queries
-  if (
-    'scope' in payload &&
-    !('_scope' in payload) &&
-    typeof payload['scope'] === 'string'
-  ) {
-    payload['_scope'] = payload['scope'].split(' ');
-  }
-
   // Should still accept our own tokens, so only check payload path if it might be external (we cant find our claims at base)
   const isExternal = !TriplitJWTType.includes(
     payload['x-triplit-token-type'] as TriplitJWTType

@@ -53,7 +53,10 @@ import {
   CollectionQueryDefault,
 } from './query/types/index.js';
 import { prepareQuery } from './query/prepare.js';
-import { getRolesFromSession } from './schema/permissions.js';
+import {
+  getRolesFromSession,
+  normalizeSessionVars,
+} from './schema/permissions.js';
 import { diffSchemas } from './schema/diff.js';
 import { genToArr } from './utils/generator.js';
 
@@ -667,7 +670,7 @@ export default class DB<M extends Models = Models> {
   }
 
   withSessionVars(variables: Record<string, any>): DB<M> {
-    return Session(this, variables);
+    return Session(this, normalizeSessionVars(variables));
   }
 
   async getClientId() {

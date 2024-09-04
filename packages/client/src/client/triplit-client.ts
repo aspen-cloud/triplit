@@ -312,19 +312,12 @@ export class TriplitClient<M extends ClientSchema = ClientSchema> {
 
     if (this.authOptions.token) {
       syncOptions.token = this.authOptions.token;
-      const variables: Record<string, any> = {};
       const decoded = decodeToken(
         this.authOptions.token,
         this.authOptions.claimsPath
       );
-      // For backwards compatibility assign to SESSION_USER_ID
-      if ('x-triplit-user-id' in decoded)
-        variables['SESSION_USER_ID'] = decoded['x-triplit-user-id'];
 
-      // Assign token to session vars
-      Object.assign(variables, decoded);
-
-      this.db = this.db.withSessionVars(variables);
+      this.db = this.db.withSessionVars(decoded);
     }
 
     this.syncEngine = new SyncEngine(this, syncOptions);
@@ -1112,21 +1105,13 @@ export class TriplitClient<M extends ClientSchema = ClientSchema> {
     // handle updating the token and variables for auth purposes
     if (hasToken) {
       this.authOptions = { ...this.authOptions, token };
-      const { claimsPath } = this.authOptions;
 
-      const variables: Record<string, any> = {};
       const decoded = decodeToken(
         this.authOptions.token!,
         this.authOptions.claimsPath
       );
-      // For backwards compatibility assign to SESSION_USER_ID
-      if ('x-triplit-user-id' in decoded)
-        variables['SESSION_USER_ID'] = decoded['x-triplit-user-id'];
 
-      // Assign token to session vars
-      Object.assign(variables, decoded);
-
-      this.db = this.db.withSessionVars(variables);
+      this.db = this.db.withSessionVars(decoded);
 
       // and update the sync engine
       updatedSyncOptions = { ...updatedSyncOptions, token };
