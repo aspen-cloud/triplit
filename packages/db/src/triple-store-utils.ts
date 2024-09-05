@@ -9,7 +9,7 @@ import { QueryValue, ValueCursor } from './query/types/collection-query.js';
 import { Timestamp } from './timestamp.js';
 import { TripleStoreTransaction } from './triple-store-transaction.js';
 import { KeyValuePair, MIN, MAX } from '@triplit/tuple-database';
-import { genToArr } from './utils/generator.js';
+import { genToArr, mapGen } from './utils/generator.js';
 
 // Value should be serializable, this is what goes into triples
 // Not to be confused with the Value type we define on queries
@@ -151,20 +151,11 @@ export function indexToTriple(
   };
 }
 
-async function* map<A, B>(
-  asyncIterable: AsyncGenerator<A>,
-  callback: (val: A, index: number) => B
-): AsyncGenerator<B> {
-  let i = 0;
-  for await (const val of asyncIterable) yield callback(val, i++);
-}
-
 export async function* scanToTriples(
   tx: MultiTupleStoreOrTransaction,
-  ...scanParams: Parameters<MultiTupleStoreOrTransaction['scan']>
+  scanParams: Parameters<MultiTupleStoreOrTransaction['scan']>[0]
 ) {
-  // @ts-expect-error
-  yield* map(tx.scan(...scanParams), indexToTriple);
+  yield* mapGen(tx.scan(scanParams), (index) => indexToTriple(index));
 }
 
 export async function* findByCollection(
