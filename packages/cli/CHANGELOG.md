@@ -1,5 +1,12 @@
 # @triplit/cli
 
+## 0.5.10
+
+### Patch Changes
+
+- 4f99c558: Manual version bump for CLI dependencies
+- a902f8b8: unify session variable transformation logic
+
 ## 0.5.9
 
 ### Patch Changes

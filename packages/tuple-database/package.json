@@ -1,6 +1,6 @@
 {
 	"name": "@triplit/tuple-database",
-	"version": "2.2.25",
+	"version": "2.2.26",
 	"description": "An optimized fork of ccorcos/tuple-database",
 	"repository": "github:aspen-cloud/tuple-database",
 	"source": "./src/main.ts",
