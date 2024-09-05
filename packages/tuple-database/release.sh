@@ -2,12 +2,12 @@ set -e
 
 # npm version patch
 
-rm -rf build
-npm run build
-cp package.json build
-cp .npmignore build
-cp README.md build
+rm -rf dist
+npm run build:all
+cp package.json dist
+cp .npmignore dist
+cp README.md dist
 
-cd build
+cd dist
 npm publish --access=public
 cd ..
