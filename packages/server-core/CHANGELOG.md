@@ -1,5 +1,14 @@
 # @triplit/server-core
 
+## 0.3.75
+
+### Patch Changes
+
+- a902f8b8: unify session variable transformation logic
+- Updated dependencies [4f99c558]
+- Updated dependencies [a902f8b8]
+  - @triplit/db@0.3.71
+
 ## 0.3.74
 
 ### Patch Changes
