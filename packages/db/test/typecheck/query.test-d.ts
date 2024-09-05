@@ -8,7 +8,7 @@ import {
   QueryWhere,
   ValueCursor,
   WhereFilter,
-} from '../../src/query/types';
+} from '../../src/query/types/index.js';
 import { EXHAUSTIVE_SCHEMA } from '../utils/exhaustive-schema.js';
 import { fakeTx, MapValue } from './utils.js';
 import { Models } from '../../src/index.js';

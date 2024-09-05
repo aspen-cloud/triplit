@@ -1,6 +1,6 @@
 import { expectTypeOf, test } from 'vitest';
 import { Schema as S } from '../../src/schema/builder.js';
-import { SchemaPaths } from '../../src/schema/types';
+import { SchemaPaths } from '../../src/schema/types/index.js';
 
 test('SchemaPaths expands a schema to max depth 3', () => {
   const schema = {
