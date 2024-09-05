@@ -1,5 +1,14 @@
 # @triplit/db
 
+## 0.3.71
+
+### Patch Changes
+
+- 4f99c558: Use iterators when clearing data, use underlying storage.clear(), reset state on clear
+- a902f8b8: unify session variable transformation logic
+- Updated dependencies [6e426627]
+  - @triplit/tuple-database@2.2.26
+
 ## 0.3.70
 
 ### Patch Changes
