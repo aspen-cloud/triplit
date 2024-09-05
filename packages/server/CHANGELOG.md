@@ -1,5 +1,13 @@
 # @triplit/server
 
+## 0.4.11
+
+### Patch Changes
+
+- @triplit/db@0.3.72
+- @triplit/client@0.4.10
+- @triplit/server-core@0.3.76
+
 ## 0.4.10
 
 ### Patch Changes
