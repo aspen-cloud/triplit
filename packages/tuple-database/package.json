@@ -30,10 +30,13 @@
 			]
 		}
 	},
+	"files": [
+		"/dist"
+	],
 	"scripts": {
-		"build": "run-s build:tsc",
-		"build:all": "run-s build:macros build:tsc",
-		"build:tsc": "tsc",
+		"build": "run-s build:tsc && (cp .npmignore dist)",
+		"build:all": "run-s build:macros build",
+		"build:tsc": "tsc && run-s validate:types",
 		"build:macros": "bun src/tools/compileMacros.ts",
 		"lint": "tsc --noEmit",
 		"watch": "tsc -w",
@@ -42,8 +45,8 @@
 		"test:watch": "npm test -- --watch --watch-extensions ts",
 		"typecheck": "tsc --project tsconfig.json --noEmit",
 		"prettier": "prettier -w src",
-		"release": "./release.sh",
-		"pack": "./pack.sh"
+		"publish-pkg": "node ../../scripts/npm-check-version-and-publish.js",
+		"validate:types": "node ../../scripts/check-for-local-references-in-declarations.js dist"
 	},
 	"devDependencies": {
 		"@types/better-sqlite3": "^7.6.3",
