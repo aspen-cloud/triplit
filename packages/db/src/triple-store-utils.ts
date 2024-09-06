@@ -180,7 +180,6 @@ export async function* findByEAT(
   const scanArgs = {
     prefix: ['EAT'],
     gte: [entityId ?? MIN, attribute ?? MIN],
-    // @ts-ignore
     lt: [entityId ?? MAX, [...(attribute ?? []), MAX], MAX],
     reverse: direction === 'DESC',
   };
@@ -326,7 +325,7 @@ export async function* findByClientTimestamp(
   timestamp: Timestamp | undefined
 ) {
   if (!timestamp && !scanDirection.startsWith('gt')) {
-    return [];
+    return;
   }
   let scanParams: Parameters<MultiTupleStoreOrTransaction['scan']>[0];
   switch (scanDirection) {
