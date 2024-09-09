@@ -1790,8 +1790,8 @@ describe('outbox', () => {
     }
     // Bob after sync
     {
-      const outboxTriples = await genToArr(aliceOutbox.findByEntity());
-      const cacheTriples = await genToArr(aliceCache.findByEntity());
+      const outboxTriples = await genToArr(bobOutbox.findByEntity());
+      const cacheTriples = await genToArr(bobCache.findByEntity());
       expect(outboxTriples).toHaveLength(0);
       expect(cacheTriples).toHaveLength(3);
     }
