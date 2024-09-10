@@ -25,7 +25,7 @@ export function useQueryOne<
   Q extends ClientQuery<M, CN>
 >(
   client: TriplitClient<M> | WorkerClient<M>,
-  query: ClientQueryBuilder<M, CN, Q>,
+  query: ClientQueryBuilder<M, CN, Q> | Q,
   options?: Partial<SubscriptionOptions>
 ): {
   fetching: boolean;
@@ -34,10 +34,10 @@ export function useQueryOne<
   result: Unalias<FetchResultEntity<M, Q>> | null;
   error: any;
 } {
-  const fetchOneQuery = query.limit(1);
+  const builtQuery = 'build' in query ? query.build() : query;
   const { fetching, fetchingLocal, fetchingRemote, results, error } = useQuery(
     client,
-    fetchOneQuery,
+    { ...builtQuery, limit: 1 },
     options
   );
   const result = useMemo(() => {
