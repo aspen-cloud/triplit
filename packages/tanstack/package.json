@@ -28,10 +28,16 @@
   ],
   "peerDependencies": {
     "@tanstack/react-router": "*",
+    "@triplit/client": "workspace:^",
     "@triplit/react": "workspace:^",
     "react": "*"
   },
   "devDependencies": {
+    "@tanstack/react-router": "^1.57.9",
+    "@triplit/client": "workspace:^",
+    "@triplit/react": "workspace:^",
+    "@types/react": "^18",
+    "react": "^18.3.1",
     "typescript": "^5.6.2"
   }
 }

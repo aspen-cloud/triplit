@@ -9812,6 +9812,45 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@tanstack/history@npm:1.57.6":
+  version: 1.57.6
+  resolution: "@tanstack/history@npm:1.57.6"
+  checksum: 10/a18b5531a3ab8c56c18e43717f5c55946fe2b44f6351dcd8b1cd6b242893b322af272ad4bdd8730f7903262a0d5adac9e7135305c004d9a959cd0687abf74130
+  languageName: node
+  linkType: hard
+
+"@tanstack/react-router@npm:^1.57.9":
+  version: 1.57.9
+  resolution: "@tanstack/react-router@npm:1.57.9"
+  dependencies:
+    "@tanstack/history": "npm:1.57.6"
+    "@tanstack/react-store": "npm:^0.5.5"
+    tiny-invariant: "npm:^1.3.3"
+    tiny-warning: "npm:^1.0.3"
+  peerDependencies:
+    "@tanstack/router-generator": 1.57.9
+    react: ">=18"
+    react-dom: ">=18"
+  peerDependenciesMeta:
+    "@tanstack/react-generator":
+      optional: true
+  checksum: 10/80bbeff4b8a16b88af6166e1c8c71f9d055d62ff78e3ef79c669955ec58a9c0110376b487c43a9b779ea890c004760ef6c0458a89518b2711eeeccb0ae52bcba
+  languageName: node
+  linkType: hard
+
+"@tanstack/react-store@npm:^0.5.5":
+  version: 0.5.5
+  resolution: "@tanstack/react-store@npm:0.5.5"
+  dependencies:
+    "@tanstack/store": "npm:0.5.5"
+    use-sync-external-store: "npm:^1.2.2"
+  peerDependencies:
+    react: ^17.0.0 || ^18.0.0
+    react-dom: ^17.0.0 || ^18.0.0
+  checksum: 10/62dc14a29f30fa8370f917cf663f62ddeb27bc06d44beb5cf13394854e03bb9ca79ea9eb2ea01ade81250e94349db30fabf69704f9de3644deffb9f4e9229683
+  languageName: node
+  linkType: hard
+
 "@tanstack/react-table@npm:^8.9.8":
   version: 8.10.7
   resolution: "@tanstack/react-table@npm:8.10.7"
@@ -9833,6 +9872,13 @@ __metadata:
     react: ^16.8.0 || ^17.0.0 || ^18.0.0
     react-dom: ^16.8.0 || ^17.0.0 || ^18.0.0
   checksum: 10/d99a18c78cbe2ab0618f9fd75b626bb9db36794dab62a4273922fd887996b01a36bc324a69047e4449c7b9aa0f11f2a19d02d70a94fb6255eaf924a619548322
+  languageName: node
+  linkType: hard
+
+"@tanstack/store@npm:0.5.5":
+  version: 0.5.5
+  resolution: "@tanstack/store@npm:0.5.5"
+  checksum: 10/7e5b2fba40f17fbb708913e9c72f1bc8dec916e26946e230f99ded73e8b37cec2546bc57ec3da14541e37e07201bc79303bd4efc7ac08efea14465dc86915a39
   languageName: node
   linkType: hard
 
@@ -10305,9 +10351,15 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@triplit/tanstack@workspace:packages/tanstack"
   dependencies:
+    "@tanstack/react-router": "npm:^1.57.9"
+    "@triplit/client": "workspace:^"
+    "@triplit/react": "workspace:^"
+    "@types/react": "npm:^18"
+    react: "npm:^18.3.1"
     typescript: "npm:^5.6.2"
   peerDependencies:
     "@tanstack/react-router": "*"
+    "@triplit/client": "workspace:^"
     "@triplit/react": "workspace:^"
     react: "*"
   languageName: unknown
@@ -27807,6 +27859,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"react@npm:^18.3.1":
+  version: 18.3.1
+  resolution: "react@npm:18.3.1"
+  dependencies:
+    loose-envify: "npm:^1.1.0"
+  checksum: 10/261137d3f3993eaa2368a83110466fc0e558bc2c7f7ae7ca52d94f03aac945f45146bd85e5f481044db1758a1dbb57879e2fcdd33924e2dde1bdc550ce73f7bf
+  languageName: node
+  linkType: hard
+
 "read-cache@npm:^1.0.0":
   version: 1.0.0
   resolution: "read-cache@npm:1.0.0"
@@ -30956,10 +31017,24 @@ __metadata:
   languageName: node
   linkType: hard
 
+"tiny-invariant@npm:^1.3.3":
+  version: 1.3.3
+  resolution: "tiny-invariant@npm:1.3.3"
+  checksum: 10/5e185c8cc2266967984ce3b352a4e57cb89dad5a8abb0dea21468a6ecaa67cd5bb47a3b7a85d08041008644af4f667fb8b6575ba38ba5fb00b3b5068306e59fe
+  languageName: node
+  linkType: hard
+
 "tiny-queue@npm:^0.2.1":
   version: 0.2.1
   resolution: "tiny-queue@npm:0.2.1"
   checksum: 10/1e1ea7e8c12cfc8caf686de34cca80cefe0bffe393c7af67c5b31474198e33f7bf31692245fb7426760103df5305a28361d7e62b194a8c08d3b4e0d84461ed06
+  languageName: node
+  linkType: hard
+
+"tiny-warning@npm:^1.0.3":
+  version: 1.0.3
+  resolution: "tiny-warning@npm:1.0.3"
+  checksum: 10/da62c4acac565902f0624b123eed6dd3509bc9a8d30c06e017104bedcf5d35810da8ff72864400ad19c5c7806fc0a8323c68baf3e326af7cb7d969f846100d71
   languageName: node
   linkType: hard
 
@@ -32480,6 +32555,15 @@ __metadata:
     "@types/react":
       optional: true
   checksum: 10/ec99e31aefeb880f6dc4d02cb19a01d123364954f857811470ece32872f70d6c3eadbe4d073770706a9b7db6136f2a9fbf1bb803e07fbb21e936a47479281690
+  languageName: node
+  linkType: hard
+
+"use-sync-external-store@npm:^1.2.2":
+  version: 1.2.2
+  resolution: "use-sync-external-store@npm:1.2.2"
+  peerDependencies:
+    react: ^16.8.0 || ^17.0.0 || ^18.0.0
+  checksum: 10/671e9c190aab9a8374a5d468c6ba17f52c38b6fae970110bc196fc1e2b57204149aea9619be49a1bb5207fb6e51d8afd19c3bcb94afe61813fed039821461dc0
   languageName: node
   linkType: hard
 

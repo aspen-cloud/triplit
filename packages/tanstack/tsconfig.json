@@ -12,13 +12,14 @@
     "declaration": true, // This is important to generate type declarations
     "isolatedModules": true,
     "skipLibCheck": true,
-    "rootDir": "./src/"
+    "rootDir": "./src/",
+    "jsx": "react-jsx"
   },
   "references": [
     {
       "path": "../client/tsconfig.json"
     }
   ],
-  "include": ["./src/**/*.ts"],
+  "include": ["./src/**/*.ts", "./src/**/*.tsx"],
   "exclude": ["./dist", "node_modules"]
 }

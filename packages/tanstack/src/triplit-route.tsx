@@ -18,7 +18,7 @@ import {
 import { useQuery } from '@triplit/react';
 import { ComponentType, useMemo } from 'react';
 
-export function routeWithTriplit<
+export function triplitRoute<
   M extends ClientSchema,
   Q extends ClientQuery<M>,
   Path extends keyof FileRoutesByPath,
@@ -41,7 +41,6 @@ export function routeWithTriplit<
         >
       ) => Q),
   Component: ComponentType<{ results: QueryResult<M, Q>[] }>
-  // ): Parameters<ReturnType<typeof createFileRoute<Path>>>[0] {
 ): Parameters<
   ReturnType<typeof createFileRoute<Path, TParentRoute, TId, TPath, TFullPath>>
 >[0] {
