@@ -16,7 +16,7 @@ import {
   TriplitClient,
 } from '@triplit/client';
 import { useQuery } from '@triplit/react';
-import { ComponentType, useMemo } from 'react';
+import { ComponentType, useCallback, useMemo, useState } from 'react';
 
 export function triplitRoute<
   M extends ClientSchema,
@@ -40,7 +40,10 @@ export function triplitRoute<
           unknown
         >
       ) => Q),
-  Component: ComponentType<{ results: QueryResult<M, Q>[] }>
+  Component: ComponentType<{
+    results: QueryResult<M, Q>[];
+    updateQuery: (newQuery: Q) => void;
+  }>
 ): Parameters<
   ReturnType<typeof createFileRoute<Path, TParentRoute, TId, TPath, TFullPath>>
 >[0] {
@@ -75,12 +78,16 @@ export function triplitRoute<
       const { results: initialResults, query } = useLoaderData({
         strict: false,
       });
-      const resp = useQuery(client, query);
+      const [latestQuery, setQuery] = useState<Q>(query);
+      const updateQuery = useCallback((newQuery: Q) => {
+        setQuery(newQuery);
+      }, []);
+      const resp = useQuery(client, latestQuery);
       const results = useMemo(() => {
         const latestResults = resp.results ?? initialResults;
         return [...(latestResults?.values() ?? [])];
       }, [initialResults, resp?.results]);
-      return <Component results={results} />;
+      return <Component results={results} updateQuery={updateQuery} />;
     },
   };
 }
