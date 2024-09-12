@@ -119,6 +119,19 @@ describe('DurableClock', () => {
     currentTick = await clock.getCurrentTimestamp();
     expect(currentTick).toEqual([1, 'alice']);
   });
+  it('clearing the db will not over supply onClear callbacks', async () => {
+    const clock = new DurableClock('store', 'alice');
+    const db = new DB({ sources: { store: new MemoryStorage() }, clock });
+    // Await clock to be ready
+    await new Promise((res) => setTimeout(res, 100));
+    // @ts-expect-error (not exposed)
+    expect(db.tripleStore.onClearCallbacks.length).toBe(2);
+    for (let i = 0; i < 10; i++) {
+      await db.clear();
+      // @ts-expect-error (not exposed)
+      expect(db.tripleStore.onClearCallbacks.length).toBe(2);
+    }
+  });
   it.todo(
     "throws an error when it's assigned to something other than a TripleStore",
     async () => {
