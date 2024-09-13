@@ -59,22 +59,18 @@ function transformNullable(object: any) {
 }
 
 function transformDefault(object: any) {
-  if (object?.options?.default) {
+// if (object?.options?.default != null) {
     // we set the default, though JSON Schema notes that it should be
     // only used for documentation / example values, not as form default
-    if (
-      typeof object?.options?.default === 'string' ||
-      typeof object?.options?.default === 'number'
-    ) {
+    if (typeof object?.options?.default !== 'function') {
       object.default = object.options.default;
-      return;
-    }
+          }
 
     if (object?.options?.default?.func != null) {
-      // Handle  triplit's special cases: 'now' and 'uuid'
+      // Handle triplit's special cases: 'now' and 'uuid'
       object.default = object.options.default.func;
-    }
-  }
+      }
+// }
 }
 
 function transformEnum(object: any) {
