@@ -59,18 +59,18 @@ function transformNullable(object: any) {
 }
 
 function transformDefault(object: any) {
-// if (object?.options?.default != null) {
-    // we set the default, though JSON Schema notes that it should be
-    // only used for documentation / example values, not as form default
-    if (typeof object?.options?.default !== 'function') {
-      object.default = object.options.default;
-          }
+  // if (object?.options?.default != null) {
+  // we set the default, though JSON Schema notes that it should be
+  // only used for documentation / example values, not as form default
+  if (typeof object?.options?.default !== 'function') {
+    object.default = object.options.default;
+  }
 
-    if (object?.options?.default?.func != null) {
-      // Handle triplit's special cases: 'now' and 'uuid'
-      object.default = object.options.default.func;
-      }
-// }
+  if (object?.options?.default?.func != null) {
+    // Handle triplit's special cases: 'now' and 'uuid'
+    object.default = object.options.default.func;
+  }
+  // }
 }
 
 function transformEnum(object: any) {
@@ -83,18 +83,28 @@ export function transformPropertiesOptionalToRequired(object: any) {
   // To indicate optional fields, triplit uses an optional array, while
   // JSON schema uses the inverse concept and uses a "required" array field
 
+  return tranformKeysRequirementsContext(object, 'optional', 'required');
+}
+
+export function tranformKeysRequirementsContext(
+  object: any,
+  from = 'optional',
+  towards = 'required'
+) {
   if (object.properties != null) {
     const allKeys = Object.keys(object.properties);
-    const triplitOptionalKeys = object?.optional ?? [];
+    const specialKeys = object?.[from] ?? [];
 
-    const diff = allKeys.filter((item) => !triplitOptionalKeys?.includes(item));
+    const diff = allKeys.filter((item) => !specialKeys?.includes(item));
+    // ensure sorting order, else tests fail even if the same items
+    diff.sort();
 
     // object.required = structuredClone(diff);
     if (diff.length > 0) {
-      object.required = structuredClone(diff);
+      object[towards] = structuredClone(diff);
     }
 
-    delete object?.optional;
+    delete object?.[from];
   }
 
   return object;
