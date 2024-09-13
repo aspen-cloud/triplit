@@ -52,6 +52,7 @@ export function exportSchemaAsJSONSchema(
 ): JSONSchema7 | undefined {
   //
   if (!schema) return undefined;
+
   const collectionsListJsonSchema: Record<string, JSONSchema7> = {};
 
   const triplitSchemaJsonData = schemaToJSON({
@@ -59,11 +60,16 @@ export function exportSchemaAsJSONSchema(
     version: 0,
   });
 
-  for (const collectionKey in triplitSchemaJsonData?.collections) {
+  // copy and work on duplicate to keep original object unchanged
+  const duplicateOfTriplitSchemaJsonData = structuredClone(
+    triplitSchemaJsonData
+  );
+
+  for (const collectionKey in duplicateOfTriplitSchemaJsonData?.collections) {
     //
     const collectionJsonSchema: JSONSchema7 =
       transformTriplitJsonDataInJsonSchema(
-        triplitSchemaJsonData,
+        duplicateOfTriplitSchemaJsonData,
         collectionKey
       );
 
