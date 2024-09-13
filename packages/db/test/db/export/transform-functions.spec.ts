@@ -43,6 +43,20 @@ describe('transformOptions', () => {
     });
   });
 
+  test('should correctly set boolean default', () => {
+    const input = {
+      type: 'boolean',
+      options: {
+        default: false,
+      },
+    };
+    const output = transformOptions(input);
+    expect(output).toEqual({
+      type: 'boolean',
+      default: false,
+    });
+  });
+
   test('null added correctly if nullable true', () => {
     const input = {
       type: 'string',
@@ -243,7 +257,7 @@ describe('Test all Transforms together', () => {
           },
         },
       },
-      required: ['stringEnum', 'set_stringEnum'],
+      required: ['set_stringEnum', 'stringEnum'],
     };
 
     transformFunctions.forEach((transformFunc) => {
@@ -356,12 +370,12 @@ describe('Test all Transforms together', () => {
         },
       },
       required: [
-        'recordType',
-        'obj',
         'id',
+        'obj',
+        'recordType',
         'set_number',
-        'stringEnum',
         'set_stringEnum',
+        'stringEnum',
       ],
     };
 
