@@ -1,5 +1,12 @@
 # @triplit/react
 
+## 0.3.101
+
+### Patch Changes
+
+- 5eae93dc: Use client in hooks deps
+  - @triplit/client@0.4.12
+
 ## 0.3.100
 
 ### Patch Changes
