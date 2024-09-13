@@ -1,0 +1,90 @@
+---
+description: Learn how to use Tanstack Router integration with Triplit.
+---
+
+import { Tabs, Tab, Callout } from 'nextra-theme-docs';
+
+# Tanstack Router
+
+### Introduction
+
+The `@triplit/tanstack` package provides seamless integration between Tanstack Router and Triplit, allowing you to use a Triplit query as the loader for a route which will automatically be subscribed to and update to both changes from the server as well as optimistic updates from the client.
+
+### Installation
+
+To get started make sure you have [Tanstack Router setup](https://tanstack.com/router/latest/docs/framework/react/quick-start) then install the `@triplit/tanstack` package:
+
+<Tabs items={['npm', 'pnpm', 'yarn', 'bun']}>
+
+  <Tab>
+    ```bash copy
+    npm i @triplit/tanstack
+    ```
+  </Tab>
+    <Tab>
+    ```bash copy
+    pnpm add @triplit/tanstack
+    ```
+  </Tab>
+  <Tab>
+    ```bash copy
+    yarn add @triplit/tanstack
+    ```
+  </Tab>
+  <Tab>
+    ```bash copy
+    bun add @triplit/tanstack
+    ```
+  </Tab>
+</Tabs>
+
+## `triplitRoute`
+
+The `triplitRoute` function is an integration between Tanstack Router and the Triplit client. It helps define a route with data fetched from the Triplit client and a component to render based on the fetched data.
+
+```ts
+triplitRoute(triplitClient: TriplitClient, query: ClientQuery, Component: ReactComponent): RouteConfig;
+```
+
+### Parameters
+
+- **`triplitClient`**: The instance of the Triplit client, which is used to query the data from the Triplit API.
+- **`query`**: A Client Query or function that returns a query to be run using the `triplitClient`. The function receives an object containing the `params` for the route.
+- **`Component`**: A React component that renders the data fetched by the `triplitClient`. The component receives a prop named `results`, which contains the results of the query.
+
+### Returns
+
+`triplitRoute` returns a route configuration object, which can be passed to Tanstack Router's route creation functions such as `createFileRoute`.
+
+### Example Usage
+
+Here’s an example of how to use the `triplitRoute` function with the Tanstack Router to define a route for displaying contact details:
+```tsx filename="src/routes/$contactId.tsx"
+import { createFileRoute } from '@tanstack/react-router';
+import { triplitRoute } from '@triplit/tanstack';
+import { triplitClient } from '../triplit.js';
+
+
+export const Route = createFileRoute('/$contactId')(
+  triplitRoute(
+    triplitClient,
+    ({ params }) =>
+      triplitClient
+        .query('contacts')
+        .where('id', '=', params.contactId)
+        .limit(1)
+        .build(),
+    ContactComponent({ results }) {
+      if (results.length === 0) {
+        return <div>Contact not found</div>;
+      }
+      const contact = results[0];
+      return (
+        <div>
+          {/* Render the contact */}
+        </div>
+      );
+    }
+  )
+);
+```
