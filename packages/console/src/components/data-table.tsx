@@ -29,7 +29,7 @@ import {
 import { PARSE_FUNCS } from './create-entity-sheet';
 import { CopyValueMenu } from './copy-value-menu.js';
 import { TriplitClient } from '@triplit/client';
-import { AttributeDefinition } from '@triplit/db';
+import { AttributeDefinition, CollectionPermissions } from '@triplit/db';
 import {
   CollectionAttributeDefinition,
   QueryAttributeDefinition,
@@ -44,6 +44,7 @@ import {
   updateTriplitValue,
 } from 'src/utils/mutate-cells.js';
 import { useToast } from 'src/hooks/useToast.js';
+import { RoleFilters } from './role-filters.js';
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
@@ -217,6 +218,7 @@ type TriplitDataCellProps = {
   onSelectCell: () => void;
   editable?: boolean;
   optional?: boolean;
+  permissions?: CollectionPermissions<any, any>;
 };
 
 export function DataCell({
@@ -230,6 +232,7 @@ export function DataCell({
   collection,
   editable = true,
   optional = false,
+  permissions,
 }: TriplitDataCellProps) {
   const { toast } = useToast();
   const [isEditing, setIsEditing] = useState(false);
@@ -390,6 +393,13 @@ export function DataCell({
               </Button>
             )}
           </div>
+        )}
+        {permissions && (
+          <RoleFilters
+            permissions={permissions}
+            rule="update"
+            client={client}
+          />
         )}
       </PopoverContent>
     </Popover>

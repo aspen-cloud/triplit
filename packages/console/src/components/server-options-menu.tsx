@@ -1,10 +1,9 @@
-import { ImportProjectForm } from './import-project-form';
-import { ProjectInfoForm } from './project-info-form';
-import { ProjectSelector } from './project-selector';
+import { ImportServerForm } from './import-server-form';
+import { ServerInfoForm } from './server-info-form';
+import { ServerSelector } from './server-selector';
 import { DownloadSimple, FolderOpen, Info, Trash } from '@phosphor-icons/react';
 import { useState } from 'react';
-import { useProjectState } from './project-provider';
-import { useProject } from '../hooks/useProject';
+import { useServerState } from './server-provider';
 import {
   Modal,
   DropdownMenu,
@@ -13,36 +12,37 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@triplit/ui';
-import { DeleteProjectDialog } from './delete-project-dialog';
-import { addProjectToConsole } from 'src/utils/project.js';
+import { DeleteServerDialog } from './delete-server-dialog';
+import { addServerToConsole } from 'src/utils/server.js';
+import { useQueryOne } from '@triplit/react';
+import { consoleClient } from 'triplit/client.js';
 
-export function ProjectOptionsMenu({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
-  const [projectPrimaryKey, setSelectedProjectId] = useProjectState();
+export function ServerOptionsMenu({ children }: { children: React.ReactNode }) {
+  const [serverHost, setServerHost] = useServerState();
   const [infoModalIsOpen, setInfoModalIsOpen] = useState(false);
   const [selectModalIsOpen, setSelectModalIsOpen] = useState(false);
   const [importModalIsOpen, setImportModalIsOpen] = useState(false);
-  const [deleteProjectDialogIsOpen, setDeleteProjectDialogIsOpen] =
+  const [deleteServerDialogIsOpen, setDeleteServerDialogIsOpen] =
     useState(false);
-  const { result: project } = useProject(projectPrimaryKey);
-  if (!(project && projectPrimaryKey)) return children;
+  const { result: server } = useQueryOne(
+    consoleClient,
+    consoleClient.query('servers').where('id', '=', serverHost)
+  );
+  if (!(server && serverHost)) return children;
   return (
     <>
-      <DeleteProjectDialog
-        projectName={project?.displayName}
-        open={deleteProjectDialogIsOpen}
-        onOpenChange={setDeleteProjectDialogIsOpen}
+      <DeleteServerDialog
+        serverName={server?.displayName}
+        open={deleteServerDialogIsOpen}
+        onOpenChange={setDeleteServerDialogIsOpen}
       />
       <Modal open={selectModalIsOpen} onOpenChange={setSelectModalIsOpen}>
-        <ProjectSelector
-          onPressImportProject={() => {
+        <ServerSelector
+          handleImportServer={() => {
             setSelectModalIsOpen(false);
             setImportModalIsOpen(true);
           }}
-          onSelectProject={(projectId) => {
+          handleSelectServer={() => {
             setSelectModalIsOpen(false);
           }}
         />
@@ -50,20 +50,20 @@ export function ProjectOptionsMenu({
       <Modal
         open={infoModalIsOpen}
         onOpenChange={setInfoModalIsOpen}
-        title="Project info"
+        title="Server info"
       >
-        <ProjectInfoForm project={project} projectId={projectPrimaryKey} />
+        <ServerInfoForm serverId={serverHost} />
       </Modal>
       <Modal
         open={importModalIsOpen}
         onOpenChange={setImportModalIsOpen}
-        title="Import a project"
+        title="Connect to a server"
       >
-        <ImportProjectForm
+        <ImportServerForm
           onSubmit={async (values) => {
             try {
-              const projectId = await addProjectToConsole(values);
-              setSelectedProjectId(projectId);
+              const serverId = await addServerToConsole(values);
+              setServerHost(serverId);
               setImportModalIsOpen(false);
             } catch (e) {
               console.error(e);
@@ -77,23 +77,23 @@ export function ProjectOptionsMenu({
           <DropdownMenuGroup>
             <DropdownMenuItem onClick={() => setInfoModalIsOpen(true)}>
               <Info size={18} className="w-5 h-5 mr-3" />
-              Project info
+              Server info
             </DropdownMenuItem>
             <DropdownMenuItem onClick={() => setSelectModalIsOpen(true)}>
               <FolderOpen size={18} className="w-5 h-5 mr-3" />
-              Change project
+              Change servers
             </DropdownMenuItem>
             <DropdownMenuItem onClick={() => setImportModalIsOpen(true)}>
               <DownloadSimple size={18} className="w-5 h-5 mr-3" />
-              Import project
+              Connect to a server
             </DropdownMenuItem>
           </DropdownMenuGroup>
           <DropdownMenuItem
-            onClick={() => setDeleteProjectDialogIsOpen(true)}
+            onClick={() => setDeleteServerDialogIsOpen(true)}
             className={'text-red-500'}
           >
             <Trash size={18} className="w-5 h-5 mr-3" />
-            {`Delete ${project?.displayName}`}
+            {`Delete ${server?.displayName}`}
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>

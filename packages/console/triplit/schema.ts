@@ -1,46 +1,27 @@
-import { Schema as S } from '@triplit/client';
+import { Schema as S, type Entity } from '@triplit/client';
 
-export const schemaObject = {
-  filters: {
+export const schema = {
+  servers: {
     schema: S.Schema({
       id: S.Id(),
-      attribute: S.String(),
-      asType: S.String(),
-      operator: S.String(),
-      value: S.String(),
-
-      collectionName: S.String(),
-      projectId: S.String(),
-    }),
-  },
-
-  orders: {
-    schema: S.Schema({
-      id: S.Id(),
-      attribute: S.String({ nullable: true }),
-      direction: S.String({ nullable: true }),
-      collectionName: S.String(),
-      projectId: S.String(),
-      // fractionalIndex: S.String(),
-    }),
-  },
-
-  projects: {
-    schema: S.Schema({
-      id: S.Id(),
+      created_at: S.Date({ default: S.Default.now() }),
+      tokens: S.RelationMany('tokens', {
+        where: [['serverUrl', '=', '$1.url']],
+        order: [['created_at', 'ASC']],
+      }),
+      url: S.String(),
       displayName: S.String(),
-      projectId: S.Optional(S.String()),
-      token: S.String(),
-      server: S.String(),
-      secure: S.Boolean(),
     }),
   },
-  selections: {
+  tokens: {
     schema: S.Schema({
       id: S.Id(),
-      collectionName: S.String(),
-      projectId: S.String(),
+      created_at: S.Date({ default: S.Default.now() }),
+      value: S.String(),
+      name: S.String(),
+      serverUrl: S.String(),
     }),
   },
 };
-export type SchemaType = typeof schemaObject;
+
+export type Server = Entity<typeof schema, 'servers'>;

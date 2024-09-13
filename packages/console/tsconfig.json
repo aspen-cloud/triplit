@@ -22,7 +22,7 @@
     },
     "rootDirs": ["./@", "./src", "./triplit"]
   },
-  "include": ["src"],
+  "include": ["src", "triplit"],
   "references": [
     { "path": "./tsconfig.node.json" },
     {

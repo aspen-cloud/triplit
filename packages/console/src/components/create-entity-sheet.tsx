@@ -35,7 +35,7 @@ import {
 import { TriplitClient } from '@triplit/client';
 import { Plus } from 'lucide-react';
 import { nanoid } from 'nanoid';
-import { flattenSchema } from 'src/utils/flatten-schema.js';
+import { RoleFilters } from './role-filters.js';
 
 interface FormValues {
   id: string;
@@ -176,7 +176,7 @@ export function CreateEntitySheet({
 }: {
   collection: string;
   inferredAttributes?: string[];
-  collectionSchema?: Collection<any>;
+  collectionSchema?: CollectionDefinition;
   client: TriplitClient<any>;
 }) {
   const [open, setOpen] = useState(false);
@@ -449,6 +449,13 @@ export function CreateEntitySheet({
           <SheetDescription>
             Create a new entity in <Code>{collection}</Code>
           </SheetDescription>
+          {collectionSchema && collectionSchema.permissions && (
+            <RoleFilters
+              rule="insert"
+              permissions={collectionSchema.permissions}
+              client={client}
+            />
+          )}
         </SheetHeader>
         <form
           onSubmit={async (e) => {

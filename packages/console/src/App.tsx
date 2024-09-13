@@ -1,12 +1,12 @@
 import { useState } from 'react';
 import { Modal } from '@triplit/ui';
 import {
-  ImportProjectForm,
-  ProjectSelector,
+  ImportServerForm,
+  ServerSelector,
   FullScreenWrapper,
 } from './components';
 import { useNavigate } from 'react-router-dom';
-import { addProjectToConsole } from './utils/project.js';
+import { addServerToConsole } from './utils/server.js';
 
 function App() {
   const navigate = useNavigate();
@@ -14,8 +14,8 @@ function App() {
 
   return (
     <FullScreenWrapper>
-      <ProjectSelector
-        onPressImportProject={() => {
+      <ServerSelector
+        handleImportServer={() => {
           setImportModalIsOpen(true);
         }}
       />
@@ -26,10 +26,10 @@ function App() {
         }}
         title="Import a project"
       >
-        <ImportProjectForm
+        <ImportServerForm
           onSubmit={async (values) => {
             try {
-              const projectId = await addProjectToConsole(values);
+              const projectId = await addServerToConsole(values);
               navigate('/' + projectId);
               setImportModalIsOpen(false);
             } catch (e) {

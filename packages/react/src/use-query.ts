@@ -192,7 +192,7 @@ export function usePaginatedQuery<
     return () => {
       unsubscribe();
     };
-  }, [stringifiedQuery]);
+  }, [stringifiedQuery, client]);
 
   const nextPage = useCallback(() => {
     setFetchingPage(true);
@@ -304,7 +304,7 @@ export function useInfiniteQuery<
     return () => {
       unsubscribe();
     };
-  }, [stringifiedQuery]);
+  }, [stringifiedQuery, client]);
 
   const loadMore = useCallback(() => {
     setFetchingMore(true);

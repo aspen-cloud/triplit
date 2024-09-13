@@ -3,8 +3,9 @@ import ReactDOM from 'react-dom/client';
 import App from './App';
 import { createBrowserRouter, RouterProvider } from 'react-router-dom';
 import '../../ui/globals.css';
-import { ProjectViewerPage, loader } from './components/project-viewer.js';
+import { ServerViewerPage, loader } from './components/server-viewer.js';
 import { ThemeProvider } from '@triplit/ui';
+import { ClientProvider } from './components/client-context.js';
 
 const router = createBrowserRouter([
   {
@@ -12,9 +13,9 @@ const router = createBrowserRouter([
     element: <App />,
   },
   {
-    path: ':projectId',
+    path: ':serverHost',
     loader: loader,
-    element: <ProjectViewerPage />,
+    element: <ServerViewerPage />,
     // we have to disable revalidation because otherwise it's re-mounting
     // the component and re-running the loader whenever the query params change
     shouldRevalidate: ({ currentUrl, nextUrl }) =>
@@ -25,7 +26,9 @@ const router = createBrowserRouter([
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <ThemeProvider>
-      <RouterProvider router={router} />
+      <ClientProvider>
+        <RouterProvider router={router} />
+      </ClientProvider>
     </ThemeProvider>
   </React.StrictMode>
 );

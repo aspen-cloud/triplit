@@ -8,10 +8,15 @@ import {
   PopoverTrigger,
   Select,
 } from '@triplit/ui';
-import { typeFromJSON } from '../../../db/src/data-types/base';
-import { QueryWhere } from '../../../db/src/query';
 import { nanoid } from 'nanoid';
-import { CollectionDefinition } from '@triplit/db';
+import {
+  CollectionDefinition,
+  typeFromJSON,
+  type QueryWhere,
+  type WhereFilter,
+} from '@triplit/db';
+import { RoleFilters } from './role-filters.js';
+import { TriplitClient } from '@triplit/client';
 
 type FiltersPopoverProps = {
   collection: string;
@@ -19,6 +24,7 @@ type FiltersPopoverProps = {
   uniqueAttributes: Set<string>;
   collectionSchema?: CollectionDefinition;
   filters: QueryWhere<any, any>;
+  client: TriplitClient;
 };
 
 function mapFilterArraysToFilterObjects(
@@ -43,11 +49,10 @@ function mapFilterObjectsToFilterArrays(
     value: any;
   }[]
 ): QueryWhere<any, any> {
-  return filters.map(({ attribute, operator, value }) => [
-    attribute,
-    operator,
-    value,
-  ]);
+  return filters.map(
+    ({ attribute, operator, value }) =>
+      [attribute, operator, value] as WhereFilter<any, any>
+  );
 }
 
 export function FiltersPopover(props: FiltersPopoverProps) {
@@ -174,6 +179,13 @@ export function FiltersPopover(props: FiltersPopoverProps) {
           />
           <Button type="submit">Apply</Button>
         </form>
+        {collectionSchema?.permissions && (
+          <RoleFilters
+            permissions={collectionSchema?.permissions}
+            rule="read"
+            client={props.client}
+          />
+        )}
       </PopoverContent>
     </Popover>
   );

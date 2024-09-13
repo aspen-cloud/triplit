@@ -1,8 +1,10 @@
-import { schemaObject as DBConsoleSchemaObject } from './schema';
+import { schema } from './schema.js';
 import { TriplitClient } from '@triplit/client';
 
+const inBrowser = typeof window !== 'undefined';
+
 export const consoleClient = new TriplitClient({
-  schema: DBConsoleSchemaObject,
-  storage: 'memory',
+  schema,
   autoConnect: false,
+  storage: inBrowser ? 'indexeddb' : 'memory',
 });

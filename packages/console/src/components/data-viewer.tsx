@@ -66,7 +66,7 @@ export function DataViewer({
   >(null);
   const [selectedAttribute, setSelectedAttribute] = useState<string>('');
   const [selectedCell, setSelectedCell] = useState<string | null>(null);
-  const selectedCollection = query?.collection;
+  const selectedCollection = query.collection!;
   const [selectedEntities, setSelectedEntities] = useState<Set<string>>(
     new Set()
   );
@@ -180,6 +180,7 @@ export function DataViewer({
           <TriplitColumnHeader attribute="id">
             {selectedEntities && selectedEntities.size > 0 && (
               <DeleteEntitiesDialog
+                permissions={collectionSchema?.permissions}
                 entityIds={[...selectedEntities.keys()]}
                 collectionName={selectedCollection}
                 client={client}
@@ -291,6 +292,7 @@ export function DataViewer({
                 client={client}
                 value={row.getValue(attr)}
                 optional={isOptional}
+                permissions={collectionSchema?.permissions}
               />
             );
           },
@@ -461,6 +463,7 @@ export function DataViewer({
           onSubmit={(filters) => {
             setQuery({ where: filters });
           }}
+          client={client}
         />
         <OrderPopover
           uniqueAttributes={uniqueAttributes}

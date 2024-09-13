@@ -322,7 +322,13 @@ export class WritePermissionError extends TriplitError {
   ) {
     super(...args);
     this.name = 'WritePermissionError';
-    this.baseMessage = `Write to collection '${collection}' with id '${entityId}' is not permitted. Failed operation: ${operation}. Session roles: [${sessionRoles
+    this.baseMessage = `'${operation}' permission for the collection '${collection}' prevented the ${
+      operation === 'insert'
+        ? 'insertion'
+        : operation === 'delete'
+        ? 'deletion'
+        : 'update'
+    } of the entity with id '${entityId}'. The provided session roles were [${sessionRoles
       .map((m) => m.key)
       .join(', ')}].`;
     this.status = STATUS_CODES.Unauthorized;

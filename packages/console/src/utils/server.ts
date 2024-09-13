@@ -1,74 +1,77 @@
-import { triplesToSchema } from '@triplit/db';
-import { Project } from '../components';
+import { ImportServerFormValues } from 'src/components/import-server-form.js';
+import { JWTPayloadIsOfCorrectForm } from './remote-helpers.js';
+import { consoleClient } from 'triplit/client.js';
+import { TriplitClient } from '@triplit/client';
+import { DBTransaction } from '@triplit/db/src/db-transaction.js';
+import { schema } from 'triplit/schema.js';
 
-/**
- * Decode a JWT payload
- * https://stackoverflow.com/a/38552302
- * @param  {String} token The JWT
- * @return {Object}       The decoded payload
- */
-export function parseJWT(token: string) {
-  let base64Url = token.split('.')[1];
-  let base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-  let jsonPayload = decodeURIComponent(
-    atob(base64)
-      .split('')
-      .map(function (c) {
-        return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
-      })
-      .join('')
-  );
-  return JSON.parse(jsonPayload);
+export function addServiceToken(
+  clientTx: TriplitClient<typeof schema> | DBTransaction<typeof schema>,
+  serverUrl: string,
+  token: string
+) {
+  return clientTx.insert('tokens', {
+    id: 'service_' + serverUrl,
+    name: 'Service token',
+    value: token,
+    serverUrl,
+  });
 }
 
-export function JWTPayloadIsOfCorrectForm(token: string) {
+export async function addServerToConsole(formValues: ImportServerFormValues) {
+  const { displayName, serviceToken, serverUrl: server } = formValues;
   try {
-    const parsedPayload = parseJWT(token);
-    return (
-      Object.hasOwn(parsedPayload, 'x-triplit-token-type') &&
-      parsedPayload['x-triplit-token-type'] === 'secret'
-    );
-  } catch (e) {
-    console.error(e);
-    return false;
-  }
-}
+    const host = new URL(server).host;
 
-async function queryServer(route: string, project: Project) {
-  const { server, secure, token } = project;
-  try {
-    return await fetch(`http${secure ? 's' : ''}://${server}/${route}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        authorization: `Bearer ${token}`,
-      },
+    await consoleClient.transact(async (tx) => {
+      await Promise.all([
+        tx.insert('servers', {
+          displayName,
+          url: server,
+          id: host,
+        }),
+        addServiceToken(tx, server, serviceToken),
+      ]);
     });
+    return host;
   } catch (e) {
     console.error(e);
-    return { ok: false };
+    throw new Error(
+      "Failed to read token. Please make sure you've entered a valid token."
+    );
   }
 }
 
-export async function fetchSchema(project: Project) {
-  const response = await queryServer('schema', project);
-  if (response.ok) {
-    const { type, schemaTriples } = await response.json();
-    if (type === 'schema') {
-      return triplesToSchema(schemaTriples);
-    }
-  }
-  return undefined;
-}
+export const DEFAULT_HOST = 'localhost:6543';
+const DEFAULT_SERVER_NAME = 'dev-server';
+const DEFAULT_TOKEN =
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ4LXRyaXBsaXQtdG9rZW4tdHlwZSI6InNlY3JldCIsIngtdHJpcGxpdC1wcm9qZWN0LWlkIjoibG9jYWwtcHJvamVjdC1pZCJ9.8Z76XXPc9esdlZb2b7NDC7IVajNXKc4eVcPsO7Ve0ug';
 
-export type CollectionStats = { collection: string; numEntities: number };
+export async function initializeFromUrl() {
+  if (typeof window === 'undefined') return null;
+  let token,
+    server,
+    projName = null;
+  const url = new URL(window.location.href);
+  const isLocalRoute = url.pathname === '/local';
 
-export async function fetchCollectionStats(project: Project) {
-  const response = await queryServer('stats', project);
-  if (response.ok) {
-    return (await response.json()) as CollectionStats[];
+  if (isLocalRoute) {
+    token = DEFAULT_TOKEN;
+    server = 'http://' + DEFAULT_HOST;
+    projName = DEFAULT_SERVER_NAME;
   } else {
-    console.warn(`Could not fetch collection stats`);
-    return [];
+    const params = new URLSearchParams(url.search);
+    token = params.get('token');
+    if (!(token && JWTPayloadIsOfCorrectForm(token))) return null;
+    server = params.get('server');
+    if (!server) return null;
+    projName = params.get('projName');
   }
+  const serverHost = await addServerToConsole({
+    serverUrl: server,
+    serviceToken: token,
+    displayName: projName ?? 'triplit-project',
+  });
+
+  return serverHost;
 }

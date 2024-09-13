@@ -11,27 +11,27 @@ import {
 import { Code } from '@triplit/ui';
 import { consoleClient } from 'triplit/client';
 import { ComponentProps } from 'react';
-import { useProjectState } from './project-provider';
+import { useServerState } from './server-provider';
 
-type DeleteProjectDialogProps = {
-  projectName: string;
+type DeleteServerDialogProps = {
+  serverName: string;
 } & ComponentProps<typeof AlertDialog>;
 
-async function onDeleteProject(id: string) {
+async function onDeleteServer(id: string) {
   try {
-    await consoleClient.delete('projects', id);
+    await consoleClient.delete('servers', id);
   } catch (e) {}
 }
 
-export function DeleteProjectDialog(props: DeleteProjectDialogProps) {
-  const [projectId, setProjectId] = useProjectState();
-  const { projectName, onOpenChange, ...dialogProps } = props;
+export function DeleteServerDialog(props: DeleteServerDialogProps) {
+  const [serverId, setServerId] = useServerState();
+  const { serverName, onOpenChange, ...dialogProps } = props;
   return (
     <AlertDialog onOpenChange={onOpenChange} {...dialogProps}>
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>
-            Are you sure you want to delete <Code>{projectName}</Code>?
+            Are you sure you want to delete <Code>{serverName}</Code>?
           </AlertDialogTitle>
           <AlertDialogDescription>
             This action will only delete the project from the console, it will
@@ -43,8 +43,8 @@ export function DeleteProjectDialog(props: DeleteProjectDialogProps) {
           <AlertDialogCancel>Cancel</AlertDialogCancel>
           <AlertDialogAction
             onClick={async () => {
-              projectId && (await onDeleteProject(projectId));
-              setProjectId('');
+              serverId && (await onDeleteServer(serverId));
+              setServerId('');
             }}
           >
             Delete

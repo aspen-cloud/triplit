@@ -8,7 +8,7 @@ export default defineConfig({
   plugins: [react(), tsconfigPaths(), dts({ rollupTypes: true })],
   build: {
     lib: {
-      entry: 'src/components/project-viewer.tsx',
+      entry: 'src/components/index.ts',
       formats: ['es'],
     },
     rollupOptions: {

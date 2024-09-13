@@ -29,6 +29,8 @@ export type {
   DBFetchOptions,
   TransactOptions,
 } from './db.js';
+
+export type { PermissionOperations } from './schema/types/models.js';
 export { ChangeTracker, createUpdateProxy } from './db-transaction.js';
 export type { DBTransaction } from './db-transaction.js';
 export {
@@ -40,6 +42,9 @@ export {
   // TODO
   triplesToEntities as constructEntities,
   compareCursors,
+  isFilterGroup,
+  isFilterStatement,
+  isBooleanFilter,
 } from './query.js';
 export {
   QUERY_INPUT_TRANSFORMERS,
@@ -52,6 +57,8 @@ export {
   logSchemaChangeViolations,
   getVariableComponents,
   isValueVariable,
+  replaceVariablesInFilterStatements,
+  replaceVariable,
 } from './db-helpers.js';
 export type {
   TripleRow,
@@ -69,6 +76,7 @@ export {
 export {
   getRolesFromSession,
   normalizeSessionVars,
+  getCollectionPermissions,
 } from './schema/permissions.js';
 export { Schema } from './schema/builder.js';
 export { diffSchemas, getSchemaDiffIssues } from './schema/diff.js';
@@ -104,5 +112,6 @@ export type { IsAny } from './utility-types.js';
 export * from './errors.js';
 // See ./data-types/index.ts for why this is necessary
 export type * from './data-types/index.js';
+export { typeFromJSON } from './data-types/base.js';
 export * from './schema/export/index.js';
 export * from './utils/generator.js';

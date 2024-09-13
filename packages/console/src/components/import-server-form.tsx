@@ -1,42 +1,45 @@
 import { Button, PasswordInput, Input, FormField } from '@triplit/ui';
 import { useForm } from '@mantine/form';
 import { useCallback, useState } from 'react';
-import { JWTPayloadIsOfCorrectForm } from '../utils/server';
+import {
+  JWTPayloadIsOfCorrectForm,
+  isServiceToken,
+} from '../utils/remote-helpers';
 
-export interface ImportProjectFormValues {
-  token: string;
+export interface ImportServerFormValues {
+  serviceToken: string;
   displayName: string;
-  server: string;
+  serverUrl: string;
 }
 
-export function ImportProjectForm({
+export function ImportServerForm({
   onSubmit,
-  projectHint,
+  serverHint,
 }: {
-  onSubmit: (values: ImportProjectFormValues) => void;
-  projectHint?: ImportProjectFormValues;
+  onSubmit: (values: ImportServerFormValues) => void;
+  serverHint?: ImportServerFormValues;
 }) {
   const {
-    token: tokenHint,
-    server: serverHint,
+    serviceToken: tokenHint,
+    serverUrl: serverUrlHint,
     displayName: displayNameHint,
-  } = projectHint ?? {};
+  } = serverHint ?? {};
 
   const [imported, setImported] = useState(
-    tokenHint && JWTPayloadIsOfCorrectForm(tokenHint)
+    tokenHint && isServiceToken(tokenHint)
   );
 
-  const form = useForm<ImportProjectFormValues>({
+  const form = useForm<ImportServerFormValues>({
     initialValues: {
-      token: tokenHint ?? '',
+      serviceToken: tokenHint ?? '',
       displayName: displayNameHint ?? '',
-      server: serverHint ?? '',
+      serverUrl: serverUrlHint ?? '',
     },
 
     validate: {
-      token: (value) =>
-        !JWTPayloadIsOfCorrectForm(value)
-          ? 'Service token has malformed metadata'
+      serviceToken: (value) =>
+        !isServiceToken(value)
+          ? 'Provided token is not a service token, please verify that it has the { "x-triplit-token-type" : "secret" } claim set.'
           : null,
 
       displayName: (value) =>
@@ -44,24 +47,25 @@ export function ImportProjectForm({
     },
     initialErrors: {
       token:
-        tokenHint && !JWTPayloadIsOfCorrectForm(tokenHint)
-          ? 'Service token has malformed metadata, please check that it is correct'
+        tokenHint && !isServiceToken(tokenHint)
+          ? 'Provided token is not a service token, please verify that it has the { "x-triplit-token-type" : "secret" } claim set.'
           : null,
     },
   });
+  console.log({ values: form.values, errors: form.errors });
 
   const importSecretKey = useCallback(() => {
     try {
-      const { hasError, error } = form.validateField('token');
+      const { hasError, error } = form.validateField('serviceToken');
       if (hasError) {
-        form.setFieldError('token', error);
+        form.setFieldError('serviceToken', error);
         return;
       }
       setImported(true);
     } catch (e) {
       form.setFieldError(
-        'token',
-        'Unabled to parse Service Token, please check that it is correct'
+        'serviceToken',
+        'Provided token is not a service token, please verify that it has the { "x-triplit-token-type" : "secret" } claim set.'
       );
     }
   }, [form]);
@@ -71,17 +75,17 @@ export function ImportProjectForm({
       <FormField
         label="Triplit Service Token"
         description="The Service Token for your Triplit project can be found at https://triplit.dev/dashboard"
-        error={form.getInputProps('token').error}
+        error={form.getInputProps('serviceToken').error}
       >
         <PasswordInput
           autoComplete="off"
           placeholder="*****"
-          {...form.getInputProps('token')}
+          {...form.getInputProps('serviceToken')}
         />
       </FormField>
       {!imported && (
         <Button
-          disabled={form.values.token.length === 0}
+          disabled={form.values.serviceToken.length === 0}
           onClick={importSecretKey}
         >
           Import
@@ -90,13 +94,13 @@ export function ImportProjectForm({
       {imported && (
         <>
           <FormField
-            label="Sync server address"
+            label="Database server"
             description="The URL of the server to sync with."
-            error={form.getInputProps('server').error}
+            error={form.getInputProps('serverUrl').error}
           >
             <Input
-              placeholder="project-id.localhost:8787"
-              {...form.getInputProps('server')}
+              placeholder="https://project-id.triplit:io"
+              {...form.getInputProps('serverUrl')}
             />
           </FormField>
           <FormField
@@ -105,7 +109,7 @@ export function ImportProjectForm({
             error={form.getInputProps('displayName').error}
           >
             <Input
-              placeholder="local-staging"
+              placeholder="prod-todos"
               {...form.getInputProps('displayName')}
             />
           </FormField>
