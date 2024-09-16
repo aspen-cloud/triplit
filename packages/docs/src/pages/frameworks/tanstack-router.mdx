@@ -50,7 +50,9 @@ triplitRoute(triplitClient: TriplitClient, query: ClientQuery, Component: ReactC
 
 - **`triplitClient`**: The instance of the Triplit client, which is used to query the data from the Triplit API.
 - **`query`**: A Client Query or function that returns a query to be run using the `triplitClient`. The function receives an object containing the `params` for the route.
-- **`Component`**: A React component that renders the data fetched by the `triplitClient`. The component receives a prop named `results`, which contains the results of the query.
+- **`Component`**: A React component that renders the data fetched by the `triplitClient`. The component receives the following props:
+  - `results`: An array containing the results of the query
+  - `error`: An error if the query's subscription has an error
 
 ### Returns
 
@@ -59,6 +61,7 @@ triplitRoute(triplitClient: TriplitClient, query: ClientQuery, Component: ReactC
 ### Example Usage
 
 Here’s an example of how to use the `triplitRoute` function with the Tanstack Router to define a route for displaying contact details:
+
 ```tsx filename="src/routes/$contactId.tsx"
 import { createFileRoute } from '@tanstack/react-router';
 import { triplitRoute } from '@triplit/tanstack';
@@ -87,4 +90,28 @@ export const Route = createFileRoute('/$contactId')(
     }
   )
 );
+```
+
+### Extending the Route
+
+The `triplitRoute` funciton can be extended and overriden with additional Tanstack configuration options by spreading the returned route configuration object.
+
+```tsx filename="src/routes/$contactId.tsx"
+import { createFileRoute } from '@tanstack/react-router';
+import { triplitRoute } from '@triplit/tanstack';
+import { triplitClient } from '../triplit.js';
+
+export const Route = createFileRoute('/$contactId')({
+  ...triplitRoute(triplitClient, ({ params }) =>
+    triplitClient
+      .query('contacts')
+      .where('id', '=', params.contactId)
+      .limit(1)
+      .build()
+  ),
+  // Additional properties can be added here
+  onError: (error) => {
+    console.error('Error fetching contact:', error);
+  },
+});
 ```

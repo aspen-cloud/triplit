@@ -42,6 +42,7 @@ export function triplitRoute<
       ) => Q),
   Component: ComponentType<{
     results: QueryResult<M, Q>[];
+    error: any;
     updateQuery: (newQuery: Q) => void;
   }>
 ): Parameters<
@@ -87,7 +88,13 @@ export function triplitRoute<
         const latestResults = resp.results ?? initialResults;
         return [...(latestResults?.values() ?? [])];
       }, [initialResults, resp?.results]);
-      return <Component results={results} updateQuery={updateQuery} />;
+      return (
+        <Component
+          results={results}
+          error={resp.error}
+          updateQuery={updateQuery}
+        />
+      );
     },
   };
 }
