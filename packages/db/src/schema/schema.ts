@@ -5,12 +5,9 @@ import type { Attribute, TripleRow } from '../triple-store-utils.js';
 import { objectToTuples, timestampedObjectToPlainObject } from '../utils.js';
 import { constructEntity } from '../query.js';
 import { appendCollectionToId } from '../db-helpers.js';
-import { typeFromJSON, DataType } from '../data-types/base.js';
-import {
-  CollectionsDefinition,
-  SchemaDefinition,
-} from '../data-types/serialization.js';
-import { BooleanType } from '../data-types/boolean.js';
+import { DataType } from '../data-types/types/index.js';
+import { typeFromJSON } from './serialization.js';
+import { BooleanType } from '../data-types/definitions/boolean.js';
 import {
   DBTypeFromModel,
   JSTypeFromModel,
@@ -19,6 +16,8 @@ import {
   SchemaConfig,
   Collection,
   StoreSchema,
+  CollectionsDefinition,
+  SchemaDefinition,
 } from './types/index.js';
 
 // We infer TObject as a return type of some funcitons and this causes issues with consuming packages

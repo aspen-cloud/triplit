@@ -1,5 +1,5 @@
-import { calcDefaultValue, userTypeOptionsAreValid } from './base.js';
-import { UserTypeOptions } from './serialization.js';
+import { calcDefaultValue, userTypeOptionsAreValid } from '../configuration.js';
+import { UserTypeOptions } from '../types/index.js';
 import {
   TypeWithOptions,
   ValueInterface,
@@ -9,7 +9,7 @@ import {
   InvalidTypeOptionsError,
   DBSerializationError,
   JSONValueParseError,
-} from '../errors.js';
+} from '../../errors.js';
 
 const BOOLEAN_OPERATORS = ['=', '!=', 'isDefined'] as const;
 type BooleanOperators = typeof BOOLEAN_OPERATORS;

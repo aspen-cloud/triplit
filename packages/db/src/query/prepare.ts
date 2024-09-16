@@ -4,7 +4,7 @@ import {
   isQueryInclusionShorthand,
   isQueryInclusionSubquery,
 } from '../collection-query.js';
-import { DataType } from '../data-types/base.js';
+import { DataType } from '../data-types/types/index.js';
 import { appendCollectionToId, isValueVariable } from '../db-helpers.js';
 import { CollectionFromModels, CollectionNameFromModels } from '../db.js';
 import {

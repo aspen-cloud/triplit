@@ -26,7 +26,7 @@ import {
   PossibleDataViolations,
 } from './schema/diff.js';
 import { TripleStoreApi } from './triple-store.js';
-import { VALUE_TYPE_KEYS } from './data-types/serialization.js';
+import { VALUE_TYPE_KEYS } from './data-types/constants.js';
 import DB, { CollectionFromModels, CollectionNameFromModels } from './db.js';
 import { DBTransaction } from './db-transaction.js';
 import { Attribute, TupleValue } from './triple-store-utils.js';

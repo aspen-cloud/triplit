@@ -1,5 +1,6 @@
-import { DataType, Optional, ValueType } from '../../data-types/base.js';
-import { TypeInterface } from '../../data-types/type.js';
+import { ValueType } from '../../data-types/types/index.js';
+import { TypeInterface } from '../../data-types/definitions/type.js';
+import { Optional } from '../../data-types/types/index.js';
 import { IsUnknownOrUndefined, Not } from '../../utility-types.js';
 
 /**

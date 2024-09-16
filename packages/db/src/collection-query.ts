@@ -16,6 +16,7 @@ import {
   QueryInclusion,
   RefSubquery,
   SchemaQueries,
+  Operator,
 } from './query/types/index.js';
 import {
   isBooleanFilter,
@@ -48,7 +49,7 @@ import {
   createVariable,
   fetchResultToJS,
 } from './db-helpers.js';
-import { DataType, Operator } from './data-types/base.js';
+import { ExtractTimestampedType, DataType } from './data-types/types/index.js';
 import { VariableAwareCache } from './variable-aware-cache.js';
 import { isTimestampedEntityDeleted } from './entity.js';
 import {
@@ -57,8 +58,7 @@ import {
   SystemVariables,
 } from './db.js';
 import type DB from './db.js';
-import { QueryType } from './data-types/query.js';
-import { ExtractTimestampedType } from './data-types/type.js';
+import { QueryType } from './data-types/definitions/query.js';
 import {
   RangeContraints,
   TripleRow,

@@ -1,11 +1,6 @@
-import { TNumber, TString, TBoolean } from '@sinclair/typebox';
-import { Operator } from './base.js';
-import { UserTypeOptions, ValueTypeKeys } from './serialization.js';
+import { UserTypeOptions, ValueTypeKeys } from '../types/index.js';
 import { TypeInterface } from './type.js';
-
-export type ValueSchemaType = TString | TNumber | TBoolean;
-
-export type SerializedValueOverrides = 'date';
+import { Operator } from '../../query/types/index.js';
 
 export type TypeWithOptions<
   T,

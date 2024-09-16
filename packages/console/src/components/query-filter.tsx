@@ -1,13 +1,14 @@
 import { AttributeDefinition, Model } from '@triplit/db';
 import { useCallback } from 'react';
 import { Select, Input, FormField, CloseButton } from '@triplit/ui';
-import { Operator, typeFromJSON } from '../../../db/src/data-types/base';
 import {
+  CollectionDefinition,
   ALL_TYPES,
   CollectionTypeKeys,
   ValueTypeKeys,
-} from '../../../db/src/data-types/serialization';
-import { CollectionDefinition } from '@triplit/db';
+  Operator,
+  typeFromJSON,
+} from '@triplit/db';
 
 export function QueryFilter({
   filter,

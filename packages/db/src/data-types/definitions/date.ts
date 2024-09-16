@@ -1,5 +1,5 @@
-import { UserTypeOptions } from './serialization.js';
-import { calcDefaultValue, userTypeOptionsAreValid } from './base.js';
+import { UserTypeOptions } from '../types/index.js';
+import { calcDefaultValue, userTypeOptionsAreValid } from '../configuration.js';
 import {
   TypeWithOptions,
   ValueInterface,
@@ -9,8 +9,8 @@ import {
   InvalidTypeOptionsError,
   DBSerializationError,
   JSONValueParseError,
-} from '../errors.js';
-import { isDateTime } from '../utils/date.js';
+} from '../../errors.js';
+import { isDateTime } from '../../utils/date.js';
 
 const DATE_OPERATORS = ['=', '!=', '<', '>', '<=', '>=', 'isDefined'] as const;
 type DateOperators = typeof DATE_OPERATORS;

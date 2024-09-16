@@ -5,35 +5,34 @@ import {
   DBSerializationError,
   JSONValueParseError,
   JSToJSONValueParseError,
-} from '../errors.js';
-import { TimestampType, ValueType } from './base.js';
+} from '../../errors.js';
 import { CollectionInterface } from './collection.js';
 import {
   CollectionAttributeDefinition,
-  UserTypeOptions,
-  VALUE_TYPE_KEYS,
   ValueAttributeDefinition,
-} from './serialization.js';
-import { ExtractJSType } from './type.js';
-import { ChangeTracker } from '../db-transaction.js';
-import { TypeWithOptions } from './value.js';
+} from '../../schema/types/index.js';
+import { ChangeTracker } from '../../db-transaction.js';
+import { TypeWithOptions, ValueInterface } from './value.js';
+import { ExtractJSType, UserTypeOptions } from '../types/index.js';
+import { Timestamp } from '../../timestamp.js';
+import { VALUE_TYPE_KEYS } from '../constants.js';
 
 const SET_OPERATORS = ['=', '!=', 'has', '!has', 'isDefined'] as const;
 type SetOperators = typeof SET_OPERATORS;
 
 export type SetType<
-  Items extends ValueType<any>,
+  Items extends ValueInterface,
   TypeOptions extends UserTypeOptions = {}
 > = CollectionInterface<
   'set',
   TypeWithOptions<Set<ExtractJSType<Items>>, TypeOptions>,
   Record<string, boolean>,
-  Record<string, [boolean, TimestampType]>, // TODO: should be based on the type of the key
+  Record<string, [boolean, Timestamp]>, // TODO: should be based on the type of the key
   SetOperators
 >;
 
 export function SetType<
-  Items extends ValueType<any>,
+  Items extends ValueInterface,
   TypeOptions extends UserTypeOptions = {}
 >(
   items: Items,
@@ -136,7 +135,7 @@ class SetUpdateProxy<T> {
   constructor(
     public changeTracker: ChangeTracker,
     private prefix: string,
-    public schema: SetType<ValueType<any>, any>
+    public schema: SetType<ValueInterface, any>
   ) {}
   add(value: T) {
     const serializedValue = this.schema.items.convertInputToDBValue(
@@ -194,7 +193,7 @@ function getSetFromChangeTracker(
 export function createSetProxy<T>(
   changeTracker: ChangeTracker,
   propPointer: string,
-  schema: SetType<ValueType<any>, any>
+  schema: SetType<ValueInterface, any>
 ): Set<T> {
   const stringSet = getSetFromChangeTracker(changeTracker, propPointer);
   const set = new Set(

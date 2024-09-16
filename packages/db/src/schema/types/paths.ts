@@ -1,5 +1,5 @@
-import { QueryType } from '../../data-types/query.js';
-import { RecordType } from '../../data-types/record.js';
+import { QueryType } from '../../data-types/definitions/query.js';
+import { RecordType } from '../../data-types/definitions/record.js';
 import { CollectionNameFromModels, ModelFromModels } from '../../db.js';
 import { CollectionQuery } from '../../query/types/index.js';
 import { PrefixedUnion } from '../../utility-types.js';

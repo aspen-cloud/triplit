@@ -1,4 +1,3 @@
-import { TimestampType } from './data-types/base.js';
 import { UnserializableValueError } from './errors.js';
 import { Timestamp } from './timestamp.js';
 import { Attribute, EAV, TupleValue } from './triple-store-utils.js';
@@ -148,7 +147,7 @@ export type Timestamped<T> = T extends { [key: string]: any }
 export type UnTimestampedObject<T extends TimestampedObject> = {
   [k in keyof T]: T[k] extends TimestampedObject
     ? UnTimestampedObject<T[k]>
-    : T[k] extends [value: infer V, timestamp: TimestampType]
+    : T[k] extends [value: infer V, timestamp: Timestamp]
     ? V
     : never;
 };

@@ -3,6 +3,13 @@ import {
   Schema,
   CollectionAttributeDefinition,
   CollectionDefinition,
+  ALL_TYPES,
+  AllTypes,
+  RecordAttributeDefinition,
+  UserTypeOptions,
+  VALUE_TYPE_KEYS,
+  ValueAttributeDefinition,
+  ValueTypeKeys,
 } from '@triplit/db';
 import {
   Button,
@@ -23,15 +30,6 @@ import { ComponentProps, useEffect, useState, useCallback } from 'react';
 import { TriplitClient } from '@triplit/client';
 
 import { atom, useAtom } from 'jotai';
-import {
-  ALL_TYPES,
-  AllTypes,
-  RecordAttributeDefinition,
-  UserTypeOptions,
-  VALUE_TYPE_KEYS,
-  ValueAttributeDefinition,
-  ValueTypeKeys,
-} from '../../../db/src/data-types/serialization';
 import { nanoid } from 'nanoid';
 import {
   addAttribute,

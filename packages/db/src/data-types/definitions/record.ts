@@ -2,17 +2,15 @@ import {
   DBSerializationError,
   JSONValueParseError,
   TriplitError,
-} from '../errors.js';
+} from '../../errors.js';
 import {
   IsPropertyOptional,
   IsPropertyRequired,
-} from '../schema/types/properties.js';
-import { Optional } from './base.js';
-import {
   AttributeDefinition,
   RecordAttributeDefinition,
-} from './serialization.js';
-import { ExtractJSType, ExtractDBType, TypeInterface } from './type.js';
+} from '../../schema/types/index.js';
+import { TypeInterface } from './type.js';
+import { ExtractJSType, ExtractDBType, Optional } from '../types/index.js';
 
 type RecordJSType<
   Properties extends { [k: string]: TypeInterface | Optional<TypeInterface> }

@@ -12,7 +12,9 @@ import {
   Models,
   StoreSchema,
   PermissionWriteOperations,
+  SchemaDefinition,
 } from './schema/types/index.js';
+import { typeFromJSON } from './schema/serialization.js';
 import { nanoid } from 'nanoid';
 import CollectionQueryBuilder, {
   fetch,
@@ -21,7 +23,6 @@ import CollectionQueryBuilder, {
   convertEntityToJS,
 } from './collection-query.js';
 import {
-  DBSerializationError,
   EntityNotFoundError,
   InvalidCollectionNameError,
   InvalidInsertDocumentError,
@@ -69,9 +70,7 @@ import {
   triplesToEntities,
 } from './query.js';
 import { dbDocumentToTuples, timestampedObjectToPlainObject } from './utils.js';
-import { typeFromJSON } from './data-types/base.js';
-import { SchemaDefinition } from './data-types/serialization.js';
-import { createSetProxy } from './data-types/set.js';
+import { createSetProxy } from './data-types/definitions/set.js';
 import {
   EntityId,
   TripleStoreBeforeInsertHook,
@@ -83,7 +82,7 @@ import {
   TripleStoreAfterCommitHook,
 } from './triple-store-utils.js';
 import { TripleStoreApi } from './triple-store.js';
-import { RecordType } from './data-types/record.js';
+import { RecordType } from './data-types/definitions/record.js';
 import { Logger } from '@triplit/types/logger';
 import {
   CollectionQuery,

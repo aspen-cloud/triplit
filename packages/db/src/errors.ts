@@ -1,7 +1,7 @@
 import {
   COLLECTION_TYPE_KEYS,
   VALUE_TYPE_KEYS,
-} from './data-types/serialization.js';
+} from './data-types/constants.js';
 import { SessionRole } from './schema/permissions.js';
 import { Models } from './schema/types/index.js';
 

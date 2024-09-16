@@ -21,7 +21,6 @@ import { DeleteAttributeDialog } from './delete-attribute-dialog';
 import { atom, useAtom } from 'jotai';
 import { FiltersPopover } from './filters-popover';
 import { OrderPopover } from './order-popover';
-import { SchemaDefinition } from '../../../db/src/data-types/serialization';
 import { DeleteEntitiesDialog } from './delete-entities-dialog.js';
 import { CollectionMenu } from './collection-menu.js';
 import { DeleteCollectionDialog } from './delete-collection-dialog.js';
@@ -30,6 +29,7 @@ import {
   TriplitError,
   getVariableComponents,
   isValueVariable,
+  SchemaDefinition,
 } from '@triplit/db';
 import { deleteAttribute } from 'src/utils/schema.js';
 import { useToast } from 'src/hooks/useToast.js';

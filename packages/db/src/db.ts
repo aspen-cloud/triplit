@@ -5,6 +5,7 @@ import {
   Models,
   InsertTypeFromModel,
   StoreSchema,
+  AttributeDefinition,
 } from './schema/types/index.js';
 import { AsyncTupleStorageApi, TupleStorageApi } from '@triplit/tuple-database';
 import CollectionQueryBuilder, {
@@ -32,11 +33,7 @@ import {
   logSchemaChangeViolations,
 } from './db-helpers.js';
 import { VariableAwareCache } from './variable-aware-cache.js';
-
-import {
-  AttributeDefinition,
-  UserTypeOptions,
-} from './data-types/serialization.js';
+import { UserTypeOptions } from './data-types/types/index.js';
 import { copyHooks, prefixVariables, triplesToObject } from './utils.js';
 import { EAV, indexToTriple, TripleRow } from './triple-store-utils.js';
 import { TripleStore } from './triple-store.js';

@@ -1,12 +1,8 @@
-import { Operator } from '../../data-types/base.js';
-import { QueryType } from '../../data-types/query.js';
-import { ExtractOperators, ExtractValueInputs } from '../../data-types/type.js';
+import { QueryType } from '../../data-types/definitions/query.js';
 import { CollectionNameFromModels, ModelFromModels } from '../../db.js';
 import {
-  ExtractTypeFromRecord,
   ModelPaths,
   Models,
-  Path,
   RelationAttributes,
   RelationPaths,
   RelationshipCollectionName,
@@ -459,3 +455,18 @@ export type MergeQueryInclusion<
     : NonNullable<Inc['select']>[number],
   ParseInclusions<M, CN, NonNullable<Coalesce<Inc['include'], Q['include']>>>
 >;
+
+export type Operator =
+  | '='
+  | '<'
+  | '>'
+  | '<='
+  | '>='
+  | '!='
+  | 'like'
+  | 'nlike'
+  | 'in'
+  | 'nin'
+  | 'has'
+  | '!has'
+  | 'isDefined';

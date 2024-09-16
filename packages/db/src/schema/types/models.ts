@@ -1,11 +1,10 @@
-import { DataType } from '../../data-types/base.js';
-import { QueryType } from '../../data-types/query.js';
-import { RecordProps, RecordType } from '../../data-types/record.js';
+import { QueryType } from '../../data-types/definitions/query.js';
 import {
-  ExtractDBType,
-  ExtractJSType,
-  TypeInterface,
-} from '../../data-types/type.js';
+  RecordProps,
+  RecordType,
+} from '../../data-types/definitions/record.js';
+import { TypeInterface } from '../../data-types/definitions/type.js';
+import { ExtractDBType, ExtractJSType } from '../../data-types/types/index.js';
 import {
   CollectionNameFromModels,
   CollectionRules,

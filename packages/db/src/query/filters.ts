@@ -3,8 +3,6 @@ import {
   FetchFromStorageOptions,
   loadSubquery,
 } from '../collection-query.js';
-import { Operator } from '../data-types/base.js';
-import DB from '../db.js';
 import { InvalidFilterError, QueryNotPreparedError } from '../errors.js';
 import {
   EntityData,
@@ -25,6 +23,7 @@ import {
   SubQueryFilter,
   WhereFilter,
   CollectionQuery,
+  Operator,
 } from './types/index.js';
 
 /**

@@ -1,14 +1,10 @@
 import {
+  Collection,
+  Models,
+  StoreSchema,
   CollectionDefinition,
   CollectionsDefinition,
   SchemaDefinition,
-} from '../../../data-types/serialization.js';
-import {
-  Collection,
-  CollectionPermissions,
-  Models,
-  RolePermissions,
-  StoreSchema,
 } from '../../types/index.js';
 
 export function schemaToJSON(schema: StoreSchema<Models>): SchemaDefinition;

@@ -1,5 +1,5 @@
-import { calcDefaultValue, userTypeOptionsAreValid } from './base.js';
-import { UserTypeOptions, ValueAttributeDefinition } from './serialization.js';
+import { calcDefaultValue, userTypeOptionsAreValid } from '../configuration.js';
+import { UserTypeOptions } from '../types/index.js';
 import {
   TypeWithOptions,
   ValueInterface,
@@ -9,7 +9,7 @@ import {
   InvalidTypeOptionsError,
   DBSerializationError,
   JSONValueParseError,
-} from '../errors.js';
+} from '../../errors.js';
 
 const NUMBER_OPERATORS = [
   '=',
@@ -43,7 +43,7 @@ export function NumberType<TypeOptions extends UserTypeOptions = {}>(
     supportedOperations: NUMBER_OPERATORS,
     context: {},
     options,
-    toJSON(): ValueAttributeDefinition {
+    toJSON() {
       return { type: this.type, options: this.options };
     },
     convertInputToDBValue(val) {

@@ -81,16 +81,9 @@ export {
 export { Schema } from './schema/builder.js';
 export { diffSchemas, getSchemaDiffIssues } from './schema/diff.js';
 export type { TObject } from './schema/schema.js';
+export { typeFromJSON } from './schema/serialization.js';
 export * from './schema/types/index.js';
-export type {
-  AttributeDefinition,
-  CollectionAttributeDefinition,
-  CollectionDefinition,
-  CollectionsDefinition,
-  QueryAttributeDefinition,
-  UserTypeOptions,
-  SchemaDefinition as SchemaJSON,
-} from './data-types/serialization.js';
+export type { SchemaDefinition as SchemaJSON } from './schema/types/index.js';
 export { timestampCompare } from './timestamp.js';
 export type { Timestamp } from './timestamp.js';
 export { DurableClock } from './clocks/durable-clock.js';
@@ -111,7 +104,8 @@ export type { TimestampedObject, UnTimestampedObject } from './utils.js';
 export type { IsAny } from './utility-types.js';
 export * from './errors.js';
 // See ./data-types/index.ts for why this is necessary
-export type * from './data-types/index.js';
-export { typeFromJSON } from './data-types/base.js';
+export * from './data-types/index.js';
+export * from './data-types/types/index.js';
+export * from './data-types/constants.js';
 export * from './schema/export/index.js';
 export * from './utils/generator.js';

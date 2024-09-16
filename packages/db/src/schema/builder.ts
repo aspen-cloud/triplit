@@ -1,14 +1,14 @@
 import type { CollectionNameFromModels } from '../db.js';
-import { StringType } from '../data-types/string.js';
-import { NumberType } from '../data-types/number.js';
-import { BooleanType } from '../data-types/boolean.js';
-import { DateType } from '../data-types/date.js';
-import { RecordType } from '../data-types/record.js';
-import { SetType } from '../data-types/set.js';
-import { QueryType, SubQuery } from '../data-types/query.js';
+import { StringType } from '../data-types/definitions/string.js';
+import { NumberType } from '../data-types/definitions/number.js';
+import { BooleanType } from '../data-types/definitions/boolean.js';
+import { DateType } from '../data-types/definitions/date.js';
+import { RecordType } from '../data-types/definitions/record.js';
+import { SetType } from '../data-types/definitions/set.js';
+import { QueryType, SubQuery } from '../data-types/definitions/query.js';
 import type { Models, SchemaConfig } from './types/models.js';
-import { DataType, Optional } from '../data-types/base.js';
-import { TypeInterface } from '../data-types/type.js';
+import { Optional } from '../data-types/types/index.js';
+import { TypeInterface } from '../data-types/definitions/type.js';
 
 // NOTE: when adding new return types they should be exported in the index.ts file
 // https://github.com/microsoft/TypeScript/issues/42873
