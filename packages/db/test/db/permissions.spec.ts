@@ -99,6 +99,9 @@ const messagingSchema = {
             // non-sense rule just to test that it runs
             filter: [['text', '!=', 'disallowed']],
           },
+          delete: {
+            filter: [['author.user_id', '=', '$role.user_id']],
+          },
         },
         admin: {
           read: {
@@ -740,11 +743,15 @@ describe('Delete', () => {
     const adminToken = {
       role: 'admin',
     };
+    const user1Token = {
+      role: 'user',
+      user_id: 'user-1',
+    };
     const user3Token = {
       role: 'user',
       user_id: 'user-3',
     };
-
+    const user1DB = db.withSessionVars(user1Token);
     const user3DB = db.withSessionVars(user3Token);
     const adminDB = db.withSessionVars(adminToken);
 
@@ -752,9 +759,15 @@ describe('Delete', () => {
     await expect(user3DB.delete('messages', 'message-1')).rejects.toThrow(
       WritePermissionError
     );
+
+    // Permitted user can delete messages
+    await expect(
+      user1DB.delete('messages', 'message-1')
+    ).resolves.not.toThrow();
+
     // Admin can delete any message
     await expect(
-      adminDB.delete('messages', 'message-1')
+      adminDB.delete('messages', 'message-2')
     ).resolves.not.toThrow();
   });
 
