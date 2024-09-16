@@ -96,5 +96,11 @@ export function triplitRoute<
         />
       );
     },
+    // Turn off caching to prevent stale local results
+    // https://tanstack.com/router/latest/docs/framework/react/guide/data-loading#using-shouldreload-and-gctime-to-opt-out-of-caching
+    // Do not cache this route's data after it's unloaded
+    gcTime: 0,
+    // Only reload the route when the user navigates to it or when deps change
+    shouldReload: false,
   };
 }
