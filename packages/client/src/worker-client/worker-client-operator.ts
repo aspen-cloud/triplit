@@ -1,9 +1,7 @@
 import * as ComLink from 'comlink';
-import { WorkerInternalClient } from './worker-internal-client.js';
+import { ClientComlinkWrapper } from './client-comlink-wrapper.js';
 
-const internalClient = new WorkerInternalClient();
-
-internalClient.client;
+const internalClient = new ClientComlinkWrapper();
 
 // @ts-expect-error
 self.addEventListener('connect', (evt: MessageEvent) => {

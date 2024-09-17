@@ -31,7 +31,7 @@ class WorkerLogger {
   }
 }
 
-export class WorkerInternalClient implements ClientWorker {
+export class ClientComlinkWrapper implements ClientWorker {
   public client: Client | null = null;
   constructor() {}
   init(options: ClientOptions, logger: any) {

@@ -37,10 +37,10 @@
       "import": "./dist/worker-client/worker-client-operator.js",
       "default": "./dist/worker-client/worker-client-operator.js"
     },
-    "./worker-internal-client": {
-      "types": "./dist/worker-client/worker-internal-client.d.ts",
-      "import": "./dist/worker-client/worker-internal-client.js",
-      "default": "./dist/worker-client/worker-internal-client.js"
+    "./client-comlink-wrapper": {
+      "types": "./dist/worker-client/client-comlink-wrapper.d.ts",
+      "import": "./dist/worker-client/client-comlink-wrapper.js",
+      "default": "./dist/worker-client/client-comlink-wrapper.js"
     }
   },
   "scripts": {
