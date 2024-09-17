@@ -58,3 +58,13 @@ export class WebSocketsUnavailableError extends TriplitError {
     this.status = STATUS_CODES['Service Unavailable'];
   }
 }
+
+export class WorkerInternalClientNotInitializedError extends TriplitError {
+  constructor(...args: any[]) {
+    super(...args);
+    this.name = 'WorkerInternalClientNotInitializedError';
+    this.baseMessage =
+      'Attemped to invoke a method on the internal worker client before it was initialized. Ensure that the WorkerClient in the main thread has been initialized before invoking methods on the client inside the worker.';
+    this.status = STATUS_CODES['Internal Server Error'];
+  }
+}
