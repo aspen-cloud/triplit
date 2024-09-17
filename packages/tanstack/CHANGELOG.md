@@ -1,5 +1,15 @@
 # @triplit/tanstack
 
+## 0.0.4
+
+### Patch Changes
+
+- 0883e821: Return subscription error to tanstack component
+- e49cb9fc: Opt out of loader caching by default
+- Updated dependencies [3c7fd004]
+  - @triplit/client@0.4.13
+  - @triplit/react@0.3.102
+
 ## 0.0.3
 
 ### Patch Changes

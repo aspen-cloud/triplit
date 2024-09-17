@@ -1,5 +1,11 @@
 # @triplit/db
 
+## 0.3.75
+
+### Patch Changes
+
+- 5fed7f42: export schema builder types
+
 ## 0.3.74
 
 ### Patch Changes
