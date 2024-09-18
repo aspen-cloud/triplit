@@ -35,7 +35,7 @@ If at any time you want to check your progress against the finished app, or if y
 Let's use Vite to create a new React app. Run the following command in your terminal:
 
 ```bash copy
-npm create vite@latest todos -- --template react
+npm create vite@latest todos -- --template react-ts
 ```
 
 Follow the prompts to create a new project. Once it's been created, navigate to the project directory:
@@ -116,12 +116,19 @@ Now's a good time to set up an `.env` file in the `todos` directory. This file w
 
 ```bash filename=".env" copy
 TRIPLIT_DB_URL=http://localhost:6543
-TRIPLIT_ANON_TOKEN=replace_me
 TRIPLIT_SERVICE_TOKEN=replace_me
+TRIPLIT_ANON_TOKEN=replace_me
 # Replace `replace_me` with the tokens in the terminal where you ran `npx triplit dev`
 
 VITE_TRIPLIT_SERVER_URL=$TRIPLIT_DB_URL
 VITE_TRIPLIT_TOKEN=$TRIPLIT_ANON_TOKEN
+```
+
+Make sure you have `.env` as part of your `.gitignore` file:
+
+```bash filename=".gitignore" copy
+# Ignore .env files
+.env
 ```
 
 Now restart the development server by pressing `Ctrl + C` and running `npx triplit dev` again.
@@ -148,10 +155,11 @@ This will start the Vite development server on port `5173`. You can now open you
 
 Now that we have the development server running, let's integrate Triplit into our client code.
 
-Triplit provides a client library that you can use to read and write data. Let's initialize it with our API tokens and the schema that we defined earlier. Create a new file in the `src` directory called `client.ts` and add the following code:
+Triplit provides a client library that you can use to read and write data. Let's initialize it with our API tokens and the schema that we defined earlier. Create a new file in the `triplit` directory called `client.ts` and add the following code:
 
 ```ts filename="triplit/client.ts" copy
-import { schema } from './schema.js';
+import { TriplitClient } from '@triplit/client';
+import { schema } from './schema';
 
 export const triplit = new TriplitClient({
   schema,
@@ -245,7 +253,7 @@ Replace the contents of `App.tsx` with the following:
 
 ```tsx filename="src/App.tsx" copy showLineNumbers
 import React, { useState } from 'react';
-import { triplit } from './client';
+import { triplit } from '../triplit/client';
 
 export default function App() {
   const [text, setText] = useState('');
@@ -288,7 +296,7 @@ This component renders a form with a text input and a submit button. When the fo
 
 We have a component that creates a new todo, but we still need to write some code that fetches the todos from the database and renders them on the page. If we want to test that our insertions are working without doing any more work, we can use the Triplit console.
 
-When you ran `npx triplit dev` earlier, it started a Triplit console on port `6542`. You can open the console by navigating to `http://localhost:6542` in your browser. You should see a page that looks like this:
+When you ran `npx triplit dev` earlier, it started a Triplit console. This is either located at `http://localhost:6542` or `https://console.triplit.dev/local`. You should see a page that looks like this:
 
 ![Triplit console](/triplit-console.png)
 
