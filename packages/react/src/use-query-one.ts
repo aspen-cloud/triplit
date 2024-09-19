@@ -41,7 +41,7 @@ export function useQueryOne<
     options
   );
   const result = useMemo(() => {
-    return Array.from(results?.values() ?? [])[0] ?? null;
+    return results?.[0] ?? null;
   }, [results]);
   return { fetching, fetchingLocal, fetchingRemote, result, error };
 }

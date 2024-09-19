@@ -10,7 +10,6 @@
     triplit,
     triplit.query('todos').order('created_at', 'DESC'),
   );
-  let todosArray = $derived(todos.results ? Array.from(todos.results) : []);
 </script>
 
 <div class="main-container">
@@ -38,7 +37,7 @@
     {/if}
     {#if todos.results}
       <div class="todos-container">
-        {#each todosArray as [_key, todo]}
+        {#each todos.results as todo}
           <Todo {todo} />
         {/each}
       </div>

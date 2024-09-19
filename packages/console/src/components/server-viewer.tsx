@@ -56,13 +56,13 @@ export async function loader({ params }: { params: { serverHost?: string } }) {
   );
   if (!server) return redirect('/');
   let { url, tokens } = server;
-  if (tokens.size === 0) {
+  if (tokens.length === 0) {
     console.error(`No tokens found for server with host [${serverHost}]`);
     return redirect('/');
   }
   const token =
-    tokens.get('service_' + serverHost)?.value ??
-    tokens.values().next().value.value;
+    tokens.find((e) => e.id === 'service_' + serverHost)?.value ??
+    tokens[0].value;
   const collectionStats = await fetchCollectionStats(server);
   return { collectionStats, url, token };
 }
@@ -265,80 +265,79 @@ export function ServerViewer({
             }}
           />
         </div>
-        {tokens &&
-          Array.from(tokens.values()).map(({ value, name, id }) => {
-            const isSelectedToken = client.token === value;
-            const isServiceToken = id.startsWith('service_');
-            return (
-              <>
-                <Button
-                  key={value}
-                  onClick={() => {
-                    console.log('setting token', value);
-                    updateClientOptions({ token: value });
-                    // setClient(overwriteClient(value, client));
-                  }}
-                  variant={isSelectedToken ? 'default' : 'ghost'}
-                  className={`group truncate flex h-auto px-2 py-1 flex-row items-center gap-2 justify-start shrink-0`}
-                >
-                  <KeyRound
-                    className="shrink-0 hidden md:inline-block"
-                    size={20}
-                  />
-                  <span className="text-xs md:text-sm truncate w-full">{`${name}`}</span>
-                  {!isServiceToken && (
-                    <DropdownMenu>
-                      <DropdownMenuTrigger
-                        className="group-hover:visible invisible"
-                        onClick={(e) => {
+        {tokens?.map(({ value, name, id }) => {
+          const isSelectedToken = client.token === value;
+          const isServiceToken = id.startsWith('service_');
+          return (
+            <>
+              <Button
+                key={value}
+                onClick={() => {
+                  console.log('setting token', value);
+                  updateClientOptions({ token: value });
+                  // setClient(overwriteClient(value, client));
+                }}
+                variant={isSelectedToken ? 'default' : 'ghost'}
+                className={`group truncate flex h-auto px-2 py-1 flex-row items-center gap-2 justify-start shrink-0`}
+              >
+                <KeyRound
+                  className="shrink-0 hidden md:inline-block"
+                  size={20}
+                />
+                <span className="text-xs md:text-sm truncate w-full">{`${name}`}</span>
+                {!isServiceToken && (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger
+                      className="group-hover:visible invisible"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                      }}
+                    >
+                      <EllipsisVertical />
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent>
+                      <DropdownMenuItem
+                        onClick={async (e) => {
                           e.stopPropagation();
+                          await consoleClient.delete('tokens', id);
+                          if (isSelectedToken) {
+                            // We should always have at least one token because you
+                            // can't delete the service token so if this token
+                            // just happens to be the first token then get
+                            // the next token otherwise default to the first token
+                            const tokenIterator = tokens.values();
+                            let newToken = tokenIterator.next().value;
+                            if (newToken.id === id) {
+                              newToken = tokenIterator.next().value;
+                            }
+                            updateClientOptions({ token: newToken.value });
+                          }
                         }}
                       >
-                        <EllipsisVertical />
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent>
-                        <DropdownMenuItem
-                          onClick={async (e) => {
-                            e.stopPropagation();
-                            await consoleClient.delete('tokens', id);
-                            if (isSelectedToken) {
-                              // We should always have at least one token because you
-                              // can't delete the service token so if this token
-                              // just happens to be the first token then get
-                              // the next token otherwise default to the first token
-                              const tokenIterator = tokens.values();
-                              let newToken = tokenIterator.next().value;
-                              if (newToken.id === id) {
-                                newToken = tokenIterator.next().value;
-                              }
-                              updateClientOptions({ token: newToken.value });
-                            }
-                          }}
-                        >
-                          <div className="hover:text-red-500 flex gap-1 items-center">
-                            <Trash2Icon size="16px" />
-                            {`Remove "${name}"`}
-                          </div>
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  )}
-                </Button>
-                {isSelectedToken &&
-                  client.db.sessionRoles &&
-                  client.db.sessionRoles.length > 0 && (
-                    <div
-                      className="flex flex-wrap flex-row gap-2 mt-2"
-                      key={value + '_roles'}
-                    >
-                      {client.db.sessionRoles?.map((role) => (
-                        <RoleCard key={role.key} role={role} />
-                      ))}
-                    </div>
-                  )}
-              </>
-            );
-          })}
+                        <div className="hover:text-red-500 flex gap-1 items-center">
+                          <Trash2Icon size="16px" />
+                          {`Remove "${name}"`}
+                        </div>
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                )}
+              </Button>
+              {isSelectedToken &&
+                client.db.sessionRoles &&
+                client.db.sessionRoles.length > 0 && (
+                  <div
+                    className="flex flex-wrap flex-row gap-2 mt-2"
+                    key={value + '_roles'}
+                  >
+                    {client.db.sessionRoles?.map((role) => (
+                      <RoleCard key={role.key} role={role} />
+                    ))}
+                  </div>
+                )}
+            </>
+          );
+        })}
 
         <div className="flex flex-row items-center justify-between gap-2 md:gap-4 my-4">
           <span className="truncate text-sm md:text-lg font-semibold">

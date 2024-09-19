@@ -6,14 +6,14 @@ import { Callout } from 'nextra-theme-docs';
 
 # fetch
 
-`fetch()` executes the specified query and returns a Map with entity ids as keys and the associated entities as values. For example:
+`fetch()` executes the specified query and returns an array of entities. For example:
 
 ```typescript
 await client.insert('employees', { id: 'Fry', name: 'Philip J. Fry' });
 await client.insert('employees', { id: 'Leela', name: 'Turanga Leela' });
 
 const query = client.query('employees').build();
-const result = await client.fetch(query, options); // Map<string, { name: string }>
+const result = await client.fetch(query, options); // { name: string }[]
 ```
 
 ## Fetch options

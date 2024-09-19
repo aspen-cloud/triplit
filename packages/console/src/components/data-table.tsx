@@ -35,7 +35,7 @@ import {
   QueryAttributeDefinition,
   RecordAttributeDefinition,
   ValueAttributeDefinition,
-} from '@triplit/db/src/data-types/serialization';
+} from '@triplit/db';
 import { ArrowSquareOut } from '@phosphor-icons/react';
 import {
   TriplitDataTypes,

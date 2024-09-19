@@ -45,7 +45,7 @@ describe('date operations', () => {
       .order(['birthday', 'ASC'])
       .build();
     db.fetch(query).then((results) => {
-      expect(results.size).toBe(2);
+      expect(results.length).toBe(2);
       expect([...results.values()].map((r) => r.id)).toEqual(['3', '2']);
     });
   });
@@ -56,7 +56,7 @@ describe('date operations', () => {
       .order(['birthday', 'DESC'])
       .build();
     db.fetch(query).then((results) => {
-      expect(results.size).toBe(2);
+      expect(results.length).toBe(2);
       expect([...results.values()].map((r) => r.id)).toEqual(['1', '3']);
     });
   });
@@ -72,7 +72,7 @@ describe('date operations', () => {
       .order(['birthday', 'ASC'])
       .build();
     db.fetch(query).then((results) => {
-      expect(results.size).toBe(1);
+      expect(results.length).toBe(1);
       expect([...results.values()].map((r) => r.id)).toEqual(['1']);
     });
   });
@@ -88,7 +88,7 @@ describe('date operations', () => {
       .order(['birthday', 'ASC'])
       .build();
     db.fetch(query).then((results) => {
-      expect(results.size).toBe(3);
+      expect(results.length).toBe(3);
       expect([...results.values()].map((r) => r.id)).toEqual(['3', '1', '2']);
     });
   });

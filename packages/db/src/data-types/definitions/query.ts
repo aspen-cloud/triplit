@@ -75,11 +75,8 @@ export function QueryType<
         // TODO: confirm map
         // if (val === undefined) return undefined;
         // const entries = JSON.parse(val);
-        return new Map(
-          Array.from(val.entries()).map(([k, v]: any) => [
-            k,
-            relationSchema.convertDBValueToJS(v, schema),
-          ])
+        return Array.from(val.entries()).map(([, v]: any) =>
+          relationSchema.convertDBValueToJS(v, schema)
         );
       } else {
         throw new InvalidQueryCardinalityError(cardinality);
@@ -98,12 +95,7 @@ export function QueryType<
       if (cardinality === 'one') {
         return relationSchema.convertJSONToJS(val, schema);
       } else if (cardinality === 'many') {
-        return new Map(
-          val.map(([k, v]: any) => [
-            k,
-            relationSchema.convertJSONToJS(v, schema),
-          ])
-        );
+        return val.map((v: any) => relationSchema.convertJSONToJS(v, schema));
       } else {
         throw new InvalidQueryCardinalityError(cardinality);
       }
@@ -126,10 +118,7 @@ export function QueryType<
           schema
         );
       } else if (cardinality === 'many') {
-        return Array.from(val.entries()).map(([k, v]: any) => [
-          k,
-          relationSchema.convertJSToJSON(v, schema),
-        ]);
+        return val.map((v: any) => relationSchema.convertJSToJSON(v, schema));
       } else {
         throw new InvalidQueryCardinalityError(cardinality);
       }

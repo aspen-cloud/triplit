@@ -34,10 +34,9 @@ export function SearchUsers({
   const { nonMembers } = useUsersNotInConversationList(conversation)
 
   // @ts-ignore
-  const currentUser = members?.get(currentUserId)
-  const membersExCurrentUser = members
-    ? Array.from(members).filter(([id]) => id !== currentUserId)
-    : []
+  const currentUser = members.find(({ id }) => id === currentUserId)
+  const membersExCurrentUser =
+    members?.filter(({ id }) => id !== currentUserId) ?? []
 
   return (
     <CommandDialog open={open} onOpenChange={setOpen}>
@@ -68,10 +67,10 @@ export function SearchUsers({
                   </Button>
                 </CommandItem>
               )}
-              {Array.from(membersExCurrentUser)
-                .filter(([id]) => id !== currentUserId)
-                .map(([id, user]) => (
-                  <CommandItem className="gap-4 justify-between" key={id}>
+              {membersExCurrentUser
+                ?.filter(({ id }) => id !== currentUserId)
+                .map((user) => (
+                  <CommandItem className="gap-4 justify-between" key={user.id}>
                     <div className="flex flex-row gap-4 ml-2">{user.name}</div>
                     <Button
                       size="sm"
@@ -86,10 +85,10 @@ export function SearchUsers({
                   </CommandItem>
                 ))}
             </CommandGroup>
-            {nonMembers && nonMembers.size > 0 && (
+            {nonMembers && nonMembers.length > 0 && (
               <CommandGroup heading="Invite">
-                {Array.from(nonMembers).map(([id, user]) => (
-                  <CommandItem className="gap-4 justify-between" key={id}>
+                {nonMembers.map((user) => (
+                  <CommandItem className="gap-4 justify-between" key={user.id}>
                     <div className="flex flex-row gap-4 ml-2">{user.name}</div>
                     <Button
                       size="sm"

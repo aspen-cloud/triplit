@@ -172,7 +172,7 @@ export default Command({
           async (results, info) => {
             // Avoid firing on potentially stale results
             if (info.hasRemoteFulfilled) {
-              const schemaJSON = results.get('_schema');
+              const schemaJSON = results[0];
               const resultHash = hashSchemaJSON(schemaJSON.collections);
               const fileSchema = schemaToJSON({
                 collections: ctx.schema,

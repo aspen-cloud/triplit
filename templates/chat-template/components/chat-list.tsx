@@ -129,22 +129,18 @@ export function ChatList() {
               <ConvoSkeleton />
             </>
           )}
-          {conversations &&
-            conversations.size > 0 &&
-            Array.from(conversations).map(([id, conversation]) => (
-              <ConvoListItem
-                key={id}
-                convo={conversation}
-                isSelected={id === selectedChat}
-              />
-            ))}
-          {!(fetching && fetchingRemote) &&
-            conversations &&
-            conversations.size === 0 && (
-              <div className="text-muted-foreground text-sm mx-auto">
-                {chatFilter ? "No results" : "No chats"}
-              </div>
-            )}
+          {conversations?.map((conversation) => (
+            <ConvoListItem
+              key={conversation.id}
+              convo={conversation}
+              isSelected={conversation.id === selectedChat}
+            />
+          ))}
+          {!(fetching && fetchingRemote) && conversations?.length === 0 && (
+            <div className="text-muted-foreground text-sm mx-auto">
+              {chatFilter ? "No results" : "No chats"}
+            </div>
+          )}
         </div>
       </div>
     </>

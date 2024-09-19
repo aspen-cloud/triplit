@@ -1,10 +1,10 @@
 /// <reference types="svelte" />
 
 import type {
-  ClientFetchResult,
   ClientQuery,
   ClientQueryBuilder,
   CollectionNameFromModels,
+  FetchResult,
   Models,
   SubscriptionOptions,
   TriplitClient,
@@ -34,11 +34,11 @@ export function useQuery<
   fetching: boolean;
   fetchingLocal: boolean;
   fetchingRemote: boolean;
-  results: Unalias<ClientFetchResult<M, Q>> | undefined;
+  results: Unalias<FetchResult<M, Q>> | undefined;
   error: any;
   updateQuery: (query: ClientQueryBuilder<M, CN, Q>) => void;
 } {
-  let results: Unalias<ClientFetchResult<M, Q>> | undefined = $state(undefined);
+  let results: Unalias<FetchResult<M, Q>> | undefined = $state(undefined);
   let isInitialFetch = $state(true);
   let fetchingLocal = $state(false);
   let fetchingRemote = $state(client.connectionStatus !== 'CLOSED');
@@ -56,7 +56,7 @@ export function useQuery<
 
   $effect(() => {
     client
-      .isFirstTimeFetchingQuery($state.snapshot(builtQuery))
+      .isFirstTimeFetchingQuery($state.snapshot(builtQuery) as Q)
       .then((isFirstFetch) => {
         isInitialFetch = isFirstFetch;
       });
@@ -77,11 +77,11 @@ export function useQuery<
 
   $effect(() => {
     const unsubscribe = client.subscribe(
-      $state.snapshot(builtQuery),
+      $state.snapshot(builtQuery) as Q,
       (localResults) => {
         fetchingLocal = false;
         error = undefined;
-        results = new Map(localResults as any);
+        results = localResults as any;
       },
       (error) => {
         fetchingLocal = false;

@@ -1,6 +1,6 @@
 import { useMemo } from "react"
 import { Entity } from "@triplit/client"
-import { useInfiniteQuery, useQuery } from "@triplit/react"
+import { useInfiniteQuery, useQuery, useQueryOne } from "@triplit/react"
 
 import { client } from "@/lib/triplit.js"
 
@@ -29,19 +29,14 @@ export function useFilteredConversations(query: string) {
 // between conversations and users and return a full user object for each member.
 export function useConversation(convoId: string) {
   const {
-    results: conversations,
+    result: conversation,
     fetching,
     fetchingRemote,
     error,
-  } = useQuery(
+  } = useQueryOne(
     client,
-    client
-      .query("conversations")
-      .where("id", "=", convoId)
-      .limit(1)
-      .include("membersInfo")
+    client.query("conversations").id(convoId).include("membersInfo")
   )
-  const conversation = conversations?.get(convoId)
   return { conversation, fetching, fetchingRemote, error }
 }
 
@@ -51,9 +46,8 @@ export function useConversationSnippet(convoId: string) {
     .query("messages")
     .where("conversationId", "=", convoId)
     .order("created_at", "DESC")
-    .limit(1)
-  const { results: messages } = useQuery(client, messagesQuery)
-  return messages && messages.values().next().value?.text
+  const { result: message } = useQueryOne(client, messagesQuery)
+  return message?.text
 }
 
 // Populates the <MessageList/> component with both sent and pending messages
@@ -101,7 +95,7 @@ export function useMessages(convoId: string) {
     hasMore,
     loadMore,
     messages,
-    pendingMessages: pendingMessages ?? new Map(),
+    pendingMessages: pendingMessages,
   }
 }
 

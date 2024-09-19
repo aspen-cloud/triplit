@@ -1,5 +1,5 @@
 import type {
-  ClientFetchResult,
+  FetchResult,
   ClientQuery,
   ClientQueryBuilder,
   CollectionNameFromModels,
@@ -29,7 +29,7 @@ type QueryResults<
   fetching: Signal<boolean>;
   fetchingLocal: Signal<boolean>;
   fetchingRemote: Signal<boolean>;
-  results: Signal<Unalias<ClientFetchResult<M, Q>> | undefined>;
+  results: Signal<Unalias<FetchResult<M, Q>> | undefined>;
   error: Signal<any>;
 };
 
@@ -74,7 +74,7 @@ function createBaseQuery<
     return runInInjectionContext(injector, () => queryFn());
   });
 
-  const resultSignal = signal<ClientFetchResult<M, Q> | undefined>(undefined);
+  const resultSignal = signal<FetchResult<M, Q> | undefined>(undefined);
   const fetchingLocalSignal = signal(true);
   const fetchingRemoteSignal = signal(
     queryParamsSignal().client.connectionStatus !== 'CLOSED'
@@ -119,7 +119,7 @@ function createBaseQuery<
         (localResults) => {
           fetchingLocalSignal.set(false);
           errorSignal.set(undefined);
-          resultSignal.set(new Map(localResults as any));
+          resultSignal.set(localResults as any);
         },
         (error) => {
           fetchingLocalSignal.set(false);

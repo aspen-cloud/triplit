@@ -357,7 +357,7 @@ export function fetchResultToJS<
   results.forEach((entity, id) => {
     results.set(id, convertEntityToJS(entity as any, schema, collectionName));
   });
-  return results as unknown as FetchResult<M, Q>;
+  return Array.from(results.values()) as unknown as FetchResult<M, Q>;
 }
 
 export function isValueVariable(value: QueryValue): value is string {

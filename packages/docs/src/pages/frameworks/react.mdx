@@ -47,7 +47,7 @@ The `useQuery` hook subscribes to the provided query inside your React component
 
 The result of the hook is an object with the following properties:
 
-- `results`: A Map containing the results of the query, with entity ids as keys and entities as values.
+- `results`: An array of entities that satisfy the query.
 - `fetching`: A boolean that will be `true` initially, and then turn `false` when either the local fetch returns cached results or if there were no cached results and the remote fetch has completed.
 - `fetchingLocal`: A boolean indicating whether the query is currently fetching from the local cache.
 - `fetchingRemote`: A boolean indicating whether the query is currently fetching from the server.
@@ -67,7 +67,7 @@ function App() {
 
   return (
     <div>
-      {results.entries().forEach((item) => (
+      {results?.map((item) => (
         <div>{item.text}</div>
       ))}
     </div>
@@ -127,7 +127,7 @@ function App() {
 
   return (
     <div>
-      {results.entries().map((item) => (
+      {results?.map((item) => (
         <div>{item.text}</div>
       ))}
       {fetchingPage && <div>Loading page...</div>}
@@ -142,7 +142,7 @@ For `usePaginatedQuery` to function properly the provided query must have a `lim
 
 ## useInfiniteQuery
 
-The `useInfiniteQuery` hook subscribes to the provided query, and exposes helper functions for loading more results. It is useful for patterns that continously load more data in addition to the existing result set. Chat applications or content browsing applications that load more data as the user scrolls are good use cases for `useInfiniteQuery`.
+The `useInfiniteQuery` hook subscribes to the provided query, and exposes helper functions for loading more results. It is useful for patterns that continuously load more data in addition to the existing result set. Chat applications or content browsing applications that load more data as the user scrolls are good use cases for `useInfiniteQuery`.
 
 ```tsx copy filename="app.tsx"
 import { useInfiniteQuery } from '@triplit/react';
@@ -157,7 +157,7 @@ function App() {
 
   return (
     <div>
-      {results.entries().map((item) => (
+      {results?.map((item) => (
         <div>{item.text}</div>
       ))}
       {fetchingMore && <div>Loading more...</div>}

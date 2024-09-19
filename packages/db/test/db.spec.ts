@@ -126,7 +126,7 @@ describe('Database API', () => {
           .where([['level', '=', 100]])
           .build()
       );
-      expect(eq.size).toBe(classes.filter((cls) => cls.level === 100).length);
+      expect(eq.length).toBe(classes.filter((cls) => cls.level === 100).length);
     });
 
     it('supports inequality operator', async () => {
@@ -135,7 +135,9 @@ describe('Database API', () => {
           .where([['level', '!=', 100]])
           .build()
       );
-      expect(neq.size).toBe(classes.filter((cls) => cls.level !== 100).length);
+      expect(neq.length).toBe(
+        classes.filter((cls) => cls.level !== 100).length
+      );
     });
 
     it('supports greater than operator', async () => {
@@ -144,7 +146,7 @@ describe('Database API', () => {
           .where([['level', '>', 100]])
           .build()
       );
-      expect(gt.size).toBe(classes.filter((cls) => cls.level > 100).length);
+      expect(gt.length).toBe(classes.filter((cls) => cls.level > 100).length);
     });
 
     it('supports greater than or equal operator', async () => {
@@ -153,7 +155,7 @@ describe('Database API', () => {
           .where([['level', '>=', 100]])
           .build()
       );
-      expect(gte.size).toBe(classes.filter((cls) => cls.level >= 100).length);
+      expect(gte.length).toBe(classes.filter((cls) => cls.level >= 100).length);
     });
 
     it('supports less than operator', async () => {
@@ -162,7 +164,7 @@ describe('Database API', () => {
           .where([['level', '<', 200]])
           .build()
       );
-      expect(lt.size).toBe(classes.filter((cls) => cls.level < 200).length);
+      expect(lt.length).toBe(classes.filter((cls) => cls.level < 200).length);
     });
 
     it('supports less than or equal operator', async () => {
@@ -171,7 +173,7 @@ describe('Database API', () => {
           .where([['level', '<=', 200]])
           .build()
       );
-      expect(lte.size).toBe(classes.filter((cls) => cls.level <= 200).length);
+      expect(lte.length).toBe(classes.filter((cls) => cls.level <= 200).length);
     });
 
     it('supports "in" operator', async () => {
@@ -180,7 +182,7 @@ describe('Database API', () => {
           .where([['level', 'in', [100, 200]]])
           .build()
       );
-      expect(_in.size).toBe(4);
+      expect(_in.length).toBe(4);
     });
 
     it('supports "nin" operator', async () => {
@@ -189,7 +191,7 @@ describe('Database API', () => {
           .where([['level', 'nin', [100, 200]]])
           .build()
       );
-      expect(nin.size).toBe(1);
+      expect(nin.length).toBe(1);
     });
   });
   it('treats "in" operations on sets as a defacto "intersects"', async () => {
@@ -208,26 +210,26 @@ describe('Database API', () => {
         .where([['set', 'in', ['a', 'd']]])
         .build()
     );
-    expect(results.size).toBe(3);
+    expect(results.length).toBe(3);
     results = await newDb.fetch(
       CollectionQueryBuilder('test')
         .where([['set', 'in', ['d']]])
         .build()
     );
-    expect(results.size).toBe(1);
+    expect(results.length).toBe(1);
     results = await newDb.fetch(
       CollectionQueryBuilder('test')
         .where([['set', 'in', ['a', 'b']]])
         .build()
     );
-    expect(results.size).toBe(2);
+    expect(results.length).toBe(2);
   });
 
   it('supports basic queries with the "like" operator', async () => {
     const studentsNamedJohn = await db.fetch(
       CollectionQueryBuilder('Student').where(['name', 'like', 'John%']).build()
     );
-    expect(studentsNamedJohn.size).toBe(
+    expect(studentsNamedJohn.length).toBe(
       students.filter((s) => s.name.startsWith('John')).length
     );
 
@@ -236,7 +238,7 @@ describe('Database API', () => {
         .where([['name', 'like', '%ie%']])
         .build()
     );
-    expect(studentswithIeIntheirName.size).toBe(
+    expect(studentswithIeIntheirName.length).toBe(
       students.filter((s) => s.name.includes('ie')).length
     );
 
@@ -245,7 +247,7 @@ describe('Database API', () => {
         .where([['name', 'like', 'Calculus _']])
         .build()
     );
-    expect(calculusClasses.size).toBe(
+    expect(calculusClasses.length).toBe(
       classes.filter((c) => new RegExp('Calculus *').test(c.name)).length
     );
 
@@ -254,7 +256,7 @@ describe('Database API', () => {
         .where([['name', 'like', 'Calculus*+']])
         .build()
     );
-    expect(escapeOutRegex.size).not.toBe(
+    expect(escapeOutRegex.length).not.toBe(
       classes.filter((c) => new RegExp('Calculus *').test(c.name)).length
     );
     const departmentsWithSinTheMiddleOfTheirName = await db.fetch(
@@ -262,33 +264,33 @@ describe('Database API', () => {
         .where([['name', 'like', '%_s_%']])
         .build()
     );
-    expect(departmentsWithSinTheMiddleOfTheirName.size).toBe(2);
+    expect(departmentsWithSinTheMiddleOfTheirName.length).toBe(2);
     const artistsWithDashInTheirName = await db.fetch(
       CollectionQueryBuilder('Rapper')
         .where([['name', 'like', '%-%']])
         .build()
     );
-    expect(artistsWithDashInTheirName.size).toBe(2);
+    expect(artistsWithDashInTheirName.length).toBe(2);
     const artistsWithDollaSignInTheirName = await db.fetch(
       CollectionQueryBuilder('Rapper')
         .where([['name', 'like', '%$%']])
         .build()
     );
-    expect(artistsWithDollaSignInTheirName.size).toBe(1);
+    expect(artistsWithDollaSignInTheirName.length).toBe(1);
 
     const artistsWithQuotesInTheirName = await db.fetch(
       CollectionQueryBuilder('Rapper')
         .where([['name', 'like', "%'%'%"]])
         .build()
     );
-    expect(artistsWithQuotesInTheirName.size).toBe(2);
+    expect(artistsWithQuotesInTheirName.length).toBe(2);
 
     const Biggie = await db.fetch(
       CollectionQueryBuilder('Rapper')
         .where([['name', 'like', '%B.I.G%.']])
         .build()
     );
-    expect(Biggie.size).toBe(1);
+    expect(Biggie.length).toBe(1);
   });
 
   it('support basic queries with the "nlike" operator', async () => {
@@ -297,13 +299,13 @@ describe('Database API', () => {
         .where([['name', 'nlike', '%B.I.G%.']])
         .build()
     );
-    expect(Biggie.size).toBe(RAPPERS_AND_PRODUCERS.length - 1);
+    expect(Biggie.length).toBe(RAPPERS_AND_PRODUCERS.length - 1);
     const artistsWithoutQuotesInTheirName = await db.fetch(
       CollectionQueryBuilder('Rapper')
         .where([['name', 'nlike', "%'%'%"]])
         .build()
     );
-    expect(artistsWithoutQuotesInTheirName.size).toBe(
+    expect(artistsWithoutQuotesInTheirName.length).toBe(
       RAPPERS_AND_PRODUCERS.length - 2
     );
   });
@@ -346,19 +348,19 @@ describe('Database API', () => {
         .where([['enrolled_students', 'has', 'student-1']])
         .build()
     );
-    expect([...results.keys()]).toStrictEqual(['class-2', 'class-3']);
+    expect(results.map((e) => e.id)).toStrictEqual(['class-2', 'class-3']);
     const results2 = await db.fetch(
       CollectionQueryBuilder('Classes')
         .where([['enrolled_students', 'has', 'bad-id']])
         .build()
     );
-    expect(results2.size).toBe(0);
+    expect(results2.length).toBe(0);
     const results3 = await db.fetch(
       CollectionQueryBuilder('Classes')
         .where([['enrolled_students', '!has', 'student-1']])
         .build()
     );
-    expect([...results3.keys()]).toStrictEqual([
+    expect(results3.map((e) => e.id)).toStrictEqual([
       'class-1',
       'class-4',
       'class-5',
@@ -368,12 +370,12 @@ describe('Database API', () => {
         .where([['enrolled_students', '!has', 'bad-id']])
         .build()
     );
-    expect(results4.size).toBe(5);
+    expect(results4.length).toBe(5);
   });
 
   it('supports basic queries without filters', async () => {
     const results = await db.fetch(CollectionQueryBuilder('Student').build());
-    expect(results.size).toBe(students.length);
+    expect(results.length).toBe(students.length);
   });
 
   it('throws an error when filtering with an unimplmented operator', async () => {
@@ -400,7 +402,7 @@ describe('Database API', () => {
     const ranks = [...results.values()].map((r) => r.rank);
     expect(Math.max(...ranks)).toBe(4);
     expect(Math.min(...ranks)).toBe(2);
-    expect(results.size).toBe(3);
+    expect(results.length).toBe(3);
   });
 
   it('supports filtering on one attribute with multiple operators (additive)', async () => {
@@ -414,7 +416,7 @@ describe('Database API', () => {
     const ranks = [...results.values()].map((r) => r.rank);
     expect(Math.max(...ranks)).toBe(4);
     expect(Math.min(...ranks)).toBe(2);
-    expect(results.size).toBe(3);
+    expect(results.length).toBe(3);
   });
 
   it('where clause by non leaf will throw error', async () => {
@@ -758,7 +760,7 @@ describe('Register operations', () => {
 
     const preUpdateLookup = await db.fetch(preUpdateQuery);
     expect(preUpdateLookup).toHaveLength(1);
-    expect(preUpdateLookup.get('1')).toBeTruthy();
+    expect(preUpdateLookup[0]).toBeTruthy();
 
     const NEW_NAME = 'Dr. Zoidberg';
 
@@ -776,8 +778,8 @@ describe('Register operations', () => {
     const newQueryResult = await db.fetch(postUpdateQuery);
     expect(oldQueryResult).toHaveLength(0);
     expect(newQueryResult).toHaveLength(1);
-    expect(newQueryResult.get('1')).toBeTruthy();
-    expect(newQueryResult.get('1').name).toBe(NEW_NAME);
+    expect(newQueryResult[0]).toBeTruthy();
+    expect(newQueryResult[0].name).toBe(NEW_NAME);
   });
 });
 
@@ -989,7 +991,7 @@ describe('ORDER & LIMIT & Pagination', () => {
     const descendingScoresResults = await db.fetch(
       db.query('TestScores').order('score', 'DESC').build()
     );
-    expect(descendingScoresResults.size).toBe(TEST_SCORES.length);
+    expect(descendingScoresResults.length).toBe(TEST_SCORES.length);
     const areAllScoresDescending = Array.from(
       descendingScoresResults.values()
     ).every((result, i, arr) => {
@@ -1005,7 +1007,7 @@ describe('ORDER & LIMIT & Pagination', () => {
     const descendingScoresResults = await db.fetch(
       CollectionQueryBuilder('TestScores').order(['score', 'ASC']).build()
     );
-    expect(descendingScoresResults.size).toBe(TEST_SCORES.length);
+    expect(descendingScoresResults.length).toBe(TEST_SCORES.length);
     const areAllScoresDescending = Array.from(
       descendingScoresResults.values()
     ).every((result, i, arr) => {
@@ -1078,8 +1080,8 @@ describe('ORDER & LIMIT & Pagination', () => {
       const resultsDESC = await db.fetch(
         db.query('test').order(['deep.deeper.deepest.prop', 'DESC']).build()
       );
-      expect([...resultsASC.keys()]).toEqual(['2', '1', '3']);
-      expect([...resultsDESC.keys()]).toEqual(['3', '1', '2']);
+      expect(resultsASC.map((e) => e.id)).toEqual(['2', '1', '3']);
+      expect(resultsDESC.map((e) => e.id)).toEqual(['3', '1', '2']);
     }
     {
       const resultsASC = await db.fetch(
@@ -1088,15 +1090,15 @@ describe('ORDER & LIMIT & Pagination', () => {
       const resultsDESC = await db.fetch(
         db.query('test').order(['deep.prop', 'DESC']).build()
       );
-      expect([...resultsASC.keys()]).toEqual(['1', '2', '3']);
-      expect([...resultsDESC.keys()]).toEqual(['3', '2', '1']);
+      expect(resultsASC.map((e) => e.id)).toEqual(['1', '2', '3']);
+      expect(resultsDESC.map((e) => e.id)).toEqual(['3', '2', '1']);
     }
   });
   it('order by multiple properties', async () => {
     const descendingScoresResults = await db.fetch(
       db.query('TestScores').order(['score', 'ASC'], ['date', 'DESC']).build()
     );
-    expect(descendingScoresResults.size).toBe(TEST_SCORES.length);
+    expect(descendingScoresResults.length).toBe(TEST_SCORES.length);
     const areAllScoresDescending = Array.from(
       descendingScoresResults.values()
     ).every((result, i, arr) => {
@@ -1120,7 +1122,7 @@ describe('ORDER & LIMIT & Pagination', () => {
         .order('date', 'DESC')
         .build()
     );
-    expect(descendingScoresResults.size).toBe(TEST_SCORES.length);
+    expect(descendingScoresResults.length).toBe(TEST_SCORES.length);
     const areAllScoresDescending = Array.from(
       descendingScoresResults.values()
     ).every((result, i, arr) => {
@@ -1139,7 +1141,7 @@ describe('ORDER & LIMIT & Pagination', () => {
     const initialOrdered = await db.fetch(
       db.query('TestScores').order('score', 'ASC').build()
     );
-    expect(initialOrdered.size).toBe(TEST_SCORES.length);
+    expect(initialOrdered.length).toBe(TEST_SCORES.length);
     const areAllScoresDescending = Array.from(initialOrdered.values()).every(
       (result, i, arr) => {
         if (i === 0) return true;
@@ -1151,19 +1153,15 @@ describe('ORDER & LIMIT & Pagination', () => {
     expect(areAllScoresDescending).toBeTruthy();
 
     // Move first item to the end
-    await db.update(
-      'TestScores',
-      [...initialOrdered.keys()][0],
-      async (entity) => {
-        entity.score = [...initialOrdered.values()][0].score + 1;
-      }
-    );
+    await db.update('TestScores', initialOrdered[0].id, async (entity) => {
+      entity.score = [...initialOrdered.values()][0].score + 1;
+    });
 
     after: {
       const ascendingResults = await db.fetch(
         CollectionQueryBuilder('TestScores').order(['score', 'ASC']).build()
       );
-      expect(ascendingResults.size).toBe(TEST_SCORES.length);
+      expect(ascendingResults.length).toBe(TEST_SCORES.length);
       const areAllScoresDescending = Array.from(
         ascendingResults.values()
       ).every((result, i, arr) => {
@@ -1221,7 +1219,7 @@ describe('ORDER & LIMIT & Pagination', () => {
       db.query('TestScores').order('score', 'DESC').limit(5).build()
     );
     console.log(await db.fetch(db.query('TestScores').limit(5).build()));
-    expect(descendingScoresResults.size).toBe(5);
+    expect(descendingScoresResults.length).toBe(5);
     const areAllScoresDescending = Array.from(
       descendingScoresResults.values()
     ).every((result, i, arr) => {
@@ -1245,14 +1243,14 @@ describe('ORDER & LIMIT & Pagination', () => {
       sortedScoresDesc.slice(0, PAGE_SIZE)
     );
 
-    const lastDoc = [...firstPageResults.entries()].at(-1);
+    const lastDoc = firstPageResults.at(-1);
 
     const secondPageResults = await db.fetch(
       db
         .query('TestScores')
         .order('score', 'DESC')
         .limit(PAGE_SIZE)
-        .after([lastDoc[1].score, lastDoc[0]])
+        .after([lastDoc.score, lastDoc?.id])
         .build()
     );
 
@@ -1273,14 +1271,14 @@ describe('ORDER & LIMIT & Pagination', () => {
       sortedScoresAsc.slice(0, PAGE_SIZE)
     );
 
-    const lastDoc = [...firstPageResults.entries()].at(-1);
+    const lastDoc = firstPageResults.at(-1);
 
     const secondPageResults = await db.fetch(
       db
         .query('TestScores')
         .order('score', 'ASC')
         .limit(PAGE_SIZE)
-        .after([lastDoc[1].score, lastDoc[0]])
+        .after([lastDoc.score, lastDoc?.id])
         .build()
     );
     expect([...secondPageResults.values()].map((r) => r.score)).toEqual(
@@ -1306,7 +1304,7 @@ describe('ORDER & LIMIT & Pagination', () => {
         },
         {
           action: async (results) => {
-            const idFromResults = [...results.keys()][0];
+            const idFromResults = results[0].id;
             await db.transact(async (tx) => {
               await tx.update('TestScores', idFromResults, async (entity) => {
                 entity.score = 0;
@@ -1314,7 +1312,7 @@ describe('ORDER & LIMIT & Pagination', () => {
             });
           },
           check: (results) => {
-            expect(results.size).toBe(LIMIT);
+            expect(results.length).toBe(LIMIT);
             expect(
               [...results.values()].map((result) => result.score).includes(0)
             ).toBeFalsy();
@@ -1322,10 +1320,10 @@ describe('ORDER & LIMIT & Pagination', () => {
         },
         {
           action: async (results) => {
-            const firstResult = [...results][0];
+            const firstResult = results[0];
             await db.transact(async (tx) => {
-              await tx.update('TestScores', firstResult[0], async (entity) => {
-                entity.score = firstResult[1].score + 1;
+              await tx.update('TestScores', firstResult.id, async (entity) => {
+                entity.score = firstResult.score + 1;
               });
             });
           },
@@ -1362,12 +1360,12 @@ describe('ORDER & LIMIT & Pagination', () => {
       [
         {
           check: (results) => {
-            expect(results.size).toBe(LIMIT);
+            expect(results.length).toBe(LIMIT);
           },
         },
         {
           action: async (results) => {
-            const idFromResults = [...results.keys()][0];
+            const idFromResults = results[0].id;
             await db.transact(async (tx) => {
               await tx.update('TestScores', idFromResults, async (entity) => {
                 entity.score = 0;
@@ -1375,7 +1373,7 @@ describe('ORDER & LIMIT & Pagination', () => {
             });
           },
           check: (results) => {
-            expect(results.size).toBe(LIMIT);
+            expect(results.length).toBe(LIMIT);
             expect(
               [...results.values()].map((result) => result.score).includes(0)
             ).toBeFalsy();
@@ -1397,8 +1395,8 @@ describe('ORDER & LIMIT & Pagination', () => {
 
     const query = db.query('test').order(['name', 'ASC']).limit(3).build();
     const result = await db.fetch(query);
-    expect(result.size).toBe(3);
-    expect([...result.keys()]).toEqual(['1', '2', '4']);
+    expect(result.length).toBe(3);
+    expect(result.map((e) => e.id)).toEqual(['1', '2', '4']);
   });
 
   it('can handle secondary sorts on values with runs of equal primary values', async () => {
@@ -1540,14 +1538,14 @@ describe('database transactions', () => {
         date: '2023-04-16',
       });
       expect(
-        (await db.fetch(CollectionQueryBuilder('TestScores').build())).size
+        (await db.fetch(CollectionQueryBuilder('TestScores').build())).length
       ).toBe(0);
       expect(
-        (await tx.fetch(CollectionQueryBuilder('TestScores').build())).size
+        (await tx.fetch(CollectionQueryBuilder('TestScores').build())).length
       ).toBe(1);
     });
     expect(
-      (await db.fetch(CollectionQueryBuilder('TestScores').build())).size
+      (await db.fetch(CollectionQueryBuilder('TestScores').build())).length
     ).toBe(1);
     // expect(() => tx.collection('TestScores').query().fetch()).toThrowError();
   });
@@ -1572,15 +1570,15 @@ describe('database transactions', () => {
         date: '2023-04-16',
       });
       expect(
-        (await db.fetch(CollectionQueryBuilder('TestScores').build())).size
+        (await db.fetch(CollectionQueryBuilder('TestScores').build())).length
       ).toBe(0);
       expect(
-        (await tx.fetch(CollectionQueryBuilder('TestScores').build())).size
+        (await tx.fetch(CollectionQueryBuilder('TestScores').build())).length
       ).toBe(1);
       await tx.cancel();
     });
     expect(
-      (await db.fetch(CollectionQueryBuilder('TestScores').build())).size
+      (await db.fetch(CollectionQueryBuilder('TestScores').build())).length
     ).toBe(0);
     // expect(() => tx.collection('TestScores').query().fetch()).toThrowError();
   });
@@ -3030,7 +3028,7 @@ describe('Nested Properties', () => {
       }
 
       const query = db.query('Businesses').entityId(ENTITY_ID).build();
-      const result = (await db.fetch(query)).get(ENTITY_ID);
+      const result = (await db.fetch(query)).find((e) => e.id === ENTITY_ID);
       expect(result.address.street.number).toBe('123');
       expect(result.address.street.name).toBe('Main St');
       expect(result.address.city).toBe('San Francisco');
@@ -3043,7 +3041,9 @@ describe('Nested Properties', () => {
       }
 
       const query = db.query('Businesses').entityId(ENTITY_ID).build();
-      const preUpdateLookup = (await db.fetch(query)).get(ENTITY_ID);
+      const preUpdateLookup = (await db.fetch(query)).find(
+        (e) => e.id === ENTITY_ID
+      );
       expect(preUpdateLookup.address.street.number).toBe('123');
       expect(preUpdateLookup.address.street.name).toBe('Main St');
 
@@ -3051,7 +3051,9 @@ describe('Nested Properties', () => {
         entity.address.street.number = '456';
       });
 
-      const postUpdateLookup = (await db.fetch(query)).get(ENTITY_ID);
+      const postUpdateLookup = (await db.fetch(query)).find(
+        (e) => e.id === ENTITY_ID
+      );
       expect(postUpdateLookup.address.street.number).toBe('456');
       expect(postUpdateLookup.address.street.name).toBe('Main St');
     });
@@ -3102,10 +3104,13 @@ describe('Nested Properties', () => {
       }
 
       const results = await db.fetch(
-        db.query('Businesses').select(['address.city', 'address.state']).build()
+        db
+          .query('Businesses')
+          .select(['address.city', 'address.state', 'id'])
+          .build()
       );
       expect(results).toHaveLength(1);
-      const result = results.get(ENTITY_ID);
+      const result = results.find((e) => e.id === ENTITY_ID);
       expect(result.address.city).toBe('San Francisco');
       expect(result.address.state).toBe('CA');
       expect(result.address).not.toHaveProperty('street');
@@ -3156,7 +3161,7 @@ describe('Nested Properties', () => {
       }
 
       const query = db.query('Businesses').entityId(ENTITY_ID).build();
-      const result = (await db.fetch(query)).get(ENTITY_ID);
+      const result = (await db.fetch(query)).find((e) => e.id === ENTITY_ID);
       expect(result.address.street.number).toBe('123');
       expect(result.address.street.name).toBe('Main St');
       expect(result.address.city).toBe('San Francisco');
@@ -4851,7 +4856,7 @@ describe('Graph-like queries', () => {
       .build();
 
     const result = await db.fetch(query);
-    expect(Array.from(result.keys())).toEqual([
+    expect(result.map((e) => e.id)).toEqual([
       'Airbus-A380',
       'Boeing-737',
       'Boeing-747',
@@ -4940,9 +4945,14 @@ describe('selecting subqueries', () => {
       })
       .build();
     const result = await db.fetch(query);
-    expect(result.get('user-1')).toHaveProperty('posts');
-    expect(result.get('user-1')!.posts).toHaveLength(1);
-    expect(result.get('user-1')!.posts.get('post-1')).toMatchObject({
+
+    expect(result.find((e) => e.id === 'user-1')).toHaveProperty('posts');
+    expect(result.find((e) => e.id === 'user-1')!.posts).toHaveLength(1);
+    expect(
+      result
+        .find((e) => e.id === 'user-1')!
+        .posts.find((e) => e.id === 'post-1')
+    ).toMatchObject({
       id: 'post-1',
       content: 'Hello World!',
       author_id: 'user-1',
@@ -4994,10 +5004,18 @@ describe('selecting subqueries', () => {
       })
       .build();
     const result = await db.fetch(query);
-    expect(result.get('user-1')).toHaveProperty('posts');
-    expect(result.get('user-1')!.posts).toHaveLength(1);
-    expect(result.get('user-1')!.posts.get('post-1')!.likedBy).toBeDefined();
-    expect(result.get('user-1')!.posts.get('post-1')!.likedBy).toHaveLength(3);
+    expect(result.find((e) => e.id === 'user-1')).toHaveProperty('posts');
+    expect(result.find((e) => e.id === 'user-1')!.posts).toHaveLength(1);
+    expect(
+      result
+        .find((e) => e.id === 'user-1')!
+        .posts.find((e) => e.id === 'post-1')!.likedBy
+    ).toBeDefined();
+    expect(
+      result
+        .find((e) => e.id === 'user-1')!
+        .posts.find((e) => e.id === 'post-1')!.likedBy
+    ).toHaveLength(3);
   });
 
   it('can subscribe with subqueries', async () => {
@@ -5024,9 +5042,15 @@ describe('selecting subqueries', () => {
       {
         check: (results) => {
           expect(results).toHaveLength(3);
-          expect(results.get('user-1')).toHaveProperty('posts');
-          expect(results.get('user-1')!.posts).toHaveLength(1);
-          expect(results.get('user-1')!.posts.get('post-1')).toMatchObject({
+          expect(results.find((e) => e.id === 'user-1')).toHaveProperty(
+            'posts'
+          );
+          expect(results.find((e) => e.id === 'user-1')!.posts).toHaveLength(1);
+          expect(
+            results
+              .find((e) => e.id === 'user-1')!
+              .posts.find((e) => e.id === 'post-1')
+          ).toMatchObject({
             id: 'post-1',
             content: 'Hello World!',
             author_id: 'user-1',
@@ -5044,9 +5068,15 @@ describe('selecting subqueries', () => {
         },
         check: (results) => {
           expect(results).toHaveLength(3);
-          expect(results.get('user-1')).toHaveProperty('posts');
-          expect(results.get('user-1')!.posts).toHaveLength(2);
-          expect(results.get('user-1')!.posts.get('post-4')).toMatchObject({
+          expect(results.find((e) => e.id === 'user-1')).toHaveProperty(
+            'posts'
+          );
+          expect(results.find((e) => e.id === 'user-1')!.posts).toHaveLength(2);
+          expect(
+            results
+              .find((e) => e.id === 'user-1')!
+              .posts.find((e) => e.id === 'post-4')
+          ).toMatchObject({
             id: 'post-4',
             content: 'Hello World!',
             author_id: 'user-1',
@@ -5077,8 +5107,10 @@ describe('selecting subqueries', () => {
       })
       .build();
     const result = await db.fetch(query);
-    expect(result.get('user-1')).toHaveProperty('favoritePost');
-    expect(result.get('user-1')!.favoritePost).toMatchObject({
+    expect(result.find((e) => e.id === 'user-1')).toHaveProperty(
+      'favoritePost'
+    );
+    expect(result.find((e) => e.id === 'user-1')!.favoritePost).toMatchObject({
       id: 'post-1',
       content: 'Hello World!',
       author_id: 'user-1',
@@ -5106,8 +5138,10 @@ describe('selecting subqueries', () => {
       })
       .build();
     const result = await db.fetch(query);
-    expect(result.get('user-1')).toHaveProperty('favoritePost');
-    expect(result.get('user-1')!.favoritePost).toEqual(null);
+    expect(result.find((e) => e.id === 'user-1')).toHaveProperty(
+      'favoritePost'
+    );
+    expect(result.find((e) => e.id === 'user-1')!.favoritePost).toEqual(null);
   });
 });
 
@@ -5229,18 +5263,26 @@ describe('selecting subqueries from schema', () => {
 
     const result = await user1DB.fetch(query);
     // Other fields are included in the selection
-    expect(result.get('user-1')).toHaveProperty('name');
+    expect(result.find((e) => e.id === 'user-1')).toHaveProperty('name');
 
-    expect(result.get('user-1')).toHaveProperty('posts');
-    expect(result.get('user-1')!.posts).toHaveLength(1);
-    expect(result.get('user-1')!.posts!.get('post-1')).toMatchObject({
+    expect(result.find((e) => e.id === 'user-1')).toHaveProperty('posts');
+    expect(result.find((e) => e.id === 'user-1')!.posts).toHaveLength(1);
+    expect(
+      result
+        .find((e) => e.id === 'user-1')!
+        .posts!.find((e) => e.id === 'post-1')
+    ).toMatchObject({
       id: 'post-1',
       content: 'Hello World!',
       author_id: 'user-1',
       topics: new Set(['comedy', 'sports']),
     });
-    expect(result.get('user-1')!.friends).toHaveLength(1);
-    expect(result.get('user-1')!.friends.get('user-3')).toMatchObject({
+    expect(result.find((e) => e.id === 'user-1')!.friends).toHaveLength(1);
+    expect(
+      result
+        .find((e) => e.id === 'user-1')!
+        .friends.find((e) => e.id === 'user-3')
+    ).toMatchObject({
       id: 'user-3',
       name: 'Charlie',
       friend_ids: new Set(['user-1', 'user-2']),
@@ -5251,7 +5293,7 @@ describe('selecting subqueries from schema', () => {
     const query = user1DB.query('likes').include('post').build();
     const results = await user1DB.fetch(query);
     console.log(results);
-    expect(results.size).toBe(3);
+    expect(results.length).toBe(3);
     const postsMap = new Map();
     for (const result of results.values()) {
       expect(result.post).not.toBeNull();
@@ -5268,8 +5310,8 @@ describe('selecting subqueries from schema', () => {
     const query = user1DB.query('users').build();
 
     const result = await user1DB.fetch(query);
-    expect(result.get('user-1')).not.toHaveProperty('posts');
-    expect(result.get('user-1')).not.toHaveProperty('friends');
+    expect(result.find((e) => e.id === 'user-1')).not.toHaveProperty('posts');
+    expect(result.find((e) => e.id === 'user-1')).not.toHaveProperty('friends');
   });
 
   // TODO: determine if we want to support this
@@ -5279,7 +5321,7 @@ describe('selecting subqueries from schema', () => {
     }))!;
     expect(result).toHaveProperty('posts');
     expect(result.posts).toHaveLength(1);
-    expect(result.posts.get('post-1')).toMatchObject({
+    expect(result.posts.find((e) => e.id === 'post-1')).toMatchObject({
       id: 'post-1',
       content: 'Hello World!',
       author_id: 'user-1',
@@ -5293,12 +5335,20 @@ describe('selecting subqueries from schema', () => {
       .build();
     const result = await user1DB.fetch(query);
     // Other fields are included in the selection
-    expect(result.get('user-1')).toHaveProperty('name');
-    expect(result.get('user-1')).toHaveProperty('posts');
-    expect(result.get('user-1')!.posts).toHaveLength(1);
-    expect(result.get('user-1')!.posts.get('post-1')).toBeDefined();
+    expect(result.find((e) => e.id === 'user-1')).toHaveProperty('name');
+    expect(result.find((e) => e.id === 'user-1')).toHaveProperty('posts');
+    expect(result.find((e) => e.id === 'user-1')!.posts).toHaveLength(1);
+    expect(
+      result
+        .find((e) => e.id === 'user-1')!
+        .posts.find((e) => e.id === 'post-1')
+    ).toBeDefined();
     // fails
-    expect(result.get('user-1')!.posts.get('post-1')?.likes).toBeDefined();
+    expect(
+      result
+        .find((e) => e.id === 'user-1')!
+        .posts.find((e) => e.id === 'post-1')?.likes
+    ).toBeDefined();
   });
   it('should throw an error if you try to update a subquery', async () => {
     expect(
@@ -5325,14 +5375,14 @@ describe('selecting subqueries from schema', () => {
         user1DB.query('users').include('posts').build()
       );
       expect(result).toHaveLength(3);
-      expect(result.get('user-1')).toHaveProperty('posts');
-      expect(result.get('user-1')!.posts).toHaveLength(1);
+      expect(result.find((e) => e.id === 'user-1')).toHaveProperty('posts');
+      expect(result.find((e) => e.id === 'user-1')!.posts).toHaveLength(1);
 
-      expect(result.get('user-2')).toHaveProperty('posts');
-      expect(result.get('user-2')!.posts).toHaveLength(0);
+      expect(result.find((e) => e.id === 'user-2')).toHaveProperty('posts');
+      expect(result.find((e) => e.id === 'user-2')!.posts).toHaveLength(0);
 
-      expect(result.get('user-3')).toHaveProperty('posts');
-      expect(result.get('user-3')!.posts).toHaveLength(0);
+      expect(result.find((e) => e.id === 'user-3')).toHaveProperty('posts');
+      expect(result.find((e) => e.id === 'user-3')!.posts).toHaveLength(0);
     }
   });
 
@@ -5351,19 +5401,19 @@ describe('selecting subqueries from schema', () => {
       skipRules: true,
     });
     expect(results).toHaveLength(3);
-    expect(results.get('user-1')).toHaveProperty('posts');
-    expect(results.get('user-1')!.posts).toHaveLength(1);
-    expect(results.get('user-2')).toHaveProperty('posts');
-    expect(results.get('user-2')!.posts).toHaveLength(1);
-    expect(results.get('user-3')).toHaveProperty('posts');
-    expect(results.get('user-3')!.posts).toHaveLength(1);
+    expect(results.find((e) => e.id === 'user-1')).toHaveProperty('posts');
+    expect(results.find((e) => e.id === 'user-1')!.posts).toHaveLength(1);
+    expect(results.find((e) => e.id === 'user-2')).toHaveProperty('posts');
+    expect(results.find((e) => e.id === 'user-2')!.posts).toHaveLength(1);
+    expect(results.find((e) => e.id === 'user-3')).toHaveProperty('posts');
+    expect(results.find((e) => e.id === 'user-3')!.posts).toHaveLength(1);
   });
 
   it('can select a singleton via a subquery', async () => {
     const query = user1DB.query('posts').include('author').build();
     const result = await user1DB.fetch(query);
-    expect(result.get('post-1')).toHaveProperty('author');
-    expect(result.get('post-1').author).toMatchObject({
+    expect(result.find((e) => e.id === 'post-1')).toHaveProperty('author');
+    expect(result.find((e) => e.id === 'post-1').author).toMatchObject({
       id: 'user-1',
       name: 'Alice',
       friend_ids: new Set(['user-2', 'user-3']),
@@ -5379,8 +5429,8 @@ describe('selecting subqueries from schema', () => {
       })
       .build();
     const result = await user1DB.fetch(query);
-    expect(result.get('post-1')).toHaveProperty('author');
-    expect(result.get('post-1').author).toEqual(null);
+    expect(result.find((e) => e.id === 'post-1')).toHaveProperty('author');
+    expect(result.find((e) => e.id === 'post-1').author).toEqual(null);
   });
   it('subscribe to subqueries when using entityId in query', async () => {
     const query = user1DB
@@ -5392,8 +5442,10 @@ describe('selecting subqueries from schema', () => {
       {
         check: (results) => {
           expect(results).toHaveLength(1);
-          expect(results.get('user-1')).toHaveProperty('posts');
-          expect(results.get('user-1')!.posts).toHaveLength(1);
+          expect(results.find((e) => e.id === 'user-1')).toHaveProperty(
+            'posts'
+          );
+          expect(results.find((e) => e.id === 'user-1')!.posts).toHaveLength(1);
         },
       },
       {
@@ -5406,9 +5458,15 @@ describe('selecting subqueries from schema', () => {
         },
         check: (results) => {
           expect(results).toHaveLength(1);
-          expect(results.get('user-1')).toHaveProperty('posts');
-          expect(results.get('user-1')!.posts).toHaveLength(2);
-          expect(results.get('user-1')!.posts.get('post-4')).toMatchObject({
+          expect(results.find((e) => e.id === 'user-1')).toHaveProperty(
+            'posts'
+          );
+          expect(results.find((e) => e.id === 'user-1')!.posts).toHaveLength(2);
+          expect(
+            results
+              .find((e) => e.id === 'user-1')!
+              .posts.find((e) => e.id === 'post-4')
+          ).toMatchObject({
             id: 'post-4',
             content: 'Hello World!',
             author_id: 'user-1',
@@ -5450,7 +5508,7 @@ describe('db.clear()', () => {
     // State is defined
     {
       const result = await db.fetch({ collectionName: 'test' });
-      expect(result.size).toBe(2);
+      expect(result.length).toBe(2);
 
       const schema = await db.getSchema();
       expect(schema).not.toEqual(undefined);
@@ -5460,7 +5518,7 @@ describe('db.clear()', () => {
 
     {
       const result = await db.fetch({ collectionName: 'test' });
-      expect(result.size).toBe(0);
+      expect(result.length).toBe(0);
 
       const schema = await db.getSchema();
       expect(schema).toEqual(undefined);
@@ -5497,7 +5555,7 @@ describe('db.clear()', () => {
     // State is defined
     {
       const result = await db.fetch({ collectionName: 'test' });
-      expect(result.size).toBe(2);
+      expect(result.length).toBe(2);
 
       const schema = await db.getSchema();
       expect(schema).not.toEqual(undefined);
@@ -5507,7 +5565,7 @@ describe('db.clear()', () => {
 
     {
       const result = await db.fetch({ collectionName: 'test' });
-      expect(result.size).toBe(0);
+      expect(result.length).toBe(0);
 
       const schema = await db.getSchema();
       expect(schema).not.toEqual(undefined);
@@ -5631,8 +5689,8 @@ describe('variable conflicts', () => {
         .where(['name', '=', '$global.name'])
         .build();
       const result = await db.fetch(query);
-      expect(result.size).toBe(1);
-      expect(Array.from(result.keys())).toStrictEqual(['1']);
+      expect(result.length).toBe(1);
+      expect(result.map((e) => e.id)).toStrictEqual(['1']);
     }
 
     // Can query with session variables
@@ -5642,8 +5700,8 @@ describe('variable conflicts', () => {
         .where(['name', '=', '$session.name'])
         .build();
       const result = await db.fetch(query);
-      expect(result.size).toBe(1);
-      expect(Array.from(result.keys())).toStrictEqual(['2']);
+      expect(result.length).toBe(1);
+      expect(result.map((e) => e.id)).toStrictEqual(['2']);
     }
 
     // Can query with query variables
@@ -5654,8 +5712,8 @@ describe('variable conflicts', () => {
         .where(['name', '=', '$query.name'])
         .build();
       const result = await db.fetch(query);
-      expect(result.size).toBe(1);
-      expect(Array.from(result.keys())).toStrictEqual(['3']);
+      expect(result.length).toBe(1);
+      expect(result.map((e) => e.id)).toStrictEqual(['3']);
     }
 
     // Can query with subquery variables (each colletion has a 'name' field)
@@ -5694,8 +5752,8 @@ describe('variable conflicts', () => {
           .where(['department.head.name', '=', '$0.name'])
           .build();
         const result = await db.fetch(query);
-        expect(result.size).toBe(1);
-        expect(Array.from(result.keys())).toStrictEqual(['5']);
+        expect(result.length).toBe(1);
+        expect(result.map((e) => e.id)).toStrictEqual(['5']);
       }
 
       {
@@ -5705,8 +5763,8 @@ describe('variable conflicts', () => {
           .where(['department.head.name', '=', '$0.department.name'])
           .build();
         const result = await db.fetch(query);
-        expect(result.size).toBe(3);
-        expect(Array.from(result.keys())).toStrictEqual(['5', '6', '7']);
+        expect(result.length).toBe(3);
+        expect(result.map((e) => e.id)).toStrictEqual(['5', '6', '7']);
       }
 
       {
@@ -5716,7 +5774,7 @@ describe('variable conflicts', () => {
           .where(['department.head.name', '=', '$0.department.head.name'])
           .build();
         const result = await db.fetch(query);
-        expect(result.size).toBe(7);
+        expect(result.length).toBe(7);
       }
     }
   });
@@ -5769,11 +5827,11 @@ describe('variable conflicts', () => {
     {
       const query = db.query('users').select(['id']).include('city').build();
       const result = await db.fetch(query);
-      expect(result.get('1')).toMatchObject({
+      expect(result.find((e) => e.id === '1')).toMatchObject({
         id: '1',
         city: { id: '1', name: 'Springfield', state: 'IL' },
       });
-      expect(result.get('2')).toMatchObject({
+      expect(result.find((e) => e.id === '2')).toMatchObject({
         id: '2',
         city: { id: '2', name: 'Chicago', state: 'IL' },
       });
@@ -5787,8 +5845,8 @@ describe('variable conflicts', () => {
         .where(['address.city_id', '=', '$session.city.id'])
         .build();
       const result = await sessionDB.fetch(query);
-      expect(result.size).toBe(1);
-      expect(result.get('2')).toMatchObject({
+      expect(result.length).toBe(1);
+      expect(result.find((e) => e.id === '2')).toMatchObject({
         id: '2',
         name: 'Bob',
         address: {
@@ -5827,14 +5885,20 @@ describe('variable conflicts', () => {
       const bobDB = db.withSessionVars({ SESSION_USER_ID: '2' });
       {
         const result = await aliceDB.fetch(aliceDB.query('users').build());
-        expect(result.size).toBe(1);
-        expect(result.get('1')).toMatchObject({ id: '1', name: 'Alice' });
+        expect(result.length).toBe(1);
+        expect(result.find((e) => e.id === '1')).toMatchObject({
+          id: '1',
+          name: 'Alice',
+        });
       }
 
       {
         const result = await bobDB.fetch(db.query('users').build());
-        expect(result.size).toBe(1);
-        expect(result.get('2')).toMatchObject({ id: '2', name: 'Bob' });
+        expect(result.length).toBe(1);
+        expect(result.find((e) => e.id === '2')).toMatchObject({
+          id: '2',
+          name: 'Bob',
+        });
       }
     });
     it('rules properly reference current entity', async () => {
@@ -5962,37 +6026,33 @@ describe('variable conflicts', () => {
         const result = await db.fetch(
           db.query('users').include('posts').build()
         );
-        expect(result.get('1')?.posts).toStrictEqual(
-          new Map([
-            ['1', { id: '1', content: 'Hello1', author_id: '1' }],
-            ['2', { id: '2', content: 'Hello2', author_id: '1' }],
-          ])
-        );
-        expect(result.get('2')?.posts).toStrictEqual(
-          new Map([
-            ['3', { id: '3', content: 'Hello3', author_id: '2' }],
-            ['4', { id: '4', content: 'Hello4', author_id: '2' }],
-          ])
-        );
+        expect(result.find((e) => e.id === '1')?.posts).toStrictEqual([
+          { id: '1', content: 'Hello1', author_id: '1' },
+          { id: '2', content: 'Hello2', author_id: '1' },
+        ]);
+        expect(result.find((e) => e.id === '2')?.posts).toStrictEqual([
+          { id: '3', content: 'Hello3', author_id: '2' },
+          { id: '4', content: 'Hello4', author_id: '2' },
+        ]);
       }
 
       {
         const result = await db.fetch(
           db.query('posts').include('author').build()
         );
-        expect(result.get('1')?.author).toStrictEqual({
+        expect(result.find((e) => e.id === '1')?.author).toStrictEqual({
           id: '1',
           name: 'Alice',
         });
-        expect(result.get('2')?.author).toStrictEqual({
+        expect(result.find((e) => e.id === '2')?.author).toStrictEqual({
           id: '1',
           name: 'Alice',
         });
-        expect(result.get('3')?.author).toStrictEqual({
+        expect(result.find((e) => e.id === '3')?.author).toStrictEqual({
           id: '2',
           name: 'Bob',
         });
-        expect(result.get('4')?.author).toStrictEqual({
+        expect(result.find((e) => e.id === '4')?.author).toStrictEqual({
           id: '2',
           name: 'Bob',
         });

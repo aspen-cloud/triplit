@@ -25,7 +25,7 @@ import { ClientQuery, ClientSchema, SchemaClientQueries } from './query.js';
 export type ClientFetchResult<
   M extends Models,
   C extends SchemaClientQueries<M>
-> = Map<string, ClientFetchResultEntity<M, C>>;
+> = ClientFetchResultEntity<M, C>[];
 
 /**
  * Entity from a query based on the query's model

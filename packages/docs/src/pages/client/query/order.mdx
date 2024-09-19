@@ -82,7 +82,7 @@ const query = client
   .limit(PAGE_SIZE);
 
 const { results: firstPage } = client.fetch(query);
-const lastEntity = Array.from(firstPage.values()).pop();
+const lastEntity = firstPage?.pop();
 
 const secondPageQuery = query.after(lastEntity);
 const { results: secondPage } = client.fetch(secondPageQuery);

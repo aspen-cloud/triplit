@@ -93,10 +93,6 @@ export function DataViewer({
     hasMore,
     loadMore,
   } = useInfiniteQuery(client, triplitQuery);
-  const sortedAndFilteredEntities = useMemo(
-    () => Array.from(orderedAndFilteredResults ?? []),
-    [orderedAndFilteredResults]
-  );
 
   const flattenedCollectionSchema = useMemo(() => {
     if (!collectionSchema) return undefined;
@@ -114,9 +110,9 @@ export function DataViewer({
     }
 
     // Best we can do for now with schemaless is to load all attributes from the current set of entities
-    if (!sortedAndFilteredEntities) return attributes;
+    if (!orderedAndFilteredResults) return attributes;
     // otherwise construct a set of all attributes from all entities
-    sortedAndFilteredEntities.forEach(([_id, entity]) => {
+    orderedAndFilteredResults.forEach((entity) => {
       Object.keys(entity).forEach((key: string) => {
         if (!attributes.has(key) && key !== '_collection') {
           attributes.add(key);
@@ -124,17 +120,17 @@ export function DataViewer({
       });
     });
     return attributes;
-  }, [sortedAndFilteredEntities, flattenedCollectionSchema]);
+  }, [orderedAndFilteredResults, flattenedCollectionSchema]);
 
   const allVisibleEntitiesAreSelected = useMemo(() => {
     if (!selectedEntities || selectedEntities.size === 0) return false;
-    const allVisibleEntities = new Set(
-      sortedAndFilteredEntities.map(([id]) => id)
+    const allVisibleEntities = new Set<string>(
+      orderedAndFilteredResults?.map((e) => e.id as string)
     );
     return Array.from(allVisibleEntities).every((id) =>
       selectedEntities.has(id)
     );
-  }, [sortedAndFilteredEntities, selectedEntities]);
+  }, [orderedAndFilteredResults, selectedEntities]);
 
   function onDeselectAllEntities() {
     setSelectedEntities(new Set());
@@ -157,7 +153,9 @@ export function DataViewer({
   }
 
   function onSelectAllEntities() {
-    setSelectedEntities(new Set(sortedAndFilteredEntities.map(([id]) => id)));
+    setSelectedEntities(
+      new Set(orderedAndFilteredResults?.map((e) => e.id as string))
+    );
   }
 
   function toggleSelectAllEntities() {
@@ -383,13 +381,12 @@ export function DataViewer({
   }
 
   const flatFilteredEntities = useMemo(() => {
-    const flattened = sortedAndFilteredEntities.map(([id, entity]) => ({
-      id,
+    const flattened = orderedAndFilteredResults?.map((entity) => ({
+      id: entity.id,
       ...flattenEntity(entity),
     }));
-    // console.log({ flattened });
     return flattened;
-  }, [sortedAndFilteredEntities]);
+  }, [orderedAndFilteredResults]);
 
   return (
     <div className="flex flex-col max-w-full items-start h-screen overflow-hidden">
@@ -474,13 +471,15 @@ export function DataViewer({
             setQuery({ order });
           }}
         />
-        <div className="text-sm px-2">{`Showing ${
-          sortedAndFilteredEntities.length
-        }${
-          stats && !filters?.length
-            ? ` of ${parseTotalEstimate(stats.numEntities)}`
-            : ''
-        } entities`}</div>
+        {orderedAndFilteredResults?.length && (
+          <div className="text-sm px-2">{`Showing ${
+            orderedAndFilteredResults.length
+          }${
+            stats && !filters?.length
+              ? ` of ${parseTotalEstimate(stats.numEntities)}`
+              : ''
+          } entities`}</div>
+        )}
 
         <CreateEntitySheet
           key={selectedCollection}
@@ -490,15 +489,17 @@ export function DataViewer({
           client={client}
         />
       </div>
-      <DataTable
-        columns={columns}
-        data={flatFilteredEntities}
-        showLoadMore={hasMore}
-        loadMoreDisabled={fetchingMore || !hasMore}
-        onLoadMore={() => {
-          loadMore();
-        }}
-      />
+      {
+        <DataTable
+          columns={columns}
+          data={flatFilteredEntities ?? []}
+          showLoadMore={hasMore}
+          loadMoreDisabled={fetchingMore || !hasMore}
+          onLoadMore={() => {
+            loadMore();
+          }}
+        />
+      }
     </div>
   );
 }

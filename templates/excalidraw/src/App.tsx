@@ -47,7 +47,7 @@ function App() {
       excalidrawAPI.resetScene();
       return;
     }
-    const elements = Array.from(results.values()).map((elem) => {
+    const elements = results.map((elem) => {
       if (elem.groupIds) {
         elem.groupIds = Object.values(elem.groupIds);
       } else {
@@ -186,16 +186,14 @@ function App() {
     return currElem._fracIndex;
   }
 
-  const pagesArray = useMemo(() => (pages ? [...pages.values()] : []), [pages]);
-
   return (
     <div className="flex flex-col w-[100vw] h-[100vh]">
       <div className="w-[100vw] bg-zinc-900 flex flex-row justify-between items-center py-2 px-2 gap-3">
-        <PageManagementMenu pages={pagesArray} />
+        <PageManagementMenu pages={pages ?? []} />
         <SyncStateIndicator />
       </div>
       <div className="relative grow">
-        <WelcomeOverlay pages={pagesArray} />
+        <WelcomeOverlay pages={pages ?? []} />
         <Excalidraw
           onChange={onChange}
           ref={excalidrawRefCallback}

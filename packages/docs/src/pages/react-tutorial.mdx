@@ -399,7 +399,7 @@ export default function App() {
 
 The `useQuery` hook takes two arguments: a Triplit client and a query. The query is created by calling `triplit.query` and passing in the name of the collection that we want to query. `useQuery` returns an object with the following properties:
 
-- `results`: A `Map<string, Todo>` that contains the results of the query. The keys of the map are the ids of the todos, and the values are the todos themselves.
+- `results`: An `Array<Todo>` that contains the results of the query.
 - `error`: An error object if the query failed, or `undefined` if the query succeeded.
 - `fetching`: A boolean that indicates whether the query is currently fetching data.
 
@@ -450,13 +450,11 @@ export default function App() {
           Add Todo
         </button>
       </form>
-      {todos && (
-        <div>
-          {Array.from(todos).map(([id, todo]) => (
-            <Todo key={id} todo={todo} />
-          ))}
-        </div>
-      )}
+      <div>
+        {todos?.map((todo) => (
+          <Todo key={todo.id} todo={todo} />
+        ))}
+      </div>
     </div>
   );
 }
@@ -466,7 +464,7 @@ Here we've:
 
 1. Imported our `<Todo/>` component
 2. Called the `useTodos` hook to query the todos
-3. Rendered the todos by turning the `Map<string, Todo>` returned by the `useTodos` hook into an `Array`, and iterated over the array with `Array.map` in our `<App/>` component.
+3. Rendered the todos by iterating over the array with `Array.map` in our `<App/>` component.
 
 <Callout emoji="💡">
   Triplit queries are *live*, meaning that you never need to manually refetch

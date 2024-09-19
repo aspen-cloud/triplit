@@ -6553,6 +6553,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@jridgewell/sourcemap-codec@npm:^1.5.0":
+  version: 1.5.0
+  resolution: "@jridgewell/sourcemap-codec@npm:1.5.0"
+  checksum: 10/4ed6123217569a1484419ac53f6ea0d9f3b57e5b57ab30d7c267bdb27792a27eb0e4b08e84a2680aa55cc2f2b411ffd6ec3db01c44fdc6dc43aca4b55f8374fd
+  languageName: node
+  linkType: hard
+
 "@jridgewell/trace-mapping@npm:0.3.9":
   version: 0.3.9
   resolution: "@jridgewell/trace-mapping@npm:0.3.9"
@@ -9732,20 +9739,20 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@sveltejs/package@npm:^2.3.0":
-  version: 2.3.0
-  resolution: "@sveltejs/package@npm:2.3.0"
+"@sveltejs/package@npm:^2.3.5":
+  version: 2.3.5
+  resolution: "@sveltejs/package@npm:2.3.5"
   dependencies:
-    chokidar: "npm:^3.6.0"
+    chokidar: "npm:^4.0.0"
     kleur: "npm:^4.1.5"
     sade: "npm:^1.8.1"
     semver: "npm:^7.5.4"
-    svelte2tsx: "npm:~0.7.0"
+    svelte2tsx: "npm:~0.7.16"
   peerDependencies:
     svelte: ^3.44.0 || ^4.0.0 || ^5.0.0-next.1
   bin:
     svelte-package: svelte-package.js
-  checksum: 10/01825ca23b42cac136077c871ecfe2dd1b044ea41cc4b60f9d2f11f60f58c030e3231c3f1d5a3c0762e1e861e42647f5484290aa951ab1ef4b09cde4a55a1ddc
+  checksum: 10/ce2df3cda527ff461d33b55508b0e09d1e779d1b5f4a23127f7438615460333ff9153448e101c80ee32dab90c5c376dde8e78a02c6d1ee5a85ace0a76c16b66d
   languageName: node
   linkType: hard
 
@@ -9926,15 +9933,16 @@ __metadata:
   linkType: hard
 
 "@triplit/angular@npm:latest":
-  version: 0.0.1
-  resolution: "@triplit/angular@npm:0.0.1"
+  version: 0.0.24
+  resolution: "@triplit/angular@npm:0.0.24"
   dependencies:
-    "@triplit/client": "npm:^0.3.76"
+    "@triplit/client": "npm:^0.4.13"
     tslib: "npm:^2.3.0"
   peerDependencies:
     "@angular/common": ^18.1.0
     "@angular/core": ^18.1.0
-  checksum: 10/ad95dafcd2d8e47802f5827f73ba562ff3fdb4c2b032ee498ffb4daab439b5f2abea5760d184fe8275a39d63a7307dc6cb4ebd7be3b8fafc08f4e607510f32b1
+    rxjs: ^7.8.1
+  checksum: 10/7db1c6d0f1e763ff8a906bf686249be6fe484d47197cedba5144a1f8f145c2c9c4bd1ebd987daf47cbd30e23f18728de31fdc548d20a21d3cdfe64d540249af2
   languageName: node
   linkType: hard
 
@@ -9972,7 +9980,43 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@triplit/cli@npm:0.5.14, @triplit/cli@workspace:^, @triplit/cli@workspace:packages/cli":
+"@triplit/cli@npm:latest":
+  version: 0.3.71
+  resolution: "@triplit/cli@npm:0.3.71"
+  dependencies:
+    "@supabase/supabase-js": "npm:^2.39.3"
+    "@triplit/client": "npm:^0.3.59"
+    "@triplit/db": "npm:^0.3.45"
+    "@triplit/server": "npm:^0.3.49"
+    "@triplit/server-core": "npm:^0.3.47"
+    ansis: "npm:^1.5.5"
+    axios: "npm:^1.5.0"
+    chokidar: "npm:^3.5.3"
+    conf: "npm:^12.0.0"
+    degit: "npm:^2.8.4"
+    dotenv: "npm:^16.3.1"
+    dotenv-expand: "npm:^10.0.0"
+    esbuild: "npm:^0.20.0"
+    ink: "npm:^4.4.0"
+    jsondiffpatch: "npm:^0.5.0"
+    jsonwebtoken: "npm:^9.0.2"
+    minimist: "npm:^1.2.8"
+    node-fetch: "npm:^3.3.2"
+    nypm: "npm:^0.3.8"
+    ora: "npm:^8.0.1"
+    parjs: "npm:^1.3.2"
+    prettier: "npm:^3.0.3"
+    prompts: "npm:^2.4.2"
+    react: "npm:^18.2.0"
+    typescript: "npm:^5.2.2"
+    ws: "npm:^8.14.1"
+  bin:
+    triplit: ./dist/index.js
+  checksum: 10/d7073548b87bfb51c1f594dc27c5aecef65a5209cef0e107a3a8f1fe804d3c0ca56c235c91427aeb8286462741ef4acaca46afa720957968fb5d212aa6384952
+  languageName: node
+  linkType: hard
+
+"@triplit/cli@workspace:^, @triplit/cli@workspace:packages/cli":
   version: 0.0.0-use.local
   resolution: "@triplit/cli@workspace:packages/cli"
   dependencies:
@@ -10029,43 +10073,20 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@triplit/cli@npm:latest":
-  version: 0.3.71
-  resolution: "@triplit/cli@npm:0.3.71"
+"@triplit/client@npm:^0.3.59":
+  version: 0.3.84
+  resolution: "@triplit/client@npm:0.3.84"
   dependencies:
-    "@supabase/supabase-js": "npm:^2.39.3"
-    "@triplit/client": "npm:^0.3.59"
-    "@triplit/db": "npm:^0.3.45"
-    "@triplit/server": "npm:^0.3.49"
-    "@triplit/server-core": "npm:^0.3.47"
-    ansis: "npm:^1.5.5"
-    axios: "npm:^1.5.0"
-    chokidar: "npm:^3.5.3"
-    conf: "npm:^12.0.0"
-    degit: "npm:^2.8.4"
-    dotenv: "npm:^16.3.1"
-    dotenv-expand: "npm:^10.0.0"
-    esbuild: "npm:^0.20.0"
-    ink: "npm:^4.4.0"
-    jsondiffpatch: "npm:^0.5.0"
-    jsonwebtoken: "npm:^9.0.2"
-    minimist: "npm:^1.2.8"
-    node-fetch: "npm:^3.3.2"
-    nypm: "npm:^0.3.8"
-    ora: "npm:^8.0.1"
-    parjs: "npm:^1.3.2"
-    prettier: "npm:^3.0.3"
-    prompts: "npm:^2.4.2"
-    react: "npm:^18.2.0"
-    typescript: "npm:^5.2.2"
-    ws: "npm:^8.14.1"
-  bin:
-    triplit: ./dist/index.js
-  checksum: 10/d7073548b87bfb51c1f594dc27c5aecef65a5209cef0e107a3a8f1fe804d3c0ca56c235c91427aeb8286462741ef4acaca46afa720957968fb5d212aa6384952
+    "@sinclair/typebox": "npm:^0.32.15"
+    "@triplit/db": "npm:^0.3.64"
+    comlink: "npm:^4.4.1"
+    rxjs: "npm:^7.8.1"
+    superjson: "npm:^2.2.1"
+  checksum: 10/987e3f616c8451e024664102b97246be8f37be902809180a293e35e3bc34527dfe3bb322ccef9a1f5019c527045a69c188e9de71dae55b8b1a67ce9a2ca19c9a
   languageName: node
   linkType: hard
 
-"@triplit/client@npm:0.4.13, @triplit/client@workspace:^, @triplit/client@workspace:packages/client":
+"@triplit/client@npm:^0.4.13, @triplit/client@workspace:^, @triplit/client@workspace:packages/client":
   version: 0.0.0-use.local
   resolution: "@triplit/client@workspace:packages/client"
   dependencies:
@@ -10084,42 +10105,16 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@triplit/client@npm:^0.3.59, @triplit/client@npm:^0.3.76":
-  version: 0.3.84
-  resolution: "@triplit/client@npm:0.3.84"
-  dependencies:
-    "@sinclair/typebox": "npm:^0.32.15"
-    "@triplit/db": "npm:^0.3.64"
-    comlink: "npm:^4.4.1"
-    rxjs: "npm:^7.8.1"
-    superjson: "npm:^2.2.1"
-  checksum: 10/987e3f616c8451e024664102b97246be8f37be902809180a293e35e3bc34527dfe3bb322ccef9a1f5019c527045a69c188e9de71dae55b8b1a67ce9a2ca19c9a
-  languageName: node
-  linkType: hard
-
-"@triplit/client@npm:^0.3.73":
-  version: 0.3.73
-  resolution: "@triplit/client@npm:0.3.73"
-  dependencies:
-    "@sinclair/typebox": "npm:^0.32.15"
-    "@triplit/db": "npm:^0.3.56"
-    comlink: "npm:^4.4.1"
-    rxjs: "npm:^7.8.1"
-    superjson: "npm:^2.2.1"
-  checksum: 10/d53a13d7d453de79c731558f3a2c34c1687576991f2fab6f74100b44adea4fd93247adc2d65af481cafe8b9f2e90edf3494437a0b7e158544dd88f0cc8e21d54
-  languageName: node
-  linkType: hard
-
 "@triplit/client@npm:latest":
-  version: 0.3.59
-  resolution: "@triplit/client@npm:0.3.59"
+  version: 0.4.13
+  resolution: "@triplit/client@npm:0.4.13"
   dependencies:
     "@sinclair/typebox": "npm:^0.32.15"
-    "@triplit/db": "npm:^0.3.45"
+    "@triplit/db": "npm:^0.3.75"
     comlink: "npm:^4.4.1"
     rxjs: "npm:^7.8.1"
     superjson: "npm:^2.2.1"
-  checksum: 10/833093c1a186d24a40e0f7a0204677398e224bbd5512ff8d00bac3559921c0fe6392ea81740d01d5ffb6a46a84693cb4fe95123049afdc256d9f3bbd6c2455aa
+  checksum: 10/dff34fdbf28137ab6885b46aef54e115735a5434216bd3ac65e59fa448fa92873bc1d974c32e05b97045d47576b3ca1df38a701faa2923444818a86e7bbc641c
   languageName: node
   linkType: hard
 
@@ -10166,7 +10161,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@triplit/db@npm:0.3.75, @triplit/db@npm:^0.3.45, @triplit/db@npm:^0.3.64, @triplit/db@workspace:^, @triplit/db@workspace:packages/db":
+"@triplit/db@npm:^0.3.45, @triplit/db@npm:^0.3.64, @triplit/db@npm:^0.3.75, @triplit/db@workspace:^, @triplit/db@workspace:packages/db":
   version: 0.0.0-use.local
   resolution: "@triplit/db@workspace:packages/db"
   dependencies:
@@ -10196,21 +10191,34 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@triplit/db@npm:^0.3.56":
-  version: 0.3.56
-  resolution: "@triplit/db@npm:0.3.56"
+"@triplit/db@npm:latest":
+  version: 0.3.75
+  resolution: "@triplit/db@npm:0.3.75"
   dependencies:
     "@sinclair/typebox": "npm:^0.32.15"
-    "@triplit/tuple-database": "npm:2.2.25"
+    "@triplit/tuple-database": "npm:^2.2.27"
+    ajv: "npm:^8.17.1"
+    ajv-formats: "npm:^3.0.1"
     idb: "npm:^7.1.1"
     nanoid: "npm:^3.0.0"
     pino: "npm:^8.11.0"
     tinybench: "npm:^2.5.0"
-  checksum: 10/bc61547702c3171a08b841120ba3e293f7b5258b73c76173f29e40e9713f948fe0c67d8f7aaf42192319d492692e8285a94b0d06f5a872f137489286961a959e
+  checksum: 10/caf4782a88978894120c35e77c4712bc059e85dcfa2cce01dc7f316909534b723ffcd3c08c48d74f77935ce8b50cde33c96564b481c28c9f3ae3c3f817bd4617
   languageName: node
   linkType: hard
 
-"@triplit/react@npm:0.3.102, @triplit/react@workspace:^, @triplit/react@workspace:packages/react":
+"@triplit/react@npm:latest":
+  version: 0.3.102
+  resolution: "@triplit/react@npm:0.3.102"
+  dependencies:
+    "@triplit/client": "npm:^0.4.13"
+  peerDependencies:
+    react: "*"
+  checksum: 10/87575cf5297a784cdf711b8868c71db4caa98414a33c62d9d9a7cbf791f9729994f2a2950c178cc75caf34e13eaf27efc58beed48cabec8225600b52b0003b1c
+  languageName: node
+  linkType: hard
+
+"@triplit/react@workspace:^, @triplit/react@workspace:packages/react":
   version: 0.0.0-use.local
   resolution: "@triplit/react@workspace:packages/react"
   dependencies:
@@ -10221,17 +10229,6 @@ __metadata:
     react: "*"
   languageName: unknown
   linkType: soft
-
-"@triplit/react@npm:latest":
-  version: 0.3.62
-  resolution: "@triplit/react@npm:0.3.62"
-  dependencies:
-    "@triplit/client": "npm:^0.3.59"
-  peerDependencies:
-    react: "*"
-  checksum: 10/7612f32f806bc79574b29447ad494b47006791aa11702904393f283c64517ebf2c5c613d3a822e52e8bbb666dcd5454c79b954540c009d1e5ed7934ba791bf4e
-  languageName: node
-  linkType: hard
 
 "@triplit/server-core@npm:^0.3.47, @triplit/server-core@npm:^0.3.67, @triplit/server-core@workspace:^, @triplit/server-core@workspace:packages/server-core":
   version: 0.0.0-use.local
@@ -10321,13 +10318,13 @@ __metadata:
   linkType: hard
 
 "@triplit/svelte@npm:latest":
-  version: 0.1.31
-  resolution: "@triplit/svelte@npm:0.1.31"
+  version: 0.1.70
+  resolution: "@triplit/svelte@npm:0.1.70"
   dependencies:
-    "@triplit/client": "npm:^0.3.59"
+    "@triplit/client": "npm:^0.4.13"
   peerDependencies:
     svelte: ^5.0.0-next.137
-  checksum: 10/b3ad1c87bf7112def600b7446fc8c033ce04dda4b3a3da90da276f56c8c5d419975e49f88d288c412ee24519dcb701d44653627b93ec6c9793557a224482042a
+  checksum: 10/2f907b7f270f2008dbb326d56214b2f0dc563b7838469da8f1261f1815ccd04ca2d1ea9965f6dd5dc3253605a026d277e4713f7b8174cb84637511a93d39420f
   languageName: node
   linkType: hard
 
@@ -10335,15 +10332,15 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@triplit/svelte@workspace:packages/svelte"
   dependencies:
-    "@sveltejs/package": "npm:^2.3.0"
+    "@sveltejs/package": "npm:^2.3.5"
     "@triplit/client": "workspace:^"
     "@tsconfig/svelte": "npm:^5.0.2"
-    svelte: "npm:^5.0.0-next.137"
-    svelte-check: "npm:^3.6.7"
+    svelte: "npm:^5.0.0-next.255"
+    svelte-check: "npm:^4.0.2"
     tslib: "npm:^2.6.2"
     typescript: "npm:^5.2.2"
   peerDependencies:
-    svelte: ^5.0.0-next.137
+    svelte: "*"
   languageName: unknown
   linkType: soft
 
@@ -10365,27 +10362,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@triplit/tuple-database@npm:2.2.25":
-  version: 2.2.25
-  resolution: "@triplit/tuple-database@npm:2.2.25"
-  dependencies:
-    elen: "npm:^1.0.10"
-    fractional-indexing: "npm:^3.1.0"
-    fs-extra: "npm:^11.1.0"
-    md5: "npm:^2.3.0"
-    remeda: "npm:^1.37.0"
-    sorted-btree: "npm:^1.8.1"
-    uuid: "npm:^9.0.0"
-  peerDependencies:
-    react: "*"
-  peerDependenciesMeta:
-    react:
-      optional: true
-  checksum: 10/d080da661bdd104ca87f54ec0b1e152f12f97a6123fe61bd39850b51baac47e13e14f68d5fb8b27ad44a241b94884cb14dddc911c7c593c9909cd7d4b98ef604
-  languageName: node
-  linkType: hard
-
-"@triplit/tuple-database@workspace:^, @triplit/tuple-database@workspace:packages/tuple-database":
+"@triplit/tuple-database@npm:^2.2.27, @triplit/tuple-database@workspace:^, @triplit/tuple-database@workspace:packages/tuple-database":
   version: 0.0.0-use.local
   resolution: "@triplit/tuple-database@workspace:packages/tuple-database"
   dependencies:
@@ -10471,13 +10448,13 @@ __metadata:
   linkType: soft
 
 "@triplit/vue@npm:latest":
-  version: 0.1.11
-  resolution: "@triplit/vue@npm:0.1.11"
+  version: 0.1.36
+  resolution: "@triplit/vue@npm:0.1.36"
   dependencies:
-    "@triplit/client": "npm:^0.3.73"
+    "@triplit/client": "npm:^0.4.13"
   peerDependencies:
     vue: "*"
-  checksum: 10/e49575b767e54b85a7d447b5d9e6b4c9bf2b6f6222314704d324250bc088fb030b8f860c694dc2210172510d78f48a4bc79a6becc6836d6f115e9194529f32cf
+  checksum: 10/99c13454984103a323ec725a0cd146fa44b9008f2e4499a5334980a1d8370e2ef1d8b8c732b49c0b22ca16cea0024b9e66522fa91afb5af4084683cf996dd089
   languageName: node
   linkType: hard
 
@@ -13249,7 +13226,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"acorn@npm:^8.11.0, acorn@npm:^8.4.1, acorn@npm:^8.7.1":
+"acorn@npm:^8.11.0, acorn@npm:^8.12.1, acorn@npm:^8.4.1, acorn@npm:^8.7.1":
   version: 8.12.1
   resolution: "acorn@npm:8.12.1"
   bin:
@@ -13709,6 +13686,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"aria-query@npm:^5.3.1":
+  version: 5.3.1
+  resolution: "aria-query@npm:5.3.1"
+  checksum: 10/4b39d2e466992121886ae436d67085537af895b7e545e6092b89950a1f2c372e4a91b0b1daa16a5164564fdefbc6415a1d04d0fe2db8b1326f9ca6728f8384d0
+  languageName: node
+  linkType: hard
+
 "array-buffer-byte-length@npm:^1.0.0":
   version: 1.0.0
   resolution: "array-buffer-byte-length@npm:1.0.0"
@@ -14071,6 +14055,13 @@ __metadata:
   dependencies:
     dequal: "npm:^2.0.3"
   checksum: 10/5b0bc6a1b1e9701811adc7682953617f40859838275a68584579b0668902111fd16aef3ec9de3855de1065d8c3c0a1af62f6edc9db25395c722cc21c91780587
+  languageName: node
+  linkType: hard
+
+"axobject-query@npm:^4.1.0":
+  version: 4.1.0
+  resolution: "axobject-query@npm:4.1.0"
+  checksum: 10/e275dea9b673f71170d914f2d2a18be5d57d8d29717b629e7fedd907dcc2ebdc7a37803ff975874810bd423f222f299c020d28fde40a146f537448bf6bfecb6e
   languageName: node
   linkType: hard
 
@@ -14914,6 +14905,15 @@ __metadata:
     fsevents:
       optional: true
   checksum: 10/863e3ff78ee7a4a24513d2a416856e84c8e4f5e60efbe03e8ab791af1a183f569b62fc6f6b8044e2804966cb81277ddbbc1dc374fba3265bd609ea8efd62f5b3
+  languageName: node
+  linkType: hard
+
+"chokidar@npm:^4.0.0":
+  version: 4.0.0
+  resolution: "chokidar@npm:4.0.0"
+  dependencies:
+    readdirp: "npm:^4.0.1"
+  checksum: 10/e9a65db724a9ba2a40ad10f1d55caa5ccb5ba17533414271ec315004664860439348e51fa4faaa640fcc5f6427a410919fa1608892fbad41ed86fce682633cfa
   languageName: node
   linkType: hard
 
@@ -19334,6 +19334,18 @@ __metadata:
   languageName: node
   linkType: hard
 
+"fdir@npm:^6.2.0":
+  version: 6.3.0
+  resolution: "fdir@npm:6.3.0"
+  peerDependencies:
+    picomatch: ^3 || ^4
+  peerDependenciesMeta:
+    picomatch:
+      optional: true
+  checksum: 10/baa3a476a8407cc77bc77e3c946aea5ca0aa48f080f2c434b70196a37ddcd57bbc4c12d75164f9e6d947f6e148c297c9fa65f507178d0e9204d98ef83d776dcc
+  languageName: node
+  linkType: hard
+
 "fetch-blob@npm:^3.1.2, fetch-blob@npm:^3.1.4":
   version: 3.2.0
   resolution: "fetch-blob@npm:3.2.0"
@@ -23452,6 +23464,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"magic-string@npm:^0.30.11":
+  version: 0.30.11
+  resolution: "magic-string@npm:0.30.11"
+  dependencies:
+    "@jridgewell/sourcemap-codec": "npm:^1.5.0"
+  checksum: 10/b784d2240252f5b1e755d487354ada4c672cbca16f045144f7185a75b059210e5fcca7be7be03ef1bac2ca754c4428b21d36ae64a9057ba429916f06b8c54eb2
+  languageName: node
+  linkType: hard
+
 "magic-string@npm:^0.30.5":
   version: 0.30.5
   resolution: "magic-string@npm:0.30.5"
@@ -25164,10 +25185,10 @@ __metadata:
     "@radix-ui/react-slot": "npm:^1.0.2"
     "@tailwindcss/typography": "npm:^0.5.10"
     "@triplit/authjs-adapter": "npm:^1.0.2"
-    "@triplit/cli": "npm:0.5.14"
-    "@triplit/client": "npm:0.4.13"
-    "@triplit/db": "npm:0.3.75"
-    "@triplit/react": "npm:0.3.102"
+    "@triplit/cli": "npm:latest"
+    "@triplit/client": "npm:latest"
+    "@triplit/db": "npm:latest"
+    "@triplit/react": "npm:latest"
     "@types/bcryptjs": "npm:^2"
     "@types/jsonwebtoken": "npm:^9.0.2"
     "@types/node": "npm:^17.0.45"
@@ -27972,6 +27993,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"readdirp@npm:^4.0.1":
+  version: 4.0.1
+  resolution: "readdirp@npm:4.0.1"
+  checksum: 10/f8a2d3308c9dd19d9da4fc7f19a02fc057259a80014949d8f3d98f4e6042896119fb96eb3f3e6a743747d12f0bf781b771902b0b03aba58f884589c50968fad4
+  languageName: node
+  linkType: hard
+
 "readdirp@npm:~3.6.0":
   version: 3.6.0
   resolution: "readdirp@npm:3.6.0"
@@ -30484,23 +30512,21 @@ __metadata:
   languageName: node
   linkType: hard
 
-"svelte-check@npm:^3.6.7":
-  version: 3.6.9
-  resolution: "svelte-check@npm:3.6.9"
+"svelte-check@npm:^4.0.2":
+  version: 4.0.2
+  resolution: "svelte-check@npm:4.0.2"
   dependencies:
-    "@jridgewell/trace-mapping": "npm:^0.3.17"
+    "@jridgewell/trace-mapping": "npm:^0.3.25"
     chokidar: "npm:^3.4.1"
-    fast-glob: "npm:^3.2.7"
-    import-fresh: "npm:^3.2.1"
+    fdir: "npm:^6.2.0"
     picocolors: "npm:^1.0.0"
     sade: "npm:^1.7.4"
-    svelte-preprocess: "npm:^5.1.3"
-    typescript: "npm:^5.0.3"
   peerDependencies:
-    svelte: ^3.55.0 || ^4.0.0-next.0 || ^4.0.0 || ^5.0.0-next.0
+    svelte: ^4.0.0 || ^5.0.0-next.0
+    typescript: ">=5.0.0"
   bin:
     svelte-check: bin/svelte-check
-  checksum: 10/5b6e1a7b2e86e62bf543877518f925a6e02b11290d10f31b0568d016457447dd86805a3af7c7fe31ab5aeca1a6810d9dceb635894ca2261677db205286333a60
+  checksum: 10/6f1ab734497627205e476c7347e190aa01914585eabf34b3de50cd50cab054bda95840d0fac77c9954648303ef664b572c3927425b57a1859f61f9f7c983a56f
   languageName: node
   linkType: hard
 
@@ -30600,16 +30626,16 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"svelte2tsx@npm:~0.7.0":
-  version: 0.7.6
-  resolution: "svelte2tsx@npm:0.7.6"
+"svelte2tsx@npm:~0.7.16":
+  version: 0.7.19
+  resolution: "svelte2tsx@npm:0.7.19"
   dependencies:
     dedent-js: "npm:^1.0.1"
     pascal-case: "npm:^3.1.1"
   peerDependencies:
     svelte: ^3.55 || ^4.0.0-next.0 || ^4.0 || ^5.0.0-next.0
     typescript: ^4.9.4 || ^5.0.0
-  checksum: 10/796c806ed5694f9f16223164799a6e1ece4c6fb181bd5b7711e3c8ef68015ad306d7713e28903a74434841cda82e6410f18410adbc85cb12be1a4689b4a957b5
+  checksum: 10/13c68f53b54ac6b6ecff4c7a659f6e23e41b2c004888acea7834afc3c38e5bb8f6ef95cdc47b59ede73e016eb52215e223d13ed7f746956c71c31119533238c5
   languageName: node
   linkType: hard
 
@@ -30634,24 +30660,24 @@ __metadata:
   languageName: node
   linkType: hard
 
-"svelte@npm:^5.0.0-next.137":
-  version: 5.0.0-next.137
-  resolution: "svelte@npm:5.0.0-next.137"
+"svelte@npm:^5.0.0-next.255":
+  version: 5.0.0-next.255
+  resolution: "svelte@npm:5.0.0-next.255"
   dependencies:
-    "@ampproject/remapping": "npm:^2.2.1"
-    "@jridgewell/sourcemap-codec": "npm:^1.4.15"
+    "@ampproject/remapping": "npm:^2.3.0"
+    "@jridgewell/sourcemap-codec": "npm:^1.5.0"
     "@types/estree": "npm:^1.0.5"
-    acorn: "npm:^8.11.3"
+    acorn: "npm:^8.12.1"
     acorn-typescript: "npm:^1.4.13"
-    aria-query: "npm:^5.3.0"
-    axobject-query: "npm:^4.0.0"
+    aria-query: "npm:^5.3.1"
+    axobject-query: "npm:^4.1.0"
     esm-env: "npm:^1.0.0"
     esrap: "npm:^1.2.2"
     is-reference: "npm:^3.0.2"
     locate-character: "npm:^3.0.0"
-    magic-string: "npm:^0.30.5"
+    magic-string: "npm:^0.30.11"
     zimmerframe: "npm:^1.1.2"
-  checksum: 10/6c27215596a5439e4f3ced2c5c1966d68c3f35d521c789f2fcab6fc816db8d224ed28de1d7d602b211d503bd5d1cc56da25640c3cbf8a228293ac26969b43662
+  checksum: 10/dc8acbeeed4b0d93863fb66b43ea2ec95d17f52ebfcda24825e15e1d3a805b41a303ca0e07285d3336d5641199483cc65a3110b42717c930b935b730c796b6a8
   languageName: node
   linkType: hard
 

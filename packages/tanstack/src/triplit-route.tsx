@@ -86,7 +86,7 @@ export function triplitRoute<
       const resp = useQuery(client, latestQuery);
       const results = useMemo(() => {
         const latestResults = resp.results ?? initialResults;
-        return [...(latestResults?.values() ?? [])];
+        return latestResults ?? [];
       }, [initialResults, resp?.results]);
       return (
         <Component

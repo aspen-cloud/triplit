@@ -49,7 +49,7 @@ The `injectQuery` hook subscribes to the provided query inside your Angular comp
 
 The result of the hook is an object with the following `Signal` properties:
 
-- `results`: A Map containing the results of the query, with entity ids as keys and entities as values.
+- `results`: An array of entities that satisfy the query.
 - `fetching`: A boolean that will be `true` initially, and then turn `false` when either the local fetch returns cached results or if there were no cached results and the remote fetch has completed.
 - `fetchingLocal`: A boolean indicating whether the query is currently fetching from the local cache.
 - `fetchingRemote`: A boolean indicating whether the query is currently fetching from the server.
@@ -69,9 +69,9 @@ import { TodoComponent } from './todo/todo.component.js';
     <div>
       @if(queryResults.fetching()){
       <p>Loading...</p>
-      } @else {
+      } @if(queryResults.results()){
       <div>
-        @for (todo of todosArray(); track todo.id) {
+        @for (todo of queryResults.results(); track todo.id) {
         <app-todo [todo]="todo" />
         }
       </div>
@@ -84,12 +84,6 @@ export class AppComponent {
     client: triplit,
     query: triplit.query('todos').order('created_at', 'DESC'),
   }));
-  todosArray = computed(() => {
-    const results = this.queryResults.results();
-    if (!results) return [];
-    results;
-    return Array.from(results.values());
-  });
 }
 ```
 
@@ -140,7 +134,7 @@ import { map } from 'rxjs';
       <p>Loading...</p>
       } @else {
       <div>
-        @for (todo of (todosArray$ | async); track todo.id) {
+        @for (todo of (queryResults.results$ | async); track todo.id) {
         <app-todo [todo]="todo" />
         }
       </div>
@@ -153,10 +147,5 @@ export class AppComponent {
     client: triplit,
     query: triplit.query('todos').order('created_at', 'DESC'),
   }));
-  todosArray$ = this.queryResults.results$.pipe(
-    map((results) => {
-      return results ? [...results.values()] : undefined;
-    })
-  );
 }
 ```

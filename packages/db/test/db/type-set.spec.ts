@@ -131,7 +131,7 @@ describe('Set operations', () => {
     expect([...result!.friends.values()]).toEqual([]);
   });
 
-  it('set.size correctly tracks updates', async () => {
+  it('set.length correctly tracks updates', async () => {
     const db = new DB({ schema });
     await db.insert('Users', defaultUser);
     await db.update('Users', 'user-1', async (entity) => {
@@ -346,8 +346,8 @@ describe('Set operations', () => {
       .build();
 
     const results = await db.fetch(query);
-    expect(results.size).toBe(1);
-    expect(results.get('2')).toBeDefined();
+    expect(results.length).toBe(1);
+    expect(results.find((e) => e.id === '2')).toBeDefined();
   });
 
   it('Can subscribe to queries with a set in the filter', async () => {
@@ -375,7 +375,7 @@ describe('Set operations', () => {
     });
 
     await testSubscription(db, query, [
-      { check: (data) => expect(Array.from(data.keys())).toEqual(['1']) },
+      { check: (data) => expect(data.map((e) => e.id)).toEqual(['1']) },
       // Insert
       {
         action: async () => {
@@ -392,7 +392,7 @@ describe('Set operations', () => {
             });
           });
         },
-        check: (data) => expect(Array.from(data.keys())).toEqual(['1', '3']),
+        check: (data) => expect(data.map((e) => e.id)).toEqual(['1', '3']),
       },
       // Update
       {
@@ -406,14 +406,14 @@ describe('Set operations', () => {
             });
           });
         },
-        check: (data) => expect(Array.from(data.keys())).toEqual(['1', '2']),
+        check: (data) => expect(data.map((e) => e.id)).toEqual(['1', '2']),
       },
       // Delete
       {
         action: async () => {
           await db.delete('students', '1');
         },
-        check: (data) => expect(Array.from(data.keys())).toEqual(['2']),
+        check: (data) => expect(data.map((e) => e.id)).toEqual(['2']),
       },
     ]);
   });

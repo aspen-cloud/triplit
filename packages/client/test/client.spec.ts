@@ -100,7 +100,7 @@ describe.each([TriplitClient, WorkerClient])('%O', (Client) => {
         {
           check: ([results, info], sub) => {
             expect(info.hasMore).toBe(true);
-            expect(results.size).toBe(3);
+            expect(results.length).toBe(3);
             const ids = Array.from(results.values()).map((r) => r.id);
             expect(ids).toEqual(['6', '3', '1']);
           },
@@ -112,7 +112,7 @@ describe.each([TriplitClient, WorkerClient])('%O', (Client) => {
           },
           check: ([results, info], sub) => {
             expect(info.hasMore).toBe(true);
-            expect(results.size).toBe(6);
+            expect(results.length).toBe(6);
             const ids = Array.from(results.values()).map((r) => r.id);
             expect(ids).toEqual(['6', '3', '1', '4', '7', '2']);
           },
@@ -124,7 +124,7 @@ describe.each([TriplitClient, WorkerClient])('%O', (Client) => {
           },
           check: ([results, info], sub) => {
             expect(info.hasMore).toBe(false);
-            expect(results.size).toBe(7);
+            expect(results.length).toBe(7);
             const ids = Array.from(results.values()).map((r) => r.id);
             expect(ids).toEqual(['6', '3', '1', '4', '7', '2', '5']);
           },
@@ -136,7 +136,7 @@ describe.each([TriplitClient, WorkerClient])('%O', (Client) => {
           },
           check: ([results, info], sub) => {
             expect(info.hasMore).toBe(false);
-            expect(results.size).toBe(7);
+            expect(results.length).toBe(7);
           },
         },
       ]);
@@ -159,7 +159,7 @@ describe.each([TriplitClient, WorkerClient])('%O', (Client) => {
         {
           check: ([results, info], sub) => {
             expect(info.hasMore).toBe(true);
-            expect(results.size).toBe(3);
+            expect(results.length).toBe(3);
             const ids = Array.from(results.values()).map((r) => r.id);
             expect(ids).toEqual(['6', '3', '1']);
           },
@@ -171,7 +171,7 @@ describe.each([TriplitClient, WorkerClient])('%O', (Client) => {
           },
           check: ([results, info], sub) => {
             expect(info.hasMore).toBe(true);
-            expect(results.size).toBe(5);
+            expect(results.length).toBe(5);
             const ids = Array.from(results.values()).map((r) => r.id);
             expect(ids).toEqual(['6', '3', '1', '4', '7']);
           },
@@ -183,7 +183,7 @@ describe.each([TriplitClient, WorkerClient])('%O', (Client) => {
           },
           check: ([results, info], sub) => {
             expect(info.hasMore).toBe(false);
-            expect(results.size).toBe(7);
+            expect(results.length).toBe(7);
             const ids = Array.from(results.values()).map((r) => r.id);
             expect(ids).toEqual(['6', '3', '1', '4', '7', '2', '5']);
           },
@@ -203,7 +203,7 @@ describe.each([TriplitClient, WorkerClient])('%O', (Client) => {
         {
           check: ([results, info], sub) => {
             expect(info.hasMore).toBe(false);
-            expect(results.size).toBe(3);
+            expect(results.length).toBe(3);
             const ids = Array.from(results.values()).map((r) => r.id);
             expect(ids).toEqual(['3', '1', '2']);
           },
@@ -215,7 +215,7 @@ describe.each([TriplitClient, WorkerClient])('%O', (Client) => {
           },
           check: ([results, info], sub) => {
             expect(info.hasMore).toBe(true);
-            expect(results.size).toBe(3);
+            expect(results.length).toBe(3);
             const ids = Array.from(results.values()).map((r) => r.id);
             expect(ids).toEqual(['3', '1', '2']);
           },
@@ -227,7 +227,7 @@ describe.each([TriplitClient, WorkerClient])('%O', (Client) => {
           },
           check: async ([results, info], sub) => {
             expect(info.hasMore).toBe(false);
-            expect(results.size).toBe(4);
+            expect(results.length).toBe(4);
             const ids = Array.from(results.values()).map((r) => r.id);
             expect(ids).toEqual(['3', '1', '2', '4']);
           },
@@ -250,7 +250,7 @@ describe.each([TriplitClient, WorkerClient])('%O', (Client) => {
         {
           check: ([results, info], sub) => {
             expect(info.hasMore).toBe(false);
-            expect(results.size).toBe(3);
+            expect(results.length).toBe(3);
             const ids = Array.from(results.values()).map((r) => r.id);
             expect(ids).toEqual(['3', '1', '2']);
           },
@@ -262,7 +262,7 @@ describe.each([TriplitClient, WorkerClient])('%O', (Client) => {
           },
           check: ([results, info], sub) => {
             expect(info.hasMore).toBe(true);
-            expect(results.size).toBe(3);
+            expect(results.length).toBe(3);
             const ids = Array.from(results.values()).map((r) => r.id);
             expect(ids).toEqual(['3', '1', '4']);
           },
@@ -274,7 +274,7 @@ describe.each([TriplitClient, WorkerClient])('%O', (Client) => {
           },
           check: async ([results, info], sub) => {
             expect(info.hasMore).toBe(false);
-            expect(results.size).toBe(4);
+            expect(results.length).toBe(4);
             const ids = Array.from(results.values()).map((r) => r.id);
             expect(ids).toEqual(['3', '1', '4', '2']);
           },
@@ -296,7 +296,7 @@ describe.each([TriplitClient, WorkerClient])('%O', (Client) => {
         {
           check: ([results, info], sub) => {
             expect(info.hasMore).toBe(true);
-            expect(results.size).toBe(3);
+            expect(results.length).toBe(3);
             const ids = Array.from(results.values()).map((r) => r.id);
             expect(ids).toEqual(['3', '1', '2']);
           },
@@ -308,7 +308,7 @@ describe.each([TriplitClient, WorkerClient])('%O', (Client) => {
           },
           check: ([results, info], sub) => {
             expect(info.hasMore).toBe(false);
-            expect(results.size).toBe(3);
+            expect(results.length).toBe(3);
             const ids = Array.from(results.values()).map((r) => r.id);
             expect(ids).toEqual(['3', '1', '2']);
           },
@@ -330,7 +330,7 @@ describe.each([TriplitClient, WorkerClient])('%O', (Client) => {
         {
           check: ([results, info], sub) => {
             expect(info.hasMore).toBe(true);
-            expect(results.size).toBe(3);
+            expect(results.length).toBe(3);
             const ids = Array.from(results.values()).map((r) => r.id);
             expect(ids).toEqual(['3', '1', '4']);
           },
@@ -342,7 +342,7 @@ describe.each([TriplitClient, WorkerClient])('%O', (Client) => {
           },
           check: ([results, info], sub) => {
             expect(info.hasMore).toBe(false);
-            expect(results.size).toBe(3);
+            expect(results.length).toBe(3);
             const ids = Array.from(results.values()).map((r) => r.id);
             expect(ids).toEqual(['3', '1', '2']);
           },
@@ -363,7 +363,7 @@ describe.each([TriplitClient, WorkerClient])('%O', (Client) => {
           check: ([results, info], sub) => {
             expect(info.hasPreviousPage).toBe(false);
             expect(info.hasNextPage).toBe(false);
-            expect(results.size).toBe(0);
+            expect(results.length).toBe(0);
           },
         },
       ]);
@@ -380,7 +380,7 @@ describe.each([TriplitClient, WorkerClient])('%O', (Client) => {
           check: ([results, info], sub) => {
             expect(info.hasPreviousPage).toBe(false);
             expect(info.hasNextPage).toBe(false);
-            expect(results.size).toBe(1);
+            expect(results.length).toBe(1);
           },
         },
       ]);
@@ -403,7 +403,7 @@ describe.each([TriplitClient, WorkerClient])('%O', (Client) => {
           check: ([results, info], sub) => {
             expect(info.hasPreviousPage).toBe(false);
             expect(info.hasNextPage).toBe(true);
-            expect(results.size).toBe(3);
+            expect(results.length).toBe(3);
             const ids = Array.from(results.values()).map((r) => r.id);
             expect(ids).toEqual(['6', '3', '1']);
           },
@@ -416,7 +416,7 @@ describe.each([TriplitClient, WorkerClient])('%O', (Client) => {
           check: ([results, info], sub) => {
             expect(info.hasPreviousPage).toBe(true);
             expect(info.hasNextPage).toBe(true);
-            expect(results.size).toBe(3);
+            expect(results.length).toBe(3);
             const ids = Array.from(results.values()).map((r) => r.id);
             expect(ids).toEqual(['4', '7', '2']);
           },
@@ -429,7 +429,7 @@ describe.each([TriplitClient, WorkerClient])('%O', (Client) => {
           check: ([results, info], sub) => {
             expect(info.hasPreviousPage).toBe(true);
             expect(info.hasNextPage).toBe(false);
-            expect(results.size).toBe(1);
+            expect(results.length).toBe(1);
             const ids = Array.from(results.values()).map((r) => r.id);
             expect(ids).toEqual(['5']);
           },
@@ -442,7 +442,7 @@ describe.each([TriplitClient, WorkerClient])('%O', (Client) => {
           check: ([results, info], sub) => {
             expect(info.hasPreviousPage).toBe(true);
             expect(info.hasNextPage).toBe(true);
-            expect(results.size).toBe(3);
+            expect(results.length).toBe(3);
             const ids = Array.from(results.values()).map((r) => r.id);
             expect(ids).toEqual(['4', '7', '2']);
           },
@@ -455,7 +455,7 @@ describe.each([TriplitClient, WorkerClient])('%O', (Client) => {
           check: ([results, info], sub) => {
             expect(info.hasPreviousPage).toBe(false);
             expect(info.hasNextPage).toBe(true);
-            expect(results.size).toBe(3);
+            expect(results.length).toBe(3);
             const ids = Array.from(results.values()).map((r) => r.id);
             expect(ids).toEqual(['6', '3', '1']);
           },
@@ -475,7 +475,7 @@ describe.each([TriplitClient, WorkerClient])('%O', (Client) => {
         {
           check: ([results, info], sub) => {
             expect(info.hasNextPage).toBe(false);
-            expect(results.size).toBe(3);
+            expect(results.length).toBe(3);
             const ids = Array.from(results.values()).map((r) => r.id);
             expect(ids).toEqual(['3', '1', '2']);
           },
@@ -486,7 +486,7 @@ describe.each([TriplitClient, WorkerClient])('%O', (Client) => {
           },
           check: ([results, info], sub) => {
             expect(info.hasNextPage).toBe(true);
-            expect(results.size).toBe(3);
+            expect(results.length).toBe(3);
             const ids = Array.from(results.values()).map((r) => r.id);
             expect(ids).toEqual(['3', '1', '2']);
           },
@@ -506,7 +506,7 @@ describe.each([TriplitClient, WorkerClient])('%O', (Client) => {
         {
           check: ([results, info], sub) => {
             expect(info.hasNextPage).toBe(false);
-            expect(results.size).toBe(3);
+            expect(results.length).toBe(3);
             const ids = Array.from(results.values()).map((r) => r.id);
             expect(ids).toEqual(['3', '1', '2']);
           },
@@ -517,7 +517,7 @@ describe.each([TriplitClient, WorkerClient])('%O', (Client) => {
           },
           check: ([results, info], sub) => {
             expect(info.hasNextPage).toBe(true);
-            expect(results.size).toBe(3);
+            expect(results.length).toBe(3);
             const ids = Array.from(results.values()).map((r) => r.id);
             expect(ids).toEqual(['3', '1', '4']);
           },
@@ -538,7 +538,7 @@ describe.each([TriplitClient, WorkerClient])('%O', (Client) => {
         {
           check: ([results, info], sub) => {
             expect(info.hasNextPage).toBe(true);
-            expect(results.size).toBe(3);
+            expect(results.length).toBe(3);
             const ids = Array.from(results.values()).map((r) => r.id);
             expect(ids).toEqual(['3', '1', '2']);
           },
@@ -549,7 +549,7 @@ describe.each([TriplitClient, WorkerClient])('%O', (Client) => {
           },
           check: ([results, info], sub) => {
             expect(info.hasNextPage).toBe(false);
-            expect(results.size).toBe(3);
+            expect(results.length).toBe(3);
             const ids = Array.from(results.values()).map((r) => r.id);
             expect(ids).toEqual(['3', '1', '2']);
           },
@@ -570,7 +570,7 @@ describe.each([TriplitClient, WorkerClient])('%O', (Client) => {
         {
           check: ([results, info], sub) => {
             expect(info.hasNextPage).toBe(true);
-            expect(results.size).toBe(3);
+            expect(results.length).toBe(3);
             const ids = Array.from(results.values()).map((r) => r.id);
             expect(ids).toEqual(['3', '1', '4']);
           },
@@ -581,7 +581,7 @@ describe.each([TriplitClient, WorkerClient])('%O', (Client) => {
           },
           check: ([results, info], sub) => {
             expect(info.hasNextPage).toBe(false);
-            expect(results.size).toBe(3);
+            expect(results.length).toBe(3);
             const ids = Array.from(results.values()).map((r) => r.id);
             expect(ids).toEqual(['3', '1', '2']);
           },
@@ -610,7 +610,7 @@ describe.each([TriplitClient, WorkerClient])('%O', (Client) => {
           check: ([results, info], sub) => {
             expect(info.hasPreviousPage).toBe(false);
             expect(info.hasNextPage).toBe(false);
-            expect(results.size).toBe(3);
+            expect(results.length).toBe(3);
             const ids = Array.from(results.values()).map((r) => r.id);
             expect(ids).toEqual(['3', '1', '2']);
           },
@@ -622,7 +622,7 @@ describe.each([TriplitClient, WorkerClient])('%O', (Client) => {
           check: ([results, info], sub) => {
             expect(info.hasPreviousPage).toBe(false);
             expect(info.hasNextPage).toBe(true);
-            expect(results.size).toBe(3);
+            expect(results.length).toBe(3);
             const ids = Array.from(results.values()).map((r) => r.id);
             expect(ids).toEqual(['4', '3', '1']);
           },
@@ -649,7 +649,7 @@ describe.each([TriplitClient, WorkerClient])('%O', (Client) => {
           check: ([results, info], sub) => {
             expect(info.hasPreviousPage).toBe(false);
             expect(info.hasNextPage).toBe(true);
-            expect(results.size).toBe(3);
+            expect(results.length).toBe(3);
             const ids = Array.from(results.values()).map((r) => r.id);
             expect(ids).toEqual(['6', '3', '1']);
           },
@@ -662,7 +662,7 @@ describe.each([TriplitClient, WorkerClient])('%O', (Client) => {
           check: ([results, info], sub) => {
             expect(info.hasPreviousPage).toBe(true);
             expect(info.hasNextPage).toBe(true);
-            expect(results.size).toBe(3);
+            expect(results.length).toBe(3);
             const ids = Array.from(results.values()).map((r) => r.id);
             expect(ids).toEqual(['4', '7', '2']);
           },
@@ -675,7 +675,7 @@ describe.each([TriplitClient, WorkerClient])('%O', (Client) => {
           check: ([results, info], sub) => {
             expect(info.hasPreviousPage).toBe(false);
             expect(info.hasNextPage).toBe(true);
-            expect(results.size).toBe(3);
+            expect(results.length).toBe(3);
             const ids = Array.from(results.values()).map((r) => r.id);
             expect(ids).toEqual(['6', '3', '1']);
           },
@@ -687,7 +687,7 @@ describe.each([TriplitClient, WorkerClient])('%O', (Client) => {
           check: ([results, info], sub) => {
             expect(info.hasPreviousPage).toBe(false);
             expect(info.hasNextPage).toBe(true);
-            expect(results.size).toBe(3);
+            expect(results.length).toBe(3);
             const ids = Array.from(results.values()).map((r) => r.id);
             expect(ids).toEqual(['8', '6', '3']);
           },
@@ -710,7 +710,7 @@ describe.each([TriplitClient, WorkerClient])('%O', (Client) => {
           check: ([results, info], sub) => {
             expect(info.hasPreviousPage).toBe(false);
             expect(info.hasNextPage).toBe(true);
-            expect(results.size).toBe(3);
+            expect(results.length).toBe(3);
             const ids = Array.from(results.values()).map((r) => r.id);
             expect(ids).toEqual(['3', '1', '4']);
           },
@@ -723,7 +723,7 @@ describe.each([TriplitClient, WorkerClient])('%O', (Client) => {
           check: ([results, info], sub) => {
             expect(info.hasPreviousPage).toBe(true);
             expect(info.hasNextPage).toBe(false);
-            expect(results.size).toBe(1);
+            expect(results.length).toBe(1);
             const ids = Array.from(results.values()).map((r) => r.id);
             expect(ids).toEqual(['2']);
           },
@@ -737,7 +737,7 @@ describe.each([TriplitClient, WorkerClient])('%O', (Client) => {
           check: ([results, info], sub) => {
             expect(info.hasPreviousPage).toBe(false);
             expect(info.hasNextPage).toBe(false);
-            expect(results.size).toBe(1);
+            expect(results.length).toBe(1);
             const ids = Array.from(results.values()).map((r) => r.id);
             expect(ids).toEqual(['2']);
           },
@@ -760,7 +760,7 @@ describe.each([TriplitClient, WorkerClient])('%O', (Client) => {
           check: ([results, info], sub) => {
             expect(info.hasPreviousPage).toBe(false);
             expect(info.hasNextPage).toBe(true);
-            expect(results.size).toBe(3);
+            expect(results.length).toBe(3);
             const ids = Array.from(results.values()).map((r) => r.id);
             expect(ids).toEqual(['3', '1', '4']);
           },
@@ -773,7 +773,7 @@ describe.each([TriplitClient, WorkerClient])('%O', (Client) => {
           check: ([results, info], sub) => {
             expect(info.hasPreviousPage).toBe(true);
             expect(info.hasNextPage).toBe(false);
-            expect(results.size).toBe(1);
+            expect(results.length).toBe(1);
             const ids = Array.from(results.values()).map((r) => r.id);
             expect(ids).toEqual(['2']);
           },
@@ -787,7 +787,7 @@ describe.each([TriplitClient, WorkerClient])('%O', (Client) => {
           check: ([results, info], sub) => {
             expect(info.hasPreviousPage).toBe(false);
             expect(info.hasNextPage).toBe(false);
-            expect(results.size).toBe(3);
+            expect(results.length).toBe(3);
             const ids = Array.from(results.values()).map((r) => r.id);
             expect(ids).toEqual(['3', '4', '2']);
           },
@@ -851,7 +851,7 @@ describe.each([TriplitClient, WorkerClient])('%O', (Client) => {
           check: ([results, info], sub) => {
             expect(info.hasPreviousPage).toBe(false);
             expect(info.hasNextPage).toBe(true);
-            expect(results.size).toBe(3);
+            expect(results.length).toBe(3);
             const ids = Array.from(results.values()).map((r) => r.id);
             expect(ids).toEqual(['6', '3', '1']);
           },
@@ -864,7 +864,7 @@ describe.each([TriplitClient, WorkerClient])('%O', (Client) => {
           check: ([results, info], sub) => {
             expect(info.hasPreviousPage).toBe(true);
             expect(info.hasNextPage).toBe(true);
-            expect(results.size).toBe(3);
+            expect(results.length).toBe(3);
             const ids = Array.from(results.values()).map((r) => r.id);
             expect(ids).toEqual(['4', '7', '2']);
           },
@@ -877,7 +877,7 @@ describe.each([TriplitClient, WorkerClient])('%O', (Client) => {
           check: ([results, info], sub) => {
             expect(info.hasPreviousPage).toBe(true);
             expect(info.hasNextPage).toBe(false);
-            expect(results.size).toBe(1);
+            expect(results.length).toBe(1);
             const ids = Array.from(results.values()).map((r) => r.id);
             expect(ids).toEqual(['5']);
           },
@@ -890,7 +890,7 @@ describe.each([TriplitClient, WorkerClient])('%O', (Client) => {
           check: ([results, info], sub) => {
             expect(info.hasPreviousPage).toBe(true);
             expect(info.hasNextPage).toBe(true);
-            expect(results.size).toBe(3);
+            expect(results.length).toBe(3);
             const ids = Array.from(results.values()).map((r) => r.id);
             expect(ids).toEqual(['4', '7', '2']);
           },
@@ -903,7 +903,7 @@ describe.each([TriplitClient, WorkerClient])('%O', (Client) => {
           check: ([results, info], sub) => {
             expect(info.hasPreviousPage).toBe(false);
             expect(info.hasNextPage).toBe(true);
-            expect(results.size).toBe(3);
+            expect(results.length).toBe(3);
             const ids = Array.from(results.values()).map((r) => r.id);
             expect(ids).toEqual(['6', '3', '1']);
           },

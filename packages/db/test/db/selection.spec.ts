@@ -262,48 +262,39 @@ describe('schemaful', () => {
     beforeAll(async () => await seedMusicData(db));
     describe('shorthand', () => {
       it('can include a relationship by name', async () => {
-        const EXPECTED_RESULT = new Map([
-          [
-            '1',
-            {
-              id: '1',
-              title: 'Led Zeppelin IV',
-              artist_id: '1',
-              artist: { id: '1', name: 'Led Zeppelin', genre_id: '1' },
-              review_ids: new Set(['1', '2']),
-            },
-          ],
-          [
-            '2',
-            {
-              id: '2',
-              title: 'Abbey Road',
-              artist_id: '2',
-              artist: { id: '2', name: 'The Beatles', genre_id: '1' },
-              review_ids: new Set(['3']),
-            },
-          ],
-          [
-            '3',
-            {
-              id: '3',
-              title: 'To Pimp a Butterfly',
-              artist_id: '3',
-              artist: { id: '3', name: 'Kendrick Lamar', genre_id: '2' },
-              review_ids: new Set(['4']),
-            },
-          ],
-          [
-            '4',
-            {
-              id: '4',
-              title: 'Oxymoron',
-              artist_id: '4',
-              artist: { id: '4', name: 'Schoolboy Q', genre_id: '2' },
-              review_ids: new Set(['5']),
-            },
-          ],
-        ]);
+        const EXPECTED_RESULT = [
+          {
+            id: '1',
+            title: 'Led Zeppelin IV',
+            artist_id: '1',
+            artist: { id: '1', name: 'Led Zeppelin', genre_id: '1' },
+            review_ids: new Set(['1', '2']),
+          },
+
+          {
+            id: '2',
+            title: 'Abbey Road',
+            artist_id: '2',
+            artist: { id: '2', name: 'The Beatles', genre_id: '1' },
+            review_ids: new Set(['3']),
+          },
+
+          {
+            id: '3',
+            title: 'To Pimp a Butterfly',
+            artist_id: '3',
+            artist: { id: '3', name: 'Kendrick Lamar', genre_id: '2' },
+            review_ids: new Set(['4']),
+          },
+
+          {
+            id: '4',
+            title: 'Oxymoron',
+            artist_id: '4',
+            artist: { id: '4', name: 'Schoolboy Q', genre_id: '2' },
+            review_ids: new Set(['5']),
+          },
+        ];
 
         // Builder
         {
@@ -348,68 +339,47 @@ describe('schemaful', () => {
 
     describe('rel subqueries', () => {
       it('can extend a relation on the schema with a rel subquery', async () => {
-        const EXPECTED_RESULT = new Map([
-          [
-            '1',
-            {
-              id: '1',
-              title: 'Led Zeppelin IV',
-              artist_id: '1',
-              review_ids: new Set(['1', '2']),
-              top_reviews: new Map([
-                [
-                  '1',
-                  { id: '1', album_id: '1', rating: 5, body: 'Great album' },
-                ],
-              ]),
-            },
-          ],
-          [
-            '2',
-            {
-              id: '2',
-              title: 'Abbey Road',
-              artist_id: '2',
-              review_ids: new Set(['3']),
-              top_reviews: new Map([
-                [
-                  '3',
-                  { id: '3', album_id: '2', rating: 5, body: 'Great album' },
-                ],
-              ]),
-            },
-          ],
-          [
-            '3',
-            {
-              id: '3',
-              title: 'To Pimp a Butterfly',
-              artist_id: '3',
-              review_ids: new Set(['4']),
-              top_reviews: new Map([
-                [
-                  '4',
-                  { id: '4', album_id: '3', rating: 5, body: 'Great album' },
-                ],
-              ]),
-            },
-          ],
-          [
-            '4',
-            {
-              id: '4',
-              title: 'Oxymoron',
-              artist_id: '4',
-              review_ids: new Set(['5']),
-              top_reviews: new Map([
-                [
-                  '5',
-                  { id: '5', album_id: '4', rating: 5, body: 'Great album' },
-                ],
-              ]),
-            },
-          ],
-        ]);
+        const EXPECTED_RESULT = [
+          {
+            id: '1',
+            title: 'Led Zeppelin IV',
+            artist_id: '1',
+            review_ids: new Set(['1', '2']),
+            top_reviews: [
+              { id: '1', album_id: '1', rating: 5, body: 'Great album' },
+            ],
+          },
+
+          {
+            id: '2',
+            title: 'Abbey Road',
+            artist_id: '2',
+            review_ids: new Set(['3']),
+            top_reviews: [
+              { id: '3', album_id: '2', rating: 5, body: 'Great album' },
+            ],
+          },
+
+          {
+            id: '3',
+            title: 'To Pimp a Butterfly',
+            artist_id: '3',
+            review_ids: new Set(['4']),
+            top_reviews: [
+              { id: '4', album_id: '3', rating: 5, body: 'Great album' },
+            ],
+          },
+
+          {
+            id: '4',
+            title: 'Oxymoron',
+            artist_id: '4',
+            review_ids: new Set(['5']),
+            top_reviews: [
+              { id: '5', album_id: '4', rating: 5, body: 'Great album' },
+            ],
+          },
+        ];
 
         // Builder
         {
@@ -454,31 +424,28 @@ describe('schemaful', () => {
       });
 
       it('can perform deep nesting', async () => {
-        const EXPECTED_RESULT = new Map([
-          [
-            '1',
-            {
+        const EXPECTED_RESULT = [
+          {
+            id: '1',
+            title: 'Stairway to Heaven',
+            album_id: '1',
+            album: {
               id: '1',
-              title: 'Stairway to Heaven',
-              album_id: '1',
-              album: {
+              title: 'Led Zeppelin IV',
+              artist_id: '1',
+              artist: {
                 id: '1',
-                title: 'Led Zeppelin IV',
-                artist_id: '1',
-                artist: {
-                  id: '1',
-                  name: 'Led Zeppelin',
-                  genre_id: '1',
-                  // genre: { id: '1', name: 'Rock' },
-                },
-                artist_genre: {
-                  genre: { id: '1', name: 'Rock' },
-                },
-                review_ids: new Set(['1', '2']),
+                name: 'Led Zeppelin',
+                genre_id: '1',
+                // genre: { id: '1', name: 'Rock' },
               },
+              artist_genre: {
+                genre: { id: '1', name: 'Rock' },
+              },
+              review_ids: new Set(['1', '2']),
             },
-          ],
-        ]);
+          },
+        ];
 
         // Builder
         {
@@ -563,30 +530,22 @@ describe('schemaful', () => {
 
     describe('subquery selection', () => {
       it('can include a random subquery', async () => {
-        const EXPECTED_RESULT = new Map([
-          [
-            '1',
-            {
-              id: '1',
-              name: 'Rock',
-              genre_artists: new Map([
-                ['1', { name: 'Led Zeppelin' }],
-                ['2', { name: 'The Beatles' }],
-              ]),
-            },
-          ],
-          [
-            '2',
-            {
-              id: '2',
-              name: 'Rap',
-              genre_artists: new Map([
-                ['3', { name: 'Kendrick Lamar' }],
-                ['4', { name: 'Schoolboy Q' }],
-              ]),
-            },
-          ],
-        ]);
+        const EXPECTED_RESULT = [
+          {
+            id: '1',
+            name: 'Rock',
+            genre_artists: [{ name: 'Led Zeppelin' }, { name: 'The Beatles' }],
+          },
+
+          {
+            id: '2',
+            name: 'Rap',
+            genre_artists: [
+              { name: 'Kendrick Lamar' },
+              { name: 'Schoolboy Q' },
+            ],
+          },
+        ];
 
         // Builder
         {

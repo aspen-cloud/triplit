@@ -459,22 +459,34 @@ export class Session {
 
   async fetch(query: CollectionQuery) {
     try {
+      const hasSelectWithoutId = query.select && !query.select.includes('id');
+
+      if (hasSelectWithoutId) {
+        // @ts-expect-error
+        query.select.push('id');
+      }
+
       const result = await this.db.fetch(query, {
         skipRules: hasAdminAccess(this.token),
       });
+
       const schema = (await this.db.getSchema())?.collections;
       const { collectionName } = query;
+
       const collectionSchema = schema?.[collectionName]?.schema;
-      const data = new Map(
-        [...result.entries()].map(([id, entity]) => [
-          id,
-          collectionSchema
-            ? collectionSchema.convertJSToJSON(entity, schema)
-            : entity,
-        ])
-      );
+      const data = result.map((entity) => {
+        const jsonEntity = collectionSchema
+          ? collectionSchema.convertJSToJSON(entity, schema)
+          : entity;
+        const entityId = jsonEntity.id;
+        if (hasSelectWithoutId && jsonEntity.id) {
+          delete jsonEntity.id;
+        }
+        return [entityId, jsonEntity];
+      });
+
       return ServerResponse(200, {
-        result: [...data.entries()],
+        result: data,
       });
     } catch (e) {
       return errorResponse(e as Error);

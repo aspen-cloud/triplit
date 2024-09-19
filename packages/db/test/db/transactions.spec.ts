@@ -25,7 +25,7 @@ describe('commit transaction', () => {
       tx.insert('test', { name: 'test' });
     });
     const result = await db.fetch(db.query('test').build());
-    expect(result).toEqual(new Map());
+    expect(result).toEqual([]);
     // expect(consoleSpy).toHaveBeenCalledWith(
     //   'You are attempting to perform an operation on an already committed transaction - changes may not be committed. Please ensure you are awaiting async operations within a transaction.'
     // );
@@ -41,7 +41,7 @@ describe('commit transaction', () => {
     });
     await expect(transaction).rejects.toThrow('test');
     const result = await db.fetch(db.query('test').build());
-    expect(result).toEqual(new Map());
+    expect(result).toEqual([]);
   });
 
   // This is the current behavior but I think we should update this as we expand the hooks / triggers API
@@ -56,7 +56,7 @@ describe('commit transaction', () => {
     });
     await expect(transaction).rejects.toThrow('test');
     const result = await db.fetch(db.query('test').build());
-    expect(result).toEqual(new Map([['1', { id: '1', name: 'test' }]]));
+    expect(result).toEqual([{ id: '1', name: 'test' }]);
   });
 
   it('subscriptions are not impacted by afterCommit hook failures', async () => {
@@ -100,7 +100,7 @@ describe('cancel transaction', () => {
       await tx.cancel();
     });
     const result = await db.fetch(db.query('test').build());
-    expect(result).toEqual(new Map([['1', { id: '1', name: 'committed' }]]));
+    expect(result).toEqual([{ id: '1', name: 'committed' }]);
   });
 
   it('cannot perform operations after canceling a transaction', async () => {
@@ -119,7 +119,7 @@ describe('cancel transaction', () => {
       tx.cancel();
     });
     const result = await db.fetch(db.query('test').build());
-    expect(result).toEqual(new Map());
+    expect(result).toEqual([]);
   });
 
   it('canceling a transaction in beforeCommit hook cancels the transaction', async () => {
@@ -132,7 +132,7 @@ describe('cancel transaction', () => {
     });
     expect(transaction.isCanceled).toBe(true);
     const result = await db.fetch(db.query('test').build());
-    expect(result).toEqual(new Map());
+    expect(result).toEqual([]);
   });
 
   it('canceling a transaction in afterCommit hook warns user', async () => {

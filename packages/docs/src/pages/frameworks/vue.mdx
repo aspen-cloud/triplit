@@ -47,7 +47,7 @@ The `useQuery` hook subscribes to the provided query inside your Vue component a
 
 The result of the hook is an object with the following properties:
 
-- `results`: A Map containing the results of the query, with entity ids as keys and entities as values.
+- `results`: An array of entities that satisfy the query.
 - `fetching`: A boolean that will be `true` initially, and then turn `false` when either the local fetch returns cached results or if there were no cached results and the remote fetch has completed.
 - `fetchingLocal`: A boolean indicating whether the query is currently fetching from the local cache.
 - `fetchingRemote`: A boolean indicating whether the query is currently fetching from the server.
@@ -61,10 +61,11 @@ import Todo from './components/Todo.vue';
 import { computed } from 'vue';
 import { client } from './triplit';
 
-const { fetching, results, error } = useQuery(client, client.query('todos'));
-const todos = computed(() =>
-  results.value ? [...results.value.values()] : []
-);
+const {
+  fetching,
+  results: todos,
+  error,
+} = useQuery(client, client.query('todos'));
 </script>
 
 <template>
@@ -72,7 +73,7 @@ const todos = computed(() =>
     <h1>Todos</h1>
     <span v-if="fetching">Loading...</span>
     <span v-else-if="error">Error: {{ error.message }}</span>
-    <ul v-else>
+    <ul v-else-if="todos">
       <Todo
         v-for="todo in todos"
         :key="todo.id"

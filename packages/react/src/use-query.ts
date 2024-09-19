@@ -104,7 +104,7 @@ export function useQuery<
         setFetchingLocal(false);
         setError(undefined);
         // TODO: fix types to match
-        setResults(new Map(localResults as any));
+        setResults(localResults as any);
       },
       (error) => {
         setFetchingLocal(false);
@@ -177,7 +177,7 @@ export function usePaginatedQuery<
         setHasNextPage(info.hasNextPage);
         setHasPreviousPage(info.hasPreviousPage);
         // TODO: fix types to match
-        setResults(new Map(results as any));
+        setResults(results as any);
       },
       (error) => {
         setFetching(false);
@@ -282,7 +282,7 @@ export function useInfiniteQuery<
         setHasMore(info.hasMore);
         setResults(
           // TODO: fix types to match
-          new Map(results as any)
+          results
         );
       },
       (error) => {

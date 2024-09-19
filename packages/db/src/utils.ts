@@ -172,11 +172,9 @@ export function timestampedObjectToPlainObject<O extends TimestampedObject>(
   }
   if (obj instanceof Map) {
     // @ts-expect-error
-    return new Map(
-      Array.from(obj.entries()).map(([key, val]) => {
-        return [key, timestampedObjectToPlainObject(val)];
-      })
-    );
+    return Array.from(obj.entries()).map(([, val]) => {
+      return timestampedObjectToPlainObject(val);
+    });
   }
   const entries = Object.entries(obj)
     .map(([key, val]) => {

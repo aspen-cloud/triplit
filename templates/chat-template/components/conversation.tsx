@@ -143,16 +143,6 @@ function MessageList({ convoId }: { convoId: string }) {
     loadMore,
   } = useMessages(convoId)
 
-  const messageArray = useMemo(() => {
-    if (!messages) return []
-    return Array.from(messages).map(([_id, message]) => message)
-  }, [messages])
-
-  const pendingMessageArray = useMemo(() => {
-    if (!pendingMessages) return []
-    return Array.from(pendingMessages).map(([_id, message]) => message)
-  }, [pendingMessages])
-
   const scroll = useRef<HTMLSpanElement>(null)
   const messagesConainerRef = useRef<HTMLDivElement>(null)
   const onScroll = useCallback(() => {
@@ -176,7 +166,7 @@ function MessageList({ convoId }: { convoId: string }) {
         onScroll={onScroll}
       >
         <span ref={scroll}></span>
-        {pendingMessageArray.map((message, index) => (
+        {pendingMessages?.map((message, index) => (
           <ChatBubble
             key={message.id}
             message={message}
@@ -193,14 +183,12 @@ function MessageList({ convoId }: { convoId: string }) {
             <p>Error: {messagesError.message}</p>
           </div>
         ) : (
-          messageArray.map((message, index) => {
+          messages?.map((message, index) => {
             // @ts-ignore
             const isOwnMessage = message.sender_id === session.user.id
             const isFirstMessageInABlockFromThisDay =
-              index === messageArray.length - 1 ||
-              new Date(
-                messageArray[index + 1]?.created_at
-              ).toLocaleDateString() !==
+              index === messages.length - 1 ||
+              new Date(messages[index + 1]?.created_at).toLocaleDateString() !==
                 new Date(message.created_at).toLocaleDateString()
             return (
               <Fragment key={message.id}>
@@ -292,7 +280,7 @@ function ChatBubble({
       </div>
       <div className={cn("flex flex-row gap-1", isOwnMessage && "self-end")}>
         {Object.entries(
-          Array.from(message.reactions.values()).reduce((prev, reaction) => {
+          message.reactions?.reduce((prev, reaction) => {
             prev[reaction.emoji] = (prev[reaction.emoji] || 0) + 1
             return prev
           }, {} as Record<string, number>)

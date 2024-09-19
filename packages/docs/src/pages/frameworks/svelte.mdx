@@ -86,7 +86,7 @@ The `useQuery` hook subscribes to the provided query inside your Svelte componen
 
 The result of the hook is an object with the following properties:
 
-- `results`: A Map containing the results of the query, with entity ids as keys and entities as values.
+- `results`: An array of entities that satisfy the query.
 - `fetching`: A boolean that will be `true` initially, and then turn `false` when either the local fetch returns cached results or if there were no cached results and the remote fetch has completed.
 - `fetchingLocal`: A boolean indicating whether the query is currently fetching from the local cache.
 - `fetchingRemote`: A boolean indicating whether the query is currently fetching from the server.
@@ -102,16 +102,15 @@ The result of the hook is an object with the following properties:
   const client = new TriplitClient({ schema });
 
   let data = useQuery(client, client.query('todos'));
-  let todosArray = $derived(data.results ? Array.from(data.results): [])
 </script>
 <div>
   {#if data.fetching}
     <p>Loading...</p>
   {:else if data.error}
     <p>Error: {data.error.message}</p>
-  {:else}
+  {:else if data.results}
     <div>
-      {#each todosArray as [_id, todo]}
+      {#each data.results as todo}
         <div>{todo.text}</div>
       {/each}
     </div>

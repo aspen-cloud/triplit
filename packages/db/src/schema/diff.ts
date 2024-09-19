@@ -501,7 +501,7 @@ async function detectAttributeSatisfiesEnum(
       .build(),
     { skipRules: true }
   );
-  return allEntities.size === 0;
+  return allEntities.length === 0;
 }
 
 async function detectAttributeHasNoUndefined(
@@ -553,7 +553,7 @@ async function detectAttributeHasNoNull(
       .build(),
     { skipRules: true }
   );
-  return allEntities.size === 0;
+  return allEntities.length === 0;
 }
 
 async function detectCollectionIsEmpty(
@@ -564,5 +564,5 @@ async function detectCollectionIsEmpty(
     tx.db.query(collectionName).select([]).limit(1).build(),
     { skipRules: true }
   );
-  return allEntities.size === 0;
+  return allEntities.length === 0;
 }

@@ -28,11 +28,7 @@ describe.each(SCALAR_TYPES)('%s', (type) => {
               .build();
             const result = await db.fetch(query);
             expect(
-              new Set(
-                Array.from(result.values()).map((result) =>
-                  result.testAttr.toString()
-                )
-              )
+              new Set(result.map((result) => result.testAttr.toString()))
             ).toEqual(expected);
           }
         );

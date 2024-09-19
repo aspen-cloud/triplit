@@ -140,7 +140,7 @@ it('can filter on existing relationships', async () => {
 
   const query = db.query('groups').where(exists('members'));
   const result = await db.fetch(query.build());
-  const keys = [...result.keys()];
+  const keys = result.map((e) => e.id);
   expect(keys).toHaveLength(2);
   expect(keys).toContain('1');
   expect(keys).toContain('2');
@@ -156,7 +156,7 @@ it('can filter on existing relationships with additional filters', async () => {
     })
   );
   const result = await db.fetch(query.build());
-  const keys = [...result.keys()];
+  const keys = result.map((e) => e.id);
   expect(keys).toHaveLength(1);
   expect(keys).toContain('1');
 });
@@ -168,7 +168,7 @@ it('can filter on deep relationships', async () => {
     .query('groups')
     .where(exists('members.user', { where: [['name', '=', 'Bob']] }));
   const result = await db.fetch(query.build());
-  const keys = [...result.keys()];
+  const keys = result.map((e) => e.id);
   expect(keys).toHaveLength(1);
   expect(keys).toContain('1');
 });

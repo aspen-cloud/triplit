@@ -15,11 +15,6 @@ export function ServerSelector({
   const [serverHost] = useServerState();
   const servers = useServers();
 
-  const serverList = useMemo(
-    () => (servers ? Array.from(servers.values()) : []),
-    [servers]
-  );
-
   const navigate = useNavigate();
 
   return (
@@ -27,7 +22,7 @@ export function ServerSelector({
       <div className="self-center text-zinc-500 text-sm">
         Connect to a server
       </div>
-      {serverList.map(({ id, displayName, url }) => (
+      {servers?.map(({ id, displayName, url }) => (
         <Button
           key={id}
           style={{ height: 50 }}

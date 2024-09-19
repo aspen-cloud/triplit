@@ -77,7 +77,7 @@ describe('DB Variables', () => {
       async (db) => {
         const result = await db.fetch(query);
         expect(result).toHaveLength(1);
-        expect(result.get('dep-1')?.id).toBe(DEPARTMENT);
+        expect(result.find((e) => e.id === 'dep-1')?.id).toBe(DEPARTMENT);
       }
     );
   });
@@ -130,12 +130,12 @@ describe('DB Variables', () => {
       .build();
 
     const preUpdateResult = await db.fetch(query);
-    expect(preUpdateResult.size).toBe(3);
+    expect(preUpdateResult.length).toBe(3);
 
     db.updateGlobalVariables({ DEPARTMENT: 'dep-2' });
 
     const postUpdateResult = await db.fetch(query);
-    expect(postUpdateResult.size).toBe(2);
+    expect(postUpdateResult.length).toBe(2);
   });
 
   it('can provide variables via a query', async () => {
@@ -152,8 +152,8 @@ describe('DB Variables', () => {
         const result1 = await db.fetch(builtQuery1);
         const result2 = await db.fetch(builtQuery2);
 
-        expect(result1.size).toBe(3);
-        expect(result2.size).toBe(2);
+        expect(result1.length).toBe(3);
+        expect(result2.length).toBe(2);
       }
     );
   });
@@ -229,7 +229,7 @@ describe('sessions', () => {
     {
       const resp = await sessionFoo.fetch(query);
       expect(resp).toHaveLength(1);
-      expect(resp.get('2')).toMatchObject({
+      expect(resp.find((e) => e.id === '2')).toMatchObject({
         id: '2',
         name: 'foo',
         visible: true,

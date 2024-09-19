@@ -112,18 +112,18 @@ describe('Rules', () => {
 
       let calls = 0;
       let assertions = [
-        (results: Map<string, any>) => {
-          expect(results.size).toBe(0);
+        (results: any[]) => {
+          expect(results.length).toBe(0);
         },
-        (results: Map<string, any>) => {
-          expect(results.size).toBe(1);
-          expect(results.get('1')).toBeTruthy();
+        (results: any[]) => {
+          expect(results.length).toBe(1);
+          expect(results.find((e) => e.id === '1')).toBeTruthy();
         },
-        (results: Map<string, any>) => {
-          expect(results.size).toBe(2);
-          expect(results.get('1')).toBeTruthy();
-          expect(results.get('2')).toBeFalsy();
-          expect(results.get('3')).toBeTruthy();
+        (results: any[]) => {
+          expect(results.length).toBe(2);
+          expect(results.find((e) => e.id === '1')).toBeTruthy();
+          expect(results.find((e) => e.id === '2')).toBeFalsy();
+          expect(results.find((e) => e.id === '3')).toBeTruthy();
         },
       ];
       db.subscribe(completedTodosQuery, (data) => {

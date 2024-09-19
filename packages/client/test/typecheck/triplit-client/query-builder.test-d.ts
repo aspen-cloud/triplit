@@ -118,26 +118,20 @@ describe('Queries', () => {
     {
       const result = await client.fetch(queryA);
       expectTypeOf<typeof result>().toEqualTypeOf<
-        Map<
-          string,
-          {
-            id: string;
-            attrA: string;
-          }
-        >
+        {
+          id: string;
+          attrA: string;
+        }[]
       >();
     }
     const queryB = client.query('b').build();
     {
       const result = await client.fetch(queryB);
       expectTypeOf<typeof result>().toEqualTypeOf<
-        Map<
-          string,
-          {
-            id: string;
-            attrB: string;
-          }
-        >
+        {
+          id: string;
+          attrB: string;
+        }[]
       >();
     }
   });

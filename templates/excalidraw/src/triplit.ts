@@ -36,7 +36,7 @@ export function useUnsyncedElementsCount() {
   const { results: allUnsyncedElements } = useUnsyncedElements();
   return useMemo(() => {
     if (!allUnsyncedElements) return {};
-    return [...allUnsyncedElements.values()].reduce((acc, elem) => {
+    return allUnsyncedElements.reduce((acc, elem) => {
       acc[elem.pageId] ? (acc[elem.pageId] += 1) : (acc[elem.pageId] = 1);
       return acc;
     }, {});

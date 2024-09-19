@@ -1,5 +1,5 @@
 import type {
-  ClientFetchResult,
+  FetchResult,
   ClientQuery,
   ClientQueryBuilder,
   CollectionNameFromModels,
@@ -32,13 +32,13 @@ export function createQuery<
   fetching$: Observable<boolean>;
   fetchingLocal$: Observable<boolean>;
   fetchingRemote$: Observable<boolean>;
-  results$: Observable<Unalias<ClientFetchResult<M, Q>> | undefined>;
+  results$: Observable<Unalias<FetchResult<M, Q>> | undefined>;
   error$: Observable<any>;
 } {
   const queryParams$ = new BehaviorSubject(queryFn());
-  const resultSubject = new BehaviorSubject<
-    ClientFetchResult<M, Q> | undefined
-  >(undefined);
+  const resultSubject = new BehaviorSubject<FetchResult<M, Q> | undefined>(
+    undefined
+  );
   const fetchingLocalSubject = new BehaviorSubject<boolean>(true);
   const fetchingRemoteSubject = new BehaviorSubject<boolean>(
     queryFn().client.connectionStatus !== 'CLOSED'
@@ -67,7 +67,7 @@ export function createQuery<
     .pipe(
       switchMap((params) => {
         const { client, query, options } = params;
-        return new Observable<ClientFetchResult<M, Q>>((observer) => {
+        return new Observable<FetchResult<M, Q>>((observer) => {
           fetchingLocalSubject.next(true);
           const unsubscribe = client.subscribe(
             query.build(),

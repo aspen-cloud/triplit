@@ -85,7 +85,7 @@ const result = await client.fetch(query);
 // {
 //   id: string;
 //   name: string;
-//   bestFilms: Map<string, { id: string; title: string; rating: number; directorId: string }>;
+//   bestFilms: { id: string; title: string; rating: number; directorId: string }[];
 // }
 ```
 
@@ -100,7 +100,7 @@ const query = client
 // {
 //   id: string;
 //   name: string;
-//   allFilms: Map<string, { id: string; title: string; rating: number; directorId: string, actors: Map<string, { ... }> }>;
+//   allFilms: { id: string; title: string; rating: number; directorId: string, actors: { ... }[] }[];
 // }
 ```
 

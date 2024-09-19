@@ -137,7 +137,7 @@ describe('OR queries', () => {
         .build()
     );
     expect(redOr22).toHaveLength(3);
-    expect([...redOr22.keys()]).toEqual(
+    expect(redOr22.map((e) => e.id)).toEqual(
       expect.arrayContaining(
         ['1', '3', '5'].map((id) => expect.stringContaining(id.toString()))
       )
@@ -157,7 +157,7 @@ describe('OR queries', () => {
         .build()
     );
     expect(blue23Or22).toHaveLength(3);
-    expect([...blue23Or22.keys()]).toEqual(
+    expect(blue23Or22.map((e) => e.id)).toEqual(
       expect.arrayContaining(
         [1, 2, 3].map((id) => expect.stringContaining(id.toString()))
       )
@@ -193,25 +193,25 @@ describe('OR queries', () => {
     {
       const query = db.query('shows').where(clauseTT).build();
       const result = await db.fetch(query);
-      expect([...result.keys()]).toContain('1');
+      expect(result.map((r) => r.id)).toContain('1');
     }
 
     {
       const query = db.query('shows').where(clauseTF).build();
       const result = await db.fetch(query);
-      expect([...result.keys()]).toContain('1');
+      expect(result.map((r) => r.id)).toContain('1');
     }
 
     {
       const query = db.query('shows').where(clauseFT).build();
       const result = await db.fetch(query);
-      expect([...result.keys()]).toContain('1');
+      expect(result.map((r) => r.id)).toContain('1');
     }
 
     {
       const query = db.query('shows').where(clauseFF).build();
       const result = await db.fetch(query);
-      expect([...result.keys()]).not.toContain('1');
+      expect(result.map((r) => r.id)).not.toContain('1');
     }
   });
 });

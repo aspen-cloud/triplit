@@ -6,14 +6,14 @@ import { Callout } from 'nextra-theme-docs';
 
 # fetchOne
 
-`fetchOne` is similar to `fetch()` but will return a tuple `[id, entity]` of the first entity in the result set or `null` if the result set is empty. For example:
+`fetchOne` is similar to `fetch()` but will return only the first entity in the result set or `null` if the result set is empty. For example:
 
 ```typescript
 await client.insert('employees', { id: 'Fry', name: 'Philip J. Fry' });
 await client.insert('employees', { id: 'Leela', name: 'Turanga Leela' });
 
 const query = client.query('employees').build();
-const result = await client.fetchOne(query, options); // ['Fry', { name: 'Philip J. Fry' }]
+const result = await client.fetchOne(query, options); // { name: 'Philip J. Fry' }
 
 const queryEmpty = client
   .query('employees')

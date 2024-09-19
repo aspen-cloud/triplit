@@ -85,7 +85,7 @@ export class VariableAwareCache<Schema extends Models> {
         },
         ([results, triples]) => {
           this.cache.set(id, {
-            results,
+            results: new Map(results.map((e) => [e.id as string, e])),
             triples: Array.from(triples.values()).flat(),
           });
           resolve();

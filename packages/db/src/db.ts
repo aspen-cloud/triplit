@@ -852,7 +852,7 @@ export default class DB<M extends Models = Models> {
   ): Promise<Unalias<FetchResultEntity<M, ToQuery<M, Q>>> | null> {
     query = { ...query, limit: 1 };
     const result = await this.fetch(query, options);
-    const entity = [...result.values()][0];
+    const entity = [...result][0];
     if (!entity) return null;
     return entity;
   }

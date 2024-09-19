@@ -27,7 +27,7 @@ function onSubmit() {
       <p v-if="fetching">Loading...</p>
       <div v-if="results" class="todos-container">
         <Todo
-          v-for="[_id, todo] in Array.from(results)"
+          v-for="todo in results"
           :id="todo.id"
           :text="todo.text"
           :completed="todo.completed"

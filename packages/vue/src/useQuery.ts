@@ -1,6 +1,6 @@
 import { Ref, computed, ref, watchEffect, type ComputedRef } from 'vue';
 import type {
-  ClientFetchResult,
+  FetchResult,
   ClientQuery,
   ClientQueryBuilder,
   CollectionNameFromModels,
@@ -32,13 +32,13 @@ export function useQuery<
   fetching: ComputedRef<boolean>;
   fetchingLocal: ComputedRef<boolean>;
   fetchingRemote: ComputedRef<boolean>;
-  results: ComputedRef<Unalias<ClientFetchResult<M, Q>> | undefined>;
+  results: ComputedRef<Unalias<FetchResult<M, Q>> | undefined>;
   error: ComputedRef<unknown>;
   updateQuery: (query: ClientQueryBuilder<M, CN, Q>) => void;
 } {
-  const results = ref<Unalias<ClientFetchResult<M, Q>> | undefined>(
-    undefined
-  ) as Ref<Unalias<ClientFetchResult<M, Q>> | undefined>;
+  const results = ref<Unalias<FetchResult<M, Q>> | undefined>(undefined) as Ref<
+    Unalias<FetchResult<M, Q>> | undefined
+  >;
   const isInitialFetch = ref(true);
   const fetchingLocal = ref(false);
   const fetchingRemote = ref(client.connectionStatus !== 'CLOSED');

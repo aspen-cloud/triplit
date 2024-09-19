@@ -268,7 +268,7 @@ describe('Read', () => {
     const db = new DB({ schema: messagingSchema });
     await seedMessagingData(db);
     const messages = await db.fetch(db.query('messages').build());
-    expect(messages.size).toEqual(0);
+    expect(messages.length).toEqual(0);
   });
 
   it('skipping rules will allow you to read data', async () => {
@@ -277,7 +277,7 @@ describe('Read', () => {
     const messages = await db.fetch(db.query('messages').build(), {
       skipRules: true,
     });
-    expect(messages.size).toEqual(9);
+    expect(messages.length).toEqual(9);
   });
 
   it('authenticated users can read data based on rules', async () => {
@@ -308,8 +308,8 @@ describe('Read', () => {
     {
       // TODO: need to figure out of the matcher makes more sense as a merge, or first match...basically how do you deal with group
       const messages = await user1DB.fetch(user1DB.query('messages').build());
-      expect(messages.size).toEqual(6);
-      expect(Array.from(messages.keys()).sort()).toEqual([
+      expect(messages.length).toEqual(6);
+      expect(messages.map((m) => m.id).sort()).toEqual([
         'message-1',
         'message-2',
         'message-3',
@@ -322,8 +322,8 @@ describe('Read', () => {
     // User 2
     {
       const messages = await user2DB.fetch(user2DB.query('messages').build());
-      expect(messages.size).toEqual(5);
-      expect(Array.from(messages.keys()).sort()).toEqual([
+      expect(messages.length).toEqual(5);
+      expect(messages.map((m) => m.id).sort()).toEqual([
         'message-1',
         'message-2',
         'message-7',
@@ -335,8 +335,8 @@ describe('Read', () => {
     // User 3
     {
       const messages = await user3DB.fetch(user3DB.query('messages').build());
-      expect(messages.size).toEqual(4);
-      expect(Array.from(messages.keys()).sort()).toEqual([
+      expect(messages.length).toEqual(4);
+      expect(messages.map((m) => m.id).sort()).toEqual([
         'message-4',
         'message-5',
         'message-7',
@@ -347,7 +347,7 @@ describe('Read', () => {
     // Admin
     {
       const messages = await adminDB.fetch(adminDB.query('messages').build());
-      expect(messages.size).toEqual(9);
+      expect(messages.length).toEqual(9);
     }
   });
 
@@ -381,13 +381,13 @@ describe('Read', () => {
     {
       const query = db.query('permissioned').build();
       const results = await db.fetch(query);
-      expect(results.size).toEqual(0);
+      expect(results.length).toEqual(0);
     }
 
     {
       const query = db.query('permissionless').build();
       const results = await db.fetch(query);
-      expect(results.size).toEqual(1);
+      expect(results.length).toEqual(1);
     }
   });
 });

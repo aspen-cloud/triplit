@@ -22,10 +22,16 @@ function Messages() {
 
   return (
     <div>
-      {allMessages.entries().map(([id, message]) => (
+      {allMessages?.map((message) => (
         <div>
           <p>{message.text}</p>
-          <p>{pendingMessages.has(id) ? 'Sending...' : 'Sent'}</p>
+          <p>
+            {pendingMessages?.find(
+              (pendingMessage) => pendingMessage.id === message.id
+            )
+              ? 'Sending...'
+              : 'Sent'}
+          </p>
         </div>
       ))}
     </div>

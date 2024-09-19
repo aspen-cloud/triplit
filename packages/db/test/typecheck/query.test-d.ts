@@ -20,7 +20,7 @@ describe('fetch', () => {
       const tx = fakeTx(db);
       const query = db.query('test').build();
       const result = await db.fetch(query);
-      expectTypeOf<MapValue<typeof result>>().toEqualTypeOf<{
+      expectTypeOf<(typeof result)[number]>().toEqualTypeOf<{
         id: string;
         string: string;
         boolean: boolean;
@@ -41,7 +41,7 @@ describe('fetch', () => {
       }>();
 
       const txResult = await tx.fetch(query);
-      expectTypeOf<MapValue<typeof txResult>>().toEqualTypeOf<{
+      expectTypeOf<(typeof txResult)[number]>().toEqualTypeOf<{
         id: string;
         string: string;
         boolean: boolean;
@@ -67,14 +67,14 @@ describe('fetch', () => {
       const tx = fakeTx(db);
       const query = db.query('test').select(['id', 'string', 'number']).build();
       const result = await db.fetch(query);
-      expectTypeOf<MapValue<typeof result>>().toEqualTypeOf<{
+      expectTypeOf<(typeof result)[number]>().toEqualTypeOf<{
         id: string;
         string: string;
         number: number;
       }>();
 
       const txResult = await tx.fetch(query);
-      expectTypeOf<MapValue<typeof txResult>>().toEqualTypeOf<{
+      expectTypeOf<(typeof txResult)[number]>().toEqualTypeOf<{
         id: string;
         string: string;
         number: number;
@@ -89,14 +89,14 @@ describe('fetch', () => {
       const query = db.query('test').select(['id', 'record']).build();
       {
         const result = await db.fetch(query);
-        expectTypeOf<MapValue<typeof result>>().toEqualTypeOf<{
+        expectTypeOf<(typeof result)[number]>().toEqualTypeOf<{
           id: string;
           record: { attr1: string; attr2: string; attr3?: string };
         }>();
       }
       {
         const result = await tx.fetch(query);
-        expectTypeOf<MapValue<typeof result>>().toEqualTypeOf<{
+        expectTypeOf<(typeof result)[number]>().toEqualTypeOf<{
           id: string;
           record: { attr1: string; attr2: string; attr3?: string };
         }>();
@@ -109,14 +109,14 @@ describe('fetch', () => {
         .build();
       {
         const result = await db.fetch(query2);
-        expectTypeOf<MapValue<typeof result>>().toEqualTypeOf<{
+        expectTypeOf<(typeof result)[number]>().toEqualTypeOf<{
           id: string;
           record: { attr1: string; attr3: string | undefined };
         }>();
       }
       {
         const result = await tx.fetch(query2);
-        expectTypeOf<MapValue<typeof result>>().toEqualTypeOf<{
+        expectTypeOf<(typeof result)[number]>().toEqualTypeOf<{
           id: string;
           record: { attr1: string; attr3: string | undefined };
         }>();
@@ -144,20 +144,20 @@ describe('fetch', () => {
         .build();
       {
         const result = await db.fetch(query);
-        expectTypeOf<MapValue<typeof result>>().toEqualTypeOf<{
+        expectTypeOf<(typeof result)[number]>().toEqualTypeOf<{
           relationOne: { id: string; test2Data: string } | null;
-          relationMany: Map<string, { id: string; test3Data: string }>;
+          relationMany: { id: string; test3Data: string }[];
           relationById: { id: string; test4Data: string } | null;
-          random: Map<string, { id: string; test2Data: string }>;
+          random: { id: string; test2Data: string }[];
         }>();
       }
       {
         const result = await tx.fetch(query);
-        expectTypeOf<MapValue<typeof result>>().toEqualTypeOf<{
+        expectTypeOf<(typeof result)[number]>().toEqualTypeOf<{
           relationOne: { id: string; test2Data: string } | null;
-          relationMany: Map<string, { id: string; test3Data: string }>;
+          relationMany: { id: string; test3Data: string }[];
           relationById: { id: string; test4Data: string } | null;
-          random: Map<string, { id: string; test2Data: string }>;
+          random: { id: string; test2Data: string }[];
         }>;
       }
     });
@@ -173,14 +173,14 @@ describe('fetch', () => {
 
       {
         const result = await db.fetch(query);
-        expectTypeOf<MapValue<typeof result>>().toEqualTypeOf<{
+        expectTypeOf<(typeof result)[number]>().toEqualTypeOf<{
           id: string;
           relationOne: { id: string; test2Data: string } | null;
         }>();
       }
       {
         const result = await tx.fetch(query);
-        expectTypeOf<MapValue<typeof result>>().toEqualTypeOf<{
+        expectTypeOf<(typeof result)[number]>().toEqualTypeOf<{
           id: string;
           relationOne: { id: string; test2Data: string } | null;
         }>();
@@ -201,14 +201,14 @@ describe('fetch', () => {
         // DB
         {
           const result = await db.fetch(query);
-          expectTypeOf<MapValue<typeof result>>().toEqualTypeOf<{
+          expectTypeOf<(typeof result)[number]>().toEqualTypeOf<{
             relationById: { id: string; test4Data: string } | null;
           }>();
         }
         // Transaction
         {
           const result = await tx.fetch(query);
-          expectTypeOf<MapValue<typeof result>>().toEqualTypeOf<{
+          expectTypeOf<(typeof result)[number]>().toEqualTypeOf<{
             relationById: { id: string; test4Data: string } | null;
           }>();
         }
@@ -223,7 +223,7 @@ describe('fetch', () => {
             select: [],
             include: { relationById: true },
           });
-          expectTypeOf<MapValue<typeof result>>().toEqualTypeOf<{
+          expectTypeOf<(typeof result)[number]>().toEqualTypeOf<{
             relationById: { id: string; test4Data: string } | null;
           }>();
         }
@@ -234,7 +234,7 @@ describe('fetch', () => {
             select: [],
             include: { relationById: true },
           });
-          expectTypeOf<MapValue<typeof result>>().toEqualTypeOf<{
+          expectTypeOf<(typeof result)[number]>().toEqualTypeOf<{
             relationById: { id: string; test4Data: string } | null;
           }>();
         }
@@ -269,14 +269,14 @@ describe('fetch', () => {
         // DB
         {
           const result = await db.fetch(query);
-          expectTypeOf<MapValue<typeof result>>().toEqualTypeOf<{
+          expectTypeOf<(typeof result)[number]>().toEqualTypeOf<{
             aliased: { id: string; test4Data: string } | null;
           }>();
         }
         // Transaction
         {
           const result = await tx.fetch(query);
-          expectTypeOf<MapValue<typeof result>>().toEqualTypeOf<{
+          expectTypeOf<(typeof result)[number]>().toEqualTypeOf<{
             aliased: { id: string; test4Data: string } | null;
           }>();
         }
@@ -291,7 +291,7 @@ describe('fetch', () => {
             select: [],
             include: { aliased: { _rel: 'relationById' } },
           });
-          expectTypeOf<MapValue<typeof result>>().toEqualTypeOf<{
+          expectTypeOf<(typeof result)[number]>().toEqualTypeOf<{
             aliased: { id: string; test4Data: string } | null;
           }>();
         }
@@ -302,7 +302,7 @@ describe('fetch', () => {
             select: [],
             include: { aliased: { _rel: 'relationById' } },
           });
-          expectTypeOf<MapValue<typeof result>>().toEqualTypeOf<{
+          expectTypeOf<(typeof result)[number]>().toEqualTypeOf<{
             aliased: { id: string; test4Data: string } | null;
           }>();
         }
@@ -324,14 +324,14 @@ describe('fetch', () => {
         // DB
         {
           const result = await db.fetch(query);
-          expectTypeOf<MapValue<typeof result>>().toEqualTypeOf<{
+          expectTypeOf<(typeof result)[number]>().toEqualTypeOf<{
             aliased: { test4Data: string } | null;
           }>();
         }
         // Transaction
         {
           const result = await tx.fetch(query);
-          expectTypeOf<MapValue<typeof result>>().toEqualTypeOf<{
+          expectTypeOf<(typeof result)[number]>().toEqualTypeOf<{
             aliased: { test4Data: string } | null;
           }>();
         }
@@ -351,7 +351,7 @@ describe('fetch', () => {
               },
             },
           });
-          expectTypeOf<MapValue<typeof result>>().toEqualTypeOf<{
+          expectTypeOf<(typeof result)[number]>().toEqualTypeOf<{
             aliased: { test4Data: string } | null;
           }>();
         }
@@ -367,7 +367,7 @@ describe('fetch', () => {
               },
             },
           });
-          expectTypeOf<MapValue<typeof result>>().toEqualTypeOf<{
+          expectTypeOf<(typeof result)[number]>().toEqualTypeOf<{
             aliased: { test4Data: string } | null;
           }>();
         }
@@ -389,14 +389,14 @@ describe('fetch', () => {
         // DB
         {
           const result = await db.fetch(query);
-          expectTypeOf<MapValue<typeof result>>().toEqualTypeOf<{
+          expectTypeOf<(typeof result)[number]>().toEqualTypeOf<{
             aliased: { test3: { id: string; test3Data: string } | null } | null;
           }>();
         }
         // Transaction
         {
           const result = await tx.fetch(query);
-          expectTypeOf<MapValue<typeof result>>().toEqualTypeOf<{
+          expectTypeOf<(typeof result)[number]>().toEqualTypeOf<{
             aliased: { test3: { id: string; test3Data: string } | null } | null;
           }>();
         }
@@ -417,7 +417,7 @@ describe('fetch', () => {
               },
             },
           });
-          expectTypeOf<MapValue<typeof result>>().toEqualTypeOf<{
+          expectTypeOf<(typeof result)[number]>().toEqualTypeOf<{
             aliased: { test3: { id: string; test3Data: string } | null } | null;
           }>();
         }
@@ -434,7 +434,7 @@ describe('fetch', () => {
               },
             },
           });
-          expectTypeOf<MapValue<typeof result>>().toEqualTypeOf<{
+          expectTypeOf<(typeof result)[number]>().toEqualTypeOf<{
             aliased: { test3: { id: string; test3Data: string } | null } | null;
           }>();
         }
@@ -458,14 +458,14 @@ describe('fetch', () => {
         // DB
         {
           const result = await db.fetch(query);
-          expectTypeOf<MapValue<typeof result>>().toEqualTypeOf<{
+          expectTypeOf<(typeof result)[number]>().toEqualTypeOf<{
             aliased: { id: string; test2Data: string } | null;
           }>();
         }
         // Transaction
         {
           const result = await tx.fetch(query);
-          expectTypeOf<MapValue<typeof result>>().toEqualTypeOf<{
+          expectTypeOf<(typeof result)[number]>().toEqualTypeOf<{
             aliased: { id: string; test2Data: string } | null;
           }>();
         }
@@ -485,7 +485,7 @@ describe('fetch', () => {
               },
             },
           });
-          expectTypeOf<MapValue<typeof result>>().toEqualTypeOf<{
+          expectTypeOf<(typeof result)[number]>().toEqualTypeOf<{
             aliased: { id: string; test2Data: string } | null;
           }>();
         }
@@ -501,7 +501,7 @@ describe('fetch', () => {
               },
             },
           });
-          expectTypeOf<MapValue<typeof result>>().toEqualTypeOf<{
+          expectTypeOf<(typeof result)[number]>().toEqualTypeOf<{
             aliased: { id: string; test2Data: string } | null;
           }>();
         }
@@ -525,14 +525,14 @@ describe('fetch', () => {
         // DB
         {
           const result = await db.fetch(query);
-          expectTypeOf<MapValue<typeof result>>().toEqualTypeOf<{
+          expectTypeOf<(typeof result)[number]>().toEqualTypeOf<{
             aliased: { test2Data: string } | null;
           }>();
         }
         // Transaction
         {
           const result = await tx.fetch(query);
-          expectTypeOf<MapValue<typeof result>>().toEqualTypeOf<{
+          expectTypeOf<(typeof result)[number]>().toEqualTypeOf<{
             aliased: { test2Data: string } | null;
           }>();
         }
@@ -552,7 +552,7 @@ describe('fetch', () => {
               },
             },
           });
-          expectTypeOf<MapValue<typeof result>>().toEqualTypeOf<{
+          expectTypeOf<(typeof result)[number]>().toEqualTypeOf<{
             aliased: { test2Data: string } | null;
           }>();
         }
@@ -568,7 +568,7 @@ describe('fetch', () => {
               },
             },
           });
-          expectTypeOf<MapValue<typeof result>>().toEqualTypeOf<{
+          expectTypeOf<(typeof result)[number]>().toEqualTypeOf<{
             aliased: { test2Data: string } | null;
           }>();
         }
@@ -592,14 +592,14 @@ describe('fetch', () => {
         // DB
         {
           const result = await db.fetch(query);
-          expectTypeOf<MapValue<typeof result>>().toEqualTypeOf<{
+          expectTypeOf<(typeof result)[number]>().toEqualTypeOf<{
             aliased: { test3: { id: string; test3Data: string } | null } | null;
           }>();
         }
         // Transaction
         {
           const result = await tx.fetch(query);
-          expectTypeOf<MapValue<typeof result>>().toEqualTypeOf<{
+          expectTypeOf<(typeof result)[number]>().toEqualTypeOf<{
             aliased: { test3: { id: string; test3Data: string } | null } | null;
           }>();
         }
@@ -623,7 +623,7 @@ describe('fetch', () => {
               },
             },
           });
-          expectTypeOf<MapValue<typeof result>>().toEqualTypeOf<{
+          expectTypeOf<(typeof result)[number]>().toEqualTypeOf<{
             aliased: { test3: { id: string; test3Data: string } | null } | null;
           }>();
         }
@@ -643,7 +643,7 @@ describe('fetch', () => {
               },
             },
           });
-          expectTypeOf<MapValue<typeof result>>().toEqualTypeOf<{
+          expectTypeOf<(typeof result)[number]>().toEqualTypeOf<{
             aliased: { test3: { id: string; test3Data: string } | null } | null;
           }>();
         }
@@ -659,12 +659,12 @@ describe('fetch', () => {
 
       {
         const result = await db.fetch(query);
-        expectTypeOf(result).toEqualTypeOf<Map<string, { [x: string]: any }>>();
+        expectTypeOf(result).toEqualTypeOf<{ [x: string]: any }[]>();
       }
 
       {
         const result = await tx.fetch(query);
-        expectTypeOf(result).toEqualTypeOf<Map<string, { [x: string]: any }>>();
+        expectTypeOf(result).toEqualTypeOf<{ [x: string]: any }[]>();
       }
     });
   });

@@ -8,7 +8,7 @@ To define a relationship between two collections, you define a subquery that des
 
 ## RelationMany
 
-A `RelationMany` attribute will be in the shape `Map<string, Entity>`. It's designed to model a one-to-many relationship between two collections. The `RelationMany` attribute will be a map of the related entities keyed by their id. If no related entities are found, the attribute will be an empty map.
+A `RelationMany` attribute will be in the shape `Array<Entity>`. It's designed to model a one-to-many relationship between two collections. If no related entities are found, the attribute will be an empty array.
 
 In this example schema, we are modeling a school, where departments have many classes. The `departments` collection has a `classes` attribute that is a `RelationMany` to the `classes` collection.
 

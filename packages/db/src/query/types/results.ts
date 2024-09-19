@@ -19,6 +19,8 @@ export type Unalias<T> = T extends Map<infer K, infer V>
   ? Set<Unalias<V>>
   : T extends Date
   ? T
+  : T extends Array<infer U>
+  ? Array<Unalias<U>>
   : T extends Object
   ? { [K in keyof T]: Unalias<T[K]> }
   : T;
@@ -33,12 +35,12 @@ export type QueryResult<
 > = C extends 'one' ? FetchResultEntity<M, Q> | null : FetchResult<M, Q>;
 
 /**
- * A map containing the results of a database fetch
+ * An array containing the results of a database fetch
  */
-export type FetchResult<M extends Models, Q extends SchemaQueries<M>> = Map<
-  string,
-  FetchResultEntity<M, Q>
->;
+export type FetchResult<
+  M extends Models,
+  Q extends SchemaQueries<M>
+> = FetchResultEntity<M, Q>[];
 
 /**
  * An entity fetched from the database, based on a CollectionQuery

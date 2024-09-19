@@ -135,7 +135,7 @@ describe('S.Query', () => {
       ).toStrictEqual({ id: '123', date: d });
       expect(type.convertDBValueToJS(null, schema)).toBe(null);
     });
-    it('cardinality = "many" returns a converted map', () => {
+    it('cardinality = "many" returns an array', () => {
       const schema = {
         test: { schema: S.Schema({ id: S.String(), date: S.Date() }) },
       };
@@ -144,18 +144,16 @@ describe('S.Query', () => {
       const type = S.Query({ collectionName: 'test' }, 'many');
       expect(
         type.convertDBValueToJS(
-          new Map([
-            ['123', { id: '123', date: d1.toISOString() }],
-            ['456', { id: '456', date: d2.toISOString() }],
-          ]),
+          [
+            { id: '123', date: d1.toISOString() },
+            { id: '456', date: d2.toISOString() },
+          ],
           schema
         )
-      ).toStrictEqual(
-        new Map([
-          ['123', { id: '123', date: d1 }],
-          ['456', { id: '456', date: d2 }],
-        ])
-      );
+      ).toStrictEqual([
+        { id: '123', date: d1 },
+        { id: '456', date: d2 },
+      ]);
       expect(type.convertDBValueToJS(null, schema)).toBe(null);
     });
     it('throws error if cardinality is invalid', () => {
@@ -198,7 +196,7 @@ describe('S.Query', () => {
       ).toStrictEqual({ id: '123', date: d });
       expect(type.convertJSONToJS(null, schema)).toBe(null);
     });
-    it('cardinality = "many" returns a converted map', () => {
+    it('cardinality = "many" returns an array', () => {
       const schema = {
         test: { schema: S.Schema({ id: S.String(), date: S.Date() }) },
       };
@@ -208,17 +206,15 @@ describe('S.Query', () => {
       expect(
         type.convertJSONToJS(
           [
-            ['123', { id: '123', date: d1.toISOString() }],
-            ['456', { id: '456', date: d2.toISOString() }],
+            { id: '123', date: d1.toISOString() },
+            { id: '456', date: d2.toISOString() },
           ],
           schema
         )
-      ).toStrictEqual(
-        new Map([
-          ['123', { id: '123', date: d1 }],
-          ['456', { id: '456', date: d2 }],
-        ])
-      );
+      ).toStrictEqual([
+        { id: '123', date: d1 },
+        { id: '456', date: d2 },
+      ]);
       expect(type.convertJSONToJS(null, schema)).toBe(null);
     });
     it('throws error if cardinality is invalid', () => {
@@ -261,7 +257,7 @@ describe('S.Query', () => {
       ).toStrictEqual({ id: '123', date: d.toISOString() });
       expect(type.convertJSToJSON(null, schema)).toBe(null);
     });
-    it('cardinality = "many" returns a converted map', () => {
+    it('cardinality = "many" returns an array', () => {
       const schema = {
         test: { schema: S.Schema({ id: S.String(), date: S.Date() }) },
       };
@@ -270,15 +266,15 @@ describe('S.Query', () => {
       const type = S.Query({ collectionName: 'test' }, 'many');
       expect(
         type.convertJSToJSON(
-          new Map([
-            ['123', { id: '123', date: d1 }],
-            ['456', { id: '456', date: d2 }],
-          ]),
+          [
+            { id: '123', date: d1 },
+            { id: '456', date: d2 },
+          ],
           schema
         )
       ).toStrictEqual([
-        ['123', { id: '123', date: d1.toISOString() }],
-        ['456', { id: '456', date: d2.toISOString() }],
+        { id: '123', date: d1.toISOString() },
+        { id: '456', date: d2.toISOString() },
       ]);
       expect(type.convertJSToJSON(null, schema)).toBe(null);
     });

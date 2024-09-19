@@ -472,15 +472,17 @@ describe('record operations', () => {
       });
       {
         const result = await db.fetch(
-          db.query('test').select(['optionalAttr']).build()
+          db.query('test').select(['optionalAttr', 'id']).build()
         );
-        expect(result.get('item1')).toEqual({});
+        console.log(result);
+        expect(result.find((e) => e.id === 'item1')).toEqual({ id: 'item1' });
       }
       {
         const result = await db.fetch(
-          db.query('test').select(['optionalAttr', 'record']).build()
+          db.query('test').select(['optionalAttr', 'record', 'id']).build()
         );
-        expect(result.get('item1')).toEqual({
+        expect(result.find((e) => e.id === 'item1')).toEqual({
+          id: 'item1',
           record: {
             attr: 'attr',
           },

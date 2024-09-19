@@ -1712,15 +1712,8 @@ export function subscribeResultsAndTriples<
             results = fetchResult.results;
             triples = fetchResult.triples;
             await onResults([
-              new Map(
-                [...results].map(([id, entity]) => [
-                  id,
-                  convertEntityToJS(
-                    entity,
-                    options.schema,
-                    query.collectionName
-                  ),
-                ])
+              [...results].map(([id, entity]) =>
+                convertEntityToJS(entity, options.schema, query.collectionName)
               ) as FetchResult<M, Q>,
               triples,
             ]);
@@ -1903,11 +1896,8 @@ export function subscribeResultsAndTriples<
           triples = Array.from(matchedTriples.values()).flat();
           // console.timeEnd('query recalculation');
           await onResults([
-            new Map(
-              [...results].map(([id, entity]) => [
-                id,
-                convertEntityToJS(entity, options.schema, query.collectionName),
-              ])
+            [...results].map(([id, entity]) =>
+              convertEntityToJS(entity, options.schema, query.collectionName)
             ) as FetchResult<M, Q>,
             triples,
           ]);
@@ -1917,11 +1907,8 @@ export function subscribeResultsAndTriples<
         }
       });
       await onResults([
-        new Map(
-          [...results].map(([id, entity]) => [
-            id,
-            convertEntityToJS(entity, options.schema, query.collectionName),
-          ])
+        [...results].map(([id, entity]) =>
+          convertEntityToJS(entity, options.schema, query.collectionName)
         ) as FetchResult<M, Q>,
         triples,
       ]);

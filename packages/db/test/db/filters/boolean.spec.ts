@@ -11,7 +11,7 @@ it('boolean TRUE is a no-op', async () => {
 
   const query = db.query('users').where('age', '>', 24).where(true).build();
   const result = await db.fetch(query);
-  expect(result.size).toBe(2);
+  expect(result.length).toBe(2);
 });
 it('boolean FALSE returns no data', async () => {
   const db = new DB();
@@ -23,5 +23,5 @@ it('boolean FALSE returns no data', async () => {
 
   const query = db.query('users').where('age', '>', 24).where(false).build();
   const result = await db.fetch(query);
-  expect(result.size).toBe(0);
+  expect(result.length).toBe(0);
 });

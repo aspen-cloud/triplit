@@ -410,7 +410,7 @@ export class TriplitClient<M extends ClientSchema = ClientSchema> {
 
     if (opts.policy === 'local-first') {
       const localResults = await this.fetchLocal(query, opts);
-      if (localResults.size > 0) return localResults;
+      if (localResults.length > 0) return localResults;
       try {
         await this.syncEngine.syncQuery(query);
       } catch (e) {
@@ -895,11 +895,12 @@ export class TriplitClient<M extends ClientSchema = ClientSchema> {
           compareCursors(query.after[0], [
             // @ts-expect-error
             firstEntry[1][cursorAttr], // TODO need to translate things like dates
-            firstEntry[0],
+            // @ts-expect-error
+            firstEntry[1].id,
           ]) > -1;
 
         // If we have overflowing data, we can move the window forward
-        const canMoveWindowForward = results.size >= query.limit!; // Pretty sure this cant be gt, but still
+        const canMoveWindowForward = results.length >= query.limit!; // Pretty sure this cant be gt, but still
 
         // If we can page forward or backward (from the perspective of the original query)
         const hasPreviousPage =
@@ -925,14 +926,16 @@ export class TriplitClient<M extends ClientSchema = ClientSchema> {
           ? [
               // @ts-expect-error
               firstDataEntry[1][cursorAttr],
-              firstDataEntry[0],
+              // @ts-expect-error
+              firstDataEntry[1].id!,
             ]
           : undefined;
         rangeEnd = lastDataEntry
           ? [
               // @ts-expect-error
               lastDataEntry[1][cursorAttr],
-              lastDataEntry[0],
+              // @ts-expect-error
+              lastDataEntry[1].id!,
             ]
           : undefined;
 
@@ -956,11 +959,14 @@ export class TriplitClient<M extends ClientSchema = ClientSchema> {
             options
           );
         } else {
-          onResults(new Map(entries), {
-            ...info,
-            hasNextPage: hasNextPage,
-            hasPreviousPage: hasPreviousPage,
-          });
+          onResults(
+            entries.map(([, entity]) => entity),
+            {
+              ...info,
+              hasNextPage: hasNextPage,
+              hasPreviousPage: hasPreviousPage,
+            }
+          );
         }
       };
 
@@ -1061,13 +1067,16 @@ export class TriplitClient<M extends ClientSchema = ClientSchema> {
         results: Unalias<FetchResult<M, ToQuery<M, CQ>>>,
         info: { hasRemoteFulfilled: boolean }
       ) => {
-        const hasMore = results.size >= query.limit!;
+        const hasMore = results.length >= query.limit!;
         let entries = Array.from(results.entries());
         if (hasMore) entries = entries.slice(0, -1);
-        onResults(new Map(entries), {
-          hasRemoteFulfilled: info.hasRemoteFulfilled,
-          hasMore,
-        });
+        onResults(
+          entries.map(([, entity]) => entity),
+          {
+            hasRemoteFulfilled: info.hasRemoteFulfilled,
+            hasMore,
+          }
+        );
       };
 
       returnValue.loadMore = (pageSize?: number) => {

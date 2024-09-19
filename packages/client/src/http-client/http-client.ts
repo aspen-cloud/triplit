@@ -300,12 +300,7 @@ function deserializeHttpFetchResult<
   M extends Models,
   Q extends SchemaQueries<M>
 >(query: Q, result: [string, any][], schema?: any): FetchResult<M, Q> {
-  return new Map(
-    result.map((entry) => [
-      entry[0],
-      deserializeHttpEntity(query, entry[1], schema),
-    ])
-  );
+  return result.map((entry) => deserializeHttpEntity(query, entry[1], schema));
 }
 
 function deserializeHttpEntity<M extends Models, Q extends SchemaQueries<M>>(
