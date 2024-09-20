@@ -38,7 +38,7 @@ it('fetch respects queries', async () => {
   });
 });
 
-it.only('fetch can handle a select without ["id"]', async () => {
+it('fetch can handle a select without ["id"]', async () => {
   await withServer({ port: PORT }, async () => {
     const client = new HttpClient({
       server: `http://localhost:${PORT}`,
