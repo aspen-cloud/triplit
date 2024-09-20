@@ -20,7 +20,6 @@
   "local-development": "Local development",
   "seeding": "Seeding a database",
   "ssr": "Server-side rendering",
-  "migrations": { "title": "Migrations", "display": "hidden" },
   "v2": {
     "title": "V2",
     "display": "hidden"

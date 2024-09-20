@@ -1,327 +1,77 @@
-import fs from 'node:fs';
-import DB, {
-  Migration,
+import {
+  AddAttributePayload,
+  AddRulePayload,
+  AlterAttributeOptionPayload,
   CollectionDefinition,
-  CreateCollectionOperation,
-  DropCollectionOperation,
-  AddAttributeOperation,
-  DropAttributeOperation,
-  AlterAttributeOptionOperation,
-  DropAttributeOptionOperation,
-  AddRuleOperation,
-  DropRuleOperation,
   CollectionsDefinition,
-  hashSchemaJSON,
-  schemaToJSON,
-  SetAttributeOptionalOperation,
+  CreateCollectionPayload,
+  DropAttributeOptionPayload,
+  DropAttributePayload,
+  DropCollectionPayload,
+  DropRulePayload,
+  SetAttributeOptionalPayload,
 } from '@triplit/db';
 import { diff } from 'jsondiffpatch';
-import { getMigrationsDir } from './filesystem.js';
-import { readLocalSchema } from './schema.js';
 
-export interface MigrationFile {
-  filename: string;
-  migration: Migration;
-}
+type CreateCollectionOperation = ['create_collection', CreateCollectionPayload];
+type DropCollectionOperation = ['drop_collection', DropCollectionPayload];
+type AddAttributeOperation = ['add_attribute', AddAttributePayload];
+type DropAttributeOperation = ['drop_attribute', DropAttributePayload];
+type AlterAttributeOptionOperation = [
+  'alter_attribute_option',
+  AlterAttributeOptionPayload
+];
+type DropAttributeOptionOperation = [
+  'drop_attribute_option',
+  DropAttributeOptionPayload
+];
+type AddRuleOperation = ['add_rule', AddRulePayload];
+type DropRuleOperation = ['drop_rule', DropRulePayload];
+type SetAttributeOptionalOperation = [
+  'set_attribute_optional',
+  SetAttributeOptionalPayload
+];
 
-export function readMigrations() {
-  const migrationsDir = getMigrationsDir();
-  return fs.readdirSync(migrationsDir).map<MigrationFile>((file) => ({
-    migration: JSON.parse(
-      fs.readFileSync(`${migrationsDir}/${file}`, 'utf8')
-    ) as Migration,
-    filename: file,
-  }));
-}
+type DBOperation =
+  | CreateCollectionOperation
+  | DropCollectionOperation
+  | AddAttributeOperation
+  | DropAttributeOperation
+  | AlterAttributeOptionOperation
+  | DropAttributeOptionOperation
+  | AddRuleOperation
+  | DropRuleOperation
+  | SetAttributeOptionalOperation;
 
-type MigrationsStatus =
-  | 'IN_SYNC'
-  | 'SERVER_BEHIND'
-  | 'SERVER_AHEAD'
-  | 'SERVER_UNTRACKED_CHANGES'
-  | 'PROJECT_UNTRACKED_CHANGES'
-  | 'PROJECT_HAS_ORPHANS'
-  | 'UNKNOWN';
+type SchemaChangeset = {
+  up: DBOperation[];
+  down: DBOperation[];
+};
 
-type ProjectMigrationStatus = 'IN_SYNC' | 'UNAPPLIED' | 'ORPHANED' | 'UNKNOWN';
-type ServerMigrationStatus = 'IN_SYNC' | 'UNTRACKED' | 'UNKNOWN';
-
-export async function getMigrationsStatus({ ctx }): Promise<{
-  status: MigrationsStatus;
-  server: {
-    migrationIds: number[];
-    migrationHash: number | undefined;
-    schemaHash: number | undefined;
-    schema: CollectionsDefinition | undefined;
-    migrations: { id: number; parent: number; name: string }[];
-    statuses: Record<number, ServerMigrationStatus>;
-  };
-  project: {
-    migrationIds: number[];
-    migrationsHash: number | undefined;
-    schemaHash: number | undefined;
-    schema: CollectionsDefinition | undefined;
-    migrations: Migration[];
-    statuses: Record<number, ProjectMigrationStatus>;
-  };
-}> {
-  const serverMigrationInfo = await ctx.requestServer(
-    'POST',
-    '/migration/status'
-  );
-
-  const { schemaHash: serverHash, schema: serverSchemaJSON } =
-    serverMigrationInfo;
-  const serverMigrations: [{ id: number; parent: number; name: string }] =
-    serverMigrationInfo.migrations ?? [];
-
-  const projectMigrations = readMigrations()
-    .map((mf) => mf.migration)
-    .sort((a, b) => a.version - b.version);
-  // const latestProjectMigrationId = projectMigrations.reduce((max, m) => {
-  //   return Math.max(max ?? 0, m.version);
-  // }, 0);
-
-  const projectMigrationIds = projectMigrations?.map((m) => m.version) ?? [];
-  const serverMigrationIds = serverMigrations?.map((m) => m.id) ?? [];
-  const latestServerMigrationId = serverMigrationIds.at(-1) ?? 0;
-
-  // DB of migrations up to what is known on the server
-  // TODO: Think through if this is correct if other migrations slip in
-  const serverMigrationsDB = new DB<any>({
-    migrations: projectMigrations.filter((m) =>
-      serverMigrationIds.includes(m.version)
-    ),
-  });
-  await serverMigrationsDB.ready;
-  const serverMigrationsSchema = await serverMigrationsDB.getSchema();
-  const serverMigrationsSchemaJSON = schemaToJSON(serverMigrationsSchema);
-  const serverMigrationsHash = hashSchemaJSON(
-    serverMigrationsSchemaJSON?.collections
-  );
-
-  // DB of all migrations in the project
-  const projectMigrationsDB = new DB<any>({
-    migrations: projectMigrations,
-  });
-  await projectMigrationsDB.ready;
-  const projectMigrationsSchema = await projectMigrationsDB.getSchema();
-  const projectMigrationsSchemaJSON = schemaToJSON(projectMigrationsSchema);
-  const projectMigrationsHash = hashSchemaJSON(
-    projectMigrationsSchemaJSON?.collections
-  );
-
-  // Info from local schema file
-  const projectFileSchema = await readLocalSchema();
-  const projectFileSchemaJSON = projectFileSchema
-    ? schemaToJSON({
-        collections: projectFileSchema,
-        version: 0,
-      })
-    : undefined;
-  const projectFileHash = hashSchemaJSON(projectFileSchemaJSON?.collections); // more acurately 'schemaHash'?
-
-  const projectMigrationStatuses: Record<number, ProjectMigrationStatus> = {};
-  const serverMigrationStatuses: Record<number, ServerMigrationStatus> = {};
-
-  function isOrphan(migration: { version: number; parent: number }) {
-    // If directly ahead of server, not an orphan
-    if (migration.parent === latestServerMigrationId) {
-      return false;
-    }
-    // If a different server migration has this parent, we are an orphan
-    if (
-      serverMigrations.some(
-        (sm) => sm.parent === migration.parent && sm.id !== migration.version
-      )
-    ) {
-      return true;
-    }
-
-    // If we cannot find parent, we are an orphan
-    const parentMigration = projectMigrations.find(
-      (m) => m.version === migration.parent
-    );
-    if (!parentMigration) return true;
-    return isOrphan(parentMigration);
-  }
-
-  function getProjectMigrationStatus(migration: {
-    version: number;
-    parent: number;
-  }): ProjectMigrationStatus {
-    if (projectMigrationIds.includes(migration.version)) {
-      if (serverMigrationIds.includes(migration.version)) return 'IN_SYNC';
-      // check if orphan
-      if (isOrphan(migration)) return 'ORPHANED';
-      return 'UNAPPLIED';
-    }
-    return 'UNKNOWN';
-  }
-
-  function getServerMigrationStatus(migration: {
-    id: number;
-    parent: number;
-  }): ServerMigrationStatus {
-    if (serverMigrationIds.includes(migration.id)) {
-      if (projectMigrationIds.includes(migration.id)) {
-        return 'IN_SYNC';
-      }
-      return 'UNTRACKED';
-    }
-    return 'UNKNOWN';
-  }
-
-  for (const m of projectMigrations) {
-    projectMigrationStatuses[m.version] = getProjectMigrationStatus(m);
-  }
-
-  for (const m of serverMigrations) {
-    serverMigrationStatuses[m.id] = getServerMigrationStatus(m);
-  }
-
-  const info = {
-    server: {
-      migrationIds: serverMigrationIds,
-      migrationHash: serverMigrationsHash,
-      schemaHash: serverHash,
-      schema: serverSchemaJSON?.collections,
-      migrations: serverMigrations,
-      statuses: serverMigrationStatuses,
-    },
-    project: {
-      migrationIds: projectMigrationIds,
-      migrationsHash: projectMigrationsHash,
-      schemaHash: projectFileHash,
-      schema: projectFileSchemaJSON?.collections,
-      migrations: projectMigrations,
-      statuses: projectMigrationStatuses,
-    },
-  };
-
-  // Any unknowns, we dont know the status and should not proceed
-  if (
-    Object.values(serverMigrationStatuses).some(
-      (status) => status === 'UNKNOWN'
-    ) ||
-    Object.values(projectMigrationStatuses).some(
-      (status) => status === 'UNKNOWN'
-    )
-  ) {
-    return { status: 'UNKNOWN', ...info };
-  }
-
-  // If any server migrations are untracked, we should pull those in first
-  if (
-    Object.values(serverMigrationStatuses).some(
-      (status) => status === 'UNTRACKED'
-    )
-  ) {
-    return { status: 'SERVER_AHEAD', ...info };
-  }
-
-  // Next we should check if the server has changes to its schema that havent been tracked
-  if (serverMigrationsHash !== serverHash) {
-    return { status: 'SERVER_UNTRACKED_CHANGES', ...info };
-  }
-
-  // Next we should check for orphaned changes and warn the user to fix them (usually result of pulling in new migrations)
-  if (
-    Object.values(projectMigrationStatuses).some(
-      (status) => status === 'ORPHANED'
-    )
-  ) {
-    return { status: 'PROJECT_HAS_ORPHANS', ...info };
-  }
-
-  // check if we need to generate a migration (ie we have locally updated the schema)
-  if (projectHasUntrackedChanges(projectFileHash, projectMigrationsHash)) {
-    return { status: 'PROJECT_UNTRACKED_CHANGES', ...info };
-  }
-
-  // if the client has any unapplied migrations, we should apply those first
-  if (
-    Object.values(projectMigrationStatuses).some(
-      (status) => status === 'UNAPPLIED'
-    )
-  ) {
-    return { status: 'SERVER_BEHIND', ...info };
-  }
-
-  // Final check, if all in sync then we're good
-  if (
-    Object.values(projectMigrationStatuses).every(
-      (status) => status === 'IN_SYNC'
-    ) &&
-    Object.values(serverMigrationStatuses).every(
-      (status) => status === 'IN_SYNC'
-    )
-  ) {
-    return { status: 'IN_SYNC', ...info };
-  }
-
-  // Something wasnt hit, so we dont know the status
-  return { status: 'UNKNOWN', ...info };
-}
-
-export function projectHasUntrackedChanges(
-  projectFileHash: number | undefined,
-  projectMigrationsHash: number | undefined
-) {
-  // Schemaless (ie no schema file) and an empty schema are treated the same on the client
-  const projectFileHasContent = !!projectFileHash;
-  const projectMigrationsHasContent = !!projectMigrationsHash;
-  const bothEmpty = !projectFileHasContent && !projectMigrationsHasContent;
-  // if both empty, no changes
-  if (bothEmpty) return false;
-  return projectFileHash !== projectMigrationsHash;
-}
-
-export async function applyMigration(
-  migration: Migration,
-  direction: 'up' | 'down',
-  ctx: any
-) {
-  try {
-    await ctx.requestServer('POST', '/migration/apply', {
-      migration,
-      direction,
-    });
-  } catch (e) {
-    console.error(e);
-    throw new Error(
-      `Error applying ${direction} migration ${migration.version}`
-    );
-  }
-}
-
-type MigrationContext = {
+type ChangesetContext = {
   previousSchema: CollectionsDefinition;
   targetScema: CollectionsDefinition;
 };
 
-export function createMigration(
+export function createSchemaChangeset(
   schemaLeft: CollectionsDefinition,
-  schemaRight: CollectionsDefinition,
-  version: number,
-  parent: number,
-  name: string
+  schemaRight: CollectionsDefinition
 ) {
   const schemaDiff = diff(schemaLeft, schemaRight);
   if (!schemaDiff) return undefined;
-  const migration: Migration = { up: [], down: [], version, parent, name };
+  const changeset: SchemaChangeset = { up: [], down: [] };
   const context = { previousSchema: schemaLeft, targetScema: schemaRight };
-  parseCollectionDiff(migration, schemaDiff, context);
-  // Dont love this check, but sometimes we have diffs that are basically no ops and shouldnt create migrations
-  if (migration.up.length === 0 && migration.down.length === 0)
+  parseCollectionDiff(changeset, schemaDiff, context);
+  // Dont love this check, but sometimes we have diffs that are basically no ops and shouldnt create changesets
+  if (changeset.up.length === 0 && changeset.down.length === 0)
     return undefined;
-  return migration;
+  return changeset;
 }
 
 function parseCollectionDiff(
-  migration: Migration,
+  changeset: SchemaChangeset,
   diff: any,
-  context: MigrationContext
+  context: ChangesetContext
 ) {
   const collectionKeys = Object.keys(diff);
   for (const collectionKey of collectionKeys) {
@@ -336,8 +86,8 @@ function parseCollectionDiff(
       const dropCollectionOperation = genDropCollectionOperation({
         name: collectionKey,
       });
-      migration.up.push(createCollectionOperation);
-      migration.down.unshift(dropCollectionOperation);
+      changeset.up.push(createCollectionOperation);
+      changeset.down.unshift(dropCollectionOperation);
     } else if (collectionDiffStatus === 'REMOVED') {
       const dropCollectionOperation = genDropCollectionOperation({
         name: collectionKey,
@@ -347,14 +97,14 @@ function parseCollectionDiff(
         collectionKey,
         collectionDefinition
       );
-      migration.up.push(dropCollectionOperation);
-      migration.down.unshift(createCollectionOperation);
+      changeset.up.push(dropCollectionOperation);
+      changeset.down.unshift(createCollectionOperation);
     } else if (collectionDiffStatus === 'CHANGED') {
       throw new Error('NOT HANDLED. FAILED TO PARSE.');
     } else {
       if (collectionDiff.schema?.properties) {
         parseAttributesDiff(
-          migration,
+          changeset,
           collectionKey,
           collectionDiff.schema.properties,
           context
@@ -362,24 +112,24 @@ function parseCollectionDiff(
       }
       if (collectionDiff.schema?.optional) {
         parseOptionalPropsDiff(
-          migration,
+          changeset,
           collectionKey,
           collectionDiff.schema.optional,
           context
         );
       }
       if (collectionDiff.rules) {
-        parseRulesDiff(migration, collectionKey, collectionDiff.rules, context);
+        parseRulesDiff(changeset, collectionKey, collectionDiff.rules, context);
       }
     }
   }
 }
 
 function parseAttributesDiff(
-  migration: Migration,
+  changeset: SchemaChangeset,
   collection: string,
   diff: any,
-  context: MigrationContext,
+  context: ChangesetContext,
   attributePrefix: string[] = []
 ) {
   // We are not expecting the attributes property to be added or removed
@@ -398,8 +148,8 @@ function parseAttributesDiff(
         collection,
         path: [...attributePrefix, attributeKey],
       });
-      migration.up.push(addAttributeOperation);
-      migration.down.unshift(dropAttributeOperation);
+      changeset.up.push(addAttributeOperation);
+      changeset.down.unshift(dropAttributeOperation);
     } else if (attributeDiffStatus === 'REMOVED') {
       const dropAttributeOperation = genDropAttributeOperation({
         collection,
@@ -411,8 +161,8 @@ function parseAttributesDiff(
         path: [...attributePrefix, attributeKey],
         attribute: attributeDefinition,
       });
-      migration.up.push(dropAttributeOperation);
-      migration.down.unshift(addAttributeOperation);
+      changeset.up.push(dropAttributeOperation);
+      changeset.down.unshift(addAttributeOperation);
     } else if (attributeDiffStatus === 'CHANGED') {
       throw new Error('NOT HANDLED. FAILED TO PARSE.');
     } else {
@@ -428,7 +178,7 @@ function parseAttributesDiff(
       // properties implies its a record type...might be nicer to actually read info from the schema
       if (!!attributeDiff.properties) {
         parseAttributesDiff(
-          migration,
+          changeset,
           collection,
           attributeDiff.properties,
           context,
@@ -438,7 +188,7 @@ function parseAttributesDiff(
       // Also implies its a record type
       if (!!attributeDiff.optional) {
         parseOptionalPropsDiff(
-          migration,
+          changeset,
           collection,
           attributeDiff.optional,
           context,
@@ -448,7 +198,7 @@ function parseAttributesDiff(
       // options implies its a leaf type
       if (!!attributeDiff.options) {
         parseAttributeOptionsDiff(
-          migration,
+          changeset,
           collection,
           [...attributePrefix, attributeKey],
           attributeDiff.options
@@ -482,8 +232,8 @@ function parseAttributesDiff(
           path: [...attributePrefix, attributeKey],
           attribute: oldDefinition,
         });
-        migration.up.push(dropOldAttributeOperation, addNewAttributeOperation);
-        migration.down.unshift(
+        changeset.up.push(dropOldAttributeOperation, addNewAttributeOperation);
+        changeset.down.unshift(
           dropNewAttributeOperation,
           addOldAttributeOperation
         );
@@ -503,7 +253,7 @@ function parseAttributesDiff(
 
 // We could pool all these together
 function parseAttributeOptionsDiff(
-  migration: Migration,
+  changeset: SchemaChangeset,
   collection: string,
   attribute: string[],
   diff: any
@@ -523,8 +273,8 @@ function parseAttributeOptionsDiff(
         path: attribute,
         option: optionKey,
       });
-      migration.up.push(newOptionOperation);
-      migration.down.unshift(oldOptionOperation);
+      changeset.up.push(newOptionOperation);
+      changeset.down.unshift(oldOptionOperation);
     } else if (optionDiffStatus === 'REMOVED') {
       const oldValue = optionDiff[0];
       const newOptionOperation = genDropAttributeOptionOperation({
@@ -537,8 +287,8 @@ function parseAttributeOptionsDiff(
         path: attribute,
         options: { [optionKey]: oldValue },
       });
-      migration.up.push(newOptionOperation);
-      migration.down.unshift(oldOptionOperation);
+      changeset.up.push(newOptionOperation);
+      changeset.down.unshift(oldOptionOperation);
     } else if (optionDiffStatus === 'CHANGED') {
       const [oldValue, newValue] = optionDiff as [any, any];
       const newOptionOperation = genAlterAttributeOptionOperation({
@@ -551,19 +301,19 @@ function parseAttributeOptionsDiff(
         path: attribute,
         options: { [optionKey]: oldValue },
       });
-      migration.up.push(newOptionOperation);
-      migration.down.unshift(oldOptionOperation);
+      changeset.up.push(newOptionOperation);
+      changeset.down.unshift(oldOptionOperation);
     } else {
-      throw new Error('Failed to create migration: Unexpected diff');
+      throw new Error('Failed to create changeset: Unexpected diff');
     }
   }
 }
 
 function parseOptionalPropsDiff(
-  migration: Migration,
+  changeset: SchemaChangeset,
   collection: string,
   diff: any,
-  context: MigrationContext,
+  context: ChangesetContext,
   attributePrefix: string[] = []
 ) {
   const optionalDiffStatus = diffStatus(diff);
@@ -581,8 +331,8 @@ function parseOptionalPropsDiff(
         path: attrPath,
         optional: false,
       });
-      migration.up.push(setOptionalOp);
-      migration.down.unshift(setNotOptionalOp);
+      changeset.up.push(setOptionalOp);
+      changeset.down.unshift(setNotOptionalOp);
     }
   }
   if (optionalDiffStatus === 'REMOVED') {
@@ -599,16 +349,16 @@ function parseOptionalPropsDiff(
         path: attrPath,
         optional: true,
       });
-      migration.up.push(setNotOptionalOp);
-      migration.down.unshift(setOptionalOp);
+      changeset.up.push(setNotOptionalOp);
+      changeset.down.unshift(setOptionalOp);
     }
   }
   if (optionalDiffStatus === 'CHANGED') {
-    throw new Error('Failed to create migration: Unexpected diff');
+    throw new Error('Failed to create changeset: Unexpected diff');
   }
   if (optionalDiffStatus === 'UNCHANGED') {
     if (diff._t !== 'a')
-      throw new Error('Failed to create migration: Unexpected diff'); // Not array
+      throw new Error('Failed to create changeset: Unexpected diff'); // Not array
     const oldOptional = context.previousSchema[collection].schema.optional;
     const newOptional = context.targetScema[collection].schema.optional;
     const { added, removed } = calculateArrayChanges(oldOptional, newOptional);
@@ -624,8 +374,8 @@ function parseOptionalPropsDiff(
         path: attrPath,
         optional: false,
       });
-      migration.up.push(setOptionalOp);
-      migration.down.unshift(setNotOptionalOp);
+      changeset.up.push(setOptionalOp);
+      changeset.down.unshift(setNotOptionalOp);
     }
     for (const optionalKey of removed) {
       const attrPath = [...attributePrefix, optionalKey];
@@ -639,8 +389,8 @@ function parseOptionalPropsDiff(
         path: attrPath,
         optional: true,
       });
-      migration.up.push(setNotOptionalOp);
-      migration.down.unshift(setOptionalOp);
+      changeset.up.push(setNotOptionalOp);
+      changeset.down.unshift(setOptionalOp);
     }
   }
 }
@@ -655,17 +405,17 @@ function calculateArrayChanges(
 }
 
 function parseRulesDiff(
-  migration: Migration,
+  changeset: SchemaChangeset,
   collection: string,
   diff: any,
-  context: MigrationContext
+  context: ChangesetContext
 ) {
   const rulesDiffStatus = diffStatus(diff);
   if (rulesDiffStatus === 'ADDED') {
     const rulesDefinition = diff[0];
     for (const ruleType of Object.keys(rulesDefinition)) {
       parseRulesTypeDiff(
-        migration,
+        changeset,
         collection,
         ruleType,
         [rulesDefinition[ruleType]],
@@ -676,7 +426,7 @@ function parseRulesDiff(
     const rulesDefinition = diff[0];
     for (const ruleType of Object.keys(rulesDefinition)) {
       parseRulesTypeDiff(
-        migration,
+        changeset,
         collection,
         ruleType,
         [rulesDefinition[ruleType], 0, 0],
@@ -688,7 +438,7 @@ function parseRulesDiff(
   } else if (rulesDiffStatus === 'UNCHANGED') {
     for (const ruleType of Object.keys(diff)) {
       parseRulesTypeDiff(
-        migration,
+        changeset,
         collection,
         ruleType,
         diff[ruleType],
@@ -700,18 +450,18 @@ function parseRulesDiff(
 }
 
 function parseRulesTypeDiff(
-  migration: Migration,
+  changeset: SchemaChangeset,
   collection: string,
   ruleType: string,
   diff: any,
-  context: MigrationContext
+  context: ChangesetContext
 ) {
   const rulesTypeDiffStatus = diffStatus(diff);
   if (rulesTypeDiffStatus === 'ADDED') {
     const rulesTypeDefinition = diff[0];
     for (const ruleKey of Object.keys(rulesTypeDefinition)) {
       parseRuleDiff(
-        migration,
+        changeset,
         collection,
         ruleType,
         ruleKey,
@@ -723,7 +473,7 @@ function parseRulesTypeDiff(
     const rulesTypeDefinition = diff[0];
     for (const ruleKey of Object.keys(rulesTypeDefinition)) {
       parseRuleDiff(
-        migration,
+        changeset,
         collection,
         ruleType,
         ruleKey,
@@ -736,7 +486,7 @@ function parseRulesTypeDiff(
   } else if (rulesTypeDiffStatus === 'UNCHANGED') {
     for (const ruleKey of Object.keys(diff)) {
       parseRuleDiff(
-        migration,
+        changeset,
         collection,
         ruleType,
         ruleKey,
@@ -748,12 +498,12 @@ function parseRulesTypeDiff(
 }
 
 function parseRuleDiff(
-  migration: Migration,
+  changeset: SchemaChangeset,
   collection: string,
   ruleType: string,
   ruleKey: string,
   diff: any,
-  context: MigrationContext
+  context: ChangesetContext
 ) {
   const ruleDiffStatus = diffStatus(diff);
   if (ruleDiffStatus === 'ADDED') {
@@ -769,8 +519,8 @@ function parseRuleDiff(
       scope: ruleType,
       id: ruleKey,
     });
-    migration.up.push(addRuleOperation);
-    migration.down.unshift(dropRuleOperation);
+    changeset.up.push(addRuleOperation);
+    changeset.down.unshift(dropRuleOperation);
   } else if (ruleDiffStatus === 'REMOVED') {
     const rule = diff[0];
     const dropRuleOperation = genDropRuleOperation({
@@ -784,8 +534,8 @@ function parseRuleDiff(
       id: ruleKey,
       rule,
     });
-    migration.up.push(dropRuleOperation);
-    migration.down.unshift(addRuleOperation);
+    changeset.up.push(dropRuleOperation);
+    changeset.down.unshift(addRuleOperation);
   } else if (ruleDiffStatus === 'CHANGED') {
     throw new Error('NOT IMPLEMENTED');
   } else if (ruleDiffStatus === 'UNCHANGED') {
@@ -795,7 +545,7 @@ function parseRuleDiff(
     const newRule = context.targetScema[collection].rules?.[ruleType][ruleKey];
     // Throwing an error because its unexpected, but I havent really tested if it could happen (I think deleting/adding rules is handled elsewhere)
     if (!oldRule || !newRule) {
-      throw new Error('Failed to create migration: Unexpected diff');
+      throw new Error('Failed to create changeset: Unexpected diff');
     }
     const dropOldRuleOperation = genDropRuleOperation({
       collection,
@@ -821,8 +571,8 @@ function parseRuleDiff(
       rule: oldRule,
     });
 
-    migration.up.push(dropOldRuleOperation, addNewRuleOperation);
-    migration.down.unshift(dropNewRuleOperation, addOldRuleOperation);
+    changeset.up.push(dropOldRuleOperation, addNewRuleOperation);
+    changeset.down.unshift(dropNewRuleOperation, addOldRuleOperation);
   }
 }
 

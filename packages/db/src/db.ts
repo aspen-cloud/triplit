@@ -5,7 +5,8 @@ import {
   Models,
   InsertTypeFromModel,
   StoreSchema,
-  AttributeDefinition,
+  CollectionRules,
+  Rule,
 } from './schema/types/index.js';
 import { AsyncTupleStorageApi, TupleStorageApi } from '@triplit/tuple-database';
 import CollectionQueryBuilder, {
@@ -16,35 +17,27 @@ import CollectionQueryBuilder, {
 } from './collection-query.js';
 import { Entity, constructEntity, updateEntity } from './query.js';
 import { MemoryBTreeStorage } from './storage/memory-btree.js';
-import {
-  DBOptionsError,
-  InvalidMigrationOperationError,
-  TriplitError,
-} from './errors.js';
+import { DBOptionsError, TriplitError } from './errors.js';
 import { Clock } from './clocks/clock.js';
 
 import { DBTransaction } from './db-transaction.js';
 import {
   appendCollectionToId,
-  readSchemaFromTripleStore,
   overrideStoredSchema,
   getSchemaTriples,
   fetchResultToJS,
   logSchemaChangeViolations,
 } from './db-helpers.js';
 import { VariableAwareCache } from './variable-aware-cache.js';
-import { UserTypeOptions } from './data-types/types/index.js';
-import { copyHooks, prefixVariables, triplesToObject } from './utils.js';
+import { copyHooks } from './utils.js';
 import { EAV, indexToTriple, TripleRow } from './triple-store-utils.js';
 import { ClearOptions, TripleStore } from './triple-store.js';
 import { Logger } from '@triplit/types/logger';
-import { isAnyOrUndefined } from './utility-types.js';
 import {
   Unalias,
   FetchResult,
   FetchResultEntity,
   CollectionQuery,
-  QueryWhere,
   SchemaQueries,
   ToQuery,
   CollectionQueryDefault,
@@ -56,27 +49,19 @@ import {
 } from './schema/permissions.js';
 import { diffSchemas } from './schema/diff.js';
 import { genToArr } from './utils/generator.js';
+import {
+  AddAttributePayload,
+  AddRulePayload,
+  AlterAttributeOptionPayload,
+  CreateCollectionPayload,
+  DropAttributeOptionPayload,
+  DropAttributePayload,
+  DropCollectionPayload,
+  DropRulePayload,
+  SetAttributeOptionalPayload,
+} from './db/types/operations.js';
 
 const DEFAULT_CACHE_DISABLED = true;
-
-export interface Rule<
-  M extends Models,
-  CN extends CollectionNameFromModels<M>
-> {
-  filter: QueryWhere<M, CN>;
-  description?: string;
-}
-
-export interface CollectionRules<
-  M extends Models,
-  CN extends CollectionNameFromModels<M>
-> {
-  read?: Record<string, Rule<M, CN>>;
-  write?: Record<string, Rule<M, CN>>;
-  // insert?: Rule<M>[];
-  // update?: Rule<M>[];
-}
-
 export interface TransactOptions {
   storeScope?: { read: string[]; write: string[] };
   skipRules?: boolean;
@@ -84,79 +69,10 @@ export interface TransactOptions {
   manualSchemaRefresh?: boolean;
 }
 
-export type CreateCollectionOperation = [
-  'create_collection',
-  {
-    name: string;
-    schema: { [path: string]: AttributeDefinition };
-    rules?: CollectionRules<any, any>;
-    optional?: string[];
-  }
-];
-export type DropCollectionOperation = ['drop_collection', { name: string }];
-export type AddAttributeOperation = [
-  'add_attribute',
-  {
-    collection: string;
-    path: string[];
-    attribute: AttributeDefinition;
-    optional?: boolean;
-  }
-];
-export type DropAttributeOperation = [
-  'drop_attribute',
-  { collection: string; path: string[] }
-];
-export type AlterAttributeOptionOperation = [
-  'alter_attribute_option',
-  { collection: string; path: string[]; options: UserTypeOptions }
-];
-export type DropAttributeOptionOperation = [
-  'drop_attribute_option',
-  { collection: string; path: string[]; option: string }
-];
-export type AddRuleOperation = [
-  'add_rule',
-  { collection: string; scope: string; id: string; rule: Rule<any, any> }
-];
-export type DropRuleOperation = [
-  'drop_rule',
-  { collection: string; scope: string; id: string }
-];
-export type SetAttributeOptionalOperation = [
-  'set_attribute_optional',
-  { collection: string; path: string[]; optional: boolean }
-];
-
-type DBOperation =
-  | CreateCollectionOperation
-  | DropCollectionOperation
-  | AddAttributeOperation
-  | DropAttributeOperation
-  | AlterAttributeOptionOperation
-  | DropAttributeOptionOperation
-  | AddRuleOperation
-  | DropRuleOperation
-  | SetAttributeOptionalOperation;
-
-export type Migration = {
-  up: DBOperation[];
-  down: DBOperation[];
-  version: number;
-  parent: number;
-  name: string;
-};
-
 type StorageSource = AsyncTupleStorageApi | TupleStorageApi;
 
 export interface DBConfig<M extends Models = Models> {
   schema?: { collections: M; version?: number; roles?: Record<string, any> };
-  migrations?:
-    | Migration[]
-    | {
-        definitions: Migration[];
-        scopes?: string[];
-      };
   source?: StorageSource;
   sources?: Record<string, StorageSource>;
   tenantId?: string;
@@ -428,7 +344,6 @@ export default class DB<M extends Models = Models> {
     source,
     sources,
     tenantId,
-    migrations,
     clock,
     variables,
     logger,
@@ -451,10 +366,8 @@ export default class DB<M extends Models = Models> {
     if (Object.keys(sourcesMap).length === 0)
       throw new DBOptionsError('No triple stores provided.');
 
-    if (schema && migrations)
-      throw new DBOptionsError('Cannot provide both schema and migrations');
-
     // If a schema is provided, assume using schema but no migrations (keep at version 0)
+    // TODO: drop `version` from schema
     const tripleStoreSchema = schema
       ? {
           ...schema,
@@ -495,13 +408,6 @@ export default class DB<M extends Models = Models> {
             this.setupSchemaListener();
           })
           .then(() => this.initializeDBWithSchema(tripleStoreSchema))
-      : !!migrations
-      ? this.storageReady
-          // TODO: look into why test fails if we setup listener first for migrations
-          .then(() => this.initializeDBWithMigrations(migrations))
-          .then(() => {
-            this.setupSchemaListener();
-          })
       : this.storageReady.then(() => {
           this.setupSchemaListener();
         });
@@ -524,22 +430,6 @@ export default class DB<M extends Models = Models> {
     if (!dangerouslyBypassSchemaInitialization && !this.isSchemaInitialized)
       throw new TriplitError('Schema not initialized');
     return this.schema;
-  }
-
-  private initializeDBWithMigrations(
-    migrations:
-      | Migration[]
-      | {
-          definitions: Migration[];
-          scopes?: string[] | undefined;
-        }
-      | undefined
-  ): Promise<void> {
-    return migrations
-      ? Array.isArray(migrations)
-        ? this.migrate(migrations, 'up')
-        : this.migrate(migrations.definitions, 'up', migrations.scopes)
-      : Promise.resolve();
   }
 
   private async initializeDBWithSchema(schema: StoreSchema<M> | undefined) {
@@ -1016,196 +906,58 @@ export default class DB<M extends Models = Models> {
     return CollectionQueryBuilder<M, CN>(collectionName, params);
   }
 
-  async createCollection(params: CreateCollectionOperation[1]) {
+  async createCollection(params: CreateCollectionPayload) {
     await this.transact(async (tx) => {
       await tx.createCollection(params);
     });
   }
 
-  async dropCollection(params: DropCollectionOperation[1]) {
+  async dropCollection(params: DropCollectionPayload) {
     await this.transact(async (tx) => {
       await tx.dropCollection(params);
     });
   }
 
-  async addAttribute(params: AddAttributeOperation[1]) {
+  async addAttribute(params: AddAttributePayload) {
     await this.transact(async (tx) => {
       await tx.addAttribute(params);
     });
   }
 
-  async dropAttribute(params: DropAttributeOperation[1]) {
+  async dropAttribute(params: DropAttributePayload) {
     await this.transact(async (tx) => {
       await tx.dropAttribute(params);
     });
   }
 
-  async alterAttributeOption(params: AlterAttributeOptionOperation[1]) {
+  async alterAttributeOption(params: AlterAttributeOptionPayload) {
     await this.transact(async (tx) => {
       await tx.alterAttributeOption(params);
     });
   }
 
-  async dropAttributeOption(params: DropAttributeOptionOperation[1]) {
+  async dropAttributeOption(params: DropAttributeOptionPayload) {
     await this.transact(async (tx) => {
       await tx.dropAttributeOption(params);
     });
   }
 
-  async addRule(params: AddRuleOperation[1]) {
+  async addRule(params: AddRulePayload) {
     await this.transact(async (tx) => {
       await tx.addRule(params);
     });
   }
 
-  async dropRule(params: DropRuleOperation[1]) {
+  async dropRule(params: DropRulePayload) {
     await this.transact(async (tx) => {
       await tx.dropRule(params);
     });
   }
 
-  async setAttributeOptional(params: SetAttributeOptionalOperation[1]) {
+  async setAttributeOptional(params: SetAttributeOptionalPayload) {
     await this.transact(async (tx) => {
       await tx.setAttributeOptional(params);
     });
-  }
-
-  private async applySchemaMigration(
-    migration: Migration,
-    direction: 'up' | 'down',
-    scopes?: string[]
-  ) {
-    const operations = migration[direction];
-    // Need to read from triple store manually because we block db.transaction() api and schema access
-    const { schema } = await readSchemaFromTripleStore<M>(this.tripleStore);
-    await this.tripleStore.transact(
-      async (tripTx) => {
-        const tx = new DBTransaction(this, tripTx, copyHooks(this.hooks), {
-          schema,
-        });
-        for (const operation of operations) {
-          switch (operation[0]) {
-            case 'create_collection':
-              await tx.createCollection(operation[1]);
-              break;
-            case 'drop_collection':
-              await tx.dropCollection(operation[1]);
-              break;
-            case 'add_attribute':
-              await tx.addAttribute(operation[1]);
-              break;
-            case 'drop_attribute':
-              await tx.dropAttribute(operation[1]);
-              break;
-            case 'alter_attribute_option':
-              await tx.alterAttributeOption(operation[1]);
-              break;
-            case 'drop_attribute_option':
-              await tx.dropAttributeOption(operation[1]);
-              break;
-            case 'add_rule':
-              await tx.addRule(operation[1]);
-              break;
-            case 'drop_rule':
-              await tx.dropRule(operation[1]);
-              break;
-            case 'set_attribute_optional':
-              await tx.setAttributeOptional(operation[1]);
-              break;
-            default:
-              throw new InvalidMigrationOperationError(
-                `The operation ${operation[0]} is not recognized.`
-              );
-          }
-        }
-        // Keeping for backwards compatability, but it doesnt really need to be in the schema
-        await tripTx.insertTriples([
-          {
-            id: appendCollectionToId('_metadata', '_schema'),
-            attribute: ['_metadata', 'version'],
-            value: direction === 'up' ? migration.version : migration.parent,
-            timestamp: await tripTx.clock.getNextTimestamp(),
-            expired: false,
-          },
-        ]);
-        if (direction === 'up') {
-          // Add migration marker
-          await tripTx.updateMetadataTuples([
-            ['migrations', [`${migration.version}`, 'id'], migration.version],
-            [
-              'migrations',
-              [`${migration.version}`, 'parent'],
-              migration.parent,
-            ],
-            ['migrations', [`${migration.version}`, 'name'], migration.name],
-            [
-              'migrations',
-              [`${migration.version}`, 'applied'],
-              new Date().toISOString(),
-            ],
-          ]);
-        } else if (direction === 'down') {
-          // remove migration marker
-          await tripTx.deleteMetadataTuples([
-            ['migrations', [`${migration.version}`]],
-          ]);
-        }
-      },
-      scopes ? { read: scopes, write: scopes } : undefined
-    );
-  }
-
-  async migrate(
-    migrations: Migration[],
-    direction: 'up' | 'down',
-    scopes?: string[]
-  ) {
-    const sortedMigrations = migrations.sort(
-      (a, b) => (a.version - b.version) * (direction === 'up' ? 1 : -1)
-    );
-    for (const migration of sortedMigrations) {
-      const { schema: storedSchema } = await readSchemaFromTripleStore(
-        this.tripleStore
-      );
-
-      const dbVersion = storedSchema?.version ?? 0;
-      if (canMigrate(migration, direction, dbVersion)) {
-        try {
-          await this.applySchemaMigration(migration, direction, scopes);
-        } catch (e) {
-          console.error(
-            `Error applying ${direction} migration with verison`,
-            migration.version,
-            e
-          );
-          throw e;
-        }
-      } else {
-        console.info('skipping migration', migration);
-      }
-    }
-  }
-
-  async getAppliedMigrations() {
-    const migrationTuples = await this.tripleStore.readMetadataTuples(
-      'migrations'
-    );
-    const res = triplesToObject<{
-      migrations?: Record<
-        string,
-        { applied: string; id: number; parent: number; name: string }
-      >;
-    }>(migrationTuples);
-    return res.migrations || {};
-  }
-
-  async getLatestMigrationId() {
-    const migrations = await this.getAppliedMigrations();
-    const maxVersion = Object.values(migrations).reduce<number | undefined>(
-      (max, m) => Math.max(max || 0, m.id),
-      undefined
-    );
-    return maxVersion;
   }
 
   async getCollectionStats(): Promise<Map<string, number>> {
@@ -1235,18 +987,6 @@ export default class DB<M extends Models = Models> {
   onSchemaChange(cb: SchemaChangeCallback<M>) {
     this.onSchemaChangeCallbacks.add(cb);
     return () => this.onSchemaChangeCallbacks.delete(cb);
-  }
-}
-
-function canMigrate(
-  migration: Migration,
-  direction: 'up' | 'down',
-  dbVersion: number
-) {
-  if (direction === 'up') {
-    return migration.parent === dbVersion;
-  } else {
-    return migration.version === dbVersion;
   }
 }
 

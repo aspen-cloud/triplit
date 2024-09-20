@@ -2,7 +2,6 @@ import { InMemoryTupleStorage } from '@triplit/tuple-database';
 import { describe, expect, it, beforeEach, beforeAll, vi } from 'vitest';
 import {
   and,
-  Migration,
   DB,
   or,
   Schema as S,
@@ -10,22 +9,18 @@ import {
   queryResultToJson,
   WriteRuleError,
   InvalidFilterError,
-  DBTransaction,
   schemaToJSON,
   DBSerializationError,
   InvalidInternalEntityIdError,
   InvalidEntityIdError,
   EntityNotFoundError,
-  InvalidMigrationOperationError,
   InvalidOperationError,
   InvalidCollectionNameError,
   InvalidInsertDocumentError,
   CollectionNotFoundError,
   InvalidSchemaPathError,
-  SessionVariableNotFoundError,
   InvalidOrderClauseError,
   InvalidWhereClauseError,
-  CollectionQuery,
   genToArr,
   DurableClock,
 } from '../src';
@@ -36,7 +31,6 @@ import { MemoryBTreeStorage as MemoryStorage } from '../src/storage/memory-btree
 import { testSubscription } from './utils/test-subscription.js';
 import {
   appendCollectionToId,
-  fetchResultToJS,
   stripCollectionFromId,
 } from '../src/db-helpers.js';
 import { TripleRow } from '../dist/types/triple-store-utils.js';
@@ -47,9 +41,7 @@ import {
 } from '../src/collection-query.js';
 import { prepareQuery } from '../src/query/prepare.js';
 import { DEFAULT_PAGE_SIZE as TUPLE_DB_DEFAULT_PAGE_SIZE } from '../src/multi-tuple-store.js';
-import { triplesToEntities } from '../src/query.js';
 import { testDBAndTransaction } from './utils/db-helpers.js';
-import { not } from 'ajv/dist/compile/codegen/index.js';
 
 const pause = async (ms: number = 100) =>
   new Promise((resolve) => setTimeout(resolve, ms));
@@ -2805,172 +2797,6 @@ describe('schema changes', async () => {
     expect(beforeSchema.collections.students).toBeDefined();
   });
 });
-
-describe('migrations', () => {
-  const migrations: Migration[] = [
-    {
-      parent: 0,
-      version: 1,
-      up: [
-        [
-          'create_collection',
-          {
-            name: 'students',
-            schema: {
-              id: { type: 'number', options: {} },
-              name: { type: 'string', options: {} },
-            },
-          },
-        ],
-      ],
-      down: [['drop_collection', { name: 'students' }]],
-    },
-    {
-      parent: 1,
-      version: 2,
-      up: [
-        [
-          'create_collection',
-          {
-            name: 'classes',
-            schema: {
-              id: { type: 'number', options: {} },
-              department: { type: 'string', options: {} },
-            },
-          },
-        ],
-      ],
-      down: [['drop_collection', { name: 'classes' }]],
-    },
-  ];
-
-  it('initializing a DB with migrations sets the schema and migrations tracker', async () => {
-    const db = new DB({ migrations });
-    const dbSchema = await db.getSchema();
-    expect(dbSchema?.collections).toHaveProperty('students');
-    expect(dbSchema?.collections).toHaveProperty('classes');
-    expect(dbSchema?.version).toEqual(2);
-
-    const appliedMigrations = Object.values(await db.getAppliedMigrations());
-    expect(appliedMigrations.length).toEqual(2);
-    expect(appliedMigrations[0].id).toEqual(1);
-    expect(appliedMigrations[0].parent).toEqual(0);
-    expect(appliedMigrations[1].id).toEqual(2);
-    expect(appliedMigrations[1].parent).toEqual(1);
-  });
-
-  it('migrating updates migrations tracker', async () => {
-    const db = new DB();
-    await db.ready;
-    {
-      const appliedMigrations = Object.values(await db.getAppliedMigrations());
-      expect(appliedMigrations.length).toEqual(0);
-    }
-    await db.migrate([migrations[0]], 'up');
-    {
-      const appliedMigrations = Object.values(await db.getAppliedMigrations());
-      expect(appliedMigrations.length).toEqual(1);
-    }
-    await db.migrate([migrations[1]], 'up');
-    {
-      const appliedMigrations = Object.values(await db.getAppliedMigrations());
-      expect(appliedMigrations.length).toEqual(2);
-    }
-    await db.migrate([migrations[1]], 'down');
-    {
-      const appliedMigrations = Object.values(await db.getAppliedMigrations());
-      expect(appliedMigrations.length).toEqual(1);
-    }
-    await db.migrate([migrations[0]], 'down');
-    {
-      const appliedMigrations = Object.values(await db.getAppliedMigrations());
-      expect(appliedMigrations.length).toEqual(0);
-    }
-  });
-
-  it('will stop migrating on an error', async () => {
-    const migrationsCopy = JSON.parse(
-      JSON.stringify(migrations)
-    ) as Migration[];
-    migrationsCopy[1].up.push([
-      'bad_op',
-      {
-        arg: 'foo',
-      },
-    ]);
-    const db = new DB({ migrations: migrationsCopy });
-    await expect(db.ready).rejects.toThrowError(InvalidMigrationOperationError);
-    // const db = new DB({ migrations: migrationsCopy });
-
-    // const dbSchema = await db.getSchema();
-    // expect(dbSchema?.collections).toHaveProperty('students');
-    // expect(dbSchema?.collections).not.toHaveProperty('classes');
-    // expect(dbSchema?.version).toEqual(1);
-  });
-
-  it('will only run migrations if version and parent pointer match', async () => {
-    const migration01 = { parent: 0, version: 1, up: [], down: [] };
-    const migration12 = { parent: 1, version: 2, up: [], down: [] };
-    const migration13 = { parent: 1, version: 3, up: [], down: [] };
-    const migration23 = { parent: 2, version: 3, up: [], down: [] };
-    const migration34 = { parent: 3, version: 4, up: [], down: [] };
-
-    // Standard case
-    const migrationsLinked = [
-      migration01,
-      migration12,
-      migration23,
-      migration34,
-    ];
-    // Branch at 1->2, 1->3, must apply a migration with parent 2 to continue
-    const migrationsUnlinked = [
-      migration01,
-      migration12,
-      migration13,
-      migration34,
-    ];
-    // Skip 1->3, continue with 2->3
-    const migrationsAll = [
-      migration01,
-      migration12,
-      migration13,
-      migration23,
-      migration34,
-    ];
-
-    const dbLinked = new DB({ migrations: migrationsLinked });
-    const dbUnlinked = new DB({ migrations: migrationsUnlinked });
-    const dbAll = new DB({ migrations: migrationsAll });
-
-    const dbLinkedSchema = await dbLinked.getSchema();
-    const dbUnlinkedSchema = await dbUnlinked.getSchema();
-    const dbAllSchema = await dbAll.getSchema();
-    expect(dbLinkedSchema?.version).toEqual(4);
-    expect(dbUnlinkedSchema?.version).toEqual(2);
-    expect(dbAllSchema?.version).toEqual(4);
-
-    const linkedMigration = { parent: 4, version: 5, up: [], down: [] };
-    const unlinkedMigration = { parent: 3, version: 5, up: [], down: [] };
-
-    await dbAll.migrate([unlinkedMigration], 'up');
-    const dbAllSchemaAfter = await dbAll.getSchema();
-    expect(dbAllSchemaAfter?.version).toEqual(4);
-
-    await dbAll.migrate([linkedMigration], 'up');
-    const dbAllSchemaAfter2 = await dbAll.getSchema();
-    expect(dbAllSchemaAfter2?.version).toEqual(5);
-
-    // TODO: I think this would fail because migration would be applied since we dont actually store the migrations that were applied
-    // dbAll.migrate([unlinkedMigration], 'down');
-    // expect(dbAll.tripleStore.schema?.version).toEqual(5);
-    await dbAll.migrate([linkedMigration], 'down');
-    const dbAllSchemaAfter3 = await dbAll.getSchema();
-    expect(dbAllSchemaAfter3?.version).toEqual(4);
-
-    await dbAll.migrate([unlinkedMigration], 'down');
-    const dbAllSchemaAfter4 = await dbAll.getSchema();
-    expect(dbAllSchemaAfter4?.version).toEqual(4);
-  });
 
   describe('Data deletion', () => {
     it('clear() removes all data from the database', async () => {

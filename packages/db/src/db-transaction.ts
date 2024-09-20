@@ -37,22 +37,11 @@ import {
 import { ValuePointer } from '@sinclair/typebox/value';
 import DB, {
   CollectionNameFromModels,
-  CollectionFromModels,
   ModelFromModels,
-  CreateCollectionOperation,
-  DropCollectionOperation,
-  AddAttributeOperation,
-  DropAttributeOperation,
   DBFetchOptions,
-  AlterAttributeOptionOperation,
-  DropAttributeOptionOperation,
-  AddRuleOperation,
-  DropRuleOperation,
-  FetchByIdQueryParams,
   DBHooks,
   DEFAULT_STORE_KEY,
   EntityOpSet,
-  SetAttributeOptionalOperation,
   OpSet,
 } from './db.js';
 import {
@@ -97,6 +86,17 @@ import {
 import { prepareQuery } from './query/prepare.js';
 import { getCollectionPermissions } from './schema/permissions.js';
 import { genToArr } from './utils/generator.js';
+import {
+  AddAttributePayload,
+  AddRulePayload,
+  AlterAttributeOptionPayload,
+  CreateCollectionPayload,
+  DropAttributeOptionPayload,
+  DropAttributePayload,
+  DropCollectionPayload,
+  DropRulePayload,
+  SetAttributeOptionalPayload,
+} from './db/types/operations.js';
 
 interface TransactionOptions<M extends Models = Models> {
   schema?: StoreSchema<M>;
@@ -437,8 +437,7 @@ export class DBTransaction<M extends Models> {
     if (metadataTriples.length === 0) return;
 
     /**
-     * When using the migrations option in the DB constructor, we need to query the schema triples when the hook first fires to initialize _schema,
-     * otherwise the initial _schema value will just be the schema delta of the migration.
+     * If for whatever reason we havent loaded the schema yet, load it
      */
     if (!this._schema) {
       const { schemaTriples } = await readSchemaFromTripleStore(tx);
@@ -935,7 +934,7 @@ export class DBTransaction<M extends Models> {
     }
   }
 
-  async createCollection(params: CreateCollectionOperation[1]) {
+  async createCollection(params: CreateCollectionPayload) {
     // Create schema object so it can be updated
     await this.checkOrCreateSchema();
     // The set of params here is unfortunately awkward to add to because of the way the schema is stored
@@ -974,7 +973,7 @@ export class DBTransaction<M extends Models> {
     );
   }
 
-  async dropCollection(params: DropCollectionOperation[1]) {
+  async dropCollection(params: DropCollectionPayload) {
     const { name: collectionName } = params;
     await this.update(
       this.METADATA_COLLECTION_NAME,
@@ -989,7 +988,7 @@ export class DBTransaction<M extends Models> {
     );
   }
 
-  async addAttribute(params: AddAttributeOperation[1]) {
+  async addAttribute(params: AddAttributePayload) {
     const { collection: collectionName, path, attribute, optional } = params;
     validatePath(path);
     await this.update(
@@ -1018,7 +1017,7 @@ export class DBTransaction<M extends Models> {
     );
   }
 
-  async dropAttribute(params: DropAttributeOperation[1]) {
+  async dropAttribute(params: DropAttributePayload) {
     const { collection: collectionName, path } = params;
     validatePath(path);
     await this.update(
@@ -1046,7 +1045,7 @@ export class DBTransaction<M extends Models> {
     );
   }
 
-  async alterAttributeOption(params: AlterAttributeOptionOperation[1]) {
+  async alterAttributeOption(params: AlterAttributeOptionPayload) {
     const { collection: collectionName, path, options } = params;
     validatePath(path);
     await this.update(
@@ -1083,7 +1082,7 @@ export class DBTransaction<M extends Models> {
     );
   }
 
-  async dropAttributeOption(params: DropAttributeOptionOperation[1]) {
+  async dropAttributeOption(params: DropAttributeOptionPayload) {
     const { collection: collectionName, path, option } = params;
     validatePath(path);
     await this.update(
@@ -1116,7 +1115,7 @@ export class DBTransaction<M extends Models> {
     );
   }
 
-  async addRule(params: AddRuleOperation[1]) {
+  async addRule(params: AddRulePayload) {
     const { collection, scope, id, rule } = params;
     await this.update(
       this.METADATA_COLLECTION_NAME,
@@ -1134,7 +1133,7 @@ export class DBTransaction<M extends Models> {
     );
   }
 
-  async dropRule(params: DropRuleOperation[1]) {
+  async dropRule(params: DropRulePayload) {
     const { collection, scope, id } = params;
     await this.update(
       this.METADATA_COLLECTION_NAME,
@@ -1149,7 +1148,7 @@ export class DBTransaction<M extends Models> {
     );
   }
 
-  async setAttributeOptional(params: SetAttributeOptionalOperation[1]) {
+  async setAttributeOptional(params: SetAttributeOptionalPayload) {
     const { collection: collectionName, path, optional } = params;
     validatePath(path);
     await this.update(

@@ -1,6 +1,5 @@
 import {
   DB,
-  Migration,
   UpdateTypeFromModel,
   CollectionNameFromModels,
   DBTransaction,
@@ -170,10 +169,6 @@ export interface ClientOptions<M extends ClientSchema = ClientSchema> {
    * The URL of the server to connect to. If not provided, the client will not connect to a server.
    */
   serverUrl?: string;
-  /**
-   * @deprecated use `schema` instead
-   */
-  migrations?: Migration[];
   syncSchema?: boolean;
   transport?: SyncTransport;
   /**
@@ -253,7 +248,6 @@ export class TriplitClient<M extends ClientSchema = ClientSchema> {
       serverUrl,
       syncSchema,
       transport,
-      migrations,
       clientId,
       variables,
       storage,
@@ -279,12 +273,6 @@ export class TriplitClient<M extends ClientSchema = ClientSchema> {
     this.db = new DB<M>({
       clock,
       schema: dbSchema,
-      migrations: migrations
-        ? {
-            definitions: migrations,
-            scopes: ['cache'],
-          }
-        : undefined,
       variables,
       sources: getClientStorage(storage ?? DEFAULT_STORAGE_OPTION),
       logger: this.logger.scope('db'),

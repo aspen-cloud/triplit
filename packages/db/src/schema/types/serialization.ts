@@ -5,10 +5,9 @@ import {
   ValueTypeKeys,
 } from '../../data-types/types/index.js';
 import { TypeInterface } from '../../data-types/definitions/type.js';
-import { CollectionRules } from '../../db.js';
 import { QueryResultCardinality } from '../../query/types/collection-query.js';
 import { Schema } from '../builder.js';
-import { RolePermissions, Roles } from './models.js';
+import { CollectionRules, RolePermissions, Roles } from './models.js';
 
 // TODO: rename `XYZDefinition` to `SerializedXYZ`
 

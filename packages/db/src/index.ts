@@ -11,24 +11,14 @@ type Storage = TupleStorageApi | AsyncTupleStorageApi;
 export type { Storage };
 
 export type {
-  Migration,
   CollectionNameFromModels,
   ModelFromModels,
-  CollectionRules,
-  CreateCollectionOperation,
-  DropCollectionOperation,
-  AddAttributeOperation,
-  DropAttributeOperation,
-  AlterAttributeOptionOperation,
-  DropAttributeOptionOperation,
-  AddRuleOperation,
-  DropRuleOperation,
-  SetAttributeOptionalOperation,
   DBConfig,
   FetchByIdQueryParams,
   DBFetchOptions,
   TransactOptions,
 } from './db.js';
+export type * from './db/types/index.js';
 
 export type { PermissionOperations } from './schema/types/models.js';
 export { ChangeTracker, createUpdateProxy } from './db-transaction.js';

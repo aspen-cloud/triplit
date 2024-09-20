@@ -359,47 +359,6 @@ export class Session {
     }
   }
 
-  async getMigrationStatus() {
-    if (!hasAdminAccess(this.token)) return NotAdminResponse();
-    const schema = await this.db.getSchema();
-    if (!schema) {
-      return ServerResponse(200, { type: 'schemaless' });
-    }
-
-    const migrations = Object.values(await this.db.getAppliedMigrations()).sort(
-      (a, b) => a.id - b.id
-    );
-    const hash = hashSchemaJSON(schemaToJSON(schema)?.collections);
-
-    return ServerResponse(200, {
-      type: 'schema',
-      migrations,
-      schemaHash: hash,
-      schema,
-    });
-  }
-
-  async applyMigration({
-    migration,
-    direction,
-  }: {
-    migration: any;
-    direction: 'up' | 'down';
-  }) {
-    if (!hasAdminAccess(this.token)) return NotAdminResponse();
-    try {
-      if (!migration || !direction)
-        return errorResponse(
-          new TriplitError('Missing migration or direction')
-        );
-      await this.db.migrate([migration], direction);
-    } catch (e) {
-      if (isTriplitError(e)) return errorResponse(e);
-      return errorResponse(new TriplitError('Error applying migration'));
-    }
-    return ServerResponse(200);
-  }
-
   async getCollectionStats() {
     if (!hasAdminAccess(this.token)) return NotAdminResponse();
     const stats = await this.db.getCollectionStats();

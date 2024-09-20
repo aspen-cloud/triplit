@@ -5,11 +5,7 @@ import {
 } from '../../data-types/definitions/record.js';
 import { TypeInterface } from '../../data-types/definitions/type.js';
 import { ExtractDBType, ExtractJSType } from '../../data-types/types/index.js';
-import {
-  CollectionNameFromModels,
-  CollectionRules,
-  ModelFromModels,
-} from '../../db.js';
+import { CollectionNameFromModels, ModelFromModels } from '../../db.js';
 import { Intersection, StringKey } from '../../utility-types.js';
 import { Schema } from '../builder.js';
 import { ExtractBasePaths, ModelPaths, ShiftPath } from './paths.js';
@@ -52,6 +48,22 @@ export type Collection<T extends SchemaConfig = SchemaConfig> = {
   rules?: CollectionRules<any, any>;
   permissions?: RolePermissions<any, any>;
 };
+
+export interface Rule<
+  M extends Models,
+  CN extends CollectionNameFromModels<M>
+> {
+  filter: QueryWhere<M, CN>;
+  description?: string;
+}
+
+export interface CollectionRules<
+  M extends Models,
+  CN extends CollectionNameFromModels<M>
+> {
+  read?: Record<string, Rule<M, CN>>;
+  write?: Record<string, Rule<M, CN>>;
+}
 
 export type RolePermissions<
   M extends Models,

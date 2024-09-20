@@ -293,16 +293,7 @@ export class InvalidTypeOptionsError extends TriplitError {
   }
 }
 
-// Migration Errors
-export class InvalidMigrationOperationError extends TriplitError {
-  constructor(...args: any[]) {
-    super(...args);
-    this.name = 'InvalidMigrationOperationError';
-    this.baseMessage = `Invalid migration operation.`;
-    this.status = STATUS_CODES['Bad Request'];
-  }
-}
-
+// Permission Errors
 export class WriteRuleError extends TriplitError {
   constructor(...args: any[]) {
     super(...args);

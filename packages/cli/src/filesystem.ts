@@ -17,14 +17,7 @@ export function getTriplitDir() {
   return TRIPLIT_DIR;
 }
 
-export const MIGRATIONS_DIR = path.join(TRIPLIT_DIR, 'migrations');
-
 export const SEED_DIR = path.join(TRIPLIT_DIR, 'seeds');
-
-export function getMigrationsDir() {
-  createDirIfNotExists(MIGRATIONS_DIR);
-  return MIGRATIONS_DIR;
-}
 
 export function getSeedsDir() {
   createDirIfNotExists(SEED_DIR);

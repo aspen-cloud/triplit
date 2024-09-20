@@ -58,17 +58,6 @@ export class Server {
         case 'clear':
           resp = await session.clearDB(params);
           break;
-
-        case 'migration': {
-          if (route[1] === 'status') {
-            resp = await session.getMigrationStatus();
-            break;
-          }
-          if (route[1] === 'apply') {
-            resp = await session.applyMigration(params);
-            break;
-          }
-        }
         case 'stats':
           resp = await session.getCollectionStats();
           break;
@@ -156,19 +145,11 @@ const TRIPLIT_SEGEMENTS = [
   'update',
 ] as const;
 
-const MIGRATION_SEGMENTS = ['status', 'apply'] as const;
-
 type TriplitPath = [(typeof TRIPLIT_SEGEMENTS)[number]];
-type MigrationPath = ['migration', (typeof MIGRATION_SEGMENTS)[number]];
-export type Route = TriplitPath | MigrationPath | [];
+export type Route = TriplitPath | [];
 
 function isValidRoute(route: string[]): route is Route {
   if (route.length === 0 || route.length > 2) return false;
-  if (route[0] === 'migration') {
-    if (route.length === 1) return false;
-    // @ts-expect-error
-    return MIGRATION_SEGMENTS.includes(route[1]);
-  }
   if (route.length > 1) return false;
   // @ts-expect-error
   return TRIPLIT_SEGEMENTS.includes(route[0]);
