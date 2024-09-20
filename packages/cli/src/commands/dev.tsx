@@ -153,7 +153,7 @@ export default Command({
         const schemaPath = path.join(getTriplitDir(), 'schema.ts');
         const schemaQuery = client
           .query('_metadata')
-          .entityId('_schema')
+          .id('_schema')
           // Avoid firing on optimistic changes
           .syncStatus('confirmed')
           .build();

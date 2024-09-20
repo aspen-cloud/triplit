@@ -226,13 +226,6 @@ export class QueryBuilder<
   vars(vars: Record<string, any>) {
     return new QueryBuilder<M, CN, Q>({ ...this.query, vars });
   }
-
-  /**
-   * @deprecated Use 'id()' instead.
-   */
-  entityId(entityId: string) {
-    return this.id(entityId);
-  }
 }
 
 export function relationBuilder<

@@ -486,7 +486,7 @@ describe('single entity subscriptions', async () => {
 
   it('can subscribe to an entity', async () => {
     await Promise.all(defaultData.map((doc) => db.insert('students', doc)));
-    await testSubscription(db, db.query('students').entityId('3').build(), [
+    await testSubscription(db, db.query('students').id('3').build(), [
       {
         check: (results) => {
           const entity = results.find((e) => e.id === '3');
@@ -511,7 +511,7 @@ describe('single entity subscriptions', async () => {
   });
   it("should return nothing if the entity doesn't exist, and then update when it is inserted and deleted", async () => {
     await Promise.all(defaultData.map((doc) => db.insert('students', doc)));
-    await testSubscription(db, db.query('students').entityId('6').build(), [
+    await testSubscription(db, db.query('students').id('6').build(), [
       {
         check: (results) => {
           const entity = results.find((e) => e.id === '6');
@@ -553,7 +553,7 @@ describe('single entity subscriptions', async () => {
     await Promise.all(defaultData.map((doc) => db.insert('students', doc)));
     await new Promise<void>(async (resolve) => {
       const spy = vi.fn();
-      db.subscribe(db.query('students').entityId('3').build(), spy);
+      db.subscribe(db.query('students').id('3').build(), spy);
       setTimeout(() => {
         expect(spy).toHaveBeenCalledOnce();
         resolve();
@@ -561,7 +561,7 @@ describe('single entity subscriptions', async () => {
     });
     await new Promise<void>(async (resolve) => {
       const spy = vi.fn();
-      db.subscribe(db.query('students').entityId('3').build(), spy);
+      db.subscribe(db.query('students').id('3').build(), spy);
       await db.transact(async (tx) => {
         await tx.update('students', '1', async (entity) => {
           entity.major = 'sociology';
@@ -579,7 +579,7 @@ describe('single entity subscriptions', async () => {
     });
     await new Promise<void>(async (resolve) => {
       const spy = vi.fn();
-      db.subscribe(db.query('students').entityId('3').build(), spy);
+      db.subscribe(db.query('students').id('3').build(), spy);
       await db.transact(async (tx) => {
         await tx.update('students', '1', async (entity) => {
           entity.major = 'sociology';

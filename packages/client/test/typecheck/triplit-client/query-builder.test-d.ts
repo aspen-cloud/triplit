@@ -31,7 +31,6 @@ test('Builder API', () => {
     | 'syncStatus'
     | 'vars'
     | 'where'
-    | 'entityId'
     | 'subquery';
 
   const builder = client.query('a');
@@ -60,9 +59,6 @@ test('Builder API', () => {
 
   const builderWithWhere = builder.where([['attr', '=', 'foo']]);
   expectTypeOf<keyof typeof builderWithWhere>().toEqualTypeOf<BuilderKeys>();
-
-  const builderWithEntityId = builder.entityId('1');
-  expectTypeOf<keyof typeof builderWithEntityId>().toEqualTypeOf<BuilderKeys>();
 });
 
 describe('Collection name', () => {

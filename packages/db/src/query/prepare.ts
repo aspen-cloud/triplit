@@ -237,14 +237,6 @@ function getQueryFilters<M extends Models, Q extends CollectionQuery<M>>(
 ): QueryWhere<M> {
   const filters: QueryWhere<M> = query.where ? [...query.where] : [];
 
-  // Translate entityId helper to where clause filter
-  if (query.entityId) {
-    filters.push(
-      // @ts-expect-error
-      ['id', '=', query.entityId]
-    );
-  }
-
   if (
     schema &&
     !isSystemCollection(query.collectionName) &&

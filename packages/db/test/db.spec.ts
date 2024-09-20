@@ -2852,7 +2852,8 @@ describe('Nested Properties', () => {
         await db.insert('Businesses', data);
       }
 
-      const query = db.query('Businesses').entityId(ENTITY_ID).build();
+      const query = db.query('Businesses').id(ENTITY_ID).build();
+      const query = db.query('Businesses').id(ENTITY_ID).build();
       const result = (await db.fetch(query)).find((e) => e.id === ENTITY_ID);
       expect(result.address.street.number).toBe('123');
       expect(result.address.street.name).toBe('Main St');
@@ -2865,7 +2866,7 @@ describe('Nested Properties', () => {
         await db.insert('Businesses', data);
       }
 
-      const query = db.query('Businesses').entityId(ENTITY_ID).build();
+      const query = db.query('Businesses').id(ENTITY_ID).build();
       const preUpdateLookup = (await db.fetch(query)).find(
         (e) => e.id === ENTITY_ID
       );
@@ -2985,7 +2986,7 @@ describe('Nested Properties', () => {
         await db.insert('Businesses', { ...data, id });
       }
 
-      const query = db.query('Businesses').entityId(ENTITY_ID).build();
+      const query = db.query('Businesses').id(ENTITY_ID).build();
       const result = (await db.fetch(query)).find((e) => e.id === ENTITY_ID);
       expect(result.address.street.number).toBe('123');
       expect(result.address.street.name).toBe('Main St');
@@ -5257,12 +5258,8 @@ describe('selecting subqueries from schema', () => {
     expect(result.find((e) => e.id === 'post-1')).toHaveProperty('author');
     expect(result.find((e) => e.id === 'post-1').author).toEqual(null);
   });
-  it('subscribe to subqueries when using entityId in query', async () => {
-    const query = user1DB
-      .query('users')
-      .entityId('user-1')
-      .include('posts')
-      .build();
+  it('subscribe to subqueries when using id() in query', async () => {
+    const query = user1DB.query('users').id('user-1').include('posts').build();
     await testSubscription(user1DB, query, [
       {
         check: (results) => {

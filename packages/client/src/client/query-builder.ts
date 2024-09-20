@@ -226,13 +226,6 @@ export class ClientQueryBuilder<
     return new ClientQueryBuilder<M, CN, Q>({ ...this.query, vars });
   }
 
-  /**
-   * @deprecated Use 'id()' instead.
-   */
-  entityId(entityId: string) {
-    return this.id(entityId);
-  }
-
   syncStatus(status: SyncStatus) {
     return new ClientQueryBuilder<M, CN, Q>({
       ...this.query,

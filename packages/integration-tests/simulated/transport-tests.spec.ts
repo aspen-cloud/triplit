@@ -109,7 +109,7 @@ describe('schema syncing', () => {
           // @ts-expect-error - metadata not in schema
           '_metadata'
         )
-        .entityId('_schema')
+        .id('_schema')
         .build(),
       () => {}
     );
@@ -119,7 +119,7 @@ describe('schema syncing', () => {
           // @ts-expect-error - metadata not in schema
           '_metadata'
         )
-        .entityId('_schema')
+        .id('_schema')
         .build(),
       bobCallback
     );
@@ -167,7 +167,7 @@ describe('schema syncing', () => {
           // @ts-expect-error - metadata not in schema
           '_metadata'
         )
-        .entityId('_schema')
+        .id('_schema')
         .build(),
       callback
     );
@@ -212,7 +212,7 @@ describe('schema syncing', () => {
           // @ts-expect-error - metadata not in schema
           '_metadata'
         )
-        .entityId('_schema')
+        .id('_schema')
         .build(),
       callback
     );

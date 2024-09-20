@@ -70,8 +70,8 @@ describe('DB Variables', () => {
     );
   });
 
-  it('entityId supports variables', async () => {
-    const query = db.query('departments').entityId('$DEPARTMENT').build();
+  it('id supports variables', async () => {
+    const query = db.query('departments').id('$DEPARTMENT').build();
     await testDBAndTransaction(
       () => db,
       async (db) => {
