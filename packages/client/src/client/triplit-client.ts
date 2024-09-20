@@ -221,10 +221,6 @@ export class TriplitClient<M extends ClientSchema = ClientSchema> {
   syncEngine: SyncEngine;
   authOptions: AuthOptions;
 
-  /**
-   * @deprecated use `http` instead
-   */
-  remote: HttpClient<M>;
   http: HttpClient<M>;
 
   private defaultFetchOptions: {
@@ -290,7 +286,7 @@ export class TriplitClient<M extends ClientSchema = ClientSchema> {
       ...(serverUrl ? mapServerUrlToSyncOptions(serverUrl) : {}),
     };
 
-    this.http = this.remote = new HttpClient<M>({
+    this.http = new HttpClient<M>({
       serverUrl,
       token,
       schemaFactory: async () => (await this.db.getSchema())?.collections as M,

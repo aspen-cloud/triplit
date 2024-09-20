@@ -289,13 +289,6 @@ export class HttpClient<M extends ClientSchema = ClientSchema> {
   }
 }
 
-export {
-  /**
-   *  @deprecated Use 'HttpClient' instead.
-   */
-  HttpClient as RemoteClient,
-};
-
 function deserializeHttpFetchResult<
   M extends Models,
   Q extends SchemaQueries<M>
