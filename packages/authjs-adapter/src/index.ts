@@ -9,7 +9,7 @@ import { HttpClient } from '@triplit/client';
 import { Models } from '@triplit/db';
 
 export type TriplitAdapterConnectionOptions = {
-  server: string;
+  serverUrl: string;
   token: string;
   schema?: Models;
   sessionCollectionName?: string;
@@ -26,7 +26,7 @@ export function TriplitAdapter(
   options: TriplitAdapterConnectionOptions
 ): Adapter {
   const client = new HttpClient({
-    server: options.server,
+    serverUrl: options.serverUrl,
     token: options.token,
     schema: options.schema,
   });

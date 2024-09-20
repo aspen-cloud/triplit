@@ -126,7 +126,7 @@ export async function insertSeeds(
     return;
   }
   const client = new HttpClient({
-    server: url,
+    serverUrl: url,
     token: token,
     schema,
   });
