@@ -36,7 +36,8 @@ export class QueryBuilder<
   M extends Models,
   CN extends CollectionNameFromModels<M>,
   Q extends ModelQueries<M, CN> = CollectionQueryDefault<M, CN>
-> implements BuilderBase<CollectionQuery<M, CN>, 'collectionName', 'id'>
+> implements
+    BuilderBase<CollectionQuery<M, CN>, 'collectionName' | 'entityId', 'id'>
 {
   protected query: Q;
   constructor(query: Q) {
