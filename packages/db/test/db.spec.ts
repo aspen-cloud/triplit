@@ -2798,29 +2798,28 @@ describe('schema changes', async () => {
   });
 });
 
-  describe('Data deletion', () => {
-    it('clear() removes all data from the database', async () => {
-      // Schema provides us with metadata to delete
-      const schema = {
-        collections: {
-          students: {
-            schema: S.Schema({
-              id: S.String(),
-              name: S.String(),
-            }),
-          },
+describe('Data deletion', () => {
+  it('clear() removes all data from the database', async () => {
+    // Schema provides us with metadata to delete
+    const schema = {
+      collections: {
+        students: {
+          schema: S.Schema({
+            id: S.String(),
+            name: S.String(),
+          }),
         },
-      };
-      const storage = new InMemoryTupleStorage();
-      const db = new DB({ source: storage, schema: schema });
-      await db.insert('students', { id: '1', name: 'Alice' });
+      },
+    };
+    const storage = new InMemoryTupleStorage();
+    const db = new DB({ source: storage, schema: schema });
+    await db.insert('students', { id: '1', name: 'Alice' });
 
-      expect(storage.data.length).not.toBe(0);
+    expect(storage.data.length).not.toBe(0);
 
-      await db.clear({ full: true });
+    await db.clear({ full: true });
 
-      expect(storage.data.length).toBe(0);
-    });
+    expect(storage.data.length).toBe(0);
   });
 });
 
