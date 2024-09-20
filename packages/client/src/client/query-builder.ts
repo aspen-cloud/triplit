@@ -46,7 +46,11 @@ export class ClientQueryBuilder<
   CN extends CollectionNameFromModels<M>,
   Q extends ModelQueries<M, CN> = ClientQueryDefault<M, CN>
 > implements
-    BuilderBase<ClientQuery<any, any, any, any>, 'collectionName', 'id'>
+    BuilderBase<
+      ClientQuery<any, any, any, any>,
+      'collectionName' | 'entityId',
+      'id'
+    >
 {
   protected query: Q;
   constructor(query: Q) {
