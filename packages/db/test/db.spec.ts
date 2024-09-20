@@ -2851,8 +2851,6 @@ describe('Nested Properties', () => {
       for (const [id, data] of Object.entries(defaultData)) {
         await db.insert('Businesses', data);
       }
-
-      const query = db.query('Businesses').id(ENTITY_ID).build();
       const query = db.query('Businesses').id(ENTITY_ID).build();
       const result = (await db.fetch(query)).find((e) => e.id === ENTITY_ID);
       expect(result.address.street.number).toBe('123');
