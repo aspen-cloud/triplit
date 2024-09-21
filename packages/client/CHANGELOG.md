@@ -1,5 +1,23 @@
 # @triplit/client
 
+## 0.5.0
+
+### Minor Changes
+
+- 0a09013b: Sunset migrations API
+- f894e435: update query return type to array
+- abe8bea8: Sunset client.remote, RemoteClient, server config param
+- 38746526: Add reset API for full state resets of client, updateToken and updateOptions do not automatically reconnect anymore
+- abe8bea8: Sunset entityId() in builder
+
+### Patch Changes
+
+- Updated dependencies [0a09013b]
+- Updated dependencies [38746526]
+- Updated dependencies [f894e435]
+- Updated dependencies [abe8bea8]
+  - @triplit/db@0.4.0
+
 ## 0.4.13
 
 ### Patch Changes
