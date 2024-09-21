@@ -76,7 +76,7 @@ describe('/clear', async () => {
 
   it('parameterelss only clears data triples', async () => {
     const client = new HttpClient({
-      server: `http://localhost:${PORT}`,
+      serverUrl: `http://localhost:${PORT}`,
       token: serviceToken,
     });
     await withServer(
@@ -109,7 +109,7 @@ describe('/clear', async () => {
 
   it('{full: false} only clears data triples', async () => {
     const client = new HttpClient({
-      server: `http://localhost:${PORT}`,
+      serverUrl: `http://localhost:${PORT}`,
       token: serviceToken,
     });
     await withServer(
@@ -142,7 +142,7 @@ describe('/clear', async () => {
 
   it('{full: true} clears all data', async () => {
     const client = new HttpClient({
-      server: `http://localhost:${PORT}`,
+      serverUrl: `http://localhost:${PORT}`,
       token: serviceToken,
     });
     await withServer(
