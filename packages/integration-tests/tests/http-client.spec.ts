@@ -19,7 +19,7 @@ beforeEach(async () => {
 it('fetch respects queries', async () => {
   await withServer({ port: PORT }, async () => {
     const client = new HttpClient({
-      server: `http://localhost:${PORT}`,
+      serverUrl: `http://localhost:${PORT}`,
       token: serviceToken,
     });
     await client.insert('test', { id: 'test1', name: 'a' });
@@ -41,7 +41,7 @@ it('fetch respects queries', async () => {
 it('fetch can handle a select without ["id"]', async () => {
   await withServer({ port: PORT }, async () => {
     const client = new HttpClient({
-      server: `http://localhost:${PORT}`,
+      serverUrl: `http://localhost:${PORT}`,
       token: serviceToken,
     });
     await client.insert('test', { id: 'test1', name: 'a' });
@@ -63,7 +63,7 @@ it('fetch can handle a select without ["id"]', async () => {
 it('fetchOne returns a single entity that matches filter', async () => {
   await withServer({ port: PORT }, async () => {
     const client = new HttpClient({
-      server: `http://localhost:${PORT}`,
+      serverUrl: `http://localhost:${PORT}`,
       token: serviceToken,
     });
     await client.insert('test', { id: 'test1', name: 'a' });
@@ -82,7 +82,7 @@ it('fetchOne returns a single entity that matches filter', async () => {
 it('fetchById returns a single entity by id', async () => {
   await withServer({ port: PORT }, async () => {
     const client = new HttpClient({
-      server: `http://localhost:${PORT}`,
+      serverUrl: `http://localhost:${PORT}`,
       token: serviceToken,
     });
     await client.insert('test', { id: 'test1', name: 'a' });
@@ -170,7 +170,7 @@ it('can handle inserting all of our supported types', async () => {
     },
     async () => {
       const client = new HttpClient<typeof schema>({
-        server: `http://localhost:${PORT}`,
+        serverUrl: `http://localhost:${PORT}`,
         token: serviceToken,
         schema,
       });
@@ -230,7 +230,7 @@ describe('set operations', () => {
       },
       async () => {
         const client = new HttpClient({
-          server: `http://localhost:${PORT}`,
+          serverUrl: `http://localhost:${PORT}`,
           token: serviceToken,
           schema: schema.collections,
         });
@@ -294,7 +294,7 @@ describe('set operations', () => {
       },
       async () => {
         const client = new HttpClient({
-          server: `http://localhost:${PORT}`,
+          serverUrl: `http://localhost:${PORT}`,
           token: serviceToken,
           schema: schema.collections,
         });
@@ -346,7 +346,7 @@ describe('set operations', () => {
       },
       async () => {
         const client = new HttpClient({
-          server: `http://localhost:${PORT}`,
+          serverUrl: `http://localhost:${PORT}`,
           token: serviceToken,
           schema: schema.collections,
         });
@@ -397,7 +397,7 @@ it('fetch properly deserializes data based on schema', async () => {
     },
     async () => {
       const client = new HttpClient<typeof schema.collections>({
-        server: `http://localhost:${PORT}`,
+        serverUrl: `http://localhost:${PORT}`,
         token: serviceToken,
         schema: schema.collections,
       });
@@ -470,7 +470,7 @@ it('fetch can properly deserialize subqueries with schema', async () => {
     },
     async () => {
       const client = new HttpClient({
-        server: `http://localhost:${PORT}`,
+        serverUrl: `http://localhost:${PORT}`,
         token: serviceToken,
         schema: schema.collections,
       });
@@ -538,7 +538,7 @@ it.todo(
       },
       async () => {
         const client = new HttpClient({
-          server: `http://localhost:${PORT}`,
+          serverUrl: `http://localhost:${PORT}`,
           token: serviceToken,
         });
         await client.insert('test', {
@@ -611,7 +611,7 @@ it('update properly updates an entity', async () => {
     { port: PORT, serverOptions: { dbOptions: { schema } } },
     async () => {
       const client = new HttpClient({
-        server: `http://localhost:${PORT}`,
+        serverUrl: `http://localhost:${PORT}`,
         token: serviceToken,
         schema: schema.collections,
       });
@@ -639,7 +639,7 @@ it('update properly updates an entity', async () => {
 it('delete properly deletes an entity', async () => {
   await withServer({ port: PORT }, async () => {
     const client = new HttpClient({
-      server: `http://localhost:${PORT}`,
+      serverUrl: `http://localhost:${PORT}`,
       token: serviceToken,
     });
     await client.insert('test', { id: 'test1', name: 'a' });
