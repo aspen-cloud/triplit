@@ -1,5 +1,21 @@
 # @triplit/tanstack
 
+## 1.0.0
+
+### Minor Changes
+
+- f894e435: update query return type to array
+
+### Patch Changes
+
+- Updated dependencies [0a09013b]
+- Updated dependencies [f894e435]
+- Updated dependencies [abe8bea8]
+- Updated dependencies [38746526]
+- Updated dependencies [abe8bea8]
+  - @triplit/client@0.5.0
+  - @triplit/react@0.4.0
+
 ## 0.0.4
 
 ### Patch Changes

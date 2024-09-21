@@ -1,5 +1,17 @@
 # @triplit/db
 
+## 0.4.0
+
+### Minor Changes
+
+- 0a09013b: Sunset migrations API
+- f894e435: update query return type to array
+- abe8bea8: Sunset entityId() in builder
+
+### Patch Changes
+
+- 38746526: Update clear to rewrite data to keep back to original stores only
+
 ## 0.3.75
 
 ### Patch Changes

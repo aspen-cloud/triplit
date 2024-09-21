@@ -1,5 +1,20 @@
 # @triplit/server-core
 
+## 0.4.0
+
+### Minor Changes
+
+- 0a09013b: Sunset migrations API
+- f894e435: update query return type to array
+
+### Patch Changes
+
+- Updated dependencies [0a09013b]
+- Updated dependencies [38746526]
+- Updated dependencies [f894e435]
+- Updated dependencies [abe8bea8]
+  - @triplit/db@0.4.0
+
 ## 0.3.79
 
 ### Patch Changes

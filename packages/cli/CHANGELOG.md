@@ -1,5 +1,15 @@
 # @triplit/cli
 
+## 0.6.0
+
+### Minor Changes
+
+- f894e435: update query return type to array
+
+### Patch Changes
+
+- 38746526: Manual version bump for CLI dependencies
+
 ## 0.5.14
 
 ### Patch Changes

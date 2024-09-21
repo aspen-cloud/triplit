@@ -4,6 +4,21 @@
 
 ### Patch Changes
 
+- Updated dependencies [0a09013b]
+- Updated dependencies [38746526]
+- Updated dependencies [f894e435]
+- Updated dependencies [abe8bea8]
+- Updated dependencies [38746526]
+- Updated dependencies [abe8bea8]
+  - @triplit/client@0.5.0
+  - @triplit/db@0.4.0
+  - @triplit/authjs-adapter@2.0.0
+  - @triplit/react@0.4.0
+
+## null
+
+### Patch Changes
+
 - Updated dependencies [5fed7f42]
 - Updated dependencies [3c7fd004]
   - @triplit/db@0.3.75
