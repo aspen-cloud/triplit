@@ -28,30 +28,347 @@ function expectUnorderedArrayEquality(a: any[], b: any[]) {
   }
 }
 
+const seeds = [
+  {
+    key: 'noDupes',
+    seed: async (db: DB) =>
+      await Promise.all(
+        testData.map((data, i) => db.insert('tests', { id: `${i}`, ...data }))
+      ),
+  },
+  {
+    key: 'dupes',
+    seed: async (db: DB) =>
+      await Promise.all(
+        testData.flatMap((data, i) => [
+          db.insert('tests', { id: `${i}`, ...data }),
+          db.insert('tests', { id: `${i}`, ...data }),
+        ])
+      ),
+  },
+];
+
 describe('candidate selection', () => {
-  it('selects a candidate based on equality filter', async () => {
-    const db = new DB();
-    await Promise.all(
-      testData.map((data, i) => db.insert('tests', { id: `${i}`, ...data }))
-    );
+  describe.each(seeds)('with seed $key', ({ key, seed }) => {
+    describe('filter index', () => {
+      it('selects a candidate based on equality filter', async () => {
+        const db = new DB();
+        await seed(db);
 
-    // Select Alice
-    {
-      const query = db.query('tests').where('name', '=', 'Alice').build();
-      await db.transact(async (tx) => {
-        const { candidates } = await getCandidateEntityIds(tx.storeTx, query, {
-          session: {
-            roles: db.sessionRoles,
-            systemVars: db.systemVars,
-          },
-        });
-        expectUnorderedArrayEquality(await genToArr(candidates), ['tests#0']);
+        // Select Alice
+        {
+          const query = db.query('tests').where('name', '=', 'Alice').build();
+          await db.transact(async (tx) => {
+            const { candidates } = await getCandidateEntityIds(
+              tx.storeTx,
+              query,
+              {
+                session: {
+                  roles: db.sessionRoles,
+                  systemVars: db.systemVars,
+                },
+              }
+            );
+            expectUnorderedArrayEquality(await genToArr(candidates), [
+              'tests#0',
+            ]);
+          });
+        }
+
+        // Select age 24
+        {
+          const query = db.query('tests').where('age', '=', 24).build();
+          await db.transact(async (tx) => {
+            const { candidates } = await getCandidateEntityIds(
+              tx.storeTx,
+              query,
+              {
+                session: {
+                  roles: db.sessionRoles,
+                  systemVars: db.systemVars,
+                },
+              }
+            );
+            expectUnorderedArrayEquality(await genToArr(candidates), [
+              'tests#3',
+              'tests#4',
+              'tests#5',
+            ]);
+          });
+        }
       });
-    }
+      it('selects a candidate based on id filter if available', async () => {
+        const db = new DB();
+        await seed(db);
 
-    // Select age 24
-    {
-      const query = db.query('tests').where('age', '=', 24).build();
+        // Uses id filter, even though there is another potential match
+        {
+          const query = db
+            .query('tests')
+            .where([
+              ['age', '=', 25],
+              ['id', '=', '0'],
+            ])
+            .build();
+          await db.transact(async (tx) => {
+            const { candidates } = await getCandidateEntityIds(
+              tx.storeTx,
+              query,
+              {
+                session: {
+                  roles: db.sessionRoles,
+                  systemVars: db.systemVars,
+                },
+              }
+            );
+            expectUnorderedArrayEquality(await genToArr(candidates), [
+              'tests#0',
+            ]);
+          });
+        }
+      });
+
+      it('selects a candidate based on range filter', async () => {
+        const db = new DB();
+        await seed(db);
+
+        // lt
+        {
+          const query = db.query('tests').where('score', '<', 70).build();
+          await db.transact(async (tx) => {
+            const { candidates } = await getCandidateEntityIds(
+              tx.storeTx,
+              query,
+              {
+                session: {
+                  roles: db.sessionRoles,
+                  systemVars: db.systemVars,
+                },
+              }
+            );
+            expectUnorderedArrayEquality(await genToArr(candidates), [
+              'tests#11',
+              'tests#13',
+              'tests#14',
+            ]);
+          });
+        }
+        // lte
+        {
+          const query = db.query('tests').where('score', '<=', 70).build();
+          await db.transact(async (tx) => {
+            const { candidates } = await getCandidateEntityIds(
+              tx.storeTx,
+              query,
+              {
+                session: {
+                  roles: db.sessionRoles,
+                  systemVars: db.systemVars,
+                },
+              }
+            );
+            expectUnorderedArrayEquality(await genToArr(candidates), [
+              'tests#9',
+              'tests#11',
+              'tests#12',
+              'tests#13',
+              'tests#14',
+            ]);
+          });
+        }
+        // gt
+        {
+          const query = db.query('tests').where('score', '>', 90).build();
+          await db.transact(async (tx) => {
+            const { candidates } = await getCandidateEntityIds(
+              tx.storeTx,
+              query,
+              {
+                session: {
+                  roles: db.sessionRoles,
+                  systemVars: db.systemVars,
+                },
+              }
+            );
+            expectUnorderedArrayEquality(await genToArr(candidates), [
+              'tests#0',
+              'tests#2',
+            ]);
+          });
+        }
+        // gte
+        {
+          const query = db.query('tests').where('score', '>=', 90).build();
+          await db.transact(async (tx) => {
+            const { candidates } = await getCandidateEntityIds(
+              tx.storeTx,
+              query,
+              {
+                session: {
+                  roles: db.sessionRoles,
+                  systemVars: db.systemVars,
+                },
+              }
+            );
+            expectUnorderedArrayEquality(await genToArr(candidates), [
+              'tests#0',
+              'tests#1',
+              'tests#2',
+              'tests#4',
+            ]);
+          });
+        }
+      });
+
+      it('uses multiple range filters if operators and attributes match', async () => {
+        const db = new DB();
+        await seed(db);
+
+        // match
+        {
+          const query = db
+            .query('tests')
+            .where([
+              ['score', '>', 80],
+              ['score', '<=', 90],
+            ])
+            .build();
+          await db.transact(async (tx) => {
+            const { candidates } = await getCandidateEntityIds(
+              tx.storeTx,
+              query,
+              {
+                session: {
+                  roles: db.sessionRoles,
+                  systemVars: db.systemVars,
+                },
+              }
+            );
+            expectUnorderedArrayEquality(await genToArr(candidates), [
+              'tests#1',
+              'tests#3',
+              'tests#4',
+              'tests#6',
+            ]);
+          });
+        }
+
+        // non matching operators
+        {
+          const query = db
+            .query('tests')
+            .where([
+              ['score', '>', 80],
+              ['score', '>=', 90],
+            ])
+            .build();
+          await db.transact(async (tx) => {
+            const { candidates } = await getCandidateEntityIds(
+              tx.storeTx,
+              query,
+              {
+                session: {
+                  roles: db.sessionRoles,
+                  systemVars: db.systemVars,
+                },
+              }
+            );
+            expectUnorderedArrayEquality(await genToArr(candidates), [
+              'tests#0',
+              'tests#1',
+              'tests#2',
+              'tests#3',
+              'tests#4',
+              'tests#6',
+            ]);
+          });
+        }
+
+        // non matching paths
+        {
+          const query = db
+            .query('tests')
+            .where([
+              ['score', '>', 80],
+              ['age', '<=', 25],
+            ])
+            .build();
+          await db.transact(async (tx) => {
+            const { candidates } = await getCandidateEntityIds(
+              tx.storeTx,
+              query,
+              {
+                session: {
+                  roles: db.sessionRoles,
+                  systemVars: db.systemVars,
+                },
+              }
+            );
+            expectUnorderedArrayEquality(await genToArr(candidates), [
+              'tests#0',
+              'tests#1',
+              'tests#2',
+              'tests#3',
+              'tests#4',
+              'tests#6',
+            ]);
+          });
+        }
+      });
+    });
+
+    describe('order index', () => {
+      it('selects candidates in order if order clause is provided', async () => {
+        const db = new DB();
+        await seed(db);
+
+        // Ordered only on first attribute for candidate selection
+        const query = db
+          .query('tests')
+          .order('score', 'ASC')
+          .order('name', 'ASC')
+          .build();
+        await db.transact(async (tx) => {
+          const { candidates } = await getCandidateEntityIds(
+            tx.storeTx,
+            query,
+            {
+              session: {
+                roles: db.sessionRoles,
+                systemVars: db.systemVars,
+              },
+            }
+          );
+          expect(await genToArr(candidates)).toEqual([
+            'tests#13',
+            'tests#11',
+            'tests#14',
+            'tests#12',
+            'tests#9',
+            'tests#10',
+            'tests#7',
+            'tests#5',
+            'tests#8',
+            'tests#3',
+            'tests#6',
+            'tests#1',
+            'tests#4',
+            'tests#2',
+            'tests#0',
+          ]);
+        });
+      });
+    });
+
+    it('will use filter index before order index', async () => {
+      const db = new DB();
+      await seed(db);
+
+      const query = db
+        .query('tests')
+        .where('age', '>=', 24)
+        .order('score', 'ASC')
+        .build();
       await db.transact(async (tx) => {
         const { candidates } = await getCandidateEntityIds(tx.storeTx, query, {
           session: {
@@ -60,240 +377,62 @@ describe('candidate selection', () => {
           },
         });
         expectUnorderedArrayEquality(await genToArr(candidates), [
+          'tests#0',
+          'tests#1',
+          'tests#2',
           'tests#3',
           'tests#4',
           'tests#5',
         ]);
       });
-    }
-  });
-  it('selects a candidate based on id filter if available', async () => {
-    const db = new DB();
-    await Promise.all(
-      testData.map((data, i) => db.insert('tests', { id: `${i}`, ...data }))
-    );
+    });
 
-    // Uses id filter, even though there is another potential match
-    {
-      const query = db
-        .query('tests')
-        .where([
-          ['age', '=', 25],
-          ['id', '=', '0'],
-        ])
-        .build();
-      await db.transact(async (tx) => {
-        const { candidates } = await getCandidateEntityIds(tx.storeTx, query, {
-          session: {
-            roles: db.sessionRoles,
-            systemVars: db.systemVars,
-          },
-        });
-        expectUnorderedArrayEquality(await genToArr(candidates), ['tests#0']);
-      });
-    }
-  });
+    it('if no matching clauses are found, it uses a collection scan', async () => {
+      const db = new DB();
+      await seed(db);
 
-  it('selects a candidate based on range filter', async () => {
-    const db = new DB();
-    await Promise.all(
-      testData.map((data, i) => db.insert('tests', { id: `${i}`, ...data }))
-    );
-    // lt
-    {
-      const query = db.query('tests').where('score', '<', 70).build();
-      await db.transact(async (tx) => {
-        const { candidates } = await getCandidateEntityIds(tx.storeTx, query, {
-          session: {
-            roles: db.sessionRoles,
-            systemVars: db.systemVars,
-          },
+      // No info to use
+      {
+        const query = db.query('tests').build();
+        await db.transact(async (tx) => {
+          const { candidates } = await getCandidateEntityIds(
+            tx.storeTx,
+            query,
+            {
+              session: {
+                roles: db.sessionRoles,
+                systemVars: db.systemVars,
+              },
+            }
+          );
+          expectUnorderedArrayEquality(
+            await genToArr(candidates),
+            testData.map((_, i) => `tests#${i}`)
+          );
         });
-        expectUnorderedArrayEquality(await genToArr(candidates), [
-          'tests#11',
-          'tests#13',
-          'tests#14',
-        ]);
-      });
-    }
-    // lte
-    {
-      const query = db.query('tests').where('score', '<=', 70).build();
-      await db.transact(async (tx) => {
-        const { candidates } = await getCandidateEntityIds(tx.storeTx, query, {
-          session: {
-            roles: db.sessionRoles,
-            systemVars: db.systemVars,
-          },
-        });
-        expectUnorderedArrayEquality(await genToArr(candidates), [
-          'tests#9',
-          'tests#11',
-          'tests#12',
-          'tests#13',
-          'tests#14',
-        ]);
-      });
-    }
-    // gt
-    {
-      const query = db.query('tests').where('score', '>', 90).build();
-      await db.transact(async (tx) => {
-        const { candidates } = await getCandidateEntityIds(tx.storeTx, query, {
-          session: {
-            roles: db.sessionRoles,
-            systemVars: db.systemVars,
-          },
-        });
-        expectUnorderedArrayEquality(await genToArr(candidates), [
-          'tests#0',
-          'tests#2',
-        ]);
-      });
-    }
-    // gte
-    {
-      const query = db.query('tests').where('score', '>=', 90).build();
-      await db.transact(async (tx) => {
-        const { candidates } = await getCandidateEntityIds(tx.storeTx, query, {
-          session: {
-            roles: db.sessionRoles,
-            systemVars: db.systemVars,
-          },
-        });
-        expectUnorderedArrayEquality(await genToArr(candidates), [
-          'tests#0',
-          'tests#1',
-          'tests#2',
-          'tests#4',
-        ]);
-      });
-    }
-  });
+      }
 
-  it('uses multiple range filters if operators and attributes match', async () => {
-    const db = new DB();
-    await Promise.all(
-      testData.map((data, i) => db.insert('tests', { id: `${i}`, ...data }))
-    );
-    // match
-    {
-      const query = db
-        .query('tests')
-        .where([
-          ['score', '>', 80],
-          ['score', '<=', 90],
-        ])
-        .build();
-      await db.transact(async (tx) => {
-        const { candidates } = await getCandidateEntityIds(tx.storeTx, query, {
-          session: {
-            roles: db.sessionRoles,
-            systemVars: db.systemVars,
-          },
+      // No matching filter operation
+      {
+        const query = db.query('tests').where('name', '!=', 'Alice').build();
+        await db.transact(async (tx) => {
+          const { candidates } = await getCandidateEntityIds(
+            tx.storeTx,
+            query,
+            {
+              session: {
+                roles: db.sessionRoles,
+                systemVars: db.systemVars,
+              },
+            }
+          );
+          expectUnorderedArrayEquality(
+            await genToArr(candidates),
+            testData.map((_, i) => `tests#${i}`)
+          );
         });
-        expectUnorderedArrayEquality(await genToArr(candidates), [
-          'tests#1',
-          'tests#3',
-          'tests#4',
-          'tests#6',
-        ]);
-      });
-    }
-
-    // non matching operators
-    {
-      const query = db
-        .query('tests')
-        .where([
-          ['score', '>', 80],
-          ['score', '>=', 90],
-        ])
-        .build();
-      await db.transact(async (tx) => {
-        const { candidates } = await getCandidateEntityIds(tx.storeTx, query, {
-          session: {
-            roles: db.sessionRoles,
-            systemVars: db.systemVars,
-          },
-        });
-        expectUnorderedArrayEquality(await genToArr(candidates), [
-          'tests#0',
-          'tests#1',
-          'tests#2',
-          'tests#3',
-          'tests#4',
-          'tests#6',
-        ]);
-      });
-    }
-
-    // non matching paths
-    {
-      const query = db
-        .query('tests')
-        .where([
-          ['score', '>', 80],
-          ['age', '<=', 25],
-        ])
-        .build();
-      await db.transact(async (tx) => {
-        const { candidates } = await getCandidateEntityIds(tx.storeTx, query, {
-          session: {
-            roles: db.sessionRoles,
-            systemVars: db.systemVars,
-          },
-        });
-        expectUnorderedArrayEquality(await genToArr(candidates), [
-          'tests#0',
-          'tests#1',
-          'tests#2',
-          'tests#3',
-          'tests#4',
-          'tests#6',
-        ]);
-      });
-    }
-  });
-
-  it('if no matching functions are found, it uses a collection scan', async () => {
-    const db = new DB();
-    await Promise.all(
-      testData.map((data, i) => db.insert('tests', { id: `${i}`, ...data }))
-    );
-    // No info to use
-    {
-      const query = db.query('tests').build();
-      await db.transact(async (tx) => {
-        const { candidates } = await getCandidateEntityIds(tx.storeTx, query, {
-          session: {
-            roles: db.sessionRoles,
-            systemVars: db.systemVars,
-          },
-        });
-        expectUnorderedArrayEquality(
-          await genToArr(candidates),
-          testData.map((_, i) => `tests#${i}`)
-        );
-      });
-    }
-
-    // No matching filter operation
-    {
-      const query = db.query('tests').where('name', '!=', 'Alice').build();
-      await db.transact(async (tx) => {
-        const { candidates } = await getCandidateEntityIds(tx.storeTx, query, {
-          session: {
-            roles: db.sessionRoles,
-            systemVars: db.systemVars,
-          },
-        });
-        expectUnorderedArrayEquality(
-          await genToArr(candidates),
-          testData.map((_, i) => `tests#${i}`)
-        );
-      });
-    }
+      }
+    });
   });
 });
 

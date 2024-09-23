@@ -81,7 +81,7 @@ import {
 } from './query/filters.js';
 import { prepareQuery } from './query/prepare.js';
 import { SessionRole } from './schema/permissions.js';
-import { arrToGen, genToArr, mapGen } from './utils/generator.js';
+import { arrToGen, distinctGen, genToArr, mapGen } from './utils/generator.js';
 import { QueryExecutionCache } from './query/execution-cache.js';
 
 export default function CollectionQueryBuilder<
@@ -457,19 +457,22 @@ export async function getCandidateEntityIds(
 
     const filterSet = getFilterSetForQuery(tx, query, schema, fulfilled);
     if (filterSet) {
-      return { candidates: filterSet, fulfilled };
+      return { candidates: distinctGen(filterSet), fulfilled };
     }
 
     const orderSet = await getOrderSetForQuery(tx, query, schema, fulfilled);
     if (orderSet) {
-      return { candidates: orderSet, fulfilled };
+      return {
+        candidates: distinctGen(orderSet),
+        fulfilled,
+      };
     }
 
     // TODO: evaluate performing both order and filter scans
     // Initial observations are that order scans are slow / longer, should investigate further
   }
   return {
-    candidates: getCollectionIds(tx, query),
+    candidates: distinctGen(getCollectionIds(tx, query)),
     fulfilled,
   };
 }

@@ -37,3 +37,38 @@ export function mapGen<T, R>(
     },
   };
 }
+
+export function distinctGen<T>(
+  iterable: AsyncIterable<T> | Iterable<T>,
+  cb?: (value: T) => any
+): AsyncIterable<T> {
+  return {
+    [Symbol.asyncIterator](): AsyncIterator<T> {
+      const i = isAsyncIterable(iterable)
+        ? iterable[Symbol.asyncIterator]()
+        : iterable[Symbol.iterator]();
+      const set = new Set();
+      return {
+        async next(): Promise<IteratorResult<T>> {
+          while (true) {
+            const a = await i.next();
+            if (a.done) {
+              return a;
+            }
+            const key = cb ? cb(a.value) : a.value;
+            if (!set.has(key)) {
+              set.add(key);
+              return a;
+            }
+          }
+        },
+      };
+    },
+  };
+}
+
+function isAsyncIterable<T>(
+  iter: AsyncIterable<T> | Iterable<T>
+): iter is AsyncIterable<T> {
+  return Symbol.asyncIterator in iter;
+}
