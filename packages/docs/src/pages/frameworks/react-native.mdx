@@ -75,16 +75,21 @@ const config = getDefaultConfig(__dirname);
 
 // additional configuration steps
 
-// Resolve exports from @triplit/db
+// Resolve exports for these Triplit packages
+const packageExportsDependencies = ['@triplit/db', '@triplit/tuple-database'];
+// Custom resolver function
 function customResolver(context, moduleName, platform) {
-  if (moduleName.startsWith('@triplit/db/storage')) {
-    const suffix = moduleName.replace('@triplit/db/storage', '');
-    const basePath = path.dirname(require.resolve('@triplit/db'));
-    const filePath = path.join(basePath, `storage`, `${suffix}.js`);
-    return {
-      filePath: filePath,
-      type: 'sourceFile',
-    };
+  for (const dep of packageExportsDependencies) {
+    const prefix = dep + '/';
+    if (moduleName.startsWith(prefix)) {
+      const suffix = moduleName.replace(prefix, '');
+      const basePath = path.dirname(require.resolve(dep));
+      const filePath = path.join(basePath, `${suffix}.js`);
+      return {
+        filePath: filePath,
+        type: 'sourceFile',
+      };
+    }
   }
   return context.resolveRequest(context, moduleName, platform);
 }
@@ -102,6 +107,7 @@ Triplit was originally built to run in web browsers, so a few APIs are used in s
 - atob / btoa: [@react-native-anywhere/polyfill-base64](https://www.npmjs.com/package/@react-native-anywhere/polyfill-base64)
 - EventTarget: [event-target-polyfill](https://www.npmjs.com/package/event-target-polyfill)
 - hasown: [hasown](https://www.npmjs.com/package/hasown)
+- AsyncIterator: [@azure/core-asynciterator-polyfill](https://www.npmjs.com/package/@azure/core-asynciterator-polyfill)
 
 These polyfills should be imported or implemented in your project's entry file so they can be run as early as possible.
 
