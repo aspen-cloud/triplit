@@ -11,13 +11,15 @@
 import {
   CollectionNameFromModels,
   CollectionQuery,
+  ModelFromModels,
   Models,
   QueryInclusions,
   QuerySelection,
   ReturnTypeFromQuery,
+  TypeFromModel,
   Unalias,
 } from '@triplit/db';
-import { ClientQuery, ClientSchema, SchemaClientQueries } from './query.js';
+import { ClientSchema, SchemaClientQueries } from './query.js';
 
 /**
  * Results from a query based on the query's model in the format `Map<id, entity>`
@@ -47,7 +49,19 @@ export type ClientFetchResultEntity<
  * ```
 
  */
+
+/**
+ * The type of an entity
+ */
 export type Entity<
+  M extends ClientSchema,
+  CN extends CollectionNameFromModels<M>
+> = Unalias<TypeFromModel<ModelFromModels<M, CN>>>;
+
+/**
+ * The type of an entity with selection and inclusion as it would be returned from a query
+ */
+export type EntityWithSelection<
   M extends ClientSchema,
   CN extends CollectionNameFromModels<M>,
   Selection extends QuerySelection<M, CN> = QuerySelection<M, CN>,
@@ -61,5 +75,5 @@ export type Entity<
  */
 export type QueryResult<
   M extends Models,
-  C extends SchemaClientQueries<M>
-> = Unalias<ReturnTypeFromQuery<M, C>>;
+  Q extends SchemaClientQueries<M>
+> = Unalias<ReturnTypeFromQuery<M, Q>>;

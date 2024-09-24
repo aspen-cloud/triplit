@@ -83,9 +83,7 @@ export {
   convertEntityToJS,
 } from './collection-query.js';
 export { QueryBuilder } from './query/builder.js';
-export type {
-  TimestampedTypeFromModel as TypeFromModel, // TODO: dont alias
-} from './collection-query.js';
+export type { TimestampedTypeFromModel } from './collection-query.js';
 export type * from './query/types/index.js';
 export { default as Builder } from './utils/builder.js';
 export type { toBuilder } from './utils/builder.js';

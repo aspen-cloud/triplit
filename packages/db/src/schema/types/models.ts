@@ -151,6 +151,23 @@ export type SelectModelFromModel<M extends Model> = M extends Model<
   : never;
 
 /**
+ * The basic type of a model
+ */
+export type TypeFromModel<M extends Model> = {
+  [k in keyof SelectModelFromModel<M>['properties'] as IsPropertyRequired<
+    SelectModelFromModel<M>['properties'][k]
+  > extends true
+    ? StringKey<k>
+    : never]: ExtractJSType<M['properties'][k]>;
+} & {
+  [k in keyof SelectModelFromModel<M>['properties'] as IsPropertyOptional<
+    SelectModelFromModel<M>['properties'][k]
+  > extends true
+    ? StringKey<k>
+    : never]?: ExtractJSType<M['properties'][k]>;
+};
+
+/**
  * The type of an insert operation for a model
  */
 export type InsertTypeFromModel<M extends Model> = {
