@@ -109,7 +109,7 @@ Triplit was originally built to run in web browsers, so a few APIs are used in s
 - hasown: [hasown](https://www.npmjs.com/package/hasown)
 - AsyncIterator: [@azure/core-asynciterator-polyfill](https://www.npmjs.com/package/@azure/core-asynciterator-polyfill)
 
-These polyfills should be imported or implemented in your project's entry file so they can be run as early as possible.
+These polyfills should be imported or implemented in your project's entry file so they can be run as early as possible. Typically this is your `index.js` file. If you are using Expo Router see this [thread](https://github.com/expo/expo/discussions/25122) on creating and using an `index.js` file to add polyfills.
 
 ```javascript
 import 'react-native-get-random-values';
@@ -118,6 +118,10 @@ import 'react-native-get-random-values';
 // The rest of your entry file
 ```
 
+### Local development
+
+When running a local development server on your machine, it will be running at `localhost`. However if you are running your app on a physical device (ie your phone with the Expo Go app or a custom build) you will need to change the `localhost` to your machine's IP address. You can find your IP address by running `ipconfig getifaddr en0` in your terminal. So a URL `http://localhost:<port>` would become `http://<your-ip>:<port>`.
+
 ## Storage providers
 
 Triplit provides storage providers for React Native applications to persist data on the device, including for `expo-sqlite`. Read more about the available storage providers in the [client storage documentation](/client/storage#in-react-native).
@@ -125,3 +129,7 @@ Triplit provides storage providers for React Native applications to persist data
 ## Bare React Native
 
 The team over at Triplit hasn't had the chance to test out a bare React Native project. Although we don't expect the required steps to be much different than with Expo, there may be differences. If you have set up Triplit in a bare RN project, please let us know how it went!
+
+```
+
+```
