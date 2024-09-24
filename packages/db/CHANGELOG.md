@@ -1,5 +1,12 @@
 # @triplit/db
 
+## 0.4.1
+
+### Patch Changes
+
+- 8966b0fe: Fixup deduplication bug in candidate selection
+- 761648cf: Add TypeFromModel type
+
 ## 0.4.0
 
 ### Minor Changes

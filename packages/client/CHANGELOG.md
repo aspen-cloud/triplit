@@ -1,5 +1,14 @@
 # @triplit/client
 
+## 0.5.1
+
+### Patch Changes
+
+- 761648cf: Properly handle optional props in Entity type, add type EntityWithSelection for including a selection or inclusion with Entity
+- Updated dependencies [8966b0fe]
+- Updated dependencies [761648cf]
+  - @triplit/db@0.4.1
+
 ## 0.5.0
 
 ### Minor Changes
