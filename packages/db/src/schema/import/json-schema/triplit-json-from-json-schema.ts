@@ -1,6 +1,6 @@
 import { JSONSchema7 } from 'json-schema';
 import { invertTransformations } from './invert-transform-functions.js';
-import { SchemaDefinition } from 'packages/db/src/data-types/serialization.js';
+import { SchemaDefinition } from '../../types/serialization.js';
 import { JSONToSchema } from '../../schema.js';
 
 export function triplitJsonFromJsonSchema(

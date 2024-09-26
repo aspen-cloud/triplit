@@ -1,5 +1,5 @@
 import { JSONSchema7 } from 'json-schema';
-import { tranformKeysRequirementsContext } from '../../export/json-schema/transform-funcs';
+import { tranformKeysRequirementsContext } from '../../export/json-schema/transform-funcs.js';
 
 /**
  * @param object the (sub)object transforms are applied to
