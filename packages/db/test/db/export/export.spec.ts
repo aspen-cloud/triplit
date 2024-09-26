@@ -42,6 +42,7 @@ describe('Full JSON Compliance Test', () => {
       type: 'object',
       properties: {
         id: {
+          default: 'uuid',
           type: 'string',
         },
         boolean: {
@@ -90,6 +91,7 @@ describe('Full JSON Compliance Test', () => {
           type: 'object',
           properties: {
             id: {
+              default: 'uuid',
               type: 'string',
             },
             boolean: {

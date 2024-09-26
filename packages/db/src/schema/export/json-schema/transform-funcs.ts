@@ -34,47 +34,6 @@ export function deleteRelationFields(
   return object;
 }
 
-// export function transformOptions(object: any, overlyingObj?: any) {
-//   // --- guard from undefined/null
-//   if (object.options == null) return object;
-
-//   // --- nullable
-//   if (object?.options?.nullable === true) {
-//     // nullable values are indicated as type: ["null"] in JSON schema
-//     if (Array.isArray(object.type) === false) {
-//       object.type = [object.type, 'null'];
-//     } else {
-//       // normally triplit's schema should just be a string, but
-//       // just in case it changes to allow array of types
-//       object.type.push('null');
-//     }
-//   }
-//   // --- default
-//   if (object?.options?.default) {
-//     // we set the default, though JSON Schema notes that it should be
-//     // only used for documentation / example values, not as form default
-//     if (
-//       typeof object?.options?.default === 'string' ||
-//       typeof object?.options?.default === 'number'
-//     ) {
-//       object.default = String(object.options.default);
-//     } else {
-//       // we do nothing
-//       // as if it's object to define a function
-//       // triplit uses: default: { func: 'uuid', args: null }
-//     }
-//   }
-
-//   // --- enum
-//   if (object?.options?.enum != null) {
-//     object.enum = object?.options?.enum;
-//   }
-
-//   delete object?.options;
-
-//   return object;
-// }
-
 export function transformOptions(object: any, overlyingObj?: any) {
   if (object.options == null) return object;
 
@@ -100,20 +59,18 @@ function transformNullable(object: any) {
 }
 
 function transformDefault(object: any) {
-  if (object?.options?.default) {
-    // we set the default, though JSON Schema notes that it should be
-    // only used for documentation / example values, not as form default
-    if (
-      typeof object?.options?.default === 'string' ||
-      typeof object?.options?.default === 'number'
-    ) {
-      object.default = String(object.options.default);
-    } else {
-      // Handle complex default values (e.g., functions) if needed
-      // triplit uses: default: { func: 'uuid', args: null }
-      // Currently, we're not handling these cases
-    }
+  // if (object?.options?.default != null) {
+  // we set the default, though JSON Schema notes that it should be
+  // only used for documentation / example values, not as form default
+  if (typeof object?.options?.default !== 'function') {
+    object.default = object.options.default;
   }
+
+  if (object?.options?.default?.func != null) {
+    // Handle triplit's special cases: 'now' and 'uuid'
+    object.default = object.options.default.func;
+  }
+  // }
 }
 
 function transformEnum(object: any) {
@@ -126,18 +83,28 @@ export function transformPropertiesOptionalToRequired(object: any) {
   // To indicate optional fields, triplit uses an optional array, while
   // JSON schema uses the inverse concept and uses a "required" array field
 
+  return tranformKeysRequirementsContext(object, 'optional', 'required');
+}
+
+export function tranformKeysRequirementsContext(
+  object: any,
+  from = 'optional',
+  towards = 'required'
+) {
   if (object.properties != null) {
     const allKeys = Object.keys(object.properties);
-    const triplitOptionalKeys = object?.optional ?? [];
+    const specialKeys = object?.[from] ?? [];
 
-    const diff = allKeys.filter((item) => !triplitOptionalKeys?.includes(item));
+    const diff = allKeys.filter((item) => !specialKeys?.includes(item));
+    // ensure sorting order, else tests fail even if the same items
+    diff.sort();
 
     // object.required = structuredClone(diff);
     if (diff.length > 0) {
-      object.required = structuredClone(diff);
+      object[towards] = structuredClone(diff);
     }
 
-    delete object?.optional;
+    delete object?.[from];
   }
 
   return object;
