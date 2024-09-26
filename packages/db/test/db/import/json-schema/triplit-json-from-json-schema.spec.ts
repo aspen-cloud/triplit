@@ -1,10 +1,12 @@
 import { describe, expect, test, vi } from 'vitest';
 
-import { triplitJsonFromJsonSchema } from '../../../../src/schema/import/json-schema/triplit-json-from-json-schema';
-import { exportSchemaAsJSONSchema } from '../../../../src/schema/export/json-schema/export';
 import { schema as exhaustiveTestTriplitSchema } from '../../export/exhaustive-test-schema';
 
-import { schemaToJSON } from '../../../../src/schema/export';
+import {
+  schemaToJSON,
+  exportSchemaAsJSONSchema,
+  triplitJsonFromJsonSchema,
+} from '../../../../src/';
 import { JSONSchema7 } from 'json-schema';
 import { exampleTestOfjsonSchemaFromZodSchema } from './exampleTestOfjsonSchemaFromZodSchema';
 
