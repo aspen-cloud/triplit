@@ -1,5 +1,14 @@
 # @triplit/client
 
+## 0.5.2
+
+### Patch Changes
+
+- 3feda93e: export all client types
+- Updated dependencies [c0365bd9]
+- Updated dependencies [5305bc0f]
+  - @triplit/db@0.4.2
+
 ## 0.5.1
 
 ### Patch Changes

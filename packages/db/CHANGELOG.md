@@ -1,5 +1,12 @@
 # @triplit/db
 
+## 0.4.2
+
+### Patch Changes
+
+- c0365bd9: Fixup triple dupes bug
+- 5305bc0f: add triplitSchemaToJsonSchema utility
+
 ## 0.4.1
 
 ### Patch Changes
