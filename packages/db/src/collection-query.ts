@@ -1456,6 +1456,7 @@ function resultSetSelection<M extends Models, Q extends SchemaQueries<M>>(
       for (const triple of cachedTriples) {
         triples.push(triple);
       }
+      selectedEntities.add(entityId);
     }
   }
   return { results, triples };
