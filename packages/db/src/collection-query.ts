@@ -1362,12 +1362,16 @@ function resultSetFromEntityOrder<M extends Models, Q extends SchemaQueries<M>>(
   results: TimestampedFetchResult<Q>;
   triples: TripleRow[];
 } {
+  const selectedEntities = new Set<string>();
   const selection = resultSetSelection<M, Q>(
     query,
     entityOrder,
-    executionContext
+    executionContext,
+    selectedEntities
   );
   for (const clauseFulfillmentEntity of executionContext.fulfillmentEntities) {
+    // If we've already loaded this entity skip to avoid dupes
+    if (selectedEntities.has(clauseFulfillmentEntity)) continue;
     const triples =
       executionContext.executionCache.getData(clauseFulfillmentEntity)
         ?.triples ?? [];
@@ -1381,7 +1385,8 @@ function resultSetFromEntityOrder<M extends Models, Q extends SchemaQueries<M>>(
 function resultSetSelection<M extends Models, Q extends SchemaQueries<M>>(
   query: Q,
   entityOrder: string[],
-  executionContext: FetchExecutionContext
+  executionContext: FetchExecutionContext,
+  selectedEntities: Set<string>
 ): {
   results: TimestampedFetchResult<Q>;
   triples: TripleRow[];
@@ -1390,10 +1395,10 @@ function resultSetSelection<M extends Models, Q extends SchemaQueries<M>>(
   const { executionCache } = executionContext;
   const results = new Map<string, any>();
   const triples: TripleRow[] = [];
-  for (const entityId of entityOrder) {
+  for (const componentId of entityOrder) {
     // Root entities shoudl have a component
     // TODO: is this componentid from subqueries...i forget
-    const component = executionCache.getComponent(entityId);
+    const component = executionCache.getComponent(componentId);
     const cachedEntity = executionCache.getData(component?.entityId ?? '');
     if (!cachedEntity) continue;
 
@@ -1425,10 +1430,11 @@ function resultSetSelection<M extends Models, Q extends SchemaQueries<M>>(
       let subqueryOrder = component.relationships[attributeName];
       if (typeof subqueryOrder === 'string') subqueryOrder = [subqueryOrder];
       const { results: subqueryResult, triples: subQueryTriples } =
-        resultSetFromEntityOrder<M, typeof subquery>(
+        resultSetSelection<M, typeof subquery>(
           subquery,
           subqueryOrder ?? [],
-          executionContext
+          executionContext,
+          selectedEntities
         );
 
       entity[attributeName] =
@@ -1441,13 +1447,15 @@ function resultSetSelection<M extends Models, Q extends SchemaQueries<M>>(
       }
     }
 
-    results.set(
-      splitIdParts(entityId.split(QueryExecutionCache.KeySeparator).at(-1)!)[1],
-      entity
-    );
-    const cachedTriples = cachedEntity.triples ?? [];
-    for (const triple of cachedTriples) {
-      triples.push(triple);
+    const entityId = componentId
+      .split(QueryExecutionCache.KeySeparator)
+      .at(-1)!;
+    results.set(splitIdParts(entityId)[1], entity);
+    if (!selectedEntities.has(entityId)) {
+      const cachedTriples = cachedEntity.triples ?? [];
+      for (const triple of cachedTriples) {
+        triples.push(triple);
+      }
     }
   }
   return { results, triples };
