@@ -30,7 +30,6 @@ export function RoleFilters({
   rule: PermissionOperations;
 }) {
   const roles = client.db.sessionRoles ?? [];
-  console.log({ roles, permissions });
   const flatRoles: ConsoleSessionRoleWithFilter[] = roles.reduce(
     (prev, role) => {
       const roleFilterForRule = permissions[role.key]?.[rule]?.filter;

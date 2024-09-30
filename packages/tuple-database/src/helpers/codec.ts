@@ -158,9 +158,6 @@ export function decodeTuple(str: string, options?: EncodingOptions) {
 		}
 		const end = match.index
 		const escaped = str.slice(start, end)
-		if (typeof escaped !== "string") {
-			console.log(escaped)
-		}
 		const unescaped = escaped
 			// BB -> B
 			.replace(reEncodedEscape, escape)

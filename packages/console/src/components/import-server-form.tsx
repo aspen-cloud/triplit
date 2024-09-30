@@ -52,7 +52,6 @@ export function ImportServerForm({
           : null,
     },
   });
-  console.log({ values: form.values, errors: form.errors });
 
   const importSecretKey = useCallback(() => {
     try {

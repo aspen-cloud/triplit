@@ -72,7 +72,6 @@ export async function updateTriplitSet(
 ) {
   try {
     await client.update(collection, entityId, async (originalEntity) => {
-      console.log('originalEntity', originalEntity);
       const path = attribute.split('.');
       let entityCopy = originalEntity;
       while (path.length > 1) {
@@ -80,7 +79,6 @@ export async function updateTriplitSet(
         entityCopy = entityCopy[key];
       }
       const possiblyNestedSet = entityCopy[path[0]];
-      console.log('possiblyNestedSet', possiblyNestedSet);
       if (action === 'add') {
         if (possiblyNestedSet === null || possiblyNestedSet === undefined) {
           entityCopy[path[0]] = new Set([value]);

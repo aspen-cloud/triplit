@@ -273,7 +273,6 @@ export function ServerViewer({
               <Button
                 key={value}
                 onClick={() => {
-                  console.log('setting token', value);
                   updateClientOptions({ token: value });
                   // setClient(overwriteClient(value, client));
                 }}
