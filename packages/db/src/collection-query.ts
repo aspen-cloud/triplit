@@ -561,11 +561,13 @@ function groupIdentifiersBySubquery<
 
 function getEntitiesAtStateVector(
   collectionTriples: TripleRow[],
-  stateVector?: Map<string, number>
+  stateVector?: Map<string, number>,
+  treatMissingClientIdAs: 'higher' | 'lower' = 'lower'
 ) {
   return triplesToEntities(
     collectionTriples,
-    stateVector && stateVector.size > 0 ? stateVector : undefined
+    stateVector && stateVector.size > 0 ? stateVector : undefined,
+    treatMissingClientIdAs
   );
 }
 
@@ -631,9 +633,11 @@ export async function fetchDeltaTriples<
   const afterContext = initialFetchExecutionContext();
   for (const changedEntityId of changedEntityTriples.keys()) {
     const entityTriples = await genToArr(tx.findByEntity(changedEntityId));
-    const beforeData = getEntitiesAtStateVector(entityTriples, stateVector).get(
-      changedEntityId
-    );
+    const beforeData = getEntitiesAtStateVector(
+      entityTriples,
+      stateVector,
+      'higher'
+    ).get(changedEntityId);
     const entityBeforeStateVector = beforeData?.data;
     if (beforeData?.data) {
       beforeContext.executionCache.setData(changedEntityId, {
@@ -645,8 +649,11 @@ export async function fetchDeltaTriples<
         relationships: {},
       });
     }
-    const afterData =
-      getEntitiesAtStateVector(entityTriples).get(changedEntityId);
+    const afterData = getEntitiesAtStateVector(
+      entityTriples,
+      undefined,
+      'higher'
+    ).get(changedEntityId);
     const entityAfterStateVector = afterData?.data;
     if (afterData?.data) {
       afterContext.executionCache.setData(changedEntityId, {
@@ -1578,6 +1585,7 @@ export async function fetchOne<M extends Models, Q extends CollectionQuery<M>>(
 export function doesEntityObjMatchBasicWhere<
   Q extends CollectionQuery<any, any>
 >(entityObj: any, where: Q['where'], schema?: CollectionQuerySchema<Q>) {
+  if (!entityObj) return false;
   if (!where) return true;
   const basicStatements = where.filter(isFilterStatement);
 

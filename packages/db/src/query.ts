@@ -298,7 +298,8 @@ export function updateEntity(entity: Entity, triples: TripleRow[]) {
 
 export function triplesToEntities(
   triples: TripleRow[],
-  maxTimestamps?: Map<string, number>
+  maxTimestamps?: Map<string, number>,
+  treatMissingClientIdAs: 'higher' | 'lower' = 'lower'
 ) {
   return triples.reduce((acc, triple) => {
     const { id, timestamp } = triple;
@@ -306,7 +307,8 @@ export function triplesToEntities(
     if (maxTimestamps) {
       const [_clock, client] = timestamp;
       // if timestamp is greater, return early and dont apply triple
-      if (!maxTimestamps.has(client)) return acc;
+      if (!maxTimestamps.has(client) && treatMissingClientIdAs === 'lower')
+        return acc;
       const stateVectorEntry = maxTimestamps.get(client)!;
       if (
         stateVectorEntry &&
