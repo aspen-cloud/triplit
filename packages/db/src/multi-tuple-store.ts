@@ -83,7 +83,7 @@ async function* lazyScan<
     | AsyncTupleDatabaseClient<TupleSchema>[]
     | AsyncTupleRootTransactionApi<TupleSchema>[],
   args?: ScanArgs<T, P> | undefined,
-  batchSize: number = 100
+  batchSize: number = DEFAULT_PAGE_SIZE
 ): AsyncGenerator<
   Extract<TupleSchema, { key: TupleToObject<P> }>,
   void,
@@ -122,12 +122,18 @@ async function* lazyScan<
       break;
     }
 
+    let i = 0;
     for (const result of results) {
       yield result;
       remainingLimit--;
-      cursorKey = result.key.slice(
-        args?.prefix?.length ?? 0
-      ) as TupleToObject<P> & Tuple;
+      i++;
+      // After we merge from multiple stores we may have # results > batchLimit and with an order gap, we still need to respect the batch limit to ensure the last key we pull out is the last key in the batch across all stores
+      if (i === batchLimit) {
+        cursorKey = result.key.slice(
+          args?.prefix?.length ?? 0
+        ) as TupleToObject<P> & Tuple;
+        break;
+      }
     }
 
     if (results.length < batchLimit) {
@@ -236,7 +242,6 @@ export default class MultiTupleStore<TupleSchema extends KeyValuePair> {
 
   async *scan<T extends Tuple, P extends TuplePrefix<T>>(
     args?: ScanArgs<T, P> | undefined,
-    txId?: string | undefined,
     batchSize: number = DEFAULT_PAGE_SIZE
   ): AsyncGenerator<
     Extract<TupleSchema, { key: TupleToObject<P> }>,
