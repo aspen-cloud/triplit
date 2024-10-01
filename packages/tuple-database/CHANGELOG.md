@@ -1,5 +1,11 @@
 # @triplit/tuple-database
 
+## 2.2.28
+
+### Patch Changes
+
+- 3e96117b: rm logs
+
 ## 2.2.27
 
 ### Patch Changes
