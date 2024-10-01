@@ -2,7 +2,7 @@ import '../../../ui/globals.css';
 
 import { OrderStatement, Schema, QueryWhere } from '@triplit/db';
 import { TriplitClient } from '@triplit/client';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState, Fragment } from 'react';
 import { CaretDown, GridFour, Selection } from '@phosphor-icons/react';
 import { DataViewer, FullScreenWrapper } from '.';
 import {
@@ -171,7 +171,7 @@ export function ServerViewer({
     const listener = client.onSyncMessageReceived((message) => {
       const hasTransactionFailures =
         message.type === 'ERROR' &&
-        message.payload?.metadata?.failures.length > 0;
+        (message.payload?.metadata?.failures ?? []).length > 0;
       if (!hasTransactionFailures) return;
       const { failures } = message.payload.metadata as {
         failures: {
@@ -269,7 +269,7 @@ export function ServerViewer({
           const isSelectedToken = client.token === value;
           const isServiceToken = id.startsWith('service_');
           return (
-            <>
+            <Fragment key={id}>
               <Button
                 key={value}
                 onClick={() => {
@@ -334,7 +334,7 @@ export function ServerViewer({
                     ))}
                   </div>
                 )}
-            </>
+            </Fragment>
           );
         })}
 
