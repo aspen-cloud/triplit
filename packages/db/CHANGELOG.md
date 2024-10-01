@@ -1,5 +1,11 @@
 # @triplit/db
 
+## 0.4.4
+
+### Patch Changes
+
+- f7ab3c65: bug fix for cross-client deletes
+
 ## 0.4.3
 
 ### Patch Changes
