@@ -512,7 +512,7 @@ describe('deletes', () => {
     expect(bobSub.mock.calls[2][0].length).toBe(3);
     expect(bobSub.mock.calls[3][0].length).toBe(2);
   });
-  it.only('can sync a delete made by client b for an entity inserted by client a', async () => {
+  it('can sync a delete made by client b for an entity inserted by client a', async () => {
     const schema = {
       version: 0,
       collections: {
@@ -551,6 +551,48 @@ describe('deletes', () => {
     await pause();
     expect(aliceSub.mock.lastCall[0]).toHaveLength(0);
     expect(bobSub.mock.lastCall[0]).toHaveLength(0);
+  });
+  // Addresses an issue where related deletes were not being synced
+  it('Can sync related deletes', async () => {
+    const schema = {
+      collections: {
+        test: {
+          schema: S.Schema({
+            id: S.Id(),
+            related_id: S.String(),
+            related: S.RelationById('related', '$related_id'),
+          }),
+        },
+        related: {
+          schema: S.Schema({ id: S.Id() }),
+        },
+      },
+    };
+    const server = new TriplitServer(new DB({ schema }));
+    const alice = createTestClient(server, SERVICE_KEY, {
+      clientId: 'alice',
+      schema: schema.collections,
+    });
+    const bob = createTestClient(server, SERVICE_KEY, {
+      clientId: 'bob',
+      schema: schema.collections,
+    });
+    await alice.transact(async (tx) => {
+      await tx.insert('related', { id: 'related1' });
+      await tx.insert('test', { id: 'test1', related_id: 'related1' });
+    });
+    await pause();
+    const aliceSub = vi.fn();
+    const bobSub = vi.fn();
+    alice.subscribe(alice.query('test').include('related').build(), aliceSub);
+    bob.subscribe(bob.query('test').include('related').build(), bobSub);
+    await pause();
+    await bob.delete('related', 'related1');
+    await pause();
+    const lastCallAlice = aliceSub.mock.calls.at(-1)[0];
+    const lastCallBob = bobSub.mock.calls.at(-1)[0];
+    expect(lastCallAlice.find((e: any) => e.id === 'test1').related).toBe(null);
+    expect(lastCallBob.find((e: any) => e.id === 'test1').related).toBe(null);
   });
 });
 
