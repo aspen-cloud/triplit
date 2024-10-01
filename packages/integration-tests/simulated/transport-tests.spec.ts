@@ -512,6 +512,49 @@ describe('deletes', () => {
     expect(bobSub.mock.calls[2][0].length).toBe(3);
     expect(bobSub.mock.calls[3][0].length).toBe(2);
   });
+  it('can sync a delete made by client b for an entity inserted by client a', async () => {
+    const schema = {
+      version: 0,
+      collections: {
+        test: {
+          schema: S.Schema({
+            id: S.Id(),
+            name: S.String(),
+          }),
+        },
+      },
+    };
+    const server = new TriplitServer(
+      new DB({
+        schema,
+      })
+    );
+    const alice = createTestClient(server, NOT_SERVICE_KEY);
+    const bob = createTestClient(server, NOT_SERVICE_KEY);
+    // set up a subscription for bob
+    const bobSub = vi.fn();
+    const aliceSub = vi.fn();
+    const query = bob
+      .query('test')
+      // .where('name', '=', 'george')
+      .build();
+    alice.subscribe(query, aliceSub);
+    bob.subscribe(query, bobSub);
+
+    // set up data to delete
+    await alice.insert('test', { id: 'alice1', name: 'george' });
+    await pause();
+
+    // they should both see the data
+    expect(aliceSub.mock.lastCall[0]).toHaveLength(1);
+    expect(bobSub.mock.lastCall[0]).toHaveLength(1);
+
+    // if bob deletes, Alice should see the delete
+    await bob.delete('test', 'alice1');
+    await pause();
+    expect(aliceSub.mock.lastCall[0]).toHaveLength(0);
+    expect(bobSub.mock.lastCall[0]).toHaveLength(0);
+  });
 });
 
 describe('array syncing', () => {
