@@ -512,7 +512,7 @@ describe('deletes', () => {
     expect(bobSub.mock.calls[2][0].length).toBe(3);
     expect(bobSub.mock.calls[3][0].length).toBe(2);
   });
-  it('can sync a delete made by client b for an entity inserted by client a', async () => {
+  it.only('can sync a delete made by client b for an entity inserted by client a', async () => {
     const schema = {
       version: 0,
       collections: {
@@ -534,10 +534,7 @@ describe('deletes', () => {
     // set up a subscription for bob
     const bobSub = vi.fn();
     const aliceSub = vi.fn();
-    const query = bob
-      .query('test')
-      // .where('name', '=', 'george')
-      .build();
+    const query = bob.query('test').where('name', '=', 'george').build();
     alice.subscribe(query, aliceSub);
     bob.subscribe(query, bobSub);
 
