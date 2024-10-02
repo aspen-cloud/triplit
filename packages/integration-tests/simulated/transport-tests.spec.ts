@@ -480,7 +480,7 @@ describe('Connection Status', () => {
 const client = new TriplitClient();
 const baseQuery = client.query('test');
 describe('deletes', () => {
-  it.only.each([
+  it.each([
     [baseQuery.where('name', 'like', '%bob%'), ['bob2']],
     [baseQuery.order('name', 'DESC'), ['bob2', 'alice2']],
     // TODO: get limit working
