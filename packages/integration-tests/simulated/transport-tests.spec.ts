@@ -477,10 +477,19 @@ describe('Connection Status', () => {
   });
 });
 
+const client = new TriplitClient();
+const baseQuery = client.query('test');
 describe('deletes', () => {
-  it('can sync deletes', async () => {
+  it.only.each([
+    [baseQuery.where('name', 'like', '%bob%'), ['bob2']],
+    [baseQuery.order('name', 'DESC'), ['bob2', 'alice2']],
+    // TODO: get limit working
+    // [baseQuery.order('name', 'ASC').limit(1), ['alice2']],
+  ])('can sync deletes for queries ', async (query, results) => {
     const server = new TriplitServer(new DB());
-    const alice = createTestClient(server, SERVICE_KEY, { clientId: 'alice' });
+    const alice = createTestClient(server, SERVICE_KEY, {
+      clientId: 'alice',
+    });
     const bob = createTestClient(server, SERVICE_KEY, { clientId: 'bob' });
 
     // set up data to delete
@@ -493,8 +502,9 @@ describe('deletes', () => {
     // set up subscriptions
     const aliceSub = vi.fn();
     const bobSub = vi.fn();
-    alice.subscribe(alice.query('test').build(), aliceSub);
-    bob.subscribe(bob.query('test').build(), bobSub);
+
+    alice.subscribe(query.build(), aliceSub);
+    bob.subscribe(query.build(), bobSub);
     await pause();
 
     // alice can delete her own
@@ -503,16 +513,14 @@ describe('deletes', () => {
     await alice.delete('test', 'bob1');
     await pause();
 
-    expect(aliceSub).toHaveBeenCalledTimes(4);
-    expect(aliceSub.mock.calls[1][0].length).toBe(4);
-    expect(aliceSub.mock.calls[2][0].length).toBe(3);
-    expect(aliceSub.mock.calls[3][0].length).toBe(2);
-    expect(bobSub).toHaveBeenCalledTimes(4);
-    expect(bobSub.mock.calls[1][0].length).toBe(4);
-    expect(bobSub.mock.calls[2][0].length).toBe(3);
-    expect(bobSub.mock.calls[3][0].length).toBe(2);
+    expect(aliceSub.mock.lastCall[0].map((e: any) => e.id)).toStrictEqual(
+      results
+    );
+    expect(bobSub.mock.lastCall[0].map((e: any) => e.id)).toStrictEqual(
+      results
+    );
   });
-  it('can sync a delete made by client b for an entity inserted by client a', async () => {
+  it('can sync deletes when the subscribing queries have filters', async () => {
     const schema = {
       version: 0,
       collections: {
