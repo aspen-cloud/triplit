@@ -1585,7 +1585,7 @@ export async function fetchOne<M extends Models, Q extends CollectionQuery<M>>(
 export function doesEntityObjMatchBasicWhere<
   Q extends CollectionQuery<any, any>
 >(entityObj: any, where: Q['where'], schema?: CollectionQuerySchema<Q>) {
-  if (!entityObj) return false;
+  if (!entityObj || entityObj?.id?.[0] === undefined) return false;
   if (!where) return true;
   const basicStatements = where.filter(isFilterStatement);
 
