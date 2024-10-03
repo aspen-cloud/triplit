@@ -1,5 +1,11 @@
 # @triplit/angular
 
+## 0.1.5
+
+### Patch Changes
+
+- dea78d2e: fix query unsubscribing for angular bindings
+
 ## 0.1.4
 
 ### Patch Changes
