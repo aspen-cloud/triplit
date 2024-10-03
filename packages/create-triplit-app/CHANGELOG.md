@@ -1,5 +1,11 @@
 # create-triplit-app
 
+## 0.0.20
+
+### Patch Changes
+
+- dea78d2e: fix query unsubscribing for angular bindings
+
 ## 0.0.19
 
 ### Patch Changes
