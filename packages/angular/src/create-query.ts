@@ -1,4 +1,4 @@
-import type {
+import {
   FetchResult,
   ClientQuery,
   ClientQueryBuilder,
@@ -36,9 +36,7 @@ export function createQuery<
   error$: Observable<any>;
 } {
   const queryParams$ = new BehaviorSubject(queryFn());
-  const resultSubject = new BehaviorSubject<FetchResult<M, Q> | undefined>(
-    undefined
-  );
+
   const fetchingLocalSubject = new BehaviorSubject<boolean>(true);
   const fetchingRemoteSubject = new BehaviorSubject<boolean>(
     queryFn().client.connectionStatus !== 'CLOSED'
@@ -63,38 +61,38 @@ export function createQuery<
       isInitialFetchSubject.next(isFirstFetch);
     });
 
-  queryParams$
-    .pipe(
-      switchMap((params) => {
-        const { client, query, options } = params;
-        return new Observable<FetchResult<M, Q>>((observer) => {
-          fetchingLocalSubject.next(true);
-          const unsubscribe = client.subscribe(
-            query.build(),
-            (localResults) => {
-              fetchingLocalSubject.next(false);
-              errorSubject.next(undefined);
-              // Using 'as any' to bypass the type mismatch temporarily
-              observer.next(localResults as any);
+  const results$ = queryParams$.pipe(
+    switchMap((params) => {
+      const { client, query, options } = params;
+      return new Observable<FetchResult<M, Q>>((observer) => {
+        fetchingLocalSubject.next(true);
+        const unsubscribe = client.subscribe(
+          query.build(),
+          (localResults) => {
+            fetchingLocalSubject.next(false);
+            errorSubject.next(undefined);
+            // Using 'as any' to bypass the type mismatch temporarily
+            observer.next(localResults as any);
+          },
+          (error) => {
+            fetchingLocalSubject.next(false);
+            errorSubject.next(error);
+            observer.error(error);
+          },
+          {
+            ...(options ?? {}),
+            onRemoteFulfilled: () => {
+              hasResponseFromServerSubject.next(true);
+              fetchingRemoteSubject.next(false);
             },
-            (error) => {
-              fetchingLocalSubject.next(false);
-              errorSubject.next(error);
-              observer.error(error);
-            },
-            {
-              ...(options ?? {}),
-              onRemoteFulfilled: () => {
-                hasResponseFromServerSubject.next(true);
-                fetchingRemoteSubject.next(false);
-              },
-            }
-          );
-          return () => unsubscribe();
-        });
-      })
-    )
-    .subscribe(resultSubject);
+          }
+        );
+        return () => {
+          unsubscribe();
+        };
+      });
+    })
+  );
 
   return {
     fetching$: combineLatest([
@@ -110,7 +108,7 @@ export function createQuery<
     fetchingLocal$: fetchingLocalSubject.asObservable(),
     fetchingRemote$: fetchingRemoteSubject.asObservable(),
     // @ts-ignore
-    results$: resultSubject.asObservable(),
+    results$,
     error$: errorSubject.asObservable(),
   };
 }
