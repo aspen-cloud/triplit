@@ -639,10 +639,6 @@ export default class DB<M extends Models = Models> {
     return { successful, issues };
   }
 
-  async echoQuery<Q extends SchemaQueries<M>>(query: Q) {
-    return query;
-  }
-
   async fetch<Q extends SchemaQueries<M>>(
     query: Q,
     options: DBFetchOptions = {}
