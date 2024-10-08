@@ -13,6 +13,7 @@ import {
   ServerCloseReason,
   ClientSyncMessage,
   ParseResult,
+  SyncConnection,
 } from '@triplit/server-core';
 import { parseAndValidateToken, ProjectJWT } from '@triplit/server-core/token';
 import { logger } from './logger.js';
@@ -230,9 +231,9 @@ export function createServer(options?: ServerOptions) {
   }
 
   wss.on('connection', async (socket: WS.WebSocket) => {
-    const session = socket.session;
+    const syncConnection = socket.syncConnection;
 
-    session!.addListener((messageType, payload) => {
+    syncConnection!.addListener((messageType, payload) => {
       sendMessage(socket, messageType, payload);
     });
 
@@ -254,11 +255,18 @@ export function createServer(options?: ServerOptions) {
         );
 
       logger.logMessage('received', parsedMessage);
-      session!.dispatchCommand(parsedMessage!);
+      syncConnection!.dispatchCommand(parsedMessage!);
     });
 
     socket.on('close', (code, reason) => {
-      session!.close();
+      if (!socket.syncConnection) return;
+
+      const triplitServer = getServer(
+        process.env.PROJECT_ID!,
+        options?.upstream
+      );
+      triplitServer.closeConnection(socket.syncConnection.options.clientId);
+
       // Should this use the closeSocket function?
       socket.close(code, reason);
     });
@@ -425,8 +433,7 @@ export function createServer(options?: ServerOptions) {
               clientSchemaHash: clientHash,
               syncSchema,
             });
-            // @ts-expect-error
-            socket.session = connection;
+            (socket as WS.WebSocket).syncConnection = connection;
             const schemaIncombaitility =
               await connection.isClientSchemaCompatible();
             if (schemaIncombaitility) {

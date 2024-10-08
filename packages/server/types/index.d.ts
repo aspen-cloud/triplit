@@ -1,4 +1,4 @@
-import type { Session, Connection } from '@triplit/server-core';
+import type { Session, SyncConnection } from '@triplit/server-core';
 import type { ProjectJWT } from '@triplit/server-core/token';
 
 declare module 'ws' {
@@ -7,7 +7,7 @@ declare module 'ws' {
     isAlive: boolean;
     token?: ProjectJWT;
     clientId?: string;
-    session?: Connection;
+    syncConnection?: SyncConnection;
   }
 }
 

@@ -1,11 +1,11 @@
 import { DB as TriplitDB, TriplitError } from '@triplit/db';
 import {
-  Connection,
   ConnectionOptions,
   ServerResponse,
   Session,
   routeNotFoundResponse,
 } from './session.js';
+import { SyncConnection } from './sync-connection.js';
 import type { ServerResponse as ServerResponseType } from './session.js';
 import { isTriplitError } from './utils.js';
 import { Logger, NullLogger } from './logging.js';
@@ -15,7 +15,7 @@ import { ProjectJWT } from './token.js';
  * Represents a Triplit server for a specific tenant.
  */
 export class Server {
-  private connections: Map<string, Connection> = new Map();
+  private connections: Map<string, SyncConnection> = new Map();
 
   constructor(public db: TriplitDB<any>, public logger: Logger = NullLogger) {}
 
@@ -35,6 +35,8 @@ export class Server {
   }
 
   closeConnection(clientId: string) {
+    const connection = this.connections.get(clientId);
+    connection?.close();
     this.connections.delete(clientId);
   }
 
