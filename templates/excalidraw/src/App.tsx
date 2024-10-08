@@ -61,6 +61,9 @@ function App() {
         elem.points = JSON.parse(elem.points);
         console.log('elem with points', elem);
       }
+      if (elem.boundElements) {
+        elem.boundElements = Object.values(elem.boundElements);
+      }
       return elem;
     });
 
