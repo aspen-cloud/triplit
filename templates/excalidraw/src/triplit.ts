@@ -17,7 +17,10 @@ export function useExcalidrawElements() {
   const [currentPageId] = usePageId();
   return useQuery(
     client,
-    client.query('elements').where('pageId', '=', currentPageId)
+    client
+      .query('elements')
+      .order('_fracIndex', 'ASC')
+      .where('pageId', '=', currentPageId)
   );
 }
 
