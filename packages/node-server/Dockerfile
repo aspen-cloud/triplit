@@ -10,4 +10,6 @@ COPY . .
 
 EXPOSE 8080
 
-CMD [ "npm", "start" ]
+ENV NODE_OPTIONS=""
+
+CMD ["sh", "-c", "node $NODE_OPTIONS ./run.js"]
