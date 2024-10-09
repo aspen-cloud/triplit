@@ -112,7 +112,7 @@ export function replaceVariable(
     for (const part of path) {
       if (current == null) {
         // Allow referential variables to be undefined
-        if (varScopeType(scope) === 'referential') return undefined;
+        if (varScopeType(scope) === 'relational') return undefined;
         throw new SessionVariableNotFoundError(target);
       }
       current = current[part];
@@ -371,7 +371,7 @@ export function isValueReferentialVariable(value: QueryValue): value is string {
   return !isNaN(parseInt(scope ?? ''));
 }
 
-const VARIABLE_SCOPES = ['global', 'session', 'role', 'query']; // 'referential' is a type, but denoted by integers
+const VARIABLE_SCOPES = ['global', 'session', 'role', 'query']; // 'relational' is a type, but denoted by integers
 
 export function getVariableComponents(
   variable: string
@@ -394,7 +394,7 @@ function isScopedVariable(scope: string | undefined): scope is string {
 }
 
 export function varScopeType(scope: string): string {
-  if (!isNaN(parseInt(scope))) return 'referential';
+  if (!isNaN(parseInt(scope))) return 'relational';
   return scope;
 }
 

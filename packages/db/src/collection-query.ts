@@ -2152,7 +2152,7 @@ async function loadRelationshipsIntoContextFromVariable(
   if (!options.schema) return;
   const [scope, key] = getVariableComponents(variable);
   const scopeType = scope ? varScopeType(scope) : undefined;
-  if (scopeType === 'referential') {
+  if (scopeType === 'relational') {
     const parsedScope = parseInt(scope!);
     // Get the query component
     const componentData =
