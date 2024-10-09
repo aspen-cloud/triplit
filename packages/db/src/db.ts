@@ -60,6 +60,7 @@ import {
   DropRulePayload,
   SetAttributeOptionalPayload,
 } from './db/types/operations.js';
+import { generatePsuedoRandomId } from './utils/random.js';
 
 const DEFAULT_CACHE_DISABLED = true;
 export interface TransactOptions {
@@ -338,6 +339,14 @@ export default class DB<M extends Models = Models> {
   };
   private _pendingSchemaRequest: Promise<void> | null;
   logger: Logger;
+  public activeSubscriptions: Map<
+    string,
+    {
+      query: CollectionQuery<M>;
+      unsubscribe: () => Promise<void>;
+      updateVariables: () => Promise<void>;
+    }
+  > = new Map();
 
   constructor({
     schema,
@@ -630,6 +639,7 @@ export default class DB<M extends Models = Models> {
   }
 
   updateGlobalVariables(variables: Record<string, any>) {
+    this.activeSubscriptions.forEach((sub) => sub.updateVariables());
     this.systemVars.global = { ...this.systemVars.global, ...variables };
   }
 
@@ -788,7 +798,7 @@ export default class DB<M extends Models = Models> {
         options.noCache === undefined
           ? DEFAULT_CACHE_DISABLED
           : options.noCache;
-      const unsub = subscribe<M, Q>(
+      const subscription = subscribe<M, Q>(
         options.scope
           ? this.tripleStore.setStorageScope(options.scope)
           : this.tripleStore,
@@ -816,17 +826,33 @@ export default class DB<M extends Models = Models> {
           onError?.(...args);
         }
       );
-      return unsub;
+      return subscription;
     };
 
-    const unsubPromise = startSubscription().catch(onError);
+    const subscriptionPromise = startSubscription().catch(onError);
 
+    // @ts-expect-error
+    const queryId = query.traceId ?? generatePsuedoRandomId();
+    this.activeSubscriptions.set(queryId, {
+      query,
+      unsubscribe: async () => {
+        // Immediately set unsubscribed to true to prevent any new results from being processed
+        unsubscribed = true;
+        this.logger.debug('subscribe END', { query });
+        const subscription = await subscriptionPromise;
+        this.activeSubscriptions.delete(queryId);
+        return subscription && subscription.unsubscribe();
+      },
+      updateVariables: async () => {
+        const subscription = await subscriptionPromise;
+        return subscription && (await subscription.updateVars(this.systemVars));
+      },
+    });
+
+    // Maybe return an object like { unsubscribe: () => void, updateVariables: () => void } but for now
+    // keep API backwards compatible
     return async () => {
-      // Immediately set unsubscribed to true to prevent any new results from being processed
-      unsubscribed = true;
-      this.logger.debug('subscribe END', { query });
-      const unsub = await unsubPromise;
-      return unsub?.();
+      return this.activeSubscriptions.get(queryId)?.unsubscribe();
     };
   }
 

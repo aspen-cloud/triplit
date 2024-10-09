@@ -1675,10 +1675,12 @@ export function subscribeResultsAndTriples<
 ) {
   const { select, order, limit, include } = query;
   const executionContext = initialFetchExecutionContext();
-  const asyncUnSub = async () => {
-    let results: TimestampedFetchResult<Q> = new Map();
-    let triples: TripleRow[] = [];
-    let unsub = () => {};
+  let results: TimestampedFetchResult<Q> = new Map();
+  let triples: TripleRow[] = [];
+  let where = query.where;
+  const sessionOptions = { ...options.session };
+
+  async function initializeSubscriptionState() {
     try {
       const fetchResult = await fetch<M, Q>(
         tripleStore,
@@ -1689,243 +1691,14 @@ export function subscribeResultsAndTriples<
       results = fetchResult.results;
       triples = fetchResult.triples;
 
-      const { where } = await replaceVariablesInQuery(
-        tripleStore,
-        query,
-        executionContext,
-        options
-      );
-
-      unsub = tripleStore.onWrite(async (storeWrites) => {
-        try {
-          // Handle queries with nested queries as a special case for now
-          if (
-            (where &&
-              someFilterStatements(where, (filter) =>
-                isSubQueryFilter(filter)
-              )) ||
-            (include && Object.keys(include).length > 0) ||
-            (order &&
-              order.some(
-                (o) =>
-                  options.schema &&
-                  identifierIncludesRelation(
-                    o[0],
-                    options.schema,
-                    query.collectionName
-                  )
-              ))
-          ) {
-            const fetchResult = await fetch<M, Q>(
-              tripleStore,
-              query,
-              initialFetchExecutionContext(),
-              {
-                schema: options.schema,
-                skipRules: options.skipRules,
-                cache: options.cache,
-                skipIndex: options.skipIndex,
-                session: options.session,
-                // TODO: do we need to pass state vector here?
-              }
-            );
-            results = fetchResult.results;
-            triples = fetchResult.triples;
-            await onResults([
-              [...results].map(([id, entity]) =>
-                convertEntityToJS(entity, options.schema, query.collectionName)
-              ) as FetchResult<M, Q>,
-              triples,
-            ]);
-            return;
-          }
-
-          const allInserts = Object.values(storeWrites).flatMap(
-            (ops) => ops.inserts
-          );
-          const allDeletes = Object.values(storeWrites).flatMap(
-            (ops) => ops.deletes
-          );
-          let nextResult = new Map(results);
-          const matchedTriples: Map<string, TripleRow[]> = new Map();
-          const updatedEntitiesForQuery = new Set<string>(
-            [...allInserts, ...allDeletes]
-              .map(({ id }) => splitIdParts(id))
-              .filter(
-                ([collectionName, _id]) =>
-                  collectionName === query.collectionName
-              )
-              .map(([_collectionName, id]) => id)
-          );
-          // Early return prevents processing if no relevant entities were updated
-          // While a query is always scoped to a single collection this is safe
-          if (!updatedEntitiesForQuery.size) return;
-
-          let queryShouldRefire = false;
-
-          // Helpers for limit window
-          const endOfWindow = [...nextResult.values()].at(-1);
-          const windowSize = nextResult.size;
-
-          for (const entity of updatedEntitiesForQuery) {
-            const entityTriples = await genToArr(
-              tripleStore.findByEntity(
-                appendCollectionToId(query.collectionName, entity)
-              )
-            );
-
-            function entityMatchesAfter(
-              entity: any,
-              query: CollectionQuery<any, any>
-            ) {
-              if (!query.after) return true;
-              if (!query.order?.length) return true;
-              const orderAttr = query.order[0][0];
-              const orderDir = query.order[0][1];
-              const [cursor, inclusive] = query.after;
-              const [afterEntityValue, afterEntityId] = cursor;
-              const entityValue = entity[orderAttr][0];
-              // TODO: need to perform encoding at least I think...
-              if (orderDir === 'ASC') {
-                if (entityValue === afterEntityValue) {
-                  return inclusive
-                    ? entity.id[0] >= stripCollectionFromId(afterEntityId)
-                    : entity.id[0] > stripCollectionFromId(afterEntityId);
-                }
-                return (
-                  entityValue >
-                  // @ts-expect-error - handle encoding / null / dates / etc
-                  afterEntityValue
-                );
-              } else {
-                if (entityValue === afterEntityValue) {
-                  return inclusive
-                    ? entity.id[0] <= stripCollectionFromId(afterEntityId)
-                    : entity.id[0] < stripCollectionFromId(afterEntityId);
-                }
-                return (
-                  entityValue <
-                  // @ts-expect-error - handle encoding / null / dates / etc
-                  afterEntityValue
-                );
-              }
-            }
-
-            const entityWrapper = new Entity();
-            updateEntity(entityWrapper, entityTriples);
-            const entityObj = entityWrapper.data;
-            const isInCollection =
-              entityObj['_collection'] &&
-              entityObj['_collection'][0] === query.collectionName;
-            const isInResult =
-              isInCollection &&
-              doesEntityObjMatchBasicWhere(
-                entityObj,
-                where ?? [],
-                options.schema && options.schema[query.collectionName]?.schema
-              ) &&
-              entityMatchesAfter(entityObj, query);
-
-            // Check if the result stays within the current range of the query based on the limit
-            // If it doesnt, we'll remove and might add it back when we backfill
-            let satisfiesLimitRange = true;
-            if (order && limit && windowSize >= limit) {
-              const sortFn = querySorter(query);
-              satisfiesLimitRange = sortFn(entityObj, endOfWindow) < 1;
-            }
-
-            // Add to result or prune as needed
-            if (isInResult && satisfiesLimitRange) {
-              if (
-                !nextResult.has(entity) ||
-                !Equal(nextResult.get(entity), entityObj)
-              ) {
-                // Adding to result set
-                nextResult.set(
-                  entity,
-                  entityObj as TimestampedFetchResultEntity<Q>
-                );
-                matchedTriples.set(
-                  entity,
-                  Object.values(entityWrapper.triples)
-                );
-                queryShouldRefire = true;
-              }
-            } else if (nextResult.has(entity)) {
-              // prune from a result set
-              nextResult.delete(entity);
-              matchedTriples.set(entity, Object.values(entityWrapper.triples));
-              queryShouldRefire = true;
-            }
-          }
-          // No change to result, return early
-          if (!queryShouldRefire) return;
-          if (order || limit) {
-            const entries = [...nextResult];
-
-            // If we have removed data from the result set we need to backfill
-            if (limit && entries.length < limit) {
-              const lastResultEntry = entries.at(entries.length - 1);
-              const lastResultEntryId =
-                lastResultEntry &&
-                appendCollectionToId(query.collectionName, lastResultEntry[0]);
-              const backFillQuery = {
-                ...query,
-                limit: limit - entries.length,
-                // If there is no explicit order, then order by Id is assumed
-                after: lastResultEntryId
-                  ? [
-                      [
-                        order
-                          ? // @ts-expect-error TODO: eventually re-write this
-                            lastResultEntry[1][order![0][0]][0]
-                          : lastResultEntryId,
-                        lastResultEntryId,
-                      ],
-                      false,
-                    ]
-                  : undefined,
-              };
-              const backFilledResults = await fetch<M, Q>(
-                tripleStore,
-                backFillQuery,
-                initialFetchExecutionContext(),
-                {
-                  schema: options.schema,
-                  skipRules: options.skipRules,
-                  // State vector needed in backfill?
-                  cache: options.cache,
-                  skipIndex: options.skipIndex,
-                  session: options.session,
-                }
-              );
-              for (const entry of backFilledResults.results) {
-                entries.push(entry);
-              }
-            }
-
-            if (order) {
-              // TODO: this fails...need loaded data...we dont have it from fetch...
-              sortEntities(query, entries);
-            }
-
-            nextResult = new Map(entries.slice(0, limit));
-          }
-
-          results = nextResult as TimestampedFetchResult<Q>;
-          triples = Array.from(matchedTriples.values()).flat();
-          // console.timeEnd('query recalculation');
-          await onResults([
-            [...results].map(([id, entity]) =>
-              convertEntityToJS(entity, options.schema, query.collectionName)
-            ) as FetchResult<M, Q>,
-            triples,
-          ]);
-        } catch (e) {
-          console.error(e);
-          onError && (await onError(e));
-        }
-      });
+      where = (
+        await replaceVariablesInQuery(
+          tripleStore,
+          query,
+          executionContext,
+          options
+        )
+      ).where;
       await onResults([
         [...results].map(([id, entity]) =>
           convertEntityToJS(entity, options.schema, query.collectionName)
@@ -1936,14 +1709,253 @@ export function subscribeResultsAndTriples<
       console.error(e);
       onError && (await onError(e));
     }
-    return unsub;
-  };
+  }
 
-  const unsubPromise = asyncUnSub();
+  const initializationPromise = initializeSubscriptionState();
 
-  return async () => {
-    const unsub = await unsubPromise;
-    unsub();
+  const unsub = tripleStore.onWrite(async (storeWrites) => {
+    // we have to do this to get the variables in `where` replaced
+    await initializationPromise;
+    try {
+      // Handle queries with nested queries as a special case for now
+      if (
+        (where &&
+          someFilterStatements(where, (filter) => isSubQueryFilter(filter))) ||
+        (include && Object.keys(include).length > 0) ||
+        (order &&
+          order.some(
+            (o) =>
+              options.schema &&
+              identifierIncludesRelation(
+                o[0],
+                options.schema,
+                query.collectionName
+              )
+          ))
+      ) {
+        const fetchResult = await fetch<M, Q>(
+          tripleStore,
+          query,
+          initialFetchExecutionContext(),
+          {
+            schema: options.schema,
+            skipRules: options.skipRules,
+            cache: options.cache,
+            skipIndex: options.skipIndex,
+            session: sessionOptions,
+            // TODO: do we need to pass state vector here?
+          }
+        );
+        results = fetchResult.results;
+        triples = fetchResult.triples;
+        await onResults([
+          [...results].map(([id, entity]) =>
+            convertEntityToJS(entity, options.schema, query.collectionName)
+          ) as FetchResult<M, Q>,
+          triples,
+        ]);
+        return;
+      }
+
+      const allInserts = Object.values(storeWrites).flatMap(
+        (ops) => ops.inserts
+      );
+      const allDeletes = Object.values(storeWrites).flatMap(
+        (ops) => ops.deletes
+      );
+      let nextResult = new Map(results);
+      const matchedTriples: Map<string, TripleRow[]> = new Map();
+      const updatedEntitiesForQuery = new Set<string>(
+        [...allInserts, ...allDeletes]
+          .map(({ id }) => splitIdParts(id))
+          .filter(
+            ([collectionName, _id]) => collectionName === query.collectionName
+          )
+          .map(([_collectionName, id]) => id)
+      );
+      // Early return prevents processing if no relevant entities were updated
+      // While a query is always scoped to a single collection this is safe
+      if (!updatedEntitiesForQuery.size) return;
+
+      let queryShouldRefire = false;
+
+      // Helpers for limit window
+      const endOfWindow = [...nextResult.values()].at(-1);
+      const windowSize = nextResult.size;
+
+      for (const entity of updatedEntitiesForQuery) {
+        const entityTriples = await genToArr(
+          tripleStore.findByEntity(
+            appendCollectionToId(query.collectionName, entity)
+          )
+        );
+
+        function entityMatchesAfter(
+          entity: any,
+          query: CollectionQuery<any, any>
+        ) {
+          if (!query.after) return true;
+          if (!query.order?.length) return true;
+          const orderAttr = query.order[0][0];
+          const orderDir = query.order[0][1];
+          const [cursor, inclusive] = query.after;
+          const [afterEntityValue, afterEntityId] = cursor;
+          const entityValue = entity[orderAttr][0];
+          // TODO: need to perform encoding at least I think...
+          if (orderDir === 'ASC') {
+            if (entityValue === afterEntityValue) {
+              return inclusive
+                ? entity.id[0] >= stripCollectionFromId(afterEntityId)
+                : entity.id[0] > stripCollectionFromId(afterEntityId);
+            }
+            return (
+              entityValue >
+              // @ts-expect-error - handle encoding / null / dates / etc
+              afterEntityValue
+            );
+          } else {
+            if (entityValue === afterEntityValue) {
+              return inclusive
+                ? entity.id[0] <= stripCollectionFromId(afterEntityId)
+                : entity.id[0] < stripCollectionFromId(afterEntityId);
+            }
+            return (
+              entityValue <
+              // @ts-expect-error - handle encoding / null / dates / etc
+              afterEntityValue
+            );
+          }
+        }
+
+        const entityWrapper = new Entity();
+        updateEntity(entityWrapper, entityTriples);
+        const entityObj = entityWrapper.data;
+        const isInCollection =
+          entityObj['_collection'] &&
+          entityObj['_collection'][0] === query.collectionName;
+        const isInResult =
+          isInCollection &&
+          doesEntityObjMatchBasicWhere(
+            entityObj,
+            where ?? [],
+            options.schema && options.schema[query.collectionName]?.schema
+          ) &&
+          entityMatchesAfter(entityObj, query);
+
+        // Check if the result stays within the current range of the query based on the limit
+        // If it doesnt, we'll remove and might add it back when we backfill
+        let satisfiesLimitRange = true;
+        if (order && limit && windowSize >= limit) {
+          const sortFn = querySorter(query);
+          satisfiesLimitRange = sortFn(entityObj, endOfWindow) < 1;
+        }
+
+        // Add to result or prune as needed
+        if (isInResult && satisfiesLimitRange) {
+          if (
+            !nextResult.has(entity) ||
+            !Equal(nextResult.get(entity), entityObj)
+          ) {
+            // Adding to result set
+            nextResult.set(
+              entity,
+              entityObj as TimestampedFetchResultEntity<Q>
+            );
+            matchedTriples.set(entity, Object.values(entityWrapper.triples));
+            queryShouldRefire = true;
+          }
+        } else if (nextResult.has(entity)) {
+          // prune from a result set
+          nextResult.delete(entity);
+          matchedTriples.set(entity, Object.values(entityWrapper.triples));
+          queryShouldRefire = true;
+        }
+      }
+      // No change to result, return early
+      if (!queryShouldRefire) return;
+      if (order || limit) {
+        const entries = [...nextResult];
+
+        // If we have removed data from the result set we need to backfill
+        if (limit && entries.length < limit) {
+          const lastResultEntry = entries.at(entries.length - 1);
+          const lastResultEntryId =
+            lastResultEntry &&
+            appendCollectionToId(query.collectionName, lastResultEntry[0]);
+          const backFillQuery = {
+            ...query,
+            limit: limit - entries.length,
+            // If there is no explicit order, then order by Id is assumed
+            after: lastResultEntryId
+              ? [
+                  [
+                    order
+                      ? // @ts-expect-error TODO: eventually re-write this
+                        lastResultEntry[1][order![0][0]][0]
+                      : lastResultEntryId,
+                    lastResultEntryId,
+                  ],
+                  false,
+                ]
+              : undefined,
+          };
+          const backFilledResults = await fetch<M, Q>(
+            tripleStore,
+            backFillQuery,
+            initialFetchExecutionContext(),
+            {
+              schema: options.schema,
+              skipRules: options.skipRules,
+              // State vector needed in backfill?
+              cache: options.cache,
+              skipIndex: options.skipIndex,
+              session: sessionOptions,
+            }
+          );
+          for (const entry of backFilledResults.results) {
+            entries.push(entry);
+          }
+        }
+
+        if (order) {
+          // TODO: this fails...need loaded data...we dont have it from fetch...
+          sortEntities(query, entries);
+        }
+
+        nextResult = new Map(entries.slice(0, limit));
+      }
+
+      results = nextResult as TimestampedFetchResult<Q>;
+      triples = Array.from(matchedTriples.values()).flat();
+      // console.timeEnd('query recalculation');
+      await onResults([
+        [...results].map(([id, entity]) =>
+          convertEntityToJS(entity, options.schema, query.collectionName)
+        ) as FetchResult<M, Q>,
+        triples,
+      ]);
+    } catch (e) {
+      console.error(e);
+      onError && (await onError(e));
+    }
+  });
+
+  return {
+    updateVars: async (vars: SystemVariables) => {
+      const updatedQuery = await replaceVariablesInQuery(
+        tripleStore,
+        query,
+        executionContext,
+        { ...options, session: { ...sessionOptions, systemVars: vars } }
+      );
+      if (Equal(updatedQuery.where, where)) return;
+      sessionOptions.systemVars = vars;
+      await initializeSubscriptionState();
+    },
+    unsubscribe: async () => {
+      await initializationPromise;
+      unsub();
+    },
   };
 }
 

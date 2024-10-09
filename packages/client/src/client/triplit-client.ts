@@ -16,14 +16,11 @@ import {
   TupleValue,
   schemaToJSON,
   Unalias,
-  SchemaJSON,
   TransactionResult,
   TripleRow,
   TransactOptions,
-  SchemaQueries,
   ToQuery,
   FetchResultEntity,
-  CollectionQueryDefault,
   FetchResultEntityFromParts,
   StoreSchema,
   ClearOptions,
@@ -313,7 +310,6 @@ export class TriplitClient<M extends ClientSchema = ClientSchema> {
 
     if (syncSchema) {
       this.syncEngine.subscribe(
-        // @ts-ignore
         this.db.query('_metadata').id('_schema').build()
       );
     }
@@ -385,8 +381,7 @@ export class TriplitClient<M extends ClientSchema = ClientSchema> {
     options?: Partial<FetchOptions>
   ): Promise<Unalias<FetchResult<M, ToQuery<M, CQ>>>> {
     // ID is currently used to trace the lifecycle of a query/subscription across logs
-    // @ts-ignore
-    query = addLoggingIdToQuery(query);
+    query = addTraceIdToQuery(query);
 
     const opts = { ...this.defaultFetchOptions.fetch, ...(options ?? {}) };
     if (opts.policy === 'local-only') {
@@ -496,7 +491,7 @@ export class TriplitClient<M extends ClientSchema = ClientSchema> {
     options?: Partial<FetchOptions>
   ): Promise<Unalias<FetchResultEntity<M, ToQuery<M, CQ>>> | null> {
     // ID is currently used to trace the lifecycle of a query/subscription across logs
-    query = addLoggingIdToQuery(query);
+    query = addTraceIdToQuery(query);
     query = { ...query, limit: 1 };
     const result = await this.fetch(query, options);
     const entity = [...result.values()][0];
@@ -625,8 +620,7 @@ export class TriplitClient<M extends ClientSchema = ClientSchema> {
     let unsubscribed = false;
     const opts: SubscriptionOptions = { localOnly: false, ...(options ?? {}) };
     // ID is currently used to trace the lifecycle of a query/subscription across logs
-    // @ts-ignore
-    query = addLoggingIdToQuery(query);
+    query = addTraceIdToQuery(query);
     const scope = parseScope(query);
     this.logger.debug('subscribe start', query, scope);
     if (opts.localOnly) {
@@ -722,8 +716,7 @@ export class TriplitClient<M extends ClientSchema = ClientSchema> {
     let unsubscribed = false;
     const opts: SubscriptionOptions = { localOnly: false, ...(options ?? {}) };
     // ID is currently used to trace the lifecycle of a query/subscription across logs
-    // @ts-ignore
-    query = addLoggingIdToQuery(query);
+    query = addTraceIdToQuery(query);
     const scope = parseScope(query);
     this.logger.debug('subscribeTriples start', query, scope);
     if (opts.localOnly) {
@@ -1244,8 +1237,8 @@ export class TriplitClient<M extends ClientSchema = ClientSchema> {
   }
 }
 
-function addLoggingIdToQuery(query: any) {
-  return { id: Math.random().toString().slice(2), ...query };
+function addTraceIdToQuery<Q>(query: Q): Q & { traceId: string } {
+  return { traceId: Math.random().toString().slice(2), ...query };
 }
 
 function mapServerUrlToSyncOptions(serverUrl: string) {

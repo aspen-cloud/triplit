@@ -597,3 +597,86 @@ describe('single entity subscriptions', async () => {
     });
   });
 });
+
+describe('subscriptions with variables', () => {
+  it('will refire the affected subscriptions when global variables change', async () => {
+    const db = new DB({
+      schema: {
+        collections: {
+          students: {
+            schema: S.Schema({
+              id: S.String(),
+              name: S.String(),
+              major: S.String(),
+              dorm: S.String(),
+            }),
+          },
+        },
+      },
+      variables: {
+        major1: 'Computer Science',
+        major2: 'Biology',
+      },
+    });
+    const defaultData = [
+      { id: '1', name: 'Alice', major: 'Computer Science', dorm: 'Allen' },
+      { id: '2', name: 'Bob', major: 'Biology', dorm: 'Battell' },
+      {
+        id: '3',
+        name: 'Charlie',
+        major: 'Computer Science',
+        dorm: 'Battell',
+      },
+      { id: '4', name: 'David', major: 'Math', dorm: 'Allen' },
+      { id: '5', name: 'Emily', major: 'Biology', dorm: 'Allen' },
+    ];
+    const changedVariablesSubscriptionSpy = vi.fn();
+    const unchangedVariablesSubscriptionSpy = vi.fn();
+
+    await Promise.all(defaultData.map((doc) => db.insert('students', doc)));
+    await new Promise<void>(async (resolve) => {
+      db.subscribe(
+        db.query('students').where('major', '=', '$global.major1').build(),
+        changedVariablesSubscriptionSpy
+      );
+      db.subscribe(
+        db.query('students').where('major', '=', '$global.major2').build(),
+        unchangedVariablesSubscriptionSpy
+      );
+      await db.insert('students', {
+        id: '6',
+        name: 'Frank',
+        major: 'Computer Science',
+        dorm: 'Painter',
+      });
+      setTimeout(() => {
+        expect(changedVariablesSubscriptionSpy).toHaveBeenCalledTimes(2);
+        expect(unchangedVariablesSubscriptionSpy).toHaveBeenCalledTimes(1);
+        expect(
+          changedVariablesSubscriptionSpy.mock.lastCall?.[0].map(
+            (e: any) => e.id
+          )
+        ).toEqual(['1', '3', '6']);
+        resolve();
+      }, 50);
+    });
+    changedVariablesSubscriptionSpy.mockClear();
+    unchangedVariablesSubscriptionSpy.mockClear();
+
+    // change the global variable should cause the subscription with the variable to refire
+    // and the subscription without the variable to not refire
+    await new Promise<void>(async (resolve) => {
+      db.updateGlobalVariables({ major1: 'Biology', major2: 'Biology' });
+      setTimeout(() => {
+        expect(changedVariablesSubscriptionSpy).toHaveBeenCalledOnce;
+        expect(unchangedVariablesSubscriptionSpy).toBeCalledTimes(0);
+        expect(
+          changedVariablesSubscriptionSpy.mock.lastCall?.[0].map(
+            (e: any) => e.id
+          )
+        ).toEqual(['2', '5']);
+        resolve();
+      }, 50);
+    });
+  });
+});
