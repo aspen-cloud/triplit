@@ -720,7 +720,7 @@ export class DBTransaction<M extends Models> {
 
     // insert triples
     await this.storeTx.insertTriples(triples);
-    const insertedEntity = constructEntity(triples, storeId);
+    const insertedEntity = constructEntity(triples, storeId, schema);
     if (!insertedEntity) throw new Error('Malformed id');
     const insertedEntityJS = convertEntityToJS(
       insertedEntity.data as any,
@@ -775,7 +775,11 @@ export class DBTransaction<M extends Models> {
     const storeId = appendCollectionToId(collectionName, entityId);
 
     const entityTriples = await genToArr(this.storeTx.findByEntity(storeId));
-    const entity = constructEntity(entityTriples, storeId);
+    const entity = constructEntity(
+      entityTriples,
+      storeId,
+      (await this.getSchema())?.collections
+    );
     if (entityTriples.length === 0 || !entity || entity.isDeleted) {
       throw new EntityNotFoundError(
         entityId,

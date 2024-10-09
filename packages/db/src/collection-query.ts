@@ -542,6 +542,8 @@ function getEntitiesAtStateVector(
 ) {
   return constructEntities(
     collectionTriples,
+    // TODO
+    undefined,
     stateVector && stateVector.size > 0 ? stateVector : undefined,
     treatMissingClientIdAs
   );
@@ -879,13 +881,16 @@ function reverseRelationFilter(filter: FilterStatement<any, any>) {
  */
 function LoadCandidateEntities(
   tx: TripleStoreApi,
-  executionContext: FetchExecutionContext
+  executionContext: FetchExecutionContext,
+  options: FetchFromStorageOptions
 ): MapFunc<string, string> {
   return async (entityId) => {
     // Load entity data if not loaded
     if (!executionContext.executionCache.hasData(entityId)) {
       const storeTriples = await genToArr(tx.findByEntity(entityId));
-      const entity = constructEntities(storeTriples).get(entityId)!;
+      const entity = constructEntities(storeTriples, options.schema).get(
+        entityId
+      )!;
       // Load raw entity
       executionContext.executionCache.setData(entityId, {
         entity,
@@ -1294,7 +1299,7 @@ export async function loadQuery<
     await getCandidateEntityIds(tx, queryWithInsertedVars, options);
 
   let pipeline = new Pipeline<string>()
-    .map(LoadCandidateEntities(tx, executionContext))
+    .map(LoadCandidateEntities(tx, executionContext, options))
     // Apply where filters
     .filter(ApplyFilters(tx, queryWithInsertedVars, executionContext, options))
     // Filter out deleted entities
@@ -1552,7 +1557,7 @@ export function subscribeEntities<
   ) => void | Promise<void>,
   onError?: (error: any) => void | Promise<void>
 ) {
-  const { order, limit } = query;
+  const { order, limit, collectionName } = query;
   let where = query.where;
   const sessionOptions = { ...options.session };
   const executionContext = initialFetchExecutionContext();
@@ -1562,6 +1567,8 @@ export function subscribeEntities<
       'Cannot use subscribeEntities with relational queries'
     );
   }
+
+  const model = options.schema?.[collectionName]?.schema;
 
   let results: Map<string, Entity> = new Map();
   async function initializeSubscriptionState() {
@@ -1681,7 +1688,7 @@ export function subscribeEntities<
           const entityTriples = await genToArr(
             tripleStore.findByEntity(entityId)
           );
-          entity = new Entity(entityTriples);
+          entity = new Entity(entityTriples, model);
           changeTriples.set(entityId, entity.triples);
         }
 

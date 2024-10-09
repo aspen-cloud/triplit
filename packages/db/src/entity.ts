@@ -5,6 +5,8 @@ import { splitIdParts } from './db-helpers.js';
 import { compareTuple } from '@triplit/tuple-database';
 import { InvalidTripleApplicationError } from './errors.js';
 import { attributeToJsonPointer } from './utils.js';
+import { Model, Models } from './schema/types/index.js';
+import { RecordType } from './data-types/definitions/record.js';
 
 export const COLLECTION_MARKER = '_collection';
 export const COLLECTION_ATTRIBUTE = [COLLECTION_MARKER];
@@ -22,8 +24,12 @@ export function updateEntity(entity: Entity, triples: TripleRow[]) {
 /**
  * Constructs an entity from a set of triples. Returns undefined if the entity does not exist in the triples.
  */
-export function constructEntity(triples: TripleRow[], id: string) {
-  const entities = constructEntities(triples);
+export function constructEntity(
+  triples: TripleRow[],
+  id: string,
+  schema?: Models
+) {
+  const entities = constructEntities(triples, schema);
   return entities.get(id);
 }
 
@@ -32,6 +38,8 @@ export function constructEntity(triples: TripleRow[], id: string) {
  */
 export function constructEntities(
   triples: TripleRow[],
+  schema?: Models,
+
   maxTimestamps?: Map<string, number>,
   treatMissingClientIdAs: 'higher' | 'lower' = 'lower'
 ) {
@@ -57,7 +65,9 @@ export function constructEntities(
     if (acc.has(id)) {
       entity = acc.get(id)!;
     } else {
-      entity = new Entity();
+      const collectionName = splitIdParts(id)[0];
+      const model = schema?.[collectionName]?.schema;
+      entity = new Entity([], model);
       acc.set(id, entity);
     }
     entity.applyTriple(triple);
@@ -75,6 +85,7 @@ export class Entity {
   private _collectionName: string | undefined;
   private _isDeleted: boolean = false;
   private _data: Record<string, any> | undefined;
+  private _model: Model | undefined;
 
   /**
    * The ordered (by attribute) set of triples that make up this entity. This will only include the latest triple for each attribute.
@@ -86,7 +97,8 @@ export class Entity {
   // Marker to indicate that the entity data should be materialized on read
   private shouldMaterialize = false;
 
-  constructor(triples: TripleRow[] = []) {
+  constructor(triples: TripleRow[] = [], model?: Model) {
+    this._model = model;
     for (const triple of triples) {
       this.applyTriple(triple);
     }
@@ -230,7 +242,7 @@ export class Entity {
   private materialize() {
     // NOTE: I feel like deleted entities should have data = undefined, but it breaks some types / need to code around that
     if (this.isDeleted) return {};
-    const data = {};
+    const data = createEntityTemplate(this._model);
     let parentObjectStack: TripleRow[] = [];
     for (const triple of this.triples) {
       let { attribute, value, expired } = triple;
@@ -335,5 +347,27 @@ function applyValue(
     ValuePointer.Delete(data, path);
   } else {
     ValuePointer.Set(data, path, value);
+  }
+}
+
+function createEntityTemplate(model: Model | undefined) {
+  if (!model) return {};
+  return new EntityTemplate(model);
+}
+
+/**
+ * A template for an entity's data based on a model.
+ *
+ * Attempts to avoid V8 hidden classes https://v8.dev/docs/hidden-classes
+ */
+class EntityTemplate<T extends RecordType> {
+  constructor(model: T) {
+    for (const [key, property] of Object.entries(model.properties)) {
+      if (property.type === 'query') continue;
+      if (property.type === 'record') {
+        (this as any)[key] = new EntityTemplate(property as RecordType);
+      }
+      (this as any)[key] = undefined;
+    }
   }
 }

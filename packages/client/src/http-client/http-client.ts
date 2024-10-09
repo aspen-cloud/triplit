@@ -238,7 +238,8 @@ export class HttpClient<M extends ClientSchema = ClientSchema> {
       );
     const entity = constructEntity(
       triples,
-      appendCollectionToId(collectionName, entityId)
+      appendCollectionToId(collectionName, entityId),
+      schema
     );
     const entityData = entity?.data ?? {};
     const changes = new ChangeTracker(entityData);
