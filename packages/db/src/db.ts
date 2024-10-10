@@ -732,11 +732,13 @@ export default class DB<M extends Models = Models> {
     );
 
     if (options.sync) {
-      return getSyncTriplesFromContext<M, Q>(
-        fetchQuery,
-        entityOrder,
-        executionContext
-      );
+      return Array.from(
+        getSyncTriplesFromContext<M, Q>(
+          fetchQuery,
+          entityOrder,
+          executionContext
+        ).values()
+      ).flat();
     }
     return Array.from(
       getResultTriplesFromContext<M, Q>(

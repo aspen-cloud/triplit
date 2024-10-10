@@ -58,7 +58,7 @@ export function prepareQuery<M extends Models, Q extends CollectionQuery<M>>(
   schema: M | undefined,
   session: Session,
   options: QueryPreparationOptions = {}
-) {
+): Q {
   let fetchQuery = { ...query };
 
   // Validate collection name

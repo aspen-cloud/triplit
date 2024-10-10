@@ -39,7 +39,6 @@ export function constructEntity(
 export function constructEntities(
   triples: TripleRow[],
   schema?: Models,
-
   maxTimestamps?: Map<string, number>,
   treatMissingClientIdAs: 'higher' | 'lower' = 'lower'
 ) {

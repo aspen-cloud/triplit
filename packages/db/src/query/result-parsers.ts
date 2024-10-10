@@ -3,7 +3,6 @@ import {
   FetchExecutionContext,
   isQueryInclusionSubquery,
 } from '../collection-query.js';
-import { splitIdParts } from '../db-helpers.js';
 import { Entity } from '../entity.js';
 import { QueryNotPreparedError } from '../errors.js';
 import { Model, Models } from '../schema/types/index.js';
@@ -106,7 +105,7 @@ export function getResultTriplesFromContext<
         entityTriples.push(triple);
       }
     }
-    triples.set(splitIdParts(entityId)[1], entityTriples);
+    triples.set(entityId, entityTriples);
   }
   return triples;
 }
@@ -120,17 +119,14 @@ export function getSyncTriplesFromContext<
     entityOrder,
     executionContext
   );
-  const flatTriples = Array.from(triples.values()).flat();
   for (const entityId of executionContext.fulfillmentEntities) {
     // If we've already loaded this entity skip to avoid dupes
     if (triples.has(entityId)) continue;
     const fullfillmentTriples =
       executionContext.executionCache.getData(entityId)?.entity.triples ?? [];
-    for (const triple of fullfillmentTriples) {
-      flatTriples.push(triple);
-    }
+    triples.set(entityId, fullfillmentTriples);
   }
-  return flatTriples;
+  return triples;
 }
 
 export function getQueryResultsFromContext<
@@ -176,7 +172,7 @@ export function getQueryResultsFromContext<
         cardinality === 'one' ? subqueryResult[0] ?? null : subqueryResult;
     }
 
-    results.set(splitIdParts(entityId)[1], entityWithSelection);
+    results.set(entityId, entityWithSelection);
   }
   return results;
 }

@@ -1985,11 +1985,13 @@ export function subscribeTriples<
             session: options.session,
           }
         );
-        triples = getSyncTriplesFromContext<M, Q>(
-          query,
-          resultOrder,
-          executionContext
-        );
+        triples = Array.from(
+          getSyncTriplesFromContext<M, Q>(
+            query,
+            resultOrder,
+            executionContext
+          ).values()
+        ).flat();
       }
 
       const unsub = tripleStore.onWrite(async (storeWrites) => {
