@@ -7,6 +7,7 @@ export async function runServer(port: number, options?: ServerOptions) {
   await new Promise<void>((res) => {
     server = startServer(port, res);
   });
+  // @ts-expect-error
   return server;
 }
 

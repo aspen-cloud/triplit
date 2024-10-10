@@ -1,64 +1,15 @@
-import {
-  Server as TriplitServer,
-  Session,
-  Connection,
-  ClientSyncMessage,
-} from '@triplit/server-core';
-import {
-  TriplitClient,
-  SyncTransport,
-  TransportConnectParams,
-  ConnectionStatus,
-  ClientOptions,
-  ClientSchema,
-} from '@triplit/client';
+import { Server as TriplitServer } from '@triplit/server-core';
+import { TriplitClient, ClientSchema } from '@triplit/client';
 import { describe, vi, it, expect } from 'vitest';
 import DB, { Models, Schema as S, genToArr, or } from '@triplit/db';
 import { MemoryBTreeStorage as MemoryStorage } from '@triplit/db/storage/memory-btree';
-import { CloseReason } from '@triplit/types/sync';
-import { hashQuery } from '../../client/src/utils/query.js';
-
-function parseJWT(token: string | undefined) {
-  if (!token) throw new Error('No token provided');
-  let base64Url = token.split('.')[1];
-  let base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-  let jsonPayload = decodeURIComponent(
-    atob(base64)
-      .split('')
-      .map(function (c) {
-        return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
-      })
-      .join('')
-  );
-  return JSON.parse(jsonPayload);
-}
-
-/**
- *
- * @param ms [ms=100] - The number of milliseconds to pause
- */
-const pause = async (ms: number = 100) =>
-  new Promise((resolve) => setTimeout(resolve, ms));
-
-function createTestClient<M extends Models>(
-  server: TriplitServer,
-  apiKey: string,
-  options: ClientOptions<M> = {}
-) {
-  return new TriplitClient({
-    storage: 'memory',
-    transport: new TestTransport(server),
-    token: apiKey,
-    logLevel: 'error',
-    ...options,
-  });
-}
-
-const SERVICE_KEY =
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ4LXRyaXBsaXQtdG9rZW4tdHlwZSI6InNlY3JldCIsIngtdHJpcGxpdC1wcm9qZWN0LWlkIjoidG9kb3MiLCJpYXQiOjE2OTY1MzMwMjl9.zAu3Coy49C4WSMKegE4NePHrCAtZ3B3_uJdDjTxu2NM';
-
-const NOT_SERVICE_KEY =
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ4LXRyaXBsaXQtdG9rZW4tdHlwZSI6InRlc3QiLCJ4LXRyaXBsaXQtcHJvamVjdC1pZCI6InRvZG9zIiwiaWF0IjoxNjk3NDc5MDI3fQ.8vkJawoLwsnTJK8_-zC3PCHjcb8zTK50SgYluQ3VYtM';
+import { hashQuery } from '@triplit/client';
+import { pause } from '../utils/async.js';
+import {
+  NOT_SERVICE_KEY,
+  SERVICE_KEY,
+  createTestClient,
+} from '../utils/client.js';
 
 describe('TestTransport', () => {
   it('can sync an insert on one client to another client', async () => {
@@ -2391,96 +2342,3 @@ it('running reset will disconnect and reset the client sync state and clear all 
     expect(results.length).toBe(0);
   }
 });
-
-class TestTransport implements SyncTransport {
-  private connection: Connection | null = null;
-  clientId: string | undefined;
-  onMessageCallback: ((evt: any) => any) | null = null;
-  onOpenCallback: ((evt: any) => any) | null = null;
-  onCloseCallback: ((evt: any) => any) | null = null;
-  onErrorCallback: ((evt: any) => any) | null = null;
-  onConnectionChangeCallback: ((state: ConnectionStatus) => void) | null = null;
-  connectionStatus: ConnectionStatus = 'CLOSED';
-
-  private removeConnectionListener: (() => void) | undefined;
-
-  constructor(public server: TriplitServer) {}
-  get isOpen() {
-    return this.connectionStatus === 'OPEN';
-  }
-  async connect(params: TransportConnectParams) {
-    // simulate network connection, allow sync engine listeners to mount
-    setTimeout(() => {
-      const { syncSchema, token, clientId, schema } = params;
-      const parsedToken = parseJWT(token);
-      this.connection = this.server.openConnection(parsedToken, {
-        clientId,
-        clientSchemaHash: schema,
-        syncSchema,
-      });
-      this.clientId = clientId;
-      this.removeConnectionListener = this.connection.addListener(
-        (messageType, payload) => {
-          // @ts-expect-error type is {}
-          const error = payload.error;
-          if (error) console.error(error);
-          this.onMessageCallback &&
-            this.onMessageCallback({
-              data: JSON.stringify({ type: messageType, payload }),
-            });
-        }
-      );
-      this.setIsOpen(true);
-    }, 0);
-  }
-
-  private setIsOpen(open: boolean, event?: any) {
-    this.connectionStatus = open ? 'OPEN' : 'CLOSED';
-    if (this.connectionStatus === 'OPEN') {
-      this.onOpenCallback && this.onOpenCallback(event);
-    }
-    if (this.connectionStatus === 'CLOSED') {
-      this.onCloseCallback && this.onCloseCallback(event);
-    }
-    this.onConnectionChangeCallback &&
-      this.onConnectionChangeCallback(this.connectionStatus);
-  }
-
-  onOpen(callback: (ev: any) => void): void {
-    this.onOpenCallback = callback;
-  }
-
-  async sendMessage(message: ClientSyncMessage): Promise<void> {
-    if (!this.isOpen) {
-      return;
-    }
-    if (!this.connection) {
-      return;
-    }
-    this.connection.dispatchCommand(message);
-  }
-
-  onMessage(callback: (message: any) => void): void {
-    this.onMessageCallback = callback;
-  }
-
-  onError(callback: (ev: any) => void): void {
-    this.onErrorCallback = callback;
-  }
-
-  onClose(callback: (ev: any) => void): void {
-    this.onCloseCallback = callback;
-  }
-
-  onConnectionChange(callback: (state: ConnectionStatus) => void): void {
-    this.onConnectionChangeCallback = callback;
-  }
-
-  close(reason?: CloseReason) {
-    this.removeConnectionListener?.();
-    this.server.closeConnection(this.clientId!);
-    this.setIsOpen(false, {
-      reason: JSON.stringify(reason),
-    });
-  }
-}
