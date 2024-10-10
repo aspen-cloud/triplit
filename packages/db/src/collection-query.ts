@@ -1746,7 +1746,7 @@ export function subscribeEntities<
           const lastResultEntry = entries.at(entries.length - 1);
           const lastResultEntryId = lastResultEntry && lastResultEntry[0];
           const lastResultData = lastResultEntry && lastResultEntry[1].data;
-          const orderAttr = order![0][0];
+          const orderAttr = order?.[0]?.[0];
           const backFillQuery = {
             ...query,
             limit: limit - entries.length,
@@ -1754,7 +1754,7 @@ export function subscribeEntities<
             after: lastResultEntryId
               ? [
                   [
-                    order
+                    orderAttr
                       ? getPropertyFromPath(
                           lastResultData,
                           orderAttr.split('.')
