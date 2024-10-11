@@ -76,7 +76,7 @@ export class SyncEngine {
       fulfilled: boolean;
       responseCallbacks: Set<(response: any) => void>;
       subCount: number;
-      hasSentPromise?: Promise<void>;
+      hasSentPromise?: Promise<boolean>;
     }
   > = new Map();
 
@@ -237,16 +237,10 @@ export class SyncEngine {
 
   private connectQuery(queryId: string, params: CollectionQuery<any, any>) {
     if (!this.queries.has(queryId)) return;
-    let resolveMessageSentPromise: (value: any) => void = () => {};
-    let rejectMessageSentPromise: (reason: any) => void = () => {};
-    const messageSentPromise: Promise<void> = new Promise((resolve, reject) => {
-      resolveMessageSentPromise = resolve;
-      rejectMessageSentPromise = reject;
-    });
 
-    this.queries.get(queryId)!.hasSentPromise = messageSentPromise;
-
-    this.getQueryState(queryId).then((queryState: Timestamp[]) => {
+    this.queries.get(queryId)!.hasSentPromise = this.getQueryState(
+      queryId
+    ).then((queryState: Timestamp[]) => {
       const didSend = this.sendMessage({
         type: 'CONNECT_QUERY',
         payload: {
@@ -255,12 +249,7 @@ export class SyncEngine {
           state: queryState,
         },
       });
-      // resolveMessageSentPromise(void 0);
-      if (didSend) {
-        resolveMessageSentPromise(void 0);
-      } else {
-        rejectMessageSentPromise(void 0);
-      }
+      return didSend;
     });
   }
 
@@ -291,7 +280,7 @@ export class SyncEngine {
     if (!this.queries.has(id)) return;
     try {
       const hasSentPromise = this.queries.get(id)!.hasSentPromise;
-      if (hasSentPromise) {
+      if (hasSentPromise && (await hasSentPromise)) {
         await hasSentPromise;
         this.sendMessage({ type: 'DISCONNECT_QUERY', payload: { id } });
       }
