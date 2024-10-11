@@ -1664,7 +1664,9 @@ export function subscribeEntities<
       // Loop through changed entities and determine if any query changes occurred
       for (const entityId of updatedEntitiesForQuery) {
         const isInPreviousResult = results.has(entityId);
-
+        const prevData = isInPreviousResult
+          ? { ...results.get(entityId)!.data }
+          : undefined;
         // Get latest entity
         let entity: Entity;
         // If the entity is in the previous result set, we can apply incremental changes
@@ -1720,7 +1722,11 @@ export function subscribeEntities<
           queryShouldRefire = true;
         }
         // Updating => update result set, send change triples
-        else if (isInPreviousResult && isInNextResult) {
+        else if (
+          isInPreviousResult &&
+          isInNextResult &&
+          !Equal(prevData, entity.data)
+        ) {
           // Result changes already handled
           // Change triples already handled
           queryShouldRefire = true;
