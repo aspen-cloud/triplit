@@ -2,11 +2,9 @@ import { describe, expect, it } from 'vitest';
 import { TripleRow } from '../src/triple-store-utils.js';
 import { Entity } from '../src/entity.js';
 import DB from '../src/db.js';
-import {
-  InvalidTripleApplicationError,
-  Schema,
-  genToArr,
-} from '../src/index.js';
+import { InvalidTripleApplicationError } from '../src/errors.js';
+import { genToArr } from '../src/utils/generator.js';
+import { appendCollectionToId } from '../src/db-helpers.js';
 
 it('the first triple  assigns the collection name and id', () => {
   const triples: TripleRow[] = [
@@ -172,6 +170,55 @@ describe('operations', () => {
           id: '1',
           a: { g: 5, h: { i: 6 } },
           f: 4,
+        });
+      });
+    });
+    /**
+     * Triples will be sorted alphabetically, checks that triples that wont be applied due to timestamps comps wont short circuit data construction
+     *
+     * [attr, val, ts]
+     * [[a], {}, 2]
+     * [[a, b], 1, 1] // wont be applied bc timestamp less than parent
+     * [[a, c], 2, 1] // wont be applied bc timestamp less than parent
+     * [[a, d], 3, 2]
+     * [[a, e], 4, 2]
+     */
+    it('overwrite nested data with non alphabetical key order', async () => {
+      const db = new DB();
+      await db.insert(COLLECTION_NAME, {
+        id: '1',
+        a: { b: 1, c: 2 },
+      });
+      const timestamp = await db.tripleStore.clock.getNextTimestamp();
+      await db.tripleStore.insertTriples([
+        {
+          id: appendCollectionToId(COLLECTION_NAME, '1'),
+          attribute: ['collection', 'a'],
+          value: '{}',
+          timestamp,
+          expired: false,
+        },
+        {
+          id: appendCollectionToId(COLLECTION_NAME, '1'),
+          attribute: ['collection', 'a', 'd'],
+          value: 3,
+          timestamp,
+          expired: false,
+        },
+        {
+          id: appendCollectionToId(COLLECTION_NAME, '1'),
+          attribute: ['collection', 'a', 'e'],
+          value: 4,
+          timestamp,
+          expired: false,
+        },
+      ]);
+      const triples = await genToArr(db.tripleStore.findByEntity());
+      await testRandomTriplePermutations(triples, (triples) => {
+        const entity = new Entity(triples);
+        expect(entity.data).toEqual({
+          id: '1',
+          a: { d: 3, e: 4 },
         });
       });
     });

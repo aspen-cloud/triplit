@@ -257,41 +257,28 @@ export class Entity {
 
       // Track current parent (may be undefined)
       let parentObjMarker = parentObjectStack.at(-1);
-      // If we have a parent, we should only fill in those that are direct children and with timestamp gte parent object
-      if (parentObjMarker) {
-        // Apply direct children of parent with gte timestamp
-        if (
-          isChildOf(triple, parentObjMarker, 1) &&
-          timestampCompare(triple.timestamp, parentObjMarker.timestamp) >= 0
-        ) {
-          applyValue(data, dataPath, value);
-          if (isObjMarker) {
-            parentObjectStack.push(triple);
-          }
-        }
-        // if not a child at all, this means we are done with this object and should pop from stack until we find parent
-        else if (!isChildOf(triple, parentObjMarker)) {
-          while (parentObjectStack.length > 0) {
-            parentObjectStack.pop();
-            parentObjMarker = parentObjectStack.at(-1);
-            if (parentObjMarker && isChildOf(triple, parentObjMarker, 1)) {
-              applyValue(data, dataPath, value);
-              if (isObjMarker) {
-                parentObjectStack.push(triple);
-              }
-              break;
-            }
-          }
-        }
+
+      // Check if attribute is a child of the current parent, if not pop until we find parent
+      while (parentObjectStack.length > 0) {
+        if (isChildOf(triple, parentObjMarker)) break;
+        parentObjectStack.pop();
+        parentObjMarker = parentObjectStack.at(-1);
       }
 
-      // At root
-      if (!parentObjMarker) {
-        if (isChildOf(triple, parentObjMarker, 1)) {
-          applyValue(data, dataPath, value);
-          if (isObjMarker) {
-            parentObjectStack.push(triple);
-          }
+      /**
+       * Once we have a parent match, we can apply the value if:
+       * 1. The triple is a DIRECT child of parent (meaning there must be an object marker present for nested values)
+       * 2. The triple timestamp is gte the parent object marker timestamp (this handles object assignments)
+       */
+      if (
+        isChildOf(triple, parentObjMarker, 1) &&
+        (parentObjMarker
+          ? timestampCompare(triple.timestamp, parentObjMarker.timestamp) >= 0
+          : true)
+      ) {
+        applyValue(data, dataPath, value);
+        if (isObjMarker) {
+          parentObjectStack.push(triple);
         }
       }
     }
@@ -321,7 +308,6 @@ function isChildOf(
     generations ?? child.attribute.length - parent.attribute.length;
   if (generationsBack < 0) return false;
   return (
-    timestampCompare(parent.timestamp, child.timestamp) <= 0 &&
     parent.attribute.length === child.attribute.length - generationsBack &&
     compareTuple(
       parent.attribute,
