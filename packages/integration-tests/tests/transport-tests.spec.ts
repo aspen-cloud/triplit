@@ -1667,7 +1667,7 @@ describe('pagination syncing', () => {
       created_at: new Date(date),
       id: new_id,
     });
-    await pause();
+    await pause(150);
     expect(bobSub.mock.calls.at(-1)[0]).toHaveLength(5);
     expect([...bobSub.mock.calls.at(-1)[0].map((e: any) => e.id)]).toEqual([
       new_id,
@@ -1743,11 +1743,12 @@ describe('stateful query syncing', () => {
     {
       const syncMessageCallback = vi.fn();
       client.syncEngine.onSyncMessageReceived(syncMessageCallback);
+      await pause();
       const unsub = client.subscribe(
         client.query('cities').where('state', '=', 'CA').build(),
         () => {}
       );
-      await pause(10);
+      await pause();
       expect(syncMessageCallback).toHaveBeenCalled();
       const triplesMessages = syncMessageCallback.mock.calls.filter(
         ([{ type }]) => type === 'TRIPLES'
