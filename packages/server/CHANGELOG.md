@@ -1,5 +1,18 @@
 # @triplit/server
 
+## 0.4.20
+
+### Patch Changes
+
+- 186174da: Ensure sync connections are cleaned up on disconnect
+- Updated dependencies [c9fde067]
+- Updated dependencies [16687b5a]
+- Updated dependencies [c9fde067]
+- Updated dependencies [186174da]
+  - @triplit/db@0.4.5
+  - @triplit/client@0.5.5
+  - @triplit/server-core@0.5.0
+
 ## 0.4.19
 
 ### Patch Changes

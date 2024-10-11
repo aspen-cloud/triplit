@@ -1,5 +1,11 @@
 # @triplit/db
 
+## 0.4.5
+
+### Patch Changes
+
+- c9fde067: refire subscriptions on global var changes, add tracking of active subscriptions
+
 ## 0.4.4
 
 ### Patch Changes
