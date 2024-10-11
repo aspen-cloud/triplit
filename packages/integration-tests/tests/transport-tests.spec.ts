@@ -2210,19 +2210,18 @@ describe('deduping subscriptions', () => {
     const unsub1 = alice.subscribe(query, sub1Callback);
 
     await pause();
-    expect(syncMessageCallback).toHaveBeenCalledTimes(2);
-    // console.dir(syncMessageCallback.mock.calls, { depth: 10 });
+    expect(syncMessageCallback).toHaveBeenCalledTimes(1);
     const unsub2 = alice.subscribe(query, sub2Callback);
     await pause();
 
-    expect(syncMessageCallback).toHaveBeenCalledTimes(2);
+    expect(syncMessageCallback).toHaveBeenCalledTimes(1);
     unsub1();
     await pause();
-    expect(syncMessageCallback).toHaveBeenCalledTimes(2);
+    expect(syncMessageCallback).toHaveBeenCalledTimes(1);
     expect(syncMessageCallback.mock.lastCall[0].type).toBe('CONNECT_QUERY');
     unsub2();
     await pause();
-    expect(syncMessageCallback).toHaveBeenCalledTimes(3);
+    expect(syncMessageCallback).toHaveBeenCalledTimes(2);
     expect(syncMessageCallback.mock.lastCall[0].type).toBe('DISCONNECT_QUERY');
   });
   it("will send updates to all subscribers that haven't been unsubscribed", async () => {

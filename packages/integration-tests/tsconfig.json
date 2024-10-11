@@ -111,6 +111,9 @@
       "path": "../../packages/db/tsconfig.json"
     },
     {
+      "path": "../../packages/client/tsconfig.json"
+    },
+    {
       "path": "../../packages/cli/tsconfig.json"
     }
   ]

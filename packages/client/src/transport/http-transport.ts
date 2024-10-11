@@ -28,9 +28,9 @@ export class HttpTransport implements SyncTransport {
     if (this.eventSource) this.eventSource.onopen = callback;
   }
 
-  sendMessage(message: ClientSyncMessage): void {
-    if (!this.transportOptions) return;
-    if (!this.isOpen) return;
+  sendMessage(message: ClientSyncMessage): boolean {
+    if (!this.transportOptions) return false;
+    if (!this.isOpen) return false;
 
     const { token, clientId, server, secure } = this.transportOptions;
 
@@ -50,6 +50,7 @@ export class HttpTransport implements SyncTransport {
       // I think we just swallow the error here, since we're not connected to the server?
       // Equivalent to websocket "closed"
     });
+    return true;
   }
 
   onMessage(callback: (message: any) => void): void {

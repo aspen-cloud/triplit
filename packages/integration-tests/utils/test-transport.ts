@@ -68,14 +68,15 @@ export class TestTransport implements SyncTransport {
     this.onOpenCallback = callback;
   }
 
-  async sendMessage(message: ClientSyncMessage): Promise<void> {
+  sendMessage(message: ClientSyncMessage): boolean {
     if (!this.isOpen) {
-      return;
+      return false;
     }
     if (!this.connection) {
-      return;
+      return false;
     }
     simulateNetwork(() => this.connection!.dispatchCommand(message));
+    return true;
   }
 
   onMessage(callback: (message: any) => void): void {

@@ -76,6 +76,7 @@ export class SyncEngine {
       fulfilled: boolean;
       responseCallbacks: Set<(response: any) => void>;
       subCount: number;
+      hasSentPromise?: Promise<void>;
     }
   > = new Map();
 
@@ -201,16 +202,7 @@ export class SyncEngine {
         responseCallbacks: new Set(),
         subCount: 0,
       });
-      this.getQueryState(id).then((queryState: Timestamp[]) => {
-        this.sendMessage({
-          type: 'CONNECT_QUERY',
-          payload: {
-            id: id,
-            params,
-            state: queryState,
-          },
-        });
-      });
+      this.connectQuery(id, params);
     }
     // Safely using query! here because we just set it
     const query = this.queries.get(id)!;
@@ -243,6 +235,35 @@ export class SyncEngine {
     };
   }
 
+  private connectQuery(queryId: string, params: CollectionQuery<any, any>) {
+    if (!this.queries.has(queryId)) return;
+    let resolveMessageSentPromise: (value: any) => void = () => {};
+    let rejectMessageSentPromise: (reason: any) => void = () => {};
+    const messageSentPromise: Promise<void> = new Promise((resolve, reject) => {
+      resolveMessageSentPromise = resolve;
+      rejectMessageSentPromise = reject;
+    });
+
+    this.queries.get(queryId)!.hasSentPromise = messageSentPromise;
+
+    this.getQueryState(queryId).then((queryState: Timestamp[]) => {
+      const didSend = this.sendMessage({
+        type: 'CONNECT_QUERY',
+        payload: {
+          id: queryId,
+          params,
+          state: queryState,
+        },
+      });
+      // resolveMessageSentPromise(void 0);
+      if (didSend) {
+        resolveMessageSentPromise(void 0);
+      } else {
+        rejectMessageSentPromise(void 0);
+      }
+    });
+  }
+
   private triplesToStateVector(triples: TripleRow[]): Timestamp[] {
     const clientClocks = new Map<string, number>();
     triples.forEach((t) => {
@@ -266,9 +287,18 @@ export class SyncEngine {
   /**
    * @hidden
    */
-  disconnectQuery(id: string) {
-    this.sendMessage({ type: 'DISCONNECT_QUERY', payload: { id } });
-    this.queries.delete(id);
+  async disconnectQuery(id: string) {
+    if (!this.queries.has(id)) return;
+    try {
+      const hasSentPromise = this.queries.get(id)!.hasSentPromise;
+      if (hasSentPromise) {
+        await hasSentPromise;
+        this.sendMessage({ type: 'DISCONNECT_QUERY', payload: { id } });
+      }
+    } catch (e) {
+    } finally {
+      this.queries.delete(id);
+    }
   }
 
   private commitCallbacks: Map<string, Set<() => void>> = new Map();
@@ -438,16 +468,7 @@ export class SyncEngine {
       if (hasOutboxTriples) this.signalOutboxTriples();
       // Reconnect any queries
       for (const [id, queryInfo] of this.queries) {
-        this.getQueryState(id).then((queryState) => {
-          this.sendMessage({
-            type: 'CONNECT_QUERY',
-            payload: {
-              id,
-              params: queryInfo.params,
-              state: queryState,
-            },
-          });
-        });
+        this.connectQuery(id, queryInfo.params);
       }
     });
 
@@ -633,11 +654,16 @@ export class SyncEngine {
   }
 
   private sendMessage(message: ClientSyncMessage) {
-    this.transport.sendMessage(message);
-    this.logger.debug('sent', message);
-    for (const handler of this.messageSentSubscribers) {
-      handler(message);
+    const didSend = this.transport.sendMessage(message);
+
+    if (didSend) {
+      this.logger.debug('sent', message);
+      for (const handler of this.messageSentSubscribers) {
+        handler(message);
+      }
     }
+
+    return didSend;
   }
 
   /**

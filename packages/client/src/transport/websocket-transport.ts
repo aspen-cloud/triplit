@@ -36,12 +36,12 @@ export class WebSocketTransport implements SyncTransport {
   onOpen(callback: (ev: any) => void): void {
     if (this.ws) this.ws.onopen = callback;
   }
-  sendMessage(message: ClientSyncMessage): void {
+  sendMessage(message: ClientSyncMessage): boolean {
     // For now, skip sending messages if we're not connected. I dont think we need a queue yet.
-    if (!this.ws) return;
+    if (!this.ws) return false;
     if (!this.isOpen) {
       // console.log('skipping', type, payload);
-      return;
+      return false;
     }
 
     // Perform chunking if the message is too large
@@ -69,9 +69,10 @@ export class WebSocketTransport implements SyncTransport {
           })
         );
       }
-      return;
+      return true;
     }
     this.ws.send(JSON.stringify(message));
+    return true;
   }
   connect(params: TransportConnectParams): void {
     if (this.ws && this.isOpen) this.close();
