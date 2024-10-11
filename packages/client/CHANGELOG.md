@@ -1,5 +1,14 @@
 # @triplit/client
 
+## 0.5.5
+
+### Patch Changes
+
+- 16687b5a: Fix race condition with rapid query disconnects
+- c9fde067: fixup bug causing duplicate query tracking when syncStatus is assigned
+- Updated dependencies [c9fde067]
+  - @triplit/db@0.4.5
+
 ## 0.5.4
 
 ### Patch Changes
