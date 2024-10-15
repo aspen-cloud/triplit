@@ -103,7 +103,7 @@ Triplit provides a development server that you can use to test your app locally.
 npx triplit dev
 ```
 
-This will start the sync server on port `6543` and a database console on port `6542`. It will also output API tokens that your app will use to connect to the sync server.
+This will start the sync server at `http://localhost:6543` and a database console at `https://console.triplit.dev/local`. It will also output API tokens that your app will use to connect to the sync server.
 
 <Callout emoji="💡">
   If you're using our hosted service, Triplit Cloud, you can use the API tokens
@@ -296,7 +296,7 @@ This component renders a form with a text input and a submit button. When the fo
 
 We have a component that creates a new todo, but we still need to write some code that fetches the todos from the database and renders them on the page. If we want to test that our insertions are working without doing any more work, we can use the Triplit console.
 
-When you ran `npx triplit dev` earlier, it started a Triplit console. This is either located at `http://localhost:6542` or `https://console.triplit.dev/local`. You should see a page that looks like this:
+When you ran `npx triplit dev` earlier, it started a Triplit console. This is located at `https://console.triplit.dev/local`. You should see a page that looks like this:
 
 ![Triplit console](/triplit-console.png)
 
