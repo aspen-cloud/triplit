@@ -10073,7 +10073,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@triplit/client@npm:0.5.5, @triplit/client@workspace:^, @triplit/client@workspace:packages/client":
+"@triplit/client@npm:0.5.5, @triplit/client@npm:^0.5.5, @triplit/client@workspace:^, @triplit/client@workspace:packages/client":
   version: 0.0.0-use.local
   resolution: "@triplit/client@workspace:packages/client"
   dependencies:
@@ -10207,7 +10207,18 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@triplit/react@npm:0.4.5, @triplit/react@workspace:^, @triplit/react@workspace:packages/react":
+"@triplit/react@npm:0.4.5, @triplit/react@npm:latest":
+  version: 0.4.5
+  resolution: "@triplit/react@npm:0.4.5"
+  dependencies:
+    "@triplit/client": "npm:^0.5.5"
+  peerDependencies:
+    react: "*"
+  checksum: 10/abe8f7d74987579fec1901bbfa066e01ef6268739bcce32e9b758dfc0c7ff8189aa9317775e2cef6ce46fff59a70f712649c5bcc87f2a00065f96f499078f482
+  languageName: node
+  linkType: hard
+
+"@triplit/react@workspace:^, @triplit/react@workspace:packages/react":
   version: 0.0.0-use.local
   resolution: "@triplit/react@workspace:packages/react"
   dependencies:
@@ -10218,17 +10229,6 @@ __metadata:
     react: "*"
   languageName: unknown
   linkType: soft
-
-"@triplit/react@npm:latest":
-  version: 0.3.102
-  resolution: "@triplit/react@npm:0.3.102"
-  dependencies:
-    "@triplit/client": "npm:^0.4.13"
-  peerDependencies:
-    react: "*"
-  checksum: 10/87575cf5297a784cdf711b8868c71db4caa98414a33c62d9d9a7cbf791f9729994f2a2950c178cc75caf34e13eaf27efc58beed48cabec8225600b52b0003b1c
-  languageName: node
-  linkType: hard
 
 "@triplit/server-core@npm:^0.3.47, @triplit/server-core@npm:^0.3.67":
   version: 0.3.79
@@ -21259,6 +21259,7 @@ __metadata:
     "@types/node": "npm:^22.4.1"
     execa: "npm:^8.0.1"
     fs-extra: "npm:^11.1.1"
+    vite-tsconfig-paths: "npm:^5.0.1"
     vitest: "npm:^2.1.2"
   languageName: unknown
   linkType: soft
@@ -31360,6 +31361,20 @@ __metadata:
   languageName: node
   linkType: hard
 
+"tsconfck@npm:^3.0.3":
+  version: 3.1.4
+  resolution: "tsconfck@npm:3.1.4"
+  peerDependencies:
+    typescript: ^5.0.0
+  peerDependenciesMeta:
+    typescript:
+      optional: true
+  bin:
+    tsconfck: bin/tsconfck.js
+  checksum: 10/4fb02e75ff374a82052b4800970bebe4466b5a6e7193d74e7b875cc8225acb5037fb4e7dcd4a5cd751c22129360cb13b4d5536897eae131d69c1a20fb18a99b4
+  languageName: node
+  linkType: hard
+
 "tsconfig-paths@npm:^3.14.1, tsconfig-paths@npm:^3.14.2":
   version: 3.14.2
   resolution: "tsconfig-paths@npm:3.14.2"
@@ -32848,6 +32863,22 @@ __metadata:
     vite:
       optional: true
   checksum: 10/fd21e99a9bcd4ddb995727a9cf7b87ca95308b0b67e69bee2b836024aabe962b2206fbb62e66645638a1298fd171f8a2b0b55202da7cc801a31b3efa41a3fb2f
+  languageName: node
+  linkType: hard
+
+"vite-tsconfig-paths@npm:^5.0.1":
+  version: 5.0.1
+  resolution: "vite-tsconfig-paths@npm:5.0.1"
+  dependencies:
+    debug: "npm:^4.1.1"
+    globrex: "npm:^0.1.2"
+    tsconfck: "npm:^3.0.3"
+  peerDependencies:
+    vite: "*"
+  peerDependenciesMeta:
+    vite:
+      optional: true
+  checksum: 10/e3cf1a2b997747cec6af83c3f9acc057e7f452ef91c3f38a9e32eb2e6cc6c723f51026e38f5d114296fc499b10b36bb56d668d9613a7367f5ecf23adb78642d7
   languageName: node
   linkType: hard
 

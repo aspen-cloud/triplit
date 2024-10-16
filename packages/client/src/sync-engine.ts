@@ -76,7 +76,8 @@ export class SyncEngine {
       fulfilled: boolean;
       responseCallbacks: Set<(response: any) => void>;
       subCount: number;
-      hasSentPromise?: Promise<boolean>;
+      hasSent: boolean;
+      abortController: AbortController;
     }
   > = new Map();
 
@@ -201,6 +202,8 @@ export class SyncEngine {
         fulfilled: false,
         responseCallbacks: new Set(),
         subCount: 0,
+        hasSent: false,
+        abortController: new AbortController(),
       });
       this.connectQuery(id, params);
     }
@@ -238,9 +241,15 @@ export class SyncEngine {
   private connectQuery(queryId: string, params: CollectionQuery<any, any>) {
     if (!this.queries.has(queryId)) return;
 
-    this.queries.get(queryId)!.hasSentPromise = this.getQueryState(
-      queryId
-    ).then((queryState: Timestamp[]) => {
+    this.getQueryState(queryId).then((queryState: Timestamp[]) => {
+      const queryMetadata = this.queries.get(queryId);
+      if (
+        !queryMetadata ||
+        queryMetadata.hasSent ||
+        queryMetadata.abortController.signal.aborted
+      ) {
+        return;
+      }
       const didSend = this.sendMessage({
         type: 'CONNECT_QUERY',
         payload: {
@@ -249,6 +258,9 @@ export class SyncEngine {
           state: queryState,
         },
       });
+      if (didSend) {
+        queryMetadata.hasSent = true;
+      }
       return didSend;
     });
   }
@@ -278,16 +290,13 @@ export class SyncEngine {
    */
   async disconnectQuery(id: string) {
     if (!this.queries.has(id)) return;
-    try {
-      const hasSentPromise = this.queries.get(id)!.hasSentPromise;
-      if (hasSentPromise && (await hasSentPromise)) {
-        await hasSentPromise;
-        this.sendMessage({ type: 'DISCONNECT_QUERY', payload: { id } });
-      }
-    } catch (e) {
-    } finally {
-      this.queries.delete(id);
+    const queryMetadata = this.queries.get(id)!;
+    if (queryMetadata.hasSent) {
+      this.sendMessage({ type: 'DISCONNECT_QUERY', payload: { id } });
+    } else {
+      queryMetadata.abortController.abort();
     }
+    this.queries.delete(id);
   }
 
   private commitCallbacks: Map<string, Set<() => void>> = new Map();
@@ -589,6 +598,10 @@ export class SyncEngine {
    */
   private resetConnectionState() {
     this.awaitingAck = new Set();
+    for (const id of this.queries.keys()) {
+      const queryMetadata = this.queries.get(id);
+      queryMetadata!.hasSent = false;
+    }
   }
 
   /**

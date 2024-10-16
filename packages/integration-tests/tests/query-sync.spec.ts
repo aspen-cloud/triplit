@@ -1,4 +1,4 @@
-import { expect, it, describe } from 'vitest';
+import { expect, it, describe, vi } from 'vitest';
 import { pause } from '../utils/async.js';
 import { Server as TriplitServer } from '@triplit/server-core';
 import DB from '@triplit/db';
@@ -19,6 +19,7 @@ describe('CONNECT_QUERY message should be sent before DISCONNECT_QUERY', async (
     const messageLog = spyMessages(client);
     const query = client.query('test').build();
     const unsub = client.subscribe(query, () => {});
+    await pause(1);
     unsub();
     await pause();
     const mappedMessages = mapMessages(messageLog, (message) => {
@@ -48,7 +49,7 @@ describe('CONNECT_QUERY message should be sent before DISCONNECT_QUERY', async (
     ]);
   });
 
-  it('should not send connect or disconnect if subscribed and unsubscribed will disconnected', async () => {
+  it('should not send connect or disconnect if subscribed and unsubscribed while disconnected', async () => {
     const server = new TriplitServer(new DB());
     const client = createTestClient(server, SERVICE_KEY, {
       clientId: 'alice',
@@ -69,6 +70,28 @@ describe('CONNECT_QUERY message should be sent before DISCONNECT_QUERY', async (
       };
     });
     expect(mappedMessages).toHaveLength(0);
+  });
+
+  it('should properly connect if subscribe -> unsubscribe -> subscribe in quick succession', async () => {
+    const server = new TriplitServer(new DB());
+    const client = createTestClient(server, SERVICE_KEY, {
+      clientId: 'alice',
+    });
+    await pause();
+    const messageLog = spyMessages(client);
+    const query = client.query('test').build();
+
+    const unsubFirst = client.subscribe(query, () => {});
+    unsubFirst();
+    const resultCallbackSpy = vi.fn();
+    const remoteResponseCallbackSpy = vi.fn();
+    const unsubSecond = client.subscribe(query, resultCallbackSpy, () => {}, {
+      onRemoteFulfilled: remoteResponseCallbackSpy,
+    });
+    await pause(300);
+    expect(resultCallbackSpy).toHaveBeenCalled();
+    expect(remoteResponseCallbackSpy).toHaveBeenCalled();
+    // expect(resultCallbackSpy.lastCall.args[0].type).toBe('TRIPLES');
   });
 });
 
