@@ -17,7 +17,11 @@ import { ProjectJWT } from './token.js';
 export class Server {
   private connections: Map<string, SyncConnection> = new Map();
 
-  constructor(public db: TriplitDB<any>, public logger: Logger = NullLogger) {}
+  constructor(
+    public db: TriplitDB<any>,
+    public exceptionReporter: (e: unknown) => void = (e) => console.error(e),
+    public logger: Logger = NullLogger
+  ) {}
 
   createSession(token: ProjectJWT) {
     return new Session(this, token);
@@ -110,7 +114,11 @@ export class Server {
           break;
       }
     } catch (e: any) {
-      const error = isTriplitError(e)
+      const knownError = isTriplitError(e);
+      if (!knownError) {
+        this.exceptionReporter(e);
+      }
+      const error = knownError
         ? e
         : new TriplitError(
             `An unknown error occurred while handling the request: ${route.join(

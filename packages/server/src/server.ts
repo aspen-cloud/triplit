@@ -135,7 +135,7 @@ export function createServer(options?: ServerOptions) {
           ...(options?.dbOptions ?? {}),
         });
     // @ts-expect-error
-    const server = new TriplitServer(db);
+    const server = new TriplitServer(db, captureException);
     triplitServers.set(projectId, server);
     return server;
   }

@@ -76,8 +76,8 @@ export class Session {
       await this.db.clear({ full });
       return ServerResponse(200);
     } catch (e) {
-      if (isTriplitError(e)) return errorResponse(e);
-      return errorResponse(e, {
+      if (isTriplitError(e)) return this.errorResponse(e);
+      return this.errorResponse(e, {
         fallbackMessage: 'An unknown error occurred clearing the database.',
       });
     }
@@ -125,7 +125,7 @@ export class Session {
 
   async queryTriples({ query }: { query: CollectionQuery }) {
     if (!query)
-      return errorResponse(
+      return this.errorResponse(
         new TriplitError('{ query: CollectionQuery } missing from request body')
       );
     try {
@@ -136,7 +136,7 @@ export class Session {
         })
       );
     } catch (e) {
-      return errorResponse(e as Error);
+      return this.errorResponse(e as Error);
     }
   }
 
@@ -172,7 +172,7 @@ export class Session {
         result: data,
       });
     } catch (e) {
-      return errorResponse(e as Error);
+      return this.errorResponse(e as Error);
     }
   }
 
@@ -194,7 +194,7 @@ export class Session {
       };
       return ServerResponse(200, serializableResult);
     } catch (e) {
-      return errorResponse(e, {
+      return this.errorResponse(e, {
         fallbackMessage: 'Could not insert entity. An unknown error occurred.',
       });
     }
@@ -235,7 +235,7 @@ export class Session {
       };
       return ServerResponse(200, serializableResult);
     } catch (e) {
-      return errorResponse(e, {
+      return this.errorResponse(e, {
         fallbackMessage: 'Could not insert entity. An unknown error occurred.',
       });
     }
@@ -247,7 +247,7 @@ export class Session {
       await this.db.tripleStore.insertTriples(triples);
       return ServerResponse(200, {});
     } catch (e) {
-      return errorResponse(e, {
+      return this.errorResponse(e, {
         fallbackMessage: 'Could not insert triples. An unknown error occurred.',
       });
     }
@@ -265,7 +265,7 @@ export class Session {
       });
       return ServerResponse(200, {});
     } catch (e) {
-      return errorResponse(e, {
+      return this.errorResponse(e, {
         fallbackMessage: 'Could not delete triples. An unknown error occurred.',
       });
     }
@@ -283,7 +283,7 @@ export class Session {
           const timestamp = await tx.storeTx.getTransactionTimestamp();
           for (const patch of patches) {
             if (patch[0] === 'delete') {
-              tx.storeTx.insertTriple({
+              await tx.storeTx.insertTriple({
                 id,
                 attribute: [collectionName, ...patch[1]],
                 value: null,
@@ -291,7 +291,7 @@ export class Session {
                 expired: true,
               });
             } else if (patch[0] === 'set') {
-              tx.storeTx.insertTriple({
+              await tx.storeTx.insertTriple({
                 id,
                 attribute: [collectionName, ...patch[1]],
                 value: patch[2],
@@ -305,7 +305,7 @@ export class Session {
       );
       return ServerResponse(200, txResult);
     } catch (e) {
-      return errorResponse(e, {
+      return this.errorResponse(e, {
         fallbackMessage: 'Could not update entity. An unknown error occurred.',
       });
     }
@@ -318,23 +318,24 @@ export class Session {
       });
       return ServerResponse(200, txResult);
     } catch (e) {
-      return errorResponse(e, {
+      return this.errorResponse(e, {
         fallbackMessage: 'Could not delete entity. An unknown error occurred.',
       });
     }
   }
-}
 
-function errorResponse(e: unknown, options?: { fallbackMessage?: string }) {
-  if (isTriplitError(e)) {
-    return ServerResponse(e.status, e.toJSON());
+  errorResponse(e: unknown, options?: { fallbackMessage?: string }) {
+    if (isTriplitError(e)) {
+      return ServerResponse(e.status, e.toJSON());
+    }
+    this.server.exceptionReporter(e);
+    const generalError = new TriplitError(
+      options?.fallbackMessage ??
+        'An unknown error occurred processing your request.'
+    );
+    console.log(e);
+    return ServerResponse(generalError.status, generalError.toJSON());
   }
-  const generalError = new TriplitError(
-    options?.fallbackMessage ??
-      'An unknown error occurred processing your request.'
-  );
-  console.log(e);
-  return ServerResponse(generalError.status, generalError.toJSON());
 }
 
 export function throttle(callback: () => void, delay: number) {
