@@ -1,5 +1,11 @@
 # @triplit/server-core
 
+## 0.5.1
+
+### Patch Changes
+
+- deacd21c: handle larger bulk inserts
+
 ## 0.5.0
 
 ### Minor Changes

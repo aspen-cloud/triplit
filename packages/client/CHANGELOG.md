@@ -1,5 +1,11 @@
 # @triplit/client
 
+## 0.5.6
+
+### Patch Changes
+
+- 3ca5265f: Fix query syncin race condition that occured with React Strict mode's double rendering behavior
+
 ## 0.5.5
 
 ### Patch Changes

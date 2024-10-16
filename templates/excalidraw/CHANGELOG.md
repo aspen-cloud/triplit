@@ -4,6 +4,14 @@
 
 ### Patch Changes
 
+- Updated dependencies [3ca5265f]
+  - @triplit/client@0.5.6
+  - @triplit/react@0.4.6
+
+## null
+
+### Patch Changes
+
 - Updated dependencies [c9fde067]
 - Updated dependencies [16687b5a]
 - Updated dependencies [c9fde067]
