@@ -98,7 +98,11 @@
     /* Completeness */
     // "skipDefaultLibCheck": true,                      /* Skip type checking .d.ts files that are included with TypeScript. */
     "skipLibCheck": true /* Skip type checking all .d.ts files. */,
-    "moduleResolution": "NodeNext"
+    "moduleResolution": "NodeNext",
+    "paths": {
+      "@triplit/client/*": ["../../packages/client/src/*"],
+      "@triplit/client": ["../../packages/client/src/index.ts"]
+    }
   },
   "references": [
     {
