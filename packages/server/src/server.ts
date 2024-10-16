@@ -18,7 +18,7 @@ import {
 import { parseAndValidateToken, ProjectJWT } from '@triplit/server-core/token';
 import { logger } from './logger.js';
 import { Route } from '@triplit/server-core/triplit-server';
-import multer from 'multer';
+import multer, { MulterError } from 'multer';
 import * as Sentry from '@sentry/node';
 import {
   StoreKeys,
@@ -35,7 +35,10 @@ import { createRequire } from 'module';
 import { TriplitClient } from '@triplit/client';
 import PublicRouter from './routes/public.js';
 
-const upload = multer();
+const MB = 1024 * 1024;
+const MB_LIMIT = 100;
+
+const upload = multer({ limits: { fieldSize: MB * MB_LIMIT } });
 
 function parseClientMessage(
   message: WS.RawData
@@ -391,6 +394,24 @@ export function createServer(options?: ServerOptions) {
   });
   wss.on('close', () => {
     clearInterval(heartbeatInterval);
+  });
+  // @ts-expect-error
+  app.use(function (err: unknown, req, res, next) {
+    console.error(err);
+    captureException(err);
+    if (err instanceof MulterError) {
+      if (err.code === 'LIMIT_FIELD_VALUE') {
+        return res
+          .status(400)
+          .json(
+            new TriplitError(
+              `Attempted to perform a bulk insert with a JSON payload that exceeded the maximum size of ${MB_LIMIT} MB`
+            ).toJSON()
+          );
+      }
+      return res.status(400).json(new TriplitError(err.message).toJSON());
+    }
+    next(err);
   });
 
   return function startServer(port: number, onOpen?: (() => void) | undefined) {
