@@ -1,5 +1,15 @@
 # @triplit/server
 
+## 0.4.21
+
+### Patch Changes
+
+- deacd21c: handle larger bulk inserts
+- Updated dependencies [deacd21c]
+- Updated dependencies [3ca5265f]
+  - @triplit/server-core@0.5.1
+  - @triplit/client@0.5.6
+
 ## 0.4.20
 
 ### Patch Changes
