@@ -3,7 +3,7 @@ import { ClientSchema, Schema as S, Entity } from '@triplit/client';
 // This is your schema definition.
 //
 // For all of the supported types and options, check the documentation:
-//   https://triplit.com/docs/schemas/types
+//   https://triplit.dev/docs/schemas/types
 //
 // Whenever you change your schema while the sync server is running
 // you'll need to run
