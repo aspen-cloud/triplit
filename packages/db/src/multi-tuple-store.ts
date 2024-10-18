@@ -279,7 +279,6 @@ export default class MultiTupleStore<TupleSchema extends KeyValuePair> {
       Promise.all(unsubFuncs).then((unsubs) =>
         unsubs.forEach((unsub) => unsub())
       );
-      // TODO: clean up reactivity
     };
   }
 
@@ -529,7 +528,7 @@ export class MultiTupleTransaction<
       hooks,
     });
     for (const [storageKey, tx] of txEntries) {
-      store.reactivity.trackSubTx(storageKey, tx.id, this.id);
+      store.reactivity.trackTupleStoreTx(storageKey, tx.id, this.id);
     }
     this.txs = txs;
     this.store = store;
@@ -706,6 +705,9 @@ export class MultiTupleTransaction<
 
     // schedule reactivity callbacks
     this.store.reactivity.emit(this.id);
+    for (const [storeId, tx] of Object.entries(this.txs)) {
+      this.store.reactivity.untrackTupleStoreTx(storeId, tx.id);
+    }
 
     // run after hooks
     for (const afterHook of this.hooks.afterCommit) {
@@ -743,6 +745,9 @@ export class MultiTupleTransaction<
     this.setStatus('canceling');
     await Promise.all(Object.values(this.txs).map((tx) => tx.cancel()));
     this.setStatus('canceled');
+    for (const [storeId, tx] of Object.entries(this.txs)) {
+      this.store.reactivity.untrackTupleStoreTx(storeId, tx.id);
+    }
   }
 
   async cancel() {
@@ -783,24 +788,55 @@ type MultiTupleReactivityCallback<TupleSchema extends KeyValuePair> = (
   >
 ) => void | Promise<void>;
 type MultiTupleReactivityCallbackArgs = Record<string, WriteOps<any>>;
+
+/**
+ * MultiTupleReactivity is a class that manages reactivity for a MultiTupleStore.
+ *
+ * We allow for multiple stores to be combined into a single MultiTupleStore, and we want a way to fire a single when a transaction is committed across many stores.
+ *
+ * When we subscribe to a MultiTupleStore, we add a subscription to each store that on fire adds a callback to the MultiTupleReactivity, so on write we we queue up the data.
+ *
+ * Later, when a multi store transaction is committed, we call emit() on the MultiTupleReactivity, which will call the single callback with the combined write operations.
+ */
 export class MultiTupleReactivity {
+  // Maps multi store txid to callbacks (will call callbacks for tracked tuple stores)
   private txCallbacks: Record<
     string,
     {
       callbacks: Set<MultiTupleReactivityCallback<any>>;
       args: MultiTupleReactivityCallbackArgs;
-      subTxs: string[];
+      tupleStoreTxs: string[];
     }
   > = {};
-  private subTxReactivityIds: Record<string, string> = {};
+  // Maps tuple store composite key to multi store txid
+  private tupleStoreTxReactivityIds: Record<string, string> = {};
   private taskQueue = new TaskQueue();
 
-  trackSubTx(storeId: string, txId: string, multiStoreTxId: string) {
-    this.subTxReactivityIds[`${storeId}_${txId}`] = multiStoreTxId;
+  trackTupleStoreTx(storeId: string, txId: string, multiStoreTxId: string) {
+    const tupleStoreTxId = MultiTupleReactivity.TupleStoreCompositeKey(
+      storeId,
+      txId
+    );
+    this.tupleStoreTxReactivityIds[tupleStoreTxId] = multiStoreTxId;
   }
 
+  untrackTupleStoreTx(storeId: string, txId: string) {
+    const tupleStoreTxId = MultiTupleReactivity.TupleStoreCompositeKey(
+      storeId,
+      txId
+    );
+    delete this.tupleStoreTxReactivityIds[tupleStoreTxId];
+  }
+
+  /**
+   * Returns the MultiTupleTransaction id related to a tuple store transaction id
+   */
   getReactivityId(storeId: string, txId: string) {
-    return this.subTxReactivityIds[`${storeId}_${txId}`];
+    const tupleStoreTxId = MultiTupleReactivity.TupleStoreCompositeKey(
+      storeId,
+      txId
+    );
+    return this.tupleStoreTxReactivityIds[tupleStoreTxId];
   }
 
   updateCallback(
@@ -814,12 +850,20 @@ export class MultiTupleReactivity {
       this.txCallbacks[reactivityId] = {
         callbacks: new Set(),
         args: {},
-        subTxs: [],
+        tupleStoreTxs: [],
       };
     }
     this.txCallbacks[reactivityId].callbacks.add(callback);
     this.txCallbacks[reactivityId].args[storeId] = writeOps;
-    this.txCallbacks[reactivityId].subTxs.push(txId);
+    const tupleStoreTxId = MultiTupleReactivity.TupleStoreCompositeKey(
+      storeId,
+      txId
+    );
+    this.txCallbacks[reactivityId].tupleStoreTxs.push(tupleStoreTxId);
+  }
+
+  deleteCallback(reactivityId: string) {
+    delete this.txCallbacks[reactivityId];
   }
 
   emit(reactivityId: string) {
@@ -829,11 +873,12 @@ export class MultiTupleReactivity {
         Array.from(txCallbacks.callbacks),
         txCallbacks.args
       );
-      for (const subTxId of txCallbacks.subTxs) {
-        delete this.subTxReactivityIds[subTxId];
-      }
       delete this.txCallbacks[reactivityId];
     }
+  }
+
+  static TupleStoreCompositeKey(storeId: string, txId: string) {
+    return `${storeId}_${txId}`;
   }
 }
 

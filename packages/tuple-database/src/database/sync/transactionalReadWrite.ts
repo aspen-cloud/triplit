@@ -32,9 +32,14 @@ export function transactionalReadWrite<S extends KeyValuePair = KeyValuePair>(
 				retries,
 				() => {
 					const tx = dbOrTx.transact()
-					const result = fn(tx, ...args)
-					tx.commit()
-					return result
+					try {
+						const result = fn(tx, ...args)
+						tx.commit()
+						return result
+					} catch (e) {
+						tx.cancel()
+						throw e
+					}
 				},
 				options
 			)

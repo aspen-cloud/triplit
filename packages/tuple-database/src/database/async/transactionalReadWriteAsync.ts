@@ -26,9 +26,14 @@ export function transactionalReadWriteAsync<
 				retries,
 				async () => {
 					const tx = dbOrTx.transact()
-					const result = await fn(tx, ...args)
-					await tx.commit()
-					return result
+					try {
+						const result = await fn(tx, ...args)
+						await tx.commit()
+						return result
+					} catch (e) {
+						await tx.cancel()
+						throw e
+					}
 				},
 				options
 			)
