@@ -1,5 +1,14 @@
 # @triplit/db
 
+## 0.4.6
+
+### Patch Changes
+
+- 15815dc2: fixup reactivity memory leak
+- 23b6171d: add support for webhooks
+- Updated dependencies [15815dc2]
+  - @triplit/tuple-database@2.2.29
+
 ## 0.4.5
 
 ### Patch Changes
