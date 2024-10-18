@@ -1,4 +1,9 @@
-import { DB as TriplitDB, TriplitError } from '@triplit/db';
+import {
+  DBTransaction,
+  DB as TriplitDB,
+  TriplitError,
+  splitIdParts,
+} from '@triplit/db';
 import {
   ConnectionOptions,
   ServerResponse,
@@ -10,18 +15,22 @@ import type { ServerResponse as ServerResponseType } from './session.js';
 import { isTriplitError } from './utils.js';
 import { Logger, NullLogger } from './logging.js';
 import { ProjectJWT } from './token.js';
+import { WebhooksManager } from './webhooks-manager.js';
 
 /**
  * Represents a Triplit server for a specific tenant.
  */
 export class Server {
   private connections: Map<string, SyncConnection> = new Map();
+  public webhooksManager: WebhooksManager;
 
   constructor(
     public db: TriplitDB<any>,
     public exceptionReporter: (e: unknown) => void = (e) => console.error(e),
     public logger: Logger = NullLogger
-  ) {}
+  ) {
+    this.webhooksManager = new WebhooksManager(db);
+  }
 
   createSession(token: ProjectJWT) {
     return new Session(this, token);
@@ -105,6 +114,18 @@ export class Server {
           resp = await session.getSchema(params);
           break;
         }
+        case 'webhooks-get': {
+          resp = await session.handleWebhooksGet();
+          break;
+        }
+        case 'webhooks-push': {
+          resp = await session.handleWebhooksJSONPush(params);
+          break;
+        }
+        case 'webhooks-clear': {
+          resp = await session.handleWebhooksClear();
+          break;
+        }
         case 'override-schema': {
           resp = await session.overrideSchema(params);
           break;
@@ -153,6 +174,9 @@ const TRIPLIT_SEGEMENTS = [
   'schema',
   'stats',
   'update',
+  'webhooks-get',
+  'webhooks-push',
+  'webhooks-clear',
 ] as const;
 
 type TriplitPath = [(typeof TRIPLIT_SEGEMENTS)[number]];

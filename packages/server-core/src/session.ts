@@ -15,6 +15,7 @@ import { Server as TriplitServer } from './triplit-server.js';
 import { ProjectJWT } from './token.js';
 import { genToArr } from '@triplit/db';
 import { SyncConnection } from './sync-connection.js';
+import { WebhookJSONDefinition } from './webhooks-manager.js';
 
 export interface ConnectionOptions {
   clientId: string;
@@ -335,6 +336,43 @@ export class Session {
     );
     console.log(e);
     return ServerResponse(generalError.status, generalError.toJSON());
+  }
+  async handleWebhooksJSONPush({
+    webhooks,
+  }: {
+    webhooks: WebhookJSONDefinition;
+  }) {
+    if (!hasAdminAccess(this.token)) return NotAdminResponse();
+    try {
+      this.server.webhooksManager.addAndStoreWebhooks(webhooks);
+      return ServerResponse(200, {});
+    } catch (e) {
+      return this.errorResponse(e, {
+        fallbackMessage: 'Could not add webhooks.',
+      });
+    }
+  }
+  async handleWebhooksClear() {
+    if (!hasAdminAccess(this.token)) return NotAdminResponse();
+    try {
+      this.server.webhooksManager.clearWebhooks();
+      return ServerResponse(200, {});
+    } catch (e) {
+      return this.errorResponse(e, {
+        fallbackMessage: 'Could not clear webhooks.',
+      });
+    }
+  }
+  async handleWebhooksGet() {
+    if (!hasAdminAccess(this.token)) return NotAdminResponse();
+    try {
+      const webhooks = await this.server.webhooksManager.getWebhooks();
+      return ServerResponse(200, webhooks);
+    } catch (e) {
+      return this.errorResponse(e, {
+        fallbackMessage: 'Could not fetch webhooks.',
+      });
+    }
   }
 }
 

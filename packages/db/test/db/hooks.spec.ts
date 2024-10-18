@@ -206,4 +206,42 @@ describe('hooks API', async () => {
     expect(afterDeleteFn.mock.calls[0][0].entity).toBe(undefined);
     expect(afterDeleteFn.mock.calls[1][0].entity).toBe(undefined);
   });
+  it('removing hooks will prevent them from running', async () => {
+    const db = new DB();
+    const beforeCommitFn = vi.fn();
+    const beforeCommit = db.addTrigger(
+      { when: 'beforeCommit', collectionName: 'users' },
+      beforeCommitFn
+    );
+    const beforeInsertFn = vi.fn();
+    const beforeInsert = db.addTrigger(
+      { when: 'beforeInsert', collectionName: 'users' },
+      beforeInsertFn
+    );
+    const beforeUpdateFn = vi.fn();
+    const beforeUpdate = db.addTrigger(
+      { when: 'beforeUpdate', collectionName: 'users' },
+      beforeUpdateFn
+    );
+    const beforeDeleteFn = vi.fn();
+    const beforeDelete = db.addTrigger(
+      { when: 'beforeDelete', collectionName: 'users' },
+      beforeDeleteFn
+    );
+    db.removeTrigger(beforeCommit);
+    db.removeTrigger(beforeInsert);
+    db.removeTrigger(beforeUpdate);
+    db.removeTrigger(beforeDelete);
+    await db.transact(async (tx) => {
+      await tx.insert('users', { id: '1', name: 'alice' });
+      await tx.update('users', '1', (entity) => {
+        entity.name = 'aaron';
+      });
+      await tx.delete('users', '1');
+    });
+    expect(beforeCommitFn).toHaveBeenCalledTimes(0);
+    expect(beforeInsertFn).toHaveBeenCalledTimes(0);
+    expect(beforeUpdateFn).toHaveBeenCalledTimes(0);
+    expect(beforeDeleteFn).toHaveBeenCalledTimes(0);
+  });
 });

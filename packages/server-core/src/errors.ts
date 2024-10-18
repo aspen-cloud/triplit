@@ -224,3 +224,16 @@ export class RouteNotFoundError extends TriplitError {
     this.status = STATUS_CODES['Not Found'];
   }
 }
+
+export class UnserializableEntityError extends TriplitError {
+  constructor(entity: any, ...args: any[]) {
+    super(...args);
+    this.name = 'UnserializableObjectError';
+    this.baseMessage =
+      'The sync server, while schemaless, encountered an object that could not be serialized to JSON.';
+    this.contextMessage = `The entity that could not be serialized: ${JSON.stringify(
+      entity
+    )}`;
+    this.status = STATUS_CODES['Internal Server Error'];
+  }
+}

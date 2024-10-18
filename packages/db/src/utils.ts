@@ -1,3 +1,4 @@
+import { TriggerMap } from './db.js';
 import { OBJECT_MARKER } from './entity.js';
 import { UnserializableValueError } from './errors.js';
 import { Timestamp } from './timestamp.js';
@@ -103,12 +104,22 @@ export function triplesToObject<T>(triples: TuplePrefix<EAV>[]) {
 }
 
 // TODO: refactor how hooks are passed to transactions (probably want to call this in constructor of tx classes)
-export function copyHooks<Hooks extends Record<string, any[]>>(
+export function copyTripleStoreHooks<Hooks extends Record<string, any[]>>(
   hooks: Hooks
 ): Hooks {
   return Object.entries(hooks).reduce<Hooks>((acc, [key, value]) => {
     // @ts-ignore
     acc[key] = [...value];
+    return acc;
+  }, {} as Hooks);
+}
+
+export function copyDBHooks<Hooks extends Record<string, TriggerMap<any, any>>>(
+  hooks: Hooks
+): Hooks {
+  return Object.entries(hooks).reduce<Hooks>((acc, [key, value]) => {
+    // @ts-ignore
+    acc[key] = new Map(value);
     return acc;
   }, {} as Hooks);
 }

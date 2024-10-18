@@ -33,7 +33,7 @@ import {
   findAllClientIds,
   RangeContraints,
 } from './triple-store-utils.js';
-import { copyHooks } from './utils.js';
+import { copyTripleStoreHooks } from './utils.js';
 import { MirroredArray } from './utils/mirrored-array.js';
 import { genToArr } from './utils/generator.js';
 import * as tv from '@triplit/tuple-database/helpers/sortedTupleValuePairs';
@@ -432,7 +432,7 @@ export class TripleStoreTransaction implements TripleStoreApi {
       // @ts-expect-error
       tupleTx: this.tupleTx.withScope(scope),
       clock: this.clock,
-      hooks: copyHooks(this.hooks),
+      hooks: copyTripleStoreHooks(this.hooks),
     });
   }
 

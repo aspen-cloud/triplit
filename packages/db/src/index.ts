@@ -46,6 +46,7 @@ export {
   isValueVariable,
   replaceVariablesInFilterStatements,
   replaceVariable,
+  splitIdParts,
 } from './db-helpers.js';
 export type {
   TripleRow,

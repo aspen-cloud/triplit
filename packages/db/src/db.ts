@@ -30,7 +30,7 @@ import {
   logSchemaChangeViolations,
 } from './db-helpers.js';
 import { VariableAwareCache } from './variable-aware-cache.js';
-import { copyHooks } from './utils.js';
+import { copyDBHooks } from './utils.js';
 import { EAV, indexToTriple, TripleRow } from './triple-store-utils.js';
 import { ClearOptions, TripleStore } from './triple-store.js';
 import { Logger } from '@triplit/types/logger';
@@ -141,16 +141,18 @@ type TxOutput<Output> = {
   output: Output | undefined;
 };
 
-type TriggerWhen =
-  | 'afterCommit'
-  | 'afterDelete'
-  | 'afterInsert'
-  | 'afterUpdate'
-  | 'beforeCommit'
-  | 'beforeDelete'
-  | 'beforeInsert'
-  | 'beforeUpdate';
+const TRIGGER_WHEN = [
+  'afterCommit',
+  'afterDelete',
+  'afterInsert',
+  'afterUpdate',
+  'beforeCommit',
+  'beforeDelete',
+  'beforeInsert',
+  'beforeUpdate',
+] as const;
 
+type TriggerWhen = (typeof TRIGGER_WHEN)[number];
 // TODO: type this better
 export type EntityOpSet = OpSet<[string, any]>;
 
@@ -287,33 +289,38 @@ type TriggerCallback =
   | BeforeUpdateCallback<any, any>
   | BeforeDeleteCallback<any, any>;
 
+export type TriggerMap<
+  C extends TriggerCallback,
+  O extends TriggerOptions
+> = Map<string, [C, O]>;
+
 export type DBHooks<M extends Models> = {
-  afterCommit: [AfterCommitCallback<M>, AfterCommitOptions<M>][];
-  afterInsert: [
+  afterCommit: TriggerMap<AfterCommitCallback<M>, AfterCommitOptions<M>>;
+  afterInsert: TriggerMap<
     AfterInsertCallback<M, CollectionNameFromModels<M>>,
     AfterInsertOptions<M, CollectionNameFromModels<M>>
-  ][];
-  afterUpdate: [
+  >;
+  afterUpdate: TriggerMap<
     AfterInsertCallback<M, CollectionNameFromModels<M>>,
     AfterUpdateOptions<M, CollectionNameFromModels<M>>
-  ][];
-  afterDelete: [
+  >;
+  afterDelete: TriggerMap<
     AfterDeleteCallback<M, CollectionNameFromModels<M>>,
     AfterDeleteOptions<M, CollectionNameFromModels<M>>
-  ][];
-  beforeCommit: [BeforeCommitCallback<M>, BeforeCommitOptions<M>][];
-  beforeInsert: [
+  >;
+  beforeCommit: TriggerMap<BeforeCommitCallback<M>, BeforeCommitOptions<M>>;
+  beforeInsert: TriggerMap<
     BeforeInsertCallback<M, CollectionNameFromModels<M>>,
     BeforeInsertOptions<M, CollectionNameFromModels<M>>
-  ][];
-  beforeUpdate: [
+  >;
+  beforeUpdate: TriggerMap<
     BeforeUpdateCallback<M, CollectionNameFromModels<M>>,
     BeforeUpdateOptions<M, CollectionNameFromModels<M>>
-  ][];
-  beforeDelete: [
+  >;
+  beforeDelete: TriggerMap<
     BeforeDeleteCallback<M, CollectionNameFromModels<M>>,
     BeforeDeleteOptions<M, CollectionNameFromModels<M>>
-  ][];
+  >;
 };
 
 export type SystemVariables = {
@@ -337,14 +344,14 @@ export default class DB<M extends Models = Models> {
   private onSchemaChangeCallbacks: Set<SchemaChangeCallback<M>>;
 
   private hooks: DBHooks<M> = {
-    afterCommit: [],
-    afterInsert: [],
-    afterUpdate: [],
-    afterDelete: [],
-    beforeCommit: [],
-    beforeInsert: [],
-    beforeUpdate: [],
-    beforeDelete: [],
+    afterCommit: new Map(),
+    afterInsert: new Map(),
+    afterUpdate: new Map(),
+    afterDelete: new Map(),
+    beforeCommit: new Map(),
+    beforeInsert: new Map(),
+    beforeUpdate: new Map(),
+    beforeDelete: new Map(),
   };
   private _pendingSchemaRequest: Promise<void> | null;
   logger: Logger;
@@ -498,80 +505,55 @@ export default class DB<M extends Models = Models> {
     );
   }
 
-  addTrigger(on: AfterCommitOptions<M>, callback: AfterCommitCallback<M>): void;
+  addTrigger(
+    on: AfterCommitOptions<M>,
+    callback: AfterCommitCallback<M>
+  ): string;
   addTrigger<CN extends CollectionNameFromModels<M>>(
     on: AfterInsertOptions<M, CN>,
     callback: AfterInsertCallback<M, CN>
-  ): void;
+  ): string;
   addTrigger<CN extends CollectionNameFromModels<M>>(
     on: AfterUpdateOptions<M, CN>,
     callback: AfterUpdateCallback<M, CN>
-  ): void;
+  ): string;
   addTrigger<CN extends CollectionNameFromModels<M>>(
     on: AfterDeleteOptions<M, CN>,
     callback: AfterDeleteCallback<M, CN>
-  ): void;
+  ): string;
   addTrigger(
     on: BeforeCommitOptions<M>,
     callback: BeforeCommitCallback<M>
-  ): void;
+  ): string;
   addTrigger<CN extends CollectionNameFromModels<M>>(
     on: BeforeInsertOptions<M, CN>,
     callback: BeforeInsertCallback<M, CN>
-  ): void;
+  ): string;
   addTrigger<CN extends CollectionNameFromModels<M>>(
     on: BeforeUpdateOptions<M, CN>,
     callback: BeforeUpdateCallback<M, CN>
-  ): void;
+  ): string;
   addTrigger<CN extends CollectionNameFromModels<M>>(
     on: BeforeDeleteOptions<M, CN>,
     callback: BeforeDeleteCallback<M, CN>
-  ): void;
-  addTrigger(on: TriggerOptions, callback: TriggerCallback) {
-    switch (on.when) {
-      case 'afterCommit':
-        this.hooks.afterCommit.push([callback as AfterCommitCallback<M>, on]);
-        break;
-      case 'afterInsert':
-        this.hooks.afterInsert.push([
-          callback as AfterInsertCallback<M, CollectionNameFromModels<M>>,
-          on,
-        ]);
-        break;
-      case 'afterUpdate':
-        this.hooks.afterUpdate.push([
-          callback as AfterUpdateCallback<M, CollectionNameFromModels<M>>,
-          on,
-        ]);
-        break;
-      case 'afterDelete':
-        this.hooks.afterDelete.push([
-          callback as AfterDeleteCallback<M, CollectionNameFromModels<M>>,
-          on,
-        ]);
-        break;
-      case 'beforeCommit':
-        this.hooks.beforeCommit.push([callback as BeforeCommitCallback<M>, on]);
-        break;
-      case 'beforeInsert':
-        this.hooks.beforeInsert.push([
-          callback as BeforeInsertCallback<M, CollectionNameFromModels<M>>,
-          on,
-        ]);
-        break;
-      case 'beforeUpdate':
-        this.hooks.beforeUpdate.push([
-          callback as BeforeUpdateCallback<M, CollectionNameFromModels<M>>,
-          on,
-        ]);
-        break;
-      case 'beforeDelete':
-        this.hooks.beforeDelete.push([
-          callback as BeforeDeleteCallback<M, CollectionNameFromModels<M>>,
-          on,
-        ]);
-        break;
+  ): string;
+  addTrigger(on: TriggerOptions, callback: TriggerCallback): string {
+    if (!TRIGGER_WHEN.includes(on.when)) {
+      throw new Error(`Invalid trigger when: ${on.when}`);
     }
+    const id = generatePsuedoRandomId();
+    // @ts-expect-error
+    this.hooks[on.when].set(id, [callback, on]);
+    return id;
+  }
+
+  removeTrigger(id: string): boolean {
+    for (const when of TRIGGER_WHEN) {
+      if (this.hooks[when].delete(id)) {
+        return true;
+      }
+    }
+    return false;
   }
 
   withSessionVars(variables: Record<string, any>): DB<M> {
@@ -625,7 +607,7 @@ export default class DB<M extends Models = Models> {
     );
     try {
       const resp = await this.tripleStore.transact(async (tripTx) => {
-        const tx = new DBTransaction<M>(this, tripTx, copyHooks(this.hooks), {
+        const tx = new DBTransaction<M>(this, tripTx, copyDBHooks(this.hooks), {
           schema,
           skipRules: options.skipRules,
           logger: this.logger.scope('tx'),

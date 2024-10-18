@@ -463,10 +463,10 @@ export class DBTransaction<M extends Models> {
     tx
   ) => {
     const hasBeforeCallbacks =
-      this.hooks.beforeCommit.length > 0 ||
-      this.hooks.beforeInsert.length > 0 ||
-      this.hooks.beforeUpdate.length > 0 ||
-      this.hooks.beforeDelete.length > 0;
+      this.hooks.beforeCommit.size > 0 ||
+      this.hooks.beforeInsert.size > 0 ||
+      this.hooks.beforeUpdate.size > 0 ||
+      this.hooks.beforeDelete.size > 0;
     if (!hasBeforeCallbacks) return;
 
     // At the moment, triggers only work for a single 'default' storage
@@ -474,7 +474,7 @@ export class DBTransaction<M extends Models> {
     const triples = triplesByStorage[DEFAULT_STORE_KEY];
     const opSet = await triplesToEntityOpSet(triples, this.storeTx);
     if (opSet.inserts.length) {
-      for (const [hook, options] of this.hooks.beforeInsert) {
+      for (const [hook, options] of this.hooks.beforeInsert.values()) {
         const collectionInserts = opSet.inserts.filter(
           ([id]) => splitIdParts(id)[0] === options.collectionName
         );
@@ -484,7 +484,7 @@ export class DBTransaction<M extends Models> {
       }
     }
     if (opSet.updates.length) {
-      for (const [hook, options] of this.hooks.beforeUpdate) {
+      for (const [hook, options] of this.hooks.beforeUpdate.values()) {
         const collectionUpdates = opSet.updates.filter(
           ([id]) => splitIdParts(id)[0] === options.collectionName
         );
@@ -494,7 +494,7 @@ export class DBTransaction<M extends Models> {
       }
     }
     if (opSet.deletes.length) {
-      for (const [hook, options] of this.hooks.beforeDelete) {
+      for (const [hook, options] of this.hooks.beforeDelete.values()) {
         const collectionDeletes = opSet.deletes.filter(
           ([id]) => splitIdParts(id)[0] === options.collectionName
         );
@@ -504,7 +504,7 @@ export class DBTransaction<M extends Models> {
       }
     }
 
-    for (const [hook, options] of this.hooks.beforeCommit) {
+    for (const [hook, options] of this.hooks.beforeCommit.values()) {
       const inserts = opSet.inserts;
       // .filter(
       //   ([id]) => splitIdParts(id)[0] === options.collectionName
@@ -535,10 +535,10 @@ export class DBTransaction<M extends Models> {
     tx
   ) => {
     const hasAfterCallbacks =
-      this.hooks.afterCommit.length > 0 ||
-      this.hooks.afterInsert.length > 0 ||
-      this.hooks.afterUpdate.length > 0 ||
-      this.hooks.afterDelete.length > 0;
+      this.hooks.afterCommit.size > 0 ||
+      this.hooks.afterInsert.size > 0 ||
+      this.hooks.afterUpdate.size > 0 ||
+      this.hooks.afterDelete.size > 0;
     if (!hasAfterCallbacks) return;
 
     // At the moment, triggers only work for a single 'default' storage
@@ -546,7 +546,7 @@ export class DBTransaction<M extends Models> {
     const triples = triplesByStorage[DEFAULT_STORE_KEY];
     const opSet = await triplesToEntityOpSet(triples, this.db.tripleStore);
     if (opSet.inserts.length) {
-      for (const [hook, options] of this.hooks.afterInsert) {
+      for (const [hook, options] of this.hooks.afterInsert.values()) {
         const collectionInserts = opSet.inserts.filter(
           ([id]) => splitIdParts(id)[0] === options.collectionName
         );
@@ -556,7 +556,7 @@ export class DBTransaction<M extends Models> {
       }
     }
     if (opSet.updates.length) {
-      for (const [hook, options] of this.hooks.afterUpdate) {
+      for (const [hook, options] of this.hooks.afterUpdate.values()) {
         const collectionUpdates = opSet.updates.filter(
           ([id]) => splitIdParts(id)[0] === options.collectionName
         );
@@ -567,7 +567,7 @@ export class DBTransaction<M extends Models> {
       }
     }
     if (opSet.deletes.length) {
-      for (const [hook, options] of this.hooks.afterDelete) {
+      for (const [hook, options] of this.hooks.afterDelete.values()) {
         const collectionDeletes = opSet.deletes.filter(
           ([id]) => splitIdParts(id)[0] === options.collectionName
         );
@@ -577,7 +577,7 @@ export class DBTransaction<M extends Models> {
       }
     }
 
-    for (const [hook, options] of this.hooks.afterCommit) {
+    for (const [hook, _options] of this.hooks.afterCommit.values()) {
       const inserts = opSet.inserts;
       // .filter(
       //   ([id]) => splitIdParts(id)[0] === options.collectionName
