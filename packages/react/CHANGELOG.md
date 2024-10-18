@@ -1,5 +1,11 @@
 # @triplit/react
 
+## 0.4.7
+
+### Patch Changes
+
+- @triplit/client@0.5.7
+
 ## 0.4.6
 
 ### Patch Changes

@@ -1,5 +1,11 @@
 # @triplit/tuple-database
 
+## 2.2.29
+
+### Patch Changes
+
+- 15815dc2: Cancel transaction on failure
+
 ## 2.2.28
 
 ### Patch Changes

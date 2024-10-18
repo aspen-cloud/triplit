@@ -1,5 +1,11 @@
 # node-server
 
+## 0.3.95
+
+### Patch Changes
+
+- @triplit/server@0.4.22
+
 ## 0.3.94
 
 ### Patch Changes

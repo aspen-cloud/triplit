@@ -1,5 +1,14 @@
 # @triplit/server-core
 
+## 0.5.2
+
+### Patch Changes
+
+- 23b6171d: add support for webhooks
+- Updated dependencies [15815dc2]
+- Updated dependencies [23b6171d]
+  - @triplit/db@0.4.6
+
 ## 0.5.1
 
 ### Patch Changes

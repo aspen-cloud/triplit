@@ -1,5 +1,12 @@
 # @triplit/cli
 
+## 0.6.7
+
+### Patch Changes
+
+- 23b6171d: add support for webhooks
+- 15815dc2: Manual version bump for CLI dependencies
+
 ## 0.6.6
 
 ### Patch Changes
