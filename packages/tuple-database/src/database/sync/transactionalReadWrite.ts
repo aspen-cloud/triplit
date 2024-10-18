@@ -37,7 +37,8 @@ export function transactionalReadWrite<S extends KeyValuePair = KeyValuePair>(
 						tx.commit()
 						return result
 					} catch (e) {
-						tx.cancel()
+						// If the transaction is already committed, we don't need to cancel it.
+						if (!tx.committed && !tx.canceled) tx.cancel()
 						throw e
 					}
 				},

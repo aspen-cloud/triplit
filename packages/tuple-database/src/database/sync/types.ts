@@ -98,6 +98,8 @@ export type TupleRootTransactionApi<S extends KeyValuePair = KeyValuePair> = {
 	cancel: () => Identity<void>
 	id: TxId
 	writes: Required<WriteOps<S>>
+	committed: boolean
+	canceled: boolean
 }
 
 export type TupleTransactionApi<S extends KeyValuePair = KeyValuePair> = {

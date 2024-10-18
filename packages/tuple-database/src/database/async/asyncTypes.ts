@@ -96,6 +96,8 @@ export type AsyncTupleRootTransactionApi<
 	cancel: () => Promise<void>
 	id: TxId
 	writes: Required<WriteOps<S>>
+	committed: boolean
+	canceled: boolean
 }
 
 export type AsyncTupleTransactionApi<S extends KeyValuePair = KeyValuePair> = {
