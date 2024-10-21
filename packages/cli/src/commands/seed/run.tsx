@@ -41,15 +41,6 @@ export default Command({
   },
 });
 
-function logError(e: Error | TriplitError) {
-  if (e instanceof TriplitError) {
-    console.error(red(e.baseMessage));
-    e.contextMessage && console.error(red(e.contextMessage));
-  } else {
-    console.error(red(e.message));
-  }
-}
-
 export async function insertSeeds(
   url: string,
   token: string,
@@ -151,7 +142,7 @@ export async function insertSeeds(
         }
       } catch (e) {
         spinner.fail(`Failed to seed with ${path.basename(seed)}`);
-        logError(e);
+        console.error(e);
       }
     }
   }

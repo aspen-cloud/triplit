@@ -99,6 +99,7 @@ export async function loadTsModule(filepath: string) {
       platform: 'node',
       target: 'node16',
       outfile: transpiledJsPath,
+      sourcemap: 'inline',
     });
     const mod = await importFresh('file:///' + transpiledJsPath);
     return mod;
