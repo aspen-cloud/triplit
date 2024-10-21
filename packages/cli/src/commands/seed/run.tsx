@@ -15,10 +15,14 @@ import { TriplitError } from '@triplit/db';
 import { seedDirExists } from './create.js';
 import ora from 'ora';
 import { projectSchemaMiddleware } from '../../middleware/project-schema.js';
+import { SourceMapConsumer } from 'source-map';
 
 export async function loadSeedModule(seedPath: string) {
-  const module = await loadTsModule(seedPath);
-  return module.default as () => Promise<BulkInsert<any>>;
+  const { mod: module, sourceMap } = await loadTsModule(seedPath, true);
+  return {
+    seedMod: module.default as () => Promise<BulkInsert<any>>,
+    sourceMap,
+  };
 }
 
 export default Command({
@@ -122,8 +126,10 @@ export async function insertSeeds(
     schema,
   });
   for (const seed of seeds) {
-    const seedFn = await loadSeedModule(seed);
+    const { seedMod: seedFn, sourceMap } = await loadSeedModule(seed);
     if (seedFn) {
+      // console.dir(sourceMap, { depth: 10 });
+      // return;
       const spinner = ora(`Uploading seed: ${path.basename(seed)}`).start();
       try {
         const response = await client.bulkInsert(await seedFn());
@@ -141,8 +147,45 @@ export async function insertSeeds(
           );
         }
       } catch (e) {
+        // console.log(e.stack);
+        // console.log(e.stack.split('\n'));
+        const relevantStacks = e.stack
+          .split('\n')
+          .filter((line: string) => line.includes('.temp'))
+          .map((line: string) => line.trim());
+        const positions = relevantStacks
+          .map((line: string) => line.split(':').slice(-2))
+          .map((position: [string, string]) => ({
+            line: position[0],
+            column: position[1],
+          }));
+        let newTrace;
+        await SourceMapConsumer.with(sourceMap, undefined, async (consumer) => {
+          const originalPositions = [];
+          for (const position of positions) {
+            const originalPosition = consumer.originalPositionFor({
+              line: Number(position.line),
+              column: Number(position.column),
+            });
+            // console.log(originalPosition);
+            originalPositions.push(originalPosition);
+          }
+          newTrace = `
+            Error: ${e.message}
+            ${originalPositions
+              .map(
+                (pos) =>
+                  `at ${pos.name} (${path.resolve(
+                    path.dirname(seed),
+                    path.basename(pos.source)
+                  )}:${pos.line}:${pos.column})`
+              )
+              .join('\n')}
+            `;
+        });
         spinner.fail(`Failed to seed with ${path.basename(seed)}`);
-        console.error(e);
+        console.error(red(newTrace));
+        // logError(e);
       }
     }
   }

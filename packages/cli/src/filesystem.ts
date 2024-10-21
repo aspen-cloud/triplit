@@ -83,7 +83,7 @@ export async function importFresh(modulePath: string) {
   return await import(cacheBustingModulePath);
 }
 
-export async function loadTsModule(filepath: string) {
+export async function loadTsModule(filepath: string, includeSource = false) {
   if (!filepath.endsWith('.ts')) throw new Error('File must be a .ts file');
   const absolutePath = path.resolve(filepath);
   const dir = path.dirname(absolutePath);
@@ -99,10 +99,16 @@ export async function loadTsModule(filepath: string) {
       platform: 'node',
       target: 'node16',
       outfile: transpiledJsPath,
-      sourcemap: 'inline',
+      sourcemap: 'external',
+      sourcesContent: true,
     });
     const mod = await importFresh('file:///' + transpiledJsPath);
-    return mod;
+    if (!includeSource) {
+      return mod;
+    }
+    const sourceMapPath = transpiledJsPath + '.map';
+    const sourceMap = JSON.parse(fs.readFileSync(sourceMapPath, 'utf8'));
+    return { mod, sourceMap };
   } finally {
     fs.rmSync(tmpDir, { recursive: true, force: true });
   }
