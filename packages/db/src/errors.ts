@@ -49,7 +49,8 @@ export class TriplitError extends Error {
   toJSON() {
     return {
       name: this.name,
-      message: this.baseMessage,
+      message: this.message,
+      baseMessage: this.baseMessage,
       status: this.status,
       contextMessage: this.contextMessage,
     };
