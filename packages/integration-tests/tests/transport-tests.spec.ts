@@ -9,6 +9,7 @@ import {
   NOT_SERVICE_KEY,
   SERVICE_KEY,
   createTestClient,
+  spyMessages,
 } from '../utils/client.js';
 
 describe('TestTransport', () => {
@@ -2341,4 +2342,106 @@ it('running reset will disconnect and reset the client sync state and clear all 
     const results = await alice.fetch(query1);
     expect(results.length).toBe(0);
   }
+});
+
+describe('backfilling queries with limits', async () => {
+  // Server starts with data larger than the limit,
+  // the client subscribes to some data with a limit,
+  // then deletes some data, which should trigger
+  // a backfill so that the client has the correct number of items
+  it('can handle simple non-relational query', async () => {
+    const schema = {
+      collections: {
+        test: {
+          schema: S.Schema({ id: S.Id(), name: S.String() }),
+        },
+      },
+    };
+    const serverDB = new DB({ schema });
+    // insert 20 items
+    for (let i = 0; i < 40; i++) {
+      serverDB.insert('test', { id: `test${i}`, name: `test${i}` });
+    }
+    const LIMIT = 10;
+
+    const server = new TriplitServer(serverDB);
+    const alice = createTestClient(server, SERVICE_KEY, {
+      clientId: 'alice',
+      schema: schema.collections,
+    });
+    const query = alice
+      .query('test')
+      .where('name', 'like', 'test%')
+      .limit(LIMIT)
+      .build();
+    const messages = spyMessages(alice);
+
+    const aliceSub = vi.fn();
+    alice.subscribe(query, aliceSub);
+    await pause(200);
+    expect(aliceSub).toHaveBeenCalled();
+    const initialResults = aliceSub.mock.calls.at(-1)[0];
+    expect(initialResults).toHaveLength(LIMIT);
+    const itemsToDelete = initialResults.map((e: any) => e.id).slice(0, 5);
+    await alice.transact(async (tx) => {
+      for (const id of itemsToDelete) {
+        await tx.delete('test', id);
+      }
+    });
+    await pause(200);
+    const latestResults = aliceSub.mock.calls.at(-1)[0];
+    expect(latestResults).toHaveLength(LIMIT);
+    const resultIds = latestResults.map((e: any) => e.id);
+
+    const deletedIds = ['test0', 'test1', 'test2', 'test3', 'test4'];
+    expect(resultIds).not.toContain(deletedIds);
+  });
+  it('can handle a simple non-relational query with an order', async () => {
+    const schema = {
+      collections: {
+        test: {
+          schema: S.Schema({ id: S.Id(), name: S.String() }),
+        },
+      },
+    };
+    const serverDB = new DB({ schema });
+    // insert 20 items
+    for (let i = 0; i < 40; i++) {
+      serverDB.insert('test', { id: `test${i}`, name: `test${i}` });
+    }
+    const LIMIT = 10;
+
+    const server = new TriplitServer(serverDB);
+    const alice = createTestClient(server, SERVICE_KEY, {
+      clientId: 'alice',
+      schema: schema.collections,
+    });
+    const query = alice
+      .query('test')
+      .order('name', 'ASC')
+      .where('name', 'like', 'test%')
+      .limit(LIMIT)
+      .build();
+    const messages = spyMessages(alice);
+
+    const aliceSub = vi.fn();
+    alice.subscribe(query, aliceSub);
+    await pause(200);
+    expect(aliceSub).toHaveBeenCalled();
+    const initialResults = aliceSub.mock.calls.at(-1)[0];
+    expect(initialResults).toHaveLength(LIMIT);
+    const itemsToDelete = initialResults.map((e: any) => e.id).slice(0, 5);
+    await alice.transact(async (tx) => {
+      for (const id of itemsToDelete) {
+        await tx.delete('test', id);
+      }
+    });
+    await pause(200);
+    const latestResults = aliceSub.mock.calls.at(-1)[0];
+    expect(latestResults).toHaveLength(LIMIT);
+    const resultIds = latestResults.map((e: any) => e.id);
+
+    const deletedIds = ['test0', 'test1', 'test2', 'test3', 'test4'];
+    expect(resultIds).not.toContain(deletedIds);
+  });
 });

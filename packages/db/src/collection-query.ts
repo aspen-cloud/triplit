@@ -1531,7 +1531,7 @@ function isQueryRelational(
   options: FetchFromStorageOptions
 ) {
   const { where, include, order } = query;
-  return (
+  return !!(
     (where &&
       someFilterStatements(where, (filter) => isSubQueryFilter(filter))) ||
     (include && Object.keys(include).length > 0) ||
@@ -1753,25 +1753,34 @@ export function subscribeEntities<
           const lastResultEntryId = lastResultEntry && lastResultEntry[0];
           const lastResultData = lastResultEntry && lastResultEntry[1].data;
           const orderAttr = order?.[0]?.[0];
-          const backFillQuery = {
-            ...query,
-            limit: limit - entries.length,
-            // If there is no explicit order, then order by Id is assumed
-            after: lastResultEntryId
-              ? [
-                  [
-                    orderAttr
-                      ? getPropertyFromPath(
-                          lastResultData,
-                          orderAttr.split('.')
-                        )
-                      : lastResultEntryId,
-                    lastResultEntryId,
-                  ],
-                  false,
-                ]
-              : undefined,
-          };
+          const backFillQuery = orderAttr
+            ? {
+                ...query,
+                limit: limit - entries.length,
+                // If there is no explicit order, then order by Id is assumed
+                after: lastResultEntryId
+                  ? [
+                      [
+                        orderAttr
+                          ? getPropertyFromPath(
+                              lastResultData,
+                              orderAttr.split('.')
+                            )
+                          : lastResultEntryId,
+                        lastResultEntryId,
+                      ],
+                      false,
+                    ]
+                  : undefined,
+              }
+            : {
+                ...query,
+                where: [
+                  ...(query.where ?? []),
+                  ['id', 'nin', entries.map(([id]) => splitIdParts(id)[1])],
+                ],
+                limit: limit - entries.length,
+              };
           const executionContext = initialFetchExecutionContext();
           const backfillOrder = await loadQuery<M, Q>(
             tripleStore,
@@ -1962,6 +1971,18 @@ export function subscribeTriples<
   onResults: (results: TripleRow[]) => void | Promise<void>,
   onError?: (error: any) => void | Promise<void>
 ) {
+  if (query.limit != undefined && !isQueryRelational(query, options)) {
+    const { unsubscribe } = subscribeEntities<M, Q>(
+      tripleStore,
+      query,
+      options,
+      (_results, deltaTriples) => {
+        onResults(Array.from(deltaTriples.values()).flat());
+      },
+      onError
+    );
+    return unsubscribe;
+  }
   const asyncUnSub = async () => {
     let triples: TripleRow[] = [];
     try {
