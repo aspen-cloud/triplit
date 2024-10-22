@@ -1,7 +1,7 @@
 // Based on the FoundationDb tutorial:
 // https://apple.github.io/foundationdb/class-scheduling.html
 
-import { flatten, range } from "remeda"
+import { range } from "remeda"
 import { describe, it, expect } from "bun:test"
 import { transactionalReadWrite } from "../database/sync/transactionalReadWrite.js"
 import { ReadOnlyTupleDatabaseClientApi } from "../database/sync/types.js"
@@ -40,13 +40,12 @@ const types = [
 
 const times = range(2, 20).map((t) => `${t}:00`)
 
-const classNames = flatten(
-	flatten(
-		levels.map((level) =>
-			types.map((type) => times.map((time) => [level, type, time].join(" ")))
-		)
+const classNames = levels
+	.map((level) =>
+		types.map((type) => times.map((time) => [level, type, time].join(" ")))
 	)
-)
+	.flat()
+	.flat()
 
 type SchoolSchema =
 	| { key: ["class", string]; value: number }

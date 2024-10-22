@@ -10402,7 +10402,7 @@ __metadata:
     organize-imports-cli: "npm:^0.10.0"
     prettier: "npm:^2.8.2"
     react: "npm:^18.2.0"
-    remeda: "npm:^1.37.0"
+    remeda: "npm:^2.16.0"
     sorted-btree: "npm:^1.8.1"
     ts-node: "npm:^10.9.1"
     typescript: "npm:^5.4.5"
@@ -28274,10 +28274,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"remeda@npm:^1.37.0":
-  version: 1.37.0
-  resolution: "remeda@npm:1.37.0"
-  checksum: 10/cf33d40089e0d13d875fa1e45127e798de4c42848a4313dbb763b141316d84b9d06f11bc571a2e533452b7c0d38e9f05afe7e561a368a0411ce7e8cbccbd2c7b
+"remeda@npm:^2.16.0":
+  version: 2.16.0
+  resolution: "remeda@npm:2.16.0"
+  dependencies:
+    type-fest: "npm:^4.26.1"
+  checksum: 10/75b51338e2ca1272d6eb27dc9d460c29dd92d6ded25f7d8fd82bbd29e63d5cf5b9eaefec6e59b8eda886cb5a0c373b56c60b65bc15ec663f64b6e9c72268460d
   languageName: node
   linkType: hard
 
@@ -31748,6 +31750,13 @@ __metadata:
   version: 3.13.1
   resolution: "type-fest@npm:3.13.1"
   checksum: 10/9a8a2359ada34c9b3affcaf3a8f73ee14c52779e89950db337ce66fb74c3399776c697c99f2532e9b16e10e61cfdba3b1c19daffb93b338b742f0acd0117ce12
+  languageName: node
+  linkType: hard
+
+"type-fest@npm:^4.26.1":
+  version: 4.26.1
+  resolution: "type-fest@npm:4.26.1"
+  checksum: 10/b82676194f80af228cb852e320d2ea8381c89d667d2e4d9f2bdfc8f254bccc039c7741a90c53617a4de0c9fdca8265ed18eb0888cd628f391c5c381c33a9f94b
   languageName: node
   linkType: hard
 

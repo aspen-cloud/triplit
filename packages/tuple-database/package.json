@@ -86,7 +86,7 @@
 		"fractional-indexing": "^3.1.0",
 		"fs-extra": "^11.1.0",
 		"md5": "^2.3.0",
-		"remeda": "^1.37.0",
+		"remeda": "^2.16.0",
 		"sorted-btree": "^1.8.1",
 		"uuid": "^9.0.0"
 	},

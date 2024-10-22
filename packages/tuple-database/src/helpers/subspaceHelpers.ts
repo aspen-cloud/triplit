@@ -1,4 +1,4 @@
-import { equals, omitBy } from "remeda"
+import { isDeepEqual, omitBy } from "remeda"
 import { ScanArgs } from "../database/types.js"
 import {
 	KeyValuePair,
@@ -72,7 +72,7 @@ export function removePrefixFromWriteOps(
 
 export function removePrefixFromTuple(prefix: Tuple, tuple: Tuple) {
 	if (!prefix.length) return tuple
-	if (!equals(tuple.slice(0, prefix.length), prefix)) {
+	if (!isDeepEqual(tuple.slice(0, prefix.length), prefix)) {
 		throw new Error("Invalid prefix: " + JSON.stringify({ prefix, tuple }))
 	}
 	return tuple.slice(prefix.length)
