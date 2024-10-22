@@ -456,8 +456,8 @@ describe('iterator', () => {
   });
 });
 
-it.only('should throw an error if you attempt to initialize a schema with a malformed type', () => {
-  expect(async () => {
+it('should throw an error if you attempt to initialize a schema with a malformed type', async () => {
+  await expect(async () => {
     const db = new DB({
       schema: {
         version: 0,
@@ -472,5 +472,5 @@ it.only('should throw an error if you attempt to initialize a schema with a malf
       },
     });
     await db.ready;
-  }).toThrow(MalformedSchemaError);
+  }).rejects.toThrow(MalformedSchemaError);
 });
