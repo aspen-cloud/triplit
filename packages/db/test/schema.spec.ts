@@ -12,8 +12,10 @@ import {
   InvalidSchemaOptionsError,
   InvalidSchemaPathError,
   JSONValueParseError,
+  MalformedSchemaError,
   TriplitError,
 } from '../src/errors.js';
+import DB from '../src/db.js';
 
 /**
  * Sort of speccing out value type tests here
@@ -452,4 +454,23 @@ describe('iterator', () => {
     const properties = [...schemaTraverser];
     expect(properties).toEqual([undefined]);
   });
+});
+
+it.only('should throw an error if you attempt to initialize a schema with a malformed type', () => {
+  expect(async () => {
+    const db = new DB({
+      schema: {
+        version: 0,
+        collections: {
+          a: {
+            schema: S.Schema({
+              id: S.Id(),
+              attr: { ...S.String(), type: 'invalid type' },
+            }),
+          },
+        },
+      },
+    });
+    await db.ready;
+  }).toThrow(MalformedSchemaError);
 });
