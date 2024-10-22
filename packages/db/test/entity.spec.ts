@@ -322,6 +322,22 @@ describe('operations', () => {
     // TODO: what should data be?
     it.todo('delete sets data to undefined', async () => {});
   });
+  describe('clone', () => {
+    it('clones an entity', async () => {
+      const db = new DB();
+      await db.insert(COLLECTION_NAME, { id: '1', a: 1 });
+      const triples = await genToArr(db.tripleStore.findByEntity());
+      await testRandomTriplePermutations(triples, (triples) => {
+        const entity = new Entity(triples);
+        const clone = Entity.clone(entity);
+        expect(clone.data).toEqual(entity.data);
+        expect(clone.id).toBe(entity.id);
+        expect(clone.collectionName).toBe(entity.collectionName);
+        expect(clone.triples).toEqual(entity.triples);
+        expect(clone.isDeleted).toBe(entity.isDeleted);
+      });
+    });
+  });
 });
 
 async function testRandomTriplePermutations(

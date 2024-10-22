@@ -145,6 +145,21 @@ export class Entity {
   }
 
   /**
+   * Clone an entity. This will create a new entity with the same triples and data as the original entity.
+   * It will skip the apply triples step, as we assume the triples are already applied and sorted
+   */
+  static clone(entity: Entity): Entity {
+    const clone = new Entity([], entity._model);
+    clone.triples.push(...entity.triples);
+    clone._id = entity._id;
+    clone._collectionName = entity._collectionName;
+    clone._isDeleted = entity._isDeleted;
+    clone._data = entity._data;
+    clone.shouldMaterialize = entity.shouldMaterialize;
+    return clone;
+  }
+
+  /**
    * Apply a triple to the entity. This will insert the triple into the correct location in the entity's triples.
    *
    * The first call to this method will set the entity's id and collection name.
