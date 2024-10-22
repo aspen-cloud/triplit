@@ -33,6 +33,7 @@ import {
   InvalidSchemaPathError,
   WritePermissionError,
   TriplitError,
+  MalformedSchemaError,
 } from './errors.js';
 import { ValuePointer } from '@sinclair/typebox/value';
 import DB, {
@@ -426,16 +427,35 @@ export class DBTransaction<M extends Models> {
       newSchemaTriples.unshift(...schemaTriples);
     }
 
-    this._schema = this._schema ?? new Entity();
-    updateEntity(this._schema, newSchemaTriples);
+    // clone the schema so we can test the update
+    const updatedSchema = this._schema
+      ? Entity.clone(this._schema)
+      : new Entity();
+    updateEntity(updatedSchema, newSchemaTriples);
+
+    const updateSchemaDefinition = updatedSchema.data as
+      | SchemaDefinition
+      | undefined;
+
+    // test that the updated schema is valid
+    let collections;
+    try {
+      collections =
+        updateSchemaDefinition?.collections &&
+        collectionsDefinitionToSchema(updateSchemaDefinition.collections);
+    } catch (e) {
+      if (e instanceof TriplitError) throw new MalformedSchemaError(e);
+      throw e;
+    }
+
+    this._schema = updatedSchema;
+
     // Type definitions are kinda ugly here
-    const schemaDefinition = this._schema?.data as SchemaDefinition | undefined;
+    const schemaDefinition = this._schema?.data;
 
     this.schema = {
       version: schemaDefinition?.version ?? 0,
-      collections:
-        schemaDefinition?.collections &&
-        collectionsDefinitionToSchema(schemaDefinition.collections),
+      collections,
     } as StoreSchema<M>;
   };
 

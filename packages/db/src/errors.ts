@@ -360,6 +360,16 @@ export class UnrecognizedAttributeTypeError extends TriplitError {
   }
 }
 
+export class MalformedSchemaError extends TriplitError {
+  constructor(innerError: TriplitError, ...args: any[]) {
+    super(...args);
+    this.name = 'MalformedSchemaError';
+    this.baseMessage = `The schema provided is malformed.`;
+    this.contextMessage = `This was triggered by ${innerError.name}: ${innerError.message}`;
+    this.status = STATUS_CODES['Bad Request'];
+  }
+}
+
 export class EditingProtectedFieldError extends TriplitError {
   constructor(field: string, ...args: any[]) {
     super(...args);
