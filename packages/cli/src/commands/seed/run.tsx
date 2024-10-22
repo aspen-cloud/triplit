@@ -149,6 +149,7 @@ export async function insertSeeds(
       } catch (e) {
         // console.log(e.stack);
         // console.log(e.stack.split('\n'));
+        const tempFileLocation = path.join(path.dirname(seed), '.temp');
         const relevantStacks = e.stack
           .split('\n')
           .filter((line: string) => line.includes('.temp'))
@@ -167,7 +168,6 @@ export async function insertSeeds(
               line: Number(position.line),
               column: Number(position.column),
             });
-            // console.log(originalPosition);
             originalPositions.push(originalPosition);
           }
           newTrace = `
@@ -176,11 +176,11 @@ export async function insertSeeds(
               .map(
                 (pos) =>
                   `at ${pos.name} (${path.resolve(
-                    path.dirname(seed),
-                    path.basename(pos.source)
+                    tempFileLocation,
+                    pos.source
                   )}:${pos.line}:${pos.column})`
               )
-              .join('\n')}
+              .join('\n\t')}
             `;
         });
         spinner.fail(`Failed to seed with ${path.basename(seed)}`);
