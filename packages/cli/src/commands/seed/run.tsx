@@ -147,20 +147,34 @@ export async function insertSeeds(
           );
         }
       } catch (e) {
-        // console.log(e.stack);
-        // console.log(e.stack.split('\n'));
+        spinner.fail(`Failed to seed with ${path.basename(seed)}`);
+
+        // maps the error stack trace to the original source code
         const tempFileLocation = path.join(path.dirname(seed), '.temp');
-        const relevantStacks = e.stack
-          .split('\n')
-          .filter((line: string) => line.includes('.temp'))
-          .map((line: string) => line.trim());
-        const positions = relevantStacks
+
+        // only include the stack trace lines that are relevant to the temp file
+        // that the seed script runs
+        const splitStack = e.stack.split('\n');
+        const relevantStackFrames = splitStack.filter((line: string, i) =>
+          line.includes('.temp')
+        ) as string[];
+
+        // if there are no frames from the temp file, assume this is
+        // a triplit error and throw it for debugging purposes
+        if (relevantStackFrames.length === 0) {
+          console.error(e);
+          return;
+        }
+
+        const positions = relevantStackFrames
           .map((line: string) => line.split(':').slice(-2))
           .map((position: [string, string]) => ({
             line: position[0],
-            column: position[1],
+            column: position[1].replaceAll(')', ''),
           }));
         let newTrace;
+
+        // use the source map to get the original source code location and name
         await SourceMapConsumer.with(sourceMap, undefined, async (consumer) => {
           const originalPositions = [];
           for (const position of positions) {
@@ -170,22 +184,22 @@ export async function insertSeeds(
             });
             originalPositions.push(originalPosition);
           }
-          newTrace = `
-            Error: ${e.message}
-            ${originalPositions
-              .map(
-                (pos) =>
-                  `at ${pos.name} (${path.resolve(
-                    tempFileLocation,
-                    pos.source
-                  )}:${pos.line}:${pos.column})`
+          const parensRegex = /\(.*\)/;
+
+          newTrace = [
+            // the first line of the stack trace is the error message
+            splitStack[0],
+            ...originalPositions.map((pos, i) =>
+              relevantStackFrames[i].replace(
+                parensRegex,
+                `(file://${path.resolve(tempFileLocation, pos.source)}:${
+                  pos.line
+                }:${pos.column})`
               )
-              .join('\n\t')}
-            `;
+            ),
+          ].join('\n');
         });
-        spinner.fail(`Failed to seed with ${path.basename(seed)}`);
         console.error(red(newTrace));
-        // logError(e);
       }
     }
   }

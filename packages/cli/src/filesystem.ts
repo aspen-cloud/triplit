@@ -100,7 +100,9 @@ export async function loadTsModule(filepath: string, includeSource = false) {
       target: 'node16',
       outfile: transpiledJsPath,
       sourcemap: 'external',
-      sourcesContent: true,
+      minifyIdentifiers: false,
+      minifyWhitespace: true,
+      minifySyntax: true,
     });
     const mod = await importFresh('file:///' + transpiledJsPath);
     if (!includeSource) {
