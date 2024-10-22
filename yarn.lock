@@ -10181,6 +10181,7 @@ __metadata:
     ajv-formats: "npm:^3.0.1"
     fast-check: "npm:^3.16.0"
     idb: "npm:^7.1.1"
+    mnemonist: "npm:0.40.0-rc1"
     nanoid: "npm:^3.0.0"
     pino: "npm:^8.11.0"
     rxdb: "npm:^14.14.2"
@@ -24820,6 +24821,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"mnemonist@npm:0.40.0-rc1":
+  version: 0.40.0-rc1
+  resolution: "mnemonist@npm:0.40.0-rc1"
+  dependencies:
+    obliterator: "npm:^2.0.4"
+  checksum: 10/c693f148c6c2d4f6b5642ca9b643ecb447a937da401354bc041b89acb1a5fa0f6dbebdc9a99aedfe031d6a9e389dd63f56be1ba3ff20525f4d2c7bac9eb30032
+  languageName: node
+  linkType: hard
+
 "mocha@npm:^10.2.0":
   version: 10.7.3
   resolution: "mocha@npm:10.7.3"
@@ -26135,6 +26145,13 @@ __metadata:
     define-properties: "npm:^1.2.0"
     es-abstract: "npm:^1.22.1"
   checksum: 10/20ab42c0bbf984405c80e060114b18cf5d629a40a132c7eac4fb79c5d06deb97496311c19297dcf9c61f45c2539cd4c7f7c5d6230e51db360ff297bbc9910162
+  languageName: node
+  linkType: hard
+
+"obliterator@npm:^2.0.4":
+  version: 2.0.4
+  resolution: "obliterator@npm:2.0.4"
+  checksum: 10/5a49ce3736aa9c8ae536e14e556e347b225c71215d3d3e0b191da0386284a804b9e22c09780645f2cea3981d4cecefaa394f59f4ffd6167fe6c2f2401777e1ae
   languageName: node
   linkType: hard
 

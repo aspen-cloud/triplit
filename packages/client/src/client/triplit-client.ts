@@ -23,6 +23,7 @@ import {
   FetchResultEntityFromParts,
   StoreSchema,
   ClearOptions,
+  EntityCacheOptions,
 } from '@triplit/db';
 import { decodeToken } from '../token.js';
 import {
@@ -175,6 +176,8 @@ export interface ClientOptions<M extends ClientSchema = ClientSchema> {
    */
   logLevel?: 'info' | 'warn' | 'error' | 'debug';
   skipRules?: boolean;
+
+  experimental_entityCache?: EntityCacheOptions;
 }
 
 // default policy is local-and-remote and no timeout
@@ -220,6 +223,7 @@ export class TriplitClient<M extends ClientSchema = ClientSchema> {
       defaultQueryOptions,
       logger,
       logLevel = 'info',
+      experimental_entityCache,
     } = options ?? {};
     this.logger =
       logger ??
@@ -242,6 +246,7 @@ export class TriplitClient<M extends ClientSchema = ClientSchema> {
       variables,
       sources: getClientStorage(storage ?? DEFAULT_STORAGE_OPTION),
       logger: this.logger.scope('db'),
+      experimental_entityCache,
     });
 
     this.defaultFetchOptions = {

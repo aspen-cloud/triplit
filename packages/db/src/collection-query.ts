@@ -76,6 +76,7 @@ import {
   getSyncTriplesFromContext,
   filterEntityToSelection,
 } from './query/result-parsers.js';
+import { EntityCache } from './db/types/entity-cache.js';
 
 export default function CollectionQueryBuilder<
   M extends Models,
@@ -950,10 +951,16 @@ function LoadCandidateEntities(
   return async (entityId) => {
     // Load entity data if not loaded
     if (!executionContext.executionCache.hasData(entityId)) {
-      const storeTriples = await genToArr(tx.findByEntity(entityId));
-      const entity = constructEntities(storeTriples, options.schema).get(
-        entityId
-      )!;
+      let entity: Entity;
+      if (options.entityCache && options.entityCache.has(entityId)) {
+        entity = options.entityCache.get(entityId)!;
+      } else {
+        const storeTriples = await genToArr(tx.findByEntity(entityId));
+        entity = constructEntities(storeTriples, options.schema).get(entityId)!;
+        if (options.entityCache) {
+          options.entityCache.set(entityId, entity);
+        }
+      }
       // Load raw entity
       executionContext.executionCache.setData(entityId, {
         entity,
@@ -1297,6 +1304,7 @@ export type FetchFromStorageOptions = {
   schema?: Models;
   skipRules?: boolean;
   cache?: VariableAwareCache<any>;
+  entityCache?: EntityCache;
   stateVector?: Map<string, number>;
   skipIndex?: boolean;
   session: {
@@ -1718,6 +1726,9 @@ export function subscribeEntities<
         entityOrder,
         executionContext
       );
+      for (const key of results.keys()) {
+        results.set(key, Entity.clone(results.get(key)!));
+      }
       where = (
         await replaceVariablesInQuery(
           tripleStore,
@@ -1925,6 +1936,7 @@ export function subscribeEntities<
               skipRules: options.skipRules,
               // State vector needed in backfill?
               cache: options.cache,
+              entityCache: options.entityCache,
               skipIndex: options.skipIndex,
               session: options.session,
             }
@@ -2055,6 +2067,7 @@ export function subscribe<M extends Models, Q extends CollectionQuery<M>>(
           schema: options.schema,
           skipRules: options.skipRules,
           cache: options.cache,
+          entityCache: options.entityCache,
           skipIndex: options.skipIndex,
           session: options.session,
           // TODO: do we need to pass state vector here?
@@ -2143,6 +2156,7 @@ export function subscribeTriples<
             schema: options.schema,
             // stateVector: options.stateVector,
             cache: options.cache,
+            entityCache: options.entityCache,
             session: options.session,
           }
         );

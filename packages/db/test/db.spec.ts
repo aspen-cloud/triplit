@@ -4088,7 +4088,7 @@ describe('delta querying', async () => {
       const query = db.query('posts').where('author_id', '=', user_id).build();
 
       const addedTriples: TripleRow[] = [];
-      db.tripleStore.onInsert((newTriples) => {
+      db.tripleStore.afterCommit((newTriples) => {
         addedTriples.push(...[...Object.values(newTriples)].flat());
       });
       await db.insert('posts', {
@@ -4125,7 +4125,7 @@ describe('delta querying', async () => {
       const query = db.query('posts').where('author_id', '=', user_id).build();
 
       const addedTriples: TripleRow[] = [];
-      db.tripleStore.onInsert((newTriples) => {
+      db.tripleStore.afterCommit((newTriples) => {
         addedTriples.push(...[...Object.values(newTriples)].flat());
       });
       await db.delete('posts', post_id);
@@ -4153,7 +4153,7 @@ describe('delta querying', async () => {
       const query = db.query('posts').where('author_id', '=', user_id).build();
 
       const addedTriples: TripleRow[] = [];
-      db.tripleStore.onInsert((newTriples) => {
+      db.tripleStore.afterCommit((newTriples) => {
         addedTriples.push(...[...Object.values(newTriples)].flat());
       });
 
@@ -4183,7 +4183,7 @@ describe('delta querying', async () => {
       const query = db.query('posts').where('author_id', '=', user_id).build();
 
       const addedTriples: TripleRow[] = [];
-      db.tripleStore.onInsert((newTriples) => {
+      db.tripleStore.afterCommit((newTriples) => {
         addedTriples.push(...[...Object.values(newTriples)].flat());
       });
       await db.insert('posts', {
@@ -4284,7 +4284,7 @@ describe('delta querying', async () => {
       expect(initialTriples.length).toBeGreaterThan(0);
 
       const addedTriples: TripleRow[] = [];
-      db.tripleStore.onInsert((newTriples) => {
+      db.tripleStore.afterCommit((newTriples) => {
         addedTriples.push(...[...Object.values(newTriples)].flat());
       });
 
@@ -4327,7 +4327,7 @@ describe('delta querying', async () => {
       expect(initialTriples.length).toBeGreaterThan(0);
 
       const addedTriples: TripleRow[] = [];
-      db.tripleStore.onInsert((newTriples) => {
+      db.tripleStore.afterCommit((newTriples) => {
         addedTriples.push(...[...Object.values(newTriples)].flat());
       });
       // insert another post after the queried date
@@ -4517,7 +4517,7 @@ describe('delta querying', async () => {
         await clientDB.tripleStore.insertTriples(initialTriples);
 
         const addedTriples: TripleRow[] = [];
-        serverDB.tripleStore.onInsert((newTriples) => {
+        serverDB.tripleStore.afterCommit((newTriples) => {
           addedTriples.push(...[...Object.values(newTriples)].flat());
         });
 
