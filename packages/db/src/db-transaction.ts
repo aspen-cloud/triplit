@@ -82,6 +82,7 @@ import {
   FetchResult,
   FetchResultEntity,
   FetchResultEntityFromParts,
+  QueryWhere,
   SchemaQueries,
   ToQuery,
   Unalias,
@@ -100,6 +101,7 @@ import {
   DropRulePayload,
   SetAttributeOptionalPayload,
 } from './db/types/operations.js';
+import { and, or } from './query.js';
 
 interface TransactionOptions<M extends Models = Models> {
   schema?: StoreSchema<M>;
@@ -128,8 +130,8 @@ async function checkWritePermissions<M extends Models>(
   // If no permissions for collection, its exempt from rules
   if (!permissions) return;
 
-  let permissionsStatements = [];
-  let hasMatch = false;
+  let permissionsStatements: QueryWhere<M, any>[] = [];
+  let hasMatchingPermission = false;
   if (sessionRoles) {
     for (const sessionRole of sessionRoles) {
       const rolePermissions = permissions[sessionRole.key];
@@ -139,25 +141,29 @@ async function checkWritePermissions<M extends Models>(
 
       if (permission.filter) {
         // Must opt in to the permission
-        hasMatch = true;
+        hasMatchingPermission = true;
         // TODO: handle empty arrays
         if (Array.isArray(permission.filter)) {
-          permissionsStatements.push(...permission.filter);
+          permissionsStatements.push(permission.filter as QueryWhere<M, any>);
         }
       }
     }
   }
 
-  if (!hasMatch) {
+  if (!hasMatchingPermission) {
     // postUpdate is optional, so if there's nothing to check against, we can skip
     if (operation === 'postUpdate') return;
-    permissionsStatements = [false];
+    // Deny access
+    permissionsStatements = [[false]];
   }
 
   const query = prepareQuery(
     {
       collectionName,
-      where: [['id', '=', entityId], ...permissionsStatements],
+      where: [
+        ['id', '=', entityId],
+        or(permissionsStatements.map((filters) => and(filters))),
+      ],
     } as CollectionQuery<M, any>,
     schema.collections as M,
     {

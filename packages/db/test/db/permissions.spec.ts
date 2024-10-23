@@ -506,6 +506,85 @@ describe('Insert', () => {
       db.insert('permissionless', { id: '1' })
     ).resolves.not.toThrow();
   });
+
+  it('can handle union of two roles', async () => {
+    const schema = {
+      roles: {
+        authenticated: {
+          match: {
+            user_id: '$user_id',
+          },
+        },
+        admin: {
+          match: {
+            role: 'admin',
+            user_id: '$user_id',
+          },
+        },
+      },
+      collections: {
+        messages: {
+          schema: S.Schema({
+            id: S.Id(),
+            text: S.String(),
+            author_id: S.String(),
+          }),
+          permissions: {
+            authenticated: {
+              insert: {
+                filter: [['author_id', '=', '$role.user_id']],
+              },
+            },
+            admin: {
+              insert: {
+                filter: [true],
+              },
+            },
+          },
+        },
+      },
+      version: 0,
+    } satisfies StoreSchema<Models>;
+
+    const db = new DB({ schema });
+
+    const user1Token = {
+      user_id: 'user-1',
+    };
+    const adminToken = {
+      role: 'admin',
+      user_id: 'user-1',
+    };
+
+    const user1DB = db.withSessionVars(user1Token);
+    const adminDB = db.withSessionVars(adminToken);
+
+    // User 1
+    await expect(
+      user1DB.insert('messages', {
+        id: 'message-1',
+        text: 'Hello, world!',
+        author_id: 'user-1',
+      })
+    ).resolves.not.toThrow();
+
+    await expect(
+      user1DB.insert('messages', {
+        id: 'message-2',
+        text: 'Hello, world!',
+        author_id: 'user-2',
+      })
+    ).rejects.toThrow();
+
+    // Admin
+    await expect(
+      adminDB.insert('messages', {
+        id: 'message-3',
+        text: 'Hello, world!',
+        author_id: 'user-2',
+      })
+    ).resolves.not.toThrow();
+  });
 });
 
 describe('Update', () => {
