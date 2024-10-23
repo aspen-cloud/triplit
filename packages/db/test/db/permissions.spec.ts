@@ -390,6 +390,111 @@ describe('Read', () => {
       expect(results.length).toEqual(1);
     }
   });
+
+  it('can handle union of two roles', async () => {
+    const schema = {
+      roles: {
+        authenticated: {
+          match: {
+            user_id: '$user_id',
+          },
+        },
+        admin: {
+          match: {
+            role: 'admin',
+            user_id: '$user_id',
+          },
+        },
+      },
+      collections: {
+        messages: {
+          schema: S.Schema({
+            id: S.Id(),
+            text: S.String(),
+            author_id: S.String(),
+            recipient_id: S.String(),
+          }),
+          permissions: {
+            authenticated: {
+              read: {
+                filter: [
+                  or([
+                    ['author_id', '=', '$role.user_id'],
+                    ['recipient_id', '=', '$role.user_id'],
+                  ]),
+                ],
+              },
+            },
+            admin: {
+              read: {
+                filter: [true],
+              },
+            },
+          },
+        },
+      },
+      version: 0,
+    } satisfies StoreSchema<Models>;
+
+    const db = new DB({ schema });
+
+    // insert messages
+    await db.transact(
+      async (tx) => {
+        await tx.insert('messages', {
+          id: 'message-1',
+          text: 'Hello, world!',
+          author_id: 'user-1',
+          recipient_id: 'user-2',
+        });
+        await tx.insert('messages', {
+          id: 'message-2',
+          text: 'Hello, world!',
+          author_id: 'user-2',
+          recipient_id: 'user-1',
+        });
+        await tx.insert('messages', {
+          id: 'message-3',
+          text: 'Hello, world!',
+          author_id: 'user-2',
+          recipient_id: 'user-3',
+        });
+      },
+      { skipRules: true }
+    );
+
+    const user1Token = {
+      user_id: 'user-1',
+    };
+    const adminToken = {
+      role: 'admin',
+      user_id: 'user-1',
+    };
+
+    const user1DB = db.withSessionVars(user1Token);
+    const adminDB = db.withSessionVars(adminToken);
+
+    // User 1
+    {
+      const messages = await user1DB.fetch(user1DB.query('messages').build());
+      expect(messages.length).toEqual(2);
+      expect(messages.map((m) => m.id).sort()).toEqual([
+        'message-1',
+        'message-2',
+      ]);
+    }
+
+    // Admin
+    {
+      const messages = await adminDB.fetch(adminDB.query('messages').build());
+      expect(messages.length).toEqual(3);
+      expect(messages.map((m) => m.id).sort()).toEqual([
+        'message-1',
+        'message-2',
+        'message-3',
+      ]);
+    }
+  });
 });
 
 describe('Insert', () => {

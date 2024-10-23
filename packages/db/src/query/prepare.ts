@@ -18,11 +18,13 @@ import {
   TriplitError,
 } from '../errors.js';
 import {
+  and,
   exists,
   isBooleanFilter,
   isExistsFilter,
   isFilterGroup,
   isSubQueryFilter,
+  or,
 } from '../query.js';
 import {
   getCollectionPermissions,
@@ -265,7 +267,7 @@ function getQueryFilters<M extends Models, Q extends CollectionQuery<M>>(
     );
     // If we have collection permissions, we should apply them, otherwise its permissionless
     if (collectionPermissions) {
-      let permissionFilters: QueryWhere<M, any> = [];
+      let permissionFilters: QueryWhere<M, any>[] = [];
       let hasMatch = false;
       if (session.roles) {
         for (const sessionRole of session.roles) {
@@ -277,14 +279,15 @@ function getQueryFilters<M extends Models, Q extends CollectionQuery<M>>(
             if (Array.isArray(permission.filter)) {
               permissionFilters.push(
                 // @ts-expect-error
-                ...permission.filter
+                permission.filter
               );
             }
           }
         }
       }
-      if (!hasMatch) permissionFilters = [false];
-      filters.push(...permissionFilters);
+      if (!hasMatch) permissionFilters = [[false]];
+      const permissionsWhere = or(permissionFilters.map((f) => and(f)));
+      filters.push(permissionsWhere);
     }
   }
 
@@ -366,9 +369,9 @@ function getQueryFilters<M extends Models, Q extends CollectionQuery<M>>(
 function getReadRuleFilters(
   schema: Models,
   collectionName: CollectionNameFromModels
-): QueryWhere<any, any> {
+): QueryWhere<any, any>[] {
   if (schema?.[collectionName]?.rules?.read)
-    return Object.values(schema[collectionName].rules?.read ?? {}).flatMap(
+    return Object.values(schema[collectionName].rules?.read ?? {}).map(
       (rule) => rule.filter
     );
 
