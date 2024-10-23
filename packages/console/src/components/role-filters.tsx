@@ -179,12 +179,26 @@ function Array({
   );
 }
 
-export function RoleCard({ role }: { role: ConsoleSessionRole }) {
+export function RoleCard({
+  name,
+  vars,
+  active,
+}: {
+  name: string;
+  vars?: any;
+  active: boolean;
+}) {
   return (
-    <Tooltip label={<JSONCodeBlock json={role.roleVars} />}>
-      <div className="py-1 flex flex-col items-center px-2 w-max rounded text-xs bg-secondary text-secondary-foreground">
+    <Tooltip hidden={!active} label={<JSONCodeBlock json={vars} />}>
+      <div
+        className={cn(
+          'py-1 flex flex-col items-center px-2 w-max rounded text-xs bg-secondary text-muted-foreground',
+          active &&
+            'dark:bg-blue-950 dark:text-blue-300 bg-blue-200 text-blue-800'
+        )}
+      >
         <IdCard size={20} />
-        {role.key}
+        {name}
       </div>
     </Tooltip>
   );

@@ -263,6 +263,7 @@ export function ServerViewer({
               updateClientOptions({ token });
               // setClient(overwriteClient(token, client));
             }}
+            schema={schema}
           />
         </div>
         {tokens?.map(({ value, name, id }) => {
@@ -326,11 +327,16 @@ export function ServerViewer({
                 client.db.sessionRoles &&
                 client.db.sessionRoles.length > 0 && (
                   <div
-                    className="flex flex-wrap flex-row gap-2 mt-2"
+                    className="flex flex-wrap flex-row gap-2 my-2"
                     key={value + '_roles'}
                   >
                     {client.db.sessionRoles?.map((role) => (
-                      <RoleCard key={role.key} role={role} />
+                      <RoleCard
+                        key={role.key}
+                        name={role.key}
+                        vars={role.roleVars}
+                        active={true}
+                      />
                     ))}
                   </div>
                 )}
