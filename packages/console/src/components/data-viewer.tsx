@@ -10,7 +10,7 @@ import {
   TriplitColumnHeader,
   RelationCell,
 } from './data-table';
-import { Button, Checkbox, Tooltip } from '@triplit/ui';
+import { Button, Checkbox, Select, Tooltip } from '@triplit/ui';
 import { Plus } from 'lucide-react';
 import {
   SchemaAttributeSheet,
@@ -70,6 +70,7 @@ export function DataViewer({
   const [selectedEntities, setSelectedEntities] = useState<Set<string>>(
     new Set()
   );
+  const [pageSize, setPageSize] = useState(PAGE_SIZE);
   const collectionSchema = schema?.collections?.[selectedCollection];
   const filters = query.where;
   const order = query.order;
@@ -80,8 +81,8 @@ export function DataViewer({
         .query(selectedCollection)
         .order(...order)
         .where(filters)
-        .limit(PAGE_SIZE),
-    [selectedCollection, order, filters]
+        .limit(pageSize),
+    [selectedCollection, order, filters, pageSize]
   );
 
   // TODO remove localOnly when we get rid of the whole-collection query above
@@ -471,10 +472,19 @@ export function DataViewer({
             setQuery({ order });
           }}
         />
+        <div className="flex flex-row gap-2 items-center text-sm">
+          <div className="whitespace-nowrap">Page size</div>
+          <Select
+            className="h-7"
+            onValueChange={(v) => {
+              setPageSize(Number(v));
+            }}
+            value={String(pageSize)}
+            data={['25', '50', '100']}
+          />
+        </div>
         {!!orderedAndFilteredResults?.length && (
-          <div className="text-sm px-2">{`Showing ${
-            orderedAndFilteredResults.length
-          }
+          <div className="text-sm">{`Showing ${orderedAndFilteredResults.length}
           ${
             stats && !filters?.length
               ? ` of ${parseTotalEstimate(stats.numEntities)}`
@@ -496,9 +506,7 @@ export function DataViewer({
           data={flatFilteredEntities ?? []}
           showLoadMore={hasMore}
           loadMoreDisabled={fetchingMore || !hasMore}
-          onLoadMore={() => {
-            loadMore();
-          }}
+          onLoadMore={loadMore}
         />
       }
     </div>
