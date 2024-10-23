@@ -471,10 +471,11 @@ export function DataViewer({
             setQuery({ order });
           }}
         />
-        {orderedAndFilteredResults?.length && (
+        {!!orderedAndFilteredResults?.length && (
           <div className="text-sm px-2">{`Showing ${
             orderedAndFilteredResults.length
-          }${
+          }
+          ${
             stats && !filters?.length
               ? ` of ${parseTotalEstimate(stats.numEntities)}`
               : ''

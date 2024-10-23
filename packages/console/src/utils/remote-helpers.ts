@@ -64,7 +64,7 @@ async function queryServer(
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        authorization: `Bearer ${serviceToken}`,
+        authorization: `Bearer ${serviceToken.value}`,
       },
     });
   } catch (e) {

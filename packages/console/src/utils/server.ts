@@ -62,6 +62,7 @@ export async function initializeFromUrl() {
   } else {
     const params = new URLSearchParams(url.search);
     token = params.get('token');
+    if (token === 'null') token = null;
     if (!(token && JWTPayloadIsOfCorrectForm(token))) return null;
     server = params.get('server');
     if (!server) return null;
