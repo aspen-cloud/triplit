@@ -1106,6 +1106,100 @@ describe('Delete', () => {
     );
     await expect(db.delete('permissionless', '1')).resolves.not.toThrow();
   });
+
+  it('can handle union of two roles', async () => {
+    const schema = {
+      roles: {
+        authenticated: {
+          match: {
+            user_id: '$user_id',
+          },
+        },
+        admin: {
+          match: {
+            role: 'admin',
+            user_id: '$user_id',
+          },
+        },
+      },
+      collections: {
+        messages: {
+          schema: S.Schema({
+            id: S.Id(),
+            text: S.String(),
+            author_id: S.String(),
+          }),
+          permissions: {
+            authenticated: {
+              delete: {
+                filter: [['author_id', '=', '$role.user_id']],
+              },
+            },
+            admin: {
+              delete: {
+                filter: [true],
+              },
+            },
+          },
+        },
+      },
+      version: 0,
+    } satisfies StoreSchema<Models>;
+
+    const db = new DB({ schema });
+
+    // insert messages
+    await db.transact(
+      async (tx) => {
+        await tx.insert('messages', {
+          id: 'message-1',
+          text: 'Hello, world!',
+          author_id: 'user-1',
+        });
+        await tx.insert('messages', {
+          id: 'message-2',
+          text: 'Hello, world!',
+          author_id: 'user-2',
+        });
+        await tx.insert('messages', {
+          id: 'message-3',
+          text: 'Hello, world!',
+          author_id: 'user-2',
+        });
+      },
+      { skipRules: true }
+    );
+
+    const user1Token = {
+      user_id: 'user-1',
+    };
+    const adminToken = {
+      role: 'admin',
+      user_id: 'user-1',
+    };
+
+    const user1DB = db.withSessionVars(user1Token);
+    const adminDB = db.withSessionVars(adminToken);
+
+    expect(adminDB.sessionRoles).toEqual(
+      expect.arrayContaining([
+        { key: 'authenticated', roleVars: { user_id: 'user-1' } },
+        { key: 'admin', roleVars: { user_id: 'user-1' } },
+      ])
+    );
+
+    // User 1
+    await expect(
+      user1DB.delete('messages', 'message-1')
+    ).resolves.not.toThrow();
+
+    await expect(user1DB.delete('messages', 'message-2')).rejects.toThrow();
+
+    // Admin
+    await expect(
+      adminDB.delete('messages', 'message-2')
+    ).resolves.not.toThrow();
+  });
 });
 
 it('can migrate from a schema with rules to a schema with permissions', async () => {
