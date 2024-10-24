@@ -369,9 +369,9 @@ function getQueryFilters<M extends Models, Q extends CollectionQuery<M>>(
 function getReadRuleFilters(
   schema: Models,
   collectionName: CollectionNameFromModels
-): QueryWhere<any, any>[] {
+): QueryWhere<any, any> {
   if (schema?.[collectionName]?.rules?.read)
-    return Object.values(schema[collectionName].rules?.read ?? {}).map(
+    return Object.values(schema[collectionName].rules?.read ?? {}).flatMap(
       (rule) => rule.filter
     );
 
