@@ -1,5 +1,14 @@
 # @triplit/client
 
+## 0.5.8
+
+### Patch Changes
+
+- ccfa038c: Add method subscribeBackground() for sync in background
+- Updated dependencies [3984bc94]
+- Updated dependencies [94417d39]
+  - @triplit/db@0.5.0
+
 ## 0.5.7
 
 ### Patch Changes

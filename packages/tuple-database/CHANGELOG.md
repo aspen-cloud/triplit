@@ -1,5 +1,11 @@
 # @triplit/tuple-database
 
+## 2.2.30
+
+### Patch Changes
+
+- 9197cc72: update remeda package
+
 ## 2.2.29
 
 ### Patch Changes

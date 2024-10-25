@@ -1,5 +1,17 @@
 # @triplit/db
 
+## 0.5.0
+
+### Minor Changes
+
+- 94417d39: Treat multiple matching roles as a union of permission filters rather than an intersection
+
+### Patch Changes
+
+- 3984bc94: Fix bug where results are not properly backfilled when syncing for queries with limits
+- Updated dependencies [9197cc72]
+  - @triplit/tuple-database@2.2.30
+
 ## 0.4.6
 
 ### Patch Changes

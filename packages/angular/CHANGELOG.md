@@ -1,5 +1,14 @@
 # @triplit/angular
 
+## 0.1.9
+
+### Patch Changes
+
+- 8d588af4: add createPaginatedQuery and createInfiniteQuery
+- b0854ad2: fixup createInfiniteQuery loadMore function to accept optional pageSize
+- Updated dependencies [ccfa038c]
+  - @triplit/client@0.5.8
+
 ## 0.1.8
 
 ### Patch Changes
