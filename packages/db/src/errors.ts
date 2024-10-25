@@ -559,7 +559,7 @@ export class QueryNotPreparedError extends TriplitError {
   constructor(...args: any[]) {
     super(...args);
     this.name = 'QueryNotPreparedError';
-    this.baseMessage = `The query has not been prepared yet. This indicates a bug. Please inform the Triplit team.`;
+    this.baseMessage = `The query has parameters that have not been prepared with the schema. This could indicate that the database does not have a schema or that it is not up-to-date. Run \`npx triplit schema diff\` to verify that the server’s schema is in sync with the client’s. If it is not, run \`npx triplit schema push\` to update the server’s schema.`;
     this.status = STATUS_CODES['Internal Server Error'];
   }
 }
