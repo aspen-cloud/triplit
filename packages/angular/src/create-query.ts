@@ -206,7 +206,7 @@ type createInfiniteQueryPayload<M extends Models, Q extends ClientQuery<M>> = {
   fetchingMore$: Observable<boolean>;
   error$: Observable<any>;
   hasMore$: Observable<boolean>;
-  loadMore: () => void;
+  loadMore: (pageSize?: number) => void;
 };
 
 export function createInfiniteQuery<
@@ -224,7 +224,9 @@ export function createInfiniteQuery<
   const fetchingSubject = new BehaviorSubject<boolean>(true);
   const fetchingMoreSubject = new BehaviorSubject<boolean>(false);
   const hasMoreSubject = new BehaviorSubject<boolean>(false);
-  const loadMoreSubject = new BehaviorSubject<() => void>(() => {});
+  const loadMoreSubject = new BehaviorSubject<(pageSize?: number) => void>(
+    () => {}
+  );
   const errorSubject = new BehaviorSubject<any>(undefined);
 
   const results$ = queryParams$.pipe(
@@ -252,8 +254,8 @@ export function createInfiniteQuery<
           },
           options
         );
-        loadMoreSubject.next(() => {
-          subscription.loadMore();
+        loadMoreSubject.next((pageSize?: number) => {
+          subscription.loadMore(pageSize);
           fetchingMoreSubject.next(true);
         });
         return subscription.unsubscribe;
@@ -266,7 +268,7 @@ export function createInfiniteQuery<
     fetching$: fetchingSubject.asObservable(),
     fetchingMore$$: fetchingMoreSubject.asObservable(),
     hasMore$: hasMoreSubject.asObservable(),
-    loadMore: () => loadMoreSubject.getValue()(),
+    loadMore: (pageSize?: number) => loadMoreSubject.getValue()(pageSize),
     // @ts-ignore
     results$,
     error$: errorSubject.asObservable(),
