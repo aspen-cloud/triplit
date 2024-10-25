@@ -38,7 +38,7 @@ type useInfiniteQueryPayload<M extends Models, Q extends ClientQuery<M>> = {
   fetchingMore: boolean;
   error: any;
   hasMore: boolean;
-  loadMore: () => void;
+  loadMore: (pageSize?: number) => void;
   disconnect: () => void;
 };
 /**
@@ -252,7 +252,7 @@ export function useInfiniteQuery<
   );
   const [fetchingMore, setFetchingMore] = useState(false);
 
-  const loadMoreRef = useRef<() => void>();
+  const loadMoreRef = useRef<(pageSize?: number) => void>();
   const disconnectRef = useRef<() => void>();
   const hasResponseFromServer = useRef(false);
 
@@ -306,9 +306,9 @@ export function useInfiniteQuery<
     };
   }, [stringifiedQuery, client]);
 
-  const loadMore = useCallback(() => {
+  const loadMore = useCallback((pageSize?: number) => {
     setFetchingMore(true);
-    loadMoreRef.current?.();
+    loadMoreRef.current?.(pageSize);
   }, []);
 
   const disconnect = useCallback(() => {
