@@ -2022,19 +2022,24 @@ export function subscribeTriples<
       }
 
       const unsub = tripleStore.onWrite(async (storeWrites) => {
-        const allInserts = Object.values(storeWrites).flatMap(
-          (ops) => ops.inserts
-        );
-        const deltaTriples = await fetchDeltaTriples<M, Q>(
-          tripleStore,
-          query,
-          allInserts,
-          initialFetchExecutionContext(),
-          options
-        );
+        try {
+          const allInserts = Object.values(storeWrites).flatMap(
+            (ops) => ops.inserts
+          );
+          const deltaTriples = await fetchDeltaTriples<M, Q>(
+            tripleStore,
+            query,
+            allInserts,
+            initialFetchExecutionContext(),
+            options
+          );
 
-        if (deltaTriples.length) {
-          onResults(deltaTriples);
+          if (deltaTriples.length) {
+            onResults(deltaTriples);
+          }
+        } catch (error) {
+          console.error(error);
+          onError && (await onError(error));
         }
       });
       await onResults(triples);
