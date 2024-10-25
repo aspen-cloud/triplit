@@ -34,3 +34,7 @@ export function spyMessages(client: TriplitClient) {
   });
   return messages;
 }
+
+export function throwOnError(error: unknown) {
+  throw error;
+}

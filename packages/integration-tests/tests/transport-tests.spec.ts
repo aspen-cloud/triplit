@@ -10,6 +10,7 @@ import {
   SERVICE_KEY,
   createTestClient,
   spyMessages,
+  throwOnError,
 } from '../utils/client.js';
 
 describe('TestTransport', () => {
@@ -1077,6 +1078,65 @@ describe('Sync situations', () => {
       );
       expect(bobResults).toEqual(['4', '2', '3', '1']);
     }
+  });
+
+  describe('background syncing', () => {
+    it('can subscribe to a bulk query in the background and use local subscriptions for data', async () => {
+      const server = new TriplitServer(new DB());
+      await server.db.transact(async (tx) => {
+        await tx.insert('students', { id: '1', name: 'Alice', dorm: 'A' });
+        await tx.insert('students', { id: '2', name: 'Bob', dorm: 'B' });
+        await tx.insert('students', { id: '3', name: 'Charlie', dorm: 'A' });
+        await tx.insert('students', { id: '4', name: 'David', dorm: 'B' });
+        await tx.insert('students', { id: '5', name: 'Eve', dorm: 'A' });
+      });
+
+      const alice = createTestClient(server, SERVICE_KEY, {
+        clientId: 'alice',
+      });
+
+      const remoteQuery = alice.query('students').build();
+      const localQueryA = alice
+        .query('students')
+        .where('dorm', '=', 'A')
+        .build();
+      const localQueryB = alice
+        .query('students')
+        .where('dorm', '=', 'B')
+        .build();
+
+      const subA = vi.fn();
+      const subB = vi.fn();
+
+      alice.subscribe(localQueryA, subA, throwOnError, { localOnly: true });
+      alice.subscribe(localQueryB, subB, throwOnError, { localOnly: true });
+
+      await pause();
+
+      expect(subA.mock.calls.at(-1)[0]).toHaveLength(0);
+      expect(subA).toHaveBeenCalledTimes(1);
+      expect(subB.mock.calls.at(-1)[0]).toHaveLength(0);
+      expect(subB).toHaveBeenCalledTimes(1);
+
+      // triggers sync
+      alice.subscribeBackground(remoteQuery);
+
+      await pause();
+
+      expect(subA.mock.calls.at(-1)[0]).toHaveLength(3);
+      expect(subA).toHaveBeenCalledTimes(2);
+      expect(subB.mock.calls.at(-1)[0]).toHaveLength(2);
+      expect(subB).toHaveBeenCalledTimes(2);
+
+      await alice.insert('students', { id: '6', name: 'Frank', dorm: 'A' });
+
+      await pause();
+
+      expect(subA.mock.calls.at(-1)[0]).toHaveLength(4);
+      expect(subA).toHaveBeenCalledTimes(3);
+      expect(subB.mock.calls.at(-1)[0]).toHaveLength(2);
+      expect(subB).toHaveBeenCalledTimes(2);
+    });
   });
 });
 
