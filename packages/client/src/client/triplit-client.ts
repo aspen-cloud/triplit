@@ -798,6 +798,13 @@ export class TriplitClient<M extends ClientSchema = ClientSchema> {
   }
 
   /**
+   * Syncs a query to your local database in the background. This is useful to pre-fetch a larger portion of data and used in combination with local-only subscriptions.
+   */
+  subscribeBackground<CQ extends SchemaClientQueries<M>>(query: CQ) {
+    return this.syncEngine.subscribe(query);
+  }
+
+  /**
    * Subscribe to a query with helpers for pagination
    * This query will "oversubscribe" by 1 on either side of the current page to determine if there are "next" or "previous" pages
    * The window generally looks like [buffer, ...page..., buffer]

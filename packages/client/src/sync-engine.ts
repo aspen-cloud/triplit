@@ -639,6 +639,7 @@ export class SyncEngine {
       // On a remote read error, default to disconnecting the query
       // You will still send triples, but you wont receive updates
       case 'QuerySyncError':
+        // TODO: surface this error to the user
         const queryKey = metadata?.queryKey;
         if (queryKey) this.disconnectQuery(queryKey);
     }

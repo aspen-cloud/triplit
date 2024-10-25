@@ -306,6 +306,20 @@ export class WorkerClient<M extends ClientSchema = ClientSchema> {
       unsubPromise.then((unsub) => unsub());
     };
   }
+
+  subscribeBackground<CQ extends SchemaClientQueries<M>>(query: CQ) {
+    const unsubPromise = (async () => {
+      await this.initialized;
+      return this.clientWorker.subscribeBackground(
+        // @ts-expect-error
+        query
+      );
+    })();
+    return () => {
+      unsubPromise.then((unsub) => unsub());
+    };
+  }
+
   /**
    * Subscribe to a query with helpers for pagination
    * This query will "oversubscribe" by 1 on either side of the current page to determine if there are "next" or "previous" pages
