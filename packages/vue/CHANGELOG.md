@@ -1,5 +1,11 @@
 # @triplit/vue
 
+## 0.2.9
+
+### Patch Changes
+
+- 37b0d416: fixup initial fetching state
+
 ## 0.2.8
 
 ### Patch Changes
