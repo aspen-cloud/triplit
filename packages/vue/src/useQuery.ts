@@ -40,7 +40,7 @@ export function useQuery<
     Unalias<FetchResult<M, Q>> | undefined
   >;
   const isInitialFetch = ref(true);
-  const fetchingLocal = ref(false);
+  const fetchingLocal = ref(true);
   const fetchingRemote = ref(client.connectionStatus !== 'CLOSED');
   const fetching = computed(
     () => fetchingLocal.value || (isInitialFetch.value && fetchingRemote.value)

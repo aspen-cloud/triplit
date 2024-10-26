@@ -40,7 +40,7 @@ export function useQuery<
 } {
   let results: Unalias<FetchResult<M, Q>> | undefined = $state(undefined);
   let isInitialFetch = $state(true);
-  let fetchingLocal = $state(false);
+  let fetchingLocal = $state(true);
   let fetchingRemote = $state(client.connectionStatus !== 'CLOSED');
   let fetching = $derived(fetchingLocal || (isInitialFetch && fetchingRemote));
   let error: any = $state(undefined);
