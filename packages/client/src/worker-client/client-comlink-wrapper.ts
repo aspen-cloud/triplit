@@ -2,13 +2,11 @@ import * as ComLink from 'comlink';
 import {
   TriplitClient as Client,
   ClientOptions,
-  SubscriptionOptions,
 } from '../client/triplit-client.js';
 import {
   Attribute,
   CollectionNameFromModels,
   JSONToSchema,
-  ModelFromModels,
   UpdateTypeFromModel,
   TupleValue,
   CollectionQuery,
@@ -18,8 +16,12 @@ import {
 import { LogLevel } from '@triplit/types/logger';
 import { DefaultLogger } from '../client-logger.js';
 import { WorkerInternalClientNotInitializedError } from '../errors.js';
-import { SchemaClientQueries, ClientSchema } from '../client/types/query.js';
-import { SubscribeBackgroundOptions } from '../client/types/subscriptions.js';
+import {
+  SchemaClientQueries,
+  ClientSchema,
+  SubscribeBackgroundOptions,
+  SubscriptionOptions,
+} from '../client/types';
 
 interface ClientWorker extends Client {
   init: (options: ClientOptions, logger: any) => void;

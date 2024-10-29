@@ -2,17 +2,12 @@ import * as ComLink from 'comlink';
 import type {
   TriplitClient as Client,
   ClientOptions,
-  FetchOptions,
-  InfiniteSubscription,
-  PaginatedSubscription,
-  SubscriptionOptions,
 } from '../client/triplit-client.js';
 import {
   ChangeTracker,
   ClearOptions,
   CollectionNameFromModels,
   CollectionQuery,
-  CollectionQueryDefault,
   DBTransaction,
   FetchResult,
   FetchResultEntity,
@@ -20,7 +15,6 @@ import {
   InsertTypeFromModel,
   JSONToSchema,
   ModelFromModels,
-  SchemaQueries,
   ToQuery,
   TransactionResult,
   Unalias,
@@ -34,6 +28,10 @@ import {
   ClientSchema,
   SchemaClientQueries,
   SubscribeBackgroundOptions,
+  FetchOptions,
+  InfiniteSubscription,
+  PaginatedSubscription,
+  SubscriptionOptions,
 } from '../client/types';
 import { clientQueryBuilder } from '../client/query-builder.js';
 import SuperJSON from 'superjson';
