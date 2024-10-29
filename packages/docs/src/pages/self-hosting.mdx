@@ -19,6 +19,10 @@ You have several options for running the server:
 
 Each release of the server is [published as a Docker image](https://hub.docker.com/r/aspencloud/triplit-server/tags). You can deploy the server to a cloud provider like [fly.io](https://fly.io/docs/languages-and-frameworks/dockerfile/), [DigitalOcean](https://docs.digitalocean.com/products/app-platform/how-to/deploy-from-container-images/), or AWS. You'll also want to setup a volume to persist the database.
 
+The docker file starts a node server on port 8080, and you can pass in the following environment variables to configure the server:
+
+- `NODE_OPTIONS` - Node.js options for the server (e.g. `--max-old-space-size=4096`)
+
 ## One-click deploy
 
 Triplit is integrated with [Railway](https://railway.app/), a cloud provider that supports one-click deploys. Read about how to deploy a Triplit server using Railway in our [Triplit Cloud guide](/triplit-cloud/self-hosted-deployments).
