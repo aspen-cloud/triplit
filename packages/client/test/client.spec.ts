@@ -3,30 +3,31 @@ import { TriplitClient } from '../src/client/triplit-client.js';
 import { WorkerClient } from '../src/worker-client/worker-client.js';
 import { ClientFetchResult, ClientQuery } from '../src/client/types';
 import { Schema as S, Unalias } from '@triplit/db';
+import { ClientSchema } from '../dist/index.js';
 
 const workerUrl = new URL(
   '../src/worker-client/worker-client-operator.ts',
   import.meta.url
 ).href;
 
-interface Step<Q extends ClientQuery<any, any>> {
+interface Step<Q extends ClientQuery<ClientSchema>> {
   action: (
-    results: [results: Unalias<ClientFetchResult<Q>>, info: any],
+    results: [results: Unalias<ClientFetchResult<any, Q>>, info: any],
     sub: any
   ) => Promise<void> | void;
   check: (
-    results: [results: Unalias<ClientFetchResult<Q>>, info: any],
+    results: [results: Unalias<ClientFetchResult<any, Q>>, info: any],
     sub: any
   ) => Promise<void> | void;
 }
 
-type Steps<Q extends ClientQuery<any, any>> = [
+type Steps<Q extends ClientQuery<ClientSchema>> = [
   Pick<Step<Q>, 'check'>,
   ...Step<Q>[]
 ];
 
-async function testSubscribeWithExpand<Q extends ClientQuery<any, any>>(
-  client: TriplitClient<any>,
+async function testSubscribeWithExpand<Q extends ClientQuery<ClientSchema>>(
+  client: TriplitClient | WorkerClient,
   query: Q,
   steps: Steps<Q>
 ) {
@@ -53,8 +54,8 @@ async function testSubscribeWithExpand<Q extends ClientQuery<any, any>>(
   });
 }
 
-async function testSubscribeWithPagination<Q extends ClientQuery<any, any>>(
-  client: TriplitClient<any>,
+async function testSubscribeWithPagination<Q extends ClientQuery<ClientSchema>>(
+  client: TriplitClient | WorkerClient,
   query: Q,
   steps: Steps<Q>
 ) {
@@ -98,7 +99,7 @@ describe.each([TriplitClient, WorkerClient])('%O', (Client) => {
       const query = client.query('test').order(['age', 'ASC']).limit(3).build();
       await testSubscribeWithExpand(client, query, [
         {
-          check: ([results, info], sub) => {
+          check: ([results, info], _sub) => {
             expect(info.hasMore).toBe(true);
             expect(results.length).toBe(3);
             const ids = Array.from(results.values()).map((r) => r.id);
@@ -106,11 +107,11 @@ describe.each([TriplitClient, WorkerClient])('%O', (Client) => {
           },
         },
         {
-          action: async ([results, info], sub) => {
+          action: async (_args, sub) => {
             sub.loadMore();
             await new Promise((res) => setTimeout(res, 100));
           },
-          check: ([results, info], sub) => {
+          check: ([results, info], _sub) => {
             expect(info.hasMore).toBe(true);
             expect(results.length).toBe(6);
             const ids = Array.from(results.values()).map((r) => r.id);
@@ -118,11 +119,11 @@ describe.each([TriplitClient, WorkerClient])('%O', (Client) => {
           },
         },
         {
-          action: async ([results, info], sub) => {
+          action: async (_args, sub) => {
             sub.loadMore();
             await new Promise((res) => setTimeout(res, 100));
           },
-          check: ([results, info], sub) => {
+          check: ([results, info], _sub) => {
             expect(info.hasMore).toBe(false);
             expect(results.length).toBe(7);
             const ids = Array.from(results.values()).map((r) => r.id);
@@ -130,11 +131,11 @@ describe.each([TriplitClient, WorkerClient])('%O', (Client) => {
           },
         },
         {
-          action: async ([results, info], sub) => {
+          action: async (_args, sub) => {
             sub.loadMore();
             await new Promise((res) => setTimeout(res, 100));
           },
-          check: ([results, info], sub) => {
+          check: ([results, info], _sub) => {
             expect(info.hasMore).toBe(false);
             expect(results.length).toBe(7);
           },
@@ -157,7 +158,7 @@ describe.each([TriplitClient, WorkerClient])('%O', (Client) => {
       const query = client.query('test').order(['age', 'ASC']).limit(3).build();
       await testSubscribeWithExpand(client, query, [
         {
-          check: ([results, info], sub) => {
+          check: ([results, info], _sub) => {
             expect(info.hasMore).toBe(true);
             expect(results.length).toBe(3);
             const ids = Array.from(results.values()).map((r) => r.id);
@@ -165,11 +166,11 @@ describe.each([TriplitClient, WorkerClient])('%O', (Client) => {
           },
         },
         {
-          action: async ([results, info], sub) => {
+          action: async (_args, sub) => {
             sub.loadMore(2);
             await new Promise((res) => setTimeout(res, 100));
           },
-          check: ([results, info], sub) => {
+          check: ([results, info], _sub) => {
             expect(info.hasMore).toBe(true);
             expect(results.length).toBe(5);
             const ids = Array.from(results.values()).map((r) => r.id);
@@ -177,11 +178,11 @@ describe.each([TriplitClient, WorkerClient])('%O', (Client) => {
           },
         },
         {
-          action: async ([results, info], sub) => {
+          action: async (_args, sub) => {
             sub.loadMore(2);
             await new Promise((res) => setTimeout(res, 100));
           },
-          check: ([results, info], sub) => {
+          check: ([results, info], _sub) => {
             expect(info.hasMore).toBe(false);
             expect(results.length).toBe(7);
             const ids = Array.from(results.values()).map((r) => r.id);
@@ -201,7 +202,7 @@ describe.each([TriplitClient, WorkerClient])('%O', (Client) => {
       const query = client.query('test').order(['age', 'ASC']).limit(3).build();
       await testSubscribeWithExpand(client, query, [
         {
-          check: ([results, info], sub) => {
+          check: ([results, info], _sub) => {
             expect(info.hasMore).toBe(false);
             expect(results.length).toBe(3);
             const ids = Array.from(results.values()).map((r) => r.id);
@@ -210,10 +211,10 @@ describe.each([TriplitClient, WorkerClient])('%O', (Client) => {
         },
         {
           // Add data out of range
-          action: async ([results, info], sub) => {
+          action: async (_args, _sub) => {
             await client.insert('test', { id: '4', name: 'dave', age: 30 });
           },
-          check: ([results, info], sub) => {
+          check: ([results, info], _sub) => {
             expect(info.hasMore).toBe(true);
             expect(results.length).toBe(3);
             const ids = Array.from(results.values()).map((r) => r.id);
@@ -221,11 +222,11 @@ describe.each([TriplitClient, WorkerClient])('%O', (Client) => {
           },
         },
         {
-          action: async ([results, info], sub) => {
+          action: async (_args, sub) => {
             sub.loadMore();
             await new Promise((res) => setTimeout(res, 100));
           },
-          check: async ([results, info], sub) => {
+          check: async ([results, info], _sub) => {
             expect(info.hasMore).toBe(false);
             expect(results.length).toBe(4);
             const ids = Array.from(results.values()).map((r) => r.id);
@@ -248,7 +249,7 @@ describe.each([TriplitClient, WorkerClient])('%O', (Client) => {
       const query = client.query('test').order(['age', 'ASC']).limit(3).build();
       await testSubscribeWithExpand(client, query, [
         {
-          check: ([results, info], sub) => {
+          check: ([results, info], _sub) => {
             expect(info.hasMore).toBe(false);
             expect(results.length).toBe(3);
             const ids = Array.from(results.values()).map((r) => r.id);
@@ -257,10 +258,10 @@ describe.each([TriplitClient, WorkerClient])('%O', (Client) => {
         },
         {
           // Add data in range
-          action: async ([results, info], sub) => {
+          action: async (_args, _sub) => {
             await client.insert('test', { id: '4', name: 'dave', age: 20 });
           },
-          check: ([results, info], sub) => {
+          check: ([results, info], _sub) => {
             expect(info.hasMore).toBe(true);
             expect(results.length).toBe(3);
             const ids = Array.from(results.values()).map((r) => r.id);
@@ -268,11 +269,11 @@ describe.each([TriplitClient, WorkerClient])('%O', (Client) => {
           },
         },
         {
-          action: async ([results, info], sub) => {
+          action: async (_args, sub) => {
             sub.loadMore();
             await new Promise((res) => setTimeout(res, 100));
           },
-          check: async ([results, info], sub) => {
+          check: async ([results, info], _sub) => {
             expect(info.hasMore).toBe(false);
             expect(results.length).toBe(4);
             const ids = Array.from(results.values()).map((r) => r.id);
@@ -294,7 +295,7 @@ describe.each([TriplitClient, WorkerClient])('%O', (Client) => {
       const query = client.query('test').order(['age', 'ASC']).limit(3).build();
       await testSubscribeWithExpand(client, query, [
         {
-          check: ([results, info], sub) => {
+          check: ([results, info], _sub) => {
             expect(info.hasMore).toBe(true);
             expect(results.length).toBe(3);
             const ids = Array.from(results.values()).map((r) => r.id);
@@ -303,10 +304,10 @@ describe.each([TriplitClient, WorkerClient])('%O', (Client) => {
         },
         {
           // Remove data out of range
-          action: async ([results, info], sub) => {
+          action: async (_args, _sub) => {
             await client.delete('test', '4');
           },
-          check: ([results, info], sub) => {
+          check: ([results, info], _sub) => {
             expect(info.hasMore).toBe(false);
             expect(results.length).toBe(3);
             const ids = Array.from(results.values()).map((r) => r.id);
@@ -328,7 +329,7 @@ describe.each([TriplitClient, WorkerClient])('%O', (Client) => {
       const query = client.query('test').order(['age', 'ASC']).limit(3).build();
       await testSubscribeWithExpand(client, query, [
         {
-          check: ([results, info], sub) => {
+          check: ([results, info], _sub) => {
             expect(info.hasMore).toBe(true);
             expect(results.length).toBe(3);
             const ids = Array.from(results.values()).map((r) => r.id);
@@ -337,10 +338,10 @@ describe.each([TriplitClient, WorkerClient])('%O', (Client) => {
         },
         {
           // Remove data in range
-          action: async ([results, info], sub) => {
+          action: async (_args, _sub) => {
             await client.delete('test', '4');
           },
-          check: ([results, info], sub) => {
+          check: ([results, info], _sub) => {
             expect(info.hasMore).toBe(false);
             expect(results.length).toBe(3);
             const ids = Array.from(results.values()).map((r) => r.id);
@@ -360,7 +361,7 @@ describe.each([TriplitClient, WorkerClient])('%O', (Client) => {
       const query = client.query('test').order(['age', 'ASC']).limit(3).build();
       await testSubscribeWithPagination(client, query, [
         {
-          check: ([results, info], sub) => {
+          check: ([results, info], _sub) => {
             expect(info.hasPreviousPage).toBe(false);
             expect(info.hasNextPage).toBe(false);
             expect(results.length).toBe(0);
@@ -377,7 +378,7 @@ describe.each([TriplitClient, WorkerClient])('%O', (Client) => {
       const query = client.query('test').order(['age', 'ASC']).limit(3).build();
       await testSubscribeWithPagination(client, query, [
         {
-          check: ([results, info], sub) => {
+          check: ([results, info], _sub) => {
             expect(info.hasPreviousPage).toBe(false);
             expect(info.hasNextPage).toBe(false);
             expect(results.length).toBe(1);
@@ -400,7 +401,7 @@ describe.each([TriplitClient, WorkerClient])('%O', (Client) => {
       const query = client.query('test').order(['age', 'ASC']).limit(3).build();
       await testSubscribeWithPagination(client, query, [
         {
-          check: ([results, info], sub) => {
+          check: ([results, info], _sub) => {
             expect(info.hasPreviousPage).toBe(false);
             expect(info.hasNextPage).toBe(true);
             expect(results.length).toBe(3);
@@ -409,11 +410,11 @@ describe.each([TriplitClient, WorkerClient])('%O', (Client) => {
           },
         },
         {
-          action: async ([results, info], sub) => {
+          action: async (_args, sub) => {
             sub.nextPage();
             await new Promise((res) => setTimeout(res, 100));
           },
-          check: ([results, info], sub) => {
+          check: ([results, info], _sub) => {
             expect(info.hasPreviousPage).toBe(true);
             expect(info.hasNextPage).toBe(true);
             expect(results.length).toBe(3);
@@ -422,11 +423,11 @@ describe.each([TriplitClient, WorkerClient])('%O', (Client) => {
           },
         },
         {
-          action: async ([results, info], sub) => {
+          action: async (_args, sub) => {
             sub.nextPage();
             await new Promise((res) => setTimeout(res, 100));
           },
-          check: ([results, info], sub) => {
+          check: ([results, info], _sub) => {
             expect(info.hasPreviousPage).toBe(true);
             expect(info.hasNextPage).toBe(false);
             expect(results.length).toBe(1);
@@ -435,11 +436,11 @@ describe.each([TriplitClient, WorkerClient])('%O', (Client) => {
           },
         },
         {
-          action: async ([results, info], sub) => {
+          action: async (_args, sub) => {
             sub.prevPage();
             await new Promise((res) => setTimeout(res, 100));
           },
-          check: ([results, info], sub) => {
+          check: ([results, info], _sub) => {
             expect(info.hasPreviousPage).toBe(true);
             expect(info.hasNextPage).toBe(true);
             expect(results.length).toBe(3);
@@ -448,11 +449,11 @@ describe.each([TriplitClient, WorkerClient])('%O', (Client) => {
           },
         },
         {
-          action: async ([results, info], sub) => {
+          action: async (_args, sub) => {
             sub.prevPage();
             await new Promise((res) => setTimeout(res, 100));
           },
-          check: ([results, info], sub) => {
+          check: ([results, info], _sub) => {
             expect(info.hasPreviousPage).toBe(false);
             expect(info.hasNextPage).toBe(true);
             expect(results.length).toBe(3);
@@ -473,7 +474,7 @@ describe.each([TriplitClient, WorkerClient])('%O', (Client) => {
       const query = client.query('test').order(['age', 'ASC']).limit(3).build();
       await testSubscribeWithPagination(client, query, [
         {
-          check: ([results, info], sub) => {
+          check: ([results, info], _sub) => {
             expect(info.hasNextPage).toBe(false);
             expect(results.length).toBe(3);
             const ids = Array.from(results.values()).map((r) => r.id);
@@ -481,10 +482,10 @@ describe.each([TriplitClient, WorkerClient])('%O', (Client) => {
           },
         },
         {
-          action: async ([results, info], sub) => {
+          action: async (_args, _sub) => {
             await client.insert('test', { id: '4', name: 'dave', age: 30 });
           },
-          check: ([results, info], sub) => {
+          check: ([results, info], _sub) => {
             expect(info.hasNextPage).toBe(true);
             expect(results.length).toBe(3);
             const ids = Array.from(results.values()).map((r) => r.id);
@@ -504,7 +505,7 @@ describe.each([TriplitClient, WorkerClient])('%O', (Client) => {
       const query = client.query('test').order(['age', 'ASC']).limit(3).build();
       await testSubscribeWithPagination(client, query, [
         {
-          check: ([results, info], sub) => {
+          check: ([results, info], _sub) => {
             expect(info.hasNextPage).toBe(false);
             expect(results.length).toBe(3);
             const ids = Array.from(results.values()).map((r) => r.id);
@@ -512,10 +513,10 @@ describe.each([TriplitClient, WorkerClient])('%O', (Client) => {
           },
         },
         {
-          action: async ([results, info], sub) => {
+          action: async (_args, _sub) => {
             await client.insert('test', { id: '4', name: 'dave', age: 20 });
           },
-          check: ([results, info], sub) => {
+          check: ([results, info], _sub) => {
             expect(info.hasNextPage).toBe(true);
             expect(results.length).toBe(3);
             const ids = Array.from(results.values()).map((r) => r.id);
@@ -536,7 +537,7 @@ describe.each([TriplitClient, WorkerClient])('%O', (Client) => {
       const query = client.query('test').order(['age', 'ASC']).limit(3).build();
       await testSubscribeWithPagination(client, query, [
         {
-          check: ([results, info], sub) => {
+          check: ([results, info], _sub) => {
             expect(info.hasNextPage).toBe(true);
             expect(results.length).toBe(3);
             const ids = Array.from(results.values()).map((r) => r.id);
@@ -544,10 +545,10 @@ describe.each([TriplitClient, WorkerClient])('%O', (Client) => {
           },
         },
         {
-          action: async ([results, info], sub) => {
+          action: async (_args, _sub) => {
             await client.delete('test', '4');
           },
-          check: ([results, info], sub) => {
+          check: ([results, info], _sub) => {
             expect(info.hasNextPage).toBe(false);
             expect(results.length).toBe(3);
             const ids = Array.from(results.values()).map((r) => r.id);
@@ -568,7 +569,7 @@ describe.each([TriplitClient, WorkerClient])('%O', (Client) => {
       const query = client.query('test').order(['age', 'ASC']).limit(3).build();
       await testSubscribeWithPagination(client, query, [
         {
-          check: ([results, info], sub) => {
+          check: ([results, info], _sub) => {
             expect(info.hasNextPage).toBe(true);
             expect(results.length).toBe(3);
             const ids = Array.from(results.values()).map((r) => r.id);
@@ -576,10 +577,10 @@ describe.each([TriplitClient, WorkerClient])('%O', (Client) => {
           },
         },
         {
-          action: async ([results, info], sub) => {
+          action: async (_args, _sub) => {
             await client.delete('test', '4');
           },
-          check: ([results, info], sub) => {
+          check: ([results, info], _sub) => {
             expect(info.hasNextPage).toBe(false);
             expect(results.length).toBe(3);
             const ids = Array.from(results.values()).map((r) => r.id);
@@ -607,7 +608,7 @@ describe.each([TriplitClient, WorkerClient])('%O', (Client) => {
       const query = client.query('test').order(['age', 'ASC']).limit(3).build();
       await testSubscribeWithPagination(client, query, [
         {
-          check: ([results, info], sub) => {
+          check: ([results, info], _sub) => {
             expect(info.hasPreviousPage).toBe(false);
             expect(info.hasNextPage).toBe(false);
             expect(results.length).toBe(3);
@@ -616,10 +617,10 @@ describe.each([TriplitClient, WorkerClient])('%O', (Client) => {
           },
         },
         {
-          action: async ([results, info], sub) => {
+          action: async (_args, _sub) => {
             await client.insert('test', { id: '4', name: 'dave', age: 10 });
           },
-          check: ([results, info], sub) => {
+          check: ([results, info], _sub) => {
             expect(info.hasPreviousPage).toBe(false);
             expect(info.hasNextPage).toBe(true);
             expect(results.length).toBe(3);
@@ -646,7 +647,7 @@ describe.each([TriplitClient, WorkerClient])('%O', (Client) => {
       const query = client.query('test').order(['age', 'ASC']).limit(3).build();
       await testSubscribeWithPagination(client, query, [
         {
-          check: ([results, info], sub) => {
+          check: ([results, info], _sub) => {
             expect(info.hasPreviousPage).toBe(false);
             expect(info.hasNextPage).toBe(true);
             expect(results.length).toBe(3);
@@ -655,11 +656,11 @@ describe.each([TriplitClient, WorkerClient])('%O', (Client) => {
           },
         },
         {
-          action: async ([results, info], sub) => {
+          action: async (_args, sub) => {
             sub.nextPage();
             await new Promise((res) => setTimeout(res, 100));
           },
-          check: ([results, info], sub) => {
+          check: ([results, info], _sub) => {
             expect(info.hasPreviousPage).toBe(true);
             expect(info.hasNextPage).toBe(true);
             expect(results.length).toBe(3);
@@ -668,11 +669,11 @@ describe.each([TriplitClient, WorkerClient])('%O', (Client) => {
           },
         },
         {
-          action: async ([results, info], sub) => {
+          action: async (_args, sub) => {
             sub.prevPage();
             await new Promise((res) => setTimeout(res, 100));
           },
-          check: ([results, info], sub) => {
+          check: ([results, info], _sub) => {
             expect(info.hasPreviousPage).toBe(false);
             expect(info.hasNextPage).toBe(true);
             expect(results.length).toBe(3);
@@ -681,10 +682,10 @@ describe.each([TriplitClient, WorkerClient])('%O', (Client) => {
           },
         },
         {
-          action: async ([results, info], sub) => {
+          action: async (_args, _sub) => {
             await client.insert('test', { id: '8', name: 'hayley', age: 17 });
           },
-          check: ([results, info], sub) => {
+          check: ([results, info], _sub) => {
             expect(info.hasPreviousPage).toBe(false);
             expect(info.hasNextPage).toBe(true);
             expect(results.length).toBe(3);
@@ -707,7 +708,7 @@ describe.each([TriplitClient, WorkerClient])('%O', (Client) => {
       const query = client.query('test').order(['age', 'ASC']).limit(3).build();
       await testSubscribeWithPagination(client, query, [
         {
-          check: ([results, info], sub) => {
+          check: ([results, info], _sub) => {
             expect(info.hasPreviousPage).toBe(false);
             expect(info.hasNextPage).toBe(true);
             expect(results.length).toBe(3);
@@ -716,11 +717,11 @@ describe.each([TriplitClient, WorkerClient])('%O', (Client) => {
           },
         },
         {
-          action: async ([results, info], sub) => {
+          action: async (_args, sub) => {
             sub.nextPage();
             await new Promise((res) => setTimeout(res, 100));
           },
-          check: ([results, info], sub) => {
+          check: ([results, info], _sub) => {
             expect(info.hasPreviousPage).toBe(true);
             expect(info.hasNextPage).toBe(false);
             expect(results.length).toBe(1);
@@ -729,12 +730,12 @@ describe.each([TriplitClient, WorkerClient])('%O', (Client) => {
           },
         },
         {
-          action: async ([results, info], sub) => {
+          action: async (_args, _sub) => {
             await client.delete('test', '1');
             await client.delete('test', '3');
             await client.delete('test', '4');
           },
-          check: ([results, info], sub) => {
+          check: ([results, info], _sub) => {
             expect(info.hasPreviousPage).toBe(false);
             expect(info.hasNextPage).toBe(false);
             expect(results.length).toBe(1);
@@ -757,7 +758,7 @@ describe.each([TriplitClient, WorkerClient])('%O', (Client) => {
       const query = client.query('test').order(['age', 'ASC']).limit(3).build();
       await testSubscribeWithPagination(client, query, [
         {
-          check: ([results, info], sub) => {
+          check: ([results, info], _sub) => {
             expect(info.hasPreviousPage).toBe(false);
             expect(info.hasNextPage).toBe(true);
             expect(results.length).toBe(3);
@@ -766,11 +767,11 @@ describe.each([TriplitClient, WorkerClient])('%O', (Client) => {
           },
         },
         {
-          action: async ([results, info], sub) => {
+          action: async (_args, sub) => {
             sub.nextPage();
             await new Promise((res) => setTimeout(res, 100));
           },
-          check: ([results, info], sub) => {
+          check: ([results, info], _sub) => {
             expect(info.hasPreviousPage).toBe(true);
             expect(info.hasNextPage).toBe(false);
             expect(results.length).toBe(1);
@@ -779,12 +780,12 @@ describe.each([TriplitClient, WorkerClient])('%O', (Client) => {
           },
         },
         {
-          action: async ([results, info], sub) => {
+          action: async (_args, sub) => {
             await client.delete('test', '1');
             sub.prevPage();
             await new Promise((res) => setTimeout(res, 100));
           },
-          check: ([results, info], sub) => {
+          check: ([results, info], _sub) => {
             expect(info.hasPreviousPage).toBe(false);
             expect(info.hasNextPage).toBe(false);
             expect(results.length).toBe(3);
@@ -848,7 +849,7 @@ describe.each([TriplitClient, WorkerClient])('%O', (Client) => {
       const query = client.query('test').order(['dob', 'ASC']).limit(3).build();
       await testSubscribeWithPagination(client, query, [
         {
-          check: ([results, info], sub) => {
+          check: ([results, info], _sub) => {
             expect(info.hasPreviousPage).toBe(false);
             expect(info.hasNextPage).toBe(true);
             expect(results.length).toBe(3);
@@ -857,11 +858,11 @@ describe.each([TriplitClient, WorkerClient])('%O', (Client) => {
           },
         },
         {
-          action: async ([results, info], sub) => {
+          action: async (_args, sub) => {
             sub.nextPage();
             await new Promise((res) => setTimeout(res, 100));
           },
-          check: ([results, info], sub) => {
+          check: ([results, info], _sub) => {
             expect(info.hasPreviousPage).toBe(true);
             expect(info.hasNextPage).toBe(true);
             expect(results.length).toBe(3);
@@ -870,11 +871,11 @@ describe.each([TriplitClient, WorkerClient])('%O', (Client) => {
           },
         },
         {
-          action: async ([results, info], sub) => {
+          action: async (_args, sub) => {
             sub.nextPage();
             await new Promise((res) => setTimeout(res, 100));
           },
-          check: ([results, info], sub) => {
+          check: ([results, info], _sub) => {
             expect(info.hasPreviousPage).toBe(true);
             expect(info.hasNextPage).toBe(false);
             expect(results.length).toBe(1);
@@ -883,7 +884,7 @@ describe.each([TriplitClient, WorkerClient])('%O', (Client) => {
           },
         },
         {
-          action: async ([results, info], sub) => {
+          action: async (_args, sub) => {
             sub.prevPage();
             await new Promise((res) => setTimeout(res, 100));
           },
@@ -896,11 +897,11 @@ describe.each([TriplitClient, WorkerClient])('%O', (Client) => {
           },
         },
         {
-          action: async ([results, info], sub) => {
+          action: async (_args, sub) => {
             sub.prevPage();
             await new Promise((res) => setTimeout(res, 100));
           },
-          check: ([results, info], sub) => {
+          check: ([results, info], _sub) => {
             expect(info.hasPreviousPage).toBe(false);
             expect(info.hasNextPage).toBe(true);
             expect(results.length).toBe(3);
