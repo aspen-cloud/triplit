@@ -42,9 +42,7 @@ import { prepareQuery } from '../src/query/prepare.js';
 import { DEFAULT_PAGE_SIZE as TUPLE_DB_DEFAULT_PAGE_SIZE } from '../src/multi-tuple-store.js';
 import { testDBAndTransaction } from './utils/db-helpers.js';
 import { isCollectionAttribute } from '../src/entity.js';
-
-const pause = async (ms: number = 100) =>
-  new Promise((resolve) => setTimeout(resolve, ms));
+import { pause } from './utils/async.js';
 
 describe('Database API', () => {
   let db: DB;

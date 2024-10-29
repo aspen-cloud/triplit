@@ -6,6 +6,7 @@ import {
 } from '../src/schema/diff.js';
 import { Schema as S } from '../src/schema/builder.js';
 import DB, { DBTransaction, Models } from '../src/index.js';
+import { pause } from './utils/async.js';
 
 function wrapSchema(definition: any) {
   return {
@@ -428,10 +429,6 @@ describe('detecting dangerous edits', () => {
     });
   });
 });
-
-function pause(ms: number) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
 
 describe('rules', () => {
   it('can detect changes to rules', () => {

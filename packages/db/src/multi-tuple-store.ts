@@ -257,23 +257,25 @@ export default class MultiTupleStore<TupleSchema extends KeyValuePair> {
     args: ScanArgs<T, P>,
     callback: MultiTupleReactivityCallback<TupleSchema>
   ): Unsubscribe {
+    const subscriptionId = Math.random().toString(36).slice(2);
+
     const unsubFuncs = this.getStorageClientsEntries('read').map(
-      ([storeId, store]) =>
-        store.subscribe(args, (writeOps, txId) => {
-          const reactivityId = this.reactivity.getReactivityId(storeId, txId);
-          if (!reactivityId) {
+      ([storeId, store]) => {
+        return store.subscribe(args, (writeOps, txId) => {
+          const parentTxId = this.reactivity.getParentTxId(storeId, txId);
+          if (!parentTxId) {
             // Shouldnt happen, but problematic if it does (we're not tracking updates properly)
             console.warn('Not tracking reactivity for', storeId, txId);
             return;
           }
-          this.reactivity.updateCallback(
-            reactivityId,
+          this.reactivity.assignStorePayloadToMultiStoreCallback(
+            parentTxId,
+            subscriptionId,
             callback,
-            writeOps,
-            storeId,
-            txId
+            { writeOps, storeId, txId }
           );
-        })
+        });
+      }
     );
     return () => {
       Promise.all(unsubFuncs).then((unsubs) =>
@@ -794,18 +796,25 @@ type MultiTupleReactivityCallbackArgs = Record<string, WriteOps<any>>;
  *
  * We allow for multiple stores to be combined into a single MultiTupleStore, and we want a way to fire a single when a transaction is committed across many stores.
  *
- * When we subscribe to a MultiTupleStore, we add a subscription to each store that on fire adds a callback to the MultiTupleReactivity, so on write we we queue up the data.
+ * When we subscribe to a MultiTupleStore, we add a subscription to each store that on fire passes its args , so on write we we queue up the data.
  *
  * Later, when a multi store transaction is committed, we call emit() on the MultiTupleReactivity, which will call the single callback with the combined write operations.
  */
 export class MultiTupleReactivity {
-  // Maps multi store txid to callbacks (will call callbacks for tracked tuple stores)
-  private txCallbacks: Record<
+  // Maps multi store txid to subscription information
+  private multiStoreSubscriptionCallbacks: Record<
+    // MultiTupleTransaction id
     string,
     {
-      callbacks: Set<MultiTupleReactivityCallback<any>>;
-      args: MultiTupleReactivityCallbackArgs;
-      tupleStoreTxs: string[];
+      // For this transaction, tracks the callback and store args
+      // When each store subscription fires, we add the writeOps to the proper store args
+      subscriptions: Map<
+        string,
+        {
+          callback: MultiTupleReactivityCallback<any>;
+          args: MultiTupleReactivityCallbackArgs;
+        }
+      >;
     }
   > = {};
   // Maps tuple store composite key to multi store txid
@@ -831,7 +840,7 @@ export class MultiTupleReactivity {
   /**
    * Returns the MultiTupleTransaction id related to a tuple store transaction id
    */
-  getReactivityId(storeId: string, txId: string) {
+  getParentTxId(storeId: string, txId: string) {
     const tupleStoreTxId = MultiTupleReactivity.TupleStoreCompositeKey(
       storeId,
       txId
@@ -839,41 +848,67 @@ export class MultiTupleReactivity {
     return this.tupleStoreTxReactivityIds[tupleStoreTxId];
   }
 
-  updateCallback(
-    reactivityId: string,
+  /**
+   * When a store subscription fires, add that to the multi store transaction callback which we will call when the multi store transaction is committed
+   */
+  assignStorePayloadToMultiStoreCallback(
+    // Multi store transaction id
+    parentTxId: string,
+    // Multi store subscription id
+    subscriptionId: string,
+    // Function to call when the multi store transaction is committed
     callback: MultiTupleReactivityCallback<any>,
-    writeOps: WriteOps<any>,
-    storeId: string,
-    txId: string
+    storeSubscriptionPayload: {
+      // Store id
+      storeId: string;
+      // Store transaciton id
+      txId: string;
+      // Store operations
+      writeOps: WriteOps<any>;
+    }
   ) {
-    if (!this.txCallbacks[reactivityId]) {
-      this.txCallbacks[reactivityId] = {
-        callbacks: new Set(),
-        args: {},
-        tupleStoreTxs: [],
+    if (!this.multiStoreSubscriptionCallbacks[parentTxId]) {
+      this.multiStoreSubscriptionCallbacks[parentTxId] = {
+        subscriptions: new Map(),
       };
     }
-    this.txCallbacks[reactivityId].callbacks.add(callback);
-    this.txCallbacks[reactivityId].args[storeId] = writeOps;
-    const tupleStoreTxId = MultiTupleReactivity.TupleStoreCompositeKey(
-      storeId,
-      txId
-    );
-    this.txCallbacks[reactivityId].tupleStoreTxs.push(tupleStoreTxId);
-  }
 
-  deleteCallback(reactivityId: string) {
-    delete this.txCallbacks[reactivityId];
-  }
+    const { storeId, writeOps } = storeSubscriptionPayload;
 
-  emit(reactivityId: string) {
-    const txCallbacks = this.txCallbacks[reactivityId];
-    if (txCallbacks) {
-      this.taskQueue.schedule(
-        Array.from(txCallbacks.callbacks),
-        txCallbacks.args
+    const currentSubscription =
+      this.multiStoreSubscriptionCallbacks[parentTxId].subscriptions.get(
+        subscriptionId
       );
-      delete this.txCallbacks[reactivityId];
+
+    if (currentSubscription) {
+      // If we already have a callback for this subscription, assign the writeOps to the proper store
+      currentSubscription.args[storeId] = writeOps;
+    } else {
+      // If we dont have a callback for this subscription, create a new one
+      this.multiStoreSubscriptionCallbacks[parentTxId].subscriptions.set(
+        subscriptionId,
+        {
+          callback,
+          args: { [storeId]: writeOps },
+        }
+      );
+    }
+  }
+
+  /**
+   * When a multi store transaction is committed, schedule the callbacks to be called
+   */
+  emit(parentTxId: string) {
+    const subscritpionCallbacks =
+      this.multiStoreSubscriptionCallbacks[parentTxId];
+    if (subscritpionCallbacks) {
+      this.taskQueue.schedule(
+        Array.from(subscritpionCallbacks.subscriptions.values()).map((sub) => [
+          sub.callback,
+          sub.args,
+        ])
+      );
+      delete this.multiStoreSubscriptionCallbacks[parentTxId];
     }
   }
 
@@ -886,15 +921,15 @@ class TaskQueue {
   queue: [any, any][] = [];
   isRunning = false;
 
-  async schedule(callbacks: any[], args: any) {
+  schedule(unitsOfWork: [callback: any, args: any][]) {
     if (this.isRunning) {
       setTimeout(() => {
-        this.queue.push(...callbacks.map((cb) => [cb, args] as [any, any]));
+        this.queue.push(...unitsOfWork);
         this.run();
       });
       return;
     }
-    this.queue.push(...callbacks.map((cb) => [cb, args] as [any, any]));
+    this.queue.push(...unitsOfWork);
     this.run();
   }
 
