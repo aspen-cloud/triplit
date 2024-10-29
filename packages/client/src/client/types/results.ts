@@ -22,7 +22,7 @@ import {
 import { ClientSchema, SchemaClientQueries } from './query.js';
 
 /**
- * Results from a query based on the query's model in the format `Map<id, entity>`
+ * Results from a query based on the query's model in the format `entity[]`
  */
 export type ClientFetchResult<
   M extends Models,
