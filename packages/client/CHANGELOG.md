@@ -1,5 +1,11 @@
 # @triplit/client
 
+## 0.5.9
+
+### Patch Changes
+
+- @triplit/db@0.5.1
+
 ## 0.5.8
 
 ### Patch Changes

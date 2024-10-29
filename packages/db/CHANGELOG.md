@@ -1,5 +1,12 @@
 # @triplit/db
 
+## 0.5.1
+
+### Patch Changes
+
+- Updated dependencies [9ef4f9a3]
+  - @triplit/tuple-database@2.2.31
+
 ## 0.5.0
 
 ### Minor Changes

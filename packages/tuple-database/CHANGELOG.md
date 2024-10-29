@@ -1,5 +1,11 @@
 # @triplit/tuple-database
 
+## 2.2.31
+
+### Patch Changes
+
+- 9ef4f9a3: Use withExclusiveTransactionAsync when creating a transaction with ExpoSqlite
+
 ## 2.2.30
 
 ### Patch Changes

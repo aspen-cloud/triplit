@@ -1,5 +1,13 @@
 # @triplit/console
 
+## 0.4.9
+
+### Patch Changes
+
+- @triplit/db@0.5.1
+- @triplit/client@0.5.9
+- @triplit/react@0.4.9
+
 ## 0.4.8
 
 ### Patch Changes
