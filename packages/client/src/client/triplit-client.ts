@@ -38,7 +38,9 @@ import {
   ClientQuery,
   ClientQueryDefault,
   ClientSchema,
+  ErrorCallback,
   SchemaClientQueries,
+  SubscribeBackgroundOptions,
 } from './types';
 import { clientQueryBuilder } from './query-builder.js';
 import { HttpClient } from '../http-client/http-client.js';
@@ -309,8 +311,13 @@ export class TriplitClient<M extends ClientSchema = ClientSchema> {
     });
 
     if (syncSchema) {
-      this.syncEngine.subscribe(
-        this.db.query('_metadata').id('_schema').build()
+      this.subscribeBackground(
+        this.db.query('_metadata').id('_schema').build(),
+        {
+          onError: () => {
+            console.warn('Schema sync disconnected');
+          },
+        }
       );
     }
   }
@@ -614,7 +621,7 @@ export class TriplitClient<M extends ClientSchema = ClientSchema> {
       results: Unalias<FetchResult<M, ToQuery<M, CQ>>>,
       info: { hasRemoteFulfilled: boolean }
     ) => void | Promise<void>,
-    onError?: (error: any) => void | Promise<void>,
+    onError?: ErrorCallback,
     options?: Partial<SubscriptionOptions>
   ) {
     let unsubscribed = false;
@@ -639,8 +646,15 @@ export class TriplitClient<M extends ClientSchema = ClientSchema> {
           }
         );
       } catch (e) {
-        if (onError) onError(e);
-        else warnError(e);
+        if (onError) {
+          if (e instanceof Error) onError(e);
+          else
+            onError(
+              new TriplitError(
+                'An unknown error occurred while running subscription'
+              )
+            );
+        } else warnError(e);
         return () => {};
       }
     }
@@ -695,7 +709,10 @@ export class TriplitClient<M extends ClientSchema = ClientSchema> {
           opts.onRemoteFulfilled?.();
         }, 250);
       };
-      unsubscribeRemote = this.syncEngine.subscribe(query, onFulfilled);
+      unsubscribeRemote = this.syncEngine.subscribe(query, {
+        onQueryFulfilled: onFulfilled,
+        onQueryError: onError,
+      });
     }
     return () => {
       unsubscribed = true;
@@ -710,7 +727,7 @@ export class TriplitClient<M extends ClientSchema = ClientSchema> {
       results: TripleRow[],
       info: { hasRemoteFulfilled: boolean }
     ) => void | Promise<void>,
-    onError?: (error: any) => void | Promise<void>,
+    onError?: ErrorCallback,
     options?: Partial<SubscriptionOptions>
   ) {
     let unsubscribed = false;
@@ -735,8 +752,15 @@ export class TriplitClient<M extends ClientSchema = ClientSchema> {
           }
         );
       } catch (e) {
-        if (onError) onError(e);
-        else warnError(e);
+        if (onError) {
+          if (e instanceof Error) onError(e);
+          else
+            onError(
+              new TriplitError(
+                'An unknown error occurred while running subscription'
+              )
+            );
+        } else warnError(e);
         return () => {};
       }
     }
@@ -788,7 +812,10 @@ export class TriplitClient<M extends ClientSchema = ClientSchema> {
           opts.onRemoteFulfilled?.();
         }, 250);
       };
-      unsubscribeRemote = this.syncEngine.subscribe(query, onFulfilled);
+      unsubscribeRemote = this.syncEngine.subscribe(query, {
+        onQueryFulfilled: onFulfilled,
+        onQueryError: onError,
+      });
     }
     return () => {
       unsubscribed = true;
@@ -800,8 +827,11 @@ export class TriplitClient<M extends ClientSchema = ClientSchema> {
   /**
    * Syncs a query to your local database in the background. This is useful to pre-fetch a larger portion of data and used in combination with local-only subscriptions.
    */
-  subscribeBackground<CQ extends SchemaClientQueries<M>>(query: CQ) {
-    return this.syncEngine.subscribe(query);
+  subscribeBackground<CQ extends SchemaClientQueries<M>>(
+    query: CQ,
+    options: SubscribeBackgroundOptions = {}
+  ) {
+    return this.syncEngine.subscribe(query, { onQueryError: options.onError });
   }
 
   /**

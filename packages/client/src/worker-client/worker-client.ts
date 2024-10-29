@@ -33,6 +33,7 @@ import {
   ClientQueryDefault,
   ClientSchema,
   SchemaClientQueries,
+  SubscribeBackgroundOptions,
 } from '../client/types';
 import { clientQueryBuilder } from '../client/query-builder.js';
 import SuperJSON from 'superjson';
@@ -307,12 +308,16 @@ export class WorkerClient<M extends ClientSchema = ClientSchema> {
     };
   }
 
-  subscribeBackground<CQ extends SchemaClientQueries<M>>(query: CQ) {
+  subscribeBackground<CQ extends SchemaClientQueries<M>>(
+    query: CQ,
+    options: SubscribeBackgroundOptions = {}
+  ) {
     const unsubPromise = (async () => {
       await this.initialized;
       return this.clientWorker.subscribeBackground(
         // @ts-expect-error
-        query
+        query,
+        options
       );
     })();
     return () => {

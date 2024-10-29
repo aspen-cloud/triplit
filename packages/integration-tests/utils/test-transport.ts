@@ -119,6 +119,6 @@ function parseJWT(token: string | undefined) {
   return JSON.parse(jsonPayload);
 }
 
-function simulateNetwork(callback: () => void, ms: number = 0) {
-  setTimeout(callback, ms);
+function simulateNetwork(callback: () => void, latency: number = 0) {
+  setTimeout(callback, latency);
 }

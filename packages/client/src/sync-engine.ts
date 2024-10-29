@@ -5,7 +5,6 @@ import {
   constructEntities,
   hashSchemaJSON,
   schemaToJSON,
-  stripCollectionFromId,
   convertEntityToJS,
   Timestamp,
   TripleStoreApi,
@@ -25,6 +24,7 @@ import { WebSocketTransport } from './transport/websocket-transport.js';
 import {
   ClientSyncMessage,
   CloseReason,
+  ServerErrorMessage,
   ServerSyncMessage,
 } from '@triplit/types/sync';
 import {
@@ -32,8 +32,11 @@ import {
   RemoteFetchFailedError,
   RemoteSyncFailedError,
 } from './errors.js';
-import { Value } from '@sinclair/typebox/value';
-import { ClientQuery, SchemaClientQueries } from './client/types';
+import {
+  ClientQuery,
+  ErrorCallback,
+  SchemaClientQueries,
+} from './client/types';
 import { Logger } from '@triplit/types/logger';
 import { genToArr } from '@triplit/db';
 import { hashQuery } from './utils/query.js';
@@ -75,6 +78,7 @@ export class SyncEngine {
       params: CollectionQuery<any, any>;
       fulfilled: boolean;
       responseCallbacks: Set<(response: any) => void>;
+      errorCallbacks: Set<ErrorCallback>;
       subCount: number;
       hasSent: boolean;
       abortController: AbortController;
@@ -194,13 +198,21 @@ export class SyncEngine {
   /**
    * @hidden
    */
-  subscribe(params: CollectionQuery<any, any>, onQueryFulfilled?: () => void) {
+  subscribe(
+    params: CollectionQuery<any, any>,
+    options: {
+      onQueryFulfilled?: () => void;
+      onQueryError?: ErrorCallback;
+    } = {}
+  ) {
+    const { onQueryFulfilled, onQueryError } = options;
     const id = hashQuery(params);
     if (!this.queries.has(id)) {
       this.queries.set(id, {
         params,
         fulfilled: false,
         responseCallbacks: new Set(),
+        errorCallbacks: new Set(),
         subCount: 0,
         hasSent: false,
         abortController: new AbortController(),
@@ -213,6 +225,10 @@ export class SyncEngine {
     if (onQueryFulfilled) {
       query.fulfilled && onQueryFulfilled();
       query.responseCallbacks.add(onQueryFulfilled);
+    }
+
+    if (onQueryError) {
+      query.errorCallbacks.add(onQueryError);
     }
 
     return () => {
@@ -228,6 +244,9 @@ export class SyncEngine {
       query.subCount--;
       if (onQueryFulfilled) {
         query.responseCallbacks.delete(onQueryFulfilled);
+      }
+      if (onQueryError) {
+        query.errorCallbacks.delete(onQueryError);
       }
 
       // If there are no more subscriptions, disconnect the query
@@ -618,7 +637,7 @@ export class SyncEngine {
     });
   }
 
-  private async handleErrorMessage(message: any) {
+  private async handleErrorMessage(message: ServerErrorMessage) {
     const { error, metadata } = message.payload;
     this.logger.error(error.name, metadata);
     switch (error.name) {
@@ -639,9 +658,18 @@ export class SyncEngine {
       // On a remote read error, default to disconnecting the query
       // You will still send triples, but you wont receive updates
       case 'QuerySyncError':
-        // TODO: surface this error to the user
         const queryKey = metadata?.queryKey;
-        if (queryKey) this.disconnectQuery(queryKey);
+        if (queryKey) {
+          const query = this.queries.get(queryKey);
+          if (query) {
+            const parsedError = TriplitError.fromJson(error);
+            for (const errorCallback of query.errorCallbacks) {
+              // TODO: include metadata (inner error)
+              await errorCallback(parsedError);
+            }
+          }
+          await this.disconnectQuery(queryKey);
+        }
     }
   }
 

@@ -19,6 +19,7 @@ import { LogLevel } from '@triplit/types/logger';
 import { DefaultLogger } from '../client-logger.js';
 import { WorkerInternalClientNotInitializedError } from '../errors.js';
 import { SchemaClientQueries, ClientSchema } from '../client/types/query.js';
+import { SubscribeBackgroundOptions } from '../client/types/subscriptions.js';
 
 interface ClientWorker extends Client {
   init: (options: ClientOptions, logger: any) => void;
@@ -140,10 +141,11 @@ export class ClientComlinkWrapper implements ClientWorker {
     return ComLink.proxy(this.client.subscribe(...args));
   }
   subscribeBackground<CQ extends SchemaClientQueries<ClientSchema>>(
-    query: CQ
+    query: CQ,
+    options: SubscribeBackgroundOptions = {}
   ): () => void {
     if (!this.client) throw new WorkerInternalClientNotInitializedError();
-    return this.client.subscribeBackground(query);
+    return this.client.subscribeBackground(query, options);
   }
   // @ts-expect-error
   async subscribeWithPagination(

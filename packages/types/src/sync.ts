@@ -1,6 +1,8 @@
 // TODO: add these types back
 // import type { CollectionQuery, Timestamp, TripleRow } from '@triplit/db';
 
+import { ITriplitError } from './errors.js';
+
 type CollectionQuery<T, U> = any;
 type Timestamp = [sequence: number, client: string];
 type TripleRow = any;
@@ -47,7 +49,17 @@ export type ServerTriplesMessage = SyncMessage<
 export type ServrTriplesRequestMessage = SyncMessage<'TRIPLES_REQUEST', {}>;
 export type ServerErrorMessage = SyncMessage<
   'ERROR',
-  { messageType: ClientSyncMessage['type']; error: any; metadata: any }
+  {
+    messageType: ClientSyncMessage['type'];
+    error: ITriplitError;
+    metadata?: {
+      // Sync errors
+      queryKey?: string;
+      innerError?: ITriplitError;
+      // Write errors
+      failures: { txId: string; error: ITriplitError }[];
+    };
+  }
 >;
 export type ServerCloseMessage = SyncMessage<'CLOSE', ServerCloseReason>;
 

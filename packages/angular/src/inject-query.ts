@@ -79,7 +79,7 @@ function createBaseQuery<
   const fetchingRemoteSignal = signal(
     queryParamsSignal().client.connectionStatus !== 'CLOSED'
   );
-  const errorSignal = signal(undefined);
+  const errorSignal = signal<Error | undefined>(undefined);
   const isInitialFetchSignal = signal(true);
   const hasResponseFromServer = signal(false);
   const builtQuerySignal = signal(queryParamsSignal().query.build());

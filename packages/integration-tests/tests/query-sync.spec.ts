@@ -1,7 +1,7 @@
 import { expect, it, describe, vi } from 'vitest';
 import { pause } from '../utils/async.js';
-import { Server as TriplitServer } from '@triplit/server-core';
-import DB from '@triplit/db';
+import { QuerySyncError, Server as TriplitServer } from '@triplit/server-core';
+import DB, { TriplitError } from '@triplit/db';
 import {
   MessageLog,
   MessageLogItem,
@@ -92,6 +92,52 @@ describe('CONNECT_QUERY message should be sent before DISCONNECT_QUERY', async (
     expect(resultCallbackSpy).toHaveBeenCalled();
     expect(remoteResponseCallbackSpy).toHaveBeenCalled();
     // expect(resultCallbackSpy.lastCall.args[0].type).toBe('TRIPLES');
+  });
+});
+
+describe('remote error handling', async () => {
+  it('should call the error callback when the server sends QuerySyncError', async () => {
+    const server = new TriplitServer(new DB());
+    const client = createTestClient(server, SERVICE_KEY, { clientId: 'alice' });
+    const query = client.query('test').build();
+    const errorCallback = vi.fn();
+    client.subscribe(query, () => {}, errorCallback);
+    //@ts-expect-error
+    const queryId = client.syncEngine.queries.keys().next().value;
+    await pause();
+    server
+      .getConnection('alice')
+      ?.sendErrorResponse('CONNECT_QUERY', new QuerySyncError({}), {
+        queryKey: queryId,
+        innerError: new TriplitError('INNER_ERROR'),
+      });
+    await pause();
+    expect(errorCallback).toHaveBeenCalledTimes(1);
+    console.log(errorCallback.mock.calls);
+    expect(errorCallback.mock.calls.at(-1)?.[0].name).toBe('QuerySyncError');
+    // TODO: pass through inner error information
+  });
+  // This is current behavior, but may not be the desired behavior in the future
+  it('should disconnect the query when the server sends an error', async () => {
+    const server = new TriplitServer(new DB());
+    const client = createTestClient(server, SERVICE_KEY, { clientId: 'alice' });
+    const query = client.query('test').build();
+    const errorCallback = vi.fn();
+    client.subscribe(query, () => {}, errorCallback);
+    //@ts-expect-error
+    const queryId = client.syncEngine.queries.keys().next().value;
+    await pause();
+    server
+      .getConnection('alice')
+      ?.sendErrorResponse('CONNECT_QUERY', new QuerySyncError({}), {
+        queryKey: queryId,
+        innerError: new TriplitError('INNER_ERROR'),
+      });
+    await pause();
+    expect(
+      // @ts-expect-error
+      client.syncEngine.queries.size
+    ).toBe(0);
   });
 });
 

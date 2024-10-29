@@ -4,6 +4,7 @@ import {
 } from './data-types/constants.js';
 import { SessionRole } from './schema/permissions.js';
 import { Models } from './schema/types/index.js';
+import { ITriplitError } from '@triplit/types/errors.js';
 
 export const STATUS_CODES = {
   Success: 200,
@@ -46,7 +47,7 @@ export class TriplitError extends Error {
     return JSON.stringify(this.toJSON());
   }
 
-  toJSON() {
+  toJSON(): ITriplitError {
     return {
       name: this.name,
       message: this.message,

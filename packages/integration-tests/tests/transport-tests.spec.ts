@@ -1119,7 +1119,7 @@ describe('Sync situations', () => {
       expect(subB).toHaveBeenCalledTimes(1);
 
       // triggers sync
-      alice.subscribeBackground(remoteQuery);
+      alice.subscribeBackground(remoteQuery, { onError: throwOnError });
 
       await pause();
 
