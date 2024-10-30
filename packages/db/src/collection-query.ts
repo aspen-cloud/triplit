@@ -404,10 +404,14 @@ export function getCollectionIds(
   tx: TripleStoreApi,
   query: CollectionQuery<any, any>
 ) {
-  return mapGen(
-    tx.findByAVE([COLLECTION_ATTRIBUTE, query.collectionName]),
-    (t) => t.id
-  );
+  return mapGen(findCollectionTriples(tx, query), (t) => t.id);
+}
+
+function findCollectionTriples(
+  tx: TripleStoreApi,
+  query: CollectionQuery<any, any>
+) {
+  return tx.findByAVE([COLLECTION_ATTRIBUTE, query.collectionName]);
 }
 
 export async function getCandidateEntityIds(
@@ -1265,6 +1269,61 @@ export function initialFetchExecutionContext(): FetchExecutionContext {
   };
 }
 
+function isIdQuery(query: CollectionQuery) {
+  return (
+    query.select?.length === 1 &&
+    query.select[0] === 'id' &&
+    !query.after &&
+    (!query.where || query.where.length === 0) &&
+    (!query.order || query.order.length === 0) &&
+    (!query.include || Object.keys(query.include).length === 0) &&
+    !query.limit
+  );
+}
+
+async function resolveIdQuery(
+  tx: TripleStoreApi,
+  query: CollectionQuery,
+  executionContext: FetchExecutionContext,
+  options: FetchFromStorageOptions
+) {
+  // Load possible entity ids from indexes
+  const triples = findCollectionTriples(tx, query);
+  const candidateSet = new Map<string, TripleRow>();
+  // Should be ordered by timestamp
+  for await (const collectionTriple of triples) {
+    if (!collectionTriple) continue;
+    if (collectionTriple.expired) candidateSet.delete(collectionTriple.id);
+    else candidateSet.set(collectionTriple.id, collectionTriple);
+  }
+  const loadedCandidates = [];
+  for (const [entityId, triple] of candidateSet) {
+    // Load entity data if not loaded
+    if (!executionContext.executionCache.hasData(entityId)) {
+      const entity = constructEntities([triple], options.schema).get(entityId)!;
+      // Load raw entity
+      executionContext.executionCache.setData(entityId, {
+        entity,
+      });
+    }
+
+    // Create query component if not loaded
+    const componentKey = QueryExecutionCache.ComponentId(
+      executionContext.componentPrefix,
+      entityId
+    );
+    if (!executionContext.executionCache.hasComponent(componentKey)) {
+      const component = {
+        entityId,
+        relationships: {},
+      };
+      executionContext.executionCache.setComponent(componentKey, component);
+    }
+    loadedCandidates.push(entityId);
+  }
+  return loadedCandidates;
+}
+
 /**
  * Runs a base query and returns the entity ids in order
  * Loads data and query components into the context's executionCach
@@ -1278,6 +1337,22 @@ export async function loadQuery<
   executionContext: FetchExecutionContext,
   options: FetchFromStorageOptions
 ): Promise<string[]> {
+  if (
+    isIdQuery(
+      // @ts-expect-error
+      query
+    )
+  ) {
+    console.log('is count query');
+    return resolveIdQuery(
+      tx,
+      // @ts-expect-error
+      query,
+      executionContext,
+      options
+    );
+  }
+
   const collectionSchema = options.schema?.[query.collectionName]?.schema;
   if (
     options.cache &&
