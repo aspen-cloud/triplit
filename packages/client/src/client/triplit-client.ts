@@ -802,7 +802,10 @@ export class TriplitClient<M extends ClientSchema = ClientSchema> {
     query: CQ,
     options: SubscribeBackgroundOptions = {}
   ) {
-    return this.syncEngine.subscribe(query, { onQueryError: options.onError });
+    return this.syncEngine.subscribe(query, {
+      onQueryFulfilled: options.onFulfilled,
+      onQueryError: options.onError,
+    });
   }
 
   /**

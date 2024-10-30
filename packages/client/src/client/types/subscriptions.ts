@@ -18,6 +18,10 @@ type ClientSubscriptionOptions = {
 export type SubscriptionOptions = ClientDBFetchOptions &
   ClientSubscriptionOptions;
 
-export type SubscribeBackgroundOptions = { onError?: ErrorCallback };
+export type SubscribeBackgroundOptions = {
+  // TODO: could have onResults(triples) here as well
+  onFulfilled?: () => void;
+  onError?: ErrorCallback;
+};
 
 export type ErrorCallback = (error: Error) => void | Promise<void>;

@@ -1138,6 +1138,30 @@ describe('Sync situations', () => {
       expect(subB).toHaveBeenCalledTimes(2);
     });
   });
+
+  it('fires onFulfileld callback when a query is fulfilled', async () => {
+    const server = new TriplitServer(new DB());
+    await server.db.insert('test', { id: 'test1', name: 'test1' });
+    const alice = createTestClient(server, SERVICE_KEY, { clientId: 'alice' });
+    const query = alice.query('test').build();
+
+    {
+      const fetchResult = await alice.fetch(query);
+      expect(fetchResult).toHaveLength(0);
+    }
+
+    const callback = vi.fn();
+    alice.subscribeBackground(query, {
+      onError: throwOnError,
+      onFulfilled: callback,
+    });
+    await pause();
+    expect(callback).toHaveBeenCalledTimes(1);
+    {
+      const fetchResult = await alice.fetch(query);
+      expect(fetchResult).toHaveLength(1);
+    }
+  });
 });
 
 describe('sync status', () => {
