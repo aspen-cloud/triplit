@@ -1,5 +1,12 @@
 # @triplit/db
 
+## 0.5.2
+
+### Patch Changes
+
+- aca9cf75: fixup bug with multi store reactivity payloads
+- 3d5e879d: Add typing to TriplitError.toJSON()
+
 ## 0.5.1
 
 ### Patch Changes
