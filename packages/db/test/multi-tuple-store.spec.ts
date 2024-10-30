@@ -51,6 +51,39 @@ describe('reactivity', () => {
     });
   });
 
+  it('creating a subscription tracks the subscription for reactivity', async () => {
+    const client1 = createDBClient();
+    const client2 = createDBClient();
+    const store = new MultiTupleStore({
+      storage: {
+        client1,
+        client2,
+      },
+    });
+
+    const callback = vi.fn();
+    store.subscribe({ prefix: ['test'] }, callback);
+
+    expect(store.reactivity.subscriptions.size).toBe(1);
+  });
+
+  it('closing a subscription cleans up subscritpion tracking', async () => {
+    const client1 = createDBClient();
+    const client2 = createDBClient();
+    const store = new MultiTupleStore({
+      storage: {
+        client1,
+        client2,
+      },
+    });
+
+    const callback = vi.fn();
+    const unsubscribe = store.subscribe({ prefix: ['test'] }, callback);
+    unsubscribe();
+
+    expect(store.reactivity.subscriptions.size).toBe(0);
+  });
+
   it('opening a transaction tracks the transaction for reactivity', async () => {
     const client1 = createDBClient();
     const client2 = createDBClient();
@@ -62,7 +95,7 @@ describe('reactivity', () => {
     });
 
     const tx = store.transact();
-    const expectedReactivity = Object.fromEntries(
+    const expectedReactivity = new Map(
       Object.entries(tx.txs).map(([storeId, tupleStoreTx]) => [
         MultiTupleReactivity.TupleStoreCompositeKey(storeId, tupleStoreTx.id),
         tx.id,
@@ -87,10 +120,12 @@ describe('reactivity', () => {
     await store.autoTransact(async (tx) => {
       await tx.set(['test', 'key'], 'value');
     }, undefined);
+
+    const expectedReactivity = new Map();
     expect(
       // @ts-expect-error - testing private property
       store.reactivity.tupleStoreTxReactivityIds
-    ).toEqual({});
+    ).toEqual(expectedReactivity);
   });
 
   it('cancelling a transaction cleans up reactivity', async () => {
@@ -107,10 +142,12 @@ describe('reactivity', () => {
       await tx.set(['test', 'key'], 'value');
       await tx.cancel();
     }, undefined);
+
+    const expectedReactivity = new Map();
     expect(
       // @ts-expect-error - testing private property
       store.reactivity.tupleStoreTxReactivityIds
-    ).toEqual({});
+    ).toEqual(expectedReactivity);
   });
 
   it('failure to commit cleans up reactivity', async () => {
@@ -133,10 +170,12 @@ describe('reactivity', () => {
     } catch {
       // Swallow the error
     }
+
+    const expectedReactivity = new Map();
     expect(
       // @ts-expect-error - testing private property
       store.reactivity.tupleStoreTxReactivityIds
-    ).toEqual({});
+    ).toEqual(expectedReactivity);
   });
 });
 
