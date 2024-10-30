@@ -1,5 +1,13 @@
 # @triplit/angular
 
+## 0.1.11
+
+### Patch Changes
+
+- 3d5e879d: Add error typing
+- Updated dependencies [3d5e879d]
+  - @triplit/client@0.5.10
+
 ## 0.1.10
 
 ### Patch Changes
