@@ -17,5 +17,6 @@
     "incremental": true
   },
   "include": ["./src/**/*.ts"],
-  "exclude": ["./dist", "node_modules"]
+  "exclude": ["./dist", "node_modules"],
+  "references": [{ "path": "../tuple-database/tsconfig.json" }]
 }
