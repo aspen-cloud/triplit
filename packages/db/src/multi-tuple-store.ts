@@ -375,6 +375,8 @@ export default class MultiTupleStore<TupleSchema extends KeyValuePair> {
 
 export class ScopedMultiTupleOperator<TupleSchema extends KeyValuePair> {
   readonly txScope: TransactionScope<TupleSchema>;
+  protected _inheritedHooks: MultiTupleStoreHooks<TupleSchema>;
+  protected _ownHooks: MultiTupleStoreHooks<TupleSchema>;
   hooks: MultiTupleStoreHooks<TupleSchema>;
   readonly state: { status: TransactionStatus };
   constructor({
@@ -388,7 +390,36 @@ export class ScopedMultiTupleOperator<TupleSchema extends KeyValuePair> {
   }) {
     this.state = state;
     this.txScope = txScope;
-    this.hooks = hooks;
+    this._inheritedHooks = hooks ?? {
+      beforeCommit: [],
+      beforeInsert: [],
+      beforeScan: [],
+      afterCommit: [],
+    };
+    this._ownHooks = {
+      beforeCommit: [],
+      beforeInsert: [],
+      beforeScan: [],
+      afterCommit: [],
+    };
+    this.hooks = {
+      beforeCommit: MirroredArray(
+        this._inheritedHooks.beforeCommit,
+        this._ownHooks.beforeCommit
+      ),
+      beforeInsert: MirroredArray(
+        this._inheritedHooks.beforeInsert,
+        this._ownHooks.beforeInsert
+      ),
+      beforeScan: MirroredArray(
+        this._inheritedHooks.beforeScan,
+        this._ownHooks.beforeScan
+      ),
+      afterCommit: MirroredArray(
+        this._inheritedHooks.afterCommit,
+        this._ownHooks.afterCommit
+      ),
+    };
   }
 
   async *scan<T extends Tuple, P extends TuplePrefix<T>>(
@@ -459,6 +490,18 @@ export class ScopedMultiTupleOperator<TupleSchema extends KeyValuePair> {
     }
     this.txScope.write.forEach((tx) => tx.set(tuple, value));
   }
+
+  beforeScan(callback: MultiTupleStoreBeforeScanHook<TupleSchema>) {
+    this._ownHooks.beforeScan.push(callback);
+  }
+
+  beforeCommit(callback: MultiTupleStoreBeforeCommitHook<TupleSchema>) {
+    this._ownHooks.beforeCommit.push(callback);
+  }
+
+  afterCommit(callback: MultiTupleStoreAfterCommitHook<TupleSchema>) {
+    this._ownHooks.afterCommit.push(callback);
+  }
 }
 
 function mergeMultipleSortedArrays<T>(
@@ -499,8 +542,6 @@ export class MultiTupleTransaction<
 > extends ScopedMultiTupleOperator<TupleSchema> {
   readonly txs: Record<string, AsyncTupleRootTransactionApi<TupleSchema>>;
   readonly store: MultiTupleStore<TupleSchema>;
-  private _inheritedHooks: MultiTupleStoreHooks<TupleSchema>;
-  private _ownHooks: MultiTupleStoreHooks<TupleSchema>;
 
   id: string = Math.random().toString(36).slice(2);
 
@@ -534,36 +575,6 @@ export class MultiTupleTransaction<
     }
     this.txs = txs;
     this.store = store;
-    this._inheritedHooks = hooks ?? {
-      beforeCommit: [],
-      beforeInsert: [],
-      beforeScan: [],
-      afterCommit: [],
-    };
-    this._ownHooks = {
-      beforeCommit: [],
-      beforeInsert: [],
-      beforeScan: [],
-      afterCommit: [],
-    };
-    this.hooks = {
-      beforeCommit: MirroredArray(
-        this._inheritedHooks.beforeCommit,
-        this._ownHooks.beforeCommit
-      ),
-      beforeInsert: MirroredArray(
-        this._inheritedHooks.beforeInsert,
-        this._ownHooks.beforeInsert
-      ),
-      beforeScan: MirroredArray(
-        this._inheritedHooks.beforeScan,
-        this._ownHooks.beforeScan
-      ),
-      afterCommit: MirroredArray(
-        this._inheritedHooks.afterCommit,
-        this._ownHooks.afterCommit
-      ),
-    };
   }
 
   private get status() {
@@ -594,18 +605,6 @@ export class MultiTupleTransaction<
     return Object.fromEntries(
       Object.entries(this.txs).map(([id, tx]) => [id, tx.writes])
     );
-  }
-
-  beforeScan(callback: MultiTupleStoreBeforeScanHook<TupleSchema>) {
-    this._ownHooks.beforeScan.push(callback);
-  }
-
-  beforeCommit(callback: MultiTupleStoreBeforeCommitHook<TupleSchema>) {
-    this._ownHooks.beforeCommit.push(callback);
-  }
-
-  afterCommit(callback: MultiTupleStoreAfterCommitHook<TupleSchema>) {
-    this._ownHooks.afterCommit.push(callback);
   }
 
   async *scan<T extends Tuple, P extends TuplePrefix<T>>(

@@ -58,23 +58,40 @@ export class DurableClock implements Clock {
       return rej(e);
     }
 
-    // Listen on all storages for new timestamps
-    store.onInsert(async (inserts) => {
-      const allTriples = Object.values(inserts).flat();
-      const maxTimestamp = allTriples.reduce<Timestamp | undefined>(
-        (max, triple) =>
-          timestampCompare(triple.timestamp, max) > 0 ? triple.timestamp : max,
-        undefined
-      );
+    // Use beforeCommit hook to update clock tuples in same transaction and avoid async issue
+    store.beforeCommit(async (storeTriples) => {
+      let maxTimestamp: Timestamp | undefined = undefined;
+      for (const triples of Object.values(storeTriples)) {
+        for (const triple of triples) {
+          if (timestampCompare(triple.timestamp, maxTimestamp) > 0) {
+            maxTimestamp = triple.timestamp;
+          }
+        }
+      }
       await this.clockReady;
       if (timestampCompare(maxTimestamp, this.clock) > 0) {
-        this.clock = [maxTimestamp![0], this.clock![1]];
         this.scopedStore!.updateMetadataTuples([
-          ['clock', ['tick'], this.clock![0]],
+          ['clock', ['tick'], maxTimestamp![0]],
           ['clock', ['clientId'], this.clock![1]],
         ]);
       }
     });
+    // Use after commit hook to update cached clock data
+    store.afterCommit(async (storeTriples) => {
+      let maxTimestamp: Timestamp | undefined = undefined;
+      for (const triples of Object.values(storeTriples)) {
+        for (const triple of triples) {
+          if (timestampCompare(triple.timestamp, maxTimestamp) > 0) {
+            maxTimestamp = triple.timestamp;
+          }
+        }
+      }
+      await this.clockReady;
+      if (timestampCompare(maxTimestamp, this.clock) > 0) {
+        this.clock = [maxTimestamp![0], this.clock![1]];
+      }
+    });
+
     this.onClearUnsubscribe?.();
     this.onClearUnsubscribe = store.onClear(async () => {
       this.assigned = false;
