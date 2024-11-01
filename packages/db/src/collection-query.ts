@@ -1410,7 +1410,6 @@ export async function loadQuery<
       query
     )
   ) {
-    console.log('is count query');
     return resolveIdQuery(
       tx,
       // @ts-expect-error
