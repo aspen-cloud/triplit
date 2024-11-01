@@ -4,9 +4,9 @@ description: How to use the TriplitClient subscribe method to listen to changes 
 
 # subscribe
 
-Alternatively, you may subscribe to a query. Subscribing to a query will provide continual updates to the query result based on the state of your local database.
+Query subscriptions are the "live" version of a fetch. Subscribing to a query will provide continual updates to the query result based on the state of your local database.
 
-If the sync engine is connected to the remote database, subscribing to a query will keep your local database in sync with the remote database as well depending on the options provided to the subscription).
+If the sync engine is connected to the remote database, subscribing to a query will keep your local database in sync with the remote database as well depending on the options provided to the subscription.
 
 Starting a subscription is as simple as defining a query and a callback to run when data has updated:
 
