@@ -4,7 +4,7 @@ description: How to subscribe to queries in the background using subscribeBackgr
 
 # subscribeBackground
 
-There are certain situations in which you may want to subscribe to a query from the server without immediately needing the results. `subscribeBackground` cuts down on some of the work that `subscribe` does, by setting up a connection for a given query but not materializing the results for a handler. The data will still be synced to the local database and accessible via other subscriptions.
+There are certain situations in which you may want to subscribe to a query from the server without immediately needing the results. `subscribeBackground` cuts down on some of the work that `subscribe` does, by setting up a connection for a given query but not materializing the results for a callback function. The data will still be synced to the local database and accessible via other subscriptions.
 
 `subscribeBackground` can support a pattern where you have one large subscription to keep your local database up to date, and then define many local-only subscriptions that you know to be a subset of the larger subscription. This will cut down on traffic to the server and in some cases improve performance. However, it may also lead to more data being synced than is necessary.
 

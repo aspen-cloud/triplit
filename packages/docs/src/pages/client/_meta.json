@@ -11,6 +11,7 @@
   "subscribe": "`subscribe`",
   "subscribe-with-pagination": "`subscribeWithPagination`",
   "subscribe-with-expand": "`subscribeWithExpand`",
+  "subscribe-background": "`subscribeBackground`",
   "storage": "Storage",
   "sync-engine": "Sync engine",
   "http-client": "HTTP client",
