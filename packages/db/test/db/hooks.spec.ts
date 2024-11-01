@@ -31,8 +31,8 @@ describe('hooks API', async () => {
     expect(beforeCommitFn).toHaveBeenCalledTimes(1);
     expect(beforeCommitFn.mock.calls[0][0].opSet).toStrictEqual({
       inserts: [
-        ['users#1', { id: '1', name: 'alice' }],
-        ['users#2', { id: '2', name: 'bob' }],
+        ['users#1', { entity: { id: '1', name: 'alice' }, oldEntity: null }],
+        ['users#2', { entity: { id: '2', name: 'bob' }, oldEntity: null }],
       ],
       updates: [],
       deletes: [],
@@ -60,8 +60,20 @@ describe('hooks API', async () => {
     expect(beforeCommitFn.mock.calls[1][0].opSet).toStrictEqual({
       inserts: [],
       updates: [
-        ['users#1', { id: '1', name: 'aaron' }],
-        ['users#2', { id: '2', name: 'blair' }],
+        [
+          'users#1',
+          {
+            entity: { id: '1', name: 'aaron' },
+            oldEntity: { id: '1', name: 'alice' },
+          },
+        ],
+        [
+          'users#2',
+          {
+            entity: { id: '2', name: 'blair' },
+            oldEntity: { id: '2', name: 'bob' },
+          },
+        ],
       ],
       deletes: [],
     });
@@ -85,14 +97,20 @@ describe('hooks API', async () => {
     expect(inserts).toStrictEqual([]);
     expect(updates).toStrictEqual([]);
     expect(deletes).toMatchObject([
-      ['users#1', undefined],
-      ['users#2', undefined],
+      ['users#1', { entity: null, oldEntity: { id: '1', name: 'aaron' } }],
+      ['users#2', { entity: null, oldEntity: { id: '2', name: 'blair' } }],
     ]);
     expect(beforeInsertFn).toHaveBeenCalledTimes(2);
     expect(beforeUpdateFn).toHaveBeenCalledTimes(2);
     expect(beforeDeleteFn).toHaveBeenCalledTimes(2);
-    expect(beforeDeleteFn.mock.calls[0][0].entity).toBe(undefined);
-    expect(beforeDeleteFn.mock.calls[1][0].entity).toBe(undefined);
+    expect(beforeDeleteFn.mock.calls[0][0].oldEntity).toStrictEqual({
+      id: '1',
+      name: 'aaron',
+    });
+    expect(beforeDeleteFn.mock.calls[1][0].oldEntity).toStrictEqual({
+      id: '2',
+      name: 'blair',
+    });
   });
   it('after write hooks will run on transaction', async () => {
     const db = new DB({
@@ -143,8 +161,8 @@ describe('hooks API', async () => {
     expect(afterCommitFn).toHaveBeenCalledTimes(1);
     expect(afterCommitFn.mock.calls[0][0].opSet).toStrictEqual({
       inserts: [
-        ['users#1', { id: '1', name: 'alice' }],
-        ['users#2', { id: '2', name: 'bob' }],
+        ['users#1', { entity: { id: '1', name: 'alice' }, oldEntity: null }],
+        ['users#2', { entity: { id: '2', name: 'bob' }, oldEntity: null }],
       ],
       updates: [],
       deletes: [],
@@ -172,8 +190,20 @@ describe('hooks API', async () => {
     expect(afterCommitFn.mock.calls[1][0].opSet).toStrictEqual({
       inserts: [],
       updates: [
-        ['users#1', { id: '1', name: 'aaron' }],
-        ['users#2', { id: '2', name: 'blair' }],
+        [
+          'users#1',
+          {
+            entity: { id: '1', name: 'aaron' },
+            oldEntity: { id: '1', name: 'alice' },
+          },
+        ],
+        [
+          'users#2',
+          {
+            entity: { id: '2', name: 'blair' },
+            oldEntity: { id: '2', name: 'bob' },
+          },
+        ],
       ],
       deletes: [],
     });
@@ -197,14 +227,20 @@ describe('hooks API', async () => {
     expect(inserts).toStrictEqual([]);
     expect(updates).toStrictEqual([]);
     expect(deletes).toMatchObject([
-      ['users#1', undefined],
-      ['users#2', undefined],
+      ['users#1', { entity: null, oldEntity: { id: '1', name: 'aaron' } }],
+      ['users#2', { entity: null, oldEntity: { id: '2', name: 'blair' } }],
     ]);
     expect(afterInsertFn).toHaveBeenCalledTimes(2);
     expect(afterUpdateFn).toHaveBeenCalledTimes(2);
     expect(afterDeleteFn).toHaveBeenCalledTimes(2);
-    expect(afterDeleteFn.mock.calls[0][0].entity).toBe(undefined);
-    expect(afterDeleteFn.mock.calls[1][0].entity).toBe(undefined);
+    expect(afterDeleteFn.mock.calls[0][0].oldEntity).toStrictEqual({
+      id: '1',
+      name: 'aaron',
+    });
+    expect(afterDeleteFn.mock.calls[1][0].oldEntity).toStrictEqual({
+      id: '2',
+      name: 'blair',
+    });
   });
   it('removing hooks will prevent them from running', async () => {
     const db = new DB();

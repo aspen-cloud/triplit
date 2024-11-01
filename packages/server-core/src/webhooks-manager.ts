@@ -115,15 +115,14 @@ export class WebhooksManager {
               return acc;
             }
             const collectionEntities = opSet[action].reduce(
-              (arr, [id, entity]) => {
+              (arr, [id, { entity, oldEntity }]) => {
                 const compoundKey = splitIdParts(id);
                 if (compoundKey[0] !== collectionName) return arr;
-                // TODO: get deleted entities? Now just adding the id
-                if (!entity) return [...arr, compoundKey[1]];
-                // if no collection schema, test if JSON
+
                 if (!collection) {
                   try {
                     JSON.stringify(entity);
+                    JSON.stringify(oldEntity);
                   } catch (e) {
                     // handle the weird case where the server lacks a schema
                     // and the entity has unsupported types
@@ -132,15 +131,30 @@ export class WebhooksManager {
                   return [...arr, entity];
                 }
                 // otherwise convert to JSON
+
                 return [
                   ...arr,
-                  collection.schema.convertJSToJSON(
-                    collection.schema.convertDBValueToJS(
-                      entity,
-                      schema.collections
-                    ),
-                    schema.collections
-                  ),
+                  {
+                    id: compoundKey[1],
+                    entity:
+                      entity &&
+                      collection.schema.convertJSToJSON(
+                        collection.schema.convertDBValueToJS(
+                          entity,
+                          schema.collections
+                        ),
+                        schema.collections
+                      ),
+                    oldEntity:
+                      oldEntity &&
+                      collection.schema.convertJSToJSON(
+                        collection.schema.convertDBValueToJS(
+                          oldEntity,
+                          schema.collections
+                        ),
+                        schema.collections
+                      ),
+                  },
                 ];
               },
               [] as any[]

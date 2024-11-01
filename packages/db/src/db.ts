@@ -154,7 +154,8 @@ const TRIGGER_WHEN = [
 
 type TriggerWhen = (typeof TRIGGER_WHEN)[number];
 // TODO: type this better
-export type EntityOpSet = OpSet<[string, any]>;
+
+export type EntityOpSet = OpSet<[string, { oldEntity: any; entity: any }]>;
 
 export type OpSet<T> = {
   inserts: T[];
@@ -196,6 +197,7 @@ type AfterUpdateCallback<
   M extends Models,
   CN extends CollectionNameFromModels<M>
 > = (args: {
+  oldEntity: FetchResultEntity<M, CollectionQuery<M, CN>>;
   entity: FetchResultEntity<M, CollectionQuery<M, CN>>;
   tx: DBTransaction<M>;
   db: DB<M>;
@@ -211,7 +213,7 @@ type AfterDeleteCallback<
   M extends Models,
   CN extends CollectionNameFromModels<M>
 > = (args: {
-  entity: FetchResultEntity<M, CollectionQuery<M, CN>>;
+  oldEntity: FetchResultEntity<M, CollectionQuery<M, CN>>;
   tx: DBTransaction<M>;
   db: DB<M>;
 }) => void | Promise<void>;
@@ -249,6 +251,7 @@ type BeforeUpdateCallback<
   M extends Models,
   CN extends CollectionNameFromModels<M>
 > = (args: {
+  oldEntity: FetchResultEntity<M, CollectionQuery<M, CN>>;
   entity: FetchResultEntity<M, CollectionQuery<M, CN>>;
   tx: DBTransaction<M>;
   db: DB<M>;
@@ -264,7 +267,7 @@ type BeforeDeleteCallback<
   M extends Models,
   CN extends CollectionNameFromModels<M>
 > = (args: {
-  entity: FetchResultEntity<M, CollectionQuery<M, CN>>;
+  oldEntity: FetchResultEntity<M, CollectionQuery<M, CN>>;
   tx: DBTransaction<M>;
   db: DB<M>;
 }) => void | Promise<void>;
@@ -301,7 +304,7 @@ export type DBHooks<M extends Models> = {
     AfterInsertOptions<M, CollectionNameFromModels<M>>
   >;
   afterUpdate: TriggerMap<
-    AfterInsertCallback<M, CollectionNameFromModels<M>>,
+    AfterUpdateCallback<M, CollectionNameFromModels<M>>,
     AfterUpdateOptions<M, CollectionNameFromModels<M>>
   >;
   afterDelete: TriggerMap<

@@ -21,6 +21,7 @@ import CollectionQueryBuilder, {
   fetchOne,
   initialFetchExecutionContext,
   convertEntityToJS,
+  getEntitiesBeforeAndAfterNewTriples,
 } from './collection-query.js';
 import {
   EntityNotFoundError,
@@ -268,33 +269,25 @@ async function triplesToEntityOpSet(
   triples: TripleRow[],
   tripleStore: TripleStoreApi
 ): Promise<EntityOpSet> {
-  const deltas = constructEntities(triples);
+  const entitiesBeforeAndAfter = await getEntitiesBeforeAndAfterNewTriples(
+    tripleStore,
+    triples
+  );
   const opSet: EntityOpSet = { inserts: [], updates: [], deletes: [] };
-  for (const [id, delta] of deltas) {
-    // default to update
-    let operation: 'insert' | 'update' | 'delete' = 'update';
-    // Inserts and deletes will include the _collection attribute
-    const collectionTriple = delta.findTriple('_collection');
-    if (collectionTriple) {
-      if (delta.isDeleted) operation = 'delete';
-      else operation = 'insert';
-    }
-    // Get the full entities from the triple store
-    const entity = constructEntity(
-      await genToArr(tripleStore.findByEntity(id)),
-      id
-    );
-    if (!entity) continue;
+  for (const [id, { oldEntity, entity, operation }] of entitiesBeforeAndAfter) {
     switch (operation) {
       case 'insert':
-        opSet.inserts.push([id, entity.data]);
+        opSet.inserts.push([id, { oldEntity: null, entity: entity!.data }]);
         break;
       case 'update':
         // TODO: add deltas to update
-        opSet.updates.push([id, entity.data]);
+        opSet.updates.push([
+          id,
+          { oldEntity: oldEntity!.data, entity: entity!.data },
+        ]);
         break;
       case 'delete':
-        opSet.deletes.push([id, undefined]);
+        opSet.deletes.push([id, { oldEntity: oldEntity!.data, entity: null }]);
         break;
     }
   }
@@ -504,7 +497,7 @@ export class DBTransaction<M extends Models> {
         const collectionInserts = opSet.inserts.filter(
           ([id]) => splitIdParts(id)[0] === options.collectionName
         );
-        for (const [id, entity] of collectionInserts) {
+        for (const [id, { entity }] of collectionInserts) {
           await hook({ entity, tx: this, db: this.db });
         }
       }
@@ -514,8 +507,13 @@ export class DBTransaction<M extends Models> {
         const collectionUpdates = opSet.updates.filter(
           ([id]) => splitIdParts(id)[0] === options.collectionName
         );
-        for (const [id, entity] of collectionUpdates) {
-          await hook({ entity, tx: this, db: this.db });
+        for (const [id, { entity, oldEntity }] of collectionUpdates) {
+          await hook({
+            oldEntity,
+            entity,
+            tx: this,
+            db: this.db,
+          });
         }
       }
     }
@@ -524,8 +522,8 @@ export class DBTransaction<M extends Models> {
         const collectionDeletes = opSet.deletes.filter(
           ([id]) => splitIdParts(id)[0] === options.collectionName
         );
-        for (const [id, entity] of collectionDeletes) {
-          await hook({ entity, tx: this, db: this.db });
+        for (const [id, { oldEntity }] of collectionDeletes) {
+          await hook({ oldEntity, tx: this, db: this.db });
         }
       }
     }
@@ -576,7 +574,8 @@ export class DBTransaction<M extends Models> {
         const collectionInserts = opSet.inserts.filter(
           ([id]) => splitIdParts(id)[0] === options.collectionName
         );
-        for (const [_id, entity] of collectionInserts) {
+        for (const [_id, { entity }] of collectionInserts) {
+          if (!entity) continue;
           await hook({ entity, tx: this, db: this.db });
         }
       }
@@ -587,8 +586,13 @@ export class DBTransaction<M extends Models> {
           ([id]) => splitIdParts(id)[0] === options.collectionName
         );
 
-        for (const [_id, entity] of collectionUpdates) {
-          await hook({ entity, tx: this, db: this.db });
+        for (const [_id, { oldEntity, entity }] of collectionUpdates) {
+          await hook({
+            oldEntity,
+            entity,
+            tx: this,
+            db: this.db,
+          });
         }
       }
     }
@@ -597,8 +601,8 @@ export class DBTransaction<M extends Models> {
         const collectionDeletes = opSet.deletes.filter(
           ([id]) => splitIdParts(id)[0] === options.collectionName
         );
-        for (const [_id, entity] of collectionDeletes) {
-          await hook({ entity, tx: this, db: this.db });
+        for (const [_id, { oldEntity }] of collectionDeletes) {
+          await hook({ oldEntity, tx: this, db: this.db });
         }
       }
     }

@@ -573,6 +573,87 @@ async function getTriplesAfterStateVector(
   return allTriples;
 }
 
+export async function getEntitiesBeforeAndAfterNewTriples(
+  tx: TripleStoreApi,
+  newTriples: TripleRow[]
+): Promise<
+  Map<
+    string,
+    | {
+        oldEntity: null;
+        entity: Entity;
+        changedTriples: TripleRow[];
+        operation: 'insert';
+      }
+    | {
+        oldEntity: Entity;
+        entity: Entity;
+        changedTriples: TripleRow[];
+        operation: 'update';
+      }
+    | {
+        oldEntity: Entity;
+        entity: null;
+        changedTriples: TripleRow[];
+        operation: 'delete';
+      }
+  >
+> {
+  const deltaEntities = constructEntities(newTriples);
+
+  // this is kinda weird but we're actually creating the state vector that would be
+  // before these changed triples so it's looking for the min timestamp rather than
+  // the max
+  const stateVectorBeforeAnyChanges = newTriples.reduce<Map<string, number>>(
+    (acc, curr) => {
+      const [tick, clientId] = curr.timestamp;
+      if (!acc.has(clientId) || tick < acc.get(clientId)! + 1) {
+        acc.set(clientId, Math.max(tick - 1, 0));
+      }
+      return acc;
+    },
+    new Map()
+  );
+
+  let allTriplesForAllEntities: TripleRow[] = [];
+  for (const changedEntityId of deltaEntities.keys()) {
+    allTriplesForAllEntities = allTriplesForAllEntities.concat(
+      await genToArr(tx.findByEntity(changedEntityId))
+    );
+  }
+
+  const beforeEntities = getEntitiesAtStateVector(
+    allTriplesForAllEntities,
+    stateVectorBeforeAnyChanges,
+    'higher'
+  );
+  const afterEntities = getEntitiesAtStateVector(
+    allTriplesForAllEntities,
+    undefined,
+    'higher'
+  );
+
+  const beforeAndAfterMap = new Map();
+
+  for (const entityId of deltaEntities.keys()) {
+    let operation: 'insert' | 'update' | 'delete' = 'update';
+    const entityDelta = deltaEntities.get(entityId)!;
+    if (entityDelta.findTriple('_collection')) {
+      if (entityDelta.isDeleted) operation = 'delete';
+      else operation = 'insert';
+    }
+
+    beforeAndAfterMap.set(entityId, {
+      oldEntity: beforeEntities.get(entityId) ?? null,
+      entity: afterEntities.get(entityId) ?? null,
+      changedTriples: entityDelta.triples,
+      operation,
+    });
+  }
+
+  return beforeAndAfterMap;
+}
+
 export async function fetchDeltaTriples<
   M extends Models,
   Q extends CollectionQuery<M, any>
@@ -583,6 +664,8 @@ export async function fetchDeltaTriples<
   _executionContext: FetchExecutionContext,
   options: FetchFromStorageOptions
 ) {
+  const deltaTriples: TripleRow[] = [];
+
   const queryPermutations = generateQueryRootPermutations(
     await replaceVariablesInQuery(
       tx,
@@ -592,34 +675,16 @@ export async function fetchDeltaTriples<
     )
   );
 
-  const changedEntityTriples = newTriples.reduce((entities, trip) => {
-    if (!entities.has(trip.id)) {
-      entities.set(trip.id, []);
-    }
-    entities.get(trip.id)!.push(trip);
-    return entities;
-  }, new Map<string, TripleRow[]>());
-  const deltaTriples: TripleRow[] = [];
-
-  // this is kinda weird but we're actually creating the state vector that would be
-  // before these changed triples so it's looking for the min timestamp rather than
-  // the max
-  const stateVector = newTriples.reduce<Map<string, number>>((acc, curr) => {
-    const [tick, clientId] = curr.timestamp;
-    if (!acc.has(clientId) || tick < acc.get(clientId)! + 1) {
-      acc.set(clientId, Math.max(tick - 1, 0));
-    }
-    return acc;
-  }, new Map());
+  const beforeAndAfterEntities = await getEntitiesBeforeAndAfterNewTriples(
+    tx,
+    newTriples
+  );
   const beforeContext = initialFetchExecutionContext();
   const afterContext = initialFetchExecutionContext();
-  for (const changedEntityId of changedEntityTriples.keys()) {
-    const entityTriples = await genToArr(tx.findByEntity(changedEntityId));
-    const beforeData = getEntitiesAtStateVector(
-      entityTriples,
-      stateVector,
-      'higher'
-    ).get(changedEntityId);
+  for (const [
+    changedEntityId,
+    { oldEntity: beforeData, entity: afterData, changedTriples },
+  ] of beforeAndAfterEntities) {
     const entityBeforeStateVector = beforeData;
     if (beforeData) {
       beforeContext.executionCache.setData(changedEntityId, {
@@ -630,11 +695,6 @@ export async function fetchDeltaTriples<
         relationships: {},
       });
     }
-    const afterData = getEntitiesAtStateVector(
-      entityTriples,
-      undefined,
-      'higher'
-    ).get(changedEntityId);
     const entityAfterStateVector = afterData;
     if (afterData) {
       afterContext.executionCache.setData(changedEntityId, {
@@ -734,8 +794,7 @@ export async function fetchDeltaTriples<
           // An example is if we insert a net new entity it will not match before
           // so it need's the whole entity to be sent but that will fully overlap
           // with the last step.
-          const alreadyIncludedTriples =
-            changedEntityTriples.get(changedEntityId)!;
+          const alreadyIncludedTriples = changedTriples;
           const tripleKeys = new Set(
             alreadyIncludedTriples.map(
               (t) =>
@@ -756,7 +815,7 @@ export async function fetchDeltaTriples<
           deltaTriples.push(triple);
         }
       }
-      for (const triple of changedEntityTriples.get(changedEntityId)!) {
+      for (const triple of changedTriples) {
         deltaTriples.push(triple);
       }
     }
