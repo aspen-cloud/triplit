@@ -112,16 +112,16 @@ Triplit was originally built to run in web browsers, so a few APIs are used in s
 These polyfills should be imported or implemented in your project's entry file so they can be run as early as possible. Typically this is your `index.js` file. If you are using Expo Router see this [thread](https://github.com/expo/expo/discussions/25122) on creating and using an `index.js` file to add polyfills.
 
 ```javascript
-import "react-native-get-random-values";
-import "react-native-url-polyfill/auto";
-import "@react-native-anywhere/polyfill-base64";
-import "event-target-polyfill";
-import "hasown";
-import "@azure/core-asynciterator-polyfill";
+import 'react-native-get-random-values';
+import 'react-native-url-polyfill/auto';
+import '@react-native-anywhere/polyfill-base64';
+import 'event-target-polyfill';
+import 'hasown';
+import '@azure/core-asynciterator-polyfill';
 // ... other polyfills
 
 // If using Expo Router:
-import 'expo-router/entry'
+import 'expo-router/entry';
 
 // The rest of your entry file
 ```
@@ -137,7 +137,3 @@ Triplit provides storage providers for React Native applications to persist data
 ## Bare React Native
 
 The team over at Triplit hasn't had the chance to test out a bare React Native project. Although we don't expect the required steps to be much different than with Expo, there may be differences. If you have set up Triplit in a bare RN project, please let us know how it went!
-
-```
-
-```
