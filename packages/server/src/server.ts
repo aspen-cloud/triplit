@@ -123,9 +123,11 @@ export function createServer(options?: ServerOptions) {
 
   function getServer(projectId: string, upstream?: ServerOptions['upstream']) {
     if (triplitServers.has(projectId)) return triplitServers.get(projectId)!;
-    const dbOptions: Partial<DBConfig> = {};
+    const dbOptions: Partial<DBConfig> = {
+      experimental: {},
+    };
     if (process.env.ENTITY_CACHE_ENABLED) {
-      dbOptions.experimental_entityCache = {
+      dbOptions.experimental!.entityCache = {
         capacity: process.env.ENTITY_CACHE_CAPACITY
           ? parseInt(process.env.ENTITY_CACHE_CAPACITY)
           : 100000,

@@ -177,7 +177,9 @@ export interface ClientOptions<M extends ClientSchema = ClientSchema> {
   logLevel?: 'info' | 'warn' | 'error' | 'debug';
   skipRules?: boolean;
 
-  experimental_entityCache?: EntityCacheOptions;
+  experimental?: {
+    entityCache?: EntityCacheOptions;
+  };
 }
 
 // default policy is local-and-remote and no timeout
@@ -223,7 +225,7 @@ export class TriplitClient<M extends ClientSchema = ClientSchema> {
       defaultQueryOptions,
       logger,
       logLevel = 'info',
-      experimental_entityCache,
+      experimental,
     } = options ?? {};
     this.logger =
       logger ??
@@ -246,7 +248,7 @@ export class TriplitClient<M extends ClientSchema = ClientSchema> {
       variables,
       sources: getClientStorage(storage ?? DEFAULT_STORAGE_OPTION),
       logger: this.logger.scope('db'),
-      experimental_entityCache,
+      experimental,
     });
 
     this.defaultFetchOptions = {

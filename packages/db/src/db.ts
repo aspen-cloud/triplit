@@ -90,7 +90,9 @@ export interface DBConfig<M extends Models = Models> {
   clock?: Clock;
   variables?: Record<string, any>;
   logger?: Logger;
-  experimental_entityCache?: EntityCacheOptions;
+  experimental?: {
+    entityCache?: EntityCacheOptions;
+  };
 }
 
 export const DEFAULT_STORE_KEY = 'default';
@@ -382,7 +384,7 @@ export default class DB<M extends Models = Models> {
     clock,
     variables,
     logger,
-    experimental_entityCache,
+    experimental,
   }: DBConfig<M> = {}) {
     this.logger = logger ?? {
       info: console.info,
@@ -424,8 +426,8 @@ export default class DB<M extends Models = Models> {
     });
 
     this.cache = new VariableAwareCache(this);
-    if (experimental_entityCache) {
-      this.entityCache = createEntityCache(experimental_entityCache);
+    if (experimental?.entityCache) {
+      this.entityCache = createEntityCache(experimental?.entityCache);
       assignEntityCacheToStore(this.tripleStore, this.entityCache);
     }
 
