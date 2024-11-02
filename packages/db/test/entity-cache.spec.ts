@@ -3,7 +3,11 @@ import DB from '../src/db.js';
 
 // Sanity check with entity cache, when reading in a transaction we should not use the cached value
 it('Reads proper data within a transaction', async () => {
-  const db = new DB({ experimental_entityCache: true });
+  const db = new DB({
+    experimental: {
+      entityCache: { capacity: 100 },
+    },
+  });
   await db.insert('test', { id: '1', name: 'test' });
   // loads cache
   await db.fetchById('test', '1');
