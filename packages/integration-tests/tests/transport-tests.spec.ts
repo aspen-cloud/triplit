@@ -2038,6 +2038,7 @@ describe('outbox', () => {
 
       // When alice sends the first TRIPLES message, all txs should send
       {
+        let passed = false;
         const unsubscribe = alice.syncEngine.onSyncMessageSent(
           async (message) => {
             if (message.type === 'TRIPLES') {
@@ -2055,17 +2056,20 @@ describe('outbox', () => {
               expect(tx1Triples).toHaveLength(3);
               expect(tx2Triples).toHaveLength(3);
               expect(tx3Triples).toHaveLength(3);
+              passed = true;
             }
           }
         );
+        alice.syncEngine.connect();
+        await pause(1000);
+        expect(passed).toBe(true);
       }
-      alice.syncEngine.connect();
-      await pause(300);
-      // @ts-expect-error (not exposed)
 
+      // @ts-expect-error (not exposed)
       // Eventaully, flush outbox again and check that only the failed tx is sent
       alice.syncEngine.signalOutboxTriples();
       {
+        let passed = false;
         const unsubscribe = alice.syncEngine.onSyncMessageSent(
           async (message) => {
             if (message.type === 'TRIPLES') {
@@ -2083,11 +2087,13 @@ describe('outbox', () => {
               expect(tx1Triples).toHaveLength(0);
               expect(tx2Triples).toHaveLength(3);
               expect(tx3Triples).toHaveLength(0);
+              passed = true;
             }
           }
         );
+        await pause(300);
+        expect(passed).toBe(true);
       }
-      await pause(300);
     });
 
     it('on socket disconnect, un-ACKed triples will be re-sent', async () => {

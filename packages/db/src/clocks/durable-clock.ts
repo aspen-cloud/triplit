@@ -33,30 +33,6 @@ export class DurableClock implements Clock {
     if (this.assigned) return;
     this.assigned = true;
     const [res, rej] = this.readyCallbacks!;
-    try {
-      this.scopedStore = this.scope
-        ? store.setStorageScope([this.scope])
-        : store;
-
-      // Initialize in memory clock with current stored clock or create a new one
-      const clockTuples = await this.scopedStore.readMetadataTuples('clock');
-      if (clockTuples.length === 0) {
-        this.clock = [0, this.clientId];
-        await this.scopedStore.updateMetadataTuples([
-          ['clock', ['tick'], this.clock[0]],
-          ['clock', ['clientId'], this.clock[1]],
-        ]);
-      } else {
-        const { clock } = triplesToObject<{
-          clock: { clientId: string; tick: number };
-        }>(clockTuples);
-        this.clock = [clock.tick, clock.clientId];
-      }
-      res();
-    } catch (e) {
-      console.error(e);
-      return rej(e);
-    }
 
     // Use beforeCommit hook to update clock tuples in same transaction and avoid async issue
     store.beforeCommit(async (storeTriples) => {
@@ -70,7 +46,7 @@ export class DurableClock implements Clock {
       }
       await this.clockReady;
       if (timestampCompare(maxTimestamp, this.clock) > 0) {
-        this.scopedStore!.updateMetadataTuples([
+        await this.scopedStore!.updateMetadataTuples([
           ['clock', ['tick'], maxTimestamp![0]],
           ['clock', ['clientId'], this.clock![1]],
         ]);
@@ -94,6 +70,7 @@ export class DurableClock implements Clock {
 
     this.onClearUnsubscribe?.();
     this.onClearUnsubscribe = store.onClear(async () => {
+      await this.clockReady;
       this.assigned = false;
       this.clientId = nanoid();
       this.clockReady = new Promise(async (res, rej) => {
@@ -103,6 +80,32 @@ export class DurableClock implements Clock {
       });
       await this.assignToStore(store);
     });
+
+    try {
+      this.scopedStore = this.scope
+        ? store.setStorageScope([this.scope])
+        : store;
+
+      // Initialize in memory clock with current stored clock or create a new one
+      // maybe clock hasnt initialized?
+      const clockTuples = await this.scopedStore.readMetadataTuples('clock');
+      if (clockTuples.length === 0) {
+        this.clock = [0, this.clientId];
+        await this.scopedStore.updateMetadataTuples([
+          ['clock', ['tick'], this.clock[0]],
+          ['clock', ['clientId'], this.clock[1]],
+        ]);
+      } else {
+        const { clock } = triplesToObject<{
+          clock: { clientId: string; tick: number };
+        }>(clockTuples);
+        this.clock = [clock.tick, clock.clientId];
+      }
+      res();
+    } catch (e) {
+      console.error(e);
+      return rej(e);
+    }
   }
 
   async getCurrentTimestamp() {
