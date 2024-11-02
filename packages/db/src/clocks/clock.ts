@@ -6,4 +6,5 @@ export interface Clock {
   getCurrentTimestamp(): Promise<Timestamp>;
   getNextTimestamp(): Promise<Timestamp>;
   setTick(tick: number): Promise<void>;
+  clockReady: Promise<void>;
 }

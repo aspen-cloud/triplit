@@ -6,6 +6,7 @@ import { Clock } from './clock.js';
 export class MemoryClock implements Clock {
   clientId: string;
   tick: number;
+  clockReady: Promise<void> = Promise.resolve();
   constructor({ clientId, tick }: { clientId?: string; tick?: number } = {}) {
     this.clientId = clientId ?? nanoid();
     this.tick = tick ?? 0;

@@ -307,14 +307,29 @@ export class TripleStore<StoreKeys extends string = any>
 
   beforeInsert(callback: TripleStoreBeforeInsertHook) {
     this.hooks.beforeInsert.push(callback);
+    return () => {
+      this.hooks.beforeInsert = this.hooks.beforeInsert.filter(
+        (cb) => cb !== callback
+      );
+    };
   }
 
   beforeCommit(callback: TripleStoreBeforeCommitHook) {
     this.hooks.beforeCommit.push(callback);
+    return () => {
+      this.hooks.beforeCommit = this.hooks.beforeCommit.filter(
+        (cb) => cb !== callback
+      );
+    };
   }
 
   afterCommit(callback: TripleStoreAfterCommitHook) {
     this.hooks.afterCommit.push(callback);
+    return () => {
+      this.hooks.afterCommit = this.hooks.afterCommit.filter(
+        (cb) => cb !== callback
+      );
+    };
   }
 
   async *findByCollection(

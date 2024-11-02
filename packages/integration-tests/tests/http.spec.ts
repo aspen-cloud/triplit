@@ -146,7 +146,10 @@ describe('/clear', async () => {
       token: serviceToken,
     });
     await withServer(
-      { port: PORT, serverOptions: { dbOptions: { schema: DEFAULT_SCHEMA } } },
+      {
+        port: PORT,
+        serverOptions: { dbOptions: { schema: DEFAULT_SCHEMA } },
+      },
       async (server) => {
         await client.insert('users', { id: '1', name: 'Alice' });
         {

@@ -442,7 +442,9 @@ export default class DB<M extends Models = Models> {
       tripleStoreSchema: tripleStoreSchema && schemaToJSON(tripleStoreSchema),
     });
 
-    this.storageReady = this.tripleStore.ensureStorageIsMigrated();
+    this.storageReady = this.tripleStore
+      .ensureStorageIsMigrated()
+      .then(() => this.tripleStore.clock.clockReady);
     this.schemaInitialized = !!tripleStoreSchema
       ? this.storageReady
           // Setup schema subscription
