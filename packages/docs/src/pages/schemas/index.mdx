@@ -89,7 +89,11 @@ await client.insert('todos', {
 
 ### Getting types from your schema
 
-While the `schema` passed to the client constructor will be used to validate your queries and give you type hinting in any of the client's methods, you may want to extract the types from your schema to use in other parts of your application. You can do this with the `Entity` type.
+While the `schema` passed to the client constructor will be used to validate your queries and give you type hinting in any of the client's methods, you may want to extract the types from your schema to use in other parts of your application.
+
+#### `Entity`
+
+You extract a simple type from your with the `Entity` type.
 
 ```typescript
 import { Entity, ClientSchema } from '@triplit/client';
@@ -116,6 +120,84 @@ Todo will be a simple type:
   created_at: Date, 
   tags: Set<string> 
 } 
+*/
+```
+
+#### `EntityWithSelection`
+
+If you need more advanced types you can use the `EntityWithSelection` type. It expands `Entity` with a `selected` type parameter that can be used to select out specific attributes and an `inclusion` type parameter to add the types of related entities.
+
+```ts
+import type { Entity, EntityWithSelection } from '@triplit/client';
+
+const schema = {
+  users: {
+    schema: S.Schema({
+      id: S.Id(),
+      name: S.String(),
+      posts: S.RelationMany('posts', {
+        where: [['authorId', '=', '$1.id']],
+      }),
+    }),
+  },
+  posts: {
+    schema: S.Schema({
+      id: S.Id(),
+      text: S.String(),
+      authorId: S.String(),
+    }),
+  },
+};
+
+type User = Entity<typeof schema, 'users'>;
+/*
+type User = {
+  id: string;
+  name: string;
+}
+*/
+
+type UserWithPosts = EntityWithSelection<
+  typeof schema,
+  'users',
+  ['name'],
+  { posts: true }
+>;
+
+/*
+type UserWithPosts = {
+  name: string;
+  posts: Array<{
+    id: string;
+    text: string;
+  }>
+}
+*/
+```
+
+#### `QueryResult`
+
+If you'd like to extract types from a [query](/client/query) instead of a schema, you can use the `QueryResult` type.
+
+```ts
+import { client } from './client';
+import type { QueryResult } from '@triplit/client';
+
+const userQuery = client
+  .query('users')
+  .select(['name'].include('posts'))
+  .build();
+
+type UserQueryResult = QueryResult<typeof userQuery>;
+
+/*
+type UserQueryResult = {
+  name: string;
+  posts: Array<{
+    id: string;
+    text: string;
+  }>
+}
 */
 ```
 
