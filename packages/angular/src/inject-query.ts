@@ -20,6 +20,7 @@ import {
   signal,
 } from '@angular/core';
 import { assertInjector } from './util/assert-injector';
+import { WorkerClient } from '@triplit/client/worker-client';
 
 type QueryResults<
   M extends Models,
@@ -38,7 +39,7 @@ type QueryParams<
   CN extends CollectionNameFromModels<M>,
   Q extends ClientQuery<M, CN>
 > = () => {
-  client: TriplitClient<M>;
+  client: TriplitClient<M> | WorkerClient<M>;
   query: ClientQueryBuilder<M, CN, Q>;
   options?: Partial<SubscriptionOptions>;
 };

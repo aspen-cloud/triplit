@@ -27,7 +27,7 @@ export function createQuery<
   Q extends ClientQuery<M, CN>
 >(
   queryFn: () => {
-    client: TriplitClient<any>;
+    client: TriplitClient<any> | WorkerClient<any>;
     query: ClientQueryBuilder<M, CN, Q>;
     options?: Partial<SubscriptionOptions>;
   }
