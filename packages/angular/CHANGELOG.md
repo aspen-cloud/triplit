@@ -1,5 +1,11 @@
 # @triplit/angular
 
+## 0.1.13
+
+### Patch Changes
+
+- 3ce1f909: fix types
+
 ## 0.1.12
 
 ### Patch Changes
