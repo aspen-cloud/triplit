@@ -1,6 +1,6 @@
 {
   "name": "@triplit/tanstack",
-  "version": "1.0.10",
+  "version": "1.0.11",
   "packageManager": "yarn@4.2.2",
   "type": "module",
   "source": "./src/index.ts",
