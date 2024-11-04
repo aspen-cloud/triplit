@@ -315,7 +315,7 @@ export class WorkerClient<M extends ClientSchema = ClientSchema> {
       return this.clientWorker.subscribeBackground(
         // @ts-expect-error
         query,
-        options
+        ComLink.proxy(options)
       );
     })();
     return () => {

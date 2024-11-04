@@ -142,12 +142,13 @@ export class ClientComlinkWrapper implements ClientWorker {
     if (!this.client) throw new WorkerInternalClientNotInitializedError();
     return ComLink.proxy(this.client.subscribe(...args));
   }
-  subscribeBackground<CQ extends SchemaClientQueries<ClientSchema>>(
+  // @ts-expect-error
+  async subscribeBackground<CQ extends SchemaClientQueries<ClientSchema>>(
     query: CQ,
     options: SubscribeBackgroundOptions = {}
-  ): () => void {
+  ) {
     if (!this.client) throw new WorkerInternalClientNotInitializedError();
-    return this.client.subscribeBackground(query, options);
+    return ComLink.proxy(this.client.subscribeBackground(query, options));
   }
   // @ts-expect-error
   async subscribeWithPagination(
