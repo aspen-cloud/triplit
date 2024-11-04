@@ -271,7 +271,7 @@ describe('search/scan functionality', async () => {
     },
   ];
   beforeEach(async () => {
-   await storage.clear();
+    await storage.clear();
   });
   it('can find by attribute', async () => {
     await store.insertTriples(defaultData);

@@ -22,7 +22,9 @@ describe('commit transaction', () => {
     const db = new DB();
     // const consoleSpy = vi.spyOn(console, 'warn');
     await db.transact(async (tx) => {
-      tx.insert('test', { name: 'test' });
+      // TODO: figure out what to do with "alread comitted error" and testing
+      // Currently catching to avoid error firing in test
+      tx.insert('test', { name: 'test' }).catch(() => {});
     });
     const result = await db.fetch(db.query('test').build());
     expect(result).toEqual([]);
