@@ -554,7 +554,7 @@ function getEntitiesAtStateVector(
   );
 }
 
-async function getTriplesAfterStateVector(
+export async function getTriplesAfterStateVector(
   tx: TripleStoreApi,
   stateVector: Map<string, number>
 ): Promise<TripleRow[]> {
@@ -2239,7 +2239,7 @@ function selectParser(entity: any) {
   };
 }
 
-async function replaceVariablesInQuery<Q extends CollectionQuery<any>>(
+export async function replaceVariablesInQuery<Q extends CollectionQuery<any>>(
   tx: TripleStoreApi,
   query: Q,
   executionContext: FetchExecutionContext,
