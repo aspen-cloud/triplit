@@ -1,5 +1,11 @@
 # @triplit/client
 
+## 0.5.13
+
+### Patch Changes
+
+- bdd50e7f: Fixup worker client subscribeBackground
+
 ## 0.5.12
 
 ### Patch Changes
