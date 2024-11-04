@@ -93,3 +93,4 @@ export * from './data-types/constants.js';
 export * from './schema/export/index.js';
 export * from './schema/import/index.js';
 export * from './utils/generator.js';
+export * from './utils/query.js';

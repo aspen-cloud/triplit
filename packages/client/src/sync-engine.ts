@@ -39,7 +39,7 @@ import {
 } from './client/types';
 import { Logger } from '@triplit/types/logger';
 import { genToArr } from '@triplit/db';
-import { hashQuery } from './utils/query.js';
+import { hashQuery } from '@triplit/db';
 
 type OnMessageReceivedCallback = (message: ServerSyncMessage) => void;
 type OnMessageSentCallback = (message: ClientSyncMessage) => void;

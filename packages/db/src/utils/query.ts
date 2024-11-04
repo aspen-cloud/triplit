@@ -1,5 +1,5 @@
 import { Value } from '@sinclair/typebox/value';
-import { CollectionQuery } from '@triplit/db';
+import { type CollectionQuery } from '../query/types/index.js';
 
 // Should update this as we add more query properties
 const COLLECTION_QUERY_PROPS: (keyof CollectionQuery)[] = [

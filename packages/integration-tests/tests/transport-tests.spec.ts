@@ -9,7 +9,7 @@ import DB, {
   or,
 } from '@triplit/db';
 import { MemoryBTreeStorage as MemoryStorage } from '@triplit/db/storage/memory-btree';
-import { hashQuery } from '@triplit/client';
+import { hashQuery } from '@triplit/db';
 import { pause } from '../utils/async.js';
 import {
   NOT_SERVICE_KEY,
