@@ -307,7 +307,7 @@ export class SyncEngine {
   /**
    * @hidden
    */
-  async disconnectQuery(id: string) {
+  disconnectQuery(id: string) {
     if (!this.queries.has(id)) return;
     const queryMetadata = this.queries.get(id)!;
     if (queryMetadata.hasSent) {
@@ -668,7 +668,7 @@ export class SyncEngine {
               await errorCallback(parsedError);
             }
           }
-          await this.disconnectQuery(queryKey);
+          this.disconnectQuery(queryKey);
         }
     }
   }
