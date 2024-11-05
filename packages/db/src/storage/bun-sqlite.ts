@@ -1,1 +1,1 @@
-export * from '@triplit/tuple-database/storage/BunSqliteTupleStorage';
+export * from '@triplit/tuple-database/storage/BunSQLiteTupleStorage';
