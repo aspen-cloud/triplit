@@ -5,6 +5,7 @@
 */
 
 import sqlite from "better-sqlite3"
+import { Database as BunSqlite } from "bun:sqlite"
 import * as fs from "fs-extra"
 import { Level } from "level"
 import { range } from "remeda"
@@ -18,6 +19,12 @@ import { SQLiteTupleStorage } from "../storage/SQLiteTupleStorage.js"
 import * as LMDB from "lmdb"
 import { LMDBTupleStorage } from "../storage/LMDBTupleStorage.js"
 import { MemoryBTreeStorage } from "../storage/MemoryBTreeTupleStorage.js"
+import { BunSQLiteTupleStorage } from "../storage/BunSQLiteTupleStorage.js"
+
+import { dirname } from "path"
+import { fileURLToPath } from "node:url"
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = dirname(__filename)
 
 const iterations = 1000
 const writeIters = 100
@@ -227,6 +234,38 @@ async function main() {
 	// 		new AsyncTupleDatabase(
 	// 			new LevelTupleStorage(
 	// 				new Level(path.join(tmpDir, "benchmark-level.db"))
+	// 			)
+	// 		)
+	// 	)
+	// )
+
+	// Bun SQLITE
+	// await asyncWriteOnlyBenchmark(
+	// 	"bun-sqlite",
+	// 	new AsyncTupleDatabaseClient(
+	// 		new AsyncTupleDatabase(
+	// 			new BunSQLiteTupleStorage(
+	// 				new BunSqlite(path.join(tmpDir, "benchmark-sqlite.db"))
+	// 			)
+	// 		)
+	// 	)
+	// )
+	// await asyncReadPerformanceBenchmark(
+	// 	"bun-sqlite",
+	// 	new AsyncTupleDatabaseClient(
+	// 		new AsyncTupleDatabase(
+	// 			new BunSQLiteTupleStorage(
+	// 				new BunSqlite(path.join(tmpDir, "benchmark-sqlite.db"))
+	// 			)
+	// 		)
+	// 	)
+	// )
+	// await asyncReadRemoveWriteBenchmark(
+	// 	"bun-sqlite",
+	// 	new AsyncTupleDatabaseClient(
+	// 		new AsyncTupleDatabase(
+	// 			new BunSQLiteTupleStorage(
+	// 				new BunSqlite(path.join(tmpDir, "benchmark-sqlite.db"))
 	// 			)
 	// 		)
 	// 	)
