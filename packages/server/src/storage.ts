@@ -4,10 +4,17 @@ import { LMDBTupleStorage } from '@triplit/db/storage/lmdb';
 import { MemoryArrayStorage } from '@triplit/db/storage/memory-array';
 import { MemoryBTreeStorage } from '@triplit/db/storage/memory-btree';
 import { SQLiteTupleStorage } from '@triplit/db/storage/sqlite';
+import { BunSQLiteTupleStorage } from '@triplit/db/storage/bun-sqlite';
 import { require } from './utils/esm.js';
-import { TriplitError } from '@triplit/db';
+import { TriplitError, type Storage } from '@triplit/db';
 
-export const durableStoreKeys = ['file', 'leveldb', 'lmdb', 'sqlite'] as const;
+export const durableStoreKeys = [
+  'file',
+  'leveldb',
+  'lmdb',
+  'sqlite',
+  'bun-sqlite',
+] as const;
 export const inMemoryStoreKeys = [
   'memory',
   'memory-array',
@@ -94,4 +101,40 @@ export function defaultSQLiteStorage() {
       PRAGMA mmap_size = 30000000000;
     `);
   return new SQLiteTupleStorage(db);
+}
+
+export function defaultBunSqliteStorage() {
+  const dbPath = getStoragePath();
+  const bunSqlite = require('bun:sqlite');
+  const db = new bunSqlite.Database(dbPath);
+  db.exec(`
+    PRAGMA journal_mode = WAL;
+    PRAGMA synchronous = NORMAL;
+    PRAGMA temp_store = memory;
+    PRAGMA mmap_size = 30000000000;
+  `);
+  return new BunSQLiteTupleStorage(db);
+}
+
+export function resolveStorageStringOption(storage: StoreKeys): Storage {
+  switch (storage) {
+    case 'file':
+      return defaultFileStorage();
+    case 'leveldb':
+      return defaultLevelDBStorage();
+    case 'lmdb':
+      return defaultLMDBStorage();
+    case 'memory':
+      return defaultMemoryStorage();
+    case 'memory-array':
+      return defaultBTreeStorage();
+    case 'memory-btree':
+      return defaultArrayStorage();
+    case 'sqlite':
+      return defaultSQLiteStorage();
+    case 'bun-sqlite':
+      return defaultBunSqliteStorage();
+    default:
+      throw new TriplitError(`Invalid storage option: ${storage}`);
+  }
 }

@@ -1,10 +1,7 @@
 import WS, { WebSocketServer } from 'ws';
 import express from 'express';
 import { DB, DBConfig, DurableClock, Storage, TriplitError } from '@triplit/db';
-import {
-  MalformedMessagePayloadError,
-  RateLimitExceededError,
-} from '@triplit/server-core/errors';
+import { MalformedMessagePayloadError } from '@triplit/server-core/errors';
 import cors from 'cors';
 import { useHttpToken, readWSToken } from './middleware/token-reader.js';
 import url from 'url';
@@ -13,23 +10,13 @@ import {
   ServerCloseReason,
   ClientSyncMessage,
   ParseResult,
-  SyncConnection,
 } from '@triplit/server-core';
 import { parseAndValidateToken, ProjectJWT } from '@triplit/server-core/token';
 import { logger } from './logger.js';
 import { Route } from '@triplit/server-core/triplit-server';
 import multer, { MulterError } from 'multer';
 import * as Sentry from '@sentry/node';
-import {
-  StoreKeys,
-  defaultArrayStorage,
-  defaultBTreeStorage,
-  defaultFileStorage,
-  defaultLMDBStorage,
-  defaultLevelDBStorage,
-  defaultMemoryStorage,
-  defaultSQLiteStorage,
-} from './storage.js';
+import { StoreKeys, resolveStorageStringOption } from './storage.js';
 import path from 'path';
 import { createRequire } from 'module';
 import { TriplitClient } from '@triplit/client';
@@ -40,7 +27,7 @@ const MB_LIMIT = 100;
 
 const upload = multer({ limits: { fieldSize: MB * MB_LIMIT } });
 
-function parseClientMessage(
+export function parseClientMessage(
   message: WS.RawData
 ): ParseResult<ClientSyncMessage> {
   // TODO: do more validation here
@@ -83,27 +70,6 @@ function initSentry() {
 function captureException(e: any) {
   if (Sentry.isInitialized() && e instanceof Error) {
     Sentry.captureException(e);
-  }
-}
-
-function resolveStorageStringOption(storage: StoreKeys): Storage {
-  switch (storage) {
-    case 'file':
-      return defaultFileStorage();
-    case 'leveldb':
-      return defaultLevelDBStorage();
-    case 'lmdb':
-      return defaultLMDBStorage();
-    case 'memory':
-      return defaultMemoryStorage();
-    case 'memory-array':
-      return defaultBTreeStorage();
-    case 'memory-btree':
-      return defaultArrayStorage();
-    case 'sqlite':
-      return defaultSQLiteStorage();
-    default:
-      throw new TriplitError(`Invalid storage option: ${storage}`);
   }
 }
 
