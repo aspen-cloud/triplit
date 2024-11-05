@@ -56,7 +56,39 @@ class Logger {
   debug(message: any, ...args: any[]) {
     this._logger.debug(message, ...args);
   }
+  logRequest(method: string, path: string, body?: any) {
+    this.info(
+      REQUEST_TYPE_COLOR(RECEIVED_SYMBOL),
+      bold(method),
+      REQUEST_TYPE_COLOR(path),
+      ...(this.verbose && body
+        ? [REQUEST_TYPE_COLOR('\nRequest body: '), formatBody(body)]
+        : [])
+    );
+  }
+  logResponse(
+    method: string,
+    path: string,
+    statusCode: number,
+    time: number,
+    body?: any
+  ) {
+    const isError = isErrorResponse(statusCode);
+    const primaryColor = isError ? ERROR_COLOR : SUCCESS_COLOR;
+    this.info(
+      primaryColor(SENT_SYMBOL),
+      bold(method),
+      REQUEST_TYPE_COLOR(path),
+      isError
+        ? ERROR_COLOR(String(statusCode))
+        : SUCCESS_COLOR(String(statusCode)),
+      dim(`${time}ms`),
 
+      ...(this.verbose && body
+        ? [SUCCESS_COLOR('\nResponse body: '), formatBody(body)]
+        : [])
+    );
+  }
   logRequestAndResponse(request: any, response: any, time: number) {
     const { method, url, body: reqBody } = request;
     const { statusCode, body: resBody } = response;
