@@ -2296,7 +2296,7 @@ describe('rules', () => {
   });
 });
 
-describe.only('permissions', () => {
+describe('permissions', () => {
   const SCHEMA = {
     roles: {
       user: {
@@ -2316,7 +2316,7 @@ describe.only('permissions', () => {
         permissions: {
           user: {
             read: {
-              filter: [['memberIds', 'has', '$role.$userId']],
+              filter: [['memberIds', 'has', '$role.userId']],
             },
             update: {
               filter: [['adminId', '=', '$role.userId']],
@@ -2364,14 +2364,12 @@ describe.only('permissions', () => {
 
   describe('insert', async () => {
     const server = new TriplitServer(new DB({ schema: SCHEMA }));
-    const alice = createTestClient(server, SERVICE_KEY, {
+    const alice = createTestClient(server, ALICE_TOKEN, {
       clientId: 'alice',
-      token: ALICE_TOKEN,
       schema: SCHEMA.collections,
     });
-    const bob = createTestClient(server, SERVICE_KEY, {
+    const bob = createTestClient(server, BOB_TOKEN, {
       clientId: 'bob',
-      token: BOB_TOKEN,
       schema: SCHEMA.collections,
     });
     it('restricts groupChat insertions', async () => {
@@ -2418,10 +2416,11 @@ describe.only('permissions', () => {
         text: 'hello',
       });
       await pause();
+      // All group members get the messages in group
       expect(aliceSub).toHaveBeenCalled();
       expect(aliceSub.mock.calls.at(-1)?.[0]).toHaveLength(1);
       expect(bobSub).toHaveBeenCalled();
-      expect(bobSub.mock.calls.at(-1)?.[0]).toHaveLength(0);
+      expect(bobSub.mock.calls.at(-1)?.[0]).toHaveLength(1);
       const { txId } = await bob.insert('messages', {
         id: 'chat2',
         groupId: 'chat1',
@@ -2448,18 +2447,17 @@ describe.only('permissions', () => {
   describe('update', async () => {
     const serverDb = new DB({ schema: SCHEMA });
     const server = new TriplitServer(serverDb);
-    const alice = createTestClient(server, SERVICE_KEY, {
+    const alice = createTestClient(server, ALICE_TOKEN, {
       clientId: 'alice',
-      token: ALICE_TOKEN,
       schema: SCHEMA.collections,
     });
-    const bob = createTestClient(server, SERVICE_KEY, {
+    const bob = createTestClient(server, BOB_TOKEN, {
       clientId: 'bob',
-      token: BOB_TOKEN,
       schema: SCHEMA.collections,
     });
 
     it('restricts groupChat updates', async () => {
+      // Create a group chat
       await serverDb.insert(
         'groupChats',
         {
@@ -2481,9 +2479,9 @@ describe.only('permissions', () => {
       expect(aliceSub).toHaveBeenCalled();
       expect(aliceSub.mock.calls.at(-1)?.[0]).toHaveLength(1);
       expect(bobSub).toHaveBeenCalled();
-      console.log('alice calls', aliceSub.mock.calls);
-      console.log('bob calls', bobSub.mock.calls);
       expect(bobSub.mock.calls.at(-1)?.[0]).toHaveLength(1);
+
+      // Bob cannot update group chat because he is not the admin
       const { txId } = await bob.update('groupChats', 'chat1', (entity) => {
         entity.name = 'updated';
       });
@@ -2510,14 +2508,28 @@ describe.only('permissions', () => {
       expect(aliceSub).toHaveBeenCalled();
       expect(aliceSub.mock.calls.at(-1)?.[0]).toHaveLength(1);
       expect(bobSub).toHaveBeenCalled();
-      expect(bobSub.mock.calls.at(-1)?.[0]).toHaveLength(0);
-      const { txId } = await alice.update('messages', 'msg1', (entity) => {
-        entity.text = 'updated';
-      });
-      const bobErrorSub = vi.fn();
-      bob.onTxFailureRemote(txId!, bobErrorSub);
-      await pause();
-      expect(bobErrorSub).toHaveBeenCalled();
+      expect(bobSub.mock.calls.at(-1)?.[0]).toHaveLength(1);
+
+      // Alice cannot update message because message updates are illegal
+      {
+        const { txId } = await alice.update('messages', 'msg1', (entity) => {
+          entity.text = 'updated';
+        });
+        const errCallback = vi.fn();
+        alice.onTxFailureRemote(txId!, errCallback);
+        await pause();
+        expect(errCallback).toHaveBeenCalled();
+      }
+      // Bob cannot update message because message updates are illegal
+      {
+        const { txId } = await bob.update('messages', 'msg1', (entity) => {
+          entity.text = 'updated';
+        });
+        const errCallback = vi.fn();
+        bob.onTxFailureRemote(txId!, errCallback);
+        await pause();
+        expect(errCallback).toHaveBeenCalled();
+      }
     });
   });
 });
