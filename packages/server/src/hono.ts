@@ -16,7 +16,7 @@ import {
 } from '@triplit/types/sync';
 import { logger } from './logger.js';
 import { parseAndValidateToken, ProjectJWT } from '@triplit/server-core/token';
-import { Hono } from 'hono';
+import { Context, Hono } from 'hono';
 import { StatusCode } from 'hono/utils/http-status';
 
 import { WSContext, type UpgradeWebSocket, WSMessageReceive } from 'hono/ws';
@@ -131,20 +131,14 @@ export function createTriplitHonoServer(
           const queryParams = new URL(ws.url).searchParams;
 
           let token: ProjectJWT | undefined = undefined;
-          const { JWT_SECRET, PROJECT_ID, CLAIMS_PATH, EXTERNAL_JWT_SECRET } =
-            env(c);
+
           try {
-            const tokenRes = await parseAndValidateToken(
+            const { data, error } = await parseAndValidateTokenWithEnv(
               queryParams.get('token')!,
-              JWT_SECRET,
-              PROJECT_ID,
-              {
-                payloadPath: CLAIMS_PATH,
-                externalSecret: EXTERNAL_JWT_SECRET,
-              }
+              c
             );
-            if (tokenRes.error) throw tokenRes.error;
-            token = tokenRes.data;
+            if (error) throw error;
+            token = data;
           } catch (e) {
             captureException(e);
             closeSocket(
@@ -240,16 +234,7 @@ export function createTriplitHonoServer(
       throw new NoTokenProvidedError('Missing authorization token');
     }
     try {
-      const { data, error } = await parseAndValidateToken(
-        token,
-        process.env.JWT_SECRET,
-        process.env.PROJECT_ID,
-        {
-          payloadPath: process.env.CLAIMS_PATH,
-          externalSecret: process.env.EXTERNAL_JWT_SECRET,
-        }
-      );
-
+      const { data, error } = await parseAndValidateTokenWithEnv(token, c);
       if (error) throw error;
       c.set('token', data);
       return next();
@@ -298,6 +283,14 @@ export function createTriplitHonoServer(
   return app;
 }
 
+function parseAndValidateTokenWithEnv(token: string, c: Context) {
+  const { JWT_SECRET, PROJECT_ID, CLAIMS_PATH, EXTERNAL_JWT_SECRET } = env(c);
+  return parseAndValidateToken(token, JWT_SECRET, PROJECT_ID, {
+    payloadPath: CLAIMS_PATH,
+    externalSecret: EXTERNAL_JWT_SECRET,
+  });
+}
+
 function sendMessage(
   socket: WSContext,
   type: any,
@@ -325,7 +318,7 @@ function sendMessage(
   // }
 }
 
-export function sendErrorMessage(
+function sendErrorMessage(
   socket: WSContext,
   originalMessage: ClientSyncMessage | undefined, // message is undefined if we cannot parse it
   error: TriplitError,
@@ -340,7 +333,7 @@ export function sendErrorMessage(
   sendMessage(socket, 'ERROR', payload);
 }
 
-export function closeSocket(
+function closeSocket(
   socket: WSContext,
   reason: ServerCloseReason,
   code?: number
