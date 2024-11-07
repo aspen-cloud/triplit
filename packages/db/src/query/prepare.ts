@@ -5,7 +5,11 @@ import {
   isQueryInclusionSubquery,
 } from '../collection-query.js';
 import { DataType } from '../data-types/types/index.js';
-import { appendCollectionToId, isValueVariable } from '../db-helpers.js';
+import {
+  appendCollectionToId,
+  isValueVariable,
+  replaceVariablesInFilterStatements,
+} from '../db-helpers.js';
 import { CollectionFromModels, CollectionNameFromModels } from '../db.js';
 import {
   IncludedNonRelationError,
@@ -47,6 +51,7 @@ import {
 
 export interface QueryPreparationOptions {
   skipRules?: boolean;
+  bindSessionVariables?: boolean;
 }
 
 interface Session {
@@ -59,7 +64,10 @@ export function prepareQuery<M extends Models, Q extends CollectionQuery<M>>(
   query: Q,
   schema: M | undefined,
   session: Session,
-  options: QueryPreparationOptions = {}
+  options: QueryPreparationOptions = {
+    skipRules: false,
+    bindSessionVariables: false,
+  }
 ): Q {
   let fetchQuery = { ...query };
 
@@ -254,11 +262,15 @@ function getQueryFilters<M extends Models, Q extends CollectionQuery<M>>(
   ) {
     // Old permission system
     const ruleFilters = getReadRuleFilters(schema, query.collectionName);
-    if (ruleFilters?.length > 0)
+    if (ruleFilters?.length > 0) {
       filters.push(
         // @ts-expect-error
-        ...ruleFilters
+        ...(options.bindSessionVariables
+          ? // @ts-expect-error
+            replaceVariablesInFilterStatements(ruleFilters, session.session)
+          : ruleFilters)
       );
+    }
 
     // New permission system
     const collectionPermissions = getCollectionPermissions(
@@ -267,7 +279,7 @@ function getQueryFilters<M extends Models, Q extends CollectionQuery<M>>(
     );
     // If we have collection permissions, we should apply them, otherwise its permissionless
     if (collectionPermissions) {
-      let permissionFilters: QueryWhere<M, any>[] = [];
+      let permissionFilters: QueryWhere<any, any>[] = [];
       let hasMatch = false;
       if (session.roles) {
         for (const sessionRole of session.roles) {
@@ -278,8 +290,11 @@ function getQueryFilters<M extends Models, Q extends CollectionQuery<M>>(
             // TODO: handle empty arrays
             if (Array.isArray(permission.filter)) {
               permissionFilters.push(
-                // @ts-expect-error
-                permission.filter
+                options.bindSessionVariables
+                  ? replaceVariablesInFilterStatements(permission.filter, {
+                      role: sessionRole.roleVars,
+                    })
+                  : permission.filter
               );
             }
           }
