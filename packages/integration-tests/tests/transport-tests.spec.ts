@@ -2379,6 +2379,7 @@ describe('permissions', () => {
       bob.subscribe(bob.query('groupChats').build(), bobSub);
 
       await pause();
+
       const { txId: aliceTx } = await alice.insert('groupChats', {
         id: 'chat1',
         memberIds: new Set(['alice']),
@@ -2387,8 +2388,9 @@ describe('permissions', () => {
       });
       const aliceErrorSub = vi.fn();
       alice.onTxFailureRemote(aliceTx!, aliceErrorSub);
-      console.log(aliceErrorSub.mock.calls);
+
       await pause();
+
       expect(aliceErrorSub).not.toHaveBeenCalled();
       expect(aliceSub).toHaveBeenCalled();
       expect(aliceSub.mock.calls.at(-1)?.[0]).toHaveLength(1);

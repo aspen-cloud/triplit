@@ -28,7 +28,11 @@ import {
 export class SyncConnection {
   connectedQueries: Map<
     string,
-    { unsubscribe: () => void; serverHasRespondedOnce: boolean }
+    {
+      unsubscribe: () => void;
+      serverHasRespondedOnce: boolean;
+      externalQueryId: string;
+    }
   >;
   listeners: Set<(messageType: string, payload: {}) => void>;
 
@@ -39,7 +43,7 @@ export class SyncConnection {
     this.listeners = new Set();
     this.querySyncer = this.session.db.createQuerySyncer(
       this.options.clientId,
-      (results, forQueries) => {
+      (results, forInternalQueries) => {
         const triples = results ?? [];
         const triplesForClient = triples.filter(
           ({ timestamp: [_t, client] }) => client !== this.options.clientId
@@ -47,7 +51,7 @@ export class SyncConnection {
         // We should send triples to client even if there are none
         // so that the client knows that the query has been fulfilled by the remote
         // for the initial query response
-        const everyRelevantQueryHasResponded = forQueries.every(
+        const everyRelevantQueryHasResponded = forInternalQueries.every(
           (id) =>
             this.connectedQueries.has(id) &&
             this.connectedQueries.get(id)!.serverHasRespondedOnce
@@ -56,27 +60,39 @@ export class SyncConnection {
           return;
         this.sendResponse('TRIPLES', {
           triples: triplesForClient,
-          forQueries,
+          forQueries: forInternalQueries.map(
+            (id) => this.connectedQueries.get(id)?.externalQueryId
+          ),
         });
 
-        for (const queryKey of forQueries) {
+        for (const queryKey of forInternalQueries) {
           if (this.connectedQueries.has(queryKey))
             this.connectedQueries.get(queryKey)!.serverHasRespondedOnce = true;
         }
       },
-      (error) => {
+      (error: unknown, queryKey?: string) => {
         console.error(error);
         const innerError = isTriplitError(error)
           ? error
           : new TriplitError(
               'An unknown error occurred while processing your request.'
             );
-        // TODO: pass context in callback into error
-        // this.sendErrorResponse('CONNECT_QUERY', new QuerySyncError(params), {
-        //   queryKey,
-        //   innerError,
-        // });
-        return;
+
+        if (queryKey && this.connectedQueries.has(queryKey)) {
+          const { externalQueryId } = this.connectedQueries.get(queryKey)!;
+          this.sendErrorResponse(
+            'CONNECT_QUERY',
+            new QuerySyncError(innerError),
+            {
+              queryKey: externalQueryId,
+              innerError,
+            }
+          );
+        } else {
+          // TODO: pass context in callback into error
+          this.sendErrorResponse('CONNECT_QUERY', innerError);
+          return;
+        }
       }
     );
   }
@@ -118,46 +134,62 @@ export class SyncConnection {
     this.sendResponse('ERROR', payload);
   }
 
-  handleConnectQueryMessage(msgParams: ClientConnectQueryMessage['payload']) {
+  async handleConnectQueryMessage(
+    msgParams: ClientConnectQueryMessage['payload']
+  ) {
     const { id: queryKey, params, state } = msgParams;
-    const { collectionName, ...parsedQuery } = params;
-    const clientStates = new Map(
-      (state ?? []).map(([sequence, client]) => [client, sequence])
-    );
-    const builtQuery = this.session.db
-      .query(collectionName, parsedQuery)
-      .build();
+    try {
+      const { collectionName, ...parsedQuery } = params;
+      const clientStates = new Map(
+        (state ?? []).map(([sequence, client]) => [client, sequence])
+      );
+      const builtQuery = this.session.db
+        .query(collectionName, parsedQuery)
+        .build();
 
-    // TODO: THIS SHOULD BE KEYED ON QUERY HASH
-    const unsubscribe = async () => {
-      this.querySyncer.unregisterQuery(queryKey);
-    };
+      // TODO: THIS SHOULD BE KEYED ON QUERY HASH
+      const unsubscribe = async () => {
+        this.querySyncer.unregisterQuery(queryKey);
+      };
 
-    this.connectedQueries.set(queryKey, {
-      unsubscribe,
-      serverHasRespondedOnce: false,
-    });
+      const internalQueryId = await this.querySyncer.registerQuery(
+        builtQuery as any,
+        {
+          skipRules: hasAdminAccess(this.session.token),
+          stateVector: clientStates,
+        }
+      );
 
-    this.querySyncer.registerQuery(
-      builtQuery as any,
-      {
-        skipRules: hasAdminAccess(this.session.token),
-        stateVector: clientStates,
-      },
-      queryKey
-    );
+      if (!internalQueryId) return;
 
-    // // TODO: is this totally necessary?
-    // if (this.connectedQueries.has(queryKey)) {
-    //   // unsubscribe from previous query instance
-    //   this.connectedQueries.get(queryKey)!.unsubscribe();
-    // }
+      this.connectedQueries.set(internalQueryId, {
+        unsubscribe,
+        serverHasRespondedOnce: false,
+        externalQueryId: queryKey,
+      });
+    } catch (e) {
+      console.error(e);
+      const innerError = isTriplitError(e)
+        ? e
+        : new TriplitError(
+            'An unknown error occurred while processing your request.'
+          );
+      this.sendErrorResponse('CONNECT_QUERY', new QuerySyncError(innerError), {
+        queryKey,
+        innerError,
+      });
+    }
   }
 
   handleDisconnectQueryMessage(
     msgParams: ClientDisconnectQueryMessage['payload']
   ) {
     const { id: queryKey } = msgParams;
+    const internalQueryId = Array.from(this.connectedQueries.entries()).find(
+      ([_internalId, entry]) => entry.externalQueryId === queryKey
+    )?.[0];
+    if (!internalQueryId) return;
+    this.querySyncer.unregisterQuery(internalQueryId);
     if (this.connectedQueries.has(queryKey)) {
       this.connectedQueries.get(queryKey)?.unsubscribe();
       this.connectedQueries.delete(queryKey);
