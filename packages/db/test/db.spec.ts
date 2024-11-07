@@ -22,6 +22,7 @@ import {
   InvalidWhereClauseError,
   genToArr,
   DurableClock,
+  SessionVariableNotFoundError,
 } from '../src';
 import { hashSchemaJSON } from '../src/schema/schema.js';
 import { Models } from '../src/schema/types';
@@ -5591,6 +5592,15 @@ describe('variable conflicts', () => {
         expect(result.length).toBe(7);
       }
     }
+  });
+
+  it('Will throw an error if a variable is referenced that does not exist', async () => {
+    const db = baseDB.withSessionVars({ name: 'MATH101' });
+    await expect(
+      db.fetch(
+        db.query('classes').where(['name', '=', '$session.$name']).build()
+      )
+    ).rejects.toThrow(SessionVariableNotFoundError);
   });
 
   it('can access a nested data and record types via a variable', async () => {

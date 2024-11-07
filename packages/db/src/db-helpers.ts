@@ -114,7 +114,7 @@ export function replaceVariable(
       if (current == null) {
         // Allow referential variables to be undefined
         if (varScopeType(scope) === 'relational') return undefined;
-        throw new SessionVariableNotFoundError(target);
+        throw new SessionVariableNotFoundError(target, scope, scopeVars);
       }
     }
     return current;

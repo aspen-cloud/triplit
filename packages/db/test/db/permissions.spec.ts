@@ -3,7 +3,10 @@ import DB from '../../src/db.ts';
 import { Schema as S } from '../../src/schema/builder.ts';
 import { Models, StoreSchema } from '../../src/schema/types';
 import { and, exists, or } from '../../src/query.ts';
-import { WritePermissionError } from '../../src/errors.ts';
+import {
+  SessionVariableNotFoundError,
+  WritePermissionError,
+} from '../../src/errors.ts';
 import { InMemoryTupleStorage } from '@triplit/tuple-database';
 
 const messagingSchema = {
@@ -501,6 +504,57 @@ describe('Read', () => {
         'message-3',
       ]);
     }
+  });
+
+  it.only("will throw an error if you add a permissions with a role variable that doesn't exist", async () => {
+    const schema = {
+      roles: {
+        authenticated: {
+          match: {
+            user_id: '$user_id',
+          },
+        },
+      },
+      collections: {
+        messages: {
+          schema: S.Schema({
+            id: S.Id(),
+            text: S.String(),
+            author_id: S.String(),
+            recipient_id: S.String(),
+          }),
+          permissions: {
+            authenticated: {
+              read: {
+                filter: [
+                  or([
+                    ['author_id', '=', '$role.$user_id'],
+                    ['recipient_id', '=', '$role.$user_id'],
+                  ]),
+                ],
+              },
+            },
+            admin: {
+              read: {
+                filter: [true],
+              },
+            },
+          },
+        },
+      },
+      version: 0,
+    } satisfies StoreSchema<Models>;
+    const db = new DB({ schema });
+
+    const user1Token = {
+      user_id: 'user-1',
+    };
+
+    const user1DB = db.withSessionVars(user1Token);
+
+    await expect(
+      user1DB.fetch(user1DB.query('messages').build())
+    ).rejects.toThrow(SessionVariableNotFoundError);
   });
 });
 
