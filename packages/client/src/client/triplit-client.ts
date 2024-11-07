@@ -394,6 +394,9 @@ export class TriplitClient<M extends ClientSchema = ClientSchema> {
     }
 
     if (opts.policy === 'remote-only') {
+      console.warn(
+        "The fetch policy 'remote-only' is deprecated and may return incorrect results for queries with relations. Use TriplitClient.http.fetch to bypass the local cache completely and fetch from the server."
+      );
       return this.syncEngine.fetchQuery(query);
     }
 
