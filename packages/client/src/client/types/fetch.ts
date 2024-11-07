@@ -12,6 +12,9 @@ export type RemoteFirstFetchOptions = {
   policy: 'remote-first';
 };
 export type RemoteOnlyFetchOptions = {
+  /**
+   * @deprecated - use `TriplitClient.http.fetch` instead
+   */
   policy: 'remote-only';
 };
 export type LocalAndRemoteFetchOptions = {
