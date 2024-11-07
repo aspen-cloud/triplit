@@ -12,7 +12,7 @@
     "typescript": "^5.0.0"
   },
   "dependencies": {
-    "@triplit/server": "0.4.28",
+    "@triplit/server": "0.4.29",
     "hono": "^4.6.9"
   }
 }

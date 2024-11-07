@@ -1,5 +1,13 @@
 # @triplit/db
 
+## 0.5.5
+
+### Patch Changes
+
+- 8f004df6: add bun server support
+- Updated dependencies [8f004df6]
+  - @triplit/tuple-database@2.2.32
+
 ## 0.5.4
 
 ### Patch Changes
