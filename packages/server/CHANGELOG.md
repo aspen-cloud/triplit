@@ -1,5 +1,15 @@
 # @triplit/server
 
+## 0.4.29
+
+### Patch Changes
+
+- 8f004df6: add bun server support
+- Updated dependencies [8f004df6]
+  - @triplit/db@0.5.5
+  - @triplit/client@0.5.14
+  - @triplit/server-core@0.5.8
+
 ## 0.4.28
 
 ### Patch Changes
