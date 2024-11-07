@@ -14546,7 +14546,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "bun-server@workspace:packages/bun-server"
   dependencies:
-    "@triplit/server": "workspace:^"
+    "@triplit/server": "npm:0.4.28"
     "@types/bun": "npm:latest"
     hono: "npm:^4.6.9"
   peerDependencies:
