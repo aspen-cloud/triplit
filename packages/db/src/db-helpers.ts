@@ -110,12 +110,12 @@ export function replaceVariable(
     const path = key.split('.');
     let current = scopeVars;
     for (const part of path) {
+      current = current[part];
       if (current == null) {
         // Allow referential variables to be undefined
         if (varScopeType(scope) === 'relational') return undefined;
         throw new SessionVariableNotFoundError(target);
       }
-      current = current[part];
     }
     return current;
   } else {

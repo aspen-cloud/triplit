@@ -5204,9 +5204,10 @@ describe('selecting subqueries from schema', () => {
   });
 
   it('skipRules option should skip rules for subqueries', async () => {
-    const query = db.query('users').include('posts').build();
+    const userDb = db.withSessionVars({ USER_ID: 'irrelevant-user' });
+    const query = userDb.query('users').include('posts').build();
     {
-      const results = await db.fetch(query, { skipRules: false });
+      const results = await userDb.fetch(query, { skipRules: false });
       expect([...results.values()].map((user) => user.posts)).toMatchObject([
         new Map(),
         new Map(),
@@ -5214,7 +5215,7 @@ describe('selecting subqueries from schema', () => {
       ]);
     }
 
-    const results = await db.fetch(query, {
+    const results = await userDb.fetch(query, {
       skipRules: true,
     });
     expect(results).toHaveLength(3);
