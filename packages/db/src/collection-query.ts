@@ -1336,10 +1336,9 @@ export function initialFetchExecutionContext(): FetchExecutionContext {
   };
 }
 
-function isIdQuery(query: CollectionQuery) {
+function isCountQuery(query: CollectionQuery) {
   return (
-    query.select?.length === 1 &&
-    query.select[0] === 'id' &&
+    query.select?.length === 0 &&
     !query.after &&
     (!query.where || query.where.length === 0) &&
     (!query.order || query.order.length === 0) &&
@@ -1348,7 +1347,7 @@ function isIdQuery(query: CollectionQuery) {
   );
 }
 
-async function resolveIdQuery(
+async function resolveCountQuery(
   tx: TripleStoreApi,
   query: CollectionQuery,
   executionContext: FetchExecutionContext,
@@ -1405,12 +1404,12 @@ export async function loadQuery<
   options: FetchFromStorageOptions
 ): Promise<string[]> {
   if (
-    isIdQuery(
+    isCountQuery(
       // @ts-expect-error
       query
     )
   ) {
-    return resolveIdQuery(
+    return resolveCountQuery(
       tx,
       // @ts-expect-error
       query,
