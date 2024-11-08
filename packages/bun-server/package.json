@@ -1,9 +1,12 @@
 {
   "name": "bun-server",
+  "version": "0.4.29",
   "module": "index.ts",
   "type": "module",
   "scripts": {
-    "start": "bun ./index.ts"
+    "start": "bun ./index.ts",
+    "publish": "./scripts/publish.sh",
+    "check-and-publish": "node ./scripts/docker-check-version-and-publish.js"
   },
   "devDependencies": {
     "@types/bun": "latest"

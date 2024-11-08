@@ -3,7 +3,7 @@
   "packageManager": "yarn@3.4.1",
   "private": true,
   "type": "module",
-  "version": "0.3.102",
+  "version": "0.4.29",
   "scripts": {
     "start": "node ./run.js",
     "publish": "./scripts/publish.sh",

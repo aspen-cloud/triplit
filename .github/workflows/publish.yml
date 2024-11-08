@@ -60,8 +60,14 @@ jobs:
           username: ${{ secrets.DOCKER_HUB_USERNAME }}
           password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
 
-      - name: Install
+      - name: Install Node server dependencies
         run: cd packages/node-server && yarn workspaces focus --production
 
-      - name: Build and push Docker image
+      - name: Build and push Node server Docker image
         run: cd packages/node-server && PROJECTS_ADMIN_API_URL=${{secrets.PROJECTS_ADMIN_API_URL}} PROJECTS_ADMIN_API_KEY=${{secrets.PROJECTS_ADMIN_API_KEY}} yarn check-and-publish
+
+      - name: Install Bun server dependencies
+        run: cd packages/bun-server && yarn workspaces focus --production
+
+      - name: Build and push Bun server Docker image
+        run: cd packages/bun-server && PROJECTS_ADMIN_API_URL=${{secrets.PROJECTS_ADMIN_API_URL}} PROJECTS_ADMIN_API_KEY=${{secrets.PROJECTS_ADMIN_API_KEY}} yarn check-and-publish
