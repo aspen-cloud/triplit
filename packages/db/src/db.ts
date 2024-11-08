@@ -1177,15 +1177,9 @@ export default class DB<M extends Models = Models> {
       return queryId;
     };
 
-    // const unregisterQuery = async (query: CollectionQuery<M>) => {
     const unregisterQuery = async (id: string) => {
       await this.storageReady;
 
-      // const schema = (await this.getSchema())?.collections as M;
-      // const preparedQuery = prepareQuery(query, schema, {
-      //   roles: this.sessionRoles,
-      // });
-      // const queryId = hashQuery(preparedQuery as any);
       const queryId = id;
       if (this.syncQueries.has(queryId)) {
         const syncQuery = this.syncQueries.get(queryId)!;
