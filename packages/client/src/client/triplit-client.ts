@@ -1180,8 +1180,8 @@ export class TriplitClient<M extends ClientSchema = ClientSchema> {
    * @param callback
    * @returns a function removing the listener callback
    */
-  onTxFailureRemote(txId: string, callback: () => void) {
-    return this.syncEngine.onTxFailure(txId, callback);
+  onTxFailureRemote(...args: Parameters<typeof this.syncEngine.onTxFailure>) {
+    return this.syncEngine.onTxFailure(...args);
   }
 
   /**
