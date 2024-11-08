@@ -188,10 +188,10 @@ export async function safeSchemaEdit(
   const { txId, output, isCanceled } = transaction;
   if (txId && !isCanceled) {
     const promise = new Promise<void>((resolve, reject) => {
-      client.syncEngine.onTxCommit(txId, () => {
+      client.onTxCommitRemote(txId, () => {
         resolve();
       });
-      client.syncEngine.onTxFailure(txId, (e) => {
+      client.onTxFailureRemote(txId, (e) => {
         reject(e);
       });
     });

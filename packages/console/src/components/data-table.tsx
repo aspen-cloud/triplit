@@ -183,6 +183,8 @@ function CellValue(props: {
     );
   if (definition.type === 'date' && value instanceof Date)
     return (value as Date).toISOString();
+  if (typeof value === 'number')
+    return value.toLocaleString(undefined, { maximumFractionDigits: 3 });
   return JSON.stringify(value, null, 2);
 }
 
@@ -679,14 +681,7 @@ function DateInput(props: InputProps) {
 export function DataTable<TData, TValue>({
   columns,
   data,
-  onLoadMore,
-  showLoadMore,
-  loadMoreDisabled,
-}: DataTableProps<TData, TValue> & {
-  onLoadMore?: () => void;
-  showLoadMore?: boolean;
-  loadMoreDisabled?: boolean;
-}) {
+}: DataTableProps<TData, TValue>) {
   const table = useReactTable({
     data,
     columns,
@@ -702,11 +697,10 @@ export function DataTable<TData, TValue>({
 
   return (
     <Table
-      className="bg-popover text-xs border-r border-t flex flex-col h-full"
-      wrapperClassName="pb-8"
+      className="bg-popover text-xs border-r "
       style={{ width: table.getCenterTotalSize() }}
     >
-      <TableHeader>
+      <TableHeader className="sticky top-0 bg-popover border-t">
         {table.getHeaderGroups().map((headerGroup) => (
           <TableRow key={headerGroup.id} className={``}>
             {headerGroup.headers.map((header, index) => {
@@ -752,23 +746,10 @@ export function DataTable<TData, TValue>({
           })
         ) : (
           <TableRow className="bg-popover hover:bg-inherit">
-            <TableCell
-              colSpan={columns.length}
-              className="h-24 w-full text-center text-muted-foreground"
-            >
+            <TableCell className="w-full text-left text-muted-foreground">
               No results
             </TableCell>
           </TableRow>
-        )}
-        {showLoadMore && (
-          <Button
-            className="w-full rounded-none"
-            variant={'secondary'}
-            onClick={onLoadMore}
-            disabled={loadMoreDisabled}
-          >
-            Load more
-          </Button>
         )}
       </TableBody>
     </Table>

@@ -22,21 +22,13 @@ type DeleteEntitiesDialogProps = {
   collectionName: string;
   permissions?: CollectionPermissions<any, any>;
   client: TriplitClient<any>;
+  onDialogConfirm: () => void;
 };
-
-async function deleteEntities(
-  client: TriplitClient<any>,
-  collectionName: string,
-  entityIds: string[]
-) {
-  await client.transact(async (tx) => {
-    await Promise.all(entityIds.map((id) => tx.delete(collectionName, id)));
-  });
-}
 
 export function DeleteEntitiesDialog(props: DeleteEntitiesDialogProps) {
   const [open, setOpen] = useState(false);
-  const { collectionName, client, entityIds, permissions } = props;
+  const { collectionName, client, entityIds, permissions, onDialogConfirm } =
+    props;
   return (
     <AlertDialog open={open} onOpenChange={setOpen}>
       <AlertDialogTrigger asChild>
@@ -70,11 +62,7 @@ export function DeleteEntitiesDialog(props: DeleteEntitiesDialogProps) {
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel>Cancel</AlertDialogCancel>
-          <AlertDialogAction
-            onClick={async () => {
-              await deleteEntities(client, collectionName, entityIds);
-            }}
-          >
+          <AlertDialogAction onClick={onDialogConfirm}>
             Delete
           </AlertDialogAction>
         </AlertDialogFooter>

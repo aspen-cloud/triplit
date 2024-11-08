@@ -40,6 +40,8 @@ if (typeof window !== 'undefined') window.client = consoleClient;
 
 const PAGE_SIZE = 25;
 
+const LOAD_MORE_OPTIONS = [25, 50, 100];
+
 export function DataViewer({
   client,
   schema,
@@ -183,6 +185,16 @@ export function DataViewer({
                 entityIds={[...selectedEntities.keys()]}
                 collectionName={selectedCollection}
                 client={client}
+                onDialogConfirm={async () => {
+                  await client.transact(async (tx) => {
+                    await Promise.all(
+                      Array.from(selectedEntities).map((id) =>
+                        tx.delete(selectedCollection, id)
+                      )
+                    );
+                  });
+                  setSelectedEntities(new Set());
+                }}
               />
             )}
           </TriplitColumnHeader>
@@ -390,7 +402,7 @@ export function DataViewer({
   }, [orderedAndFilteredResults]);
 
   return (
-    <div className="flex flex-col max-w-full items-start h-screen overflow-hidden">
+    <div className="flex flex-col max-w-full items-start h-full overflow-hidden">
       {flattenedCollectionSchema && (
         <>
           <SchemaAttributeSheet
@@ -438,7 +450,7 @@ export function DataViewer({
           />
         </>
       )}
-      <h3 className="px-4 mt-5 mb-1 text-2xl font-semibold tracking-tight flex flex-row gap-2">
+      {/* <h3 className="px-4 mt-5 mb-1 text-2xl font-semibold tracking-tight flex flex-row gap-2">
         {selectedCollection}
         {schema && (
           <CollectionMenu
@@ -451,8 +463,10 @@ export function DataViewer({
             }}
           />
         )}
-      </h3>
+      </h3> */}
       <div className="flex flex-row gap-4 p-4 items-center">
+        <span className="text-lg font-bold">{selectedCollection}</span>
+
         <FiltersPopover
           filters={filters}
           uniqueAttributes={uniqueAttributes}
@@ -472,25 +486,6 @@ export function DataViewer({
             setQuery({ order });
           }}
         />
-        <div className="flex flex-row gap-2 items-center text-sm">
-          <div className="whitespace-nowrap">Page size</div>
-          <Select
-            className="h-7"
-            onValueChange={(v) => {
-              setPageSize(Number(v));
-            }}
-            value={String(pageSize)}
-            data={['25', '50', '100']}
-          />
-        </div>
-        {!!orderedAndFilteredResults?.length && (
-          <div className="text-sm">{`Showing ${orderedAndFilteredResults.length}
-          ${
-            stats && !filters?.length
-              ? ` of ${parseTotalEstimate(stats.numEntities)}`
-              : ''
-          } entities`}</div>
-        )}
 
         <CreateEntitySheet
           key={selectedCollection}
@@ -500,15 +495,36 @@ export function DataViewer({
           client={client}
         />
       </div>
-      {
-        <DataTable
-          columns={columns}
-          data={flatFilteredEntities ?? []}
-          showLoadMore={hasMore}
-          loadMoreDisabled={fetchingMore || !hasMore}
-          onLoadMore={loadMore}
-        />
-      }
+      <div className="relative overflow-auto max-w-full h-full w-full">
+        <DataTable columns={columns} data={flatFilteredEntities ?? []} />
+      </div>
+      <div className="flex flex-row gap-7 items-center p-2 pl-4 text-xs text-muted-foreground">
+        {!!orderedAndFilteredResults && (
+          <div className="whitespace-nowrap">{`Showing ${
+            orderedAndFilteredResults.length
+          }
+          ${
+            stats && !filters?.length
+              ? ` of ${parseTotalEstimate(stats.numEntities)}`
+              : ''
+          } entities`}</div>
+        )}
+        <div className="flex flex-row gap-1 items-center">
+          <div>Load more:</div>
+          {LOAD_MORE_OPTIONS.map((option) => (
+            <Button
+              variant={'secondary'}
+              className="h-auto py-1 text-xs px-1.5"
+              onClick={() => {
+                loadMore(option);
+              }}
+              disabled={!hasMore || fetchingMore}
+            >
+              {String(option)}
+            </Button>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }
