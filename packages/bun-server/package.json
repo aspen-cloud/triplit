@@ -1,6 +1,6 @@
 {
   "name": "bun-server",
-  "version": "0.4.29",
+  "version": "0.4.30",
   "module": "index.ts",
   "type": "module",
   "scripts": {
@@ -15,7 +15,7 @@
     "typescript": "^5.0.0"
   },
   "dependencies": {
-    "@triplit/server": "0.4.29",
+    "@triplit/server": "0.4.30",
     "hono": "^4.6.9"
   }
 }

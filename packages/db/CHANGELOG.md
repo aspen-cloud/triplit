@@ -1,5 +1,11 @@
 # @triplit/db
 
+## 0.5.6
+
+### Patch Changes
+
+- dd8278d1: Fixup select: ['id'] query results
+
 ## 0.5.5
 
 ### Patch Changes
