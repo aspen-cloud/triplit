@@ -1,5 +1,11 @@
 # bun-server
 
+## 0.4.31
+
+### Patch Changes
+
+- 7698ec5d: add missing dep
+
 ## 0.4.30
 
 ### Patch Changes
