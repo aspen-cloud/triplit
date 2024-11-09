@@ -1,5 +1,12 @@
 # @triplit/server
 
+## 0.4.32
+
+### Patch Changes
+
+- dfcabc47: manual version bump
+- eea4f952: manual version bump
+
 ## 0.4.30
 
 ### Patch Changes
