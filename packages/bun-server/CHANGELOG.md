@@ -1,5 +1,14 @@
 # bun-server
 
+## 0.4.32
+
+### Patch Changes
+
+- dfcabc47: manual version bump
+- Updated dependencies [dfcabc47]
+- Updated dependencies [eea4f952]
+  - @triplit/server@0.4.32
+
 ## 0.4.31
 
 ### Patch Changes
