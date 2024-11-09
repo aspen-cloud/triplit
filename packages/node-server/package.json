@@ -10,7 +10,7 @@
     "check-and-publish": "node ./scripts/docker-check-version-and-publish.js"
   },
   "dependencies": {
-    "@triplit/server": "0.4.30",
+    "@triplit/server": "0.4.31",
     "better-sqlite3": "^8.3.0"
   },
   "devDependencies": {
