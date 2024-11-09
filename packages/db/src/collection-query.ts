@@ -1666,9 +1666,9 @@ function entitySatisfiesAllFilters(
 export type CollectionQuerySchema<Q extends CollectionQuery<any, any>> =
   Q extends CollectionQuery<infer M, infer CN> ? ModelFromModels<M, CN> : never;
 
-function isQueryRelational(
+export function isQueryRelational(
   query: CollectionQuery<any, any>,
-  options: FetchFromStorageOptions
+  options: Pick<FetchFromStorageOptions, 'schema'>
 ) {
   const { where, include, order } = query;
   return !!(
@@ -1782,7 +1782,7 @@ export async function subscribeEntities<
   };
 }
 
-async function applyTriplesToSubscribedQuery<
+export async function applyTriplesToSubscribedQuery<
   M extends Models,
   Q extends CollectionQuery<M>
 >(
@@ -1797,7 +1797,6 @@ async function applyTriplesToSubscribedQuery<
 }> {
   const { order, limit, collectionName } = query;
   let where = query.where;
-  const sessionOptions = { ...options.session };
   const model = options.schema?.[collectionName]?.schema;
 
   // Inserts should represent most changes
@@ -1904,7 +1903,6 @@ async function applyTriplesToSubscribedQuery<
     }
 
     const isInNextResult = matchesFilters && satisfiesLimitRange;
-
     // Entering => add to result set, send change triples
     if (!isInPreviousResult && isInNextResult) {
       nextResult.set(entityId, entity);
@@ -2142,7 +2140,7 @@ export function subscribeTriples<
   onError?: (error: any) => void | Promise<void>
 ) {
   if (query.limit != undefined && !isQueryRelational(query, options)) {
-    const { unsubscribe } = subscribeEntities<M, Q>(
+    const unsubPromise = subscribeEntities<M, Q>(
       tripleStore,
       query,
       options,
@@ -2151,7 +2149,10 @@ export function subscribeTriples<
       },
       onError
     );
-    return unsubscribe;
+    return async () => {
+      const unsub = await unsubPromise;
+      unsub.unsubscribe();
+    };
   }
   const asyncUnSub = async () => {
     let triples: TripleRow[] = [];

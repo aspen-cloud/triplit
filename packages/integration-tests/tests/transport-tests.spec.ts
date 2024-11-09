@@ -1751,17 +1751,17 @@ describe('pagination syncing', () => {
         .map(([id]) => id)
     );
     // insert new todo
-    const new_id = 'inserted';
-    const date = '2021-01-05T00:00:00.001Z';
+    const NEW_ID = 'inserted';
+    const DATE = '2021-01-05T00:00:00.001Z';
     await alice.insert('todos', {
       text: 'todo',
-      created_at: new Date(date),
-      id: new_id,
+      created_at: new Date(DATE),
+      id: NEW_ID,
     });
     await pause(150);
     expect(bobSub.mock.calls.at(-1)[0]).toHaveLength(5);
     expect([...bobSub.mock.calls.at(-1)[0].map((e: any) => e.id)]).toEqual([
-      new_id,
+      NEW_ID,
       ...datesInASCOrder
         .slice()
         .reverse()
@@ -1769,8 +1769,8 @@ describe('pagination syncing', () => {
         .map(([id]) => id),
     ]);
     // delete a todo
-    await alice.delete('todos', new_id);
-    await pause();
+    await alice.delete('todos', NEW_ID);
+    await pause(200);
     expect(bobSub.mock.calls.at(-1)[0]).toHaveLength(5);
     expect([...bobSub.mock.calls.at(-1)[0].map((e: any) => e.id)]).toEqual(
       datesInASCOrder

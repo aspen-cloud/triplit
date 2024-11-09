@@ -23,6 +23,8 @@ import CollectionQueryBuilder, {
   getEntitiesBeforeAndAfterNewTriples,
   doesEntityMatchBasicWhere,
   loadSubquery,
+  isQueryRelational,
+  applyTriplesToSubscribedQuery,
 } from './collection-query.js';
 import { COLLECTION_ATTRIBUTE, Entity, updateEntity } from './entity.js';
 import { MemoryBTreeStorage } from './storage/memory-btree.js';
@@ -73,6 +75,7 @@ import {
 } from './db/types/operations.js';
 import { generatePsuedoRandomId } from './utils/random.js';
 import {
+  getEntitiesFromContext,
   getResultTriplesFromContext,
   getSyncTriplesFromContext,
 } from './query/result-parsers.js';
@@ -384,7 +387,13 @@ export default class DB<M extends Models = Models> {
       connectionIds: Set<string>;
       query: CollectionQuery<any, any>;
       queryPermutations: CollectionQuery<any, any>[];
-    }
+    } & (
+      | { type: 'fetch-delta-triples' }
+      | {
+          type: 'ivm';
+          results: Map<string, Entity>;
+        }
+    )
   > = new Map();
   private connectionCallbacks: Map<
     string,
@@ -496,6 +505,33 @@ export default class DB<M extends Models = Models> {
           (ops) => ops.inserts
         );
         await this.updateSubscriptionsWithNewTriples(newTriples);
+        // currently handle IVM queries separately
+        for (const [queryId, syncQueryMetadata] of this.syncQueries) {
+          if (syncQueryMetadata.type !== 'ivm') continue;
+          const { results, connectionIds } = syncQueryMetadata;
+          const update = await applyTriplesToSubscribedQuery(
+            this.tripleStore,
+            {
+              schema: this.getSchemaSync(true)?.collections,
+              session: {
+                systemVars: this.systemVars,
+                roles: this.sessionRoles,
+              },
+            },
+            results,
+            storeWrites,
+            syncQueryMetadata.query
+          );
+          syncQueryMetadata.results = update.results;
+          const deltaTriples = Array.from(update.deltaTriples.values()).flat();
+          if (deltaTriples.length > 0) {
+            for (const connectionId of connectionIds) {
+              const connection = this.connectionCallbacks.get(connectionId);
+              if (!connection) continue;
+              connection.onResults(deltaTriples, [queryId]);
+            }
+          }
+        }
       });
     });
   }
@@ -1119,11 +1155,23 @@ export default class DB<M extends Models = Models> {
       } else {
         const queryPermutations =
           generateQueryRootPermutations(subscriptionQuery);
-
+        const shouldUseIVM =
+          query.limit != undefined &&
+          !isQueryRelational(query, {
+            schema: schema,
+          });
         this.syncQueries.set(queryId, {
           connectionIds: new Set([connectionId]),
           query: subscriptionQuery,
           queryPermutations,
+          ...(shouldUseIVM
+            ? {
+                results: new Map(),
+                type: 'ivm',
+              }
+            : {
+                type: 'fetch-delta-triples',
+              }),
         });
       }
       (async () => {
@@ -1167,6 +1215,16 @@ export default class DB<M extends Models = Models> {
                 executionContext
               ).values()
             ).flat();
+
+            if (this.syncQueries.get(queryId)?.type === 'ivm') {
+              // @ts-expect-error
+              this.syncQueries.get(queryId)!.results = getEntitiesFromContext(
+                // @ts-expect-error
+                subscriptionQuery,
+                resultOrder,
+                executionContext
+              );
+            }
           }
         } catch (e) {
           console.error(e);
@@ -1245,8 +1303,11 @@ export default class DB<M extends Models = Models> {
             relationships: {},
           });
         }
-        for (const [id, { query, connectionIds, queryPermutations }] of this
-          .syncQueries) {
+        for (const [
+          id,
+          { query, connectionIds, queryPermutations, type },
+        ] of this.syncQueries) {
+          if (type !== 'fetch-delta-triples') continue;
           for (const queryPermutation of queryPermutations) {
             if (
               queryPermutation.collectionName !==

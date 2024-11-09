@@ -1667,6 +1667,7 @@ describe('database transactions', () => {
       });
       expect(insertSpy).not.toHaveBeenCalled();
     });
+    await pause(10);
     expect(insertSpy).toHaveBeenCalledTimes(1);
   });
 
