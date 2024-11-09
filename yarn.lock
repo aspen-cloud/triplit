@@ -11566,7 +11566,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/semver@npm:^7.3.12":
+"@types/semver@npm:^7.3.12, @types/semver@npm:^7.5.8":
   version: 7.5.8
   resolution: "@types/semver@npm:7.5.8"
   checksum: 10/3496808818ddb36deabfe4974fd343a78101fa242c4690044ccdc3b95dcf8785b494f5d628f2f47f38a702f8db9c53c67f47d7818f2be1b79f2efb09692e1178
@@ -14548,7 +14548,9 @@ __metadata:
   dependencies:
     "@triplit/server": "npm:0.4.30"
     "@types/bun": "npm:latest"
+    "@types/semver": "npm:^7.5.8"
     hono: "npm:^4.6.9"
+    semver: "npm:^7.6.3"
   peerDependencies:
     typescript: ^5.0.0
   languageName: unknown
@@ -29237,7 +29239,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"semver@npm:^7.0.0, semver@npm:^7.1.1, semver@npm:^7.3.6":
+"semver@npm:^7.0.0, semver@npm:^7.1.1, semver@npm:^7.3.6, semver@npm:^7.6.3":
   version: 7.6.3
   resolution: "semver@npm:7.6.3"
   bin:
