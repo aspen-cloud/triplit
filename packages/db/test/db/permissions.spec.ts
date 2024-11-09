@@ -506,7 +506,7 @@ describe('Read', () => {
     }
   });
 
-  it.only("will throw an error if you add a permissions with a role variable that doesn't exist", async () => {
+  it("will throw an error if you add a permissions with a role variable that doesn't exist", async () => {
     const schema = {
       roles: {
         authenticated: {
