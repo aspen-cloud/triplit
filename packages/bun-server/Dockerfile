@@ -10,4 +10,4 @@ COPY . .
 
 EXPOSE 8080
 
-ENTRYPOINT [ "bun", "run", "index.ts" ]
+ENTRYPOINT [ "bun", "run", "./index.ts" ]
