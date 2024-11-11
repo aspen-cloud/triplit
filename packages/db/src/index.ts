@@ -60,6 +60,7 @@ export {
   JSONToSchema,
   hashSchemaJSON,
   getSchemaFromPath,
+  getDefaultValuesForCollection,
 } from './schema/schema.js';
 export {
   getRolesFromSession,

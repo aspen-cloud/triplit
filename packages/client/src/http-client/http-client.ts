@@ -20,6 +20,7 @@ import {
   FetchResultEntity,
   CollectionQueryDefault,
   Models,
+  getDefaultValuesForCollection,
 } from '@triplit/db';
 import { ClientSchema } from '../client/types';
 import { httpClientQueryBuilder } from './query-builder.js';
@@ -144,18 +145,22 @@ export class HttpClient<M extends ClientSchema = ClientSchema> {
   ) {
     // we need to convert Sets to arrays before sending to the server
     const schema = await this.schema();
-    const collectionSchema = schema?.[collectionName]?.schema;
+    const collectionSchema = schema?.[collectionName];
+
+    const defaultValues = schema?.[collectionName]
+      ? getDefaultValuesForCollection(schema?.[collectionName])
+      : {};
+
+    // Append defaults
+    const inputWithDefaults = {
+      ...defaultValues,
+      ...object,
+    };
+
     const jsonEntity = collectionSchema
-      ? Object.fromEntries(
-          Object.entries(object).map(([attribute, value]) => [
-            attribute,
-            collectionSchema.properties[attribute].convertJSToJSON(
-              value,
-              schema
-            ),
-          ])
-        )
-      : object;
+      ? //@ts-expect-error
+        collectionSchema?.schema.convertJSToJSON(inputWithDefaults, schema)
+      : inputWithDefaults;
     const { data, error } = await this.sendRequest('/insert', 'POST', {
       collectionName,
       entity: jsonEntity,
