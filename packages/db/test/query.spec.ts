@@ -1,6 +1,10 @@
 import { describe, expect, it, beforeEach, beforeAll, vi } from 'vitest';
 import { generateQueryRootPermutations } from '../src/collection-query.js';
 import DB from '../src/index.js';
+import { Schema as S } from '../src/schema/builder.js';
+import { schemaToJSON } from '../src/schema/export/index.js';
+import { or } from '../src/query.js';
+import { prepareQuery } from '../src/query/prepare.js';
 
 describe('query root permutations', () => {
   it('can generate a permutation for each subquery filter', () => {
@@ -79,6 +83,50 @@ describe('query builder', () => {
       ['name', 'ASC'],
       ['age', 'ASC'],
     ]);
+  });
+});
+
+// TODO: add more tests, move tests here
+describe('prepare query', () => {
+  describe('where', () => {
+    it.only('prepare query doesnt edit schema', async () => {
+      const schema = {
+        collections: {
+          profiles: {
+            schema: S.Schema({
+              id: S.Id(),
+              userId: S.String(),
+              user: S.RelationById('users', '$userId'),
+            }),
+            permissions: {
+              test_role: {
+                read: {
+                  filter: [
+                    or([
+                      ['user.name', '=', 'Matt'],
+                      ['user.name', '=', 'Will'],
+                      ['user.name', '=', 'Phil'],
+                    ]),
+                  ],
+                },
+              },
+            },
+          },
+          users: {
+            schema: S.Schema({
+              id: S.Id(),
+              name: S.String(),
+            }),
+          },
+        },
+        version: 0,
+      };
+      const schemaCopy = schemaToJSON(schema);
+      prepareQuery({ collectionName: 'profiles' }, schema.collections, {
+        roles: [{ key: 'test_role', roleVars: {} }],
+      });
+      expect(schemaToJSON(schema)).toEqual(schemaCopy);
+    });
   });
 });
 

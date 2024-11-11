@@ -548,8 +548,9 @@ function mapFilterStatements<
 ): QueryWhere<M, CN> {
   return statements.map((statement) => {
     if (isFilterGroup(statement)) {
-      statement.filters = mapFilterStatements(statement.filters, mapFunction);
-      return statement;
+      const group = { ...statement };
+      group.filters = mapFilterStatements(group.filters, mapFunction);
+      return group;
     }
     return mapFunction(statement);
   });
