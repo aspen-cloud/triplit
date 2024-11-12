@@ -499,41 +499,46 @@ export default class DB<M extends Models = Models> {
     this.ready = Promise.all([this.storageReady, this.schemaInitialized]).then(
       () => this.logger.debug('Ready')
     );
-    this.ready.then(() => {
-      this.tripleStore.onWrite(async (storeWrites) => {
-        const newTriples = Object.values(storeWrites).flatMap(
-          (ops) => ops.inserts
-        );
-        await this.updateSubscriptionsWithNewTriples(newTriples);
-        // currently handle IVM queries separately
-        for (const [queryId, syncQueryMetadata] of this.syncQueries) {
-          if (syncQueryMetadata.type !== 'ivm') continue;
-          const { results, connectionIds } = syncQueryMetadata;
-          const update = await applyTriplesToSubscribedQuery(
-            this.tripleStore,
-            {
-              schema: this.getSchemaSync(true)?.collections,
-              session: {
-                systemVars: this.systemVars,
-                roles: this.sessionRoles,
-              },
-            },
-            results,
-            storeWrites,
-            syncQueryMetadata.query
+
+    this.ready
+      .catch(() => {})
+      .then(() => {
+        this.tripleStore.onWrite(async (storeWrites) => {
+          const newTriples = Object.values(storeWrites).flatMap(
+            (ops) => ops.inserts
           );
-          syncQueryMetadata.results = update.results;
-          const deltaTriples = Array.from(update.deltaTriples.values()).flat();
-          if (deltaTriples.length > 0) {
-            for (const connectionId of connectionIds) {
-              const connection = this.connectionCallbacks.get(connectionId);
-              if (!connection) continue;
-              connection.onResults(deltaTriples, [queryId]);
+          await this.updateSubscriptionsWithNewTriples(newTriples);
+          // currently handle IVM queries separately
+          for (const [queryId, syncQueryMetadata] of this.syncQueries) {
+            if (syncQueryMetadata.type !== 'ivm') continue;
+            const { results, connectionIds } = syncQueryMetadata;
+            const update = await applyTriplesToSubscribedQuery(
+              this.tripleStore,
+              {
+                schema: this.getSchemaSync(true)?.collections,
+                session: {
+                  systemVars: this.systemVars,
+                  roles: this.sessionRoles,
+                },
+              },
+              results,
+              storeWrites,
+              syncQueryMetadata.query
+            );
+            syncQueryMetadata.results = update.results;
+            const deltaTriples = Array.from(
+              update.deltaTriples.values()
+            ).flat();
+            if (deltaTriples.length > 0) {
+              for (const connectionId of connectionIds) {
+                const connection = this.connectionCallbacks.get(connectionId);
+                if (!connection) continue;
+                connection.onResults(deltaTriples, [queryId]);
+              }
             }
           }
-        }
+        });
       });
-    });
   }
 
   get sessionRoles() {
