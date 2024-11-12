@@ -89,7 +89,7 @@ describe('query builder', () => {
 // TODO: add more tests, move tests here
 describe('prepare query', () => {
   describe('where', () => {
-    it.only('prepare query doesnt edit schema', async () => {
+    it('prepare query doesnt edit schema', async () => {
       const schema = {
         collections: {
           profiles: {
