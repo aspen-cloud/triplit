@@ -1,5 +1,13 @@
 # @triplit/db
 
+## 0.5.7
+
+### Patch Changes
+
+- 9107e262: Unify underlying storage subscription handlers for query subscriptions
+- 0cc53c85: export getDefaultValuesForCollection helper function
+- cb785390: fixup prepareQuery editing inmemory schema
+
 ## 0.5.6
 
 ### Patch Changes
