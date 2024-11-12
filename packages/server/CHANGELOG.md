@@ -1,5 +1,17 @@
 # @triplit/server
 
+## 0.4.33
+
+### Patch Changes
+
+- 6f7f4dc9: Manual version bump
+- Updated dependencies [9107e262]
+- Updated dependencies [0cc53c85]
+- Updated dependencies [cb785390]
+  - @triplit/db@0.5.7
+  - @triplit/client@0.5.16
+  - @triplit/server-core@0.5.10
+
 ## 0.4.32
 
 ### Patch Changes

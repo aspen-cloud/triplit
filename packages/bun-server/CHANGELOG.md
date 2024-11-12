@@ -1,5 +1,13 @@
 # bun-server
 
+## 0.4.33
+
+### Patch Changes
+
+- 6f7f4dc9: fixup docker file
+- Updated dependencies [6f7f4dc9]
+  - @triplit/server@0.4.33
+
 ## 0.4.32
 
 ### Patch Changes
