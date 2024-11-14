@@ -682,3 +682,141 @@ describe('subscriptions with variables', () => {
 });
 
 it.todo('Can subscribe to limit without order, uses id as backup');
+
+it('delta triples OR statments', async () => {
+  const query = {
+    collectionName: 'messages',
+    where: [
+      {
+        mod: 'or',
+        filters: [
+          {
+            mod: 'and',
+            filters: [
+              {
+                exists: {
+                  collectionName: 'groups',
+                  where: [
+                    ['id', '=', '$1.group_id'],
+                    {
+                      exists: {
+                        collectionName: 'members',
+                        where: [
+                          ['group_id', '=', '$1.id'],
+                          ['user_id', '=', '$session.user_id'],
+                          ['role', '=', 'member'],
+                        ],
+                      },
+                    },
+                  ],
+                },
+              },
+              ['deleted_at', '=', null],
+            ],
+          },
+          {
+            exists: {
+              collectionName: 'groups',
+              where: [
+                ['id', '=', '$1.group_id'],
+                {
+                  exists: {
+                    collectionName: 'members',
+                    where: [
+                      ['group_id', '=', '$1.id'],
+                      ['user_id', '=', '$session.user_id'],
+                      ['role', '=', 'admin'],
+                    ],
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    ],
+  };
+
+  const db = new DB();
+  await db.insert('users', { id: 'alice', name: 'Alice' });
+  await db.insert('users', { id: 'bob', name: 'Bob' });
+  await db.insert('users', { id: 'charlie', name: 'Charlie' });
+  await db.insert('users', { id: 'david', name: 'David' });
+  await db.insert('groups', { id: '1' });
+  await db.insert('groups', { id: '2' });
+  await db.insert('groups', { id: '3' });
+  await db.insert('members', {
+    id: '1_alice',
+    group_id: '1',
+    user_id: 'alice',
+    role: 'admin',
+  });
+  await db.insert('members', {
+    id: '1_bob',
+    group_id: '1',
+    user_id: 'bob',
+    role: 'member',
+  });
+  await db.insert('members', {
+    id: '2_bob',
+    group_id: '2',
+    user_id: 'bob',
+    role: 'admin',
+  });
+  await db.insert('members', {
+    id: '2_charlie',
+    group_id: '2',
+    user_id: 'charlie',
+    role: 'member',
+  });
+  await db.insert('members', {
+    id: '3_charlie',
+    group_id: '3',
+    user_id: 'charlie',
+    role: 'admin',
+  });
+  await db.insert('members', {
+    id: '3_david',
+    group_id: '3',
+    user_id: 'david',
+    role: 'member',
+  });
+
+  const aliceDB = db.withSessionVars({ user_id: 'alice' });
+
+  await testSubscriptionTriples(aliceDB, query, [
+    {
+      check: (data) => {
+        expect(data.length).toBe(0);
+      },
+    },
+    {
+      action: async () => {
+        await db.insert('messages', {
+          id: '1',
+          group_id: '1',
+          author_id: 'alice',
+          text: 'Hello',
+          deleted_at: null,
+        });
+      },
+      check: (data) => {
+        expect(data.length).toBeGreaterThan(0);
+      },
+    },
+    {
+      action: async () => {
+        await db.insert('messages', {
+          id: '2',
+          group_id: '2',
+          author_id: 'bob',
+          text: 'Hello',
+          deleted_at: null,
+        });
+      },
+      noopTimeout: 500,
+      check: (data) => {},
+    },
+  ]);
+});
+

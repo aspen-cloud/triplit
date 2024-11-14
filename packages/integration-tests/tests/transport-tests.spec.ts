@@ -2363,16 +2363,17 @@ describe('permissions', () => {
     'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJib2IiLCJ4LXRyaXBsaXQtcHJvamVjdC1pZCI6InRvZG9zIiwiaWF0IjoxNjk3NDc5MDI3fQ.S9lOFgpUnUnZuX19bzxkEnyoPDQ4oscpWmwA_NkEW5g';
 
   describe('insert', async () => {
-    const server = new TriplitServer(new DB({ schema: SCHEMA }));
-    const alice = createTestClient(server, ALICE_TOKEN, {
-      clientId: 'alice',
-      schema: SCHEMA.collections,
-    });
-    const bob = createTestClient(server, BOB_TOKEN, {
-      clientId: 'bob',
-      schema: SCHEMA.collections,
-    });
     it('restricts groupChat insertions', async () => {
+      const server = new TriplitServer(new DB({ schema: SCHEMA }));
+      const alice = createTestClient(server, ALICE_TOKEN, {
+        clientId: 'alice',
+        schema: SCHEMA.collections,
+      });
+      const bob = createTestClient(server, BOB_TOKEN, {
+        clientId: 'bob',
+        schema: SCHEMA.collections,
+      });
+
       const aliceSub = vi.fn();
       const bobSub = vi.fn();
       alice.subscribe(alice.query('groupChats').build(), aliceSub);
@@ -2380,91 +2381,136 @@ describe('permissions', () => {
 
       await pause();
 
-      const { txId: aliceTx } = await alice.insert('groupChats', {
-        id: 'chat1',
-        memberIds: new Set(['alice']),
-        name: 'chat1',
-        adminId: 'alice',
-      });
-      const aliceErrorSub = vi.fn();
-      alice.onTxFailureRemote(aliceTx!, aliceErrorSub);
+      // Alice can insert a group chat where she is a member
+      {
+        const { txId: aliceTx } = await alice.insert('groupChats', {
+          id: 'chat1',
+          memberIds: new Set(['alice']),
+          name: 'chat1',
+          adminId: 'alice',
+        });
+        alice.onTxFailureRemote(aliceTx!, throwOnError);
+        await pause();
+        expect(aliceSub).toHaveBeenCalled();
+        expect(aliceSub.mock.calls.at(-1)?.[0]).toHaveLength(1);
+        expect(bobSub).toHaveBeenCalled();
+        expect(bobSub.mock.calls.at(-1)?.[0]).toHaveLength(0);
+      }
 
-      await pause();
-
-      expect(aliceErrorSub).not.toHaveBeenCalled();
-      expect(aliceSub).toHaveBeenCalled();
-      expect(aliceSub.mock.calls.at(-1)?.[0]).toHaveLength(1);
-      expect(bobSub).toHaveBeenCalled();
-      expect(bobSub.mock.calls.at(-1)?.[0]).toHaveLength(0);
-      const { txId } = await bob.insert('groupChats', {
-        id: 'chat2',
-        memberIds: new Set(['alice']),
-        name: 'chat2',
-        adminId: 'alice',
-      });
-      const bobErrorSub = vi.fn();
-      bob.onTxFailureRemote(txId!, bobErrorSub);
-      await pause();
-      expect(bobErrorSub).toHaveBeenCalled();
+      // Bob cannot insert a group chat where he is not a member
+      {
+        const { txId } = await bob.insert('groupChats', {
+          id: 'chat2',
+          memberIds: new Set(['alice']),
+          name: 'chat2',
+          adminId: 'alice',
+        });
+        const bobErrorSub = vi.fn();
+        bob.onTxFailureRemote(txId!, bobErrorSub);
+        await pause();
+        expect(bobErrorSub).toHaveBeenCalled();
+      }
     });
 
     it('restricts message insertions', async () => {
+      const server = new TriplitServer(new DB({ schema: SCHEMA }));
+      await server.db.insert(
+        'groupChats',
+        {
+          id: 'chat1',
+          memberIds: new Set(['alice']),
+          name: 'chat1',
+          adminId: 'alice',
+        },
+        { skipRules: true }
+      );
+      await server.db.insert(
+        'groupChats',
+        {
+          id: 'chat2',
+          memberIds: new Set(['alice', 'bob']),
+          name: 'chat2',
+          adminId: 'bob',
+        },
+        { skipRules: true }
+      );
+      const alice = createTestClient(server, ALICE_TOKEN, {
+        clientId: 'alice',
+        schema: SCHEMA.collections,
+      });
+      const bob = createTestClient(server, BOB_TOKEN, {
+        clientId: 'bob',
+        schema: SCHEMA.collections,
+      });
+
       const aliceSub = vi.fn();
       const bobSub = vi.fn();
       alice.subscribe(alice.query('messages').build(), aliceSub);
       bob.subscribe(bob.query('messages').build(), bobSub);
 
       await pause();
-      await alice.insert('messages', {
-        id: 'msg1',
-        groupId: 'chat1',
-        authorId: 'alice',
-        text: 'hello',
-      });
-      await pause();
-      // All group members get the messages in group
-      expect(aliceSub).toHaveBeenCalled();
-      expect(aliceSub.mock.calls.at(-1)?.[0]).toHaveLength(1);
-      expect(bobSub).toHaveBeenCalled();
-      expect(bobSub.mock.calls.at(-1)?.[0]).toHaveLength(1);
-      const { txId } = await bob.insert('messages', {
-        id: 'chat2',
-        groupId: 'chat1',
-        authorId: 'alice',
-        text: 'hello',
-      });
+
+      // Alice can insert a message in a group chat where she is a member
+      {
+        const { txId } = await alice.insert('messages', {
+          id: 'msg1',
+          groupId: 'chat1',
+          authorId: 'alice',
+          text: 'hello',
+        });
+        alice.onTxFailureRemote(txId!, throwOnError);
+        await pause();
+
+        // All group members get the messages in group
+        expect(aliceSub).toHaveBeenCalled();
+        expect(aliceSub.mock.calls.at(-1)?.[0]).toHaveLength(1);
+        expect(bobSub).toHaveBeenCalled();
+        expect(bobSub.mock.calls.at(-1)?.[0]).toHaveLength(0);
+      }
+
       const bobErrorSub = vi.fn();
-      bob.onTxFailureRemote(txId!, bobErrorSub);
-      await pause();
-      expect(bobErrorSub).toHaveBeenCalled();
-      bobErrorSub.mockClear();
-      const { txId: txId2 } = await bob.insert('messages', {
-        id: 'msg2',
-        groupId: 'chat1',
-        authorId: 'bob',
-        text: 'hello',
-      });
-      bob.onTxFailureRemote(txId2!, bobErrorSub);
-      await pause();
-      expect(bobErrorSub).toHaveBeenCalled();
+      // Bob cannot insert a message as alice
+      {
+        const { txId } = await bob.insert('messages', {
+          id: 'msg2',
+          groupId: 'chat2',
+          authorId: 'alice',
+          text: 'hello',
+        });
+        bob.onTxFailureRemote(txId!, bobErrorSub);
+        await pause();
+        expect(bobErrorSub).toHaveBeenCalled();
+        bobErrorSub.mockClear();
+      }
+
+      // Bob cannot insert a message into a group he is not a member of
+      {
+        const { txId } = await bob.insert('messages', {
+          id: 'msg4',
+          groupId: 'chat1',
+          authorId: 'bob',
+          text: 'hello',
+        });
+        bob.onTxFailureRemote(txId!, bobErrorSub);
+        await pause();
+        expect(bobErrorSub).toHaveBeenCalled();
+      }
     });
   });
 
   describe('update', async () => {
-    const serverDb = new DB({ schema: SCHEMA });
-    const server = new TriplitServer(serverDb);
-    const alice = createTestClient(server, ALICE_TOKEN, {
-      clientId: 'alice',
-      schema: SCHEMA.collections,
-    });
-    const bob = createTestClient(server, BOB_TOKEN, {
-      clientId: 'bob',
-      schema: SCHEMA.collections,
-    });
-
     it('restricts groupChat updates', async () => {
+      const server = new TriplitServer(new DB({ schema: SCHEMA }));
+      const alice = createTestClient(server, ALICE_TOKEN, {
+        clientId: 'alice',
+        schema: SCHEMA.collections,
+      });
+      const bob = createTestClient(server, BOB_TOKEN, {
+        clientId: 'bob',
+        schema: SCHEMA.collections,
+      });
       // Create a group chat
-      await serverDb.insert(
+      await server.db.insert(
         'groupChats',
         {
           id: 'chat1',
@@ -2498,6 +2544,28 @@ describe('permissions', () => {
     });
 
     it('restricts message updates', async () => {
+      const server = new TriplitServer(new DB({ schema: SCHEMA }));
+      const alice = createTestClient(server, ALICE_TOKEN, {
+        clientId: 'alice',
+        schema: SCHEMA.collections,
+      });
+      const bob = createTestClient(server, BOB_TOKEN, {
+        clientId: 'bob',
+        schema: SCHEMA.collections,
+      });
+
+      // Create a group chat
+      await server.db.insert(
+        'groupChats',
+        {
+          id: 'chat1',
+          memberIds: new Set(['alice', 'bob']),
+          name: 'chat1',
+          adminId: 'alice',
+        },
+        { skipRules: true }
+      );
+
       const aliceSub = vi.fn();
       const bobSub = vi.fn();
       alice.subscribe(alice.query('messages').build(), aliceSub);

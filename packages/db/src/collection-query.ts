@@ -713,72 +713,52 @@ export async function fetchDeltaTriples<
       ) {
         continue;
       }
-      const matchesSimpleFiltersBefore =
-        !!entityBeforeStateVector &&
-        doesEntityMatchBasicWhere(
-          entityBeforeStateVector,
-          queryPermutation.where,
-          options.schema &&
-            options.schema[queryPermutation.collectionName]?.schema
-        );
-      const matchesSimpleFiltersAfter =
-        !!entityAfterStateVector &&
-        doesEntityMatchBasicWhere(
-          entityAfterStateVector,
-          queryPermutation.where,
-          options.schema &&
-            options.schema[queryPermutation.collectionName]?.schema
-        );
 
-      if (!matchesSimpleFiltersBefore && !matchesSimpleFiltersAfter) {
-        continue;
-      }
-
-      const subQueries = (queryPermutation.where ?? []).filter((filter) =>
-        isSubQueryFilter(filter)
-      ) as SubQueryFilter<M>[];
-      let matchesBefore = matchesSimpleFiltersBefore;
-      if (matchesSimpleFiltersBefore && subQueries.length > 0) {
-        for (const { exists: subQuery } of subQueries) {
-          const subQueryResult = await loadSubquery(
-            tx,
-            queryPermutation,
-            subQuery,
-            'one',
-            beforeContext,
-            options,
-            'exists',
-            [changedEntityId, entityBeforeStateVector]
-          );
-          if (subQueryResult === null) {
-            matchesBefore = false;
-            continue;
+      // Check that entity matches filters:
+      // Start with the checking that the entity exists, assume it matches the query
+      // Then check for unsatisfied filters
+      let matchesBefore =
+        !!entityBeforeStateVector && !entityBeforeStateVector.isDeleted;
+      let matchesAfter =
+        !!entityAfterStateVector && !entityAfterStateVector.isDeleted;
+      if (queryPermutation.where) {
+        const where = queryPermutation.where;
+        const filterPriorityOrder = getFilterPriorityOrder(
+          queryPermutation.where
+        );
+        if (matchesBefore) {
+          for (const filterIdx of filterPriorityOrder) {
+            const filter = where[filterIdx];
+            const satisfied = await satisfiesFilter(
+              tx,
+              queryPermutation,
+              beforeContext,
+              options,
+              [changedEntityId, entityBeforeStateVector!],
+              filter
+            );
+            if (!satisfied) {
+              matchesBefore = false;
+              break;
+            }
           }
         }
-      }
-      const afterTriplesMatch = [];
-      let matchesAfter = matchesSimpleFiltersAfter;
-      if (matchesSimpleFiltersAfter && subQueries.length > 0) {
-        for (const { exists: subQuery } of subQueries) {
-          const subQueryResult = await loadSubquery(
-            tx,
-            queryPermutation,
-            subQuery,
-            'one',
-            afterContext,
-            options,
-            'exists',
-            [changedEntityId, entityAfterStateVector]
-          );
-          if (subQueryResult === null) {
-            matchesAfter = false;
-            continue;
-          }
-          const triples =
-            afterContext.executionCache.getData(subQueryResult)?.entity
-              .triples ?? [];
-          for (const triple of triples) {
-            afterTriplesMatch.push(triple);
+
+        if (matchesAfter) {
+          for (const filterIdx of filterPriorityOrder) {
+            const filter = where[filterIdx];
+            const satisfied = await satisfiesFilter(
+              tx,
+              queryPermutation,
+              afterContext,
+              options,
+              [changedEntityId, entityAfterStateVector!],
+              filter
+            );
+            if (!satisfied) {
+              matchesAfter = false;
+              break;
+            }
           }
         }
       }
@@ -788,29 +768,36 @@ export async function fetchDeltaTriples<
       }
 
       if (!matchesBefore) {
-        if (subQueries.length === 0) {
-          // Basically where including the whole entity if it is new to the result set
-          // but we also want to filter any triples that will be included in the
-          // final step of adding changed triples for the given entity
-          // An example is if we insert a net new entity it will not match before
-          // so it need's the whole entity to be sent but that will fully overlap
-          // with the last step.
-          const alreadyIncludedTriples = changedTriples;
-          const tripleKeys = new Set(
-            alreadyIncludedTriples.map(
-              (t) =>
-                t.id + JSON.stringify(t.attribute) + JSON.stringify(t.timestamp)
-            )
-          );
-          const trips = Object.values(afterData!.triples).filter(
-            (t) =>
-              !tripleKeys.has(
-                t.id + JSON.stringify(t.attribute) + JSON.stringify(t.timestamp)
-              )
-          );
-          for (const triple of trips) {
+        const afterTriplesMatch = [];
+        for (const fulfillmentEntityId of afterContext.fulfillmentEntities) {
+          const entity =
+            afterContext.executionCache.getData(fulfillmentEntityId)?.entity;
+          if (!entity) continue;
+          for (const triple of entity.triples) {
             afterTriplesMatch.push(triple);
           }
+        }
+        // Basically we're including the whole entity if it is new to the result set
+        // but we also want to filter any triples that will be included in the
+        // final step of adding changed triples for the given entity
+        // An example is if we insert a net new entity it will not match before
+        // so it need's the whole entity to be sent but that will fully overlap
+        // with the last step.
+        const alreadyIncludedTriples = changedTriples;
+        const tripleKeys = new Set(
+          alreadyIncludedTriples.map(
+            (t) =>
+              t.id + JSON.stringify(t.attribute) + JSON.stringify(t.timestamp)
+          )
+        );
+        const trips = Object.values(afterData!.triples).filter(
+          (t) =>
+            !tripleKeys.has(
+              t.id + JSON.stringify(t.attribute) + JSON.stringify(t.timestamp)
+            )
+        );
+        for (const triple of trips) {
+          afterTriplesMatch.push(triple);
         }
         for (const triple of afterTriplesMatch) {
           deltaTriples.push(triple);
@@ -878,6 +865,7 @@ function queryChainToQuery(
   };
 }
 
+// TODO: needs to handle filter groupings
 function* generateQueryChains(
   query: CollectionQuery<any, any>,
   prefix: CollectionQuery<any, any>[] = []
@@ -993,7 +981,7 @@ function ApplyFilters(
   const { where } = query;
 
   // Apply filters in order of priority (if a filter is faster to run we'll run that first)
-  const filterOrder = getFilterPriorityOrder(query);
+  const filterOrder = getFilterPriorityOrder(where);
 
   return async (entityId) => {
     const entity = executionContext.executionCache.getData(entityId)?.entity;
@@ -1592,8 +1580,11 @@ export function doesEntityMatchBasicWhere<Q extends CollectionQuery<any, any>>(
 ) {
   if (entity.isDeleted) return false;
   if (!where) return true;
+  const booleanStatements = where.filter(isBooleanFilter);
+  if (booleanStatements.some((bool) => !bool)) {
+    return false;
+  }
   const basicStatements = where.filter(isFilterStatement);
-
   const orStatements = where
     .filter(isFilterGroup)
     .filter((f) => f.mod === 'or');

@@ -23,10 +23,35 @@ describe('query root permutations', () => {
       ],
     };
     const permutations = generateQueryRootPermutations(query);
-    // prettyPrint(permutations);
     expect(permutations).toHaveLength(2);
+    expect(permutations).toContainEqual({
+      collectionName: 'manufacturers',
+      where: [
+        {
+          exists: {
+            collectionName: 'cars',
+            where: [
+              ['type', '=', 'SUV'],
+              ['manufacturer', '=', '$1.id'],
+            ],
+          },
+        },
+      ],
+    });
+    expect(permutations).toContainEqual({
+      collectionName: 'cars',
+      where: [
+        ['type', '=', 'SUV'],
+        {
+          exists: {
+            collectionName: 'manufacturers',
+            where: [['id', '=', '$1.manufacturer']],
+          },
+        },
+      ],
+    });
   });
-  it('can generate a permutation for each subquery filter', () => {
+  it('can generate a permutation for inclusions', () => {
     const query = {
       collectionName: 'manufacturers',
       include: {
@@ -43,8 +68,47 @@ describe('query root permutations', () => {
       },
     };
     const permutations = generateQueryRootPermutations(query);
-    // prettyPrint(permutations);
     expect(permutations).toHaveLength(2);
+    expect(permutations).toContainEqual({
+      collectionName: 'manufacturers',
+      include: {
+        suvs: {
+          cardinality: 'many',
+          subquery: {
+            collectionName: 'cars',
+            where: [
+              ['type', '=', 'SUV'],
+              ['manufacturer', '=', '$1.id'],
+            ],
+          },
+        },
+      },
+      where: [],
+    });
+    expect(permutations).toContainEqual({
+      collectionName: 'cars',
+      where: [
+        ['type', '=', 'SUV'],
+        {
+          exists: {
+            collectionName: 'manufacturers',
+            include: {
+              suvs: {
+                cardinality: 'many',
+                subquery: {
+                  collectionName: 'cars',
+                  where: [
+                    ['type', '=', 'SUV'],
+                    ['manufacturer', '=', '$1.id'],
+                  ],
+                },
+              },
+            },
+            where: [['id', '=', '$1.manufacturer']],
+          },
+        },
+      ],
+    });
   });
 });
 
@@ -129,20 +193,3 @@ describe('prepare query', () => {
     });
   });
 });
-
-function prettyPrint(obj: any) {
-  return console.log(
-    JSON.stringify(
-      obj,
-      (key, value) => {
-        if (Array.isArray(value) && value.every((v) => typeof v !== 'object')) {
-          // Convert array to a JSON string with no spacing for indentation
-          return '[' + value.join(', ') + ']';
-          // return value;
-        }
-        return value; // Return non-array values unchanged
-      },
-      2
-    )
-  );
-}
