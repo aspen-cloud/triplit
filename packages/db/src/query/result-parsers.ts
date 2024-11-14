@@ -17,17 +17,13 @@ import {
   SchemaQueries,
 } from './types/index.js';
 
-export function getQueryComponentsFromContext<
-  M extends Models,
-  Q extends SchemaQueries<M>
->(
-  query: Q,
-  entityOrder: string[],
-  executionContext: FetchExecutionContext
+export function getEntityConnections(
+  executionContext: FetchExecutionContext,
+  entityIds: string[]
 ): Map<string, QueryComponentCacheEntry> {
   const { executionCache } = executionContext;
   const results = new Map<string, QueryComponentCacheEntry>();
-  for (const componentId of entityOrder) {
+  for (const componentId of entityIds) {
     // Root entities should have a component
     const component = executionCache.getComponent(componentId);
     if (!component) continue;
@@ -38,21 +34,13 @@ export function getQueryComponentsFromContext<
   return results;
 }
 
-export function getEntitiesFromContext<
-  M extends Models,
-  Q extends SchemaQueries<M>
->(
-  query: Q,
+export function getEntitiesFromContext(
   entityOrder: string[],
   executionContext: FetchExecutionContext
 ): Map<string, Entity> {
   const { executionCache } = executionContext;
   const results = new Map<string, Entity>();
-  const components = getQueryComponentsFromContext<M, Q>(
-    query,
-    entityOrder,
-    executionContext
-  );
+  const components = getEntityConnections(executionContext, entityOrder);
   for (const [entityId, component] of components) {
     if (results.has(entityId)) continue;
     const cachedEntity = executionCache.getData(component.entityId);
@@ -73,11 +61,7 @@ export function getResultTriplesFromContext<
   const triples: Map<string, TripleRow[]> = new Map();
   const { include } = query;
   const { executionCache } = executionContext;
-  const components = getQueryComponentsFromContext<M, Q>(
-    query,
-    entityOrder,
-    executionContext
-  );
+  const components = getEntityConnections(executionContext, entityOrder);
   for (const [entityId, component] of components) {
     const cachedEntity = executionCache.getData(component?.entityId ?? '');
     if (!cachedEntity) continue;
@@ -140,11 +124,7 @@ export function getQueryResultsFromContext<
   const { select, include } = query;
   const { executionCache } = executionContext;
   const results = new Map<string, FetchResultEntity<M, Q>>();
-  const components = getQueryComponentsFromContext<M, Q>(
-    query,
-    entityOrder,
-    executionContext
-  );
+  const components = getEntityConnections(executionContext, entityOrder);
   for (const [entityId, component] of components) {
     const cachedEntity = executionCache.getData(component.entityId);
     if (!cachedEntity) continue;

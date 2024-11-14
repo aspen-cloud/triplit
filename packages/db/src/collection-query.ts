@@ -688,7 +688,7 @@ export async function fetchDeltaTriples<
   ] of beforeAndAfterEntities) {
     const entityBeforeStateVector = beforeData;
     if (beforeData) {
-      beforeContext.executionCache.setData(changedEntityId, {
+      beforeContext.executionCache.getEntity(changedEntityId, {
         entity: beforeData,
       });
       beforeContext.executionCache.setComponent(changedEntityId, {
@@ -698,7 +698,7 @@ export async function fetchDeltaTriples<
     }
     const entityAfterStateVector = afterData;
     if (afterData) {
-      afterContext.executionCache.setData(changedEntityId, {
+      afterContext.executionCache.getEntity(changedEntityId, {
         entity: afterData,
       });
       afterContext.executionCache.setComponent(changedEntityId, {
@@ -938,7 +938,7 @@ function LoadCandidateEntities(
 ): MapFunc<string, string> {
   return async (entityId) => {
     // Load entity data if not loaded
-    if (!executionContext.executionCache.hasData(entityId)) {
+    if (!executionContext.executionCache.hasEntity(entityId)) {
       let entity: Entity;
       if (options.entityCache && options.entityCache.has(entityId)) {
         entity = options.entityCache.get(entityId)!;
@@ -950,7 +950,7 @@ function LoadCandidateEntities(
         }
       }
       // Load raw entity
-      executionContext.executionCache.setData(entityId, {
+      executionContext.executionCache.getEntity(entityId, {
         entity,
       });
     }
@@ -1324,7 +1324,7 @@ export function initialFetchExecutionContext(): FetchExecutionContext {
   };
 }
 
-function isCountQuery(query: CollectionQuery) {
+function isQueryBigSelectNone(query: CollectionQuery) {
   return (
     query.select?.length === 0 &&
     !query.after &&
@@ -1353,10 +1353,10 @@ async function resolveCountQuery(
   const loadedCandidates = [];
   for (const [entityId, triple] of candidateSet) {
     // Load entity data if not loaded
-    if (!executionContext.executionCache.hasData(entityId)) {
+    if (!executionContext.executionCache.hasEntity(entityId)) {
       const entity = constructEntities([triple], options.schema).get(entityId)!;
       // Load raw entity
-      executionContext.executionCache.setData(entityId, {
+      executionContext.executionCache.getEntity(entityId, {
         entity,
       });
     }
@@ -1380,7 +1380,7 @@ async function resolveCountQuery(
 
 /**
  * Runs a base query and returns the entity ids in order
- * Loads data and query components into the context's executionCach
+ * Loads data and query components into the context's executionCache
  */
 export async function loadQuery<
   M extends Models,
@@ -1392,7 +1392,7 @@ export async function loadQuery<
   options: FetchFromStorageOptions
 ): Promise<string[]> {
   if (
-    isCountQuery(
+    isQueryBigSelectNone(
       // @ts-expect-error
       query
     )
@@ -1712,11 +1712,7 @@ export async function subscribeEntities<
         executionContext,
         options
       );
-      results = getEntitiesFromContext<M, Q>(
-        query,
-        entityOrder,
-        executionContext
-      );
+      results = getEntitiesFromContext(entityOrder, executionContext);
       for (const key of results.keys()) {
         results.set(key, Entity.clone(results.get(key)!));
       }
@@ -1975,8 +1971,7 @@ export async function applyTriplesToSubscribedQuery<
           session: options.session,
         }
       );
-      const backFilledResults = getEntitiesFromContext<M, Q>(
-        query,
+      const backFilledResults = getEntitiesFromContext(
         backfillOrder,
         executionContext
       );

@@ -1222,8 +1222,6 @@ export default class DB<M extends Models = Models> {
             if (this.syncQueries.get(queryId)?.type === 'ivm') {
               // @ts-expect-error
               this.syncQueries.get(queryId)!.results = getEntitiesFromContext(
-                // @ts-expect-error
-                subscriptionQuery,
                 resultOrder,
                 executionContext
               );
@@ -1288,7 +1286,7 @@ export default class DB<M extends Models = Models> {
       ] of beforeAndAfterEntities) {
         const entityBeforeStateVector = beforeData;
         if (beforeData) {
-          beforeContext.executionCache.setData(changedEntityId, {
+          beforeContext.executionCache.getEntity(changedEntityId, {
             entity: beforeData,
           });
           beforeContext.executionCache.setComponent(changedEntityId, {
@@ -1298,7 +1296,7 @@ export default class DB<M extends Models = Models> {
         }
         const entityAfterStateVector = afterData;
         if (afterData) {
-          afterContext.executionCache.setData(changedEntityId, {
+          afterContext.executionCache.getEntity(changedEntityId, {
             entity: afterData,
           });
           afterContext.executionCache.setComponent(changedEntityId, {
