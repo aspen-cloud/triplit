@@ -1447,11 +1447,8 @@ export default class DB<M extends Models = Models> {
         { triples, forQueries },
       ] of deltaTriplesPerConnection) {
         const connection = this.connectionCallbacks.get(connectionId);
-        if (connection) {
-          if (triples.length) {
-            connection.onResults(triples, [...forQueries]);
-          }
-        }
+        if (!(connection && triples.length)) continue;
+        connection.onResults(triples, [...forQueries]);
       }
     } catch (error) {
       console.error(error);
