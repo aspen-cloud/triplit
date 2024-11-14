@@ -148,10 +148,13 @@ export function usePaginatedQuery<
   Q extends ClientQuery<M, CN>
 >(
   client: TriplitClient<M> | WorkerClient<M>,
-  query: ClientQueryBuilder<M, CN, Q>,
+  query: ClientQueryBuilder<M, CN, Q> | Q,
   options?: Partial<SubscriptionOptions>
 ): usePaginatedQueryPayload<M, Q> {
-  const builtQuery = useMemo(() => query.build(), [query]);
+  const builtQuery = useMemo(
+    () => query && ('build' in query ? query.build() : query),
+    [query]
+  );
   const [hasNextPage, setHasNextPage] = useState(false);
   const [hasPreviousPage, setHasPreviousPage] = useState(false);
   const [results, setResults] = useState<
@@ -233,13 +236,16 @@ export function usePaginatedQuery<
 export function useInfiniteQuery<
   M extends Models,
   CN extends CollectionNameFromModels<M>,
-  Q extends ClientQuery<M>
+  Q extends ClientQuery<M, CN>
 >(
   client: TriplitClient<M> | WorkerClient<M>,
-  query: ClientQueryBuilder<M, CN, Q>,
+  query: ClientQueryBuilder<M, CN, Q> | Q,
   options?: Partial<SubscriptionOptions>
 ): useInfiniteQueryPayload<M, Q> {
-  const builtQuery = useMemo(() => query.build(), [query]);
+  const builtQuery = useMemo(
+    () => query && ('build' in query ? query.build() : query),
+    [query]
+  );
   const stringifiedQuery = builtQuery && JSON.stringify(builtQuery);
   const [hasMore, setHasMore] = useState(false);
   const [results, setResults] = useState<
@@ -282,7 +288,7 @@ export function useInfiniteQuery<
         setHasMore(info.hasMore);
         setResults(
           // TODO: fix types to match
-          results
+          results as any
         );
       },
       (error) => {
