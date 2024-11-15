@@ -659,36 +659,40 @@ export class TriplitClient<M extends ClientSchema = ClientSchema> {
           userErrorCallback(error);
         }
       : undefined;
-    const clientSubscriptionCallback = (
-      newResults: Unalias<FetchResult<M, ToQuery<M, CQ>>>
-    ) => {
-      results = newResults;
-      this.logger.debug('subscribe RESULTS', results);
-      onResults(results, { hasRemoteFulfilled });
-    };
-    unsubscribeLocal = this.db.subscribe(
-      query,
-      clientSubscriptionCallback,
-      onError,
-      {
-        scope,
-        skipRules: this.options?.skipRules ?? SKIP_RULES,
-        ...opts,
+    const hasLocalFulfilled = new Promise<void>((res, rej) => {
+      try {
+        unsubscribeLocal = this.db.subscribe(
+          query,
+          (newResults: Unalias<FetchResult<M, ToQuery<M, CQ>>>) => {
+            results = newResults;
+            this.logger.debug('subscribe RESULTS', results);
+            onResults(results, { hasRemoteFulfilled });
+            res();
+          },
+          (e) => {
+            onError?.(e);
+            res();
+          },
+          {
+            scope,
+            skipRules: this.options?.skipRules ?? SKIP_RULES,
+            ...opts,
+          }
+        );
+      } catch (e) {
+        rej(e);
       }
-    );
+    });
+
     if (scope.includes('cache')) {
-      const onFulfilled = () => {
+      const onFulfilled = async () => {
         if (hasRemoteFulfilled) return;
+        // Ensure we wait for the local subscription has fulfilled before calling onRemoteFulfilled
+        await hasLocalFulfilled;
         hasRemoteFulfilled = true;
-        if (fulfilledTimeout !== null) {
-          clearTimeout(fulfilledTimeout);
-        }
-        // This is a hack to make sure we don't call onRemoteFulfilled before
-        // the local subscription callback has had a chance to refire
-        fulfilledTimeout = setTimeout(() => {
-          clientSubscriptionCallback(results);
-          opts.onRemoteFulfilled?.();
-        }, 250);
+        // TODO: refactor subscription pipeline atomically handle remote fulfilled
+        onResults(results, { hasRemoteFulfilled });
+        opts.onRemoteFulfilled?.();
       };
       unsubscribeRemote = this.syncEngine.subscribe(query, {
         onQueryFulfilled: onFulfilled,
