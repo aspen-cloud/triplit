@@ -2181,7 +2181,7 @@ describe('rules', () => {
               filter: [
                 or([
                   ['author_id', '=', '$SESSION_USER_ID'],
-                  ['collaborators', 'has', '$SESSION_USER_ID'],
+                  ['collaborators', 'has', '$session.SESSION_USER_ID'],
                 ]),
               ],
             },
@@ -2221,9 +2221,9 @@ describe('rules', () => {
     const secondPostId = output?.id;
     await pause(200);
     expect(bobCallback).toHaveBeenCalledTimes(2);
-    const lastCallVal = bobCallback.mock.calls.at(-1)[0];
-    expect(lastCallVal).toHaveLength(1);
-    expect(lastCallVal.find((e: any) => e.id === secondPostId)).toBeTruthy();
+    const bobLastCallVal = bobCallback.mock.calls.at(-1)[0];
+    expect(bobLastCallVal).toHaveLength(1);
+    expect(bobLastCallVal.find((e: any) => e.id === secondPostId)).toBeTruthy();
   });
 
   it('can write when matching rules', async () => {

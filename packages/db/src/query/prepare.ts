@@ -266,8 +266,12 @@ function getQueryFilters<M extends Models, Q extends CollectionQuery<M>>(
       filters.push(
         // @ts-expect-error
         ...(options.bindSessionVariables
-          ? // @ts-expect-error
-            replaceVariablesInFilterStatements(ruleFilters, session.session)
+          ? replaceVariablesInFilterStatements(ruleFilters, {
+              // @ts-expect-error
+              ...session.session,
+              // @ts-expect-error
+              session: session.session,
+            })
           : ruleFilters)
       );
     }
