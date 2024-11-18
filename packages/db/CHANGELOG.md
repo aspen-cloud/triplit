@@ -1,5 +1,12 @@
 # @triplit/db
 
+## 0.5.8
+
+### Patch Changes
+
+- bdebed22: Fix issue where $session scoped variables weren't working in sync queries
+- 7b1839b6: Apply filter groupings in delta triples calculations
+
 ## 0.5.7
 
 ### Patch Changes
