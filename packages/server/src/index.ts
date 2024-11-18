@@ -1,7 +1,7 @@
 import './setupEnv.js';
 
-export { createServer, ServerOptions } from './server.js';
-export { createTriplitHonoServer } from './hono.js';
+export { createServer } from './server.js';
+export { createTriplitHonoServer, ServerOptions } from './hono.js';
 export {
   durableStoreKeys,
   inMemoryStoreKeys,

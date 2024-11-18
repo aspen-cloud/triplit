@@ -9,6 +9,7 @@ import {
   isBooleanFilter,
   isExistsFilter,
   isFilterGroup,
+  isFilterStatement,
   isSubQueryFilter,
 } from '../query.js';
 import { Entity } from '../entity.js';
@@ -39,13 +40,29 @@ export async function satisfiesFilter<Q extends CollectionQuery>(
   if (isFilterGroup(filter)) {
     const { mod, filters } = filter;
     if (mod === 'and') {
-      return await everyAsync(filters, (f) =>
-        satisfiesFilter(tx, query, executionContext, options, entityEntry, f)
+      const filterOrder = getFilterPriorityOrder(filters);
+      return await everyAsync(filterOrder, (idx) =>
+        satisfiesFilter(
+          tx,
+          query,
+          executionContext,
+          options,
+          entityEntry,
+          filters[idx]
+        )
       );
     }
     if (mod === 'or') {
-      return await someAsync(filters, (f) =>
-        satisfiesFilter(tx, query, executionContext, options, entityEntry, f)
+      const filterOrder = getFilterPriorityOrder(filters);
+      return await someAsync(filterOrder, (idx) =>
+        satisfiesFilter(
+          tx,
+          query,
+          executionContext,
+          options,
+          entityEntry,
+          filters[idx]
+        )
       );
     }
     return false;
@@ -220,42 +237,57 @@ function ilike(text: string, pattern: string): boolean {
   return regex.test(text);
 }
 
-// TODO: would be safest to have a way to determine if a filter is basic, otherwise return 'unknown' (or fail)
 function determineFilterType(
   filter: WhereFilter<any, any>
-): 'basic' | 'relational' {
-  if (isSubQueryFilter(filter)) {
-    return 'relational';
-  }
-  if (isFilterGroup(filter)) {
-    const { filters } = filter;
-    const groupingTypes = filters.map((f) => determineFilterType(f));
-    if (groupingTypes.includes('relational')) {
-      return 'relational';
-    }
-  }
-  return 'basic';
+): 'boolean' | 'basic' | 'group' | 'relational' {
+  if (isFilterStatement(filter)) return 'basic';
+  if (isSubQueryFilter(filter)) return 'relational';
+  if (isFilterGroup(filter)) return 'group';
+  if (isBooleanFilter(filter)) return 'boolean';
+  throw new InvalidFilterError(
+    `Filter type could not be determined: ${JSON.stringify(filter)}`
+  );
 }
 
 /**
  * Based on the type of filter, determine its priority in execution
+ * 1. Boolean filters
+ * 2. Basic filters
+ * 3. Group filters (which are then ordered by their own priority)
+ * 4. Relational filters (subqueries, will take the longest to execute)
  */
 export function getFilterPriorityOrder(
-  query: CollectionQuery<any, any>
+  where: CollectionQuery<any, any>['where']
 ): number[] {
-  const { where = [] } = query;
+  if (!where) return [];
   const basicFilters = [];
+  const booleanFilters = [];
+  const groupFilters = [];
   const relationalFilters = [];
 
   for (let i = 0; i < where.length; i++) {
     const filter = where[i];
     const filterType = determineFilterType(filter);
-    if (filterType === 'relational') {
-      relationalFilters.push(i);
-    } else {
-      basicFilters.push(i);
+    switch (filterType) {
+      case 'boolean':
+        booleanFilters.push(i);
+        break;
+      case 'basic':
+        basicFilters.push(i);
+        break;
+      case 'group':
+        groupFilters.push(i);
+        break;
+      case 'relational':
+        relationalFilters.push(i);
+        break;
     }
   }
 
-  return [...basicFilters, ...relationalFilters];
+  return [
+    ...booleanFilters,
+    ...basicFilters,
+    ...groupFilters,
+    ...relationalFilters,
+  ];
 }

@@ -15,14 +15,12 @@ export function ClientAuthProvider({
     // @ts-expect-error
     const token = session?.token
     if (token !== client.token) {
-      client.disconnect()
-      client.updateToken(token)
-      if (!client.token) {
-        // Note: this is async
+      const endSessionPromise = client.endSession()
+      if (!token) {
         client.reset()
-      } else {
-        client.connect()
+        return
       }
+      endSessionPromise.then(() => client.startSession(token))
     }
   }, [session])
 

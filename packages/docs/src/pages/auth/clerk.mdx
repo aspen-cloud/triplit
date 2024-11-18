@@ -51,26 +51,23 @@ There are also community SDKs for frameworks like [Svelte](https://github.com/ma
 
 ### Add the Clerk token to your Triplit client
 
-Your Triplit client needs to send the JWT token issued by Clerk with each request. You can do this with the `updateToken` method for the `TriplitClient`.
+Your Triplit client needs to send the JWT token issued by Clerk with each request. You can do this with the `startSession` method for the `TriplitClient`.
 
 ```ts copy
 // get the Clerk client or session using your framework
 // e.g. `const auth = useAuth()` from @clerk/clerk-react
 auth.getToken().then(async (token) => {
-  // If token has changed, update the client
+  // If token has changed, end the current session and start a new one
   if (token !== client.token) {
-    client.disconnect();
-    client.updateToken(token);
-    if (!client.token) {
-      // If no token, we are unauthenticated, reset the client in case there is any data for the previous session stored
-      await client.reset();
-    } else {
-      // If we have a token, connect to the server with new information
-      client.connect();
+    client.endSession();
+    if (client.token) {
+      await client.startSession(token, true, { refreshHandler: auth.getToken });
     }
   }
 });
 ```
+
+You'll note that we're using the `refreshHandler` option to automatically refresh the token before it expires. Triplit will close down connections with expired tokens, but this will keep connections open for as long as Clerk issues a token that has consistent [roles](/schemas/permissions#roles) .
 
 ### Test locally
 
@@ -102,6 +99,6 @@ export const roles: Roles = {
 };
 ```
 
-[Read here to see how you can use this Role to define a permission.](/schemas/permissions)
+[Read here to see how you can use this Role to define a permission.](/schemas/permissions).
 
 </Steps>

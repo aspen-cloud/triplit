@@ -11,16 +11,24 @@ export async function runServer(port: number, options?: ServerOptions) {
   return server;
 }
 
-// This works for now, fine to refactor in any way if needed
-export async function withServer(
-  options: { port: number; serverOptions?: ServerOptions },
-  callback: (server: any) => void | Promise<void>
+const usedPorts = new Set<number>();
+
+export async function tempTriplitServer(
+  options: {
+    serverOptions?: ServerOptions;
+  } = {}
 ) {
-  const { port, serverOptions } = options;
-  const server = await runServer(port, serverOptions);
-  try {
-    await callback(server);
-  } finally {
-    await new Promise<void>((res) => server.close(res));
+  const { serverOptions } = options;
+  let randomPort = Math.floor(Math.random() * 1000) + 3000;
+  while (usedPorts.has(randomPort)) {
+    randomPort++;
   }
+  const server = await runServer(randomPort, serverOptions);
+  return {
+    port: randomPort,
+    [Symbol.dispose]: () => {
+      server.close();
+      usedPorts.delete(randomPort);
+    },
+  };
 }

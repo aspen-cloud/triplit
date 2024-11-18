@@ -40,10 +40,4 @@ These options define how you authenticate with your client database and remote d
 - `token` is a jwt that is used to identify the user to the client database and remote databases (see the [Auth guide](/auth)). Providing a `token` will set the variable `$session.SESSION_USER_ID` on the database, which is used for authorization rules.
 - `claimsPath` is the path to the Triplit claims on the token. It should be a `.` separated string like `path.to.claims`. This should match the value set on your project in the Triplit Dashboard.
 
-The `token` can be updated with the `client.updateToken` method.
-
-Use the `client.updateOptions` method if you need to update the `serverUrl` and `token` atomically.
-
-It is recommended that your client is disconnected before calling `client.updateOptions`, `client.updateServerUrl` or `client.updateOptions`. If the connection is open, the client will disconnect automatically and you will need to call `client.connect()` again to reconnect.
-
-For best practices on using these APIs and updating user sessions, see the [Auth guide](/auth#changing-users).
+The `TriplitClient`'s session API provides methods to switch out the token and update the client's connection to the server. For best practices on using these APIs and updating user sessions, see the [Auth guide](/auth#changing-users).

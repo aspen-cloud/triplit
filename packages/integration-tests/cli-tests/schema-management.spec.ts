@@ -8,8 +8,8 @@ import {
 import { Models, Schema as S } from '@triplit/db';
 import { serverRequesterMiddleware } from '../../cli/src/middleware/add-server-requester.js';
 import { emptyDir } from 'fs-extra';
-import { ServerOptions } from '../../server/src/server.js';
-import { withServer } from '../utils/server.js';
+import { ServerOptions } from '../../server/src/hono.js';
+import { tempTriplitServer } from '../utils/server.js';
 import { evalJSString, transpileTsString } from '../../cli/src/filesystem.js';
 
 const PORT = 8888;
@@ -19,7 +19,6 @@ const serviceToken =
 const env = {
   TRIPLIT_JWT_SECRET: 'test-secret',
   TRIPLIT_SERVICE_TOKEN: serviceToken,
-  TRIPLIT_DB_URL: `http://localhost:${PORT}`,
   TRIPLIT_PROJECT_ID: 'project',
 };
 process.env = { ...process.env, ...env };
@@ -42,7 +41,13 @@ async function writeLocalSchema(collections: Models<any, any>, path?: string) {
 }
 
 async function readRemoteSchema() {
-  const { stdout } = await $shell`yarn triplit schema print --location=remote`;
+  let stdout;
+  try {
+    const output = await $shell`yarn triplit schema print --location=remote`;
+    stdout = output.stdout;
+  } catch (e) {
+    console.error(e);
+  }
   // If no schema, return undefined
   if (!stdout) return undefined;
   const transpiled = transpileTsString(stdout);
@@ -69,10 +74,10 @@ async function withServerAndCtx(
   options: { port: number; serverOptions?: ServerOptions },
   callback: (ctx: any, server: any) => void | Promise<void>
 ) {
-  await withServer(options, async (server) => {
-    const ctx = await generateNetworkCtx({}, options.port);
-    await callback(ctx, server);
-  });
+  using server = await tempTriplitServer(options);
+  process.env.TRIPLIT_DB_URL = `http://localhost:${server.port}`;
+  const ctx = await generateNetworkCtx({}, server.port);
+  await callback(ctx, server);
 }
 
 beforeEach(async () => {

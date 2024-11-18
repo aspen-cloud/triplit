@@ -24,15 +24,16 @@ export class QueryExecutionCache {
   /**
    * While executing a query, we will cache the entities we have loaded
    */
-  private data: Map<string, DataCacheEntry> = new Map();
+  private entities: Map<string, DataCacheEntry> = new Map();
 
   /**
    * While executing a query, we will store "components" of a query, which are usually subqueries
    */
-  private components: Map<string, QueryComponentCacheEntry> = new Map();
+  private entityRelationShips: Map<string, QueryComponentCacheEntry> =
+    new Map();
 
   getData(entityId: string) {
-    const data = this.data.get(entityId);
+    const data = this.entities.get(entityId);
     if (!data)
       throw new TriplitError(
         `An entity with id '${entityId}' has not been loaded into execuction cache`
@@ -40,16 +41,16 @@ export class QueryExecutionCache {
     return data;
   }
 
-  setData(entityId: string, entry: DataCacheEntry) {
-    this.data.set(entityId, entry);
+  getEntity(entityId: string, entry: DataCacheEntry) {
+    this.entities.set(entityId, entry);
   }
 
-  hasData(entityId: string) {
-    return this.data.has(entityId);
+  hasEntity(entityId: string) {
+    return this.entities.has(entityId);
   }
 
   getComponent(componentId: string) {
-    const component = this.components.get(componentId);
+    const component = this.entityRelationShips.get(componentId);
     if (!component)
       throw new TriplitError(
         `A component with id '${componentId}' has not been loaded into execuction cache`
@@ -58,11 +59,11 @@ export class QueryExecutionCache {
   }
 
   setComponent(componentId: string, entry: QueryComponentCacheEntry) {
-    this.components.set(componentId, entry);
+    this.entityRelationShips.set(componentId, entry);
   }
 
   hasComponent(componentId: string) {
-    return this.components.has(componentId);
+    return this.entityRelationShips.has(componentId);
   }
 
   getComponentData(componentId: string) {

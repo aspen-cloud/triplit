@@ -25,3 +25,7 @@ export function hashQuery<Q extends CollectionQuery>(params: Q) {
   const hash = Value.Hash(queryParams).toString();
   return hash;
 }
+
+export function hash(value: unknown): string {
+  return Value.Hash(value).toString();
+}

@@ -68,3 +68,42 @@ export class WorkerInternalClientNotInitializedError extends TriplitError {
     this.status = STATUS_CODES['Internal Server Error'];
   }
 }
+
+export class SessionRolesMismatchError extends TriplitError {
+  constructor(...args: any[]) {
+    super(...args);
+    this.name = 'SessionRoleMismatchError';
+    this.baseMessage =
+      'Attempted to use `TriplitClient.updateSessionToken` with a token that does not have the same roles as the current session token. `updateSessionToken` should only be used to refresh the session with the server to prevent token expiry. To connect with a new token with new roles, use `TriplitClient.endSession` and then `TriplitClient.startSession(...)` with the new token.';
+    this.status = STATUS_CODES['Forbidden'];
+  }
+}
+
+export class SessionAlreadyActiveError extends TriplitError {
+  constructor(...args: any[]) {
+    super(...args);
+    this.name = 'SessionAlreadyActiveError';
+    this.baseMessage =
+      'Attempted to start a new session when a session is already active. Call `TriplitClient.endSession()` before starting a new session.';
+    this.status = STATUS_CODES['Forbidden'];
+  }
+}
+
+export class TokenExpiredError extends TriplitError {
+  constructor(...args: any[]) {
+    super(...args);
+    this.name = 'TokenExpiredError';
+    this.baseMessage =
+      'The provided token has expired. Please ensure that you are using a fresh token when calling `startSession` or `updateSessionToken`.';
+    this.status = STATUS_CODES['Unauthorized'];
+  }
+}
+export class NoActiveSessionError extends TriplitError {
+  constructor(...args: any[]) {
+    super(...args);
+    this.name = 'NoActiveSessionError';
+    this.baseMessage =
+      'Attempted to perform an operation that requires an active session when no session is active. Call `TriplitClient.startSession(...)` to start a new session.';
+    this.status = STATUS_CODES['Forbidden'];
+  }
+}

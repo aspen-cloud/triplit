@@ -18,13 +18,10 @@ import CollectionQueryBuilder, {
   getTriplesAfterStateVector,
   fetchDeltaTriples,
   generateQueryRootPermutations,
-  FetchExecutionContext,
-  replaceVariablesInQuery,
   getEntitiesBeforeAndAfterNewTriples,
-  doesEntityMatchBasicWhere,
-  loadSubquery,
   isQueryRelational,
   applyTriplesToSubscribedQuery,
+  FetchFromStorageOptions,
 } from './collection-query.js';
 import { COLLECTION_ATTRIBUTE, Entity, updateEntity } from './entity.js';
 import { MemoryBTreeStorage } from './storage/memory-btree.js';
@@ -86,6 +83,7 @@ import {
 import { EntityCache, EntityCacheOptions } from './db/types/entity-cache.js';
 import { hashQuery } from './index.js';
 import { isSubQueryFilter } from './query.js';
+import { getFilterPriorityOrder, satisfiesFilter } from './query/filters.js';
 
 const DEFAULT_CACHE_DISABLED = true;
 export interface TransactOptions {
@@ -385,6 +383,7 @@ export default class DB<M extends Models = Models> {
     string,
     {
       connectionIds: Set<string>;
+      options: FetchFromStorageOptions;
       query: CollectionQuery<any, any>;
       queryPermutations: CollectionQuery<any, any>[];
     } & (
@@ -1123,7 +1122,6 @@ export default class DB<M extends Models = Models> {
       options: DBFetchOptions = {}
     ) => {
       await this.storageReady;
-
       const schema = (await this.getSchema())?.collections as M;
       const subscriptionQuery = prepareQuery(
         query,
@@ -1153,7 +1151,6 @@ export default class DB<M extends Models = Models> {
       };
 
       const queryId = hashQuery(subscriptionQuery as any);
-
       if (this.syncQueries.has(queryId)) {
         const syncQuery = this.syncQueries.get(queryId)!;
         syncQuery.connectionIds.add(connectionId);
@@ -1167,6 +1164,7 @@ export default class DB<M extends Models = Models> {
           });
         this.syncQueries.set(queryId, {
           connectionIds: new Set([connectionId]),
+          options: subscribeTriplesOptions,
           query: subscriptionQuery,
           queryPermutations,
           ...(shouldUseIVM
@@ -1224,8 +1222,6 @@ export default class DB<M extends Models = Models> {
             if (this.syncQueries.get(queryId)?.type === 'ivm') {
               // @ts-expect-error
               this.syncQueries.get(queryId)!.results = getEntitiesFromContext(
-                // @ts-expect-error
-                subscriptionQuery,
                 resultOrder,
                 executionContext
               );
@@ -1290,7 +1286,7 @@ export default class DB<M extends Models = Models> {
       ] of beforeAndAfterEntities) {
         const entityBeforeStateVector = beforeData;
         if (beforeData) {
-          beforeContext.executionCache.setData(changedEntityId, {
+          beforeContext.executionCache.getEntity(changedEntityId, {
             entity: beforeData,
           });
           beforeContext.executionCache.setComponent(changedEntityId, {
@@ -1300,7 +1296,7 @@ export default class DB<M extends Models = Models> {
         }
         const entityAfterStateVector = afterData;
         if (afterData) {
-          afterContext.executionCache.setData(changedEntityId, {
+          afterContext.executionCache.getEntity(changedEntityId, {
             entity: afterData,
           });
           afterContext.executionCache.setComponent(changedEntityId, {
@@ -1310,7 +1306,7 @@ export default class DB<M extends Models = Models> {
         }
         for (const [
           id,
-          { query, connectionIds, queryPermutations, type },
+          { query, connectionIds, queryPermutations, type, options },
         ] of this.syncQueries) {
           if (type !== 'fetch-delta-triples') continue;
           for (const queryPermutation of queryPermutations) {
@@ -1320,83 +1316,52 @@ export default class DB<M extends Models = Models> {
             ) {
               continue;
             }
-            const matchesSimpleFiltersBefore =
-              !!entityBeforeStateVector &&
-              doesEntityMatchBasicWhere(
-                entityBeforeStateVector,
-                queryPermutation.where,
-                schema && schema[queryPermutation.collectionName]?.schema
-              );
-            const matchesSimpleFiltersAfter =
-              !!entityAfterStateVector &&
-              doesEntityMatchBasicWhere(
-                entityAfterStateVector,
-                queryPermutation.where,
-                schema && schema[queryPermutation.collectionName]?.schema
-              );
 
-            if (!matchesSimpleFiltersBefore && !matchesSimpleFiltersAfter) {
-              continue;
-            }
-
-            const subQueries = (queryPermutation.where ?? []).filter((filter) =>
-              isSubQueryFilter(filter)
-            ) as SubQueryFilter<M>[];
-            let matchesBefore = matchesSimpleFiltersBefore;
-            if (matchesSimpleFiltersBefore && subQueries.length > 0) {
-              for (const { exists: subQuery } of subQueries) {
-                const subQueryResult = await loadSubquery(
-                  tx,
-                  queryPermutation,
-                  subQuery,
-                  'one',
-                  beforeContext,
-                  // options
-                  // TODO: PASS REAL OPTIONS HERE
-                  {
-                    session: {
-                      systemVars: this.systemVars,
-                      roles: this.sessionRoles,
-                    },
-                  },
-                  'exists',
-                  [changedEntityId, entityBeforeStateVector]
-                );
-                if (subQueryResult === null) {
-                  matchesBefore = false;
-                  continue;
+            // Check that entity matches filters:
+            // Start with the checking that the entity exists, assume it matches the query
+            // Then check for unsatisfied filters
+            let matchesBefore =
+              !!entityBeforeStateVector && !entityBeforeStateVector.isDeleted;
+            let matchesAfter =
+              !!entityAfterStateVector && !entityAfterStateVector.isDeleted;
+            if (queryPermutation.where) {
+              const where = queryPermutation.where;
+              const filterPriorityOrder = getFilterPriorityOrder(
+                queryPermutation.where
+              );
+              if (matchesBefore) {
+                for (const filterIdx of filterPriorityOrder) {
+                  const filter = where[filterIdx];
+                  const satisfied = await satisfiesFilter(
+                    tx,
+                    queryPermutation,
+                    beforeContext,
+                    options,
+                    [changedEntityId, entityBeforeStateVector!],
+                    filter
+                  );
+                  if (!satisfied) {
+                    matchesBefore = false;
+                    break;
+                  }
                 }
               }
-            }
-            const afterTriplesMatch = [];
-            let matchesAfter = matchesSimpleFiltersAfter;
-            if (matchesSimpleFiltersAfter && subQueries.length > 0) {
-              for (const { exists: subQuery } of subQueries) {
-                const subQueryResult = await loadSubquery(
-                  tx,
-                  queryPermutation,
-                  subQuery,
-                  'one',
-                  afterContext,
-                  // TODO: PASS REAL OPTIONS HERE
-                  {
-                    session: {
-                      systemVars: this.systemVars,
-                      roles: this.sessionRoles,
-                    },
-                  },
-                  'exists',
-                  [changedEntityId, entityAfterStateVector]
-                );
-                if (subQueryResult === null) {
-                  matchesAfter = false;
-                  continue;
-                }
-                const triples =
-                  afterContext.executionCache.getData(subQueryResult)?.entity
-                    .triples ?? [];
-                for (const triple of triples) {
-                  afterTriplesMatch.push(triple);
+
+              if (matchesAfter) {
+                for (const filterIdx of filterPriorityOrder) {
+                  const filter = where[filterIdx];
+                  const satisfied = await satisfiesFilter(
+                    tx,
+                    queryPermutation,
+                    afterContext,
+                    options,
+                    [changedEntityId, entityAfterStateVector!],
+                    filter
+                  );
+                  if (!satisfied) {
+                    matchesAfter = false;
+                    break;
+                  }
                 }
               }
             }
@@ -1406,33 +1371,42 @@ export default class DB<M extends Models = Models> {
             }
 
             if (!matchesBefore) {
-              if (subQueries.length === 0) {
-                // Basically where including the whole entity if it is new to the result set
-                // but we also want to filter any triples that will be included in the
-                // final step of adding changed triples for the given entity
-                // An example is if we insert a net new entity it will not match before
-                // so it need's the whole entity to be sent but that will fully overlap
-                // with the last step.
-                const alreadyIncludedTriples = changedTriples;
-                const tripleKeys = new Set(
-                  alreadyIncludedTriples.map(
-                    (t) =>
-                      t.id +
+              const afterTriplesMatch = [];
+              for (const fulfillmentEntityId of afterContext.fulfillmentEntities) {
+                const entity =
+                  afterContext.executionCache.getData(
+                    fulfillmentEntityId
+                  )?.entity;
+                if (!entity) continue;
+                for (const triple of entity.triples) {
+                  afterTriplesMatch.push(triple);
+                }
+              }
+              // Basically we're including the whole entity if it is new to the result set
+              // but we also want to filter any triples that will be included in the
+              // final step of adding changed triples for the given entity
+              // An example is if we insert a net new entity it will not match before
+              // so it need's the whole entity to be sent but that will fully overlap
+              // with the last step.
+              const alreadyIncludedTriples = changedTriples;
+              const tripleKeys = new Set(
+                alreadyIncludedTriples.map(
+                  (t) =>
+                    t.id +
+                    JSON.stringify(t.attribute) +
+                    JSON.stringify(t.timestamp)
+                )
+              );
+              const trips = Object.values(afterData!.triples).filter(
+                (t) =>
+                  !tripleKeys.has(
+                    t.id +
                       JSON.stringify(t.attribute) +
                       JSON.stringify(t.timestamp)
                   )
-                );
-                const trips = Object.values(afterData!.triples).filter(
-                  (t) =>
-                    !tripleKeys.has(
-                      t.id +
-                        JSON.stringify(t.attribute) +
-                        JSON.stringify(t.timestamp)
-                    )
-                );
-                for (const triple of trips) {
-                  afterTriplesMatch.push(triple);
-                }
+              );
+              for (const triple of trips) {
+                afterTriplesMatch.push(triple);
               }
               for (const triple of afterTriplesMatch) {
                 for (const connectionId of connectionIds) {
@@ -1471,11 +1445,8 @@ export default class DB<M extends Models = Models> {
         { triples, forQueries },
       ] of deltaTriplesPerConnection) {
         const connection = this.connectionCallbacks.get(connectionId);
-        if (connection) {
-          if (triples.length) {
-            connection.onResults(triples, [...forQueries]);
-          }
-        }
+        if (!(connection && triples.length)) continue;
+        connection.onResults(triples, [...forQueries]);
       }
     } catch (error) {
       console.error(error);

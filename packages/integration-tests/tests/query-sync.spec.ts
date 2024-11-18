@@ -13,7 +13,10 @@ import {
 describe('CONNECT_QUERY message should be sent before DISCONNECT_QUERY', async () => {
   it('should not send disconnect before connect when immediately unsubscribing', async () => {
     const server = new TriplitServer(new DB());
-    const client = createTestClient(server, SERVICE_KEY, { clientId: 'alice' });
+    const client = createTestClient(server, {
+      clientId: 'alice',
+      token: SERVICE_KEY,
+    });
     await pause();
     // Start message spy after connecting
     const messageLog = spyMessages(client);
@@ -51,7 +54,8 @@ describe('CONNECT_QUERY message should be sent before DISCONNECT_QUERY', async (
 
   it('should not send connect or disconnect if subscribed and unsubscribed while disconnected', async () => {
     const server = new TriplitServer(new DB());
-    const client = createTestClient(server, SERVICE_KEY, {
+    const client = createTestClient(server, {
+      token: SERVICE_KEY,
       clientId: 'alice',
       autoConnect: false,
     });
@@ -74,7 +78,8 @@ describe('CONNECT_QUERY message should be sent before DISCONNECT_QUERY', async (
 
   it('should properly connect if subscribe -> unsubscribe -> subscribe in quick succession', async () => {
     const server = new TriplitServer(new DB());
-    const client = createTestClient(server, SERVICE_KEY, {
+    const client = createTestClient(server, {
+      token: SERVICE_KEY,
       clientId: 'alice',
     });
     await pause();
@@ -98,7 +103,10 @@ describe('CONNECT_QUERY message should be sent before DISCONNECT_QUERY', async (
 describe('remote error handling', async () => {
   it('should call the error callback when the server sends QuerySyncError', async () => {
     const server = new TriplitServer(new DB());
-    const client = createTestClient(server, SERVICE_KEY, { clientId: 'alice' });
+    const client = createTestClient(server, {
+      clientId: 'alice',
+      token: SERVICE_KEY,
+    });
     const query = client.query('test').build();
     const errorCallback = vi.fn();
     client.subscribe(query, () => {}, errorCallback);
@@ -120,7 +128,10 @@ describe('remote error handling', async () => {
   // This is current behavior, but may not be the desired behavior in the future
   it('should disconnect the query when the server sends an error', async () => {
     const server = new TriplitServer(new DB());
-    const client = createTestClient(server, SERVICE_KEY, { clientId: 'alice' });
+    const client = createTestClient(server, {
+      clientId: 'alice',
+      token: SERVICE_KEY,
+    });
     const query = client.query('test').build();
     const errorCallback = vi.fn();
     client.subscribe(query, () => {}, errorCallback);

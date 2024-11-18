@@ -31,7 +31,10 @@ export type ClientCloseReasonType =
 export type ServerCloseReasonType =
   | 'SCHEMA_MISMATCH'
   | 'UNAUTHORIZED'
-  | 'INTERNAL_ERROR';
+  | 'TOKEN_EXPIRED'
+  | 'ROLES_MISMATCH'
+  | 'INTERNAL_ERROR'
+  | 'UNKNOWN';
 export type CloseReasonType = ClientCloseReasonType | ServerCloseReasonType;
 export type CloseReason = {
   type: CloseReasonType;
@@ -92,12 +95,18 @@ export type ClientChunkMessage = SyncMessage<
   { data: string; total: number; index: number; id: string }
 >;
 
+export type ClientUpdateTokenMessage = SyncMessage<
+  'UPDATE_TOKEN',
+  { token: string }
+>;
+
 export type ClientSyncMessage =
   | ClientConnectQueryMessage
   | ClientDisconnectQueryMessage
   | ClientTriplesPendingMessage
   | ClientTriplesMessage
-  | ClientChunkMessage;
+  | ClientChunkMessage
+  | ClientUpdateTokenMessage;
 
 type SuccessResult<T> = { data: T; error?: undefined };
 type ErrorResult<E> = { data?: undefined; error: E };

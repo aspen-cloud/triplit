@@ -91,7 +91,7 @@ const {
 The `useConnectionStatus` hook subscribes to changes to the connection status of the client and will automatically unsubscribe when the component unmounts.
 
 ```vue filename="ConnectionStatus.vue"
-<script lang="ts">
+<script setup lang="ts">
 import { useConnectionStatus } from '@triplit/vue';
 import { client } from './triplit';
 
