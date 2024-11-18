@@ -130,7 +130,7 @@ export function createTriplitHonoServer(
       return {
         onOpen: async (_event, ws) => {
           if (!ws.url) return;
-          const queryParams = new URL(ws.url).searchParams;
+          const queryParams = ws.url.searchParams;
 
           let token: ProjectJWT | undefined = undefined;
 
