@@ -1,5 +1,11 @@
 # @triplit/db
 
+## 0.5.9
+
+### Patch Changes
+
+- 2713ca43: export additional methods
+
 ## 0.5.8
 
 ### Patch Changes

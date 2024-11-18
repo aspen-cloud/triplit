@@ -1,5 +1,13 @@
 # @triplit/server-core
 
+## 0.5.12
+
+### Patch Changes
+
+- 2713ca43: use hono for default node server implmenetation
+- Updated dependencies [2713ca43]
+  - @triplit/db@0.5.9
+
 ## 0.5.11
 
 ### Patch Changes
