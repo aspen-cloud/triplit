@@ -62,8 +62,8 @@ export function createTriplitHonoServer(
     ? typeof options.storage === 'string'
       ? resolveStorageStringOption(options.storage)
       : typeof options.storage === 'function'
-        ? options.storage()
-        : options.storage
+      ? options.storage()
+      : options.storage
     : undefined;
   if (options?.verboseLogs) logger.verbose = true;
   const dbOptions: Partial<DBConfig> = {
@@ -361,7 +361,7 @@ function sendMessage(
   options: { dropIfClosed?: boolean } = {}
 ) {
   const message = JSON.stringify({ type, payload });
-  if (socket.readyState === WebSocket.OPEN) {
+  if (socket.readyState === 1) {
     logger.logMessage('sent', { type, payload });
     socket.send(message);
   }
