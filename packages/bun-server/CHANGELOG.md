@@ -1,5 +1,12 @@
 # bun-server
 
+## 0.4.36
+
+### Patch Changes
+
+- Updated dependencies [7bb32f7e]
+  - @triplit/server@0.4.36
+
 ## 0.4.35
 
 ### Patch Changes
