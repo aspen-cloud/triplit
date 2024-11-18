@@ -19,7 +19,6 @@ const serviceToken =
 const env = {
   TRIPLIT_JWT_SECRET: 'test-secret',
   TRIPLIT_SERVICE_TOKEN: serviceToken,
-  TRIPLIT_DB_URL: `http://localhost:${PORT}`,
   TRIPLIT_PROJECT_ID: 'project',
 };
 process.env = { ...process.env, ...env };
@@ -42,7 +41,13 @@ async function writeLocalSchema(collections: Models<any, any>, path?: string) {
 }
 
 async function readRemoteSchema() {
-  const { stdout } = await $shell`yarn triplit schema print --location=remote`;
+  let stdout;
+  try {
+    const output = await $shell`yarn triplit schema print --location=remote`;
+    stdout = output.stdout;
+  } catch (e) {
+    console.error(e);
+  }
   // If no schema, return undefined
   if (!stdout) return undefined;
   const transpiled = transpileTsString(stdout);
@@ -70,6 +75,7 @@ async function withServerAndCtx(
   callback: (ctx: any, server: any) => void | Promise<void>
 ) {
   using server = await tempTriplitServer(options);
+  process.env.TRIPLIT_DB_URL = `http://localhost:${server.port}`;
   const ctx = await generateNetworkCtx({}, server.port);
   await callback(ctx, server);
 }
