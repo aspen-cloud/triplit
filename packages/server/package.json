@@ -28,6 +28,8 @@
     "validate:types": "node ../../scripts/check-for-local-references-in-declarations.js dist"
   },
   "dependencies": {
+    "@hono/node-server": "^1.13.7",
+    "@hono/node-ws": "^1.0.4",
     "@sentry/cli": "^2.31.2",
     "@sentry/node": "^7.112.2",
     "@triplit/client": "workspace:^",

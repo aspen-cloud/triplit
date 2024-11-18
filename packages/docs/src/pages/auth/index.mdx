@@ -37,7 +37,7 @@ const client = new TriplitClient({
 });
 ```
 
-This will automically connect the client to the server and authenticate with the provided token. If you would like to connect manually, you can set `autoConnect` to `false` and call `client.connect()` when ready.
+This will automatically connect the client to the server and authenticate with the provided token. If you would like to connect manually, you can set `autoConnect` to `false` and call `client.connect()` when ready.
 
 ```typescript {5, 10}
 import { TriplitClient } from '@triplit/client';
@@ -52,31 +52,58 @@ const client = new TriplitClient({
 client.connect();
 ```
 
-### Changing users
+### Modeling sign in and sign out flows
 
-It is common for an app to need to change the user that is currently authenticated. This could be because a user is signing out, or because a user is signing in. You generally want to follow these steps when changing users:
+#### Starting sessions
 
-1. Disconnect the client
-1. Update the token
-1. Perform any necessary cleanup
-1. Reconnect the client
-
-When signing out a user, it is recommeded to call the `reset` method on your client. This will ensure any data that is stored from another user's session is cleared and any state related to syncing is reset.
+If users in your app start in an unauthenticated state (e.g. you display a sign-in form when the app loads), or if users can sign out, you will need to use Triplit's sessions API to initiate and teardown sync connections and the appropriate moments. When changing users (as represented by tokens), you should use the `startSession` method.
 
 ```typescript
-async function onSignOut() {
-  client.disconnect();
-  client.updateToken(undefined);
-  await client.reset();
-}
-
-function onSignIn(newToken: string) {
-  client.updateToken(newToken);
-  client.connect();
+async function onSignIn(token: string) {
+  await client.startSession(token);
 }
 ```
 
-More information on updating client options can be found in the [client documentation](client/options#auth-options).
+This will update the token and connect the client to the server. The `TriplitClient` calls this method implicitly when you provide a token to the constructor.
+
+#### Ending sessions
+
+When a user signs out, you should call the `endSession` method. This will disconnect the client and reset metadata related to the session. It **will not** clear any data stored in the client's cache. It's up to you, the developer, to decide whether or not the next user should have access to the data from the previous user.
+
+```typescript
+async function onSignOut(clearCache: boolean = false) {
+  await client.endSession();
+  if (clearCache) {
+    await client.clear();
+  }
+}
+```
+
+#### Updating sessions
+
+If your authentication provider issues short-lived tokens, you may need to refresh the token mid-session. You can do this by passing in a handler function into `startSession`. This handler will either run at an interval you specify, or it will read the expiry time from the token itself and run when the token is about to expire.
+
+```typescript
+const refreshHandler = async () => {
+  return await authProvider.getFreshToken();
+};
+
+async function onSignIn(token: string) {
+  await client.startSession(token, true, { refreshHandler });
+}
+```
+
+When the session ends, the client will automatically cleanup the interval.
+
+You can also manually refresh the token by calling `updateSessionToken` with the new token.
+
+```typescript
+function onTokenRefresh(newToken: string) {
+  client.updateSessionToken(newToken);
+}
+```
+
+`updateSessionToken` and/or the refresh handler will throw an error if the [roles](/schemas/permissions#roles) of the new token do not match the roles of the current token. This is to prevent a user from changing their token to one that has more access than they should during the same sync connection. Attempting to do so will throw an error.
 
 ## Authorization
 

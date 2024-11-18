@@ -24,10 +24,18 @@ import {
   StoreSchema,
   ClearOptions,
   EntityCacheOptions,
+  Roles,
+  sessionRolesAreEquivalent,
+  getRolesFromSession,
+  normalizeSessionVars,
 } from '@triplit/db';
-import { decodeToken } from '../token.js';
+import { decodeToken, tokenIsExpired } from '../token.js';
 import {
   IndexedDbUnavailableError,
+  NoActiveSessionError,
+  SessionAlreadyActiveError,
+  SessionRolesMismatchError,
+  TokenExpiredError,
   UnrecognizedFetchPolicyError,
 } from '../errors.js';
 import { MemoryBTreeStorage } from '@triplit/db/storage/memory-btree';
@@ -69,6 +77,8 @@ interface AuthOptions {
 
 // Could probably make this an option if you want client side validation
 const SKIP_RULES = true;
+
+const SESSION_ROLES_KEY = 'SESSION_ROLES';
 
 function parseScope(query: ClientQuery<any, any>) {
   const { syncStatus } = query;
@@ -127,6 +137,11 @@ export interface ClientOptions<M extends ClientSchema = ClientSchema> {
    * The schema used to validate database operations and provide type-hinting. Read more about schemas {@link https://www.triplit.dev/docs/schemas | here }
    */
   schema?: M;
+
+  /**
+   * The roles used to authorize database operations. Read more about roles {@link https://www.triplit.dev/docs/authorization | here }
+   */
+  roles?: Roles;
   /**
    * The token used to authenticate with the server. If not provided, the client will not connect to a server. Read more about tokens {@link https://www.triplit.dev/docs/auth | here }
    */
@@ -195,6 +210,7 @@ export class TriplitClient<M extends ClientSchema = ClientSchema> {
    */
   syncEngine: SyncEngine;
   authOptions: AuthOptions;
+  private tokenRefreshTimer: ReturnType<typeof setTimeout> | null = null;
 
   http: HttpClient<M>;
 
@@ -214,6 +230,7 @@ export class TriplitClient<M extends ClientSchema = ClientSchema> {
   constructor(options?: ClientOptions<M>) {
     const {
       schema,
+      roles,
       token,
       claimsPath,
       serverUrl,
@@ -241,7 +258,9 @@ export class TriplitClient<M extends ClientSchema = ClientSchema> {
     const autoConnect = options?.autoConnect ?? true;
     const clock = new DurableClock('cache', clientId);
     this.authOptions = { token, claimsPath };
-    const dbSchema = schema ? { collections: schema, version: 0 } : undefined;
+    const dbSchema = schema
+      ? { collections: schema, version: 0, roles }
+      : undefined;
     this.db = new DB<M>({
       clock,
       schema: dbSchema,
@@ -272,20 +291,10 @@ export class TriplitClient<M extends ClientSchema = ClientSchema> {
       this.http.updateOptions({ schema: schema?.collections });
     });
 
-    if (this.authOptions.token) {
-      syncOptions.token = this.authOptions.token;
-      const decoded = decodeToken(
-        this.authOptions.token,
-        this.authOptions.claimsPath
-      );
-
-      this.db = this.db.withSessionVars(decoded);
-    }
-
     this.syncEngine = new SyncEngine(this, syncOptions);
     // Look into how calling connect / disconnect early is handled
-    this.db.ready.then(() => {
-      if (autoConnect) this.syncEngine.connect();
+    this.db.ready.then(async () => {
+      token && (await this.startSession(token, autoConnect));
     });
 
     if (syncSchema) {
@@ -463,7 +472,7 @@ export class TriplitClient<M extends ClientSchema = ClientSchema> {
   }
 
   async reset(options: ClearOptions = {}) {
-    await this.syncEngine.reset();
+    await this.syncEngine.resetQueryState();
     await this.clear(options);
   }
 
@@ -1111,7 +1120,9 @@ export class TriplitClient<M extends ClientSchema = ClientSchema> {
    *
    * @param options - The options to update the client with
    */
-  updateOptions(options: Pick<ClientOptions<M>, 'token' | 'serverUrl'>) {
+  private updateOptions(
+    options: Pick<ClientOptions<M>, 'token' | 'serverUrl'>
+  ) {
     const { token, serverUrl } = options;
     const hasToken = options.hasOwnProperty('token');
     const hasServerUrl = options.hasOwnProperty('serverUrl');
@@ -1142,6 +1153,133 @@ export class TriplitClient<M extends ClientSchema = ClientSchema> {
     }
   }
 
+  private async getRolesForSyncSession(): Promise<DB['sessionRoles']> {
+    const savedSessionRoles = await this.db.tripleStore.readMetadataTuples(
+      SESSION_ROLES_KEY,
+      []
+    );
+    if (savedSessionRoles.length === 0) return undefined;
+    if (savedSessionRoles[0][2] === null) return undefined;
+    let parsedRoles;
+    try {
+      parsedRoles = JSON.parse(
+        savedSessionRoles[0][2] as string
+      ) as DB['sessionRoles'];
+    } catch (e) {
+      console.error('Error parsing saved session roles', e);
+    }
+    return parsedRoles;
+  }
+
+  /**
+   * Starts a new sync session with the provided token
+   *
+   * @param token - The token to start the session with
+   * @param autoConnect - If true, the client will automatically connect to the server after starting the session. Defaults to true.
+   * @param refreshOptions - Options for refreshing the token
+   * @param refreshOptions.interval - The interval in milliseconds to refresh the token. If not provided, the token will be refreshed 500ms before it expires.
+   * @param refreshOptions.handler - The function to call to refresh the token. It returns a promise that resolves with the new token.
+   */
+  async startSession(
+    token: string,
+    autoConnect = true,
+    refreshOptions?: {
+      interval?: number;
+      refreshHandler: () => Promise<string>;
+    }
+  ) {
+    // If there is already an active session, you should not be able to start a new one
+    if (this.syncEngine.token) {
+      throw new SessionAlreadyActiveError();
+    }
+    if (tokenIsExpired(decodeToken(token))) {
+      throw new TokenExpiredError();
+    }
+    // TODO: handle db readiness in lower level APIs
+    await this.db.ready;
+
+    // Start the session with the provided token
+    // Update the token on the client to the new token (this will close the current connection)
+    this.updateToken(token);
+
+    // Check if the role information for this token is the same as the last
+    // If so, we don't need to reset the sync state
+    const savedRoles = await this.getRolesForSyncSession();
+    if (!sessionRolesAreEquivalent(this.db.sessionRoles, savedRoles)) {
+      // save the new session roles to storage
+      await this.db.tripleStore.updateMetadataTuples([
+        [SESSION_ROLES_KEY, [], JSON.stringify(this.db.sessionRoles ?? [])],
+      ]);
+      await this.syncEngine.resetQueryState();
+    }
+
+    // If autoConnect is true, connect the client to the server
+    autoConnect && this.connect();
+
+    // Setup token refresh handler
+    if (!refreshOptions) return;
+    const { interval, refreshHandler } = refreshOptions;
+    const setRefreshTimeoutForToken = (token: string) => {
+      const decoded = decodeToken(token);
+      if (!decoded.exp && !interval) return;
+      const delay = interval ?? Math.max(decoded.exp - Date.now() - 500, 0);
+      this.tokenRefreshTimer = setTimeout(async () => {
+        const freshToken = await refreshHandler();
+        this.updateSessionToken(freshToken);
+        setRefreshTimeoutForToken(freshToken);
+      }, delay);
+    };
+    setRefreshTimeoutForToken(token);
+    return () => {
+      this.resetTokenRefreshHandler();
+    };
+  }
+
+  /**
+   * Disconnects the client from the server and ends the current sync session.
+   */
+  async endSession() {
+    this.resetTokenRefreshHandler();
+    this.disconnect();
+    this.updateToken(undefined);
+    await this.syncEngine.resetQueryState();
+    await this.db.tripleStore.transact(async (tx) => {
+      await tx.deleteMetadataTuples([[SESSION_ROLES_KEY]]);
+    });
+  }
+
+  /**
+   * Attempts to update the token of the current session, which re-use the current connection. If the new token does not have the same roles as the current session, an error will be thrown.
+   */
+  updateSessionToken(token: string) {
+    if (!this.syncEngine.token) {
+      throw new NoActiveSessionError();
+    }
+    const decodedToken = decodeToken(token);
+    if (tokenIsExpired(decodedToken)) {
+      throw new TokenExpiredError();
+    }
+    const sessionRoles = getRolesFromSession(
+      this.db.schema,
+      normalizeSessionVars(decodedToken)
+    );
+    if (!sessionRolesAreEquivalent(this.db.sessionRoles, sessionRoles)) {
+      throw new SessionRolesMismatchError();
+    }
+    this.syncEngine.updateTokenForSession(token);
+  }
+
+  resetTokenRefreshHandler() {
+    if (this.tokenRefreshTimer) {
+      clearTimeout(this.tokenRefreshTimer);
+      this.tokenRefreshTimer = null;
+    }
+  }
+
+  onSessionError(...args: Parameters<typeof this.syncEngine.onSessionError>) {
+    return this.syncEngine.onSessionError(...args);
+  }
+
   withSessionVars(session: any) {
     const newClient = new TriplitClient<M>(this.options);
     newClient.db = this.db.withSessionVars(session);
@@ -1153,7 +1291,7 @@ export class TriplitClient<M extends ClientSchema = ClientSchema> {
    *
    * @param token
    */
-  updateToken(token: string | undefined) {
+  private updateToken(token: string | undefined) {
     this.updateOptions({ token });
   }
 

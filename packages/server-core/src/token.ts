@@ -17,9 +17,18 @@ import { TriplitError } from '@triplit/db';
 
 const TriplitJWTType = ['test', 'anon', 'secret'] as const;
 export type TriplitJWTType = (typeof TriplitJWTType)[number];
+
+export type StandardJWTClaims = Partial<{
+  iss: string;
+  sub: string;
+  aud: string;
+  exp: number;
+  iat: number;
+}>;
+
 export type TriplitJWT = {
   'x-triplit-token-type'?: 'test' | 'anon' | 'secret';
-};
+} & StandardJWTClaims;
 
 export type ProjectJWT = TriplitJWT;
 

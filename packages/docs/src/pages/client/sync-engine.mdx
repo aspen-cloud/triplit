@@ -8,18 +8,18 @@ description: How to connect, disconnect, handle errors and check the connection 
 
 Instantiating a client will automatically connect to the server. If the connection is unexpectedly lost, the client will automatically reconnect.
 
-You may also manually manage the state connection to the server by calling `client.syncEngine.connect()` and `client.syncEngine.disconnect()`.
+You may also manually manage the state connection to the server by calling `client.connect()` and `client.disconnect()`.
 
-The connection parameters used in the client constructor can be updated by calling `client.updateOptions(params)`. If necessary, this will disconnect and reconnect to the server with the new parameters.
+The connection parameters used in the client constructor can be updated by using the Sessions API. Read more about it in the [auth guide](/auth)
 
 ## Connection status
 
-The connection status is available at `client.syncEngine.connectionStatus`.
+The connection status is available at `client.connectionStatus`.
 
-You may also listen to changes in the connection status by adding a listener to `client.syncEngine.onConnectionStatusChange(callback, runImmediately)`. If the optional parameter `runImmediately` is set to `true`, the callback will be run immediately with the current connection status.
+You may also listen to changes in the connection status by adding a listener to `client.onConnectionStatusChange(callback, runImmediately)`. If the optional parameter `runImmediately` is set to `true`, the callback will be run immediately with the current connection status.
 
 ```typescript
-client.syncEngine.onConnectionStatusChange((status) => {
+client.onConnectionStatusChange((status) => {
   if (status === 'OPEN') console.log('Connected to server');
   if (status === 'CLOSED') console.log('Disconnected from server');
 }, true);

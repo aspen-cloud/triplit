@@ -1,9 +1,7 @@
-import { assert, beforeEach, describe, expect, it } from 'vitest';
-import { withServer } from '../utils/server.js';
+import { beforeEach, describe, expect, it } from 'vitest';
+import { tempTriplitServer } from '../utils/server.js';
 import { ClientSchema, Entity, HttpClient } from '@triplit/client';
 import { InsertTypeFromModel, Schema as S } from '@triplit/db';
-
-const PORT = 8888;
 
 const serviceToken =
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ4LXRyaXBsaXQtdG9rZW4tdHlwZSI6InNlY3JldCIsIngtdHJpcGxpdC1wcm9qZWN0LWlkIjoicHJvamVjdCJ9.gcDKyZU9wf8o43Ca9kUVXO4KsGwX8IhhyEg1PO1ZqiQ';
@@ -17,82 +15,82 @@ beforeEach(async () => {
 });
 
 it('fetch respects queries', async () => {
-  await withServer({ port: PORT }, async () => {
-    const client = new HttpClient({
-      serverUrl: `http://localhost:${PORT}`,
-      token: serviceToken,
-    });
-    await client.insert('test', { id: 'test1', name: 'a' });
-    await client.insert('test', { id: 'test2', name: 'b' });
-    await client.insert('test', { id: 'test3', name: 'a' });
-
-    const result = await client.fetch({
-      collectionName: 'test',
-      where: [['name', '=', 'a']],
-    });
-
-    expect(result.length).toEqual(2);
-    expect(result.find((e) => e.id === 'test1')).toBeTruthy();
-    expect(result.find((e) => e.id === 'test2')).toBeFalsy();
-    expect(result.find((e) => e.id === 'test3')).toBeTruthy();
+  using server = await tempTriplitServer();
+  const { port } = server;
+  const client = new HttpClient({
+    serverUrl: `http://localhost:${port}`,
+    token: serviceToken,
   });
+  await client.insert('test', { id: 'test1', name: 'a' });
+  await client.insert('test', { id: 'test2', name: 'b' });
+  await client.insert('test', { id: 'test3', name: 'a' });
+
+  const result = await client.fetch({
+    collectionName: 'test',
+    where: [['name', '=', 'a']],
+  });
+
+  expect(result.length).toEqual(2);
+  expect(result.find((e) => e.id === 'test1')).toBeTruthy();
+  expect(result.find((e) => e.id === 'test2')).toBeFalsy();
+  expect(result.find((e) => e.id === 'test3')).toBeTruthy();
 });
 
 it('fetch can handle a select without ["id"]', async () => {
-  await withServer({ port: PORT }, async () => {
-    const client = new HttpClient({
-      serverUrl: `http://localhost:${PORT}`,
-      token: serviceToken,
-    });
-    await client.insert('test', { id: 'test1', name: 'a' });
-    await client.insert('test', { id: 'test2', name: 'b' });
-    await client.insert('test', { id: 'test3', name: 'a' });
-
-    const result = await client.fetch({
-      collectionName: 'test',
-      select: ['name'],
-      where: [['name', '=', 'a']],
-    });
-    expect(result.length).toEqual(2);
-    expect(result.every((e) => e.id === undefined)).toBeTruthy();
-    expect(result.find((e) => e.name === 'a')).toBeTruthy();
-    expect(result.find((e) => e.name === 'b')).toBeFalsy();
+  using server = await tempTriplitServer();
+  const { port } = server;
+  const client = new HttpClient({
+    serverUrl: `http://localhost:${port}`,
+    token: serviceToken,
   });
+  await client.insert('test', { id: 'test1', name: 'a' });
+  await client.insert('test', { id: 'test2', name: 'b' });
+  await client.insert('test', { id: 'test3', name: 'a' });
+
+  const result = await client.fetch({
+    collectionName: 'test',
+    select: ['name'],
+    where: [['name', '=', 'a']],
+  });
+  expect(result.length).toEqual(2);
+  expect(result.every((e) => e.id === undefined)).toBeTruthy();
+  expect(result.find((e) => e.name === 'a')).toBeTruthy();
+  expect(result.find((e) => e.name === 'b')).toBeFalsy();
 });
 
 it('fetchOne returns a single entity that matches filter', async () => {
-  await withServer({ port: PORT }, async () => {
-    const client = new HttpClient({
-      serverUrl: `http://localhost:${PORT}`,
-      token: serviceToken,
-    });
-    await client.insert('test', { id: 'test1', name: 'a' });
-    await client.insert('test', { id: 'test2', name: 'b' });
-    await client.insert('test', { id: 'test3', name: 'a' });
-
-    const result = await client.fetchOne({
-      collectionName: 'test',
-      where: [['name', '=', 'a']],
-    });
-
-    expect(result).toEqual({ id: 'test1', name: 'a' });
+  using server = await tempTriplitServer();
+  const { port } = server;
+  const client = new HttpClient({
+    serverUrl: `http://localhost:${port}`,
+    token: serviceToken,
   });
+  await client.insert('test', { id: 'test1', name: 'a' });
+  await client.insert('test', { id: 'test2', name: 'b' });
+  await client.insert('test', { id: 'test3', name: 'a' });
+
+  const result = await client.fetchOne({
+    collectionName: 'test',
+    where: [['name', '=', 'a']],
+  });
+
+  expect(result).toEqual({ id: 'test1', name: 'a' });
 });
 
 it('fetchById returns a single entity by id', async () => {
-  await withServer({ port: PORT }, async () => {
-    const client = new HttpClient({
-      serverUrl: `http://localhost:${PORT}`,
-      token: serviceToken,
-    });
-    await client.insert('test', { id: 'test1', name: 'a' });
-    await client.insert('test', { id: 'test2', name: 'b' });
-    await client.insert('test', { id: 'test3', name: 'a' });
-
-    const result = await client.fetchById('test', 'test1');
-
-    expect(result).toEqual({ id: 'test1', name: 'a' });
+  using server = await tempTriplitServer();
+  const { port } = server;
+  const client = new HttpClient({
+    serverUrl: `http://localhost:${port}`,
+    token: serviceToken,
   });
+  await client.insert('test', { id: 'test1', name: 'a' });
+  await client.insert('test', { id: 'test2', name: 'b' });
+  await client.insert('test', { id: 'test3', name: 'a' });
+
+  const result = await client.fetchById('test', 'test1');
+
+  expect(result).toEqual({ id: 'test1', name: 'a' });
 });
 
 it('can handle inserting all of our supported types', async () => {
@@ -159,50 +157,46 @@ it('can handle inserting all of our supported types', async () => {
     defaultNullBoolean: null,
     defaultNullDate: null,
   };
-  await withServer(
-    {
-      port: PORT,
-      serverOptions: {
-        dbOptions: {
-          schema: { collections: schema },
-        },
+  await using server = await tempTriplitServer({
+    serverOptions: {
+      dbOptions: {
+        schema: { collections: schema },
       },
     },
-    async () => {
-      const client = new HttpClient<typeof schema>({
-        serverUrl: `http://localhost:${PORT}`,
-        token: serviceToken,
-        schema,
-      });
+  });
+  const { port } = server;
+  const client = new HttpClient<typeof schema>({
+    serverUrl: `http://localhost:${port}`,
+    token: serviceToken,
+    schema,
+  });
 
-      await client.insert('test', insertedEntity);
+  await client.insert('test', insertedEntity);
 
-      const result = await client.fetchOne({
-        collectionName: 'test',
-        where: [['string', '=', 'string']],
-      });
+  const result = await client.fetchOne({
+    collectionName: 'test',
+    where: [['string', '=', 'string']],
+  });
 
-      expect(result).toEqual(expectedEntity);
+  expect(result).toEqual(expectedEntity);
 
-      // delete the entity
-      await client.delete('test', 'test1');
+  // delete the entity
+  await client.delete('test', 'test1');
 
-      //fetch it back
-      const result2 = await client.fetchOne({
-        collectionName: 'test',
-        where: [['string', '=', 'string']],
-      });
+  //fetch it back
+  const result2 = await client.fetchOne({
+    collectionName: 'test',
+    where: [['string', '=', 'string']],
+  });
 
-      expect(result2).toBeNull();
+  expect(result2).toBeNull();
 
-      await client.bulkInsert({ test: [insertedEntity] });
-      const result3 = await client.fetchOne({
-        collectionName: 'test',
-        where: [['string', '=', 'string']],
-      });
-      expect(result3).toEqual(expectedEntity);
-    }
-  );
+  await client.bulkInsert({ test: [insertedEntity] });
+  const result3 = await client.fetchOne({
+    collectionName: 'test',
+    where: [['string', '=', 'string']],
+  });
+  expect(result3).toEqual(expectedEntity);
 });
 
 describe('set operations', () => {
@@ -219,158 +213,146 @@ describe('set operations', () => {
   };
 
   it('can insert Sets', async () => {
-    await withServer(
-      {
-        port: PORT,
-        serverOptions: {
-          dbOptions: {
-            schema,
-          },
+    await using server = await tempTriplitServer({
+      serverOptions: {
+        dbOptions: {
+          schema,
         },
       },
-      async () => {
-        const client = new HttpClient({
-          serverUrl: `http://localhost:${PORT}`,
-          token: serviceToken,
-          schema: schema.collections,
-        });
+    });
+    const { port } = server;
+    const client = new HttpClient({
+      serverUrl: `http://localhost:${port}`,
+      token: serviceToken,
+      schema: schema.collections,
+    });
 
-        // Test single insert
-        await client.insert('test', {
-          id: 'test1',
-          name: 'a',
-          tags: new Set(['tag1', 'tag2']),
-        });
+    // Test single insert
+    await client.insert('test', {
+      id: 'test1',
+      name: 'a',
+      tags: new Set(['tag1', 'tag2']),
+    });
 
-        const result = await client.fetchById('test', 'test1');
-        expect(result).toEqual({
-          id: 'test1',
-          name: 'a',
-          tags: new Set(['tag1', 'tag2']),
-        });
+    const result = await client.fetchById('test', 'test1');
+    expect(result).toEqual({
+      id: 'test1',
+      name: 'a',
+      tags: new Set(['tag1', 'tag2']),
+    });
 
-        // Test bulk insert
-        await client.bulkInsert({
-          test: [
-            {
-              id: 'test2',
-              name: 'b',
-              tags: new Set(['tag3', 'tag4']),
-            },
-            {
-              id: 'test3',
-              name: 'c',
-              tags: new Set(['tag5', 'tag6']),
-            },
-          ],
-        });
-
-        const result2 = await client.fetchById('test', 'test2');
-        expect(result2).toEqual({
+    // Test bulk insert
+    await client.bulkInsert({
+      test: [
+        {
           id: 'test2',
           name: 'b',
           tags: new Set(['tag3', 'tag4']),
-        });
-
-        const result3 = await client.fetchById('test', 'test3');
-        expect(result3).toEqual({
+        },
+        {
           id: 'test3',
           name: 'c',
           tags: new Set(['tag5', 'tag6']),
-        });
-      }
-    );
+        },
+      ],
+    });
+
+    const result2 = await client.fetchById('test', 'test2');
+    expect(result2).toEqual({
+      id: 'test2',
+      name: 'b',
+      tags: new Set(['tag3', 'tag4']),
+    });
+
+    const result3 = await client.fetchById('test', 'test3');
+    expect(result3).toEqual({
+      id: 'test3',
+      name: 'c',
+      tags: new Set(['tag5', 'tag6']),
+    });
   });
 
   it('can update sets', async () => {
-    await withServer(
-      {
-        port: PORT,
-        serverOptions: {
-          dbOptions: {
-            schema,
-          },
+    await using server = await tempTriplitServer({
+      serverOptions: {
+        dbOptions: {
+          schema,
         },
       },
-      async () => {
-        const client = new HttpClient({
-          serverUrl: `http://localhost:${PORT}`,
-          token: serviceToken,
-          schema: schema.collections,
-        });
+    });
+    const { port } = server;
+    const client = new HttpClient({
+      serverUrl: `http://localhost:${port}`,
+      token: serviceToken,
+      schema: schema.collections,
+    });
 
-        await client.insert('test', {
-          id: 'test1',
-          name: 'a',
-          tags: new Set(['tag1', 'tag2']),
-        });
+    await client.insert('test', {
+      id: 'test1',
+      name: 'a',
+      tags: new Set(['tag1', 'tag2']),
+    });
 
-        await client.update('test', 'test1', (entity) => {
-          entity.tags.add('tag3');
-        });
+    await client.update('test', 'test1', (entity) => {
+      entity.tags.add('tag3');
+    });
 
-        {
-          const result = await client.fetchById('test', 'test1');
-          expect(result).toEqual({
-            id: 'test1',
-            name: 'a',
-            tags: new Set(['tag1', 'tag2', 'tag3']),
-          });
-        }
+    {
+      const result = await client.fetchById('test', 'test1');
+      expect(result).toEqual({
+        id: 'test1',
+        name: 'a',
+        tags: new Set(['tag1', 'tag2', 'tag3']),
+      });
+    }
 
-        await client.update('test', 'test1', (entity) => {
-          entity.tags.delete('tag2');
-        });
+    await client.update('test', 'test1', (entity) => {
+      entity.tags.delete('tag2');
+    });
 
-        {
-          const result = await client.fetchById('test', 'test1');
-          expect(result).toEqual({
-            id: 'test1',
-            name: 'a',
-            tags: new Set(['tag1', 'tag3']),
-          });
-        }
-      }
-    );
+    {
+      const result = await client.fetchById('test', 'test1');
+      expect(result).toEqual({
+        id: 'test1',
+        name: 'a',
+        tags: new Set(['tag1', 'tag3']),
+      });
+    }
   });
 
   it('can assign to sets', async () => {
-    await withServer(
-      {
-        port: PORT,
-        serverOptions: {
-          dbOptions: {
-            schema,
-          },
+    await using server = await tempTriplitServer({
+      serverOptions: {
+        dbOptions: {
+          schema,
         },
       },
-      async () => {
-        const client = new HttpClient({
-          serverUrl: `http://localhost:${PORT}`,
-          token: serviceToken,
-          schema: schema.collections,
-        });
+    });
+    const { port } = server;
+    const client = new HttpClient({
+      serverUrl: `http://localhost:${port}`,
+      token: serviceToken,
+      schema: schema.collections,
+    });
 
-        await client.insert('test', {
-          id: 'test1',
-          name: 'a',
-          tags: new Set(['tag1', 'tag2']),
-        });
+    await client.insert('test', {
+      id: 'test1',
+      name: 'a',
+      tags: new Set(['tag1', 'tag2']),
+    });
 
-        await client.update('test', 'test1', (entity) => {
-          entity.tags = new Set(['tag3', 'tag4']);
-        });
+    await client.update('test', 'test1', (entity) => {
+      entity.tags = new Set(['tag3', 'tag4']);
+    });
 
-        {
-          const result = await client.fetchById('test', 'test1');
-          expect(result).toEqual({
-            id: 'test1',
-            name: 'a',
-            tags: new Set(['tag3', 'tag4']),
-          });
-        }
-      }
-    );
+    {
+      const result = await client.fetchById('test', 'test1');
+      expect(result).toEqual({
+        id: 'test1',
+        name: 'a',
+        tags: new Set(['tag3', 'tag4']),
+      });
+    }
   });
 });
 
@@ -386,54 +368,50 @@ it('fetch properly deserializes data based on schema', async () => {
       },
     },
   };
-  await withServer(
-    {
-      port: PORT,
-      serverOptions: {
-        dbOptions: {
-          schema,
-        },
+  await using server = await tempTriplitServer({
+    serverOptions: {
+      dbOptions: {
+        schema,
       },
     },
-    async () => {
-      const client = new HttpClient<typeof schema.collections>({
-        serverUrl: `http://localhost:${PORT}`,
-        token: serviceToken,
-        schema: schema.collections,
-      });
-      await client.insert('test', {
-        id: 'test1',
-        name: 'a',
-        date: new Date(2022, 10, 15),
-      });
+  });
+  const { port } = server;
+  const client = new HttpClient<typeof schema.collections>({
+    serverUrl: `http://localhost:${port}`,
+    token: serviceToken,
+    schema: schema.collections,
+  });
+  await client.insert('test', {
+    id: 'test1',
+    name: 'a',
+    date: new Date(2022, 10, 15),
+  });
 
-      const expectedResult = {
-        id: 'test1',
-        name: 'a',
-        date: new Date(2022, 10, 15),
-      };
+  const expectedResult = {
+    id: 'test1',
+    name: 'a',
+    date: new Date(2022, 10, 15),
+  };
 
-      // fetch
-      {
-        const result = await client.fetch({ collectionName: 'test' });
-        expect(result.find((e) => e.id === 'test1')).toEqual(expectedResult);
-      }
+  // fetch
+  {
+    const result = await client.fetch({ collectionName: 'test' });
+    expect(result.find((e) => e.id === 'test1')).toEqual(expectedResult);
+  }
 
-      // fetchOne
-      {
-        const result = await client.fetchOne({
-          collectionName: 'test',
-        });
-        expect(result).toEqual(expectedResult);
-      }
+  // fetchOne
+  {
+    const result = await client.fetchOne({
+      collectionName: 'test',
+    });
+    expect(result).toEqual(expectedResult);
+  }
 
-      // fetchById
-      {
-        const result = await client.fetchById('test', 'test1');
-        expect(result).toEqual(expectedResult);
-      }
-    }
-  );
+  // fetchById
+  {
+    const result = await client.fetchById('test', 'test1');
+    expect(result).toEqual(expectedResult);
+  }
 });
 
 it('fetch can properly deserialize subqueries with schema', async () => {
@@ -459,139 +437,130 @@ it('fetch can properly deserialize subqueries with schema', async () => {
       },
     },
   };
-  await withServer(
-    {
-      port: PORT,
-      serverOptions: {
-        dbOptions: {
-          schema,
-        },
+  await using server = await tempTriplitServer({
+    serverOptions: {
+      dbOptions: {
+        schema,
       },
     },
-    async () => {
-      const client = new HttpClient({
-        serverUrl: `http://localhost:${PORT}`,
-        token: serviceToken,
-        schema: schema.collections,
-      });
-      await client.insert('test', {
-        id: 'test1',
-        name: 'a',
-      });
-      await client.insert('relationship', {
-        id: 'rel1',
-        testId: 'test1',
-      });
-      await client.insert('relationship', {
-        id: 'rel2',
-        testId: 'test1',
-      });
+  });
+  const { port } = server;
+  const client = new HttpClient({
+    serverUrl: `http://localhost:${port}`,
+    token: serviceToken,
+    schema: schema.collections,
+  });
+  await client.insert('test', {
+    id: 'test1',
+    name: 'a',
+  });
+  await client.insert('relationship', {
+    id: 'rel1',
+    testId: 'test1',
+  });
+  await client.insert('relationship', {
+    id: 'rel2',
+    testId: 'test1',
+  });
 
-      const expectedRel1 = {
-        id: 'rel1',
-        testId: 'test1',
-      };
+  const expectedRel1 = {
+    id: 'rel1',
+    testId: 'test1',
+  };
 
-      const expectedRel2 = {
-        id: 'rel2',
-        testId: 'test1',
-      };
+  const expectedRel2 = {
+    id: 'rel2',
+    testId: 'test1',
+  };
 
-      // fetch
-      {
-        const result = await client.fetch({
-          collectionName: 'test',
-          include: { relationshipOne: null, relationshipMany: null },
-        });
-        const relOne = result.find((e) => e.id === 'test1')!.relationshipOne;
-        expect(relOne).toEqual(expectedRel1);
-        const relMany = result.find((e) => e.id === 'test1')!.relationshipMany;
-        expect(relMany.length).toEqual(2);
-        expect(relMany.find((e) => e.id === 'rel1')).toEqual(expectedRel1);
-        expect(relMany.find((e) => e.id === 'rel2')).toEqual(expectedRel2);
-      }
-      // fetchOne
-      {
-        const result = await client.fetchOne({
-          collectionName: 'test',
-          include: { relationshipOne: null, relationshipMany: null },
-        });
+  // fetch
+  {
+    const result = await client.fetch({
+      collectionName: 'test',
+      include: { relationshipOne: null, relationshipMany: null },
+    });
+    const relOne = result.find((e) => e.id === 'test1')!.relationshipOne;
+    expect(relOne).toEqual(expectedRel1);
+    const relMany = result.find((e) => e.id === 'test1')!.relationshipMany;
+    expect(relMany.length).toEqual(2);
+    expect(relMany.find((e) => e.id === 'rel1')).toEqual(expectedRel1);
+    expect(relMany.find((e) => e.id === 'rel2')).toEqual(expectedRel2);
+  }
+  // fetchOne
+  {
+    const result = await client.fetchOne({
+      collectionName: 'test',
+      include: { relationshipOne: null, relationshipMany: null },
+    });
 
-        const relOne = result!.relationshipOne;
-        expect(relOne).toEqual(expectedRel1);
-        const relMany = result!.relationshipMany;
-        expect(relMany.length).toEqual(2);
-        expect(relMany.find((e) => e.id === 'rel1')).toEqual(expectedRel1);
-        expect(relMany.find((e) => e.id === 'rel2')).toEqual(expectedRel2);
-      }
-    }
-  );
+    const relOne = result!.relationshipOne;
+    expect(relOne).toEqual(expectedRel1);
+    const relMany = result!.relationshipMany;
+    expect(relMany.length).toEqual(2);
+    expect(relMany.find((e) => e.id === 'rel1')).toEqual(expectedRel1);
+    expect(relMany.find((e) => e.id === 'rel2')).toEqual(expectedRel2);
+  }
 });
 
 // TODO: need to properly handle subqueries without schema in http api
 it.todo(
   'fetch can properly deserialize subqueries without schema',
   async () => {
-    await withServer(
-      {
-        port: PORT,
-      },
-      async () => {
-        const client = new HttpClient({
-          serverUrl: `http://localhost:${PORT}`,
-          token: serviceToken,
-        });
-        await client.insert('test', {
-          id: 'test1',
-          name: 'a',
-        });
-        await client.insert('relationship', {
-          id: 'rel1',
-          testId: 'test1',
-        });
-        await client.insert('relationship', {
-          id: 'rel2',
-          testId: 'test1',
-        });
+    await using server = await tempTriplitServer({});
+    const { port } = server;
+    const client = new HttpClient({
+      serverUrl: `http://localhost:${port}`,
+      token: serviceToken,
+    });
+    await client.insert('test', {
+      id: 'test1',
+      name: 'a',
+    });
+    await client.insert('relationship', {
+      id: 'rel1',
+      testId: 'test1',
+    });
+    await client.insert('relationship', {
+      id: 'rel2',
+      testId: 'test1',
+    });
 
-        const expectedRel1 = {
-          id: 'rel1',
-          testId: 'test1',
-        };
+    const expectedRel1 = {
+      id: 'rel1',
+      testId: 'test1',
+    };
 
-        const expectedRel2 = {
-          id: 'rel2',
-          testId: 'test1',
-        };
+    const expectedRel2 = {
+      id: 'rel2',
+      testId: 'test1',
+    };
 
-        const result = await client.fetch({
-          collectionName: 'test',
-          include: {
-            relationshipOne: {
-              subquery: {
-                collectionName: 'relationship',
-                where: [['testId', '=', '$id']],
-              },
-              cardinality: 'one',
-            },
-            relationshipMany: {
-              subquery: {
-                collectionName: 'relationship',
-                where: [['testId', '=', '$id']],
-              },
-              cardinality: 'many',
-            },
+    const result = await client.fetch({
+      collectionName: 'test',
+      include: {
+        relationshipOne: {
+          subquery: {
+            collectionName: 'relationship',
+            where: [['testId', '=', '$id']],
           },
-        });
+          cardinality: 'one',
+        },
+        relationshipMany: {
+          subquery: {
+            collectionName: 'relationship',
+            where: [['testId', '=', '$id']],
+          },
+          cardinality: 'many',
+        },
+      },
+    });
 
-        const relOne = result.find((e) => e.id === 'test1')!.relationshipOne;
-        expect(relOne).toEqual(expectedRel1);
-        const relMany = result.find((e) => e.id === 'test1')!.relationshipMany;
-        expect(relMany.length).toEqual(2);
-        expect(relMany.find((e) => e.id === 'rel1')).toEqual(expectedRel1);
-        expect(relMany.find((e) => e.id === 'rel2')).toEqual(expectedRel2);
-      }
-    );
+    const relOne = result.find((e) => e.id === 'test1')!.relationshipOne;
+    expect(relOne).toEqual(expectedRel1);
+    const relMany = result.find((e) => e.id === 'test1')!.relationshipMany;
+    expect(relMany.length).toEqual(2);
+    expect(relMany.find((e) => e.id === 'rel1')).toEqual(expectedRel1);
+    expect(relMany.find((e) => e.id === 'rel2')).toEqual(expectedRel2);
   }
 );
 
@@ -607,51 +576,50 @@ it('update properly updates an entity', async () => {
       },
     },
   };
-  await withServer(
-    { port: PORT, serverOptions: { dbOptions: { schema } } },
-    async () => {
-      const client = new HttpClient({
-        serverUrl: `http://localhost:${PORT}`,
-        token: serviceToken,
-        schema: schema.collections,
-      });
-      await client.insert('test', {
-        id: 'test1',
-        name: 'a',
-        date: new Date(2023, 1, 1),
-      });
+  await using server = await tempTriplitServer({
+    serverOptions: { dbOptions: { schema } },
+  });
+  const { port } = server;
+  const client = new HttpClient({
+    serverUrl: `http://localhost:${port}`,
+    token: serviceToken,
+    schema: schema.collections,
+  });
+  await client.insert('test', {
+    id: 'test1',
+    name: 'a',
+    date: new Date(2023, 1, 1),
+  });
 
-      await client.update('test', 'test1', (entity) => {
-        entity.name = 'b';
-        entity.date = new Date(2023, 1, 2);
-      });
+  await client.update('test', 'test1', (entity) => {
+    entity.name = 'b';
+    entity.date = new Date(2023, 1, 2);
+  });
 
-      const result = await client.fetchById('test', 'test1');
-      expect(result).toEqual({
-        id: 'test1',
-        name: 'b',
-        date: new Date(2023, 1, 2),
-      });
-    }
-  );
+  const result = await client.fetchById('test', 'test1');
+  expect(result).toEqual({
+    id: 'test1',
+    name: 'b',
+    date: new Date(2023, 1, 2),
+  });
 });
 
 it('delete properly deletes an entity', async () => {
-  await withServer({ port: PORT }, async () => {
-    const client = new HttpClient({
-      serverUrl: `http://localhost:${PORT}`,
-      token: serviceToken,
-    });
-    await client.insert('test', { id: 'test1', name: 'a' });
-    {
-      const result = await client.fetchById('test', 'test1');
-      expect(result).toBeTruthy();
-    }
-
-    await client.delete('test', 'test1');
-    {
-      const result = await client.fetchById('test', 'test1');
-      expect(result).toBeFalsy();
-    }
+  await using server = await tempTriplitServer();
+  const { port } = server;
+  const client = new HttpClient({
+    serverUrl: `http://localhost:${port}`,
+    token: serviceToken,
   });
+  await client.insert('test', { id: 'test1', name: 'a' });
+  {
+    const result = await client.fetchById('test', 'test1');
+    expect(result).toBeTruthy();
+  }
+
+  await client.delete('test', 'test1');
+  {
+    const result = await client.fetchById('test', 'test1');
+    expect(result).toBeFalsy();
+  }
 });

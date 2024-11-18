@@ -27,3 +27,8 @@ function decodeJwt(token: string) {
 
   return JSON.parse(jsonPayload);
 }
+
+export function tokenIsExpired(token: Record<string, any>) {
+  if (token.exp === undefined) return false;
+  return token.exp * 1000 < Date.now();
+}

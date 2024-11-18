@@ -1,16 +1,6 @@
-import {
-  DBTransaction,
-  DB as TriplitDB,
-  TriplitError,
-  splitIdParts,
-} from '@triplit/db';
-import {
-  ConnectionOptions,
-  ServerResponse,
-  Session,
-  routeNotFoundResponse,
-} from './session.js';
-import { SyncConnection } from './sync-connection.js';
+import { DB as TriplitDB, TriplitError } from '@triplit/db';
+import { ServerResponse, Session, routeNotFoundResponse } from './session.js';
+import { ConnectionOptions, SyncConnection } from './sync-connection.js';
 import type { ServerResponse as ServerResponseType } from './session.js';
 import { isTriplitError } from './utils.js';
 import { Logger, NullLogger } from './logging.js';
@@ -41,8 +31,12 @@ export class Server {
   }
 
   openConnection(token: ProjectJWT, connectionOptions: ConnectionOptions) {
-    const session = this.createSession(token);
-    const connection = session.createConnection(connectionOptions);
+    const connection = new SyncConnection(
+      token,
+      this.db,
+      this.logger,
+      connectionOptions
+    );
     this.connections.set(connectionOptions.clientId, connection);
     return connection;
   }

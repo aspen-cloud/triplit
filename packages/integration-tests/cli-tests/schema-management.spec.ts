@@ -8,8 +8,8 @@ import {
 import { Models, Schema as S } from '@triplit/db';
 import { serverRequesterMiddleware } from '../../cli/src/middleware/add-server-requester.js';
 import { emptyDir } from 'fs-extra';
-import { ServerOptions } from '../../server/src/server.js';
-import { withServer } from '../utils/server.js';
+import { ServerOptions } from '../../server/src/hono.js';
+import { tempTriplitServer } from '../utils/server.js';
 import { evalJSString, transpileTsString } from '../../cli/src/filesystem.js';
 
 const PORT = 8888;
@@ -69,10 +69,9 @@ async function withServerAndCtx(
   options: { port: number; serverOptions?: ServerOptions },
   callback: (ctx: any, server: any) => void | Promise<void>
 ) {
-  await withServer(options, async (server) => {
-    const ctx = await generateNetworkCtx({}, options.port);
-    await callback(ctx, server);
-  });
+  using server = await tempTriplitServer(options);
+  const ctx = await generateNetworkCtx({}, server.port);
+  await callback(ctx, server);
 }
 
 beforeEach(async () => {

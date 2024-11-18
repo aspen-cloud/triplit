@@ -46,7 +46,7 @@ it('instantiating a client with a token sets session variables', async () => {
 it('updating a client with a token sets session variables', async () => {
   const client = new TriplitClient({ autoConnect: false });
   expect(client.db.systemVars.session).toStrictEqual({});
-  client.updateToken(EXTERNAL_TOKEN_V2);
+  await client.startSession(EXTERNAL_TOKEN_V2);
   expect(client.db.systemVars.session).toStrictEqual({
     hello: 'world',
     'x-triplit-project-id': 'project',

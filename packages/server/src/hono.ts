@@ -1,4 +1,13 @@
-import { DB, TriplitError, DurableClock, DBConfig, Storage } from '@triplit/db';
+import {
+  DB,
+  TriplitError,
+  DurableClock,
+  DBConfig,
+  Storage,
+  getRolesFromSession,
+  normalizeSessionVars,
+  sessionRolesAreEquivalent,
+} from '@triplit/db';
 import {
   InvalidAuthenticationSchemeError,
   MalformedMessagePayloadError,
@@ -20,11 +29,11 @@ import { Context, Hono } from 'hono';
 import { StatusCode } from 'hono/utils/http-status';
 
 import { WSContext, type UpgradeWebSocket, WSMessageReceive } from 'hono/ws';
-import { type BaseClient as SentryClient } from '@sentry/core';
 
 import { StoreKeys, resolveStorageStringOption } from './storage.js';
 import { env } from 'hono/adapter';
 import { logger as honoLogger } from 'hono/logger';
+import { cors } from 'hono/cors';
 
 import { TriplitClient } from '@triplit/client';
 
@@ -46,17 +55,15 @@ export type ServerOptions = {
 export function createTriplitHonoServer(
   options: ServerOptions,
   upgradeWebSocket: UpgradeWebSocket,
-  sentry?: SentryClient<any>
+  captureException?: (e: unknown) => void,
+  honoApp?: Hono
 ) {
   const dbSource = !!options?.storage
     ? typeof options.storage === 'string'
-      ? resolveStorageStringOption(
-          // @ts-ignore TODO: check why this is not working...might be module resolution issue?
-          options.storage
-        )
+      ? resolveStorageStringOption(options.storage)
       : typeof options.storage === 'function'
-      ? options.storage()
-      : options.storage
+        ? options.storage()
+        : options.storage
     : undefined;
   if (options?.verboseLogs) logger.verbose = true;
   const dbOptions: Partial<DBConfig> = {
@@ -65,7 +72,6 @@ export function createTriplitHonoServer(
   Object.assign(dbOptions, options?.dbOptions);
   const db = options.upstream
     ? new TriplitClient({
-        // clientId: projectId,
         serverUrl: options.upstream.url,
         token: options.upstream.token,
         syncSchema: true,
@@ -73,10 +79,10 @@ export function createTriplitHonoServer(
       })
     : new DB({
         source: dbSource,
-        // tenantId: projectId,
         clock: new DurableClock(),
         ...dbOptions,
       });
+
   // @ts-expect-error
   const server = new TriplitServer(db, captureException);
 
@@ -88,15 +94,10 @@ export function createTriplitHonoServer(
         : 100000,
     };
   }
-  const app = new Hono<{ Variables: Variables }>();
-
-  function captureException(e: any) {
-    if (sentry && e instanceof Error) {
-      sentry.captureException(e);
-    }
-  }
+  const app = (honoApp ?? new Hono()) as Hono<{ Variables: Variables }>;
 
   app.use(honoLogger());
+  app.use(cors());
 
   // app.use(async (c, next) => {
   //   const reqBody = await c.req.text();
@@ -109,11 +110,12 @@ export function createTriplitHonoServer(
   // });
 
   app.onError((error, c) => {
+    console.error(error);
     if (error instanceof TriplitError) {
-      if (error.status === 500) captureException(error);
+      if (error.status === 500) captureException?.(error);
       return c.json(error.toJSON(), error.status as StatusCode);
     }
-    captureException(error);
+    captureException?.(error);
     return c.text('Internal server error', 500);
   });
 
@@ -140,7 +142,7 @@ export function createTriplitHonoServer(
             if (error) throw error;
             token = data;
           } catch (e) {
-            captureException(e);
+            captureException?.(e);
             closeSocket(
               ws,
               {
@@ -171,12 +173,23 @@ export function createTriplitHonoServer(
               closeSocket(ws, schemaIncompatibility, 1008);
               return;
             }
+            // @ts-expect-error
+            ws.tokenExpiration = token.exp;
             syncConnection!.addListener((messageType, payload) => {
+              if (
+                // @ts-expect-error
+                ws.tokenExpiration &&
+                // @ts-expect-error
+                ws.tokenExpiration * 1000 < Date.now()
+              ) {
+                closeSocket(ws, { type: 'TOKEN_EXPIRED', retry: false }, 1008);
+                return;
+              }
               sendMessage(ws, messageType, payload);
             });
           } catch (e) {
             console.error(e);
-            captureException(e);
+            captureException?.(e);
             closeSocket(
               ws,
               {
@@ -189,7 +202,16 @@ export function createTriplitHonoServer(
             return;
           }
         },
-        onMessage(event, ws) {
+        async onMessage(event, ws) {
+          if (
+            // @ts-expect-error
+            ws.tokenExpiration &&
+            // @ts-expect-error
+            ws.tokenExpiration * 1000 < Date.now()
+          ) {
+            closeSocket(ws, { type: 'TOKEN_EXPIRED', retry: false }, 1008);
+            return;
+          }
           const { data: parsedMessage, error } = parseClientMessage(event.data);
           if (error)
             return sendErrorMessage(
@@ -201,6 +223,51 @@ export function createTriplitHonoServer(
               }
             );
           logger.logMessage('received', parsedMessage);
+          if (parsedMessage.type === 'UPDATE_TOKEN') {
+            const { token: newToken } = parsedMessage.payload;
+            const { data, error } = await parseAndValidateTokenWithEnv(
+              newToken,
+              c
+            );
+            if (error) {
+              closeSocket(
+                ws,
+                {
+                  type: 'UNAUTHORIZED',
+                  message: error.message,
+                  retry: false,
+                },
+                1008
+              );
+              return;
+            }
+            const newTokenRoles = getRolesFromSession(
+              syncConnection?.db.schema,
+              normalizeSessionVars(data)
+            );
+
+            const existingTokenRoles = getRolesFromSession(
+              syncConnection?.db.schema,
+              // @ts-expect-error
+              normalizeSessionVars(syncConnection?.token)
+            );
+            if (!sessionRolesAreEquivalent(newTokenRoles, existingTokenRoles)) {
+              closeSocket(
+                ws,
+                {
+                  type: 'ROLES_MISMATCH',
+                  message: "Roles for new token don't match the old token.",
+                  retry: false,
+                },
+                1008
+              );
+              return;
+            }
+            // @ts-expect-error
+            ws.tokenExpiration = data?.exp;
+            return;
+          }
+
           syncConnection!.dispatchCommand(parsedMessage!);
         },
         onClose: (event, ws) => {
@@ -212,9 +279,7 @@ export function createTriplitHonoServer(
           ws.close(event.code, event.reason);
         },
         onError: (event, ws) => {
-          console.log('error', event);
-          // TODO: handle error
-          captureException(event);
+          captureException?.(event);
           closeSocket(ws, { type: 'INTERNAL_ERROR', retry: false }, 1011);
         },
       };
@@ -268,9 +333,7 @@ export function createTriplitHonoServer(
     let body;
     try {
       body = await c.req.json();
-    } catch {
-      throw new TriplitError('Invalid JSON body', 400);
-    }
+    } catch (e) {}
     const token = c.get('token');
     const { statusCode, payload } = await server.handleRequest(
       new URL(c.req.url).pathname.slice(1).split('/') as Route,
@@ -297,25 +360,11 @@ function sendMessage(
   payload: any,
   options: { dropIfClosed?: boolean } = {}
 ) {
-  // const send = socket.send;
   const message = JSON.stringify({ type, payload });
-  // socket.send = (m) => {
-  //   // logger.logMessage('sent', { type, payload });
-  //   socket.send = send;
-  //   return socket.send(m);
-  // };
   if (socket.readyState === WebSocket.OPEN) {
     logger.logMessage('sent', { type, payload });
     socket.send(message);
   }
-  // else if (!options.dropIfClosed) {
-  //   // I think this is unlikely to be hit, but just in case the socket isnt opened yet, queue messages
-  //   const send = () => {
-  //     socket.send(message);
-  //     socket.removeEventListener('open', send);
-  //   };
-  //   socket.addEventListener('open', send);
-  // }
 }
 
 function sendErrorMessage(

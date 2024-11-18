@@ -41,7 +41,7 @@ npx triplit dev
 
 ### Add Supabase Auth to your Triplit app
 
-Your app should have some flow to [authenticate a user](https://supabase.com/docs/reference/javascript/auth-signinwithpassword) that uses Supabase's authentication methods. Once a user is signed in, your Triplit client needs to send the JWT token issued by Supabase with each request. You can do this with the `TriplitClient.updateToken` method.
+Your app should have some flow to [authenticate a user](https://supabase.com/docs/reference/javascript/auth-signinwithpassword) that uses Supabase's authentication methods. Once a user is signed in, your Triplit client needs to send the JWT token issued by Supabase with each request, and handle other authentication events.
 
 ```ts copy
 import { createClient } from '@supabase/supabase-js';
@@ -58,30 +58,21 @@ const triplit = new TriplitClient({
   serverUrl: 'http://localhost:6543',
 });
 
-async function updateTriplitWithAuthSession(session) {
-  const newToken = session?.access_token;
-  // if the token has changed, update the client
-  if (newToken !== triplit.token) {
-    triplit.disconnect();
-    triplit.updateToken(newToken);
-    if (!triplit.token) {
-      // If no token, we are unauthenticated, reset the client in case there is any data for the previous session stored
-      await triplit.reset();
-    } else {
-      // If we have a token, connect to the server with new information
-      triplit.connect();
-    }
-  }
-}
-
-// Get initial session data on page load and subscribe to changes
 function getSessionAndSubscribe() {
-  supabase.auth.getSession().then(async ({ data: { session } }) => {
-    await updateTriplitWithAuthSession(session);
-  });
   const { data: session } = supabase.auth.onAuthStateChange(
-    async (_event, session) => {
-      await updateTriplitWithAuthSession(session);
+    async (event, session) => {
+      switch (event) {
+        case 'INITIAL_SESSION':
+        case 'SIGNED_IN':
+          await triplit.startSession(session.access_token);
+          break;
+        case 'SIGNED_OUT':
+          await triplit.endSession();
+          break;
+        case 'TOKEN_REFRESHED':
+          triplit.updateSessionToken(session.access_token);
+          break;
+      }
     }
   );
   return session.subscription.unsubscribe;

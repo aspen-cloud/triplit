@@ -17,12 +17,6 @@ import { genToArr } from '@triplit/db';
 import { SyncConnection } from './sync-connection.js';
 import { WebhookJSONDefinition } from './webhooks-manager.js';
 
-export interface ConnectionOptions {
-  clientId: string;
-  clientSchemaHash: number | undefined;
-  syncSchema?: boolean | undefined;
-}
-
 export function isChunkedMessageComplete(message: string[], total: number) {
   if (message.length !== total) return false;
   for (let i = 0; i < total; i++) {
@@ -64,10 +58,6 @@ export class Session {
     // TODO: figure out admin middleware
 
     this.db = server.db.withSessionVars(token);
-  }
-
-  createConnection(connectionParams: ConnectionOptions) {
-    return new SyncConnection(this, connectionParams);
   }
 
   // TODO: ensure data that we store in memory is invalidated when the db is "cleared"

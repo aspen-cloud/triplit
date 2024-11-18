@@ -406,18 +406,32 @@ export class WorkerClient<M extends ClientSchema = ClientSchema> {
     return JSONToSchema(await this.clientWorker.getSchemaJson());
   }
 
-  async updateOptions(options: Pick<ClientOptions, 'token' | 'serverUrl'>) {
-    await this.initialized;
-    return this.clientWorker.updateOptions(options);
-  }
-  async updateToken(token?: string) {
-    await this.initialized;
-    return this.clientWorker.updateToken(token);
-  }
-
   async updateServerUrl(serverUrl: string) {
     await this.initialized;
     return this.clientWorker.updateServerUrl(serverUrl);
+  }
+
+  async startSession(...args: Parameters<Client<M>['startSession']>) {
+    await this.initialized;
+    if (args[2]) args[2] = ComLink.proxy(args[2]);
+    return this.clientWorker.startSession(...args);
+  }
+
+  async endSession(...args: Parameters<Client<M>['endSession']>) {
+    await this.initialized;
+    return this.clientWorker.endSession(...args);
+  }
+
+  async onSessionError(...args: Parameters<Client<M>['onSessionError']>) {
+    await this.initialized;
+    return this.clientWorker.onSessionError(ComLink.proxy(args[0]));
+  }
+
+  async updateSessionToken(
+    ...args: Parameters<Client<M>['updateSessionToken']>
+  ) {
+    await this.initialized;
+    return this.clientWorker.updateSessionToken(...args);
   }
 
   async isFirstTimeFetchingQuery(

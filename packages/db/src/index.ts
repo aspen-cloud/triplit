@@ -66,6 +66,7 @@ export {
   getRolesFromSession,
   normalizeSessionVars,
   getCollectionPermissions,
+  sessionRolesAreEquivalent,
 } from './schema/permissions.js';
 export { Schema } from './schema/builder.js';
 export { diffSchemas, getSchemaDiffIssues } from './schema/diff.js';

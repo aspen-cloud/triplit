@@ -6194,6 +6194,26 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@hono/node-server@npm:^1.13.7":
+  version: 1.13.7
+  resolution: "@hono/node-server@npm:1.13.7"
+  peerDependencies:
+    hono: ^4
+  checksum: 10/25e169b2d4e20a222514914c531be3910e84687cdfd68ee6a493504c36750ef285c8ee37da6875bf43a9402128d166071ed5e0885e164b6363ab6244b2c6db58
+  languageName: node
+  linkType: hard
+
+"@hono/node-ws@npm:^1.0.4":
+  version: 1.0.4
+  resolution: "@hono/node-ws@npm:1.0.4"
+  dependencies:
+    ws: "npm:^8.17.0"
+  peerDependencies:
+    "@hono/node-server": ^1.11.1
+  checksum: 10/55be820d61341505009bba25d33d8ad8e7e60c9d31c6c96747339766b76a8083ca074fc0db26a8c7ea89e8655774fb854c5eaab4a5725ad5c5c74638b217dc2b
+  languageName: node
+  linkType: hard
+
 "@humanwhocodes/config-array@npm:^0.11.13":
   version: 0.11.13
   resolution: "@humanwhocodes/config-array@npm:0.11.13"
@@ -10285,6 +10305,8 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@triplit/server@workspace:packages/server"
   dependencies:
+    "@hono/node-server": "npm:^1.13.7"
+    "@hono/node-ws": "npm:^1.0.4"
     "@sentry/cli": "npm:^2.31.2"
     "@sentry/core": "npm:^8.37.0"
     "@sentry/node": "npm:^7.112.2"
@@ -21328,10 +21350,13 @@ __metadata:
     "@triplit/server-core": "workspace:^"
     "@types/fs-extra": "npm:^11"
     "@types/node": "npm:^22.4.1"
+    "@types/ws": "npm:^8"
     execa: "npm:^8.0.1"
     fs-extra: "npm:^11.1.1"
+    jose: "npm:^5.9.6"
     vite-tsconfig-paths: "npm:^5.0.1"
     vitest: "npm:^2.1.2"
+    ws: "npm:^8.18.0"
   languageName: unknown
   linkType: soft
 
@@ -22366,6 +22391,13 @@ __metadata:
   version: 5.2.0
   resolution: "jose@npm:5.2.0"
   checksum: 10/40712b3f6149aa6fbb43630bc510485d17561d2c9adcaf25ec663f092ea587c3e2776826eccc2a12e82be9ad1a54e1266bc035aa5a35db1470ee7ff5082f45c6
+  languageName: node
+  linkType: hard
+
+"jose@npm:^5.9.6":
+  version: 5.9.6
+  resolution: "jose@npm:5.9.6"
+  checksum: 10/3ebbda9f6a96d493944f2720bf4436347884666cd87b7087a61cff12a3b540fe6fd743b5eb8defe7bc2a45aa58992ae6687da78797d91fc4e3e5e8588aa98c7d
   languageName: node
   linkType: hard
 
@@ -27385,7 +27417,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"prettier@npm:^2.6.2, prettier@npm:^2.7.1, prettier@npm:^2.8.2, prettier@npm:^2.8.8":
+"prettier@npm:^2.7.1, prettier@npm:^2.8.2, prettier@npm:^2.8.8":
   version: 2.8.8
   resolution: "prettier@npm:2.8.8"
   bin:
@@ -27403,7 +27435,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"prettier@npm:^3.2.5":
+"prettier@npm:^3.2.5, prettier@npm:^3.3.3":
   version: 3.3.3
   resolution: "prettier@npm:3.3.3"
   bin:
@@ -31342,7 +31374,7 @@ __metadata:
     "@changesets/cli": "npm:^2.26.1"
     "@types/semver": "npm:^7"
     esbuild: "npm:0.17.18"
-    prettier: "npm:^2.6.2"
+    prettier: "npm:^3.3.3"
     semver: "npm:^7.5.4"
     turbo: "npm:^2.0.3"
     typescript: "npm:^5.2.2"
@@ -34321,7 +34353,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"ws@npm:^8.16.0":
+"ws@npm:^8.16.0, ws@npm:^8.17.0, ws@npm:^8.18.0":
   version: 8.18.0
   resolution: "ws@npm:8.18.0"
   peerDependencies:
