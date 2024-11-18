@@ -1,5 +1,14 @@
 # @triplit/client
 
+## 0.5.17
+
+### Patch Changes
+
+- f1ce9675: Prevent possible error in client subscription race condition
+- Updated dependencies [bdebed22]
+- Updated dependencies [7b1839b6]
+  - @triplit/db@0.5.8
+
 ## 0.5.16
 
 ### Patch Changes
