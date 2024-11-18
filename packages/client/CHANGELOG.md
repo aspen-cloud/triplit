@@ -1,5 +1,16 @@
 # @triplit/client
 
+## 0.6.0
+
+### Minor Changes
+
+- 2713ca43: Implement new sessions API
+
+### Patch Changes
+
+- Updated dependencies [2713ca43]
+  - @triplit/db@0.5.9
+
 ## 0.5.17
 
 ### Patch Changes

@@ -10012,7 +10012,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@triplit/authjs-adapter@npm:^2.0.0, @triplit/authjs-adapter@workspace:packages/authjs-adapter":
+"@triplit/authjs-adapter@npm:^3.0.0, @triplit/authjs-adapter@workspace:packages/authjs-adapter":
   version: 0.0.0-use.local
   resolution: "@triplit/authjs-adapter@workspace:packages/authjs-adapter"
   dependencies:
@@ -10026,7 +10026,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@triplit/cli@npm:0.6.18, @triplit/cli@workspace:^, @triplit/cli@workspace:packages/cli":
+"@triplit/cli@npm:0.6.19, @triplit/cli@workspace:^, @triplit/cli@workspace:packages/cli":
   version: 0.0.0-use.local
   resolution: "@triplit/cli@workspace:packages/cli"
   dependencies:
@@ -10120,7 +10120,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@triplit/client@npm:0.5.17, @triplit/client@npm:^0.5.5, @triplit/client@workspace:^, @triplit/client@workspace:packages/client":
+"@triplit/client@npm:0.6.0, @triplit/client@workspace:^, @triplit/client@workspace:packages/client":
   version: 0.0.0-use.local
   resolution: "@triplit/client@workspace:packages/client"
   dependencies:
@@ -10162,6 +10162,19 @@ __metadata:
     rxjs: "npm:^7.8.1"
     superjson: "npm:^2.2.1"
   checksum: 10/dff34fdbf28137ab6885b46aef54e115735a5434216bd3ac65e59fa448fa92873bc1d974c32e05b97045d47576b3ca1df38a701faa2923444818a86e7bbc641c
+  languageName: node
+  linkType: hard
+
+"@triplit/client@npm:^0.5.5":
+  version: 0.5.17
+  resolution: "@triplit/client@npm:0.5.17"
+  dependencies:
+    "@sinclair/typebox": "npm:^0.32.15"
+    "@triplit/db": "npm:^0.5.8"
+    comlink: "npm:^4.4.1"
+    rxjs: "npm:^7.8.1"
+    superjson: "npm:^2.2.1"
+  checksum: 10/1f970f27bb7d08ac9331b55d52c084d578f3787d887f144f2c23395d815fa2e38e580f790555fd09b0f9d22c38dd9aabbc5e32541ba3a3a31cbc1786dd1ef393
   languageName: node
   linkType: hard
 
@@ -10208,7 +10221,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@triplit/db@npm:0.5.8, @triplit/db@workspace:^, @triplit/db@workspace:packages/db":
+"@triplit/db@npm:0.5.9, @triplit/db@npm:^0.5.8, @triplit/db@workspace:^, @triplit/db@workspace:packages/db":
   version: 0.0.0-use.local
   resolution: "@triplit/db@workspace:packages/db"
   dependencies:
@@ -10255,7 +10268,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@triplit/react@npm:0.4.17, @triplit/react@workspace:^, @triplit/react@workspace:packages/react":
+"@triplit/react@npm:0.4.18, @triplit/react@workspace:^, @triplit/react@workspace:packages/react":
   version: 0.0.0-use.local
   resolution: "@triplit/react@workspace:packages/react"
   dependencies:
@@ -10301,7 +10314,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@triplit/server@npm:0.4.34, @triplit/server@workspace:^, @triplit/server@workspace:packages/server":
+"@triplit/server@npm:0.4.35, @triplit/server@workspace:^, @triplit/server@workspace:packages/server":
   version: 0.0.0-use.local
   resolution: "@triplit/server@workspace:packages/server"
   dependencies:
@@ -14568,7 +14581,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "bun-server@workspace:packages/bun-server"
   dependencies:
-    "@triplit/server": "npm:0.4.34"
+    "@triplit/server": "npm:0.4.35"
     "@types/bun": "npm:latest"
     "@types/semver": "npm:^7.5.8"
     hono: "npm:^4.6.9"
@@ -25306,11 +25319,11 @@ __metadata:
     "@radix-ui/react-dropdown-menu": "npm:^2.0.6"
     "@radix-ui/react-slot": "npm:^1.0.2"
     "@tailwindcss/typography": "npm:^0.5.10"
-    "@triplit/authjs-adapter": "npm:^2.0.0"
-    "@triplit/cli": "npm:0.6.18"
-    "@triplit/client": "npm:0.5.17"
-    "@triplit/db": "npm:0.5.8"
-    "@triplit/react": "npm:0.4.17"
+    "@triplit/authjs-adapter": "npm:^3.0.0"
+    "@triplit/cli": "npm:0.6.19"
+    "@triplit/client": "npm:0.6.0"
+    "@triplit/db": "npm:0.5.9"
+    "@triplit/react": "npm:0.4.18"
     "@types/bcryptjs": "npm:^2"
     "@types/jsonwebtoken": "npm:^9.0.2"
     "@types/node": "npm:^17.0.45"
@@ -25829,7 +25842,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "node-server@workspace:packages/node-server"
   dependencies:
-    "@triplit/server": "npm:0.4.34"
+    "@triplit/server": "npm:0.4.35"
     "@types/semver": "npm:^7"
     better-sqlite3: "npm:^8.3.0"
     semver: "npm:^7.6.0"
