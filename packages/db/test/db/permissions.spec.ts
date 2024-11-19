@@ -760,6 +760,127 @@ describe('Insert', () => {
       })
     ).resolves.not.toThrow();
   });
+  it('can handle collections where attributes named in the role are undefined/Optional', async () => {
+    const schema = {
+      roles: {
+        authenticated: {
+          match: {
+            user_id: '$user_id',
+          },
+        },
+      },
+      collections: {
+        messages: {
+          schema: S.Schema({
+            id: S.Id(),
+            text: S.String(),
+            author_id: S.Optional(S.String()),
+            recipient_id: S.String(),
+          }),
+          permissions: {
+            authenticated: {
+              read: {
+                filter: [['author_id', '=', '$role.user_id']],
+              },
+              insert: {
+                filter: [true],
+              },
+            },
+          },
+        },
+      },
+      version: 0,
+    } satisfies StoreSchema<Models>;
+
+    const db = new DB({ schema });
+
+    const user1Token = {
+      user_id: 'user-1',
+    };
+
+    const user1DB = db.withSessionVars(user1Token);
+
+    await expect(
+      user1DB.insert('messages', {
+        id: 'message-1',
+        text: 'Hello, world!',
+        recipient_id: 'user-1',
+      })
+    ).resolves.not.toThrow();
+
+    await expect(
+      user1DB.fetchById('messages', 'message-1')
+    ).resolves.toStrictEqual(null);
+  });
+  it('can handle an insertions in a transaction where the first entity is related to the second by a relational permission', async () => {
+    const schema = {
+      roles: {
+        authenticated: {
+          match: {
+            user_id: '$user_id',
+          },
+        },
+      },
+      collections: {
+        profile: {
+          schema: S.Schema({
+            id: S.Id(),
+            userId: S.String(),
+          }),
+          permissions: {
+            authenticated: {
+              read: {
+                filter: [['userId', '=', '$role.user_id']],
+              },
+              insert: {
+                filter: [['userId', '=', '$role.user_id']],
+              },
+            },
+          },
+        },
+        messages: {
+          schema: S.Schema({
+            id: S.Id(),
+            text: S.String(),
+            profile_id: S.String(),
+            sender: S.RelationById('profile', '$profile_id'),
+          }),
+          permissions: {
+            authenticated: {
+              read: {
+                filter: [['sender.userId', '=', '$role.user_id']],
+              },
+              insert: {
+                filter: [['sender.userId', '=', '$role.user_id']],
+              },
+            },
+          },
+        },
+      },
+      version: 0,
+    } satisfies StoreSchema<Models>;
+
+    const db = new DB({ schema });
+
+    const user1Token = {
+      user_id: 'user-1',
+    };
+
+    const user1DB = db.withSessionVars(user1Token);
+
+    await expect(
+      user1DB.transact(async (tx) => {
+        const { id: profile_id } = await tx.insert('profile', {
+          userId: 'user-1',
+        });
+        await tx.insert('messages', {
+          id: 'message-1',
+          text: 'Hello, world!',
+          profile_id,
+        });
+      })
+    ).resolves.not.toThrow();
+  });
 });
 
 describe('Update', () => {
