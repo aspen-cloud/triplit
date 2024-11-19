@@ -7,7 +7,7 @@ import {
 	Tuple,
 	WriteOps,
 } from "./types.js"
-import { compareTuple } from "../helpers/compareTuple.js"
+import { compareTuple, compareValue } from "../helpers/compareTuple.js"
 import { TupleStorageApi } from "../database/sync/types.js"
 
 type BTreeInstance = typeof BTree.EmptyBTree
@@ -19,7 +19,7 @@ export class MemoryBTreeStorage implements TupleStorageApi {
 	constructor() {
 		this.btree =
 			// @ts-expect-error
-			new BTreeClass<Tuple, any>(undefined, compareTuple)
+			new BTreeClass<Tuple, any>(undefined, compareValue)
 	}
 	scan(args?: ScanStorageArgs | undefined): KeyValuePair[] {
 		const low = args?.gte ?? args?.gt ?? MIN
@@ -54,7 +54,7 @@ export class MemoryBTreeStorage implements TupleStorageApi {
 	clear(): void {
 		this.btree =
 			// @ts-expect-error
-			new BTreeClass<Tuple, any>(undefined, compareTuple)
+			new BTreeClass<Tuple, any>(undefined, compareValue)
 	}
 	close(): void {}
 }
