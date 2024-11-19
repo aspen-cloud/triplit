@@ -361,9 +361,10 @@ function sendMessage(
   options: { dropIfClosed?: boolean } = {}
 ) {
   const message = JSON.stringify({ type, payload });
+  // OPEN = 1
   if (socket.readyState === 1) {
-    logger.logMessage('sent', { type, payload });
     socket.send(message);
+    logger.logMessage('sent', { type, payload });
   }
 }
 
