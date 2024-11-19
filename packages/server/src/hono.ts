@@ -62,8 +62,8 @@ export function createTriplitHonoServer(
     ? typeof options.storage === 'string'
       ? resolveStorageStringOption(options.storage)
       : typeof options.storage === 'function'
-      ? options.storage()
-      : options.storage
+        ? options.storage()
+        : options.storage
     : undefined;
   if (options?.verboseLogs) logger.verbose = true;
   const dbOptions: Partial<DBConfig> = {
@@ -80,6 +80,7 @@ export function createTriplitHonoServer(
     : new DB({
         source: dbSource,
         clock: new DurableClock(),
+        tenantId: process.env.PROJECT_ID,
         ...dbOptions,
       });
 
