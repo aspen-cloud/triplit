@@ -1,5 +1,11 @@
 # @triplit/server
 
+## 0.4.37
+
+### Patch Changes
+
+- 57c1971f: revert to legacy express server
+
 ## 0.4.36
 
 ### Patch Changes
