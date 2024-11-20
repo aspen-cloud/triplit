@@ -60,10 +60,10 @@ import { TriplitClient } from '@triplit/client';
 import { schema } from './schema';
 
 export const triplit = new TriplitClient({
-	storage: 'indexeddb',
-	schema,
-	serverUrl: import.meta.env.VITE_TRIPLIT_SERVER_URL,
-	token: import.meta.env.VITE_TRIPLIT_TOKEN,
+  storage: 'indexeddb',
+  schema,
+  serverUrl: import.meta.env.VITE_TRIPLIT_SERVER_URL,
+  token: import.meta.env.VITE_TRIPLIT_TOKEN,
 });
 ```
 

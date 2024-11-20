@@ -29,14 +29,15 @@ import { injectQuery } from '@triplit/angular';
           />
           <button class="btn" type="submit">Add Todo</button>
         </form>
-        @if(queryResults.fetching()){
-        <p>Loading...</p>
-        } @if (queryResults.results()) {
-        <div class="todos-container">
-          @for (todo of queryResults.results(); track todo.id) {
-          <app-todo [todo]="todo" />
-          }
-        </div>
+        @if (queryResults.fetching()) {
+          <p>Loading...</p>
+        }
+        @if (queryResults.results()) {
+          <div class="todos-container">
+            @for (todo of queryResults.results(); track todo.id) {
+              <app-todo [todo]="todo" />
+            }
+          </div>
         }
       </div>
     </div>

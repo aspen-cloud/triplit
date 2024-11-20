@@ -12,8 +12,8 @@ export function SyncStateIndicator() {
           unsyncedChanges.length > 1 ? 's' : ''
         }`
       : isConnected
-      ? 'All changes synced'
-      : 'Not connected to Triplit';
+        ? 'All changes synced'
+        : 'Not connected to Triplit';
   return (
     <div
       className="text-sm shrink-[2] overflow-hidden flex flex-row gap-2 py-2 px-3 items-center justify-center text-zinc-300"

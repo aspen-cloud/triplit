@@ -41,9 +41,7 @@ export default function App() {
         {fetching && <p>Loading...</p>}
         {todos && (
           <div className="todos-container">
-            {todos?.map((todo) => (
-              <Todo key={todo.id} todo={todo} />
-            ))}
+            {todos?.map((todo) => <Todo key={todo.id} todo={todo} />)}
           </div>
         )}
       </div>

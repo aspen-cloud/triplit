@@ -11,9 +11,7 @@
   padding: 24px;
 }
 
-
 .main {
-
   width: 100%;
   height: 100%;
 }
@@ -27,7 +25,6 @@
   gap: 8px;
   width: max-content;
 }
-
 
 .db-connect-button svg {
   flex-shrink: 0;
@@ -46,7 +43,6 @@
   /* gap: 8px; */
   /* padding-top: 16px; */
   /* border-right: 1px solid lightgray; */
-
 }
 
 .projects-list {
@@ -79,13 +75,13 @@
 
 .project-item:hover {
   box-shadow: 0px 0px 8px 1px #4b472482;
-  border-color: #FFFFFF33;
+  border-color: #ffffff33;
 }
 
 .project-item.active {
   /* background-color: #4b4724; */
-  border-color: #FFFFFFCC;
-  color: #FFF;
+  border-color: #ffffffcc;
+  color: #fff;
   /* font-weight: bold; */
 }
 

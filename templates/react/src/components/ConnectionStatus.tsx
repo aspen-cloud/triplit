@@ -9,8 +9,8 @@ export function ConnectionStatus() {
       {status === 'CLOSED'
         ? 'Offline'
         : status === 'CONNECTING'
-        ? 'Connecting'
-        : 'Online'}
+          ? 'Connecting'
+          : 'Online'}
     </div>
   );
 }

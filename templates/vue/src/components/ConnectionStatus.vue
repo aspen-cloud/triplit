@@ -12,8 +12,8 @@ const { connectionStatus } = useConnectionStatus(triplit)
       connectionStatus === 'CLOSED'
         ? 'Offline'
         : connectionStatus === 'CONNECTING'
-        ? 'Connecting'
-        : 'Online'
+          ? 'Connecting'
+          : 'Online'
     }}
   </div>
 </template>

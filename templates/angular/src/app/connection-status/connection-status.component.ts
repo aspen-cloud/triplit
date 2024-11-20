@@ -7,8 +7,13 @@ import { triplit } from '../../../triplit/client.js';
   standalone: true,
   template: ` <div class="connection-status">
     <div class="{{ 'indicator ' + status().toLowerCase() }}"></div>
-    @if (status() === 'CLOSED') {Offline} @else if (status() === 'CONNECTING')
-    {Connecting} @else {Online}
+    @if (status() === 'CLOSED') {
+      Offline
+    } @else if (status() === 'CONNECTING') {
+      Connecting
+    } @else {
+      Online
+    }
   </div>`,
 })
 export class ConnectionStatusComponent {
