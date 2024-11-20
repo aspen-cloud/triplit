@@ -503,6 +503,7 @@ export default class DB<M extends Models = Models> {
       .catch(() => {})
       .then(() => {
         this.tripleStore.onWrite(async (storeWrites) => {
+          if (this.syncQueries.size === 0) return;
           const newTriples = Object.values(storeWrites).flatMap(
             (ops) => ops.inserts
           );
