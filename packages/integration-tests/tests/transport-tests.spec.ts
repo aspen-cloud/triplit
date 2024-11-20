@@ -3381,3 +3381,49 @@ describe('backfilling queries with limits', async () => {
     expect(resultIds).not.toContain(deletedIds);
   });
 });
+
+describe('entity cache on client', async () => {
+  it('can get cached results for the same collection from two different subscriptions', async () => {
+    const schema = {
+      users: {
+        schema: S.Schema({
+          id: S.Id(),
+          name: S.String(),
+          events: S.RelationMany('event_registrations', {
+            where: [['user_id', '=', '$id']],
+          }),
+        }),
+      },
+      event_registrations: {
+        schema: S.Schema({
+          id: S.Id(),
+          user_id: S.String(),
+        }),
+      },
+    };
+    const serverDB = new DB({ schema: { collections: schema, version: 0 } });
+    for (let i = 0, len = 31; i < len; i++) {
+      await serverDB.insert('users', { id: `user${i}`, name: `user${i}` });
+    }
+    const alice = createTestClient(new TriplitServer(serverDB), {
+      token: SERVICE_KEY,
+      clientId: 'alice',
+      schema: schema,
+      experimental: {
+        entityCache: {
+          capacity: 10000,
+        },
+      },
+    });
+    const allUsersQuery = alice.query('users').include('events').build();
+    const currentUserQuery = alice.query('users').id('user0').limit(1).build();
+
+    const allUsersSub = vi.fn();
+    const currentUserSub = vi.fn();
+    alice.subscribe(allUsersQuery, allUsersSub);
+    alice.subscribe(currentUserQuery, currentUserSub);
+    await pause(200);
+
+    expect(allUsersSub.mock.lastCall?.[0]).toHaveLength(31);
+  });
+});
