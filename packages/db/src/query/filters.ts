@@ -89,7 +89,7 @@ export async function satisfiesFilter<Q extends CollectionQuery>(
 
 async function satisfiesRelationalFilter<
   M extends Models,
-  Q extends CollectionQuery<M, any>
+  Q extends CollectionQuery<M, any>,
 >(
   tx: TripleStoreApi,
   query: Q,
@@ -121,7 +121,7 @@ async function satisfiesRelationalFilter<
 
 function satisfiesFilterStatement<
   M extends Models,
-  Q extends CollectionQuery<M, any>
+  Q extends CollectionQuery<M, any>,
 >(
   query: Q,
   options: FetchFromStorageOptions,

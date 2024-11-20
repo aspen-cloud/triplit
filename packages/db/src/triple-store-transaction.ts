@@ -137,7 +137,7 @@ export class TripleStoreTransaction implements TripleStoreApi {
   async *findByEAT(
     tupleArgs: [
       entityId?: string | undefined,
-      attribute?: Attribute | undefined
+      attribute?: Attribute | undefined,
     ],
     direction?: 'ASC' | 'DESC' | undefined
   ) {
@@ -147,7 +147,7 @@ export class TripleStoreTransaction implements TripleStoreApi {
     tupleArgs: [
       attribute?: Attribute | undefined,
       value?: TupleValue | undefined,
-      entityId?: string | undefined
+      entityId?: string | undefined,
     ],
     direction?: 'ASC' | 'DESC' | undefined
   ) {

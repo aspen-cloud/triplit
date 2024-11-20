@@ -21,7 +21,7 @@ import { useQueryOne } from './use-query-one.js';
  */
 export function useEntity<
   M extends Models,
-  CN extends CollectionNameFromModels<M>
+  CN extends CollectionNameFromModels<M>,
 >(
   client: TriplitClient<M> | WorkerClient<M>,
   collectionName: CN,

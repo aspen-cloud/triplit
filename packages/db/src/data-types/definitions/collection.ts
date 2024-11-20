@@ -13,7 +13,7 @@ export type CollectionInterface<
   JSType = any,
   JsonType = any,
   _SchemaType = any,
-  Operators extends readonly Operator[] = readonly Operator[]
+  Operators extends readonly Operator[] = readonly Operator[],
 > = TypeInterface<TypeId, JSType, JsonType, Operators> & {
   readonly items: ValueInterface;
   readonly options: UserTypeOptions;

@@ -9,7 +9,7 @@ export type TypeInterface<
   TypeId extends string = string, // possibly specify known value types
   JSType = any,
   DBType = any, // string, number, boolean, array, object
-  Operators extends readonly Operator[] = readonly Operator[]
+  Operators extends readonly Operator[] = readonly Operator[],
 > = {
   readonly type: TypeId;
   readonly supportedOperations: Operators;

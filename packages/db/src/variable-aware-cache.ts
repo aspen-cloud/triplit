@@ -203,7 +203,7 @@ export class VariableAwareCache<Schema extends Models> {
 
   queryToViews<
     CN extends CollectionNameFromModels<Schema>,
-    Q extends CollectionQuery<Schema, CN>
+    Q extends CollectionQuery<Schema, CN>,
   >(query: Q) {
     const variableFilters: FilterStatement<Schema, CN>[] = [];
     const nonVariableFilters = query.where

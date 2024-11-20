@@ -11,7 +11,7 @@ type AggregateFunc<I> = (items: I[]) => I[] | Promise<I[]>;
 type AggregateTuple = [
   'aggregate',
   AggregateFunc<any>,
-  { limit: number; takeWhile?: FilterFunc<any> }
+  { limit: number; takeWhile?: FilterFunc<any> },
 ];
 
 type SortFunc<I> = (a: I, b: I) => number;

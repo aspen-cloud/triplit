@@ -53,7 +53,10 @@ export function hasAdminAccess(token: ProjectJWT) {
 
 export class Session {
   db: TriplitDB<any>;
-  constructor(public server: TriplitServer, public token: ProjectJWT) {
+  constructor(
+    public server: TriplitServer,
+    public token: ProjectJWT
+  ) {
     if (!token) throw new TriplitError('Token is required');
     // TODO: figure out admin middleware
 

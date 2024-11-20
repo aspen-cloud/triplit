@@ -81,7 +81,7 @@ export class Schema {
    */
   static RelationMany = <
     C extends CollectionNameFromModels,
-    Q extends SubQuery<Models, C>
+    Q extends SubQuery<Models, C>,
   >(
     collectionName: C,
     query: Omit<Q, 'collectionName'>
@@ -95,7 +95,7 @@ export class Schema {
    */
   static RelationOne = <
     C extends CollectionNameFromModels,
-    Q extends SubQuery<Models, C>
+    Q extends SubQuery<Models, C>,
   >(
     collectionName: C,
     query: Omit<Q, 'collectionName'>

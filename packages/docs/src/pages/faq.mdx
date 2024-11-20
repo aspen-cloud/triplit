@@ -5,11 +5,12 @@ description: Frequently asked questions about Triplit.
 # Frequently asked questions
 
 ## Why should I choose Triplit over a traditional database?
+
 Triplit is designed to have the best developer experience possible right out of the box. It was created to make building apps with real-time, local-first user experiences much easier than with existing tools. So if you aspire to have your app to feel native while supporting collaborative features expected of modern web apps, then Triplit is probably the right choice for you.
 
 ## Why should I care about offline support?
 
-By adding offline support to your app, you end up making it fast in *all* network conditions. Even if your users are on fast internet and you've fully optimized your server, you can't beat the speed of light. Having a robust cache on device will just improve your user experience by making each interaction feel instant and not delayed by a roundtrip to the server. This is same strategy employed by some of the most loved apps like Linear, Figma, and Superhuman.
+By adding offline support to your app, you end up making it fast in _all_ network conditions. Even if your users are on fast internet and you've fully optimized your server, you can't beat the speed of light. Having a robust cache on device will just improve your user experience by making each interaction feel instant and not delayed by a roundtrip to the server. This is same strategy employed by some of the most loved apps like Linear, Figma, and Superhuman.
 
 ## How can Triplit be a relational database if it doesn't use joins?
 
@@ -57,10 +58,6 @@ You can use the [HTTP Client](/client/http-client) to query and update data from
 
 Every data structure that Triplit can store is designed to support multiple concurrent writers. Sets are able to handle concurrent additions and removals without problem, but arrays lose many nice properties under collaboration. Consider the push method: if two people concurrently push to an array they will end up adding an element to the same index, ultimately causing one item to overwrite the other. In the future, Triplit will expose a List datatype that will support pushing to the beginning and end of a list and assignment operations to specific indices. In most cases using a Set or a List in place of an Array will suffice.
 
-
 ## Why do ordinary databases struggle with collaborative applications?
 
 Many popular databases do not implement real-time query subscriptions, which are the foundation for collaborative apps. Developers generally end up replicating the functionality of their remote database on the client to create the illusion of live updating queries.
-
-
-

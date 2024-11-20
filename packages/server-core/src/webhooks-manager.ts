@@ -61,9 +61,8 @@ export class WebhooksManager {
   }
 
   async fetchWebhooksFromStorage(): Promise<WebhookJSONDefinition | undefined> {
-    const webhookTuples = await this.db.tripleStore.readMetadataTuples(
-      WEBHOOK_ID
-    );
+    const webhookTuples =
+      await this.db.tripleStore.readMetadataTuples(WEBHOOK_ID);
     if (webhookTuples.length === 0) {
       return undefined;
     }

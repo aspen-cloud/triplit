@@ -54,7 +54,7 @@ type useInfiniteQueryPayload<M extends Models, Q extends ClientQuery<M>> = {
 export function useQuery<
   M extends Models,
   CN extends CollectionNameFromModels<M>,
-  Q extends ClientQuery<M, CN>
+  Q extends ClientQuery<M, CN>,
 >(
   client: TriplitClient<M> | WorkerClient<M>,
   query: ClientQueryBuilder<M, CN, Q> | Q,
@@ -145,7 +145,7 @@ export function useQuery<
 export function usePaginatedQuery<
   M extends Models,
   CN extends CollectionNameFromModels<M>,
-  Q extends ClientQuery<M, CN>
+  Q extends ClientQuery<M, CN>,
 >(
   client: TriplitClient<M> | WorkerClient<M>,
   query: ClientQueryBuilder<M, CN, Q> | Q,
@@ -236,7 +236,7 @@ export function usePaginatedQuery<
 export function useInfiniteQuery<
   M extends Models,
   CN extends CollectionNameFromModels<M>,
-  Q extends ClientQuery<M, CN>
+  Q extends ClientQuery<M, CN>,
 >(
   client: TriplitClient<M> | WorkerClient<M>,
   query: ClientQueryBuilder<M, CN, Q> | Q,

@@ -51,7 +51,7 @@ export type Collection<T extends SchemaConfig = SchemaConfig> = {
 
 export interface Rule<
   M extends Models,
-  CN extends CollectionNameFromModels<M>
+  CN extends CollectionNameFromModels<M>,
 > {
   filter: QueryWhere<M, CN>;
   description?: string;
@@ -59,7 +59,7 @@ export interface Rule<
 
 export interface CollectionRules<
   M extends Models,
-  CN extends CollectionNameFromModels<M>
+  CN extends CollectionNameFromModels<M>,
 > {
   read?: Record<string, Rule<M, CN>>;
   write?: Record<string, Rule<M, CN>>;
@@ -67,12 +67,12 @@ export interface CollectionRules<
 
 export type RolePermissions<
   M extends Models,
-  CN extends CollectionNameFromModels<M>
+  CN extends CollectionNameFromModels<M>,
 > = Record<string, CollectionPermissions<M, CN>>;
 
 export type CollectionPermissions<
   M extends Models,
-  CN extends CollectionNameFromModels<M>
+  CN extends CollectionNameFromModels<M>,
 > = {
   read?: CollectionPermission<M, CN>;
   insert?: CollectionPermission<M, CN>;
@@ -86,7 +86,7 @@ export type PermissionWriteOperations = Exclude<PermissionOperations, 'read'>;
 
 type CollectionPermission<
   M extends Models,
-  CN extends CollectionNameFromModels<M>
+  CN extends CollectionNameFromModels<M>,
 > = {
   filter?: QueryWhere<M, CN>;
   // attributes?: Array<QuerySelectionValue<M, CN>>;
@@ -131,7 +131,7 @@ export type StoreSchema<M extends Models> = {
  */
 export type Models<
   CollectionName extends string = string,
-  T extends SchemaConfig = SchemaConfig
+  T extends SchemaConfig = SchemaConfig,
 > = {
   [K in CollectionName]: Collection<T>;
 };
@@ -139,16 +139,15 @@ export type Models<
 /**
  * A subset of a model with properties that are available for selection
  */
-export type SelectModelFromModel<M extends Model> = M extends Model<
-  infer Config
->
-  ? Model<//@ts-expect-error
-    {
-      [k in keyof Config as Config[k] extends QueryType<any, any, any>
-        ? never
-        : k]: Config[k];
-    }>
-  : never;
+export type SelectModelFromModel<M extends Model> =
+  M extends Model<infer Config>
+    ? Model<//@ts-expect-error
+      {
+        [k in keyof Config as Config[k] extends QueryType<any, any, any>
+          ? never
+          : k]: Config[k];
+      }>
+    : never;
 
 /**
  * The basic type of a model
@@ -231,7 +230,7 @@ export type DBTypeFromModel<M extends Model> = {
  */
 export type PathFilteredTypeFromModel<
   Record extends RecordType,
-  Paths extends string
+  Paths extends string,
 > = {
   [K in keyof Record['properties'] & ExtractBasePaths<Paths>]: K extends Paths
     ? // If the exact path matches, include it as is.
@@ -239,8 +238,8 @@ export type PathFilteredTypeFromModel<
       ? ExtractJSType<Record['properties'][K]> | undefined
       : ExtractJSType<Record['properties'][K]>
     : Record['properties'][K] extends RecordType
-    ? PathFilteredTypeFromModel<Record['properties'][K], ShiftPath<Paths>> // Otherwise, recurse into sub-properties
-    : never;
+      ? PathFilteredTypeFromModel<Record['properties'][K], ShiftPath<Paths>> // Otherwise, recurse into sub-properties
+      : never;
 };
 
 /**
@@ -250,7 +249,7 @@ export type QuerySelectionFilteredTypeFromModel<
   M extends Models,
   CN extends CollectionNameFromModels<M>,
   Selection extends QuerySelection<M, CN>,
-  Inclusion extends QueryInclusions<M, CN>
+  Inclusion extends QueryInclusions<M, CN>,
 > =
   // Path selections
   PathFilteredTypeFromModel<
@@ -270,42 +269,47 @@ type ExtractRelationSubqueryType<
   M extends Models,
   CN extends CollectionNameFromModels<M>,
   Alias extends string,
-  Inclusion extends QueryInclusion<M, CN>
-> = Inclusion extends RelationSubquery<any, any, any>
-  ? QueryResult<M, ToQuery<M, Inclusion['subquery']>, Inclusion['cardinality']>
-  : Inclusion extends RefSubquery<M, CN>
-  ? QueryResult<
-      M,
-      MergeQueryInclusion<
-        M,
-        RefQuery<M, CN, Inclusion['_rel']>['collectionName'],
-        RefQuery<M, CN, Inclusion['_rel']>,
-        Inclusion
-      >,
-      Ref<M, CN, Inclusion['_rel']>['cardinality']
-    >
-  : Alias extends RelationAttributes<M, CN>
-  ? Inclusion extends true
+  Inclusion extends QueryInclusion<M, CN>,
+> =
+  Inclusion extends RelationSubquery<any, any, any>
     ? QueryResult<
         M,
-        ToQuery<M, RefQuery<M, CN, Alias>>,
-        Ref<M, CN, Alias>['cardinality']
+        ToQuery<M, Inclusion['subquery']>,
+        Inclusion['cardinality']
       >
-    : Inclusion extends null
-    ? QueryResult<
-        M,
-        ToQuery<M, RefQuery<M, CN, Alias>>,
-        Ref<M, CN, Alias>['cardinality']
-      >
-    : never
-  : never;
+    : Inclusion extends RefSubquery<M, CN>
+      ? QueryResult<
+          M,
+          MergeQueryInclusion<
+            M,
+            RefQuery<M, CN, Inclusion['_rel']>['collectionName'],
+            RefQuery<M, CN, Inclusion['_rel']>,
+            Inclusion
+          >,
+          Ref<M, CN, Inclusion['_rel']>['cardinality']
+        >
+      : Alias extends RelationAttributes<M, CN>
+        ? Inclusion extends true
+          ? QueryResult<
+              M,
+              ToQuery<M, RefQuery<M, CN, Alias>>,
+              Ref<M, CN, Alias>['cardinality']
+            >
+          : Inclusion extends null
+            ? QueryResult<
+                M,
+                ToQuery<M, RefQuery<M, CN, Alias>>,
+                Ref<M, CN, Alias>['cardinality']
+              >
+            : never
+        : never;
 
 /**
  * A type matching the properties of a model that are relations
  */
 export type RelationAttributes<
   M extends Models,
-  CN extends CollectionNameFromModels<M>
+  CN extends CollectionNameFromModels<M>,
 > = {
   [K in keyof ModelFromModels<M, CN>['properties']]: ModelFromModels<
     M,

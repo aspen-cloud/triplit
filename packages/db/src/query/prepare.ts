@@ -469,7 +469,7 @@ function getQueryAfter<M extends Models, Q extends CollectionQuery<M>>(
 
 function whereFilterValidator<
   M extends Models,
-  CN extends CollectionNameFromModels<M>
+  CN extends CollectionNameFromModels<M>,
 >(
   schema: M | undefined,
   collectionName: CN
@@ -535,7 +535,7 @@ function mergeQueries<M extends Models>(
 
 function mapFilterStatements<
   M extends Models,
-  CN extends CollectionNameFromModels<M>
+  CN extends CollectionNameFromModels<M>,
 >(
   statements: QueryWhere<M, CN>,
   mapFunction: (
@@ -565,7 +565,7 @@ function mapFilterStatements<
  */
 function validateIdentifier<
   M extends Models,
-  CN extends CollectionNameFromModels<M>
+  CN extends CollectionNameFromModels<M>,
 >(
   identifier: string,
   schema: M,

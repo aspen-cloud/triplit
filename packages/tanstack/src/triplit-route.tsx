@@ -25,7 +25,8 @@ export function triplitRoute<
   TParentRoute extends AnyRoute = FileRoutesByPath[Path]['parentRoute'],
   TId extends RouteConstraints['TId'] = FileRoutesByPath[Path]['id'],
   TPath extends RouteConstraints['TPath'] = FileRoutesByPath[Path]['path'],
-  TFullPath extends RouteConstraints['TFullPath'] = FileRoutesByPath[Path]['fullPath']
+  TFullPath extends
+    RouteConstraints['TFullPath'] = FileRoutesByPath[Path]['fullPath'],
 >(
   client: TriplitClient<M>,
   query:
@@ -57,7 +58,7 @@ export function triplitRoute<
         AnyContext,
         unknown,
         unknown
-      >
+      >,
     >(
       ctx: Ctx
     ): Promise<{

@@ -292,7 +292,7 @@ export class HttpClient<M extends ClientSchema = ClientSchema> {
 
 function deserializeHttpFetchResult<
   M extends Models,
-  Q extends SchemaQueries<M>
+  Q extends SchemaQueries<M>,
 >(query: Q, result: [string, any][], schema?: any): FetchResult<M, Q> {
   return result.map((entry) => deserializeHttpEntity(query, entry[1], schema));
 }

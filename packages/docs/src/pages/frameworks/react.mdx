@@ -65,13 +65,7 @@ function App() {
   if (fetching) return <div>Loading...</div>;
   if (error) return <div>Could not load data.</div>;
 
-  return (
-    <div>
-      {results?.map((item) => (
-        <div>{item.text}</div>
-      ))}
-    </div>
-  );
+  return <div>{results?.map((item) => <div>{item.text}</div>)}</div>;
 }
 ```
 
@@ -127,9 +121,7 @@ function App() {
 
   return (
     <div>
-      {results?.map((item) => (
-        <div>{item.text}</div>
-      ))}
+      {results?.map((item) => <div>{item.text}</div>)}
       {fetchingPage && <div>Loading page...</div>}
       {hasPreviousPage && <button onClick={prevPage}>Previous page</button>}
       {hasNextPage && <button onClick={nextPage}>Next page</button>}
@@ -157,9 +149,7 @@ function App() {
 
   return (
     <div>
-      {results?.map((item) => (
-        <div>{item.text}</div>
-      ))}
+      {results?.map((item) => <div>{item.text}</div>)}
       {fetchingMore && <div>Loading more...</div>}
       {hasMore && <button onClick={loadMore}>Load more</button>}
     </div>

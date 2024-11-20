@@ -235,7 +235,7 @@ async function printDirectoryHelp(name: string, commands: CommandTree) {
 }
 
 function printCommandHelp<
-  Cmd extends CommandDefinition<ArgDefinitions, any, any>
+  Cmd extends CommandDefinition<ArgDefinitions, any, any>,
 >(name: string, cmdDef: Cmd) {
   // @ts-ignore
   console.log(`triplit ${bold(name)}`);

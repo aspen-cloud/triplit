@@ -42,7 +42,7 @@ export interface CollectionDefinition {
  * The serialized form of a record attribute
  */
 export type RecordAttributeDefinition<
-  Properties extends Record<string, TypeInterface> = {}
+  Properties extends Record<string, TypeInterface> = {},
 > = {
   type: 'record';
   properties: Record<keyof Properties, AttributeDefinition>;

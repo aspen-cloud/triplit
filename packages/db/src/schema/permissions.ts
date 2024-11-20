@@ -55,15 +55,18 @@ export function sessionRolesAreEquivalent(
 }
 
 function hashRoleVars(roles: SessionRole[]) {
-  return roles.reduce((prev, { key, roleVars }) => {
-    prev[key] = hash(roleVars);
-    return prev;
-  }, {} as Record<string, string>);
+  return roles.reduce(
+    (prev, { key, roleVars }) => {
+      prev[key] = hash(roleVars);
+      return prev;
+    },
+    {} as Record<string, string>
+  );
 }
 
 export function getCollectionPermissions<
   M extends Models,
-  CN extends CollectionNameFromModels<M>
+  CN extends CollectionNameFromModels<M>,
 >(schema: M, collectionName: CN) {
   if (!schema) return undefined;
   const collection = schema[collectionName];

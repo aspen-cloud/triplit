@@ -328,8 +328,8 @@ export class WritePermissionError extends TriplitError {
       operation === 'insert'
         ? 'insertion'
         : operation === 'delete'
-        ? 'deletion'
-        : 'update'
+          ? 'deletion'
+          : 'update'
     } of the entity with id '${entityId}'. The provided session roles were [${sessionRoles
       .map((m) => m.key)
       .join(', ')}].`;

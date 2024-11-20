@@ -19,17 +19,17 @@ type AddAttributeOperation = ['add_attribute', AddAttributePayload];
 type DropAttributeOperation = ['drop_attribute', DropAttributePayload];
 type AlterAttributeOptionOperation = [
   'alter_attribute_option',
-  AlterAttributeOptionPayload
+  AlterAttributeOptionPayload,
 ];
 type DropAttributeOptionOperation = [
   'drop_attribute_option',
-  DropAttributeOptionPayload
+  DropAttributeOptionPayload,
 ];
 type AddRuleOperation = ['add_rule', AddRulePayload];
 type DropRuleOperation = ['drop_rule', DropRulePayload];
 type SetAttributeOptionalOperation = [
   'set_attribute_optional',
-  SetAttributeOptionalPayload
+  SetAttributeOptionalPayload,
 ];
 
 type DBOperation =

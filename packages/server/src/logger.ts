@@ -120,8 +120,8 @@ class Logger {
     const primaryColor = isError
       ? ERROR_COLOR
       : action === 'received'
-      ? REQUEST_TYPE_COLOR
-      : SUCCESS_COLOR;
+        ? REQUEST_TYPE_COLOR
+        : SUCCESS_COLOR;
     const messageBody = isError
       ? formatErrorPayload(payload)
       : formatMessagePayload(action, message, this.verbose);

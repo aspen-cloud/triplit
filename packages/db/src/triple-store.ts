@@ -101,7 +101,7 @@ export interface TripleStoreApi {
     [attribute, value, entityId]: [
       attribute?: Attribute,
       value?: TupleValue,
-      entityId?: EntityId
+      entityId?: EntityId,
     ],
     direction?: 'ASC' | 'DESC'
   ): AsyncGenerator<TripleRow>;
@@ -131,8 +131,8 @@ export interface TripleStoreApi {
 type RemoveFirstFromTuple<T extends any[]> = T['length'] extends 0
   ? never
   : ((...b: T) => void) extends (a: any, ...b: infer I) => void
-  ? I
-  : [];
+    ? I
+    : [];
 
 async function addIndexesToTransaction(
   tupleTx: MultiTupleTransaction<TupleIndex>
@@ -342,7 +342,7 @@ export class TripleStore<StoreKeys extends string = any>
   async *findByEAT(
     [entityId, attribute]: [
       entityId?: string | undefined,
-      attribute?: Attribute | undefined
+      attribute?: Attribute | undefined,
     ],
     direction?: 'ASC' | 'DESC' | undefined
   ) {
@@ -352,7 +352,7 @@ export class TripleStore<StoreKeys extends string = any>
     [attribute, value, entityId]: [
       attribute?: Attribute | undefined,
       value?: TupleValue | undefined,
-      entityId?: string | undefined
+      entityId?: string | undefined,
     ],
     direction?: 'ASC' | 'DESC' | undefined
   ) {

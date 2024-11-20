@@ -24,7 +24,7 @@ import {
 export function createQuery<
   M extends Models,
   CN extends CollectionNameFromModels<M>,
-  Q extends ClientQuery<M, CN>
+  Q extends ClientQuery<M, CN>,
 >(
   queryFn: () => {
     client: TriplitClient<any> | WorkerClient<any>;
@@ -131,7 +131,7 @@ type createPaginatedQueryPayload<M extends Models, Q extends ClientQuery<M>> = {
 export function createPaginatedQuery<
   M extends Models,
   CN extends CollectionNameFromModels<M>,
-  Q extends ClientQuery<M, CN>
+  Q extends ClientQuery<M, CN>,
 >(
   queryFn: () => {
     client: TriplitClient<any> | WorkerClient<any>;
@@ -212,7 +212,7 @@ type createInfiniteQueryPayload<M extends Models, Q extends ClientQuery<M>> = {
 export function createInfiniteQuery<
   M extends Models,
   CN extends CollectionNameFromModels<M>,
-  Q extends ClientQuery<M>
+  Q extends ClientQuery<M>,
 >(
   queryFn: () => {
     client: TriplitClient<M> | WorkerClient<M>;

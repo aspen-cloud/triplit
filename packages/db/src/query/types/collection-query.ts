@@ -27,7 +27,7 @@ export type CollectionQuery<
   M extends Models = Models,
   CN extends CollectionNameFromModels<M> = CollectionNameFromModels<M>,
   Selection extends QuerySelection<M, CN> = QuerySelection<M, CN>,
-  Inclusions extends QueryInclusions<M, CN> = QueryInclusions<M, CN>
+  Inclusions extends QueryInclusions<M, CN> = QueryInclusions<M, CN>,
 > = {
   where?: QueryWhere<M, CN>;
   select?: Selection[];
@@ -65,7 +65,7 @@ type BaseCollectionQuery = CollectionQuery<any, any, any, any>;
  */
 export type CollectionQueryDefault<
   M extends Models,
-  CN extends CollectionNameFromModels<M> = CollectionNameFromModels<M>
+  CN extends CollectionNameFromModels<M> = CollectionNameFromModels<M>,
 > = CollectionQuery<M, CN, QuerySelection<M, CN>, {}>;
 
 /**
@@ -90,7 +90,7 @@ export type CollectionQueryCollectionName<Q extends BaseCollectionQuery> =
 export type CollectionQuerySelection<
   M extends Models,
   CN extends CollectionNameFromModels<M>,
-  Q extends ModelQueries<M, CN>
+  Q extends ModelQueries<M, CN>,
 > = Q extends CollectionQuery<M, CN, infer S> ? S : never;
 
 /**
@@ -99,7 +99,7 @@ export type CollectionQuerySelection<
 export type CollectionQueryInclusion<
   M extends Models,
   CN extends CollectionNameFromModels<M>,
-  Q extends ModelQueries<M, CN>
+  Q extends ModelQueries<M, CN>,
 > = Q extends CollectionQuery<M, CN, infer S, infer I> ? I : never;
 
 // === Query Types ===
@@ -109,7 +109,7 @@ export type CollectionQueryInclusion<
  */
 export type QuerySelectionValue<
   M extends Models,
-  CN extends CollectionNameFromModels<M>
+  CN extends CollectionNameFromModels<M>,
 > = ModelPaths<M, CN>;
 
 /**
@@ -117,7 +117,7 @@ export type QuerySelectionValue<
  */
 export type QuerySelection<
   M extends Models,
-  CN extends CollectionNameFromModels<M>
+  CN extends CollectionNameFromModels<M>,
 > = QuerySelectionValue<M, CN>;
 
 /**
@@ -133,7 +133,7 @@ export type QueryResultCardinality = 'one' | 'many';
  */
 export type QueryWhere<
   M extends Models,
-  CN extends CollectionNameFromModels<M> = CollectionNameFromModels<M>
+  CN extends CollectionNameFromModels<M> = CollectionNameFromModels<M>,
 > = WhereFilter<M, CN>[];
 
 /**
@@ -142,7 +142,7 @@ export type QueryWhere<
 // I've done this with ExistsFilter, but adding a 'type' property to each type for narrowing would be helpful. Should still support old props for backwards compatibility.
 export type WhereFilter<
   M extends Models,
-  CN extends CollectionNameFromModels<M>
+  CN extends CollectionNameFromModels<M>,
 > =
   | FilterStatement<M, CN>
   | FilterGroup<M, CN>
@@ -156,11 +156,11 @@ export type WhereFilter<
 export type FilterStatement<
   M extends Models,
   CN extends CollectionNameFromModels<M>,
-  K extends SchemaPaths<M, CN> = SchemaPaths<M, CN>
+  K extends SchemaPaths<M, CN> = SchemaPaths<M, CN>,
 > = [
   K,
   Operator, // ExtractOperators<ExtractTypeFromRecord<ModelFromModels<M, CN>, M, K>>,
-  QueryValue // ExtractValueInputs<ExtractTypeFromRecord<ModelFromModels<M, CN>, M, K>>
+  QueryValue, // ExtractValueInputs<ExtractTypeFromRecord<ModelFromModels<M, CN>, M, K>>
 ];
 
 /**
@@ -168,7 +168,7 @@ export type FilterStatement<
  */
 export type FilterGroup<
   M extends Models,
-  CN extends CollectionNameFromModels<M>
+  CN extends CollectionNameFromModels<M>,
 > = AndFilterGroup<M, CN> | OrFilterGroup<M, CN>;
 
 /**
@@ -176,7 +176,7 @@ export type FilterGroup<
  */
 export type AndFilterGroup<
   M extends Models,
-  CN extends CollectionNameFromModels<M>
+  CN extends CollectionNameFromModels<M>,
 > = {
   mod: 'and';
   filters: QueryWhere<M, CN>;
@@ -187,7 +187,7 @@ export type AndFilterGroup<
  */
 export type OrFilterGroup<
   M extends Models,
-  CN extends CollectionNameFromModels<M>
+  CN extends CollectionNameFromModels<M>,
 > = {
   mod: 'or';
   filters: QueryWhere<M, CN>;
@@ -199,7 +199,7 @@ export type OrFilterGroup<
 export type SubQueryFilter<
   M extends Models = Models,
   // This is the collection name of the subquery, not the parent query
-  SubqueryCN extends CollectionNameFromModels<M> = CollectionNameFromModels<M>
+  SubqueryCN extends CollectionNameFromModels<M> = CollectionNameFromModels<M>,
 > = {
   exists: CollectionQuery<M, SubqueryCN>;
 };
@@ -213,7 +213,7 @@ export type RelationshipExistsFilter<
   P extends RelationPaths<ModelFromModels<M, CN>, M> = RelationPaths<
     ModelFromModels<M, CN>,
     M
-  >
+  >,
 > = {
   type: 'relationshipExists';
   relationship: P;
@@ -229,7 +229,7 @@ export type RelationshipExistsFilter<
  */
 export type QueryOrder<
   M extends Models,
-  CN extends CollectionNameFromModels<M>
+  CN extends CollectionNameFromModels<M>,
 > = OrderStatement<M, CN>[];
 
 /**
@@ -237,7 +237,7 @@ export type QueryOrder<
  */
 export type OrderStatement<
   M extends Models,
-  CN extends CollectionNameFromModels<M>
+  CN extends CollectionNameFromModels<M>,
 > = [property: SchemaPaths<M, CN>, direction: 'ASC' | 'DESC'];
 
 // ====== Pagination Types ======
@@ -249,7 +249,7 @@ export type ValueCursor = [value: QueryValue, entityId: EntityId];
  */
 export type QueryInclusions<
   M extends Models,
-  CN extends CollectionNameFromModels<M>
+  CN extends CollectionNameFromModels<M>,
 > = {
   [alias: string]: QueryInclusion<M, CN>;
 };
@@ -259,7 +259,7 @@ export type QueryInclusions<
  */
 export type QueryInclusion<
   M extends Models,
-  CN extends CollectionNameFromModels<M> = CollectionNameFromModels<M>
+  CN extends CollectionNameFromModels<M> = CollectionNameFromModels<M>,
 > =
   | RefShorthand
   | RelationSubquery<M, SchemaQueries<M>, QueryResultCardinality>
@@ -277,7 +277,7 @@ type RefShorthand = true | null;
  */
 export type RefSubquery<
   M extends Models,
-  CN extends CollectionNameFromModels<M> = CollectionNameFromModels<M>
+  CN extends CollectionNameFromModels<M> = CollectionNameFromModels<M>,
 
   // RefName extends RelationAttributes<M, CN>,
   // Q extends KeyedModelQueries<M, CN>[RefName] = KeyedModelQueries<
@@ -292,7 +292,7 @@ export type RefSubquery<
 export type RefQueryExtension<
   M extends Models,
   CN extends CollectionNameFromModels<M> = CollectionNameFromModels<M>,
-  Q extends ModelQueries<M, CN> = ModelQueries<M, CN>
+  Q extends ModelQueries<M, CN> = ModelQueries<M, CN>,
 > = Pick<Q, 'select' | 'include' | 'limit' | 'where' | 'order'>;
 
 /**
@@ -301,7 +301,7 @@ export type RefQueryExtension<
 export type RefQueryExtensionBase<
   M extends Models,
   CN extends CollectionNameFromModels<M>,
-  Q extends ModelQueries<M, CN>
+  Q extends ModelQueries<M, CN>,
 > = Q;
 
 /**
@@ -310,14 +310,11 @@ export type RefQueryExtensionBase<
 export type Ref<
   M extends Models,
   CN extends CollectionNameFromModels<M>,
-  RefName extends RelationAttributes<M, CN>
-> = ModelFromModels<M, CN>['properties'][RefName] extends QueryType<
-  any,
-  any,
-  any
->
-  ? ModelFromModels<M, CN>['properties'][RefName]
-  : never;
+  RefName extends RelationAttributes<M, CN>,
+> =
+  ModelFromModels<M, CN>['properties'][RefName] extends QueryType<any, any, any>
+    ? ModelFromModels<M, CN>['properties'][RefName]
+    : never;
 
 /**
  * The query type of a referential subquery.
@@ -325,7 +322,7 @@ export type Ref<
 export type RefQuery<
   M extends Models,
   CN extends CollectionNameFromModels<M>,
-  RefName extends RelationAttributes<M, CN>
+  RefName extends RelationAttributes<M, CN>,
 > = Ref<M, CN, RefName>['query'];
 
 /**
@@ -334,7 +331,7 @@ export type RefQuery<
 export type RefCollectionName<
   M extends Models,
   CN extends CollectionNameFromModels<M>,
-  RefName extends RelationAttributes<M, CN>
+  RefName extends RelationAttributes<M, CN>,
 > = RefQuery<M, CN, RefName>['collectionName'];
 
 // ========= Relational Subquery Types =========
@@ -344,7 +341,7 @@ export type RefCollectionName<
 export type RelationSubquery<
   M extends Models,
   Q extends SchemaQueries<M>,
-  Cardinality extends QueryResultCardinality
+  Cardinality extends QueryResultCardinality,
 > = {
   subquery: Q;
   cardinality: Cardinality;
@@ -369,7 +366,7 @@ export type SchemaQueries<M extends Models> =
  */
 export type KeyedModelQueries<
   M extends Models,
-  CN extends CollectionNameFromModels<M>
+  CN extends CollectionNameFromModels<M>,
 > = {
   [K in RelationAttributes<M, CN>]: ToQueryWithDefaults<M, RefQuery<M, CN, K>>;
 };
@@ -379,7 +376,7 @@ export type KeyedModelQueries<
  */
 export type ModelQueries<
   M extends Models,
-  CN extends CollectionNameFromModels<M>
+  CN extends CollectionNameFromModels<M>,
 > = KeyedModelQueries<M, CN>[RelationAttributes<M, CN>];
 
 /**
@@ -387,7 +384,7 @@ export type ModelQueries<
  */
 export type ModelRefSubQueries<
   M extends Models,
-  CN extends CollectionNameFromModels<M>
+  CN extends CollectionNameFromModels<M>,
 > = {
   [K in keyof KeyedModelQueries<M, CN>]: {
     _rel: K;
@@ -400,7 +397,7 @@ export type ModelRefSubQueries<
 export type ParseSelect<
   M extends Models,
   CN extends CollectionNameFromModels<M>,
-  Selection extends CollectionQuery<M, CN>['select']
+  Selection extends CollectionQuery<M, CN>['select'],
 > =
   // Untyped query literals will have unknonw select
   unknown extends Selection
@@ -414,7 +411,7 @@ export type ParseSelect<
 export type ParseInclusions<
   M extends Models,
   CN extends CollectionNameFromModels<M>,
-  Inclusions extends QueryInclusions<M, CN>
+  Inclusions extends QueryInclusions<M, CN>,
 > = unknown extends Inclusions ? {} : Inclusions;
 
 /**
@@ -422,7 +419,7 @@ export type ParseInclusions<
  */
 export type ToQuery<
   M extends Models,
-  Q extends Record<string, any>
+  Q extends Record<string, any>,
 > = CollectionQuery<
   M,
   Q['collectionName'],
@@ -435,7 +432,7 @@ export type ToQuery<
  */
 export type ToQueryWithDefaults<
   M extends Models,
-  Q extends Record<string, any>
+  Q extends Record<string, any>,
 > = CollectionQuery<M, Q['collectionName']>;
 
 /**
@@ -445,7 +442,7 @@ export type MergeQueryInclusion<
   M extends Models,
   CN extends CollectionNameFromModels<M>,
   Q extends CollectionQuery<M, CN>,
-  Inc extends Pick<CollectionQuery<M, CN>, 'select' | 'include'>
+  Inc extends Pick<CollectionQuery<M, CN>, 'select' | 'include'>,
 > = CollectionQuery<
   M,
   CN,

@@ -90,8 +90,8 @@ export function createServer(options?: ServerOptions) {
           options.storage
         )
       : typeof options.storage === 'function'
-      ? options.storage()
-      : options.storage
+        ? options.storage()
+        : options.storage
     : undefined;
   if (options?.verboseLogs) logger.verbose = true;
   const triplitServers = new Map<string, TriplitServer>();

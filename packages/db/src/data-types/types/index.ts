@@ -31,29 +31,23 @@ export type DataType =
   | QueryType<any, any, any>
   | RecordType<RecordProps<any, any>>;
 
-export type ExtractJSType<T> = T extends TypeInterface<
-  infer _TypeId,
-  infer JSType
->
-  ? JSType
-  : never;
+export type ExtractJSType<T> =
+  T extends TypeInterface<infer _TypeId, infer JSType> ? JSType : never;
 
-export type ExtractDBType<T> = T extends TypeInterface<
-  infer _TypeId,
-  infer _JSType,
-  infer DBType
->
-  ? DBType
-  : never;
+export type ExtractDBType<T> =
+  T extends TypeInterface<infer _TypeId, infer _JSType, infer DBType>
+    ? DBType
+    : never;
 
-export type ExtractOperators<T extends TypeInterface> = T extends TypeInterface<
-  infer _TypeId,
-  infer _JSType,
-  infer _JsonType,
-  infer Operators
->
-  ? Operators[number]
-  : never;
+export type ExtractOperators<T extends TypeInterface> =
+  T extends TypeInterface<
+    infer _TypeId,
+    infer _JSType,
+    infer _JsonType,
+    infer Operators
+  >
+    ? Operators[number]
+    : never;
 
 // TODO: improve type inference based on operator
 export type ExtractValueInputs<T extends TypeInterface> = QueryValue;

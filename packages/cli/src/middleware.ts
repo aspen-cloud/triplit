@@ -12,7 +12,7 @@ export function Middleware<
     args: Args;
   }) => Ctx | Promise<Ctx> | string | Promise<string>,
   Args extends string[] = string[],
-  Flags extends Record<string, Flag> = Record<string, Flag>
+  Flags extends Record<string, Flag> = Record<string, Flag>,
 >(
   def: MiddlewareDefinition<Args, Flags, Ctx, Run>
 ): MiddlewareDefinition<Args, Flags, Ctx, Run> {
@@ -26,7 +26,7 @@ export interface MiddlewareDefinition<
   Run extends (params: {
     flags: FlagsToTypes<Flags>;
     args: Args;
-  }) => Ctx | Promise<Ctx> | string | Promise<string>
+  }) => Ctx | Promise<Ctx> | string | Promise<string>,
 > {
   name: string;
   description?: string;

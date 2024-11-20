@@ -35,7 +35,7 @@ import {
 export class QueryBuilder<
   M extends Models,
   CN extends CollectionNameFromModels<M>,
-  Q extends ModelQueries<M, CN> = CollectionQueryDefault<M, CN>
+  Q extends ModelQueries<M, CN> = CollectionQueryDefault<M, CN>,
 > implements
     BuilderBase<CollectionQuery<M, CN>, 'collectionName' | 'entityId', 'id'>
 {
@@ -178,7 +178,7 @@ export class QueryBuilder<
   subquery<
     Alias extends string,
     PQ extends SchemaQueries<M>,
-    Cardinality extends QueryResultCardinality = 'many'
+    Cardinality extends QueryResultCardinality = 'many',
   >(
     relationName: Alias,
     query: PQ,
@@ -232,7 +232,7 @@ export class QueryBuilder<
 export function relationBuilder<
   M extends Models,
   CN extends CollectionNameFromModels<M>,
-  RName extends RelationAttributes<M, CN>
+  RName extends RelationAttributes<M, CN>,
 >(relationName: RName) {
   return new RelationBuilder<M, CN, RName>(relationName);
 }
@@ -245,7 +245,10 @@ export class RelationBuilder<
     M,
     RefCollectionName<M, CN, RName>
   > = QuerySelection<M, RefCollectionName<M, CN, RName>>,
-  RelInclusions extends QueryInclusions<M, RefCollectionName<M, CN, RName>> = {}
+  RelInclusions extends QueryInclusions<
+    M,
+    RefCollectionName<M, CN, RName>
+  > = {},
 > {
   private relationName: RName;
   private ext: RefQueryExtension<
@@ -295,7 +298,7 @@ export class RelationBuilder<
 
   include<
     Alias extends string,
-    RQ extends RefSubquery<M, RefCollectionName<M, CN, RName>>
+    RQ extends RefSubquery<M, RefCollectionName<M, CN, RName>>,
   >(
     alias: Alias,
     refQuery: RQ
@@ -308,7 +311,7 @@ export class RelationBuilder<
   >;
   include<
     Alias extends string,
-    RQ extends RefSubquery<M, RefCollectionName<M, CN, RName>>
+    RQ extends RefSubquery<M, RefCollectionName<M, CN, RName>>,
   >(
     alias: Alias,
     builder: (
@@ -316,7 +319,7 @@ export class RelationBuilder<
         InclusionRName extends RelationAttributes<
           M,
           RefCollectionName<M, CN, RName>
-        >
+        >,
       >(
         relationName: InclusionRName
       ) => RelationBuilder<M, RefCollectionName<M, CN, RName>, InclusionRName>
@@ -356,13 +359,13 @@ export class RelationBuilder<
 
 export type QUERY_INPUT_TRANSFORMERS<
   M extends Models,
-  CN extends CollectionNameFromModels<M>
+  CN extends CollectionNameFromModels<M>,
 > = ReturnType<typeof QUERY_INPUT_TRANSFORMERS<M, CN>>;
 
 // TODO: add functional type guards for conditionals
 export const QUERY_INPUT_TRANSFORMERS = <
   M extends Models,
-  CN extends CollectionNameFromModels<M>
+  CN extends CollectionNameFromModels<M>,
 >() => ({
   where: <A extends FilterInput<M, CN, any>>(
     q: Pick<CollectionQuery<M, CN>, 'where'>,

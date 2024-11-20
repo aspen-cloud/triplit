@@ -78,7 +78,7 @@ export function stripCollectionFromId(id: string): string {
 
 export function replaceVariablesInFilterStatements<
   M extends Models,
-  CN extends CollectionNameFromModels<M>
+  CN extends CollectionNameFromModels<M>,
 >(
   statements: QueryWhere<M, CN>,
   variables: Record<string, any>
@@ -129,7 +129,7 @@ export function replaceVariable(
 
 export function* filterStatementIterator<
   M extends Models,
-  CN extends CollectionNameFromModels<M>
+  CN extends CollectionNameFromModels<M>,
 >(
   statements: QueryWhere<M, CN>
 ): Generator<
@@ -149,7 +149,7 @@ export function* filterStatementIterator<
 
 export function someFilterStatements<
   M extends Models,
-  CN extends CollectionNameFromModels<M>
+  CN extends CollectionNameFromModels<M>,
 >(
   statements: QueryWhere<M, CN>,
   someFunction: (
@@ -334,7 +334,7 @@ export function validateTriple(
 
 export async function getCollectionSchema<
   M extends Models,
-  CN extends CollectionNameFromModels<M>
+  CN extends CollectionNameFromModels<M>,
 >(tx: DB<M> | DBTransaction<M>, collectionName: CN) {
   const res = await tx.getSchema();
   const { collections } = res ?? {};
@@ -348,7 +348,7 @@ export async function getCollectionSchema<
 
 export function fetchResultToJS<
   M extends Models,
-  Q extends CollectionQuery<M, CollectionNameFromModels<M>>
+  Q extends CollectionQuery<M, CollectionNameFromModels<M>>,
 >(
   results: Map<string, FetchResultEntity<M, Q>>,
   schema: M | undefined,

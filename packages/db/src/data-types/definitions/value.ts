@@ -4,7 +4,7 @@ import { Operator } from '../../query/types/index.js';
 
 export type TypeWithOptions<
   T,
-  TypeOptions extends UserTypeOptions
+  TypeOptions extends UserTypeOptions,
 > = TypeOptions['nullable'] extends true ? T | null : T;
 
 export type ValueInterface<
@@ -12,7 +12,7 @@ export type ValueInterface<
   JSType = any,
   JsonType = any, // string, number, boolean, array, object
   Operators extends readonly Operator[] = readonly Operator[],
-  TypeOptions extends UserTypeOptions = UserTypeOptions
+  TypeOptions extends UserTypeOptions = UserTypeOptions,
 > = TypeInterface<TypeId, JSType, JsonType, Operators> & {
   // TODO: type this as TypeOptions without everything breaking
   readonly options: UserTypeOptions;

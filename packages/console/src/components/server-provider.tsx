@@ -5,7 +5,7 @@ export const useServerState = () => {
   const { serverHost } = useParams();
   const navigate = useNavigate();
   return [
-    serverHost === 'local' ? DEFAULT_HOST : serverHost ?? '',
+    serverHost === 'local' ? DEFAULT_HOST : (serverHost ?? ''),
     (newHost: string) => navigate('/' + newHost),
   ] as const;
 };

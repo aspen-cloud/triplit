@@ -26,7 +26,7 @@ import { ClientSchema, SchemaClientQueries } from './query.js';
  */
 export type ClientFetchResult<
   M extends Models,
-  C extends SchemaClientQueries<M>
+  C extends SchemaClientQueries<M>,
 > = ClientFetchResultEntity<M, C>[];
 
 /**
@@ -34,7 +34,7 @@ export type ClientFetchResult<
  */
 export type ClientFetchResultEntity<
   M extends Models,
-  C extends SchemaClientQueries<M>
+  C extends SchemaClientQueries<M>,
 > = ReturnTypeFromQuery<M, C>;
 
 /**
@@ -55,7 +55,7 @@ export type ClientFetchResultEntity<
  */
 export type Entity<
   M extends ClientSchema,
-  CN extends CollectionNameFromModels<M>
+  CN extends CollectionNameFromModels<M>,
 > = Unalias<TypeFromModel<ModelFromModels<M, CN>>>;
 
 /**
@@ -65,7 +65,7 @@ export type EntityWithSelection<
   M extends ClientSchema,
   CN extends CollectionNameFromModels<M>,
   Selection extends QuerySelection<M, CN> = QuerySelection<M, CN>,
-  Inclusion extends QueryInclusions<M, CN> = {}
+  Inclusion extends QueryInclusions<M, CN> = {},
 > = Unalias<
   ReturnTypeFromQuery<M, CollectionQuery<M, CN, Selection, Inclusion>>
 >;
@@ -75,5 +75,5 @@ export type EntityWithSelection<
  */
 export type QueryResult<
   M extends Models,
-  Q extends SchemaClientQueries<M>
+  Q extends SchemaClientQueries<M>,
 > = Unalias<ReturnTypeFromQuery<M, Q>>;

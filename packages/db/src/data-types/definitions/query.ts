@@ -14,7 +14,7 @@ import {
 
 export type SubQuery<
   M extends Models,
-  CN extends CollectionNameFromModels<M>
+  CN extends CollectionNameFromModels<M>,
 > = Pick<
   CollectionQuery<M, CN, any, any>,
   'collectionName' | 'where' | 'limit' | 'order'
@@ -24,7 +24,7 @@ export type SubQuery<
 export type QueryType<
   CN extends CollectionNameFromModels,
   Q extends SubQuery<Models, CN>,
-  C extends QueryResultCardinality = 'many'
+  C extends QueryResultCardinality = 'many',
 > = TypeInterface<
   'query',
   FetchResult<Models, Q>,
@@ -38,7 +38,7 @@ export type QueryType<
 export function QueryType<
   CN extends CollectionNameFromModels,
   Q extends SubQuery<Models, CN>,
-  C extends QueryResultCardinality = 'many'
+  C extends QueryResultCardinality = 'many',
 >(query: Q, cardinality: C = 'many' as C): QueryType<CN, Q, C> {
   return {
     type: 'query' as const,

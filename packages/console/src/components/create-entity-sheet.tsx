@@ -120,7 +120,7 @@ function initializeNewEntityForm(
   const attributes = (
     Object.entries(collection.schema.properties) as [
       string,
-      Exclude<AttributeDefinition, RecordAttributeDefinition>
+      Exclude<AttributeDefinition, RecordAttributeDefinition>,
     ][]
   )
     .filter(
@@ -458,35 +458,33 @@ export function CreateEntitySheet({
           )}
         </SheetHeader>
         <form
-            onSubmit={async (e) => {
-                e.preventDefault();
-                try {
-                    let entity = convertFormToEntity(form.values.attributes);
-                    if (form.values.id) {
-                        entity = Object.assign(entity, { id: form.values.id });
-                    }
+          onSubmit={async (e) => {
+            e.preventDefault();
+            try {
+              let entity = convertFormToEntity(form.values.attributes);
+              if (form.values.id) {
+                entity = Object.assign(entity, { id: form.values.id });
+              }
 
-                    const { txId } = await client.transact(async (tx) => {
-                        await tx.insert(collection, entity);
-                    });
+              const { txId } = await client.transact(async (tx) => {
+                await tx.insert(collection, entity);
+              });
 
-                    client.syncEngine.onTxCommit(txId, () => {
-                        console.log("Transaction succeeded on the server");
-                        form.reset();
-                        setOpen(false);
-                    });
+              client.syncEngine.onTxCommit(txId, () => {
+                console.log('Transaction succeeded on the server');
+                form.reset();
+                setOpen(false);
+              });
 
-                    client.syncEngine.onTxFailure(txId, (e) => {
-                        console.error("Transaction failed on the server", e);
-                        const shouldRetry = false;
-                        client.syncEngine.rollback(txId);
-
-                    });
-
-                } catch (e) {
-                    console.error("Transaction setup failed", e);
-                }
-            }}
+              client.syncEngine.onTxFailure(txId, (e) => {
+                console.error('Transaction failed on the server', e);
+                const shouldRetry = false;
+                client.syncEngine.rollback(txId);
+              });
+            } catch (e) {
+              console.error('Transaction setup failed', e);
+            }
+          }}
           className="flex flex-col gap-10 mt-8"
         >
           <FormField label="id" description="The primary key for this entity">

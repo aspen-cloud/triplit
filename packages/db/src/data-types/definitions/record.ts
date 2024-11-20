@@ -13,7 +13,7 @@ import { TypeInterface } from './type.js';
 import { ExtractJSType, ExtractDBType, Optional } from '../types/index.js';
 
 type RecordJSType<
-  Properties extends { [k: string]: TypeInterface | Optional<TypeInterface> }
+  Properties extends { [k: string]: TypeInterface | Optional<TypeInterface> },
 > = {
   [k in keyof Properties as IsPropertyRequired<Properties[k]> extends true
     ? k
@@ -26,7 +26,7 @@ type RecordJSType<
 
 export type RecordProps<
   Key extends string = string,
-  DT extends TypeInterface = TypeInterface
+  DT extends TypeInterface = TypeInterface,
 > = {
   [K in Key]: DT;
 };

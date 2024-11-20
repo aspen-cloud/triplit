@@ -17,10 +17,10 @@ export function CollectionSchemaDetail({ collectionSchema }) {
           const attributeDefault = attributeType.startsWith('set_')
             ? 'not applicable'
             : options.default === undefined
-            ? 'unset'
-            : typeof options.default === 'object'
-            ? options.default.func
-            : options.default;
+              ? 'unset'
+              : typeof options.default === 'object'
+                ? options.default.func
+                : options.default;
           return (
             <div
               className="grid grid-cols-4 gap-4 items-center"

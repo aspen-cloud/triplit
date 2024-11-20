@@ -28,7 +28,7 @@ import {
 
 export function clientQueryBuilder<
   M extends ClientSchema,
-  CN extends CollectionNameFromModels<M>
+  CN extends CollectionNameFromModels<M>,
 >(collectionName: CN, params?: Omit<ClientQuery<M, CN>, 'collectionName'>) {
   const query = {
     collectionName,
@@ -44,7 +44,7 @@ export function clientQueryBuilder<
 export class ClientQueryBuilder<
   M extends Models,
   CN extends CollectionNameFromModels<M>,
-  Q extends ModelQueries<M, CN> = ClientQueryDefault<M, CN>
+  Q extends ModelQueries<M, CN> = ClientQueryDefault<M, CN>,
 > implements
     BuilderBase<
       ClientQuery<any, any, any, any>,
@@ -191,7 +191,7 @@ export class ClientQueryBuilder<
   subquery<
     Alias extends string,
     PQ extends SchemaQueries<M>,
-    Cardinality extends QueryResultCardinality = 'many'
+    Cardinality extends QueryResultCardinality = 'many',
   >(
     relationName: Alias,
     query: PQ,

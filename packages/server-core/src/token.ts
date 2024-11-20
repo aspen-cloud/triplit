@@ -89,7 +89,7 @@ export async function parseAndValidateToken(
 
   // tokens from gateway will not have triplit claims, so will seem external, but should be validated with master jwt secret
   const secretKey = isExternal
-    ? options.externalSecret ?? triplitSecret
+    ? (options.externalSecret ?? triplitSecret)
     : triplitSecret;
   if (!secretKey) {
     return {

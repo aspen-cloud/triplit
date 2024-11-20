@@ -25,7 +25,7 @@ import { WorkerClient } from '@triplit/client/worker-client';
 type QueryResults<
   M extends Models,
   CN extends CollectionNameFromModels<M>,
-  Q extends ClientQuery<M, CN>
+  Q extends ClientQuery<M, CN>,
 > = {
   fetching: Signal<boolean>;
   fetchingLocal: Signal<boolean>;
@@ -37,7 +37,7 @@ type QueryResults<
 type QueryParams<
   M extends Models,
   CN extends CollectionNameFromModels<M>,
-  Q extends ClientQuery<M, CN>
+  Q extends ClientQuery<M, CN>,
 > = () => {
   client: TriplitClient<M> | WorkerClient<M>;
   query: ClientQueryBuilder<M, CN, Q>;
@@ -47,7 +47,7 @@ type QueryParams<
 export function injectQuery<
   M extends Models,
   CN extends CollectionNameFromModels<M>,
-  Q extends ClientQuery<M, CN>
+  Q extends ClientQuery<M, CN>,
 >(
   // TODO: make add WorkerClient to type
   queryFn: QueryParams<M, CN, Q>,
@@ -61,7 +61,7 @@ export function injectQuery<
 function createBaseQuery<
   M extends Models,
   CN extends CollectionNameFromModels<M>,
-  Q extends ClientQuery<M, CN>
+  Q extends ClientQuery<M, CN>,
 >(queryFn: QueryParams<M, CN, Q>): QueryResults<M, CN, Q> {
   const injector = inject(Injector);
   const destroyRef = injector.get(DestroyRef);

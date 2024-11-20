@@ -146,8 +146,8 @@ export function indexToTriple(
       indexType === 'EAT'
         ? index.value[1]
         : indexType === 'AVE'
-        ? false
-        : index.value.expired,
+          ? false
+          : index.value.expired,
   };
 }
 
@@ -191,7 +191,7 @@ export async function* findByAVE(
   [attribute, value, entityId]: [
     attribute?: Attribute,
     value?: TupleValue,
-    entityId?: EntityId
+    entityId?: EntityId,
   ] = [],
   direction?: 'ASC' | 'DESC'
 ) {
@@ -216,23 +216,23 @@ export async function* findValuesInRange(
   const greaterThanCursor = !!constraints.greaterThanCursor
     ? constraints.greaterThanCursor
     : constraints.greaterThan
-    ? ([constraints.greaterThan, MAX] as const)
-    : undefined;
+      ? ([constraints.greaterThan, MAX] as const)
+      : undefined;
   const greaterThanOrEqualCursor = !!constraints.greaterThanOrEqualCursor
     ? constraints.greaterThanOrEqualCursor
     : constraints.greaterThanOrEqual
-    ? ([constraints.greaterThanOrEqual, MIN] as const)
-    : undefined;
+      ? ([constraints.greaterThanOrEqual, MIN] as const)
+      : undefined;
   const lessThanCursor = !!constraints.lessThanCursor
     ? constraints.lessThanCursor
     : constraints.lessThan
-    ? ([constraints.lessThan, MIN] as const)
-    : undefined;
+      ? ([constraints.lessThan, MIN] as const)
+      : undefined;
   const lessThanOrEqualCursor = !!constraints.lessThanOrEqualCursor
     ? constraints.lessThanOrEqualCursor
     : constraints.lessThanOrEqual
-    ? ([constraints.lessThanOrEqual, MAX] as const)
-    : undefined;
+      ? ([constraints.lessThanOrEqual, MAX] as const)
+      : undefined;
 
   const scanArgs = {
     prefix,

@@ -56,7 +56,10 @@ export default {
 export class TriplitDurableObject implements DurableObject {
   db: any;
   triplitServer: TriplitServer;
-  constructor(readonly state: DurableObjectState, readonly env: Env) {
+  constructor(
+    readonly state: DurableObjectState,
+    readonly env: Env
+  ) {
     this.db = new DB({
       schema: { collections: schema },
       clock: new DurableClock(),

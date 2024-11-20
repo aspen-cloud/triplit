@@ -22,7 +22,7 @@ import { useQuery } from './use-query.js';
 export function useQueryOne<
   M extends Models,
   CN extends CollectionNameFromModels<M>,
-  Q extends ClientQuery<M, CN>
+  Q extends ClientQuery<M, CN>,
 >(
   client: TriplitClient<M> | WorkerClient<M>,
   query: ClientQueryBuilder<M, CN, Q> | Q,

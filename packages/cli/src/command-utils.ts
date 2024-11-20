@@ -66,16 +66,15 @@ export function findCommands(dir: string): CommandTree {
 
 export type Command<
   Flags extends Flag[] | undefined,
-  Args extends any | undefined
+  Args extends any | undefined,
 > = {
   description?: string;
   flags: Flags;
   args?: Args;
-  (args: Args, flags: Flags):
-    | Promise<ReactElement>
-    | ReactElement
-    | Promise<void>
-    | void;
+  (
+    args: Args,
+    flags: Flags
+  ): Promise<ReactElement> | ReactElement | Promise<void> | void;
 };
 
 const MyCommand = () => {};

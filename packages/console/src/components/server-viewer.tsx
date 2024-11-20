@@ -49,7 +49,7 @@ export async function loader({ params }: { params: { serverHost?: string } }) {
   const serverHost =
     slugServerHost === 'local'
       ? DEFAULT_HOST
-      : importedServerHost ?? slugServerHost;
+      : (importedServerHost ?? slugServerHost);
   if (!serverHost) return redirect('/');
   const server = await consoleClient.fetchOne(
     consoleClient.query('servers').id(serverHost).include('tokens').build()
@@ -212,10 +212,13 @@ export function ServerViewer({
     : collectionStats.map(({ collection }) => collection);
 
   const statsByCollection = useMemo(() => {
-    return collectionStats.reduce((acc, { collection, numEntities }) => {
-      acc[collection] = { numEntities };
-      return acc;
-    }, {} as Record<string, { numEntities: number }>);
+    return collectionStats.reduce(
+      (acc, { collection, numEntities }) => {
+        acc[collection] = { numEntities };
+        return acc;
+      },
+      {} as Record<string, { numEntities: number }>
+    );
   }, [collectionStats]);
 
   const selectedCollectionStats = statsByCollection[query.collection];

@@ -52,7 +52,7 @@ export function getEntitiesFromContext(
 
 export function getResultTriplesFromContext<
   M extends Models,
-  Q extends SchemaQueries<M>
+  Q extends SchemaQueries<M>,
 >(
   query: Q,
   entityOrder: string[],
@@ -96,7 +96,7 @@ export function getResultTriplesFromContext<
 
 export function getSyncTriplesFromContext<
   M extends Models,
-  Q extends SchemaQueries<M>
+  Q extends SchemaQueries<M>,
 >(query: Q, entityOrder: string[], executionContext: FetchExecutionContext) {
   const triples = getResultTriplesFromContext<M, Q>(
     query,
@@ -115,7 +115,7 @@ export function getSyncTriplesFromContext<
 
 export function getQueryResultsFromContext<
   M extends Models,
-  Q extends SchemaQueries<M>
+  Q extends SchemaQueries<M>,
 >(
   query: Q,
   entityOrder: string[],
@@ -149,7 +149,7 @@ export function getQueryResultsFromContext<
       );
 
       entityWithSelection[attributeName] =
-        cardinality === 'one' ? subqueryResult[0] ?? null : subqueryResult;
+        cardinality === 'one' ? (subqueryResult[0] ?? null) : subqueryResult;
     }
 
     results.set(entityId, entityWithSelection);

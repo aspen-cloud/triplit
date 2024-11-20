@@ -38,7 +38,7 @@ type StringTypeOptions<E extends string> = UserTypeOptions & {
 };
 
 export function StringType<
-  TypeOptions extends StringTypeOptions<any> = UserTypeOptions
+  TypeOptions extends StringTypeOptions<any> = UserTypeOptions,
 >(options: TypeOptions = {} as TypeOptions): StringType<TypeOptions> {
   if (options && !userTypeOptionsAreValid(options)) {
     throw new InvalidTypeOptionsError(options);

@@ -77,7 +77,7 @@ export const DEFAULT_PAGE_SIZE = 100;
 async function* lazyScan<
   TupleSchema extends KeyValuePair,
   T extends Tuple,
-  P extends TuplePrefix<T>
+  P extends TuplePrefix<T>,
 >(
   stores:
     | AsyncTupleDatabaseClient<TupleSchema>[]
@@ -538,7 +538,7 @@ function mergeMultipleSortedArrays<T>(
 type TransactionState = { status: TransactionStatus };
 
 export class MultiTupleTransaction<
-  TupleSchema extends KeyValuePair
+  TupleSchema extends KeyValuePair,
 > extends ScopedMultiTupleOperator<TupleSchema> {
   readonly txs: Record<string, AsyncTupleRootTransactionApi<TupleSchema>>;
   readonly store: MultiTupleStore<TupleSchema>;

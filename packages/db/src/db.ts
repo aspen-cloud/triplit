@@ -112,12 +112,12 @@ export const DEFAULT_STORE_KEY = 'default';
 
 export type CollectionFromModels<
   M extends Models,
-  CN extends CollectionNameFromModels<M> = CollectionNameFromModels<M>
+  CN extends CollectionNameFromModels<M> = CollectionNameFromModels<M>,
 > = M[CN];
 
 export type ModelFromModels<
   M extends Models,
-  CN extends CollectionNameFromModels<M>
+  CN extends CollectionNameFromModels<M>,
 > = M[CN]['schema'];
 
 export type CollectionNameFromModels<M extends Models = Models> = keyof M &
@@ -150,7 +150,7 @@ export function ruleToTuple(
 
 export type FetchByIdQueryParams<
   M extends Models,
-  CN extends CollectionNameFromModels<M>
+  CN extends CollectionNameFromModels<M>,
 > = Pick<CollectionQuery<M, CN>, 'include'>;
 
 type SchemaChangeCallback<M extends Models> = (
@@ -194,14 +194,14 @@ type AfterCommitCallback<M extends Models> = (args: {
 }) => void | Promise<void>;
 interface AfterInsertOptions<
   M extends Models,
-  CN extends CollectionNameFromModels<M>
+  CN extends CollectionNameFromModels<M>,
 > {
   when: 'afterInsert';
   collectionName: CN;
 }
 type AfterInsertCallback<
   M extends Models,
-  CN extends CollectionNameFromModels<M>
+  CN extends CollectionNameFromModels<M>,
 > = (args: {
   entity: FetchResultEntity<M, CollectionQuery<M, CN>>;
   tx: DBTransaction<M>;
@@ -209,14 +209,14 @@ type AfterInsertCallback<
 }) => void | Promise<void>;
 interface AfterUpdateOptions<
   M extends Models,
-  CN extends CollectionNameFromModels<M>
+  CN extends CollectionNameFromModels<M>,
 > {
   when: 'afterUpdate';
   collectionName: CN;
 }
 type AfterUpdateCallback<
   M extends Models,
-  CN extends CollectionNameFromModels<M>
+  CN extends CollectionNameFromModels<M>,
 > = (args: {
   oldEntity: FetchResultEntity<M, CollectionQuery<M, CN>>;
   entity: FetchResultEntity<M, CollectionQuery<M, CN>>;
@@ -225,14 +225,14 @@ type AfterUpdateCallback<
 }) => void | Promise<void>;
 interface AfterDeleteOptions<
   M extends Models,
-  CN extends CollectionNameFromModels<M>
+  CN extends CollectionNameFromModels<M>,
 > {
   when: 'afterDelete';
   collectionName: CN;
 }
 type AfterDeleteCallback<
   M extends Models,
-  CN extends CollectionNameFromModels<M>
+  CN extends CollectionNameFromModels<M>,
 > = (args: {
   oldEntity: FetchResultEntity<M, CollectionQuery<M, CN>>;
   tx: DBTransaction<M>;
@@ -248,14 +248,14 @@ type BeforeCommitCallback<M extends Models> = (args: {
 }) => void | Promise<void>;
 interface BeforeInsertOptions<
   M extends Models,
-  CN extends CollectionNameFromModels<M>
+  CN extends CollectionNameFromModels<M>,
 > {
   when: 'beforeInsert';
   collectionName: CN;
 }
 type BeforeInsertCallback<
   M extends Models,
-  CN extends CollectionNameFromModels<M>
+  CN extends CollectionNameFromModels<M>,
 > = (args: {
   entity: FetchResultEntity<M, CollectionQuery<M, CN>>;
   tx: DBTransaction<M>;
@@ -263,14 +263,14 @@ type BeforeInsertCallback<
 }) => void | Promise<void>;
 interface BeforeUpdateOptions<
   M extends Models,
-  CN extends CollectionNameFromModels<M>
+  CN extends CollectionNameFromModels<M>,
 > {
   when: 'beforeUpdate';
   collectionName: CN;
 }
 type BeforeUpdateCallback<
   M extends Models,
-  CN extends CollectionNameFromModels<M>
+  CN extends CollectionNameFromModels<M>,
 > = (args: {
   oldEntity: FetchResultEntity<M, CollectionQuery<M, CN>>;
   entity: FetchResultEntity<M, CollectionQuery<M, CN>>;
@@ -279,14 +279,14 @@ type BeforeUpdateCallback<
 }) => void | Promise<void>;
 interface BeforeDeleteOptions<
   M extends Models,
-  CN extends CollectionNameFromModels<M>
+  CN extends CollectionNameFromModels<M>,
 > {
   when: 'beforeDelete';
   collectionName: CN;
 }
 type BeforeDeleteCallback<
   M extends Models,
-  CN extends CollectionNameFromModels<M>
+  CN extends CollectionNameFromModels<M>,
 > = (args: {
   oldEntity: FetchResultEntity<M, CollectionQuery<M, CN>>;
   tx: DBTransaction<M>;
@@ -315,7 +315,7 @@ type TriggerCallback =
 
 export type TriggerMap<
   C extends TriggerCallback,
-  O extends TriggerOptions
+  O extends TriggerOptions,
 > = Map<string, [C, O]>;
 
 export type DBHooks<M extends Models> = {

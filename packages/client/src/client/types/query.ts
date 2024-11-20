@@ -27,11 +27,11 @@ export type ClientQuery<
   M extends ClientSchema,
   CN extends CollectionNameFromModels<M> = CollectionNameFromModels<M>,
   Selection extends QuerySelection<M, CN> = QuerySelection<M, CN>,
-  Inclusions extends QueryInclusions<M, CN> = QueryInclusions<M, CN>
+  Inclusions extends QueryInclusions<M, CN> = QueryInclusions<M, CN>,
 > = CollectionQuery<M, CN, Selection, Inclusions> & ClientQueryExtensions;
 
 export type ClientQueryFromCollectionQuery<
-  Q extends CollectionQuery<any, any, any, any>
+  Q extends CollectionQuery<any, any, any, any>,
 > = Q & ClientQueryExtensions;
 
 export type SchemaClientQueries<M extends ClientSchema> =
@@ -42,7 +42,7 @@ export type SchemaClientQueries<M extends ClientSchema> =
  */
 export type ClientQueryDefault<
   M extends ClientSchema,
-  CN extends CollectionNameFromModels<M>
+  CN extends CollectionNameFromModels<M>,
 > = ClientQueryFromCollectionQuery<CollectionQueryDefault<M, CN>>;
 
 /**

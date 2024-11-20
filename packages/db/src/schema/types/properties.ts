@@ -23,9 +23,8 @@ export type PropertyHasDefault<T extends TypeInterface> = Not<
 /**
  * Returns true if the property is optional, otherwise false.
  */
-export type IsPropertyOptional<T extends TypeInterface> = T extends Optional<T>
-  ? true
-  : false;
+export type IsPropertyOptional<T extends TypeInterface> =
+  T extends Optional<T> ? true : false;
 
 /**
  * Returns true if the property is required, otherwise false.

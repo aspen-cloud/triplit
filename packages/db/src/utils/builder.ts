@@ -19,7 +19,7 @@ export type toBuilder<
     [key in keyof Omit<Partial<Data>, ProtectedField>]: (
       ...args: any
     ) => Data[key];
-  } = never
+  } = never,
 > = {
   [K in keyof Omit<Required<Data>, ProtectedField>]: (
     ...args: K extends KeyOfOrEmpty<CustomInputs>
@@ -36,7 +36,7 @@ export default function Builder<
       arg0: Data,
       ...args: any
     ) => Data[key];
-  } = never
+  } = never,
 >(
   initial: Data,
   {

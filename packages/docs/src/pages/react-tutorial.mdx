@@ -450,11 +450,7 @@ export default function App() {
           Add Todo
         </button>
       </form>
-      <div>
-        {todos?.map((todo) => (
-          <Todo key={todo.id} todo={todo} />
-        ))}
-      </div>
+      <div>{todos?.map((todo) => <Todo key={todo.id} todo={todo} />)}</div>
     </div>
   );
 }

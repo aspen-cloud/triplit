@@ -22,7 +22,7 @@ type SetOperators = typeof SET_OPERATORS;
 
 export type SetType<
   Items extends ValueInterface,
-  TypeOptions extends UserTypeOptions = {}
+  TypeOptions extends UserTypeOptions = {},
 > = CollectionInterface<
   'set',
   TypeWithOptions<Set<ExtractJSType<Items>>, TypeOptions>,
@@ -33,7 +33,7 @@ export type SetType<
 
 export function SetType<
   Items extends ValueInterface,
-  TypeOptions extends UserTypeOptions = {}
+  TypeOptions extends UserTypeOptions = {},
 >(
   items: Items,
   options: TypeOptions = {} as TypeOptions

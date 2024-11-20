@@ -13,17 +13,18 @@ import {
 /**
  * Transforms a complex nested type to a readable type
  */
-export type Unalias<T> = T extends Map<infer K, infer V>
-  ? Map<K, Unalias<V>>
-  : T extends Set<infer V>
-  ? Set<Unalias<V>>
-  : T extends Date
-  ? T
-  : T extends Array<infer U>
-  ? Array<Unalias<U>>
-  : T extends Object
-  ? { [K in keyof T]: Unalias<T[K]> }
-  : T;
+export type Unalias<T> =
+  T extends Map<infer K, infer V>
+    ? Map<K, Unalias<V>>
+    : T extends Set<infer V>
+      ? Set<Unalias<V>>
+      : T extends Date
+        ? T
+        : T extends Array<infer U>
+          ? Array<Unalias<U>>
+          : T extends Object
+            ? { [K in keyof T]: Unalias<T[K]> }
+            : T;
 
 /**
  * The expected result of a query given its cardinality
@@ -31,7 +32,7 @@ export type Unalias<T> = T extends Map<infer K, infer V>
 export type QueryResult<
   M extends Models,
   Q extends SchemaQueries<M>,
-  C extends QueryResultCardinality
+  C extends QueryResultCardinality,
 > = C extends 'one' ? FetchResultEntity<M, Q> | null : FetchResult<M, Q>;
 
 /**
@@ -39,7 +40,7 @@ export type QueryResult<
  */
 export type FetchResult<
   M extends Models,
-  Q extends SchemaQueries<M>
+  Q extends SchemaQueries<M>,
 > = FetchResultEntity<M, Q>[];
 
 /**
@@ -49,7 +50,7 @@ export type FetchResult<
 // That may indicate a bug with our typechecking library, but for now we'll provide the schema as a parameter
 export type FetchResultEntity<
   M extends Models,
-  Q extends SchemaQueries<M>
+  Q extends SchemaQueries<M>,
 > = FetchResultEntityFromParts<
   M,
   Q['collectionName'],
@@ -68,7 +69,7 @@ export type FetchResultEntity<
  */
 export type ReturnTypeFromQuery<
   M extends Models,
-  Q extends SchemaQueries<M>
+  Q extends SchemaQueries<M>,
 > = FetchResultEntity<M, Q>;
 
 /**
@@ -78,7 +79,7 @@ export type FetchResultEntityFromParts<
   M extends Models,
   CN extends CollectionNameFromModels<M>,
   Selection extends QuerySelection<M, CN> = QuerySelection<M, CN>,
-  Inclusion extends QueryInclusions<M, CN> = {}
+  Inclusion extends QueryInclusions<M, CN> = {},
 > = QuerySelectionFilteredTypeFromModel<M, CN, Selection, Inclusion>;
 
 /**

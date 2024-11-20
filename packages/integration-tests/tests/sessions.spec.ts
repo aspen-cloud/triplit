@@ -16,13 +16,11 @@ const initialPayload = {
 const JWT_SECRET = new TextEncoder().encode('test-secret');
 
 async function encodeToken(payload: any, exp?: string) {
-  let token = new jose.SignJWT(payload)
-    .setProtectedHeader({ alg: 'HS256' })
+  let token = new jose.SignJWT(payload).setProtectedHeader({ alg: 'HS256' });
   if (exp) {
     token = token.setExpirationTime(exp);
   }
-  return await token
-    .sign(JWT_SECRET);
+  return await token.sign(JWT_SECRET);
 }
 
 // process.env.PROJECT_ID = 'project';
@@ -116,7 +114,7 @@ describe('Session Management', async () => {
     expect(connectionSpy).toHaveBeenCalledWith('OPEN');
     await pause(800);
     await alice.insert('users', { id: '1', name: 'Alice' });
-    await pause(50)
+    await pause(50);
     expect(sessionErrorSpy).toHaveBeenCalledWith('TOKEN_EXPIRED');
     await bob.startSession(await encodeToken(initialPayload, '30 min'));
     const bobSpy = vi.fn();
@@ -127,83 +125,79 @@ describe('Session Management', async () => {
     expect(bobSpy.mock.lastCall?.[0]).toStrictEqual([]);
   });
 
-  it(
-    'server wont send messages to clients with expired sessions',
-    async () => {
-      using server = await tempTriplitServer({
-        serverOptions: { dbOptions: { schema: DEFAULT_SCHEMA } },
-      });
-      const { port } = server;
-      const aliceToken = await encodeToken(initialPayload, '1 sec');
-      const bobToken = await encodeToken(initialPayload, '5 sec');
-      const alice = new TriplitClient({
-        serverUrl: `http://localhost:${port}`,
-        token: aliceToken,
-        schema: DEFAULT_SCHEMA.collections,
-      });
-      const bob = new TriplitClient({
-        serverUrl: `http://localhost:${port}`,
-        schema: DEFAULT_SCHEMA.collections,
-        token:bobToken
-      });
+  it('server wont send messages to clients with expired sessions', async () => {
+    using server = await tempTriplitServer({
+      serverOptions: { dbOptions: { schema: DEFAULT_SCHEMA } },
+    });
+    const { port } = server;
+    const aliceToken = await encodeToken(initialPayload, '1 sec');
+    const bobToken = await encodeToken(initialPayload, '5 sec');
+    const alice = new TriplitClient({
+      serverUrl: `http://localhost:${port}`,
+      token: aliceToken,
+      schema: DEFAULT_SCHEMA.collections,
+    });
+    const bob = new TriplitClient({
+      serverUrl: `http://localhost:${port}`,
+      schema: DEFAULT_SCHEMA.collections,
+      token: bobToken,
+    });
 
-      // Start session
-      const aliceSubSpy = vi.fn();
-      const sessionErrorSpy = vi.fn();
-      alice.onSessionError(sessionErrorSpy);
-      alice.subscribe(alice.query('users').build(), aliceSubSpy);
-      await pause(200);
-      expect(sessionErrorSpy).not.toHaveBeenCalledWith('EXPIRED_TOKEN');
-      await pause(800);
-      await bob.insert('users', { id: '1', name: 'Alice' });
-      await pause(50)
-      expect(sessionErrorSpy).toHaveBeenCalled();
-      expect(aliceSubSpy).toHaveBeenCalledTimes(2);
-      // connection closed, so the insert didn't sync
-      expect(aliceSubSpy.mock.lastCall?.[0]).toStrictEqual([]);
-    }
-  );
-  it(
-    'will reject token updates for tokens with different roles',
-    async () => {
-      const roles : Roles = {
-        admin:{
-          match:{
-          'x-triplit-token-type':'secret'
-        }
-      }
-      }
-      const schema = {
-        collections: {
-          users: {
-            schema: S.Schema({
-              id: S.Id(),
-              name: S.String(),
-            }),
-          },
+    // Start session
+    const aliceSubSpy = vi.fn();
+    const sessionErrorSpy = vi.fn();
+    alice.onSessionError(sessionErrorSpy);
+    alice.subscribe(alice.query('users').build(), aliceSubSpy);
+    await pause(200);
+    expect(sessionErrorSpy).not.toHaveBeenCalledWith('EXPIRED_TOKEN');
+    await pause(800);
+    await bob.insert('users', { id: '1', name: 'Alice' });
+    await pause(50);
+    expect(sessionErrorSpy).toHaveBeenCalled();
+    expect(aliceSubSpy).toHaveBeenCalledTimes(2);
+    // connection closed, so the insert didn't sync
+    expect(aliceSubSpy.mock.lastCall?.[0]).toStrictEqual([]);
+  });
+  it('will reject token updates for tokens with different roles', async () => {
+    const roles: Roles = {
+      admin: {
+        match: {
+          'x-triplit-token-type': 'secret',
         },
-        roles,
-        version:0
-      }
-      using server = await tempTriplitServer({
-        serverOptions: { dbOptions: {schema} },
-      });
-      const { port } = server;
-      const aliceToken = await encodeToken(initialPayload, '30 min');
-      const alice = new TriplitClient({
-        serverUrl: `http://localhost:${port}`,
-        token: aliceToken,
-        schema: schema.collections,
-      });
-      const sessionErrorSpy = vi.fn();
-      alice.onSessionError(sessionErrorSpy);
-      await pause(50);
-      alice.updateSessionToken(await encodeToken({ 'x-triplit-token-type': 'secret' }, '30 min'));
-      await pause(50);
-      expect(sessionErrorSpy).toHaveBeenCalledWith('ROLES_MISMATCH');
-    }
-  );
-  it('tokens without an expiration time are allowed, don\'t expire, and can be updated with tokens that do or don\'t have an expiration time', async () => {
+      },
+    };
+    const schema = {
+      collections: {
+        users: {
+          schema: S.Schema({
+            id: S.Id(),
+            name: S.String(),
+          }),
+        },
+      },
+      roles,
+      version: 0,
+    };
+    using server = await tempTriplitServer({
+      serverOptions: { dbOptions: { schema } },
+    });
+    const { port } = server;
+    const aliceToken = await encodeToken(initialPayload, '30 min');
+    const alice = new TriplitClient({
+      serverUrl: `http://localhost:${port}`,
+      token: aliceToken,
+      schema: schema.collections,
+    });
+    const sessionErrorSpy = vi.fn();
+    alice.onSessionError(sessionErrorSpy);
+    await pause(50);
+    alice.updateSessionToken(
+      await encodeToken({ 'x-triplit-token-type': 'secret' }, '30 min')
+    );
+    await pause(50);
+    expect(sessionErrorSpy).toHaveBeenCalledWith('ROLES_MISMATCH');
+  });
+  it("tokens without an expiration time are allowed, don't expire, and can be updated with tokens that do or don't have an expiration time", async () => {
     using server = await tempTriplitServer({
       serverOptions: { dbOptions: { schema: DEFAULT_SCHEMA } },
     });
@@ -212,14 +206,14 @@ describe('Session Management', async () => {
 
     const alice = new TriplitClient({
       serverUrl: `http://localhost:${port}`,
-      token:initialToken,
+      token: initialToken,
       schema: DEFAULT_SCHEMA.collections,
     });
 
     const bob = new TriplitClient({
       serverUrl: `http://localhost:${port}`,
       schema: DEFAULT_SCHEMA.collections,
-      token:initialToken,
+      token: initialToken,
     });
 
     // Start session
@@ -242,12 +236,11 @@ describe('Session Management', async () => {
 
     // Update session token without expiration time
     alice.updateSessionToken(await encodeToken(initialPayload, '1s'));
-    
+
     await pause(1050);
     await bob.insert('users', { id: '3', name: 'Charlie' });
-    await pause(200)
+    await pause(200);
     expect(aliceSubSpy.mock.lastCall?.[0]?.length).toBe(2);
     expect(sessionErrorSpy).toHaveBeenCalledWith('TOKEN_EXPIRED');
-
   });
 });

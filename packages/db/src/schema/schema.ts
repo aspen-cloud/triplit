@@ -57,7 +57,7 @@ export function getSchemaFromPath(model: Model, path: Attribute): DataType {
 
 export function createSchemaIterator<
   M extends Models,
-  CN extends CollectionNameFromModels<M>
+  CN extends CollectionNameFromModels<M>,
 >(path: string[], schema: M, collectionName: CN) {
   let pathIndex = 0;
   let schemaTraverser = createSchemaTraverser(schema, collectionName);
@@ -85,7 +85,7 @@ type Traverser = {
 
 export function createSchemaTraverser<
   M extends Models,
-  CN extends CollectionNameFromModels<M>
+  CN extends CollectionNameFromModels<M>,
 >(schema: M, collectionName: CN): Traverser {
   let current: DataType | undefined = schema[collectionName]?.schema;
   const getter = (attribute: string): Traverser => {
@@ -109,7 +109,7 @@ export function createSchemaTraverser<
 
 export function getAttributeFromSchema<
   M extends Models,
-  CN extends CollectionNameFromModels<M>
+  CN extends CollectionNameFromModels<M>,
 >(attribute: string[], schema: M, collectionName: CN) {
   let iter = createSchemaIterator(attribute, schema, collectionName);
   let result = iter.next();
