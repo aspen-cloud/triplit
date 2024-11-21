@@ -41,7 +41,7 @@ export class QueryExecutionCache {
     return data;
   }
 
-  getEntity(entityId: string, entry: DataCacheEntry) {
+  setEntity(entityId: string, entry: DataCacheEntry) {
     this.entities.set(entityId, entry);
   }
 

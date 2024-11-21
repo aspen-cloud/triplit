@@ -246,7 +246,7 @@ function loadViewResultIntoExecutionCache<M extends Models>(
   resultEntries.forEach((entry) => {
     const [entityId, entity] = entry;
     if (!executionContext.executionCache.hasEntity(entityId)) {
-      executionContext.executionCache.getEntity(entityId, {
+      executionContext.executionCache.setEntity(entityId, {
         entity: entity,
         // triples: view.triples.filter((t) => t.id === entityId),
       });

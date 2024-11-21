@@ -688,7 +688,7 @@ export async function fetchDeltaTriples<
   ] of beforeAndAfterEntities) {
     const entityBeforeStateVector = beforeData;
     if (beforeData) {
-      beforeContext.executionCache.getEntity(changedEntityId, {
+      beforeContext.executionCache.setEntity(changedEntityId, {
         entity: beforeData,
       });
       beforeContext.executionCache.setComponent(changedEntityId, {
@@ -698,7 +698,7 @@ export async function fetchDeltaTriples<
     }
     const entityAfterStateVector = afterData;
     if (afterData) {
-      afterContext.executionCache.getEntity(changedEntityId, {
+      afterContext.executionCache.setEntity(changedEntityId, {
         entity: afterData,
       });
       afterContext.executionCache.setComponent(changedEntityId, {
@@ -950,7 +950,7 @@ function LoadCandidateEntities(
         }
       }
       // Load raw entity
-      executionContext.executionCache.getEntity(entityId, {
+      executionContext.executionCache.setEntity(entityId, {
         entity,
       });
     }
@@ -1356,7 +1356,7 @@ async function resolveCountQuery(
     if (!executionContext.executionCache.hasEntity(entityId)) {
       const entity = constructEntities([triple], options.schema).get(entityId)!;
       // Load raw entity
-      executionContext.executionCache.getEntity(entityId, {
+      executionContext.executionCache.setEntity(entityId, {
         entity,
       });
     }

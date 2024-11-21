@@ -1287,7 +1287,7 @@ export default class DB<M extends Models = Models> {
       ] of beforeAndAfterEntities) {
         const entityBeforeStateVector = beforeData;
         if (beforeData) {
-          beforeContext.executionCache.getEntity(changedEntityId, {
+          beforeContext.executionCache.setEntity(changedEntityId, {
             entity: beforeData,
           });
           beforeContext.executionCache.setComponent(changedEntityId, {
@@ -1297,7 +1297,7 @@ export default class DB<M extends Models = Models> {
         }
         const entityAfterStateVector = afterData;
         if (afterData) {
-          afterContext.executionCache.getEntity(changedEntityId, {
+          afterContext.executionCache.setEntity(changedEntityId, {
             entity: afterData,
           });
           afterContext.executionCache.setComponent(changedEntityId, {
