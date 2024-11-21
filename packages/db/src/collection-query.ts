@@ -937,29 +937,37 @@ function LoadCandidateEntities(
   options: FetchFromStorageOptions
 ): MapFunc<string, string> {
   return async (entityId) => {
-    // Load entity data if not loaded
+    // Load entity data from current execution cache
     let entity: Entity | undefined = executionContext.executionCache.hasEntity(
       entityId
     )
       ? executionContext.executionCache.getData(entityId).entity
       : undefined;
 
-    if (!entity && options.entityCache)
-      entity = options.entityCache.get(entityId);
-
+    // If the entity is not already in the execution cache, go get it and add it to the execution cache
     if (!entity) {
-      const storeTriples = await genToArr(tx.findByEntity(entityId));
-      entity = constructEntities(storeTriples, options.schema).get(entityId);
-      if (options.entityCache && entity) {
-        options.entityCache.set(entityId, entity);
+      // Attempt to load from global cache
+      if (options.entityCache) entity = options.entityCache.get(entityId);
+
+      // If not cached, fetch from store
+      if (!entity) {
+        const storeTriples = await genToArr(tx.findByEntity(entityId));
+        entity = constructEntities(storeTriples, options.schema).get(entityId);
+        // We MAY select candidates that don't exist, so only cache if we found an entity
+        // Update global cache if there is an entity
+        if (entity && options.entityCache) {
+          options.entityCache.set(entityId, entity);
+        }
+      }
+
+      // Add to execution cache if we found an entity
+      if (entity) {
+        executionContext.executionCache.setEntity(entityId, {
+          entity,
+        });
       }
     }
-    // Load raw entity
-    if (entity) {
-      executionContext.executionCache.setEntity(entityId, {
-        entity,
-      });
-    }
+
     // Create query component if not loaded
     const componentKey = QueryExecutionCache.ComponentId(
       executionContext.componentPrefix,
