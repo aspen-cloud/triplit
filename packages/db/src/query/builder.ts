@@ -369,7 +369,7 @@ export type QUERY_INPUT_TRANSFORMERS<
  * E.g. where(undefined)
  */
 function isInputNoOp(args: any): args is [undefined] {
-  return args.length === 1 && args[0] === undefined;
+  return Array.isArray(args) && args[0] === undefined;
 }
 
 /**
@@ -389,7 +389,7 @@ function isInputSpreadClauses<
   M extends Models,
   CN extends CollectionNameFromModels<M>,
 >(args: any): args is QueryWhere<M, CN> {
-  return args.every((arg: any) => isWhereFilter(arg));
+  return Array.isArray(args) && args.every((arg: any) => isWhereFilter(arg));
 }
 
 /**

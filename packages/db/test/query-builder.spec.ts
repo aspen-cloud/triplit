@@ -8,6 +8,7 @@ import {
   SubQueryFilter,
   WhereFilter,
 } from '../src/query/types/index.js';
+import { QueryClauseFormattingError } from '../src/errors.ts';
 
 it('query builder doesnt overwrite previous builder objects', async () => {
   const db = new DB();
@@ -155,6 +156,14 @@ describe('where', () => {
   });
   it('a malformed clause throws an error', () => {
     const db = new DB();
-    expect(() => db.query('test').where({} as any)).toThrow();
+    expect(() =>
+      db
+        .query('test')
+        .where(
+          // @ts-expect-error
+          'invalid'
+        )
+        .build()
+    ).toThrow(QueryClauseFormattingError);
   });
 });
