@@ -938,23 +938,28 @@ function LoadCandidateEntities(
 ): MapFunc<string, string> {
   return async (entityId) => {
     // Load entity data if not loaded
-    if (!executionContext.executionCache.hasEntity(entityId)) {
-      let entity: Entity;
-      if (options.entityCache && options.entityCache.has(entityId)) {
-        entity = options.entityCache.get(entityId)!;
-      } else {
-        const storeTriples = await genToArr(tx.findByEntity(entityId));
-        entity = constructEntities(storeTriples, options.schema).get(entityId)!;
-        if (options.entityCache) {
-          options.entityCache.set(entityId, entity);
-        }
+    let entity: Entity | undefined = executionContext.executionCache.hasEntity(
+      entityId
+    )
+      ? executionContext.executionCache.getData(entityId).entity
+      : undefined;
+
+    if (!entity && options.entityCache)
+      entity = options.entityCache.get(entityId);
+
+    if (!entity) {
+      const storeTriples = await genToArr(tx.findByEntity(entityId));
+      entity = constructEntities(storeTriples, options.schema).get(entityId);
+      if (options.entityCache && entity) {
+        options.entityCache.set(entityId, entity);
       }
-      // Load raw entity
+    }
+    // Load raw entity
+    if (entity) {
       executionContext.executionCache.setEntity(entityId, {
         entity,
       });
     }
-
     // Create query component if not loaded
     const componentKey = QueryExecutionCache.ComponentId(
       executionContext.componentPrefix,
@@ -984,6 +989,7 @@ function ApplyFilters(
   const filterOrder = getFilterPriorityOrder(where);
 
   return async (entityId) => {
+    if (!executionContext.executionCache.hasEntity(entityId)) return false;
     const entity = executionContext.executionCache.getData(entityId)?.entity;
     if (!entity) return false;
     if (!where) return true;

@@ -31,3 +31,18 @@ it('Reads proper data within a transaction', async () => {
   const cacheName = db.entityCache?.get('test#1')?.data.name;
   expect(cacheName).toBe('updated');
 });
+
+it('fetches a non-existent entity without loading it into the cache', async () => {
+  const db = new DB({
+    experimental: {
+      entityCache: { capacity: 100 },
+    },
+  });
+  let result = await db.fetchById('test', '1');
+  expect(result).toBe(null);
+  expect(db.entityCache?.has('test#1')).toBe(false);
+  await db.insert('test', { id: '1', name: 'test' });
+  result = await db.fetchById('test', '1');
+  expect(result).toEqual({ id: '1', name: 'test' });
+  expect(db.entityCache?.has('test#1')).toBe(true);
+});
