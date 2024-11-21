@@ -48,7 +48,11 @@ export type FilterInput<
 export type OrderInput<
   M extends Models,
   CN extends CollectionNameFromModels<M>,
-> = OrderStatement<M, CN> | [OrderStatement<M, CN>] | [QueryOrder<M, CN>];
+> =
+  | [typeof undefined]
+  | OrderStatement<M, CN>
+  | QueryOrder<M, CN>
+  | [QueryOrder<M, CN>];
 
 /**
  * Input for builder after() clauses

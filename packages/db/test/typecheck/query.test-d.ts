@@ -931,6 +931,7 @@ describe('query builder', () => {
       expectTypeOf(query.order)
         .parameter(0)
         .toEqualTypeOf<
+          | undefined
           | 'id'
           | 'attr1'
           | 'attr1.inner1'
@@ -950,7 +951,10 @@ describe('query builder', () => {
       expectTypeOf(query.order)
         .parameter(0)
         .toEqualTypeOf<
-          string | QueryOrder<Models, 'test'> | OrderStatement<Models, 'test'>
+          | undefined
+          | string
+          | QueryOrder<Models, 'test'>
+          | OrderStatement<Models, 'test'>
         >();
     }
   });

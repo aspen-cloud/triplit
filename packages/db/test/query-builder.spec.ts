@@ -4,6 +4,7 @@ import { Models } from '../src/schema/types/index.js';
 import {
   FilterGroup,
   FilterStatement,
+  OrderStatement,
   RelationshipExistsFilter,
   SubQueryFilter,
   WhereFilter,
@@ -160,6 +161,62 @@ describe('where', () => {
       db
         .query('test')
         .where(
+          // @ts-expect-error
+          'invalid'
+        )
+        .build()
+    ).toThrow(QueryClauseFormattingError);
+  });
+});
+
+describe('order', () => {
+  const order1: OrderStatement<Models, any> = ['name', 'ASC'];
+  const order2: OrderStatement<Models, any> = ['age', 'DESC'];
+  const clauses = [order1, order2];
+  it('order() accepts single clause', () => {
+    const db = new DB();
+    for (const clause of clauses) {
+      const query = db.query('test').order(clause).build();
+      expect(query.order).toEqual([clause]);
+    }
+  });
+  it('order() accepts multiple clauses', () => {
+    const db = new DB();
+    const query = db
+      .query('test')
+      .order(...clauses)
+      .build();
+    expect(query.order).toEqual(clauses);
+  });
+  it('order() accepts a joint clause', () => {
+    const db = new DB();
+    const query = db.query('test').order(clauses).build();
+    expect(query.order).toEqual(clauses);
+  });
+  it('adding multiple order clauses appends them to the existing order clauses', () => {
+    const db = new DB();
+    let query = db.query('test');
+    for (const clause of clauses) {
+      query = query.order(clause);
+    }
+    expect(query.build().order).toEqual(clauses);
+  });
+  it('passing undefined is a no-op', () => {
+    const db = new DB();
+    const query = db
+      .query('test')
+      .order(order1)
+      .order(undefined)
+      .order()
+      .build();
+    expect(query.order).toEqual([order1]);
+  });
+  it('a malformed clause throws an error', () => {
+    const db = new DB();
+    expect(() =>
+      db
+        .query('test')
+        .order(
           // @ts-expect-error
           'invalid'
         )

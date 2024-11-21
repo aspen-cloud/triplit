@@ -428,7 +428,7 @@ export const QUERY_INPUT_TRANSFORMERS = <
     q: Pick<CollectionQuery<M, CN>, 'order'>,
     ...args: OrderInput<M, CN>
   ): QueryOrder<M, CN> | undefined => {
-    if (!args[0]) return undefined;
+    if (!args[0]) return q.order ?? [];
     let newOrder: QueryOrder<M, CN> = [];
     /**
      * E.g. order("id", "ASC")
