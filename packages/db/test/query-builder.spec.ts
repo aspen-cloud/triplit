@@ -16,10 +16,7 @@ it('query builder doesnt overwrite previous builder objects', async () => {
   const originalBuilder = db
     .query('test')
     .id('123')
-    .include('foo', {
-      subquery: { collectionName: 'bar' },
-      cardinality: 'many',
-    })
+    .subquery('foo', { collectionName: 'bar' }, 'many')
     .limit(10)
     .order('name', 'ASC')
     .after(['1', '1'])
@@ -29,10 +26,7 @@ it('query builder doesnt overwrite previous builder objects', async () => {
 
   const updatedBuilder = originalBuilder
     .id('234')
-    .include('bar', {
-      subquery: { collectionName: 'baz' },
-      cardinality: 'one',
-    })
+    .subquery('bar', { collectionName: 'baz' }, 'one')
     .limit(20)
     .order('name', 'DESC')
     .after(['2', '2'])

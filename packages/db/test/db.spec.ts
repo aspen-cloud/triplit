@@ -4759,10 +4759,11 @@ describe('selecting subqueries', () => {
         //   cardinality: 'many',
         // },
       ])
-      .include('posts', {
-        subquery: db.query('posts').where('author_id', '=', '$id').build(),
-        cardinality: 'many',
-      })
+      .subquery(
+        'posts',
+        db.query('posts').where('author_id', '=', '$id').build(),
+        'many'
+      )
       .build();
     const result = await db.fetch(query);
 
@@ -4807,21 +4808,20 @@ describe('selecting subqueries', () => {
         //   cardinality: 'many',
         // },
       ])
-      .include('posts', {
-        subquery: db
+      .subquery(
+        'posts',
+        db
           .query('posts')
           .where('author_id', '=', '$id')
           .select(['id'])
-          .include('likedBy', {
-            subquery: db
-              .query('users')
-              .where('liked_post_ids', '=', '$id')
-              .build(),
-            cardinality: 'many',
-          })
+          .subquery(
+            'likedBy',
+            db.query('users').where('liked_post_ids', '=', '$id').build(),
+            'many'
+          )
           .build(),
-        cardinality: 'many',
-      })
+        'many'
+      )
       .build();
     const result = await db.fetch(query);
     expect(result.find((e) => e.id === 'user-1')).toHaveProperty('posts');
@@ -4853,10 +4853,11 @@ describe('selecting subqueries', () => {
         //   cardinality: 'many',
         // },
       ])
-      .include('posts', {
-        subquery: db.query('posts').where('author_id', '=', '$id').build(),
-        cardinality: 'many',
-      })
+      .subquery(
+        'posts',
+        db.query('posts').where('author_id', '=', '$id').build(),
+        'many'
+      )
       .build();
     await testSubscription(db, query, [
       {
@@ -4921,10 +4922,11 @@ describe('selecting subqueries', () => {
         //   cardinality: 'one',
         // },
       ])
-      .include('favoritePost', {
-        subquery: db.query('posts').where('author_id', '=', '$id').build(),
-        cardinality: 'one',
-      })
+      .subquery(
+        'favoritePost',
+        db.query('posts').where('author_id', '=', '$id').build(),
+        'one'
+      )
       .build();
     const result = await db.fetch(query);
     expect(result.find((e) => e.id === 'user-1')).toHaveProperty(
@@ -4952,10 +4954,11 @@ describe('selecting subqueries', () => {
         //   cardinality: 'one',
         // },
       ])
-      .include('favoritePost', {
-        subquery: db.query('posts').where('author_id', '=', 'george').build(),
-        cardinality: 'one',
-      })
+      .subquery(
+        'favoritePost',
+        db.query('posts').where('author_id', '=', 'george').build(),
+        'one'
+      )
       .build();
     const result = await db.fetch(query);
     expect(result.find((e) => e.id === 'user-1')).toHaveProperty(

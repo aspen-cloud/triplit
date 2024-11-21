@@ -93,7 +93,7 @@ bench
   .add('include relation with filter', async () => {
     const query = db
       .query('manufacturers')
-      .include('cars', { where: [['type', '=', 'SUV']] })
+      .include('cars', { _rel: 'cars', where: [['type', '=', 'SUV']] })
       .build();
 
     await db.fetch(query);
