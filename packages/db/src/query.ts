@@ -62,6 +62,19 @@ export function isBooleanFilter<
   return typeof filter === 'boolean';
 }
 
+export function isWhereFilter<
+  M extends Models,
+  CN extends CollectionNameFromModels<M>,
+>(filter: any): filter is WhereFilter<M, CN> {
+  return (
+    isFilterStatement(filter) ||
+    isFilterGroup(filter) ||
+    isSubQueryFilter(filter) ||
+    isExistsFilter(filter) ||
+    isBooleanFilter(filter)
+  );
+}
+
 export function or<M extends Models, CN extends CollectionNameFromModels<M>>(
   where: QueryWhere<M, CN>
 ): OrFilterGroup<M, CN> {

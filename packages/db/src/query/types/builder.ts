@@ -39,8 +39,7 @@ export type FilterInput<
 > =
   | [typeof undefined]
   | FilterStatement<M, CN, P>
-  | [FilterStatement<M, CN, P>]
-  | WhereFilter<M, CN>[]
+  | QueryWhere<M, CN>
   | [QueryWhere<M, CN>];
 
 /**
