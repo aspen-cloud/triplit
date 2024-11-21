@@ -283,6 +283,14 @@ export class HttpClient<M extends ClientSchema = ClientSchema> {
     return data;
   }
 
+  async deleteAll<CN extends CollectionNameFromModels<M>>(collectionName: CN) {
+    const { data, error } = await this.sendRequest('/delete-all', 'POST', {
+      collectionName,
+    });
+    if (error) throw error;
+    return data;
+  }
+
   query<CN extends CollectionNameFromModels<M>>(
     collectionName: CN
   ): ReturnType<typeof httpClientQueryBuilder<M, CN>> {

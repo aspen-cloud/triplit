@@ -318,6 +318,24 @@ export class Session {
     }
   }
 
+  async deleteAll(collectionName: string) {
+    if (!hasAdminAccess(this.token)) return NotAdminResponse();
+    try {
+      const txResult = await this.db.transact(async (tx) => {
+        const allEntities = await tx.fetch({ collectionName, select: ['id'] });
+        for (const entity of allEntities) {
+          // @ts-expect-error
+          await tx.delete(collectionName, entity.id);
+        }
+      });
+      return ServerResponse(200, txResult);
+    } catch (e) {
+      return this.errorResponse(e, {
+        fallbackMessage: `Could not delete all entities in '${collectionName}'. An unknown error occurred.`,
+      });
+    }
+  }
+
   errorResponse(e: unknown, options?: { fallbackMessage?: string }) {
     if (isTriplitError(e)) {
       return ServerResponse(e.status, e.toJSON());

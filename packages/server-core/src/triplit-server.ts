@@ -104,6 +104,10 @@ export class Server {
           resp = await session.delete(collectionName, entityId);
           break;
         }
+        case 'delete-all': {
+          const { collectionName } = params;
+          resp = await session.deleteAll(collectionName);
+        }
         case 'schema': {
           resp = await session.getSchema(params);
           break;
@@ -158,6 +162,7 @@ const TRIPLIT_SEGEMENTS = [
   'bulk-insert',
   'clear',
   'delete',
+  'delete-all',
   'delete-triples',
   'fetch',
   'insert',

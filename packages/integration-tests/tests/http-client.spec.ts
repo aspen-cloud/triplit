@@ -623,3 +623,33 @@ it('delete properly deletes an entity', async () => {
     expect(result).toBeFalsy();
   }
 });
+
+it('deleteAll properly deletes all entities in a collection', async () => {
+  await using server = await tempTriplitServer();
+  const { port } = server;
+  const client = new HttpClient({
+    serverUrl: `http://localhost:${port}`,
+    token: serviceToken,
+  });
+  await client.insert('test', { id: 'test1', name: 'a' });
+  await client.insert('test', { id: 'test2', name: 'b' });
+  await client.insert('test', { id: 'test3', name: 'c' });
+  await client.insert('prod', { id: 'prod1', name: 'd' });
+  {
+    const result = await client.fetch({ collectionName: 'test' });
+    expect(result.length).toEqual(3);
+  }
+  {
+    const result = await client.fetch({ collectionName: 'prod' });
+    expect(result.length).toEqual(1);
+  }
+  await client.deleteAll('test');
+  {
+    const result = await client.fetch({ collectionName: 'test' });
+    expect(result.length).toEqual(0);
+  }
+  {
+    const result = await client.fetch({ collectionName: 'prod' });
+    expect(result.length).toEqual(1);
+  }
+});
