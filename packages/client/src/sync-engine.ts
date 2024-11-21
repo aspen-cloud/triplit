@@ -522,6 +522,11 @@ export class SyncEngine {
           type = 'UNKNOWN';
           retry = true;
         }
+        if (type === 'UNAUTHORIZED') {
+          this.logger.error(
+            'The server has closed the connection because the client is unauthorized. Please provide a valid token.'
+          );
+        }
         if (type === 'SCHEMA_MISMATCH') {
           this.logger.error(
             'The server has closed the connection because the client schema does not match the server schema. Please update your client schema.'
@@ -540,7 +545,12 @@ export class SyncEngine {
           );
         }
         if (
-          ['ROLES_MISMATCH', 'TOKEN_EXPIRED', 'SCHEMA_MISMATCH'].includes(type)
+          [
+            'ROLES_MISMATCH',
+            'TOKEN_EXPIRED',
+            'SCHEMA_MISMATCH',
+            'UNAUTHORIZED',
+          ].includes(type)
         ) {
           for (const handler of this.sessionErrorSubscribers) {
             handler(type);

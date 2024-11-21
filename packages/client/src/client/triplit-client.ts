@@ -1193,7 +1193,11 @@ export class TriplitClient<M extends ClientSchema = ClientSchema> {
       throw new SessionAlreadyActiveError();
     }
     if (tokenIsExpired(decodeToken(token))) {
-      throw new TokenExpiredError();
+      if (!refreshOptions?.refreshHandler) {
+        // should we centralize this in client.onSessionError?
+        throw new TokenExpiredError();
+      }
+      token = await refreshOptions.refreshHandler();
     }
     // TODO: handle db readiness in lower level APIs
     await this.db.ready;
@@ -1219,8 +1223,8 @@ export class TriplitClient<M extends ClientSchema = ClientSchema> {
     // Setup token refresh handler
     if (!refreshOptions) return;
     const { interval, refreshHandler } = refreshOptions;
-    const setRefreshTimeoutForToken = (token: string) => {
-      const decoded = decodeToken(token);
+    const setRefreshTimeoutForToken = (refreshToken: string) => {
+      const decoded = decodeToken(refreshToken);
       if (!decoded.exp && !interval) return;
       const delay = interval ?? Math.max(decoded.exp - Date.now() - 500, 0);
       this.tokenRefreshTimer = setTimeout(async () => {
