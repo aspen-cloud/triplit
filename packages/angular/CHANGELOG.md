@@ -1,5 +1,11 @@
 # @triplit/angular
 
+## 0.1.21
+
+### Patch Changes
+
+- @triplit/client@0.6.1
+
 ## 0.1.20
 
 ### Patch Changes

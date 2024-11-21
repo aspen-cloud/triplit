@@ -1,5 +1,11 @@
 # @triplit/cli
 
+## 0.6.22
+
+### Patch Changes
+
+- 1bcf734d: Manual version bump for CLI dependencies
+
 ## 0.6.21
 
 ### Patch Changes

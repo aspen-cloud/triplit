@@ -1,5 +1,13 @@
 # @triplit/db
 
+## 0.5.10
+
+### Patch Changes
+
+- a0932216: bug fix for experimental entity cache
+- Updated dependencies [1bcf734d]
+  - @triplit/tuple-database@2.2.33
+
 ## 0.5.9
 
 ### Patch Changes
