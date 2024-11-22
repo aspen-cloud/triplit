@@ -96,7 +96,21 @@ export class WorkerClient<M extends ClientSchema = ClientSchema> {
       sharedWorkerPort ??
       getTriplitWorkerEndpoint(options?.workerUrl);
     this.clientWorker = ComLink.wrap<Client<M>>(workerEndpoint);
-    const { schema, onSessionError, ...remainingOptions } = options || {};
+    const {
+      schema,
+      onSessionError,
+      token,
+      refreshOptions,
+      autoConnect,
+      ...remainingOptions
+    } = options || {};
+    if (token) {
+      this.startSession(
+        token,
+        autoConnect,
+        refreshOptions && ComLink.proxy(refreshOptions)
+      );
+    }
     if (onSessionError) {
       this.onSessionError(onSessionError);
     }

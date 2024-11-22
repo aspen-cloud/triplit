@@ -41,9 +41,10 @@ export class ClientComlinkWrapper implements ClientWorker {
   constructor() {}
   init(options: ClientOptions, logger: any) {
     if (this.client != undefined) return;
-    const { schema } = options;
+    const { schema, logLevel, token, autoConnect, ...remainingOptions } =
+      options;
     const workerLogger = new DefaultLogger({
-      level: options.logLevel,
+      level: logLevel,
       onLog: (log) => {
         if (!logger) return;
         if (log.scope == undefined) {
@@ -66,7 +67,7 @@ export class ClientComlinkWrapper implements ClientWorker {
       },
     });
     this.client = new Client({
-      ...options,
+      ...remainingOptions,
       // TODO - Is the schema in a json format here? Its not typed that way...
       schema: JSONToSchema(schema as any)?.collections,
       logger: workerLogger,
