@@ -41,7 +41,7 @@ import {
 import { MemoryBTreeStorage } from '@triplit/db/storage/memory-btree';
 import { IndexedDbStorage } from '@triplit/db/storage/indexed-db';
 import { SyncTransport } from '../transport/transport.js';
-import { SyncEngine } from '../sync-engine.js';
+import { OnSessionErrorCallback, SyncEngine } from '../sync-engine.js';
 import {
   ClientDBFetchOptions,
   ClientQuery,
@@ -132,6 +132,11 @@ type ClientTransactOptions = Pick<
   'manualSchemaRefresh' | 'skipRules'
 >;
 
+type TokenRefreshOptions = {
+  refreshHandler: () => Promise<string>;
+  interval?: number;
+};
+
 export interface ClientOptions<M extends ClientSchema = ClientSchema> {
   /**
    * The schema used to validate database operations and provide type-hinting. Read more about schemas {@link https://www.triplit.dev/docs/schemas | here }
@@ -146,6 +151,17 @@ export interface ClientOptions<M extends ClientSchema = ClientSchema> {
    * The token used to authenticate with the server. If not provided, the client will not connect to a server. Read more about tokens {@link https://www.triplit.dev/docs/auth | here }
    */
   token?: string;
+
+  /**
+   * A callback that is called when the client's connection to server closes due to a session-related error.
+   */
+  onSessionError?: OnSessionErrorCallback;
+
+  /**
+   *
+   */
+  refreshOptions?: TokenRefreshOptions;
+
   /**
    * The path to the claims in the token, if they are nested.
    */
@@ -232,6 +248,8 @@ export class TriplitClient<M extends ClientSchema = ClientSchema> {
       schema,
       roles,
       token,
+      onSessionError,
+      refreshOptions,
       claimsPath,
       serverUrl,
       syncSchema,
@@ -291,10 +309,14 @@ export class TriplitClient<M extends ClientSchema = ClientSchema> {
       this.http.updateOptions({ schema: schema?.collections });
     });
 
+    if (onSessionError) {
+      this.onSessionError(onSessionError);
+    }
+
     this.syncEngine = new SyncEngine(this, syncOptions);
     // Look into how calling connect / disconnect early is handled
     this.db.ready.then(async () => {
-      token && (await this.startSession(token, autoConnect));
+      token && (await this.startSession(token, autoConnect, refreshOptions));
     });
 
     if (syncSchema) {
@@ -1286,8 +1308,8 @@ export class TriplitClient<M extends ClientSchema = ClientSchema> {
     }
   }
 
-  onSessionError(...args: Parameters<typeof this.syncEngine.onSessionError>) {
-    return this.syncEngine.onSessionError(...args);
+  onSessionError(callback: OnSessionErrorCallback) {
+    return this.syncEngine.onSessionError(callback);
   }
 
   withSessionVars(session: any) {

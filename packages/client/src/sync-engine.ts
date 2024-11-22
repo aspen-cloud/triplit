@@ -44,7 +44,13 @@ import { hashQuery } from '@triplit/db';
 
 type OnMessageReceivedCallback = (message: ServerSyncMessage) => void;
 type OnMessageSentCallback = (message: ClientSyncMessage) => void;
-type OnSessionErrorCallback = (type: ServerCloseReasonType) => void;
+
+type SessionErrors = Extract<
+  ServerCloseReasonType,
+  'ROLES_MISMATCH' | 'TOKEN_EXPIRED' | 'SCHEMA_MISMATCH' | 'UNAUTHORIZED'
+>;
+
+export type OnSessionErrorCallback = (type: SessionErrors) => void;
 
 const QUERY_STATE_KEY = 'query-state';
 
@@ -553,7 +559,7 @@ export class SyncEngine {
           ].includes(type)
         ) {
           for (const handler of this.sessionErrorSubscribers) {
-            handler(type);
+            handler(type as SessionErrors);
           }
         }
 

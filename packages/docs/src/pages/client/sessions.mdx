@@ -1,0 +1,157 @@
+---
+description: Learn how to use the Sessions API for the Triplit client to model auth events in your app.
+---
+
+import { Callout } from 'nextra-theme-docs';
+
+# Sessions
+
+Triplit models connections with the server as sessions. Sessions are created when the client is initialized with a `token`, or by calling `startSession`. They end when `endSession` is called. When using durable storage like IndexedDB, they persist through page reloads, and when the client loses connection to the server. This ensures that the server sends only the changes that the client missed while it was disconnected.
+
+Triplit client sessions are easy to map to user authentication sessions, but they don't have to. They can also represent different states of the client, like a session for a guest user and a session for a logged-in user.
+
+## `startSession`
+
+You have two options to start a session: when you initialize the client or by calling `startSession`. You usually want to initialize your client as early as possible in the lifecycle of your app, which may be before you have a token. In this case, you can call `startSession` when you have a token.
+
+```ts
+import { TriplitClient } from '@triplit/client';
+
+const client = new TriplitClient({
+  serverUrl: 'https://<project-id>.triplit.io',
+});
+
+await client.startSession('your-token');
+```
+
+or
+
+```ts
+import { TriplitClient } from '@triplit/client';
+
+const client = new TriplitClient({
+  serverUrl: 'https://<project-id>.triplit.io',
+  token: 'your-token',
+});
+```
+
+You can can also decide whether or not the client should `autoConnect` to the server when you start a session. If you set `autoConnect` to `false`, you can manually connect with the `client.connect()` method.
+
+```ts
+await client.startSession('your-token', false);
+
+// time passes
+
+client.connect();
+```
+
+### Refreshing a session
+
+Most authentication providers issue tokens that expire after a certain amount of time. Triplit servers will close the connection with a client when they detect that its token has expired. To prevent this, and keep the connection open, you can provide a `refreshHandler` to the client. The `refreshHandler` is a function that returns a new token. The client will call this function 1 second before the token expires, as determined from the `exp` claim.
+
+```ts
+import { TriplitClient } from '@triplit/client';
+import { getFreshToken } from './auth';
+
+const client = new TriplitClient({
+  serverUrl: 'https://<project-id>.triplit.io',
+});
+
+await client.startSession('your-token', true, {
+  refreshHandler: async () => {
+    // get a new token
+    return await getFreshToken();
+  },
+});
+
+// or in the constructor
+
+const client = new TriplitClient({
+  serverUrl: 'https://<project-id>.triplit.io',
+  token: 'your-token',
+  refreshOptions: {
+    refreshHandler: async () => {
+      // get a new token
+      return await getFreshToken();
+    },
+  },
+});
+```
+
+You can also provide an `interval` to the `refreshOptions` to set the time in milliseconds that the client will wait before calling the `refreshHandler` again. You should do this if you know the token's expiration time and want more control over when it gets refreshed.
+
+```ts
+await client.startSession('your-token', true, {
+  interval: 1000 * 60 * 5, // 5 minutes
+  refreshHandler: async () => {
+    // get a new token
+    return await getFreshToken();
+  },
+});
+```
+
+If you want even more granular control over when the client refreshes the token, you can call `updateSessionToken` with a new token.
+
+```ts
+import { TriplitClient } from '@triplit/client';
+
+const client = new TriplitClient({
+  serverUrl: 'https://<project-id>.triplit.io',
+  token: 'your-token',
+});
+
+// later
+client.updateSessionToken('your-new-token');
+```
+
+<Callout>
+  It's important that tokens used to refresh a session have the same roles as
+  the original token. They are intended to represent that same user, with the
+  same permissions, as interpreted by roles assigned it by the server and its
+  schema. Read more on roles [here](/schemas/permissions). If you attempt to
+  update the token with a token that has different roles, the server will close
+  the connection and send a `ROLES_MISMATCH` error.
+</Callout>
+
+## `endSession`
+
+When a user logs out, you should end the session. This will close the connection to the server, cleanup any refresh events, and clear some metadata about the session.
+
+```ts
+import { TriplitClient } from '@triplit/client';
+
+const client = new TriplitClient({
+  serverUrl: 'https://<project-id>.triplit.io',
+  token: 'your-token',
+});
+```
+
+<Callout>
+  Calling `endSession` **will not** clear the the client's database. If you want
+  to clear the cache, you should call `client.clear()`.
+</Callout>
+
+## `onSessionError`
+
+`onSessionError` is a function that is called when the client receives an error from the server about the session, which will lead to the sync connection to being terminated. This can be used to end the session, restart it, and/or clear the cache. Potential error cases include:
+
+- `UNAUTHORIZED`: the token can't be verified, either because it is expired, is signed with the wrong key, or otherwise unable to be parsed. This indicates that the client has been given an erroneous token or, if you're certain that the token is valid, that the server is misconfigured.
+- `SCHEMA_MISMATCH`: the schema of the client and the server are out of sync.
+- `TOKEN_EXPIRED`: the previously valid token that had been used to authenticate the client has expired and the client will no longer receive messages. This message is sent not at the exact time that the token expires, but when the client attempts to send a message to the server or vice versa and the server detects that the token has expired.
+- `ROLES_MISMATCH`: occurs when the client attempts to update the token with the `refreshHandler` option for `startSession` or when using `updateSessionToken`. This error is sent when the client attempts to update the token with a token that has different roles than the previous token. This is a security feature to prevent a user from changing their privileges by updating their token with one that has different roles.
+
+```ts
+import { TriplitClient } from '@triplit/client';
+
+const client = new TriplitClient({
+  serverUrl: 'https://<project-id>.triplit.io',
+  token: 'your-token',
+  onSessionError: (type) => {
+    if (type === 'TOKEN_EXPIRED') {
+      // log the user out
+      client.endSession();
+      client.clear();
+    }
+  },
+});
+```

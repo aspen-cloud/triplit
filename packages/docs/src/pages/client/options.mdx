@@ -39,5 +39,5 @@ These options define how you authenticate with your client database and remote d
 
 - `token` is a jwt that is used to identify the user to the client database and remote databases (see the [Auth guide](/auth)). Providing a `token` will set the variable `$session.SESSION_USER_ID` on the database, which is used for authorization rules.
 - `claimsPath` is the path to the Triplit claims on the token. It should be a `.` separated string like `path.to.claims`. This should match the value set on your project in the Triplit Dashboard.
-
-The `TriplitClient`'s session API provides methods to switch out the token and update the client's connection to the server. For best practices on using these APIs and updating user sessions, see the [Auth guide](/auth#changing-users).
+- `onSessionError` is a function that is called when the client receives an error from the server about the session, which will lead to the sync connection to being terminated. Read more about refreshing a session in the [Sessions guide](/client/sessions).
+- `refreshOptions` can be used to set the `refreshHandler` and `interval` for the client. Read more about refreshing a session in the [Sessions guide](/client/sessions).

@@ -64,7 +64,7 @@ async function onSignIn(token: string) {
 }
 ```
 
-This will update the token and connect the client to the server. The `TriplitClient` calls this method implicitly when you provide a token to the constructor.
+This will update the token and connect the client to the server. The `TriplitClient` calls this method implicitly when you provide a token to the constructor. For more information on the `startSession` method, see the [Sessions API guide](/client/sessions).
 
 #### Ending sessions
 
@@ -79,31 +79,11 @@ async function onSignOut(clearCache: boolean = false) {
 }
 ```
 
+For more information on the `endSession` method, see the [Sessions API guide](/client/sessions).
+
 #### Updating sessions
 
-If your authentication provider issues short-lived tokens, you may need to refresh the token mid-session. You can do this by passing in a handler function into `startSession`. This handler will either run at an interval you specify, or it will read the expiry time from the token itself and run when the token is about to expire.
-
-```typescript
-const refreshHandler = async () => {
-  return await authProvider.getFreshToken();
-};
-
-async function onSignIn(token: string) {
-  await client.startSession(token, true, { refreshHandler });
-}
-```
-
-When the session ends, the client will automatically cleanup the interval.
-
-You can also manually refresh the token by calling `updateSessionToken` with the new token.
-
-```typescript
-function onTokenRefresh(newToken: string) {
-  client.updateSessionToken(newToken);
-}
-```
-
-`updateSessionToken` and/or the refresh handler will throw an error if the [roles](/schemas/permissions#roles) of the new token do not match the roles of the current token. This is to prevent a user from changing their token to one that has more access than they should during the same sync connection. Attempting to do so will throw an error.
+If your authentication provider issues short-lived tokens, you may need to refresh the token mid-session. Read more about refreshing a session in the [Sessions API guide](/client/sessions).
 
 ## Authorization
 
