@@ -116,7 +116,7 @@ export function defaultBunSqliteStorage() {
   return new BunSQLiteTupleStorage(db);
 }
 
-export function resolveStorageStringOption(storage: StoreKeys): Storage {
+export function createTriplitStorageProvider(storage: StoreKeys): Storage {
   switch (storage) {
     case 'file':
       return defaultFileStorage();

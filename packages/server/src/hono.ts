@@ -30,7 +30,6 @@ import { StatusCode } from 'hono/utils/http-status';
 
 import { WSContext, type UpgradeWebSocket, WSMessageReceive } from 'hono/ws';
 
-import { StoreKeys, resolveStorageStringOption } from './storage.js';
 import { logger as honoLogger } from 'hono/logger';
 import { cors } from 'hono/cors';
 
@@ -41,7 +40,7 @@ type Variables = {
 };
 
 export type ServerOptions = {
-  storage?: StoreKeys | Storage | (() => Storage);
+  storage?: Storage | (() => Storage);
   dbOptions?: DBConfig;
   watchMode?: boolean;
   verboseLogs?: boolean;
@@ -63,11 +62,9 @@ export function createTriplitHonoServer(
   honoApp?: Hono
 ) {
   const dbSource = !!options?.storage
-    ? typeof options.storage === 'string'
-      ? resolveStorageStringOption(options.storage)
-      : typeof options.storage === 'function'
-        ? options.storage()
-        : options.storage
+    ? typeof options.storage === 'function'
+      ? options.storage()
+      : options.storage
     : undefined;
   if (options?.verboseLogs) logger.verbose = true;
   const dbOptions: Partial<DBConfig> = {

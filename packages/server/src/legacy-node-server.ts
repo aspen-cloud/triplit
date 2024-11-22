@@ -25,7 +25,7 @@ import { logger } from './logger.js';
 import { Route } from '@triplit/server-core/triplit-server';
 import multer, { MulterError } from 'multer';
 import * as Sentry from '@sentry/node';
-import { StoreKeys, resolveStorageStringOption } from './storage.js';
+import { StoreKeys, createTriplitStorageProvider } from './storage.js';
 import path from 'path';
 import { createRequire } from 'module';
 import { TriplitClient } from '@triplit/client';
@@ -85,7 +85,7 @@ function captureException(e: any) {
 export function createServer(options?: ServerOptions) {
   const dbSource = !!options?.storage
     ? typeof options.storage === 'string'
-      ? resolveStorageStringOption(
+      ? createTriplitStorageProvider(
           // @ts-ignore TODO: check why this is not working...might be module resolution issue?
           options.storage
         )
