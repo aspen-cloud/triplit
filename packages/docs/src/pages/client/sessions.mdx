@@ -12,7 +12,7 @@ Triplit client sessions are easy to map to user authentication sessions, but the
 
 ## `startSession`
 
-You have two options to start a session: when you initialize the client or by calling `startSession`. You usually want to initialize your client as early as possible in the lifecycle of your app, which may be before you have a token. In this case, you can call `startSession` when you have a token.
+You have two options to start a session: when you initialize the client or by calling `startSession`. You usually want to initialize your client as early as possible in the lifecycle of your app, which may be before you have a token. In this case, you can create a Triplit Client without a token and then later call `startSession` when you have one.
 
 ```ts
 import { TriplitClient } from '@triplit/client';
