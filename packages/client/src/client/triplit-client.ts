@@ -309,11 +309,11 @@ export class TriplitClient<M extends ClientSchema = ClientSchema> {
       this.http.updateOptions({ schema: schema?.collections });
     });
 
+    this.syncEngine = new SyncEngine(this, syncOptions);
+
     if (onSessionError) {
       this.onSessionError(onSessionError);
     }
-
-    this.syncEngine = new SyncEngine(this, syncOptions);
     // Look into how calling connect / disconnect early is handled
     this.db.ready.then(async () => {
       token && (await this.startSession(token, autoConnect, refreshOptions));
