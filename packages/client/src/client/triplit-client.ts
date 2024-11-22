@@ -1194,7 +1194,7 @@ export class TriplitClient<M extends ClientSchema = ClientSchema> {
     }
     if (tokenIsExpired(decodeToken(token))) {
       if (!refreshOptions?.refreshHandler) {
-        // should we centralize this in client.onSessionError?
+        // should we centralize this in
         throw new TokenExpiredError();
       }
       token = await refreshOptions.refreshHandler();
@@ -1226,7 +1226,13 @@ export class TriplitClient<M extends ClientSchema = ClientSchema> {
     const setRefreshTimeoutForToken = (refreshToken: string) => {
       const decoded = decodeToken(refreshToken);
       if (!decoded.exp && !interval) return;
-      const delay = interval ?? Math.max(decoded.exp - Date.now() - 500, 0);
+      let delay = interval ?? decoded.exp - Date.now() - 1000;
+      if (delay < 1000) {
+        this.logger.warn(
+          `The minimum allowed refresh interval is 1000ms, the ${interval ? 'provided interval' : 'interval determined from the provided token'} was ${Math.round(delay)}ms.`
+        );
+        delay = 1000;
+      }
       this.tokenRefreshTimer = setTimeout(async () => {
         const freshToken = await refreshHandler();
         this.updateSessionToken(freshToken);
