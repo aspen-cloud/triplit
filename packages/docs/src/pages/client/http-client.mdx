@@ -35,6 +35,9 @@ const { txId } = await client.http.update('todos', '123', (entity) => {
 // Delete an entity in the "todos" collection
 const { txId } = await client.http.delete('todos', '123');
 
+// Delete all entities in the "todos" collection
+const { txId } = await client.http.deleteAll('todos');
+
 // Fetch the entity with the ID "123" in the "todos" collection
 const todoWithId123 = await client.http.fetchById('todos', '123');
 

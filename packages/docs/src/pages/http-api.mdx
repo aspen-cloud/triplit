@@ -160,6 +160,24 @@ await fetch('https://<project-id>.triplit.io/delete', {
 });
 ```
 
+### `/delete-all`
+
+Deletes all entities for a given collection.
+
+```ts
+// Request
+await fetch('https://<project-id>.triplit.io/delete-all', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    Authorization: 'Bearer ' + TRIPLIT_TOKEN,
+  },
+  body: JSON.stringify({
+    collectionName: 'todos',
+  }),
+});
+```
+
 ### `/healthcheck`
 
 This endpoint is publicly available (i.e. no authentication token is required) and will return a 200 status code if the server is running and healthy.
