@@ -34,7 +34,7 @@ function captureException(e: any) {
 }
 
 export function createServer(
-  options?: Parameters<typeof createTriplitHonoServer>[0]
+  options: Parameters<typeof createTriplitHonoServer>[0]
 ) {
   let app = new Hono();
   initSentry();
@@ -42,7 +42,7 @@ export function createServer(
 
   // @ts-expect-error
   app = createTriplitHonoServer(
-    options ?? {},
+    options,
     upgradeWebSocket,
     captureException,
     app
