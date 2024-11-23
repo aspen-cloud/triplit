@@ -1,5 +1,14 @@
 # @triplit/client
 
+## 0.6.2
+
+### Patch Changes
+
+- 2541c6e2: various fixups for the sessions API
+- Updated dependencies [8e9511dc]
+- Updated dependencies [a2532548]
+  - @triplit/db@0.5.11
+
 ## 0.6.1
 
 ### Patch Changes
