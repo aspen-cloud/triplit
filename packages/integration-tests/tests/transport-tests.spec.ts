@@ -3010,11 +3010,12 @@ describe('sessions API', async () => {
         schema: collections,
         roles,
       });
-      // create tokens that expire every 600ms
+      const EXPIRE_TIME = 2000;
+      // create tokens that expire every 2000ms
       function getToken() {
         return new Jose.UnsecuredJWT({
           'x-triplit-token-type': 'secret',
-          exp: Date.now() + 600,
+          exp: Date.now() + EXPIRE_TIME,
         }).encode();
       }
 
@@ -3029,10 +3030,8 @@ describe('sessions API', async () => {
         },
       });
 
-      // Should have been called 3 times because the Triplit session API
-      // will refresh 500ms before the token expires
-      await pause(350);
-      expect(refreshTracker).toHaveBeenCalledTimes(3);
+      await pause((EXPIRE_TIME - 500) * 3);
+      expect(refreshTracker).toHaveBeenCalledTimes(4);
       refreshTracker.mockClear();
 
       // ending the session should stop the refresh handler
@@ -3049,15 +3048,15 @@ describe('sessions API', async () => {
             resolve(getToken());
           });
         },
-        interval: 50,
+        interval: EXPIRE_TIME,
       });
-      await pause(200);
+      await pause(EXPIRE_TIME * 3 + 10);
       expect(refreshTracker2).toHaveBeenCalledTimes(3);
       refreshTracker2.mockClear();
       endRefresh?.();
       await pause(200);
       expect(refreshTracker2).not.toHaveBeenCalled();
-    });
+    }, 30000);
     it('will handle the sync session state of the previous session if you use durable storage', async () => {
       const cache = new MemoryBTreeStorage();
       const outbox = new MemoryBTreeStorage();
