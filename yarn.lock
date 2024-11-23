@@ -12770,6 +12770,17 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@vitest/web-worker@npm:^2.1.5":
+  version: 2.1.5
+  resolution: "@vitest/web-worker@npm:2.1.5"
+  dependencies:
+    debug: "npm:^4.3.7"
+  peerDependencies:
+    vitest: 2.1.5
+  checksum: 10/be35725b05b158a59cce7984e41158c17b8cf7c8789e0e0598f1ea2a80afb4dc4f1fffea34b87bc69c3b3937eb1d839577c15dc55fa91ed2b44a2841a9630027
+  languageName: node
+  linkType: hard
+
 "@volar/language-core@npm:1.11.1, @volar/language-core@npm:~1.11.1":
   version: 1.11.1
   resolution: "@volar/language-core@npm:1.11.1"
@@ -16484,7 +16495,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"debug@npm:^4.3.6":
+"debug@npm:^4.3.6, debug@npm:^4.3.7":
   version: 4.3.7
   resolution: "debug@npm:4.3.7"
   dependencies:
@@ -21364,6 +21375,7 @@ __metadata:
     "@types/fs-extra": "npm:^11"
     "@types/node": "npm:^22.4.1"
     "@types/ws": "npm:^8"
+    "@vitest/web-worker": "npm:^2.1.5"
     execa: "npm:^8.0.1"
     fs-extra: "npm:^11.1.1"
     jose: "npm:^5.9.6"
