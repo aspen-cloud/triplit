@@ -1,4 +1,4 @@
-import { LogLevel, Logger } from '@triplit/types/logger';
+import { LogLevel, Logger } from './@triplit/types/logger.js';
 import { TriplitError } from '@triplit/db';
 import superjson from 'superjson';
 

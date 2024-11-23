@@ -57,7 +57,7 @@ import {
 } from './types';
 import { clientQueryBuilder } from './query-builder.js';
 import { HttpClient } from '../http-client/http-client.js';
-import { Logger } from '@triplit/types/logger';
+import { Logger } from '../@triplit/types/logger.js';
 import { DefaultLogger } from '../client-logger.js';
 
 export interface SyncOptions {

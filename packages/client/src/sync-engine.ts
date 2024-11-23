@@ -27,7 +27,7 @@ import {
   ServerCloseReasonType,
   ServerErrorMessage,
   ServerSyncMessage,
-} from '@triplit/types/sync';
+} from './@triplit/types/sync.js';
 import {
   MissingConnectionInformationError,
   RemoteFetchFailedError,
@@ -38,7 +38,7 @@ import {
   ErrorCallback,
   SchemaClientQueries,
 } from './client/types';
-import { Logger } from '@triplit/types/logger';
+import { Logger } from './@triplit/types/logger.js';
 import { genToArr } from '@triplit/db';
 import { hashQuery } from '@triplit/db';
 

@@ -13,7 +13,7 @@ import {
   TransactionResult,
   ClearOptions,
 } from '@triplit/db';
-import { LogLevel } from '@triplit/types/logger';
+import { LogLevel } from '../@triplit/types/logger.js';
 import { DefaultLogger } from '../client-logger.js';
 import { WorkerInternalClientNotInitializedError } from '../errors.js';
 import {

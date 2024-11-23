@@ -18,3 +18,5 @@ export * from './errors.js';
 export * from './transport/transport.js';
 export type * from './client/types';
 export type { ClientQueryBuilder } from './client/query-builder.js';
+
+export type * from './@triplit/types/sync.js';

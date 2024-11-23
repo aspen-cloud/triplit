@@ -1,4 +1,4 @@
-import { ClientSyncMessage, CloseReason } from '@triplit/types/sync';
+import { ClientSyncMessage, CloseReason } from '../@triplit/types/sync.js';
 import {
   ConnectionStatus,
   SyncTransport,
