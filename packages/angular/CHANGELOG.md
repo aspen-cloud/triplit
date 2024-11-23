@@ -1,5 +1,12 @@
 # @triplit/angular
 
+## 0.1.23
+
+### Patch Changes
+
+- Updated dependencies [483c84b6]
+  - @triplit/client@0.6.3
+
 ## 0.1.22
 
 ### Patch Changes

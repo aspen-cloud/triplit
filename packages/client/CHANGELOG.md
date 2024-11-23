@@ -1,5 +1,11 @@
 # @triplit/client
 
+## 0.6.3
+
+### Patch Changes
+
+- 483c84b6: fix refresh interval
+
 ## 0.6.2
 
 ### Patch Changes

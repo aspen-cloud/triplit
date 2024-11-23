@@ -1,5 +1,12 @@
 # @triplit/server
 
+## 0.5.1
+
+### Patch Changes
+
+- Updated dependencies [483c84b6]
+  - @triplit/client@0.6.3
+
 ## 0.5.0
 
 ### Minor Changes
