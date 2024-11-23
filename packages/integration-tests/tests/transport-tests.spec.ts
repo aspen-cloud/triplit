@@ -3015,7 +3015,7 @@ describe('sessions API', async () => {
       function getToken() {
         return new Jose.UnsecuredJWT({
           'x-triplit-token-type': 'secret',
-          exp: Date.now() + EXPIRE_TIME,
+          exp: (Date.now() + EXPIRE_TIME) / 1000,
         }).encode();
       }
 
@@ -3030,8 +3030,8 @@ describe('sessions API', async () => {
         },
       });
 
-      await pause((EXPIRE_TIME - 500) * 3);
-      expect(refreshTracker).toHaveBeenCalledTimes(4);
+      await pause((EXPIRE_TIME - 950) * 3);
+      expect(refreshTracker).toHaveBeenCalledTimes(3);
       refreshTracker.mockClear();
 
       // ending the session should stop the refresh handler
