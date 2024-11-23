@@ -17,6 +17,11 @@
       "types": "./dist/hono.d.ts",
       "import": "./dist/hono.js",
       "default": "./dist/hono.js"
+    },
+    "./cloudflare": {
+      "types": "./dist/cloudflare.d.ts",
+      "import": "./dist/cloudflare.js",
+      "default": "./dist/cloudflare.js"
     }
   },
   "files": [

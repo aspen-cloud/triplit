@@ -131,14 +131,11 @@ export function createTriplitHonoServer(
       let syncConnection: SyncConnection | undefined = undefined;
       return {
         onOpen: async (_event, ws) => {
-          if (!ws.url) return;
-          const queryParams = ws.url.searchParams;
-
           let token: ProjectJWT | undefined = undefined;
 
           try {
             const { data, error } = await parseAndValidateTokenWithOptions(
-              queryParams.get('token')!
+              c.req.query('token')!
             );
             if (error) throw error;
             token = data;
@@ -156,11 +153,11 @@ export function createTriplitHonoServer(
             return;
           }
           try {
-            const clientId = queryParams.get('client') as string;
-            const clientHash = queryParams.get('schema')
-              ? parseInt(queryParams.get('schema') as string)
+            const clientId = c.req.query('client') as string;
+            const clientHash = c.req.query('schema')
+              ? parseInt(c.req.query('schema') as string)
               : undefined;
-            const syncSchema = queryParams.get('sync-schema') === 'true';
+            const syncSchema = c.req.query('sync-schema') === 'true';
 
             syncConnection = server.openConnection(token, {
               clientId,
