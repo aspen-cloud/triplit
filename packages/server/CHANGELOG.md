@@ -1,5 +1,20 @@
 # @triplit/server
 
+## 0.5.0
+
+### Minor Changes
+
+- 2541c6e2: update options for createTriplitHonoServer
+
+### Patch Changes
+
+- Updated dependencies [2541c6e2]
+- Updated dependencies [8e9511dc]
+- Updated dependencies [a2532548]
+  - @triplit/client@0.6.2
+  - @triplit/db@0.5.11
+  - @triplit/server-core@0.5.14
+
 ## 0.4.38
 
 ### Patch Changes

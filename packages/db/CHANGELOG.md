@@ -1,5 +1,12 @@
 # @triplit/db
 
+## 0.5.11
+
+### Patch Changes
+
+- 8e9511dc: fixup types and add tests for query builder order
+- a2532548: Fixup and test additional where() query builder cases
+
 ## 0.5.10
 
 ### Patch Changes
