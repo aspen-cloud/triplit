@@ -1248,7 +1248,7 @@ export class TriplitClient<M extends ClientSchema = ClientSchema> {
     const setRefreshTimeoutForToken = (refreshToken: string) => {
       const decoded = decodeToken(refreshToken);
       if (!decoded.exp && !interval) return;
-      let delay = interval ?? decoded.exp - Date.now() - 1000;
+      let delay = interval ?? decoded.exp * 1000 - Date.now() - 1000;
       if (delay < 1000) {
         this.logger.warn(
           `The minimum allowed refresh interval is 1000ms, the ${interval ? 'provided interval' : 'interval determined from the provided token'} was ${Math.round(delay)}ms.`
