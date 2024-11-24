@@ -42,14 +42,23 @@ const client = new TriplitClient({
   storage: 'indexeddb',
 });
 
-// Which is equivalent to
+// Or provide your own name
+
+const client = new TriplitClient({
+  storage: {
+    type: 'indexeddb',
+    name: 'my-database',
+  },
+});
+
+// Or provide your own instances (not possible with the WorkerClient)
 
 import { IndexedDbStorage } from '@triplit/db/storage/indexed-db';
 
 const client = new TriplitClient({
   storage: {
-    outbox: new IndexedDBStorage('triplit-outbox'),
-    cache: new IndexedDBStorage('triplit-cache'),
+    outbox: new IndexedDBStorage('my-database-outbox'),
+    cache: new IndexedDBStorage('my-database-cache'),
   },
 });
 ```
