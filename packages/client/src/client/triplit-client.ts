@@ -92,10 +92,12 @@ function parseScope(query: ClientQuery<any, any>) {
       return ['outbox'];
   }
 }
+
+type SupportClientStorageProviders = 'indexeddb' | 'memory';
+
 export type SimpleClientStorageOptions =
-  | 'indexeddb'
-  | 'memory'
-  | { type: 'indexeddb' | 'memory'; name: string };
+  | SupportClientStorageProviders
+  | { type: SupportClientStorageProviders; name?: string };
 
 type SimpleStorageOrInstances =
   | { cache: Storage; outbox: Storage }
