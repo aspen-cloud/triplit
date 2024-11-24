@@ -96,7 +96,8 @@ function parseScope(query: ClientQuery<any, any>) {
 type StorageOptions =
   | { cache: Storage; outbox: Storage }
   | 'indexeddb'
-  | 'memory';
+  | 'memory'
+  | { type: 'indexeddb' | 'memory'; name: string };
 
 function getClientStorage(storageOption: StorageOptions) {
   if (
@@ -108,19 +109,25 @@ function getClientStorage(storageOption: StorageOptions) {
     return storageOption;
   }
 
-  if (storageOption === 'memory')
+  const storageType =
+    typeof storageOption === 'object' ? storageOption.type : storageOption;
+
+  const storageName =
+    typeof storageOption === 'object' ? storageOption.name : 'triplit';
+
+  if (storageType === 'memory')
     return {
       cache: new MemoryBTreeStorage(),
       outbox: new MemoryBTreeStorage(),
     };
 
-  if (storageOption === 'indexeddb') {
+  if (storageType === 'indexeddb') {
     if (typeof indexedDB === 'undefined') {
       throw new IndexedDbUnavailableError();
     }
     return {
-      cache: new IndexedDbStorage('triplit-cache'),
-      outbox: new IndexedDbStorage('triplit-outbox'),
+      cache: new IndexedDbStorage(`${storageName}-cache`),
+      outbox: new IndexedDbStorage(`${storageName}-outbox`),
     };
   }
 }
