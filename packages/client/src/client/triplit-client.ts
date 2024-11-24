@@ -92,14 +92,16 @@ function parseScope(query: ClientQuery<any, any>) {
       return ['outbox'];
   }
 }
-
-type StorageOptions =
-  | { cache: Storage; outbox: Storage }
+export type SimpleClientStorageOptions =
   | 'indexeddb'
   | 'memory'
   | { type: 'indexeddb' | 'memory'; name: string };
 
-function getClientStorage(storageOption: StorageOptions) {
+type SimpleStorageOrInstances =
+  | { cache: Storage; outbox: Storage }
+  | SimpleClientStorageOptions;
+
+function getClientStorage(storageOption: SimpleStorageOrInstances) {
   if (
     typeof storageOption === 'object' &&
     ('cache' in storageOption || 'outbox' in storageOption)
@@ -189,7 +191,7 @@ export interface ClientOptions<M extends ClientSchema = ClientSchema> {
   /**
    * The storage for the client cache. Can be `memory`, `indexeddb` or an object with `cache` and `outbox` properties. Defaults to `memory`. Read more about storage {@link https://www.triplit.dev/docs/client/storage | here }
    */
-  storage?: StorageOptions;
+  storage?: SimpleStorageOrInstances;
 
   /**
    * Default options for fetch queries. Read more about fetch options {@link https://www.triplit.dev/docs/client/fetch#policy | here }

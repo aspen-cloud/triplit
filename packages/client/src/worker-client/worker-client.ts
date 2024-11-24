@@ -2,6 +2,7 @@ import * as ComLink from 'comlink';
 import type {
   TriplitClient as Client,
   ClientOptions,
+  SimpleClientStorageOptions,
 } from '../client/triplit-client.js';
 import {
   ChangeTracker,
@@ -85,8 +86,9 @@ export class WorkerClient<M extends ClientSchema = ClientSchema> {
     {} as any;
   private _connectionStatus: ConnectionStatus;
   constructor(
-    options?: ClientOptions<M> & {
+    options?: Omit<ClientOptions<M>, 'storage'> & {
       workerUrl?: string;
+      storage?: SimpleClientStorageOptions;
     },
     workerEndpoint?: ComLink.Endpoint,
     sharedWorkerPort?: MessagePort
