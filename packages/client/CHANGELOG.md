@@ -1,5 +1,11 @@
 # @triplit/client
 
+## 0.6.4
+
+### Patch Changes
+
+- 6de9aaf4: add ability to custom name storages without providing instances
+
 ## 0.6.3
 
 ### Patch Changes

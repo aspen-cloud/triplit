@@ -1,7 +1,7 @@
 {
   "name": "@triplit/vue",
   "packageManager": "yarn@3.4.1",
-  "version": "0.2.22",
+  "version": "0.2.23",
   "source": "./src/index.ts",
   "main": "./dist/index.js",
   "module": "./dist/index.js",
