@@ -75,6 +75,9 @@ import {
   getQueryResultsFromContext,
   getSyncTriplesFromContext,
   filterEntityToSelection,
+  getResultTriplesFromContext,
+  getQueriedEntityIdsFromContext,
+  getSyncEntityIdsFromContext,
 } from './query/result-parsers.js';
 import { EntityCache } from './db/types/entity-cache.js';
 
@@ -556,12 +559,16 @@ function getEntitiesAtStateVector(
 
 export async function getTriplesAfterStateVector(
   tx: TripleStoreApi,
-  stateVector: Map<string, number>
+  stateVector: Map<string, number> | undefined
 ): Promise<TripleRow[]> {
+  const partialStateVector = stateVector ?? new Map();
   const allTriples: TripleRow[] = [];
   const allClientIds = await tx.findAllClientIds();
   const completeStateVector = new Map<string, number>(
-    allClientIds.map((clientId) => [clientId, stateVector.get(clientId) ?? 0])
+    allClientIds.map((clientId) => [
+      clientId,
+      partialStateVector.get(clientId) ?? 0,
+    ])
   );
   for (const [clientId, tick] of completeStateVector) {
     const triples = await genToArr(
@@ -655,6 +662,28 @@ export async function getEntitiesBeforeAndAfterNewTriples(
   return beforeAndAfterMap;
 }
 
+export async function fetchSyncTriplesReplay<
+  M extends Models,
+  Q extends CollectionQuery<M, any>,
+>(
+  tx: TripleStoreApi,
+  query: Q,
+  executionContext: FetchExecutionContext,
+  options: FetchFromStorageOptions
+): Promise<TripleRow[]> {
+  const triplesAfterStateVector = await getTriplesAfterStateVector(
+    tx,
+    options.stateVector
+  );
+  return await fetchDeltaTriples<M, Q>(
+    tx,
+    query,
+    triplesAfterStateVector,
+    executionContext,
+    options
+  );
+}
+
 export async function fetchDeltaTriples<
   M extends Models,
   Q extends CollectionQuery<M, any>,
@@ -690,6 +719,7 @@ export async function fetchDeltaTriples<
     if (beforeData) {
       beforeContext.executionCache.setEntity(changedEntityId, {
         entity: beforeData,
+        tripleHistory: [...beforeData.triples],
       });
       beforeContext.executionCache.setComponent(changedEntityId, {
         entityId: changedEntityId,
@@ -700,6 +730,7 @@ export async function fetchDeltaTriples<
     if (afterData) {
       afterContext.executionCache.setEntity(changedEntityId, {
         entity: afterData,
+        tripleHistory: [...afterData.triples],
       });
       afterContext.executionCache.setComponent(changedEntityId, {
         entityId: changedEntityId,
@@ -944,6 +975,7 @@ function LoadCandidateEntities(
       ? executionContext.executionCache.getData(entityId).entity
       : undefined;
 
+    let storeTriples: TripleRow[] | undefined;
     // If the entity is not already in the execution cache, go get it and add it to the execution cache
     if (!entity) {
       // Attempt to load from global cache
@@ -951,8 +983,12 @@ function LoadCandidateEntities(
 
       // If not cached, fetch from store
       if (!entity) {
-        const storeTriples = await genToArr(tx.findByEntity(entityId));
-        entity = constructEntities(storeTriples, options.schema).get(entityId);
+        storeTriples = await genToArr(tx.findByEntity(entityId));
+        entity = constructEntities(
+          storeTriples,
+          options.schema,
+          options.stateVector
+        ).get(entityId);
         // We MAY select candidates that don't exist, so only cache if we found an entity
         // Update global cache if there is an entity
         if (entity && options.entityCache) {
@@ -964,6 +1000,7 @@ function LoadCandidateEntities(
       if (entity) {
         executionContext.executionCache.setEntity(entityId, {
           entity,
+          tripleHistory: storeTriples ?? entity.triples,
         });
       }
     }
@@ -1372,6 +1409,7 @@ async function resolveCountQuery(
       // Load raw entity
       executionContext.executionCache.setEntity(entityId, {
         entity,
+        tripleHistory: [triple],
       });
     }
 
@@ -1482,6 +1520,103 @@ export async function loadQuery<
   const entitiesArr =
     entities instanceof Array ? entities : await genToArr(entities);
   return entitiesArr;
+}
+
+export async function fetchSyncTriplesRequery<
+  M extends Models,
+  Q extends CollectionQuery<M, any>,
+>(
+  tx: TripleStoreApi,
+  query: Q,
+  executionContext: FetchExecutionContext,
+  options: FetchFromStorageOptions
+): Promise<Map<string, TripleRow[]>> {
+  // If we have a state vector, perform query at that state vector and latest state
+  if (options.stateVector) {
+    // Fetch at state vector
+    const deltaExecutionContext = initialFetchExecutionContext();
+    const stateVectorEntityOrder = await loadQuery<M, Q>(
+      tx,
+      query,
+      deltaExecutionContext,
+      options
+    );
+
+    // Get all the result entityIds
+    const stateVectorEntities = getSyncEntityIdsFromContext<M, Q>(
+      query,
+      stateVectorEntityOrder,
+      deltaExecutionContext
+    );
+
+    // Get the latest data
+    const latestEntityOrder = await loadQuery<M, Q>(
+      tx,
+      query,
+      executionContext,
+      { ...options, stateVector: undefined }
+    );
+    const latestTriples = getSyncTriplesFromContext<M, Q>(
+      query,
+      latestEntityOrder,
+      executionContext
+    );
+
+    const result = new Map<string, TripleRow[]>();
+
+    // Get all triples after statevector
+    for (const entityId of stateVectorEntities) {
+      const triples = (
+        deltaExecutionContext.executionCache.getData(entityId).tripleHistory ??
+        []
+      ).filter((t) => isTripleAfterStateVector(t, options.stateVector!));
+      result.set(entityId, triples);
+    }
+
+    // Any entities that are now a part of the result should be appended
+    for (const [entityId, triples] of latestTriples) {
+      if (!result.has(entityId)) {
+        result.set(entityId, triples);
+      }
+    }
+    return result;
+  } else {
+    const entityOrder = await loadQuery<M, Q>(
+      tx,
+      query,
+      executionContext,
+      options
+    );
+    return getSyncTriplesFromContext<M, Q>(
+      query,
+      entityOrder,
+      executionContext
+    );
+  }
+}
+
+export async function fetchSyncTriplesRequeryArr<
+  M extends Models,
+  Q extends CollectionQuery<M, any>,
+>(
+  tx: TripleStoreApi,
+  query: Q,
+  executionContext: FetchExecutionContext,
+  options: FetchFromStorageOptions
+): Promise<TripleRow[]> {
+  return Array.from(
+    (
+      await fetchSyncTriplesRequery<M, Q>(tx, query, executionContext, options)
+    ).values()
+  ).flat();
+}
+
+function isTripleAfterStateVector(
+  triple: TripleRow,
+  stateVector: Map<string, number>
+) {
+  const currentTick = stateVector.get(triple.timestamp[1]) ?? 0;
+  return triple.timestamp[0] > currentTick;
 }
 
 /**
@@ -2158,18 +2293,21 @@ export function subscribeTriples<
     let triples: TripleRow[] = [];
     try {
       if (options.stateVector && options.stateVector.size > 0) {
-        const triplesAfterStateVector = await getTriplesAfterStateVector(
-          tripleStore,
-          options.stateVector
-        );
-        const deltaTriples = await fetchDeltaTriples<M, Q>(
-          tripleStore,
-          query,
-          triplesAfterStateVector,
-          initialFetchExecutionContext(),
-          options
-        );
-        triples = deltaTriples;
+        if (query.limit != undefined) {
+          const deltaTriples = await fetchSyncTriplesRequeryArr<
+            M,
+            typeof query
+          >(tripleStore, query, initialFetchExecutionContext(), options);
+          triples = deltaTriples;
+        } else {
+          const deltaTriples = await fetchSyncTriplesReplay<M, typeof query>(
+            tripleStore,
+            query,
+            initialFetchExecutionContext(),
+            options
+          );
+          triples = deltaTriples;
+        }
       } else {
         const executionContext = initialFetchExecutionContext();
         const resultOrder = await loadQuery<M, Q>(

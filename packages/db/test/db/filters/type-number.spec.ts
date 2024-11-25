@@ -1,8 +1,8 @@
 import { describe, expect, it, test } from 'vitest';
 import { Schema as S } from '../../../src/schema/builder.js';
+import { shuffleArray } from '../../utils/data.js';
 import {
   genData,
-  shuffleArray,
   testEq,
   testFilterOp,
   testGt,

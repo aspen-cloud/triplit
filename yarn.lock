@@ -5585,6 +5585,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@faker-js/faker@npm:^9.0.3":
+  version: 9.0.3
+  resolution: "@faker-js/faker@npm:9.0.3"
+  checksum: 10/60ea71c31d6bd6317184736de17daee415e229cab5e10a4146a19622f3eb22f49f42345ff339dc9261f0214ca1f9b019c63fd9aac842a2d359f135102788ec90
+  languageName: node
+  linkType: hard
+
 "@fast-check/vitest@npm:^0.1.0":
   version: 0.1.0
   resolution: "@fast-check/vitest@npm:0.1.0"
@@ -10226,6 +10233,7 @@ __metadata:
   resolution: "@triplit/db@workspace:packages/db"
   dependencies:
     "@cloudflare/workers-types": "npm:^4.20240129.0"
+    "@faker-js/faker": "npm:^9.0.3"
     "@fast-check/vitest": "npm:^0.1.0"
     "@sinclair/typebox": "npm:^0.32.15"
     "@stryker-mutator/core": "npm:^7.3.0"

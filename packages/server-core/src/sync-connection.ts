@@ -151,9 +151,9 @@ export class SyncConnection {
     const { id: queryKey, params, state } = msgParams;
     try {
       const { collectionName, ...parsedQuery } = params;
-      const clientStates = new Map(
-        (state ?? []).map(([sequence, client]) => [client, sequence])
-      );
+      const clientStates = state
+        ? new Map(state.map(([sequence, client]) => [client, sequence]))
+        : undefined;
       const builtQuery = this.db.query(collectionName, parsedQuery).build();
 
       // TODO: THIS SHOULD BE KEYED ON QUERY HASH

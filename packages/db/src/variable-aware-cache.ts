@@ -248,7 +248,7 @@ function loadViewResultIntoExecutionCache<M extends Models>(
     if (!executionContext.executionCache.hasEntity(entityId)) {
       executionContext.executionCache.setEntity(entityId, {
         entity: entity,
-        // triples: view.triples.filter((t) => t.id === entityId),
+        tripleHistory: view.triples.filter((t) => t.id === entityId),
       });
     }
 

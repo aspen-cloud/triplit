@@ -107,7 +107,7 @@ export function getSyncTriplesFromContext<
     // If we've already loaded this entity skip to avoid dupes
     if (triples.has(entityId)) continue;
     const fullfillmentTriples =
-      executionContext.executionCache.getData(entityId)?.entity.triples ?? [];
+      executionContext.executionCache.getData(entityId)?.tripleHistory ?? [];
     triples.set(entityId, fullfillmentTriples);
   }
   return triples;
@@ -155,6 +155,64 @@ export function getQueryResultsFromContext<
     results.set(entityId, entityWithSelection);
   }
   return results;
+}
+
+export function getQueriedEntityIdsFromContext<
+  M extends Models,
+  Q extends SchemaQueries<M>,
+>(
+  query: Q,
+  entityOrder: string[],
+  executionContext: FetchExecutionContext
+): Set<string> {
+  const { include } = query;
+  const { executionCache } = executionContext;
+  const results = new Set<string>();
+  const components = getEntityConnections(executionContext, entityOrder);
+  for (const [entityId, component] of components) {
+    if (results.has(entityId)) continue;
+    const cachedEntity = executionCache.getData(component.entityId);
+    if (!cachedEntity) continue;
+    results.add(entityId);
+    // Load inclusions
+    for (const [attributeName, inc] of Object.entries(include ?? {})) {
+      if (!isQueryInclusionSubquery(inc)) {
+        throw new QueryNotPreparedError('An inclusion is not prepared');
+      }
+      if (!component) continue;
+      const { subquery, cardinality } = inc;
+      let subqueryOrder = component.relationships[attributeName];
+      if (typeof subqueryOrder === 'string') subqueryOrder = [subqueryOrder];
+      const subqueryResult = getQueriedEntityIdsFromContext<M, typeof subquery>(
+        subquery,
+        subqueryOrder ?? [],
+        executionContext
+      );
+      for (const entityId of subqueryResult) {
+        results.add(entityId);
+      }
+    }
+  }
+  return results;
+}
+
+export function getSyncEntityIdsFromContext<
+  M extends Models,
+  Q extends SchemaQueries<M>,
+>(
+  query: Q,
+  entityOrder: string[],
+  executionContext: FetchExecutionContext
+): Set<string> {
+  const entityIds = getQueriedEntityIdsFromContext<M, Q>(
+    query,
+    entityOrder,
+    executionContext
+  );
+  for (const entityId of executionContext.fulfillmentEntities) {
+    entityIds.add(entityId);
+  }
+  return entityIds;
 }
 
 export function filterEntityToSelection(

@@ -1,12 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { Schema as S } from '../../../src/schema/builder.js';
-import {
-  genData,
-  shuffleArray,
-  testEq,
-  testFilterOp,
-  testNEq,
-} from './utils.js';
+import { shuffleArray } from '../../utils/data.js';
+import { genData, testEq, testFilterOp, testNEq } from './utils.js';
 
 // If this fails, add tests for the missing operations
 it('expected operations are tested', () => {

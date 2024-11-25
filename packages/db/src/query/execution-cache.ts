@@ -1,8 +1,14 @@
 import { TriplitError } from '../errors.js';
 import { Entity } from '../entity.js';
+import { TripleRow } from '../triple-store-utils.js';
 
 export type DataCacheEntry = {
   entity: Entity;
+  /**
+   * Store the triples loaded from the triple store for this entity
+   * entity.triples will be a subset of this
+   */
+  tripleHistory: TripleRow[];
 };
 
 export type QueryComponentCacheEntry = {

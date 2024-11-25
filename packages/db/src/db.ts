@@ -22,6 +22,8 @@ import CollectionQueryBuilder, {
   isQueryRelational,
   applyTriplesToSubscribedQuery,
   FetchFromStorageOptions,
+  fetchSyncTriplesRequeryArr,
+  fetchSyncTriplesReplay,
 } from './collection-query.js';
 import { COLLECTION_ATTRIBUTE, Entity, updateEntity } from './entity.js';
 import { MemoryBTreeStorage } from './storage/memory-btree.js';
@@ -1183,19 +1185,29 @@ export default class DB<M extends Models = Models> {
         let triples: TripleRow[] = [];
         try {
           if (options.stateVector && options.stateVector.size > 0) {
-            const triplesAfterStateVector = await getTriplesAfterStateVector(
-              this.tripleStore,
-              options.stateVector
-            );
-            // const deltaTriples = await fetchDeltaTriples<M, Q>(
-            const deltaTriples = await fetchDeltaTriples<M, any>(
-              this.tripleStore,
-              subscriptionQuery,
-              triplesAfterStateVector,
-              initialFetchExecutionContext(),
-              subscribeTriplesOptions
-            );
-            triples = deltaTriples;
+            if (subscriptionQuery.limit != undefined) {
+              const deltaTriples = await fetchSyncTriplesRequeryArr<
+                M,
+                typeof subscriptionQuery
+              >(
+                this.tripleStore,
+                subscriptionQuery,
+                initialFetchExecutionContext(),
+                subscribeTriplesOptions
+              );
+              triples = deltaTriples;
+            } else {
+              const deltaTriples = await fetchSyncTriplesReplay<
+                M,
+                typeof subscriptionQuery
+              >(
+                this.tripleStore,
+                subscriptionQuery,
+                initialFetchExecutionContext(),
+                subscribeTriplesOptions
+              );
+              triples = deltaTriples;
+            }
           } else {
             const executionContext = initialFetchExecutionContext();
             // const resultOrder = await loadQuery<M, Q>(
@@ -1289,6 +1301,7 @@ export default class DB<M extends Models = Models> {
         if (beforeData) {
           beforeContext.executionCache.setEntity(changedEntityId, {
             entity: beforeData,
+            tripleHistory: [...beforeData.triples],
           });
           beforeContext.executionCache.setComponent(changedEntityId, {
             entityId: changedEntityId,
@@ -1299,6 +1312,7 @@ export default class DB<M extends Models = Models> {
         if (afterData) {
           afterContext.executionCache.setEntity(changedEntityId, {
             entity: afterData,
+            tripleHistory: [...afterData.triples],
           });
           afterContext.executionCache.setComponent(changedEntityId, {
             entityId: changedEntityId,
