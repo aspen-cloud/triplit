@@ -45,6 +45,7 @@
     "@triplit/client": "workspace:^",
     "@triplit/db": "workspace:^",
     "@triplit/server-core": "workspace:^",
+    "archiver": "^7.0.1",
     "consola": "^3.2.3",
     "cors": "^2.8.5",
     "dotenv": "^16.0.3",
@@ -58,6 +59,7 @@
   "devDependencies": {
     "@sentry/core": "^8.37.0",
     "@triplit/types": "workspace:^",
+    "@types/archiver": "^6.0.3",
     "@types/cors": "^2",
     "@types/express": "^4.17.17",
     "@types/jsonwebtoken": "^9",

@@ -19,6 +19,7 @@ import {
   ServerCloseReason,
   ClientSyncMessage,
   ParseResult,
+  hasAdminAccess,
 } from '@triplit/server-core';
 import { parseAndValidateToken, ProjectJWT } from '@triplit/server-core/token';
 import { logger } from './logger.js';
@@ -30,6 +31,8 @@ import path from 'path';
 import { createRequire } from 'module';
 import { TriplitClient } from '@triplit/client';
 import PublicRouter from './routes/public.js';
+import fs from 'fs';
+import archiver from 'archiver';
 
 const MB = 1024 * 1024;
 const MB_LIMIT = 100;
@@ -355,6 +358,47 @@ export function createServer(options?: ServerOptions) {
       req.token!
     );
     res.status(statusCode).json(payload);
+  });
+  authenticated.post('/db-download', async (req, res) => {
+    if (!hasAdminAccess(req.token!)) {
+      return res.status(403).json({ message: 'Unauthorized' });
+    }
+    if (!process.env.LOCAL_DATABASE_URL) {
+      return res.status(500).json({ message: 'no database url provided' });
+    }
+    const dirPath = path.dirname(process.env.LOCAL_DATABASE_URL);
+    if (!dirPath) {
+      return res.status(400).json({ message: 'no dir path provided' });
+    }
+
+    if (!fs.existsSync(dirPath)) {
+      return res.status(400).json({ message: 'dir does not exist' });
+    }
+
+    // Set headers for zip file download
+    const zipFileName = 'directory.zip';
+    res.setHeader('Content-Type', 'application/zip');
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="${zipFileName}"`
+    );
+
+    // Create a zip archive and pipe it to the response
+    const archive = archiver('zip', {
+      zlib: { level: 9 }, // Compression level
+    });
+
+    archive.on('error', (err) => {
+      res.status(500).send('Error creating archive');
+    });
+
+    archive.pipe(res);
+
+    // Append files and directories to the archive
+    archive.directory(dirPath, false);
+
+    // Finalize the archive (send the zip file)
+    archive.finalize();
   });
   authenticated.post('*', async (req, res) => {
     const path = req.path.split('/').slice(1) as Route; // ignore first empty string from split
