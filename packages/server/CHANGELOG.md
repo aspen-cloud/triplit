@@ -1,5 +1,11 @@
 # @triplit/server
 
+## 0.5.3
+
+### Patch Changes
+
+- 72a807db: Add db download to legacy server
+
 ## 0.5.2
 
 ### Patch Changes
