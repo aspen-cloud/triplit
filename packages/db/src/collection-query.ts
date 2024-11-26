@@ -2296,21 +2296,13 @@ export function subscribeTriples<
     let triples: TripleRow[] = [];
     try {
       if (options.stateVector && options.stateVector.size > 0) {
-        if (query.limit != undefined) {
-          const deltaTriples = await fetchSyncTriplesRequeryArr<
-            M,
-            typeof query
-          >(tripleStore, query, initialFetchExecutionContext(), options);
-          triples = deltaTriples;
-        } else {
-          const deltaTriples = await fetchSyncTriplesReplay<M, typeof query>(
-            tripleStore,
-            query,
-            initialFetchExecutionContext(),
-            options
-          );
-          triples = deltaTriples;
-        }
+        const deltaTriples = await fetchSyncTriplesRequeryArr<M, typeof query>(
+          tripleStore,
+          query,
+          initialFetchExecutionContext(),
+          options
+        );
+        triples = deltaTriples;
       } else {
         const executionContext = initialFetchExecutionContext();
         const resultOrder = await loadQuery<M, Q>(

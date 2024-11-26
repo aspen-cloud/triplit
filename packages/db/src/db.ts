@@ -1185,29 +1185,16 @@ export default class DB<M extends Models = Models> {
         let triples: TripleRow[] = [];
         try {
           if (options.stateVector && options.stateVector.size > 0) {
-            if (subscriptionQuery.limit != undefined) {
-              const deltaTriples = await fetchSyncTriplesRequeryArr<
-                M,
-                typeof subscriptionQuery
-              >(
-                this.tripleStore,
-                subscriptionQuery,
-                initialFetchExecutionContext(),
-                subscribeTriplesOptions
-              );
-              triples = deltaTriples;
-            } else {
-              const deltaTriples = await fetchSyncTriplesReplay<
-                M,
-                typeof subscriptionQuery
-              >(
-                this.tripleStore,
-                subscriptionQuery,
-                initialFetchExecutionContext(),
-                subscribeTriplesOptions
-              );
-              triples = deltaTriples;
-            }
+            const deltaTriples = await fetchSyncTriplesRequeryArr<
+              M,
+              typeof subscriptionQuery
+            >(
+              this.tripleStore,
+              subscriptionQuery,
+              initialFetchExecutionContext(),
+              subscribeTriplesOptions
+            );
+            triples = deltaTriples;
           } else {
             const executionContext = initialFetchExecutionContext();
             // const resultOrder = await loadQuery<M, Q>(
