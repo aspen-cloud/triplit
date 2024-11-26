@@ -1,5 +1,11 @@
 # @triplit/db
 
+## 0.5.12
+
+### Patch Changes
+
+- bb973df7: Use new, efficient refetching strategy for queries that reconnect with existing caches
+
 ## 0.5.11
 
 ### Patch Changes
