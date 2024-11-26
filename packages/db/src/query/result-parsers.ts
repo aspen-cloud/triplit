@@ -50,6 +50,10 @@ export function getEntitiesFromContext(
   return results;
 }
 
+/**
+ * Returns a map of entity ids to the triples that are associated with them
+ * This
+ */
 export function getResultTriplesFromContext<
   M extends Models,
   Q extends SchemaQueries<M>,
@@ -67,6 +71,7 @@ export function getResultTriplesFromContext<
     if (!cachedEntity) continue;
 
     // TODO: filter down triples by selection or just include all?
+    // For now i think we dont
     const entityTriples = [...cachedEntity.entity.triples];
 
     // Load inclusions
@@ -84,9 +89,12 @@ export function getResultTriplesFromContext<
         executionContext
       );
 
-      // TODO: ensure these triples are de-duped...like if you load the same entity mulitple times in subqueries
-      for (const triple of Array.from(subqueryResult.values()).flat()) {
-        entityTriples.push(triple);
+      // Load subquery results into the parent query triple map
+      // TO de-dupe, we are checking if the entity already has triples and assuming that all triples are included because select doesnt filter down triples
+      for (const [entityId, entityTriples] of subqueryResult) {
+        if (!triples.has(entityId)) {
+          triples.set(entityId, entityTriples);
+        }
       }
     }
     triples.set(entityId, entityTriples);

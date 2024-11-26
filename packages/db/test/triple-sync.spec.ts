@@ -12,6 +12,7 @@ import { Schema as S } from '../src/schema/builder.js';
 import { faker } from '@faker-js/faker';
 import { shuffleArray } from './utils/data.js';
 import { prepareQuery } from '../src/query/prepare.js';
+import { createEntityCache } from '../src/db/entity-cache.js';
 
 const SCHOOL_SCHEMA = {
   collections: {
@@ -107,6 +108,7 @@ describe.each([
 ])('%s', ({ fetchSyncTriples }) => {
   describe('CollectionName', () => {
     it('A client can query data in a collection', async () => {
+      const entityCache = createEntityCache({ capacity: 1000 });
       // setup a server db with state
       const serverClock = new DurableClock(undefined, 'server');
       const serverDB = new DB({ clock: serverClock });
@@ -136,6 +138,7 @@ describe.each([
           query,
           initialFetchExecutionContext(),
           {
+            entityCache,
             stateVector,
             session: {
               systemVars: serverDB.systemVars,
@@ -446,9 +449,11 @@ describe.each([
   });
 
   describe('Include', () => {
-    it.todo(
-      'Adding / removing an item that matches an include statement',
-      async () => {
+    if (fetchSyncTriples.name === 'fetchSyncTriplesReplay') {
+      // TODO: This does not work with replay right now
+      it.todo('Adding / removing an item that matches an include statement');
+    } else {
+      it('Adding / removing an item that matches an include statement', async () => {
         const serverClock = new DurableClock(undefined, 'server');
         const serverDB = new DB({ clock: serverClock, schema: SCHOOL_SCHEMA });
 
@@ -529,7 +534,7 @@ describe.each([
           await serverDB.update('classes', '1', (entity) => {
             entity.student_ids.add('3');
           });
-          await performSync();
+          const trips = await performSync();
           expect(subFires.length).toEqual(3);
           expect(subFires.at(-1).length).toEqual(1);
           expect(subFires.at(-1)[0].students.length).toEqual(3);
@@ -554,8 +559,9 @@ describe.each([
           expect(subFires.at(-1).length).toEqual(1);
           expect(subFires.at(-1)[0].students.length).toEqual(1);
         }
-      }
-    );
+      });
+    }
+
     it.todo('Updates to included data are sent');
     it.todo('Adding an item to a query contains included data');
     describe('Nested includes', () => {
@@ -563,6 +569,85 @@ describe.each([
       it.todo('Updates to included data are sent');
       it.todo('Adding an item to a query contains included data');
     });
+  });
+
+  it('A client can query data in a collection (with entity cache)', async () => {
+    const entityCache = createEntityCache({ capacity: 1000 });
+    // setup a server db with state
+    const serverClock = new DurableClock(undefined, 'server');
+    const serverDB = new DB({ clock: serverClock });
+    await serverDB.transact(async (tx) => {
+      for (let i = 0; i < 50; i++) {
+        await tx.insert('a', { id: i.toString(), name: `a-${i}` });
+        await tx.insert('b', { id: i.toString(), name: `b-${i}` });
+      }
+    });
+    // setup an empty client db
+    const clientClock = new DurableClock(undefined, 'client');
+    const clientDB = new DB({ clock: clientClock });
+
+    // setup subscription
+    const query = clientDB.query('a').build();
+    const subFires = [];
+    clientDB.subscribe(query, (results) => {
+      subFires.push(results);
+    });
+
+    const stateVector = new Map<string, number>();
+
+    let i = 0;
+    async function performSync() {
+      const deltaTriples = await fetchSyncTriples(
+        serverDB.tripleStore,
+        query,
+        initialFetchExecutionContext(),
+        {
+          entityCache,
+          stateVector,
+          session: {
+            systemVars: serverDB.systemVars,
+            roles: undefined,
+          },
+        }
+      );
+      console.log(`sync ${i}`, deltaTriples.length);
+      updateStateVector(stateVector, deltaTriples);
+      await clientDB.tripleStore.insertTriples(deltaTriples);
+      i++;
+      await pause();
+      return deltaTriples;
+    }
+
+    // Step 1: No data, get data
+    {
+      await performSync();
+      expect(subFires.length).toEqual(2);
+      expect(subFires.at(-1).length).toEqual(50);
+    }
+
+    // Step 2: Server adds an entity in collection A
+    await serverDB.insert('a', { id: '50', name: 'a-50' });
+    {
+      await performSync();
+      expect(subFires.length).toEqual(3);
+      expect(subFires.at(-1).length).toEqual(51);
+    }
+
+    // Step 3: Server deletes an entity in collection A
+    await serverDB.delete('a', '0');
+    {
+      await performSync();
+      expect(subFires.length).toEqual(4);
+      expect(subFires.at(-1).length).toEqual(50);
+    }
+
+    // Step 4: Server adds an entity in collection B
+    await serverDB.insert('b', { id: '50', name: 'b-50' });
+    {
+      await performSync();
+      expect(subFires.length).toEqual(4);
+      expect(subFires.at(-1).length).toEqual(50);
+    }
   });
 });
 
