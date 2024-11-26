@@ -52,7 +52,7 @@ export function getEntitiesFromContext(
 
 /**
  * Returns a map of entity ids to the triples that are associated with them
- * This
+ * The data is not nested based on the results of the query
  */
 export function getResultTriplesFromContext<
   M extends Models,
