@@ -1,5 +1,11 @@
 # @triplit/db
 
+## 0.5.13
+
+### Patch Changes
+
+- 7bbc8e53: ignore entity cache when state vector is present
+
 ## 0.5.12
 
 ### Patch Changes
