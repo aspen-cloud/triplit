@@ -10,6 +10,7 @@ import {
   schemaToJSON,
   UserTypeOptions,
   Roles,
+  StringTypeOptions,
 } from '@triplit/db';
 import { blue } from 'ansis/colors';
 
@@ -167,7 +168,7 @@ function schemaItemToString(schemaItem: {
   let result = '';
   switch (type) {
     case 'string':
-      result = `S.String(${valueOptionsToString(attribute.options)})`;
+      result = `S.String(${valueOptionsToString(attribute.options, 'string')})`;
       break;
     case 'boolean':
       result = `S.Boolean(${valueOptionsToString(attribute.options)})`;
@@ -230,15 +231,28 @@ function wrapOptional(type: string, optional: boolean) {
   return optional ? `S.Optional(${type})` : type;
 }
 
-function valueOptionsToString(options: UserTypeOptions): string {
+function valueOptionsToString(
+  options: UserTypeOptions,
+  valueType: 'string' | undefined = undefined
+): string {
   const { nullable, default: defaultValue } = options;
   const result: string[] = [];
   if (nullable !== undefined) result.push(`nullable: ${nullable}`);
   if (defaultValue !== undefined)
     result.push(`default: ${defaultValueToString(defaultValue)}`);
+  if (valueType === 'string') {
+    result.push(...parseStringOptions(options));
+  }
   // wrap in braces if there are options
   if (result.length) return `{${result.join(', ')}}`;
   return '';
+}
+
+function parseStringOptions(options: StringTypeOptions<any>) {
+  const { enum: enumValue } = options;
+  const result: string[] = [];
+  if (enumValue) result.push(`enum: ${JSON.stringify(enumValue)} as const`);
+  return result;
 }
 
 type Defined<T> = T extends undefined ? never : T;
