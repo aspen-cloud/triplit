@@ -59,8 +59,8 @@ Your Triplit client needs to send the JWT token issued by Clerk with each reques
 auth.getToken().then(async (token) => {
   // If token has changed, end the current session and start a new one
   if (token !== client.token) {
-    client.endSession();
-    if (client.token) {
+    await client.endSession();
+    if (token) {
       await client.startSession(token, true, { refreshHandler: auth.getToken });
     }
   }

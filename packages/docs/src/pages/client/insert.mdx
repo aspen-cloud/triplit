@@ -17,7 +17,7 @@ const { txId, output } = await client.insert('employee', {
 
 The `id` field in Triplit is a special field that is used to uniquely identify records and is required on entities. If you do not provide an id, one will be generated for you.
 
-The `insert` method may also be used to upsert an existing record when used in a schemaless database or in conjuction with [optional attributes](/schemas/types#optional). For example:
+The `insert` method may also be used to upsert an existing record when used in a schemaless database or in conjunction with [optional attributes](/schemas/types#optional). For example:
 
 ```typescript
 const schema = {
