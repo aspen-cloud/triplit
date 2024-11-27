@@ -1,5 +1,11 @@
 # @triplit/db
 
+## 0.5.14
+
+### Patch Changes
+
+- b2b3eae5: use requery strategy for all triple subscription fetches
+
 ## 0.5.13
 
 ### Patch Changes
