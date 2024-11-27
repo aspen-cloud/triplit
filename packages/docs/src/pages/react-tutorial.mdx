@@ -135,7 +135,11 @@ Now restart the development server by pressing `Ctrl + C` and running `npx tripl
 
 We're basically done setting up Triplit. Now we can start building the app.
 
-Note: The dev server automatically picks up on schema changes. If you're using Triplit Cloud, run `npx triplit schema push` to make the triplit server aware of the schema you've defined.
+<Callout emoji="💡">
+  The development server automatically loads your schema on startup. If you're
+  using Triplit Cloud, run `npx triplit schema push` to make the remote server
+  aware of the schema you've defined.
+</Callout>
 
 ## Building the app
 
@@ -452,7 +456,11 @@ export default function App() {
           Add Todo
         </button>
       </form>
-      <div>{todos?.map((todo) => <Todo key={todo.id} todo={todo} />)}</div>
+      <div>
+        {todos?.map((todo) => (
+          <Todo key={todo.id} todo={todo} />
+        ))}
+      </div>
     </div>
   );
 }
