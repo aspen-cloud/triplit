@@ -1,5 +1,12 @@
 # @triplit/cli
 
+## 0.6.30
+
+### Patch Changes
+
+- e5ff046f: parse enum values in schema print
+- f3186500: Manual version bump for CLI dependencies
+
 ## 0.6.29
 
 ### Patch Changes
