@@ -77,29 +77,7 @@ describe('DurableClock', () => {
     currentTick = await clock.getCurrentTimestamp();
     expect(currentTick[0]).toBe(16);
   });
-  it('will reset on full clear', async () => {
-    const clock = new DurableClock('store', 'alice');
-    const db = new DB({ sources: { store: new MemoryStorage() }, clock });
-    let currentTick = await clock.getCurrentTimestamp();
-    await db.tripleStore.transact(async (tx) => {
-      const ts = await tx.getTransactionTimestamp();
-      await tx.insertTriple({
-        id: 'a',
-        attribute: ['b'],
-        value: 'c',
-        expired: false,
-        timestamp: ts,
-      });
-    });
-    currentTick = await clock.getCurrentTimestamp();
-    expect(currentTick).toEqual([1, 'alice']);
-    await db.clear({ full: true });
-    currentTick = await clock.getCurrentTimestamp();
-    expect(currentTick[0]).toBe(0);
-    expect(typeof currentTick[1] === 'string').toBe(true);
-    expect(currentTick[1]).not.toBe('alice');
-  });
-  it('will maintain clock on partial clear', async () => {
+  it('will reset on clear', async () => {
     const clock = new DurableClock('store', 'alice');
     const db = new DB({ sources: { store: new MemoryStorage() }, clock });
     let currentTick = await clock.getCurrentTimestamp();
@@ -117,8 +95,30 @@ describe('DurableClock', () => {
     expect(currentTick).toEqual([1, 'alice']);
     await db.clear();
     currentTick = await clock.getCurrentTimestamp();
-    expect(currentTick).toEqual([1, 'alice']);
+    expect(currentTick[0]).toBe(0);
+    expect(typeof currentTick[1] === 'string').toBe(true);
+    expect(currentTick[1]).not.toBe('alice');
   });
+  // it('will maintain clock on partial clear', async () => {
+  //   const clock = new DurableClock('store', 'alice');
+  //   const db = new DB({ sources: { store: new MemoryStorage() }, clock });
+  //   let currentTick = await clock.getCurrentTimestamp();
+  //   await db.tripleStore.transact(async (tx) => {
+  //     const ts = await tx.getTransactionTimestamp();
+  //     await tx.insertTriple({
+  //       id: 'a',
+  //       attribute: ['b'],
+  //       value: 'c',
+  //       expired: false,
+  //       timestamp: ts,
+  //     });
+  //   });
+  //   currentTick = await clock.getCurrentTimestamp();
+  //   expect(currentTick).toEqual([1, 'alice']);
+  //   await db.clear();
+  //   currentTick = await clock.getCurrentTimestamp();
+  //   expect(currentTick).toEqual([1, 'alice']);
+  // });
   it('clearing the db will not over supply onClear callbacks', async () => {
     // Memory clock
     // Memory schema

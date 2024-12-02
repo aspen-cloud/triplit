@@ -654,6 +654,10 @@ export class TripleStore<StoreKeys extends string = any>
             await scopedTx.insertTriple(triple);
           }
           for (const kv of localMetadataScan) {
+            // excluding clock metadata
+            if (kv.key[0] === 'metadata' && kv.key[1] === 'clock') {
+              continue;
+            }
             await scopedTx.tupleTx.set(kv.key, kv.value);
           }
         }
