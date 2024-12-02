@@ -1,5 +1,12 @@
 # @triplit/db
 
+## 0.5.15
+
+### Patch Changes
+
+- f3186500: reset clock on any db reset
+- e5ff046f: export StringTypeOptions
+
 ## 0.5.14
 
 ### Patch Changes

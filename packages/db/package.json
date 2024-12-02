@@ -3,7 +3,7 @@
   "repository": "github:aspen-cloud/triplit",
   "homepage": "https://triplit.dev",
   "license": "AGPL-3.0-only",
-  "version": "0.5.14",
+  "version": "0.5.15",
   "source": "./src/index.ts",
   "main": "./dist/index.js",
   "module": "./dist/index.js",
