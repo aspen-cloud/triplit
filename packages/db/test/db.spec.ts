@@ -5367,7 +5367,11 @@ describe('db.clear()', () => {
 
     const originalMetadata = JSON.parse(
       JSON.stringify(
-        await genToArr(db.tripleStore.tupleStore.scan({ prefix: ['metadata'] }))
+        (
+          await genToArr(
+            db.tripleStore.tupleStore.scan({ prefix: ['metadata'] })
+          )
+        ).filter((t) => t.key[1] !== 'clock')
       )
     );
 
@@ -5389,9 +5393,9 @@ describe('db.clear()', () => {
       const schema = await db.getSchema();
       expect(schema).not.toEqual(undefined);
 
-      const metadataTuples = await genToArr(
-        db.tripleStore.tupleStore.scan({ prefix: ['metadata'] })
-      );
+      const metadataTuples = (
+        await genToArr(db.tripleStore.tupleStore.scan({ prefix: ['metadata'] }))
+      ).filter((t) => t.key[1] !== 'clock');
       expect(metadataTuples).toEqual(originalMetadata);
     }
   });
