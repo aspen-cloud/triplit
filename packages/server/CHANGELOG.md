@@ -1,5 +1,14 @@
 # @triplit/server
 
+## 0.5.9
+
+### Patch Changes
+
+- Updated dependencies [a80dbe04]
+  - @triplit/db@0.5.17
+  - @triplit/client@0.6.10
+  - @triplit/server-core@0.5.20
+
 ## 0.5.8
 
 ### Patch Changes

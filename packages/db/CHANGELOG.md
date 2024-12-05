@@ -1,5 +1,11 @@
 # @triplit/db
 
+## 0.5.17
+
+### Patch Changes
+
+- a80dbe04: add additional checks to schema diffs
+
 ## 0.5.16
 
 ### Patch Changes
