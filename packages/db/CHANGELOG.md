@@ -1,5 +1,11 @@
 # @triplit/db
 
+## 0.5.16
+
+### Patch Changes
+
+- 4ccc6422: upgrade @sinclair/typebox
+
 ## 0.5.15
 
 ### Patch Changes
