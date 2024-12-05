@@ -1,5 +1,11 @@
 # @triplit/cli
 
+## 0.6.32
+
+### Patch Changes
+
+- a80dbe04: Manual version bump for CLI dependencies
+
 ## 0.6.31
 
 ### Patch Changes
