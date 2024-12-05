@@ -9570,6 +9570,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@sinclair/typebox@npm:^0.34.11":
+  version: 0.34.11
+  resolution: "@sinclair/typebox@npm:0.34.11"
+  checksum: 10/411f0501059050313219879d8135c37f0353900f5e00b48b38a295175070c0b167b63d01ccdccfa941bce271db34f52f423f97a341ae73ed4660e48b07f86cf4
+  languageName: node
+  linkType: hard
+
 "@sindresorhus/merge-streams@npm:^2.1.0":
   version: 2.3.0
   resolution: "@sindresorhus/merge-streams@npm:2.3.0"
@@ -10131,7 +10138,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@triplit/client@workspace:packages/client"
   dependencies:
-    "@sinclair/typebox": "npm:^0.32.15"
+    "@sinclair/typebox": "npm:^0.34.11"
     "@triplit/db": "workspace:^"
     "@triplit/types": "workspace:^"
     "@types/node": "npm:^20.4.0"
@@ -10235,7 +10242,7 @@ __metadata:
     "@cloudflare/workers-types": "npm:^4.20240129.0"
     "@faker-js/faker": "npm:^9.0.3"
     "@fast-check/vitest": "npm:^0.1.0"
-    "@sinclair/typebox": "npm:^0.32.15"
+    "@sinclair/typebox": "npm:^0.34.11"
     "@stryker-mutator/core": "npm:^7.3.0"
     "@stryker-mutator/vitest-runner": "npm:^7.3.0"
     "@triplit/tuple-database": "workspace:^"
