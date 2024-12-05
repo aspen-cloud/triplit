@@ -218,7 +218,9 @@ export function diffSchemas(
       }))
     );
     // Diff rules
-    const isRuleDiff = Diff(collectionA?.rules, collectionB?.rules).length > 0;
+    const isRuleDiff =
+      !!collectionA?.rules !== !!collectionB?.rules ||
+      Diff(collectionA?.rules, collectionB?.rules).length > 0;
     if (isRuleDiff)
       diff.push({
         _diff: 'collectionRules',
@@ -226,6 +228,7 @@ export function diffSchemas(
       });
     // Diff permissions
     const isPermissionDiff =
+      !!collectionA?.permissions !== !!collectionB?.permissions ||
       Diff(collectionA?.permissions, collectionB?.permissions).length > 0;
     if (isPermissionDiff)
       diff.push({
@@ -235,7 +238,9 @@ export function diffSchemas(
   }
 
   // Diff roles
-  const isRoleDiff = Diff(schemaA.roles, schemaB.roles).length > 0;
+  const isRoleDiff =
+    !!schemaA.roles !== !!schemaB.roles ||
+    Diff(schemaA.roles, schemaB.roles).length > 0;
   if (isRoleDiff)
     diff.push({
       _diff: 'roles',
