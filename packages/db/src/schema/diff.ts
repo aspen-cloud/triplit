@@ -218,18 +218,18 @@ export function diffSchemas(
       }))
     );
     // Diff rules
-    const isRuleDiff =
-      !!collectionA?.rules !== !!collectionB?.rules ||
-      Diff(collectionA?.rules, collectionB?.rules).length > 0;
+    const isRuleDiff = areDifferent(collectionA?.rules, collectionB?.rules);
     if (isRuleDiff)
       diff.push({
         _diff: 'collectionRules',
         collection,
       });
     // Diff permissions
-    const isPermissionDiff =
-      !!collectionA?.permissions !== !!collectionB?.permissions ||
-      Diff(collectionA?.permissions, collectionB?.permissions).length > 0;
+    const isPermissionDiff = areDifferent(
+      collectionA?.permissions,
+      collectionB?.permissions
+    );
+
     if (isPermissionDiff)
       diff.push({
         _diff: 'collectionPermissions',
@@ -238,15 +238,22 @@ export function diffSchemas(
   }
 
   // Diff roles
-  const isRoleDiff =
-    !!schemaA.roles !== !!schemaB.roles ||
-    Diff(schemaA.roles, schemaB.roles).length > 0;
+  const isRoleDiff = areDifferent(schemaA.roles, schemaB.roles);
   if (isRoleDiff)
     diff.push({
       _diff: 'roles',
     });
 
   return diff;
+}
+
+function areDifferent(a: any, b: any): boolean {
+  // Both undefined, no diff
+  if (!a && !b) return false;
+  // One is undefined, diff
+  if (!a || !b) return true;
+  // Diff requires both to be objects
+  return Diff(a, b).length > 0;
 }
 
 type ALLOWABLE_DATA_CONSTRAINTS =
