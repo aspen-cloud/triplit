@@ -98,7 +98,23 @@ config.resolver.resolveRequest = customResolver;
 module.exports = config;
 ```
 
-### 3. Configure polyfills
+### 3. Configure Babel (optional)
+
+If you are building for the web, you'll need to update a babel configuration file. At the root of your Expo project, create a `babel.config.js` file with the following content:
+
+```javascript
+module.exports = function (api) {
+  api.cache(true);
+  return {
+    presets: ['babel-preset-expo'],
+    assumptions: {
+      enumerableModuleMeta: true,
+    },
+  };
+};
+```
+
+### 4. Configure polyfills
 
 Triplit was originally built to run in web browsers, so a few APIs are used in some core packages and dependencies that are not in the ECMAScript spec that Hermes implements. So you will need to add some polyfills to your project. We list some polyfills below, but you may use other packages or write your own.
 
