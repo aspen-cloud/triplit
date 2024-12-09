@@ -360,7 +360,7 @@ export function fetchResultToJS<
 }
 
 export function isValueVariable(value: QueryValue): value is string {
-  return typeof value === 'string' && value.startsWith('$');
+  return typeof value === 'string' && value[0] === '$';
 }
 
 export function isValueReferentialVariable(value: QueryValue): value is string {
