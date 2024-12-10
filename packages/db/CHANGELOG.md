@@ -1,5 +1,11 @@
 # @triplit/db
 
+## 0.5.18
+
+### Patch Changes
+
+- 398da292: adjust schema diffing for relations and speed up data validation
+
 ## 0.5.17
 
 ### Patch Changes
