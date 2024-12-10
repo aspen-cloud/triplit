@@ -506,8 +506,8 @@ async function detectAttributeSatisfiesEnum(
   const allEntities = await tx.fetch(
     tx.db
       .query(collectionName)
-      .select([attribute.join('.')])
       .where(attribute.join('.'), 'nin', enumArray)
+      .limit(1)
       .build(),
     { skipRules: true }
   );
@@ -522,14 +522,12 @@ async function detectAttributeHasNoUndefined(
   const allEntities = await tx.fetch(
     tx.db
       .query(collectionName)
-      .select([attribute.join('.')])
+      .where(attribute.join('.'), 'isDefined', false)
+      .limit(1)
       .build(),
     { skipRules: true }
   );
-  return !Array.from(allEntities.values()).some(
-    (entity) =>
-      ValuePointer.Get(entity, '/' + attribute.join('/')) === undefined
-  );
+  return allEntities.length === 0;
 }
 
 async function detectAttributeIsEmpty(
@@ -540,13 +538,12 @@ async function detectAttributeIsEmpty(
   const allEntities = await tx.fetch(
     tx.db
       .query(collectionName)
-      .select([attribute.join('.')])
+      .where(attribute.join('.'), 'isDefined', true)
+      .limit(1)
       .build(),
     { skipRules: true }
   );
-  return Array.from(allEntities.values()).every((entity) => {
-    return ValuePointer.Get(entity, '/' + attribute.join('/')) === undefined;
-  });
+  return allEntities.length === 0;
 }
 
 async function detectAttributeHasNoNull(
@@ -557,7 +554,6 @@ async function detectAttributeHasNoNull(
   const allEntities = await tx.fetch(
     tx.db
       .query(collectionName)
-      .select([attribute.join('.')])
       .where(attribute.join('.'), '=', null)
       .limit(1)
       .build(),
@@ -571,7 +567,7 @@ async function detectCollectionIsEmpty(
   collectionName: string
 ) {
   const allEntities = await tx.fetch(
-    tx.db.query(collectionName).select([]).limit(1).build(),
+    tx.db.query(collectionName).select(['id']).limit(1).build(),
     { skipRules: true }
   );
   return allEntities.length === 0;
