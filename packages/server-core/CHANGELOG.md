@@ -1,5 +1,13 @@
 # @triplit/server-core
 
+## 0.5.22
+
+### Patch Changes
+
+- 6d348d3d: Add `--failOnBackwardsIncompatibleChange` to @triplit/CLI `schema push` command
+- Updated dependencies [6d348d3d]
+  - @triplit/db@0.5.19
+
 ## 0.5.21
 
 ### Patch Changes
