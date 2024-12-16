@@ -1,5 +1,12 @@
 # @triplit/cli
 
+## 0.6.34
+
+### Patch Changes
+
+- 6d348d3d: Add `--failOnBackwardsIncompatibleChange` to @triplit/CLI `schema push` command
+- 6d348d3d: Manual version bump for CLI dependencies
+
 ## 0.6.33
 
 ### Patch Changes

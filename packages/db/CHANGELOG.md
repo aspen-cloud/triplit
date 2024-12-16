@@ -1,5 +1,11 @@
 # @triplit/db
 
+## 0.5.19
+
+### Patch Changes
+
+- 6d348d3d: Add `--failOnBackwardsIncompatibleChange` to @triplit/CLI `schema push` command
+
 ## 0.5.18
 
 ### Patch Changes
