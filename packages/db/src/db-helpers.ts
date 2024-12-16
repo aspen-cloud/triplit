@@ -186,7 +186,8 @@ export async function readSchemaFromTripleStore<M extends Models = Models>(
 
 export async function overrideStoredSchema<M extends Models>(
   db: DB<M>,
-  schema: StoreSchema<M> | undefined
+  schema: StoreSchema<M> | undefined,
+  { failOnBackwardsIncompatibleChange = false } = {}
 ): Promise<{
   successful: boolean;
   issues: PossibleDataViolations[];
@@ -203,6 +204,12 @@ export async function overrideStoredSchema<M extends Models>(
         if (diff.length === 0) return { successful: true, issues };
 
         issues = await getSchemaDiffIssues(tx, diff);
+
+        // TODO if `failOnBackwardsIncompatibleChange` is true, we should skip
+        // data checks for faster performance
+        if (failOnBackwardsIncompatibleChange && issues.length > 0) {
+          return { successful: false, issues };
+        }
         if (
           issues.length > 0 &&
           issues.some((issue) => issue.violatesExistingData)

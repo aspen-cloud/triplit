@@ -111,9 +111,17 @@ export class Session {
     // TODO: better message (maybe error about invalid parameters?)
     return ServerResponse(400, new TriplitError('Invalid format').toJSON());
   }
-  async overrideSchema(params: { schema: any }) {
+  async overrideSchema(
+    params: { schema: any } & Parameters<
+      typeof TriplitDB.prototype.overrideSchema
+    >[1]
+  ) {
     if (!hasAdminAccess(this.token)) return NotAdminResponse();
-    const result = await this.db.overrideSchema(JSONToSchema(params.schema));
+    const { schema, ...options } = params;
+    const result = await this.db.overrideSchema(
+      JSONToSchema(params.schema),
+      options
+    );
     return ServerResponse(result.successful ? 200 : 409, result);
   }
 
