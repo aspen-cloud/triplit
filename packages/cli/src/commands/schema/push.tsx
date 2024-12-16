@@ -15,6 +15,12 @@ export default Command({
       required: false,
       default: false,
     }),
+    printIssues: Flag.Boolean({
+      description: 'Print issues even if successful',
+      char: 'p',
+      required: false,
+      default: false,
+    }),
   },
   run: async ({ ctx, flags }) => {
     const localSchema = schemaToJSON({
@@ -40,11 +46,16 @@ export default Command({
       process.exit(1);
     }
     logSchemaChangeViolations(data.successful, data.issues, {
-      warn: (message, ...args) => console.log(Colors.yellow(message), ...args),
-      info: (message, ...args) => console.log(Colors.blue(message), ...args),
-      error: (message, ...args) => console.log(Colors.red(message), ...args),
-      debug: () => {},
-      scope: () => this,
+      forcePrintIssues:
+        flags.failOnBackwardsIncompatibleChange || flags.printIssues,
+      logger: {
+        warn: (message, ...args) =>
+          console.log(Colors.yellow(message), ...args),
+        info: (message, ...args) => console.log(Colors.blue(message), ...args),
+        error: (message, ...args) => console.log(Colors.red(message), ...args),
+        debug: () => {},
+        scope: () => this,
+      },
     });
     if (!data.successful) {
       process.exit(1);

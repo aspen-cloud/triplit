@@ -736,7 +736,7 @@ export default class DB<M extends Models = Models> {
       schema,
       options
     );
-    logSchemaChangeViolations(successful, issues, this.logger);
+    logSchemaChangeViolations(successful, issues, { logger: this.logger });
     return { successful, issues };
   }
 
