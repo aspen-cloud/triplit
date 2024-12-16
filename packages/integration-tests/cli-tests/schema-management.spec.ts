@@ -1,5 +1,5 @@
 import { $ } from 'execa';
-import { it, expect, beforeEach } from 'vitest';
+import { it, expect, beforeEach, describe } from 'vitest';
 import path from 'path';
 import {
   schemaFileContentFromSchema,
@@ -85,34 +85,102 @@ beforeEach(async () => {
   await emptyDir(triplitPath);
 });
 
-it(
-  'can push initial local changes to the server',
-  async () => {
-    await withServerAndCtx({ port: PORT }, async (ctx) => {
-      // write local schema
-      await writeLocalSchema({
-        test: {
-          schema: S.Schema({
-            id: S.Id(),
-            attr: S.String(),
-          }),
-        },
+describe('schema push', () => {
+  it(
+    'can push local schema to remote',
+    async () => {
+      await withServerAndCtx({ port: PORT }, async (ctx) => {
+        // write local schema
+        await writeLocalSchema({
+          test: {
+            schema: S.Schema({
+              id: S.Id(),
+              attr: S.String(),
+            }),
+          },
+        });
+
+        // Remote schema starts as empty
+        {
+          const schema = await readRemoteSchema();
+          expect(schema).toBeUndefined();
+        }
+
+        // push local schema
+        await $shell`yarn triplit schema push`;
+
+        {
+          const { schema: collections } = await readRemoteSchema();
+          expect(Object.keys(collections)).toEqual(['test']);
+        }
       });
+    },
+    { timeout: 10000 }
+  );
+  it(
+    'will throw if a backwards incompatible change is made a with the --failOnBackwardsIncompatibleChange flag set',
+    async () => {
+      await withServerAndCtx({ port: PORT }, async (ctx) => {
+        // write local schema
+        await writeLocalSchema({
+          test: {
+            schema: S.Schema({
+              id: S.Id(),
+              attr: S.String(),
+              relation: S.RelationById('relatedCollection', '$attr'),
+            }),
+          },
+          relatedCollection: {
+            schema: S.Schema({
+              id: S.Id(),
+            }),
+          },
+        });
 
-      // Remove schema starts as empty
-      {
-        const schema = await readRemoteSchema();
-        expect(schema).toBeUndefined();
-      }
+        // Remote schema starts as empty
+        {
+          const schema = await readRemoteSchema();
+          expect(schema).toBeUndefined();
+        }
 
-      // push local schema
-      await $shell`yarn triplit schema push`;
+        // push local schema
+        await expect(
+          $shell`yarn triplit schema push --failOnBackwardsIncompatibleChange`
+        ).resolves.not.toThrow();
 
-      {
-        const { schema: collections } = await readRemoteSchema();
-        expect(Object.keys(collections)).toEqual(['test']);
-      }
-    });
-  },
-  { timeout: 10000 }
-);
+        {
+          const { schema: collections } = await readRemoteSchema();
+          expect(Object.keys(collections)).toEqual([
+            'relatedCollection',
+            'test',
+          ]);
+        }
+        await writeLocalSchema({
+          test: {
+            schema: S.Schema({
+              id: S.Id(),
+              attr: S.String(),
+              // remove relation
+              // relation: S.RelationById('relatedCollection', '$attr'),
+            }),
+          },
+          relatedCollection: {
+            schema: S.Schema({
+              id: S.Id(),
+            }),
+          },
+        });
+
+        // removing a relation is backwards incompatible but not corrupting, so it should not throw
+        // by default, but will with the flag
+        await expect(
+          $shell`yarn triplit schema push --failOnBackwardsIncompatibleChange`
+        ).rejects.toThrow();
+
+        // without the flag, it shouldn't throw
+        await expect($shell`yarn triplit schema push`).resolves.not.toThrow();
+      });
+    },
+    { timeout: 10000 }
+  );
+});

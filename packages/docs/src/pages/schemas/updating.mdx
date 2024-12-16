@@ -183,3 +183,7 @@ Triplit will prevent you from changing an attribute from nullable to non-nullabl
 ### Changing a string to an enum string or updating an enum
 
 Triplit will prevent you from changing a string to an enum string or updating an enum if there are existing entities in the collection with values that are not in the new enum. In production, update all of the existing entities to have a value that is in the new enum and then you will be able to make the change.
+
+### Removing a relation
+
+Because relations in Triplit are just views on data in other collections, removing a relation will not corrupt data but can still lead to backward-incompatible behavior between client and server. For instance, if the server's schema is updated to remove a relation, but an out-of-date client continues to issues queries with clauses that reference that relation, such as `include`, a relational `where` filter, or an `exists` filter, the server will reject those queries. In production, you may need to deprecate clients that are still using the old relation and force them to update the app with the new schema bundled in.
