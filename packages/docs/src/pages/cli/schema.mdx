@@ -9,9 +9,10 @@ triplit schema push
 Apply the local schema to the server
 
 Flags:
+--failOnBackwardsIncompatibleChange Fail if there is a backwards incompatible change
 --token, -t Service Token
 --remote, -r Remote URL to connect to
---schemaPath, -P File path to the schema file
+--schemaPath, -P File path to the local schema file
 --noSchema, -N Do not load a schema file
 ```
 
@@ -28,7 +29,7 @@ Flags:
     Options: json, typescript, json-schema (default: typescript)
 --token, -t Service Token
 --remote, -r Remote URL to connect to
---schemaPath, -P File path to the schema file
+--schemaPath, -P File path to the local schema file
 --noSchema, -N Do not load a schema file
 ```
 
@@ -41,6 +42,6 @@ Show the diff between local and remote schema
 Flags:
 --token, -t Service Token
 --remote, -r Remote URL to connect to
---schemaPath, -P File path to the schema file
+--schemaPath, -P File path to the local schema file
 --noSchema, -N Do not load a schema file
 ```
