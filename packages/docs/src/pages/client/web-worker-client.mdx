@@ -22,7 +22,7 @@ const client = new WorkerClient({
 To use it in [Vite](https://vitejs.dev), you need to import an additional parameter `workerUrl`, which helps the Vite build process to correctly bundle the Web Worker:
 
 ```ts {3,6} copy
-import { WorkerClient } from '@triplit/client';
+import { WorkerClient } from '@triplit/client/worker-client';
 import { schema } from './schema';
 import workerUrl from '@triplit/client/worker-client-operator?url';
 
