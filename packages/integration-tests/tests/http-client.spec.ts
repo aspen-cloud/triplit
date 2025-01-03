@@ -412,6 +412,15 @@ it('fetch properly deserializes data based on schema', async () => {
     const result = await client.fetchById('test', 'test1');
     expect(result).toEqual(expectedResult);
   }
+
+  // Fetch with selection
+  {
+    const result = await client.fetch({
+      collectionName: 'test',
+      select: ['id'],
+    });
+    expect(result).toEqual([{ id: 'test1' }]);
+  }
 });
 
 it('fetch can properly deserialize subqueries with schema', async () => {

@@ -8,6 +8,8 @@ import {
   appendCollectionToId,
   EntityId,
   JSONToSchema,
+  Models,
+  Model,
 } from '@triplit/db';
 import { RouteNotFoundError, ServiceKeyRequiredError } from './errors.js';
 import { isTriplitError } from './utils.js';
@@ -161,7 +163,8 @@ export class Session {
       const collectionSchema = schema?.[collectionName]?.schema;
       const data = result.map((entity) => {
         const jsonEntity = collectionSchema
-          ? collectionSchema.convertJSToJSON(entity, schema)
+          ? // Based on select, you may not have a full entity
+            convertPartialToJSON(entity, collectionSchema, schema)
           : entity;
         const entityId = jsonEntity.id;
         if (hasSelectWithoutId && jsonEntity.id) {
@@ -393,6 +396,20 @@ export class Session {
       });
     }
   }
+}
+
+// A query result may be partial due to select
+function convertPartialToJSON<T>(
+  partial: any,
+  collectionSchema: Model,
+  schema: Models
+): any {
+  return Object.fromEntries(
+    Object.entries(partial).map(([k, v]) => {
+      const propDef = collectionSchema.properties[k];
+      return [k, propDef ? propDef.convertJSToJSON(v, schema) : v];
+    })
+  );
 }
 
 export function throttle(callback: () => void, delay: number) {
