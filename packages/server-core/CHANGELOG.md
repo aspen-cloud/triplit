@@ -1,5 +1,13 @@
 # @triplit/server-core
 
+## 0.5.23
+
+### Patch Changes
+
+- a23fcc9d: handle selection over http api
+- Updated dependencies [4ef05ec3]
+  - @triplit/db@0.5.20
+
 ## 0.5.22
 
 ### Patch Changes

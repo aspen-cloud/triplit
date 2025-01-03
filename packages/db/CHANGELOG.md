@@ -1,5 +1,11 @@
 # @triplit/db
 
+## 0.5.20
+
+### Patch Changes
+
+- 4ef05ec3: fixup typebox
+
 ## 0.5.19
 
 ### Patch Changes
