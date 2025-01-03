@@ -18,6 +18,11 @@
       "types": "./dist/types/storage/*.d.ts",
       "require": "./dist/storage/*.js",
       "import": "./dist/storage/*.js"
+    },
+    "./collection-query.js": {
+      "types": "./dist/types/collection-query.d.ts",
+      "require": "./dist/collection-query.js",
+      "import": "./dist/collection-query.js"
     }
   },
   "typesVersions": {
@@ -27,6 +32,9 @@
       ],
       ".": [
         "./dist/types/index.d.ts"
+      ],
+      "./collection-query.js": [
+        "./dist/types/collection-query.d.ts"
       ]
     }
   },
