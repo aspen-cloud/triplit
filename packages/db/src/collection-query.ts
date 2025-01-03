@@ -51,7 +51,7 @@ import {
   TripleRow,
   TupleValue,
 } from './triple-store-utils.js';
-import { Equal } from '@sinclair/typebox/value';
+import { Value as TBValue } from '@sinclair/typebox/value';
 import { MIN, encodeValue } from '@triplit/tuple-database';
 import { QueryBuilder } from './query/builder.js';
 import {
@@ -1909,7 +1909,7 @@ export async function subscribeEntities<
         executionContext,
         { ...options, session: { ...sessionOptions, systemVars: vars } }
       );
-      if (Equal(updatedQuery.where, localQuery.where)) return;
+      if (TBValue.Equal(updatedQuery.where, localQuery.where)) return;
       localQuery = updatedQuery;
       sessionOptions.systemVars = vars;
       await initializeSubscriptionState();
@@ -2052,7 +2052,7 @@ export async function applyTriplesToSubscribedQuery<
     else if (
       isInPreviousResult &&
       isInNextResult &&
-      !Equal(prevData, entity.data)
+      !TBValue.Equal(prevData, entity.data)
     ) {
       // Result changes already handled
       // Change triples already handled
@@ -2256,7 +2256,7 @@ export function subscribe<M extends Models, Q extends CollectionQuery<M>>(
         executionContext,
         { ...options, session: { ...sessionOptions, systemVars: vars } }
       );
-      if (Equal(updatedQuery.where, where)) return;
+      if (TBValue.Equal(updatedQuery.where, where)) return;
       sessionOptions.systemVars = vars;
       await initializeSubscriptionState();
     },

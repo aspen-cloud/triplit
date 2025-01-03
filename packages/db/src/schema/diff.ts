@@ -1,5 +1,5 @@
 import { Model, Models, StoreSchema } from './types/index.js';
-import { Value as TBValue, ValuePointer, Diff } from '@sinclair/typebox/value';
+import { Value as TBValue } from '@sinclair/typebox/value';
 import { UserTypeOptions } from '../data-types/types/index.js';
 import { DBTransaction } from '../db-transaction.js';
 
@@ -253,7 +253,7 @@ function areDifferent(a: any, b: any): boolean {
   // One is undefined, diff
   if (!a || !b) return true;
   // Diff requires both to be objects
-  return Diff(a, b).length > 0;
+  return TBValue.Diff(a, b).length > 0;
 }
 
 type ALLOWABLE_DATA_CONSTRAINTS =
