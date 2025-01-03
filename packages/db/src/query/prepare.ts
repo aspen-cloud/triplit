@@ -64,7 +64,9 @@ export function prepareQuery<M extends Models, Q extends CollectionQuery<M>>(
   query: Q,
   schema: M | undefined,
   session: Session,
-  options: QueryPreparationOptions = {
+  options: QueryPreparationOptions & {
+    collectionsPermissionsChecked?: Set<string>;
+  } = {
     skipRules: false,
     bindSessionVariables: false,
   }
@@ -79,7 +81,13 @@ export function prepareQuery<M extends Models, Q extends CollectionQuery<M>>(
   const include = getQueryInclude(fetchQuery, schema, session, options);
 
   // Determine filters
-  const where = getQueryFilters(fetchQuery, schema, session, options);
+  const isPermissionAlreadyChecked = options.collectionsPermissionsChecked?.has(
+    fetchQuery.collectionName
+  );
+  const where = getQueryFilters(fetchQuery, schema, session, {
+    ...options,
+    skipRules: isPermissionAlreadyChecked || options.skipRules,
+  });
 
   // Determine order
   const order = getQueryOrder(fetchQuery, schema, options);
@@ -353,7 +361,14 @@ function getQueryFilters<M extends Models, Q extends CollectionQuery<M>>(
       ];
 
       return {
-        exists: prepareQuery(subquery, schema, session, options),
+        exists: prepareQuery(subquery, schema, session, {
+          ...options,
+          collectionsPermissionsChecked: new Set([
+            // @ts-expect-error
+            ...(options.collectionsPermissionsChecked ?? []),
+            query.collectionName,
+          ]),
+        }),
       };
     }
     if (!Array.isArray(statement)) return statement;
@@ -376,7 +391,14 @@ function getQueryFilters<M extends Models, Q extends CollectionQuery<M>>(
         }
         subquery.where = [...subquery.where, [path.join('.'), op, val]];
         return {
-          exists: prepareQuery(subquery, schema, session, options),
+          exists: prepareQuery(subquery, schema, session, {
+            ...options,
+            collectionsPermissionsChecked: new Set([
+              // @ts-expect-error
+              ...(options.collectionsPermissionsChecked ?? []),
+              query.collectionName,
+            ]),
+          }),
         };
       }
     }

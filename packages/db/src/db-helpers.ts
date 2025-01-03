@@ -84,11 +84,12 @@ export function replaceVariablesInFilterStatements<
   variables: Record<string, any>
 ): QueryWhere<M, CN> {
   return statements.map((filter) => {
-    if (isFilterGroup(filter))
+    if (isFilterGroup(filter)) {
       return {
         ...filter,
         filters: replaceVariablesInFilterStatements(filter.filters, variables),
       };
+    }
     if (isFilterStatement(filter)) {
       const replacedValue = replaceVariable(filter[2], variables);
       return [filter[0], filter[1], replacedValue];

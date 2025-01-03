@@ -5892,3 +5892,130 @@ describe('variable conflicts', () => {
     });
   });
 });
+
+describe('cyclical permissions', () => {
+  const schema: Models = {
+    users: {
+      schema: S.Schema({
+        id: S.Id(),
+      }),
+    },
+    events: {
+      schema: S.Schema({
+        id: S.Id(),
+        attendees: S.RelationMany('eventAttendees', {
+          where: [['eventId', '=', '$id']],
+        }),
+      }),
+      permissions: {
+        user: {
+          read: {
+            // Can see events that they are attending
+            filter: [['attendees.userId', '=', '$role.user_id']],
+          },
+        },
+      },
+    },
+    eventAttendees: {
+      schema: S.Schema({
+        id: S.Id(),
+        eventId: S.String(),
+        event: S.RelationById('events', '$eventId'),
+        userId: S.String(),
+        user: S.RelationById('users', '$userId'),
+      }),
+      permissions: {
+        user: {
+          read: {
+            // Can see event attendees of events that they are attending
+            filter: [['event.attendees.userId', '=', '$role.user_id']],
+          },
+        },
+      },
+    },
+  };
+
+  const db = new DB({
+    schema: {
+      roles: {
+        user: {
+          match: {
+            role: 'user',
+            userId: '$user_id',
+          },
+        },
+      },
+      collections: schema,
+      version: 0,
+    },
+  });
+
+  beforeAll(async () => {
+    await db.insert('users', { id: '1' }, { skipRules: true });
+    await db.insert('users', { id: '2' }, { skipRules: true });
+    await db.insert('users', { id: '3' }, { skipRules: true });
+    await db.insert('users', { id: '4' }, { skipRules: true });
+    await db.insert('events', { id: '1' }, { skipRules: true });
+    await db.insert('events', { id: '2' }, { skipRules: true });
+    await db.insert(
+      'eventAttendees',
+      { id: '1', eventId: '1', userId: '1' },
+      { skipRules: true }
+    );
+    await db.insert(
+      'eventAttendees',
+      { id: '2', eventId: '1', userId: '2' },
+      { skipRules: true }
+    );
+    await db.insert(
+      'eventAttendees',
+      { id: '3', eventId: '2', userId: '1' },
+      { skipRules: true }
+    );
+    await db.insert(
+      'eventAttendees',
+      { id: '4', eventId: '2', userId: '3' },
+      { skipRules: true }
+    );
+    await db.insert(
+      'eventAttendees',
+      { id: '5', eventId: '2', userId: '4' },
+      { skipRules: true }
+    );
+  });
+  const user1Session = db.withSessionVars({
+    role: 'user',
+    userId: '1',
+  });
+  const user2Session = db.withSessionVars({
+    role: 'user',
+    userId: '2',
+  });
+
+  it('can query events that a user is attending', async () => {
+    {
+      const result = await user1Session.fetch(db.query('events').build());
+      expect(result.length).toBe(2);
+      expect(result).toEqual([{ id: '1' }, { id: '2' }]);
+    }
+    {
+      const result = await user2Session.fetch(db.query('events').build());
+      expect(result.length).toBe(1);
+      expect(result).toEqual([{ id: '1' }]);
+    }
+  });
+  it('can query mutual attendees', async () => {
+    {
+      const result = await user1Session.fetch(
+        db.query('eventAttendees').build()
+      );
+      expect(result.length).toBe(5);
+    }
+    {
+      const result = await user2Session.fetch(
+        db.query('eventAttendees').build()
+      );
+      expect(result.length).toBe(2);
+    }
+  });
+});
