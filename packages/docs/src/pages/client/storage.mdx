@@ -124,4 +124,4 @@ async function clearCache() {
 }
 ```
 
-If you are clearing your cache because a user is signing out, it is recommended to use `client.reset()` as explained in the [auth guide](/auth#changing-users).
+If you are clearing your cache because a user is signing out, it is recommended to use this in conjuction with `client.endSession()` as explained in the [auth guide](/auth#modeling-sign-in-and-sign-out-flows).

@@ -124,6 +124,11 @@ const client = new TriplitClient({
   serverUrl: 'https://<project-id>.triplit.io',
   token: 'your-token',
 });
+
+// when ready to end session
+await client.endSession();
+// If signing out, it is recommended to also clear your local database
+await client.clear();
 ```
 
 <Callout>
