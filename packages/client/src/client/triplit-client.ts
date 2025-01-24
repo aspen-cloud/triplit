@@ -325,10 +325,10 @@ export class TriplitClient<M extends ClientSchema = ClientSchema> {
     if (onSessionError) {
       this.onSessionError(onSessionError);
     }
-    // Look into how calling connect / disconnect early is handled
-    this.db.ready.then(async () => {
-      token && (await this.startSession(token, autoConnect, refreshOptions));
-    });
+
+    if (token) {
+      this.startSession(token, autoConnect, refreshOptions);
+    }
 
     if (syncSchema) {
       this.subscribeBackground(
@@ -1232,12 +1232,13 @@ export class TriplitClient<M extends ClientSchema = ClientSchema> {
       }
       token = await refreshOptions.refreshHandler();
     }
-    // TODO: handle db readiness in lower level APIs
-    await this.db.ready;
 
     // Start the session with the provided token
     // Update the token on the client to the new token (this will close the current connection)
     this.updateToken(token);
+
+    // TODO: handle db readiness in lower level APIs
+    await this.db.ready;
 
     // Check if the role information for this token is the same as the last
     // If so, we don't need to reset the sync state

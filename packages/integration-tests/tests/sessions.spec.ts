@@ -1,6 +1,6 @@
 import { expect, it, describe, vi, afterAll, beforeAll } from 'vitest';
 import { tempTriplitServer } from '../utils/server.js';
-import { TriplitClient } from '@triplit/client';
+import { TriplitClient, WebSocketTransport } from '@triplit/client';
 import { WorkerClient } from '@triplit/client/worker-client';
 
 import { Roles, Schema as S } from '@triplit/db';
@@ -37,6 +37,59 @@ beforeAll(() => {
 
 afterAll(() => {
   vi.unstubAllEnvs();
+});
+
+describe('Session intialization', () => {
+  const DEFAULT_SCHEMA = {
+    collections: {
+      users: {
+        schema: S.Schema({
+          id: S.Id(),
+          name: S.String(),
+        }),
+      },
+    },
+  };
+  // We must be careful with async work to initialize the db that needs to be done before starting your session
+  it('Can initialize a disconnected client and then connect, only when the client is ready', async () => {
+    const token = await encodeToken(initialPayload, '30 min');
+    const connectSpy = vi.fn();
+    const stubTransport = new WebSocketTransport();
+    stubTransport.connect = connectSpy;
+    const client = new TriplitClient({
+      autoConnect: false,
+      schema: DEFAULT_SCHEMA.collections,
+      token,
+      transport: stubTransport,
+    });
+    client.connect();
+    await pause();
+    expect(connectSpy.mock.calls.length).toBe(1);
+    expect(connectSpy.mock.calls[0][0].token).toBe(token);
+  });
+  it('Can end a session and change the token after constructing', async () => {
+    const token = await encodeToken(initialPayload, '30 min');
+    const connectSpy = vi.fn();
+    const stubTransport = new WebSocketTransport();
+    stubTransport.connect = connectSpy;
+    const client = new TriplitClient({
+      // autoConnect: false,
+      schema: DEFAULT_SCHEMA.collections,
+      token,
+      transport: stubTransport,
+    });
+    await client.endSession();
+    const nextToken = await encodeToken(
+      {
+        different: 'payload',
+      },
+      '30 min'
+    );
+    await client.startSession(nextToken);
+    await pause(1000);
+    // TODO: could clean up the number of connect calls
+    expect(connectSpy.mock.calls.at(-1)[0].token).toBe(nextToken);
+  });
 });
 
 describe.each([TriplitClient, WorkerClient])('%O', (Client) => {
