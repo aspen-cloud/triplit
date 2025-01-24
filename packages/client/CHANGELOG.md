@@ -1,5 +1,11 @@
 # @triplit/client
 
+## 0.6.14
+
+### Patch Changes
+
+- 6ad22d9e: export transports, handle some additional session init conditions
+
 ## 0.6.13
 
 ### Patch Changes
