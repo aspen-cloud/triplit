@@ -36,6 +36,7 @@ import { Logger } from '@triplit/types/logger';
 import { FetchResult } from './query/types/index.js';
 import { genToArr } from './utils/generator.js';
 import { COLLECTION_MARKER, OBJECT_MARKER } from './entity.js';
+import { ValuePointer } from '@sinclair/typebox/value';
 
 const ID_SEPARATOR = '#';
 
@@ -121,10 +122,11 @@ export function replaceVariable(
     return current;
   } else {
     // if no scope, allow missing variable
-    if (key in variables) return variables[key];
+    // if (key in variables) return variables[key];
     // console.warn(new SessionVariableNotFoundError(target));
     // throw new SessionVariableNotFoundError(target);
-    return undefined;
+    // return undefined;
+    return ValuePointer.Get(variables, '/' + key.split('.').join('/'));
   }
 }
 

@@ -6019,3 +6019,38 @@ describe('cyclical permissions', () => {
     }
   });
 });
+
+it('test relation with nested fk', async () => {
+  const schema = {
+    a: {
+      schema: S.Schema({
+        id: S.Id(),
+        record: S.Record({
+          bId: S.String(),
+        }),
+        // Test no scope
+        b1: S.RelationById('b', '$record.bId'),
+        // Test with scope
+        b2: S.RelationById('b', '$1.record.bId'),
+      }),
+    },
+    b: {
+      schema: S.Schema({
+        id: S.Id(),
+      }),
+    },
+  };
+  const db = new DB({ schema: { collections: schema } });
+  await db.insert('b', { id: 'b-1' });
+  await db.insert('a', { id: 'a-1', record: { bId: 'b-1' } });
+
+  const result = await db.fetchOne(
+    db.query('a').include('b1').include('b2').build()
+  );
+  expect(result).toEqual({
+    id: 'a-1',
+    record: { bId: 'b-1' },
+    b1: { id: 'b-1' },
+    b2: { id: 'b-1' },
+  });
+});
