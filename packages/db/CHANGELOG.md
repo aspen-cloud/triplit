@@ -1,5 +1,11 @@
 # @triplit/db
 
+## 0.5.21
+
+### Patch Changes
+
+- dcc536dc: Support record nested relational vars
+
 ## 0.5.20
 
 ### Patch Changes
