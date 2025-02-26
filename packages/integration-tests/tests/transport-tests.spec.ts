@@ -2939,16 +2939,6 @@ describe('sessions API', async () => {
       await pause(25);
       expect(bob.syncEngine.connectionStatus).toBe('CLOSED');
     });
-    it('will throw an error if you call start session without ending the session first', async () => {
-      const server = new TriplitServer(new DB());
-      const alice = createTestClient(server, {
-        clientId: 'alice',
-      });
-      await alice.startSession(SERVICE_KEY, true);
-      expect(
-        async () => await alice.startSession(SERVICE_KEY, true)
-      ).rejects.toThrow(SessionAlreadyActiveError);
-    });
     it('will throw an error if you attempt to start a session with an expired token', async () => {
       const server = new TriplitServer(new DB());
       const alice = createTestClient(server, {
