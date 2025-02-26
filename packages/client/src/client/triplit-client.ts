@@ -144,7 +144,7 @@ type ClientTransactOptions = Pick<
 >;
 
 type TokenRefreshOptions = {
-  refreshHandler: () => Promise<string>;
+  refreshHandler: () => Promise<string | null>;
   interval?: number;
 };
 
@@ -1216,21 +1216,20 @@ export class TriplitClient<M extends ClientSchema = ClientSchema> {
   async startSession(
     token: string,
     autoConnect = true,
-    refreshOptions?: {
-      interval?: number;
-      refreshHandler: () => Promise<string>;
-    }
+    refreshOptions?: TokenRefreshOptions
   ) {
     // If there is already an active session, you should not be able to start a new one
     if (this.syncEngine.token) {
-      throw new SessionAlreadyActiveError();
+      await this.endSession();
     }
     if (tokenIsExpired(decodeToken(token))) {
       if (!refreshOptions?.refreshHandler) {
         // should we centralize this in
         throw new TokenExpiredError();
       }
-      token = await refreshOptions.refreshHandler();
+      const maybeToken = await refreshOptions.refreshHandler();
+      if (!maybeToken) return;
+      token = maybeToken;
     }
     // TODO: handle db readiness in lower level APIs
     await this.db.ready;
@@ -1267,9 +1266,16 @@ export class TriplitClient<M extends ClientSchema = ClientSchema> {
         delay = 1000;
       }
       this.tokenRefreshTimer = setTimeout(async () => {
-        const freshToken = await refreshHandler();
-        this.updateSessionToken(freshToken);
-        setRefreshTimeoutForToken(freshToken);
+        const maybeFreshToken = await refreshHandler();
+        if (!maybeFreshToken) {
+          this.logger.warn(
+            'The token refresh handler did not return a new token, ending the session.'
+          );
+          await this.endSession();
+          return;
+        }
+        this.updateSessionToken(maybeFreshToken);
+        setRefreshTimeoutForToken(maybeFreshToken);
       }, delay);
     };
     setRefreshTimeoutForToken(token);

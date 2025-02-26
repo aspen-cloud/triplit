@@ -109,6 +109,57 @@ describe.each([TriplitClient, WorkerClient])('%O', (Client) => {
       await bob.insert('users', { id: '1', name: 'Alice' });
     });
 
+    it('will gracefully end the old session and start another one if you call startSession in succession', async () => {
+      using server = await tempTriplitServer({
+        serverOptions: { dbOptions: { schema: DEFAULT_SCHEMA } },
+      });
+      const { port } = server;
+      const client = new Client({
+        workerUrl,
+        serverUrl: `http://localhost:${port}`,
+        autoConnect: true,
+        schema: DEFAULT_SCHEMA.collections,
+      });
+
+      const bob = new TriplitClient({
+        serverUrl: `http://localhost:${port}`,
+        schema: DEFAULT_SCHEMA.collections,
+        token: await encodeToken(initialPayload, '30 min'),
+      });
+
+      const initialToken = await encodeToken(initialPayload, '30 min');
+
+      // Start session
+      await client.startSession(initialToken);
+      const sessionErrorSpy = vi.fn();
+      client.onSessionError(sessionErrorSpy);
+      await pause(30);
+      const subSpy = vi.fn();
+      client.subscribe(client.query('users').build(), subSpy);
+      await pause(30);
+      await bob.insert('users', { id: '1', name: 'Alice' });
+      await pause(100);
+      expect(subSpy.mock.lastCall).toEqual([
+        [{ id: '1', name: 'Alice' }],
+        { hasRemoteFulfilled: true },
+      ]);
+
+      // Start another session
+      const newToken = await encodeToken(initialPayload, '10 min');
+      await client.startSession(newToken);
+      await pause(30);
+      await bob.insert('users', { id: '2', name: 'Bob' });
+      await pause(30);
+      // continues syncing
+      expect(subSpy.mock.lastCall).toEqual([
+        [
+          { id: '1', name: 'Alice' },
+          { id: '2', name: 'Bob' },
+        ],
+        { hasRemoteFulfilled: true },
+      ]);
+    });
+
     it('server wont accept messages from clients with expired tokens', async () => {
       using server = await tempTriplitServer({
         serverOptions: { dbOptions: { schema: DEFAULT_SCHEMA } },
