@@ -1,5 +1,11 @@
 # @triplit/client
 
+## 0.6.15
+
+### Patch Changes
+
+- 70ea2813: more gracefully handle starting session when one is already active
+
 ## 0.6.14
 
 ### Patch Changes
