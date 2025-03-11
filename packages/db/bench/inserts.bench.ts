@@ -26,12 +26,6 @@ function getSqliteKVStore(storage: 'memory' | 'sqlite') {
     memory: () => new BTreeKVStore(),
     sqlite: () => {
       const db = sqlite(':memory:');
-      db.exec(`
-      PRAGMA journal_mode = WAL;
-      PRAGMA synchronous = NORMAL;
-      PRAGMA temp_store = memory;
-      PRAGMA mmap_size = 30000000000;
-    `);
       new SQLiteKVStore(db);
     },
   };

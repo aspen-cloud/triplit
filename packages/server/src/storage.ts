@@ -39,12 +39,6 @@ export function defaultSqliteKVStore() {
   const dbPath = getStoragePath();
   const sqlite = require('better-sqlite3');
   const db = sqlite(dbPath);
-  db.exec(`
-      PRAGMA journal_mode = WAL;
-      PRAGMA synchronous = NORMAL;
-      PRAGMA temp_store = memory;
-      PRAGMA mmap_size = 30000000000;
-    `);
   return new SQLiteKVStore(db);
 }
 

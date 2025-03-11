@@ -19,12 +19,6 @@ import { InMemoryTestKVStore } from './utils/test-kv-store.js';
 
 const btree = new BTreeKVStore();
 const sqliteDb = sqlite(':memory:');
-sqliteDb.exec(`
-  PRAGMA journal_mode = WAL;
-  PRAGMA synchronous = NORMAL;
-  PRAGMA temp_store = memory;
-  PRAGMA mmap_size = 30000000000;
-`);
 const sqliteKv = new SQLiteKVStore(sqliteDb);
 const lmdb = open({});
 const lmdbKv = new LmdbKVStore(lmdb);

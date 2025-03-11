@@ -12,10 +12,6 @@ import 'fake-indexeddb/auto';
 describe('DurableWriteBuffer test suite', () => {
   const btree = new BTreeKVStore();
   const sqliteDb = sqlite(':memory:');
-  sqliteDb.exec(`
-    PRAGMA journal_mode = WAL;
-    PRAGMA synchronous = NORMAL;
-  `);
   const sqliteKv = new SQLiteKVStore(sqliteDb);
   const lmdb = open({});
   const lmdbKv = new LmdbKVStore(lmdb);

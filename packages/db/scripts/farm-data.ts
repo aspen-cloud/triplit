@@ -13,12 +13,6 @@ import { fileURLToPath } from 'url';
 import { QueryWhere } from '../src/query.js';
 const btree = new BTreeKVStore();
 const sqliteDb = sqlite('./app.db');
-sqliteDb.exec(`
-  PRAGMA journal_mode = WAL;
-  PRAGMA synchronous = NORMAL;
-  PRAGMA temp_store = memory;
-  PRAGMA mmap_size = 30000000000;
-`);
 const sqliteKv = new SQLiteKVStore(sqliteDb);
 const lmdb = open('./lmdb', {});
 const lmdbKv = new LmdbKVStore(lmdb);

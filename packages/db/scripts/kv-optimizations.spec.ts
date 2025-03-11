@@ -7,12 +7,6 @@ import sqlite from 'better-sqlite3';
 import { open } from 'lmdb';
 const btree = new BTreeKVStore();
 const sqliteDb = sqlite('./app.db');
-sqliteDb.exec(`
-  PRAGMA journal_mode = WAL;
-  PRAGMA synchronous = NORMAL;
-  PRAGMA temp_store = memory;
-  PRAGMA mmap_size = 30000000000;
-`);
 const sqliteKv = new SQLiteKVStore(sqliteDb);
 const lmdb = open('./lmdb', {});
 const lmdbKv = new LmdbKVStore(lmdb);
