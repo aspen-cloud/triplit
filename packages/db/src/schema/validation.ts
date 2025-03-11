@@ -324,8 +324,9 @@ function validateRolePermissions(
   if (typeof permissions !== 'object') return 'permissions is not an object';
   for (const key in permissions) {
     // TODO: this may cause problems if roles are not provided / just validating permissions
-    const roleExists = schema.roles?.[key];
-    if (!roleExists) return `"${key}" does not match a role`;
+    // maybe this should be a warning
+    // const roleExists = schema.roles?.[key];
+    // if (!roleExists) return `"${key}" does not match a role`;
     const permission = permissions[key];
     const invalidRolePermissions = validatePermissionOperations(permission);
     if (invalidRolePermissions)
