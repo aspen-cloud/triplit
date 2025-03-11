@@ -136,3 +136,19 @@ function prettyPrintWhereFilters(filters: QueryWhere) {
 }
 
 runQueries();
+
+/*
+--- expected results ---
+
+# of results | query where
+------------ | -----------
+5414         | unvailable_date isDefined false                                                                                     
+1837         | birth_date >= $global.newborn_cutoff AND unvailable_date isDefined false                                            
+1300         | all_breedings.stage = Pregnant AND unvailable_date isDefined false                                                  
+1305         | milking = true AND unvailable_date isDefined false                                                                  
+392          | all_breedings.stage = Joined AND unvailable_date isDefined false                                                    
+1            | unvailable_date isDefined false AND milking_changes.id isDefined true AND milking = false                           
+1            | unvailable_date isDefined true AND unvailable_date >= $global.newborn_cutoff                                        
+0            | unvailable_date isDefined false AND treatments.id = 6_in_1_vaccinated AND birth_date <= $global.vaccination_cutoff  
+0            | treatments.administered_at isDefined false AND unvailable_date isDefined false                                      
+*/
