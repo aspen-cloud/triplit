@@ -133,7 +133,7 @@ export class VariableAwareCache {
     }
     if (start == undefined || end == undefined) {
       throw new QueryCacheError(
-        `Queries with the operator ${op} in a where clause can't be stored in the query cache. Currently, supported operators are: ${[
+        `Queries with the operator "${op}" in a where clause can't be stored in the query cache. Currently, supported operators are: ${[
           '=',
           '!=',
           '<',
