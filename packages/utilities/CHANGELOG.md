@@ -1,5 +1,11 @@
 # @triplit/utilities
 
+## 0.0.2
+
+### Patch Changes
+
+- @triplit/db@1.0.1
+
 ## 0.0.1
 
 ### Patch Changes
