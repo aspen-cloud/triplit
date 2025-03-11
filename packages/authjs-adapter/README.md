@@ -58,10 +58,6 @@ In your `triplit/schema.ts` file, add the following collections:
         schema: S.Schema({
             id: S.Id(),
             userId: S.String(),
-            user: S.Query({
-                collectionName: "users" as const,
-                where: [["id", "=", "$userId"]],
-            }),
             type: S.String(),
             provider: S.String(),
             providerAccountId: S.String(),
@@ -73,18 +69,20 @@ In your `triplit/schema.ts` file, add the following collections:
             id_token: S.String({ nullable: true, default: null }),
             session_state: S.String({ nullable: true, default: null }),
         }),
+        relationships: {
+            user: S.RelationById("users", "$1.userId")
+        }
     },
     sessions: {
         schema: S.Schema({
             id: S.Id(),
             userId: S.String(),
-            user: S.Query({
-                collectionName: "users" as const,
-                where: [["id", "=", "$userId"]],
-            }),
             expires: S.Date(),
             sessionToken: S.String(),
         }),
+        relationships: {
+            user: S.RelationById("users", "$1.userId")
+        }
     },
     verificationTokens: {
         schema: S.Schema({

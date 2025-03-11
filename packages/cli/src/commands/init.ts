@@ -18,12 +18,12 @@ function hasPackageJson() {
 
 const packageToInstall = ['@triplit/client'];
 
-export default Command({
+const cmd = Command({
   description: 'Initialize a Triplit project',
   middleware: [],
   flags: {
     framework: Flag.Enum({
-      options: ['react', 'svelte', 'vue'] as const,
+      options: ['react', 'svelte', 'vue', 'angular'] as const,
       char: 'f',
       description: 'Frontend framework helpers to install',
     }),
@@ -70,6 +70,9 @@ export default Command({
         case 'vue':
           packageToInstall.push('@triplit/vue');
           break;
+        case 'angular':
+          packageToInstall.push('@triplit/angular');
+          break;
       }
     }
     console.log(`Installing packages: ${packageToInstall.join(', ')}`);
@@ -91,9 +94,10 @@ export default Command({
     console.log(blue('  - triplit/schema.ts'));
   },
 });
+export default cmd;
 
 const SchemaFileContent =
-  `import { ClientSchema, Schema as S } from '@triplit/client';
+  `import { Schema as S } from '@triplit/client';
 
 /**
  * Define your schema here. After:
@@ -102,7 +106,7 @@ const SchemaFileContent =
  *
  * For more information about schemas, see the docs: https://www.triplit.dev/docs/schemas
  */
-export const schema = {
+export const schema = S.Collections({
     // todos: {
     //   schema: S.Schema({
     //     id: S.Id(),
@@ -110,6 +114,6 @@ export const schema = {
     //     description: S.String(),
     //   }),
     // },
-} satisfies ClientSchema;
+});
 
 `.trim() + '\n';

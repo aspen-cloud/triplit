@@ -1,4 +1,4 @@
-import { chunk } from "remeda"
+import { chunk } from "../helpers/remeda.js"
 import * as uuid from "uuid"
 import md5 from "md5"
 

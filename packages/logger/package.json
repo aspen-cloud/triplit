@@ -1,0 +1,33 @@
+{
+  "name": "@triplit/logger",
+  "module": "./dist/index.js",
+  "type": "module",
+  "version": "0.0.1-canary-20250217185840",
+  "main": "./dist/index.js",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.mts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.js"
+    },
+    "./*": {
+      "types": "./dist/handlers/*.d.mts",
+      "import": "./dist/handlers/*.js",
+      "require": "./dist/index.js"
+    }
+  },
+  "files": [
+    "/dist"
+  ],
+  "scripts": {
+    "build": "tsc --build --pretty",
+    "publish-pkg": "node ../../scripts/npm-check-version-and-publish.js"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "typescript": "^5.7.3"
+  },
+  "peerDependencies": {
+    "typescript": "^5.0.0"
+  }
+}

@@ -47,7 +47,7 @@ client.connect();
 
 ### Refreshing a session
 
-Most authentication providers issue tokens that expire after a certain amount of time. Triplit servers will close the connection with a client when they detect that its token has expired. To prevent this, and keep the connection open, you can provide a `refreshHandler` to the client. The `refreshHandler` is a function that returns a new token. The client will call this function 1 second before the token expires, as determined from the `exp` claim.
+Most authentication providers issue tokens that expire after a certain amount of time. Triplit servers will close the connection with a client when they detect that its token has expired. To prevent this, and keep the connection open, you can provide a `refreshHandler` to the client. The `refreshHandler` is a function that returns a new token, or `null`. The client will call this function 1 second before the token expires, as determined from the `exp` claim.
 
 ```ts
 import { TriplitClient } from '@triplit/client';

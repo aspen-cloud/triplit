@@ -1,16 +1,19 @@
 import {
-  ClientQuery,
   Models,
-  ClientQueryBuilder,
   SubscriptionOptions,
   TriplitClient,
-  Unalias,
-  FetchResultEntity,
-  CollectionNameFromModels,
+  SchemaQuery,
+  FetchResult,
+  SubscriptionSignalPayload,
 } from '@triplit/client';
-import { WorkerClient } from '@triplit/client/worker-client';
 import { useMemo } from 'react';
 import { useQuery } from './use-query.js';
+
+type useQueryOnePayload<M extends Models<M>, Q extends SchemaQuery<M>> = Omit<
+  SubscriptionSignalPayload<M, Q>,
+  'results'
+> & { result: FetchResult<M, Q, 'one'> };
+
 /**
  * A React hook that subscribes to a query and fetches only one result
  *
@@ -19,25 +22,14 @@ import { useQuery } from './use-query.js';
  * @param options - Additional options for the subscription
  * @returns An object containing the fetching state, the result of the query, and any error that occurred
  */
-export function useQueryOne<
-  M extends Models,
-  CN extends CollectionNameFromModels<M>,
-  Q extends ClientQuery<M, CN>,
->(
-  client: TriplitClient<M> | WorkerClient<M>,
-  query: ClientQueryBuilder<M, CN, Q> | Q,
+export function useQueryOne<M extends Models<M>, Q extends SchemaQuery<M>>(
+  client: TriplitClient<M>,
+  query: Q,
   options?: Partial<SubscriptionOptions>
-): {
-  fetching: boolean;
-  fetchingLocal: boolean;
-  fetchingRemote: boolean;
-  result: Unalias<FetchResultEntity<M, Q>> | null;
-  error: any;
-} {
-  const builtQuery = 'build' in query ? query.build() : query;
+): useQueryOnePayload<M, Q> {
   const { fetching, fetchingLocal, fetchingRemote, results, error } = useQuery(
     client,
-    { ...builtQuery, limit: 1 },
+    { ...query, limit: 1 },
     options
   );
   const result = useMemo(() => {

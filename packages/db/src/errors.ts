@@ -2,8 +2,7 @@ import {
   COLLECTION_TYPE_KEYS,
   VALUE_TYPE_KEYS,
 } from './data-types/constants.js';
-import { SessionRole } from './schema/permissions.js';
-import { Models } from './schema/types/index.js';
+import { Models, SessionRole } from './schema/types/index.js';
 import { ITriplitError } from '@triplit/types/errors.js';
 
 export const STATUS_CODES = {
@@ -143,15 +142,15 @@ export class SessionVariableNotFoundError extends TriplitError {
   constructor(
     variableName: string,
     scope: string,
-    allVars: Record<string, any>,
+    scopeVars: Record<string, any> | undefined,
     ...args: any[]
   ) {
     super(...args);
     this.name = 'SessionVariableNotFoundError';
-    this.baseMessage = `\'${variableName}\' could not be found in the variables for this query. The available $${scope} variables are: ${Object.keys(
-      allVars
+    this.baseMessage = `\'${variableName}\' could not be found in the variables for this query. The available ${scope} variables are: ${Object.keys(
+      scopeVars ?? {}
     )
-      .map((v) => `\'$${scope}.${v}\'`)
+      .map((v) => `\'${scope}.${v}\'`)
       .join(', ')}`;
     this.status = STATUS_CODES['Bad Request'];
   }
@@ -484,7 +483,16 @@ export class DBSerializationError extends TriplitError {
   constructor(targetType: string, erroneousValue: any, ...args: any[]) {
     super(...args);
     this.name = 'DBSerializationError';
-    this.baseMessage = `When inserting or updating an entity, there was an error serializing the data: ${erroneousValue} as type: ${targetType}`;
+    this.baseMessage = `There was an error serializing an input to an acceptable format. Could not tranform the data: ${erroneousValue} as type: ${targetType}`;
+    this.status = STATUS_CODES['Bad Request'];
+  }
+}
+
+export class DBDeserializationError extends TriplitError {
+  constructor(targetType: string, erroneousValue: any, ...args: any[]) {
+    super(...args);
+    this.name = 'DBDeserializationError';
+    this.baseMessage = `There was an error deserializing an database value to JS. Could not tranform the data: ${erroneousValue} as type: ${targetType}`;
     this.status = STATUS_CODES['Bad Request'];
   }
 }

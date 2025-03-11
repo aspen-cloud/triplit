@@ -1,11 +1,11 @@
 {
   "index": "Overview",
-  "select": "`select`",
-  "include": "`include`",
-  "where": "`where`",
-  "order": "`order`",
-  "limit": "`limit`",
-  "subquery": "`subquery`",
+  "select": "`Select`",
+  "include": "`Include`",
+  "where": "`Where`",
+  "order": "`Order`",
+  "limit": "`Limit`",
+  "subquery": "`SubqueryOne/Many`",
   "sync-status": "`syncStatus`",
-  "variables": "`vars`"
+  "variables": "`Vars`"
 }

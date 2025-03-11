@@ -1,0 +1,22 @@
+{
+  "compilerOptions": {
+    "outDir": "./dist",
+    "rootDir": "./src/",
+    "target": "ES2022",
+    "strict": true,
+    "skipLibCheck": true,
+    "declaration": true,
+    "lib": ["ESNext", "DOM"],
+    "module": "NodeNext",
+    "moduleResolution": "nodenext",
+    "composite": true,
+    "sourceMap": true,
+    "tsBuildInfoFile": "./dist/tsconfig.tsbuildinfo"
+  },
+  "references": [
+    { "path": "../db/tsconfig.json" },
+    { "path": "../client/tsconfig.json" }
+  ],
+  "include": ["./src/**/*.ts", "test/utils/memory-with-delay.ts"],
+  "exclude": ["node_modules", "dist"]
+}

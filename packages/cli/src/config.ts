@@ -5,7 +5,7 @@ import { randomUUID } from 'node:crypto';
 export const CONFIG_KEYS = ['installId', 'telemetryEnabled'];
 
 export const config = new Conf<{
-  installId?: string;
+  installId?: string | null;
   telemetryEnabled?: boolean;
 }>({
   projectName: 'triplit-cli',

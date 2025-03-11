@@ -12,7 +12,7 @@ import { Callout } from 'nextra-theme-docs';
 await client.insert('employees', { id: 'Fry', name: 'Philip J. Fry' });
 await client.insert('employees', { id: 'Leela', name: 'Turanga Leela' });
 
-const query = client.query('employees').build();
+const query = client.query('employees');
 const result = await client.fetch(query, options); // { name: string }[]
 ```
 

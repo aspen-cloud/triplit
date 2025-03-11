@@ -1,12 +1,7 @@
 import { CollectionNameFromModels } from '../db.js';
 import { matchPattern } from '../utils/pattern-matcher.js';
 import { hash } from '../utils/query.js';
-import { Models, StoreSchema } from './types/index.js';
-
-export type SessionRole = {
-  key: string;
-  roleVars: Record<string, any>;
-};
+import { Models, SessionRole, StoreSchema } from './types/index.js';
 
 /**
  * Parse a token and return the roles that match the token
@@ -64,16 +59,19 @@ function hashRoleVars(roles: SessionRole[]) {
   );
 }
 
-export function getCollectionPermissions<
-  M extends Models,
-  CN extends CollectionNameFromModels<M>,
->(schema: M, collectionName: CN) {
+export function getCollectionPermissions(
+  schema: Models | undefined,
+  collectionName: string
+) {
   if (!schema) return undefined;
   const collection = schema[collectionName];
   if (!collection) return undefined;
   return collection.permissions;
 }
 
+/**
+ * @deprecated use '@triplit/entity-db'
+ */
 export function normalizeSessionVars(variables: Record<string, any>) {
   const normalizedVars: Record<string, any> = {};
 

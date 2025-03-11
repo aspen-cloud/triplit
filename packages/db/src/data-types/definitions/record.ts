@@ -40,6 +40,15 @@ export type RecordType<Properties extends RecordProps = RecordProps> =
   > & {
     properties: Properties;
     optional?: (keyof Properties)[];
+  } & {
+    convertInputToDBValue(
+      val: any,
+      options?: { ignoreRequiredProperties?: boolean }
+    ): { [K in keyof Properties]: ExtractDBType<Properties[K]> };
+    validateInput(
+      val: any,
+      options?: { ignoreRequiredProperties?: boolean }
+    ): string | undefined;
   };
 
 export function RecordType<Properties extends RecordProps<any, any>>(
@@ -79,8 +88,15 @@ export function RecordType<Properties extends RecordProps<any, any>>(
 
       return serialized;
     },
-    convertInputToDBValue(val: any) {
-      const invalidReason = this.validateInput(val);
+    convertInputToDBValue(
+      val: any,
+      options: {
+        ignoreRequiredProperties?: boolean;
+      } = { ignoreRequiredProperties: false }
+    ) {
+      const invalidReason = this.validateInput(val, {
+        ignoreRequiredProperties: options.ignoreRequiredProperties,
+      });
       if (invalidReason)
         throw new DBSerializationError(
           `record`,
@@ -91,7 +107,9 @@ export function RecordType<Properties extends RecordProps<any, any>>(
         Object.entries(properties)
           .filter(([k, propDef]) => {
             const isQuery = propDef.type === 'query';
-            const optionalAndNoValue = isOptional(k) && val[k] === undefined;
+            const optionalAndNoValue =
+              (options.ignoreRequiredProperties || isOptional(k)) &&
+              val[k] === undefined;
             return !isQuery && !optionalAndNoValue;
           })
           .map(([k, propDef]) => {
@@ -164,32 +182,44 @@ export function RecordType<Properties extends RecordProps<any, any>>(
           .filter(([_, v]) => v !== undefined)
       );
     },
-    validateInput(_val: any) {
+    validateInput(
+      val: any,
+      {
+        ignoreRequiredProperties,
+      }: {
+        ignoreRequiredProperties?: boolean;
+      } = { ignoreRequiredProperties: false }
+    ) {
       // cannot assign null
-      if (_val === null) return 'value cannot be null';
+      if (val === null) return 'value cannot be null';
       // must be an object
-      if (typeof _val !== 'object') return 'value must be an object';
+      if (typeof val !== 'object') return 'value must be an object';
 
       // all required properties are present
-      const requiredProperties = Object.entries(properties).filter(
-        // Need to add query here to support schemas as records
-        ([k, v]) =>
-          !isOptional(k) && v.type !== 'query' && v.defaultInput() === undefined
-      );
-      const keysSet = new Set(Object.keys(_val));
+      const requiredProperties = ignoreRequiredProperties
+        ? []
+        : Object.entries(properties).filter(
+            // Need to add query here to support schemas as records
+            ([k, v]) =>
+              !isOptional(k) &&
+              v.type !== 'query' &&
+              v.defaultInput() === undefined
+          );
+      const keysSet = new Set(Object.keys(val));
       const missingProperties = requiredProperties
         .filter(([k, _v]) => {
           return !keysSet.has(k);
         })
         .map(([k, _v]) => k);
+
       if (missingProperties.length > 0)
         return `missing properties: ${missingProperties.join(', ')}`;
 
-      for (const k in _val) {
+      for (const k in val) {
         if (properties[k]) {
           const v = properties[k];
-          if (isOptional(k) && _val[k] === undefined) continue;
-          const reason = v.validateInput(_val[k]);
+          if (isOptional(k) && val[k] === undefined) continue;
+          const reason = v.validateInput(val[k]);
           if (reason) return `invalid value for ${k} (${reason})`;
         } else {
           return `invalid property ${k}`;

@@ -1,5 +1,5 @@
 import { LogLevel, Logger } from './@triplit/types/logger.js';
-import { TriplitError } from '@triplit/db';
+import { TriplitError } from '@triplit/entity-db';
 import superjson from 'superjson';
 
 export type LogListener = ((log: any) => void) | undefined;

@@ -1,4 +1,4 @@
-import * as _ from "remeda"
+import { shuffle } from "../helpers/remeda.js"
 import { describe, it, expect } from "bun:test"
 import { MAX, MIN, Tuple } from "../storage/types.js"
 import {
@@ -24,7 +24,7 @@ describe("sortedTupleArray", () => {
 
 		it("sorts prefixes in the correct order", () => {
 			const data: Tuple[] = []
-			for (const item of _.shuffle(items)) {
+			for (const item of shuffle(items)) {
 				set(data, item)
 			}
 			expect(data).toEqual(items)

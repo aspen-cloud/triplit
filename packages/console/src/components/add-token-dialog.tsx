@@ -11,7 +11,7 @@ import {
 } from '@triplit/ui';
 import { Check, Plus } from 'lucide-react';
 import { Fragment, useMemo, useState } from 'react';
-import { Roles, getRolesFromSession } from '@triplit/db';
+import { getRolesFromSession, Roles } from '@triplit/entity-db';
 import { parseJWT } from 'src/utils/remote-helpers.js';
 import { ConsoleSessionRole } from 'src/utils/roles.js';
 import { RoleCard } from './role-filters.js';

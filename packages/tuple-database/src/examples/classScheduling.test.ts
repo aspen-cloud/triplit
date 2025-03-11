@@ -1,7 +1,7 @@
 // Based on the FoundationDb tutorial:
 // https://apple.github.io/foundationdb/class-scheduling.html
 
-import { range } from "remeda"
+import { range } from "../helpers/remeda.js"
 import { describe, it, expect } from "bun:test"
 import { transactionalReadWrite } from "../database/sync/transactionalReadWrite.js"
 import { ReadOnlyTupleDatabaseClientApi } from "../database/sync/types.js"

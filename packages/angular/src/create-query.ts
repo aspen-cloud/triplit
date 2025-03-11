@@ -1,123 +1,72 @@
 import {
   FetchResult,
-  ClientQuery,
-  ClientQueryBuilder,
-  CollectionNameFromModels,
   Models,
   SubscriptionOptions,
   TriplitClient,
-  Unalias,
+  SchemaQuery,
+  SubscriptionSignalPayload,
 } from '@triplit/client';
-import { WorkerClient } from '@triplit/client/worker-client';
-import {
-  BehaviorSubject,
-  combineLatest,
-  from,
-  Observable,
-  map,
-  distinctUntilChanged,
-  switchMap,
-  share,
-  shareReplay,
-} from 'rxjs';
+import { BehaviorSubject, Observable, switchMap, shareReplay } from 'rxjs';
 
-export function createQuery<
-  M extends Models,
-  CN extends CollectionNameFromModels<M>,
-  Q extends ClientQuery<M, CN>,
->(
+type WrapObservable<T> = {
+  [K in keyof T & string as `${K}$`]: Observable<T[K]>;
+};
+
+export function createQuery<M extends Models<M>, Q extends SchemaQuery<M>>(
   queryFn: () => {
-    client: TriplitClient<any> | WorkerClient<any>;
-    query: ClientQueryBuilder<M, CN, Q>;
+    client: TriplitClient<M>;
+    query: Q;
     options?: Partial<SubscriptionOptions>;
   }
-): {
-  fetching$: Observable<boolean>;
-  fetchingLocal$: Observable<boolean>;
-  fetchingRemote$: Observable<boolean>;
-  results$: Observable<Unalias<FetchResult<M, Q>> | undefined>;
-  error$: Observable<any>;
-} {
+): WrapObservable<SubscriptionSignalPayload<M, Q>> {
   const queryParams$ = new BehaviorSubject(queryFn());
 
   const fetchingLocalSubject = new BehaviorSubject<boolean>(true);
-  const fetchingRemoteSubject = new BehaviorSubject<boolean>(
-    queryFn().client.connectionStatus !== 'CLOSED'
-  );
+  const fetchingRemoteSubject = new BehaviorSubject<boolean>(false);
+  const fetchingSubject = new BehaviorSubject<boolean>(true);
   const errorSubject = new BehaviorSubject<any>(undefined);
-  const isInitialFetchSubject = new BehaviorSubject<boolean>(true);
-  const hasResponseFromServerSubject = new BehaviorSubject<boolean>(false);
-
-  const builtQuery$ = queryParams$.pipe(
-    map((params) => params.query.build()),
-    distinctUntilChanged()
-  );
-
-  builtQuery$
-    .pipe(
-      switchMap((builtQuery) => {
-        const { client } = queryParams$.getValue();
-        return from(client.isFirstTimeFetchingQuery(builtQuery));
-      })
-    )
-    .subscribe((isFirstFetch) => {
-      isInitialFetchSubject.next(isFirstFetch);
-    });
 
   const results$ = queryParams$.pipe(
     switchMap((params) => {
       const { client, query, options } = params;
-      return new Observable<FetchResult<M, Q>>((observer) => {
-        fetchingLocalSubject.next(true);
-
-        const unsubscribe = client.subscribe(
-          query.build(),
-          (localResults) => {
-            fetchingLocalSubject.next(false);
-            errorSubject.next(undefined);
-            // Using 'as any' to bypass the type mismatch temporarily
-            observer.next(localResults as any);
-          },
-          (error) => {
-            fetchingLocalSubject.next(false);
-            errorSubject.next(error);
-            observer.error(error);
-          },
-          {
-            ...(options ?? {}),
-            onRemoteFulfilled: () => {
-              hasResponseFromServerSubject.next(true);
-              fetchingRemoteSubject.next(false);
+      fetchingLocalSubject.next(true);
+      fetchingRemoteSubject.next(false);
+      fetchingSubject.next(true);
+      errorSubject.next(undefined);
+      return new Observable<SubscriptionSignalPayload<M, Q>['results']>(
+        (observer) => {
+          const unsubscribe = client.subscribeWithStatus(
+            query,
+            (state) => {
+              fetchingLocalSubject.next(state.fetchingLocal);
+              fetchingRemoteSubject.next(state.fetchingRemote);
+              fetchingSubject.next(state.fetching);
+              errorSubject.next(state.error);
+              observer.next(state.results);
             },
-          }
-        );
-        return unsubscribe;
-      });
+            options
+          );
+          return unsubscribe;
+        }
+      );
     }),
     shareReplay({ refCount: true })
   );
 
   return {
-    fetching$: combineLatest([
-      fetchingLocalSubject,
-      isInitialFetchSubject,
-      fetchingRemoteSubject,
-    ]).pipe(
-      map(
-        ([fetchingLocal, isInitialFetch, fetchingRemote]) =>
-          fetchingLocal || (isInitialFetch && fetchingRemote)
-      )
-    ),
+    fetching$: fetchingSubject.asObservable(),
     fetchingLocal$: fetchingLocalSubject.asObservable(),
     fetchingRemote$: fetchingRemoteSubject.asObservable(),
-    // @ts-ignore
     results$,
     error$: errorSubject.asObservable(),
   };
 }
 
-type createPaginatedQueryPayload<M extends Models, Q extends ClientQuery<M>> = {
-  results$: Observable<Unalias<FetchResult<M, Q>> | undefined>;
+type createPaginatedQueryPayload<
+  M extends Models<M>,
+  Q extends SchemaQuery<M>,
+> = {
+  results$: Observable<FetchResult<M, Q, 'many'> | undefined>;
   fetching$: Observable<boolean>;
   fetchingPage$: Observable<boolean>;
   error$: Observable<any>;
@@ -129,13 +78,12 @@ type createPaginatedQueryPayload<M extends Models, Q extends ClientQuery<M>> = {
 };
 
 export function createPaginatedQuery<
-  M extends Models,
-  CN extends CollectionNameFromModels<M>,
-  Q extends ClientQuery<M, CN>,
+  M extends Models<M>,
+  Q extends SchemaQuery<M>,
 >(
   queryFn: () => {
-    client: TriplitClient<any> | WorkerClient<any>;
-    query: ClientQueryBuilder<M, CN, Q>;
+    client: TriplitClient<M>;
+    query: Q;
     options?: Partial<SubscriptionOptions>;
   }
 ): createPaginatedQueryPayload<M, Q> {
@@ -146,16 +94,17 @@ export function createPaginatedQuery<
   const hasPreviousPageSubject = new BehaviorSubject<boolean>(false);
   const nextPageSubject = new BehaviorSubject<() => void>(() => {});
   const prevPageSubject = new BehaviorSubject<() => void>(() => {});
+  const disconnectSubject = new BehaviorSubject<() => void>(() => {});
   const fetchingPageSubject = new BehaviorSubject<boolean>(false);
 
   const results$ = queryParams$.pipe(
     switchMap((params) => {
       const { client, query, options } = params;
-      return new Observable<FetchResult<M, Q>>((observer) => {
+      return new Observable<FetchResult<M, Q, 'many'>>((observer) => {
         fetchingSubject.next(true);
 
         const subscription = client.subscribeWithPagination(
-          query.build(),
+          query,
           (localResults, info) => {
             fetchingSubject.next(false);
             fetchingPageSubject.next(false);
@@ -181,6 +130,7 @@ export function createPaginatedQuery<
           fetchingPageSubject.next(true);
           subscription.prevPage();
         });
+        disconnectSubject.next(() => subscription.unsubscribe());
         return subscription.unsubscribe;
       });
     }),
@@ -188,35 +138,39 @@ export function createPaginatedQuery<
   );
 
   return {
-    fetchingRemote$: fetchingSubject.asObservable(),
+    fetching$: fetchingSubject.asObservable(),
     fetchingPage$: fetchingPageSubject.asObservable(),
     hasNextPage$: hasNextPageSubject.asObservable(),
     hasPreviousPage$: hasPreviousPageSubject.asObservable(),
     nextPage: () => nextPageSubject.getValue()(),
     prevPage: () => prevPageSubject.getValue()(),
+    disconnect: () => disconnectSubject.getValue()(),
     // @ts-ignore
     results$,
     error$: errorSubject.asObservable(),
   };
 }
 
-type createInfiniteQueryPayload<M extends Models, Q extends ClientQuery<M>> = {
-  results$: Observable<Unalias<FetchResult<M, Q>> | undefined>;
+type createInfiniteQueryPayload<
+  M extends Models<M>,
+  Q extends SchemaQuery<M>,
+> = {
+  results$: Observable<FetchResult<M, Q, 'many'> | undefined>;
   fetching$: Observable<boolean>;
   fetchingMore$: Observable<boolean>;
   error$: Observable<any>;
   hasMore$: Observable<boolean>;
   loadMore: (pageSize?: number) => void;
+  disconnect: () => void;
 };
 
 export function createInfiniteQuery<
-  M extends Models,
-  CN extends CollectionNameFromModels<M>,
-  Q extends ClientQuery<M>,
+  M extends Models<M>,
+  Q extends SchemaQuery<M>,
 >(
   queryFn: () => {
-    client: TriplitClient<M> | WorkerClient<M>;
-    query: ClientQueryBuilder<M, CN, Q>;
+    client: TriplitClient<M>;
+    query: Q;
     options?: Partial<SubscriptionOptions>;
   }
 ): createInfiniteQueryPayload<M, Q> {
@@ -227,17 +181,18 @@ export function createInfiniteQuery<
   const loadMoreSubject = new BehaviorSubject<(pageSize?: number) => void>(
     () => {}
   );
+  const disconnectSubject = new BehaviorSubject<() => void>(() => {});
   const errorSubject = new BehaviorSubject<any>(undefined);
 
   const results$ = queryParams$.pipe(
     switchMap((params) => {
       const { client, query, options } = params;
 
-      return new Observable<FetchResult<M, Q>>((observer) => {
+      return new Observable<FetchResult<M, Q, 'many'>>((observer) => {
         fetchingSubject.next(true);
 
         const subscription = client.subscribeWithExpand(
-          query.build(),
+          query,
           (localResults, info) => {
             fetchingSubject.next(false);
             fetchingMoreSubject.next(false);
@@ -258,6 +213,7 @@ export function createInfiniteQuery<
           subscription.loadMore(pageSize);
           fetchingMoreSubject.next(true);
         });
+        disconnectSubject.next(() => subscription.unsubscribe());
         return subscription.unsubscribe;
       });
     }),
@@ -266,9 +222,10 @@ export function createInfiniteQuery<
 
   return {
     fetching$: fetchingSubject.asObservable(),
-    fetchingMore$$: fetchingMoreSubject.asObservable(),
+    fetchingMore$: fetchingMoreSubject.asObservable(),
     hasMore$: hasMoreSubject.asObservable(),
     loadMore: (pageSize?: number) => loadMoreSubject.getValue()(pageSize),
+    disconnect: () => disconnectSubject.getValue()(),
     // @ts-ignore
     results$,
     error$: errorSubject.asObservable(),

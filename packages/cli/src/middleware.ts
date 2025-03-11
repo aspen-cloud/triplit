@@ -21,7 +21,7 @@ export function Middleware<
 
 export interface MiddlewareDefinition<
   Args extends string[],
-  Flags extends { [key: string]: Flag } | undefined,
+  Flags extends { [key: string]: Flag },
   Ctx extends Record<string, any>,
   Run extends (params: {
     flags: FlagsToTypes<Flags>;

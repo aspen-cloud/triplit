@@ -1,5 +1,6 @@
 import { HttpClient } from "@triplit/client"
 
+import { createCredentailAndUser } from "@/lib/create-user.js"
 import { hashPassword } from "@/lib/crypt.js"
 
 const client = new HttpClient({
@@ -19,21 +20,12 @@ export async function POST(request: Request) {
     return Response.json({ message: "User already exists" }, { status: 422 })
   }
 
-  const hashedPassword = await hashPassword(password)
-
-  const id = crypto.randomUUID()
-
-  const credential = {
-    userId: id,
+  const { credential, user } = await createCredentailAndUser({
     username,
-    password: hashedPassword,
-  }
-
-  const user = {
-    id,
-    name: username,
+    password,
     email,
-  }
+  })
+
   const result = await client.bulkInsert({
     credentials: [credential],
     users: [user],

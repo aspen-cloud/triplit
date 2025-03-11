@@ -2,16 +2,16 @@
 import { useConnectionStatus } from '@triplit/vue'
 import { triplit } from '@/lib/client'
 
-const { connectionStatus } = useConnectionStatus(triplit)
+const connection = useConnectionStatus(triplit)
 </script>
 
 <template>
   <div class="connection-status">
-    <div :class="`indicator ${connectionStatus.toLowerCase()}`"></div>
+    <div :class="`indicator ${connection.status.toLowerCase()}`"></div>
     {{
-      connectionStatus === 'CLOSED'
+      connection.status === 'CLOSED'
         ? 'Offline'
-        : connectionStatus === 'CONNECTING'
+        : connection.status === 'CONNECTING'
           ? 'Connecting'
           : 'Online'
     }}

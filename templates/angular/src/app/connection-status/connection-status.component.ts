@@ -1,15 +1,17 @@
 import { Component } from '@angular/core';
-import { injectConnectionStatus } from '@triplit/angular';
+import { createConnectionStatus } from '@triplit/angular';
 import { triplit } from '../../../triplit/client.js';
+import { CommonModule } from '@angular/common';
 
 @Component({
   selector: 'app-connection-status',
   standalone: true,
+  imports: [CommonModule],
   template: ` <div class="connection-status">
-    <div class="{{ 'indicator ' + status().toLowerCase() }}"></div>
-    @if (status() === 'CLOSED') {
+    <div class="{{ 'indicator ' + (status$ | async)?.toLowerCase() }}"></div>
+    @if ((status$ | async) === 'CLOSED') {
       Offline
-    } @else if (status() === 'CONNECTING') {
+    } @else if ((status$ | async) === 'CONNECTING') {
       Connecting
     } @else {
       Online
@@ -17,6 +19,5 @@ import { triplit } from '../../../triplit/client.js';
   </div>`,
 })
 export class ConnectionStatusComponent {
-  //@ts-ignore
-  status = injectConnectionStatus(triplit);
+  status$ = createConnectionStatus(triplit);
 }

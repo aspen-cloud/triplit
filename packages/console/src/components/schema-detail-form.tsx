@@ -1,7 +1,12 @@
+import { Collection } from '@triplit/entity-db';
 import { Input, Checkbox } from '@triplit/ui';
 
-export function CollectionSchemaDetail({ collectionSchema }) {
-  const attributes = collectionSchema.schema?.properties;
+export function CollectionSchemaDetail({
+  collectionSchema,
+}: {
+  collectionSchema: Collection;
+}) {
+  const attributes = collectionSchema.schema.properties;
   return (
     <div className="flex flex-col space-y-5 text-sm">
       <div className="grid grid-cols-4 text-xs gap-4 text-zinc-500">

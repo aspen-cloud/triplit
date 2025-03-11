@@ -133,6 +133,9 @@
       "path": "../db/tsconfig.json"
     },
     {
+      "path": "../entity-db/tsconfig.json"
+    },
+    {
       "path": "../client/tsconfig.json"
     },
     {

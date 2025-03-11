@@ -74,9 +74,9 @@ Triplit uses a [schema](/schemas) to define the structure of your data. By using
 We're going to set up a [schema](/schemas) for the Todos app in the `./triplit/schema.ts` file. Open the file and replace its contents with the following code:
 
 ```ts filename="./triplit/schema.ts" copy
-import { Schema as S, ClientSchema } from '@triplit/client';
+import { Schema as S } from '@triplit/client';
 
-export const schema = {
+const schema = S.Collections({
   todos: {
     schema: S.Schema({
       id: S.Id(),
@@ -85,7 +85,7 @@ export const schema = {
       created_at: S.Date({ default: S.Default.now() }),
     }),
   },
-} satisfies ClientSchema;
+});
 ```
 
 This schema defines a single collection, `todos`, with the following fields:
@@ -370,7 +370,7 @@ import { triplit } from '../triplit/client';
 import { useQuery } from '@triplit/react';
 
 function useTodos() {
-  const todosQuery = triplit.query('todos').order('created_at', 'DESC');
+  const todosQuery = triplit.query('todos').Order('created_at', 'DESC');
   const { results: todos, error } = useQuery(triplit, todosQuery);
   return { todos, error };
 }
@@ -427,7 +427,7 @@ import { triplit } from '../triplit/client';
 import Todo from './components/Todo';
 
 function useTodos() {
-  const todosQuery = triplit.query('todos').order('created_at', 'DESC');
+  const todosQuery = triplit.query('todos').Order('created_at', 'DESC');
   const { results: todos, error, fetching } = useQuery(triplit, todosQuery);
   return { todos, error, fetching };
 }
@@ -456,11 +456,7 @@ export default function App() {
           Add Todo
         </button>
       </form>
-      <div>
-        {todos?.map((todo) => (
-          <Todo key={todo.id} todo={todo} />
-        ))}
-      </div>
+      <div>{todos?.map((todo) => <Todo key={todo.id} todo={todo} />)}</div>
     </div>
   );
 }

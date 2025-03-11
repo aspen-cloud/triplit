@@ -3,16 +3,20 @@ import { getTriplitDir, loadTsModule } from './filesystem.js';
 import fs from 'fs';
 import { format } from 'prettier';
 import {
-  AttributeDefinition,
-  CollectionsDefinition,
-  CollectionDefinition,
-  QueryAttributeDefinition,
-  schemaToJSON,
-  UserTypeOptions,
-  Roles,
   StringTypeOptions,
-} from '@triplit/db';
+  DBSchema,
+  Collection,
+  Model,
+  RolePermissions,
+  DataType,
+  TypeConfig,
+  Relationship,
+  isIdFilter,
+  CollectionQuery,
+} from '@triplit/entity-db';
 import { blue } from 'ansis/colors';
+
+const INDENT = '  ';
 
 export async function readLocalSchema() {
   const triplitDir = getTriplitDir();
@@ -33,20 +37,7 @@ export async function writeSchemaFile(
   console.log(blue(`New schema has been saved at ${fileName}`));
 }
 
-export function schemaFileContentFromSchema(
-  schema:
-    | {
-        roles?: Roles;
-        version: number;
-        collections: any;
-      }
-    | undefined
-) {
-  const schemaJSON = schemaToJSON(schema);
-  return schemaFileContentFromJSON(schemaJSON);
-}
-
-export function schemaFileContentFromJSON(schemaJSON: any) {
+export function schemaFileContentFromSchema(schemaJSON: DBSchema) {
   const schemaContent = collectionsDefinitionToFileContent(
     schemaJSON?.collections ?? {}
   );
@@ -59,16 +50,14 @@ export function schemaFileContentFromJSON(schemaJSON: any) {
 
 import { Schema as S, Roles } from '@triplit/client';
 export const roles: Roles = ${JSON.stringify(rolesContent, null, 2)};
-export const schema = ${schemaContent};
+export const schema = S.Collections(${schemaContent});
       `.trim() + '\n';
   return fileContent;
 }
 
-// Generate a string representation of the schema that can be written to a file
-const indentation = '  ';
 export function collectionsDefinitionToFileContent(
-  collectionsDefinition: CollectionsDefinition,
-  indent = indentation
+  collectionsDefinition: Record<string, Collection>,
+  indent = INDENT
 ) {
   let result = '{\n';
   for (let collectionKey in collectionsDefinition) {
@@ -76,58 +65,77 @@ export function collectionsDefinitionToFileContent(
     result += `'${collectionKey}': {\n`;
     const {
       schema: attributes,
-      rules,
       permissions,
+      relationships,
     } = collectionsDefinition[collectionKey];
-    result += generateAttributesSection(attributes, indent + indentation);
-    result += generateRulesSection(rules, indent + indentation);
-    result += generatePermissionsSection(permissions, indent + indentation);
+    result += generateAttributesSection(attributes, indent + INDENT);
+    result += generateRelationshipsSection(relationships, indent + INDENT);
+    result += generatePermissionsSection(permissions, indent + INDENT);
     result += indent + '},\n';
   }
   return result + indent.slice(0, -2) + '}';
 }
 
-function generateAttributesSection(
-  schema: CollectionDefinition['schema'],
-  indent: string
-) {
+function generateAttributesSection(schema: Model, indent: string) {
   let result = '';
   result += indent + 'schema: S.Schema({\n';
   for (const path in schema.properties) {
     const itemInfo = schema.properties[path];
-    const optional =
-      schema.optional?.includes(
-        // @ts-expect-error typescript trying to be too smart
-        path
-      ) ?? false;
-    result += generateAttributeSchema(
-      [path],
-      { attribute: itemInfo, optional: optional },
-      indent + indentation
-    );
+    result += generateAttributeSchema([path], itemInfo, indent + INDENT);
   }
   result += indent + '}),\n';
   return result;
 }
 
-function generateRulesSection(
-  rules: CollectionDefinition['rules'],
+function generateRelationshipsSection(
+  relationships: Record<string, Relationship> | undefined,
   indent: string
 ) {
   let result = '';
-  if (rules) {
-    result +=
-      indent +
-      `rules: ${JSON.stringify(rules, null, 2)
-        .split('\n')
-        .join(`\n${indent}`)}`;
+  if (relationships) {
+    result += indent + 'relationships: {\n';
+    for (const relationshipName in relationships) {
+      const relationship = relationships[relationshipName];
+      result +=
+        indent +
+        `'${relationshipName}': ${generateRelationshipString(relationship)},\n`;
+    }
+    result += indent + '},\n';
   }
-
   return result;
 }
 
+function generateRelationshipString(relationship: Relationship) {
+  const { query, cardinality } = relationship;
+  const { collectionName, ...queryParams } = query;
+  if (cardinality === 'one') {
+    const { where } = query;
+    const isRelationById =
+      !!collectionName &&
+      !!where &&
+      where.length === 1 &&
+      isIdFilter(where[0]) &&
+      where[0][1] === '=' &&
+      Object.keys(queryParams).length === 1;
+
+    if (isRelationById)
+      return `S.RelationById('${collectionName}', '${
+        // @ts-expect-error
+        where![0][2]
+      }')`;
+    else
+      return `S.RelationOne('${collectionName}',${subQueryToString(
+        queryParams
+      )})`;
+  } else {
+    return `S.RelationMany('${collectionName}',${subQueryToString(
+      queryParams
+    )})`;
+  }
+}
+
 function generatePermissionsSection(
-  permissions: CollectionDefinition['permissions'],
+  permissions: RolePermissions | undefined,
   indent: string
 ) {
   let result = '';
@@ -143,7 +151,7 @@ function generatePermissionsSection(
 
 function generateAttributeSchema(
   path: string[],
-  schemaItem: { attribute: AttributeDefinition; optional: boolean },
+  schemaItem: DataType,
   indent: string
 ) {
   if (path.length === 0) return schemaItemToString(schemaItem);
@@ -152,96 +160,58 @@ function generateAttributeSchema(
   let result = '';
   const [head, ...tail] = path;
   result += indent + `'${head}': {\n`;
-  result += generateAttributeSchema(tail, schemaItem, indent + indentation);
+  result += generateAttributeSchema(tail, schemaItem, indent + INDENT);
   result += indent + '},\n';
   return result;
 }
 
-// TODO: parse options
-// TODO: put on type classes?
-function schemaItemToString(schemaItem: {
-  attribute: AttributeDefinition;
-  optional?: boolean;
-}): string {
-  const { attribute, optional } = schemaItem;
+function schemaItemToString(attribute: DataType): string {
+  const optional = attribute.config?.optional ?? false;
   const { type } = attribute;
   let result = '';
   switch (type) {
     case 'string':
-      result = `S.String(${valueOptionsToString(attribute.options, 'string')})`;
+      result = `S.String(${typeConfigToString(attribute)})`;
       break;
     case 'boolean':
-      result = `S.Boolean(${valueOptionsToString(attribute.options)})`;
+      result = `S.Boolean(${typeConfigToString(attribute)})`;
       break;
     case 'number':
-      result = `S.Number(${valueOptionsToString(attribute.options)})`;
+      result = `S.Number(${typeConfigToString(attribute)})`;
       break;
     case 'date':
-      result = `S.Date(${valueOptionsToString(attribute.options)})`;
+      result = `S.Date(${typeConfigToString(attribute)})`;
       break;
     case 'set':
-      result = `S.Set(${schemaItemToString({
-        attribute: attribute.items,
-      })},${valueOptionsToString(attribute.options)})`;
+      result = `S.Set(${schemaItemToString(
+        attribute.items
+      )},${typeConfigToString(attribute)})`;
       break;
     case 'record':
       result = `S.Record({${Object.entries(attribute.properties)
-        .map(([key, value]) => {
-          const optional = attribute.optional?.includes(key) ?? false;
-          return `'${key}': ${schemaItemToString({
-            attribute: value,
-            optional,
-          })}`;
-        })
+        .map(([key, value]) => `'${key}': ${schemaItemToString(value)}`)
         .join(',\n')}})`;
-      break;
-    case 'query':
-      const { query, cardinality } = attribute;
-      const { collectionName, ...queryParams } = query;
-      if (cardinality === 'one') {
-        const isRelationById =
-          collectionName &&
-          query.where &&
-          query.where.length === 1 &&
-          query.where[0][0] === 'id' &&
-          query.where[0][1] === '=' &&
-          Object.keys(queryParams).length === 1;
-        if (isRelationById)
-          result = `S.RelationById('${collectionName}', '${queryParams.where[0][2]}')`;
-        else
-          result = `S.RelationOne('${collectionName}',${subQueryToString(
-            queryParams
-          )})`;
-      } else {
-        result = `S.RelationMany('${collectionName}',${subQueryToString(
-          queryParams
-        )})`;
-      }
       break;
     default:
       throw new Error(`Invalid type: ${type}`);
   }
-  const excludeOptional = ['query'];
-  if (!excludeOptional.includes(type))
-    result = wrapOptional(result, optional ?? false);
+  if (optional) result = wrapOptional(result);
+
   return result;
 }
 
-function wrapOptional(type: string, optional: boolean) {
-  return optional ? `S.Optional(${type})` : type;
+function wrapOptional(type: string) {
+  return `S.Optional(${type})`;
 }
 
-function valueOptionsToString(
-  options: UserTypeOptions,
-  valueType: 'string' | undefined = undefined
-): string {
-  const { nullable, default: defaultValue } = options;
+function typeConfigToString(attribute: DataType): string {
   const result: string[] = [];
-  if (nullable !== undefined) result.push(`nullable: ${nullable}`);
-  if (defaultValue !== undefined)
-    result.push(`default: ${defaultValueToString(defaultValue)}`);
-  if (valueType === 'string') {
-    result.push(...parseStringOptions(options));
+  if (attribute.config?.nullable !== undefined)
+    result.push(`nullable: ${attribute.config.nullable}`);
+  if (attribute.config?.default !== undefined)
+    result.push(`default: ${defaultValueToString(attribute.config?.default)}`);
+  if (attribute.type === 'string') {
+    result.push(...parseStringOptions(attribute.config));
   }
   // wrap in braces if there are options
   if (result.length) return `{${result.join(', ')}}`;
@@ -251,19 +221,15 @@ function valueOptionsToString(
 function parseStringOptions(options: StringTypeOptions<any>) {
   const { enum: enumValue } = options;
   const result: string[] = [];
-  if (enumValue) result.push(`enum: ${JSON.stringify(enumValue)} as const`);
+  if (enumValue) result.push(`enum: ${JSON.stringify(enumValue)}`);
   return result;
 }
 
-type Defined<T> = T extends undefined ? never : T;
-
-function defaultValueToString(
-  defaultValue: Defined<UserTypeOptions['default']>
-): string {
+function defaultValueToString(defaultValue: TypeConfig['default']): string {
   if (typeof defaultValue === 'object' && defaultValue !== null) {
     const { func, args } = defaultValue;
     // TODO: import list from db
-    if (!['now', 'uuid'].includes(func))
+    if (!['now', 'uuid', 'Set.empty'].includes(func))
       throw new Error('Invalid default function name');
     const parsedArgs = args ? args.map(valueToJS).join(', ') : '';
     return `S.Default.${func}(${parsedArgs})`;
@@ -282,21 +248,13 @@ function valueToJS(value: any) {
 }
 
 function subQueryToString(
-  subquery: Omit<QueryAttributeDefinition['query'], 'collectionName'>
+  subquery: Pick<CollectionQuery, 'where' | 'limit' | 'order'>
 ) {
   const { where, limit, order } = subquery;
-  // const collectionNameString = collectionName
-  //   ? `collectionName: '${collectionName}' as const`
-  //   : '';
   const whereString = where ? `where: ${JSON.stringify(where)}` : '';
   const limitString = limit ? `limit: ${limit}` : '';
   const orderString = order ? `order: ${JSON.stringify(order)}` : '';
-  const cleanedString = [
-    // collectionNameString,
-    whereString,
-    limitString,
-    orderString,
-  ]
+  const cleanedString = [whereString, limitString, orderString]
     .filter((str) => str)
     .join(', ');
   return `{${cleanedString}}`;

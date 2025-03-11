@@ -7,7 +7,7 @@ import Todo from '@/components/Todo.vue'
 import { ref } from 'vue'
 
 let text = ref('')
-const { results, fetching } = useQuery(triplit, triplit.query('todos').order('created_at', 'DESC'))
+const state = useQuery(triplit, triplit.query('todos').Order('created_at', 'DESC'))
 function onSubmit() {
   triplit.insert('todos', { text: text.value })
   text.value = ''
@@ -24,10 +24,10 @@ function onSubmit() {
         <input v-model="text" placeholder="What needs to be done?" class="todo-input" />
         <button class="btn" type="submit" :disabled="!text">Add Todo</button>
       </form>
-      <p v-if="fetching">Loading...</p>
-      <div v-if="results" class="todos-container">
+      <p v-if="state.fetching">Loading...</p>
+      <div v-if="state.results" class="todos-container">
         <Todo
-          v-for="todo in results"
+          v-for="todo in state.results"
           :id="todo.id"
           :text="todo.text"
           :completed="todo.completed"

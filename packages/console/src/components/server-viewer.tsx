@@ -1,6 +1,6 @@
 import '../../../ui/globals.css';
 
-import { OrderStatement, Schema, QueryWhere } from '@triplit/db';
+import { OrderStatement, QueryWhere } from '@triplit/entity-db';
 import { TriplitClient } from '@triplit/client';
 import { useCallback, useEffect, useMemo, useState, Fragment } from 'react';
 import { CaretDown, GridFour, Selection } from '@phosphor-icons/react';
@@ -52,7 +52,7 @@ export async function loader({ params }: { params: { serverHost?: string } }) {
       : (importedServerHost ?? slugServerHost);
   if (!serverHost) return redirect('/');
   const server = await consoleClient.fetchOne(
-    consoleClient.query('servers').id(serverHost).include('tokens').build()
+    consoleClient.query('servers').Id(serverHost).Include('tokens')
   );
   if (!server) return redirect('/');
   let { url, tokens } = server;
@@ -63,7 +63,7 @@ export async function loader({ params }: { params: { serverHost?: string } }) {
   const token =
     tokens.find((e) => e.id === 'service_' + serverHost)?.value ??
     tokens[0].value;
-  const collectionStats = await fetchCollectionStats(server);
+  const collectionStats = await fetchCollectionStats(server.url, token);
   return { collectionStats, url, token };
 }
 
@@ -161,14 +161,13 @@ export function ServerViewer({
   }, [client]);
 
   const { toast } = useToast();
-  // const [client, setClient] = useState(injectedClient);
   const { result: server } = useServer(client.options?.serverUrl!);
   const { results: tokens } = useTokens(client.options?.serverUrl!);
-
+  const serviceToken = tokens?.find((t) => t.id.startsWith('service_'))?.value;
   const connectionStatus = useConnectionStatus(client);
   useEffect(() => {
-    client?.syncEngine.connect();
-    const listener = client.onSyncMessageReceived((message) => {
+    client.connect();
+    const listener = client.onSyncMessageReceived(async (message) => {
       const hasTransactionFailures =
         message.type === 'ERROR' &&
         (message.payload?.metadata?.failures ?? []).length > 0;
@@ -179,7 +178,7 @@ export function ServerViewer({
           txId: string;
         }[];
       };
-      failures.forEach(({ error, txId }) => {
+      failures.forEach(({ error }) => {
         toast({
           title: error.name,
           description:
@@ -188,11 +187,13 @@ export function ServerViewer({
               : '',
           variant: 'destructive',
         });
-        client.rollback(txId);
       });
+      // could make this more granular by inspecting the error
+      // or by doing this on the individual update/delete handlers in the data-viewer
+      await client.clearPendingChangesAll();
     });
     return () => {
-      client?.syncEngine.disconnect();
+      client.disconnect();
       listener();
     };
   }, [client]);
@@ -201,13 +202,19 @@ export function ServerViewer({
     addTokenFromClient(client);
   }, []);
 
-  const { result: schema, fetching: fetchingSchema } = useEntity(
-    client,
-    '_metadata',
-    '_schema'
-  );
+  // useEffect(() => {
 
-  const collectionsTolist = schema
+  //     const schema = client.db.schema;
+  //     const jsonSchema = schemaToJSON(schema);
+  //     console.log('setting schema', jsonSchema);
+  //     setSchema(jsonSchema);
+  //     setFetchingSchema(false);
+
+  // }, [client]);
+
+  const schema = client.db.schema;
+
+  const collectionsToList = schema
     ? Object.keys(schema.collections)
     : collectionStats.map(({ collection }) => collection);
 
@@ -226,7 +233,7 @@ export function ServerViewer({
   // if loading render loading state
   if (!client) return <FullScreenWrapper>Loading...</FullScreenWrapper>;
   const shouldEnableCreateCollectionButton =
-    schema || collectionsTolist.length === 0;
+    schema || collectionsToList.length === 0;
   // If client, render hooks that rely on client safely
   return (
     <div className="flex bg-popover w-full overflow-hidden h-full">
@@ -262,7 +269,9 @@ export function ServerViewer({
                 value: token,
                 name: nickname,
               });
-              updateClientOptions({ token });
+              await updateClientOptions({
+                token,
+              });
               // setClient(overwriteClient(token, client));
             }}
             schema={schema}
@@ -275,8 +284,10 @@ export function ServerViewer({
             <Fragment key={id}>
               <Button
                 key={value}
-                onClick={() => {
-                  updateClientOptions({ token: value });
+                onClick={async () => {
+                  await updateClientOptions({
+                    token: value,
+                  });
                   // setClient(overwriteClient(value, client));
                 }}
                 variant={isSelectedToken ? 'secondary' : 'ghost'}
@@ -303,16 +314,9 @@ export function ServerViewer({
                           e.stopPropagation();
                           await consoleClient.delete('tokens', id);
                           if (isSelectedToken) {
-                            // We should always have at least one token because you
-                            // can't delete the service token so if this token
-                            // just happens to be the first token then get
-                            // the next token otherwise default to the first token
-                            const tokenIterator = tokens.values();
-                            let newToken = tokenIterator.next().value;
-                            if (newToken.id === id) {
-                              newToken = tokenIterator.next().value;
-                            }
-                            updateClientOptions({ token: newToken.value });
+                            await updateClientOptions({
+                              token: serviceToken,
+                            });
                           }
                         }}
                       >
@@ -326,13 +330,13 @@ export function ServerViewer({
                 )}
               </Button>
               {isSelectedToken &&
-                client.db.sessionRoles &&
-                client.db.sessionRoles.length > 0 && (
+                client.db.session?.roles &&
+                client.db.session?.roles.length > 0 && (
                   <div
                     className="flex flex-wrap flex-row gap-2 my-2"
                     key={value + '_roles'}
                   >
-                    {client.db.sessionRoles?.map((role) => (
+                    {client.db.session.roles?.map((role) => (
                       <RoleCard
                         key={role.key}
                         name={role.key}
@@ -350,7 +354,7 @@ export function ServerViewer({
           <span className="truncate text-sm md:text-lg font-semibold">
             Collections
           </span>
-          <CreateCollectionDialog
+          {/* <CreateCollectionDialog
             disabled={!shouldEnableCreateCollectionButton}
             onSubmit={async (collectionName) => {
               try {
@@ -370,33 +374,30 @@ export function ServerViewer({
                 console.error(e);
               }
             }}
-          />
+          /> */}
         </div>
-        {!fetchingSchema &&
-          connectionStatus !== 'CONNECTING' &&
-          collectionsTolist.map((collection) => (
-            <Button
-              key={collection}
-              onClick={() => {
-                setQuery({ collection }, false);
-              }}
-              variant={query.collection === collection ? 'secondary' : 'ghost'}
-              className={`truncate flex h-auto px-2 py-1 flex-row items-center gap-2 justify-start shrink-0`}
-            >
-              <GridFour
-                weight="light"
-                className="shrink-0 hidden md:inline-block"
-                size={24}
-              />
-              <span className="text-xs md:text-sm truncate">{`${collection}`}</span>
-            </Button>
-          ))}
-        {!fetchingSchema &&
-          connectionStatus !== 'CONNECTING' &&
-          collectionsTolist.length === 0 && (
+        {collectionsToList.map((collection) => (
+          <Button
+            key={collection}
+            onClick={() => {
+              setQuery({ collection }, false);
+            }}
+            variant={query.collection === collection ? 'secondary' : 'ghost'}
+            className={`truncate flex h-auto px-2 py-1 flex-row items-center gap-2 justify-start shrink-0`}
+          >
+            <GridFour
+              weight="light"
+              className="shrink-0 hidden md:inline-block"
+              size={24}
+            />
+            <span className="text-xs md:text-sm truncate">{`${collection}`}</span>
+          </Button>
+        ))}
+        {connectionStatus !== 'CONNECTING' &&
+          collectionsToList.length === 0 && (
             <p className="text-xs">
               {
-                'Looks like you haven’t added any data yet. Once there is data saved in your Triplit instance, your collections will show up here.'
+                'Looks like you haven’t added any data yet. Once you push a schema, the collections will appear here.'
               }
             </p>
           )}
@@ -408,7 +409,7 @@ export function ServerViewer({
         )}
       </div>
       <div className="flex-grow flex flex-col min-w-0">
-        {!fetchingSchema && query.collection ? (
+        {query.collection ? (
           <DataViewer
             key={query.collection}
             client={client}
@@ -434,31 +435,32 @@ function findStringBetween(str: string, start: string, end: string): string {
   return str.slice(startIndex, endIndex);
 }
 
-function addTokenFromClient(client: TriplitClient<any>) {
+async function addTokenFromClient(client: TriplitClient<any>) {
   const token = client.token;
   const serverUrl = client.options?.serverUrl;
   if (!(token && serverUrl)) return;
-  consoleClient.transact(async (tx) => {
-    const existingToken = await tx.fetchOne(
-      consoleClient
-        .query('tokens')
-        .where([
-          ['value', '=', token],
-          ['serverUrl', '=', serverUrl],
-        ])
-        .build()
-    );
-    if (!existingToken) {
-      const isService = isServiceToken(token);
-      if (isService) {
-        await addServiceToken(tx, serverUrl, token);
-        return;
-      }
-      await tx.insert('tokens', {
-        serverUrl,
-        value: token,
-        name: 'Default token',
-      });
-    }
-  });
+  consoleClient
+    .fetchOne(
+      consoleClient.query('tokens').Where([
+        ['value', '=', token],
+        ['serverUrl', '=', serverUrl],
+      ]),
+      { policy: 'local-only' }
+    )
+    .then((existingToken) => {
+      if (existingToken) return;
+      const tokenToInsert = isServiceToken(token)
+        ? {
+            id: 'service_' + serverUrl,
+            name: 'Service token',
+            value: token,
+            serverUrl,
+          }
+        : {
+            serverUrl,
+            value: token,
+            name: 'Default token',
+          };
+      consoleClient.insert('tokens', tokenToInsert);
+    });
 }

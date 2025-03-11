@@ -8,7 +8,8 @@
   let text = $state('');
   const todos = useQuery(
     triplit,
-    triplit.query('todos').order('created_at', 'DESC'),
+    triplit.query('todos').Order('created_at', 'DESC'),
+    {}
   );
 </script>
 

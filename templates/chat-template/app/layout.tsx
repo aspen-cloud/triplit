@@ -1,12 +1,11 @@
 import "@/styles/globals.css"
 import { Metadata, Viewport } from "next"
-import { SessionProvider } from "next-auth/react"
 
 import { siteConfig } from "@/config/site.js"
 import { fontSans } from "@/lib/fonts.js"
 import { cn } from "@/lib/utils.js"
-import { ClientAuthProvider } from "@/components/client-auth-provider.js"
-import { ThemeProvider } from "@/components/theme-provider.js"
+
+import { Content } from "./content.jsx"
 
 export const metadata: Metadata = {
   title: {
@@ -44,19 +43,7 @@ export default function RootLayout({ children }: RootLayoutProps) {
             fontSans.variable
           )}
         >
-          <SessionProvider>
-            <ClientAuthProvider>
-              <ThemeProvider
-                attribute="class"
-                defaultTheme="system"
-                enableSystem
-              >
-                <div className="relative flex min-h-screen flex-col">
-                  {children}
-                </div>
-              </ThemeProvider>
-            </ClientAuthProvider>
-          </SessionProvider>
+          <Content>{children}</Content>
         </body>
       </html>
     </>

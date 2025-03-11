@@ -30,15 +30,12 @@ import {
   isSubQueryFilter,
   or,
 } from '../query.js';
-import {
-  getCollectionPermissions,
-  SessionRole,
-} from '../schema/permissions.js';
+import { getCollectionPermissions } from '../schema/permissions.js';
 import {
   createSchemaTraverser,
   getAttributeFromSchema,
 } from '../schema/schema.js';
-import { Models } from '../schema/types/index.js';
+import { Models, SessionRole } from '../schema/types/index.js';
 import {
   CollectionQuery,
   FilterStatement,
@@ -476,13 +473,13 @@ function getQueryAfter<M extends Models, Q extends CollectionQuery<M>>(
   }
   // Could validate the cursor matches the order by field type
   // If we support multiple cursors we could validate that there is a cursor for each order by field
-
   const [cursor, inclusive] = query.after;
+  if (cursor.length !== 2) throw new TriplitError('Invalid cursor');
   const after = [
     [
       // TODO: need to find a better place to apply schema transformations (see where too)
       cursor[0] instanceof Date ? cursor[0].toISOString() : cursor[0],
-      appendCollectionToId(query.collectionName, cursor[1]),
+      appendCollectionToId(query.collectionName, cursor[1] as string),
     ],
     inclusive,
   ];

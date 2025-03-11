@@ -14,7 +14,7 @@
     "format:check": "prettier --check \"**/*.{ts,tsx,mdx}\" --cache"
   },
   "dependencies": {
-    "@auth/core": "^0.18.1",
+    "@auth/core": "0.34.2",
     "@radix-ui/react-avatar": "^1.0.4",
     "@radix-ui/react-dialog": "^1.0.5",
     "@radix-ui/react-dropdown-menu": "^2.0.6",
@@ -30,9 +30,9 @@
     "jose": "^5.0.1",
     "jsonwebtoken": "^9.0.2",
     "lucide-react": "0.105.0-alpha.4",
-    "next": "latest",
-    "next-auth": "beta",
-    "next-themes": "^0.2.1",
+    "next": "^15.2.1",
+    "next-auth": "^4.24.11",
+    "next-themes": "^0.4.4",
     "react": "latest",
     "react-dom": "latest",
     "sharp": "^0.31.3",
@@ -40,6 +40,7 @@
     "tailwindcss-animate": "^1.0.6"
   },
   "devDependencies": {
+    "@faker-js/faker": "^9.6.0",
     "@ianvs/prettier-plugin-sort-imports": "^3.7.2",
     "@tailwindcss/typography": "^0.5.10",
     "@triplit/cli": "0.6.36",
@@ -51,7 +52,7 @@
     "@typescript-eslint/parser": "^5.61.0",
     "autoprefixer": "^10.4.14",
     "eslint": "^8.44.0",
-    "eslint-config-next": "13.0.0",
+    "eslint-config-next": "^15.2.1",
     "eslint-config-prettier": "^8.8.0",
     "eslint-plugin-react": "^7.32.2",
     "eslint-plugin-tailwindcss": "^3.13.0",
@@ -59,5 +60,6 @@
     "prettier": "^2.8.8",
     "tailwindcss": "^3.3.2",
     "typescript": "^5.3.2"
-  }
+  },
+  "version": "null-canary-20250310223455"
 }

@@ -1,4 +1,5 @@
-import { isDeepEqual, omitBy } from "remeda"
+import { isDeepEqual } from "../helpers/remeda.js"
+import { omitBy } from "../helpers/remeda.js"
 import { ScanArgs } from "../database/types.js"
 import {
 	KeyValuePair,

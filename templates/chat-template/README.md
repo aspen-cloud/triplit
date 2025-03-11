@@ -16,6 +16,16 @@ yarn create triplit-app --template=chat && cd triplit-app && yarn install
 yarn dev
 ```
 
+### Configure your `.env`
+
+This is a good time to set up your `.env`, which needs to be properly configured so that the Triplit Client running in your app and the dev environment can talk to each other. We include a mostly complete example `.env.example`. To start you'll need to:
+
+- Rename `.env.example` to `.env`
+
+If you receive errors related to your token, ensure that the env var `TRIPLIT_SERVICE_TOKEN` matches the `Service Token` in the CLI output after you run `yarn triplit dev`
+
+Optionally if you plan to use OAuth, register your app with [Github](https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/creating-an-oauth-app) and update the `GITHUB_ID` and `GITHUB_SECRET` to add OAuth support to the demo.
+
 ### In another terminal, run the Triplit dev environment
 
 To get syncing working between multiple clients, you'll need to start a local Triplit dev environment.
@@ -26,20 +36,19 @@ yarn triplit dev
 
 This will spin up both the server responsible for syncing and a developer console for inspecting the data on the server. [Check out the docs](https://www.triplit.dev/docs/local-development#start-triplit-services) for more info on local development with Triplit.
 
-### Configure your `.env`
+If you would like the local database initialized with data, this repo comes with a seed file which will load data into your database before starting up. More information on creating your own seeds can be found [here](https://www.triplit.dev/docs/seeding).
 
-This is a good time to set up your `.env`, which needs to be properly configured so that the Triplit Client running in your app and the dev environment can talk to each other. We include a mostly complete example `.env.example`, that needs two modification to start working.
-
-- Rename it to `.env`
-- Update the `TRIPLIT_SERVICE_TOKEN` with the `Service Token` in the CLI output after you run `yarn triplit dev`
-- Optionally, register your app with [Github](https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/creating-an-oauth-app) and update the `GITHUB_ID and GITHUB_SECRET` to add oauth support to the demo.
+```
+yarn triplit dev --seed=seed.ts
+```
 
 ## Features
 
-- Sent/unsent indicators for messages using Triplit's `syncStatus` query filter
+- Sent/unsent indicators for messages using Triplit's `syncStatus` query option
 - Offline support using Triplit's built-in offline cache and optimistic updates
 - Realtime updates and syncing between clients using Triplit's sync engine
-- User accounts stored in Triplit's remote database
+- Durable client storage with IndexedDB
+- User accounts stored in Triplit's remote database and database auth sesisons managed by Triplit
 
 ## Triplit usage
 
@@ -59,10 +68,12 @@ In the example below, our conversations collection has permissions defined that 
       id: S.Id(),
       name: S.String(),
       members: S.Set(S.String()),
+    }),
+    relationships: {
       membersInfo: S.RelationMany("users", {
         where: [["id", "in", "$members"]],
       }),
-    }),
+    },
     permissions: {
       user: {
         read: {

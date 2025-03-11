@@ -6,7 +6,7 @@ import { GettingStarted } from './components/GettingStarted.tsx';
 import { ConnectionStatus } from './components/ConnectionStatus.tsx';
 
 function useTodos() {
-  const todosQuery = triplit.query('todos').order('created_at', 'DESC');
+  const todosQuery = triplit.query('todos').Order('created_at', 'DESC');
   const { results: todos, error, fetching } = useQuery(triplit, todosQuery);
   return { todos, error, fetching };
 }

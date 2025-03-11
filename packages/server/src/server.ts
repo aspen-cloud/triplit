@@ -33,15 +33,25 @@ function captureException(e: any) {
   }
 }
 
-export function createServer(
-  options: Parameters<typeof createTriplitHonoServer>[0]
+export async function createServer(
+  options: Parameters<typeof createTriplitHonoServer>[0] & {
+    useNodeInspector?: boolean;
+  }
 ) {
+  let inspectorHandle: any;
+  if (options.useNodeInspector) {
+    const inspector = require('node:inspector/promises');
+
+    inspectorHandle = inspector.open({});
+    const inspectorUrl = inspector.url();
+    console.log(`Node inspector listening on ${inspectorUrl}`);
+  }
   let app = new Hono();
   initSentry();
   const { injectWebSocket, upgradeWebSocket } = createNodeWebSocket({ app });
 
   // @ts-expect-error
-  app = createTriplitHonoServer(
+  app = await createTriplitHonoServer(
     options,
     upgradeWebSocket,
     captureException,
@@ -53,6 +63,9 @@ export function createServer(
     injectWebSocket(server);
     return {
       close: (onClose?: () => void) => {
+        if (inspectorHandle) {
+          inspectorHandle[Symbol.dispose]();
+        }
         server.close();
         onClose && onClose();
       },

@@ -15,7 +15,7 @@ import {
 import { useState } from 'react';
 import { Trash } from '@phosphor-icons/react';
 import { RoleFilters } from './role-filters.js';
-import { type CollectionPermissions } from '@triplit/db';
+import { type CollectionPermissions } from '@triplit/entity-db';
 
 type DeleteEntitiesDialogProps = {
   entityIds: string[];

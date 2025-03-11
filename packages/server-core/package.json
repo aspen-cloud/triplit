@@ -59,8 +59,10 @@
     "validate:types": "node ../../scripts/check-for-local-references-in-declarations.js dist"
   },
   "dependencies": {
-    "@triplit/db": "workspace:^",
-    "jose": "^4.15.4"
+    "@triplit/entity-db": "workspace:^",
+    "@triplit/logger": "workspace:^",
+    "jose": "^4.15.4",
+    "superjson": "^2.2.2"
   },
   "devDependencies": {
     "@triplit/types": "workspace:^",

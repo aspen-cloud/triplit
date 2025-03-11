@@ -22,10 +22,9 @@ Limitations of schemaless mode include:
 A schema object defines your collections and the attributes and relationships on those collections. Schemas are defined in Javascript like so:
 
 ```typescript
-import { Schema as S } from '@triplit/client';
-import { TriplitClient, ClientSchema } from '@triplit/client';
+import { Schema as S, TriplitClient } from '@triplit/client';
 
-const schema = {
+const schema = S.Collections({
   todos: {
     schema: S.Schema({
       id: S.Id(),
@@ -47,14 +46,14 @@ const schema = {
       }),
     }),
   },
-} satisfies ClientSchema;
+});
 
 const client = new TriplitClient({
   schema,
 });
 ```
 
-Passing a schema to the client constructor will override any schema currently stored in your cache. This can cause data corruption, if the new schema is not compatible with existing data in the shape of the old schema. Refer to the [schema management guide](/schemas/updating) for more information.
+Passing a schema to the client constructor will override any schema currently stored in your cache. This can cause data corruption if the new schema is not compatible with existing data in the shape of the old schema. Refer to the [schema management guide](/schemas/updating) for more information.
 
 <Callout>
   By default, your schema file will be created by `triplit init` or `npm create
@@ -96,9 +95,9 @@ While the `schema` passed to the client constructor will be used to validate you
 You can extract a simple type from your schema with the `Entity` type.
 
 ```typescript
-import { Entity, ClientSchema } from '@triplit/client';
+import { type Entity, Schema as S } from '@triplit/client';
 
-const schema = {
+const schema = S.Collections({
   todos: {
     schema: S.Schema({
       id: S.Id(),
@@ -108,7 +107,7 @@ const schema = {
       tags: S.Set(S.String()),
     }),
   },
-} satisfies ClientSchema;
+});
 
 type Todo = Entity<typeof schema, 'todos'>;
 /* 
@@ -123,22 +122,24 @@ Todo will be a simple type:
 */
 ```
 
-#### `EntityWithSelection`
+#### `QueryResult`
 
-If you need more advanced types you can use the `EntityWithSelection` type. It expands `Entity` with a `selected` type parameter that can be used to select out specific attributes and an `inclusion` type parameter to add the types of related entities.
+If you need more advanced types, e.g. that include an entity's relationships, you can use the `QueryResult` type. It allows you to generate the return type of any query, e.g. with a `Select` clause that narrows fields or `Include` clauses that add related entities.
 
 ```ts
-import type { Entity, EntityWithSelection } from '@triplit/client';
+import { type QueryResult, Schema as S } from '@triplit/client';
 
-const schema = {
+const schema = S.Collections({
   users: {
     schema: S.Schema({
       id: S.Id(),
       name: S.String(),
+    }),
+    relationships: {
       posts: S.RelationMany('posts', {
         where: [['authorId', '=', '$1.id']],
       }),
-    }),
+    },
   },
   posts: {
     schema: S.Schema({
@@ -147,51 +148,15 @@ const schema = {
       authorId: S.String(),
     }),
   },
-};
+});
 
-type User = Entity<typeof schema, 'users'>;
-/*
-type User = {
-  id: string;
-  name: string;
-}
-*/
-
-type UserWithPosts = EntityWithSelection<
+type UserWithPosts = QueryResult<
   typeof schema,
-  'users',
-  ['name'],
-  { posts: true }
+  { collectionName: 'users'; select: ['name']; include: { posts: true } }
 >;
 
 /*
 type UserWithPosts = {
-  name: string;
-  posts: Array<{
-    id: string;
-    text: string;
-  }>
-}
-*/
-```
-
-#### `QueryResult`
-
-If you'd like to extract types from a [query](/client/query) instead of a schema, you can use the `QueryResult` type.
-
-```ts
-import { client } from './client';
-import type { QueryResult } from '@triplit/client';
-
-const userQuery = client
-  .query('users')
-  .select(['name'].include('posts'))
-  .build();
-
-type UserQueryResult = QueryResult<typeof userQuery>;
-
-/*
-type UserQueryResult = {
   name: string;
   posts: Array<{
     id: string;

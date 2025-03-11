@@ -1,18 +1,17 @@
 import { TriplitClient } from '@triplit/client';
 import {
-  AttributeDefinition,
-  CollectionDefinition,
+  DataType,
   DBTransaction,
-  UserTypeOptions,
+  BaseTypeOptions,
   diffSchemas,
   getSchemaDiffIssues,
-} from '@triplit/db';
+} from '@triplit/entity-db';
 
 export async function createCollection(
   client: TriplitClient<any>,
   collectionName: string,
   schema: {
-    [path: string]: AttributeDefinition;
+    [path: string]: DataType;
   }
 ) {
   try {
@@ -58,7 +57,7 @@ export async function addAttribute(
   client: TriplitClient<any>,
   collection: string,
   path: string[],
-  attribute: AttributeDefinition,
+  attribute: DataType,
   optional: boolean = false
 ) {
   try {
@@ -105,7 +104,7 @@ export async function alterAttributeOption(
   client: TriplitClient<any>,
   collection: string,
   path: string[],
-  options: UserTypeOptions
+  options: BaseTypeOptions
 ) {
   try {
     const issues = await safeSchemaEdit(client, async (tx) => {
@@ -161,7 +160,7 @@ export async function safeSchemaEdit(
       try {
         await callback(tx);
         if (!originalSchema) return;
-        const updatedSchema = await tx.getSchemaFromStore();
+        const updatedSchema = tx.schema;
         if (!updatedSchema) return;
         const diff = diffSchemas(originalSchema, updatedSchema);
 

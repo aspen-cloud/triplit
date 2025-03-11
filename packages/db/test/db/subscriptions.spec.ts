@@ -819,4 +819,3 @@ it('delta triples OR statments', async () => {
     },
   ]);
 });
-

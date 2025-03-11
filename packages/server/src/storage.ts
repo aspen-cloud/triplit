@@ -1,25 +1,11 @@
-import { FileTupleStorage } from '@triplit/db/storage/file';
-import { LevelTupleStorage } from '@triplit/db/storage/level-db';
-import { LMDBTupleStorage } from '@triplit/db/storage/lmdb';
-import { MemoryArrayStorage } from '@triplit/db/storage/memory-array';
-import { MemoryBTreeStorage } from '@triplit/db/storage/memory-btree';
-import { SQLiteTupleStorage } from '@triplit/db/storage/sqlite';
-import { BunSQLiteTupleStorage } from '@triplit/db/storage/bun-sqlite';
 import { require } from './utils/esm.js';
-import { TriplitError, type Storage } from '@triplit/db';
+import { KVStore, TriplitError } from '@triplit/entity-db';
+import { SQLiteKVStore } from '@triplit/entity-db/storage/sqlite';
+import { BTreeKVStore } from '@triplit/entity-db/storage/memory-btree';
+import { LmdbKVStore } from '@triplit/entity-db/storage/lmdb';
 
-export const durableStoreKeys = [
-  'file',
-  'leveldb',
-  'lmdb',
-  'sqlite',
-  'bun-sqlite',
-] as const;
-export const inMemoryStoreKeys = [
-  'memory',
-  'memory-array',
-  'memory-btree',
-] as const;
+export const durableStoreKeys = ['lmdb', 'sqlite'] as const;
+export const inMemoryStoreKeys = ['memory', 'memory-btree'] as const;
 export const storeKeys = [...durableStoreKeys, ...inMemoryStoreKeys] as const;
 
 export type DurableStoreKeys = (typeof durableStoreKeys)[number];
@@ -36,61 +22,20 @@ function getStoragePath() {
 }
 
 /**
- * Default implementation of the storage interface using a file system store
- */
-export function defaultFileStorage() {
-  const filePath = getStoragePath();
-  return new FileTupleStorage(filePath);
-}
-
-/**
- * Default implementation of the storage interface using LevelDB
- */
-export function defaultLevelDBStorage() {
-  const dbPath = getStoragePath();
-  const { Level } = require('level');
-  const level = new Level(dbPath);
-  return new LevelTupleStorage(level);
-}
-
-/**
- * Default implementation of the storage interface using LMDB
- */
-export function defaultLMDBStorage() {
-  const dbPath = getStoragePath();
-  const LMDB = require('lmdb');
-  return new LMDBTupleStorage((options) =>
-    LMDB.open(dbPath, {
-      ...options,
-    })
-  );
-}
-
-/**
  * Default implementation of the storage interface using an in-memory store (default is BTree)
  */
 export function defaultMemoryStorage() {
-  return new MemoryBTreeStorage();
-}
-
-/**
- * Default implementation of the storage interface using an in memory BTree
- */
-export function defaultArrayStorage() {
-  return new MemoryArrayStorage();
+  return new BTreeKVStore();
 }
 
 /**
  * Default implementation of the storage interface using an in memory BTree
  */
 export function defaultBTreeStorage() {
-  return new MemoryBTreeStorage();
+  return new BTreeKVStore();
 }
 
-/**
- * Default implementation of the storage interface using SQLite
- */
-export function defaultSQLiteStorage() {
+export function defaultSqliteKVStore() {
   const dbPath = getStoragePath();
   const sqlite = require('better-sqlite3');
   const db = sqlite(dbPath);
@@ -100,40 +45,27 @@ export function defaultSQLiteStorage() {
       PRAGMA temp_store = memory;
       PRAGMA mmap_size = 30000000000;
     `);
-  return new SQLiteTupleStorage(db);
+  return new SQLiteKVStore(db);
 }
 
-export function defaultBunSqliteStorage() {
+export function defaultLmdbKVStore() {
   const dbPath = getStoragePath();
-  const bunSqlite = require('bun:sqlite');
-  const db = new bunSqlite.Database(dbPath);
-  db.exec(`
-    PRAGMA journal_mode = WAL;
-    PRAGMA synchronous = NORMAL;
-    PRAGMA temp_store = memory;
-    PRAGMA mmap_size = 30000000000;
-  `);
-  return new BunSQLiteTupleStorage(db);
+  const LMDB = require('lmdb');
+  const lmdb = LMDB.open(dbPath, {});
+  return new LmdbKVStore(lmdb);
 }
 
-export function createTriplitStorageProvider(storage: StoreKeys): Storage {
+// Legacy types: 'file', 'leveldb', 'memory-array'
+export function createTriplitStorageProvider(storage: StoreKeys): KVStore {
   switch (storage) {
-    case 'file':
-      return defaultFileStorage();
-    case 'leveldb':
-      return defaultLevelDBStorage();
     case 'lmdb':
-      return defaultLMDBStorage();
+      return defaultLmdbKVStore();
     case 'memory':
       return defaultMemoryStorage();
-    case 'memory-array':
-      return defaultBTreeStorage();
     case 'memory-btree':
-      return defaultArrayStorage();
+      return defaultBTreeStorage();
     case 'sqlite':
-      return defaultSQLiteStorage();
-    case 'bun-sqlite':
-      return defaultBunSqliteStorage();
+      return defaultSqliteKVStore();
     default:
       throw new TriplitError(`Invalid storage option: ${storage}`);
   }

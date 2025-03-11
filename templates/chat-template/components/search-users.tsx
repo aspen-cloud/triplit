@@ -6,6 +6,7 @@ import {
 } from "@/lib/triplit-mutations.js"
 import {
   Conversation,
+  UseConversationResult,
   useUsersNotInConversationList,
 } from "@/hooks/triplit-hooks.js"
 
@@ -26,7 +27,7 @@ export function SearchUsers({
 }: {
   open: boolean
   setOpen: (open: boolean) => void
-  conversation: Conversation
+  conversation: UseConversationResult
 }) {
   const { data: session } = useSession()
   const currentUserId = session?.user?.id

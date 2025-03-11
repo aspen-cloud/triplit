@@ -1,6 +1,6 @@
 import './setupEnv.js';
 
-export { createServer } from './legacy-node-server.js';
+export { createServer } from './server.js';
 export {
   durableStoreKeys,
   inMemoryStoreKeys,

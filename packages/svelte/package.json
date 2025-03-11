@@ -32,10 +32,10 @@
     "@triplit/client": "workspace:^"
   },
   "devDependencies": {
-    "@sveltejs/package": "^2.3.5",
-    "@tsconfig/svelte": "^5.0.2",
-    "svelte": "^5.0.0-next.255",
-    "svelte-check": "^4.0.2",
+    "@sveltejs/package": "^2.3.10",
+    "@tsconfig/svelte": "^5.0.4",
+    "svelte": "^5.22.6",
+    "svelte-check": "^4.1.5",
     "tslib": "^2.6.2",
     "typescript": "^5.2.2"
   },

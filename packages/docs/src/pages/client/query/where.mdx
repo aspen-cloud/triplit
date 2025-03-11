@@ -1,27 +1,27 @@
 ---
-description: The `where` clause is used to filter results in a Triplit query based on conditions.
+description: The `Where` clause is used to filter results in a Triplit query based on conditions.
 ---
 
 import { Callout } from 'nextra/components';
 
-# where
+# Where
 
-To filter results based on conditions, you can use the `where` method. This method accepts a list of clauses as arguments. A clause is a tuple that takes the form `[attribute, operator, value]`.
+To filter results based on conditions, you can use the `Where` method. This method accepts a list of clauses as arguments. A clause is a tuple that takes the form `[attribute, operator, value]`.
 
 For example the following query will return all registered users.
 
 ```typescript
 const query = client
   .query('users')
-  .select(['id', 'name', 'email', 'dob'])
-  .where('is_registered', '=', true);
+  .Select(['id', 'name', 'email', 'dob'])
+  .Where('is_registered', '=', true);
 ```
 
-Clauses can be passed to `where` as a single clause or an array of clauses:
+Clauses can be passed to `Where` as a single clause or an array of clauses:
 
-- `.where('is_registered', '=', true)`
-- `.where(['is_registered', '=', true])`
-- `.where([['is_registered', '=', true], ...additional clauses])`
+- `.Where('is_registered', '=', true)`
+- `.Where(['is_registered', '=', true])`
+- `.Where([['is_registered', '=', true], ...additional clauses])`
 
 If multiple clauses are provided, all clauses are joined with a logical AND. However, you may use `or` and `and` methods within the clause array to specify how clauses should be logically grouped and joined.
 
@@ -32,8 +32,8 @@ import { or } from '@triplit/client';
 
 const query = client
   .query('users')
-  .select(['id', 'name', 'email', 'dob'])
-  .where([
+  .Select(['id', 'name', 'email', 'dob'])
+  .Where([
     [
       ['is_registered', '=', true],
       or([
@@ -47,7 +47,7 @@ const query = client
 You may use dot notation to filter by attributes of a record.
 
 ```typescript
-const query = client.query('users').where('address.city', '=', 'New York');
+const query = client.query('users').Where('address.city', '=', 'New York');
 ```
 
 If you define relationships in your schema you may also access those via dot notation. Triplit will autocomplete up to 3 levels of depth, but arbitrary depth is supported.
@@ -55,7 +55,7 @@ If you define relationships in your schema you may also access those via dot not
 ```typescript
 const query = client
   .query('test_scores')
-  .where('class.instructor.name', '=', 'Dr. Smith');
+  .Where('class.instructor.name', '=', 'Dr. Smith');
 ```
 
 ### Boolean clauses
@@ -63,8 +63,8 @@ const query = client
 You may also pass in a boolean value as a clause. These statements are particularly useful when defining [permissions](/schemas/permissions).
 
 ```typescript
-const query = client.query('users').where([true]); // 'true' is a no-op, will return all users
-const query = client.query('users').where([false]); // 'false' filters out all results, will return no users
+const query = client.query('users').Where([true]); // 'true' is a no-op, will return all users
+const query = client.query('users').Where([false]); // 'false' filters out all results, will return no users
 ```
 
 ### Exists filters
@@ -73,16 +73,18 @@ You may also define a filter to check if related data exists. Triplit provides a
 
 ```typescript
 import { Schema as S, exists } from '@triplit/client';
-const schema = {
+const schema = S.Collections({
   todos: {
     schema: S.Schema({
       id: S.Id(),
       text: S.String(),
       assignee_ids: S.Set(S.String()),
+    }),
+    relationships: {
       assignees: S.RelationMany('users', {
         where: ['id', 'in', '$assignee_ids'],
       }),
-    }),
+    },
   },
   users: {
     schema: S.Schema({
@@ -92,10 +94,10 @@ const schema = {
       title: S.String(),
     }),
   },
-};
+});
 
 // Todos where at least one assignee is on the engineering team and has the title of manager
-const query = client.query('todos').where(
+const query = client.query('todos').Where(
   exists('assignees', {
     where: [
       ['team', '=', 'engineering'],
@@ -106,8 +108,8 @@ const query = client.query('todos').where(
 ```
 
 <Callout type="warning" emoji="⚠️">
-  You may be tempted to write the query above as: `.where('assignees.team', '=',
-  'engineering').where('assignees.title', '=', 'manager')`. However, this will
+  You may be tempted to write the query above as: `.Where('assignees.team', '=',
+  'engineering').Where('assignees.title', '=', 'manager')`. However, this will
   instead query for todos where at least one assignee is on the engineering team
   and where at least one assignee has the title of manager.
 </Callout>
@@ -118,8 +120,8 @@ See the list of [data types](/schemas/types) for more information on the operato
 
 ## Id shorthand
 
-If you want to query by the entity's ID, you can use the `id` method as a shorthand for `where('id', '=', id)`. E.g.
+If you want to query by the entity's ID, you can use the `Id` method as a shorthand for `Where('id', '=', id)`. E.g.
 
 ```ts
-const query = client.query('users').id('the-user-id');
+const query = client.query('users').Id('the-user-id');
 ```

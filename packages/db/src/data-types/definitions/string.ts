@@ -12,6 +12,10 @@ import {
 } from '../../errors.js';
 
 const STRING_OPERATORS = [
+  '<',
+  '>',
+  '<=',
+  '>=',
   '=',
   '!=',
   'like',

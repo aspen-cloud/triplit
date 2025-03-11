@@ -1,29 +1,20 @@
 import {
-  UpdateTypeFromModel,
   CollectionNameFromModels,
-  ModelFromModels,
-  InsertTypeFromModel,
-  ChangeTracker,
-  createUpdateProxy,
-  Attribute,
-  TupleValue,
-  TriplitError,
-  EntityId,
-  constructEntity,
-  TripleRow,
-  appendCollectionToId,
+  createUpdateProxyAndTrackChanges,
+  deserializeEntity,
+  deserializeFetchResult,
   EntityNotFoundError,
-  Unalias,
-  SchemaQueries,
   FetchResult,
-  ToQuery,
-  FetchResultEntity,
-  CollectionQueryDefault,
   Models,
-  getDefaultValuesForCollection,
-} from '@triplit/db';
-import { ClientSchema } from '../client/types';
-import { httpClientQueryBuilder } from './query-builder.js';
+  queryBuilder,
+  ReadModel,
+  SchemaQuery,
+  serializeEntity,
+  TriplitError,
+  Type,
+  UpdatePayload,
+  WriteModel,
+} from '@triplit/entity-db';
 
 function parseError(error: string) {
   try {
@@ -34,7 +25,7 @@ function parseError(error: string) {
   }
 }
 
-export type HttpClientOptions<M extends ClientSchema> = {
+export type HttpClientOptions<M extends Models<M> = Models> = {
   serverUrl?: string;
   token?: string;
   schema?: M;
@@ -42,7 +33,7 @@ export type HttpClientOptions<M extends ClientSchema> = {
 };
 
 // Interact with remote via http api, totally separate from your local database
-export class HttpClient<M extends ClientSchema = ClientSchema> {
+export class HttpClient<M extends Models<M> = Models> {
   constructor(private options: HttpClientOptions<M> = {}) {}
 
   // Hack: use schemaFactory to get schema if it's not ready from provider
@@ -87,185 +78,134 @@ export class HttpClient<M extends ClientSchema = ClientSchema> {
     return { data: await res.json(), error: undefined };
   }
 
-  async fetch<CQ extends SchemaQueries<M>>(
-    query: CQ
-  ): Promise<Unalias<FetchResult<M, ToQuery<M, CQ>>>> {
+  async fetch<Q extends SchemaQuery<M>>(
+    query: Q
+  ): Promise<FetchResult<M, Q, 'many'>> {
     const { data, error } = await this.sendRequest('/fetch', 'POST', {
       query,
     });
     if (error) throw error;
-    return deserializeHttpFetchResult<M, CQ>(
+    return deserializeFetchResult(
       query,
-      data.result,
-      await this.schema()
-    ) as Unalias<FetchResult<M, ToQuery<M, CQ>>>;
+      await this.schema(),
+      data.map((entity: any) => entity[1])
+    ) as FetchResult<M, Q, 'many'>;
   }
 
-  private async queryTriples<CQ extends SchemaQueries<M>>(
-    query: CQ
-  ): Promise<TripleRow[]> {
-    const { data, error } = await this.sendRequest('/queryTriples', 'POST', {
-      query,
-    });
-    if (error) throw error;
-    return data;
-  }
-
-  async fetchOne<CQ extends SchemaQueries<M>>(
-    query: CQ
-  ): Promise<Unalias<FetchResultEntity<M, ToQuery<M, CQ>>> | null> {
+  async fetchOne<Q extends SchemaQuery<M>>(
+    query: Q
+  ): Promise<FetchResult<M, Q, 'one'>> {
     query = { ...query, limit: 1 };
     const { data, error } = await this.sendRequest('/fetch', 'POST', {
       query,
     });
     if (error) throw error;
-    const deserialized = deserializeHttpFetchResult<M, CQ>(
+    const deserialized = deserializeFetchResult(
       query,
-      data.result,
-      await this.schema()
+      await this.schema(),
+      data.map((entity: any) => entity[1])
     );
-    const entity = [...deserialized.values()][0];
+    const entity = deserialized[0];
     if (!entity) return null;
-    return entity as Unalias<FetchResultEntity<M, ToQuery<M, CQ>>>;
+    return entity as NonNullable<FetchResult<M, Q, 'one'>>;
   }
 
   async fetchById<CN extends CollectionNameFromModels<M>>(
     collectionName: CN,
     id: string
-  ): Promise<Unalias<
-    FetchResultEntity<M, ToQuery<M, CollectionQueryDefault<M, CN>>>
-  > | null> {
-    const query = this.query(collectionName).id(id).build() as SchemaQueries<M>;
-    return this.fetchOne(query);
+  ): Promise<FetchResult<M, { collectionName: CN }, 'one'>> {
+    const query = this.query(collectionName).Id(id);
+    return this.fetchOne<{ collectionName: CN }>(query);
   }
 
   async insert<CN extends CollectionNameFromModels<M>>(
     collectionName: CN,
-    object: Unalias<InsertTypeFromModel<ModelFromModels<M, CN>>>
-  ) {
+    object: WriteModel<M, CN>
+  ): Promise<ReadModel<M, CN>> {
     // we need to convert Sets to arrays before sending to the server
     const schema = await this.schema();
-    const collectionSchema = schema?.[collectionName];
+    const collectionSchema = schema?.[collectionName].schema;
 
-    const defaultValues = schema?.[collectionName]
-      ? getDefaultValuesForCollection(schema?.[collectionName])
-      : {};
-
-    // Append defaults
-    const inputWithDefaults = {
-      ...defaultValues,
-      ...object,
-    };
-
+    // TODO: we should just be able to use the internal changeset here, which is
+    // already JSON compliant
     const jsonEntity = collectionSchema
-      ? //@ts-expect-error
-        collectionSchema?.schema.convertJSToJSON(inputWithDefaults, schema)
-      : inputWithDefaults;
+      ? Type.serialize(collectionSchema, object, 'decoded')
+      : object;
     const { data, error } = await this.sendRequest('/insert', 'POST', {
       collectionName,
       entity: jsonEntity,
     });
     if (error) throw error;
-    return data;
+    return deserializeEntity(collectionSchema, data);
   }
 
-  async bulkInsert(bulk: BulkInsert<M>) {
-    // we need to convert Sets to arrays before sending to the server
+  async bulkInsert(bulk: BulkInsert<M>): Promise<BulkInsertResult<M>> {
     const schema = await this.schema();
-    const jsonBulkInsert = schema
-      ? Object.fromEntries(
-          Object.entries(bulk).map(([collectionName, entities]) => [
-            collectionName,
-            entities?.map((entity: any) =>
-              Object.fromEntries(
-                Object.entries(entity).map(([attribute, value]) => [
-                  attribute,
-                  schema[collectionName]?.schema.properties[
-                    attribute
-                  ].convertJSToJSON(value, schema),
-                ])
-              )
-            ),
-          ])
-        )
-      : bulk;
+    let payload = bulk;
+    if (schema) {
+      const schemaPayload: BulkInsert<M> = {};
+      for (const key in bulk) {
+        const collectionName = key as CollectionNameFromModels<M>;
+        const data = bulk[collectionName];
+        const collectionSchema = schema?.[collectionName].schema;
+        if (!data) continue;
+        schemaPayload[collectionName] = data.map((entity: any) =>
+          serializeEntity(collectionSchema, entity)
+        );
+      }
+      payload = schemaPayload;
+    }
 
     const { data, error } = await this.sendRequest(
       '/bulk-insert-file',
       'POST',
-      jsonBulkInsert,
+      payload,
       { isFile: true }
     );
     if (error) throw error;
-    return data;
-  }
-
-  async insertTriples(triples: any[]) {
-    const { data, error } = await this.sendRequest('/insert-triples', 'POST', {
-      triples,
-    });
-    if (error) throw error;
-    return data;
-  }
-
-  async deleteTriples(entityAttributes: [EntityId, Attribute][]) {
-    const { data, error } = await this.sendRequest('/delete-triples', 'POST', {
-      entityAttributes,
-    });
-    if (error) throw error;
-    return data;
+    const result: BulkInsertResult<M> = {};
+    for (const key in data) {
+      const collectionName = key as CollectionNameFromModels<M>;
+      const collectionSchema = schema?.[collectionName].schema;
+      result[collectionName] = data[key].map((entity: any) =>
+        deserializeEntity(collectionSchema, entity)
+      );
+    }
+    return result;
   }
 
   async update<CN extends CollectionNameFromModels<M>>(
     collectionName: CN,
-    entityId: string,
-    updater: (
-      entity: Unalias<UpdateTypeFromModel<ModelFromModels<M, CN>>>
-    ) => void | Promise<void>
+    id: string,
+    update: UpdatePayload<M, CN>
   ) {
-    /**
-     * This queries the current entity so we can construct "patches"
-     * Patches are basically tuples (ie triples w/o timestamps), so we should just call them tuples
-     * The way our updater works right now, non assignment operations (ie set.add(), etc) should have their value loaded as to not conflict with possibly "undefined" values in the proxy
-     * We should refactor this though, because we shouldnt require pre-loading data to make an update (@wernst has some ideas)
-     */
+    let changes = undefined;
     const schema = await this.schema();
     const collectionSchema = schema?.[collectionName]?.schema;
-    const entityQuery = this.query(collectionName)
-      .id(entityId)
-      .build() as SchemaQueries<M>;
-    const triples = await this.queryTriples(entityQuery);
-    if (!triples.length)
-      throw new EntityNotFoundError(
-        entityId,
-        collectionName,
-        "Cannot perform an update on an entity that doesn't exist"
+    if (typeof update === 'function') {
+      const existingEntity = await this.fetchById(collectionName, id);
+      if (!existingEntity) {
+        throw new EntityNotFoundError(id, collectionName);
+      }
+      changes = {};
+      // one of the key assumptions we're making here is that the update proxy
+      // will take car of the conversion of Sets and Dates. This is mostly
+      // to account for capturing changes to Sets because we need something
+      // that can track deletes and sets to a Set, which a Set itself cannot do
+      await update(
+        createUpdateProxyAndTrackChanges(
+          existingEntity,
+          changes,
+          collectionSchema
+        )
       );
-    const entity = constructEntity(
-      triples,
-      appendCollectionToId(collectionName, entityId),
-      schema
-    );
-    const entityData = entity?.data ?? {};
-    const changes = new ChangeTracker(entityData);
-    const updateProxy: any = createUpdateProxy(
-      changes,
-      entityData,
-      schema,
-      collectionName
-    );
-    await updater(updateProxy);
-    const changeTuples = changes.getTuples();
-    const patches: (['delete', Attribute] | ['set', Attribute, TupleValue])[] =
-      changeTuples.map((tuple) => {
-        if (tuple[1] === undefined)
-          return ['delete', tuple[0]] as ['delete', Attribute];
-        return ['set', tuple[0], tuple[1]] as ['set', Attribute, TupleValue];
-      });
+    } else {
+      changes = update;
+    }
     const { data, error } = await this.sendRequest('/update', 'POST', {
       collectionName,
-      entityId,
-      patches,
+      entityId: id,
+      changes,
     });
     if (error) throw error;
     return data;
@@ -291,39 +231,15 @@ export class HttpClient<M extends ClientSchema = ClientSchema> {
     return data;
   }
 
-  query<CN extends CollectionNameFromModels<M>>(
-    collectionName: CN
-  ): ReturnType<typeof httpClientQueryBuilder<M, CN>> {
-    return httpClientQueryBuilder<M, CN>(collectionName);
+  query<CN extends CollectionNameFromModels<M>>(collectionName: CN) {
+    return queryBuilder<M, CN>(collectionName);
   }
 }
 
-function deserializeHttpFetchResult<
-  M extends Models,
-  Q extends SchemaQueries<M>,
->(query: Q, result: [string, any][], schema?: any): FetchResult<M, Q> {
-  return result.map((entry) => deserializeHttpEntity(query, entry[1], schema));
-}
+export type BulkInsert<M extends Models<M> = Models> = {
+  [CN in CollectionNameFromModels<M>]?: WriteModel<M, CN>[];
+};
 
-function deserializeHttpEntity<M extends Models, Q extends SchemaQueries<M>>(
-  query: Q,
-  entity: any,
-  schema?: any
-): FetchResultEntity<M, Q> {
-  const { include, collectionName } = query;
-  const collectionSchema = schema?.[collectionName]?.schema;
-
-  const deserializedEntity = collectionSchema
-    ? (collectionSchema.convertJSONToJS(entity, schema) as FetchResultEntity<
-        M,
-        Q
-      >)
-    : entity;
-  return deserializedEntity;
-}
-
-export type BulkInsert<M extends ClientSchema> = {
-  [CN in CollectionNameFromModels<M>]?: Unalias<
-    InsertTypeFromModel<ModelFromModels<M, CN>>
-  >[];
+export type BulkInsertResult<M extends Models<M> = Models> = {
+  [CN in CollectionNameFromModels<M>]?: ReadModel<M, CN>[];
 };

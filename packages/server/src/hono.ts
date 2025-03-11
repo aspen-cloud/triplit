@@ -1,13 +1,13 @@
 import {
-  DB,
+  DBOptions,
+  KVStore,
   TriplitError,
-  DurableClock,
-  DBConfig,
-  Storage,
   getRolesFromSession,
+  createDB,
+  ServerEntityStore,
   normalizeSessionVars,
   sessionRolesAreEquivalent,
-} from '@triplit/db';
+} from '@triplit/entity-db';
 import {
   InvalidAuthenticationSchemeError,
   MalformedMessagePayloadError,
@@ -23,31 +23,34 @@ import {
   ParseResult,
   ServerCloseReason,
 } from '@triplit/types/sync';
-import { logger } from './logger.js';
+import { logger, LogHandler } from '@triplit/logger';
+import { ConsoleHandler } from '@triplit/logger/console';
 import { parseAndValidateToken, ProjectJWT } from '@triplit/server-core/token';
-import { Hono } from 'hono';
-import { StatusCode } from 'hono/utils/http-status';
+import { Context, Hono } from 'hono';
+import { ContentfulStatusCode, StatusCode } from 'hono/utils/http-status';
 
 import { WSContext, type UpgradeWebSocket, WSMessageReceive } from 'hono/ws';
 
-import { logger as honoLogger } from 'hono/logger';
+// import { logger as honoLogger } from 'hono/logger';
 import { cors } from 'hono/cors';
-
-import { TriplitClient } from '@triplit/client';
+import { createTriplitStorageProvider, StoreKeys } from './storage.js';
+import { bodyLimit } from 'hono/body-limit';
 
 type Variables = {
   token: ProjectJWT;
 };
 
+const FILE_UPLOAD_BODY_MAX = 1024 * 1024 * 100; // 100MB
+
 export type ServerOptions = {
-  storage?: Storage | (() => Storage);
-  dbOptions?: DBConfig;
-  watchMode?: boolean;
+  storage?: StoreKeys | KVStore | (() => KVStore);
+  dbOptions?: DBOptions;
   verboseLogs?: boolean;
   upstream?: {
     url: string;
     token: string;
   };
+  logHandler?: LogHandler;
   jwtSecret: string;
   projectId?: string;
   // do we still need this?
@@ -55,7 +58,7 @@ export type ServerOptions = {
   externalJwtSecret?: string;
 };
 
-export function createTriplitHonoServer(
+export async function createTriplitHonoServer(
   options: ServerOptions,
   upgradeWebSocket: UpgradeWebSocket,
   captureException?: (e: unknown) => void,
@@ -66,28 +69,72 @@ export function createTriplitHonoServer(
       ? options.storage()
       : options.storage
     : undefined;
-  if (options?.verboseLogs) logger.verbose = true;
-  const dbOptions: Partial<DBConfig> = {
+  options.logHandler
+    ? logger.registerHandler(options.logHandler, { exclusive: true })
+    : logger.registerHandler(new ConsoleHandler());
+  // if (options?.verboseLogs) logger.level = true;
+  const dbOptions: Partial<DBOptions> = {
     experimental: {},
   };
   Object.assign(dbOptions, options?.dbOptions);
-  const db = options.upstream
-    ? new TriplitClient({
-        serverUrl: options.upstream.url,
-        token: options.upstream.token,
-        syncSchema: true,
-        skipRules: false,
-      })
-    : new DB({
-        source: dbSource,
-        clock: new DurableClock(),
-        // Can this be removed?
-        tenantId: options.projectId,
-        ...dbOptions,
-      });
+  // const db = options.upstream
+  //   ? new TriplitClient({
+  //       serverUrl: options.upstream.url,
+  //       token: options.upstream.token,
+  //       syncSchema: true,
+  //       skipRules: false,
+  //     })
+  //   : new DB({
+  //       source: dbSource,
+  //       clock: new DurableClock(),
+  //       // Can this be removed?
+  //       tenantId: options.projectId,
+  //       ...dbOptions,
+  //     });
+
+  // let kvStore = null;
+  // if (dbSource && dbSource === 'sqlite') {
+  //   const sqlite = require('better-sqlite3');
+  // }
+
+  const db = await createDB({
+    ...dbOptions,
+    clientId: 'server',
+    entityStore: new ServerEntityStore(),
+    kv:
+      typeof dbSource === 'string'
+        ? createTriplitStorageProvider(dbSource)
+        : dbSource,
+  });
+
+  const server = new TriplitServer(db, captureException);
 
   // @ts-expect-error
-  const server = new TriplitServer(db, captureException);
+  globalThis.db = db;
+  // @ts-expect-error
+  globalThis.server = server;
+  // @ts-expect-error
+  globalThis.showSubscribedQueries = () => {
+    console.table(
+      [...db.ivm.subscribedQueries.values()].map((val) => ({
+        collection: val.ogQuery.collectionName,
+        listeners: val.listeners.size,
+        limit: val.ogQuery.limit,
+        ...Object.fromEntries(
+          (val.ogQuery.order ?? []).map((order, i) => [
+            `order-${i}`,
+            JSON.stringify(order),
+          ])
+        ),
+        ...Object.fromEntries(
+          (val.ogQuery.where ?? []).map((filter, i) => [
+            `where-${i}`,
+            JSON.stringify(filter),
+          ])
+        ),
+      }))
+    );
+  };
 
   function parseAndValidateTokenWithOptions(token: string) {
     return parseAndValidateToken(token, options.jwtSecret, options.projectId, {
@@ -98,7 +145,7 @@ export function createTriplitHonoServer(
 
   const app = (honoApp ?? new Hono()) as Hono<{ Variables: Variables }>;
 
-  app.use(honoLogger());
+  // app.use(honoLogger());
   app.use(cors());
 
   // app.use(async (c, next) => {
@@ -112,10 +159,10 @@ export function createTriplitHonoServer(
   // });
 
   app.onError((error, c) => {
-    console.error(error);
+    logger.error('Error handling request', error);
     if (error instanceof TriplitError) {
       if (error.status === 500) captureException?.(error);
-      return c.json(error.toJSON(), error.status as StatusCode);
+      return c.json(error.toJSON(), error.status as ContentfulStatusCode);
     }
     captureException?.(error);
     return c.text('Internal server error', 500);
@@ -153,24 +200,15 @@ export function createTriplitHonoServer(
             return;
           }
           try {
-            const clientId = c.req.query('client') as string;
             const clientHash = c.req.query('schema')
               ? parseInt(c.req.query('schema') as string)
               : undefined;
             const syncSchema = c.req.query('sync-schema') === 'true';
 
             syncConnection = server.openConnection(token, {
-              clientId,
               clientSchemaHash: clientHash,
               syncSchema,
             });
-            const schemaIncompatibility =
-              await syncConnection.isClientSchemaCompatible();
-            if (schemaIncompatibility) {
-              schemaIncompatibility.retry = !!options?.watchMode;
-              closeSocket(ws, schemaIncompatibility, 1008);
-              return;
-            }
             // @ts-expect-error
             ws.tokenExpiration = token.exp;
             syncConnection!.addListener((messageType, payload) => {
@@ -185,8 +223,9 @@ export function createTriplitHonoServer(
               }
               sendMessage(ws, messageType, payload);
             });
+            await syncConnection.start();
           } catch (e) {
-            console.error(e);
+            logger.error('Error opening connection', e as any);
             captureException?.(e);
             closeSocket(
               ws,
@@ -220,7 +259,8 @@ export function createTriplitHonoServer(
                 message: event.data,
               }
             );
-          logger.logMessage('received', parsedMessage);
+          // logger.info('received', parsedMessage);
+          messageLogger.info('received', parsedMessage);
           if (parsedMessage.type === 'UPDATE_TOKEN') {
             const { token: newToken } = parsedMessage.payload;
             const { data, error } =
@@ -269,8 +309,7 @@ export function createTriplitHonoServer(
         onClose: (event, ws) => {
           if (!syncConnection) return;
 
-          server.closeConnection(syncConnection.options.clientId);
-
+          server.closeConnection(syncConnection);
           // Should this use the closeSocket function?
           ws.close(event.code, event.reason);
         },
@@ -311,20 +350,41 @@ export function createTriplitHonoServer(
     }
   });
 
-  app.post('/bulk-insert-file', async (c) => {
-    const body = await c.req.formData();
-    if (!body.has('data')) {
-      return c.text('No data provided for file upload', 400);
-    }
-    const data = JSON.parse(body.get('data') as string);
-    const token = c.get('token');
-    const { statusCode, payload } = await server.handleRequest(
-      ['bulk-insert'],
-      data,
-      token
-    );
-    return c.json(payload, statusCode as StatusCode);
+  app.get('/version', (c) => {
+    return c.text('1.0.0', 200);
   });
+
+  app.post(
+    '/bulk-insert-file',
+    bodyLimit({
+      // NOTE: bun max is 128MB https://hono.dev/docs/middleware/builtin/body-limit#usage-with-bun-for-large-requests
+      // Maybe this can be configurable?
+      maxSize: FILE_UPLOAD_BODY_MAX,
+      onError: (c) => {
+        const error = new TriplitError(
+          `Body too large, max size is ${Math.floor(FILE_UPLOAD_BODY_MAX / 1024 / 1024)} MB`
+        );
+        return c.json(error.toJSON(), 413);
+      },
+    }),
+    async (c) => {
+      const body = await parseMultipartFormData(c);
+      if (!body['data']) {
+        return c.json(
+          new TriplitError('No data provided for file upload'),
+          400
+        );
+      }
+      const data = JSON.parse(body['data'] as string);
+      const token = c.get('token');
+      const { statusCode, payload } = await server.handleRequest(
+        ['bulk-insert'],
+        data,
+        token
+      );
+      return c.json(payload, statusCode as ContentfulStatusCode);
+    }
+  );
   app.post('*', async (c) => {
     let body;
     try {
@@ -336,12 +396,57 @@ export function createTriplitHonoServer(
       body,
       token
     );
-    return c.json(payload, statusCode as StatusCode);
+    return c.json(payload, statusCode as ContentfulStatusCode);
   });
 
   return app;
 }
 
+// Seeing hono methods return a single 1MB chunk of the file data, so manually parsing formdata
+// ex. c.req.formData(), c.req.parseBody(), etc
+// TODO: create issue with hono
+async function parseMultipartFormData(c: Context) {
+  const contentType = c.req.header('content-type') || '';
+  if (!contentType.startsWith('multipart/form-data')) {
+    throw new Error('Invalid Content-Type');
+  }
+
+  // Extract boundary from `Content-Type: multipart/form-data; boundary=------xyz`
+  const boundary = '--' + contentType.split('boundary=')[1];
+  if (!boundary) {
+    throw new Error('Invalid boundary');
+  }
+
+  // Read the full request body
+  const rawBuffer = await c.req.arrayBuffer();
+  const rawText = new TextDecoder().decode(rawBuffer); // Convert buffer to string
+
+  // Split parts using the boundary
+  const parts = rawText.split(boundary).slice(1, -1); // Ignore first/last empty parts
+
+  const formData: Record<string, string> = {}; // Store parsed key-value pairs
+
+  for (const part of parts) {
+    const [headers, ...bodyLines] = part.trim().split('\r\n\r\n');
+    const body = bodyLines.join('\r\n\r\n'); // Handle multi-line body
+
+    // Find `name="data"` in Content-Disposition
+    const contentDisposition = headers.split('\r\n')[0]; // First header line
+    const nameMatchIndex = contentDisposition.indexOf('name="');
+    if (nameMatchIndex === -1) continue;
+
+    // Extract the field name
+    const nameStart = nameMatchIndex + 6; // `name="` is 6 characters long
+    const nameEnd = contentDisposition.indexOf('"', nameStart);
+    const fieldName = contentDisposition.slice(nameStart, nameEnd);
+
+    formData[fieldName] = body; // Store the value
+  }
+
+  return formData;
+}
+
+const messageLogger = logger.context('message');
 function sendMessage(
   socket: WSContext,
   type: any,
@@ -352,7 +457,8 @@ function sendMessage(
   // OPEN = 1
   if (socket.readyState === 1) {
     socket.send(message);
-    logger.logMessage('sent', { type, payload });
+    messageLogger.info('sent', { type, payload });
+    // logger.log('sent', type, payload);
   }
 }
 

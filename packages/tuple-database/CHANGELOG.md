@@ -1,5 +1,71 @@
 # @triplit/tuple-database
 
+## 2.3.0-canary-20250225192824
+
+### Patch Changes
+
+- 8cf48720: bump version
+
+## 2.3.0-canary-20250225002127
+
+### Patch Changes
+
+- 0357ba6f: bump version
+
+## 2.3.0-canary-20250224214952
+
+### Patch Changes
+
+- 873e99e6: bump version
+
+## 2.3.0-canary-20250224192505
+
+### Patch Changes
+
+- cc9ff43a: version bump
+
+## 2.3.0-canary-20250221232228
+
+### Patch Changes
+
+- 2c881424: version bump
+
+## 2.3.0-canary-20250204062109
+
+### Patch Changes
+
+- 93c8f928: test bump
+
+## 2.3.0-canary-20250204060424
+
+### Patch Changes
+
+- 8940c6f1: test bump
+
+## 2.3.0-canary-20250204055631
+
+### Patch Changes
+
+- 7ed7e51d: test bump
+
+## 2.3.0-canary-20250204042452
+
+### Patch Changes
+
+- e8d703e5: test bump
+
+## 2.3.0-canary-20250204035012
+
+### Patch Changes
+
+- bd732fd5: test version bump
+
+## 2.3.0-canary-20250204025207
+
+### Minor Changes
+
+- 4866105f: switch to entity format and entity-db package, minor bump
+
 ## 2.2.33
 
 ### Patch Changes

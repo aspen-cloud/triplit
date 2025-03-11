@@ -9,18 +9,17 @@ import {
   useLoaderData,
 } from '@tanstack/react-router';
 import {
-  ClientFetchResult,
-  ClientQuery,
-  ClientSchema,
-  QueryResult,
+  FetchResult,
+  Models,
+  SchemaQuery,
   TriplitClient,
 } from '@triplit/client';
 import { useQuery } from '@triplit/react';
 import { ComponentType, useCallback, useMemo, useState } from 'react';
 
 export function triplitRoute<
-  M extends ClientSchema,
-  Q extends ClientQuery<M>,
+  M extends Models<M>,
+  Q extends SchemaQuery<M>,
   Path extends keyof FileRoutesByPath,
   TParentRoute extends AnyRoute = FileRoutesByPath[Path]['parentRoute'],
   TId extends RouteConstraints['TId'] = FileRoutesByPath[Path]['id'],
@@ -42,7 +41,7 @@ export function triplitRoute<
         >
       ) => Q),
   Component: ComponentType<{
-    results: QueryResult<M, Q>[];
+    results: FetchResult<M, Q, 'many'>;
     error: any;
     updateQuery: (newQuery: Q) => void;
   }>
@@ -62,15 +61,12 @@ export function triplitRoute<
     >(
       ctx: Ctx
     ): Promise<{
-      results: ClientFetchResult<M, Q>;
+      results: FetchResult<M, Q, 'many'>;
       query: Q;
     }> => {
       const fullQuery: Q =
         typeof query === 'function' ? query(ctx as any) : query;
-      const results = (await client.fetch(fullQuery)) as ClientFetchResult<
-        M,
-        Q
-      >;
+      const results = await client.fetch(fullQuery);
       return {
         results,
         query: fullQuery,

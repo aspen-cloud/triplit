@@ -1,20 +1,12 @@
 import {
+  DBChanges,
+  NestedMap,
+  hashQuery,
   CollectionQuery,
-  TripleRow,
   TriplitError,
-  constructEntities,
-  hashSchemaJSON,
-  schemaToJSON,
-  convertEntityToJS,
-  Timestamp,
-  TripleStoreApi,
-  FetchResult,
-  Models,
-  Unalias,
-  ToQuery,
-} from '@triplit/db';
+  hashObject,
+} from '@triplit/entity-db';
 import { SyncOptions, TriplitClient } from './client/triplit-client.js';
-import { Subject } from 'rxjs';
 import {
   ConnectionStatus,
   SyncTransport,
@@ -27,20 +19,23 @@ import {
   ServerCloseReasonType,
   ServerErrorMessage,
   ServerSyncMessage,
+  QueryState,
+  SyncTimestamp,
 } from './@triplit/types/sync.js';
 import {
   MissingConnectionInformationError,
-  RemoteFetchFailedError,
   RemoteSyncFailedError,
 } from './errors.js';
 import {
-  ClientQuery,
+  EntitySyncErrorCallback,
+  EntitySyncSuccessCallback,
   ErrorCallback,
-  SchemaClientQueries,
+  QuerySyncState,
+  SyncStateCallback,
 } from './client/types';
 import { Logger } from './@triplit/types/logger.js';
-import { genToArr } from '@triplit/db';
-import { hashQuery } from '@triplit/db';
+import SuperJSON from 'superjson';
+import { logger } from '@triplit/logger';
 
 type OnMessageReceivedCallback = (message: ServerSyncMessage) => void;
 type OnMessageSentCallback = (message: ClientSyncMessage) => void;
@@ -54,6 +49,16 @@ export type OnSessionErrorCallback = (type: SessionErrors) => void;
 
 const QUERY_STATE_KEY = 'query-state';
 
+function isEmpty(obj: any) {
+  for (const prop in obj) {
+    if (Object.hasOwn(obj, prop)) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
 /**
  * The SyncEngine is responsible for managing the connection to the server and syncing data
  */
@@ -61,10 +66,7 @@ export class SyncEngine {
   private transport: SyncTransport;
 
   private client: TriplitClient<any>;
-  private syncOptions: SyncOptions;
-
-  private txCommits$ = new Subject<string>();
-  private txFailures$ = new Subject<{ txId: string; error: unknown }>();
+  syncOptions: SyncOptions;
 
   private connectionChangeHandlers: Set<(status: ConnectionStatus) => void> =
     new Set();
@@ -72,22 +74,32 @@ export class SyncEngine {
     new Set();
   private messageSentSubscribers: Set<OnMessageSentCallback> = new Set();
   private sessionErrorSubscribers: Set<OnSessionErrorCallback> = new Set();
-
+  private entitySyncErrorSubscribers: NestedMap<
+    string,
+    string,
+    EntitySyncErrorCallback
+  > = new NestedMap();
+  private entitySyncSuccessSubscribers: NestedMap<
+    string,
+    string,
+    EntitySyncSuccessCallback
+  > = new NestedMap();
   logger: Logger;
 
   // Connection state - these are used to track the state of the connection and should reset on dis/reconnect
   private awaitingAck: Set<string> = new Set();
+  private syncInProgress: boolean = false;
   private reconnectTimeoutDelay = 250;
   private reconnectTimeout: any;
+  private serverReady: boolean = false;
 
   // Session state - these are used to track the state of the session and should persist across reconnections, but reset on reset()
   private queries: Map<
     string,
     {
       params: CollectionQuery<any, any>;
-      fulfilled: boolean;
-      responseCallbacks: Set<(response: any) => void>;
-      errorCallbacks: Set<ErrorCallback>;
+      syncState: QuerySyncState;
+      syncStateCallbacks: Set<SyncStateCallback>;
       subCount: number;
       hasSent: boolean;
       abortController: AbortController;
@@ -97,7 +109,7 @@ export class SyncEngine {
   /**
    *
    * @param options configuration options for the sync engine
-   * @param db the client database to be synced
+   * @param db the client database to be synsced
    */
   constructor(client: TriplitClient<any>, options: SyncOptions) {
     this.client = client;
@@ -106,31 +118,56 @@ export class SyncEngine {
     this.syncOptions.secure = options.secure ?? true;
     this.syncOptions.syncSchema = options.syncSchema ?? false;
     this.transport = options.transport ?? new WebSocketTransport();
-    this.txCommits$.subscribe((txId) => {
-      const callbacks = this.commitCallbacks.get(txId);
-      if (callbacks) {
-        for (const callback of callbacks) {
-          callback();
-        }
-        this.commitCallbacks.delete(txId);
-        this.failureCallbacks.delete(txId);
-      }
-    });
-    this.txFailures$.subscribe(({ txId, error }) => {
-      const callbacks = this.failureCallbacks.get(txId);
-      if (callbacks) {
-        for (const callback of callbacks) {
-          callback(error);
-        }
-      }
-    });
+  }
 
-    // Signal the server when there are triples to send
-    const throttledSignal = throttle(() => this.signalOutboxTriples(), 100);
-    this.db.tripleStore.setStorageScope(['outbox']).onInsert((inserts) => {
-      if (!inserts['outbox']?.length) return;
-      throttledSignal();
+  async sendChanges(changes: DBChanges) {
+    this.sendMessage({
+      type: 'CHANGES',
+      payload: {
+        changes: SuperJSON.serialize(changes),
+      },
     });
+  }
+
+  async maybeSyncOutbox() {
+    if (this.client.awaitReady) await this.client.awaitReady;
+    if (this.syncInProgress || this.connectionStatus !== 'OPEN') return;
+    this.client.db.entityStore.doubleBuffer.lockAndSwitchBuffers();
+    await this.trySyncLockedBuffer();
+  }
+
+  async trySyncLockedBuffer() {
+    if (this.client.awaitReady) await this.client.awaitReady;
+    this.syncInProgress = true;
+    try {
+      const changes = await this.client.db.entityStore.doubleBuffer
+        .getLockedBuffer()
+        .getChanges(this.client.db.kv);
+      if (!isEmpty(changes)) {
+        this.sendChanges(changes);
+        return;
+      }
+    } finally {
+      this.syncInProgress = false;
+    }
+  }
+
+  async clearPendingChangesForEntity(collection: string, id: string) {
+    const tx = this.client.db.kv.transact();
+    await this.client.db.entityStore.doubleBuffer
+      .getUnlockedBuffer()
+      .clearChangesForEntity(tx, collection, id);
+    await tx.commit();
+    // because we've surgically removed the changes for this entity
+    // there might be other changes that we can sync
+    // TODO: is this desired behavior every time?
+    return this.maybeSyncOutbox();
+  }
+
+  async clearPendingChangesAll() {
+    const tx = this.client.db.kv.transact();
+    await this.client.db.entityStore.doubleBuffer.getUnlockedBuffer().clear(tx);
+    await tx.commit();
   }
 
   /**
@@ -138,10 +175,6 @@ export class SyncEngine {
    */
   get token() {
     return this.syncOptions.token;
-  }
-
-  get db() {
-    return this.client.db;
   }
 
   private get httpUri() {
@@ -171,6 +204,28 @@ export class SyncEngine {
     };
   }
 
+  onEntitySyncSuccess(
+    collection: string,
+    entityId: string,
+    callback: () => void
+  ) {
+    this.entitySyncSuccessSubscribers.set(collection, entityId, callback);
+    return () => {
+      this.entitySyncSuccessSubscribers.delete(collection, entityId);
+    };
+  }
+
+  onEntitySyncError(
+    collection: string,
+    entityId: string,
+    callback: EntitySyncErrorCallback
+  ) {
+    this.entitySyncErrorSubscribers.set(collection, entityId, callback);
+    return () => {
+      this.entitySyncErrorSubscribers.delete(collection, entityId);
+    };
+  }
+
   onSessionError(callback: OnSessionErrorCallback) {
     this.sessionErrorSubscribers.add(callback);
     return () => {
@@ -179,12 +234,10 @@ export class SyncEngine {
   }
 
   private async getConnectionParams(): Promise<TransportConnectParams> {
-    const clientId = await this.db.getClientId();
-    const schemaHash = hashSchemaJSON(
-      schemaToJSON(await this.db.getSchema())?.collections
-    );
+    if (this.client.awaitReady) await this.client.awaitReady;
+    const collecitons = this.client.db.getSchema()?.collections;
+    const schemaHash = collecitons ? hashObject(collecitons) : undefined;
     return {
-      clientId,
       schema: schemaHash,
       syncSchema: this.syncOptions.syncSchema,
       token: this.syncOptions.token,
@@ -193,63 +246,73 @@ export class SyncEngine {
     };
   }
 
-  private async getQueryState(queryId: string) {
-    const queryState = await this.db.tripleStore.readMetadataTuples(
-      QUERY_STATE_KEY,
-      [queryId]
-    );
-    if (queryState.length === 0) return undefined;
-    const stateVector = JSON.parse(queryState[0][2] as string);
-    return stateVector;
-  }
-
+  // TODO: determine future of query states
   async isFirstTimeFetchingQuery(query: CollectionQuery<any, any>) {
-    await this.db.ready;
-    const hash = hashQuery(query);
-    const state = await this.getQueryState(hash);
-    return state === undefined;
+    if (this.client.awaitReady) await this.client.awaitReady;
+    return !(await this.client.db.getMetadata([
+      QUERY_STATE_KEY,
+      hashQuery(query),
+    ]));
   }
 
-  private async setQueryState(queryId: string, stateVector: Timestamp[]) {
-    await this.db.tripleStore.updateMetadataTuples([
-      [QUERY_STATE_KEY, [queryId], JSON.stringify(stateVector)],
-    ]);
+  private async markQueryAsSeen(queryId: string) {
+    if (this.client.awaitReady) await this.client.awaitReady;
+    return this.client.db.setMetadata([QUERY_STATE_KEY, queryId], true);
   }
 
   /**
    * @hidden
    */
-  subscribe(
+  async subscribe(
     params: CollectionQuery<any, any>,
     options: {
       onQueryFulfilled?: () => void;
       onQueryError?: ErrorCallback;
+      onQuerySyncStateChange?: SyncStateCallback;
     } = {}
   ) {
-    const { onQueryFulfilled, onQueryError } = options;
+    const { onQueryFulfilled, onQueryError, onQuerySyncStateChange } = options;
     const id = hashQuery(params);
-    if (!this.queries.has(id)) {
+    const queryHasMounted = this.queries.has(id);
+    if (!queryHasMounted) {
       this.queries.set(id, {
         params,
-        fulfilled: false,
-        responseCallbacks: new Set(),
-        errorCallbacks: new Set(),
+        syncState: 'NOT_STARTED',
+        syncStateCallbacks: new Set(),
         subCount: 0,
         hasSent: false,
         abortController: new AbortController(),
       });
-      this.connectQuery(id, params);
     }
     // Safely using query! here because we just set it
     const query = this.queries.get(id)!;
     query.subCount++;
-    if (onQueryFulfilled) {
-      query.fulfilled && onQueryFulfilled();
-      query.responseCallbacks.add(onQueryFulfilled);
-    }
 
+    if (onQuerySyncStateChange) {
+      query.syncStateCallbacks.add(onQuerySyncStateChange);
+    }
+    let fulfillmentCallback: SyncStateCallback | undefined = undefined;
+
+    if (onQueryFulfilled) {
+      query.syncState === 'FULFILLED' && onQueryFulfilled();
+      fulfillmentCallback = (state) => {
+        if (state === 'FULFILLED') {
+          onQueryFulfilled();
+        }
+      };
+      query.syncStateCallbacks.add(fulfillmentCallback);
+    }
+    let errorCallback: SyncStateCallback | undefined = undefined;
     if (onQueryError) {
-      query.errorCallbacks.add(onQueryError);
+      errorCallback = (state, error) => {
+        if (state === 'ERROR') {
+          onQueryError(error);
+        }
+      };
+      query.syncStateCallbacks.add(errorCallback);
+    }
+    if (!queryHasMounted) {
+      await this.connectQuery(id);
     }
 
     return () => {
@@ -263,11 +326,14 @@ export class SyncEngine {
 
       // Clear data related to subscription
       query.subCount--;
-      if (onQueryFulfilled) {
-        query.responseCallbacks.delete(onQueryFulfilled);
+      if (fulfillmentCallback) {
+        query.syncStateCallbacks.delete(fulfillmentCallback);
       }
-      if (onQueryError) {
-        query.errorCallbacks.delete(onQueryError);
+      if (errorCallback) {
+        query.syncStateCallbacks.delete(errorCallback);
+      }
+      if (onQuerySyncStateChange) {
+        query.syncStateCallbacks.delete(onQuerySyncStateChange);
       }
 
       // If there are no more subscriptions, disconnect the query
@@ -278,51 +344,69 @@ export class SyncEngine {
     };
   }
 
-  private connectQuery(queryId: string, params: CollectionQuery<any, any>) {
+  private async connectQuery(queryId: string) {
+    if (this.client.awaitReady) await this.client.awaitReady;
     if (!this.queries.has(queryId)) return;
 
-    this.getQueryState(queryId).then((queryState: Timestamp[]) => {
-      const queryMetadata = this.queries.get(queryId);
-      if (
-        !queryMetadata ||
-        queryMetadata.hasSent ||
-        queryMetadata.abortController.signal.aborted
-      ) {
-        return;
-      }
-      const didSend = this.sendMessage({
-        type: 'CONNECT_QUERY',
-        payload: {
-          id: queryId,
-          params,
-          state: queryState,
-        },
-      });
-      if (didSend) {
-        queryMetadata.hasSent = true;
-      }
-      return didSend;
+    const queryMetadata = this.queries.get(queryId);
+    /**
+     * Do not send CONNECT_QUERY message if:
+     * - query no longer exists
+     * - query has already been sent in this session
+     * - query has been aborted
+     * - server is not ready
+     */
+    if (
+      !queryMetadata ||
+      queryMetadata.hasSent ||
+      queryMetadata.abortController.signal.aborted ||
+      !this.serverReady
+    ) {
+      return;
+    }
+
+    const latestServerTimestamp = (await this.client.db.getMetadata([
+      'latest_server_timestamp',
+    ])) as SyncTimestamp | undefined;
+
+    let queryState: QueryState | undefined = undefined;
+
+    if (latestServerTimestamp) {
+      queryState = {
+        timestamp: latestServerTimestamp,
+        // we should be able to retrieve these from the denormalized changes
+        // that are stored in IVM, assuming that the subscription is initialized
+        // In the case of background subscription, there won't be
+        // any record of the query in IVM, so we can just fall back to fetchChanges
+        // BUT if we go down that way then there's a contract that what
+        // comes out of IVM and watch we get from fetchChanges is the same
+        entityIds: changesToEntityIds(
+          await this.client.db.fetchChanges(queryMetadata.params)
+        ),
+      };
+    }
+    const didSend = this.sendMessage({
+      type: 'CONNECT_QUERY',
+      payload: {
+        id: queryId,
+        params: queryMetadata.params,
+        state: queryState,
+      },
     });
+    if (didSend) {
+      queryMetadata.syncState = 'IN_FLIGHT';
+      for (const callback of queryMetadata.syncStateCallbacks) {
+        callback('IN_FLIGHT', undefined);
+      }
+      queryMetadata.hasSent = true;
+    }
+    return didSend;
   }
 
-  private triplesToStateVector(triples: TripleRow[]): Timestamp[] {
-    const clientClocks = new Map<string, number>();
-    triples.forEach((t) => {
-      // only set the clock if it is greater than the current clock for each client
-      const [tick, clientId] = t.timestamp;
-      const currentClock = clientClocks.get(clientId);
-      if (!currentClock || tick > currentClock) {
-        clientClocks.set(clientId, tick);
-      }
-    });
-    return [...clientClocks.entries()].map(([clientId, timestamp]) => [
-      timestamp,
-      clientId,
-    ]);
-  }
-
-  hasQueryBeenFulfilled(queryId: string) {
-    return this.queries.get(queryId)?.fulfilled ?? false;
+  hasServerRespondedForQuery(query: CollectionQuery<any, any>) {
+    const queryId = hashQuery(query);
+    const queryMetadata = this.queries.get(queryId);
+    return (queryMetadata && queryMetadata.syncState === 'FULFILLED') ?? false;
   }
 
   /**
@@ -372,10 +456,6 @@ export class SyncEngine {
     };
   }
 
-  private signalOutboxTriples() {
-    this.sendMessage({ type: 'TRIPLES_PENDING', payload: {} });
-  }
-
   /**
    * Initiate a sync connection with the server
    */
@@ -387,132 +467,137 @@ export class SyncEngine {
     this.transport.connect(params);
     this.transport.onMessage(async (evt) => {
       const message: ServerSyncMessage = JSON.parse(evt.data);
-      this.logger.debug('received', message);
+      logger.debug('received', message);
       for (const handler of this.messageReceivedSubscribers) {
         handler(message);
       }
       if (message.type === 'ERROR') {
         await this.handleErrorMessage(message);
       }
-      if (message.type === 'TRIPLES') {
-        const { payload } = message;
-        const triples = payload.triples;
-        const queryIds = payload.forQueries;
+      if (message.type === 'ENTITY_DATA') {
+        const {
+          changes: stringifiedChanges,
+          timestamp,
+          forQueries: queryIds,
+        } = message.payload;
+        const changes = SuperJSON.deserialize<DBChanges>(stringifiedChanges);
+        // first apply changes
+        // the db will push these onto IVMs buffer
+        await this.client.db.applyChangesWithTimestamp(changes, timestamp, {
+          skipRules: true,
+        });
 
+        // TODO do in same transaction
+        await this.client.db.setMetadata(
+          ['latest_server_timestamp'],
+          timestamp
+        );
+
+        // then update the query fulfillment state so that
+        // the client can signal in the results handler
+        // that the next time IVM fires, it's because
+        // of the server's response
         for (const qId of queryIds) {
-          await this.updateQueryStateVector(qId, triples);
           const query = this.queries.get(qId);
           if (!query) continue;
-          query.fulfilled = true;
-          const callbackSet = query?.responseCallbacks;
-          if (callbackSet) {
-            for (const callback of callbackSet) callback(payload);
+          if (query.syncState !== 'FULFILLED') {
+            await this.markQueryAsSeen(qId);
+            query.syncState = 'FULFILLED';
           }
           // this.queryFulfillmentCallbacks.delete(qId);
         }
-        if (triples.length !== 0) {
-          await this.db.transact(
-            async (dbTx) => {
-              await dbTx.storeTx
-                .withScope({ read: ['cache'], write: ['cache'] })
-                .insertTriples(triples);
-            },
-            { skipRules: true }
-          );
-        }
-      }
 
-      if (message.type === 'TRIPLES_ACK') {
-        const { payload } = message;
-        const { txIds, failedTxIds } = payload;
-        try {
-          const failuresSet = new Set(failedTxIds);
-          // TODO: do we want hooks to run here?
-          await this.db.tripleStore.transact(async (tx) => {
-            const outboxOperator = tx.withScope({
-              read: ['outbox'],
-              write: ['outbox'],
-            });
-            const cacheOperator = tx.withScope({
-              read: ['cache'],
-              write: ['cache'],
-            });
-            // move all commited outbox triples to cache
-            for (const clientTxId of txIds) {
-              const timestamp = JSON.parse(clientTxId);
-              const triplesToEvict = await genToArr(
-                outboxOperator.findByClientTimestamp(
-                  await this.db.getClientId(),
-                  'eq',
-                  timestamp
-                )
-              );
-              if (triplesToEvict.length > 0) {
-                await cacheOperator.insertTriples(triplesToEvict);
-                await outboxOperator.deleteTriples(triplesToEvict);
-              }
-            }
-          });
-          for (const txId of txIds) {
-            this.txCommits$.next(txId);
-          }
+        // update IVM
+        await this.client.db.updateQueryViews();
+        this.client.db.broadcastToQuerySubscribers();
 
-          // Filter out failures, tell server there are unsent triples
-          // Would be nice to not load all these into memory
-          // However for most workloads its hopefully not that much data
-          const triplesToSend = (
-            await this.getTriplesToSend(
-              this.db.tripleStore.setStorageScope(['outbox'])
-            )
-          ).filter((t) => !failuresSet.has(JSON.stringify(t.timestamp)));
-          if (triplesToSend.length) this.signalOutboxTriples();
-        } finally {
-          // After processing, clean state (ACK received)
-          for (const txId of txIds) {
-            this.awaitingAck.delete(txId);
-          }
-          for (const txId of failedTxIds) {
-            this.awaitingAck.delete(txId);
+        // finally, run the query fulfillment callbacks
+        for (const qId of queryIds) {
+          const query = this.queries.get(qId);
+          if (!query) continue;
+          for (const callback of query.syncStateCallbacks) {
+            callback('FULFILLED', message.payload);
           }
         }
       }
 
-      if (message.type === 'TRIPLES_REQUEST') {
-        // we do this outbox scan like a million times (i think the server can still do a small throttle for backpressue of those mesasges bc theyre stateless)
-        const triplesToSend = await this.getTriplesToSend(
-          this.db.tripleStore.setStorageScope(['outbox'])
+      if (message.type === 'CHANGES_ACK') {
+        const ackedChanges = await this.client.db.entityStore.doubleBuffer
+          .getLockedBuffer()
+          .getChanges(this.client.db.kv);
+
+        // write the acked changes to the outbox
+        const tx = this.client.db.kv.transact();
+        // go through to the entity store because
+        // that will skip buffering IVM
+        await this.client.db.entityStore.applyChangesWithTimestamp(
+          tx,
+          ackedChanges,
+          message.payload.timestamp,
+          {
+            checkWritePermission: undefined,
+            entityChangeValidator: undefined,
+          }
         );
-        this.sendTriples(triplesToSend);
+        for (const [collection, entityCallbackMap] of this
+          .entitySyncSuccessSubscribers) {
+          const collectionChanges = ackedChanges[collection];
+          if (!collectionChanges) continue;
+          for (const [id, callback] of entityCallbackMap) {
+            if (
+              collectionChanges.sets.has(id) ||
+              collectionChanges.deletes.has(id)
+            ) {
+              await callback();
+            }
+          }
+        }
+        await this.client.db.entityStore.doubleBuffer
+          .getLockedBuffer()
+          .clear(tx);
+        await tx.commit();
+        this.syncInProgress = false;
+        // empty the outbox
+        // this.checkUnlockedBufferAndSendAnyChanges();
+        await this.maybeSyncOutbox();
       }
 
       if (message.type === 'CLOSE') {
         const { payload } = message;
-        this.logger.info(
+        logger.info(
           `Closing connection${payload?.message ? `: ${payload.message}` : '.'}`
         );
         const { type, retry } = payload;
         // Close payload must remain under 125 bytes
         this.closeConnection({ type, retry });
       }
+
+      if (message.type === 'SCHEMA_REQUEST') {
+        const schema = await this.client.getSchema();
+        this.sendMessage({
+          type: 'SCHEMA_RESPONSE',
+          payload: { schema },
+        });
+      }
+
+      if (message.type === 'READY') {
+        if (!this.serverReady) {
+          this.serverReady = true;
+          await this.initializeSync();
+        }
+      }
     });
     this.transport.onOpen(async () => {
-      this.logger.info('sync connection has opened');
+      logger.info('sync connection has opened', {
+        status: this.connectionStatus,
+      });
       this.resetReconnectTimeout();
-      // Cut down on message sending by only signaling if there are triples to send
-      const outboxTriples = await this.getTriplesToSend(
-        this.db.tripleStore.setStorageScope(['outbox'])
-      );
-      const hasOutboxTriples = !!outboxTriples.length;
-      if (hasOutboxTriples) this.signalOutboxTriples();
-      // Reconnect any queries
-      for (const [id, queryInfo] of this.queries) {
-        this.connectQuery(id, queryInfo.params);
-      }
     });
 
     this.transport.onClose((evt) => {
       // Clear any sync state
       this.resetQueryAcks();
+      this.serverReady = false;
 
       // If there is no reason, then default is to retry
       if (evt.reason) {
@@ -529,24 +614,24 @@ export class SyncEngine {
           retry = true;
         }
         if (type === 'UNAUTHORIZED') {
-          this.logger.error(
+          logger.error(
             'The server has closed the connection because the client is unauthorized. Please provide a valid token.'
           );
         }
         if (type === 'SCHEMA_MISMATCH') {
-          this.logger.error(
+          logger.error(
             'The server has closed the connection because the client schema does not match the server schema. Please update your client schema.'
           );
         }
 
         if (type === 'TOKEN_EXPIRED') {
-          this.logger.error(
+          logger.error(
             'The server has closed the connection because the token has expired. Fetch a new token from your authentication provider and call `TriplitClient.endSession()` and `TriplitClient.startSession(token)` to restart the session.'
           );
         }
 
         if (type === 'ROLES_MISMATCH') {
-          this.logger.error(
+          logger.error(
             'The server has closed the connection because the client attempted to update the session with a token that has different roles than the existing token. Call `TriplitClient.endSession()` and `TriplitClient.startSession(token)` to restart the session with the new token.'
           );
         }
@@ -565,7 +650,7 @@ export class SyncEngine {
 
         if (!retry) {
           // early return to prevent reconnect
-          this.logger.warn(
+          logger.warn(
             'The connection has closed. Based on the signal, the connection will not automatically retry. If you would like to reconnect, please call `connect()`.'
           );
           return;
@@ -584,8 +669,8 @@ export class SyncEngine {
       );
     });
     this.transport.onError((evt) => {
-      // console.log('error ws', evt);
-      this.logger.error('transport error', evt);
+      // logger.log('error ws', evt);
+      logger.error('transport error', evt);
       // on error, close the connection and attempt to reconnect
       this.transport.close();
     });
@@ -598,31 +683,21 @@ export class SyncEngine {
     });
   }
 
+  private async initializeSync() {
+    await this.trySyncLockedBuffer();
+    await this.maybeSyncOutbox();
+
+    // Reconnect any queries
+    for (const [id] of this.queries) {
+      this.connectQuery(id);
+    }
+  }
+
   /**
    * The current connection status of the sync engine
    */
   get connectionStatus() {
     return this.transport.connectionStatus;
-  }
-
-  private async updateQueryStateVector(queryId: string, triples: any) {
-    const queryState: Timestamp[] = await this.getQueryState(queryId);
-    if (triples.length > 0) {
-      const stateVector = this.triplesToStateVector(triples);
-      const nextQueryState = new Map(
-        (queryState ?? []).map(([t, c]) => [c, t])
-      );
-      stateVector.forEach(([t, c]) => {
-        const current = nextQueryState.get(c);
-        if (!current || t > current) {
-          nextQueryState.set(c, t);
-        }
-      });
-      this.setQueryState(
-        queryId,
-        [...nextQueryState.entries()].map(([c, t]) => [t, c])
-      );
-    }
   }
 
   /**
@@ -632,7 +707,7 @@ export class SyncEngine {
    */
   updateConnection(options: Partial<SyncOptions>) {
     if (this.connectionStatus === 'OPEN') {
-      console.warn(
+      logger.warn(
         'You are updating the connection options while the connection is open. To avoid unexpected behavior the connection will be closed and you should call `connect()` again after the update. To hide this warning, call `disconnect()` before updating the connection options.'
       );
       this.disconnect();
@@ -648,23 +723,18 @@ export class SyncEngine {
   }
 
   /**
-   * Clears state vectors for remote queries and resets their server acks.
+   * Resets the server acks for remote queries.
    * On the next connection, queries will be re-sent to server as if there is no previous seen data.
    * If the connection is currently open, it will be closed and you will need to call `connect()` again.
    */
   async resetQueryState() {
     if (this.connectionStatus === 'OPEN') {
-      console.warn(
+      logger.warn(
         'You are resetting the sync engine while the connection is open. To avoid unexpected behavior the connection will be closed and you should call `connect()` again after resetting. To hide this warning, call `disconnect()` before resetting.'
       );
       this.disconnect();
     }
     this.resetQueryAcks();
-
-    // delete the state vectors
-    await this.db.tripleStore.transact(async (tx) => {
-      await tx.deleteMetadataTuples([[QUERY_STATE_KEY]]);
-    });
   }
 
   /**
@@ -673,30 +743,22 @@ export class SyncEngine {
    */
   private resetQueryAcks() {
     this.awaitingAck = new Set();
-    for (const id of this.queries.keys()) {
-      const queryMetadata = this.queries.get(id);
+    for (const queryMetadata of this.queries.values()) {
       queryMetadata!.hasSent = false;
+      queryMetadata!.syncState = 'NOT_STARTED';
     }
   }
 
   private async handleErrorMessage(message: ServerErrorMessage) {
-    const { error, metadata } = message.payload;
-    this.logger.error(error.name, metadata);
+    const { error, metadata, messageType } = message.payload;
+    logger.error(error.name, metadata);
     switch (error.name) {
       case 'MalformedMessagePayloadError':
       case 'UnrecognizedMessageTypeError':
-        this.logger.warn(
+        logger.warn(
           'You sent a malformed message to the server. This might occur if your client is not up to date with the server. Please ensure your client is updated.'
         );
-        // TODO: If the message that fails is a triple insert, we should handle that specifically depending on the case
         break;
-      case 'TriplesInsertError':
-        const failures = metadata?.failures ?? [];
-        // Could maybe do this on ACK too
-        for (const failure of failures) {
-          const { txId, error } = failure;
-          this.txFailures$.next({ txId, error });
-        }
       // On a remote read error, default to disconnecting the query
       // You will still send triples, but you wont receive updates
       case 'QuerySyncError':
@@ -705,32 +767,62 @@ export class SyncEngine {
           const query = this.queries.get(queryKey);
           if (query) {
             const parsedError = TriplitError.fromJson(error);
-            for (const errorCallback of query.errorCallbacks) {
+            query.syncState = 'ERROR';
+            for (const callback of query.syncStateCallbacks) {
               // TODO: include metadata (inner error)
-              await errorCallback(parsedError);
+              await callback('ERROR', parsedError);
             }
           }
           this.disconnectQuery(queryKey);
         }
     }
-  }
+    if (messageType === 'CHANGES') {
+      const kvTx = this.client.db.kv.transact();
+      const outbox = this.client.db.entityStore.doubleBuffer;
 
-  private sendTriples(triples: TripleRow[]) {
-    const triplesToSend = this.syncOptions.syncSchema
-      ? triples
-      : triples.filter(({ id }) => !id.includes('_metadata#_schema'));
-    if (triplesToSend.length === 0) return;
-    triplesToSend.forEach((t) =>
-      this.awaitingAck.add(JSON.stringify(t.timestamp))
-    );
-    this.sendMessage({ type: 'TRIPLES', payload: { triples: triplesToSend } });
+      // can we have the server send this back instead of reading the potentially
+      // unstable buffer?
+      const failedChanges = await outbox.getLockedBuffer().getChanges(kvTx);
+
+      // rebase the unlocked buffer on the failed locked buffer
+      await outbox
+        .getLockedBuffer()
+        .write(kvTx, await outbox.getUnlockedBuffer().getChanges(kvTx));
+      await outbox.getUnlockedBuffer().clear(kvTx);
+      await kvTx.commit();
+
+      // now we can switch the buffers so that the
+      // client can write to the unlocked buffer
+      outbox.lockAndSwitchBuffers();
+      this.syncInProgress = false;
+
+      for (const collection in failedChanges) {
+        // TODO: layer in deletes
+        for (const [id, change] of failedChanges[collection].sets) {
+          const errorCallback = this.entitySyncErrorSubscribers.get(
+            collection,
+            id
+          );
+          if (errorCallback) {
+            // should we be providing the change or the full entity?
+            // TODO: ts fixups for error passed in
+            // should this just be the root error instead of in this
+            // failures array?
+            // @ts-expect-error
+            await errorCallback(metadata?.failures[0]?.error, change);
+          }
+        }
+      }
+    }
   }
 
   private sendMessage(message: ClientSyncMessage) {
+    // TODO: it might be safe to prevent sending some messages if the server hasnt indicated its ready yet
+    // Allowed messages might include token exchange info and schema exchange info
     const didSend = this.transport.sendMessage(message);
 
     if (didSend) {
-      this.logger.debug('sent', message);
+      logger.debug('sent', message);
       for (const handler of this.messageSentSubscribers) {
         handler(message);
       }
@@ -744,41 +836,16 @@ export class SyncEngine {
    * @param txId
    */
   async retry(txId: string) {
-    const timestamp: Timestamp = JSON.parse(txId);
-    const triplesToSend = await genToArr(
-      this.db.tripleStore
-        .setStorageScope(['outbox'])
-        .findByClientTimestamp(await this.db.getClientId(), 'eq', timestamp)
-    );
-    if (triplesToSend.length > 0) this.sendTriples(triplesToSend);
+    await this.maybeSyncOutbox();
   }
 
   /**
    * Rollback a transaction from the client database. It will no longer be sent to the remote database as a part of the syncing process. This is commonly used when a transaction fails to commit on the remote database in the `onTxFailure` callback.
    * @param txIds
    */
+  // TODO: implement rollback
   async rollback(txIds: string | string[]) {
-    const txIdList = Array.isArray(txIds) ? txIds : [txIds];
-    await this.db.transact(
-      async (tx) => {
-        const scopedTx = tx.storeTx.withScope({
-          read: ['outbox'],
-          write: ['outbox'],
-        });
-        for (const txId of txIdList) {
-          const timestamp = JSON.parse(txId);
-          const triples = await genToArr(
-            scopedTx.findByClientTimestamp(
-              await this.db.getClientId(),
-              'eq',
-              timestamp
-            )
-          );
-          await scopedTx.deleteTriples(triples);
-        }
-      },
-      { skipRules: true }
-    );
+    throw new Error('NOT IMPLEMENTED');
   }
 
   /**
@@ -810,68 +877,26 @@ export class SyncEngine {
   /**
    * @hidden
    */
-  async syncQuery(query: ClientQuery<any, any>) {
+  async syncQuery(query: CollectionQuery<any, any>) {
     try {
-      const triples = await this.getRemoteTriples(query);
-      await this.db.transact(
-        async (dbTx) => {
-          await dbTx.storeTx
-            .withScope({ read: ['cache'], write: ['cache'] })
-            .insertTriples(triples);
+      let resolve: (value: unknown) => void, reject: (reason?: any) => void;
+      const promise = new Promise((res, rej) => {
+        resolve = res;
+        reject = rej;
+      });
+      const unsubPromise = this.subscribe(query, {
+        onQueryFulfilled: async () => {
+          const unsub = await unsubPromise;
+          resolve(void 0);
+          unsub();
         },
-        { skipRules: true }
-      );
+      });
+      return promise;
     } catch (e) {
       if (e instanceof TriplitError) throw e;
       if (e instanceof Error) throw new RemoteSyncFailedError(query, e.message);
       throw new RemoteSyncFailedError(query, 'An unknown error occurred.');
     }
-  }
-
-  /**
-   * @hidden
-   */
-  async fetchQuery<M extends Models, CQ extends SchemaClientQueries<M>>(
-    query: CQ
-  ) {
-    try {
-      // Simpler to serialize triples and reconstruct entities on the client
-      const triples = await this.getRemoteTriples(query);
-      const entities = constructEntities(triples);
-      const schema = (await this.db.getSchema())?.collections;
-      return [...entities].map(([, entity]) =>
-        convertEntityToJS(entity.data, schema)
-      ) as Unalias<FetchResult<M, ToQuery<M, CQ>>>;
-    } catch (e) {
-      if (e instanceof TriplitError) throw e;
-      if (e instanceof Error)
-        throw new RemoteFetchFailedError(query, e.message);
-      throw new RemoteFetchFailedError(query, 'An unknown error occurred.');
-    }
-  }
-
-  private async getRemoteTriples(query: ClientQuery<any, any>) {
-    const res = await this.fetchFromServer(`/queryTriples`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ query }),
-    });
-    if (!res.ok) {
-      let errorBody;
-      try {
-        errorBody = await res.json();
-      } catch (e) {
-        throw new RemoteFetchFailedError(
-          query,
-          `The server responded with an error: ${await res.text()}`
-        );
-      }
-      const message = errorBody.message ?? JSON.stringify(errorBody);
-      throw new RemoteFetchFailedError(query, message);
-    }
-    return await res.json();
   }
 
   private fetchFromServer(
@@ -889,21 +914,18 @@ export class SyncEngine {
       headers: { Authorization: `Bearer ${this.token}`, ...init?.headers },
     });
   }
+}
 
-  private async getTriplesToSend(store: TripleStoreApi) {
-    return (await genToArr(store.findByEntity())).filter((t) =>
-      this.shouldSendTriple(t)
-    );
+function changesToEntityIds(changes: DBChanges): Record<string, string[]> {
+  const entityIds: Record<string, string[]> = {};
+  for (const [collection, collectionChanges] of Object.entries(changes)) {
+    const changedIds = [
+      ...collectionChanges.sets.keys(),
+      ...collectionChanges.deletes,
+    ];
+    entityIds[collection] = changedIds;
   }
-
-  private shouldSendTriple(t: TripleRow) {
-    const hasBeenSent = this.awaitingAck.has(JSON.stringify(t.timestamp));
-    return (
-      !hasBeenSent &&
-      // Filter out schema triples if syncSchema is false
-      (this.syncOptions.syncSchema || !t.id.includes('_metadata#_schema'))
-    );
-  }
+  return entityIds;
 }
 
 function throttle(callback: () => void, delay: number) {

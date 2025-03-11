@@ -111,7 +111,7 @@ export type Role = {
 export type Roles = Record<string, Role>;
 
 export type StoreSchema<M extends Models> = {
-  version: number;
+  version?: number;
   collections: M;
   roles?: Roles;
 };

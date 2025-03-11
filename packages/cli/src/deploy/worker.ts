@@ -1,3 +1,4 @@
+//@ts-nocheck TODO: DEPRECATED (I THINK)
 import { DB, DurableClock, TriplitError } from '@triplit/db';
 import {
   MalformedMessagePayloadError,
@@ -132,7 +133,6 @@ export class TriplitDurableObject implements DurableObject {
     token: ProjectJWT
   ): Promise<Response> {
     const url = new URL(request.url);
-    const clientId = url.searchParams.get('client')!;
     const clientSchemaHashString = url.searchParams.get('schema')!;
     const clientSchemaHash = clientSchemaHashString
       ? parseInt(clientSchemaHashString)
@@ -151,7 +151,6 @@ export class TriplitDurableObject implements DurableObject {
 
     const syncConnection = this.triplitServer.openConnection(token, {
       clientSchemaHash,
-      clientId,
       syncSchema,
     });
 
@@ -182,7 +181,7 @@ export class TriplitDurableObject implements DurableObject {
         { type: 'INTERNAL_ERROR', retry: false, message: evt?.error?.message },
         1011
       );
-      syncConnection.close();
+      this.triplitServer.closeConnection(syncConnection);
       unsubscribeMessageListener();
     };
     let closeHandler = (evt: CloseEvent) => {

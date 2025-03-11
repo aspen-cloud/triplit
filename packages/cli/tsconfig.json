@@ -1,8 +1,7 @@
 {
   // "extends": "../../tsconfig.json",
   "compilerOptions": {
-    // TODO: move to strict
-    "strict": false,
+    "strict": true,
     "composite": true,
     "lib": ["ESNext"],
     "module": "NodeNext",
@@ -20,11 +19,7 @@
     "tsBuildInfoFile": "./dist/tsconfig.tsbuildinfo",
     "rootDir": "./src/",
     "declarationDir": "./dist/types",
-    "types": ["@cloudflare/workers-types"],
-    "paths": {
-      "@triplit/db": ["../db/src/index.ts"],
-      "@triplit/server-core": ["../server-core/src/index.ts"]
-    }
+    "types": ["@cloudflare/workers-types"]
   },
   "references": [
     {

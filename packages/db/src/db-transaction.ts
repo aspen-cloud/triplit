@@ -1331,10 +1331,7 @@ export function createUpdateProxy<
       if (propSchema.context.optional && value === undefined) {
         return proxyDeleteProperty(prop);
       }
-      const dbValue = propSchema.convertInputToDBValue(
-        // @ts-expect-error Big DataType union results in never as arg type
-        value
-      );
+      const dbValue = propSchema.convertInputToDBValue(value);
       changeTracker.set(propPointer, dbValue);
       return true;
     },

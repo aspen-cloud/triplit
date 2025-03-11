@@ -1,4 +1,4 @@
-import { omitBy } from "remeda"
+import { omitBy } from "../helpers/remeda.js"
 import { ScanArgs } from "../database/types.js"
 import { MAX, Tuple } from "../storage/types.js"
 import { compareTuple } from "./compareTuple.js"

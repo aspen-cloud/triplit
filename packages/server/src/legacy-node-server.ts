@@ -1,3 +1,4 @@
+//@ts-nocheck
 import WS, { WebSocketServer } from 'ws';
 import express from 'express';
 import {
@@ -311,7 +312,7 @@ export function createServer(options?: ServerOptions) {
         process.env.PROJECT_ID!,
         options?.upstream
       );
-      triplitServer.closeConnection(socket.syncConnection.options.clientId);
+      triplitServer.closeConnection(socket.syncConnection);
 
       // Should this use the closeSocket function?
       socket.close(code, reason);
@@ -334,22 +335,22 @@ export function createServer(options?: ServerOptions) {
   // app.use(rateLimiterMiddleware);
   const triplitServer = getServer(process.env.PROJECT_ID!, options?.upstream);
 
-  authenticated.post('/message', async (req, res) => {
-    try {
-      const { message, options } = req.body;
-      const { clientId } = options;
-      const session = triplitServer.getConnection(clientId);
-      if (!session) {
-        throw new Error('NO CONNECTION OPEN!');
-      }
-      await session.dispatchCommand(message);
-      return res.sendStatus(200);
-    } catch (e) {
-      console.error(e);
-      captureException(e);
-      return res.sendStatus(500);
-    }
-  });
+  // authenticated.post('/message', async (req, res) => {
+  //   try {
+  //     const { message, options } = req.body;
+  //     const { clientId } = options;
+  //     const session = triplitServer.getConnection(clientId);
+  //     if (!session) {
+  //       throw new Error('NO CONNECTION OPEN!');
+  //     }
+  //     await session.dispatchCommand(message);
+  //     return res.sendStatus(200);
+  //   } catch (e) {
+  //     console.error(e);
+  //     captureException(e);
+  //     return res.sendStatus(500);
+  //   }
+  // });
   authenticated.post('/bulk-insert-file', upload.none(), async (req, res) => {
     const jsonBody = JSON.parse(req.body.data);
     const { statusCode, payload } = await triplitServer.handleRequest(
@@ -411,59 +412,58 @@ export function createServer(options?: ServerOptions) {
   });
 
   // set up a server sent event stream
-  app.get('/message-events', async (req, res) => {
-    // Can't set headers with EventSource, check query params
-    const { schema, client, syncSchema, token: rawToken } = req.query;
-    const { data: token, error } = await parseAndValidateToken(
-      rawToken as string,
-      process.env.JWT_SECRET,
-      process.env.PROJECT_ID,
-      {
-        payloadPath: process.env.CLAIMS_PATH,
-        externalSecret: process.env.EXTERNAL_JWT_SECRET,
-      }
-    );
-    if (error) {
-      captureException(error);
-      return res.sendStatus(401);
-    }
+  // app.get('/message-events', async (req, res) => {
+  //   // Can't set headers with EventSource, check query params
+  //   const { schema, client, syncSchema, token: rawToken } = req.query;
+  //   const { data: token, error } = await parseAndValidateToken(
+  //     rawToken as string,
+  //     process.env.JWT_SECRET,
+  //     process.env.PROJECT_ID,
+  //     {
+  //       payloadPath: process.env.CLAIMS_PATH,
+  //       externalSecret: process.env.EXTERNAL_JWT_SECRET,
+  //     }
+  //   );
+  //   if (error) {
+  //     captureException(error);
+  //     return res.sendStatus(401);
+  //   }
 
-    const connection = triplitServer.openConnection(token, {
-      clientId: client as string,
-      clientSchemaHash: schema ? parseInt(schema as string) : undefined,
-      syncSchema: syncSchema === 'true',
-    });
+  //   const connection = triplitServer.openConnection(token, {
+  //     clientSchemaHash: schema ? parseInt(schema as string) : undefined,
+  //     syncSchema: syncSchema === 'true',
+  //   });
 
-    res.setHeader('Cache-Control', 'no-cache');
-    res.setHeader('Content-Type', 'text/event-stream');
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Connection', 'keep-alive');
-    res.flushHeaders(); // flush the headers to establish SSE with client
+  //   res.setHeader('Cache-Control', 'no-cache');
+  //   res.setHeader('Content-Type', 'text/event-stream');
+  //   res.setHeader('Access-Control-Allow-Origin', '*');
+  //   res.setHeader('Connection', 'keep-alive');
+  //   res.flushHeaders(); // flush the headers to establish SSE with client
 
-    let unsubscribe: (() => void) | undefined = undefined;
-    // If client closes connection, stop sending events
-    res.on('close', () => {
-      unsubscribe?.();
-      res.end();
-    });
+  //   let unsubscribe: (() => void) | undefined = undefined;
+  //   // If client closes connection, stop sending events
+  //   res.on('close', () => {
+  //     unsubscribe?.();
+  //     res.end();
+  //   });
 
-    const schemaIncombaitility = await connection.isClientSchemaCompatible();
-    if (schemaIncombaitility) {
-      res.write(
-        `data: ${JSON.stringify({
-          type: 'CLOSE',
-          payload: schemaIncombaitility,
-        })}\n\n`
-      );
-      return;
-    }
+  //   const schemaIncombaitility = await connection.isClientSchemaCompatible();
+  //   if (schemaIncombaitility) {
+  //     res.write(
+  //       `data: ${JSON.stringify({
+  //         type: 'CLOSE',
+  //         payload: schemaIncombaitility,
+  //       })}\n\n`
+  //     );
+  //     return;
+  //   }
 
-    unsubscribe = connection.addListener((messageType, payload) => {
-      res.write(`data: ${JSON.stringify({ type: messageType, payload })}\n\n`);
-    });
+  //   unsubscribe = connection.addListener((messageType, payload) => {
+  //     res.write(`data: ${JSON.stringify({ type: messageType, payload })}\n\n`);
+  //   });
 
-    return;
-  });
+  //   return;
+  // });
 
   app.use('/', authenticated);
 
@@ -524,7 +524,6 @@ export function createServer(options?: ServerOptions) {
         try {
           if (request.url) {
             const parsedUrl = url.parse(request.url!, true);
-            const clientId = parsedUrl.query.client as string;
             const clientHash = parsedUrl.query.schema
               ? parseInt(parsedUrl.query.schema as string)
               : undefined;
@@ -534,7 +533,6 @@ export function createServer(options?: ServerOptions) {
               options?.upstream
             );
             const connection = server.openConnection(token!, {
-              clientId,
               clientSchemaHash: clientHash,
               syncSchema,
             });

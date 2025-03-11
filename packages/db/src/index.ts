@@ -17,9 +17,10 @@ export type {
   FetchByIdQueryParams,
   DBFetchOptions,
   TransactOptions,
+  SystemVariables,
 } from './db.js';
 export type * from './db/types/index.js';
-
+export { Value as TBValue } from '@sinclair/typebox/value';
 export type { PermissionOperations } from './schema/types/models.js';
 export { ChangeTracker, createUpdateProxy } from './db-transaction.js';
 export type { DBTransaction } from './db-transaction.js';
@@ -60,7 +61,11 @@ export {
   sessionRolesAreEquivalent,
 } from './schema/permissions.js';
 export { Schema } from './schema/builder.js';
-export { diffSchemas, getSchemaDiffIssues } from './schema/diff.js';
+export {
+  diffSchemas,
+  getSchemaDiffIssues,
+  getBackwardsIncompatibleEdits,
+} from './schema/diff.js';
 export type { TObject } from './schema/schema.js';
 export { typeFromJSON } from './schema/serialization.js';
 export * from './schema/types/index.js';
@@ -82,6 +87,7 @@ export * from './errors.js';
 // See ./data-types/index.ts for why this is necessary
 export * from './data-types/index.js';
 export * from './data-types/types/index.js';
+export * from './data-types/configuration.js';
 export * from './data-types/constants.js';
 export * from './schema/export/index.js';
 export * from './schema/import/index.js';

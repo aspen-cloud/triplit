@@ -74,9 +74,8 @@ export const Route = createFileRoute('/$contactId')(
     ({ params }) =>
       triplitClient
         .query('contacts')
-        .where('id', '=', params.contactId)
-        .limit(1)
-        .build(),
+        .Where('id', '=', params.contactId)
+        .Limit(1),
     ContactComponent({ results }) {
       if (results.length === 0) {
         return <div>Contact not found</div>;
@@ -103,11 +102,7 @@ import { triplitClient } from '../triplit.js';
 
 export const Route = createFileRoute('/$contactId')({
   ...triplitRoute(triplitClient, ({ params }) =>
-    triplitClient
-      .query('contacts')
-      .where('id', '=', params.contactId)
-      .limit(1)
-      .build()
+    triplitClient.query('contacts').Where('id', '=', params.contactId).Limit(1)
   ),
   // Additional properties can be added here
   onError: (error) => {

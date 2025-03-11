@@ -98,11 +98,7 @@
     /* Completeness */
     // "skipDefaultLibCheck": true,                      /* Skip type checking .d.ts files that are included with TypeScript. */
     "skipLibCheck": true /* Skip type checking all .d.ts files. */,
-    "moduleResolution": "NodeNext",
-    "paths": {
-      "@triplit/client/*": ["../../packages/client/src/*"],
-      "@triplit/client": ["../../packages/client/src/index.ts"]
-    }
+    "moduleResolution": "NodeNext"
   },
   "references": [
     {
@@ -119,6 +115,9 @@
     },
     {
       "path": "../../packages/cli/tsconfig.json"
+    },
+    {
+      "path": "../../packages/entity-db/tsconfig.json"
     }
   ]
 }

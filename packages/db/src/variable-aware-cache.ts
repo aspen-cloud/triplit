@@ -6,11 +6,11 @@ import {
 } from './collection-query.js';
 import { CollectionNameFromModels } from './db.js';
 import { isValueVariable, replaceVariable } from './db-helpers.js';
-import { isFilterStatement } from './query.js';
+import { isExistsFilter, isFilterStatement } from './query.js';
 import { CollectionQuery, FilterStatement } from './query/types/index.js';
 import { getSchemaFromPath } from './schema/schema.js';
 import { Model, Models } from './schema/types/index.js';
-import * as TB from '@sinclair/typebox/value';
+// import * as TB from '@sinclair/typebox/value';
 import type DB from './db.js';
 import { QueryCacheError } from './errors.js';
 import { TripleRow } from './triple-store-utils.js';
@@ -19,7 +19,7 @@ import { Entity } from './entity.js';
 
 export class VariableAwareCache<Schema extends Models> {
   cache: Map<
-    BigInt,
+    string,
     {
       results: Map<string, Entity>;
       triples: TripleRow[];
@@ -34,12 +34,21 @@ export class VariableAwareCache<Schema extends Models> {
     query: CollectionQuery<any, any>,
     model?: Model | undefined
   ) {
-    // if (!model) return false;
-    if (query.limit !== undefined) return false;
-    if (query.where && query.where.some((f) => !isFilterStatement(f)))
-      return false;
+    if (!query.where || query.where.length === 0) return true;
+    // Queries with limit are somewhat hard to accommodate
+    // While it's totally correct to create the view for the query with limit
+    // it can be fairly inefficient if the limit greatly reduces the number of
+    // returned results from the possible results
+    //   e.g. "conversations with latest message"
+    // this is tricky because `exist` filters create a query with limit 1
+    // so the limit itself is not always a good heuristic to rely on because
+    // if the relation is on the entities ID then even after you apply LIMIT 1
+    // you've likely used most results in the view so it's fine
+    // if (query.limit !== undefined) return false;
+    // if (query.where && query.where.some((f) => !isFilterStatement(f)))
+    //   return false;
 
-    if (query.include && Object.keys(query.include).length > 0) return false;
+    // if (query.include && Object.keys(query.include).length > 0) return false;
 
     // This is shouldn't be the case anymore (since we use include for sub relations)
     if (query.select && query.select.some((s) => typeof s === 'object'))
@@ -49,7 +58,11 @@ export class VariableAwareCache<Schema extends Models> {
     const variableStatements: FilterStatement<any, any>[] = statements.filter(
       ([, , v]) => typeof v === 'string' && v.startsWith('$')
     );
-    if (variableStatements.length !== 1) return false;
+    // So currently we'll only support queries with:
+    // 1. a single variable filter (typical relational subquery)
+    // 2. no variable filters which is an odd one (inspired by benchmarks query)
+    //    bc resolving from it is trivial (just return all entities)
+    if (variableStatements.length > 1) return false;
 
     if (!['=', '<', '<=', '>', '>=', '!='].includes(variableStatements[0][1]))
       return false;
@@ -62,7 +75,9 @@ export class VariableAwareCache<Schema extends Models> {
     }
     return true;
   }
-
+  /**
+   * @deprecated
+   */
   async createView<Q extends CollectionQuery<Schema, any>>(
     viewQuery: Q,
     schema: Schema
@@ -98,7 +113,8 @@ export class VariableAwareCache<Schema extends Models> {
   }
 
   viewQueryToId(viewQuery: any) {
-    return TB.Value.Hash(viewQuery);
+    return JSON.stringify(viewQuery);
+    // return TB.Value.Hash(viewQuery);
   }
 
   async resolveFromCache<Q extends CollectionQuery<Schema, any>>(
@@ -106,7 +122,11 @@ export class VariableAwareCache<Schema extends Models> {
     executionContext: FetchExecutionContext,
     options: FetchFromStorageOptions
   ): Promise<string[]> {
-    const { views, variableFilters } = this.queryToViews(query);
+    const { views, variableFilters } = VariableAwareCache.queryToViews<
+      Schema,
+      CollectionNameFromModels<Schema>,
+      Q
+    >(query);
     const id = this.viewQueryToId(views[0]);
     if (!this.cache.has(id)) {
       // NOTE: dangerously setting ! on options.schema (not sure if schema is actually required or not)
@@ -201,7 +221,78 @@ export class VariableAwareCache<Schema extends Models> {
     return resultEntries.map(([key]) => key);
   }
 
-  queryToViews<
+  static async resolveQueryFromView(viewResults: any[], [prop, op, val]: any) {
+    let start, end;
+    if (['=', '<', '<=', '>', '>='].includes(op)) {
+      start = binarySearch(
+        viewResults,
+        val,
+        (ent) => ent[prop],
+        'start',
+        (a, b) => {
+          if (op === '<') return a < b ? 0 : 1;
+          if (op === '<=') return a <= b ? 0 : 1;
+          if (op === '>') return a > b ? 0 : -1;
+          if (op === '>=') return a >= b ? 0 : -1;
+          return a === b ? 0 : a < b ? -1 : 1;
+        }
+      );
+      end = binarySearch(
+        viewResults,
+        val,
+        (ent) => ent[prop],
+        'end',
+        (a, b) => {
+          if (op === '<') return a < b ? 0 : 1;
+          if (op === '<=') return a <= b ? 0 : 1;
+          if (op === '>') return a > b ? 0 : -1;
+          if (op === '>=') return a >= b ? 0 : -1;
+          return a === b ? 0 : a < b ? -1 : 1;
+        }
+      );
+    }
+    if (op === '!=') {
+      start = binarySearch(
+        viewResults,
+        val,
+        (ent) => ent[prop],
+        'start',
+        (a, b) => {
+          return a === b ? 0 : a < b ? -1 : 1;
+        }
+      );
+      end = binarySearch(
+        viewResults,
+        val,
+        (ent) => ent[prop],
+        'end',
+        (a, b) => {
+          return a === b ? 0 : a < b ? -1 : 1;
+        }
+      );
+      const resultEntries = [
+        ...viewResults.slice(0, start + 1),
+        ...viewResults.slice(end),
+      ];
+      return resultEntries.map(([key]) => key);
+    }
+    if (start == undefined || end == undefined) {
+      throw new QueryCacheError(
+        `Queries with the operator ${op} in a where clause can't be stored in the query cache. Currently, supported operators are: ${[
+          '=',
+          '!=',
+          '<',
+          '<=',
+          '>',
+          '>=',
+        ]}`
+      );
+    }
+    return viewResults.slice(start, end + 1);
+  }
+
+  static queryToViews<
+    Schema extends Models,
     CN extends CollectionNameFromModels<Schema>,
     Q extends CollectionQuery<Schema, CN>,
   >(query: Q) {
@@ -212,6 +303,9 @@ export class VariableAwareCache<Schema extends Models> {
           const [prop, _op, val] = filter;
           if (isValueVariable(val)) {
             variableFilters.push([prop, _op, val]);
+            return false;
+          }
+          if (isExistsFilter(filter)) {
             return false;
           }
           return true;

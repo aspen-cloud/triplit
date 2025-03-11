@@ -18,16 +18,16 @@ type ArgDefinitionsToValues<Args extends ArgDefinitions> = Args extends {
       [K in Name as string]: string[];
     }
   : Args extends { name: infer Name extends string; description: string }[]
-    ? {
-        // Creates record of arg names to a single string value
-        [key in Name]: string;
-      }
-    : never;
+  ? {
+      // Creates record of arg names to a single string value
+      [key in Name]: string;
+    }
+  : never;
 
 export interface CommandDefinition<
   Args extends ArgDefinitions | undefined,
   Flags extends AllowedFlags<Middleware>,
-  Middleware extends MiddlewareDefinition<any, any, any, any> | undefined,
+  Middleware extends MiddlewareDefinition<any, any, any, any>,
 > {
   description?: string;
   examples?: { usage: string; description?: string }[];
@@ -46,11 +46,11 @@ type MergeUnion<U> = {
 
 type RunCommand<
   Args extends ArgDefinitions | undefined,
-  Flags extends AllowedFlags<Middleware> | undefined,
+  Flags extends AllowedFlags<Middleware>,
   Middleware extends MiddlewareDefinition<any, any, any, any>,
 > = (params: {
   args: ArgDefinitionsToValues<Args & ArgsFromMiddleware<Middleware>>;
-  flags: FlagsToTypes<Flags & FlagsFromMiddleware<Middleware>>;
+  flags: FlagsToTypes<Flags>; // & FlagsFromMiddleware<Middleware>
   ctx: MergeUnion<CtxFromMiddleware<Middleware>>;
 }) => Promise<ReactElement> | ReactElement | Promise<void> | void;
 

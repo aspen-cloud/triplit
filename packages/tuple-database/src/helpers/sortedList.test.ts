@@ -1,4 +1,4 @@
-import * as _ from "remeda"
+import { shuffle } from "../helpers/remeda.js"
 import { describe, it, expect } from "bun:test"
 import { compare } from "./compare.js"
 import { remove, scan, set } from "./sortedList.js"
@@ -8,7 +8,7 @@ describe("sortedList", () => {
 		for (let i = 0; i < 10; i++) {
 			const items = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
 			const list: number[] = []
-			for (const item of _.shuffle(items)) {
+			for (const item of shuffle(items)) {
 				set(list, item, compare)
 			}
 			expect(list).toEqual(items)

@@ -1,4 +1,4 @@
-import { Schema as S, type ClientSchema, type Entity } from '@triplit/client';
+import { Schema as S, type Entity } from '@triplit/client';
 
 // This is your schema definition.
 //
@@ -13,7 +13,7 @@ import { Schema as S, type ClientSchema, type Entity } from '@triplit/client';
 // Read more about schema management:
 //  https://www.triplit.dev/docs/schemas/updating
 
-export const schema = {
+export const schema = S.Collections({
   todos: {
     schema: S.Schema({
       id: S.Id(),
@@ -22,7 +22,7 @@ export const schema = {
       created_at: S.Date({ default: S.Default.now() }),
     }),
   },
-} satisfies ClientSchema;
+});
 
 // Use the `Entity` type to extract clean types for your collections
 export type Todo = Entity<typeof schema, 'todos'>;

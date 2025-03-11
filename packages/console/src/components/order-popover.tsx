@@ -8,12 +8,12 @@ import {
   Button,
 } from '@triplit/ui';
 import { useState } from 'react';
-import { CollectionDefinition, OrderStatement } from '@triplit/db';
+import { Collection, OrderStatement } from '@triplit/entity-db';
 
 type OrderPopoverProps = {
   collection: string;
   uniqueAttributes: Set<string>;
-  collectionSchema?: CollectionDefinition;
+  collectionSchema?: Collection;
   order: OrderStatement<any, any>;
   onSubmit: (order: OrderStatement<any, any>) => void;
 };

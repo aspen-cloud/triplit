@@ -1,0 +1,419 @@
+---
+description: Learn how to update your application for the upgraded API in Triplit 1.0.
+---
+
+# Migrating to Triplit 1.0
+
+Triplit 1.0 is here. It's a major upgrade that includes significant improvements to performance and reliability, including:
+
+- Faster reads, up to 20x for complicated queries
+- Faster writes, []x on inserts, updates and deletes
+- More memory efficient, up to 10x less memory usage
+- Up to 10x less disk storage per entity.
+
+There are also several improvements to the API, including:
+
+- Simplified query syntax and the removal of `.build()` from the query builder API
+- More type hinting when defining permissions and relations in a schema.
+- Easier self-hosted server setup with fewer required environment variables.
+
+Because Triplit 1.0 uses a new data storage format and redesigned sync protocol, client and server must be updated in tandem, and neither will be backwards compatible with their pre-1.0 counterparts. The server upgrade involves a data migration. If you're using Triplit Cloud, we'll handle this for you when you're ready to upgrade. If you're self-hosting, you can follow the instructions in the [server upgrade section](#server) below.
+
+## Query builder
+
+### Capitalization and `.build()`
+
+Anywhere you have a Triplit query defined in your app, you'll need to make some subtle updates. Every builder method (e.g. `.Where`, `.Select`, `.Include`) is now capitalized. In addition, you no longer need to call `.build()` at the end of your query. Here's an example of a query before and after the upgrade:
+
+Before:
+
+```ts
+const query = triplit
+  .query('todos')
+  .where('completed', '=', false)
+  .order('created_at', 'ASC')
+  .include('assignee')
+  .build();
+```
+
+After:
+
+```ts
+const query = triplit
+  .query('todos')
+  .Where('completed', '=', false)
+  .Order('created_at', 'ASC')
+  .Include('assignee');
+```
+
+### `SyncStatus`
+
+The `SyncStatus` parameter has been changed from a query builder method to an option on `TriplitClient.subscribe` and `TriplitClient.fetch` and their permutations (e.g. `fetchOne`, `fetchById`).
+
+Before:
+
+```ts
+const unsyncedTodosQuery = triplit.query('todos').syncStatus('pending').build();
+
+const result = triplit.fetch(unsyncedTodosQuery);
+const unsubscribeHandler = triplit.subscribe(unsyncedTodosQuery, (result) => {
+  console.log(result);
+});
+```
+
+After:
+
+```ts
+const unsyncedTodosQuery = triplit.query('todos');
+
+const result = triplit.fetch(unsyncedTodosQuery, {
+  syncStatus: 'pending',
+});
+const unsubscribeHandler = triplit.subscribe(
+  unsyncedTodosQuery,
+  (result) => {
+    console.log(result);
+  },
+  undefined,
+  {
+    syncStatus: 'pending',
+  }
+);
+```
+
+### `subquery` builder method
+
+The `.subquery` builder method has been replaced with two new methods: `.SubqueryOne` and `.SubqueryMany`. Previously the `.subquery` method required a `cardinality` parameter to specify whether the subquery was for a single or multiple entities. These new methods are more explicit and provide better type hinting.
+
+Before:
+
+```ts
+const query = triplit
+  .query('todos')
+  .subquery(
+    'assignee',
+    triplit.query('users').where('name', '=', 'Alice').build(),
+    'one'
+  )
+  .build();
+```
+
+After:
+
+```ts {3}
+const query = triplit
+  .query('todos')
+  .SubqueryOne('assignee', triplit.query('users').Where('name', '=', 'Alice'));
+```
+
+## Schema
+
+### Reorganized schema sections and better type hinting
+
+- Relations in your schema are now defined in a `relationships` section. This makes it easier to see at a glance how your data is connected, and provides better type hinting when you're working with your schema.
+
+- The `ClientSchema` type has been removed in favor of an `S.Collections` method that gives better type hinting when defining your schema.
+
+Here's an example of a schema before and after the upgrade:
+
+Before:
+
+```ts
+import { Schema as S, type ClientSchema } from '@triplit/client';
+
+const schema = {
+  todos: {
+    schema: S.Schema({
+      id: S.Id(),
+      text: S.String(),
+      completed: S.Boolean(),
+      assigneeId: S.String(),
+      assignee: S.RelationById('users', '$1.assigneeId'),
+    }),
+  },
+  users: {
+    schema: S.Schema({
+      id: S.Id(),
+      name: S.String(),
+    }),
+  },
+} satisfies ClientSchema;
+```
+
+After:
+
+```ts {3,11-13}
+import { Schema as S } from '@triplit/client';
+
+const schema = S.Collections({
+  todos: {
+    schema: S.Schema({
+      id: S.Id(),
+      text: S.String(),
+      completed: S.Boolean(),
+      assigneeId: S.String(),
+    }),
+    relationships: {
+      assignee: S.RelationById('users', '$1.assigneeId'),
+    },
+  },
+  users: {
+    schema: S.Schema({
+      id: S.Id(),
+      name: S.String(),
+    }),
+  },
+});
+```
+
+### New `S.Default.Set.empty()` option
+
+The `S.Default.Set.empty()` is a new option for the `default` option in a `Set` attribute. Here's how to use it:
+
+```ts {9}
+import { Schema as S } from '@triplit/client';
+
+const schema = S.Collections({
+  todos: {
+    schema: S.Schema({
+      id: S.Id(),
+      text: S.String(),
+      completed: S.Boolean(),
+      tags: S.Set(S.String(), { default: S.Default.Set.empty() }),
+    }),
+  },
+});
+```
+
+### Changed type helpers
+
+The `EntityWithSelection` type, previously used to extract an entity from the schema with a specific selection, has been replaced with a `QueryResult` type. This new type is more flexible and provides better type hinting when working with your schema.
+
+Before:
+
+```ts
+import { type EntityWithSelection } from '@triplit/client';
+import { schema } from './schema';
+
+type UserWithPosts = EntityWithSelection<
+  typeof schema,
+  'users', // collection
+  ['name'], // selection
+  { posts: true } // inclusions
+>;
+```
+
+After:
+
+```ts
+import { type QueryResult } from '@triplit/client';
+import { schema } from './schema';
+import { triplit } from './client';
+
+type UserWithPosts = QueryResult<
+  typeof schema,
+  { collectionName: 'users'; select: ['name']; include: { posts: true } }
+>;
+```
+
+## Client configuration
+
+### `storage` changed
+
+The `storage` option in the `TriplitClient` no longer accepts an object with `cache` and `outbox` properties. Instead, you can continue to pass in the simple string values `memory` or `indexeddb`, or in the uncommon case that you are creating your own storage provider, an instance of a `KVStore` (which is a new interface in Triplit 1.0). If you need to specify a name for your IndexedDB database, you can pass in an object with a `type` property set to `'indexeddb'` and a `name` property set to the desired name of your database.
+
+Before:
+
+```ts
+import { TriplitClient } from '@triplit/client';
+import { IndexedDbStorage } from '@triplit/db/storage/indexed-db';
+
+const client = new TriplitClient({
+  storage: {
+    outbox: new IndexedDBStorage('my-database-outbox'),
+    cache: new IndexedDBStorage('my-database-cache'),
+  },
+});
+```
+
+After:
+
+```ts
+import { TriplitClient } from '@triplit/client';
+const client = new TriplitClient({
+  storage: {
+    type: 'indexeddb',
+    name: 'my-database',
+  },
+});
+
+// also works if you don't need to specify a name
+const client = new TriplitClient({
+  storage: 'indexeddb',
+});
+```
+
+### Storage imports
+
+If you chose to import storage providers directly, previously our storage providers were only exported from `@triplit/db`, so you needed to install `@triplit/db` alongside `@triplit/client`. Providers are now directly exported by `@triplit/client`.
+
+Before:
+
+```ts
+import { TriplitClient } from '@triplit/client';
+import { IndexedDbStorage } from '@triplit/db/storage/indexed-db';
+
+const client = new TriplitClient({
+  storage: {
+    outbox: new IndexedDBStorage('my-database-outbox'),
+    cache: new IndexedDBStorage('my-database-cache'),
+  },
+});
+```
+
+After:
+
+```ts
+import { TriplitClient } from '@triplit/client';
+import { IndexedDbStorage } from '@triplit/client/storage/indexed-db';
+
+const client = new TriplitClient({
+  storage: new IndexedDbStorage('my-database'),
+});
+```
+
+For most purposes, you should only need to install `@triplit/client`.
+
+### `experimental.entityCache` removed
+
+The `experimental.entityCache` option has been removed from the `TriplitClient` configuration. This option is no longer needed in Triplit 1.0.
+
+## Client methods
+
+### Deleting optional attributes
+
+Previously, deleting an optional attribute in the `TriplitClient.update` method would remove the key from the entity. Any attribute wrapped in `S.Optional` would be of type `T | undefined`.
+
+Now, deleting an optional attribute will set the attribute to `null`, and the attribute will be of type `T | undefined | null`.
+
+### `insert`, `update`, `delete`, `transact` return types changed
+
+These methods no longer return a `{ txId, output }` object. Instead, if they have an output, e.g. `insert`, they return it directly.
+
+Before:
+
+```ts
+import { triplit } from './client';
+
+// output is the inserted entity
+const { txId, output } = await triplit.insert('todos', {
+  id: '1',
+  text: 'Buy milk',
+});
+const { txId } = await triplit.update('todos', '1', (e) => {
+  e.text = 'Buy buttermilk';
+});
+const { txId } = await triplit.delete('todos', '1');
+```
+
+After:
+
+```ts
+import { triplit } from './client';
+
+const output = await triplit.insert('todos', { text: 'Buy milk' });
+
+// these methods have no return value
+await triplit.update('todos', '1', (e) => {
+  e.text = 'Buy buttermilk';
+});
+await triplit.delete('todos', '1');
+```
+
+Retrying and rollback with `TxId` is no longer necessary, as the sync engine now handles rollbacks with a new API. See below for more details.
+
+### Sync error handling methods changed
+
+The `TriplitClient` methods `retry`, `rollback`, `onTxSuccessRemote`, and `onTxFailureRemote` have been replaced with a new API for handling sync errors. The new methods include `onEntitySyncError`, `onEntitySyncSuccess`, `clearPendingChangesForEntity` and `clearPendingChangesForAll`. Instead of registering callbacks for a specific transaction, you may register callbacks for a specific entity.
+
+It is important that you handle sync errors in your app code, as the sync engine can get blocked if the entity that causes the error is not removed from the outbox or updated.
+
+Before:
+
+```ts
+import { triplit } from './client';
+
+const { txId } = await triplit.insert('todos', { id: '1', text: 'Buy milk' });
+
+triplit.onTxSuccessRemote(txId, () => {
+  console.log('Transaction succeeded');
+});
+
+triplit.onTxFailureRemote(txId, () => {
+  console.log('Transaction failed');
+  triplit.rollback(txId);
+});
+```
+
+After:
+
+```ts
+import { triplit } from './client';
+
+const insertedEntity = await triplit.insert('todos', {
+  id: '1',
+  text: 'Buy milk',
+});
+
+triplit.onEntitySyncSuccess('todos', '1', () => {
+  console.log('Entity synced');
+});
+
+// if you need to full rollback
+triplit.onEntitySyncError('todos', '1', () => {
+  triplit.clearPendingChangesForEntity('todos', '1');
+});
+
+// if you can handle the error and want to try with a changed entity
+// mutating the entity will trigger a new sync
+triplit.onEntitySyncError('todos', '1', () => {
+  triplit.update('todos', '1', (e) => {
+    e.text = 'Buy buttermilk';
+  });
+});
+```
+
+### `getSchemaJSON` removed
+
+The `getSchemaJSON` method has been removed from the `TriplitClient` API, as the schema is now JSON by default.
+
+Before:
+
+```ts
+import { triplit } from './client';
+
+const serializedSchema = await triplit.getSchemaJSON();
+```
+
+After:
+
+```ts {3}
+import { schema } from './schema';
+const serializedSchema = await triplit.getSchema();
+```
+
+## Frameworks
+
+### Angular
+
+Triplit previously maintained two sets of Angular bindings: the signal-based `injectQuery` and the observable-based `createQuery`. In Triplit 1.0, we've removed the signal-based bindings in favor of the more flexible and powerful observable-based bindings. If you're using the signal-based bindings, you'll need to update your app to use the observable-based bindings. Generally this means adopting the [Async pipe syntax](https://v17.angular.io/guide/observables-in-angular#async-pipe) in your templates or by using the [`@angular/rxjs-interop` package](https://angular.dev/ecosystem/rxjs-interop) to translate them to signals.
+
+## Migrating your server
+
+### Move your data over
+
+TBD
+
+### Remove `PROJECT_ID` secret
+
+This secret is no longer needed in Triplit 1.0. You can remove it from your environment variables.

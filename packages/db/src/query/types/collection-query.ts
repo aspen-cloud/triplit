@@ -34,7 +34,7 @@ export type CollectionQuery<
   // | [string, CollectionQuery<M, any>]
   order?: QueryOrder<M, CN>;
   limit?: number;
-  after?: [ValueCursor, boolean];
+  after?: QueryAfter;
   /**
    * @deprecated define a where filter instead
    */
@@ -157,11 +157,13 @@ export type FilterStatement<
   M extends Models,
   CN extends CollectionNameFromModels<M>,
   K extends SchemaPaths<M, CN> = SchemaPaths<M, CN>,
-> = [
-  K,
-  Operator, // ExtractOperators<ExtractTypeFromRecord<ModelFromModels<M, CN>, M, K>>,
-  QueryValue, // ExtractValueInputs<ExtractTypeFromRecord<ModelFromModels<M, CN>, M, K>>
-];
+> = Readonly<
+  [
+    K,
+    Operator, // ExtractOperators<ExtractTypeFromRecord<ModelFromModels<M, CN>, M, K>>,
+    QueryValue, // ExtractValueInputs<ExtractTypeFromRecord<ModelFromModels<M, CN>, M, K>>
+  ]
+>;
 
 /**
  * A set of filters specified to be combined with AND or OR.
@@ -241,7 +243,8 @@ export type OrderStatement<
 > = [property: SchemaPaths<M, CN>, direction: 'ASC' | 'DESC'];
 
 // ====== Pagination Types ======
-export type ValueCursor = [value: QueryValue, entityId: EntityId];
+export type QueryAfter = [ValueCursor, boolean];
+export type ValueCursor = [value: QueryValue, ...values: QueryValue[]];
 
 // ====== Inclusion Types ======
 /**

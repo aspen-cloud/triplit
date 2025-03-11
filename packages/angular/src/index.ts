@@ -1,3 +1,2 @@
-export * from './inject-connection-status';
-export * from './inject-query';
+export * from './create-connection-status';
 export * from './create-query';

@@ -6,7 +6,7 @@ description: How to use the TriplitClient subscribeWithExpand method to fetch a 
 
 `subscribeWithExpand` is a special type of subscription that is used to fetch a window of data that can programmatically grow in size. It is similar to `subscribe` but it has a few differences:
 
-- It expects the query to have an initial `limit` defined.
+- It expects the query to have an initial `Limit` defined.
 - It returns a `loadMore(pageSize?: number)` function to fetch more data. By default, it fetches the next page of data based on the initial `limit` defined in the query.
 
 ```typescript

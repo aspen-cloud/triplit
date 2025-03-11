@@ -1,64 +1,17 @@
-import { Model, Models, StoreSchema } from './types/index.js';
+import {
+  ALLOWABLE_DATA_CONSTRAINTS,
+  AttributeDiff,
+  BackwardsIncompatibleEdit,
+  CollectionAttributeDiff,
+  Model,
+  Models,
+  StoreSchema,
+  PossibleDataViolation,
+} from './types/index.js';
 import { Value as TBValue } from '@sinclair/typebox/value';
 import { UserTypeOptions } from '../data-types/types/index.js';
 import { DBTransaction } from '../db-transaction.js';
-
-type ChangeToAttribute =
-  | {
-      type: 'update';
-      changes: {
-        items?: { type: string };
-        type?: string;
-        options?: any;
-        optional?: boolean;
-      };
-    }
-  | {
-      type: 'insert';
-      metadata: {
-        type: string;
-        options: any;
-        optional: boolean;
-      };
-      isNewCollection: boolean;
-    }
-  | {
-      type: 'delete';
-      metadata: {
-        type: string;
-        options: any;
-        optional: boolean;
-      };
-    };
-
-type AttributeDiff = {
-  attribute: string[];
-} & ChangeToAttribute;
-
-type CollectionAttributeDiff = {
-  _diff: 'collectionAttribute';
-  collection: string;
-} & AttributeDiff;
-
-type CollectionRulesDiff = {
-  _diff: 'collectionRules';
-  collection: string;
-};
-
-type CollectionPermissionsDiff = {
-  _diff: 'collectionPermissions';
-  collection: string;
-};
-
-type RolesDiff = {
-  _diff: 'roles';
-};
-
-type Diff =
-  | CollectionAttributeDiff
-  | CollectionRulesDiff
-  | CollectionPermissionsDiff
-  | RolesDiff;
+import { Diff } from './types/index.js';
 
 // type AttributeDiff = AttributeChange;
 
@@ -256,26 +209,6 @@ function areDifferent(a: any, b: any): boolean {
   return TBValue.Diff(a, b).length > 0;
 }
 
-type ALLOWABLE_DATA_CONSTRAINTS =
-  | 'none'
-  | 'never'
-  | 'collection_is_empty'
-  | 'attribute_is_empty' // undefined
-  | 'attribute_has_no_undefined'
-  | 'attribute_has_no_null'
-  | 'attribute_satisfies_enum';
-
-type BackwardsIncompatibleEdits = {
-  issue: string;
-  dataConstraint: ALLOWABLE_DATA_CONSTRAINTS;
-  context: CollectionAttributeDiff;
-  attributeCure: (
-    collection: string,
-    attribute: string[],
-    enums?: string[]
-  ) => string | null;
-};
-
 export function getBackwardsIncompatibleEdits(schemaDiff: Diff[]) {
   return schemaDiff.reduce((acc, curr) => {
     if (!isCollectionAttributeDiff(curr)) return acc;
@@ -291,7 +224,7 @@ export function getBackwardsIncompatibleEdits(schemaDiff: Diff[]) {
       });
     }
     return acc;
-  }, [] as BackwardsIncompatibleEdits[]);
+  }, [] as BackwardsIncompatibleEdit[]);
 }
 
 const DANGEROUS_EDITS = [
@@ -433,11 +366,6 @@ async function isEditSafeWithExistingData(
   );
 }
 
-export type PossibleDataViolations = {
-  violatesExistingData: boolean;
-  cure: string;
-} & BackwardsIncompatibleEdits;
-
 export async function getSchemaDiffIssues(
   tx: DBTransaction<any>,
   schemaDiff: Diff[]
@@ -470,7 +398,7 @@ export async function getSchemaDiffIssues(
       };
     })
   );
-  return results as PossibleDataViolations[];
+  return results as PossibleDataViolation[];
 }
 
 const DATA_CONSTRAINT_CHECKS: Record<

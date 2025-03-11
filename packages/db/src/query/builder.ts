@@ -34,6 +34,7 @@ import {
 } from './types/index.js';
 import { isBooleanFilter, isFilterGroup, isFilterStatement } from '../index.js';
 import { isSubQueryFilter, isWhereFilter } from '../query.js';
+import { ValuePointer } from '@sinclair/typebox/value';
 
 export class QueryBuilder<
   M extends Models,
@@ -476,19 +477,14 @@ export const QUERY_INPUT_TRANSFORMERS = <
   ): [ValueCursor, boolean] | undefined {
     if (!after) return undefined;
     if (!q.order) throw new AfterClauseWithNoOrderError(after);
-    const attributeToOrderBy = q.order[0][0];
-    if (after instanceof Array && after.length === 2)
-      return [after, inclusive ?? false];
-    if (
-      typeof after === 'object' &&
-      !(after instanceof Array) &&
-      Object.hasOwn(after, 'id') &&
-      Object.hasOwn(after, attributeToOrderBy)
-    ) {
+    const orderAttributes = q.order.map((o) => o[0]);
+    if (after instanceof Array) return [after, inclusive ?? false];
+    if (typeof after === 'object') {
       return [
-        // @ts-expect-error TODO: properly type this
         // Maybe even sunset this and only use ValueCursor format
-        [after[attributeToOrderBy] as QueryValue, after.id as string],
+        orderAttributes.map((attr) =>
+          ValuePointer.Get(after, attr)
+        ) as ValueCursor,
         inclusive ?? false,
       ];
     }

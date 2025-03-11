@@ -5,7 +5,6 @@ import {
   getCoreRowModel,
   useReactTable,
 } from '@tanstack/react-table';
-
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Table,
@@ -29,22 +28,23 @@ import {
 import { PARSE_FUNCS } from './create-entity-sheet';
 import { CopyValueMenu } from './copy-value-menu.js';
 import { TriplitClient } from '@triplit/client';
-import { AttributeDefinition, CollectionPermissions } from '@triplit/db';
-import {
-  CollectionAttributeDefinition,
-  QueryAttributeDefinition,
-  RecordAttributeDefinition,
-  ValueAttributeDefinition,
-} from '@triplit/db';
 import { ArrowSquareOut } from '@phosphor-icons/react';
 import {
   TriplitDataTypes,
-  deleteTriplitValue,
   updateTriplitSet,
   updateTriplitValue,
 } from 'src/utils/mutate-cells.js';
 import { useToast } from 'src/hooks/useToast.js';
 import { RoleFilters } from './role-filters.js';
+import { atom, useAtom } from 'jotai';
+import type {
+  ValueType,
+  SetType,
+  Relationship,
+  RecordType,
+  DataType,
+  PrimitiveType,
+} from '@triplit/entity-db';
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
@@ -55,8 +55,14 @@ type ColumnHeaderProps = {
   attribute: string;
   onClickHeader?: () => void;
   rightIcon?: React.ReactNode;
-  attributeDef?: AttributeDefinition;
+  attributeDef?: ValueType | Relationship;
 } & React.HTMLAttributes<HTMLDivElement>;
+
+function isRelationship(
+  attributeDef: ValueType | Relationship
+): attributeDef is Relationship {
+  return (attributeDef as Relationship).query !== undefined;
+}
 
 export function TriplitColumnHeader(props: ColumnHeaderProps) {
   const { attribute, onClickHeader, rightIcon, attributeDef, children } = props;
@@ -67,9 +73,9 @@ export function TriplitColumnHeader(props: ColumnHeaderProps) {
     >
       <div className="flex flex-row items-center truncate gap-1">
         <div className="truncate">{attribute}</div>
-        {attributeDef?.type && (
+        {attributeDef && (
           <div className="font-normal text-primary/50 truncate">
-            {attributeDef.type === 'query' ? 'relation' : attributeDef.type}
+            {isRelationship(attributeDef) ? 'relation' : attributeDef.type}
           </div>
         )}
         {children}
@@ -86,7 +92,7 @@ function SetCellContents({
   className,
 }: {
   triplitSet: Set<any> | null;
-  definition: CollectionAttributeDefinition;
+  definition: SetType;
   limit?: number;
   className?: string;
 }) {
@@ -129,7 +135,7 @@ function RecordCellContents({
   className,
 }: {
   record: Record<string, any>;
-  definition?: RecordAttributeDefinition;
+  definition?: RecordType;
   limit?: number;
   className?: string;
 }) {
@@ -168,10 +174,7 @@ function RecordCellContents({
   );
 }
 
-function CellValue(props: {
-  definition: AttributeDefinition;
-  value: TriplitDataTypes;
-}) {
+function CellValue(props: { definition: DataType; value: TriplitDataTypes }) {
   const { definition, value } = props;
   if (value === null) return <span className="text-primary/50">null</span>;
   if (value === undefined) return '';
@@ -189,7 +192,7 @@ function CellValue(props: {
 }
 
 type TriplitRelationCellProps = {
-  queryDef: QueryAttributeDefinition;
+  queryDef: Relationship;
   onClickRelationLink: () => void;
 };
 
@@ -197,7 +200,7 @@ export function RelationCell({
   queryDef,
   onClickRelationLink,
 }: TriplitRelationCellProps) {
-  const { collectionName: linkedCollection } = queryDef?.query;
+  const { collectionName: linkedCollection } = queryDef.query;
   return (
     <Button
       variant={'link'}
@@ -211,25 +214,23 @@ export function RelationCell({
 
 type TriplitDataCellProps = {
   entityId: string;
-  selected: boolean;
   client: TriplitClient<any>;
   collection: string;
   attribute: string;
   value: TriplitDataTypes;
-  attributeDef?: AttributeDefinition;
-  onSelectCell: () => void;
+  attributeDef?: ValueType;
   editable?: boolean;
   optional?: boolean;
-  permissions?: CollectionPermissions<any, any>;
+  permissions?: Permission;
 };
+
+const selectedAtom = atom<string | null>(null);
 
 export function DataCell({
   value,
   entityId,
   attribute,
-  attributeDef = { type: 'string', options: { nullable: true } },
-  onSelectCell = () => {},
-  selected = false,
+  attributeDef = { type: 'string', config: { nullable: true } },
   client,
   collection,
   editable = true,
@@ -237,19 +238,28 @@ export function DataCell({
   permissions,
 }: TriplitDataCellProps) {
   const { toast } = useToast();
+  const rowKey = `${attribute}:${entityId}`;
+  const [selected] = useAtom(
+    useMemo(() => atom((get) => get(selectedAtom) === rowKey), [rowKey])
+  );
+  const [_, setSelected] = useAtom(selectedAtom);
   const [isEditing, setIsEditing] = useState(false);
-  const nullable = !!attributeDef?.options?.nullable;
-  useEffect(() => {
-    if (!selected) setIsEditing(false);
-  }, [selected]);
+  const nullable = attributeDef?.config?.nullable ?? false;
 
   return (
-    <Popover open={isEditing && editable} onOpenChange={setIsEditing}>
+    <Popover
+      open={isEditing && editable && selected}
+      // onOpenChange={setIsEditing}
+    >
       <CopyValueMenu value={value}>
         <PopoverTrigger
+          disabled={!editable}
           onClick={() => {
-            onSelectCell();
-            if (selected && editable) setIsEditing(!isEditing);
+            if (!selected) {
+              setSelected(rowKey);
+              return;
+            }
+            setIsEditing(!isEditing);
           }}
           // setting height manually until we can figure out how to get these to fill the row
           className={`text-left px-3 py-2 border truncate w-full h-[38px] ${
@@ -287,34 +297,10 @@ export function DataCell({
               }
             }}
           />
-        ) : attributeDef?.type === 'record' ? (
-          <RecordCellEditor
+        ) : (
+          <PrimitiveCellEditor
             value={value}
             definition={attributeDef}
-            onSubmit={async (newValue) => {
-              const error = await updateTriplitValue(
-                attribute,
-                client,
-                collection,
-                entityId,
-                newValue
-              );
-              if (error) {
-                toast({
-                  title: 'Error',
-                  description: error,
-                  variant: 'destructive',
-                });
-                return;
-              }
-              setIsEditing(false);
-            }}
-            onBlur={() => setIsEditing(false)}
-          />
-        ) : (
-          <ValueCellEditor
-            value={value}
-            definition={attributeDef as ValueAttributeDefinition}
             onBlur={() => setIsEditing(false)}
             onSubmit={async (newValue: TriplitDataTypes) => {
               if (newValue !== value) {
@@ -340,60 +326,30 @@ export function DataCell({
         )}
         {(nullable || optional) && (
           <div className="pt-2 flex flex-row gap-2">
-            {nullable && (
-              <Button
-                className="text-xs h-auto py-1 px-2 justify-self-start"
-                variant={'ghost'}
-                disabled={value === null}
-                onClick={async (e) => {
-                  const error = await updateTriplitValue(
-                    attribute,
-                    client,
-                    collection,
-                    entityId,
-                    null
-                  );
-                  if (error) {
-                    toast({
-                      title: 'Error',
-                      description: error,
-                      variant: 'destructive',
-                    });
-                    return;
-                  }
-                }}
-              >
-                Set to <Code className="text-xs ml-1">null</Code>
-              </Button>
-            )}
-            {optional && (
-              <Button
-                className="text-xs h-auto py-1 px-2 justify-self-start"
-                disabled={value === undefined}
-                variant={'ghost'}
-                onClick={async (e) => {
-                  const error = await deleteTriplitValue(
-                    attribute,
-                    client,
-                    collection,
-                    entityId
-                  );
-                  if (error) {
-                    toast({
-                      title: 'Error',
-                      description: error,
-                      variant: 'destructive',
-                    });
-                    return;
-                  }
-                }}
-              >
-                Delete{' '}
-                {attributeDef.type === 'set' || attributeDef.type === 'record'
-                  ? attributeDef.type
-                  : 'value'}
-              </Button>
-            )}
+            <Button
+              className="text-xs h-auto py-1 px-2 justify-self-start"
+              variant={'ghost'}
+              disabled={value === null}
+              onClick={async (e) => {
+                const error = await updateTriplitValue(
+                  attribute,
+                  client,
+                  collection,
+                  entityId,
+                  null
+                );
+                if (error) {
+                  toast({
+                    title: 'Error',
+                    description: error,
+                    variant: 'destructive',
+                  });
+                  return;
+                }
+              }}
+            >
+              Set to <Code className="text-xs ml-1">null</Code>
+            </Button>
           </div>
         )}
         {permissions && (
@@ -411,7 +367,7 @@ export function DataCell({
 type SetCellEditorProps = {
   onChangeSet(value: string | null, action: 'add' | 'delete' | 'null'): void;
   set: Set<string> | undefined;
-  definition: CollectionAttributeDefinition;
+  definition: SetType;
 };
 
 function SetCellEditor(props: SetCellEditorProps) {
@@ -433,55 +389,41 @@ function SetCellEditor(props: SetCellEditorProps) {
   );
 }
 
-type ValueCellEditorProps = {
+type PrimitiveCellEditorProps = {
   value: TriplitDataTypes;
-  definition: ValueAttributeDefinition;
+  definition: PrimitiveType;
   onSubmit: (newValue: TriplitDataTypes) => void;
   onBlur: () => void;
 };
 
 function coerceStringToTriplitType(
   value: string | null | Array<any>,
-  definition: AttributeDefinition
+  definition: ValueType
 ) {
   const { type } = definition;
-  if (value === null || value === null) return value;
+  if (value === null) return value;
   if (type === 'number') return Number(value);
   if (type === 'boolean') return JSON.parse(value);
   if (type === 'date') return new Date(value);
   if (type === 'set') return new Set(value);
-  if (type === 'record')
-    return Object.fromEntries(
-      Object.entries(value).map(([key, value]) => [
-        key,
-        coerceStringToTriplitType(value, definition.properties[key]),
-      ])
-    );
   return value;
 }
 
 function coerceTriplitTypeToInput(
   value: TriplitDataTypes,
-  definition: AttributeDefinition
+  definition: DataType
 ) {
   const { type } = definition;
-  if (type === 'record' && typeof value === 'object')
-    return Object.fromEntries(
-      Object.entries(value).map(([key, value]) => [
-        key,
-        coerceTriplitTypeToInput(value, definition.properties[key]),
-      ])
-    );
   if (value === null || value === undefined) return '';
   if (type && type === 'date')
     return new Date(value as string | Date).toISOString();
   return String(value);
 }
 
-function ValueCellEditor(props: ValueCellEditorProps) {
+function PrimitiveCellEditor(props: PrimitiveCellEditorProps) {
   const { value, definition, onSubmit, onBlur } = props;
-  const { type, options } = definition;
-  const nullable = !!options?.nullable;
+  const { type, config } = definition;
+  const nullable = config?.nullable ?? false;
   const [draftValue, setDraftValue] = useState<string>(
     type ? coerceTriplitTypeToInput(value, definition) : JSON.stringify(value)
   );
@@ -490,7 +432,7 @@ function ValueCellEditor(props: ValueCellEditorProps) {
     if (type === 'date') return DateInput;
     if (type === 'boolean') return BooleanInput;
     if (type === 'number') return NumberInput;
-    if (type === 'string' && definition.options?.enum) return EnumInput;
+    if (type === 'string' && definition.config?.enum) return EnumInput;
     return StringInput;
   }, [type]);
 
@@ -513,7 +455,7 @@ function ValueCellEditor(props: ValueCellEditorProps) {
           setError('');
         }}
         value={draftValue}
-        options={definition.options?.enum}
+        options={definition.config?.enum}
       />
       {error && <div className="text-red-500 my-1 text-xs">{error}</div>}
       <div className="flex flex-row gap-1 justify-end mt-1">
@@ -531,78 +473,6 @@ function ValueCellEditor(props: ValueCellEditorProps) {
           onClick={(e) => {
             e.preventDefault();
             submitNewValue();
-          }}
-          size={'sm'}
-          className="text-xs h-auto py-1 px-2"
-        >
-          Save
-        </Button>
-      </div>
-    </div>
-  );
-}
-
-type RecordCellEditorProps = {
-  value: Record<string, any>;
-  definition: RecordAttributeDefinition;
-  onSubmit: (newValue: Record<string, any>) => void;
-  onBlur: () => void;
-};
-
-function RecordCellEditor(props: RecordCellEditorProps) {
-  const { value, definition, onSubmit, onBlur } = props;
-  const { properties } = definition;
-  const [draftValue, setDraftValue] = useState<string>(
-    coerceTriplitTypeToInput(value, definition)
-  );
-
-  const EditorInputs = useMemo(() => {
-    return Object.keys(properties).map((key) => {
-      const type = properties[key].type;
-      if (type === 'date') return DateInput;
-      if (type === 'boolean') return BooleanInput;
-      if (type === 'number') return NumberInput;
-      if (type === 'string' && properties[key].options?.enum) return EnumInput;
-      return StringInput;
-    });
-  }, [properties]);
-
-  return (
-    <div className="flex flex-col gap-2">
-      {EditorInputs.map((EditorInput, index) => {
-        const key = Object.keys(properties)[index];
-        return (
-          <div key={key} className="flex flex-col gap-1">
-            <div className="text-xs ml-1">{key}</div>
-            <EditorInput
-              onChange={(newValue) => {
-                setDraftValue((draftValue) => {
-                  const newDraftValue = { ...draftValue };
-                  newDraftValue[key] = newValue;
-                  return newDraftValue;
-                });
-              }}
-              value={draftValue[key]}
-              options={properties[key]?.options?.enum}
-            />
-          </div>
-        );
-      })}
-      <div className="flex flex-row gap-1 justify-end mt-1">
-        <Button
-          onClick={(e) => {
-            onBlur();
-          }}
-          size={'sm'}
-          className="text-xs h-auto py-1 px-2"
-          variant={'outline'}
-        >
-          Cancel
-        </Button>
-        <Button
-          onClick={(e) => {
-            e.preventDefault();
-            onSubmit(coerceStringToTriplitType(draftValue, definition));
           }}
           size={'sm'}
           className="text-xs h-auto py-1 px-2"

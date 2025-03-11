@@ -1,79 +1,65 @@
-//  There is some odd behavior when using infer with intersection types
-//  Our query types are set up as:
-//  CollectionQuery<...> = Query<...> & { ... }
-//  ClientQuery<...> = CollectionQuery<...> & { ... }
-//
-//  However, if you attempt to infer the generic of a base object (ex. CollectionQuery<infer M>) with the intersected object (ClientQuery<any>) the inferred type M is overly generic
-//
-//  Recreating the fetch result types here to avoid this issue
-//  Playground: https://www.typescriptlang.org/play?#code/KYDwDg9gTgLgBDAnmYcCyEAmwA2BnAHgCg44BhCHHYAYxgEsIA7AOQEMBbVUGYJzPHDwwo9JgHMANCTgAVODz4C4AJVrRMBYaImShIseIB8RI3AC8q9VE0UqtBs3Zc9sowG4iRJCjgAhNjxgAjQFEF5+QQxsfAI2JkQ9eMQjPTIWMIjlAGtgRAgAM3QzSwBvGTYYEQBGAC50AG10gF1PAF8vH1QAUXClYE1QxUj0LFxCZKSE1PIM4Zy8wuKLf0DgtDSWMwAyOFLKkQAmeu1DNs9vZFRZYGFqgnl5wQCguISplJK5TKVntbfEnBkmYAPxwADkYECeHBcHq4IKbHoOHBni6cluMEODx+IxewUmQOmX0efTx-zEBWAUDgAFUPqC6XCIYjkajOlc4ABJJhgACu8EsvSyAwIpV4wnq+3hBQgEHBbTaenBEpg4I8HN8ajwfJwMGqKxudwIPP5MA16O1uqxhsx2NNAo8QA
-
 import {
   CollectionNameFromModels,
-  CollectionQuery,
-  ModelFromModels,
+  FetchResult,
   Models,
-  QueryInclusions,
-  QuerySelection,
-  ReturnTypeFromQuery,
-  TypeFromModel,
-  Unalias,
-} from '@triplit/db';
-import { ClientSchema, SchemaClientQueries } from './query.js';
-
-/**
- * Results from a query based on the query's model in the format `entity[]`
- */
-export type ClientFetchResult<
-  M extends Models,
-  C extends SchemaClientQueries<M>,
-> = ClientFetchResultEntity<M, C>[];
-
-/**
- * Entity from a query based on the query's model
- */
-export type ClientFetchResultEntity<
-  M extends Models,
-  C extends SchemaClientQueries<M>,
-> = ReturnTypeFromQuery<M, C>;
+  Schema as S,
+  SchemaQuery,
+} from '@triplit/entity-db';
 
 /**
  * The fully selected type of an entity, including all fields but not relations
- * 
+ *
  * @template M The type of the defined schema
  * @template CN The collection name
- * 
+ *
  * @example
  * ```ts
  * type MyEntity = Entity<typeof schema, 'myCollection'>
  * ```
-
- */
-
-/**
- * The type of an entity
  */
 export type Entity<
-  M extends ClientSchema,
-  CN extends CollectionNameFromModels<M>,
-> = Unalias<TypeFromModel<ModelFromModels<M, CN>>>;
+  M extends Models<M> = Models,
+  CN extends CollectionNameFromModels<M> = CollectionNameFromModels<M>,
+> = QueryResult<M, { collectionName: CN }>;
+
+const schema = S.Collections({
+  todos: {
+    schema: S.Schema({
+      id: S.Id(),
+      title: S.String(),
+      done: S.Boolean(),
+      assigneeId: S.String(),
+    }),
+    relationships: {
+      assignee: S.RelationById('users', '$1.assigneeId'),
+    },
+  },
+  users: {
+    schema: S.Schema({
+      id: S.Id(),
+      name: S.String(),
+    }),
+  },
+});
 
 /**
- * The type of an entity with selection and inclusion as it would be returned from a query
- */
-export type EntityWithSelection<
-  M extends ClientSchema,
-  CN extends CollectionNameFromModels<M>,
-  Selection extends QuerySelection<M, CN> = QuerySelection<M, CN>,
-  Inclusion extends QueryInclusions<M, CN> = {},
-> = Unalias<
-  ReturnTypeFromQuery<M, CollectionQuery<M, CN, Selection, Inclusion>>
->;
-
-/**
- * The type for the result returned from a query
+ * The type for the result returned from a query. This is also useful for creating types for data.
+ *
+ * @template M The type of the defined schema
+ * @template Q A valid query for the schema M
+ *
+ * @example
+ * ```ts
+ * type MyFilteredEntity = QueryResult<
+ *  typeof schema,
+ *  {
+ *    collectionName: 'todos';
+ *    select: ['id', 'title', 'done'];
+ *    include: { assignee: true };
+ *  }>;
+ * ```
  */
 export type QueryResult<
-  M extends Models,
-  Q extends SchemaClientQueries<M>,
-> = Unalias<ReturnTypeFromQuery<M, Q>>;
+  M extends Models<M> = Models,
+  Q extends SchemaQuery<M> = SchemaQuery<M>,
+> = NonNullable<FetchResult<M, Q, 'one'>>;

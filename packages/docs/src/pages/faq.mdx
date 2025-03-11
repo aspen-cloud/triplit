@@ -17,7 +17,7 @@ By adding offline support to your app, you end up making it fast in _all_ networ
 In Triplit, relationships are simply sub-queries. They allow you to connect entities across collections (or even within the same collection) with the expressiveness of a query. Triplit's support for set attributes allows it to establish complex relations without join tables. Sets can be used to "embed" the related ids directly on the entity. For example, a schema for a chat app with users and messages could be defined as follows:
 
 ```typescript
-const schema = {
+const schema = S.Collections({
   users: {
     schema: S.Schema({
       id: S.String(),
@@ -29,13 +29,15 @@ const schema = {
       id: S.Id(),
       text: S.String(),
       likes: S.Set(S.String()),
-      users_who_liked: S.Query({
+    }),
+    relationships: {
+      users_who_liked: S.RelationMany({
         collectionName: 'users',
         where: [['id', 'in', '$likes']],
       }),
-    }),
+    },
   },
-};
+});
 ```
 
 Check out [relations in your schema](/schemas/relations) to learn more.

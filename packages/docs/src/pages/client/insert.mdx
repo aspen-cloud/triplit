@@ -9,7 +9,7 @@ import { Callout } from 'nextra-theme-docs';
 `insert()` inserts a new record into a collection and returns the inserted record, if successful. For example:
 
 ```typescript
-const { txId, output } = await client.insert('employee', {
+const insertedEntity = await client.insert('employee', {
   id: 'Fry',
   name: 'Philip Fry',
 });
@@ -20,7 +20,7 @@ The `id` field in Triplit is a special field that is used to uniquely identify r
 The `insert` method may also be used to upsert an existing record when used in a schemaless database or in conjunction with [optional attributes](/schemas/types#optional). For example:
 
 ```typescript
-const schema = {
+const schema = S.Collections({
   employee: {
     schema: S.Schema({
       id: S.Id(),
@@ -29,7 +29,8 @@ const schema = {
       year_hired: S.Optional(S.Number()),
     }),
   },
-} satisfies ClientSchema;
+});
+
 await client.insert('employee', { id: 'Fry', name: 'Philip J. Fry' });
 await client.insert('employee', {
   id: 'Fry',

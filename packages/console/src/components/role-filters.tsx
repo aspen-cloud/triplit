@@ -1,17 +1,19 @@
 import { TriplitClient } from '@triplit/client';
-import {
+import type {
   CollectionPermissions,
   QueryWhere,
-  type PermissionOperations,
-  replaceVariablesInFilterStatements,
-  type FilterGroup,
-  type FilterStatement,
+  PermissionOperations,
+  FilterGroup,
+  FilterStatement,
+  SessionRole,
+} from '@triplit/entity-db';
+import {
   isFilterGroup,
   isFilterStatement,
   isBooleanFilter,
   isValueVariable,
   replaceVariable,
-} from '@triplit/db';
+} from '@triplit/entity-db';
 import { IdCard } from 'lucide-react';
 import { Code, Tooltip, cn } from '@triplit/ui';
 import { ConsoleSessionRole } from 'src/utils/roles.js';
@@ -29,18 +31,15 @@ export function RoleFilters({
   permissions: CollectionPermissions<any, any>;
   rule: PermissionOperations;
 }) {
-  const roles = client.db.sessionRoles ?? [];
-  const flatRoles: ConsoleSessionRoleWithFilter[] = roles.reduce(
-    (prev, role) => {
-      const roleFilterForRule = permissions[role.key]?.[rule]?.filter;
-      // roles that don't have rules for a specific action are implicitly disallowed
-      if (!roleFilterForRule) {
-        return prev;
-      }
-      return [...prev, { ...role, filter: roleFilterForRule }];
-    },
-    [] as ConsoleSessionRoleWithFilter[]
-  );
+  const roles: SessionRole[] = client.db.session?.roles ?? [];
+  const flatRoles: ConsoleSessionRoleWithFilter[] = [];
+  for (const role of roles) {
+    // @ts-expect-error
+    const roleFilterForRule = permissions[role.key]?.[rule]?.filter;
+    if (!roleFilterForRule) continue;
+    flatRoles.push({ ...role, filter: roleFilterForRule });
+  }
+
   const flatRolesWithVariablesReplaced: ConsoleSessionRoleWithFilter[] =
     flatRoles.map((roleWithFilter) => {
       const { filter, ...role } = roleWithFilter;

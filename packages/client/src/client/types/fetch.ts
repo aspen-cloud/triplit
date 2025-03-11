@@ -1,6 +1,4 @@
-import { DBFetchOptions } from '@triplit/db';
-
-export type ClientDBFetchOptions = Pick<DBFetchOptions, 'noCache'>;
+import { FetchOptions as DBFetchOptions } from '@triplit/entity-db';
 
 export type LocalFirstFetchOptions = {
   policy: 'local-first';
@@ -21,8 +19,10 @@ export type LocalAndRemoteFetchOptions = {
   policy: 'local-and-remote';
   timeout?: number;
 };
-export type FetchOptions = ClientDBFetchOptions &
-  (
+export type SyncStatus = 'pending' | 'confirmed' | 'all';
+export type ClientFetchOptions = DBFetchOptions & {
+  syncStatus?: SyncStatus;
+} & (
     | LocalFirstFetchOptions
     | LocalOnlyFetchOptions
     | RemoteFirstFetchOptions

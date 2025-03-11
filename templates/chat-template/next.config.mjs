@@ -10,6 +10,7 @@ const nextConfig = {
     }
     return webpackConfig
   },
+  serverExternalPackages: ["bcryptjs"],
 }
 
 export default nextConfig

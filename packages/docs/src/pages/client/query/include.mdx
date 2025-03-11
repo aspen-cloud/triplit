@@ -1,33 +1,39 @@
 ---
-description: The `include` clause is used to specify the relations on an entity that should be included in a query.
+description: The `Include` clause is used to specify the relations on an entity that should be included in a query.
 ---
 
-# include
+# Include
 
 If you have defined a [relation in your schema](/schemas/relations) using `RelationById`, `RelationOne`, or `RelationMany`, you can include those related entities in a query.
 
 For example, the following schema defines a relation between `users` and `messages`
 
 ```typescript
-const schema = {
-  users: S.Schema({
-    id: S.Id(),
-    name: S.Id(),
-    email: S.String(),
-  }),
-  messages: S.Schema({
-    id: S.Id(),
-    text: S.String(),
-    sender_id: S.String(),
-    sender: S.RelationById('users', '$sender_id'),
-  }),
-};
+const schema = S.Collections({
+  users: {
+    schema: S.Schema({
+      id: S.Id(),
+      name: S.Id(),
+      email: S.String(),
+    }),
+  },
+  messages: {
+    schema: S.Schema({
+      id: S.Id(),
+      text: S.String(),
+      sender_id: S.String(),
+    }),
+    relationships: {
+      sender: S.RelationById('users', '$sender_id'),
+    },
+  },
+});
 ```
 
-By default, a query on `messages` will not include the `sender` as an attribute. To include the sender, use the `include` method in the query builder.
+By default, a query on `messages` will not include the `sender` as an attribute. To include the sender, use the `Include` method in the query builder.
 
 ```typescript
-const query = client.query('messages').include('sender');
+const query = client.query('messages').Include('sender');
 
 /*
 {
@@ -41,44 +47,47 @@ const query = client.query('messages').include('sender');
 
 ## Including multiple relations
 
-If a collection has multiple relations, you can select them by chaining multiple `include` calls.
+If a collection has multiple relations, you can select them by chaining multiple `Include` calls.
 
 ```typescript
-const query = client.query('messages').include('sender').include('receiver');
+const query = client.query('messages').Include('sender').Include('receiver');
 ```
 
 ## Aliasing and extending relations
 
-You can extend and alias relations with the `include` method. Given a schema with a relation from `directors` to `films`:
+You can extend and alias relations with the `Include` method. Given a schema with a relation from `directors` to `films`:
 
 ```typescript
-const schema = {
-  films: S.Schema({
-    id: S.Id(),
-    title: S.Id(),
-    rating: S.Number(),
-    directorId: S.String(),
-  }),
-  directors: S.Schema({
-    id: S.Id(),
-    name: S.String(),
-    allFilms: S.RelationMany('films', {
-      where: [['directorId', '=', '$1.id']],
+const schema = S.Collections({
+  films: {
+    schema: S.Schema({
+      id: S.Id(),
+      title: S.Id(),
+      rating: S.Number(),
+      directorId: S.String(),
     }),
-  }),
-};
+  },
+  directors: {
+    schema: S.Schema({
+      id: S.Id(),
+      name: S.String(),
+    }),
+    relationships: {
+      allFilms: S.RelationMany('films', {
+        where: [['directorId', '=', '$1.id']],
+      }),
+    },
+  },
+});
 ```
 
 You can write an adhoc query that narrows down a director's films to just their top 3, building off the existing `allFilms` relation.
 
 ```typescript
-const query = client
-  .query('directors')
-  .include('bestFilms', (rel) =>
-    rel('allFilms').order('rating', 'DESC').limit(3).build()
-  )
-  .build();
-
+const query = client.query('directors').Include('bestFilms', (rel) =>
+  // TODO: confirm capitalization of `rel`
+  rel('allFilms').Order('rating', 'DESC').Limit(3)
+);
 const result = await client.fetch(query);
 
 // And the result will be fully typed
@@ -94,8 +103,7 @@ This is also useful for querying nested data. For example:
 ```typescript
 const query = client
   .query('directors')
-  .include('allFilms', (rel) => rel('allFilms').include('actors').build())
-  .build();
+  .Include('allFilms', (rel) => rel('allFilms').Include('actors'));
 
 // {
 //   id: string;
@@ -104,4 +112,4 @@ const query = client
 // }
 ```
 
-The extending query can use any valid query builder method, such as `order`, `limit`, `where`, etc.
+The extending query can use any valid query builder method, such as `Order`, `Limit`, `Where`, etc.

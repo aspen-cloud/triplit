@@ -1,16 +1,18 @@
 import { expectTypeOf, test } from 'vitest';
-import { Schema as S } from '@triplit/db';
-import { Entity, EntityWithSelection } from '../../src/client/types';
+import { Schema as S } from '@triplit/entity-db';
+import { Entity, QueryResult } from '../../src/client/types';
 
 test('Entity', () => {
-  const schema = {
+  const schema = S.Collections({
     a: {
       schema: S.Schema({
         id: S.Id(),
         a_attr: S.String(),
         optional: S.Optional(S.String()),
-        rel: S.RelationById('b', '$bId'),
       }),
+      relationships: {
+        rel: S.RelationById('b', '$1.a_attr'),
+      },
     },
     b: {
       schema: S.Schema({
@@ -18,11 +20,11 @@ test('Entity', () => {
         b_attr: S.String(),
       }),
     },
-  };
+  });
   expectTypeOf<Entity<typeof schema, 'a'>>().toEqualTypeOf<{
     id: string;
     a_attr: string;
-    optional?: string;
+    optional?: string | null | undefined;
   }>();
   expectTypeOf<Entity<typeof schema, 'b'>>().toEqualTypeOf<{
     id: string;
@@ -30,15 +32,17 @@ test('Entity', () => {
   }>();
 });
 
-test('EntityWithSelection', () => {
-  const schema = {
+test('QueryResult allows for selection and inclusion', () => {
+  const schema = S.Collections({
     a: {
       schema: S.Schema({
         id: S.Id(),
         a_attr: S.String(),
         optional: S.Optional(S.String()),
-        rel: S.RelationById('b', '$bId'),
       }),
+      relationships: {
+        rel: S.RelationById('b', '$1.a_attr'),
+      },
     },
     b: {
       schema: S.Schema({
@@ -46,25 +50,32 @@ test('EntityWithSelection', () => {
         b_attr: S.String(),
       }),
     },
-  };
+  });
+  type Test = QueryResult<typeof schema, { collectionName: 'a' }>;
+
   // No selection
-  expectTypeOf<EntityWithSelection<typeof schema, 'a'>>().toEqualTypeOf<{
+  expectTypeOf<
+    QueryResult<typeof schema, { collectionName: 'a' }>
+  >().toEqualTypeOf<{
     id: string;
     a_attr: string;
-    // One notable difference here is technically we have selected all, so all keys are included
-    optional: string | undefined;
+    // TODO: should these keys be optional?
+    optional?: string | null | undefined;
   }>();
 
   // With selection
   expectTypeOf<
-    EntityWithSelection<typeof schema, 'a', 'a_attr'>
+    QueryResult<typeof schema, { collectionName: 'a'; select: ['a_attr'] }>
   >().toEqualTypeOf<{
     a_attr: string;
   }>();
 
   // With inclusion
   expectTypeOf<
-    EntityWithSelection<typeof schema, 'a', 'a_attr', { rel: true }>
+    QueryResult<
+      typeof schema,
+      { collectionName: 'a'; select: ['a_attr']; include: { rel: true } }
+    >
   >().toEqualTypeOf<{
     a_attr: string;
     rel: {

@@ -4,21 +4,18 @@ description: The syncStatus clause is used to filter results in Triplit query ba
 
 # syncStatus
 
-Triplit's client [storage](/client/storage) is split into two areas - an outbox for unsynced updates and a cache for synced updates. Sometimes you may want to indicate that to a user that data has not yet been saved to the server. To do this, you can use the `syncStatus` method. This method accepts a single sync state (`pending`, `confirmed`, `all`) as an argument.
+Triplit's client [storage](/client/storage) is split into two areas - an outbox for unsynced updates and a cache for synced updates. Sometimes you may want to indicate that to a user that data has not yet been saved to the server. To do this, you can use the `syncStatus` option in a subscription. This method accepts a single sync state (`pending`, `confirmed`, `all`) as an argument.
 
 For example, a messaging app could use two queries to build message sent indicators. In [React](/frameworks/react):
 
 ```tsx
-const allMessagesQuery = client.query('messages').order(['createdAt', 'ASC']);
-
-const pendingMessagesQuery = client
-  .query('messages')
-  .select(['id'])
-  .syncStatus('pending');
+const messagesQuery = client.query('messages').Order(['createdAt', 'ASC']);
 
 function Messages() {
-  const { results: allMessages } = useQuery(client, allMessagesQuery);
-  const { results: pendingMessages } = useQuery(client, pendingMessagesQuery);
+  const { results: allMessages } = useQuery(client, messagesQuery);
+  const { results: pendingMessages } = useQuery(client, messagesQuery, {
+    syncStatus: 'pending',
+  });
 
   return (
     <div>

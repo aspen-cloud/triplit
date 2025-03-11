@@ -4,7 +4,8 @@ import { GettingStartedComponent } from './getting-started/getting-started.compo
 import { TodoComponent } from './todo/todo.component.js';
 import { triplit } from '../../triplit/client.js';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
-import { injectQuery } from '@triplit/angular';
+import { createQuery } from '@triplit/angular';
+import { CommonModule } from '@angular/common';
 @Component({
   selector: 'app-root',
   standalone: true,
@@ -13,6 +14,7 @@ import { injectQuery } from '@triplit/angular';
     GettingStartedComponent,
     TodoComponent,
     ReactiveFormsModule,
+    CommonModule,
   ],
   template: `
     <div class="main-container">
@@ -29,12 +31,12 @@ import { injectQuery } from '@triplit/angular';
           />
           <button class="btn" type="submit">Add Todo</button>
         </form>
-        @if (queryResults.fetching()) {
+        @if (queryResults.fetching$ | async) {
           <p>Loading...</p>
         }
-        @if (queryResults.results()) {
+        @if (queryResults.results$ | async) {
           <div class="todos-container">
-            @for (todo of queryResults.results(); track todo.id) {
+            @for (todo of queryResults.results$ | async; track todo.id) {
               <app-todo [todo]="todo" />
             }
           </div>
@@ -51,10 +53,8 @@ export class AppComponent {
     await triplit.insert('todos', { text: this.draftTodo.value });
     this.draftTodo.setValue('');
   };
-  queryResults = injectQuery(() => ({
-    //@ts-ignore
+  queryResults = createQuery(() => ({
     client: triplit,
-    //@ts-ignore
-    query: triplit.query('todos').order('created_at', 'DESC'),
+    query: triplit.query('todos').Order('created_at', 'DESC'),
   }));
 }

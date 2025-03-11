@@ -3,7 +3,7 @@ import { createTriplitHonoServer } from '@triplit/server/hono';
 import { createTriplitStorageProvider } from '@triplit/server';
 const { upgradeWebSocket, websocket } = createBunWebSocket();
 
-const honoServer = createTriplitHonoServer(
+const honoServer = await createTriplitHonoServer(
   {
     storage: createTriplitStorageProvider('bun-sqlite'),
     jwtSecret: process.env.JWT_SECRET!,

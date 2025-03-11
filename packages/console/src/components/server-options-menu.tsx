@@ -26,7 +26,7 @@ export function ServerOptionsMenu({ children }: { children: React.ReactNode }) {
     useState(false);
   const { result: server } = useQueryOne(
     consoleClient,
-    consoleClient.query('servers').where('id', '=', serverHost)
+    consoleClient.query('servers').Where('id', '=', serverHost)
   );
   if (!(server && serverHost)) return children;
   return (

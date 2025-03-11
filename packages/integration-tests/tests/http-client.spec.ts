@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { tempTriplitServer } from '../utils/server.js';
 import { ClientSchema, Entity, HttpClient } from '@triplit/client';
-import { InsertTypeFromModel, Schema as S } from '@triplit/db';
+import { Schema as S, Type, WriteModel } from '@triplit/entity-db';
 
 const serviceToken =
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ4LXRyaXBsaXQtdG9rZW4tdHlwZSI6InNlY3JldCIsIngtdHJpcGxpdC1wcm9qZWN0LWlkIjoicHJvamVjdCJ9.gcDKyZU9wf8o43Ca9kUVXO4KsGwX8IhhyEg1PO1ZqiQ';
@@ -94,7 +94,7 @@ it('fetchById returns a single entity by id', async () => {
 });
 
 it('can handle inserting all of our supported types', async () => {
-  const schema = {
+  const schema = S.Collections({
     test: {
       schema: S.Schema({
         id: S.Id(),
@@ -124,38 +124,44 @@ it('can handle inserting all of our supported types', async () => {
         defaultNullDate: S.Date({ default: null, nullable: true }),
       }),
     },
-  } satisfies ClientSchema;
+  });
   type TestSchema = Entity<typeof schema, 'test'>;
-  const insertedEntity: InsertTypeFromModel<(typeof schema)['test']['schema']> =
-    {
-      id: 'test1',
+  const insertedEntity: WriteModel<typeof schema, 'test'> = {
+    id: 'test1',
+    string: 'string',
+    number: 42,
+    boolean: true,
+    date: new Date(2022, 10, 15),
+    set: new Set(['set']),
+    record: {
       string: 'string',
       number: 42,
       boolean: true,
       date: new Date(2022, 10, 15),
-      set: new Set(['set']),
-      record: {
-        string: 'string',
-        number: 42,
-        boolean: true,
-        date: new Date(2022, 10, 15),
-      },
-      nullableString: null,
-      nullableNumber: null,
-      nullableBoolean: null,
-      nullableDate: null,
-      nullableSet: null,
-    };
+    },
+    nullableString: null,
+    nullableNumber: null,
+    nullableBoolean: null,
+    nullableDate: null,
+    nullableSet: null,
+  };
   const expectedEntity: TestSchema = {
-    ...(insertedEntity as TestSchema),
+    id: 'test1',
+    string: 'string',
+    number: 42,
+    boolean: true,
+    date: new Date(2022, 10, 15),
+    set: new Set(['set']),
+    record: {
+      string: 'string',
+      number: 42,
+      boolean: true,
+      date: new Date(2022, 10, 15),
+    },
     defaultString: 'default',
     defaultNumber: 42,
     defaultBoolean: true,
     defaultDate: new Date(2022, 10, 15),
-    defaultNullString: null,
-    defaultNullNumber: null,
-    defaultNullBoolean: null,
-    defaultNullDate: null,
   };
   await using server = await tempTriplitServer({
     serverOptions: {
@@ -430,13 +436,15 @@ it('fetch can properly deserialize subqueries with schema', async () => {
         schema: S.Schema({
           id: S.Id(),
           name: S.String(),
+        }),
+        relationships: {
           relationshipOne: S.RelationOne('relationship', {
             where: [['testId', '=', '$id']],
           }),
           relationshipMany: S.RelationMany('relationship', {
             where: [['testId', '=', '$id']],
           }),
-        }),
+        },
       },
       relationship: {
         schema: S.Schema({
@@ -512,66 +520,63 @@ it('fetch can properly deserialize subqueries with schema', async () => {
 });
 
 // TODO: need to properly handle subqueries without schema in http api
-it.todo(
-  'fetch can properly deserialize subqueries without schema',
-  async () => {
-    await using server = await tempTriplitServer({});
-    const { port } = server;
-    const client = new HttpClient({
-      serverUrl: `http://localhost:${port}`,
-      token: serviceToken,
-    });
-    await client.insert('test', {
-      id: 'test1',
-      name: 'a',
-    });
-    await client.insert('relationship', {
-      id: 'rel1',
-      testId: 'test1',
-    });
-    await client.insert('relationship', {
-      id: 'rel2',
-      testId: 'test1',
-    });
+it('fetch can properly deserialize subqueries without schema', async () => {
+  await using server = await tempTriplitServer({});
+  const { port } = server;
+  const client = new HttpClient({
+    serverUrl: `http://localhost:${port}`,
+    token: serviceToken,
+  });
+  await client.insert('test', {
+    id: 'test1',
+    name: 'a',
+  });
+  await client.insert('relationship', {
+    id: 'rel1',
+    testId: 'test1',
+  });
+  await client.insert('relationship', {
+    id: 'rel2',
+    testId: 'test1',
+  });
 
-    const expectedRel1 = {
-      id: 'rel1',
-      testId: 'test1',
-    };
+  const expectedRel1 = {
+    id: 'rel1',
+    testId: 'test1',
+  };
 
-    const expectedRel2 = {
-      id: 'rel2',
-      testId: 'test1',
-    };
+  const expectedRel2 = {
+    id: 'rel2',
+    testId: 'test1',
+  };
 
-    const result = await client.fetch({
-      collectionName: 'test',
-      include: {
-        relationshipOne: {
-          subquery: {
-            collectionName: 'relationship',
-            where: [['testId', '=', '$id']],
-          },
-          cardinality: 'one',
+  const result = await client.fetch({
+    collectionName: 'test',
+    include: {
+      relationshipOne: {
+        subquery: {
+          collectionName: 'relationship',
+          where: [['testId', '=', '$id']],
         },
-        relationshipMany: {
-          subquery: {
-            collectionName: 'relationship',
-            where: [['testId', '=', '$id']],
-          },
-          cardinality: 'many',
-        },
+        cardinality: 'one',
       },
-    });
+      relationshipMany: {
+        subquery: {
+          collectionName: 'relationship',
+          where: [['testId', '=', '$id']],
+        },
+        cardinality: 'many',
+      },
+    },
+  });
 
-    const relOne = result.find((e) => e.id === 'test1')!.relationshipOne;
-    expect(relOne).toEqual(expectedRel1);
-    const relMany = result.find((e) => e.id === 'test1')!.relationshipMany;
-    expect(relMany.length).toEqual(2);
-    expect(relMany.find((e) => e.id === 'rel1')).toEqual(expectedRel1);
-    expect(relMany.find((e) => e.id === 'rel2')).toEqual(expectedRel2);
-  }
-);
+  const relOne = result.find((e) => e.id === 'test1')!.relationshipOne;
+  expect(relOne).toEqual(expectedRel1);
+  const relMany = result.find((e) => e.id === 'test1')!.relationshipMany;
+  expect(relMany.length).toEqual(2);
+  expect(relMany.find((e) => e.id === 'rel1')).toEqual(expectedRel1);
+  expect(relMany.find((e) => e.id === 'rel2')).toEqual(expectedRel2);
+});
 
 it('update properly updates an entity', async () => {
   const schema = {

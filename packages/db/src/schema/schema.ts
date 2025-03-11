@@ -192,6 +192,14 @@ export function getDefaultValuesForCollection(
   return collection.schema.defaultInput();
 }
 
+// Create a new schema hash function
+// Should be aware of the structure of the schema
+// - if A is undefined and B is false
+// - if A is undefined and B is an empty object
+// - Need tests around it
+// - Things like where are unordered
+// - The query hash method is like this
+
 // Poor man's hash function for schema
 // Using this in place of a version check on schemas for syncing
 // Schema versions are harder to manage with console updates

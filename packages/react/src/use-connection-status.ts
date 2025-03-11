@@ -10,8 +10,9 @@ import { useEffect, useState } from 'react';
 export function useConnectionStatus(
   client: TriplitClient<any> | WorkerClient<any>
 ) {
-  const [connectionStatus, setConnectionStatus] =
-    useState<ConnectionStatus>('CONNECTING');
+  const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>(
+    client.connectionStatus
+  );
   useEffect(() => {
     const unsub = client.onConnectionStatusChange((status) => {
       setConnectionStatus(status);

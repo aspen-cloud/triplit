@@ -1,11 +1,12 @@
-import { serverRequesterMiddleware } from '../middleware/add-server-requester.js';
+// @ts-nocheck TODO: fixup args
+
 import { Command } from '../command.js';
 import prompts from 'prompts';
 import { CONFIG_KEYS, config, getTelemetryEnabled } from '../config.js';
 
 export default Command({
   description: 'Sets global configuration options',
-  middleware: [serverRequesterMiddleware],
+  middleware: [],
   flags: {},
   args: [
     {

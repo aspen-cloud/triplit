@@ -15,6 +15,14 @@ You have several options for running the server:
 - Use a [one-click deploy](#one-click-deploy) to a cloud provider that is integrated with Triplit.
 - Build [a custom server](#building-a-custom-server) and use a cloud provider that supports Git-based deploys
 
+<Callout type="warning" emoji="⚠️">
+
+The guide on this page is specifically for standalone, self-hosted deployments that are not compatible with the Triplit Cloud Dashboard.
+
+We recommend that you instead follow [this guide](/triplit-cloud/self-hosted-deployments) for self-hosting your Triplit Server while still making it accessible and configurable via the Triplit Dashboard.
+
+</Callout>
+
 ## Docker
 
 Each release of the server is [published as a Docker image](https://hub.docker.com/r/aspencloud/triplit-server/tags). You can deploy the server to a cloud provider like [fly.io](https://fly.io/docs/languages-and-frameworks/dockerfile/), [DigitalOcean](https://docs.digitalocean.com/products/app-platform/how-to/deploy-from-container-images/), or AWS. You'll also want to setup a volume to persist the database.
@@ -66,13 +74,9 @@ You can now deploy the server to a cloud provider that supports Git deploys, lik
 
 Triplit is designed to support any storage that can implement a key value store. You may specify the storage adapter you want to use by setting the `storage` option. Triplit provides some default configurations of our storage adapters, which you can use by setting the `storage` option to the appropriate string value for the adapter. These include:
 
-- `file` - A simple file-based storage adapter
-- `leveldb` - A LevelDB storage adapter, which requires the installation of the [`level` package](https://github.com/Level/level)
-- `lmdb` - An LMDB storage adapter, which requires the installation of the [`lmdb` package](https://github.com/kriszyp/lmdb-js)
 - `memory` (default) - See `memory-btree`
-- `memory-array` - An in-memory storage adapter backed by an array
-- `memory-btree` - An in-memory storage adapter backed by a B-Tree
 - `sqlite` - An SQLite storage adapter, which requires the installation of the [`better-sqlite3` package](https://github.com/WiseLibs/better-sqlite3)
+- `lmdb` - An LMDB storage adapter, which requires the installation of the [`lmdb` package](https://github.com/kriszyp/lmdb-js)
 
 <Callout type="warning" emoji="⚠️">
   In-memory storage adapters are not durable and are not recommended for
@@ -99,21 +103,13 @@ The server exposes a health check endpoint at `/healthcheck`. This endpoint will
 
 ## Secrets
 
-There are a few secrets that you need to provide to the server to enable certain features. **If you are planning on using the Triplit Dashboard, you will need to set `PROJECT_ID` and `JWT_SECRET` to specific values associated with your project.** Read the [Triplit Cloud guide](/triplit-cloud/self-hosted-deployments#configuration) for more information.
-
-### `PROJECT_ID`
-
-The server uses a `PROJECT_ID` to identify your project. You can set the `PROJECT_ID` environment variable to a unique identifier for your project. If you would like to connect to the Triplit Dashboard, you must create a project and use the assigned project id.
+There are a few secrets that you need to provide to the server to enable certain features. **If you are planning on using the Triplit Dashboard, you will need to set `JWT_SECRET` to the global Triplit public RSA key associated with your project.** Read the [Triplit Cloud guide](/triplit-cloud/self-hosted-deployments#configuration) for more information.
 
 ### `JWT_SECRET`
 
-The server uses JWT tokens to authenticate clients, and you need to provide a symmetric secret or public key to verify these tokens that it receives. The `JWT_SECRET` environment variable should be assigned to this validation secret. Triplit supports both symmetric (HS256) and asymmetric (RS256) encryption algorithms for JWTs. You will need to generate client tokens signed with the appropriate algorithm. With the `TRIPLIT_JWT_SECRET` set, you can also use the [`triplit dev`](/cli/dev) CLI to generate these tokens for you.
+The server uses JWT tokens to authenticate clients, and you need to provide a symmetric secret or public key to verify these tokens that it receives. The `JWT_SECRET` environment variable should be assigned to this validation secret. Triplit supports both symmetric (HS256) and asymmetric (RS256) encryption algorithms for JWTs. You will need to generate client tokens signed with the appropriate algorithm.
 
-```bash copy
-TRIPLIT_JWT_SECRET=your-secret triplit dev
-```
-
-You can also do it with the `jsonwebtoken` package (e.g. if you wanted to use asymmetric encryption) :
+You can generate tokens with the `jsonwebtoken` package (e.g. if you wanted to use asymmetric encryption) :
 
 ```typescript copy
 import jwt from 'jsonwebtoken';
@@ -139,9 +135,17 @@ For more complicated authentication schemes, refer to our [authentication guide]
 
 ### `LOCAL_DATABASE_URL` (required for durable storage)
 
-An absolute path on the server's file system to a directory where the server will store any database files. This is required for durable storage options: `file`, `leveldb`, `lmdb`, and `sqlite`.
+An absolute path on the server's file system to a directory where the server will store any database files. This is required for durable storage options: `lmdb`, and `sqlite`.
 
 ### `EXTERNAL_JWT_SECRET` (optional)
+
+<Callout type="warning" emoji="⚠️">
+  If you plan to connect your self-hosted Triplit server to the Triplit
+  Dashboard and use JWTs for authentication and permission within Triplit,
+  EXTERNAL_JWT_SECRET should only be set on your Triplit Dashboard. Ensure the
+  env var is NOT included wherever you deployed your Docker image. Otherwise,
+  you may encounter errors related to invalid JWTs and JWT signatures.
+</Callout>
 
 If you want your server to support JWTs signed by a second issuer, you can also set `EXTERNAL_JWT_SECRET` to that signing secret (or public key). For the server to recognize a JWT as "external", it must **not** have the `x-triplit-token-type` claim or if that claim is set, it must **not** have the value of `anon` or `secret`. Those specific combinations of claims are reserved for "internal" JWTs, e.g. the special `anon` and `secret` tokens.
 

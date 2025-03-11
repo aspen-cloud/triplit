@@ -23,7 +23,7 @@ import {
   getAttributeFromSchema,
   getSchemaFromPath,
 } from './schema/schema.js';
-import { Model, Models } from './schema/types/index.js';
+import { Model, Models, SessionRole } from './schema/types/index.js';
 import { Timestamp, timestampCompare } from './timestamp.js';
 import { TripleStore, TripleStoreApi } from './triple-store.js';
 import { FilterFunc, MapFunc, Pipeline } from './utils/pipeline.js';
@@ -66,7 +66,6 @@ import {
   satisfiesSetFilter,
 } from './query/filters.js';
 import { prepareQuery } from './query/prepare.js';
-import { SessionRole } from './schema/permissions.js';
 import { arrToGen, distinctGen, genToArr, mapGen } from './utils/generator.js';
 import { QueryExecutionCache } from './query/execution-cache.js';
 import { COLLECTION_ATTRIBUTE, Entity, constructEntities } from './entity.js';
@@ -2594,7 +2593,9 @@ function entityMatchesAfter(entity: Entity, query: CollectionQuery<any, any>) {
   if (!entity.id) return false;
   const [orderAttr, orderDir] = query.order[0];
   const [cursor, inclusive] = query.after;
-  const [afterEntityValue, afterEntityId] = cursor;
+  if (cursor.length > 2) throw new TriplitError('invalid cursor');
+  const afterEntityValue = cursor[0];
+  const afterEntityId = cursor[1] as string;
   const entityValue = getPropertyFromPath(entity.data, orderAttr.split('.'));
 
   // TODO: need to perform encoding at least I think...

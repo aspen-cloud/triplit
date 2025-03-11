@@ -90,7 +90,7 @@ const client = new TriplitClient();
 function App() {
   const { result: todo } = useQueryOne(
     client,
-    client.query('todos').id('todo-id')
+    client.query('todos').Id('todo-id')
   );
 
   return <div>{todo.text}</div>;
@@ -116,7 +116,7 @@ function App() {
     prevPage,
   } = usePaginatedQuery(
     client,
-    client.query('todos').limit(10).order('created_at', 'DESC')
+    client.query('todos').Limit(10).Order('created_at', 'DESC')
   );
 
   return (
@@ -144,7 +144,7 @@ const client = new TriplitClient();
 function App() {
   const { results, fetchingMore, hasMore, loadMore } = useInfiniteQuery(
     client,
-    client.query('todos').limit(10).order('created_at', 'DESC')
+    client.query('todos').Limit(10).Order('created_at', 'DESC')
   );
 
   return (

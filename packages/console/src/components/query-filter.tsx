@@ -1,14 +1,13 @@
-import { AttributeDefinition, Model } from '@triplit/db';
 import { useCallback } from 'react';
 import { Select, Input, FormField, CloseButton } from '@triplit/ui';
 import {
-  CollectionDefinition,
   ALL_TYPES,
-  CollectionTypeKeys,
-  ValueTypeKeys,
-  Operator,
-  typeFromJSON,
-} from '@triplit/db';
+  Collection,
+  SUPPORTED_OPERATIONS,
+  AllTypes,
+  DataType,
+  PrimitiveTypeKeys,
+} from '@triplit/entity-db';
 
 export function QueryFilter({
   filter,
@@ -19,9 +18,9 @@ export function QueryFilter({
 }: {
   filter: {
     attribute: string;
-    operator: Operator;
+    operator: string;
     value: string;
-    asType: string;
+    asType: PrimitiveTypeKeys;
     id: string;
   };
   onUpdate: (
@@ -30,30 +29,32 @@ export function QueryFilter({
   ) => void;
   attributes: string[];
   onPressRemove: () => void;
-  collectionDefinition?: CollectionDefinition;
+  collectionDefinition?: Collection;
 }) {
   const { attribute, operator, value, asType } = filter;
-  const attributeDefinition = collectionDefinition?.schema?.properties[
+  const attributeDefinition: DataType = collectionDefinition?.schema
+    ?.properties[
     attribute as keyof (typeof collectionDefinition)['schema']['properties']
   ] ?? {
     type: asType,
-    options: {},
+    config: {},
   };
 
   const onChangeAttribute = useCallback(
     (attr: string) => {
-      const newAttributeDefinition = collectionDefinition?.schema?.properties?.[
+      const newAttributeDefinition: DataType = collectionDefinition?.schema
+        ?.properties?.[
         attr as keyof (typeof collectionDefinition)['schema']['properties']
       ] ?? {
         type: 'string',
-        options: {},
+        config: {},
       };
       if (newAttributeDefinition.type !== asType) {
         onUpdate('value', '');
         onUpdate('asType', newAttributeDefinition.type);
         onUpdate(
           'operator',
-          typeFromJSON(newAttributeDefinition).supportedOperations[0]
+          SUPPORTED_OPERATIONS[newAttributeDefinition.type][0]
         );
       }
       onUpdate('attribute', attr);
@@ -62,15 +63,10 @@ export function QueryFilter({
   );
 
   const onChangeType = useCallback(
-    (type: ValueTypeKeys | CollectionTypeKeys) => {
+    (type: AllTypes) => {
       onUpdate('value', '');
       onUpdate('asType', type);
-      const newOperatorOptions = typeFromJSON({
-        type,
-        items: { type: 'string', options: {} },
-      }).supportedOperations;
-      if (!newOperatorOptions.includes(operator))
-        onUpdate('operator', newOperatorOptions[0]);
+      onUpdate('operator', SUPPORTED_OPERATIONS[type][0]);
     },
     [operator]
   );
@@ -79,6 +75,16 @@ export function QueryFilter({
     attributeDefinition && attributeDefinition.type === 'set'
       ? attributeDefinition.items.type
       : asType;
+
+  const compositeSupportedOperations =
+    attributeDefinition && attributeDefinition.type === 'set'
+      ? Array.from(
+          new Set([
+            ...SUPPORTED_OPERATIONS[asType],
+            ...SUPPORTED_OPERATIONS[attributeDefinition.items.type],
+          ])
+        )
+      : SUPPORTED_OPERATIONS[asType];
   return (
     <>
       <Select
@@ -102,7 +108,7 @@ export function QueryFilter({
         key={`operator-${filter.id}`}
         value={operator}
         onValueChange={(value) => onUpdate('operator', value ?? '')}
-        data={typeFromJSON(attributeDefinition).supportedOperations}
+        data={compositeSupportedOperations}
       />
       {valueInputType === 'string' && (
         <Input

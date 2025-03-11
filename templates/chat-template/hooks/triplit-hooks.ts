@@ -9,6 +9,7 @@ import { schema } from "../triplit/schema.js"
 export type Conversation = Entity<typeof schema, "conversations">
 export type Message = Entity<typeof schema, "messages">
 export type Reaction = Entity<typeof schema, "reactions">
+
 // Populate the conversation sidebar (or full screen on mobile) and applies
 // the search filter to the query results.
 export function useFilteredConversations(query: string) {
@@ -19,7 +20,7 @@ export function useFilteredConversations(query: string) {
     error,
   } = useQuery(
     client,
-    client.query("conversations").where("name", "like", `%${query}%`)
+    client.query("conversations").Where("name", "like", `%${query}%`)
   )
   return { conversations, fetchingRemote, fetching, error }
 }
@@ -35,17 +36,20 @@ export function useConversation(convoId: string) {
     error,
   } = useQueryOne(
     client,
-    client.query("conversations").id(convoId).include("membersInfo")
+    client.query("conversations").Id(convoId).Include("membersInfo")
   )
   return { conversation, fetching, fetchingRemote, error }
 }
+export type UseConversationResult = NonNullable<
+  ReturnType<typeof useConversation>["conversation"]
+>
 
 // Populate the conversation cards on the sidebar with the last recieved message
 export function useConversationSnippet(convoId: string) {
   const messagesQuery = client
     .query("messages")
-    .where("conversationId", "=", convoId)
-    .order("created_at", "DESC")
+    .Where("conversationId", "=", convoId)
+    .Order("created_at", "DESC")
   const { result: message } = useQueryOne(client, messagesQuery)
   return message?.text
 }
@@ -58,21 +62,12 @@ export function useMessages(convoId: string) {
     () =>
       client
         .query("messages")
-        .where("conversationId", "=", convoId)
-        .order("created_at", "DESC")
-        .limit(30)
-        .include("sender")
-        .include("reactions"),
+        .Where("conversationId", "=", convoId)
+        .Order("created_at", "DESC")
+        .Limit(30)
+        .Include("sender")
+        .Include("reactions"),
     [convoId]
-  )
-
-  const deliveredMessagesQuery = useMemo(
-    () => messagesQuery.syncStatus("confirmed"),
-    [messagesQuery]
-  )
-  const pendingMessagesQuery = useMemo(
-    () => messagesQuery.syncStatus("pending"),
-    [messagesQuery]
   )
 
   const {
@@ -83,9 +78,11 @@ export function useMessages(convoId: string) {
     error,
     hasMore,
     loadMore,
-  } = useInfiniteQuery(client, deliveredMessagesQuery)
+  } = useInfiniteQuery(client, messagesQuery, { syncStatus: "confirmed" })
 
-  const { results: pendingMessages } = useQuery(client, pendingMessagesQuery)
+  const { results: pendingMessages } = useQuery(client, messagesQuery, {
+    syncStatus: "pending",
+  })
 
   return {
     fetchingRemote,
@@ -98,6 +95,9 @@ export function useMessages(convoId: string) {
     pendingMessages: pendingMessages,
   }
 }
+export type UseMessagesResult = NonNullable<
+  ReturnType<typeof useMessages>["messages"]
+>[number]
 
 // Used to populate the <SearchUsers/> component for adding members to a conversation
 // Uses the nin operator in tandem with the conversation's members to exclude them
@@ -112,7 +112,7 @@ export function useUsersNotInConversationList(conversation: Conversation) {
     client,
     client
       .query("users")
-      .where("id", "nin", Array.from(conversation?.members ?? []))
+      .Where("id", "nin", Array.from(conversation?.members ?? []))
   )
   return { nonMembers, fetching, fetchingRemote, error }
 }

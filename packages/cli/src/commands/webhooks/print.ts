@@ -1,16 +1,16 @@
-import { serverRequesterMiddleware } from '../../middleware/add-server-requester.js';
+import { createServerRequesterMiddleware } from '../../middleware/add-server-requester.js';
 import { Command } from '../../command.js';
 import ora from 'ora';
 
 export default Command({
   description: 'Prints the webhooks that are active on the sync server',
-  middleware: [serverRequesterMiddleware],
+  middleware: [createServerRequesterMiddleware({ destructive: false })],
   run: async ({ ctx }) => {
     const spinner = ora(
       'Getting the webhooks currently running on the server...'
     ).start();
     try {
-      const res = await ctx.requestServer('POST', '/webhooks-get');
+      const res = await ctx.remote.request('POST', '/webhooks-get');
       spinner.succeed('Webhooks retrieved from the server');
       console.dir(res, { depth: null });
     } catch (e) {

@@ -6,7 +6,7 @@ import type {
   VerificationToken,
 } from '@auth/core/adapters';
 import { HttpClient } from '@triplit/client';
-import { Models } from '@triplit/db';
+import type { Models } from '@triplit/entity-db';
 
 export type TriplitAdapterConnectionOptions = {
   serverUrl: string;
@@ -41,7 +41,7 @@ export function TriplitAdapter(
   return {
     async createUser(user) {
       const result = await client.insert(collectionNames.user, user);
-      return result?.output;
+      return result as AdapterUser;
     },
     async getUser(id) {
       const user = ((await client.fetchById(collectionNames.user, id)) ??
@@ -67,11 +67,7 @@ export function TriplitAdapter(
           user: true,
         },
       });
-      return (
-        (account?.user as unknown as Map<string, AdapterUser>)?.get(
-          (account as unknown as AdapterAccount)?.userId
-        ) ?? null
-      );
+      return (account?.user as AdapterUser) ?? null;
     },
     async updateUser(user) {
       const { id, ...rest } = user;
@@ -86,7 +82,7 @@ export function TriplitAdapter(
     },
     async linkAccount(account) {
       const result = await client.insert(collectionNames.account, account);
-      return result?.output;
+      return result as AdapterAccount;
     },
     async unlinkAccount({ providerAccountId, provider }) {
       const account = (await client.fetchOne({
@@ -107,7 +103,7 @@ export function TriplitAdapter(
     },
     async createSession(session) {
       const result = await client.insert(collectionNames.session, session);
-      return result?.output;
+      return result as AdapterSession;
     },
     async getSessionAndUser(sessionToken) {
       const sessionWithUser = await client.fetchOne({
@@ -118,11 +114,8 @@ export function TriplitAdapter(
         },
       });
       if (!sessionWithUser) return null;
-      const { user: userMap, ...session } = sessionWithUser;
-      // @ts-expect-error - need some schema to help with model types
-      const user = userMap?.get(session.userId);
+      const { user, ...session } = sessionWithUser;
       if (!user) return null;
-
       return { session, user } as {
         session: AdapterSession;
         user: AdapterUser;
@@ -163,7 +156,7 @@ export function TriplitAdapter(
         ...token,
         expires: token.expires.toISOString(),
       });
-      return result?.output;
+      return result as VerificationToken;
     },
     async useVerificationToken({ identifier, token }) {
       const result = (await client.fetchOne({

@@ -1,26 +1,22 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from 'react';
 import {
   TriplitClient,
-  ClientQuery,
   Models,
-  ClientQueryBuilder,
   SubscriptionOptions,
-  Unalias,
   FetchResult,
-  CollectionNameFromModels,
+  SchemaQuery,
+  SubscriptionSignalPayload,
 } from '@triplit/client';
-import type { WorkerClient } from '@triplit/client/worker-client';
 
-type useQueryPayload<M extends Models, Q extends ClientQuery<M>> = {
-  results: Unalias<FetchResult<M, Q>> | undefined;
-  fetching: boolean;
-  fetchingLocal: boolean;
-  fetchingRemote: boolean;
-  error: any;
-};
-
-type usePaginatedQueryPayload<M extends Models, Q extends ClientQuery<M>> = {
-  results: Unalias<FetchResult<M, Q>> | undefined;
+type usePaginatedQueryPayload<M extends Models<M>, Q extends SchemaQuery<M>> = {
+  results: FetchResult<M, Q, 'many'> | undefined;
   fetching: boolean;
   fetchingPage: boolean;
   error: any;
@@ -31,8 +27,8 @@ type usePaginatedQueryPayload<M extends Models, Q extends ClientQuery<M>> = {
   disconnect: () => void;
 };
 
-type useInfiniteQueryPayload<M extends Models, Q extends ClientQuery<M>> = {
-  results: Unalias<FetchResult<M, Q>> | undefined;
+type useInfiniteQueryPayload<M extends Models<M>, Q extends SchemaQuery<M>> = {
+  results: FetchResult<M, Q, 'many'> | undefined;
   fetching: boolean;
   fetchingRemote: boolean;
   fetchingMore: boolean;
@@ -41,6 +37,34 @@ type useInfiniteQueryPayload<M extends Models, Q extends ClientQuery<M>> = {
   loadMore: (pageSize?: number) => void;
   disconnect: () => void;
 };
+
+function createStateSubscription<M extends Models<M>, Q extends SchemaQuery<M>>(
+  client: TriplitClient<M>,
+  query: Q,
+  options?: Partial<SubscriptionOptions>
+) {
+  let latestValue: SubscriptionSignalPayload<M, Q> = {
+    results: undefined,
+    fetching: true,
+    fetchingLocal: true,
+    fetchingRemote: false,
+    error: undefined,
+  };
+  return [
+    (callback: () => void) => {
+      return client.subscribeWithStatus(
+        query,
+        (newVal) => {
+          latestValue = newVal;
+          callback();
+        },
+        options
+      );
+    },
+    () => latestValue,
+  ] as const;
+}
+
 /**
  * A React hook that subscribes to a query
  *
@@ -51,86 +75,20 @@ type useInfiniteQueryPayload<M extends Models, Q extends ClientQuery<M>> = {
  * @param options.onRemoteFulfilled - An optional callback that is called when the remote query has been fulfilled.
  * @returns An object containing the fetching state, the result of the query, and any error that occurred
  */
-export function useQuery<
-  M extends Models,
-  CN extends CollectionNameFromModels<M>,
-  Q extends ClientQuery<M, CN>,
->(
-  client: TriplitClient<M> | WorkerClient<M>,
-  query: ClientQueryBuilder<M, CN, Q> | Q,
+export function useQuery<M extends Models<M>, Q extends SchemaQuery<M>>(
+  client: TriplitClient<M>,
+  query: Q,
   options?: Partial<SubscriptionOptions>
-): useQueryPayload<M, Q> {
-  const [results, setResults] = useState<
-    Unalias<FetchResult<M, Q>> | undefined
-  >(undefined);
-  const [fetchingLocal, setFetchingLocal] = useState(true);
-  const [fetchingRemote, setFetchingRemote] = useState(
-    client.connectionStatus !== 'CLOSED'
+) {
+  const stringifiedQuery = query && JSON.stringify(query);
+  const [subscribe, snapshot] = useMemo(
+    () => createStateSubscription(client, query, options),
+    [stringifiedQuery, client]
   );
-  const [error, setError] = useState<any>(undefined);
-  const [isInitialFetch, setIsInitialFetch] = useState(true);
-
-  const hasResponseFromServer = useRef(false);
-  const builtQuery = query && ('build' in query ? query.build() : query);
-  const fetching = fetchingLocal || (isInitialFetch && fetchingRemote);
-  const stringifiedQuery = builtQuery && JSON.stringify(builtQuery);
-
-  useEffect(() => {
-    client.isFirstTimeFetchingQuery(builtQuery).then((isFirstFetch) => {
-      setIsInitialFetch(isFirstFetch);
-    });
-    const unsub = client.onConnectionStatusChange((status) => {
-      if (status === 'CLOSING' || status === 'CLOSED') {
-        setFetchingRemote(false);
-        return;
-      }
-      if (status === 'OPEN' && hasResponseFromServer.current === false) {
-        setFetchingRemote(true);
-        return;
-      }
-    }, true);
-    return () => {
-      unsub();
-    };
-  }, [stringifiedQuery, client]);
-
-  useEffect(() => {
-    if (!client) return;
-    setResults(undefined);
-    setFetchingLocal(true);
-    const unsubscribe = client.subscribe(
-      builtQuery,
-      (localResults) => {
-        setFetchingLocal(false);
-        setError(undefined);
-        // TODO: fix types to match
-        setResults(localResults as any);
-      },
-      (error) => {
-        setFetchingLocal(false);
-        setError(error);
-      },
-      {
-        ...(options ?? {}),
-        onRemoteFulfilled: () => {
-          hasResponseFromServer.current = true;
-          setFetchingRemote(false);
-        },
-      }
-    );
-
-    return () => {
-      unsubscribe();
-    };
-  }, [stringifiedQuery, client]);
-
-  return {
-    fetching,
-    fetchingRemote,
-    fetchingLocal,
-    results,
-    error,
-  };
+  const getServerSnapshot = useCallback(() => {
+    return snapshot();
+  }, [snapshot]);
+  return useSyncExternalStore(subscribe, snapshot, getServerSnapshot);
 }
 /**
  * A React hook that subscribes to a query in a paginated manner
@@ -143,23 +101,18 @@ export function useQuery<
  * @returns An object containing functions to load the previous and next pages, the fetching state, the result of the query, and any error that occurred
  */
 export function usePaginatedQuery<
-  M extends Models,
-  CN extends CollectionNameFromModels<M>,
-  Q extends ClientQuery<M, CN>,
+  M extends Models<M>,
+  Q extends SchemaQuery<M>,
 >(
-  client: TriplitClient<M> | WorkerClient<M>,
-  query: ClientQueryBuilder<M, CN, Q> | Q,
+  client: TriplitClient<M>,
+  query: Q,
   options?: Partial<SubscriptionOptions>
 ): usePaginatedQueryPayload<M, Q> {
-  const builtQuery = useMemo(
-    () => query && ('build' in query ? query.build() : query),
-    [query]
-  );
   const [hasNextPage, setHasNextPage] = useState(false);
   const [hasPreviousPage, setHasPreviousPage] = useState(false);
-  const [results, setResults] = useState<
-    Unalias<FetchResult<M, Q>> | undefined
-  >(undefined);
+  const [results, setResults] = useState<FetchResult<M, Q, 'many'> | undefined>(
+    undefined
+  );
   const [error, setError] = useState<any>(undefined);
   const [fetching, setFetching] = useState(true);
   const [fetchingPage, setFetchingPage] = useState(false);
@@ -168,11 +121,11 @@ export function usePaginatedQuery<
   const prevPageRef = useRef<() => void>();
   const disconnectRef = useRef<() => void>();
 
-  const stringifiedQuery = builtQuery && JSON.stringify(builtQuery);
+  const stringifiedQuery = query && JSON.stringify(query);
 
   useEffect(() => {
     const { unsubscribe, nextPage, prevPage } = client.subscribeWithPagination(
-      builtQuery,
+      query,
       (results, info) => {
         setFetching(false);
         setError(undefined);
@@ -233,24 +186,16 @@ export function usePaginatedQuery<
  * @param options.localOnly - If true, the subscription will only use the local cache. Defaults to false.
  * @param options.onRemoteFulfilled - An optional callback that is called when the remote query has been fulfilled. * @returns An object containing a function to load more results, the fetching state, the result of the query, and any error that occurred
  */
-export function useInfiniteQuery<
-  M extends Models,
-  CN extends CollectionNameFromModels<M>,
-  Q extends ClientQuery<M, CN>,
->(
-  client: TriplitClient<M> | WorkerClient<M>,
-  query: ClientQueryBuilder<M, CN, Q> | Q,
+export function useInfiniteQuery<M extends Models<M>, Q extends SchemaQuery<M>>(
+  client: TriplitClient<M>,
+  query: Q,
   options?: Partial<SubscriptionOptions>
 ): useInfiniteQueryPayload<M, Q> {
-  const builtQuery = useMemo(
-    () => query && ('build' in query ? query.build() : query),
-    [query]
-  );
-  const stringifiedQuery = builtQuery && JSON.stringify(builtQuery);
+  const stringifiedQuery = query && JSON.stringify(query);
   const [hasMore, setHasMore] = useState(false);
-  const [results, setResults] = useState<
-    Unalias<FetchResult<M, Q>> | undefined
-  >(undefined);
+  const [results, setResults] = useState<FetchResult<M, Q, 'many'> | undefined>(
+    undefined
+  );
   const [error, setError] = useState<any>(undefined);
   const [fetching, setFetching] = useState(true);
   const [fetchingRemote, setFetchingRemote] = useState(
@@ -280,7 +225,7 @@ export function useInfiniteQuery<
 
   useEffect(() => {
     const { unsubscribe, loadMore } = client.subscribeWithExpand(
-      builtQuery,
+      query,
       (results, info) => {
         setFetching(false);
         setError(undefined);

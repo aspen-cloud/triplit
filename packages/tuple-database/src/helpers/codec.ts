@@ -2,7 +2,7 @@
 
 // @ts-expect-error
 import * as elen from "elen"
-import { invert, sortBy } from "remeda"
+import { invert } from "../helpers/remeda.js"
 import { isPlainObject } from "./isPlainObject.js"
 import { Tuple, Value } from "../storage/types.js"
 import { compare } from "./compare.js"
@@ -27,9 +27,11 @@ export const encodingByte = {
 export type EncodingType = keyof typeof encodingByte
 
 export const encodingRank = new Map<EncodingType, number>(
-	sortBy(Object.entries(encodingByte), ([key, value]) => value).map(
-		([key], i) => [key as EncodingType, i]
-	)
+	Object.entries(encodingByte)
+		.sort((a, b) => {
+			return a[1] < b[1] ? -1 : 1
+		})
+		.map(([key], i) => [key as EncodingType, i])
 )
 
 export function encodeValue(value: Value, options?: EncodingOptions): string {

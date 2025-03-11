@@ -1,8 +1,8 @@
 import { Bench } from 'tinybench';
-import { DB as TriplitDB, Schema as S } from '@triplit/db';
-import { ClientSchema, TriplitClient } from '../src';
+import { DB as TriplitDB, Schema as S } from '@triplit/entity-db';
+import { TriplitClient } from '../src';
 
-const schema = {
+const schema = S.Collections({
   cars: {
     schema: S.Schema({
       id: S.Id(),
@@ -10,20 +10,24 @@ const schema = {
       model: S.String(),
       manufacturerId: S.String(),
       type: S.String(),
-      manufacturer: S.RelationById('manufacturers', '$manufacturerId'),
     }),
+    relationships: {
+      manufacturer: S.RelationById('manufacturers', '$manufacturerId'),
+    },
   },
   manufacturers: {
     schema: S.Schema({
       id: S.String(),
       name: S.String(),
       country: S.String(),
+    }),
+    relationships: {
       cars: S.RelationMany('cars', {
         where: [['manufacturerId', '=', '$id']],
       }),
-    }),
+    },
   },
-} satisfies ClientSchema;
+});
 
 const db = new TriplitDB({
   schema: {
@@ -61,14 +65,10 @@ for (const dbOrClient of [db, client]) {
 
 const suite = new Bench();
 
-const query = db
-  .query('cars')
-  .where([['year', '>', 2021]])
-  .build();
-
+const query = db.query('cars').Where([['year', '>', 2021]]);
 suite
-  .add('@triplit/db', async () => {
-    // Your benchmark code for @triplit/db here
+  .add('@triplit/entity-db', async () => {
+    // Your benchmark code for @triplit/entity-db here
     await db.fetch(query);
   })
   .add('@triplit/client', async () => {

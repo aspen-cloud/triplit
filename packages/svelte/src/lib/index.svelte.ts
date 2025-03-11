@@ -1,16 +1,12 @@
 /// <reference types="svelte" />
 
 import type {
-  ClientQuery,
-  ClientQueryBuilder,
-  CollectionNameFromModels,
-  FetchResult,
   Models,
+  SchemaQuery,
   SubscriptionOptions,
+  SubscriptionSignalPayload,
   TriplitClient,
-  Unalias,
 } from '@triplit/client';
-import { WorkerClient } from '@triplit/client/worker-client';
 
 /**
  * A hook that subscribes to a query
@@ -22,82 +18,31 @@ import { WorkerClient } from '@triplit/client/worker-client';
  * @param options.onRemoteFulfilled - An optional callback that is called when the remote query has been fulfilled.
  * @returns An object containing the fetching state, the result of the query, any error that occurred, and a function to update the query
  */
-export function useQuery<
-  M extends Models,
-  CN extends CollectionNameFromModels<M>,
-  Q extends ClientQuery<M, CN>,
->(
-  client: TriplitClient<M> | WorkerClient<M>,
-  query: ClientQueryBuilder<M, CN, Q>,
+export function useQuery<M extends Models<M>, Q extends SchemaQuery<M>>(
+  client: TriplitClient<M>,
+  query: Q,
   options?: Partial<SubscriptionOptions>
-): {
-  fetching: boolean;
-  fetchingLocal: boolean;
-  fetchingRemote: boolean;
-  results: Unalias<FetchResult<M, Q>> | undefined;
-  error: any;
-  updateQuery: (query: ClientQueryBuilder<M, CN, Q>) => void;
-} {
-  let results: Unalias<FetchResult<M, Q>> | undefined = $state(undefined);
-  let isInitialFetch = $state(true);
+): SubscriptionSignalPayload<M, Q> {
+  let results: SubscriptionSignalPayload<M, Q>['results'] = $state(undefined);
+  let fetching = $state(true);
   let fetchingLocal = $state(true);
-  let fetchingRemote = $state(client.connectionStatus !== 'CLOSED');
-  let fetching = $derived(fetchingLocal || (isInitialFetch && fetchingRemote));
+  let fetchingRemote = $state(false);
   let error: any = $state(undefined);
-  let hasResponseFromServer = false;
-  let builtQuery = $state(query && query.build());
-
-  function updateQuery(query: ClientQueryBuilder<M, CN, Q>) {
-    builtQuery = query.build();
-    results = undefined;
-    fetchingLocal = true;
-    hasResponseFromServer = false;
-  }
 
   $effect(() => {
-    client
-      .isFirstTimeFetchingQuery($state.snapshot(builtQuery) as Q)
-      .then((isFirstFetch) => {
-        isInitialFetch = isFirstFetch;
-      });
-    const unsub = client.onConnectionStatusChange((status) => {
-      if (status === 'CLOSING' || status === 'CLOSED') {
-        fetchingRemote = false;
-        return;
-      }
-      if (status === 'OPEN' && hasResponseFromServer === false) {
-        fetchingRemote = true;
-        return;
-      }
-    }, true);
-    return () => {
-      unsub();
-    };
-  });
-
-  $effect(() => {
-    const unsubscribe = client.subscribe(
-      $state.snapshot(builtQuery) as Q,
-      (localResults) => {
-        fetchingLocal = false;
-        error = undefined;
-        results = localResults as any;
+    const unsub = client.subscribeWithStatus(
+      query,
+      (newVal) => {
+        results = newVal.results;
+        fetching = newVal.fetching;
+        fetchingLocal = newVal.fetchingLocal;
+        fetchingRemote = newVal.fetchingRemote;
+        error = newVal.error;
       },
-      (error) => {
-        fetchingLocal = false;
-        error = error;
-      },
-      {
-        ...(options ?? {}),
-        onRemoteFulfilled: () => {
-          hasResponseFromServer = true;
-          fetchingRemote = false;
-        },
-      }
+      options
     );
-    return () => {
-      unsubscribe();
-    };
+
+    return unsub;
   });
 
   return {
@@ -116,7 +61,6 @@ export function useQuery<
     get error() {
       return error;
     },
-    updateQuery,
   };
 }
 
@@ -126,10 +70,8 @@ export function useQuery<
  * @param client - The client instance to get the connection status of
  * @returns An object containing `status`, the current connection status of the client with the server
  */
-export function useConnectionStatus(
-  client: TriplitClient<any> | WorkerClient<any>
-) {
-  let status = $state('CONNECTING');
+export function useConnectionStatus(client: TriplitClient<any>) {
+  let status = $state(client.connectionStatus);
 
   $effect(() => {
     const unsub = client.onConnectionStatusChange((newStatus) => {

@@ -1,0 +1,624 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`query planning > query: '20 most recent messages in a conversa…' 1`] = `
+{
+  "steps": [
+    {
+      "collectionName": "messages",
+      "type": "SCAN",
+    },
+    {
+      "filter": [
+        [
+          "conversationId",
+          "=",
+          "conv123",
+        ],
+      ],
+      "type": "ITERATOR_FILTER",
+    },
+    {
+      "type": "COLLECT",
+    },
+    {
+      "fields": [
+        [
+          "timestamp",
+          "DESC",
+        ],
+      ],
+      "type": "SORT",
+    },
+    {
+      "count": 20,
+      "type": "LIMIT",
+    },
+  ],
+  "views": {},
+}
+`;
+
+exports[`query planning > query: 'Benchmarks query' 1`] = `
+{
+  "steps": [
+    {
+      "collectionName": "branches",
+      "type": "SCAN",
+    },
+    {
+      "type": "COLLECT",
+    },
+    {
+      "alias": "latest_run",
+      "subPlan": [
+        {
+          "type": "PREPARE_VIEW",
+          "viewId": "0",
+        },
+        {
+          "filter": [
+            [
+              "branch_name",
+              "=",
+              "$1.id",
+            ],
+          ],
+          "type": "RESOLVE_FROM_VIEW",
+          "viewId": "0",
+        },
+        {
+          "type": "PICK",
+        },
+      ],
+      "type": "SUBQUERY",
+    },
+    {
+      "alias": "benchmarks",
+      "subPlan": [
+        {
+          "collectionName": "benchmarks",
+          "type": "SCAN",
+        },
+        {
+          "type": "COLLECT",
+        },
+        {
+          "alias": "latest_branch_run",
+          "subPlan": [
+            {
+              "type": "PREPARE_VIEW",
+              "viewId": "1",
+            },
+            {
+              "filter": [
+                [
+                  "benchmark",
+                  "=",
+                  "$1.id",
+                ],
+                [
+                  "branch_name",
+                  "=",
+                  "$2.id",
+                ],
+              ],
+              "type": "RESOLVE_FROM_VIEW",
+              "viewId": "1",
+            },
+            {
+              "type": "PICK",
+            },
+          ],
+          "type": "SUBQUERY",
+        },
+      ],
+      "type": "SUBQUERY",
+    },
+  ],
+  "views": {
+    "0": {
+      "steps": [
+        {
+          "collectionName": "runs",
+          "type": "SCAN",
+        },
+        {
+          "type": "COLLECT",
+        },
+        {
+          "fields": [
+            [
+              "branch_name",
+              "ASC",
+            ],
+            [
+              "created_at",
+              "DESC",
+            ],
+          ],
+          "type": "SORT",
+        },
+      ],
+      "views": {},
+    },
+    "1": {
+      "steps": [
+        {
+          "collectionName": "runs",
+          "type": "SCAN",
+        },
+        {
+          "type": "COLLECT",
+        },
+        {
+          "fields": [
+            [
+              "benchmark",
+              "ASC",
+            ],
+            [
+              "branch_name",
+              "ASC",
+            ],
+            [
+              "created_at",
+              "DESC",
+            ],
+          ],
+          "type": "SORT",
+        },
+      ],
+      "views": {},
+    },
+  },
+}
+`;
+
+exports[`query planning > query: 'Conversations including the most rece…' 1`] = `
+{
+  "steps": [
+    {
+      "collectionName": "conversations",
+      "type": "SCAN",
+    },
+    {
+      "type": "COLLECT",
+    },
+    {
+      "alias": "latestMessage",
+      "subPlan": [
+        {
+          "collectionName": "messages",
+          "type": "SCAN",
+        },
+        {
+          "filter": [
+            [
+              "conversationId",
+              "=",
+              "$1.id",
+            ],
+          ],
+          "type": "ITERATOR_FILTER",
+        },
+        {
+          "type": "COLLECT",
+        },
+        {
+          "fields": [
+            [
+              "timestamp",
+              "DESC",
+            ],
+          ],
+          "type": "SORT",
+        },
+        {
+          "alias": "sender",
+          "subPlan": [
+            {
+              "type": "PREPARE_VIEW",
+              "viewId": "0",
+            },
+            {
+              "filter": [
+                [
+                  "id",
+                  "=",
+                  "$1.senderId",
+                ],
+              ],
+              "type": "RESOLVE_FROM_VIEW",
+              "viewId": "0",
+            },
+            {
+              "type": "PICK",
+            },
+          ],
+          "type": "SUBQUERY",
+        },
+        {
+          "type": "PICK",
+        },
+      ],
+      "type": "SUBQUERY",
+    },
+  ],
+  "views": {
+    "0": {
+      "steps": [
+        {
+          "collectionName": "users",
+          "type": "SCAN",
+        },
+        {
+          "type": "COLLECT",
+        },
+        {
+          "fields": [
+            [
+              "id",
+              "ASC",
+            ],
+          ],
+          "type": "SORT",
+        },
+      ],
+      "views": {},
+    },
+  },
+}
+`;
+
+exports[`query planning > query: 'Flights to california including the d…' 1`] = `
+{
+  "steps": [
+    {
+      "collectionName": "flights",
+      "type": "SCAN",
+    },
+    {
+      "type": "PREPARE_VIEW",
+      "viewId": "0",
+    },
+    {
+      "filter": [
+        [
+          "destination",
+          "in",
+          "$view_0.id",
+        ],
+      ],
+      "type": "ITERATOR_FILTER",
+    },
+    {
+      "type": "COLLECT",
+    },
+    {
+      "alias": "destinationAirport",
+      "subPlan": [
+        {
+          "type": "PREPARE_VIEW",
+          "viewId": "1",
+        },
+        {
+          "filter": [
+            [
+              "id",
+              "=",
+              "$1.destination",
+            ],
+          ],
+          "type": "RESOLVE_FROM_VIEW",
+          "viewId": "1",
+        },
+        {
+          "type": "PICK",
+        },
+      ],
+      "type": "SUBQUERY",
+    },
+  ],
+  "views": {
+    "0": {
+      "steps": [
+        {
+          "collectionName": "airports",
+          "type": "SCAN",
+        },
+        {
+          "filter": [
+            [
+              "state",
+              "=",
+              "CA",
+            ],
+          ],
+          "type": "ITERATOR_FILTER",
+        },
+        {
+          "type": "COLLECT",
+        },
+      ],
+      "views": {},
+    },
+    "1": {
+      "steps": [
+        {
+          "collectionName": "airports",
+          "type": "SCAN",
+        },
+        {
+          "filter": [
+            [
+              "state",
+              "=",
+              "CA",
+            ],
+          ],
+          "type": "ITERATOR_FILTER",
+        },
+        {
+          "type": "COLLECT",
+        },
+        {
+          "fields": [
+            [
+              "id",
+              "ASC",
+            ],
+          ],
+          "type": "SORT",
+        },
+      ],
+      "views": {},
+    },
+  },
+}
+`;
+
+exports[`query planning > query: 'Messages and the reactions' 1`] = `
+{
+  "steps": [
+    {
+      "collectionName": "messages",
+      "type": "SCAN",
+    },
+    {
+      "type": "COLLECT",
+    },
+    {
+      "alias": "reactions",
+      "subPlan": [
+        {
+          "type": "PREPARE_VIEW",
+          "viewId": "0",
+        },
+        {
+          "filter": [
+            [
+              "messageId",
+              "=",
+              "$1.id",
+            ],
+          ],
+          "type": "RESOLVE_FROM_VIEW",
+          "viewId": "0",
+        },
+      ],
+      "type": "SUBQUERY",
+    },
+  ],
+  "views": {
+    "0": {
+      "steps": [
+        {
+          "collectionName": "reactions",
+          "type": "SCAN",
+        },
+        {
+          "type": "COLLECT",
+        },
+        {
+          "fields": [
+            [
+              "messageId",
+              "ASC",
+            ],
+          ],
+          "type": "SORT",
+        },
+      ],
+      "views": {},
+    },
+  },
+}
+`;
+
+exports[`query planning > query: 'Posts authored by user with username …' 1`] = `
+{
+  "steps": [
+    {
+      "collectionName": "posts",
+      "type": "SCAN",
+    },
+    {
+      "type": "PREPARE_VIEW",
+      "viewId": "0",
+    },
+    {
+      "filter": [
+        [
+          "authorId",
+          "in",
+          "$view_0.id",
+        ],
+      ],
+      "type": "ITERATOR_FILTER",
+    },
+    {
+      "type": "COLLECT",
+    },
+  ],
+  "views": {
+    "0": {
+      "steps": [
+        {
+          "collectionName": "users",
+          "type": "SCAN",
+        },
+        {
+          "filter": [
+            [
+              "username",
+              "=",
+              "Bob99",
+            ],
+          ],
+          "type": "ITERATOR_FILTER",
+        },
+        {
+          "type": "COLLECT",
+        },
+      ],
+      "views": {},
+    },
+  },
+}
+`;
+
+exports[`query planning > query: 'Posts ordered by the last name of the…' 1`] = `
+{
+  "steps": [
+    {
+      "collectionName": "posts",
+      "type": "SCAN",
+    },
+    {
+      "type": "COLLECT",
+    },
+    {
+      "alias": "_order_0",
+      "subPlan": [
+        {
+          "type": "PREPARE_VIEW",
+          "viewId": "0",
+        },
+        {
+          "filter": [
+            [
+              "id",
+              "=",
+              "$1.authorId",
+            ],
+          ],
+          "type": "RESOLVE_FROM_VIEW",
+          "viewId": "0",
+        },
+      ],
+      "type": "SUBQUERY",
+    },
+    {
+      "fields": [
+        [
+          "_order_0.name",
+          "ASC",
+        ],
+      ],
+      "type": "SORT",
+    },
+  ],
+  "views": {
+    "0": {
+      "steps": [
+        {
+          "collectionName": "users",
+          "type": "SCAN",
+        },
+        {
+          "type": "COLLECT",
+        },
+        {
+          "fields": [
+            [
+              "id",
+              "ASC",
+            ],
+          ],
+          "type": "SORT",
+        },
+      ],
+      "views": {},
+    },
+  },
+}
+`;
+
+exports[`query planning > query: 'messages from conversations that the …' 1`] = `
+{
+  "steps": [
+    {
+      "collectionName": "messages",
+      "type": "SCAN",
+    },
+    {
+      "type": "PREPARE_VIEW",
+      "viewId": "0",
+    },
+    {
+      "filter": [
+        [
+          "conversationId",
+          "in",
+          "$view_0.id",
+        ],
+      ],
+      "type": "ITERATOR_FILTER",
+    },
+    {
+      "type": "COLLECT",
+    },
+  ],
+  "views": {
+    "0": {
+      "steps": [
+        {
+          "type": "PREPARE_VIEW",
+          "viewId": "1",
+        },
+        {
+          "collectionName": "conversations",
+          "ids": "$view_1.conversationId",
+          "type": "ID_LOOK_UP",
+        },
+        {
+          "type": "COLLECT",
+        },
+      ],
+      "views": {},
+    },
+    "1": {
+      "steps": [
+        {
+          "collectionName": "conversation_members",
+          "type": "SCAN",
+        },
+        {
+          "filter": [
+            [
+              "userId",
+              "=",
+              "user123",
+            ],
+          ],
+          "type": "ITERATOR_FILTER",
+        },
+        {
+          "type": "COLLECT",
+        },
+      ],
+      "views": {},
+    },
+  },
+}
+`;

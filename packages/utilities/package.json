@@ -1,0 +1,59 @@
+{
+  "name": "@triplit/utilities",
+  "packageManager": "yarn@4.2.2",
+  "version": "0.0.1-canary-20250310223455",
+  "type": "module",
+  "files": [
+    "/dist"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.js"
+    },
+    "./*": {
+      "types": "./dist/*.d.ts",
+      "import": "./dist/*.js",
+      "require": "./dist/*.js"
+    }
+  },
+  "typesVersions": {
+    "*": {
+      ".": [
+        "./dist/index.d.ts"
+      ],
+      "./*": [
+        "./dist/*.d.ts"
+      ]
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "lint": "tsc --noEmit",
+    "test": "vitest run",
+    "publish-pkg": "node ../../scripts/npm-check-version-and-publish.js"
+  },
+  "dependencies": {
+    "@triplit/entity-db": "workspace:^"
+  },
+  "devDependencies": {
+    "@types/json-schema": "^7.0.15",
+    "ajv": "^8.17.1",
+    "ajv-formats": "^3.0.1",
+    "typescript": "^5.8.2",
+    "vitest": "^3.0.7"
+  },
+  "peerDependencies": {
+    "ajv": "^8.17.1",
+    "ajv-formats": "^3.0.1"
+  },
+  "peerDependenciesMeta": {
+    "ajv": {
+      "optional": true
+    },
+    "ajv-formats": {
+      "optional": true
+    }
+  }
+}

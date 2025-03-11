@@ -24,6 +24,7 @@ import { useSession } from "next-auth/react"
 import { client } from "@/lib/triplit.js"
 import { cn } from "@/lib/utils.js"
 import {
+  UseMessagesResult,
   useConversation,
   useMessages,
   type Message,
@@ -220,8 +221,8 @@ function MessageList({ convoId }: { convoId: string }) {
   )
 }
 
-function toggleReaction(message: Message, userId: string) {
-  const usersExistingReactionId = Array.from(message?.reactions?.values()).find(
+function toggleReaction(message: UseMessagesResult, userId: string) {
+  const usersExistingReactionId = (message?.reactions ?? []).find(
     (reaction) => reaction.userId === userId
   )?.id
   if (usersExistingReactionId) {
@@ -241,7 +242,7 @@ function ChatBubble({
   isOwnMessage,
   showSentIndicator,
 }: {
-  message: Message
+  message: UseMessagesResult
   delivered: boolean
   isOwnMessage: boolean
   showSentIndicator?: boolean

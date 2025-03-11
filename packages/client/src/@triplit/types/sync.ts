@@ -1,15 +1,17 @@
-// TODO: add these types back
-// import type { CollectionQuery, Timestamp, TripleRow } from '@triplit/db';
-
 import { ITriplitError } from './errors.js';
 
 type CollectionQuery<T, U> = any;
-type Timestamp = [sequence: number, client: string];
+export type SyncTimestamp = [number, number, string];
 type TripleRow = any;
 
 type SyncMessage<Type extends string, Payload extends any> = {
   type: Type;
   payload: Payload;
+};
+
+export type QueryState = {
+  timestamp: SyncTimestamp;
+  entityIds: { [collection: string]: string[] };
 };
 
 export type ServerCloseReason = {
@@ -50,6 +52,14 @@ export type ServerTriplesMessage = SyncMessage<
   { triples: TripleRow[]; forQueries: string[] }
 >;
 export type ServrTriplesRequestMessage = SyncMessage<'TRIPLES_REQUEST', {}>;
+export type ServerEntityDataMessage = SyncMessage<
+  'ENTITY_DATA',
+  { changes: any; timestamp: any; forQueries: string[] }
+>;
+export type ServerChangesAckMessage = SyncMessage<
+  'CHANGES_ACK',
+  { timestamp: any }
+>;
 export type ServerErrorMessage = SyncMessage<
   'ERROR',
   {
@@ -65,20 +75,26 @@ export type ServerErrorMessage = SyncMessage<
   }
 >;
 export type ServerCloseMessage = SyncMessage<'CLOSE', ServerCloseReason>;
+export type ServerSchemaRequestMessage = SyncMessage<'SCHEMA_REQUEST', {}>;
+export type ServerReadyMessage = SyncMessage<'READY', {}>;
 
 export type ServerSyncMessage =
   | ServerTriplesAckMessage
   | ServerTriplesMessage
   | ServrTriplesRequestMessage
   | ServerErrorMessage
-  | ServerCloseMessage;
+  | ServerCloseMessage
+  | ServerEntityDataMessage
+  | ServerChangesAckMessage
+  | ServerSchemaRequestMessage
+  | ServerReadyMessage;
 
 export type ClientConnectQueryMessage = SyncMessage<
   'CONNECT_QUERY',
   {
     id: string;
     params: CollectionQuery<any, any>;
-    state?: Timestamp[];
+    state?: QueryState;
   }
 >;
 export type ClientDisconnectQueryMessage = SyncMessage<
@@ -94,10 +110,15 @@ export type ClientChunkMessage = SyncMessage<
   'CHUNK',
   { data: string; total: number; index: number; id: string }
 >;
+export type ClientChangesMessage = SyncMessage<'CHANGES', { changes: any }>;
 
 export type ClientUpdateTokenMessage = SyncMessage<
   'UPDATE_TOKEN',
   { token: string }
+>;
+export type ClientSchemaResponseMessage = SyncMessage<
+  'SCHEMA_RESPONSE',
+  { schema: any }
 >;
 
 export type ClientSyncMessage =
@@ -106,7 +127,9 @@ export type ClientSyncMessage =
   | ClientTriplesPendingMessage
   | ClientTriplesMessage
   | ClientChunkMessage
-  | ClientUpdateTokenMessage;
+  | ClientUpdateTokenMessage
+  | ClientChangesMessage
+  | ClientSchemaResponseMessage;
 
 type SuccessResult<T> = { data: T; error?: undefined };
 type ErrorResult<E> = { data?: undefined; error: E };

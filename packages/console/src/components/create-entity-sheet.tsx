@@ -1,18 +1,14 @@
-import {
-  CollectionAttributeDefinition,
-  AttributeDefinition,
-  Model,
-} from '@triplit/db';
+import type {
+  ValueTypeKeys,
+  DataType,
+  Collection,
+  AllTypes,
+  RecordType,
+} from '@triplit/entity-db';
 import { useEffect, useMemo, useState } from 'react';
 
 import { useForm } from '@mantine/form';
-import {
-  CollectionDefinition,
-  CollectionTypeKeys,
-  RecordAttributeDefinition,
-  ValueTypeKeys,
-} from '@triplit/db/src/data-types/serialization.js';
-import { Collection } from '@triplit/db/src/schema.js';
+
 import {
   SetInput,
   Button,
@@ -41,7 +37,7 @@ interface FormValues {
   id: string;
   attributes: {
     fieldName: string;
-    definition: AttributeDefinition;
+    definition: DataType;
     fieldValue: string | Set<any>;
     key: string;
   }[];
@@ -52,10 +48,10 @@ interface FormValues {
  */
 function convertFormValueToTriplitValue(
   value: string | Record<string, any> | null | undefined,
-  definition: AttributeDefinition
+  definition: DataType
 ): any {
   // If we have a default function, let DB handle and return undefined
-  const hasDefaultFunction = !!definition?.options?.default?.func;
+  const hasDefaultFunction = !!definition?.config?.default?.func;
   if (hasDefaultFunction && value == undefined) return undefined;
 
   // Undefined and null are valid triplit values (for inputs)
@@ -112,28 +108,21 @@ function convertFormToEntity(attributes: FormValues['attributes']) {
   return entity;
 }
 
-function initializeNewEntityForm(
-  collection?: CollectionDefinition
-): FormValues {
+function initializeNewEntityForm(collection?: Collection): FormValues {
   if (!collection || !collection?.schema?.properties)
     return { id: '', attributes: [] };
-  const attributes = (
-    Object.entries(collection.schema.properties) as [
-      string,
-      Exclude<AttributeDefinition, RecordAttributeDefinition>,
-    ][]
-  )
-    .filter(
-      ([_attr, definition]) => definition.type !== 'query' && _attr !== 'id'
-    )
-    .map(([attr, definition]) => {
-      return {
-        definition,
-        fieldName: attr,
-        fieldValue: undefined,
-        key: attr,
-      };
+  const attributes = [];
+  for (const key in collection.schema.properties) {
+    if (key === 'id') continue;
+    const definition = collection.schema.properties[key];
+    attributes.push({
+      definition,
+      fieldName: key,
+      fieldValue: undefined,
+      key,
     });
+  }
+  // @ts-expect-error
   return { id: '', attributes };
 }
 
@@ -144,7 +133,7 @@ function TypeLabel({
   isEnum = false,
 }: {
   name: string;
-  type: ValueTypeKeys | CollectionTypeKeys;
+  type: AllTypes;
   setItemsType?: ValueTypeKeys;
   isEnum?: boolean;
 }) {
@@ -168,6 +157,10 @@ function TypeLabel({
   );
 }
 
+function isRecordType(def: DataType): def is RecordType {
+  return def.type === 'record';
+}
+
 export function CreateEntitySheet({
   collection,
   inferredAttributes,
@@ -176,7 +169,7 @@ export function CreateEntitySheet({
 }: {
   collection: string;
   inferredAttributes?: string[];
-  collectionSchema?: CollectionDefinition;
+  collectionSchema?: Collection;
   client: TriplitClient<any>;
 }) {
   const [open, setOpen] = useState(false);
@@ -203,17 +196,22 @@ export function CreateEntitySheet({
     );
   }, [form.values.attributes, collectionSchema, allAttributes]);
 
-  const optionalAttributes = new Set(collectionSchema?.schema?.optional ?? []);
+  const optionalAttributes = new Set(
+    Object.entries(collectionSchema?.schema?.properties ?? {})
+      .filter(([key, value]) => value.config?.optional ?? false)
+      .map(([key, value]) => key)
+  );
+
   const allFields =
     // useMemo(
     //   () =>
     form.values.attributes.map((item, index) => {
-      const hasDefault = item.definition?.options?.default !== undefined;
+      const hasDefault = item.definition.config?.default !== undefined;
+      const isNullable = item.definition.config?.nullable ?? false;
+      const isOptional = item.definition.config?.optional ?? false;
       const isRequired =
-        !hasDefault &&
-        !optionalAttributes.has(item.fieldName) &&
-        (!item.definition?.options?.nullable || item.fieldValue !== null);
-      const isEnum = item.definition?.options?.enum;
+        !hasDefault && !isOptional && (!isNullable || item.fieldValue !== null);
+      const isEnum = item.definition?.config?.enum;
       return (
         <div
           key={item.key}
@@ -269,7 +267,7 @@ export function CreateEntitySheet({
             {item.definition.type === 'string' && isEnum && (
               <Select
                 required={isRequired}
-                data={item.definition.options.enum}
+                data={item.definition.config.enum}
                 disabled={item.fieldValue === null}
                 value={item.fieldValue ?? ''}
                 onValueChange={(value) => {
@@ -331,15 +329,12 @@ export function CreateEntitySheet({
                 parse={PARSE_FUNCS[item.definition.items.type]}
               />
             )}
-            {item.definition.type === 'record' &&
+            {isRecordType(item.definition) &&
               Object.entries(item.definition.properties).map(
                 ([name, definition]) => (
                   <div className="flex flex-row gap-2" key={name}>
                     <div className="ml-10 w-1/4">
-                      <TypeLabel
-                        name={name}
-                        type={item.definition.properties[name].type}
-                      />
+                      <TypeLabel name={name} type={definition.type} />
                     </div>
                     {definition.type === 'string' && (
                       <Textarea
@@ -389,11 +384,11 @@ export function CreateEntitySheet({
                   </div>
                 )
               )}
-            {item?.definition?.options?.default?.func && (
-              <div className="text-muted-foreground">{`Default: ${item?.definition?.options?.default?.func}()`}</div>
+            {item.definition.config?.default?.func && (
+              <div className="text-muted-foreground">{`Default: ${item.definition.config?.default?.func}()`}</div>
             )}
           </FormField>
-          {(item.definition?.options?.nullable || !collectionSchema) && (
+          {(isNullable || !collectionSchema) && (
             <div className="flex flex-col gap-2 self-end items-center mb-[10px]">
               <p className="text-sm mb-2">Null?</p>
               <Checkbox
@@ -465,22 +460,31 @@ export function CreateEntitySheet({
               if (form.values.id) {
                 entity = Object.assign(entity, { id: form.values.id });
               }
+              const inserted = await client.insert(collection, entity);
 
-              const { txId } = await client.transact(async (tx) => {
-                await tx.insert(collection, entity);
-              });
+              const unsubSuccess = client.onEntitySyncSuccess(
+                collection,
+                inserted.id,
+                () => {
+                  console.log('Transaction succeeded on the server');
+                  form.reset();
+                  setOpen(false);
+                  unsubSuccess();
+                }
+              );
 
-              client.syncEngine.onTxCommit(txId, () => {
-                console.log('Transaction succeeded on the server');
-                form.reset();
-                setOpen(false);
-              });
-
-              client.syncEngine.onTxFailure(txId, (e) => {
-                console.error('Transaction failed on the server', e);
-                const shouldRetry = false;
-                client.syncEngine.rollback(txId);
-              });
+              const unsubError = client.onEntitySyncError(
+                collection,
+                inserted.id,
+                async () => {
+                  console.error('Transaction failed on the server', e);
+                  await client.clearPendingChangesForEntity(
+                    collection,
+                    inserted.id
+                  );
+                  unsubError();
+                }
+              );
             } catch (e) {
               console.error('Transaction setup failed', e);
             }
@@ -555,6 +559,10 @@ function parseNumber(value: string) {
   return val;
 }
 
+function parseString(value: string) {
+  return value;
+}
+
 function parseBoolean(value: string) {
   if (value === 'true') return true;
   if (value === 'false') return false;
@@ -565,4 +573,5 @@ export const PARSE_FUNCS = {
   date: parseDate,
   number: parseNumber,
   boolean: parseBoolean,
+  string: parseString,
 };

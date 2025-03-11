@@ -3,9 +3,9 @@ import Repl from 'node:repl';
 import * as Triplit from '@triplit/client';
 import WebSocket from 'ws';
 import { Command } from '../command.js';
-import { serverRequesterMiddleware } from '../middleware/add-server-requester.js';
+import { createServerRequesterMiddleware } from '../middleware/add-server-requester.js';
 import { parseQuery } from '../parser.js';
-import { TriplitError, schemaToJSON } from '@triplit/db';
+import { TriplitError } from '@triplit/entity-db';
 import { projectSchemaMiddleware } from '../middleware/project-schema.js';
 import ora from 'ora';
 import { Logger } from '@triplit/types/logger';
@@ -69,12 +69,16 @@ class CliLogger implements Logger {
 global.WebSocket = WebSocket;
 export default Command({
   description: 'Start a REPL with the Triplit client',
-  middleware: [serverRequesterMiddleware, projectSchemaMiddleware],
+  middleware: [
+    createServerRequesterMiddleware({ destructive: false }),
+    projectSchemaMiddleware,
+  ],
   run: async ({ ctx }) => {
+    const schema = await ctx.projectSchema.getSchema();
     const triplit = new Triplit.TriplitClient({
-      serverUrl: ctx.url,
-      token: ctx.token,
-      schema: ctx.schema,
+      serverUrl: ctx.remote.url,
+      token: ctx.remote.token,
+      schema: schema?.collections,
       logger: new CliLogger({}),
     });
     const spinner = ora('Connecting to Triplit server').start();
@@ -85,6 +89,7 @@ export default Command({
     await awaitConnect(triplit);
     spinner.stop();
     triplit.onConnectionStatusChange((status) => {});
+    // @ts-expect-error
     global.triplit = triplit;
     const repl = Repl.start(`db> `);
     repl.defineCommand('fetch', {
@@ -108,7 +113,11 @@ export default Command({
     });
     repl.defineCommand('schema', {
       action: async () => {
-        const schema = schemaToJSON(await triplit.db.getSchema());
+        const schema = await triplit.getSchema();
+        if (!schema) {
+          console.error('No schema found');
+          return;
+        }
         const { collections } = schema;
         for (const [name, collection] of Object.entries(collections)) {
           console.log(name);

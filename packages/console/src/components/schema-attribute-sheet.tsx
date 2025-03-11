@@ -1,16 +1,17 @@
 import {
-  AttributeDefinition,
   Schema,
-  CollectionAttributeDefinition,
-  CollectionDefinition,
   ALL_TYPES,
   AllTypes,
-  RecordAttributeDefinition,
-  UserTypeOptions,
   VALUE_TYPE_KEYS,
-  ValueAttributeDefinition,
   ValueTypeKeys,
-} from '@triplit/db';
+  Collection,
+  ValueType,
+  DataType,
+  SetType,
+  RecordType,
+  PrimitiveType,
+  PrimitiveTypeKeys,
+} from '@triplit/entity-db';
 import {
   Button,
   Checkbox,
@@ -33,14 +34,13 @@ import { atom, useAtom } from 'jotai';
 import { nanoid } from 'nanoid';
 import {
   addAttribute,
-  alterAttributeOption,
   parseIssue,
   safeSchemaEdit,
 } from 'src/utils/schema.js';
 import { useToast } from 'src/hooks/useToast.js';
 
 export type AttributesForm = {
-  [key: string]: AttributeDefinition;
+  [key: string]: DataType;
 };
 
 function getDefaultOptionsFromType(type: ValueTypeKeys) {
@@ -52,7 +52,7 @@ function getDefaultOptionsFromType(type: ValueTypeKeys) {
 type NewAttributeFormProps = {
   client: TriplitClient<any>;
   collectionName: string;
-  collectionSchema: CollectionDefinition;
+  collectionSchema: Collection;
   attributeToUpdateName: string | null;
 };
 export const addOrUpdateAttributeFormOpenAtom = atom(false);
@@ -65,7 +65,7 @@ export function SchemaAttributeSheet({
 }: NewAttributeFormProps & ComponentProps<typeof Sheet>) {
   const { toast } = useToast();
   const editing = attributeToUpdateName;
-  const attributeToUpdate = attributeToUpdateName
+  const attributeToUpdate : DataType | null = attributeToUpdateName
     ? collectionSchema?.schema.properties[attributeToUpdateName]
     : null;
   const [open, setOpen] = useAtom(addOrUpdateAttributeFormOpenAtom);
@@ -76,21 +76,18 @@ export function SchemaAttributeSheet({
     attributeToUpdate?.type ?? 'string'
   );
   const [hasDefault, setHasDefault] = useState(
-    attributeToUpdate?.options?.default !== undefined
+    attributeToUpdate?.config?.default !== undefined
   );
-  const [setType, setSetType] = useState<ValueTypeKeys>(
-    attributeToUpdate?.items?.type ?? 'string'
+  const [setType, setSetType] = useState<PrimitiveTypeKeys>(
+    attributeToUpdate?.type === 'set' ? attributeToUpdate.items.type ?? 'string'
   );
   const [defaultType, setDefaultType] = useState<'Value' | 'now' | 'uuid'>(
-    typeof attributeToUpdate?.options?.default === 'object'
-      ? attributeToUpdate.options.default.func
+    typeof attributeToUpdate?.config?.default === 'object'
+      ? attributeToUpdate.config.default.func
       : 'Value'
   );
-  const [isOptional, setIsOptional] = useState(
-    !!(
-      collectionSchema.schema.optional &&
-      collectionSchema.schema.optional.includes(attributeToUpdateName)
-    )
+  const [optional, setOptional] = useState(
+    attributeToUpdate?.config?.optional ?? false
   );
   const [recordKeyTypes, setRecordKeyTypes] = useState<
     Record<string, [string, ValueTypeKeys]>
@@ -99,30 +96,30 @@ export function SchemaAttributeSheet({
       ? Object.fromEntries(
           Object.entries(attributeToUpdate.properties).map(([key, value]) => [
             key,
-            [key, (value as ValueAttributeDefinition).type],
+            [key, (value as ValueType).type],
           ])
         )
       : {}
   );
 
   const [defaultValue, setDefaultValue] = useState(
-    attributeToUpdate?.options?.default &&
-      typeof attributeToUpdate?.options?.default !== 'object'
-      ? String(attributeToUpdate.options.default)
+    attributeToUpdate?.config?.default &&
+      typeof attributeToUpdate?.config?.default !== 'object'
+      ? String(attributeToUpdate.config.default)
       : ''
   );
   const [nullable, setNullable] = useState(
-    attributeToUpdate?.options?.nullable ?? false
+    attributeToUpdate?.config?.nullable ?? false
   );
 
-  const formToAttributeDefinition = useCallback(() => {
+  const formToAttributeDefinition : ()=>DataType = useCallback(() => {
     const baseAttribute = { type: attributeBaseType };
     if (attributeBaseType === 'set') {
       return {
         ...baseAttribute,
         items: { type: setType },
-        options: { nullable },
-      } as CollectionAttributeDefinition;
+        config: { nullable, optional },
+      } as SetType;
     }
     if (attributeBaseType === 'record') {
       return {
@@ -133,10 +130,10 @@ export function SchemaAttributeSheet({
             { type },
           ])
         ),
-      } as RecordAttributeDefinition;
+      } as RecordType;
     }
-    const baseOptions = { nullable };
-    if (!hasDefault) return { ...baseAttribute, options: baseOptions };
+    const baseOptions = { nullable, optional };
+    if (!hasDefault) return { ...baseAttribute, config: baseOptions };
     let value: any = '';
     if (defaultType === 'Value')
       value =
@@ -147,14 +144,15 @@ export function SchemaAttributeSheet({
     if (defaultType === 'uuid') value = Schema.Default.uuid();
     return {
       ...baseAttribute,
-      options: { ...baseOptions, default: value },
-    } as AttributeDefinition;
+      config: { ...baseOptions, default: value },
+    } as PrimitiveType;
   }, [
     attributeBaseType,
     collectionSchema,
     setType,
     recordKeyTypes,
     nullable,
+    optional,
     hasDefault,
     defaultType,
     defaultValue,
@@ -162,14 +160,14 @@ export function SchemaAttributeSheet({
 
   const submitForm = useCallback(async () => {
     const updatedAttribute =
-      formToAttributeDefinition() as ValueAttributeDefinition;
+      formToAttributeDefinition();
     if (!attributeToUpdate) {
       const error = await addAttribute(
         client,
         collectionName,
         attributeName.split('.'),
         updatedAttribute,
-        isOptional
+        optional
       );
 
       if (error) {
@@ -187,8 +185,8 @@ export function SchemaAttributeSheet({
 
     const issues = await safeSchemaEdit(client, async (tx) => {
       if (
-        updatedAttribute.options.default === undefined &&
-        attributeToUpdate.options?.default !== undefined
+        updatedAttribute.config.default === undefined &&
+        attributeToUpdate.config?.default !== undefined
       ) {
         await tx.dropAttributeOption({
           collection: collectionName,
@@ -196,11 +194,8 @@ export function SchemaAttributeSheet({
           option: 'default',
         });
       }
-      const isAlreadyOptional = collectionSchema.schema.optional?.includes(
-        // @ts-expect-error
-        attributeName
-      );
-      if (!isAlreadyOptional && isOptional) {
+      const isAlreadyOptional = attributeToUpdate.config?.optional ?? false;
+      if (!isAlreadyOptional && optional) {
         await tx.setAttributeOptional({
           collection: collectionName,
           path: attributeName.split('.'),
@@ -210,7 +205,7 @@ export function SchemaAttributeSheet({
       await tx.alterAttributeOption({
         collection: collectionName,
         path: attributeName.split('.'),
-        options: updatedAttribute.options,
+        options: updatedAttribute.config,
       });
     });
 
@@ -231,7 +226,7 @@ export function SchemaAttributeSheet({
     collectionName,
     formToAttributeDefinition,
     collectionSchema,
-    isOptional,
+    optional,
   ]);
 
   return (
@@ -285,7 +280,7 @@ export function SchemaAttributeSheet({
                 value={attributeBaseType}
                 disabled={editing}
                 onValueChange={(value) => {
-                  setAttributeBaseType(value as ValueTypeKeys);
+                  setAttributeBaseType(value as PrimitiveTypeKeys);
                   setDefaultType('Value');
                 }}
                 data={[...ALL_TYPES]}
@@ -295,7 +290,7 @@ export function SchemaAttributeSheet({
                   value={setType}
                   disabled={editing}
                   onValueChange={(value) => {
-                    setSetType(value as ValueTypeKeys);
+                    setSetType(value as PrimitiveTypeKeys);
                   }}
                   data={[...VALUE_TYPE_KEYS]}
                 />
@@ -376,7 +371,7 @@ export function SchemaAttributeSheet({
             <div className="flex flex-row items-center gap-3">
               <Checkbox
                 className="w-5 h-5"
-                checked={isOptional}
+                checked={optional}
                 disabled={
                   !!(
                     attributeToUpdate &&
@@ -386,7 +381,7 @@ export function SchemaAttributeSheet({
                     )
                   )
                 }
-                onCheckedChange={setIsOptional}
+                onCheckedChange={setOptional}
               />
               <Label>Optional</Label>
             </div>
@@ -466,7 +461,7 @@ export function SchemaAttributeSheet({
                   className="w-5 h-5"
                   checked={nullable}
                   disabled={
-                    attributeToUpdate && attributeToUpdate?.options?.nullable
+                    attributeToUpdate && attributeToUpdate?.config?.nullable
                   }
                   onCheckedChange={setNullable}
                 />

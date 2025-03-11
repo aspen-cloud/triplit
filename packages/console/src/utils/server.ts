@@ -1,22 +1,6 @@
 import { ImportServerFormValues } from 'src/components/import-server-form.js';
 import { JWTPayloadIsOfCorrectForm } from './remote-helpers.js';
 import { consoleClient } from 'triplit/client.js';
-import { TriplitClient } from '@triplit/client';
-import { DBTransaction } from '@triplit/db/src/db-transaction.js';
-import { schema } from 'triplit/schema.js';
-
-export function addServiceToken(
-  clientTx: TriplitClient<typeof schema> | DBTransaction<typeof schema>,
-  serverUrl: string,
-  token: string
-) {
-  return clientTx.insert('tokens', {
-    id: 'service_' + serverUrl,
-    name: 'Service token',
-    value: token,
-    serverUrl,
-  });
-}
 
 export async function addServerToConsole(formValues: ImportServerFormValues) {
   const { displayName, serviceToken, serverUrl: server } = formValues;
@@ -24,14 +8,17 @@ export async function addServerToConsole(formValues: ImportServerFormValues) {
     const host = new URL(server).host;
 
     await consoleClient.transact(async (tx) => {
-      await Promise.all([
-        tx.insert('servers', {
-          displayName,
-          url: server,
-          id: host,
-        }),
-        addServiceToken(tx, server, serviceToken),
-      ]);
+      await tx.insert('servers', {
+        displayName,
+        url: server,
+        id: host,
+      });
+      await tx.insert('tokens', {
+        id: 'service_' + server,
+        name: 'Service token',
+        value: serviceToken,
+        serverUrl: server,
+      });
     });
     return host;
   } catch (e) {

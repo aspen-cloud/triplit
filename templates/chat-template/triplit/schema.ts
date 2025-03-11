@@ -1,4 +1,4 @@
-import { Models, Roles, Schema as S, or } from "@triplit/db"
+import { Models, Roles, Schema as S } from "@triplit/client"
 
 export const roles: Roles = {
   user: {
@@ -8,21 +8,25 @@ export const roles: Roles = {
   },
 }
 
-export const schema = {
+export const schema = S.Collections({
   messages: {
     schema: S.Schema({
       id: S.Id(),
       conversationId: S.String(),
+      // TODO: camel case
       sender_id: S.String(),
-      sender: S.RelationById("users", "$sender_id"),
       text: S.String(),
+      // TODO: this can be date
       created_at: S.String({ default: S.Default.now() }),
       likes: S.Optional(S.Set(S.String())),
+    }),
+    relationships: {
+      sender: S.RelationById("users", "$sender_id"),
       reactions: S.RelationMany("reactions", {
         where: [["messageId", "=", "$id"]],
       }),
       convo: S.RelationById("conversations", "$conversationId"),
-    }),
+    },
     permissions: {
       user: {
         read: {
@@ -43,11 +47,13 @@ export const schema = {
     schema: S.Schema({
       id: S.Id(),
       name: S.String(),
-      members: S.Set(S.String()),
+      members: S.Set(S.String(), { default: S.Default.Set.empty() }),
+    }),
+    relationships: {
       membersInfo: S.RelationMany("users", {
         where: [["id", "in", "$members"]],
       }),
-    }),
+    },
     permissions: {
       user: {
         read: {
@@ -70,10 +76,12 @@ export const schema = {
       id: S.Id(),
       createdAt: S.Date({ default: S.Default.now() }),
       messageId: S.String(),
-      message: S.RelationById("messages", "$messageId"),
       userId: S.String(),
       emoji: S.String(),
     }),
+    relationships: {
+      message: S.RelationById("messages", "$messageId"),
+    },
     permissions: {
       user: {
         read: {
@@ -123,10 +131,12 @@ export const schema = {
       email: S.String({ nullable: true, default: null }),
       emailVerified: S.Date({ nullable: true, default: null }),
       image: S.String({ nullable: true, default: null }),
+    }),
+    relationships: {
       conversations: S.RelationMany("conversations", {
         where: [["members", "contains", "$id"]],
       }),
-    }),
+    },
     permissions: {
       user: {
         // For the sake of demo, allow all users to read all users
@@ -140,7 +150,6 @@ export const schema = {
     schema: S.Schema({
       id: S.Id(),
       userId: S.String(),
-      user: S.RelationById("users", "$userId"),
       type: S.String(),
       provider: S.String(),
       providerAccountId: S.String(),
@@ -152,16 +161,21 @@ export const schema = {
       id_token: S.String({ nullable: true, default: null }),
       session_state: S.String({ nullable: true, default: null }),
     }),
+    relationships: {
+      user: S.RelationById("users", "$userId"),
+    },
     permissions: {},
   },
   sessions: {
     schema: S.Schema({
       id: S.Id(),
       userId: S.String(),
-      user: S.RelationById("users", "$userId"),
       expires: S.Date(),
       sessionToken: S.String(),
     }),
+    relationships: {
+      user: S.RelationById("users", "$userId"),
+    },
     permissions: {},
   },
   verificationTokens: {
@@ -173,4 +187,4 @@ export const schema = {
     }),
     permissions: {},
   },
-} satisfies Models<any, any>
+})

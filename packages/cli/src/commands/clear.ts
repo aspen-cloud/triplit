@@ -1,14 +1,13 @@
 import { blue } from 'ansis/colors';
-import { serverRequesterMiddleware } from '../middleware/add-server-requester.js';
+import { createServerRequesterMiddleware } from '../middleware/add-server-requester.js';
 import { Command } from '../command.js';
 import prompts from 'prompts';
 import * as Flag from '../flags.js';
-import ora from 'ora';
-import { or } from '@triplit/db';
+import ora, { Ora } from 'ora';
 
 export default Command({
   description: "Clears the sync server's database",
-  middleware: [serverRequesterMiddleware],
+  middleware: [createServerRequesterMiddleware({ destructive: true })],
   flags: {
     full: Flag.Boolean({
       char: 'f',
@@ -18,21 +17,25 @@ export default Command({
     }),
   },
   run: async ({ args, ctx, flags }) => {
-    const { proceed } = await prompts({
-      type: 'confirm',
-      name: 'proceed',
-      message: 'Are you sure you want to clear the database?',
-    });
-    if (!proceed) return;
-    console.log('Sync server: ', blue(ctx.url));
-    const spinner = ora('Clearing the sync server').start();
+    let spinner: Ora | undefined;
     try {
-      await ctx.requestServer('POST', '/clear', {
-        full: flags.full,
-      });
-      spinner.succeed('Sync server database has been cleared');
+      await ctx.remote.request(
+        'POST',
+        '/clear',
+        {
+          full: flags.full,
+        },
+        {
+          hooks: {
+            beforeRequest: () => {
+              spinner = ora('Clearing the sync server').start();
+            },
+          },
+        }
+      );
+      spinner?.succeed('Sync server database has been cleared');
     } catch (e) {
-      spinner.fail('Failed to clear the sync server database');
+      spinner?.fail('Failed to clear the sync server database');
       console.error(e);
       return;
     }

@@ -1,5 +1,5 @@
-import * as _ from "remeda"
-import { sumBy } from "remeda"
+import { sumBy } from "../../helpers/remeda.js"
+import { shuffle } from "../../helpers/remeda.js"
 import { describe, it, expect } from "bun:test"
 import { randomId } from "../../helpers/randomId.js"
 import { KeyValuePair, MAX, MIN, WriteOps } from "../../storage/types.js"
@@ -37,7 +37,7 @@ export function asyncDatabaseTestSuite(
 				{ key: ["a", "c", "c"], value: 9 },
 			]
 			const transaction = store.transact()
-			for (const { key, value } of _.shuffle(items)) {
+			for (const { key, value } of shuffle(items)) {
 				transaction.set(key, value)
 			}
 			await transaction.commit()
@@ -210,7 +210,7 @@ export function asyncDatabaseTestSuite(
 				{ key: ["a", "c", "c"], value: 9 },
 			]
 			const transaction = store.transact()
-			for (const { key, value } of _.shuffle(items)) {
+			for (const { key, value } of shuffle(items)) {
 				transaction.set(key, value)
 			}
 			expect(await transaction.scan()).toEqual(items)
@@ -288,7 +288,7 @@ export function asyncDatabaseTestSuite(
 				{ key: ["a", "c", "c"], value: 9 },
 			]
 			const transaction = store.transact()
-			for (const { key, value } of _.shuffle(items)) {
+			for (const { key, value } of shuffle(items)) {
 				transaction.set(key, value)
 			}
 			await transaction.commit()
@@ -324,7 +324,7 @@ export function asyncDatabaseTestSuite(
 				{ key: ["a", "c", "c"], value: 9 },
 			]
 			const transaction = store.transact()
-			for (const { key, value } of _.shuffle(items)) {
+			for (const { key, value } of shuffle(items)) {
 				transaction.set(key, value)
 			}
 			await transaction.commit()
@@ -369,7 +369,7 @@ export function asyncDatabaseTestSuite(
 				{ key: ["a", "c", "c"], value: 9 },
 			]
 			const transaction = store.transact()
-			for (const { key, value } of _.shuffle(items)) {
+			for (const { key, value } of shuffle(items)) {
 				transaction.set(key, value)
 			}
 			await transaction.commit()
@@ -399,7 +399,7 @@ export function asyncDatabaseTestSuite(
 				{ key: [2, true, true, true, 1], value: 1 },
 			]
 			const transaction = store.transact()
-			for (const { key, value } of _.shuffle(items)) {
+			for (const { key, value } of shuffle(items)) {
 				transaction.set(key, value)
 			}
 			await transaction.commit()
@@ -427,7 +427,7 @@ export function asyncDatabaseTestSuite(
 			]
 
 			const transaction = store.transact()
-			for (const { key, value } of _.shuffle(items)) {
+			for (const { key, value } of shuffle(items)) {
 				transaction.set(key, value)
 			}
 			await transaction.commit()
@@ -485,7 +485,7 @@ export function asyncDatabaseTestSuite(
 			]
 
 			const transaction = store.transact()
-			for (const { key, value } of _.shuffle(items)) {
+			for (const { key, value } of shuffle(items)) {
 				transaction.set(key, value)
 			}
 			await transaction.commit()
@@ -520,7 +520,7 @@ export function asyncDatabaseTestSuite(
 				{ key: ["a", "c", "c"], value: 9 },
 			]
 			const transaction = store.transact()
-			for (const { key, value } of _.shuffle(items)) {
+			for (const { key, value } of shuffle(items)) {
 				transaction.set(key, value)
 			}
 			await transaction.commit()
@@ -556,7 +556,7 @@ export function asyncDatabaseTestSuite(
 				{ key: ["a", "c", "c"], value: 9 },
 			]
 			const transaction = store.transact()
-			for (const { key, value } of _.shuffle(items)) {
+			for (const { key, value } of shuffle(items)) {
 				transaction.set(key, value)
 			}
 			await transaction.commit()
@@ -605,7 +605,7 @@ export function asyncDatabaseTestSuite(
 				{ key: ["a", "c", "c"], value: 9 },
 			]
 			const transaction = store.transact()
-			for (const { key, value } of _.shuffle(items)) {
+			for (const { key, value } of shuffle(items)) {
 				transaction.set(key, value)
 			}
 			await transaction.commit()
@@ -643,7 +643,7 @@ export function asyncDatabaseTestSuite(
 				{ key: ["a", "c", "c"], value: 9 },
 			]
 			const transaction = store.transact()
-			for (const { key, value } of _.shuffle(items)) {
+			for (const { key, value } of shuffle(items)) {
 				transaction.set(key, value)
 			}
 			await transaction.commit()
@@ -676,7 +676,7 @@ export function asyncDatabaseTestSuite(
 				{ key: ["a", "c", "c"], value: 9 },
 			]
 			const transaction = store.transact()
-			for (const { key, value } of _.shuffle(items)) {
+			for (const { key, value } of shuffle(items)) {
 				transaction.set(key, value)
 			}
 			await transaction.commit()
@@ -710,7 +710,7 @@ export function asyncDatabaseTestSuite(
 				{ key: ["a", "c", "c"], value: 9 },
 			]
 			const transaction = store.transact()
-			for (const { key, value } of _.shuffle(items)) {
+			for (const { key, value } of shuffle(items)) {
 				transaction.set(key, value)
 			}
 			await transaction.commit()
@@ -746,7 +746,7 @@ export function asyncDatabaseTestSuite(
 				{ key: ["a", "c", "c"], value: 9 },
 			]
 			const transaction = store.transact()
-			for (const { key, value } of _.shuffle(items)) {
+			for (const { key, value } of shuffle(items)) {
 				transaction.set(key, value)
 			}
 			await transaction.commit()
@@ -782,7 +782,7 @@ export function asyncDatabaseTestSuite(
 				{ key: ["a", "c", "c"], value: 9 },
 			]
 			const transaction = store.transact()
-			for (const { key, value } of _.shuffle(items)) {
+			for (const { key, value } of shuffle(items)) {
 				transaction.set(key, value)
 			}
 			await transaction.commit()
@@ -802,7 +802,7 @@ export function asyncDatabaseTestSuite(
 				(item, i) => ({ key: [item], value: i } as KeyValuePair)
 			)
 			const transaction = store.transact()
-			for (const { key, value } of _.shuffle(items)) {
+			for (const { key, value } of shuffle(items)) {
 				transaction.set(key, value)
 			}
 			await transaction.commit()
@@ -825,7 +825,7 @@ export function asyncDatabaseTestSuite(
 				{ key: ["a", "c", "c"], value: 9 },
 			]
 			const transaction = store.transact()
-			for (const { key, value } of _.shuffle(items)) {
+			for (const { key, value } of shuffle(items)) {
 				transaction.set(key, value)
 			}
 			await transaction.commit()
@@ -865,7 +865,7 @@ export function asyncDatabaseTestSuite(
 				{ key: ["a", "c", "c"], value: 9 },
 			]
 			const transaction = store.transact()
-			for (const { key, value } of _.shuffle(items)) {
+			for (const { key, value } of shuffle(items)) {
 				transaction.set(key, value)
 			}
 			await transaction.commit()
@@ -909,7 +909,7 @@ export function asyncDatabaseTestSuite(
 				{ key: ["a", "c", "c"], value: 9 },
 			]
 			const transaction = store.transact()
-			for (const { key, value } of _.shuffle(items)) {
+			for (const { key, value } of shuffle(items)) {
 				transaction.set(key, value)
 			}
 			await transaction.commit()
@@ -1021,7 +1021,7 @@ export function asyncDatabaseTestSuite(
 					["name", "c", "Andrew"],
 				]
 				const transaction = store.transact()
-				for (const key of _.shuffle(items)) {
+				for (const key of shuffle(items)) {
 					setAEV(key, transaction)
 				}
 				await transaction.commit()
@@ -1104,7 +1104,7 @@ export function asyncDatabaseTestSuite(
 				]
 
 				const transaction = store.transact()
-				for (const person of _.shuffle(people)) {
+				for (const person of shuffle(people)) {
 					await setPerson(person, transaction)
 				}
 				await transaction.commit()
@@ -1361,7 +1361,7 @@ export function asyncDatabaseTestSuite(
 					{ key: ["a", "c", "c"], value: 9 },
 				]
 				const transaction = store.transact()
-				for (const { key, value } of _.shuffle(items)) {
+				for (const { key, value } of shuffle(items)) {
 					transaction.set(key, value)
 				}
 				await transaction.commit()
@@ -1399,7 +1399,7 @@ export function asyncDatabaseTestSuite(
 					{ key: ["a", "c", "c"], value: 9 },
 				]
 				const transaction = store.transact()
-				for (const { key, value } of _.shuffle(items)) {
+				for (const { key, value } of shuffle(items)) {
 					transaction.set(key, value)
 				}
 				await transaction.commit()
@@ -1434,7 +1434,7 @@ export function asyncDatabaseTestSuite(
 					{ key: ["a", "c", "c"], value: 9 },
 				]
 				const transaction = store.transact()
-				for (const { key, value } of _.shuffle(items)) {
+				for (const { key, value } of shuffle(items)) {
 					transaction.set(key, value)
 				}
 				await transaction.commit()
@@ -1469,7 +1469,7 @@ export function asyncDatabaseTestSuite(
 					{ key: ["a", "c", "c"], value: 9 },
 				]
 				const transaction = store.transact()
-				for (const { key, value } of _.shuffle(items)) {
+				for (const { key, value } of shuffle(items)) {
 					transaction.set(key, value)
 				}
 				await transaction.commit()
@@ -1952,7 +1952,7 @@ export function asyncDatabaseTestSuite(
 						{ key: ["a", "c", "c"], value: 9 },
 					]
 					const transaction = store.transact()
-					for (const { key, value } of _.shuffle(items)) {
+					for (const { key, value } of shuffle(items)) {
 						transaction.set(key, value)
 					}
 					await transaction.commit()

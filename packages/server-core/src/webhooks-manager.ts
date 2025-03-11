@@ -1,9 +1,10 @@
+// @ts-nocheck TODO: update webhooks to next gen
 import {
   DBTransaction,
   DB as TriplitDB,
   TriplitError,
   splitIdParts,
-} from '@triplit/db';
+} from '@triplit/entity-db';
 import { createHmac } from 'node:crypto';
 import { UnserializableEntityError } from './errors.js';
 
@@ -208,6 +209,7 @@ export class WebhooksManager {
   }
 }
 
+export type WebhookAction = keyof WebhookJSONDefinition[string][string];
 export type WebhookJSONDefinition = {
   [url: string]: {
     [collectionName: string]: {

@@ -474,7 +474,6 @@ export default class DB<M extends Models = Models> {
     this.onSchemaChangeCallbacks = new Set([updateCachedSchemaOnChange]);
 
     this.logger.debug('Initializing', {
-      //@ts-expect-error
       schema: schema && schemaToJSON(schema),
       tripleStoreSchema: tripleStoreSchema && schemaToJSON(tripleStoreSchema),
     });
@@ -866,7 +865,7 @@ export default class DB<M extends Models = Models> {
     options: TransactOptions = {}
   ) {
     return this.transact(async (tx) => {
-      return await tx.insert(collectionName, doc);
+      return await tx.insert(collectionName, structuredClone(doc));
     }, options);
   }
 

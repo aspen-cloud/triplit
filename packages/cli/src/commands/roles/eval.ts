@@ -1,13 +1,8 @@
-import { normalize, parse } from 'node:path';
 import { Command } from '../../command.js';
 import * as Flag from '../../flags.js';
-import { serverRequesterMiddleware } from '../../middleware/add-server-requester.js';
+import { createServerRequesterMiddleware } from '../../middleware/add-server-requester.js';
 import { projectSchemaMiddleware } from '../../middleware/project-schema.js';
-import {
-  JSONToSchema,
-  getRolesFromSession,
-  normalizeSessionVars,
-} from '@triplit/db';
+import { normalizeSessionVars, getRolesFromSession } from '@triplit/entity-db';
 
 import * as JWT from 'jsonwebtoken';
 
@@ -28,7 +23,10 @@ export default Command({
       required: false,
     },
   ],
-  middleware: [serverRequesterMiddleware, projectSchemaMiddleware],
+  middleware: [
+    createServerRequesterMiddleware({ destructive: false }),
+    projectSchemaMiddleware,
+  ],
   run: async ({ flags, ctx, args }) => {
     let roleToken = args.token;
     let parsedClaims;
@@ -44,7 +42,7 @@ export default Command({
     parsedClaims = normalizeSessionVars(parsedClaims);
     let schema;
     if (flags.location === 'remote') {
-      const serverSchemaResponse = await ctx.requestServer('POST', '/schema', {
+      const serverSchemaResponse = await ctx.remote.request('POST', '/schema', {
         format: 'json',
       });
       if (serverSchemaResponse.type === 'schemaless') {
@@ -53,14 +51,14 @@ export default Command({
         );
         return;
       }
-      const { schema: schemaJSON } = serverSchemaResponse;
-      schema = JSONToSchema(schemaJSON);
+      schema = serverSchemaResponse.schema;
     } else {
-      if (!ctx.roles) {
+      const localSchema = await ctx.projectSchema.getSchema();
+      if (!localSchema?.roles) {
         console.log('No roles found in schema');
         return;
       }
-      schema = { roles: ctx.roles, schema: ctx.schema };
+      schema = localSchema;
     }
     if (!schema.roles) {
       console.log('No roles found in schema');

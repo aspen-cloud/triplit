@@ -27,7 +27,6 @@ export type TransportConnectParams = {
   server?: string;
   secure?: boolean;
   token?: string;
-  clientId: string;
   schema?: number;
   syncSchema?: boolean;
 };

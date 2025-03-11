@@ -3,6 +3,7 @@ import { getSession, storeSession } from '../auth-state.js';
 import { Middleware } from '../middleware.js';
 import { supabase } from '../supabase.js';
 import axios from 'axios';
+import { Session } from '@supabase/supabase-js';
 
 export const MANAGEMENT_API_URL =
   process.env.MANAGEMENT_API_URL ?? 'https://api.triplit.dev';
@@ -10,7 +11,7 @@ export const MANAGEMENT_API_URL =
 export const accessTokenMiddleware = Middleware({
   name: 'Access Token',
   run: async ({ flags, args }) => {
-    let session = getSession();
+    let session: Session | null = getSession();
     if (!session) {
       return `\nNo session found. Run ${green(
         '`triplit login`'
@@ -18,7 +19,7 @@ export const accessTokenMiddleware = Middleware({
     }
     // Check if session is expired
     const now = new Date();
-    const expiresAt = new Date(session.expires_at);
+    const expiresAt = new Date(session.expires_at ?? 0);
     if (now > expiresAt) {
       const { data, error } = await supabase.auth.refreshSession(session);
       if (error) {
@@ -26,6 +27,11 @@ export const accessTokenMiddleware = Middleware({
       }
       session = data.session;
       storeSession(data.session);
+      if (!session) {
+        return `\nSession expired. Run ${green(
+          '`triplit login`'
+        )} and then retry.\n`;
+      }
     }
     const requestServer = makeAPIRequester(session.access_token);
     return {

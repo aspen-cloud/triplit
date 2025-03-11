@@ -7,13 +7,13 @@ import CreateTriplitAppTabs from '../../components/CreateTriplitAppTabs.mdx';
 
 # Angular
 
-### New projects
+## New projects
 
 The fast way to get started with Triplit is to use Create Triplit App which will scaffold a Angular application with Triplit. Choose `Angular` when prompted for the frontend framework.
 
 <CreateTriplitAppTabs />
 
-### Existing projects
+## Existing projects
 
 If have an existing Angular project, you install the hooks provided by `@triplit/angular`:
 
@@ -41,86 +41,11 @@ If have an existing Angular project, you install the hooks provided by `@triplit
   </Tab>
 </Tabs>
 
-## Signal-based hooks
-
-### injectQuery
-
-The `injectQuery` hook subscribes to the provided query inside your Angular component and will automatically unsubscribe from the query when the component unmounts.
-
-The result of the hook is an object with the following `Signal` properties:
-
-- `results`: An array of entities that satisfy the query.
-- `fetching`: A boolean that will be `true` initially, and then turn `false` when either the local fetch returns cached results or if there were no cached results and the remote fetch has completed.
-- `fetchingLocal`: A boolean indicating whether the query is currently fetching from the local cache.
-- `fetchingRemote`: A boolean indicating whether the query is currently fetching from the server.
-- `error`: An error object if the query failed to fetch.
-
-```ts filename="app.component.ts"
-import { triplit } from '@/triplit/client.js';
-import { injectQuery } from '@triplit/angular';
-import { Component, computed } from '@angular/core';
-import { TodoComponent } from './todo/todo.component.js';
-
-@Component({
-  selector: 'app-root',
-  standalone: true,
-  imports: [TodoComponent],
-  template: `
-    <div>
-      @if (queryResults.fetching()) {
-        <p>Loading...</p>
-      }
-      @if (queryResults.results()) {
-        <div>
-          @for (todo of queryResults.results(); track todo.id) {
-            <app-todo [todo]="todo" />
-          }
-        </div>
-      }
-    </div>
-  `,
-})
-export class AppComponent {
-  queryResults = injectQuery(() => ({
-    client: triplit,
-    query: triplit.query('todos').order('created_at', 'DESC'),
-  }));
-}
-```
-
-### injectConnectionStatus
-
-The `injectConnectionStatus` hook subscribes to changes to the connection status of the client and will automatically unsubscribe when the component unmounts.
-
-```ts filename="connection-status.component.ts"
-import { Component } from '@angular/core';
-import { injectConnectionStatus } from '@triplit/angular';
-import { triplit } from '../../../triplit/client.js';
-
-@Component({
-  selector: 'app-connection-status',
-  standalone: true,
-  template: `<div>
-    <div class="{{ 'indicator ' + status().toLowerCase() }}"></div>
-    @if (status() === 'CLOSED') {
-      Offline
-    } @else if (status() === 'CONNECTING') {
-      Connecting
-    } @else {
-      Online
-    }
-  </div>`,
-})
-export class ConnectionStatusComponent {
-  status = injectConnectionStatus(triplit);
-}
-```
-
-## Observable-based hooks
+## Observables
 
 ### createQuery
 
-The `createQuery` hook return an object with observable properties that contain the results of the query, fetching states and error states. It has the same properties as the `injectQuery` hook, but the properties are `Observable` values instead of `Signal` values.
+The `createQuery` hook return an object with observable properties that contain the results of the query, fetching states and error states.
 
 ```ts filename="app.component.ts"
 import { triplit } from '@/triplit/client.js';
@@ -151,7 +76,7 @@ import { map } from 'rxjs';
 export class AppComponent {
   queryResults = createQuery(() => ({
     client: triplit,
-    query: triplit.query('todos').order('created_at', 'DESC'),
+    query: triplit.query('todos').Order('created_at', 'DESC'),
   }));
 }
 ```
@@ -195,7 +120,7 @@ import { map } from 'rxjs';
 export class AppComponent {
   infiniteQuery = createInfiniteQuery(() => ({
     client: triplit,
-    query: triplit.query('todos').order('created_at', 'DESC').limit(5),
+    query: triplit.query('todos').Order('created_at', 'DESC').Limit(5),
   }));
 }
 ```
@@ -245,7 +170,36 @@ import { map } from 'rxjs';
 export class AppComponent {
   paginatedQuery = createPaginatedQuery(() => ({
     client: triplit,
-    query: triplit.query('todos').order('created_at', 'DESC').limit(5),
+    query: triplit.query('todos').Order('created_at', 'DESC').Limit(5),
   }));
+}
+```
+
+### createConnectionStatus
+
+The `createConnectionStatus` function returns an observable that emits the current connection status of the client.
+
+```ts filename="app.component.ts"
+import { Component } from '@angular/core';
+import { createConnectionStatus } from '@triplit/angular';
+import { triplit } from '@/triplit/client.js';
+import { CommonModule } from '@angular/common';
+
+@Component({
+  selector: 'app-connection-status',
+  standalone: true,
+  imports: [CommonModule],
+  template: `<div>
+    @if ((status$ | async) === 'CLOSED') {
+      Offline
+    } @else if ((status$ | async) === 'CONNECTING') {
+      Connecting
+    } @else {
+      Online
+    }
+  </div>`,
+})
+export class ConnectionStatusComponent {
+  status$ = createConnectionStatus(triplit);
 }
 ```

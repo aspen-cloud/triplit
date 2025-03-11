@@ -1,20 +1,18 @@
 import { Command } from '../../command.js';
 import * as Flag from '../../flags.js';
-import { serverRequesterMiddleware } from '../../middleware/add-server-requester.js';
-import {
-  JSONToSchema,
-  schemaToJSON,
-  exportSchemaAsJSONSchema,
-} from '@triplit/db';
+import { createServerRequesterMiddleware } from '../../middleware/add-server-requester.js';
+import { exportSchemaAsJSONSchema } from '@triplit/utilities';
 import { format as formatFile } from 'prettier';
 import { projectSchemaMiddleware } from '../../middleware/project-schema.js';
 import { schemaFileContentFromSchema } from '../../schema.js';
+import { DBSchema } from '@triplit/entity-db';
 
 const DISPLAY_FORMATS = ['json', 'typescript', 'file', 'json-schema'] as const;
 type SchemaFormat = (typeof DISPLAY_FORMATS)[number];
 
 export default Command({
-  description: 'View the schema of the current project',
+  description:
+    'View the schema of the current project. No output if schemaless.',
   flags: {
     location: Flag.Enum({
       char: 'l',
@@ -29,28 +27,32 @@ export default Command({
       default: 'typescript',
     }),
   },
-  middleware: [serverRequesterMiddleware, projectSchemaMiddleware],
+  middleware: [
+    createServerRequesterMiddleware({
+      destructive: false,
+    }),
+    projectSchemaMiddleware,
+  ],
   run: async ({ flags, ctx }) => {
     const location = flags.location;
     if (location === 'local') {
-      const schema = ctx.schema;
-      const roles = ctx.roles;
-      if (!schema) return;
+      const localSchema = await ctx.projectSchema.getSchema();
+      if (!localSchema) return;
+      if (!localSchema.collections) return;
       const formattedSchema = await formatSchemaForDisplay(
-        { collections: schema, roles, version: 0 },
+        localSchema,
         flags.format as SchemaFormat
       );
       console.log(formattedSchema);
     }
     if (location === 'remote') {
-      const serverSchemaResponse = await ctx.requestServer('POST', '/schema', {
+      const serverSchemaResponse = await ctx.remote.request('POST', '/schema', {
         format: 'json',
       });
       if (serverSchemaResponse.type === 'schemaless') {
         return;
       } else if (serverSchemaResponse.type === 'schema') {
-        const { schema: schemaJSON } = serverSchemaResponse;
-        const schema = JSONToSchema(schemaJSON);
+        const { schema } = serverSchemaResponse;
         const formattedSchema = await formatSchemaForDisplay(
           schema,
           flags.format as SchemaFormat
@@ -64,11 +66,11 @@ export default Command({
 });
 
 async function formatSchemaForDisplay(
-  schema,
+  schema: DBSchema,
   format: SchemaFormat
 ): Promise<string> {
   if (format === 'json') {
-    return JSON.stringify(schemaToJSON(schema), null, 2);
+    return JSON.stringify(schema, null, 2);
   }
   if (format === 'json-schema') {
     return JSON.stringify(

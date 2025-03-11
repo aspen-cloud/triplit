@@ -31,7 +31,8 @@ export class WebSocketTransport implements SyncTransport {
     return !!this.ws && this.ws.readyState === this.ws.OPEN;
   }
   get connectionStatus(): ConnectionStatus {
-    return this.ws ? friendlyReadyState(this.ws) : 'CLOSED';
+    // @ts-expect-error
+    return this.ws ? friendlyReadyState(this.ws) : 'UNINITIALIZED';
   }
   onOpen(callback: (ev: any) => void): void {
     if (this.ws) this.ws.onopen = callback;
@@ -76,11 +77,10 @@ export class WebSocketTransport implements SyncTransport {
   }
   connect(params: TransportConnectParams): void {
     if (this.ws && this.isOpen) this.close();
-    const { token, clientId, schema, syncSchema, server, secure } = params;
+    const { token, schema, syncSchema, server, secure } = params;
     const missingParams = [];
-    if (!token || !clientId || !server) {
+    if (!token || !server) {
       if (!token) missingParams.push('token');
-      if (!clientId) missingParams.push('clientId');
       if (!server) missingParams.push('server');
       console.warn(
         `Missing required params: [${missingParams.join(
@@ -94,7 +94,6 @@ export class WebSocketTransport implements SyncTransport {
       wsOptions.set('schema', schema.toString());
     }
     wsOptions.set('sync-schema', String(syncSchema));
-    wsOptions.set('client', clientId);
     wsOptions.set('token', token);
     const wsUri = `${
       secure ? 'wss' : 'ws'
@@ -167,18 +166,11 @@ function friendlyReadyState(conn: WebSocket): ConnectionStatus {
   }
 }
 
-if (
-  typeof WebSocket !== 'undefined' &&
-  typeof self !== 'undefined' &&
-  !!Object.getOwnPropertyDescriptor(self, 'WebSocket')?.writable
-) {
-  // Add any changes to the WebSocket type here (ex more event handlers)
-  var WebSocketProxy = new Proxy(WebSocket, {
+if (typeof globalThis !== 'undefined' && globalThis.WebSocket) {
+  var WebSocketProxy = new Proxy(globalThis.WebSocket, {
     construct: function (target, args) {
-      const instance = new target(
-        // @ts-ignore
-        ...args
-      );
+      //@ts-expect-error
+      const instance = new target(...args);
 
       function dispatchConnectionChangeEvent() {
         instance.dispatchEvent(new Event('connectionchange'));
@@ -190,15 +182,14 @@ if (
         }
       }
 
-      // Capture the connecting state after the constructor is called
-      setTimeout(function () {
+      // Handle connecting state after constructor
+      setTimeout(() => {
         dispatchConnectionChangeEvent();
       }, 0);
 
       const openHandler = () => {
         dispatchConnectionChangeEvent();
       };
-
       const closeHandler = () => {
         dispatchConnectionChangeEvent();
         instance.removeEventListener('open', openHandler);
@@ -212,6 +203,6 @@ if (
     },
   });
 
-  // replace the native WebSocket with the proxy
-  WebSocket = WebSocketProxy;
+  // Replace native/global WebSocket with the proxy
+  globalThis.WebSocket = WebSocketProxy;
 }

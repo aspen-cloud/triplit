@@ -1,19 +1,30 @@
-import { serverRequesterMiddleware } from '../../middleware/add-server-requester.js';
+import { createServerRequesterMiddleware } from '../../middleware/add-server-requester.js';
 import { Command } from '../../command.js';
-import ora from 'ora';
+import ora, { Ora } from 'ora';
 
 export default Command({
   description: 'Removes all webhooks from the sync server',
-  middleware: [serverRequesterMiddleware],
+  middleware: [createServerRequesterMiddleware({ destructive: true })],
   run: async ({ ctx }) => {
-    const spinner = ora(
-      'Clearing the webhooks currently running on the server...'
-    ).start();
+    let spinner: Ora | undefined;
     try {
-      const res = await ctx.requestServer('POST', '/webhooks-clear');
-      spinner.succeed('Webhooks cleared from the server');
+      const res = await ctx.remote.request(
+        'POST',
+        '/webhooks-clear',
+        {},
+        {
+          hooks: {
+            beforeRequest: () => {
+              ora(
+                'Clearing the webhooks currently running on the server...'
+              ).start();
+            },
+          },
+        }
+      );
+      spinner?.succeed('Webhooks cleared from the server');
     } catch (e) {
-      spinner.fail('Failed to clear webhooks from the server');
+      spinner?.fail('Failed to clear webhooks from the server');
       console.error(e);
       return;
     }

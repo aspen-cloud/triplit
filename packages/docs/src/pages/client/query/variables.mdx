@@ -8,15 +8,15 @@ Variables in Triplit allow you to pass in preset values into queries. They consi
 
 ### Query variables
 
-Query variables are prefixed with the `query` scope and are accessible just to the query they are defined on. They are defined with the `vars` method in the query builder. For example:
+Query variables are prefixed with the `query` scope and are accessible just to the query they are defined on. They are defined with the `Vars` method in the query builder. For example:
 
 ```typescript
-const baseQuery = client.query('employees').where([
+const baseQuery = client.query('employees').Where([
   ['team', '=', 'Delivery Crew'],
   ['name', '=', '$query.name'],
 ]);
-const fryQuery = baseQuery.vars({ name: 'Philip J. Fry' });
-const leelaQuery = baseQuery.vars({ name: 'Turanga Leela' });
+const fryQuery = baseQuery.Vars({ name: 'Philip J. Fry' });
+const leelaQuery = baseQuery.Vars({ name: 'Turanga Leela' });
 ```
 
 This can help prevent writing the same query multiple times with different values.
@@ -27,10 +27,10 @@ Global variables are prefixed with the `global` scope and are accessible to all 
 
 ```typescript
 const client = new TriplitClient({ variables: { name: 'Philip J. Fry' } });
-let query = client.query('employees').where('name', '=', '$global.name'); // resolves to 'Philip J. Fry'
+let query = client.query('employees').Where('name', '=', '$global.name'); // resolves to 'Philip J. Fry'
 
 client.db.updateGlobalVariables({ name: 'Turanga Leela' });
-query = client.query('employees').where('name', '=', '$global.name'); // resolves to 'Turanga Leela'
+query = client.query('employees').Where('name', '=', '$global.name'); // resolves to 'Turanga Leela'
 ```
 
 ### Session variables

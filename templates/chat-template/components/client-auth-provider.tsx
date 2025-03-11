@@ -12,7 +12,6 @@ export function ClientAuthProvider({
 }) {
   const { data: session } = useSession()
   useEffect(() => {
-    // @ts-expect-error
     const token = session?.token
     if (token !== client.token) {
       const endSessionPromise = client.endSession()

@@ -45,14 +45,15 @@ If have an existing Vue project, you install the hooks provided by `@triplit/vue
 
 The `useQuery` hook subscribes to the provided query inside your Vue component and will automatically unsubscribe from the query when the component unmounts.
 
-The result of the hook is an object with the following properties:
+The result of the hook is a [reactive](https://vuejs.org/guide/essentials/reactivity-fundamentals.html#reactive) object with the following properties:
 
 - `results`: An array of entities that satisfy the query.
 - `fetching`: A boolean that will be `true` initially, and then turn `false` when either the local fetch returns cached results or if there were no cached results and the remote fetch has completed.
 - `fetchingLocal`: A boolean indicating whether the query is currently fetching from the local cache.
 - `fetchingRemote`: A boolean indicating whether the query is currently fetching from the server.
 - `error`: An error object if the query failed to fetch.
-- `updateQuery`: A function that can be called to update the query.
+
+Because `useQuery` uses the `reactive` function from Vue, it can't be destructured in the `setup` block. Instead, you can access the properties directly from the returned object.
 
 ```vue filename="App.vue"
 <script setup lang="ts">
@@ -61,21 +62,17 @@ import Todo from './components/Todo.vue';
 import { computed } from 'vue';
 import { client } from './triplit';
 
-const {
-  fetching,
-  results: todos,
-  error,
-} = useQuery(client, client.query('todos'));
+const state = useQuery(client, client.query('todos'));
 </script>
 
 <template>
   <div>
     <h1>Todos</h1>
-    <span v-if="fetching">Loading...</span>
-    <span v-else-if="error">Error: {{ error.message }}</span>
-    <ul v-else-if="todos">
+    <span v-if="state.fetching">Loading...</span>
+    <span v-else-if="state.error">Error: {{ state.error.message }}</span>
+    <ul v-else-if="state.todos">
       <Todo
-        v-for="todo in todos"
+        v-for="todo in state.todos"
         :key="todo.id"
         :id="todo.id"
         :text="todo.text"
@@ -95,12 +92,12 @@ The `useConnectionStatus` hook subscribes to changes to the connection status of
 import { useConnectionStatus } from '@triplit/vue';
 import { client } from './triplit';
 
-const { connectionStatus } = useConnectionStatus(client);
+const connection = useConnectionStatus(client);
 </script>
 <template>
   <div>
-    <span v-if="connectionStatus === 'OPEN'">🟢</span>
-    <span v-else-if="connectionStatus === 'CLOSED'">🔴</span>
+    <span v-if="connection.status === 'OPEN'">🟢</span>
+    <span v-else-if="connection.status === 'CLOSED'">🔴</span>
     <span v-else>🟡</span>
   </div>
 </template>

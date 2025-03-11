@@ -65,7 +65,7 @@ const { _: args, ...flags } = argv;
 
 await execute(args, flags);
 
-export async function execute(args: string[], flags: {}) {
+export async function execute(args: string[], flags: Record<string, any>) {
   const commands = findCommands(
     fileURLToPath(new URL('.', import.meta.url)) + '/commands'
   );
@@ -127,7 +127,7 @@ export async function execute(args: string[], flags: {}) {
         if (
           'default' in flagInput &&
           !(flagName in flags) &&
-          !(flagInput.char in flags)
+          !(flagInput.char && flagInput.char in flags)
         ) {
           flags[flagName] = flagInput.default;
         }
@@ -135,30 +135,29 @@ export async function execute(args: string[], flags: {}) {
       },
       flags
     );
-    unaliasedFlags = Object.entries(flagsWithDefaults).reduce(
-      (acc, [flagName, flagInput]) => {
-        const flagDef = cmdFlagsDefs.find(
-          ([name, { char }]) => name === flagName || char === flagName
-        );
-        if (flagDef) {
-          const [name, def] = flagDef;
-          try {
-            acc[name] = def.parse(flagInput as string | boolean | number);
-          } catch (e) {
-            console.error(
-              // @ts-ignore
-              red`Could not interpret input for flag ${bold(name)}`
-            );
-            console.error(`   ${e.message}`);
-            process.exit(1);
-          }
-        } else {
-          acc[flagName] = flagInput;
+    unaliasedFlags = Object.entries(flagsWithDefaults).reduce<
+      Record<string, any>
+    >((acc, [flagName, flagInput]) => {
+      const flagDef = cmdFlagsDefs.find(
+        ([name, { char }]) => name === flagName || char === flagName
+      );
+      if (flagDef) {
+        const [name, def] = flagDef;
+        try {
+          acc[name] = def.parse(flagInput as string | boolean | number);
+        } catch (e: any) {
+          console.error(
+            // @ts-ignore
+            red`Could not interpret input for flag ${bold(name)}`
+          );
+          console.error(`   ${e.message}`);
+          process.exit(1);
         }
-        return acc;
-      },
-      {}
-    );
+      } else {
+        acc[flagName] = flagInput;
+      }
+      return acc;
+    }, {});
   }
   let ctx = {};
   for (const middleware of cmdDef.middleware ?? []) {
@@ -210,9 +209,9 @@ export async function execute(args: string[], flags: {}) {
       ctx,
     });
     if (result && React.isValidElement(result)) {
-      render(result, { patchConsole: false });
+      render(result, { patchConsole: false, exitOnCtrlC: false });
     }
-  } catch (e) {
+  } catch (e: any) {
     console.error(red(e.message));
     // TODO report error
     process.exit(1);
@@ -239,7 +238,7 @@ function printCommandHelp<
 >(name: string, cmdDef: Cmd) {
   // @ts-ignore
   console.log(`triplit ${bold(name)}`);
-  console.log(dim(cmdDef.description));
+  if (cmdDef.description) console.log(dim(cmdDef.description));
   console.log();
   if (cmdDef.args) {
     console.log('Arguments:');
@@ -288,13 +287,17 @@ function printFlags(flags: Record<string, Flag>) {
   )) {
     console.log(
       `--${bold(name)}${flag.char ? `, -${bold(flag.char)}` : ''} ${dim(
-        flag.description
+        flag.description ?? ''
       )}`
     );
     // @ts-expect-error This is specific to enum flags, maybe flag types have their own help text function?
     const options = flag.options;
     if (options) {
       console.log(`    Options: ${options.join(', ')}`);
+    }
+    const defaultValue = flag.default;
+    if (defaultValue !== undefined) {
+      console.log(`    Default: ${defaultValue}`);
     }
   }
 }

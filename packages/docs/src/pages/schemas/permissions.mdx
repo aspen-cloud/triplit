@@ -59,8 +59,8 @@ Wildcards in the `match` object (prefixed with `$`) will be assigned to [variabl
   "type": "user",
   "uid": 123
 }
-// Query - resolves to db.query('todos').where('authorId', '=', 123);
-db.query('todos').where('authorId', '=', '$role.userId');
+// Query - resolves to db.query('todos').Where('authorId', '=', 123);
+db.query('todos').Where('authorId', '=', '$role.userId');
 ```
 
 Your schema file should export the `roles` object for use in your schema definitions.
@@ -77,11 +77,13 @@ By default, there are no access controls on the database and they must be config
 The following example turns off all access to the `todos` collection so it is only accessible with your [`service` token](/auth#tokens):
 
 ```typescript filename="schema.ts" copy
-const roles = {
+import { type Roles, Schema as S } from '@triplit/client';
+
+const roles: Roles = {
   // Role definitions
 };
 
-const schema = {
+const schema = S.Collections({
   todos: {
     schema: S.Schema({
       id: S.Id(),
@@ -90,7 +92,7 @@ const schema = {
     }),
     permissions: {},
   },
-};
+});
 
 export { schema, roles };
 ```
@@ -118,7 +120,7 @@ const roles: Roles = {
   // Role definitions
 };
 
-const schema = {
+const schema = S.Collections({
   todos: {
     schema: S.Schema({
       id: S.Id(),
@@ -140,7 +142,7 @@ const schema = {
       },
     },
   },
-};
+});
 
 export { schema, roles };
 ```
@@ -156,7 +158,7 @@ const roles: Roles = {
   // Role definitions
 };
 
-const schema = {
+const schema = S.Collections({
   todos: {
     schema: S.Schema({
       id: S.Id(),
@@ -178,7 +180,7 @@ const schema = {
       },
     },
   },
-};
+});
 
 export { schema, roles };
 ```
@@ -194,7 +196,7 @@ const roles = {
   // Role definitions
 };
 
-const schema = {
+const schema = S.Collections({
   todos: {
     schema: S.Schema({
       id: S.Id(),
@@ -216,7 +218,7 @@ const schema = {
       },
     },
   },
-};
+});
 
 export { schema, roles };
 ```
@@ -226,13 +228,13 @@ export { schema, roles };
 You may also optionally define a `postUpdate` permission that will be run after an update operation has been completed. This is useful for confirming that updated data is valid. For example, this checks that a `user` has not re-assigned a todo to another `user`:
 
 ```typescript filename="schema.ts" copy
-import { type Roles, Schema } from '@triplit/client';
+import { type Roles, Schema as S } from '@triplit/client';
 
 const roles: Roles = {
   // Role definitions
 };
 
-const schema = {
+const schema = S.Collections({
   todos: {
     schema: S.Schema({
       id: S.Id(),
@@ -252,7 +254,7 @@ const schema = {
       },
     },
   },
-};
+});
 
 export { schema, roles };
 ```
@@ -262,14 +264,14 @@ export { schema, roles };
 To allow users to delete data, you must define a `delete` permission that specifies the roles that may delete data and any additional restrictions. The following example allows a `user` to delete todos that they authored and an `admin` to delete any todo:
 
 ```typescript
-import { type Roles, Schema } from '@triplit/client';
+import { type Roles, Schema as S } from '@triplit/client';
 
 // schema.ts
 const roles: Roles = {
   // Role definitions
 };
 
-const schema = {
+const schema = S.Collections({
   todos: {
     schema: S.Schema({
       id: S.Id(),
@@ -291,7 +293,7 @@ const schema = {
       },
     },
   },
-};
+});
 
 export { schema, roles };
 ```
@@ -315,7 +317,7 @@ const roles: Roles = {
   },
 };
 
-const schema = {
+const schema = S.Collections({
   profiles: {
     schema: S.Schema({
       id: S.Id(), // Use the user ID from your auth provider when inserting
@@ -359,5 +361,5 @@ const schema = {
       },
     },
   },
-};
+});
 ```

@@ -24,9 +24,14 @@ export default async function IndexPage() {
           </li>
           <li>
             Realtime updates and syncing between clients using Triplit&apos;s
-            sync enginge.
+            sync engine
           </li>
-          <li>User accounts stored in Triplit&apos;s remote database </li>
+          <li>Durable client storage with IndexedDB</li>
+          <li>
+            User accounts stored in Triplit&apos;s remote database and database
+            auth sessions managed by Triplit
+          </li>
+          <li>Simple local development experience with seeding utilities</li>
         </ul>
         <h3>Built with</h3>
         <p>
@@ -37,6 +42,10 @@ export default async function IndexPage() {
           <a href="https://triplit.dev">Triplit</a>.
         </p>
         <h3>Questions/Feedback</h3>{" "}
+        <p>
+          Instructions to run the app and local development environment are in
+          the `README.md` of this repo.
+        </p>
         <p>
           Get in touch with us on{" "}
           <a href="'https://discord.gg/q89sGWHqQ5'">Discord</a>

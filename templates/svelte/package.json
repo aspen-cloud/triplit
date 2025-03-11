@@ -11,20 +11,20 @@
     "lint": "eslint ."
   },
   "devDependencies": {
-    "@sveltejs/adapter-auto": "^3.0.0",
-    "@sveltejs/kit": "^2.0.0",
-    "@sveltejs/vite-plugin-svelte": "^3.0.0",
+    "@sveltejs/adapter-auto": "^4.0.0",
+    "@sveltejs/kit": "^2.18.0",
+    "@sveltejs/vite-plugin-svelte": "^5.0.3",
     "@triplit/cli": "latest",
     "@types/eslint": "^8.56.7",
     "eslint": "^9.0.0",
     "eslint-plugin-svelte": "^2.36.0",
     "globals": "^15.0.0",
-    "svelte": "^5.0.0-next.1",
-    "svelte-check": "^3.6.0",
+    "svelte": "^5.22.6",
+    "svelte-check": "^4.1.5",
     "tslib": "^2.4.1",
     "typescript": "^5.0.0",
     "typescript-eslint": "^8.0.0-alpha.20",
-    "vite": "^5.0.3"
+    "vite": "^6.2.1"
   },
   "type": "module",
   "dependencies": {

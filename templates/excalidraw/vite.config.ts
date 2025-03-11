@@ -26,4 +26,7 @@ export default defineConfig({
       includeAssets: ['**/*'],
     }),
   ],
+  define: {
+    'process.env': {},
+  },
 });

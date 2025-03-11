@@ -1,5 +1,5 @@
 import { expectTypeOf, test, describe } from 'vitest';
-import { Schema as S } from '@triplit/db';
+import { Schema as S } from '@triplit/entity-db';
 import { HttpClient } from '../../../src/http-client/http-client.js';
 
 describe('.insert()', () => {
@@ -9,8 +9,10 @@ describe('.insert()', () => {
         schema: S.Schema({
           id: S.Id(),
           attrA: S.String(),
-          b: S.RelationById('b', '$id'),
         }),
+        relationships: {
+          b: S.RelationById('b', '$id'),
+        },
       },
       b: {
         schema: S.Schema({
@@ -28,12 +30,12 @@ describe('.insert()', () => {
       const client = new HttpClient({ schema });
       const expectEntityParamA = expectTypeOf(client.insert<'a'>).parameter(1);
       expectEntityParamA.toEqualTypeOf<{
-        id?: string;
+        id?: string | null | undefined;
         attrA: string;
       }>();
       const expectEntityParamB = expectTypeOf(client.insert<'b'>).parameter(1);
       expectEntityParamB.toEqualTypeOf<{
-        id?: string;
+        id?: string | null | undefined;
         attrB: string;
       }>();
     });
@@ -43,11 +45,11 @@ describe('.insert()', () => {
         expectTypeOf(client.insert).parameter(0).toEqualTypeOf<string>();
       });
 
-      test('entity arg is typed as {[x: string]: any, id?: string}', () => {
+      test('entity arg is typed as { [x: string]: any }', () => {
         const client = new HttpClient();
         expectTypeOf(client.insert<'a'>)
           .parameter(1)
-          .toEqualTypeOf<{ [x: string]: any; id?: string }>();
+          .toEqualTypeOf<{ [x: string]: any }>();
       });
     });
   });
@@ -72,11 +74,11 @@ describe('.insert()', () => {
         const client = new HttpClient({ schema });
         expectTypeOf(client.bulkInsert).parameter(0).toEqualTypeOf<{
           a?: Array<{
-            id?: string;
+            id?: string | null | undefined;
             attrA: string;
           }>;
           b?: Array<{
-            id?: string;
+            id?: string | null | undefined;
             attrB: string;
           }>;
         }>();
@@ -84,13 +86,12 @@ describe('.insert()', () => {
     });
 
     describe('schemaless', () => {
-      test('bulk arg is typed as Record<', () => {
+      test('bulk arg is typed as Record of schemaless entity arrays', () => {
         const client = new HttpClient();
         expectTypeOf(client.bulkInsert).parameter(0).toEqualTypeOf<{
           [x: string]:
             | {
                 [x: string]: any;
-                id?: string | undefined;
               }[]
             | undefined;
         }>();

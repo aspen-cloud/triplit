@@ -1,5 +1,5 @@
 import { TriplitClient } from '@triplit/client';
-import { TriplitError } from '@triplit/db';
+import { TriplitError } from '@triplit/entity-db';
 
 export type TriplitDataTypes =
   | string

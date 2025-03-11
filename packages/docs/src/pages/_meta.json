@@ -1,6 +1,7 @@
 {
   "index": "Welcome",
   "quick-start": "Quick Start",
+  "v1-migration": "Migrating to Triplit 1.0",
   "react-tutorial": "React + Vite tutorial",
   "faq": "FAQ",
   "-1": {

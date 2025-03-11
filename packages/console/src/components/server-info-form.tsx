@@ -12,7 +12,7 @@ import { useQueryOne } from '@triplit/react';
 export function ServerInfoForm({ serverId }: { serverId: string }) {
   const { result: server, fetching } = useQueryOne(
     consoleClient,
-    consoleClient.query('servers').where('id', '=', serverId).include('tokens')
+    consoleClient.query('servers').Where('id', '=', serverId).Include('tokens')
   );
 
   const [draftName, setDraftName] = useState('');

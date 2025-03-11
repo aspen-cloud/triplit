@@ -17,6 +17,7 @@ import {
   ValueCursor,
   WhereFilter,
 } from './query/types/index.js';
+import { TriplitError } from './errors.js';
 
 export function isFilterStatement<
   M extends Models,
@@ -108,6 +109,8 @@ export function compareCursors(
   cursor1: ValueCursor | undefined,
   cursor2: ValueCursor | undefined
 ) {
+  if (cursor1 && cursor1.length > 2) throw new TriplitError('invalid cursor');
+  if (cursor2 && cursor2.length > 2) throw new TriplitError('invalid cursor');
   if (!cursor1 && !cursor2) return 0;
   if (!cursor1) return -1;
   if (!cursor2) return 1;
@@ -118,6 +121,7 @@ export function compareCursors(
   if (cursor2Value instanceof Date) cursor2Value = cursor2Value.getTime();
   if (cursor1Value !== cursor2Value)
     return encodeValue(cursor1Value) > encodeValue(cursor2Value) ? 1 : -1;
-  if (cursor1[1] !== cursor2[1]) return cursor1[1] > cursor2[1] ? 1 : -1;
+  if (cursor1[1] !== cursor2[1])
+    return (cursor1[1] as string) > (cursor2[1] as string) ? 1 : -1;
   return 0;
 }

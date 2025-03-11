@@ -2,11 +2,10 @@ import { client } from "@/lib/triplit.js"
 
 // Creates a new conversation with the current user as the only member
 async function addConversation(name: string, currentUserId: string) {
-  const { output: conversation } = await client.insert("conversations", {
+  return client.insert("conversations", {
     name,
     members: new Set([currentUserId]),
   })
-  return conversation
 }
 
 // Adds a user to an existing conversation, using the Triplit update API which supports

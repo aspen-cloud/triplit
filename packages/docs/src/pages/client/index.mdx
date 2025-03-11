@@ -20,11 +20,11 @@ Along with reads, every client is able to write to its database and Triplit ensu
 
 ### Client Database
 
-On the client, Triplit keeps your data in two storage areas: an `outbox` and a `cache`. The outbox is a queue of data that is waiting to be sent to the server. The cache is a local copy of the data that has been confirmed to have been received by the server.
+On the client, Triplit keeps your data in two storage areas: an `outbox` and a `cache`. The outbox is a buffer of data that is waiting to be sent to the server. The cache is a local copy of the data that has been confirmed to have been received by the server.
 
-Although the outbox acts as a queue, it is actually a separate part of the database that is equally queryable. By default, results from the cache and outbox are merged together, however queries can be configured to only return data from the cache (to display only confirmed data) or only return data from the outbox (to denote unconfirmed data).
+By default, results from the cache and outbox are merged together, however queries can be configured to only return data from the cache (to display only confirmed data) or only return data from the outbox (to denote unconfirmed data).
 
-If a client is offline or is not connected to the remote database for any reason, then the data will remain in the outbox so you can sync that data can be synced at a later time.
+If a client is offline or is not connected to the remote database for any reason, then the data will remain in the outbox so that data can be synced at a later time.
 
 ### Server Database
 
@@ -32,7 +32,7 @@ The server database provides durable centralized storage for clients and handles
 
 ## Setting up sync
 
-To set up syncing, you need to tell your Triplit Client how to connect to the remote database with the `sync` options in the constructor. Additional options can be found [here](/client/options).
+To set up syncing, you need to tell your Triplit Client how to connect to the remote database with the `serverUrl` and `token` options in the constructor. Additional options can be found [here](/client/options).
 
 ```typescript
 const client = new TriplitClient({
@@ -46,7 +46,7 @@ const client = new TriplitClient({
 [Once you've installed](/getting-started) the Triplit CLI, you can run the following command to start a local Triplit Server (and remote database):
 
 ```bash
-triplit dev
+npm run triplit dev
 ```
 
 By default this will set up a server at `http://localhost:6543`, and should display an access token for your database.
@@ -61,7 +61,7 @@ const client = new TriplitClient({
   token: '<access token>',
 });
 
-const query = client.query('todos').build();
+const query = client.query('todos');
 
 client.subscribe(query, (todos) => {
   console.log(todos);

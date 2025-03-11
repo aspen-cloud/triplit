@@ -23,6 +23,11 @@
       "types": "./dist/types/collection-query.d.ts",
       "require": "./dist/collection-query.js",
       "import": "./dist/collection-query.js"
+    },
+    "./variable-aware-cache": {
+      "types": "./dist/types/variable-aware-cache.d.ts",
+      "require": "./dist/variable-aware-cache.js",
+      "import": "./dist/variable-aware-cache.js"
     }
   },
   "typesVersions": {
@@ -85,7 +90,7 @@
     "ajv-formats": "^3.0.1",
     "idb": "^7.1.1",
     "mnemonist": "0.40.0-rc1",
-    "nanoid": "^3.0.0",
+    "nanoid": "^5.1.0",
     "pino": "^8.11.0"
   }
 }

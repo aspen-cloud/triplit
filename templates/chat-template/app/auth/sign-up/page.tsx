@@ -12,6 +12,7 @@ export default function NewUserPage() {
   const [username, setUsername] = useState("")
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
+  const [error, setError] = useState("")
   return (
     <div className="p-6 rounded-md border">
       <h1 className="mb-5 font-bold text-xl">New User</h1>
@@ -19,12 +20,14 @@ export default function NewUserPage() {
         className="flex flex-col gap-5"
         onSubmit={async (e) => {
           e.preventDefault()
+          setError("")
           const res = await fetch("/api/auth/new-user", {
             method: "POST",
             body: JSON.stringify({ username, password, email }),
           })
           if (!res.ok) {
             console.error("error", res)
+            setError("Failed to create user")
             return
           }
           setUsername("")
@@ -85,6 +88,11 @@ export default function NewUserPage() {
           </Button>
         </div>
       </form>
+      {error && (
+        <div className="flex items-center gap-2 p-3 mt-2 text-red-700 bg-red-100 border border-red-400 rounded-lg">
+          <span className="text-sm font-medium">{error}</span>
+        </div>
+      )}
       <div className="flex flex-col items-center gap-4 my-4">
         <div className="text-sm text-muted-foreground">
           Already have an account?

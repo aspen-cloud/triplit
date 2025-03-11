@@ -34,7 +34,6 @@ export const upgradeWebSocket: UpgradeWebSocket<
     get readyState() {
       return server.readyState as WSReadyState;
     },
-    // @ts-expect-error
     url: server.url ? new URL(server.url) : null,
     send: (source) => server.send(source),
   });
@@ -42,7 +41,8 @@ export const upgradeWebSocket: UpgradeWebSocket<
   // note: cloudflare workers doesn't support 'open' event
 
   if (events.onClose) {
-    server.addEventListener('close', (evt: CloseEvent) =>
+    // CloseEvent not typed
+    server.addEventListener('close', (evt: any) =>
       events.onClose?.(evt, wsContext)
     );
   }

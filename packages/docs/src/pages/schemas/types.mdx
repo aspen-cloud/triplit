@@ -8,25 +8,25 @@ import { Callout } from 'nextra-theme-docs';
 
 When using a schema you have a few datatypes at your disposal:
 
-### Schema type
+### Collections and Schema types
 
-The schema type is used to define a collection and its attributes. It should always be the outermost type in your schema definition. It is a special type of Record type so may use the same modifiers as [Record](#record).
+The `Collections` and `Schema` schema types are used to define your collections and their attributes. They are simple record types but will help provide type hinting and validation to their parameters.
 
 ```typescript
 import { Schema as S } from '@triplit/client';
-const schema = {
+const schema = S.Collections({
   todos: {
     schema: S.Schema({
       id: S.Id(),
       // Additional attributes here...
     }),
   },
-};
+});
 ```
 
 ### Value types
 
-Value types are basic primitive types for the database.
+Value types are basic types for the database.
 
 #### String
 
@@ -98,79 +98,7 @@ const dateType = S.Date();
 
 Dates support `=`, `!=`, `>`, `>=`, `<`, `<=`, and `isDefined` operators in `where` statements.
 
-#### Options
-
-Value types have a few options that can be passed to their constructor.
-
-##### `nullable`
-
-You can indicate an attribute is nullable by passing the `{ nullable: true }` option to its constructor.
-
-```typescript
-import { Schema as S } from '@triplit/client';
-import { TriplitClient } from '@triplit/client';
-const schema = {
-  test: {
-    schema: S.Schema({
-      id: S.Id(),
-      nullableString: S.String({ nullable: true }),
-    }),
-  },
-};
-
-const client = new TriplitClient({
-  schema,
-});
-
-await client.insert('test', {
-  nullableString: null,
-});
-```
-
-##### `default`
-
-You can provide defaults values or functions for an attribute. Triplit currently support literal values and the following functions:
-
-- `uuid()`
-- `now()`
-
-The below schema has literal and function default values.
-
-```typescript
-import { Schema as S } from '@triplit/client';
-import { TriplitClient } from '@triplit/client';
-const schema = {
-  messages: {
-    schema: S.Schema({
-      id: S.Id(),
-      text: S.String({ default: 'hello' }),
-      sent_at: S.Date({ default: S.Default.now() }),
-    }),
-  },
-};
-await client.insert('test', {});
-// { id: <uuid>, text: 'hello', sent_at: '2021-03-01T00:00:00.000Z' }
-```
-
-##### `enum` (String only)
-
-You can provide an array of strings to the `enum` option to restrict the possible values of a string attribute.
-
-```typescript
-import { Schema as S } from '@triplit/client';
-const schema = {
-  test: {
-    schema: S.Schema({
-      id: S.Id(),
-      status: S.String({ enum: ['active', 'inactive'] as const }),
-    }),
-  },
-};
-```
-
-This will both perform runtime validation and provide autocomplete in your editor. **Note: you must add `as const` to the array to enable Typescript support for the enum values.**
-
-### Set
+#### Set
 
 Set types are used to store a collection of non nullable value types. Sets are unordered and do not allow duplicate values.
 
@@ -186,9 +114,134 @@ const stringSet = S.Set(S.String());
 
 Sets support `has` and `!has` operators in `where` statements, which check if the set does or does not contain the value. They also support the `isDefined` operator.
 
+### Options
+
+Value types have a few options that can be passed to their constructor.
+
+#### `nullable`
+
+You can indicate an attribute is nullable by passing the `{ nullable: true }` option to its constructor.
+
+```typescript
+import { Schema as S } from '@triplit/client';
+import { TriplitClient } from '@triplit/client';
+const schema = S.Collections({
+  test: {
+    schema: S.Schema({
+      id: S.Id(),
+      nullableString: S.String({ nullable: true }),
+    }),
+  },
+});
+
+const client = new TriplitClient({
+  schema,
+});
+
+await client.insert('test', {
+  nullableString: null,
+});
+```
+
+#### `optional`
+
+You can indicate an attribute is optional by passing the `{ optional: true }` option to its constructor or wrapping the attribute in `S.Optional`. Optional attributes are not required for insertion by the schema and will be `undefined` at runtime if not provided. Optional attributes may also be deleted and assigned to `null` in updater functions.
+
+```typescript
+import { Schema as S } from '@triplit/client';
+const schema = S.Collections({
+  test: {
+    schema: S.Schema({
+      id: S.Id(),
+      optionalString: S.String({ optional: true }),
+    }),
+  },
+});
+
+await client.insert('test', {
+  id: '123',
+});
+
+// { id: '123' }
+
+await client.update('test', '123', (e) => {
+  e.optionalString = 'hello';
+});
+
+// { id: '123', optionalString: 'hello' }
+
+await client.update('test', '123', (e) => {
+  delete e.optionalString;
+});
+
+// { id: '123', optionalString: null }
+```
+
+Optional attributes support the `isDefined` operator, which checks if the specified attribute is defined.
+
+```typescript
+import { Schema as S } from '@triplit/client';
+const schema = S.Collections({
+  profiles: {
+    schema: S.Schema({
+      id: S.Id(),
+      name: S.String(),
+      email: S.Optional(S.String()),
+    }),
+  },
+});
+
+const query = client.query('profiles').Where('email', 'isDefined', true);
+```
+
+#### `default`
+
+You can provide defaults values or functions for an attribute. Triplit currently support literal values and the following functions:
+
+- `uuid()` (for Strings)
+- `now()` (for Dates)
+- `Set.empty()` (for Sets)
+
+The below schema has literal and function default values.
+
+```typescript
+import { Schema as S } from '@triplit/client';
+import { TriplitClient } from '@triplit/client';
+const schema = S.Collections({
+  messages: {
+    schema: S.Schema({
+      id: S.Id(),
+      text: S.String({ default: 'hello' }),
+      sent_at: S.Date({ default: S.Default.now() }),
+      reactions: S.Set(S.String(), { default: S.Default.Set.empty() }),
+    }),
+  },
+});
+await client.insert('test', {});
+// { id: <uuid>, text: 'hello', sent_at: '2021-03-01T00:00:00.000Z',reactions: Set {} }
+```
+
+#### `enum` (String only)
+
+You can provide an array of strings to the `enum` option to restrict the possible values of a string attribute.
+
+```typescript
+import { Schema as S } from '@triplit/client';
+const schema = S.Collections({
+  test: {
+    schema: S.Schema({
+      id: S.Id(),
+      status: S.String({ enum: ['active', 'inactive'] }),
+    }),
+  },
+});
+```
+
+This will both perform runtime validation and provide autocomplete in your editor.
+
 ### Record
 
-Record types support nested information.
+Record types allow you model nested information. They support the `nullable` option.
 
 ```typescript
 import { Schema as S } from '@triplit/client';
@@ -198,63 +251,4 @@ const recordType = S.Record({
   state: S.String(),
   zip: S.String(),
 });
-```
-
-### Optional
-
-You may mark attributes in a schema (and record) as optional with the `Optional` modifier. They will not be required by the schema and will be undefined at runtime if not provided. Optional attributes may also be deleted and assigned to `undefined` in updater functions.
-
-```typescript {7}
-import { Schema as S } from '@triplit/client';
-
-const schema = S.Schema({
-  address: {
-    schema: {
-      street: S.String(),
-      apartmentNumber: S.Optional(S.String()),
-      city: S.String(),
-      state: S.String(),
-      zip: S.String(),
-    },
-  },
-});
-
-/*
-Will be valid:
-{
-  street: '123 Main St',
-  city: 'Anytown',
-  state: 'NY',
-  zip: '12345',
-}
-
-Will also be valid:
-{
-  street: '123 Main St',
-  city: 'Anytown',
-  state: 'NY',
-  zip: '12345',
-  apartmentNumber: '2',
-}
-*/
-```
-
-Optional attributes support the `isDefined` operator, which checks if the specified attribute is defined.
-
-```typescript
-import { Schema as S } from '@triplit/client';
-const schema = {
-  profiles: {
-    schema: S.Schema({
-      id: S.Id(),
-      name: S.String(),
-      email: S.Optional(S.String()),
-    }),
-  },
-};
-
-const query = client
-  .query('profiles')
-  .where('email', 'isDefined', true)
-  .build();
 ```

@@ -6,7 +6,7 @@ description: How to use the TriplitClient subscribeWithPagination method to subs
 
 `subscribeWithPagination` is a special type of subscription that is used to fetch data in pages. It is similar to `subscribe` but it has a few differences:
 
-- It expects the query to have a `limit` defined.
+- It expects the query to have a `Limit` defined.
 - It returns `nextPage` and `prevPage` functions to fetch the next and previous pages of data.
 - The subscription callback will have `hasNextPage` and `hasPreviousPage` booleans to indicate if there are more pages to fetch.
 

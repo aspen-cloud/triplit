@@ -9,9 +9,8 @@ import {
 } from '../../filesystem.js';
 import fs from 'fs';
 import path from 'node:path';
-import { BulkInsert, HttpClient } from '@triplit/client';
-import { serverRequesterMiddleware } from '../../middleware/add-server-requester.js';
-import { TriplitError } from '@triplit/db';
+import { BulkInsert, HttpClient, Models } from '@triplit/client';
+import { createServerRequesterMiddleware } from '../../middleware/add-server-requester.js';
 import { seedDirExists } from './create.js';
 import ora from 'ora';
 import { projectSchemaMiddleware } from '../../middleware/project-schema.js';
@@ -39,9 +38,19 @@ export default Command({
       description: 'Run a specific seed file',
     },
   ],
-  middleware: [serverRequesterMiddleware, projectSchemaMiddleware],
+  middleware: [
+    createServerRequesterMiddleware({ destructive: false }),
+    projectSchemaMiddleware,
+  ],
   async run({ flags, ctx, args }) {
-    await insertSeeds(ctx.url, ctx.token, args.file, flags.all, ctx.schema);
+    const localSchema = await ctx.projectSchema.getSchema();
+    await insertSeeds(
+      ctx.remote.url,
+      ctx.remote.token,
+      args.file,
+      flags.all,
+      localSchema?.collections
+    );
   },
 });
 
@@ -50,7 +59,7 @@ export async function insertSeeds(
   token: string,
   file: string,
   runAll: boolean = false,
-  schema: any
+  schema: Models | undefined
 ) {
   // Check if seed directory exists, prompt user to create it
   if (!seedDirExists()) {
@@ -132,12 +141,11 @@ export async function insertSeeds(
       // return;
       const spinner = ora(`Uploading seed: ${path.basename(seed)}`).start();
       try {
-        const response = await client.bulkInsert(await seedFn());
-        const { output } = response;
+        const output = await client.bulkInsert(await seedFn());
         spinner.succeed(`Successfully seeded with ${path.basename(seed)}`);
-
         for (const collectionName in output) {
           const collection = output[collectionName];
+          if (!collection) continue;
           console.log(
             grey(
               `Inserted ${blue(
@@ -146,7 +154,7 @@ export async function insertSeeds(
             )
           );
         }
-      } catch (e) {
+      } catch (e: any) {
         spinner.fail(`Failed to seed with ${path.basename(seed)}`);
 
         // maps the error stack trace to the original source code
@@ -155,7 +163,7 @@ export async function insertSeeds(
         // only include the stack trace lines that are relevant to the temp file
         // that the seed script runs
         const splitStack = e.stack.split('\n');
-        const relevantStackFrames = splitStack.filter((line: string, i) =>
+        const relevantStackFrames = splitStack.filter((line: string) =>
           line.includes('.temp')
         ) as string[];
 
@@ -168,10 +176,13 @@ export async function insertSeeds(
 
         const positions = relevantStackFrames
           .map((line: string) => line.split(':').slice(-2))
-          .map((position: [string, string]) => ({
-            line: position[0],
-            column: position[1].replaceAll(')', ''),
-          }));
+          .map(
+            // @ts-expect-error
+            (position: [string, string]) => ({
+              line: position[0],
+              column: position[1].replaceAll(')', ''),
+            })
+          );
         let newTrace;
 
         // use the source map to get the original source code location and name
@@ -192,14 +203,22 @@ export async function insertSeeds(
             ...originalPositions.map((pos, i) =>
               relevantStackFrames[i].replace(
                 parensRegex,
-                `(file://${path.resolve(tempFileLocation, pos.source)}:${
-                  pos.line
-                }:${pos.column})`
+                `(file://${path.resolve(
+                  tempFileLocation,
+                  // @ts-expect-error
+
+                  pos.source
+                )}:${pos.line}:${pos.column})`
               )
             ),
           ].join('\n');
         });
-        console.error(red(newTrace));
+        console.error(
+          red(
+            // @ts-expect-error
+            newTrace
+          )
+        );
       }
     }
   }

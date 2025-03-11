@@ -1,5 +1,4 @@
-import { STATUS_CODES as HTTP_CODES, TriplitError } from '@triplit/db';
-import { Route } from './triplit-server.js';
+import { STATUS_CODES as HTTP_CODES, TriplitError } from '@triplit/entity-db';
 
 const STATUS_CODES = {
   ...HTTP_CODES,

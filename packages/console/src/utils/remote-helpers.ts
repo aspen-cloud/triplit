@@ -1,6 +1,6 @@
-import { triplesToSchema } from '@triplit/db';
+import { DBSchema } from '@triplit/entity-db';
 import { consoleClient } from 'triplit/client.js';
-import { Server } from 'triplit/schema.js';
+
 /**
  * Decode a JWT payload
  * https://stackoverflow.com/a/38552302
@@ -46,14 +46,11 @@ export function isServiceToken(token: string) {
 
 async function queryServer(
   route: string,
-  server: Server
+  url: string
 ): Promise<Response | { ok: false }> {
-  const { url } = server;
   const serviceToken = await consoleClient.fetchOne(
-    consoleClient
-      .query('tokens')
-      .id('service_' + url)
-      .build()
+    consoleClient.query('tokens').Id('service_' + url),
+    { policy: 'local-only' }
   );
   if (!serviceToken) {
     console.error(`Could not find service token for server ${url}`);
@@ -73,12 +70,12 @@ async function queryServer(
   }
 }
 
-export async function fetchSchema(project: Server) {
-  const response = await queryServer('schema', project);
+export async function fetchSchema(url: string): Promise<DBSchema | undefined> {
+  const response = await queryServer('schema', url);
   if (response.ok) {
-    const { type, schemaTriples } = await response.json();
-    if (type === 'schema') {
-      return triplesToSchema(schemaTriples);
+    const body = await response.json();
+    if (body.type === 'schema') {
+      return body.schema;
     }
   }
   return undefined;
@@ -86,8 +83,8 @@ export async function fetchSchema(project: Server) {
 
 export type CollectionStats = { collection: string; numEntities: number };
 
-export async function fetchCollectionStats(project: Server) {
-  const response = await queryServer('stats', project);
+export async function fetchCollectionStats(url: string) {
+  const response = await queryServer('stats', url);
   if (response.ok) {
     return (await response.json()) as CollectionStats[];
   } else {

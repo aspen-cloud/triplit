@@ -1,5 +1,6 @@
 import React, { createContext, useCallback, useRef } from 'react';
 import { TriplitClient } from '@triplit/client';
+import { fetchSchema } from '../utils/remote-helpers.js';
 
 type ClientContextData = {
   serverClients: Map<string, TriplitClient>;
@@ -41,7 +42,7 @@ export function useClient() {
   const { serverClients, selectedClient, setSelectedClient } =
     React.useContext(ClientContext);
   const updateClientOptions = useCallback(
-    (params: { serverUrl?: string; token?: string } | undefined) => {
+    async (params: { serverUrl?: string; token?: string } | undefined) => {
       if (!params) {
         // delete
         setSelectedClient(undefined);
@@ -56,11 +57,14 @@ export function useClient() {
       }
       const clientId = createClientId(serverUrl, token);
       if (!serverClients.has(clientId)) {
+        const serverSchema = await fetchSchema(serverUrl);
         const newClient = new TriplitClient({
           token,
           serverUrl,
-          syncSchema: true,
+          schema: serverSchema?.collections,
+          roles: serverSchema?.roles,
         });
+        if (newClient.awaitReady) await newClient.awaitReady;
         serverClients.set(clientId, newClient);
       }
       setSelectedClient(serverClients.get(clientId));

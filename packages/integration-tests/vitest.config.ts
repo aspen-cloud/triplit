@@ -5,5 +5,12 @@ export default defineConfig({
   plugins: [tsconfigPaths()],
   test: {
     setupFiles: ['@vitest/web-worker'],
+    coverage: {
+      include: [
+        '../entity-db/src/**/*.{js,ts}',
+        '../client/src/**/*.{js,ts}',
+        '../server-core/src/**/*.{js,ts}',
+      ],
+    },
   },
 });

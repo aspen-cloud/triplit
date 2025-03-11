@@ -3,6 +3,7 @@ import {
   SyncTransport,
   TransportConnectParams,
 } from '@triplit/client';
+import { logger } from '@triplit/logger';
 import {
   Server as TriplitServer,
   SyncConnection,
@@ -10,9 +11,19 @@ import {
   CloseReason,
 } from '@triplit/server-core';
 
+logger.registerHandler({
+  log: (record) => {
+    if (record.level === 'ERROR') {
+      console.error(record);
+    }
+  },
+  startSpan: () => {},
+  endSpan: () => {},
+  recordMetric: () => {},
+});
+
 export class TestTransport implements SyncTransport {
   private connection: SyncConnection | null = null;
-  clientId: string | undefined;
   onMessageCallback: ((evt: any) => any) | null = null;
   onOpenCallback: ((evt: any) => any) | null = null;
   onCloseCallback: ((evt: any) => any) | null = null;
@@ -29,29 +40,34 @@ export class TestTransport implements SyncTransport {
   async connect(params: TransportConnectParams) {
     // simulate network connection, allow sync engine listeners to mount
     simulateNetwork(() => {
-      const { syncSchema, token, clientId, schema } = params;
+      const { syncSchema, token, schema } = params;
       const parsedToken = parseJWT(token);
       this.connection = this.server.openConnection(parsedToken, {
-        clientId,
         clientSchemaHash: schema,
         syncSchema,
       });
-      this.clientId = clientId;
       this.removeConnectionListener = this.connection.addListener(
         (messageType, payload) => {
           // @ts-expect-error type is {}
           const error = payload.error;
-          if (error) console.error(error);
+          if (error) logger.error(error);
           this.onMessageCallback &&
             this.onMessageCallback({
               data: JSON.stringify({ type: messageType, payload }),
             });
         }
       );
+      // NOTE: this is async
+      // Will perform messaging handshake and start syncing
+      // TODO: should probably do this after `this.setIsOpen(true);`
+      this.connection.start();
       this.setIsOpen(true);
     });
   }
 
+  /**
+   * Sets the state of the websocket connection (not any syncing state)
+   */
   private setIsOpen(open: boolean, event?: any) {
     this.connectionStatus = open ? 'OPEN' : 'CLOSED';
     if (this.connectionStatus === 'OPEN') {
@@ -96,8 +112,9 @@ export class TestTransport implements SyncTransport {
   }
 
   close(reason?: CloseReason) {
+    if (!this.connection) return;
     this.removeConnectionListener?.();
-    this.server.closeConnection(this.clientId!);
+    this.server.closeConnection(this.connection);
     this.setIsOpen(false, {
       reason: JSON.stringify(reason),
     });

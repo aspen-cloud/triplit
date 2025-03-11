@@ -40,6 +40,7 @@ export function parseQuery(queryText: string) {
     thenq(whitespace()),
     then(operators),
     thenq(whitespace()),
+    // @ts-expect-error
     then(value),
     flatten()
   );

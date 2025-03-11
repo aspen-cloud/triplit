@@ -1,10 +1,9 @@
 import { expect, it, describe, vi } from 'vitest';
 import { pause } from '../utils/async.js';
 import { QuerySyncError, Server as TriplitServer } from '@triplit/server-core';
-import DB, { TriplitError } from '@triplit/db';
+import { DB, TriplitError } from '@triplit/entity-db';
 import {
-  MessageLog,
-  MessageLogItem,
+  mapMessages,
   SERVICE_KEY,
   createTestClient,
   spyMessages,
@@ -20,7 +19,7 @@ describe('CONNECT_QUERY message should be sent before DISCONNECT_QUERY', async (
     await pause();
     // Start message spy after connecting
     const messageLog = spyMessages(client);
-    const query = client.query('test').build();
+    const query = client.query('test');
     const unsub = client.subscribe(query, () => {});
     await pause(1);
     unsub();
@@ -46,7 +45,7 @@ describe('CONNECT_QUERY message should be sent before DISCONNECT_QUERY', async (
       {
         direction: 'RECEIVED',
         message: {
-          type: 'TRIPLES',
+          type: 'ENTITY_DATA',
         },
       },
     ]);
@@ -62,7 +61,7 @@ describe('CONNECT_QUERY message should be sent before DISCONNECT_QUERY', async (
     const messageLog = spyMessages(client);
 
     // Start message spy after connecting
-    const query = client.query('test').build();
+    const query = client.query('test');
     const unsub = client.subscribe(query, () => {});
     await pause();
     unsub();
@@ -84,7 +83,7 @@ describe('CONNECT_QUERY message should be sent before DISCONNECT_QUERY', async (
     });
     await pause();
     const messageLog = spyMessages(client);
-    const query = client.query('test').build();
+    const query = client.query('test');
 
     const unsubFirst = client.subscribe(query, () => {});
     unsubFirst();
@@ -107,15 +106,20 @@ describe('remote error handling', async () => {
       clientId: 'alice',
       token: SERVICE_KEY,
     });
-    const query = client.query('test').build();
+    const query = client.query('test');
     const errorCallback = vi.fn();
     client.subscribe(query, () => {}, errorCallback);
+    // have to add pause here because the query getting assigned
+    //  to the syncEngine can be async
+    await pause(10);
     //@ts-expect-error
     const queryId = client.syncEngine.queries.keys().next().value;
     await pause();
-    server
-      .getConnection('alice')
-      ?.sendErrorResponse('CONNECT_QUERY', new QuerySyncError({}), {
+    // @ts-expect-error private attribute
+    server.connections
+      .values()
+      .next()
+      .value?.sendErrorResponse('CONNECT_QUERY', new QuerySyncError({}), {
         queryKey: queryId,
         innerError: new TriplitError('INNER_ERROR'),
       });
@@ -132,15 +136,18 @@ describe('remote error handling', async () => {
       clientId: 'alice',
       token: SERVICE_KEY,
     });
-    const query = client.query('test').build();
+    const query = client.query('test');
     const errorCallback = vi.fn();
     client.subscribe(query, () => {}, errorCallback);
+    await pause(10);
     //@ts-expect-error
     const queryId = client.syncEngine.queries.keys().next().value;
     await pause();
-    server
-      .getConnection('alice')
-      ?.sendErrorResponse('CONNECT_QUERY', new QuerySyncError({}), {
+    // @ts-expect-error private attribute
+    server.connections
+      .values()
+      .next()
+      .value?.sendErrorResponse('CONNECT_QUERY', new QuerySyncError({}), {
         queryKey: queryId,
         innerError: new TriplitError('INNER_ERROR'),
       });
@@ -151,13 +158,3 @@ describe('remote error handling', async () => {
     ).toBe(0);
   });
 });
-
-function mapMessages(
-  logs: MessageLog,
-  callback: (message: MessageLogItem['message']) => any
-) {
-  return logs.map((log) => ({
-    ...log,
-    message: callback(log.message),
-  }));
-}

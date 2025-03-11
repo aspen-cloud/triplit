@@ -1,23 +1,18 @@
 import {
+  CollectionQuery,
+  DBChanges,
+  serializeFetchResult,
   DB as TriplitDB,
   TriplitError,
-  schemaToJSON,
-  CollectionQuery,
-  Attribute,
-  TupleValue,
-  appendCollectionToId,
-  EntityId,
-  JSONToSchema,
-  Models,
-  Model,
-} from '@triplit/db';
+  Type,
+} from '@triplit/entity-db';
 import { RouteNotFoundError, ServiceKeyRequiredError } from './errors.js';
 import { isTriplitError } from './utils.js';
 import { Server as TriplitServer } from './triplit-server.js';
 import { ProjectJWT } from './token.js';
-import { genToArr } from '@triplit/db';
-import { SyncConnection } from './sync-connection.js';
 import { WebhookJSONDefinition } from './webhooks-manager.js';
+import SuperJSON from 'superjson';
+import { logger } from '@triplit/logger';
 
 export function isChunkedMessageComplete(message: string[], total: number) {
   if (message.length !== total) return false;
@@ -54,14 +49,13 @@ export function hasAdminAccess(token: ProjectJWT) {
 }
 
 export class Session {
-  db: TriplitDB<any>;
+  db: TriplitDB;
   constructor(
     public server: TriplitServer,
     public token: ProjectJWT
   ) {
     if (!token) throw new TriplitError('Token is required');
     // TODO: figure out admin middleware
-
     this.db = server.db.withSessionVars(token);
   }
 
@@ -91,22 +85,16 @@ export class Session {
     return ServerResponse(200, payload);
   }
 
-  async getSchema(params: { format?: 'json' | 'triples' }) {
+  async getSchema(params: { format?: 'json' }) {
     if (!hasAdminAccess(this.token)) return NotAdminResponse();
-    const format = params?.format ?? 'triples';
-    const schema = await this.db.getSchema();
+    const format = params?.format ?? 'json';
+    const schema = this.db.getSchema();
     if (!schema) return ServerResponse(200, { type: 'schemaless' });
 
-    if (format === 'triples') {
-      // TODO: rename schemaTriples to schema
+    if (format === 'json') {
       return ServerResponse(200, {
         type: 'schema',
-        schemaTriples: schemaToJSON(schema),
-      });
-    } else if (format === 'json') {
-      return ServerResponse(200, {
-        type: 'schema',
-        schema: schemaToJSON(schema),
+        schema: schema,
       });
     }
 
@@ -120,28 +108,13 @@ export class Session {
   ) {
     if (!hasAdminAccess(this.token)) return NotAdminResponse();
     const { schema, ...options } = params;
-    const result = await this.db.overrideSchema(
-      JSONToSchema(params.schema),
-      options
-    );
-    return ServerResponse(result.successful ? 200 : 409, result);
+    const change = await this.db.overrideSchema(params.schema, options);
+    // TODO: determine if we the proper status code (change.successful ? 200 : 409)
+    return ServerResponse(200, change);
   }
 
-  async queryTriples({ query }: { query: CollectionQuery }) {
-    if (!query)
-      return this.errorResponse(
-        new TriplitError('{ query: CollectionQuery } missing from request body')
-      );
-    try {
-      return ServerResponse(
-        200,
-        await this.db.fetchTriples(query, {
-          skipRules: hasAdminAccess(this.token),
-        })
-      );
-    } catch (e) {
-      return this.errorResponse(e as Error);
-    }
+  async queryTriples(...params: any[]) {
+    return ServerResponse(410, {});
   }
 
   async fetch(query: CollectionQuery) {
@@ -157,25 +130,18 @@ export class Session {
         skipRules: hasAdminAccess(this.token),
       });
 
-      const schema = (await this.db.getSchema())?.collections;
-      const { collectionName } = query;
+      const schema = this.db.getSchema()?.collections;
 
-      const collectionSchema = schema?.[collectionName]?.schema;
       const data = result.map((entity) => {
-        const jsonEntity = collectionSchema
-          ? // Based on select, you may not have a full entity
-            convertPartialToJSON(entity, collectionSchema, schema)
-          : entity;
-        const entityId = jsonEntity.id;
-        if (hasSelectWithoutId && jsonEntity.id) {
-          delete jsonEntity.id;
+        const id = entity.id;
+        if (hasSelectWithoutId && entity.id) {
+          delete entity.id;
         }
-        return [entityId, jsonEntity];
+        const serlialized = serializeFetchResult(query, schema, entity);
+        return [id, serlialized];
       });
 
-      return ServerResponse(200, {
-        result: data,
-      });
+      return ServerResponse(200, data);
     } catch (e) {
       return this.errorResponse(e as Error);
     }
@@ -183,21 +149,15 @@ export class Session {
 
   async insert(collectionName: string, entity: any) {
     try {
-      const schema = (await this.db.getSchema())?.collections;
-      const collectionSchema = schema?.[collectionName]?.schema;
-      const insertEntity = collectionSchema
-        ? collectionSchema.convertJSONToJS(entity, schema)
-        : entity;
-      const txResult = await this.db.insert(collectionName, insertEntity, {
+      const insertedData = await this.db.insert(collectionName, entity, {
         skipRules: hasAdminAccess(this.token),
       });
-      const serializableResult = {
-        ...txResult,
-        output: collectionSchema
-          ? collectionSchema.convertJSToJSON(txResult.output, schema)
-          : txResult.output,
-      };
-      return ServerResponse(200, serializableResult);
+      const collectionSchema =
+        this.db.getSchema()?.collections?.[collectionName].schema;
+      const serialized = collectionSchema
+        ? Type.serialize(collectionSchema, insertedData, 'decoded')
+        : insertedData;
+      return ServerResponse(200, serialized);
     } catch (e) {
       return this.errorResponse(e, {
         fallbackMessage: 'Could not insert entity. An unknown error occurred.',
@@ -207,7 +167,6 @@ export class Session {
 
   async bulkInsert(inserts: Record<string, any[]>) {
     try {
-      const schema = (await this.db.getSchema())?.collections;
       const txResult = await this.db.transact(
         async (tx) => {
           const output = Object.keys(inserts).reduce(
@@ -215,30 +174,16 @@ export class Session {
             {}
           ) as Record<string, any[]>;
           for (const [collectionName, entities] of Object.entries(inserts)) {
-            const collectionSchema = schema?.[collectionName]?.schema;
             for (const entity of entities) {
-              const insertEntity = collectionSchema
-                ? collectionSchema.convertJSONToJS(entity, schema)
-                : entity;
-              const insertedEntity = await tx.insert(
-                collectionName,
-                insertEntity
-              );
-              output[collectionName].push(
-                collectionSchema
-                  ? collectionSchema.convertJSToJSON(insertedEntity, schema)
-                  : insertedEntity
-              );
+              const insertedEntity = await tx.insert(collectionName, entity);
+              output[collectionName].push(insertedEntity);
             }
           }
           return output;
         },
         { skipRules: hasAdminAccess(this.token) }
       );
-      const serializableResult = {
-        ...txResult,
-      };
-      return ServerResponse(200, serializableResult);
+      return ServerResponse(200, txResult);
     } catch (e) {
       return this.errorResponse(e, {
         fallbackMessage: 'Could not insert entity. An unknown error occurred.',
@@ -246,69 +191,39 @@ export class Session {
     }
   }
 
-  async insertTriples(triples: any[]) {
+  async insertTriples(...params: any[]) {
+    return ServerResponse(410, {});
+  }
+
+  async deleteTriples(...params: any[]) {
+    return ServerResponse(410, {});
+  }
+
+  async applyChanges(params: { changes: any }) {
     try {
       if (!hasAdminAccess(this.token)) return NotAdminResponse();
-      await this.db.tripleStore.insertTriples(triples);
+      const changes = SuperJSON.deserialize<DBChanges>(params.changes);
+      const timestamp = this.db.clock.next();
+      await this.db.applyChangesWithTimestamp(changes, timestamp, {
+        skipRules: hasAdminAccess(this.token),
+      });
+      await this.db.updateQueryViews();
+      this.db.broadcastToQuerySubscribers();
       return ServerResponse(200, {});
     } catch (e) {
       return this.errorResponse(e, {
-        fallbackMessage: 'Could not insert triples. An unknown error occurred.',
+        fallbackMessage: 'Could not apply changes. An unknown error occurred.',
       });
     }
   }
 
-  async deleteTriples(entityAttributes: [EntityId, Attribute][]) {
+  // TODO: breaking API change from patch array to changes {}
+  async update(collectionName: string, entityId: string, changes: any) {
     try {
-      if (!hasAdminAccess(this.token)) return NotAdminResponse();
-      await this.db.tripleStore.transact(async (tx) => {
-        for (const [entityId, attribute] of entityAttributes) {
-          await tx.deleteTriples(
-            await genToArr(tx.findByEntityAttribute(entityId, attribute))
-          );
-        }
+      await this.db.update(collectionName, entityId, changes, {
+        skipRules: hasAdminAccess(this.token),
       });
       return ServerResponse(200, {});
-    } catch (e) {
-      return this.errorResponse(e, {
-        fallbackMessage: 'Could not delete triples. An unknown error occurred.',
-      });
-    }
-  }
-
-  async update(
-    collectionName: string,
-    entityId: string,
-    patches: (['set', Attribute, TupleValue] | ['delete', Attribute])[]
-  ) {
-    try {
-      const txResult = await this.db.transact(
-        async (tx) => {
-          const id = appendCollectionToId(collectionName, entityId);
-          const timestamp = await tx.storeTx.getTransactionTimestamp();
-          for (const patch of patches) {
-            if (patch[0] === 'delete') {
-              await tx.storeTx.insertTriple({
-                id,
-                attribute: [collectionName, ...patch[1]],
-                value: null,
-                timestamp,
-                expired: true,
-              });
-            } else if (patch[0] === 'set') {
-              await tx.storeTx.insertTriple({
-                id,
-                attribute: [collectionName, ...patch[1]],
-                value: patch[2],
-                timestamp,
-                expired: false,
-              });
-            }
-          }
-        },
-        { skipRules: hasAdminAccess(this.token) }
-      );
-      return ServerResponse(200, txResult);
     } catch (e) {
       return this.errorResponse(e, {
         fallbackMessage: 'Could not update entity. An unknown error occurred.',
@@ -318,10 +233,10 @@ export class Session {
 
   async delete(collectionName: string, entityId: string) {
     try {
-      const txResult = await this.db.delete(collectionName, entityId, {
+      await this.db.delete(collectionName, entityId, {
         skipRules: hasAdminAccess(this.token),
       });
-      return ServerResponse(200, txResult);
+      return ServerResponse(200, {});
     } catch (e) {
       return this.errorResponse(e, {
         fallbackMessage: 'Could not delete entity. An unknown error occurred.',
@@ -335,7 +250,6 @@ export class Session {
       const txResult = await this.db.transact(async (tx) => {
         const allEntities = await tx.fetch({ collectionName, select: ['id'] });
         for (const entity of allEntities) {
-          // @ts-expect-error
           await tx.delete(collectionName, entity.id);
         }
       });
@@ -356,7 +270,7 @@ export class Session {
       options?.fallbackMessage ??
         'An unknown error occurred processing your request.'
     );
-    console.log(e);
+    logger.error('Error processing request', e as Error);
     return ServerResponse(generalError.status, generalError.toJSON());
   }
   async handleWebhooksJSONPush({
@@ -366,7 +280,8 @@ export class Session {
   }) {
     if (!hasAdminAccess(this.token)) return NotAdminResponse();
     try {
-      this.server.webhooksManager.addAndStoreWebhooks(webhooks);
+      // TODO: add back webhooks
+      // this.server.webhooksManager.addAndStoreWebhooks(webhooks);
       return ServerResponse(200, {});
     } catch (e) {
       return this.errorResponse(e, {
@@ -377,7 +292,8 @@ export class Session {
   async handleWebhooksClear() {
     if (!hasAdminAccess(this.token)) return NotAdminResponse();
     try {
-      this.server.webhooksManager.clearWebhooks();
+      // TODO: add back webhooks
+      // this.server.webhooksManager.clearWebhooks();
       return ServerResponse(200, {});
     } catch (e) {
       return this.errorResponse(e, {
@@ -388,28 +304,16 @@ export class Session {
   async handleWebhooksGet() {
     if (!hasAdminAccess(this.token)) return NotAdminResponse();
     try {
-      const webhooks = await this.server.webhooksManager.getWebhooks();
-      return ServerResponse(200, webhooks);
+      // TODO: add back webhooks
+      // const webhooks = await this.server.webhooksManager.getWebhooks();
+      // return ServerResponse(200, webhooks);
+      return ServerResponse(200, {});
     } catch (e) {
       return this.errorResponse(e, {
         fallbackMessage: 'Could not fetch webhooks.',
       });
     }
   }
-}
-
-// A query result may be partial due to select
-function convertPartialToJSON<T>(
-  partial: any,
-  collectionSchema: Model,
-  schema: Models
-): any {
-  return Object.fromEntries(
-    Object.entries(partial).map(([k, v]) => {
-      const propDef = collectionSchema.properties[k];
-      return [k, propDef ? propDef.convertJSToJSON(v, schema) : v];
-    })
-  );
 }
 
 export function throttle(callback: () => void, delay: number) {

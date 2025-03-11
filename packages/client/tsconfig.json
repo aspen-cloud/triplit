@@ -6,7 +6,7 @@
     "module": "ESNext",
     "outDir": "./dist",
     "tsBuildInfoFile": "./dist/tsconfig.tsbuildinfo",
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",
     "strict": true,
     "esModuleInterop": true,
     "declaration": true,
@@ -20,6 +20,9 @@
     },
     {
       "path": "../types/tsconfig.json"
+    },
+    {
+      "path": "../entity-db/tsconfig.json"
     }
   ],
   "include": ["./src/**/*.ts"],

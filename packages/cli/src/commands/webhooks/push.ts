@@ -1,16 +1,16 @@
 import { blue } from 'ansis/colors';
-import { serverRequesterMiddleware } from '../../middleware/add-server-requester.js';
+import { createServerRequesterMiddleware } from '../../middleware/add-server-requester.js';
 import { Command } from '../../command.js';
 import * as Flag from '../../flags.js';
-import { WebhookJSONDefinition } from '@triplit/server-core';
-import ora from 'ora';
+import { WebhookJSONDefinition, WebhookAction } from '@triplit/server-core';
+import ora, { Ora } from 'ora';
 import path from 'path';
 import fs from 'fs';
 import { getTriplitDir } from '../../filesystem.js';
 
 export default Command({
   description: 'Pushes webhooks to the sync server',
-  middleware: [serverRequesterMiddleware],
+  middleware: [createServerRequesterMiddleware({ destructive: true })],
   flags: {
     raw: Flag.String({
       description: 'Raw JSON string of the webhook',
@@ -47,13 +47,23 @@ export default Command({
     }
 
     console.dir(webhooks, { depth: null });
-    console.log('Sync server: ', blue(ctx.url));
-    const spinner = ora('Pushing webhooks to the server').start();
+    let spinner: Ora | undefined;
     try {
-      await ctx.requestServer('POST', '/webhooks-push', { webhooks });
-      spinner.succeed('Webhooks have been pushed to the sync server');
+      await ctx.remote.request(
+        'POST',
+        '/webhooks-push',
+        { webhooks },
+        {
+          hooks: {
+            beforeRequest: () => {
+              spinner = ora('Pushing webhooks to the server').start();
+            },
+          },
+        }
+      );
+      spinner?.succeed('Webhooks have been pushed to the sync server');
     } catch (e) {
-      spinner.fail('Failed to push webhooks to the sync server');
+      spinner?.fail('Failed to push webhooks to the sync server');
       console.error(e);
       return;
     }
@@ -76,7 +86,9 @@ export function validateWebhookStructure(
       return null;
     }
     for (const collectionName in webhook[url]) {
-      for (const action of Object.keys(webhook[url][collectionName])) {
+      for (const action of Object.keys(
+        webhook[url][collectionName]
+      ) as WebhookAction[]) {
         if (!['inserts', 'updates', 'deletes'].includes(action)) {
           console.error('Invalid action', action);
           return null;

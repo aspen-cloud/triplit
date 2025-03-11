@@ -1,4 +1,4 @@
-import { TriplitError, STATUS_CODES } from '@triplit/db';
+import { TriplitError, STATUS_CODES } from '@triplit/entity-db';
 
 export class UnrecognizedFetchPolicyError extends TriplitError {
   constructor(policy: string, ...args: any[]) {

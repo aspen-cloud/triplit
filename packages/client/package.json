@@ -41,6 +41,11 @@
       "types": "./dist/worker-client/client-comlink-wrapper.d.ts",
       "import": "./dist/worker-client/client-comlink-wrapper.js",
       "default": "./dist/worker-client/client-comlink-wrapper.js"
+    },
+    "./storage/*": {
+      "types": "./dist/storage/*.d.ts",
+      "import": "./dist/storage/*.js",
+      "default": "./dist/storage/*.js"
     }
   },
   "scripts": {
@@ -52,17 +57,16 @@
     "test:unit": "vitest run",
     "typecheck": "vitest --typecheck.only --no-watch",
     "publish-pkg": "node ../../scripts/npm-check-version-and-publish.js",
-    "build-worker": "esbuild ./src/worker-client/worker-client-operator.ts --bundle --minify --platform=browser --outfile=./dist/worker-client/worker-client-operator.js --format=esm",
+    "build-worker": "esbuild ./src/worker-client/worker-client-operator.ts --bundle --minify --external:better-sqlite3 --external:lmdb --external:expo-sqlite --platform=browser --outfile=./dist/worker-client/worker-client-operator.js --format=esm",
     "validate:types": "node ../../scripts/check-for-local-references-in-declarations.js dist"
   },
   "files": [
     "/dist"
   ],
   "dependencies": {
-    "@sinclair/typebox": "^0.34.11",
-    "@triplit/db": "workspace:^",
+    "@triplit/entity-db": "workspace:^",
+    "@triplit/logger": "workspace:^",
     "comlink": "^4.4.1",
-    "rxjs": "^7.8.1",
     "superjson": "^2.2.1"
   },
   "devDependencies": {

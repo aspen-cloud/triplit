@@ -11,14 +11,13 @@ import fs, { existsSync } from 'fs';
 import { CWD, getDataDir, getTriplitDir } from '../filesystem.js';
 import { Command } from '../command.js';
 import * as Flag from '../flags.js';
-import chokidar from 'chokidar';
-import { hashSchemaJSON, schemaToJSON } from '@triplit/db';
-import { TriplitClient } from '@triplit/client';
+import chokidar, { FSWatcher } from 'chokidar';
 import { insertSeeds } from './seed/run.js';
 import { projectSchemaMiddleware } from '../middleware/project-schema.js';
-import { schemaFileContentFromJSON, writeSchemaFile } from '../schema.js';
 import { validateWebhookStructure } from './webhooks/push.js';
 import { blue } from 'ansis/colors';
+import { logger } from '@triplit/logger';
+import { DevServerLogHandler } from '../log-handlers/dev-server-logs.js';
 
 export default Command({
   description: 'Starts the Triplit development environment',
@@ -32,11 +31,6 @@ export default Command({
     dbPort: Flag.Number({
       char: 'd',
       description: 'Port to run the database server on',
-    }),
-    watch: Flag.Boolean({
-      char: 'w',
-      description: 'Watch for schema changes',
-      hidden: true,
     }),
     verbose: Flag.Boolean({
       char: 'v',
@@ -64,6 +58,11 @@ export default Command({
       description: 'Token to be used with the upstream server',
       hidden: true,
     }),
+    inspect: Flag.Boolean({
+      description: 'Enable node inspector',
+      hidden: true,
+      default: false,
+    }),
   },
   async run({ flags, ctx }) {
     const dbPort = flags.dbPort || 6543;
@@ -80,8 +79,6 @@ export default Command({
     if (durableStoreKeys.includes(flags.storage as any)) {
       // Check dependenies as needed
       switch (flags.storage as (typeof durableStoreKeys)[number]) {
-        case 'leveldb':
-          checkLevelDBDependency();
         case 'lmdb':
           checkLMDBDependency();
         case 'sqlite':
@@ -116,12 +113,10 @@ export default Command({
       process.env.JWT_SECRET,
       { noTimestamp: true }
     );
-    const collections = ctx.schema;
-    const roles = ctx.roles;
-    const schema =
-      collections && flags.initWithSchema
-        ? { collections, roles, version: 0 }
-        : undefined;
+
+    const schema = flags.initWithSchema
+      ? await ctx.projectSchema.getSchema()
+      : undefined;
 
     let upstream = undefined;
     if (!!flags.upstreamUrl) {
@@ -133,104 +128,35 @@ export default Command({
         token: flags.upstreamToken,
       };
     }
-
-    const startDBServer = createDBServer({
+    logger.registerHandler(
+      new DevServerLogHandler({ verbose: flags.verbose }),
+      { exclusive: true }
+    );
+    const startDBServer = await createDBServer({
       storage: flags.storage || 'memory',
+      jwtSecret: process.env.JWT_SECRET,
+      projectId: process.env.PROJECT_ID,
+      externalJwtSecret: process.env.EXTERNAL_JWT_SECRET,
       dbOptions: {
         schema,
       },
-      watchMode: !!flags.watch,
       verboseLogs: !!flags.verbose,
       upstream,
+      useNodeInspector: flags.inspect,
     });
-    let watcher: chokidar.FSWatcher | undefined = undefined;
-    let remoteSchemaUnsubscribe = undefined;
+    let watcher: FSWatcher | undefined = undefined;
     const dbServer = startDBServer(dbPort, async () => {
-      const schemaPath = path.join(getTriplitDir(), 'schema.ts');
-      watcher = chokidar.watch(schemaPath, {
+      watcher = chokidar.watch(ctx.projectSchema.schemaPath, {
         awaitWriteFinish: true,
       });
-      if (flags.watch) {
-        const client = new TriplitClient({
-          serverUrl: `http://localhost:${dbPort}`,
-          token: serviceKey,
-          syncSchema: true,
-        });
-        await client.db.ready;
-        const schemaPath = path.join(getTriplitDir(), 'schema.ts');
-        const schemaQuery = client
-          .query('_metadata')
-          .id('_schema')
-          // Avoid firing on optimistic changes
-          .syncStatus('confirmed')
-          .build();
-
-        /**
-         * There's a few problems here:
-         * - syncStatus('confirmed') as currently implemented is a poor abstraction for this, we really want to subscribe purely to remote changes
-         * - Race conditions around file reading/writing as updates come in
-         *
-         * Causes:
-         * - Remote changes come into the cache in two messages 'TRIPLES' and 'TRIPLES_ACK' (usually in that order), causing two updates. The first will not include your changes.
-         * - We dont queue up the subscription calls to await eachother...I think tough to do as they'll be in different transactions
-         */
-        remoteSchemaUnsubscribe = client.subscribe(
-          schemaQuery,
-          async (results, info) => {
-            // Avoid firing on potentially stale results
-            if (info.hasRemoteFulfilled) {
-              const schemaJSON = results[0];
-              const resultHash = hashSchemaJSON(schemaJSON.collections);
-              const fileSchema = schemaToJSON({
-                collections: ctx.schema,
-                version: 0,
-              });
-              const currentFileHash = hashSchemaJSON(fileSchema.collections);
-
-              // If no diff, do nothing
-              if (resultHash === currentFileHash) {
-                return;
-              }
-
-              const content = schemaFileContentFromJSON(schemaJSON);
-
-              // Unwatch the file to avoid infinite loop
-              watcher.unwatch(schemaPath);
-              await writeSchemaFile(content);
-              watcher.add(schemaPath);
-            }
-          },
-          (error) => {
-            console.log('An error occurred in the schema change subscription');
-            console.error(error);
-          }
+      watcher.on('change', async () => {
+        console.warn(
+          'Schema file changed. Restart the dev server or run\n\n`triplit schema push`\n\nto apply the new schema.'
         );
-
-        // On file changes, update the schema
-        watcher.on('change', async () => {
-          const collections = ctx.schema;
-          const schema = collections
-            ? schemaToJSON({ collections, version: 0 })
-            : undefined;
-
-          // Bulk updates the schema
-          // TODO: apply more granular updates with schema diffing
-          await client.update('_metadata', '_schema', (entity) => {
-            delete entity.collections;
-            entity.collections = schema.collections;
-          });
-        });
-      } else {
-        watcher.on('change', async () => {
-          console.warn(
-            'Schema file changed. Restart the dev server or run\n\n`triplit schema push`\n\nto apply the new schema.'
-          );
-        });
-      }
+      });
     });
 
     process.on('SIGINT', function () {
-      remoteSchemaUnsubscribe?.();
       watcher?.close();
       dbServer.close();
       process.exit();
@@ -251,7 +177,13 @@ export default Command({
           }).toString()}`);
 
     if (flags.seed !== undefined) {
-      await insertSeeds(dbUrl, serviceKey, flags.seed, false, ctx.schema);
+      await insertSeeds(
+        dbUrl,
+        serviceKey,
+        flags.seed,
+        false,
+        schema?.collections
+      );
     }
 
     const webhooksPath = path.resolve(
@@ -325,6 +257,7 @@ export default Command({
             </Box>
           </Box>
         </Box>
+        <Newline />
       </>
     );
   },

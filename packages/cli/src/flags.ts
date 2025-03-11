@@ -53,15 +53,15 @@ export function Enum<E extends Readonly<string[]>>(
 ): Flag<E[number]> {
   return {
     ...opts,
-    parse: (input: string) => {
-      if (!opts.options.includes(input)) {
+    parse: (input) => {
+      if (!opts.options.includes(input as E[number])) {
         throw new Error(
           `Invalid option: "${input}". Valid options are: ${opts.options.join(
             ', '
           )}`
         );
       }
-      return input;
+      return input as E[number];
     },
   };
 }

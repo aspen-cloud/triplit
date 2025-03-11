@@ -15,12 +15,15 @@ export default Command({
   async run({ ctx }) {
     const { organization } = ctx;
     const project = await createProjectWithPrompts(organization.id);
+    if (!project) process.exit(1);
     createConfig(project);
     printDashboardLink(project);
   },
 });
 
-async function createProjectWithPrompts(organizationId: string) {
+async function createProjectWithPrompts(
+  organizationId: string
+): Promise<{ id: string; name: string } | undefined> {
   const { projectName } = await prompts(
     {
       type: 'text',
@@ -76,7 +79,8 @@ async function createProjectViaAPI(args: {
   organization_id: string;
 }): Promise<{ data: any; error: any }> {
   try {
-    const token = (await supabase.auth.getSession()).data?.session.access_token;
+    const token = (await supabase.auth.getSession()).data?.session
+      ?.access_token;
     if (!token) {
       return { data: undefined, error: 'No access token found' };
     }

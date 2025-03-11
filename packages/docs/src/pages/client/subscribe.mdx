@@ -30,3 +30,9 @@ const unsubscribe = client.subscribe(
 ```
 
 If a subscription query fails on the server then syncing for that query will stop. However, the subscription will remain active and updates to the local database will still be available. As well, the syncing of other queries will not be impacted. Although you will not receive updates from the server, updates that you make via [mutations](/client/insert) will be sent.
+
+## Subscription options
+
+- `syncStatus`: Describes the set of data from the client's various sources to include in the subscription. Can be `pending`, `confirmed`, or `all`. By default, `syncStatus` is set to `all`.
+- `localOnly`: If set to `true`, the subscription will only listen to changes in the local database and will not attempt to sync with the remote database. Multiple small `localOnly` subscriptions are often paired with a large [background subscription](/client/subscribe-background). By default, `localOnly` is set to `false`.
+- `onRemoteFulfilled`: A callback that is called when the server has first sent back results for the subscription.

@@ -10,11 +10,12 @@ import {
 } from '@triplit/ui';
 import { nanoid } from 'nanoid';
 import {
-  CollectionDefinition,
-  typeFromJSON,
+  Collection,
+  DataType,
+  SUPPORTED_OPERATIONS,
   type QueryWhere,
   type WhereFilter,
-} from '@triplit/db';
+} from '@triplit/entity-db';
 import { RoleFilters } from './role-filters.js';
 import { TriplitClient } from '@triplit/client';
 
@@ -22,14 +23,14 @@ type FiltersPopoverProps = {
   collection: string;
   onSubmit: (filters: QueryWhere<any, any>) => void;
   uniqueAttributes: Set<string>;
-  collectionSchema?: CollectionDefinition;
+  collectionSchema?: Collection;
   filters: QueryWhere<any, any>;
   client: TriplitClient;
 };
 
 function mapFilterArraysToFilterObjects(
   filters: QueryWhere<any, any>,
-  collectionSchema?: CollectionDefinition
+  collectionSchema?: Collection
 ) {
   return filters.map(([attribute, operator, value]) => ({
     attribute,
@@ -67,13 +68,11 @@ export function FiltersPopover(props: FiltersPopoverProps) {
   const onCreateNewDraftFilter = useCallback(
     (attribute: string) => {
       setKey(+new Date());
-      const attributeDefinition = collectionSchema
+      const attributeDefinition: DataType | null = collectionSchema
         ? collectionSchema?.schema?.properties?.[attribute]
         : null;
       const defaultType = attributeDefinition?.type ?? 'string';
-      const defaultOperator = typeFromJSON(
-        attributeDefinition ?? { type: defaultType }
-      ).supportedOperations[0];
+      const defaultOperator = SUPPORTED_OPERATIONS[defaultType][0];
       const defaultValue = defaultType === 'boolean' ? true : '';
 
       const filterObj = {

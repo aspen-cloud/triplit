@@ -1,4 +1,4 @@
-import { shuffle } from "remeda"
+import { shuffle } from "../helpers/remeda.js"
 import { describe, it, expect } from "bun:test"
 import { Tuple } from "../storage/types.js"
 import { sortedValues } from "../test/fixtures.js"

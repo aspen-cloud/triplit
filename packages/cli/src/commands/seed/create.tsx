@@ -5,14 +5,14 @@ import prompts from 'prompts';
 import { SEED_DIR, getSeedsDir } from '../../filesystem.js';
 import fs from 'fs';
 import path from 'node:path';
-import { Models } from '@triplit/db';
+import { Models } from '@triplit/entity-db';
 import { projectSchemaMiddleware } from '../../middleware/project-schema.js';
 
 export function seedDirExists() {
   return fs.existsSync(SEED_DIR);
 }
 
-function getSeedTemplate(schema: Models<any, any> | undefined) {
+function getSeedTemplate(schema: Models | undefined) {
   return `import { BulkInsert } from \"@triplit/client\"
 ${schema ? 'import { schema } from "../schema.js"' : ''}
 export default function seed(): BulkInsert<${
@@ -52,8 +52,8 @@ export default Command({
   middleware: [projectSchemaMiddleware],
   async run({ args, ctx }) {
     // Check if seed directory exists, prompt user to create it
-    const schema = ctx.schema;
-    const seedTemplate = getSeedTemplate(schema);
+    const localSchema = await ctx.projectSchema.getSchema();
+    const seedTemplate = getSeedTemplate(localSchema?.collections);
     let filename = args.filename;
     if (!filename) {
       let { name } = await prompts({

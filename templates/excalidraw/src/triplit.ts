@@ -4,14 +4,14 @@ import { usePageId } from './use-query-params.js';
 import { useMemo } from 'react';
 
 export const client = new TriplitClient({
-  storage: 'indexeddb',
+  storage: 'memory',
   serverUrl: import.meta.env.VITE_TRIPLIT_SERVER_URL,
   token: import.meta.env.VITE_TRIPLIT_TOKEN,
 });
 window.triplit = client;
 
 export function usePages() {
-  return useQuery(client, client.query('pages').order(['createdAt', 'DESC']));
+  return useQuery(client, client.query('pages').Order(['createdAt', 'DESC']));
 }
 export function useExcalidrawElements() {
   const [currentPageId] = usePageId();
@@ -19,8 +19,8 @@ export function useExcalidrawElements() {
     client,
     client
       .query('elements')
-      .order('_fracIndex', 'ASC')
-      .where('pageId', '=', currentPageId)
+      .Order('_fracIndex', 'ASC')
+      .Where('pageId', '=', currentPageId)
   );
 }
 
@@ -28,10 +28,10 @@ export function useUnsyncedElements() {
   const [currentPageId] = usePageId();
   return useQuery(
     client,
-    client
-      .query('elements')
-      .where('pageId', '=', currentPageId)
-      .syncStatus('pending')
+    client.query('elements').Where('pageId', '=', currentPageId),
+    {
+      syncStatus: 'pending',
+    }
   );
 }
 

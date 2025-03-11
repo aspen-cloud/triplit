@@ -6,14 +6,18 @@ import { Callout } from 'nextra-theme-docs';
 
 # Safely updating schemas in production
 
+## Client compatibility
+
+When a client connects to a Triplit server, it compares the schema it has stored locally with the schema on the server. If the schemas are incompatible, the client will refuse to connect to the server. This is a safety feature to prevent data corruption. That does not mean that you can't update your schema on the server, but you must do so in a way that is backwards compatible. This page describes the tools Triplit provides to make this process as smooth as possible.
+
 ## Getting setup
 
 Let start with a simple schema, defined at `./triplit/schema.ts` in your project directory.
 
 ```typescript filename="./triplit/schema.ts" copy
-import { Schema as S, ClientSchema } from '@triplit/client';
+import { Schema as S } from '@triplit/client';
 
-export const schema = {
+const schema = S.Collections({
   todos: {
     schema: S.Schema({
       id: S.Id(),
@@ -21,7 +25,7 @@ export const schema = {
       completed: S.Boolean({ default: false }),
     }),
   },
-} satisfies ClientSchema;
+});
 ```
 
 You can start the development server with the schema pre-loaded.
@@ -74,7 +78,7 @@ client.insert('todos', { text: 'Work on project' });
 Now let's edit our schema by adding a new `tagId` attribute to `todos`, in anticipation of letting users group their todos by tag.
 
 ```typescript filename="./triplit/schema.ts" copy {7}
-export const schema = {
+const schema = S.Collections({
   todos: {
     schema: S.Schema({
       id: S.Id(),
@@ -83,7 +87,7 @@ export const schema = {
       tagId: S.String(),
     }),
   },
-} satisfies ClientSchema;
+});
 ```
 
 ### Pushing the schema
@@ -123,7 +127,7 @@ Whenever you try to `triplit schema push`, the receiving database will run a dif
 Let's make `tagId` optional:
 
 ```typescript filename="./triplit/schema.ts" copy {7}
-export const schema = {
+const schema = S.Collections({
   todos: {
     schema: S.Schema({
       id: S.Id(),
@@ -132,14 +136,14 @@ export const schema = {
       tagId: S.Optional(S.String()),
     }),
   },
-} satisfies ClientSchema;
+});
 ```
 
 Now we can run `triplit schema push` again, and it should succeed. For completeness, let's also backfill the `tagId` for existing todos:
 
 ```ts copy
 await client.transact(async (tx) => {
-  const allTodos = await tx.fetch(client.query('todos').build());
+  const allTodos = await tx.fetch(client.query('todos'));
   for (const [_id, todo] of allTodos) {
     await tx.update('todos', todo.id, (entity) => {
       entity.tagId = 'chores';

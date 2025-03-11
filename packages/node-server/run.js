@@ -2,9 +2,12 @@ import { createServer } from '@triplit/server';
 
 const port = +(process.env.PORT || 8080);
 
-const startServer = createServer({
+const startServer = await createServer({
   storage: 'sqlite',
   verboseLogs: !!process.env.VERBOSE_LOGS,
+  jwtSecret: process.env.JWT_SECRET,
+  projectId: process.env.PROJECT_ID,
+  externalJwtSecret: process.env.EXTERNAL_JWT_SECRET,
 });
 
 const dbServer = startServer(port);

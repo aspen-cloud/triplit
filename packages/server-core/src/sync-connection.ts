@@ -1,36 +1,46 @@
-import DB, { TriplitError, schemaToJSON, hashSchemaJSON } from '@triplit/db';
 import {
-  QuerySyncError,
-  TriplesInsertError,
-  UnrecognizedMessageTypeError,
-} from './errors.js';
-import {
-  groupTriplesByTimestamp,
-  insertTriplesByTransaction,
-  isTriplitError,
-} from './utils.js';
+  DB,
+  DBChanges,
+  TriplitError,
+  diffSchemas,
+  getBackwardsIncompatibleEdits,
+} from '@triplit/entity-db';
+import { QuerySyncError, UnrecognizedMessageTypeError } from './errors.js';
+import { isTriplitError } from './utils.js';
 import {
   ServerSyncMessage,
   ClientSyncMessage,
   ServerCloseReason,
   ClientConnectQueryMessage,
   ClientDisconnectQueryMessage,
-  ClientTriplesMessage,
+  ClientChangesMessage,
+  ClientSchemaResponseMessage,
 } from '@triplit/types/sync';
 import {
   hasAdminAccess,
   throttle,
   isChunkedMessageComplete,
 } from './session.js';
-import { TriplitJWT, parseAndValidateToken } from './token.js';
-import { Logger } from './logging.js';
+import { TriplitJWT } from './token.js';
+import { logger } from '@triplit/logger';
+import SuperJSON from 'superjson';
+import { mergeDBChanges } from '@triplit/entity-db/changes-buffer';
+import { COMPATIBILITY_LIST_KEY } from './constants.js';
 
 export interface ConnectionOptions {
-  clientId: string;
   clientSchemaHash: number | undefined;
   syncSchema?: boolean | undefined;
 }
 
+const INCOMPATIBLE_SCHEMA_PAYLOAD = {
+  type: 'SCHEMA_MISMATCH',
+  retry: false,
+  message:
+    'The client schema is not backwards compatible with the server schema.',
+};
+
+//TODO: this should be able to close the WS itself
+// Currently just sends a 'CLOSE' message, not sure there's a guarantee the connection closes
 export class SyncConnection {
   connectedQueries: Map<
     string,
@@ -42,77 +52,61 @@ export class SyncConnection {
   >;
   listeners: Set<(messageType: string, payload: {}) => void>;
   chunkedMessages: Map<string, string[]> = new Map();
-  querySyncer: ReturnType<DB['createQuerySyncer']>;
+  subscriptionDataBuffer: { changedQueries: Set<string>; changes: DBChanges } =
+    { changedQueries: new Set(), changes: {} };
+  // querySyncer: ReturnType<DB['createQuerySyncer']>;
+  private started = false;
+  private canSync = false;
+
   constructor(
     public token: TriplitJWT,
     public db: DB,
-    private logger: Logger,
     public options: ConnectionOptions
   ) {
     this.db = this.db.withSessionVars(token);
     this.connectedQueries = new Map();
     this.listeners = new Set();
-    this.querySyncer = this.db.createQuerySyncer(
-      this.options.clientId,
-      (results, forInternalQueries) => {
-        const triples = results ?? [];
-        const triplesForClient = triples.filter(
-          ({ timestamp: [_t, client] }) => client !== this.options.clientId
-        );
-        // We should send triples to client even if there are none
-        // so that the client knows that the query has been fulfilled by the remote
-        // for the initial query response
-        const everyRelevantQueryHasResponded = forInternalQueries.every(
-          (id) =>
-            this.connectedQueries.has(id) &&
-            this.connectedQueries.get(id)!.serverHasRespondedOnce
-        );
-        if (everyRelevantQueryHasResponded && triplesForClient.length === 0)
-          return;
-        this.sendResponse('TRIPLES', {
-          triples: triplesForClient,
-          forQueries: forInternalQueries.map(
-            (id) => this.connectedQueries.get(id)?.externalQueryId
-          ),
-        });
-
-        for (const queryKey of forInternalQueries) {
-          if (this.connectedQueries.has(queryKey))
-            this.connectedQueries.get(queryKey)!.serverHasRespondedOnce = true;
-        }
-      },
-      (error: unknown, queryKey?: string) => {
-        console.error(error);
-        const innerError = isTriplitError(error)
-          ? error
-          : new TriplitError(
-              'An unknown error occurred while processing your request.'
-            );
-
-        if (queryKey && this.connectedQueries.has(queryKey)) {
-          const { externalQueryId } = this.connectedQueries.get(queryKey)!;
-          this.sendErrorResponse(
-            'CONNECT_QUERY',
-            new QuerySyncError(innerError),
-            {
-              queryKey: externalQueryId,
-              innerError,
-            }
-          );
-        } else {
-          // TODO: pass context in callback into error
-          this.sendErrorResponse('CONNECT_QUERY', innerError);
-          return;
-        }
-      }
-    );
   }
 
-  sendResponse<Msg extends ServerSyncMessage>(
+  async start() {
+    if (this.started) return;
+    // If the client is schemaless, we will allow the connection and safe use of data is up to the client
+    // Client writes may be rejected based on server schema
+    if (this.options.clientSchemaHash === undefined) {
+      this.canSync = true;
+      return this.sendMessage('READY', {});
+    }
+
+    // If the server is schemaless and the client is not, we should not sync
+    // The server may send unhandle-able data and break a client application
+    if (!this.db.schema) {
+      this.canSync = false;
+      return this.sendMessage('CLOSE', {
+        type: 'SCHEMA_MISMATCH',
+        retry: false,
+        message:
+          'The server does not have a schema, but the connecting client does. The server may send un-handleable data and break the client application.',
+      });
+    }
+
+    // TODO: evaluate if we should cache this value (requiring read to storage might add to read pressure under load, or be blocked)
+    const compatibilityList =
+      (await this.db.getMetadata(COMPATIBILITY_LIST_KEY)) ?? [];
+    // If we recognize the client schema hash as compatible, we can sync
+    if (compatibilityList.includes(this.options.clientSchemaHash)) {
+      this.canSync = true;
+      return this.sendMessage('READY', {});
+    }
+
+    // If we don't recognize the client schema hash, request more information
+    return this.sendMessage('SCHEMA_REQUEST', {});
+  }
+
+  sendMessage<Msg extends ServerSyncMessage>(
     messageType: Msg['type'],
     payload: Msg['payload']
   ) {
-    this.logger.log('Sending message', { messageType, payload });
+    logger.debug('Sending message', { messageType, payload });
     for (const listener of this.listeners) {
       listener(messageType, payload);
     }
@@ -142,42 +136,68 @@ export class SyncConnection {
       error: error.toJSON(),
       metadata,
     };
-    this.sendResponse('ERROR', payload);
+    this.sendMessage('ERROR', payload);
+  }
+
+  private bufferEntityData(changes: DBChanges, queryId?: string) {
+    this.subscriptionDataBuffer.changes = mergeDBChanges(
+      this.subscriptionDataBuffer.changes,
+      changes
+    );
+    if (!queryId) {
+      throw new Error('queryId is required to bufferEntityData');
+    }
+    this.subscriptionDataBuffer.changedQueries.add(queryId!);
+  }
+
+  flushEntityDataToClient() {
+    if (this.subscriptionDataBuffer.changedQueries.size === 0) return;
+    this.sendMessage('ENTITY_DATA', {
+      changes: SuperJSON.serialize(this.subscriptionDataBuffer.changes),
+      timestamp: this.db.clock.current(),
+      forQueries: Array.from(this.subscriptionDataBuffer.changedQueries),
+    });
+    this.subscriptionDataBuffer = {
+      changedQueries: new Set(),
+      changes: {},
+    };
   }
 
   async handleConnectQueryMessage(
     msgParams: ClientConnectQueryMessage['payload']
   ) {
-    const { id: queryKey, params, state } = msgParams;
+    const { id: queryKey, params: query, state } = msgParams;
     try {
-      const { collectionName, ...parsedQuery } = params;
-      const clientStates = state
-        ? new Map(state.map(([sequence, client]) => [client, sequence]))
-        : undefined;
-      const builtQuery = this.db.query(collectionName, parsedQuery).build();
-
-      // TODO: THIS SHOULD BE KEYED ON QUERY HASH
-      const unsubscribe = async () => {
-        this.querySyncer.unregisterQuery(queryKey);
-      };
-
-      const internalQueryId = await this.querySyncer.registerQuery(
-        builtQuery as any,
+      // TODO: handle this more centrally so a ENTITY_DATA message can be sent for multiple
+      // subscribed queries at once
+      const unsubscribe = this.db.subscribeChanges(
+        query,
+        this.bufferEntityData.bind(this),
         {
+          queryState: state,
           skipRules: hasAdminAccess(this.token),
-          stateVector: clientStates,
+          queryKey,
+          errorCallback: (error) => {
+            throw error;
+          },
         }
       );
 
-      if (!internalQueryId) return;
-
-      this.connectedQueries.set(internalQueryId, {
+      // TODO: should we be doing this?
+      if (this.connectedQueries.has(queryKey)) {
+        this.connectedQueries.get(queryKey)?.unsubscribe();
+      }
+      // TODO: use the variables-replaced queryId
+      this.connectedQueries.set(queryKey, {
         unsubscribe,
         serverHasRespondedOnce: false,
         externalQueryId: queryKey,
       });
+
+      await this.db.updateQueryViews();
+      this.db.broadcastToQuerySubscribers();
     } catch (e) {
-      console.error(e);
+      logger.error('Connect query error', e as Error);
       const innerError = isTriplitError(e)
         ? e
         : new TriplitError(
@@ -194,11 +214,11 @@ export class SyncConnection {
     msgParams: ClientDisconnectQueryMessage['payload']
   ) {
     const { id: queryKey } = msgParams;
-    const internalQueryId = Array.from(this.connectedQueries.entries()).find(
-      ([_internalId, entry]) => entry.externalQueryId === queryKey
-    )?.[0];
-    if (!internalQueryId) return;
-    this.querySyncer.unregisterQuery(internalQueryId);
+    // const internalQueryId = Array.from(this.connectedQueries.entries()).find(
+    //   ([_internalId, entry]) => entry.externalQueryId === queryKey
+    // )?.[0];
+    // if (!internalQueryId) return;
+    // this.querySyncer.unregisterQuery(internalQueryId);
     if (this.connectedQueries.has(queryKey)) {
       this.connectedQueries.get(queryKey)?.unsubscribe();
       this.connectedQueries.delete(queryKey);
@@ -208,7 +228,7 @@ export class SyncConnection {
   // in case TRIPLES_PENDING requests pile up, throttle them
   // Or figure out a better way to tap into queue of pending requests
   private throttledTriplesRequest = throttle(
-    () => this.sendResponse('TRIPLES_REQUEST', {}),
+    () => this.sendMessage('TRIPLES_REQUEST', {}),
     10
   );
 
@@ -216,63 +236,29 @@ export class SyncConnection {
     this.throttledTriplesRequest();
   }
 
-  async handleTriplesMessage(msgParams: ClientTriplesMessage['payload']) {
-    const { triples } = msgParams;
-    if (!triples?.length) return;
-    let successes: string[] = [];
-    let failures: [string, TriplitError][] = [];
-    const txTriples = Object.fromEntries(
-      Object.entries(groupTriplesByTimestamp(triples)).filter(
-        ([txId, triples]) => {
-          if (hasAdminAccess(this.token)) return true;
-          const anySchemaTriples = triples.some(
-            (trip) => trip.attribute[0] === '_metadata'
-          );
-          if (anySchemaTriples) {
-            failures.push([
-              txId,
-              new TriplitError(
-                'Invalid permissions to modify schema. Must use Service Token.'
-              ),
-            ]);
-            return false;
-          }
-          return true;
-        }
-      )
-    );
+  async handleChangesMessage(msgParams: ClientChangesMessage['payload']) {
+    const changes = SuperJSON.deserialize<DBChanges>(msgParams.changes);
+    const timestamp = this.db.clock.next();
     try {
-      // If we fail here handle individual failures
-      const resp = await insertTriplesByTransaction(
-        this.db,
-        txTriples,
-        hasAdminAccess(this.token)
-      );
-      successes = resp.successes;
-      failures.push(...resp.failures);
-
-      if (failures.length > 0) {
-        this.sendErrorResponse('TRIPLES', new TriplesInsertError(), {
-          failures: failures.map(([txId, error]) => ({
-            txId,
-            error: error.toJSON(),
-          })),
-        });
-      }
-
-      this.sendResponse('TRIPLES_ACK', {
-        txIds: successes,
-        failedTxIds: failures.map(([txId]) => txId),
+      await this.db.applyChangesWithTimestamp(changes, timestamp, {
+        skipRules: hasAdminAccess(this.token),
       });
+      this.sendMessage('CHANGES_ACK', { timestamp });
+      // TODO: determine if this should be on some sort of interval or managed/triggered elsewhere
+      await this.db.updateQueryViews();
+      this.db.broadcastToQuerySubscribers();
     } catch (e) {
+      logger.error('Changes error', e as Error);
       const error = isTriplitError(e)
         ? e
         : new TriplitError(
             'An unknown error occurred while processing your request.'
           );
-      this.sendErrorResponse('TRIPLES', new TriplesInsertError(), {
-        failures: Object.keys(txTriples).map((txId) => ({
-          txId,
+      // TODO: test error payloads
+      this.sendErrorResponse('CHANGES', new TriplitError(), {
+        failures: Object.keys(changes).map((collection) => ({
+          txId: JSON.stringify(timestamp),
+          collection,
           error: error.toJSON(),
         })),
       });
@@ -298,18 +284,77 @@ export class SyncConnection {
     }
   }
 
+  private async handleSchemaResponseMessage(
+    msgParams: ClientSchemaResponseMessage['payload']
+  ) {
+    const { schema: clientSchema } = msgParams;
+
+    // If client is schemaless, we can sync but will reject invalid changes on server
+    if (!clientSchema) {
+      this.canSync = true;
+      return this.sendMessage('READY', {});
+    }
+
+    const serverSchema = this.db.getSchema();
+    // If server is schemaless, we may corrupt a client and probably shouldnt sync
+    if (!serverSchema) {
+      this.canSync = false;
+      return this.sendMessage('CLOSE', INCOMPATIBLE_SCHEMA_PAYLOAD);
+    }
+
+    const diff = diffSchemas(clientSchema, serverSchema);
+
+    const allowClientToSync = async () => {
+      const hashes =
+        (await this.db.getMetadata<number[]>(COMPATIBILITY_LIST_KEY)) ?? [];
+      if (!hashes.includes(this.options.clientSchemaHash!)) {
+        await this.db.setMetadata(COMPATIBILITY_LIST_KEY, [
+          ...hashes,
+          this.options.clientSchemaHash!,
+        ]);
+      }
+      this.canSync = true;
+      this.sendMessage('READY', {});
+    };
+
+    // Schemas are identical, we can sync
+    if (diff.length === 0) {
+      return await allowClientToSync();
+    }
+
+    const incompatibleEdits = getBackwardsIncompatibleEdits(diff);
+    const isSchemaCompatible = incompatibleEdits.length === 0;
+    console.dir(incompatibleEdits, { depth: null });
+
+    // If schema is incompatible, we shouldnt sync
+    if (!isSchemaCompatible) {
+      this.canSync = false;
+      return this.sendMessage('CLOSE', INCOMPATIBLE_SCHEMA_PAYLOAD);
+    }
+
+    // If schema is compatible, we can sync
+    await allowClientToSync();
+  }
+
   dispatchCommand(message: ClientSyncMessage) {
-    this.logger.log('Received message', message);
+    logger.debug('Received message', message);
     try {
+      if (message.type === 'SCHEMA_RESPONSE') {
+        return this.handleSchemaResponseMessage(message.payload);
+      }
+      if (!this.canSync) {
+        return this.sendErrorResponse(
+          message.type,
+          new TriplitError('Server not ready for messages')
+        );
+      }
       switch (message.type) {
         case 'CONNECT_QUERY':
           return this.handleConnectQueryMessage(message.payload);
         case 'DISCONNECT_QUERY':
           return this.handleDisconnectQueryMessage(message.payload);
-        case 'TRIPLES_PENDING':
-          return this.handleTriplesPendingMessage();
-        case 'TRIPLES':
-          return this.handleTriplesMessage(message.payload);
+        case 'CHANGES':
+          return this.handleChangesMessage(message.payload);
         case 'CHUNK':
           return this.handleChunkMessage(message.payload);
         default:
@@ -321,7 +366,7 @@ export class SyncConnection {
           );
       }
     } catch (e) {
-      console.error(e);
+      logger.error('Error while dispatching command', e as Error);
       return this.sendErrorResponse(
         message.type,
         isTriplitError(e)
@@ -338,19 +383,8 @@ export class SyncConnection {
     return this.db.insert(collectionName, entity);
   }
 
+  // TODO: handle references to this in tenant-db and legacy-node-server
   async isClientSchemaCompatible(): Promise<ServerCloseReason | undefined> {
-    const serverSchema = await this.db.getSchema();
-    const serverHash = hashSchemaJSON(schemaToJSON(serverSchema)?.collections);
-    if (
-      serverHash &&
-      serverHash !== this.options.clientSchemaHash &&
-      !this.options.syncSchema
-    )
-      return {
-        type: 'SCHEMA_MISMATCH',
-        retry: false,
-        message: 'Client schema does not match server schema.',
-      };
-    return undefined;
+    throw new Error('NOT IMPLEMENTED');
   }
 }

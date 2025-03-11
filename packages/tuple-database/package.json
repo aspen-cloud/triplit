@@ -1,6 +1,6 @@
 {
 	"name": "@triplit/tuple-database",
-	"version": "2.2.33",
+	"version": "2.3.0-canary-20250225192824",
 	"description": "An optimized fork of ccorcos/tuple-database",
 	"repository": "github:aspen-cloud/tuple-database",
 	"source": "./src/main.ts",
@@ -49,7 +49,7 @@
 		"validate:types": "node ../../scripts/check-for-local-references-in-declarations.js dist"
 	},
 	"devDependencies": {
-		"@types/better-sqlite3": "^7.6.3",
+		"@types/better-sqlite3": "^7.6.12",
 		"@types/bun": "^1.0.12",
 		"@types/fs-extra": "^11.0.1",
 		"@types/level": "^6.0.1",
@@ -59,7 +59,7 @@
 		"@types/node": "^18.11.18",
 		"@types/react": "^18.0.26",
 		"@types/uuid": "^10.0.0",
-		"better-sqlite3": "^9.5.0",
+		"better-sqlite3": "^11.8.1",
 		"expo-sqlite": "^14.0.3",
 		"fake-indexeddb": "^4.0.1",
 		"idb": "^7.1.1",
@@ -86,7 +86,6 @@
 		"fractional-indexing": "^3.1.0",
 		"fs-extra": "^11.1.0",
 		"md5": "^2.3.0",
-		"remeda": "^2.16.0",
 		"sorted-btree": "^1.8.1",
 		"uuid": "^9.0.0"
 	},

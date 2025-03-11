@@ -69,7 +69,7 @@ export default function NewUserPage() {
           />
         </div>
         {error && (
-          <div className="text-red-500 text-sm">
+          <div className="flex items-center gap-2 p-3 mt-2 text-red-700 bg-red-100 border border-red-400 rounded-lg">
             {error === "CredentialsSignin"
               ? "Invalid username or password"
               : "An error occurred"}

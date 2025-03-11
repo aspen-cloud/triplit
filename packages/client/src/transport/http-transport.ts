@@ -32,7 +32,7 @@ export class HttpTransport implements SyncTransport {
     if (!this.transportOptions) return false;
     if (!this.isOpen) return false;
 
-    const { token, clientId, server, secure } = this.transportOptions;
+    const { token, server, secure } = this.transportOptions;
 
     const uri = `${secure ? 'https' : 'http'}://${server}/message`;
     fetch(uri, {
@@ -43,7 +43,7 @@ export class HttpTransport implements SyncTransport {
       },
       body: JSON.stringify({
         message,
-        options: { clientId },
+        options: {},
       }),
     }).catch((err) => {
       console.error(err);
@@ -64,11 +64,10 @@ export class HttpTransport implements SyncTransport {
   connect(params: TransportConnectParams): void {
     if (this.eventSource) this.close();
 
-    const { token, clientId, schema, syncSchema, server, secure } = params;
+    const { token, schema, syncSchema, server, secure } = params;
     const missingParams = [];
-    if (!token || !clientId || !server) {
+    if (!token || !server) {
       if (!token) missingParams.push('token');
-      if (!clientId) missingParams.push('clientId');
       if (!server) missingParams.push('server');
       console.warn(
         `Missing required params: [${missingParams.join(
@@ -83,7 +82,6 @@ export class HttpTransport implements SyncTransport {
       eventSourceOptions.set('schema', schema.toString());
     }
     eventSourceOptions.set('sync-schema', String(syncSchema));
-    eventSourceOptions.set('client', clientId);
     eventSourceOptions.set('token', token);
     const eventSourceUri = `${
       secure ? 'https' : 'http'

@@ -1,4 +1,4 @@
-import * as _ from "remeda"
+import { shuffle } from "../helpers/remeda.js"
 import { describe, it, expect } from "bun:test"
 import { KeyValuePair } from "../storage/types.js"
 import { get, remove, scan, set } from "./sortedTupleValuePairs.js"
@@ -16,7 +16,7 @@ describe("sortedTupleValuePairs", () => {
 
 	it("sorts prefixes in the correct order", () => {
 		const data: KeyValuePair[] = []
-		for (const { key, value } of _.shuffle(items)) {
+		for (const { key, value } of shuffle(items)) {
 			set(data, key, value)
 		}
 		expect(data).toEqual(items)
@@ -80,7 +80,7 @@ describe("sortedTupleValuePairs", () => {
 
 	it("set reverse", () => {
 		const data: KeyValuePair[] = []
-		for (const { key, value } of _.shuffle(items)) {
+		for (const { key, value } of shuffle(items)) {
 			set(data, key, value, true)
 		}
 		expect(data).toEqual(reversed)

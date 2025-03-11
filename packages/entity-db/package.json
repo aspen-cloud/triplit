@@ -1,0 +1,83 @@
+{
+  "name": "@triplit/entity-db",
+  "packageManager": "yarn@4.2.2",
+  "version": "0.0.1-canary-20250310223455",
+  "source": "./src/index.ts",
+  "main": "./dist/index.js",
+  "type": "module",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./ivm": {
+      "types": "./dist/ivm.d.ts",
+      "import": "./dist/ivm.js",
+      "default": "./dist/ivm.js"
+    },
+    "./changes-buffer": {
+      "types": "./dist/memory-write-buffer.d.ts",
+      "import": "./dist/memory-write-buffer.js",
+      "default": "./dist/memory-write-buffer.js"
+    },
+    "./storage/*": {
+      "types": "./dist/kv-store/storage/*.d.ts",
+      "import": "./dist/kv-store/storage/*.js",
+      "default": "./dist/kv-store/storage/*.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc --noCheck",
+    "lint": "tsc --noEmit",
+    "lint:tests": "tsc --noEmit --project tsconfig.test.json",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "publish-pkg": "node ../../scripts/npm-check-version-and-publish.js",
+    "typecheck": "vitest --typecheck.only --no-watch"
+  },
+  "dependencies": {
+    "@triplit/logger": "workspace:^",
+    "elen": "^1.0.10",
+    "nanoid": "^5.1.0",
+    "sorted-btree": "^1.8.1"
+  },
+  "devDependencies": {
+    "@fast-check/vitest": "^0.1.5",
+    "@triplit/types": "workspace:^",
+    "@types/better-sqlite3": "^7.6.12",
+    "@types/bun": "^1.2.3",
+    "@vitest/coverage-v8": "^3.0.6",
+    "better-sqlite3": "^11.8.1",
+    "esbuild": "^0.25.0",
+    "expo-sqlite": "^15.1.2",
+    "fake-indexeddb": "^6.0.0",
+    "jest": "^29.7.0",
+    "lmdb": "^3.2.6",
+    "mitata": "^1.0.27",
+    "tinybench": "^3.1.0",
+    "typescript": "^5.7.2",
+    "vitest": "^3.0.6"
+  },
+  "peerDependencies": {
+    "better-sqlite3": "*",
+    "expo-sqlite": "*",
+    "lmdb": "*"
+  },
+  "peerDependenciesMeta": {
+    "better-sqlite3": {
+      "optional": true
+    },
+    "expo-sqlite": {
+      "optional": true
+    },
+    "lmdb": {
+      "optional": true
+    }
+  }
+}

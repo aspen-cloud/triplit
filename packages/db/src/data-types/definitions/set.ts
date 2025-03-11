@@ -17,7 +17,7 @@ import { ExtractJSType, UserTypeOptions } from '../types/index.js';
 import { Timestamp } from '../../timestamp.js';
 import { VALUE_TYPE_KEYS } from '../constants.js';
 
-const SET_OPERATORS = ['=', '!=', 'has', '!has', 'isDefined'] as const;
+const SET_OPERATORS = ['has', '!has', 'isDefined'] as const;
 type SetOperators = typeof SET_OPERATORS;
 
 export type SetType<
@@ -28,7 +28,7 @@ export type SetType<
   TypeWithOptions<Set<ExtractJSType<Items>>, TypeOptions>,
   Record<string, boolean>,
   Record<string, [boolean, Timestamp]>, // TODO: should be based on the type of the key
-  SetOperators
+  SetOperators | Items['supportedOperations']
 >;
 
 export function SetType<
@@ -46,7 +46,7 @@ export function SetType<
     );
   return {
     type: 'set',
-    supportedOperations: SET_OPERATORS,
+    supportedOperations: [...SET_OPERATORS, ...items.supportedOperations],
     context: {},
     items,
     options,
@@ -67,8 +67,10 @@ export function SetType<
           invalidReason
         );
       if (options.nullable && val === null) return null;
+      // TODO: maybe return null here?
+      if (this.context.optional && val === undefined) return undefined;
       return [...val.values()].reduce((acc, key) => {
-        return { ...acc, [key as string]: true };
+        return { ...acc, [items.convertInputToDBValue(key) as string]: true };
       }, {});
     },
     // @ts-ignore
@@ -100,6 +102,7 @@ export function SetType<
     },
     validateInput(val: any) {
       if (options.nullable === true && val === null) return;
+      if (this.context.optional && val === undefined) return;
       // must be a set
       if (!(val instanceof Set) && !(val instanceof Array))
         return `Expected Set, got ${betterTypeOf(val)}`;

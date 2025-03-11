@@ -1,10 +1,10 @@
-import { Value } from '@sinclair/typebox/value';
+import { Value as TBValue } from '@sinclair/typebox/value';
 import { UserTypeOptions } from './types/index.js';
 import { Static, Type } from '@sinclair/typebox';
 import { nanoid } from 'nanoid';
 
 export function userTypeOptionsAreValid(options: UserTypeOptions) {
-  return Value.Check(UserTypeOptionsSchema, options);
+  return TBValue.Check(UserTypeOptionsSchema, options);
 }
 
 const DefaultFunctionSchema = Type.Object({

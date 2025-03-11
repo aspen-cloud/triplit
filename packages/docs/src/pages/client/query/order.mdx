@@ -1,32 +1,32 @@
 ---
-description: The `order` clause is used to sort results in Triplit query based on their attributes or relations.
+description: The `Order` clause is used to sort results in Triplit query based on their attributes or relations.
 ---
 
 import { Callout } from 'nextra-theme-docs';
 
-# order
+# Order
 
-To order the results of a query, you can use the `order` method. This method accepts a list of order clauses as an argument. An order clause is a tuple that takes the form `[attribute, direction]`. `direction` can be either `ASC` or `DESC`. Clauses are applied in the order they are provided.
+To order the results of a query, you can use the `Order` method. This method accepts a list of order clauses as an argument. An order clause is a tuple that takes the form `[attribute, direction]`. `direction` can be either `ASC` or `DESC`. Clauses are applied in the order they are provided.
 
 For example the following query will return all users ordered by their creation date in descending order.
 
 ```typescript
 const query = client
   .query('users')
-  .select(['id', 'name', 'email', 'dob'])
-  .order('created_at', 'DESC');
+  .Select(['id', 'name', 'email', 'dob'])
+  .Order('created_at', 'DESC');
 ```
 
-Clauses can be passed to `order` as a single clause or an array of clauses:
+Clauses can be passed to `Order` as a single clause or an array of clauses:
 
-- `.order('created_at', 'DESC')`
-- `.order(['created_at', 'DESC'])`
-- `.order([['created_at', 'DESC']])`
+- `.Order('created_at', 'DESC')`
+- `.Order(['created_at', 'DESC'])`
+- `.Order([['created_at', 'DESC']])`
 
 You may use dot notation to order by attributes of a record.
 
 ```typescript
-const query = client.query('users').order('address.city', 'ASC');
+const query = client.query('users').Order('address.city', 'ASC');
 ```
 
 ### Ordering with relations
@@ -34,30 +34,34 @@ const query = client.query('users').order('address.city', 'ASC');
 If you are using a schema, you can order by attributes of related entities. For example, the following schema defines a relation between `users` and `messages`
 
 ```typescript
-const schema = {
-  users: S.Schema({
-    id: S.Id(),
-    name: S.String(),
-    email: S.String(),
-  }),
-  messages: S.Schema({
-    id: S.Id(),
-    text: S.String(),
-    created_at: S.Date({ default: S.Default.now() }),
-    sender_id: S.String(),
-    sender: S.RelationById('users', '$sender_id'),
-  }),
-};
+const schema = S.Collections({
+  users: {
+    schema: S.Schema({
+      id: S.Id(),
+      name: S.String(),
+      email: S.String(),
+    }),
+  },
+  messages: {
+    schema: S.Schema({
+      id: S.Id(),
+      text: S.String(),
+      created_at: S.Date({ default: S.Default.now() }),
+      sender_id: S.String(),
+    }),
+    relationships: { sender: S.RelationById('users', '$sender_id') },
+  },
+});
 ```
 
 You can then order messages by the name of the sender.
 
 ```typescript
 // Order messages by the name of the sender in ascending order
-client.query('messages').order('sender.name', 'ASC');
+client.query('messages').Order('sender.name', 'ASC');
 
 // Order messages by the name of the sender and then by the created date in descending order
-client.query('messages').order([
+client.query('messages').Order([
   ['sender.name', 'ASC'],
   ['created_at', 'DESC'],
 ]);
@@ -70,20 +74,20 @@ client.query('messages').order([
 
 ### After
 
-You may use the `after` method to specify an entity to start the query from. This is useful for paginating results. You must use `order` before using `after`. At the moment, `after` only supports a single cursor that corresponds to the first `order` clause.
+You may use the `After` method to specify an entity to start the query from. This is useful for paginating results. You must use `Order` before using `After`. At the moment, `After` only supports a single cursor that corresponds to the first `Order` clause.
 
 ```typescript {12-14}
 const PAGE_SIZE = 10;
 
 const query = client
   .query('users')
-  .select(['id', 'name', 'email', 'dob'])
-  .order('created_at', 'DESC')
-  .limit(PAGE_SIZE);
+  .Select(['id', 'name', 'email', 'dob'])
+  .Order('created_at', 'DESC')
+  .Limit(PAGE_SIZE);
 
 const { results: firstPage } = client.fetch(query);
 const lastEntity = firstPage?.pop();
 
-const secondPageQuery = query.after(lastEntity);
+const secondPageQuery = query.After(lastEntity);
 const { results: secondPage } = client.fetch(secondPageQuery);
 ```

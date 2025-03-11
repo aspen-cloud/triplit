@@ -1,39 +1,70 @@
 import { Middleware } from '../middleware.js';
 import * as Flag from '../flags.js';
-import { getTriplitDir, loadTsModule } from '../filesystem.js';
-import path from 'path';
+import { getDefaultSchemaPath, loadTsModule } from '../filesystem.js';
 import fs from 'fs';
+import { DBSchema } from '@triplit/entity-db';
+import { yellow } from 'ansis/colors';
 
+/**
+ * Loads the schema
+ */
 export const projectSchemaMiddleware = Middleware({
   name: 'Project Schema',
   flags: {
     schemaPath: Flag.String({
       description: 'File path to the local schema file',
       required: false,
-      char: 'P',
     }),
-    noSchema: Flag.Boolean({
-      description: 'Do not load a schema file',
-      char: 'N',
+    // Flag to throw schema if not found
+    requireSchema: Flag.Boolean({
+      description: 'Throw an error if no local schema file is found',
+      required: false,
+      default: false,
     }),
   },
-  run: async ({ flags }) => {
-    if (flags.noSchema) return { schema: undefined };
-    let schemaPath =
-      flags.schemaPath ??
-      process.env.TRIPLIT_SCHEMA_PATH ??
-      path.join(getTriplitDir(), 'schema.ts');
+  run: async ({
+    flags,
+  }): Promise<{
+    projectSchema: {
+      getSchema: () => Promise<DBSchema | undefined>;
+      schemaPath: string;
+    };
+  }> => {
+    const schemaPath = flags.schemaPath ?? getDefaultSchemaPath();
+    const getSchema = createSchemaLoader({
+      schemaPath,
+      requireSchema: flags.requireSchema,
+    });
+
+    return { projectSchema: { getSchema, schemaPath } };
+  },
+});
+
+function createSchemaLoader({
+  schemaPath,
+  requireSchema,
+}: {
+  schemaPath: string;
+  requireSchema: boolean;
+}): () => Promise<DBSchema | undefined> {
+  return async () => {
     if (!fs.existsSync(schemaPath)) {
-      return `Schema file not found at ${schemaPath}. If you would like to run without a schema file, use the --noSchema flag.`;
+      if (requireSchema)
+        throw new Error(
+          `Schema file not found at ${schemaPath}. You may specify a different location with the --schemaPath flag.`
+        );
+      console.warn(yellow(`No schema file found at ${schemaPath}.`));
+      return undefined;
     }
     const result = await loadTsModule(schemaPath);
     if (!result) {
-      return `Failed to load schema file at ${schemaPath}. If you would like to run without a schema file, use the --noSchema flag.`;
+      throw new Error(
+        `Failed to load schema from ${schemaPath}, even though it exists. Please check the file for errors.`
+      );
     }
-    if (!result.schema) {
-      return `${schemaPath} does not export an object named 'schema'. Please export one. If you would like to run without a schema file, use the --noSchema flag.`;
-    }
-
-    return { ...result } as { schema: any; roles?: any };
-  },
-});
+    return {
+      collections: result.schema,
+      roles: result.roles,
+    } as DBSchema;
+  };
+}

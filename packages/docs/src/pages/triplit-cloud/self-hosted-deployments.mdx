@@ -2,7 +2,7 @@
 description: Learn about connecting a self-hosted server to Triplit Cloud.
 ---
 
-import { Steps } from 'nextra-theme-docs';
+import { Steps, Callout } from 'nextra-theme-docs';
 
 import Image from 'next/image';
 import selfHosting from '../../../public/dashboard-screenshots/self-hosting.png';
@@ -32,8 +32,6 @@ Triplit Cloud is fully compatible with self-hosted Triplit servers. This means y
 
 After creating your project, you'll be shown some information about your project, and instructions for deploying a self-hosted machine.
 
-{' '}
-
 <Image
   src={selfHosting}
   alt="Self hosting instructions"
@@ -43,7 +41,7 @@ After creating your project, you'll be shown some information about your project
 
 You have two options for deploying a self-hosted machine:
 
-- **Railway**: One-click-deply a Triplit server using Railway. This is the easiest way to get started with a self-hosted machine, and won't require any configuration.
+- **Railway**: One-click-deploy a Triplit server using Railway. This is the easiest way to get started with a self-hosted machine, and won't require any configuration.
 - **Docker**: Deploy a Triplit server using Docker on a platform of your choice. This will require you to configure your server with the necessary environment variables.
 
 We plan on adding many more one-click-deploy options in the future, so stay tuned!
@@ -52,17 +50,37 @@ We plan on adding many more one-click-deploy options in the future, so stay tune
 
 If you're not using one of the one-click deploy options, you'll need to configure your server to accept requests from the Triplit Dashboard.
 
-- **`PROJECT_ID`**: The unique identifier for your project. You can find this on the deploy instructions screen pictured above. Once you're past the creation step, you can find the Project Id in the Triplit Dashboard under your project's settings.
+<Callout type="warning" emoji="⚠️">
+  If you plan to connect your self-hosted Triplit server to the Triplit
+  Dashboard and use JWTs for authentication and permission within Triplit,
+  EXTERNAL_JWT_SECRET should only be set on your Triplit Dashboard. Ensure the
+  env var is NOT included wherever you deployed your Docker image. Otherwise,
+  you may encounter errors related to invalid JWTs and JWT signatures.
+</Callout>
 
-{/* ![Project id in the dashboard](/dashboard-screenshots/project-id.png) */}
+##### `JWT_SECRET`
 
-- **`JWT_SECRET`**: The secret used to sign and verify JWT tokens. To use the Triplit Dashboard, set this to the Triplit public key. If you're deploying with Railway, this is configured for you.
+The secret used to sign and verify JWT tokens. To use the Triplit Dashboard, set this to the official Triplit public key, provided below.
 
 ```text copy
 -----BEGIN PUBLIC KEY-----MIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEA3/h/YykqVaiyqxDpKqyafdsIiGOi/xZ5CXkwzlG8EHfs9L6eB+/zYQ3Aiqvb2ysTCqS53aD2Ktiv44s9Xs1yHNpZkAIQugKdeERhZAQm20DA3DHj1ONZ9jCduUV5C99y5uM06+6FdfwYjrVWpPjuKwdzU+/f5Q4rsG3K2vSRFQX7UYJhnqSfeqXZZ0n5WGqDzRVsSLDgpBtIba7cGQ8v6NJgdRk95SksOXJ/srnSeogWZ2+V6X6J/fxcYwRQYa+YFBcY8ReOWr79pdAScGF0fA89GctCwdxcpVlGHP9zbQe6wY5/LHm84iQ4WP8w8azpNcm33DX3QbBbY8c3YPzEyt3qcOTrDqwNPEwsARmf3p2SmkVntB7T89Ca33ppRTPKA6BknbESgE6ShKOoaHC15ZexJP7AYNJ5ap8eXFhlKEM9VfytfkshNgmq7SC0M9WKcrtQFAvpoh0ggzIC0yh/A8ndUCo3DA58p5aRjYOgliuzeQCkI6kRK8fnJKX38q91mhma7lf4nYkYxbhorSTRqS3VLyHSTx9AbiWLYl8zdqAWGYVuysXdKKY1kpQzzwqcY5RT/CEDsVIkO2GB4iNzMqkA3hI3673oBEE+/PhkeIqE2WmL15SCR65OIj7L0XBZgVhqpPdICctD5Xktc684kpdqT2jKW0h2O53iZXFiWhMCAwEAAQ==-----END PUBLIC KEY-----
 ```
 
-- Other secrets: If you are **not** using a one-click deployment option, like Railway, there are other secrets you may need to configure, including `LOCAL_DATABASE_URL`, `EXTERNAL_JWT_SECRET` and `CLAIMS_PATH`. You can read more about them in the [self-hosting guide](/self-hosting).
+##### `LOCAL_DATABASE_URL` (required for durable storage)
+
+An absolute path on the server's file system to a directory where the server will store any database files. This is required for durable storage options: `lmdb`, and `sqlite`.
+
+##### `CLAIMS_PATH` (optional)
+
+If you are using custom JWTs with nested Triplit-related claims, you can set the `CLAIMS_PATH` environment variable. The server will read the claims at the path specified by `CLAIMS_PATH`. Read the [authentication guide](/auth) for more information.
+
+##### `SENTRY_DSN` (optional)
+
+If you want to log errors to Sentry, you can set the `SENTRY_DSN` environment variable. The server will automatically log errors to Sentry.
+
+##### `VERBOSE_LOGS` (optional)
+
+If you want to log all incoming and outgoing messages and requests, you can set the `VERBOSE_LOGS` environment variable. This can be useful for debugging.
 
 ### Add your server's hostname to your project
 

@@ -20,12 +20,12 @@ import {
 import { isFilterGroup, isFilterStatement } from './query.js';
 import { getSchemaFromPath, triplesToSchema } from './schema/schema.js';
 import { schemaToTriples } from './schema/export/index.js';
-import { Models, StoreSchema } from './schema/types/index.js';
 import {
-  diffSchemas,
-  getSchemaDiffIssues,
-  PossibleDataViolations,
-} from './schema/diff.js';
+  Models,
+  StoreSchema,
+  PossibleDataViolation,
+} from './schema/types/index.js';
+import { diffSchemas, getSchemaDiffIssues } from './schema/diff.js';
 import { TripleStoreApi } from './triple-store.js';
 import { VALUE_TYPE_KEYS } from './data-types/constants.js';
 import DB, { CollectionFromModels, CollectionNameFromModels } from './db.js';
@@ -193,13 +193,13 @@ export async function overrideStoredSchema<M extends Models>(
   { failOnBackwardsIncompatibleChange = false } = {}
 ): Promise<{
   successful: boolean;
-  issues: PossibleDataViolations[];
+  issues: PossibleDataViolation[];
 }> {
   if (!schema) return { successful: false, issues: [] };
   const result = await db.transact(
     async (tx) => {
       const currentSchema = await tx.getSchema();
-      let issues: PossibleDataViolations[] = [];
+      let issues: PossibleDataViolation[] = [];
       if (currentSchema) {
         const diff = diffSchemas(currentSchema, schema);
 
@@ -251,7 +251,7 @@ export async function overrideStoredSchema<M extends Models>(
 
 export function logSchemaChangeViolations(
   successful: boolean,
-  issues: PossibleDataViolations[],
+  issues: PossibleDataViolation[],
   {
     logger,
     forcePrintIssues = false,
@@ -278,13 +278,13 @@ export function logSchemaChangeViolations(
   }
 }
 
-function logSchemaIssues(logger: Logger, issues: PossibleDataViolations[]) {
+function logSchemaIssues(logger: Logger, issues: PossibleDataViolation[]) {
   const collectionIssueMap = issues.reduce((acc, issue) => {
     const collection = issue.context.collection;
     const existingIssues = acc.get(collection) ?? [];
     acc.set(collection, [...existingIssues, issue]);
     return acc;
-  }, new Map<string, PossibleDataViolations[]>());
+  }, new Map<string, PossibleDataViolation[]>());
   collectionIssueMap.forEach((issues, collection) => {
     logger.error(`\nCollection: '${collection}'`);
     issues.forEach(({ issue, context, cure }) => {

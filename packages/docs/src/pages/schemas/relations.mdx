@@ -15,15 +15,17 @@ In this example schema, we are modeling a school, where departments have many cl
 ```typescript {8-10}
 import { Schema as S } from '@triplit/client';
 
-const schema = {
+const schema = S.Collections({
   departments: {
     schema: S.Schema({
       id: S.Id(),
       name: S.String(),
+    }),
+    relationships: {
       classes: S.RelationMany('classes', {
         where: [['department_id', '=', '$id']],
       }),
-    }),
+    },
   },
   classes: {
     schema: S.Schema({
@@ -34,7 +36,7 @@ const schema = {
       department_id: S.String(),
     }),
   },
-};
+});
 ```
 
 ## RelationOne
@@ -46,15 +48,17 @@ We can update our model of a school, so that a class has a relation to its depar
 ```typescript {20-22}
 import { Schema as S } from '@triplit/client';
 
-const schema = {
+const schema = S.Collections({
   departments: {
     schema: S.Schema({
       id: S.Id(),
       name: S.String(),
+    }),
+    relationships: {
       classes: S.RelationMany('classes', {
         where: [['department_id', '=', '$id']],
       }),
-    }),
+    },
   },
   classes: {
     schema: S.Schema({
@@ -63,12 +67,14 @@ const schema = {
       level: S.Number(),
       building: S.String(),
       department_id: S.String(),
+    }),
+    relationships: {
       department: S.RelationOne('departments', {
         where: [['id', '=', '$department_id']],
       }),
-    }),
+    },
   },
-};
+});
 ```
 
 ## RelationById
@@ -80,15 +86,17 @@ We can update the previous example to use `RelationById` instead of `RelationOne
 ```typescript {20}
 import { Schema as S } from '@triplit/client';
 
-const schema = {
+const schema = S.Collections({
   departments: {
     schema: S.Schema({
       id: S.Id(),
       name: S.String(),
+    }),
+    relationships: {
       classes: S.RelationMany('classes', {
         where: [['department_id', '=', '$id']],
       }),
-    }),
+    },
   },
   classes: {
     schema: S.Schema({
@@ -97,10 +105,12 @@ const schema = {
       level: S.Number(),
       building: S.String(),
       department_id: S.String(),
-      department: S.RelationById('departments', '$department_id'),
     }),
+    relationships: {
+      department: S.RelationById('departments', '$department_id'),
+    },
   },
-};
+});
 ```
 
 ## Querying collections with relations
@@ -108,8 +118,8 @@ const schema = {
 By default, queries on collections with relations will _not_ return related data. You can use the `include` method to specify which relations you want to include in the query.
 
 ```typescript
-const classesQuery = client.query('classes').include('department');
-const departmentsQuery = client.query('departments').include('classes');
+const classesQuery = client.query('classes').Include('department');
+const departmentsQuery = client.query('departments').Include('classes');
 ```
 
 ## Defining relations with referential variables

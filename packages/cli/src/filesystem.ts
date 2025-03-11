@@ -31,6 +31,12 @@ export function getDataDir() {
   return DATA_DIR;
 }
 
+export function getDefaultSchemaPath() {
+  return (
+    process.env.TRIPLIT_SCHEMA_PATH ?? path.join(getTriplitDir(), 'schema.ts')
+  );
+}
+
 export function transpileTsFile(filename: string) {
   const source = fs.readFileSync(filename, 'utf8');
   return transpileTsString(source);
@@ -120,20 +126,16 @@ export async function evalJSString(
   source: string,
   options: { tmpFile?: string } = {}
 ) {
-  let transpiledJsPath = options.tmpFile;
+  // If no tmpFile is provided, create a temporary file and cleanup after
+  const cleanup = !options.tmpFile;
+  const transpiledJsPath =
+    options.tmpFile ?? path.join(process.cwd(), 'tmp', '_temp.js');
   try {
-    // If no tmpFile is provided, create a temporary file and cleanup after
-    if (!options.tmpFile) {
-      const cwd = process.cwd();
-      const tmpDir = path.join(cwd, 'tmp');
-      transpiledJsPath = path.join(tmpDir, `_temp.js`);
-    }
     fs.mkdirSync(path.dirname(transpiledJsPath), { recursive: true });
     fs.writeFileSync(transpiledJsPath, source, 'utf8');
-
     return await importFresh('file:///' + transpiledJsPath);
   } finally {
-    if (!options.tmpFile) {
+    if (cleanup) {
       fs.rmSync(transpiledJsPath, { recursive: true, force: true });
     }
   }
