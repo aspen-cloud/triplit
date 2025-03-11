@@ -227,6 +227,11 @@ export class ClientComlinkWrapper<M extends Models<M> = Models>
     return ComLink.proxy(this.client.onEntitySyncError(...args));
   }
 
+  onFailureToSyncWrites(callback: (e: unknown) => void): () => void {
+    if (!this.client) throw new WorkerInternalClientNotInitializedError();
+    return ComLink.proxy(this.client.onFailureToSyncWrites(callback));
+  }
+
   onConnectionStatusChange(
     ...args: Parameters<
       NonNullable<typeof this.client>['onConnectionStatusChange']

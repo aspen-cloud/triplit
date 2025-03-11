@@ -404,8 +404,8 @@ export class TriplitClient<M extends Models<M> = Models> {
     if (opts.policy === 'local-first') {
       const isFirstTimeFetchingQuery =
         await this.syncEngine.isFirstTimeFetchingQuery(query);
-      // TODO: probablyIntendsToConnect is a bit of hack
-      // we probably want syncEngine.syncQuery to abort if we are not connected
+      // TODO: manage potential failure case where it looks like we're going to sync
+      // but then we fail and then need to reject the promise
       if (!(isFirstTimeFetchingQuery && this.probablyIntendsToConnect))
         return await this.fetchLocal(query, opts);
       try {
@@ -671,10 +671,12 @@ export class TriplitClient<M extends Models<M> = Models> {
 
   private get probablyIntendsToConnect() {
     return (
-      !!this.options?.autoConnect &&
-      !!this.syncEngine.syncOptions.token &&
-      !!this.syncEngine.syncOptions.server &&
-      this.connectionStatus !== 'CLOSED'
+      this.connectionStatus === 'OPEN' ||
+      (!!this.options?.autoConnect &&
+        !!this.syncEngine.syncOptions.token &&
+        !!this.syncEngine.syncOptions.server &&
+        this.connectionStatus !== 'CLOSED' &&
+        this.connectionStatus !== 'CLOSING')
     );
   }
 
@@ -685,8 +687,7 @@ export class TriplitClient<M extends Models<M> = Models> {
   ): () => void {
     let results: FetchResult<M, Q, 'many'> | undefined = undefined;
     let waitingOnRemoteSync =
-      (this.connectionStatus === 'OPEN' || this.probablyIntendsToConnect) &&
-      !options?.localOnly;
+      this.probablyIntendsToConnect && !options?.localOnly;
     let fetchingLocal = true;
     let fetchingRemote = false;
     let error: any = undefined;
@@ -1328,6 +1329,12 @@ export class TriplitClient<M extends Models<M> = Models> {
     ...args: Parameters<typeof this.syncEngine.onEntitySyncError>
   ) {
     return this.syncEngine.onEntitySyncError(...args);
+  }
+
+  onFailureToSyncWrites(
+    ...args: Parameters<typeof this.syncEngine.onFailureToSyncWrites>
+  ) {
+    return this.syncEngine.onFailureToSyncWrites(...args);
   }
 
   /**

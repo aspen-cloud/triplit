@@ -1,0 +1,92 @@
+---
+description: How to subscribe to various Triplit sync events to debug your app and remedy sync failures.
+---
+
+# Event listeners
+
+The `TriplitClient` provides a number of event listeners that you can use to debug your app and remedy sync failures. These listeners are:
+
+## Sync write failures
+
+These handlers are called when a write fails to sync with the server because of data corruption, a failed schema check, or insufficient write permissions.
+
+### `onEntitySyncError`
+
+Given an the id of an entity and its collection, this handler is called when a write for that entity fails to sync with the server. The callback will provide an error and the specific change for the entity (or accumulation of changes if there have been multiple writes to the entity). It will be called repeatedly until the returned unsubscribe handler is called.
+
+You may choose to undo the write by calling `clearPendingChangesForEntity` or retry the write by mutating the entity again.
+
+The sync will automatically retry when any write to the entity or any other entity is made.
+
+```typescript copy
+const insertedEntity = await client.insert('employee', {
+  id: 'Fry',
+  name: 'Philip J. Fry',
+});
+
+const unsub = client.onEntitySyncError('employee', 'fry', (error, change) => {
+  // Transaction failed on the server
+  // remove the entity from the outbox
+  await client.clearPendingChangesForEntity('employee', 'fry');
+});
+```
+
+### `onFailureToSyncWrites`
+
+When registered, the handler will be called when any write fails to sync. The callback provides an error object and the buffer of writes (a nested `Map<Collection,Map<Id,Change>>`) that failed to sync. It will be called repeatedly until the returned unsubscribe handler is called.
+
+You may choose to undo the write by calling `clearPendingChangesAll`, or by calling `clearPendingChangesForEntity` for each entity that failed to sync. The sync will automatically retry when any write to the entity or any other entity is made.
+
+```typescript copy
+const unsub = client.onFailureToSyncWrites((error, writes) => {
+  console.error('Failed to sync writes', error, writes);
+  await client.clearPendingChangesAll();
+});
+```
+
+## Sync write success
+
+### `onEntitySyncSuccess`
+
+Given an the id of an entity and its collection, this handler is called when a write for that entity successfully syncs with the server. It will be called repeatedly (e.g. after multiple updates to the same entity) until the returned unsubscribe handler is called.
+
+```typescript copy
+const insertedEntity = await client.insert('employee', {
+  id: 'Fry',
+  name: 'Philip J. Fry',
+});
+
+const unsub = client.onEntitySyncSuccess('employee', 'fry', () => {
+  // Insert succeeded on the server
+});
+```
+
+## Auth events
+
+### `onSessionError`
+
+Read more about this listener in the [Sessions API](/client/sessions#onsessionerror) documentation.
+
+## Message events
+
+The client communicates with the server over WebSockets. You can listen to messages sent and received with the following handlers:
+
+### `onSyncMessageSent`
+
+When registered, the provided callback will fire with the message sent to the server. It will be called repeatedly until the returned unsubscribe handler is called.
+
+```typescript copy
+const unsub = client.onSyncMessageSent((message) => {
+  console.log('Message sent to server', message);
+});
+```
+
+### `onSyncMessageReceived`
+
+When registered, the provided callback will fire with the message received from the server. It will be called repeatedly until the returned unsubscribe handler is called.
+
+```typescript copy
+const unsub = client.onSyncMessageReceived((message) => {
+  console.log('Message received from server', message);
+});
+```

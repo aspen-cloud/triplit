@@ -84,6 +84,9 @@ export class SyncEngine {
     string,
     EntitySyncSuccessCallback
   > = new NestedMap();
+  private onFailureToSyncWritesSubscribers: Set<
+    (e: unknown, writes: DBChanges) => void | Promise<void>
+  > = new Set();
   logger: Logger;
 
   // Connection state - these are used to track the state of the connection and should reset on dis/reconnect
@@ -223,6 +226,13 @@ export class SyncEngine {
     this.entitySyncErrorSubscribers.set(collection, entityId, callback);
     return () => {
       this.entitySyncErrorSubscribers.delete(collection, entityId);
+    };
+  }
+
+  onFailureToSyncWrites(callback: (e: unknown) => void) {
+    this.onFailureToSyncWritesSubscribers.add(callback);
+    return () => {
+      this.onFailureToSyncWritesSubscribers.delete(callback);
     };
   }
 
@@ -795,7 +805,9 @@ export class SyncEngine {
       // client can write to the unlocked buffer
       outbox.lockAndSwitchBuffers();
       this.syncInProgress = false;
-
+      for (const handler of this.onFailureToSyncWritesSubscribers) {
+        await handler(error, failedChanges);
+      }
       for (const collection in failedChanges) {
         // TODO: layer in deletes
         for (const [id, change] of failedChanges[collection].sets) {

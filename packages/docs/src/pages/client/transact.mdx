@@ -4,7 +4,7 @@ description: How to use the TriplitClient transact method to update a Triplit da
 
 # transact
 
-Transactions are a way to group multiple mutations into a single atomic operation. If any part of the mutations fail, the entire transaction is rolled back.
+Transactions are a way to group multiple mutations into a single atomic operation. If any part of the mutations fail **on the client**, the entire transaction is rolled back. If the transaction succeeds on the client but fails on the server, it will need to be handled. Read the [event listeners](/client/event-listeners) documentation for more information on how to handle these cases.
 
 A transaction can be created by calling `client.transact()`. For example:
 
@@ -16,52 +16,5 @@ await client.transact(async (tx) => {
     id: 'Bender',
     name: 'Bender Bending Rodriguez',
   });
-});
-```
-
-If you decide you need to abort a transaction, you can call `cancel` inside your transaction. For example:
-
-```typescript
-await client.transact(async (tx) => {
-  await tx.insert('employee', { id: 'Hermes', name: 'Hermes Conrad' });
-  await tx.cancel();
-});
-```
-
-## Error and success handling
-
-Mutations are first run on Triplit's local cache "optimistically", returning a promise. If the optimistic mutation is successful, the promise will resolve. If the optimistic mutation fails, the promise will reject with an error. So you can handle optimistic updates with standard promise handling. For example:
-
-```typescript
-try {
-  const insertedEntity = await client.insert('employee', {
-    id: 'Fry',
-    name: 'Philip J. Fry',
-  });
-  // Optimistic update succeeded
-} catch (e) {
-  // Optimistic update failed
-}
-```
-
-If the client is connected to a server, local mutations will be synced over the network. To react to a sync success or failure on the server you can pass a callback to `client.onEntitySyncSuccess( collection, entityId, callback)` or `client.onEntitySyncError( collection, entityId, callback)`. An sync error will temporarily block syncing. To remedy the situation, you have two options.
-
-1. Mutate the entity again, which will trigger a new sync attempt.
-2. Clear the entity from the outbox, which will remove the optimistic update and allow syncing to resume.
-
-For example:
-
-```typescript
-const insertedEntity = await client.insert('employee', {
-  id: 'Fry',
-  name: 'Philip J. Fry',
-});
-client.onEntitySyncSuccess('employee', 'fry', () => {
-  // Transaction succeeded on the server
-});
-client.onEntitySyncError('employee', 'fry', () => {
-  // Transaction failed on the server
-  // remove the entity from the outbox
-  await client.clearPendingChangesForEntity('employee', 'fry');
 });
 ```

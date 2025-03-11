@@ -121,48 +121,56 @@ it('will clear the outbox after syncing', async () => {
   client.disconnect();
 });
 
-it('client updates should go into the outbox and clear after syncing', async () => {
-  using server = await tempTriplitServer({
-    serverOptions: { dbOptions: { schema: DEFAULT_SCHEMA }, jwtSecret: SECRET },
-  });
-  const { port } = server;
-  const client = new TriplitClient({
-    serverUrl: `http://localhost:${port}`,
-    token: DEFAULT_TOKEN,
-    schema: DEFAULT_SCHEMA.collections,
-    autoConnect: true,
-  });
-  await pause();
-  await client.insert('users', { id: '1', name: 'test' });
-  await pause();
-  expect(
-    await client.db.entityStore.doubleBuffer.getChangesForEntity(
-      client.db.kv,
-      'users',
-      '1'
-    )
-  ).toStrictEqual(undefined);
-  client.disconnect();
-  await client.update('users', '1', (e) => {
-    e.name = 'updated';
-  });
-  expect(
-    await client.db.entityStore.doubleBuffer.getChangesForEntity(
-      client.db.kv,
-      'users',
-      '1'
-    )
-  ).toEqual({
-    update: { name: 'updated' },
-    delete: false,
-  });
-  expect(await client.fetch({ collectionName: 'users' })).toEqual([
-    {
-      id: '1',
-      name: 'updated',
-    },
-  ]);
-});
+it(
+  'client updates should go into the outbox and clear after syncing',
+  { timeout: 500 },
+  async () => {
+    using server = await tempTriplitServer({
+      serverOptions: {
+        dbOptions: { schema: DEFAULT_SCHEMA },
+        jwtSecret: SECRET,
+      },
+    });
+    const { port } = server;
+    const client = new TriplitClient({
+      serverUrl: `http://localhost:${port}`,
+      token: DEFAULT_TOKEN,
+      schema: DEFAULT_SCHEMA.collections,
+      autoConnect: true,
+    });
+
+    await pause();
+    await client.insert('users', { id: '1', name: 'test' });
+    await pause();
+    expect(
+      await client.db.entityStore.doubleBuffer.getChangesForEntity(
+        client.db.kv,
+        'users',
+        '1'
+      )
+    ).toStrictEqual(undefined);
+    client.disconnect();
+    await client.update('users', '1', (e) => {
+      e.name = 'updated';
+    });
+    expect(
+      await client.db.entityStore.doubleBuffer.getChangesForEntity(
+        client.db.kv,
+        'users',
+        '1'
+      )
+    ).toEqual({
+      update: { name: 'updated' },
+      delete: false,
+    });
+    expect(await client.fetch({ collectionName: 'users' })).toEqual([
+      {
+        id: '1',
+        name: 'updated',
+      },
+    ]);
+  }
+);
 
 it('should sync all valid changes made offline', async () => {
   using server = await tempTriplitServer({
@@ -692,4 +700,50 @@ it('will fire an onEntitySyncSuccess callback', async () => {
   await client.insert('users', { id: '2', name: 'test' });
   await pause(30);
   expect(spy).not.toHaveBeenCalled();
+});
+
+it('will fire an onFailureToSyncWrites callback', async () => {
+  using server = await tempTriplitServer({
+    serverOptions: {
+      dbOptions: {
+        schema: {
+          roles: { user: { match: { sub: '$userId' } } },
+          collections: S.Collections({
+            users: {
+              schema: S.Schema({ id: S.Id(), name: S.String() }),
+              permissions: {
+                user: {
+                  insert: { filter: [true] },
+                  update: { filter: [false] },
+                  delete: { filter: [false] },
+                },
+              },
+            },
+          }),
+        },
+      },
+      jwtSecret: SECRET,
+    },
+  });
+  const { port } = server;
+  const client = new TriplitClient({
+    serverUrl: `http://localhost:${port}`,
+    token: DEFAULT_TOKEN,
+    schema: DEFAULT_SCHEMA.collections,
+    autoConnect: true,
+  });
+  const spy = vi.fn();
+  const unsub = client.onFailureToSyncWrites(spy);
+  await client.insert('users', { id: '1', name: 'test' });
+  await pause(30);
+  expect(spy).not.toHaveBeenCalled();
+  await client.update('users', '1', (e) => {
+    e.name = 'updated';
+  });
+  await pause(30);
+  expect(spy).toHaveBeenCalled();
+  await client.delete('users', '1');
+  await pause(30);
+  expect(spy).toHaveBeenCalledTimes(2);
+  unsub();
 });

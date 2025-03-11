@@ -412,6 +412,13 @@ export class WorkerClient<M extends Models<M> = Models> implements Client<M> {
     return () => unSubPromise.then((unsub) => unsub());
   }
 
+  onFailureToSyncWrites(callback: (e: unknown) => void): () => void {
+    const unSubPromise = this.initialized.then(() =>
+      this.clientWorker.onFailureToSyncWrites(ComLink.proxy(callback))
+    );
+    return () => unSubPromise.then((unsub) => unsub());
+  }
+
   onConnectionStatusChange(
     callback: (status: ConnectionStatus) => void,
     runImmediately?: boolean
