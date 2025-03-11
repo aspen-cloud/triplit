@@ -46,15 +46,6 @@ export type CloseReason = {
   retry: boolean;
 };
 
-export type ServerTriplesAckMessage = SyncMessage<
-  'TRIPLES_ACK',
-  { txIds: string[]; failedTxIds: string[] }
->;
-export type ServerTriplesMessage = SyncMessage<
-  'TRIPLES',
-  { triples: TripleRow[]; forQueries: string[] }
->;
-export type ServrTriplesRequestMessage = SyncMessage<'TRIPLES_REQUEST', {}>;
 export type ServerEntityDataMessage = SyncMessage<
   'ENTITY_DATA',
   { changes: any; timestamp: any; forQueries: string[] }
@@ -82,9 +73,6 @@ export type ServerSchemaRequestMessage = SyncMessage<'SCHEMA_REQUEST', {}>;
 export type ServerReadyMessage = SyncMessage<'READY', {}>;
 
 export type ServerSyncMessage =
-  | ServerTriplesAckMessage
-  | ServerTriplesMessage
-  | ServrTriplesRequestMessage
   | ServerErrorMessage
   | ServerCloseMessage
   | ServerEntityDataMessage
@@ -104,11 +92,7 @@ export type ClientDisconnectQueryMessage = SyncMessage<
   'DISCONNECT_QUERY',
   { id: string }
 >;
-export type ClientTriplesPendingMessage = SyncMessage<'TRIPLES_PENDING', {}>;
-export type ClientTriplesMessage = SyncMessage<
-  'TRIPLES',
-  { triples: TripleRow[] }
->;
+
 export type ClientChunkMessage = SyncMessage<
   'CHUNK',
   { data: string; total: number; index: number; id: string }
@@ -127,8 +111,6 @@ export type ClientSchemaResponseMessage = SyncMessage<
 export type ClientSyncMessage =
   | ClientConnectQueryMessage
   | ClientDisconnectQueryMessage
-  | ClientTriplesPendingMessage
-  | ClientTriplesMessage
   | ClientChunkMessage
   | ClientUpdateTokenMessage
   | ClientChangesMessage
