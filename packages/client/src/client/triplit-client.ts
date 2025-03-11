@@ -402,8 +402,12 @@ export class TriplitClient<M extends Models<M> = Models> {
     }
 
     if (opts.policy === 'local-first') {
-      const localResults = await this.fetchLocal(query, opts);
-      if (localResults.length > 0) return localResults;
+      const isFirstTimeFetchingQuery =
+        await this.syncEngine.isFirstTimeFetchingQuery(query);
+      // TODO: probablyIntendsToConnect is a bit of hack
+      // we probably want syncEngine.syncQuery to abort if we are not connected
+      if (!(isFirstTimeFetchingQuery && this.probablyIntendsToConnect))
+        return await this.fetchLocal(query, opts);
       try {
         await this.syncEngine.syncQuery(query);
       } catch (e) {
@@ -413,10 +417,12 @@ export class TriplitClient<M extends Models<M> = Models> {
     }
 
     if (opts.policy === 'remote-first') {
-      try {
-        await this.syncEngine.syncQuery(query);
-      } catch (e) {
-        warnError(e);
+      if (this.probablyIntendsToConnect) {
+        try {
+          await this.syncEngine.syncQuery(query);
+        } catch (e) {
+          warnError(e);
+        }
       }
       return this.fetchLocal(query, opts);
     }
@@ -663,21 +669,23 @@ export class TriplitClient<M extends Models<M> = Models> {
     };
   }
 
+  private get probablyIntendsToConnect() {
+    return (
+      !!this.options?.autoConnect &&
+      !!this.syncEngine.syncOptions.token &&
+      !!this.syncEngine.syncOptions.server &&
+      this.connectionStatus !== 'CLOSED'
+    );
+  }
+
   subscribeWithStatus<Q extends SchemaQuery<M>>(
     query: Q,
     callback: (state: SubscriptionSignalPayload<M, Q>) => void,
     options?: Partial<SubscriptionOptions>
   ): () => void {
     let results: FetchResult<M, Q, 'many'> | undefined = undefined;
-
-    // this is for the case at the initialization of the client
-    let clientProbablyIntendsToConnect =
-      !!this.options?.autoConnect &&
-      !!this.syncEngine.syncOptions.token &&
-      !!this.syncEngine.syncOptions.server &&
-      this.connectionStatus !== 'CLOSED';
     let waitingOnRemoteSync =
-      (this.connectionStatus === 'OPEN' || clientProbablyIntendsToConnect) &&
+      (this.connectionStatus === 'OPEN' || this.probablyIntendsToConnect) &&
       !options?.localOnly;
     let fetchingLocal = true;
     let fetchingRemote = false;
