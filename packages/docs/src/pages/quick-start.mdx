@@ -66,6 +66,30 @@ Follow the instructions in the [React + Vite turorial](/react-tutorial) to finis
 
 You'll find a schema already setup in your project. You can modify this file to define the collections in your database. To learn more about schemas, check out the [schema guide](/schemas).
 
+### Configure your client
+
+<FileTree>
+  <FileTree.Folder name="triplit" defaultOpen>
+    <FileTree.File name="client.ts" />
+  </FileTree.Folder>
+</FileTree>
+
+To sync with a Triplit server, your frontend needs a `TriplitClient`. Create a `client.ts` file in your `triplit` folder and export a client.
+
+```typescript filename="triplit.ts" copy
+import { TriplitClient } from '@triplit/client';
+import { schema } from './schema';
+
+export const triplit = new TriplitClient({
+  schema,
+  serverUrl: 'http://localhost:6543',
+  token:
+    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ4LXRyaXBsaXQtdG9rZW4tdHlwZSI6InNlY3JldCIsIngtdHJpcGxpdC1wcm9qZWN0LWlkIjoibG9jYWwtcHJvamVjdC1pZCJ9.8Z76XXPc9esdlZb2b7NDC7IVajNXKc4eVcPsO7Ve0ug',
+});
+```
+
+This snippet is configured to connect with a default local development server. Once you've deployed your own server or are using Triplit Cloud, you'll need to update the `serverUrl` and `token` fields and store them as environmental variables.
+
 ### Setup your dev server
 
 Triplit has a robust local development environment that you can set up with a single command.
