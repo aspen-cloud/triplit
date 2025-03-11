@@ -4,14 +4,7 @@ description: Learn how to update your application for the upgraded API in Tripli
 
 # Migrating to Triplit 1.0
 
-Triplit 1.0 is here. It's a major upgrade that includes significant improvements to performance and reliability, including:
-
-- Faster reads, up to 20x for complicated queries
-- Faster writes, []x on inserts, updates and deletes
-- More memory efficient, up to 10x less memory usage
-- Up to 10x less disk storage per entity.
-
-There are also several improvements to the API, including:
+Triplit 1.0 is here. It's a major upgrade that includes significant improvements to performance and reliability. There are also several improvements to the API, including:
 
 - Simplified query syntax and the removal of `.build()` from the query builder API
 - More type hinting when defining permissions and relations in a schema.
@@ -334,7 +327,7 @@ Retrying and rollback with `TxId` is no longer necessary, as the sync engine now
 
 ### Sync error handling methods changed
 
-The `TriplitClient` methods `retry`, `rollback`, `onTxSuccessRemote`, and `onTxFailureRemote` have been replaced with a new API for handling sync errors. The new methods include `onEntitySyncError`, `onEntitySyncSuccess`, `clearPendingChangesForEntity` and `clearPendingChangesForAll`. Instead of registering callbacks for a specific transaction, you may register callbacks for a specific entity.
+The `TriplitClient` methods `retry`, `rollback`, `onTxSuccessRemote`, and `onTxFailureRemote` have been replaced with a new API for handling sync errors. The new methods include `onFailureToSyncWrites`, `onEntitySyncError`, `onEntitySyncSuccess`, `clearPendingChangesForEntity` and `clearPendingChangesForAll`. Instead of registering callbacks for a specific transaction, you may register callbacks for a specific entity.
 
 It is important that you handle sync errors in your app code, as the sync engine can get blocked if the entity that causes the error is not removed from the outbox or updated.
 
@@ -381,6 +374,12 @@ triplit.onEntitySyncError('todos', '1', () => {
     e.text = 'Buy buttermilk';
   });
 });
+
+// if you want to listen to any failed write over sync
+triplit.onFailureToSyncWrites((error, writes) => {
+  console.error('Failed to sync writes', error, writes);
+  await triplit.clearPendingChangesAll();
+});
 ```
 
 ### `getSchemaJSON` removed
@@ -408,7 +407,22 @@ const serializedSchema = await triplit.getSchema();
 
 Triplit previously maintained two sets of Angular bindings: the signal-based `injectQuery` and the observable-based `createQuery`. In Triplit 1.0, we've removed the signal-based bindings in favor of the more flexible and powerful observable-based bindings. If you're using the signal-based bindings, you'll need to update your app to use the observable-based bindings. Generally this means adopting the [Async pipe syntax](https://v17.angular.io/guide/observables-in-angular#async-pipe) in your templates or by using the [`@angular/rxjs-interop` package](https://angular.dev/ecosystem/rxjs-interop) to translate them to signals.
 
-## Migrating your server
+### Expo (React Native)
+
+There's a new storage provider for Expo applications that use the `expo-sqlite` package. You can now use the `ExpoSQLiteKVStore` storage provider to store data on the device. This provider is available in the `@triplit/db` package.
+
+```ts
+import { ExpoSQLiteKVStore } from '@triplit/db/storage/expo-sqlite';
+import { TriplitClient } from '@triplit/client';
+
+new TriplitClient({
+  storage: new ExpoSQLiteKVStore('triplit.db'),
+});
+```
+
+You should use a new name for your SQLite database to avoid conflicts with any legacy Triplit databases on the device.
+
+<!-- ## Migrating your server
 
 ### Move your data over
 
@@ -416,4 +430,4 @@ TBD
 
 ### Remove `PROJECT_ID` secret
 
-This secret is no longer needed in Triplit 1.0. You can remove it from your environment variables.
+This secret is no longer needed in Triplit 1.0. You can remove it from your environment variables. -->
