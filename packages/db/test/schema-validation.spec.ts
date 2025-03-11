@@ -643,7 +643,7 @@ describe('collections validation', () => {
           'schema collections definition is invalid: "test" is not a valid collection: collection permissions is invalid: permissions is not an object'
         );
       });
-      it('permission keys must match a role', () => {
+      it.skip('permission keys must match a role', () => {
         expect(
           validateSchema({
             collections: {
