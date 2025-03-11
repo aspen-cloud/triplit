@@ -492,7 +492,95 @@ export class RelationBuilder<
     );
   }
 
-  // TODO: add subquery apis
+  SubqueryOne<Alias extends string, SQ extends SchemaQuery<M>>(
+    alias: Alias,
+    subquery: SQ
+  ): RelationBuilder<
+    M,
+    CN,
+    Ref,
+    WithInclusionRaw<
+      RQ,
+      RQ['include'] & { [K in Alias]: RelationSubquery<M, SQ, 'one'> }
+    >
+  >;
+  SubqueryOne<Alias extends string, SQ extends SchemaQuery<M>>(
+    alias: Alias,
+    subquery: (
+      sub: <CName extends CollectionNameFromModels<M>>(
+        collectionName: CName
+      ) => QueryBuilder<M, CName>
+    ) => SQ
+  ): RelationBuilder<
+    M,
+    CN,
+    Ref,
+    WithInclusionRaw<
+      RQ,
+      RQ['include'] & { [K in Alias]: RelationSubquery<M, SQ, 'one'> }
+    >
+  >;
+  SubqueryOne(alias: any, subquery: any): any {
+    if (typeof subquery === 'function') {
+      subquery = subquery(queryBuilder);
+    }
+    const include = QUERY_INPUT_TRANSFORMERS<
+      M,
+      RefCollectionName<M, CN, Ref>
+    >().include(this, alias, {
+      subquery,
+      cardinality: 'one',
+    });
+    return new RelationBuilder(this._extends, {
+      ...this,
+      include,
+    });
+  }
+
+  SubqueryMany<Alias extends string, SQ extends SchemaQuery<M>>(
+    alias: Alias,
+    subquery: SQ
+  ): RelationBuilder<
+    M,
+    CN,
+    Ref,
+    WithInclusionRaw<
+      RQ,
+      RQ['include'] & { [K in Alias]: RelationSubquery<M, SQ, 'many'> }
+    >
+  >;
+  SubqueryMany<Alias extends string, SQ extends SchemaQuery<M>>(
+    alias: Alias,
+    subquery: (
+      sub: <CName extends CollectionNameFromModels<M>>(
+        collectionName: CName
+      ) => QueryBuilder<M, CName>
+    ) => SQ
+  ): RelationBuilder<
+    M,
+    CN,
+    Ref,
+    WithInclusionRaw<
+      RQ,
+      RQ['include'] & { [K in Alias]: RelationSubquery<M, SQ, 'many'> }
+    >
+  >;
+  SubqueryMany(alias: any, subquery: any): any {
+    if (typeof subquery === 'function') {
+      subquery = subquery(queryBuilder);
+    }
+    const include = QUERY_INPUT_TRANSFORMERS<
+      M,
+      RefCollectionName<M, CN, Ref>
+    >().include(this, alias, {
+      subquery,
+      cardinality: 'many',
+    });
+    return new RelationBuilder(this._extends, {
+      ...this,
+      include,
+    });
+  }
 }
 
 type RelationshipRefFromQuery<Q extends CollectionQuery<any, any>> =
