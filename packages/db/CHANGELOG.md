@@ -1,5 +1,12 @@
 # @triplit/entity-db
 
+## 1.0.2
+
+### Patch Changes
+
+- 88df6b96: fixup query builder where and order types inside relation builder
+- b19cbb14: tweak vac error message
+
 ## 1.0.1
 
 ### Patch Changes
