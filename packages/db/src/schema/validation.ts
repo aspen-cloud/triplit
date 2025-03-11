@@ -303,6 +303,8 @@ function validateRelationshipName(name: string) {
     return 'relationship name cannot start with a numeric character';
   if (!/^[a-zA-Z0-9_]+$/.test(name))
     return 'relationship name contains invalid characters - only alphanumeric characters and underscores are allowed.';
+
+  // TODO: cannot match an attribute name
 }
 
 function validateRelationship(relationship: Relationship) {
