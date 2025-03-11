@@ -10322,29 +10322,6 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@triplit/db@npm:latest":
-  version: 1.0.1
-  resolution: "@triplit/db@npm:1.0.1"
-  dependencies:
-    "@triplit/logger": "npm:^0.0.1"
-    elen: "npm:^1.0.10"
-    nanoid: "npm:^5.1.0"
-    sorted-btree: "npm:^1.8.1"
-  peerDependencies:
-    better-sqlite3: "*"
-    expo-sqlite: "*"
-    lmdb: "*"
-  peerDependenciesMeta:
-    better-sqlite3:
-      optional: true
-    expo-sqlite:
-      optional: true
-    lmdb:
-      optional: true
-  checksum: 10/6b902a31dfc893b359ac452b410ddb04fac2fa1c2d6d528385fe0854e0abf89e5cc89f81f190b94f63ce68153bbef78a3b694b37ec5096f2a46a5b6c33e7cb36
-  languageName: node
-  linkType: hard
-
 "@triplit/logger@npm:^0.0.1, @triplit/logger@workspace:^, @triplit/logger@workspace:packages/logger":
   version: 0.0.0-use.local
   resolution: "@triplit/logger@workspace:packages/logger"
@@ -26456,7 +26433,6 @@ __metadata:
     "@triplit/authjs-adapter": "npm:^1.0.1"
     "@triplit/cli": "npm:1.0.0"
     "@triplit/client": "npm:latest"
-    "@triplit/db": "npm:latest"
     "@triplit/react": "npm:latest"
     "@types/bcryptjs": "npm:^2"
     "@types/jsonwebtoken": "npm:^9.0.2"

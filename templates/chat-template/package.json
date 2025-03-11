@@ -21,7 +21,6 @@
     "@radix-ui/react-slot": "^1.0.2",
     "@triplit/authjs-adapter": "^1.0.1",
     "@triplit/client": "latest",
-    "@triplit/db": "latest",
     "@triplit/react": "latest",
     "bcryptjs": "^2.4.3",
     "class-variance-authority": "^0.7.0",
