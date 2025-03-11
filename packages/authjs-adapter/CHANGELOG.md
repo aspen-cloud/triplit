@@ -1,5 +1,17 @@
 # @triplit/authjs-adapter
 
+## 1.0.0
+
+### Minor Changes
+
+- aa25e64d: Triplit 1.0
+
+### Patch Changes
+
+- Updated dependencies [aa25e64d]
+- Updated dependencies [70ea2813]
+  - @triplit/client@1.0.0
+
 ## 4.0.0-canary-20250310223455
 
 ### Patch Changes

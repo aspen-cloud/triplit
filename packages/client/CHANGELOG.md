@@ -1,5 +1,17 @@
 # @triplit/client
 
+## 1.0.0
+
+### Major Changes
+
+- aa25e64d: Triplit 1.0
+
+### Patch Changes
+
+- 70ea2813: more gracefully handle starting session when one is already active
+- Updated dependencies [44f9ed5b]
+  - @triplit/db@1.0.0
+
 ## 0.6.14
 
 ### Patch Changes

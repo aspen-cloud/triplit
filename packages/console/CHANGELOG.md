@@ -1,5 +1,20 @@
 # @triplit/console
 
+## 1.0.0
+
+### Major Changes
+
+- aa25e64d: Triplit 1.0
+
+### Patch Changes
+
+- Updated dependencies [aa25e64d]
+- Updated dependencies [70ea2813]
+- Updated dependencies [44f9ed5b]
+  - @triplit/client@1.0.0
+  - @triplit/react@1.0.0
+  - @triplit/db@1.0.0
+
 ## 0.4.32
 
 ### Patch Changes
