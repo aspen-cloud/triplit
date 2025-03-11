@@ -222,9 +222,6 @@ function formatMessagePayload(
   if (type === 'CONNECT_QUERY') {
     return formatConnectQueryPayload(payload, verbose);
   }
-  if (type === 'TRIPLES') {
-    return formatTriplesPayload(action, payload, verbose);
-  }
   if (payload === undefined || !verbose) return '';
   if (verbose) {
     return JSON.stringify(payload, null, 2);
