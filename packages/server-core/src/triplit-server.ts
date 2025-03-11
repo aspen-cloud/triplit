@@ -158,21 +158,6 @@ export class Server {
           resp = await session.applyChanges(params);
           break;
         }
-        // === Dead routes ===
-        case 'query-triples':
-        case 'queryTriples':
-          resp = await session.queryTriples(params);
-          break;
-        case 'insert-triples': {
-          const { triples } = params;
-          resp = await session.insertTriples(triples);
-          break;
-        }
-        case 'delete-triples': {
-          const { entityAttributes } = params;
-          resp = await session.deleteTriples(entityAttributes);
-          break;
-        }
         // === Not Found ===
         default:
           resp = routeNotFoundResponse(route);
