@@ -1,5 +1,11 @@
 # @triplit/entity-db
 
+## 1.0.0
+
+### Major Changes
+
+- 44f9ed5b: Triplit 1.0
+
 ## 0.0.1-canary-20250310223455
 
 ### Patch Changes
