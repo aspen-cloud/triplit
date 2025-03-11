@@ -225,17 +225,6 @@ export class SyncConnection {
     }
   }
 
-  // in case TRIPLES_PENDING requests pile up, throttle them
-  // Or figure out a better way to tap into queue of pending requests
-  private throttledTriplesRequest = throttle(
-    () => this.sendMessage('TRIPLES_REQUEST', {}),
-    10
-  );
-
-  handleTriplesPendingMessage() {
-    this.throttledTriplesRequest();
-  }
-
   async handleChangesMessage(msgParams: ClientChangesMessage['payload']) {
     const changes = SuperJSON.deserialize<DBChanges>(msgParams.changes);
     const timestamp = this.db.clock.next();
