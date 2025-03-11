@@ -13,7 +13,6 @@
     "@triplit/cli": "workspace:^",
     "@triplit/client": "workspace:^",
     "@triplit/db": "workspace:^",
-    "@triplit/entity-db": "workspace:^",
     "@triplit/logger": "workspace:^",
     "@triplit/server": "workspace:^",
     "@triplit/server-core": "workspace:^",

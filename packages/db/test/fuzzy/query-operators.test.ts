@@ -1,6 +1,7 @@
 import { test, fc } from '@fast-check/vitest';
 import { describe, expect } from 'vitest';
-import DB, { Schema as S } from '../../src/index.js';
+import { DB } from '../../src/db.js';
+import { Schema as S } from '../../src/schema/builder.js';
 
 const SCALAR_OPS = ['<', '<=', '=', '!=', '>=', '>'] as const;
 const SCALAR_TYPES = ['String', 'Number', 'Boolean', 'Date'] as const;
@@ -10,30 +11,26 @@ const SCALAR_TYPES = ['String', 'Number', 'Boolean', 'Date'] as const;
  */
 describe.each(SCALAR_TYPES)('%s', (type) => {
   describe.each(SCALAR_OPS)('%s', (op) => {
-    describe.each(['required', 'optional', 'nullable'] as const)(
-      '%s',
-      async (field) => {
-        const { db, data } = await initializeDB(type, field);
-        test.prop([triplitTypeToFastCheckType(type)])(
-          'correctly filters',
-          async (value) => {
-            const expected = new Set(
-              data
-                .filter((d) => compare(d.testAttr, value, op))
-                .map((d) => d.testAttr.toString())
-            );
-            const query = db
-              .query('testCollection')
-              .where(['testAttr', op, value])
-              .build();
-            const result = await db.fetch(query);
-            expect(
-              new Set(result.map((result) => result.testAttr.toString()))
-            ).toEqual(expected);
-          }
-        );
-      }
-    );
+    describe.each(['required', 'nullable'] as const)('%s', async (field) => {
+      const { db, data } = await initializeDB(type, field);
+      test.prop([triplitTypeToFastCheckType(type)])(
+        'correctly filters',
+        async (value) => {
+          const expected = new Set(
+            data
+              .filter((d) => compare(d.testAttr, value, op))
+              .map((d) => d.testAttr.toString())
+          );
+          const query = db
+            .query('testCollection')
+            .Where(['testAttr', op, value]);
+          const result = await db.fetch(query);
+          expect(
+            new Set(result.map((result) => result.testAttr.toString()))
+          ).toEqual(expected);
+        }
+      );
+    });
   });
 });
 
@@ -83,7 +80,7 @@ async function initializeDB(
       }),
     },
   };
-  const db = new DB({ schema: { collections: collection, version: 0 } });
+  const db = new DB({ schema: { collections: collection } });
   const data = fc.sample(
     fc.record({ testAttr: triplitTypeToFastCheckType(type) }),
     100

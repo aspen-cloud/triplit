@@ -1,4 +1,4 @@
-import { TriplitError } from '@triplit/entity-db';
+import { TriplitError } from '@triplit/db';
 
 // For some reason in cloudflare workers instanceof doesn't work for custom errors
 // I think this might be related to the nature of how we bundle and deploy

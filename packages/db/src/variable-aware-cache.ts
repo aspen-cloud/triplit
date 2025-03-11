@@ -1,39 +1,30 @@
-import {
-  FetchExecutionContext,
-  FetchFromStorageOptions,
-  getQueryVariables,
-  subscribeEntities,
-} from './collection-query.js';
-import { CollectionNameFromModels } from './db.js';
-import { isValueVariable, replaceVariable } from './db-helpers.js';
-import { isExistsFilter, isFilterStatement } from './query.js';
-import { CollectionQuery, FilterStatement } from './query/types/index.js';
-import { getSchemaFromPath } from './schema/schema.js';
-import { Model, Models } from './schema/types/index.js';
-// import * as TB from '@sinclair/typebox/value';
-import type DB from './db.js';
 import { QueryCacheError } from './errors.js';
-import { TripleRow } from './triple-store-utils.js';
-import { QueryExecutionCache } from './query/execution-cache.js';
-import { Entity } from './entity.js';
+import { DB } from './db.js';
+import { isFilterStatement, isSubQueryFilter } from './filters.js';
+import { isValueVariable } from './variables.js';
+import {
+  getAttributeFromSchema,
+  isTraversalRelationship,
+} from './schema/utilities.js';
+import { DBEntity } from './types.js';
+import { CollectionQuery, FilterStatement } from './query.js';
+import { Models } from './schema/index.js';
+import { ViewEntity } from './query-engine.js';
 
-export class VariableAwareCache<Schema extends Models> {
+export class VariableAwareCache {
   cache: Map<
     string,
     {
-      results: Map<string, Entity>;
-      triples: TripleRow[];
+      results: Map<string, DBEntity>;
+      //   triples: TripleRow[];
     }
   >;
 
-  constructor(readonly db: DB<Schema>) {
+  constructor(readonly db: DB) {
     this.cache = new Map();
   }
 
-  static canCacheQuery(
-    query: CollectionQuery<any, any>,
-    model?: Model | undefined
-  ) {
+  static canCacheQuery(query: CollectionQuery, schema: Models | undefined) {
     if (!query.where || query.where.length === 0) return true;
     // Queries with limit are somewhat hard to accommodate
     // While it's totally correct to create the view for the query with limit
@@ -55,61 +46,29 @@ export class VariableAwareCache<Schema extends Models> {
       return false;
 
     const statements = (query.where ?? []).filter(isFilterStatement);
-    const variableStatements: FilterStatement<any, any>[] = statements.filter(
-      ([, , v]) => typeof v === 'string' && v.startsWith('$')
+    const variableStatements = statements.filter(([, , v]) =>
+      isValueVariable(v)
     );
     // So currently we'll only support queries with:
     // 1. a single variable filter (typical relational subquery)
     // 2. no variable filters which is an odd one (inspired by benchmarks query)
     //    bc resolving from it is trivial (just return all entities)
-    if (variableStatements.length > 1) return false;
+    // if (variableStatements.length > 1) return false;
 
-    if (!['=', '<', '<=', '>', '>=', '!='].includes(variableStatements[0][1]))
+    if (!['=', '<', '<=', '>', '>=', '!='].includes(variableStatements[0]?.[1]))
       return false;
-    if (model) {
-      const attributeSchema = getSchemaFromPath(
-        model,
-        (variableStatements[0][0] as string).split('.')
+
+    if (schema) {
+      const attributeSchema = getAttributeFromSchema(
+        (variableStatements[0][0] as string).split('.'),
+        schema,
+        query.collectionName
       );
+      if (!attributeSchema) return false;
+      if (isTraversalRelationship(attributeSchema)) return false;
       if (attributeSchema.type === 'set') return false;
     }
     return true;
-  }
-  /**
-   * @deprecated
-   */
-  async createView<Q extends CollectionQuery<Schema, any>>(
-    viewQuery: Q,
-    schema: Schema
-  ) {
-    return new Promise<void>((resolve) => {
-      const id = this.viewQueryToId(viewQuery);
-      subscribeEntities<Schema, Q>(
-        this.db.tripleStore,
-        viewQuery,
-        {
-          schema,
-          skipRules: true,
-          session: {
-            roles: this.db.sessionRoles,
-            systemVars: this.db.systemVars,
-          },
-        },
-        (entities) => {
-          this.cache.set(id, {
-            results: entities,
-            triples: Array.from(entities.values())
-              .map((entity) => entity.triples)
-              .flat(),
-          });
-          resolve();
-        },
-        (err) => {
-          console.error('error in view', err);
-          this.cache.delete(id);
-        }
-      );
-    });
   }
 
   viewQueryToId(viewQuery: any) {
@@ -117,117 +76,13 @@ export class VariableAwareCache<Schema extends Models> {
     // return TB.Value.Hash(viewQuery);
   }
 
-  async resolveFromCache<Q extends CollectionQuery<Schema, any>>(
-    query: Q,
-    executionContext: FetchExecutionContext,
-    options: FetchFromStorageOptions
-  ): Promise<string[]> {
-    const { views, variableFilters } = VariableAwareCache.queryToViews<
-      Schema,
-      CollectionNameFromModels<Schema>,
-      Q
-    >(query);
-    const id = this.viewQueryToId(views[0]);
-    if (!this.cache.has(id)) {
-      // NOTE: dangerously setting ! on options.schema (not sure if schema is actually required or not)
-      await this.createView(views[0], options.schema! as Schema);
-    }
-    // TODO support multiple variable clauses
-    const [prop, op, varStr] = variableFilters[0];
-    const varKey = (varStr as string).slice(1);
-    const vars = getQueryVariables(query, executionContext, options);
-    const varValue = replaceVariable(varStr, vars);
-    const view = this.cache.get(id)!;
-    const viewResultEntries = [...view.results.entries()];
-    let start, end;
-    if (['=', '<', '<=', '>', '>='].includes(op)) {
-      start = binarySearch(
-        viewResultEntries,
-        varValue,
-        ([, ent]) => ent.data[prop],
-        'start',
-        (a, b) => {
-          if (op === '<') return a < b ? 0 : 1;
-          if (op === '<=') return a <= b ? 0 : 1;
-          if (op === '>') return a > b ? 0 : -1;
-          if (op === '>=') return a >= b ? 0 : -1;
-          return a === b ? 0 : a < b ? -1 : 1;
-        }
-      );
-      end = binarySearch(
-        viewResultEntries,
-        varValue,
-        ([, ent]) => ent.data[prop],
-        'end',
-        (a, b) => {
-          if (op === '<') return a < b ? 0 : 1;
-          if (op === '<=') return a <= b ? 0 : 1;
-          if (op === '>') return a > b ? 0 : -1;
-          if (op === '>=') return a >= b ? 0 : -1;
-          return a === b ? 0 : a < b ? -1 : 1;
-        }
-      );
-    }
-    if (op === '!=') {
-      start = binarySearch(
-        viewResultEntries,
-        varValue,
-        ([, ent]) => ent.data[prop],
-        'start',
-        (a, b) => {
-          return a === b ? 0 : a < b ? -1 : 1;
-        }
-      );
-      end = binarySearch(
-        viewResultEntries,
-        varValue,
-        ([, ent]) => ent.data[prop],
-        'end',
-        (a, b) => {
-          return a === b ? 0 : a < b ? -1 : 1;
-        }
-      );
-      const resultEntries = [
-        ...viewResultEntries.slice(0, start + 1),
-        ...viewResultEntries.slice(end),
-      ];
-      loadViewResultIntoExecutionCache(
-        resultEntries,
-        query,
-        view,
-        executionContext
-      );
-      return resultEntries.map(([key]) => key);
-    }
-    if (start == undefined || end == undefined) {
-      throw new QueryCacheError(
-        `Queries with the operator ${op} in a where clause can't be stored in the query cache. Currently, supported operators are: ${[
-          '=',
-          '!=',
-          '<',
-          '<=',
-          '>',
-          '>=',
-        ]}`
-      );
-    }
-    const resultEntries = viewResultEntries.slice(start, end + 1);
-    loadViewResultIntoExecutionCache(
-      resultEntries,
-      query,
-      view,
-      executionContext
-    );
-    return resultEntries.map(([key]) => key);
-  }
-
-  static async resolveQueryFromView(viewResults: any[], [prop, op, val]: any) {
+  static resolveQueryFromView(viewResults: ViewEntity[], [prop, op, val]: any) {
     let start, end;
     if (['=', '<', '<=', '>', '>='].includes(op)) {
       start = binarySearch(
         viewResults,
         val,
-        (ent) => ent[prop],
+        (ent) => ent.data[prop],
         'start',
         (a, b) => {
           if (op === '<') return a < b ? 0 : 1;
@@ -240,7 +95,7 @@ export class VariableAwareCache<Schema extends Models> {
       end = binarySearch(
         viewResults,
         val,
-        (ent) => ent[prop],
+        (ent) => ent.data[prop],
         'end',
         (a, b) => {
           if (op === '<') return a < b ? 0 : 1;
@@ -255,7 +110,7 @@ export class VariableAwareCache<Schema extends Models> {
       start = binarySearch(
         viewResults,
         val,
-        (ent) => ent[prop],
+        (ent) => ent.data[prop],
         'start',
         (a, b) => {
           return a === b ? 0 : a < b ? -1 : 1;
@@ -264,7 +119,7 @@ export class VariableAwareCache<Schema extends Models> {
       end = binarySearch(
         viewResults,
         val,
-        (ent) => ent[prop],
+        (ent) => ent.data[prop],
         'end',
         (a, b) => {
           return a === b ? 0 : a < b ? -1 : 1;
@@ -291,23 +146,21 @@ export class VariableAwareCache<Schema extends Models> {
     return viewResults.slice(start, end + 1);
   }
 
-  static queryToViews<
-    Schema extends Models,
-    CN extends CollectionNameFromModels<Schema>,
-    Q extends CollectionQuery<Schema, CN>,
-  >(query: Q) {
-    const variableFilters: FilterStatement<Schema, CN>[] = [];
-    const nonVariableFilters = query.where
+  static queryToViews(query: CollectionQuery) {
+    const variableFilters: FilterStatement[] = [];
+    const staticFilters = query.where
       ? query.where.filter((filter) => {
-          if (!(filter instanceof Array)) return true;
-          const [prop, _op, val] = filter;
-          if (isValueVariable(val)) {
-            variableFilters.push([prop, _op, val]);
+          if (isSubQueryFilter(filter)) {
             return false;
           }
-          if (isExistsFilter(filter)) {
-            return false;
+          if (filter instanceof Array) {
+            const [prop, _op, val] = filter;
+            if (isValueVariable(val)) {
+              variableFilters.push([prop, _op, val]);
+              return false;
+            }
           }
+
           return true;
         })
       : undefined;
@@ -315,50 +168,18 @@ export class VariableAwareCache<Schema extends Models> {
       views: [
         {
           collectionName: query.collectionName,
-          where: nonVariableFilters,
-          // select: query.select,
+          where: staticFilters,
           order: [
             ...variableFilters.map((f) => [f[0], 'ASC']),
             ...(query.order ?? []),
           ],
+          limit: variableFilters.length > 0 ? undefined : query.limit,
+          include: query.include,
         },
-      ] as Q[],
+      ] as CollectionQuery[],
       variableFilters,
     };
   }
-}
-
-function loadViewResultIntoExecutionCache<M extends Models>(
-  resultEntries: [string, Entity][],
-  query: CollectionQuery<M>,
-  view: {
-    results: Map<string, any>;
-    triples: TripleRow[];
-  },
-  executionContext: FetchExecutionContext
-) {
-  resultEntries.forEach((entry) => {
-    const [entityId, entity] = entry;
-    if (!executionContext.executionCache.hasEntity(entityId)) {
-      executionContext.executionCache.setEntity(entityId, {
-        entity: entity,
-        tripleHistory: view.triples.filter((t) => t.id === entityId),
-      });
-    }
-
-    // Create query component if not loaded
-    const componentKey = QueryExecutionCache.ComponentId(
-      executionContext.componentPrefix,
-      entityId
-    );
-    if (!executionContext.executionCache.hasComponent(componentKey)) {
-      const component = {
-        entityId,
-        relationships: {},
-      };
-      executionContext.executionCache.setComponent(componentKey, component);
-    }
-  });
 }
 
 /**

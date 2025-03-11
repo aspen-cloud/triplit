@@ -3,7 +3,7 @@ import { tempTriplitServer } from '../utils/server.js';
 import { TriplitClient } from '@triplit/client';
 import { WorkerClient } from '@triplit/client/worker-client';
 
-import { Roles, Schema as S } from '@triplit/entity-db';
+import { Roles, Schema as S } from '@triplit/db';
 import * as jose from 'jose';
 import WebSocket from 'ws';
 import { pause } from '../utils/async.js';

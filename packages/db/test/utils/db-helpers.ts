@@ -1,8 +1,7 @@
-import DB from '../../src/db.js';
-import { Models } from '../../src/schema/types';
+import { DB, Models } from '../../src';
 import { DBTransaction } from '../../src/db-transaction.js';
 
-export async function testDBAndTransaction<M extends Models>(
+export async function testDBAndTransaction<M extends Models<M>>(
   // should return a new instance if you are performing writes in your test
   dbFactory: () => DB<M> | Promise<DB<M>>,
   test: (db: DB<M> | DBTransaction<M>) => void | Promise<void>,

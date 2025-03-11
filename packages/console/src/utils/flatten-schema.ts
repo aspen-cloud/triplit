@@ -1,4 +1,4 @@
-import { Collection, RecordType } from '@triplit/entity-db';
+import { Collection, RecordType } from '@triplit/db';
 
 export function flattenSchema(collectionSchema: Collection): Collection {
   const schema = flattenRecord(collectionSchema.schema);

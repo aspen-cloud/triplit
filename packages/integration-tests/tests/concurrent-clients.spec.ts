@@ -1,11 +1,11 @@
 import { test, expect, describe } from 'vitest';
 import { ClientSchema, TriplitClient } from '@triplit/client';
 import { Server as TriplitServer } from '@triplit/server-core';
-import { DB, Schema as S } from '@triplit/entity-db';
+import { DB, Schema as S } from '@triplit/db';
 import { createTestClient, SERVICE_KEY } from '../utils/client.js';
 import { pause } from '../utils/async.js';
 import { setTimeout } from 'timers/promises';
-import { areChangesEmpty } from '@triplit/entity-db/changes-buffer';
+import { areChangesEmpty } from '@triplit/db/changes-buffer';
 
 /**
  * This test simulates a messaging app with 4 connected clients that each send

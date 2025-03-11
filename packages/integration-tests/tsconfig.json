@@ -115,9 +115,6 @@
     },
     {
       "path": "../../packages/cli/tsconfig.json"
-    },
-    {
-      "path": "../../packages/entity-db/tsconfig.json"
     }
   ]
 }

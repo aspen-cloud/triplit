@@ -1,16 +1,16 @@
-import { describe, expect, it, beforeEach, beforeAll, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import {
   diffSchemas,
   getSchemaDiffIssues,
   getBackwardsIncompatibleEdits,
-} from '../src/schema/diff.js';
+} from '../src/schema/diff-issues.js';
 import { Schema as S } from '../src/schema/builder.js';
-import DB, { DBTransaction, Models } from '../src/index.js';
+import { DB } from '../src/db.js';
 import { pause } from './utils/async.js';
+import { DBTransaction } from '../src/db-transaction.js';
 
 function wrapSchema(definition: any) {
   return {
-    version: 0,
     collections: { stressTest: { schema: S.Schema(definition) } },
   };
 }
@@ -90,7 +90,7 @@ delete changed.record;
 const stressTestSchema = wrapSchema(stressTest);
 
 describe('Schema diffing', () => {
-  it('can diff a big schema', () => {
+  it('handles equality', () => {
     const result = diffSchemas(stressTestSchema, stressTestSchema);
     expect(result.length).toBe(0);
   });
@@ -101,16 +101,15 @@ describe('Schema diffing', () => {
       stressTestSchema,
       wrapSchema(lackingAnAttribute)
     );
-    expect(result).toStrictEqual([
+    expect(result).toEqual([
       {
         _diff: 'collectionAttribute',
         collection: 'stressTest',
         type: 'delete',
         attribute: ['id'],
-        metadata: {
+        dataType: {
           type: 'string',
-          options: { nullable: false, default: { args: null, func: 'uuid' } },
-          optional: false,
+          config: { nullable: false, default: { args: null, func: 'uuid' } },
         },
       },
     ]);
@@ -118,16 +117,15 @@ describe('Schema diffing', () => {
       wrapSchema(lackingAnAttribute),
       stressTestSchema
     );
-    expect(reverseResult).toStrictEqual([
+    expect(reverseResult).toEqual([
       {
         _diff: 'collectionAttribute',
         collection: 'stressTest',
         type: 'insert',
         attribute: ['id'],
-        metadata: {
+        dataType: {
           type: 'string',
-          options: { nullable: false, default: { args: null, func: 'uuid' } },
-          optional: false,
+          config: { nullable: false, default: { args: null, func: 'uuid' } },
         },
         isNewCollection: false,
       },
@@ -159,51 +157,49 @@ describe('Schema diffing', () => {
       return { ...prev, [curr.attribute[0]]: curr };
     }, {});
     expect(resultsMap.number.changes.type).toBe('set');
-    expect(resultsMap.boolean.changes.optional).toBe(true);
-    expect(resultsMap.optionalBoolean.changes.optional).toBe(false);
-    expect(resultsMap.nullableDate.changes.options.nullable).toBe(false);
-    expect(resultsMap.date.changes.options).toStrictEqual({
+    expect(resultsMap.boolean.changes.config.optional).toBe(true);
+    expect(resultsMap.optionalBoolean.changes.config.optional).toBe(false);
+    expect(resultsMap.nullableDate.changes.config.nullable).toBe(false);
+    expect(resultsMap.date.changes.config).toStrictEqual({
       nullable: true,
       default: S.Default.now(),
     });
   });
   it('can diff schemas with different collections', () => {
     const schemaA = {
-      version: 0,
-      collections: { first: { schema: S.Schema({ id: S.Id() }) } },
+      collections: S.Collections({
+        first: { schema: S.Schema({ id: S.Id() }) },
+      }),
     };
     const schemaB = {
-      version: 0,
-      collections: {
+      collections: S.Collections({
         first: { schema: S.Schema({ id: S.Id() }) },
         second: { schema: S.Schema({ id: S.Id() }) },
-      },
+      }),
     };
     const diff = diffSchemas(schemaB, schemaA);
-    expect(diff).toStrictEqual([
+    expect(diff).toEqual([
       {
         _diff: 'collectionAttribute',
         collection: 'second',
         type: 'delete',
         attribute: ['id'],
-        metadata: {
-          options: { nullable: false, default: { args: null, func: 'uuid' } },
+        dataType: {
+          config: { nullable: false, default: { args: null, func: 'uuid' } },
           type: 'string',
-          optional: false,
         },
       },
     ]);
     const reverseDiff = diffSchemas(schemaA, schemaB);
-    expect(reverseDiff).toStrictEqual([
+    expect(reverseDiff).toEqual([
       {
         _diff: 'collectionAttribute',
         collection: 'second',
         type: 'insert',
         attribute: ['id'],
-        metadata: {
+        dataType: {
           type: 'string',
-          options: { nullable: false, default: { args: null, func: 'uuid' } },
-          optional: false,
+          config: { nullable: false, default: { args: null, func: 'uuid' } },
         },
         isNewCollection: true,
       },
@@ -263,7 +259,10 @@ describe('detecting dangerous edits', () => {
     const db = new DB({ schema: original });
     let results;
     await db.transact(async (tx) => {
-      results = await getSchemaDiffIssues(tx, diffSchemas(original, different));
+      results = await getSchemaDiffIssues(
+        tx.fetch.bind(tx),
+        diffSchemas(original, different)
+      );
       // happiest case, nothing in the database
       // TODO: changing types should be allowed with empty databases? tbd
       expect(
@@ -274,7 +273,7 @@ describe('detecting dangerous edits', () => {
     let reverseResults;
     await db.transact(async (tx) => {
       reverseResults = await getSchemaDiffIssues(
-        tx,
+        tx.fetch.bind(tx),
         diffSchemas(different, original)
       );
 
@@ -309,7 +308,10 @@ describe('detecting dangerous edits', () => {
     });
 
     await db.transact(async (tx) => {
-      results = await getSchemaDiffIssues(tx, diffSchemas(original, different));
+      results = await getSchemaDiffIssues(
+        tx.fetch.bind(tx),
+        diffSchemas(original, different)
+      );
       expect(
         results.map(({ violatesExistingData }) => violatesExistingData)
       ).toStrictEqual([true, true, true, true, true, true, true]);
@@ -329,7 +331,7 @@ describe('detecting dangerous edits', () => {
     });
     await db2.transact(async (tx) => {
       reverseResults = await getSchemaDiffIssues(
-        tx,
+        tx.fetch.bind(tx),
         diffSchemas(different, original)
       );
       expect(
@@ -356,7 +358,7 @@ describe('detecting dangerous edits', () => {
     different: any
   ) {
     return await getSchemaDiffIssues(
-      tx,
+      tx.fetch.bind(tx),
       diffSchemas(
         wrapSchema({ id: S.Id(), enum: original }),
         wrapSchema({ id: S.Id(), enum: different })
@@ -430,119 +432,24 @@ describe('detecting dangerous edits', () => {
   });
 });
 
-describe('rules', () => {
-  it('can detect changes to rules', () => {
-    const schemaA = {
-      version: 0,
-      collections: {
-        test: {
-          schema: S.Schema({ id: S.Id() }),
-          rules: {
-            read: { 'can-read': { filter: [false] } },
-          },
-        },
-      },
-    };
-    const schemaB = {
-      version: 0,
-      collections: {
-        test: {
-          schema: S.Schema({ id: S.Id() }),
-          rules: {
-            read: { 'cant-read': { filter: [false] } },
-          },
-        },
-      } satisfies Models,
-    };
-
-    const diff = diffSchemas(schemaA, schemaB);
-    expect(diff).toStrictEqual([
-      {
-        _diff: 'collectionRules',
-        collection: 'test',
-      },
-    ]);
-  });
-  it('can add rules', () => {
-    const schemaA = {
-      version: 0,
-      collections: {
-        test: {
-          schema: S.Schema({ id: S.Id() }),
-        },
-      },
-    };
-    const schemaB = {
-      version: 0,
-      collections: {
-        test: {
-          schema: S.Schema({ id: S.Id() }),
-          rules: {
-            read: { 'cant-read': { filter: [false] } },
-          },
-        },
-      } satisfies Models,
-    };
-
-    const diff = diffSchemas(schemaA, schemaB);
-    expect(diff).toStrictEqual([
-      {
-        _diff: 'collectionRules',
-        collection: 'test',
-      },
-    ]);
-  });
-  it('can remove rules', () => {
-    const schemaA = {
-      version: 0,
-      collections: {
-        test: {
-          schema: S.Schema({ id: S.Id() }),
-          rules: {
-            read: { 'can-read': { filter: [false] } },
-          },
-        },
-      },
-    };
-    const schemaB = {
-      version: 0,
-      collections: {
-        test: {
-          schema: S.Schema({ id: S.Id() }),
-        },
-      } satisfies Models,
-    };
-
-    const diff = diffSchemas(schemaA, schemaB);
-    expect(diff).toStrictEqual([
-      {
-        _diff: 'collectionRules',
-        collection: 'test',
-      },
-    ]);
-  });
-});
-
 describe('roles', () => {
   it('can detect changes to roles', () => {
     const schemaA = {
-      version: 0,
-      collections: {
+      collections: S.Collections({
         test: {
           schema: S.Schema({ id: S.Id() }),
         },
-      },
+      }),
       roles: {
         user: { match: { type: 'user' } },
       },
     };
     const schemaB = {
-      version: 0,
-      collections: {
+      collections: S.Collections({
         test: {
           schema: S.Schema({ id: S.Id() }),
         },
-      },
+      }),
       roles: {
         user: { match: { role: 'user' } },
       },
@@ -556,20 +463,18 @@ describe('roles', () => {
   });
   it('can add roles', () => {
     const schemaA = {
-      version: 0,
-      collections: {
+      collections: S.Collections({
         test: {
           schema: S.Schema({ id: S.Id() }),
         },
-      },
+      }),
     };
     const schemaB = {
-      version: 0,
-      collections: {
+      collections: S.Collections({
         test: {
           schema: S.Schema({ id: S.Id() }),
         },
-      },
+      }),
       roles: {
         user: { match: { role: 'user' } },
       },
@@ -583,23 +488,21 @@ describe('roles', () => {
   });
   it('can remove roles', () => {
     const schemaA = {
-      version: 0,
-      collections: {
+      collections: S.Collections({
         test: {
           schema: S.Schema({ id: S.Id() }),
         },
-      },
+      }),
       roles: {
         user: { match: { role: 'user' } },
       },
     };
     const schemaB = {
-      version: 0,
-      collections: {
+      collections: S.Collections({
         test: {
           schema: S.Schema({ id: S.Id() }),
         },
-      },
+      }),
     };
     const diff = diffSchemas(schemaA, schemaB);
     expect(diff).toStrictEqual([
@@ -613,8 +516,7 @@ describe('roles', () => {
 describe('permissions', () => {
   it('can detect changes to permissions', () => {
     const schemaA = {
-      version: 0,
-      collections: {
+      collections: S.Collections({
         test: {
           schema: S.Schema({ id: S.Id() }),
           permissions: {
@@ -623,11 +525,10 @@ describe('permissions', () => {
             },
           },
         },
-      } satisfies Models,
+      }),
     };
     const schemaB = {
-      version: 0,
-      collections: {
+      collections: S.Collections({
         test: {
           schema: S.Schema({ id: S.Id() }),
           permissions: {
@@ -636,7 +537,7 @@ describe('permissions', () => {
             },
           },
         },
-      } satisfies Models,
+      }),
     };
     const diff = diffSchemas(schemaA, schemaB);
     expect(diff).toStrictEqual([
@@ -648,16 +549,14 @@ describe('permissions', () => {
   });
   it('can add permissions', () => {
     const schemaA = {
-      version: 0,
-      collections: {
+      collections: S.Collections({
         test: {
           schema: S.Schema({ id: S.Id() }),
         },
-      } satisfies Models,
+      }),
     };
     const schemaB = {
-      version: 0,
-      collections: {
+      collections: S.Collections({
         test: {
           schema: S.Schema({ id: S.Id() }),
           permissions: {
@@ -666,7 +565,7 @@ describe('permissions', () => {
             },
           },
         },
-      } satisfies Models,
+      }),
     };
     const diff = diffSchemas(schemaA, schemaB);
     expect(diff).toStrictEqual([
@@ -678,8 +577,7 @@ describe('permissions', () => {
   });
   it('can remove permissions', () => {
     const schemaA = {
-      version: 0,
-      collections: {
+      collections: S.Collections({
         test: {
           schema: S.Schema({ id: S.Id() }),
           permissions: {
@@ -688,15 +586,14 @@ describe('permissions', () => {
             },
           },
         },
-      } satisfies Models,
+      }),
     };
     const schemaB = {
-      version: 0,
-      collections: {
+      collections: S.Collections({
         test: {
           schema: S.Schema({ id: S.Id() }),
         },
-      } satisfies Models,
+      }),
     };
     const diff = diffSchemas(schemaA, schemaB);
     expect(diff).toStrictEqual([

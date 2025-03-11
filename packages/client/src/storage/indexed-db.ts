@@ -1,1 +1,1 @@
-export * from '@triplit/entity-db/storage/indexed-db';
+export * from '@triplit/db/storage/indexed-db';

@@ -1,5 +1,5 @@
 // TODO: figure out safe exporting, but this is probably fine(?)
-export * from '@triplit/entity-db';
+export * from '@triplit/db';
 export * from './client/triplit-client.js';
 export * from './http-client/http-client.js';
 export * from './sync-engine.js';

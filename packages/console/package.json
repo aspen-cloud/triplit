@@ -35,7 +35,7 @@
     "@phosphor-icons/react": "^2.0.10",
     "@tanstack/react-table": "^8.9.8",
     "@triplit/client": "workspace:^",
-    "@triplit/entity-db": "workspace:^",
+    "@triplit/db": "workspace:^",
     "@triplit/react": "workspace:^",
     "jotai": "^2.12.1",
     "lucide-react": "^0.441.0",

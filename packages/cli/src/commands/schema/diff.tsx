@@ -2,7 +2,7 @@ import { yellow } from 'ansis/colors';
 import { Command } from '../../command.js';
 import { createServerRequesterMiddleware } from '../../middleware/add-server-requester.js';
 import { projectSchemaMiddleware } from '../../middleware/project-schema.js';
-import { diffSchemas } from '@triplit/entity-db';
+import { diffSchemas } from '@triplit/db';
 import * as Flag from '../../flags.js';
 
 export default Command({

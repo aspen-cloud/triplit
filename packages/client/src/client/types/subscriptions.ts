@@ -1,4 +1,4 @@
-import { Change, FetchResult, Models, SchemaQuery } from '@triplit/entity-db';
+import { Change, FetchResult, Models, SchemaQuery } from '@triplit/db';
 import { ClientFetchOptions } from './fetch.js';
 
 export type SubscriptionSignalPayload<

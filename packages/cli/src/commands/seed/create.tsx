@@ -5,7 +5,7 @@ import prompts from 'prompts';
 import { SEED_DIR, getSeedsDir } from '../../filesystem.js';
 import fs from 'fs';
 import path from 'node:path';
-import { Models } from '@triplit/entity-db';
+import { Models } from '@triplit/db';
 import { projectSchemaMiddleware } from '../../middleware/project-schema.js';
 
 export function seedDirExists() {

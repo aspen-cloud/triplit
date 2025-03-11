@@ -1,3 +1,0 @@
-[test]
-preload = ["./test-hooks.ts"]
-root = "./src"

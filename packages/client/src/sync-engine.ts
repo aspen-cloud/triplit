@@ -5,7 +5,7 @@ import {
   CollectionQuery,
   TriplitError,
   hashObject,
-} from '@triplit/entity-db';
+} from '@triplit/db';
 import { SyncOptions, TriplitClient } from './client/triplit-client.js';
 import {
   ConnectionStatus,

@@ -1,1 +1,1 @@
-export * from '@triplit/entity-db/storage/expo-sqlite';
+export * from '@triplit/db/storage/expo-sqlite';

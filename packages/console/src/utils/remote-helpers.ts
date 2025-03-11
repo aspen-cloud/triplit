@@ -1,4 +1,4 @@
-import { DBSchema } from '@triplit/entity-db';
+import { DBSchema } from '@triplit/db';
 import { consoleClient } from 'triplit/client.js';
 
 /**

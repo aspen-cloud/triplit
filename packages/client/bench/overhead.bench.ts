@@ -1,5 +1,5 @@
 import { Bench } from 'tinybench';
-import { DB as TriplitDB, Schema as S } from '@triplit/entity-db';
+import { DB as TriplitDB, Schema as S } from '@triplit/db';
 import { TriplitClient } from '../src';
 
 const schema = S.Collections({
@@ -67,8 +67,8 @@ const suite = new Bench();
 
 const query = db.query('cars').Where([['year', '>', 2021]]);
 suite
-  .add('@triplit/entity-db', async () => {
-    // Your benchmark code for @triplit/entity-db here
+  .add('@triplit/db', async () => {
+    // Your benchmark code for @triplit/db here
     await db.fetch(query);
   })
   .add('@triplit/client', async () => {

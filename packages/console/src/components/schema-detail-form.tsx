@@ -1,4 +1,4 @@
-import { Collection } from '@triplit/entity-db';
+import { Collection } from '@triplit/db';
 import { Input, Checkbox } from '@triplit/ui';
 
 export function CollectionSchemaDetail({

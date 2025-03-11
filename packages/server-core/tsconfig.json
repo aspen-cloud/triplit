@@ -105,9 +105,6 @@
       "path": "../db/tsconfig.json"
     },
     {
-      "path": "../entity-db/tsconfig.json"
-    },
-    {
       "path": "../types/tsconfig.json"
     }
   ],

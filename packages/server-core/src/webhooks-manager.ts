@@ -4,7 +4,7 @@ import {
   DB as TriplitDB,
   TriplitError,
   splitIdParts,
-} from '@triplit/entity-db';
+} from '@triplit/db';
 import { createHmac } from 'node:crypto';
 import { UnserializableEntityError } from './errors.js';
 

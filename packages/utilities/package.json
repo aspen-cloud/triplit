@@ -1,7 +1,7 @@
 {
   "name": "@triplit/utilities",
   "packageManager": "yarn@4.2.2",
-  "version": "0.0.1-canary-20250310223455",
+  "version": "0.0.0",
   "type": "module",
   "files": [
     "/dist"
@@ -35,7 +35,7 @@
     "publish-pkg": "node ../../scripts/npm-check-version-and-publish.js"
   },
   "dependencies": {
-    "@triplit/entity-db": "workspace:^"
+    "@triplit/db": "workspace:^"
   },
   "devDependencies": {
     "@types/json-schema": "^7.0.15",

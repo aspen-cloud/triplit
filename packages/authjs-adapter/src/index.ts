@@ -6,7 +6,7 @@ import type {
   VerificationToken,
 } from '@auth/core/adapters';
 import { HttpClient } from '@triplit/client';
-import type { Models } from '@triplit/entity-db';
+import type { Models } from '@triplit/db';
 
 export type TriplitAdapterConnectionOptions = {
   serverUrl: string;

@@ -1,4 +1,4 @@
-import { getRolesFromSession } from '@triplit/entity-db';
+import { getRolesFromSession } from '@triplit/db';
 
 export type ConsoleSessionRole = NonNullable<
   ReturnType<typeof getRolesFromSession>

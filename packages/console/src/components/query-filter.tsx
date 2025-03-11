@@ -7,7 +7,7 @@ import {
   AllTypes,
   DataType,
   PrimitiveTypeKeys,
-} from '@triplit/entity-db';
+} from '@triplit/db';
 
 export function QueryFilter({
   filter,

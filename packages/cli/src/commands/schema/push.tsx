@@ -1,7 +1,7 @@
 import * as Colors from 'ansis/colors';
 import { Command } from '../../command.js';
 import { createServerRequesterMiddleware } from '../../middleware/add-server-requester.js';
-import { logSchemaChangeViolations } from '@triplit/entity-db';
+import { logSchemaChangeViolations } from '@triplit/db';
 import ora, { Ora } from 'ora';
 import { projectSchemaMiddleware } from '../../middleware/project-schema.js';
 import * as Flag from '../../flags.js';

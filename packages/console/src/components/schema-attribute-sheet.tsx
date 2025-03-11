@@ -11,7 +11,7 @@ import {
   RecordType,
   PrimitiveType,
   PrimitiveTypeKeys,
-} from '@triplit/entity-db';
+} from '@triplit/db';
 import {
   Button,
   Checkbox,

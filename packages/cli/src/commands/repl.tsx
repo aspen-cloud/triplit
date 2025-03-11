@@ -5,7 +5,7 @@ import WebSocket from 'ws';
 import { Command } from '../command.js';
 import { createServerRequesterMiddleware } from '../middleware/add-server-requester.js';
 import { parseQuery } from '../parser.js';
-import { TriplitError } from '@triplit/entity-db';
+import { TriplitError } from '@triplit/db';
 import { projectSchemaMiddleware } from '../middleware/project-schema.js';
 import ora from 'ora';
 import { Logger } from '@triplit/types/logger';

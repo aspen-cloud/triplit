@@ -1,7 +1,7 @@
 import { describe, test, expectTypeOf } from 'vitest';
-import DB, { Schema as S } from '../../src/index.js';
+import { DB, Schema as S } from '../../src/index.js';
 import { EXHAUSTIVE_SCHEMA } from '../utils/exhaustive-schema.js';
-import { fakeTx } from './utils.js';
+import { fakeTx, ExhaustiveSchemaInsert } from './utils.js';
 
 describe('schemaful', () => {
   test('collection param includes all collections', () => {
@@ -40,45 +40,8 @@ describe('schemaful', () => {
     const expectEntityParam = expectTypeOf(db.insert<'test'>).parameter(1);
     const expectEntityParamInTx = expectTypeOf(tx.insert<'test'>).parameter(1);
     // TODO: properly opt in to optional sets and records
-    expectEntityParam.toEqualTypeOf<{
-      id?: string;
-      string: string;
-      boolean: boolean;
-      number: number;
-      enumString: 'a' | 'b' | 'c';
-      date: Date;
-      setString?: Set<string>;
-      setNumber?: Set<number>;
-      nullableSet?: Set<string> | null;
-      record?: { attr1: string; attr2: string; attr3?: string };
-      optional?: string;
-      nullableFalse: string;
-      nullableTrue: string | null;
-      defaultValue?: string;
-      defaultNull?: string | null;
-      defaultNow?: string;
-      defaultUuid?: string;
-    }>();
-
-    expectEntityParamInTx.toEqualTypeOf<{
-      id?: string;
-      string: string;
-      boolean: boolean;
-      number: number;
-      enumString: 'a' | 'b' | 'c';
-      date: Date;
-      setString?: Set<string>;
-      setNumber?: Set<number>;
-      nullableSet?: Set<string> | null;
-      record?: { attr1: string; attr2: string; attr3?: string };
-      optional?: string;
-      nullableFalse: string;
-      nullableTrue: string | null;
-      defaultValue?: string;
-      defaultNull?: string | null;
-      defaultNow?: string;
-      defaultUuid?: string;
-    }>();
+    expectEntityParam.toEqualTypeOf<ExhaustiveSchemaInsert>();
+    expectEntityParamInTx.toEqualTypeOf<ExhaustiveSchemaInsert>();
   });
 });
 
@@ -90,14 +53,10 @@ describe('schemaless', () => {
     expectTypeOf(tx.insert).parameter(0).toEqualTypeOf<string>();
   });
 
-  test('entity param is {[x:string]: any, id?: string }', () => {
+  test('entity param is {[x:string]: any }', () => {
     const db = new DB();
     const tx = fakeTx(db);
-    expectTypeOf(db.insert)
-      .parameter(1)
-      .toEqualTypeOf<{ [x: string]: any; id?: string }>();
-    expectTypeOf(tx.insert)
-      .parameter(1)
-      .toEqualTypeOf<{ [x: string]: any; id?: string }>();
+    expectTypeOf(db.insert).parameter(1).toEqualTypeOf<{ [x: string]: any }>();
+    expectTypeOf(tx.insert).parameter(1).toEqualTypeOf<{ [x: string]: any }>();
   });
 });

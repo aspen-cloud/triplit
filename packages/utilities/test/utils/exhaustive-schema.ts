@@ -1,4 +1,4 @@
-import { Schema as S } from '@triplit/entity-db';
+import { Schema as S } from '@triplit/db';
 
 export const schema = S.Collections({
   plain: {

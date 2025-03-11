@@ -1,7 +1,7 @@
 import { expect, it, describe, vi } from 'vitest';
 import { pause } from '../utils/async.js';
 import { QuerySyncError, Server as TriplitServer } from '@triplit/server-core';
-import { DB, TriplitError } from '@triplit/entity-db';
+import { DB, TriplitError } from '@triplit/db';
 import {
   mapMessages,
   SERVICE_KEY,

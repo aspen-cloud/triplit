@@ -43,7 +43,7 @@
     "@sentry/cli": "^2.31.2",
     "@sentry/node": "^7.112.2",
     "@triplit/client": "workspace:^",
-    "@triplit/entity-db": "workspace:^",
+    "@triplit/db": "workspace:^",
     "@triplit/logger": "workspace:^",
     "@triplit/server-core": "workspace:^",
     "archiver": "^7.0.1",

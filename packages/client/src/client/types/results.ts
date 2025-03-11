@@ -4,7 +4,7 @@ import {
   Models,
   Schema as S,
   SchemaQuery,
-} from '@triplit/entity-db';
+} from '@triplit/db';
 
 /**
  * The fully selected type of an entity, including all fields but not relations

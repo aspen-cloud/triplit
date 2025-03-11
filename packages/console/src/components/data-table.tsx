@@ -44,7 +44,7 @@ import type {
   RecordType,
   DataType,
   PrimitiveType,
-} from '@triplit/entity-db';
+} from '@triplit/db';
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];

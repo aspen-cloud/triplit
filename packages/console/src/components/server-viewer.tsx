@@ -1,6 +1,6 @@
 import '../../../ui/globals.css';
 
-import { OrderStatement, QueryWhere } from '@triplit/entity-db';
+import { OrderStatement, QueryWhere } from '@triplit/db';
 import { TriplitClient } from '@triplit/client';
 import { useCallback, useEffect, useMemo, useState, Fragment } from 'react';
 import { CaretDown, GridFour, Selection } from '@phosphor-icons/react';

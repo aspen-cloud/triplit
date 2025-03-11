@@ -19,7 +19,7 @@
     "@radix-ui/react-dialog": "^1.0.5",
     "@radix-ui/react-dropdown-menu": "^2.0.6",
     "@radix-ui/react-slot": "^1.0.2",
-    "@triplit/authjs-adapter": "^3.0.0",
+    "@triplit/authjs-adapter": "^0.1.0",
     "@triplit/client": "0.6.14",
     "@triplit/db": "0.5.21",
     "@triplit/react": "0.4.32",
@@ -61,5 +61,5 @@
     "tailwindcss": "^3.3.2",
     "typescript": "^5.3.2"
   },
-  "version": "null-canary-20250310223455"
+  "version": "0.0.0"
 }

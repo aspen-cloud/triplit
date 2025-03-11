@@ -8,7 +8,8 @@ const currentVersion = packageJson.version;
 console.log({ package: packageJson.name, publishedVersion, currentVersion });
 if (!publishedVersion || semver.gt(currentVersion, publishedVersion)) {
   console.log('New version detected. Publishing...');
-  execSync('yarn npm publish --access public --tag canary', {
+  // yarn npm publish --access public --tag canary
+  execSync('yarn npm publish --access public', {
     stdio: 'inherit',
   });
 } else {
@@ -25,9 +26,9 @@ function getPublishedVersion() {
     );
     const publishedVersions = JSON.parse(publishedVersionsString);
     // dist-tags latest is the latest stable release
-    // use canary while on next-gen
     return (
-      publishedVersions['dist-tags'].canary ??
+      // use canary while on next-gen
+      // publishedVersions['dist-tags'].canary ??
       publishedVersions['dist-tags'].latest
     );
   } catch (e) {

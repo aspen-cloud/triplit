@@ -8,7 +8,7 @@ import {
   Button,
 } from '@triplit/ui';
 import { useState } from 'react';
-import { Collection, OrderStatement } from '@triplit/entity-db';
+import { Collection, OrderStatement } from '@triplit/db';
 
 type OrderPopoverProps = {
   collection: string;

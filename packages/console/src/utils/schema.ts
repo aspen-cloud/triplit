@@ -5,7 +5,7 @@ import {
   BaseTypeOptions,
   diffSchemas,
   getSchemaDiffIssues,
-} from '@triplit/entity-db';
+} from '@triplit/db';
 
 export async function createCollection(
   client: TriplitClient<any>,

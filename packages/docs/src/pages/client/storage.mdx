@@ -53,10 +53,10 @@ Triplit does not currently provide a Sqlite storage adapter for the browser. The
 
 ### In React Native
 
-Triplit provides an `expo-sqlite` storage adapter for React Native applications. This adapter uses the [`expo-sqlite`](https://docs.expo.dev/versions/latest/sdk/sqlite/) package to store data on the device. Users of Expo 51 or greater can get started by importing the storage provider from `@triplit/entity-db/storage/expo-sqlite`:
+Triplit provides an `expo-sqlite` storage adapter for React Native applications. This adapter uses the [`expo-sqlite`](https://docs.expo.dev/versions/latest/sdk/sqlite/) package to store data on the device. Users of Expo 51 or greater can get started by importing the storage provider from `@triplit/db/storage/expo-sqlite`:
 
 ```ts
-import { ExpoSQLiteKVStore } from '@triplit/entity-db/storage/expo-sqlite';
+import { ExpoSQLiteKVStore } from '@triplit/db/storage/expo-sqlite';
 import { TriplitClient } from '@triplit/client';
 
 new TriplitClient({
@@ -67,7 +67,7 @@ new TriplitClient({
 You may also instantiate the storage provider with an existing database instance:
 
 ```ts
-import { ExpoSQLiteKVStore } from '@triplit/entity-db/storage/expo-sqlite';
+import { ExpoSQLiteKVStore } from '@triplit/db/storage/expo-sqlite';
 import * as SQLite from 'expo-sqlite';
 import { TriplitClient } from '@triplit/client';
 

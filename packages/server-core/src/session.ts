@@ -5,7 +5,7 @@ import {
   DB as TriplitDB,
   TriplitError,
   Type,
-} from '@triplit/entity-db';
+} from '@triplit/db';
 import { RouteNotFoundError, ServiceKeyRequiredError } from './errors.js';
 import { isTriplitError } from './utils.js';
 import { Server as TriplitServer } from './triplit-server.js';

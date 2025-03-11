@@ -6,14 +6,14 @@ import type {
   FilterGroup,
   FilterStatement,
   SessionRole,
-} from '@triplit/entity-db';
+} from '@triplit/db';
 import {
   isFilterGroup,
   isFilterStatement,
   isBooleanFilter,
   isValueVariable,
   replaceVariable,
-} from '@triplit/entity-db';
+} from '@triplit/db';
 import { IdCard } from 'lucide-react';
 import { Code, Tooltip, cn } from '@triplit/ui';
 import { ConsoleSessionRole } from 'src/utils/roles.js';

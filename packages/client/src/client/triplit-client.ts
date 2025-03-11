@@ -46,9 +46,9 @@ import {
   ValueCursor,
   UpdatePayload,
   queryBuilder,
-} from '@triplit/entity-db';
-import { BTreeKVStore } from '@triplit/entity-db/storage/memory-btree';
-import { IndexedDbKVStore } from '@triplit/entity-db/storage/indexed-db';
+} from '@triplit/db';
+import { BTreeKVStore } from '@triplit/db/storage/memory-btree';
+import { IndexedDbKVStore } from '@triplit/db/storage/indexed-db';
 import { compareCursors } from '../pagination.js';
 import { ClientTransactOptions } from './types/client.js';
 

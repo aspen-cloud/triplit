@@ -4,7 +4,7 @@ import type {
   Collection,
   AllTypes,
   RecordType,
-} from '@triplit/entity-db';
+} from '@triplit/db';
 import { useEffect, useMemo, useState } from 'react';
 
 import { useForm } from '@mantine/form';

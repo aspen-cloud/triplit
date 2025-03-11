@@ -8,7 +8,7 @@ import {
   Models,
   Schema as S,
   SchemaQuery,
-} from '@triplit/entity-db';
+} from '@triplit/db';
 
 const workerUrl = new URL(
   '../src/worker-client/worker-client-operator.ts',

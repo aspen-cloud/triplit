@@ -14,7 +14,7 @@ import {
   Type,
   UpdatePayload,
   WriteModel,
-} from '@triplit/entity-db';
+} from '@triplit/db';
 
 function parseError(error: string) {
   try {

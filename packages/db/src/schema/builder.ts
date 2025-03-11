@@ -1,18 +1,22 @@
-import type { CollectionNameFromModels } from '../db.js';
-import { StringType } from '../data-types/definitions/string.js';
-import { NumberType } from '../data-types/definitions/number.js';
-import { BooleanType } from '../data-types/definitions/boolean.js';
-import { DateType } from '../data-types/definitions/date.js';
-import { RecordType } from '../data-types/definitions/record.js';
-import { SetType } from '../data-types/definitions/set.js';
-import { QueryType, SubQuery } from '../data-types/definitions/query.js';
-import type { Models, SchemaConfig } from './types/models.js';
-import { Optional } from '../data-types/types/index.js';
-import { TypeInterface } from '../data-types/definitions/type.js';
+import { StringType } from './data-types/definitions/string.js';
+import { NumberType } from './data-types/definitions/number.js';
+import { BooleanType } from './data-types/definitions/boolean.js';
+import { DateType } from './data-types/definitions/date.js';
+import {
+  DataTypeRecordProps,
+  RecordType,
+} from './data-types/definitions/record.js';
+import { SetType } from './data-types/definitions/set.js';
+import type { CollectionNameFromModels, Models } from './types/models.js';
+import { DataType, OptionalType, TypeInterface } from './types/index.js';
+import { CollectionQuery } from '../query.js';
 
-// NOTE: when adding new return types they should be exported in the index.ts file
-// https://github.com/microsoft/TypeScript/issues/42873
-// https://github.com/microsoft/TypeScript/pull/58176#issuecomment-2052698294
+// Ensures that id is on root schema record
+type SchemaProps<Properties = Record<string, DataType>> =
+  DataTypeRecordProps<Properties> & {
+    id: ReturnType<typeof Schema.Id>;
+  };
+
 export class Schema {
   /**
    * The Id data type is string that generates a UUID when the `id` field is omitted from an inserted entity.
@@ -71,36 +75,54 @@ export class Schema {
    */
   static Set = SetType;
 
-  static Query = QueryType;
-
-  /**
-   * A RelationMany models a one-to-many relationship between two collections. The attribute, when included in a query, is of the shape `Map<string, Entity>`. {@link https://triplit.dev/schemas/relations#relationmany Read more in the docs.}
-   *
-   * @param collectionName - the name of the related collection
-   * @param query - the query to filter the related collection
-   */
+  // /**
+  //  * A RelationMany models a one-to-many relationship between two collections. The attribute, when included in a query, is of the shape `Map<string, Entity>`. {@link https://triplit.dev/schemas/relations#relationmany Read more in the docs.}
+  //  *
+  //  * @param collectionName - the name of the related collection
+  //  * @param query - the query to filter the related collection
+  //  */
+  // TODO: limit query to just 'where', 'order', 'limit', 'after', ...and other fields
   static RelationMany = <
-    C extends CollectionNameFromModels,
-    Q extends SubQuery<Models, C>,
+    M extends Models<M> = Models,
+    C extends CollectionNameFromModels<M> = CollectionNameFromModels<M>,
+    Q extends Pick<CollectionQuery<M, C>, 'where' | 'order' | 'limit'> = Pick<
+      CollectionQuery<M, C>,
+      'where' | 'order' | 'limit'
+    >,
   >(
     collectionName: C,
-    query: Omit<Q, 'collectionName'>
-  ) => QueryType<C, Q, 'many'>({ collectionName, ...query } as Q, 'many');
+    query: Q
+  ) => ({
+    query: {
+      collectionName,
+      ...query,
+    },
+    cardinality: 'many' as const,
+  });
 
-  /**
-   * A RelationOne models a one-to-one relationship between two collections. The attribute, when included in a query, will return the first `Entity` that matches to the `query` or `null` if none were found. {@link https://triplit.dev/schemas/relations#relationone Read more in the docs.}
-   *
-   * @param collectionName - the name of the related collection
-   * @param query - the query to filter the related collection
-   */
+  // /**
+  //  * A RelationOne models a one-to-one relationship between two collections. The attribute, when included in a query, will return the first `Entity` that matches to the `query` or `null` if none were found. {@link https://triplit.dev/schemas/relations#relationone Read more in the docs.}
+  //  *
+  //  * @param collectionName - the name of the related collection
+  //  * @param query - the query to filter the related collection
+  //  */
   static RelationOne = <
-    C extends CollectionNameFromModels,
-    Q extends SubQuery<Models, C>,
+    M extends Models<M> = Models,
+    C extends CollectionNameFromModels<M> = CollectionNameFromModels<M>,
+    Q extends Pick<CollectionQuery<M, C>, 'where' | 'order' | 'limit'> = Pick<
+      CollectionQuery<M, C>,
+      'where' | 'order' | 'limit'
+    >,
   >(
     collectionName: C,
-    query: Omit<Q, 'collectionName'>
-  ) =>
-    QueryType<C, Q, 'one'>({ collectionName, ...query, limit: 1 } as Q, 'one');
+    query: Q
+  ) => ({
+    query: {
+      collectionName,
+      ...query,
+    },
+    cardinality: 'one' as const,
+  });
 
   /**
    * A RelationById models a one-to-one relationship between two collections. The attribute, when included in a query, will return the entity with the provided id or `null` if none were found. {@link https://triplit.dev/schemas/relations#relationbyid Read more in the docs.}
@@ -108,24 +130,36 @@ export class Schema {
    * @param collectionName - the name of the related collection
    * @param query - the query to filter the related collection
    */
-  static RelationById = <C extends CollectionNameFromModels>(
+  static RelationById = <C extends CollectionNameFromModels<Models>>(
     collectionName: C,
     entityId: string
-  ) => QueryType({ collectionName, where: [['id', '=', entityId]] }, 'one');
+  ) => ({
+    query: {
+      collectionName,
+      where: [['id', '=', entityId]] as any,
+    },
+    cardinality: 'one' as const,
+  });
 
   /**
    * A schema is a collection of fields that define the structure of an entity.
    *
    * @param properties - the fields of the schema
    */
-  static Schema<T extends SchemaConfig>(
-    ...args: Parameters<typeof this.Record<T>>
+  static Schema<Properties extends SchemaProps<Properties> = SchemaProps>(
+    properties: Properties
   ) {
-    return this.Record(...args);
+    return RecordType(properties);
   }
 
   static get Default() {
     return {
+      Set: {
+        empty: () => ({
+          func: 'Set.empty',
+          args: null,
+        }),
+      },
       /**
        * A helper function to add a randomly generated UUID as the default value for a field.
        *
@@ -147,8 +181,17 @@ export class Schema {
    *
    * @param type - the data type of the field
    */
-  static Optional<T extends TypeInterface>(type: T): Optional<T> {
-    type.context.optional = true;
-    return type as Optional<T>;
+  static Optional<T extends TypeInterface>(type: T): OptionalType<T> {
+    // @ts-expect-error
+    return {
+      ...type,
+      config: type.config
+        ? { ...type.config, optional: true }
+        : { optional: true },
+    };
+  }
+
+  static Collections<M extends Models<M> = Models>(collections: M): M {
+    return collections;
   }
 }

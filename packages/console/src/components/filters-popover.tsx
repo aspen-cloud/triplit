@@ -15,7 +15,7 @@ import {
   SUPPORTED_OPERATIONS,
   type QueryWhere,
   type WhereFilter,
-} from '@triplit/entity-db';
+} from '@triplit/db';
 import { RoleFilters } from './role-filters.js';
 import { TriplitClient } from '@triplit/client';
 

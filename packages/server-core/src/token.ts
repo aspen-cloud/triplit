@@ -13,7 +13,7 @@ import {
   InvalidTokenSignatureError,
   TokenVerificationError,
 } from './errors.js';
-import { TriplitError } from '@triplit/entity-db';
+import { TriplitError } from '@triplit/db';
 
 const TriplitJWTType = ['test', 'anon', 'secret'] as const;
 export type TriplitJWTType = (typeof TriplitJWTType)[number];

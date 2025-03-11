@@ -1,7 +1,7 @@
 import { expect, it, describe, vi } from 'vitest';
 import { Server as TriplitServer } from '@triplit/server-core';
 import { createTestClient, SERVICE_KEY, spyMessages } from '../utils/client.js';
-import { DB, Models, Schema as S } from '@triplit/entity-db';
+import { DB, Models, Schema as S } from '@triplit/db';
 import { pause } from '../utils/async.js';
 
 it('Should allow a client with the same schema to sync', async () => {

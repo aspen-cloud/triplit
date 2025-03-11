@@ -5,7 +5,7 @@ import {
   schemaFileContentFromSchema,
   writeSchemaFile,
 } from '../../cli/src/schema.js';
-import { Models, Schema as S } from '@triplit/entity-db';
+import { Models, Schema as S } from '@triplit/db';
 import { serverRequesterMiddleware } from '../../cli/src/middleware/add-server-requester.js';
 import { emptyDir } from 'fs-extra';
 import { ServerOptions } from '../../server/src/hono.js';

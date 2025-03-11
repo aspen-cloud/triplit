@@ -1,5 +1,5 @@
 import { expectTypeOf, test } from 'vitest';
-import { Schema as S } from '@triplit/entity-db';
+import { Schema as S } from '@triplit/db';
 import { Entity, QueryResult } from '../../src/client/types';
 
 test('Entity', () => {

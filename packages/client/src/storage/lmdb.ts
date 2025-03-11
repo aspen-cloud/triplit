@@ -1,1 +1,1 @@
-export * from '@triplit/entity-db/storage/lmdb';
+export * from '@triplit/db/storage/lmdb';

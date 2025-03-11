@@ -2,7 +2,7 @@ import { Command } from '../../command.js';
 import * as Flag from '../../flags.js';
 import { createServerRequesterMiddleware } from '../../middleware/add-server-requester.js';
 import { projectSchemaMiddleware } from '../../middleware/project-schema.js';
-import { normalizeSessionVars, getRolesFromSession } from '@triplit/entity-db';
+import { normalizeSessionVars, getRolesFromSession } from '@triplit/db';
 
 import * as JWT from 'jsonwebtoken';
 

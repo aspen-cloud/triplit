@@ -13,7 +13,7 @@ import {
   Relationship,
   isIdFilter,
   CollectionQuery,
-} from '@triplit/entity-db';
+} from '@triplit/db';
 import { blue } from 'ansis/colors';
 
 const INDENT = '  ';

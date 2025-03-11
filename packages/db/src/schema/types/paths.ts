@@ -1,200 +1,161 @@
-import { QueryType } from '../../data-types/definitions/query.js';
-import { RecordType } from '../../data-types/definitions/record.js';
-import { CollectionNameFromModels, ModelFromModels } from '../../db.js';
-import { CollectionQuery } from '../../query/types/index.js';
-import { PrefixedUnion } from '../../utility-types.js';
-import { Models, SelectModelFromModel } from './models.js';
+import {
+  RefCollectionName,
+  RefDefinition,
+  RelationshipRef,
+} from '../../query.js';
+import { StringKey } from '../../types.js';
+import { RecordType } from '../data-types/index.js';
+import { CollectionNameFromModels, Models } from './models.js';
 
-/**
- * A path in a schema
- */
-export type Path = string;
-
-/**
- * The maximum depth of relationships to expand in path search
- */
-export type MAX_RELATIONSHIP_DEPTH = 3;
-
-/**
- * Expand a record type into a union of all possible paths, including relationships and nested records
- */
-export type RecordPaths<
-  R extends RecordType<any>,
-  M extends Models,
-  TDepth extends any[] = [],
-> =
-  R extends RecordType<any>
-    ? {
-        [K in keyof R['properties']]: R['properties'][K] extends RecordType<any>
-          ? // Record root
-            | `${Path & K}`
-              // Record children
-              | PrefixedUnion<
-                  RecordPaths<
-                    // @ts-expect-error
-                    R['properties'][K],
-                    M,
-                    TDepth
-                  >,
-                  `${Path & K}.`
-                >
-          : R['properties'][K] extends QueryType<any, any, any>
-            ? // Basically start back at top of schema but add prefix
-              PrefixedUnion<
-                // Track max depth as relationships are expanded
-                TDepth['length'] extends MAX_RELATIONSHIP_DEPTH
-                  ? any
-                  : QueryPaths<
-                      // @ts-expect-error
-                      R['properties'][K],
-                      M,
-                      [...TDepth, any]
-                    >,
-                `${Path & K}.`
-              >
-            : // Base case for values
-              `${Path & K}`;
-      }[keyof R['properties']]
-    : never;
-
-/**
- * Expand a record type into a union of all paths that have relationships at every level
- */
-// Note: this what we should edit to support relationships inside records (expand records to find relationships)
-export type RelationPaths<
-  R extends RecordType<any>,
-  M extends Models,
-  TDepth extends any[] = [],
-> =
-  R extends RecordType<any>
-    ? {
-        [K in keyof R['properties']]: R['properties'][K] extends QueryType<
-          any,
-          any,
-          any
-        >
-          ? // Basically start back at top of schema but add prefix
-            | `${Path & K}` // Take current path, union with expanded paths
-              | PrefixedUnion<
-                  PrefixedUnion<
-                    // Track max depth as relationships are expanded
-                    TDepth['length'] extends MAX_RELATIONSHIP_DEPTH
-                      ? any
-                      : RelationPaths<
-                          ModelFromModels<
-                            M,
-                            R['properties'][K]['query']['collectionName']
-                          >,
-                          M,
-                          [...TDepth, any]
-                        >,
-                    '.'
-                  >,
-                  Path & K
-                >
-          : never;
-      }[keyof R['properties']]
-    : never;
-
-/**
- * Expand a query type into a union of all possible paths
- */
-export type QueryPaths<
-  QType extends QueryType<any, any, any>,
-  M extends Models,
-  TDepth extends any[] = [],
-> =
-  QType extends QueryType<any, infer Q, any>
-    ? SchemaPaths<M, Q['collectionName'], TDepth>
-    : never;
-
-/**
- * Expand a schema into a union of all possible paths
- */
 export type SchemaPaths<
-  M extends Models,
+  M extends Models<M>,
   CN extends CollectionNameFromModels<M>,
-  TDepth extends any[] = [],
-> = RecordPaths<M[CN]['schema'], M, TDepth>;
+> = RecordPaths<M[CN]['schema']>;
 
-/**
- * Expand a Model into a union of all possible paths, non inclusive of relationships
- */
+// TODO: increasing max depth to 3 causes typescript to complain
+type MAX_RELATION_DEPTH = 2;
+type DEPTH = 0 | 1 | 2;
+type IncrementDepth<D extends DEPTH> = D extends 0
+  ? 1
+  : D extends 1
+    ? 2
+    : never;
+
+// Exhaustive schema paths = root paths + all relations (+ their root paths)
 export type ModelPaths<
-  M extends Models,
+  M extends Models<M>,
   CN extends CollectionNameFromModels<M>,
-> = RecordPaths<
-  // Use SelectModelFromModel to remove relationships
-  SelectModelFromModel<ModelFromModels<M, CN>>,
-  M
->;
+  RDepth extends DEPTH = 0,
+> = SchemaPaths<M, CN> | RelationshipPaths<M, CN, RDepth>;
+
+export type RelationshipPaths<
+  M extends Models<M>,
+  CN extends CollectionNameFromModels<M>,
+  RDepth extends DEPTH = 0,
+> = RDepth extends MAX_RELATION_DEPTH
+  ? string
+  : {
+      [K in RelationshipRef<
+        M,
+        CN
+      >]: `${K & string}.${ModelPaths<M, RefCollectionName<M, CN, K>, IncrementDepth<RDepth>>}`;
+    }[RelationshipRef<M, CN>];
+
+// Given a point in the schema, resolve the path returning the data type
+export type ResolveModelPath<
+  M extends Models<M>,
+  CN extends CollectionNameFromModels<M>,
+  Path extends string,
+  Current extends RecordType = M[CN]['schema'],
+> = Path extends `${infer Head}.${infer Tail}`
+  ? Head extends StringKey<Current['properties']>
+    ? ResolveModelPath<M, CN, Tail, Current['properties'][Head]>
+    : Head extends RelationshipRef<M, CN>
+      ? ResolveModelPath<
+          M,
+          RefCollectionName<M, CN, Head>,
+          Tail,
+          M[CN]['schema']
+        >
+      : never
+  : Current['properties'][Path];
+
+// All paths in the schema that are relationships from a starting point
+// TODO: unify with RelationshipPaths (this is a prefix)
+export type ModelRelationshipPaths<
+  M extends Models<M>,
+  CN extends CollectionNameFromModels<M>,
+  RDepth extends DEPTH = 0,
+> = RDepth extends MAX_RELATION_DEPTH
+  ? string
+  : {
+      [K in RelationshipRef<M, CN>]:
+        | `${K & string}`
+        | `${K & string}.${ModelRelationshipPaths<M, RefCollectionName<M, CN, K>, IncrementDepth<RDepth>>}`;
+    }[RelationshipRef<M, CN>];
+
+export type ResolveRelationshipPath<
+  M extends Models<M>,
+  CN extends CollectionNameFromModels<M>,
+  Path extends string,
+> = Path extends `${infer Head}.${infer Tail}`
+  ? Head extends RelationshipRef<M, CN>
+    ? ResolveRelationshipPath<M, RefCollectionName<M, CN, Head>, Tail>
+    : never
+  : Path extends RelationshipRef<M, CN>
+    ? RefDefinition<M, CN, Path>
+    : never;
 
 /**
- * Get the base key of a path or union of paths
+ * Expand a record type into a union of all possible paths, including nested records and the root time of a nested record
  */
-export type ExtractBasePaths<P extends string> =
-  P extends `${infer Key}.${string}` ? Key : P;
-
-/**
- * Shift a path to the next level by removing the first key
- */
-export type ShiftPath<P extends string> = P extends `${string}.${infer Rest}`
-  ? Rest
+type RecordPaths<R extends RecordType> = R extends RecordType
+  ? {
+      // TODO: this breaks with StringKey<R['properties']> for some reason?
+      [K in keyof R['properties']]: R['properties'][K] extends RecordType
+        ?
+            | `${K & string}`
+            | `${K & string}.${RecordPaths<
+                // @ts-expect-error
+                R['properties'][K]
+              >}`
+        : K & string;
+    }[StringKey<R['properties']>]
   : never;
 
 /**
- * Get the collection name of a relationship at a path
+ * SplitPath<"a.b.c", "."> --> ["a", "b", "c"]
  */
-export type RelationshipCollectionName<
-  M extends Models,
-  CN extends CollectionNameFromModels<M>,
-  P extends RelationPaths<ModelFromModels<M, CN>, M>,
-> =
-  ExtractTypeFromRecord<ModelFromModels<M, CN>, M, P> extends QueryType<
-    any,
-    any,
-    any
-  >
-    ? ExtractTypeFromRecord<
-        ModelFromModels<M, CN>,
-        M,
-        P
-      >['query']['collectionName']
-    : never;
+type SplitPath<
+  S extends string,
+  Delimiter extends string,
+> = S extends `${infer Head}${Delimiter}${infer Tail}`
+  ? [Head, ...SplitPath<Tail, Delimiter>]
+  : [S];
 
 /**
- * Gets the Triplit data type at a path for a record type
+ * Utility to turn a union of object types into a single
+ * intersection type. For example:
+ *
+ *   { a: number } | { b: string }
+ * becomes:
+ *   { a: number } & { b: string }
  */
-export type ExtractTypeFromRecord<
-  R extends RecordType<any>,
-  M extends Models,
-  P extends Path, // should be a dot notation path
-> = P extends `${infer K}.${infer Rest}` // if path is nested
-  ? K extends keyof R['properties'] // if key is a valid key
-    ? R['properties'][K] extends RecordType<any> // if value at key is a record type
-      ? ExtractTypeFromRecord<
-          // @ts-expect-error
-          R['properties'][K],
-          M,
-          Rest
-        > // recurse
-      : R['properties'][K] extends QueryType<any, any, any> // if value at key is a query type
-        ? ExtractTypeFromSchema<
-            M,
-            R['properties'][K]['query']['collectionName'],
-            Rest
-          >
-        : never // if value at key cannot be recursed
-    : never // if key is not a valid key
-  : P extends keyof R['properties'] // if path is not nested
-    ? R['properties'][P] // return value at path
-    : never; // if path is not valid
+type UnionToIntersection<U> = (U extends any ? (k: U) => void : never) extends (
+  k: infer I
+) => void
+  ? I
+  : never;
 
 /**
- * Gets the Triplit data type at a path for a schema
+ * PathFilteredHelper<T, ["a", "b"]>:
+ *   1. If "a" is a key of T, we keep T["a"] under the key "a",
+ *   2. then recursively process the remainder of the path ("b") on T["a"].
+ *   3. If we exhaust the path, we simply return T (meaning keep the entire sub-object).
  */
-export type ExtractTypeFromSchema<
-  M extends Models,
-  CN extends CollectionNameFromModels<M>,
-  P extends Path,
-> = ExtractTypeFromRecord<ModelFromModels<M, CN>, M, P>;
+type PathFilteredHelper<T, Keys extends string[]> = Keys extends [
+  infer Head,
+  ...infer Tail,
+]
+  ? Head extends StringKey<T>
+    ? {
+        [K in Head]: PathFilteredHelper<T[K], Extract<Tail, string[]>>;
+      }
+    : {}
+  : T;
+
+/**
+ * PathFiltered<T, "foo.bar" | "x" | "y.z"> takes each path in the union,
+ * runs it through PathFilteredHelper, and intersects the results.
+ *
+ * Example:
+ *   PathFiltered<typeof obj, 'age' | 'address.street'>
+ *     => { age: number } & { address: { street: string } }
+ */
+export type PathFiltered<T, Paths extends string> = UnionToIntersection<
+  Paths extends infer P
+    ? P extends string
+      ? PathFilteredHelper<T, SplitPath<P, '.'>>
+      : never
+    : never
+>;

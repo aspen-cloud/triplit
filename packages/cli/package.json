@@ -23,7 +23,7 @@
     "@cloudflare/workers-types": "^4.20240117.0",
     "@supabase/supabase-js": "^2.39.3",
     "@triplit/client": "workspace:^",
-    "@triplit/entity-db": "workspace:^",
+    "@triplit/db": "workspace:^",
     "@triplit/logger": "workspace:^",
     "@triplit/server": "workspace:^",
     "@triplit/server-core": "workspace:^",

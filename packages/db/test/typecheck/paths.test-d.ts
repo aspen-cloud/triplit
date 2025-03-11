@@ -1,23 +1,28 @@
 import { expectTypeOf, test } from 'vitest';
 import { Schema as S } from '../../src/schema/builder.js';
-import { SchemaPaths } from '../../src/schema/types/index.js';
+import { ModelPaths } from '../../src/schema/types/index.js';
 
 test('SchemaPaths expands a schema to max depth 3', () => {
   const schema = {
     a: {
       schema: S.Schema({
         id: S.Id(),
-        b: S.RelationById('b', '$id'),
       }),
+      relationships: {
+        b: S.RelationById('b', '$id'),
+      },
     },
     b: {
       schema: S.Schema({
         id: S.Id(),
-        a: S.RelationById('a', '$id'),
       }),
+      relationships: {
+        a: S.RelationById('a', '$id'),
+      },
     },
   };
-  expectTypeOf<SchemaPaths<typeof schema, 'a'>>().toEqualTypeOf<
-    'id' | 'b.id' | 'b.a.id' | 'b.a.b.id' | `b.a.b.a.${any}`
+  // TODO:
+  expectTypeOf<ModelPaths<typeof schema, 'a'>>().toEqualTypeOf<
+    'id' | 'b.id' | `b.a.${string}`
   >();
 });

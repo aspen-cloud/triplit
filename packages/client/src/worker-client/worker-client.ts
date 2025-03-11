@@ -26,7 +26,7 @@ import {
   TransactCallback,
   UpdatePayload,
   WriteModel,
-} from '@triplit/entity-db';
+} from '@triplit/db';
 import { ClientComlinkWrapper } from './client-comlink-wrapper.js';
 import { ClientTransactOptions } from '../client/types/client.js';
 

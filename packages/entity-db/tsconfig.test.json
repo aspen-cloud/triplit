@@ -1,7 +1,0 @@
-{
-  "extends": "./tsconfig.json",
-  "compilerOptions": {
-    "rootDir": "."
-  },
-  "include": ["./test/typecheck", "./test/utils/exhaustive-schema.ts", "src"]
-}

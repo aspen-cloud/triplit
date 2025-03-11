@@ -17,7 +17,7 @@ import {
   Models,
   ReadModel,
   SchemaQuery,
-} from '@triplit/entity-db';
+} from '@triplit/db';
 import { ClientTransactOptions } from '../client/types/client.js';
 
 interface ClientWorker<M extends Models<M> = Models>

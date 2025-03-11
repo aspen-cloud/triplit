@@ -1,4 +1,4 @@
-import { STATUS_CODES as HTTP_CODES, TriplitError } from '@triplit/entity-db';
+import { STATUS_CODES as HTTP_CODES, TriplitError } from '@triplit/db';
 
 const STATUS_CODES = {
   ...HTTP_CODES,

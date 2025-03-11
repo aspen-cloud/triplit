@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { TriplitClient } from '../src/client/triplit-client.js';
-import { hashQuery } from '@triplit/entity-db';
+import { hashQuery } from '@triplit/db';
 
 describe('hashQuery', () => {
   it('can generate a unique string for a query based on params', () => {

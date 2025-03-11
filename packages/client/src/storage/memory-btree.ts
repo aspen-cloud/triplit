@@ -1,1 +1,1 @@
-export * from '@triplit/entity-db/storage/memory-btree';
+export * from '@triplit/db/storage/memory-btree';

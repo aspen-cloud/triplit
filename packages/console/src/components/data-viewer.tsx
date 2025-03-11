@@ -23,7 +23,7 @@ import {
   SetType,
   DateType,
   ValueType,
-} from '@triplit/entity-db';
+} from '@triplit/db';
 import { useToast } from 'src/hooks/useToast.js';
 
 if (typeof window !== 'undefined') window.client = consoleClient;

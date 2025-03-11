@@ -64,7 +64,7 @@
     "/dist"
   ],
   "dependencies": {
-    "@triplit/entity-db": "workspace:^",
+    "@triplit/db": "workspace:^",
     "@triplit/logger": "workspace:^",
     "comlink": "^4.4.1",
     "superjson": "^2.2.1"

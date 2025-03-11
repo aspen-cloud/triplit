@@ -30,7 +30,7 @@ import {
   Schema as S,
   or,
   hashQuery,
-} from '@triplit/entity-db';
+} from '@triplit/db';
 
 describe('TestTransport', () => {
   it('can sync an insert on one client to another client', async () => {

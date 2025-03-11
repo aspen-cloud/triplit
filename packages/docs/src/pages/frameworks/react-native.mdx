@@ -76,7 +76,7 @@ const config = getDefaultConfig(__dirname);
 // additional configuration steps
 
 // Resolve exports for these Triplit packages
-const packageExportsDependencies = ['@triplit/db', '@triplit/tuple-database'];
+const packageExportsDependencies = ['@triplit/db', '@triplit/logger'];
 // Custom resolver function
 function customResolver(context, moduleName, platform) {
   for (const dep of packageExportsDependencies) {

@@ -5,7 +5,7 @@ import {
   NoTokenProvidedError,
 } from '@triplit/server-core/errors';
 import { parseAndValidateToken } from '@triplit/server-core/token';
-import { TriplitError } from '@triplit/entity-db';
+import { TriplitError } from '@triplit/db';
 
 export async function useHttpToken(
   req: Request,

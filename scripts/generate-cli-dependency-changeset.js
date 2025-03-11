@@ -10,7 +10,6 @@ const { execSync } = require('child_process');
 const CLI_DEPS = [
   '@triplit/client',
   '@triplit/db',
-  '@triplit/entity-db',
   '@triplit/server',
   '@triplit/server-core',
 ];

@@ -1,8 +1,8 @@
 import { require } from './utils/esm.js';
-import { KVStore, TriplitError } from '@triplit/entity-db';
-import { SQLiteKVStore } from '@triplit/entity-db/storage/sqlite';
-import { BTreeKVStore } from '@triplit/entity-db/storage/memory-btree';
-import { LmdbKVStore } from '@triplit/entity-db/storage/lmdb';
+import { KVStore, TriplitError } from '@triplit/db';
+import { SQLiteKVStore } from '@triplit/db/storage/sqlite';
+import { BTreeKVStore } from '@triplit/db/storage/memory-btree';
+import { LmdbKVStore } from '@triplit/db/storage/lmdb';
 
 export const durableStoreKeys = ['lmdb', 'sqlite'] as const;
 export const inMemoryStoreKeys = ['memory', 'memory-btree'] as const;

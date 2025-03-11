@@ -1,5 +1,5 @@
-import { hashObject, TriplitError } from '@triplit/entity-db';
-import { DB as TriplitDB } from '@triplit/entity-db';
+import { hashObject, TriplitError } from '@triplit/db';
+import { DB as TriplitDB } from '@triplit/db';
 
 import { ServerResponse, Session, routeNotFoundResponse } from './session.js';
 import { ConnectionOptions, SyncConnection } from './sync-connection.js';

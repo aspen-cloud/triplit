@@ -7,7 +7,7 @@ import {
   ServerEntityStore,
   normalizeSessionVars,
   sessionRolesAreEquivalent,
-} from '@triplit/entity-db';
+} from '@triplit/db';
 import {
   InvalidAuthenticationSchemeError,
   MalformedMessagePayloadError,

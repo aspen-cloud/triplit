@@ -1,7 +1,9 @@
 import { test, fc } from '@fast-check/vitest';
 import { describe, expect } from 'vitest';
-import DB, { Schema as S, TriplitError } from '../../src/index.js';
 import { AssertionError } from 'chai';
+import { DB } from '../../src/db.js';
+import { Schema as S } from '../../src/schema/builder.js';
+import { TriplitError } from '../../src/errors.js';
 
 describe('inserts', () => {
   const db = new DB({
@@ -45,7 +47,6 @@ describe('inserts', () => {
           }),
         },
       },
-      version: 0,
     },
   });
 
@@ -127,9 +128,9 @@ describe('inserts', () => {
   ])('should insert a record', async (ent) => {
     try {
       const resp = await db.insert('stressTest', ent);
-      const fetchedEnt = await db.fetchById('stressTest', resp.output.id);
+      const fetchedEnt = await db.fetchById('stressTest', resp.id);
       expect(fetchedEnt).not.toBeNull();
-      const insertedEnt = turnObjectArraysToSet({ ...ent, id: resp.output.id });
+      const insertedEnt = turnObjectArraysToSet({ ...ent, id: resp.id });
       try {
         // expect(insertedEnt).toEqual(fetchedEnt);
       } catch (e) {

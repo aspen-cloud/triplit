@@ -1,3 +1,6 @@
+import { DBSchema } from '../../db.js';
+import { DataType } from './index.js';
+
 export type ChangeToAttribute =
   | {
       type: 'update';
@@ -10,20 +13,12 @@ export type ChangeToAttribute =
     }
   | {
       type: 'insert';
-      metadata: {
-        type: string;
-        options: any;
-        optional: boolean;
-      };
+      dataType: DataType;
       isNewCollection: boolean;
     }
   | {
       type: 'delete';
-      metadata: {
-        type: string;
-        options: any;
-        optional: boolean;
-      };
+      dataType: DataType;
     };
 
 export type AttributeDiff = {
@@ -35,8 +30,8 @@ export type CollectionAttributeDiff = {
   collection: string;
 } & AttributeDiff;
 
-export type CollectionRulesDiff = {
-  _diff: 'collectionRules';
+export type CollectionRelationshipsDiff = {
+  _diff: 'collectionRelationships';
   collection: string;
 };
 
@@ -51,7 +46,6 @@ export type RolesDiff = {
 
 export type Diff =
   | CollectionAttributeDiff
-  | CollectionRulesDiff
   | CollectionPermissionsDiff
   | RolesDiff;
 
@@ -79,3 +73,12 @@ export type PossibleDataViolation = {
   violatesExistingData: boolean;
   cure: string;
 } & BackwardsIncompatibleEdit;
+
+export type SchemaChange = {
+  successful: boolean;
+  invalid: string | undefined;
+  diff: Diff[];
+  issues: PossibleDataViolation[];
+  oldSchema: DBSchema | undefined;
+  newSchema: DBSchema;
+};

@@ -1,6 +1,6 @@
 import { it, describe, expect } from 'vitest';
 import { Server as TriplitServer } from '@triplit/server-core';
-import { DB, hashQuery } from '@triplit/entity-db';
+import { DB, hashQuery } from '@triplit/db';
 import {
   createTestClient,
   MessageLogItem,

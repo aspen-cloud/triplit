@@ -1,20 +1,20 @@
-import { CollectionQuery, DB, FetchResult, TripleRow } from '../../src';
+import { CollectionQuery, DB, DBChanges } from '../../src';
 
 interface Step<Q extends CollectionQuery<any, any>> {
-  action: (results: FetchResult<Q>) => Promise<void> | void;
-  check: (results: FetchResult<Q>) => Promise<void> | void;
+  action: (results: any[]) => Promise<void> | void;
+  check: (results: any[]) => Promise<void> | void;
   noopTimeout?: number;
 }
 
-interface TriplesStep {
-  action: (results: TripleRow[]) => Promise<void> | void;
-  check: (results: TripleRow[]) => Promise<void> | void;
+interface ChangesStep {
+  action: (results: DBChanges) => Promise<void> | void;
+  check: (results: DBChanges) => Promise<void> | void;
   noopTimeout?: number;
 }
 
 type Steps<Q extends CollectionQuery<any, any>> = [
   Pick<Step<Q>, 'check'>,
-  ...Step<Q>[]
+  ...Step<Q>[],
 ];
 
 export async function testSubscription<Q extends CollectionQuery<any, any>>(
@@ -22,7 +22,7 @@ export async function testSubscription<Q extends CollectionQuery<any, any>>(
   query: Q,
   steps: Steps<Q>
 ) {
-  return new Promise<void>((resolve, reject) => {
+  return new Promise<void>(async (resolve, reject) => {
     let stepIndex = 0;
     let awaitingNoop = false;
     db.subscribe(
@@ -36,6 +36,8 @@ export async function testSubscription<Q extends CollectionQuery<any, any>>(
             return resolve();
           }
           await steps[stepIndex].action(results);
+          await db.updateQueryViews();
+          db.broadcastToQuerySubscribers();
           if (steps[stepIndex].noopTimeout) {
             const currentStepIdx = stepIndex;
             setTimeout(async () => {
@@ -58,16 +60,18 @@ export async function testSubscription<Q extends CollectionQuery<any, any>>(
       },
       (error) => reject(error)
     );
+    await db.updateQueryViews();
+    db.broadcastToQuerySubscribers();
   });
 }
 
-export async function testSubscriptionTriples<
-  Q extends CollectionQuery<any, any>
->(db: DB, query: Q, steps: TriplesStep[]) {
+export async function testSubscriptionChanges<
+  Q extends CollectionQuery<any, any>,
+>(db: DB, query: Q, steps: ChangesStep[]) {
   return new Promise<void>((resolve, reject) => {
     let stepIndex = 0;
     let awaitingNoop = false;
-    db.subscribeTriples(
+    db.subscribeChanges(
       query,
       async (results) => {
         try {

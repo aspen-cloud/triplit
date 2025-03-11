@@ -4,7 +4,7 @@ import {
   TriplitError,
   diffSchemas,
   getBackwardsIncompatibleEdits,
-} from '@triplit/entity-db';
+} from '@triplit/db';
 import { QuerySyncError, UnrecognizedMessageTypeError } from './errors.js';
 import { isTriplitError } from './utils.js';
 import {
@@ -24,7 +24,7 @@ import {
 import { TriplitJWT } from './token.js';
 import { logger } from '@triplit/logger';
 import SuperJSON from 'superjson';
-import { mergeDBChanges } from '@triplit/entity-db/changes-buffer';
+import { mergeDBChanges } from '@triplit/db/changes-buffer';
 import { COMPATIBILITY_LIST_KEY } from './constants.js';
 
 export interface ConnectionOptions {

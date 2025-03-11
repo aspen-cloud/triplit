@@ -1,7 +1,7 @@
 import { expect, it, describe } from 'vitest';
 import { tempTriplitServer } from '../utils/server.js';
 import { HttpClient } from '@triplit/client';
-import { Schema as S } from '@triplit/entity-db';
+import { Schema as S } from '@triplit/db';
 
 const anonToken =
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ4LXRyaXBsaXQtdG9rZW4tdHlwZSI6ImFub24iLCJ4LXRyaXBsaXQtcHJvamVjdC1pZCI6InByb2plY3QifQ.HKRGDhSqgvJG8x0oOnVTRWtBWYtCkj_7AnBzChNfpjQ';

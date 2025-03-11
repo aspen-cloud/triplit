@@ -1,4 +1,4 @@
-import { FetchOptions as DBFetchOptions } from '@triplit/entity-db';
+import { FetchOptions as DBFetchOptions } from '@triplit/db';
 
 export type LocalFirstFetchOptions = {
   policy: 'local-first';

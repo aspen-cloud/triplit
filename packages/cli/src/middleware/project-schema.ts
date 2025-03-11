@@ -2,7 +2,7 @@ import { Middleware } from '../middleware.js';
 import * as Flag from '../flags.js';
 import { getDefaultSchemaPath, loadTsModule } from '../filesystem.js';
 import fs from 'fs';
-import { DBSchema } from '@triplit/entity-db';
+import { DBSchema } from '@triplit/db';
 import { yellow } from 'ansis/colors';
 
 /**

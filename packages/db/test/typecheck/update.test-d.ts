@@ -1,13 +1,7 @@
 import { describe, test, expectTypeOf } from 'vitest';
-import DB, {
-  ModelFromModels,
-  Models,
-  Schema as S,
-  Unalias,
-  UpdateTypeFromModel,
-} from '../../src/index.js';
+import { DB, Schema as S } from '../../src/index.js';
 import { EXHAUSTIVE_SCHEMA } from '../utils/exhaustive-schema.js';
-import { fakeTx } from './utils.js';
+import { ExhaustiveSchemaSelectAll, Extends, fakeTx } from './utils.js';
 
 describe('schemaful', () => {
   test('collection param includes all collections', () => {
@@ -39,51 +33,24 @@ describe('schemaful', () => {
     expectTypeOf(tx.update).parameter(0).toEqualTypeOf<'a' | 'b' | 'c'>();
   });
 
+  test('entity param allows partial model for patching', () => {
+    const db = new DB({ schema: EXHAUSTIVE_SCHEMA });
+    const tx = fakeTx(db);
+    type UpdateParam = Parameters<typeof db.update<'test'>>[2];
+    expectTypeOf<
+      Extends<Partial<ExhaustiveSchemaSelectAll>, UpdateParam>
+    >().toEqualTypeOf<true>();
+  });
+
   test('entity param in updater properly reads proxy values from schema', () => {
     const db = new DB({ schema: EXHAUSTIVE_SCHEMA });
     const tx = fakeTx(db);
     db.update('test', 'id', (entity) => {
-      expectTypeOf(entity).toEqualTypeOf<{
-        readonly id: string;
-        string: string;
-        boolean: boolean;
-        number: number;
-        enumString: 'a' | 'b' | 'c';
-        date: Date;
-        setString: Set<string>;
-        setNumber: Set<number>;
-        nullableSet: Set<string> | null;
-        record: { attr1: string; attr2: string; attr3?: string };
-        optional?: string;
-        nullableFalse: string;
-        nullableTrue: string | null;
-        defaultValue: string;
-        defaultNull: string | null;
-        defaultNow: string;
-        defaultUuid: string;
-      }>();
+      expectTypeOf(entity).toEqualTypeOf<ExhaustiveSchemaSelectAll>();
     });
 
     tx.update('test', 'id', (entity) => {
-      expectTypeOf(entity).toEqualTypeOf<{
-        readonly id: string;
-        string: string;
-        boolean: boolean;
-        number: number;
-        enumString: 'a' | 'b' | 'c';
-        date: Date;
-        setString: Set<string>;
-        setNumber: Set<number>;
-        nullableSet: Set<string> | null;
-        record: { attr1: string; attr2: string; attr3?: string };
-        optional?: string;
-        nullableFalse: string;
-        nullableTrue: string | null;
-        defaultValue: string;
-        defaultNull: string | null;
-        defaultNow: string;
-        defaultUuid: string;
-      }>();
+      expectTypeOf(entity).toEqualTypeOf<ExhaustiveSchemaSelectAll>();
     });
   });
 });
@@ -96,16 +63,25 @@ describe('schemaless', () => {
     expectTypeOf(tx.update).parameter(0).toEqualTypeOf<string>();
   });
 
-  test('entity param in updater is {[x:string]: any, readonly id: string }', () => {
+  test('entity param allows partial model for patching ({ [x:string]: any })', () => {
+    const db = new DB();
+    const tx = fakeTx(db);
+    type UpdateParam = Parameters<typeof db.update<'test'>>[2];
+    expectTypeOf<
+      Extends<{ [x: string]: any }, UpdateParam>
+    >().toEqualTypeOf<true>();
+  });
+
+  test('entity param in updater is { [x:string]: any }', () => {
     const db = new DB();
     const tx = fakeTx(db);
     expectTypeOf(db.update)
       .parameter(2)
       .parameter(0)
-      .toEqualTypeOf<{ [x: string]: any; readonly id: string }>();
+      .toEqualTypeOf<{ [x: string]: any }>();
     expectTypeOf(tx.update)
       .parameter(2)
       .parameter(0)
-      .toEqualTypeOf<{ [x: string]: any; readonly id: string }>();
+      .toEqualTypeOf<{ [x: string]: any }>();
   });
 });

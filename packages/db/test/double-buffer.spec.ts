@@ -10,7 +10,7 @@ import { KVDoubleBuffer } from '../src/double-buffer';
 import { DurableWriteBuffer } from '../src/durable-write-buffer.ts';
 import 'fake-indexeddb/auto';
 
-// filepath: /Users/pbohlman/aspen/triplit-internal/public/packages/entity-db/test/double-buffer.spec.ts
+// filepath: /Users/pbohlman/aspen/triplit-internal/public/packages/db/test/double-buffer.spec.ts
 
 const btree = new BTreeKVStore();
 const sqliteDb = sqlite(':memory:');

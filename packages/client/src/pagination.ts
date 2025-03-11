@@ -1,4 +1,4 @@
-import { compareValue, ValueCursor } from '@triplit/entity-db';
+import { compareValue, ValueCursor } from '@triplit/db';
 
 export function compareCursors(
   cursor1: ValueCursor | undefined,

@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { tempTriplitServer } from '../utils/server.js';
 import { ClientSchema, Entity, HttpClient } from '@triplit/client';
-import { Schema as S, Type, WriteModel } from '@triplit/entity-db';
+import { Schema as S, Type, WriteModel } from '@triplit/db';
 
 const serviceToken =
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ4LXRyaXBsaXQtdG9rZW4tdHlwZSI6InNlY3JldCIsIngtdHJpcGxpdC1wcm9qZWN0LWlkIjoicHJvamVjdCJ9.gcDKyZU9wf8o43Ca9kUVXO4KsGwX8IhhyEg1PO1ZqiQ';

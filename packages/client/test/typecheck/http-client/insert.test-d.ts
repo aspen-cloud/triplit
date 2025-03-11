@@ -1,5 +1,5 @@
 import { expectTypeOf, test, describe } from 'vitest';
-import { Schema as S } from '@triplit/entity-db';
+import { Schema as S } from '@triplit/db';
 import { HttpClient } from '../../../src/http-client/http-client.js';
 
 describe('.insert()', () => {

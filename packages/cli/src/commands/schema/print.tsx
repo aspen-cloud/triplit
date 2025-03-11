@@ -5,7 +5,7 @@ import { exportSchemaAsJSONSchema } from '@triplit/utilities';
 import { format as formatFile } from 'prettier';
 import { projectSchemaMiddleware } from '../../middleware/project-schema.js';
 import { schemaFileContentFromSchema } from '../../schema.js';
-import { DBSchema } from '@triplit/entity-db';
+import { DBSchema } from '@triplit/db';
 
 const DISPLAY_FORMATS = ['json', 'typescript', 'file', 'json-schema'] as const;
 type SchemaFormat = (typeof DISPLAY_FORMATS)[number];
