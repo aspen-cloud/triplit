@@ -146,7 +146,7 @@ export class DB<
   subscribe<Q extends SchemaQuery<M>>(
     query: Q,
     onResults: SubscriptionResultsCallback<M, Q>,
-    onError?: ErrorCallback,
+    onError?: (error: Error) => void,
     // TODO: will we need this?
     options: FetchOptions = {}
   ): () => void {
@@ -178,7 +178,7 @@ export class DB<
       results: FetchResult<M, Q, 'many'>;
       changes: DBChanges;
     }) => void,
-    onError?: ErrorCallback,
+    onError?: (error: Error) => void,
     options: FetchOptions = {}
   ): () => void {
     const preparedQuery = prepareQuery(
