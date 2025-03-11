@@ -1,6 +1,7 @@
 import {
   CollectionQuery,
   DBChanges,
+  serializeEntity,
   serializeFetchResult,
   DB as TriplitDB,
   TriplitError,
@@ -154,9 +155,7 @@ export class Session {
       });
       const collectionSchema =
         this.db.getSchema()?.collections?.[collectionName].schema;
-      const serialized = collectionSchema
-        ? Type.serialize(collectionSchema, insertedData, 'decoded')
-        : insertedData;
+      const serialized = serializeEntity(collectionSchema, insertedData);
       return ServerResponse(200, serialized);
     } catch (e) {
       return this.errorResponse(e, {
@@ -167,23 +166,30 @@ export class Session {
 
   async bulkInsert(inserts: Record<string, any[]>) {
     try {
-      const txResult = await this.db.transact(
+      const schema = this.db.getSchema();
+      const result = await this.db.transact(
         async (tx) => {
           const output = Object.keys(inserts).reduce(
             (acc, collectionName) => ({ ...acc, [collectionName]: [] }),
             {}
           ) as Record<string, any[]>;
           for (const [collectionName, entities] of Object.entries(inserts)) {
+            const collectionSchema =
+              schema?.collections?.[collectionName].schema;
             for (const entity of entities) {
               const insertedEntity = await tx.insert(collectionName, entity);
-              output[collectionName].push(insertedEntity);
+              const serialized = serializeEntity(
+                collectionSchema,
+                insertedEntity
+              );
+              output[collectionName].push(serialized);
             }
           }
           return output;
         },
         { skipRules: hasAdminAccess(this.token) }
       );
-      return ServerResponse(200, txResult);
+      return ServerResponse(200, result);
     } catch (e) {
       return this.errorResponse(e, {
         fallbackMessage: 'Could not insert entity. An unknown error occurred.',
