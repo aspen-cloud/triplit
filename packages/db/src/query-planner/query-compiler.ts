@@ -25,7 +25,7 @@ export type Step =
   | {
       type: 'ID_LOOK_UP';
       collectionName: string;
-      ids: string[] | ViewResultRef; // e.g. "view_1" or ["id1", "id2"]
+      ids: string[]; // e.g. "$view_1.id" or ["id1", "id2"]
     }
   | {
       type: 'RESOLVE_FROM_VIEW';

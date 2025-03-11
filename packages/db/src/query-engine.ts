@@ -225,21 +225,8 @@ export class EntityStoreQueryEngine {
               //  This sucks to have to do but it works for now
               ...flattenViews(preparedViews),
             });
-            if (typeof varMatch === 'string') {
-              ids = [varMatch];
-            } else if (Array.isArray(varMatch)) {
-              ids = varMatch;
-            } else if (typeof varMatch === 'object' && varMatch !== null) {
-              // Internal Set case: Record<Value, boolean>
-              ids = [];
-              for (const [key, value] of Object.entries(varMatch)) {
-                if (value === true) {
-                  ids.push(key);
-                }
-              }
-            } else {
-              throw new Error(`Invalid variable match for ${ids}`);
-            }
+
+            ids = resolvedVarToIdArray(varMatch);
           }
           collectionName = step.collectionName;
           candidateIterator = this.getCollectionCandidatesById(
@@ -474,4 +461,27 @@ export class EntityStoreQueryEngine {
     }
     return candidates;
   }
+}
+
+type ResolvedIdLookupVar =
+  | undefined
+  | null
+  | string
+  | Record<string, boolean>
+  | ResolvedIdLookupVar[];
+
+function resolvedVarToIdArray(varMatch: ResolvedIdLookupVar) {
+  let ids: string[] = [];
+  if (typeof varMatch === 'string') {
+    ids = [varMatch];
+  } else if (Array.isArray(varMatch)) {
+    ids = varMatch.flatMap(resolvedVarToIdArray);
+  } else if (typeof varMatch === 'object' && varMatch !== null) {
+    for (const [key, value] of Object.entries(varMatch)) {
+      if (value === true) {
+        ids.push(key);
+      }
+    }
+  }
+  return ids;
 }
