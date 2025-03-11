@@ -1,5 +1,12 @@
 # @triplit/utilities
 
+## 0.0.1
+
+### Patch Changes
+
+- Updated dependencies [44f9ed5b]
+  - @triplit/db@1.0.0
+
 ## 0.0.1-canary-20250310223455
 
 ### Patch Changes

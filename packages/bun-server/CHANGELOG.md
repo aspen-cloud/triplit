@@ -1,5 +1,16 @@
 # bun-server
 
+## 1.0.0
+
+### Major Changes
+
+- aa25e64d: Triplit 1.0
+
+### Patch Changes
+
+- Updated dependencies [aa25e64d]
+  - @triplit/server@1.0.0
+
 ## 0.4.52
 
 ### Patch Changes
