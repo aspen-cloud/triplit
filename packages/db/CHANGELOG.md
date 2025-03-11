@@ -1,5 +1,12 @@
 # @triplit/entity-db
 
+## 1.0.1
+
+### Patch Changes
+
+- Updated dependencies [05053ede]
+  - @triplit/logger@0.0.1
+
 ## 1.0.0
 
 ### Major Changes

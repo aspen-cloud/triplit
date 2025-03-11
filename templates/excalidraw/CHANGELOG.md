@@ -1,5 +1,13 @@
 # excalidraw
 
+## 1.0.1
+
+### Patch Changes
+
+- @triplit/client@1.0.1
+- @triplit/db@1.0.1
+- @triplit/react@1.0.1
+
 ## 1.0.0
 
 ### Major Changes
