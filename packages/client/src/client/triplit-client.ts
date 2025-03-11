@@ -265,7 +265,7 @@ export class TriplitClient<M extends Models<M> = Models> {
             await this.db.updateQueryViews();
             this.db.broadcastToQuerySubscribers();
             if (this.syncEngine.connectionStatus !== 'OPEN') return;
-            this.syncEngine.maybeSyncOutbox();
+            await this.syncEngine.syncWrites();
           },
           20,
           { leading: false, trailing: true }
@@ -1338,19 +1338,14 @@ export class TriplitClient<M extends Models<M> = Models> {
   }
 
   /**
-   * Retry sending a transaction to the remote database. This is commonly used when a transaction fails to commit on the remote database in the `onTxFailure` callback.
-   * @param txId
+   * Manually send any pending writes to the remote database. This may be a no-op if:
+   * - there is already a push in progress
+   * - the connection is not open
+   *
+   * If the push is successful, it will return `success: true`. If the push fails, it will return `success: false` and a `failureReason`.
    */
-  retry(...args: Parameters<typeof this.syncEngine.retry>) {
-    return this.syncEngine.retry(...args);
-  }
-
-  /**
-   * Rollback a transaction from the client database. It will no longer be sent to the remote database as a part of the syncing process. This is commonly used when a transaction fails to commit on the remote database in the `onTxFailure` callback.
-   * @param txIds
-   */
-  rollback(...args: Parameters<typeof this.syncEngine.rollback>) {
-    return this.syncEngine.rollback(...args);
+  syncWrites(...args: Parameters<typeof this.syncEngine.syncWrites>) {
+    return this.syncEngine.syncWrites(...args);
   }
 
   /**

@@ -248,13 +248,9 @@ export class ClientComlinkWrapper<M extends Models<M> = Models>
     if (!this.client) throw new WorkerInternalClientNotInitializedError();
     return this.client.disconnect();
   }
-  retry(...args: Parameters<Client<M>['retry']>) {
+  syncWrites(...args: Parameters<Client<M>['syncWrites']>) {
     if (!this.client) throw new WorkerInternalClientNotInitializedError();
-    return this.client.retry(...args);
-  }
-  rollback(...args: Parameters<Client<M>['rollback']>) {
-    if (!this.client) throw new WorkerInternalClientNotInitializedError();
-    return this.client.rollback(...args);
+    return this.client.syncWrites(...args);
   }
   isFirstTimeFetchingQuery(query: CollectionQuery<any, any>): Promise<boolean> {
     if (!this.client) throw new WorkerInternalClientNotInitializedError();

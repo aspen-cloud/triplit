@@ -123,7 +123,7 @@ export class SyncEngine {
     this.transport = options.transport ?? new WebSocketTransport();
   }
 
-  async sendChanges(changes: DBChanges) {
+  private async sendChanges(changes: DBChanges) {
     this.sendMessage({
       type: 'CHANGES',
       payload: {
@@ -132,11 +132,33 @@ export class SyncEngine {
     });
   }
 
-  async maybeSyncOutbox() {
+  /**
+   * Manually send any pending writes to the remote database. This may be a no-op if:
+   * - there is already a push in progress
+   * - the connection is not open
+   *
+   * If the push is successful, it will return `success: true`. If the push fails, it will return `success: false` and a `failureReason`.
+   */
+  async syncWrites(): Promise<{
+    didSync: boolean;
+    syncFailureReason?: string;
+  }> {
     if (this.client.awaitReady) await this.client.awaitReady;
-    if (this.syncInProgress || this.connectionStatus !== 'OPEN') return;
+    if (this.syncInProgress)
+      return {
+        didSync: false,
+        syncFailureReason: 'Sync in progress',
+      };
+    if (this.connectionStatus !== 'OPEN')
+      return {
+        didSync: false,
+        syncFailureReason: 'Connection not open',
+      };
     this.client.db.entityStore.doubleBuffer.lockAndSwitchBuffers();
     await this.trySyncLockedBuffer();
+    return {
+      didSync: true,
+    };
   }
 
   async trySyncLockedBuffer() {
@@ -164,7 +186,7 @@ export class SyncEngine {
     // because we've surgically removed the changes for this entity
     // there might be other changes that we can sync
     // TODO: is this desired behavior every time?
-    return this.maybeSyncOutbox();
+    return this.syncWrites();
   }
 
   async clearPendingChangesAll() {
@@ -433,39 +455,6 @@ export class SyncEngine {
     this.queries.delete(id);
   }
 
-  private commitCallbacks: Map<string, Set<() => void>> = new Map();
-  private failureCallbacks: Map<string, Set<(e: unknown) => void>> = new Map();
-
-  /**
-   * When a transaction has been confirmed by the remote database, the callback will be called
-   * @param txId
-   * @param callback
-   * @returns a function removing the listener callback
-   */
-  onTxCommit(txId: string, callback: () => void) {
-    this.commitCallbacks.has(txId)
-      ? this.commitCallbacks.get(txId)?.add(callback)
-      : this.commitCallbacks.set(txId, new Set([callback]));
-    return () => {
-      this.commitCallbacks.get(txId)?.delete(callback);
-    };
-  }
-
-  /**
-   * If a transaction fails to commit on the remote database, the callback will be called
-   * @param txId
-   * @param callback
-   * @returns a function removing the listener callback
-   */
-  onTxFailure(txId: string, callback: (e: unknown) => void) {
-    this.failureCallbacks.has(txId)
-      ? this.failureCallbacks.get(txId)?.add(callback)
-      : this.failureCallbacks.set(txId, new Set([callback]));
-    return () => {
-      this.failureCallbacks.get(txId)?.delete(callback);
-    };
-  }
-
   /**
    * Initiate a sync connection with the server
    */
@@ -569,7 +558,7 @@ export class SyncEngine {
         this.syncInProgress = false;
         // empty the outbox
         // this.checkUnlockedBufferAndSendAnyChanges();
-        await this.maybeSyncOutbox();
+        await this.syncWrites();
       }
 
       if (message.type === 'CLOSE') {
@@ -695,7 +684,7 @@ export class SyncEngine {
 
   private async initializeSync() {
     await this.trySyncLockedBuffer();
-    await this.maybeSyncOutbox();
+    await this.syncWrites();
 
     // Reconnect any queries
     for (const [id] of this.queries) {
@@ -841,23 +830,6 @@ export class SyncEngine {
     }
 
     return didSend;
-  }
-
-  /**
-   * Retry sending a transaciton to the remote database. This is commonly used when a transaction fails to commit on the remote database in the `onTxFailure` callback.
-   * @param txId
-   */
-  async retry(txId: string) {
-    await this.maybeSyncOutbox();
-  }
-
-  /**
-   * Rollback a transaction from the client database. It will no longer be sent to the remote database as a part of the syncing process. This is commonly used when a transaction fails to commit on the remote database in the `onTxFailure` callback.
-   * @param txIds
-   */
-  // TODO: implement rollback
-  async rollback(txIds: string | string[]) {
-    throw new Error('NOT IMPLEMENTED');
   }
 
   /**

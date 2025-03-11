@@ -440,13 +440,9 @@ export class WorkerClient<M extends Models<M> = Models> implements Client<M> {
     await this.initialized;
     return this.clientWorker.disconnect();
   }
-  async retry(txId: string) {
+  async syncWrites() {
     await this.initialized;
-    return this.clientWorker.retry(txId);
-  }
-  async rollback(txIds: string | string[]) {
-    await this.initialized;
-    return this.clientWorker.rollback(txIds);
+    return this.clientWorker.syncWrites();
   }
 
   async clear(options: ClearOptions = {}) {
