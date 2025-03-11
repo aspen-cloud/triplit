@@ -70,11 +70,15 @@ export function getRolesFromSession<M extends Models<M>, S extends DBSchema<M>>(
   return sessionRoles;
 }
 
+function rolesEmpty(roles: SessionRole[] | undefined): boolean {
+  return !roles || roles.length === 0;
+}
+
 export function sessionRolesAreEquivalent(
   a: SessionRole[] | undefined,
   b: SessionRole[] | undefined
 ): boolean {
-  if (a === undefined && b === undefined) {
+  if (rolesEmpty(a) && rolesEmpty(b)) {
     return true;
   }
 

@@ -36,9 +36,19 @@ export type HttpClientOptions<M extends Models<M> = Models> = {
 export class HttpClient<M extends Models<M> = Models> {
   constructor(private options: HttpClientOptions<M> = {}) {}
 
+  private _schemaInitialized: boolean = false;
+
   // Hack: use schemaFactory to get schema if it's not ready from provider
   private async schema(): Promise<M | undefined> {
-    return this.options.schema || (await this.options.schemaFactory?.());
+    if (!this._schemaInitialized) {
+      if (!this.options.schema) {
+        this.options.schema = await (this.options.schemaFactory
+          ? this.options.schemaFactory()
+          : undefined);
+      }
+      this._schemaInitialized = true;
+    }
+    return this.options.schema;
   }
 
   updateOptions(options: HttpClientOptions<M>) {

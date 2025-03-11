@@ -218,12 +218,12 @@ export class TriplitClient<M extends Models<M> = Models> {
    * Logs are only stored in `debug` mode
    */
   readonly logs: any[] = [];
-  readonly options: ClientOptions<M> | undefined;
+  readonly options: ClientOptions<M>;
   /**
    *
    * @param options - The {@link ClientOptions | options} for the client
    */
-  constructor(options?: ClientOptions<M>) {
+  constructor(options: ClientOptions<M> = {}) {
     const {
       schema,
       roles,
@@ -239,7 +239,7 @@ export class TriplitClient<M extends Models<M> = Models> {
       defaultQueryOptions,
       logger,
       logLevel = 'info',
-    } = options ?? {};
+    } = options;
 
     const dbSchema = schema ? { collections: schema, roles } : undefined;
     const storage = getClientStorage(
@@ -273,7 +273,9 @@ export class TriplitClient<M extends Models<M> = Models> {
       );
       this.db.onSchemaChange((change) => {
         if (change.successful) {
-          this.http.updateOptions({ schema: change.newSchema as any });
+          this.http.updateOptions({
+            schema: change.newSchema.collections as M,
+          });
         }
       });
       if (syncSchema) {
@@ -345,6 +347,7 @@ export class TriplitClient<M extends Models<M> = Models> {
    *
    * @returns The schema of the database as a Javascript object
    */
+  // TODO: eval if this should return full db schema or just collections
   async getSchema(): Promise<DBSchema<M> | undefined> {
     if (this.awaitReady) await this.awaitReady;
     return this.db.getSchema();
@@ -364,7 +367,7 @@ export class TriplitClient<M extends Models<M> = Models> {
     this.logger.debug('transact START');
     const resp = await this.db.transact(callback, {
       ...options,
-      skipRules: options.skipRules ?? this.options?.skipRules ?? SKIP_RULES,
+      skipRules: options.skipRules ?? this.options.skipRules ?? SKIP_RULES,
     });
     this.logger.debug('transact END', resp);
     return resp;
@@ -449,7 +452,7 @@ export class TriplitClient<M extends Models<M> = Models> {
   ): Promise<FetchResult<M, Q, 'many'>> {
     this.logger.debug('fetchLocal START', query);
     const res = await this.db.fetch(query, {
-      skipRules: this.options?.skipRules ?? SKIP_RULES,
+      skipRules: this.options.skipRules ?? SKIP_RULES,
       ...(options ?? {}),
     });
     this.logger.debug('fetchLocal END', res);
@@ -527,7 +530,7 @@ export class TriplitClient<M extends Models<M> = Models> {
     if (this.awaitReady) await this.awaitReady;
     this.logger.debug('insert START', collectionName, object);
     const resp = await this.db.insert(collectionName, object, {
-      skipRules: this.options?.skipRules ?? SKIP_RULES,
+      skipRules: this.options.skipRules ?? SKIP_RULES,
     });
     this.logger.debug('insert END', resp);
     return resp;
@@ -549,7 +552,7 @@ export class TriplitClient<M extends Models<M> = Models> {
     if (this.awaitReady) await this.awaitReady;
     this.logger.debug('update START', collectionName, entityId);
     const resp = await this.db.update(collectionName, entityId, data, {
-      skipRules: this.options?.skipRules ?? SKIP_RULES,
+      skipRules: this.options.skipRules ?? SKIP_RULES,
     });
     this.logger.debug('update END', resp);
     return resp;
@@ -569,7 +572,7 @@ export class TriplitClient<M extends Models<M> = Models> {
     if (this.awaitReady) await this.awaitReady;
     this.logger.debug('delete START', collectionName, entityId);
     const resp = await this.db.delete(collectionName, entityId, {
-      skipRules: this.options?.skipRules ?? SKIP_RULES,
+      skipRules: this.options.skipRules ?? SKIP_RULES,
     });
     this.logger.debug('delete END', resp);
     return resp;
@@ -641,7 +644,7 @@ export class TriplitClient<M extends Models<M> = Models> {
         : undefined;
 
       const unsubscribeLocal = this.db.subscribe(query, onResults, onError, {
-        skipRules: this.options?.skipRules ?? SKIP_RULES,
+        skipRules: this.options.skipRules ?? SKIP_RULES,
         ...opts,
       });
 
@@ -672,7 +675,7 @@ export class TriplitClient<M extends Models<M> = Models> {
   private get probablyIntendsToConnect() {
     return (
       this.connectionStatus === 'OPEN' ||
-      (!!this.options?.autoConnect &&
+      (!!this.options.autoConnect &&
         !!this.syncEngine.syncOptions.token &&
         !!this.syncEngine.syncOptions.server &&
         this.connectionStatus !== 'CLOSED' &&
