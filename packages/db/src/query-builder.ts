@@ -379,8 +379,11 @@ export class RelationBuilder<
     );
   }
 
-  Where(...args: FilterInput<M, CN>) {
-    const where = QUERY_INPUT_TRANSFORMERS<M, CN>().where(this, ...args);
+  Where(...args: FilterInput<M, RefCollectionName<M, CN, Ref>>) {
+    const where = QUERY_INPUT_TRANSFORMERS<
+      M,
+      RefCollectionName<M, CN, Ref>
+    >().where(this, ...args);
     return new RelationBuilder<M, CN, Ref, RQ>(
       this._extends,
       // @ts-expect-error
@@ -419,8 +422,11 @@ export class RelationBuilder<
     );
   }
 
-  Order(...args: OrderInput<M, CN>) {
-    const order = QUERY_INPUT_TRANSFORMERS<M, CN>().order(this, ...args);
+  Order(...args: OrderInput<M, RefCollectionName<M, CN, Ref>>) {
+    const order = QUERY_INPUT_TRANSFORMERS<
+      M,
+      RefCollectionName<M, CN, Ref>
+    >().order(this, ...args);
     return new RelationBuilder<M, CN, Ref, RQ>(
       this._extends,
       // @ts-expect-error
