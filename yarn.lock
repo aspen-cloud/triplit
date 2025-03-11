@@ -10212,7 +10212,19 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@triplit/client@npm:1.0.1, @triplit/client@workspace:^, @triplit/client@workspace:packages/client":
+"@triplit/client@npm:1.0.1, @triplit/client@npm:latest":
+  version: 1.0.1
+  resolution: "@triplit/client@npm:1.0.1"
+  dependencies:
+    "@triplit/db": "npm:^1.0.1"
+    "@triplit/logger": "npm:^0.0.1"
+    comlink: "npm:^4.4.1"
+    superjson: "npm:^2.2.1"
+  checksum: 10/a59e60526f076c2a70b6dbfc2df08c82ecf8e5ca48fecf8947e0631c870578a216c31b37ee66cb33e79c5f9485bacb6a4fc5ea8024df78bb5e2952f84812e478
+  languageName: node
+  linkType: hard
+
+"@triplit/client@npm:^1.0.1, @triplit/client@workspace:^, @triplit/client@workspace:packages/client":
   version: 0.0.0-use.local
   resolution: "@triplit/client@workspace:packages/client"
   dependencies:
@@ -10273,7 +10285,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@triplit/db@npm:1.0.1, @triplit/db@workspace:^, @triplit/db@workspace:packages/db":
+"@triplit/db@npm:^1.0.1, @triplit/db@workspace:^, @triplit/db@workspace:packages/db":
   version: 0.0.0-use.local
   resolution: "@triplit/db@workspace:packages/db"
   dependencies:
@@ -10310,7 +10322,30 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@triplit/logger@workspace:^, @triplit/logger@workspace:packages/logger":
+"@triplit/db@npm:latest":
+  version: 1.0.1
+  resolution: "@triplit/db@npm:1.0.1"
+  dependencies:
+    "@triplit/logger": "npm:^0.0.1"
+    elen: "npm:^1.0.10"
+    nanoid: "npm:^5.1.0"
+    sorted-btree: "npm:^1.8.1"
+  peerDependencies:
+    better-sqlite3: "*"
+    expo-sqlite: "*"
+    lmdb: "*"
+  peerDependenciesMeta:
+    better-sqlite3:
+      optional: true
+    expo-sqlite:
+      optional: true
+    lmdb:
+      optional: true
+  checksum: 10/6b902a31dfc893b359ac452b410ddb04fac2fa1c2d6d528385fe0854e0abf89e5cc89f81f190b94f63ce68153bbef78a3b694b37ec5096f2a46a5b6c33e7cb36
+  languageName: node
+  linkType: hard
+
+"@triplit/logger@npm:^0.0.1, @triplit/logger@workspace:^, @triplit/logger@workspace:packages/logger":
   version: 0.0.0-use.local
   resolution: "@triplit/logger@workspace:packages/logger"
   dependencies:
@@ -10321,7 +10356,18 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@triplit/react@npm:1.0.1, @triplit/react@workspace:^, @triplit/react@workspace:packages/react":
+"@triplit/react@npm:1.0.1, @triplit/react@npm:latest":
+  version: 1.0.1
+  resolution: "@triplit/react@npm:1.0.1"
+  dependencies:
+    "@triplit/client": "npm:^1.0.1"
+  peerDependencies:
+    react: "*"
+  checksum: 10/81212d72b4338c02527aa89b418d64971bb3977607b96f3d80ff5f6bd17f2c47bd99f44c775cd11a05ec847715c8b314b7fdf8c53da31b00e2e8aa955e4cc617
+  languageName: node
+  linkType: hard
+
+"@triplit/react@workspace:^, @triplit/react@workspace:packages/react":
   version: 0.0.0-use.local
   resolution: "@triplit/react@workspace:packages/react"
   dependencies:
@@ -26409,9 +26455,9 @@ __metadata:
     "@tailwindcss/typography": "npm:^0.5.10"
     "@triplit/authjs-adapter": "npm:^1.0.1"
     "@triplit/cli": "npm:1.0.0"
-    "@triplit/client": "npm:1.0.1"
-    "@triplit/db": "npm:1.0.1"
-    "@triplit/react": "npm:1.0.1"
+    "@triplit/client": "npm:latest"
+    "@triplit/db": "npm:latest"
+    "@triplit/react": "npm:latest"
     "@types/bcryptjs": "npm:^2"
     "@types/jsonwebtoken": "npm:^9.0.2"
     "@types/node": "npm:^17.0.45"
