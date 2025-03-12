@@ -4,7 +4,7 @@ import type { DataType, Models, Relationship } from '../schema/types/index.js';
  * Gets the attribute from a schema based on a path
  */
 export function getAttributeFromSchema(
-  attribute: string[],
+  attribute: Iterable<string>,
   schema: Models,
   collectionName: string
 ) {
