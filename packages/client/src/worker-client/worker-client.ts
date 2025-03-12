@@ -226,7 +226,6 @@ export class WorkerClient<M extends Models<M> = Models> implements Client<M> {
   ): () => void {
     const unsubPromise = (async () => {
       await this.initialized;
-      //@ts-expect-error TODO
       return this.clientWorker.subscribeWithStatus(
         query,
         ComLink.proxy(callback),

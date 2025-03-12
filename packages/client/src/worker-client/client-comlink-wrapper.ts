@@ -160,6 +160,17 @@ export class ClientComlinkWrapper<M extends Models<M> = Models>
     return ComLink.proxy(this.client.subscribeWithExpand(...args));
   }
 
+  // @ts-expect-error
+  async subscribeWithStatus(
+    ...args: Parameters<Client<M>['subscribeWithStatus']>
+  ) {
+    args[2] = await normalizeSubscriptionOptions(
+      args[2] as ComLink.Remote<(typeof args)[2]>
+    );
+    if (!this.client) throw new WorkerInternalClientNotInitializedError();
+    return ComLink.proxy(this.client.subscribeWithStatus(...args));
+  }
+
   async startSession(...args: Parameters<Client<M>['startSession']>) {
     if (!this.client) throw new WorkerInternalClientNotInitializedError();
     const normalizedOptions = await normalizeStartSessionOptions(
