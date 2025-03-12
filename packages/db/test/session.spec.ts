@@ -63,14 +63,38 @@ describe('role equivalence', () => {
     const result = sessionRolesAreEquivalent(undefined, undefined);
     expect(result).toBe(true);
   });
-  it('undefined and defined are not equivalent', () => {
+  // Both amount to "no roles"
+  it('undefined and empty array are equivalent', () => {
     {
       const result = sessionRolesAreEquivalent(undefined, []);
-      expect(result).toBe(false);
+      expect(result).toBe(true);
     }
     {
       const result = sessionRolesAreEquivalent([], undefined);
-      expect(result).toBe(false);
+      expect(result).toBe(true);
+    }
+  });
+  it('undefined and non-empty array are not equivalent', () => {
+    {
+      const result = sessionRolesAreEquivalent(undefined, [
+        {
+          key: 'a',
+          roleVars: {},
+        },
+      ]);
+      expect(result).toBe(true);
+    }
+    {
+      const result = sessionRolesAreEquivalent(
+        [
+          {
+            key: 'a',
+            roleVars: {},
+          },
+        ],
+        undefined
+      );
+      expect(result).toBe(true);
     }
   });
   it('different lengths are not equivalent', () => {
