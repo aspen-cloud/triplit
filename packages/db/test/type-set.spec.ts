@@ -466,7 +466,6 @@ it('Can subscribe to queries with a set in the filter', async () => {
     // Update
     {
       action: async () => {
-        console.log('update');
         await db.transact(async (tx) => {
           await tx.update('students', '2', async (entity) => {
             entity.classes.add('math');
@@ -493,7 +492,6 @@ it('Can subscribe to queries with a set in the filter', async () => {
     // Delete
     {
       action: async () => {
-        console.log('delete');
         await db.delete('students', '1');
       },
       check: (data) =>

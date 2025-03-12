@@ -288,7 +288,6 @@ describe('Database API', () => {
       const results3 = await db.fetch(
         db.query('Classes').Where([['enrolled_students', '!has', 'student-1']])
       );
-      console.log('all', await db.fetch(db.query('Classes')));
       expect(results3.map((e) => e.id)).toStrictEqual([
         'class-1',
         'class-4',
