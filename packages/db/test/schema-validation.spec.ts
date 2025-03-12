@@ -493,6 +493,25 @@ describe('collections validation', () => {
           })
         ).toBe(undefined);
       });
+      it('relationship names cannot match a property in the schema', () => {
+        expect(
+          validateSchema({
+            collections: {
+              test: {
+                schema: S.Schema({
+                  id: S.Id(),
+                  attr: S.String(),
+                }),
+                relationships: {
+                  attr: S.RelationById('users', '$id'),
+                },
+              },
+            },
+          })
+        ).toBe(
+          'schema collections definition is invalid: "test" is not a valid collection: collection relationships is invalid: relationship "attr" is invalid: relationship name matches a property name'
+        );
+      });
       it('relationships must have a cardinality', () => {
         expect(
           validateSchema({

@@ -91,7 +91,8 @@ export function validateCollection(collection: Collection, schema: DBSchema) {
     return `collection schema is invalid: ${invalidCollectionSchema}`;
   if ('relationships' in collection) {
     const invalidRelationships = validateRelationships(
-      collection.relationships
+      collection.relationships,
+      collection
     );
     if (invalidRelationships)
       return `collection relationships is invalid: ${invalidRelationships}`;
@@ -278,12 +279,15 @@ function isDefaultFunctionId(id: string): id is DefaultFunctionId {
   return DEFAULT_FUNCTIONS.includes(id as DefaultFunctionId);
 }
 
-function validateRelationships(relationships: Collection['relationships']) {
+function validateRelationships(
+  relationships: Collection['relationships'],
+  collection: Collection
+) {
   if (hasNoValue(relationships)) return;
   if (typeof relationships !== 'object')
     return 'relationships is not an object';
   for (const key in relationships) {
-    const invalidRelationshipName = validateRelationshipName(key);
+    const invalidRelationshipName = validateRelationshipName(key, collection);
     if (invalidRelationshipName)
       return `relationship "${key}" is invalid: ${invalidRelationshipName}`;
     const relationship = relationships[key];
@@ -293,7 +297,7 @@ function validateRelationships(relationships: Collection['relationships']) {
   }
 }
 
-function validateRelationshipName(name: string) {
+function validateRelationshipName(name: string, collection: Collection) {
   if (hasNoValue(name)) return 'relationship name is not defined';
   if (typeof name !== 'string') return 'relationship name is not a string';
   if (name.length === 0) return 'relationship name is empty';
@@ -304,7 +308,8 @@ function validateRelationshipName(name: string) {
   if (!/^[a-zA-Z0-9_]+$/.test(name))
     return 'relationship name contains invalid characters - only alphanumeric characters and underscores are allowed.';
 
-  // TODO: cannot match an attribute name
+  if (collection.schema.properties[name])
+    return 'relationship name matches a property name';
 }
 
 function validateRelationship(relationship: Relationship) {
