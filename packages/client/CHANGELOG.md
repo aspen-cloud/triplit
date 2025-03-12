@@ -1,5 +1,13 @@
 # @triplit/client
 
+## 1.0.4
+
+### Patch Changes
+
+- 9e7be963: WorkerClient fixups
+- Updated dependencies [f6fecc85]
+  - @triplit/db@1.0.4
+
 ## 1.0.3
 
 ### Patch Changes
