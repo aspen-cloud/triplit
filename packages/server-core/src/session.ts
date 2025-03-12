@@ -120,29 +120,14 @@ export class Session {
 
   async fetch(query: CollectionQuery) {
     try {
-      const hasSelectWithoutId = query.select && !query.select.includes('id');
-
-      if (hasSelectWithoutId) {
-        // @ts-expect-error
-        query.select.push('id');
-      }
-
       const result = await this.db.fetch(query, {
         skipRules: hasAdminAccess(this.token),
       });
-
       const schema = this.db.getSchema()?.collections;
-
-      const data = result.map((entity) => {
-        const id = entity.id;
-        if (hasSelectWithoutId && entity.id) {
-          delete entity.id;
-        }
-        const serlialized = serializeFetchResult(query, schema, entity);
-        return [id, serlialized];
-      });
-
-      return ServerResponse(200, data);
+      const serialized = result.map((entity) =>
+        serializeFetchResult(query, schema, entity)
+      );
+      return ServerResponse(200, serialized);
     } catch (e) {
       return this.errorResponse(e as Error);
     }

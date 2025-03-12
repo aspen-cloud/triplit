@@ -98,7 +98,7 @@ export class HttpClient<M extends Models<M> = Models> {
     return deserializeFetchResult(
       query,
       await this.schema(),
-      data.map((entity: any) => entity[1])
+      data
     ) as FetchResult<M, Q, 'many'>;
   }
 
@@ -113,7 +113,7 @@ export class HttpClient<M extends Models<M> = Models> {
     const deserialized = deserializeFetchResult(
       query,
       await this.schema(),
-      data.map((entity: any) => entity[1])
+      data
     );
     const entity = deserialized[0];
     if (!entity) return null;

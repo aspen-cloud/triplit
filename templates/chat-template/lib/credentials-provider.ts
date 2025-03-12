@@ -33,7 +33,8 @@ export const CREDENTIALS_PROVIDER = CredentialsProvider({
     if (!res.ok) {
       return null
     }
-    const authInfo = (await res.json())?.result?.[0]?.[1]
+
+    const authInfo = (await res.json())?.[0]
 
     if (!authInfo) {
       return null
@@ -64,7 +65,7 @@ export const CREDENTIALS_PROVIDER = CredentialsProvider({
     })
 
     if (!response.ok) return null
-    const profile = (await response.json())?.result?.[0]?.[1]
+    const profile = (await response.json())?.[0]
     if (!profile) return null
 
     return profile
