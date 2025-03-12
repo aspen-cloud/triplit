@@ -1,5 +1,11 @@
 # @triplit/server-core
 
+## 1.0.5
+
+### Patch Changes
+
+- a6ceef0b: fixup fetch return values not entires
+
 ## 1.0.4
 
 ### Patch Changes

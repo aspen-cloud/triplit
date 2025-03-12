@@ -1,5 +1,14 @@
 # next-template
 
+## 1.0.5
+
+### Patch Changes
+
+- Updated dependencies [a6ceef0b]
+  - @triplit/client@1.0.5
+  - @triplit/authjs-adapter@1.0.5
+  - @triplit/react@1.0.5
+
 ## 1.0.4
 
 ### Patch Changes
