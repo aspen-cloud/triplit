@@ -422,12 +422,43 @@ new TriplitClient({
 
 You should use a new name for your SQLite database to avoid conflicts with any legacy Triplit databases on the device.
 
-<!-- ## Migrating your server
+### HTTP API
 
-### Move your data over
+If you're using the [`HttpClient`](/client/http-client) to interact with the HTTP API, you won't need to make any changes to your code. If you're interacting with the API directly (e.g. with a raw `fetch` call):
 
-TBD
+- The `/fetch` route now returns an flatter JSON payload of query results (`Entity[]`), rather than a JSON object of the shape`{ result : [string, Entity][] }`.
 
-### Remove `PROJECT_ID` secret
+So for this query:
 
-This secret is no longer needed in Triplit 1.0. You can remove it from your environment variables. -->
+```ts
+const response = await fetch('https://<project-id>.triplit.io/fetch', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    Authorization: 'Bearer ' + TRIPLIT_TOKEN,
+  },
+  body: JSON.stringify({
+    collection: 'todos',
+    query: {
+      collectionName: 'todos',
+      where: [['completed', '=', false]],
+    },
+  }),
+});
+```
+
+Before:
+
+```ts
+const result = await response.json();
+// result = { result: [['123',{ id: '123', title: 'Buy milk', completed: false }]] }
+```
+
+After:
+
+```ts
+const result = await response.json();
+// result = [{ id: '123', title: 'Buy milk', completed: false }]
+```
+
+While the query builder methods (.e.g `Where`, `Order`, `Include`) have changed capitalization, keys in a json query payload remain lowercase.
