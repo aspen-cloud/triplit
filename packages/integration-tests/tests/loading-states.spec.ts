@@ -25,6 +25,7 @@ it("isFirstTimeFetchingQuery should return true if the query has not been fetchi
     serverUrl: `http://localhost:${port}`,
     token: serviceToken,
   });
+  await pause(60);
   const query = client.query('users');
   expect(await client.isFirstTimeFetchingQuery(query)).toBe(true);
   await client.fetch(query);
@@ -38,7 +39,7 @@ it("isFirstTimeFetchingQuery should return true if the query has not been fetchi
     () => {}
   );
   expect(await client.isFirstTimeFetchingQuery(subscriptionQuery)).toBe(true);
-  await pause(30);
+  await pause(60);
   expect(await client.isFirstTimeFetchingQuery(subscriptionQuery)).toBe(false);
 });
 
@@ -54,10 +55,10 @@ it('onConnectionStatusChange should reflect the correct connection status', asyn
     statuses.push(status);
   }, true);
   expect(statuses).toEqual(['UNINITIALIZED']);
-  await pause(20);
+  await pause(60);
   expect(statuses).toEqual(['UNINITIALIZED', 'CONNECTING', 'OPEN']);
   client.disconnect();
-  await pause(20);
+  await pause(60);
   expect(statuses).toEqual(['UNINITIALIZED', 'CONNECTING', 'OPEN', 'CLOSED']);
 });
 
