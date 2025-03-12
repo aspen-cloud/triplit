@@ -206,7 +206,7 @@ export function DataViewer({
                       let parsedVal = value;
                       if (isValueVariable(value)) {
                         const [scope, key] = getVariableComponents(value);
-                        if (scope === undefined || scope === '1') {
+                        if (scope === undefined || scope == 1) {
                           parsedVal = row.getValue(key);
                         } else {
                           throw new TriplitError(
