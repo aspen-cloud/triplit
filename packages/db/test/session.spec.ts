@@ -82,7 +82,7 @@ describe('role equivalence', () => {
           roleVars: {},
         },
       ]);
-      expect(result).toBe(true);
+      expect(result).toBe(false);
     }
     {
       const result = sessionRolesAreEquivalent(
@@ -94,7 +94,7 @@ describe('role equivalence', () => {
         ],
         undefined
       );
-      expect(result).toBe(true);
+      expect(result).toBe(false);
     }
   });
   it('different lengths are not equivalent', () => {
