@@ -1,5 +1,19 @@
 # @triplit/server
 
+## 1.0.3
+
+### Patch Changes
+
+- eac92f24: remove extra pragma statements
+- Updated dependencies [4fe2bc9c]
+- Updated dependencies [eb08f761]
+- Updated dependencies [593238e5]
+- Updated dependencies [eb08f761]
+- Updated dependencies [bc014aa3]
+  - @triplit/client@1.0.3
+  - @triplit/db@1.0.3
+  - @triplit/server-core@1.0.3
+
 ## 1.0.2
 
 ### Patch Changes

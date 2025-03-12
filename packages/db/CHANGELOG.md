@@ -1,5 +1,12 @@
 # @triplit/entity-db
 
+## 1.0.3
+
+### Patch Changes
+
+- eb08f761: tweak role equivalency check to allow relax definition of no roles
+- bc014aa3: add Subquery apis inside relation builder
+
 ## 1.0.2
 
 ### Patch Changes

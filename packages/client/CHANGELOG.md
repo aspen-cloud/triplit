@@ -1,5 +1,16 @@
 # @triplit/client
 
+## 1.0.3
+
+### Patch Changes
+
+- 4fe2bc9c: git commit -m "remove deprecated apis"
+- eb08f761: properly pass schema to http client
+- 593238e5: add onFailureToSyncWrites callback
+- Updated dependencies [eb08f761]
+- Updated dependencies [bc014aa3]
+  - @triplit/db@1.0.3
+
 ## 1.0.2
 
 ### Patch Changes

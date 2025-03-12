@@ -19,9 +19,9 @@
     "@radix-ui/react-dialog": "^1.0.5",
     "@radix-ui/react-dropdown-menu": "^2.0.6",
     "@radix-ui/react-slot": "^1.0.2",
-    "@triplit/authjs-adapter": "^1.0.2",
-    "@triplit/client": "1.0.2",
-    "@triplit/react": "1.0.2",
+    "@triplit/authjs-adapter": "^1.0.3",
+    "@triplit/client": "1.0.3",
+    "@triplit/react": "1.0.3",
     "bcryptjs": "^2.4.3",
     "class-variance-authority": "^0.7.0",
     "clsx": "^1.2.1",
@@ -42,7 +42,7 @@
     "@faker-js/faker": "^9.6.0",
     "@ianvs/prettier-plugin-sort-imports": "^3.7.2",
     "@tailwindcss/typography": "^0.5.10",
-    "@triplit/cli": "1.0.1",
+    "@triplit/cli": "1.0.2",
     "@types/bcryptjs": "^2",
     "@types/jsonwebtoken": "^9.0.2",
     "@types/node": "^17.0.45",
@@ -60,5 +60,5 @@
     "tailwindcss": "^3.3.2",
     "typescript": "^5.3.2"
   },
-  "version": "1.0.2"
+  "version": "1.0.3"
 }
