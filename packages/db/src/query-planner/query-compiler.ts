@@ -11,6 +11,7 @@ import { isFilterGroup, isSubQueryFilter } from '../filters.js';
 import { getVariableComponents, isValueVariable } from '../variables.js';
 import { getIdFilter, hasIdFilter } from './heuristics.js';
 import { VariableAwareCache as VAC } from '../variable-aware-cache.js';
+import { Models } from '../schema/index.js';
 
 export interface RelationalPlan {
   views: Record<string, CollectionQuery>;
@@ -89,6 +90,7 @@ export interface CompiledPlan {
 
 export function extractViews(
   query: CollectionQuery,
+  schema: Models | undefined,
   generateViewId: () => string
 ): RelationalPlan {
   const plan: RelationalPlan = {
@@ -96,7 +98,11 @@ export function extractViews(
     rootQuery: query,
   };
   if (query.where) {
-    const { where, views } = whereFiltersToViews(query.where, generateViewId);
+    const { where, views } = whereFiltersToViews(
+      query.where,
+      schema,
+      generateViewId
+    );
     query.where = where;
     Object.assign(plan.views, views);
   }
@@ -107,6 +113,7 @@ export function extractViews(
       if (inclusion === null || inclusion === true) continue;
       const { newViews, rewrittenQuery } = subqueryToView(
         inclusion.subquery,
+        schema,
         generateViewId
       );
       Object.assign(plan.views, newViews);
@@ -125,6 +132,7 @@ export function extractViews(
       }
       const { newViews, rewrittenQuery } = subqueryToView(
         maybeSubquery.subquery,
+        schema,
         generateViewId
       );
       Object.assign(plan.views, newViews);
@@ -137,16 +145,21 @@ export function extractViews(
 
 function subqueryToView(
   subquery: CollectionQuery,
+  schema: Models | undefined,
   generateViewId: () => string
 ) {
   let newViews = null;
   let rewrittenQuery = null;
   const hasNestedSubquery =
     subquery.include && Object.keys(subquery.include).length > 0;
-  if (VAC.canCacheQuery(subquery) && !hasNestedSubquery) {
+  if (VAC.canCacheQuery(subquery, schema) && !hasNestedSubquery) {
     const viewId = generateViewId();
-    const vacView = VAC.queryToViews(subquery);
-    const extractedView = extractViews(vacView.views[0], generateViewId);
+    const vacView = VAC.queryToViews(subquery, schema);
+    const extractedView = extractViews(
+      vacView.views[0],
+      schema,
+      generateViewId
+    );
     newViews = { [viewId]: extractedView.rootQuery, ...extractedView.views };
     rewrittenQuery = {
       ...subquery,
@@ -154,7 +167,7 @@ function subqueryToView(
       where: vacView.variableFilters,
     };
   } else {
-    const extractedView = extractViews(subquery, generateViewId);
+    const extractedView = extractViews(subquery, schema, generateViewId);
     newViews = extractedView.views;
     rewrittenQuery = extractedView.rootQuery;
   }
@@ -163,6 +176,7 @@ function subqueryToView(
 
 function whereFiltersToViews(
   where: QueryWhere,
+  schema: Models | undefined,
   generateViewId: () => string
 ): {
   where: QueryWhere;
@@ -176,7 +190,7 @@ function whereFiltersToViews(
       !hasHigherLevelReferences(filter.exists.where)
     ) {
       const viewId = generateViewId();
-      const extractedView = extractViews(filter.exists, generateViewId);
+      const extractedView = extractViews(filter.exists, schema, generateViewId);
       views[viewId] = extractedView.rootQuery;
       Object.assign(views, extractedView.views);
 
@@ -204,6 +218,7 @@ function whereFiltersToViews(
     } else if (isFilterGroup(filter)) {
       const { where: newWhere, views: newViews } = whereFiltersToViews(
         filter.filters,
+        schema,
         generateViewId
       );
       updatedWhere.push({ ...filter, filters: newWhere });
@@ -228,13 +243,16 @@ function hasHigherLevelReferences(where: QueryWhere): boolean {
   return false;
 }
 
-export function compileQuery(query: CollectionQuery): CompiledPlan {
+export function compileQuery(
+  query: CollectionQuery,
+  schema: Models | undefined
+): CompiledPlan {
   // console.dir({ query }, { depth: null });
   let nextViewId = 0;
   const generateViewId = (): string => {
     return `${nextViewId++}`;
   };
-  const relationalPlan = extractViews(query, generateViewId);
+  const relationalPlan = extractViews(query, schema, generateViewId);
   // console.dir({ relationalPlan }, { depth: null });
   const compiledPlan = compileRelationalPlan(relationalPlan);
   // console.dir({ compiledPlan }, { depth: null });

@@ -191,7 +191,7 @@ describe('query planning', async () => {
   ];
 
   test.each(queries)('query: $description', async ({ query }) => {
-    const plan = compileQuery(query);
+    const plan = compileQuery(query, undefined);
     expect(plan).toMatchSnapshot();
   });
 });

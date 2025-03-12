@@ -116,7 +116,7 @@ export class EntityStoreQueryEngine {
     query: CollectionQuery,
     vars: any = {}
   ): Promise<ViewEntity[] | ViewEntity> {
-    const compiledPlan = compileQuery(query);
+    const compiledPlan = compileQuery(query, this.schema?.collections);
     return this.executeCompiledPlan(compiledPlan, vars);
   }
 

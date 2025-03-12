@@ -413,3 +413,21 @@ export function* filterStatementIterator(
     }
   }
 }
+
+/**
+ * Returns true if the filter has no relational components
+ */
+export function isStaticFilter(
+  filter: WhereFilter
+): filter is boolean | FilterStatement | FilterGroup {
+  if (isBooleanFilter(filter)) return true;
+  if (isFilterStatement(filter)) return true;
+  if (isFilterGroup(filter)) {
+    const { mod, filters } = filter;
+    return filters.every((f) => isStaticFilter(f));
+  }
+  if (isSubQueryFilter(filter)) return false;
+  if (isRelationshipExistsFilter(filter)) return false;
+  // throw new TriplitError('Unknown filter type');
+  return true;
+}

@@ -1546,3 +1546,226 @@ it('Can load a relation with variable nested in a record', async () => {
     b2: { id: 'b-1' },
   });
 });
+
+const messagingSchema = S.Collections({
+  users: {
+    schema: S.Schema({
+      id: S.Id(),
+      name: S.String(),
+    }),
+  },
+  groups: {
+    schema: S.Schema({
+      id: S.Id(),
+      name: S.String(),
+      member_ids: S.Set(S.String()),
+      creator_id: S.String(),
+    }),
+  },
+});
+
+function seedMessagingDB(db: DB<typeof messagingSchema>) {
+  return db.transact(async (tx) => {
+    await tx.insert('users', { id: 'user-1', name: 'Alice' });
+    await tx.insert('users', { id: 'user-2', name: 'Bob' });
+    await tx.insert('users', { id: 'user-3', name: 'Charlie' });
+
+    await tx.insert('groups', {
+      id: 'group-1',
+      name: 'Group 1',
+      member_ids: new Set(['user-1', 'user-2']),
+      creator_id: 'user-1',
+    });
+    await tx.insert('groups', {
+      id: 'group-2',
+      name: 'Group 2',
+      member_ids: new Set(['user-1', 'user-3']),
+      creator_id: 'user-3',
+    });
+  });
+}
+
+// group.memebrs user: [id, in, $1.members]
+// group.memebrs creator: [id, in, members] && [creator, =, $1.id]
+
+const TestScoreSchema = S.Collections({
+  students: {
+    schema: S.Schema({
+      id: S.Id(),
+      name: S.String(),
+    }),
+  },
+  scores: {
+    schema: S.Schema({
+      id: S.Id(),
+      student_id: S.String(),
+      score: S.Number(),
+    }),
+    relationships: {
+      student: S.RelationById('students', '$student_id'),
+    },
+  },
+});
+function seedTestScoreDB(db: DB<typeof TestScoreSchema>) {
+  return db.transact(async (tx) => {
+    await tx.insert('students', { id: 'student-1', name: 'Alice' });
+    await tx.insert('students', { id: 'student-2', name: 'Bob' });
+    const aliceScores = [100, 90, 80, 70, 60, 50, 40, 30, 20, 10];
+    const bobScores = [95, 85, 75, 65, 55, 45, 35, 25, 15, 5];
+    for (let i = 0; i < aliceScores.length; i++) {
+      await tx.insert('scores', {
+        id: `score-${i + 1}`,
+        student_id: 'student-1',
+        score: aliceScores[i],
+      });
+      await tx.insert('scores', {
+        id: `score-${i + 11}`,
+        student_id: 'student-2',
+        score: bobScores[i],
+      });
+    }
+  });
+}
+
+// These essentially attempt to test the VAC and other relational paths that are lightly tested
+// I dont know the best place to put this, im tempted to directly test the VAC or query engine
+describe('Variable filters', () => {
+  describe('operators', () => {
+    it('can join by "in" operator', async () => {
+      const db = new DB({ schema: { collections: messagingSchema } });
+      await seedMessagingDB(db);
+      // Single filter
+      {
+        const query = db
+          .query('groups')
+          .SubqueryMany('members', {
+            collectionName: 'users',
+            where: [['id', 'in', '$1.member_ids']],
+          })
+          .Where([['id', '=', 'group-1']]);
+        const result = await db.fetchOne(query);
+        expect(result).toEqual({
+          id: 'group-1',
+          name: 'Group 1',
+          member_ids: new Set(['user-1', 'user-2']),
+          creator_id: 'user-1',
+          members: [
+            { id: 'user-1', name: 'Alice' },
+            { id: 'user-2', name: 'Bob' },
+          ],
+        });
+      }
+      // Multiple filters
+      {
+        const query = db
+          .query('groups')
+          .SubqueryOne('creator', {
+            collectionName: 'users',
+            where: [
+              ['id', '=', '$1.creator_id'],
+              ['id', 'in', '$1.member_ids'],
+            ],
+          })
+          .Where([['id', '=', 'group-1']]);
+        const result = await db.fetchOne(query);
+        expect(result).toEqual({
+          id: 'group-1',
+          name: 'Group 1',
+          member_ids: new Set(['user-1', 'user-2']),
+          creator_id: 'user-1',
+          creator: { id: 'user-1', name: 'Alice' },
+        });
+      }
+    });
+    it('can join by "has"', async () => {
+      const db = new DB({ schema: { collections: messagingSchema } });
+      await seedMessagingDB(db);
+      {
+        const query = db
+          .query('users')
+          .SubqueryMany('groups', {
+            collectionName: 'groups',
+            where: [['member_ids', 'has', '$1.id']],
+          })
+          .Where([['id', '=', 'user-1']]);
+        const result = await db.fetchOne(query);
+        expect(result).toEqual({
+          id: 'user-1',
+          name: 'Alice',
+          groups: [
+            {
+              id: 'group-1',
+              name: 'Group 1',
+              member_ids: new Set(['user-1', 'user-2']),
+              creator_id: 'user-1',
+            },
+            {
+              id: 'group-2',
+              name: 'Group 2',
+              member_ids: new Set(['user-1', 'user-3']),
+              creator_id: 'user-3',
+            },
+          ],
+        });
+      }
+
+      {
+        const query = db
+          .query('users')
+          .SubqueryMany('created_groups', {
+            collectionName: 'groups',
+            where: [
+              ['creator_id', '=', '$1.id'],
+              ['member_ids', 'has', '$1.id'],
+            ],
+          })
+          .Where([['id', '=', 'user-1']]);
+        const result = await db.fetchOne(query);
+        expect(result).toEqual({
+          id: 'user-1',
+          name: 'Alice',
+          created_groups: [
+            {
+              id: 'group-1',
+              name: 'Group 1',
+              member_ids: new Set(['user-1', 'user-2']),
+              creator_id: 'user-1',
+            },
+          ],
+        });
+      }
+    });
+    it('can join with set = operator', async () => {
+      const db = new DB({ schema: { collections: messagingSchema } });
+      await seedMessagingDB(db);
+      {
+        const query = db
+          .query('users')
+          .SubqueryMany('groups', {
+            collectionName: 'groups',
+            where: [['member_ids', '=', '$1.id']],
+          })
+          .Where([['id', '=', 'user-1']]);
+        const result = await db.fetchOne(query);
+        expect(result).toEqual({
+          id: 'user-1',
+          name: 'Alice',
+          groups: [
+            {
+              id: 'group-1',
+              name: 'Group 1',
+              member_ids: new Set(['user-1', 'user-2']),
+              creator_id: 'user-1',
+            },
+            {
+              id: 'group-2',
+              name: 'Group 2',
+              member_ids: new Set(['user-1', 'user-3']),
+              creator_id: 'user-3',
+            },
+          ],
+        });
+      }
+    });
+  });
+});

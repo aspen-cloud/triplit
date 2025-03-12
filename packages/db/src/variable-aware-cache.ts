@@ -1,14 +1,18 @@
 import { QueryCacheError } from './errors.js';
 import { DB } from './db.js';
-import { isFilterStatement, isSubQueryFilter } from './filters.js';
+import {
+  isFilterStatement,
+  isStaticFilter,
+  isSubQueryFilter,
+} from './filters.js';
 import { isValueVariable } from './variables.js';
 import {
   getAttributeFromSchema,
   isTraversalRelationship,
 } from './schema/utilities.js';
-import { DBEntity } from './types.js';
+import { DBEntity, QueryWhere, WhereFilter } from './types.js';
 import { CollectionQuery, FilterStatement } from './query.js';
-import { Models } from './schema/index.js';
+import { isPrimitiveType, Models } from './schema/index.js';
 import { ViewEntity } from './query-engine.js';
 
 export class VariableAwareCache {
@@ -35,39 +39,11 @@ export class VariableAwareCache {
     // so the limit itself is not always a good heuristic to rely on because
     // if the relation is on the entities ID then even after you apply LIMIT 1
     // you've likely used most results in the view so it's fine
-    // if (query.limit !== undefined) return false;
-    // if (query.where && query.where.some((f) => !isFilterStatement(f)))
-    //   return false;
 
-    // if (query.include && Object.keys(query.include).length > 0) return false;
-
-    // This is shouldn't be the case anymore (since we use include for sub relations)
-    if (query.select && query.select.some((s) => typeof s === 'object'))
-      return false;
-
-    const statements = (query.where ?? []).filter(isFilterStatement);
-    const variableStatements = statements.filter(([, , v]) =>
-      isValueVariable(v)
+    const orderableStatements = (query.where ?? []).filter(
+      isOrderableFilter(schema, query)
     );
-    // So currently we'll only support queries with:
-    // 1. a single variable filter (typical relational subquery)
-    // 2. no variable filters which is an odd one (inspired by benchmarks query)
-    //    bc resolving from it is trivial (just return all entities)
-    // if (variableStatements.length > 1) return false;
-
-    if (!['=', '<', '<=', '>', '>=', '!='].includes(variableStatements[0]?.[1]))
-      return false;
-
-    if (schema) {
-      const attributeSchema = getAttributeFromSchema(
-        (variableStatements[0][0] as string).split('.'),
-        schema,
-        query.collectionName
-      );
-      if (!attributeSchema) return false;
-      if (isTraversalRelationship(attributeSchema)) return false;
-      if (attributeSchema.type === 'set') return false;
-    }
+    if (orderableStatements.length === 0) return false;
     return true;
   }
 
@@ -146,24 +122,20 @@ export class VariableAwareCache {
     return viewResults.slice(start, end + 1);
   }
 
-  static queryToViews(query: CollectionQuery) {
+  static queryToViews(query: CollectionQuery, schema: Models | undefined) {
     const variableFilters: FilterStatement[] = [];
-    const staticFilters = query.where
-      ? query.where.filter((filter) => {
-          if (isSubQueryFilter(filter)) {
-            return false;
-          }
-          if (filter instanceof Array) {
-            const [prop, _op, val] = filter;
-            if (isValueVariable(val)) {
-              variableFilters.push([prop, _op, val]);
-              return false;
-            }
-          }
-
-          return true;
-        })
-      : undefined;
+    const staticFilters: QueryWhere = [];
+    const isOrderable = isOrderableFilter(schema, query);
+    for (const filter of query.where ?? []) {
+      if (isOrderable(filter)) {
+        variableFilters.push(filter);
+        continue;
+      }
+      if (isStaticFilter(filter)) {
+        staticFilters.push(filter);
+        continue;
+      }
+    }
     return {
       views: [
         {
@@ -180,6 +152,26 @@ export class VariableAwareCache {
       variableFilters,
     };
   }
+}
+
+function isOrderableFilter(schema: Models | undefined, query: CollectionQuery) {
+  return (filter: WhereFilter): filter is FilterStatement => {
+    if (!isFilterStatement(filter)) return false;
+    const [prop, op, val] = filter;
+    if (!isValueVariable(val)) return false;
+    if (!['=', '<', '<=', '>', '>=', '!='].includes(op)) return false;
+    if (schema) {
+      const attribute = getAttributeFromSchema(
+        prop.split('.'),
+        schema,
+        query.collectionName
+      );
+      if (!attribute) return false;
+      if (isTraversalRelationship(attribute)) return false;
+      if (!isPrimitiveType(attribute)) return false;
+    }
+    return true;
+  };
 }
 
 /**
