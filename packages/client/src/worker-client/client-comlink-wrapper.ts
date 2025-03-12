@@ -26,7 +26,7 @@ interface ClientWorker<M extends Models<M> = Models>
   update: <CN extends CollectionNameFromModels<M>>(
     collectionName: CN,
     entityId: string,
-    data: Partial<ReadModel<M, CN>> | string
+    data: Partial<ReadModel<M, CN>>
   ) => Promise<void>;
   transact: <Output>(
     callback: string,
@@ -83,13 +83,13 @@ export class ClientComlinkWrapper<M extends Models<M> = Models>
     if (!this.client) throw new WorkerInternalClientNotInitializedError();
     return await this.client.fetch(...args);
   }
-  async transact<Output>(
-    callback: string,
-    options: Partial<ClientTransactOptions> = {}
-  ) {
+  // @ts-expect-error
+  async transact(...args: Parameters<Client<M>['transact']>) {
     if (!this.client) throw new WorkerInternalClientNotInitializedError();
-    const deserializedCallback = new Function(`return ${callback}`)();
-    return await this.client.transact<Output>(deserializedCallback, options);
+    return await this.client.transact(
+      (tx) => args[0](ComLink.proxy(tx)),
+      args[1]
+    );
   }
   async fetchById(...args: Parameters<Client<M>['fetchById']>): Promise<any> {
     if (!this.client) throw new WorkerInternalClientNotInitializedError();
@@ -106,13 +106,9 @@ export class ClientComlinkWrapper<M extends Models<M> = Models>
   async update<CN extends CollectionNameFromModels<M>>(
     collectionName: CN,
     entityId: string,
-    data: Partial<ReadModel<M, CN>> | string
+    data: Partial<ReadModel<M, CN>>
   ) {
     if (!this.client) throw new WorkerInternalClientNotInitializedError();
-    if (typeof data === 'string') {
-      const fn = new Function(`return ${data}`)();
-      return await this.client.update(collectionName, entityId, fn);
-    }
     return await this.client.update(collectionName, entityId, data);
   }
   async getSchema() {

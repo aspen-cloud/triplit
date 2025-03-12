@@ -18,12 +18,17 @@ import {
   ClearOptions,
   CollectionNameFromModels,
   CollectionQuery,
+  createUpdateProxyAndTrackChanges,
+  EntityNotFoundError,
   FetchResult,
+  InvalidCollectionNameError,
   Models,
   queryBuilder,
   SchemaQuery,
   SubscriptionResultsCallback,
   TransactCallback,
+  Type,
+  Unalias,
   UpdatePayload,
   WriteModel,
 } from '@triplit/db';
@@ -145,14 +150,87 @@ export class WorkerClient<M extends Models<M> = Models> implements Client<M> {
     return this.clientWorker.fetch(query, options);
   }
 
-  async transact<Output>(
+  async transact<CN extends CollectionNameFromModels<M>, Output>(
     callback: TransactCallback<M, Output>,
     options: Partial<ClientTransactOptions> = {}
   ): Promise<Output> {
     await this.initialized;
-    const serialziedCallback = callback.toString();
-    return this.clientWorker.transact(serialziedCallback, options);
+    const client = this;
+    const wrappedTxCallback: TransactCallback<M, Output> = async (tx) => {
+      // create a proxy wrapper around TX that intercepts calls to tx.update that
+      // normally takes a callback so instead we wrap with ComLink.proxy
+      const proxiedTx = new Proxy(tx, {
+        get(target, prop) {
+          if (prop === 'update') {
+            return async (
+              collectionName: CN,
+              id: string,
+              update: UpdatePayload<M>
+            ) => {
+              const changes = await client.getChangesFromUpdatePayload(
+                collectionName,
+                id,
+                update,
+                tx.fetchById.bind(tx)
+              );
+              return await tx.update(collectionName, id, changes);
+            };
+          }
+          // @ts-expect-error
+          return target[prop];
+        },
+      });
+      return await callback(proxiedTx);
+    };
+    return this.clientWorker.transact(
+      ComLink.proxy(wrappedTxCallback),
+      options
+    ) as Promise<Output>;
   }
+
+  // this takes all the requisite info to mock
+  // a proxy on the client side that can be used
+  // to update an entity and then pass the changes
+  // to the worker
+  private async getChangesFromUpdatePayload<
+    CN extends CollectionNameFromModels<M>,
+  >(
+    collectionName: CN,
+    id: string,
+    update: UpdatePayload<M>,
+    fetchById: (
+      collectionName: CN,
+      id: string
+    ) => Promise<any | null> = this.fetchById.bind(this)
+  ) {
+    if (!collectionName) {
+      throw new InvalidCollectionNameError(collectionName);
+    }
+    let changes = undefined;
+    const collectionSchema = (await this.getSchema())?.collections[
+      collectionName
+    ].schema;
+    if (typeof update === 'function') {
+      const existingEntity = structuredClone(
+        await fetchById(collectionName, id)
+      );
+      if (!existingEntity) {
+        throw new EntityNotFoundError(id, collectionName);
+      }
+      changes = {};
+      await update(
+        createUpdateProxyAndTrackChanges(
+          existingEntity,
+          changes,
+          collectionSchema
+        )
+      );
+    } else {
+      changes = update;
+    }
+    return changes;
+  }
+
   async fetchById<CN extends CollectionNameFromModels<M>>(
     collectionName: CN,
     id: string,
@@ -181,12 +259,12 @@ export class WorkerClient<M extends Models<M> = Models> implements Client<M> {
     data: UpdatePayload<M, CN>
   ) {
     await this.initialized;
-    const serializedData = typeof data === 'function' ? data.toString() : data;
-    return await this.clientWorker.update(
+    const changes = await this.getChangesFromUpdatePayload(
       collectionName,
       entityId,
-      serializedData
+      data
     );
+    return await this.clientWorker.update(collectionName, entityId, changes);
   }
 
   async delete<CN extends CollectionNameFromModels<M>>(
