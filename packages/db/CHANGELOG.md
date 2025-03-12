@@ -1,5 +1,11 @@
 # @triplit/entity-db
 
+## 1.0.4
+
+### Patch Changes
+
+- f6fecc85: make VAC more aware of set filters and non VAC friendly operators
+
 ## 1.0.3
 
 ### Patch Changes
