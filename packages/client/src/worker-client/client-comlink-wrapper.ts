@@ -284,8 +284,7 @@ async function normalizeSubscriptionOptions(
 ): Promise<Partial<SubscriptionOptions>> {
   if (options == undefined) return {};
   return {
-    // localOnly: await options.localOnly,
-    // noCache: await options.noCache,
+    localOnly: await options.localOnly,
     onRemoteFulfilled: await options.onRemoteFulfilled,
   };
 }
