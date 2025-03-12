@@ -66,7 +66,7 @@ export type Step =
       viewId: string;
     }
   | {
-      // A subquery for "include" or "exists" references
+      // A subquery for "include"
       type: 'SUBQUERY';
       alias: string; // for an Include
       subPlan: Step[];
@@ -279,11 +279,13 @@ function getViewsReferencedInFilters(
 }
 
 /**
- * Convert a single Query (already free of `exists` subqueries)
- * into a straightforward step list: SCAN -> FILTER -> SORT -> LIMIT -> SUBQUERY includes, etc.
+ * Compiles a given `CollectionQuery` into a sequence of execution steps.
  *
- * In your real implementation, you'd choose index scans vs. full scans,
- * combine multiple filters, etc.
+ * @param {CollectionQuery} q - The query to compile that's already been processed by the view
+ * extractor / relational planner.
+ * @returns {Step[]} An array of steps representing the compiled query that will be interpreted by
+ * the query engine
+ *
  */
 function compileQueryToSteps(q: CollectionQuery): Step[] {
   const steps: Step[] = [];
@@ -327,9 +329,11 @@ function compileQueryToSteps(q: CollectionQuery): Step[] {
     // TODO we should figure out how to break up the filters
     // by which ones can be resolved VAC-style and which ones
     // should have some post-processing
+    // This likely will need to be coordinated in the view extractor so it's clear
+    // which filters are used to do initial view resolution (ala VAC) and which ones
+    // remain
     hasFiltersBeenHandled = true;
     hasOrderBeenHandled = true;
-    // return steps;
   } else {
     // Candidate selection
     if (idFilter) {
@@ -411,7 +415,6 @@ function compileQueryToSteps(q: CollectionQuery): Step[] {
     hasFiltersBeenHandled = true;
   }
 
-  // If orderBy is present, add a SORT step
   if (q.order && q.order.length > 0 && !hasOrderBeenHandled) {
     const orderStatements = [];
     // if order is based on a relation, make sure to include it first
@@ -437,7 +440,6 @@ function compileQueryToSteps(q: CollectionQuery): Step[] {
     });
   }
 
-  // If limit is present, add a LIMIT step
   if (typeof q.limit === 'number' && !hasLimitBeenHandled) {
     steps.push({
       type: 'LIMIT',
@@ -445,8 +447,9 @@ function compileQueryToSteps(q: CollectionQuery): Step[] {
     });
   }
 
-  //  Includes => add a SUBQUERY step for each include
-  //    (In practice, you'd handle them differently or batch them.)
+  // Create a sub plan for each inclusion which usually
+  // ends up resolving from a previously extracted view
+  // but may also become a nested loop query
   if (q.include) {
     for (const [alias, def] of Object.entries(q.include)) {
       const subPlan = compileQueryToSteps(def.subquery);
