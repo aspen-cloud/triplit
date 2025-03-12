@@ -14,6 +14,7 @@ import {
   SchemaQuery,
   SubscriptionSignalPayload,
 } from '@triplit/client';
+import { WorkerClient } from '@triplit/client/worker-client';
 
 type usePaginatedQueryPayload<M extends Models<M>, Q extends SchemaQuery<M>> = {
   results: FetchResult<M, Q, 'many'> | undefined;
@@ -39,7 +40,7 @@ type useInfiniteQueryPayload<M extends Models<M>, Q extends SchemaQuery<M>> = {
 };
 
 function createStateSubscription<M extends Models<M>, Q extends SchemaQuery<M>>(
-  client: TriplitClient<M>,
+  client: TriplitClient<M> | WorkerClient<M>,
   query: Q,
   options?: Partial<SubscriptionOptions>
 ) {
@@ -76,7 +77,7 @@ function createStateSubscription<M extends Models<M>, Q extends SchemaQuery<M>>(
  * @returns An object containing the fetching state, the result of the query, and any error that occurred
  */
 export function useQuery<M extends Models<M>, Q extends SchemaQuery<M>>(
-  client: TriplitClient<M>,
+  client: TriplitClient<M> | WorkerClient<M>,
   query: Q,
   options?: Partial<SubscriptionOptions>
 ) {
@@ -104,7 +105,7 @@ export function usePaginatedQuery<
   M extends Models<M>,
   Q extends SchemaQuery<M>,
 >(
-  client: TriplitClient<M>,
+  client: TriplitClient<M> | WorkerClient<M>,
   query: Q,
   options?: Partial<SubscriptionOptions>
 ): usePaginatedQueryPayload<M, Q> {
@@ -187,7 +188,7 @@ export function usePaginatedQuery<
  * @param options.onRemoteFulfilled - An optional callback that is called when the remote query has been fulfilled. * @returns An object containing a function to load more results, the fetching state, the result of the query, and any error that occurred
  */
 export function useInfiniteQuery<M extends Models<M>, Q extends SchemaQuery<M>>(
-  client: TriplitClient<M>,
+  client: TriplitClient<M> | WorkerClient<M>,
   query: Q,
   options?: Partial<SubscriptionOptions>
 ): useInfiniteQueryPayload<M, Q> {

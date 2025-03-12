@@ -6,6 +6,7 @@ import {
   SchemaQuery,
   SubscriptionSignalPayload,
 } from '@triplit/client';
+import { WorkerClient } from '@triplit/client/worker-client';
 import { BehaviorSubject, Observable, switchMap, shareReplay } from 'rxjs';
 
 type WrapObservable<T> = {
@@ -14,7 +15,7 @@ type WrapObservable<T> = {
 
 export function createQuery<M extends Models<M>, Q extends SchemaQuery<M>>(
   queryFn: () => {
-    client: TriplitClient<M>;
+    client: TriplitClient<M> | WorkerClient<M>;
     query: Q;
     options?: Partial<SubscriptionOptions>;
   }
@@ -82,7 +83,7 @@ export function createPaginatedQuery<
   Q extends SchemaQuery<M>,
 >(
   queryFn: () => {
-    client: TriplitClient<M>;
+    client: TriplitClient<M> | WorkerClient<M>;
     query: Q;
     options?: Partial<SubscriptionOptions>;
   }
@@ -169,7 +170,7 @@ export function createInfiniteQuery<
   Q extends SchemaQuery<M>,
 >(
   queryFn: () => {
-    client: TriplitClient<M>;
+    client: TriplitClient<M> | WorkerClient<M>;
     query: Q;
     options?: Partial<SubscriptionOptions>;
   }

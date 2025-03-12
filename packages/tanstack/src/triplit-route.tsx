@@ -14,6 +14,7 @@ import {
   SchemaQuery,
   TriplitClient,
 } from '@triplit/client';
+import { WorkerClient } from '@triplit/client/worker-client';
 import { useQuery } from '@triplit/react';
 import { ComponentType, useCallback, useMemo, useState } from 'react';
 
@@ -27,7 +28,7 @@ export function triplitRoute<
   TFullPath extends
     RouteConstraints['TFullPath'] = FileRoutesByPath[Path]['fullPath'],
 >(
-  client: TriplitClient<M>,
+  client: TriplitClient<M> | WorkerClient<M>,
   query:
     | Q
     | ((

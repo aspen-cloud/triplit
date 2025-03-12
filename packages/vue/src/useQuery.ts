@@ -6,6 +6,7 @@ import type {
   SchemaQuery,
   SubscriptionSignalPayload,
 } from '@triplit/client';
+import { WorkerClient } from '@triplit/client/worker-client';
 
 /**
  * A composable that subscribes to a query
@@ -17,7 +18,7 @@ import type {
  * @param options.onRemoteFulfilled - An optional callback that is called when the remote query has been fulfilled. * @returns An object containing the fetching state, the result of the query, any error that occurred, and a function to update the query
  */
 export function useQuery<M extends Models<M>, Q extends SchemaQuery<M>>(
-  client: TriplitClient<M>,
+  client: TriplitClient<M> | WorkerClient<M>,
   query: Q,
   options?: Partial<SubscriptionOptions>
 ) {

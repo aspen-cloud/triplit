@@ -6,6 +6,7 @@ import {
   FetchResult,
 } from '@triplit/client';
 import { useQueryOne } from './use-query-one.js';
+import { WorkerClient } from '@triplit/client/worker-client';
 
 /**
  * A React hook that subscribes to an entity
@@ -20,7 +21,7 @@ export function useEntity<
   M extends Models<M>,
   CN extends CollectionNameFromModels<M>,
 >(
-  client: TriplitClient<M>,
+  client: TriplitClient<M> | WorkerClient<M>,
   collectionName: CN,
   id: string,
   options?: Partial<SubscriptionOptions>

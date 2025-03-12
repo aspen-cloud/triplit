@@ -7,6 +7,7 @@ import type {
   SubscriptionSignalPayload,
   TriplitClient,
 } from '@triplit/client';
+import { WorkerClient } from '@triplit/client/worker-client';
 
 /**
  * A hook that subscribes to a query
@@ -19,7 +20,7 @@ import type {
  * @returns An object containing the fetching state, the result of the query, any error that occurred, and a function to update the query
  */
 export function useQuery<M extends Models<M>, Q extends SchemaQuery<M>>(
-  client: TriplitClient<M>,
+  client: TriplitClient<M> | WorkerClient<M>,
   query: Q,
   options?: Partial<SubscriptionOptions>
 ): SubscriptionSignalPayload<M, Q> {
