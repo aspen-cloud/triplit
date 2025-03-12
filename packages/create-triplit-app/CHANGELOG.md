@@ -1,5 +1,11 @@
 # create-triplit-app
 
+## 0.0.23
+
+### Patch Changes
+
+- 593238e5: add onFailureToSyncWrites callback
+
 ## 0.0.20
 
 ### Patch Changes

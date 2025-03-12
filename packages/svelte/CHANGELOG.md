@@ -1,5 +1,15 @@
 # @triplit/svelte
 
+## 1.0.3
+
+### Patch Changes
+
+- 214bd859: add WorkerClient to acceptable client types for framework bindings
+- Updated dependencies [4fe2bc9c]
+- Updated dependencies [eb08f761]
+- Updated dependencies [593238e5]
+  - @triplit/client@1.0.3
+
 ## 1.0.2
 
 ### Patch Changes
