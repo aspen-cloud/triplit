@@ -1,5 +1,11 @@
 # @triplit/client
 
+## 1.0.5
+
+### Patch Changes
+
+- a6ceef0b: update http response parsing
+
 ## 1.0.4
 
 ### Patch Changes
