@@ -1,4 +1,4 @@
-import { beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { DB, DBSchema } from '../src/db.js';
 import { Schema as S } from '../src/schema/builder.js';
 import { and, exists, or } from '../src/filters.js';
@@ -7,6 +7,7 @@ import {
   WritePermissionError,
 } from '../src/errors.js';
 import { BTreeKVStore } from '../src/kv-store/storage/memory-btree.js';
+import { CollectionQuery } from '../src/query.js';
 
 const messagingSchema = {
   roles: {
@@ -33,6 +34,9 @@ const messagingSchema = {
         members: S.RelationMany('members', {
           where: [['group_id', '=', '$id']],
         }),
+        messages: S.RelationMany('messages', {
+          where: [['group_id', '=', '$id']],
+        }),
       },
     },
     members: {
@@ -52,6 +56,11 @@ const messagingSchema = {
         id: S.Id(),
         name: S.String(),
       }),
+      relationships: {
+        groups: S.RelationMany('groups', {
+          where: [['members.user_id', '=', '$id']],
+        }),
+      },
     },
     messages: {
       schema: S.Schema({
@@ -2045,4 +2054,151 @@ describe('cyclical permissions', () => {
       }
     }
   );
+});
+
+describe('subscriptions', () => {
+  describe('should not leak data', async () => {
+    const db = new DB({ schema: messagingSchema });
+    // await seedMessagingData(db);
+
+    const user1Token = {
+      role: 'user',
+      user_id: 'user-1',
+    };
+    const user1DB = db.withSessionVars(user1Token);
+
+    const TRICKY_QUERIES: { description: string; query: CollectionQuery }[] = [
+      {
+        description:
+          'accessing messages through deep nested include from users -> groups -> messages',
+        query: user1DB
+          .query('users')
+          .Include('groups', (rel) => rel('groups').Include('messages')),
+      },
+      {
+        description:
+          'query messages with filters that could interfere with permission',
+        query: user1DB.query('messages').Where('author_id', 'isDefined', true),
+      },
+      {
+        description:
+          'query where messages are indirectly references via where filter',
+        query: user1DB
+          .query('groups')
+          .Where('messages.author_id', '!=', 'user-1'),
+      },
+    ];
+
+    const TRICKY_OPERATIONS: {
+      description: string;
+      run: () => Promise<void>;
+    }[] = [
+      {
+        description:
+          'insert a message where the user is not a member of the group',
+        run: async () => {
+          await db.insert(
+            'messages',
+            {
+              text: 'Hello, world!',
+              author_id: 'someone-else',
+              group_id: 'group-3',
+            },
+            { skipRules: true }
+          );
+        },
+      },
+      {
+        description:
+          'tx where a two groups with messages are inserted, one the user is a member of the other they are not',
+        run: async () => {
+          await db.transact(
+            async (tx) => {
+              const { id: groupId1 } = await tx.insert('groups', {
+                name: 'group-with-user-1',
+              });
+              const { id: groupId2 } = await tx.insert('groups', {
+                name: 'group-without-user-1',
+              });
+
+              await tx.insert('members', {
+                group_id: groupId1,
+                user_id: 'user-1',
+                role: 'member',
+              });
+
+              await tx.insert('messages', {
+                text: 'ALLOWED',
+                author_id: 'user-1',
+                group_id: groupId1,
+              });
+
+              await tx.insert('messages', {
+                id: 'not-for-user-1#1',
+                text: 'User one should NOT see this!',
+                author_id: 'user-2',
+                group_id: groupId2,
+              });
+            },
+            { skipRules: true }
+          );
+        },
+      },
+      {
+        description:
+          'update a message where the user is not a member of the group',
+        run: async () => {
+          await db.update(
+            'messages',
+            'not-for-user-1#1',
+            (entity) => {
+              entity.text = 'Not for user 1!';
+            },
+            { skipRules: true }
+          );
+        },
+      },
+      {
+        description:
+          'delete a message where the user is not a member of the group',
+        run: async () => {
+          await db.delete('messages', 'message-1', { skipRules: true });
+        },
+      },
+    ];
+
+    describe.each(TRICKY_QUERIES)('query: $description', ({ query }) => {
+      let subSpy = vi.fn();
+      let unsub;
+      beforeAll(async () => {
+        unsub = user1DB.subscribeChanges(query, subSpy);
+      });
+      afterAll(() => {
+        unsub();
+      });
+      it.each(TRICKY_OPERATIONS)('$description', async ({ run }) => {
+        await run();
+        await user1DB.updateQueryViews();
+        await user1DB.broadcastToQuerySubscribers();
+        // expect(fetchResult.length).toBeGreaterThan(0);
+        const subscriptionResult = subSpy.mock.calls[0][0];
+        console.dir(
+          {
+            // fetchResult,
+            subscriptionResult,
+          },
+          { depth: null }
+        );
+        // expect(subscriptionResult).toEqual(fetchResult);
+        const messagesFromChanges = [
+          ...(subscriptionResult.messages?.sets.values() ?? []),
+        ];
+        // expect(messagesFromChanges).toEqual();
+        for (const message of messagesFromChanges) {
+          // console.dir(message, { depth: null });
+          expect(message.text).toBe('ALLOWED');
+        }
+      });
+    });
+  });
 });
