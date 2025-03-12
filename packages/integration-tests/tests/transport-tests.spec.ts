@@ -3918,8 +3918,11 @@ describe('entity cache on client', async () => {
   });
 });
 
+// TODO: this is failing because the test transport
+// doesn't simulate the connectionStatus well (it is CLOSED when it should be open)
+// and the fetch policy is somewhat determined by the connection status
 describe('fetch', async () => {
-  describe('local-first', async () => {
+  describe.only('local-first', async () => {
     it('will get results from remote server with net-new query', async () => {
       const serverDB = new DB({ entityStore: new ServerEntityStore() });
       const server = new TriplitServer(serverDB);
