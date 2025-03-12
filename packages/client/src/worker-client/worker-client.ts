@@ -80,9 +80,6 @@ class WorkerLogger {
 export class WorkerClient<M extends Models<M> = Models> implements Client<M> {
   initialized: Promise<void>;
   clientWorker: ClientComlinkWrapper<M>; //ComLink.Remote<Client<M>>;
-  // @ts-expect-error TODO: use interface for ClientAPI
-  db: { updateGlobalVariables: (variables: Record<string, any>) => void } =
-    {} as any;
   private _connectionStatus: ConnectionStatus;
   constructor(
     options?: Omit<ClientOptions<M>, 'storage'> & {
@@ -129,9 +126,6 @@ export class WorkerClient<M extends Models<M> = Models> implements Client<M> {
     this.onConnectionStatusChange((status) => {
       this._connectionStatus = status;
     }, true);
-    this.db.updateGlobalVariables = (variables) => {
-      this.clientWorker.updateGlobalVariables(variables);
-    };
   }
 
   get connectionStatus() {
@@ -441,6 +435,11 @@ export class WorkerClient<M extends Models<M> = Models> implements Client<M> {
   ) {
     await this.initialized;
     return this.clientWorker.updateSessionToken(...args);
+  }
+
+  async updateGlobalVariables(vars: Record<string, any>): Promise<void> {
+    await this.initialized;
+    return this.clientWorker.updateGlobalVariables(vars);
   }
 
   async isFirstTimeFetchingQuery(query: CollectionQuery): Promise<boolean> {

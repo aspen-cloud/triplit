@@ -263,11 +263,11 @@ export class ClientComlinkWrapper<M extends Models<M> = Models>
     if (!this.client) throw new WorkerInternalClientNotInitializedError();
     return this.client.isFirstTimeFetchingQuery(query);
   }
-  updateGlobalVariables(
+  async updateGlobalVariables(
     ...args: Parameters<Client<M>['db']['updateGlobalVariables']>
   ) {
     if (!this.client) throw new WorkerInternalClientNotInitializedError();
-    return this.client.db.updateGlobalVariables(...args);
+    return this.client.updateGlobalVariables(...args);
   }
   async clear(options: ClearOptions = {}) {
     if (!this.client) throw new WorkerInternalClientNotInitializedError();

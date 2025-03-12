@@ -1262,6 +1262,11 @@ export class TriplitClient<M extends Models<M> = Models> {
     return newClient;
   }
 
+  async updateGlobalVariables(vars: Record<string, any>): Promise<void> {
+    if (this.awaitReady) await this.awaitReady;
+    this.db.updateGlobalVariables(vars);
+  }
+
   /**
    * Updates the `token` of the client. This will cause the client to close its current connection to the server and attempt reopen a new one with the provided token.
    *
