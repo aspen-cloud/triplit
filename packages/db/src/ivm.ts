@@ -178,6 +178,7 @@ export class IVM<M extends Models<M> = Models> {
           listener({ results, changes });
         }
       }
+      rootQueryInfo.hasChanged = false;
       rootQueryInfo.capturedChanges = undefined;
     }
   }
