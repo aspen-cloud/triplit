@@ -61,7 +61,8 @@
     "validate:types": "node ../../scripts/check-for-local-references-in-declarations.js dist"
   },
   "files": [
-    "/dist"
+    "/dist",
+    "/src"
   ],
   "dependencies": {
     "@triplit/db": "workspace:^",

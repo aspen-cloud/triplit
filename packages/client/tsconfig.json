@@ -12,7 +12,8 @@
     "declaration": true,
     "isolatedModules": true,
     "skipLibCheck": true,
-    "rootDir": "./src/"
+    "rootDir": "./src/",
+    "sourceMap": true
   },
   "references": [
     {
