@@ -1,5 +1,12 @@
 # @triplit/entity-db
 
+## 1.0.6
+
+### Patch Changes
+
+- a5b5c5fe: Add core-js polyfills
+- 017b22bb: Add S.Filter helper to aid with multi-file permission building
+
 ## 1.0.5
 
 ### Patch Changes

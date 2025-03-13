@@ -1,5 +1,15 @@
 # excalidraw
 
+## 1.0.7
+
+### Patch Changes
+
+- Updated dependencies [a5b5c5fe]
+- Updated dependencies [017b22bb]
+  - @triplit/db@1.0.6
+  - @triplit/client@1.0.7
+  - @triplit/react@1.0.7
+
 ## 1.0.6
 
 ### Patch Changes
