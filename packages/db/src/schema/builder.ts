@@ -9,7 +9,7 @@ import {
 import { SetType } from './data-types/definitions/set.js';
 import type { CollectionNameFromModels, Models } from './types/models.js';
 import { DataType, OptionalType, TypeInterface } from './types/index.js';
-import { CollectionQuery } from '../query.js';
+import { CollectionQuery, QueryWhere } from '../query.js';
 
 // Ensures that id is on root schema record
 type SchemaProps<Properties = Record<string, DataType>> =
@@ -193,5 +193,13 @@ export class Schema {
 
   static Collections<M extends Models<M> = Models>(collections: M): M {
     return collections;
+  }
+
+  static Filter<
+    M extends Models<M> = Models,
+    CN extends CollectionNameFromModels<M> = CollectionNameFromModels<M>,
+    W extends QueryWhere<M, CN> = QueryWhere<M, CN>,
+  >(filter: W): W {
+    return filter;
   }
 }
