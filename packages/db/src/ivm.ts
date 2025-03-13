@@ -146,6 +146,16 @@ export class IVM<M extends Models<M> = Models> {
     // save the query state to a variable before the fetch but I think
     // it's better to leave this as a reminder that this is a potential
     // issue
+    const tx = this.storage.transact();
+    await this.entityStore.applyChanges(
+      tx,
+      queryResultsToChanges(results, query),
+      {
+        checkWritePermission: undefined,
+        entityChangeValidator: undefined,
+      }
+    );
+    await tx.commit();
     if (this.subscribedQueries.get(rootQueryId)) {
       this.subscribedQueries.get(rootQueryId)!.results = results;
     }
