@@ -3,14 +3,14 @@
   "packageManager": "yarn@3.4.1",
   "private": true,
   "type": "module",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "scripts": {
     "start": "node ./run.js",
     "publish": "./scripts/publish.sh",
     "check-and-publish": "node ./scripts/docker-check-version-and-publish.js"
   },
   "dependencies": {
-    "@triplit/server": "1.0.5",
+    "@triplit/server": "1.0.6",
     "better-sqlite3": "^11.8.1"
   },
   "devDependencies": {
