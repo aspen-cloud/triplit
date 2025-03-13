@@ -10284,6 +10284,7 @@ __metadata:
     "@types/bun": "npm:^1.2.3"
     "@vitest/coverage-v8": "npm:^3.0.6"
     better-sqlite3: "npm:^11.8.1"
+    core-js: "npm:^3.41.0"
     elen: "npm:^1.0.10"
     esbuild: "npm:^0.25.0"
     expo-sqlite: "npm:^15.1.2"
@@ -15975,6 +15976,13 @@ __metadata:
   dependencies:
     browserslist: "npm:^4.24.4"
   checksum: 10/a59da111fc437cc7ed1a1448dae6883617cabebd7731433d27ad75e0ff77df5f411204979bd8eb5668d2600f99db46eedf6f87e123109b6de728bef489d4229a
+  languageName: node
+  linkType: hard
+
+"core-js@npm:^3.41.0":
+  version: 3.41.0
+  resolution: "core-js@npm:3.41.0"
+  checksum: 10/a06ebae2264dd24c8e4b331a68412f7d0730557c41901f80fa910a9398dbef4670482d9ef5a41fef7efd41307c612d3d4051df7640ac4c01ff6feda45f8b92be
   languageName: node
   linkType: hard
 

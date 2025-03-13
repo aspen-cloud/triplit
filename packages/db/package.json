@@ -44,6 +44,7 @@
   },
   "dependencies": {
     "@triplit/logger": "workspace:^",
+    "core-js": "^3.41.0",
     "elen": "^1.0.10",
     "nanoid": "^5.1.0",
     "sorted-btree": "^1.8.1"
