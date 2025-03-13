@@ -1,5 +1,12 @@
 # @triplit/entity-db
 
+## 1.0.5
+
+### Patch Changes
+
+- 4005a4bf: validate that collection property and relationship names dont match
+- 431fb8d4: Add sourcemaps to db and client
+
 ## 1.0.4
 
 ### Patch Changes
