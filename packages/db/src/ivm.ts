@@ -1036,13 +1036,9 @@ function doesEntityMatchBasicWhere(
   filters: WhereFilter<any, any>[],
   schema?: DBSchema
 ) {
-  // TODO support group filters (and, or)
-  // TODO: support filters on set/record attributes
-  return filters
-    .filter(Array.isArray)
-    .every((filter) =>
-      satisfiesNonRelationalFilter(collectionName, entity, filter, schema)
-    );
+  return filters.every((filter) =>
+    satisfiesNonRelationalFilter(collectionName, entity, filter, schema, true)
+  );
 }
 
 function getPathToIncludedSubquery(

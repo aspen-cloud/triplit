@@ -981,6 +981,18 @@ describe('IVM syncing', () => {
         },
       ],
     },
+    messagesFromEitherBobOrCharlie: {
+      collectionName: 'messages',
+      where: [
+        {
+          mod: 'or',
+          filters: [
+            ['senderId', '=', 'bob'],
+            ['senderId', '=', 'charlie'],
+          ],
+        },
+      ],
+    },
     conversationsWithMessages: {
       collectionName: 'conversations',
       where: [

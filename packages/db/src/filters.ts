@@ -33,7 +33,8 @@ export function satisfiesNonRelationalFilter(
   collectionName: string,
   entity: DBEntity,
   filter: WhereFilter,
-  schema?: DBSchema
+  schema?: DBSchema,
+  ignoreSubQueries = false
 ): boolean {
   if (isBooleanFilter(filter)) return filter;
   if (isFilterGroup(filter)) {
@@ -52,9 +53,11 @@ export function satisfiesNonRelationalFilter(
   }
 
   if (isSubQueryFilter(filter)) {
-    console.error(filter);
+    if (ignoreSubQueries) {
+      return true;
+    }
     throw new Error(
-      'Subquery filters should be filtered out before this point'
+      `Subquery filters should be filtered out before this point, found ${filter}`
     );
   }
 
@@ -392,6 +395,13 @@ export function exists(relationship: any, ext: any = {}) {
   };
 }
 
+/**
+ * This will iterate over all statements (even recursively in groups) and return
+ * true if any of the statements satisfy the provided function.
+ * @param statements
+ * @param someFunction
+ * @returns
+ */
 export function someFilterStatements(
   statements: QueryWhere,
   someFunction: (statement: WhereFilter) => boolean
@@ -402,6 +412,11 @@ export function someFilterStatements(
   return false;
 }
 
+/**
+ * This will iterate over all statements including recursively within groups  of AND and OR
+ * but not within subqueries
+ * @param statements
+ */
 export function* filterStatementIterator(
   statements: QueryWhere
 ): Generator<WhereFilter> {
