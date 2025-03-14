@@ -189,11 +189,6 @@ function whereFiltersToViews(
       isSubQueryFilter(filter) &&
       !hasHigherLevelReferences(filter.exists.where)
     ) {
-      const viewId = generateViewId();
-      const extractedView = extractViews(filter.exists, schema, generateViewId);
-      views[viewId] = extractedView.rootQuery;
-      Object.assign(views, extractedView.views);
-
       const variableFilters = new Set(
         filter.exists.where?.filter((f) => {
           return (
@@ -203,6 +198,18 @@ function whereFiltersToViews(
           );
         })
       );
+
+      // Only perform inversion if there is a single relational filter
+      // [a, in, view.a] AND [b, in, view.b] is not safely executed (matches any 'a' in the view and any 'b' in the view)
+      if (variableFilters.size > 1) {
+        updatedWhere.push(filter);
+        continue;
+      }
+
+      const viewId = generateViewId();
+      const extractedView = extractViews(filter.exists, schema, generateViewId);
+      views[viewId] = extractedView.rootQuery;
+      Object.assign(views, extractedView.views);
 
       extractedView.rootQuery.where = filter.exists.where?.filter(
         (f) => !variableFilters.has(f)
