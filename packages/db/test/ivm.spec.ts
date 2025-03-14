@@ -1255,13 +1255,15 @@ describe('IVM syncing', () => {
         const randomOps = deterministicMixArrays(
           [
             createRandomOpsForCollection('messages', NUM_OPS, seed),
-            createRandomOpsForCollection('conversationMembers', NUM_OPS, seed),
-            createRandomOpsForCollection('conversations', NUM_OPS, seed),
+            createRandomOpsForCollection(
+              'conversationMembers',
+              NUM_OPS,
+              seed * 2
+            ),
+            createRandomOpsForCollection('conversations', NUM_OPS, seed * 3),
           ],
           seed
         );
-
-        console.log(randomOps);
 
         const flushChangesFrequency = [1, 2, 3, 4, 5, 6][seed % 6];
         // const updateViewFrequency = [1, 2, 3, 4, 5, 6][seed % 6];
