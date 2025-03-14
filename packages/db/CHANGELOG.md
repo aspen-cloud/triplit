@@ -1,5 +1,11 @@
 # @triplit/entity-db
 
+## 1.0.7
+
+### Patch Changes
+
+- 1891580f: Use explicit file extensions for core-js polyfills
+
 ## 1.0.6
 
 ### Patch Changes
