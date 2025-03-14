@@ -10,7 +10,7 @@ import type {
   SchemaQuery,
 } from './query.js';
 import { DataType } from './schema/data-types/types/index.js';
-import { Models, PermissionOperations } from './schema/index.js';
+import { flipOperator, Models, PermissionOperations } from './schema/index.js';
 import {
   IncludedNonRelationError,
   InvalidCollectionNameError,
@@ -591,7 +591,7 @@ function transformAndValidateFilter(
         );
     }
 
-    // replace static variables
+    // replace variables
     if (isValueVariable(val)) {
       const components = getVariableComponents(val);
       let scope = components[0];
@@ -601,6 +601,8 @@ function transformAndValidateFilter(
         scope = components[0];
         val = '$' + components.join('.');
       }
+
+      // Replace static variables
       if (!isVariableScopeRelational(scope)) {
         const variable = ValuePointer.Get(variables, components as string[]);
         if (variable === undefined) {
@@ -608,8 +610,16 @@ function transformAndValidateFilter(
         }
         val = variable;
       }
-      // replace rhs with exists
+      // Replace relational paths with subquery filter
       else if (schema) {
+        /**
+         * To expand the variable path in to a filter we must
+         * 1. Find the query the path starts from (refQuery)
+         * 2. Find the relationship in the path, coming from the filter value
+         * 3. Bump every variable in the subquery definition based on how deep we are in the query stack
+         * 4. Create a new filter statement based on the current filter, with the flipped operator and the value as a variable path of the filter prop
+         * 5. Eval as subquery
+         */
         const refQuery =
           options.queryStack[options.queryStack.length - scope - 1];
         const valPath = components.slice(1) as string[];
@@ -620,16 +630,21 @@ function transformAndValidateFilter(
         )) {
           if (isTraversalRelationship(attr)) {
             const subquery = { ...attr.query };
-            const subpath = valPath.slice(attrPath.length).join('.');
-            let inverseVal = `$1.${prop}`;
             // Placing the subquery in a nested spot, increment variables based on how deep we are in the query stack
             const incrementedSubquery = safeIncrementQueryVars(
               subquery,
               options.queryStack.length - 1
             );
+
+            // Create flipped filter components (swapping left and right operands)
+            const flippedPath = valPath.slice(attrPath.length).join('.');
+            const flippedOp = flipOperator(op);
+            let flippedVal = `$1.${prop}`;
+
+            // Add flipped filter to subquery
             incrementedSubquery.where = [
               ...(incrementedSubquery.where ?? []),
-              [subpath, op, inverseVal],
+              [flippedPath, flippedOp, flippedVal],
             ];
 
             const filter = transformAndValidateFilter(

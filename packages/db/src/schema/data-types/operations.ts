@@ -1,3 +1,4 @@
+import { TriplitError } from '../../errors.js';
 import { AllTypes } from '../types/index.js';
 
 const BASE_OPERATIONS = ['isDefined'] as const;
@@ -23,3 +24,20 @@ export const SUPPORTED_OPERATIONS = {
     'nlike',
   ],
 } as const satisfies Record<AllTypes, string[]>;
+
+// Return the operator that remains true if the left and right operands are flipped
+export function flipOperator(op: string) {
+  if (op === '=') return '=';
+  if (op === '!=') return '!=';
+  if (op === '<') return '>';
+  if (op === '>') return '<';
+  if (op === '<=') return '>=';
+  if (op === '>=') return '<=';
+  if (op === 'in') return 'has';
+  if (op === 'nin') return '!has';
+  if (op === 'has') return 'in';
+  if (op === '!has') return 'nin';
+  // If we hit this with a valid operator, figure out how to support that operator
+  // Ex. not sure how 'like' fits into this
+  throw new TriplitError(`Cannot flip operator ${op}`);
+}

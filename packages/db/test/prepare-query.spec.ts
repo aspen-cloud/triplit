@@ -1322,6 +1322,35 @@ describe('where', () => {
           ],
         });
       });
+      it('Properly flips operator of inverted statement', () => {
+        const query = prepareQuery(
+          {
+            collectionName: 'a',
+            where: [['aProp1', '>', '$0.b.bProp1']],
+          },
+          collections,
+          {},
+          undefined,
+          {
+            applyPermission: undefined,
+          }
+        );
+        expect(query).toEqual({
+          collectionName: 'a',
+          where: [
+            {
+              exists: {
+                collectionName: 'b',
+                where: [
+                  ['id', '=', '$1.b_id'],
+                  // still querying that aProp1 is greater
+                  ['bProp1', '<', '$1.aProp1'],
+                ],
+              },
+            },
+          ],
+        });
+      });
     });
     it.todo(
       'smart enough to simplify [b.bProp1, =, $0.b.prop2] query with shared relational path'
