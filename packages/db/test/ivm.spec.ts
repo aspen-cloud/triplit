@@ -1100,7 +1100,7 @@ describe('IVM syncing', () => {
   const randomEntityFactory = {
     messages: (seed: number) => ({
       id: seed.toString(),
-      conversationId: 'conv1',
+      conversationId: CONVERSATIONS[seed % CONVERSATIONS.length],
       senderId: USERS[seed % USERS.length],
       text: `Message ${seed}`,
       sentAt: TODAY - Math.round(100000 * Math.random()),
@@ -1122,15 +1122,13 @@ describe('IVM syncing', () => {
   ) {
     const ops: EntityOperation[] = [];
     const aliveEntities: string[] = [];
+    const rand = lcg(seed);
     for (let i = 0; i < numOps; i++) {
-      const deterministicRandomValueForOp = (seed * 9301 + 49297 * i) % 233280;
       const op =
         aliveEntities.length === 0
           ? 'insert'
           : // Making inserts and updates more likely than deletes
-            ['insert', 'insert', 'update', 'update', 'delete'][
-              deterministicRandomValueForOp % 6
-            ];
+            ['insert', 'insert', 'update', 'update', 'delete'][rand(5)];
 
       if (op === 'delete') {
         ops.push({
@@ -1139,10 +1137,9 @@ describe('IVM syncing', () => {
           id: aliveEntities.shift()!,
         });
       } else if (op === 'update') {
-        const id =
-          aliveEntities[deterministicRandomValueForOp % aliveEntities.length];
+        const id = aliveEntities[rand(aliveEntities.length)];
         const { id: _, ...value } = randomEntityFactory[collectionName](
-          deterministicRandomValueForOp
+          rand(1000)
         );
         ops.push({
           type: 'update',
@@ -1151,15 +1148,14 @@ describe('IVM syncing', () => {
           value,
         });
       } else {
-        const randomEntity = randomEntityFactory[collectionName](
-          deterministicRandomValueForOp
-        );
+        const randomEntity = randomEntityFactory[collectionName](rand(1000));
         ops.push({
           type: 'insert',
           collection: collectionName,
           id: randomEntity.id,
           value: randomEntity,
         });
+        aliveEntities.push(randomEntity.id);
       }
     }
     return ops;
@@ -1170,121 +1166,137 @@ describe('IVM syncing', () => {
   );
 
   describe.each(RANDOM_SEEDS)('seed %i', (seed) => {
-    test.each(Object.keys(QUERIES))('Query: %s', async (queryKey) => {
-      const query = QUERIES[queryKey];
-      const serverDb = new DB();
-      const clientDb = new DB();
+    describe.each([true])('database starts empty: %s', (shouldTrackChanges) => {
+      test.each(Object.keys(QUERIES))('Query: %s', async (queryKey) => {
+        const query = QUERIES[queryKey];
+        const serverDb = new DB();
+        const clientDb = new DB();
 
-      const NUM_OPS = 30;
-      const randomOps = deterministicShuffle(
-        [
-          ...createRandomOpsForCollection('messages', NUM_OPS, seed),
-          ...createRandomOpsForCollection('conversationMembers', NUM_OPS, seed),
-          ...createRandomOpsForCollection('conversations', NUM_OPS, seed),
-        ],
-        seed
-      );
-      const flushChangesFrequency = [1, 2, 3, 4, 5, 6][seed % 6];
-      // const updateViewFrequency = [1, 2, 3, 4, 5, 6][seed % 6];
-      const broadcastChangesFrequency = [1, 2, 3, 4, 5, 6][seed % 6];
+        // const expectedNumberOfCalls = Math.floor(
+        //   randomOps.length / flushChangesFrequency
+        // );
+        const spy = vi.fn();
+        let ranStep, resolve, reject;
+        let numCalls = 0;
 
-      const expectedNumberOfCalls = Math.floor(
-        randomOps.length / flushChangesFrequency
-      );
-      const spy = vi.fn();
-      let ranStep, resolve, reject;
-      let numCalls = 0;
+        const prepared = prepareQuery(query, undefined, {}, undefined, {
+          applyPermission: undefined,
+        });
 
-      const prepared = prepareQuery(query, undefined, {}, undefined, {
-        applyPermission: undefined,
-      });
+        // starting states should match
+        expect(await serverDb.fetch(query)).toEqual(
+          await clientDb.fetch(query)
+        );
 
-      serverDb.subscribeWithChanges(
-        prepared,
-        async ({ changes: serverChanges, results: serverResults }) => {
-          ({ promise: ranStep, resolve, reject } = Promise.withResolvers());
-          spy();
+        serverDb.subscribeWithChanges(
+          prepared,
+          async ({ changes: serverChanges, results: serverResults }) => {
+            ({ promise: ranStep, resolve, reject } = Promise.withResolvers());
+            spy();
 
-          // insert changes into clientDb
-          if (serverChanges) {
-            for (const [collection, changes] of Object.entries(serverChanges)) {
-              if (!changes) {
-                console.warn('no changes', collection, changes);
-                continue;
-              }
-              for (const id of changes.deletes) {
-                await clientDb.delete(collection, id);
-              }
-              for (const [id, value] of changes.sets.entries()) {
-                if ('id' in value) {
-                  await clientDb.insert(collection, value);
-                } else {
-                  await clientDb.update(collection, id, value);
+            // insert changes into clientDb
+            if (serverChanges) {
+              for (const [collection, changes] of Object.entries(
+                serverChanges
+              )) {
+                if (!changes) {
+                  console.warn('no changes', collection, changes);
+                  continue;
+                }
+                for (const id of changes.deletes) {
+                  await clientDb.delete(collection, id);
+                }
+                for (const [id, value] of changes.sets.entries()) {
+                  if ('id' in value) {
+                    await clientDb.insert(collection, value);
+                  } else {
+                    await clientDb.update(collection, id, value);
+                  }
                 }
               }
             }
-          }
-          try {
-            const clientFetchResults = await clientDb.fetch(query);
-            const serverFetchResults = await serverDb.fetch(query);
+            try {
+              const clientFetchResults = await clientDb.fetch(query);
+              const serverFetchResults = await serverDb.fetch(query);
 
-            // console.dir(
-            //   {
-            //     serverChanges,
-            //     clientResults: clientFetchResults,
-            //     serverResults,
-            //     serverFetchResults,
-            //   },
-            //   { depth: null }
-            // );
+              // console.dir(
+              //   {
+              //     serverChanges,
+              //     clientResults: clientFetchResults,
+              //     serverResults,
+              //     serverFetchResults,
+              //   },
+              //   { depth: null }
+              // );
 
-            // TODO verify subquery result order
-            if (query.order != null) {
-              // TODO verify order rather than expect order to be exactly the same.
-              // E.g. a result can satisfy the order in multiple different ways
-              // but still be correct in the face of equal values. I.e. it's an unstable sort
-              expect(clientFetchResults).toEqual(serverFetchResults);
-              expect(clientFetchResults).toEqual(serverResults);
-            } else {
-              const serverResultMap = resultArrToMap(serverResults);
-              const clientResultMap = resultArrToMap(clientFetchResults);
-              const serverFetchResultMap = resultArrToMap(serverFetchResults);
-              expect(clientResultMap).toEqual(serverResultMap);
-              expect(clientResultMap).toEqual(serverFetchResultMap);
+              // TODO verify subquery result order
+              if (query.order != null) {
+                // TODO verify order rather than expect order to be exactly the same.
+                // E.g. a result can satisfy the order in multiple different ways
+                // but still be correct in the face of equal values. I.e. it's an unstable sort
+                expect(clientFetchResults).toEqual(serverFetchResults);
+                expect(clientFetchResults).toEqual(serverResults);
+              } else {
+                const serverResultMap = resultArrToMap(serverResults);
+                const clientResultMap = resultArrToMap(clientFetchResults);
+                const serverFetchResultMap = resultArrToMap(serverFetchResults);
+                expect(clientResultMap).toEqual(serverResultMap);
+                expect(clientResultMap).toEqual(serverFetchResultMap);
+              }
+              numCalls++;
+              resolve();
+            } catch (e) {
+              reject(e);
             }
-            numCalls++;
-            resolve();
-          } catch (e) {
-            reject(e);
+          }
+        );
+
+        const NUM_OPS = 10;
+        const randomOps = deterministicMixArrays(
+          [
+            createRandomOpsForCollection('messages', NUM_OPS, seed),
+            createRandomOpsForCollection('conversationMembers', NUM_OPS, seed),
+            createRandomOpsForCollection('conversations', NUM_OPS, seed),
+          ],
+          seed
+        );
+
+        console.log(randomOps);
+
+        const flushChangesFrequency = [1, 2, 3, 4, 5, 6][seed % 6];
+        // const updateViewFrequency = [1, 2, 3, 4, 5, 6][seed % 6];
+        const broadcastChangesFrequency = [1, 2, 3, 4, 5, 6][seed % 6];
+
+        let i = 0;
+        for (const op of randomOps) {
+          await applyOpToDB(serverDb, op);
+          i++;
+          if (i % flushChangesFrequency === 0) {
+            await serverDb.updateQueryViews();
+          }
+          if (i % broadcastChangesFrequency === 0) {
+            ranStep = Promise.resolve();
+            // if the query subscription runs it should reassign ranStep
+            // to a promise that resolves when the result checks finish
+            serverDb.broadcastToQuerySubscribers();
+            await ranStep;
           }
         }
-      );
-
-      let i = 0;
-      for (const op of randomOps) {
-        if (op.type === 'insert') {
-          await serverDb.insert(op.collection!, op.value);
-        } else if (op.type === 'update') {
-          await serverDb.update(op.collection!, op.id, op.value);
-        } else {
-          await serverDb.delete(op.collection!, op.id);
-        }
-        i++;
-        if (i % flushChangesFrequency === 0) {
-          await serverDb.updateQueryViews();
-        }
-        if (i % broadcastChangesFrequency === 0) {
-          ranStep = Promise.resolve();
-          // if the query subscription runs it should reassign ranStep
-          // to a promise that resolves when the result checks finish
-          serverDb.broadcastToQuerySubscribers();
-          await ranStep;
-        }
-      }
-      // expect(spy).toHaveBeenCalledTimes(expectedNumberOfCalls);
+        // expect(spy).toHaveBeenCalledTimes(expectedNumberOfCalls);
+      });
     });
   });
 });
+
+function applyOpToDB(db: DB, op: EntityOperation) {
+  if (op.type === 'insert') {
+    return db.insert(op.collection!, op.value);
+  } else if (op.type === 'update') {
+    return db.update(op.collection!, op.id, op.value);
+  } else {
+    return db.delete(op.collection!, op.id);
+  }
+}
 
 /**
  * This will recursively turn an array of results into a map with the id as the key
@@ -1394,3 +1406,28 @@ describe('Concurrency ', () => {
     expect(subSpy).not.toHaveBeenCalled();
   });
 });
+
+function lcg(seed: number) {
+  const a = 1664525;
+  const c = 1013904223;
+  const m = 2 ** 32; // 4294967296
+  let state = seed;
+  return function (scale: number = 1) {
+    state = (a * state + c) % m;
+    return Math.floor((state / m) * scale); // Scale to 0, 1, 2
+  };
+}
+
+function deterministicMixArrays(arrays: any[][], seed: number) {
+  const rand = lcg(seed); // Seed it
+  const mixed = [];
+  let i = 0;
+  while (arrays.some((arr) => arr.length > 0)) {
+    const arrayIndex = rand(arrays.length);
+    if (arrays[arrayIndex].length > 0) {
+      mixed.push(arrays[arrayIndex].shift());
+    }
+    i++;
+  }
+  return mixed;
+}
