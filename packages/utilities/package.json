@@ -1,7 +1,7 @@
 {
   "name": "@triplit/utilities",
   "packageManager": "yarn@4.2.2",
-  "version": "0.0.7",
+  "version": "0.0.8",
   "type": "module",
   "files": [
     "/dist"

@@ -1,5 +1,12 @@
 # @triplit/utilities
 
+## 0.0.8
+
+### Patch Changes
+
+- Updated dependencies [1891580f]
+  - @triplit/db@1.0.7
+
 ## 0.0.7
 
 ### Patch Changes
