@@ -10282,6 +10282,7 @@ __metadata:
     "@triplit/types": "workspace:^"
     "@types/better-sqlite3": "npm:^7.6.12"
     "@types/bun": "npm:^1.2.3"
+    "@types/core-js": "npm:^2.5.8"
     "@vitest/coverage-v8": "npm:^3.0.6"
     better-sqlite3: "npm:^11.8.1"
     core-js: "npm:^3.41.0"
@@ -10712,6 +10713,13 @@ __metadata:
   version: 0.4.1
   resolution: "@types/cookie@npm:0.4.1"
   checksum: 10/427c9220217d3d74f3e5d53d68cd39502f3bbebdb1af4ecf0d05076bcbe9ddab299ad6369fe0f517389296ba4ca49ddf9a8c22f68e5e9eb8ae6d0076cfab90b2
+  languageName: node
+  linkType: hard
+
+"@types/core-js@npm:^2.5.8":
+  version: 2.5.8
+  resolution: "@types/core-js@npm:2.5.8"
+  checksum: 10/58c4b86102b13b778d3631d38913c788ef7f688d99fbd741f6241a9cedc7e986e670011bdccd58b32e28e97b9c0fa6fffedef6ba0f670a005b321788a5a01a65
   languageName: node
   linkType: hard
 
