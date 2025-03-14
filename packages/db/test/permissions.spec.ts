@@ -1622,61 +1622,6 @@ it('write permissions are not recursively applied', async () => {
   ).rejects.toThrow(WritePermissionError);
 });
 
-it('can migrate from a schema with rules to a schema with permissions', async () => {
-  const groupsCollection = messagingSchema.collections.groups.schema;
-  const membersCollection = messagingSchema.collections.members.schema;
-  const usersCollection = messagingSchema.collections.users.schema;
-  const messagesCollection = messagingSchema.collections.messages.schema;
-
-  const rulesSchema = {
-    collections: {
-      groups: {
-        schema: groupsCollection,
-      },
-      members: {
-        schema: membersCollection,
-      },
-      users: {
-        schema: usersCollection,
-      },
-      messages: {
-        schema: messagesCollection,
-        rules: {
-          read: {
-            'can read': {
-              filter: [true],
-            },
-          },
-          write: {
-            'can write': {
-              filter: [true],
-            },
-          },
-        },
-      },
-    } satisfies Models,
-  };
-  const kv = new BTreeKVStore();
-  const db1 = new DB({ schema: rulesSchema, kv });
-  // Check db1 schema has rules
-  {
-    const schema = await db1.getSchema();
-    expect(schema).toBeDefined();
-    expect(schema!.roles).toBeUndefined();
-    expect(schema!.collections.messages.permissions).toBeUndefined();
-    expect(schema!.collections.messages.rules).toBeDefined();
-  }
-  const db2 = new DB({ schema: messagingSchema, kv });
-  // Check db2 schema has permissions
-  {
-    const schema = await db2.getSchema();
-    expect(schema).toBeDefined();
-    expect(schema!.roles).toBeDefined();
-    expect(schema!.collections.messages.permissions).toBeDefined();
-    expect(schema!.collections.messages.rules).toBeUndefined();
-  }
-});
-
 describe('cyclical permissions', () => {
   const schema = S.Collections({
     users: {

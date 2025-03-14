@@ -379,13 +379,6 @@ describe('selecting subqueries from schema', () => {
               where: [['post_id', '=', '$id']],
             }),
           },
-          // rules: {
-          //   read: {
-          //     'read your own posts': {
-          //       filter: [['author_id', '=', '$session.USER_ID']],
-          //     },
-          //   },
-          // },
           permissions: {
             user: {
               read: {

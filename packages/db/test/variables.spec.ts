@@ -267,15 +267,6 @@ describe('variable conflicts', () => {
               where: [['department_id', '=', '$1.id']],
             }),
           },
-          // TODO: drop rules?
-          rules: {
-            write: {
-              head_in_department: {
-                description: 'Head must be in the department',
-                filter: [['head.department_id', '=', '$0.id']],
-              },
-            },
-          },
         },
         faculty: {
           schema: S.Schema({
