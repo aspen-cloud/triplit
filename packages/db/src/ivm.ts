@@ -825,12 +825,13 @@ export class IVM<M extends Models<M> = Models> {
             current = current.subqueries[relation];
           }
           const leafValue = current.subqueries[leaf];
+          // TODO: if this query has a limit, this doesn't handle backfilling after the removal?
           if (Array.isArray(leafValue)) {
             current.subqueries[leaf] = current.subqueries[leaf].filter(
               (r: any) => r.data.id !== entityId
             );
           } else {
-            current[leaf] = null;
+            current.subqueries[leaf] = null;
           }
         }
       } else {
@@ -1103,10 +1104,7 @@ function mergeResults(
       Object.entries(inclusions).map(([prop, { subquery, cardinality }]) => {
         const existing = result.subqueries[prop];
         const additional = newResultMap.get(result.data.id)!.subqueries[prop];
-        if (additional == null) {
-          return [prop, existing];
-        }
-        if (existing == null) {
+        if (additional == null || existing == null) {
           return [prop, additional];
         }
         if (cardinality === 'one') {
