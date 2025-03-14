@@ -27,15 +27,17 @@ const USER_SCHEMA = {
   },
 };
 
-const USER_PROFILE_SCHEMA = {
+const USER_PROFILE_SCHEMA = S.Collections({
   users: {
     schema: S.Schema({
       id: S.Id(),
       name: S.String(),
       emails: S.Set(S.String(), { default: S.Default.Set.empty() }),
       profileId: S.String(),
-      profile: S.RelationById('profiles', '$1.profileId'),
     }),
+    relationships: {
+      profile: S.RelationById('profiles', '$1.profileId'),
+    },
   },
   profiles: {
     schema: S.Schema({
@@ -44,37 +46,43 @@ const USER_PROFILE_SCHEMA = {
       bio: S.String(),
     }),
   },
-};
+});
 
-const USER_PROFILE_POST_SCHEMA = {
+const USER_PROFILE_POST_SCHEMA = S.Collections({
   users: {
     schema: S.Schema({
       id: S.Id(),
       name: S.String(),
       profileId: S.String(),
+    }),
+    relationships: {
       profile: S.RelationById('profiles', '$1.profileId'),
       posts: S.RelationMany('posts', {
         where: [['authorId', '=', '$1.id']],
       }),
-    }),
+    },
   },
   profiles: {
     schema: S.Schema({
       id: S.Id(),
       userId: S.String(),
-      user: S.RelationById('users', '$1.userId'),
       bio: S.String(),
     }),
+    relationships: {
+      user: S.RelationById('users', '$1.userId'),
+    },
   },
   posts: {
     schema: S.Schema({
       id: S.Id(),
       authorId: S.String(),
-      author: S.RelationById('users', '$1.authorId'),
       content: S.String(),
     }),
+    relationships: {
+      author: S.RelationById('users', '$1.authorId'),
+    },
   },
-};
+});
 
 const ROLES = {
   authenticated: {
@@ -90,18 +98,20 @@ const ROLES = {
   },
 };
 
-const PERMISSIONED_SCHEMA = {
+const PERMISSIONED_SCHEMA = S.Collections({
   users: {
     schema: S.Schema({
       id: S.Id(),
       name: S.String(),
       profileId: S.String(),
-      profile: S.RelationById('profiles', '$1.profileId'),
     }),
+    relationships: {
+      profile: S.RelationById('profiles', '$1.profileId'),
+    },
     permissions: {
       authenticated: {
         read: {
-          filter: [['id', '=', '$role.userId'] as const],
+          filter: [['id', '=', '$role.userId']],
         },
       },
       admin: {
@@ -111,7 +121,17 @@ const PERMISSIONED_SCHEMA = {
       },
     },
   },
-};
+  profiles: {
+    schema: S.Schema({
+      id: S.Id(),
+      userId: S.String(),
+      bio: S.String(),
+    }),
+    relationships: {
+      user: S.RelationById('users', '$1.userId'),
+    },
+  },
+});
 
 describe('collectionName', () => {
   it('validates that it is a string', () => {
@@ -1207,6 +1227,105 @@ describe('where', () => {
         },
       ]);
     });
+    describe('$0 variable expansion', () => {
+      const collections = S.Collections({
+        a: {
+          schema: S.Schema({
+            id: S.Id(),
+            aProp1: S.Number(),
+            aProp2: S.Number(),
+            b_id: S.String(),
+            c_id: S.String(),
+          }),
+          relationships: {
+            b: S.RelationById('b', '$1.b_id'),
+            c: S.RelationById('c', '$1.c_id'),
+          },
+        },
+        b: {
+          schema: S.Schema({
+            id: S.Id(),
+            bProp1: S.Number(),
+            bProp2: S.Number(),
+          }),
+        },
+        c: {
+          schema: S.Schema({
+            id: S.Id(),
+            cProp1: S.Number(),
+            cProp2: S.Number(),
+          }),
+        },
+      });
+
+      it('expands properly with a relational different paths on prop and variable', () => {
+        const query = prepareQuery(
+          {
+            collectionName: 'a',
+            where: [['aProp1', '=', '$0.b.bProp1']],
+          },
+          collections,
+          {},
+          undefined,
+          {
+            applyPermission: undefined,
+          }
+        );
+        expect(query).toEqual({
+          collectionName: 'a',
+          where: [
+            {
+              exists: {
+                collectionName: 'b',
+                where: [
+                  ['id', '=', '$1.b_id'],
+                  ['bProp1', '=', '$1.aProp1'],
+                ],
+              },
+            },
+          ],
+        });
+      });
+      it('expands properly with a relational different paths on prop and variable', () => {
+        const query = prepareQuery(
+          {
+            collectionName: 'a',
+            where: [['b.bProp1', '=', '$0.c.cProp1']],
+          },
+          collections,
+          {},
+          undefined,
+          {
+            applyPermission: undefined,
+          }
+        );
+        expect(query).toEqual({
+          collectionName: 'a',
+          where: [
+            {
+              exists: {
+                collectionName: 'b',
+                where: [
+                  ['id', '=', '$1.b_id'],
+                  {
+                    exists: {
+                      collectionName: 'c',
+                      where: [
+                        ['id', '=', '$2.c_id'],
+                        ['cProp1', '=', '$1.bProp1'],
+                      ],
+                    },
+                  },
+                ],
+              },
+            },
+          ],
+        });
+      });
+    });
+    it.todo(
+      'smart enough to simplify [b.bProp1, =, $0.b.prop2] query with shared relational path'
+    );
   });
   describe('subquery filters', () => {
     it('prepares subquery filters', () => {

@@ -4,13 +4,9 @@ import type {
   QueryWhere,
   ValueCursor,
   WhereFilter,
-  QueryInclusion,
   QueryInclusions,
   QueryResultCardinality,
   RefQueryExtension,
-  RefSubquery,
-  RelationSubquery,
-  RefShorthand,
   SchemaQuery,
 } from './query.js';
 import { DataType } from './schema/data-types/types/index.js';
@@ -44,6 +40,7 @@ import {
   getVariableComponents,
   isValueVariable,
   isVariableScopeRelational,
+  safeIncrementQueryVars,
   safeIncrementSubqueryVar,
 } from './variables.js';
 import { ValuePointer } from './utils/value-pointer.js';
@@ -67,6 +64,7 @@ import {
   isQueryInclusionSubquery,
   isQueryResultCardinality,
 } from './subquery.js';
+
 const ACCESS_DENIED_FILTER = Object.freeze([false]) as QueryWhere;
 
 // type PreparedQuery = Pick<
@@ -95,6 +93,7 @@ type PrepareQueryOptions = {
 type PrepareQueryRecursiveOptions = PrepareQueryOptions & {
   isExpandingPermission: boolean;
   permissionStack: string[];
+  queryStack: CollectionQuery[];
 };
 
 export function prepareQuery<M extends Models<M> = Models>(
@@ -125,6 +124,7 @@ export function prepareQuery(
       applyPermission: options.applyPermission,
       isExpandingPermission: false,
       permissionStack: [],
+      queryStack: [],
     }
   );
 
@@ -138,7 +138,8 @@ function prepareQueryRecursive(
   session: Session | undefined,
   options: PrepareQueryRecursiveOptions
 ): CollectionQuery {
-  return {
+  options.queryStack.push(query);
+  const prepared: CollectionQuery = {
     collectionName: prepareCollectionName(query, schema),
     select: prepareQuerySelects(query, schema),
     include: prepareQueryInclude(query, schema, variables, session, options),
@@ -148,6 +149,8 @@ function prepareQueryRecursive(
     limit: prepareQueryLimit(query),
     after: prepareQueryAfter(query, schema),
   };
+  options.queryStack.pop();
+  return prepared;
 }
 
 // TODO: improve system collection detection in other prepare functions
@@ -541,25 +544,6 @@ function transformAndValidateFilter(
   if (isFilterStatement(filter)) {
     let [prop, op, val] = filter;
 
-    // replace static variables
-    if (isValueVariable(val)) {
-      const components = getVariableComponents(val);
-      let scope = components[0];
-      // If the variable is not scoped, assume it is a relational variable referring to parent
-      if (scope === undefined) {
-        components[0] = 1;
-        scope = components[0];
-        val = '$' + components.join('.');
-      }
-      if (!isVariableScopeRelational(scope)) {
-        const variable = ValuePointer.Get(variables, components as string[]);
-        if (variable === undefined) {
-          throw new SessionVariableNotFoundError(val, scope, variables[scope]);
-        }
-        val = variable;
-      }
-    }
-
     // If anything in the path is a query type, need to transform it to an exists statement
     if (schema) {
       const propPath = prop.split('.');
@@ -579,8 +563,7 @@ function transformAndValidateFilter(
             val = safeIncrementSubqueryVar(val);
           }
           subquery.where = [...(subquery.where ?? []), [subpath, op, val]];
-
-          return transformAndValidateFilter(
+          const filter = transformAndValidateFilter(
             {
               exists: subquery,
             },
@@ -590,6 +573,7 @@ function transformAndValidateFilter(
             session,
             options
           );
+          return filter;
         }
         propAttributeType = attr;
       }
@@ -605,6 +589,63 @@ function transformAndValidateFilter(
         throw new InvalidFilterError(
           `Operator '${op}' is not valid for property '${prop}' of type '${propAttributeType.type}'`
         );
+    }
+
+    // replace static variables
+    if (isValueVariable(val)) {
+      const components = getVariableComponents(val);
+      let scope = components[0];
+      // If the variable is not scoped, assume it is a relational variable referring to parent
+      if (scope === undefined) {
+        components[0] = 1;
+        scope = components[0];
+        val = '$' + components.join('.');
+      }
+      if (!isVariableScopeRelational(scope)) {
+        const variable = ValuePointer.Get(variables, components as string[]);
+        if (variable === undefined) {
+          throw new SessionVariableNotFoundError(val, scope, variables[scope]);
+        }
+        val = variable;
+      }
+      // replace rhs with exists
+      else if (schema) {
+        const refQuery =
+          options.queryStack[options.queryStack.length - scope - 1];
+        const valPath = components.slice(1) as string[];
+        for (const [attrPath, attr] of createSchemaEntriesIterator(
+          valPath,
+          schema,
+          refQuery.collectionName
+        )) {
+          if (isTraversalRelationship(attr)) {
+            const subquery = { ...attr.query };
+            const subpath = valPath.slice(attrPath.length).join('.');
+            let inverseVal = `$1.${prop}`;
+            // Placing the subquery in a nested spot, increment variables based on how deep we are in the query stack
+            const incrementedSubquery = safeIncrementQueryVars(
+              subquery,
+              options.queryStack.length - 1
+            );
+            incrementedSubquery.where = [
+              ...(incrementedSubquery.where ?? []),
+              [subpath, op, inverseVal],
+            ];
+
+            const filter = transformAndValidateFilter(
+              {
+                exists: incrementedSubquery,
+              },
+              subquery,
+              schema,
+              variables,
+              session,
+              options
+            );
+            return filter;
+          }
+        }
+      }
     }
 
     // TODO: this should probably be handled by the path type definition, with some schemaless defaults (for things like dates)
@@ -778,9 +819,13 @@ function prepareQueryOrder(
         }
       }
       if (subqueryRef) {
-        const prepared = prepareQuery(subqueryRef, schema, variables, session, {
-          applyPermission: 'read',
-        });
+        const prepared = prepareQueryRecursive(
+          subqueryRef,
+          schema,
+          variables,
+          session,
+          options
+        );
         order.push([
           field,
           direction,

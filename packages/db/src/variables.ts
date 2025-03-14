@@ -1,4 +1,11 @@
 import { SessionVariableNotFoundError } from './errors.js';
+import {
+  isFilterGroup,
+  isFilterStatement,
+  isRelationshipExistsFilter,
+  isSubQueryFilter,
+} from './filters.js';
+import { CollectionQuery, QueryWhere } from './query.js';
 import { ValuePointer } from './utils/value-pointer.js';
 
 const VARIABLE_SCOPES = new Set(['$global', '$session', '$role', '$query']);
@@ -68,16 +75,64 @@ export function isVariableScopeRelational(
 /**
  * Given a variable, if the variable is referential, increment the scope by 1, otherwise return the variable unchanged.
  */
-export function safeIncrementSubqueryVar(varName: string) {
-  if (!isValueVariable(varName))
-    throw new Error('Cannot increment non-value variable: ' + varName);
-
+export function safeIncrementSubqueryVar(
+  varName: string,
+  step: number = 1
+): string {
+  if (!isValueVariable(varName)) return varName;
   const components = getVariableComponents(varName);
   const scope = components[0];
   if (isVariableScopeRelational(scope)) {
-    return `$${scope + 1}.${components.slice(1).join('.')}`;
+    return `$${scope + step}.${components.slice(1).join('.')}`;
   }
   return varName;
+}
+
+function safeIncrementQueryWhere(
+  where: QueryWhere,
+  step: number = 1
+): QueryWhere {
+  const newWhere: QueryWhere = [];
+  for (const filter of where) {
+    // Filter statement, filter group, filter subquery, relationship exists(?)
+    if (isFilterStatement(filter)) {
+      let [prop, op, val] = filter;
+      val = safeIncrementSubqueryVar(val as string, step);
+      newWhere.push([prop, op, val]);
+      continue;
+    }
+    if (isFilterGroup(filter)) {
+      newWhere.push({
+        ...filter,
+        filters: safeIncrementQueryWhere(filter.filters, step),
+      });
+      continue;
+    }
+    if (isSubQueryFilter(filter)) {
+      newWhere.push({ exists: safeIncrementQueryVars(filter.exists, step) });
+      continue;
+    }
+    if (isRelationshipExistsFilter(filter)) {
+      newWhere.push({
+        exists: {
+          ...filter.exists,
+          where: filter.exists.where
+            ? safeIncrementQueryWhere(filter.exists.where, step)
+            : undefined,
+        },
+      });
+    }
+    newWhere.push(filter);
+  }
+  return newWhere;
+}
+
+export function safeIncrementQueryVars(
+  query: CollectionQuery,
+  step: number = 1
+): CollectionQuery {
+  if (!query.where) return query;
+  return { ...query, where: safeIncrementQueryWhere(query.where, step) };
 }
 
 export function replaceVariable(value: string, variables: Record<string, any>) {
