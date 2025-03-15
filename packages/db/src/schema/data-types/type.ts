@@ -95,6 +95,9 @@ export namespace Type {
    * TODO: evaluate if partial should be default or configurable
    */
   export function encode(type: DataType, input: any): any {
+    if (isOptional(type) && hasNoValue(input)) {
+      return undefined;
+    }
     if (isValueType(type)) {
       switch (type.type) {
         case 'boolean':
