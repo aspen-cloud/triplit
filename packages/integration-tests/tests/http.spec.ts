@@ -8,8 +8,7 @@ const anonToken =
 const serviceToken =
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ4LXRyaXBsaXQtdG9rZW4tdHlwZSI6InNlY3JldCIsIngtdHJpcGxpdC1wcm9qZWN0LWlkIjoicHJvamVjdCJ9.gcDKyZU9wf8o43Ca9kUVXO4KsGwX8IhhyEg1PO1ZqiQ';
 
-process.env.PROJECT_ID = 'project';
-process.env.JWT_SECRET = 'test-secret';
+const jwtSecret = 'test-secret';
 
 describe('/clear', async () => {
   const DEFAULT_SCHEMA = {
@@ -24,7 +23,11 @@ describe('/clear', async () => {
   };
 
   it('fails without service token', async () => {
-    using server = await tempTriplitServer();
+    using server = await tempTriplitServer({
+      serverOptions: {
+        jwtSecret: jwtSecret,
+      },
+    });
     const { port } = server;
     {
       const res = await fetch(`http://localhost:${port}/clear`, {
@@ -50,7 +53,10 @@ describe('/clear', async () => {
 
   it('parameterless only clears non-metadata', async () => {
     using server = await tempTriplitServer({
-      serverOptions: { dbOptions: { schema: DEFAULT_SCHEMA } },
+      serverOptions: {
+        dbOptions: { schema: DEFAULT_SCHEMA },
+        jwtSecret: jwtSecret,
+      },
     });
     const { port } = server;
     const client = new HttpClient({
@@ -82,7 +88,10 @@ describe('/clear', async () => {
 
   it('{full: false} only clears non-metadata', async () => {
     using server = await tempTriplitServer({
-      serverOptions: { dbOptions: { schema: DEFAULT_SCHEMA } },
+      serverOptions: {
+        dbOptions: { schema: DEFAULT_SCHEMA },
+        jwtSecret: jwtSecret,
+      },
     });
     const { port } = server;
     const client = new HttpClient({
@@ -114,7 +123,10 @@ describe('/clear', async () => {
 
   it('{full: true} clears all data', async () => {
     await using server = await tempTriplitServer({
-      serverOptions: { dbOptions: { schema: DEFAULT_SCHEMA } },
+      serverOptions: {
+        dbOptions: { schema: DEFAULT_SCHEMA },
+        jwtSecret: jwtSecret,
+      },
     });
     const { port } = server;
     const client = new HttpClient({

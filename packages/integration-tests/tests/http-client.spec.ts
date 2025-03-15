@@ -6,8 +6,7 @@ import { Schema as S, Type, WriteModel } from '@triplit/db';
 const serviceToken =
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ4LXRyaXBsaXQtdG9rZW4tdHlwZSI6InNlY3JldCIsIngtdHJpcGxpdC1wcm9qZWN0LWlkIjoicHJvamVjdCJ9.gcDKyZU9wf8o43Ca9kUVXO4KsGwX8IhhyEg1PO1ZqiQ';
 
-process.env.PROJECT_ID = 'project';
-process.env.JWT_SECRET = 'test-secret';
+const jwtSecret = 'test-secret';
 
 // TODO: include this as part of withServer (gives the server a little breather between closing and opening)
 beforeEach(async () => {
@@ -15,7 +14,11 @@ beforeEach(async () => {
 });
 
 it('fetch respects queries', async () => {
-  using server = await tempTriplitServer();
+  using server = await tempTriplitServer({
+    serverOptions: {
+      jwtSecret: jwtSecret,
+    },
+  });
   const { port } = server;
   const client = new HttpClient({
     serverUrl: `http://localhost:${port}`,
@@ -37,7 +40,11 @@ it('fetch respects queries', async () => {
 });
 
 it('fetch can handle a select without ["id"]', async () => {
-  using server = await tempTriplitServer();
+  using server = await tempTriplitServer({
+    serverOptions: {
+      jwtSecret: jwtSecret,
+    },
+  });
   const { port } = server;
   const client = new HttpClient({
     serverUrl: `http://localhost:${port}`,
@@ -59,7 +66,11 @@ it('fetch can handle a select without ["id"]', async () => {
 });
 
 it('fetchOne returns a single entity that matches filter', async () => {
-  using server = await tempTriplitServer();
+  using server = await tempTriplitServer({
+    serverOptions: {
+      jwtSecret: jwtSecret,
+    },
+  });
   const { port } = server;
   const client = new HttpClient({
     serverUrl: `http://localhost:${port}`,
@@ -78,7 +89,11 @@ it('fetchOne returns a single entity that matches filter', async () => {
 });
 
 it('fetchById returns a single entity by id', async () => {
-  using server = await tempTriplitServer();
+  using server = await tempTriplitServer({
+    serverOptions: {
+      jwtSecret: jwtSecret,
+    },
+  });
   const { port } = server;
   const client = new HttpClient({
     serverUrl: `http://localhost:${port}`,
@@ -168,6 +183,7 @@ it('can handle inserting all of our supported types', async () => {
       dbOptions: {
         schema: { collections: schema },
       },
+      jwtSecret: jwtSecret,
     },
   });
   const { port } = server;
@@ -224,6 +240,7 @@ describe('set operations', () => {
         dbOptions: {
           schema,
         },
+        jwtSecret: jwtSecret,
       },
     });
     const { port } = server;
@@ -284,6 +301,7 @@ describe('set operations', () => {
         dbOptions: {
           schema,
         },
+        jwtSecret: jwtSecret,
       },
     });
     const { port } = server;
@@ -332,6 +350,7 @@ describe('set operations', () => {
         dbOptions: {
           schema,
         },
+        jwtSecret: jwtSecret,
       },
     });
     const { port } = server;
@@ -379,6 +398,7 @@ it('fetch properly deserializes data based on schema', async () => {
       dbOptions: {
         schema,
       },
+      jwtSecret: jwtSecret,
     },
   });
   const { port } = server;
@@ -459,6 +479,7 @@ it('fetch can properly deserialize subqueries with schema', async () => {
       dbOptions: {
         schema,
       },
+      jwtSecret: jwtSecret,
     },
   });
   const { port } = server;
@@ -521,7 +542,11 @@ it('fetch can properly deserialize subqueries with schema', async () => {
 
 // TODO: need to properly handle subqueries without schema in http api
 it('fetch can properly deserialize subqueries without schema', async () => {
-  await using server = await tempTriplitServer({});
+  await using server = await tempTriplitServer({
+    serverOptions: {
+      jwtSecret: jwtSecret,
+    },
+  });
   const { port } = server;
   const client = new HttpClient({
     serverUrl: `http://localhost:${port}`,
@@ -591,7 +616,7 @@ it('update properly updates an entity', async () => {
     },
   };
   await using server = await tempTriplitServer({
-    serverOptions: { dbOptions: { schema } },
+    serverOptions: { dbOptions: { schema }, jwtSecret: jwtSecret },
   });
   const { port } = server;
   const client = new HttpClient({
@@ -619,7 +644,11 @@ it('update properly updates an entity', async () => {
 });
 
 it('delete properly deletes an entity', async () => {
-  await using server = await tempTriplitServer();
+  await using server = await tempTriplitServer({
+    serverOptions: {
+      jwtSecret: jwtSecret,
+    },
+  });
   const { port } = server;
   const client = new HttpClient({
     serverUrl: `http://localhost:${port}`,
@@ -639,7 +668,11 @@ it('delete properly deletes an entity', async () => {
 });
 
 it('deleteAll properly deletes all entities in a collection', async () => {
-  await using server = await tempTriplitServer();
+  await using server = await tempTriplitServer({
+    serverOptions: {
+      jwtSecret: jwtSecret,
+    },
+  });
   const { port } = server;
   const client = new HttpClient({
     serverUrl: `http://localhost:${port}`,

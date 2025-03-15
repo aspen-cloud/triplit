@@ -8,7 +8,6 @@ export async function runServer(
   let server: ReturnType<typeof startServer>;
   const startServer = await createServer({
     storage: 'memory',
-    ...(options ?? {}),
     jwtSecret: process.env.JWT_SECRET!,
     externalJwtSecret: process.env.EXTERNAL_JWT_SECRET,
     logHandler: options?.logHandler ?? {
@@ -17,6 +16,7 @@ export async function runServer(
       endSpan: () => {},
       recordMetric: () => {},
     },
+    ...(options ?? {}),
   });
   await new Promise<void>((res) => {
     server = startServer(port, res);
