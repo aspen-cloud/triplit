@@ -77,27 +77,18 @@ export class WebSocketTransport implements SyncTransport {
   }
   connect(params: TransportConnectParams): void {
     if (this.ws && this.isOpen) this.close();
-    const { token, schema, syncSchema, server, secure } = params;
-    const missingParams = [];
-    if (!token || !server) {
-      if (!token) missingParams.push('token');
-      if (!server) missingParams.push('server');
-      console.warn(
-        `Missing required params: [${missingParams.join(
-          ', '
-        )}]. Skipping sync connection.`
-      );
-      return;
-    }
+    const { token, schema, syncSchema, server } = params;
     const wsOptions = new URLSearchParams();
     if (schema) {
       wsOptions.set('schema', schema.toString());
     }
     wsOptions.set('sync-schema', String(syncSchema));
     wsOptions.set('token', token);
+    const secure = server.startsWith('https://');
+    const domain = server.slice(secure ? 8 : 7); // remove protocol
     const wsUri = `${
       secure ? 'wss' : 'ws'
-    }://${server}?${wsOptions.toString()}`;
+    }://${domain}?${wsOptions.toString()}`;
     if (!webSocketsAreAvailable()) {
       throw new WebSocketsUnavailableError();
     }

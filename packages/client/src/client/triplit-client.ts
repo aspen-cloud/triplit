@@ -55,7 +55,6 @@ import { ClientTransactOptions } from './types/client.js';
 export interface SyncOptions {
   server?: string;
   token?: string;
-  secure?: boolean;
   syncSchema?: boolean;
   transport?: SyncTransport;
   logger: Logger;
@@ -317,11 +316,12 @@ export class TriplitClient<M extends Models<M> = Models> {
       ...defaultQueryOptions,
     };
 
+    validateServerUrl(serverUrl);
     const syncOptions: SyncOptions = {
       syncSchema,
       transport,
       logger: this.logger.scope('sync'),
-      ...(serverUrl ? mapServerUrlToSyncOptions(serverUrl) : {}),
+      server: serverUrl,
     };
 
     this.http = new HttpClient<M>({
@@ -1127,10 +1127,8 @@ export class TriplitClient<M extends Models<M> = Models> {
 
     // handle updating the server url for sync purposes
     if (hasServerUrl) {
-      const { server, secure } = serverUrl
-        ? mapServerUrlToSyncOptions(serverUrl)
-        : { server: undefined, secure: undefined };
-      updatedSyncOptions = { ...updatedSyncOptions, server, secure };
+      validateServerUrl(serverUrl);
+      updatedSyncOptions = { ...updatedSyncOptions, server: serverUrl };
     }
 
     if (hasToken || hasServerUrl) {
@@ -1433,4 +1431,14 @@ function throttle<T>(
       lastArgs = args;
     }
   };
+}
+
+function validateServerUrl(serverUrl: string | undefined): void {
+  if (
+    serverUrl &&
+    !serverUrl.startsWith('http://') &&
+    !serverUrl.startsWith('https://')
+  ) {
+    throw new TriplitError('Invalid serverUrl provided');
+  }
 }

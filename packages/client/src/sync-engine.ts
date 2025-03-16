@@ -112,13 +112,12 @@ export class SyncEngine {
   /**
    *
    * @param options configuration options for the sync engine
-   * @param db the client database to be synsced
+   * @param db the client database to be synced
    */
   constructor(client: TriplitClient<any>, options: SyncOptions) {
     this.client = client;
     this.logger = options.logger;
     this.syncOptions = options;
-    this.syncOptions.secure = options.secure ?? true;
     this.syncOptions.syncSchema = options.syncSchema ?? false;
     this.transport = options.transport ?? new WebSocketTransport();
   }
@@ -202,14 +201,6 @@ export class SyncEngine {
     return this.syncOptions.token;
   }
 
-  private get httpUri() {
-    return this.syncOptions.server
-      ? `${this.syncOptions.secure ? 'https' : 'http'}://${
-          this.syncOptions.server
-        }`
-      : undefined;
-  }
-
   updateTokenForSession(token: string) {
     this.syncOptions.token = token;
     this.transport.sendMessage({ type: 'UPDATE_TOKEN', payload: { token } });
@@ -265,16 +256,17 @@ export class SyncEngine {
     };
   }
 
-  private async getConnectionParams(): Promise<TransportConnectParams> {
+  private async getConnectionParams(): Promise<
+    Partial<TransportConnectParams>
+  > {
     if (this.client.awaitReady) await this.client.awaitReady;
-    const collecitons = this.client.db.getSchema()?.collections;
-    const schemaHash = collecitons ? hashObject(collecitons) : undefined;
+    const collections = this.client.db.getSchema()?.collections;
+    const schemaHash = collections ? hashObject(collections) : undefined;
     return {
       schema: schemaHash,
       syncSchema: this.syncOptions.syncSchema,
       token: this.syncOptions.token,
       server: this.syncOptions.server,
-      secure: this.syncOptions.secure,
     };
   }
 
@@ -463,6 +455,8 @@ export class SyncEngine {
       this.closeConnection({ type: 'CONNECTION_OVERRIDE', retry: false });
     }
     const params = await this.getConnectionParams();
+    if (!validateConnectionParamsWithWarning(params)) return;
+
     this.transport.connect(params);
     this.transport.onMessage(async (evt) => {
       const message: ServerSyncMessage = JSON.parse(evt.data);
@@ -882,22 +876,6 @@ export class SyncEngine {
       throw new RemoteSyncFailedError(query, 'An unknown error occurred.');
     }
   }
-
-  private fetchFromServer(
-    path: string,
-    init?: RequestInit | undefined
-  ): Promise<Response> {
-    if (!this.httpUri || !this.token) {
-      const messages = [];
-      if (!this.httpUri) messages.push('No server specified.');
-      if (!this.token) messages.push('No token specified.');
-      throw new MissingConnectionInformationError(messages.join(' '));
-    }
-    return fetch(`${this.httpUri}${path}`, {
-      ...init,
-      headers: { Authorization: `Bearer ${this.token}`, ...init?.headers },
-    });
-  }
 }
 
 function changesToEntityIds(changes: DBChanges): Record<string, string[]> {
@@ -910,6 +888,23 @@ function changesToEntityIds(changes: DBChanges): Record<string, string[]> {
     entityIds[collection] = changedIds;
   }
   return entityIds;
+}
+
+function validateConnectionParamsWithWarning(
+  params: Partial<TransportConnectParams>
+): params is TransportConnectParams {
+  const missingParams = [];
+  if (!params.token) missingParams.push('token');
+  if (!params.server) missingParams.push('server');
+  if (missingParams.length) {
+    console.warn(
+      `Missing required params: [${missingParams.join(
+        ', '
+      )}]. Skipping sync connection.`
+    );
+    return false;
+  }
+  return true;
 }
 
 function throttle(callback: () => void, delay: number) {

@@ -13,20 +13,28 @@ export type ConnectionStatus = 'CONNECTING' | 'OPEN' | 'CLOSING' | 'CLOSED';
 export interface SyncTransport {
   isOpen: boolean;
   connectionStatus: ConnectionStatus;
-  onOpen(callback: (ev: any) => void): void;
+  /**
+   * Sends a message to the server. If the message could not be sent, this should return false. If successfully sent, this should return true.
+   */
   sendMessage(message: ClientSyncMessage): boolean;
-  onMessage(callback: (message: any) => void): void;
-  onError(callback: (ev: any) => void): void;
+  /**
+   * Connect to the server with the given parameters. If this transport is already connected, it should will close the existing connection and open a new one.
+   */
   connect(params: TransportConnectParams): void;
+  /**
+   * Closes the connection to the server. If the transport is not connected, this should be a no op.
+   */
   close(reason?: CloseReason): void;
   onClose(callback: (ev: any) => void): void;
   onConnectionChange(callback: (state: ConnectionStatus) => void): void;
+  onError(callback: (ev: any) => void): void;
+  onMessage(callback: (message: any) => void): void;
+  onOpen(callback: (ev: any) => void): void;
 }
 
 export type TransportConnectParams = {
-  server?: string;
-  secure?: boolean;
-  token?: string;
-  schema?: number;
+  server: string;
+  token: string;
+  schema: number | undefined;
   syncSchema?: boolean;
 };
