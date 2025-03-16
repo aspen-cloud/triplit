@@ -1,10 +1,5 @@
 import * as ComLink from 'comlink';
-import type {
-  TriplitClient as Client,
-  ClientOptions,
-  SimpleClientStorageOptions,
-} from '../client/triplit-client.js';
-import { ConnectionStatus } from '../transport/transport.js';
+import type { TriplitClient as Client } from '../client/triplit-client.js';
 import {
   SubscribeBackgroundOptions,
   ClientFetchOptions,
@@ -33,7 +28,12 @@ import {
   WriteModel,
 } from '@triplit/db';
 import { ClientComlinkWrapper } from './client-comlink-wrapper.js';
-import { ClientTransactOptions } from '../client/types/client.js';
+import {
+  ClientOptions,
+  ClientTransactOptions,
+  SimpleClientStorageOptions,
+} from '../client/types/client.js';
+import { ConnectionStatus } from '../types.js';
 
 export function getTriplitWorkerEndpoint(workerUrl?: string): ComLink.Endpoint {
   const url =

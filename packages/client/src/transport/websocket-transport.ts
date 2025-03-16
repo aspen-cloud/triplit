@@ -1,10 +1,10 @@
 import { ClientSyncMessage, CloseReason } from '../@triplit/types/sync.js';
+import { WebSocketsUnavailableError } from '../errors.js';
 import {
   ConnectionStatus,
   SyncTransport,
   TransportConnectParams,
-} from './transport.js';
-import { WebSocketsUnavailableError } from '../errors.js';
+} from '../types.js';
 
 const DEFAULT_PAYLOAD_SIZE_LIMIT = (1024 * 1024) / 2;
 

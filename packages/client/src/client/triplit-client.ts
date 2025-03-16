@@ -2,13 +2,11 @@ import { decodeToken, tokenIsExpired } from '../token.js';
 import {
   IndexedDbUnavailableError,
   NoActiveSessionError,
-  SessionAlreadyActiveError,
   SessionRolesMismatchError,
   TokenExpiredError,
   UnrecognizedFetchPolicyError,
 } from '../errors.js';
-import { SyncTransport } from '../transport/transport.js';
-import { OnSessionErrorCallback, SyncEngine } from '../sync-engine.js';
+import { SyncEngine } from '../sync-engine.js';
 import {
   ErrorCallback,
   ClientFetchOptions,
@@ -19,6 +17,9 @@ import {
   SubscriptionOptions,
   SyncStatus,
   SubscriptionSignalPayload,
+  TokenRefreshOptions,
+  OnSessionErrorCallback,
+  SyncOptions,
 } from './types';
 import { HttpClient } from '../http-client/http-client.js';
 import { Logger } from '../@triplit/types/logger.js';
@@ -36,7 +37,6 @@ import {
   Models,
   DBSchema,
   WriteModel,
-  Roles,
   CollectionNameFromModels,
   SchemaQuery,
   FetchResult,
@@ -50,15 +50,11 @@ import {
 import { BTreeKVStore } from '@triplit/db/storage/memory-btree';
 import { IndexedDbKVStore } from '@triplit/db/storage/indexed-db';
 import { compareCursors } from '../pagination.js';
-import { ClientTransactOptions } from './types/client.js';
-
-export interface SyncOptions {
-  server?: string;
-  token?: string;
-  syncSchema?: boolean;
-  transport?: SyncTransport;
-  logger: Logger;
-}
+import {
+  ClientOptions,
+  ClientTransactOptions,
+  SimpleStorageOrInstances,
+} from './types/client.js';
 
 /**
  * Friendly alias for Models type.
@@ -75,14 +71,6 @@ interface AuthOptions {
 const SKIP_RULES = true;
 
 const SESSION_ROLES_KEY = 'SESSION_ROLES';
-
-type SupportClientStorageProviders = 'indexeddb' | 'memory';
-
-export type SimpleClientStorageOptions =
-  | SupportClientStorageProviders
-  | { type: SupportClientStorageProviders; name?: string };
-
-type SimpleStorageOrInstances = KVStore | SimpleClientStorageOptions;
 
 function getClientStorage(storageOption: SimpleStorageOrInstances): KVStore {
   if (
@@ -110,85 +98,6 @@ function getClientStorage(storageOption: SimpleStorageOrInstances): KVStore {
 }
 
 const DEFAULT_STORAGE_OPTION = 'memory';
-
-type TokenRefreshOptions = {
-  refreshHandler: () => Promise<string | null>;
-  interval?: number;
-};
-
-export interface ClientOptions<M extends Models<M> = Models> {
-  /**
-   * The schema used to validate database operations and provide type-hinting. Read more about schemas {@link https://www.triplit.dev/docs/schemas | here }
-   */
-  schema?: M;
-
-  /**
-   * The roles used to authorize database operations. Read more about roles {@link https://www.triplit.dev/docs/authorization | here }
-   */
-  roles?: Roles;
-  /**
-   * The token used to authenticate with the server. If not provided, the client will not connect to a server. Read more about tokens {@link https://www.triplit.dev/docs/auth | here }
-   */
-  token?: string;
-
-  /**
-   * A callback that is called when the client's connection to server closes due to a session-related error.
-   */
-  onSessionError?: OnSessionErrorCallback;
-
-  /**
-   *
-   */
-  refreshOptions?: TokenRefreshOptions;
-
-  /**
-   * The path to the claims in the token, if they are nested.
-   */
-  claimsPath?: string;
-
-  /**
-   * The URL of the server to connect to. If not provided, the client will not connect to a server.
-   */
-  serverUrl?: string;
-  syncSchema?: boolean;
-  transport?: SyncTransport;
-  /**
-   * Variables to initialized the database with. Read more about variables {@link https://www.triplit.dev/docs/client/query/variables | here }
-   */
-  variables?: Record<string, any>;
-  clientId?: string;
-
-  /**
-   * The storage for the client cache. Can be `memory`, `indexeddb` or an object with `cache` and `outbox` properties. Defaults to `memory`. Read more about storage {@link https://www.triplit.dev/docs/client/storage | here }
-   */
-  storage?: SimpleStorageOrInstances;
-
-  /**
-   * Default options for fetch queries. Read more about fetch options {@link https://www.triplit.dev/docs/client/fetch#policy | here }
-   */
-  defaultQueryOptions?: {
-    fetch?: ClientFetchOptions;
-    subscription?: SubscriptionOptions;
-  };
-
-  /**
-   * Whether the client should automatically connect to the server on initialization.
-   */
-  autoConnect?: boolean;
-  logger?: Logger;
-
-  /**
-   * The log level for the client.
-   * - `info`: Logs all messages
-   * - `warn`: Logs warnings and errors
-   * - `error`: Logs errors
-   * - `debug`: Logs all messages and additional debug information
-   */
-  logLevel?: 'info' | 'warn' | 'error' | 'debug';
-  skipRules?: boolean;
-
-  experimental?: {};
-}
 
 // default policy is local-and-remote and no timeout
 const DEFAULT_FETCH_OPTIONS = {

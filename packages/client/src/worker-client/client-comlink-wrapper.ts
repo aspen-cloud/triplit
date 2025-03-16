@@ -1,8 +1,5 @@
 import * as ComLink from 'comlink';
-import {
-  TriplitClient as Client,
-  ClientOptions,
-} from '../client/triplit-client.js';
+import { TriplitClient as Client } from '../client/triplit-client.js';
 import { LogLevel } from '../@triplit/types/logger.js';
 import { DefaultLogger } from '../client-logger.js';
 import { WorkerInternalClientNotInitializedError } from '../errors.js';
@@ -18,7 +15,10 @@ import {
   ReadModel,
   SchemaQuery,
 } from '@triplit/db';
-import { ClientTransactOptions } from '../client/types/client.js';
+import {
+  ClientOptions,
+  ClientTransactOptions,
+} from '../client/types/client.js';
 
 interface ClientWorker<M extends Models<M> = Models>
   extends Omit<Client<M>, 'update' | 'transact'> {

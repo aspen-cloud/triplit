@@ -3,7 +3,7 @@ import {
   ConnectionStatus,
   SyncTransport,
   TransportConnectParams,
-} from './transport.js';
+} from '../types.js';
 
 export class HttpTransport implements SyncTransport {
   private eventSource: EventSource | undefined;

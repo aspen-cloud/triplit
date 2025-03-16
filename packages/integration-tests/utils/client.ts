@@ -21,6 +21,7 @@ export function createTestClient<M extends Models<M> = Models>(
     storage: 'memory',
     transport: new TestTransport(server),
     logLevel: 'error',
+    serverUrl: 'http://test-server',
     ...options,
   });
 }

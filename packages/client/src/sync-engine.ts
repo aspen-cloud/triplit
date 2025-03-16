@@ -6,12 +6,7 @@ import {
   TriplitError,
   hashObject,
 } from '@triplit/db';
-import { SyncOptions, TriplitClient } from './client/triplit-client.js';
-import {
-  ConnectionStatus,
-  SyncTransport,
-  TransportConnectParams,
-} from './transport/transport.js';
+import { TriplitClient } from './client/triplit-client.js';
 import { WebSocketTransport } from './transport/websocket-transport.js';
 import {
   ClientSyncMessage,
@@ -30,22 +25,22 @@ import {
   EntitySyncErrorCallback,
   EntitySyncSuccessCallback,
   ErrorCallback,
+  OnMessageReceivedCallback,
+  OnMessageSentCallback,
+  OnSessionErrorCallback,
   QuerySyncState,
+  SessionErrors,
+  SyncOptions,
   SyncStateCallback,
 } from './client/types';
 import { Logger } from './@triplit/types/logger.js';
 import SuperJSON from 'superjson';
 import { logger } from '@triplit/logger';
-
-type OnMessageReceivedCallback = (message: ServerSyncMessage) => void;
-type OnMessageSentCallback = (message: ClientSyncMessage) => void;
-
-type SessionErrors = Extract<
-  ServerCloseReasonType,
-  'ROLES_MISMATCH' | 'TOKEN_EXPIRED' | 'SCHEMA_MISMATCH' | 'UNAUTHORIZED'
->;
-
-export type OnSessionErrorCallback = (type: SessionErrors) => void;
+import {
+  ConnectionStatus,
+  SyncTransport,
+  TransportConnectParams,
+} from './types.js';
 
 const QUERY_STATE_KEY = 'query-state';
 
