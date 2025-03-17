@@ -37,12 +37,16 @@ export async function tempTriplitServer(
   while (usedPorts.has(randomPort)) {
     randomPort++;
   }
+  usedPorts.add(randomPort);
   const server = await runServer(randomPort, serverOptions);
   return {
     port: randomPort,
     [Symbol.dispose]: () => {
       server.close();
-      usedPorts.delete(randomPort);
+      // Give it a second for the port to actually free up
+      setTimeout(() => {
+        usedPorts.delete(randomPort);
+      }, 1000);
     },
   };
 }
