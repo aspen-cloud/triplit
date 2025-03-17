@@ -18,7 +18,7 @@ export interface SyncTransport {
    */
   sendMessage(message: ClientSyncMessage): boolean;
   /**
-   * Connect to the server with the given parameters. If this transport is already connected, it should will close the existing connection and open a new one.
+   * Connect to the server with the given parameters. If this transport is already connected, it should close the existing connection and open a new one.
    */
   connect(params: TransportConnectParams): void;
   /**

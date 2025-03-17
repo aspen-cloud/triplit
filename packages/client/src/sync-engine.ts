@@ -113,8 +113,6 @@ export class SyncEngine {
    */
   constructor(client: TriplitClient<any>, options: SyncOptions) {
     this.client = client;
-    this.logger = options.logger;
-    this.transport = options.transport ?? new WebSocketTransport();
     this.client.onConnectionOptionsChange((change) => {
       // TODO: eval this for other connectionStatuses
       const shouldDisconnect =
@@ -128,6 +126,17 @@ export class SyncEngine {
         this.disconnect();
       }
     });
+
+    this.transport = options.transport ?? new WebSocketTransport();
+    this.transport.onConnectionChange((status) => {
+      if (status === 'CLOSING' || status === 'CLOSED') {
+        if (this.lastParamsHash !== undefined) {
+          this.lastParamsHash = undefined;
+        }
+      }
+    });
+
+    this.logger = options.logger;
   }
 
   private async sendChanges(changes: DBChanges) {
@@ -262,9 +271,7 @@ export class SyncEngine {
     };
   }
 
-  private async getConnectionParams(): Promise<
-    Partial<TransportConnectParams>
-  > {
+  async getConnectionParams(): Promise<Partial<TransportConnectParams>> {
     if (this.client.awaitReady) await this.client.awaitReady;
     const collections = this.client.db.getSchema()?.collections;
     const schemaHash = collections ? hashObject(collections) : undefined;
@@ -454,232 +461,46 @@ export class SyncEngine {
   }
 
   /**
+   * A signal to abort the connection to the server in case it is cancelled while the connection is in progress
+   */
+  private connectionAbort = false;
+  private lastParamsHash: number | undefined = undefined;
+
+  async connect() {
+    this.connectionAbort = false;
+    const params = await this.getConnectionParams();
+    this.createConnection(params);
+  }
+
+  /**
    * Initiate a sync connection with the server
    */
-  async connect() {
-    if (this.transport.connectionStatus !== 'CLOSED') {
-      this.closeConnection({ type: 'CONNECTION_OVERRIDE', retry: false });
-    }
-    const params = await this.getConnectionParams();
+  createConnection(params: Partial<TransportConnectParams>) {
+    if (this.connectionAbort) return;
     if (!validateConnectionParamsWithWarning(params)) return;
+    const paramsHash = hashObject(params);
+    // If there is not an existing connection, reset lastParamsHash
+    if (
+      this.connectionStatus !== 'OPEN' &&
+      this.connectionStatus !== 'CONNECTING'
+    ) {
+      this.lastParamsHash = undefined;
+    }
+    // Dont reconnect with the same parameters
+    if (this.lastParamsHash === paramsHash) return;
 
+    // Setup connection
+    this.lastParamsHash = paramsHash;
     this.transport.connect(params);
-    this.transport.onMessage(async (evt) => {
-      const message: ServerSyncMessage = JSON.parse(evt.data);
-      logger.debug('received', message);
-      for (const handler of this.messageReceivedSubscribers) {
-        handler(message);
-      }
-      if (message.type === 'ERROR') {
-        await this.handleErrorMessage(message);
-      }
-      if (message.type === 'ENTITY_DATA') {
-        const {
-          changes: stringifiedChanges,
-          timestamp,
-          forQueries: queryIds,
-        } = message.payload;
-        const changes = SuperJSON.deserialize<DBChanges>(stringifiedChanges);
-        // first apply changes
-        // the db will push these onto IVMs buffer
-        await this.client.db.applyChangesWithTimestamp(changes, timestamp, {
-          skipRules: true,
-        });
 
-        // TODO do in same transaction
-        await this.client.db.setMetadata(
-          ['latest_server_timestamp'],
-          timestamp
-        );
-
-        // then update the query fulfillment state so that
-        // the client can signal in the results handler
-        // that the next time IVM fires, it's because
-        // of the server's response
-        for (const qId of queryIds) {
-          const query = this.queries.get(qId);
-          if (!query) continue;
-          if (query.syncState !== 'FULFILLED') {
-            await this.markQueryAsSeen(qId);
-            query.syncState = 'FULFILLED';
-          }
-          // this.queryFulfillmentCallbacks.delete(qId);
-        }
-
-        // update IVM
-        await this.client.db.updateQueryViews();
-        this.client.db.broadcastToQuerySubscribers();
-
-        // finally, run the query fulfillment callbacks
-        for (const qId of queryIds) {
-          const query = this.queries.get(qId);
-          if (!query) continue;
-          for (const callback of query.syncStateCallbacks) {
-            callback('FULFILLED', message.payload);
-          }
-        }
-      }
-
-      if (message.type === 'CHANGES_ACK') {
-        const ackedChanges = await this.client.db.entityStore.doubleBuffer
-          .getLockedBuffer()
-          .getChanges(this.client.db.kv);
-
-        // write the acked changes to the outbox
-        const tx = this.client.db.kv.transact();
-        // go through to the entity store because
-        // that will skip buffering IVM
-        await this.client.db.entityStore.applyChangesWithTimestamp(
-          tx,
-          ackedChanges,
-          message.payload.timestamp,
-          {
-            checkWritePermission: undefined,
-            entityChangeValidator: undefined,
-          }
-        );
-        for (const [collection, entityCallbackMap] of this
-          .entitySyncSuccessSubscribers) {
-          const collectionChanges = ackedChanges[collection];
-          if (!collectionChanges) continue;
-          for (const [id, callback] of entityCallbackMap) {
-            if (
-              collectionChanges.sets.has(id) ||
-              collectionChanges.deletes.has(id)
-            ) {
-              await callback();
-            }
-          }
-        }
-        await this.client.db.entityStore.doubleBuffer
-          .getLockedBuffer()
-          .clear(tx);
-        await tx.commit();
-        this.syncInProgress = false;
-        // empty the outbox
-        // this.checkUnlockedBufferAndSendAnyChanges();
-        await this.syncWrites();
-      }
-
-      if (message.type === 'CLOSE') {
-        const { payload } = message;
-        logger.info(
-          `Closing connection${payload?.message ? `: ${payload.message}` : '.'}`
-        );
-        const { type, retry } = payload;
-        // Close payload must remain under 125 bytes
-        this.closeConnection({ type, retry });
-      }
-
-      if (message.type === 'SCHEMA_REQUEST') {
-        const schema = await this.client.getSchema();
-        this.sendMessage({
-          type: 'SCHEMA_RESPONSE',
-          payload: { schema },
-        });
-      }
-
-      if (message.type === 'READY') {
-        if (!this.serverReady) {
-          this.serverReady = true;
-          await this.initializeSync();
-        }
-      }
-    });
-    this.transport.onOpen(async () => {
-      logger.info('sync connection has opened', {
-        status: this.connectionStatus,
-      });
-      this.resetReconnectTimeout();
-    });
-
-    this.transport.onClose((evt) => {
-      // Clear any sync state
-      this.resetQueryAcks();
-      this.serverReady = false;
-
-      // If there is no reason, then default is to retry
-      if (evt.reason) {
-        let type: ServerCloseReasonType;
-        let retry: boolean;
-        // We populate the reason field with some information about the close
-        // Some WS implementations include a reason field that isn't a JSON string on connection failures, etc
-        try {
-          const { type: t, retry: r } = JSON.parse(evt.reason);
-          type = t;
-          retry = r;
-        } catch (e) {
-          type = 'UNKNOWN';
-          retry = true;
-        }
-        if (type === 'UNAUTHORIZED') {
-          logger.error(
-            'The server has closed the connection because the client is unauthorized. Please provide a valid token.'
-          );
-        }
-        if (type === 'SCHEMA_MISMATCH') {
-          logger.error(
-            'The server has closed the connection because the client schema does not match the server schema. Please update your client schema.'
-          );
-        }
-
-        if (type === 'TOKEN_EXPIRED') {
-          logger.error(
-            'The server has closed the connection because the token has expired. Fetch a new token from your authentication provider and call `TriplitClient.endSession()` and `TriplitClient.startSession(token)` to restart the session.'
-          );
-        }
-
-        if (type === 'ROLES_MISMATCH') {
-          logger.error(
-            'The server has closed the connection because the client attempted to update the session with a token that has different roles than the existing token. Call `TriplitClient.endSession()` and `TriplitClient.startSession(token)` to restart the session with the new token.'
-          );
-        }
-        if (
-          [
-            'ROLES_MISMATCH',
-            'TOKEN_EXPIRED',
-            'SCHEMA_MISMATCH',
-            'UNAUTHORIZED',
-          ].includes(type)
-        ) {
-          for (const handler of this.sessionErrorSubscribers) {
-            handler(type as SessionErrors);
-          }
-        }
-
-        if (!retry) {
-          // early return to prevent reconnect
-          logger.warn(
-            'The connection has closed. Based on the signal, the connection will not automatically retry. If you would like to reconnect, please call `connect()`.'
-          );
-          return;
-        }
-      }
-
-      // Attempt to reconnect with backoff
-      const connectionHandler = this.connect.bind(this);
-      this.reconnectTimeout = setTimeout(
-        connectionHandler,
-        this.reconnectTimeoutDelay
-      );
-      this.reconnectTimeoutDelay = Math.min(
-        30000,
-        this.reconnectTimeoutDelay * 2
-      );
-    });
-    this.transport.onError((evt) => {
-      // logger.log('error ws', evt);
-      logger.error('transport error', evt);
-      // on error, close the connection and attempt to reconnect
-      this.transport.close();
-    });
-
-    // NOTE: this comes from proxy in websocket.ts
-    this.transport.onConnectionChange((state: ConnectionStatus) => {
-      for (const handler of this.connectionChangeHandlers) {
-        handler(state);
-      }
-    });
+    // Setup listeners
+    this.transport.onMessage(this.onMessageHandler.bind(this));
+    this.transport.onOpen(this.onOpenHandler.bind(this));
+    this.transport.onClose(this.onCloseHandler.bind(this));
+    this.transport.onError(this.onErrorHandler.bind(this));
+    this.transport.onConnectionChange(
+      this.onConnectionChangeHandler.bind(this)
+    );
   }
 
   private async initializeSync() {
@@ -689,6 +510,219 @@ export class SyncEngine {
     // Reconnect any queries
     for (const [id] of this.queries) {
       this.connectQuery(id);
+    }
+  }
+
+  private async onMessageHandler(evt: any) {
+    const message: ServerSyncMessage = JSON.parse(evt.data);
+    logger.debug('received', message);
+    for (const handler of this.messageReceivedSubscribers) {
+      handler(message);
+    }
+    if (message.type === 'ERROR') {
+      await this.handleErrorMessage(message);
+    }
+    if (message.type === 'ENTITY_DATA') {
+      const {
+        changes: stringifiedChanges,
+        timestamp,
+        forQueries: queryIds,
+      } = message.payload;
+      const changes = SuperJSON.deserialize<DBChanges>(stringifiedChanges);
+      // first apply changes
+      // the db will push these onto IVMs buffer
+      await this.client.db.applyChangesWithTimestamp(changes, timestamp, {
+        skipRules: true,
+      });
+
+      // TODO do in same transaction
+      await this.client.db.setMetadata(['latest_server_timestamp'], timestamp);
+
+      // then update the query fulfillment state so that
+      // the client can signal in the results handler
+      // that the next time IVM fires, it's because
+      // of the server's response
+      for (const qId of queryIds) {
+        const query = this.queries.get(qId);
+        if (!query) continue;
+        if (query.syncState !== 'FULFILLED') {
+          await this.markQueryAsSeen(qId);
+          query.syncState = 'FULFILLED';
+        }
+        // this.queryFulfillmentCallbacks.delete(qId);
+      }
+
+      // update IVM
+      await this.client.db.updateQueryViews();
+      this.client.db.broadcastToQuerySubscribers();
+
+      // finally, run the query fulfillment callbacks
+      for (const qId of queryIds) {
+        const query = this.queries.get(qId);
+        if (!query) continue;
+        for (const callback of query.syncStateCallbacks) {
+          callback('FULFILLED', message.payload);
+        }
+      }
+    }
+
+    if (message.type === 'CHANGES_ACK') {
+      const ackedChanges = await this.client.db.entityStore.doubleBuffer
+        .getLockedBuffer()
+        .getChanges(this.client.db.kv);
+
+      // write the acked changes to the outbox
+      const tx = this.client.db.kv.transact();
+      // go through to the entity store because
+      // that will skip buffering IVM
+      await this.client.db.entityStore.applyChangesWithTimestamp(
+        tx,
+        ackedChanges,
+        message.payload.timestamp,
+        {
+          checkWritePermission: undefined,
+          entityChangeValidator: undefined,
+        }
+      );
+      for (const [collection, entityCallbackMap] of this
+        .entitySyncSuccessSubscribers) {
+        const collectionChanges = ackedChanges[collection];
+        if (!collectionChanges) continue;
+        for (const [id, callback] of entityCallbackMap) {
+          if (
+            collectionChanges.sets.has(id) ||
+            collectionChanges.deletes.has(id)
+          ) {
+            await callback();
+          }
+        }
+      }
+      await this.client.db.entityStore.doubleBuffer.getLockedBuffer().clear(tx);
+      await tx.commit();
+      this.syncInProgress = false;
+      // empty the outbox
+      // this.checkUnlockedBufferAndSendAnyChanges();
+      await this.syncWrites();
+    }
+
+    if (message.type === 'CLOSE') {
+      const { payload } = message;
+      logger.info(
+        `Closing connection${payload?.message ? `: ${payload.message}` : '.'}`
+      );
+      const { type, retry } = payload;
+      // Close payload must remain under 125 bytes
+      this.closeConnection({ type, retry });
+    }
+
+    if (message.type === 'SCHEMA_REQUEST') {
+      const schema = await this.client.getSchema();
+      this.sendMessage({
+        type: 'SCHEMA_RESPONSE',
+        payload: { schema },
+      });
+    }
+
+    if (message.type === 'READY') {
+      if (!this.serverReady) {
+        this.serverReady = true;
+        await this.initializeSync();
+      }
+    }
+  }
+
+  private onOpenHandler() {
+    logger.info('sync connection has opened', {
+      status: this.connectionStatus,
+    });
+    this.resetReconnectTimeout();
+  }
+
+  private onCloseHandler(evt: any) {
+    // Clear any sync state
+    this.resetQueryAcks();
+    this.serverReady = false;
+
+    // If there is no reason, then default is to retry
+    if (evt.reason) {
+      let type: ServerCloseReasonType;
+      let retry: boolean;
+      // We populate the reason field with some information about the close
+      // Some WS implementations include a reason field that isn't a JSON string on connection failures, etc
+      try {
+        const { type: t, retry: r } = JSON.parse(evt.reason);
+        type = t;
+        retry = r;
+      } catch (e) {
+        type = 'UNKNOWN';
+        retry = true;
+      }
+      if (type === 'UNAUTHORIZED') {
+        logger.error(
+          'The server has closed the connection because the client is unauthorized. Please provide a valid token.'
+        );
+      }
+      if (type === 'SCHEMA_MISMATCH') {
+        logger.error(
+          'The server has closed the connection because the client schema does not match the server schema. Please update your client schema.'
+        );
+      }
+
+      if (type === 'TOKEN_EXPIRED') {
+        logger.error(
+          'The server has closed the connection because the token has expired. Fetch a new token from your authentication provider and call `TriplitClient.endSession()` and `TriplitClient.startSession(token)` to restart the session.'
+        );
+      }
+
+      if (type === 'ROLES_MISMATCH') {
+        logger.error(
+          'The server has closed the connection because the client attempted to update the session with a token that has different roles than the existing token. Call `TriplitClient.endSession()` and `TriplitClient.startSession(token)` to restart the session with the new token.'
+        );
+      }
+      if (
+        [
+          'ROLES_MISMATCH',
+          'TOKEN_EXPIRED',
+          'SCHEMA_MISMATCH',
+          'UNAUTHORIZED',
+        ].includes(type)
+      ) {
+        for (const handler of this.sessionErrorSubscribers) {
+          handler(type as SessionErrors);
+        }
+      }
+
+      if (!retry) {
+        // early return to prevent reconnect
+        logger.warn(
+          'The connection has closed. Based on the signal, the connection will not automatically retry. If you would like to reconnect, please call `connect()`.'
+        );
+        return;
+      }
+    }
+
+    // Attempt to reconnect with backoff
+    const connectionHandler = this.connect.bind(this);
+    this.reconnectTimeout = setTimeout(
+      connectionHandler,
+      this.reconnectTimeoutDelay
+    );
+    this.reconnectTimeoutDelay = Math.min(
+      30000,
+      this.reconnectTimeoutDelay * 2
+    );
+  }
+
+  private onErrorHandler(evt: any) {
+    // logger.log('error ws', evt);
+    logger.error('transport error', evt);
+    // on error, close the connection and attempt to reconnect
+    this.closeConnection();
+  }
+
+  private onConnectionChangeHandler(state: ConnectionStatus) {
+    for (const handler of this.connectionChangeHandlers) {
+      handler(state);
     }
   }
 
@@ -711,7 +745,7 @@ export class SyncEngine {
    * On the next connection, queries will be re-sent to server as if there is no previous seen data.
    * If the connection is currently open, it will be closed and you will need to call `connect()` again.
    */
-  async resetQueryState() {
+  resetQueryState() {
     if (this.connectionStatus === 'OPEN') {
       logger.warn(
         'You are resetting the sync engine while the connection is open. To avoid unexpected behavior the connection will be closed and you should call `connect()` again after resetting. To hide this warning, call `disconnect()` before resetting.'
@@ -835,7 +869,8 @@ export class SyncEngine {
   }
 
   private closeConnection(reason?: CloseReason) {
-    if (this.transport) this.transport.close(reason);
+    this.connectionAbort = true;
+    this.transport.close(reason);
   }
 
   private resetReconnectTimeout() {

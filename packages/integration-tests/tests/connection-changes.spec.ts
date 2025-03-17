@@ -1,30 +1,168 @@
 import { it, describe, expect } from 'vitest';
-import { Server as TriplitServer } from '@triplit/server-core';
-import { DB, hashQuery } from '@triplit/db';
-import {
-  createTestClient,
-  MessageLogItem,
-  SERVICE_KEY,
-  spyMessages,
-} from '../utils/client.js';
+import { hashQuery, Schema as S } from '@triplit/db';
+import { MessageLogItem, spyMessages } from '../utils/client.js';
 import { pause } from '../utils/async.js';
+import { withWebsocketStub } from '../utils/websockets.js';
+import { TriplitClient, WebSocketTransport } from '@triplit/client';
+import { tempTriplitServer } from '../utils/server.js';
+
+const serviceToken =
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ4LXRyaXBsaXQtdG9rZW4tdHlwZSI6InNlY3JldCIsIngtdHJpcGxpdC1wcm9qZWN0LWlkIjoicHJvamVjdCJ9.gcDKyZU9wf8o43Ca9kUVXO4KsGwX8IhhyEg1PO1ZqiQ';
 
 describe('Constructor autoConnect', () => {
-  it.todo(
-    'A client will attempt to connect to the server on construction if autoConnect is true'
+  it(
+    'A client will attempt to connect to the server on construction if autoConnect is true',
+    withWebsocketStub(async ({ openSockets }) => {
+      const schema = S.Collections({
+        users: {
+          schema: S.Schema({
+            id: S.Id(),
+            name: S.String(),
+            age: S.Number(),
+          }),
+        },
+      });
+      using server = await tempTriplitServer({
+        serverOptions: {
+          dbOptions: {
+            schema: { collections: schema },
+          },
+          jwtSecret: 'test-secret',
+        },
+      });
+      const { port } = server;
+      const client = new TriplitClient({
+        schema,
+        serverUrl: `http://localhost:${port}`,
+        token: serviceToken,
+        autoConnect: true,
+      });
+      await pause();
+      expect(openSockets.size).toBe(1);
+      expect(client.connectionStatus).toBe('OPEN');
+    })
   );
-  it.todo(
-    'A client will not attempt to connect to the server on construction if autoConnect is false'
+  it(
+    'A client will not attempt to connect to the server on construction if autoConnect is false',
+    withWebsocketStub(async ({ openSockets }) => {
+      const schema = S.Collections({
+        users: {
+          schema: S.Schema({
+            id: S.Id(),
+            name: S.String(),
+            age: S.Number(),
+          }),
+        },
+      });
+      using server = await tempTriplitServer({
+        serverOptions: {
+          dbOptions: {
+            schema: { collections: schema },
+          },
+          jwtSecret: 'test-secret',
+        },
+      });
+      const { port } = server;
+      const client = new TriplitClient({
+        schema,
+        serverUrl: `http://localhost:${port}`,
+        token: serviceToken,
+        autoConnect: false,
+      });
+      await pause();
+      expect(openSockets.size).toBe(0);
+      expect(client.connectionStatus).toBe('UNINITIALIZED');
+    })
   );
 });
 describe('Connecting a client', () => {
-  it.todo('Calling client.connect() will attempt to connect to the server');
-  it.todo('Calling client.connect() multiple times is a no-op');
+  it(
+    'Calling client.connect() will attempt to connect to the server',
+    withWebsocketStub(async ({ openSockets }) => {
+      const schema = S.Collections({
+        users: {
+          schema: S.Schema({
+            id: S.Id(),
+            name: S.String(),
+            age: S.Number(),
+          }),
+        },
+      });
+      using server = await tempTriplitServer({
+        serverOptions: {
+          dbOptions: {
+            schema: { collections: schema },
+          },
+          jwtSecret: 'test-secret',
+        },
+      });
+      const { port } = server;
+      const client = new TriplitClient({
+        schema,
+        serverUrl: `http://localhost:${port}`,
+        token: serviceToken,
+        autoConnect: false,
+      });
+      await pause();
+      expect(openSockets.size).toBe(0);
+      expect(client.connectionStatus).toBe('UNINITIALIZED');
+      client.connect();
+      await pause();
+      expect(openSockets.size).toBe(1);
+      expect(client.connectionStatus).toBe('OPEN');
+    })
+  );
+  it(
+    'Calling client.connect() multiple times is a no-op',
+    withWebsocketStub(async ({ openSockets }) => {
+      const schema = S.Collections({
+        users: {
+          schema: S.Schema({
+            id: S.Id(),
+            name: S.String(),
+            age: S.Number(),
+          }),
+        },
+      });
+      using server = await tempTriplitServer({
+        serverOptions: {
+          dbOptions: {
+            schema: { collections: schema },
+          },
+          jwtSecret: 'test-secret',
+        },
+      });
+      const { port } = server;
+      const client = new TriplitClient({
+        schema,
+        serverUrl: `http://localhost:${port}`,
+        token: serviceToken,
+        autoConnect: true,
+      });
+      const messageSpy = spyMessages(client);
+      client.connect();
+      client.connect();
+      client.connect();
+      client.connect();
+      client.connect();
+      await pause();
+      // Only one socket open
+      expect(openSockets.size).toBe(1);
+      // Only one ready message sent
+      expect(messageSpy.filter(serverReadyMessages).length).toBe(1);
+    })
+  );
   it('After disconnecting, calling connect() will reconnect and restart syncing', async () => {
-    const server = new TriplitServer(new DB());
-    const client = createTestClient(server, {
-      token: SERVICE_KEY,
-      clientId: 'alice',
+    using server = await tempTriplitServer({
+      serverOptions: {
+        jwtSecret: 'test-secret',
+      },
+    });
+    const { port } = server;
+    const client = new TriplitClient({
+      serverUrl: `http://localhost:${port}`,
+      token: serviceToken,
+      autoConnect: true,
     });
     const spy1 = spyMessages(client);
     const query1 = client.query('test');
@@ -82,10 +220,143 @@ describe('Connecting a client', () => {
   });
 });
 describe('Disconnecting a client', () => {
-  it.todo(
-    'Calling client.disconnect() will attempt to disconnect from the server'
+  it(
+    'Calling client.disconnect() will attempt to disconnect from the server',
+    withWebsocketStub(async ({ openSockets }) => {
+      const schema = S.Collections({
+        users: {
+          schema: S.Schema({
+            id: S.Id(),
+            name: S.String(),
+            age: S.Number(),
+          }),
+        },
+      });
+      using server = await tempTriplitServer({
+        serverOptions: {
+          dbOptions: {
+            schema: { collections: schema },
+          },
+          jwtSecret: 'test-secret',
+        },
+      });
+      const { port } = server;
+      const client = new TriplitClient({
+        schema,
+        serverUrl: `http://localhost:${port}`,
+        token: serviceToken,
+        autoConnect: true,
+      });
+      await pause();
+      expect(openSockets.size).toBe(1);
+      client.disconnect();
+      await pause();
+      expect(openSockets.size).toBe(0);
+    })
   );
-  it.todo('Calling client.disconnect() multiple times is a no-op');
+  it(
+    'can connect and disconnect immediately and no socket will remain open - auto connection',
+    withWebsocketStub(async ({ openSockets }) => {
+      const schema = S.Collections({
+        users: {
+          schema: S.Schema({
+            id: S.Id(),
+            name: S.String(),
+            age: S.Number(),
+          }),
+        },
+      });
+      using server = await tempTriplitServer({
+        serverOptions: {
+          dbOptions: {
+            schema: { collections: schema },
+          },
+          jwtSecret: 'test-secret',
+        },
+      });
+      const { port } = server;
+      const client = new TriplitClient({
+        schema,
+        serverUrl: `http://localhost:${port}`,
+        token: serviceToken,
+        autoConnect: true,
+      });
+      client.disconnect();
+      await pause();
+      expect(openSockets.size).toBe(0);
+    })
+  );
+  it(
+    'can connect and disconnect immediately and no socket will remain open - manual connection',
+    withWebsocketStub(async ({ openSockets }) => {
+      const schema = S.Collections({
+        users: {
+          schema: S.Schema({
+            id: S.Id(),
+            name: S.String(),
+            age: S.Number(),
+          }),
+        },
+      });
+      using server = await tempTriplitServer({
+        serverOptions: {
+          dbOptions: {
+            schema: { collections: schema },
+          },
+          jwtSecret: 'test-secret',
+        },
+      });
+      const { port } = server;
+      const client = new TriplitClient({
+        schema,
+        serverUrl: `http://localhost:${port}`,
+        token: serviceToken,
+        autoConnect: false,
+      });
+      client.connect();
+      client.disconnect();
+      await pause();
+      expect(openSockets.size).toBe(0);
+    })
+  );
+  it(
+    'Calling client.disconnect() multiple times is a no-op',
+    withWebsocketStub(async ({ openSockets }) => {
+      const schema = S.Collections({
+        users: {
+          schema: S.Schema({
+            id: S.Id(),
+            name: S.String(),
+            age: S.Number(),
+          }),
+        },
+      });
+      using server = await tempTriplitServer({
+        serverOptions: {
+          dbOptions: {
+            schema: { collections: schema },
+          },
+          jwtSecret: 'test-secret',
+        },
+      });
+      const { port } = server;
+      const client = new TriplitClient({
+        schema,
+        serverUrl: `http://localhost:${port}`,
+        token: serviceToken,
+        autoConnect: true,
+      });
+      client.disconnect();
+      client.disconnect();
+      client.disconnect();
+      client.disconnect();
+      client.disconnect();
+      client.disconnect();
+      client.disconnect();
+      await pause();
+      expect(openSockets.size).toBe(0);
+    })
+  );
 });
 
 function sentConnectQueryMessageForQuery(log: MessageLogItem, qid: string) {

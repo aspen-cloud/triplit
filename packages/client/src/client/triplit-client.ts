@@ -249,16 +249,18 @@ export class TriplitClient<M extends Models<M> = Models> {
     if (options.onSessionError) {
       this.onSessionError(options.onSessionError);
     }
-    // Look into how calling connect / disconnect early is handled
-    // Think this is OK to not await db.ready because it's handled
-    // deeper in the call stack where it's specifically needed in the sync engine
-    // which is to say when it gets the schema hash for syncing purposes
+
+    // If we provide a token in the constructor, start a session
     if (options.token) {
       // Asynchronously starts the session if a token is provided
-      this.startSession(
-        options.token,
-        this.connectOnInitialization,
-        options.refreshOptions
+      // We will NOT auto connect to allow any disconnect signals to flow through
+      this.startSession(options.token, false, options.refreshOptions).then(
+        async () => {
+          if (this.connectOnInitialization) {
+            const params = await this.syncEngine.getConnectionParams();
+            this.syncEngine.createConnection(params);
+          }
+        }
       );
     }
   }
@@ -413,7 +415,7 @@ export class TriplitClient<M extends Models<M> = Models> {
   }
 
   async reset(options: ClearOptions = {}) {
-    await this.syncEngine.resetQueryState();
+    this.syncEngine.resetQueryState();
     await this.clear(options);
   }
 
@@ -1059,14 +1061,14 @@ export class TriplitClient<M extends Models<M> = Models> {
    * Starts a new sync session with the provided token
    *
    * @param token - The token to start the session with
-   * @param autoConnect - If true, the client will automatically connect to the server after starting the session. Defaults to true.
+   * @param connect - If true, the client will automatically connect to the server after starting the session. Defaults to true.
    * @param refreshOptions - Options for refreshing the token
    * @param refreshOptions.interval - The interval in milliseconds to refresh the token. If not provided, the token will be refreshed 500ms before it expires.
    * @param refreshOptions.handler - The function to call to refresh the token. It returns a promise that resolves with the new token.
    */
   async startSession(
     token: string,
-    autoConnect = true,
+    connect = true,
     refreshOptions?: TokenRefreshOptions
   ) {
     // 1. determine the new token
@@ -1092,13 +1094,13 @@ export class TriplitClient<M extends Models<M> = Models> {
     if (token === this.token) return;
 
     // 3. End previous session
-    await this.endSession();
+    if (this.token) this.endSession();
 
     // 4. Update the client token
     this.updateToken(token);
 
-    // 5. If we should re-connect, do that
-    autoConnect && (await this.connect());
+    // 5. If we should connect, do that
+    if (connect) await this.connect();
 
     // 6. Set up a token refresh handler if provided
     // Setup token refresh handler
@@ -1120,7 +1122,7 @@ export class TriplitClient<M extends Models<M> = Models> {
           this.logger.warn(
             'The token refresh handler did not return a new token, ending the session.'
           );
-          await this.endSession();
+          this.endSession();
           return;
         }
         await this.updateSessionToken(maybeFreshToken);
@@ -1136,11 +1138,11 @@ export class TriplitClient<M extends Models<M> = Models> {
   /**
    * Disconnects the client from the server and ends the current sync session.
    */
-  async endSession() {
+  endSession() {
     this.resetTokenRefreshHandler();
     this.disconnect();
     this.updateToken(undefined);
-    await this.syncEngine.resetQueryState();
+    this.syncEngine.resetQueryState();
   }
 
   /**

@@ -76,13 +76,16 @@ export class WebSocketTransport implements SyncTransport {
     return true;
   }
   connect(params: TransportConnectParams): void {
-    if (this.ws && this.isOpen) this.close();
+    // Close any existing connection
+    this.close();
+
+    // Setup connection URL
     const { token, schema, syncSchema, server } = params;
     const wsOptions = new URLSearchParams();
     if (schema) {
       wsOptions.set('schema', schema.toString());
     }
-    wsOptions.set('sync-schema', String(syncSchema));
+    wsOptions.set('sync-schema', String(!!syncSchema));
     wsOptions.set('token', token);
     const secure = server.startsWith('https://');
     const domain = server.slice(secure ? 8 : 7); // remove protocol
@@ -92,11 +95,15 @@ export class WebSocketTransport implements SyncTransport {
     if (!webSocketsAreAvailable()) {
       throw new WebSocketsUnavailableError();
     }
+
+    // Create a new WebSocket connection and set up event listeners
     this.ws = new WebSocket(wsUri);
     this.ws.onconnectionchange = (status) => {
       this.connectionListeners.forEach((listener) => listener(status));
     };
   }
+
+  // TODO: feels a bit awkward that these have to be set up after connect()
   onMessage(callback: (message: any) => void): void {
     if (this.ws) this.ws.onmessage = callback;
   }
@@ -105,7 +112,23 @@ export class WebSocketTransport implements SyncTransport {
   }
   close(reason?: CloseReason): void {
     // Assuming normal close for now (1000), possibly map reasons to codes later
-    this.ws && this.ws.close(1000, JSON.stringify(reason));
+    if (!this.ws) return;
+
+    // If socket is open, close
+    if (this.ws.readyState === this.ws.OPEN) {
+      return this.ws.close(1000, JSON.stringify(reason));
+    }
+
+    // If socket is connecting, close once open
+    if (this.ws.readyState === this.ws.CONNECTING) {
+      return this.ws.addEventListener(
+        'open',
+        () => {
+          this.ws?.close(1000, JSON.stringify(reason));
+        },
+        { once: true }
+      );
+    }
   }
   onClose(callback: (ev: any) => void): void {
     if (this.ws) this.ws.onclose = callback;
