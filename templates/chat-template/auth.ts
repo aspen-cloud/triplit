@@ -39,8 +39,11 @@ export const authOptions: AuthOptions = {
       if (process.env.NEXTAUTH_SECRET) {
         session.token = await signToken(token, process.env.NEXTAUTH_SECRET)
       }
+      if (!token["x-triplit-user-id"]) {
+        throw new Error("Token missing x-triplit-user-id")
+      }
       if (session.user) {
-        session.user.id = token["x-triplit-user-id"] as string | undefined
+        session.user.id = token["x-triplit-user-id"] as string
       }
       return session
     },

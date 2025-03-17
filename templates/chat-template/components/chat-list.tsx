@@ -4,10 +4,9 @@ import { ChangeEvent, useState } from "react"
 import Link from "next/link.js"
 import { useRouter } from "next/navigation.js"
 import { ChevronDown, Loader2, LogOut, PenBox } from "lucide-react"
-import { signOut, useSession } from "next-auth/react"
+import { signOut } from "next-auth/react"
 
 import { addConversation } from "@/lib/triplit-mutations.js"
-import { client } from "@/lib/triplit.js"
 import { cn } from "@/lib/utils.js"
 import {
   useConversationSnippet,
@@ -16,6 +15,7 @@ import {
 import { useSelectedConvo } from "@/hooks/use-selected-convo.js"
 import { Button } from "@/components/ui/button.js"
 
+import { useCurrentUser } from "./client-auth-provider.jsx"
 import { ConnectionStatus } from "./connection-status.jsx"
 import {
   DropdownMenu,
@@ -28,8 +28,8 @@ import { Modal } from "./ui/modal.jsx"
 import { Skeleton } from "./ui/skeleton.jsx"
 
 export function ChatList() {
-  const { data: sessionData } = useSession()
-  const currentUserId = sessionData?.user?.id
+  const currentUser = useCurrentUser()
+  const currentUserId = currentUser.id
   const selectedChat = useSelectedConvo()
   const [chatFilter, setChatFilter] = useState("")
   const [createConvoModalOpen, setCreateConvoModalOpen] = useState(false)
@@ -197,6 +197,8 @@ function UserDropdownMenu() {
       <DropdownMenuContent className="w-20">
         <DropdownMenuItem
           onSelect={async () => {
+            // On sign out, we set `redirect: false` to ensure the useSession hook fires to reset Triplit state
+            // https://next-auth.js.org/getting-started/client#using-the-redirect-false-option-1
             const data = await signOut({
               redirect: false,
               callbackUrl: "/auth/sign-in",

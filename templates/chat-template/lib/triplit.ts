@@ -16,5 +16,5 @@ export const client = new TriplitClient({
   storage,
 })
 
-// @ts-ignore
+// @ts-expect-error
 if (isClient) window.client = client

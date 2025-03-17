@@ -19,7 +19,6 @@ import {
   SendIcon,
   Users,
 } from "lucide-react"
-import { useSession } from "next-auth/react"
 
 import { client } from "@/lib/triplit.js"
 import { cn } from "@/lib/utils.js"
@@ -30,6 +29,7 @@ import {
   type Message,
 } from "@/hooks/triplit-hooks.js"
 
+import { useCurrentUser } from "./client-auth-provider.jsx"
 import { SearchUsers } from "./search-users.jsx"
 import { Button } from "./ui/button.jsx"
 import { Input } from "./ui/input.jsx"
@@ -86,21 +86,19 @@ function MessageInput({
   convoId: string
   scrollRef: RefObject<HTMLSpanElement>
 }) {
-  const { data: session } = useSession()
+  const currentUser = useCurrentUser()
   const [draftMsg, setDraftMsg] = useState("")
 
   return (
     <div>
       <form
         onSubmit={(e) => {
-          if (!session) return
           e.preventDefault()
           client
             .insert("messages", {
               conversationId: convoId,
               text: draftMsg,
-              // @ts-ignore
-              sender_id: session.user.id,
+              sender_id: currentUser.id,
             })
             .then(() => {
               setDraftMsg("")
@@ -133,7 +131,7 @@ function MessageInput({
 }
 
 function MessageList({ convoId }: { convoId: string }) {
-  const { data: session } = useSession()
+  const currentUser = useCurrentUser()
   const {
     messages,
     pendingMessages,
@@ -185,8 +183,7 @@ function MessageList({ convoId }: { convoId: string }) {
           </div>
         ) : (
           messages?.map((message, index) => {
-            // @ts-ignore
-            const isOwnMessage = message.sender_id === session.user.id
+            const isOwnMessage = message.sender_id === currentUser.id
             const isFirstMessageInABlockFromThisDay =
               index === messages.length - 1 ||
               new Date(messages[index + 1]?.created_at).toLocaleDateString() !==
@@ -247,7 +244,7 @@ function ChatBubble({
   isOwnMessage: boolean
   showSentIndicator?: boolean
 }) {
-  const { data: session } = useSession()
+  const currentUser = useCurrentUser()
 
   return (
     <div className="flex flex-col gap-1">
@@ -259,9 +256,7 @@ function ChatBubble({
             delivered ? "bg-secondary" : "border border-dashed",
             isOwnMessage && "items-end"
           )}
-          onDoubleClick={() => {
-            session?.user?.id && toggleReaction(message, session?.user?.id)
-          }}
+          onDoubleClick={() => toggleReaction(message, currentUser.id)}
         >
           {!isOwnMessage && (
             <div className="text-sm font-bold">{message.sender?.name}</div>

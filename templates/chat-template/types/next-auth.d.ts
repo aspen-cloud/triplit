@@ -8,7 +8,7 @@ declare module "next-auth" {
     token?: string
     user:
       | ({
-          id?: string
+          id: string
         } & NonNullable<DefaultSession["user"]>)
       | undefined
   }

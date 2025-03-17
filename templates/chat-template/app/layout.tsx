@@ -1,11 +1,11 @@
 import "@/styles/globals.css"
+import { Suspense } from "react"
 import { Metadata, Viewport } from "next"
 
 import { siteConfig } from "@/config/site.js"
 import { fontSans } from "@/lib/fonts.js"
 import { cn } from "@/lib/utils.js"
-
-import { Content } from "./content.jsx"
+import { ThemeProvider } from "@/components/theme-provider.js"
 
 export const metadata: Metadata = {
   title: {
@@ -43,7 +43,11 @@ export default function RootLayout({ children }: RootLayoutProps) {
             fontSans.variable
           )}
         >
-          <Content>{children}</Content>
+          <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+            <div className="relative flex min-h-screen flex-col">
+              <Suspense fallback={<div>Loading...</div>}>{children}</Suspense>{" "}
+            </div>
+          </ThemeProvider>
         </body>
       </html>
     </>
