@@ -1531,6 +1531,91 @@ describe('Delete', () => {
   });
 });
 
+// TODO: this really could be a unit test for satisfies filters
+it('write permissions can handle filter groupings with subqueries', async () => {
+  const schema = {
+    roles: {
+      authenticated: {
+        match: {
+          user_id: '$user_id',
+        },
+      },
+    },
+    collections: S.Collections({
+      test1: {
+        schema: S.Schema({
+          id: S.Id(),
+          test2_id: S.String(),
+        }),
+        relationships: {
+          test2: S.RelationById('test2', '$test2_id'),
+        },
+        permissions: {
+          authenticated: {
+            read: {
+              filter: [true],
+            },
+            insert: {
+              filter: [
+                or([
+                  ['test2.author_id', '=', '$role.user_id'],
+                  ['test2.author_id', '=', 'admin'],
+                ]),
+              ],
+            },
+          },
+        },
+      },
+      test2: {
+        schema: S.Schema({
+          id: S.Id(),
+          author_id: S.String(),
+        }),
+      },
+    }),
+  };
+  const db = new DB({ schema });
+  await db.transact(
+    async (tx) => {
+      await tx.insert('test2', {
+        id: '1',
+        author_id: 'user-1',
+      });
+      await tx.insert('test2', {
+        id: '2',
+        author_id: 'admin',
+      });
+      await tx.insert('test2', {
+        id: '3',
+        author_id: 'user-2',
+      });
+    },
+    { skipRules: true }
+  );
+  const user1Token = {
+    user_id: 'user-1',
+  };
+  const user1DB = db.withSessionVars(user1Token);
+  await expect(
+    user1DB.insert('test1', {
+      id: '1',
+      test2_id: '1',
+    })
+  ).resolves.not.toThrow();
+  await expect(
+    user1DB.insert('test1', {
+      id: '2',
+      test2_id: '2',
+    })
+  ).resolves.not.toThrow();
+  await expect(
+    user1DB.insert('test1', {
+      id: '3',
+      test2_id: '3',
+    })
+  ).rejects.toThrow(WritePermissionError);
+});
+
 it('write permissions are not recursively applied', async () => {
   const schema = {
     roles: {

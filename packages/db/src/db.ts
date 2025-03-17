@@ -33,7 +33,7 @@ import {
   TypeConverters,
 } from './schema/converters.js';
 import { isEmpty } from './memory-write-buffer.js';
-import { isSubQueryFilter, satisfiesNonRelationalFilter } from './filters.js';
+import { satisfiesFilters } from './filters.js';
 import { ValuePointer } from './utils/value-pointer.js';
 import { logger as LOGGER, Logger } from '@triplit/logger';
 import { Type } from './schema/data-types/type.js';
@@ -850,27 +850,13 @@ export class DB<
     const queryEngine = new EntityStoreQueryEngine(
       storage,
       this.entityStore,
-      this.schema as DBSchema | undefined
+      this.schema
     );
-    let isSatisfied = true;
-    for (const filter of preparedPermissions) {
-      if (isSubQueryFilter(filter)) {
-        const result = await queryEngine.executeRelationalQuery(filter.exists, {
-          entityStack: [entity],
-        });
-        if (result.length === 0) {
-          isSatisfied = false;
-          break;
-        }
-      } else {
-        if (
-          !satisfiesNonRelationalFilter(collection, entity, filter, this.schema)
-        ) {
-          isSatisfied = false;
-          break;
-        }
-      }
-    }
+    const isSatisfied = await satisfiesFilters(
+      entity,
+      preparedPermissions,
+      queryEngine
+    );
     if (!isSatisfied) {
       throw new WritePermissionError(
         collection,

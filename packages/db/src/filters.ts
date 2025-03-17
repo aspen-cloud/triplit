@@ -29,6 +29,53 @@ import {
   Models,
 } from './schema/index.js';
 
+export async function satisfiesFilters(
+  entity: any,
+  filters: QueryWhere,
+  queryEngine: EntityStoreQueryEngine
+): Promise<boolean> {
+  let isSatisfied = true;
+  for (const filter of filters) {
+    isSatisfied = await satisfiesFilter(entity, filter, queryEngine);
+    if (!isSatisfied) {
+      break;
+    }
+  }
+  return isSatisfied;
+}
+
+export async function satisfiesFilter(
+  entity: any,
+  filter: WhereFilter,
+  queryEngine: EntityStoreQueryEngine
+): Promise<boolean> {
+  if (isFilterGroup(filter)) {
+    if (filter.mod === 'and') {
+      return await satisfiesFilters(entity, filter.filters, queryEngine);
+    } else {
+      let isSatisfied = false;
+      for (const orFilter of filter.filters) {
+        isSatisfied = await satisfiesFilters(entity, [orFilter], queryEngine);
+        if (isSatisfied) break;
+      }
+      return isSatisfied;
+    }
+  } else if (isSubQueryFilter(filter)) {
+    const result = await queryEngine.executeRelationalQuery(filter.exists, {
+      entityStack: [entity],
+    });
+    if (Array.isArray(result)) return result.length > 0;
+    return !!result;
+  } else {
+    return satisfiesNonRelationalFilter(
+      entity.collection,
+      entity,
+      filter,
+      queryEngine.schema
+    );
+  }
+}
+
 export function satisfiesNonRelationalFilter(
   collectionName: string,
   entity: DBEntity,
