@@ -89,6 +89,15 @@ export type SimpleClientStorageOptions =
 
 export type SimpleStorageOrInstances = KVStore | SimpleClientStorageOptions;
 
+// TODO: I think both `skipRules` and `manualSchemaRefresh` arent used / needed
 export type ClientTransactOptions = Pick<TransactOptions, 'skipRules'> & {
   manualSchemaRefresh?: boolean;
 };
+
+export type ConnectionOptionsChange = Pick<
+  ClientOptions,
+  'token' | 'serverUrl'
+> & { tokenRefresh?: boolean };
+export type ConnectionOptionsChangeHandler = (
+  params: ConnectionOptionsChange
+) => void;

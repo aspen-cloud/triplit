@@ -196,11 +196,8 @@ export class ClientComlinkWrapper<M extends Models<M> = Models>
     return ComLink.proxy(this.client.onSessionError(...args));
   }
 
-  updateServerUrl(
-    ...args: Parameters<Client<M>['updateServerUrl']>
-  ): Promise<void> {
+  updateServerUrl(...args: Parameters<Client<M>['updateServerUrl']>) {
     if (!this.client) throw new WorkerInternalClientNotInitializedError();
-
     return this.client.updateServerUrl(...args);
   }
 

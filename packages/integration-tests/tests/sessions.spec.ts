@@ -76,7 +76,9 @@ describe.each([TriplitClient, WorkerClient])('%O', (Client) => {
       expect(dataResult.length).toBe(1);
 
       // Update session token
-      client.updateSessionToken(await encodeToken(initialPayload, '30 min'));
+      await client.updateSessionToken(
+        await encodeToken(initialPayload, '30 min')
+      );
       await pause(200);
       await client.insert('users', { id: '2', name: 'Bob' });
       dataResult = await client.fetch(client.query('users'));
@@ -261,8 +263,8 @@ describe.each([TriplitClient, WorkerClient])('%O', (Client) => {
       });
       const sessionErrorSpy = vi.fn();
       alice.onSessionError(sessionErrorSpy);
-      await pause(50);
-      alice.updateSessionToken(
+      await pause(500);
+      await alice.updateSessionToken(
         await encodeToken({ 'x-triplit-token-type': 'secret' }, '30 min')
       );
       await pause(50);
@@ -301,13 +303,13 @@ describe.each([TriplitClient, WorkerClient])('%O', (Client) => {
       expect(aliceSubSpy.mock.lastCall?.[0]?.length).toBe(1);
 
       // Update session token with no expiration time
-      alice.updateSessionToken(await encodeToken(initialPayload));
+      await alice.updateSessionToken(await encodeToken(initialPayload));
       await bob.insert('users', { id: '2', name: 'Bob' });
       await pause(100);
       expect(aliceSubSpy.mock.lastCall?.[0]?.length).toBe(2);
 
       // Update session token without expiration time
-      alice.updateSessionToken(await encodeToken(initialPayload, '1s'));
+      await alice.updateSessionToken(await encodeToken(initialPayload, '1s'));
 
       await pause(1050);
       await bob.insert('users', { id: '3', name: 'Charlie' });

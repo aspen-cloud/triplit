@@ -7,9 +7,6 @@ import {
 import { SyncTransport } from '../../types.js';
 
 export interface SyncOptions {
-  server?: string;
-  token?: string;
-  syncSchema?: boolean;
   transport?: SyncTransport;
   logger: Logger;
 }

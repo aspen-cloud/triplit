@@ -20,6 +20,7 @@ import {
 import {
   MissingConnectionInformationError,
   RemoteSyncFailedError,
+  TokenExpiredError,
 } from './errors.js';
 import {
   EntitySyncErrorCallback,
@@ -32,6 +33,7 @@ import {
   SessionErrors,
   SyncOptions,
   SyncStateCallback,
+  TokenRefreshOptions,
 } from './client/types';
 import { Logger } from './@triplit/types/logger.js';
 import SuperJSON from 'superjson';
@@ -41,6 +43,7 @@ import {
   SyncTransport,
   TransportConnectParams,
 } from './types.js';
+import { decodeToken, tokenIsExpired } from './token.js';
 
 const QUERY_STATE_KEY = 'query-state';
 
@@ -61,7 +64,6 @@ export class SyncEngine {
   private transport: SyncTransport;
 
   private client: TriplitClient<any>;
-  syncOptions: SyncOptions;
 
   private connectionChangeHandlers: Set<(status: ConnectionStatus) => void> =
     new Set();
@@ -112,9 +114,20 @@ export class SyncEngine {
   constructor(client: TriplitClient<any>, options: SyncOptions) {
     this.client = client;
     this.logger = options.logger;
-    this.syncOptions = options;
-    this.syncOptions.syncSchema = options.syncSchema ?? false;
     this.transport = options.transport ?? new WebSocketTransport();
+    this.client.onConnectionOptionsChange((change) => {
+      // TODO: eval this for other connectionStatuses
+      const shouldDisconnect =
+        this.connectionStatus === 'OPEN' &&
+        // Server change or non refresh token change
+        ('serverUrl' in change || ('token' in change && !change.tokenRefresh));
+      if (shouldDisconnect) {
+        logger.warn(
+          'You are updating the connection options while the connection is open. To avoid unexpected behavior the connection will be closed and you should call `connect()` again after the update. To hide this warning, call `disconnect()` before updating the connection options.'
+        );
+        this.disconnect();
+      }
+    });
   }
 
   private async sendChanges(changes: DBChanges) {
@@ -190,15 +203,13 @@ export class SyncEngine {
   }
 
   /**
-   * The token used to authenticate with the server
+   * @hidden
    */
-  get token() {
-    return this.syncOptions.token;
-  }
-
   updateTokenForSession(token: string) {
-    this.syncOptions.token = token;
-    this.transport.sendMessage({ type: 'UPDATE_TOKEN', payload: { token } });
+    return this.sendMessage({
+      type: 'UPDATE_TOKEN',
+      payload: { token },
+    });
   }
 
   onSyncMessageReceived(callback: OnMessageReceivedCallback) {
@@ -259,9 +270,9 @@ export class SyncEngine {
     const schemaHash = collections ? hashObject(collections) : undefined;
     return {
       schema: schemaHash,
-      syncSchema: this.syncOptions.syncSchema,
-      token: this.syncOptions.token,
-      server: this.syncOptions.server,
+      syncSchema: this.client.syncSchema,
+      token: this.client.token,
+      server: this.client.serverUrl,
     };
   }
 
@@ -686,21 +697,6 @@ export class SyncEngine {
    */
   get connectionStatus() {
     return this.transport.connectionStatus;
-  }
-
-  /**
-   * @hidden
-   * Updates the sync engine's configuration options. If the connection is currently open, it will be closed and you will need to call `connect()` again.
-   * @param options
-   */
-  updateConnection(options: Partial<SyncOptions>) {
-    if (this.connectionStatus === 'OPEN') {
-      logger.warn(
-        'You are updating the connection options while the connection is open. To avoid unexpected behavior the connection will be closed and you should call `connect()` again after the update. To hide this warning, call `disconnect()` before updating the connection options.'
-      );
-      this.disconnect();
-    }
-    this.syncOptions = { ...this.syncOptions, ...options };
   }
 
   /**

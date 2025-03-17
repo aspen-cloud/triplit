@@ -53,19 +53,16 @@ import { compareCursors } from '../pagination.js';
 import {
   ClientOptions,
   ClientTransactOptions,
+  ConnectionOptionsChange,
+  ConnectionOptionsChangeHandler,
   SimpleStorageOrInstances,
 } from './types/client.js';
+import { WebSocketTransport } from '../transport/websocket-transport.js';
 
 /**
  * Friendly alias for Models type.
  */
 export type ClientSchema = Models;
-
-// Not totally sold on passing in the token here, but it felt awkward to have it in the sync options since its also relevant to the database
-interface AuthOptions {
-  claimsPath?: string;
-  token?: string;
-}
 
 // Could probably make this an option if you want client side validation
 const SKIP_RULES = true;
@@ -106,15 +103,22 @@ const DEFAULT_FETCH_OPTIONS = {
 
 export class TriplitClient<M extends Models<M> = Models> {
   awaitReady: Promise<void> | null = null;
-
   // @ts-expect-error
   db: EntityDB<M, EntityStoreWithOutbox>;
   /**
    * The sync engine is responsible for managing the connection to the server and syncing data
    */
   syncEngine: SyncEngine;
-  authOptions: AuthOptions;
   private tokenRefreshTimer: ReturnType<typeof setTimeout> | null = null;
+
+  private _token: string | undefined = undefined;
+  private claimsPath: string | undefined = undefined;
+
+  private _serverUrl: string | undefined = undefined;
+
+  private readonly skipRules: boolean = SKIP_RULES;
+
+  readonly syncSchema: boolean;
 
   http: HttpClient<M>;
 
@@ -126,37 +130,25 @@ export class TriplitClient<M extends Models<M> = Models> {
    * Logs are only stored in `debug` mode
    */
   readonly logs: any[] = [];
-  readonly options: ClientOptions<M>;
+
+  private connectOnInitialization: boolean;
+
   /**
    *
    * @param options - The {@link ClientOptions | options} for the client
    */
   constructor(options: ClientOptions<M> = {}) {
-    const {
-      schema,
-      roles,
-      token,
-      onSessionError,
-      refreshOptions,
-      claimsPath,
-      serverUrl,
-      syncSchema,
-      transport,
-      clientId,
-      variables,
-      defaultQueryOptions,
-      logger,
-      logLevel = 'info',
-    } = options;
-
-    const dbSchema = schema ? { collections: schema, roles } : undefined;
+    this.connectOnInitialization = options.autoConnect ?? true;
+    const dbSchema = options.schema
+      ? { collections: options.schema, roles: options.roles }
+      : undefined;
     const storage = getClientStorage(
       options?.storage ?? DEFAULT_STORAGE_OPTION
     );
-
+    this.syncSchema = options.syncSchema ?? false;
     this.awaitReady = createDB({
       schema: dbSchema,
-      variables,
+      variables: options.variables,
       entityStore: new EntityStoreWithOutbox(storage),
       kv: storage,
       clientId: Math.random().toString(36).substring(7),
@@ -164,8 +156,20 @@ export class TriplitClient<M extends Models<M> = Models> {
         shouldTrackChanges: false,
       },
     }).then((db) => {
+      // If we have a session set up at this point, use that info
+      const decoded = this.token
+        ? decodeToken(this.token, this.claimsPath)
+        : {};
       // @ts-expect-error
-      this.db = db;
+      this.db = db.withSessionVars(decoded);
+      this.onConnectionOptionsChange((changes) => {
+        if ('token' in changes) {
+          const decoded = changes.token
+            ? decodeToken(changes.token, this.claimsPath)
+            : {};
+          this.db = this.db.withSessionVars(decoded);
+        }
+      });
       this.db.onCommit(
         // @ts-expect-error
         throttle(
@@ -186,7 +190,7 @@ export class TriplitClient<M extends Models<M> = Models> {
           });
         }
       });
-      if (syncSchema) {
+      if (this.syncSchema) {
         this.subscribeBackground(
           this.db
             .query(
@@ -207,48 +211,56 @@ export class TriplitClient<M extends Models<M> = Models> {
     });
 
     this.logger =
-      logger ??
+      options.logger ??
       new DefaultLogger({
         scope: 'client',
-        level: logLevel,
+        level: options.logLevel,
         // Use debug mode as a proxy for dev mode
-        onLog: logLevel === 'debug' ? (log) => this.logs.push(log) : () => {},
+        onLog:
+          options.logLevel === 'debug'
+            ? (log) => this.logs.push(log)
+            : () => {},
       });
 
-    this.options = options;
-
-    const autoConnect = options?.autoConnect ?? true;
-    this.authOptions = { token, claimsPath };
+    this.claimsPath = options.claimsPath;
 
     this.defaultFetchOptions = {
       fetch: DEFAULT_FETCH_OPTIONS,
-      ...defaultQueryOptions,
+      ...options.defaultQueryOptions,
     };
 
-    validateServerUrl(serverUrl);
-    const syncOptions: SyncOptions = {
-      syncSchema,
-      transport,
-      logger: this.logger.scope('sync'),
-      server: serverUrl,
-    };
+    validateServerUrl(options.serverUrl);
+    this._serverUrl = options.serverUrl;
 
     this.http = new HttpClient<M>({
-      serverUrl,
-      token,
+      serverUrl: this._serverUrl,
+      token: this._token,
       schemaFactory: async () => (await this.getSchema())?.collections as M,
     });
+    this.onConnectionOptionsChange((options) => {
+      this.http.updateOptions(options);
+    });
 
-    this.syncEngine = new SyncEngine(this, syncOptions);
+    this.syncEngine = new SyncEngine(this, {
+      transport: options.transport,
+      logger: this.logger.scope('sync'),
+    });
 
-    if (onSessionError) {
-      this.onSessionError(onSessionError);
+    if (options.onSessionError) {
+      this.onSessionError(options.onSessionError);
     }
     // Look into how calling connect / disconnect early is handled
     // Think this is OK to not await db.ready because it's handled
     // deeper in the call stack where it's specifically needed in the sync engine
     // which is to say when it gets the schema hash for syncing purposes
-    token && this.startSession(token, autoConnect, refreshOptions);
+    if (options.token) {
+      // Asynchronously starts the session if a token is provided
+      this.startSession(
+        options.token,
+        this.connectOnInitialization,
+        options.refreshOptions
+      );
+    }
   }
 
   /**
@@ -276,7 +288,7 @@ export class TriplitClient<M extends Models<M> = Models> {
     this.logger.debug('transact START');
     const resp = await this.db.transact(callback, {
       ...options,
-      skipRules: options.skipRules ?? this.options.skipRules ?? SKIP_RULES,
+      skipRules: this.skipRules,
     });
     this.logger.debug('transact END', resp);
     return resp;
@@ -361,7 +373,7 @@ export class TriplitClient<M extends Models<M> = Models> {
   ): Promise<FetchResult<M, Q, 'many'>> {
     this.logger.debug('fetchLocal START', query);
     const res = await this.db.fetch(query, {
-      skipRules: this.options.skipRules ?? SKIP_RULES,
+      skipRules: this.skipRules,
       ...(options ?? {}),
     });
     this.logger.debug('fetchLocal END', res);
@@ -439,7 +451,7 @@ export class TriplitClient<M extends Models<M> = Models> {
     if (this.awaitReady) await this.awaitReady;
     this.logger.debug('insert START', collectionName, object);
     const resp = await this.db.insert(collectionName, object, {
-      skipRules: this.options.skipRules ?? SKIP_RULES,
+      skipRules: this.skipRules,
     });
     this.logger.debug('insert END', resp);
     return resp;
@@ -461,7 +473,7 @@ export class TriplitClient<M extends Models<M> = Models> {
     if (this.awaitReady) await this.awaitReady;
     this.logger.debug('update START', collectionName, entityId);
     const resp = await this.db.update(collectionName, entityId, data, {
-      skipRules: this.options.skipRules ?? SKIP_RULES,
+      skipRules: this.skipRules,
     });
     this.logger.debug('update END', resp);
     return resp;
@@ -481,7 +493,7 @@ export class TriplitClient<M extends Models<M> = Models> {
     if (this.awaitReady) await this.awaitReady;
     this.logger.debug('delete START', collectionName, entityId);
     const resp = await this.db.delete(collectionName, entityId, {
-      skipRules: this.options.skipRules ?? SKIP_RULES,
+      skipRules: this.skipRules,
     });
     this.logger.debug('delete END', resp);
     return resp;
@@ -553,7 +565,7 @@ export class TriplitClient<M extends Models<M> = Models> {
         : undefined;
 
       const unsubscribeLocal = this.db.subscribe(query, onResults, onError, {
-        skipRules: this.options.skipRules ?? SKIP_RULES,
+        skipRules: this.skipRules,
         ...opts,
       });
 
@@ -584,9 +596,9 @@ export class TriplitClient<M extends Models<M> = Models> {
   private get probablyIntendsToConnect() {
     return (
       this.connectionStatus === 'OPEN' ||
-      (!!this.options.autoConnect &&
-        !!this.syncEngine.syncOptions.token &&
-        !!this.syncEngine.syncOptions.server &&
+      (!!this.connectOnInitialization &&
+        !!this.token &&
+        !!this.serverUrl &&
         this.connectionStatus !== 'CLOSED' &&
         this.connectionStatus !== 'CLOSING')
     );
@@ -1010,39 +1022,36 @@ export class TriplitClient<M extends Models<M> = Models> {
     return returnValue as InfiniteSubscription;
   }
   /**
-   * Updates the `token` or `serverUrl` of the client. If the connection is currently open, it will be closed and you will need to call `connect()` again.
+   * Updates the `token` or `serverUrl` of the client and will inform subscribers. Only will fire to subscribers if the value(s) have changed.
    *
    * @param options - The options to update the client with
    */
-  private async updateOptions(
-    options: Pick<ClientOptions<M>, 'token' | 'serverUrl'>
-  ) {
-    const { token, serverUrl } = options;
-    const hasToken = options.hasOwnProperty('token');
-    const hasServerUrl = options.hasOwnProperty('serverUrl');
-    let updatedSyncOptions = {};
+  private updateConnectionOptions(change: ConnectionOptionsChange) {
+    const { token, serverUrl, tokenRefresh } = change;
+    const hasTokenChange =
+      change.hasOwnProperty('token') && token !== this.token;
+    const hasServerUrlChange =
+      change.hasOwnProperty('serverUrl') && serverUrl !== this.serverUrl;
+    let updatedSyncOptions: Partial<ConnectionOptionsChange> = {};
 
     // handle updating the token and variables for auth purposes
-    if (hasToken) {
-      if (this.awaitReady) await this.awaitReady;
-      this.authOptions = { ...this.authOptions, token };
-      const decoded = this.authOptions.token
-        ? decodeToken(this.authOptions.token, this.authOptions.claimsPath)
-        : {};
-      this.db = this.db.withSessionVars(decoded);
-      // and update the sync engine
-      updatedSyncOptions = { ...updatedSyncOptions, token };
+    if (hasTokenChange) {
+      // TODO: validate is jwt
+      updatedSyncOptions = { ...updatedSyncOptions, token, tokenRefresh };
     }
 
     // handle updating the server url for sync purposes
-    if (hasServerUrl) {
+    if (hasServerUrlChange) {
       validateServerUrl(serverUrl);
-      updatedSyncOptions = { ...updatedSyncOptions, server: serverUrl };
+      updatedSyncOptions = { ...updatedSyncOptions, serverUrl };
     }
 
-    if (hasToken || hasServerUrl) {
-      this.syncEngine.updateConnection(updatedSyncOptions);
-      this.http.updateOptions(updatedSyncOptions);
+    if (hasTokenChange || hasServerUrlChange) {
+      if (hasTokenChange) this._token = token;
+      if (hasServerUrlChange) this._serverUrl = serverUrl;
+      for (const handler of this.connectionOptionsChangeHandlers) {
+        handler(updatedSyncOptions);
+      }
     }
   }
 
@@ -1060,32 +1069,38 @@ export class TriplitClient<M extends Models<M> = Models> {
     autoConnect = true,
     refreshOptions?: TokenRefreshOptions
   ) {
-    // If there is already an active session, you should not be able to start a new one
-    if (this.syncEngine.token) {
-      await this.endSession();
-    }
-    if (tokenIsExpired(decodeToken(token))) {
-      if (!refreshOptions?.refreshHandler) {
-        // should we centralize this in
-        throw new TokenExpiredError();
+    // 1. determine the new token
+    if (token) {
+      if (tokenIsExpired(decodeToken(token, this.claimsPath))) {
+        if (!refreshOptions?.refreshHandler) {
+          // should we centralize this in
+          throw new TokenExpiredError();
+        }
+        const maybeToken = await refreshOptions.refreshHandler();
+        if (!maybeToken) {
+          console.warn(
+            'An expired token was passed to startSession, and the refreshHandler was unable to provide a new token. Session will not be started'
+          );
+          // TODO: should this end the current session?
+          return;
+        }
+        token = maybeToken;
       }
-      const maybeToken = await refreshOptions.refreshHandler();
-      if (!maybeToken) {
-        console.warn(
-          'An expired token was passed to startSession, and the refreshHandler was unable to provide a new token. Session will not be started'
-        );
-        return;
-      }
-      token = maybeToken;
     }
 
-    // Start the session with the provided token
-    // Update the token on the client to the new token (this will close the current connection)
-    await this.updateToken(token);
+    // 2. If the new token is already the current token, do nothing
+    if (token === this.token) return;
 
-    // If autoConnect is true, connect the client to the server
-    autoConnect && this.connect();
+    // 3. End previous session
+    await this.endSession();
 
+    // 4. Update the client token
+    this.updateToken(token);
+
+    // 5. If we should re-connect, do that
+    autoConnect && (await this.connect());
+
+    // 6. Set up a token refresh handler if provided
     // Setup token refresh handler
     if (!refreshOptions) return;
     const { interval, refreshHandler } = refreshOptions;
@@ -1108,7 +1123,7 @@ export class TriplitClient<M extends Models<M> = Models> {
           await this.endSession();
           return;
         }
-        this.updateSessionToken(maybeFreshToken);
+        await this.updateSessionToken(maybeFreshToken);
         setRefreshTimeoutForToken(maybeFreshToken);
       }, delay);
     };
@@ -1133,7 +1148,7 @@ export class TriplitClient<M extends Models<M> = Models> {
    */
   async updateSessionToken(token: string) {
     if (this.awaitReady) await this.awaitReady;
-    if (!this.syncEngine.token) {
+    if (!this.token) {
       throw new NoActiveSessionError();
     }
     const decodedToken = decodeToken(token);
@@ -1149,7 +1164,23 @@ export class TriplitClient<M extends Models<M> = Models> {
     if (!sessionRolesAreEquivalent(this.db.session?.roles, sessionRoles)) {
       throw new SessionRolesMismatchError();
     }
-    this.syncEngine.updateTokenForSession(token);
+    this.updateToken(token, true);
+    const didSend = this.syncEngine.updateTokenForSession(token);
+    if (!didSend) {
+      // There is a chance the message to update the token wont send, for safety just try again once more
+      const sentAfterDelay = await new Promise<boolean>((res, rej) =>
+        setTimeout(
+          () => res(this.syncEngine.updateTokenForSession(token)),
+          1000
+        )
+      );
+      if (!sentAfterDelay)
+        // TODO: end session?
+        // If this throws, we should evaluate how to handle different states of our websocket transport and if/when we should queue messages
+        throw new TriplitError(
+          'Failed to update the session token for the current session.'
+        );
+    }
   }
 
   resetTokenRefreshHandler() {
@@ -1163,12 +1194,6 @@ export class TriplitClient<M extends Models<M> = Models> {
     return this.syncEngine.onSessionError(callback);
   }
 
-  withSessionVars(session: any) {
-    const newClient = new TriplitClient<M>(this.options);
-    newClient.db = this.db.withSessionVars(session);
-    return newClient;
-  }
-
   async updateGlobalVariables(vars: Record<string, any>): Promise<void> {
     if (this.awaitReady) await this.awaitReady;
     this.db.updateGlobalVariables(vars);
@@ -1179,8 +1204,8 @@ export class TriplitClient<M extends Models<M> = Models> {
    *
    * @param token
    */
-  private async updateToken(token: string | undefined) {
-    await this.updateOptions({ token });
+  private updateToken(token: string | undefined, refresh?: boolean) {
+    this.updateConnectionOptions({ token, tokenRefresh: refresh });
   }
 
   /**
@@ -1188,8 +1213,8 @@ export class TriplitClient<M extends Models<M> = Models> {
    *
    * @param serverUrl
    */
-  async updateServerUrl(serverUrl: string | undefined) {
-    await this.updateOptions({ serverUrl });
+  updateServerUrl(serverUrl: string | undefined) {
+    this.updateConnectionOptions({ serverUrl });
   }
 
   /**
@@ -1222,7 +1247,11 @@ export class TriplitClient<M extends Models<M> = Models> {
    * The token used to authenticate with the server
    */
   get token() {
-    return this.syncEngine.token;
+    return this._token;
+  }
+
+  get serverUrl() {
+    return this._serverUrl;
   }
 
   onSyncMessageReceived(
@@ -1286,6 +1315,18 @@ export class TriplitClient<M extends Models<M> = Models> {
     ...args: Parameters<typeof this.syncEngine.clearPendingChangesAll>
   ) {
     return this.syncEngine.clearPendingChangesAll(...args);
+  }
+
+  private connectionOptionsChangeHandlers: Array<ConnectionOptionsChangeHandler> =
+    [];
+  onConnectionOptionsChange(
+    callback: ConnectionOptionsChangeHandler
+  ): () => void {
+    this.connectionOptionsChangeHandlers.push(callback);
+    return () => {
+      this.connectionOptionsChangeHandlers =
+        this.connectionOptionsChangeHandlers.filter((cb) => cb !== callback);
+    };
   }
 }
 
