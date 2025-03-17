@@ -14,11 +14,11 @@ it('on client creation, should set up HTTP client with proper options passed thr
       autoConnect: false,
     });
     // TODO: shoudlnt use options.token, fixup init state
-    expect(client.options.token).toBeUndefined();
+    expect(client.token).toBeUndefined();
     expect(client.http.options.token).toBeUndefined();
-    expect(client.options.serverUrl).toBeUndefined();
+    expect(client.serverUrl).toBeUndefined();
     expect(client.http.options.schema).toBeUndefined();
-    expect(client.schema).toBeUndefined();
+    expect(await client.getSchema()).toBeUndefined();
     expect(await client.http.schema()).toBeUndefined();
   }
   // with options
@@ -38,9 +38,9 @@ it('on client creation, should set up HTTP client with proper options passed thr
       autoConnect: false,
     });
     // TODO: shoudlnt use options.token, fixup init state
-    expect(client.options.token).toBe(TOKEN);
+    expect(client.token).toBe(TOKEN);
     expect(client.http.options.token).toBe(TOKEN);
-    expect(client.options.serverUrl).toBe('http://localhost');
+    expect(client.serverUrl).toBe('http://localhost');
     expect(client.http.options.serverUrl).toBe('http://localhost');
     expect((await client.getSchema())?.collections).toEqual(schema);
     expect(await client.http.schema()).toEqual(schema);

@@ -156,12 +156,15 @@ export class TriplitClient<M extends Models<M> = Models> {
         shouldTrackChanges: false,
       },
     }).then((db) => {
-      // If we have a session set up at this point, use that info
-      const decoded = this.token
-        ? decodeToken(this.token, this.claimsPath)
-        : {};
-      // @ts-expect-error
-      this.db = db.withSessionVars(decoded);
+      if (this.token) {
+        // If we have a session set up at this point, use that info
+        const decoded = decodeToken(this.token, this.claimsPath);
+        // @ts-expect-error
+        this.db = db.withSessionVars(decoded);
+      } else {
+        // @ts-expect-error
+        this.db = db;
+      }
       this.onConnectionOptionsChange((changes) => {
         if ('token' in changes) {
           const decoded = changes.token
@@ -1094,7 +1097,7 @@ export class TriplitClient<M extends Models<M> = Models> {
     if (token === this.token) return;
 
     // 3. End previous session
-    if (this.token) this.endSession();
+    if (this.token) await this.endSession();
 
     // 4. Update the client token
     this.updateToken(token);
@@ -1122,7 +1125,7 @@ export class TriplitClient<M extends Models<M> = Models> {
           this.logger.warn(
             'The token refresh handler did not return a new token, ending the session.'
           );
-          this.endSession();
+          await this.endSession();
           return;
         }
         await this.updateSessionToken(maybeFreshToken);
@@ -1138,7 +1141,7 @@ export class TriplitClient<M extends Models<M> = Models> {
   /**
    * Disconnects the client from the server and ends the current sync session.
    */
-  endSession() {
+  async endSession() {
     this.resetTokenRefreshHandler();
     this.disconnect();
     this.updateToken(undefined);

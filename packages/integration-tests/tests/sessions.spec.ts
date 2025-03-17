@@ -85,7 +85,7 @@ describe.each([TriplitClient, WorkerClient])('%O', (Client) => {
       expect(dataResult.length).toBe(2);
 
       // End session
-      client.endSession();
+      await client.endSession();
       await pause(200);
       expect(sessionErrorSpy).not.toHaveBeenCalled();
       // expect(client.connectionStatus).toBe('CLOSED');

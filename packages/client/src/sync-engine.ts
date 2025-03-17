@@ -464,6 +464,10 @@ export class SyncEngine {
    * A signal to abort the connection to the server in case it is cancelled while the connection is in progress
    */
   private connectionAbort = false;
+
+  /**
+   * A hash of the last set of connected params, should not reconnect if the same params are used twice and the connection is already open
+   */
   private lastParamsHash: number | undefined = undefined;
 
   async connect() {
@@ -479,6 +483,7 @@ export class SyncEngine {
     if (this.connectionAbort) return;
     if (!validateConnectionParamsWithWarning(params)) return;
     const paramsHash = hashObject(params);
+
     // If there is not an existing connection, reset lastParamsHash
     if (
       this.connectionStatus !== 'OPEN' &&
@@ -486,6 +491,7 @@ export class SyncEngine {
     ) {
       this.lastParamsHash = undefined;
     }
+
     // Dont reconnect with the same parameters
     if (this.lastParamsHash === paramsHash) return;
 

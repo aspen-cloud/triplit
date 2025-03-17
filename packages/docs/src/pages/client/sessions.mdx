@@ -154,8 +154,8 @@ const client = new TriplitClient({
   onSessionError: (type) => {
     if (type === 'TOKEN_EXPIRED') {
       // log the user out
-      client.endSession();
-      client.clear();
+      await client.endSession();
+      await client.clear();
     }
   },
 });
