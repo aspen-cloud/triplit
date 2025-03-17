@@ -1,5 +1,12 @@
 # @triplit/entity-db
 
+## 1.0.8
+
+### Patch Changes
+
+- c4cdb1ec: fixup relational variable filter paths starting from $0
+- 0e9ae548: handle subquery filters in OR groups in write permissions
+
 ## 1.0.7
 
 ### Patch Changes
