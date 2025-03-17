@@ -1141,6 +1141,7 @@ export class TriplitClient<M extends Models<M> = Models> {
   /**
    * Disconnects the client from the server and ends the current sync session.
    */
+  // NOTE: this is not synchronous, should we make it so? That would break the current API if you relied on the promise return type
   async endSession() {
     this.resetTokenRefreshHandler();
     this.disconnect();
