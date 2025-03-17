@@ -1,12 +1,11 @@
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
-import { DB, DBSchema } from '../src/db.js';
+import { DB } from '../src/db.js';
 import { Schema as S } from '../src/schema/builder.js';
 import { and, exists, or } from '../src/filters.js';
 import {
   SessionVariableNotFoundError,
   WritePermissionError,
 } from '../src/errors.js';
-import { BTreeKVStore } from '../src/kv-store/storage/memory-btree.js';
 import { CollectionQuery } from '../src/query.js';
 
 const messagingSchema = {
@@ -371,7 +370,7 @@ describe('Read', () => {
 
   it('permission-less collections can always be read', async () => {
     const schema = {
-      collections: {
+      collections: S.Collections({
         permissioned: {
           schema: S.Schema({
             id: S.Id(),
@@ -389,8 +388,8 @@ describe('Read', () => {
             id: S.Id(),
           }),
         },
-      },
-    } satisfies DBSchema;
+      }),
+    };
     const db = new DB({ schema });
     await db.insert('permissioned', { id: '1' }, { skipRules: true });
     await db.insert('permissionless', { id: '1' }, { skipRules: true });
@@ -423,7 +422,7 @@ describe('Read', () => {
           },
         },
       },
-      collections: {
+      collections: S.Collections({
         messages: {
           schema: S.Schema({
             id: S.Id(),
@@ -449,8 +448,8 @@ describe('Read', () => {
             },
           },
         },
-      },
-    } satisfies DBSchema;
+      }),
+    };
 
     const db = new DB({ schema });
 
@@ -530,7 +529,7 @@ describe('Read', () => {
             },
           },
         },
-        collections: {
+        collections: S.Collections({
           messages: {
             schema: S.Schema({
               id: S.Id(),
@@ -556,8 +555,8 @@ describe('Read', () => {
               },
             },
           },
-        },
-      } satisfies DBSchema;
+        }),
+      };
       const db = new DB({ schema });
 
       const user1Token = {
@@ -581,7 +580,7 @@ describe('Read', () => {
           },
         },
       },
-      collections: {
+      collections: S.Collections({
         testMissingRole: {
           schema: S.Schema({
             id: S.Id(),
@@ -618,8 +617,8 @@ describe('Read', () => {
             },
           },
         },
-      },
-    } satisfies DBSchema;
+      }),
+    };
     const db = new DB({ schema });
     await db.insert('testMissingRole', { id: '1' }, { skipRules: true });
     await db.insert('testMissingRule', { id: '1' }, { skipRules: true });
@@ -732,7 +731,7 @@ describe('Insert', () => {
 
   it('permission-less collections can always be written to', async () => {
     const schema = {
-      collections: {
+      collections: S.Collections({
         permissioned: {
           schema: S.Schema({
             id: S.Id(),
@@ -750,8 +749,8 @@ describe('Insert', () => {
             id: S.Id(),
           }),
         },
-      },
-    } satisfies DBSchema;
+      }),
+    };
 
     const db = new DB({ schema });
     await expect(db.insert('permissioned', { id: '1' })).rejects.toThrow(
@@ -777,7 +776,7 @@ describe('Insert', () => {
           },
         },
       },
-      collections: {
+      collections: S.Collections({
         messages: {
           schema: S.Schema({
             id: S.Id(),
@@ -797,8 +796,8 @@ describe('Insert', () => {
             },
           },
         },
-      },
-    } satisfies DBSchema;
+      }),
+    };
 
     const db = new DB({ schema });
 
@@ -812,8 +811,6 @@ describe('Insert', () => {
 
     const user1DB = db.withSessionVars(user1Token);
     const adminDB = db.withSessionVars(adminToken);
-
-    await adminDB.ready;
 
     expect(adminDB.session?.roles).toEqual(
       expect.arrayContaining([
@@ -857,7 +854,7 @@ describe('Insert', () => {
           },
         },
       },
-      collections: {
+      collections: S.Collections({
         messages: {
           schema: S.Schema({
             id: S.Id(),
@@ -876,8 +873,8 @@ describe('Insert', () => {
             },
           },
         },
-      },
-    } satisfies DBSchema;
+      }),
+    };
 
     const db = new DB({ schema });
 
@@ -908,7 +905,7 @@ describe('Insert', () => {
           },
         },
       },
-      collections: {
+      collections: S.Collections({
         profile: {
           schema: S.Schema({
             id: S.Id(),
@@ -945,8 +942,8 @@ describe('Insert', () => {
             },
           },
         },
-      },
-    } satisfies DBSchema;
+      }),
+    };
 
     const db = new DB({ schema });
 
@@ -979,7 +976,7 @@ describe('Insert', () => {
           },
         },
       },
-      collections: {
+      collections: S.Collections({
         testMissingRole: {
           schema: S.Schema({
             id: S.Id(),
@@ -1022,8 +1019,8 @@ describe('Insert', () => {
             },
           },
         },
-      },
-    } satisfies DBSchema;
+      }),
+    };
     const db = new DB({ schema });
     const user1DB = db.withSessionVars({ user_id: 'user-1' });
 
@@ -1107,7 +1104,7 @@ describe('Update', () => {
 
   it('permission-less collections can always be updated', async () => {
     const schema = {
-      collections: {
+      collections: S.Collections({
         permissioned: {
           schema: S.Schema({
             id: S.Id(),
@@ -1130,8 +1127,8 @@ describe('Update', () => {
             data: S.String(),
           }),
         },
-      },
-    } satisfies DBSchema;
+      }),
+    };
 
     const db = new DB({ schema });
     await db.insert(
@@ -1166,7 +1163,7 @@ describe('Update', () => {
           },
         },
       },
-      collections: {
+      collections: S.Collections({
         updatePermission: {
           schema: S.Schema({
             id: S.Id(),
@@ -1202,8 +1199,8 @@ describe('Update', () => {
             authenticated: {},
           },
         },
-      },
-    } satisfies DBSchema;
+      }),
+    };
 
     const db = new DB({ schema });
     await db.insert(
@@ -1261,7 +1258,7 @@ describe('Update', () => {
           },
         },
       },
-      collections: {
+      collections: S.Collections({
         messages: {
           schema: S.Schema({
             id: S.Id(),
@@ -1281,8 +1278,8 @@ describe('Update', () => {
             },
           },
         },
-      },
-    } satisfies DBSchema;
+      }),
+    };
 
     const db = new DB({ schema });
 
@@ -1406,7 +1403,7 @@ describe('Delete', () => {
 
   it('permission-less collections can always be deleted from', async () => {
     const schema = {
-      collections: {
+      collections: S.Collections({
         permissioned: {
           schema: S.Schema({
             id: S.Id(),
@@ -1424,8 +1421,8 @@ describe('Delete', () => {
             id: S.Id(),
           }),
         },
-      },
-    } satisfies DBSchema;
+      }),
+    };
 
     const db = new DB({ schema });
     await db.insert('permissioned', { id: '1' }, { skipRules: true });
@@ -1452,7 +1449,7 @@ describe('Delete', () => {
           },
         },
       },
-      collections: {
+      collections: S.Collections({
         messages: {
           schema: S.Schema({
             id: S.Id(),
@@ -1472,8 +1469,8 @@ describe('Delete', () => {
             },
           },
         },
-      },
-    } satisfies DBSchema;
+      }),
+    };
 
     const db = new DB({ schema });
 
@@ -1625,7 +1622,7 @@ it('write permissions are not recursively applied', async () => {
         },
       },
     },
-    collections: {
+    collections: S.Collections({
       test1: {
         schema: S.Schema({
           id: S.Id(),
@@ -1661,8 +1658,8 @@ it('write permissions are not recursively applied', async () => {
           },
         },
       },
-    },
-  } satisfies DBSchema;
+    }),
+  };
 
   const db = new DB({ schema });
 
