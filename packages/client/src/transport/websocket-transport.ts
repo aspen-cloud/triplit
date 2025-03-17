@@ -31,7 +31,6 @@ export class WebSocketTransport implements SyncTransport {
     return !!this.ws && this.ws.readyState === this.ws.OPEN;
   }
   get connectionStatus(): ConnectionStatus {
-    // @ts-expect-error
     return this.ws ? friendlyReadyState(this.ws) : 'UNINITIALIZED';
   }
   onOpen(callback: (ev: any) => void): void {
