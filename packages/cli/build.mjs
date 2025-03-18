@@ -1,5 +1,5 @@
 import { build } from 'esbuild';
-import { readdirSync, statSync, readFileSync, copyFileSync } from 'fs';
+import { readdirSync, statSync, readFileSync, copyFileSync, rmSync } from 'fs';
 import { join, resolve } from 'path';
 
 const SRC_DIR = 'src';
@@ -83,6 +83,8 @@ async function buildFiles() {
   const entryFilePath = join(SRC_DIR, 'index.ts');
   const files = [entryFilePath, ...cmdFiles];
   const deps = getDeps();
+  // rm rf OUT_DIR, otherwise we generate duplicate files between builds
+  rmSync(OUT_DIR, { recursive: true, force: true });
   await build({
     inject: ['./cjs-shim.js'],
     entryPoints: files,
