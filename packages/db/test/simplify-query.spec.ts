@@ -306,4 +306,35 @@ describe('filter simplification', () => {
       });
     }
   });
+
+  it('simplifies subquery filters', () => {
+    const simplified = simplifyQuery({
+      collectionName: 'test',
+      where: [
+        {
+          exists: {
+            collectionName: 'test2',
+            where: [
+              // should simplify this to one filter statement
+              {
+                mod: 'or',
+                filters: [['id', '=', 1]],
+              },
+            ],
+          },
+        },
+      ],
+    });
+    expect(simplified).toEqual({
+      collectionName: 'test',
+      where: [
+        {
+          exists: {
+            collectionName: 'test2',
+            where: [['id', '=', 1]],
+          },
+        },
+      ],
+    });
+  });
 });

@@ -4,7 +4,7 @@ import type {
   QueryWhere,
   WhereFilter,
 } from './query.js';
-import { isFilterGroup } from './filters.js';
+import { isFilterGroup, isSubQueryFilter } from './filters.js';
 
 /**
  * Simplifies a query by removing redundant parts
@@ -61,6 +61,11 @@ function simplifyWhereClauses(
 function simplifyWhereClause(clause: WhereFilter) {
   if (isFilterGroup(clause)) {
     return simplifyFilterGroup(clause);
+  }
+  if (isSubQueryFilter(clause)) {
+    return {
+      exists: simplifyQuery(clause.exists),
+    };
   }
   return clause;
 }
