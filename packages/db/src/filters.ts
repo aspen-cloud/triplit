@@ -88,12 +88,24 @@ export function satisfiesNonRelationalFilter(
     const { mod, filters } = filter;
     if (mod === 'and') {
       return filters.every((f) =>
-        satisfiesNonRelationalFilter(collectionName, entity, f, schema)
+        satisfiesNonRelationalFilter(
+          collectionName,
+          entity,
+          f,
+          schema,
+          ignoreSubQueries
+        )
       );
     }
     if (mod === 'or') {
       return filters.some((f) =>
-        satisfiesNonRelationalFilter(collectionName, entity, f, schema)
+        satisfiesNonRelationalFilter(
+          collectionName,
+          entity,
+          f,
+          schema,
+          ignoreSubQueries
+        )
       );
     }
     return false;
