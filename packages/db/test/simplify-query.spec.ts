@@ -338,3 +338,103 @@ describe('filter simplification', () => {
     });
   });
 });
+
+describe('order simplification', () => {
+  it('allows undefined order', () => {
+    const simplified = simplifyQuery({
+      collectionName: 'test',
+      order: undefined,
+    });
+    expect(simplified).toEqual({ collectionName: 'test' });
+  });
+  it('drops empty order groups', () => {
+    const simplified = simplifyQuery({
+      collectionName: 'test',
+      order: [],
+    });
+    expect(simplified).toEqual({ collectionName: 'test' });
+  });
+  it('simplifies order subqueries', () => {
+    const simplified = simplifyQuery({
+      collectionName: 'test',
+      order: [
+        // @ts-expect-error
+        [
+          'id',
+          'ASC',
+          {
+            subquery: {
+              collectionName: 'test2',
+              where: [
+                {
+                  mod: 'or',
+                  filters: [['id', '=', 1]],
+                },
+              ],
+            },
+            cardinality: 'one',
+          },
+        ],
+      ],
+    });
+    expect(simplified).toEqual({
+      collectionName: 'test',
+      order: [
+        [
+          'id',
+          'ASC',
+          {
+            subquery: {
+              collectionName: 'test2',
+              where: [['id', '=', 1]],
+            },
+            cardinality: 'one',
+          },
+        ],
+      ],
+    });
+  });
+});
+
+describe('inclusion simplification', () => {
+  it('allows undefined include', () => {
+    const simplified = simplifyQuery({
+      collectionName: 'test',
+      include: undefined,
+    });
+    expect(simplified).toEqual({ collectionName: 'test' });
+  });
+  it('drops empty include groups', () => {
+    const simplified = simplifyQuery({
+      collectionName: 'test',
+      include: {},
+    });
+    expect(simplified).toEqual({ collectionName: 'test' });
+  });
+  it('simplifies subquery definitions', () => {
+    const simplified = simplifyQuery({
+      collectionName: 'test',
+      include: {
+        test: {
+          subquery: {
+            collectionName: 'test2',
+            where: [{ mod: 'or', filters: [['id', '=', 1]] }],
+          },
+          cardinality: 'one',
+        },
+      },
+    });
+    expect(simplified).toEqual({
+      collectionName: 'test',
+      include: {
+        test: {
+          subquery: {
+            collectionName: 'test2',
+            where: [['id', '=', 1]],
+          },
+          cardinality: 'one',
+        },
+      },
+    });
+  });
+});
