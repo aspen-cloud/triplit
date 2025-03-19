@@ -1,4 +1,5 @@
 import path from 'path';
+import { fileURLToPath } from 'url';
 
 export function triplitMetroConfig(config: any) {
   const currentResolver = config.resolver.resolveRequest;
@@ -28,7 +29,7 @@ export function triplitMetroResolveRequest(moduleName: string) {
     }
     const dep = `@triplit/${packageName}`;
     const suffix = rewriteDepPath(dep, depPath.join('/'));
-    const basePath = path.dirname(require.resolve(dep));
+    const basePath = path.dirname(resolveDependency(dep));
     const filePath = path.join(
       basePath,
       suffix.endsWith('.js') ? suffix : `${suffix}.js`
@@ -48,4 +49,18 @@ function rewriteDepPath(dep: string, depPath: string) {
     }
   }
   return depPath;
+}
+
+function resolveDependency(dep: string) {
+  // CommonJS
+  if (typeof require !== 'undefined') {
+    return require.resolve(dep);
+  }
+  // If unavailable use ESM apis
+  if (typeof import.meta.resolve === 'function') {
+    const resolvedPath = import.meta.resolve(dep);
+    return fileURLToPath(resolvedPath);
+  }
+
+  throw new Error('Cannot resolve dependency: ' + dep);
 }
