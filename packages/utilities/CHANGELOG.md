@@ -1,5 +1,11 @@
 # @triplit/utilities
 
+## 0.0.12
+
+### Patch Changes
+
+- 5354b7d2: add metro config helpers to utilities
+
 ## 0.0.11
 
 ### Patch Changes

@@ -1,5 +1,13 @@
 # @triplit/client
 
+## 1.0.12
+
+### Patch Changes
+
+- ad6618dd: separate out client transport exports
+- Updated dependencies [b37e241f]
+  - @triplit/db@1.0.11
+
 ## 1.0.11
 
 ### Patch Changes
