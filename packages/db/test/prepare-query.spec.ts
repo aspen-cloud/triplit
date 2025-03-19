@@ -393,7 +393,7 @@ describe('include', () => {
         applyPermission: undefined,
       }
     );
-    expect(query.include).toEqual({});
+    expect(query.include).toBeUndefined();
   });
 
   it('accepts subqueries', () => {
