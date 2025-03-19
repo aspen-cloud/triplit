@@ -1,5 +1,13 @@
 # @triplit/client
 
+## 1.0.11
+
+### Patch Changes
+
+- e9395371: add a few more specific return types
+- Updated dependencies [e9395371]
+  - @triplit/db@1.0.10
+
 ## 1.0.10
 
 ### Patch Changes

@@ -1,5 +1,11 @@
 # @triplit/entity-db
 
+## 1.0.10
+
+### Patch Changes
+
+- e9395371: add a few more specific return types
+
 ## 1.0.9
 
 ### Patch Changes
