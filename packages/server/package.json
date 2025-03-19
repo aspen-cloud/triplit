@@ -1,7 +1,7 @@
 {
   "name": "@triplit/server",
   "packageManager": "yarn@3.4.1",
-  "version": "1.0.12",
+  "version": "1.0.13",
   "source": "./src/index.ts",
   "main": "./dist/index.js",
   "type": "module",

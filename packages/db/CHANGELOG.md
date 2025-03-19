@@ -1,5 +1,11 @@
 # @triplit/entity-db
 
+## 1.0.11
+
+### Patch Changes
+
+- b37e241f: simplify order and include clauses with subqueries
+
 ## 1.0.10
 
 ### Patch Changes

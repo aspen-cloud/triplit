@@ -1,7 +1,7 @@
 {
   "name": "react-template",
   "private": true,
-  "version": "1.0.11",
+  "version": "1.0.12",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -10,13 +10,13 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@triplit/client": "1.0.11",
-    "@triplit/react": "1.0.11",
+    "@triplit/client": "1.0.12",
+    "@triplit/react": "1.0.12",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },
   "devDependencies": {
-    "@triplit/cli": "1.0.11",
+    "@triplit/cli": "1.0.12",
     "@types/react": "^19.0.10",
     "@types/react-dom": "^19.0.4",
     "@typescript-eslint/eslint-plugin": "^6.14.0",
