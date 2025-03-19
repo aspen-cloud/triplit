@@ -1,5 +1,12 @@
 # @triplit/entity-db
 
+## 1.0.9
+
+### Patch Changes
+
+- 0f8a4a4a: simplify subquery filters during preparation
+- a7c98bcd: Fix nested relational filters in fitler groups like AND and OR (usually in permissions) failing in subscriptions
+
 ## 1.0.8
 
 ### Patch Changes
