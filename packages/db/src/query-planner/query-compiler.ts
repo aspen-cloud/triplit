@@ -281,15 +281,15 @@ export function compileQuery(
   query: CollectionQuery,
   schema: Models | undefined
 ): CompiledPlan {
-  console.dir({ query }, { depth: null });
+  // console.dir({ query }, { depth: null });
   let nextViewId = 0;
   const generateViewId = (): string => {
     return `${nextViewId++}`;
   };
   const relationalPlan = extractViews(query, schema, generateViewId);
-  console.dir({ relationalPlan }, { depth: null });
+  // console.dir({ relationalPlan }, { depth: null });
   const compiledPlan = compileRelationalPlan(relationalPlan);
-  console.dir({ compiledPlan }, { depth: null });
+  // console.dir({ compiledPlan }, { depth: null });
   return compiledPlan;
 }
 
