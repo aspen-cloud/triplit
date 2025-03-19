@@ -58,11 +58,9 @@ Next, install Triplit's packages:
 
 ### 2. Update metro.config.js
 
-Triplit has a few packages that use features unsupported by the Metro bundler like [exports](https://nodejs.org/docs/latest-v18.x/api/packages.html#package-entry-points). So, Triplit provides a utility for generating a custom Metro config that will resolve these exports.
+Triplit has a few packages that use features unsupported by the Metro bundler like [exports](https://nodejs.org/docs/latest-v18.x/api/packages.html#package-entry-points). Triplit provides a utility for generating a custom Metro config that will resolve these exports.
 
-To handle these imports, you will need to customize the Metro bundler. If you have not already created a `metro.config.js` file, please see the Expo docs on properly [configuring Metro](https://docs.expo.dev/guides/customizing-metro/). Once you have created a `metro.config.js` file, you can add the following code to resolve the exports from the Triplit packages:
-
-You will need to make sure to install `@triplit/utilities` as a dev dependency (as instructed in step 1):
+To handle Triplit's packages you will need to customize the Metro bundler. If you have not already created a `metro.config.js` file, please see the Expo docs on properly [configuring Metro](https://docs.expo.dev/guides/customizing-metro/). Once you have created a `metro.config.js` file and installed `@triplit/utilities` as a dev dependency, you can add the following code to properly resolve Triplit packages:
 
 ```javascript
 const { getDefaultConfig } = require('expo/metro-config');
