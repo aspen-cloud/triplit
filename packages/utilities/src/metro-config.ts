@@ -27,7 +27,7 @@ export function triplitMetroResolveRequest(moduleName: string) {
       return undefined;
     }
     const dep = `@triplit/${packageName}`;
-    const suffix = rewritePath(dep, depPath.join('/'));
+    const suffix = rewriteDepPath(dep, depPath.join('/'));
     const basePath = path.dirname(require.resolve(dep));
     const filePath = path.join(
       basePath,
@@ -41,11 +41,11 @@ export function triplitMetroResolveRequest(moduleName: string) {
   return undefined;
 }
 
-function rewritePath(dep: string, path: string) {
+function rewriteDepPath(dep: string, depPath: string) {
   if (dep === '@triplit/db') {
-    if (path.startsWith('storage/')) {
-      return path.replace('storage/', 'kv-store/storage/');
+    if (depPath.startsWith('storage/')) {
+      return depPath.replace('storage/', 'kv-store/storage/');
     }
   }
-  return path;
+  return depPath;
 }
