@@ -46,6 +46,11 @@
       "types": "./dist/storage/*.d.ts",
       "import": "./dist/storage/*.js",
       "default": "./dist/storage/*.js"
+    },
+    "./transport/*": {
+      "types": "./dist/transport/*.d.ts",
+      "import": "./dist/transport/*.js",
+      "default": "./dist/transport/*.js"
     }
   },
   "scripts": {
