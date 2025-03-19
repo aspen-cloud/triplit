@@ -1,5 +1,11 @@
 # @triplit/cli
 
+## 1.0.10
+
+### Patch Changes
+
+- 92fb3808: Improve error logging between CLI and dev server
+
 ## 1.0.9
 
 ### Patch Changes
