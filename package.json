@@ -13,7 +13,7 @@
     "lint": "yarn workspaces foreach --all run lint",
     "version": "changeset version && yarn install --mode update-lockfile",
     "version:canary": "changeset version --snapshot canary && yarn install --mode update-lockfile",
-    "changeset": "changeset && node ./scripts/generate-cli-dependency-changeset.js",
+    "changeset": "changeset && node ./scripts/generate-manual-dependency-changeset.js",
     "test": "yarn workspaces foreach --all -p --exclude @triplit/db run test"
   },
   "devDependencies": {
