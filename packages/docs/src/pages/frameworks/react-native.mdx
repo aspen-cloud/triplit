@@ -30,27 +30,27 @@ Next, install Triplit's packages:
   <Tab>
     ```bash
     npm i @triplit/client @triplit/react
-    npm i @triplit/cli --save-dev
+    npm i @triplit/cli @triplit/utilities --save-dev
     ```
   </Tab>
   <Tab>
     ```bash
     pnpm add @triplit/client @triplit/react
-    pnpm add @triplit/cli --save-dev
+    pnpm add @triplit/cli @triplit/utilities --save-dev
     ```
 
   </Tab>
   <Tab>
     ```bash
     yarn add @triplit/client @triplit/react
-    yarn add @triplit/cli --dev
+    yarn add @triplit/cli @triplit/utilities --dev
     ```
 
   </Tab>
   <Tab>
     ```bash
     bun add @triplit/client @triplit/react
-    bun add @triplit/cli --dev
+    bun add @triplit/cli @triplit/utilities --dev
     ```
     
     </Tab>
@@ -58,42 +58,37 @@ Next, install Triplit's packages:
 
 ### 2. Update metro.config.js
 
-Some Triplit packages use [Package Exports](https://nodejs.org/docs/latest-v18.x/api/packages.html#package-entry-points), which Metro does not yet support.
-
-<Callout type="info" emoji="ℹ️">
-  Metro does have a configuration option
-  [unstable_enablePackageExports](https://metrobundler.dev/docs/configuration/#unstable_enablepackageexports-experimental)
-  but we found it broke other parts of the package resolution process.
-</Callout>
+Triplit has a few packages that use features unsupported by the Metro bundler like [exports](https://nodejs.org/docs/latest-v18.x/api/packages.html#package-entry-points). So, Triplit provides a utility for generating a custom Metro config that will resolve these exports.
 
 To handle these imports, you will need to customize the Metro bundler. If you have not already created a `metro.config.js` file, please see the Expo docs on properly [configuring Metro](https://docs.expo.dev/guides/customizing-metro/). Once you have created a `metro.config.js` file, you can add the following code to resolve the exports from the Triplit packages:
 
+You will need to make sure to install `@triplit/utilities` as a dev dependency (as instructed in step 1):
+
 ```javascript
 const { getDefaultConfig } = require('expo/metro-config');
-const path = require('path');
 const config = getDefaultConfig(__dirname);
+const { triplitMetroConfig } = require('@triplit/utilities/metro-config');
 
-// additional configuration steps
+module.exports = triplitMetroConfig(config);
+```
 
-// Resolve exports for these Triplit packages
-const packageExportsDependencies = ['@triplit/db', '@triplit/logger'];
-// Custom resolver function
-function customResolver(context, moduleName, platform) {
-  for (const dep of packageExportsDependencies) {
-    const prefix = dep + '/';
-    if (moduleName.startsWith(prefix)) {
-      const suffix = moduleName.replace(prefix, '');
-      const basePath = path.dirname(require.resolve(dep));
-      const filePath = path.join(basePath, `${suffix}.js`);
-      return {
-        filePath: filePath,
-        type: 'sourceFile',
-      };
-    }
-  }
+If you would like more control over dependency resolution, you can import `triplitMetroResolveRequest` and use it inside a custom resolver.
+
+```javascript
+const { getDefaultConfig } = require('expo/metro-config');
+const config = getDefaultConfig(__dirname);
+const {
+  triplitMetroResolveRequest,
+} = require('@triplit/utilities/metro-config');
+
+config.resolver.resolveRequest = (context, moduleName, platform) => {
+  const triplitResult = triplitMetroResolveRequest(moduleName);
+  if (triplitResult) return triplitResult;
+
+  // Additional resolver logic
+
   return context.resolveRequest(context, moduleName, platform);
-}
-config.resolver.resolveRequest = customResolver;
+};
 
 module.exports = config;
 ```
