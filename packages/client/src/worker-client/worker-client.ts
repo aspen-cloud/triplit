@@ -19,6 +19,7 @@ import {
   InvalidCollectionNameError,
   Models,
   queryBuilder,
+  ReadModel,
   SchemaQuery,
   SubscriptionResultsCallback,
   TransactCallback,
@@ -139,7 +140,7 @@ export class WorkerClient<M extends Models<M> = Models> implements Client<M> {
   async fetch<Q extends SchemaQuery<M>>(
     query: Q,
     options?: Partial<ClientFetchOptions>
-  ) {
+  ): Promise<FetchResult<M, Q, 'many'>> {
     await this.initialized;
     return this.clientWorker.fetch(query, options);
   }
@@ -229,21 +230,21 @@ export class WorkerClient<M extends Models<M> = Models> implements Client<M> {
     collectionName: CN,
     id: string,
     options?: Partial<ClientFetchOptions>
-  ) {
+  ): Promise<FetchResult<M, { collectionName: CN }, 'one'>> {
     await this.initialized;
     return this.clientWorker.fetchById(collectionName, id, options);
   }
   async fetchOne<Q extends SchemaQuery<M>>(
     query: Q,
     options?: Partial<ClientFetchOptions>
-  ) {
+  ): Promise<FetchResult<M, Q, 'one'>> {
     await this.initialized;
     return this.clientWorker.fetchOne(query, options);
   }
   async insert<CN extends CollectionNameFromModels<M>>(
     collectionName: CN,
     object: WriteModel<M, CN>
-  ) {
+  ): Promise<ReadModel<M, CN>> {
     await this.initialized;
     return this.clientWorker.insert(collectionName, object);
   }
@@ -251,7 +252,7 @@ export class WorkerClient<M extends Models<M> = Models> implements Client<M> {
     collectionName: CN,
     entityId: string,
     data: UpdatePayload<M, CN>
-  ) {
+  ): Promise<void> {
     await this.initialized;
     const changes = await this.getChangesFromUpdatePayload(
       collectionName,
@@ -264,7 +265,7 @@ export class WorkerClient<M extends Models<M> = Models> implements Client<M> {
   async delete<CN extends CollectionNameFromModels<M>>(
     collectionName: CN,
     entityId: string
-  ) {
+  ): Promise<void> {
     await this.initialized;
     return this.clientWorker.delete(collectionName, entityId);
   }

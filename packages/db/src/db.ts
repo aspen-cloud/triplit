@@ -59,6 +59,7 @@ import {
   EntityWriteOptions,
   FetchOptions,
   OnCommitCallback,
+  ReadModel,
   SchemaChangeListener,
   SubscriptionResultsCallback,
   TransactCallback,
@@ -457,7 +458,7 @@ export class DB<
     collectionName: CN,
     data: WriteModel<M, CN>,
     options?: EntityWriteOptions
-  ) {
+  ): Promise<ReadModel<M, CN>> {
     // TODO: for insert, update, delete, can we do this without creating garbage
     // for the changes map and array?
     // e.g. more semantic API for the entityStore
@@ -478,7 +479,7 @@ export class DB<
     id: string,
     data: UpdatePayload<M, CN>,
     options?: EntityWriteOptions
-  ) {
+  ): Promise<void> {
     return this.transact(
       async (tx) => {
         await tx.update(collectionName, id, data);
@@ -493,7 +494,7 @@ export class DB<
     collectionName: string,
     id: string,
     options?: EntityWriteOptions
-  ) {
+  ): Promise<void> {
     return this.transact(
       async (tx) => {
         await tx.delete(collectionName, id);

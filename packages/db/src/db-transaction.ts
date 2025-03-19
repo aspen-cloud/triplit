@@ -126,7 +126,7 @@ export class DBTransaction<M extends Models<M> = Models> {
   async insert<CN extends CollectionNameFromModels<M>>(
     collectionName: CN,
     data: WriteModel<M, CN>
-  ) {
+  ): Promise<ReadModel<M, CN>> {
     // have these checks also in the kvTx itself, but
     // we don't call those until we're ready to commit
     // so these intermediate updates are necessary
