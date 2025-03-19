@@ -1,0 +1,51 @@
+import path from 'path';
+
+export function triplitMetroConfig(config: any) {
+  const currentResolver = config.resolver.resolveRequest;
+  config.resolver.resolveRequest = (
+    context: any,
+    moduleName: any,
+    platform: any
+  ) => {
+    // Prepend triplit package resolver
+    const triplitResult = triplitMetroResolveRequest(moduleName);
+    if (triplitResult) return triplitResult;
+    // Fallback to default resolver or any overridden resolver
+    return currentResolver
+      ? currentResolver(context, moduleName, platform)
+      : context.resolveRequest(context, moduleName, platform);
+  };
+  return config;
+}
+
+export function triplitMetroResolveRequest(moduleName: string) {
+  // Resolve exports for Triplit packages
+  if (moduleName.startsWith('@triplit/')) {
+    const [_scope, packageName, ...depPath] = moduleName.split('/');
+    // No special path to resolve
+    if (depPath.length === 0) {
+      return undefined;
+    }
+    const dep = `@triplit/${packageName}`;
+    const suffix = rewritePath(dep, depPath.join('/'));
+    const basePath = path.dirname(require.resolve(dep));
+    const filePath = path.join(
+      basePath,
+      suffix.endsWith('.js') ? suffix : `${suffix}.js`
+    );
+    return {
+      filePath: filePath,
+      type: 'sourceFile',
+    };
+  }
+  return undefined;
+}
+
+function rewritePath(dep: string, path: string) {
+  if (dep === '@triplit/db') {
+    if (path.startsWith('storage/')) {
+      return path.replace('storage/', 'kv-store/storage/');
+    }
+  }
+  return path;
+}

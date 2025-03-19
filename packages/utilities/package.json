@@ -34,10 +34,8 @@
     "test": "vitest run",
     "publish-pkg": "node ../../scripts/npm-check-version-and-publish.js"
   },
-  "dependencies": {
-    "@triplit/db": "workspace:^"
-  },
   "devDependencies": {
+    "@triplit/db": "workspace:^",
     "@types/json-schema": "^7.0.15",
     "ajv": "^8.17.1",
     "ajv-formats": "^3.0.1",

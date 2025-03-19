@@ -1,4 +1,4 @@
-import { Models } from '@triplit/db';
+import type { Models } from '@triplit/db';
 import { JSONSchema7 } from 'json-schema';
 import { Ajv } from 'ajv';
 import addFormats from 'ajv-formats';
