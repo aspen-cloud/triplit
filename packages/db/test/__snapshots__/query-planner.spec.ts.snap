@@ -1,5 +1,71 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
+exports[`query planning > query: '' 1`] = `
+{
+  "steps": [
+    {
+      "collectionName": "messages",
+      "type": "SCAN",
+    },
+    {
+      "subPlan": [
+        {
+          "type": "PREPARE_VIEW",
+          "viewId": "0",
+        },
+        {
+          "filter": [
+            [
+              "id",
+              "=",
+              "$1.senderId",
+            ],
+            [
+              "name",
+              "=",
+              "$1.text",
+            ],
+          ],
+          "type": "RESOLVE_FROM_VIEW",
+          "viewId": "0",
+        },
+      ],
+      "type": "ITERATOR_SUBQUERY_FILTER",
+    },
+    {
+      "type": "COLLECT",
+    },
+  ],
+  "views": {
+    "0": {
+      "steps": [
+        {
+          "collectionName": "users",
+          "type": "SCAN",
+        },
+        {
+          "type": "COLLECT",
+        },
+        {
+          "fields": [
+            [
+              "id",
+              "ASC",
+            ],
+            [
+              "name",
+              "ASC",
+            ],
+          ],
+          "type": "SORT",
+        },
+      ],
+      "views": {},
+    },
+  },
+}
+`;
+
 exports[`query planning > query: '20 most recent messages in a conversa…' 1`] = `
 {
   "steps": [
@@ -615,6 +681,72 @@ exports[`query planning > query: 'messages from conversations that the …' 1`] 
         },
         {
           "type": "COLLECT",
+        },
+      ],
+      "views": {},
+    },
+  },
+}
+`;
+
+exports[`query planning > query: 'subquery with two filters with variab…' 1`] = `
+{
+  "steps": [
+    {
+      "collectionName": "messages",
+      "type": "SCAN",
+    },
+    {
+      "subPlan": [
+        {
+          "type": "PREPARE_VIEW",
+          "viewId": "0",
+        },
+        {
+          "filter": [
+            [
+              "id",
+              "=",
+              "$1.senderId",
+            ],
+            [
+              "name",
+              "=",
+              "$1.text",
+            ],
+          ],
+          "type": "RESOLVE_FROM_VIEW",
+          "viewId": "0",
+        },
+      ],
+      "type": "ITERATOR_SUBQUERY_FILTER",
+    },
+    {
+      "type": "COLLECT",
+    },
+  ],
+  "views": {
+    "0": {
+      "steps": [
+        {
+          "collectionName": "users",
+          "type": "SCAN",
+        },
+        {
+          "type": "COLLECT",
+        },
+        {
+          "fields": [
+            [
+              "id",
+              "ASC",
+            ],
+            [
+              "name",
+              "ASC",
+            ],
+          ],
+          "type": "SORT",
         },
       ],
       "views": {},

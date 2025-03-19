@@ -185,43 +185,69 @@ function whereFiltersToViews(
   const views: Record<string, CollectionQuery> = {};
   const updatedWhere: QueryWhere[] = [];
   for (const filter of where) {
-    if (
-      isSubQueryFilter(filter) &&
-      !hasHigherLevelReferences(filter.exists.where)
-    ) {
-      const variableFilters = new Set(
-        filter.exists.where?.filter((f) => {
-          return (
-            Array.isArray(f) &&
-            isValueVariable(f[2]) &&
-            getVariableComponents(f[2])[0] === 1
-          );
-        })
-      );
-
-      // Only perform inversion if there is a single relational filter
-      // [a, in, view.a] AND [b, in, view.b] is not safely executed (matches any 'a' in the view and any 'b' in the view)
-      if (variableFilters.size > 1) {
-        updatedWhere.push(filter);
-        continue;
-      }
-
-      const viewId = generateViewId();
-      const extractedView = extractViews(filter.exists, schema, generateViewId);
-      views[viewId] = extractedView.rootQuery;
-      Object.assign(views, extractedView.views);
-
-      extractedView.rootQuery.where = filter.exists.where?.filter(
-        (f) => !variableFilters.has(f)
-      );
-      const viewFilters = [...variableFilters]?.map((f) => {
-        return [
-          getVariableComponents(f[2])[1],
-          'in',
-          `$view_${viewId}.${f[0]}`,
-        ];
+    // if the filter is a subquery filter
+    // we may be able to do "inversion"
+    if (isSubQueryFilter(filter)) {
+      const subquery = filter.exists;
+      const hasGrandparentReferences =
+        subquery.where && hasHigherLevelReferences(subquery.where);
+      const subqueryVariableFilters = (subquery.where ?? []).filter((f) => {
+        return (
+          Array.isArray(f) &&
+          isValueVariable(f[2]) &&
+          getVariableComponents(f[2])[0] === 1
+        );
       });
-      updatedWhere.push(...viewFilters);
+      // inversion strategy
+      if (!hasGrandparentReferences && subqueryVariableFilters.length < 2) {
+        const viewId = generateViewId();
+        const extractedView = extractViews(subquery, schema, generateViewId);
+        views[viewId] = extractedView.rootQuery;
+        Object.assign(views, extractedView.views);
+
+        // remove the variable filters from the view
+        extractedView.rootQuery.where = subquery.where?.filter(
+          (f) => !subqueryVariableFilters.includes(f)
+        );
+
+        // and in the main query, add the filter on the view
+        const viewFilters = subqueryVariableFilters.map((f) => {
+          return [
+            getVariableComponents(f[2])[1],
+            'in',
+            `$view_${viewId}.${f[0]}`,
+          ];
+        });
+        updatedWhere.push(...viewFilters);
+
+        // VAC strategy
+      } else if (VAC.canCacheQuery(subquery, schema)) {
+        const viewId = generateViewId();
+        const vacView = VAC.queryToViews(subquery, schema);
+
+        const extractedView = extractViews(
+          vacView.views[0],
+          schema,
+          generateViewId
+        );
+        const { where: remainingFilters, views: remainingViews } =
+          whereFiltersToViews(vacView.unusedFilters, schema, generateViewId);
+        extractedView.rootQuery.where?.concat(remainingFilters);
+
+        views[viewId] = extractedView.rootQuery;
+        Object.assign(views, extractedView.views);
+        Object.assign(views, remainingViews);
+        updatedWhere.push({
+          exists: {
+            ...subquery,
+            collectionName: `$view_${viewId}`,
+            where: [...vacView.variableFilters, ...remainingFilters],
+          },
+        });
+        // implicitly going to lead to the nester subquery strategy
+      } else {
+        updatedWhere.push(filter);
+      }
     } else if (isFilterGroup(filter)) {
       const { where: newWhere, views: newViews } = whereFiltersToViews(
         filter.filters,
@@ -230,6 +256,7 @@ function whereFiltersToViews(
       );
       updatedWhere.push({ ...filter, filters: newWhere });
       Object.assign(views, newViews);
+      // let the rest pass through and be handled with a more naive approach
     } else {
       updatedWhere.push(filter);
     }
@@ -254,15 +281,15 @@ export function compileQuery(
   query: CollectionQuery,
   schema: Models | undefined
 ): CompiledPlan {
-  // console.dir({ query }, { depth: null });
+  console.dir({ query }, { depth: null });
   let nextViewId = 0;
   const generateViewId = (): string => {
     return `${nextViewId++}`;
   };
   const relationalPlan = extractViews(query, schema, generateViewId);
-  // console.dir({ relationalPlan }, { depth: null });
+  console.dir({ relationalPlan }, { depth: null });
   const compiledPlan = compileRelationalPlan(relationalPlan);
-  // console.dir({ compiledPlan }, { depth: null });
+  console.dir({ compiledPlan }, { depth: null });
   return compiledPlan;
 }
 
@@ -350,6 +377,18 @@ function compileQueryToSteps(q: CollectionQuery): Step[] {
       viewId,
       filter: simpleFilters,
     });
+    if (subqueryFilters.length > 0) {
+      for (const subqueryFilter of subqueryFilters) {
+        steps.push({
+          type: 'ITERATOR_SUBQUERY_FILTER',
+          // TODO maybe add LIMIT 1
+          subPlan: compileQueryToSteps(subqueryFilter.exists),
+        });
+      }
+      steps.push({
+        type: 'COLLECT',
+      });
+    }
     hasBeenCollected = true;
     // TODO we should figure out how to break up the filters
     // by which ones can be resolved VAC-style and which ones

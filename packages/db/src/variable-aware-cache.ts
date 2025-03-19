@@ -125,6 +125,7 @@ export class VariableAwareCache {
   static queryToViews(query: CollectionQuery, schema: Models | undefined) {
     const variableFilters: FilterStatement[] = [];
     const staticFilters: QueryWhere = [];
+    const unusedFilters: QueryWhere = [];
     const isOrderable = isOrderableFilter(schema, query);
     for (const filter of query.where ?? []) {
       if (isOrderable(filter)) {
@@ -135,6 +136,7 @@ export class VariableAwareCache {
         staticFilters.push(filter);
         continue;
       }
+      unusedFilters.push(filter);
     }
     return {
       views: [
@@ -150,6 +152,7 @@ export class VariableAwareCache {
         },
       ] as CollectionQuery[],
       variableFilters,
+      unusedFilters,
     };
   }
 }

@@ -183,6 +183,7 @@ export class EntityStoreQueryEngine {
           for (const filter of boundFilters) {
             results = VAC.resolveQueryFromView(results, filter);
           }
+          candidateIterator = results;
           break;
         }
         case 'SUBQUERY': {

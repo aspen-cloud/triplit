@@ -188,6 +188,23 @@ describe('query planning', async () => {
         ],
       },
     },
+    {
+      description: 'subquery with two filters with variables',
+      query: {
+        collectionName: 'messages',
+        where: [
+          {
+            exists: {
+              collectionName: 'users',
+              where: [
+                ['id', '=', '$1.senderId'],
+                ['name', '=', '$1.text'],
+              ],
+            },
+          },
+        ],
+      },
+    },
   ];
 
   test.each(queries)('query: $description', async ({ query }) => {
