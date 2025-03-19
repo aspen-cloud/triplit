@@ -1,5 +1,11 @@
 # @triplit/cli
 
+## 1.0.11
+
+### Patch Changes
+
+- e9395371: Manual version bump for CLI dependencies
+
 ## 1.0.10
 
 ### Patch Changes
