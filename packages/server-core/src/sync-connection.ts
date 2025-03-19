@@ -237,14 +237,13 @@ export class SyncConnection {
       await this.db.updateQueryViews();
       this.db.broadcastToQuerySubscribers();
     } catch (e) {
-      logger.error('Changes error', e as Error);
       const error = isTriplitError(e)
         ? e
         : new TriplitError(
             'An unknown error occurred while processing your request.'
           );
       // TODO: test error payloads
-      this.sendErrorResponse('CHANGES', new TriplitError(), {
+      this.sendErrorResponse('CHANGES', error, {
         failures: Object.keys(changes).map((collection) => ({
           txId: JSON.stringify(timestamp),
           collection,

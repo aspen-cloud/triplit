@@ -50,10 +50,10 @@ export class DevServerLogHandler implements LogHandler {
     if (!this.verbose && level === 'DEBUG') return;
     process.stdout.write(dim(new Date(timestamp).toLocaleTimeString() + ' '));
     if (level === 'ERROR' || level === 'FATAL') {
-      console.error(
-        `${red('⚠️  ERROR:')} ${white(message)}\n`,
-        attributes || ''
-      );
+      console.trace('log error');
+      console.log('------');
+      console.log(`${red('⚠️  ERROR:')} ${white(message)}\n`, attributes || '');
+      console.log('------');
       return;
     }
     if (context === 'request') {
@@ -179,7 +179,12 @@ export class DevServerLogHandler implements LogHandler {
       ? REQUEST_TYPE_COLOR
       : SUCCESS_COLOR;
     const messageBody = isError
-      ? formatErrorPayload(payload)
+      ? formatErrorPayload({
+          // @ts-expect-error
+          type: payload.messageType,
+          // @ts-expect-error
+          message: `${payload.error.name}: ${payload.error.message}`,
+        })
       : formatMessagePayload(action, message, this.verbose);
     console.log(primaryColor(symbol), primaryColor(type), messageBody);
   }

@@ -9,7 +9,7 @@ import {
 } from '../../filesystem.js';
 import fs from 'fs';
 import path from 'node:path';
-import { BulkInsert, HttpClient, Models } from '@triplit/client';
+import { BulkInsert, HttpClient, Models, TriplitError } from '@triplit/client';
 import { createServerRequesterMiddleware } from '../../middleware/add-server-requester.js';
 import { seedDirExists } from './create.js';
 import ora from 'ora';
@@ -141,7 +141,16 @@ export async function insertSeeds(
       // return;
       const spinner = ora(`Uploading seed: ${path.basename(seed)}`).start();
       try {
-        const output = await client.bulkInsert(await seedFn());
+        let bulkInsertPayload;
+        try {
+          bulkInsertPayload = await seedFn();
+        } catch (e) {
+          handleSeedFileError(e, sourceMap, seed);
+          // @ts-expect-error
+          e.handled = true;
+          throw e;
+        }
+        const output = await client.bulkInsert(bulkInsertPayload);
         spinner.succeed(`Successfully seeded with ${path.basename(seed)}`);
         for (const collectionName in output) {
           const collection = output[collectionName];
@@ -156,70 +165,80 @@ export async function insertSeeds(
         }
       } catch (e: any) {
         spinner.fail(`Failed to seed with ${path.basename(seed)}`);
-
-        // maps the error stack trace to the original source code
-        const tempFileLocation = path.join(path.dirname(seed), '.temp');
-
-        // only include the stack trace lines that are relevant to the temp file
-        // that the seed script runs
-        const splitStack = e.stack.split('\n');
-        const relevantStackFrames = splitStack.filter((line: string) =>
-          line.includes('.temp')
-        ) as string[];
-
-        // if there are no frames from the temp file, assume this is
-        // a triplit error and throw it for debugging purposes
-        if (relevantStackFrames.length === 0) {
-          console.error(e);
+        if (e.handled) {
           return;
         }
-
-        const positions = relevantStackFrames
-          .map((line: string) => line.split(':').slice(-2))
-          .map(
-            // @ts-expect-error
-            (position: [string, string]) => ({
-              line: position[0],
-              column: position[1].replaceAll(')', ''),
-            })
-          );
-        let newTrace;
-
-        // use the source map to get the original source code location and name
-        await SourceMapConsumer.with(sourceMap, undefined, async (consumer) => {
-          const originalPositions = [];
-          for (const position of positions) {
-            const originalPosition = consumer.originalPositionFor({
-              line: Number(position.line),
-              column: Number(position.column),
-            });
-            originalPositions.push(originalPosition);
-          }
-          const parensRegex = /\(.*\)/;
-
-          newTrace = [
-            // the first line of the stack trace is the error message
-            splitStack[0],
-            ...originalPositions.map((pos, i) =>
-              relevantStackFrames[i].replace(
-                parensRegex,
-                `(file://${path.resolve(
-                  tempFileLocation,
-                  // @ts-expect-error
-
-                  pos.source
-                )}:${pos.line}:${pos.column})`
-              )
-            ),
-          ].join('\n');
-        });
-        console.error(
-          red(
-            // @ts-expect-error
-            newTrace
-          )
-        );
+        if (e instanceof TriplitError) {
+          console.error(red(e.message));
+        } else {
+          console.error(e);
+        }
       }
     }
   }
+}
+
+async function handleSeedFileError(e: any, sourceMap: string, seed: string) {
+  // maps the error stack trace to the original source code
+  const tempFileLocation = path.join(path.dirname(seed), '.temp');
+
+  // only include the stack trace lines that are relevant to the temp file
+  // that the seed script runs
+  const splitStack = e.stack.split('\n');
+  const relevantStackFrames = splitStack.filter((line: string) =>
+    line.includes('.temp')
+  ) as string[];
+
+  // if there are no frames from the temp file, assume this is
+  // a triplit error and throw it for debugging purposes
+  if (relevantStackFrames.length === 0) {
+    console.error(e);
+    return;
+  }
+
+  const positions = relevantStackFrames
+    .map((line: string) => line.split(':').slice(-2))
+    .map(
+      // @ts-expect-error
+      (position: [string, string]) => ({
+        line: position[0],
+        column: position[1].replaceAll(')', ''),
+      })
+    );
+  let newTrace;
+
+  // use the source map to get the original source code location and name
+  await SourceMapConsumer.with(sourceMap, undefined, async (consumer) => {
+    const originalPositions = [];
+    for (const position of positions) {
+      const originalPosition = consumer.originalPositionFor({
+        line: Number(position.line),
+        column: Number(position.column),
+      });
+      originalPositions.push(originalPosition);
+    }
+    const parensRegex = /\(.*\)/;
+
+    newTrace = [
+      // the first line of the stack trace is the error message
+      splitStack[0],
+      ...originalPositions.map((pos, i) =>
+        relevantStackFrames[i].replace(
+          parensRegex,
+          `(file://${path.resolve(
+            tempFileLocation,
+            // @ts-expect-error
+
+            pos.source
+          )}:${pos.line}:${pos.column})`
+        )
+      ),
+    ].join('\n');
+  });
+  console.error(
+    red(
+      // @ts-expect-error
+      newTrace
+    )
+  );
 }
