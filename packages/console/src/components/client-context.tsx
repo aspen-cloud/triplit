@@ -50,8 +50,8 @@ export function useClient() {
       }
       // No changes
       let { serverUrl, token } = params;
-      serverUrl = serverUrl ?? selectedClient?.options?.serverUrl;
-      token = token ?? selectedClient?.options?.token;
+      serverUrl = serverUrl ?? selectedClient?.serverUrl;
+      token = token ?? selectedClient?.token;
       if (!serverUrl || !token) {
         throw new Error('Both serverUrl and token must be provided');
       }

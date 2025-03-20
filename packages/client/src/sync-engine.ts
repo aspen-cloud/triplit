@@ -194,6 +194,7 @@ export class SyncEngine {
   }
 
   async clearPendingChangesForEntity(collection: string, id: string) {
+    if (this.client.awaitReady) await this.client.awaitReady;
     const tx = this.client.db.kv.transact();
     await this.client.db.entityStore.doubleBuffer
       .getUnlockedBuffer()
@@ -206,6 +207,7 @@ export class SyncEngine {
   }
 
   async clearPendingChangesAll() {
+    if (this.client.awaitReady) await this.client.awaitReady;
     const tx = this.client.db.kv.transact();
     await this.client.db.entityStore.doubleBuffer.getUnlockedBuffer().clear(tx);
     await tx.commit();
@@ -537,6 +539,7 @@ export class SyncEngine {
       const changes = SuperJSON.deserialize<DBChanges>(stringifiedChanges);
       // first apply changes
       // the db will push these onto IVMs buffer
+      if (this.client.awaitReady) await this.client.awaitReady;
       await this.client.db.applyChangesWithTimestamp(changes, timestamp, {
         skipRules: true,
       });
@@ -573,6 +576,9 @@ export class SyncEngine {
     }
 
     if (message.type === 'CHANGES_ACK') {
+      if (this.client.awaitReady) await this.client.awaitReady;
+      if (this.client.awaitReady) await this.client.awaitReady;
+
       const ackedChanges = await this.client.db.entityStore.doubleBuffer
         .getLockedBuffer()
         .getChanges(this.client.db.kv);
@@ -801,6 +807,7 @@ export class SyncEngine {
         }
     }
     if (messageType === 'CHANGES') {
+      if (this.client.awaitReady) await this.client.awaitReady;
       const kvTx = this.client.db.kv.transact();
       const outbox = this.client.db.entityStore.doubleBuffer;
 

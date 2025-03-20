@@ -139,7 +139,11 @@ export class Logger {
 
     // Send to all registered transports
     for (const handler of this.handlers) {
-      handler.log(record);
+      try {
+        handler.log(record);
+      } catch (error) {
+        console.error('Error in log handler:', error);
+      }
     }
   }
 
