@@ -1,5 +1,11 @@
 # @triplit/react-native
 
+## 1.0.14
+
+### Patch Changes
+
+- 725900eb: fixup package.json entrypoint
+
 ## 1.0.13
 
 ### Patch Changes
