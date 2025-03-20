@@ -1,5 +1,11 @@
 # @triplit/entity-db
 
+## 1.0.12
+
+### Patch Changes
+
+- 5fea17c0: Rm console logs
+
 ## 1.0.11
 
 ### Patch Changes
