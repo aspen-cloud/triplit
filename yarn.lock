@@ -511,6 +511,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@azure/core-asynciterator-polyfill@npm:^1.0.2":
+  version: 1.0.2
+  resolution: "@azure/core-asynciterator-polyfill@npm:1.0.2"
+  checksum: 10/ccdad3bcf3f670e0b4f52e421cd1566368dce36ea4b3cb18a9b554c14ea0c1436868cb55e774b2377307dcb222e4eb3777b48e97249157c612e9c24654a56d16
+  languageName: node
+  linkType: hard
+
 "@babel/code-frame@npm:^7.0.0":
   version: 7.22.5
   resolution: "@babel/code-frame@npm:7.22.5"
@@ -8959,6 +8966,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@react-native-anywhere/polyfill-base64@npm:^0.0.1-alpha.0":
+  version: 0.0.1-alpha.0
+  resolution: "@react-native-anywhere/polyfill-base64@npm:0.0.1-alpha.0"
+  dependencies:
+    base-64: "npm:^0.1.0"
+  checksum: 10/bf920338a0e6a25d944b5ecc649fbf4d47dedd52c7dda238f7c33e2c1b1baa0dc5480587474ab46abe282d852d3923a384d083952dcb37bef6ebc034245d1677
+  languageName: node
+  linkType: hard
+
 "@remix-run/router@npm:1.10.0":
   version: 1.10.0
   resolution: "@remix-run/router@npm:1.10.0"
@@ -10323,6 +10339,22 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@triplit/react-native@workspace:packages/react-native":
+  version: 0.0.0-use.local
+  resolution: "@triplit/react-native@workspace:packages/react-native"
+  dependencies:
+    "@azure/core-asynciterator-polyfill": "npm:^1.0.2"
+    "@react-native-anywhere/polyfill-base64": "npm:^0.0.1-alpha.0"
+    "@triplit/react": "workspace:^"
+    "@types/react-native-get-random-values": "npm:^1"
+    event-target-polyfill: "npm:^0.0.4"
+    hasown: "npm:^2.0.2"
+    react-native-get-random-values: "npm:^1.11.0"
+    react-native-url-polyfill: "npm:^2.0.0"
+    typescript: "npm:^5.8.2"
+  languageName: unknown
+  linkType: soft
+
 "@triplit/react@npm:1.0.12, @triplit/react@workspace:^, @triplit/react@workspace:packages/react":
   version: 0.0.0-use.local
   resolution: "@triplit/react@workspace:packages/react"
@@ -11339,6 +11371,13 @@ __metadata:
   peerDependencies:
     "@types/react": ^19.0.0
   checksum: 10/f15d470242f0b7cca57dd7e991a2852525ac93b2cb92f7e6c104d7bd6a978c3b1d0ba9b8698f23bc19c16b5cd98a6d160007be52c61196952f57cf019f204254
+  languageName: node
+  linkType: hard
+
+"@types/react-native-get-random-values@npm:^1":
+  version: 1.8.2
+  resolution: "@types/react-native-get-random-values@npm:1.8.2"
+  checksum: 10/08f3f82efbb5b6d9acd8f7f55a2dac9f228886323ac3018a1bab46cd1b45f24809d194fd2a3fe02a9ec4196606325e5cfffde0b0057ae785208b658fdc83c821
   languageName: node
   linkType: hard
 
@@ -14388,6 +14427,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"base-64@npm:^0.1.0":
+  version: 0.1.0
+  resolution: "base-64@npm:0.1.0"
+  checksum: 10/5a42938f82372ab5392cbacc85a5a78115cbbd9dbef9f7540fa47d78763a3a8bd7d598475f0d92341f66285afd377509851a9bb5c67bbecb89686e9255d5b3eb
+  languageName: node
+  linkType: hard
+
 "base64-js@npm:^1.3.1":
   version: 1.5.1
   resolution: "base64-js@npm:1.5.1"
@@ -14749,7 +14795,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"buffer@npm:^5.5.0":
+"buffer@npm:^5.4.3, buffer@npm:^5.5.0":
   version: 5.7.1
   resolution: "buffer@npm:5.7.1"
   dependencies:
@@ -19564,6 +19610,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"event-target-polyfill@npm:^0.0.4":
+  version: 0.0.4
+  resolution: "event-target-polyfill@npm:0.0.4"
+  checksum: 10/465f7abfc7d4716365cae732f6940732b0c48315358b228df80d13c85d1b55f2ff8c02c6c98bd1d474fe9e21119d40ff4d907dffe8387ae89ee8a09608365bf9
+  languageName: node
+  linkType: hard
+
 "event-target-shim@npm:^5.0.0":
   version: 5.0.1
   resolution: "event-target-shim@npm:5.0.1"
@@ -19842,6 +19895,13 @@ __metadata:
   version: 6.0.0
   resolution: "fake-indexeddb@npm:6.0.0"
   checksum: 10/b4098f050ae1f18e23edd5e87da17aee1b6a199e1d3dec0c35346db73416ffac59bd595e2011b9cd70f36fe25eb852d122d2a05c74f75754869f300d84159414
+  languageName: node
+  linkType: hard
+
+"fast-base64-decode@npm:^1.0.0":
+  version: 1.0.0
+  resolution: "fast-base64-decode@npm:1.0.0"
+  checksum: 10/4c59eb1775a7f132333f296c5082476fdcc8f58d023c42ed6d378d2e2da4c328c7a71562f271181a725dd17cdaa8f2805346cc330cdbad3b8e4b9751508bd0a3
   languageName: node
   linkType: hard
 
@@ -28673,6 +28733,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"punycode@npm:^2.1.1":
+  version: 2.3.1
+  resolution: "punycode@npm:2.3.1"
+  checksum: 10/febdc4362bead22f9e2608ff0171713230b57aff9dddc1c273aa2a651fbd366f94b7d6a71d78342a7c0819906750351ca7f2edd26ea41b626d87d6a13d1bd059
+  languageName: node
+  linkType: hard
+
 "pure-rand@npm:^6.0.0":
   version: 6.1.0
   resolution: "pure-rand@npm:6.1.0"
@@ -28836,6 +28903,28 @@ __metadata:
   version: 18.2.0
   resolution: "react-is@npm:18.2.0"
   checksum: 10/200cd65bf2e0be7ba6055f647091b725a45dd2a6abef03bf2380ce701fd5edccee40b49b9d15edab7ac08a762bf83cb4081e31ec2673a5bfb549a36ba21570df
+  languageName: node
+  linkType: hard
+
+"react-native-get-random-values@npm:^1.11.0":
+  version: 1.11.0
+  resolution: "react-native-get-random-values@npm:1.11.0"
+  dependencies:
+    fast-base64-decode: "npm:^1.0.0"
+  peerDependencies:
+    react-native: ">=0.56"
+  checksum: 10/eb04833ce2b66309d737f1447ab01ad32aca00a8d1cc4de7b4e751c23f4d9f8059a2643bb16e0b6f3e6b074a9e57e769bb2bf2afc50a912c5661d80a6ce4de34
+  languageName: node
+  linkType: hard
+
+"react-native-url-polyfill@npm:^2.0.0":
+  version: 2.0.0
+  resolution: "react-native-url-polyfill@npm:2.0.0"
+  dependencies:
+    whatwg-url-without-unicode: "npm:8.0.0-3"
+  peerDependencies:
+    react-native: "*"
+  checksum: 10/6a8d605eeb1b0ee9b0f47f1866acc2edfa2131a4a8fb1ea3839ceb507e225b894ed66f49a3bd826fc964f2c8005b3678c9d3b65d07eb0a3b979be830cb618686
   languageName: node
   linkType: hard
 
@@ -35092,6 +35181,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"webidl-conversions@npm:^5.0.0":
+  version: 5.0.0
+  resolution: "webidl-conversions@npm:5.0.0"
+  checksum: 10/cea864dd9cf1f2133d82169a446fb94427ba089e4676f5895273ea085f165649afe587ae3f19f2f0370751a724bba2d96e9956d652b3e41ac1feaaa4376e2d70
+  languageName: node
+  linkType: hard
+
 "webpack-dev-middleware@npm:7.4.2, webpack-dev-middleware@npm:^7.4.2":
   version: 7.4.2
   resolution: "webpack-dev-middleware@npm:7.4.2"
@@ -35239,6 +35335,17 @@ __metadata:
   version: 0.1.4
   resolution: "websocket-extensions@npm:0.1.4"
   checksum: 10/b5399b487d277c78cdd2aef63764b67764aa9899431e3a2fa272c6ad7236a0fb4549b411d89afa76d5afd664c39d62fc19118582dc937e5bb17deb694f42a0d1
+  languageName: node
+  linkType: hard
+
+"whatwg-url-without-unicode@npm:8.0.0-3":
+  version: 8.0.0-3
+  resolution: "whatwg-url-without-unicode@npm:8.0.0-3"
+  dependencies:
+    buffer: "npm:^5.4.3"
+    punycode: "npm:^2.1.1"
+    webidl-conversions: "npm:^5.0.0"
+  checksum: 10/aa588b54b75304335c5e189f8572626f989364c2ac5be5a1643ac687c2501f044405e1eb5761d65a826f570befade5fe51a723d917e9ab7672bb65d14065e82f
   languageName: node
   linkType: hard
 

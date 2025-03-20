@@ -1,0 +1,49 @@
+{
+  "name": "@triplit/react-native",
+  "packageManager": "yarn@4.2.2",
+  "version": "1.0.11",
+  "type": "module",
+  "files": [
+    "/dist"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.js"
+    },
+    "./*": {
+      "types": "./dist/*.d.ts",
+      "import": "./dist/*.js",
+      "require": "./dist/*.js"
+    }
+  },
+  "typesVersions": {
+    "*": {
+      ".": [
+        "./dist/index.d.ts"
+      ],
+      "./*": [
+        "./dist/*.d.ts"
+      ]
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "lint": "tsc --noEmit",
+    "publish-pkg": "node ../../scripts/npm-check-version-and-publish.js"
+  },
+  "dependencies": {
+    "@azure/core-asynciterator-polyfill": "^1.0.2",
+    "@react-native-anywhere/polyfill-base64": "^0.0.1-alpha.0",
+    "@triplit/react": "workspace:^",
+    "event-target-polyfill": "^0.0.4",
+    "hasown": "^2.0.2",
+    "react-native-get-random-values": "^1.11.0",
+    "react-native-url-polyfill": "^2.0.0"
+  },
+  "devDependencies": {
+    "@types/react-native-get-random-values": "^1",
+    "typescript": "^5.8.2"
+  }
+}
