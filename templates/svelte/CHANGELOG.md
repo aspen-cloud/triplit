@@ -1,5 +1,12 @@
 # svelte-template
 
+## 1.0.14
+
+### Patch Changes
+
+- @triplit/client@1.0.14
+- @triplit/svelte@1.0.14
+
 ## 1.0.13
 
 ### Patch Changes
