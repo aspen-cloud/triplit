@@ -62,6 +62,11 @@ function createSchemaLoader({
         `Failed to load schema from ${schemaPath}, even though it exists. Please check the file for errors.`
       );
     }
+    if (!result.schema) {
+      throw new Error(
+        `The schema file at ${schemaPath} does not export a "schema" object. Please ensure it is correctly formatted.`
+      );
+    }
     return {
       collections: result.schema,
       roles: result.roles,
