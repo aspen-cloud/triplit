@@ -32,7 +32,9 @@ Automated version bump for ${package} after dependency changes`;
 }
 
 function generateChangeset(package, dependencies) {
-  if (dependencies.some((dep) => changesetStatusOutput.includes(dep))) {
+  if (
+    dependencies.some((dep) => changesetStatusOutput.includes(`- ${dep}\n`))
+  ) {
     const sanitizedPackage = package.replace(/@/g, '').replace(/\//g, '-');
     const changesetPath = path.join(
       __dirname,
