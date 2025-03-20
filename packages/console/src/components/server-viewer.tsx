@@ -161,8 +161,8 @@ export function ServerViewer({
   }, [client]);
 
   const { toast } = useToast();
-  const { result: server } = useServer(client.options?.serverUrl!);
-  const { results: tokens } = useTokens(client.options?.serverUrl!);
+  const { result: server } = useServer(client?.serverUrl!);
+  const { results: tokens } = useTokens(client?.serverUrl!);
   const serviceToken = tokens?.find((t) => t.id.startsWith('service_'))?.value;
   const connectionStatus = useConnectionStatus(client);
   useEffect(() => {
@@ -265,7 +265,7 @@ export function ServerViewer({
           <AddTokenDialog
             onSubmit={async (token, nickname) => {
               await consoleClient.insert('tokens', {
-                serverUrl: client.options?.serverUrl!,
+                serverUrl: client?.serverUrl!,
                 value: token,
                 name: nickname,
               });
@@ -437,7 +437,7 @@ function findStringBetween(str: string, start: string, end: string): string {
 
 async function addTokenFromClient(client: TriplitClient<any>) {
   const token = client.token;
-  const serverUrl = client.options?.serverUrl;
+  const serverUrl = client?.serverUrl;
   if (!(token && serverUrl)) return;
   consoleClient
     .fetchOne(
