@@ -43,7 +43,6 @@ await fetch('https://<project-id>.triplit.io/fetch', {
     Authorization: 'Bearer ' + TRIPLIT_TOKEN,
   },
   body: JSON.stringify({
-    collection: 'todos',
     query: {
       collectionName: 'todos',
       where: [['completed', '=', false]],
