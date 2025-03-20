@@ -407,12 +407,14 @@ const serializedSchema = await triplit.getSchema();
 
 Triplit previously maintained two sets of Angular bindings: the signal-based `injectQuery` and the observable-based `createQuery`. In Triplit 1.0, we've removed the signal-based bindings in favor of the more flexible and powerful observable-based bindings. If you're using the signal-based bindings, you'll need to update your app to use the observable-based bindings. Generally this means adopting the [Async pipe syntax](https://v17.angular.io/guide/observables-in-angular#async-pipe) in your templates or by using the [`@angular/rxjs-interop` package](https://angular.dev/ecosystem/rxjs-interop) to translate them to signals.
 
-### Expo (React Native)
+### Expo / React Native
 
-There's a new storage provider for Expo applications that use the `expo-sqlite` package. You can now use the `ExpoSQLiteKVStore` storage provider to store data on the device. This provider is available in the `@triplit/db` package.
+#### Expo SQLite storage provider
+
+There's a new storage provider for Expo applications that use the `expo-sqlite` package. You can now use the `ExpoSQLiteKVStore` storage provider to store data on the device. This provider is available in the `@triplit/client` package.
 
 ```ts
-import { ExpoSQLiteKVStore } from '@triplit/db/storage/expo-sqlite';
+import { ExpoSQLiteKVStore } from '@triplit/client/storage/expo-sqlite';
 import { TriplitClient } from '@triplit/client';
 
 new TriplitClient({
@@ -421,6 +423,10 @@ new TriplitClient({
 ```
 
 You should use a new name for your SQLite database to avoid conflicts with any legacy Triplit databases on the device.
+
+#### @triplit/react-native
+
+We moved relevant React Native code to a new `@triplit/react-native` package. This includes various helpers for configuring your app with Expo and Triplit and re-exports the same hooks available in the `@triplit/react` package. You can find updating information on setting up a react project with Triplit [here](/frameworks/react-native).
 
 ### HTTP API
 
