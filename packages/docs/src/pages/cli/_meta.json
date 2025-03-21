@@ -1,10 +1,11 @@
 {
   "index": "Installation",
-  "clear": "`clear`",
   "dev": "`dev`",
-  "init": "`init`",
-  "repl": "`repl`",
-  "roles": "`roles`",
   "schema": "`schema`",
-  "seed": "`seed`"
+  "seed": "`seed`",
+  "snapshot": "`snapshot`",
+  "clear": "`clear`",
+  "roles": "`roles`",
+  "init": "`init`",
+  "repl": "`repl`"
 }

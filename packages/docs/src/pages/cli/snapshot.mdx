@@ -1,0 +1,31 @@
+---
+description: Learn how to use the `triplit snapshot [create | push]` commands to save a local copy of a remote Triplit database.
+---
+
+# `triplit snapshot`
+
+## `triplit snapshot create`
+
+```
+triplit snapshot create
+Exports all database information to files.
+
+Flags:
+--outDir The directory to save the snapshot to.
+--token, -t Service Token
+--remote, -r Remote URL to connect to
+```
+
+## `triplit snapshot push`
+
+```
+triplit snapshot push
+Pushes a snapshot to the server.
+
+Flags:
+--snapshot The directory containing the source snapshot.
+--token, -t Service Token
+--remote, -r Remote URL to connect to
+--ignoreDestructiveWarning Ignore warning that command may be destructive
+    Default: false
+```
