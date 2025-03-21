@@ -1,5 +1,11 @@
 # create-triplit-app
 
+## 0.0.26
+
+### Patch Changes
+
+- ee4dc5c1: Automated version bump for create-triplit-app after dependency changes
+
 ## 0.0.25
 
 ### Patch Changes
