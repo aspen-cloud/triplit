@@ -1,6 +1,6 @@
 import { InvalidFilterError, TriplitError } from './errors.js';
 import { isValueVariable } from './variables.js';
-import { DBEntity } from './types.js';
+import { DBEntity, Insert } from './types.js';
 import { ValuePointer } from './utils/value-pointer.js';
 import { EntityStoreQueryEngine } from './query-engine.js';
 import { asyncIterEvery, asyncIterSome } from './utils/iterators.js';
@@ -30,7 +30,7 @@ import {
 } from './schema/index.js';
 
 export async function satisfiesFilters(
-  entity: any,
+  entity: { collectionName: string } & Insert,
   filters: QueryWhere,
   queryEngine: EntityStoreQueryEngine
 ): Promise<boolean> {
@@ -45,7 +45,7 @@ export async function satisfiesFilters(
 }
 
 export async function satisfiesFilter(
-  entity: any,
+  entity: { collectionName: string } & Insert,
   filter: WhereFilter,
   queryEngine: EntityStoreQueryEngine
 ): Promise<boolean> {
@@ -68,7 +68,7 @@ export async function satisfiesFilter(
     return !!result;
   } else {
     return satisfiesNonRelationalFilter(
-      entity.collection,
+      entity.collectionName,
       entity,
       filter,
       queryEngine.schema

@@ -854,7 +854,9 @@ export class DB<
       this.schema
     );
     const isSatisfied = await satisfiesFilters(
-      entity,
+      // TODO this is dumb and we should just pass in the collection name
+      // or better not need it at all
+      { ...entity, collectionName: collection },
       preparedPermissions,
       queryEngine
     );

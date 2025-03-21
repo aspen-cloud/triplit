@@ -635,9 +635,6 @@ export class IVM<M extends Models<M> = Models> {
       // implicitly mutating the root query state
       subscribedQueryInfo.capturedChanges!
     );
-    subscribedQueryInfo.capturedChanges![
-      queryNode.query.collectionName
-    ].sets.set(entityId, entityAfter);
 
     subscribedQueryInfo.results = mergeResults(
       subscribedQueryInfo.results ?? [],

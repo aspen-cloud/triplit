@@ -3034,11 +3034,11 @@ describe('permissions', () => {
         alice.onEntitySyncError('messages', 'msg1', throwOnError);
         await pause();
 
-        // All group members get the messages in group
+        // Only Alice should see the message
         expect(aliceSub).toHaveBeenCalled();
         expect(aliceSub.mock.calls.at(-1)?.[0]).toHaveLength(1);
         expect(bobSub).toHaveBeenCalled();
-        expect(bobSub.mock.calls.at(-1)?.[0]).toHaveLength(1);
+        expect(bobSub.mock.calls.at(-1)?.[0]).toHaveLength(0);
       }
 
       const bobErrorSub = vi.fn();
