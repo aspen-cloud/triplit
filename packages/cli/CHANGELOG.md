@@ -1,5 +1,12 @@
 # @triplit/cli
 
+## 1.0.16
+
+### Patch Changes
+
+- b873c68d: Automated version bump for @triplit/cli after dependency changes
+- b873c68d: Manually bump CLI to get latest server
+
 ## 1.0.15
 
 ### Patch Changes
