@@ -16,7 +16,7 @@ export default Command({
   flags: {
     location: Flag.Enum({
       char: 'l',
-      description: 'Location of the schema file',
+      description: 'The schema definition to print (local or remote)',
       options: ['local', 'remote'],
       default: 'remote',
     }),

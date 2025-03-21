@@ -2,7 +2,7 @@
 import dotenv from 'dotenv';
 import dotenvExpand from 'dotenv-expand';
 dotenvExpand.expand(dotenv.config({ path: ['.env.local', '.env'] }));
-import { bold, dim, red } from 'ansis/colors';
+import { bold, dim, red, yellow } from 'ansis/colors';
 import React from 'react';
 import { render } from 'ink';
 import {
@@ -101,6 +101,17 @@ export async function execute(args: string[], flags: Record<string, any>) {
     console.error(`Could not find command: ${bold(cmdDef.name)}.`);
     return;
   }
+
+  if (cmdDef.experimental) {
+    console.log(
+      yellow(
+        `Warning: ${bold(
+          cmdDef.name
+        )} is experimental. It's behavior and usage may change in the future.`
+      )
+    );
+  }
+
   // @ts-ignore
   if (flags.help || flags.h) {
     printCommandHelp(argv._.join(' '), cmdDef);

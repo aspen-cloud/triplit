@@ -801,7 +801,7 @@ export class DB<
     const schema = this.schema?.collections;
     if (!schema) return;
     const collectionSchema =
-      schema[collection as CollectionNameFromModels<M>].schema;
+      schema[collection as CollectionNameFromModels<M>]?.schema;
     if (!collectionSchema) return;
     const validation = Type.validateEncoded(collectionSchema, change, {
       partial: ignoreRequiredProperties,

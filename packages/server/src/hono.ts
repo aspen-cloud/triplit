@@ -368,6 +368,10 @@ export async function createTriplitHonoServer(
       },
     }),
     async (c) => {
+      // Flag to ignore the return value and just return 200
+      // Would be nice to have this flow into the DB as well and save on work done to prepare a query response
+      // This is fairly innocuous to rename/rethink, so we can refactor as needed
+      const noReturn = c.req.query('no-return') === 'true';
       const body = await parseMultipartFormData(c);
       if (!body['data']) {
         return c.json(
@@ -375,14 +379,20 @@ export async function createTriplitHonoServer(
           400
         );
       }
-      const data = JSON.parse(body['data'] as string);
+      const data =
+        typeof body['data'] === 'string'
+          ? JSON.parse(body['data'])
+          : body['data'];
       const token = c.get('token');
       const { statusCode, payload } = await server.handleRequest(
         ['bulk-insert'],
         data,
         token
       );
-      return c.json(payload, statusCode as ContentfulStatusCode);
+      return c.json(
+        noReturn ? {} : payload,
+        statusCode as ContentfulStatusCode
+      );
     }
   );
   app.post('*', async (c) => {
@@ -408,7 +418,7 @@ export async function createTriplitHonoServer(
 async function parseMultipartFormData(c: Context) {
   const contentType = c.req.header('content-type') || '';
   if (!contentType.startsWith('multipart/form-data')) {
-    throw new Error('Invalid Content-Type');
+    throw new Error(`Invalid Content-Type: ${contentType}`);
   }
 
   // Extract boundary from `Content-Type: multipart/form-data; boundary=------xyz`
@@ -440,9 +450,18 @@ async function parseMultipartFormData(c: Context) {
     const nameEnd = contentDisposition.indexOf('"', nameStart);
     const fieldName = contentDisposition.slice(nameStart, nameEnd);
 
-    formData[fieldName] = body; // Store the value
-  }
+    // If content header specifies JSON, parse it
+    const contentTypeHeader = headers
+      .split('\r\n')
+      .find((h) => h.toLowerCase().startsWith('content-type'));
+    const isJson = contentTypeHeader?.includes('application/json');
 
+    if (isJson) {
+      formData[fieldName] = JSON.parse(body);
+    } else {
+      formData[fieldName] = body;
+    }
+  }
   return formData;
 }
 

@@ -149,28 +149,41 @@ export class Session {
     }
   }
 
-  async bulkInsert(inserts: Record<string, any[]>) {
+  async bulkInsert(params: {
+    inserts: Record<string, any[]>;
+    noReturn?: boolean;
+  }) {
     try {
+      const { inserts, noReturn } = params;
       const schema = this.db.getSchema();
       const result = await this.db.transact(
         async (tx) => {
-          const output = Object.keys(inserts).reduce(
-            (acc, collectionName) => ({ ...acc, [collectionName]: [] }),
-            {}
-          ) as Record<string, any[]>;
-          for (const [collectionName, entities] of Object.entries(inserts)) {
-            const collectionSchema =
-              schema?.collections?.[collectionName].schema;
-            for (const entity of entities) {
-              const insertedEntity = await tx.insert(collectionName, entity);
-              const serialized = serializeEntity(
-                collectionSchema,
-                insertedEntity
-              );
-              output[collectionName].push(serialized);
+          if (noReturn) {
+            for (const [collectionName, entities] of Object.entries(inserts)) {
+              for (const entity of entities) {
+                await tx.insert(collectionName, entity);
+              }
             }
+            return {};
+          } else {
+            const output = Object.keys(inserts).reduce(
+              (acc, collectionName) => ({ ...acc, [collectionName]: [] }),
+              {}
+            ) as Record<string, any[]>;
+            for (const [collectionName, entities] of Object.entries(inserts)) {
+              const collectionSchema =
+                schema?.collections?.[collectionName].schema;
+              for (const entity of entities) {
+                const insertedEntity = await tx.insert(collectionName, entity);
+                const serialized = serializeEntity(
+                  collectionSchema,
+                  insertedEntity
+                );
+                output[collectionName].push(serialized);
+              }
+            }
+            return output;
           }
-          return output;
         },
         { skipRules: hasAdminAccess(this.token) }
       );

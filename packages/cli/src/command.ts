@@ -35,6 +35,7 @@ export interface CommandDefinition<
   flags?: Flags;
   middleware?: Middleware[];
   preRelease?: boolean;
+  experimental?: boolean;
   run: RunCommand<Args, Flags, Middleware>;
 }
 

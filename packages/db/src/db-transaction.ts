@@ -150,6 +150,7 @@ export class DBTransaction<M extends Models<M> = Models> {
       throw new InvalidInsertDocumentError(
         `The document being inserted must be an object.`
       );
+    // TODO: this (I think) will accept inserts to collections that don't exist in the schema ... do we want to allow this?
     const collectionSchema = this.schema?.collections[collectionName]?.schema;
     const parsed = parseInsert(collectionSchema, data);
     // For some reason only doing this for collections without schemas (?)

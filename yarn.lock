@@ -10189,6 +10189,7 @@ __metadata:
     "@types/node": "npm:^22.13.10"
     "@types/prompts": "npm:^2"
     "@types/react": "npm:^18.2.21"
+    "@types/stream-json": "npm:^1"
     "@types/ws": "npm:^8"
     ansis: "npm:^1.5.5"
     axios: "npm:^1.5.0"
@@ -10200,6 +10201,7 @@ __metadata:
     dotenv: "npm:^16.4.5"
     dotenv-expand: "npm:^10.0.0"
     esbuild: "npm:^0.23.1"
+    form-data: "npm:^4.0.2"
     fsevents: "npm:^2.3.3"
     ink: "npm:^4.4.0"
     jsonwebtoken: "npm:^9.0.2"
@@ -10216,6 +10218,7 @@ __metadata:
     react: "npm:^18.2.0"
     react-devtools-core: "npm:^4.28.0"
     source-map: "npm:^0.7.4"
+    stream-json: "npm:^1.9.1"
     tsx: "npm:^3.12.9"
     typescript: "npm:^5.2.2"
     vitest: "npm:^1.3.1"
@@ -11555,6 +11558,25 @@ __metadata:
   version: 2.0.3
   resolution: "@types/stack-utils@npm:2.0.3"
   checksum: 10/72576cc1522090fe497337c2b99d9838e320659ac57fa5560fcbdcbafcf5d0216c6b3a0a8a4ee4fdb3b1f5e3420aa4f6223ab57b82fef3578bec3206425c6cf5
+  languageName: node
+  linkType: hard
+
+"@types/stream-chain@npm:*":
+  version: 2.1.0
+  resolution: "@types/stream-chain@npm:2.1.0"
+  dependencies:
+    "@types/node": "npm:*"
+  checksum: 10/0cc764e01abb0d86725081206751f1dd1c52ba147c2d15b03698aa373ad06ff0085afd577b92927347d288539803af78166314a4f50c2d17d275cb911ee92a29
+  languageName: node
+  linkType: hard
+
+"@types/stream-json@npm:^1":
+  version: 1.7.8
+  resolution: "@types/stream-json@npm:1.7.8"
+  dependencies:
+    "@types/node": "npm:*"
+    "@types/stream-chain": "npm:*"
+  checksum: 10/5712526d446850b779cba1ae4d93b58683d3fd9799a328195168751aa8cab354c03b52dca228733c3dbbb5c6d918594f5697571d62c61f34b131b2f9fcdcd1f2
   languageName: node
   linkType: hard
 
@@ -20349,6 +20371,18 @@ __metadata:
     combined-stream: "npm:^1.0.8"
     mime-types: "npm:^2.1.12"
   checksum: 10/7264aa760a8cf09482816d8300f1b6e2423de1b02bba612a136857413fdc96d7178298ced106817655facc6b89036c6e12ae31c9eb5bdc16aabf502ae8a5d805
+  languageName: node
+  linkType: hard
+
+"form-data@npm:^4.0.2":
+  version: 4.0.2
+  resolution: "form-data@npm:4.0.2"
+  dependencies:
+    asynckit: "npm:^0.4.0"
+    combined-stream: "npm:^1.0.8"
+    es-set-tostringtag: "npm:^2.1.0"
+    mime-types: "npm:^2.1.12"
+  checksum: 10/82c65b426af4a40090e517a1bc9057f76970b4c6043e37aa49859c447d88553e77d4cc5626395079a53d2b0889ba5f2a49f3900db3ad3f3f1bf76613532572fb
   languageName: node
   linkType: hard
 
@@ -31424,6 +31458,22 @@ __metadata:
   version: 0.2.2
   resolution: "stdin-discarder@npm:0.2.2"
   checksum: 10/642ffd05bd5b100819d6b24a613d83c6e3857c6de74eb02fc51506fa61dc1b0034665163831873868157c4538d71e31762bcf319be86cea04c3aba5336470478
+  languageName: node
+  linkType: hard
+
+"stream-chain@npm:^2.2.5":
+  version: 2.2.5
+  resolution: "stream-chain@npm:2.2.5"
+  checksum: 10/f9c65fe21251106083ca753d8b36f5a35dc426f5cb12851d9a872b6eb69e30ea2c94d87887bfda8c820503e842183812922532fb2adab18d5878d31a4516b956
+  languageName: node
+  linkType: hard
+
+"stream-json@npm:^1.9.1":
+  version: 1.9.1
+  resolution: "stream-json@npm:1.9.1"
+  dependencies:
+    stream-chain: "npm:^2.2.5"
+  checksum: 10/8c97d3078127aaf70197b0e4b5ca668307f1768a4eb1ac4c2030056e1f862d7a11b83094b87d2b04c3c14f76a8a8657eb87b1760d57781c172e3a513c7e2b5fd
   languageName: node
   linkType: hard
 
