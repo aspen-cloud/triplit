@@ -1,6 +1,6 @@
 {
   "name": "svelte-template",
-  "version": "1.0.14",
+  "version": "1.0.15",
   "private": true,
   "scripts": {
     "dev": "vite dev",
@@ -28,7 +28,7 @@
   },
   "type": "module",
   "dependencies": {
-    "@triplit/client": "1.0.14",
-    "@triplit/svelte": "1.0.14"
+    "@triplit/client": "1.0.15",
+    "@triplit/svelte": "1.0.15"
   }
 }
