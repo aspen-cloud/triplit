@@ -1,7 +1,7 @@
 {
   "name": "angular-template",
   "type": "module",
-  "version": "1.0.14",
+  "version": "1.0.15",
   "scripts": {
     "ng": "ng",
     "dev": "ng serve",
@@ -19,8 +19,8 @@
     "@angular/platform-browser": "^19.2.1",
     "@angular/platform-browser-dynamic": "^19.2.1",
     "@angular/router": "^19.2.1",
-    "@triplit/angular": "1.0.14",
-    "@triplit/client": "1.0.14",
+    "@triplit/angular": "1.0.15",
+    "@triplit/client": "1.0.15",
     "rxjs": "^7.8.2",
     "tslib": "^2.3.0",
     "zone.js": "~0.14.3"

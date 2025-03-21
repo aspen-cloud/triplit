@@ -1,5 +1,11 @@
 # @triplit/entity-db
 
+## 1.0.14
+
+### Patch Changes
+
+- 69c8efe7: Fix syncing bug with certain inserts
+
 ## 1.0.13
 
 ### Patch Changes
