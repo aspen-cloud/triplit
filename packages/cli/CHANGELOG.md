@@ -1,5 +1,11 @@
 # @triplit/cli
 
+## 1.0.15
+
+### Patch Changes
+
+- ee4dc5c1: Automated version bump for @triplit/cli after dependency changes
+
 ## 1.0.14
 
 ### Patch Changes
