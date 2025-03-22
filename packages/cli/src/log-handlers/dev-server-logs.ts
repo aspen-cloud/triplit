@@ -50,10 +50,7 @@ export class DevServerLogHandler implements LogHandler {
     if (!this.verbose && level === 'DEBUG') return;
     process.stdout.write(dim(new Date(timestamp).toLocaleTimeString() + ' '));
     if (level === 'ERROR' || level === 'FATAL') {
-      console.trace('log error');
-      console.log('------');
       console.log(`${red('⚠️  ERROR:')} ${white(message)}\n`, attributes || '');
-      console.log('------');
       return;
     }
     if (context === 'request') {
@@ -173,7 +170,7 @@ export class DevServerLogHandler implements LogHandler {
     const { type, payload } = message;
     const symbol = action === 'sent' ? SENT_SYMBOL : RECEIVED_SYMBOL;
     const isError = isErrorMessage(type);
-    const primaryColor = isError
+    const primaryColor = isDestructiveMessage(type)
       ? ERROR_COLOR
       : action === 'received'
       ? REQUEST_TYPE_COLOR
@@ -255,6 +252,10 @@ function formatConnectQueryPayload(
 }
 
 function isErrorMessage(messageType: string) {
+  return messageType === 'ERROR' || messageType === 'INTERNAL_ERROR';
+}
+
+function isDestructiveMessage(messageType: string) {
   return (
     messageType === 'ERROR' ||
     messageType === 'UNAUTHORIZED' ||

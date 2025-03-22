@@ -312,7 +312,6 @@ export class SyncConnection {
 
     const incompatibleEdits = getBackwardsIncompatibleEdits(diff);
     const isSchemaCompatible = incompatibleEdits.length === 0;
-    console.dir(incompatibleEdits, { depth: null });
 
     // If schema is incompatible, we shouldnt sync
     if (!isSchemaCompatible) {
