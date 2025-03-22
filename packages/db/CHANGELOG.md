@@ -1,5 +1,11 @@
 # @triplit/entity-db
 
+## 1.0.15
+
+### Patch Changes
+
+- 74736c3f: BUG FIX: handle possible accessor on undefined
+
 ## 1.0.14
 
 ### Patch Changes

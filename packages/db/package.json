@@ -1,7 +1,7 @@
 {
   "name": "@triplit/db",
   "packageManager": "yarn@4.2.2",
-  "version": "1.0.14",
+  "version": "1.0.15",
   "source": "./src/index.ts",
   "main": "./dist/index.js",
   "type": "module",
