@@ -10,7 +10,7 @@ Triplit 1.0 is here. It's a major upgrade that includes significant improvements
 - More type hinting when defining permissions and relations in a schema.
 - Easier self-hosted server setup with fewer required environment variables.
 
-Because Triplit 1.0 uses a new data storage format and redesigned sync protocol, client and server must be updated in tandem, and neither will be backwards compatible with their pre-1.0 counterparts. The server upgrade involves a data migration. If you're using Triplit Cloud, we'll handle this for you when you're ready to upgrade. If you're self-hosting, you can follow the instructions in the [server upgrade section](#server) below.
+Because Triplit 1.0 uses a new data storage format and redesigned sync protocol, client and server must be updated in tandem, and neither will be backwards compatible with their pre-1.0 counterparts. The server upgrade involves a data migration. If you're using Triplit Cloud, we'll handle this for you when you're ready to upgrade. If you're self-hosting, you can follow the instructions in the [server upgrade section](#migrating-your-server) below.
 
 ## Query builder
 
@@ -468,3 +468,26 @@ const result = await response.json();
 ```
 
 While the query builder methods (.e.g `Where`, `Order`, `Include`) have changed capitalization, keys in a json query payload remain lowercase.
+
+## Migrating your server
+
+### Triplit Cloud
+
+If you're on a Triplit Cloud database, you don't need to do anything to upgrade your server. We'll handle the upgrade for you when you're ready to upgrade. Just contact us in the [Triplit Discord](https://discord.gg/triplit) or at [help@triplit.dev](mailto:help@triplit.dev).
+
+### Self hosted
+
+If you're self hosting, you'll need to migrate your own database. Triplit provides a few tools that are helpful for this process, but it is up to you to ensure you safely migrate the database for your application's needs.
+
+If you are using SQLite for storage (which is the default) and you are re-using the same machine, it is recommended that you delete your existing database file(s) during the migration. These files should exist at the path you have specified by your `LOCAL_DATABASE_URL` variable. This isn't strictly necessary, but highly recommended as it will improve the performance of the database and ensures no data from V0 is carried over.
+
+There are a variety of ways you could go about migrating data from V0 to V1, but generally the steps to migrate your server are:
+
+1. If you have outside traffic to your server and want to re-use your machine, we recommend that you disable that traffic during the migration. For example, if you are directly serving a docker container you can change the port that the container is exposed on. Alternatively, you could deploy to a different machine that won't have outside traffic.
+2. Take a snapshot of your database with `triplit snapshot create`.
+3. If you are re-using your machine, delete your existing database file(s).
+4. Pointing to the server you would like to push to, run `triplit snapshot push --snapshot=<snapshotId>`.
+5. With an updated schema as described above, run `triplit schema push`.
+6. Congratulations, you have successfully migrated your server from V0 to V1! If things seem stable, you may now re-enable traffic to your server. If anything seems incorrect, you should have your data saved in a snapshot.
+
+If you would like any help or have any questions, please reach out to us in the [Triplit Discord](https://discord.gg/triplit) or at [help@triplit.dev](mailto:help@triplit.dev).
