@@ -1,5 +1,14 @@
 # @triplit/server-core
 
+## 1.0.17
+
+### Patch Changes
+
+- 74736c3f: optionally return no data for bulk inserts
+- da23bcbe: Minor clean up of logging
+- Updated dependencies [74736c3f]
+  - @triplit/db@1.0.15
+
 ## 1.0.16
 
 ### Patch Changes

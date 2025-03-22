@@ -1,5 +1,13 @@
 # @triplit/cli
 
+## 1.0.17
+
+### Patch Changes
+
+- 0d0d7595: Automated version bump for @triplit/cli after dependency changes
+- da23bcbe: Minor clean up of logging
+- 74736c3f: add snapshot create and snapshot push commands
+
 ## 1.0.16
 
 ### Patch Changes

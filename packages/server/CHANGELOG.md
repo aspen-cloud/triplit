@@ -1,5 +1,17 @@
 # @triplit/server
 
+## 1.0.17
+
+### Patch Changes
+
+- 74736c3f: respect content-type header while parsing form data, optionally return no data from bulk insert
+- Updated dependencies [74736c3f]
+- Updated dependencies [74736c3f]
+- Updated dependencies [da23bcbe]
+  - @triplit/db@1.0.15
+  - @triplit/server-core@1.0.17
+  - @triplit/client@1.0.16
+
 ## 1.0.16
 
 ### Patch Changes
