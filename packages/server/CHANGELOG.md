@@ -1,5 +1,11 @@
 # @triplit/server
 
+## 1.0.18
+
+### Patch Changes
+
+- 8eb2eb35: hotfix bulk-insert-file route
+
 ## 1.0.17
 
 ### Patch Changes
