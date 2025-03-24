@@ -386,7 +386,7 @@ export async function createTriplitHonoServer(
       const token = c.get('token');
       const { statusCode, payload } = await server.handleRequest(
         ['bulk-insert'],
-        data,
+        { noReturn, inserts: data },
         token
       );
       return c.json(
