@@ -410,7 +410,6 @@ describe('subscriptions', () => {
     });
 
     // initial results (empty)
-    await db.awaitReady;
     await db.updateQueryViews();
     db.broadcastToQuerySubscribers();
 

@@ -429,7 +429,7 @@ describe('IVM', () => {
         },
       }),
     };
-    const db = new DB({ schema });
+    const db = new DB({ schema, ivmOptions: { shouldTrackChanges: false } });
     beforeEach(async () => {
       await db.clear({});
     });
@@ -593,7 +593,7 @@ describe('IVM', () => {
         },
       }),
     };
-    const db = new DB({ schema });
+    const db = new DB({ schema, ivmOptions: { shouldTrackChanges: false } });
     const USERS = [
       { id: '1', name: 'Alice' },
       { id: '2', name: 'Bob' },

@@ -1,6 +1,6 @@
 import { CollectionNameFromModels, Models } from './schema/index.js';
 import { CollectionQuery, QueryOrder, WhereFilter } from './query.js';
-import { DBChanges, DBEntity, QueryWhere } from './types.js';
+import { Change, DBChanges, DBEntity, QueryAfter } from './types.js';
 import {
   isFilterGroup,
   isSubQueryFilter,
@@ -296,10 +296,11 @@ export class IVM<M extends Models<M> = Models> {
     }
 
     const affectedQueries = this.getAffectedQueries(storeChanges);
-    for (const [subscribedQueryInfo, changes] of affectedQueries) {
-      if (handledRootQueries.has(subscribedQueryInfo.rootQuery)) {
+    for (const [queryId, changes] of affectedQueries) {
+      if (handledRootQueries.has(queryId)) {
         continue;
       }
+      const subscribedQueryInfo = this.subscribedQueries.get(queryId)!;
       if (this.options.shouldTrackChanges) {
         await this.processChangesForTracking(subscribedQueryInfo, changes);
       } else {
@@ -315,10 +316,145 @@ export class IVM<M extends Models<M> = Models> {
     rootQueryInfo: SubscribedQueryInfo,
     changes: DBChanges
   ) {
-    // Currently just rerun the query
-    const freshResults = await this.db.rawFetch(rootQueryInfo.query);
-    rootQueryInfo.results = freshResults as ViewEntity[];
-    rootQueryInfo.hasChanged = true;
+    const rootQuery = rootQueryInfo.query;
+    const rootCollection = rootQuery.collectionName;
+    let onlyChangesToRootCollection = true;
+    for (const collection in changes) {
+      if (rootCollection !== collection) {
+        onlyChangesToRootCollection = false;
+        break;
+      }
+    }
+    // TODO: short circuit if this is a big server initialization
+    if (isQueryRelational(rootQuery)) {
+      const freshResults = await this.db.rawFetch(rootQuery);
+      rootQueryInfo.results = freshResults as ViewEntity[];
+      rootQueryInfo.hasChanged = true;
+      return;
+    }
+    const rootCollectionChanges = changes[rootCollection];
+    const deletes = rootCollectionChanges.deletes;
+    const inserts = new Map<string, DBEntity>();
+    const updates = new Map<string, Change>();
+    for (const [id, entity] of rootCollectionChanges.sets) {
+      if (entity.id) {
+        inserts.set(id, entity as DBEntity);
+      } else {
+        updates.set(id, entity as Change);
+      }
+    }
+    const evictedEntities = new Set<string>();
+    const addedEntities = new Set<string>();
+    // console.dir({ rootQuery, deletes, inserts, updates }, { depth: null });
+    // console.log({ inserts, updates, deletes });
+    const handledUpdates = new Set<string>();
+    const matchesWhereOrAfterIfRelevant = (e: DBEntity) =>
+      (!rootQuery.where ||
+        doesEntityMatchBasicWhere(
+          rootCollection,
+          e,
+          rootQuery.where,
+          this.db.schema
+        )) &&
+      (!rootQuery.after || satisfiesAfter(e, rootQuery.after, rootQuery.order));
+
+    let filteredResults = rootQueryInfo.results!;
+    // console.dir({ before: filteredResults }, { depth: null });
+    if (deletes.size > 0 || updates.size > 0) {
+      filteredResults = rootQueryInfo.results!.filter((entity) => {
+        let matches = true;
+        if (deletes.has(entity.data.id)) {
+          matches = false;
+        }
+        if (updates.has(entity.data.id)) {
+          handledUpdates.add(entity.data.id);
+          deepObjectAssign(entity.data, updates.get(entity.data.id));
+          matches = matchesWhereOrAfterIfRelevant(entity.data);
+        }
+        if (!matches) {
+          evictedEntities.add(entity.data.id);
+        }
+        return matches;
+      });
+    }
+    // console.dir({ after: filteredResults }, { depth: null });
+    const potentialAdditions: DBEntity[] = Array.from(inserts.values());
+
+    // console.dir({ afterInserts: filteredResults }, { depth: null });
+    for (const [id, update] of updates) {
+      if (handledUpdates.has(id)) {
+        continue;
+      }
+      if (
+        rootQuery.where &&
+        !doesUpdateImpactSimpleFilters(update, rootQuery.where)
+      ) {
+        continue;
+      }
+      const sourceEntity = await this.db.entityStore.getEntity(
+        this.db.kv,
+        rootCollection,
+        id
+      );
+      if (sourceEntity == null) {
+        continue;
+      }
+      potentialAdditions.push(sourceEntity);
+    }
+
+    for (const entity of potentialAdditions) {
+      if (matchesWhereOrAfterIfRelevant(entity)) {
+        addedEntities.add(entity.id);
+        filteredResults.push(createViewEntity(entity));
+      }
+    }
+
+    if (rootQuery?.order != null) {
+      filteredResults.sort((a, b) =>
+        compare(flattenViewEntity(a), flattenViewEntity(b), rootQuery.order!)
+      );
+    }
+    if (rootQuery?.limit != null) {
+      if (
+        evictedEntities.size > 0 &&
+        filteredResults.length < rootQuery.limit
+      ) {
+        if (rootQuery.order && filteredResults.length > 0) {
+          const backfillQuery = {
+            ...rootQuery,
+            limit: rootQuery.limit - filteredResults.length,
+          };
+          const after: QueryAfter = [
+            // @ts-expect-error
+            rootQuery.order.map(([attr]) => {
+              return ValuePointer.Get(
+                filteredResults[filteredResults.length - 1].data,
+                attr
+              );
+            }),
+            // TODO: hard to reason about inclusive vs exclusive here
+            // maybe shouldn't be doing this if you'll end up with duplicate entities.
+            // unless you add an id to the order and after to tiebreak
+            false,
+          ];
+          backfillQuery.after = after;
+
+          filteredResults = filteredResults.concat(
+            await this.db.rawFetch(backfillQuery)
+          );
+        } else {
+          // this could be better handled higher up
+          filteredResults = (await this.db.rawFetch(rootQuery)) as ViewEntity[];
+        }
+      } else {
+        filteredResults = filteredResults.slice(0, rootQuery.limit);
+      }
+    }
+    rootQueryInfo.results = filteredResults;
+    rootQueryInfo.hasChanged =
+      evictedEntities.size > 0 ||
+      addedEntities.size > 0 ||
+      handledUpdates.size > 0;
   }
 
   private async processChangesForTracking(
@@ -374,11 +510,9 @@ export class IVM<M extends Models<M> = Models> {
     );
   }
 
-  private getAffectedQueries(
-    changes: DBChanges
-  ): Map<SubscribedQueryInfo, DBChanges> {
+  private getAffectedQueries(changes: DBChanges): Map<string, DBChanges> {
     // TODO  we should probably organize queries by touched collections to make this faster
-    const affectedQueries = new Map<SubscribedQueryInfo, DBChanges>();
+    const affectedQueries = new Map<string, DBChanges>();
     for (const queryId of this.subscribedQueries.keys()) {
       const queryState = this.subscribedQueries.get(queryId)!;
       const queryChanges = {} as DBChanges;
@@ -388,7 +522,7 @@ export class IVM<M extends Models<M> = Models> {
         }
       }
       if (Object.keys(queryChanges).length > 0) {
-        affectedQueries.set(queryState, queryChanges);
+        affectedQueries.set(queryId, queryChanges);
       }
     }
     return affectedQueries;
@@ -908,7 +1042,7 @@ function doesEntityMatchBasicWhere(
 }
 
 function doesUpdateImpactSimpleFilters(
-  entity: DBEntity,
+  entity: Change,
   filters: WhereFilter<any, any>[]
 ) {
   // TODO check order statements as well
