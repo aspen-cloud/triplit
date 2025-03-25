@@ -1185,7 +1185,7 @@ describe('IVM syncing', () => {
       (shouldTrackChanges) => {
         test.each(QUERIES_TO_TEST)('Query: %s', async (queryKey) => {
           const query = QUERIES[queryKey];
-          const serverDb = new DB();
+          const serverDb = new DB({ ivmOptions: { shouldTrackChanges } });
           const clientDb = new DB();
 
           // const expectedNumberOfCalls = Math.floor(
