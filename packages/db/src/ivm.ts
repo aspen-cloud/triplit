@@ -92,9 +92,11 @@ export class IVM<M extends Models<M> = Models> {
     if (!this.subscribedQueries.has(rootQueryId)) {
       this.subscribedQueries.set(rootQueryId, {
         ogQuery: query,
-        query: createQueryWithRelationalOrderAddedToIncludes(
-          createQueryWithExistsAddedToIncludes(query)
-        ),
+        query: this.options.shouldTrackChanges
+          ? createQueryWithRelationalOrderAddedToIncludes(
+              createQueryWithExistsAddedToIncludes(query)
+            )
+          : query,
         listeners: new Set(),
         errorCallbacks: new Set(),
         uninitializedListeners: new WeakSet(),
