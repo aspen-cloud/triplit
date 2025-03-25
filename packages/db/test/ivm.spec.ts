@@ -1234,37 +1234,39 @@ describe('IVM syncing', () => {
                       }
                     }
                   }
-                }
-                const clientFetchResults = await clientDb.fetch(query);
-                const serverFetchResults = await serverDb.fetch(query);
 
-                // console.dir(
-                //   {
-                //     serverChanges,
-                //     clientResults: clientFetchResults,
-                //     serverResults,
-                //     serverFetchResults,
-                //   },
-                //   { depth: null }
-                // );
+                  const clientFetchResults = await clientDb.fetch(query);
 
-                // TODO verify subquery result order
-                if (query.order != null) {
-                  // TODO verify order rather than expect order to be exactly the same.
-                  // E.g. a result can satisfy the order in multiple different ways
-                  // but still be correct in the face of equal values. I.e. it's an unstable sort
-                  expect(serverResults).toEqual(serverFetchResults);
-                  if (shouldTrackChanges) {
+                  if (query.order != null) {
                     expect(clientFetchResults).toEqual(serverResults);
+                  } else {
+                    const clientResultMap = resultArrToMap(clientFetchResults);
+                    const serverResultMap = resultArrToMap(serverResults);
+                    expect(clientResultMap).toEqual(serverResultMap);
                   }
                 } else {
-                  const serverResultMap = resultArrToMap(serverResults);
-                  const clientResultMap = resultArrToMap(clientFetchResults);
-                  const serverFetchResultMap =
-                    resultArrToMap(serverFetchResults);
-                  expect(serverResultMap).toEqual(serverFetchResultMap);
-                  if (shouldTrackChanges) {
-                    expect(clientResultMap).toEqual(serverResultMap);
+                  const serverFetchResults = await serverDb.fetch(query);
+
+                  // console.dir(
+                  //   {
+                  //     serverChanges,
+                  //     clientResults: clientFetchResults,
+                  //     serverResults,
+                  //     serverFetchResults,
+                  //   },
+                  //   { depth: null }
+                  // );
+
+                  // TODO verify subquery result order
+                  if (query.order != null) {
+                    // TODO verify order rather than expect order to be exactly the same.
+                    // E.g. a result can satisfy the order in multiple different ways
+                    // but still be correct in the face of equal values. I.e. it's an unstable sort
+                    expect(serverResults).toEqual(serverFetchResults);
+                  } else {
+                    expect(resultArrToMap(serverResults)).toEqual(
+                      resultArrToMap(serverFetchResults)
+                    );
                   }
                 }
                 numCalls++;
