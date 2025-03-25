@@ -16,6 +16,7 @@ import { deterministicShuffle } from './utils/seeding.js';
 import { prepareQuery } from '../src/prepare-query.js';
 import { pause } from './utils/async.js';
 import { InMemoryTestKVStore } from './utils/test-kv-store.js';
+import { areChangesEmpty } from '../src/memory-write-buffer.js';
 
 describe('IVM', () => {
   describe('initial results', async () => {
@@ -977,9 +978,20 @@ describe('IVM syncing', () => {
               ['conversationId', '=', '$1.conversationId'],
               ['userId', '=', 'alice'],
             ],
+            order: [['id', 'DESC']],
           },
         },
       ],
+      include: {
+        membership: {
+          subquery: {
+            collectionName: 'conversationMembers',
+            where: [['conversationId', '=', '$1.conversationId']],
+            order: [['id', 'DESC']],
+          },
+          cardinality: 'one',
+        },
+      },
     },
     messagesFromEitherBobOrCharlie: {
       collectionName: 'messages',
@@ -1164,129 +1176,142 @@ describe('IVM syncing', () => {
   const RANDOM_SEEDS = Array.from({ length: 1 }, (_, i) =>
     Math.floor(Math.random() * 10_000)
   );
+  const QUERIES_TO_TEST: Array<keyof typeof QUERIES> = Object.keys(QUERIES);
+  // const QUERIES_TO_TEST: Array<keyof typeof QUERIES> = ['aliceMessages'];
 
   describe.each(RANDOM_SEEDS)('seed %i', (seed) => {
-    describe.each([true])('database starts empty: %s', (shouldTrackChanges) => {
-      test.each(Object.keys(QUERIES))('Query: %s', async (queryKey) => {
-        const query = QUERIES[queryKey];
-        const serverDb = new DB();
-        const clientDb = new DB();
+    describe.each([false, true])(
+      'should track changes: %s',
+      (shouldTrackChanges) => {
+        test.each(QUERIES_TO_TEST)('Query: %s', async (queryKey) => {
+          const query = QUERIES[queryKey];
+          const serverDb = new DB();
+          const clientDb = new DB();
 
-        // const expectedNumberOfCalls = Math.floor(
-        //   randomOps.length / flushChangesFrequency
-        // );
-        const spy = vi.fn();
-        let ranStep, resolve, reject;
-        let numCalls = 0;
+          // const expectedNumberOfCalls = Math.floor(
+          //   randomOps.length / flushChangesFrequency
+          // );
+          const spy = vi.fn();
+          let ranStep, resolve, reject;
+          let numCalls = 0;
 
-        const prepared = prepareQuery(query, undefined, {}, undefined, {
-          applyPermission: undefined,
-        });
+          const prepared = prepareQuery(query, undefined, {}, undefined, {
+            applyPermission: undefined,
+          });
 
-        // starting states should match
-        expect(await serverDb.fetch(query)).toEqual(
-          await clientDb.fetch(query)
-        );
+          // starting states should match
+          expect(await serverDb.fetch(query)).toEqual(
+            await clientDb.fetch(query)
+          );
 
-        serverDb.subscribeWithChanges(
-          prepared,
-          async ({ changes: serverChanges, results: serverResults }) => {
-            ({ promise: ranStep, resolve, reject } = Promise.withResolvers());
-            spy();
+          serverDb.subscribeWithChanges(
+            prepared,
+            async ({ changes: serverChanges, results: serverResults }) => {
+              ({ promise: ranStep, resolve, reject } = Promise.withResolvers());
+              spy();
 
-            // insert changes into clientDb
-            if (serverChanges) {
-              for (const [collection, changes] of Object.entries(
-                serverChanges
-              )) {
-                if (!changes) {
-                  console.warn('no changes', collection, changes);
-                  continue;
-                }
-                for (const id of changes.deletes) {
-                  await clientDb.delete(collection, id);
-                }
-                for (const [id, value] of changes.sets.entries()) {
-                  if ('id' in value) {
-                    await clientDb.insert(collection, value);
-                  } else {
-                    await clientDb.update(collection, id, value);
+              try {
+                // insert changes into clientDb
+                if (shouldTrackChanges) {
+                  // console.dir({ serverChanges }, { depth: null });
+                  // expect(serverChanges).toBeDefined();
+                  // expect(areChangesEmpty(serverChanges)).toBeFalsy();
+                  for (const [collection, changes] of Object.entries(
+                    serverChanges
+                  )) {
+                    if (!changes) {
+                      console.warn('no changes', collection, changes);
+                      continue;
+                    }
+                    for (const id of changes.deletes) {
+                      await clientDb.delete(collection, id);
+                    }
+                    for (const [id, value] of changes.sets.entries()) {
+                      if ('id' in value) {
+                        await clientDb.insert(collection, value);
+                      } else {
+                        await clientDb.update(collection, id, value);
+                      }
+                    }
                   }
                 }
+                const clientFetchResults = await clientDb.fetch(query);
+                const serverFetchResults = await serverDb.fetch(query);
+
+                // console.dir(
+                //   {
+                //     serverChanges,
+                //     clientResults: clientFetchResults,
+                //     serverResults,
+                //     serverFetchResults,
+                //   },
+                //   { depth: null }
+                // );
+
+                // TODO verify subquery result order
+                if (query.order != null) {
+                  // TODO verify order rather than expect order to be exactly the same.
+                  // E.g. a result can satisfy the order in multiple different ways
+                  // but still be correct in the face of equal values. I.e. it's an unstable sort
+                  expect(serverResults).toEqual(serverFetchResults);
+                  if (shouldTrackChanges) {
+                    expect(clientFetchResults).toEqual(serverResults);
+                  }
+                } else {
+                  const serverResultMap = resultArrToMap(serverResults);
+                  const clientResultMap = resultArrToMap(clientFetchResults);
+                  const serverFetchResultMap =
+                    resultArrToMap(serverFetchResults);
+                  expect(serverResultMap).toEqual(serverFetchResultMap);
+                  if (shouldTrackChanges) {
+                    expect(clientResultMap).toEqual(serverResultMap);
+                  }
+                }
+                numCalls++;
+                resolve();
+              } catch (e) {
+                reject(e);
               }
             }
-            try {
-              const clientFetchResults = await clientDb.fetch(query);
-              const serverFetchResults = await serverDb.fetch(query);
+          );
 
-              // console.dir(
-              //   {
-              //     serverChanges,
-              //     clientResults: clientFetchResults,
-              //     serverResults,
-              //     serverFetchResults,
-              //   },
-              //   { depth: null }
-              // );
+          const NUM_OPS = 10;
+          const randomOps = deterministicMixArrays(
+            [
+              createRandomOpsForCollection('messages', NUM_OPS, seed),
+              createRandomOpsForCollection(
+                'conversationMembers',
+                NUM_OPS,
+                seed * 2
+              ),
+              createRandomOpsForCollection('conversations', NUM_OPS, seed * 3),
+            ],
+            seed
+          );
 
-              // TODO verify subquery result order
-              if (query.order != null) {
-                // TODO verify order rather than expect order to be exactly the same.
-                // E.g. a result can satisfy the order in multiple different ways
-                // but still be correct in the face of equal values. I.e. it's an unstable sort
-                expect(clientFetchResults).toEqual(serverFetchResults);
-                expect(clientFetchResults).toEqual(serverResults);
-              } else {
-                const serverResultMap = resultArrToMap(serverResults);
-                const clientResultMap = resultArrToMap(clientFetchResults);
-                const serverFetchResultMap = resultArrToMap(serverFetchResults);
-                expect(clientResultMap).toEqual(serverResultMap);
-                expect(clientResultMap).toEqual(serverFetchResultMap);
-              }
-              numCalls++;
-              resolve();
-            } catch (e) {
-              reject(e);
+          const flushChangesFrequency = [1, 2, 3, 4, 5, 6][seed % 6];
+          // const updateViewFrequency = [1, 2, 3, 4, 5, 6][seed % 6];
+          const broadcastChangesFrequency = [1, 2, 3, 4, 5, 6][seed % 6];
+
+          let i = 0;
+          for (const op of randomOps) {
+            await applyOpToDB(serverDb, op);
+            i++;
+            if (i % flushChangesFrequency === 0) {
+              await serverDb.updateQueryViews();
+            }
+            if (i % broadcastChangesFrequency === 0) {
+              ranStep = Promise.resolve();
+              // if the query subscription runs it should reassign ranStep
+              // to a promise that resolves when the result checks finish
+              serverDb.broadcastToQuerySubscribers();
+              await ranStep;
             }
           }
-        );
-
-        const NUM_OPS = 10;
-        const randomOps = deterministicMixArrays(
-          [
-            createRandomOpsForCollection('messages', NUM_OPS, seed),
-            createRandomOpsForCollection(
-              'conversationMembers',
-              NUM_OPS,
-              seed * 2
-            ),
-            createRandomOpsForCollection('conversations', NUM_OPS, seed * 3),
-          ],
-          seed
-        );
-
-        const flushChangesFrequency = [1, 2, 3, 4, 5, 6][seed % 6];
-        // const updateViewFrequency = [1, 2, 3, 4, 5, 6][seed % 6];
-        const broadcastChangesFrequency = [1, 2, 3, 4, 5, 6][seed % 6];
-
-        let i = 0;
-        for (const op of randomOps) {
-          await applyOpToDB(serverDb, op);
-          i++;
-          if (i % flushChangesFrequency === 0) {
-            await serverDb.updateQueryViews();
-          }
-          if (i % broadcastChangesFrequency === 0) {
-            ranStep = Promise.resolve();
-            // if the query subscription runs it should reassign ranStep
-            // to a promise that resolves when the result checks finish
-            serverDb.broadcastToQuerySubscribers();
-            await ranStep;
-          }
-        }
-        // expect(spy).toHaveBeenCalledTimes(expectedNumberOfCalls);
-      });
-    });
+          // expect(spy).toHaveBeenCalledTimes(expectedNumberOfCalls);
+        });
+      }
+    );
   });
 });
 

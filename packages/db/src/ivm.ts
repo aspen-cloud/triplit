@@ -1,7 +1,8 @@
 import { CollectionNameFromModels, Models } from './schema/index.js';
 import { CollectionQuery, QueryOrder, WhereFilter } from './query.js';
-import { DBChanges, DBEntity } from './types.js';
+import { DBChanges, DBEntity, QueryWhere } from './types.js';
 import {
+  isFilterGroup,
   isSubQueryFilter,
   satisfiesNonRelationalFilter,
   someFilterStatements,
@@ -10,6 +11,7 @@ import { DB, DBSchema } from './db.js';
 import { deepObjectAssign } from './utils/deep-merge.js';
 import {
   areChangesEmpty,
+  mergeDBChanges,
   SimpleMemoryWriteBuffer,
 } from './memory-write-buffer.js';
 import { EntityDataStore } from './entity-data-store.js';
@@ -44,6 +46,7 @@ interface SubscribedQueryInfo {
   results?: ViewEntity[];
   capturedChanges?: DBChanges;
   hasChanged?: boolean;
+  collections: Set<string>;
 }
 
 type SubscriptionCallback = (update: {
@@ -96,6 +99,7 @@ export class IVM<M extends Models<M> = Models> {
         errorCallbacks: new Set(),
         uninitializedListeners: new WeakSet(),
         results: undefined,
+        collections: new Set(),
       });
       this.createQueryNodesForRootQuery(rootQueryId, query, 'root');
     }
@@ -146,16 +150,16 @@ export class IVM<M extends Models<M> = Models> {
     // save the query state to a variable before the fetch but I think
     // it's better to leave this as a reminder that this is a potential
     // issue
-    const tx = this.storage.transact();
-    await this.entityStore.applyChanges(
-      tx,
-      queryResultsToChanges(results, query),
-      {
-        checkWritePermission: undefined,
-        entityChangeValidator: undefined,
-      }
-    );
-    await tx.commit();
+    // const tx = this.storage.transact();
+    // await this.entityStore.applyChanges(
+    //   tx,
+    //   queryResultsToChanges(results, query),
+    //   {
+    //     checkWritePermission: undefined,
+    //     entityChangeValidator: undefined,
+    //   }
+    // );
+    // await tx.commit();
     if (this.subscribedQueries.get(rootQueryId)) {
       this.subscribedQueries.get(rootQueryId)!.results = results;
     }
@@ -174,6 +178,8 @@ export class IVM<M extends Models<M> = Models> {
           !rootQueryInfo.hasChanged &&
           areChangesEmpty(rootQueryInfo.capturedChanges!)
         ) {
+          console.log('Skipping listener');
+          // console.dir({ rootQueryInfo }, { depth: 10 });
           continue;
         }
         const results =
@@ -199,6 +205,7 @@ export class IVM<M extends Models<M> = Models> {
     type: QueryNode['queryType']
   ) {
     const collection = query.collectionName;
+    this.subscribedQueries.get(queryId)!.collections?.add(collection);
     if (!this.queryNodes[collection]) {
       this.queryNodes[collection] = [];
     }
@@ -277,253 +284,112 @@ export class IVM<M extends Models<M> = Models> {
     //     numChangedCollections: Object.keys(storeChanges).length,
     //   },
     // });
+    const handledRootQueries = new Set<string>();
     // Iterate through queries and get initial results for ones that don't have any
     for (const queryId of this.subscribedQueries.keys()) {
       if (this.subscribedQueries.get(queryId)!.results == null) {
         await this.initializeQueryResults(queryId);
+        handledRootQueries.add(queryId);
       }
     }
-    const schema = this.db.getSchema();
 
-    // Map from queryId to a set of changes
-    // let capturedChanges: Map<string, Record<C, Map<string, any>>> = {} as any;
-    const handledRootQueries = new Set<string>();
-    for (const collection in storeChanges) {
-      const allSetEntities = new Set(storeChanges[collection].sets.keys());
-      const allChangedEntities = new Set([
-        ...allSetEntities,
-        ...storeChanges[collection].deletes,
-      ]);
-      for (const queryNode of this.queryNodes[collection] ?? []) {
-        try {
-          // using _mark = performanceTrace('updateViews-query', {
-          //   track: 'IVM',
-          //   properties: {
-          //     collection,
-          //     query: JSON.stringify(queryNode.query),
-          //     allSetEntities: allSetEntities.size,
-          //     allChangedEntities: allChangedEntities.size,
-          //   },
-          // });
-          const rootQueryId = queryNode.rootQuery;
-          if (handledRootQueries.has(rootQueryId)) {
-            continue;
-          }
-
-          // If it's a simple, non-relational query and there are only inserts
-          // then we can just update the results directly with all of the changes
-          // at once
-          if (
-            queryNode.queryType === 'root' &&
-            !isQueryRelational(queryNode.query) &&
-            allSetEntities.size > 0 &&
-            storeChanges[collection].deletes.size === 0 &&
-            // only inserts
-            Array.from(allSetEntities).every((id) =>
-              Object.hasOwn(storeChanges[collection].sets.get(id), 'id')
-            )
-          ) {
-            this.handleSimpleInserts({
-              allSetEntities,
-              queryNode,
-              storeChanges,
-              schema: schema,
-            });
-            continue;
-          }
-
-          const rootResults = this.subscribedQueries.get(rootQueryId)!.results;
-          if (
-            !this.options.shouldTrackChanges &&
-            (!rootResults || allChangedEntities.size >= rootResults.length)
-          ) {
-            await this.initializeQueryResults(rootQueryId);
-            handledRootQueries.add(rootQueryId);
-            this.subscribedQueries.get(rootQueryId)!.hasChanged = true;
-            continue;
-          }
-          let entitiesProcessed = 0;
-          for (const entityId of allChangedEntities) {
-            if (entitiesProcessed++ % 100 === 0) {
-              await yieldToEventLoop();
-            }
-            const entityBefore = await this.entityStore.getEntity(
-              this.storage,
-              collection,
-              entityId
-            );
-            const isSet = storeChanges[collection].sets.has(entityId);
-            const isDeleted = storeChanges[collection].deletes.has(entityId);
-            let entityAfter: DBEntity | undefined = entityBefore;
-            if (isDeleted) {
-              entityAfter = isSet
-                ? (storeChanges[collection].sets.get(entityId)! as DBEntity)
-                : undefined;
-            } else if (isSet) {
-              entityAfter = entityBefore
-                ? deepObjectAssign(
-                    {},
-                    entityBefore,
-                    storeChanges[collection].sets.get(entityId)
-                  )
-                : (storeChanges[collection].sets.get(entityId) as DBEntity);
-            }
-            const rootQueryState = this.subscribedQueries.get(
-              queryNode.rootQuery
-            )!;
-            if (!rootQueryState) {
-              logger.error('Root query state not found', queryNode);
-              continue;
-            }
-            if (!rootQueryState.capturedChanges) {
-              rootQueryState.capturedChanges = {} as any;
-            }
-            const rootQueryChanges = rootQueryState.capturedChanges!;
-            if (!(collection in rootQueryChanges)) {
-              rootQueryChanges[collection] = {
-                sets: new Map(),
-                deletes: new Set(),
-              };
-            }
-            const collectionChanges = rootQueryChanges[collection];
-
-            const filtersWithoutVars = queryNode.query.where?.filter(
-              (filter) =>
-                !(
-                  Array.isArray(filter) &&
-                  typeof filter[2] === 'string' &&
-                  filter[2].startsWith('$')
-                )
-            ) ?? [true];
-            // TODO incorporate possible 'delete' changes
-            const entityMatchesBefore =
-              entityBefore == null
-                ? false
-                : doesEntityMatchBasicWhere(
-                    collection,
-                    entityBefore,
-                    filtersWithoutVars,
-                    schema
-                  ) &&
-                  (!queryNode.query.after ||
-                    satisfiesAfter(
-                      entityBefore,
-                      queryNode.query.after,
-                      queryNode.query.order
-                    ));
-            const entityMatchesAfter =
-              entityAfter == null
-                ? false
-                : doesEntityMatchBasicWhere(
-                    collection,
-                    entityAfter,
-                    filtersWithoutVars,
-                    schema
-                  ) &&
-                  (!queryNode.query.after ||
-                    satisfiesAfter(
-                      entityAfter,
-                      queryNode.query.after,
-                      queryNode.query.order
-                    ));
-            const rootQuery = this.subscribedQueries.get(
-              queryNode.rootQuery
-            )!.query;
-            const queryIsRoot = queryNode.queryType === 'root';
-
-            // console.dir(
-            //   {
-            //     storeChanges,
-            //     entityMatchesBefore,
-            //     entityMatchesAfter,
-            //     entityBefore,
-            //     entityAfter,
-            //     queryIsRoot,
-            //   },
-            //   { depth: null }
-            // );
-
-            if (!entityMatchesBefore && !entityMatchesAfter) {
-              // Do nothing
-              continue;
-            }
-
-            if (rootQuery.limit != null) {
-              // The heuristic here is that a limit query is
-              // a. relatively cheap to compute (smaller)
-              // b. nearly as expensive to calculate incrementally (backfill) than it
-              //    is to calculate the whole thing
-              // Therefore we just recalculate the whole thing
-              // and diff with the previous results to get the changes
-              const newResults = await this.db.rawFetch(rootQuery);
-              const currentResults = rootQueryState.results ?? [];
-              const currentResultIds = new Set(currentResults.map((r) => r.id));
-              const addedResults = newResults.filter(
-                (r) => !currentResultIds.has(r.data.id)
-              );
-              rootQueryState.results = newResults;
-
-              queryResultsToChanges(addedResults, rootQuery, rootQueryChanges);
-              if (isDeleted) {
-                collectionChanges.deletes.add(entityId);
-              } else {
-                collectionChanges.sets.set(entityId, entityAfter!);
-              }
-              continue;
-            }
-
-            // Below is a basic truth table for the different cases of matchesBefore and matchesAfter
-            if (entityMatchesBefore && entityMatchesAfter) {
-              await this.handlePotentialResultUpdate(
-                rootQueryState,
-                queryNode,
-                entityAfter as DBEntity
-              );
-              continue;
-            }
-
-            if (entityMatchesBefore && !entityMatchesAfter) {
-              await this.handlePotentialResultEviction(
-                rootQueryState,
-                queryNode,
-                entityBefore as DBEntity | null | undefined,
-                entityAfter as DBEntity | null | undefined
-              );
-              continue;
-            }
-
-            if (!entityMatchesBefore && entityMatchesAfter) {
-              await this.handlePotentialResultAdditions(
-                rootQueryState,
-                queryNode,
-                entityAfter as DBEntity
-              );
-              continue;
-            }
-          }
-        } catch (e) {
-          logger.error('Error updating views', {
-            error: e,
-            queryNode,
-            collection,
-          });
-          const errorCallbacks = this.subscribedQueries.get(
-            queryNode.rootQuery
-          )?.errorCallbacks;
-          if (!errorCallbacks) return;
-          for (const errorCallback of errorCallbacks) {
-            errorCallback(e as Error);
-          }
-        }
+    const affectedQueries = this.getAffectedQueries(storeChanges);
+    for (const [subscribedQueryInfo, changes] of affectedQueries) {
+      if (handledRootQueries.has(subscribedQueryInfo.rootQuery)) {
+        continue;
+      }
+      if (this.options.shouldTrackChanges) {
+        await this.processChangesForTracking(subscribedQueryInfo, changes);
+      } else {
+        await this.updateQueryResults(subscribedQueryInfo, changes);
       }
     }
     const kvTx = this.storage.transact();
-    await this.entityStore.applyChanges(kvTx, storeChanges, {
-      checkWritePermission: undefined,
-      entityChangeValidator: undefined,
-    });
-    await this.doubleBuffer.inactiveBuffer.clear(kvTx);
+    this.doubleBuffer.inactiveBuffer.clear(kvTx);
     await kvTx.commit();
+  }
+
+  private async updateQueryResults(
+    rootQueryInfo: SubscribedQueryInfo,
+    changes: DBChanges
+  ) {
+    // Currently just rerun the query
+    const freshResults = await this.db.rawFetch(rootQueryInfo.query);
+    rootQueryInfo.results = freshResults as ViewEntity[];
+    rootQueryInfo.hasChanged = true;
+  }
+
+  private async processChangesForTracking(
+    rootQueryInfo: SubscribedQueryInfo,
+    changes: DBChanges
+  ) {
+    const freshResults = await this.db.rawFetch(rootQueryInfo.query);
+    const previousResultChanges = queryResultsToChanges(
+      rootQueryInfo.results!,
+      rootQueryInfo.query
+    );
+    const newResultChanges = queryResultsToChanges(
+      freshResults as ViewEntity[],
+      rootQueryInfo.query
+    );
+    const diff = diffChanges(previousResultChanges, newResultChanges);
+
+    const filteredChanges = {} as DBChanges;
+    for (const collection in diff) {
+      // We only want to pass on deletes that were actually deleted
+      // const actualDeletes = changes[collection]?.deletes
+      //   ? diff[collection].deletes.intersection(changes[collection].deletes)
+      //   : new Set<string>();
+
+      filteredChanges[collection] = {
+        sets: diff[collection].sets,
+        // deletes: actualDeletes,
+        deletes: diff[collection].deletes,
+      };
+      // We want to also capture sets that were treated as deletes by the diff
+      if (changes[collection]?.sets) {
+        const evictedSets = new Set(
+          changes[collection].sets.keys()
+        ).intersection(diff[collection].deletes);
+        for (const evictedSet of evictedSets) {
+          filteredChanges[collection].deletes.delete(evictedSet);
+          filteredChanges[collection].sets.set(
+            evictedSet,
+            changes[collection].sets.get(evictedSet)!
+          );
+        }
+      }
+    }
+
+    if (!areChangesEmpty(diff)) {
+      rootQueryInfo.hasChanged = true;
+    }
+    rootQueryInfo.results = freshResults;
+    rootQueryInfo.capturedChanges = mergeDBChanges(
+      rootQueryInfo.capturedChanges ?? {},
+      // filteredChanges
+      diff
+    );
+  }
+
+  private getAffectedQueries(
+    changes: DBChanges
+  ): Map<SubscribedQueryInfo, DBChanges> {
+    // TODO  we should probably organize queries by touched collections to make this faster
+    const affectedQueries = new Map<SubscribedQueryInfo, DBChanges>();
+    for (const queryId of this.subscribedQueries.keys()) {
+      const queryState = this.subscribedQueries.get(queryId)!;
+      const queryChanges = {} as DBChanges;
+      for (const collection in changes) {
+        if (queryState.collections.has(collection)) {
+          queryChanges[collection] = changes[collection];
+        }
+      }
+      if (Object.keys(queryChanges).length > 0) {
+        affectedQueries.set(queryState, queryChanges);
+      }
+    }
+    return affectedQueries;
   }
 
   // This is used to get results that should be incorporated into the root query
@@ -1039,6 +905,23 @@ function doesEntityMatchBasicWhere(
   );
 }
 
+function doesUpdateImpactSimpleFilters(
+  entity: DBEntity,
+  filters: WhereFilter<any, any>[]
+) {
+  // TODO check order statements as well
+  return filters.some((filter) => {
+    if (isFilterGroup(filter)) {
+      return doesUpdateImpactSimpleFilters(entity, filter.filters);
+    }
+    const attributePath = filter[0].split('.');
+    // TODO handle nested attributes
+    // e.g. some record assignment like entity.auth = {} could affect "entity.author.name"
+    const value = ValuePointer.Get(entity, attributePath);
+    return value !== undefined;
+  });
+}
+
 function getPathToIncludedSubquery(
   rootQuery: CollectionQuery,
   subquery: CollectionQuery
@@ -1145,22 +1028,101 @@ function isQueryRelational(query: CollectionQuery<any, any>) {
   );
 }
 
+function getRelevantUpdatesAndInserts(
+  collectionSets: Map<string, any>,
+  // insertFilter: (change: DBEntity) => boolean
+  queryContext: {
+    query: CollectionQuery;
+    schema?: DBSchema;
+  }
+) {
+  const inserts = []; // Inserts that match the query
+  const updates: Map<string, any> = new Map(); // all updates (unfiltered)
+  for (const [entId, change] of collectionSets) {
+    const isInsert = 'id' in change;
+    if (isInsert) {
+      if (
+        doesEntityMatchBasicWhere(
+          queryContext.query.collectionName,
+          change as DBEntity,
+          queryContext.query.where ?? [true],
+          queryContext.schema
+        )
+      ) {
+        inserts.push(change);
+      }
+    } else {
+      updates.set(entId, change);
+    }
+  }
+
+  return { updates, inserts };
+}
+
+// type ResultRelationalStructure = {
+//   collectionName: string;
+//   subqueries: Record<string, ResultRelationalStructure>;
+// };
+
+// function queryToRelationalStructure(
+//   query: CollectionQuery
+// ): ResultRelationalStructure {
+//   const { include } = query;
+//   const subqueries = {} as Record<string, ResultRelationalStructure>;
+//   for (const [key, { subquery }] of Object.entries(include ?? {})) {
+//     subqueries[key] = queryToRelationalStructure(subquery);
+//   }
+//   return {
+//     collectionName: query.collectionName,
+//     subqueries,
+//   };
+// }
+
 /**
- * # Notes and TODOS
- * 1. Initial fetch [DONE!]
- *    - This is tricky because we want subscribers that subscribe to an existing query
- *    - after it's been initialized to get the initial results as changes, however, the
- *    - results themselves are not
- * 2. Batch optimizations
- *    - There's probably a good deal of work we can cut out by observing that a bunch of changes
- *    - can be processed together e.g. inserts are guaranteed to be not match "before" and more so
- *    - if a matching query is a root query with no subqueries they can be added directly to
- *    - the results and even more so if they query has no limit or order it can just be
- *    - quickly appended
- * 3. Stateful fetch [DONE!]
- *    - Our current idea here is to send entityIds that the client has for a given query
- *    - which actually could be quite efficient because we can check to see if those entityIds
- *    - are still in the result set and, for the ones that aren't, we can fetch them for the client
- *    - to invalidate. Effectively this is doing a diff between the client's state and
- *    - the server's state
+ * This will take two sets of changes and return a set of changes that need to be applied
+ * to the old changes to get the new changes which means modeling missing changes as
+ * deletes
+ * @param oldChanges
+ * @param newChanges
  */
+function diffChanges(oldChanges: DBChanges, newChanges: DBChanges): DBChanges {
+  const changes = {} as DBChanges;
+  const collections = new Set([
+    ...Object.keys(oldChanges),
+    ...Object.keys(newChanges),
+  ]);
+  for (const collection of collections) {
+    if (!oldChanges[collection]) {
+      changes[collection] = newChanges[collection];
+      continue;
+    }
+    if (!newChanges[collection]) {
+      changes[collection] = {
+        sets: new Map(),
+        deletes: new Set(oldChanges[collection].sets.keys()),
+      };
+      continue;
+    }
+    const oldCollectionChanges = oldChanges[collection];
+    const newCollectionChanges = newChanges[collection];
+    const newSets = new Map(newCollectionChanges.sets);
+    const newDeletes = new Set(newCollectionChanges.deletes);
+    for (const [id, data] of oldCollectionChanges.sets) {
+      if (!newSets.has(id)) {
+        newDeletes.add(id);
+      } else {
+        const newData = newSets.get(id);
+        if (JSON.stringify(data) !== JSON.stringify(newData)) {
+          newSets.set(id, newData);
+        } else {
+          newSets.delete(id);
+        }
+      }
+    }
+    changes[collection] = {
+      sets: newSets,
+      deletes: newDeletes,
+    };
+  }
+  return changes;
+}
