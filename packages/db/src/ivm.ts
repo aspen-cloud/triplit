@@ -325,7 +325,7 @@ export class IVM<M extends Models<M> = Models> {
         break;
       }
     }
-    // TODO: short circuit if this is a big server initialization
+    // TODO: also short circuit if this is a big server initialization
     if (isQueryRelational(rootQuery)) {
       const freshResults = await this.db.rawFetch(rootQuery);
       rootQueryInfo.results = freshResults as ViewEntity[];
@@ -360,6 +360,8 @@ export class IVM<M extends Models<M> = Models> {
 
     let filteredResults = rootQueryInfo.results!;
     // console.dir({ before: filteredResults }, { depth: null });
+    // if we have deletes or updates, we're going to check for evictions
+    // to the current results
     if (deletes.size > 0 || updates.size > 0) {
       filteredResults = rootQueryInfo.results!.filter((entity) => {
         let matches = true;
@@ -378,9 +380,11 @@ export class IVM<M extends Models<M> = Models> {
       });
     }
     // console.dir({ after: filteredResults }, { depth: null });
+    // if we have inserts, we're going to check if they should be added
     const potentialAdditions: DBEntity[] = Array.from(inserts.values());
 
-    // console.dir({ afterInserts: filteredResults }, { depth: null });
+    // any unhandled updates are those that aren't already in the results
+    // should also be included in the potential additions
     for (const [id, update] of updates) {
       if (handledUpdates.has(id)) {
         continue;
@@ -415,11 +419,24 @@ export class IVM<M extends Models<M> = Models> {
       );
     }
     if (rootQuery?.limit != null) {
+      // We only should need to backfill if
+      // 1. we evicted entities in this pass
+      // 2. and the original results were at the limit
+      // 3. the new results are less than the limit
       if (
         evictedEntities.size > 0 &&
+        rootQueryInfo.results!.length === rootQuery.limit &&
         filteredResults.length < rootQuery.limit
       ) {
-        if (rootQuery.order && filteredResults.length > 0) {
+        // We can only form a nice ordered backfill query iff
+        // the root query has an order and the new results have perfectly
+        // interleaved with the old results
+        if (
+          rootQuery.order &&
+          filteredResults.length > 0 &&
+          rootQueryInfo.results![rootQueryInfo.results!.length - 1].data.id ===
+            filteredResults[filteredResults.length - 1].data.id
+        ) {
           const backfillQuery = {
             ...rootQuery,
             limit: rootQuery.limit - filteredResults.length,
