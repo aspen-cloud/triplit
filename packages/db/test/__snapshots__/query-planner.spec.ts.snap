@@ -589,6 +589,19 @@ exports[`query planning > query: 'Posts ordered by the last name of the…' 1`] 
         [
           "_order_0.name",
           "ASC",
+          {
+            "cardinality": "one",
+            "subquery": {
+              "collectionName": "$view_0",
+              "where": [
+                [
+                  "id",
+                  "=",
+                  "$1.authorId",
+                ],
+              ],
+            },
+          },
         ],
       ],
       "type": "SORT",
