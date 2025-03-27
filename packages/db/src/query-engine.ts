@@ -1,5 +1,10 @@
 import { VariableAwareCache as VAC } from './variable-aware-cache.js';
-import { getVariableComponents, isValueVariable } from './variables.js';
+import {
+  bindVariablesInFilters,
+  getVariableComponents,
+  isValueVariable,
+  resolveVariable,
+} from './variables.js';
 import { isFilterGroup, satisfiesNonRelationalFilter } from './filters.js';
 import {
   DBEntity,
@@ -8,6 +13,7 @@ import {
   FilterGroup,
   type CollectionQuery,
   type FilterStatement,
+  QueryOrder,
 } from './types.js';
 import {
   asyncIterFilter,
@@ -173,7 +179,7 @@ export class EntityStoreQueryEngine {
           if (!view) {
             throw new Error(`View ${step.viewId} not found in vars`);
           }
-          const boundFilters = this.bindVariablesInFilters(step.filter, {
+          const boundFilters = bindVariablesInFilters(step.filter, {
             ...vars,
             // TODO solve this in variable lookup
             //  This sucks to have to do but it works for now
@@ -220,7 +226,7 @@ export class EntityStoreQueryEngine {
           let ids = step.ids;
           // Check if ids is a variable
           if (typeof ids === 'string') {
-            const varMatch = this.resolveVariable(ids, {
+            const varMatch = resolveVariable(ids, {
               ...vars,
               // TODO solve this in variable lookup
               //  This sucks to have to do but it works for now
@@ -258,7 +264,7 @@ export class EntityStoreQueryEngine {
           break;
         }
         case 'ITERATOR_FILTER': {
-          const boundFilters = this.bindVariablesInFilters(step.filter, {
+          const boundFilters = bindVariablesInFilters(step.filter, {
             ...vars,
             ...flattenViews(preparedViews),
           });
@@ -321,7 +327,7 @@ export class EntityStoreQueryEngine {
           if (collectionName == undefined) {
             throw new Error('No collection name found when trying to FILTER');
           }
-          const boundFilters = this.bindVariablesInFilters(step.filter, {
+          const boundFilters = bindVariablesInFilters(step.filter, {
             ...vars,
             ...preparedViews,
           });
@@ -369,47 +375,6 @@ export class EntityStoreQueryEngine {
       }
     }
     return results;
-  }
-
-  private resolveVariable(variable: string, vars: any): any {
-    if (variable in vars) {
-      return vars[variable];
-    }
-    const [relativeDepth, ...path] = getVariableComponents(variable);
-    if (typeof relativeDepth === 'number') {
-      if (!vars.entityStack || vars.entityStack.length < relativeDepth) {
-        throw new Error(
-          `Variable reference is out of bounds. Tried to find ${variable} in stack of size ${vars.entityStack?.length}`
-        );
-      }
-      // Use entityStack: $1 gives last, $2 gives parent's parent, etc.
-      return ValuePointer.Get(
-        vars.entityStack[vars.entityStack.length - relativeDepth],
-        path
-      );
-    }
-    const resolvedVal = ValuePointer.Get(vars, path);
-    // TODO should we throw an error here if undefined?
-    return resolvedVal;
-  }
-
-  private bindVariablesInFilters(
-    filters: (FilterStatement | FilterGroup)[],
-    vars: any
-  ): (FilterStatement | FilterGroup)[] {
-    return filters.map((filter) => {
-      if (isFilterGroup(filter)) {
-        return {
-          ...filter,
-          filters: this.bindVariablesInFilters(filter.filters, vars),
-        };
-      }
-      if (isValueVariable(filter[2])) {
-        const variable = filter[2] as string;
-        return [filter[0], filter[1], this.resolveVariable(variable, vars)];
-      }
-      return filter;
-    });
   }
 
   /**

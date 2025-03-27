@@ -5,7 +5,12 @@ import {
   isRelationshipExistsFilter,
   isSubQueryFilter,
 } from './filters.js';
-import { CollectionQuery, QueryWhere } from './query.js';
+import {
+  CollectionQuery,
+  FilterGroup,
+  FilterStatement,
+  QueryWhere,
+} from './query.js';
 import { ValuePointer } from './utils/value-pointer.js';
 
 const VARIABLE_SCOPES = new Set(['$global', '$session', '$role', '$query']);
@@ -151,4 +156,46 @@ export function replaceVariable(value: string, variables: Record<string, any>) {
     }
     return variable;
   }
+}
+
+export function resolveVariable(variable: string, vars: any): any {
+  if (variable in vars) {
+    return vars[variable];
+  }
+  const [relativeDepth, ...path] = getVariableComponents(variable);
+  if (typeof relativeDepth === 'number') {
+    if (!vars.entityStack || vars.entityStack.length < relativeDepth) {
+      throw new Error(
+        `Variable reference is out of bounds. Tried to find ${variable} in stack of size ${vars.entityStack?.length}`
+      );
+    }
+    // Use entityStack: $1 gives last, $2 gives parent's parent, etc.
+    return ValuePointer.Get(
+      vars.entityStack[vars.entityStack.length - relativeDepth],
+      path
+    );
+  }
+  const resolvedVal = ValuePointer.Get(vars, path);
+  // TODO should we throw an error here if undefined?
+  return resolvedVal;
+}
+
+export function bindVariablesInFilters(
+  filters: (FilterStatement | FilterGroup)[],
+  vars: any
+): (FilterStatement | FilterGroup)[] {
+  return filters.map((filter) => {
+    if (isFilterGroup(filter)) {
+      return {
+        ...filter,
+        // @ts-expect-error
+        filters: bindVariablesInFilters(filter.filters, vars),
+      };
+    }
+    if (isValueVariable(filter[2])) {
+      const variable = filter[2] as string;
+      return [filter[0], filter[1], resolveVariable(variable, vars)];
+    }
+    return filter;
+  });
 }
