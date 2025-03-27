@@ -1,6 +1,12 @@
 import { CollectionNameFromModels, Models } from './schema/index.js';
 import { CollectionQuery, QueryOrder, WhereFilter } from './query.js';
-import { Change, DBChanges, DBEntity, QueryAfter } from './types.js';
+import {
+  Change,
+  DBChanges,
+  DBEntity,
+  QueryAfter,
+  RelationSubquery,
+} from './types.js';
 import {
   isFilterGroup,
   isSubQueryFilter,
@@ -27,8 +33,10 @@ import { yieldToEventLoop } from './utils/timers.js';
 import {
   createViewEntity,
   flattenViewEntity,
+  sortViewEntities,
   ViewEntity,
 } from './query-engine.js';
+import { bindVariablesInFilters } from './variables.js';
 
 interface QueryNode {
   // TODO support multiple root queries (essentially subqueries could be shared between root queries)
@@ -180,7 +188,7 @@ export class IVM<M extends Models<M> = Models> {
           !rootQueryInfo.hasChanged &&
           areChangesEmpty(rootQueryInfo.capturedChanges!)
         ) {
-          console.log('Skipping listener');
+          // console.log('Skipping listener');
           // console.dir({ rootQueryInfo }, { depth: 10 });
           continue;
         }
@@ -326,152 +334,240 @@ export class IVM<M extends Models<M> = Models> {
       }
     }
     // TODO: also short circuit if this is a big server initialization
-    if (isQueryRelational(rootQuery)) {
+    if (
+      !!(
+        (rootQuery.where &&
+          someFilterStatements(rootQuery.where, (filter) =>
+            isSubQueryFilter(filter)
+          )) ||
+        // @ts-expect-error
+        (rootQuery.order && rootQuery.order.some((o) => !!o[2]))
+      )
+    ) {
       const freshResults = await this.db.rawFetch(rootQuery);
       rootQueryInfo.results = freshResults as ViewEntity[];
       rootQueryInfo.hasChanged = true;
       return;
     }
-    const rootCollectionChanges = changes[rootCollection];
-    const deletes = rootCollectionChanges.deletes;
-    const inserts = new Map<string, DBEntity>();
-    const updates = new Map<string, Change>();
-    for (const [id, entity] of rootCollectionChanges.sets) {
-      if (entity.id) {
-        inserts.set(id, entity as DBEntity);
-      } else {
-        updates.set(id, entity as Change);
-      }
-    }
+    const updatedResults = await this.updateResultsWithQuery(
+      rootQueryInfo.results,
+      changes,
+      rootQuery
+    );
+    rootQueryInfo.results = updatedResults.updatedResults;
+    rootQueryInfo.hasChanged = updatedResults.hasChanged;
+  }
+
+  private async updateResultsWithQuery(
+    results: ViewEntity[] | undefined,
+    changes: DBChanges,
+    query: CollectionQuery,
+    entityStack: DBEntity[] = []
+  ): Promise<{ updatedResults: ViewEntity[]; hasChanged: boolean }> {
+    const { collectionName, order, after, limit, where, include } = query;
+    // console.dir({ query, results, changes }, { depth: null });
+    const collectionChanges = changes[collectionName];
+    // console.dir({ collectionChanges, results }, { depth: null });
+    let filteredResults = results ?? [];
     const evictedEntities = new Set<string>();
     const addedEntities = new Set<string>();
-    // console.dir({ rootQuery, deletes, inserts, updates }, { depth: null });
     // console.log({ inserts, updates, deletes });
     const handledUpdates = new Set<string>();
-    const matchesWhereOrAfterIfRelevant = (e: DBEntity) =>
-      (!rootQuery.where ||
-        doesEntityMatchBasicWhere(
-          rootCollection,
-          e,
-          rootQuery.where,
-          this.db.schema
-        )) &&
-      (!rootQuery.after || satisfiesAfter(e, rootQuery.after, rootQuery.order));
-
-    let filteredResults = rootQueryInfo.results!;
-    // console.dir({ before: filteredResults }, { depth: null });
-    // if we have deletes or updates, we're going to check for evictions
-    // to the current results
-    if (deletes.size > 0 || updates.size > 0) {
-      filteredResults = rootQueryInfo.results!.filter((entity) => {
-        let matches = true;
-        if (deletes.has(entity.data.id)) {
-          matches = false;
-        }
-        if (updates.has(entity.data.id)) {
-          handledUpdates.add(entity.data.id);
-          deepObjectAssign(entity.data, updates.get(entity.data.id));
-          matches = matchesWhereOrAfterIfRelevant(entity.data);
-        }
-        if (!matches) {
-          evictedEntities.add(entity.data.id);
-        }
-        return matches;
-      });
-    }
-    // console.dir({ after: filteredResults }, { depth: null });
-    // if we have inserts, we're going to check if they should be added
-    const potentialAdditions: DBEntity[] = Array.from(inserts.values());
-
-    // any unhandled updates are those that aren't already in the results
-    // should also be included in the potential additions
-    for (const [id, update] of updates) {
-      if (handledUpdates.has(id)) {
-        continue;
-      }
-      if (
-        rootQuery.where &&
-        !doesUpdateImpactSimpleFilters(update, rootQuery.where)
-      ) {
-        continue;
-      }
-      const sourceEntity = await this.db.entityStore.getEntity(
-        this.db.kv,
-        rootCollection,
-        id
-      );
-      if (sourceEntity == null) {
-        continue;
-      }
-      potentialAdditions.push(sourceEntity);
-    }
-
-    for (const entity of potentialAdditions) {
-      if (matchesWhereOrAfterIfRelevant(entity)) {
-        addedEntities.add(entity.id);
-        filteredResults.push(createViewEntity(entity));
-      }
-    }
-
-    if (rootQuery?.order != null) {
-      filteredResults.sort((a, b) =>
-        compare(flattenViewEntity(a), flattenViewEntity(b), rootQuery.order!)
-      );
-    }
-    if (rootQuery?.limit != null) {
-      // We only should need to backfill if
-      // 1. we evicted entities in this pass
-      // 2. and the original results were at the limit
-      // 3. the new results are less than the limit
-      if (
-        evictedEntities.size > 0 &&
-        rootQueryInfo.results!.length === rootQuery.limit &&
-        filteredResults.length < rootQuery.limit
-      ) {
-        // We can only form a nice ordered backfill query iff
-        // the root query has an order and the new results have perfectly
-        // interleaved with the old results
-        if (
-          rootQuery.order &&
-          filteredResults.length > 0 &&
-          rootQueryInfo.results![rootQueryInfo.results!.length - 1].data.id ===
-            filteredResults[filteredResults.length - 1].data.id
-        ) {
-          const backfillQuery = {
-            ...rootQuery,
-            limit: rootQuery.limit - filteredResults.length,
-          };
-          const after: QueryAfter = [
-            // @ts-expect-error
-            rootQuery.order.map(([attr]) => {
-              return ValuePointer.Get(
-                filteredResults[filteredResults.length - 1].data,
-                attr
-              );
-            }),
-            // TODO: hard to reason about inclusive vs exclusive here
-            // maybe shouldn't be doing this if you'll end up with duplicate entities.
-            // unless you add an id to the order and after to tiebreak
-            false,
-          ];
-          backfillQuery.after = after;
-
-          filteredResults = filteredResults.concat(
-            await this.db.rawFetch(backfillQuery)
-          );
+    const inlineUpdatedEntities = new Set<string>();
+    if (collectionChanges) {
+      const inlineUpdatedEntitiesWithOrderRelevantChanges = new Set<string>();
+      const deletes = collectionChanges.deletes;
+      const inserts = new Map<string, DBEntity>();
+      const updates = new Map<string, Change>();
+      for (const [id, entity] of collectionChanges.sets) {
+        if (entity.id) {
+          inserts.set(id, entity as DBEntity);
         } else {
-          // this could be better handled higher up
-          filteredResults = (await this.db.rawFetch(rootQuery)) as ViewEntity[];
+          updates.set(id, entity as Change);
         }
-      } else {
-        filteredResults = filteredResults.slice(0, rootQuery.limit);
+      }
+      const updateAffectsOrder = (update: Change) =>
+        order &&
+        order.some(
+          ([attribute]) => ValuePointer.Get(update, attribute) !== undefined
+        );
+      const matchesWhereOrAfterIfRelevant = (e: DBEntity) =>
+        (!where ||
+          doesEntityMatchBasicWhere(
+            collectionName,
+            e,
+            where,
+            this.db.schema
+          )) &&
+        (!after || satisfiesAfter(e, after, order));
+      // if we have deletes or updates, we're going to check for evictions
+      // to the current results
+      if (deletes.size > 0 || updates.size > 0) {
+        filteredResults = results!.filter((entity) => {
+          let matches = true;
+          if (deletes.has(entity.data.id)) {
+            matches = false;
+          }
+          if (updates.has(entity.data.id)) {
+            const update = updates.get(entity.data.id)!;
+            handledUpdates.add(entity.data.id);
+            deepObjectAssign(entity.data, update);
+            matches = matchesWhereOrAfterIfRelevant(entity.data);
+            if (matches) {
+              inlineUpdatedEntities.add(entity.data.id);
+              updateAffectsOrder(update) &&
+                inlineUpdatedEntitiesWithOrderRelevantChanges.add(
+                  entity.data.id
+                );
+            }
+          }
+          if (!matches) {
+            evictedEntities.add(entity.data.id);
+          }
+          return matches;
+        });
+        // if we have evictions and we were previously at the limit
+        // we need to check if we need to backfill
+        // TODO: this could be refined more in the case that we know the new entity is
+        // to be ahead of or behind the current results
+        // TODO: if this query is not the root, we should probably bubble this up as an indication to refetch
+        if (
+          (evictedEntities.size > 0 ||
+            inlineUpdatedEntitiesWithOrderRelevantChanges.size > 0) &&
+          results!.length === limit &&
+          order
+        ) {
+          return {
+            updatedResults: (await this.db.rawFetch(query)) as ViewEntity[],
+            hasChanged: true,
+          };
+        }
+      }
+      // console.dir({ after: filteredResults }, { depth: null });
+      // if we have inserts, we're going to check if they should be added
+      const potentialAdditions: DBEntity[] =
+        inserts.size > 0 ? Array.from(inserts.values()) : [];
+
+      // any unhandled updates are those that aren't already in the results
+      // should also be included in the potential additions
+      // console.dir({ handledUpdates, updates }, { depth: null });
+      for (const [id, update] of updates) {
+        if (handledUpdates.has(id)) {
+          continue;
+        }
+        if (
+          where &&
+          !doesUpdateImpactSimpleFilters(update, where) &&
+          !updateAffectsOrder(update)
+        ) {
+          continue;
+        }
+        const sourceEntity = await this.db.entityStore.getEntity(
+          this.db.kv,
+          collectionName,
+          id
+        );
+        if (sourceEntity == null) {
+          continue;
+        }
+        potentialAdditions.push(sourceEntity);
+      }
+
+      // console.log({ potentialAdditions });
+
+      for (const entity of potentialAdditions) {
+        if (matchesWhereOrAfterIfRelevant(entity)) {
+          addedEntities.add(entity.id);
+          filteredResults.push(createViewEntity(entity));
+        }
+      }
+
+      // TODO: if relational order, do this after updating inclusions
+      // TODO: only sort if there are changes that affect the order
+      if (
+        order != null &&
+        !(
+          addedEntities.size === 0 &&
+          inlineUpdatedEntitiesWithOrderRelevantChanges.size === 0
+        )
+      ) {
+        sortViewEntities(filteredResults, order);
+      }
+      if (limit != null && filteredResults.length > limit) {
+        filteredResults = filteredResults.slice(0, limit);
       }
     }
-    rootQueryInfo.results = filteredResults;
-    rootQueryInfo.hasChanged =
-      evictedEntities.size > 0 ||
-      addedEntities.size > 0 ||
-      handledUpdates.size > 0;
+    let inclusionHasUpdated = false;
+
+    if (include) {
+      const entitiesToRefetchInclusions = new Set<string>();
+      for (const entity of filteredResults) {
+        // TODO: this should check updated entities too
+        // but only updated entities with changes that affect the inclusion
+        if (
+          addedEntities.has(entity.data.id) ||
+          inlineUpdatedEntities.has(entity.data.id)
+        ) {
+          entitiesToRefetchInclusions.add(entity.data.id);
+          continue;
+        }
+        for (const inclusion in include) {
+          const { subquery, cardinality } = include[
+            inclusion
+          ] as RelationSubquery;
+          const updatedEntityStack = entityStack.concat(entity.data);
+          const { hasChanged, updatedResults } =
+            await this.updateResultsWithQuery(
+              // @ts-expect-error: fixup typing of viewEntity inclusions
+              cardinality === 'one'
+                ? entity.subqueries[inclusion]
+                  ? [entity.subqueries[inclusion]]
+                  : []
+                : entity.subqueries[inclusion],
+              changes,
+              {
+                ...subquery,
+                where: subquery.where
+                  ? bindVariablesInFilters(subquery.where, {
+                      entityStack: updatedEntityStack,
+                    })
+                  : undefined,
+              }
+            );
+          if (hasChanged) {
+            inclusionHasUpdated = true;
+            entity.subqueries[inclusion] =
+              cardinality === 'one'
+                ? (updatedResults?.[0] ?? null)
+                : updatedResults;
+          }
+        }
+      }
+      // instead of fetching here we could first check for memoized subqueries
+      if (entitiesToRefetchInclusions.size > 0) {
+        const idFilter = [
+          ['id', 'in', Array.from(entitiesToRefetchInclusions)],
+        ];
+        const resultsToMerge = await this.db.rawFetch({
+          ...query,
+          where: where ? where.concat(idFilter) : idFilter,
+        });
+        for (const result of resultsToMerge) {
+          const index = filteredResults.findIndex(
+            (r) => r.data.id === result.data.id
+          );
+          filteredResults[index] = result;
+        }
+      }
+    }
+    return {
+      updatedResults: filteredResults,
+      hasChanged:
+        evictedEntities.size > 0 ||
+        addedEntities.size > 0 ||
+        handledUpdates.size > 0 ||
+        inclusionHasUpdated,
+    };
   }
 
   private async processChangesForTracking(
