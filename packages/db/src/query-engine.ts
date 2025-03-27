@@ -350,20 +350,7 @@ export class EntityStoreQueryEngine {
         }
 
         case 'SORT': {
-          results.sort((a, b) => {
-            const flattenedA = flattenViewEntity(a);
-            const flattenedB = flattenViewEntity(b);
-            for (const [attr, dir] of step.fields) {
-              const direction = compareValue(
-                ValuePointer.Get(flattenedA, attr) ?? MIN,
-                ValuePointer.Get(flattenedB, attr) ?? MIN
-              );
-              if (direction !== 0) {
-                return dir === 'ASC' ? direction : -direction;
-              }
-            }
-            return 0;
-          });
+          sortViewEntities(results, step.fields);
           break;
         }
 
@@ -485,4 +472,46 @@ function resolvedVarToIdArray(varMatch: ResolvedIdLookupVar) {
     }
   }
   return ids;
+}
+
+export function sortViewEntities(entities: ViewEntity[], order: QueryOrder) {
+  const orderWithViewEntityKeysInterleaved = order.map(
+    ([key, direction, maybeSubquery]) => {
+      const keyPath = key.split('.');
+      if (maybeSubquery) {
+        const subqueryLevel = getLevelOfNestedInclude(maybeSubquery.subquery);
+        return [
+          keyPath
+            .slice(0, subqueryLevel + 1)
+            .flatMap((key) => ['subqueries', key])
+            .concat('data', keyPath.slice(-1)),
+          direction,
+          maybeSubquery,
+        ];
+      }
+      return [['data', ...keyPath], direction];
+    }
+  ) as [string[], 'ASC' | 'DESC'][];
+  entities.sort((a, b) => {
+    for (const [attr, dir] of orderWithViewEntityKeysInterleaved) {
+      const direction = compareValue(
+        ValuePointer.Get(a, attr) ?? MIN,
+        ValuePointer.Get(b, attr) ?? MIN
+      );
+      if (direction !== 0) {
+        return dir === 'ASC' ? direction : -direction;
+      }
+    }
+    return 0;
+  });
+}
+
+function getLevelOfNestedInclude(query: CollectionQuery) {
+  let level = 0;
+  if (!query.include) return level;
+  for (const key in query.include) {
+    const inclusion = query.include[key];
+    level = Math.max(level, getLevelOfNestedInclude(inclusion.subquery) + 1);
+  }
+  return level;
 }

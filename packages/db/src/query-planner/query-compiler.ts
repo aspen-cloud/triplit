@@ -496,7 +496,7 @@ function compileQueryToSteps(q: CollectionQuery): Step[] {
         subPlan,
       });
       const updatedProperty = attr.split('.').toSpliced(0, 1, alias).join('.');
-      orderStatements.push([updatedProperty, direction]);
+      orderStatements.push([updatedProperty, direction, maybeSubquery]);
     }
     steps.push({
       type: 'SORT',
