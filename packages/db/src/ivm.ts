@@ -9,6 +9,7 @@ import {
 } from './types.js';
 import {
   isFilterGroup,
+  isFilterStatement,
   isSubQueryFilter,
   satisfiesNonRelationalFilter,
   someFilterStatements,
@@ -36,7 +37,11 @@ import {
   sortViewEntities,
   ViewEntity,
 } from './query-engine.js';
-import { bindVariablesInFilters } from './variables.js';
+import {
+  bindVariablesInFilters,
+  isValueVariable,
+  getVariableComponents,
+} from './variables.js';
 
 interface QueryNode {
   // TODO support multiple root queries (essentially subqueries could be shared between root queries)
@@ -370,7 +375,7 @@ export class IVM<M extends Models<M> = Models> {
     // console.dir({ collectionChanges, results }, { depth: null });
     let filteredResults = results ?? [];
     const evictedEntities = new Set<string>();
-    const addedEntities = new Set<string>();
+    const addedEntities = new Map<string, DBEntity>();
     // console.log({ inserts, updates, deletes });
     const handledUpdates = new Set<string>();
     const inlineUpdatedEntities = new Set<string>();
@@ -477,7 +482,7 @@ export class IVM<M extends Models<M> = Models> {
 
       for (const entity of potentialAdditions) {
         if (matchesWhereOrAfterIfRelevant(entity)) {
-          addedEntities.add(entity.id);
+          addedEntities.set(entity.id, entity);
           filteredResults.push(createViewEntity(entity));
         }
       }
@@ -494,6 +499,13 @@ export class IVM<M extends Models<M> = Models> {
         sortViewEntities(filteredResults, order);
       }
       if (limit != null && filteredResults.length > limit) {
+        for (let i = limit; i < filteredResults.length; i++) {
+          const entity = filteredResults[i];
+          // remove added entities that fell outside of the limit
+          if (addedEntities.has(entity.data.id)) {
+            addedEntities.delete(entity.data.id);
+          }
+        }
         filteredResults = filteredResults.slice(0, limit);
       }
     }
@@ -512,6 +524,12 @@ export class IVM<M extends Models<M> = Models> {
           continue;
         }
         for (const inclusion in include) {
+          // we should be able to skip this if
+          // 1. we know the inclusion is a leaf AND
+          //    (there are no changes for that collection
+          //    OR the changes are just inserts that fail on simple filters)
+          // 2. if the inclusion is not a leaf but there are no remaining collection changes
+          //    for any subquery
           const { subquery, cardinality } = include[
             inclusion
           ] as RelationSubquery;
@@ -560,6 +578,13 @@ export class IVM<M extends Models<M> = Models> {
         }
       }
     }
+    /**
+     * changeset is:
+     * - evictedEntities ∩ deletes (would also be previously seen entities)
+     * - handledUpdates ∩ sets (would also be previously seen entities)
+     * - addedEntities (after limit applied?) -> changeset (add to previously seen)
+     * - recursive changes
+     */
     return {
       updatedResults: filteredResults,
       hasChanged:
