@@ -17,7 +17,8 @@ const QUERY_NAMES = [
 //   'CHAT_WITH_LAST_20_MESSAGES_AND_SENDER',
 //   'UNREAD_MESSAGES_WITH_CONVO_AND_SENDER',
 // ];
-const QUERIES_TO_RUN: (typeof QUERY_NAMES)[number][] = ['ALL_MESSAGES'];
+// const QUERIES_TO_RUN: (typeof QUERY_NAMES)[number][] = ['ALL_MESSAGES'];
+const QUERIES_TO_RUN = QUERY_NAMES;
 
 const NUM_OPS = 1_000;
 
@@ -241,7 +242,13 @@ class TriplitWorkload implements DB_Workload {
   constructor() {
     const sqliteDb = sqlite(':memory:');
     const sqliteKv = new SQLiteKVStore(sqliteDb);
-    this.db = new DB({ schema: TriplitWorkload.schema, kv: sqliteKv });
+    this.db = new DB({
+      schema: TriplitWorkload.schema,
+      kv: sqliteKv,
+      ivmOptions: {
+        shouldTrackChanges: false,
+      },
+    });
     this.queries = {
       CONVERSATIONS_WITH_LAST_MESSAGE_AND_UNREAD_COUNT: this.db
         .query('conversations')
@@ -258,7 +265,10 @@ class TriplitWorkload implements DB_Workload {
         .Where('read_at', '=', null)
         .Include('sender')
         .Include('conversation'),
-      ALL_MESSAGES: this.db.query('messages'),
+      ALL_MESSAGES: this.db
+        .query('messages')
+        .Limit(100)
+        .Order('created_at', 'DESC'),
     };
   }
 
@@ -425,7 +435,9 @@ WHERE m.read_at IS NULL
 ORDER BY m.created_at ASC;
 `
       ),
-      ALL_MESSAGES: this.db.prepare(`SELECT * from messages LIMIT 100;`),
+      ALL_MESSAGES: this.db.prepare(
+        `SELECT * from messages ORDER BY created_at DESC LIMIT 100;`
+      ),
     };
   }
   async init(initialData: typeof INITIAL_DATA) {
