@@ -483,7 +483,7 @@ export class SyncEngine {
    */
   createConnection(params: Partial<TransportConnectParams>) {
     if (this.connectionAbort) return;
-    if (!validateConnectionParamsWithWarning(params)) return;
+    if (!this.validateConnectionParamsWithWarning(params)) return;
     const paramsHash = hashObject(params);
 
     // If there is not an existing connection, reset lastParamsHash
@@ -915,6 +915,23 @@ export class SyncEngine {
       throw new RemoteSyncFailedError(query, 'An unknown error occurred.');
     }
   }
+
+  private validateConnectionParamsWithWarning(
+    params: Partial<TransportConnectParams>
+  ): params is TransportConnectParams {
+    const missingParams = [];
+    if (!params.token) missingParams.push('token');
+    if (!params.server) missingParams.push('serverUrl');
+    if (missingParams.length) {
+      this.logger.warn(
+        `You are attempting to connect but the connection cannot be opened because the required parameters are missing: [${missingParams.join(
+          ', '
+        )}].`
+      );
+      return false;
+    }
+    return true;
+  }
 }
 
 function changesToEntityIds(changes: DBChanges): Record<string, string[]> {
@@ -927,23 +944,6 @@ function changesToEntityIds(changes: DBChanges): Record<string, string[]> {
     entityIds[collection] = changedIds;
   }
   return entityIds;
-}
-
-function validateConnectionParamsWithWarning(
-  params: Partial<TransportConnectParams>
-): params is TransportConnectParams {
-  const missingParams = [];
-  if (!params.token) missingParams.push('token');
-  if (!params.server) missingParams.push('server');
-  if (missingParams.length) {
-    console.warn(
-      `Missing required params: [${missingParams.join(
-        ', '
-      )}]. Skipping sync connection.`
-    );
-    return false;
-  }
-  return true;
 }
 
 function throttle(callback: () => void, delay: number) {

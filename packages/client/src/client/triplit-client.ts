@@ -253,19 +253,16 @@ export class TriplitClient<M extends Models<M> = Models> {
       this.onSessionError(options.onSessionError);
     }
 
-    // If we provide a token in the constructor, start a session
-    if (options.token) {
-      // Asynchronously starts the session if a token is provided
-      // We will NOT auto connect to allow any disconnect signals to flow through
-      this.startSession(options.token, false, options.refreshOptions).then(
-        async () => {
-          if (this.connectOnInitialization) {
-            const params = await this.syncEngine.getConnectionParams();
-            this.syncEngine.createConnection(params);
-          }
+    // Asynchronously start a session with the provided token, should safely handle no token
+    // Once we have initialized the proper state on the client, we will connect
+    this.startSession(options.token, false, options.refreshOptions).then(
+      async () => {
+        if (this.connectOnInitialization) {
+          const params = await this.syncEngine.getConnectionParams();
+          this.syncEngine.createConnection(params);
         }
-      );
-    }
+      }
+    );
   }
 
   /**
@@ -1070,7 +1067,7 @@ export class TriplitClient<M extends Models<M> = Models> {
    * @param refreshOptions.handler - The function to call to refresh the token. It returns a promise that resolves with the new token.
    */
   async startSession(
-    token: string,
+    token: string | undefined,
     connect = true,
     refreshOptions?: TokenRefreshOptions
   ) {
@@ -1107,7 +1104,7 @@ export class TriplitClient<M extends Models<M> = Models> {
 
     // 6. Set up a token refresh handler if provided
     // Setup token refresh handler
-    if (!refreshOptions) return;
+    if (!refreshOptions || !this.token) return;
     const { interval, refreshHandler } = refreshOptions;
     const setRefreshTimeoutForToken = (refreshToken: string) => {
       const decoded = decodeToken(refreshToken);
@@ -1132,7 +1129,7 @@ export class TriplitClient<M extends Models<M> = Models> {
         setRefreshTimeoutForToken(maybeFreshToken);
       }, delay);
     };
-    setRefreshTimeoutForToken(token);
+    setRefreshTimeoutForToken(this.token);
     return () => {
       this.resetTokenRefreshHandler();
     };
