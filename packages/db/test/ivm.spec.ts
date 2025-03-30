@@ -8,7 +8,7 @@ import {
   afterEach,
 } from 'vitest';
 import { DB, DBSchema } from '../src/db.js';
-import { IVM } from '../src/ivm.js';
+import { diffChanges, IVM } from '../src/ivm.js';
 import { Schema as S } from '../src/schema/builder.js';
 import { CollectionQuery, OrderStatement, QueryOrder } from '../src/query.js';
 import { Models } from '../src/schema/types/index.js';
@@ -16,7 +16,8 @@ import { deterministicShuffle } from './utils/seeding.js';
 import { prepareQuery } from '../src/prepare-query.js';
 import { pause } from './utils/async.js';
 import { InMemoryTestKVStore } from './utils/test-kv-store.js';
-import { areChangesEmpty } from '../src/memory-write-buffer.js';
+import { areChangesEmpty, mergeDBChanges } from '../src/memory-write-buffer.js';
+import { DBChanges } from '../dist/types.js';
 
 describe('IVM', () => {
   describe('initial results', async () => {
@@ -1183,134 +1184,187 @@ describe('IVM syncing', () => {
     describe.each([false, true])(
       'should track changes: %s',
       (shouldTrackChanges) => {
-        test.each(QUERIES_TO_TEST)('Query: %s', async (queryKey) => {
-          const query = QUERIES[queryKey];
-          const serverDb = new DB({ ivmOptions: { shouldTrackChanges } });
-          const clientDb = new DB();
+        async function testQueries(queryKeys: string[]) {
+          for (const queryKey of queryKeys) {
+            const query = QUERIES[queryKey];
+            const serverDb = new DB({ ivmOptions: { shouldTrackChanges } });
+            const clientDb = new DB();
 
-          // const expectedNumberOfCalls = Math.floor(
-          //   randomOps.length / flushChangesFrequency
-          // );
-          const spy = vi.fn();
-          let ranStep, resolve, reject;
-          let numCalls = 0;
+            // const expectedNumberOfCalls = Math.floor(
+            //   randomOps.length / flushChangesFrequency
+            // );
+            const spy = vi.fn();
+            let ranStep, resolve, reject;
+            let numCalls = 0;
 
-          const prepared = prepareQuery(query, undefined, {}, undefined, {
-            applyPermission: undefined,
-          });
+            const prepared = prepareQuery(query, undefined, {}, undefined, {
+              applyPermission: undefined,
+            });
 
-          // starting states should match
-          expect(await serverDb.fetch(query)).toEqual(
-            await clientDb.fetch(query)
-          );
+            // starting states should match
+            expect(await serverDb.fetch(query)).toEqual(
+              await clientDb.fetch(query)
+            );
+            let subscribedQueryState = new Map<
+              CollectionQuery<any, any>,
+              DBChanges
+            >();
+            subscribedQueryState.set(prepared, {});
+            serverDb.subscribeWithChanges(
+              prepared,
+              async ({ changes: serverChanges, results: serverResults }) => {
+                ({
+                  promise: ranStep,
+                  resolve,
+                  reject,
+                } = Promise.withResolvers());
+                spy();
 
-          serverDb.subscribeWithChanges(
-            prepared,
-            async ({ changes: serverChanges, results: serverResults }) => {
-              ({ promise: ranStep, resolve, reject } = Promise.withResolvers());
-              spy();
-
-              try {
-                // insert changes into clientDb
-                if (shouldTrackChanges) {
-                  // console.dir({ serverChanges }, { depth: null });
-                  // expect(serverChanges).toBeDefined();
-                  // expect(areChangesEmpty(serverChanges)).toBeFalsy();
-                  for (const [collection, changes] of Object.entries(
-                    serverChanges
-                  )) {
-                    if (!changes) {
-                      console.warn('no changes', collection, changes);
-                      continue;
-                    }
-                    for (const id of changes.deletes) {
-                      await clientDb.delete(collection, id);
-                    }
-                    for (const [id, value] of changes.sets.entries()) {
-                      if ('id' in value) {
-                        await clientDb.insert(collection, value);
+                try {
+                  // insert changes into clientDb
+                  if (shouldTrackChanges) {
+                    let unionOfChangesBefore = {};
+                    let unionOfChangesAfter = {};
+                    for (const [q, changes] of subscribedQueryState.entries()) {
+                      unionOfChangesBefore = mergeDBChanges(
+                        unionOfChangesBefore,
+                        changes
+                      );
+                      if (q === prepared) {
+                        unionOfChangesAfter = mergeDBChanges(
+                          unionOfChangesAfter,
+                          serverChanges
+                        );
                       } else {
-                        await clientDb.update(collection, id, value);
+                        unionOfChangesAfter = mergeDBChanges(
+                          unionOfChangesAfter,
+                          changes
+                        );
                       }
                     }
-                  }
-
-                  const clientFetchResults = await clientDb.fetch(query);
-
-                  if (query.order != null) {
-                    expect(clientFetchResults).toEqual(serverResults);
-                  } else {
-                    const clientResultMap = resultArrToMap(clientFetchResults);
-                    const serverResultMap = resultArrToMap(serverResults);
-                    expect(clientResultMap).toEqual(serverResultMap);
-                  }
-                } else {
-                  const serverFetchResults = await serverDb.fetch(query);
-
-                  // console.dir(
-                  //   {
-                  //     serverChanges,
-                  //     clientResults: clientFetchResults,
-                  //     serverResults,
-                  //     serverFetchResults,
-                  //   },
-                  //   { depth: null }
-                  // );
-
-                  // TODO verify subquery result order
-                  if (query.order != null) {
-                    // TODO verify order rather than expect order to be exactly the same.
-                    // E.g. a result can satisfy the order in multiple different ways
-                    // but still be correct in the face of equal values. I.e. it's an unstable sort
-                    expect(serverResults).toEqual(serverFetchResults);
-                  } else {
-                    expect(resultArrToMap(serverResults)).toEqual(
-                      resultArrToMap(serverFetchResults)
+                    subscribedQueryState.set(prepared, serverChanges);
+                    const changeDiff = diffChanges(
+                      unionOfChangesBefore,
+                      unionOfChangesAfter
                     );
+                    // console.dir(
+                    //   {
+                    //     unionOfChangesBefore,
+                    //     unionOfChangesAfter,
+                    //     serverChanges,
+                    //     changeDiff,
+                    //   },
+                    //   { depth: null }
+                    // );
+                    // console.dir({ serverChanges }, { depth: null });
+                    // expect(serverChanges).toBeDefined();
+                    // expect(areChangesEmpty(serverChanges)).toBeFalsy();
+                    for (const [collection, changes] of Object.entries(
+                      changeDiff
+                    )) {
+                      if (!changes) {
+                        console.warn('no changes', collection, changes);
+                        continue;
+                      }
+                      for (const id of changes.deletes) {
+                        await clientDb.delete(collection, id);
+                      }
+                      for (const [id, value] of changes.sets.entries()) {
+                        if ('id' in value) {
+                          await clientDb.insert(collection, value);
+                        } else {
+                          await clientDb.update(collection, id, value);
+                        }
+                      }
+                    }
+
+                    const clientFetchResults = await clientDb.fetch(query);
+
+                    if (query.order != null) {
+                      expect(clientFetchResults).toEqual(serverResults);
+                    } else {
+                      const clientResultMap =
+                        resultArrToMap(clientFetchResults);
+                      const serverResultMap = resultArrToMap(serverResults);
+                      expect(clientResultMap).toEqual(serverResultMap);
+                    }
+                  } else {
+                    const serverFetchResults = await serverDb.fetch(query);
+
+                    // console.dir(
+                    //   {
+                    //     serverChanges,
+                    //     clientResults: clientFetchResults,
+                    //     serverResults,
+                    //     serverFetchResults,
+                    //   },
+                    //   { depth: null }
+                    // );
+
+                    // TODO verify subquery result order
+                    if (query.order != null) {
+                      // TODO verify order rather than expect order to be exactly the same.
+                      // E.g. a result can satisfy the order in multiple different ways
+                      // but still be correct in the face of equal values. I.e. it's an unstable sort
+                      expect(serverResults).toEqual(serverFetchResults);
+                    } else {
+                      expect(resultArrToMap(serverResults)).toEqual(
+                        resultArrToMap(serverFetchResults)
+                      );
+                    }
                   }
+                  numCalls++;
+                  resolve();
+                } catch (e) {
+                  reject(e);
                 }
-                numCalls++;
-                resolve();
-              } catch (e) {
-                reject(e);
+              }
+            );
+
+            const NUM_OPS = 10;
+            const randomOps = deterministicMixArrays(
+              [
+                createRandomOpsForCollection('messages', NUM_OPS, seed),
+                createRandomOpsForCollection(
+                  'conversationMembers',
+                  NUM_OPS,
+                  seed * 2
+                ),
+                createRandomOpsForCollection(
+                  'conversations',
+                  NUM_OPS,
+                  seed * 3
+                ),
+              ],
+              seed
+            );
+
+            const flushChangesFrequency = [1, 2, 3, 4, 5, 6][seed % 6];
+            // const updateViewFrequency = [1, 2, 3, 4, 5, 6][seed % 6];
+            const broadcastChangesFrequency = [1, 2, 3, 4, 5, 6][seed % 6];
+
+            let i = 0;
+            for (const op of randomOps) {
+              await applyOpToDB(serverDb, op);
+              i++;
+              if (i % flushChangesFrequency === 0) {
+                await serverDb.updateQueryViews();
+              }
+              if (i % broadcastChangesFrequency === 0) {
+                ranStep = Promise.resolve();
+                // if the query subscription runs it should reassign ranStep
+                // to a promise that resolves when the result checks finish
+                serverDb.broadcastToQuerySubscribers();
+                await ranStep;
               }
             }
-          );
-
-          const NUM_OPS = 10;
-          const randomOps = deterministicMixArrays(
-            [
-              createRandomOpsForCollection('messages', NUM_OPS, seed),
-              createRandomOpsForCollection(
-                'conversationMembers',
-                NUM_OPS,
-                seed * 2
-              ),
-              createRandomOpsForCollection('conversations', NUM_OPS, seed * 3),
-            ],
-            seed
-          );
-
-          const flushChangesFrequency = [1, 2, 3, 4, 5, 6][seed % 6];
-          // const updateViewFrequency = [1, 2, 3, 4, 5, 6][seed % 6];
-          const broadcastChangesFrequency = [1, 2, 3, 4, 5, 6][seed % 6];
-
-          let i = 0;
-          for (const op of randomOps) {
-            await applyOpToDB(serverDb, op);
-            i++;
-            if (i % flushChangesFrequency === 0) {
-              await serverDb.updateQueryViews();
-            }
-            if (i % broadcastChangesFrequency === 0) {
-              ranStep = Promise.resolve();
-              // if the query subscription runs it should reassign ranStep
-              // to a promise that resolves when the result checks finish
-              serverDb.broadcastToQuerySubscribers();
-              await ranStep;
-            }
           }
-          // expect(spy).toHaveBeenCalledTimes(expectedNumberOfCalls);
+        }
+        test.each(QUERIES_TO_TEST)('Query: %s', async (queryKey) => {
+          return await testQueries([queryKey]);
+        });
+        test('all queries concurrently', async () => {
+          await testQueries(QUERIES_TO_TEST);
         });
       }
     );

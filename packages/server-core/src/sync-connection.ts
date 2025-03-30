@@ -26,6 +26,7 @@ import { logger } from '@triplit/logger';
 import SuperJSON from 'superjson';
 import { mergeDBChanges } from '@triplit/db/changes-buffer';
 import { COMPATIBILITY_LIST_KEY } from './constants.js';
+import { diffChanges } from '@triplit/db/ivm';
 
 export interface ConnectionOptions {
   clientSchemaHash: number | undefined;
@@ -52,8 +53,11 @@ export class SyncConnection {
   >;
   listeners: Set<(messageType: string, payload: {}) => void>;
   chunkedMessages: Map<string, string[]> = new Map();
-  subscriptionDataBuffer: { changedQueries: Set<string>; changes: DBChanges } =
-    { changedQueries: new Set(), changes: {} };
+  subscriptionDataBuffer: {
+    changedQueries: Set<string>;
+    changes: DBChanges;
+    queryEntities: Map<string, DBChanges>;
+  } = { changedQueries: new Set(), changes: {}, queryEntities: new Map() };
   // querySyncer: ReturnType<DB['createQuerySyncer']>;
   private started = false;
   private canSync = false;
@@ -140,13 +144,52 @@ export class SyncConnection {
   }
 
   private bufferEntityData(changes: DBChanges, queryId?: string) {
-    this.subscriptionDataBuffer.changes = mergeDBChanges(
-      this.subscriptionDataBuffer.changes,
-      changes
-    );
     if (!queryId) {
       throw new Error('queryId is required to bufferEntityData');
     }
+    let unionOfChangesBefore = {};
+    let unionOfChangesAfter = {};
+    for (const [qId, qEntities] of this.subscriptionDataBuffer.queryEntities) {
+      // console.log('merging', qId, qEntities);
+      // console.dir(
+      //   {
+      //     before: unionOfChangesBefore,
+      //     entities: qEntities,
+      //   },
+      //   { depth: null }
+      // );
+      unionOfChangesBefore = mergeDBChanges(unionOfChangesBefore, qEntities);
+      // console.dir(
+      //   {
+      //     after: unionOfChangesBefore,
+      //   },
+      //   { depth: null }
+      // );
+      if (qId === queryId) {
+        unionOfChangesAfter = mergeDBChanges(unionOfChangesAfter, changes);
+      } else {
+        unionOfChangesAfter = mergeDBChanges(unionOfChangesAfter, qEntities);
+      }
+    }
+    this.subscriptionDataBuffer.queryEntities.set(queryId!, changes);
+    const changeDiff = diffChanges(unionOfChangesBefore, unionOfChangesAfter);
+
+    // console.dir(
+    //   {
+    //     subscriptionDataBuffer: this.subscriptionDataBuffer,
+    //     unionOfChangesBefore,
+    //     unionOfChangesAfter,
+    //     queryId,
+    //     changes,
+    //     changeDiff,
+    //   },
+    //   { depth: null }
+    // );
+    this.subscriptionDataBuffer.changes = mergeDBChanges(
+      this.subscriptionDataBuffer.changes,
+      changeDiff
+    );
+    // this.subscriptionDataBuffer.changes = changeDiff;
     this.subscriptionDataBuffer.changedQueries.add(queryId!);
   }
 
@@ -157,10 +200,10 @@ export class SyncConnection {
       timestamp: this.db.clock.current(),
       forQueries: Array.from(this.subscriptionDataBuffer.changedQueries),
     });
-    this.subscriptionDataBuffer = {
-      changedQueries: new Set(),
-      changes: {},
-    };
+
+    // Flush subscription data state excluding the entities for the queries
+    this.subscriptionDataBuffer.changes = {};
+    this.subscriptionDataBuffer.changedQueries = new Set();
   }
 
   async handleConnectQueryMessage(
@@ -168,8 +211,10 @@ export class SyncConnection {
   ) {
     const { id: queryKey, params: query, state } = msgParams;
     try {
-      // TODO: handle this more centrally so a ENTITY_DATA message can be sent for multiple
-      // subscribed queries at once
+      // TODO figure out better way to manage this especially on unsubscribe
+      // and when there are multiple subs to the same query
+      this.subscriptionDataBuffer.queryEntities.set(queryKey, {});
+
       const unsubscribe = this.db.subscribeChanges(
         query,
         this.bufferEntityData.bind(this),

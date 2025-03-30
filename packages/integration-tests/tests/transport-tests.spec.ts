@@ -2372,6 +2372,7 @@ describe('stateful query syncing', () => {
         relationships: {
           runs: S.RelationMany('runs', {
             where: [['branch_name', '=', '$id']],
+            order: [['created_at', 'DESC']],
           }),
           latest_run: S.RelationOne('runs', {
             where: [['branch_name', '=', '$id']],
@@ -2468,7 +2469,7 @@ describe('stateful query syncing', () => {
         branch_name: 'master',
         commit_hash: 'hash-3',
         commit_message: 'commit message 3',
-        created_at: new Date('2023-01-02'),
+        created_at: new Date(+new Date('2023-01-02') + 100),
         results: {
           memory_avg: 100,
           memory_max: 200,
@@ -3404,7 +3405,7 @@ describe('sessions API', async () => {
         autoConnect: false,
       });
       await pause();
-      expect(alice.syncEngine.connectionStatus).toBe('CLOSED');
+      expect(alice.syncEngine.connectionStatus).toBe('UNINITIALIZED');
       alice.connect();
       await pause();
       expect(alice.syncEngine.connectionStatus).toBe('OPEN');
@@ -3424,8 +3425,7 @@ describe('sessions API', async () => {
         clientId: 'alice',
         autoConnect: false,
       });
-      await pause();
-      expect(alice.syncEngine.connectionStatus).toBe('CLOSED');
+      expect(alice.syncEngine.connectionStatus).toBe('UNINITIALIZED');
       await alice.startSession(SERVICE_KEY, true);
       await pause();
       expect(alice.syncEngine.connectionStatus).toBe('OPEN');
@@ -3438,7 +3438,7 @@ describe('sessions API', async () => {
       expect(bob.syncEngine.connectionStatus).toBe('CLOSED');
       await bob.startSession(SERVICE_KEY, false);
       await pause();
-      expect(bob.syncEngine.connectionStatus).toBe('CLOSED');
+      expect(bob.syncEngine.connectionStatus).toBe('UNINITIALIZED');
     });
     it('will throw an error if you attempt to start a session with an expired token', async () => {
       const server = new TriplitServer(

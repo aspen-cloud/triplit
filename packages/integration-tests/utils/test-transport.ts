@@ -16,6 +16,7 @@ logger.registerHandler({
     if (record.level === 'ERROR') {
       console.error(record);
     }
+    // console.dir(record, { depth: 12 });
   },
   startSpan: () => {},
   endSpan: () => {},
@@ -29,7 +30,7 @@ export class TestTransport implements SyncTransport {
   onCloseCallback: ((evt: any) => any) | null = null;
   onErrorCallback: ((evt: any) => any) | null = null;
   onConnectionChangeCallback: ((state: ConnectionStatus) => void) | null = null;
-  connectionStatus: ConnectionStatus = 'CLOSED';
+  connectionStatus: ConnectionStatus = 'UNINITIALIZED';
 
   private removeConnectionListener: (() => void) | undefined;
 
