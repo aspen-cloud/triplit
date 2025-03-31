@@ -17,11 +17,7 @@ import {
   QueryState,
   SyncTimestamp,
 } from './@triplit/types/sync.js';
-import {
-  MissingConnectionInformationError,
-  RemoteSyncFailedError,
-  TokenExpiredError,
-} from './errors.js';
+import { RemoteSyncFailedError } from './errors.js';
 import {
   EntitySyncErrorCallback,
   EntitySyncSuccessCallback,
@@ -33,17 +29,14 @@ import {
   SessionErrors,
   SyncOptions,
   SyncStateCallback,
-  TokenRefreshOptions,
 } from './client/types';
-import { Logger } from './@triplit/types/logger.js';
 import SuperJSON from 'superjson';
-import { logger } from '@triplit/logger';
+import { Logger } from '@triplit/logger';
 import {
   ConnectionStatus,
   SyncTransport,
   TransportConnectParams,
 } from './types.js';
-import { decodeToken, tokenIsExpired } from './token.js';
 
 const QUERY_STATE_KEY = 'query-state';
 
@@ -113,6 +106,7 @@ export class SyncEngine {
    */
   constructor(client: TriplitClient<any>, options: SyncOptions) {
     this.client = client;
+    this.logger = options.logger;
     this.client.onConnectionOptionsChange((change) => {
       // TODO: eval this for other connectionStatuses
       const shouldDisconnect =
@@ -120,7 +114,7 @@ export class SyncEngine {
         // Server change or non refresh token change
         ('serverUrl' in change || ('token' in change && !change.tokenRefresh));
       if (shouldDisconnect) {
-        logger.warn(
+        this.logger.warn(
           'You are updating the connection options while the connection is open. To avoid unexpected behavior the connection will be closed and you should call `connect()` again after the update. To hide this warning, call `disconnect()` before updating the connection options.'
         );
         this.disconnect();
@@ -135,8 +129,6 @@ export class SyncEngine {
         }
       }
     });
-
-    this.logger = options.logger;
   }
 
   private async sendChanges(changes: DBChanges) {
@@ -523,7 +515,7 @@ export class SyncEngine {
 
   private async onMessageHandler(evt: any) {
     const message: ServerSyncMessage = JSON.parse(evt.data);
-    logger.debug('received', message);
+    this.logger.debug('received', message);
     for (const handler of this.messageReceivedSubscribers) {
       handler(message);
     }
@@ -619,7 +611,7 @@ export class SyncEngine {
 
     if (message.type === 'CLOSE') {
       const { payload } = message;
-      logger.info(
+      this.logger.info(
         `Closing connection${payload?.message ? `: ${payload.message}` : '.'}`
       );
       const { type, retry } = payload;
@@ -644,7 +636,7 @@ export class SyncEngine {
   }
 
   private onOpenHandler() {
-    logger.info('sync connection has opened', {
+    this.logger.info('sync connection has opened', {
       status: this.connectionStatus,
     });
     this.resetReconnectTimeout();
@@ -670,24 +662,24 @@ export class SyncEngine {
         retry = true;
       }
       if (type === 'UNAUTHORIZED') {
-        logger.error(
+        this.logger.error(
           'The server has closed the connection because the client is unauthorized. Please provide a valid token.'
         );
       }
       if (type === 'SCHEMA_MISMATCH') {
-        logger.error(
+        this.logger.error(
           'The server has closed the connection because the client schema does not match the server schema. Please update your client schema.'
         );
       }
 
       if (type === 'TOKEN_EXPIRED') {
-        logger.error(
+        this.logger.error(
           'The server has closed the connection because the token has expired. Fetch a new token from your authentication provider and call `TriplitClient.endSession()` and `TriplitClient.startSession(token)` to restart the session.'
         );
       }
 
       if (type === 'ROLES_MISMATCH') {
-        logger.error(
+        this.logger.error(
           'The server has closed the connection because the client attempted to update the session with a token that has different roles than the existing token. Call `TriplitClient.endSession()` and `TriplitClient.startSession(token)` to restart the session with the new token.'
         );
       }
@@ -706,7 +698,7 @@ export class SyncEngine {
 
       if (!retry) {
         // early return to prevent reconnect
-        logger.warn(
+        this.logger.warn(
           'The connection has closed. Based on the signal, the connection will not automatically retry. If you would like to reconnect, please call `connect()`.'
         );
         return;
@@ -726,8 +718,8 @@ export class SyncEngine {
   }
 
   private onErrorHandler(evt: any) {
-    // logger.log('error ws', evt);
-    logger.error('transport error', evt);
+    // this.logger.log('error ws', evt);
+    this.logger.error('transport error', evt);
     // on error, close the connection and attempt to reconnect
     this.closeConnection();
   }
@@ -759,7 +751,7 @@ export class SyncEngine {
    */
   resetQueryState() {
     if (this.connectionStatus === 'OPEN') {
-      logger.warn(
+      this.logger.warn(
         'You are resetting the sync engine while the connection is open. To avoid unexpected behavior the connection will be closed and you should call `connect()` again after resetting. To hide this warning, call `disconnect()` before resetting.'
       );
       this.disconnect();
@@ -781,11 +773,11 @@ export class SyncEngine {
 
   private async handleErrorMessage(message: ServerErrorMessage) {
     const { error, metadata, messageType } = message.payload;
-    logger.error(error.name, metadata);
+    this.logger.error(error.name, metadata);
     switch (error.name) {
       case 'MalformedMessagePayloadError':
       case 'UnrecognizedMessageTypeError':
-        logger.warn(
+        this.logger.warn(
           'You sent a malformed message to the server. This might occur if your client is not up to date with the server. Please ensure your client is updated.'
         );
         break;
@@ -855,7 +847,7 @@ export class SyncEngine {
     const didSend = this.transport.sendMessage(message);
 
     if (didSend) {
-      logger.debug('sent', message);
+      this.logger.debug('sent', message);
       for (const handler of this.messageSentSubscribers) {
         handler(message);
       }

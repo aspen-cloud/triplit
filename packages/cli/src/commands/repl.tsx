@@ -8,7 +8,7 @@ import { parseQuery } from '../parser.js';
 import { TriplitError } from '@triplit/db';
 import { projectSchemaMiddleware } from '../middleware/project-schema.js';
 import ora from 'ora';
-import { Logger } from '@triplit/types/logger';
+import { Logger, LogHandler, LogRecord } from '@triplit/logger';
 
 async function awaitConnect(client: Triplit.TriplitClient) {
   return new Promise<void>((resolve) => {
@@ -29,39 +29,35 @@ async function awaitConnect(client: Triplit.TriplitClient) {
   });
 }
 
-class CliLogger implements Logger {
-  private _scope: string;
-  constructor({ scope }: { scope?: string }) {
-    this._scope = scope ?? '';
-  }
-  log(msg: string) {
-    // console.log(msg);
-  }
-  info(msg: string) {
-    // console.info(msg);
-  }
-  error(msg: any, err: unknown) {
-    console.log('logging error', typeof msg, typeof err);
-    if (this._scope === 'sync') return;
-    if (msg instanceof TriplitError) {
-      console.error(msg.message);
-      return;
+class CliLogHandler implements LogHandler {
+  log(record: LogRecord) {
+    const { level, context, message, attributes } = record;
+    if (level === 'ERROR' || level === 'FATAL') {
+      console.log('logging error', typeof message, typeof attributes);
+      if (context === 'sync') return;
+      // I think this is correct
+      // @ts-expect-error
+      if (message instanceof TriplitError) {
+        console.error(message.message);
+        return;
+      }
+      if (attributes instanceof TriplitError) {
+        console.error(attributes.message);
+        return;
+      }
+      console.error(message, attributes);
+    } else {
+      console.log(message, attributes);
     }
-    if (err instanceof TriplitError) {
-      console.log('TRIPLIT ERROR');
-      console.error(err.message);
-      return;
-    }
-    console.error(msg, err);
   }
-  debug(msg: string) {
-    // console.debug(msg);
+  startSpan(name: string, context?: string, attributes?: Record<string, any>) {
+    throw new Error('Method not implemented.');
   }
-  warn(msg: string) {
-    // console.warn(msg);
+  endSpan(span: any): void {
+    throw new Error('Method not implemented.');
   }
-  scope(scope: string) {
-    return new CliLogger({ scope });
+  recordMetric(name: string, value: number, attributes?: Record<string, any>) {
+    throw new Error('Method not implemented.');
   }
 }
 
@@ -79,7 +75,7 @@ export default Command({
       serverUrl: ctx.remote.url,
       token: ctx.remote.token,
       schema: schema?.collections,
-      logger: new CliLogger({}),
+      logger: new Logger([new CliLogHandler()]),
     });
     const spinner = ora('Connecting to Triplit server').start();
     setTimeout(() => {

@@ -5,7 +5,7 @@ import {
   SubscriptionOptions,
   SyncTransport,
 } from '../../types.js';
-import { Logger } from '../../@triplit/types/logger.js';
+import { Logger } from '@triplit/logger';
 
 export interface ClientOptions<M extends Models<M> = Models> {
   /**

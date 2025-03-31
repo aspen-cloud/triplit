@@ -19,11 +19,11 @@ import {
   SubscriptionSignalPayload,
   TokenRefreshOptions,
   OnSessionErrorCallback,
-  SyncOptions,
 } from './types';
 import { HttpClient } from '../http-client/http-client.js';
-import { Logger } from '../@triplit/types/logger.js';
-import { DefaultLogger } from '../client-logger.js';
+import { Logger } from '@triplit/logger';
+import { clientLogHandler } from '../client-logger.js';
+import { MemoryHandler } from '@triplit/logger/memory';
 import {
   DB as EntityDB,
   KVStore,
@@ -126,10 +126,6 @@ export class TriplitClient<M extends Models<M> = Models> {
     fetch: ClientFetchOptions;
   };
   logger: Logger;
-  /**
-   * Logs are only stored in `debug` mode
-   */
-  readonly logs: any[] = [];
 
   private connectOnInitialization: boolean;
 
@@ -203,7 +199,7 @@ export class TriplitClient<M extends Models<M> = Models> {
             .Id('_schema'),
           {
             onError: () => {
-              console.warn('Schema sync disconnected');
+              this.logger.warn('Schema sync disconnected');
             },
           }
         );
@@ -213,17 +209,14 @@ export class TriplitClient<M extends Models<M> = Models> {
       });
     });
 
-    this.logger =
-      options.logger ??
-      new DefaultLogger({
-        scope: 'client',
-        level: options.logLevel,
-        // Use debug mode as a proxy for dev mode
-        onLog:
-          options.logLevel === 'debug'
-            ? (log) => this.logs.push(log)
-            : () => {},
-      });
+    this.logger = options.logger ?? new Logger([clientLogHandler()]);
+    if (options.logLevel) {
+      this.logger.setLogLevel(options.logLevel);
+    }
+    // With debug logging, store logs for access
+    if (options.logLevel === 'debug') {
+      this.logger.registerHandler(new MemoryHandler());
+    }
 
     this.claimsPath = options.claimsPath;
 
@@ -246,7 +239,7 @@ export class TriplitClient<M extends Models<M> = Models> {
 
     this.syncEngine = new SyncEngine(this, {
       transport: options.transport,
-      logger: this.logger.scope('sync'),
+      logger: this.logger.context('sync'),
     });
 
     if (options.onSessionError) {
@@ -292,7 +285,7 @@ export class TriplitClient<M extends Models<M> = Models> {
       ...options,
       skipRules: this.skipRules,
     });
-    this.logger.debug('transact END', resp);
+    this.logger.debug('transact END', { txOutput: resp });
     return resp;
   }
 
@@ -337,7 +330,7 @@ export class TriplitClient<M extends Models<M> = Models> {
       try {
         await this.syncEngine.syncQuery(query);
       } catch (e) {
-        warnError(e);
+        this.warnError(e);
       }
       return this.fetchLocal(query, opts);
     }
@@ -347,7 +340,7 @@ export class TriplitClient<M extends Models<M> = Models> {
         try {
           await this.syncEngine.syncQuery(query);
         } catch (e) {
-          warnError(e);
+          this.warnError(e);
         }
       }
       return this.fetchLocal(query, opts);
@@ -362,7 +355,7 @@ export class TriplitClient<M extends Models<M> = Models> {
       await Promise.race([
         this.syncEngine.syncQuery(query),
         new Promise((res) => setTimeout(res, timeout)),
-      ]).catch(warnError);
+      ]).catch(this.warnError);
       return this.fetchLocal(query, opts);
     }
 
@@ -395,10 +388,10 @@ export class TriplitClient<M extends Models<M> = Models> {
     id: string,
     options?: Partial<ClientFetchOptions>
   ): Promise<FetchResult<M, { collectionName: CN }, 'one'>> {
-    this.logger.debug('fetchById START', collectionName, id, options);
+    this.logger.debug('fetchById START', { collectionName, id, options });
     const query = this.query(collectionName).Id(id);
     const result = await this.fetchOne<{ collectionName: CN }>(query, options);
-    this.logger.debug('fetchById END', collectionName, id, options);
+    this.logger.debug('fetchById END', { collectionName, id, options, result });
     return result;
   }
 
@@ -451,11 +444,11 @@ export class TriplitClient<M extends Models<M> = Models> {
     object: WriteModel<M, CN>
   ) {
     if (this.awaitReady) await this.awaitReady;
-    this.logger.debug('insert START', collectionName, object);
+    this.logger.debug('insert START', { collectionName, object });
     const resp = await this.db.insert(collectionName, object, {
       skipRules: this.skipRules,
     });
-    this.logger.debug('insert END', resp);
+    this.logger.debug('insert END', { txOutput: resp });
     return resp;
   }
 
@@ -473,11 +466,11 @@ export class TriplitClient<M extends Models<M> = Models> {
     data: UpdatePayload<M, CN>
   ) {
     if (this.awaitReady) await this.awaitReady;
-    this.logger.debug('update START', collectionName, entityId);
+    this.logger.debug('update START', { collectionName, entityId });
     const resp = await this.db.update(collectionName, entityId, data, {
       skipRules: this.skipRules,
     });
-    this.logger.debug('update END', resp);
+    this.logger.debug('update END', { txOutput: resp });
     return resp;
   }
 
@@ -493,11 +486,11 @@ export class TriplitClient<M extends Models<M> = Models> {
     entityId: string
   ) {
     if (this.awaitReady) await this.awaitReady;
-    this.logger.debug('delete START', collectionName, entityId);
+    this.logger.debug('delete START', { collectionName, entityId });
     const resp = await this.db.delete(collectionName, entityId, {
       skipRules: this.skipRules,
     });
-    this.logger.debug('delete END', resp);
+    this.logger.debug('delete END', { txOutput: resp });
     return resp;
   }
 
@@ -791,12 +784,12 @@ export class TriplitClient<M extends Models<M> = Models> {
       });
     };
     returnValue.nextPage = () => {
-      console.warn(
+      this.logger.warn(
         'There is no limit set on the query, so nextPage() is a no-op'
       );
     };
     returnValue.prevPage = () => {
-      console.warn(
+      this.logger.warn(
         'There is no limit set on the query, so prevPage() is a no-op'
       );
     };
@@ -980,7 +973,7 @@ export class TriplitClient<M extends Models<M> = Models> {
       });
     };
     returnValue.loadMore = () => {
-      console.warn(
+      this.logger.warn(
         'There is no limit set on the query, so loadMore is a no-op'
       );
     };
@@ -1080,7 +1073,7 @@ export class TriplitClient<M extends Models<M> = Models> {
         }
         const maybeToken = await refreshOptions.refreshHandler();
         if (!maybeToken) {
-          console.warn(
+          this.logger.warn(
             'An expired token was passed to startSession, and the refreshHandler was unable to provide a new token. Session will not be started'
           );
           // TODO: should this end the current session?
@@ -1331,6 +1324,17 @@ export class TriplitClient<M extends Models<M> = Models> {
         this.connectionOptionsChangeHandlers.filter((cb) => cb !== callback);
     };
   }
+
+  private warnError(e: any) {
+    if (e instanceof TriplitError) {
+      this.logger.warn(
+        // @ts-expect-error
+        e.toJSON()
+      );
+    } else {
+      this.logger.warn(e);
+    }
+  }
 }
 
 function addTraceIdToQuery<Q>(query: Q): Q & { traceId: string } {
@@ -1342,14 +1346,6 @@ function mapServerUrlToSyncOptions(serverUrl: string) {
   const secure = url.protocol === 'https:';
   const server = url.host;
   return { server, secure };
-}
-
-function warnError(e: any) {
-  if (e instanceof TriplitError) {
-    console.warn(e.toJSON());
-  } else {
-    console.warn(e);
-  }
 }
 
 function flipOrder(order: any) {

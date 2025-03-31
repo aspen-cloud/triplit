@@ -35,6 +35,7 @@ import {
   SimpleClientStorageOptions,
 } from '../client/types/client.js';
 import { ConnectionStatus } from '../types.js';
+import { clientLogHandler } from '../client-logger.js';
 
 export function getTriplitWorkerEndpoint(workerUrl?: string): ComLink.Endpoint {
   const url =
@@ -120,7 +121,7 @@ export class WorkerClient<M extends Models<M> = Models> implements Client<M> {
         ...remainingOptions,
         schema: schema,
       },
-      ComLink.proxy(new WorkerLogger())
+      ComLink.proxy(clientLogHandler())
     );
     this._connectionStatus =
       options?.autoConnect === false ? 'CLOSED' : 'CONNECTING';

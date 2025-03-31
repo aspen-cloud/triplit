@@ -1,4 +1,4 @@
-import { Logger } from '../../@triplit/types/logger.js';
+import { Logger } from '@triplit/logger';
 import {
   ClientSyncMessage,
   ServerCloseReasonType,

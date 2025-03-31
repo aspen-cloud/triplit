@@ -6,6 +6,9 @@ export const LOG_LEVELS = [
   'ERROR', // 17-20
   'FATAL', // 21-24
 ] as const;
+const LOG_LEVEL_INDICES = Object.fromEntries(
+  LOG_LEVELS.map((level, index) => [level, index])
+);
 
 export type LogLevelName = (typeof LOG_LEVELS)[number];
 
@@ -90,7 +93,8 @@ export class Logger {
 
   constructor(
     handlers?: LogHandler[],
-    resourceAttributes?: Record<string, any>
+    resourceAttributes?: Record<string, any>,
+    logLevel: LogLevelName | 'NONE' = 'INFO'
   ) {
     // Provide a default ConsoleTransport if none supplied:
     this.handlers = handlers ?? [];
@@ -98,6 +102,8 @@ export class Logger {
     // Resource attributes allow you to specify
     // things like service.name, service.version, etc.
     this.resourceAttributes = resourceAttributes || {};
+
+    this.logLevel = logLevel;
   }
 
   registerHandler(
@@ -119,15 +125,33 @@ export class Logger {
    * This context can represent a subsystem, feature, or namespace.
    */
   context(context: string): Logger {
-    const childLogger = new Logger(this.handlers, this.resourceAttributes);
+    const childLogger = new Logger(
+      this.handlers,
+      this.resourceAttributes,
+      this.logLevel
+    );
     childLogger.loggerContext = context;
     return childLogger;
+  }
+
+  private logLevel: LogLevelName | 'NONE' = 'INFO';
+  setLogLevel(level: string) {
+    const formattedLevel = level.toUpperCase();
+    if (
+      LOG_LEVELS.includes(formattedLevel as LogLevelName) ||
+      formattedLevel === 'NONE'
+    ) {
+      this.logLevel = formattedLevel as LogLevelName;
+    }
   }
 
   /**
    * Catch all internal log method to dispatch to log handlers
    */
   _log(level: LogLevelName, message: string, attributes?: Record<string, any>) {
+    if (this.logLevel === 'NONE') return;
+    if (LOG_LEVEL_INDICES[level] < LOG_LEVEL_INDICES[this.logLevel]) return;
+
     const record: LogRecord = {
       level,
       message,

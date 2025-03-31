@@ -3,8 +3,10 @@ import { hashQuery, Schema as S } from '@triplit/db';
 import { MessageLogItem, spyMessages } from '../utils/client.js';
 import { pause } from '../utils/async.js';
 import { withWebsocketStub } from '../utils/websockets.js';
-import { TriplitClient, WebSocketTransport } from '@triplit/client';
+import { TriplitClient } from '@triplit/client';
 import { tempTriplitServer } from '../utils/server.js';
+import { Logger } from '@triplit/logger';
+import { LogHandlerSpy } from '../utils/logging.js';
 
 const serviceToken =
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ4LXRyaXBsaXQtdG9rZW4tdHlwZSI6InNlY3JldCIsIngtdHJpcGxpdC1wcm9qZWN0LWlkIjoicHJvamVjdCJ9.gcDKyZU9wf8o43Ca9kUVXO4KsGwX8IhhyEg1PO1ZqiQ';
@@ -152,6 +154,61 @@ describe('Connecting a client', () => {
       expect(messageSpy.filter(serverReadyMessages).length).toBe(1);
     })
   );
+  it('A client will warn if not enough information to connect is provided', async () => {
+    using server = await tempTriplitServer({
+      serverOptions: {
+        jwtSecret: 'test-secret',
+      },
+    });
+    const { port } = server;
+    {
+      // No params
+      const handlerSpy = new LogHandlerSpy();
+      const client = new TriplitClient({
+        autoConnect: true,
+        logger: new Logger([handlerSpy]),
+      });
+      await pause();
+      expect(handlerSpy.logs.length).toBe(1);
+      const log = handlerSpy.logs[0];
+      expect(log.level).toBe('WARN');
+      expect(log.message).toBe(
+        'You are attempting to connect but the connection cannot be opened because the required parameters are missing: [token, serverUrl].'
+      );
+    }
+    {
+      // Missing token
+      const handlerSpy = new LogHandlerSpy();
+      const client = new TriplitClient({
+        serverUrl: `http://localhost:${port}`,
+        autoConnect: true,
+        logger: new Logger([handlerSpy]),
+      });
+      await pause();
+      expect(handlerSpy.logs.length).toBe(1);
+      const log = handlerSpy.logs[0];
+      expect(log.level).toBe('WARN');
+      expect(log.message).toBe(
+        'You are attempting to connect but the connection cannot be opened because the required parameters are missing: [token].'
+      );
+    }
+    {
+      const handlerSpy = new LogHandlerSpy();
+      const client = new TriplitClient({
+        // Missing serverUrl
+        token: serviceToken,
+        autoConnect: true,
+        logger: new Logger([handlerSpy]),
+      });
+      await pause();
+      expect(handlerSpy.logs.length).toBe(1);
+      const log = handlerSpy.logs[0];
+      expect(log.level).toBe('WARN');
+      expect(log.message).toBe(
+        'You are attempting to connect but the connection cannot be opened because the required parameters are missing: [serverUrl].'
+      );
+    }
+  });
   it('After disconnecting, calling connect() will reconnect and restart syncing', async () => {
     using server = await tempTriplitServer({
       serverOptions: {

@@ -1,7 +1,5 @@
 import * as ComLink from 'comlink';
 import { TriplitClient as Client } from '../client/triplit-client.js';
-import { LogLevel } from '../@triplit/types/logger.js';
-import { DefaultLogger } from '../client-logger.js';
 import { WorkerInternalClientNotInitializedError } from '../errors.js';
 import {
   SubscribeBackgroundOptions,
@@ -15,10 +13,12 @@ import {
   ReadModel,
   SchemaQuery,
 } from '@triplit/db';
+import { Logger, LogHandler } from '@triplit/logger';
 import {
   ClientOptions,
   ClientTransactOptions,
 } from '../client/types/client.js';
+import { clientLogHandler } from '../client-logger.js';
 
 interface ClientWorker<M extends Models<M> = Models>
   extends Omit<Client<M>, 'update' | 'transact'> {
@@ -34,49 +34,24 @@ interface ClientWorker<M extends Models<M> = Models>
   ) => Promise<Output>;
 }
 
-class WorkerLogger {
-  logScope: string | undefined;
-  constructor(opts: { scope?: string; level: LogLevel }) {
-    this.logScope = opts.scope;
-  }
-}
-
 export class ClientComlinkWrapper<M extends Models<M> = Models>
   implements ClientWorker<M>
 {
   public client: Client<M> | null = null;
   constructor() {}
-  init(options: ClientOptions<M>, logger: any) {
+  init(options: ClientOptions<M>, workerThreadLogHandler: LogHandler) {
     if (this.client != undefined) return;
     const { schema, logLevel, token, autoConnect, ...remainingOptions } =
       options;
-    const workerLogger = new DefaultLogger({
-      level: logLevel,
-      onLog: (log) => {
-        if (!logger) return;
-        if (log.scope == undefined) {
-          log.scope = '';
-        }
-        switch (log.level) {
-          case 'error':
-            logger.error(log);
-            break;
-          case 'warn':
-            logger.warn(log);
-            break;
-          case 'info':
-            logger.info(log);
-            break;
-          case 'debug':
-            logger.debug(log);
-            break;
-        }
-      },
-    });
+
+    // Setup logger
+    const mainThreadLogHandler = clientLogHandler();
+    const logger = new Logger([workerThreadLogHandler, mainThreadLogHandler]);
+
     this.client = new Client<M>({
       ...remainingOptions,
       schema: schema,
-      logger: workerLogger,
+      logger: logger,
     });
   }
   async fetch(...args: Parameters<Client<M>['fetch']>) {

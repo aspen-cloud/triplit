@@ -71,7 +71,18 @@ export async function createTriplitHonoServer(
     : undefined;
   options.logHandler
     ? logger.registerHandler(options.logHandler, { exclusive: true })
-    : logger.registerHandler(new ConsoleHandler());
+    : logger.registerHandler(
+        new ConsoleHandler({
+          formatter: (record) => {
+            const { level, message, timestamp, context, attributes } = record;
+            const timeStr = new Date(timestamp).toISOString();
+            return [
+              `[${timeStr}] [${context ?? '*'}] ${message}`,
+              attributes || '',
+            ];
+          },
+        })
+      );
   // if (options?.verboseLogs) logger.level = true;
   const dbOptions: Partial<DBOptions> = {
     experimental: {},
