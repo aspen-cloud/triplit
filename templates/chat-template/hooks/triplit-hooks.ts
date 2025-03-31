@@ -20,7 +20,10 @@ export function useFilteredConversations(query: string) {
     error,
   } = useQuery(
     client,
-    client.query("conversations").Where("name", "like", `%${query}%`)
+    client
+      .query("conversations")
+      .Where("name", "like", `%${query}%`)
+      .Order("latestMessage.created_at", "DESC")
   )
   return { conversations, fetchingRemote, fetching, error }
 }
@@ -44,7 +47,7 @@ export type UseConversationResult = NonNullable<
   ReturnType<typeof useConversation>["conversation"]
 >
 
-// Populate the conversation cards on the sidebar with the last recieved message
+// Populate the conversation cards on the sidebar with the last received message
 export function useConversationSnippet(convoId: string) {
   const messagesQuery = client
     .query("messages")

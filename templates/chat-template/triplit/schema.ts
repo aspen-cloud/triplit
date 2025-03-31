@@ -53,6 +53,10 @@ export const schema = S.Collections({
       membersInfo: S.RelationMany("users", {
         where: [["id", "in", "$members"]],
       }),
+      latestMessage: S.RelationOne("messages", {
+        where: [["conversationId", "=", "$id"]],
+        order: [["created_at", "DESC"]],
+      }),
     },
     permissions: {
       user: {

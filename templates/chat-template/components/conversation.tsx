@@ -275,20 +275,21 @@ function ChatBubble({
         )}
       </div>
       <div className={cn("flex flex-row gap-1", isOwnMessage && "self-end")}>
-        {Object.entries(
-          message.reactions?.reduce((prev, reaction) => {
-            prev[reaction.emoji] = (prev[reaction.emoji] || 0) + 1
-            return prev
-          }, {} as Record<string, number>)
-        ).map(([reaction, count]) => (
-          <div
-            key={reaction}
-            className="flex flex-row gap-1 items-center rounded-lg px-2 py-0.5 text-sm"
-          >
-            {reaction}
-            <span className="text-muted-foreground">{count}</span>
-          </div>
-        ))}
+        {message.reactions &&
+          Object.entries(
+            message.reactions?.reduce((prev, reaction) => {
+              prev[reaction.emoji] = (prev[reaction.emoji] || 0) + 1
+              return prev
+            }, {} as Record<string, number>)
+          ).map(([reaction, count]) => (
+            <div
+              key={reaction}
+              className="flex flex-row gap-1 items-center rounded-lg px-2 py-0.5 text-sm"
+            >
+              {reaction}
+              <span className="text-muted-foreground">{count}</span>
+            </div>
+          ))}
       </div>
     </div>
   )
