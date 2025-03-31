@@ -437,10 +437,10 @@ export class IVM<M extends Models<M> = Models> {
         // to be ahead of or behind the current results
         // TODO: if this query is not the root, we should probably bubble this up as an indication to refetch
         if (
+          limit &&
+          results!.length === limit &&
           (evictedEntities.size > 0 ||
-            (inlineUpdatedEntitiesWithOrderRelevantChanges.size > 0 &&
-              order)) &&
-          results!.length === limit
+            (inlineUpdatedEntitiesWithOrderRelevantChanges.size > 0 && order))
         ) {
           return {
             updatedResults: (await this.db.rawFetch(query)) as ViewEntity[],
