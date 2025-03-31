@@ -64,7 +64,7 @@ export type EntityWriteOptions = {
 export type SubscriptionResultsCallback<
   M extends Models<M> = Models,
   Q extends SchemaQuery<M> = SchemaQuery<M>,
-> = (results: FetchResult<M, Q, 'many'>) => void;
+> = (results: FetchResult<M, Q, 'many'>, queryKey?: string) => void;
 export type OnCommitCallback = (changes: DBChanges) => Promise<void>;
 export type SchemaChangeListener = (
   change: SchemaChange

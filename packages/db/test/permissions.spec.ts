@@ -7,6 +7,7 @@ import {
   WritePermissionError,
 } from '../src/errors.js';
 import { CollectionQuery } from '../src/query.js';
+import { queryResultsToChanges } from '../src/ivm.js';
 
 const messagingSchema = {
   roles: {
@@ -2076,7 +2077,7 @@ describe('cyclical permissions', () => {
           userId: '1',
         });
         const result = await session.fetch(db.query('users'));
-        console.dir(result, { depth: null });
+        // console.dir(result, { depth: null });
         // expect 1, 5, 6
       }
     }
@@ -2198,7 +2199,14 @@ describe('subscriptions', () => {
       let subSpy = vi.fn();
       let unsub;
       beforeAll(async () => {
-        unsub = user1DB.subscribeChanges(query, subSpy);
+        unsub = user1DB.subscribe(query, (results) => {
+          subSpy(
+            queryResultsToChanges(
+              results.map((res) => ({ data: res })),
+              query
+            )
+          );
+        });
       });
       afterAll(() => {
         unsub();

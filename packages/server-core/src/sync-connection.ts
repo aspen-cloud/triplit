@@ -1,9 +1,11 @@
 import {
+  CollectionQuery,
   DB,
   DBChanges,
   TriplitError,
   diffSchemas,
   getBackwardsIncompatibleEdits,
+  prepareQuery,
 } from '@triplit/db';
 import { QuerySyncError, UnrecognizedMessageTypeError } from './errors.js';
 import { isTriplitError } from './utils.js';
@@ -26,7 +28,12 @@ import { logger } from '@triplit/logger';
 import SuperJSON from 'superjson';
 import { mergeDBChanges } from '@triplit/db/changes-buffer';
 import { COMPATIBILITY_LIST_KEY } from './constants.js';
-import { diffChanges } from '@triplit/db/ivm';
+import {
+  createQueryWithExistsAddedToIncludes,
+  createQueryWithRelationalOrderAddedToIncludes,
+  diffChanges,
+  queryResultsToChanges,
+} from '@triplit/db/ivm';
 
 export interface ConnectionOptions {
   clientSchemaHash: number | undefined;
@@ -49,6 +56,7 @@ export class SyncConnection {
       unsubscribe: () => void;
       serverHasRespondedOnce: boolean;
       externalQueryId: string;
+      externalQuery: CollectionQuery;
     }
   >;
   listeners: Set<(messageType: string, payload: {}) => void>;
@@ -143,53 +151,46 @@ export class SyncConnection {
     this.sendMessage('ERROR', payload);
   }
 
-  private bufferEntityData(changes: DBChanges, queryId?: string) {
+  private bufferEntityData(results: any[], queryId?: string) {
     if (!queryId) {
       throw new Error('queryId is required to bufferEntityData');
     }
+    const changes = queryResultsToChanges(
+      results,
+      this.connectedQueries.get(queryId)!.externalQuery
+    );
     let unionOfChangesBefore = {};
     let unionOfChangesAfter = {};
     for (const [qId, qEntities] of this.subscriptionDataBuffer.queryEntities) {
-      // console.log('merging', qId, qEntities);
-      // console.dir(
-      //   {
-      //     before: unionOfChangesBefore,
-      //     entities: qEntities,
-      //   },
-      //   { depth: null }
-      // );
       unionOfChangesBefore = mergeDBChanges(unionOfChangesBefore, qEntities);
-      // console.dir(
-      //   {
-      //     after: unionOfChangesBefore,
-      //   },
-      //   { depth: null }
-      // );
       if (qId === queryId) {
         unionOfChangesAfter = mergeDBChanges(unionOfChangesAfter, changes);
       } else {
         unionOfChangesAfter = mergeDBChanges(unionOfChangesAfter, qEntities);
       }
     }
-    this.subscriptionDataBuffer.queryEntities.set(queryId!, changes);
+    this.subscriptionDataBuffer.queryEntities.set(
+      queryId!,
+      structuredClone(changes)
+    );
     const changeDiff = diffChanges(unionOfChangesBefore, unionOfChangesAfter);
 
-    // console.dir(
-    //   {
-    //     subscriptionDataBuffer: this.subscriptionDataBuffer,
-    //     unionOfChangesBefore,
-    //     unionOfChangesAfter,
-    //     queryId,
-    //     changes,
-    //     changeDiff,
-    //   },
-    //   { depth: null }
-    // );
+    console.dir(
+      {
+        results,
+        subscriptionDataBuffer: this.subscriptionDataBuffer,
+        unionOfChangesBefore,
+        unionOfChangesAfter,
+        query: this.connectedQueries.get(queryId)!.externalQuery,
+        changes,
+        changeDiff,
+      },
+      { depth: null }
+    );
     this.subscriptionDataBuffer.changes = mergeDBChanges(
       this.subscriptionDataBuffer.changes,
       changeDiff
     );
-    // this.subscriptionDataBuffer.changes = changeDiff;
     this.subscriptionDataBuffer.changedQueries.add(queryId!);
   }
 
@@ -214,17 +215,30 @@ export class SyncConnection {
       // TODO figure out better way to manage this especially on unsubscribe
       // and when there are multiple subs to the same query
       this.subscriptionDataBuffer.queryEntities.set(queryKey, {});
-
-      const unsubscribe = this.db.subscribeChanges(
-        query,
+      const queryWithRelationalInclusions =
+        createQueryWithRelationalOrderAddedToIncludes(
+          createQueryWithExistsAddedToIncludes(
+            prepareQuery(
+              query,
+              this.db.schema?.['collections'],
+              {},
+              undefined,
+              {
+                applyPermission: undefined,
+              }
+            )
+          )
+        );
+      const unsubscribe = this.db.subscribeRaw(
+        queryWithRelationalInclusions,
         this.bufferEntityData.bind(this),
+        (err) => {
+          throw err;
+        },
         {
           queryState: state,
           skipRules: hasAdminAccess(this.token),
           queryKey,
-          errorCallback: (error) => {
-            throw error;
-          },
         }
       );
 
@@ -237,6 +251,7 @@ export class SyncConnection {
         unsubscribe,
         serverHasRespondedOnce: false,
         externalQueryId: queryKey,
+        externalQuery: queryWithRelationalInclusions,
       });
 
       await this.db.updateQueryViews();

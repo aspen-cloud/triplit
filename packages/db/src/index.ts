@@ -1,4 +1,5 @@
 import './polyfills.js';
+export { prepareQuery } from './prepare-query.js';
 export * from './codec.js';
 export * from './db.js';
 export * from './db-transaction.js';

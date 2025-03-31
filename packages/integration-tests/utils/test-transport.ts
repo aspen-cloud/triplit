@@ -14,7 +14,7 @@ import {
 logger.registerHandler({
   log: (record) => {
     if (record.level === 'ERROR') {
-      console.error(record);
+      console.dir(record, { depth: 12 });
     }
     // console.dir(record, { depth: 12 });
   },

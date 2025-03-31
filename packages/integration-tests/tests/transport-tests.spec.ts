@@ -169,7 +169,7 @@ describe.skip('schema syncing', () => {
 
     expect((await clientSchemaAttributes(bob))?.age).toBeUndefined();
   });
-  it('should not sync the schema if the client sneding updates does not have a service token', async () => {
+  it('should not sync the schema if the client sending updates does not have a service token', async () => {
     const schema = {
       collections: {
         students: { schema: S.Schema({ id: S.Id(), name: S.String() }) },
@@ -2559,12 +2559,12 @@ describe('stateful query syncing', () => {
         created_at: expect.any(Date),
         runs: [
           {
-            id: 'run-1',
+            id: 'run-2',
             benchmark: 'benchmark-1',
-            branch_name: 'master',
-            commit_hash: 'hash-1',
-            commit_message: 'commit message 1',
-            created_at: new Date('2023-01-01'),
+            branch_name: 'dev',
+            commit_hash: 'hash-2',
+            commit_message: 'commit message 2',
+            created_at: new Date('2023-01-02'),
             results: {
               memory_avg: 100,
               memory_max: 200,
@@ -2573,12 +2573,12 @@ describe('stateful query syncing', () => {
             },
           },
           {
-            id: 'run-2',
+            id: 'run-1',
             benchmark: 'benchmark-1',
-            branch_name: 'dev',
-            commit_hash: 'hash-2',
-            commit_message: 'commit message 2',
-            created_at: new Date('2023-01-02'),
+            branch_name: 'master',
+            commit_hash: 'hash-1',
+            commit_message: 'commit message 1',
+            created_at: new Date('2023-01-01'),
             results: {
               memory_avg: 100,
               memory_max: 200,

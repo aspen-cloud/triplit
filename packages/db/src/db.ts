@@ -149,7 +149,13 @@ export class DB<
     onResults: SubscriptionResultsCallback<M, Q>,
     onError?: (error: Error) => void,
     // TODO: will we need this?
-    options: FetchOptions = {}
+    options: FetchOptions & {
+      queryState?: {
+        timestamp: Timestamp;
+        entityIds: Record<string, string[]>;
+      };
+      queryKey?: string;
+    } = {}
   ): () => void {
     const preparedQuery = prepareQuery(
       query,
@@ -167,12 +173,44 @@ export class DB<
           preparedQuery,
           'many',
           this.typeConverters
-        )
+        ),
+        options.queryKey
       );
     };
     return this.ivm.subscribe(preparedQuery, callback, onError);
   }
 
+  subscribeRaw<Q extends SchemaQuery<M>>(
+    query: Q,
+    onResults: SubscriptionResultsCallback<M, Q>,
+    onError?: (error: Error) => void,
+    // TODO: will we need this?
+    options: FetchOptions & {
+      queryState?: {
+        timestamp: Timestamp;
+        entityIds: Record<string, string[]>;
+      };
+      queryKey?: string;
+    } = {}
+  ): () => void {
+    const preparedQuery = prepareQuery(
+      query,
+      this.schema?.collections,
+      this.systemVars,
+      this.session,
+      {
+        applyPermission: options.skipRules ? undefined : 'read',
+      }
+    );
+    const callback = ({ results }: any) => {
+      onResults(results, options.queryKey);
+    };
+    return this.ivm.subscribe(preparedQuery, callback, onError);
+  }
+
+  /**
+   * @deprecated TODO remove
+   */
   subscribeWithChanges<Q extends SchemaQuery<M>>(
     query: Q,
     onResults: (args: {
@@ -204,7 +242,9 @@ export class DB<
     };
     return this.ivm.subscribe(preparedQuery, callback, onError);
   }
-
+  /**
+   * @deprecated TODO remove
+   */
   subscribeChanges<Q extends SchemaQuery<M>>(
     query: Q,
     onResults: (results: DBChanges, queryId?: string) => void | Promise<void>,

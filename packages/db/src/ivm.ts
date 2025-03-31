@@ -1,47 +1,28 @@
 import { CollectionNameFromModels, Models } from './schema/index.js';
 import { CollectionQuery, QueryOrder, WhereFilter } from './query.js';
-import {
-  Change,
-  DBChanges,
-  DBEntity,
-  QueryAfter,
-  RelationSubquery,
-} from './types.js';
+import { Change, DBChanges, DBEntity, RelationSubquery } from './types.js';
 import {
   isFilterGroup,
-  isFilterStatement,
   isSubQueryFilter,
   satisfiesNonRelationalFilter,
   someFilterStatements,
 } from './filters.js';
 import { DB, DBSchema } from './db.js';
 import { deepObjectAssign } from './utils/deep-merge.js';
-import {
-  areChangesEmpty,
-  mergeDBChanges,
-  SimpleMemoryWriteBuffer,
-} from './memory-write-buffer.js';
+import { SimpleMemoryWriteBuffer } from './memory-write-buffer.js';
 import { EntityDataStore } from './entity-data-store.js';
 import { BTreeKVStore } from './kv-store/storage/memory-btree.js';
-import { performanceTrace } from './utils/performance-trace.js';
 import { satisfiesAfter } from './after.js';
 import { logger } from '@triplit/logger';
 import { ValuePointer } from './utils/value-pointer.js';
 import { KVDoubleBuffer } from './double-buffer.js';
-import { DurableWriteBuffer } from './durable-write-buffer.js';
-import { setImmediate } from 'node:timers/promises';
-import { yieldToEventLoop } from './utils/timers.js';
 import {
   createViewEntity,
   flattenViewEntity,
   sortViewEntities,
   ViewEntity,
 } from './query-engine.js';
-import {
-  bindVariablesInFilters,
-  isValueVariable,
-  getVariableComponents,
-} from './variables.js';
+import { bindVariablesInFilters } from './variables.js';
 
 interface QueryNode {
   // TODO support multiple root queries (essentially subqueries could be shared between root queries)
@@ -57,19 +38,13 @@ interface SubscribedQueryInfo {
   errorCallbacks: Set<(error: Error) => void>;
   uninitializedListeners: WeakSet<SubscriptionCallback>;
   results?: ViewEntity[];
-  capturedChanges?: DBChanges;
   hasChanged?: boolean;
   collections: Set<string>;
 }
 
-type SubscriptionCallback = (update: {
-  results: ViewEntity[];
-  changes: DBChanges;
-}) => void;
+type SubscriptionCallback = (update: { results: ViewEntity[] }) => void;
 
-export interface IVMOptions {
-  shouldTrackChanges?: boolean;
-}
+export interface IVMOptions {}
 
 export class IVM<M extends Models<M> = Models> {
   storage = new BTreeKVStore();
@@ -103,20 +78,23 @@ export class IVM<M extends Models<M> = Models> {
   ) {
     const rootQueryId = JSON.stringify(query);
     if (!this.subscribedQueries.has(rootQueryId)) {
+      // Get all collections that are referenced by this root query
+      // or one of its subqueries
+      const collectionsCoveredByThisQuery = new Set<string>();
+      mapSubqueriesRecursive(query, (q) => {
+        collectionsCoveredByThisQuery.add(q.collectionName);
+        return q;
+      });
+
       this.subscribedQueries.set(rootQueryId, {
         ogQuery: query,
-        query: this.options.shouldTrackChanges
-          ? createQueryWithRelationalOrderAddedToIncludes(
-              createQueryWithExistsAddedToIncludes(query)
-            )
-          : query,
+        query,
         listeners: new Set(),
         errorCallbacks: new Set(),
         uninitializedListeners: new WeakSet(),
         results: undefined,
-        collections: new Set(),
+        collections: collectionsCoveredByThisQuery,
       });
-      this.createQueryNodesForRootQuery(rootQueryId, query, 'root');
     }
 
     this.subscribedQueries.get(rootQueryId)!.listeners.add(callback);
@@ -146,13 +124,6 @@ export class IVM<M extends Models<M> = Models> {
 
       if (this.subscribedQueries.get(rootQueryId)!.listeners.size === 0) {
         this.subscribedQueries.delete(rootQueryId);
-        // TODO make this more efficient
-        this.queryNodes = Object.fromEntries(
-          Object.entries(this.queryNodes).map(([collection, nodes]) => [
-            collection,
-            nodes.filter((n) => n.rootQuery !== rootQueryId),
-          ])
-        ) as typeof this.queryNodes;
       }
     };
   }
@@ -165,16 +136,6 @@ export class IVM<M extends Models<M> = Models> {
     // save the query state to a variable before the fetch but I think
     // it's better to leave this as a reminder that this is a potential
     // issue
-    // const tx = this.storage.transact();
-    // await this.entityStore.applyChanges(
-    //   tx,
-    //   queryResultsToChanges(results, query),
-    //   {
-    //     checkWritePermission: undefined,
-    //     entityChangeValidator: undefined,
-    //   }
-    // );
-    // await tx.commit();
     if (this.subscribedQueries.get(rootQueryId)) {
       this.subscribedQueries.get(rootQueryId)!.results = results;
     }
@@ -190,55 +151,18 @@ export class IVM<M extends Models<M> = Models> {
         }
         if (
           !rootQueryInfo.uninitializedListeners.has(listener) &&
-          !rootQueryInfo.hasChanged &&
-          areChangesEmpty(rootQueryInfo.capturedChanges!)
+          !rootQueryInfo.hasChanged
         ) {
-          // console.log('Skipping listener');
-          // console.dir({ rootQueryInfo }, { depth: 10 });
           continue;
         }
-        const results =
-          rootQueryInfo.results &&
-          removeInternalIncludesFromResults(rootQueryInfo.results);
-        const changes = rootQueryInfo.uninitializedListeners.has(listener)
-          ? queryResultsToChanges(rootQueryInfo.results, rootQueryInfo.query)
-          : rootQueryInfo.capturedChanges!;
+        const results = rootQueryInfo.results;
 
         rootQueryInfo.uninitializedListeners.delete(listener);
-        if (results != null || changes != null) {
-          listener({ results, changes });
+        if (results != null) {
+          listener({ results });
         }
       }
       rootQueryInfo.hasChanged = false;
-      rootQueryInfo.capturedChanges = undefined;
-    }
-  }
-
-  private createQueryNodesForRootQuery(
-    queryId: string,
-    query: CollectionQuery,
-    type: QueryNode['queryType']
-  ) {
-    const collection = query.collectionName;
-    this.subscribedQueries.get(queryId)!.collections?.add(collection);
-    if (!this.queryNodes[collection]) {
-      this.queryNodes[collection] = [];
-    }
-    this.queryNodes[collection].push({
-      rootQuery: queryId,
-      query,
-      queryType: type,
-    });
-    for (const subquery of query.where?.filter(isSubQueryFilter) ?? []) {
-      this.createQueryNodesForRootQuery(queryId, subquery.exists, 'exists');
-    }
-    for (const [relName, { subquery }] of Object.entries(query.include ?? [])) {
-      this.createQueryNodesForRootQuery(queryId, subquery, 'include');
-    }
-    for (const [attribute, _direction, rel] of query.order ?? []) {
-      if (rel) {
-        this.createQueryNodesForRootQuery(queryId, rel.subquery, 'order');
-      }
     }
   }
 
@@ -248,13 +172,7 @@ export class IVM<M extends Models<M> = Models> {
     const changes = structuredClone(newChanges);
     const tx = this.storage.transact();
     try {
-      if (this.subscribedQueries.size === 0) {
-        // This is to keep the internal entity store up to date
-        await this.entityStore.applyChanges(tx, changes, {
-          checkWritePermission: undefined,
-          entityChangeValidator: undefined,
-        });
-      } else {
+      if (this.subscribedQueries.size > 0) {
         // TODO / WARNING this basically needs to be synchronous otherwise there will be
         // a race condition between the changes being applied and the views being updated
         // which can cause the TX that updates the buffer to commit while updateViews is running
@@ -314,11 +232,7 @@ export class IVM<M extends Models<M> = Models> {
         continue;
       }
       const subscribedQueryInfo = this.subscribedQueries.get(queryId)!;
-      if (this.options.shouldTrackChanges) {
-        await this.processChangesForTracking(subscribedQueryInfo, changes);
-      } else {
-        await this.updateQueryResults(subscribedQueryInfo, changes);
-      }
+      await this.updateQueryResults(subscribedQueryInfo, changes);
     }
     const kvTx = this.storage.transact();
     this.doubleBuffer.inactiveBuffer.clear(kvTx);
@@ -595,63 +509,6 @@ export class IVM<M extends Models<M> = Models> {
     };
   }
 
-  private async processChangesForTracking(
-    rootQueryInfo: SubscribedQueryInfo,
-    changes: DBChanges
-  ) {
-    const freshResults = await this.db.rawFetch(rootQueryInfo.query);
-    const previousResultChanges = queryResultsToChanges(
-      rootQueryInfo.results!,
-      rootQueryInfo.query
-    );
-    const newResultChanges = queryResultsToChanges(
-      freshResults as ViewEntity[],
-      rootQueryInfo.query
-    );
-    rootQueryInfo.results = freshResults as ViewEntity[];
-    rootQueryInfo.hasChanged = true;
-    rootQueryInfo.capturedChanges = newResultChanges;
-    return;
-    const diff = diffChanges(previousResultChanges, newResultChanges);
-
-    const filteredChanges = {} as DBChanges;
-    for (const collection in diff) {
-      // We only want to pass on deletes that were actually deleted
-      // const actualDeletes = changes[collection]?.deletes
-      //   ? diff[collection].deletes.intersection(changes[collection].deletes)
-      //   : new Set<string>();
-
-      filteredChanges[collection] = {
-        sets: diff[collection].sets,
-        // deletes: actualDeletes,
-        deletes: diff[collection].deletes,
-      };
-      // We want to also capture sets that were treated as deletes by the diff
-      if (changes[collection]?.sets) {
-        const evictedSets = new Set(
-          changes[collection].sets.keys()
-        ).intersection(diff[collection].deletes);
-        for (const evictedSet of evictedSets) {
-          filteredChanges[collection].deletes.delete(evictedSet);
-          filteredChanges[collection].sets.set(
-            evictedSet,
-            changes[collection].sets.get(evictedSet)!
-          );
-        }
-      }
-    }
-
-    if (!areChangesEmpty(diff)) {
-      rootQueryInfo.hasChanged = true;
-    }
-    rootQueryInfo.results = freshResults;
-    rootQueryInfo.capturedChanges = mergeDBChanges(
-      rootQueryInfo.capturedChanges ?? {},
-      // filteredChanges
-      diff
-    );
-  }
-
   private getAffectedQueries(changes: DBChanges): Map<string, DBChanges> {
     // TODO  we should probably organize queries by touched collections to make this faster
     const affectedQueries = new Map<string, DBChanges>();
@@ -673,7 +530,6 @@ export class IVM<M extends Models<M> = Models> {
   async clear() {
     await this.storage.clear();
     this.subscribedQueries.clear();
-    this.queryNodes = {} as any;
   }
 }
 
@@ -682,7 +538,6 @@ export function queryResultsToChanges<C extends string>(
   query: CollectionQuery,
   changes: DBChanges = {}
 ) {
-  // removeInternalIncludesFromResults(results);
   const collection = query.collectionName as C;
   if (!changes[collection]) {
     changes[collection] = { sets: new Map(), deletes: new Set() };
@@ -758,15 +613,6 @@ export function createQueryWithRelationalOrderAddedToIncludes(
     };
   }
   return newQuery;
-}
-
-function removeInternalIncludesFromResults(results: any[]) {
-  return results.map((viewEnt) => ({
-    data: viewEnt.data,
-    subqueries: Object.fromEntries(
-      Object.entries(viewEnt.subqueries).filter(([key]) => !key.startsWith('_'))
-    ),
-  }));
 }
 
 function mapSubqueriesRecursive(

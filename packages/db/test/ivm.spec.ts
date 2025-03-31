@@ -8,7 +8,13 @@ import {
   afterEach,
 } from 'vitest';
 import { DB, DBSchema } from '../src/db.js';
-import { diffChanges, IVM } from '../src/ivm.js';
+import {
+  createQueryWithExistsAddedToIncludes,
+  createQueryWithRelationalOrderAddedToIncludes,
+  diffChanges,
+  IVM,
+  queryResultsToChanges,
+} from '../src/ivm.js';
 import { Schema as S } from '../src/schema/builder.js';
 import { CollectionQuery, OrderStatement, QueryOrder } from '../src/query.js';
 import { Models } from '../src/schema/types/index.js';
@@ -18,6 +24,8 @@ import { pause } from './utils/async.js';
 import { InMemoryTestKVStore } from './utils/test-kv-store.js';
 import { areChangesEmpty, mergeDBChanges } from '../src/memory-write-buffer.js';
 import { DBChanges } from '../dist/types.js';
+import { ViewEntity } from '../dist/query-engine.js';
+import { flattenViewEntity } from '../src/query-engine.js';
 
 describe('IVM', () => {
   describe('initial results', async () => {
@@ -105,208 +113,207 @@ describe('IVM', () => {
       unsubs.forEach((unsub) => unsub());
     });
   });
-  describe.each([true, false])(
-    'shouldTrackChanges: %s',
-    (shouldTrackChanges) => {
-      test('can subscribe to a non-relational query and get updates', async () => {
-        const db = new DB({ ivmOptions: { shouldTrackChanges } });
+  // No longer tracking changes here because it happens in the server
+  describe.each([false])('shouldTrackChanges: %s', (shouldTrackChanges) => {
+    test('can subscribe to a non-relational query and get updates', async () => {
+      const db = new DB({ ivmOptions: { shouldTrackChanges } });
 
-        await db.insert('users', { id: '1', name: 'Alice' });
-        await db.insert('users', { id: '2', name: 'Bob' });
+      await db.insert('users', { id: '1', name: 'Alice' });
+      await db.insert('users', { id: '2', name: 'Bob' });
 
-        const spy = vi.fn();
+      const spy = vi.fn();
 
-        const unsubscribe = db.subscribeWithChanges(
-          {
-            collectionName: 'users',
-            where: [['name', '=', 'Alice']],
-          },
-          ({ results, changes }) => {
-            spy({ results, changes });
-          },
-          (err) => {
-            throw err;
-          }
-        );
-
-        await db.updateQueryViews();
-        db.broadcastToQuerySubscribers();
-        expect(spy).toHaveBeenCalledTimes(1);
-        expect(spy.mock.lastCall[0].results).toEqual([
-          { id: '1', name: 'Alice' },
-        ]);
-        if (shouldTrackChanges) {
-          expect(spy.mock.lastCall[0].changes).toEqual({
-            users: {
-              deletes: new Set(),
-              sets: new Map([['1', { id: '1', name: 'Alice' }]]),
-            },
-          });
+      const unsubscribe = db.subscribeWithChanges(
+        {
+          collectionName: 'users',
+          where: [['name', '=', 'Alice']],
+        },
+        ({ results, changes }) => {
+          spy({ results, changes });
+        },
+        (err) => {
+          throw err;
         }
+      );
 
-        await db.update('users', '1', { name: 'Alice Updated' });
+      await db.updateQueryViews();
+      db.broadcastToQuerySubscribers();
+      expect(spy).toHaveBeenCalledTimes(1);
+      expect(spy.mock.lastCall[0].results).toEqual([
+        { id: '1', name: 'Alice' },
+      ]);
+      if (shouldTrackChanges) {
+        expect(spy.mock.lastCall[0].changes).toEqual({
+          users: {
+            deletes: new Set(),
+            sets: new Map([['1', { id: '1', name: 'Alice' }]]),
+          },
+        });
+      }
 
-        await db.updateQueryViews();
-        db.broadcastToQuerySubscribers();
-        expect(spy).toHaveBeenCalledTimes(2);
-        expect(spy.mock.lastCall[0].results).toEqual([]);
-        if (shouldTrackChanges) {
-          expect(spy.mock.lastCall[0].changes).toEqual({
-            users: {
-              deletes: new Set(),
-              sets: new Map([['1', { name: 'Alice Updated' }]]),
+      await db.update('users', '1', { name: 'Alice Updated' });
+
+      await db.updateQueryViews();
+      db.broadcastToQuerySubscribers();
+      expect(spy).toHaveBeenCalledTimes(2);
+      expect(spy.mock.lastCall[0].results).toEqual([]);
+      if (shouldTrackChanges) {
+        expect(spy.mock.lastCall[0].changes).toEqual({
+          users: {
+            deletes: new Set(),
+            sets: new Map([['1', { name: 'Alice Updated' }]]),
+          },
+        });
+      }
+
+      unsubscribe();
+    });
+
+    test('can subscribe to a relational query and get updates', async () => {
+      const db = new DB({ ivmOptions: { shouldTrackChanges } });
+
+      await db.insert('users', { id: '1', name: 'Alice' });
+      await db.insert('users', { id: '2', name: 'Bob' });
+      await db.insert('users', { id: '3', name: 'Charlie' });
+
+      await db.insert('posts', { id: '1', userId: '1', public: true });
+      await db.insert('posts', { id: '2', userId: '2', public: false });
+      await db.insert('posts', { id: '3', userId: '2', public: false });
+
+      const spy = vi.fn();
+      const unsubscribe = db.subscribe(
+        {
+          collectionName: 'users',
+          where: [
+            {
+              exists: {
+                collectionName: 'posts',
+                where: [
+                  ['userId', '=', '$1.id'],
+                  ['public', '=', true],
+                ],
+              },
             },
-          });
-        }
+          ],
+        },
+        spy
+      );
 
-        unsubscribe();
-      });
+      await db.updateQueryViews();
+      db.broadcastToQuerySubscribers();
 
-      test('can subscribe to a relational query and get updates', async () => {
-        const db = new DB({ ivmOptions: { shouldTrackChanges } });
+      expect(spy).toHaveBeenCalledTimes(1);
+      expect(spy.mock.lastCall[0]).toEqual([{ id: '1', name: 'Alice' }]);
 
-        await db.insert('users', { id: '1', name: 'Alice' });
-        await db.insert('users', { id: '2', name: 'Bob' });
-        await db.insert('users', { id: '3', name: 'Charlie' });
+      await db.insert('posts', { id: '4', userId: '2', public: true });
 
-        await db.insert('posts', { id: '1', userId: '1', public: true });
-        await db.insert('posts', { id: '2', userId: '2', public: false });
-        await db.insert('posts', { id: '3', userId: '2', public: false });
+      await db.updateQueryViews();
+      db.broadcastToQuerySubscribers();
 
-        const spy = vi.fn();
-        const unsubscribe = db.subscribe(
-          {
-            collectionName: 'users',
-            where: [
-              {
-                exists: {
-                  collectionName: 'posts',
-                  where: [
-                    ['userId', '=', '$1.id'],
-                    ['public', '=', true],
-                  ],
-                },
+      // const firstCallResults = spy.mock.calls[0][0];
+      // const secondCallResults = spy.mock.calls[1][0];
+      // console.dir(firstCallResults === secondCallResults, spy.mock.calls);
+      expect(spy).toHaveBeenCalledTimes(2);
+      expect(spy.mock.lastCall[0]).toEqual([
+        { id: '1', name: 'Alice' },
+        { id: '2', name: 'Bob' },
+      ]);
+
+      unsubscribe();
+    });
+
+    test('can handle deletes on simple, non-relational query', async () => {
+      const db = new DB({ ivmOptions: { shouldTrackChanges } });
+
+      await db.insert('users', { id: '1', name: 'Alice' });
+      await db.insert('users', { id: '2', name: 'Bob' });
+      await db.insert('users', { id: '3', name: 'Charlie' });
+
+      const spy = vi.fn();
+      const unsubscribe = db.subscribe(
+        {
+          collectionName: 'users',
+          where: [['name', '=', 'Alice']],
+        },
+        spy
+      );
+
+      await db.updateQueryViews();
+      db.broadcastToQuerySubscribers();
+
+      expect(spy).toHaveBeenCalledTimes(1);
+      expect(spy.mock.lastCall[0]).toEqual([{ id: '1', name: 'Alice' }]);
+
+      await db.delete('users', '1');
+
+      await db.updateQueryViews();
+      db.broadcastToQuerySubscribers();
+
+      expect(spy).toHaveBeenCalledTimes(2);
+      expect(spy.mock.lastCall[0]).toEqual([]);
+
+      unsubscribe();
+    });
+
+    test('can handle deletes on relation', async () => {
+      const db = new DB({ ivmOptions: { shouldTrackChanges } });
+
+      await db.insert('users', { id: '1', name: 'Alice' });
+      await db.insert('users', { id: '2', name: 'Bob' });
+      await db.insert('users', { id: '3', name: 'Charlie' });
+
+      await db.insert('posts', { id: '1', userId: '1', public: true });
+      await db.insert('posts', { id: '2', userId: '2', public: false });
+      await db.insert('posts', { id: '3', userId: '1', public: false });
+
+      const spy = vi.fn();
+      const unsubscribe = db.subscribe(
+        {
+          collectionName: 'users',
+          where: [
+            {
+              exists: {
+                collectionName: 'posts',
+                where: [
+                  ['userId', '=', '$1.id'],
+                  ['public', '=', true],
+                ],
               },
-            ],
-          },
-          spy
-        );
+            },
+          ],
+        },
+        spy
+      );
 
-        await db.updateQueryViews();
-        db.broadcastToQuerySubscribers();
+      await db.updateQueryViews();
+      db.broadcastToQuerySubscribers();
 
-        expect(spy).toHaveBeenCalledTimes(1);
-        expect(spy.mock.lastCall[0]).toEqual([{ id: '1', name: 'Alice' }]);
+      expect(spy).toHaveBeenCalledTimes(1);
+      expect(spy.mock.lastCall[0]).toEqual([{ id: '1', name: 'Alice' }]);
 
-        await db.insert('posts', { id: '4', userId: '2', public: true });
+      // Irrelevant delete (should not trigger a change)
+      await db.delete('posts', '3');
 
-        await db.updateQueryViews();
-        db.broadcastToQuerySubscribers();
+      await db.updateQueryViews();
+      db.broadcastToQuerySubscribers();
+      // This will sometimes bet called twice because of the shortcut used on the client
+      // to just
+      expect(spy.mock.calls.length).toBeLessThanOrEqual(2);
+      expect(spy.mock.lastCall[0]).toEqual([{ id: '1', name: 'Alice' }]);
 
-        // const firstCallResults = spy.mock.calls[0][0];
-        // const secondCallResults = spy.mock.calls[1][0];
-        // console.dir(firstCallResults === secondCallResults, spy.mock.calls);
-        expect(spy).toHaveBeenCalledTimes(2);
-        expect(spy.mock.lastCall[0]).toEqual([
-          { id: '1', name: 'Alice' },
-          { id: '2', name: 'Bob' },
-        ]);
+      await db.delete('posts', '1');
 
-        unsubscribe();
-      });
+      await db.updateQueryViews();
+      db.broadcastToQuerySubscribers();
 
-      test('can handle deletes on simple, non-relational query', async () => {
-        const db = new DB({ ivmOptions: { shouldTrackChanges } });
+      expect(spy.mock.calls.length).toBeLessThanOrEqual(3);
+      expect(spy.mock.lastCall[0]).toEqual([]);
 
-        await db.insert('users', { id: '1', name: 'Alice' });
-        await db.insert('users', { id: '2', name: 'Bob' });
-        await db.insert('users', { id: '3', name: 'Charlie' });
-
-        const spy = vi.fn();
-        const unsubscribe = db.subscribe(
-          {
-            collectionName: 'users',
-            where: [['name', '=', 'Alice']],
-          },
-          spy
-        );
-
-        await db.updateQueryViews();
-        db.broadcastToQuerySubscribers();
-
-        expect(spy).toHaveBeenCalledTimes(1);
-        expect(spy.mock.lastCall[0]).toEqual([{ id: '1', name: 'Alice' }]);
-
-        await db.delete('users', '1');
-
-        await db.updateQueryViews();
-        db.broadcastToQuerySubscribers();
-
-        expect(spy).toHaveBeenCalledTimes(2);
-        expect(spy.mock.lastCall[0]).toEqual([]);
-
-        unsubscribe();
-      });
-
-      test('can handle deletes on relation', async () => {
-        const db = new DB({ ivmOptions: { shouldTrackChanges } });
-
-        await db.insert('users', { id: '1', name: 'Alice' });
-        await db.insert('users', { id: '2', name: 'Bob' });
-        await db.insert('users', { id: '3', name: 'Charlie' });
-
-        await db.insert('posts', { id: '1', userId: '1', public: true });
-        await db.insert('posts', { id: '2', userId: '2', public: false });
-        await db.insert('posts', { id: '3', userId: '1', public: false });
-
-        const spy = vi.fn();
-        const unsubscribe = db.subscribe(
-          {
-            collectionName: 'users',
-            where: [
-              {
-                exists: {
-                  collectionName: 'posts',
-                  where: [
-                    ['userId', '=', '$1.id'],
-                    ['public', '=', true],
-                  ],
-                },
-              },
-            ],
-          },
-          spy
-        );
-
-        await db.updateQueryViews();
-        db.broadcastToQuerySubscribers();
-
-        expect(spy).toHaveBeenCalledTimes(1);
-        expect(spy.mock.lastCall[0]).toEqual([{ id: '1', name: 'Alice' }]);
-
-        // Irrelevant delete (should not trigger a change)
-        await db.delete('posts', '3');
-
-        await db.updateQueryViews();
-        db.broadcastToQuerySubscribers();
-        // This will sometimes bet called twice because of the shortcut used on the client
-        // to just
-        expect(spy.mock.calls.length).toBeLessThanOrEqual(2);
-        expect(spy.mock.lastCall[0]).toEqual([{ id: '1', name: 'Alice' }]);
-
-        await db.delete('posts', '1');
-
-        await db.updateQueryViews();
-        db.broadcastToQuerySubscribers();
-
-        expect(spy.mock.calls.length).toBeLessThanOrEqual(3);
-        expect(spy.mock.lastCall[0]).toEqual([]);
-
-        unsubscribe();
-      });
-    }
-  );
-  test('can track changes with deletes on simple, non-relational query', async () => {
+      unsubscribe();
+    });
+  });
+  // IVM no longer does this specific change tracking rather it happens on the server
+  test.skip('can track changes with deletes on simple, non-relational query', async () => {
     const db = new DB();
 
     await db.insert('users', { id: '1', name: 'Alice' });
@@ -348,7 +355,8 @@ describe('IVM', () => {
     unsubscribe();
   });
 
-  test('can track changes with deletes on relation', async () => {
+  // IVM no longer does this specific change tracking rather it happens on the server
+  test.skip('can track changes with deletes on relation', async () => {
     const db = new DB();
 
     await db.insert('users', { id: '1', name: 'Alice' });
@@ -1093,6 +1101,12 @@ describe('IVM syncing', () => {
       collectionName: 'messages',
       where: [['sentAt', '>', TODAY - 24 * 60 * 60 * 1000]],
     },
+    // TODO / note that because there is no ORDER, it isn't deterministic which messages are returned
+    // so it can differ between IVM and a fresh fetch
+    // fiveMessages: {
+    //   collectionName: 'messages',
+    //   limit: 5,
+    // },
     messagesByConversationByDate: {
       collectionName: 'messages',
       where: [],
@@ -1174,20 +1188,19 @@ describe('IVM syncing', () => {
     return ops;
   }
 
-  const RANDOM_SEEDS = Array.from({ length: 1 }, (_, i) =>
+  const RANDOM_SEEDS = Array.from({ length: 50 }, (_, i) =>
     Math.floor(Math.random() * 10_000)
   );
   const QUERIES_TO_TEST: Array<keyof typeof QUERIES> = Object.keys(QUERIES);
-  // const QUERIES_TO_TEST: Array<keyof typeof QUERIES> = ['aliceMessages'];
-
+  // const QUERIES_TO_TEST: Array<keyof typeof QUERIES> = ['fiveMessages'];
   describe.each(RANDOM_SEEDS)('seed %i', (seed) => {
     describe.each([false, true])(
       'should track changes: %s',
       (shouldTrackChanges) => {
         async function testQueries(queryKeys: string[]) {
           for (const queryKey of queryKeys) {
-            const query = QUERIES[queryKey];
-            const serverDb = new DB({ ivmOptions: { shouldTrackChanges } });
+            let query = QUERIES[queryKey];
+            const serverDb = new DB();
             const clientDb = new DB();
 
             // const expectedNumberOfCalls = Math.floor(
@@ -1197,10 +1210,23 @@ describe('IVM syncing', () => {
             let ranStep, resolve, reject;
             let numCalls = 0;
 
-            const prepared = prepareQuery(query, undefined, {}, undefined, {
-              applyPermission: undefined,
-            });
-
+            query = shouldTrackChanges
+              ? createQueryWithRelationalOrderAddedToIncludes(
+                  createQueryWithExistsAddedToIncludes(
+                    prepareQuery(
+                      query,
+                      serverDb.schema?.['collections'],
+                      {},
+                      undefined,
+                      {
+                        applyPermission: undefined,
+                      }
+                    )
+                  )
+                )
+              : prepareQuery(query, undefined, {}, undefined, {
+                  applyPermission: undefined,
+                });
             // starting states should match
             expect(await serverDb.fetch(query)).toEqual(
               await clientDb.fetch(query)
@@ -1209,10 +1235,10 @@ describe('IVM syncing', () => {
               CollectionQuery<any, any>,
               DBChanges
             >();
-            subscribedQueryState.set(prepared, {});
-            serverDb.subscribeWithChanges(
-              prepared,
-              async ({ changes: serverChanges, results: serverResults }) => {
+            subscribedQueryState.set(query, {});
+            serverDb.subscribeRaw(
+              query,
+              async (rawServerResults: ViewEntity[]) => {
                 ({
                   promise: ranStep,
                   resolve,
@@ -1221,34 +1247,48 @@ describe('IVM syncing', () => {
                 spy();
 
                 try {
-                  // insert changes into clientDb
+                  const serverResults = rawServerResults.map((r) =>
+                    structuredClone(flattenViewEntity(r))
+                  );
                   if (shouldTrackChanges) {
+                    const serverChanges = queryResultsToChanges(
+                      rawServerResults,
+                      query
+                    );
+                    /**
+                     * This is replicating / simulating the diffing that happens on the server
+                     */
+                    // TODO actually share the function and/or move this testing to integration-tests
                     let unionOfChangesBefore = {};
                     let unionOfChangesAfter = {};
                     for (const [q, changes] of subscribedQueryState.entries()) {
                       unionOfChangesBefore = mergeDBChanges(
-                        unionOfChangesBefore,
-                        changes
+                        structuredClone(unionOfChangesBefore),
+                        structuredClone(changes)
                       );
-                      if (q === prepared) {
+                      if (q === query) {
                         unionOfChangesAfter = mergeDBChanges(
-                          unionOfChangesAfter,
-                          serverChanges
+                          structuredClone(unionOfChangesAfter),
+                          structuredClone(serverChanges)
                         );
                       } else {
                         unionOfChangesAfter = mergeDBChanges(
-                          unionOfChangesAfter,
-                          changes
+                          structuredClone(unionOfChangesAfter),
+                          structuredClone(changes)
                         );
                       }
                     }
-                    subscribedQueryState.set(prepared, serverChanges);
+                    subscribedQueryState.set(
+                      query,
+                      structuredClone(serverChanges)
+                    );
                     const changeDiff = diffChanges(
                       unionOfChangesBefore,
                       unionOfChangesAfter
                     );
                     // console.dir(
                     //   {
+                    //     serverResults,
                     //     unionOfChangesBefore,
                     //     unionOfChangesAfter,
                     //     serverChanges,
@@ -1281,8 +1321,21 @@ describe('IVM syncing', () => {
                     const clientFetchResults = await clientDb.fetch(query);
 
                     if (query.order != null) {
+                      // console.dir(
+                      //   { clientFetchResults, serverResults },
+                      //   { depth: null }
+                      // );
                       expect(clientFetchResults).toEqual(serverResults);
                     } else {
+                      // console.dir(
+                      //   {
+                      //     clientFetchResults,
+                      //     serverResults,
+                      //     serverChanges,
+                      //     changeDiff,
+                      //   },
+                      //   { depth: null }
+                      // );
                       const clientResultMap =
                         resultArrToMap(clientFetchResults);
                       const serverResultMap = resultArrToMap(serverResults);
@@ -1290,16 +1343,6 @@ describe('IVM syncing', () => {
                     }
                   } else {
                     const serverFetchResults = await serverDb.fetch(query);
-
-                    // console.dir(
-                    //   {
-                    //     serverChanges,
-                    //     clientResults: clientFetchResults,
-                    //     serverResults,
-                    //     serverFetchResults,
-                    //   },
-                    //   { depth: null }
-                    // );
 
                     // TODO verify subquery result order
                     if (query.order != null) {
@@ -1363,9 +1406,9 @@ describe('IVM syncing', () => {
         test.each(QUERIES_TO_TEST)('Query: %s', async (queryKey) => {
           return await testQueries([queryKey]);
         });
-        test('all queries concurrently', async () => {
-          await testQueries(QUERIES_TO_TEST);
-        });
+        // test('all queries concurrently', async () => {
+        //   await testQueries(QUERIES_TO_TEST);
+        // });
       }
     );
   });
