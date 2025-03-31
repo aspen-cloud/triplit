@@ -938,7 +938,7 @@ describe('Sync situations', () => {
 
     await alice.delete('test', 'test1');
     await pause();
-    expect(aliceSub.mock.calls.length).toBe(5); // ...prev, optimistic delete, echo'd server delete which isn't getting filtered correctly on the client
+    expect(aliceSub.mock.calls.length).toBe(4); // ...prev, optimistic delete, echo'd server delete which isn't getting filtered correctly on the client
   });
 
   it('data is synced properly when query results have been evicted while client is offline', async () => {

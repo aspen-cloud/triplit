@@ -23,6 +23,7 @@ import {
   ViewEntity,
 } from './query-engine.js';
 import { bindVariablesInFilters } from './variables.js';
+import { getCollectionsReferencedInSubqueries } from './ivm-utils.js';
 
 interface QueryNode {
   // TODO support multiple root queries (essentially subqueries could be shared between root queries)
@@ -80,12 +81,6 @@ export class IVM<M extends Models<M> = Models> {
     if (!this.subscribedQueries.has(rootQueryId)) {
       // Get all collections that are referenced by this root query
       // or one of its subqueries
-      const collectionsCoveredByThisQuery = new Set<string>();
-      mapSubqueriesRecursive(query, (q) => {
-        collectionsCoveredByThisQuery.add(q.collectionName);
-        return q;
-      });
-
       this.subscribedQueries.set(rootQueryId, {
         ogQuery: query,
         query,
@@ -93,7 +88,9 @@ export class IVM<M extends Models<M> = Models> {
         errorCallbacks: new Set(),
         uninitializedListeners: new WeakSet(),
         results: undefined,
-        collections: collectionsCoveredByThisQuery,
+        collections: new Set(
+          getCollectionsReferencedInSubqueries(query).get(rootQueryId)!
+        ).add(query.collectionName),
       });
     }
 
@@ -231,8 +228,14 @@ export class IVM<M extends Models<M> = Models> {
       if (handledRootQueries.has(queryId)) {
         continue;
       }
-      const subscribedQueryInfo = this.subscribedQueries.get(queryId)!;
-      await this.updateQueryResults(subscribedQueryInfo, changes);
+      const { results, query } = this.subscribedQueries.get(queryId)!;
+      const { updatedResults, hasChanged } = await this.updateQueryResults(
+        results,
+        changes,
+        query
+      );
+      this.subscribedQueries.get(queryId)!.results = updatedResults;
+      this.subscribedQueries.get(queryId)!.hasChanged = hasChanged;
     }
     const kvTx = this.storage.transact();
     this.doubleBuffer.inactiveBuffer.clear(kvTx);
@@ -240,18 +243,10 @@ export class IVM<M extends Models<M> = Models> {
   }
 
   private async updateQueryResults(
-    rootQueryInfo: SubscribedQueryInfo,
-    changes: DBChanges
-  ) {
-    const rootQuery = rootQueryInfo.query;
-    const rootCollection = rootQuery.collectionName;
-    let onlyChangesToRootCollection = true;
-    for (const collection in changes) {
-      if (rootCollection !== collection) {
-        onlyChangesToRootCollection = false;
-        break;
-      }
-    }
+    existingResults: ViewEntity[] | undefined,
+    changes: DBChanges,
+    rootQuery: CollectionQuery
+  ): Promise<{ updatedResults: ViewEntity[]; hasChanged: boolean }> {
     // TODO: also short circuit if this is a big server initialization
     if (
       !!(
@@ -263,18 +258,17 @@ export class IVM<M extends Models<M> = Models> {
         (rootQuery.order && rootQuery.order.some((o) => !!o[2]))
       )
     ) {
-      const freshResults = await this.db.rawFetch(rootQuery);
-      rootQueryInfo.results = freshResults as ViewEntity[];
-      rootQueryInfo.hasChanged = true;
-      return;
+      const refetchedResults = await this.db.rawFetch(rootQuery);
+      return {
+        updatedResults: refetchedResults as ViewEntity[],
+        hasChanged: true,
+      };
     }
-    const updatedResults = await this.updateResultsWithQuery(
-      rootQueryInfo.results,
+    return await this.updateResultsWithQuery(
+      existingResults,
       changes,
       rootQuery
     );
-    rootQueryInfo.results = updatedResults.updatedResults;
-    rootQueryInfo.hasChanged = updatedResults.hasChanged;
   }
 
   private async updateResultsWithQuery(
