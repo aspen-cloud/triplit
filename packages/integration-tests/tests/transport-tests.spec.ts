@@ -3403,16 +3403,17 @@ describe('sessions API', async () => {
         clientId: 'alice',
         autoConnect: false,
       });
+      await pause();
       expect(alice.syncEngine.connectionStatus).toBe('CLOSED');
       alice.connect();
-      await pause(25);
+      await pause();
       expect(alice.syncEngine.connectionStatus).toBe('OPEN');
 
       const bob = createTestClient(server, {
         token: SERVICE_KEY,
         clientId: 'bob',
       });
-      await pause(25);
+      await pause();
       expect(bob.syncEngine.connectionStatus).toBe('OPEN');
     });
     it('respects the `autoConnect` option in the `startSession` method', async () => {
@@ -3421,17 +3422,22 @@ describe('sessions API', async () => {
       );
       const alice = createTestClient(server, {
         clientId: 'alice',
+        autoConnect: false,
       });
+      await pause();
       expect(alice.syncEngine.connectionStatus).toBe('CLOSED');
       await alice.startSession(SERVICE_KEY, true);
-      await pause(25);
+      await pause();
       expect(alice.syncEngine.connectionStatus).toBe('OPEN');
 
       const bob = createTestClient(server, {
         clientId: 'bob',
+        autoConnect: false,
       });
+      await pause();
+      expect(bob.syncEngine.connectionStatus).toBe('CLOSED');
       await bob.startSession(SERVICE_KEY, false);
-      await pause(25);
+      await pause();
       expect(bob.syncEngine.connectionStatus).toBe('CLOSED');
     });
     it('will throw an error if you attempt to start a session with an expired token', async () => {
