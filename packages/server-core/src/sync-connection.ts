@@ -162,11 +162,20 @@ export class SyncConnection {
     let unionOfChangesBefore = {};
     let unionOfChangesAfter = {};
     for (const [qId, qEntities] of this.subscriptionDataBuffer.queryEntities) {
-      unionOfChangesBefore = mergeDBChanges(unionOfChangesBefore, qEntities);
+      unionOfChangesBefore = mergeDBChanges(
+        unionOfChangesBefore,
+        structuredClone(qEntities)
+      );
       if (qId === queryId) {
-        unionOfChangesAfter = mergeDBChanges(unionOfChangesAfter, changes);
+        unionOfChangesAfter = mergeDBChanges(
+          unionOfChangesAfter,
+          structuredClone(changes)
+        );
       } else {
-        unionOfChangesAfter = mergeDBChanges(unionOfChangesAfter, qEntities);
+        unionOfChangesAfter = mergeDBChanges(
+          unionOfChangesAfter,
+          structuredClone(qEntities)
+        );
       }
     }
     this.subscriptionDataBuffer.queryEntities.set(
