@@ -1,3 +1,4 @@
+import { isEmpty } from './memory-write-buffer.js';
 import {
   CollectionName,
   DBChanges,
@@ -168,10 +169,11 @@ function applyChange<T extends Record<string, any> | undefined>(
       typeof existingValue === 'object' &&
       existingValue != null &&
       typeof value === 'object' &&
-      value != null
+      value != null &&
+      !Array.isArray(value)
     ) {
       const [newValue, newSets] = applyChange(existingValue, value);
-      if (Object.keys(newSets).length > 0) {
+      if (!isEmpty(newSets)) {
         appliedSets[key] = deepObjectAssign(appliedSets[key] ?? {}, newSets);
         updated[key] = newValue;
       }
