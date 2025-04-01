@@ -472,7 +472,8 @@ export class IVM<M extends Models<M> = Models> {
                       entityStack: updatedEntityStack,
                     })
                   : undefined,
-              }
+              },
+              updatedEntityStack
             );
           if (hasChanged) {
             inclusionHasUpdated = true;
