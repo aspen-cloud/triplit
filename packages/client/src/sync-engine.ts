@@ -5,6 +5,7 @@ import {
   CollectionQuery,
   TriplitError,
   hashObject,
+  prepareQuery,
 } from '@triplit/db';
 import { TriplitClient } from './client/triplit-client.js';
 import { WebSocketTransport } from './transport/websocket-transport.js';
@@ -37,6 +38,11 @@ import {
   SyncTransport,
   TransportConnectParams,
 } from './types.js';
+import { decodeToken, tokenIsExpired } from './token.js';
+import {
+  createQueryWithExistsAddedToIncludes,
+  createQueryWithRelationalOrderAddedToIncludes,
+} from '@triplit/db/ivm';
 
 const QUERY_STATE_KEY = 'query-state';
 
@@ -403,8 +409,22 @@ export class SyncEngine {
     let queryState: QueryState | undefined = undefined;
 
     if (latestServerTimestamp) {
+      const queryWithRelationalInclusions =
+        createQueryWithRelationalOrderAddedToIncludes(
+          createQueryWithExistsAddedToIncludes(
+            prepareQuery(
+              queryMetadata.params,
+              this.client.db.schema?.['collections'],
+              {},
+              undefined,
+              {
+                applyPermission: undefined,
+              }
+            )
+          )
+        );
       const entityIds = changesToEntityIds(
-        await this.client.db.fetchChanges(queryMetadata.params, {
+        await this.client.db.fetchChanges(queryWithRelationalInclusions, {
           skipRules: true,
         })
       );
