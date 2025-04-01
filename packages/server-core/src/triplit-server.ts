@@ -25,13 +25,8 @@ export class Server {
     // TODO: reimplement webhooks
     // this.webhooksManager = new WebhooksManager(db);
     this.db.onCommit(async (changes) => {
-      try {
-        await this.db.updateQueryViews();
-        this.db.broadcastToQuerySubscribers();
-      } catch (e) {
-        // Catch so we dont crash server on error
-        logger.error('Error updating subscriptions after commit', e as Error);
-      }
+      await this.db.updateQueryViews();
+      this.db.broadcastToQuerySubscribers();
     });
     this.db.onSchemaChange(async (change) => {
       if (change.successful) {
