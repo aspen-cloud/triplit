@@ -572,7 +572,6 @@ export class SyncEngine {
 
     if (message.type === 'CHANGES_ACK') {
       if (this.client.awaitReady) await this.client.awaitReady;
-      if (this.client.awaitReady) await this.client.awaitReady;
 
       const ackedChanges = await this.client.db.entityStore.doubleBuffer
         .getLockedBuffer()
@@ -591,6 +590,8 @@ export class SyncEngine {
           entityChangeValidator: undefined,
         }
       );
+      await this.client.db.entityStore.doubleBuffer.getLockedBuffer().clear(tx);
+      await tx.commit();
       for (const [collection, entityCallbackMap] of this
         .entitySyncSuccessSubscribers) {
         const collectionChanges = ackedChanges[collection];
@@ -600,12 +601,12 @@ export class SyncEngine {
             collectionChanges.sets.has(id) ||
             collectionChanges.deletes.has(id)
           ) {
-            await callback();
+            // Not awaiting as these callbacks are not designed to interrupt/disrupt outbox
+            // processing
+            callback();
           }
         }
       }
-      await this.client.db.entityStore.doubleBuffer.getLockedBuffer().clear(tx);
-      await tx.commit();
       this.syncInProgress = false;
       // empty the outbox
       // this.checkUnlockedBufferAndSendAnyChanges();
