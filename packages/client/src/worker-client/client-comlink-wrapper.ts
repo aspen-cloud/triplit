@@ -41,8 +41,8 @@ export class ClientComlinkWrapper<M extends Models<M> = Models>
   constructor() {}
   init(options: ClientOptions<M>, workerThreadLogHandler: LogHandler) {
     if (this.client != undefined) return;
-    const { schema, logLevel, token, autoConnect, ...remainingOptions } =
-      options;
+    // Handle session in main thread
+    const { token, ...remainingOptions } = options;
 
     // Setup logger
     const mainThreadLogHandler = clientLogHandler();
@@ -50,8 +50,9 @@ export class ClientComlinkWrapper<M extends Models<M> = Models>
 
     this.client = new Client<M>({
       ...remainingOptions,
-      schema: schema,
       logger: logger,
+      // Handle autoConnect in the main thread
+      autoConnect: false,
     });
   }
   async fetch(...args: Parameters<Client<M>['fetch']>) {

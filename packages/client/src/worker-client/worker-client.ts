@@ -8,7 +8,6 @@ import {
   SubscriptionOptions,
   SubscriptionSignalPayload,
 } from '../client/types';
-import SuperJSON from 'superjson';
 import {
   ClearOptions,
   CollectionNameFromModels,
@@ -23,8 +22,6 @@ import {
   SchemaQuery,
   SubscriptionResultsCallback,
   TransactCallback,
-  Type,
-  Unalias,
   UpdatePayload,
   WriteModel,
 } from '@triplit/db';
@@ -57,28 +54,6 @@ export function getTriplitSharedWorkerPort(
   return new SharedWorker(url, options).port;
 }
 
-function logObjToMessage(lobObj: any) {
-  const message = lobObj.scope
-    ? [`%c${lobObj.scope}`, 'color: #888', lobObj.message]
-    : [lobObj.message];
-  return [...message, ...lobObj.args.map(SuperJSON.deserialize)];
-}
-
-class WorkerLogger {
-  error(log: any) {
-    console.error(...logObjToMessage(log));
-  }
-  warn(log: any) {
-    console.warn(...logObjToMessage(log));
-  }
-  info(log: any) {
-    console.info(...logObjToMessage(log));
-  }
-  debug(log: any) {
-    console.debug(...logObjToMessage(log));
-  }
-}
-
 export class WorkerClient<M extends Models<M> = Models> implements Client<M> {
   initialized: Promise<void>;
   clientWorker: ClientComlinkWrapper<M>; //ComLink.Remote<Client<M>>;
@@ -98,7 +73,6 @@ export class WorkerClient<M extends Models<M> = Models> implements Client<M> {
     // @ts-expect-error
     this.clientWorker = ComLink.wrap(workerEndpoint) as ClientComlinkWrapper<M>;
     const {
-      schema,
       onSessionError,
       token,
       refreshOptions,
@@ -117,14 +91,10 @@ export class WorkerClient<M extends Models<M> = Models> implements Client<M> {
     }
     // @ts-expect-error
     this.initialized = this.clientWorker.init(
-      {
-        ...remainingOptions,
-        schema: schema,
-      },
+      remainingOptions,
       ComLink.proxy(clientLogHandler())
     );
-    this._connectionStatus =
-      options?.autoConnect === false ? 'CLOSED' : 'CONNECTING';
+    this._connectionStatus = 'UNINITIALIZED';
     this.onConnectionStatusChange((status) => {
       this._connectionStatus = status;
     }, true);

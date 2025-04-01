@@ -736,14 +736,16 @@ export class SyncEngine {
       this.reconnectTimeoutDelay
     );
     this.reconnectTimeoutDelay = Math.min(
-      30000,
+      300000, // 5 minutes max
       this.reconnectTimeoutDelay * 2
     );
   }
 
   private onErrorHandler(evt: any) {
-    // this.logger.log('error ws', evt);
-    this.logger.error('transport error', evt);
+    // WS errors are intentionally vague, so just log a message
+    this.logger.error(
+      'An error occurred during the connection to the server. Retrying connection...'
+    );
     // on error, close the connection and attempt to reconnect
     this.closeConnection();
   }
