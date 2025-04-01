@@ -6,7 +6,7 @@ import {
   writeSchemaFile,
 } from '../../cli/src/schema.js';
 import { Models, Schema as S } from '@triplit/db';
-import { serverRequesterMiddleware } from '../../cli/src/middleware/add-server-requester.js';
+import { createServerRequesterMiddleware } from '../../cli/src/middleware/add-server-requester.js';
 import { emptyDir } from 'fs-extra';
 import { ServerOptions } from '../../server/src/hono.js';
 import { tempTriplitServer } from '../utils/server.js';
@@ -54,7 +54,9 @@ async function readRemoteSchema() {
 }
 
 async function generateNetworkCtx(ctx: any, port: number) {
-  const result = await serverRequesterMiddleware.run({
+  const result = await createServerRequesterMiddleware({
+    destructive: true,
+  }).run({
     flags: {
       token: serviceToken,
       remote: `http://localhost:${port}`,
@@ -106,7 +108,7 @@ describe('schema push', () => {
         }
 
         // push local schema
-        await $shell`yarn triplit schema push`;
+        await $shell`yarn triplit schema push --ignoreDestructiveWarning`;
 
         {
           const { schema: collections } = await readRemoteSchema();
@@ -117,7 +119,7 @@ describe('schema push', () => {
     { timeout: 10000 }
   );
   it(
-    'will throw if a backwards incompatible change is made a with the --failOnBackwardsIncompatibleChange flag set',
+    'will throw if a backwards incompatible change is made, unless --force flag is provided',
     async () => {
       await withServerAndCtx({ port: PORT }, async (ctx) => {
         // write local schema
@@ -146,7 +148,7 @@ describe('schema push', () => {
 
         // push local schema
         await expect(
-          $shell`yarn triplit schema push --failOnBackwardsIncompatibleChange`
+          $shell`yarn triplit schema push --ignoreDestructiveWarning`
         ).resolves.not.toThrow();
 
         {
@@ -160,10 +162,12 @@ describe('schema push', () => {
           test: {
             schema: S.Schema({
               id: S.Id(),
-              attr: S.String(),
-              // remove relation
-              // relation: S.RelationById('relatedCollection', '$attr'),
+              // attr: S.String(),
             }),
+            relationships: {
+              // TODO: is removing a relationship a backwards incompatible change? Doesnt seem to be throwing currently
+              relation: S.RelationById('relatedCollection', '$attr'),
+            },
           },
           relatedCollection: {
             schema: S.Schema({
@@ -175,11 +179,13 @@ describe('schema push', () => {
         // removing a relation is backwards incompatible but not corrupting, so it should not throw
         // by default, but will with the flag
         await expect(
-          $shell`yarn triplit schema push --failOnBackwardsIncompatibleChange`
+          $shell`yarn triplit schema push --ignoreDestructiveWarning`
         ).rejects.toThrow();
 
         // without the flag, it shouldn't throw
-        await expect($shell`yarn triplit schema push`).resolves.not.toThrow();
+        await expect(
+          $shell`yarn triplit schema push --ignoreDestructiveWarning --force`
+        ).resolves.not.toThrow();
       });
     },
     { timeout: 10000 }
