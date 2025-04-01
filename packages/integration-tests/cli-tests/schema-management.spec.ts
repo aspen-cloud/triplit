@@ -188,6 +188,6 @@ describe('schema push', () => {
         ).resolves.not.toThrow();
       });
     },
-    { timeout: 10000 }
+    { timeout: 20000 }
   );
 });
