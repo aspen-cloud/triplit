@@ -214,9 +214,13 @@ export function ServerViewer({
 
   const schema = client.db.schema;
 
-  const collectionsToList = schema
-    ? Object.keys(schema.collections)
-    : collectionStats.map(({ collection }) => collection);
+  const collectionsToList = (
+    schema
+      ? Object.keys(schema.collections)
+      : collectionStats.map(({ collection }) => collection)
+  ).sort((a, b) => {
+    return a.localeCompare(b);
+  });
 
   const statsByCollection = useMemo(() => {
     return collectionStats.reduce(
