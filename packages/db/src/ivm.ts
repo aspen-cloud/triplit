@@ -1,6 +1,12 @@
 import { CollectionNameFromModels, Models } from './schema/index.js';
 import { CollectionQuery, QueryOrder, WhereFilter } from './query.js';
-import { Change, DBChanges, DBEntity, RelationSubquery } from './types.js';
+import {
+  Change,
+  DBChanges,
+  DBEntity,
+  Insert,
+  RelationSubquery,
+} from './types.js';
 import {
   isFilterGroup,
   isSubQueryFilter,
@@ -290,15 +296,18 @@ export class IVM<M extends Models<M> = Models> {
     if (collectionChanges) {
       const inlineUpdatedEntitiesWithOrderRelevantChanges = new Set<string>();
       const deletes = collectionChanges.deletes;
-      const inserts = new Map<string, DBEntity>();
-      const updates = new Map<string, Change>();
-      for (const [id, entity] of collectionChanges.sets) {
-        if (entity.id) {
-          inserts.set(id, entity as DBEntity);
-        } else {
-          updates.set(id, entity as Change);
-        }
-      }
+      const sets = collectionChanges.sets;
+      // TODO: bring back this nice inserts/updates delineation
+      // when we know that IVM won't receive upserts
+      // const inserts = new Map<string, DBEntity>();
+      // const updates = new Map<string, Change>();
+      // for (const [id, entity] of collectionChanges.sets) {
+      //   if (entity.id) {
+      //     inserts.set(id, entity as DBEntity);
+      //   } else {
+      //     updates.set(id, entity as Change);
+      //   }
+      // }
       const updateAffectsOrder = (update: Change) =>
         order &&
         order.some(
@@ -315,14 +324,14 @@ export class IVM<M extends Models<M> = Models> {
         (!after || satisfiesAfter(e, after, order));
       // if we have deletes or updates, we're going to check for evictions
       // to the current results
-      if (deletes.size > 0 || updates.size > 0) {
+      if (deletes.size > 0 || sets.size > 0) {
         filteredResults = results!.filter((entity) => {
           let matches = true;
           if (deletes.has(entity.data.id)) {
             matches = false;
           }
-          if (updates.has(entity.data.id)) {
-            const update = updates.get(entity.data.id)!;
+          if (sets.has(entity.data.id)) {
+            const update = sets.get(entity.data.id)!;
             handledUpdates.add(entity.data.id);
             deepObjectAssign(entity.data, update);
             matches = matchesWhereOrAfterIfRelevant(entity.data);
@@ -358,20 +367,31 @@ export class IVM<M extends Models<M> = Models> {
       }
       // console.dir({ after: filteredResults }, { depth: null });
       // if we have inserts, we're going to check if they should be added
-      const potentialAdditions: DBEntity[] =
-        inserts.size > 0 ? Array.from(inserts.values()) : [];
+      // const potentialAdditions: DBEntity[] =
+      //   inserts.size > 0 ? Array.from(inserts.values()) : [];
 
       // any unhandled updates are those that aren't already in the results
       // should also be included in the potential additions
       // console.dir({ handledUpdates, updates }, { depth: null });
-      for (const [id, update] of updates) {
+      for (const [id, change] of sets) {
         if (handledUpdates.has(id)) {
           continue;
         }
+        if (changeIsInsert(change)) {
+          if (matchesWhereOrAfterIfRelevant(change)) {
+            addedEntities.set(id, change);
+            filteredResults.push(createViewEntity(change));
+          }
+          continue;
+        }
+        // if we know that the change is an update, we can say it's
+        // been considered for this query previously. this clause essentially
+        // says if the update doesn't give us a reason to reconsider
+        // that decision, we can skip it
         if (
           where &&
-          !doesUpdateImpactSimpleFilters(update, where) &&
-          !updateAffectsOrder(update)
+          !doesUpdateImpactSimpleFilters(change, where) &&
+          !updateAffectsOrder(change)
         ) {
           continue;
         }
@@ -383,15 +403,9 @@ export class IVM<M extends Models<M> = Models> {
         if (sourceEntity == null) {
           continue;
         }
-        potentialAdditions.push(sourceEntity);
-      }
-
-      // console.log({ potentialAdditions });
-
-      for (const entity of potentialAdditions) {
-        if (matchesWhereOrAfterIfRelevant(entity)) {
-          addedEntities.set(entity.id, entity);
-          filteredResults.push(createViewEntity(entity));
+        if (matchesWhereOrAfterIfRelevant(sourceEntity)) {
+          addedEntities.set(sourceEntity.id, sourceEntity);
+          filteredResults.push(createViewEntity(sourceEntity));
         }
       }
 
@@ -501,6 +515,10 @@ export class IVM<M extends Models<M> = Models> {
         handledUpdates.size > 0 ||
         inclusionHasUpdated,
     };
+  }
+
+  changeIsInsert(change: Change): change is Insert {
+    return change.id !== undefined;
   }
 
   private getAffectedQueries(changes: DBChanges): Map<string, DBChanges> {
@@ -743,6 +761,10 @@ const compare = (a: DBEntity, b: DBEntity, order: QueryOrder<any, any>) => {
   }
   return 0;
 };
+
+function changeIsInsert(change: Change): change is Insert {
+  return change.id !== undefined;
+}
 
 function mergeResults(
   existingResults: ViewEntity[],
