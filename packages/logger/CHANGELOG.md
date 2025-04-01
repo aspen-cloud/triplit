@@ -1,5 +1,11 @@
 # @triplit/logger
 
+## 0.0.3
+
+### Patch Changes
+
+- a4a9c4ec: make console logger formatting configurable, add log level filtering
+
 ## 0.0.2
 
 ### Patch Changes

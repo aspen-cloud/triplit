@@ -1,5 +1,15 @@
 # @triplit/client
 
+## 1.0.17
+
+### Patch Changes
+
+- 23f52af2: Allow connection attempt to flow through even if no token to ensure logs inform user of state
+- a4a9c4ec: move client to use @triplit/logger
+- Updated dependencies [a4a9c4ec]
+  - @triplit/logger@0.0.3
+  - @triplit/db@1.0.16
+
 ## 1.0.16
 
 ### Patch Changes
