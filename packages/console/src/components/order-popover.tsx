@@ -42,7 +42,7 @@ export function OrderPopover(props: OrderPopoverProps) {
           [] as string[]
         )
       : uniqueAttributes
-  );
+  ).sort((a, b) => a.localeCompare(b));
   const hasOrders = order.length > 0;
   return (
     <Popover

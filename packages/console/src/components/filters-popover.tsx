@@ -96,7 +96,7 @@ export function FiltersPopover(props: FiltersPopoverProps) {
           [] as string[]
         )
       : uniqueAttributes
-  );
+  ).sort((a, b) => a.localeCompare(b));
   const hasFilters = filters.length > 0;
   return (
     <Popover
