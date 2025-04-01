@@ -403,6 +403,11 @@ export class SyncEngine {
     let queryState: QueryState | undefined = undefined;
 
     if (latestServerTimestamp) {
+      const entityIds = changesToEntityIds(
+        await this.client.db.fetchChanges(queryMetadata.params, {
+          skipRules: true,
+        })
+      );
       queryState = {
         timestamp: latestServerTimestamp,
         // we should be able to retrieve these from the denormalized changes
@@ -411,9 +416,7 @@ export class SyncEngine {
         // any record of the query in IVM, so we can just fall back to fetchChanges
         // BUT if we go down that way then there's a contract that what
         // comes out of IVM and watch we get from fetchChanges is the same
-        entityIds: changesToEntityIds(
-          await this.client.db.fetchChanges(queryMetadata.params)
-        ),
+        entityIds,
       };
     }
     const didSend = this.sendMessage({

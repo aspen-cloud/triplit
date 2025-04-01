@@ -456,6 +456,12 @@ export class DB<
       : (results as ViewEntity[]).map(projectAndConvertEntity);
   }
 
+  /**
+   * @deprecated
+   * @param query
+   * @param options
+   * @returns
+   */
   async fetchChanges(query: CollectionQuery<M>, options?: FetchOptions) {
     const preparedQuery = prepareQuery(
       query,
@@ -466,11 +472,8 @@ export class DB<
         applyPermission: options?.skipRules ? undefined : 'read',
       }
     );
-    const queryToGetChanges = createQueryWithRelationalOrderAddedToIncludes(
-      createQueryWithExistsAddedToIncludes(preparedQuery)
-    );
-    const results = await this.rawFetch(queryToGetChanges);
-    const changes = queryResultsToChanges(results, queryToGetChanges);
+    const results = (await this.rawFetch(preparedQuery)) as ViewEntity[];
+    const changes = queryResultsToChanges(results, preparedQuery);
     return changes;
   }
 

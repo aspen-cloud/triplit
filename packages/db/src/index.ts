@@ -20,3 +20,4 @@ export type * from './types.js';
 export * from './utils/hash.js';
 export * from './utils/nested-map.js';
 export * from './utils/value-pointer.js';
+export * from './hybrid-clock.js';

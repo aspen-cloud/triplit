@@ -1,7 +1,9 @@
 import {
+  CollectionNameFromModels,
   CollectionQuery,
   DB,
   DBChanges,
+  HybridLogicalClock,
   TriplitError,
   diffSchemas,
   getBackwardsIncompatibleEdits,
@@ -17,6 +19,7 @@ import {
   ClientDisconnectQueryMessage,
   ClientChangesMessage,
   ClientSchemaResponseMessage,
+  QueryState,
 } from '@triplit/types/sync';
 import {
   hasAdminAccess,
@@ -57,6 +60,7 @@ export class SyncConnection {
       serverHasRespondedOnce: boolean;
       externalQueryId: string;
       externalQuery: CollectionQuery;
+      checkpoint?: QueryState;
     }
   >;
   listeners: Set<(messageType: string, payload: {}) => void>;
@@ -151,14 +155,13 @@ export class SyncConnection {
     this.sendMessage('ERROR', payload);
   }
 
-  private bufferEntityData(results: any[], queryId?: string) {
+  // TODO handle the async nature of this
+  private async bufferEntityData(results: any[], queryId?: string) {
     if (!queryId) {
       throw new Error('queryId is required to bufferEntityData');
     }
-    const changes = queryResultsToChanges(
-      results,
-      this.connectedQueries.get(queryId)!.externalQuery
-    );
+    const queryInfo = this.connectedQueries.get(queryId)!;
+    const changes = queryResultsToChanges(results, queryInfo.externalQuery);
     let unionOfChangesBefore = {};
     let unionOfChangesAfter = {};
     for (const [qId, qEntities] of this.subscriptionDataBuffer.queryEntities) {
@@ -182,20 +185,95 @@ export class SyncConnection {
       queryId!,
       structuredClone(changes)
     );
-    const changeDiff = diffChanges(unionOfChangesBefore, unionOfChangesAfter);
+    let changeDiff = diffChanges(unionOfChangesBefore, unionOfChangesAfter);
 
-    console.dir(
-      {
-        results,
-        subscriptionDataBuffer: this.subscriptionDataBuffer,
-        unionOfChangesBefore,
-        unionOfChangesAfter,
-        query: this.connectedQueries.get(queryId)!.externalQuery,
-        changes,
-        changeDiff,
-      },
-      { depth: null }
-    );
+    if (!queryInfo.serverHasRespondedOnce && queryInfo.checkpoint) {
+      const entitiesThatHaveNotChanged: Record<string, Set<string>> = {};
+      const entitiesThatAreNoLongerInTheResultSet: Record<
+        string,
+        Set<string>
+      > = {};
+
+      for (const [collection, entityIds] of Object.entries(
+        queryInfo.checkpoint.entityIds
+      )) {
+        for (const entityId of entityIds) {
+          if (!entityIsInChangeset(changes, collection, entityId)) {
+            if (!entitiesThatAreNoLongerInTheResultSet[collection]) {
+              entitiesThatAreNoLongerInTheResultSet[collection] = new Set();
+            }
+            entitiesThatAreNoLongerInTheResultSet[collection].add(entityId);
+            // out of the results and in the results but unchanged
+            // are mutually exclusive categories so we can skip
+            // timestamp checking
+            continue;
+          }
+          const timestamp =
+            await this.db.entityStore.metadataStore.getTimestampForEntity(
+              this.db.kv,
+              collection,
+              entityId
+            );
+          if (
+            // TODO: determine if timestamp can ever be undefined
+            // I think the only case could be if the entity was optimistically inserted
+            // on the client but never synced to the server
+            // assuming that we don't delete metadata when we delete entities
+            timestamp &&
+            HybridLogicalClock.compare(
+              timestamp,
+              queryInfo.checkpoint.timestamp
+            ) < 0
+          ) {
+            if (!entitiesThatHaveNotChanged[collection]) {
+              entitiesThatHaveNotChanged[collection] = new Set();
+            }
+            entitiesThatHaveNotChanged[collection].add(entityId);
+          }
+        }
+      }
+
+      // step 2: filter out unchanged entities from the new changeset
+      changeDiff = {};
+      for (const collection in changes) {
+        changeDiff[collection] = {
+          sets: new Map(),
+          deletes: changes[collection].deletes,
+        };
+        for (const [id, patch] of changes[collection].sets) {
+          if (entitiesThatHaveNotChanged[collection]?.has(id)) {
+            continue;
+          }
+          changeDiff[collection].sets.set(id, patch);
+        }
+      }
+
+      // step 3: for any entities that are no longer in the result set,
+      // get any updates or deletes and add them to the changeset
+      for (const [collectionName, entityIds] of Object.entries(
+        entitiesThatAreNoLongerInTheResultSet
+      )) {
+        const stillMissingEntityIds = new Set(entityIds);
+        if (!changeDiff[collectionName]) {
+          changeDiff[collectionName] = {
+            sets: new Map(),
+            deletes: new Set(),
+          };
+        }
+        const addedChanges = await this.db.fetchChanges({
+          collectionName: collectionName as CollectionNameFromModels<any>,
+          where: [['id', 'in', Array.from(entityIds)]],
+        });
+        for (const [id, addedChange] of addedChanges[collectionName].sets) {
+          stillMissingEntityIds.delete(id);
+          changeDiff[collectionName].sets.set(id, addedChange);
+        }
+        for (const entityId of stillMissingEntityIds) {
+          changeDiff[collectionName].deletes.add(entityId);
+        }
+      }
+    }
+    queryInfo.serverHasRespondedOnce = true;
     this.subscriptionDataBuffer.changes = mergeDBChanges(
       this.subscriptionDataBuffer.changes,
       changeDiff
@@ -261,6 +339,7 @@ export class SyncConnection {
         serverHasRespondedOnce: false,
         externalQueryId: queryKey,
         externalQuery: queryWithRelationalInclusions,
+        checkpoint: state,
       });
 
       await this.db.updateQueryViews();
@@ -443,4 +522,16 @@ export class SyncConnection {
   async isClientSchemaCompatible(): Promise<ServerCloseReason | undefined> {
     throw new Error('NOT IMPLEMENTED');
   }
+}
+
+function entityIsInChangeset(
+  changes: DBChanges,
+  collection: string,
+  entityId: string
+) {
+  return (
+    changes[collection] &&
+    (changes[collection].sets.has(entityId) ||
+      changes[collection].deletes.has(entityId))
+  );
 }
