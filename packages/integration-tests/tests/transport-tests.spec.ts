@@ -3437,8 +3437,7 @@ describe('sessions API', async () => {
         clientId: 'bob',
         autoConnect: false,
       });
-      await pause();
-      expect(bob.syncEngine.connectionStatus).toBe('CLOSED');
+      expect(bob.syncEngine.connectionStatus).toBe('UNINITIALIZED');
       await bob.startSession(SERVICE_KEY, false);
       await pause();
       expect(bob.syncEngine.connectionStatus).toBe('UNINITIALIZED');
