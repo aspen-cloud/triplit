@@ -441,14 +441,14 @@ export class IVM<M extends Models<M> = Models> {
             inclusion
           ] as RelationSubquery;
           const updatedEntityStack = entityStack.concat(entity.data);
+          const existingInclusion = entity.subqueries[inclusion];
           const { hasChanged, updatedResults } =
             await this.updateQueryResultsInPlace(
-              // @ts-expect-error: fixup typing of viewEntity inclusions
-              cardinality === 'one'
-                ? entity.subqueries[inclusion]
-                  ? [entity.subqueries[inclusion]]
-                  : []
-                : entity.subqueries[inclusion],
+              Array.isArray(existingInclusion)
+                ? existingInclusion
+                : existingInclusion === null
+                  ? []
+                  : [existingInclusion],
               changes,
               {
                 ...subquery,
@@ -543,33 +543,19 @@ export function queryResultsToChanges<C extends string>(
   const include = query.include ?? {};
   for (const result of results) {
     changes[collection].sets.set(result.data.id, result.data);
-    for (const [key, { subquery, cardinality }] of Object.entries(include)) {
+    for (const [key, { subquery }] of Object.entries(include)) {
       const subqueryResults = result.subqueries[key];
       if (subqueryResults == null) {
         continue;
       }
       queryResultsToChanges(
-        cardinality === 'one' ? [subqueryResults] : subqueryResults,
+        Array.isArray(subqueryResults) ? subqueryResults : [subqueryResults],
         subquery,
         changes
       );
     }
   }
   return changes;
-}
-
-function entityWithoutIncludes(entity: any, query: CollectionQuery) {
-  if (query.include == null) {
-    return entity;
-  }
-  const cleaned = { ...entity };
-  for (const key in cleaned) {
-    if (key in query.include) {
-      delete cleaned[key];
-    }
-  }
-
-  return cleaned;
 }
 
 export function createQueryWithExistsAddedToIncludes(
@@ -613,68 +599,6 @@ export function createQueryWithRelationalOrderAddedToIncludes(
   return newQuery;
 }
 
-function mapSubqueriesRecursive(
-  query: CollectionQuery,
-  mapFunc: (
-    query: CollectionQuery,
-    path?: string[]
-  ) => (CollectionQuery | null) | [CollectionQuery | null],
-  options: {
-    traverseIncludes?: boolean;
-    traverseExists?: boolean;
-  } = { traverseIncludes: true, traverseExists: true },
-  path: string[] = []
-): CollectionQuery | null {
-  const mappedQuery = mapFunc(query, path);
-  if (mappedQuery == null) {
-    return null;
-  }
-  return {
-    ...mappedQuery,
-    where: options.traverseExists
-      ? (mappedQuery.where?.map((filter) => {
-          if (isSubQueryFilter(filter)) {
-            const mappedQuery = mapSubqueriesRecursive(
-              filter.exists,
-              mapFunc,
-              options,
-              path
-            );
-            // TODO figure out if it's better to return true or filter out the subquery
-            if (mappedQuery == null) return true;
-            return {
-              ...filter,
-              exists: mappedQuery,
-            };
-          }
-          return filter;
-        }) ?? [])
-      : mappedQuery.where,
-    include: options.traverseIncludes
-      ? Object.fromEntries(
-          Object.entries(mappedQuery.include ?? {})
-            .map(([key, { subquery, cardinality }]) => {
-              const mappedQuery = mapSubqueriesRecursive(
-                subquery,
-                mapFunc,
-                options,
-                path.concat(key)
-              );
-              if (mappedQuery == null) return null;
-              return [
-                key,
-                {
-                  subquery: mappedQuery,
-                  cardinality,
-                },
-              ];
-            })
-            .filter((x) => x != null)
-        )
-      : mappedQuery.include,
-  };
-}
-
 function doesEntityMatchBasicWhere(
   collectionName: string,
   entity: DBEntity,
@@ -711,165 +635,9 @@ function doesUpdateImpactSimpleFilters(
   });
 }
 
-function getPathToIncludedSubquery(
-  rootQuery: CollectionQuery,
-  subquery: CollectionQuery
-) {
-  const queryStack: [CollectionQuery, string[]][] = [];
-  queryStack.push([rootQuery, []]);
-  const targetQueryString = JSON.stringify(subquery);
-  while (queryStack.length > 0) {
-    const [currentQuery, path] = queryStack.pop()!;
-    if (JSON.stringify(currentQuery) === targetQueryString) {
-      return path;
-    }
-    const inclusions = Object.entries(currentQuery.include ?? {});
-    for (const [includeAlias, include] of inclusions) {
-      queryStack.push([include.subquery, path.concat(includeAlias)]);
-    }
-  }
-  return null;
-}
-
-// TODO use correct utility here
-const compare = (a: DBEntity, b: DBEntity, order: QueryOrder<any, any>) => {
-  for (const [field, direction, subquery] of order) {
-    const isRelational = !!subquery;
-    let aValue = a[field];
-    let bValue = b[field];
-    if (isRelational) {
-      // this is basically to handle the fact that the relation on the
-      // entity isnt a true relation but aliased using
-      // dot notation based on the order clause e.g. 'author.name' instead of 'authorId'
-      const pathWithoutParent = field.split('.').slice(1).join('.');
-      aValue = ValuePointer.Get(aValue, pathWithoutParent);
-      bValue = ValuePointer.Get(bValue, pathWithoutParent);
-    }
-
-    if (aValue < bValue) {
-      return direction === 'ASC' ? -1 : 1;
-    }
-    if (aValue > bValue) {
-      return direction === 'ASC' ? 1 : -1;
-    }
-  }
-  return 0;
-};
-
 function changeIsInsert(change: Change): change is Insert {
   return change.id !== undefined;
 }
-
-function mergeResults(
-  existingResults: ViewEntity[],
-  additionalResults: ViewEntity[],
-  query?: CollectionQuery
-) {
-  const newResultMap = new Map(additionalResults.map((r) => [r.data.id, r]));
-  const mergedResultIds = new Set();
-  const inclusions = query?.include ?? {};
-  for (const result of existingResults) {
-    if (!newResultMap.has(result.data.id)) {
-      continue;
-    }
-    mergedResultIds.add(result.data.id);
-    const updatedInclusions = Object.fromEntries(
-      Object.entries(inclusions).map(([prop, { subquery, cardinality }]) => {
-        const existing = result.subqueries[prop];
-        const additional = newResultMap.get(result.data.id)!.subqueries[prop];
-        if (additional == null || existing == null) {
-          return [prop, additional];
-        }
-        if (cardinality === 'one') {
-          return [prop, mergeResults([existing], [additional], subquery)[0]];
-        }
-        return [prop, mergeResults(existing, additional, subquery)];
-      })
-    );
-    // TODO handle updating individual properties
-    Object.assign(result.subqueries, updatedInclusions);
-    const newResult = newResultMap.get(result.data.id)!;
-    for (const key in newResult.data) {
-      result.data[key] = newResult.data[key];
-    }
-  }
-  const newResults = additionalResults.filter(
-    (r) => !mergedResultIds.has(r.data.id)
-  );
-  const updatedResults = existingResults.concat(newResults);
-
-  if (query?.order != null) {
-    updatedResults.sort((a, b) =>
-      compare(flattenViewEntity(a), flattenViewEntity(b), query.order!)
-    );
-  }
-  if (query?.limit != null) {
-    return updatedResults.slice(0, query.limit);
-  } else {
-    return updatedResults;
-  }
-}
-
-function isQueryRelational(query: CollectionQuery<any, any>) {
-  const { where, include, order } = query;
-  return !!(
-    (where &&
-      someFilterStatements(where, (filter) => isSubQueryFilter(filter))) ||
-    (include && Object.keys(include).length > 0) ||
-    // @ts-expect-error
-    (order && order.some((o) => !!o[2]))
-  );
-}
-
-function getRelevantUpdatesAndInserts(
-  collectionSets: Map<string, any>,
-  // insertFilter: (change: DBEntity) => boolean
-  queryContext: {
-    query: CollectionQuery;
-    schema?: DBSchema;
-  }
-) {
-  const inserts = []; // Inserts that match the query
-  const updates: Map<string, any> = new Map(); // all updates (unfiltered)
-  for (const [entId, change] of collectionSets) {
-    const isInsert = 'id' in change;
-    if (isInsert) {
-      if (
-        doesEntityMatchBasicWhere(
-          queryContext.query.collectionName,
-          change as DBEntity,
-          queryContext.query.where ?? [true],
-          queryContext.schema
-        )
-      ) {
-        inserts.push(change);
-      }
-    } else {
-      updates.set(entId, change);
-    }
-  }
-
-  return { updates, inserts };
-}
-
-// type ResultRelationalStructure = {
-//   collectionName: string;
-//   subqueries: Record<string, ResultRelationalStructure>;
-// };
-
-// function queryToRelationalStructure(
-//   query: CollectionQuery
-// ): ResultRelationalStructure {
-//   const { include } = query;
-//   const subqueries = {} as Record<string, ResultRelationalStructure>;
-//   for (const [key, { subquery }] of Object.entries(include ?? {})) {
-//     subqueries[key] = queryToRelationalStructure(subquery);
-//   }
-//   return {
-//     collectionName: query.collectionName,
-//     subqueries,
-//   };
-// }
 
 /**
  * This will take two sets of changes and return a set of changes that need to be applied

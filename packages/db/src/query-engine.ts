@@ -40,7 +40,7 @@ export interface ExecutionContext {
 
 export interface ViewEntity {
   data: DBEntity; // Immutable/frozen entity from storage
-  subqueries: Record<string, ViewEntity[]>; // Subquery results for this entity view
+  subqueries: Record<string, null | ViewEntity | ViewEntity[]>; // Subquery results for this entity view
 }
 
 export function createViewEntity(ent: DBEntity): ViewEntity {
@@ -50,7 +50,7 @@ export function createViewEntity(ent: DBEntity): ViewEntity {
   };
 }
 
-export function flattenViewEntity(viewEnt: ViewEntity): any {
+export function flattenViewEntity(viewEnt: ViewEntity | null): any {
   if (!viewEnt) return viewEnt;
   if (!('data' in viewEnt) || !('subqueries' in viewEnt)) {
     throw new Error(
@@ -315,10 +315,11 @@ export class EntityStoreQueryEngine {
                 viewPlans,
                 preparedViews,
               });
-              if (subResults.length === 0) {
-                return false;
+              if (Array.isArray(subResults)) {
+                return subResults.length > 0;
+              } else {
+                return subResults !== null;
               }
-              return true;
             }
           );
           break;
@@ -380,8 +381,8 @@ export class EntityStoreQueryEngine {
   /**
    * A top-level fetch method, using the (still) private loadQuery internally.
    */
-  async fetch(query: CollectionQuery) {
-    return this.loadQuery(query);
+  async fetch(query: CollectionQuery): Promise<ViewEntity[]> {
+    return this.loadQuery(query) as Promise<ViewEntity[]>;
   }
 
   async *getCollectionCandidates(

@@ -401,7 +401,7 @@ export class DB<
     return results;
   }
 
-  async rawFetch(query: CollectionQuery) {
+  async rawFetch(query: CollectionQuery): Promise<ViewEntity[]> {
     const queryEngine = new EntityStoreQueryEngine(
       this.kv,
       this.entityStore,
