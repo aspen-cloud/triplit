@@ -7,7 +7,12 @@ import {
   QueryWhere,
   SubQueryFilter,
 } from '../types.js';
-import { isFilterGroup, isSubQueryFilter } from '../filters.js';
+import {
+  filterStatementIterator,
+  isFilterGroup,
+  isFilterStatement,
+  isSubQueryFilter,
+} from '../filters.js';
 import { getVariableComponents, isValueVariable } from '../variables.js';
 import { getIdFilter, hasIdFilter } from './heuristics.js';
 import { VariableAwareCache as VAC } from '../variable-aware-cache.js';
