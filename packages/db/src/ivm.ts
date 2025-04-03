@@ -32,7 +32,11 @@ import {
   ViewEntity,
 } from './query-engine.js';
 import { bindVariablesInFilters } from './variables.js';
-import { getCollectionsReferencedInSubqueries } from './ivm-utils.js';
+import {
+  getCollectionsReferencedInSubqueries,
+  hasSubqueryFilterAtAnyLevel,
+  hasSubqueryOrderAtAnyLevel,
+} from './ivm-utils.js';
 
 interface QueryNode {
   // TODO support multiple root queries (essentially subqueries could be shared between root queries)
@@ -237,50 +241,28 @@ export class IVM<M extends Models<M> = Models> {
       if (handledRootQueries.has(queryId)) {
         continue;
       }
-      const { results, query } = this.subscribedQueries.get(queryId)!;
-      const { updatedResults, hasChanged } = await this.updateQueryResults(
-        results,
-        changes,
-        query
-      );
-      this.subscribedQueries.get(queryId)!.results = updatedResults;
-      this.subscribedQueries.get(queryId)!.hasChanged = hasChanged;
+      const queryState = this.subscribedQueries.get(queryId)!;
+      const { results, query: rootQuery } = queryState;
+      if (
+        hasSubqueryFilterAtAnyLevel(rootQuery) ||
+        hasSubqueryOrderAtAnyLevel(rootQuery)
+      ) {
+        const refetchedResults = await this.db.rawFetch(rootQuery);
+        queryState.results = refetchedResults as ViewEntity[];
+        queryState.hasChanged = true;
+      } else {
+        const { updatedResults, hasChanged } =
+          await this.updateQueryResultsInPlace(results, changes, rootQuery);
+        queryState.results = updatedResults;
+        queryState.hasChanged = hasChanged;
+      }
     }
     const kvTx = this.storage.transact();
     this.doubleBuffer.inactiveBuffer.clear(kvTx);
     await kvTx.commit();
   }
 
-  private async updateQueryResults(
-    existingResults: ViewEntity[] | undefined,
-    changes: DBChanges,
-    rootQuery: CollectionQuery
-  ): Promise<{ updatedResults: ViewEntity[]; hasChanged: boolean }> {
-    // TODO: also short circuit if this is a big server initialization
-    if (
-      !!(
-        (rootQuery.where &&
-          someFilterStatements(rootQuery.where, (filter) =>
-            isSubQueryFilter(filter)
-          )) ||
-        // @ts-expect-error
-        (rootQuery.order && rootQuery.order.some((o) => !!o[2]))
-      )
-    ) {
-      const refetchedResults = await this.db.rawFetch(rootQuery);
-      return {
-        updatedResults: refetchedResults as ViewEntity[],
-        hasChanged: true,
-      };
-    }
-    return await this.updateResultsWithQuery(
-      existingResults,
-      changes,
-      rootQuery
-    );
-  }
-
-  private async updateResultsWithQuery(
+  private async updateQueryResultsInPlace(
     results: ViewEntity[] | undefined,
     changes: DBChanges,
     query: CollectionQuery,
@@ -460,7 +442,7 @@ export class IVM<M extends Models<M> = Models> {
           ] as RelationSubquery;
           const updatedEntityStack = entityStack.concat(entity.data);
           const { hasChanged, updatedResults } =
-            await this.updateResultsWithQuery(
+            await this.updateQueryResultsInPlace(
               // @ts-expect-error: fixup typing of viewEntity inclusions
               cardinality === 'one'
                 ? entity.subqueries[inclusion]
