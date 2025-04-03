@@ -183,7 +183,7 @@ function whereFiltersToViews(
   views: Record<string, CollectionQuery>;
 } {
   const views: Record<string, CollectionQuery> = {};
-  const updatedWhere: QueryWhere[] = [];
+  const updatedWhere: QueryWhere = [];
   for (const filter of where) {
     // if the filter is a subquery filter
     // we may be able to do "inversion"
@@ -264,12 +264,10 @@ function whereFiltersToViews(
   return { where: updatedWhere, views };
 }
 function hasHigherLevelReferences(where: QueryWhere): boolean {
-  for (const filter of where) {
-    if (Array.isArray(filter) && isValueVariable(filter[2])) {
+  for (const filter of filterStatementIterator(where)) {
+    if (isFilterStatement(filter) && isValueVariable(filter[2])) {
       const [level] = getVariableComponents(filter[2]);
       if (typeof level === 'number' && level > 1) return true;
-    } else if (isFilterGroup(filter)) {
-      if (hasHigherLevelReferences(filter.filters)) return true;
     } else if (isSubQueryFilter(filter)) {
       if (hasHigherLevelReferences(filter.exists.where || [])) return true;
     }
@@ -314,17 +312,13 @@ function getViewsReferencedInFilters(
   filters: FilterStatement[],
   viewNames: Set<string> = new Set()
 ): Set<string> {
-  for (const filter of filters) {
+  for (const filter of filterStatementIterator(filters)) {
     if (
-      Array.isArray(filter) &&
+      isFilterStatement(filter) &&
       isValueVariable(filter[2]) &&
       filter[2].startsWith('$view_')
     ) {
       viewNames.add(filter[2]);
-      continue;
-    }
-    if (isFilterGroup(filter)) {
-      getViewsReferencedInFilters(filter.filters, viewNames);
     }
   }
   return viewNames;
