@@ -1175,7 +1175,17 @@ describe('IVM syncing', () => {
           value,
         });
       } else {
-        const randomEntity = randomEntityFactory[collectionName](rand(1000));
+        const seeded = rand(1000);
+        let randomEntity = randomEntityFactory[collectionName](seeded);
+        // in case we have a collision with an existing message
+        if (collectionName === 'messages') {
+          let isIdAlreadyUsed = aliveEntities.includes(randomEntity.id);
+          while (isIdAlreadyUsed) {
+            randomEntity = randomEntityFactory[collectionName](rand(1000));
+            isIdAlreadyUsed = aliveEntities.includes(randomEntity.id);
+          }
+        }
+
         ops.push({
           type: 'insert',
           collection: collectionName,
