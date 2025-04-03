@@ -9,6 +9,7 @@ import {
   RelationSubquery,
 } from './types.js';
 import {
+  filterStatementIterator,
   isBooleanFilter,
   isFilterGroup,
   isRelationshipExistsFilter,
@@ -471,7 +472,7 @@ export class IVM<M extends Models<M> = Models> {
       }
       // instead of fetching here we could first check for memoized subqueries
       if (entitiesToRefetchInclusions.size > 0) {
-        const idFilter = [
+        const idFilter: QueryWhere = [
           ['id', 'in', Array.from(entitiesToRefetchInclusions)],
         ];
         const resultsToMerge = await this.db.rawFetch({
@@ -562,22 +563,20 @@ export function createQueryWithExistsAddedToIncludes(
   query: CollectionQuery
 ): CollectionQuery {
   const newQuery = structuredClone(query);
-  const exists = query.where?.filter(isSubQueryFilter);
-  if (exists && exists.length > 0) {
-    newQuery.include = {
-      ...newQuery.include,
-      ...Object.fromEntries<Record<string, CollectionQuery>>(
-        exists.map((subquery, i) => [
-          `_exists-${i}`,
-          {
-            subquery: {
-              ...createQueryWithExistsAddedToIncludes(subquery.exists),
-            } as CollectionQuery,
-            cardinality: 'one',
-          },
-        ])
-      ),
-    };
+  let i = 0;
+  if (newQuery.where) {
+    for (const filter of filterStatementIterator(newQuery.where)) {
+      if (isSubQueryFilter(filter)) {
+        if (!newQuery.include) {
+          newQuery.include = {};
+        }
+        newQuery.include[`_exists-${i}`] = {
+          subquery: createQueryWithExistsAddedToIncludes(filter.exists),
+          cardinality: 'one',
+        };
+        i++;
+      }
+    }
   }
   return newQuery;
 }
@@ -588,7 +587,6 @@ export function createQueryWithRelationalOrderAddedToIncludes(
   if (!query.order) return query;
   const newQuery = structuredClone(query);
   // TODO: update QueryOrder type to include potential subquery
-  // @ts-expect-error
   for (const [attribute, _direction, subquery] of newQuery.order!) {
     if (!subquery) continue;
     newQuery.include = {
@@ -675,7 +673,8 @@ export function diffChanges(
       if (!newSets.has(id)) {
         newDeletes.add(id);
       } else {
-        const newData = newSets.get(id);
+        // safe because we are in the block where we know the id exists
+        const newData = newSets.get(id)!;
         if (JSON.stringify(data) !== JSON.stringify(newData)) {
           newSets.set(id, newData);
         } else {

@@ -181,18 +181,17 @@ export function resolveVariable(variable: string, vars: any): any {
 }
 
 export function bindVariablesInFilters(
-  filters: (FilterStatement | FilterGroup)[],
+  filters: QueryWhere,
   vars: any
-): (FilterStatement | FilterGroup)[] {
+): QueryWhere {
   return filters.map((filter) => {
     if (isFilterGroup(filter)) {
       return {
         ...filter,
-        // @ts-expect-error
         filters: bindVariablesInFilters(filter.filters, vars),
       };
     }
-    if (isValueVariable(filter[2])) {
+    if (isFilterStatement(filter) && isValueVariable(filter[2])) {
       const variable = filter[2] as string;
       return [filter[0], filter[1], resolveVariable(variable, vars)];
     }
