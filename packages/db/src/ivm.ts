@@ -5,10 +5,13 @@ import {
   DBChanges,
   DBEntity,
   Insert,
+  QueryWhere,
   RelationSubquery,
 } from './types.js';
 import {
+  isBooleanFilter,
   isFilterGroup,
+  isRelationshipExistsFilter,
   isSubQueryFilter,
   satisfiesNonRelationalFilter,
   someFilterStatements,
@@ -693,7 +696,7 @@ function mapSubqueriesRecursive(
 function doesEntityMatchBasicWhere(
   collectionName: string,
   entity: DBEntity,
-  filters: WhereFilter<any, any>[],
+  filters: QueryWhere,
   schema?: DBSchema
 ) {
   return filters.every((filter) =>
@@ -703,12 +706,20 @@ function doesEntityMatchBasicWhere(
 
 function doesUpdateImpactSimpleFilters(
   entity: Change,
-  filters: WhereFilter<any, any>[]
-) {
-  // TODO check order statements as well
+  filters: QueryWhere
+): boolean {
   return filters.some((filter) => {
+    if (isBooleanFilter(filter)) {
+      return false;
+    }
     if (isFilterGroup(filter)) {
       return doesUpdateImpactSimpleFilters(entity, filter.filters);
+    }
+    if (isSubQueryFilter(filter)) {
+      throw new Error('Subquery filters are not supported in this context');
+    }
+    if (isRelationshipExistsFilter(filter)) {
+      throw new Error('Untranslated exists filter');
     }
     const attributePath = filter[0].split('.');
     // TODO handle nested attributes
