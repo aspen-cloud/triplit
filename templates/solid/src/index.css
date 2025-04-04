@@ -1,0 +1,151 @@
+:root {
+  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+
+  color-scheme: light dark;
+  color: rgba(255, 255, 255, 0.87);
+  background-color: #242424;
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  height: 100vh;
+}
+
+.main-container {
+  display: flex;
+  flex-direction: row;
+  max-width: 1440px;
+  margin: auto;
+}
+
+.getting-started {
+  padding: 16px;
+  width: 45%;
+  display: none;
+}
+
+.app-container {
+  color: black;
+  background-color: white;
+  position: fixed;
+  top: 0;
+  padding-top: 10vh;
+  right: 0;
+  display: flex;
+  align-items: center;
+  width: 100%;
+  height: 100%;
+  flex-direction: column;
+}
+
+.todos-container {
+  display: flex;
+  width: 320px;
+  flex-direction: column;
+  gap: 1em;
+  margin-top: 1em;
+}
+
+@media (min-width: 768px) {
+  .getting-started {
+    display: inline;
+  }
+  .app-container {
+    width: 50%;
+  }
+}
+
+.todo {
+  display: flex;
+  gap: 1em;
+  align-items: center;
+}
+
+.btn {
+  margin-left: 8px;
+  border: none;
+  border-radius: 0.25em;
+  padding: 0.5em 1em;
+  background-color: cornflowerblue;
+  color: #fff;
+  font-size: 1em;
+  cursor: pointer;
+}
+
+.todo-input {
+  border-radius: 0.25em;
+  border-color: cornflowerblue;
+  padding: 0.5em 1em;
+  background-color: white;
+  color: black;
+  font-size: 1em;
+}
+
+.x-button {
+  border: none;
+  background-color: transparent;
+  display: none;
+}
+.x-button:hover {
+  filter: brightness(1.5);
+}
+
+.todo:hover .x-button {
+  display: block;
+}
+
+pre {
+  background-color: black;
+  padding: 12px;
+  border-radius: 4px;
+}
+
+code {
+  background-color: black;
+  padding: 2px 4px;
+  border-radius: 4px;
+}
+
+.connection-status {
+  position: fixed;
+  top: 0;
+  right: 0;
+  padding: 8px;
+  font-size: 0.8em;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+}
+
+.indicator {
+  width: 12px;
+  height: 12px;
+  margin-right: 4px;
+  border-radius: 50%;
+  display: inline-block;
+  background-color: yellow;
+}
+
+.indicator.open {
+  background-color: greenyellow;
+  border: green 1px solid;
+}
+
+.indicator.closed {
+  background-color: orangered;
+  border: red 1px solid;
+}
+
+.indicator.connecting {
+  background-color: yellow;
+  border: darkgoldenrod 1px solid;
+}
+
+input[type='checkbox'] {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+}

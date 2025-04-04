@@ -59,9 +59,18 @@ const FRAMEWORKS: Framework[] = [
       '@triplit/svelte': 'latest',
     },
   },
+  {
+    name: 'solid',
+    display: 'Solid.js',
+    color: blue,
+    variants: [],
+    dependencies: {
+      '@triplit/solid': 'latest',
+    },
+  },
 ];
 
-const TEMPLATES = ['chat', 'react', 'svelte', 'vue', 'angular'];
+const TEMPLATES = ['chat', 'react', 'svelte', 'vue', 'angular', 'solid'];
 
 function getViteCreateArgs(
   pkgManager: string,
@@ -161,6 +170,10 @@ async function createTriplitAppWithVite() {
               {
                 title: yellow('Angular'),
                 value: 'angular',
+              },
+              {
+                title: blue('Solid.js'),
+                value: 'solid',
               },
             ],
           },

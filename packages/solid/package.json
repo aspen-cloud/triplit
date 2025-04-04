@@ -1,0 +1,34 @@
+{
+  "name": "@triplit/solid",
+  "version": "1.0.0",
+  "packageManager": "yarn@4.2.2",
+  "type": "module",
+  "files": [
+    "dist",
+    "src"
+  ],
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "source": "./src/index.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "default": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "publish-pkg": "node ../../scripts/npm-check-version-and-publish.js"
+  },
+  "devDependencies": {
+    "@triplit/client": "workspace:^",
+    "solid-js": "^1.9.5",
+    "typescript": "^5.8.2"
+  },
+  "peerDependencies": {
+    "@triplit/client": "workspace:^",
+    "solid-js": "*"
+  }
+}
