@@ -20,6 +20,7 @@
     "cmdk": "^0.2.0",
     "embla-carousel-react": "^8.1.7",
     "lucide-react": "^0.292.0",
+    "react-resizable-panels": "^2.1.7",
     "tailwind-merge": "^2.0.0",
     "tailwindcss-animate": "^1.0.7"
   },
