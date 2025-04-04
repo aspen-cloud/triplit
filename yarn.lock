@@ -10333,6 +10333,22 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@triplit/cli@npm:latest":
+  version: 1.0.20
+  resolution: "@triplit/cli@npm:1.0.20"
+  dependencies:
+    esbuild: "npm:^0.23.1"
+    fsevents: "npm:^2.3.3"
+    source-map: "npm:^0.7.4"
+  dependenciesMeta:
+    fsevents:
+      optional: true
+  bin:
+    triplit: ./dist/index.js
+  checksum: 10/da5697b232a8a1ed28c48a6cc6926f67d00c805114ddbd2bcf7b2d42ec26c61a6623a3af16999a1475a72478dcedb06c5aff6450035380ab874b27e0f521dc9b
+  languageName: node
+  linkType: hard
+
 "@triplit/client@npm:1.0.17, @triplit/client@workspace:^, @triplit/client@workspace:packages/client":
   version: 0.0.0-use.local
   resolution: "@triplit/client@workspace:packages/client"
@@ -10350,6 +10366,18 @@ __metadata:
     vitest: "npm:^2.0.5"
   languageName: unknown
   linkType: soft
+
+"@triplit/client@npm:latest":
+  version: 1.0.17
+  resolution: "@triplit/client@npm:1.0.17"
+  dependencies:
+    "@triplit/db": "npm:^1.0.16"
+    "@triplit/logger": "npm:^0.0.3"
+    comlink: "npm:^4.4.1"
+    superjson: "npm:^2.2.1"
+  checksum: 10/d45000c39be38d53b17e269b4b5a239008e7887d23a091a63df0e8f30e243498bc9690202c062fa526053efda065a3b672bad18450d5b60ed3e2584b417b25dc
+  languageName: node
+  linkType: hard
 
 "@triplit/console@workspace:packages/console":
   version: 0.0.0-use.local
@@ -10394,7 +10422,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@triplit/db@workspace:^, @triplit/db@workspace:packages/db":
+"@triplit/db@npm:^1.0.16, @triplit/db@workspace:^, @triplit/db@workspace:packages/db":
   version: 0.0.0-use.local
   resolution: "@triplit/db@workspace:packages/db"
   dependencies:
@@ -10433,7 +10461,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@triplit/logger@workspace:^, @triplit/logger@workspace:packages/logger":
+"@triplit/logger@npm:^0.0.3, @triplit/logger@workspace:^, @triplit/logger@workspace:packages/logger":
   version: 0.0.0-use.local
   resolution: "@triplit/logger@workspace:packages/logger"
   dependencies:
@@ -10538,7 +10566,17 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@triplit/solid@workspace:^, @triplit/solid@workspace:packages/solid":
+"@triplit/solid@npm:latest":
+  version: 1.0.0
+  resolution: "@triplit/solid@npm:1.0.0"
+  peerDependencies:
+    "@triplit/client": ^1.0.17
+    solid-js: "*"
+  checksum: 10/5947391f41ae967847299290078643efe27d68c8ba960ac4a7012d405c9282847293582fb5943f81d329570ac2219a40e19f261288b6c1728cd79cbc20811926
+  languageName: node
+  linkType: hard
+
+"@triplit/solid@workspace:packages/solid":
   version: 0.0.0-use.local
   resolution: "@triplit/solid@workspace:packages/solid"
   dependencies:
@@ -31387,6 +31425,20 @@ __metadata:
   languageName: node
   linkType: hard
 
+"solid-template@workspace:templates/solid":
+  version: 0.0.0-use.local
+  resolution: "solid-template@workspace:templates/solid"
+  dependencies:
+    "@triplit/cli": "npm:latest"
+    "@triplit/client": "npm:latest"
+    "@triplit/solid": "npm:latest"
+    solid-js: "npm:^1.9.5"
+    typescript: "npm:^5.7.2"
+    vite: "npm:^6.0.0"
+    vite-plugin-solid: "npm:^2.11.6"
+  languageName: unknown
+  linkType: soft
+
 "sort-keys@npm:^5.0.0":
   version: 5.0.0
   resolution: "sort-keys@npm:5.0.0"
@@ -34645,20 +34697,6 @@ __metadata:
   checksum: 10/eb7bfaab64f554d9c0462594ec2f7242deea30a2d54077742a489f69af52a515ac25c7342f7a38cdf8f60296aaa23a395793ed3d740f2d106262fbcc32730aae
   languageName: node
   linkType: hard
-
-"vite-template-solid@workspace:templates/solidjs":
-  version: 0.0.0-use.local
-  resolution: "vite-template-solid@workspace:templates/solidjs"
-  dependencies:
-    "@triplit/cli": "workspace:^"
-    "@triplit/client": "workspace:^"
-    "@triplit/solid": "workspace:^"
-    solid-js: "npm:^1.9.5"
-    typescript: "npm:^5.7.2"
-    vite: "npm:^6.0.0"
-    vite-plugin-solid: "npm:^2.11.6"
-  languageName: unknown
-  linkType: soft
 
 "vite-tsconfig-paths@npm:^4.2.0":
   version: 4.2.1
