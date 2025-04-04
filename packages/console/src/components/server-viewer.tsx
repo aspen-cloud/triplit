@@ -11,6 +11,9 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  ResizableHandle,
+  ResizablePanel,
+  ResizablePanelGroup,
   cn,
 } from '@triplit/ui';
 import { ServerOptionsMenu } from './server-options-menu';
@@ -236,129 +239,138 @@ export function ServerViewer({
 
   // if loading render loading state
   if (!client) return <FullScreenWrapper>Loading...</FullScreenWrapper>;
-  const shouldEnableCreateCollectionButton =
-    schema || collectionsToList.length === 0;
+
   // If client, render hooks that rely on client safely
   return (
     <div className="flex bg-popover w-full overflow-hidden h-full">
       <Toaster />
-      <div className=" border-r flex flex-col p-4 w-[250px] shrink-0 overflow-y-auto">
-        {showMetaServerOptions && server && (
-          <ServerOptionsMenu>
-            <Button variant="secondary" className="w-full h-[2.5rem] mb-4">
-              <div className="font-bold truncate">{server.displayName}</div>
-              <CaretDown className="ml-2 shrink-0" />
-            </Button>
-          </ServerOptionsMenu>
-        )}
-        <div
-          className={cn(
-            'text-xs py-1 px-2 w-max rounded transition-all',
-            connectionStatus === 'OPEN'
-              ? 'bg-green-200 text-green-700 dark:bg-green-950 dark:text-green-400 scale-100 mb-2'
-              : 'bg-yellow-200 dark:bg-yellow-900 text-yellow-700 dark:text-yellow-400 animate-pulse scale-125 mb-3'
-          )}
+      <ResizablePanelGroup
+        direction="horizontal"
+        autoSaveId={'triplit-collections-list'}
+      >
+        <ResizablePanel
+          autoSave="yes"
+          defaultSize={15}
+          minSize={5}
+          maxSize={50}
+          className="flex flex-col p-4 overflow-y-auto"
         >
-          {connectionStatus === 'OPEN' ? 'Connected' : 'Connecting'}
-        </div>
-        <div className="flex flex-row flex-wrap gap-2 mb-1"></div>
-        <div className="flex flex-row items-center justify-between gap-2 md:gap-4 mb-4">
-          <span className="truncate text-sm md:text-lg font-semibold">
-            Tokens
-          </span>
-          <AddTokenDialog
-            onSubmit={async (token, nickname) => {
-              await consoleClient.insert('tokens', {
-                serverUrl: client?.serverUrl!,
-                value: token,
-                name: nickname,
-              });
-              await updateClientOptions({
-                token,
-              });
-              // setClient(overwriteClient(token, client));
-            }}
-            schema={schema}
-          />
-        </div>
-        {tokens?.map(({ value, name, id }) => {
-          const isSelectedToken = client.token === value;
-          const isServiceToken = id.startsWith('service_');
-          return (
-            <Fragment key={id}>
-              <Button
-                key={value}
-                onClick={async () => {
-                  await updateClientOptions({
-                    token: value,
-                  });
-                  // setClient(overwriteClient(value, client));
-                }}
-                variant={isSelectedToken ? 'secondary' : 'ghost'}
-                className={`group truncate flex h-auto px-2 py-1 flex-row items-center gap-2 justify-start shrink-0`}
-              >
-                <KeyRound
-                  className="shrink-0 hidden md:inline-block ml-1"
-                  size={16}
-                />
-                <span className="text-xs md:text-sm truncate w-full text-left">{`${name}`}</span>
-                {!isServiceToken && (
-                  <DropdownMenu>
-                    <DropdownMenuTrigger
-                      className="group-hover:visible invisible"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                      }}
-                    >
-                      <EllipsisVertical />
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent>
-                      <DropdownMenuItem
-                        onClick={async (e) => {
+          {showMetaServerOptions && server && (
+            <ServerOptionsMenu>
+              <Button variant="secondary" className="w-full h-[2.5rem] mb-4">
+                <div className="font-bold truncate">{server.displayName}</div>
+                <CaretDown className="ml-2 shrink-0" />
+              </Button>
+            </ServerOptionsMenu>
+          )}
+          <div
+            className={cn(
+              'text-xs py-1 px-2 w-max rounded transition-all',
+              connectionStatus === 'OPEN'
+                ? 'bg-green-200 text-green-700 dark:bg-green-950 dark:text-green-400 scale-100 mb-2'
+                : 'bg-yellow-200 dark:bg-yellow-900 text-yellow-700 dark:text-yellow-400 animate-pulse scale-125 mb-3'
+            )}
+          >
+            {connectionStatus === 'OPEN' ? 'Connected' : 'Connecting'}
+          </div>
+          <div className="flex flex-row flex-wrap gap-2 mb-1"></div>
+          <div className="flex flex-row items-center justify-between gap-2 md:gap-4 mb-4">
+            <span className="truncate text-sm md:text-lg font-semibold">
+              Tokens
+            </span>
+            <AddTokenDialog
+              onSubmit={async (token, nickname) => {
+                await consoleClient.insert('tokens', {
+                  serverUrl: client?.serverUrl!,
+                  value: token,
+                  name: nickname,
+                });
+                await updateClientOptions({
+                  token,
+                });
+                // setClient(overwriteClient(token, client));
+              }}
+              schema={schema}
+            />
+          </div>
+          {tokens?.map(({ value, name, id }) => {
+            const isSelectedToken = client.token === value;
+            const isServiceToken = id.startsWith('service_');
+            return (
+              <Fragment key={id}>
+                <Button
+                  key={value}
+                  onClick={async () => {
+                    await updateClientOptions({
+                      token: value,
+                    });
+                    // setClient(overwriteClient(value, client));
+                  }}
+                  variant={isSelectedToken ? 'secondary' : 'ghost'}
+                  className={`group truncate flex h-auto px-2 py-1 flex-row items-center gap-2 justify-start shrink-0`}
+                >
+                  <KeyRound
+                    className="shrink-0 hidden md:inline-block ml-1"
+                    size={16}
+                  />
+                  <span className="text-xs md:text-sm truncate w-full text-left">{`${name}`}</span>
+                  {!isServiceToken && (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger
+                        className="group-hover:visible invisible"
+                        onClick={(e) => {
                           e.stopPropagation();
-                          await consoleClient.delete('tokens', id);
-                          if (isSelectedToken) {
-                            await updateClientOptions({
-                              token: serviceToken,
-                            });
-                          }
                         }}
                       >
-                        <div className="hover:text-red-500 flex gap-1 items-center">
-                          <Trash2Icon size="16px" />
-                          {`Remove "${name}"`}
-                        </div>
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                )}
-              </Button>
-              {isSelectedToken &&
-                client.db.session?.roles &&
-                client.db.session?.roles.length > 0 && (
-                  <div
-                    className="flex flex-wrap flex-row gap-2 my-2"
-                    key={value + '_roles'}
-                  >
-                    {client.db.session.roles?.map((role) => (
-                      <RoleCard
-                        key={role.key}
-                        name={role.key}
-                        vars={role.roleVars}
-                        active={true}
-                      />
-                    ))}
-                  </div>
-                )}
-            </Fragment>
-          );
-        })}
+                        <EllipsisVertical />
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent>
+                        <DropdownMenuItem
+                          onClick={async (e) => {
+                            e.stopPropagation();
+                            await consoleClient.delete('tokens', id);
+                            if (isSelectedToken) {
+                              await updateClientOptions({
+                                token: serviceToken,
+                              });
+                            }
+                          }}
+                        >
+                          <div className="hover:text-red-500 flex gap-1 items-center">
+                            <Trash2Icon size="16px" />
+                            {`Remove "${name}"`}
+                          </div>
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  )}
+                </Button>
+                {isSelectedToken &&
+                  client.db.session?.roles &&
+                  client.db.session?.roles.length > 0 && (
+                    <div
+                      className="flex flex-wrap flex-row gap-2 my-2"
+                      key={value + '_roles'}
+                    >
+                      {client.db.session.roles?.map((role) => (
+                        <RoleCard
+                          key={role.key}
+                          name={role.key}
+                          vars={role.roleVars}
+                          active={true}
+                        />
+                      ))}
+                    </div>
+                  )}
+              </Fragment>
+            );
+          })}
 
-        <div className="flex flex-row items-center justify-between gap-2 md:gap-4 my-4">
-          <span className="truncate text-sm md:text-lg font-semibold">
-            Collections
-          </span>
-          {/* <CreateCollectionDialog
+          <div className="flex flex-row items-center justify-between gap-2 md:gap-4 my-4">
+            <span className="truncate text-sm md:text-lg font-semibold">
+              Collections
+            </span>
+            {/* <CreateCollectionDialog
             disabled={!shouldEnableCreateCollectionButton}
             onSubmit={async (collectionName) => {
               try {
@@ -379,56 +391,58 @@ export function ServerViewer({
               }
             }}
           /> */}
-        </div>
-        {collectionsToList.map((collection) => (
-          <Button
-            key={collection}
-            onClick={() => {
-              setQuery({ collection }, false);
-            }}
-            variant={query.collection === collection ? 'secondary' : 'ghost'}
-            className={`truncate flex h-auto px-2 py-1 flex-row items-center gap-2 justify-start shrink-0`}
-          >
-            <GridFour
-              weight="light"
-              className="shrink-0 hidden md:inline-block"
-              size={24}
-            />
-            <span className="text-xs md:text-sm truncate">{`${collection}`}</span>
-          </Button>
-        ))}
-        {connectionStatus !== 'CONNECTING' &&
-          collectionsToList.length === 0 && (
-            <p className="text-xs">
-              {
-                'Looks like you haven’t added any data yet. Once you push a schema, the collections will appear here.'
-              }
-            </p>
-          )}
-        {showMetaServerOptions && (
-          <>
-            <div className="grow" />
-            <ModeToggle className="" />
-          </>
-        )}
-      </div>
-      <div className="flex-grow flex flex-col min-w-0">
-        {query.collection ? (
-          <DataViewer
-            key={query.collection}
-            client={client}
-            schema={schema}
-            stats={selectedCollectionStats}
-            query={query}
-            setQuery={setQuery}
-          />
-        ) : (
-          <div className="flex flex-col h-full justify-center items-center gap-6">
-            <Selection size={80} weight="thin" />
-            No collection selected
           </div>
-        )}
-      </div>
+          {collectionsToList.map((collection) => (
+            <Button
+              key={collection}
+              onClick={() => {
+                setQuery({ collection }, false);
+              }}
+              variant={query.collection === collection ? 'secondary' : 'ghost'}
+              className={`truncate flex h-auto px-2 py-1 flex-row items-center gap-2 justify-start shrink-0`}
+            >
+              <GridFour
+                weight="light"
+                className="shrink-0 hidden md:inline-block"
+                size={24}
+              />
+              <span className="text-xs md:text-sm truncate">{`${collection}`}</span>
+            </Button>
+          ))}
+          {connectionStatus !== 'CONNECTING' &&
+            collectionsToList.length === 0 && (
+              <p className="text-xs">
+                {
+                  'Looks like you haven’t added any data yet. Once you push a schema, the collections will appear here.'
+                }
+              </p>
+            )}
+          {showMetaServerOptions && (
+            <>
+              <div className="grow" />
+              <ModeToggle className="" />
+            </>
+          )}
+        </ResizablePanel>
+        <ResizableHandle />
+        <ResizablePanel className="flex-grow flex flex-col min-w-0">
+          {query.collection ? (
+            <DataViewer
+              key={query.collection}
+              client={client}
+              schema={schema}
+              stats={selectedCollectionStats}
+              query={query}
+              setQuery={setQuery}
+            />
+          ) : (
+            <div className="flex flex-col h-full justify-center items-center gap-6">
+              <Selection size={80} weight="thin" />
+              No collection selected
+            </div>
+          )}
+        </ResizablePanel>
+      </ResizablePanelGroup>
     </div>
   );
 }
