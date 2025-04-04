@@ -6,11 +6,13 @@ import {
   ConnectionStatus,
 } from '@triplit/client';
 
+// Minimally adapted from @doeixd's example https://github.com/aspen-cloud/triplit/issues/147#issuecomment-2755080098
+
 /**
  * A primitive that subscribes to a query.
  *
- * @param client - The client instance accessor to query with.
- * @param query - The query accessor to subscribe to.
+ * @param client - The client instance to query with.
+ * @param query - The query to subscribe to.
  * @param options - Optional accessor for additional options for the subscription.
  * @param options.localOnly - If true, the subscription will only use the local cache. Defaults to false.
  * @param options.onRemoteFulfilled - An optional callback that is called when the remote query has been fulfilled.
@@ -71,12 +73,10 @@ export function useQuery<T extends CollectionQuery>(
 /**
  * A primitive that subscribes to the connection status of a client with the server.
  *
- * @param client - The client instance accessor to get the connection status of.
+ * @param client - The client instance to get the connection status of.
  * @returns An object containing `status`, an accessor for the current connection status.
  */
-export function useConnectionStatus(
-  client: TriplitClient // Use Accessor if client can change
-) {
+export function useConnectionStatus(client: TriplitClient) {
   // Initialize with the current status
   const [status, setStatus] = createSignal<ConnectionStatus>(
     client.connectionStatus
