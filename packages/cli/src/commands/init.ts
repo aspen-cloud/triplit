@@ -23,7 +23,7 @@ const cmd = Command({
   middleware: [],
   flags: {
     framework: Flag.Enum({
-      options: ['react', 'svelte', 'vue', 'angular'] as const,
+      options: ['react', 'svelte', 'vue', 'angular', 'solid'] as const,
       char: 'f',
       description: 'Frontend framework helpers to install',
     }),
@@ -72,6 +72,9 @@ const cmd = Command({
           break;
         case 'angular':
           packageToInstall.push('@triplit/angular');
+          break;
+        case 'solid':
+          packageToInstall.push('@triplit/solid');
           break;
       }
     }
