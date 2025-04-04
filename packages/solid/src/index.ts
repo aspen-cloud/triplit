@@ -1,10 +1,13 @@
 import { createSignal, createEffect, onCleanup, Accessor } from 'solid-js';
 import {
   TriplitClient,
-  CollectionQuery,
   SubscriptionOptions,
   ConnectionStatus,
+  Models,
+  SchemaQuery,
+  FetchResult,
 } from '@triplit/client';
+import { WorkerClient } from '@triplit/client/worker-client';
 
 // Minimally adapted from @doeixd's example https://github.com/aspen-cloud/triplit/issues/147#issuecomment-2755080098
 
@@ -18,17 +21,19 @@ import {
  * @param options.onRemoteFulfilled - An optional callback that is called when the remote query has been fulfilled.
  * @returns An object containing accessors for the fetching state, the result of the query, and any error that occurred.
  */
-export function useQuery<T extends CollectionQuery>(
-  client: TriplitClient,
-  query: T,
+export function useQuery<M extends Models<M>, Q extends SchemaQuery<M>>(
+  client: TriplitClient<M> | WorkerClient<M>,
+  query: Q,
   options?: Accessor<Partial<SubscriptionOptions>>
 ) {
-  const [results, setResults] = createSignal<T | undefined>(undefined);
+  const [results, setResults] = createSignal<
+    FetchResult<M, Q, 'many'> | undefined
+  >(undefined);
   const [fetching, setFetching] = createSignal<boolean>(true);
   const [fetchingLocal, setFetchingLocal] = createSignal<boolean>(true);
   const [fetchingRemote, setFetchingRemote] = createSignal<boolean>(false);
   const [error, setError] = createSignal<Error | undefined>(undefined);
-  const [querySignal, setQuery] = createSignal<T>(query); // Ensure we can track query changes
+  const [querySignal, setQuery] = createSignal<Q>(query); // Ensure we can track query changes
 
   createEffect(() => {
     const currentClient = client;
@@ -42,10 +47,9 @@ export function useQuery<T extends CollectionQuery>(
     setFetchingRemote(true);
     setError(undefined);
 
-    const unsub = currentClient.subscribeWithStatus<T>(
+    const unsub = currentClient.subscribeWithStatus(
       currentQuery,
       (newVal) => {
-        console.dir(newVal);
         setResults(newVal.results);
         setFetching(newVal.fetching);
         setFetchingLocal(newVal.fetchingLocal);

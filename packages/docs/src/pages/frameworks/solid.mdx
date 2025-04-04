@@ -1,0 +1,100 @@
+---
+description: Learn how use Solid bindings for the Triplit client in your app.
+---
+
+import { Tabs, Tab, Callout } from 'nextra-theme-docs';
+import CreateTriplitAppTabs from '../../components/CreateTriplitAppTabs.mdx';
+
+# Solid
+
+### New projects
+
+The fast way to get started with Triplit is to use Create Triplit App which will scaffold a Vite application with Triplit. Choose `Solid` when prompted for the frontend framework.
+
+<CreateTriplitAppTabs />
+
+### Existing projects
+
+If you have an existing Solid project, you can add the hooks provided by `@triplit/solid`:
+
+<Tabs items={['npm', 'pnpm', 'yarn', 'bun']}>
+
+  <Tab>
+    ```bash copy
+    npm i @triplit/solid
+    ```
+  </Tab>
+    <Tab>
+    ```bash copy
+    pnpm add @triplit/solid
+    ```
+  </Tab>
+  <Tab>
+    ```bash copy
+    yarn add @triplit/solid
+    ```
+  </Tab>
+    <Tab>
+    ```bash copy
+    bun add @triplit/solid
+    ```
+  </Tab>
+</Tabs>
+
+## useQuery
+
+The `useQuery` hook subscribes to the provided query inside your Solid component and will automatically unsubscribe from the query when the component unmounts.
+
+The result of the hook is an object with the following signal accessor and getter properties:
+
+- `results`: An array of entities that satisfy the query.
+- `fetching`: A boolean that will be `true` initially, and then turn `false` when either the local fetch returns cached results or if there were no cached results and the remote fetch has completed.
+- `fetchingLocal`: A boolean indicating whether the query is currently fetching from the local cache.
+- `fetchingRemote`: A boolean indicating whether the query is currently fetching from the server.
+- `error`: An error object if the query failed to fetch.
+- `setQuery`: a setter function that can be used to update the query and cleanup the previous query.
+
+```tsx filename="app.tsx"
+import { useQuery } from '@triplit/solid';
+
+const client = new TriplitClient();
+const query = client.query('todos');
+
+function App() {
+  const { results, fetching, error } = useQuery(client, query);
+
+  return (
+    <div>
+      <Show when={fetching()}>
+        <p>Loading...</p>
+      </Show>
+      <Show when={error()}>
+        <div>Could not load data.</div>;
+      </Show>
+      <For each={results()}>
+        {(item) => <div key={item.id}>{item.text}</div>}
+      </For>
+    </div>
+  );
+}
+```
+
+## useConnectionStatus
+
+The `useConnectionStatus` hook subscribes to changes to the connection status of the client and will automatically unsubscribe when the component unmounts.
+
+```tsx copy filename="app.tsx"
+import { useConnectionStatus } from '@triplit/solid';
+
+const client = new TriplitClient();
+
+function App() {
+  const { status } = useConnectionStatus(client);
+
+  return (
+    <div>
+      The client is {status() === 'OPEN' ? 'connected' : 'disconnected'}
+    </div>
+  );
+}
+```
