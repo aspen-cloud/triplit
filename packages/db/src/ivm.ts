@@ -242,6 +242,10 @@ export class IVM<M extends Models<M> = Models> {
       if (handledRootQueries.has(queryId)) {
         continue;
       }
+      if (!this.subscribedQueries.has(queryId)) {
+        logger.warn('Subscribed query not found during update', { queryId });
+        continue;
+      }
       const queryState = this.subscribedQueries.get(queryId)!;
       const { results, query: rootQuery } = queryState;
       if (
