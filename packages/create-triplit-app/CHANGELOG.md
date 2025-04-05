@@ -1,5 +1,11 @@
 # create-triplit-app
 
+## 0.0.30
+
+### Patch Changes
+
+- 3641a667: Add support for Solid.js!
+
 ## 0.0.29
 
 ### Patch Changes

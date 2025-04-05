@@ -1,5 +1,12 @@
 # @triplit/console
 
+## 1.0.18
+
+### Patch Changes
+
+- 808e676a: Sort filter and order dropdown attributes
+- 865aaf61: Order collections by name
+
 ## 1.0.17
 
 ### Patch Changes
