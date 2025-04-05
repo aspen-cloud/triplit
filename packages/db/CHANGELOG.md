@@ -1,5 +1,11 @@
 # @triplit/entity-db
 
+## 1.0.17
+
+### Patch Changes
+
+- caa6b418: handle more ivm corner cases for complex queries
+
 ## 1.0.16
 
 ### Patch Changes

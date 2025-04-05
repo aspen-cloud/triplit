@@ -1,5 +1,12 @@
 # create-triplit-app
 
+## 0.0.31
+
+### Patch Changes
+
+- caa6b418: Automated version bump for create-triplit-app after dependency changes
+- caa6b418: add solid bindings
+
 ## 0.0.30
 
 ### Patch Changes
