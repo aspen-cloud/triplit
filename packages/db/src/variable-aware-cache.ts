@@ -105,7 +105,7 @@ export class VariableAwareCache {
         ...viewResults.slice(0, start + 1),
         ...viewResults.slice(end),
       ];
-      return resultEntries.map(([key]) => key);
+      return resultEntries;
     }
     if (start == undefined || end == undefined) {
       throw new QueryCacheError(
