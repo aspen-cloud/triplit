@@ -1,6 +1,7 @@
 import {
   CollectionQuery,
   DBChanges,
+  DEFAULT_ROLES,
   serializeEntity,
   serializeFetchResult,
   DB as TriplitDB,
@@ -109,6 +110,9 @@ export class Session {
   ) {
     if (!hasAdminAccess(this.token)) return NotAdminResponse();
     const { schema, ...options } = params;
+    if (!!schema.collections && !schema.roles) {
+      schema.roles = DEFAULT_ROLES;
+    }
     const change = await this.db.overrideSchema(params.schema, options);
     // TODO: determine if we the proper status code (change.successful ? 200 : 409)
     return ServerResponse(200, change);

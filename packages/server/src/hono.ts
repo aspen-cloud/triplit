@@ -7,6 +7,8 @@ import {
   ServerEntityStore,
   normalizeSessionVars,
   sessionRolesAreEquivalent,
+  DBSchema,
+  DEFAULT_ROLES,
 } from '@triplit/db';
 import {
   InvalidAuthenticationSchemeError,
@@ -108,8 +110,18 @@ export async function createTriplitHonoServer(
   //   const sqlite = require('better-sqlite3');
   // }
 
+  // if a schema is provided but no roles, add default roles
+  const schema: DBSchema | undefined =
+    !!dbOptions.schema?.collections && !dbOptions.schema.roles
+      ? {
+          collections: dbOptions.schema.collections,
+          roles: DEFAULT_ROLES,
+        }
+      : dbOptions.schema;
+
   const db = await createDB({
     ...dbOptions,
+    schema,
     clientId: 'server',
     entityStore: new ServerEntityStore(),
     kv:
