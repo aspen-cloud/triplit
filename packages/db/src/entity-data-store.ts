@@ -158,8 +158,8 @@ export class EntityDataStore implements EntityStore {
  */
 function applyChange<T extends Record<string, any> | undefined>(
   curr: T,
-  sets: Partial<T>
-): [T, Partial<T>] {
+  sets: Partial<NonNullable<T>>
+): [T, Partial<NonNullable<T>>] {
   if (!curr) return [sets as T, sets];
   const updated = structuredClone(curr);
   const appliedSets: any = {};
