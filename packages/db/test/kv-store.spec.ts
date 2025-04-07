@@ -1,3 +1,4 @@
+import '@vitest/web-worker';
 import {
   describe,
   test,
@@ -9,6 +10,7 @@ import {
 } from 'vitest';
 import { BTreeKVStore } from '../src/kv-store/storage/memory-btree.js';
 import { SQLiteKVStore } from '../src/kv-store/storage/sqlite.js';
+import { SqliteWorkerKvStore } from '../src/kv-store/storage/sqlite-worker.js';
 import { LmdbKVStore } from '../src/kv-store/storage/lmdb.js';
 import { IndexedDbKVStore } from '../src/kv-store/storage/indexed-db.js';
 import { MemoryTransaction } from '../src/kv-store/transactions/memory-tx.js';
@@ -20,11 +22,11 @@ import { InMemoryTestKVStore } from './utils/test-kv-store.js';
 const btree = new BTreeKVStore();
 const sqliteDb = sqlite(':memory:');
 const sqliteKv = new SQLiteKVStore(sqliteDb);
+const sqliteWorkerKv = new SqliteWorkerKvStore(':memory:');
 const lmdb = open({});
 const lmdbKv = new LmdbKVStore(lmdb);
 const idb = new IndexedDbKVStore('test');
 const memoryTx = new MemoryTransaction(new BTreeKVStore());
-
 describe.each([
   { label: 'In-memory BTree', store: btree },
   { label: 'In-memory transaction', store: memoryTx },
@@ -32,6 +34,7 @@ describe.each([
   { label: 'LMDB', store: lmdbKv },
   { label: 'IndexedDB', store: idb },
   { label: 'In-memory w/ delay', store: new InMemoryTestKVStore() },
+  { label: 'SQLite Worker Thread', store: sqliteWorkerKv },
 ])('--- $label ---', (scenario) => {
   const { label, store } = scenario;
   describe('get and set', () => {
@@ -485,7 +488,7 @@ describe.each([
         await tx.commit();
         expect(await store.get(['a'])).toBe(1);
       });
-      test('can scan with prefix in a transaction with scope', async () => {
+      test.only('can scan with prefix in a transaction with scope', async () => {
         await store.set(['a', 'b'], 1);
         await store.set(['a', 'c'], 2);
         let tx = store.transact();

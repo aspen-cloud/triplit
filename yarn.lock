@@ -10433,6 +10433,7 @@ __metadata:
     "@types/bun": "npm:^1.2.3"
     "@types/core-js": "npm:^2.5.8"
     "@vitest/coverage-v8": "npm:^3.0.6"
+    "@vitest/web-worker": "npm:^3.1.1"
     better-sqlite3: "npm:^11.8.1"
     core-js: "npm:^3.41.0"
     elen: "npm:^1.0.10"
@@ -10447,6 +10448,7 @@ __metadata:
     tinybench: "npm:^3.1.0"
     typescript: "npm:^5.8.2"
     vitest: "npm:^3.0.6"
+    web-worker: "npm:^1.5.0"
   peerDependencies:
     better-sqlite3: "*"
     expo-sqlite: "*"
@@ -12888,6 +12890,17 @@ __metadata:
   peerDependencies:
     vitest: 2.1.5
   checksum: 10/be35725b05b158a59cce7984e41158c17b8cf7c8789e0e0598f1ea2a80afb4dc4f1fffea34b87bc69c3b3937eb1d839577c15dc55fa91ed2b44a2841a9630027
+  languageName: node
+  linkType: hard
+
+"@vitest/web-worker@npm:^3.1.1":
+  version: 3.1.1
+  resolution: "@vitest/web-worker@npm:3.1.1"
+  dependencies:
+    debug: "npm:^4.4.0"
+  peerDependencies:
+    vitest: 3.1.1
+  checksum: 10/9945f3f9b521de85817952168126ff130f9586291c1ab02a10767938255255a51c335b601030acbbeb819a47a8be8f642692c2fee27661e65fb894692417860d
   languageName: node
   linkType: hard
 
@@ -35564,6 +35577,13 @@ __metadata:
   version: 1.2.0
   resolution: "web-worker@npm:1.2.0"
   checksum: 10/61a9d046504891ea25754eae08053a4f62a52798a5612039da9df92aca6c52c47eb0e2e35dbbe4c7ba1ba9622ad5783479ddd2e391ae6aed1f99c9b278309c53
+  languageName: node
+  linkType: hard
+
+"web-worker@npm:^1.5.0":
+  version: 1.5.0
+  resolution: "web-worker@npm:1.5.0"
+  checksum: 10/1209461e2c731fe8e8297c95a8a324c6dd00fd9f3c489ed79d18a15592731324762b7b06c8b6bc404596259aa13cd413119e0153e12a80f47a7f374960461e0d
   languageName: node
   linkType: hard
 

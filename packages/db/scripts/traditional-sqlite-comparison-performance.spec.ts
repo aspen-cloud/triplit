@@ -4,6 +4,8 @@ import { BTreeKVStore } from '../src/kv-store/storage/memory-btree.js';
 import { SQLiteKVStore } from '../src/kv-store/storage/sqlite.js';
 import { LmdbKVStore } from '../src/kv-store/storage/lmdb.js';
 import sqlite from 'better-sqlite3';
+// import { SqliteWorkerKvStore } from '../src/kv-store/storage/sqlite-worker.ts';
+import { SqliteWorkerKvStore } from '../dist/kv-store/storage/sqlite-worker.js';
 
 const QUERY_NAMES = [
   'CONVERSATIONS_WITH_LAST_MESSAGE_AND_UNREAD_COUNT',
@@ -240,8 +242,9 @@ class TriplitWorkload implements DB_Workload {
   queries: Record<(typeof QUERY_NAMES)[number], any>;
 
   constructor() {
-    const sqliteDb = sqlite(':memory:');
-    const sqliteKv = new SQLiteKVStore(sqliteDb);
+    // const sqliteDb = sqlite(':memory:');
+    // const sqliteKv = new SQLiteKVStore(sqliteDb);
+    const sqliteKv = new SqliteWorkerKvStore(':memory:');
     this.db = new DB({
       schema: TriplitWorkload.schema,
       kv: sqliteKv,

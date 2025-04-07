@@ -82,6 +82,7 @@ export default Command({
         case 'lmdb':
           checkLMDBDependency();
         case 'sqlite':
+        case 'sqlite-worker':
           checkSQLiteDependency();
         default:
           break;
