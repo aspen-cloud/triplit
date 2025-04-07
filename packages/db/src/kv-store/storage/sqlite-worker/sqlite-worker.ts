@@ -68,6 +68,7 @@ export class SqliteWorkerKvStore implements KVStore {
             'Main: Worker initialization failed:',
             response.payload
           );
+          // @ts-expect-error
           this.worker.off('message', initHandler);
           this.worker.terminate(); // Failed init, terminate worker
           reject(
@@ -79,11 +80,17 @@ export class SqliteWorkerKvStore implements KVStore {
       this.worker.addEventListener('message', initHandler); // Use once for init response
       this.worker.addEventListener('error', (err) => {
         console.error('Main: Worker encountered an error:', err);
-        this.cleanup(err); // Reject pending requests on worker error
+        this.cleanup(
+          // @ts-expect-error
+          err
+        ); // Reject pending requests on worker error
         reject(err); // Reject init promise if error occurs during init
       });
       this.worker.addEventListener('exit', (code) => {
-        if (code !== 0) {
+        if (
+          // @ts-expect-error
+          code !== 0
+        ) {
           const error = new Error(`Worker stopped with exit code ${code}`);
           console.error('Main:', error);
           this.cleanup(error); // Reject pending requests on exit

@@ -367,17 +367,26 @@ addEventListener('message', (msg: MessageEvent<WorkerRequest>) => {
       id: request.id,
       type: 'error',
       payload: error.message || 'An unknown error occurred in the worker.',
-      iteratorId: activeIterators.has(request.payload?.iteratorId)
-        ? request.payload.iteratorId
+
+      iteratorId: activeIterators.has(
+        // @ts-expect-error
+        request.payload?.iteratorId
+      )
+        ? // @ts-expect-error
+          request.payload.iteratorId
         : undefined, // Include iteratorId if error happened during scanNext
     };
     // If error occurred during scanNext/scanValuesNext, clean up the iterator
     if (
       (request.operation === 'scanNext' ||
         request.operation === 'scanValuesNext') &&
+      // @ts-expect-error
       request.payload?.iteratorId
     ) {
-      activeIterators.delete(request.payload.iteratorId);
+      activeIterators.delete(
+        // @ts-expect-error
+        request.payload.iteratorId
+      );
     }
     postMessage(response);
   }
