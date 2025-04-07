@@ -123,10 +123,7 @@ export function FiltersPopover(props: FiltersPopoverProps) {
         </Button>
       </PopoverTrigger>
 
-      <PopoverContent
-        align="start"
-        className="flex flex-col gap-3 w-full max-w-2xl"
-      >
+      <PopoverContent align="start" className="flex flex-col gap-3 w-auto">
         {draftFilters.length > 0 ? (
           <div
             className={`grid ${
@@ -158,7 +155,7 @@ export function FiltersPopover(props: FiltersPopoverProps) {
             ))}
           </div>
         ) : (
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm text-muted-foreground truncate">
             No filters applied to <Code>{collection}</Code>
           </p>
         )}
