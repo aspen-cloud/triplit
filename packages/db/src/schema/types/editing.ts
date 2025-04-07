@@ -1,14 +1,13 @@
 import { DBSchema } from '../../db.js';
-import { DataType } from './index.js';
+import { DataType, TypeConfig } from './index.js';
 
 export type ChangeToAttribute =
   | {
       type: 'update';
       changes: {
+        config?: TypeConfig;
         items?: { type: string };
         type?: string;
-        options?: any;
-        optional?: boolean;
       };
     }
   | {

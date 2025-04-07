@@ -312,7 +312,7 @@ const DANGEROUS_EDITS = [
       'added an enum to an attribute or removed an option from an existing enum',
     matchesDiff: (diff: CollectionAttributeDiff) => {
       if (diff.type === 'update') {
-        return diff.changes.config.enum !== undefined;
+        return diff.changes.config?.enum !== undefined;
       }
       return false;
     },
@@ -347,7 +347,7 @@ async function isEditSafeWithExistingData(
     attributeDiff.collection,
     attributeDiff.attribute,
     attributeDiff?.type === 'update'
-      ? attributeDiff.changes.config.enum
+      ? attributeDiff.changes.config?.enum
       : undefined
   );
 }
