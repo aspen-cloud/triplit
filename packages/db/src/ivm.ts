@@ -1,21 +1,19 @@
 import { CollectionNameFromModels, Models } from './schema/index.js';
-import { CollectionQuery, QueryOrder, WhereFilter } from './query.js';
 import {
   Change,
   DBChanges,
   DBEntity,
   Insert,
+  PreparedQuery,
+  PreparedWhere,
   QueryWhere,
-  RelationSubquery,
 } from './types.js';
 import {
-  filterStatementIterator,
+  filterStatementIteratorFlat,
   isBooleanFilter,
   isFilterGroup,
-  isRelationshipExistsFilter,
   isSubQueryFilter,
   satisfiesNonRelationalFilter,
-  someFilterStatements,
 } from './filters.js';
 import { DB, DBSchema } from './db.js';
 import { deepObjectAssign } from './utils/deep-merge.js';
@@ -42,13 +40,13 @@ import {
 interface QueryNode {
   // TODO support multiple root queries (essentially subqueries could be shared between root queries)
   rootQuery: string;
-  query: CollectionQuery;
+  query: PreparedQuery;
   queryType: 'root' | 'exists' | 'include' | 'order';
 }
 
 interface SubscribedQueryInfo {
-  ogQuery: CollectionQuery; // Original query
-  query: CollectionQuery; // Modified query with exists added to includes
+  ogQuery: PreparedQuery; // Original query
+  query: PreparedQuery; // Modified query with exists added to includes
   listeners: Set<SubscriptionCallback>;
   errorCallbacks: Set<(error: Error) => void>;
   uninitializedListeners: WeakSet<SubscriptionCallback>;
@@ -87,7 +85,7 @@ export class IVM<M extends Models<M> = Models> {
   ) {}
 
   subscribe(
-    query: CollectionQuery,
+    query: PreparedQuery,
     callback: SubscriptionCallback,
     errorCallback?: (error: Error) => void
   ) {
@@ -270,7 +268,7 @@ export class IVM<M extends Models<M> = Models> {
   private async updateQueryResultsInPlace(
     results: ViewEntity[] | undefined,
     changes: DBChanges,
-    query: CollectionQuery,
+    query: PreparedQuery,
     entityStack: DBEntity[] = []
   ): Promise<{ updatedResults: ViewEntity[]; hasChanged: boolean }> {
     const { collectionName, order, after, limit, where, include } = query;
@@ -442,9 +440,7 @@ export class IVM<M extends Models<M> = Models> {
           //    OR the changes are just inserts that fail on simple filters)
           // 2. if the inclusion is not a leaf but there are no remaining collection changes
           //    for any subquery
-          const { subquery, cardinality } = include[
-            inclusion
-          ] as RelationSubquery;
+          const { subquery, cardinality } = include[inclusion];
           const updatedEntityStack = entityStack.concat(entity.data);
           const existingInclusion = entity.subqueries[inclusion];
           const { hasChanged, updatedResults } =
@@ -476,7 +472,7 @@ export class IVM<M extends Models<M> = Models> {
       }
       // instead of fetching here we could first check for memoized subqueries
       if (entitiesToRefetchInclusions.size > 0) {
-        const idFilter: QueryWhere = [
+        const idFilter: PreparedWhere = [
           ['id', 'in', Array.from(entitiesToRefetchInclusions)],
         ];
         const resultsToMerge = await this.db.rawFetch({
@@ -538,7 +534,7 @@ export class IVM<M extends Models<M> = Models> {
 
 export function queryResultsToChanges<C extends string>(
   results: ViewEntity[],
-  query: CollectionQuery,
+  query: PreparedQuery,
   changes: DBChanges = {}
 ) {
   const collection = query.collectionName as C;
@@ -564,12 +560,12 @@ export function queryResultsToChanges<C extends string>(
 }
 
 export function createQueryWithExistsAddedToIncludes(
-  query: CollectionQuery
-): CollectionQuery {
+  query: PreparedQuery
+): PreparedQuery {
   const newQuery = structuredClone(query);
   let i = 0;
   if (newQuery.where) {
-    for (const filter of filterStatementIterator(newQuery.where)) {
+    for (const filter of filterStatementIteratorFlat(newQuery.where)) {
       if (isSubQueryFilter(filter)) {
         if (!newQuery.include) {
           newQuery.include = {};
@@ -586,7 +582,7 @@ export function createQueryWithExistsAddedToIncludes(
 }
 
 export function createQueryWithRelationalOrderAddedToIncludes(
-  query: CollectionQuery
+  query: PreparedQuery
 ) {
   if (!query.order) return query;
   const newQuery = structuredClone(query);
@@ -604,7 +600,7 @@ export function createQueryWithRelationalOrderAddedToIncludes(
 function doesEntityMatchBasicWhere(
   collectionName: string,
   entity: DBEntity,
-  filters: QueryWhere,
+  filters: PreparedWhere,
   schema?: DBSchema
 ) {
   return filters.every((filter) =>
@@ -614,7 +610,7 @@ function doesEntityMatchBasicWhere(
 
 function doesUpdateImpactSimpleFilters(
   entity: Change,
-  filters: QueryWhere
+  filters: PreparedWhere
 ): boolean {
   return filters.some((filter) => {
     if (isBooleanFilter(filter)) {
@@ -625,9 +621,6 @@ function doesUpdateImpactSimpleFilters(
     }
     if (isSubQueryFilter(filter)) {
       throw new Error('Subquery filters are not supported in this context');
-    }
-    if (isRelationshipExistsFilter(filter)) {
-      throw new Error('Untranslated exists filter');
     }
     const attributePath = filter[0].split('.');
     // TODO handle nested attributes

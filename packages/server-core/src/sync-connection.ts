@@ -4,6 +4,7 @@ import {
   DB,
   DBChanges,
   HybridLogicalClock,
+  PreparedQuery,
   TriplitError,
   diffSchemas,
   getBackwardsIncompatibleEdits,
@@ -59,7 +60,8 @@ export class SyncConnection {
       unsubscribe: () => void;
       serverHasRespondedOnce: boolean;
       externalQueryId: string;
-      externalQuery: CollectionQuery;
+      // TODO: This works with existing types, but evaluate if this is accurate
+      externalQuery: PreparedQuery;
       checkpoint?: QueryState;
     }
   >;
@@ -311,7 +313,9 @@ export class SyncConnection {
               {},
               undefined,
               {
-                applyPermission: undefined,
+                applyPermission: hasAdminAccess(this.token)
+                  ? undefined
+                  : 'read',
               }
             )
           )
@@ -324,7 +328,6 @@ export class SyncConnection {
         },
         {
           queryState: state,
-          skipRules: hasAdminAccess(this.token),
           queryKey,
         }
       );

@@ -10,6 +10,7 @@ import {
   KVStoreOrTransaction,
   Change,
   Timestamp,
+  PreparedQuery,
 } from './types.js';
 import { HybridLogicalClock } from './hybrid-clock.js';
 import { EntityStoreQueryEngine, ViewEntity } from './query-engine.js';
@@ -180,12 +181,11 @@ export class DB<
     return this.ivm.subscribe(preparedQuery, callback, onError);
   }
 
-  subscribeRaw<Q extends SchemaQuery<M>>(
-    query: Q,
-    onResults: SubscriptionResultsCallback<M, Q>,
+  subscribeRaw(
+    query: PreparedQuery,
+    onResults: SubscriptionResultsCallback,
     onError?: (error: Error) => void,
-    // TODO: will we need this?
-    options: FetchOptions & {
+    options: {
       queryState?: {
         timestamp: Timestamp;
         entityIds: Record<string, string[]>;
@@ -193,19 +193,10 @@ export class DB<
       queryKey?: string;
     } = {}
   ): () => void {
-    const preparedQuery = prepareQuery(
-      query,
-      this.schema?.collections,
-      this.systemVars,
-      this.session,
-      {
-        applyPermission: options.skipRules ? undefined : 'read',
-      }
-    );
     const callback = ({ results }: any) => {
       onResults(results, options.queryKey);
     };
-    return this.ivm.subscribe(preparedQuery, callback, onError);
+    return this.ivm.subscribe(query, callback, onError);
   }
 
   /**
@@ -368,7 +359,12 @@ export class DB<
       onResults(relevantChanges, options.queryKey);
       isInitialResponse = false;
     };
-    return this.ivm.subscribe(preparedQuery, callback, options.errorCallback);
+    return this.ivm.subscribe(
+      preparedQuery,
+      // @ts-expect-error - Ignoring because method is deprecated
+      callback,
+      options.errorCallback
+    );
   }
 
   async fetch<Q extends SchemaQuery<M>>(
@@ -392,68 +388,21 @@ export class DB<
     );
     let results = await queryEngine.fetch(preparedQuery);
 
-    results = applyProjectionsAndConversions(
+    return applyProjectionsAndConversions(
       results,
       preparedQuery,
       'many',
       this.typeConverters
     );
-    return results;
   }
 
-  async rawFetch(query: CollectionQuery): Promise<ViewEntity[]> {
+  async rawFetch(query: PreparedQuery): Promise<ViewEntity[]> {
     const queryEngine = new EntityStoreQueryEngine(
       this.kv,
       this.entityStore,
       this.schema as DBSchema | undefined
     );
     return queryEngine.fetch(query);
-  }
-
-  applyProjectionsAndConversions(
-    results: ViewEntity[] | ViewEntity,
-    query: CollectionQuery,
-    cardinality: QueryResultCardinality
-  ): any[] | any {
-    const dataConverter = this.typeConverters?.get(query.collectionName);
-
-    const convertEntity = (entityData: ViewEntity['data']) => {
-      return dataConverter?.fromDB(entityData) ?? entityData;
-    };
-
-    const projectEntity = (entity: ViewEntity['data']) => {
-      if (!query.select) return entity;
-      const projectedEntity: any = {};
-      for (const key of query.select) {
-        const path = key.split('.');
-        ValuePointer.Set(projectedEntity, path, ValuePointer.Get(entity, path));
-      }
-      return projectedEntity;
-    };
-
-    const projectAndConvertEntity = (entity) => {
-      const convertedData = convertEntity(projectEntity(entity.data));
-      const convertedInclusions =
-        query.include &&
-        Object.entries(query.include).reduce((acc, [key, { subquery }]) => {
-          if (entity.subqueries[key]) {
-            acc[key] = this.applyProjectionsAndConversions(
-              entity.subqueries[key],
-              subquery,
-              subquery.cardinality
-            );
-          }
-          return acc;
-        }, {});
-      return {
-        ...convertedData,
-        ...convertedInclusions,
-      };
-    };
-
-    return cardinality === 'one'
-      ? [projectAndConvertEntity(results)]
-      : (results as ViewEntity[]).map(projectAndConvertEntity);
   }
 
   /**
@@ -1013,88 +962,12 @@ export async function createDB<M extends Models<M> = Models>(
     // override schema implicitly handles persisting
     // but if we don't have a new schema, we need to
     // persist the old one
-    await db.updateSchema(savedSchema);
+    await db
+      // @ts-expect-error - updateSchema is private
+      .updateSchema(savedSchema);
   }
 
   return db;
-}
-
-function applySelect<M>(
-  rawEntities: ViewEntity[],
-  select?: string[],
-  include?: any
-) {
-  if (!include && !select) return rawEntities;
-  if (rawEntities.length === 0) return rawEntities;
-  return rawEntities.map((rawEnt) => {
-    let entity = rawEnt;
-    if (include) {
-      for (const inclusion in include) {
-        const { subquery, cardinality } = include[inclusion] as any;
-        if (cardinality === 'one' && entity[inclusion] === null) {
-          entity[inclusion] = null;
-          continue;
-        }
-        const selection = applySelect(
-          cardinality === 'one' ? [entity[inclusion]] : entity[inclusion],
-          subquery.select,
-          subquery.include
-        );
-        entity[inclusion] =
-          cardinality === 'one' ? (selection[0] ?? null) : selection;
-      }
-    }
-    if (select) {
-      const selectPaths = select.map((attribute) => attribute.split('.'));
-      const entityCopy = {} as any;
-      for (const path of selectPaths) {
-        ValuePointer.Set(entityCopy, path, ValuePointer.Get(entity, path));
-      }
-      if (include) {
-        for (const inclusion in include) {
-          entityCopy[inclusion] = entity[inclusion];
-        }
-      }
-      entity = entityCopy;
-    }
-    return entity;
-  });
-}
-
-function filterChangesByTimestamp(
-  changes: DBChanges,
-  timestamps: Record<string, Map<string, Timestamp>>,
-  afterTimestamp: Timestamp
-): DBChanges {
-  const filteredChanges: DBChanges = {};
-
-  for (const [collectionName, collectionChanges] of Object.entries(changes)) {
-    const filteredSets = new Map<string, any>();
-    const filteredDeletes = new Set<string>();
-
-    for (const [entityId, change] of collectionChanges.sets) {
-      const entityTimestamp = timestamps[collectionName]?.get(entityId);
-      if (entityTimestamp && entityTimestamp > afterTimestamp) {
-        filteredSets.set(entityId, change);
-      }
-    }
-
-    for (const entityId of collectionChanges.deletes) {
-      const entityTimestamp = timestamps[collectionName]?.get(entityId);
-      if (entityTimestamp && entityTimestamp > afterTimestamp) {
-        filteredDeletes.add(entityId);
-      }
-    }
-
-    if (filteredSets.size > 0 || filteredDeletes.size > 0) {
-      filteredChanges[collectionName] = {
-        sets: filteredSets,
-        deletes: filteredDeletes,
-      };
-    }
-  }
-
-  return filteredChanges;
 }
 
 function entityIsInChangeset(
@@ -1110,8 +983,8 @@ function entityIsInChangeset(
 }
 
 export function applyProjectionsAndConversions(
-  results: ViewEntity[] | ViewEntity,
-  query: CollectionQuery,
+  results: ViewEntity[] | ViewEntity | null,
+  query: PreparedQuery,
   cardinality: QueryResultCardinality,
   typeConverters?: TypeConverters
 ): any[] | any {
@@ -1130,11 +1003,11 @@ export function applyProjectionsAndConversions(
     return projectedEntity;
   };
 
-  const projectAndConvertEntity = (entity) => {
+  const projectAndConvertEntity = (entity: ViewEntity) => {
     const convertedData = convertEntity(projectEntity(entity.data));
     const convertedInclusions =
       query.include &&
-      Object.entries(query.include).reduce((acc, [key, inclusion]) => {
+      Object.entries(query.include).reduce<any>((acc, [key, inclusion]) => {
         if (entity.subqueries[key] !== undefined) {
           acc[key] = applyProjectionsAndConversions(
             entity.subqueries[key],
@@ -1151,123 +1024,6 @@ export function applyProjectionsAndConversions(
     };
   };
   return cardinality === 'one'
-    ? projectAndConvertEntity(results)
+    ? projectAndConvertEntity(results as ViewEntity)
     : (results as ViewEntity[]).map(projectAndConvertEntity);
-}
-
-/**
- * This takes a ViewEntity, query, typeConverters and creates getters for the inclusions
- * and select doing conversions lazily as necessary
- * NOTE: this is not used and still TBD if it's worth the complexity
- **/
-export function createLazyEntity(
-  entity: ViewEntity,
-  query: CollectionQuery,
-  typeConverters?: TypeConverters
-) {
-  // Single cache Map, no pre-computation
-  const cache = new Map<string, any>();
-
-  const handler: ProxyHandler<object> = {
-    get(target, prop, receiver) {
-      const propStr = String(prop);
-
-      // Handle special methods
-      if (
-        prop === 'toJSON' ||
-        prop === 'toString' ||
-        prop === 'valueOf' ||
-        prop === Symbol.toPrimitive
-      ) {
-        return () => {
-          if (!cache.has('data')) {
-            const dataConverter = typeConverters?.get(query.collectionName);
-            cache.set(
-              'data',
-              dataConverter?.fromDB(entity.data) ?? entity.data
-            );
-          }
-          const data = cache.get('data');
-          return prop === 'toString' ? JSON.stringify(data) : data;
-        };
-      }
-
-      // Return cached value if exists
-      if (cache.has(propStr)) {
-        return cache.get(propStr);
-      }
-
-      // Lazy computation only when accessed
-      let value;
-      if (propStr === 'data') {
-        const dataConverter = typeConverters?.get(query.collectionName);
-        value = dataConverter?.fromDB(entity.data) ?? entity.data;
-      } else {
-        const inclusion = query.include?.[propStr];
-        if (inclusion) {
-          const subquery = inclusion.subquery;
-          const cardinality = inclusion.cardinality;
-          const subEntities = entity.subqueries[propStr];
-          if (cardinality === 'one') {
-            value = subEntities?.[0]
-              ? createLazyEntity(subEntities[0], subquery, typeConverters)
-              : null;
-          } else {
-            value = (subEntities || []).map((v) =>
-              createLazyEntity(v, subquery, typeConverters)
-            );
-          }
-        } else {
-          // Lazy compute dataKeys only when needed
-          const dataKeys = query.select ?? Object.keys(entity.data);
-          value = dataKeys.includes(propStr) ? entity.data[propStr] : undefined;
-        }
-      }
-
-      cache.set(propStr, value);
-      return value;
-    },
-
-    has(target, prop) {
-      const propStr = String(prop);
-      if (propStr === 'data') return true;
-      if (cache.has(propStr)) return true;
-
-      // Lazy check inclusion and data keys
-      if (query.include?.[propStr]) return true;
-      const dataKeys = query.select ?? Object.keys(entity.data);
-      return dataKeys.includes(propStr);
-    },
-
-    ownKeys(target) {
-      // Extremely lazy - only returns what's been accessed plus 'data'
-      const cachedKeys = Array.from(cache.keys());
-      return [
-        'data',
-        ...(query.include ? Object.keys(query.include) : []),
-        ...cachedKeys,
-      ].filter((key, idx, arr) => arr.indexOf(key) === idx);
-    },
-
-    getOwnPropertyDescriptor(target, prop) {
-      const propStr = String(prop);
-      // Lazy check if property exists
-      const hasProp =
-        propStr === 'data' ||
-        query.include?.[propStr] !== undefined ||
-        (query.select ?? Object.keys(entity.data)).includes(propStr) ||
-        cache.has(propStr);
-
-      if (hasProp) {
-        return {
-          enumerable: true,
-          configurable: true,
-          get: () => Reflect.get(target, prop, receiver),
-        };
-      }
-      return undefined;
-    },
-  };
-
-  return new Proxy({}, handler);
 }

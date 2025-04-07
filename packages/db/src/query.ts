@@ -49,6 +49,55 @@ export type SchemaQuery<
   CN extends CollectionNameFromModels<M> = CollectionNameFromModels<M>,
 > = SchemaQueries<M>[CN];
 
+export interface PreparedQuery {
+  collectionName: string;
+  select?: string[];
+  where?: PreparedWhere;
+  order?: PreparedOrder;
+  limit?: number;
+  after?: QueryAfter;
+  include?: PreparedInclusions;
+}
+
+export type PreparedInclusions = {
+  [K in string]: PreparedInclusion;
+};
+export type PreparedInclusion = PreparedRelationSubquery;
+type PreparedRelationSubquery<
+  Cardinaltiy extends QueryResultCardinality = QueryResultCardinality,
+> = {
+  subquery: PreparedQuery;
+  cardinality: Cardinaltiy;
+};
+
+export type PreparedOrder = (OrderStatement | RelationalOrderStatement)[];
+
+export type PreparedWhere = PreparedWhereFilter[];
+
+export type PreparedWhereFilter =
+  | FilterStatement
+  | PreparedFilterGroup
+  | PreparedSubQueryFilter
+  | boolean;
+
+export type PreparedFilterGroup = FilterGroup<
+  Models,
+  CollectionNameFromModels<Models>,
+  PreparedWhere
+>;
+type PreparedAndFilterGroup = {
+  mod: 'and';
+  filters: PreparedWhere;
+};
+type PreparedOrFilterGroup = {
+  mod: 'or';
+  filters: PreparedWhere;
+};
+
+export type PreparedSubQueryFilter = {
+  exists: PreparedQuery;
+};
+
 export interface CollectionQuery<
   M extends Models<M> = Models,
   CN extends CollectionNameFromModels<M> = CollectionNameFromModels<M>,
@@ -140,7 +189,15 @@ export type FilterStatement<
 export type FilterGroup<
   M extends Models<M> = Models,
   CN extends CollectionNameFromModels<M> = CollectionNameFromModels<M>,
-> = AndFilterGroup<M, CN> | OrFilterGroup<M, CN>;
+  W extends QueryWhere<M, CN> | PreparedWhere =
+    | QueryWhere<M, CN>
+    | PreparedWhere,
+> = AndFilterGroup<M, CN, W> | OrFilterGroup<M, CN, W>;
+
+export type QueryFilterGroup<
+  M extends Models<M> = Models,
+  CN extends CollectionNameFromModels<M> = CollectionNameFromModels<M>,
+> = FilterGroup<M, CN, QueryWhere<M, CN>>;
 
 /**
  * A group of filters combined with AND.
@@ -148,9 +205,12 @@ export type FilterGroup<
 export type AndFilterGroup<
   M extends Models<M> = Models,
   CN extends CollectionNameFromModels<M> = CollectionNameFromModels<M>,
+  W extends QueryWhere<M, CN> | PreparedWhere =
+    | QueryWhere<M, CN>
+    | PreparedWhere,
 > = {
   mod: 'and';
-  filters: QueryWhere<M, CN>;
+  filters: W;
 };
 
 /**
@@ -159,9 +219,12 @@ export type AndFilterGroup<
 export type OrFilterGroup<
   M extends Models<M> = Models,
   CN extends CollectionNameFromModels<M> = CollectionNameFromModels<M>,
+  W extends QueryWhere<M, CN> | PreparedWhere =
+    | QueryWhere<M, CN>
+    | PreparedWhere,
 > = {
   mod: 'or';
-  filters: QueryWhere<M, CN>;
+  filters: W;
 };
 
 /**
@@ -230,9 +293,19 @@ export type QueryOrder<
  * A single order statement of the shape [path, direction].
  */
 export type OrderStatement<
-  M extends Models<M>,
-  CN extends CollectionNameFromModels<M>,
+  M extends Models<M> = Models,
+  CN extends CollectionNameFromModels<M> = CollectionNameFromModels<M>,
 > = [property: ModelPaths<M, CN>, direction: 'ASC' | 'DESC'];
+
+// TODO: break this out into unprepared and prepared types
+export type RelationalOrderStatement<
+  M extends Models<M> = Models,
+  CN extends CollectionNameFromModels<M> = CollectionNameFromModels<M>,
+> = [
+  property: ModelPaths<M, CN>,
+  direction: 'ASC' | 'DESC',
+  subquery: PreparedRelationSubquery<'one'>,
+];
 
 // ====== Pagination Types ======
 export type QueryAfter = [ValueCursor, boolean];

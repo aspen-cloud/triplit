@@ -424,9 +424,12 @@ export class SyncEngine {
           )
         );
       const entityIds = changesToEntityIds(
-        await this.client.db.fetchChanges(queryWithRelationalInclusions, {
-          skipRules: true,
-        })
+        await this.client.db.fetchChanges(
+          queryWithRelationalInclusions as CollectionQuery,
+          {
+            skipRules: true,
+          }
+        )
       );
       queryState = {
         timestamp: latestServerTimestamp,

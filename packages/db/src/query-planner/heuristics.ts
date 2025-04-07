@@ -1,4 +1,4 @@
-import { CollectionQuery, FilterStatement } from '../types.js';
+import { CollectionQuery, FilterStatement, PreparedQuery } from '../types.js';
 import {
   isFilterStatement,
   isIdFilterEqualityStatement,
@@ -15,7 +15,7 @@ export function hasIdFilter(query: CollectionQuery) {
 }
 
 export function getIdFilter(
-  query: CollectionQuery
+  query: CollectionQuery | PreparedQuery
 ): [FilterStatement | null, number] {
   if (!query.where) return [null, -1];
   // TODO support searching in nested filter groups like AND and OR

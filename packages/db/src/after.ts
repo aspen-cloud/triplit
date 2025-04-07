@@ -1,4 +1,4 @@
-import type { QueryAfter, QueryOrder } from './query.js';
+import type { PreparedOrder, QueryAfter, QueryOrder } from './query.js';
 import { QueryNotPreparedError } from './errors.js';
 import { ValuePointer } from './utils/value-pointer.js';
 import { compareValue, MIN } from './codec.js';
@@ -6,7 +6,7 @@ import { compareValue, MIN } from './codec.js';
 export function satisfiesAfter(
   entity: any,
   after: QueryAfter,
-  order?: QueryOrder
+  order?: PreparedOrder
 ): boolean {
   const [cursor, inclusive] = after;
   if (!order || order.length !== cursor.length) {

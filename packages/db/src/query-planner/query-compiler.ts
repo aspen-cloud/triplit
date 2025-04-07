@@ -1,27 +1,41 @@
 import {
-  CollectionQuery,
   FilterGroup,
   FilterStatement,
+  OrderStatement,
+  PreparedOrder,
+  PreparedQuery,
+  PreparedSubQueryFilter,
+  PreparedWhere,
   QueryAfter,
   QueryOrder,
   QueryWhere,
+  RelationalOrderStatement,
   SubQueryFilter,
 } from '../types.js';
 import {
-  filterStatementIterator,
+  filterStatementIteratorFlat,
   isFilterGroup,
   isFilterStatement,
+  isStaticFilter,
   isSubQueryFilter,
+  StaticFilter,
 } from '../filters.js';
 import { getVariableComponents, isValueVariable } from '../variables.js';
 import { getIdFilter, hasIdFilter } from './heuristics.js';
 import { VariableAwareCache as VAC } from '../variable-aware-cache.js';
 import { Models } from '../schema/index.js';
+import { TriplitError } from '../errors.js';
+import { all } from '../utils/guards.js';
 
 export interface RelationalPlan {
-  views: Record<string, CollectionQuery>;
-  rootQuery: CollectionQuery;
+  views: Record<string, PreparedQuery>;
+  rootQuery: PreparedQuery;
 }
+
+export type AfterFilter = {
+  after: QueryAfter;
+  order: PreparedOrder;
+};
 
 export type Step =
   | {
@@ -31,7 +45,7 @@ export type Step =
   | {
       type: 'ID_LOOK_UP';
       collectionName: string;
-      ids: string[]; // e.g. "$view_1.id" or ["id1", "id2"]
+      ids: string | string[]; // e.g. "$view_1.id" or ["id1", "id2"]
     }
   | {
       type: 'RESOLVE_FROM_VIEW';
@@ -43,7 +57,8 @@ export type Step =
     }
   | {
       type: 'ITERATOR_FILTER';
-      filter: (FilterStatement | FilterGroup | { after: QueryAfter })[];
+      filter: StaticFilter[];
+      after?: AfterFilter;
     }
   | {
       type: 'ITERATOR_LIMIT';
@@ -57,11 +72,12 @@ export type Step =
   // NOTE this also includes `after` filters
   | {
       type: 'FILTER';
-      filter: (FilterStatement | FilterGroup | { after: QueryAfter })[];
+      filter: StaticFilter[];
+      after?: AfterFilter;
     }
   | {
       type: 'SORT';
-      fields: [string, 'ASC' | 'DESC'][];
+      fields: (OrderStatement | RelationalOrderStatement)[];
     }
   | {
       type: 'LIMIT';
@@ -94,7 +110,7 @@ export interface CompiledPlan {
 }
 
 export function extractViews(
-  query: CollectionQuery,
+  query: PreparedQuery,
   schema: Models | undefined,
   generateViewId: () => string
 ): RelationalPlan {
@@ -114,8 +130,6 @@ export function extractViews(
 
   if (query.include) {
     for (const [alias, inclusion] of Object.entries(query.include)) {
-      // TODO: cleanup inclusion typings here
-      if (inclusion === null || inclusion === true) continue;
       const { newViews, rewrittenQuery } = subqueryToView(
         inclusion.subquery,
         schema,
@@ -149,7 +163,7 @@ export function extractViews(
 }
 
 function subqueryToView(
-  subquery: CollectionQuery,
+  subquery: PreparedQuery,
   schema: Models | undefined,
   generateViewId: () => string
 ) {
@@ -180,15 +194,15 @@ function subqueryToView(
 }
 
 function whereFiltersToViews(
-  where: QueryWhere,
+  where: PreparedWhere,
   schema: Models | undefined,
   generateViewId: () => string
 ): {
-  where: QueryWhere;
-  views: Record<string, CollectionQuery>;
+  where: PreparedWhere;
+  views: Record<string, PreparedQuery>;
 } {
-  const views: Record<string, CollectionQuery> = {};
-  const updatedWhere: QueryWhere = [];
+  const views: Record<string, PreparedQuery> = {};
+  const updatedWhere: PreparedWhere = [];
   for (const filter of where) {
     // if the filter is a subquery filter
     // we may be able to do "inversion"
@@ -196,13 +210,15 @@ function whereFiltersToViews(
       const subquery = filter.exists;
       const hasGrandparentReferences =
         subquery.where && hasHigherLevelReferences(subquery.where);
-      const subqueryVariableFilters = (subquery.where ?? []).filter((f) => {
-        return (
-          Array.isArray(f) &&
-          isValueVariable(f[2]) &&
-          getVariableComponents(f[2])[0] === 1
-        );
-      });
+      const subqueryVariableFilters = (subquery.where ?? []).filter(
+        (f): f is FilterStatement => {
+          return (
+            isFilterStatement(f) &&
+            isValueVariable(f[2]) &&
+            getVariableComponents(f[2])[0] === 1
+          );
+        }
+      );
       // inversion strategy
       if (!hasGrandparentReferences && subqueryVariableFilters.length < 2) {
         const viewId = generateViewId();
@@ -212,17 +228,19 @@ function whereFiltersToViews(
 
         // remove the variable filters from the view
         extractedView.rootQuery.where = subquery.where?.filter(
-          (f) => !subqueryVariableFilters.includes(f)
+          (f) => !subqueryVariableFilters.includes(f as FilterStatement)
         );
 
         // and in the main query, add the filter on the view
-        const viewFilters = subqueryVariableFilters.map((f) => {
-          return [
-            getVariableComponents(f[2])[1],
-            'in',
-            `$view_${viewId}.${f[0]}`,
-          ];
-        });
+        const viewFilters = subqueryVariableFilters.map<FilterStatement>(
+          (f) => {
+            return [
+              getVariableComponents(f[2])[1],
+              'in',
+              `$view_${viewId}.${f[0]}`,
+            ];
+          }
+        );
         updatedWhere.push(...viewFilters);
 
         // VAC strategy
@@ -268,8 +286,8 @@ function whereFiltersToViews(
   }
   return { where: updatedWhere, views };
 }
-function hasHigherLevelReferences(where: QueryWhere): boolean {
-  for (const filter of filterStatementIterator(where)) {
+function hasHigherLevelReferences(where: PreparedWhere): boolean {
+  for (const filter of filterStatementIteratorFlat(where)) {
     if (isFilterStatement(filter) && isValueVariable(filter[2])) {
       const [level] = getVariableComponents(filter[2]);
       if (typeof level === 'number' && level > 1) return true;
@@ -281,7 +299,7 @@ function hasHigherLevelReferences(where: QueryWhere): boolean {
 }
 
 export function compileQuery(
-  query: CollectionQuery,
+  query: PreparedQuery,
   schema: Models | undefined
 ): CompiledPlan {
   // console.dir({ query }, { depth: null });
@@ -314,10 +332,10 @@ export function compileRelationalPlan(relPlan: RelationalPlan): CompiledPlan {
 }
 
 function getViewsReferencedInFilters(
-  filters: FilterStatement[],
+  filters: StaticFilter[],
   viewNames: Set<string> = new Set()
 ): Set<string> {
-  for (const filter of filterStatementIterator(filters)) {
+  for (const filter of filterStatementIteratorFlat(filters)) {
     if (
       isFilterStatement(filter) &&
       isValueVariable(filter[2]) &&
@@ -330,43 +348,55 @@ function getViewsReferencedInFilters(
 }
 
 /**
- * Compiles a given `CollectionQuery` into a sequence of execution steps.
+ * Compiles a given `PreparedQuery` into a sequence of execution steps.
  *
- * @param {CollectionQuery} q - The query to compile that's already been processed by the view
+ * @param {PreparedQuery} q - The query to compile that's already been processed by the view
  * extractor / relational planner.
  * @returns {Step[]} An array of steps representing the compiled query that will be interpreted by
  * the query engine
  *
  */
-function compileQueryToSteps(q: CollectionQuery): Step[] {
+function compileQueryToSteps(q: PreparedQuery): Step[] {
   const steps: Step[] = [];
   let hasLimitBeenHandled = false;
   let hasBeenCollected = false;
   let hasFiltersBeenHandled = false;
   let hasOrderBeenHandled = false;
 
-  const subqueryFilters: SubQueryFilter[] = [];
-  const simpleFilters:
-    | FilterStatement[]
-    | { after: QueryAfter; order: QueryOrder } = [];
+  const subqueryFilters: PreparedSubQueryFilter[] = [];
+  const staticFilters: StaticFilter[] = [];
   if (q.where) {
     for (const filter of q.where) {
-      if (isSubQueryFilter(filter)) {
+      if (isStaticFilter(filter)) {
+        staticFilters.push(filter);
+      } else if (isSubQueryFilter(filter)) {
         subqueryFilters.push(filter);
       } else {
-        simpleFilters.push(filter);
+        throw new TriplitError(
+          `Could not compile query: Unsupported filter type in where clause: ${JSON.stringify(filter)}`
+        );
       }
     }
   }
 
-  if (q.after) {
-    simpleFilters.push({ after: q.after, order: q.order });
-  }
+  const afterFilter: AfterFilter | undefined = q.after
+    ? {
+        after: q.after,
+        // It isn't typed this way, but prepareQuery dictates that `after` must have an `order` property
+        order: q.order!,
+      }
+    : undefined;
 
   const [idFilter, idFilterIndex] = getIdFilter(q);
 
   if (q.collectionName.startsWith('$view_')) {
     const viewId = q.collectionName.slice(`$view_`.length);
+    // Resolving from a view MUST use filter statements that feed into the VAC
+    if (!all(staticFilters, isFilterStatement)) {
+      throw new TriplitError(
+        `Filters on view ${viewId} must be simple filter statements.`
+      );
+    }
     steps.push({
       type: 'PREPARE_VIEW',
       viewId,
@@ -374,7 +404,7 @@ function compileQueryToSteps(q: CollectionQuery): Step[] {
     steps.push({
       type: 'RESOLVE_FROM_VIEW',
       viewId,
-      filter: simpleFilters,
+      filter: staticFilters,
     });
     if (subqueryFilters.length > 0) {
       for (const subqueryFilter of subqueryFilters) {
@@ -401,7 +431,7 @@ function compileQueryToSteps(q: CollectionQuery): Step[] {
     // Candidate selection
     if (idFilter) {
       if (typeof idFilter[2] === 'string' && idFilter[2].startsWith('$view_')) {
-        const viewId = idFilter[2].split('.').at(0).slice(`$view_`.length);
+        const viewId = idFilter[2].split('.')[0].slice(`$view_`.length);
         steps.push({
           type: 'PREPARE_VIEW',
           viewId,
@@ -419,7 +449,7 @@ function compileQueryToSteps(q: CollectionQuery): Step[] {
       });
 
       // Also remove the ID filter from the filters
-      simpleFilters.splice(idFilterIndex, 1);
+      staticFilters.splice(idFilterIndex, 1);
     } else {
       steps.push({
         type: 'SCAN',
@@ -427,12 +457,12 @@ function compileQueryToSteps(q: CollectionQuery): Step[] {
       });
     }
   }
-  if (simpleFilters.length > 0) {
-    const viewsInFilters = getViewsReferencedInFilters(simpleFilters);
+  if (staticFilters.length > 0) {
+    const viewsInFilters = getViewsReferencedInFilters(staticFilters);
     if (viewsInFilters.size > 0) {
       // viewReference could be a variable reference like $view_1.name
       for (const viewReference of viewsInFilters) {
-        const viewId = viewReference.split('.').at(0).slice(`$view_`.length);
+        const viewId = viewReference.split('.')[0].slice(`$view_`.length);
         steps.push({
           type: 'PREPARE_VIEW',
           viewId,
@@ -441,10 +471,11 @@ function compileQueryToSteps(q: CollectionQuery): Step[] {
     }
   }
   if (!hasBeenCollected) {
-    if (simpleFilters.length > 0) {
+    if (staticFilters.length > 0 || afterFilter) {
       steps.push({
         type: 'ITERATOR_FILTER',
-        filter: simpleFilters,
+        filter: staticFilters,
+        after: afterFilter,
       });
       hasFiltersBeenHandled = true;
     }
@@ -470,16 +501,17 @@ function compileQueryToSteps(q: CollectionQuery): Step[] {
     });
   }
 
-  if (simpleFilters.length > 0 && !hasFiltersBeenHandled) {
+  if ((staticFilters.length > 0 || afterFilter) && !hasFiltersBeenHandled) {
     steps.push({
       type: 'FILTER',
-      filter: simpleFilters,
+      filter: staticFilters,
+      after: afterFilter,
     });
     hasFiltersBeenHandled = true;
   }
 
   if (q.order && q.order.length > 0 && !hasOrderBeenHandled) {
-    const orderStatements = [];
+    const orderStatements: (OrderStatement | RelationalOrderStatement)[] = [];
     // if order is based on a relation, make sure to include it first
     for (let i = 0; i < q.order.length; i++) {
       const [attr, direction, maybeSubquery] = q.order[i];

@@ -1,5 +1,6 @@
 import { ITriplitError } from '@triplit/types/errors';
 import { ALL_TYPES, SessionRole } from './schema/index.js';
+import { QueryResultCardinality } from './types.js';
 
 export const STATUS_CODES = {
   Success: 200,
@@ -359,5 +360,18 @@ export class AfterClauseWithNoOrderError extends TriplitError {
     this.name = 'AfterClauseWithNoOrderError';
     this.baseMessage = `The 'after' clause must be used after an 'order' clause.`;
     this.status = STATUS_CODES['Bad Request'];
+  }
+}
+
+export class InvalidResultCardinalityError extends TriplitError {
+  constructor(
+    expected: QueryResultCardinality,
+    actual: QueryResultCardinality,
+    ...args: any[]
+  ) {
+    super(...args);
+    this.name = 'InvalidResultCardinalityError';
+    this.baseMessage = `Expected cardinality ${expected} but got ${actual}. This indicates an issue with the query engine. Please report this issue to the Triplit team.`;
+    this.status = STATUS_CODES['Internal Server Error'];
   }
 }

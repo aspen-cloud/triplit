@@ -1,6 +1,14 @@
 import { InvalidFilterError, TriplitError } from './errors.js';
 import { isValueVariable } from './variables.js';
-import { DBEntity, Insert } from './types.js';
+import {
+  DBEntity,
+  Insert,
+  PreparedFilterGroup,
+  PreparedSubQueryFilter,
+  PreparedWhere,
+  PreparedWhereFilter,
+  QueryFilterGroup,
+} from './types.js';
 import { ValuePointer } from './utils/value-pointer.js';
 import { EntityStoreQueryEngine } from './query-engine.js';
 import { asyncIterEvery, asyncIterSome } from './utils/iterators.js';
@@ -31,22 +39,22 @@ import {
 
 export async function satisfiesFilters(
   entity: { collectionName: string } & Insert,
-  filters: QueryWhere,
+  filters: PreparedWhere,
   queryEngine: EntityStoreQueryEngine
 ): Promise<boolean> {
   let isSatisfied = true;
-  for (const filter of filters) {
+  const priorityOrder = getFilterPriorityOrder(filters);
+  for (const idx of priorityOrder) {
+    const filter = filters[idx];
     isSatisfied = await satisfiesFilter(entity, filter, queryEngine);
-    if (!isSatisfied) {
-      break;
-    }
+    if (!isSatisfied) break; // Short-circuit if any filter fails
   }
   return isSatisfied;
 }
 
 export async function satisfiesFilter(
   entity: { collectionName: string } & Insert,
-  filter: WhereFilter,
+  filter: PreparedWhereFilter,
   queryEngine: EntityStoreQueryEngine
 ): Promise<boolean> {
   if (isFilterGroup(filter)) {
@@ -79,7 +87,7 @@ export async function satisfiesFilter(
 export function satisfiesNonRelationalFilter(
   collectionName: string,
   entity: DBEntity,
-  filter: WhereFilter,
+  filter: PreparedWhereFilter,
   schema?: DBSchema,
   ignoreSubQueries = false
 ): boolean {
@@ -118,10 +126,6 @@ export function satisfiesNonRelationalFilter(
     throw new Error(
       `Subquery filters should be filtered out before this point, found ${filter}`
     );
-  }
-
-  if (isRelationshipExistsFilter(filter)) {
-    throw new Error('Untranslated exists filter');
   }
   return satisfiesFilterStatement(
     { collectionName, data: entity },
@@ -298,7 +302,7 @@ function ilike(text: string, pattern: string): boolean {
 }
 
 export function isFilterStatement(
-  filter: WhereFilter
+  filter: WhereFilter | PreparedWhereFilter
 ): filter is FilterStatement {
   return (
     filter instanceof Array &&
@@ -318,13 +322,19 @@ export function isIdFilterEqualityStatement(
   return isIdFilter(filter) && (filter[1] === '=' || filter[1] === 'in');
 }
 
-export function isFilterGroup(filter: WhereFilter): filter is FilterGroup {
+export function isFilterGroup(
+  filter: PreparedWhereFilter
+): filter is PreparedFilterGroup;
+export function isFilterGroup(filter: WhereFilter): filter is QueryFilterGroup;
+export function isFilterGroup(filter: any) {
   return filter instanceof Object && 'mod' in filter;
 }
 
 export function isSubQueryFilter(
-  filter: WhereFilter
-): filter is SubQueryFilter {
+  filter: PreparedWhereFilter
+): filter is PreparedSubQueryFilter;
+export function isSubQueryFilter(filter: WhereFilter): filter is SubQueryFilter;
+export function isSubQueryFilter(filter: any) {
   return (
     filter instanceof Object &&
     'exists' in filter &&
@@ -342,7 +352,9 @@ export function isRelationshipExistsFilter(
   );
 }
 
-export function isBooleanFilter(filter: WhereFilter): filter is boolean {
+export function isBooleanFilter(
+  filter: WhereFilter | PreparedWhereFilter
+): filter is boolean {
   return typeof filter === 'boolean';
 }
 
@@ -357,7 +369,7 @@ export function isWhereFilter(filter: any): filter is WhereFilter {
 }
 
 function determineFilterType(
-  filter: WhereFilter
+  filter: PreparedWhereFilter
 ): 'boolean' | 'basic' | 'group' | 'relational' {
   if (isFilterStatement(filter)) return 'basic';
   if (isSubQueryFilter(filter)) return 'relational';
@@ -376,7 +388,7 @@ function determineFilterType(
  * 4. Relational filters (subqueries, will take the longest to execute)
  */
 export function getFilterPriorityOrder(
-  where: CollectionQuery['where']
+  where: PreparedWhere | undefined
 ): number[] {
   if (!where) return [];
   const basicFilters = [];
@@ -414,19 +426,28 @@ export function getFilterPriorityOrder(
 export function or<
   M extends Models<M> = Models,
   CN extends CollectionNameFromModels<M> = CollectionNameFromModels<M>,
-  W extends QueryWhere<M, CN> = QueryWhere<M, CN>,
+  W extends QueryWhere<M, CN> | PreparedWhere =
+    | QueryWhere<M, CN>
+    | PreparedWhere,
 >(where: W) {
-  return { mod: 'or' as const, filters: where } satisfies OrFilterGroup<M, CN>;
+  return { mod: 'or' as const, filters: where } satisfies OrFilterGroup<
+    M,
+    CN,
+    W
+  >;
 }
 
 export function and<
   M extends Models<M> = Models,
   CN extends CollectionNameFromModels<M> = CollectionNameFromModels<M>,
-  W extends QueryWhere<M, CN> = QueryWhere<M, CN>,
+  W extends QueryWhere<M, CN> | PreparedWhere =
+    | QueryWhere<M, CN>
+    | PreparedWhere,
 >(where: W) {
   return { mod: 'and' as const, filters: where } satisfies AndFilterGroup<
     M,
-    CN
+    CN,
+    W
   >;
 }
 
@@ -461,11 +482,21 @@ export function exists(relationship: any, ext: any = {}) {
  * @param someFunction
  * @returns
  */
-export function someFilterStatements(
+export function someFilterStatementsFlat(
+  statements: PreparedWhere,
+  someFunction: (
+    statement: Exclude<PreparedWhereFilter, PreparedFilterGroup>
+  ) => boolean
+): boolean;
+export function someFilterStatementsFlat(
   statements: QueryWhere,
-  someFunction: (statement: WhereFilter) => boolean
+  someFunction: (statement: Exclude<WhereFilter, FilterGroup>) => boolean
+): boolean;
+export function someFilterStatementsFlat(
+  statements: any,
+  someFunction: (statement: any) => boolean
 ): boolean {
-  for (const statement of filterStatementIterator(statements)) {
+  for (const statement of filterStatementIteratorFlat(statements)) {
     if (someFunction(statement)) return true;
   }
   return false;
@@ -476,24 +507,34 @@ export function someFilterStatements(
  * but not within subqueries
  * @param statements
  */
-export function* filterStatementIterator(
+export function filterStatementIteratorFlat(
+  statements: PreparedWhere
+): Generator<Exclude<PreparedWhereFilter, PreparedFilterGroup>>;
+export function filterStatementIteratorFlat(
   statements: QueryWhere
-): Generator<WhereFilter> {
+): Generator<Exclude<WhereFilter, FilterGroup>>;
+export function* filterStatementIteratorFlat(statements: any) {
   for (const statement of statements) {
     if (isFilterGroup(statement)) {
-      yield* filterStatementIterator(statement.filters);
+      yield* filterStatementIteratorFlat(statement.filters);
     } else {
       yield statement;
     }
   }
 }
 
+export type StaticFilter =
+  | boolean
+  | FilterStatement
+  | FilterGroup<Models, CollectionNameFromModels<Models>, StaticFilter[]>;
 /**
  * Returns true if the filter has no relational components
  */
 export function isStaticFilter(
-  filter: WhereFilter
-): filter is boolean | FilterStatement | FilterGroup {
+  filter: PreparedWhereFilter
+): filter is StaticFilter;
+export function isStaticFilter(filter: WhereFilter): filter is StaticFilter;
+export function isStaticFilter(filter: any) {
   if (isBooleanFilter(filter)) return true;
   if (isFilterStatement(filter)) return true;
   if (isFilterGroup(filter)) {

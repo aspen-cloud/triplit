@@ -1,17 +1,18 @@
 import type {
-  CollectionQuery,
-  FilterGroup,
-  QueryWhere,
-  WhereFilter,
+  PreparedFilterGroup,
+  PreparedInclusions,
+  PreparedOrder,
+  PreparedQuery,
+  PreparedWhere,
+  PreparedWhereFilter,
 } from './query.js';
 import { isFilterGroup, isSubQueryFilter } from './filters.js';
-import { isQueryInclusionSubquery } from './subquery.js';
 
 /**
  * Simplifies a query by removing redundant parts
  * Performs changes in place (assuming prepareQuery has already created a copy)
  */
-export function simplifyQuery(query: CollectionQuery): CollectionQuery {
+export function simplifyQuery(query: PreparedQuery): PreparedQuery {
   /**
    * TODO List
    * Where:
@@ -26,7 +27,7 @@ export function simplifyQuery(query: CollectionQuery): CollectionQuery {
   return query;
 }
 
-function simplifyWhere(where: QueryWhere | undefined) {
+function simplifyWhere(where: PreparedWhere | undefined) {
   if (!where) return where;
   where = simplifyWhereClauses(where, 'and');
   if (where.length === 0) return undefined;
@@ -39,10 +40,10 @@ function simplifyWhere(where: QueryWhere | undefined) {
 // TODO: drop duplicative statements
 // TODO: merge expanded subqueries that are the same (IE where a.b.c > 1 AND a.b.c <= 2)
 function simplifyWhereClauses(
-  where: QueryWhere,
+  where: PreparedWhere,
   groupWith: 'and' | 'or'
-): QueryWhere {
-  const clauses: QueryWhere = [];
+): PreparedWhere {
+  const clauses: PreparedWhere = [];
   for (let i = 0; i < where.length; i++) {
     const clause = where[i];
     const simplified = simplifyWhereClause(clause);
@@ -63,7 +64,7 @@ function simplifyWhereClauses(
 /**
  * Simplifies a single where clause
  */
-function simplifyWhereClause(clause: WhereFilter) {
+function simplifyWhereClause(clause: PreparedWhereFilter) {
   if (isFilterGroup(clause)) {
     return simplifyFilterGroup(clause);
   }
@@ -81,8 +82,8 @@ function simplifyWhereClause(clause: WhereFilter) {
  * If the filter group contains no filters, then undefined is returned and the filter can be dropped.
  */
 export function simplifyFilterGroup(
-  filterGroup: FilterGroup
-): WhereFilter | undefined {
+  filterGroup: PreparedFilterGroup
+): PreparedWhereFilter | undefined {
   // Simplify the filter group filters
   filterGroup.filters = simplifyWhereClauses(
     filterGroup.filters,
@@ -102,9 +103,9 @@ export function simplifyFilterGroup(
  * OR -> If any filter is true, the entire expression is true.
  */
 function applyBooleanCollapse(
-  filters: QueryWhere,
+  filters: PreparedWhere,
   groupWith: 'and' | 'or'
-): QueryWhere {
+): PreparedWhere {
   if (groupWith === 'and') {
     if (filters.some((filter) => filter === false)) {
       return [false];
@@ -119,40 +120,32 @@ function applyBooleanCollapse(
 }
 
 function simplifyInclusions(
-  inclusions: CollectionQuery['include']
-): CollectionQuery['include'] {
+  inclusions: PreparedInclusions | undefined
+): PreparedInclusions | undefined {
   if (!inclusions) return inclusions;
   const inclusionKeys = Object.keys(inclusions);
   if (inclusionKeys.length === 0) return undefined;
   for (const key of inclusionKeys) {
     const inclusion = inclusions[key];
-    if (isQueryInclusionSubquery(inclusion)) {
-      inclusion.subquery = simplifyQuery(inclusion.subquery);
-    }
-    inclusions[key] = inclusion;
+    inclusion.subquery = simplifyQuery(inclusion.subquery);
   }
   return inclusions;
 }
 
 function simplifyOrder(
-  order: CollectionQuery['order']
-): CollectionQuery['order'] {
+  order: PreparedOrder | undefined
+): PreparedOrder | undefined {
   if (!order) return order;
   if (order.length === 0) return undefined;
   for (let i = 0; i < order.length; i++) {
     const clause = order[i];
-    // @ts-expect-error
     if (clause.length === 3) {
-      // @ts-expect-error
       const subquery = clause[2];
-      // @ts-expect-error
       order[i] = [
         clause[0],
         clause[1],
         {
-          // @ts-expect-error
           ...subquery,
-          // @ts-expect-error
           subquery: simplifyQuery(subquery.subquery),
         },
       ];

@@ -1,3 +1,4 @@
+import { bind } from 'core-js/core/function';
 import { SessionVariableNotFoundError } from './errors.js';
 import {
   isFilterGroup,
@@ -9,6 +10,8 @@ import {
   CollectionQuery,
   FilterGroup,
   FilterStatement,
+  PreparedWhere,
+  PreparedWhereFilter,
   QueryWhere,
 } from './query.js';
 import { ValuePointer } from './utils/value-pointer.js';
@@ -180,21 +183,26 @@ export function resolveVariable(variable: string, vars: any): any {
   return resolvedVal;
 }
 
-export function bindVariablesInFilters(
-  filters: QueryWhere,
+export function bindVariablesInFilters<W extends PreparedWhere>(
+  filters: W,
   vars: any
-): QueryWhere {
-  return filters.map((filter) => {
-    if (isFilterGroup(filter)) {
-      return {
-        ...filter,
-        filters: bindVariablesInFilters(filter.filters, vars),
-      };
-    }
-    if (isFilterStatement(filter) && isValueVariable(filter[2])) {
-      const variable = filter[2] as string;
-      return [filter[0], filter[1], resolveVariable(variable, vars)];
-    }
-    return filter;
-  });
+): W {
+  return filters.map((filter) => bindVariablesInFilter(filter, vars)) as W;
+}
+
+export function bindVariablesInFilter<W extends PreparedWhereFilter>(
+  filter: W,
+  vars: any
+): W {
+  if (isFilterGroup(filter)) {
+    return {
+      mod: filter.mod,
+      filters: bindVariablesInFilters(filter.filters, vars),
+    } as W;
+  }
+  if (isFilterStatement(filter) && isValueVariable(filter[2])) {
+    const variable = filter[2] as string;
+    return [filter[0], filter[1], resolveVariable(variable, vars)] as W;
+  }
+  return filter;
 }

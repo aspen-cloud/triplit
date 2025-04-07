@@ -76,7 +76,6 @@ export class DBTransaction<M extends Models<M> = Models> {
   async fetch<Q extends SchemaQuery<M>>(
     query: Q
   ): Promise<FetchResult<M, Q, 'many'>> {
-    const schema = this.schema!;
     const preparedQuery = prepareQuery(
       query,
       this.schema?.collections,
@@ -91,21 +90,13 @@ export class DBTransaction<M extends Models<M> = Models> {
       this.entityStore,
       this.schema as DBSchema | undefined
     );
-    // const dbEntities = (await queryEngine.fetch(preparedQuery)).map((entity) =>
-    //   structuredClone(flattenViewEntity(entity))
-    // );
-    // if (this.typeConverters && this.typeConverters.has(query.collectionName)) {
-    //   this.typeConverters.get(query.collectionName)!.fromDB(dbEntities);
-    // }
-    // return dbEntities;
     let results = await queryEngine.fetch(preparedQuery);
-    results = applyProjectionsAndConversions(
+    return applyProjectionsAndConversions(
       results,
-      query,
+      preparedQuery,
       'many',
       this.typeConverters
     );
-    return results;
   }
 
   async fetchOne<Q extends SchemaQuery<M>>(

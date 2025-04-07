@@ -14,6 +14,8 @@ import {
   type CollectionQuery,
   type FilterStatement,
   QueryOrder,
+  PreparedQuery,
+  PreparedOrder,
 } from './types.js';
 import {
   asyncIterFilter,
@@ -30,6 +32,7 @@ import {
   Step,
 } from './query-planner/query-compiler.js';
 import { debugFreeze } from './macros/debug.js';
+import { InvalidResultCardinalityError, TriplitError } from './errors.js';
 
 export interface ExecutionContext {
   query: CollectionQuery;
@@ -40,7 +43,7 @@ export interface ExecutionContext {
 
 export interface ViewEntity {
   data: DBEntity; // Immutable/frozen entity from storage
-  subqueries: Record<string, null | ViewEntity | ViewEntity[]>; // Subquery results for this entity view
+  subqueries: Record<string, null | ViewEntity[] | ViewEntity>; // Subquery results for this entity view
 }
 
 export function createViewEntity(ent: DBEntity): ViewEntity {
@@ -109,7 +112,7 @@ export class EntityStoreQueryEngine {
    * query characteristics and executes it.
    */
   private async loadQuery(
-    query: CollectionQuery
+    query: PreparedQuery
   ): Promise<ViewEntity[] | ViewEntity> {
     return this.executeRelationalQuery(structuredClone(query));
   }
@@ -119,9 +122,9 @@ export class EntityStoreQueryEngine {
    * and generate an execution plan
    */
   async executeRelationalQuery(
-    query: CollectionQuery,
+    query: PreparedQuery,
     vars: any = {}
-  ): Promise<ViewEntity[] | ViewEntity> {
+  ): Promise<ViewEntity[]> {
     const compiledPlan = compileQuery(query, this.schema?.collections);
     return this.executeCompiledPlan(compiledPlan, vars);
   }
@@ -132,11 +135,15 @@ export class EntityStoreQueryEngine {
   private async executeCompiledPlan(
     compiledPlan: CompiledPlan,
     vars: any = {}
-  ): Promise<ViewEntity[] | ViewEntity> {
-    return this.executeSteps(compiledPlan.steps, {
+  ): Promise<ViewEntity[]> {
+    const results = await this.executeSteps(compiledPlan.steps, {
       vars,
       viewPlans: compiledPlan.views,
     });
+    if (Array.isArray(results)) {
+      return results;
+    }
+    throw new InvalidResultCardinalityError('many', 'one');
   }
 
   private async executeSteps(
@@ -155,7 +162,10 @@ export class EntityStoreQueryEngine {
     vars.entityStack = vars.entityStack || [];
     let results: ViewEntity[] = [];
     let collectionName: string | undefined;
-    let candidateIterator: AsyncIterable<ViewEntity> | undefined;
+    let candidateIterator:
+      | Iterable<ViewEntity>
+      | AsyncIterable<ViewEntity>
+      | undefined;
     for (const step of steps) {
       switch (step.type) {
         case 'PREPARE_VIEW': {
@@ -179,6 +189,8 @@ export class EntityStoreQueryEngine {
           if (!view) {
             throw new Error(`View ${step.viewId} not found in vars`);
           }
+          if (!Array.isArray(view))
+            throw new InvalidResultCardinalityError('many', 'one');
           const boundFilters = bindVariablesInFilters(step.filter, {
             ...vars,
             // TODO solve this in variable lookup
@@ -226,6 +238,10 @@ export class EntityStoreQueryEngine {
           let ids = step.ids;
           // Check if ids is a variable
           if (typeof ids === 'string') {
+            if (!isValueVariable(ids))
+              throw new TriplitError(
+                `Invalid ID_LOOK_UP input, expected variable or string[]`
+              );
             const varMatch = resolveVariable(ids, {
               ...vars,
               // TODO solve this in variable lookup
@@ -268,15 +284,7 @@ export class EntityStoreQueryEngine {
             ...vars,
             ...flattenViews(preparedViews),
           });
-          const fitterFuncs = boundFilters.map((filter) => {
-            if (typeof filter === 'object' && 'after' in filter) {
-              return ({ data: entityData }: ViewEntity) => {
-                if (!satisfiesAfter(entityData, filter.after, filter.order)) {
-                  return false;
-                }
-                return true;
-              };
-            }
+          const filterFuncs = boundFilters.map((filter) => {
             return (candidate: ViewEntity) =>
               satisfiesNonRelationalFilter(
                 collectionName!,
@@ -285,11 +293,25 @@ export class EntityStoreQueryEngine {
                 this.schema
               );
           });
+          if (step.after) {
+            filterFuncs.push(({ data: entityData }: ViewEntity) => {
+              if (
+                !satisfiesAfter(
+                  entityData,
+                  step.after!.after,
+                  step.after!.order
+                )
+              ) {
+                return false;
+              }
+              return true;
+            });
+          }
 
           candidateIterator = asyncIterFilter(
             candidateIterator!,
             (candidate) => {
-              for (const filterFunc of fitterFuncs) {
+              for (const filterFunc of filterFuncs) {
                 if (!filterFunc(candidate)) {
                   return false;
                 }
@@ -334,20 +356,25 @@ export class EntityStoreQueryEngine {
           });
           results = results.filter((candidate) => {
             for (const filter of boundFilters) {
-              if ('after' in filter) {
-                if (!satisfiesAfter(candidate, filter.after, filter.order)) {
-                  return false;
-                }
-                continue;
-              }
               let boundFilter = filter;
               const passesFilter = satisfiesNonRelationalFilter(
                 collectionName!,
-                candidate,
+                candidate.data,
                 boundFilter,
                 this.schema
               );
               if (!passesFilter) {
+                return false;
+              }
+            }
+            if (step.after) {
+              if (
+                !satisfiesAfter(
+                  candidate.data,
+                  step.after.after,
+                  step.after.order
+                )
+              ) {
                 return false;
               }
             }
@@ -367,12 +394,17 @@ export class EntityStoreQueryEngine {
         }
 
         case 'PICK': {
-          results = results[0] ?? null;
-          break;
+          // Return early if cardinality 'one'
+          return results[0] ?? null;
         }
 
         default:
-          throw new Error(`Unknown step type: ${step.type}`);
+          throw new Error(
+            `Unknown step type: ${
+              // @ts-expect-error
+              step.type
+            }`
+          );
       }
     }
     return results;
@@ -381,12 +413,12 @@ export class EntityStoreQueryEngine {
   /**
    * A top-level fetch method, using the (still) private loadQuery internally.
    */
-  async fetch(query: CollectionQuery): Promise<ViewEntity[]> {
+  async fetch(query: PreparedQuery): Promise<ViewEntity[]> {
     return this.loadQuery(query) as Promise<ViewEntity[]>;
   }
 
   async *getCollectionCandidates(
-    query: CollectionQuery
+    query: PreparedQuery
   ): AsyncIterable<ViewEntity> {
     for await (const ent of this.store.getEntitiesInCollection(
       this.storage,
@@ -440,7 +472,7 @@ function resolvedVarToIdArray(varMatch: ResolvedIdLookupVar) {
   return ids;
 }
 
-export function sortViewEntities(entities: ViewEntity[], order: QueryOrder) {
+export function sortViewEntities(entities: ViewEntity[], order: PreparedOrder) {
   const orderWithViewEntityKeysInterleaved = order.map(
     ([key, direction, maybeSubquery]) => {
       const keyPath = key.split('.');
@@ -472,7 +504,7 @@ export function sortViewEntities(entities: ViewEntity[], order: QueryOrder) {
   });
 }
 
-function getLevelOfNestedInclude(query: CollectionQuery) {
+function getLevelOfNestedInclude(query: PreparedQuery) {
   let level = 0;
   if (!query.include) return level;
   for (const key in query.include) {

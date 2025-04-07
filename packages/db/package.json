@@ -34,7 +34,7 @@
     "src"
   ],
   "scripts": {
-    "build": "tsc --noCheck",
+    "build": "tsc",
     "lint": "tsc --noEmit",
     "lint:tests": "tsc --noEmit --project tsconfig.test.json",
     "test": "vitest run",

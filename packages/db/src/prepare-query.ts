@@ -8,6 +8,11 @@ import type {
   QueryResultCardinality,
   RefQueryExtension,
   SchemaQuery,
+  PreparedWhere,
+  PreparedQuery,
+  PreparedInclusions,
+  PreparedWhereFilter,
+  PreparedOrder,
 } from './query.js';
 import { DataType } from './schema/data-types/types/index.js';
 import { flipOperator, Models, PermissionOperations } from './schema/index.js';
@@ -65,20 +70,7 @@ import {
   isQueryResultCardinality,
 } from './subquery.js';
 
-const ACCESS_DENIED_FILTER = Object.freeze([false]) as QueryWhere;
-
-// type PreparedQuery = Pick<
-//   CollectionQuery,
-//   | 'collectionName'
-//   | 'where'
-//   | 'order'
-//   | 'select'
-//   | 'include' // just subqueries
-//   | 'limit'
-//   | 'after'
-// > &
-// // Possibly tag with id for fast query diffing
-// { id: string };
+const ACCESS_DENIED_FILTER = Object.freeze([false]) as PreparedWhere;
 
 /**
  * User facing prepare query options
@@ -96,20 +88,20 @@ type PrepareQueryRecursiveOptions = PrepareQueryOptions & {
   queryStack: CollectionQuery[];
 };
 
-export function prepareQuery<M extends Models<M> = Models>(
-  query: SchemaQuery<M>,
-  schema: M | undefined,
-  variables: Record<string, any>,
-  session: Session | undefined,
-  options: PrepareQueryOptions
-): CollectionQuery;
+// export function prepareQuery<M extends Models<M> = Models>(
+//   query: SchemaQuery<M>,
+//   schema: M | undefined,
+//   variables: Record<string, any>,
+//   session: Session | undefined,
+//   options: PrepareQueryOptions
+// ): PreparedQuery;
 export function prepareQuery(
   query: CollectionQuery,
   schema: Models | undefined,
   variables: Record<string, any>,
   session: Session | undefined,
   options: PrepareQueryOptions
-): CollectionQuery {
+): PreparedQuery {
   // Assign query variables, assume only the root query has vars set
   if (query.vars && !variables.$query) {
     variables = { ...variables, $query: query.vars };
@@ -137,14 +129,13 @@ function prepareQueryRecursive(
   variables: Record<string, any>,
   session: Session | undefined,
   options: PrepareQueryRecursiveOptions
-): CollectionQuery {
+): PreparedQuery {
   options.queryStack.push(query);
-  const prepared: CollectionQuery = {
+  const prepared: PreparedQuery = {
     collectionName: prepareCollectionName(query, schema),
     select: prepareQuerySelects(query, schema),
     include: prepareQueryInclude(query, schema, variables, session, options),
     where: prepareQueryFilters(query, schema, variables, session, options),
-    // @ts-expect-error TODO: update QueryOrder type to include potential subquery
     order: prepareQueryOrder(query, schema, variables, session, options),
     limit: prepareQueryLimit(query),
     after: prepareQueryAfter(query, schema),
@@ -249,9 +240,9 @@ function prepareQueryInclude(
   variables: Record<string, any>,
   session: Session | undefined,
   options: PrepareQueryRecursiveOptions
-): QueryInclusions | undefined {
+): PreparedInclusions | undefined {
   if (!query.include) return query.include;
-  const inclusions: QueryInclusions = {};
+  const inclusions: PreparedInclusions = {};
   // Schemaless -> ensure everything is a valid subquery and prepare them
   // Schemaful -> Schemaless checks + transform each inferred clause
   for (let [alias, relation] of Object.entries(query.include)) {
@@ -344,7 +335,7 @@ export function prepareQueryFilters(
   variables: Record<string, any>,
   session: Session | undefined,
   options: PrepareQueryRecursiveOptions
-): QueryWhere | undefined {
+): PreparedWhere | undefined {
   let inputFilters: QueryWhere = query.where ?? [];
   if (!Array.isArray(inputFilters))
     throw new InvalidQueryWhereError(
@@ -374,14 +365,13 @@ export function prepareQueryFilters(
       !options.permissionStack.includes(query.collectionName));
 
   if (shouldApplyPermissions) {
-    // TODO: suport rules format?
     const collectionPermissions = getCollectionPermissions(
       schema,
       query.collectionName
     );
     // If we have collection permissions, we should apply them, otherwise its permissionless
     if (collectionPermissions) {
-      let permissionFilters: QueryWhere[] = [];
+      let permissionFilters: PreparedWhere[] = [];
       let hasMatch = false;
       if (session?.roles) {
         for (const sessionRole of session.roles) {
@@ -416,7 +406,7 @@ export function prepareQueryFilters(
                  * TODO: IMO this is a bit hack. TODO: we should figure out the right default for missing referential prefixes
                  */
                 const prefixedPermissionFilters =
-                  prependPerimssionFilterVariables(permission.filter);
+                  prependPermissionFilterVariables(permission.filter);
 
                 permissionFilters.push(
                   transformAndValidateFilters(
@@ -459,7 +449,7 @@ export function prepareQueryFilters(
   return where;
 }
 
-function prependPerimssionFilterVariables(filters: QueryWhere): QueryWhere {
+function prependPermissionFilterVariables(filters: QueryWhere): QueryWhere {
   return filters.map((filter) => {
     if (isFilterStatement(filter)) {
       const [prop, op, val] = filter;
@@ -476,7 +466,7 @@ function prependPerimssionFilterVariables(filters: QueryWhere): QueryWhere {
     if (isFilterGroup(filter)) {
       return {
         ...filter,
-        filters: prependPerimssionFilterVariables(filter.filters),
+        filters: prependPermissionFilterVariables(filter.filters),
       };
     }
     return filter;
@@ -490,7 +480,7 @@ function transformAndValidateFilters(
   variables: Record<string, any>,
   session: Session | undefined,
   options: PrepareQueryRecursiveOptions
-) {
+): PreparedWhere {
   return filters.map((filter) =>
     transformAndValidateFilter(
       filter,
@@ -513,7 +503,7 @@ function transformAndValidateFilter(
   variables: Record<string, any>,
   session: Session | undefined,
   options: PrepareQueryRecursiveOptions
-): WhereFilter {
+): PreparedWhereFilter {
   // Boolean filters are already valid
   if (isBooleanFilter(filter)) return filter;
 
@@ -521,12 +511,7 @@ function transformAndValidateFilter(
   if (isFilterGroup(filter)) {
     // Validate mod value
     if (filter.mod !== 'and' && filter.mod !== 'or')
-      throw new InvalidFilterError(
-        `Invalid filter group mod '${
-          // @ts-expect-error
-          filter.mod
-        }'`
-      );
+      throw new InvalidFilterError(`Invalid filter group mod '${filter.mod}'`);
     return {
       mod: filter.mod,
       filters: transformAndValidateFilters(
@@ -540,7 +525,7 @@ function transformAndValidateFilter(
     };
   }
 
-  // Handle filter statments (may transform into exists statement)
+  // Handle filter statements (may transform into exists statement)
   if (isFilterStatement(filter)) {
     let [prop, op, val] = filter;
 
@@ -761,9 +746,9 @@ function prepareQueryOrder(
   variables: Record<string, any>,
   session: Session | undefined,
   options: PrepareQueryRecursiveOptions
-) {
+): PreparedOrder | undefined {
   if (!query.order) return query.order;
-  const order = [];
+  const order: PreparedOrder = [];
   for (const [field, direction] of query.order) {
     if (direction !== 'ASC' && direction !== 'DESC') {
       throw new InvalidOrderClauseError(

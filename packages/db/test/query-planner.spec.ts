@@ -1,15 +1,11 @@
 import { describe, expect, test } from 'vitest';
-import {
-  compileQuery,
-  compileRelationalPlan,
-  extractViews,
-} from '../src/query-planner/query-compiler.js';
-import { CollectionQuery } from '../src/query.js';
+import { compileQuery } from '../src/query-planner/query-compiler.js';
+import { PreparedQuery } from '../src/query.js';
 
 describe('query planning', async () => {
   const queries: {
     description: string;
-    query: CollectionQuery;
+    query: PreparedQuery;
   }[] = [
     {
       description: "Posts authored by user with username 'Bob99'",

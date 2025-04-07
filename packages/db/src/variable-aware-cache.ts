@@ -10,7 +10,15 @@ import {
   getAttributeFromSchema,
   isTraversalRelationship,
 } from './schema/utilities.js';
-import { DBEntity, QueryWhere, WhereFilter } from './types.js';
+import {
+  DBEntity,
+  OrderStatement,
+  PreparedQuery,
+  PreparedWhere,
+  PreparedWhereFilter,
+  QueryWhere,
+  WhereFilter,
+} from './types.js';
 import { CollectionQuery, FilterStatement } from './query.js';
 import { isPrimitiveType, Models } from './schema/index.js';
 import { ViewEntity } from './query-engine.js';
@@ -28,7 +36,7 @@ export class VariableAwareCache {
     this.cache = new Map();
   }
 
-  static canCacheQuery(query: CollectionQuery, schema: Models | undefined) {
+  static canCacheQuery(query: PreparedQuery, schema: Models | undefined) {
     if (!query.where || query.where.length === 0) return true;
     // Queries with limit are somewhat hard to accommodate
     // While it's totally correct to create the view for the query with limit
@@ -52,7 +60,10 @@ export class VariableAwareCache {
     // return TB.Value.Hash(viewQuery);
   }
 
-  static resolveQueryFromView(viewResults: ViewEntity[], [prop, op, val]: any) {
+  static resolveQueryFromView(
+    viewResults: ViewEntity[],
+    [prop, op, val]: FilterStatement
+  ) {
     let start, end;
     if (['=', '<', '<=', '>', '>='].includes(op)) {
       start = binarySearch(
@@ -122,10 +133,17 @@ export class VariableAwareCache {
     return viewResults.slice(start, end + 1);
   }
 
-  static queryToViews(query: CollectionQuery, schema: Models | undefined) {
+  static queryToViews(
+    query: PreparedQuery,
+    schema: Models | undefined
+  ): {
+    views: PreparedQuery[];
+    variableFilters: FilterStatement[];
+    unusedFilters: PreparedWhere;
+  } {
     const variableFilters: FilterStatement[] = [];
-    const staticFilters: QueryWhere = [];
-    const unusedFilters: QueryWhere = [];
+    const staticFilters: PreparedWhere = [];
+    const unusedFilters: PreparedWhere = [];
     const isOrderable = isOrderableFilter(schema, query);
     for (const filter of query.where ?? []) {
       if (isOrderable(filter)) {
@@ -144,21 +162,21 @@ export class VariableAwareCache {
           collectionName: query.collectionName,
           where: staticFilters,
           order: [
-            ...variableFilters.map((f) => [f[0], 'ASC']),
+            ...variableFilters.map<OrderStatement>((f) => [f[0], 'ASC']),
             ...(query.order ?? []),
           ],
           limit: variableFilters.length > 0 ? undefined : query.limit,
           include: query.include,
         },
-      ] as CollectionQuery[],
+      ],
       variableFilters,
       unusedFilters,
     };
   }
 }
 
-function isOrderableFilter(schema: Models | undefined, query: CollectionQuery) {
-  return (filter: WhereFilter): filter is FilterStatement => {
+function isOrderableFilter(schema: Models | undefined, query: PreparedQuery) {
+  return (filter: PreparedWhereFilter): filter is FilterStatement => {
     if (!isFilterStatement(filter)) return false;
     const [prop, op, val] = filter;
     if (!isValueVariable(val)) return false;

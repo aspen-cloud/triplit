@@ -1,10 +1,10 @@
 import {
-  filterStatementIterator,
+  filterStatementIteratorFlat,
   isFilterStatement,
   isSubQueryFilter,
-  someFilterStatements,
+  someFilterStatementsFlat,
 } from './filters.js';
-import { CollectionQuery, RelationSubquery, WhereFilter } from './types.js';
+import { PreparedQuery } from './types.js';
 import {
   isValueVariable,
   getVariableComponents,
@@ -12,13 +12,13 @@ import {
 } from './variables.js';
 
 export function getReferencedRelationalVariables(
-  query: CollectionQuery,
-  stack: CollectionQuery[] = [],
+  query: PreparedQuery,
+  stack: PreparedQuery[] = [],
   results = new Map<string, Set<string>>()
 ) {
   stack.push(query);
   if (query.where) {
-    for (const filter of filterStatementIterator(query.where)) {
+    for (const filter of filterStatementIteratorFlat(query.where)) {
       if (isSubQueryFilter(filter)) {
         getReferencedRelationalVariables(filter.exists, stack, results);
       } else if (isFilterStatement(filter)) {
@@ -41,7 +41,7 @@ export function getReferencedRelationalVariables(
   }
   if (query.include) {
     for (const alias in query.include) {
-      const { subquery } = query.include[alias] as RelationSubquery;
+      const { subquery } = query.include[alias];
       getReferencedRelationalVariables(subquery, stack, results);
     }
   }
@@ -50,7 +50,7 @@ export function getReferencedRelationalVariables(
 }
 
 export function getCollectionsReferencedInSubqueries(
-  query: CollectionQuery,
+  query: PreparedQuery,
   stack: string[] = [],
   results = new Map<string, Set<string>>()
 ) {
@@ -60,7 +60,7 @@ export function getCollectionsReferencedInSubqueries(
   stack.push(JSON.stringify(query));
   results.set(JSON.stringify(query), new Set());
   if (query.where) {
-    for (const filter of filterStatementIterator(query.where)) {
+    for (const filter of filterStatementIteratorFlat(query.where)) {
       if (isSubQueryFilter(filter)) {
         const { exists } = filter;
         getCollectionsReferencedInSubqueries(exists, stack, results);
@@ -69,7 +69,7 @@ export function getCollectionsReferencedInSubqueries(
   }
   if (query.include) {
     for (const alias in query.include) {
-      const { subquery } = query.include[alias] as RelationSubquery;
+      const { subquery } = query.include[alias];
       getCollectionsReferencedInSubqueries(subquery, stack, results);
     }
   }
@@ -90,15 +90,15 @@ export function getCollectionsReferencedInSubqueries(
   return results;
 }
 
-export function hasSubqueryFilterAtAnyLevel(query: CollectionQuery) {
+export function hasSubqueryFilterAtAnyLevel(query: PreparedQuery) {
   if (query.where) {
-    if (someFilterStatements(query.where, isSubQueryFilter)) {
+    if (someFilterStatementsFlat(query.where, isSubQueryFilter)) {
       return true;
     }
   }
   if (query.include) {
     for (const alias in query.include) {
-      const { subquery } = query.include[alias] as RelationSubquery;
+      const { subquery } = query.include[alias];
       if (hasSubqueryFilterAtAnyLevel(subquery)) {
         return true;
       }
@@ -118,7 +118,7 @@ export function hasSubqueryFilterAtAnyLevel(query: CollectionQuery) {
   return false;
 }
 
-export function hasSubqueryOrderAtAnyLevel(query: CollectionQuery) {
+export function hasSubqueryOrderAtAnyLevel(query: PreparedQuery) {
   if (query.order) {
     for (const order of query.order) {
       const maybeSubqueryOrder = order[2];
@@ -129,7 +129,7 @@ export function hasSubqueryOrderAtAnyLevel(query: CollectionQuery) {
   }
   if (query.include) {
     for (const alias in query.include) {
-      const { subquery } = query.include[alias] as RelationSubquery;
+      const { subquery } = query.include[alias];
       if (hasSubqueryOrderAtAnyLevel(subquery)) {
         return true;
       }
