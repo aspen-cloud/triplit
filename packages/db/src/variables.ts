@@ -16,7 +16,13 @@ import {
 } from './query/types/index.js';
 import { ValuePointer } from './utils/value-pointer.js';
 
-const VARIABLE_SCOPES = new Set(['$global', '$session', '$role', '$query']);
+const VARIABLE_SCOPES = new Set([
+  '$global',
+  '$session',
+  '$token',
+  '$role',
+  '$query',
+]);
 
 type VariableComponents = [scope: string | number | undefined, ...string[]];
 
@@ -63,7 +69,10 @@ export function getVariableComponents(variable: string): VariableComponents {
 }
 
 function parseVarScope(scope: string): string | number | undefined {
-  if (VARIABLE_SCOPES.has(scope)) return scope;
+  if (VARIABLE_SCOPES.has(scope)) {
+    if (scope === '$token') return '$session';
+    return scope;
+  }
   const numParsed = parseInt(scope.slice(1), 10);
   if (!isNaN(numParsed)) return numParsed;
   return undefined;

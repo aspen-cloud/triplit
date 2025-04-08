@@ -33,9 +33,9 @@ client.db.updateGlobalVariables({ name: 'Turanga Leela' });
 query = client.query('employees').Where('name', '=', '$global.name'); // resolves to 'Turanga Leela'
 ```
 
-### Session variables
+### Token variables
 
-Session variables are prefixed with the `session` scope and are accessible to all queries in that database session. When [authenticating](/auth) with a Triplit server, the server will assign all claims on the JWT to session variables.
+Token variables are prefixed with the `token` scope and are accessible to all queries in that database session. When [authenticating](/auth) with a Triplit server, the server will assign all claims on the JWT to token variables.
 
 ### Role variables
 

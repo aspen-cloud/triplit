@@ -1,8 +1,6 @@
 import { DB } from '../src/db.js';
 import * as fs from 'fs';
 import * as path from 'path';
-import { EntityStoreWithOutbox } from '../src/entity-store-with-outbox.js';
-import { EntityStoreKV } from '../src/entity-store.js';
 import { schema, roles } from './farm-schema.js';
 import { BTreeKVStore } from '../src/kv-store/storage/memory-btree.js';
 import { SQLiteKVStore } from '../src/kv-store/storage/sqlite.js';
@@ -11,6 +9,7 @@ import sqlite from 'better-sqlite3';
 import { open } from 'lmdb';
 import { fileURLToPath } from 'url';
 import { QueryWhere } from '../src/query/types/index.js';
+import { KVStore } from '../src/types.js';
 const btree = new BTreeKVStore();
 const sqliteDb = sqlite('./app.db');
 const sqliteKv = new SQLiteKVStore(sqliteDb);
@@ -51,7 +50,7 @@ const newborn_cutoff = new Date(
   Date.now() - 1000 * 60 * 60 * 24 * 7 * 4 * 12
 ).toISOString();
 async function runQueries() {
-  const kvStores = [
+  const kvStores: [string, KVStore][] = [
     ['btree', btree],
     ['sqlite', sqliteKv],
     ['lmdb', lmdbKv],
