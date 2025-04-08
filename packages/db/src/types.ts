@@ -5,7 +5,7 @@ import { PermissionWriteOperations } from './schema/index.js';
 import { TripleRow, TupleValue } from './legacy.js';
 
 // TODO: refactor paths and organization
-export type * from './query.js';
+export type * from './query/types/index.js';
 export type * from './types/index.js';
 export type * from './utils/types.js';
 

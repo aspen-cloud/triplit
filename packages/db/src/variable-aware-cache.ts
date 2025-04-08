@@ -19,7 +19,7 @@ import {
   QueryWhere,
   WhereFilter,
 } from './types.js';
-import { CollectionQuery, FilterStatement } from './query.js';
+import { CollectionQuery, FilterStatement } from './query/types/index.js';
 import { isPrimitiveType, Models } from './schema/index.js';
 import { ViewEntity } from './query-engine.js';
 

@@ -27,7 +27,7 @@ import {
   logSchemaChangeViolations,
   diffSchemas,
 } from './schema/diff-issues.js';
-import { prepareQuery } from './prepare-query.js';
+import { prepareQuery } from './query/prepare-query.js';
 import { createSession, DBSession, normalizeSessionVars } from './session.js';
 import {
   getTypeConvertersFromSchema,
@@ -52,8 +52,8 @@ import {
   FetchResult,
   QueryResultCardinality,
   SchemaQuery,
-} from './query.js';
-import { QueryBuilder } from './query-builder.js';
+} from './query/types/index.js';
+import { QueryBuilder } from './query/query-builder.js';
 import {
   ClearOptions,
   DBOptions,

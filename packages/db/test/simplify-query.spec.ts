@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { simplifyQuery } from '../src/simplify-query.js';
+import { simplifyQuery } from '../src/query/simplify-query.js';
 
 describe('filter simplification', () => {
   it('allows undefined where', () => {

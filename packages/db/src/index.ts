@@ -1,5 +1,4 @@
 import './polyfills.js';
-export { prepareQuery } from './prepare-query.js';
 export * from './codec.js';
 export * from './db.js';
 export * from './db-transaction.js';
@@ -9,9 +8,7 @@ export * from './variables.js';
 export * from './http.js';
 export * from './types.js';
 export * from './entity-store-with-outbox.js';
-export * from './query.js';
-export * from './query-builder.js';
-export * from './parse.js';
+export * from './query/index.js';
 export * from './schema/index.js';
 export * from './server-entity-store.js';
 export * from './session.js';

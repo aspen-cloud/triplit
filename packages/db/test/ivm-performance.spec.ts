@@ -2,7 +2,7 @@ import { expect, describe, test, vi } from 'vitest';
 import { deterministicShuffle } from './utils/seeding.js';
 import { DB } from '../src/db.js';
 import { pause } from './utils/async.js';
-import { CollectionQuery } from '../src/query.js';
+import { CollectionQuery } from '../src/query/types/index.js';
 
 describe.skip('IVM vs Fetch', () => {
   const TODAY = new Date('2024-01-01').getTime();

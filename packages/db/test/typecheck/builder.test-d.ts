@@ -6,7 +6,7 @@ import {
   QueryWhere,
   ValueCursor,
   WhereFilter,
-} from '../../src/query.js';
+} from '../../src/query/types/index.js';
 import { DB } from '../../src/db.js';
 import { Models } from '../../src/index.js';
 

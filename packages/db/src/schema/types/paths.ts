@@ -2,7 +2,7 @@ import {
   RefCollectionName,
   RefDefinition,
   RelationshipRef,
-} from '../../query.js';
+} from '../../query/types/index.js';
 import { StringKey } from '../../types.js';
 import { RecordType } from '../data-types/index.js';
 import { CollectionNameFromModels, Models } from './models.js';

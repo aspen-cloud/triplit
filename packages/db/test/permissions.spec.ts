@@ -6,7 +6,7 @@ import {
   SessionVariableNotFoundError,
   WritePermissionError,
 } from '../src/errors.js';
-import { CollectionQuery } from '../src/query.js';
+import { CollectionQuery } from '../src/query/types/index.js';
 import { queryResultsToChanges } from '../src/ivm.js';
 
 const messagingSchema = {

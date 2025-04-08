@@ -9,7 +9,7 @@ import {
 import { SetType } from './data-types/definitions/set.js';
 import type { CollectionNameFromModels, Models } from './types/models.js';
 import { DataType, OptionalType, TypeInterface } from './types/index.js';
-import { CollectionQuery, QueryWhere } from '../query.js';
+import { CollectionQuery, QueryWhere } from '../query/types/index.js';
 
 // Ensures that id is on root schema record
 type SchemaProps<Properties = Record<string, DataType>> =

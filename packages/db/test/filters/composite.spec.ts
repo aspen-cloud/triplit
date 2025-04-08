@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { DB } from '../../src/db.js';
 import { Schema as S } from '../../src/schema/builder.js';
-import { WhereFilter } from '../../src/query.ts';
+import { WhereFilter } from '../../src/query/types/index.js';
 import { or, and } from '../../src/filters.ts';
 const characterSchema = {
   collections: S.Collections({

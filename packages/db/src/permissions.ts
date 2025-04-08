@@ -1,4 +1,4 @@
-import { QueryWhere } from './query.js';
+import { QueryWhere } from './query/types/index.js';
 import type {
   CollectionPermission,
   CollectionPermissions,

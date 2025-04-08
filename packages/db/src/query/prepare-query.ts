@@ -13,9 +13,9 @@ import type {
   PreparedInclusions,
   PreparedWhereFilter,
   PreparedOrder,
-} from './query.js';
-import { DataType } from './schema/data-types/types/index.js';
-import { flipOperator, Models, PermissionOperations } from './schema/index.js';
+} from './types/index.js';
+import { DataType } from '../schema/data-types/types/index.js';
+import { flipOperator, Models, PermissionOperations } from '../schema/index.js';
 import {
   IncludedNonRelationError,
   InvalidCollectionNameError,
@@ -30,7 +30,7 @@ import {
   InvalidQueryInclusionError,
   InvalidQueryLimitError,
   InvalidQueryWhereError,
-} from './errors.js';
+} from '../errors.js';
 import {
   and,
   or,
@@ -40,35 +40,35 @@ import {
   isFilterGroup,
   isFilterStatement,
   isSubQueryFilter,
-} from './filters.js';
+} from '../filters.js';
 import {
   getVariableComponents,
   isValueVariable,
   isVariableScopeRelational,
   safeIncrementQueryVars,
   safeIncrementSubqueryVar,
-} from './variables.js';
-import { ValuePointer } from './utils/value-pointer.js';
-import { Session } from './session.js';
+} from '../variables.js';
+import { ValuePointer } from '../utils/value-pointer.js';
+import { Session } from '../session.js';
 import {
   getCollectionPermissions,
   isWritePermissionOperation,
-} from './permissions.js';
+} from '../permissions.js';
 import {
   createSchemaEntriesIterator,
   getAttributeFromSchema,
   isTraversalRelationship,
   SchemaTraversalData,
   validateIdentifier,
-} from './schema/utilities.js';
+} from '../schema/utilities.js';
 import { simplifyQuery } from './simplify-query.js';
-import { Type } from './schema/data-types/type.js';
+import { Type } from '../schema/data-types/type.js';
 import {
   isQueryInclusionReference,
   isQueryInclusionShorthand,
   isQueryInclusionSubquery,
   isQueryResultCardinality,
-} from './subquery.js';
+} from '../subquery.js';
 
 const ACCESS_DENIED_FILTER = Object.freeze([false]) as PreparedWhere;
 

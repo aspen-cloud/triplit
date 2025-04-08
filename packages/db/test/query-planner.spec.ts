@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest';
 import { compileQuery } from '../src/query-planner/query-compiler.js';
-import { PreparedQuery } from '../src/query.js';
+import { PreparedQuery } from '../src/query/types/index.js';
 
 describe('query planning', async () => {
   const queries: {

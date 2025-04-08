@@ -10,7 +10,7 @@ import { LmdbKVStore } from '../src/kv-store/storage/lmdb.js';
 import sqlite from 'better-sqlite3';
 import { open } from 'lmdb';
 import { fileURLToPath } from 'url';
-import { QueryWhere } from '../src/query.js';
+import { QueryWhere } from '../src/query/types/index.js';
 const btree = new BTreeKVStore();
 const sqliteDb = sqlite('./app.db');
 const sqliteKv = new SQLiteKVStore(sqliteDb);

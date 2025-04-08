@@ -13,7 +13,7 @@ import {
   PreparedWhere,
   PreparedWhereFilter,
   QueryWhere,
-} from './query.js';
+} from './query/types/index.js';
 import { ValuePointer } from './utils/value-pointer.js';
 
 const VARIABLE_SCOPES = new Set(['$global', '$session', '$role', '$query']);

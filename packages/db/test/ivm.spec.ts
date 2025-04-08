@@ -16,10 +16,14 @@ import {
   queryResultsToChanges,
 } from '../src/ivm.js';
 import { Schema as S } from '../src/schema/builder.js';
-import { CollectionQuery, OrderStatement, QueryOrder } from '../src/query.js';
+import {
+  CollectionQuery,
+  OrderStatement,
+  QueryOrder,
+} from '../src/query/types/index.js';
 import { Models } from '../src/schema/types/index.js';
 import { deterministicShuffle } from './utils/seeding.js';
-import { prepareQuery } from '../src/prepare-query.js';
+import { prepareQuery } from '../src/query/prepare-query.js';
 import { pause } from './utils/async.js';
 import { InMemoryTestKVStore } from './utils/test-kv-store.js';
 import { areChangesEmpty, mergeDBChanges } from '../src/memory-write-buffer.js';

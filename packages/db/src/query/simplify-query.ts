@@ -5,8 +5,8 @@ import type {
   PreparedQuery,
   PreparedWhere,
   PreparedWhereFilter,
-} from './query.js';
-import { isFilterGroup, isSubQueryFilter } from './filters.js';
+} from './types/index.js';
+import { isFilterGroup, isSubQueryFilter } from '../filters.js';
 
 /**
  * Simplifies a query by removing redundant parts

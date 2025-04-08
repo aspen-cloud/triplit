@@ -1,6 +1,5 @@
-import { hashObject } from './utils/hash.js';
-import { CollectionNameFromModels, Models } from './schema/types/models.js';
-import { StringKey, Unalias } from './utils/types.js';
+import { CollectionNameFromModels, Models } from '../../schema/types/models.js';
+import { StringKey, Unalias } from '../../utils/types.js';
 import {
   Decoded,
   ModelPaths,
@@ -8,47 +7,26 @@ import {
   PathFiltered,
   ResolveRelationshipPath,
   SchemaPaths,
-} from './schema/index.js';
+} from '../../schema/index.js';
 
 /**
- * Hashes a query object to a unique string, ignoring non-query properties. Thus the hash is of the query the server will see.
+ * All possible queries for a schema, keyed by collection name.
  */
-export function hashQuery<Q extends CollectionQuery>(params: Q) {
-  const queryParams = Object.fromEntries(
-    Object.entries(params).filter(([key]) =>
-      (COLLECTION_QUERY_PROPS as string[]).includes(key)
-    )
-  );
-  const hash = hashObject(queryParams).toString(); // Hash(queryParams).toString();
-  return hash;
-}
-
-// Should be friendly types that we pass into queries
-// Not to be confused with the Value type that we store in the triple store
-// TODO: this could be more speciifc
-export type QueryValue =
-  | number
-  | string
-  | boolean
-  | Date
-  | null
-  | number[]
-  | boolean[]
-  | string[]
-  | Date[];
-
-// // TODO: rename
-// Record of all collection queries
 export type SchemaQueries<M extends Models<M> = Models> = {
   [CN in CollectionNameFromModels<M>]: CollectionQuery<M, CN>;
 };
 
-// Union of all collection queries if CN not provided
+/**
+ * A selection of queries for a schema, returning a union if there are multiple matches
+ */
 export type SchemaQuery<
   M extends Models<M> = Models,
   CN extends CollectionNameFromModels<M> = CollectionNameFromModels<M>,
 > = SchemaQueries<M>[CN];
 
+/**
+ * A prepared query, which is used internally by the query engine
+ */
 export interface PreparedQuery {
   collectionName: string;
   select?: string[];
@@ -59,45 +37,9 @@ export interface PreparedQuery {
   include?: PreparedInclusions;
 }
 
-export type PreparedInclusions = {
-  [K in string]: PreparedInclusion;
-};
-export type PreparedInclusion = PreparedRelationSubquery;
-type PreparedRelationSubquery<
-  Cardinaltiy extends QueryResultCardinality = QueryResultCardinality,
-> = {
-  subquery: PreparedQuery;
-  cardinality: Cardinaltiy;
-};
-
-export type PreparedOrder = (OrderStatement | RelationalOrderStatement)[];
-
-export type PreparedWhere = PreparedWhereFilter[];
-
-export type PreparedWhereFilter =
-  | FilterStatement
-  | PreparedFilterGroup
-  | PreparedSubQueryFilter
-  | boolean;
-
-export type PreparedFilterGroup = FilterGroup<
-  Models,
-  CollectionNameFromModels<Models>,
-  PreparedWhere
->;
-type PreparedAndFilterGroup = {
-  mod: 'and';
-  filters: PreparedWhere;
-};
-type PreparedOrFilterGroup = {
-  mod: 'or';
-  filters: PreparedWhere;
-};
-
-export type PreparedSubQueryFilter = {
-  exists: PreparedQuery;
-};
-
+/**
+ * A user defined query on the database, which may reference the schema or other database objects.
+ */
 export interface CollectionQuery<
   M extends Models<M> = Models,
   CN extends CollectionNameFromModels<M> = CollectionNameFromModels<M>,
@@ -109,12 +51,7 @@ export interface CollectionQuery<
   limit?: number;
   after?: QueryAfter;
   vars?: Record<string, any>;
-  // TODO: add back inclusions
   include?: QueryInclusions<M, CN>;
-  // /**
-  //  * @deprecated define a where filter instead
-  //  */
-  // entityId?: string; // Syntactic sugar for where("id", "=", entityId), should not be relied on in query engine
 }
 
 /**
@@ -178,10 +115,28 @@ export type FilterStatement<
   K,
   //Operations<ResolveModelPath<M, CN, K>> I think typescript has trouble inferring this because its a tuple, seeing a union of all ops, which is fine for now
   // However, it also causes small issues with the type system with ex. try S.RelationMany('users', { where: [ or([ ['id', '=', '$liked_by_ids'], or([['id', '=', '$liked_by_ids']]), ]), ], })
-  // It (i think) doesnt recognize string in ['id', string, string] as a valid operator and is failing
+  // It (i think) doesn't recognize string in ['id', string, string] as a valid operator and is failing
   string,
   any,
 ];
+
+export type PreparedWhere = PreparedWhereFilter[];
+
+export type PreparedWhereFilter =
+  | FilterStatement
+  | PreparedFilterGroup
+  | PreparedSubQueryFilter
+  | boolean;
+
+export type PreparedFilterGroup = FilterGroup<
+  Models,
+  CollectionNameFromModels<Models>,
+  PreparedWhere
+>;
+
+export type PreparedSubQueryFilter = {
+  exists: PreparedQuery;
+};
 
 /**
  * A set of filters specified to be combined with AND or OR.
@@ -281,6 +236,20 @@ export type RelationshipExistsExtension<
 >;
 
 // ====== Order Types ======
+// ========= Prepared Types =========
+export type PreparedOrder = PreparedOrderStatement[];
+export type PreparedOrderStatement = OrderStatement | RelationalOrderStatement;
+// TODO: break this out into unprepared and prepared types
+// TODO: make this an object or different form that is easier to guard against
+export type RelationalOrderStatement<
+  M extends Models<M> = Models,
+  CN extends CollectionNameFromModels<M> = CollectionNameFromModels<M>,
+> = [
+  property: ModelPaths<M, CN>,
+  direction: 'ASC' | 'DESC',
+  subquery: PreparedRelationSubquery<'one'>,
+];
+// ========= Unprepared Types =========
 /**
  * A query order, which is a collection of many orders.
  */
@@ -297,21 +266,37 @@ export type OrderStatement<
   CN extends CollectionNameFromModels<M> = CollectionNameFromModels<M>,
 > = [property: ModelPaths<M, CN>, direction: 'ASC' | 'DESC'];
 
-// TODO: break this out into unprepared and prepared types
-export type RelationalOrderStatement<
-  M extends Models<M> = Models,
-  CN extends CollectionNameFromModels<M> = CollectionNameFromModels<M>,
-> = [
-  property: ModelPaths<M, CN>,
-  direction: 'ASC' | 'DESC',
-  subquery: PreparedRelationSubquery<'one'>,
-];
-
 // ====== Pagination Types ======
 export type QueryAfter = [ValueCursor, boolean];
-export type ValueCursor = [value: QueryValue, ...values: QueryValue[]];
+export type ValueCursor = [
+  value: QueryValuePrimitive,
+  ...values: QueryValuePrimitive[],
+];
 
 // ====== Inclusion Types ======
+// ========= Prepared Types =========
+/**
+ * A map of prepared inclusions, keyed by alias.
+ */
+export type PreparedInclusions = {
+  [K in string]: PreparedInclusion;
+};
+/**
+ * A possible inclusion value in a query.
+ */
+export type PreparedInclusion = PreparedRelationSubquery;
+
+/**
+ * A subquery definition for a prepared query.
+ */
+export type PreparedRelationSubquery<
+  Cardinality extends QueryResultCardinality = QueryResultCardinality,
+> = {
+  subquery: PreparedQuery;
+  cardinality: Cardinality;
+};
+
+// ========= Unprepared Types =========
 /**
  * A map of inclusions, keyed by alias.
  */
@@ -336,7 +321,7 @@ export type QueryInclusion<
  */
 export type RefShorthand = true | null;
 
-// ========= Ref Subquery Types =========
+// ============ Ref Subquery Types ============
 export type RefSubquery<
   M extends Models<M> = Models,
   CN extends CollectionNameFromModels<M> = CollectionNameFromModels<M>,
@@ -375,7 +360,7 @@ export type RefCollectionName<
   Ref extends RelationshipRef<M, CN>,
 > = RefQuery<M, CN, Ref>['collectionName'];
 
-// ========= Relational Subquery Types =========
+// ============ Relational Subquery Types ============
 /**
  * A subquery defining a relationship, specifying the subquery and cardinality of the result.
  */
@@ -387,6 +372,16 @@ export type RelationSubquery<
   subquery: Q;
   cardinality: Cardinality;
 };
+
+// OTHER TYPES TODO
+
+type QueryValuePrimitive = number | string | boolean | Date | null;
+/**
+ * Possible values that can be passed into a the query engine by a user
+ */
+export type QueryValue =
+  | QueryValuePrimitive
+  | NonNullable<QueryValuePrimitive>[];
 
 export type FetchResult<
   M extends Models<M>,
@@ -446,19 +441,6 @@ type InclusionResult<
             >
           : never
         : never;
-
-// Should update this as we add more query properties
-const COLLECTION_QUERY_PROPS = [
-  'after',
-  'collectionName',
-  'select',
-  // 'entityId',
-  'include',
-  'limit',
-  'order',
-  'vars',
-  'where',
-] as const satisfies (keyof CollectionQuery)[];
 
 export type WithSelection<
   Q extends CollectionQuery<any, any>,

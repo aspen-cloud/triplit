@@ -4,7 +4,7 @@ import {
   QueryResultCardinality,
   QueryWhere,
   SchemaQuery,
-} from '../../query.js';
+} from '../../query/types/index.js';
 import { StringKey } from '../../utils/types.js';
 
 // === Model Definitions ===

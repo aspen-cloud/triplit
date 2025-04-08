@@ -77,7 +77,7 @@ export type Step =
     }
   | {
       type: 'SORT';
-      fields: (OrderStatement | RelationalOrderStatement)[];
+      fields: PreparedOrder;
     }
   | {
       type: 'LIMIT';
@@ -511,7 +511,7 @@ function compileQueryToSteps(q: PreparedQuery): Step[] {
   }
 
   if (q.order && q.order.length > 0 && !hasOrderBeenHandled) {
-    const orderStatements: (OrderStatement | RelationalOrderStatement)[] = [];
+    const orderStatements: PreparedOrder = [];
     // if order is based on a relation, make sure to include it first
     for (let i = 0; i < q.order.length; i++) {
       const [attr, direction, maybeSubquery] = q.order[i];

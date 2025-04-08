@@ -1,5 +1,5 @@
 import { it, describe, expect } from 'vitest';
-import { prepareQuery } from '../src/prepare-query.js';
+import { prepareQuery } from '../src/query/prepare-query.js';
 import { Schema as S } from '../src/schema/builder.js';
 import {
   InvalidQueryAfterError,

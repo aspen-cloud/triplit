@@ -1,8 +1,8 @@
 import {
   AfterClauseWithNoOrderError,
   QueryClauseFormattingError,
-} from './errors.js';
-import { isFilterStatement, isIdFilter, isWhereFilter } from './filters.js';
+} from '../errors.js';
+import { isFilterStatement, isIdFilter, isWhereFilter } from '../filters.js';
 import {
   CollectionQuery,
   FilterStatement,
@@ -21,9 +21,9 @@ import {
   WithInclusion,
   WithInclusionRaw,
   WithSelection,
-} from './query.js';
-import { CollectionNameFromModels, Models } from './schema/index.js';
-import { ValuePointer } from './utils/value-pointer.js';
+} from './types/index.js';
+import { CollectionNameFromModels, Models } from '../schema/index.js';
+import { ValuePointer } from '../utils/value-pointer.js';
 
 export function queryBuilder<
   M extends Models<M>,
