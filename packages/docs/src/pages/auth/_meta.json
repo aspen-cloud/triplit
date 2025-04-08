@@ -1,4 +1,5 @@
 {
-  "index": "Overview",
-  "clerk": "Clerk"
+  "index": "Quickstart",
+  "sessions": "Sessions API",
+  "integration-guides": "Integration Guides"
 }

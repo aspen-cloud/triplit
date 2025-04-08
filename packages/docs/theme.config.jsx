@@ -13,7 +13,7 @@ export default {
     link: 'https://discord.gg/q89sGWHqQ5',
   },
   sidebar: {
-    defaultMenuCollapseLevel: 2,
+    defaultMenuCollapseLevel: 1,
     titleComponent({ title, type }) {
       if (title.startsWith('`')) {
         return (

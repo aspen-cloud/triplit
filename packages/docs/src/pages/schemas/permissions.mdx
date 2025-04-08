@@ -6,12 +6,6 @@ import { Callout } from 'nextra-theme-docs';
 
 # Authorization and access control
 
-<Callout type="info">
-  This feature is available for all hosted [Triplit Cloud](/triplit-cloud)
-  users. If you are self-hosting Triplit, this feature is available in Triplit
-  0.3.58 and higher.
-</Callout>
-
 <Callout type="warning" emoji="⚠️">
   Access control checks run exclusively on the server, and are not enforced on
   the client. Invalid writes will only be rejected when they have been sent to
@@ -22,9 +16,62 @@ Triplit provides a flexible way to define access control rules for your database
 
 ## Roles
 
-When a client authenticates with a Triplit server and begins a session, it provides a token that contains some information about itself (see [authentication](/auth) for more information on tokens). You can define `roles` to access information from a token to inform permissions decisions, like 'Can this user read this todo?'.
+When a client authenticates with a Triplit server and begins a session, it provides a token that contains some information about itself (see [authentication](/auth) for more information on tokens). The server will assign that token some number of roles based on the claims present in the token.
 
-Each role has an identifier and a `match` object. When a client authenticates with a Triplit server, Triplit will check if the token matches any defined roles in the schema. If it does, the client is granted that role and will be subject to any permissions that have been defined for that it.
+### Default roles
+
+#### `anonymous`
+
+The server will assign the `anonymous` role to any client that presents the `anon` token generated in the Triplit dashboard or by the Triplit CLI. You might use this token to allow unauthenticated users to access your database.
+
+#### `authenticated`
+
+The server will assign the `authenticated` role to any client that presents a token that has a [`sub` claim](https://mojoauth.com/glossary/jwt-subject/). The `sub` or "subject" claim is a standard JWT claim that identifies the principal user that is the subject of the JWT. Tokens with the sub claim should be issued by an authentication provider such as [Clerk](/auth/integration-guides/clerk) or [Supabase](/auth/integration-guides/clerk). Because the `sub` claim is a unique identifier, we can use it to both attribute data to a user and to restrict access to that data to them.
+
+#### Example usage
+
+You might use the `anonymous` role to allow unauthenticated users to read your database, but restrict inserts and updates to authenticated users. The following example allows any user to read the `todos` collection, but only authenticated users to insert or update todos:
+
+```typescript filename="schema.ts" copy
+import { Schema as S } from '@triplit/client';
+
+export const schema = S.Collections({
+  todos: {
+    schema: S.Schema({
+      id: S.Id(),
+      text: S.String(),
+      authorId: S.String(),
+    }),
+    permissions: {
+      anonymous: {
+        read: {
+          filter: [true],
+        },
+      },
+      authenticated: {
+        read: {
+          filter: [true],
+        },
+        insert: {
+          filter: [['authorId', '=', '$token.sub']],
+        },
+        update: {
+          filter: [['authorId', '=', '$token.sub']],
+        },
+        delete: {
+          filter: [['authorId', '=', '$token.sub']],
+        },
+      },
+    },
+  },
+});
+```
+
+### Custom roles
+
+The default roles exist to make it possible to add authorization rules to your database with minimal configuration. However, your app may require more complicated role-based permission schemes than can't be modeled with only the defaults. In that case you can define your own `roles`.
+
+Each custom role must have a name and a `match` object. When a client authenticates with a Triplit server, Triplit will check if the token matches any defined roles in the schema. If it does, the client is granted that role and will be subject to any permissions that have been defined for that it.
 
 For example, you may author `admin` and `user` tokens with the following structure:
 
@@ -40,7 +87,7 @@ const roles: Roles = {
   user: {
     match: {
       type: 'user',
-      uid: '$userId',
+      sub: '$userId',
     },
   },
 };
@@ -52,18 +99,46 @@ Wildcards in the `match` object (prefixed with `$`) will be assigned to [variabl
 // match object
 {
   "type": "user",
-  "uid": "$userId",
+  "sub": "$userId",
 }
 // Token
 {
   "type": "user",
-  "uid": 123
+  "sub": 123
 }
 // Query - resolves to db.query('todos').Where('authorId', '=', 123);
 db.query('todos').Where('authorId', '=', '$role.userId');
 ```
 
+<Callout type="info">
+  You do not need to assign a token's `sub` claim to a `$role` variable to
+  reference it in a filter. You can access all of the claims on a token directly
+  by using the `$token` variable prefix. e.g. `$token.sub`.
+</Callout>
+
 Your schema file should export the `roles` object for use in your schema definitions.
+
+### Combining custom and default roles
+
+The default roles will only be applied to tokens when your schema has not defined any custom roles. If you define a custom role, the default roles will not be applied to any tokens. If you want to reuse the default and add your own, you can do so with the `DEFAULT_ROLES` constant.
+
+```typescript filename="schema.ts" copy
+import { DEFAULT_ROLES, type Roles, Schema as S } from '@triplit/client';
+const roles: Roles = {
+  ...DEFAULT_ROLES,
+  admin: {
+    match: {
+      type: 'admin',
+    },
+  },
+  user: {
+    match: {
+      type: 'user',
+      sub: '$userId',
+    },
+  },
+};
+```
 
 ## Permissions
 
@@ -155,7 +230,7 @@ To allow clients to insert data, you must define an `insert` permission that spe
 import { type Roles, Schema as S } from '@triplit/client';
 
 const roles: Roles = {
-  // Role definitions
+  // Custom role definitions
 };
 
 const schema = S.Collections({
@@ -193,7 +268,7 @@ To allow users to update data, you must define an `update` permission that speci
 import { type Roles, Schema as S } from '@triplit/client';
 
 const roles = {
-  // Role definitions
+  // Custom role definitions
 };
 
 const schema = S.Collections({
@@ -231,7 +306,7 @@ You may also optionally define a `postUpdate` permission that will be run after 
 import { type Roles, Schema as S } from '@triplit/client';
 
 const roles: Roles = {
-  // Role definitions
+  // Custom role definitions
 };
 
 const schema = S.Collections({
@@ -268,7 +343,7 @@ import { type Roles, Schema as S } from '@triplit/client';
 
 // schema.ts
 const roles: Roles = {
-  // Role definitions
+  // Custom role definitions
 };
 
 const schema = S.Collections({
@@ -304,7 +379,7 @@ Permissions are a part of your schema and can be added or updated by [modifying 
 
 ## Modeling permissions with external authentication
 
-When using an external authentication provider like [Clerk](/auth/clerk), the provider is the source of truth for identifying users. This means that in your Triplit database you might not need a traditional users collection. Permissions that restrict access to specific authenticated users should use the ids provided by the auth service. If you want to store additional information about a user in Triplit, we recommend using a `profiles` collection that uses the same ID as the user ID provided from your auth provider. When your app loads and a user authenticates, you can fetch their profile or create it if it doesn't exist. Here’s an example schema:
+When using an external authentication provider like [Clerk](/auth/integration-guides/clerk), the provider is the source of truth for identifying users. This means that in your Triplit database you might not need a traditional users collection. Permissions that restrict access to specific authenticated users should use the ids provided by the auth service. If you want to store additional information about a user in Triplit, we recommend using a `profiles` collection that uses the same ID as the user ID provided from your auth provider. When your app loads and a user authenticates, you can fetch their profile or create it if it doesn't exist. Here’s an example schema:
 
 ```typescript filename="schema.ts" copy
 import { type Roles, Schema } from '@triplit/client';

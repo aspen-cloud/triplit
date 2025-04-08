@@ -1,90 +1,123 @@
 ---
-description: Learn how to add authentication and authorization to your Triplit project.
+description: Learn how to setup user auth for your Triplit application.
 ---
 
-# Authentication and Authorization
+import { Steps, Callout, Tabs, Tab } from 'nextra/components';
 
-Authentication is the process of verifying the identity of a user. This usually involves a user providing some form of credentials (like a username and password) to a service, which then validates those credentials and provides a way to identify the user in future requests. This identity can be used to determine what data the user has access to ([authorization](/schemas/permissions)).
+# Authentication
 
-## Authentication
+In this guide we'll show you how to identify users connecting to your Triplit server and how to model access control with that information. By the end of the guide, you'll be able to define a schema that allows users to insert and update their own data, but not other users' data:
 
-Triplit uses [JWTs](https://en.wikipedia.org/wiki/JSON_Web_Token) to communicate user identity. Authentication (that is the validation that a user is who they say they are, and the generation of a JWT identifying the user) itself should be handled by an authentication service outside of Triplit. This could be a third-party service like [Clerk](https://clerk.com/), [Auth0](https://auth0.com/), [Firebase Auth](https://firebase.google.com/products/auth), [AWS Cognito](https://aws.amazon.com/cognito/), [Supabase Auth](https://supabase.com/docs/guides/auth), etc or a custom service built by your team.
-
-The JWT will need to be signed with a proper signature. Triplit supports both symmetric (HS256) and asymmetric (RS256) encryption algorithms for JWTs. If you are using Triplit's hosted offering [Triplit Cloud](/triplit-cloud), then you will need to provide the JWT's signing secret or public key to Triplit in the `External JWT secret` field in your project's settings. If you are self-hosting Triplit, you will need to provide the signing secret or public key when you start the server with the `EXTERNAL_JWT_SECRET` environmental variable.
-
-The JWT should usually have some user-identifying information (e.g. the [`sub` claim](https://datatracker.ietf.org/doc/html/rfc7519#section-4.1.2)), which can be accessed by Triplit to handle [access control](/schemas/permissions) that user. For backwards compatibility, Triplit reads the following claims:
-
-- `x-triplit-user-id`: The user's unique identifier. This is assigned to the variable `$session.SESSION_USER_ID` in queries.
-
-### Tokens
-
-Triplit provides two basic tokens that are available in your project [dashboard](https://www.triplit.dev/dashboard):
-
-- `anon` token: A token that represents an anonymous user. This token is safe to use on a client side device and should be used when no user is logged in.
-- `service` token: This token is used for administrative purposes and should only be used in trusted environments like a server you control. This token will bypass all access control checks.
-
-When getting started with Triplit these are fine to use, but they don't specify which application user is accessing the database, or if they have a distinct access role. This information can be configured by providing a JWT with the proper claims and signature (see previous section). Triplit's flexible design allows you to define any JWT claims you would like.
-
-### Using your tokens
-
-When you instantiate a `TriplitClient`, you can provide an initial token to authenticate with the server. This token is used to determine what data the client has access to.
-
-```typescript
-import { TriplitClient } from '@triplit/client';
-const client = new TriplitClient({
-  token: '<your-token>',
-  serverUrl: 'https://<project-id>.triplit.io',
+```typescript filename="schema.ts"
+export const schema = S.Collections({
+  blogPosts: {
+    schema: S.Schema({
+      id: S.Id(),
+      title: S.String(),
+      content: S.String(),
+      authorId: S.String(),
+    }),
+    permissions: {
+      authenticated: {
+        read: { filter: [true] },
+        insert: { filter: ['authorId', '=', '$token.sub'] },
+        update: { filter: ['authorId', '=', '$token.sub'] },
+        postUpdate: { filter: ['authorId', '=', '$token.sub'] },
+        delete: { filter: ['authorId', '=', '$token.sub'] },
+      },
+    },
+  },
 });
 ```
 
-This will automatically connect the client to the server and authenticate with the provided token. If you would like to connect manually, you can set `autoConnect` to `false` and call `client.connect()` when ready.
+<Steps>
 
-```typescript {5, 10}
+### Choose an authentication provider
+
+You'll likely start out your project using the `anon` and `service` tokens provided by default. These are great for getting started, but don't provide any user-specific information that you'll need to model access control.
+
+Choose from one of the many authentication providers that issue JWTs:
+
+- [Clerk](https://clerk.com/): read the Triplit integration guide [here](/auth/integration-guides/clerk)
+- [Supabase](https://supabase.com/): read the Triplit integration guide [here](/auth/integration-guides/supabase)
+- [Auth0](https://auth0.com/)
+- [Amazon Cognito](https://aws.amazon.com/cognito/)
+- ...or any other provider that issues JWTs
+
+### Allow your Triplit server to verify JWTs
+
+If you're using a third-party authentication provider, you'll need to provide the public key or secret that it's using to sign JWTs to your Triplit server so it can verify them. Triplit supports both symmetric (e.g. HMAC) and asymmetric (e.g. RSA) JWT encryption algorithms.
+
+If you're connecting to a `triplit.io` URL, [you can use the dashboard](https://www.triplit.dev/docs/triplit-cloud/managed-machines#use-the-dashboard). If you're fully self-hosting Triplit (and _not_ pointed at a `triplit.io` URL), you'll need to set the `EXTERNAL_JWT_SECRET` environmental variable to the public key or symmetric secret.
+
+### Pass the token to Triplit
+
+Once you have your authentication provider set up in your app and your user is signed in, you'll need to pass the JWT to Triplit. This is done by calling `startSession` on the `TriplitClient` instance.
+
+```typescript
 import { TriplitClient } from '@triplit/client';
+
 const client = new TriplitClient({
-  token: '<your-token>',
   serverUrl: 'https://<project-id>.triplit.io',
-  autoConnect: false,
 });
 
-// Do other things
-
-client.connect();
-```
-
-### Modeling sign in and sign out flows
-
-#### Starting sessions
-
-If users in your app start in an unauthenticated state (e.g. you display a sign-in form when the app loads), or if users can sign out, you will need to use Triplit's sessions API to initiate and teardown sync connections and the appropriate moments. When changing users (as represented by tokens), you should use the `startSession` method.
-
-```typescript
-async function onSignIn(token: string) {
-  await client.startSession(token);
-}
-```
-
-This will update the token and connect the client to the server. The `TriplitClient` calls this method implicitly when you provide a token to the constructor. For more information on the `startSession` method, see the [Sessions API guide](/client/sessions).
-
-#### Ending sessions
-
-When a user signs out, you should call the `endSession` method. This will disconnect the client and reset metadata related to the session. It **will not** clear any data stored in the client's cache. It's up to you, the developer, to decide whether or not the next user should have access to the data from the previous user.
-
-```typescript
-async function onSignOut(clearCache: boolean = false) {
-  await client.endSession();
-  if (clearCache) {
-    await client.clear();
+function onPageLoad() {
+  // get the user's token from your authentication provider
+  const token = await auth.getToken({ skipCache: true });
+  if (token) {
+    if (client.token) {
+      await client.endSession();
+    }
+    await client.startSession(token);
   }
 }
 ```
 
-For more information on the `endSession` method, see the [Sessions API guide](/client/sessions).
+Connections to the server are managed with the Sessions API. Read more about it [here](/auth/sessions).
 
-#### Updating sessions
+### Add permissions to your schema
 
-If your authentication provider issues short-lived tokens, you may need to refresh the token mid-session. Read more about refreshing a session in the [Sessions API guide](/client/sessions).
+Access control to data on a Triplit server is defined by permissions in the schema. Permissions can reference the JWT claims that are passed to Triplit. Once you've added permissions, you need to run `npx triplit schema push` to have them take effect on a deployed server (or just restart the development server if you're running it locally.).
 
-## Authorization
+```typescript filename="schema.ts"
+export const schema = S.Collections({
+  blogPosts: {
+    schema: S.Schema({
+      id: S.Id(),
+      title: S.String(),
+      content: S.String(),
+      authorId: S.String(),
+    }),
+    permissions: {
+      authenticated: {
+        read: { filter: [true] },
+        insert: { filter: ['authorId', '=', '$token.sub'] },
+        update: { filter: ['authorId', '=', '$token.sub'] },
+        postUpdate: { filter: ['authorId', '=', '$token.sub'] },
+        delete: { filter: ['authorId', '=', '$token.sub'] },
+      },
+    },
+  },
+});
+```
 
-Triplit allows you to define rules on your collections that determine who can read and write data. This is usually based on the tokens you provide. See [permissions](/schemas/permissions) for more information on reading your tokens in queries and access control definitions.
+These permissions will allow any authenticated user to read all blog posts, but only allow them to insert, update, and delete their own posts. Notice that permissions are _defined as query filters_. This means that a permissions can be as complex as a query, and use `or`, `exists` and other query operators. Permissions can also reference relationships and/or any of the JWT claims on the user's `$token`. In this case, we're using the `sub` claim to identify the user. This is the default claim that most authentication providers will use to identify the user.
+
+This also implies that when a blogPost is created, the `authorId` field should be set to the user's unique identifier. This is usually done in the client code when inserting a new blog post.
+
+### Add additional roles (optional).
+
+Triplit has two default roles: `authenticated` and `anonymous`. The `authenticated` role is used for any user that connect with a JWT that has a `sub` claim. The `anonymous` role is assigned to any client that connects with the Triplit-generated `anon` token. This is a special token that is safe to use on the client side and should be used when no user is logged in.
+
+You may find that you need to create additional roles for your application. For example, you may have an admin role that is distinct from a normal user. See the [permissions guide](/schemas/permissions) for more information.
+
+</Steps>
+
+## Debugging authentication
+
+If you are having trouble connecting to the server, there are a few things to try:
+
+- pass the `logLevel: 'debug'` option to the `TriplitClient` constructor to get more information about the connection process and failures.
+- confirm that your `serverUrl` is correct and that the server is running.
+- check that the JWT being issued by your authentication provider is valid and has not expired. You can use [jwt.io](https://jwt.io/) to decode the JWT and check its claims.
+- check that the your Triplit server is configured to accept the JWT. If you're using a third-party authentication provider, make sure that the public key or secret is set correctly in your Triplit server. If you're using a self-hosted server, make sure that the `EXTERNAL_JWT_SECRET` environmental variable is set.

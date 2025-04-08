@@ -96,22 +96,33 @@ If you're using the Triplit Dashboard, you can add the public key to the **Exter
 
 If you're using a custom self-hosted server, you need to set the `EXTERNAL_JWT_SECRET` environmental variable to the public key.
 
-### Add access control to your schema
+Now that you have a user auth system set up, you can add permissions to your Triplit schema. By default, the JWT issued by Clerk will set the `sub` claim to the authenticated user's unique identifier. The server will apply the default `authenticated` role the token. For a given collection, you can define a permission that only allows any authenticated user to read all posts but only mutate their own.
 
-Now that you have a user auth system set up, you can add roles and permissions to your Triplit schema. By default, the JWT issued by Clerk will set the `sub` claim to the authenticated user's unique identifier. In Triplit, you can use it to set up a simple `user` role:
+```ts copy filename=schema.ts
+import { Schema as S } from '@triplit/client';
 
-```ts copy
-import { Roles } from '@triplit/client';
-
-export const roles: Roles = {
-  user: {
-    match: {
-      sub: '$userId',
+export const schema = S.Collections({
+  posts: {
+    schema: S.Schema({
+      id: S.Id(),
+      title: S.String(),
+      content: S.String(),
+      authorId: S.String(),
+    }),
+    permissions: {
+      authenticated: {
+        read: { filter: [true] },
+        insert: { filter: [['authorId', '=', '$token.sub']] },
+        update: { filter: [['authorId', '=', '$token.sub']] },
+        delete: { filter: [['authorId', '=', '$token.sub']] },
+      },
     },
   },
-};
+});
 ```
 
-[Read here to see how you can use this Role to define a permission.](/schemas/permissions).
+When creating `posts`, you should ensure that the `authorId` is set to the `sub` claim, either taken from the token or the Supabase session.
+
+If you need to model more complex roles or permissions, [consult the documentation](/schemas/permissions).
 
 </Steps>

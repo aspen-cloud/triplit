@@ -2,8 +2,8 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:news="http://www.google.com/schemas/sitemap-news/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml" xmlns:mobile="http://www.google.com/schemas/sitemap-mobile/1.0" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1" xmlns:video="http://www.google.com/schemas/sitemap-video/1.1">
 <url><loc>https://www.triplit.dev/docs</loc><lastmod>2024-12-04T03:47:55.290Z</lastmod><changefreq>daily</changefreq><priority>0.7</priority></url>
 <url><loc>https://www.triplit.dev/docs/auth</loc><lastmod>2024-12-04T03:47:55.291Z</lastmod><changefreq>daily</changefreq><priority>0.7</priority></url>
-<url><loc>https://www.triplit.dev/docs/auth/clerk</loc><lastmod>2024-12-04T03:47:55.291Z</lastmod><changefreq>daily</changefreq><priority>0.7</priority></url>
-<url><loc>https://www.triplit.dev/docs/auth/supabase</loc><lastmod>2024-12-04T03:47:55.291Z</lastmod><changefreq>daily</changefreq><priority>0.7</priority></url>
+<url><loc>https://www.triplit.dev/docs/auth/integration-guides/clerk</loc><lastmod>2024-12-04T03:47:55.291Z</lastmod><changefreq>daily</changefreq><priority>0.7</priority></url>
+<url><loc>https://www.triplit.dev/docs/auth/integration-guides/supabase</loc><lastmod>2024-12-04T03:47:55.291Z</lastmod><changefreq>daily</changefreq><priority>0.7</priority></url>
 <url><loc>https://www.triplit.dev/docs/cli</loc><lastmod>2024-12-04T03:47:55.291Z</lastmod><changefreq>daily</changefreq><priority>0.7</priority></url>
 <url><loc>https://www.triplit.dev/docs/cli/clear</loc><lastmod>2024-12-04T03:47:55.291Z</lastmod><changefreq>daily</changefreq><priority>0.7</priority></url>
 <url><loc>https://www.triplit.dev/docs/cli/dev</loc><lastmod>2024-12-04T03:47:55.291Z</lastmod><changefreq>daily</changefreq><priority>0.7</priority></url>
