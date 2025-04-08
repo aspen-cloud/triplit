@@ -10462,12 +10462,15 @@ __metadata:
     better-sqlite3: "*"
     expo-sqlite: "*"
     lmdb: "*"
+    web-worker: ^1.5.0
   peerDependenciesMeta:
     better-sqlite3:
       optional: true
     expo-sqlite:
       optional: true
     lmdb:
+      optional: true
+    web-worker:
       optional: true
   languageName: unknown
   linkType: soft
