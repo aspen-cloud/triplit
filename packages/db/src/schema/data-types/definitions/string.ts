@@ -7,7 +7,7 @@ import {
 export type StringTypeOptions<
   E extends ReadonlyArray<string> = ReadonlyArray<string>,
 > = BaseTypeOptions & {
-  enum?: [...E];
+  enum?: readonly [...E];
 };
 export type StringType<Options extends StringTypeOptions = StringTypeOptions> =
   TypeInterface<'string', Options>;
@@ -16,7 +16,7 @@ export function StringType<Options extends OptionsInput<StringTypeOptions>>(
   options: Options &
     (Options['enum'] extends ReadonlyArray<string>
       ? {
-          enum: [...Options['enum']];
+          enum: readonly [...Options['enum']];
         }
       : {})
 ): StringType<Options>;

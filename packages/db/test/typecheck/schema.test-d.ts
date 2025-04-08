@@ -113,3 +113,15 @@ describe('S.Schema', () => {
     );
   });
 });
+
+describe('String Enum', () => {
+  it('can accept an external input', () => {
+    const enumData = ['one', 'two', 'three'] as const;
+    assertType(
+      S.Schema({
+        id: S.Id(),
+        enum: S.String({ enum: enumData }),
+      })
+    );
+  });
+});
