@@ -14,7 +14,8 @@
     "version": "changeset version && yarn install --mode update-lockfile",
     "version:canary": "changeset version --snapshot canary && yarn install --mode update-lockfile",
     "changeset": "changeset && node ./scripts/generate-manual-dependency-changeset.js",
-    "test": "yarn workspaces foreach --all -p --exclude @triplit/db run test"
+    "test": "yarn workspaces foreach --all -p run test",
+    "typecheck": "yarn workspaces foreach --all -p run typecheck"
   },
   "devDependencies": {
     "@changesets/cli": "^2.26.1",
