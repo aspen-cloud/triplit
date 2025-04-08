@@ -1,5 +1,8 @@
 import * as ComLink from 'comlink';
-import type { TriplitClient as Client } from '../client/triplit-client.js';
+import {
+  TriplitClient,
+  type TriplitClient as Client,
+} from '../client/triplit-client.js';
 import {
   SubscribeBackgroundOptions,
   ClientFetchOptions,
@@ -17,6 +20,7 @@ import {
   FetchResult,
   InvalidCollectionNameError,
   Models,
+  normalizeSessionVars,
   queryBuilder,
   ReadModel,
   SchemaQuery,
@@ -33,6 +37,7 @@ import {
 } from '../client/types/client.js';
 import { ConnectionStatus } from '../types.js';
 import { clientLogHandler } from '../client-logger.js';
+import { decodeToken } from '../token.js';
 
 export function getTriplitWorkerEndpoint(workerUrl?: string): ComLink.Endpoint {
   const url =
@@ -58,6 +63,7 @@ export class WorkerClient<M extends Models<M> = Models> implements Client<M> {
   initialized: Promise<void>;
   clientWorker: ClientComlinkWrapper<M>; //ComLink.Remote<Client<M>>;
   private _connectionStatus: ConnectionStatus;
+  private _vars: typeof TriplitClient.prototype.vars;
   constructor(
     options?: Omit<ClientOptions<M>, 'storage'> & {
       workerUrl?: string;
@@ -98,6 +104,17 @@ export class WorkerClient<M extends Models<M> = Models> implements Client<M> {
     this.onConnectionStatusChange((status) => {
       this._connectionStatus = status;
     }, true);
+    const sessionVars = token ? normalizeSessionVars(decodeToken(token)) : {};
+    this._vars = {
+      $global: remainingOptions?.variables ?? {},
+      $session: sessionVars,
+      $token: sessionVars,
+    };
+    this.clientWorker.onVariablesChange(
+      ComLink.proxy((vars) => {
+        this._vars = vars;
+      })
+    );
   }
 
   get connectionStatus() {
@@ -480,6 +497,9 @@ export class WorkerClient<M extends Models<M> = Models> implements Client<M> {
     return () => unSubPromise.then((unsub) => unsub());
   }
 
+  get vars() {
+    return this._vars;
+  }
   async connect() {
     await this.initialized;
     return this.clientWorker.connect();
