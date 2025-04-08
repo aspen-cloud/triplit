@@ -1250,6 +1250,10 @@ export class TriplitClient<M extends Models<M> = Models> {
     return this._serverUrl;
   }
 
+  get vars() {
+    return { ...this.db.systemVars, $token: this.db.systemVars.$session };
+  }
+
   onSyncMessageReceived(
     ...args: Parameters<typeof this.syncEngine.onSyncMessageReceived>
   ) {
