@@ -34,6 +34,7 @@ export function triplitRoute<
     | ((
         loaderParams: LoaderFnContext<
           TParentRoute,
+          TId,
           ResolveParams<Path>,
           unknown,
           unknown,
@@ -53,8 +54,9 @@ export function triplitRoute<
     loader: async <
       Ctx extends LoaderFnContext<
         TParentRoute,
+        TId,
         unknown,
-        ResolveParams<Path>,
+        Record<string, any>,
         AnyContext,
         unknown,
         unknown

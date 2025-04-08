@@ -33,7 +33,7 @@
     "react": "*"
   },
   "devDependencies": {
-    "@tanstack/react-router": "^1.57.9",
+    "@tanstack/react-router": "^1.115.2",
     "@triplit/client": "workspace:^",
     "@triplit/react": "workspace:^",
     "@types/react": "^18",
