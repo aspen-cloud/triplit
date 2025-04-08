@@ -103,7 +103,27 @@ export const schema = S.Collections({
 
 These permissions will allow any authenticated user to read all blog posts, but only allow them to insert, update, and delete their own posts. Notice that permissions are _defined as query filters_. This means that a permissions can be as complex as a query, and use `or`, `exists` and other query operators. Permissions can also reference relationships and/or any of the JWT claims on the user's `$token`. In this case, we're using the `sub` claim to identify the user. This is the default claim that most authentication providers will use to identify the user.
 
-This also implies that when a blogPost is created, the `authorId` field should be set to the user's unique identifier. This is usually done in the client code when inserting a new blog post.
+### Use token claims when inserting or updating data
+
+When Triplit is given a JWT token, it makes the decoded claims available through the `TriplitClient.vars.$token`. If your collections have fields that are set to identifiable information from the token, you can access it there and use it in your calls to `insert` or `update`.
+
+Using the `blogPosts` example from above, you can set the `authorId` field to the user's `sub` claim when inserting a new post:
+
+```typescript
+import { TriplitClient } from '@triplit/client';
+const client = new TriplitClient({
+  serverUrl: 'https://<project-id>.triplit.io',
+});
+
+const token = await auth.getToken({ skipCache: true });
+
+await client.startSession(token);
+await client.insert('posts', {
+  title: 'My first blog post',
+  content: 'Hello world!',
+  authorId: client.vars.$token.sub, // set the authorId to the user's id
+});
+```
 
 ### Add additional roles (optional).
 
@@ -121,3 +141,7 @@ If you are having trouble connecting to the server, there are a few things to tr
 - confirm that your `serverUrl` is correct and that the server is running.
 - check that the JWT being issued by your authentication provider is valid and has not expired. You can use [jwt.io](https://jwt.io/) to decode the JWT and check its claims.
 - check that the your Triplit server is configured to accept the JWT. If you're using a third-party authentication provider, make sure that the public key or secret is set correctly in your Triplit server. If you're using a self-hosted server, make sure that the `EXTERNAL_JWT_SECRET` environmental variable is set.
+
+```
+
+```

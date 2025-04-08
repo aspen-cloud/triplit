@@ -6,6 +6,8 @@ description: Variables in Triplit allow you to pass in preset values into querie
 
 Variables in Triplit allow you to pass in preset values into queries. They consist of a scope (to prevent collisions) and a dot (`.`) separated path to reference data in the variable.
 
+## Types of variables
+
 ### Query variables
 
 Query variables are prefixed with the `query` scope and are accessible just to the query they are defined on. They are defined with the `Vars` method in the query builder. For example:
@@ -40,3 +42,17 @@ Token variables are prefixed with the `token` scope and are accessible to all qu
 ### Role variables
 
 When determining access control rules with [roles](/schemas/permissions#roles), you can use role variables to reference values from a client's token in your permission definitions. Role variables are prefixed with the `role` scope.
+
+## Accessing variables
+
+`$global` and `$token` variables are accessible on the client instance through the `vars` property.
+
+```typescript
+import { TriplitClient } from '@triplit/client';
+const client = new TriplitClient({
+  variables: { name: 'Philip J. Fry' },
+  token: '<jwt-token>',
+});
+console.log(client.vars.$global.name); // Philip J. Fry
+console.log(client.vars.$token.sub); //  The subject of the JWT token, if it exists
+```
