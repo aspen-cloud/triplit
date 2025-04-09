@@ -1024,9 +1024,9 @@ describe('where', () => {
         }
       );
       expect(query.where).toEqual([
-        ['name', '=', 'test'],
         ['name', '=', '$1.unscoped'],
         ['name', '=', '$1.var2'],
+        ['name', '=', 'test'],
       ]);
     });
     it('rejects variables that are not defined', () => {
@@ -1105,8 +1105,8 @@ describe('where', () => {
                 exists: {
                   collectionName: 'profiles',
                   where: [
-                    ['id', '=', '$1.profileId'],
                     ['bio', '=', 'test'],
+                    ['id', '=', '$1.profileId'],
                   ],
                 },
               },
@@ -1141,8 +1141,8 @@ describe('where', () => {
                 exists: {
                   collectionName: 'profiles',
                   where: [
-                    ['id', '=', '$1.profileId'],
                     ['bio', '=', '$2.id'],
+                    ['id', '=', '$1.profileId'],
                   ],
                 },
               },
@@ -1217,8 +1217,8 @@ describe('where', () => {
                 exists: {
                   collectionName: 'profiles',
                   where: [
-                    ['id', '=', '$1.profileId'],
                     ['bio', '=', 'test'],
+                    ['id', '=', '$1.profileId'],
                   ],
                 },
               },
@@ -1278,8 +1278,8 @@ describe('where', () => {
               exists: {
                 collectionName: 'b',
                 where: [
-                  ['id', '=', '$1.b_id'],
                   ['bProp1', '=', '$1.aProp1'],
+                  ['id', '=', '$1.b_id'],
                 ],
               },
             },
@@ -1311,8 +1311,8 @@ describe('where', () => {
                     exists: {
                       collectionName: 'c',
                       where: [
-                        ['id', '=', '$2.c_id'],
                         ['cProp1', '=', '$1.bProp1'],
+                        ['id', '=', '$2.c_id'],
                       ],
                     },
                   },
@@ -1342,9 +1342,9 @@ describe('where', () => {
               exists: {
                 collectionName: 'b',
                 where: [
+                  ['bProp1', '<', '$1.aProp1'],
                   ['id', '=', '$1.b_id'],
                   // still querying that aProp1 is greater
-                  ['bProp1', '<', '$1.aProp1'],
                 ],
               },
             },

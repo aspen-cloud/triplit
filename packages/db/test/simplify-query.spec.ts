@@ -272,7 +272,7 @@ describe('filter simplification', () => {
       });
       expect(simplified).toEqual({
         collectionName: 'test',
-        where: [true, ['id', '=', 1]],
+        where: [['id', '=', 1], true],
       });
     }
     {
@@ -302,7 +302,7 @@ describe('filter simplification', () => {
       });
       expect(simplified).toEqual({
         collectionName: 'test',
-        where: [{ mod: 'or', filters: [false, ['id', '=', 1]] }],
+        where: [{ mod: 'or', filters: [['id', '=', 1], false] }],
       });
     }
   });
@@ -337,6 +337,170 @@ describe('filter simplification', () => {
       ],
     });
   });
+  it('de-dupes filter statements', () => {
+    {
+      const simplified = simplifyQuery({
+        collectionName: 'test',
+        where: [
+          ['id', '=', 1],
+          ['id', '=', 1],
+        ],
+      });
+
+      expect(simplified).toEqual({
+        collectionName: 'test',
+        where: [['id', '=', 1]],
+      });
+    }
+    {
+      const simplified = simplifyQuery({
+        collectionName: 'messages',
+        where: [
+          {
+            exists: {
+              collectionName: 'conversations',
+              where: [
+                ['id', '=', '$1.conversationId'],
+                ['members', '=', 'user-1'],
+                ['members', '=', 'user-1'],
+              ],
+            },
+          },
+        ],
+        include: {
+          reactions: {
+            subquery: {
+              collectionName: 'reactions',
+              where: [
+                ['messageId', '=', '$1.id'],
+                {
+                  exists: {
+                    collectionName: 'messages',
+                    where: [
+                      ['id', '=', '$1.messageId'],
+                      {
+                        exists: {
+                          collectionName: 'conversations',
+                          where: [
+                            ['members', '=', 'user-1'],
+                            ['members', '=', 'user-1'],
+                            ['id', '=', '$1.conversationId'],
+                          ],
+                        },
+                      },
+                      {
+                        exists: {
+                          collectionName: 'conversations',
+                          where: [
+                            ['id', '=', '$1.conversationId'],
+                            ['members', '=', 'user-1'],
+                            ['members', '=', 'user-1'],
+                          ],
+                        },
+                      },
+                    ],
+                  },
+                },
+              ],
+            },
+            cardinality: 'many',
+          },
+        },
+      });
+
+      expect(simplified).toEqual({
+        collectionName: 'messages',
+        where: [
+          {
+            exists: {
+              collectionName: 'conversations',
+              where: [
+                ['id', '=', '$1.conversationId'],
+                ['members', '=', 'user-1'],
+              ],
+            },
+          },
+        ],
+        include: {
+          reactions: {
+            subquery: {
+              collectionName: 'reactions',
+              where: [
+                ['messageId', '=', '$1.id'],
+                {
+                  exists: {
+                    collectionName: 'messages',
+                    where: [
+                      ['id', '=', '$1.messageId'],
+                      {
+                        exists: {
+                          collectionName: 'conversations',
+                          where: [
+                            ['id', '=', '$1.conversationId'],
+                            ['members', '=', 'user-1'],
+                          ],
+                        },
+                      },
+                    ],
+                  },
+                },
+              ],
+            },
+            cardinality: 'many',
+          },
+        },
+      });
+    }
+    {
+      const simplified = simplifyQuery({
+        collectionName: 'messages',
+        where: [
+          {
+            mod: 'or',
+            filters: [
+              ['id', '=', '$1.conversationId'],
+              ['wild', '=', '$1.conversationId'],
+            ],
+          },
+          {
+            mod: 'or',
+            filters: [
+              ['wild', '=', '$1.conversationId'],
+              ['id', '=', '$1.conversationId'],
+            ],
+          },
+        ],
+      });
+      expect(simplified).toEqual({
+        collectionName: 'messages',
+        where: [
+          {
+            mod: 'or',
+            filters: [
+              ['id', '=', '$1.conversationId'],
+              ['wild', '=', '$1.conversationId'],
+            ],
+          },
+        ],
+      });
+    }
+    {
+      const simplified = simplifyQuery({
+        collectionName: 'messages',
+        where: [
+          ['id', '=', '$1.conversationId'],
+          {
+            mod: 'or',
+            filters: [['id', '=', '$1.conversationId']],
+          },
+        ],
+      });
+      expect(simplified).toEqual({
+        collectionName: 'messages',
+        where: [['id', '=', '$1.conversationId']],
+      });
+    }
+  });
 });
 
 describe('order simplification', () => {
@@ -358,7 +522,6 @@ describe('order simplification', () => {
     const simplified = simplifyQuery({
       collectionName: 'test',
       order: [
-        // @ts-expect-error
         [
           'id',
           'ASC',

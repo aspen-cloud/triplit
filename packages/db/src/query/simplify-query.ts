@@ -37,18 +37,21 @@ function simplifyWhere(where: PreparedWhere | undefined) {
 /**
  * Simplifies a group of where clauses, related by a boolean operator (AND, OR)
  */
-// TODO: drop duplicative statements
 // TODO: merge expanded subqueries that are the same (IE where a.b.c > 1 AND a.b.c <= 2)
 function simplifyWhereClauses(
   where: PreparedWhere,
   groupWith: 'and' | 'or'
 ): PreparedWhere {
   const clauses: PreparedWhere = [];
+  const alreadySeen = new Set<string>();
   for (let i = 0; i < where.length; i++) {
     const clause = where[i];
     const simplified = simplifyWhereClause(clause);
     // Drop if we decide the clause does nothing after simplifying
-    if (simplified === undefined) continue;
+    if (simplified === undefined || alreadySeen.has(JSON.stringify(simplified)))
+      continue;
+    alreadySeen.add(JSON.stringify(simplified));
+
     // If a filter group has the same mod as the parent, we can merge the children into the parent
     if (isFilterGroup(simplified) && simplified.mod === groupWith) {
       for (const filter of simplified.filters) {
@@ -58,7 +61,14 @@ function simplifyWhereClauses(
       clauses.push(simplified);
     }
   }
-  return applyBooleanCollapse(clauses, groupWith);
+  const booleanCollapse = applyBooleanCollapse(clauses, groupWith);
+  return booleanCollapse.sort((a, b) => {
+    const aStr = JSON.stringify(a);
+    const bStr = JSON.stringify(b);
+    if (aStr < bStr) return -1;
+    if (aStr > bStr) return 1;
+    return 0;
+  });
 }
 
 /**
