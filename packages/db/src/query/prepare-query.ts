@@ -15,7 +15,13 @@ import type {
   PreparedOrder,
 } from './types/index.js';
 import { DataType } from '../schema/data-types/types/index.js';
-import { flipOperator, Models, PermissionOperations } from '../schema/index.js';
+import {
+  flipOperator,
+  Models,
+  PermissionOperations,
+  SET_OP_PREFIX,
+  SUPPORTED_OPERATIONS,
+} from '../schema/index.js';
 import {
   IncludedNonRelationError,
   InvalidCollectionNameError,
@@ -40,7 +46,6 @@ import {
   isFilterGroup,
   isFilterStatement,
   isSubQueryFilter,
-  SET_OP_PREFIX,
 } from '../filters.js';
 import {
   getVariableComponents,
@@ -577,6 +582,13 @@ function transformAndValidateFilter(
       if (propAttributeType.type === 'set') {
         op = `${SET_OP_PREFIX}${op}`;
       }
+
+      console.log({
+        op,
+        prop: propAttributeType,
+        ops: Type.supportedOperations(propAttributeType),
+        SUPPORTED_OPERATIONS,
+      });
 
       // Validate the operator for the prop
       if (!Type.supportedOperations(propAttributeType).includes(op as never))

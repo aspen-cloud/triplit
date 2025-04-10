@@ -26,6 +26,7 @@ import {
   hasNoValue,
   ModelRelationshipPaths,
   Models,
+  SET_OP_PREFIX,
 } from './schema/index.js';
 import { isValueVariable } from './variables.js';
 
@@ -108,8 +109,6 @@ function satisfiesFilterStatement(entity: DBEntity, filter: FilterStatement) {
   const value = ValuePointer.Get(entity, path);
   return evaluateFilterStatement(value, op, filterValue);
 }
-
-export const SET_OP_PREFIX = 'SET_';
 
 function evaluateFilterStatement(
   value: any,

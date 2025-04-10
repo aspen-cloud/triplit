@@ -25,8 +25,11 @@ import {
   SetType,
   StringType,
 } from './definitions/index.js';
-import { prefixOperations, SUPPORTED_OPERATIONS } from './operations.js';
-import { SET_OP_PREFIX } from '../../filters.js';
+import {
+  prefixOperations,
+  SET_OP_PREFIX,
+  SUPPORTED_OPERATIONS,
+} from './operations.js';
 
 export namespace Type {
   /**

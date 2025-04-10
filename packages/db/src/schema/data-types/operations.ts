@@ -1,11 +1,12 @@
 import { TriplitError } from '../../errors.js';
-import { SET_OP_PREFIX } from '../../filters.js';
 import { AllTypes } from '../types/index.js';
 
 const BASE_OPERATIONS = ['isDefined'] as const;
 const COMPARISON_OPERATORS = ['=', '!=', '<', '>', '<=', '>='] as const;
 const COLLECTION_OPERATORS = ['has', '!has'] as const;
 const COLLECTION_ITEM_OPERATORS = ['in', 'nin'] as const;
+
+export const SET_OP_PREFIX = 'SET_';
 
 export const SUPPORTED_OPERATIONS = {
   boolean: [...BASE_OPERATIONS, ...COMPARISON_OPERATORS],
