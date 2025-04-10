@@ -7,6 +7,7 @@ import type {
   PreparedWhereFilter,
 } from './types/index.js';
 import { isFilterGroup, isSubQueryFilter } from '../filters.js';
+import { hashFilter } from './hash-query.js';
 
 /**
  * Simplifies a query by removing redundant parts
@@ -15,8 +16,6 @@ import { isFilterGroup, isSubQueryFilter } from '../filters.js';
 export function simplifyQuery(query: PreparedQuery): PreparedQuery {
   /**
    * TODO List
-   * Where:
-   * - can drop duplicate statements (ie where a = 1 AND a = 1)
    * Order:
    * - can drop consecutive duplicate statements ie .order([['name', 'ASC'], ['id', 'ASC'], ['id', 'ASC']]) -> .order([['name', 'ASC'], ['id', 'ASC']])
    *  - probably should merge direction from the last item ie .order([['name', 'ASC'], ['id', 'ASC'], ['id', 'DESC']]) -> .order([['name', 'ASC'], ['id', 'DESC']])
@@ -42,15 +41,12 @@ function simplifyWhereClauses(
   where: PreparedWhere,
   groupWith: 'and' | 'or'
 ): PreparedWhere {
-  const clauses: PreparedWhere = [];
-  const alreadySeen = new Set<string>();
+  let clauses: PreparedWhere = [];
   for (let i = 0; i < where.length; i++) {
     const clause = where[i];
     const simplified = simplifyWhereClause(clause);
     // Drop if we decide the clause does nothing after simplifying
-    if (simplified === undefined || alreadySeen.has(JSON.stringify(simplified)))
-      continue;
-    alreadySeen.add(JSON.stringify(simplified));
+    if (simplified === undefined) continue;
 
     // If a filter group has the same mod as the parent, we can merge the children into the parent
     if (isFilterGroup(simplified) && simplified.mod === groupWith) {
@@ -61,14 +57,27 @@ function simplifyWhereClauses(
       clauses.push(simplified);
     }
   }
-  const booleanCollapse = applyBooleanCollapse(clauses, groupWith);
-  return booleanCollapse.sort((a, b) => {
-    const aStr = JSON.stringify(a);
-    const bStr = JSON.stringify(b);
-    if (aStr < bStr) return -1;
-    if (aStr > bStr) return 1;
-    return 0;
-  });
+  clauses = applyBooleanCollapse(clauses, groupWith);
+  return deduplicateWhereClauses(clauses, groupWith);
+}
+
+function deduplicateWhereClauses(
+  where: PreparedWhere,
+  groupWith: 'and' | 'or'
+) {
+  const seen = new Set();
+  const deduplicated = [];
+  for (const clause of where) {
+    const { hash } = hashFilter(clause);
+    if (seen.has(hash)) continue;
+    seen.add(hash);
+    deduplicated.push(clause);
+  }
+  // We dropped a filter which could change the simplification, re-run the simplification process
+  if (deduplicated.length !== where.length) {
+    return simplifyWhereClauses(deduplicated, groupWith);
+  }
+  return deduplicated;
 }
 
 /**

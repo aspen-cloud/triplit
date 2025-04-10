@@ -267,7 +267,7 @@ export type OrderStatement<
 > = [property: ModelPaths<M, CN>, direction: 'ASC' | 'DESC'];
 
 // ====== Pagination Types ======
-export type QueryAfter = [ValueCursor, boolean];
+export type QueryAfter = [cursor: ValueCursor, inclusive: boolean];
 export type ValueCursor = [
   value: QueryValuePrimitive,
   ...values: QueryValuePrimitive[],
