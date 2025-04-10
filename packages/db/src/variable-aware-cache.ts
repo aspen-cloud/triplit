@@ -21,11 +21,6 @@ export class VariableAwareCache {
     return true;
   }
 
-  viewQueryToId(viewQuery: any) {
-    return JSON.stringify(viewQuery);
-    // return TB.Value.Hash(viewQuery);
-  }
-
   static resolveQueryFromView(
     viewResults: ViewEntity[],
     [prop, op, val]: FilterStatement
