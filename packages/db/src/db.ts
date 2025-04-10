@@ -381,11 +381,7 @@ export class DB<
       }
     );
 
-    const queryEngine = new EntityStoreQueryEngine(
-      this.kv,
-      this.entityStore,
-      this.schema as DBSchema | undefined
-    );
+    const queryEngine = new EntityStoreQueryEngine(this.kv, this.entityStore);
     let results = await queryEngine.fetch(preparedQuery);
 
     return applyProjectionsAndConversions(
@@ -397,11 +393,7 @@ export class DB<
   }
 
   async rawFetch(query: PreparedQuery): Promise<ViewEntity[]> {
-    const queryEngine = new EntityStoreQueryEngine(
-      this.kv,
-      this.entityStore,
-      this.schema as DBSchema | undefined
-    );
+    const queryEngine = new EntityStoreQueryEngine(this.kv, this.entityStore);
     return queryEngine.fetch(query);
   }
 
@@ -840,15 +832,9 @@ export class DB<
     if (!preparedPermissions || preparedPermissions.length === 0) return;
 
     // Run a pseudo-fetch, checking if the entity satisfies the permissions filters
-    const queryEngine = new EntityStoreQueryEngine(
-      storage,
-      this.entityStore,
-      this.schema
-    );
+    const queryEngine = new EntityStoreQueryEngine(storage, this.entityStore);
     const isSatisfied = await satisfiesFilters(
-      // TODO this is dumb and we should just pass in the collection name
-      // or better not need it at all
-      { ...entity, collectionName: collection },
+      entity,
       preparedPermissions,
       queryEngine
     );

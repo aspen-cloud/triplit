@@ -25,7 +25,8 @@ import {
   SetType,
   StringType,
 } from './definitions/index.js';
-import { SUPPORTED_OPERATIONS } from './operations.js';
+import { prefixOperations, SUPPORTED_OPERATIONS } from './operations.js';
+import { SET_OP_PREFIX } from '../../filters.js';
 
 export namespace Type {
   /**
@@ -435,7 +436,10 @@ export namespace Type {
     if (type.type === 'set')
       return [
         ...SUPPORTED_OPERATIONS.set,
-        ...Type.supportedOperations(type.items),
+        ...prefixOperations(
+          Type.supportedOperations(type.items),
+          SET_OP_PREFIX
+        ),
       ];
     if (type.type === 'string') return SUPPORTED_OPERATIONS.string;
     throw new UnrecognizedAttributeTypeError(

@@ -1,16 +1,10 @@
 import {
-  FilterGroup,
   FilterStatement,
-  OrderStatement,
   PreparedOrder,
   PreparedQuery,
   PreparedSubQueryFilter,
   PreparedWhere,
   QueryAfter,
-  QueryOrder,
-  QueryWhere,
-  RelationalOrderStatement,
-  SubQueryFilter,
 } from '../types.js';
 import {
   filterStatementIteratorFlat,
@@ -21,7 +15,7 @@ import {
   StaticFilter,
 } from '../filters.js';
 import { getVariableComponents, isValueVariable } from '../variables.js';
-import { getIdFilter, hasIdFilter } from './heuristics.js';
+import { getIdFilter } from './heuristics.js';
 import { VariableAwareCache as VAC } from '../variable-aware-cache.js';
 import { Models } from '../schema/index.js';
 import { TriplitError } from '../errors.js';
@@ -111,7 +105,6 @@ export interface CompiledPlan {
 
 export function extractViews(
   query: PreparedQuery,
-  schema: Models | undefined,
   generateViewId: () => string
 ): RelationalPlan {
   const plan: RelationalPlan = {
@@ -119,11 +112,7 @@ export function extractViews(
     rootQuery: query,
   };
   if (query.where) {
-    const { where, views } = whereFiltersToViews(
-      query.where,
-      schema,
-      generateViewId
-    );
+    const { where, views } = whereFiltersToViews(query.where, generateViewId);
     query.where = where;
     Object.assign(plan.views, views);
   }
@@ -132,7 +121,6 @@ export function extractViews(
     for (const [alias, inclusion] of Object.entries(query.include)) {
       const { newViews, rewrittenQuery } = subqueryToView(
         inclusion.subquery,
-        schema,
         generateViewId
       );
       Object.assign(plan.views, newViews);
@@ -151,7 +139,6 @@ export function extractViews(
       }
       const { newViews, rewrittenQuery } = subqueryToView(
         maybeSubquery.subquery,
-        schema,
         generateViewId
       );
       Object.assign(plan.views, newViews);
@@ -162,23 +149,15 @@ export function extractViews(
   return plan;
 }
 
-function subqueryToView(
-  subquery: PreparedQuery,
-  schema: Models | undefined,
-  generateViewId: () => string
-) {
+function subqueryToView(subquery: PreparedQuery, generateViewId: () => string) {
   let newViews = null;
   let rewrittenQuery = null;
   const hasNestedSubquery =
     subquery.include && Object.keys(subquery.include).length > 0;
-  if (VAC.canCacheQuery(subquery, schema) && !hasNestedSubquery) {
+  if (VAC.canCacheQuery(subquery) && !hasNestedSubquery) {
     const viewId = generateViewId();
-    const vacView = VAC.queryToViews(subquery, schema);
-    const extractedView = extractViews(
-      vacView.views[0],
-      schema,
-      generateViewId
-    );
+    const vacView = VAC.queryToViews(subquery);
+    const extractedView = extractViews(vacView.views[0], generateViewId);
     newViews = { [viewId]: extractedView.rootQuery, ...extractedView.views };
     rewrittenQuery = {
       ...subquery,
@@ -186,7 +165,7 @@ function subqueryToView(
       where: vacView.variableFilters,
     };
   } else {
-    const extractedView = extractViews(subquery, schema, generateViewId);
+    const extractedView = extractViews(subquery, generateViewId);
     newViews = extractedView.views;
     rewrittenQuery = extractedView.rootQuery;
   }
@@ -195,7 +174,6 @@ function subqueryToView(
 
 function whereFiltersToViews(
   where: PreparedWhere,
-  schema: Models | undefined,
   generateViewId: () => string
 ): {
   where: PreparedWhere;
@@ -222,7 +200,7 @@ function whereFiltersToViews(
       // inversion strategy
       if (!hasGrandparentReferences && subqueryVariableFilters.length < 2) {
         const viewId = generateViewId();
-        const extractedView = extractViews(subquery, schema, generateViewId);
+        const extractedView = extractViews(subquery, generateViewId);
         views[viewId] = extractedView.rootQuery;
         Object.assign(views, extractedView.views);
 
@@ -244,17 +222,13 @@ function whereFiltersToViews(
         updatedWhere.push(...viewFilters);
 
         // VAC strategy
-      } else if (VAC.canCacheQuery(subquery, schema)) {
+      } else if (VAC.canCacheQuery(subquery)) {
         const viewId = generateViewId();
-        const vacView = VAC.queryToViews(subquery, schema);
+        const vacView = VAC.queryToViews(subquery);
 
-        const extractedView = extractViews(
-          vacView.views[0],
-          schema,
-          generateViewId
-        );
+        const extractedView = extractViews(vacView.views[0], generateViewId);
         const { where: remainingFilters, views: remainingViews } =
-          whereFiltersToViews(vacView.unusedFilters, schema, generateViewId);
+          whereFiltersToViews(vacView.unusedFilters, generateViewId);
         extractedView.rootQuery.where?.concat(remainingFilters);
 
         views[viewId] = extractedView.rootQuery;
@@ -274,7 +248,6 @@ function whereFiltersToViews(
     } else if (isFilterGroup(filter)) {
       const { where: newWhere, views: newViews } = whereFiltersToViews(
         filter.filters,
-        schema,
         generateViewId
       );
       updatedWhere.push({ ...filter, filters: newWhere });
@@ -298,16 +271,13 @@ function hasHigherLevelReferences(where: PreparedWhere): boolean {
   return false;
 }
 
-export function compileQuery(
-  query: PreparedQuery,
-  schema: Models | undefined
-): CompiledPlan {
+export function compileQuery(query: PreparedQuery): CompiledPlan {
   // console.dir({ query }, { depth: null });
   let nextViewId = 0;
   const generateViewId = (): string => {
     return `${nextViewId++}`;
   };
-  const relationalPlan = extractViews(query, schema, generateViewId);
+  const relationalPlan = extractViews(query, generateViewId);
   // console.dir({ relationalPlan }, { depth: null });
   const compiledPlan = compileRelationalPlan(relationalPlan);
   // console.dir({ compiledPlan }, { depth: null });

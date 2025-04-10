@@ -768,7 +768,6 @@ describe('where', () => {
       )
     ).toThrow(InvalidFilterError);
   });
-  it.todo('appends rule filters if rules are present in the schema', () => {});
   it('appends permissions filters if permissions are present in the schema', () => {
     const query = prepareQuery(
       {
@@ -1150,6 +1149,31 @@ describe('where', () => {
           },
         },
       ]);
+    });
+
+    /**
+     * Temporarily prefixing all set operations to make them unique in the query engine
+     * This may be a long term solution, but it is okay to refactor the representation if needed
+     */
+    it('transforms Set operators to internal representation', () => {
+      const schema = S.Collections({
+        users: {
+          schema: S.Schema({ id: S.Id(), friends: S.Set(S.String()) }),
+        },
+      });
+      const query = prepareQuery(
+        {
+          collectionName: 'users',
+          where: [['friends', '=', 'test']],
+        },
+        schema,
+        {},
+        undefined,
+        {
+          applyPermission: undefined,
+        }
+      );
+      expect(query.where).toEqual([['friends', 'SET_=', 'test']]);
     });
 
     it.todo('validates and transforms value from user input to db value');

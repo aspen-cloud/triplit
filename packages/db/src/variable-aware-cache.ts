@@ -1,42 +1,11 @@
 import { QueryCacheError } from './errors.js';
-import { DB } from './db.js';
-import {
-  isFilterStatement,
-  isStaticFilter,
-  isSubQueryFilter,
-} from './filters.js';
-import { isValueVariable } from './variables.js';
-import {
-  getAttributeFromSchema,
-  isTraversalRelationship,
-} from './schema/utilities.js';
-import {
-  DBEntity,
-  OrderStatement,
-  PreparedQuery,
-  PreparedWhere,
-  PreparedWhereFilter,
-  QueryWhere,
-  WhereFilter,
-} from './types.js';
-import { CollectionQuery, FilterStatement } from './query/types/index.js';
-import { isPrimitiveType, Models } from './schema/index.js';
+import { isIndexableFilter, isStaticFilter } from './filters.js';
+import { OrderStatement, PreparedQuery, PreparedWhere } from './types.js';
+import { FilterStatement } from './query/types/index.js';
 import { ViewEntity } from './query-engine.js';
 
 export class VariableAwareCache {
-  cache: Map<
-    string,
-    {
-      results: Map<string, DBEntity>;
-      //   triples: TripleRow[];
-    }
-  >;
-
-  constructor(readonly db: DB) {
-    this.cache = new Map();
-  }
-
-  static canCacheQuery(query: PreparedQuery, schema: Models | undefined) {
+  static canCacheQuery(query: PreparedQuery) {
     if (!query.where || query.where.length === 0) return true;
     // Queries with limit are somewhat hard to accommodate
     // While it's totally correct to create the view for the query with limit
@@ -47,10 +16,7 @@ export class VariableAwareCache {
     // so the limit itself is not always a good heuristic to rely on because
     // if the relation is on the entities ID then even after you apply LIMIT 1
     // you've likely used most results in the view so it's fine
-
-    const orderableStatements = (query.where ?? []).filter(
-      isOrderableFilter(schema, query)
-    );
+    const orderableStatements = (query.where ?? []).filter(isIndexableFilter);
     if (orderableStatements.length === 0) return false;
     return true;
   }
@@ -133,10 +99,7 @@ export class VariableAwareCache {
     return viewResults.slice(start, end + 1);
   }
 
-  static queryToViews(
-    query: PreparedQuery,
-    schema: Models | undefined
-  ): {
+  static queryToViews(query: PreparedQuery): {
     views: PreparedQuery[];
     variableFilters: FilterStatement[];
     unusedFilters: PreparedWhere;
@@ -144,9 +107,8 @@ export class VariableAwareCache {
     const variableFilters: FilterStatement[] = [];
     const staticFilters: PreparedWhere = [];
     const unusedFilters: PreparedWhere = [];
-    const isOrderable = isOrderableFilter(schema, query);
     for (const filter of query.where ?? []) {
-      if (isOrderable(filter)) {
+      if (isIndexableFilter(filter)) {
         variableFilters.push(filter);
         continue;
       }
@@ -173,26 +135,6 @@ export class VariableAwareCache {
       unusedFilters,
     };
   }
-}
-
-function isOrderableFilter(schema: Models | undefined, query: PreparedQuery) {
-  return (filter: PreparedWhereFilter): filter is FilterStatement => {
-    if (!isFilterStatement(filter)) return false;
-    const [prop, op, val] = filter;
-    if (!isValueVariable(val)) return false;
-    if (!['=', '<', '<=', '>', '>=', '!='].includes(op)) return false;
-    if (schema) {
-      const attribute = getAttributeFromSchema(
-        prop.split('.'),
-        schema,
-        query.collectionName
-      );
-      if (!attribute) return false;
-      if (isTraversalRelationship(attribute)) return false;
-      if (!isPrimitiveType(attribute)) return false;
-    }
-    return true;
-  };
 }
 
 /**

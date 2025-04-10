@@ -11,19 +11,19 @@ it('expected operations are tested', () => {
     // Set operations + item type operations
     // Below we just test '=' as a proxy for the other type operations
     new Set([
-      '=',
-      '!=',
-      'like',
-      'nlike',
-      'in',
-      'nin',
-      'has',
-      '!has',
-      'isDefined',
-      '<',
-      '>',
-      '<=',
-      '>=',
+      'SET_=',
+      'SET_!=',
+      'SET_like',
+      'SET_nlike',
+      'SET_in',
+      'SET_nin',
+      'SET_has',
+      'SET_!has',
+      'SET_isDefined',
+      'SET_<',
+      'SET_>',
+      'SET_<=',
+      'SET_>=',
     ])
   );
 });

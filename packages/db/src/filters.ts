@@ -1,8 +1,6 @@
-import { InvalidFilterError, TriplitError } from './errors.js';
-import { isValueVariable } from './variables.js';
+import { InvalidFilterError } from './errors.js';
 import {
   DBEntity,
-  Insert,
   PreparedFilterGroup,
   PreparedSubQueryFilter,
   PreparedWhere,
@@ -11,16 +9,9 @@ import {
 } from './types.js';
 import { ValuePointer } from './utils/value-pointer.js';
 import { EntityStoreQueryEngine } from './query-engine.js';
-import { asyncIterEvery, asyncIterSome } from './utils/iterators.js';
-import {
-  getAttributeFromSchema,
-  isTraversalRelationship,
-} from './schema/utilities.js';
-import { DBSchema } from './db.js';
 import { logger } from '@triplit/logger';
 import {
   AndFilterGroup,
-  CollectionQuery,
   FilterGroup,
   FilterStatement,
   OrFilterGroup,
@@ -36,9 +27,10 @@ import {
   ModelRelationshipPaths,
   Models,
 } from './schema/index.js';
+import { isValueVariable } from './variables.js';
 
 export async function satisfiesFilters(
-  entity: { collectionName: string } & Insert,
+  entity: DBEntity,
   filters: PreparedWhere,
   queryEngine: EntityStoreQueryEngine
 ): Promise<boolean> {
@@ -53,7 +45,7 @@ export async function satisfiesFilters(
 }
 
 export async function satisfiesFilter(
-  entity: { collectionName: string } & Insert,
+  entity: DBEntity,
   filter: PreparedWhereFilter,
   queryEngine: EntityStoreQueryEngine
 ): Promise<boolean> {
@@ -75,20 +67,13 @@ export async function satisfiesFilter(
     if (Array.isArray(result)) return result.length > 0;
     return !!result;
   } else {
-    return satisfiesNonRelationalFilter(
-      entity.collectionName,
-      entity,
-      filter,
-      queryEngine.schema
-    );
+    return satisfiesNonRelationalFilter(entity, filter);
   }
 }
 
 export function satisfiesNonRelationalFilter(
-  collectionName: string,
   entity: DBEntity,
   filter: PreparedWhereFilter,
-  schema?: DBSchema,
   ignoreSubQueries = false
 ): boolean {
   if (isBooleanFilter(filter)) return filter;
@@ -96,24 +81,12 @@ export function satisfiesNonRelationalFilter(
     const { mod, filters } = filter;
     if (mod === 'and') {
       return filters.every((f) =>
-        satisfiesNonRelationalFilter(
-          collectionName,
-          entity,
-          f,
-          schema,
-          ignoreSubQueries
-        )
+        satisfiesNonRelationalFilter(entity, f, ignoreSubQueries)
       );
     }
     if (mod === 'or') {
       return filters.some((f) =>
-        satisfiesNonRelationalFilter(
-          collectionName,
-          entity,
-          f,
-          schema,
-          ignoreSubQueries
-        )
+        satisfiesNonRelationalFilter(entity, f, ignoreSubQueries)
       );
     }
     return false;
@@ -127,75 +100,55 @@ export function satisfiesNonRelationalFilter(
       `Subquery filters should be filtered out before this point, found ${filter}`
     );
   }
-  return satisfiesFilterStatement(
-    { collectionName, data: entity },
-    filter,
-    schema
-  );
+  return satisfiesFilterStatement(entity, filter);
 }
 
-function satisfiesFilterStatement(
-  entity: {
-    collectionName: string;
-    data: DBEntity;
-  },
-  filter: FilterStatement,
-  schema?: DBSchema
-) {
+function satisfiesFilterStatement(entity: DBEntity, filter: FilterStatement) {
   const [path, op, filterValue] = filter;
-  const dataType = schema?.collections
-    ? getAttributeFromSchema(
-        path.split('.'),
-        schema?.collections,
-        entity.collectionName
-      )
-    : undefined;
-
-  const value = ValuePointer.Get(entity.data, path);
-
-  if (isTraversalRelationship(dataType)) {
-    throw new TriplitError(
-      'Cannot apply filter. Provided path did not resolve to a valid attribute.'
-    );
-  }
-
-  // If we have a schema handle specific cases
-  if (dataType && dataType.type === 'set')
-    return satisfiesSetFilter(value, op, filterValue);
-
-  // Use register as default
-  return satisfiesRegisterFilter(value, op, filterValue);
+  const value = ValuePointer.Get(entity, path);
+  return evaluateFilterStatement(value, op, filterValue);
 }
 
-export function satisfiesSetFilter(
-  setValue: Record<string, boolean>,
-  op: string, // Operator,
-  filterValue: any
-) {
-  if (op === 'has') {
-    if (hasNoValue(setValue)) return false;
-    const filteredSet = Object.entries(setValue).filter(([_v, inSet]) => inSet);
-    return filteredSet.some(([v]) => v === filterValue);
-  } else if (op === '!has') {
-    if (hasNoValue(setValue)) return true;
-    const filteredSet = Object.entries(setValue).filter(([_v, inSet]) => inSet);
-    return filteredSet.every(([v]) => v !== filterValue);
-  } else if (op === 'isDefined') {
-    return !!filterValue ? !hasNoValue(setValue) : hasNoValue(setValue);
-  } else {
-    if (hasNoValue(setValue)) return false;
-    const filteredSet = Object.entries(setValue).filter(([_v, inSet]) => inSet);
-    return filteredSet.some(([v]) =>
-      satisfiesRegisterFilter(v, op, filterValue)
-    );
-  }
-}
+export const SET_OP_PREFIX = 'SET_';
 
-export function satisfiesRegisterFilter(
+function evaluateFilterStatement(
   value: any,
-  op: string, //Operator,
+  op: string,
   filterValue: any
-) {
+): boolean {
+  /**
+   * As a temporary solution, we will prepend all set operations with SET_ in prepareQuery
+   * This should indicate that we are dealing with a set
+   * This can be refactored in the future as this is all internal handling of operators
+   */
+  if (op.startsWith(SET_OP_PREFIX)) {
+    // Valid values are { key: boolean }, null, or undefined
+    if (typeof value !== 'object' && value !== null && value !== undefined)
+      throw new InvalidFilterError(
+        `The operator requires a set value, but got ${value}`
+      );
+    const setOp = op.slice(SET_OP_PREFIX.length);
+    if (setOp === 'has') {
+      if (hasNoValue(value)) return false;
+      const filteredSet = Object.entries(value).filter(([_v, inSet]) => inSet);
+      // TODO: confirm we are deserializing v properly from a string
+      return filteredSet.some(([v]) => v === filterValue);
+    } else if (setOp === '!has') {
+      if (hasNoValue(value)) return true;
+      const filteredSet = Object.entries(value).filter(([_v, inSet]) => inSet);
+      return filteredSet.every(([v]) => v !== filterValue);
+    } else if (setOp === 'isDefined') {
+      return !!filterValue ? !hasNoValue(value) : hasNoValue(value);
+    } else {
+      if (hasNoValue(value)) return false;
+      const filteredSet = Object.entries(value).filter(([_v, inSet]) => inSet);
+      return filteredSet.some(([v]) =>
+        evaluateFilterStatement(v, setOp, filterValue)
+      );
+    }
+  }
+
+  // Handle primitive value operations
   switch (op) {
     case '=':
       // Empty equality check
@@ -259,7 +212,7 @@ export function satisfiesRegisterFilter(
       // ['a', 'in', null] false
       if (hasNoValue(value) || hasNoValue(filterValue)) return false;
       if (filterValue instanceof Array) {
-        return new Set(filterValue).has(value);
+        return filterValue.includes(value);
       } else if (filterValue instanceof Object) {
         return !!filterValue[value];
       } else {
@@ -271,7 +224,7 @@ export function satisfiesRegisterFilter(
       // ['a', 'nin', null] true
       if (hasNoValue(value) || hasNoValue(filterValue)) return true;
       if (filterValue instanceof Array) {
-        return !new Set(filterValue).has(value);
+        return !filterValue.includes(value);
       } else if (filterValue instanceof Object) {
         return !filterValue[value];
       } else {
@@ -366,6 +319,30 @@ export function isWhereFilter(filter: any): filter is WhereFilter {
     isRelationshipExistsFilter(filter) ||
     isBooleanFilter(filter)
   );
+}
+
+/**
+ * Returns true if the filter can be used in an index sorted by the property. It should be a filter statement with a some range scan operator.
+ */
+export function isIndexableFilter(
+  filter: PreparedWhereFilter
+): filter is FilterStatement {
+  if (!isFilterStatement(filter)) return false;
+  const [prop, op, val] = filter;
+  if (!isValueVariable(val)) return false;
+  if (!['=', '<', '<=', '>', '>=', '!='].includes(op)) return false;
+  // We could also confirm that the data type is a primitive, but checking the operator of a prepared query should be enough
+  // if (schema) {
+  //   const attribute = getAttributeFromSchema(
+  //     prop.split('.'),
+  //     schema,
+  //     query.collectionName
+  //   );
+  //   if (!attribute) return false;
+  //   if (isTraversalRelationship(attribute)) return false;
+  //   if (!isPrimitiveType(attribute)) return false;
+  // }
+  return true;
 }
 
 function determineFilterType(

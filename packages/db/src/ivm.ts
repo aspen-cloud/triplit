@@ -6,7 +6,6 @@ import {
   Insert,
   PreparedQuery,
   PreparedWhere,
-  QueryWhere,
 } from './types.js';
 import {
   filterStatementIteratorFlat,
@@ -15,7 +14,7 @@ import {
   isSubQueryFilter,
   satisfiesNonRelationalFilter,
 } from './filters.js';
-import { DB, DBSchema } from './db.js';
+import { DB } from './db.js';
 import { deepObjectAssign } from './utils/deep-merge.js';
 import { SimpleMemoryWriteBuffer } from './memory-write-buffer.js';
 import { EntityDataStore } from './entity-data-store.js';
@@ -26,7 +25,6 @@ import { ValuePointer } from './utils/value-pointer.js';
 import { KVDoubleBuffer } from './double-buffer.js';
 import {
   createViewEntity,
-  flattenViewEntity,
   sortViewEntities,
   ViewEntity,
 } from './query-engine.js';
@@ -302,13 +300,7 @@ export class IVM<M extends Models<M> = Models> {
           ([attribute]) => ValuePointer.Get(update, attribute) !== undefined
         );
       const matchesWhereOrAfterIfRelevant = (e: DBEntity) =>
-        (!where ||
-          doesEntityMatchBasicWhere(
-            collectionName,
-            e,
-            where,
-            this.db.schema
-          )) &&
+        (!where || doesEntityMatchBasicWhere(e, where)) &&
         (!after || satisfiesAfter(e, after, order));
       // if we have deletes or updates, we're going to check for evictions
       // to the current results
@@ -597,14 +589,9 @@ export function createQueryWithRelationalOrderAddedToIncludes(
   return newQuery;
 }
 
-function doesEntityMatchBasicWhere(
-  collectionName: string,
-  entity: DBEntity,
-  filters: PreparedWhere,
-  schema?: DBSchema
-) {
+function doesEntityMatchBasicWhere(entity: DBEntity, filters: PreparedWhere) {
   return filters.every((filter) =>
-    satisfiesNonRelationalFilter(collectionName, entity, filter, schema, true)
+    satisfiesNonRelationalFilter(entity, filter, true)
   );
 }
 

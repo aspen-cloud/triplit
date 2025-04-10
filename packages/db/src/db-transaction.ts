@@ -84,11 +84,7 @@ export class DBTransaction<M extends Models<M> = Models> {
         applyPermission: this.skipRules ? undefined : 'read',
       }
     );
-    const queryEngine = new EntityStoreQueryEngine(
-      this.kvTx,
-      this.entityStore,
-      this.schema as DBSchema | undefined
-    );
+    const queryEngine = new EntityStoreQueryEngine(this.kvTx, this.entityStore);
     let results = await queryEngine.fetch(preparedQuery);
     return applyProjectionsAndConversions(
       results,

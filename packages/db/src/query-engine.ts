@@ -1,29 +1,20 @@
 import { VariableAwareCache as VAC } from './variable-aware-cache.js';
 import {
   bindVariablesInFilters,
-  getVariableComponents,
   isValueVariable,
   resolveVariable,
 } from './variables.js';
-import { isFilterGroup, satisfiesNonRelationalFilter } from './filters.js';
+import { satisfiesNonRelationalFilter } from './filters.js';
 import {
   DBEntity,
   EntityStore,
   KVStoreOrTransaction,
-  FilterGroup,
   type CollectionQuery,
-  type FilterStatement,
-  QueryOrder,
   PreparedQuery,
   PreparedOrder,
 } from './types.js';
-import {
-  asyncIterFilter,
-  asyncIterMap,
-  asyncIterTake,
-} from './utils/iterators.js';
+import { asyncIterFilter, asyncIterTake } from './utils/iterators.js';
 import { compareValue, MIN } from './codec.js';
-import { DBSchema } from './db.js';
 import { ValuePointer } from './utils/value-pointer.js';
 import { satisfiesAfter } from './after.js';
 import {
@@ -31,7 +22,6 @@ import {
   compileQuery,
   Step,
 } from './query-planner/query-compiler.js';
-import { debugFreeze } from './macros/debug.js';
 import { InvalidResultCardinalityError, TriplitError } from './errors.js';
 
 export interface ExecutionContext {
@@ -95,16 +85,10 @@ export class EntityStoreQueryEngine {
     collectionName: string;
     data: any;
   }[] = [];
-  schema: DBSchema | undefined;
 
-  constructor(
-    storage: KVStoreOrTransaction,
-    store: EntityStore,
-    schema: DBSchema | undefined
-  ) {
+  constructor(storage: KVStoreOrTransaction, store: EntityStore) {
     this.storage = storage;
     this.store = store;
-    this.schema = schema;
   }
 
   /**
@@ -125,7 +109,7 @@ export class EntityStoreQueryEngine {
     query: PreparedQuery,
     vars: any = {}
   ): Promise<ViewEntity[]> {
-    const compiledPlan = compileQuery(query, this.schema?.collections);
+    const compiledPlan = compileQuery(query);
     return this.executeCompiledPlan(compiledPlan, vars);
   }
 
@@ -286,12 +270,7 @@ export class EntityStoreQueryEngine {
           });
           const filterFuncs = boundFilters.map((filter) => {
             return (candidate: ViewEntity) =>
-              satisfiesNonRelationalFilter(
-                collectionName!,
-                candidate.data,
-                filter,
-                this.schema
-              );
+              satisfiesNonRelationalFilter(candidate.data, filter);
           });
           if (step.after) {
             filterFuncs.push(({ data: entityData }: ViewEntity) => {
@@ -358,10 +337,8 @@ export class EntityStoreQueryEngine {
             for (const filter of boundFilters) {
               let boundFilter = filter;
               const passesFilter = satisfiesNonRelationalFilter(
-                collectionName!,
                 candidate.data,
-                boundFilter,
-                this.schema
+                boundFilter
               );
               if (!passesFilter) {
                 return false;

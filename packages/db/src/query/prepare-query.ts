@@ -40,6 +40,7 @@ import {
   isFilterGroup,
   isFilterStatement,
   isSubQueryFilter,
+  SET_OP_PREFIX,
 } from '../filters.js';
 import {
   getVariableComponents,
@@ -568,6 +569,14 @@ function transformAndValidateFilter(
         throw new InvalidFilterError(
           `Could not find property '${prop}' in the schema`
         );
+
+      /**
+       * Temporarily prefixing all set operations to make them unique in the query engine
+       * This may be a long term solution, but it is okay to refactor the representation if needed
+       */
+      if (propAttributeType.type === 'set') {
+        op = `${SET_OP_PREFIX}${op}`;
+      }
 
       // Validate the operator for the prop
       if (!Type.supportedOperations(propAttributeType).includes(op as never))
