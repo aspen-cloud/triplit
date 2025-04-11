@@ -129,21 +129,31 @@ function evaluateFilterStatement(
     const setOp = op.slice(SET_OP_PREFIX.length);
     if (setOp === 'has') {
       if (hasNoValue(value)) return false;
-      const filteredSet = Object.entries(value).filter(([_v, inSet]) => inSet);
-      // TODO: confirm we are deserializing v properly from a string
-      return filteredSet.some(([v]) => v === filterValue);
+      for (const key of Object.keys(value)) {
+        if (!value[key]) continue;
+        const deserialized = inferSetValue(key, filterValue);
+        if (deserialized === filterValue) return true;
+      }
+      return false;
     } else if (setOp === '!has') {
       if (hasNoValue(value)) return true;
-      const filteredSet = Object.entries(value).filter(([_v, inSet]) => inSet);
-      return filteredSet.every(([v]) => v !== filterValue);
+      for (const key of Object.keys(value)) {
+        if (!value[key]) continue;
+        const deserialized = inferSetValue(key, filterValue);
+        if (deserialized === filterValue) return false;
+      }
+      return true;
     } else if (setOp === 'isDefined') {
       return !!filterValue ? !hasNoValue(value) : hasNoValue(value);
     } else {
       if (hasNoValue(value)) return false;
-      const filteredSet = Object.entries(value).filter(([_v, inSet]) => inSet);
-      return filteredSet.some(([v]) =>
-        evaluateFilterStatement(v, setOp, filterValue)
-      );
+      for (const key of Object.keys(value)) {
+        if (!value[key]) continue;
+        const deserialized = inferSetValue(key, filterValue);
+        if (evaluateFilterStatement(deserialized, setOp, filterValue))
+          return true;
+      }
+      return false;
     }
   }
 
@@ -235,6 +245,15 @@ function evaluateFilterStatement(
     default:
       throw new InvalidFilterError(`The operator ${op} is not recognized.`);
   }
+}
+
+// This is fine for now, but we really need the encoding information to properly filter sets
+// Or in prepare query ensure that values in a filter are valid for the type + operator
+// TODO: improve our handling of set filters, we would like to avoid invoking the schema, but just knowing something is a set is not enough information
+function inferSetValue(serialized: string, value: any) {
+  if (typeof value === 'boolean') return serialized === 'true';
+  if (typeof value === 'number') return parseFloat(serialized);
+  return serialized;
 }
 
 function ilike(text: string, pattern: string): boolean {

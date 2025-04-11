@@ -384,4 +384,59 @@ describe.each(TEST_OPTIONS)('$engine', (options) => {
       );
     });
   });
+
+  describe('Additional set item types', () => {
+    it('filter on number', async () => {
+      const schema = {
+        collections: {
+          test: {
+            schema: S.Schema({
+              id: S.Id(),
+              attr: S.Set(S.Number()),
+              _idx: S.Number(),
+            }),
+          },
+        },
+      };
+      const data = genData([new Set([1, 2]), new Set([2, 3]), new Set([3, 4])]);
+      shuffleArray(data);
+
+      // matches on sets that contain the value
+      await testFilterOp(
+        '=',
+        schema,
+        data,
+        { cmp: 2, expected: [0, 1] },
+        options
+      );
+    });
+    it('filter on boolean', async () => {
+      const schema = {
+        collections: {
+          test: {
+            schema: S.Schema({
+              id: S.Id(),
+              attr: S.Set(S.Boolean()),
+              _idx: S.Number(),
+            }),
+          },
+        },
+      };
+      const data = genData([
+        new Set([true, false]),
+        new Set([true]),
+        new Set([false]),
+      ]);
+      shuffleArray(data);
+
+      // matches on sets that contain the value
+      await testFilterOp(
+        '=',
+        schema,
+        data,
+        { cmp: true, expected: [0, 1] },
+        options
+      );
+    });
+  });
 });
