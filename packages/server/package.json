@@ -72,7 +72,8 @@
     "level": "^8.0.1",
     "lmdb": "^3.0.12",
     "tsx": "^3.12.10",
-    "typescript": "^5.2.2"
+    "typescript": "^5.2.2",
+    "web-worker": "^1.5.0"
   },
   "peerDependenciesMeta": {
     "better-sqlite3": {
@@ -83,11 +84,15 @@
     },
     "lmdb": {
       "optional": true
+    },
+    "web-worker": {
+      "optional": true
     }
   },
   "peerDependencies": {
     "better-sqlite3": "*",
     "level": "*",
-    "lmdb": "*"
+    "lmdb": "*",
+    "web-worker": "^1.5.0"
   }
 }

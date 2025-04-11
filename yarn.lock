@@ -10565,17 +10565,21 @@ __metadata:
     node-cache: "npm:^5.1.2"
     tsx: "npm:^3.12.10"
     typescript: "npm:^5.2.2"
+    web-worker: "npm:^1.5.0"
     ws: "npm:^8.13.0"
   peerDependencies:
     better-sqlite3: "*"
     level: "*"
     lmdb: "*"
+    web-worker: ^1.5.0
   peerDependenciesMeta:
     better-sqlite3:
       optional: true
     level:
       optional: true
     lmdb:
+      optional: true
+    web-worker:
       optional: true
   languageName: unknown
   linkType: soft
