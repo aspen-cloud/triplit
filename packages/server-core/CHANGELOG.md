@@ -1,5 +1,16 @@
 # @triplit/server-core
 
+## 1.0.21
+
+### Patch Changes
+
+- 52c9cb9b: bug fix: fixup permission applicaiton on subscription
+- Updated dependencies [0c0e6c61]
+- Updated dependencies [da14a7ed]
+- Updated dependencies [50572a01]
+- Updated dependencies [97a72c5e]
+  - @triplit/db@1.0.18
+
 ## 1.0.20
 
 ### Patch Changes
