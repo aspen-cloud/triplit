@@ -2217,13 +2217,13 @@ describe('subscriptions', () => {
         await user1DB.broadcastToQuerySubscribers();
         // expect(fetchResult.length).toBeGreaterThan(0);
         const subscriptionResult = subSpy.mock.calls[0][0];
-        console.dir(
-          {
-            // fetchResult,
-            subscriptionResult,
-          },
-          { depth: null }
-        );
+        // console.dir(
+        //   {
+        //     // fetchResult,
+        //     subscriptionResult,
+        //   },
+        //   { depth: null }
+        // );
         // expect(subscriptionResult).toEqual(fetchResult);
         const messagesFromChanges = [
           ...(subscriptionResult.messages?.sets.values() ?? []),
