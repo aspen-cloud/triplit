@@ -1,5 +1,13 @@
 # @triplit/tanstack
 
+## 3.0.19
+
+### Patch Changes
+
+- 28b0a9d9: Bump internal versiona and fixup types
+  - @triplit/client@1.0.19
+  - @triplit/react@1.0.19
+
 ## 3.0.18
 
 ### Patch Changes

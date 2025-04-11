@@ -1,5 +1,14 @@
 # @triplit/entity-db
 
+## 1.0.18
+
+### Patch Changes
+
+- 0c0e6c61: Add type definitions for PreparedQuery
+- da14a7ed: bug fix in set filtering
+- 50572a01: Fixup enum type to accept external readonly array
+- 97a72c5e: Improve subscription stability under rapid disconnections
+
 ## 1.0.17
 
 ### Patch Changes
