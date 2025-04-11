@@ -583,13 +583,6 @@ function transformAndValidateFilter(
         op = `${SET_OP_PREFIX}${op}`;
       }
 
-      console.log({
-        op,
-        prop: propAttributeType,
-        ops: Type.supportedOperations(propAttributeType),
-        SUPPORTED_OPERATIONS,
-      });
-
       // Validate the operator for the prop
       if (!Type.supportedOperations(propAttributeType).includes(op as never))
         throw new InvalidFilterError(
