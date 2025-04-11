@@ -1,5 +1,11 @@
 # @triplit/server
 
+## 1.0.23
+
+### Patch Changes
+
+- c69d89fc: fixup deps
+
 ## 1.0.22
 
 ### Patch Changes

@@ -1,5 +1,12 @@
 # @triplit/cli
 
+## 1.0.23
+
+### Patch Changes
+
+- c69d89fc: Automated version bump for @triplit/cli after dependency changes
+- c69d89fc: fixup deps
+
 ## 1.0.22
 
 ### Patch Changes
