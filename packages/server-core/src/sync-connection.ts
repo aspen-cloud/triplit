@@ -309,9 +309,9 @@ export class SyncConnection {
           createQueryWithExistsAddedToIncludes(
             prepareQuery(
               query,
-              this.db.schema?.['collections'],
-              {},
-              undefined,
+              this.db.schema?.collections,
+              this.db.systemVars,
+              this.db.session,
               {
                 applyPermission: hasAdminAccess(this.token)
                   ? undefined
