@@ -23,7 +23,6 @@
     "@cloudflare/workers-types": "^4.20240117.0",
     "@supabase/supabase-js": "^2.39.3",
     "@triplit/client": "workspace:^",
-    "@triplit/db": "workspace:^",
     "@triplit/logger": "workspace:^",
     "@triplit/server": "workspace:^",
     "@triplit/server-core": "workspace:^",
@@ -72,6 +71,7 @@
     "fsevents": "^2.3.3"
   },
   "dependencies": {
+    "@triplit/db": "workspace:^",
     "esbuild": "^0.23.1",
     "source-map": "^0.7.4"
   }

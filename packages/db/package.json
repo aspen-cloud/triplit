@@ -47,7 +47,8 @@
     "core-js": "^3.41.0",
     "elen": "^1.0.10",
     "nanoid": "^5.1.0",
-    "sorted-btree": "^1.8.1"
+    "sorted-btree": "^1.8.1",
+    "web-worker": "^1.5.0"
   },
   "devDependencies": {
     "@fast-check/vitest": "^0.1.5",
@@ -66,14 +67,12 @@
     "mitata": "^1.0.27",
     "tinybench": "^3.1.0",
     "typescript": "^5.8.2",
-    "vitest": "^3.0.6",
-    "web-worker": "^1.5.0"
+    "vitest": "^3.0.6"
   },
   "peerDependencies": {
     "better-sqlite3": "*",
     "expo-sqlite": "*",
-    "lmdb": "*",
-    "web-worker": "^1.5.0"
+    "lmdb": "*"
   },
   "peerDependenciesMeta": {
     "better-sqlite3": {
@@ -83,9 +82,6 @@
       "optional": true
     },
     "lmdb": {
-      "optional": true
-    },
-    "web-worker": {
       "optional": true
     }
   }
