@@ -1,6 +1,6 @@
 {
   "name": "@triplit/angular",
-  "version": "1.0.19",
+  "version": "1.0.20",
   "type": "module",
   "source": "./src/index.ts",
   "main": "./dist/fesm2022/triplit-angular.mjs",
