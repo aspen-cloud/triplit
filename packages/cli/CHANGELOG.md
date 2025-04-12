@@ -1,5 +1,14 @@
 # @triplit/cli
 
+## 1.0.25
+
+### Patch Changes
+
+- 893dcb0a: Automated version bump for @triplit/cli after dependency changes
+- 893dcb0a: simplify worker deps
+- Updated dependencies [893dcb0a]
+  - @triplit/db@1.0.19
+
 ## 1.0.24
 
 ### Patch Changes

@@ -1,5 +1,15 @@
 # @triplit/server
 
+## 1.0.25
+
+### Patch Changes
+
+- 893dcb0a: simplify worker deps
+- Updated dependencies [893dcb0a]
+  - @triplit/db@1.0.19
+  - @triplit/client@1.0.20
+  - @triplit/server-core@1.0.22
+
 ## 1.0.24
 
 ### Patch Changes

@@ -1,5 +1,11 @@
 # @triplit/entity-db
 
+## 1.0.19
+
+### Patch Changes
+
+- 893dcb0a: simplify worker deps
+
 ## 1.0.18
 
 ### Patch Changes
