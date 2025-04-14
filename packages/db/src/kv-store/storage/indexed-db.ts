@@ -157,42 +157,26 @@ export class IndexedDbKVStore implements KVStore {
     });
     const store = transaction.objectStore(storeName);
     const batchSize = this.options.batchSize ?? 1000;
-    let keys: string[][] = [];
-    let values: any[] = [];
-    let keyRange = IDBKeyRange.bound(lower, upper, false, true);
+    let currentLower = lower;
+    let firstPage = true;
     while (true) {
-      keys = await new Promise<string[][]>((resolve, reject) => {
-        const request = store.getAllKeys(keyRange, batchSize);
-        request.onerror = () => reject(request.error);
-        request.onsuccess = () => resolve(request.result as string[][]);
-      });
+      if (compareTuple(currentLower, upper) >= 0) break;
+      const keyRange = IDBKeyRange.bound(currentLower, upper, firstPage, true);
+      const keys = await getBatchKeys<string[]>(store, keyRange, batchSize);
       if (!keys.length) break;
-      values = await new Promise((resolve, reject) => {
-        const request = store.getAll(keyRange, batchSize);
-        request.onerror = () => reject(request.error);
-        request.onsuccess = () => resolve(request.result);
-      });
+      const values = await getBatchValues(store, keyRange, batchSize);
       if (!values.length) break;
-      const lastKey = keys.at(-1)!;
-      const lastPage = compareTuple(lastKey, upper) > 0;
       for (let i = 0; i < keys.length; i++) {
-        if (lastPage) {
-          if (compareTuple(keys[i], upper) > 0) break;
-        }
         const prefixLength = (scope?.length ?? 0) + options.prefix.length;
         const keyWithoutPrefix =
           prefixLength > 0 ? keys[i].slice(prefixLength) : keys[i];
         if (keyWithoutPrefix.length === 0) break;
         yield [keyWithoutPrefix, values[i]];
       }
-      // Could be more, set up to continue scanning
-      if (values.length === batchSize) {
-        keyRange = IDBKeyRange.lowerBound(keys.at(-1), true);
-        keys = [];
-        values = [];
-      } else {
-        break;
-      }
+      const lastPage = values.length < batchSize;
+      if (lastPage) break;
+      const lastKey = keys.at(-1)!;
+      currentLower = lastKey;
     }
   }
 
@@ -210,38 +194,30 @@ export class IndexedDbKVStore implements KVStore {
     });
     const store = transaction.objectStore(storeName);
     const batchSize = this.options.batchSize ?? 1000;
-    let keys: string[][] = [];
-    let values: any[] = [];
-    let keyRange = IDBKeyRange.bound(lower, upper, false, true);
+    let currentLower = lower;
+    // As we paginate, the first page should include the lower bound according to our API
+    let firstPage = true;
     while (true) {
-      keys = await new Promise<string[][]>((resolve, reject) => {
-        const request = store.getAllKeys(keyRange, batchSize);
-        request.onerror = () => reject(request.error);
-        request.onsuccess = () => resolve(request.result as string[][]);
-      });
-      if (!keys.length) break;
-      values = await new Promise((resolve, reject) => {
-        const request = store.getAll(keyRange, batchSize);
-        request.onerror = () => reject(request.error);
-        request.onsuccess = () => resolve(request.result);
-      });
+      if (compareTuple(currentLower, upper) >= 0) break;
+      const keyRange = IDBKeyRange.bound(currentLower, upper, firstPage, true);
+      // Get range values
+      const values = await getBatchValues(store, keyRange, batchSize);
+      // If no values, no data to return
       if (!values.length) break;
-      const lastKey = keys.at(-1)!;
-      const lastPage = compareTuple(lastKey, upper) > 0;
-      for (let i = 0; i < keys.length; i++) {
-        if (lastPage) {
-          if (compareTuple(keys[i], upper) > 0) break;
-        }
-        yield values[i];
+      for (const value of values) {
+        yield value;
       }
-      // Could be more, set up to continue scanning
-      if (values.length === batchSize) {
-        keyRange = IDBKeyRange.lowerBound(keys.at(-1), true);
-        keys = [];
-        values = [];
-      } else {
-        break;
-      }
+      // Last page will not be full
+      const lastPage = values.length < batchSize;
+      if (lastPage) break;
+      const lastKey = (await getKeyInCursor(store, keyRange, batchSize)) as
+        | string[]
+        | undefined;
+      // If it cannot find the last key, it means our batch size is gt remaining key range and we're on last page (ie redundant check with above)
+      if (!lastKey) break;
+      // Reset pagination scan state
+      currentLower = lastKey;
+      firstPage = false;
     }
   }
 
@@ -338,4 +314,76 @@ export class IndexedDbKVStore implements KVStore {
       }
     });
   }
+
+  async getBatchKeys<K = IDBValidKey>(
+    keyRange: IDBKeyRange,
+    batchSize: number
+  ) {
+    const db = await this.db;
+    const transaction = db.transaction(storeName, 'readonly', {
+      durability: 'relaxed',
+    });
+    const store = transaction.objectStore(storeName);
+    return getBatchKeys(store, keyRange, batchSize);
+  }
+}
+
+/**
+ * Given a range, get the key at the offset (if offset goes over the end, returns undefined)
+ */
+function getKeyInCursor(
+  store: IDBObjectStore,
+  keyRange: IDBKeyRange,
+  offset: number = 0
+): Promise<IDBValidKey | undefined> {
+  return new Promise((resolve, reject) => {
+    const request = store.openKeyCursor(keyRange, 'next');
+    let advanced = false;
+    request.onsuccess = (event) => {
+      const req = event.target as IDBRequest<IDBCursorWithValue | null>;
+      const cursor = req?.result;
+      // If there's no cursor here, we didn't have enough entries
+      if (!cursor) {
+        resolve(undefined);
+        return;
+      }
+      // If we should advance, do so
+      if (!advanced && offset > 1) {
+        advanced = true;
+        cursor.advance(offset);
+        return;
+      }
+      // either return the cursor key or resolve undefined
+      resolve(cursor.key);
+    };
+
+    request.onerror = (event) => {
+      const req = event.target as IDBRequest<IDBCursorWithValue | null>;
+      reject(req.error);
+    };
+  });
+}
+
+function getBatchKeys<K = IDBValidKey>(
+  store: IDBObjectStore,
+  keyRange: IDBKeyRange,
+  batchSize: number
+) {
+  return new Promise<K[]>((resolve, reject) => {
+    const request = store.getAllKeys(keyRange, batchSize);
+    request.onerror = () => reject(request.error);
+    request.onsuccess = () => resolve(request.result as K[]);
+  });
+}
+
+function getBatchValues<T = any>(
+  store: IDBObjectStore,
+  keyRange: IDBKeyRange,
+  batchSize: number
+) {
+  return new Promise<T[]>((resolve, reject) => {
+    const request = store.getAll(keyRange, batchSize);
+    request.onerror = () => reject(request.error);
+    request.onsuccess = () => resolve(request.result);
+  });
 }

@@ -18,6 +18,13 @@ import sqlite from 'better-sqlite3';
 import { open } from 'lmdb';
 import 'fake-indexeddb/auto';
 import { InMemoryTestKVStore } from './utils/test-kv-store.js';
+import { Tuple } from '../src/codec.js';
+
+type TestDescription = {
+  label: string;
+  store: any;
+  skipCount?: boolean;
+};
 
 const btree = new BTreeKVStore();
 const sqliteDb = sqlite(':memory:');
@@ -25,17 +32,21 @@ const sqliteKv = new SQLiteKVStore(sqliteDb);
 const sqliteWorkerKv = new SqliteWorkerKvStore(':memory:');
 const lmdb = open({});
 const lmdbKv = new LmdbKVStore(lmdb);
-const idb = new IndexedDbKVStore('test');
+const idb = new IndexedDbKVStore('test'); // Will be single page for n < default page size (1000)
 const idbWithCache = new IndexedDbKVStore('test', { useCache: true });
+const idbPaged = new IndexedDbKVStore('test-paged', {
+  batchSize: 2,
+});
 const memoryTx = new MemoryTransaction(new BTreeKVStore());
-describe.each([
+describe.each<TestDescription>([
   { label: 'In-memory BTree', store: btree },
   { label: 'In-memory transaction', store: memoryTx },
   { label: 'SQLite', store: sqliteKv },
   { label: 'LMDB', store: lmdbKv },
   { label: 'IndexedDB', store: idb },
-  { label: 'In-memory w/ delay', store: new InMemoryTestKVStore() },
   { label: 'IndexedDB with cache', store: idbWithCache },
+  { label: 'IndexedDB (paged)', store: idbPaged },
+  { label: 'In-memory w/ delay', store: new InMemoryTestKVStore() },
   // TODO: fix remaining tests for sqlite worker kv
   // { label: 'SQLite Worker Thread', store: sqliteWorkerKv },
 ])('--- $label ---', (scenario) => {
@@ -160,7 +171,7 @@ describe.each([
     test('simple scan', async () => {
       await store.set(['a'], 1);
       await store.set(['b'], 2);
-      const results = [];
+      const results: any[] = [];
       for await (const [key, value] of store.scan({ prefix: [] })) {
         results.push([key, value]);
       }
@@ -173,7 +184,7 @@ describe.each([
       await store.set(['b'], 1);
       await store.set(['c'], 1);
       await store.set(['a'], 1);
-      const results = [];
+      const results: any[] = [];
       for await (const [key, value] of store.scan({ prefix: [] })) {
         results.push([key, value]);
       }
@@ -188,12 +199,12 @@ describe.each([
       await store.set(['c'], 1);
       const scopedStore = store.scope(['b']);
       await scopedStore.set(['a'], 2);
-      const scopedResults = [];
+      const scopedResults: [Tuple, any][] = [];
       for await (const [key, value] of scopedStore.scan({ prefix: [] })) {
         scopedResults.push([key, value]);
       }
       expect(scopedResults).toEqual([[['a'], 2]]);
-      const otherResults = [];
+      const otherResults: [Tuple, any][] = [];
       for await (const [key, value] of store.scan({ prefix: [] })) {
         otherResults.push([key, value]);
       }
@@ -207,7 +218,7 @@ describe.each([
       await store.set(['a'], 1);
       await store.set(['b', 'a'], 2);
       await store.set(['c'], 3);
-      const results = [];
+      const results: any[] = [];
       for await (const [key, value] of store.scan({ prefix: ['b'] })) {
         results.push([key, value]);
       }
@@ -219,12 +230,12 @@ describe.each([
       const scopedStore = store.scope(['b']);
       await scopedStore.set(['a'], 2);
       await scopedStore.set(['b', 'a'], 3);
-      const results = [];
+      const results: any[] = [];
       for await (const [key, value] of scopedStore.scan({ prefix: ['b'] })) {
         results.push([key, value]);
       }
       expect(results).toEqual([[['a'], 3]]);
-      const allResults = [];
+      const allResults: [Tuple, any][] = [];
       for await (const [key, value] of store.scan({ prefix: [] })) {
         allResults.push([key, value]);
       }
@@ -244,7 +255,7 @@ describe.each([
     test('simple scanValues', async () => {
       await store.set(['a'], 1);
       await store.set(['b'], 2);
-      const results = [];
+      const results: any[] = [];
       for await (const value of store.scanValues({ prefix: [] })) {
         results.push(value);
       }
@@ -254,7 +265,7 @@ describe.each([
       await store.set(['b'], 1);
       await store.set(['c'], 1);
       await store.set(['a'], 1);
-      const results = [];
+      const results: any[] = [];
       for await (const value of store.scanValues({ prefix: [] })) {
         results.push(value);
       }
@@ -265,12 +276,12 @@ describe.each([
       await store.set(['c'], 1);
       const scopedStore = store.scope(['b']);
       await scopedStore.set(['a'], 2);
-      const scopedResults = [];
+      const scopedResults: [Tuple, any][] = [];
       for await (const value of scopedStore.scanValues({ prefix: [] })) {
         scopedResults.push(value);
       }
       expect(scopedResults).toEqual([2]);
-      const otherResults = [];
+      const otherResults: [Tuple, any][] = [];
       for await (const value of store.scanValues({ prefix: [] })) {
         otherResults.push(value);
       }
@@ -280,7 +291,7 @@ describe.each([
       await store.set(['a'], 1);
       await store.set(['b', 'a'], 2);
       await store.set(['c'], 3);
-      const results = [];
+      const results: any[] = [];
       for await (const value of store.scanValues({ prefix: ['b'] })) {
         results.push(value);
       }
@@ -292,12 +303,12 @@ describe.each([
       const scopedStore = store.scope(['b']);
       await scopedStore.set(['a'], 2);
       await scopedStore.set(['b', 'a'], 3);
-      const results = [];
+      const results: any[] = [];
       for await (const value of scopedStore.scanValues({ prefix: ['b'] })) {
         results.push(value);
       }
       expect(results).toEqual([3]);
-      const allResults = [];
+      const allResults: any[] = [];
       for await (const value of store.scanValues({ prefix: [] })) {
         allResults.push(value);
       }
@@ -426,7 +437,7 @@ describe.each([
       await tx.set(['d'], 4);
       await tx.delete(['d']);
       await tx.delete(['a']);
-      const results = [];
+      const results: any[] = [];
       for await (const [key, value] of tx.scan({ prefix: [] })) {
         results.push([key, value]);
       }
@@ -434,7 +445,7 @@ describe.each([
         [['b'], 2],
         [['c'], 3],
       ]);
-      const staleResults = [];
+      const staleResults: [Tuple, any][] = [];
       for await (const [key, value] of store.scan({ prefix: [] })) {
         staleResults.push([key, value]);
       }
@@ -443,7 +454,7 @@ describe.each([
         [['b'], 2],
       ]);
       await tx.commit();
-      const freshResults = [];
+      const freshResults: [Tuple, any][] = [];
       for await (const [key, value] of store.scan({ prefix: [] })) {
         freshResults.push([key, value]);
       }
@@ -498,7 +509,7 @@ describe.each([
         const scopedTx = tx.scope(['a']);
         await scopedTx.set(['c', 'd'], 3);
         await scopedTx.set(['c', 'e'], 4);
-        const results = [];
+        const results: any[] = [];
         for await (const [key, value] of scopedTx.scan({ prefix: ['c'] })) {
           results.push([key, value]);
         }
@@ -506,7 +517,7 @@ describe.each([
           [['d'], 3],
           [['e'], 4],
         ]);
-        const staleResults = [];
+        const staleResults: [Tuple, any][] = [];
         for await (const [key, value] of store.scan({ prefix: ['a'] })) {
           staleResults.push([key, value]);
         }
@@ -525,7 +536,7 @@ describe.each([
         await scopedTx.set(['c', 'e'], 4);
         await scopedTx.delete(['c']);
         await scopedTx.set(['c'], 5);
-        const results = [];
+        const results: any[] = [];
         for await (const [key, value] of scopedTx.scan({ prefix: ['c'] })) {
           results.push([key, value]);
         }
@@ -533,7 +544,7 @@ describe.each([
           [['d'], 3],
           [['e'], 4],
         ]);
-        const staleResults = [];
+        const staleResults: [Tuple, any][] = [];
         for await (const [key, value] of store.scan({ prefix: ['a', 'b'] })) {
           staleResults.push([key, value]);
         }
@@ -542,7 +553,7 @@ describe.each([
           [['d'], 2],
         ]);
         await tx.commit();
-        const freshResults = [];
+        const freshResults: [Tuple, any][] = [];
         for await (const [key, value] of store.scan({ prefix: ['a', 'b'] })) {
           freshResults.push([key, value]);
         }
@@ -555,4 +566,6 @@ describe.each([
       });
     });
   });
+  // range scan low and hi tests, should be consistent across stores
+  test.todo('test edges of range');
 });
