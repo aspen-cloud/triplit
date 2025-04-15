@@ -1,5 +1,12 @@
 # @triplit/entity-db
 
+## 1.0.20
+
+### Patch Changes
+
+- 3cf25c56: properly type external inputs to permissions filters in schema
+- 93beece6: add useCache option to indexeddb provider
+
 ## 1.0.19
 
 ### Patch Changes

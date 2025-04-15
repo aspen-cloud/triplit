@@ -1,5 +1,12 @@
 # angular-template
 
+## 1.0.21
+
+### Patch Changes
+
+- @triplit/client@1.0.21
+- @triplit/angular@1.0.21
+
 ## 1.0.20
 
 ### Patch Changes
