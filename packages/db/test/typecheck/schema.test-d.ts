@@ -125,3 +125,31 @@ describe('String Enum', () => {
     );
   });
 });
+
+describe('Permissions', () => {
+  it('can accept an external input', () => {
+    const singleStatement = ['assignee', '=', '$role.userId'] as const;
+    const filterGroup = [singleStatement];
+    assertType(
+      S.Collections({
+        todos: {
+          schema: S.Schema({
+            id: S.Id(),
+            title: S.String(),
+            assignee: S.Boolean(),
+          }),
+          permissions: {
+            authenticated: {
+              read: {
+                filter: [singleStatement],
+              },
+              insert: {
+                filter: filterGroup,
+              },
+            },
+          },
+        },
+      })
+    );
+  });
+});

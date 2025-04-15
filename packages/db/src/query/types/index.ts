@@ -111,7 +111,7 @@ export type FilterStatement<
   M extends Models<M> = Models,
   CN extends CollectionNameFromModels<M> = CollectionNameFromModels<M>,
   K extends ModelPaths<M, CN> = ModelPaths<M, CN>,
-> = [
+> = readonly [
   K,
   //Operations<ResolveModelPath<M, CN, K>> I think typescript has trouble inferring this because its a tuple, seeing a union of all ops, which is fine for now
   // However, it also causes small issues with the type system with ex. try S.RelationMany('users', { where: [ or([ ['id', '=', '$liked_by_ids'], or([['id', '=', '$liked_by_ids']]), ]), ], })

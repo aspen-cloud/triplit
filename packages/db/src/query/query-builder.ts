@@ -24,6 +24,7 @@ import {
 } from './types/index.js';
 import { CollectionNameFromModels, Models } from '../schema/index.js';
 import { ValuePointer } from '../utils/value-pointer.js';
+import { Writeable } from '../types.js';
 
 export function queryBuilder<
   M extends Models<M>,
@@ -596,7 +597,8 @@ export type FilterInput<
   // .Where(undefined)
   | [typeof undefined]
   // .Where("id", "=", "123")
-  | ModelFilterStatement<M, CN>
+  // For some weird TS reason, unioning readonly tuples makes it hard to parse the parameters in our tests (so using Writable, but this is safe because the type will be spread)
+  | Writeable<ModelFilterStatement<M, CN>>
   // .Where(["id", "=", "123"], ["name", "=", "foo"])
   | QueryWhere<M, CN>
   // .Where(ternary ? ["id", "=", "123"] : undefined)

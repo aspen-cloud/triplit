@@ -25,3 +25,8 @@ export type Unalias<T> =
           : T extends Record<string, unknown>
             ? { [K in keyof T]: Unalias<T[K]> }
             : T;
+
+/**
+ * Transforms a Readonly type to a mutable type
+ */
+export type Writeable<T> = { -readonly [P in keyof T]: T[P] };

@@ -96,22 +96,24 @@ describe('query builder', () => {
     {
       const db = new DB({ schema });
       const query = db.query('test');
-      expectTypeOf(query.Where)
-        .parameter(0)
-        .toEqualTypeOf<
-          | undefined
-          | 'id'
-          | 'attr1'
-          | 'attr1.inner1'
-          | 'attr1.inner1.inner1A'
-          | 'attr1.inner1.inner1B'
-          | 'attr1.inner2'
-          | 'attr1.inner2.inner2A'
-          | 'attr2'
-          | 'relationById.id'
-          | WhereFilter<(typeof schema)['collections'], 'test'>
-          | QueryWhere<(typeof schema)['collections'], 'test'>
-        >();
+      expectTypeOf(query.Where).parameter(0).toEqualTypeOf<
+        // .Where(undefined)
+        | undefined
+        // .Where('id, '=', '1')
+        | 'id'
+        | 'attr1'
+        | 'attr1.inner1'
+        | 'attr1.inner1.inner1A'
+        | 'attr1.inner1.inner1B'
+        | 'attr1.inner2'
+        | 'attr1.inner2.inner2A'
+        | 'attr2'
+        | 'relationById.id'
+        // .Where(['id', '=', '1'], ['attr1', '=', '1'])
+        | WhereFilter<(typeof schema)['collections'], 'test'>
+        // .Where([['id', '=', '1'], ['attr1', '=', '1']])
+        | QueryWhere<(typeof schema)['collections'], 'test'>
+      >();
 
       // Can handle terary
       const ternary: boolean = true;
@@ -121,14 +123,16 @@ describe('query builder', () => {
       const db = new DB();
       const query = db.query('test');
       type T = typeof query.Where;
-      expectTypeOf(query.Where)
-        .parameter(0)
-        .toEqualTypeOf<
-          | string
-          | WhereFilter<Models, 'test'>
-          | QueryWhere<Models, 'test'>
-          | undefined
-        >();
+      expectTypeOf(query.Where).parameter(0).toEqualTypeOf<
+        // .Where(undefined)
+        | undefined
+        // .Where('id, '=', '1')
+        | string
+        // .Where(['id', '=', '1'], ['attr1', '=', '1'])
+        | WhereFilter<Models, 'test'>
+        // .Where([['id', '=', '1'], ['attr1', '=', '1']])
+        | QueryWhere<Models, 'test'>
+      >();
       // Can handle terary
       const ternary: boolean = true;
       assertType(query.Where(ternary ? ['id', '=', '1'] : undefined));
