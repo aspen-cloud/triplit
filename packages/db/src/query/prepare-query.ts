@@ -579,7 +579,11 @@ function transformAndValidateFilter(
        * Temporarily prefixing all set operations to make them unique in the query engine
        * This may be a long term solution, but it is okay to refactor the representation if needed
        */
-      if (propAttributeType.type === 'set') {
+      if (
+        propAttributeType.type === 'set' &&
+        // to make this idempotent (we really should try to avoid running prepareQuery twice)
+        !op.startsWith(SET_OP_PREFIX)
+      ) {
         op = `${SET_OP_PREFIX}${op}`;
       }
 
