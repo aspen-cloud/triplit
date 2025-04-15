@@ -231,7 +231,6 @@ export class IVM<M extends Models<M> = Models> {
     const storeChanges = await this.doubleBuffer.inactiveBuffer.getChanges(
       this.storage
     );
-    console.log('updating with changes', storeChanges);
     // using _mark = performanceTrace('updateViews', {
     //   track: 'IVM',
     //   properties: {
@@ -243,21 +242,16 @@ export class IVM<M extends Models<M> = Models> {
     // Iterate through queries and get initial results for ones that don't have any
     for (const queryId of this.subscribedQueries.keys()) {
       if (this.subscribedQueries.get(queryId)!.results == null) {
-        console.log('Initializing query results', { queryId });
-        console.time(`initialize ${queryId}`);
         await this.initializeQueryResults(queryId);
         handledRootQueries.add(queryId);
-        console.timeEnd(`initialize ${queryId}`);
       }
     }
 
     const affectedQueries = this.getAffectedQueries(storeChanges);
-    console.log('affectedQueries', affectedQueries);
     for (const [queryId, changes] of affectedQueries) {
       if (handledRootQueries.has(queryId)) {
         continue;
       }
-      console.time(queryId);
       if (!this.subscribedQueries.has(queryId)) {
         logger.warn('Subscribed query not found during update', { queryId });
         continue;
@@ -277,7 +271,6 @@ export class IVM<M extends Models<M> = Models> {
         queryState.results = updatedResults;
         queryState.hasChanged = hasChanged;
       }
-      console.timeEnd(queryId);
     }
     const kvTx = this.storage.transact();
     this.doubleBuffer.inactiveBuffer.clear(kvTx);
