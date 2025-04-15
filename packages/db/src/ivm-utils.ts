@@ -4,6 +4,7 @@ import {
   isSubQueryFilter,
   someFilterStatementsFlat,
 } from './filters.js';
+import { hashPreparedQuery } from './query/hash-query.js';
 import { PreparedQuery } from './types.js';
 import {
   isValueVariable,
@@ -51,14 +52,15 @@ export function getReferencedRelationalVariables(
 
 export function getCollectionsReferencedInSubqueries(
   query: PreparedQuery,
-  stack: string[] = [],
-  results = new Map<string, Set<string>>()
+  stack: number[] = [],
+  results = new Map<number, Set<string>>()
 ) {
-  for (const stringified of stack) {
-    results.get(stringified)?.add(query.collectionName);
+  for (const hashed of stack) {
+    results.get(hashed)?.add(query.collectionName);
   }
-  stack.push(JSON.stringify(query));
-  results.set(JSON.stringify(query), new Set());
+  const queryId = hashPreparedQuery(query);
+  stack.push(queryId);
+  results.set(queryId, new Set());
   if (query.where) {
     for (const filter of filterStatementIteratorFlat(query.where)) {
       if (isSubQueryFilter(filter)) {

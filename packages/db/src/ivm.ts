@@ -34,6 +34,7 @@ import {
   hasSubqueryFilterAtAnyLevel,
   hasSubqueryOrderAtAnyLevel,
 } from './ivm-utils.js';
+import { hashPreparedQuery } from './query/hash-query.js';
 
 interface QueryNode {
   // TODO support multiple root queries (essentially subqueries could be shared between root queries)
@@ -70,7 +71,7 @@ export class IVM<M extends Models<M> = Models> {
     | undefined;
 
   // These represent what subscribers are actually interested in
-  readonly subscribedQueries: Map<string, SubscribedQueryInfo> = new Map();
+  readonly subscribedQueries: Map<number, SubscribedQueryInfo> = new Map();
 
   // Individual queries that make up the subscribed queries
   // Each query represents either a root query or a subquery of a subscribed query
@@ -87,7 +88,7 @@ export class IVM<M extends Models<M> = Models> {
     callback: SubscriptionCallback,
     errorCallback?: (error: Error) => void
   ) {
-    const rootQueryId = JSON.stringify(query);
+    const rootQueryId = hashPreparedQuery(query);
     if (!this.subscribedQueries.has(rootQueryId)) {
       // Get all collections that are referenced by this root query
       // or one of its subqueries
@@ -135,7 +136,7 @@ export class IVM<M extends Models<M> = Models> {
     };
   }
 
-  private async initializeQueryResults(rootQueryId: string) {
+  private async initializeQueryResults(rootQueryId: number) {
     const query = this.subscribedQueries.get(rootQueryId)!.query;
     const results = (await this.db.rawFetch(query)) as ViewEntity[];
     // So the subscribedQuery might get deleted during the async fetch
@@ -238,7 +239,7 @@ export class IVM<M extends Models<M> = Models> {
     //     numChangedCollections: Object.keys(storeChanges).length,
     //   },
     // });
-    const handledRootQueries = new Set<string>();
+    const handledRootQueries = new Set<number>();
     // Iterate through queries and get initial results for ones that don't have any
     for (const queryId of this.subscribedQueries.keys()) {
       if (this.subscribedQueries.get(queryId)!.results == null) {
@@ -514,9 +515,9 @@ export class IVM<M extends Models<M> = Models> {
     return change.id !== undefined;
   }
 
-  private getAffectedQueries(changes: DBChanges): Map<string, DBChanges> {
+  private getAffectedQueries(changes: DBChanges): Map<number, DBChanges> {
     // TODO  we should probably organize queries by touched collections to make this faster
-    const affectedQueries = new Map<string, DBChanges>();
+    const affectedQueries = new Map<number, DBChanges>();
     for (const queryId of this.subscribedQueries.keys()) {
       const queryState = this.subscribedQueries.get(queryId)!;
       const queryChanges = {} as DBChanges;
