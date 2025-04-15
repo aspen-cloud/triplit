@@ -82,18 +82,20 @@ export interface ClientOptions<M extends Models<M> = Models> {
   experimental?: {};
 }
 
-export type SupportClientStorageProviders = 'indexeddb' | 'memory';
-
-export type SimpleClientStorageOptions =
-  | SupportClientStorageProviders
-  | { type: SupportClientStorageProviders; name?: string }
-  | {
-      type: 'indexeddb';
-      name?: string;
-      options?: IndexedDbKVOptions;
-    };
-
-export type SimpleStorageOrInstances = KVStore | SimpleClientStorageOptions;
+export type MemoryOptions = {
+  type: 'memory';
+};
+export type IndexedDbOptions = {
+  type: 'indexeddb';
+  name?: string;
+  options?: IndexedDbKVOptions;
+};
+export type SerializableMemoryOptions = 'memory' | MemoryOptions;
+export type SerializableIndexedDBOptions = 'indexeddb' | IndexedDbOptions;
+export type SerializableStorageOptions =
+  | SerializableMemoryOptions
+  | SerializableIndexedDBOptions;
+export type SimpleStorageOrInstances = KVStore | SerializableStorageOptions;
 
 // TODO: I think both `skipRules` and `manualSchemaRefresh` arent used / needed
 export type ClientTransactOptions = Pick<TransactOptions, 'skipRules'> & {

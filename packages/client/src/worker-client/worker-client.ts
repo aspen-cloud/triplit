@@ -33,7 +33,7 @@ import { ClientComlinkWrapper } from './client-comlink-wrapper.js';
 import {
   ClientOptions,
   ClientTransactOptions,
-  SimpleClientStorageOptions,
+  SerializableStorageOptions,
 } from '../client/types/client.js';
 import { ConnectionStatus } from '../types.js';
 import { clientLogHandler } from '../client-logger.js';
@@ -67,7 +67,7 @@ export class WorkerClient<M extends Models<M> = Models> implements Client<M> {
   constructor(
     options?: Omit<ClientOptions<M>, 'storage'> & {
       workerUrl?: string;
-      storage?: SimpleClientStorageOptions;
+      storage?: SerializableStorageOptions;
     },
     workerEndpoint?: ComLink.Endpoint,
     sharedWorkerPort?: MessagePort

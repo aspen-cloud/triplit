@@ -1,6 +1,5 @@
 import { decodeToken, tokenIsExpired } from '../token.js';
 import {
-  IndexedDbUnavailableError,
   NoActiveSessionError,
   SessionRolesMismatchError,
   TokenExpiredError,
@@ -26,7 +25,6 @@ import { clientLogHandler } from '../client-logger.js';
 import { MemoryHandler } from '@triplit/logger/memory';
 import {
   DB as EntityDB,
-  KVStore,
   DBTransaction,
   EntityStoreWithOutbox,
   createDB,
@@ -47,17 +45,14 @@ import {
   UpdatePayload,
   queryBuilder,
 } from '@triplit/db';
-import { BTreeKVStore } from '@triplit/db/storage/memory-btree';
-import { IndexedDbKVStore } from '@triplit/db/storage/indexed-db';
 import { compareCursors } from '../pagination.js';
 import {
   ClientOptions,
   ClientTransactOptions,
   ConnectionOptionsChange,
   ConnectionOptionsChangeHandler,
-  SimpleStorageOrInstances,
 } from './types/client.js';
-import { WebSocketTransport } from '../transport/websocket-transport.js';
+import { DEFAULT_STORAGE_OPTION, getClientStorage } from '../storage.js';
 
 /**
  * Friendly alias for Models type.
@@ -68,37 +63,6 @@ export type ClientSchema = Models;
 const SKIP_RULES = true;
 
 const SESSION_ROLES_KEY = 'SESSION_ROLES';
-
-function getClientStorage(storageOption: SimpleStorageOrInstances): KVStore {
-  if (typeof storageOption === 'object' && !('type' in storageOption)) {
-    return storageOption as KVStore;
-  }
-
-  const storageType =
-    typeof storageOption === 'object' ? storageOption.type : storageOption;
-
-  const storageName =
-    typeof storageOption === 'object'
-      ? (storageOption?.name ?? 'triplit')
-      : 'triplit';
-
-  const storageOptions =
-    typeof storageOption === 'object' && storageOption.type === 'indexeddb'
-      ? // @ts-expect-error - infer the type overload for idb
-        storageOption.options
-      : undefined;
-
-  if (storageType === 'indexeddb') {
-    if (typeof indexedDB === 'undefined') {
-      throw new IndexedDbUnavailableError();
-    }
-    // TODO: create a default IndexedDbKVStore
-    return new IndexedDbKVStore(storageName, storageOptions);
-  }
-  return new BTreeKVStore();
-}
-
-const DEFAULT_STORAGE_OPTION = 'memory';
 
 // default policy is local-and-remote and no timeout
 const DEFAULT_FETCH_OPTIONS = {
