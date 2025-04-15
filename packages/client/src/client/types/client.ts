@@ -1,4 +1,5 @@
 import { KVStore, Models, Roles, TransactOptions } from '@triplit/db';
+import type { IndexedDbKVOptions } from '@triplit/db/storage/indexed-db';
 import { OnSessionErrorCallback, TokenRefreshOptions } from './sync.js';
 import {
   ClientFetchOptions,
@@ -85,7 +86,12 @@ export type SupportClientStorageProviders = 'indexeddb' | 'memory';
 
 export type SimpleClientStorageOptions =
   | SupportClientStorageProviders
-  | { type: SupportClientStorageProviders; name?: string };
+  | { type: SupportClientStorageProviders; name?: string }
+  | {
+      type: 'indexeddb';
+      name?: string;
+      options?: IndexedDbKVOptions;
+    };
 
 export type SimpleStorageOrInstances = KVStore | SimpleClientStorageOptions;
 

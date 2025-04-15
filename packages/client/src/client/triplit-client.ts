@@ -70,10 +70,7 @@ const SKIP_RULES = true;
 const SESSION_ROLES_KEY = 'SESSION_ROLES';
 
 function getClientStorage(storageOption: SimpleStorageOrInstances): KVStore {
-  if (
-    typeof storageOption === 'object' &&
-    !('type' in storageOption && 'name' in storageOption)
-  ) {
+  if (typeof storageOption === 'object' && !('type' in storageOption)) {
     return storageOption as KVStore;
   }
 
@@ -81,15 +78,22 @@ function getClientStorage(storageOption: SimpleStorageOrInstances): KVStore {
     typeof storageOption === 'object' ? storageOption.type : storageOption;
 
   const storageName =
-    typeof storageOption === 'object' ? storageOption.name : 'triplit';
+    typeof storageOption === 'object'
+      ? (storageOption?.name ?? 'triplit')
+      : 'triplit';
+
+  const storageOptions =
+    typeof storageOption === 'object' && storageOption.type === 'indexeddb'
+      ? // @ts-expect-error - infer the type overload for idb
+        storageOption.options
+      : undefined;
 
   if (storageType === 'indexeddb') {
     if (typeof indexedDB === 'undefined') {
       throw new IndexedDbUnavailableError();
     }
     // TODO: create a default IndexedDbKVStore
-    // @ts-expect-error
-    return new IndexedDbKVStore(storageName);
+    return new IndexedDbKVStore(storageName, storageOptions);
   }
   return new BTreeKVStore();
 }

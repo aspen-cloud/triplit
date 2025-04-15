@@ -7,16 +7,19 @@ import {
 import { compareTuple, Tuple } from '../../codec.js';
 import { MemoryTransaction } from '../transactions/memory-tx.js';
 import { ScopedKVStore } from '../utils/scoped-store.js';
+import { BTreeKVStore } from './memory-btree.js';
 
 const version = 1;
 const storeName = 'triplit';
 
-type IndexedDbKVOptions = {
+export type IndexedDbKVOptions = {
   batchSize?: number;
+  useCache?: boolean;
 };
 
 export class IndexedDbKVStore implements KVStore {
   private db: Promise<IDBDatabase>;
+  private cache: BTreeKVStore | undefined;
   readonly options: IndexedDbKVOptions;
 
   constructor(
@@ -24,6 +27,9 @@ export class IndexedDbKVStore implements KVStore {
     options: IndexedDbKVOptions = {}
   ) {
     this.options = options;
+    if (options.useCache) {
+      this.cache = new BTreeKVStore();
+    }
     this.db =
       typeof db === 'string'
         ? new Promise((resolve, reject) => {
@@ -34,9 +40,9 @@ export class IndexedDbKVStore implements KVStore {
               this.setupSchema(database);
             };
 
-            request.onsuccess = (event: Event) => {
+            request.onsuccess = async (event: Event) => {
               const database = (event.target as IDBOpenDBRequest).result;
-              resolve(database);
+              resolve(await this.populateCache(database));
             };
 
             request.onerror = (event: Event) => {
@@ -46,7 +52,33 @@ export class IndexedDbKVStore implements KVStore {
               reject((event.target as IDBOpenDBRequest).error);
             };
           })
-        : db;
+        : db.then(this.populateCache);
+  }
+
+  private async populateCache(db: IDBDatabase) {
+    const transaction = db.transaction(storeName, 'readonly');
+    const store = transaction.objectStore(storeName);
+    const keys: string[][] = await new Promise<string[][]>(
+      (resolve, reject) => {
+        const request = store.getAllKeys();
+        request.onerror = () => reject(request.error);
+        request.onsuccess = () => resolve(request.result as string[][]);
+      }
+    );
+    const values: any[] = await new Promise((resolve, reject) => {
+      const request = store.getAll();
+      request.onerror = () => reject(request.error);
+      request.onsuccess = () => resolve(request.result);
+    });
+    if (keys.length !== values.length) {
+      throw new Error('IndexedDB keys and values length mismatch');
+    }
+    for (let i = 0; i < keys.length; i++) {
+      const key = keys[i];
+      const value = values[i];
+      this.cache && this.cache.data.set(key, value);
+    }
+    return db;
   }
 
   private setupSchema(db: IDBDatabase): void {
@@ -57,6 +89,9 @@ export class IndexedDbKVStore implements KVStore {
 
   async get(key: Tuple, scope?: Tuple) {
     const db = await this.db;
+    if (this.cache) {
+      return this.cache.get(key, scope);
+    }
     const fullKey = (scope ? [...scope, ...key] : key) as string[];
     return new Promise((resolve, reject) => {
       const transaction = db.transaction(storeName, 'readonly', {
@@ -80,7 +115,10 @@ export class IndexedDbKVStore implements KVStore {
       const store = transaction.objectStore(storeName);
       const request = store.put(value, fullKey);
 
-      request.onsuccess = () => resolve();
+      request.onsuccess = async () => {
+        this.cache && (await this.cache.set(key, value, scope));
+        resolve();
+      };
       request.onerror = () => reject(request.error);
     });
   }
@@ -95,7 +133,10 @@ export class IndexedDbKVStore implements KVStore {
       const store = transaction.objectStore(storeName);
       const request = store.delete(fullKey);
 
-      request.onsuccess = () => resolve();
+      request.onsuccess = async () => {
+        this.cache && (await this.cache.delete(key, scope));
+        resolve();
+      };
       request.onerror = () => reject(request.error);
     });
   }
@@ -105,6 +146,10 @@ export class IndexedDbKVStore implements KVStore {
     scope?: Tuple
   ): AsyncIterable<[Tuple, any]> {
     const db = await this.db;
+    if (this.cache) {
+      yield* this.cache.scan(options, scope);
+      return;
+    }
     const lower = scope ? [...scope, ...options.prefix] : options.prefix;
     const upper = [...lower, '\uffff'];
     const transaction = db.transaction(storeName, 'readonly', {
@@ -152,6 +197,11 @@ export class IndexedDbKVStore implements KVStore {
   }
 
   async *scanValues(options: ScanOptions, scope?: Tuple): AsyncIterable<any> {
+    await this.db;
+    if (this.cache) {
+      yield* this.cache.scanValues(options, scope);
+      return;
+    }
     const db = await this.db;
     const lower = scope ? [...scope, ...options.prefix] : options.prefix;
     const upper = [...lower, '\uffff'];
@@ -195,43 +245,6 @@ export class IndexedDbKVStore implements KVStore {
     }
   }
 
-  async *scanCursor(
-    options: ScanOptions,
-    scope?: Tuple
-  ): AsyncIterable<[Tuple, any]> {
-    const db = await this.db;
-    const lower = scope ? [...scope, ...options.prefix] : options.prefix;
-    const upper = [...lower, '\uffff'];
-    const transaction = db.transaction(storeName, 'readonly', {
-      durability: 'relaxed',
-    });
-    const store = transaction.objectStore(storeName);
-    const range = IDBKeyRange.bound(lower, upper, false, true);
-    const request = store.openCursor(range);
-
-    while (true) {
-      const cursor = await new Promise<IDBCursorWithValue>(
-        (resolve, reject) => {
-          request.onerror = () => reject(request.error);
-          request.onsuccess = () =>
-            resolve((request as IDBRequest<IDBCursorWithValue>).result);
-        }
-      );
-      if (!cursor) {
-        break;
-      }
-      const prefixLength = (scope?.length ?? 0) + options.prefix.length;
-      const keyWithoutPrefix = (
-        prefixLength > 0
-          ? (cursor.key as string[]).slice(prefixLength)
-          : cursor.key
-      ) as string[];
-      if (keyWithoutPrefix.length === 0) break;
-      yield [keyWithoutPrefix, cursor.value];
-      cursor.continue();
-    }
-  }
-
   async clear(scope?: Tuple) {
     const db = await this.db;
     const transaction = db.transaction(storeName, 'readwrite', {
@@ -241,7 +254,8 @@ export class IndexedDbKVStore implements KVStore {
     if (!scope?.length) {
       const request = store.clear();
       return new Promise<void>((resolve, reject) => {
-        request.onsuccess = () => {
+        request.onsuccess = async () => {
+          this.cache && (await this.cache.clear(scope));
           resolve();
         };
 
@@ -253,7 +267,8 @@ export class IndexedDbKVStore implements KVStore {
       const range = IDBKeyRange.bound(lower, upper, false, true);
       return new Promise<void>((resolve, reject) => {
         const request = store.delete(range);
-        request.onsuccess = () => {
+        request.onsuccess = async () => {
+          this.cache && (await this.cache.clear(scope));
           resolve();
         };
 
@@ -261,7 +276,6 @@ export class IndexedDbKVStore implements KVStore {
       });
     }
   }
-
   scope(scope: Tuple): ScopedKVStore<this> {
     return new ScopedKVStore(this, scope);
   }
@@ -272,6 +286,9 @@ export class IndexedDbKVStore implements KVStore {
 
   async count(options: CountOptions, scope?: Tuple): Promise<number> {
     const db = await this.db;
+    if (this.cache) {
+      return this.cache.count(options, scope);
+    }
     const lower = scope ? [...scope, ...options.prefix] : options.prefix;
     const upper = [...lower, '\uffff'];
     const range = IDBKeyRange.bound(lower, upper, false, true);
@@ -297,18 +314,26 @@ export class IndexedDbKVStore implements KVStore {
       });
       const store = tx.objectStore(storeName);
       let lastOp = null;
+      const deletesCopy: Tuple[] = [];
+      const setsCopy: [Tuple, any][] = [];
       for await (const key of deletes) {
         lastOp = store.delete(key as string[]);
+        deletesCopy.push(key);
       }
       for await (const [key, value] of sets) {
         lastOp = store.put(value, key as string[]);
+        setsCopy.push([key, value]);
       }
 
       if (lastOp) {
-        lastOp.onsuccess = () => resolve();
+        lastOp.onsuccess = async () => {
+          this.cache && (await this.cache.applyEdits(setsCopy, deletesCopy));
+          resolve();
+        };
         // TODO: figure out how to make on error for any error
         lastOp.onerror = () => reject(lastOp.error);
       } else {
+        this.cache && (await this.cache.applyEdits(setsCopy, deletesCopy));
         resolve();
       }
     });

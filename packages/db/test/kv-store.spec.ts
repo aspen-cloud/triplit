@@ -26,6 +26,7 @@ const sqliteWorkerKv = new SqliteWorkerKvStore(':memory:');
 const lmdb = open({});
 const lmdbKv = new LmdbKVStore(lmdb);
 const idb = new IndexedDbKVStore('test');
+const idbWithCache = new IndexedDbKVStore('test', { useCache: true });
 const memoryTx = new MemoryTransaction(new BTreeKVStore());
 describe.each([
   { label: 'In-memory BTree', store: btree },
@@ -34,6 +35,7 @@ describe.each([
   { label: 'LMDB', store: lmdbKv },
   { label: 'IndexedDB', store: idb },
   { label: 'In-memory w/ delay', store: new InMemoryTestKVStore() },
+  { label: 'IndexedDB with cache', store: idbWithCache },
   // TODO: fix remaining tests for sqlite worker kv
   // { label: 'SQLite Worker Thread', store: sqliteWorkerKv },
 ])('--- $label ---', (scenario) => {
