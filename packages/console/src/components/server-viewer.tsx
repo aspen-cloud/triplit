@@ -26,11 +26,7 @@ import {
 } from '../utils/remote-helpers';
 import { useLoaderData, redirect, useSearchParams } from 'react-router-dom';
 import { consoleClient } from 'triplit/client.js';
-import {
-  DEFAULT_HOST,
-  initializeFromUrl,
-  addServiceToken,
-} from 'src/utils/server.js';
+import { DEFAULT_HOST, initializeFromUrl } from 'src/utils/server.js';
 import { ModeToggle } from '@triplit/ui';
 import { createCollection } from 'src/utils/schema.js';
 import { useToast } from 'src/hooks/useToast.js';
@@ -66,7 +62,7 @@ export async function loader({ params }: { params: { serverHost?: string } }) {
   const token =
     tokens.find((e) => e.id === 'service_' + serverHost)?.value ??
     tokens[0].value;
-  const collectionStats = await fetchCollectionStats(server.url, token);
+  const collectionStats = await fetchCollectionStats(server.url);
   return { collectionStats, url, token };
 }
 
@@ -392,23 +388,27 @@ export function ServerViewer({
             }}
           /> */}
           </div>
-          {collectionsToList.map((collection) => (
-            <Button
-              key={collection}
-              onClick={() => {
-                setQuery({ collection }, false);
-              }}
-              variant={query.collection === collection ? 'secondary' : 'ghost'}
-              className={`truncate flex h-auto px-2 py-1 flex-row items-center gap-2 justify-start shrink-0`}
-            >
-              <GridFour
-                weight="light"
-                className="shrink-0 hidden md:inline-block"
-                size={24}
-              />
-              <span className="text-xs md:text-sm truncate">{`${collection}`}</span>
-            </Button>
-          ))}
+          <div className="flex flex-col mb-4 overflow-y-auto">
+            {collectionsToList.map((collection) => (
+              <Button
+                key={collection}
+                onClick={() => {
+                  setQuery({ collection }, false);
+                }}
+                variant={
+                  query.collection === collection ? 'secondary' : 'ghost'
+                }
+                className={`truncate flex h-auto px-2 py-1 flex-row items-center gap-2 justify-start shrink-0`}
+              >
+                <GridFour
+                  weight="light"
+                  className="shrink-0 hidden md:inline-block"
+                  size={24}
+                />
+                <span className="text-xs md:text-sm truncate">{`${collection}`}</span>
+              </Button>
+            ))}
+          </div>
           {connectionStatus !== 'CONNECTING' &&
             collectionsToList.length === 0 && (
               <p className="text-xs">
