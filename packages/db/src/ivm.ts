@@ -628,6 +628,27 @@ export class IVM<M extends Models<M> = Models> {
       }
       for (const inclusion in include) {
         const { subquery, cardinality } = include[inclusion];
+        // we can skip the fanout if the subquery or its subqueries doesn't have any relevant changes
+        // to process
+        const collectionsReferencedInSubqueries =
+          node.collectionsReferencedInSubqueries.get(
+            hashPreparedQuery(subquery)
+          );
+        if (!collectionsReferencedInSubqueries) {
+          throw new Error(
+            'Subquery not found in collectionsReferencedInSubqueries'
+          );
+        }
+        let subqueryHasChangesToConsume = false;
+        for (const collection of collectionsReferencedInSubqueries) {
+          if (changes[collection]) {
+            subqueryHasChangesToConsume = true;
+            break;
+          }
+        }
+        if (!subqueryHasChangesToConsume) {
+          continue;
+        }
         for (const entity of filteredResults) {
           // TODO: this should check updated entities too
           // but only updated entities with changes that affect the inclusion
