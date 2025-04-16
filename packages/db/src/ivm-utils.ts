@@ -15,7 +15,7 @@ import {
 export function getReferencedRelationalVariables(
   query: PreparedQuery,
   stack: PreparedQuery[] = [],
-  results = new Map<string, Set<string>>()
+  results = new Map<number, Set<string>>()
 ) {
   stack.push(query);
   if (query.where) {
@@ -29,11 +29,11 @@ export function getReferencedRelationalVariables(
           if (isVariableScopeRelational(scope)) {
             const queryReferenced = stack[stack.length - scope - 1];
             if (queryReferenced) {
-              const stringifiedQuery = JSON.stringify(queryReferenced);
-              if (!results.has(stringifiedQuery)) {
-                results.set(stringifiedQuery, new Set());
+              const hashedQuery = hashPreparedQuery(queryReferenced);
+              if (!results.has(hashedQuery)) {
+                results.set(hashedQuery, new Set());
               }
-              results.get(stringifiedQuery)?.add(attribute);
+              results.get(hashedQuery)?.add(attribute);
             }
           }
         }
@@ -60,7 +60,7 @@ export function getCollectionsReferencedInSubqueries(
   }
   const queryId = hashPreparedQuery(query);
   stack.push(queryId);
-  results.set(queryId, new Set());
+  results.set(queryId, new Set<string>().add(query.collectionName));
   if (query.where) {
     for (const filter of filterStatementIteratorFlat(query.where)) {
       if (isSubQueryFilter(filter)) {

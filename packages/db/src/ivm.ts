@@ -50,10 +50,10 @@ interface QueryNode {
   cachedWhereClause: PreparedWhere | undefined;
   results?: ViewEntity[];
   query: PreparedQuery;
-  otherReferencedCollections: Set<string>;
   shouldRefetch: boolean;
   subscribeInfo: SubscribedQueryInfo | undefined;
   hasChanged: boolean;
+  collectionsReferencedInSubqueries: Map<number, Set<string>>;
 }
 
 interface SubscribedQueryInfo {
@@ -102,13 +102,13 @@ export class IVM<M extends Models<M> = Models> {
       dependsOn: new Map(),
       results: undefined,
       query,
-      otherReferencedCollections:
-        getCollectionsReferencedInSubqueries(query).get(hashId) ?? new Set(),
       shouldRefetch:
         hasSubqueryFilterAtAnyLevel(query) || hasSubqueryOrderAtAnyLevel(query),
       subscribeInfo: undefined,
       hasChanged: false,
       cachedWhereClause: undefined,
+      collectionsReferencedInSubqueries:
+        getCollectionsReferencedInSubqueries(query),
     };
   }
 
@@ -705,8 +705,9 @@ export class IVM<M extends Models<M> = Models> {
       const queryChanges = {} as DBChanges;
       for (const collection in changes) {
         if (
-          queryState.otherReferencedCollections.has(collection) ||
-          queryState.query.collectionName === collection
+          queryState.collectionsReferencedInSubqueries
+            .get(queryId)
+            ?.has(collection)
         ) {
           queryChanges[collection] = changes[collection];
         }
