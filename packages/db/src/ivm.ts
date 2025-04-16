@@ -38,7 +38,7 @@ import {
   hasSubqueryFilterAtAnyLevel,
   hasSubqueryOrderAtAnyLevel,
 } from './ivm-utils.js';
-import { hashPreparedQuery } from './query/hash-query.js';
+import { hashFilters, hashPreparedQuery } from './query/hash-query.js';
 import {
   extractViews,
   statementHasViewReference,
@@ -649,6 +649,7 @@ export class IVM<M extends Models<M> = Models> {
         if (!subqueryHasChangesToConsume) {
           continue;
         }
+        const cachedResults = new Map<number | null, any>();
         for (const entity of filteredResults) {
           // TODO: this should check updated entities too
           // but only updated entities with changes that affect the inclusion
@@ -657,31 +658,43 @@ export class IVM<M extends Models<M> = Models> {
           }
           const updatedEntityStack = entityStack.concat(entity.data);
           const existingInclusion = entity.subqueries[inclusion];
-          const { hasChanged, updatedResults } =
-            await this.updateQueryResultsInPlace(
-              Array.isArray(existingInclusion)
-                ? existingInclusion
-                : existingInclusion === null
-                  ? []
-                  : [existingInclusion],
-              changes,
-              {
-                ...subquery,
-                where: subquery.where
-                  ? bindVariablesInFilters(subquery.where, {
-                      entityStack: updatedEntityStack,
-                    })
-                  : undefined,
-              },
-              node,
-              updatedEntityStack
-            );
-          if (hasChanged) {
+          const boundFilters = subquery.where
+            ? bindVariablesInFilters(subquery.where, {
+                entityStack: updatedEntityStack,
+              })
+            : null;
+          const hashedFilters = boundFilters ? hashFilters(boundFilters) : null;
+          if (cachedResults.has(hashedFilters)) {
+            entity.subqueries[inclusion] = cachedResults.get(hashedFilters);
+            continue;
+          }
+          const resultsInfo = await this.updateQueryResultsInPlace(
+            Array.isArray(existingInclusion)
+              ? existingInclusion
+              : existingInclusion === null
+                ? []
+                : [existingInclusion],
+            changes,
+            {
+              ...subquery,
+              where: subquery.where
+                ? bindVariablesInFilters(subquery.where, {
+                    entityStack: updatedEntityStack,
+                  })
+                : undefined,
+            },
+            node,
+            updatedEntityStack
+          );
+          const resultsWithCardinalityApplies =
+            cardinality === 'one'
+              ? (resultsInfo.updatedResults?.[0] ?? null)
+              : resultsInfo.updatedResults;
+          cachedResults.set(hashedFilters, resultsWithCardinalityApplies);
+          entity.subqueries[inclusion] = resultsWithCardinalityApplies;
+
+          if (resultsInfo.hasChanged) {
             inclusionHasUpdated = true;
-            entity.subqueries[inclusion] =
-              cardinality === 'one'
-                ? (updatedResults?.[0] ?? null)
-                : updatedResults;
           }
         }
       }
