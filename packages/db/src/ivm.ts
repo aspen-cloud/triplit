@@ -34,6 +34,7 @@ import {
 import { bindVariablesInFilters } from './variables.js';
 import {
   getCollectionsReferencedInSubqueries,
+  getReferencedRelationalVariables,
   hasSubqueryFilterAtAnyLevel,
   hasSubqueryOrderAtAnyLevel,
 } from './ivm-utils.js';
@@ -54,6 +55,7 @@ interface QueryNode {
   subscribeInfo: SubscribedQueryInfo | undefined;
   hasChanged: boolean;
   collectionsReferencedInSubqueries: Map<number, Set<string>>;
+  referencedRelationalVariables: Map<number, Set<string>>;
 }
 
 interface SubscribedQueryInfo {
@@ -107,6 +109,7 @@ export class IVM<M extends Models<M> = Models> {
       subscribeInfo: undefined,
       hasChanged: false,
       cachedWhereClause: undefined,
+      referencedRelationalVariables: getReferencedRelationalVariables(query),
       collectionsReferencedInSubqueries:
         getCollectionsReferencedInSubqueries(query),
     };
@@ -606,24 +609,31 @@ export class IVM<M extends Models<M> = Models> {
 
     if (include) {
       const entitiesToRefetchInclusions = new Set<string>();
-      for (const entity of filteredResults) {
-        // TODO: this should check updated entities too
-        // but only updated entities with changes that affect the inclusion
-        if (
-          addedEntities.has(entity.data.id) ||
-          inlineUpdatedEntities.has(entity.data.id)
-        ) {
-          entitiesToRefetchInclusions.add(entity.data.id);
-          continue;
-        }
-        for (const inclusion in include) {
-          // we should be able to skip this if
-          // 1. we know the inclusion is a leaf AND
-          //    (there are no changes for that collection
-          //    OR the changes are just inserts that fail on simple filters)
-          // 2. if the inclusion is not a leaf but there are no remaining collection changes
-          //    for any subquery
-          const { subquery, cardinality } = include[inclusion];
+      addedEntities.keys().forEach((id) => {
+        entitiesToRefetchInclusions.add(id);
+      });
+      const referencedRelationalVariables =
+        node.referencedRelationalVariables.get(hashPreparedQuery(query));
+      // only refetch an updated entities if the updated affected
+      // the relevant variables
+      if (referencedRelationalVariables) {
+        inlineUpdatedEntities.entries().forEach(([id, update]) => {
+          for (const refdVar of referencedRelationalVariables) {
+            if (ValuePointer.Get(update, refdVar) !== undefined) {
+              entitiesToRefetchInclusions.add(id);
+              break;
+            }
+          }
+        });
+      }
+      for (const inclusion in include) {
+        const { subquery, cardinality } = include[inclusion];
+        for (const entity of filteredResults) {
+          // TODO: this should check updated entities too
+          // but only updated entities with changes that affect the inclusion
+          if (entitiesToRefetchInclusions.has(entity.data.id)) {
+            continue;
+          }
           const updatedEntityStack = entityStack.concat(entity.data);
           const existingInclusion = entity.subqueries[inclusion];
           const { hasChanged, updatedResults } =
