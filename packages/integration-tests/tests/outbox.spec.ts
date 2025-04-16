@@ -1,6 +1,6 @@
 import { expect, it, describe, vi, afterAll, beforeAll } from 'vitest';
 import { tempTriplitServer } from '../utils/server.js';
-import { TriplitClient, Schema as S } from '@triplit/client';
+import { TriplitClient, Schema as S, HttpClient } from '@triplit/client';
 import { pause } from '../utils/async.js';
 import * as jose from 'jose';
 import { schema } from '../triplit/schema.js';
@@ -746,4 +746,73 @@ it('will fire an onFailureToSyncWrites callback', async () => {
   await pause(30);
   expect(spy).toHaveBeenCalledTimes(2);
   unsub();
+});
+
+it('Outbox data is always overlaid during in data from subscriptions', async () => {
+  // const serverDB = new DB({ entityStore: new ServerEntityStore() });
+  // await serverDB.insert('test', { id: 'test1', name: 'test1' });
+  // const server = new TriplitServer(serverDB);
+  using server = await tempTriplitServer({
+    serverOptions: { jwtSecret: SECRET },
+  });
+  const { port } = server;
+
+  const http = new HttpClient({
+    serverUrl: `http://localhost:${port}`,
+    token: DEFAULT_TOKEN,
+  });
+  await http.insert('test', { id: 'test1', name: 'test1' });
+
+  // Initialize alice and bob and subscriptions
+  const alice = new TriplitClient({
+    serverUrl: `http://localhost:${port}`,
+    token: DEFAULT_TOKEN,
+  });
+  const bob = new TriplitClient({
+    serverUrl: `http://localhost:${port}`,
+    token: DEFAULT_TOKEN,
+  });
+  const aliceSub = vi.fn();
+  const bobSub = vi.fn();
+  alice.subscribe(alice.query('test'), aliceSub);
+  bob.subscribe(bob.query('test'), bobSub);
+  await pause();
+  expect(aliceSub.mock.calls.at(-1)?.[0]).toStrictEqual([
+    { id: 'test1', name: 'test1' },
+  ]);
+  expect(bobSub.mock.calls.at(-1)?.[0]).toStrictEqual([
+    { id: 'test1', name: 'test1' },
+  ]);
+
+  // Prevent outbox clearing for alice
+  // THIS ISNT EXACTLY AN API BUT WE CAN KEEP ITEMS IN THE OUTBOX BY TOGGLING syncInProgress
+  alice.syncEngine.syncInProgress = true;
+  // Update data
+  await alice.update('test', 'test1', {
+    name: 'a',
+  });
+  await pause();
+  expect(aliceSub.mock.calls.at(-1)?.[0]).toStrictEqual([
+    { id: 'test1', name: 'a' },
+  ]);
+  expect(bobSub.mock.calls.at(-1)?.[0]).toStrictEqual([
+    { id: 'test1', name: 'test1' },
+  ]);
+
+  // Bob makes a change that will sync to alice
+  await bob.update('test', 'test1', {
+    name: 'b',
+  });
+  await pause();
+  // Alice still has the outbox change
+  expect(aliceSub.mock.calls.at(-1)?.[0]).toStrictEqual([
+    { id: 'test1', name: 'a' },
+  ]);
+  expect(bobSub.mock.calls.at(-1)?.[0]).toStrictEqual([
+    { id: 'test1', name: 'b' },
+  ]);
+  // TODO: If alice clears outbox, she should see bobs data
+  // await alice.clearPendingChangesForEntity('test', 'test1');
+  // await pause();
+  // console.dir(aliceSub.mock.calls, { depth: null });
 });

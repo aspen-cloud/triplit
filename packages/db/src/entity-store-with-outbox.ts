@@ -45,13 +45,44 @@ export class EntityStoreWithOutbox implements EntitySyncStore {
     return changes;
   }
 
-  applyChangesWithTimestamp(
+  async applyChangesWithTimestamp(
     tx: KVStoreTransaction,
     buffer: DBChanges,
     timestamp: Timestamp,
     options: ApplyChangesOptions
   ): Promise<DBChanges> {
-    return this.store.applyChangesWithTimestamp(tx, buffer, timestamp, options);
+    const changesToCache = await this.store.applyChangesWithTimestamp(
+      tx,
+      buffer,
+      timestamp,
+      options
+    );
+    const outboxChanges = await this.doubleBuffer.getChanges(tx);
+    // Basically we'll make sure that the pruned changes returned respect the changes in the outbox
+    // So if something was deleted in the outbox, we'll remove any sets or deletes for that entity
+    // if it was updated in the outbox, we'll remove any deletes for that entity but if there is a
+    // set, we'll merge them together with the outbox changes applied on top.
+    // if there is an insert in the outbox, we'll remove both sets and deletes for that entity
+    for (const collection in outboxChanges) {
+      const outboxCollectionChanges = outboxChanges[collection];
+      const changesToPrune = changesToCache[collection];
+      if (!changesToPrune) continue;
+      for (const id of outboxCollectionChanges.deletes) {
+        changesToPrune.deletes.delete(id);
+        changesToPrune.sets.delete(id);
+      }
+      for (const [id, change] of outboxCollectionChanges.sets) {
+        changesToPrune.deletes.delete(id);
+        const newChangeForEntity = changesToPrune.sets.get(id);
+        if (newChangeForEntity) {
+          changesToPrune.sets.set(id, {
+            ...newChangeForEntity,
+            ...change,
+          });
+        }
+      }
+    }
+    return changesToCache;
   }
 
   async getEntity(
