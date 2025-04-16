@@ -40,7 +40,7 @@ import {
 } from './ivm-utils.js';
 import { hashFilters, hashPreparedQuery } from './query/hash-query.js';
 import {
-  extractViews,
+  extractInvertedViews,
   statementHasViewReference,
 } from './query-planner/query-compiler.js';
 
@@ -143,45 +143,37 @@ export class IVM<M extends Models<M> = Models> {
     let rootNode = null;
     // try and setup multiple view nodes iff we have a subquery filter
     // that can be inverted
+    const { views, rewrittenQuery } = extractInvertedViews(
+      structuredClone(query),
+      generateViewId
+    );
     if (
-      query.where &&
-      someFilterStatementsFlat(query.where, isSubQueryFilter) &&
-      !query.include
+      !hasSubqueryFilterAtAnyLevel(rewrittenQuery) &&
+      !hasSubqueryOrderAtAnyLevel(rewrittenQuery)
     ) {
-      const { views, rootQuery } = extractViews(
-        structuredClone(query),
-        generateViewId
-      );
-      if (
-        rootQuery.where &&
-        // check that all subquery filters have been removed
-        !someFilterStatementsFlat(rootQuery.where, isSubQueryFilter)
-      ) {
-        const viewIdMappings = new Map<string, number>();
-        rootNode = this.createQueryNode(rootQuery);
-        // TODO: cleanup iding
-        const viewNodes: Record<string, QueryNode> = {};
+      const viewIdMappings = new Map<string, number>();
+      rootNode = this.createQueryNode(rewrittenQuery);
+      // TODO: cleanup iding
+      const viewNodes: Record<string, QueryNode> = {};
 
-        for (const viewId in views) {
-          const viewHash = hashPreparedQuery(views[viewId]);
-          viewIdMappings.set(viewId, viewHash);
-          // we may be able to use the same view node for multiple queries
-          if (this.viewNodes.has(viewHash)) {
-            viewNodes[viewId] = this.viewNodes.get(viewHash)!;
-            continue;
-          }
-          viewNodes[viewId] = this.createQueryNode(views[viewId]);
-          this.viewNodes.set(viewHash, viewNodes[viewId]);
+      for (const viewId in views) {
+        const viewHash = hashPreparedQuery(views[viewId]);
+        viewIdMappings.set(viewId, viewHash);
+        // we may be able to use the same view node for multiple queries
+        if (this.viewNodes.has(viewHash)) {
+          viewNodes[viewId] = this.viewNodes.get(viewHash)!;
+          continue;
         }
-
-        this.linkFilterReferences(rootNode, rootQuery.where, viewNodes);
-        for (const viewId in viewNodes) {
-          const viewNode = viewNodes[viewId];
-          this.linkFilterReferences(viewNode, viewNode.query.where, viewNodes);
-        }
+        viewNodes[viewId] = this.createQueryNode(views[viewId]);
+        this.viewNodes.set(viewHash, viewNodes[viewId]);
       }
-    }
-    if (!rootNode) {
+
+      this.linkFilterReferences(rootNode, rewrittenQuery.where, viewNodes);
+      for (const viewId in viewNodes) {
+        const viewNode = viewNodes[viewId];
+        this.linkFilterReferences(viewNode, viewNode.query.where, viewNodes);
+      }
+    } else {
       rootNode = this.createQueryNode(query);
     }
     this.viewNodes.set(rootNode.id, rootNode);

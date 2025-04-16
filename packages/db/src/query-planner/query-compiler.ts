@@ -535,3 +535,116 @@ function compileQueryToSteps(q: PreparedQuery): Step[] {
 
   return steps;
 }
+
+export function extractInvertedViews(
+  query: PreparedQuery,
+  generateViewId: () => string
+): { rewrittenQuery: PreparedQuery; views: Record<string, PreparedQuery> } {
+  const plan: {
+    views: Record<string, PreparedQuery>;
+    rewrittenQuery: PreparedQuery;
+  } = {
+    views: {},
+    rewrittenQuery: query,
+  };
+  if (query.where) {
+    const { where, views } = extractedInvertedViewsFromFilters(
+      query.where,
+      generateViewId
+    );
+    query.where = where;
+    Object.assign(plan.views, views);
+  }
+  if (query.include) {
+    for (const [alias, inclusion] of Object.entries(query.include)) {
+      const { views, rewrittenQuery } = extractInvertedViews(
+        inclusion.subquery,
+        generateViewId
+      );
+      Object.assign(plan.views, views);
+      query.include[alias] = {
+        ...query.include[alias],
+        subquery: rewrittenQuery,
+      };
+    }
+  }
+  if (query.order) {
+    for (let i = 0; i < query.order.length; i++) {
+      const [_attr, _direction, maybeSubquery] = query.order[i];
+      if (maybeSubquery == null) {
+        continue;
+      }
+      const { views, rewrittenQuery } = extractInvertedViews(
+        maybeSubquery.subquery,
+        generateViewId
+      );
+      Object.assign(plan.views, views);
+      query.order[i][2] = { ...maybeSubquery, subquery: rewrittenQuery };
+    }
+  }
+  return plan;
+}
+
+function extractedInvertedViewsFromFilters(
+  where: PreparedWhere,
+  generateViewId: () => string
+): {
+  where: PreparedWhere;
+  views: Record<string, PreparedQuery>;
+} {
+  const views: Record<string, PreparedQuery> = {};
+  const updatedWhere: PreparedWhere = [];
+  for (const filter of where) {
+    // if the filter is a subquery filter
+    // we may be able to do "inversion"
+    if (isSubQueryFilter(filter)) {
+      const subquery = filter.exists;
+      const hasGrandparentReferences =
+        subquery.where && hasHigherLevelReferences(subquery.where);
+      const subqueryVariableFilters = (subquery.where ?? []).filter(
+        (f): f is FilterStatement => {
+          return (
+            isFilterStatement(f) &&
+            isValueVariable(f[2]) &&
+            getVariableComponents(f[2])[0] === 1
+          );
+        }
+      );
+      // inversion strategy
+      if (!hasGrandparentReferences && subqueryVariableFilters.length < 2) {
+        const viewId = generateViewId();
+        const extractedView = extractInvertedViews(subquery, generateViewId);
+        views[viewId] = extractedView.rewrittenQuery;
+        Object.assign(views, extractedView.views);
+
+        // remove the variable filters from the view
+        extractedView.rewrittenQuery.where = subquery.where?.filter(
+          (f) => !subqueryVariableFilters.includes(f as FilterStatement)
+        );
+
+        // and in the main query, add the filter on the view
+        const viewFilters = subqueryVariableFilters.map<FilterStatement>(
+          (f) => {
+            return [
+              getVariableComponents(f[2])[1],
+              'in',
+              `$view_${viewId}.${f[0]}`,
+            ];
+          }
+        );
+        updatedWhere.push(...viewFilters);
+      } else {
+        updatedWhere.push(filter);
+      }
+    } else if (isFilterGroup(filter)) {
+      const { where: newWhere, views: newViews } =
+        extractedInvertedViewsFromFilters(filter.filters, generateViewId);
+      updatedWhere.push({ ...filter, filters: newWhere });
+      Object.assign(views, newViews);
+      // let the rest pass through and be handled with a more naive approach
+    } else {
+      updatedWhere.push(filter);
+    }
+  }
+  return { where: updatedWhere, views };
+}
