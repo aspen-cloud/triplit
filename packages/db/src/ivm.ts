@@ -11,8 +11,10 @@ import {
   filterStatementIteratorFlat,
   isBooleanFilter,
   isFilterGroup,
+  isFilterStatement,
   isSubQueryFilter,
   satisfiesNonRelationalFilter,
+  someFilterStatementsFlat,
 } from './filters.js';
 import { DB } from './db.js';
 import { deepObjectAssign } from './utils/deep-merge.js';
@@ -25,6 +27,7 @@ import { ValuePointer } from './utils/value-pointer.js';
 import { KVDoubleBuffer } from './double-buffer.js';
 import {
   createViewEntity,
+  flattenViews,
   sortViewEntities,
   ViewEntity,
 } from './query-engine.js';
@@ -35,12 +38,22 @@ import {
   hasSubqueryOrderAtAnyLevel,
 } from './ivm-utils.js';
 import { hashPreparedQuery } from './query/hash-query.js';
+import {
+  extractViews,
+  statementHasViewReference,
+} from './query-planner/query-compiler.js';
 
 interface QueryNode {
-  // TODO support multiple root queries (essentially subqueries could be shared between root queries)
-  rootQuery: string;
+  id: number;
+  usedBy: Set<number>;
+  dependsOn: Map<string, number>;
+  cachedWhereClause: PreparedWhere | undefined;
+  results?: ViewEntity[];
   query: PreparedQuery;
-  queryType: 'root' | 'exists' | 'include' | 'order';
+  otherReferencedCollections: Set<string>;
+  shouldRefetch: boolean;
+  subscribeInfo: SubscribedQueryInfo | undefined;
+  hasChanged: boolean;
 }
 
 interface SubscribedQueryInfo {
@@ -49,9 +62,7 @@ interface SubscribedQueryInfo {
   listeners: Set<SubscriptionCallback>;
   errorCallbacks: Set<(error: Error) => void>;
   uninitializedListeners: WeakSet<SubscriptionCallback>;
-  results?: ViewEntity[];
-  hasChanged?: boolean;
-  collections: Set<string>;
+  rootNode: QueryNode;
 }
 
 type SubscriptionCallback = (update: { results: ViewEntity[] }) => void;
@@ -72,16 +83,108 @@ export class IVM<M extends Models<M> = Models> {
 
   // These represent what subscribers are actually interested in
   readonly subscribedQueries: Map<number, SubscribedQueryInfo> = new Map();
+  readonly uninitializedQueries: Set<number> = new Set();
 
   // Individual queries that make up the subscribed queries
   // Each query represents either a root query or a subquery of a subscribed query
-  private queryNodes: Record<CollectionNameFromModels<M>, QueryNode[]> =
-    {} as any;
+  private viewNodes = new Map<number, QueryNode>();
 
   constructor(
     readonly db: DB,
     readonly options: IVMOptions
   ) {}
+
+  createQueryNode(query: PreparedQuery): QueryNode {
+    const hashId = hashPreparedQuery(query);
+    return {
+      id: hashId,
+      usedBy: new Set(),
+      dependsOn: new Map(),
+      results: undefined,
+      query,
+      otherReferencedCollections:
+        getCollectionsReferencedInSubqueries(query).get(hashId) ?? new Set(),
+      shouldRefetch:
+        hasSubqueryFilterAtAnyLevel(query) || hasSubqueryOrderAtAnyLevel(query),
+      subscribeInfo: undefined,
+      hasChanged: false,
+      cachedWhereClause: undefined,
+    };
+  }
+
+  linkFilterReferences(
+    parentNode: QueryNode,
+    filters: PreparedWhere | undefined,
+    lookup: Record<string, QueryNode>
+  ) {
+    if (!filters) return;
+    for (const filter of filterStatementIteratorFlat(filters)) {
+      if (isFilterStatement(filter) && statementHasViewReference(filter)) {
+        const referencedId = (filter[2] as string).split('.')[0].split('_')[1];
+        if (lookup[referencedId]) {
+          parentNode.dependsOn.set(
+            filter[2] as string,
+            lookup[referencedId].id
+          );
+          lookup[referencedId].usedBy.add(parentNode.id);
+        }
+      }
+    }
+  }
+  // TODO: handle query hashing collisions
+  // we should only hash the query after we've hashed any of its dependsOn
+  // because a reference like $view0 could be shared across queries but refer to different views
+  createNodesForQuery(query: PreparedQuery) {
+    let nextViewId = 0;
+    const generateViewId = (): string => `${nextViewId++}`;
+    let rootNode = null;
+    // try and setup multiple view nodes iff we have a subquery filter
+    // that can be inverted
+    if (
+      query.where &&
+      someFilterStatementsFlat(query.where, isSubQueryFilter) &&
+      !query.include
+    ) {
+      const { views, rootQuery } = extractViews(
+        structuredClone(query),
+        generateViewId
+      );
+      if (
+        rootQuery.where &&
+        // check that all subquery filters have been removed
+        !someFilterStatementsFlat(rootQuery.where, isSubQueryFilter)
+      ) {
+        const viewIdMappings = new Map<string, number>();
+        rootNode = this.createQueryNode(rootQuery);
+        // TODO: cleanup iding
+        const viewNodes: Record<string, QueryNode> = {};
+
+        for (const viewId in views) {
+          const viewHash = hashPreparedQuery(views[viewId]);
+          viewIdMappings.set(viewId, viewHash);
+          // we may be able to use the same view node for multiple queries
+          if (this.viewNodes.has(viewHash)) {
+            viewNodes[viewId] = this.viewNodes.get(viewHash)!;
+            continue;
+          }
+          viewNodes[viewId] = this.createQueryNode(views[viewId]);
+          this.viewNodes.set(viewHash, viewNodes[viewId]);
+        }
+
+        this.linkFilterReferences(rootNode, rootQuery.where, viewNodes);
+        for (const viewId in viewNodes) {
+          const viewNode = viewNodes[viewId];
+          this.linkFilterReferences(viewNode, viewNode.query.where, viewNodes);
+        }
+      }
+    }
+    if (!rootNode) {
+      rootNode = this.createQueryNode(query);
+    }
+    this.viewNodes.set(rootNode.id, rootNode);
+
+    return rootNode;
+  }
 
   subscribe(
     query: PreparedQuery,
@@ -90,19 +193,22 @@ export class IVM<M extends Models<M> = Models> {
   ) {
     const rootQueryId = hashPreparedQuery(query);
     if (!this.subscribedQueries.has(rootQueryId)) {
+      const rootNode = this.createNodesForQuery(query);
       // Get all collections that are referenced by this root query
       // or one of its subqueries
-      this.subscribedQueries.set(rootQueryId, {
+      const subInfo: SubscribedQueryInfo = {
         ogQuery: query,
-        query,
+        query: query,
         listeners: new Set(),
         errorCallbacks: new Set(),
         uninitializedListeners: new WeakSet(),
-        results: undefined,
-        collections: new Set(
-          getCollectionsReferencedInSubqueries(query).get(rootQueryId)!
-        ).add(query.collectionName),
-      });
+        rootNode,
+      };
+      this.subscribedQueries.set(rootQueryId, subInfo);
+      rootNode.subscribeInfo = subInfo;
+      this.uninitializedQueries.add(rootQueryId);
+      console.dir(this.viewNodes, { depth: null });
+      console.dir(subInfo, { depth: null });
     }
 
     this.subscribedQueries.get(rootQueryId)!.listeners.add(callback);
@@ -114,7 +220,7 @@ export class IVM<M extends Models<M> = Models> {
     this.subscribedQueries
       .get(rootQueryId)!
       .uninitializedListeners.add(callback);
-
+    // console.dir(this.viewNodes, { depth: null });
     return () => {
       if (!this.subscribedQueries.has(rootQueryId)) {
         logger.warn('Query not found', { rootQueryId });
@@ -132,45 +238,64 @@ export class IVM<M extends Models<M> = Models> {
 
       if (this.subscribedQueries.get(rootQueryId)!.listeners.size === 0) {
         this.subscribedQueries.delete(rootQueryId);
+        // TODO: figure out how to cleanup the graph
       }
     };
   }
 
-  private async initializeQueryResults(rootQueryId: number) {
-    const query = this.subscribedQueries.get(rootQueryId)!.query;
-    const results = (await this.db.rawFetch(query)) as ViewEntity[];
-    // So the subscribedQuery might get deleted during the async fetch
-    // so we have to check it still exists. We could alternatively just
-    // save the query state to a variable before the fetch but I think
-    // it's better to leave this as a reminder that this is a potential
-    // issue
-    if (this.subscribedQueries.get(rootQueryId)) {
-      this.subscribedQueries.get(rootQueryId)!.results = results;
+  private async initializeQueryResults(
+    rootQueryId: number
+  ): Promise<ViewEntity[]> {
+    const node = this.viewNodes.get(rootQueryId);
+    if (!node) {
+      throw new Error('Root query node not found during initialization');
     }
+    if (node.results) {
+      return node.results;
+    }
+    // console.dir(node.query, { depth: null });
+    let query = { ...node.query };
+    // if this query has child views, we need to make sure they've been initialized
+    // and then replace the filters that reference them with the values themselves
+    if (node.dependsOn.size > 0 && query.where) {
+      const views: Record<string, ViewEntity[]> = {};
+      for (const [key, childId] of node.dependsOn.entries()) {
+        const results = await this.initializeQueryResults(childId);
+        // extract the 'view_0' from '$view_0.attribute'
+        // TODO: can getVariableComponents work here?
+        views[key.split('.')[0].slice(1)] = results;
+      }
+      // TODO: remove flattenViews, eventually
+      query.where = bindVariablesInFilters(query.where, flattenViews(views));
+      node.cachedWhereClause = query.where;
+    }
+    const results = await this.db.rawFetch(query);
+    node.results = results as ViewEntity[];
+    return results;
   }
 
   flushChangesToListeners() {
     for (const queryId of this.subscribedQueries.keys()) {
       const rootQueryInfo = this.subscribedQueries.get(queryId)!;
       for (const listener of rootQueryInfo.listeners) {
-        if (!rootQueryInfo.results) {
+        if (!rootQueryInfo.rootNode.results) {
           logger.error('Results not found for query', { queryId });
           continue;
         }
         if (
           !rootQueryInfo.uninitializedListeners.has(listener) &&
-          !rootQueryInfo.hasChanged
+          !rootQueryInfo.rootNode.hasChanged
         ) {
           continue;
         }
-        const results = rootQueryInfo.results;
+        const results = rootQueryInfo.rootNode.results;
 
         rootQueryInfo.uninitializedListeners.delete(listener);
         if (results != null) {
           listener({ results });
         }
       }
-      rootQueryInfo.hasChanged = false;
+      rootQueryInfo.rootNode.hasChanged = false;
     }
   }
 
@@ -241,36 +366,42 @@ export class IVM<M extends Models<M> = Models> {
     // });
     const handledRootQueries = new Set<number>();
     // Iterate through queries and get initial results for ones that don't have any
-    for (const queryId of this.subscribedQueries.keys()) {
-      if (this.subscribedQueries.get(queryId)!.results == null) {
-        await this.initializeQueryResults(queryId);
-        handledRootQueries.add(queryId);
+    for (const queryId of this.uninitializedQueries) {
+      const subInfo = this.subscribedQueries.get(queryId);
+      if (!subInfo) {
+        throw new Error('Subscribed query not found during initialization');
+      }
+      if (subInfo.rootNode.results == null) {
+        await this.initializeQueryResults(subInfo.rootNode.id);
+        handledRootQueries.add(subInfo.rootNode.id);
       }
     }
+    this.uninitializedQueries.clear();
 
     const affectedQueries = this.getAffectedQueries(storeChanges);
     for (const [queryId, changes] of affectedQueries) {
       if (handledRootQueries.has(queryId)) {
         continue;
       }
-      if (!this.subscribedQueries.has(queryId)) {
+      if (!this.viewNodes.has(queryId)) {
         logger.warn('Subscribed query not found during update', { queryId });
         continue;
       }
-      const queryState = this.subscribedQueries.get(queryId)!;
-      const { results, query: rootQuery } = queryState;
-      if (
-        hasSubqueryFilterAtAnyLevel(rootQuery) ||
-        hasSubqueryOrderAtAnyLevel(rootQuery)
-      ) {
-        const refetchedResults = await this.db.rawFetch(rootQuery);
-        queryState.results = refetchedResults as ViewEntity[];
-        queryState.hasChanged = true;
+      const node = this.viewNodes.get(queryId)!;
+      if (node.shouldRefetch) {
+        const refetchedResults = await this.db.rawFetch(node.query);
+        node.results = refetchedResults as ViewEntity[];
+        node.hasChanged = true;
       } else {
         const { updatedResults, hasChanged } =
-          await this.updateQueryResultsInPlace(results, changes, rootQuery);
-        queryState.results = updatedResults;
-        queryState.hasChanged = hasChanged;
+          await this.updateQueryResultsInPlace(
+            node.results,
+            changes,
+            node.query,
+            node
+          );
+        node.results = updatedResults;
+        node.hasChanged = hasChanged;
       }
     }
     const kvTx = this.storage.transact();
@@ -282,22 +413,65 @@ export class IVM<M extends Models<M> = Models> {
     results: ViewEntity[] | undefined,
     changes: DBChanges,
     query: PreparedQuery,
+    node: QueryNode,
     entityStack: DBEntity[] = []
   ): Promise<{ updatedResults: ViewEntity[]; hasChanged: boolean }> {
-    const { collectionName, order, after, limit, where, include } = query;
+    const { collectionName, order, after, limit, include } = query;
+    let where = query.where;
     // console.dir({ query, results, changes }, { depth: null });
     const collectionChanges = changes[collectionName];
     // console.dir({ collectionChanges, results }, { depth: null });
     let filteredResults = results ?? [];
-    const evictedEntities = new Set<string>();
+    const evictedEntities = new Map<string, DBEntity>();
     const addedEntities = new Map<string, DBEntity>();
     // console.log({ inserts, updates, deletes });
-    const handledUpdates = new Set<string>();
-    const inlineUpdatedEntities = new Set<string>();
+    const handledUpdates = new Map<string, DBEntity>();
+    const inlineUpdatedEntities = new Map<string, DBEntity>();
+    if (where && node.dependsOn.size > 0) {
+      let haveAnyViewsChanged = false;
+      for (const dependsOn of node.dependsOn.values()) {
+        if (this.viewNodes.get(dependsOn)?.hasChanged) {
+          haveAnyViewsChanged = true;
+          break;
+        }
+      }
+      if (!haveAnyViewsChanged && node.cachedWhereClause) {
+        where = node.cachedWhereClause;
+      } else {
+        const views: Record<string, ViewEntity[]> = {};
+        for (const [varPath, hashedViewId] of node.dependsOn.entries()) {
+          const subNode = this.viewNodes.get(hashedViewId);
+          if (!subNode) {
+            throw new Error(
+              'view node not found during update: ' + hashedViewId
+            );
+          }
+          if (!subNode.results) {
+            throw new Error(
+              'view results not found during update: ' + hashedViewId
+            );
+          }
+          // extract the 'view_0' from '$view_0.attribute'
+          // TODO: can getVariableComponents work here?
+          views[varPath.split('.')[0].slice(1)] = subNode.results;
+        }
+        // TODO: remove flattenViews, eventually
+        where = bindVariablesInFilters(where, flattenViews(views));
+        node.cachedWhereClause = where;
+        return {
+          updatedResults: (await this.db.rawFetch({
+            ...query,
+            where,
+          })) as ViewEntity[],
+          hasChanged: true,
+        };
+      }
+    }
     if (collectionChanges) {
       const inlineUpdatedEntitiesWithOrderRelevantChanges = new Set<string>();
       const deletes = collectionChanges.deletes;
       const sets = collectionChanges.sets;
+
       // TODO: bring back this nice inserts/updates delineation
       // when we know that IVM won't receive upserts
       // const inserts = new Map<string, DBEntity>();
@@ -327,11 +501,11 @@ export class IVM<M extends Models<M> = Models> {
           }
           if (sets.has(entity.data.id)) {
             const update = sets.get(entity.data.id)!;
-            handledUpdates.add(entity.data.id);
             deepObjectAssign(entity.data, update);
+            handledUpdates.set(entity.data.id, entity.data);
             matches = matchesWhereOrAfterIfRelevant(entity.data);
             if (matches) {
-              inlineUpdatedEntities.add(entity.data.id);
+              inlineUpdatedEntities.set(entity.data.id, entity.data);
               updateAffectsOrder(update) &&
                 inlineUpdatedEntitiesWithOrderRelevantChanges.add(
                   entity.data.id
@@ -339,7 +513,7 @@ export class IVM<M extends Models<M> = Models> {
             }
           }
           if (!matches) {
-            evictedEntities.add(entity.data.id);
+            evictedEntities.set(entity.data.id, entity.data);
           }
           return matches;
         });
@@ -468,6 +642,7 @@ export class IVM<M extends Models<M> = Models> {
                     })
                   : undefined,
               },
+              node,
               updatedEntityStack
             );
           if (hasChanged) {
@@ -520,19 +695,29 @@ export class IVM<M extends Models<M> = Models> {
     return change.id !== undefined;
   }
 
+  // TODO: this should produce an ordered array? map? of queries with a topological sort
+  // where the nodes that depend on other nodes are after them
   private getAffectedQueries(changes: DBChanges): Map<number, DBChanges> {
     // TODO  we should probably organize queries by touched collections to make this faster
     const affectedQueries = new Map<number, DBChanges>();
-    for (const queryId of this.subscribedQueries.keys()) {
-      const queryState = this.subscribedQueries.get(queryId)!;
+    for (const queryId of this.viewNodes.keys()) {
+      const queryState = this.viewNodes.get(queryId)!;
       const queryChanges = {} as DBChanges;
       for (const collection in changes) {
-        if (queryState.collections.has(collection)) {
+        if (
+          queryState.otherReferencedCollections.has(collection) ||
+          queryState.query.collectionName === collection
+        ) {
           queryChanges[collection] = changes[collection];
         }
       }
-      if (Object.keys(queryChanges).length > 0) {
+      if (!isEmpty(queryChanges)) {
         affectedQueries.set(queryId, queryChanges);
+      }
+      for (const usedByNodeId of queryState.usedBy) {
+        if (!affectedQueries.has(usedByNodeId)) {
+          affectedQueries.set(usedByNodeId, {});
+        }
       }
     }
     return affectedQueries;

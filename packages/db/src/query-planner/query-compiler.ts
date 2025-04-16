@@ -306,15 +306,17 @@ function getViewsReferencedInFilters(
   viewNames: Set<string> = new Set()
 ): Set<string> {
   for (const filter of filterStatementIteratorFlat(filters)) {
-    if (
-      isFilterStatement(filter) &&
-      isValueVariable(filter[2]) &&
-      filter[2].startsWith('$view_')
-    ) {
+    if (isFilterStatement(filter) && statementHasViewReference(filter)) {
       viewNames.add(filter[2]);
     }
   }
   return viewNames;
+}
+
+export function statementHasViewReference(
+  filter: FilterStatement
+): filter is FilterStatement {
+  return isValueVariable(filter[2]) && filter[2].startsWith('$view_');
 }
 
 /**

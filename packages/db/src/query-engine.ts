@@ -58,7 +58,7 @@ export function flattenViewEntity(viewEnt: ViewEntity | null): any {
   };
 }
 
-function flattenViews(views: Record<string, ViewEntity[] | ViewEntity>) {
+export function flattenViews(views: Record<string, ViewEntity[] | ViewEntity>) {
   const flattenedViews = Object.fromEntries(
     Object.entries(views).map(([key, viewResults]) => [
       key,
