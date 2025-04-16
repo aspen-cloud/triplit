@@ -207,8 +207,8 @@ export class IVM<M extends Models<M> = Models> {
       this.subscribedQueries.set(rootQueryId, subInfo);
       rootNode.subscribeInfo = subInfo;
       this.uninitializedQueries.add(rootQueryId);
-      console.dir(this.viewNodes, { depth: null });
-      console.dir(subInfo, { depth: null });
+      // console.dir(this.viewNodes, { depth: null });
+      // console.dir(subInfo, { depth: null });
     }
 
     this.subscribedQueries.get(rootQueryId)!.listeners.add(callback);
