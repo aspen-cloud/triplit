@@ -220,7 +220,9 @@ function evaluateFilterStatement(
       // [null, 'in', ['a', 'b']] false, TODO: could be true if [null, 'in', [null]]?
       // ['a', 'in', null] false
       if (hasNoValue(value) || hasNoValue(filterValue)) return false;
-      if (filterValue instanceof Array) {
+      if (filterValue instanceof Set) {
+        return filterValue.has(value);
+      } else if (filterValue instanceof Array) {
         return filterValue.includes(value);
       } else if (filterValue instanceof Object) {
         return !!filterValue[value];
@@ -232,8 +234,10 @@ function evaluateFilterStatement(
       // [null, 'nin', ['a', 'b']] true
       // ['a', 'nin', null] true
       if (hasNoValue(value) || hasNoValue(filterValue)) return true;
-      if (filterValue instanceof Array) {
-        return !filterValue.includes(value);
+      if (filterValue instanceof Set) {
+        return !filterValue.has(value);
+      } else if (filterValue instanceof Array) {
+        return filterValue.includes(value);
       } else if (filterValue instanceof Object) {
         return !filterValue[value];
       } else {

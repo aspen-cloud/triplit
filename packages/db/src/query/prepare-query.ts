@@ -671,6 +671,10 @@ function transformAndValidateFilter(
       val = val.toISOString();
     }
 
+    if (Array.isArray(val)) {
+      val = new Set(val);
+    }
+
     return [prop, op, val];
   }
 

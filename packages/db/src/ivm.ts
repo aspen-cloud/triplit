@@ -480,7 +480,7 @@ export class IVM<M extends Models<M> = Models> {
       // instead of fetching here we could first check for memoized subqueries
       if (entitiesToRefetchInclusions.size > 0) {
         const idFilter: PreparedWhere = [
-          ['id', 'in', Array.from(entitiesToRefetchInclusions)],
+          ['id', 'in', entitiesToRefetchInclusions],
         ];
         const resultsToMerge = await this.db.rawFetch({
           ...query,

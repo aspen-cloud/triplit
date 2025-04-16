@@ -413,8 +413,8 @@ function compileQueryToSteps(q: PreparedQuery): Step[] {
         collectionName: q.collectionName,
         ids: isValueVariable(idFilter[2])
           ? idFilter[2]
-          : !Array.isArray(idFilter[2])
-            ? [idFilter[2]]
+          : typeof idFilter[2] === 'string'
+            ? new Set().add(idFilter[2])
             : idFilter[2],
       });
 

@@ -211,11 +211,11 @@ export function bindVariablesInFilter<W extends PreparedWhereFilter>(
   }
   if (isFilterStatement(filter) && isValueVariable(filter[2])) {
     const variable = filter[2] as string;
-    return [
-      filter[0],
-      filter[1],
-      resolveVariable(variable, vars),
-    ] as FilterStatement as W;
+    let resolvedValue = resolveVariable(variable, vars);
+    if (Array.isArray(resolvedValue)) {
+      resolvedValue = new Set(resolvedValue);
+    }
+    return [filter[0], filter[1], resolvedValue] as FilterStatement as W;
   }
   return filter;
 }
