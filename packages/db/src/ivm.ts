@@ -401,6 +401,7 @@ export class IVM<M extends Models<M> = Models> {
             node.results,
             changes,
             node.query,
+            node.query,
             node
           );
         node.results = updatedResults;
@@ -416,6 +417,7 @@ export class IVM<M extends Models<M> = Models> {
     results: ViewEntity[] | undefined,
     changes: DBChanges,
     query: PreparedQuery,
+    originalQuery: PreparedQuery,
     node: QueryNode,
     entityStack: DBEntity[] = []
   ): Promise<{ updatedResults: ViewEntity[]; hasChanged: boolean }> {
@@ -613,7 +615,9 @@ export class IVM<M extends Models<M> = Models> {
         entitiesToRefetchInclusions.add(id);
       });
       const referencedRelationalVariables =
-        node.referencedRelationalVariables.get(hashPreparedQuery(query));
+        node.referencedRelationalVariables.get(
+          hashPreparedQuery(originalQuery)
+        );
       // only refetch an updated entities if the updated affected
       // the relevant variables
       if (referencedRelationalVariables) {
@@ -683,6 +687,7 @@ export class IVM<M extends Models<M> = Models> {
                   })
                 : undefined,
             },
+            subquery,
             node,
             updatedEntityStack
           );
