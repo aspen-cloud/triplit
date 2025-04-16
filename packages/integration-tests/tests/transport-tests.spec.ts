@@ -3736,7 +3736,10 @@ describe('sessions API', async () => {
           schema: S.Schema({ id: S.Id(), name: S.String() }),
         },
       };
-      const db = new DB({ entityStore: new ServerEntityStore() });
+      const db = new DB({
+        entityStore: new ServerEntityStore(),
+        schema: { roles, collections },
+      });
       await db.insert('test', { id: 'test1', name: 'test1' });
       await db.insert('test', { id: 'test2', name: 'test2' });
 
@@ -3747,7 +3750,7 @@ describe('sessions API', async () => {
         roles,
         schema: collections,
       });
-      await pause(25);
+      await pause();
       expect(bob.syncEngine.connectionStatus).toBe('OPEN');
       expect(bob.token).toBe(SERVICE_KEY);
 
@@ -3755,7 +3758,7 @@ describe('sessions API', async () => {
 
       const query = bob.query('test');
       bob.subscribe(query, bobCallback);
-      await pause(50);
+      await pause();
 
       // @ts-expect-error (not exposed)
       expect(bob.syncEngine.queries.size).toBe(1);
