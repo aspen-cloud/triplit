@@ -21,8 +21,8 @@ describe('EntityDataStore', () => {
       const changes: DBChanges = {
         users: {
           sets: new Map([
-            ['1', { name: 'Alice' }],
-            ['2', { name: 'Bob' }],
+            ['1', { id: '1', name: 'Alice' }],
+            ['2', { id: '2', name: 'Bob' }],
           ]),
           deletes: new Set(),
         },
@@ -31,8 +31,14 @@ describe('EntityDataStore', () => {
       const tx = kvStore.transact();
       await entityDataStore.applyChanges(tx, changes, defaultOptions);
       await tx.commit();
-      expect(await kvStore.get(['users', '1'])).toEqual({ name: 'Alice' });
-      expect(await kvStore.get(['users', '2'])).toEqual({ name: 'Bob' });
+      expect(await kvStore.get(['users', '1'])).toEqual({
+        id: '1',
+        name: 'Alice',
+      });
+      expect(await kvStore.get(['users', '2'])).toEqual({
+        id: '2',
+        name: 'Bob',
+      });
     });
 
     it('should delete entities when change is null', async () => {
@@ -59,6 +65,17 @@ describe('EntityDataStore', () => {
         name: 'Alice',
         age: 31,
       });
+    });
+
+    // This is the way merging form syncing is expected to work (if data has been deleted from server or DNE on client, then we have nothing to merge it into and can drop it)
+    it('should ignore update changes without existing data', async () => {
+      const changes: DBChanges = {
+        users: { sets: new Map([['1', { age: 31 }]]), deletes: new Set() },
+      };
+      const tx = kvStore.transact();
+      await entityDataStore.applyChanges(tx, changes, defaultOptions);
+      await tx.commit();
+      expect(await kvStore.get(['users', '1'])).toEqual(undefined);
     });
   });
 });

@@ -714,7 +714,8 @@ describe("Entity Id'ing", () => {
   });
 
   describe('with schema', () => {
-    it('can define a schema with a required id attribute and fail if its not provided', async () => {
+    // We NEED an id default to properly identify this is an insert in the DBChanges changeset
+    it('will apply id default ', async () => {
       const db = new DB({
         schema: {
           collections: {
@@ -728,7 +729,10 @@ describe("Entity Id'ing", () => {
         },
       });
       const entityDoc = { name: 'Alice' };
-      await expect(db.insert('students', entityDoc)).rejects.toThrow();
+      const res = await db.insert('students', entityDoc);
+      expect(res).toBeDefined();
+      expect(res.id).toBeDefined();
+      expect(res.name).toBe('Alice');
     });
 
     it('can define a schema with an auto generated id attribute and have it generated', async () => {

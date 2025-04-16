@@ -7,6 +7,8 @@ import {
   KVStoreOrTransaction,
   EntityStore,
   ApplyChangesOptions,
+  Change,
+  Insert,
 } from './types.js';
 import { deepObjectAssign } from './utils/deep-merge.js';
 
@@ -54,6 +56,55 @@ export class EntityDataStore implements EntityStore {
   ): Promise<DBChanges> {
     const prefixedTx = tx.scope(this.storagePrefix);
     const appliedChanges: DBChanges = {};
+
+    const getInsertChangeset = async (
+      collection: string,
+      id: string,
+      change: Change
+    ): Promise<[Insert, Partial<Insert>] | undefined> => {
+      // Check insert permissions for new entity
+      if (options.checkWritePermission) {
+        await options.checkWritePermission(tx, collection, change, 'insert');
+      }
+      const current = await this.getEntity(tx, collection, id);
+      const isUpsert = !!current;
+      if (options.entityChangeValidator) {
+        options.entityChangeValidator(collection, change, {
+          ignoreRequiredProperties: isUpsert,
+        });
+      }
+      return applyChange(current, change);
+    };
+
+    const getUpdateChangeset = async (
+      collection: string,
+      id: string,
+      change: Change
+    ): Promise<[Insert, Partial<Insert>] | undefined> => {
+      const current = await this.getEntity(tx, collection, id);
+      if (!current) return;
+      // Check that the current value can be updated
+      if (options.checkWritePermission) {
+        await options.checkWritePermission(tx, collection, current, 'update');
+      }
+      if (options.entityChangeValidator) {
+        options.entityChangeValidator(collection, change, {
+          ignoreRequiredProperties: true,
+        });
+      }
+      const changeset = applyChange(current, change);
+      // Check that the updated value is valid
+      if (options.checkWritePermission) {
+        await options.checkWritePermission(
+          tx,
+          collection,
+          changeset[0],
+          'postUpdate'
+        );
+      }
+      return changeset;
+    };
+
     for (const [collection, collectionChanges] of Object.entries(changes)) {
       for (const id of collectionChanges.deletes) {
         if (options.checkWritePermission) {
@@ -70,57 +121,11 @@ export class EntityDataStore implements EntityStore {
       }
       for (const [id, change] of collectionChanges.sets.entries()) {
         const changeIsInsert = !!change.id;
-        if (changeIsInsert) {
-          // Check insert permissions for new entity
-          if (options.checkWritePermission) {
-            await options.checkWritePermission(
-              tx,
-              collection,
-              change,
-              'insert'
-            );
-          }
-        }
-
-        const current = await this.getEntity(tx, collection, id);
-
-        if (options.entityChangeValidator) {
-          options.entityChangeValidator(collection, change, {
-            // todo: does this same logic need to apply to write permissions
-            ignoreRequiredProperties: !changeIsInsert && !!current,
-          });
-        }
-
-        if (current && changeIsInsert) {
-          // throw new Error(
-          //   `Inserting entity that already exists: ${collection}/${id}`
-          // );
-        }
-
-        if (current && !changeIsInsert) {
-          // Check that the current value can be updated
-          if (options.checkWritePermission) {
-            await options.checkWritePermission(
-              tx,
-              collection,
-              current,
-              'update'
-            );
-          }
-        }
-
-        const [merged, sets] = applyChange(current, change);
-
-        // Check that the updated value is valid
-        if (!changeIsInsert && options.checkWritePermission) {
-          await options.checkWritePermission(
-            tx,
-            collection,
-            merged,
-            'postUpdate'
-          );
-        }
-
+        const changeset = changeIsInsert
+          ? await getInsertChangeset(collection, id, change)
+          : await getUpdateChangeset(collection, id, change);
+        if (!changeset) continue;
+        const [merged, sets] = changeset;
         // All permissions checked, can write
         await prefixedTx.set([collection, id], merged);
         if (!appliedChanges[collection]) {
@@ -159,8 +164,8 @@ export class EntityDataStore implements EntityStore {
 function applyChange<T extends Record<string, any> | undefined>(
   curr: T,
   sets: Partial<NonNullable<T>>
-): [T, Partial<NonNullable<T>>] {
-  if (!curr) return [sets as T, sets];
+): [NonNullable<T>, Partial<NonNullable<T>>] {
+  if (!curr) return [sets as NonNullable<T>, sets];
   const updated = structuredClone(curr);
   const appliedSets: any = {};
   for (const [key, value] of Object.entries(sets)) {

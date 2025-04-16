@@ -913,6 +913,74 @@ describe('Sync situations', () => {
     });
   });
 
+  it('Update and delete operations from different clients converge to a delete on both clients', async () => {
+    const serverDB = new DB({ entityStore: new ServerEntityStore() });
+    await serverDB.insert('test', { id: 'test1', name: 'test1' });
+    await serverDB.insert('test', { id: 'test2', name: 'test2' });
+    const server = new TriplitServer(serverDB);
+    const alice = createTestClient(server, {
+      token: SERVICE_KEY,
+      clientId: 'alice',
+    });
+    const bob = createTestClient(server, {
+      token: SERVICE_KEY,
+      clientId: 'bob',
+    });
+
+    alice.onFailureToSyncWrites(throwOnError);
+    bob.onFailureToSyncWrites(throwOnError);
+
+    // set up subscriptions
+    const aliceSub = vi.fn();
+    const bobSub = vi.fn();
+    alice.subscribe(alice.query('test'), aliceSub);
+    bob.subscribe(bob.query('test'), bobSub);
+    await pause();
+    // Alice update, bob delete
+    alice.disconnect();
+    bob.disconnect();
+    await alice.update('test', 'test1', (entity) => {
+      entity.name = 'a';
+    });
+    await bob.delete('test', 'test1');
+    await pause();
+    expect(aliceSub.mock.calls.at(-1)?.[0]).toStrictEqual([
+      { id: 'test1', name: 'a' },
+      { id: 'test2', name: 'test2' },
+    ]);
+    expect(bobSub.mock.calls.at(-1)?.[0]).toStrictEqual([
+      { id: 'test2', name: 'test2' },
+    ]);
+    await bob.connect();
+    await alice.connect();
+    await pause();
+    expect(aliceSub.mock.calls.at(-1)?.[0]).toStrictEqual([
+      { id: 'test2', name: 'test2' },
+    ]);
+    expect(bobSub.mock.calls.at(-1)?.[0]).toStrictEqual([
+      { id: 'test2', name: 'test2' },
+    ]);
+
+    // Alice delete, bob update
+    alice.disconnect();
+    bob.disconnect();
+
+    await alice.delete('test', 'test2');
+    await bob.update('test', 'test2', (entity) => {
+      entity.name = 'b';
+    });
+    await pause();
+    expect(aliceSub.mock.calls.at(-1)?.[0]).toStrictEqual([]);
+    expect(bobSub.mock.calls.at(-1)?.[0]).toStrictEqual([
+      { id: 'test2', name: 'b' },
+    ]);
+    alice.connect();
+    bob.connect();
+    await pause();
+    expect(aliceSub.mock.calls.at(-1)?.[0]).toStrictEqual([]);
+    expect(bobSub.mock.calls.at(-1)?.[0]).toStrictEqual([]);
+  });
+
   // TODO: look into the validity of this test...seeing mixed results depending on pause time
   // TODO: subscriptions DO overfire because the server is sending clients changes they already have
   it('subscriptions dont overfire', async () => {

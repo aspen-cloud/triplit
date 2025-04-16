@@ -139,8 +139,8 @@ export class DBTransaction<M extends Models<M> = Models> {
     // TODO: this (I think) will accept inserts to collections that don't exist in the schema ... do we want to allow this?
     const collectionSchema = this.schema?.collections[collectionName]?.schema;
     const parsed = parseInsert(collectionSchema, data);
-    // For some reason only doing this for collections without schemas (?)
-    if (!collectionSchema && !parsed.id) {
+    // If at this point an id default has not been applied, add an id to the entity because its an insert
+    if (!parsed.id) {
       parsed.id = Type.defaultValue(S.Id());
     }
     const collectionChanges = this.getOrCreateCollectionChanges(collectionName);
