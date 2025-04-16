@@ -34,7 +34,10 @@ export class TestTransport implements SyncTransport {
 
   private removeConnectionListener: (() => void) | undefined;
 
-  constructor(public server: TriplitServer) {}
+  constructor(
+    public server: TriplitServer,
+    public latency: number = 0
+  ) {}
   get isOpen() {
     return this.connectionStatus === 'OPEN';
   }
@@ -61,9 +64,9 @@ export class TestTransport implements SyncTransport {
       // NOTE: this is async
       // Will perform messaging handshake and start syncing
       // TODO: should probably do this after `this.setIsOpen(true);`
-      this.connection.start();
       this.setIsOpen(true);
-    });
+      this.connection.start();
+    }, this.latency);
   }
 
   /**
@@ -92,7 +95,10 @@ export class TestTransport implements SyncTransport {
     if (!this.connection) {
       return false;
     }
-    simulateNetwork(() => this.connection!.dispatchCommand(message));
+    simulateNetwork(
+      () => this.connection!.dispatchCommand(message),
+      this.latency
+    );
     return true;
   }
 
@@ -137,6 +143,6 @@ function parseJWT(token: string | undefined) {
   return JSON.parse(jsonPayload);
 }
 
-function simulateNetwork(callback: () => void, latency: number = 0) {
+function simulateNetwork(callback: () => void, latency: number) {
   setTimeout(callback, latency);
 }

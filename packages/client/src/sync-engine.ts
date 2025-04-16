@@ -86,7 +86,6 @@ export class SyncEngine {
   logger: Logger;
 
   // Connection state - these are used to track the state of the connection and should reset on dis/reconnect
-  private awaitingAck: Set<string> = new Set();
   private syncInProgress: boolean = false;
   private reconnectTimeoutDelay = 250;
   private reconnectTimeout: any;
@@ -150,6 +149,9 @@ export class SyncEngine {
    * Manually send any pending writes to the remote database. This may be a no-op if:
    * - there is already a push in progress
    * - the connection is not open
+   * - the server is not ready
+   *
+   * This will switch the active and inactive buffers if we are able to push
    *
    * If the push is successful, it will return `success: true`. If the push fails, it will return `success: false` and a `failureReason`.
    */
@@ -158,36 +160,62 @@ export class SyncEngine {
     syncFailureReason?: string;
   }> {
     if (this.client.awaitReady) await this.client.awaitReady;
-    if (this.syncInProgress)
+    if (this.syncInProgress) {
       return {
         didSync: false,
         syncFailureReason: 'Sync in progress',
       };
-    if (this.connectionStatus !== 'OPEN')
+    }
+    if (this.connectionStatus !== 'OPEN') {
       return {
         didSync: false,
         syncFailureReason: 'Connection not open',
       };
-    this.client.db.entityStore.doubleBuffer.lockAndSwitchBuffers();
+    }
+    if (!this.serverReady) {
+      return {
+        didSync: false,
+        syncFailureReason: 'Server not ready',
+      };
+    }
+
+    // We are good to sync, check if we should switch buffers and attempt sync
+    const shouldSwitch = await this.client.db.entityStore.doubleBuffer
+      .getLockedBuffer()
+      .isEmpty(this.client.db.kv);
+    if (shouldSwitch) {
+      this.client.db.entityStore.doubleBuffer.lockAndSwitchBuffers();
+    }
     await this.trySyncLockedBuffer();
     return {
       didSync: true,
     };
   }
 
-  async trySyncLockedBuffer() {
-    if (this.client.awaitReady) await this.client.awaitReady;
+  /**
+   * FOR INTERNAL USE ONLY, in most cases (even internally) you should use the safer `syncWrites` method
+   *
+   * This method will attempt to send the changes in the locked buffer to the server and mutates the `syncInProgress` state.
+   */
+  private async trySyncLockedBuffer() {
+    // Block others from attempting sync
     this.syncInProgress = true;
     try {
       const changes = await this.client.db.entityStore.doubleBuffer
         .getLockedBuffer()
         .getChanges(this.client.db.kv);
       if (!isEmpty(changes)) {
-        this.sendChanges(changes);
-        return;
+        // Just in case it was toggled off during any async processing
+        this.syncInProgress = true;
+        return this.sendChanges(changes);
+      } else {
+        // No changes, so weve synced
+        this.syncInProgress = false;
       }
-    } finally {
+    } catch (e) {
+      // Something failed so not in progress
       this.syncInProgress = false;
+      throw e;
     }
   }
 
@@ -530,9 +558,12 @@ export class SyncEngine {
   }
 
   private async initializeSync() {
-    await this.trySyncLockedBuffer();
-    await this.syncWrites();
-
+    const syncStatus = await this.syncWrites();
+    if (!syncStatus.didSync) {
+      this.logger.warn(
+        `Failed to send changes on initialization: ${syncStatus.syncFailureReason}`
+      );
+    }
     // Reconnect any queries
     for (const [id] of this.queries) {
       this.connectQuery(id);
@@ -671,7 +702,7 @@ export class SyncEngine {
 
   private onCloseHandler(evt: any) {
     // Clear any sync state
-    this.resetQueryAcks();
+    this.resetSyncConnectionState();
     this.serverReady = false;
 
     // If there is no reason, then default is to retry
@@ -785,15 +816,16 @@ export class SyncEngine {
       );
       this.disconnect();
     }
-    this.resetQueryAcks();
+    this.resetSyncConnectionState();
   }
 
   /**
-   * Marks all queries as unsent and removes received acks,
-   * priming them to be resent on the next connection
+   * Resets all state related to a sync connection (so if we lose connection, this should reset)
+   *
+   * Marks all queries as unsent and resets the syncInProgress indicator, so on next connection we will re-send data to the server
    */
-  private resetQueryAcks() {
-    this.awaitingAck = new Set();
+  private resetSyncConnectionState() {
+    this.syncInProgress = false;
     for (const queryMetadata of this.queries.values()) {
       queryMetadata!.hasSent = false;
       queryMetadata!.syncState = 'NOT_STARTED';

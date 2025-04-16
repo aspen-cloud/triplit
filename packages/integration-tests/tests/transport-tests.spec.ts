@@ -31,6 +31,7 @@ import {
   or,
   hashQuery,
 } from '@triplit/db';
+import { TestTransport } from '../utils/test-transport.js';
 
 describe('TestTransport', () => {
   it('can sync an insert on one client to another client', async () => {
@@ -1229,6 +1230,76 @@ describe('Sync situations', () => {
       );
       expect(bobResults).toEqual(['4', '2', '3', '1']);
     }
+  });
+
+  // This tests the 'rubber banding' behavior we saw in the demo app
+  it('Making a change while changes are in flight will wait for an ACK before sending joint changes', async () => {
+    // Set up server
+    const serverDB = new DB({ entityStore: new ServerEntityStore() });
+    const server = new TriplitServer(serverDB);
+    await serverDB.insert('test', { id: 'test1', name: 'test1' });
+    await pause();
+
+    // Set up client, with network delay to aid in exposing test case
+    const alice = createTestClient(server, {
+      token: SERVICE_KEY,
+      clientId: 'alice',
+      transport: new TestTransport(server, 400),
+    });
+    const spy = spyMessages(alice);
+    const aliceSub = vi.fn();
+    alice.subscribe(alice.query('test'), aliceSub);
+    await pause(1000);
+
+    // Add a listener that will trigger changes when a CHANGES message is sent, this should run while changes are inflight
+    const unsub = alice.onSyncMessageSent((msg) => {
+      if (msg.type === 'CHANGES') {
+        unsub();
+        alice.update('test', 'test1', {
+          name: 'b',
+        });
+        alice.update('test', 'test1', {
+          name: 'c',
+        });
+      }
+    });
+    // Make a change that will trigger the CHANGES message
+    await alice.update('test', 'test1', {
+      name: 'a',
+    });
+    // Allow time for all messages to come through
+    await pause(3000);
+    // expect latest data to be c
+    expect(aliceSub.mock.calls.at(-1)?.[0].length).toBe(1);
+    expect(aliceSub.mock.calls.at(-1)?.[0][0].name).toBe('c');
+    // expect two CHANGES messages
+    const changesMessages = spy.filter(
+      (log) => log.direction === 'SENT' && log.message.type === 'CHANGES'
+    );
+    expect(changesMessages.length).toBe(2);
+    expect(
+      changesMessages.map((log) => log.message.payload.changes.json)
+    ).toEqual([
+      {
+        test: {
+          sets: [['test1', { name: 'a' }]],
+          deletes: [],
+        },
+      },
+      {
+        test: {
+          sets: [['test1', { name: 'c' }]],
+          deletes: [],
+        },
+      },
+    ]);
+
+    // expect two CHANGES_ACK messages
+    const changesACKMessages = spy.filter(
+      (log) =>
+        log.direction === 'RECEIVED' && log.message.type === 'CHANGES_ACK'
+    );
+    expect(changesACKMessages.length).toBe(2);
   });
 
   // TODO: currently overfiring because of issue discussed above (server sends clients changes they already have)
@@ -2797,7 +2868,7 @@ describe('outbox', () => {
       }
     );
 
-    it('on socket disconnect, un-ACKed changes will be re-sent', async () => {
+    it('on socket disconnect and reconnect, un-ACKed changes will be re-sent', async () => {
       // Setup data with a successful tx
       const server = new TriplitServer(
         new DB({ entityStore: new ServerEntityStore() })
@@ -2807,8 +2878,7 @@ describe('outbox', () => {
         clientId: 'alice',
         autoConnect: false,
       });
-      const query = alice.query('test');
-      const { txId: txId1 } = await alice.insert('test', {
+      await alice.insert('test', {
         id: 'test1',
         name: 'test1',
       });
@@ -2817,19 +2887,17 @@ describe('outbox', () => {
 
       // Alice will send changes but disconnect before receiving an ACK
       {
-        const unsubscribe = alice.syncEngine.onSyncMessageSent(
-          async (message) => {
-            if (message.type === 'CHANGES') {
-              unsubscribe();
-              syncMessageSpy(message.payload);
-              alice.syncEngine.disconnect();
-            }
+        const unsubscribe = alice.onSyncMessageSent(async (message) => {
+          if (message.type === 'CHANGES') {
+            unsubscribe();
+            syncMessageSpy(message.payload);
+            alice.disconnect();
           }
-        );
+        });
       }
-      alice.syncEngine.connect();
+      alice.connect();
       await pause();
-
+      expect(alice.connectionStatus).toBe('CLOSED');
       // Check
       expect(syncMessageSpy).toHaveBeenCalled();
       expect(syncMessageSpy.mock.lastCall[0].changes.json).toEqual({
@@ -2841,7 +2909,7 @@ describe('outbox', () => {
       syncMessageSpy.mockReset();
 
       // reconnect and flush outbox, changes should try to send again
-      alice.syncEngine.connect();
+      alice.connect();
       {
         const unsubscribe = alice.syncEngine.onSyncMessageSent(
           async (message) => {
@@ -2852,7 +2920,7 @@ describe('outbox', () => {
           }
         );
       }
-      await pause(100);
+      await pause();
       expect(syncMessageSpy).toHaveBeenCalled();
       expect(syncMessageSpy.mock.lastCall[0].changes.json).toEqual({
         test: {
@@ -3762,8 +3830,6 @@ describe('sessions API', async () => {
 
       // @ts-expect-error (not exposed)
       expect(bob.syncEngine.queries.size).toBe(1);
-      // @ts-expect-error (not exposed)
-      expect(bob.syncEngine.awaitingAck.size).toBe(0);
 
       // validate the state after the session ends
       await bob.endSession();
