@@ -416,6 +416,8 @@ describe('Disconnecting a client', () => {
   );
 });
 
+// TODO: disconnect, reconnect in succession -> not restarting sycing
+
 function sentConnectQueryMessageForQuery(log: MessageLogItem, qid: string) {
   return (
     log.direction === 'SENT' &&

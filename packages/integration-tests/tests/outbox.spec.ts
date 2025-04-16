@@ -5,6 +5,7 @@ import { pause } from '../utils/async.js';
 import * as jose from 'jose';
 import { schema } from '../triplit/schema.js';
 import { permission } from 'process';
+import { spyMessages } from '../utils/client.js';
 
 global.WebSocket = WebSocket;
 
@@ -749,9 +750,6 @@ it('will fire an onFailureToSyncWrites callback', async () => {
 });
 
 it('Outbox data is always overlaid during in data from subscriptions', async () => {
-  // const serverDB = new DB({ entityStore: new ServerEntityStore() });
-  // await serverDB.insert('test', { id: 'test1', name: 'test1' });
-  // const server = new TriplitServer(serverDB);
   using server = await tempTriplitServer({
     serverOptions: { jwtSecret: SECRET },
   });
@@ -815,4 +813,52 @@ it('Outbox data is always overlaid during in data from subscriptions', async () 
   // await alice.clearPendingChangesForEntity('test', 'test1');
   // await pause();
   // console.dir(aliceSub.mock.calls, { depth: null });
+});
+
+// Including outbox data might cause deletes while sync is occuring
+it('Outbox data is not included in checkpointed fetch payload', async () => {
+  using server = await tempTriplitServer({
+    serverOptions: { jwtSecret: SECRET },
+  });
+  const { port } = server;
+
+  const http = new HttpClient({
+    serverUrl: `http://localhost:${port}`,
+    token: DEFAULT_TOKEN,
+  });
+  await http.insert('test', { id: 'test1', name: 'test1' });
+
+  // Initialize alice subscritpion
+  const alice = new TriplitClient({
+    serverUrl: `http://localhost:${port}`,
+    token: DEFAULT_TOKEN,
+  });
+  const spy = spyMessages(alice);
+  const aliceSub = vi.fn();
+  alice.subscribe(alice.query('test'), aliceSub);
+  await pause();
+
+  // Go offline and add an entity to the outbox, prevent syncing on reconnect, then reconnect
+  alice.disconnect();
+  await alice.insert('test', { id: 'test2', name: 'test2' });
+  // Prevent outbox from syncing
+  alice.syncEngine.syncInProgress = true;
+  // Connect to trigger sync process
+  await alice.connect();
+  await pause(1000);
+
+  // Sub has outbox data
+  expect(aliceSub.mock.calls.at(-1)?.[0]).toStrictEqual([
+    { id: 'test1', name: 'test1' },
+    { id: 'test2', name: 'test2' },
+  ]);
+
+  // No CONNECT_QUERY messages contain test2
+  const sentConnectQueryMessages = spy.filter(
+    (log) => log.direction === 'SENT' && log.message.type === 'CONNECT_QUERY'
+  );
+  const didSendOutboxData = sentConnectQueryMessages.some((log) =>
+    log.message.payload.state?.entityIds.includes('test2')
+  );
+  expect(didSendOutboxData).toBe(false);
 });

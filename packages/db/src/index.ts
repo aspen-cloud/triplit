@@ -9,6 +9,7 @@ export * from './http.js';
 export * from './types.js';
 export * from './entity-store-with-outbox.js';
 export * from './query/index.js';
+export * from './query-engine.js';
 export * from './schema/index.js';
 export * from './server-entity-store.js';
 export * from './session.js';

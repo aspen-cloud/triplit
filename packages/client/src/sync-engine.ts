@@ -6,6 +6,7 @@ import {
   TriplitError,
   hashObject,
   prepareQuery,
+  EntityStoreQueryEngine,
 } from '@triplit/db';
 import { TriplitClient } from './client/triplit-client.js';
 import { WebSocketTransport } from './transport/websocket-transport.js';
@@ -42,6 +43,7 @@ import { decodeToken, tokenIsExpired } from './token.js';
 import {
   createQueryWithExistsAddedToIncludes,
   createQueryWithRelationalOrderAddedToIncludes,
+  queryResultsToChanges,
 } from '@triplit/db/ivm';
 
 const QUERY_STATE_KEY = 'query-state';
@@ -451,14 +453,22 @@ export class SyncEngine {
             )
           )
         );
-      const entityIds = changesToEntityIds(
-        await this.client.db.fetchChanges(
-          queryWithRelationalInclusions as CollectionQuery,
-          {
-            skipRules: true,
-          }
-        )
+      // We should only consider your cache data for checkpointed fetch
+      // We dont have a great API for this right now, so using the DB's query engine directly
+      const queryEngine = new EntityStoreQueryEngine(
+        this.client.db.kv,
+        this.client.db.entityStore.dataStore
       );
+      const syncedResults = await queryEngine.fetch(
+        queryWithRelationalInclusions
+      );
+      const changesFromResults = queryResultsToChanges(
+        syncedResults,
+        queryWithRelationalInclusions
+      );
+
+      const entityIds = changesToEntityIds(changesFromResults);
+
       queryState = {
         timestamp: latestServerTimestamp,
         // we should be able to retrieve these from the denormalized changes
