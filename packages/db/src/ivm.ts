@@ -152,8 +152,7 @@ export class IVM<M extends Models<M> = Models> {
     // try and setup multiple view nodes iff we have a subquery filter
     // that can be inverted
     const { views, rewrittenQuery } = extractInvertedViews(
-      structuredClone(query),
-      generateViewId
+      structuredClone(query)
     );
     if (
       !hasSubqueryFilterAtAnyLevel(rewrittenQuery) &&

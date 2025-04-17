@@ -20,6 +20,7 @@ import { VariableAwareCache as VAC } from '../variable-aware-cache.js';
 import { Models } from '../schema/index.js';
 import { TriplitError } from '../errors.js';
 import { all } from '../utils/guards.js';
+import { hashPreparedQuery } from '../query/hash-query.js';
 
 export interface RelationalPlan {
   views: Record<string, PreparedQuery>;
@@ -536,10 +537,10 @@ function compileQueryToSteps(q: PreparedQuery): Step[] {
   return steps;
 }
 
-export function extractInvertedViews(
-  query: PreparedQuery,
-  generateViewId: () => string
-): { rewrittenQuery: PreparedQuery; views: Record<string, PreparedQuery> } {
+export function extractInvertedViews(query: PreparedQuery): {
+  rewrittenQuery: PreparedQuery;
+  views: Record<string, PreparedQuery>;
+} {
   const plan: {
     views: Record<string, PreparedQuery>;
     rewrittenQuery: PreparedQuery;
@@ -548,18 +549,14 @@ export function extractInvertedViews(
     rewrittenQuery: query,
   };
   if (query.where) {
-    const { where, views } = extractedInvertedViewsFromFilters(
-      query.where,
-      generateViewId
-    );
+    const { where, views } = extractedInvertedViewsFromFilters(query.where);
     query.where = where;
     Object.assign(plan.views, views);
   }
   if (query.include) {
     for (const [alias, inclusion] of Object.entries(query.include)) {
       const { views, rewrittenQuery } = extractInvertedViews(
-        inclusion.subquery,
-        generateViewId
+        inclusion.subquery
       );
       Object.assign(plan.views, views);
       query.include[alias] = {
@@ -575,8 +572,7 @@ export function extractInvertedViews(
         continue;
       }
       const { views, rewrittenQuery } = extractInvertedViews(
-        maybeSubquery.subquery,
-        generateViewId
+        maybeSubquery.subquery
       );
       Object.assign(plan.views, views);
       query.order[i][2] = { ...maybeSubquery, subquery: rewrittenQuery };
@@ -585,10 +581,7 @@ export function extractInvertedViews(
   return plan;
 }
 
-function extractedInvertedViewsFromFilters(
-  where: PreparedWhere,
-  generateViewId: () => string
-): {
+function extractedInvertedViewsFromFilters(where: PreparedWhere): {
   where: PreparedWhere;
   views: Record<string, PreparedQuery>;
 } {
@@ -612,8 +605,8 @@ function extractedInvertedViewsFromFilters(
       );
       // inversion strategy
       if (!hasGrandparentReferences && subqueryVariableFilters.length < 2) {
-        const viewId = generateViewId();
-        const extractedView = extractInvertedViews(subquery, generateViewId);
+        const extractedView = extractInvertedViews(subquery);
+        const viewId = hashPreparedQuery(extractedView.rewrittenQuery);
         views[viewId] = extractedView.rewrittenQuery;
         Object.assign(views, extractedView.views);
 
@@ -638,7 +631,7 @@ function extractedInvertedViewsFromFilters(
       }
     } else if (isFilterGroup(filter)) {
       const { where: newWhere, views: newViews } =
-        extractedInvertedViewsFromFilters(filter.filters, generateViewId);
+        extractedInvertedViewsFromFilters(filter.filters);
       updatedWhere.push({ ...filter, filters: newWhere });
       Object.assign(views, newViews);
       // let the rest pass through and be handled with a more naive approach
