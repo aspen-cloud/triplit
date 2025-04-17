@@ -154,6 +154,9 @@ export class IVM<M extends Models<M> = Models> {
       const viewIdMappings = new Map<string, number>();
       rootNode = this.createQueryNode(rewrittenQuery);
       // TODO: cleanup iding
+      // we should only be hashing the query after we've hashed
+      // any of its dependents and then replaced the `view_n`
+      // references with the hash
       const viewNodes: Record<string, QueryNode> = {};
 
       for (const viewId in views) {
@@ -756,12 +759,26 @@ export class IVM<M extends Models<M> = Models> {
       if (!isEmpty(queryChanges)) {
         affectedQueries.set(queryId, queryChanges);
       }
-      for (const usedByNodeId of queryState.usedBy) {
-        if (!affectedQueries.has(usedByNodeId)) {
-          affectedQueries.set(usedByNodeId, {});
+    }
+    let nodesToTraverseDependents = new Set(Array.from(affectedQueries.keys()));
+    // BFS search of the graph to find all nodes that depend on the affected queries
+    while (nodesToTraverseDependents.size > 0) {
+      const nextNodes = new Set<number>();
+      for (const nodeId of nodesToTraverseDependents) {
+        const dependentNode = this.viewNodes.get(nodeId);
+        if (!dependentNode) {
+          throw new Error('Node not found in getAffectedQueries');
+        }
+        for (const usedByNodeId of dependentNode.usedBy) {
+          if (!affectedQueries.has(usedByNodeId)) {
+            affectedQueries.set(usedByNodeId, {});
+            nextNodes.add(usedByNodeId);
+          }
         }
       }
+      nodesToTraverseDependents = nextNodes;
     }
+
     return affectedQueries;
   }
 
