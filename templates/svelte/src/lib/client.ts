@@ -25,3 +25,6 @@ export const triplit = new TriplitClient({
   token: PUBLIC_TRIPLIT_TOKEN,
   autoConnect: browser,
 });
+// @ts-expect-error
+if (typeof window !== 'undefined') window.triplit = triplit;
+export const Query = triplit.query;

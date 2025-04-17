@@ -18,3 +18,5 @@ export const client = new TriplitClient({
 
 // @ts-expect-error
 if (isClient) window.client = client
+
+export const Query = client.query

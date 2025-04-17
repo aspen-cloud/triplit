@@ -10,18 +10,18 @@ export const client = new WorkerClient({
   token: import.meta.env.VITE_TRIPLIT_TOKEN,
   workerUrl,
 });
+const Query = client.query;
 
 window.triplit = client;
 
 export function usePages() {
-  return useQuery(client, client.query('pages').Order(['createdAt', 'DESC']));
+  return useQuery(client, Query('pages').Order(['createdAt', 'DESC']));
 }
 export function useExcalidrawElements() {
   const [currentPageId] = usePageId();
   return useQuery(
     client,
-    client
-      .query('elements')
+    Query('elements')
       .Order('_fracIndex', 'ASC')
       .Where('pageId', '=', currentPageId)
   );
@@ -31,7 +31,7 @@ export function useUnsyncedElements() {
   const [currentPageId] = usePageId();
   return useQuery(
     client,
-    client.query('elements').Where('pageId', '=', currentPageId),
+    Query('elements').Where('pageId', '=', currentPageId),
     {
       syncStatus: 'pending',
     }

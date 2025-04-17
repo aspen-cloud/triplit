@@ -5,11 +5,11 @@ import styles from './App.module.css';
 import { GettingStarted } from './components/GettingStarted.jsx';
 import { ConnectionStatus } from './components/ConnectionStatus.jsx';
 import { Todo } from './components/Todo.jsx';
-import { triplit } from '../triplit/client.js';
+import { Query, triplit } from '../triplit/client.js';
 import { useQuery } from '@triplit/solid';
 
 function useTodos() {
-  const todosQuery = triplit.query('todos').Order('created_at', 'DESC');
+  const todosQuery = Query('todos').Order('created_at', 'DESC');
   const { results: todos, error, fetching } = useQuery(triplit, todosQuery);
   return { todos, error, fetching };
 }

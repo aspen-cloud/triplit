@@ -19,3 +19,6 @@ export const triplit = new TriplitClient({
   serverUrl: import.meta.env.VITE_TRIPLIT_SERVER_URL,
   token: import.meta.env.VITE_TRIPLIT_TOKEN,
 });
+// @ts-expect-error
+window.triplit = triplit;
+export const Query = triplit.query;

@@ -1,6 +1,6 @@
 <script lang="ts">
   import { useQuery } from '@triplit/svelte';
-  import { triplit } from '$lib/client';
+  import { triplit, Query} from '$lib/client';
   import GettingStarted from './getting-started.svelte';
   import ConnectionStatus from './connection-status.svelte';
   import Todo from './todo.svelte';
@@ -8,7 +8,7 @@
   let text = $state('');
   const todos = useQuery(
     triplit,
-    triplit.query('todos').Order('created_at', 'DESC'),
+    Query('todos').Order('created_at', 'DESC'),
     {}
   );
 </script>

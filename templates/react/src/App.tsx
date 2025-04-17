@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
 import { useQuery } from '@triplit/react';
-import { triplit } from '../triplit/client.ts';
+import { Query, triplit } from '../triplit/client.ts';
 import { Todo } from './components/Todo.tsx';
 import { GettingStarted } from './components/GettingStarted.tsx';
 import { ConnectionStatus } from './components/ConnectionStatus.tsx';
 
 function useTodos() {
-  const todosQuery = triplit.query('todos').Order('created_at', 'DESC');
+  const todosQuery = Query('todos').Order('created_at', 'DESC');
   const { results: todos, error, fetching } = useQuery(triplit, todosQuery);
   return { todos, error, fetching };
 }

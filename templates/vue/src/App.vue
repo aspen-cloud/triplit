@@ -1,13 +1,13 @@
 <script setup lang="ts">
 import { useQuery } from '@triplit/vue'
-import { triplit } from '@/lib/client'
+import { triplit, Query } from '@/lib/client'
 import GettingStarted from '@/components/GettingStarted.vue'
 import ConnectionStatus from '@/components/ConnectionStatus.vue'
 import Todo from '@/components/Todo.vue'
 import { ref } from 'vue'
 
 let text = ref('')
-const state = useQuery(triplit, triplit.query('todos').Order('created_at', 'DESC'))
+const state = useQuery(triplit, Query('todos').Order('created_at', 'DESC'))
 function onSubmit() {
   triplit.insert('todos', { text: text.value })
   text.value = ''

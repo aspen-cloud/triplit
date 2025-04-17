@@ -57,6 +57,8 @@ generateChangeset(
       ...getTriplitDependencies('templates/angular'),
       'react-template',
       ...getTriplitDependencies('templates/react'),
+      'solid-template',
+      ...getTriplitDependencies('templates/solid'),
       'svelte-template',
       ...getTriplitDependencies('templates/svelte'),
       'vue-template',

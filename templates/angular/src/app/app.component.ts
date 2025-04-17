@@ -2,7 +2,7 @@ import { Component, computed, effect } from '@angular/core';
 import { ConnectionStatusComponent } from './connection-status/connection-status.component.js';
 import { GettingStartedComponent } from './getting-started/getting-started.component.js';
 import { TodoComponent } from './todo/todo.component.js';
-import { triplit } from '../../triplit/client.js';
+import { Query, triplit } from '../../triplit/client.js';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { createQuery } from '@triplit/angular';
 import { CommonModule } from '@angular/common';
@@ -55,6 +55,6 @@ export class AppComponent {
   };
   queryResults = createQuery(() => ({
     client: triplit,
-    query: triplit.query('todos').Order('created_at', 'DESC'),
+    query: Query('todos').Order('created_at', 'DESC'),
   }));
 }
