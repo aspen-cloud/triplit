@@ -1,5 +1,14 @@
 # @triplit/entity-db
 
+## 1.0.21
+
+### Patch Changes
+
+- 9695cde2: Make set op transformation in query preparation idempotent
+- 706871a0: More consistently overlay outbox data into changes
+- 07abaca1: properly merge updates on deleted data
+- 2bb158b8: add polyfill for Array.fromAsync
+
 ## 1.0.20
 
 ### Patch Changes

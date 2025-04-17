@@ -1,5 +1,17 @@
 # @triplit/client
 
+## 1.0.22
+
+### Patch Changes
+
+- cef9da5e: Only read cache data during checkpointed fetch
+- aebc50bc: fixup bug causing outbox thrashing during sync
+- Updated dependencies [9695cde2]
+- Updated dependencies [706871a0]
+- Updated dependencies [07abaca1]
+- Updated dependencies [2bb158b8]
+  - @triplit/db@1.0.21
+
 ## 1.0.21
 
 ### Patch Changes
