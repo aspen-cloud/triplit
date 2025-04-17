@@ -1,4 +1,4 @@
-import { CollectionNameFromModels, Models } from './schema/index.js';
+import { Models } from './schema/index.js';
 import {
   Change,
   DBChanges,
@@ -14,7 +14,6 @@ import {
   isFilterStatement,
   isSubQueryFilter,
   satisfiesNonRelationalFilter,
-  someFilterStatementsFlat,
 } from './filters.js';
 import { DB } from './db.js';
 import { deepObjectAssign } from './utils/deep-merge.js';
@@ -33,6 +32,7 @@ import {
 } from './query-engine.js';
 import { bindVariablesInFilters } from './variables.js';
 import {
+  bindViewReferencesInQuery,
   getCollectionsReferencedInSubqueries,
   getReferencedRelationalVariables,
   hasSubqueryFilterAtAnyLevel,
@@ -48,7 +48,7 @@ interface QueryNode {
   id: number;
   usedBy: Set<number>;
   dependsOn: Map<string, number>;
-  cachedWhereClause: PreparedWhere | undefined;
+  cachedBoundQuery: PreparedQuery | undefined;
   results?: ViewEntity[];
   query: PreparedQuery;
   shouldRefetch: boolean;
@@ -107,7 +107,7 @@ export class IVM<M extends Models<M> = Models> {
         hasSubqueryFilterAtAnyLevel(query) || hasSubqueryOrderAtAnyLevel(query),
       subscribeInfo: undefined,
       hasChanged: false,
-      cachedWhereClause: undefined,
+      cachedBoundQuery: undefined,
       referencedRelationalVariables: getReferencedRelationalVariables(query),
       collectionsReferencedInSubqueries:
         getCollectionsReferencedInSubqueries(query),
@@ -212,10 +212,7 @@ export class IVM<M extends Models<M> = Models> {
       this.subscribedQueries.set(rootQueryId, subInfo);
       rootNode.subscribeInfo = subInfo;
       this.uninitializedQueries.add(rootQueryId);
-      // console.dir(this.viewNodes, { depth: null });
-      // console.dir(subInfo, { depth: null });
     }
-    // console.dir(this.viewNodes, { depth: null });
 
     this.subscribedQueries.get(rootQueryId)!.listeners.add(callback);
     if (errorCallback) {
@@ -226,7 +223,7 @@ export class IVM<M extends Models<M> = Models> {
     this.subscribedQueries
       .get(rootQueryId)!
       .uninitializedListeners.add(callback);
-    // console.dir(this.viewNodes, { depth: null });
+
     return () => {
       if (!this.subscribedQueries.has(rootQueryId)) {
         logger.warn('Query not found', { rootQueryId });
@@ -259,21 +256,25 @@ export class IVM<M extends Models<M> = Models> {
     if (node.results) {
       return node.results;
     }
-    // console.dir(node.query, { depth: null });
-    let query = { ...node.query };
+
+    let query = node.query;
     // if this query has child views, we need to make sure they've been initialized
     // and then replace the filters that reference them with the values themselves
-    if (node.dependsOn.size > 0 && query.where) {
-      const views: Record<string, ViewEntity[]> = {};
-      for (const [key, childId] of node.dependsOn.entries()) {
-        const results = await this.initializeQueryResults(childId);
-        // extract the 'view_0' from '$view_0.attribute'
-        // TODO: can getVariableComponents work here?
-        views[key.split('.')[0].slice(1)] = results;
+    if (node.dependsOn.size > 0) {
+      if (node.cachedBoundQuery) {
+        query = node.cachedBoundQuery;
+      } else {
+        const views: Record<string, ViewEntity[]> = {};
+        for (const [key, childId] of node.dependsOn.entries()) {
+          const results = await this.initializeQueryResults(childId);
+          // extract the 'view_0' from '$view_0.attribute'
+          // TODO: can getVariableComponents work here?
+          views[key.split('.')[0].slice(1)] = results;
+        }
+        // TODO: remove flattenViews, eventually
+        query = bindViewReferencesInQuery(query, flattenViews(views));
+        node.cachedBoundQuery = query;
       }
-      // TODO: remove flattenViews, eventually
-      query.where = bindVariablesInFilters(query.where, flattenViews(views));
-      node.cachedWhereClause = query.where;
     }
     const results = await this.db.rawFetch(query);
     node.results = results as ViewEntity[];
@@ -397,11 +398,13 @@ export class IVM<M extends Models<M> = Models> {
         continue;
       }
       const node = this.viewNodes.get(queryId)!;
+      // if this has an exists subquery or a relational order, hard refetch
       if (node.shouldRefetch) {
         const refetchedResults = await this.db.rawFetch(node.query);
         node.results = refetchedResults as ViewEntity[];
         node.hasChanged = true;
-      } else {
+        // if it has no views, we can just update the results in place
+      } else if (node.dependsOn.size === 0) {
         const { updatedResults, hasChanged } =
           await this.updateQueryResultsInPlace(
             node.results,
@@ -412,6 +415,56 @@ export class IVM<M extends Models<M> = Models> {
           );
         node.results = updatedResults;
         node.hasChanged = hasChanged;
+        // otherwise we need to check if any of the views have changed
+      } else {
+        let haveAnyViewsChanged = false;
+        for (const dependsOn of node.dependsOn.values()) {
+          if (this.viewNodes.get(dependsOn)?.hasChanged) {
+            haveAnyViewsChanged = true;
+            break;
+          }
+        }
+        if (haveAnyViewsChanged) {
+          const views: Record<string, ViewEntity[]> = {};
+          for (const [varPath, hashedViewId] of node.dependsOn.entries()) {
+            const subNode = this.viewNodes.get(hashedViewId);
+            if (!subNode) {
+              throw new Error(
+                'view node not found during update: ' + hashedViewId
+              );
+            }
+            if (!subNode.results) {
+              throw new Error(
+                'view results not found during update: ' + hashedViewId
+              );
+            }
+            // extract the 'view_0' from '$view_0.attribute'
+            // TODO: can getVariableComponents work here?
+            views[varPath.split('.')[0].slice(1)] = subNode.results;
+          }
+          const refetchQuery = bindViewReferencesInQuery(
+            node.query,
+            flattenViews(views)
+          );
+          node.cachedBoundQuery = refetchQuery;
+          const refetchedResults = await this.db.rawFetch(refetchQuery);
+          node.results = refetchedResults as ViewEntity[];
+          node.hasChanged = true;
+        } else {
+          if (!node.cachedBoundQuery) {
+            throw new Error('Cached bound query not found during update');
+          }
+          const { updatedResults, hasChanged } =
+            await this.updateQueryResultsInPlace(
+              node.results,
+              changes,
+              node.cachedBoundQuery,
+              node.query,
+              node
+            );
+          node.results = updatedResults;
+          node.hasChanged = hasChanged;
+        }
       }
     }
     const kvTx = this.storage.transact();
@@ -427,73 +480,18 @@ export class IVM<M extends Models<M> = Models> {
     node: QueryNode,
     entityStack: DBEntity[] = []
   ): Promise<{ updatedResults: ViewEntity[]; hasChanged: boolean }> {
-    const { collectionName, order, after, limit, include } = query;
-    let where = query.where;
-    // console.dir({ query, results, changes }, { depth: null });
-    const collectionChanges = changes[collectionName];
-    // console.dir({ collectionChanges, results }, { depth: null });
+    const collectionChanges = changes[query.collectionName];
     let filteredResults = results ?? [];
     const evictedEntities = new Map<string, DBEntity>();
     const addedEntities = new Map<string, DBEntity>();
-    // console.log({ inserts, updates, deletes });
     const handledUpdates = new Map<string, DBEntity>();
     const inlineUpdatedEntities = new Map<string, DBEntity>();
-    if (where && node.dependsOn.size > 0) {
-      let haveAnyViewsChanged = false;
-      for (const dependsOn of node.dependsOn.values()) {
-        if (this.viewNodes.get(dependsOn)?.hasChanged) {
-          haveAnyViewsChanged = true;
-          break;
-        }
-      }
-      if (!haveAnyViewsChanged && node.cachedWhereClause) {
-        where = node.cachedWhereClause;
-      } else {
-        const views: Record<string, ViewEntity[]> = {};
-        for (const [varPath, hashedViewId] of node.dependsOn.entries()) {
-          const subNode = this.viewNodes.get(hashedViewId);
-          if (!subNode) {
-            throw new Error(
-              'view node not found during update: ' + hashedViewId
-            );
-          }
-          if (!subNode.results) {
-            throw new Error(
-              'view results not found during update: ' + hashedViewId
-            );
-          }
-          // extract the 'view_0' from '$view_0.attribute'
-          // TODO: can getVariableComponents work here?
-          views[varPath.split('.')[0].slice(1)] = subNode.results;
-        }
-        // TODO: remove flattenViews, eventually
-        where = bindVariablesInFilters(where, flattenViews(views));
-        node.cachedWhereClause = where;
-        return {
-          updatedResults: (await this.db.rawFetch({
-            ...query,
-            where,
-          })) as ViewEntity[],
-          hasChanged: true,
-        };
-      }
-    }
+
+    const { collectionName, where, order, after, limit, include } = query;
     if (collectionChanges) {
       const inlineUpdatedEntitiesWithOrderRelevantChanges = new Set<string>();
       const deletes = collectionChanges.deletes;
       const sets = collectionChanges.sets;
-
-      // TODO: bring back this nice inserts/updates delineation
-      // when we know that IVM won't receive upserts
-      // const inserts = new Map<string, DBEntity>();
-      // const updates = new Map<string, Change>();
-      // for (const [id, entity] of collectionChanges.sets) {
-      //   if (entity.id) {
-      //     inserts.set(id, entity as DBEntity);
-      //   } else {
-      //     updates.set(id, entity as Change);
-      //   }
-      // }
       const updateAffectsOrder = (update: Change) =>
         order &&
         order.some(
@@ -547,14 +545,13 @@ export class IVM<M extends Models<M> = Models> {
           };
         }
       }
-      // console.dir({ after: filteredResults }, { depth: null });
+
       // if we have inserts, we're going to check if they should be added
       // const potentialAdditions: DBEntity[] =
       //   inserts.size > 0 ? Array.from(inserts.values()) : [];
 
       // any unhandled updates are those that aren't already in the results
       // should also be included in the potential additions
-      // console.dir({ handledUpdates, updates }, { depth: null });
       for (const [id, change] of sets) {
         if (handledUpdates.has(id)) {
           continue;
@@ -638,12 +635,22 @@ export class IVM<M extends Models<M> = Models> {
       }
       for (const inclusion in include) {
         const { subquery, cardinality } = include[inclusion];
+        const unmodifiedInclusion = originalQuery.include?.[inclusion];
+        if (!unmodifiedInclusion) {
+          throw new Error(
+            'Inclusion is transformed query not found in original query: ' +
+              inclusion
+          );
+        }
+
+        const { subquery: originalSubquery } = unmodifiedInclusion;
         // we can skip the fanout if the subquery or its subqueries doesn't have any relevant changes
         // to process
         const collectionsReferencedInSubqueries =
           node.collectionsReferencedInSubqueries.get(
-            hashPreparedQuery(subquery)
+            hashPreparedQuery(originalSubquery)
           );
+
         if (!collectionsReferencedInSubqueries) {
           throw new Error(
             'Subquery not found in collectionsReferencedInSubqueries'
@@ -693,7 +700,7 @@ export class IVM<M extends Models<M> = Models> {
                   })
                 : undefined,
             },
-            subquery,
+            originalSubquery,
             node,
             updatedEntityStack
           );
@@ -750,8 +757,6 @@ export class IVM<M extends Models<M> = Models> {
     return change.id !== undefined;
   }
 
-  // TODO: this should produce an ordered array? map? of queries with a topological sort
-  // where the nodes that depend on other nodes are after them
   private getAffectedQueries(changes: DBChanges): Map<number, DBChanges> {
     // TODO  we should probably organize queries by touched collections to make this faster
     const affectedQueries = new Map<number, DBChanges>();
@@ -789,8 +794,41 @@ export class IVM<M extends Models<M> = Models> {
       }
       nodesToTraverseDependents = nextNodes;
     }
+    let finalMap = new Map<number, DBChanges>();
+    let nodesToPush = new Set<number>(Array.from(affectedQueries.keys()));
+    // topo sort the nodes to push
+    while (nodesToPush.size > 0) {
+      const nextNodes = new Set<number>();
+      for (const nodeId of nodesToPush) {
+        const node = this.viewNodes.get(nodeId);
+        if (!node) {
+          throw new Error('Node not found in getAffectedQueries');
+        }
+        if (node.dependsOn.size === 0) {
+          finalMap.set(nodeId, affectedQueries.get(nodeId)!);
+          continue;
+        } else {
+          // check if all usedBy nodes are in the final map or not
+          // yet to processed
+          let allUsedByInFinalMap = true;
 
-    return affectedQueries;
+          for (const dependentId of node.dependsOn.values()) {
+            if (nodesToPush.has(dependentId)) {
+              allUsedByInFinalMap = false;
+              break;
+            }
+          }
+          if (allUsedByInFinalMap) {
+            finalMap.set(nodeId, affectedQueries.get(nodeId)!);
+            continue;
+          }
+          nextNodes.add(nodeId);
+        }
+      }
+      nodesToPush = nextNodes;
+    }
+
+    return finalMap;
   }
 
   async clear() {

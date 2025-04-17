@@ -1,15 +1,23 @@
 import {
   filterStatementIteratorFlat,
+  isFilterGroup,
   isFilterStatement,
   isSubQueryFilter,
   someFilterStatementsFlat,
 } from './filters.js';
+import { ViewEntity } from './query-engine.js';
 import { hashPreparedQuery } from './query/hash-query.js';
-import { PreparedQuery } from './types.js';
+import {
+  FilterStatement,
+  PreparedQuery,
+  PreparedWhere,
+  PreparedWhereFilter,
+} from './types.js';
 import {
   isValueVariable,
   getVariableComponents,
   isVariableScopeRelational,
+  resolveVariable,
 } from './variables.js';
 
 export function getReferencedRelationalVariables(
@@ -138,4 +146,71 @@ export function hasSubqueryOrderAtAnyLevel(query: PreparedQuery) {
     }
   }
   return false;
+}
+
+export function bindViewReferencesInQuery(
+  query: PreparedQuery,
+  views: Record<string, ViewEntity[]>,
+  shouldClone = true
+): PreparedQuery {
+  if (shouldClone) {
+    query = JSON.parse(JSON.stringify(query));
+  }
+  if (query.where) {
+    query.where = bindViewsInFilters(query.where, views);
+  }
+  if (query.include) {
+    for (const key in query.include) {
+      query.include[key].subquery = bindViewReferencesInQuery(
+        query.include[key].subquery,
+        views,
+        false
+      );
+    }
+  }
+  if (query.order) {
+    for (const order of query.order) {
+      const maybeSubqueryOrder = order[2];
+      if (maybeSubqueryOrder) {
+        maybeSubqueryOrder.subquery = bindViewReferencesInQuery(
+          maybeSubqueryOrder.subquery,
+          views,
+          false
+        );
+      }
+    }
+  }
+  return query;
+}
+
+export function bindViewsInFilters<W extends PreparedWhere>(
+  filters: W,
+  views: Record<string, ViewEntity[]>
+): W {
+  return filters.map((filter) => bindViewsInFilter(filter, views)) as W;
+}
+
+export function bindViewsInFilter<W extends PreparedWhereFilter>(
+  filter: W,
+  views: Record<string, ViewEntity[]>
+): W {
+  if (isFilterGroup(filter)) {
+    return {
+      mod: filter.mod,
+      filters: bindViewsInFilters(filter.filters, views),
+    } as W;
+  }
+  if (
+    isFilterStatement(filter) &&
+    isValueVariable(filter[2]) &&
+    filter[2].startsWith('$view_')
+  ) {
+    const variable = filter[2] as string;
+    let resolvedValue = resolveVariable(variable, views);
+    if (Array.isArray(resolvedValue)) {
+      resolvedValue = new Set(resolvedValue);
+    }
+    return [filter[0], filter[1], resolvedValue] as FilterStatement as W;
+  }
+  return filter;
 }
