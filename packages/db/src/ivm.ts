@@ -59,8 +59,7 @@ interface QueryNode {
 }
 
 interface SubscribedQueryInfo {
-  ogQuery: PreparedQuery; // Original query
-  query: PreparedQuery; // Modified query with exists added to includes
+  query: PreparedQuery; // Original query
   listeners: Set<SubscriptionCallback>;
   errorCallbacks: Set<(error: Error) => void>;
   uninitializedListeners: WeakSet<SubscriptionCallback>;
@@ -195,7 +194,6 @@ export class IVM<M extends Models<M> = Models> {
       // Get all collections that are referenced by this root query
       // or one of its subqueries
       const subInfo: SubscribedQueryInfo = {
-        ogQuery: query,
         query: query,
         listeners: new Set(),
         errorCallbacks: new Set(),
@@ -366,8 +364,11 @@ export class IVM<M extends Models<M> = Models> {
     // Iterate through queries and get initial results for ones that don't have any
     for (const queryId of this.uninitializedQueries) {
       const subInfo = this.subscribedQueries.get(queryId);
+      // the subInfo may have been removed by the time we call updateViews...
+      // usually a fast subscribe/unsubscribe e.g. like you might see
+      // with a react effect
       if (!subInfo) {
-        throw new Error('Subscribed query not found during initialization');
+        continue;
       }
       if (subInfo.rootNode.results == null) {
         await this.initializeQueryResults(subInfo.rootNode.id);

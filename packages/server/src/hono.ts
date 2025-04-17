@@ -140,17 +140,17 @@ export async function createTriplitHonoServer(
   globalThis.showSubscribedQueries = () => {
     console.table(
       [...db.ivm.subscribedQueries.values()].map((val) => ({
-        collection: val.ogQuery.collectionName,
+        collection: val.query.collectionName,
         listeners: val.listeners.size,
-        limit: val.ogQuery.limit,
+        limit: val.query.limit,
         ...Object.fromEntries(
-          (val.ogQuery.order ?? []).map((order, i) => [
+          (val.query.order ?? []).map((order, i) => [
             `order-${i}`,
             JSON.stringify(order),
           ])
         ),
         ...Object.fromEntries(
-          (val.ogQuery.where ?? []).map((filter, i) => [
+          (val.query.where ?? []).map((filter, i) => [
             `where-${i}`,
             JSON.stringify(filter),
           ])
