@@ -114,22 +114,31 @@ export class IVM<M extends Models<M> = Models> {
     };
   }
 
-  linkFilterReferences(
+  linkNodes(
     parentNode: QueryNode,
-    filters: PreparedWhere | undefined,
+    query: PreparedQuery,
     lookup: Record<string, QueryNode>
   ) {
-    if (!filters) return;
-    for (const filter of filterStatementIteratorFlat(filters)) {
-      if (isFilterStatement(filter) && statementHasViewReference(filter)) {
-        const referencedId = (filter[2] as string).split('.')[0].split('_')[1];
-        if (lookup[referencedId]) {
-          parentNode.dependsOn.set(
-            filter[2] as string,
-            lookup[referencedId].id
-          );
-          lookup[referencedId].usedBy.add(parentNode.id);
+    if (query.where) {
+      for (const filter of filterStatementIteratorFlat(query.where)) {
+        if (isFilterStatement(filter) && statementHasViewReference(filter)) {
+          const referencedId = (filter[2] as string)
+            .split('.')[0]
+            .split('_')[1];
+          if (lookup[referencedId]) {
+            parentNode.dependsOn.set(
+              filter[2] as string,
+              lookup[referencedId].id
+            );
+            lookup[referencedId].usedBy.add(parentNode.id);
+          }
         }
+      }
+    }
+    if (query.include) {
+      for (const key in query.include) {
+        const subquery = query.include[key].subquery;
+        this.linkNodes(parentNode, subquery, lookup);
       }
     }
   }
@@ -170,10 +179,10 @@ export class IVM<M extends Models<M> = Models> {
         this.viewNodes.set(viewHash, viewNodes[viewId]);
       }
 
-      this.linkFilterReferences(rootNode, rewrittenQuery.where, viewNodes);
+      this.linkNodes(rootNode, rewrittenQuery, viewNodes);
       for (const viewId in viewNodes) {
         const viewNode = viewNodes[viewId];
-        this.linkFilterReferences(viewNode, viewNode.query.where, viewNodes);
+        this.linkNodes(viewNode, viewNode.query, viewNodes);
       }
     } else {
       rootNode = this.createQueryNode(query);
@@ -206,6 +215,7 @@ export class IVM<M extends Models<M> = Models> {
       // console.dir(this.viewNodes, { depth: null });
       // console.dir(subInfo, { depth: null });
     }
+    // console.dir(this.viewNodes, { depth: null });
 
     this.subscribedQueries.get(rootQueryId)!.listeners.add(callback);
     if (errorCallback) {
