@@ -90,7 +90,9 @@ export default Command({
 
       // Setup the database path
       const dataDir = getDataDir();
-      const storagePath = path.join(dataDir, flags.storage, 'app.db');
+      const storageDirName =
+        flags.storage === 'sqlite-worker' ? 'sqlite' : flags.storage;
+      const storagePath = path.join(dataDir, storageDirName, 'app.db');
       if (!fs.existsSync(path.dirname(storagePath))) {
         fs.mkdirSync(path.dirname(storagePath), { recursive: true });
       }
