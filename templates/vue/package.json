@@ -1,6 +1,6 @@
 {
   "name": "vue-template",
-  "version": "1.0.21",
+  "version": "1.0.22",
   "private": true,
   "type": "module",
   "scripts": {
@@ -13,13 +13,13 @@
     "format": "prettier --write src/"
   },
   "dependencies": {
-    "@triplit/client": "1.0.21",
-    "@triplit/vue": "1.0.21",
+    "@triplit/client": "1.0.22",
+    "@triplit/vue": "1.0.22",
     "vue": "^3.5.13"
   },
   "devDependencies": {
     "@rushstack/eslint-patch": "^1.8.0",
-    "@triplit/cli": "1.0.26",
+    "@triplit/cli": "1.0.27",
     "@tsconfig/node20": "^20.1.4",
     "@types/node": "^20.14.5",
     "@vitejs/plugin-vue": "^5.2.1",
