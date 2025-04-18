@@ -199,6 +199,7 @@ export async function createTriplitHonoServer(
   app.get(
     '/',
     upgradeWebSocket((c) => {
+      console.log('RUNNING WS UPGRADE');
       let syncConnection: SyncConnection | undefined = undefined;
       return {
         onOpen: async (_event, ws) => {

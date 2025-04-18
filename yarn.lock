@@ -10526,7 +10526,7 @@ __metadata:
     dotenv: "npm:^16.0.3"
     esbuild: "npm:^0.19.3"
     express: "npm:^4.18.2"
-    hono: "npm:^4.6.20"
+    hono: "npm:4.7.6"
     jsonwebtoken: "npm:^9.0.0"
     level: "npm:^8.0.1"
     lmdb: "npm:^3.0.12"
@@ -21576,10 +21576,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"hono@npm:^4.6.20":
-  version: 4.6.20
-  resolution: "hono@npm:4.6.20"
-  checksum: 10/33e9e32db43f9b12efeda8a3770fb331b3fd2349c2ee259c5aeb2869f49e1302ec13e0dc865ca758dbec55b2d986a380336b0c122f44bcce7113d706da5e5893
+"hono@npm:4.7.6":
+  version: 4.7.6
+  resolution: "hono@npm:4.7.6"
+  checksum: 10/12651f7be08fd15609630c2acaea8443cf191c21e42fdac8c06588e6e0d54f8faf98ee2d6aaa4c1a8875a2c2835bc990a97b46385a45babff6b9079d055d6cf8
   languageName: node
   linkType: hard
 
