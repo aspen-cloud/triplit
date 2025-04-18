@@ -1,32 +1,17 @@
-import {
-  describe,
-  test,
-  vi,
-  expect,
-  beforeEach,
-  afterAll,
-  afterEach,
-} from 'vitest';
-import { DB, DBSchema } from '../src/db.js';
+import { describe, test, vi, expect, beforeEach, afterEach } from 'vitest';
+import { DB } from '../src/db.js';
 import {
   createQueryWithExistsAddedToIncludes,
   createQueryWithRelationalOrderAddedToIncludes,
   diffChanges,
-  IVM,
   queryResultsToChanges,
-} from '../src/ivm.js';
+} from '../src/ivm/index.js';
 import { Schema as S } from '../src/schema/builder.js';
-import {
-  CollectionQuery,
-  OrderStatement,
-  QueryOrder,
-} from '../src/query/types/index.js';
-import { Models } from '../src/schema/types/index.js';
-import { deterministicShuffle } from './utils/seeding.js';
+import { CollectionQuery, QueryOrder } from '../src/query/types/index.js';
 import { prepareQuery } from '../src/query/prepare-query.js';
 import { pause } from './utils/async.js';
 import { InMemoryTestKVStore } from './utils/test-kv-store.js';
-import { areChangesEmpty, mergeDBChanges } from '../src/memory-write-buffer.js';
+import { mergeDBChanges } from '../src/memory-write-buffer.js';
 import { DBChanges } from '../dist/types.js';
 import { ViewEntity } from '../dist/query-engine.js';
 import { flattenViewEntity } from '../src/query-engine.js';

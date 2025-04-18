@@ -14,9 +14,9 @@
       "default": "./dist/index.js"
     },
     "./ivm": {
-      "types": "./dist/ivm.d.ts",
-      "import": "./dist/ivm.js",
-      "default": "./dist/ivm.js"
+      "types": "./dist/ivm/index.d.ts",
+      "import": "./dist/ivm/index.js",
+      "default": "./dist/ivm/index.js"
     },
     "./changes-buffer": {
       "types": "./dist/memory-write-buffer.d.ts",

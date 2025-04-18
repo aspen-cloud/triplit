@@ -116,9 +116,6 @@ export class TriplitClient<M extends Models<M> = Models> {
       entityStore: new EntityStoreWithOutbox(storage),
       kv: storage,
       clientId: Math.random().toString(36).substring(7),
-      ivmOptions: {
-        shouldTrackChanges: false,
-      },
     }).then((db) => {
       if (this.token) {
         // If we have a session set up at this point, use that info

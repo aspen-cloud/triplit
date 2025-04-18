@@ -1,5 +1,5 @@
 import { CollectionQuery } from '../dist/types';
-import { hasSubqueryFilterAtAnyLevel } from '../src/ivm-utils.ts';
+import { hasSubqueryFilterAtAnyLevel } from '../src/ivm/utils';
 import { expect, test } from 'vitest';
 
 test('hasSubqueryFilterAtAnyLevel', () => {

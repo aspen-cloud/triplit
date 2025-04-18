@@ -7,7 +7,7 @@ import {
   WritePermissionError,
 } from '../src/errors.js';
 import { CollectionQuery } from '../src/query/types/index.js';
-import { queryResultsToChanges } from '../src/ivm.js';
+import { queryResultsToChanges } from '../src/ivm/index.js';
 
 const messagingSchema = {
   roles: {

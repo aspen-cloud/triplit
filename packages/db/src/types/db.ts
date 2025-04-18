@@ -1,6 +1,6 @@
 import { DBTransaction } from '../db-transaction.js';
 import { DBSchema } from '../db.js';
-import { IVM, IVMOptions } from '../ivm.js';
+import { IVM } from '../ivm/index.js';
 import {
   CollectionNameFromModels,
   Decoded,
@@ -39,7 +39,6 @@ export interface DBOptions<
   schema?: DBSchema<M>;
   ivm?: IVM;
   variables?: Record<string, any>;
-  ivmOptions?: IVMOptions;
   experimental?: {};
 }
 export type FetchOptions = { skipRules?: boolean };

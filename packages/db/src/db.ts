@@ -15,12 +15,7 @@ import {
 import { HybridLogicalClock } from './hybrid-clock.js';
 import { EntityStoreQueryEngine, ViewEntity } from './query-engine.js';
 import { BTreeKVStore } from './kv-store/storage/memory-btree.js';
-import {
-  createQueryWithExistsAddedToIncludes,
-  createQueryWithRelationalOrderAddedToIncludes,
-  IVM,
-  queryResultsToChanges,
-} from './ivm.js';
+import { IVM, queryResultsToChanges } from './ivm/index.js';
 import { DBTransaction } from './db-transaction.js';
 import {
   getSchemaDiffIssues,
@@ -116,10 +111,7 @@ export class DB<
       options.ivm ??
       new IVM(
         // @ts-expect-error - TODO: handle more generalized internal typings
-        this,
-        options.ivmOptions ?? {
-          shouldTrackChanges: true,
-        }
+        this
       );
 
     this.schema = options.schema;

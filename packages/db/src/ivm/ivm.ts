@@ -1,4 +1,4 @@
-import { Models } from './schema/index.js';
+import { Models } from '../schema/index.js';
 import {
   Change,
   DBChanges,
@@ -6,69 +6,42 @@ import {
   Insert,
   PreparedQuery,
   PreparedWhere,
-} from './types.js';
+} from '../types.js';
 import {
-  filterStatementIteratorFlat,
   isBooleanFilter,
   isFilterGroup,
-  isFilterStatement,
   isSubQueryFilter,
   satisfiesNonRelationalFilter,
-} from './filters.js';
-import { DB } from './db.js';
-import { deepObjectAssign } from './utils/deep-merge.js';
-import { isEmpty, SimpleMemoryWriteBuffer } from './memory-write-buffer.js';
-import { EntityDataStore } from './entity-data-store.js';
-import { BTreeKVStore } from './kv-store/storage/memory-btree.js';
-import { satisfiesAfter } from './after.js';
+} from '../filters.js';
+import { DB } from '../db.js';
+import { deepObjectAssign } from '../utils/deep-merge.js';
+import { isEmpty, SimpleMemoryWriteBuffer } from '../memory-write-buffer.js';
+import { EntityDataStore } from '../entity-data-store.js';
+import { BTreeKVStore } from '../kv-store/storage/memory-btree.js';
+import { satisfiesAfter } from '../after.js';
 import { logger } from '@triplit/logger';
-import { ValuePointer } from './utils/value-pointer.js';
-import { KVDoubleBuffer } from './double-buffer.js';
+import { ValuePointer } from '../utils/value-pointer.js';
+import { KVDoubleBuffer } from '../double-buffer.js';
 import {
   createViewEntity,
   flattenViews,
   sortViewEntities,
   ViewEntity,
-} from './query-engine.js';
-import { bindVariablesInFilters } from './variables.js';
-import {
-  bindViewReferencesInQuery,
-  getCollectionsReferencedInSubqueries,
-  getReferencedRelationalVariables,
-  hasSubqueryFilterAtAnyLevel,
-  hasSubqueryOrderAtAnyLevel,
-} from './ivm-utils.js';
-import { hashFilters, hashPreparedQuery } from './query/hash-query.js';
-import {
-  extractInvertedViews,
-  statementHasViewReference,
-} from './query-planner/query-compiler.js';
+} from '../query-engine.js';
+import { bindVariablesInFilters } from '../variables.js';
+import { bindViewReferencesInQuery } from './utils.js';
+import { hashFilters, hashPreparedQuery } from '../query/hash-query.js';
+import { addQueryToViewGraph, ViewNode } from './view-graph.js';
 
-interface QueryNode {
-  id: number;
-  usedBy: Set<number>;
-  dependsOn: Map<string, number>;
-  cachedBoundQuery: PreparedQuery | undefined;
-  results?: ViewEntity[];
-  query: PreparedQuery;
-  shouldRefetch: boolean;
-  subscribeInfo: SubscribedQueryInfo | undefined;
-  hasChanged: boolean;
-  collectionsReferencedInSubqueries: Map<number, Set<string>>;
-  referencedRelationalVariables: Map<number, Set<string>>;
-}
-
-interface SubscribedQueryInfo {
+export interface SubscribedQueryInfo {
   query: PreparedQuery; // Original query
   listeners: Set<SubscriptionCallback>;
   errorCallbacks: Set<(error: Error) => void>;
   uninitializedListeners: WeakSet<SubscriptionCallback>;
-  rootNode: QueryNode;
+  rootNode: ViewNode;
 }
 
 type SubscriptionCallback = (update: { results: ViewEntity[] }) => void;
-
-export interface IVMOptions {}
 
 export class IVM<M extends Models<M> = Models> {
   storage = new BTreeKVStore();
@@ -86,110 +59,13 @@ export class IVM<M extends Models<M> = Models> {
   readonly subscribedQueries: Map<number, SubscribedQueryInfo> = new Map();
   readonly uninitializedQueries: Set<number> = new Set();
 
-  // Individual queries that make up the subscribed queries
-  // Each query represents either a root query or a subquery of a subscribed query
-  private viewNodes = new Map<number, QueryNode>();
+  // This is a graph of all views extracted from the queries
+  // in some cases me way have just one view node per
+  // query, in other cases many
+  // keyed by the hash of the view
+  private viewGraph = new Map<number, ViewNode>();
 
-  constructor(
-    readonly db: DB,
-    readonly options: IVMOptions
-  ) {}
-
-  createQueryNode(query: PreparedQuery): QueryNode {
-    const hashId = hashPreparedQuery(query);
-    return {
-      id: hashId,
-      usedBy: new Set(),
-      dependsOn: new Map(),
-      results: undefined,
-      query,
-      shouldRefetch:
-        hasSubqueryFilterAtAnyLevel(query) || hasSubqueryOrderAtAnyLevel(query),
-      subscribeInfo: undefined,
-      hasChanged: false,
-      cachedBoundQuery: undefined,
-      referencedRelationalVariables: getReferencedRelationalVariables(query),
-      collectionsReferencedInSubqueries:
-        getCollectionsReferencedInSubqueries(query),
-    };
-  }
-
-  linkNodes(
-    parentNode: QueryNode,
-    query: PreparedQuery,
-    lookup: Record<string, QueryNode>
-  ) {
-    if (query.where) {
-      for (const filter of filterStatementIteratorFlat(query.where)) {
-        if (isFilterStatement(filter) && statementHasViewReference(filter)) {
-          const referencedId = (filter[2] as string)
-            .split('.')[0]
-            .split('_')[1];
-          if (lookup[referencedId]) {
-            parentNode.dependsOn.set(
-              filter[2] as string,
-              lookup[referencedId].id
-            );
-            lookup[referencedId].usedBy.add(parentNode.id);
-          }
-        }
-      }
-    }
-    if (query.include) {
-      for (const key in query.include) {
-        const subquery = query.include[key].subquery;
-        this.linkNodes(parentNode, subquery, lookup);
-      }
-    }
-  }
-  // TODO: handle query hashing collisions
-  // we should only hash the query after we've hashed any of its dependsOn
-  // because a reference like $view0 could be shared across queries but refer to different views
-  createNodesForQuery(query: PreparedQuery) {
-    let nextViewId = 0;
-    const generateViewId = (): string => `${nextViewId++}`;
-    let rootNode = null;
-    // try and setup multiple view nodes iff we have a subquery filter
-    // that can be inverted
-    const { views, rewrittenQuery } = extractInvertedViews(
-      structuredClone(query)
-    );
-    if (
-      !hasSubqueryFilterAtAnyLevel(rewrittenQuery) &&
-      !hasSubqueryOrderAtAnyLevel(rewrittenQuery)
-    ) {
-      const viewIdMappings = new Map<string, number>();
-      rootNode = this.createQueryNode(rewrittenQuery);
-      // TODO: cleanup iding
-      // we should only be hashing the query after we've hashed
-      // any of its dependents and then replaced the `view_n`
-      // references with the hash
-      const viewNodes: Record<string, QueryNode> = {};
-
-      for (const viewId in views) {
-        const viewHash = hashPreparedQuery(views[viewId]);
-        viewIdMappings.set(viewId, viewHash);
-        // we may be able to use the same view node for multiple queries
-        if (this.viewNodes.has(viewHash)) {
-          viewNodes[viewId] = this.viewNodes.get(viewHash)!;
-          continue;
-        }
-        viewNodes[viewId] = this.createQueryNode(views[viewId]);
-        this.viewNodes.set(viewHash, viewNodes[viewId]);
-      }
-
-      this.linkNodes(rootNode, rewrittenQuery, viewNodes);
-      for (const viewId in viewNodes) {
-        const viewNode = viewNodes[viewId];
-        this.linkNodes(viewNode, viewNode.query, viewNodes);
-      }
-    } else {
-      rootNode = this.createQueryNode(query);
-    }
-    this.viewNodes.set(rootNode.id, rootNode);
-
-    return rootNode;
-  }
+  constructor(readonly db: DB) {}
 
   subscribe(
     query: PreparedQuery,
@@ -198,7 +74,7 @@ export class IVM<M extends Models<M> = Models> {
   ) {
     const rootQueryId = hashPreparedQuery(query);
     if (!this.subscribedQueries.has(rootQueryId)) {
-      const rootNode = this.createNodesForQuery(query);
+      const rootNode = addQueryToViewGraph(query, this.viewGraph);
       // Get all collections that are referenced by this root query
       // or one of its subqueries
       const subInfo: SubscribedQueryInfo = {
@@ -245,13 +121,7 @@ export class IVM<M extends Models<M> = Models> {
     };
   }
 
-  private async initializeQueryResults(
-    rootQueryId: number
-  ): Promise<ViewEntity[]> {
-    const node = this.viewNodes.get(rootQueryId);
-    if (!node) {
-      throw new Error('Root query node not found during initialization');
-    }
+  private async initializeQueryResults(node: ViewNode): Promise<ViewEntity[]> {
     if (node.results) {
       return node.results;
     }
@@ -264,11 +134,11 @@ export class IVM<M extends Models<M> = Models> {
         query = node.cachedBoundQuery;
       } else {
         const views: Record<string, ViewEntity[]> = {};
-        for (const [key, childId] of node.dependsOn.entries()) {
-          const results = await this.initializeQueryResults(childId);
+        for (const [viewReference, relatedNode] of node.dependsOn.entries()) {
+          const results = await this.initializeQueryResults(relatedNode);
           // extract the 'view_0' from '$view_0.attribute'
           // TODO: can getVariableComponents work here?
-          views[key.split('.')[0].slice(1)] = results;
+          views[viewReference.split('.')[0].slice(1)] = results;
         }
         // TODO: remove flattenViews, eventually
         query = bindViewReferencesInQuery(query, flattenViews(views));
@@ -370,7 +240,7 @@ export class IVM<M extends Models<M> = Models> {
     //     numChangedCollections: Object.keys(storeChanges).length,
     //   },
     // });
-    const handledRootQueries = new Set<number>();
+    const handledRootNodes = new Set<ViewNode>();
     // Iterate through queries and get initial results for ones that don't have any
     for (const queryId of this.uninitializedQueries) {
       const subInfo = this.subscribedQueries.get(queryId);
@@ -381,91 +251,77 @@ export class IVM<M extends Models<M> = Models> {
         continue;
       }
       if (subInfo.rootNode.results == null) {
-        await this.initializeQueryResults(subInfo.rootNode.id);
-        handledRootQueries.add(subInfo.rootNode.id);
+        await this.initializeQueryResults(subInfo.rootNode);
+        handledRootNodes.add(subInfo.rootNode);
       }
     }
     this.uninitializedQueries.clear();
 
-    const affectedQueries = this.getAffectedQueries(storeChanges);
-    for (const [queryId, changes] of affectedQueries) {
-      if (handledRootQueries.has(queryId)) {
+    const affectedQueries =
+      this.getAffectedViewsInTopologicalOrder(storeChanges);
+    for (const [viewNode, changes] of affectedQueries) {
+      // this node was handled during initialization
+      if (handledRootNodes.has(viewNode)) {
         continue;
       }
-      if (!this.viewNodes.has(queryId)) {
-        logger.warn('Subscribed query not found during update', { queryId });
-        continue;
-      }
-      const node = this.viewNodes.get(queryId)!;
+
       // if this has an exists subquery or a relational order, hard refetch
-      if (node.shouldRefetch) {
-        const refetchedResults = await this.db.rawFetch(node.query);
-        node.results = refetchedResults as ViewEntity[];
-        node.hasChanged = true;
+      if (viewNode.shouldRefetch) {
+        viewNode.results = await this.db.rawFetch(viewNode.query);
+        viewNode.hasChanged = true;
+        continue;
         // if it has no views, we can just update the results in place
-      } else if (node.dependsOn.size === 0) {
+      }
+      let haveAnyViewsChanged = false;
+      for (const dependsOn of viewNode.dependsOn.values()) {
+        if (dependsOn.hasChanged) {
+          haveAnyViewsChanged = true;
+          break;
+        }
+      }
+      // if the view node has no dependencies or none of them have changed
+      // we can do fast in-place updates
+      if (!haveAnyViewsChanged) {
+        // we have an invariant that except for initialization, a viewNode
+        // should always have a cached bound query
+        if (viewNode.dependsOn.size > 0 && !viewNode.cachedBoundQuery) {
+          throw new Error(
+            'View node has dependencies but no cached bound query'
+          );
+        }
         const { updatedResults, hasChanged } =
           await this.updateQueryResultsInPlace(
-            node.results,
+            viewNode.results,
             changes,
-            node.query,
-            node.query,
-            node
+            viewNode.cachedBoundQuery ?? viewNode.query,
+            viewNode.query,
+            viewNode
           );
-        node.results = updatedResults;
-        node.hasChanged = hasChanged;
-        // otherwise we need to check if any of the views have changed
-      } else {
-        let haveAnyViewsChanged = false;
-        for (const dependsOn of node.dependsOn.values()) {
-          if (this.viewNodes.get(dependsOn)?.hasChanged) {
-            haveAnyViewsChanged = true;
-            break;
-          }
-        }
-        if (haveAnyViewsChanged) {
-          const views: Record<string, ViewEntity[]> = {};
-          for (const [varPath, hashedViewId] of node.dependsOn.entries()) {
-            const subNode = this.viewNodes.get(hashedViewId);
-            if (!subNode) {
-              throw new Error(
-                'view node not found during update: ' + hashedViewId
-              );
-            }
-            if (!subNode.results) {
-              throw new Error(
-                'view results not found during update: ' + hashedViewId
-              );
-            }
-            // extract the 'view_0' from '$view_0.attribute'
-            // TODO: can getVariableComponents work here?
-            views[varPath.split('.')[0].slice(1)] = subNode.results;
-          }
-          const refetchQuery = bindViewReferencesInQuery(
-            node.query,
-            flattenViews(views)
-          );
-          node.cachedBoundQuery = refetchQuery;
-          const refetchedResults = await this.db.rawFetch(refetchQuery);
-          node.results = refetchedResults as ViewEntity[];
-          node.hasChanged = true;
-        } else {
-          if (!node.cachedBoundQuery) {
-            throw new Error('Cached bound query not found during update');
-          }
-          const { updatedResults, hasChanged } =
-            await this.updateQueryResultsInPlace(
-              node.results,
-              changes,
-              node.cachedBoundQuery,
-              node.query,
-              node
-            );
-          node.results = updatedResults;
-          node.hasChanged = hasChanged;
-        }
+        viewNode.results = updatedResults;
+        viewNode.hasChanged = hasChanged;
+        continue;
       }
+
+      const views: Record<string, ViewEntity[]> = {};
+      for (const [varPath, subNode] of viewNode.dependsOn.entries()) {
+        if (!subNode.results) {
+          throw new Error(
+            'view results not found during update: ' + subNode.results
+          );
+        }
+        // extract the 'view_0' from '$view_0.attribute'
+        // TODO: can getVariableComponents work here?
+        views[varPath.split('.')[0].slice(1)] = subNode.results;
+      }
+      const refetchQuery = bindViewReferencesInQuery(
+        viewNode.query,
+        flattenViews(views)
+      );
+      viewNode.cachedBoundQuery = refetchQuery;
+      viewNode.results = await this.db.rawFetch(refetchQuery);
+      viewNode.hasChanged = true;
     }
+
     const kvTx = this.storage.transact();
     this.doubleBuffer.inactiveBuffer.clear(kvTx);
     await kvTx.commit();
@@ -476,7 +332,7 @@ export class IVM<M extends Models<M> = Models> {
     changes: DBChanges,
     query: PreparedQuery,
     originalQuery: PreparedQuery,
-    node: QueryNode,
+    node: ViewNode,
     entityStack: DBEntity[] = []
   ): Promise<{ updatedResults: ViewEntity[]; hasChanged: boolean }> {
     const collectionChanges = changes[query.collectionName];
@@ -667,8 +523,6 @@ export class IVM<M extends Models<M> = Models> {
         }
         const cachedResults = new Map<number | null, any>();
         for (const entity of filteredResults) {
-          // TODO: this should check updated entities too
-          // but only updated entities with changes that affect the inclusion
           if (entitiesToRefetchInclusions.has(entity.data.id)) {
             continue;
           }
@@ -703,12 +557,12 @@ export class IVM<M extends Models<M> = Models> {
             node,
             updatedEntityStack
           );
-          const resultsWithCardinalityApplies =
+          const resultsWithCardinalityApplied =
             cardinality === 'one'
               ? (resultsInfo.updatedResults?.[0] ?? null)
               : resultsInfo.updatedResults;
-          cachedResults.set(hashedFilters, resultsWithCardinalityApplies);
-          entity.subqueries[inclusion] = resultsWithCardinalityApplies;
+          cachedResults.set(hashedFilters, resultsWithCardinalityApplied);
+          entity.subqueries[inclusion] = resultsWithCardinalityApplied;
 
           if (resultsInfo.hasChanged) {
             inclusionHasUpdated = true;
@@ -752,65 +606,53 @@ export class IVM<M extends Models<M> = Models> {
     };
   }
 
-  changeIsInsert(change: Change): change is Insert {
-    return change.id !== undefined;
-  }
-
-  private getAffectedQueries(changes: DBChanges): Map<number, DBChanges> {
+  private getAffectedViewsInTopologicalOrder(
+    changes: DBChanges
+  ): Map<ViewNode, DBChanges> {
     // TODO  we should probably organize queries by touched collections to make this faster
-    const affectedQueries = new Map<number, DBChanges>();
-    for (const queryId of this.viewNodes.keys()) {
-      const queryState = this.viewNodes.get(queryId)!;
+    const affectedQueries = new Map<ViewNode, DBChanges>();
+    for (const node of this.viewGraph.values()) {
       const queryChanges = {} as DBChanges;
       for (const collection in changes) {
         if (
-          queryState.collectionsReferencedInSubqueries
-            .get(queryId)
-            ?.has(collection)
+          node.collectionsReferencedInSubqueries.get(node.id)?.has(collection)
         ) {
           queryChanges[collection] = changes[collection];
         }
       }
       if (!isEmpty(queryChanges)) {
-        affectedQueries.set(queryId, queryChanges);
+        affectedQueries.set(node, queryChanges);
       }
     }
     let nodesToTraverseDependents = new Set(Array.from(affectedQueries.keys()));
     // BFS search of the graph to find all nodes that depend on the affected queries
     while (nodesToTraverseDependents.size > 0) {
-      const nextNodes = new Set<number>();
-      for (const nodeId of nodesToTraverseDependents) {
-        const dependentNode = this.viewNodes.get(nodeId);
-        if (!dependentNode) {
-          throw new Error('Node not found in getAffectedQueries');
-        }
-        for (const usedByNodeId of dependentNode.usedBy) {
-          if (!affectedQueries.has(usedByNodeId)) {
-            affectedQueries.set(usedByNodeId, {});
-            nextNodes.add(usedByNodeId);
+      const nextNodes = new Set<ViewNode>();
+      for (const dependentNode of nodesToTraverseDependents) {
+        for (const reliantNode of dependentNode.usedBy) {
+          if (!affectedQueries.has(reliantNode)) {
+            affectedQueries.set(reliantNode, {});
+            nextNodes.add(reliantNode);
           }
         }
       }
       nodesToTraverseDependents = nextNodes;
     }
-    let finalMap = new Map<number, DBChanges>();
-    let nodesToPush = new Set<number>(Array.from(affectedQueries.keys()));
+
+    // TODO: use explicitly ordered data structure as opposed to map and set?
+    let viewNodesInOrder = new Map<ViewNode, DBChanges>();
+    let nodesToPush = new Set<ViewNode>(Array.from(affectedQueries.keys()));
     // topo sort the nodes to push
     while (nodesToPush.size > 0) {
-      const nextNodes = new Set<number>();
-      for (const nodeId of nodesToPush) {
-        const node = this.viewNodes.get(nodeId);
-        if (!node) {
-          throw new Error('Node not found in getAffectedQueries');
-        }
+      const nextNodes = new Set<ViewNode>();
+      for (const node of nodesToPush) {
         if (node.dependsOn.size === 0) {
-          finalMap.set(nodeId, affectedQueries.get(nodeId)!);
+          viewNodesInOrder.set(node, affectedQueries.get(node)!);
           continue;
         } else {
           // check if all usedBy nodes are in the final map or not
           // yet to processed
           let allUsedByInFinalMap = true;
-
           for (const dependentId of node.dependsOn.values()) {
             if (nodesToPush.has(dependentId)) {
               allUsedByInFinalMap = false;
@@ -818,87 +660,24 @@ export class IVM<M extends Models<M> = Models> {
             }
           }
           if (allUsedByInFinalMap) {
-            finalMap.set(nodeId, affectedQueries.get(nodeId)!);
+            viewNodesInOrder.set(node, affectedQueries.get(node)!);
             continue;
           }
-          nextNodes.add(nodeId);
+          nextNodes.add(node);
         }
       }
       nodesToPush = nextNodes;
     }
 
-    return finalMap;
+    return viewNodesInOrder;
   }
 
   async clear() {
     await this.storage.clear();
     this.subscribedQueries.clear();
+    this.uninitializedQueries.clear();
+    this.viewGraph.clear();
   }
-}
-
-export function queryResultsToChanges<C extends string>(
-  results: ViewEntity[],
-  query: PreparedQuery,
-  changes: DBChanges = {}
-) {
-  const collection = query.collectionName as C;
-  if (!changes[collection]) {
-    changes[collection] = { sets: new Map(), deletes: new Set() };
-  }
-  const include = query.include ?? {};
-  for (const result of results) {
-    changes[collection].sets.set(result.data.id, result.data);
-    for (const [key, { subquery }] of Object.entries(include)) {
-      const subqueryResults = result.subqueries[key];
-      if (subqueryResults == null) {
-        continue;
-      }
-      queryResultsToChanges(
-        Array.isArray(subqueryResults) ? subqueryResults : [subqueryResults],
-        subquery,
-        changes
-      );
-    }
-  }
-  return changes;
-}
-
-export function createQueryWithExistsAddedToIncludes(
-  query: PreparedQuery
-): PreparedQuery {
-  const newQuery = structuredClone(query);
-  let i = 0;
-  if (newQuery.where) {
-    for (const filter of filterStatementIteratorFlat(newQuery.where)) {
-      if (isSubQueryFilter(filter)) {
-        if (!newQuery.include) {
-          newQuery.include = {};
-        }
-        newQuery.include[`_exists-${i}`] = {
-          subquery: createQueryWithExistsAddedToIncludes(filter.exists),
-          cardinality: 'one',
-        };
-        i++;
-      }
-    }
-  }
-  return newQuery;
-}
-
-export function createQueryWithRelationalOrderAddedToIncludes(
-  query: PreparedQuery
-) {
-  if (!query.order) return query;
-  const newQuery = structuredClone(query);
-  // TODO: update QueryOrder type to include potential subquery
-  for (const [attribute, _direction, subquery] of newQuery.order!) {
-    if (!subquery) continue;
-    newQuery.include = {
-      ...newQuery.include,
-      [attribute]: subquery,
-    };
-  }
-  return newQuery;
 }
 
 function doesEntityMatchBasicWhere(entity: DBEntity, filters: PreparedWhere) {
@@ -931,57 +710,4 @@ function doesUpdateImpactSimpleFilters(
 
 function changeIsInsert(change: Change): change is Insert {
   return change.id !== undefined;
-}
-
-/**
- * This will take two sets of changes and return a set of changes that need to be applied
- * to the old changes to get the new changes which means modeling missing changes as
- * deletes
- * @param oldChanges
- * @param newChanges
- */
-export function diffChanges(
-  oldChanges: DBChanges,
-  newChanges: DBChanges
-): DBChanges {
-  const changes = {} as DBChanges;
-  const collections = new Set([
-    ...Object.keys(oldChanges),
-    ...Object.keys(newChanges),
-  ]);
-  for (const collection of collections) {
-    if (!oldChanges[collection]) {
-      changes[collection] = newChanges[collection];
-      continue;
-    }
-    if (!newChanges[collection]) {
-      changes[collection] = {
-        sets: new Map(),
-        deletes: new Set(oldChanges[collection].sets.keys()),
-      };
-      continue;
-    }
-    const oldCollectionChanges = oldChanges[collection];
-    const newCollectionChanges = newChanges[collection];
-    const newSets = new Map(newCollectionChanges.sets);
-    const newDeletes = new Set(newCollectionChanges.deletes);
-    for (const [id, data] of oldCollectionChanges.sets) {
-      if (!newSets.has(id)) {
-        newDeletes.add(id);
-      } else {
-        // safe because we are in the block where we know the id exists
-        const newData = newSets.get(id)!;
-        if (JSON.stringify(data) !== JSON.stringify(newData)) {
-          newSets.set(id, newData);
-        } else {
-          newSets.delete(id);
-        }
-      }
-    }
-    changes[collection] = {
-      sets: newSets,
-      deletes: newDeletes,
-    };
-  }
-  return changes;
 }
