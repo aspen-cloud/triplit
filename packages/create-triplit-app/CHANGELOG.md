@@ -1,5 +1,11 @@
 # create-triplit-app
 
+## 0.0.37
+
+### Patch Changes
+
+- 68dc88e9: Automated version bump for create-triplit-app after dependency changes
+
 ## 0.0.36
 
 ### Patch Changes
