@@ -44,7 +44,7 @@ export class SQLiteKVStore implements KVStore {
 
   db: Database;
 
-  // TODO: string constructor
+  // NOTE: string constructor is rarely used and MAY be dangerous because it actually brings in sqlite dep
   constructor(databasePath: string);
   constructor(database: Database);
   constructor(arg0: string | Database) {
