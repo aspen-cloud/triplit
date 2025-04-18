@@ -53,7 +53,15 @@ export async function createServer(
   // @ts-expect-error
   app = await createTriplitHonoServer(
     options,
-    upgradeWebSocket,
+    (init: any) => {
+      console.log('Creating ws conn');
+      try {
+        return upgradeWebSocket(init);
+      } catch (e) {
+        console.error('Error creating ws conn', e);
+        throw e;
+      }
+    },
     captureException,
     app
   );
