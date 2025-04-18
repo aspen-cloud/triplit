@@ -24,7 +24,7 @@ export class IndexedDbKVStore implements KVStore {
 
   constructor(
     db: string | Promise<IDBDatabase>,
-    options: IndexedDbKVOptions = {}
+    options: IndexedDbKVOptions = { useCache: true }
   ) {
     this.options = options;
     if (options.useCache) {
