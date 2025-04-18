@@ -1,5 +1,11 @@
 # @triplit/server
 
+## 1.0.29
+
+### Patch Changes
+
+- 10010075: lock hono dep
+
 ## 1.0.28
 
 ### Patch Changes
