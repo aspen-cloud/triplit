@@ -31,7 +31,11 @@ import {
 import { bindVariablesInFilters } from '../variables.js';
 import { bindViewReferencesInQuery } from './utils.js';
 import { hashFilters, hashPreparedQuery } from '../query/hash-query.js';
-import { addQueryToViewGraph, ViewNode } from './view-graph.js';
+import {
+  addQueryToViewGraph,
+  potentiallyRemoveNodeSubtreeFromViewGraph,
+  ViewNode,
+} from './view-graph.js';
 
 export interface SubscribedQueryInfo {
   query: PreparedQuery; // Original query
@@ -75,8 +79,6 @@ export class IVM<M extends Models<M> = Models> {
     const rootQueryId = hashPreparedQuery(query);
     if (!this.subscribedQueries.has(rootQueryId)) {
       const rootNode = addQueryToViewGraph(query, this.viewGraph);
-      // Get all collections that are referenced by this root query
-      // or one of its subqueries
       const subInfo: SubscribedQueryInfo = {
         query: query,
         listeners: new Set(),
@@ -85,38 +87,34 @@ export class IVM<M extends Models<M> = Models> {
         rootNode,
       };
       this.subscribedQueries.set(rootQueryId, subInfo);
-      rootNode.subscribeInfo = subInfo;
       this.uninitializedQueries.add(rootQueryId);
     }
+    const subInfo = this.subscribedQueries.get(rootQueryId)!;
 
-    this.subscribedQueries.get(rootQueryId)!.listeners.add(callback);
+    subInfo.listeners.add(callback);
+    subInfo.uninitializedListeners.add(callback);
     if (errorCallback) {
-      this.subscribedQueries
-        .get(rootQueryId)!
-        .errorCallbacks.add(errorCallback);
+      subInfo.errorCallbacks.add(errorCallback);
     }
-    this.subscribedQueries
-      .get(rootQueryId)!
-      .uninitializedListeners.add(callback);
 
     return () => {
-      if (!this.subscribedQueries.has(rootQueryId)) {
+      const subToRemove = this.subscribedQueries.get(rootQueryId);
+      if (!subToRemove) {
         logger.warn('Query not found', { rootQueryId });
         return;
       }
-      this.subscribedQueries.get(rootQueryId)!.listeners.delete(callback);
-      this.subscribedQueries
-        .get(rootQueryId)!
-        .uninitializedListeners.delete(callback);
+      potentiallyRemoveNodeSubtreeFromViewGraph(
+        subToRemove.rootNode,
+        this.viewGraph
+      );
+      subToRemove.listeners.delete(callback);
+      subToRemove.uninitializedListeners.delete(callback);
       if (errorCallback) {
-        this.subscribedQueries
-          .get(rootQueryId)!
-          .errorCallbacks.delete(errorCallback);
+        subToRemove.errorCallbacks.delete(errorCallback);
       }
 
-      if (this.subscribedQueries.get(rootQueryId)!.listeners.size === 0) {
+      if (subToRemove.listeners.size === 0) {
         this.subscribedQueries.delete(rootQueryId);
-        // TODO: figure out how to cleanup the graph
       }
     };
   }

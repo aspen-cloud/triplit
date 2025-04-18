@@ -12,7 +12,6 @@ import {
 } from '../query-planner/query-compiler.js';
 import { hashPreparedQuery } from '../query/hash-query.js';
 import { PreparedQuery } from '../types.js';
-import { SubscribedQueryInfo } from './ivm.js';
 
 export interface ViewNode {
   id: number;
@@ -22,7 +21,6 @@ export interface ViewNode {
   results?: ViewEntity[];
   query: PreparedQuery;
   shouldRefetch: boolean;
-  subscribeInfo: SubscribedQueryInfo | undefined;
   hasChanged: boolean;
   collectionsReferencedInSubqueries: Map<number, Set<string>>;
   referencedRelationalVariables: Map<number, Set<string>>;
@@ -38,7 +36,6 @@ function createQueryNode(query: PreparedQuery): ViewNode {
     query,
     shouldRefetch:
       hasSubqueryFilterAtAnyLevel(query) || hasSubqueryOrderAtAnyLevel(query),
-    subscribeInfo: undefined,
     hasChanged: false,
     cachedBoundQuery: undefined,
     referencedRelationalVariables: getReferencedRelationalVariables(query),
@@ -69,6 +66,34 @@ function linkNodes(
       linkNodes(parentNode, subquery, lookup);
     }
   }
+}
+
+function unlinkNodesAndMarkForRemoval(node: ViewNode): Set<number> {
+  const nodesToRemove = new Set<number>();
+  if (node.usedBy.size > 0) {
+    return nodesToRemove;
+  }
+  nodesToRemove.add(node.id);
+  for (const [key, dependency] of node.dependsOn.entries()) {
+    dependency.usedBy.delete(node);
+    const subNodesToRemove = unlinkNodesAndMarkForRemoval(dependency);
+    for (const subNodeId of subNodesToRemove) {
+      nodesToRemove.add(subNodeId);
+    }
+  }
+  return nodesToRemove;
+}
+
+// it's "potentially" because the node may have dependents
+export function potentiallyRemoveNodeSubtreeFromViewGraph(
+  node: ViewNode,
+  viewGraph: Map<number, ViewNode>
+): Set<number> {
+  const nodesToRemove = unlinkNodesAndMarkForRemoval(node);
+  for (const nodeId of nodesToRemove) {
+    viewGraph.delete(nodeId);
+  }
+  return nodesToRemove;
 }
 
 export function addQueryToViewGraph(
