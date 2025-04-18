@@ -1,5 +1,11 @@
 # @triplit/server
 
+## 1.0.30
+
+### Patch Changes
+
+- c5b3b67a: rm extraneous logs
+
 ## 1.0.29
 
 ### Patch Changes
