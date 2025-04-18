@@ -348,7 +348,7 @@ export class SyncConnection {
       await this.db.updateQueryViews();
       this.db.broadcastToQuerySubscribers();
     } catch (e) {
-      logger.error('Connect query error', e as Error);
+      logger.error('Error while processing message CONNECT_QUERY', e as Error);
       const innerError = isTriplitError(e)
         ? e
         : new TriplitError(
@@ -388,6 +388,7 @@ export class SyncConnection {
       await this.db.updateQueryViews();
       this.db.broadcastToQuerySubscribers();
     } catch (e) {
+      logger.error('Error while processing message CHANGES', e as Error);
       const error = isTriplitError(e)
         ? e
         : new TriplitError(
