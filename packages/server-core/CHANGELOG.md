@@ -1,5 +1,11 @@
 # @triplit/server-core
 
+## 1.0.25
+
+### Patch Changes
+
+- 0f4e5786: log error if error during CHANGES handler
+
 ## 1.0.24
 
 ### Patch Changes

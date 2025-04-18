@@ -1,5 +1,11 @@
 # angular-template
 
+## 1.0.23
+
+### Patch Changes
+
+- 68dc88e9: Set up Query pattern in templates
+
 ## 1.0.22
 
 ### Patch Changes
