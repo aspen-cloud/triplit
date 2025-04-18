@@ -183,7 +183,6 @@ export async function createTriplitHonoServer(
 
   app.onError((error, c) => {
     logger.error('Error handling request', error);
-    console.error('Error handling request', error);
     if (error instanceof TriplitError) {
       if (error.status === 500) captureException?.(error);
       return c.json(error.toJSON(), error.status as ContentfulStatusCode);
@@ -199,12 +198,11 @@ export async function createTriplitHonoServer(
   app.get(
     '/',
     upgradeWebSocket((c) => {
-      console.log('RUNNING WS UPGRADE');
       let syncConnection: SyncConnection | undefined = undefined;
       return {
         onOpen: async (_event, ws) => {
           let token: ProjectJWT | undefined = undefined;
-          console.log('WebSocket onOpen');
+
           try {
             const { data, error } = await parseAndValidateTokenWithOptions(
               c.req.query('token')!
@@ -212,7 +210,6 @@ export async function createTriplitHonoServer(
             if (error) throw error;
             token = data;
           } catch (e) {
-            console.log('Error parsing token', e);
             captureException?.(e);
             closeSocket(
               ws,
@@ -252,7 +249,6 @@ export async function createTriplitHonoServer(
             await syncConnection.start();
           } catch (e) {
             logger.error('Error opening connection', e as any);
-            console.log('Error opening connection', e);
             captureException?.(e);
             closeSocket(
               ws,
@@ -267,7 +263,6 @@ export async function createTriplitHonoServer(
           }
         },
         async onMessage(event, ws) {
-          console.log('WebSocket onMessage');
           if (
             // @ts-expect-error
             ws.tokenExpiration &&
@@ -336,13 +331,12 @@ export async function createTriplitHonoServer(
         },
         onClose: (event, ws) => {
           if (!syncConnection) return;
-          console.log('WebSocket onClose', event);
+
           server.closeConnection(syncConnection);
           // Should this use the closeSocket function?
           ws.close(event.code, event.reason);
         },
         onError: (event, ws) => {
-          console.log('WebSocket onError', event);
           captureException?.(event);
           closeSocket(ws, { type: 'INTERNAL_ERROR', retry: false }, 1011);
         },
