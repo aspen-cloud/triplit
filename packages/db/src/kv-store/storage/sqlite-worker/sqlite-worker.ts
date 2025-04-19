@@ -33,10 +33,9 @@ export class SqliteWorkerKvStore implements KVStore {
 
   constructor(databasePath: string) {
     // Resolve the worker script relative to this file
-    const workerPath = path.resolve(__dirname, 'sqlite.worker.js'); // Use .js extension
-
-    this.worker = new Worker(workerPath, { type: 'module' });
-    // this.worker = new SqliteWorker();
+    this.worker = new Worker(new URL('./sqlite.worker.js', import.meta.url), {
+      type: 'module',
+    });
 
     this.initPromise = new Promise((resolve, reject) => {
       // Send initialization message to worker

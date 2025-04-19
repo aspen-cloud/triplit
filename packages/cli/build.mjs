@@ -102,6 +102,22 @@ async function buildFiles() {
 
   // copy yoga.wasm file over to dist
   copyFileSync('./yoga.wasm', join(OUT_DIR, 'yoga.wasm'));
+
+  // Manually copy sqlite worker file for access by dev server
+  // Had trouble getting esbuild to handle this in the main bundle (pull in the worker file as a file)
+  const sqliteWorkerPath =
+    './node_modules/@triplit/db/dist/kv-store/storage/sqlite-worker/sqlite.worker.js';
+  const sqliteWorkerDest = join(OUT_DIR, 'commands', 'sqlite.worker.js');
+  // bundle worker file, output to sqliteWorkerDest
+  await build({
+    entryPoints: [sqliteWorkerPath],
+    outfile: sqliteWorkerDest,
+    bundle: true,
+    platform: 'node',
+    format: 'esm',
+    target: 'node16',
+    external: ['better-sqlite3'], // better-sqlite3 is user provided
+  });
 }
 
 // Run the build
