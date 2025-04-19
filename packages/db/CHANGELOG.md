@@ -1,5 +1,11 @@
 # @triplit/entity-db
 
+## 1.0.22
+
+### Patch Changes
+
+- 4a65e1c3: Use more modern url format for sqlite worker
+
 ## 1.0.21
 
 ### Patch Changes
