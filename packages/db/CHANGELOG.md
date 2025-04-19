@@ -1,5 +1,11 @@
 # @triplit/entity-db
 
+## 1.0.23
+
+### Patch Changes
+
+- 8cd8d2a4: small type refactor
+
 ## 1.0.22
 
 ### Patch Changes

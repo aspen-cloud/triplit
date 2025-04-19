@@ -3,7 +3,7 @@
   "packageManager": "yarn@3.4.1",
   "main": "dist/index.js",
   "type": "module",
-  "version": "1.0.23",
+  "version": "1.0.24",
   "files": [
     "/dist"
   ],
@@ -15,7 +15,7 @@
   },
   "peerDependencies": {
     "@auth/core": "*",
-    "@triplit/client": "1.0.23"
+    "@triplit/client": "1.0.24"
   },
   "devDependencies": {
     "@auth/core": "^0.19.0",

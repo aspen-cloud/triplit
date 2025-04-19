@@ -1,5 +1,13 @@
 # @triplit/client
 
+## 1.0.24
+
+### Patch Changes
+
+- 8cd8d2a4: add ping message
+- Updated dependencies [8cd8d2a4]
+  - @triplit/db@1.0.23
+
 ## 1.0.23
 
 ### Patch Changes
