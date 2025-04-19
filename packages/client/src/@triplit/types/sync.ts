@@ -104,13 +104,16 @@ export type ClientSchemaResponseMessage = SyncMessage<
   { schema: any }
 >;
 
+export type ClientPingMessage = SyncMessage<'PING', {}>;
+
 export type ClientSyncMessage =
   | ClientConnectQueryMessage
   | ClientDisconnectQueryMessage
   | ClientChunkMessage
   | ClientUpdateTokenMessage
   | ClientChangesMessage
-  | ClientSchemaResponseMessage;
+  | ClientSchemaResponseMessage
+  | ClientPingMessage;
 
 type SuccessResult<T> = { data: T; error?: undefined };
 type ErrorResult<E> = { data?: undefined; error: E };

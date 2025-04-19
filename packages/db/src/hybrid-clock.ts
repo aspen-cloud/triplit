@@ -1,5 +1,5 @@
 // export type Timestamp = [number, number, string];
-import { Timestamp } from '@triplit/types/sync.js';
+import { SyncTimestamp } from '@triplit/types/sync.js';
 
 // TODO use KV / make durable
 export class HybridLogicalClock {
@@ -20,11 +20,11 @@ export class HybridLogicalClock {
     return Date.now();
   }
 
-  current(): Timestamp {
+  current(): SyncTimestamp {
     return [this.currentPhysicalTimeMs, this.lastLogicalTime, this.clientId];
   }
 
-  next(): Timestamp {
+  next(): SyncTimestamp {
     const physicalTimeMs = this.currentPhysicalTimeMs;
     if (physicalTimeMs > this.lastPhysicalTimeMs) {
       this.lastPhysicalTimeMs = physicalTimeMs;
@@ -39,7 +39,7 @@ export class HybridLogicalClock {
     this.lastPhysicalTimeMs = physicalTimeMs;
   }
 
-  static compare(a: Timestamp, b: Timestamp): number {
+  static compare(a: SyncTimestamp, b: SyncTimestamp): number {
     if (a[0] === b[0]) {
       if (a[1] === b[1]) {
         return a[2].localeCompare(b[2]);
@@ -49,5 +49,5 @@ export class HybridLogicalClock {
     return a[0] - b[0];
   }
 
-  static MIN: Readonly<Timestamp> = Object.freeze([0, 0, '']);
+  static MIN: Readonly<SyncTimestamp> = Object.freeze([0, 0, '']);
 }

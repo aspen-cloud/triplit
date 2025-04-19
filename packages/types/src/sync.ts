@@ -1,11 +1,7 @@
-// TODO: add these types back
-// import type { CollectionQuery, Timestamp, TripleRow } from '@triplit/db';
-
 import { ITriplitError } from './errors.js';
 
 type CollectionQuery<T, U> = any;
-export type Timestamp = [number, number, string];
-type TripleRow = any;
+export type SyncTimestamp = [number, number, string];
 
 type SyncMessage<Type extends string, Payload extends any> = {
   type: Type;
@@ -13,7 +9,7 @@ type SyncMessage<Type extends string, Payload extends any> = {
 };
 
 export type QueryState = {
-  timestamp: Timestamp;
+  timestamp: SyncTimestamp;
   entityIds: { [collection: string]: string[] };
 };
 
@@ -108,13 +104,16 @@ export type ClientSchemaResponseMessage = SyncMessage<
   { schema: any }
 >;
 
+export type ClientPingMessage = SyncMessage<'PING', {}>;
+
 export type ClientSyncMessage =
   | ClientConnectQueryMessage
   | ClientDisconnectQueryMessage
   | ClientChunkMessage
   | ClientUpdateTokenMessage
   | ClientChangesMessage
-  | ClientSchemaResponseMessage;
+  | ClientSchemaResponseMessage
+  | ClientPingMessage;
 
 type SuccessResult<T> = { data: T; error?: undefined };
 type ErrorResult<E> = { data?: undefined; error: E };

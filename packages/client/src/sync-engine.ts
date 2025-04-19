@@ -136,6 +136,14 @@ export class SyncEngine {
         }
       }
     });
+
+    if (!!options.pingInterval) {
+      setInterval(() => {
+        if (this.connectionStatus === 'OPEN' && this.serverReady) {
+          this.sendMessage({ type: 'PING', payload: {} });
+        }
+      }, options.pingInterval * 1000);
+    }
   }
 
   private async sendChanges(changes: DBChanges) {

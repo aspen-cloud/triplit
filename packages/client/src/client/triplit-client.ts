@@ -205,9 +205,12 @@ export class TriplitClient<M extends Models<M> = Models> {
       this.http.updateOptions(options);
     });
 
+    // const pingInterval = 'pingInterval' in options ? options.pingInterval : 45;
+    const pingInterval = options.pingInterval;
     this.syncEngine = new SyncEngine(this, {
       transport: options.transport,
       logger: this.logger.context('sync'),
+      pingInterval: pingInterval,
     });
 
     if (options.onSessionError) {

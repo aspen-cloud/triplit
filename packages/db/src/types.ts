@@ -1,4 +1,4 @@
-import { type Timestamp as HybridClockTimestamp } from '@triplit/types/sync.js';
+import { type SyncTimestamp as HybridClockTimestamp } from '@triplit/types/sync.js';
 import { Tuple } from './codec.js';
 import { EntityMetadataStore } from './entity-metadata-store.js';
 import { PermissionWriteOperations } from './schema/index.js';

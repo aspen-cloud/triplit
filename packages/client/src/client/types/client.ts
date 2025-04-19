@@ -80,6 +80,11 @@ export interface ClientOptions<M extends Models<M> = Models> {
   skipRules?: boolean;
 
   experimental?: {};
+
+  /**
+   * The interval at which to ping the server to ensure connection stays alive. If set to 0 or undefined, pings are disabled.
+   */
+  pingInterval?: number;
 }
 
 export type MemoryOptions = {

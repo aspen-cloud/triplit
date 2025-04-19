@@ -9,6 +9,7 @@ import { SyncTransport } from '../../types.js';
 export interface SyncOptions {
   transport?: SyncTransport;
   logger: Logger;
+  pingInterval?: number;
 }
 
 export type OnMessageReceivedCallback = (message: ServerSyncMessage) => void;

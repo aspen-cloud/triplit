@@ -475,6 +475,11 @@ export class SyncConnection {
     await allowClientToSync();
   }
 
+  handlePingMessage() {
+    // Helps keep the connection alive
+    // Do nothing, we could respond with PONG
+  }
+
   dispatchCommand(message: ClientSyncMessage) {
     logger.debug('Received message', message);
     try {
@@ -496,6 +501,8 @@ export class SyncConnection {
           return this.handleChangesMessage(message.payload);
         case 'CHUNK':
           return this.handleChunkMessage(message.payload);
+        case 'PING':
+          return this.handlePingMessage();
         default:
           return this.sendErrorResponse(
             // @ts-ignore
