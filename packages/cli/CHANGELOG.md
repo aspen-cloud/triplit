@@ -1,5 +1,12 @@
 # @triplit/cli
 
+## 1.0.31
+
+### Patch Changes
+
+- 4a65e1c3: Automated version bump for @triplit/cli after dependency changes
+- 4a65e1c3: Fixup sqlite worker build
+
 ## 1.0.30
 
 ### Patch Changes

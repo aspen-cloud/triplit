@@ -1,6 +1,6 @@
 {
   "name": "@triplit/cli",
-  "version": "1.0.30",
+  "version": "1.0.31",
   "type": "module",
   "scripts": {
     "build": "yarn lint && node ./build.mjs",
