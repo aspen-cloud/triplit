@@ -9,7 +9,6 @@ import {
   DBEntity,
   EntityStore,
   KVStoreOrTransaction,
-  type CollectionQuery,
   PreparedQuery,
   PreparedOrder,
 } from './types.js';
@@ -23,13 +22,6 @@ import {
   Step,
 } from './query-planner/query-compiler.js';
 import { InvalidResultCardinalityError, TriplitError } from './errors.js';
-
-export interface ExecutionContext {
-  query: CollectionQuery;
-  engine: EntityStoreQueryEngine;
-  candidates?: AsyncIterable<DBEntity> | DBEntity[];
-  results: DBEntity[]; // We'll collect the final results here
-}
 
 export interface ViewEntity {
   data: DBEntity; // Immutable/frozen entity from storage
@@ -79,47 +71,16 @@ function flattenViews(views: Record<string, ViewEntity[] | ViewEntity>) {
 }
 
 export class EntityStoreQueryEngine {
-  private storage: KVStoreOrTransaction;
-  private store: EntityStore;
-  executionStack: {
-    collectionName: string;
-    data: any;
-  }[] = [];
-
-  constructor(storage: KVStoreOrTransaction, store: EntityStore) {
-    this.storage = storage;
-    this.store = store;
-  }
+  constructor(
+    private storage: KVStoreOrTransaction,
+    private store: EntityStore
+  ) {}
 
   /**
-   * This is the plan-based loadQuery. It selects an appropriate plan based on
-   * query characteristics and executes it.
+   * A top-level fetch method that compiles a query and executes it.
    */
-  private async loadQuery(
-    query: PreparedQuery
-  ): Promise<ViewEntity[] | ViewEntity> {
-    return this.executeRelationalQuery(structuredClone(query));
-  }
-
-  /**
-   * Handles relational queries by using the query compiler to extract views
-   * and generate an execution plan
-   */
-  async executeRelationalQuery(
-    query: PreparedQuery,
-    vars: any = {}
-  ): Promise<ViewEntity[]> {
-    const compiledPlan = compileQuery(query);
-    return this.executeCompiledPlan(compiledPlan, vars);
-  }
-
-  /**
-   * Executes a compiled plan which includes both views and main query steps
-   */
-  private async executeCompiledPlan(
-    compiledPlan: CompiledPlan,
-    vars: any = {}
-  ): Promise<ViewEntity[]> {
+  async fetch(query: PreparedQuery, vars: any = {}): Promise<ViewEntity[]> {
+    const compiledPlan = compileQuery(structuredClone(query));
     const results = await this.executeSteps(compiledPlan.steps, {
       vars,
       viewPlans: compiledPlan.views,
@@ -385,13 +346,6 @@ export class EntityStoreQueryEngine {
       }
     }
     return results;
-  }
-
-  /**
-   * A top-level fetch method, using the (still) private loadQuery internally.
-   */
-  async fetch(query: PreparedQuery): Promise<ViewEntity[]> {
-    return this.loadQuery(query) as Promise<ViewEntity[]>;
   }
 
   async *getCollectionCandidates(

@@ -62,7 +62,7 @@ export async function satisfiesFilter(
       return isSatisfied;
     }
   } else if (isSubQueryFilter(filter)) {
-    const result = await queryEngine.executeRelationalQuery(filter.exists, {
+    const result = await queryEngine.fetch(filter.exists, {
       entityStack: [entity],
     });
     if (Array.isArray(result)) return result.length > 0;
