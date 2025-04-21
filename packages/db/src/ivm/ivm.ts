@@ -338,7 +338,7 @@ export class IVM<M extends Models<M> = Models> {
     const evictedEntities = new Map<string, DBEntity>();
     const addedEntities = new Map<string, DBEntity>();
     const handledUpdates = new Map<string, DBEntity>();
-    const inlineUpdatedEntities = new Map<string, DBEntity>();
+    const updatesAppliedInPlace = new Map<string, Change>();
 
     const { collectionName, where, order, after, limit, include } = query;
     if (collectionChanges) {
@@ -367,7 +367,7 @@ export class IVM<M extends Models<M> = Models> {
             handledUpdates.set(entity.data.id, entity.data);
             matches = matchesWhereOrAfterIfRelevant(entity.data);
             if (matches) {
-              inlineUpdatedEntities.set(entity.data.id, entity.data);
+              updatesAppliedInPlace.set(entity.data.id, update);
               updateAffectsOrder(update) &&
                 inlineUpdatedEntitiesWithOrderRelevantChanges.add(
                   entity.data.id
@@ -470,6 +470,7 @@ export class IVM<M extends Models<M> = Models> {
       addedEntities.keys().forEach((id) => {
         entitiesToRefetchInclusions.add(id);
       });
+      // TODO: figure out more elegant way to pass in this information
       const referencedRelationalVariables =
         node.referencedRelationalVariables.get(
           hashPreparedQuery(originalQuery)
@@ -477,7 +478,7 @@ export class IVM<M extends Models<M> = Models> {
       // only refetch an updated entities if the updated affected
       // the relevant variables
       if (referencedRelationalVariables) {
-        inlineUpdatedEntities.entries().forEach(([id, update]) => {
+        updatesAppliedInPlace.entries().forEach(([id, update]) => {
           for (const refdVar of referencedRelationalVariables) {
             if (ValuePointer.Get(update, refdVar) !== undefined) {
               entitiesToRefetchInclusions.add(id);
@@ -486,84 +487,94 @@ export class IVM<M extends Models<M> = Models> {
           }
         });
       }
-      for (const inclusion in include) {
-        const { subquery, cardinality } = include[inclusion];
-        const unmodifiedInclusion = originalQuery.include?.[inclusion];
-        if (!unmodifiedInclusion) {
-          throw new Error(
-            'Inclusion is transformed query not found in original query: ' +
-              inclusion
-          );
-        }
-
-        const { subquery: originalSubquery } = unmodifiedInclusion;
-        // we can skip the fanout if the subquery or its subqueries doesn't have any relevant changes
-        // to process
-        const collectionsReferencedInSubqueries =
-          node.collectionsReferencedInSubqueries.get(
-            hashPreparedQuery(originalSubquery)
-          );
-
-        if (!collectionsReferencedInSubqueries) {
-          throw new Error(
-            'Subquery not found in collectionsReferencedInSubqueries'
-          );
-        }
-        let subqueryHasChangesToConsume = false;
-        for (const collection of collectionsReferencedInSubqueries) {
-          if (changes[collection]) {
-            subqueryHasChangesToConsume = true;
-            break;
+      if (filteredResults.length > 0) {
+        for (const inclusion in include) {
+          const { subquery, cardinality } = include[inclusion];
+          const unmodifiedInclusion = originalQuery.include?.[inclusion];
+          if (!unmodifiedInclusion) {
+            throw new Error(
+              'Inclusion is transformed query not found in original query: ' +
+                inclusion
+            );
           }
-        }
-        if (!subqueryHasChangesToConsume) {
-          continue;
-        }
-        const cachedResults = new Map<number | null, any>();
-        for (const entity of filteredResults) {
-          if (entitiesToRefetchInclusions.has(entity.data.id)) {
+
+          const { subquery: originalSubquery } = unmodifiedInclusion;
+          // we can skip the fanout if the subquery or its subqueries doesn't have any relevant changes
+          // to process
+          const collectionsReferencedInSubqueries =
+            node.collectionsReferencedInSubqueries.get(
+              hashPreparedQuery(originalSubquery)
+            );
+
+          if (!collectionsReferencedInSubqueries) {
+            throw new Error(
+              'Subquery not found in collectionsReferencedInSubqueries'
+            );
+          }
+          let subqueryHasChangesToConsume = false;
+          for (const collection of collectionsReferencedInSubqueries) {
+            if (changes[collection]) {
+              subqueryHasChangesToConsume = true;
+              break;
+            }
+          }
+          if (!subqueryHasChangesToConsume) {
             continue;
           }
-          const updatedEntityStack = entityStack.concat(entity.data);
-          const existingInclusion = entity.subqueries[inclusion];
-          const boundFilters = subquery.where
-            ? bindVariablesInFilters(subquery.where, {
-                entityStack: updatedEntityStack,
-              })
-            : null;
-          const hashedFilters = boundFilters ? hashFilters(boundFilters) : null;
-          if (cachedResults.has(hashedFilters)) {
-            entity.subqueries[inclusion] = cachedResults.get(hashedFilters);
-            continue;
-          }
-          const resultsInfo = await this.updateQueryResultsInPlace(
-            Array.isArray(existingInclusion)
-              ? existingInclusion
-              : existingInclusion === null
-                ? []
-                : [existingInclusion],
-            changes,
-            {
-              ...subquery,
-              where: subquery.where
-                ? bindVariablesInFilters(subquery.where, {
-                    entityStack: updatedEntityStack,
-                  })
-                : undefined,
-            },
-            originalSubquery,
-            node,
-            updatedEntityStack
-          );
-          const resultsWithCardinalityApplied =
-            cardinality === 'one'
-              ? (resultsInfo.updatedResults?.[0] ?? null)
-              : resultsInfo.updatedResults;
-          cachedResults.set(hashedFilters, resultsWithCardinalityApplied);
-          entity.subqueries[inclusion] = resultsWithCardinalityApplied;
+          const cachedResults = new Map<number | null, any>();
+          for (const entity of filteredResults) {
+            if (entitiesToRefetchInclusions.has(entity.data.id)) {
+              continue;
+            }
+            const updatedEntityStack = entityStack.concat(entity.data);
+            const existingInclusion = entity.subqueries[inclusion];
+            const boundFilters = subquery.where
+              ? bindVariablesInFilters(subquery.where, {
+                  entityStack: updatedEntityStack,
+                })
+              : null;
+            const hashedFilters = boundFilters
+              ? hashFilters(boundFilters)
+              : null;
+            if (cachedResults.has(hashedFilters)) {
+              entity.subqueries[inclusion] = cachedResults.get(hashedFilters);
+              continue;
+            }
+            const resultsInfo = await this.updateQueryResultsInPlace(
+              Array.isArray(existingInclusion)
+                ? existingInclusion
+                : existingInclusion === null
+                  ? []
+                  : [existingInclusion],
+              changes,
+              {
+                ...subquery,
+                // TODO: potentially bind these lazily, inside the recursive call
+                // perhaps using a filter evaluation utility from the queryEngine
+                // there's no guarantee that they will be used (e.g. if we're just
+                // process deletes or skipping to the next depth of inclusions)
+                // BUT it is helpful for keying the cache of subquery results,
+                // though that could be done with a hash of the variables
+                where: subquery.where
+                  ? bindVariablesInFilters(subquery.where, {
+                      entityStack: updatedEntityStack,
+                    })
+                  : undefined,
+              },
+              originalSubquery,
+              node,
+              updatedEntityStack
+            );
+            const resultsWithCardinalityApplied =
+              cardinality === 'one'
+                ? (resultsInfo.updatedResults?.[0] ?? null)
+                : resultsInfo.updatedResults;
+            cachedResults.set(hashedFilters, resultsWithCardinalityApplied);
+            entity.subqueries[inclusion] = resultsWithCardinalityApplied;
 
-          if (resultsInfo.hasChanged) {
-            inclusionHasUpdated = true;
+            if (resultsInfo.hasChanged) {
+              inclusionHasUpdated = true;
+            }
           }
         }
       }
