@@ -392,9 +392,9 @@ export class DB<
     );
   }
 
-  async rawFetch(query: PreparedQuery): Promise<ViewEntity[]> {
+  async rawFetch(query: PreparedQuery, vars?: any): Promise<ViewEntity[]> {
     const queryEngine = new EntityStoreQueryEngine(this.kv, this.entityStore);
-    return queryEngine.fetch(query);
+    return queryEngine.fetch(query, vars);
   }
 
   /**

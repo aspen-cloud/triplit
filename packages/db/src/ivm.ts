@@ -355,7 +355,9 @@ export class IVM<M extends Models<M> = Models> {
             (inlineUpdatedEntitiesWithOrderRelevantChanges.size > 0 && order))
         ) {
           return {
-            updatedResults: (await this.db.rawFetch(query)) as ViewEntity[],
+            updatedResults: (await this.db.rawFetch(query, {
+              entityStack,
+            })) as ViewEntity[],
             hasChanged: true,
           };
         }
@@ -482,10 +484,13 @@ export class IVM<M extends Models<M> = Models> {
         const idFilter: PreparedWhere = [
           ['id', 'in', entitiesToRefetchInclusions],
         ];
-        const resultsToMerge = await this.db.rawFetch({
-          ...query,
-          where: where ? where.concat(idFilter) : idFilter,
-        });
+        const resultsToMerge = await this.db.rawFetch(
+          {
+            ...query,
+            where: where ? where.concat(idFilter) : idFilter,
+          },
+          { entityStack: entityStack }
+        );
         for (const result of resultsToMerge) {
           const index = filteredResults.findIndex(
             (r) => r.data.id === result.data.id

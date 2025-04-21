@@ -689,3 +689,181 @@ it.todo(
 );
 
 it.todo('Can subscribe to limit without order, uses id as backup');
+
+it('handles updates to deeply nested inclusions', async () => {
+  const schema = S.Collections({
+    branches: {
+      schema: S.Schema({
+        id: S.Id(),
+      }),
+      relationships: {
+        runs: S.RelationMany('runs', {
+          where: [['branch_name', '=', '$1.id']],
+        }),
+        latest_run: S.RelationOne('runs', {
+          where: [['branch_name', '=', '$1.id']],
+          order: [['created_at', 'DESC']],
+        }),
+      },
+    },
+    runs: {
+      schema: S.Schema({
+        id: S.Id(),
+        created_at: S.Date({ default: S.Default.now() }),
+        benchmark: S.String(),
+        branch_name: S.String(),
+        commit_hash: S.String(),
+        commit_message: S.String(),
+        results: S.Record({
+          memory_avg: S.Number(),
+          memory_max: S.Number(),
+          memory_measurements: S.Optional(S.Number()),
+          run_metadata: S.Optional(S.String()),
+          runtime_avg: S.Number(),
+          runtime_max: S.Number(),
+          runtime_measurements: S.Optional(S.Number()),
+        }),
+        scenario: S.Optional(S.String()),
+        dataset: S.Optional(S.String()),
+        storage: S.Optional(S.String()),
+        task: S.Optional(S.String()),
+        params: S.Optional(S.String()),
+      }),
+      relationships: {
+        branch: S.RelationById('branches', '$1.branch_name'),
+      },
+    },
+    benchmarks: {
+      schema: S.Schema({
+        id: S.Id(),
+        name: S.String(),
+        description: S.Optional(S.String()),
+        created_at: S.Date({ default: S.Default.now() }),
+        deprecated: S.Optional(S.Boolean()),
+      }),
+      relationships: {
+        runs: S.RelationMany('runs', { where: [['benchmark', '=', '$1.id']] }),
+        latest_run: S.RelationOne('runs', {
+          where: [['benchmark', '=', '$1.id']],
+          order: [['created_at', 'DESC']],
+        }),
+      },
+    },
+  });
+
+  const db = new DB({
+    schema: { collections: schema },
+  });
+
+  const BRANCHES = [
+    // Multiple runs on some benchmarks
+    { id: 'master' },
+    // Multiple runs on some benchamrks
+    { id: 'dev' },
+    // No runs
+    { id: 'feature-1' },
+  ];
+  const BENCHMARKS = [
+    { id: 'benchmark-1', name: 'benchmark-1' },
+    { id: 'benchmark-2', name: 'benchmark-2' },
+    { id: 'benchmark-3', name: 'benchmark-3' },
+  ];
+  const RUNS = [
+    {
+      id: 'run-1',
+      benchmark: 'benchmark-1',
+      branch_name: 'master',
+      commit_hash: 'hash-1',
+      commit_message: 'commit message 1',
+      created_at: new Date('2023-01-01'),
+      results: {
+        memory_avg: 100,
+        memory_max: 200,
+        runtime_avg: 10,
+        runtime_max: 20,
+      },
+    },
+    {
+      id: 'run-2',
+      benchmark: 'benchmark-1',
+      branch_name: 'dev',
+      commit_hash: 'hash-2',
+      commit_message: 'commit message 2',
+      created_at: new Date('2023-01-02'),
+      results: {
+        memory_avg: 100,
+        memory_max: 200,
+        runtime_avg: 10,
+        runtime_max: 20,
+      },
+    },
+    {
+      id: 'run-3',
+      benchmark: 'benchmark-2',
+      branch_name: 'master',
+      commit_hash: 'hash-3',
+      commit_message: 'commit message 3',
+      created_at: new Date('2023-01-02'),
+      results: {
+        memory_avg: 100,
+        memory_max: 200,
+        runtime_avg: 10,
+        runtime_max: 20,
+      },
+    },
+    {
+      id: 'run-4',
+      benchmark: 'benchmark-2',
+      branch_name: 'dev',
+      commit_hash: 'hash-4',
+      commit_message: 'commit message 4',
+      created_at: new Date('2023-01-03'),
+      results: {
+        memory_avg: 100,
+        memory_max: 200,
+        runtime_avg: 10,
+        runtime_max: 20,
+      },
+    },
+  ];
+
+  await db.transact(async (tx) => {
+    for (const branch of BRANCHES) {
+      await tx.insert('branches', branch);
+    }
+    for (const benchmark of BENCHMARKS) {
+      await tx.insert('benchmarks', benchmark);
+    }
+    for (const run of RUNS) {
+      await tx.insert('runs', run);
+    }
+  });
+
+  const query = db.query('branches').SubqueryMany('benchmarks', {
+    collectionName: 'benchmarks',
+    select: ['id', 'name'],
+    include: {
+      latest_branch_run: {
+        subquery: {
+          collectionName: 'runs',
+          order: [['created_at', 'DESC']],
+          where: [
+            ['benchmark', '=', '$1.id'],
+            ['branch_name', '=', '$2.id'],
+          ],
+        },
+        cardinality: 'one',
+      },
+    },
+  });
+  const spy = vi.fn();
+  const unsub = db.subscribe(query, spy);
+  await db.updateQueryViews();
+  db.broadcastToQuerySubscribers();
+  console.dir(spy.mock.calls[0][0], { depth: 10 });
+  await db.update('benchmarks', 'benchmark-1', (entity) => {
+    entity.deprecated = true;
+  });
+  await db.updateQueryViews();
+  db.broadcastToQuerySubscribers();
+});
