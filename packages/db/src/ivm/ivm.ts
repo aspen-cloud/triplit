@@ -245,15 +245,15 @@ export class IVM<M extends Models<M> = Models> {
       // the subInfo may have been removed by the time we call updateViews...
       // usually a fast subscribe/unsubscribe e.g. like you might see
       // with a react effect
-      if (!subInfo) {
-        continue;
+      if (subInfo) {
+        if (subInfo.rootNode.results == null) {
+          await this.initializeQueryResults(subInfo.rootNode);
+          handledRootNodes.add(subInfo.rootNode);
+        }
       }
-      if (subInfo.rootNode.results == null) {
-        await this.initializeQueryResults(subInfo.rootNode);
-        handledRootNodes.add(subInfo.rootNode);
-      }
+      // delete in the loop to .clear() api which is dangerous with async
+      this.uninitializedQueries.delete(queryId);
     }
-    this.uninitializedQueries.clear();
 
     const affectedQueries =
       this.getAffectedViewsInTopologicalOrder(storeChanges);
