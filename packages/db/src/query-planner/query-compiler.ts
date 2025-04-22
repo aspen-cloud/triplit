@@ -606,14 +606,13 @@ function extractedInvertedViewsFromFilters(where: PreparedWhere): {
       // inversion strategy
       if (!hasGrandparentReferences && subqueryVariableFilters.length < 2) {
         const extractedView = extractInvertedViews(subquery);
-        const viewId = hashPreparedQuery(extractedView.rewrittenQuery);
-        views[viewId] = extractedView.rewrittenQuery;
-        Object.assign(views, extractedView.views);
-
         // remove the variable filters from the view
         extractedView.rewrittenQuery.where = subquery.where?.filter(
           (f) => !subqueryVariableFilters.includes(f as FilterStatement)
         );
+        const viewId = hashPreparedQuery(extractedView.rewrittenQuery);
+        views[viewId] = extractedView.rewrittenQuery;
+        Object.assign(views, extractedView.views);
 
         // and in the main query, add the filter on the view
         const viewFilters = subqueryVariableFilters.map<FilterStatement>(
