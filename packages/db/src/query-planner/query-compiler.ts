@@ -539,26 +539,26 @@ function compileQueryToSteps(q: PreparedQuery): Step[] {
 
 export function extractInvertedViews(query: PreparedQuery): {
   rewrittenQuery: PreparedQuery;
-  views: Record<string, PreparedQuery>;
+  views: HashedViewMap;
 } {
   const plan: {
-    views: Record<string, PreparedQuery>;
+    views: HashedViewMap;
     rewrittenQuery: PreparedQuery;
   } = {
-    views: {},
+    views: new Map(),
     rewrittenQuery: query,
   };
   if (query.where) {
     const { where, views } = extractedInvertedViewsFromFilters(query.where);
     query.where = where;
-    Object.assign(plan.views, views);
+    assignViewMap(plan.views, views);
   }
   if (query.include) {
     for (const [alias, inclusion] of Object.entries(query.include)) {
       const { views, rewrittenQuery } = extractInvertedViews(
         inclusion.subquery
       );
-      Object.assign(plan.views, views);
+      assignViewMap(plan.views, views);
       query.include[alias] = {
         ...query.include[alias],
         subquery: rewrittenQuery,
@@ -574,18 +574,30 @@ export function extractInvertedViews(query: PreparedQuery): {
       const { views, rewrittenQuery } = extractInvertedViews(
         maybeSubquery.subquery
       );
-      Object.assign(plan.views, views);
+      assignViewMap(plan.views, views);
       query.order[i][2] = { ...maybeSubquery, subquery: rewrittenQuery };
     }
   }
   return plan;
 }
 
-function extractedInvertedViewsFromFilters(where: PreparedWhere): {
+export type HashedViewMap = Map<number, PreparedQuery>;
+
+function assignViewMap(map1: HashedViewMap, map2: HashedViewMap): void {
+  for (const [key, value] of map2.entries()) {
+    if (map1.has(key)) {
+      continue;
+    } else {
+      map1.set(key, value);
+    }
+  }
+}
+
+export function extractedInvertedViewsFromFilters(where: PreparedWhere): {
   where: PreparedWhere;
-  views: Record<string, PreparedQuery>;
+  views: Map<number, PreparedQuery>;
 } {
-  const views: Record<string, PreparedQuery> = {};
+  const views: HashedViewMap = new Map();
   const updatedWhere: PreparedWhere = [];
   for (const filter of where) {
     // if the filter is a subquery filter
@@ -611,8 +623,8 @@ function extractedInvertedViewsFromFilters(where: PreparedWhere): {
           (f) => !subqueryVariableFilters.includes(f as FilterStatement)
         );
         const viewId = hashPreparedQuery(extractedView.rewrittenQuery);
-        views[viewId] = extractedView.rewrittenQuery;
-        Object.assign(views, extractedView.views);
+        views.set(viewId, extractedView.rewrittenQuery);
+        assignViewMap(views, extractedView.views);
 
         // and in the main query, add the filter on the view
         const viewFilters = subqueryVariableFilters.map<FilterStatement>(
@@ -632,7 +644,7 @@ function extractedInvertedViewsFromFilters(where: PreparedWhere): {
       const { where: newWhere, views: newViews } =
         extractedInvertedViewsFromFilters(filter.filters);
       updatedWhere.push({ ...filter, filters: newWhere });
-      Object.assign(views, newViews);
+      assignViewMap(views, newViews);
       // let the rest pass through and be handled with a more naive approach
     } else {
       updatedWhere.push(filter);
