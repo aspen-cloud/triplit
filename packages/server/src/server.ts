@@ -27,9 +27,12 @@ function initSentry() {
   }
 }
 
+// TODO: could probably add a sentry integration to the logger
 function captureException(e: any) {
   if (Sentry.isInitialized() && e instanceof Error) {
     Sentry.captureException(e);
+  } else {
+    console.error(e);
   }
 }
 
