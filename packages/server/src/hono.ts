@@ -29,7 +29,7 @@ import { logger, LogHandler } from '@triplit/logger';
 import { ConsoleHandler } from '@triplit/logger/console';
 import { parseAndValidateToken, ProjectJWT } from '@triplit/server-core/token';
 import { Context, Hono } from 'hono';
-import { ContentfulStatusCode, StatusCode } from 'hono/utils/http-status';
+import { ContentfulStatusCode } from 'hono/utils/http-status';
 
 import { WSContext, type UpgradeWebSocket, WSMessageReceive } from 'hono/ws';
 
@@ -42,7 +42,7 @@ type Variables = {
   token: ProjectJWT;
 };
 
-const FILE_UPLOAD_BODY_MAX = 1024 * 1024 * 100; // 100MB
+const MB1 = 1024 * 1024;
 
 export type ServerOptions = {
   storage?: StoreKeys | KVStore | (() => KVStore);
@@ -58,6 +58,7 @@ export type ServerOptions = {
   // do we still need this?
   claimsPath?: string;
   externalJwtSecret?: string;
+  maxPayloadMb?: number;
 };
 
 export async function createTriplitHonoServer(
@@ -377,15 +378,16 @@ export async function createTriplitHonoServer(
     return c.text('1.0.0', 200);
   });
 
+  const maxPayloadBytes = (options.maxPayloadMb ?? 100) * MB1;
   app.post(
     '/bulk-insert-file',
     bodyLimit({
       // NOTE: bun max is 128MB https://hono.dev/docs/middleware/builtin/body-limit#usage-with-bun-for-large-requests
       // Maybe this can be configurable?
-      maxSize: FILE_UPLOAD_BODY_MAX,
+      maxSize: maxPayloadBytes,
       onError: (c) => {
         const error = new TriplitError(
-          `Body too large, max size is ${Math.floor(FILE_UPLOAD_BODY_MAX / 1024 / 1024)} MB`
+          `Body too large, max size is ${Math.floor(maxPayloadBytes / MB1)} MB`
         );
         return c.json(error.toJSON(), 413);
       },
