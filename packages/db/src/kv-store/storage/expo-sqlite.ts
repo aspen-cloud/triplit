@@ -6,7 +6,12 @@ import {
   ScanOptions,
 } from '../../types.js';
 import * as SQLite from 'expo-sqlite';
-import { DEFAULT_PRAGMA, STATEMENTS } from '../utils/sqlite.js';
+import {
+  parseSqliteKvStoreOptions,
+  SQLiteKVStoreOptions,
+  STATEMENTS,
+  walSizeGuard,
+} from '../utils/sqlite.js';
 import { MemoryTransaction } from '../transactions/memory-tx.js';
 import { ScopedKVStore } from '../utils/scoped-store.js';
 
@@ -17,22 +22,29 @@ type SQLiteState = {
 
 export class ExpoSQLiteKVStore implements KVStore {
   private storeReady: Promise<SQLiteState>;
-  constructor(name: string);
-  constructor(db: SQLite.SQLiteDatabase);
-  constructor(arg0: string | SQLite.SQLiteDatabase) {
+  private walGuard: NodeJS.Timer | undefined;
+
+  constructor(name: string, options?: SQLiteKVStoreOptions);
+  constructor(db: SQLite.SQLiteDatabase, options?: SQLiteKVStoreOptions);
+  constructor(
+    arg0: string | SQLite.SQLiteDatabase,
+    options: SQLiteKVStoreOptions = {}
+  ) {
     let dbPromise: Promise<SQLite.SQLiteDatabase>;
     if (typeof arg0 === 'string') {
       dbPromise = SQLite.openDatabaseAsync(arg0);
     } else {
       dbPromise = Promise.resolve(arg0);
     }
+    const parsedOptions = parseSqliteKvStoreOptions(options);
     this.storeReady = dbPromise.then(async (db) => {
-      await db.execAsync(DEFAULT_PRAGMA);
+      await db.execAsync(parsedOptions.pragma);
       // TODO: promise.all the prepares?
       const createTableStatement = await db.prepareAsync(
         STATEMENTS.createTable
       );
       createTableStatement.executeAsync();
+      this.walGuard = this.startWalGuard(db, parsedOptions);
       return {
         db,
         statements: {
@@ -50,6 +62,30 @@ export class ExpoSQLiteKVStore implements KVStore {
       };
     });
   }
+
+  private startWalGuard(
+    db: SQLite.SQLiteDatabase,
+    options: Required<SQLiteKVStoreOptions>
+  ) {
+    if (this.walGuard) {
+      clearInterval(this.walGuard);
+    }
+    const dbPath = db.databasePath;
+    const walFile = `${dbPath}-wal`;
+    return setInterval(() => {
+      walSizeGuard(
+        {
+          exec: db.execSync,
+        },
+        walFile,
+        {
+          restartMax: options.checkpointRestart,
+          truncateMax: options.checkpointTruncate,
+        }
+      );
+    }, 60_000);
+  }
+
   scope(scope: Tuple): KVStore {
     return new ScopedKVStore(this, scope);
   }

@@ -1,6 +1,7 @@
 // kv-worker-protocol.ts
 import type { Tuple } from '../../../codec.js'; // Adjust path as needed
 import type { ScanOptions, CountOptions } from '../../../types.js'; // Adjust path as needed
+import { SQLiteKVStoreOptions } from '../../utils/sqlite.js';
 
 // --- Request Types (Main -> Worker) ---
 
@@ -22,6 +23,7 @@ export type WorkerOperation =
 
 export type InitPayload = {
   databasePath: string; // Or maybe just ':memory:'
+  options?: SQLiteKVStoreOptions;
 };
 
 export type GetPayload = { key: Tuple; scope?: Tuple };

@@ -15,7 +15,12 @@ import type {
   ClearPayload,
   ApplyEditsPayload,
 } from './kv-worker-protocol.js'; // Adjust path
-import { DEFAULT_PRAGMA, STATEMENTS } from '../../utils/sqlite.js';
+import {
+  parseSqliteKvStoreOptions,
+  SQLiteKVStoreOptions,
+  STATEMENTS,
+  walSizeGuard,
+} from '../../utils/sqlite.js';
 import { decodeTuple, encodeTuple, Tuple } from '../../../codec.js';
 
 // if (isMainThread) {
@@ -47,6 +52,8 @@ let transactions: {
 const activeIterators = new Map<number, Iterator<any>>();
 let nextIteratorId = 1;
 
+let walGuard: NodeJS.Timer | undefined;
+
 function initializeDatabase(payload: InitPayload): WorkerResponse {
   try {
     if (db) {
@@ -58,8 +65,9 @@ function initializeDatabase(payload: InitPayload): WorkerResponse {
     }
 
     db = sqlite(payload.databasePath);
+    const parsedOptions = parseSqliteKvStoreOptions(payload.options || {});
     db.unsafeMode(true); // Keep as per original code, evaluate later if needed
-    db.exec(DEFAULT_PRAGMA);
+    db.exec(parsedOptions.pragma);
 
     // Create table
     db.prepare(STATEMENTS.createTable).run();
@@ -92,6 +100,9 @@ function initializeDatabase(payload: InitPayload): WorkerResponse {
       }),
     };
 
+    // Start WAL guard
+    startWalGuard(db, parsedOptions);
+
     console.log(`Worker initialized DB: ${payload.databasePath}`);
     return { id: 0, type: 'initSuccess' }; // Use ID 0 for init confirmation
   } catch (error: any) {
@@ -102,6 +113,20 @@ function initializeDatabase(payload: InitPayload): WorkerResponse {
       payload: error.message || 'Initialization failed',
     };
   }
+}
+
+function startWalGuard(db: Database, options: Required<SQLiteKVStoreOptions>) {
+  if (walGuard) {
+    clearInterval(walGuard);
+  }
+  const dbPath = db.name;
+  const walFile = `${dbPath}-wal`;
+  walGuard = setInterval(() => {
+    walSizeGuard(db, walFile, {
+      restartMax: options.checkpointRestart,
+      truncateMax: options.checkpointTruncate,
+    });
+  }, 60_000);
 }
 
 function getFullKey(key: Tuple, scope?: Tuple): Tuple {
