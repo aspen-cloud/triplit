@@ -103,10 +103,7 @@ export class IVM<M extends Models<M> = Models> {
         logger.warn('Query not found', { rootQueryId });
         return;
       }
-      potentiallyRemoveNodeSubtreeFromViewGraph(
-        subToRemove.rootNode,
-        this.viewGraph
-      );
+
       subToRemove.listeners.delete(callback);
       subToRemove.uninitializedListeners.delete(callback);
       if (errorCallback) {
@@ -114,6 +111,10 @@ export class IVM<M extends Models<M> = Models> {
       }
 
       if (subToRemove.listeners.size === 0) {
+        potentiallyRemoveNodeSubtreeFromViewGraph(
+          subToRemove.rootNode,
+          this.viewGraph
+        );
         this.subscribedQueries.delete(rootQueryId);
       }
     };
