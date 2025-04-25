@@ -13,7 +13,7 @@ Starting a subscription is as simple as defining a query and a callback to run w
 ```typescript
 const unsubscribe = client.subscribe(
   query,
-  (results, info) => {
+  (results) => {
     // handle results
   },
   (error) => {
