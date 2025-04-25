@@ -27,8 +27,8 @@ import { ValuePointer } from '../utils/value-pointer.js';
 import { Writeable } from '../types.js';
 
 export function queryBuilder<
-  M extends Models<M>,
-  CN extends CollectionNameFromModels<M>,
+  M extends Models<M> = Models,
+  CN extends CollectionNameFromModels<M> = CollectionNameFromModels<M>,
 >(collectionName: CN) {
   return new QueryBuilder<M, CN>(collectionName);
 }

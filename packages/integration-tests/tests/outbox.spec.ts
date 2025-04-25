@@ -2,26 +2,14 @@ import { expect, it, describe, vi, afterAll, beforeAll } from 'vitest';
 import { tempTriplitServer } from '../utils/server.js';
 import { TriplitClient, Schema as S, HttpClient } from '@triplit/client';
 import { pause } from '../utils/async.js';
-import * as jose from 'jose';
-import { schema } from '../triplit/schema.js';
-import { permission } from 'process';
 import { spyMessages } from '../utils/client.js';
+import { encodeToken, generateServiceToken } from '../utils/token.js';
 
 global.WebSocket = WebSocket;
 
 const SECRET = 'test-secret';
 
-const JWT_SECRET = new TextEncoder().encode(SECRET);
-
-async function encodeToken(payload: any, exp?: string) {
-  let token = new jose.SignJWT(payload).setProtectedHeader({ alg: 'HS256' });
-  if (exp) {
-    token = token.setExpirationTime(exp);
-  }
-  return await token.sign(JWT_SECRET);
-}
-
-const serviceToken = await encodeToken({ 'x-triplit-token-type': 'secret' });
+const serviceToken = await generateServiceToken(SECRET);
 
 beforeAll(() => {
   vi.stubEnv('JWT_SECRET', SECRET);
@@ -31,7 +19,7 @@ afterAll(() => {
   vi.unstubAllEnvs();
 });
 
-const DEFAULT_TOKEN = await encodeToken({ sub: 'test' });
+const DEFAULT_TOKEN = await encodeToken({ sub: 'test' }, SECRET);
 
 const DEFAULT_SCHEMA = {
   collections: {
@@ -306,7 +294,7 @@ describe('can remedy rejected sync operations with simple mutations', async () =
         },
       },
     },
-    collections: {
+    collections: S.Collections({
       users: {
         schema: S.Schema({
           id: S.Id(),
@@ -336,7 +324,7 @@ describe('can remedy rejected sync operations with simple mutations', async () =
           },
         },
       },
-    },
+    }),
   };
 
   it('can remedy syncing by deleting', async () => {
@@ -784,6 +772,7 @@ it('Outbox data is always overlaid during in data from subscriptions', async () 
 
   // Prevent outbox clearing for alice
   // THIS ISNT EXACTLY AN API BUT WE CAN KEEP ITEMS IN THE OUTBOX BY TOGGLING syncInProgress
+  // @ts-expect-error - this is a private API
   alice.syncEngine.syncInProgress = true;
   // Update data
   await alice.update('test', 'test1', {
@@ -842,6 +831,7 @@ it('Outbox data is not included in checkpointed fetch payload', async () => {
   alice.disconnect();
   await alice.insert('test', { id: 'test2', name: 'test2' });
   // Prevent outbox from syncing
+  // @ts-expect-error - this is a private API
   alice.syncEngine.syncInProgress = true;
   // Connect to trigger sync process
   await alice.connect();

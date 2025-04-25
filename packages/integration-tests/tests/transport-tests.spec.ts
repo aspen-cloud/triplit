@@ -12,7 +12,7 @@ import {
   MemoryBTreeStorage,
   MemoryBTreeStorage as MemoryStorage,
 } from '@triplit/db/storage/memory-btree';
-import { genToArr } from '@triplit/db';
+import { genToArr, queryBuilder } from '@triplit/db';
 import { pause } from '../utils/async.js';
 import {
   NOT_SERVICE_KEY,
@@ -472,8 +472,7 @@ describe('Connection Status', () => {
   });
 });
 
-const client = new TriplitClient();
-const baseQuery = client.query('test');
+const baseQuery = queryBuilder('test');
 describe('deletes', () => {
   it.each([
     [baseQuery.Where('name', 'like', '%bob%'), ['bob2']],
