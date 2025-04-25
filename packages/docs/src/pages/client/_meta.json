@@ -13,7 +13,6 @@
   "subscribe-with-expand": "`subscribeWithExpand`",
   "subscribe-background": "`subscribeBackground`",
   "storage": "Storage",
-  "sessions": "Sessions",
   "sync-engine": "Sync engine",
   "event-listeners": "Event listeners",
   "http-client": "HTTP client",
