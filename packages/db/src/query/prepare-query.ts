@@ -83,12 +83,17 @@ const ACCESS_DENIED_FILTER = Object.freeze([false]) as PreparedWhere;
  */
 type PrepareQueryOptions = {
   applyPermission: PermissionOperations | undefined;
+  // If false, prepareQuery will not replace static variables with their values
+  // Another part of the code will need to handle variable replacement
+  // TODO: make this required at the top level to make sure a dev is explicit about usage (do when this becomes a feature)
+  // NOTE: this is an experimental feature
+  replaceStaticVariables?: boolean;
 };
 
 /**
  * Internal prepare query options
  */
-type PrepareQueryRecursiveOptions = PrepareQueryOptions & {
+type PrepareQueryRecursiveOptions = Required<PrepareQueryOptions> & {
   isExpandingPermission: boolean;
   permissionStack: string[];
   queryStack: CollectionQuery[];
@@ -123,6 +128,7 @@ export function prepareQuery(
       isExpandingPermission: false,
       permissionStack: [],
       queryStack: [],
+      replaceStaticVariables: options.replaceStaticVariables ?? true,
     }
   );
 
@@ -607,11 +613,17 @@ function transformAndValidateFilter(
 
       // Replace static variables
       if (!isVariableScopeRelational(scope)) {
-        const variable = ValuePointer.Get(variables, components as string[]);
-        if (variable === undefined) {
-          throw new SessionVariableNotFoundError(val, scope, variables[scope]);
+        if (options.replaceStaticVariables) {
+          const variable = ValuePointer.Get(variables, components as string[]);
+          if (variable === undefined) {
+            throw new SessionVariableNotFoundError(
+              val,
+              scope,
+              variables[scope]
+            );
+          }
+          val = variable;
         }
-        val = variable;
       }
       // Replace relational paths with subquery filter
       else if (schema) {

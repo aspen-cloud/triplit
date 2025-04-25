@@ -1028,6 +1028,35 @@ describe('where', () => {
         ['name', '=', '$1.var2'],
       ]);
     });
+    it('can opt out of static variable replacement', () => {
+      const query = prepareQuery(
+        {
+          collectionName: 'users',
+          where: [
+            ['name', '=', '$global.var1'],
+            // Unscoped vars default to relational to parent ($1)
+            ['name', '=', '$unscoped'],
+            ['name', '=', '$1.var2'],
+          ],
+        },
+        undefined,
+        {
+          $global: {
+            var1: 'test',
+          },
+        },
+        undefined,
+        {
+          applyPermission: undefined,
+          replaceStaticVariables: false,
+        }
+      );
+      expect(query.where).toEqual([
+        ['name', '=', '$global.var1'],
+        ['name', '=', '$1.unscoped'],
+        ['name', '=', '$1.var2'],
+      ]);
+    });
     it('rejects variables that are not defined', () => {
       expect(() =>
         prepareQuery(
