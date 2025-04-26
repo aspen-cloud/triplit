@@ -58,8 +58,7 @@
     "build:watch": "tsc -w",
     "lint:build": "npx publint",
     "lint": "tsc --noEmit",
-    "test": "yarn test:unit && yarn typecheck",
-    "test:unit": "vitest run",
+    "test": "vitest run",
     "typecheck": "vitest --typecheck.only --no-watch",
     "publish-pkg": "node ../../scripts/npm-check-version-and-publish.js",
     "build-worker": "esbuild ./src/worker-client/worker-client-operator.ts --bundle --minify --external:better-sqlite3 --external:lmdb --external:expo-sqlite --platform=browser --outfile=./dist/worker-client/worker-client-operator.js --format=esm",
@@ -82,7 +81,7 @@
     "esbuild": "^0.21.3",
     "tinybench": "^2.9.0",
     "typescript": "^5.2.2",
-    "vitest": "^2.0.5"
+    "vitest": "^3.0.6"
   },
   "engines": {
     "node": ">=18.0.0"
