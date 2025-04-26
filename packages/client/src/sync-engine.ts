@@ -142,7 +142,7 @@ export class SyncEngine {
         if (this.connectionStatus === 'OPEN' && this.serverReady) {
           this.sendMessage({ type: 'PING', payload: {} });
         }
-      }, options.pingInterval * 1000);
+      }, options.pingInterval * 1000).unref();
     }
   }
 

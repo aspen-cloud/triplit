@@ -82,7 +82,7 @@ export interface ClientOptions<M extends Models<M> = Models> {
   experimental?: {};
 
   /**
-   * The interval at which to ping the server to ensure connection stays alive. If set to 0 or undefined, pings are disabled.
+   * The interval in seconds at which to ping the server to ensure connection stays alive. If set to 0 or undefined, pings are disabled. Defaults to 45 (seconds).
    */
   pingInterval?: number;
 }
