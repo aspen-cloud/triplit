@@ -1,5 +1,12 @@
 # @triplit/entity-db
 
+## 1.0.24
+
+### Patch Changes
+
+- 75f3bb64: Add wal maintenance to sqlite providers, add additional sqlite configuration
+- 112aed9c: Prepare filters with missing variables to falsy
+
 ## 1.0.23
 
 ### Patch Changes
