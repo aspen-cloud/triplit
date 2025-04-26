@@ -438,3 +438,72 @@ const schema = S.Collections({
   },
 });
 ```
+
+## Modeling selective public access
+
+Sometimes you may want to allow a user to share a link to a resource that is not publicly accessible. For example, you have a table `documents` and only the author can read their own documents.
+
+```typescript
+const schema = S.Collections({
+  documents: {
+    schema: S.Schema({
+      id: S.Id(),
+      title: S.String(),
+      content: S.String(),
+      authorId: S.String(),
+    }),
+    permissions: {
+      authenticated: {
+        read: {
+          filter: [
+            // Only the author can read their own documents
+            ['authorId', '=', '$role.userId'],
+          ],
+        },
+      },
+    },
+  },
+});
+```
+
+To allow selective public access, you can use the `or` function to add another filter with a `$query` variable, allowing the requesting user to read the document if they know the id.
+
+```typescript {13-18}
+const schema = S.Collections({
+  documents: {
+    schema: S.Schema({
+      id: S.Id(),
+      title: S.String(),
+      content: S.String(),
+      authorId: S.String(),
+    }),
+    permissions: {
+      authenticated: {
+        read: {
+          filter: [
+            or([
+              // Only the author can read their own documents
+              ['authorId', '=', '$role.userId'],
+              // Anyone can read the document if they know the id
+              ['id', '=', '$query.docId'],
+            ]),
+          ],
+        },
+      },
+    },
+  },
+});
+```
+
+A client requesting the document can use the `Vars` method on the query builder to pass in the `docId` variable to the query:
+
+```typescript
+const query = client
+  .query('documents')
+  .Vars({ docId: '1234' }) // Allows access to the document with id 1234
+  .Where('id', '=', '1234'); // Filters to just the document with id 1234
+
+const document = await client.fetch(query);
+```
+
+Now you can implement a shareable link like `https://myapp.com/share/1234` and use that id (`1234`) to fetch a document as needed!
