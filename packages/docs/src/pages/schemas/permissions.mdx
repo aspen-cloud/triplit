@@ -466,7 +466,7 @@ const schema = S.Collections({
 });
 ```
 
-To allow selective public access, you can use the `or` function to add another filter with a `$query` variable, allowing the requesting user to read the document if they know the id.
+To allow selective public access, you can use the `or` function to add another filter with a [`$query` variable](/client/query/variables#query-variables), allowing the requesting user to read the document if they know the id.
 
 ```typescript {13-18}
 const schema = S.Collections({
