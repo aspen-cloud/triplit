@@ -12,7 +12,10 @@ import {
   isFilterStatement,
   isBooleanFilter,
   isValueVariable,
-  replaceVariable,
+  ValuePointer,
+  getVariableComponents,
+  isVariableScopeRelational,
+  SessionVariableNotFoundError,
 } from '@triplit/db';
 import { IdCard } from 'lucide-react';
 import { Code, Tooltip, cn } from '@triplit/ui';
@@ -47,14 +50,6 @@ export function RoleFilters({
         return roleWithFilter;
       }
       let filterStatements = filter;
-      // try {
-      //   filterStatements = replaceVariablesInFilterStatements(filter, {
-      //     ...client.db.systemVars,
-      //     role: roleWithFilter.roleVars,
-      //   });
-      // } catch (e) {
-      //   console.error(e);
-      // }
       return {
         ...role,
         roleVars: { role: role.roleVars, ...client.db.systemVars },
@@ -147,6 +142,25 @@ function Statement({
       )}
     </Code>
   );
+}
+
+// This used to be in the DB, but we no longer used it there.
+function replaceVariable(value: string, variables: Record<string, any>) {
+  const components = getVariableComponents(value);
+  let scope = components[0];
+  // If the variable is not scoped, assume it is a relational variable referring to parent
+  if (scope === undefined) {
+    components[0] = 1;
+    scope = components[0];
+    return '$' + components.join('.');
+  }
+  if (!isVariableScopeRelational(scope)) {
+    const variable = ValuePointer.Get(variables, components as string[]);
+    if (variable === undefined) {
+      throw new SessionVariableNotFoundError(value, scope, variables[scope]);
+    }
+    return variable;
+  }
 }
 
 function Singleton({ filter }: { filter: boolean }) {

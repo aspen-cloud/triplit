@@ -1,5 +1,3 @@
-import { bind } from 'core-js/core/function';
-import { SessionVariableNotFoundError } from './errors.js';
 import {
   isFilterGroup,
   isFilterStatement,
@@ -150,24 +148,6 @@ export function safeIncrementQueryVars(
 ): CollectionQuery {
   if (!query.where) return query;
   return { ...query, where: safeIncrementQueryWhere(query.where, step) };
-}
-
-export function replaceVariable(value: string, variables: Record<string, any>) {
-  const components = getVariableComponents(value);
-  let scope = components[0];
-  // If the variable is not scoped, assume it is a relational variable referring to parent
-  if (scope === undefined) {
-    components[0] = 1;
-    scope = components[0];
-    return '$' + components.join('.');
-  }
-  if (!isVariableScopeRelational(scope)) {
-    const variable = ValuePointer.Get(variables, components as string[]);
-    if (variable === undefined) {
-      throw new SessionVariableNotFoundError(value, scope, variables[scope]);
-    }
-    return variable;
-  }
 }
 
 export function resolveVariable(variable: string, vars: any): any {

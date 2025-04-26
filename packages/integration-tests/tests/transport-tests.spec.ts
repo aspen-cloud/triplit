@@ -6,6 +6,7 @@ import {
   TokenExpiredError,
   SessionRolesMismatchError,
   NoActiveSessionError,
+  HttpClient,
 } from '@triplit/client';
 import { describe, vi, it, expect } from 'vitest';
 import {
@@ -32,6 +33,8 @@ import {
   hashQuery,
 } from '@triplit/db';
 import { TestTransport } from '../utils/test-transport.js';
+import { tempTriplitServer } from '../utils/server.js';
+import { encodeToken, generateServiceToken } from '../utils/token.js';
 
 describe('TestTransport', () => {
   it('can sync an insert on one client to another client', async () => {
@@ -4121,4 +4124,176 @@ it.todo('updates to deleted entities over sync are dropped', () => {
   //   db.query('TestScores').Order(['score', 'ASC'])
   // );
   // expect([...results.values()].map((r) => r.score)).toEqual([95, 96, 97, 98]);
+});
+
+describe('selective public access permissions', () => {
+  it('can selectively allow public access to a specific entity', async () => {
+    const schema = {
+      roles: {
+        authenticated: {
+          match: {
+            sub: '$userId',
+          },
+        },
+      },
+      collections: S.Collections({
+        documents: {
+          schema: S.Schema({
+            id: S.Id(),
+            name: S.String(),
+            authorId: S.String(),
+          }),
+          permissions: {
+            authenticated: {
+              read: {
+                filter: [
+                  or([
+                    ['authorId', '=', '$role.userId'],
+                    ['id', '=', '$query.docId'],
+                  ]),
+                ],
+              },
+            },
+          },
+        },
+      }),
+    };
+    const JWT_SECRET = 'test-secret';
+
+    using server = await tempTriplitServer({
+      serverOptions: {
+        dbOptions: { schema },
+        jwtSecret: JWT_SECRET,
+        externalJwtSecret: JWT_SECRET,
+      },
+    });
+    const serviceToken = await generateServiceToken(JWT_SECRET);
+    const aliceToken = await encodeToken(
+      {
+        sub: 'alice',
+      },
+      JWT_SECRET
+    );
+    const { port } = server;
+    const http = new HttpClient({
+      serverUrl: `http://localhost:${port}`,
+      token: serviceToken,
+    });
+    await http.insert('documents', {
+      id: 'doc1',
+      name: 'Document 1',
+      authorId: 'alice',
+    });
+    await http.insert('documents', {
+      id: 'doc2',
+      name: 'Document 2',
+      authorId: 'bob',
+    });
+    await http.insert('documents', {
+      id: 'doc3',
+      name: 'Document 3',
+      authorId: 'bob',
+    });
+    const alice = new TriplitClient({
+      serverUrl: `http://localhost:${port}`,
+      token: aliceToken,
+      schema: schema.collections,
+    });
+
+    // Alice can access her own document
+    const q1 = alice.query('documents').Id('doc1');
+    const q2 = alice.query('documents').Id('doc2');
+    const q3 = alice.query('documents').Vars({ docId: 'doc2' }).Id('doc2');
+    const q4 = alice.query('documents').Vars({ docId: 'doc3' });
+
+    // Alice can access her own document
+    {
+      const res = await alice.http.fetch(q1);
+      expect(res).toEqual([
+        {
+          id: 'doc1',
+          name: 'Document 1',
+          authorId: 'alice',
+        },
+      ]);
+
+      const spy = vi.fn();
+      alice.subscribe(q1, spy);
+      await pause();
+      expect(spy.mock.calls.at(-1)?.[0]).toEqual([
+        {
+          id: 'doc1',
+          name: 'Document 1',
+          authorId: 'alice',
+        },
+      ]);
+    }
+
+    // Alice cannot access Bob's document
+    {
+      const res = await alice.http.fetch(q2);
+      expect(res).toEqual([]);
+
+      const spy = vi.fn();
+      alice.subscribe(q2, spy);
+      await pause();
+      expect(spy.mock.calls.at(-1)?.[0]).toEqual([]);
+    }
+
+    // Alice can access one of Bob's documents with the docId variable
+    {
+      const res = await alice.http.fetch(q3);
+      expect(res).toEqual([
+        {
+          id: 'doc2',
+          name: 'Document 2',
+          authorId: 'bob',
+        },
+      ]);
+
+      const spy = vi.fn();
+      alice.subscribe(q3, spy);
+      await pause();
+      expect(spy.mock.calls.at(-1)?.[0]).toEqual([
+        {
+          id: 'doc2',
+          name: 'Document 2',
+          authorId: 'bob',
+        },
+      ]);
+    }
+
+    // Alice can only access the specified document with the docId variable
+    {
+      const res = await alice.http.fetch(q4);
+      expect(res).toEqual([
+        {
+          id: 'doc1',
+          name: 'Document 1',
+          authorId: 'alice',
+        },
+        {
+          id: 'doc3',
+          name: 'Document 3',
+          authorId: 'bob',
+        },
+      ]);
+
+      const spy = vi.fn();
+      alice.subscribe(q4, spy);
+      await pause();
+      expect(spy.mock.calls.at(-1)?.[0]).toEqual([
+        {
+          id: 'doc1',
+          name: 'Document 1',
+          authorId: 'alice',
+        },
+        {
+          id: 'doc3',
+          name: 'Document 3',
+          authorId: 'bob',
+        },
+      ]);
+    }
+  });
 });

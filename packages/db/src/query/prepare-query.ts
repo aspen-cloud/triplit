@@ -4,10 +4,8 @@ import type {
   QueryWhere,
   ValueCursor,
   WhereFilter,
-  QueryInclusions,
   QueryResultCardinality,
   RefQueryExtension,
-  SchemaQuery,
   PreparedWhere,
   PreparedQuery,
   PreparedInclusions,
@@ -20,7 +18,6 @@ import {
   Models,
   PermissionOperations,
   SET_OP_PREFIX,
-  SUPPORTED_OPERATIONS,
 } from '../schema/index.js';
 import {
   IncludedNonRelationError,
@@ -30,7 +27,6 @@ import {
   InvalidQueryCardinalityError,
   InvalidSelectClauseError,
   RelationDoesNotExistError,
-  SessionVariableNotFoundError,
   TriplitError,
   InvalidQueryAfterError,
   InvalidQueryInclusionError,
@@ -616,11 +612,15 @@ function transformAndValidateFilter(
         if (options.replaceStaticVariables) {
           const variable = ValuePointer.Get(variables, components as string[]);
           if (variable === undefined) {
-            throw new SessionVariableNotFoundError(
-              val,
-              scope,
-              variables[scope]
-            );
+            // If we cannot find the variable, assume we cannot fulfil the filter and return false
+            // Previously we threw an error, we could warn, but you may expect the failure and the logging could be confusing / annoying
+            // TODO: handle undefined as a valid variable value? Maybe this should be null explicitly?
+            return false;
+            // throw new SessionVariableNotFoundError(
+            //   val,
+            //   scope,
+            //   variables[scope]
+            // );
           }
           val = variable;
         }

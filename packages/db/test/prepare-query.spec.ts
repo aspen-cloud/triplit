@@ -844,6 +844,49 @@ describe('where', () => {
     }
   });
 
+  // Important for selective public access
+  it('replaces query variables in permission filters', () => {
+    const schema = S.Collections({
+      test: {
+        schema: S.Schema({
+          id: S.Id(),
+        }),
+        permissions: {
+          authenticated: {
+            read: {
+              filter: [['id', '=', '$query.testId']],
+            },
+          },
+        },
+      },
+    });
+    const query = prepareQuery(
+      {
+        collectionName: 'test',
+        vars: {
+          testId: 'test',
+        },
+      },
+      schema,
+      {},
+      {
+        vars: {},
+        roles: [
+          {
+            key: 'authenticated',
+            roleVars: {
+              testId: 'test',
+            },
+          },
+        ],
+      },
+      {
+        applyPermission: 'read',
+      }
+    );
+    expect(query.where).toEqual([['id', '=', 'test']]);
+  });
+
   describe('boolean filters', () => {
     // TODO: rewrite after removing simplifyQuery from prepareQuery
     //     it('accepts boolean filters and returns them as is', () => {
@@ -1057,21 +1100,20 @@ describe('where', () => {
         ['name', '=', '$1.var2'],
       ]);
     });
-    it('rejects variables that are not defined', () => {
-      expect(() =>
-        prepareQuery(
-          {
-            collectionName: 'users',
-            where: [['name', '=', '$global.dne']],
-          },
-          undefined,
-          {},
-          undefined,
-          {
-            applyPermission: undefined,
-          }
-        )
-      ).toThrow(SessionVariableNotFoundError);
+    it('Transforms filters with undefined variables to falsy', () => {
+      const query = prepareQuery(
+        {
+          collectionName: 'users',
+          where: [['name', '=', '$global.dne']],
+        },
+        undefined,
+        {},
+        undefined,
+        {
+          applyPermission: undefined,
+        }
+      );
+      expect(query.where).toEqual([false]);
     });
     it('rejects filters to nonexistent attributes', () => {
       const schema = USER_SCHEMA;

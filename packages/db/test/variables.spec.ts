@@ -3,10 +3,7 @@ import { DB } from '../src';
 import { classes, departments } from './sample_data/school.js';
 import { testDBAndTransaction } from './utils/db-helpers.js';
 import { Schema as S } from '../src/schema/builder.js';
-import {
-  SessionVariableNotFoundError,
-  WritePermissionError,
-} from '../src/errors.ts';
+import { WritePermissionError } from '../src/errors.ts';
 
 describe('DB Variables', () => {
   const DEPARTMENT = 'dep-1';
@@ -421,13 +418,6 @@ describe('variable conflicts', () => {
     });
   });
 
-  it('Will throw an error if a variable is referenced that does not exist', async () => {
-    const db = baseDB.withSessionVars({ name: 'MATH101' });
-    await expect(
-      db.fetch(db.query('classes').Where(['name', '=', '$session.$name']))
-    ).rejects.toThrow(SessionVariableNotFoundError);
-  });
-
   it('can access a nested data and record types via a variable', async () => {
     const db = new DB({
       schema: {
@@ -505,6 +495,17 @@ describe('variable conflicts', () => {
         },
       });
     }
+  });
+
+  it('Will resolve like a falsy filter if variable is referenced that does not exist', async () => {
+    const db = new DB();
+    await db.insert('test', { id: '1', name: 'foo' });
+    await db.insert('test', { id: '2', name: 'bar' });
+    await db.insert('test', { id: '3', name: 'baz' });
+    const results = await db.fetch(
+      db.query('test').Where(['name', '=', '$query.name'])
+    );
+    expect(results).toEqual([]);
   });
 
   describe('backwards compatibility', () => {
