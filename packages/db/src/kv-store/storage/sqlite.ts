@@ -48,7 +48,7 @@ export class SQLiteKVStore implements KVStore {
   private transactions: SQLiteKVState['transactions'];
 
   db: Database;
-  private walGuard: NodeJS.Timer;
+  private walGuard?: NodeJS.Timer;
 
   // NOTE: string constructor is rarely used and MAY be dangerous because it actually brings in sqlite dep
   constructor(databasePath: string, options?: SQLiteKVStoreOptions);
@@ -109,12 +109,16 @@ export class SQLiteKVStore implements KVStore {
     }
     const dbPath = this.db.name;
     const walFile = `${dbPath}-wal`;
-    return setInterval(() => {
-      walSizeGuard(this.db, walFile, {
-        restartMax: options.checkpointRestart,
-        truncateMax: options.checkpointTruncate,
-      });
-    }, 60_000);
+    return (
+      setInterval(() => {
+        walSizeGuard(this.db, walFile, {
+          restartMax: options.checkpointRestart,
+          truncateMax: options.checkpointTruncate,
+        });
+      }, 60_000)
+        // https://nodejs.org/api/timers.html#timers_timeout_unref
+        .unref()
+    );
   }
 
   private createTable() {
