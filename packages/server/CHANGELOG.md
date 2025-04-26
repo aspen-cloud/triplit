@@ -1,5 +1,17 @@
 # @triplit/server
 
+## 1.0.33
+
+### Patch Changes
+
+- 592b7527: Add payload max to server config
+- ba85711f: Fallback to logging error on captureException if no sentry config
+- Updated dependencies [75f3bb64]
+- Updated dependencies [112aed9c]
+  - @triplit/db@1.0.24
+  - @triplit/client@1.0.25
+  - @triplit/server-core@1.0.28
+
 ## 1.0.32
 
 ### Patch Changes

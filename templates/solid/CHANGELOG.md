@@ -1,5 +1,12 @@
 # solid-template
 
+## 0.0.4
+
+### Patch Changes
+
+- @triplit/client@1.0.25
+- @triplit/solid@1.0.9
+
 ## 0.0.3
 
 ### Patch Changes
