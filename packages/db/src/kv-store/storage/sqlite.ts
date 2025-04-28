@@ -109,16 +109,16 @@ export class SQLiteKVStore implements KVStore {
     }
     const dbPath = this.db.name;
     const walFile = `${dbPath}-wal`;
-    return (
-      setInterval(() => {
-        walSizeGuard(this.db, walFile, {
-          restartMax: options.checkpointRestart,
-          truncateMax: options.checkpointTruncate,
-        });
-      }, 60_000)
-        // https://nodejs.org/api/timers.html#timers_timeout_unref
-        .unref()
-    );
+    const walCheck = setInterval(() => {
+      walSizeGuard(this.db, walFile, {
+        restartMax: options.checkpointRestart,
+        truncateMax: options.checkpointTruncate,
+      });
+    }, 60_000);
+    // In Node, unref() to prevent keeping the event loop alive
+    // https://nodejs.org/api/timers.html#timers_timeout_unref
+    if ('unref' in walCheck) walCheck.unref();
+    return walCheck;
   }
 
   private createTable() {

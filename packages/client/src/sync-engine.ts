@@ -138,11 +138,13 @@ export class SyncEngine {
     });
 
     if (!!options.pingInterval) {
-      setInterval(() => {
+      const ping = setInterval(() => {
         if (this.connectionStatus === 'OPEN' && this.serverReady) {
           this.sendMessage({ type: 'PING', payload: {} });
         }
-      }, options.pingInterval * 1000).unref();
+      }, options.pingInterval * 1000);
+      // In Node, unref() the ping so it doesn't block the process from exiting
+      if ('unref' in ping) ping.unref();
     }
   }
 
