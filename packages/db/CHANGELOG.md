@@ -1,5 +1,11 @@
 # @triplit/entity-db
 
+## 1.0.26
+
+### Patch Changes
+
+- 5bfe7a65: fixup unref guard
+
 ## 1.0.25
 
 ### Patch Changes

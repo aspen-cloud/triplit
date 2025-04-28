@@ -1,5 +1,13 @@
 # @triplit/client
 
+## 1.0.27
+
+### Patch Changes
+
+- 5bfe7a65: fixup unref guard
+- Updated dependencies [5bfe7a65]
+  - @triplit/db@1.0.26
+
 ## 1.0.26
 
 ### Patch Changes
