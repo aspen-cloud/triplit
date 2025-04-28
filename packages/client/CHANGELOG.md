@@ -1,5 +1,14 @@
 # @triplit/client
 
+## 1.0.26
+
+### Patch Changes
+
+- 945061c8: Add default for ping interval
+- 9ee08435: add guard for unref() usage
+- Updated dependencies [9ee08435]
+  - @triplit/db@1.0.25
+
 ## 1.0.25
 
 ### Patch Changes

@@ -1,5 +1,11 @@
 # @triplit/entity-db
 
+## 1.0.25
+
+### Patch Changes
+
+- 9ee08435: add guard for unref() usage
+
 ## 1.0.24
 
 ### Patch Changes
