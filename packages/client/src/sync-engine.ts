@@ -144,7 +144,8 @@ export class SyncEngine {
         }
       }, options.pingInterval * 1000);
       // In Node, unref() the ping so it doesn't block the process from exiting
-      if ('unref' in ping) ping.unref();
+      // TODO: improve typing of setInteval for better compatibility with browser and node
+      if (typeof ping === 'object' && 'unref' in ping) ping.unref();
     }
   }
 

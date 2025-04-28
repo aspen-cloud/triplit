@@ -117,7 +117,7 @@ export class SQLiteKVStore implements KVStore {
     }, 60_000);
     // In Node, unref() to prevent keeping the event loop alive
     // https://nodejs.org/api/timers.html#timers_timeout_unref
-    if ('unref' in walCheck) walCheck.unref();
+    if (typeof walCheck === 'object' && 'unref' in walCheck) walCheck.unref();
     return walCheck;
   }
 
