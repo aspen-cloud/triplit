@@ -764,9 +764,9 @@ it('handles updates to deeply nested inclusions', async () => {
     { id: 'feature-1' },
   ];
   const BENCHMARKS = [
-    { id: 'benchmark-1', name: 'benchmark-1' },
-    { id: 'benchmark-2', name: 'benchmark-2' },
-    { id: 'benchmark-3', name: 'benchmark-3' },
+    { id: 'benchmark-1', name: 'benchmark-1', deprecated: false },
+    { id: 'benchmark-2', name: 'benchmark-2', deprecated: false },
+    { id: 'benchmark-3', name: 'benchmark-3', deprecated: false },
   ];
   const RUNS = [
     {
@@ -839,31 +839,113 @@ it('handles updates to deeply nested inclusions', async () => {
     }
   });
 
-  const query = db.query('branches').SubqueryMany('benchmarks', {
-    collectionName: 'benchmarks',
-    select: ['id', 'name'],
-    include: {
-      latest_branch_run: {
-        subquery: {
-          collectionName: 'runs',
-          order: [['created_at', 'DESC']],
-          where: [
-            ['benchmark', '=', '$1.id'],
-            ['branch_name', '=', '$2.id'],
-          ],
+  const query = db
+    .query('branches')
+    .Order('id', 'ASC')
+    .SubqueryOne('latest_run', {
+      collectionName: 'runs',
+      order: [['created_at', 'DESC']],
+      where: [['branch_name', '=', '$1.id']],
+    })
+    .SubqueryMany('benchmarks', {
+      collectionName: 'benchmarks',
+      where: [['deprecated', '=', false]],
+      include: {
+        latest_branch_run: {
+          subquery: {
+            collectionName: 'runs',
+            order: [['created_at', 'DESC']],
+            where: [
+              ['benchmark', '=', '$1.id'],
+              ['branch_name', '=', '$2.id'],
+            ],
+          },
+          cardinality: 'one',
         },
-        cardinality: 'one',
       },
-    },
-  });
+    });
+
   const spy = vi.fn();
+
+  function currentDBSnapshot() {
+    return db.fetch(query);
+  }
+  function lastSubscriptionCall() {
+    return spy.mock.calls[spy.mock.calls.length - 1][0];
+  }
+  async function expectSnapshotToEqualSubscriptionCall() {
+    await db.updateQueryViews();
+    db.broadcastToQuerySubscribers();
+    expect(await currentDBSnapshot()).toEqual(lastSubscriptionCall());
+  }
+
   const unsub = db.subscribe(query, spy);
-  await db.updateQueryViews();
-  db.broadcastToQuerySubscribers();
-  console.dir(spy.mock.calls[0][0], { depth: 10 });
+
+  await expectSnapshotToEqualSubscriptionCall();
+  await expectSnapshotToEqualSubscriptionCall();
+  // add a new branch and associated run
+  await db.transact(async (tx) => {
+    await tx.insert('branches', {
+      id: 'feature-2',
+    });
+    await tx.insert('runs', {
+      id: 'run-5',
+      benchmark: 'benchmark-1',
+      branch_name: 'feature-2',
+      commit_hash: 'hash-5',
+      commit_message: 'commit message 5',
+      created_at: new Date('2023-01-04'),
+      results: {
+        memory_avg: 100,
+        memory_max: 200,
+        runtime_avg: 10,
+        runtime_max: 20,
+      },
+    });
+  });
+  await expectSnapshotToEqualSubscriptionCall();
+  // deprecate an existing benchmark
   await db.update('benchmarks', 'benchmark-1', (entity) => {
     entity.deprecated = true;
   });
-  await db.updateQueryViews();
-  db.broadcastToQuerySubscribers();
+  await expectSnapshotToEqualSubscriptionCall();
+  // create a new benchmark
+  await db.insert('benchmarks', {
+    id: 'benchmark-4',
+    name: 'benchmark-4',
+    deprecated: false,
+  });
+  await expectSnapshotToEqualSubscriptionCall();
+  // insert multiple new runs that become the most recent run for all benchmarks
+  await db.transact(async (tx) => {
+    await tx.insert('runs', {
+      id: 'run-6',
+      benchmark: 'benchmark-4',
+      branch_name: 'feature-2',
+      commit_hash: 'hash-6',
+      commit_message: 'commit message 6',
+      created_at: new Date('2023-01-05'),
+      results: {
+        memory_avg: 100,
+        memory_max: 200,
+        runtime_avg: 10,
+        runtime_max: 20,
+      },
+    });
+    await tx.insert('runs', {
+      id: 'run-7',
+      benchmark: 'benchmark-3',
+      branch_name: 'feature-2',
+      commit_hash: 'hash-7',
+      commit_message: 'commit message 7',
+      created_at: new Date('2023-01-06'),
+      results: {
+        memory_avg: 100,
+        memory_max: 200,
+        runtime_avg: 10,
+        runtime_max: 20,
+      },
+    });
+  });
+  await expectSnapshotToEqualSubscriptionCall();
 });
