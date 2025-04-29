@@ -1,5 +1,15 @@
 # @triplit/server
 
+## 1.0.36
+
+### Patch Changes
+
+- cb91170d: Make max body size configurable via env var
+- Updated dependencies [9db8a8a3]
+  - @triplit/db@1.0.27
+  - @triplit/client@1.0.28
+  - @triplit/server-core@1.0.31
+
 ## 1.0.35
 
 ### Patch Changes

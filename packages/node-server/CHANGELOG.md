@@ -1,5 +1,13 @@
 # node-server
 
+## 1.0.36
+
+### Patch Changes
+
+- cb91170d: Make max body size configurable via env var
+- Updated dependencies [cb91170d]
+  - @triplit/server@1.0.36
+
 ## 1.0.35
 
 ### Patch Changes
