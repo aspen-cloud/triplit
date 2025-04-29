@@ -522,25 +522,28 @@ export class IVM<M extends Models<M> = Models> {
           if (!subqueryHasChangesToConsume) {
             continue;
           }
-          const cachedResults = new Map<number | null, any>();
+          // const cachedResults = new Map<number | null, any>();
           for (const entity of filteredResults) {
             if (entitiesToRefetchInclusions.has(entity.data.id)) {
               continue;
             }
             const updatedEntityStack = entityStack.concat(entity.data);
             const existingInclusion = entity.subqueries[inclusion];
-            const boundFilters = subquery.where
-              ? bindVariablesInFilters(subquery.where, {
-                  entityStack: updatedEntityStack,
-                })
-              : null;
-            const hashedFilters = boundFilters
-              ? hashFilters(boundFilters)
-              : null;
-            if (cachedResults.has(hashedFilters)) {
-              entity.subqueries[inclusion] = cachedResults.get(hashedFilters);
-              continue;
-            }
+            // TODO: filters are an insufficient query key
+            // for an inclusion cache in the case where there are
+            // nested inclusions with references to their grandparents
+            // const boundFilters = subquery.where
+            //   ? bindVariablesInFilters(subquery.where, {
+            //       entityStack: updatedEntityStack,
+            //     })
+            //   : null;
+            // const hashedFilters = boundFilters
+            //   ? hashFilters(boundFilters)
+            //   : null;
+            // if (cachedResults.has(hashedFilters)) {
+            //   entity.subqueries[inclusion] = cachedResults.get(hashedFilters);
+            //   continue;
+            // }
             const resultsInfo = await this.updateQueryResultsInPlace(
               Array.isArray(existingInclusion)
                 ? existingInclusion
@@ -570,7 +573,7 @@ export class IVM<M extends Models<M> = Models> {
               cardinality === 'one'
                 ? (resultsInfo.updatedResults?.[0] ?? null)
                 : resultsInfo.updatedResults;
-            cachedResults.set(hashedFilters, resultsWithCardinalityApplied);
+            // cachedResults.set(hashedFilters, resultsWithCardinalityApplied);
             entity.subqueries[inclusion] = resultsWithCardinalityApplied;
 
             if (resultsInfo.hasChanged) {
