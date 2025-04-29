@@ -1,5 +1,12 @@
 # @triplit/cli
 
+## 1.0.36
+
+### Patch Changes
+
+- 9db8a8a3: Automated version bump for @triplit/cli after dependency changes
+- cb91170d: Make max body size configurable via env var
+
 ## 1.0.35
 
 ### Patch Changes

@@ -1,7 +1,7 @@
 {
   "name": "solid-template",
   "private": true,
-  "version": "0.0.6",
+  "version": "0.0.7",
   "description": "Triplit SolidJS Template",
   "type": "module",
   "scripts": {
@@ -12,14 +12,14 @@
   },
   "license": "MIT",
   "devDependencies": {
-    "@triplit/cli": "1.0.35",
+    "@triplit/cli": "1.0.36",
     "typescript": "^5.7.2",
     "vite": "^6.0.0",
     "vite-plugin-solid": "^2.11.6"
   },
   "dependencies": {
-    "@triplit/client": "1.0.27",
-    "@triplit/solid": "1.0.11",
+    "@triplit/client": "1.0.28",
+    "@triplit/solid": "1.0.12",
     "solid-js": "^1.9.5"
   }
 }
