@@ -132,16 +132,16 @@ export class EntityStoreQueryEngine {
           const viewKey = `view_${step.viewId}`;
           const view = preparedViews[viewKey];
           if (!view) {
-            throw new Error(`View ${step.viewId} not found in vars`);
+            throw new Error(`View ${step.viewId} not found`);
           }
           if (!Array.isArray(view))
             throw new InvalidResultCardinalityError('many', 'one');
-          const boundFilters = bindVariablesInFilters(step.filter, {
-            ...vars,
-            // TODO solve this in variable lookup
-            //  This sucks to have to do but it works for now
-            ...flattenViews(preparedViews),
-          });
+          const boundFilters = bindVariablesInFilters(
+            step.filter,
+            // When resolving from a view, there should be no other view variables
+            // If we error here, possibly re-add slow entity flattening
+            vars
+          );
           results = [...view];
           for (const filter of boundFilters) {
             results = VAC.resolveQueryFromView(results, filter);
