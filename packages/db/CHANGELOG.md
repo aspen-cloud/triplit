@@ -1,5 +1,11 @@
 # @triplit/entity-db
 
+## 1.0.27
+
+### Patch Changes
+
+- 9db8a8a3: Fixup: remove extra variable processing on hot path
+
 ## 1.0.26
 
 ### Patch Changes
