@@ -5688,17 +5688,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@faker-js/faker@npm:^9.5.0":
-  version: 9.5.0
-  resolution: "@faker-js/faker@npm:9.5.0"
-  checksum: 10/7dfcdf81a01b41f04e6b3a40b1c164658f1d309af8a8585ce36409758d1ee0de02e875c5e2a7163c88225ef5679386ca9706a64c800b525d8f2747967b2171ed
-  languageName: node
-  linkType: hard
-
-"@faker-js/faker@npm:^9.6.0":
-  version: 9.6.0
-  resolution: "@faker-js/faker@npm:9.6.0"
-  checksum: 10/f53aeca972a16e7cbb26024c457cea7e1c6bff9dd60561f942a48eb3233863ed7b5fbb1392eb98a0901cb5bea23cf7dbb0793a30c1655478c6a76a43ebb6c360
+"@faker-js/faker@npm:^9.7.0":
+  version: 9.7.0
+  resolution: "@faker-js/faker@npm:9.7.0"
+  checksum: 10/5167cc179bbf5f140b957f600af24772ca8c6e7e42405c312c25a6b4278b851b84bd8e3065f80e667dd4c35dd5aeb0ed490b0b1872f908d58ffae1cef9a5ef72
   languageName: node
   linkType: hard
 
@@ -10407,6 +10400,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@triplit/db@workspace:packages/db"
   dependencies:
+    "@faker-js/faker": "npm:^9.7.0"
     "@fast-check/vitest": "npm:^0.1.5"
     "@triplit/logger": "workspace:^"
     "@triplit/types": "workspace:^"
@@ -21996,7 +21990,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "integration-tests@workspace:packages/integration-tests"
   dependencies:
-    "@faker-js/faker": "npm:^9.5.0"
+    "@faker-js/faker": "npm:^9.7.0"
     "@triplit/cli": "workspace:^"
     "@triplit/client": "workspace:^"
     "@triplit/db": "workspace:^"
@@ -26615,7 +26609,7 @@ __metadata:
   resolution: "next-template@workspace:templates/chat-template"
   dependencies:
     "@auth/core": "npm:0.34.2"
-    "@faker-js/faker": "npm:^9.6.0"
+    "@faker-js/faker": "npm:^9.7.0"
     "@ianvs/prettier-plugin-sort-imports": "npm:^3.7.2"
     "@radix-ui/react-avatar": "npm:^1.0.4"
     "@radix-ui/react-dialog": "npm:^1.0.5"

@@ -39,7 +39,7 @@
     "tailwindcss-animate": "^1.0.6"
   },
   "devDependencies": {
-    "@faker-js/faker": "^9.6.0",
+    "@faker-js/faker": "^9.7.0",
     "@ianvs/prettier-plugin-sort-imports": "^3.7.2",
     "@tailwindcss/typography": "^0.5.10",
     "@triplit/cli": "1.0.35",
