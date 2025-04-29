@@ -82,6 +82,10 @@ If you want to log errors to Sentry, you can set the `SENTRY_DSN` environment va
 
 If you want to log all incoming and outgoing messages and requests, you can set the `VERBOSE_LOGS` environment variable. This can be useful for debugging.
 
+#### `MAX_BODY_SIZE` (optional)
+
+If you want to increase the maximum body size for incoming requests, you can set the `MAX_BODY_SIZE` environment variable. This is useful if you want to send large payloads to your server. The default value is 100, corresponding to 100MB.
+
 ### Add your server's hostname to your project
 
 Once you have a Triplit server running and [properly configured](#configuration), enter its hostname into the form and click **Connect**.

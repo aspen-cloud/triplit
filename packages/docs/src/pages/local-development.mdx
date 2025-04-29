@@ -44,3 +44,4 @@ If your project has a `.env` file, you may set the following environment variabl
 - `TRIPLIT_JWT_SECRET` - Overrides the JWT secret used when generating local api tokens.
 - `TRIPLIT_EXTERNAL_JWT_SECRET` - Overrides the JWT secret used when generating external api tokens.
 - `TRIPLIT_CLAIMS_PATH` - A `.` separated path to read Triplit claims on external api tokens. If not set, claims are assumed to be at the root of the token.
+- `TRIPLIT_MAX_BODY_SIZE` - The maximum body size for incoming requests. This is useful if you want to send large payloads to your server. The default value is 100, corresponding to 100MB.

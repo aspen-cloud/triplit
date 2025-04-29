@@ -8,6 +8,7 @@ const startServer = await createServer({
   jwtSecret: process.env.JWT_SECRET,
   projectId: process.env.PROJECT_ID,
   externalJwtSecret: process.env.EXTERNAL_JWT_SECRET,
+  maxPayloadMb: process.env.MAX_BODY_SIZE,
 });
 
 const dbServer = startServer(port);

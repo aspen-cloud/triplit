@@ -58,7 +58,7 @@ export type ServerOptions = {
   // do we still need this?
   claimsPath?: string;
   externalJwtSecret?: string;
-  maxPayloadMb?: number;
+  maxPayloadMb?: number | string;
 };
 
 export async function createTriplitHonoServer(
@@ -378,7 +378,15 @@ export async function createTriplitHonoServer(
     return c.text('1.0.0', 200);
   });
 
-  const maxPayloadBytes = (options.maxPayloadMb ?? 100) * MB1;
+  let parsedMaxPayload =
+    typeof options.maxPayloadMb === 'string'
+      ? parseInt(options.maxPayloadMb)
+      : options.maxPayloadMb;
+  // If invalid number, set to undefined
+  if (typeof parsedMaxPayload !== 'number' || isNaN(parsedMaxPayload))
+    parsedMaxPayload = undefined;
+  // Default to 100MB
+  const maxPayloadBytes = (parsedMaxPayload ?? 100) * MB1;
   app.post(
     '/bulk-insert-file',
     bodyLimit({

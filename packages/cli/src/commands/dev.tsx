@@ -146,6 +146,7 @@ export default Command({
       verboseLogs: !!flags.verbose,
       upstream,
       useNodeInspector: flags.inspect,
+      maxPayloadMb: process.env.TRIPLIT_MAX_BODY_SIZE,
     });
     let watcher: FSWatcher | undefined = undefined;
     const dbServer = startDBServer(dbPort, async () => {
