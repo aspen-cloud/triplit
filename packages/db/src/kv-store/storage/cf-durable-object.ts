@@ -15,7 +15,6 @@ import { STATEMENTS } from '../utils/sqlite.js';
 export class CloudflareDurableObjectKVStore implements KVStore {
   sql: SqlStorage;
 
-  // NOTE: string constructor is rarely used and MAY be dangerous because it actually brings in sqlite dep
   constructor(database: DurableObjectStorage) {
     this.sql = database.sql;
     this.sql.exec(STATEMENTS.createTable);
