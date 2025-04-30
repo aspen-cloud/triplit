@@ -1,6 +1,4 @@
 import Worker from 'web-worker';
-import path from 'path';
-import { fileURLToPath } from 'url';
 import type {
   KVStore,
   KVStoreTransaction,
@@ -17,10 +15,6 @@ import {
   WorkerRequest,
   WorkerResponse,
 } from './kv-worker-protocol.js';
-
-// Helper to get __dirname in ESM
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 export class SqliteWorkerKvStore implements KVStore {
   private worker: Worker;
