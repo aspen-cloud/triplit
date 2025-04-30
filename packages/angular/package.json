@@ -20,7 +20,7 @@
     "@angular/core": "^19.2.1",
     "ng-packagr": "^19.2.0",
     "rxjs": "^7.8.2",
-    "typescript": "^5.5.4"
+    "typescript": "^5.8.3"
   },
   "peerDependencies": {
     "@angular/common": "^19.2.1",
