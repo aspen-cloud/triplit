@@ -70,12 +70,13 @@ export class CloudflareDurableObjectKVStore implements KVStore {
     const high = low + '\uffff';
     const results = this.sql.exec(STATEMENTS.scan, low, high);
     for (const row of results) {
-      const { k, v } = row as { k: string; v: any };
-      const key = decodeTuple(k);
+      const { key, value } = row as { key: string; value: string };
+      const decodedKey = decodeTuple(key);
       const prefixLength = (scope?.length ?? 0) + options.prefix.length;
-      const keyWithoutPrefix = prefixLength > 0 ? key.slice(prefixLength) : key;
+      const keyWithoutPrefix =
+        prefixLength > 0 ? decodedKey.slice(prefixLength) : decodedKey;
       if (keyWithoutPrefix.length === 0) continue;
-      yield [keyWithoutPrefix, JSON.parse(v)];
+      yield [keyWithoutPrefix, JSON.parse(value)];
     }
   }
   async *scanValues(options: ScanOptions, scope?: Tuple): AsyncIterable<any> {
@@ -85,7 +86,7 @@ export class CloudflareDurableObjectKVStore implements KVStore {
     const high = low + '\uffff';
     const results = this.sql.exec(STATEMENTS.scanValues, low, high);
     for (const row of results) {
-      const { value } = row as { value: any };
+      const { value } = row as { value: string };
       yield JSON.parse(value);
     }
   }
