@@ -4,6 +4,7 @@ import { BTreeKVStore } from '../src/kv-store/storage/memory-btree.js';
 import { SQLiteKVStore } from '../src/kv-store/storage/sqlite.js';
 import { LmdbKVStore } from '../src/kv-store/storage/lmdb.js';
 import sqlite from 'better-sqlite3';
+import fs from 'node:fs';
 // import { SqliteWorkerKvStore } from '../src/kv-store/storage/sqlite-worker.ts';
 import { SqliteWorkerKvStore } from '../dist/kv-store/storage/sqlite-worker.js';
 
@@ -14,15 +15,16 @@ const QUERY_NAMES = [
   'ALL_MESSAGES',
 ];
 
-// const QUERIES_TO_RUN: (typeof QUERY_NAMES)[number][] = [
-//   'CONVERSATIONS_WITH_LAST_MESSAGE_AND_UNREAD_COUNT',
-//   'CHAT_WITH_LAST_20_MESSAGES_AND_SENDER',
-//   'UNREAD_MESSAGES_WITH_CONVO_AND_SENDER',
-// ];
+const QUERIES_TO_RUN: (typeof QUERY_NAMES)[number][] = [
+  // 'CONVERSATIONS_WITH_LAST_MESSAGE_AND_UNREAD_COUNT',
+  'CHAT_WITH_LAST_20_MESSAGES_AND_SENDER',
+  // 'UNREAD_MESSAGES_WITH_CONVO_AND_SENDER',
+];
 // const QUERIES_TO_RUN: (typeof QUERY_NAMES)[number][] = ['ALL_MESSAGES'];
-const QUERIES_TO_RUN = QUERY_NAMES;
+// const QUERIES_TO_RUN = QUERY_NAMES;
 
 const NUM_OPS = 1_000;
+const INITIAL_MESSAGES_COUNT = 5_000;
 
 const USERS = [
   { id: '1', name: 'Alice' },
@@ -243,8 +245,9 @@ class TriplitWorkload implements DB_Workload {
 
   constructor() {
     // const sqliteDb = sqlite(':memory:');
-    // const sqliteKv = new SQLiteKVStore(sqliteDb);
-    const sqliteKv = new SqliteWorkerKvStore(':memory:');
+    const sqliteDb = sqlite('./test-triplit.db');
+    const sqliteKv = new SQLiteKVStore(sqliteDb);
+    // const sqliteKv = new SqliteWorkerKvStore(':memory:');
     this.db = new DB({
       schema: TriplitWorkload.schema,
       kv: sqliteKv,
@@ -289,6 +292,19 @@ class TriplitWorkload implements DB_Workload {
             user_id: member.toString(),
           });
         }
+      }
+      // Seed messages
+      for (let i = 0; i < INITIAL_MESSAGES_COUNT; i++) {
+        const randomUser = Math.floor(Math.random() * USERS.length);
+        const randomConversation = Math.floor(
+          Math.random() * CONVERSATIONS.length
+        );
+        await tx.insert('messages', {
+          conversation_id: CONVERSATIONS[randomConversation].id,
+          sender_id: USERS[randomUser].id,
+          content: `Initial message ${i} from ${USERS[randomUser].name}`,
+          created_at: new Date(),
+        });
       }
     });
     for (const queryName of QUERIES_TO_RUN) {
@@ -373,7 +389,8 @@ CREATE TABLE IF NOT EXISTS conversation_members (
     FOREIGN KEY (user_id) REFERENCES users(id) */
 );
 `;
-    this.db = sqlite(':memory:');
+    // this.db = sqlite(':memory:');
+    this.db = sqlite('./test-sqlite.db');
     this.db.exec(SQLITE_DB_INITIALIZE);
 
     this.queries = {
@@ -462,6 +479,24 @@ ORDER BY m.created_at ASC;
       }
     }
 
+    // Seed messages
+    for (let i = 0; i < INITIAL_MESSAGES_COUNT; i++) {
+      const randomUser = Math.floor(Math.random() * USERS.length);
+      const randomConversation = Math.floor(
+        Math.random() * CONVERSATIONS.length
+      );
+      this.db
+        .prepare(
+          'INSERT INTO messages (conversation_id, sender_id, content, created_at) VALUES (?, ?, ?, ?)'
+        )
+        .run(
+          CONVERSATIONS[randomConversation].id,
+          USERS[randomUser].id,
+          `Initial message ${i} from ${USERS[randomUser].name}`,
+          +new Date()
+        );
+    }
+
     // verify data
     // console.log(
     //   'conversations',
@@ -500,9 +535,12 @@ ORDER BY m.created_at ASC;
   async updateViews() {
     for (const queryName of QUERIES_TO_RUN) {
       const query = this.queries[queryName];
-      query.all();
+      const results = query
+        .all()
+        .map((row) => ({ ...row, created_at: new Date(row.created_at) }));
+
+      // console.log(results);
     }
-    const end = performance.now();
   }
 }
 
@@ -528,34 +566,50 @@ async function keepAlive() {
   // console.log('Process is still alive');
   keepAlive(); // Recursive call to keep the process running
 }
-// globalThis.runTriplitTest();
-const shouldOpenDevtools = process.argv.includes('--profile');
-if (shouldOpenDevtools) {
-  keepAlive();
+try {
+  // globalThis.runTriplitTest();
+  const shouldOpenDevtools = process.argv.includes('--profile');
+  if (shouldOpenDevtools) {
+    keepAlive();
 
-  const inspector = await import('node:inspector/promises');
+    const inspector = await import('node:inspector/promises');
 
-  inspectorHandle = inspector.open({});
-  const inspectorUrl = inspector.url();
-  console.log(`Node inspector listening on ${inspectorUrl}`);
+    inspectorHandle = inspector.open({});
+    const inspectorUrl = inspector.url();
+    console.log(`Node inspector listening on ${inspectorUrl}`);
 
-  globalThis.profileTriplitTest = async (shouldProfile = true) => {
-    shouldProfile && console.profile();
-    await testWorkLoad(new TriplitWorkload(), 'Triplit (in-memory SQLite)');
-    shouldProfile && console.profileEnd();
-    // console.log('finished profiling');
-  };
-} else {
-  const results = {};
-  console.log('Testing', QUERIES_TO_RUN);
-  {
-    const name = 'TRIPLIT (in-memory SQLite)';
-    results[name] = await testWorkLoad(new TriplitWorkload(), name);
+    globalThis.profileTriplitTest = async (shouldProfile = true) => {
+      shouldProfile && console.profile();
+      await testWorkLoad(new TriplitWorkload(), 'Triplit (durable SQLite)');
+      shouldProfile && console.profileEnd();
+      // console.log('finished profiling');
+    };
+  } else {
+    const results = {};
+    console.log('Testing', QUERIES_TO_RUN);
+    {
+      const name = 'TRIPLIT (durable SQLite)';
+      results[name] = await testWorkLoad(new TriplitWorkload(), name);
+    }
+    gc();
+    {
+      const name = 'SQLITE (durable)';
+      results[name] = await testWorkLoad(new SQLiteWorkLoad(), name);
+    }
+    console.table(results);
   }
-  gc();
-  {
-    const name = 'SQLITE (in-memory)';
-    results[name] = await testWorkLoad(new SQLiteWorkLoad(), name);
+} finally {
+  await cleanUp();
+}
+
+async function cleanUp() {
+  console.log('Cleaning up...');
+  // Delete each sqlite file
+  const files = ['./test-sqlite.db', './test-triplit.db'];
+  for (const file of files) {
+    if (await fs.existsSync(file)) {
+      fs.unlinkSync(file);
+      console.log(`Deleted ${file}`);
+    }
   }
-  console.table(results);
 }
