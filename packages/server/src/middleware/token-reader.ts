@@ -4,8 +4,9 @@ import {
   InvalidAuthenticationSchemeError,
   NoTokenProvidedError,
 } from '@triplit/server-core/errors';
-import { parseAndValidateToken } from '@triplit/server-core/token';
+import { parseAndValidateToken, ProjectJWT } from '@triplit/server-core/token';
 import { TriplitError } from '@triplit/db';
+import { ParseResult } from '@triplit/server-core';
 
 export async function useHttpToken(
   req: Request,
@@ -54,7 +55,10 @@ export async function useHttpToken(
   }
 }
 
-export async function readWSToken(request: IncomingMessage) {
+export async function readWSToken(
+  request: IncomingMessage
+  // TODO: figure out a way to infer the type better (ie improve build and usage of @triplit/types)
+): Promise<ParseResult<ProjectJWT, TriplitError>> {
   const url = new URL(`http://localhost${request.url!}`);
   const token = url.searchParams.get('token');
   return parseAndValidateToken(
