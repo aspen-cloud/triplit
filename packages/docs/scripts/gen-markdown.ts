@@ -14,9 +14,13 @@ async function generate() {
   );
   for (const post of posts) {
     // await fs.writeFile(`./public/${post.path}`, post.content, 'utf8');
-    await Bun.write('./public/' + post.path, mdxToPlainMd(post.content), {
-      createPath: true,
-    });
+    await Bun.write(
+      './public/' + post.path.replace(/\.mdx?$/, '.md'),
+      mdxToPlainMd(post.content),
+      {
+        createPath: true,
+      }
+    );
   }
 }
 
