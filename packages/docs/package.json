@@ -8,7 +8,7 @@
     "start": "next start",
     "export": "next export",
     "generate:references": "typedoc",
-    "gen:md": "bun ./src/scripts/gen-markdown.ts",
+    "gen:md": "bun ./scripts/gen-markdown.ts",
     "postbuild": "next-sitemap"
   },
   "dependencies": {
@@ -22,6 +22,7 @@
     "turbo": "^2.0.4"
   },
   "devDependencies": {
+    "@types/bun": "^1.2.11",
     "@types/node": "^20.12.8",
     "@types/react": "^18",
     "@types/react-dom": "^18",

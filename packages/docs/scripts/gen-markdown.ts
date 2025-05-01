@@ -1,5 +1,6 @@
-const { promises: fs } = require('fs');
-import { getFiles, getFileBySlug, mdxToPlainMd } from '../utils/mdx';
+#!/usr/bin/env bun
+
+import { getFiles, getFileBySlug, mdxToPlainMd } from '../src/utils/mdx.js';
 
 const BLOG_URI = 'https://www.triplit.dev/blog/';
 
@@ -13,7 +14,9 @@ async function generate() {
   );
   for (const post of posts) {
     // await fs.writeFile(`./public/${post.path}`, post.content, 'utf8');
-    await Bun.write('./public/' + post.path, mdxToPlainMd(post.content));
+    await Bun.write('./public/' + post.path, mdxToPlainMd(post.content), {
+      createPath: true,
+    });
   }
 }
 

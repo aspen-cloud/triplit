@@ -11087,6 +11087,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@types/bun@npm:^1.2.11":
+  version: 1.2.11
+  resolution: "@types/bun@npm:1.2.11"
+  dependencies:
+    bun-types: "npm:1.2.11"
+  checksum: 10/5461356764cf00cfe4ab189e1a5c82152e5f056290a6e116485ca4a7e1d33bc4b41e5bcc0f87f2dea123fe1a8d66061c69be7214dd3ad06a0607a18077990c39
+  languageName: node
+  linkType: hard
+
 "@types/bun@npm:^1.2.3":
   version: 1.2.3
   resolution: "@types/bun@npm:1.2.3"
@@ -15255,6 +15264,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"bun-types@npm:1.2.11":
+  version: 1.2.11
+  resolution: "bun-types@npm:1.2.11"
+  dependencies:
+    "@types/node": "npm:*"
+  checksum: 10/0851f5c171f5480b0a862d1d42b5f5076a4e4e3a7976cca509f2d532715fef2e44ddb7b5860cfe7a6863fec66b25330e18ffcd18ade9890388415650bd152fd4
+  languageName: node
+  linkType: hard
+
 "bun-types@npm:1.2.3":
   version: 1.2.3
   resolution: "bun-types@npm:1.2.3"
@@ -17680,6 +17698,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "docs@workspace:packages/docs"
   dependencies:
+    "@types/bun": "npm:^1.2.11"
     "@types/node": "npm:^20.12.8"
     "@types/react": "npm:^18"
     "@types/react-dom": "npm:^18"
