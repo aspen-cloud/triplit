@@ -4,13 +4,16 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "next build && gen:md",
     "start": "next start",
     "export": "next export",
     "generate:references": "typedoc",
+    "gen:md": "bun ./src/scripts/gen-markdown.ts",
     "postbuild": "next-sitemap"
   },
   "dependencies": {
+    "globby": "^13.2.2",
+    "gray-matter": "^4.0.3",
     "next": "^13.4.16",
     "nextra": "^2.13.3",
     "nextra-theme-docs": "^2.13.3",
