@@ -65,8 +65,9 @@ const SKIP_RULES = true;
 const SESSION_ROLES_KEY = 'SESSION_ROLES';
 
 // default policy is local-and-remote and no timeout
-const DEFAULT_FETCH_OPTIONS = {
+const DEFAULT_FETCH_OPTIONS: ClientFetchOptions = {
   policy: 'local-first',
+  skipRules: SKIP_RULES,
 } as const;
 
 export class TriplitClient<M extends Models<M> = Models> {
