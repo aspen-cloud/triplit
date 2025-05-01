@@ -1,6 +1,5 @@
 {
   "index": "Installation",
-  "query": "`query`",
   "insert": "`insert`",
   "update": "`update`",
   "delete": "`delete`",

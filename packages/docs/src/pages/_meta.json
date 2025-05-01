@@ -7,10 +7,11 @@
   "-1": {
     "type": "separator"
   },
-  "client": "Client",
+  "client": "Client API",
+  "query": "Query API",
   "schemas": "Schemas",
   "cli": "CLI",
-  "frameworks": "Frameworks",
+  "frameworks": "Framework support",
   "triplit-cloud": "Triplit Cloud",
   "auth": "Authentication",
   "-3": {

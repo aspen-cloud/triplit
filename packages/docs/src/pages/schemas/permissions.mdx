@@ -93,7 +93,7 @@ const roles: Roles = {
 };
 ```
 
-Wildcards in the `match` object (prefixed with `$`) will be assigned to [variables](/client/query/variables) with the prefix `$role`. For example, a JWT with the following structure would match the `user` role and assign the value `123` to the `$role.userId` variable for use in your application's permission definitions:
+Wildcards in the `match` object (prefixed with `$`) will be assigned to [variables](/query/variables) with the prefix `$role`. For example, a JWT with the following structure would match the `user` role and assign the value `123` to the `$role.userId` variable for use in your application's permission definitions:
 
 ```typescript
 // match object
@@ -172,7 +172,7 @@ const schema = S.Collections({
 export { schema, roles };
 ```
 
-Collection permissions are defined for each operation and role. If a role is not included, it will not be allowed to perform that operation. When performing each operation, Triplit will check the set of set of [filter clauses](/client/query/where) that must be satisfied for the operation to be allowed.
+Collection permissions are defined for each operation and role. If a role is not included, it will not be allowed to perform that operation. When performing each operation, Triplit will check the set of set of [filter clauses](/query/where) that must be satisfied for the operation to be allowed.
 
 ```json
 {
@@ -466,7 +466,7 @@ const schema = S.Collections({
 });
 ```
 
-To allow selective public access, you can use the `or` function to add another filter with a [`$query` variable](/client/query/variables#query-variables), allowing the requesting user to read the document if they know the id.
+To allow selective public access, you can use the `or` function to add another filter with a [`$query` variable](/query/variables#query-variables), allowing the requesting user to read the document if they know the id.
 
 ```typescript {13-18}
 const schema = S.Collections({
