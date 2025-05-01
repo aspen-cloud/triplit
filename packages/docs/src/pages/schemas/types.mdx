@@ -37,33 +37,7 @@ import { Schema as S } from '@triplit/client';
 const stringType = S.String();
 ```
 
-Strings support `=`, `!=`, `like`, `nlike`, `in`, `nin`, and `isDefined` operators in `where` statements.
-
-##### `like` and `nlike`
-
-You can use the `like` operator in a where clause to do simple filtering with string similarity. A `like` expression is true if the supplied attribute matches the supplied filter pattern.
-
-An underscore (`_`) in a pattern stands for (matches) any single character; a percent sign (`%`) matches any sequence of zero or more characters.
-
-For example:
-
-```typescript
-['triplit', 'like', 'triplit']    true
-['triplit', 'like', 'tri%']       true
-['triplit', 'like', 'tr_pl_t']    true
-['triplit', 'like', 'trip']       false
-```
-
-##### `in` and `nin`
-
-You can use the `in` operator in a where clause to check if an attribute is in a set of values. The `nin` operator is the opposite of `in`.
-
-For example:
-
-```typescript
-['triplit', 'in', ['triplit', 'hello']]    true
-['triplit', 'nin', ['triplit', 'hello']]   false
-```
+For information about operators that can be used with strings in `where` statements, see the [Where clause documentation](/query/where#operators).
 
 #### Number
 
@@ -74,7 +48,7 @@ import { Schema as S } from '@triplit/client';
 const numberType = S.Number();
 ```
 
-Numbers support `=`, `!=`, `>`, `>=`, `<`, `<=`, `in`, `nin`, and `isDefined` operators in `where` statements.
+For information about operators that can be used with numbers in `where` statements, see the [Where clause documentation](/query/where#operators).
 
 #### Boolean
 
@@ -85,7 +59,7 @@ import { Schema as S } from '@triplit/client';
 const booleanType = S.Boolean();
 ```
 
-Booleans support `=`, `!=`, and `isDefined` operators in `where` statements.
+For information about operators that can be used with booleans in `where` statements, see the [Where clause documentation](/query/where#operators).
 
 #### Date
 
@@ -96,7 +70,7 @@ import { Schema as S } from '@triplit/client';
 const dateType = S.Date();
 ```
 
-Dates support `=`, `!=`, `>`, `>=`, `<`, `<=`, and `isDefined` operators in `where` statements.
+For information about operators that can be used with dates in `where` statements, see the [Where clause documentation](/query/where#operators).
 
 #### Set
 
@@ -112,7 +86,7 @@ import { Schema as S } from '@triplit/client';
 const stringSet = S.Set(S.String());
 ```
 
-Sets support `has` and `!has` operators in `where` statements, which check if the set does or does not contain the value. They also support the `isDefined` operator.
+For information about operators that can be used with sets in `where` statements, see the [Where clause documentation](/query/where#operators).
 
 ### Options
 
@@ -177,22 +151,7 @@ await client.update('test', '123', (e) => {
 // { id: '123', optionalString: null }
 ```
 
-Optional attributes support the `isDefined` operator, which checks if the specified attribute is defined.
-
-```typescript
-import { Schema as S } from '@triplit/client';
-const schema = S.Collections({
-  profiles: {
-    schema: S.Schema({
-      id: S.Id(),
-      name: S.String(),
-      email: S.Optional(S.String()),
-    }),
-  },
-});
-
-const query = client.query('profiles').Where('email', 'isDefined', true);
-```
+For information about operators that can be used with optional attributes in `where` statements, see the [Where clause documentation](/query/where#operators).
 
 #### `default`
 

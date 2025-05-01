@@ -26,6 +26,6 @@
     "@types/fs-extra": "^11",
     "@types/minimist": "^1.2.4",
     "@types/prompts": "^2",
-    "typescript": "^5.3.3"
+    "typescript": "^5.8.3"
   }
 }

@@ -19,4 +19,4 @@ const queryEmpty = client.query('employees').Where('name', '=', 'Bender');
 const resultEmpty = await client.fetchOne(queryEmpty); // null
 ```
 
-This is a convenient shorthand for using the [limit parameter](/client/query/limit) `.Limit(1)` and extracting the result from the result set.
+This is a convenient shorthand for using the [limit parameter](/query/limit) `.Limit(1)` and extracting the result from the result set.

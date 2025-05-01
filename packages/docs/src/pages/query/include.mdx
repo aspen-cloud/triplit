@@ -84,10 +84,11 @@ const schema = S.Collections({
 You can write an adhoc query that narrows down a director's films to just their top 3, building off the existing `allFilms` relation.
 
 ```typescript
-const query = client.query('directors').Include('bestFilms', (rel) =>
-  // TODO: confirm capitalization of `rel`
-  rel('allFilms').Order('rating', 'DESC').Limit(3)
-);
+const query = client
+  .query('directors')
+  .Include('bestFilms', (rel) =>
+    rel('allFilms').Order('rating', 'DESC').Limit(3)
+  );
 const result = await client.fetch(query);
 
 // And the result will be fully typed

@@ -44,6 +44,19 @@ const client = new TriplitClient({
 
 Note that passing `{ storage: 'indexeddb' }` to the constructor will create an IndexedDB databases with the default name `triplit`. If your application connects to multiple projects with separate clients, we recommend you create your own custom-named instances of `IndexedDBStorage` so that naming conflicts do not occur. You can inspect the IndexedDB database in the [browser's developer tools](https://developer.chrome.com/docs/devtools/storage/indexeddb).
 
+### Caching
+
+By default, the `TriplitClient` will cache all IndexedDB data in memory for fast access (10x faster than native IndexedDB, in some cases). If you want to disable this, you can set the `cache` option to `false` when creating the `TriplitClient`.
+
+```typescript
+const client = new TriplitClient({
+  storage: {
+    type: 'indexeddb',
+    options: { useCache: false },
+  },
+});
+```
+
 ## Sqlite
 
 ### In the browser

@@ -169,6 +169,7 @@ export class DevServerLogHandler implements LogHandler {
   #logMessage(action: Actions, message: ServerSyncMessage | ClientSyncMessage) {
     const { type, payload } = message;
     const symbol = action === 'sent' ? SENT_SYMBOL : RECEIVED_SYMBOL;
+    if (type === 'PING') return;
     const isError = isErrorMessage(type);
     const primaryColor = isDestructiveMessage(type)
       ? ERROR_COLOR

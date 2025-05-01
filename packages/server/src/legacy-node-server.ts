@@ -29,7 +29,7 @@ import multer, { MulterError } from 'multer';
 import * as Sentry from '@sentry/node';
 import { StoreKeys, createTriplitStorageProvider } from './storage.js';
 import path from 'path';
-import { createRequire } from 'module';
+import { createRequire } from 'node:module';
 import { TriplitClient } from '@triplit/client';
 import PublicRouter from './routes/public.js';
 import fs from 'fs';

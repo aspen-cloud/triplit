@@ -1,7 +1,7 @@
 import url from 'url';
 import * as Sentry from '@sentry/node';
 import path from 'path';
-import { createRequire } from 'module';
+import { createRequire } from 'node:module';
 import { createTriplitHonoServer } from './hono.js';
 import { createNodeWebSocket } from '@hono/node-ws';
 import { Hono } from 'hono';

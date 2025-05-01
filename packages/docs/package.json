@@ -4,13 +4,16 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "next build && yarn gen:md",
     "start": "next start",
     "export": "next export",
     "generate:references": "typedoc",
+    "gen:md": "bun ./scripts/gen-markdown.ts",
     "postbuild": "next-sitemap"
   },
   "dependencies": {
+    "globby": "^13.2.2",
+    "gray-matter": "^4.0.3",
     "next": "^13.4.16",
     "nextra": "^2.13.3",
     "nextra-theme-docs": "^2.13.3",
@@ -19,12 +22,13 @@
     "turbo": "^2.0.4"
   },
   "devDependencies": {
+    "@types/bun": "^1.2.11",
     "@types/node": "^20.12.8",
     "@types/react": "^18",
     "@types/react-dom": "^18",
     "next-sitemap": "^4.2.3",
     "typedoc": "^0.25.3",
     "typedoc-plugin-markdown": "^3.17.0",
-    "typescript": "^5.4.5"
+    "typescript": "^5.8.3"
   }
 }

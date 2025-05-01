@@ -1,0 +1,6 @@
+{
+  "browser": "Browser",
+  "node": "Node",
+  "cloudflare": "Cloudflare Workers",
+  "hermes": "Hermes (React Native)"
+}

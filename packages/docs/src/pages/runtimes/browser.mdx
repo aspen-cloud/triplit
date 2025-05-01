@@ -1,0 +1,29 @@
+---
+description: How to use the Triplit client library in the browser and the supported storage options - memory and IndexedDB.
+---
+
+# Triplit in the browser
+
+Triplit is the embedded database designed to run in any JavaScript environment, including the browser. Almost every developer will use Triplit in the browser through the `TriplitClient` client library. Read more about the `TriplitClient` in the [client library documentation](/client).
+
+## Supported storage options
+
+### Memory
+
+The memory storage option is the default storage option for the `TriplitClient`. It stores all data in memory and is not persistent. This means that all data will be lost when the page is refreshed or closed.
+
+### IndexedDB
+
+To persist data in the browser, you can use the `indexeddb` storage option in the `TriplitClient`. This will store all data in the browser's IndexedDB database. By default, the `TriplitClient` will cache all data in memory for fast access. If you want to disable this, you can set the `cache` option to `false` when creating the `TriplitClient`. Read more about IndexedDB storage configuration in [the client library documentation](/client/storage#indexeddb).
+
+## Example
+
+```typescript
+import { TriplitClient } from '@triplit/client';
+
+const client = new TriplitClient({
+  storage: 'indexeddb',
+  token: '<your token>',
+  serverUrl: 'https://<project-id>.triplit.io',
+});
+```

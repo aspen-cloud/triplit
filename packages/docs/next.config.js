@@ -13,7 +13,7 @@ module.exports = withNextra({
     },
     {
       source: '/fetching-data/queries',
-      destination: '/client/query',
+      destination: '/query',
       permanent: true,
     },
     {
@@ -69,6 +69,11 @@ module.exports = withNextra({
     {
       source: '/getting-started',
       destination: '/quick-start',
+      permanent: true,
+    },
+    {
+      source: '/client/query',
+      destination: '/query',
       permanent: true,
     },
   ],
