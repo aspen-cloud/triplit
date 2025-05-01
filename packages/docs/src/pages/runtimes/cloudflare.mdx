@@ -1,0 +1,60 @@
+# Triplit in Cloudflare Workers
+
+The Triplit server can be run in the [Cloudflare Workers](https://workers.cloudflare.com/) runtime. This is a great option for deploying a serverless Triplit backend. There are some memory limitations to be aware of, as the Cloudflare Workers runtime has a maximum memory limit of 128MB. This makes the Cloudflare Workers runtime a good option for small to medium-sized applications, or for applications that can be modeled with a single tenant database-per-user.
+
+Triplit provides an [example implementation](https://github.com/aspen-cloud/triplit/tree/main/packages/cf-worker-server) using the [Hono](https://hono.dev/) framework.
+
+## Supported storage options
+
+### Durable Objects
+
+[Durable Objects](https://developers.cloudflare.com/durable-objects/) are a serverless storage option that is designed to be used with Cloudflare Workers. Triplit uses the latest [SQL API](https://developers.cloudflare.com/durable-objects/api/storage-api/#sql-api) to store and retrieve data in Durable Objects.
+
+## Example
+
+```typescript
+import { DurableObject } from 'cloudflare:workers';
+import { upgradeWebSocket } from '@triplit/server/cloudflare';
+import { createTriplitHonoServer } from '@triplit/server/hono';
+import { CloudflareDurableObjectKVStore } from '@triplit/db/storage/cf-durable-object';
+
+export class MyDurableObject extends DurableObject {
+  state: DurableObjectState;
+  private appPromise: Promise<
+    Awaited<ReturnType<typeof createTriplitHonoServer>>
+  >;
+
+  constructor(ctx: DurableObjectState, env: Env) {
+    super(ctx, env);
+    this.state = ctx;
+    // Create the Triplit server
+    this.appPromise = createTriplitHonoServer(
+      {
+        // add any configuration options here
+        jwtSecret: env.JWT_SECRET,
+        // this is the Triplit storage provider for Durable Objects
+        storage: new CloudflareDurableObjectKVStore(this.state.storage),
+      },
+      // inject the platform-specific WebSocket upgrade function
+      upgradeWebSocket
+    );
+  }
+
+  async fetch(request: Request) {
+    // Await the app initialization before handling the request
+    const app = await this.appPromise;
+    return app.fetch(request);
+  }
+}
+
+export default {
+  async fetch(request, env, _ctx): Promise<Response> {
+    // Get the Durable Object ID (this is where you could easily add multi-tenancy)
+    let id: DurableObjectId = env.MY_DURABLE_OBJECT.idFromName('triplitDB');
+    let stub = env.MY_DURABLE_OBJECT.get(id);
+
+    // Forward the request to the Durable Object
+    return await stub.fetch(request);
+  },
+} satisfies ExportedHandler<Env>;
+```

@@ -12,6 +12,7 @@
   "schemas": "Schemas",
   "cli": "CLI",
   "frameworks": "Framework support",
+  "runtimes": "Runtime support",
   "triplit-cloud": "Triplit Cloud",
   "auth": "Authentication",
   "-3": {

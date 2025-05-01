@@ -1,0 +1,26 @@
+# Hermes (React Native)
+
+Triplit's client library can be used in React Native applications built on the [Hermes runtime](https://github.com/facebook/hermes).
+
+## Supported storage options
+
+### Memory
+
+The memory storage option is the default storage option for the `TriplitClient`. It stores all data in memory and is not persistent. This means that all data will be lost when the page is refreshed or closed.
+
+### Expo SQLite
+
+Triplit provides an `expo-sqlite` storage adapter for React Native applications built with [Expo](https://expo.dev/). This adapter uses the [`expo-sqlite`](https://docs.expo.dev/versions/latest/sdk/sqlite/) package to store data on the device. Read Triplit's [expo-sqlite storage provider documentation](/client/storage#in-react-native) for more information.
+
+## Example
+
+```typescript
+import { ExpoSQLiteKVStore } from '@triplit/client/storage/expo-sqlite';
+import { TriplitClient } from '@triplit/client';
+
+new TriplitClient({
+  storage: new ExpoSQLiteKVStore('triplit.db'),
+  serverUrl: process.env.EXPO_PUBLIC_SERVER_URL,
+  token: process.env.EXPO_PUBLIC_TOKEN,
+});
+```

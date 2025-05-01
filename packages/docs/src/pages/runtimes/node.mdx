@@ -1,0 +1,40 @@
+# Triplit in Node.js
+
+Node is the default runtime for the Triplit server. Triplit provides an [example implementation](https://github.com/aspen-cloud/triplit/tree/main/packages/node-server) and a [docker image](https://hub.docker.com/r/aspencloud/triplit-server). Read more about self-hosting Triplit in the [self-hosting documentation](/self-hosting).
+
+## Supported storage options
+
+### SQLite
+
+SQLite is the default storage option for the Triplit server. It stores all data in a single SQLite database file. This is the recommended storage option for most use cases, as it is fast and easy to set up.
+
+### LMDB
+
+[LMDB](https://github.com/kriszyp/lmdb-js) is a fast, memory-mapped database that is designed for high performance.
+
+## Example
+
+```typescript
+import { createServer } from '@triplit/server';
+
+const port = +(process.env.PORT || 8080);
+
+const startServer = await createServer({
+  storage: 'sqlite',
+  verboseLogs: !!process.env.VERBOSE_LOGS,
+  jwtSecret: process.env.JWT_SECRET,
+  projectId: process.env.PROJECT_ID,
+  externalJwtSecret: process.env.EXTERNAL_JWT_SECRET,
+  maxPayloadMb: process.env.MAX_BODY_SIZE,
+});
+
+const dbServer = startServer(port);
+
+console.log('running on port', port);
+process.on('SIGINT', function () {
+  dbServer.close(() => {
+    console.log('Shutting down server... ');
+    process.exit();
+  });
+});
+```
