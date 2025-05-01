@@ -116,7 +116,73 @@ const query = client.query('todos').Where(
 
 ### Operators
 
-See the list of [data types](/schemas/types) for more information on the operators that can be used in a where clause.
+The following operators are available for use in where clauses, organized by data type:
+
+#### String Operators
+
+- `=`, `!=`: Equality and inequality comparison
+- `>`, `>=`, `<`, `<=`: Greater than, greater than or equal, less than, less than or equal
+- `isDefined`: Check if the attribute is defined
+- `in`, `nin`: Check if value is in or not in a set or array of values
+
+```typescript
+// String in/nin examples
+['triplit', 'in', ['triplit', 'hello']]; // true
+['triplit', 'nin', ['triplit', 'hello']]; // false
+['triplit', 'in', ['hello', 'world']]; // false
+['triplit', 'nin', ['hello', 'world']]; // true
+```
+
+- `like`, `nlike`: String pattern matching
+  - `_` matches any single character
+  - `%` matches any sequence of zero or more characters
+
+```typescript
+// String pattern matching examples
+['triplit', 'like', 'triplit']; //true
+['triplit', 'like', 'tri%']; // true
+['triplit', 'like', 'tr_pl_t']; // true
+['triplit', 'like', 'trip']; // true // false
+```
+
+- `isDefined`: Check if the attribute is defined
+
+#### Number Operators
+
+- `=`, `!=`: Equality and inequality comparison
+- `>`, `>=`, `<`, `<=`: Greater than, greater than or equal, less than, less than or equal
+- `in`, `nin`: Check if value is in or not in a set or array of values
+- `isDefined`: Check if the attribute is defined
+
+#### Boolean Operators
+
+- `=`, `!=`: Equality and inequality comparison
+- `>`, `>=`, `<`, `<=`: Greater than, greater than or equal, less than, less than or equal
+- `isDefined`: Check if the attribute is defined
+
+#### Date Operators
+
+- `=`, `!=`: Equality and inequality comparison
+- `>`, `>=`, `<`, `<=`: Greater than, greater than or equal, less than, less than or equal
+- `isDefined`: Check if the attribute is defined
+
+#### Set Operators
+
+- `has`, `!has`: Check if the set contains or does not contain a value
+- `isDefined`: Check if the attribute is defined
+- _the operators of its underlying type_ (e.g. string, number, etc.). This will check if some value in the set matches the operator. For example, if the set is of type string, you can use `like` to check if any of the strings in the set match a pattern.
+
+#### Record Operators
+
+- `isDefined`: Check if the attribute is defined
+
+#### Optional Attributes
+
+All optional attributes support the `isDefined` operator, which checks if the specified attribute is defined:
+
+```typescript
+const query = client.query('profiles').Where('email', 'isDefined', true);
+```
 
 ## Id shorthand
 
