@@ -66,8 +66,15 @@ export type NullableType<T extends TypeInterface<any, any>> =
  * When defining a type, the base options each type can have. Thi is only a suggestion and each type may configure its own options.
  */
 export type BaseTypeOptions = {
+  // `optional` not exposed to user
   optional?: true | false;
+  /**
+   * If the type is used in a Record, sets the attribute to optional and allows `null` and `undefined` as values. Equivalent to `S.Optional()`.
+   */
   nullable?: true | false;
+  /**
+   * The default value for the type if not assigned when inserted into the database.
+   */
   default?: any; // DefaultValue
 };
 
