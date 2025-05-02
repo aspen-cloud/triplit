@@ -31,6 +31,8 @@ import {
   SUPPORTED_OPERATIONS,
 } from './operations.js';
 
+// May be a vitest problem, but sometimes import paths can cause the Type namespace to be undefined
+// Noticed this when importing `import { JsonType } from ./data-types/index.js` instead of `import { JsonType } from './data-types/definitions/json.js';`
 export namespace Type {
   /**
    * Returns an empty object for the given type
@@ -115,6 +117,12 @@ export namespace Type {
           if (typeof input === 'number' && !Number.isNaN(input))
             return new Date(input).toISOString();
           throw new DBSerializationError('date', input);
+        case 'json':
+          // TODO: determine where to validate input and how to validate input
+          // ie should a Set() just be translated to {}?
+          // Its a bit funny, although null is a valid JSON value, you cannot set a required prop to null (same as DNE)
+          if (!hasNoValue(input)) return input;
+          throw new DBSerializationError('json', input);
         case 'number':
           if (typeof input === 'number') return input;
           throw new DBSerializationError('number', input);
@@ -148,7 +156,7 @@ export namespace Type {
           throw new DBSerializationError(`set<${type.items.type}>`, input);
         default:
           throw new UnrecognizedAttributeTypeError(
-            // @ts-expect-error
+            // @ts-expect-error If this has an error, it means we are missing a case above
             type.type,
             'Failed to encode value'
           );
@@ -177,7 +185,7 @@ export namespace Type {
       throw new DBSerializationError('record', input);
     }
     throw new UnrecognizedAttributeTypeError(
-      // @ts-expect-error
+      // @ts-expect-error If this has an error, it means we are missing a case above
       type.type,
       'Failed to encode value'
     );
@@ -201,6 +209,13 @@ export namespace Type {
           return {
             valid: false,
             error: encodedValueMismatchMessage('date', encoded),
+          };
+        case 'json':
+          // TODO: same message above, should we validate the input?
+          if (typeof encoded !== 'undefined') return { valid: true };
+          return {
+            valid: false,
+            error: encodedValueMismatchMessage('json', encoded),
           };
         case 'number':
           if (typeof encoded === 'number') return { valid: true };
@@ -227,7 +242,7 @@ export namespace Type {
           };
       }
       throw new UnrecognizedAttributeTypeError(
-        // @ts-expect-error
+        // @ts-expect-error If this has an error, it means we are missing a case above
         type.type,
         'Failed to validate value'
       );
@@ -248,7 +263,7 @@ export namespace Type {
       return { valid: true };
     }
     throw new UnrecognizedAttributeTypeError(
-      // @ts-expect-error
+      // @ts-expect-error If this has an error, it means we are missing a case above
       type.type,
       'Failed to validate value'
     );
@@ -263,6 +278,8 @@ export namespace Type {
         case 'date':
           if (typeof encoded === 'string') return new Date(encoded);
           throw new DBDeserializationError('date', encoded);
+        case 'json':
+          return encoded;
         case 'number':
           if (typeof encoded === 'number') return encoded;
           throw new DBDeserializationError('number', encoded);
@@ -279,7 +296,7 @@ export namespace Type {
           throw new DBDeserializationError(`set<${type.items.type}>`, encoded);
       }
       throw new UnrecognizedAttributeTypeError(
-        // @ts-expect-error
+        // @ts-expect-error If this has an error, it means we are missing a case above
         type.type,
         'Failed to decode value'
       );
@@ -297,7 +314,7 @@ export namespace Type {
       return result;
     }
     throw new UnrecognizedAttributeTypeError(
-      // @ts-expect-error
+      // @ts-expect-error If this has an error, it means we are missing a case above
       type.type,
       'Failed to decode value'
     );
@@ -434,6 +451,7 @@ export namespace Type {
   export function supportedOperations(type: DataType): ReadonlyArray<string> {
     if (type.type === 'boolean') return SUPPORTED_OPERATIONS.boolean;
     if (type.type === 'date') return SUPPORTED_OPERATIONS.date;
+    if (type.type === 'json') return SUPPORTED_OPERATIONS.json;
     if (type.type === 'number') return SUPPORTED_OPERATIONS.number;
     if (type.type === 'record') return SUPPORTED_OPERATIONS.record;
     if (type.type === 'set')
@@ -446,19 +464,20 @@ export namespace Type {
       ];
     if (type.type === 'string') return SUPPORTED_OPERATIONS.string;
     throw new UnrecognizedAttributeTypeError(
-      // @ts-expect-error
+      // @ts-expect-error If this has an error, it means we are missing a case above
       type.type,
       'Failed to get supported operations'
     );
   }
 }
 
+// TODO: come up with better categorization
 export function isValueType(type: DataType): type is ValueType {
   return type.type !== 'record';
 }
 
 export function isPrimitiveType(type: DataType): type is PrimitiveType {
-  return type.type !== 'record' && type.type !== 'set';
+  return type.type !== 'set' && type.type !== 'json' && isValueType(type);
 }
 
 function calcDefaultValue(config: TypeConfig) {
@@ -471,6 +490,10 @@ function calcDefaultValue(config: TypeConfig) {
     return attributeDefault;
   else {
     const { args, func } = attributeDefault;
+    if (func === undefined) {
+      // If the default is a non special object, return it as is
+      return attributeDefault;
+    }
     if (func === 'uuid') {
       return args && typeof args[0] === 'number' ? nanoid(args[0]) : nanoid();
     } else if (func === 'now') {

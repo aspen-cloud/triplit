@@ -6,6 +6,7 @@
 // add to this file when adding new return types to schema builder
 export * from './boolean.js';
 export * from './date.js';
+export * from './json.js';
 export * from './number.js';
 export * from './record.js';
 export * from './set.js';

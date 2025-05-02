@@ -161,12 +161,13 @@ export class EntityDataStore implements EntityStore {
  *
  * @returns [new value, sets that were applied]
  */
-function applyChange<T extends Record<string, any> | undefined>(
+export function applyChange<T extends Record<string, any> | undefined>(
   curr: T,
-  sets: Partial<NonNullable<T>>
+  sets: Partial<NonNullable<T>>,
+  options: { clone?: boolean } = { clone: true }
 ): [NonNullable<T>, Partial<NonNullable<T>>] {
   if (!curr) return [sets as NonNullable<T>, sets];
-  const updated = structuredClone(curr);
+  const updated = options.clone ? structuredClone(curr) : curr;
   const appliedSets: any = {};
   for (const [key, value] of Object.entries(sets)) {
     const existingValue = updated[key];
@@ -177,7 +178,7 @@ function applyChange<T extends Record<string, any> | undefined>(
       value != null &&
       !Array.isArray(value)
     ) {
-      const [newValue, newSets] = applyChange(existingValue, value);
+      const [newValue, newSets] = applyChange(existingValue, value, options);
       if (!isEmpty(newSets)) {
         appliedSets[key] = deepObjectAssign(appliedSets[key] ?? {}, newSets);
         updated[key] = newValue;

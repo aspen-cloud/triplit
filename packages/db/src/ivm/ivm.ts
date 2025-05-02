@@ -16,7 +16,7 @@ import {
 import { DB } from '../db.js';
 import { deepObjectAssign } from '../utils/deep-merge.js';
 import { isEmpty, SimpleMemoryWriteBuffer } from '../memory-write-buffer.js';
-import { EntityDataStore } from '../entity-data-store.js';
+import { applyChange, EntityDataStore } from '../entity-data-store.js';
 import { BTreeKVStore } from '../kv-store/storage/memory-btree.js';
 import { satisfiesAfter } from '../after.js';
 import { logger } from '@triplit/logger';
@@ -364,7 +364,7 @@ export class IVM<M extends Models<M> = Models> {
           }
           if (sets.has(entity.data.id)) {
             const update = sets.get(entity.data.id)!;
-            deepObjectAssign(entity.data, update);
+            applyChange(entity.data, update, { clone: false });
             handledUpdates.set(entity.data.id, entity.data);
             matches = matchesWhereOrAfterIfRelevant(entity.data);
             if (matches) {

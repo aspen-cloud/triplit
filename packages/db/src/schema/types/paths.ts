@@ -4,7 +4,7 @@ import {
   RelationshipRef,
 } from '../../query/types/index.js';
 import { StringKey } from '../../types.js';
-import { RecordType } from '../data-types/index.js';
+import { JsonType, RecordType } from '../data-types/index.js';
 import { CollectionNameFromModels, Models } from './models.js';
 
 export type SchemaPaths<
@@ -91,7 +91,7 @@ export type ResolveRelationshipPath<
  */
 type RecordPaths<R extends RecordType> = R extends RecordType
   ? {
-      // TODO: this breaks with StringKey<R['properties']> for some reason?
+      // this breaks with StringKey<R['properties']> for some reason? Using keyof R['properties'] instead
       [K in keyof R['properties']]: R['properties'][K] extends RecordType
         ?
             | `${K & string}`
@@ -99,7 +99,9 @@ type RecordPaths<R extends RecordType> = R extends RecordType
                 // @ts-expect-error
                 R['properties'][K]
               >}`
-        : K & string;
+        : R['properties'][K] extends JsonType
+          ? `${K & string}` | `${K & string}.${string}`
+          : K & string;
     }[StringKey<R['properties']>]
   : never;
 

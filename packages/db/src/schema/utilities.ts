@@ -136,6 +136,9 @@ export function createSchemaTraverser(
     } else if (current.type === 'record') {
       next = current.properties[attribute];
       atRoot = false;
+    } else if (current.type === 'json') {
+      next = current;
+      atRoot = false;
     } else {
       next = undefined;
     }

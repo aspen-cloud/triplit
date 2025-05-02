@@ -306,15 +306,19 @@ export function createUpdateProxyAndTrackChanges(
 ) {
   return new Proxy(entity, {
     get(target, prop) {
+      const targetDataType =
+        // If record type, get property
+        type?.type === 'record'
+          ? type.properties[prop]
+          : // If json type, continue to assume json
+            type?.type === 'json'
+            ? type
+            : type;
       if (target[prop] instanceof Set) {
         if (!changes[prop]) {
           changes[prop] = {};
         }
-        return createSetProxy(
-          target[prop],
-          changes[prop],
-          type?.properties[prop]
-        );
+        return createSetProxy(target[prop], changes[prop], targetDataType);
       }
       if (
         typeof target[prop] === 'object' &&
@@ -327,7 +331,7 @@ export function createUpdateProxyAndTrackChanges(
         return createUpdateProxyAndTrackChanges(
           target[prop],
           changes[prop],
-          type?.properties[prop]
+          targetDataType
         );
       }
       return Reflect.get(target, prop);

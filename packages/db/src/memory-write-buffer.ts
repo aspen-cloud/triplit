@@ -95,7 +95,11 @@ export function isEmpty(obj: any) {
 export function deepIsEmpty(obj: any) {
   for (const prop in obj) {
     if (Object.hasOwn(obj, prop)) {
-      if (typeof obj[prop] === 'object' && obj[prop] !== null) {
+      if (
+        typeof obj[prop] === 'object' &&
+        obj[prop] !== null &&
+        !Array.isArray(obj[prop])
+      ) {
         if (!deepIsEmpty(obj[prop])) {
           return false;
         }

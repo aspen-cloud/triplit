@@ -8,30 +8,51 @@ const COLLECTION_ITEM_OPERATORS = ['in', 'nin'] as const;
 
 export const SET_OP_PREFIX = 'SET_';
 
+const BOOLEAN_OPERATIONS = [...BASE_OPERATIONS, ...COMPARISON_OPERATORS];
+const DATE_OPERATIONS = [...BASE_OPERATIONS, ...COMPARISON_OPERATORS];
+const NUMBER_OPERATIONS = [
+  ...BASE_OPERATIONS,
+  ...COMPARISON_OPERATORS,
+  ...COLLECTION_ITEM_OPERATORS,
+];
+const RECORD_OPERATIONS = [...BASE_OPERATIONS];
+const SET_OPERATIONS = prefixOperations(
+  [...BASE_OPERATIONS, ...COLLECTION_OPERATORS] as const,
+  SET_OP_PREFIX
+);
+const STRING_OPERATIONS = [
+  ...BASE_OPERATIONS,
+  ...COMPARISON_OPERATORS,
+  ...COLLECTION_ITEM_OPERATORS,
+  'like',
+  'nlike',
+] as const;
+
+const JSON_OPERATIONS = Array.from(
+  new Set([
+    // Supported primitive type Operations
+    ...BOOLEAN_OPERATIONS,
+    ...NUMBER_OPERATIONS,
+    ...STRING_OPERATIONS,
+    // For a JSON object, works for now
+    ...RECORD_OPERATIONS,
+    // For an array, works for now
+    ...COLLECTION_OPERATORS,
+  ])
+);
+
 export const SUPPORTED_OPERATIONS = {
-  boolean: [...BASE_OPERATIONS, ...COMPARISON_OPERATORS],
-  date: [...BASE_OPERATIONS, ...COMPARISON_OPERATORS],
-  number: [
-    ...BASE_OPERATIONS,
-    ...COMPARISON_OPERATORS,
-    ...COLLECTION_ITEM_OPERATORS,
-  ],
-  record: [...BASE_OPERATIONS],
+  boolean: BOOLEAN_OPERATIONS,
+  date: DATE_OPERATIONS,
+  json: JSON_OPERATIONS,
+  number: NUMBER_OPERATIONS,
+  record: RECORD_OPERATIONS,
   /**
    * Temporarily prefixing all set operations to make them unique in the query engine
    * This may be a long term solution, but it is okay to refactor the representation if needed
    */
-  set: prefixOperations(
-    [...BASE_OPERATIONS, ...COLLECTION_OPERATORS] as const,
-    SET_OP_PREFIX
-  ),
-  string: [
-    ...BASE_OPERATIONS,
-    ...COMPARISON_OPERATORS,
-    ...COLLECTION_ITEM_OPERATORS,
-    'like',
-    'nlike',
-  ],
+  set: SET_OPERATIONS,
+  string: STRING_OPERATIONS,
 } as const satisfies Record<AllTypes, ReadonlyArray<string>>;
 
 export function prefixOperations<Ops extends string, Prefix extends string>(

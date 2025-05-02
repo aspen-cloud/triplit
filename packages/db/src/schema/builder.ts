@@ -10,6 +10,7 @@ import { SetType } from './data-types/definitions/set.js';
 import type { CollectionNameFromModels, Models } from './types/models.js';
 import { DataType, OptionalType, TypeInterface } from './types/index.js';
 import { CollectionQuery, QueryWhere } from '../query/types/index.js';
+import { JsonType } from './data-types/definitions/json.js';
 
 // Ensures that id is on root schema record
 type SchemaProps<Properties = Record<string, DataType>> =
@@ -74,6 +75,8 @@ export class Schema {
    * @param options.default - the default value for the field. For Sets, `null` is the only supported default.
    */
   static Set = SetType;
+
+  static Json = JsonType;
 
   // /**
   //  * A RelationMany models a one-to-many relationship between two collections. The attribute, when included in a query, is of the shape `Map<string, Entity>`. {@link https://triplit.dev/schemas/relations#relationmany Read more in the docs.}

@@ -1,5 +1,6 @@
 import { DBSchema } from '../db.js';
 import { DEFAULT_FUNCTIONS } from './data-types/constants.js';
+import { JsonType } from './data-types/definitions/json.js';
 import {
   BooleanType,
   DateType,
@@ -127,6 +128,9 @@ export function validateDataType(type: DataType): string | undefined {
   if (type.type === 'date') {
     return validateDateType(type);
   }
+  if (type.type === 'json') {
+    return validateJsonType(type);
+  }
   if (type.type === 'number') {
     return validateNumberType(type);
   }
@@ -156,6 +160,13 @@ function validateDateType(type: DateType) {
   if (type.type !== 'date') return 'not a date type';
   const configInvalid = validateBaseDataTypeConfig(type.config);
   if (configInvalid) return `type date is invalid: ${configInvalid}`;
+  return;
+}
+
+function validateJsonType(type: JsonType) {
+  if (type.type !== 'json') return 'not a json type';
+  const configInvalid = validateBaseDataTypeConfig(type.config);
+  if (configInvalid) return `type json is invalid: ${configInvalid}`;
   return;
 }
 

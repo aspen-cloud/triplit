@@ -9,8 +9,13 @@ type TestOptions = {
 // If we have options for the query engine, pass these in here to inform the describe.each param
 export const TEST_OPTIONS: TestOptions[] = [{ engine: {} }];
 
-type TestDefinition = {
+type FilterTestDefinition = {
   cmp: any;
+  expected: any[];
+};
+
+type OrderTestDefinition = {
+  dir: 'ASC' | 'DESC';
   expected: any[];
 };
 
@@ -29,7 +34,7 @@ function originalIdxs(data: any[]) {
 export async function testEq<M extends Models<M>>(
   schema: Pick<DBSchema<M>, 'collections'>,
   data: any[],
-  test: TestDefinition,
+  test: FilterTestDefinition,
   options: TestOptions
 ) {
   await testFilterOp('=', schema, data, test, options);
@@ -38,7 +43,7 @@ export async function testEq<M extends Models<M>>(
 export async function testNEq<M extends Models<M>>(
   schema: Pick<DBSchema<M>, 'collections'>,
   data: any[],
-  test: TestDefinition,
+  test: FilterTestDefinition,
   options: TestOptions
 ) {
   await testFilterOp('!=', schema, data, test, options);
@@ -47,7 +52,7 @@ export async function testNEq<M extends Models<M>>(
 export async function testGt<M extends Models<M>>(
   schema: Pick<DBSchema<M>, 'collections'>,
   data: any[],
-  test: TestDefinition,
+  test: FilterTestDefinition,
   options: TestOptions
 ) {
   await testFilterOp('>', schema, data, test, options);
@@ -56,7 +61,7 @@ export async function testGt<M extends Models<M>>(
 export async function testGte<M extends Models<M>>(
   schema: Pick<DBSchema<M>, 'collections'>,
   data: any[],
-  test: TestDefinition,
+  test: FilterTestDefinition,
   options: TestOptions
 ) {
   await testFilterOp('>=', schema, data, test, options);
@@ -65,7 +70,7 @@ export async function testGte<M extends Models<M>>(
 export async function testLt<M extends Models<M>>(
   schema: Pick<DBSchema<M>, 'collections'>,
   data: any[],
-  test: TestDefinition,
+  test: FilterTestDefinition,
   options: TestOptions
 ) {
   await testFilterOp('<', schema, data, test, options);
@@ -74,7 +79,7 @@ export async function testLt<M extends Models<M>>(
 export async function testLte<M extends Models<M>>(
   schema: Pick<DBSchema<M>, 'collections'>,
   data: any[],
-  test: TestDefinition,
+  test: FilterTestDefinition,
   options: TestOptions
 ) {
   await testFilterOp('<=', schema, data, test, options);
@@ -83,7 +88,7 @@ export async function testLte<M extends Models<M>>(
 export async function testIn<M extends Models<M>>(
   schema: Pick<DBSchema<M>, 'collections'>,
   data: any[],
-  test: TestDefinition,
+  test: FilterTestDefinition,
   options: TestOptions
 ) {
   await testFilterOp('in', schema, data, test, options);
@@ -92,26 +97,53 @@ export async function testIn<M extends Models<M>>(
 export async function testNIn<M extends Models<M>>(
   schema: Pick<DBSchema<M>, 'collections'>,
   data: any[],
-  test: TestDefinition,
+  test: FilterTestDefinition,
   options: TestOptions
 ) {
   await testFilterOp('nin', schema, data, test, options);
 }
 
 export async function testFilterOp<M extends Models<M>>(
-  operation: string,
+  arg0: string | [attr: string, op: string],
   schema: Pick<DBSchema<M>, 'collections'>,
   data: any[],
-  test: TestDefinition,
+  test: FilterTestDefinition,
   options: TestOptions
 ) {
+  let attr: string;
+  let operation: string;
+  if (Array.isArray(arg0)) {
+    attr = arg0[0];
+    operation = arg0[1];
+  } else {
+    attr = 'attr';
+    operation = arg0;
+  }
   const db = new DB({ schema });
   for (const item of data) {
     await db.insert('test', item);
   }
-  const query = db.query('test').Where('attr', operation, test.cmp);
+  const query = db.query('test').Where(attr, operation, test.cmp);
   const results = await db.fetch(query);
   expectArrayHasExactly(originalIdxs(results), test.expected);
+}
+
+export async function testOrder<M extends Models<M>>(
+  attr: string | undefined,
+  schema: Pick<DBSchema<M>, 'collections'>,
+  data: any[],
+  test: OrderTestDefinition,
+  options: TestOptions
+) {
+  const db = new DB({ schema });
+  await db.transact(async (tx) => {
+    for (const item of data) {
+      await tx.insert('test', item);
+    }
+  });
+  const query = db.query('test').Order(attr, test.dir);
+  const results = await db.fetch(query);
+  expect(results.map((item) => item._idx)).toEqual(test.expected);
 }
 
 export function shuffleArray(array: any[]) {

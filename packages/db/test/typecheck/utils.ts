@@ -22,6 +22,11 @@ export type ExhaustiveSchemaSelectAll = {
   optionalDate?: Date | null | undefined;
   defaultDate: Date;
 
+  json: any;
+  nullableJson?: any;
+  optionalJson?: any;
+  defaultJson: any;
+
   number: number;
   nullableNumber?: number | null | undefined;
   optionalNumber?: number | null | undefined;
@@ -75,6 +80,11 @@ export type ExhaustiveSchemaInsert = {
   nullableDate?: Date | number | string | null | undefined;
   optionalDate?: Date | number | string | null | undefined;
   defaultDate?: Date | number | string | null | undefined;
+
+  json: any;
+  nullableJson?: any;
+  optionalJson?: any;
+  defaultJson?: any;
 
   number: number;
   nullableNumber?: number | null | undefined;

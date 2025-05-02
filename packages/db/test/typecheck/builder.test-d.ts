@@ -23,6 +23,7 @@ describe('query builder', () => {
             record: S.Record({
               attr1: S.String(),
             }),
+            json: S.Json(),
           }),
           relationships: {
             // Not included in select
@@ -50,7 +51,14 @@ describe('query builder', () => {
         .parameter(0)
         .toEqualTypeOf<
           | ReadonlyArray<
-              'attr1' | 'attr2' | 'attr3' | 'record' | 'record.attr1' | 'id'
+              | 'attr1'
+              | 'attr2'
+              | 'attr3'
+              | 'record'
+              | 'record.attr1'
+              | 'json'
+              | `json.${string}`
+              | 'id'
             >
           | undefined
         >();
@@ -80,6 +88,7 @@ describe('query builder', () => {
               }),
             }),
             attr2: S.Boolean(),
+            attr3: S.Json(),
           }),
           relationships: {
             // should include query
@@ -108,6 +117,8 @@ describe('query builder', () => {
         | 'attr1.inner2'
         | 'attr1.inner2.inner2A'
         | 'attr2'
+        | 'attr3'
+        | `attr3.${string}`
         | 'relationById.id'
         // .Where(['id', '=', '1'], ['attr1', '=', '1'])
         | WhereFilter<(typeof schema)['collections'], 'test'>
@@ -115,7 +126,7 @@ describe('query builder', () => {
         | QueryWhere<(typeof schema)['collections'], 'test'>
       >();
 
-      // Can handle terary
+      // Can handle ternary
       const ternary: boolean = true;
       assertType(query.Where(ternary ? ['id', '=', '1'] : undefined));
     }
@@ -133,7 +144,7 @@ describe('query builder', () => {
         // .Where([['id', '=', '1'], ['attr1', '=', '1']])
         | QueryWhere<Models, 'test'>
       >();
-      // Can handle terary
+      // Can handle ternary
       const ternary: boolean = true;
       assertType(query.Where(ternary ? ['id', '=', '1'] : undefined));
     }
@@ -155,6 +166,7 @@ describe('query builder', () => {
               }),
             }),
             attr2: S.Boolean(),
+            attr3: S.Json(),
           }),
           relationships: {
             relationById: S.RelationById('test2', 'test-id'),
@@ -182,11 +194,13 @@ describe('query builder', () => {
           | 'attr1.inner2'
           | 'attr1.inner2.inner2A'
           | 'attr2'
+          | 'attr3'
+          | `attr3.${string}`
           | 'relationById.id'
           | OrderStatement<(typeof schema)['collections'], 'test'>
           | QueryOrder<(typeof schema)['collections'], 'test'>
         >();
-      // Can handle terary
+      // Can handle ternary
       const ternary: boolean = true;
       assertType(query.Order(ternary ? ['id', 'ASC'] : undefined));
     }
@@ -201,7 +215,7 @@ describe('query builder', () => {
           | QueryOrder<Models, 'test'>
           | OrderStatement<Models, 'test'>
         >();
-      // Can handle terary
+      // Can handle ternary
       const ternary: boolean = true;
       assertType(query.Order(ternary ? ['id', 'ASC'] : undefined));
     }

@@ -10,6 +10,7 @@ import {
   RECORD_TYPE_KEYS,
   VALUE_TYPE_KEYS,
 } from '../constants.js';
+import { JsonType } from '../definitions/json.js';
 
 export * from './operations.js';
 export * from './type-codec.js';
@@ -27,7 +28,7 @@ export type PrimitiveType =
 /**
  * All values supported by the schema, notably these may take defaults
  */
-export type ValueType = PrimitiveType | SetType<PrimitiveType, any>;
+export type ValueType = PrimitiveType | SetType<PrimitiveType, any> | JsonType; // TODO: find proper home, possibly refactor types
 
 /**
  * All data types

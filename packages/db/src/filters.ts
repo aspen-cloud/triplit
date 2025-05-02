@@ -29,6 +29,7 @@ import {
   SET_OP_PREFIX,
 } from './schema/index.js';
 import { isValueVariable } from './variables.js';
+import { compareValue } from './codec.js';
 
 export async function satisfiesFilters(
   entity: DBEntity,
@@ -162,17 +163,18 @@ function evaluateFilterStatement(
     case '=':
       // Empty equality check
       if (hasNoValue(value) && hasNoValue(filterValue)) return true;
-      return value === filterValue;
+      // Coerce null because undefined is not a valid value (maybe should be in compareValue?)
+      return compareValue(value ?? null, filterValue ?? null) === 0;
     case '!=':
       // Empty not-equality check
       if (hasNoValue(value) && hasNoValue(filterValue)) return false;
-      return value !== filterValue;
+      return compareValue(value ?? null, filterValue ?? null) !== 0;
     case '>':
       // Null is not greater than anything
       if (hasNoValue(value)) return false;
       // Null is less than everything
       if (hasNoValue(filterValue)) return true;
-      return value > filterValue;
+      return compareValue(value, filterValue) > 0;
     case '>=':
       // Empty equality check
       if (hasNoValue(value) && hasNoValue(filterValue)) return true;
@@ -180,13 +182,13 @@ function evaluateFilterStatement(
       if (hasNoValue(value)) return false;
       // Null is less than everything
       if (hasNoValue(filterValue)) return true;
-      return value >= filterValue;
+      return compareValue(value, filterValue) >= 0;
     case '<':
       // Null is not less than anything
       if (hasNoValue(filterValue)) return false;
       // Null is less than everything
       if (hasNoValue(value)) return true;
-      return value < filterValue;
+      return compareValue(value, filterValue) < 0;
     case '<=':
       // Empty equality check
       if (hasNoValue(value) && hasNoValue(filterValue)) return true;
@@ -194,7 +196,7 @@ function evaluateFilterStatement(
       if (hasNoValue(filterValue)) return false;
       // Null is less than everything
       if (hasNoValue(value)) return true;
-      return value <= filterValue;
+      return compareValue(value, filterValue) <= 0;
 
     //TODO: move regex initialization outside of the scan loop to improve performance
     case 'like':
