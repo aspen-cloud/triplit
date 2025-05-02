@@ -20,9 +20,7 @@ import {
   getVariableComponents,
   isValueVariable,
   DBSchema,
-  SetType,
-  DateType,
-  ValueType,
+  DataType,
 } from '@triplit/db';
 import { useToast } from 'src/hooks/useToast.js';
 
@@ -266,7 +264,7 @@ export function DataViewer({
       .filter((attr) => attr !== 'id')
       .map((attr) => {
         const typeDef = flattenedCollectionSchema?.schema.properties[attr] as
-          | ValueType
+          | DataType
           | undefined;
         const isOptional = typeDef?.config?.optional ?? false;
         return {

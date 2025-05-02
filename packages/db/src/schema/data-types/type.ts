@@ -4,9 +4,9 @@ import {
   TypeConfig,
   ValidateOptions,
   PrimitiveType,
-  ValueType,
   DefaultValue,
   DefaultFunction,
+  DefaultableType,
 } from './types/index.js';
 import {
   DBDeserializationError,
@@ -30,6 +30,7 @@ import {
   SET_OP_PREFIX,
   SUPPORTED_OPERATIONS,
 } from './operations.js';
+import { DEFAULTABLE_TYPE_KEYS_SET, PRIMITIVE_TYPE_KEYS_SET } from './index.js';
 
 // May be a vitest problem, but sometimes import paths can cause the Type namespace to be undefined
 // Noticed this when importing `import { JsonType } from ./data-types/index.js` instead of `import { JsonType } from './data-types/definitions/json.js';`
@@ -57,7 +58,7 @@ export namespace Type {
    * If the type is a record, it returns an object with the default values for each property
    */
   export function defaultValue(type: DataType) {
-    if (isValueType(type)) return calcDefaultValue(type.config);
+    if (hasDefault(type)) return calcDefaultValue(type.config);
     if (type.type === 'record') {
       const result: any = {};
       for (const key in type.properties) {
@@ -104,85 +105,77 @@ export namespace Type {
     if (isOptional(type) && hasNoValue(input)) {
       return undefined;
     }
-    if (isValueType(type)) {
-      switch (type.type) {
-        case 'boolean':
-          if (typeof input === 'boolean') return input;
-          throw new DBSerializationError('boolean', input);
-        case 'date':
-          if (input instanceof Date && !isNaN(input.getTime()))
-            return input.toISOString();
-          if (typeof input === 'string' && !Number.isNaN(Date.parse(input)))
-            return new Date(input).toISOString();
-          if (typeof input === 'number' && !Number.isNaN(input))
-            return new Date(input).toISOString();
-          throw new DBSerializationError('date', input);
-        case 'json':
-          // TODO: determine where to validate input and how to validate input
-          // ie should a Set() just be translated to {}?
-          // Its a bit funny, although null is a valid JSON value, you cannot set a required prop to null (same as DNE)
-          if (!hasNoValue(input)) return input;
-          throw new DBSerializationError('json', input);
-        case 'number':
-          if (typeof input === 'number') return input;
-          throw new DBSerializationError('number', input);
-        case 'string':
-          if (typeof input === 'string') {
-            if (type.config?.enum) {
-              if (type.config?.enum.includes(input)) return input;
-            } else {
-              return input;
+    switch (type.type) {
+      case 'boolean':
+        if (typeof input === 'boolean') return input;
+        throw new DBSerializationError('boolean', input);
+      case 'date':
+        if (input instanceof Date && !isNaN(input.getTime()))
+          return input.toISOString();
+        if (typeof input === 'string' && !Number.isNaN(Date.parse(input)))
+          return new Date(input).toISOString();
+        if (typeof input === 'number' && !Number.isNaN(input))
+          return new Date(input).toISOString();
+        throw new DBSerializationError('date', input);
+      case 'json':
+        // TODO: determine where to validate input and how to validate input
+        // ie should a Set() just be translated to {}?
+        // Its a bit funny, although null is a valid JSON value, you cannot set a required prop to null (same as DNE)
+        if (!hasNoValue(input)) return input;
+        throw new DBSerializationError('json', input);
+      case 'number':
+        if (typeof input === 'number') return input;
+        throw new DBSerializationError('number', input);
+      case 'record':
+        if (typeof input === 'object' && input !== null) {
+          for (const key in input) {
+            const property = type.properties[key];
+            if (!property) {
+              throw new DBSerializationError(
+                'record',
+                input,
+                `Unrecognized property: ${key}`
+              );
             }
+
+            // If the property is optional and input is empty, skip
+            // TODO: should we drop if value is undefined?
+            if (isOptional(property) && hasNoValue(input[key])) continue;
+
+            input[key] = Type.encode(property, input[key]);
           }
-          // TODO: specify enum values in error message
-          throw new DBSerializationError('string', input);
-        case 'set':
-          if (Array.isArray(input))
-            return Object.fromEntries(
-              input.map((v) => [Type.collectionKeyEncode(type.items, v), true])
-            );
-          if (input instanceof Set)
-            return Object.fromEntries(
-              Array.from(input).map((v) => [
-                Type.collectionKeyEncode(type.items, v),
-                true,
-              ])
-            );
-          // accept an already encoded set
-          if (typeof input === 'object' && input !== null) {
-            //TODO: do we need to perform encoding / implicit validation?
+
+          return input;
+        }
+        throw new DBSerializationError('record', input);
+      case 'string':
+        if (typeof input === 'string') {
+          if (type.config?.enum) {
+            if (type.config?.enum.includes(input)) return input;
+          } else {
             return input;
           }
-          throw new DBSerializationError(`set<${type.items.type}>`, input);
-        default:
-          throw new UnrecognizedAttributeTypeError(
-            // @ts-expect-error If this has an error, it means we are missing a case above
-            type.type,
-            'Failed to encode value'
-          );
-      }
-    } else if (type.type === 'record') {
-      if (typeof input === 'object' && input !== null) {
-        for (const key in input) {
-          const property = type.properties[key];
-          if (!property) {
-            throw new DBSerializationError(
-              'record',
-              input,
-              `Unrecognized property: ${key}`
-            );
-          }
-
-          // If the property is optional and input is empty, skip
-          // TODO: should we drop if value is undefined?
-          if (isOptional(property) && hasNoValue(input[key])) continue;
-
-          input[key] = Type.encode(property, input[key]);
         }
-
-        return input;
-      }
-      throw new DBSerializationError('record', input);
+        // TODO: specify enum values in error message
+        throw new DBSerializationError('string', input);
+      case 'set':
+        if (Array.isArray(input))
+          return Object.fromEntries(
+            input.map((v) => [Type.collectionKeyEncode(type.items, v), true])
+          );
+        if (input instanceof Set)
+          return Object.fromEntries(
+            Array.from(input).map((v) => [
+              Type.collectionKeyEncode(type.items, v),
+              true,
+            ])
+          );
+        // accept an already encoded set
+        if (typeof input === 'object' && input !== null) {
+          //TODO: do we need to perform encoding / implicit validation?
+          return input;
+        }
+        throw new DBSerializationError(`set<${type.items.type}>`, input);
     }
     throw new UnrecognizedAttributeTypeError(
       // @ts-expect-error If this has an error, it means we are missing a case above
@@ -196,71 +189,64 @@ export namespace Type {
     encoded: any,
     options: ValidateOptions
   ): { valid: boolean; error?: string } {
-    if (isValueType(type)) {
-      switch (type.type) {
-        case 'boolean':
-          if (typeof encoded === 'boolean') return { valid: true };
-          return {
-            valid: false,
-            error: encodedValueMismatchMessage('boolean', encoded),
-          };
-        case 'date':
-          if (typeof encoded === 'string') return { valid: true };
-          return {
-            valid: false,
-            error: encodedValueMismatchMessage('date', encoded),
-          };
-        case 'json':
-          // TODO: same message above, should we validate the input?
-          if (typeof encoded !== 'undefined') return { valid: true };
-          return {
-            valid: false,
-            error: encodedValueMismatchMessage('json', encoded),
-          };
-        case 'number':
-          if (typeof encoded === 'number') return { valid: true };
-          return {
-            valid: false,
-            error: encodedValueMismatchMessage('number', encoded),
-          };
-        case 'string':
-          if (typeof encoded === 'string') return { valid: true };
-          return {
-            valid: false,
-            error: encodedValueMismatchMessage('string', encoded),
-          };
-        case 'set':
-          // TODO: should there be more validation of Record<string, boolean>?
-          if (typeof encoded === 'object' && encoded !== null)
-            return { valid: true };
-          return {
-            valid: false,
-            error: encodedValueMismatchMessage(
-              `set<${type.items.type}>`,
-              encoded
-            ),
-          };
-      }
-      throw new UnrecognizedAttributeTypeError(
-        // @ts-expect-error If this has an error, it means we are missing a case above
-        type.type,
-        'Failed to validate value'
-      );
-    } else if (type.type === 'record') {
-      for (const key in type.properties) {
-        const property = type.properties[key];
-        // Optioanl properties should have no value
-        if (isOptional(property) && hasNoValue(encoded[key])) continue;
-        // NOTE: may become == because null is equivalent to undefined
-        if (options.partial && !(key in encoded)) continue;
-        const validation = Type.validateEncoded(
-          property,
-          encoded[key],
-          options
-        );
-        if (!validation.valid) return validation;
-      }
-      return { valid: true };
+    switch (type.type) {
+      case 'boolean':
+        if (typeof encoded === 'boolean') return { valid: true };
+        return {
+          valid: false,
+          error: encodedValueMismatchMessage('boolean', encoded),
+        };
+      case 'date':
+        if (typeof encoded === 'string') return { valid: true };
+        return {
+          valid: false,
+          error: encodedValueMismatchMessage('date', encoded),
+        };
+      case 'json':
+        // TODO: same message above, should we validate the input?
+        if (typeof encoded !== 'undefined') return { valid: true };
+        return {
+          valid: false,
+          error: encodedValueMismatchMessage('json', encoded),
+        };
+      case 'number':
+        if (typeof encoded === 'number') return { valid: true };
+        return {
+          valid: false,
+          error: encodedValueMismatchMessage('number', encoded),
+        };
+      case 'record':
+        for (const key in type.properties) {
+          const property = type.properties[key];
+          // Optioanl properties should have no value
+          if (isOptional(property) && hasNoValue(encoded[key])) continue;
+          // NOTE: may become == because null is equivalent to undefined
+          if (options.partial && !(key in encoded)) continue;
+          const validation = Type.validateEncoded(
+            property,
+            encoded[key],
+            options
+          );
+          if (!validation.valid) return validation;
+        }
+        return { valid: true };
+      case 'string':
+        if (typeof encoded === 'string') return { valid: true };
+        return {
+          valid: false,
+          error: encodedValueMismatchMessage('string', encoded),
+        };
+      case 'set':
+        // TODO: should there be more validation of Record<string, boolean>?
+        if (typeof encoded === 'object' && encoded !== null)
+          return { valid: true };
+        return {
+          valid: false,
+          error: encodedValueMismatchMessage(
+            `set<${type.items.type}>`,
+            encoded
+          ),
+        };
     }
     throw new UnrecognizedAttributeTypeError(
       // @ts-expect-error If this has an error, it means we are missing a case above
@@ -270,48 +256,41 @@ export namespace Type {
   }
 
   export function decode(type: DataType, encoded: any): any {
-    if (isValueType(type)) {
-      switch (type.type) {
-        case 'boolean':
-          if (typeof encoded === 'boolean') return encoded;
-          throw new DBDeserializationError('boolean', encoded);
-        case 'date':
-          if (typeof encoded === 'string') return new Date(encoded);
-          throw new DBDeserializationError('date', encoded);
-        case 'json':
-          return encoded;
-        case 'number':
-          if (typeof encoded === 'number') return encoded;
-          throw new DBDeserializationError('number', encoded);
-        case 'string':
-          if (typeof encoded === 'string') return encoded;
-          throw new DBDeserializationError('string', encoded);
-        case 'set':
-          if (typeof encoded === 'object')
-            return new Set(
-              Object.entries(encoded)
-                .filter(([_, v]) => v)
-                .map(([k, _]) => Type.collectionKeyDecode(type.items, k))
-            );
-          throw new DBDeserializationError(`set<${type.items.type}>`, encoded);
-      }
-      throw new UnrecognizedAttributeTypeError(
-        // @ts-expect-error If this has an error, it means we are missing a case above
-        type.type,
-        'Failed to decode value'
-      );
-    } else if (type.type === 'record') {
-      const result: any = {};
-      for (const key in encoded) {
-        const property = type.properties[key];
-        // If the property is optional and no input is provided, decode as value if null
-        if (isOptional(property) && hasNoValue(encoded[key])) {
-          if (encoded[key] === null) result[key] = null;
-          continue;
+    switch (type.type) {
+      case 'boolean':
+        if (typeof encoded === 'boolean') return encoded;
+        throw new DBDeserializationError('boolean', encoded);
+      case 'date':
+        if (typeof encoded === 'string') return new Date(encoded);
+        throw new DBDeserializationError('date', encoded);
+      case 'json':
+        return encoded;
+      case 'number':
+        if (typeof encoded === 'number') return encoded;
+        throw new DBDeserializationError('number', encoded);
+      case 'record':
+        const result: any = {};
+        for (const key in encoded) {
+          const property = type.properties[key];
+          // If the property is optional and no input is provided, decode as value if null
+          if (isOptional(property) && hasNoValue(encoded[key])) {
+            if (encoded[key] === null) result[key] = null;
+            continue;
+          }
+          result[key] = Type.decode(property, encoded[key]);
         }
-        result[key] = Type.decode(property, encoded[key]);
-      }
-      return result;
+        return result;
+      case 'string':
+        if (typeof encoded === 'string') return encoded;
+        throw new DBDeserializationError('string', encoded);
+      case 'set':
+        if (typeof encoded === 'object')
+          return new Set(
+            Object.entries(encoded)
+              .filter(([_, v]) => v)
+              .map(([k, _]) => Type.collectionKeyDecode(type.items, k))
+          );
+        throw new DBDeserializationError(`set<${type.items.type}>`, encoded);
     }
     throw new UnrecognizedAttributeTypeError(
       // @ts-expect-error If this has an error, it means we are missing a case above
@@ -471,13 +450,12 @@ export namespace Type {
   }
 }
 
-// TODO: come up with better categorization
-export function isValueType(type: DataType): type is ValueType {
-  return type.type !== 'record';
+export function hasDefault(type: DataType): type is DefaultableType {
+  return DEFAULTABLE_TYPE_KEYS_SET.has(type.type as any);
 }
 
 export function isPrimitiveType(type: DataType): type is PrimitiveType {
-  return type.type !== 'set' && type.type !== 'json' && isValueType(type);
+  return PRIMITIVE_TYPE_KEYS_SET.has(type.type as any);
 }
 
 function calcDefaultValue(config: TypeConfig) {

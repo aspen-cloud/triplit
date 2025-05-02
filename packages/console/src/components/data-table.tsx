@@ -38,12 +38,12 @@ import { useToast } from 'src/hooks/useToast.js';
 import { RoleFilters } from './role-filters.js';
 import { atom, useAtom } from 'jotai';
 import type {
-  ValueType,
   SetType,
   Relationship,
   RecordType,
   DataType,
   PrimitiveType,
+  CollectionPermissions,
 } from '@triplit/db';
 
 interface DataTableProps<TData, TValue> {
@@ -55,11 +55,11 @@ type ColumnHeaderProps = {
   attribute: string;
   onClickHeader?: () => void;
   rightIcon?: React.ReactNode;
-  attributeDef?: ValueType | Relationship;
+  attributeDef?: DataType | Relationship;
 } & React.HTMLAttributes<HTMLDivElement>;
 
 function isRelationship(
-  attributeDef: ValueType | Relationship
+  attributeDef: DataType | Relationship
 ): attributeDef is Relationship {
   return (attributeDef as Relationship).query !== undefined;
 }
@@ -218,10 +218,10 @@ type TriplitDataCellProps = {
   collection: string;
   attribute: string;
   value: TriplitDataTypes;
-  attributeDef?: ValueType;
+  attributeDef?: DataType;
   editable?: boolean;
   optional?: boolean;
-  permissions?: Permission;
+  permissions?: CollectionPermissions<any, any>;
 };
 
 const selectedAtom = atom<string | null>(null);
@@ -398,7 +398,7 @@ type PrimitiveCellEditorProps = {
 
 function coerceStringToTriplitType(
   value: string | null | Array<any>,
-  definition: ValueType
+  definition: DataType
 ) {
   const { type } = definition;
   if (value === null) return value;

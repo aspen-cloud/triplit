@@ -1,5 +1,5 @@
 import { TriplitError } from '../../errors.js';
-import { AllTypes } from '../types/index.js';
+import { DataTypeKeys } from '../types/index.js';
 
 const BASE_OPERATIONS = ['isDefined'] as const;
 const COMPARISON_OPERATORS = ['=', '!=', '<', '>', '<=', '>='] as const;
@@ -53,7 +53,7 @@ export const SUPPORTED_OPERATIONS = {
    */
   set: SET_OPERATIONS,
   string: STRING_OPERATIONS,
-} as const satisfies Record<AllTypes, ReadonlyArray<string>>;
+} as const satisfies Record<DataTypeKeys, ReadonlyArray<string>>;
 
 export function prefixOperations<Ops extends string, Prefix extends string>(
   operations: ReadonlyArray<Ops>,

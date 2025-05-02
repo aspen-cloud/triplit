@@ -4,7 +4,7 @@ import {
   ALL_TYPES,
   Collection,
   SUPPORTED_OPERATIONS,
-  AllTypes,
+  DataTypeKeys,
   DataType,
   PrimitiveTypeKeys,
 } from '@triplit/db';
@@ -63,7 +63,7 @@ export function QueryFilter({
   );
 
   const onChangeType = useCallback(
-    (type: AllTypes) => {
+    (type: DataTypeKeys) => {
       onUpdate('value', '');
       onUpdate('asType', type);
       onUpdate('operator', SUPPORTED_OPERATIONS[type][0]);

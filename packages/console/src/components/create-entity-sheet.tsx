@@ -1,9 +1,9 @@
 import type {
-  ValueTypeKeys,
   DataType,
   Collection,
-  AllTypes,
+  DataTypeKeys,
   RecordType,
+  PrimitiveTypeKeys,
 } from '@triplit/db';
 import { useEffect, useMemo, useState } from 'react';
 
@@ -133,8 +133,8 @@ function TypeLabel({
   isEnum = false,
 }: {
   name: string;
-  type: AllTypes;
-  setItemsType?: ValueTypeKeys;
+  type: DataTypeKeys;
+  setItemsType?: PrimitiveTypeKeys;
   isEnum?: boolean;
 }) {
   return (

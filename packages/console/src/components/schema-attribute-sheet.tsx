@@ -1,16 +1,14 @@
 import {
   Schema,
   ALL_TYPES,
-  AllTypes,
-  VALUE_TYPE_KEYS,
-  ValueTypeKeys,
+  DataTypeKeys,
   Collection,
-  ValueType,
   DataType,
   SetType,
   RecordType,
   PrimitiveType,
   PrimitiveTypeKeys,
+  DefaultableTypeKeys,
 } from '@triplit/db';
 import {
   Button,
@@ -43,7 +41,8 @@ export type AttributesForm = {
   [key: string]: DataType;
 };
 
-function getDefaultOptionsFromType(type: ValueTypeKeys) {
+// TODO: set empty
+function getDefaultOptionsFromType(type: DefaultableTypeKeys) {
   if (type === 'date') return ['Value', 'now'];
   if (type === 'string') return ['Value', 'uuid'];
   else return ['Value'];
@@ -72,7 +71,7 @@ export function SchemaAttributeSheet({
   const [attributeName, setAttributeName] = useState(
     attributeToUpdateName ?? ''
   );
-  const [attributeBaseType, setAttributeBaseType] = useState<AllTypes>(
+  const [attributeBaseType, setAttributeBaseType] = useState<DataTypeKeys>(
     attributeToUpdate?.type ?? 'string'
   );
   const [hasDefault, setHasDefault] = useState(
@@ -90,13 +89,13 @@ export function SchemaAttributeSheet({
     attributeToUpdate?.config?.optional ?? false
   );
   const [recordKeyTypes, setRecordKeyTypes] = useState<
-    Record<string, [string, ValueTypeKeys]>
+    Record<string, [string, DataTypeKeys]>
   >(
     attributeToUpdate?.type === 'record'
       ? Object.fromEntries(
           Object.entries(attributeToUpdate.properties).map(([key, value]) => [
             key,
-            [key, (value as ValueType).type],
+            [key, (value as DataType).type],
           ])
         )
       : {}

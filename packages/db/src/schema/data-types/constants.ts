@@ -1,11 +1,33 @@
-export const PRIMITIVE_TYPE_KEYS = [
+import { DataType, DefaultableType, PrimitiveType } from '../../index.js';
+
+export const PRIMITIVE_TYPE_KEYS = Object.freeze([
   'string',
   'number',
   'boolean',
   'date',
-] as const;
-export const VALUE_TYPE_KEYS = [...PRIMITIVE_TYPE_KEYS, 'set', 'json'] as const;
-export const RECORD_TYPE_KEYS = ['record'] as const;
-export const ALL_TYPES = [...VALUE_TYPE_KEYS, ...RECORD_TYPE_KEYS] as const;
+] as const) satisfies readonly PrimitiveType['type'][];
+export const PRIMITIVE_TYPE_KEYS_SET = new Set(PRIMITIVE_TYPE_KEYS);
 
-export const DEFAULT_FUNCTIONS = ['now', 'uuid', 'Set.empty'] as const;
+export const DEFAULTABLE_TYPE_KEYS = Object.freeze([
+  'string',
+  'number',
+  'boolean',
+  'date',
+  'set',
+  'json',
+] as const) satisfies readonly DefaultableType['type'][];
+export const DEFAULTABLE_TYPE_KEYS_SET = new Set(DEFAULTABLE_TYPE_KEYS);
+
+export const ALL_TYPES = Object.freeze([
+  ...PRIMITIVE_TYPE_KEYS,
+  'set',
+  'json',
+  'record',
+] as const) satisfies readonly DataType['type'][];
+export const ALL_TYPES_SET = new Set(ALL_TYPES);
+
+export const DEFAULT_FUNCTIONS = Object.freeze([
+  'now',
+  'uuid',
+  'Set.empty',
+] as const);
