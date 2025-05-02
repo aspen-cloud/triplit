@@ -76,5 +76,10 @@ module.exports = withNextra({
       destination: '/query',
       permanent: true,
     },
+    {
+      source: '/client/query/:slug*',
+      destination: '/query/:slug*',
+      permanent: true,
+    },
   ],
 });
