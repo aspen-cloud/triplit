@@ -21,6 +21,7 @@ import {
   isValueVariable,
   DBSchema,
   DataType,
+  RecordType,
 } from '@triplit/db';
 import { useToast } from 'src/hooks/useToast.js';
 
@@ -341,7 +342,7 @@ export function DataViewer({
     // } as ColumnDef<any>,
   ];
 
-  function flattenEntity(entity: any) {
+  function flattenEntity(entity: any, collectionSchema?: RecordType) {
     if (!entity) return {};
     const flatEntity: Record<string, any> = {};
     Object.entries(entity).forEach(([key, value]) => {
@@ -349,13 +350,16 @@ export function DataViewer({
         typeof value === 'object' &&
         value !== null &&
         !(value instanceof Set) &&
-        !(value instanceof Date)
+        !(value instanceof Date) &&
+        // Don't flatten records that are JSON
+        collectionSchema &&
+        collectionSchema.properties[key].type !== 'json'
       ) {
-        Object.entries(flattenEntity(value)).forEach(
-          ([nestedKey, nestedValue]) => {
-            flatEntity[`${key}.${nestedKey}`] = nestedValue;
-          }
-        );
+        Object.entries(
+          flattenEntity(value, collectionSchema.properties[key])
+        ).forEach(([nestedKey, nestedValue]) => {
+          flatEntity[`${key}.${nestedKey}`] = nestedValue;
+        });
       } else {
         flatEntity[key] = value;
       }
@@ -366,7 +370,7 @@ export function DataViewer({
   const flatFilteredEntities = useMemo(() => {
     const flattened = orderedAndFilteredResults?.map((entity) => ({
       id: entity.id,
-      ...flattenEntity(entity),
+      ...flattenEntity(entity, collectionSchema?.schema),
     }));
     return flattened;
   }, [orderedAndFilteredResults]);

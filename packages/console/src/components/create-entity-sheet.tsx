@@ -78,6 +78,14 @@ function convertFormValueToTriplitValue(
     if (String(val) === 'Invalid Date') return undefined;
     return val;
   }
+  if (definition.type === 'json') {
+    try {
+      return JSON.parse(value as string);
+    } catch (e) {
+      console.error('Invalid JSON', e);
+      return undefined;
+    }
+  }
 
   // recurse in records
   if (definition.type === 'record')
@@ -275,7 +283,7 @@ export function CreateEntitySheet({
                 }}
               />
             )}
-            {item.definition.type === 'string' && !isEnum && (
+            {['string', 'json'].includes(item.definition.type) && !isEnum && (
               <Textarea
                 required={isRequired}
                 disabled={item.fieldValue === null}

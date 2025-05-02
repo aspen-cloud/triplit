@@ -402,6 +402,7 @@ function coerceStringToTriplitType(
 ) {
   const { type } = definition;
   if (value === null) return value;
+  if (type === 'json') return JSON.parse(value);
   if (type === 'number') return Number(value);
   if (type === 'boolean') return JSON.parse(value);
   if (type === 'date') return new Date(value);
@@ -417,6 +418,7 @@ function coerceTriplitTypeToInput(
   if (value === null || value === undefined) return '';
   if (type && type === 'date')
     return new Date(value as string | Date).toISOString();
+  if (type && type === 'json') return JSON.stringify(value);
   return String(value);
 }
 
