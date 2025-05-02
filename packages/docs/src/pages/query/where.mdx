@@ -176,6 +176,10 @@ The following operators are available for use in where clauses, organized by dat
 
 - `isDefined`: Check if the attribute is defined
 
+#### Json Operators
+
+Json attributes contain arbitrary JSON data, described [here](/schemas/types#json). Any operator corresponding to the underlying type of the JSON data can be used. For example, if the JSON data contains a string, you can use `like` to check if the string matches a pattern.
+
 #### Optional Attributes
 
 All optional attributes support the `isDefined` operator, which checks if the specified attribute is defined:

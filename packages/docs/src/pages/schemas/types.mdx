@@ -24,9 +24,9 @@ const schema = S.Collections({
 });
 ```
 
-### Value types
+### Primitive types
 
-Value types are basic types for the database.
+Primitive types are basic types for the database.
 
 #### String
 
@@ -34,8 +34,18 @@ The string data type is used to store text.
 
 ```typescript
 import { Schema as S } from '@triplit/client';
-const stringType = S.String();
+const stringType = S.String({
+  // options
+});
 ```
+
+Valid options for the string type include:
+
+- `nullable`: Indicates the value is optional when used in a `Record`. This is equivalent to wrapping the attribute in [`S.Optional`](#optional-keys).
+- `default`: Provides a default value or function for the attribute. Possible values include:
+  - `S.Default.uuid()`: Generates a random UUID.
+  - `string`: A literal string value.
+- `enum`: An array of strings that restricts the possible values of the attribute. This will perform runtime validation and provide autocomplete in your editor.
 
 For information about operators that can be used with strings in `where` statements, see the [Where clause documentation](/query/where#operators).
 
@@ -45,8 +55,16 @@ The number data type is used to store integer or float numbers.
 
 ```typescript
 import { Schema as S } from '@triplit/client';
-const numberType = S.Number();
+const numberType = S.Number({
+  // options
+});
 ```
+
+Valid options for the number type include:
+
+- `nullable`: Indicates the value is optional when used in a `Record`. This is equivalent to wrapping the attribute in [`S.Optional`](#optional-keys).
+- `default`: Provides a default value or function for the attribute. Possible values include:
+  - `number`: A literal number value.
 
 For information about operators that can be used with numbers in `where` statements, see the [Where clause documentation](/query/where#operators).
 
@@ -56,8 +74,16 @@ The boolean data type is used to store true or false values.
 
 ```typescript
 import { Schema as S } from '@triplit/client';
-const booleanType = S.Boolean();
+const booleanType = S.Boolean({
+  // options
+});
 ```
+
+Valid options for the boolean type include:
+
+- `nullable`: Indicates the value is optional when used in a `Record`. This is equivalent to wrapping the attribute in [`S.Optional`](#optional-keys).
+- `default`: Provides a default value or function for the attribute. Possible values include:
+  - `boolean`: A literal boolean value.
 
 For information about operators that can be used with booleans in `where` statements, see the [Where clause documentation](/query/where#operators).
 
@@ -67,12 +93,21 @@ The date data type is used to store date and time values.
 
 ```typescript
 import { Schema as S } from '@triplit/client';
-const dateType = S.Date();
+const dateType = S.Date({
+  // options
+});
 ```
+
+Valid options for the date type include:
+
+- `nullable`: Indicates the value is optional when used in a `Record`. This is equivalent to wrapping the attribute in [`S.Optional`](#optional-keys).
+- `default`: Provides a default value or function for the attribute. Possible values include:
+  - `S.Default.now()`: Generates the current date and time.
+  - `string`: An ISO 8601 formatted string.
 
 For information about operators that can be used with dates in `where` statements, see the [Where clause documentation](/query/where#operators).
 
-#### Set
+### Set
 
 Set types are used to store a collection of non nullable value types. Sets are unordered and do not allow duplicate values.
 
@@ -83,43 +118,53 @@ Set types are used to store a collection of non nullable value types. Sets are u
 
 ```typescript
 import { Schema as S } from '@triplit/client';
-const stringSet = S.Set(S.String());
+const stringSet = S.Set(S.String(), {
+  // options
+});
 ```
+
+The first argument to the `Set` constructor is the type of the values in the set. This can be any of the primitive types, including `S.String()`, `S.Number()`, `S.Boolean()`, or `S.Date()`.
+
+Valid options for the set type include:
+
+- `nullable`: Indicates the value is optional when used in a `Record`. This is equivalent to wrapping the attribute in [`S.Optional`](#optional-keys).
+- `default`: Provides a default value or function for the attribute. Possible values include:
+  - `S.Default.Set.empty()`: Generates an empty set.
 
 For information about operators that can be used with sets in `where` statements, see the [Where clause documentation](/query/where#operators).
 
-### Options
+### Record
 
-Value types have a few options that can be passed to their constructor.
-
-#### `nullable`
-
-You can indicate an attribute is nullable by passing the `{ nullable: true }` option to its constructor.
+The record types allow you model nested information with known keys, similar to a struct in C.
 
 ```typescript
 import { Schema as S } from '@triplit/client';
-import { TriplitClient } from '@triplit/client';
-const schema = S.Collections({
-  test: {
-    schema: S.Schema({
-      id: S.Id(),
-      nullableString: S.String({ nullable: true }),
-    }),
+const recordType = S.Record(
+  {
+    street: S.String(),
+    city: S.String(),
+    state: S.String(),
+    zip: S.String(),
   },
-});
-
-const client = new TriplitClient({
-  schema,
-});
-
-await client.insert('test', {
-  nullableString: null,
-});
+  {
+    // options
+  }
+);
 ```
 
-#### `optional`
+The first argument to the `Record` constructor is an object that defines the keys and their types. This can be any data type.
 
-You can indicate an attribute is optional by passing the `{ optional: true }` option to its constructor or wrapping the attribute in `S.Optional`. Optional attributes are not required for insertion by the schema and will be `undefined` at runtime if not provided. Optional attributes may also be deleted and assigned to `null` in updater functions.
+Valid options for the record type include:
+
+- `nullable`: Indicates the value is optional when used in a `Record`. This is equivalent to wrapping the attribute in [`S.Optional`](#optional-keys).
+
+For information about operators that can be used with records in `where` statements, see the [Where clause documentation](/query/where#operators).
+
+#### Optional keys
+
+You can indicate an attribute is optional by passing the `{ nullable: true }` option to its constructor or wrapping the attribute in `S.Optional`. Optional attributes may not exist, have the value `undefined`, or have the value `null` - these are all equivalent in Triplit.
+
+Under the hood `S.Schema()` is a record type, so optional attributes allow you to define optional keys in your schema as well.
 
 ```typescript
 import { Schema as S } from '@triplit/client';
@@ -127,7 +172,7 @@ const schema = S.Collections({
   test: {
     schema: S.Schema({
       id: S.Id(),
-      optionalString: S.String({ optional: true }),
+      optionalString: S.Optional(S.String()),
     }),
   },
 });
@@ -153,61 +198,29 @@ await client.update('test', '123', (e) => {
 
 For information about operators that can be used with optional attributes in `where` statements, see the [Where clause documentation](/query/where#operators).
 
-#### `default`
+### Json
 
-You can provide defaults values or functions for an attribute. Triplit currently support literal values and the following functions:
+The json type is used to store arbitrary JSON data that is [spec](https://datatracker.ietf.org/doc/html/rfc7159) compliant. This type is useful for storing unstructured data or data that may change frequently.
 
-- `uuid()` (for Strings)
-- `now()` (for Dates)
-- `Set.empty()` (for Sets)
+Valid primitive types for the json type include:
 
-The below schema has literal and function default values.
+- `string`
+- `number`
+- `boolean`
+- `null`
 
-```typescript
-import { Schema as S } from '@triplit/client';
-import { TriplitClient } from '@triplit/client';
-const schema = S.Collections({
-  messages: {
-    schema: S.Schema({
-      id: S.Id(),
-      text: S.String({ default: 'hello' }),
-      sent_at: S.Date({ default: S.Default.now() }),
-      reactions: S.Set(S.String(), { default: S.Default.Set.empty() }),
-    }),
-  },
-});
-await client.insert('test', {});
-// { id: <uuid>, text: 'hello', sent_at: '2021-03-01T00:00:00.000Z',reactions: Set {} }
-```
-
-#### `enum` (String only)
-
-You can provide an array of strings to the `enum` option to restrict the possible values of a string attribute.
+You may also store arrays and objects containing any of the above types.
 
 ```typescript
 import { Schema as S } from '@triplit/client';
-const schema = S.Collections({
-  test: {
-    schema: S.Schema({
-      id: S.Id(),
-      status: S.String({ enum: ['active', 'inactive'] }),
-    }),
-  },
+const jsonType = S.Json({
+  // options
 });
 ```
 
-This will both perform runtime validation and provide autocomplete in your editor.
+Valid options for the json type include:
 
-### Record
-
-Record types allow you model nested information. They support the `nullable` option.
-
-```typescript
-import { Schema as S } from '@triplit/client';
-const recordType = S.Record({
-  street: S.String(),
-  city: S.String(),
-  state: S.String(),
-  zip: S.String(),
-});
-```
+- `nullable`: Indicates the value is optional when used in a `Record`. This is equivalent to wrapping the attribute in [`S.Optional`](#optional-keys).
+- `default`: Provides a default value or function for the attribute. Possible values include:
+  - `json`: A literal JSON value.
+  - Any default value for the primitive types that are JSON compliant.
