@@ -1,5 +1,11 @@
 # @triplit/server
 
+## 1.0.38
+
+### Patch Changes
+
+- a57442f4: Fix esm requiring bug
+
 ## 1.0.37
 
 ### Patch Changes
