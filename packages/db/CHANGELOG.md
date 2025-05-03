@@ -1,5 +1,11 @@
 # @triplit/entity-db
 
+## 1.0.28
+
+### Patch Changes
+
+- 981dc430: Add type S.Json
+
 ## 1.0.27
 
 ### Patch Changes

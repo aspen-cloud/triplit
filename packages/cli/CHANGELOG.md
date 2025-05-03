@@ -1,5 +1,12 @@
 # @triplit/cli
 
+## 1.0.37
+
+### Patch Changes
+
+- 981dc430: Automated version bump for @triplit/cli after dependency changes
+- 556e1587: Remove PINGs from dev server logs
+
 ## 1.0.36
 
 ### Patch Changes
