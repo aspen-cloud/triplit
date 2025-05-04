@@ -19,7 +19,7 @@
   },
   "devDependencies": {
     "@rushstack/eslint-patch": "^1.8.0",
-    "@triplit/cli": "1.0.37",
+    "@triplit/cli": "1.0.38",
     "@tsconfig/node20": "^20.1.4",
     "@types/node": "^20.14.5",
     "@vitejs/plugin-vue": "^5.2.1",
