@@ -1,5 +1,12 @@
 # @triplit/cli
 
+## 1.0.38
+
+### Patch Changes
+
+- b6982233: Automated version bump for @triplit/cli after dependency changes
+- b6982233: upgrade dev server
+
 ## 1.0.37
 
 ### Patch Changes
