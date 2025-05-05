@@ -1,6 +1,8 @@
 /// <reference types="svelte" />
 
 import type {
+  CollectionNameFromModels,
+  FetchResult,
   Models,
   SchemaQuery,
   SubscriptionOptions,
@@ -71,7 +73,9 @@ export function useQuery<M extends Models<M>, Q extends SchemaQuery<M>>(
  * @param client - The client instance to get the connection status of
  * @returns An object containing `status`, the current connection status of the client with the server
  */
-export function useConnectionStatus(client: TriplitClient<any>) {
+export function useConnectionStatus(
+  client: TriplitClient<any> | WorkerClient<any>
+) {
   let status = $state(client.connectionStatus);
 
   $effect(() => {
@@ -88,4 +92,60 @@ export function useConnectionStatus(client: TriplitClient<any>) {
       return status;
     },
   };
+}
+
+/**
+ * A hook that subscribes to a query and fetches only one result
+ *
+ * @param client - The client instance to query with
+ * @param query - The query to subscribe to
+ * @param options - Additional options for the subscription
+ * @returns An object containing the fetching state, the result of the query, and any error that occurred
+ */
+export function useQueryOne<M extends Models<M>, Q extends SchemaQuery<M>>(
+  client: TriplitClient<M> | WorkerClient<M>,
+  query: Q,
+  options?: Partial<SubscriptionOptions>
+): Omit<SubscriptionSignalPayload<M, Q>, 'results'> & {
+  result: FetchResult<M, Q, 'one'>;
+} {
+  const queryPayload = useQuery(client, { ...query, limit: 1 }, options);
+  return {
+    get fetching() {
+      return queryPayload.fetching;
+    },
+    get fetchingLocal() {
+      return queryPayload.fetchingLocal;
+    },
+    get fetchingRemote() {
+      return queryPayload.fetchingRemote;
+    },
+    get result() {
+      return queryPayload.results?.[0] ?? null;
+    },
+    get error() {
+      return queryPayload.error;
+    },
+  };
+}
+
+/**
+ * A hook that subscribes to an entity
+ *
+ * @param client - The client instance to query with
+ * @param collectionName - The name of the collection to query
+ * @param id - The id of the entity to query
+ * @param options - Additional options for the subscription
+ * @returns - An object containing the fetching state, the result of the query, and any error that occurred
+ */
+export function useEntity<
+  M extends Models<M>,
+  CN extends CollectionNameFromModels<M>,
+>(
+  client: TriplitClient<M> | WorkerClient<M>,
+  collectionName: CN,
+  id: string,
+  options?: Partial<SubscriptionOptions>
+) {
+  return useQueryOne(client, client.query(collectionName).Id(id), options);
 }

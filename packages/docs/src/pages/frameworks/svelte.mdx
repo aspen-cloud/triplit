@@ -117,6 +117,18 @@ The result of the hook is an object with the following properties:
 </div>
 ```
 
+## useQueryOne
+
+`useQueryOne` is like `useQuery` in that it subscribes to the provided query, but adds a `Limit(1)` to the query.
+
+It returns the same properties as `useQuery`, except that `results` becomes `result`, which is a single entity or `null` if no entity was found.
+
+## useEntity
+
+`useEntity` subscribes to the provided entity in the collection, returning the entity or `null` if the entity does not exist.
+
+It returns the same properties as `useQuery`, except that `results` becomes `result`, which is a single entity or `null` if no entity was found.
+
 ## useConnectionStatus
 
 The `useConnectionStatus` hook subscribes to changes to the connection status of the client and will automatically unsubscribe when the component unmounts.
