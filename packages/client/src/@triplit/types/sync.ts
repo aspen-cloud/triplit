@@ -66,7 +66,9 @@ export type ServerErrorMessage = SyncMessage<
 >;
 export type ServerCloseMessage = SyncMessage<'CLOSE', ServerCloseReason>;
 export type ServerSchemaRequestMessage = SyncMessage<'SCHEMA_REQUEST', {}>;
-export type ServerReadyMessage = SyncMessage<'READY', {}>;
+export type ServerReadyMessage = SyncMessage<'READY', {
+  clientId: string;
+}>;
 
 export type ServerSyncMessage =
   | ServerErrorMessage

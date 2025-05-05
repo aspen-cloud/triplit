@@ -42,6 +42,7 @@ import {
 export interface ConnectionOptions {
   clientSchemaHash: number | undefined;
   syncSchema?: boolean | undefined;
+  clientId: string;
 }
 
 const INCOMPATIBLE_SCHEMA_PAYLOAD = {
@@ -86,13 +87,19 @@ export class SyncConnection {
     this.listeners = new Set();
   }
 
+  sendReadyMsg() {
+    return this.sendMessage('READY', {
+      clientId: this.options.clientId,
+    })
+  }
+
   async start() {
     if (this.started) return;
     // If the client is schemaless, we will allow the connection and safe use of data is up to the client
     // Client writes may be rejected based on server schema
     if (this.options.clientSchemaHash === undefined) {
       this.canSync = true;
-      return this.sendMessage('READY', {});
+      return this.sendReadyMsg();
     }
 
     // If the server is schemaless and the client is not, we should not sync
@@ -113,7 +120,7 @@ export class SyncConnection {
     // If we recognize the client schema hash as compatible, we can sync
     if (compatibilityList.includes(this.options.clientSchemaHash)) {
       this.canSync = true;
-      return this.sendMessage('READY', {});
+      return this.sendReadyMsg();
     }
 
     // If we don't recognize the client schema hash, request more information
@@ -352,8 +359,8 @@ export class SyncConnection {
       const innerError = isTriplitError(e)
         ? e
         : new TriplitError(
-            'An unknown error occurred while processing your request.'
-          );
+          'An unknown error occurred while processing your request.'
+        );
       this.sendErrorResponse('CONNECT_QUERY', new QuerySyncError(innerError), {
         queryKey,
         innerError,
@@ -392,8 +399,8 @@ export class SyncConnection {
       const error = isTriplitError(e)
         ? e
         : new TriplitError(
-            'An unknown error occurred while processing your request.'
-          );
+          'An unknown error occurred while processing your request.'
+        );
       // TODO: test error payloads
       this.sendErrorResponse('CHANGES', error, {
         failures: Object.keys(changes).map((collection) => ({
@@ -432,7 +439,7 @@ export class SyncConnection {
     // If client is schemaless, we can sync but will reject invalid changes on server
     if (!clientSchema) {
       this.canSync = true;
-      return this.sendMessage('READY', {});
+      return this.sendReadyMsg()
     }
 
     const serverSchema = this.db.getSchema();
@@ -454,7 +461,7 @@ export class SyncConnection {
         ]);
       }
       this.canSync = true;
-      this.sendMessage('READY', {});
+      this.sendReadyMsg();
     };
 
     // Schemas are identical, we can sync
@@ -518,8 +525,8 @@ export class SyncConnection {
         isTriplitError(e)
           ? e
           : new TriplitError(
-              'An unknown error occurred while processing your request.'
-            )
+            'An unknown error occurred while processing your request.'
+          )
       );
     }
   }

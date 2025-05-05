@@ -169,6 +169,10 @@ export async function createTriplitHonoServer(
 
   const app = (honoApp ?? new Hono()) as Hono<{ Variables: Variables }>;
 
+  const syncConnections = new Map<
+    string,
+    { connection: SyncConnection; ws: WSContext<any> }
+  >();
   // app.use(honoLogger());
   app.use(cors());
 
@@ -224,15 +228,20 @@ export async function createTriplitHonoServer(
             return;
           }
           try {
-            const clientHash = c.req.query('schema')
+            const clientSchemaHash = c.req.query('schema')
               ? parseInt(c.req.query('schema') as string)
               : undefined;
             const syncSchema = c.req.query('sync-schema') === 'true';
 
+            // TODO replace with better ID generation
+            const clientId = Math.random().toString(36).slice(2);
+
             syncConnection = server.openConnection(token, {
-              clientSchemaHash: clientHash,
+              clientSchemaHash: clientSchemaHash,
               syncSchema,
+              clientId,
             });
+            syncConnections.set(clientId, { connection: syncConnection, ws });
             // @ts-expect-error
             ws.tokenExpiration = token.exp;
             syncConnection!.addListener((messageType, payload) => {
@@ -344,6 +353,54 @@ export async function createTriplitHonoServer(
       };
     })
   );
+
+  app.post('/update-token', async (c) => {
+    const { clientId, token } = await c.req.json();
+    if (!syncConnections.has(clientId)) {
+      return c.json(new TriplitError('No connection found for clientId'), 400);
+    }
+
+    const { ws, connection: syncConnection } = syncConnections.get(clientId)!;
+
+    const { data, error } = await parseAndValidateTokenWithOptions(token);
+    if (error) {
+      closeSocket(
+        ws,
+        {
+          type: 'UNAUTHORIZED',
+          message: error.message,
+          retry: false,
+        },
+        1008
+      );
+      return c.text('OK', 200);
+    }
+    const newTokenRoles = getRolesFromSession(
+      syncConnection?.db.schema,
+      normalizeSessionVars(data)
+    );
+
+    const existingTokenRoles = getRolesFromSession(
+      syncConnection?.db.schema,
+      normalizeSessionVars(syncConnection?.token)
+    );
+    if (!sessionRolesAreEquivalent(newTokenRoles, existingTokenRoles)) {
+      closeSocket(
+        ws,
+        {
+          type: 'ROLES_MISMATCH',
+          message: "Roles for new token don't match the old token.",
+          retry: false,
+        },
+        1008
+      );
+      return c.text('OK', 200);
+    }
+    // @ts-expect-error
+    ws.tokenExpiration = data?.exp;
+
+    return c.text('OK', 200);
+  });
 
   app.use('*', async (c, next) => {
     const authHeader = c.req.header('authorization');

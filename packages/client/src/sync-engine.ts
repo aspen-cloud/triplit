@@ -106,6 +106,8 @@ export class SyncEngine {
     }
   > = new Map();
 
+  clientId: string | null = null;
+
   /**
    *
    * @param options configuration options for the sync engine
@@ -255,11 +257,22 @@ export class SyncEngine {
   /**
    * @hidden
    */
-  updateTokenForSession(token: string) {
-    return this.sendMessage({
-      type: 'UPDATE_TOKEN',
-      payload: { token },
-    });
+  async updateTokenForSession(token: string) {
+    try {
+      await fetch(`${this.client.serverUrl}/update-token`, {
+        method: 'POST',
+        body: JSON.stringify({
+          token,
+          clientId: this.clientId,
+        }),
+      });
+      return true;
+    } catch (e) {
+      console.error(e);
+      // @ts-expect-error
+      this.logger.error('Failed to update token', e);
+      return false;
+    }
   }
 
   onSyncMessageReceived(callback: OnMessageReceivedCallback) {
@@ -707,6 +720,11 @@ export class SyncEngine {
     }
 
     if (message.type === 'READY') {
+      const { payload } = message;
+      const { clientId } = payload;
+
+      this.clientId = clientId;
+
       if (!this.serverReady) {
         this.serverReady = true;
         await this.initializeSync();
