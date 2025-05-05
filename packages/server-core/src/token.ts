@@ -43,7 +43,7 @@ async function getJwtKey(rawPublicKey: string): Promise<KeyLike | Uint8Array> {
   if (parsedKey) {
     return importJWK(parsedKey, 'RS256');
   }
-  return new TextEncoder().encode(rawPublicKey);
+  return new Uint8Array(Buffer.from(rawPublicKey));
 }
 
 export async function parseAndValidateToken(
