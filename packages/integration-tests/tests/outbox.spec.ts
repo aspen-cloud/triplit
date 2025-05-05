@@ -852,3 +852,73 @@ it('Outbox data is not included in checkpointed fetch payload', async () => {
   );
   expect(didSendOutboxData).toBe(false);
 });
+
+it('rolled back outbox changes will correctly update in subscriptions', async () => {
+  using server = await tempTriplitServer({
+    serverOptions: { jwtSecret: SECRET },
+  });
+  const { port } = server;
+
+  const http = new HttpClient({
+    serverUrl: `http://localhost:${port}`,
+    token: DEFAULT_TOKEN,
+  });
+  await http.insert('test', { id: 'test1', name: 'test1' });
+
+  // Initialize alice subscritpion
+  const alice = new TriplitClient({
+    serverUrl: `http://localhost:${port}`,
+    token: DEFAULT_TOKEN,
+  });
+  const aliceSub = vi.fn();
+  alice.subscribe(alice.query('test'), aliceSub);
+  await pause();
+  expect(aliceSub.mock.calls.at(-1)?.[0]).toStrictEqual([
+    { id: 'test1', name: 'test1' },
+  ]);
+
+  // Go offline and add an entity to the outbox, prevent syncing on reconnect, then reconnect
+  alice.disconnect();
+  await alice.insert('test', { id: 'test2', name: 'test2' });
+  await pause(20);
+  // Sub has outbox data
+  expect(aliceSub.mock.calls.at(-1)?.[0]).toStrictEqual([
+    { id: 'test1', name: 'test1' },
+    { id: 'test2', name: 'test2' },
+  ]);
+
+  // Rollback outbox changes
+  await alice.clearPendingChangesForEntity('test', 'test2');
+
+  expect(aliceSub.mock.calls.at(-1)?.[0]).toStrictEqual([
+    { id: 'test1', name: 'test1' },
+  ]);
+
+  await alice.update('test', 'test1', {
+    name: 'test2',
+  });
+  await pause(20);
+  expect(aliceSub.mock.calls.at(-1)?.[0]).toStrictEqual([
+    { id: 'test1', name: 'test2' },
+  ]);
+  // Rollback outbox changes
+  await alice.clearPendingChangesForEntity('test', 'test1');
+  await pause(20);
+  expect(aliceSub.mock.calls.at(-1)?.[0]).toStrictEqual([
+    { id: 'test1', name: 'test1' },
+  ]);
+  await alice.insert('test', { id: 'test4', name: 'test4' });
+  await alice.update('test', 'test1', {
+    name: 'test3',
+  });
+  await pause(20);
+  expect(aliceSub.mock.calls.at(-1)?.[0]).toStrictEqual([
+    { id: 'test1', name: 'test3' },
+    { id: 'test4', name: 'test4' },
+  ]);
+  await alice.clearPendingChangesAll();
+  await pause(20);
+  expect(aliceSub.mock.calls.at(-1)?.[0]).toStrictEqual([
+    { id: 'test1', name: 'test1' },
+  ]);
+});

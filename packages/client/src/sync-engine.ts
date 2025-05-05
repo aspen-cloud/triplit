@@ -234,13 +234,67 @@ export class SyncEngine {
     }
   }
 
+  private async createRollbackBufferFromChanges(
+    changes: DBChanges
+  ): Promise<DBChanges> {
+    const rollbackChanges: DBChanges = {};
+
+    for (const [collection, { sets, deletes }] of Object.entries(changes)) {
+      rollbackChanges[collection] = { sets: new Map(), deletes: new Set() };
+      const dataStore = this.client.db.entityStore.dataStore;
+      const kv = this.client.db.kv;
+
+      // Handle deletes first, and don't revert a delete
+      // if there was nothing in the cache to begin with
+      for (const id of deletes) {
+        const entity = await dataStore.getEntity(kv, collection, id);
+        if (entity) rollbackChanges[collection].sets.set(id, entity);
+      }
+
+      // Handle sets
+      for (const id of sets.keys()) {
+        if (rollbackChanges[collection].sets.has(id)) continue;
+
+        const entity = await dataStore.getEntity(kv, collection, id);
+        if (entity) {
+          rollbackChanges[collection].sets.set(id, entity);
+        } else {
+          rollbackChanges[collection].deletes.add(id);
+        }
+      }
+    }
+
+    return rollbackChanges;
+  }
+
   async clearPendingChangesForEntity(collection: string, id: string) {
     if (this.client.awaitReady) await this.client.awaitReady;
     const tx = this.client.db.kv.transact();
+    const outboxChange = await this.client.db.entityStore.doubleBuffer
+      .getUnlockedBuffer()
+      .getChangesForEntity(tx, collection, id);
+    const buffer: DBChanges = {
+      [collection]: {
+        sets: new Map(),
+        deletes: new Set(),
+      },
+    };
+    if (outboxChange) {
+      if (outboxChange.delete) {
+        buffer[collection].deletes.add(id);
+      }
+      if (outboxChange.update) {
+        buffer[collection].sets.set(id, outboxChange.update);
+      }
+    }
+    const rollbackChanges = await this.createRollbackBufferFromChanges(buffer);
     await this.client.db.entityStore.doubleBuffer
       .getUnlockedBuffer()
       .clearChangesForEntity(tx, collection, id);
     await tx.commit();
+    await this.client.db.ivm.bufferChanges(rollbackChanges);
+    await this.client.db.updateQueryViews();
+    this.client.db.broadcastToQuerySubscribers();
     // because we've surgically removed the changes for this entity
     // there might be other changes that we can sync
     // TODO: is this desired behavior every time?
@@ -250,8 +304,15 @@ export class SyncEngine {
   async clearPendingChangesAll() {
     if (this.client.awaitReady) await this.client.awaitReady;
     const tx = this.client.db.kv.transact();
+    const changes = await this.client.db.entityStore.doubleBuffer
+      .getUnlockedBuffer()
+      .getChanges(this.client.db.kv);
+    const rollbackChanges = await this.createRollbackBufferFromChanges(changes);
     await this.client.db.entityStore.doubleBuffer.getUnlockedBuffer().clear(tx);
     await tx.commit();
+    await this.client.db.ivm.bufferChanges(rollbackChanges);
+    await this.client.db.updateQueryViews();
+    this.client.db.broadcastToQuerySubscribers();
   }
 
   /**
