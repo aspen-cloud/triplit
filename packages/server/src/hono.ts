@@ -234,7 +234,6 @@ export async function createTriplitHonoServer(
               : undefined;
             const syncSchema = c.req.query('sync-schema') === 'true';
 
-            // TODO replace with better ID generation
             const clientId = getRandomUUID();
 
             syncConnection = server.openConnection(token, {
@@ -396,7 +395,6 @@ export async function createTriplitHonoServer(
       syncConnection?.db.schema,
       normalizeSessionVars(tokenData)
     );
-    console.log({ clientId, token: tokenData, roles: newTokenRoles });
 
     const existingTokenRoles = getRolesFromSession(
       syncConnection?.db.schema,
