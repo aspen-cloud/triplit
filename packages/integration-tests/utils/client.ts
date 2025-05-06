@@ -1,7 +1,9 @@
 import {
   ClientOptions,
   ClientSchema,
+  ClientSyncMessage,
   Models,
+  ServerSyncMessage,
   TriplitClient,
 } from '@triplit/client';
 import { Server as TriplitServer } from '@triplit/server-core';
@@ -26,7 +28,9 @@ export function createTestClient<M extends Models<M> = Models>(
   });
 }
 
-export type MessageLogItem = { direction: 'SENT' | 'RECEIVED'; message: any };
+export type MessageLogItem =
+  | { direction: 'SENT'; message: ClientSyncMessage }
+  | { direction: 'RECEIVED'; message: ServerSyncMessage };
 export type MessageLog = MessageLogItem[];
 export function spyMessages<M extends Models<M> = Models>(
   client: TriplitClient<M>
@@ -43,6 +47,18 @@ export function spyMessages<M extends Models<M> = Models>(
 
 export function throwOnError(error: unknown) {
   throw error;
+}
+
+export function sentMessages(spy: MessageLog) {
+  return spy
+    .filter((log) => log.direction === 'SENT')
+    .map((log) => log.message);
+}
+
+export function receivedMessages(spy: MessageLog) {
+  return spy
+    .filter((log) => log.direction === 'RECEIVED')
+    .map((log) => log.message);
 }
 
 export function mapMessages(
