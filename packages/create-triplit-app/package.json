@@ -1,7 +1,7 @@
 {
   "name": "create-triplit-app",
   "packageManager": "yarn@3.4.1",
-  "version": "0.0.45",
+  "version": "0.0.46",
   "bin": "./index.js",
   "files": [
     "index.js",

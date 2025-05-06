@@ -1,5 +1,19 @@
 # @triplit/server
 
+## 1.0.39
+
+### Patch Changes
+
+- 461d1813: Use HTTP to refresh tokens to better support token validation at edge
+- Updated dependencies [d8023d03]
+- Updated dependencies [45c822c1]
+- Updated dependencies [d8023d03]
+- Updated dependencies [461d1813]
+- Updated dependencies [552d8d2b]
+  - @triplit/client@1.0.30
+  - @triplit/server-core@1.0.33
+  - @triplit/db@1.0.29
+
 ## 1.0.38
 
 ### Patch Changes

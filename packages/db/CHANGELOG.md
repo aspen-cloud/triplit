@@ -1,5 +1,12 @@
 # @triplit/entity-db
 
+## 1.0.29
+
+### Patch Changes
+
+- d8023d03: fixup typing of createDB
+- 552d8d2b: restart subscriptions on a db clearance
+
 ## 1.0.28
 
 ### Patch Changes
