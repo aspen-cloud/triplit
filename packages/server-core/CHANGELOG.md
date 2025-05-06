@@ -1,5 +1,15 @@
 # @triplit/server-core
 
+## 1.0.33
+
+### Patch Changes
+
+- 45c822c1: Disconnect sockets on an incompatible schema change
+- 461d1813: Use HTTP to refresh tokens to better support token validation at edge
+- Updated dependencies [d8023d03]
+- Updated dependencies [552d8d2b]
+  - @triplit/db@1.0.29
+
 ## 1.0.32
 
 ### Patch Changes

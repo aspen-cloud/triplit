@@ -1,5 +1,14 @@
 # @triplit/svelte
 
+## 1.0.30
+
+### Patch Changes
+
+- a3b6a4e4: add useQueryOne and useEntity hooks
+- Updated dependencies [d8023d03]
+- Updated dependencies [461d1813]
+  - @triplit/client@1.0.30
+
 ## 1.0.29
 
 ### Patch Changes

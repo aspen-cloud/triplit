@@ -1,5 +1,15 @@
 # @triplit/client
 
+## 1.0.30
+
+### Patch Changes
+
+- d8023d03: More safely decode jwts and ensure bad jwts get picked up by onSessionError as unauthorized
+- 461d1813: Use HTTP to refresh tokens to better support token validation at edge
+- Updated dependencies [d8023d03]
+- Updated dependencies [552d8d2b]
+  - @triplit/db@1.0.29
+
 ## 1.0.29
 
 ### Patch Changes

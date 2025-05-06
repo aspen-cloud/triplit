@@ -1,5 +1,14 @@
 # @triplit/tanstack
 
+## 3.0.30
+
+### Patch Changes
+
+- Updated dependencies [d8023d03]
+- Updated dependencies [461d1813]
+  - @triplit/client@1.0.30
+  - @triplit/react@1.0.30
+
 ## 3.0.29
 
 ### Patch Changes

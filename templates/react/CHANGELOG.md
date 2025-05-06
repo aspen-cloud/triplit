@@ -1,5 +1,14 @@
 # react-template
 
+## 1.0.31
+
+### Patch Changes
+
+- Updated dependencies [d8023d03]
+- Updated dependencies [461d1813]
+  - @triplit/client@1.0.30
+  - @triplit/react@1.0.30
+
 ## 1.0.30
 
 ### Patch Changes

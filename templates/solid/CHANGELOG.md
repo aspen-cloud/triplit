@@ -1,5 +1,14 @@
 # solid-template
 
+## 0.0.9
+
+### Patch Changes
+
+- Updated dependencies [d8023d03]
+- Updated dependencies [461d1813]
+  - @triplit/client@1.0.30
+  - @triplit/solid@1.0.14
+
 ## 0.0.8
 
 ### Patch Changes
