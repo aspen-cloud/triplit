@@ -36,19 +36,19 @@ afterAll(() => {
   vi.unstubAllEnvs();
 });
 
+const DEFAULT_SCHEMA = {
+  collections: {
+    users: {
+      schema: S.Schema({
+        id: S.Id(),
+        name: S.String(),
+      }),
+    },
+  },
+};
+
 describe.each([TriplitClient, WorkerClient])('%O', (Client) => {
   describe('Session Management', async () => {
-    const DEFAULT_SCHEMA = {
-      collections: {
-        users: {
-          schema: S.Schema({
-            id: S.Id(),
-            name: S.String(),
-          }),
-        },
-      },
-    };
-
     it('can start, update, and end a session', async () => {
       using server = await tempTriplitServer({
         serverOptions: { dbOptions: { schema: DEFAULT_SCHEMA } },
@@ -359,6 +359,48 @@ describe.each([TriplitClient, WorkerClient])('%O', (Client) => {
       await bob.insert('users', { id: '1', name: 'Alice' });
       await pause(100);
       expect(aliceSubSpy.mock.lastCall?.[0]?.length).toBe(1);
+    });
+  });
+
+  describe('Token checking', () => {
+    // TODO: this check occurs on the server, is it possible you'll start a session / sign in, but offline and cause issues?
+    it('server will reject non jwt token values with UNAUTHORIZED', async () => {
+      using server = await tempTriplitServer({
+        serverOptions: { dbOptions: { schema: DEFAULT_SCHEMA } },
+      });
+      const { port } = server;
+
+      {
+        // Using TriplitClient constructor
+        const sessionErrorSpy = vi.fn();
+        const client = new Client({
+          serverUrl: `http://localhost:${port}`,
+          token: 'invalid-token',
+          schema: DEFAULT_SCHEMA.collections,
+          onSessionError: sessionErrorSpy,
+        });
+        // Lots of async calls in worker client init
+        // A little concerning its taking > default pause time
+        await pause(500);
+        expect(sessionErrorSpy).toHaveBeenCalledWith('UNAUTHORIZED');
+      }
+      {
+        // Using .startSession()
+        const client = new Client({
+          workerUrl,
+          serverUrl: `http://localhost:${port}`,
+          autoConnect: false,
+          schema: DEFAULT_SCHEMA.collections,
+        });
+        const invalidToken = 'invalid-token';
+        const sessionErrorSpy = vi.fn();
+        client.onSessionError(sessionErrorSpy);
+        await pause();
+        expect(sessionErrorSpy).not.toHaveBeenCalled();
+        await client.startSession(invalidToken);
+        await pause();
+        expect(sessionErrorSpy).toHaveBeenCalledWith('UNAUTHORIZED');
+      }
     });
   });
 });

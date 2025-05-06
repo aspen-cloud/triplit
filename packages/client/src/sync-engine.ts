@@ -39,7 +39,6 @@ import {
   SyncTransport,
   TransportConnectParams,
 } from './types.js';
-import { decodeToken, tokenIsExpired } from './token.js';
 import {
   createQueryWithExistsAddedToIncludes,
   createQueryWithRelationalOrderAddedToIncludes,

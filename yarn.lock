@@ -10611,6 +10611,7 @@ __metadata:
     "@vitest/web-worker": "npm:^2.0.5"
     comlink: "npm:^4.4.1"
     esbuild: "npm:^0.21.3"
+    jose: "npm:^5.9.6"
     superjson: "npm:^2.2.1"
     tinybench: "npm:^2.9.0"
     typescript: "npm:^5.8.3"

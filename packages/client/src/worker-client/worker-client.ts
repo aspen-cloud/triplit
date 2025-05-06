@@ -85,10 +85,11 @@ export class WorkerClient<M extends Models<M> = Models> implements Client<M> {
       autoConnect,
       ...remainingOptions
     } = options || {};
+    const connectOnInitialization = autoConnect ?? true;
     if (token) {
       this.startSession(
         token,
-        autoConnect,
+        connectOnInitialization,
         refreshOptions && ComLink.proxy(refreshOptions)
       );
     }
@@ -104,7 +105,8 @@ export class WorkerClient<M extends Models<M> = Models> implements Client<M> {
     this.onConnectionStatusChange((status) => {
       this._connectionStatus = status;
     }, true);
-    const sessionVars = token ? normalizeSessionVars(decodeToken(token)) : {};
+    const decoded = decodeToken(token);
+    const sessionVars = decoded ? normalizeSessionVars(decoded) : {};
     this._vars = {
       $global: remainingOptions?.variables ?? {},
       $session: sessionVars,

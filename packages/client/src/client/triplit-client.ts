@@ -2,6 +2,7 @@ import { decodeToken, tokenIsExpired } from '../token.js';
 import {
   NoActiveSessionError,
   SessionRolesMismatchError,
+  TokenDecodingError,
   TokenExpiredError,
   UnrecognizedFetchPolicyError,
 } from '../errors.js';
@@ -118,21 +119,17 @@ export class TriplitClient<M extends Models<M> = Models> {
       kv: storage,
       clientId: Math.random().toString(36).substring(7),
     }).then((db) => {
-      if (this.token) {
-        // If we have a session set up at this point, use that info
-        const decoded = decodeToken(this.token, this.claimsPath);
-        // @ts-expect-error
-        this.db = db.withSessionVars(decoded);
-      } else {
-        // @ts-expect-error
-        this.db = db;
-      }
+      // If we have a session set up at this point, use that info
+      const decoded = this.token
+        ? decodeToken(this.token, this.claimsPath)
+        : undefined;
+      this.db = decoded ? db.withSessionVars(decoded) : db;
       this.onConnectionOptionsChange((changes) => {
         if ('token' in changes) {
           const decoded = changes.token
             ? decodeToken(changes.token, this.claimsPath)
             : {};
-          this.db = this.db.withSessionVars(decoded);
+          this.db = decoded ? this.db.withSessionVars(decoded) : this.db;
         }
       });
       this.db.onCommit(
@@ -1038,9 +1035,11 @@ export class TriplitClient<M extends Models<M> = Models> {
     connect = true,
     refreshOptions?: TokenRefreshOptions
   ) {
+    // On any decoding issue, we fall back to no token
+    const decoded = decodeToken(token);
     // 1. determine the new token
-    if (token) {
-      if (tokenIsExpired(decodeToken(token, this.claimsPath))) {
+    if (decoded) {
+      if (tokenIsExpired(decoded)) {
         if (!refreshOptions?.refreshHandler) {
           // should we centralize this in
           throw new TokenExpiredError();
@@ -1075,8 +1074,10 @@ export class TriplitClient<M extends Models<M> = Models> {
     const { interval, refreshHandler } = refreshOptions;
     const setRefreshTimeoutForToken = (refreshToken: string) => {
       const decoded = decodeToken(refreshToken);
+      if (!decoded) return;
       if (!decoded.exp && !interval) return;
-      let delay = interval ?? decoded.exp * 1000 - Date.now() - 1000;
+      let delay =
+        interval ?? (decoded.exp as number) * 1000 - Date.now() - 1000;
       if (delay < 1000) {
         this.logger.warn(
           `The minimum allowed refresh interval is 1000ms, the ${interval ? 'provided interval' : 'interval determined from the provided token'} was ${Math.round(delay)}ms.`
@@ -1122,9 +1123,8 @@ export class TriplitClient<M extends Models<M> = Models> {
       throw new NoActiveSessionError();
     }
     const decodedToken = decodeToken(token);
-    if (tokenIsExpired(decodedToken)) {
-      throw new TokenExpiredError();
-    }
+    if (!decodedToken) throw new TokenDecodingError(decodedToken);
+    if (tokenIsExpired(decodedToken)) throw new TokenExpiredError();
     // probably could just get this from the client constructor options?
     // if we guarantee that the client is always using that schema
     const sessionRoles = getRolesFromSession(

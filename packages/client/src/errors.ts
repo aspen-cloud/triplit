@@ -107,3 +107,12 @@ export class NoActiveSessionError extends TriplitError {
     this.status = STATUS_CODES['Forbidden'];
   }
 }
+
+export class TokenDecodingError extends TriplitError {
+  constructor(token: unknown, ...args: any[]) {
+    super(...args);
+    this.name = 'TokenDecodingError';
+    this.baseMessage = `The provided token ("${token}") could not be decoded. Please ensure that you are using a valid JWT token.`;
+    this.status = STATUS_CODES['Unauthorized'];
+  }
+}

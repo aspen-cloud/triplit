@@ -917,14 +917,15 @@ function recursivelyGetTriplesFromObj(
   return triples;
 }
 
-export async function createDB<M extends Models<M> = Models>(
-  options: DBOptions<M>
-) {
+export async function createDB<
+  M extends Models<M> = Models,
+  E extends EntitySyncStore = EntitySyncStore,
+>(options: DBOptions<M, E>): Promise<DB<M, E>> {
   let savedSchema = undefined;
   if (options.kv) {
     savedSchema = await DB.getSchemaFromStorage(options.kv);
   }
-  const db = new DB({ ...options, schema: savedSchema });
+  const db = new DB<M, E>({ ...options, schema: savedSchema as DBSchema<M> });
 
   if (options.schema) {
     const change = await db.overrideSchema(
