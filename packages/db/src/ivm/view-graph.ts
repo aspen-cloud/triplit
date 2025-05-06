@@ -47,6 +47,14 @@ function createQueryNode(query: PreparedQuery): ViewNode {
   };
 }
 
+export function resetViewGraph(viewGraph: ViewGraph) {
+  for (const node of viewGraph.values()) {
+    node.results = undefined;
+    node.cachedBoundQuery = undefined;
+    node.hasChanged = true;
+  }
+}
+
 function linkNodes(
   parentNode: ViewNode,
   query: PreparedQuery,

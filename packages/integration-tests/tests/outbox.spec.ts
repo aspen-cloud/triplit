@@ -20,6 +20,10 @@ afterAll(() => {
 });
 
 const DEFAULT_TOKEN = await encodeToken({ sub: 'test' }, SECRET);
+const DEFAULT_SERVICE_TOKEN = await encodeToken(
+  { 'x-triplit-token-type': 'secret' },
+  SECRET
+);
 
 const DEFAULT_SCHEMA = {
   collections: {
@@ -921,4 +925,124 @@ it('rolled back outbox changes will correctly update in subscriptions', async ()
   expect(aliceSub.mock.calls.at(-1)?.[0]).toStrictEqual([
     { id: 'test1', name: 'test1' },
   ]);
+});
+
+it('client.clear should update all active subscriptions', async () => {
+  const schema = S.Collections({
+    users: {
+      schema: S.Schema({
+        id: S.Id(),
+        name: S.String(),
+      }),
+    },
+    posts: {
+      schema: S.Schema({
+        id: S.Id(),
+        title: S.String(),
+        authorId: S.String(),
+      }),
+    },
+  });
+  using server = await tempTriplitServer({
+    serverOptions: {
+      dbOptions: { schema: { collections: schema } },
+      jwtSecret: SECRET,
+    },
+  });
+  const { port } = server;
+  const client = new TriplitClient({
+    serverUrl: `http://localhost:${port}`,
+    token: DEFAULT_TOKEN,
+    schema,
+    autoConnect: true,
+  });
+  const usersSub = vi.fn();
+  const postsSub = vi.fn();
+  client.subscribe(client.query('users'), usersSub);
+  client.subscribe(client.query('posts'), postsSub);
+  await pause(30);
+  expect(usersSub.mock.calls.at(-1)?.[0]).toStrictEqual([]);
+  expect(postsSub.mock.calls.at(-1)?.[0]).toStrictEqual([]);
+  await client.insert('users', { id: '1', name: 'test' });
+  await client.insert('posts', {
+    id: '1',
+    title: 'test',
+    authorId: '1',
+  });
+  await pause(30);
+  expect(usersSub.mock.calls.at(-1)?.[0]).toStrictEqual([
+    { id: '1', name: 'test' },
+  ]);
+  expect(postsSub.mock.calls.at(-1)?.[0]).toStrictEqual([
+    { id: '1', title: 'test', authorId: '1' },
+  ]);
+  await client.clear({ full: false });
+  expect(usersSub.mock.calls.at(-1)?.[0]).toStrictEqual([]);
+  expect(postsSub.mock.calls.at(-1)?.[0]).toStrictEqual([]);
+  await pause(50);
+  expect(usersSub.mock.calls.at(-1)?.[0]).toStrictEqual([
+    { id: '1', name: 'test' },
+  ]);
+  expect(postsSub.mock.calls.at(-1)?.[0]).toStrictEqual([
+    { id: '1', title: 'test', authorId: '1' },
+  ]);
+});
+it('server.clear should update all active subscriptions', async () => {
+  const schema = S.Collections({
+    users: {
+      schema: S.Schema({
+        id: S.Id(),
+        name: S.String(),
+      }),
+    },
+    posts: {
+      schema: S.Schema({
+        id: S.Id(),
+        title: S.String(),
+        authorId: S.String(),
+      }),
+    },
+  });
+  using server = await tempTriplitServer({
+    serverOptions: {
+      dbOptions: { schema: { collections: schema } },
+      jwtSecret: SECRET,
+    },
+  });
+  const { port } = server;
+  const client = new TriplitClient({
+    serverUrl: `http://localhost:${port}`,
+    token: DEFAULT_TOKEN,
+    schema,
+    autoConnect: true,
+  });
+  const usersSub = vi.fn();
+  const postsSub = vi.fn();
+  client.subscribe(client.query('users'), usersSub);
+  client.subscribe(client.query('posts'), postsSub);
+  await pause(30);
+  expect(usersSub.mock.calls.at(-1)?.[0]).toStrictEqual([]);
+  expect(postsSub.mock.calls.at(-1)?.[0]).toStrictEqual([]);
+  await client.insert('users', { id: '1', name: 'test' });
+  await client.insert('posts', {
+    id: '1',
+    title: 'test',
+    authorId: '1',
+  });
+  await pause(30);
+  expect(usersSub.mock.calls.at(-1)?.[0]).toStrictEqual([
+    { id: '1', name: 'test' },
+  ]);
+  expect(postsSub.mock.calls.at(-1)?.[0]).toStrictEqual([
+    { id: '1', title: 'test', authorId: '1' },
+  ]);
+  await fetch(`http://localhost:${port}/clear`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${DEFAULT_SERVICE_TOKEN}`,
+    },
+  });
+  await pause(50);
+  expect(usersSub.mock.calls.at(-1)?.[0]).toStrictEqual([]);
+  expect(postsSub.mock.calls.at(-1)?.[0]).toStrictEqual([]);
 });

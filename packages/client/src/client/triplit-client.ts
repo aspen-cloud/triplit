@@ -370,13 +370,19 @@ export class TriplitClient<M extends Models<M> = Models> {
    * - `full`: If true, clears the entire database. If false, only clears your application data. Defaults to `false`.
    * @returns a promise that resolves when the database has been cleared
    */
-  async clear(options: ClearOptions = {}) {
+  async clear(options: ClearOptions = { full: false }) {
     if (this.awaitReady) await this.awaitReady;
-    return this.db.clear(options);
+    await this.db.clear(options);
+    // if we were connected, reconnect the existing queries
+    // and get fresh server results
+    if (this.connectionStatus === 'OPEN') {
+      this.disconnect();
+      this.syncEngine.resetQueryState();
+      await this.connect();
+    }
   }
 
   async reset(options: ClearOptions = {}) {
-    this.syncEngine.resetQueryState();
     await this.clear(options);
   }
 

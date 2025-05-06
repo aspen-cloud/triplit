@@ -34,6 +34,7 @@ import { hashFilters, hashPreparedQuery } from '../query/hash-query.js';
 import {
   addQueryToViewGraph,
   potentiallyRemoveNodeSubtreeFromViewGraph,
+  resetViewGraph,
   ViewNode,
 } from './view-graph.js';
 
@@ -164,7 +165,6 @@ export class IVM<M extends Models<M> = Models> {
           continue;
         }
         const results = rootQueryInfo.rootNode.results;
-
         rootQueryInfo.uninitializedListeners.delete(listener);
         if (results != null) {
           listener({ results });
@@ -685,6 +685,12 @@ export class IVM<M extends Models<M> = Models> {
     return viewNodesInOrder;
   }
 
+  resetSubscriptions() {
+    resetViewGraph(this.viewGraph);
+    for (const queryId of this.subscribedQueries.keys()) {
+      this.uninitializedQueries.add(queryId);
+    }
+  }
   async clear() {
     await this.storage.clear();
     this.subscribedQueries.clear();

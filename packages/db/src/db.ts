@@ -749,13 +749,17 @@ export class DB<
   }
 
   async clear(options?: ClearOptions) {
-    await Promise.all([this.kv.clear(), this.ivm.clear()]);
+    await this.kv.clear();
     if (options?.full) {
+      await this.ivm.clear();
       this.schema = undefined;
       return;
     }
     this.schema &&
       (await this.updateSchema(this.schema as unknown as DBSchema));
+    this.ivm.resetSubscriptions();
+    await this.updateQueryViews();
+    this.broadcastToQuerySubscribers();
   }
 
   updateGlobalVariables(vars: Record<string, any>) {
