@@ -30,6 +30,7 @@ import { ConsoleHandler } from '@triplit/logger/console';
 import { parseAndValidateToken, ProjectJWT } from '@triplit/server-core/token';
 import { Context, Hono } from 'hono';
 import { ContentfulStatusCode } from 'hono/utils/http-status';
+import { randomUUID as getRandomUUID } from 'uncrypto';
 
 import { WSContext, type UpgradeWebSocket, WSMessageReceive } from 'hono/ws';
 
@@ -234,7 +235,7 @@ export async function createTriplitHonoServer(
             const syncSchema = c.req.query('sync-schema') === 'true';
 
             // TODO replace with better ID generation
-            const clientId = Math.random().toString(36).slice(2);
+            const clientId = getRandomUUID();
 
             syncConnection = server.openConnection(token, {
               clientSchemaHash: clientSchemaHash,
@@ -354,54 +355,6 @@ export async function createTriplitHonoServer(
     })
   );
 
-  app.post('/update-token', async (c) => {
-    const { clientId, token } = await c.req.json();
-    if (!syncConnections.has(clientId)) {
-      return c.json(new TriplitError('No connection found for clientId'), 400);
-    }
-
-    const { ws, connection: syncConnection } = syncConnections.get(clientId)!;
-
-    const { data, error } = await parseAndValidateTokenWithOptions(token);
-    if (error) {
-      closeSocket(
-        ws,
-        {
-          type: 'UNAUTHORIZED',
-          message: error.message,
-          retry: false,
-        },
-        1008
-      );
-      return c.text('OK', 200);
-    }
-    const newTokenRoles = getRolesFromSession(
-      syncConnection?.db.schema,
-      normalizeSessionVars(data)
-    );
-
-    const existingTokenRoles = getRolesFromSession(
-      syncConnection?.db.schema,
-      normalizeSessionVars(syncConnection?.token)
-    );
-    if (!sessionRolesAreEquivalent(newTokenRoles, existingTokenRoles)) {
-      closeSocket(
-        ws,
-        {
-          type: 'ROLES_MISMATCH',
-          message: "Roles for new token don't match the old token.",
-          retry: false,
-        },
-        1008
-      );
-      return c.text('OK', 200);
-    }
-    // @ts-expect-error
-    ws.tokenExpiration = data?.exp;
-
-    return c.text('OK', 200);
-  });
-
   app.use('*', async (c, next) => {
     const authHeader = c.req.header('authorization');
     if (!authHeader) {
@@ -429,6 +382,42 @@ export async function createTriplitHonoServer(
         );
       throw triplitError;
     }
+  });
+
+  app.post('/update-token', async (c) => {
+    const { clientId } = await c.req.json();
+    if (!syncConnections.has(clientId)) {
+      return c.json(new TriplitError('No connection found for clientId'), 400);
+    }
+    const tokenData = c.get('token');
+
+    const { ws, connection: syncConnection } = syncConnections.get(clientId)!;
+    const newTokenRoles = getRolesFromSession(
+      syncConnection?.db.schema,
+      normalizeSessionVars(tokenData)
+    );
+    console.log({ clientId, token: tokenData, roles: newTokenRoles });
+
+    const existingTokenRoles = getRolesFromSession(
+      syncConnection?.db.schema,
+      normalizeSessionVars(syncConnection?.token)
+    );
+    if (!sessionRolesAreEquivalent(newTokenRoles, existingTokenRoles)) {
+      closeSocket(
+        ws,
+        {
+          type: 'ROLES_MISMATCH',
+          message: "Roles for new token don't match the old token.",
+          retry: false,
+        },
+        1008
+      );
+      return c.text('OK', 200);
+    }
+    // @ts-expect-error
+    ws.tokenExpiration = tokenData?.exp;
+
+    return c.text('OK', 200);
   });
 
   app.get('/version', (c) => {

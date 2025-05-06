@@ -322,9 +322,12 @@ export class SyncEngine {
       await fetch(`${this.client.serverUrl}/update-token`, {
         method: 'POST',
         body: JSON.stringify({
-          token,
           clientId: this.clientId,
         }),
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
       });
       return true;
     } catch (e) {
@@ -782,7 +785,6 @@ export class SyncEngine {
     if (message.type === 'READY') {
       const { payload } = message;
       const { clientId } = payload;
-
       this.clientId = clientId;
 
       if (!this.serverReady) {

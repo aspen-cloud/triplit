@@ -10795,6 +10795,7 @@ __metadata:
     node-cache: "npm:^5.1.2"
     tsx: "npm:^3.12.10"
     typescript: "npm:^5.8.3"
+    uncrypto: "npm:^0.1.3"
     ws: "npm:^8.13.0"
   peerDependencies:
     better-sqlite3: "*"
@@ -34383,6 +34384,13 @@ __metadata:
     has-symbols: "npm:^1.1.0"
     which-boxed-primitive: "npm:^1.1.1"
   checksum: 10/fadb347020f66b2c8aeacf8b9a79826fa34cc5e5457af4eb0bbc4e79bd87fed0fa795949825df534320f7c13f199259516ad30abc55a6e7b91d8d996ca069e50
+  languageName: node
+  linkType: hard
+
+"uncrypto@npm:^0.1.3":
+  version: 0.1.3
+  resolution: "uncrypto@npm:0.1.3"
+  checksum: 10/0020f74b0ce34723196d8982a73bb7f40cff455a41b8f88ae146b86885f4e66e41a1241fe80a887505c3bd2c7f07ed362b6ed041968370073c40a98496e6a737
   languageName: node
   linkType: hard
 
