@@ -28,7 +28,7 @@ import {
   OnMessageSentCallback,
   OnSessionErrorCallback,
   QuerySyncState,
-  SessionErrors,
+  SessionError,
   SyncOptions,
   SyncStateCallback,
 } from './client/types';
@@ -850,7 +850,7 @@ export class SyncEngine {
         ].includes(type)
       ) {
         for (const handler of this.sessionErrorSubscribers) {
-          handler(type as SessionErrors);
+          handler(type as SessionError);
         }
       }
 
