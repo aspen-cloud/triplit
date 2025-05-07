@@ -637,7 +637,11 @@ export class DB<
         newSchema,
       };
 
-    issues = await getSchemaDiffIssues(this.fetch.bind(this), diff);
+    issues = await getSchemaDiffIssues(
+      (query: SchemaQuery<M>) =>
+        this.fetch.bind(this)(query, { skipRules: true }),
+      diff
+    );
 
     // TODO if `failOnBackwardsIncompatibleChange` is true, we should skip
     // data checks for faster performance

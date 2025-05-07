@@ -432,6 +432,57 @@ describe('detecting dangerous edits', () => {
   });
 });
 
+describe.each([true, false])(
+  'schema override with permissions %s',
+  async (hasPermissions) => {
+    const schemaA = {
+      collections: S.Collections({
+        users: {
+          schema: S.Schema({ id: S.Id(), name: S.String() }),
+          ...(hasPermissions
+            ? {
+                permissions: {
+                  user: {
+                    read: { filter: [true] },
+                  },
+                },
+              }
+            : {}),
+        },
+      }),
+    };
+    const schemaB = {
+      collections: S.Collections({
+        users: {
+          schema: S.Schema({ id: S.Id() }),
+          ...(hasPermissions
+            ? {
+                permissions: {
+                  user: {
+                    read: { filter: [true] },
+                  },
+                },
+              }
+            : {}),
+        },
+      }),
+    };
+    it('will not allow backwards incompatible changes', async () => {
+      const db = new DB({ schema: schemaA });
+      await db.insert(
+        'users',
+        {
+          id: '1',
+          name: 'test',
+        },
+        { skipRules: true }
+      );
+      const result = await db.overrideSchema(schemaB);
+      expect(result.successful).toBe(false);
+    });
+  }
+);
+
 describe('roles', () => {
   it('can detect changes to roles', () => {
     const schemaA = {
