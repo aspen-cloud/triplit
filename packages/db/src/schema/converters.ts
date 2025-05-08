@@ -44,9 +44,9 @@ export function getTypeConvertersFromSchema(
     );
     // This has the slight benefit that it will bail out if we dont have anything to convert, so incurs no overhead
     // Eventually this should be replaced by a compiled converter
-    if (datePaths.length === 0 && setPaths.length === 0) {
-      continue;
-    }
+    // if (datePaths.length === 0 && setPaths.length === 0) {
+    //   continue;
+    // }
     // TODO: probably want to prune / skip for undefined
     conversions.set(collection, {
       fromDB: (entity) => {

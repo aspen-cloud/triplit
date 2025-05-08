@@ -483,6 +483,31 @@ describe.each([true, false])(
   }
 );
 
+it('data is entirely usable after deleting a columns and reflects the new schema', async () => {
+  const db = new DB({
+    schema: {
+      collections: S.Collections({
+        test: {
+          schema: S.Schema({ id: S.Id(), name: S.Optional(S.String()) }),
+        },
+      }),
+    },
+  });
+  await db.insert('test', { id: '1', name: 'test' });
+  await db.update('test', '1', (entity) => {
+    entity.name = undefined; //nulll
+  });
+  await db.overrideSchema({
+    collections: S.Collections({
+      test: {
+        schema: S.Schema({ id: S.Id() }),
+      },
+    }),
+  });
+  const result = await db.fetch({ collectionName: 'test' });
+  expect(result).toEqual([{ id: '1' }]);
+});
+
 describe('roles', () => {
   it('can detect changes to roles', () => {
     const schemaA = {

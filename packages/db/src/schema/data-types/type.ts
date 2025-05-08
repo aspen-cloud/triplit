@@ -272,6 +272,9 @@ export namespace Type {
         const result: any = {};
         for (const key in encoded) {
           const property = type.properties[key];
+          if (!property) {
+            continue;
+          }
           // If the property is optional and no input is provided, decode as value if null
           if (isOptional(property) && hasNoValue(encoded[key])) {
             if (encoded[key] === null) result[key] = null;
