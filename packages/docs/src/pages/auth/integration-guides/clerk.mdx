@@ -51,36 +51,32 @@ There are also community SDKs for frameworks like [Svelte](https://github.com/ma
 
 ### Add the Clerk token to your Triplit client
 
-Your Triplit client needs to send the JWT token issued by Clerk with each request. You can do this with the `startSession` method for the `TriplitClient`.
+Your Triplit client needs to send the JWT token issued by Clerk with each request. You can do this with the `startSession` method for the `TriplitClient`. Here's an example with Clerk's React bindings:
 
 ```ts copy
-async function refreshTriplitSession() {
-  // end the existing session if it exists
-  if (triplit.token) {
-    await triplit.endSession();
-  }
+import { useAuth } from '@clerk/clerk-react';
 
-  // get the Clerk client or session using your framework
-  // e.g. `const auth = useAuth()` from @clerk/clerk-react
-  const token = await auth.getToken({ skipCache: true });
-  if (token) {
-    await triplit.startSession(token);
-  }
+function App() {
+  const { isLoaded, getToken } = useAuth();
+
+  // Refresh the Triplit session when auth state changes
+  useEffect(() => {
+    if (isLoaded) {
+      getToken().then((token) => {
+        if (!token) {
+          client.endSession();
+          return;
+        }
+        client.startSession(token, true, {
+          refreshHandler: getToken,
+        });
+      });
+    }
+  }, [getToken, isLoaded]);
 }
-
-// call this function on page load / component mount
-// and then every 45 seconds (the default Clerk token lifetime is 60 seconds).
-refreshTriplitSession();
-const interval = setInterval(refreshTriplitSession, 45000);
-
-/* if running in a framework or component, make sure to clear the interval
- *  when the component unmounts:
- *
- *  return () => clearInterval(interval);
- */
 ```
 
-You'll note that we're using `setInterval` to automatically refresh the token before it expires. Triplit will close down connections with expired tokens, but this will keep connections open for as long as Clerk issues a token that has consistent [roles](/schemas/permissions#roles) .
+You'll note that we're using the `refreshHandler` option to automatically refresh the token before it expires. Triplit will close down connections with expired tokens, but this will keep connections open for as long as Clerk issues a token that has consistent [roles](/schemas/permissions#roles) .
 
 ### Test locally
 

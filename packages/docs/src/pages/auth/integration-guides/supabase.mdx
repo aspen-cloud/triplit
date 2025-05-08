@@ -70,8 +70,7 @@ function getSessionAndSubscribe() {
           await triplit.endSession();
           break;
         case 'TOKEN_REFRESHED':
-          await triplit.endSession();
-          await triplit.startSession(session.access_token);
+          triplit.updateSessionToken(session.access_token);
           break;
       }
     }
