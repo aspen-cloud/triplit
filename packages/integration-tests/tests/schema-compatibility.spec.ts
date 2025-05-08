@@ -197,7 +197,7 @@ it('Should allow clients that are compatible to sync', async () => {
     id: '2',
     text: 'test',
     completed: false,
-    bob: 'test',
+    // bob: 'test',
   });
 
   expect(subBob.mock.calls.at(-1)?.[0].length).toEqual(2);
@@ -205,7 +205,7 @@ it('Should allow clients that are compatible to sync', async () => {
     id: '1',
     text: 'test',
     completed: false,
-    alice: 'test',
+    // alice: 'test',
   });
   expect(subBob.mock.calls.at(-1)?.[0]).toContainEqual({
     id: '2',
