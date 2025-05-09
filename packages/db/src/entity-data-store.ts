@@ -187,6 +187,7 @@ export class EntityDataStore implements EntityStore {
       if (delta.operation === 'delete') {
         appliedChanges[delta.collection].deletes.add(delta.id);
       } else {
+        if (isEmpty(delta.change)) continue;
         appliedChanges[delta.collection].sets.set(delta.id, delta.change);
       }
     }
