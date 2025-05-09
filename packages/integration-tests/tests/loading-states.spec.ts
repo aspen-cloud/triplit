@@ -303,3 +303,89 @@ it('should have the correct state for a client has autoconnect:false but then co
     ],
   ]);
 });
+it('should reset all loading states when the client calls .clear()', async () => {
+  await using server = await tempTriplitServer();
+  const { port } = server;
+  const client = new TriplitClient({
+    serverUrl: `http://localhost:${port}`,
+    token: serviceToken,
+  });
+  await pause(20);
+  const query = client.query('users');
+  await client.insert('users', { id: '1', name: 'John' });
+  await pause(20);
+
+  let states: any[] = [];
+
+  client.subscribeWithStatus(query, (state) => {
+    states.push(state);
+  });
+  await pause(20);
+  expect(states).toEqual([
+    // immediate initial result
+    {
+      results: undefined,
+      error: undefined,
+      fetching: true,
+      fetchingLocal: true,
+      fetchingRemote: false,
+    },
+    // local result returns
+    {
+      results: [{ id: '1', name: 'John' }],
+      error: undefined,
+      fetching: true,
+      fetchingLocal: false,
+      fetchingRemote: false,
+    },
+    {
+      results: [{ id: '1', name: 'John' }],
+      error: undefined,
+      fetching: true,
+      fetchingLocal: false,
+      fetchingRemote: true,
+    },
+    {
+      results: [{ id: '1', name: 'John' }],
+      error: undefined,
+      fetching: false,
+      fetchingLocal: false,
+      fetchingRemote: false,
+    },
+  ]);
+  states = [];
+  await client.clear();
+  await pause(30);
+  expect(states).toEqual([
+    // immediate initial result
+    {
+      results: undefined,
+      error: undefined,
+      fetching: true,
+      fetchingLocal: true,
+      fetchingRemote: false,
+    },
+    // local result returns
+    {
+      results: [],
+      error: undefined,
+      fetching: true,
+      fetchingLocal: false,
+      fetchingRemote: false,
+    },
+    {
+      results: [],
+      error: undefined,
+      fetching: true,
+      fetchingLocal: false,
+      fetchingRemote: true,
+    },
+    {
+      results: [{ id: '1', name: 'John' }],
+      error: undefined,
+      fetching: false,
+      fetchingLocal: false,
+      fetchingRemote: false,
+    },
+  ]);
+});

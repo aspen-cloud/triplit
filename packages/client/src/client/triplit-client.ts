@@ -87,7 +87,12 @@ export class TriplitClient<M extends Models<M> = Models> {
   private _serverUrl: string | undefined = undefined;
 
   private readonly skipRules: boolean = SKIP_RULES;
-
+  private statusSubs: Set<{
+    query: SchemaQuery<M>;
+    callback: (state: SubscriptionSignalPayload<M, any>) => void;
+    options?: Partial<SubscriptionOptions>;
+    unsub: () => void;
+  }> = new Set();
   readonly syncSchema: boolean;
 
   http: HttpClient<M>;
@@ -372,11 +377,16 @@ export class TriplitClient<M extends Models<M> = Models> {
     await this.db.clear(options);
     // if we were connected, reconnect the existing queries
     // and get fresh server results
-    if (this.connectionStatus === 'OPEN') {
-      this.disconnect();
-      this.syncEngine.resetQueryState();
-      await this.connect();
+    for (const sub of this.statusSubs) {
+      sub.unsub();
+      sub.unsub = this._subscribeWithStatus(
+        sub.query,
+        sub.callback,
+        sub.options
+      );
     }
+    await this.db.updateQueryViews();
+    this.db.broadcastToQuerySubscribers();
   }
 
   async reset(options: ClearOptions = {}) {
@@ -569,8 +579,24 @@ export class TriplitClient<M extends Models<M> = Models> {
         this.connectionStatus !== 'CLOSING')
     );
   }
-
   subscribeWithStatus<Q extends SchemaQuery<M>>(
+    query: Q,
+    callback: (state: SubscriptionSignalPayload<M, Q>) => void,
+    options?: Partial<SubscriptionOptions>
+  ): () => void {
+    const subTracker = {
+      query,
+      callback,
+      options,
+      unsub: this._subscribeWithStatus(query, callback, options),
+    };
+    this.statusSubs.add(subTracker);
+    return () => {
+      subTracker.unsub();
+      this.statusSubs.delete(subTracker);
+    };
+  }
+  private _subscribeWithStatus<Q extends SchemaQuery<M>>(
     query: Q,
     callback: (state: SubscriptionSignalPayload<M, Q>) => void,
     options?: Partial<SubscriptionOptions>
