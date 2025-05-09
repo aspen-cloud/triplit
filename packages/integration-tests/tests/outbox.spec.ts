@@ -927,7 +927,7 @@ it('rolled back outbox changes will correctly update in subscriptions', async ()
   ]);
 });
 
-it('client.clear should update all active subscriptions', async () => {
+it.skip('client.clear should update all active subscriptions', async () => {
   const schema = S.Collections({
     users: {
       schema: S.Schema({

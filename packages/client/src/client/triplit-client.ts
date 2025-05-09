@@ -385,8 +385,6 @@ export class TriplitClient<M extends Models<M> = Models> {
         sub.options
       );
     }
-    await this.db.updateQueryViews();
-    this.db.broadcastToQuerySubscribers();
   }
 
   async reset(options: ClearOptions = {}) {
