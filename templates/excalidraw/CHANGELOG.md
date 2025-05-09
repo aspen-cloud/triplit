@@ -1,5 +1,16 @@
 # excalidraw
 
+## 1.0.33
+
+### Patch Changes
+
+- Updated dependencies [36f11d23]
+- Updated dependencies [f3351943]
+- Updated dependencies [2bd3e281]
+  - @triplit/db@1.0.31
+  - @triplit/react@1.0.32
+  - @triplit/client@1.0.32
+
 ## 1.0.32
 
 ### Patch Changes
