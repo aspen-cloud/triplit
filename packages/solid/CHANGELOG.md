@@ -1,5 +1,11 @@
 # @triplit/solid
 
+## 1.0.15
+
+### Patch Changes
+
+- @triplit/client@1.0.31
+
 ## 1.0.14
 
 ### Patch Changes

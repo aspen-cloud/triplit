@@ -1,5 +1,11 @@
 # @triplit/entity-db
 
+## 1.0.30
+
+### Patch Changes
+
+- 9308b204: bump
+
 ## 1.0.29
 
 ### Patch Changes
