@@ -1,5 +1,12 @@
 # @triplit/entity-db
 
+## 1.0.31
+
+### Patch Changes
+
+- 36f11d23: fixup
+- 2bd3e281: hotfix: defer tx permissions
+
 ## 1.0.30
 
 ### Patch Changes
