@@ -762,8 +762,6 @@ export class DB<
     this.schema &&
       (await this.updateSchema(this.schema as unknown as DBSchema));
     this.ivm.resetSubscriptions();
-    await this.updateQueryViews();
-    this.broadcastToQuerySubscribers();
   }
 
   updateGlobalVariables(vars: Record<string, any>) {

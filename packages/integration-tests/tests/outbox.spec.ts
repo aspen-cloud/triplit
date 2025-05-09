@@ -976,6 +976,8 @@ it('client.clear should update all active subscriptions', async () => {
   expect(postsSub.mock.calls.at(-1)?.[0]).toStrictEqual([
     { id: '1', title: 'test', authorId: '1' },
   ]);
+  usersSub.mockClear();
+  postsSub.mockClear();
   await client.clear({ full: false });
   expect(usersSub.mock.calls.at(-1)?.[0]).toStrictEqual([]);
   expect(postsSub.mock.calls.at(-1)?.[0]).toStrictEqual([]);

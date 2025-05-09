@@ -66,6 +66,11 @@ export class Session {
     if (!hasAdminAccess(this.token)) return NotAdminResponse();
     try {
       await this.db.clear({ full });
+      // clear will reset ivm, this will rebroadcast the empty server queries
+      if (!full) {
+        await this.db.updateQueryViews();
+        this.db.broadcastToQuerySubscribers();
+      }
       return ServerResponse(200);
     } catch (e) {
       if (isTriplitError(e)) return this.errorResponse(e);
