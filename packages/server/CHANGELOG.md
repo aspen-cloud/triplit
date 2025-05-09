@@ -1,5 +1,15 @@
 # @triplit/server
 
+## 1.0.40
+
+### Patch Changes
+
+- 6e9eac7f: rm log
+- Updated dependencies [9308b204]
+  - @triplit/db@1.0.30
+  - @triplit/client@1.0.31
+  - @triplit/server-core@1.0.34
+
 ## 1.0.39
 
 ### Patch Changes

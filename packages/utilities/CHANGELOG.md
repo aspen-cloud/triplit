@@ -1,5 +1,11 @@
 # @triplit/utilities
 
+## 0.0.15
+
+### Patch Changes
+
+- 9308b204: add support to json attributes in json schema converter
+
 ## 0.0.14
 
 ### Patch Changes
