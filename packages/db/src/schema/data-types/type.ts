@@ -562,7 +562,7 @@ function typeDefaultEqual(
   return a === b;
 }
 
-function isDefaultFunction(value: DefaultValue | undefined) {
+export function isDefaultFunction(value: DefaultValue | undefined) {
   return typeof value === 'object' && value !== null && 'func' in value;
 }
 

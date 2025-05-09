@@ -8,6 +8,7 @@ export const schema = S.Collections({
       string: S.String(),
       number: S.Number(),
       date: S.Date(),
+      json: S.Json(),
       set_string: S.Set(S.String()),
       set_number: S.Set(S.Number()),
       set_boolean: S.Set(S.Boolean()),
@@ -19,6 +20,7 @@ export const schema = S.Collections({
         string: S.String(),
         number: S.Number(),
         date: S.Date(),
+        json: S.Json(),
         set_string: S.Set(S.String()),
         set_number: S.Set(S.Number()),
         set_boolean: S.Set(S.Boolean()),
@@ -34,6 +36,7 @@ export const schema = S.Collections({
       string: S.String({ nullable: true }),
       number: S.Number({ nullable: true }),
       date: S.Date({ nullable: true }),
+      json: S.Json({ nullable: true }),
       set_string: S.Set(S.String(), { nullable: true }),
       set_number: S.Set(S.Number(), { nullable: true }),
       set_boolean: S.Set(S.Boolean(), { nullable: true }),
@@ -45,6 +48,7 @@ export const schema = S.Collections({
         string: S.String({ nullable: true }),
         number: S.Number({ nullable: true }),
         date: S.Date({ nullable: true }),
+        json: S.Json({ nullable: true }),
         set_string: S.Set(S.String(), { nullable: true }),
         set_number: S.Set(S.Number(), { nullable: true }),
         set_boolean: S.Set(S.Boolean(), { nullable: true }),
@@ -66,7 +70,7 @@ export const schema = S.Collections({
 
       number: S.Number({ default: 1 }),
       date: S.Date({ default: S.Default.now() }),
-
+      json: S.Json({ default: {} }),
       set_string: S.Set(S.String({ default: '1' })),
       set_number: S.Set(S.Number({ default: 1 })),
       set_boolean: S.Set(S.Boolean({ default: false })),
@@ -81,7 +85,7 @@ export const schema = S.Collections({
         string: S.String({ default: 'a string' }),
         number: S.Number({ default: 1 }),
         date: S.Date({ default: S.Default.now() }),
-
+        json: S.Json({ default: {} }),
         set_number: S.Set(S.Number({ default: 1 })),
         set_boolean: S.Set(S.Boolean({ default: false })),
         set_date: S.Set(S.Date({ default: S.Default.now() })),
@@ -129,6 +133,7 @@ export const schema = S.Collections({
         string: S.Optional(S.String()),
         number: S.Optional(S.Number()),
         date: S.Optional(S.Date()),
+        json: S.Optional(S.Json()),
         set_string: S.Optional(S.Set(S.String())),
         set_number: S.Optional(S.Set(S.Number())),
         set_boolean: S.Optional(S.Set(S.Boolean())),
@@ -140,6 +145,7 @@ export const schema = S.Collections({
           string: S.Optional(S.String()),
           number: S.Optional(S.Number()),
           date: S.Optional(S.Date()),
+          json: S.Optional(S.Json()),
           set_string: S.Optional(S.Set(S.String())),
           set_number: S.Optional(S.Set(S.Number())),
           set_boolean: S.Optional(S.Set(S.Boolean())),
@@ -162,6 +168,7 @@ export const schema = S.Collections({
 
       number: S.Number(),
       date: S.Date(),
+      json: S.Json(),
       set_string: S.Set(S.String()),
       set_stringEnum: S.Set(S.String({ enum: ['a', 'b', 'c'] as const })),
       set_number: S.Set(S.Number()),
@@ -186,6 +193,7 @@ export const schema = S.Collections({
 
         number: S.Optional(S.Number()),
         date: S.Optional(S.Date()),
+        json: S.Optional(S.Json()),
         set_string: S.Optional(S.Set(S.String())),
         set_number: S.Optional(S.Set(S.Number())),
         set_boolean: S.Optional(S.Set(S.Boolean())),
@@ -206,6 +214,7 @@ export const schema = S.Collections({
 
           number: S.Optional(S.Number()),
           date: S.Optional(S.Date()),
+          json: S.Optional(S.Json()),
           set_string: S.Optional(S.Set(S.String())),
           set_stringEnum: S.Set(
             S.String({ default: 'a', enum: ['a', 'b', 'c'] as const })
@@ -225,6 +234,7 @@ export const schema = S.Collections({
       string: S.String(),
       number: S.Number(),
       date: S.Date(),
+      json: S.Json(),
       set_string: S.Set(S.String()),
       set_number: S.Set(S.Number()),
       set_boolean: S.Set(S.Boolean()),
@@ -236,6 +246,7 @@ export const schema = S.Collections({
         string: S.String(),
         number: S.Number(),
         date: S.Date(),
+        json: S.Json(),
         set_string: S.Set(S.String()),
         set_number: S.Set(S.Number()),
         set_boolean: S.Set(S.Boolean()),

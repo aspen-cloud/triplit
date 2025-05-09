@@ -1,4 +1,4 @@
-import type { Models } from '@triplit/db';
+import { isDefaultFunction, type Models } from '@triplit/db';
 import { JSONSchema7 } from 'json-schema';
 import { Ajv } from 'ajv';
 import addFormats from 'ajv-formats';
@@ -73,6 +73,7 @@ export const transformFunctions = [
   transformDate,
   transformRecord,
   transformSet,
+  transformJson,
   transformConfig,
   stripNonSpecFields,
 ];
@@ -89,9 +90,9 @@ function transformTriplitJsonDataInJsonSchema(
   const collectionToTransform = collections?.[collection].schema;
 
   const cloneToTransform = structuredClone(collectionToTransform);
-  transformFunctions.map((transformFunc) => {
-    transformObjectDeeply(cloneToTransform, transformFunc);
-  });
+  for (const func of transformFunctions) {
+    transformObjectDeeply(cloneToTransform, func);
+  }
   // evaluate to ensure it compiles
   // e.g. if triplit changes their format
   const schemaEvaluation = ajv.compile(cloneToTransform);
@@ -107,6 +108,16 @@ export function transformDate(object: any) {
   if (object.type === 'date') {
     object.type = 'string';
     object.format = 'date-time';
+  }
+  return object;
+}
+
+export function transformJson(object: any) {
+  if (object.type === 'json') {
+    // in JSON schema you can just omit the type
+    // to allow any type
+    // https://json-schema.org/understanding-json-schema/basics#hello-world!
+    delete object.type;
   }
   return object;
 }
@@ -139,7 +150,9 @@ export function transformConfig(object: any) {
 function transformNullable(object: any) {
   if (object?.config?.nullable === true || object?.config?.optional === true) {
     // nullable values are indicated as type: ["null"] in JSON schema
-    if (Array.isArray(object.type) === false) {
+    // no type means "any" in JSON schema, so we don't need to add null
+    if (!object.type) {
+    } else if (Array.isArray(object.type) === false) {
       object.type = [object.type, 'null'];
     } else {
       // normally triplit's schema should just be a string, but
@@ -153,7 +166,7 @@ function transformDefault(object: any) {
   // we set the default, though JSON Schema notes that it should be
   // only used for documentation / example values, not as form default
   if (object?.config?.default !== undefined) {
-    if (object.config.default.func) {
+    if (isDefaultFunction(object.config.default)) {
       // Handle triplit's special cases: 'now' and 'uuid'
       object.default = object.config.default.func;
     } else {
