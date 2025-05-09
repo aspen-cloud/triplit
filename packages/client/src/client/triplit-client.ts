@@ -570,6 +570,7 @@ export class TriplitClient<M extends Models<M> = Models> {
   private get probablyIntendsToConnect() {
     return (
       this.connectionStatus === 'OPEN' ||
+      this.connectionStatus === 'CONNECTING' ||
       (!!this.connectOnInitialization &&
         !!this.token &&
         !!this.serverUrl &&
