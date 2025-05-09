@@ -39,7 +39,10 @@ type useInfiniteQueryPayload<M extends Models<M>, Q extends SchemaQuery<M>> = {
   disconnect: () => void;
 };
 
-function createStateSubscription<M extends Models<M>, Q extends SchemaQuery<M>>(
+export function createStateSubscription<
+  M extends Models<M>,
+  Q extends SchemaQuery<M>,
+>(
   client: TriplitClient<M> | WorkerClient<M>,
   query: Q,
   options?: Partial<SubscriptionOptions>
@@ -84,7 +87,7 @@ export function useQuery<M extends Models<M>, Q extends SchemaQuery<M>>(
   const stringifiedQuery = query && JSON.stringify(query);
   const [subscribe, snapshot] = useMemo(
     () => createStateSubscription(client, query, options),
-    [stringifiedQuery, client]
+    [stringifiedQuery, client, options?.localOnly!!]
   );
   const getServerSnapshot = useCallback(() => {
     return snapshot();
