@@ -1,5 +1,11 @@
 # @triplit/server
 
+## 1.0.44
+
+### Patch Changes
+
+- 3871b1f8: fixup bun server
+
 ## 1.0.43
 
 ### Patch Changes
