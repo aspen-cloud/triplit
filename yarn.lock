@@ -511,13 +511,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@azure/core-asynciterator-polyfill@npm:^1.0.2":
-  version: 1.0.2
-  resolution: "@azure/core-asynciterator-polyfill@npm:1.0.2"
-  checksum: 10/ccdad3bcf3f670e0b4f52e421cd1566368dce36ea4b3cb18a9b554c14ea0c1436868cb55e774b2377307dcb222e4eb3777b48e97249157c612e9c24654a56d16
-  languageName: node
-  linkType: hard
-
 "@babel/code-frame@npm:^7.0.0":
   version: 7.22.5
   resolution: "@babel/code-frame@npm:7.22.5"
@@ -10720,10 +10713,10 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@triplit/react-native@workspace:packages/react-native"
   dependencies:
-    "@azure/core-asynciterator-polyfill": "npm:^1.0.2"
     "@react-native-anywhere/polyfill-base64": "npm:^0.0.1-alpha.0"
     "@triplit/react": "workspace:^"
     "@types/react-native-get-random-values": "npm:^1"
+    core-js: "npm:3.42.0"
     event-target-polyfill: "npm:^0.0.4"
     hasown: "npm:^2.0.2"
     react-native-get-random-values: "npm:^1.11.0"
@@ -16458,6 +16451,13 @@ __metadata:
   dependencies:
     browserslist: "npm:^4.24.4"
   checksum: 10/a59da111fc437cc7ed1a1448dae6883617cabebd7731433d27ad75e0ff77df5f411204979bd8eb5668d2600f99db46eedf6f87e123109b6de728bef489d4229a
+  languageName: node
+  linkType: hard
+
+"core-js@npm:3.42.0":
+  version: 3.42.0
+  resolution: "core-js@npm:3.42.0"
+  checksum: 10/07e10c475cdb45608559778c4d8d1561204aa57c937a3e77ebc7359a95a350f8acfdbeab59c6a6532eb3b47262be0d05aba150a00b79659a91bedda4f59d9d5f
   languageName: node
   linkType: hard
 

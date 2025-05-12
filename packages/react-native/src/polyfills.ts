@@ -8,5 +8,8 @@ import '@react-native-anywhere/polyfill-base64';
 // EventTarget polyfill
 import 'event-target-polyfill';
 // AsyncIterator polyfill
-import '@azure/core-asynciterator-polyfill';
+import 'core-js/actual/symbol/async-iterator';
+// StructuredClone polyfill
+import 'core-js/actual/structured-clone';
+
 import 'hasown';

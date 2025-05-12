@@ -37,9 +37,9 @@
     "publish-pkg": "node ../../scripts/npm-check-version-and-publish.js"
   },
   "dependencies": {
-    "@azure/core-asynciterator-polyfill": "^1.0.2",
     "@react-native-anywhere/polyfill-base64": "^0.0.1-alpha.0",
     "@triplit/react": "workspace:^",
+    "core-js": "3.42.0",
     "event-target-polyfill": "^0.0.4",
     "hasown": "^2.0.2",
     "react-native-get-random-values": "^1.11.0",
