@@ -1,5 +1,11 @@
 # @triplit/react-native
 
+## 1.0.36
+
+### Patch Changes
+
+- 2bdc6a70: add structuredClone polyfill
+
 ## 1.0.35
 
 ### Patch Changes
