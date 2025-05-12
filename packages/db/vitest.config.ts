@@ -4,6 +4,7 @@ export default defineConfig({
   test: {
     setupFiles: ['@vitest/web-worker'],
     include: ['./test/**/*.{test,spec}.?(c|m)[jt]s?(x)'],
+    exclude: ['./test/bun/**/*'],
     coverage: {
       include: ['src/**/*.{js,ts}'],
       exclude: ['src/utils/**', ...coverageConfigDefaults.exclude],

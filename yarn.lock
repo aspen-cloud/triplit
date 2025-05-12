@@ -10672,7 +10672,7 @@ __metadata:
     "@triplit/logger": "workspace:^"
     "@triplit/types": "workspace:^"
     "@types/better-sqlite3": "npm:^7.6.12"
-    "@types/bun": "npm:^1.2.3"
+    "@types/bun": "npm:^1.2.13"
     "@types/core-js": "npm:^2.5.8"
     "@vitest/coverage-v8": "npm:^3.0.6"
     "@vitest/web-worker": "npm:^3.1.1"
@@ -11098,12 +11098,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/bun@npm:^1.2.3":
-  version: 1.2.3
-  resolution: "@types/bun@npm:1.2.3"
+"@types/bun@npm:^1.2.13":
+  version: 1.2.13
+  resolution: "@types/bun@npm:1.2.13"
   dependencies:
-    bun-types: "npm:1.2.3"
-  checksum: 10/e704e4dfbb3898091b292f95206dd3bb5147036ad578ab11dbe4d6a3ecb6d3237530993b401ecb6b8775e75357b06c3d8316038cf6728f79a03f5eac4f603dd1
+    bun-types: "npm:1.2.13"
+  checksum: 10/a7b3815fe9995c0fec72fe5ef9f81f1f44fe9a5dfd9809c78f6d5489007bb90905d9df34a779a54e9c2e721e49f57436275ce4269dd80a9614ef87664b5985ff
   languageName: node
   linkType: hard
 
@@ -15275,13 +15275,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"bun-types@npm:1.2.3":
-  version: 1.2.3
-  resolution: "bun-types@npm:1.2.3"
+"bun-types@npm:1.2.13":
+  version: 1.2.13
+  resolution: "bun-types@npm:1.2.13"
   dependencies:
     "@types/node": "npm:*"
-    "@types/ws": "npm:~8.5.10"
-  checksum: 10/8fe559d4acaac85ac837cf87c296810944730e28aa3ff86caeb14b74474e0e6c1a629f9fcc74cbe902ccf0f7800d82004ca60da726e2ce3afe1cefc0217824df
+  checksum: 10/2a7b18b5f716e2b8898b9652065cab64951f3664c87eb09c621a36e4a5e4618a54f7315b6f77fa905ab10022a46cdde181266f6e9f5776a460408d90085e845c
   languageName: node
   linkType: hard
 
