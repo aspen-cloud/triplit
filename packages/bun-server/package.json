@@ -18,6 +18,6 @@
   },
   "dependencies": {
     "@triplit/server": "1.0.43",
-    "hono": "^4.6.9"
+    "hono": "^4.7.9"
   }
 }
