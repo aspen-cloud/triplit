@@ -15250,7 +15250,7 @@ __metadata:
     "@triplit/server": "npm:1.0.43"
     "@types/bun": "npm:latest"
     "@types/semver": "npm:^7.5.8"
-    hono: "npm:^4.7.9"
+    hono: "npm:4.7.6"
     semver: "npm:^7.6.3"
   peerDependencies:
     typescript: ^5.0.0
@@ -21961,13 +21961,6 @@ __metadata:
   version: 4.7.6
   resolution: "hono@npm:4.7.6"
   checksum: 10/12651f7be08fd15609630c2acaea8443cf191c21e42fdac8c06588e6e0d54f8faf98ee2d6aaa4c1a8875a2c2835bc990a97b46385a45babff6b9079d055d6cf8
-  languageName: node
-  linkType: hard
-
-"hono@npm:^4.7.9":
-  version: 4.7.9
-  resolution: "hono@npm:4.7.9"
-  checksum: 10/73852ac8042ae93ddadcac81bfcab938e63b6f11b75d36f22459d02f0b1de1ea012e46157646e3f07db116adbdb84e127863fa7be06682d54c68202fd3b73b3f
   languageName: node
   linkType: hard
 
