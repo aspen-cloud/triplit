@@ -96,7 +96,7 @@ async function buildFiles() {
     format: 'esm',
     target: 'node16',
     // All deps are assumed to be external unless in dev dependencies
-    external: deps,
+    external: [...deps, 'bun:sqlite'],
     // plugins: [nativeNodeModulesPlugin],
   });
 

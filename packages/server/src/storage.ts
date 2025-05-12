@@ -36,8 +36,14 @@ export function defaultBTreeStorage() {
   return new BTreeKVStore();
 }
 
-export function defaultSqliteKVStore() {
+export async function defaultSqliteKVStore() {
   const dbPath = getStoragePath();
+  if (typeof Bun !== 'undefined') {
+    const bun = await import('bun:sqlite');
+    const db = new bun.Database(dbPath, { create: true });
+    const { BunSQLiteKVStore } = await import('@triplit/db/storage/bun-sqlite');
+    return new BunSQLiteKVStore(db);
+  }
   const sqlite = require('better-sqlite3');
   const db = sqlite(dbPath);
   return new SQLiteKVStore(db);
@@ -56,7 +62,9 @@ export function defaultLmdbKVStore() {
 }
 
 // Legacy types: 'file', 'leveldb', 'memory-array'
-export function createTriplitStorageProvider(storage: StoreKeys): KVStore {
+export async function createTriplitStorageProvider(
+  storage: StoreKeys
+): Promise<KVStore> {
   switch (storage) {
     case 'lmdb':
       return defaultLmdbKVStore();
@@ -65,7 +73,7 @@ export function createTriplitStorageProvider(storage: StoreKeys): KVStore {
     case 'memory-btree':
       return defaultBTreeStorage();
     case 'sqlite':
-      return defaultSqliteKVStore();
+      return await defaultSqliteKVStore();
     case 'sqlite-worker':
       return defaultSqliteWorkerKVStore();
     default:

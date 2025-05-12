@@ -10774,6 +10774,7 @@ __metadata:
     "@triplit/server-core": "workspace:^"
     "@triplit/types": "workspace:^"
     "@types/archiver": "npm:^6.0.3"
+    "@types/bun": "npm:^1.2.13"
     "@types/cors": "npm:^2"
     "@types/express": "npm:^4.17.17"
     "@types/jsonwebtoken": "npm:^9"
@@ -15249,7 +15250,7 @@ __metadata:
     "@triplit/server": "npm:1.0.43"
     "@types/bun": "npm:latest"
     "@types/semver": "npm:^7.5.8"
-    hono: "npm:^4.6.9"
+    hono: "npm:^4.7.9"
     semver: "npm:^7.6.3"
   peerDependencies:
     typescript: ^5.0.0
@@ -21963,10 +21964,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"hono@npm:^4.6.9":
-  version: 4.6.9
-  resolution: "hono@npm:4.6.9"
-  checksum: 10/7c54373add440bfd6525ac9fd018949c48f783fcb61b3a1ba4bcdb44d11713811efac4540f84aea63c5387e6051402654ec1c763e7e8037f581d795775b7cb81
+"hono@npm:^4.7.9":
+  version: 4.7.9
+  resolution: "hono@npm:4.7.9"
+  checksum: 10/73852ac8042ae93ddadcac81bfcab938e63b6f11b75d36f22459d02f0b1de1ea012e46157646e3f07db116adbdb84e127863fa7be06682d54c68202fd3b73b3f
   languageName: node
   linkType: hard
 

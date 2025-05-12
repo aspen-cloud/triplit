@@ -128,7 +128,7 @@ export async function createTriplitHonoServer(
     entityStore: new ServerEntityStore(),
     kv:
       typeof dbSource === 'string'
-        ? createTriplitStorageProvider(dbSource)
+        ? await createTriplitStorageProvider(dbSource)
         : dbSource,
   });
 

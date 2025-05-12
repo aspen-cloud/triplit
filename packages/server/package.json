@@ -62,6 +62,7 @@
     "@sentry/core": "^8.37.0",
     "@triplit/types": "workspace:^",
     "@types/archiver": "^6.0.3",
+    "@types/bun": "^1.2.13",
     "@types/cors": "^2",
     "@types/express": "^4.17.17",
     "@types/jsonwebtoken": "^9",
