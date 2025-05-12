@@ -1,6 +1,3 @@
-import type { Database } from 'better-sqlite3';
-import fs from 'fs';
-
 const MB1 = 1024 * 1024;
 const GB1 = 1024 * MB1;
 
@@ -55,8 +52,8 @@ export const STATEMENTS = Object.freeze({
   truncate: 'DELETE FROM data',
 });
 
-const CHECKPOINT_RESTART = 'PRAGMA wal_checkpoint(RESTART);';
-const CHECKPOINT_TRUNCATE = 'PRAGMA wal_checkpoint(TRUNCATE);';
+export const CHECKPOINT_RESTART = 'PRAGMA wal_checkpoint(RESTART);';
+export const CHECKPOINT_TRUNCATE = 'PRAGMA wal_checkpoint(TRUNCATE);';
 
 export function parseSqliteKvStoreOptions(
   options: SQLiteKVStoreOptions
@@ -120,38 +117,4 @@ function defaultPragma(walAutocheckpoint: number, journalSizeLimit: number) {
     PRAGMA wal_autocheckpoint  = ${walAutocheckpoint};
     PRAGMA journal_size_limit  = ${journalSizeLimit};
   `;
-}
-
-/**
- * Just in case there are long running reads (possibly iterators), truncation may be blocked
- * Add this to an interval to guard against a growing WAL file to ensure truncation occurs
- */
-export function walSizeGuard(
-  db: {
-    exec: (sql: string) => void;
-  },
-  walFile: string,
-  options: {
-    restartMax: number;
-    truncateMax: number;
-  }
-) {
-  try {
-    const walExists = fs.existsSync(walFile);
-    if (!walExists) {
-      // If we're seeing this warning, check how how we're reading the wal file (a bundler could cause issues)
-      console.warn('Could not find wal file');
-    }
-    let walSize = walExists ? fs.statSync(walFile).size : 0;
-    if (walSize > options.truncateMax) {
-      db.exec(CHECKPOINT_TRUNCATE);
-      walSize = fs.statSync(walFile).size;
-    } else if (walSize > options.restartMax) {
-      db.exec(CHECKPOINT_RESTART);
-      walSize = fs.statSync(walFile).size;
-    }
-  } catch (e) {
-    /* swallow SQLITE_BUSY & ENOENT */
-    console.error('Error on wal guard', e);
-  }
 }

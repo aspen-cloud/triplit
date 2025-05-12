@@ -11,10 +11,10 @@ import {
   STATEMENTS,
   SQLiteKVStoreOptions,
   parseSqliteKvStoreOptions,
-  walSizeGuard,
 } from '../utils/sqlite.js';
 import { ScopedKVStore } from '../utils/scoped-store.js';
 import sqlite from 'better-sqlite3';
+import { walSizeGuard } from '../utils/sqlite-node.js';
 
 type SQLiteKVState = {
   tableCreated: boolean;

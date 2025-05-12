@@ -10,7 +10,6 @@ import {
   parseSqliteKvStoreOptions,
   SQLiteKVStoreOptions,
   STATEMENTS,
-  walSizeGuard,
 } from '../utils/sqlite.js';
 import { MemoryTransaction } from '../transactions/memory-tx.js';
 import { ScopedKVStore } from '../utils/scoped-store.js';
@@ -22,7 +21,6 @@ type SQLiteState = {
 
 export class ExpoSQLiteKVStore implements KVStore {
   private storeReady: Promise<SQLiteState>;
-  private walGuard: NodeJS.Timer | undefined;
 
   constructor(name: string, options?: SQLiteKVStoreOptions);
   constructor(db: SQLite.SQLiteDatabase, options?: SQLiteKVStoreOptions);
@@ -44,7 +42,6 @@ export class ExpoSQLiteKVStore implements KVStore {
         STATEMENTS.createTable
       );
       createTableStatement.executeAsync();
-      this.walGuard = this.startWalGuard(db, parsedOptions);
       return {
         db,
         statements: {
@@ -61,29 +58,6 @@ export class ExpoSQLiteKVStore implements KVStore {
         },
       };
     });
-  }
-
-  private startWalGuard(
-    db: SQLite.SQLiteDatabase,
-    options: Required<SQLiteKVStoreOptions>
-  ) {
-    if (this.walGuard) {
-      clearInterval(this.walGuard);
-    }
-    const dbPath = db.databasePath;
-    const walFile = `${dbPath}-wal`;
-    return setInterval(() => {
-      walSizeGuard(
-        {
-          exec: db.execSync,
-        },
-        walFile,
-        {
-          restartMax: options.checkpointRestart,
-          truncateMax: options.checkpointTruncate,
-        }
-      );
-    }, 60_000);
   }
 
   scope(scope: Tuple): KVStore {

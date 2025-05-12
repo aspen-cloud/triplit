@@ -19,9 +19,9 @@ import {
   parseSqliteKvStoreOptions,
   SQLiteKVStoreOptions,
   STATEMENTS,
-  walSizeGuard,
 } from '../../utils/sqlite.js';
 import { decodeTuple, encodeTuple, Tuple } from '../../../codec.js';
+import { walSizeGuard } from '../../utils/sqlite-node.js';
 
 // if (isMainThread) {
 //   throw new Error('This script is intended to be run as a worker thread.');
