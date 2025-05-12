@@ -1,5 +1,11 @@
 # @triplit/entity-db
 
+## 1.0.32
+
+### Patch Changes
+
+- 304532b1: remove fs import from expo-sqlite
+
 ## 1.0.31
 
 ### Patch Changes
