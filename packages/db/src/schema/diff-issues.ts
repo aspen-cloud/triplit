@@ -12,7 +12,7 @@ import {
 } from './types/index.js';
 import { Logger } from '@triplit/logger';
 import { DBSchema } from '../db.js';
-import { isOptional, Type } from './index.js';
+import { Type } from './index.js';
 import { permissionsEqual, rolesEqual } from '../permissions.js';
 import { RecordProps, RecordType } from './data-types/index.js';
 
@@ -219,7 +219,7 @@ const DANGEROUS_EDITS = [
   {
     description: 'removed an optional attribute',
     matchesDiff: (diff: CollectionAttributeDiff) => {
-      return diff.type === 'delete' && isOptional(diff.dataType);
+      return diff.type === 'delete' && Type.isOptional(diff.dataType);
     },
     dataConstraint: 'attribute_is_empty',
     attributeCure: () => null,
@@ -287,7 +287,7 @@ const DANGEROUS_EDITS = [
       if (
         diff.type === 'insert' &&
         !diff.isNewCollection &&
-        !isOptional(diff.dataType)
+        !Type.isOptional(diff.dataType)
       )
         return true;
       return false;

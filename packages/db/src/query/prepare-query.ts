@@ -64,7 +64,7 @@ import {
   validateIdentifier,
 } from '../schema/utilities.js';
 import { simplifyQuery } from './simplify-query.js';
-import { Type } from '../schema/data-types/type.js';
+import { Type } from '../schema/data-types/index.js';
 import {
   isQueryInclusionReference,
   isQueryInclusionShorthand,

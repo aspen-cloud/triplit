@@ -1,4 +1,5 @@
 import { DBSchema } from '../db.js';
+import { hasNoValue } from '../utils/value.js';
 import { DEFAULT_FUNCTIONS } from './data-types/constants.js';
 import { JsonType } from './data-types/definitions/json.js';
 import {
@@ -9,7 +10,7 @@ import {
   SetType,
   StringType,
 } from './data-types/index.js';
-import { hasNoValue, isPrimitiveType } from './data-types/type.js';
+import { isPrimitiveType } from './data-types/type.js';
 import {
   Collection,
   CollectionPermission,

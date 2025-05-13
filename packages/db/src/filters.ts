@@ -23,13 +23,13 @@ import {
 } from './types.js';
 import {
   CollectionNameFromModels,
-  hasNoValue,
   ModelRelationshipPaths,
   Models,
   SET_OP_PREFIX,
 } from './schema/index.js';
 import { isValueVariable } from './variables.js';
 import { compareValue } from './codec.js';
+import { hasNoValue } from './utils/value.js';
 
 export async function satisfiesFilters(
   entity: DBEntity,

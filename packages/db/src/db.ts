@@ -32,7 +32,7 @@ import { isEmpty } from './memory-write-buffer.js';
 import { satisfiesFilters } from './filters.js';
 import { ValuePointer } from './utils/value-pointer.js';
 import { logger as LOGGER, Logger } from '@triplit/logger';
-import { Type } from './schema/data-types/type.js';
+import { Type } from './schema/data-types/index.js';
 import { getCollectionPermissions } from './permissions.js';
 import {
   CollectionNameFromModels,
