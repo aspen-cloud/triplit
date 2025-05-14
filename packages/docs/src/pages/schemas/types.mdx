@@ -172,7 +172,9 @@ const schema = S.Collections({
   test: {
     schema: S.Schema({
       id: S.Id(),
+      // S.Optional and nullable are equivalent
       optionalString: S.Optional(S.String()),
+      alsoOptionalString: S.String({ nullable: true }),
     }),
   },
 });
