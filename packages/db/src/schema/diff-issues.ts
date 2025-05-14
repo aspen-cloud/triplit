@@ -7,6 +7,8 @@ import {
   Diff,
   Models,
   PossibleDataViolation,
+  Relationship,
+  Relationships,
   SchemaChange,
   TypeConfig,
 } from './types/index.js';
@@ -15,6 +17,7 @@ import { DBSchema } from '../db.js';
 import { Type } from './index.js';
 import { permissionsEqual, rolesEqual } from '../permissions.js';
 import { RecordProps, RecordType } from './data-types/index.js';
+import { hashQuery } from '../query/hash-query.js';
 
 function isCollectionAttributeDiff(
   diff: Diff
@@ -164,6 +167,15 @@ export function diffSchemas(
     );
 
     // TODO: Diff relationships
+    const isRelationDiff = !relationshipsEqual(
+      collectionA?.relationships,
+      collectionB?.relationships
+    );
+    if (isRelationDiff)
+      diff.push({
+        _diff: 'collectionRelationships',
+        collection,
+      });
 
     // Diff permissions
     const isPermissionDiff = !permissionsEqual(
@@ -186,6 +198,36 @@ export function diffSchemas(
     });
 
   return diff;
+}
+
+function relationshipsEqual(
+  a: Relationships | undefined,
+  b: Relationships | undefined
+) {
+  if (!a && !b) return true;
+  if (!a || !b) return false;
+
+  const keysA = Object.keys(a);
+  const keysB = Object.keys(b);
+  if (keysA.length !== keysB.length) return false;
+  for (const key of keysA) {
+    const relationshipA = a[key];
+    const relationshipB = b[key];
+    if (!relationshipEqual(relationshipA, relationshipB)) return false;
+  }
+  return true;
+}
+
+function relationshipEqual(
+  a: Relationship | undefined,
+  b: Relationship | undefined
+) {
+  if (!a && !b) return true;
+  if (!a || !b) return false;
+  if (a.cardinality !== b.cardinality) return false;
+  // TODO: implement a better hashQuery for unprepared queries
+  if (hashQuery(a.query) !== hashQuery(b.query)) return false;
+  return true;
 }
 
 // function areDifferent(a: any, b: any): boolean {

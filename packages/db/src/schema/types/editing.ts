@@ -45,6 +45,7 @@ export type RolesDiff = {
 
 export type Diff =
   | CollectionAttributeDiff
+  | CollectionRelationshipsDiff
   | CollectionPermissionsDiff
   | RolesDiff;
 

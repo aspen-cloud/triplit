@@ -28,7 +28,7 @@ export interface Collection<
   CN extends CollectionNameFromModels<M> = CollectionNameFromModels<M>,
 > {
   schema: Model;
-  relationships?: { [R in string]: ModelRelationship<M> };
+  relationships?: Relationships<M>;
   permissions?: ModelRolePermissions<M, CN>;
 }
 
@@ -57,6 +57,13 @@ type ModelRelationship<
   M extends Models<M> = Models,
   CN extends CollectionNameFromModels<M> = CollectionNameFromModels<M>,
 > = ModelsRelationship<M>[CN];
+
+export type Relationships<
+  M extends Models<M> = Models,
+  CN extends CollectionNameFromModels<M> = CollectionNameFromModels<M>,
+> = {
+  [R in string]: ModelRelationship<M, CN>;
+};
 
 /**
  * A relationship between two collections

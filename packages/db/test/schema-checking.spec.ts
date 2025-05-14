@@ -205,6 +205,41 @@ describe('Schema diffing', () => {
       },
     ]);
   });
+
+  describe('relationships', () => {
+    it('can diff adding a relationship', () => {
+      const schemaA = {
+        collections: S.Collections({
+          users: {
+            schema: S.Schema({ id: S.Id() }),
+          },
+          todos: {
+            schema: S.Schema({ id: S.Id() }),
+          },
+        }),
+      };
+      const schemaB = {
+        collections: S.Collections({
+          users: {
+            schema: S.Schema({ id: S.Id() }),
+            relationships: {
+              todos: S.RelationById('todos', '$1.id'),
+            },
+          },
+          todos: {
+            schema: S.Schema({ id: S.Id() }),
+          },
+        }),
+      };
+      const diff = diffSchemas(schemaA, schemaB);
+      expect(diff).toEqual([
+        {
+          _diff: 'collectionRelationships',
+          collection: 'users',
+        },
+      ]);
+    });
+  });
 });
 
 describe('detecting dangerous edits', () => {
