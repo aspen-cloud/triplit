@@ -431,47 +431,52 @@ export async function createTriplitHonoServer(
     parsedMaxPayload = undefined;
   // Default to 100MB
   const maxPayloadBytes = (parsedMaxPayload ?? 100) * MB1;
-  app.post(
-    '/bulk-insert-file',
-    bodyLimit({
-      // NOTE: bun max is 128MB https://hono.dev/docs/middleware/builtin/body-limit#usage-with-bun-for-large-requests
-      // Maybe this can be configurable?
-      maxSize: maxPayloadBytes,
-      onError: (c) => {
-        const error = new TriplitError(
-          `Body too large, max size is ${Math.floor(maxPayloadBytes / MB1)} MB`
-        );
-        return c.json(error.toJSON(), 413);
-      },
-    }),
-    async (c) => {
-      // Flag to ignore the return value and just return 200
-      // Would be nice to have this flow into the DB as well and save on work done to prepare a query response
-      // This is fairly innocuous to rename/rethink, so we can refactor as needed
-      const noReturn = c.req.query('no-return') === 'true';
-      const body = await parseMultipartFormData(c);
-      if (!body['data']) {
-        return c.json(
-          new TriplitError('No data provided for file upload'),
-          400
-        );
-      }
-      const data =
-        typeof body['data'] === 'string'
-          ? JSON.parse(body['data'])
-          : body['data'];
-      const token = c.get('token');
-      const { statusCode, payload } = await server.handleRequest(
-        ['bulk-insert'],
-        { noReturn, inserts: data },
-        token
+  const maxPayloadMiddleware = bodyLimit({
+    // NOTE: bun max is 128MB https://hono.dev/docs/middleware/builtin/body-limit#usage-with-bun-for-large-requests
+    // Maybe this can be configurable?
+    maxSize: maxPayloadBytes,
+    onError: (c) => {
+      const error = new TriplitError(
+        `Body too large, max size is ${Math.floor(maxPayloadBytes / MB1)} MB`
       );
-      return c.json(
-        noReturn ? {} : payload,
-        statusCode as ContentfulStatusCode
-      );
+      return c.json(error.toJSON(), 413);
+    },
+  });
+  app.post('/bulk-insert', maxPayloadMiddleware, async (c) => {
+    const body = await c.req.json();
+    const param_noReturn = c.req.query('noReturn');
+    const noReturn = param_noReturn === 'true';
+    const token = c.get('token');
+    console.log(body);
+    const { statusCode, payload } = await server.handleRequest(
+      ['bulk-insert'],
+      { inserts: body, noReturn },
+      token
+    );
+    return c.json(payload, statusCode as ContentfulStatusCode);
+  });
+  app.post('/bulk-insert-file', maxPayloadMiddleware, async (c) => {
+    // Flag to ignore the return value and just return 200
+    // Would be nice to have this flow into the DB as well and save on work done to prepare a query response
+    // This is fairly innocuous to rename/rethink, so we can refactor as needed
+    const body = await parseMultipartFormData(c);
+    if (!body['data']) {
+      return c.json(new TriplitError('No data provided for file upload'), 400);
     }
-  );
+    const data =
+      typeof body['data'] === 'string'
+        ? JSON.parse(body['data'])
+        : body['data'];
+    const param_noReturn = c.req.query('noReturn');
+    const noReturn = param_noReturn === 'true';
+    const token = c.get('token');
+    const { statusCode, payload } = await server.handleRequest(
+      ['bulk-insert'],
+      { inserts: data, noReturn },
+      token
+    );
+    return c.json(payload, statusCode as ContentfulStatusCode);
+  });
   app.post('*', async (c) => {
     let body;
     try {

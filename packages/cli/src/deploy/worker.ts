@@ -99,7 +99,8 @@ export class TriplitDurableObject implements DurableObject {
       return this.handleWebSocketUpgrade(request, token);
     }
     if (request.method === 'POST') {
-      let path = new URL(request.url).pathname.slice(1).split('/');
+      const url = new URL(request.url);
+      let path = url.pathname.slice(1).split('/');
       let body;
       if (path[0] === 'bulk-insert-file') {
         path = ['bulk-insert'];
