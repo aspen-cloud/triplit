@@ -19,7 +19,7 @@
     "tsBuildInfoFile": "./dist/tsconfig.tsbuildinfo",
     "rootDir": "./src/",
     "declarationDir": "./dist/types",
-    "types": ["@cloudflare/workers-types"]
+    "types": ["@cloudflare/workers-types", "bun"]
   },
   "references": [
     {

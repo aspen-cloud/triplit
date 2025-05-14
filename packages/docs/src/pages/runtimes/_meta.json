@@ -2,5 +2,6 @@
   "browser": "Browser",
   "node": "Node",
   "cloudflare": "Cloudflare Workers",
+  "bun": "Bun",
   "hermes": "Hermes (React Native)"
 }

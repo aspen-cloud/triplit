@@ -10544,6 +10544,7 @@ __metadata:
     "@triplit/server-core": "workspace:^"
     "@triplit/types": "workspace:^"
     "@triplit/utilities": "workspace:^"
+    "@types/bun": "npm:^1.2.13"
     "@types/degit": "npm:^2"
     "@types/ink": "npm:^2.0.3"
     "@types/jsonwebtoken": "npm:^9.0.2"

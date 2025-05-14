@@ -1,7 +1,7 @@
 import React from 'react';
 import { Box, Newline, Text } from 'ink';
 import {
-  createServer as createDBServer,
+  createServer as createNodeServer,
   durableStoreKeys,
   storeKeys,
 } from '@triplit/server';
@@ -92,7 +92,9 @@ export default Command({
       const dataDir = getDataDir();
       const storageDirName =
         flags.storage === 'sqlite-worker' ? 'sqlite' : flags.storage;
-      const storagePath = path.join(dataDir, storageDirName, 'app.db');
+      const storagePath =
+        process.env.TRIPLIT_LOCAL_DATABASE_URL ??
+        path.join(dataDir, storageDirName, 'app.db');
       if (!fs.existsSync(path.dirname(storagePath))) {
         fs.mkdirSync(path.dirname(storagePath), { recursive: true });
       }
@@ -135,6 +137,11 @@ export default Command({
       new DevServerLogHandler({ verbose: flags.verbose }),
       { exclusive: true }
     );
+    let createDBServer = createNodeServer;
+    if (typeof Bun !== 'undefined') {
+      const { createBunServer } = await import('@triplit/server/bun');
+      createDBServer = createBunServer;
+    }
     const startDBServer = await createDBServer({
       storage: flags.storage || 'memory',
       jwtSecret: process.env.JWT_SECRET,
@@ -293,6 +300,10 @@ function checkLMDBDependency() {
 }
 
 function checkSQLiteDependency() {
+  // Bun has its own built-in SQLite implementation, so we don't need to check for the dependency
+  if (typeof Bun !== 'undefined') {
+    return;
+  }
   try {
     import.meta.resolve('better-sqlite3');
   } catch (e) {

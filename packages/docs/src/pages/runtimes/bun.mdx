@@ -1,0 +1,50 @@
+---
+description: Learn how to run the Triplit sync server with Bun, and the supported storage options - SQLite.
+---
+
+# Triplit in Bun
+
+Triplit can run natively in Bun and persist data using Bun's native `bun:sqlite` package. Triplit provides an [example implementation](https://github.com/aspen-cloud/triplit/tree/main/packages/bun-server) and a [docker image](https://hub.docker.com/r/aspencloud/triplit-server-bun). Read more about self-hosting Triplit in the [self-hosting documentation](/self-hosting).
+
+## Supported storage options
+
+### `bun:sqlite`
+
+[`bun:sqlite`](https://bun.sh/docs/api/sqlite) is Bun's SQLite3 driver. It stores all data in a single SQLite database file. This is the recommended storage option for most use cases, as it is fast and easy to set up.
+
+## Dev server
+
+You can run the Triplit development server in Bun with the following command:
+
+```bash
+bunx --bun triplit dev
+```
+
+You can add the `-s sqlite` flag to use `bun:sqlite` as the storage option.
+
+## Example
+
+```typescript
+import { createBunServer } from '@triplit/server/bun';
+
+const port = +(process.env.PORT || 8080);
+
+const startServer = await createBunServer({
+  storage: 'sqlite',
+  verboseLogs: !!process.env.VERBOSE_LOGS,
+  jwtSecret: process.env.JWT_SECRET!,
+  projectId: process.env.PROJECT_ID,
+  externalJwtSecret: process.env.EXTERNAL_JWT_SECRET,
+  maxPayloadMb: process.env.MAX_BODY_SIZE,
+});
+
+const dbServer = startServer(port);
+
+console.log('running on port', port);
+process.on('SIGINT', function () {
+  dbServer.close(() => {
+    console.log('Shutting down server... ');
+    process.exit();
+  });
+});
+```
