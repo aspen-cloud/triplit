@@ -1,5 +1,13 @@
 # @triplit/client
 
+## 1.0.35
+
+### Patch Changes
+
+- Updated dependencies [c3319981]
+- Updated dependencies [4240590a]
+  - @triplit/db@1.0.33
+
 ## 1.0.34
 
 ### Patch Changes

@@ -1,5 +1,16 @@
 # @triplit/server
 
+## 1.0.45
+
+### Patch Changes
+
+- 263a50b8: fixup body and param handling for /bulk-insert
+- Updated dependencies [c3319981]
+- Updated dependencies [4240590a]
+  - @triplit/db@1.0.33
+  - @triplit/client@1.0.35
+  - @triplit/server-core@1.0.37
+
 ## 1.0.44
 
 ### Patch Changes
