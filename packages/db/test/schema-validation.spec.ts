@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { validateSchema } from '../src/schema/validation.js';
 import { Schema as S } from '../src/schema/builder.js';
+import { ALL_TYPES } from '../src/index.js';
 
 it('schema must be defined', () => {
   expect(validateSchema(undefined)).toBe('schema is not defined');
@@ -270,7 +271,7 @@ describe('collections validation', () => {
           'schema collections definition is invalid: "test" is not a valid collection: collection schema is invalid: schema is not an object'
         );
       });
-      it('colleciton schema must be a valid record type', () => {
+      it('collection schema must be a valid record type', () => {
         expect(
           validateSchema({
             collections: { test: { schema: S.String() } },
@@ -279,7 +280,7 @@ describe('collections validation', () => {
           'schema collections definition is invalid: "test" is not a valid collection: collection schema is invalid: not a record type'
         );
       });
-      it('colleciton schema must have an id property', () => {
+      it('collection schema must have an id property', () => {
         expect(
           validateSchema({
             collections: {
@@ -294,7 +295,7 @@ describe('collections validation', () => {
           'schema collections definition is invalid: "test" is not a valid collection: collection schema is invalid: primary key field "id" is not defined'
         );
       });
-      it('colleciton schema must have valid property names', () => {
+      it('collection schema must have valid property names', () => {
         expect(
           validateSchema({
             collections: {
@@ -338,35 +339,457 @@ describe('collections validation', () => {
           'schema collections definition is invalid: "test" is not a valid collection: collection schema is invalid: type record property "name$" is invalid: property name contains invalid characters - only alphanumeric characters and underscores are allowed.'
         );
       });
-      it('collection schema must have valid property definitions', () => {
-        expect(
-          validateSchema({
-            collections: {
-              test: {
-                schema: S.Schema({
-                  id: S.Id(),
-                  name: 'alice',
-                }),
+
+      describe('data type validation', () => {
+        it('collection schema must have valid property definitions', () => {
+          expect(
+            validateSchema({
+              collections: {
+                test: {
+                  schema: S.Schema({
+                    id: S.Id(),
+                    name: undefined,
+                  }),
+                },
               },
-            },
-          })
-        ).toBe(
-          'schema collections definition is invalid: "test" is not a valid collection: collection schema is invalid: type record property "name" is invalid: type is not a DataType'
-        );
-        expect(
-          validateSchema({
-            collections: {
-              test: {
-                schema: S.Schema({
-                  id: S.Id(),
-                  name: S.RelationById('names', '$id'),
-                }),
+            })
+          ).toBe(
+            'schema collections definition is invalid: "test" is not a valid collection: collection schema is invalid: type record property "name" is invalid: type is not defined'
+          );
+          expect(
+            validateSchema({
+              collections: {
+                test: {
+                  schema: S.Schema({
+                    id: S.Id(),
+                    name: 'alice',
+                  }),
+                },
               },
-            },
-          })
-        ).toBe(
-          'schema collections definition is invalid: "test" is not a valid collection: collection schema is invalid: type record property "name" is invalid: type "undefined" is not recognized'
-        );
+            })
+          ).toBe(
+            'schema collections definition is invalid: "test" is not a valid collection: collection schema is invalid: type record property "name" is invalid: type is not a DataType'
+          );
+          expect(
+            validateSchema({
+              collections: {
+                test: {
+                  schema: S.Schema({
+                    id: S.Id(),
+                    name: S.RelationById('names', '$id'),
+                  }),
+                },
+              },
+            })
+          ).toBe(
+            'schema collections definition is invalid: "test" is not a valid collection: collection schema is invalid: type record property "name" is invalid: type "undefined" is not recognized'
+          );
+        });
+
+        describe.each(ALL_TYPES)('%s base checks', (type) => {
+          it('type must have valid config if provided', () => {
+            expect(
+              validateSchema({
+                collections: {
+                  test: {
+                    schema: S.Schema({
+                      id: S.Id(),
+                      name: {
+                        type: type,
+                        config: 1,
+                      },
+                    }),
+                  },
+                },
+              })
+            ).toBe(
+              `schema collections definition is invalid: "test" is not a valid collection: collection schema is invalid: type record property "name" is invalid: type ${type} is invalid: type config is not an object`
+            );
+          });
+          it('nullable must be boolean if provided', () => {
+            expect(
+              validateSchema({
+                collections: {
+                  test: {
+                    schema: S.Schema({
+                      id: S.Id(),
+                      name: {
+                        type: type,
+                        config: {
+                          nullable: 1,
+                        },
+                      },
+                    }),
+                  },
+                },
+              })
+            ).toBe(
+              `schema collections definition is invalid: "test" is not a valid collection: collection schema is invalid: type record property "name" is invalid: type ${type} is invalid: option nullable is invalid`
+            );
+          });
+          it('optional must be boolean if provided', () => {
+            expect(
+              validateSchema({
+                collections: {
+                  test: {
+                    schema: S.Schema({
+                      id: S.Id(),
+                      name: {
+                        type: type,
+                        config: {
+                          optional: 1,
+                        },
+                      },
+                    }),
+                  },
+                },
+              })
+            ).toBe(
+              `schema collections definition is invalid: "test" is not a valid collection: collection schema is invalid: type record property "name" is invalid: type ${type} is invalid: option optional is invalid`
+            );
+          });
+        });
+
+        describe('additional boolean checks', () => {
+          it('default value must be a boolean', () => {
+            expect(
+              validateSchema({
+                collections: {
+                  test: {
+                    schema: S.Schema({
+                      id: S.Id(),
+                      name: S.Boolean({
+                        default: 1,
+                      }),
+                    }),
+                  },
+                },
+              })
+            ).toBe(
+              'schema collections definition is invalid: "test" is not a valid collection: collection schema is invalid: type record property "name" is invalid: type boolean is invalid: option default is invalid: default value could not be serialized to type'
+            );
+            expect(
+              validateSchema({
+                collections: {
+                  test: {
+                    schema: S.Schema({
+                      id: S.Id(),
+                      name: S.Boolean({
+                        default: false,
+                      }),
+                    }),
+                  },
+                },
+              })
+            ).toBe(undefined);
+          });
+        });
+        describe('additional date checks', () => {
+          it('default value must be a date encodable', () => {
+            expect(
+              validateSchema({
+                collections: {
+                  test: {
+                    schema: S.Schema({
+                      id: S.Id(),
+                      name: S.Date({
+                        default: true,
+                      }),
+                    }),
+                  },
+                },
+              })
+            ).toBe(
+              'schema collections definition is invalid: "test" is not a valid collection: collection schema is invalid: type record property "name" is invalid: type date is invalid: option default is invalid: default value could not be serialized to type'
+            );
+            expect(
+              validateSchema({
+                collections: {
+                  test: {
+                    schema: S.Schema({
+                      id: S.Id(),
+                      name: S.Date({
+                        // TODO: test new Date()
+                        default: new Date().toISOString(),
+                      }),
+                    }),
+                  },
+                },
+              })
+            ).toBe(undefined);
+          });
+        });
+        describe('additional json checks', () => {
+          it('default value must be a json encodable', () => {
+            // TODO: test with a non-serializable value
+            // expect(
+            //   validateSchema({
+            //     collections: {
+            //       test: {
+            //         schema: S.Schema({
+            //           id: S.Id(),
+            //           name: S.Json({
+            //             default: ,
+            //           }),
+            //         }),
+            //       },
+            //     },
+            //   })
+            // ).toBe(
+            //   'schema collections definition is invalid: "test" is not a valid collection: collection schema is invalid: type record property "name" is invalid: type json is invalid: option default is invalid: default value could not be serialized to type'
+            // );
+            expect(
+              validateSchema({
+                collections: {
+                  test: {
+                    schema: S.Schema({
+                      id: S.Id(),
+                      name: S.Json({
+                        default: { test: 1 },
+                      }),
+                    }),
+                  },
+                },
+              })
+            ).toBe(undefined);
+          });
+        });
+        describe('additional number checks', () => {
+          it('default value must be a number', () => {
+            expect(
+              validateSchema({
+                collections: {
+                  test: {
+                    schema: S.Schema({
+                      id: S.Id(),
+                      name: S.Number({
+                        default: '1',
+                      }),
+                    }),
+                  },
+                },
+              })
+            ).toBe(
+              'schema collections definition is invalid: "test" is not a valid collection: collection schema is invalid: type record property "name" is invalid: type number is invalid: option default is invalid: default value could not be serialized to type'
+            );
+            expect(
+              validateSchema({
+                collections: {
+                  test: {
+                    schema: S.Schema({
+                      id: S.Id(),
+                      name: S.Number({
+                        default: 1,
+                      }),
+                    }),
+                  },
+                },
+              })
+            ).toBe(undefined);
+          });
+        });
+        describe('additional record checks', () => {
+          it('record types cannot set a default value', () => {
+            const recordType = S.Record({
+              attr: S.String(),
+            });
+            recordType.config.default = { attr: 'foo' };
+            expect(
+              validateSchema({
+                collections: {
+                  test: {
+                    schema: S.Schema({
+                      id: S.Id(),
+                      name: recordType,
+                    }),
+                  },
+                },
+              })
+            ).toBe(
+              'schema collections definition is invalid: "test" is not a valid collection: collection schema is invalid: type record property "name" is invalid: type record is invalid: option default is invalid: default value cannot be set for record types'
+            );
+          });
+          // Record type checks === schema type checks tested above
+        });
+        describe('additional set checks', () => {
+          it('default value must be a set encodable', () => {
+            expect(
+              validateSchema({
+                collections: {
+                  test: {
+                    schema: S.Schema({
+                      id: S.Id(),
+                      name: S.Set(S.String(), {
+                        default: 1,
+                      }),
+                    }),
+                  },
+                },
+              })
+            ).toBe(
+              'schema collections definition is invalid: "test" is not a valid collection: collection schema is invalid: type record property "name" is invalid: type set is invalid: option default is invalid: default value could not be serialized to type'
+            );
+            expect(
+              validateSchema({
+                collections: {
+                  test: {
+                    schema: S.Schema({
+                      id: S.Id(),
+                      name: S.Set(S.String(), {
+                        default: ['foo'],
+                      }),
+                    }),
+                  },
+                },
+              })
+            ).toBe(undefined);
+          });
+          it('set type must have items property', () => {
+            const setType = S.Set(S.String());
+            setType.items = undefined;
+            expect(
+              validateSchema({
+                collections: {
+                  test: {
+                    schema: S.Schema({
+                      id: S.Id(),
+                      name: setType,
+                    }),
+                  },
+                },
+              })
+            ).toBe(
+              'schema collections definition is invalid: "test" is not a valid collection: collection schema is invalid: type record property "name" is invalid: type set is missing items'
+            );
+            expect(
+              validateSchema({
+                collections: {
+                  test: {
+                    schema: S.Schema({
+                      id: S.Id(),
+                      name: S.Set(S.String()),
+                    }),
+                  },
+                },
+              })
+            ).toBe(undefined);
+          });
+          it('set type items must be valid primitive type', () => {
+            expect(
+              validateSchema({
+                collections: {
+                  test: {
+                    schema: S.Schema({
+                      id: S.Id(),
+                      name: S.Set(S.String({ nullable: 'foo' })),
+                    }),
+                  },
+                },
+              })
+            ).toBe(
+              'schema collections definition is invalid: "test" is not a valid collection: collection schema is invalid: type record property "name" is invalid: type set items is invalid: type string is invalid: option nullable is invalid'
+            );
+
+            expect(
+              validateSchema({
+                collections: {
+                  test: {
+                    schema: S.Schema({
+                      id: S.Id(),
+                      name: S.Set(S.Record({ attr: S.String() })),
+                    }),
+                  },
+                },
+              })
+            ).toBe(
+              'schema collections definition is invalid: "test" is not a valid collection: collection schema is invalid: type record property "name" is invalid: type set items must be a primitive type'
+            );
+          });
+        });
+        describe('additional string checks', () => {
+          it('enum must be an array of strings if provided', () => {
+            expect(
+              validateSchema({
+                collections: {
+                  test: {
+                    schema: S.Schema({
+                      id: S.Id(),
+                      name: S.String({
+                        enum: 1,
+                      }),
+                    }),
+                  },
+                },
+              })
+            ).toBe(
+              'schema collections definition is invalid: "test" is not a valid collection: collection schema is invalid: type record property "name" is invalid: type string enum is not an array'
+            );
+            expect(
+              validateSchema({
+                collections: {
+                  test: {
+                    schema: S.Schema({
+                      id: S.Id(),
+                      name: S.String({
+                        enum: ['foo', 1],
+                      }),
+                    }),
+                  },
+                },
+              })
+            ).toBe(
+              'schema collections definition is invalid: "test" is not a valid collection: collection schema is invalid: type record property "name" is invalid: type string enum value is not a string'
+            );
+            expect(
+              validateSchema({
+                collections: {
+                  test: {
+                    schema: S.Schema({
+                      id: S.Id(),
+                      name: S.String({
+                        enum: ['foo', 'bar'],
+                      }),
+                    }),
+                  },
+                },
+              })
+            ).toBe(undefined);
+          });
+          it('default value must be in enum if provided', () => {
+            expect(
+              validateSchema({
+                collections: {
+                  test: {
+                    schema: S.Schema({
+                      id: S.Id(),
+                      name: S.String({
+                        enum: ['foo', 'bar'],
+                        default: 'baz',
+                      }),
+                    }),
+                  },
+                },
+              })
+            ).toBe(
+              'schema collections definition is invalid: "test" is not a valid collection: collection schema is invalid: type record property "name" is invalid: type string is invalid: option default is invalid: default value could not be serialized to type'
+            );
+            expect(
+              validateSchema({
+                collections: {
+                  test: {
+                    schema: S.Schema({
+                      id: S.Id(),
+                      name: S.String({
+                        enum: ['foo', 'bar'],
+                        default: 'foo',
+                      }),
+                    }),
+                  },
+                },
+              })
+            ).toBe(undefined);
+          });
+        });
       });
     });
 

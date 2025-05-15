@@ -1,4 +1,8 @@
-import { DBSerializationError, WritePermissionError } from './errors.js';
+import {
+  DBSerializationError,
+  TriplitError,
+  WritePermissionError,
+} from './errors.js';
 import { EntityStoreKV } from './entity-store.js';
 import {
   DBChanges,
@@ -113,6 +117,18 @@ export class DB<
         // @ts-expect-error - TODO: handle more generalized internal typings
         this
       );
+
+    if (options.schema) {
+      const schemaInvalid = validateSchema(options.schema);
+      // TODO: in production uses, if you hit this error your db instance may become unusable
+      // This should only happen if (A) validation function changed but tests should catch this, OR (B) your stored schema changed unexpectedly
+      // Optimally we can fix with schema push --force, but if you cant access the db instance that may not be possible
+      // Similar to "await ready", we probably want every operation to fail until you fix the schema
+      if (schemaInvalid)
+        throw new TriplitError(
+          `Failed to start DB because the current schema is invalid: ${schemaInvalid}`
+        );
+    }
 
     this.schema = options.schema;
     this.typeConverters = getTypeConvertersFromSchema(
