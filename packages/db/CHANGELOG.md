@@ -1,5 +1,12 @@
 # @triplit/entity-db
 
+## 1.0.33
+
+### Patch Changes
+
+- c3319981: implement relationship diffing
+- 4240590a: improve default value validation for schemas
+
 ## 1.0.32
 
 ### Patch Changes

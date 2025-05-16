@@ -1,7 +1,7 @@
 {
   "name": "@triplit/react-native",
   "packageManager": "yarn@4.2.2",
-  "version": "1.0.36",
+  "version": "1.0.37",
   "type": "module",
   "main": "./dist/index.js",
   "module": "./dist/index.js",
