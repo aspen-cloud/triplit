@@ -1,5 +1,12 @@
 # @triplit/entity-db
 
+## 1.0.34
+
+### Patch Changes
+
+- c6c4031d: add results-have-already-been initialized invariant to ivm
+- 1c9827c1: Add handling for filter view paths into sets
+
 ## 1.0.33
 
 ### Patch Changes
