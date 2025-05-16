@@ -288,6 +288,11 @@ export class IVM<M extends Models<M> = Models> {
             'View node has dependencies but no cached bound query'
           );
         }
+        if (!viewNode.results) {
+          throw new Error(
+            'View node is being updated before it is initialized'
+          );
+        }
         const { updatedResults, hasChanged } =
           await this.updateQueryResultsInPlace(
             viewNode.results,
@@ -327,7 +332,7 @@ export class IVM<M extends Models<M> = Models> {
   }
 
   private async updateQueryResultsInPlace(
-    results: ViewEntity[] | undefined,
+    results: ViewEntity[],
     changes: DBChanges,
     query: PreparedQuery,
     originalQuery: PreparedQuery,
@@ -335,7 +340,7 @@ export class IVM<M extends Models<M> = Models> {
     entityStack: DBEntity[] = []
   ): Promise<{ updatedResults: ViewEntity[]; hasChanged: boolean }> {
     const collectionChanges = changes[query.collectionName];
-    let filteredResults = results ?? [];
+    let filteredResults = results;
     const evictedEntities = new Map<string, DBEntity>();
     const addedEntities = new Map<string, DBEntity>();
     const handledUpdates = new Map<string, DBEntity>();
@@ -357,7 +362,7 @@ export class IVM<M extends Models<M> = Models> {
       // if we have deletes or updates, we're going to check for evictions
       // to the current results
       if (deletes.size > 0 || sets.size > 0) {
-        filteredResults = results!.filter((entity) => {
+        filteredResults = filteredResults.filter((entity) => {
           let matches = true;
           if (deletes.has(entity.data.id)) {
             matches = false;
