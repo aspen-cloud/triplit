@@ -166,7 +166,6 @@ export function diffSchemas(
       }))
     );
 
-    // TODO: Diff relationships
     const isRelationDiff = !relationshipsEqual(
       collectionA?.relationships,
       collectionB?.relationships
