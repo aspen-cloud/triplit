@@ -5,7 +5,6 @@ import fs from 'fs';
 import { Readable } from 'stream';
 import path from 'path';
 import FormData from 'form-data';
-import { snapshot } from 'node:test';
 
 export default Command({
   description: 'Pushes a snapshot to the server.',
