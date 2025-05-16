@@ -5,6 +5,7 @@ import fs from 'fs';
 import { Readable } from 'stream';
 import path from 'path';
 import FormData from 'form-data';
+import { snapshot } from 'node:test';
 
 export default Command({
   description: 'Pushes a snapshot to the server.',
@@ -15,13 +16,26 @@ export default Command({
       required: true,
     }),
   },
+  args: [
+    {
+      name: 'directory',
+      description: 'The directory containing the source snapshot.',
+      required: true,
+    },
+  ],
   middleware: [
     createServerRequesterMiddleware({
       destructive: true,
     }),
   ],
-  run: async ({ flags, ctx }) => {
-    const snapshotDir = flags.snapshot;
+  run: async ({ flags, ctx, args }) => {
+    const snapshotDir = args.directory ?? flags.snapshot;
+    if (snapshotDir === undefined) {
+      console.log(
+        'Missing required argument: directory. Try: \n\n\ttriplit snapshot push <directory>\n'
+      );
+      process.exit(1);
+    }
     if (!fs.existsSync(snapshotDir)) {
       console.log(`Snapshot directory ${snapshotDir} does not exist.`);
       process.exit(1);
