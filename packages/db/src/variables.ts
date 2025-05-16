@@ -12,6 +12,7 @@ import {
   PreparedWhereFilter,
   QueryWhere,
 } from './query/types/index.js';
+import { iterFromIndex } from './utils/iterators.js';
 import { ValuePointer } from './utils/value-pointer.js';
 
 const VARIABLE_SCOPES = new Set([
@@ -154,8 +155,9 @@ export function resolveVariable(variable: string, vars: any): any {
   if (variable in vars) {
     return vars[variable];
   }
-  const [relativeDepth, ...path] = getVariableComponents(variable);
-  if (typeof relativeDepth === 'number') {
+  const [scope, ...path] = getVariableComponents(variable);
+  if (typeof scope === 'number') {
+    const relativeDepth = scope;
     if (!vars.entityStack || vars.entityStack.length < relativeDepth) {
       throw new Error(
         `Variable reference is out of bounds. Tried to find ${variable} in stack of size ${vars.entityStack?.length}`
@@ -166,6 +168,14 @@ export function resolveVariable(variable: string, vars: any): any {
       vars.entityStack[vars.entityStack.length - relativeDepth],
       path
     );
+  }
+  // $view_{id} vars handled as a special case
+  if (scope === undefined && path[0].startsWith('view_')) {
+    const view = vars[path[0]];
+    if (!view) throw new Error(`View ${path[0]} not found in vars`);
+    if (!Array.isArray(view))
+      throw new Error(`View ${path[0]} is not an array`);
+    return view.map((item) => ValuePointer.Get(item, iterFromIndex(path, 1)));
   }
   const resolvedVal = ValuePointer.Get(vars, path);
   // TODO should we throw an error here if undefined?

@@ -7,20 +7,8 @@ export class ValuePointer {
     let current = data;
     for (const key of keys) {
       if (current === undefined) return undefined;
-      if (Array.isArray(current)) {
-        const parsedKey = parseInt(key, 10);
-        // This is a bit of a stretch in terms of RFC6901, which doesnt concern itself with re-mapping data
-        // If we are at an array and see a string key, use that to map into the sub object (thus assumes the inner object is an indexable object)
-        // This probably makes sense in a separate method or function (seemingly helpful for view resolution in query engine)
-        if (isNaN(parsedKey)) {
-          current = current.map((item) => item?.[key]);
-        } else {
-          current = current[parsedKey];
-        }
-      } else {
-        if (current[key] === undefined) return undefined;
-        current = current[key];
-      }
+      if (current[key] === undefined) return undefined;
+      current = current[key];
     }
     return current;
   }

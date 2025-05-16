@@ -522,6 +522,9 @@ exports[`query planning > query: 'Posts ordered by the last name of the…' 1`] 
           "type": "RESOLVE_FROM_VIEW",
           "viewId": "0",
         },
+        {
+          "type": "PICK",
+        },
       ],
       "type": "SUBQUERY",
     },

@@ -494,6 +494,12 @@ function compileQueryToSteps(q: PreparedQuery): Step[] {
       }
       const alias = `_order_${i}`;
       const subPlan = compileQueryToSteps(maybeSubquery.subquery);
+      // All order subqueries should have cardinality one
+      if (maybeSubquery.cardinality === 'one') {
+        subPlan.push({
+          type: 'PICK',
+        });
+      }
       steps.push({
         type: 'SUBQUERY',
         alias,
