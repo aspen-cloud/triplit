@@ -1,5 +1,14 @@
 # @triplit/client
 
+## 1.0.36
+
+### Patch Changes
+
+- 4f5e4662: add context to invalid server url error
+- Updated dependencies [c6c4031d]
+- Updated dependencies [1c9827c1]
+  - @triplit/db@1.0.34
+
 ## 1.0.35
 
 ### Patch Changes
