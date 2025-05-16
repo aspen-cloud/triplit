@@ -202,8 +202,23 @@ export function bindVariablesInFilter<W extends PreparedWhereFilter>(
   if (isFilterStatement(filter) && isValueVariable(filter[2])) {
     const variable = filter[2] as string;
     let resolvedValue = resolveVariable(variable, vars);
+    // Theres a few things going on here to be untangled and refactored:
+    // 1. Transforming arrays to sets for improved lookup performance
+    // 2. $view_{id} variables are returned as arrays, we have some special handling for arrays of encoded sets
+    // For (2), we should figure out a better way to encode lhs and rhs data types operands on filters so we know what we are dealing with
     if (Array.isArray(resolvedValue)) {
-      resolvedValue = new Set(resolvedValue);
+      const resolvedSet = new Set();
+      for (const val of resolvedValue) {
+        if (typeof val === 'object' && val !== null) {
+          // this is assumed to be an internal set (dangerously)
+          for (const [setVal, isAlive] of Object.entries(val)) {
+            if (isAlive) resolvedSet.add(setVal);
+          }
+        } else {
+          resolvedSet.add(val);
+        }
+      }
+      resolvedValue = resolvedSet;
     }
     return [filter[0], filter[1], resolvedValue] as FilterStatement as W;
   }

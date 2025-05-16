@@ -8,7 +8,7 @@ import {
   InvalidCollectionNameError,
   InvalidInsertDocumentError,
 } from '../src/errors.js';
-import { createDB, DB } from '../src';
+import { createDB, DB, exists } from '../src';
 import { BTreeKVStore } from '../src/kv-store/storage/memory-btree.js';
 import { classes, students, departments } from './sample_data/school.js';
 import { testSubscription } from './utils/test-subscription.js';
@@ -1786,4 +1786,70 @@ it('can upsert data with optional properties', async () => {
 
   const result = await db.fetchById('test', '1');
   expect(result).toStrictEqual({ id: '1', name: 'alice', age: 30 });
+});
+
+/**
+ * This bug was only true when and OR was added because it would trigger a filter instead of a view lookup
+ * https://github.com/aspen-cloud/triplit/issues/348
+ * TODO: what we actually need are better tests for the query engine, because this was a bug ith the filter implementation when looking at a view result
+ */
+it('can filter by a many cardinality relation collection property (ie a set) and an OR', async () => {
+  const schema = {
+    collections: S.Collections({
+      users: {
+        schema: S.Schema({
+          id: S.Id(),
+        }),
+        relationships: {
+          clubs: S.RelationMany('clubs', {
+            where: [['memberIds', '=', '$1.id']],
+          }),
+        },
+      },
+      clubs: {
+        schema: S.Schema({
+          id: S.Id(),
+          memberIds: S.Set(S.String()),
+        }),
+        relationships: {
+          members: S.RelationMany('users', {
+            where: [['id', 'in', '$1.memberIds']],
+          }),
+        },
+      },
+    }),
+  };
+  const db = new DB({ schema });
+  await db.transact(
+    async (tx) => {
+      await tx.insert('users', { id: 'a' });
+      await tx.insert('users', { id: 'b' });
+      await tx.insert('users', { id: 'c' });
+      await tx.insert('users', { id: 'd' });
+      await tx.insert('users', { id: 'e' });
+      await tx.insert('clubs', {
+        id: 'club-1',
+        memberIds: new Set(['a', 'b']),
+      });
+      await tx.insert('clubs', {
+        id: 'club-2',
+        memberIds: new Set(['a', 'd']),
+      });
+      await tx.insert('clubs', {
+        id: 'club-3',
+        memberIds: new Set(['b', 'c', 'e']),
+      });
+    },
+    { skipRules: true }
+  );
+  const query = db
+    .query('users')
+    .Where(
+      or([
+        ['id', '=', 'a'],
+        exists('clubs', { where: [['memberIds', '=', 'a']] }),
+      ])
+    );
+  const results = await db.fetch(query);
+  expect(results).toEqual([{ id: 'a' }, { id: 'b' }, { id: 'd' }]);
 });
