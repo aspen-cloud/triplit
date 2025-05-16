@@ -1391,6 +1391,8 @@ function validateServerUrl(serverUrl: string | undefined): void {
     !serverUrl.startsWith('http://') &&
     !serverUrl.startsWith('https://')
   ) {
-    throw new TriplitError('Invalid serverUrl provided');
+    throw new TriplitError(
+      'Invalid serverUrl provided. Must start with "http://" or "https://".'
+    );
   }
 }
