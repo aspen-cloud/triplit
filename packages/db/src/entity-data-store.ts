@@ -9,7 +9,7 @@ import {
   EntityStore,
   ApplyChangesOptions,
   Change,
-  Insert,
+  Delta,
 } from './types.js';
 import { deepObjectAssign } from './utils/deep-merge.js';
 
@@ -143,35 +143,15 @@ export class EntityDataStore implements EntityStore {
     for (const delta of deltas) {
       if (options.checkWritePermission) {
         if (delta.operation === 'insert') {
-          await options.checkWritePermission(
-            tx,
-            delta.collection,
-            delta.next,
-            'insert'
-          );
+          await options.checkWritePermission(tx, delta, 'insert');
         } else if (
           delta.operation === 'update' ||
           delta.operation === 'upsert'
         ) {
-          await options.checkWritePermission(
-            tx,
-            delta.collection,
-            delta.prev,
-            'update'
-          );
-          await options.checkWritePermission(
-            tx,
-            delta.collection,
-            delta.next,
-            'postUpdate'
-          );
+          await options.checkWritePermission(tx, delta, 'update');
+          await options.checkWritePermission(tx, delta, 'postUpdate');
         } else if (delta.operation === 'delete') {
-          await options.checkWritePermission(
-            tx,
-            delta.collection,
-            delta.prev,
-            'delete'
-          );
+          await options.checkWritePermission(tx, delta, 'delete');
         } else {
           throw new TriplitError(
             `An invalid delta was created and could not finish permission checks.`
@@ -203,15 +183,6 @@ export class EntityDataStore implements EntityStore {
     return prefixedStorage.scanValues({ prefix: [collection] });
   }
 }
-
-type Delta = {
-  id: string;
-  collection: string;
-  prev: any;
-  next: any;
-  change: any;
-  operation: 'insert' | 'upsert' | 'update' | 'delete';
-};
 
 /**
  * This will apply the sets to the current value of the entity

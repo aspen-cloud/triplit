@@ -15,6 +15,7 @@ import {
   Change,
   Timestamp,
   PreparedQuery,
+  Delta,
 } from './types.js';
 import { HybridLogicalClock } from './hybrid-clock.js';
 import { EntityStoreQueryEngine, ViewEntity } from './query-engine.js';
@@ -816,24 +817,38 @@ export class DB<
   // NOTE: we run this many times when writing, we can probably precalculate the filters / save them for re-use ({ [collection+operation]: filters})
   private async checkWritePermission(
     storage: KVStoreOrTransaction,
-    collection: string,
-    entity: any,
+    delta: Delta,
     operation: PermissionWriteOperations
   ) {
+    let entity = undefined;
+    const collection = delta.collection;
+    switch (operation) {
+      case 'insert':
+        entity = delta.next;
+        break;
+      case 'update':
+        entity = delta.prev;
+        break;
+      case 'delete':
+        entity = delta.prev;
+        break;
+      case 'postUpdate':
+        entity = delta.next;
+        break;
+    }
     const permissions = getCollectionPermissions(
       this.schema?.collections as Models | undefined,
       collection
     );
     // If no permissions for collection, its exempt from rules
     if (!permissions) return;
-
     // Prepare filters for fetch
     const preparedQuery = prepareQuery(
       {
         collectionName: collection,
       },
       this.schema?.collections as Models | undefined,
-      this.systemVars,
+      { ...this.systemVars, $prev: delta.prev },
       this.session,
       {
         applyPermission: operation,

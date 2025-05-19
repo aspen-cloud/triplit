@@ -1346,6 +1346,71 @@ describe('Update', () => {
   });
 });
 
+it('postUpdate can be used to ensure an attribute never changes', async () => {
+  const schema = {
+    roles: {
+      authenticated: {
+        match: {
+          user_id: '$user_id',
+        },
+      },
+    },
+    collections: S.Collections({
+      test: {
+        schema: S.Schema({
+          id: S.Id(),
+          cantChange: S.String(),
+          canChange: S.String(),
+        }),
+
+        permissions: {
+          authenticated: {
+            read: {
+              filter: [true],
+            },
+            update: {
+              filter: [true],
+            },
+            insert: {
+              filter: [true],
+            },
+            postUpdate: {
+              // test2
+              filter: [['cantChange', '=', '$prev.cantChange']],
+            },
+          },
+        },
+      },
+    }),
+  };
+  const db = new DB({ schema });
+  await db.insert(
+    'test',
+    { id: '1', cantChange: 'foo', canChange: 'bar' },
+    { skipRules: true }
+  );
+  const user1Token = {
+    user_id: 'user-1',
+  };
+  console.log('here');
+  const user1DB = db.withSessionVars(user1Token);
+  await expect(
+    user1DB.update('test', '1', (entity) => {
+      entity.canChange = 'baz';
+    })
+  ).resolves.not.toThrow();
+  await expect(
+    user1DB.update('test', '1', (entity) => {
+      entity.cantChange = 'foo';
+    })
+  ).resolves.not.toThrow();
+  await expect(
+    user1DB.update('test', '1', (entity) => {
+      entity.cantChange = 'bar';
+    })
+  ).rejects.toThrow(WritePermissionError);
+});
+
 describe('Delete', () => {
   it('data cannot be deleted if you are unauthenticated', async () => {
     const db = new DB({ schema: messagingSchema });

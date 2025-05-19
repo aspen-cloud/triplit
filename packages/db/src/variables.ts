@@ -21,6 +21,7 @@ const VARIABLE_SCOPES = new Set([
   '$token',
   '$role',
   '$query',
+  '$prev',
 ]);
 
 type VariableComponents = [scope: string | number | undefined, ...string[]];

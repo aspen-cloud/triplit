@@ -142,10 +142,18 @@ export type ApplyChangesOptions = {
   entityChangeValidator: EntityChangeValidator | undefined;
 };
 
+export type Delta = {
+  id: string;
+  collection: string;
+  prev: any;
+  next: any;
+  change: any;
+  operation: 'insert' | 'upsert' | 'update' | 'delete';
+};
+
 export type WritePermissionCheck = (
   storage: KVStoreOrTransaction,
-  collection: string,
-  entity: any,
+  delta: Delta,
   operation: PermissionWriteOperations
 ) => Promise<void>;
 
