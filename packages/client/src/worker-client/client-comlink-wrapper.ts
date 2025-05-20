@@ -16,7 +16,7 @@ import {
   ReadModel,
   SchemaQuery,
 } from '@triplit/db';
-import { Logger, LogHandler } from '@triplit/logger';
+import { logger as LOGGER, LogHandler } from '@triplit/logger';
 import {
   ClientOptions,
   ClientTransactOptions,
@@ -52,12 +52,10 @@ export class ClientComlinkWrapper<M extends Models<M> = Models>
     const { token, ...remainingOptions } = options;
 
     // Setup logger
-    const mainThreadLogHandler = clientLogHandler();
-    const logger = new Logger([workerThreadLogHandler, mainThreadLogHandler]);
+    LOGGER.registerHandler(workerThreadLogHandler);
 
     this.client = new Client<M>({
       ...remainingOptions,
-      logger: logger,
       // Handle autoConnect in the main thread
       autoConnect: false,
     });
