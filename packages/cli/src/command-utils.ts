@@ -42,22 +42,17 @@ export async function getCommandDefinition(
   return { name: prefix.concat(name).join(' '), ...definition };
 }
 
-const FILES_TO_IGNORE = ['sqlite.worker.js'];
-
 // Recursively find all ts and tsx files in the commands directory
 export function findCommands(dir: string): CommandTree {
   const files = readdirSync(dir);
   const tsFiles = files.filter(
     (f) =>
-      !FILES_TO_IGNORE.includes(f) &&
-      (f.endsWith('.ts') ||
-        f.endsWith('.tsx') ||
-        f.endsWith('.js') ||
-        f.endsWith('.jsx'))
+      f.endsWith('.ts') ||
+      f.endsWith('.tsx') ||
+      f.endsWith('.js') ||
+      f.endsWith('.jsx')
   );
-  const dirs = files.filter(
-    (f) => !tsFiles.includes(f) && !FILES_TO_IGNORE.includes(f)
-  );
+  const dirs = files.filter((f) => !tsFiles.includes(f));
   const commands: CommandTree = {};
   tsFiles.forEach((fileName) => {
     const name = fileName.replace(/\.(tsx?|jsx?)$/, '');
