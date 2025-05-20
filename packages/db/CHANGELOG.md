@@ -1,5 +1,11 @@
 # @triplit/entity-db
 
+## 1.0.35
+
+### Patch Changes
+
+- 75a5cc62: add $prev variable prefixing for postUpdate permissions
+
 ## 1.0.34
 
 ### Patch Changes

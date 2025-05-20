@@ -1,5 +1,11 @@
 # @triplit/cli
 
+## 1.0.47
+
+### Patch Changes
+
+- 75a5cc62: Automated version bump for @triplit/cli after dependency changes
+
 ## 1.0.46
 
 ### Patch Changes

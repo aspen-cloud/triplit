@@ -1,5 +1,11 @@
 # @triplit/authjs-adapter
 
+## 1.0.37
+
+### Patch Changes
+
+- @triplit/client@1.0.37
+
 ## 1.0.36
 
 ### Patch Changes
