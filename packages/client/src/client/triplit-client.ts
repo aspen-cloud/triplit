@@ -622,21 +622,24 @@ export class TriplitClient<M extends Models<M> = Models> {
         fetchingRemote,
       });
     }
+    function setRemoteStatesToFalseAndFireIfChanged() {
+      let shouldFire = false;
+      if (fetchingRemote) {
+        fetchingRemote = false;
+        shouldFire = true;
+      }
+      if (waitingOnRemoteSync) {
+        waitingOnRemoteSync = false;
+        shouldFire = true;
+      }
+      if (shouldFire) {
+        fireSignal();
+      }
+    }
     fireSignal();
     const unsubConnectionStatus = this.onConnectionStatusChange((status) => {
       if (status === 'CLOSING' || status === 'CLOSED') {
-        let shouldFire = false;
-        if (fetchingRemote) {
-          fetchingRemote = false;
-          shouldFire = true;
-        }
-        if (waitingOnRemoteSync) {
-          waitingOnRemoteSync = false;
-          shouldFire = true;
-        }
-        if (shouldFire) {
-          fireSignal();
-        }
+        setRemoteStatesToFalseAndFireIfChanged();
         return;
       }
     }, true);
@@ -661,8 +664,10 @@ export class TriplitClient<M extends Models<M> = Models> {
         fetchingLocal = false;
         error = undefined;
         if (fetchingRemote) {
-          fetchingRemote = !this.syncEngine.hasServerRespondedForQuery(query);
-          waitingOnRemoteSync = fetchingRemote;
+          const hasResponded =
+            this.syncEngine.hasServerRespondedForQuery(query);
+          fetchingRemote = !hasResponded;
+          waitingOnRemoteSync = !hasResponded;
         }
         fireSignal();
       },
@@ -677,10 +682,8 @@ export class TriplitClient<M extends Models<M> = Models> {
         onQuerySyncStateChange: (status: QuerySyncState) => {
           // TODO: connected to TODO above, likely dupe to the onError callbackProvided above
           if (status === 'FULFILLED' || status === 'ERROR') {
-            if (!fetchingRemote) return;
-            fetchingRemote = false;
-            waitingOnRemoteSync = false;
-            fireSignal();
+            setRemoteStatesToFalseAndFireIfChanged();
+            return;
           }
           if (status === 'IN_FLIGHT' && !fetchingRemote) {
             fetchingRemote = true;
