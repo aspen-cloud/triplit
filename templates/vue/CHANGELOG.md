@@ -1,5 +1,12 @@
 # vue-template
 
+## 1.0.38
+
+### Patch Changes
+
+- @triplit/client@1.0.37
+- @triplit/vue@1.0.37
+
 ## 1.0.37
 
 ### Patch Changes
