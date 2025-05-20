@@ -107,7 +107,7 @@ async function buildFiles() {
   // Had trouble getting esbuild to handle this in the main bundle (pull in the worker file as a file)
   const sqliteWorkerPath =
     './node_modules/@triplit/db/dist/kv-store/storage/sqlite-worker/sqlite.worker.js';
-  const sqliteWorkerDest = join(OUT_DIR, 'commands', 'sqlite.worker.js');
+  const sqliteWorkerDest = join(OUT_DIR, 'sqlite.worker.js');
   // bundle worker file, output to sqliteWorkerDest
   await build({
     entryPoints: [sqliteWorkerPath],
