@@ -4,6 +4,7 @@ import ora, { Ora } from 'ora';
 
 export default Command({
   description: 'Removes all webhooks from the sync server',
+  preRelease: true,
   middleware: [createServerRequesterMiddleware({ destructive: true })],
   run: async ({ ctx }) => {
     let spinner: Ora | undefined;

@@ -4,6 +4,7 @@ import ora from 'ora';
 
 export default Command({
   description: 'Prints the webhooks that are active on the sync server',
+  preRelease: true,
   middleware: [createServerRequesterMiddleware({ destructive: false })],
   run: async ({ ctx }) => {
     const spinner = ora(

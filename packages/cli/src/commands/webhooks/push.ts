@@ -10,6 +10,7 @@ import { getTriplitDir } from '../../filesystem.js';
 
 export default Command({
   description: 'Pushes webhooks to the sync server',
+  preRelease: true,
   middleware: [createServerRequesterMiddleware({ destructive: true })],
   flags: {
     raw: Flag.String({
