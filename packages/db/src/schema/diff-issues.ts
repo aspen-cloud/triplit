@@ -551,46 +551,47 @@ export function logSchemaChangeViolations(
 ) {
   const log = logger ?? (console as unknown as Logger);
   if (change.successful) {
-    log.info('Schema update successful');
-  } else {
-    log.error('Schema update failed. Please resolve the following issues:');
+    change.diff.length > 0 && log.info('Schema update successful');
+    return;
   }
+  const success = 'Schema update failed.';
+
   if (change.invalid) {
-    log.error(change.invalid);
+    log.error([success, change.invalid].join('\n'));
     return;
   }
 
-  const compatibleIssuesMessage = `Found ${change.issues.length} backwards incompatible schema changes.`;
-  if (change.issues.length > 0) {
-    log.warn(compatibleIssuesMessage);
-  } else {
-    log.info(compatibleIssuesMessage);
-  }
+  const numberOfIssues = `Please resolve the following [${change.issues.length}] issue(s):`;
 
   if (!change.successful || forcePrintIssues) {
     const problematicIssues = change.issues.filter(
       (issue) => forcePrintIssues || issue.violatesExistingData
     );
-    logSchemaIssues(log, problematicIssues);
+    log.error(
+      [success, numberOfIssues, constructSchemaIssues(problematicIssues)].join(
+        '\n\n'
+      )
+    );
   }
 }
 
-function logSchemaIssues(logger: Logger, issues: PossibleDataViolation[]) {
+function constructSchemaIssues(issues: PossibleDataViolation[]): string {
   const collectionIssueMap = issues.reduce((acc, issue) => {
     const collection = issue.context.collection;
     const existingIssues = acc.get(collection) ?? [];
     acc.set(collection, [...existingIssues, issue]);
     return acc;
   }, new Map<string, PossibleDataViolation[]>());
+  const message: string[] = [];
   collectionIssueMap.forEach((issues, collection) => {
-    logger.error(`\nCollection: '${collection}'`);
+    message.push(`Collection: '${collection}'`);
     issues.forEach(({ issue, context, cure }) => {
-      logger.error(
+      message.push(
         `\t'${context.attribute.join('.')}'
 \t\tIssue: ${issue}
 \t\tFix:   ${cure}`
       );
     });
   });
-  logger.info('');
+  return message.join('\n\n');
 }

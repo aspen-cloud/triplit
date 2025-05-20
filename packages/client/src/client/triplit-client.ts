@@ -21,7 +21,7 @@ import {
   OnSessionErrorCallback,
 } from './types';
 import { HttpClient } from '../http-client/http-client.js';
-import { Logger } from '@triplit/logger';
+import { logger as LOGGER, Logger } from '@triplit/logger';
 import { clientLogHandler } from '../client-logger.js';
 import { MemoryHandler } from '@triplit/logger/memory';
 import {
@@ -177,7 +177,8 @@ export class TriplitClient<M extends Models<M> = Models> {
       });
     });
 
-    this.logger = options.logger ?? new Logger([clientLogHandler()]);
+    this.logger = options.logger ?? LOGGER;
+    this.logger.registerHandler(clientLogHandler());
     if (options.logLevel) {
       this.logger.setLogLevel(options.logLevel);
     }
