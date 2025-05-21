@@ -465,6 +465,25 @@ describe('detecting dangerous edits', () => {
       expect(results.length).toBe(0);
     });
   });
+
+  it('new collections are backwards compatible', async () => {
+    const db = new DB({ schema: stressTestSchema });
+    // await db.insert('stressTest', { id: 'test' });
+    const result = await db.overrideSchema(
+      {
+        collections: S.Collections({
+          stressTest: {
+            schema: S.Schema(stressTest),
+          },
+          newCollection: {
+            schema: S.Schema({ id: S.Id() }),
+          },
+        }),
+      },
+      { failOnBackwardsIncompatibleChange: true }
+    );
+    expect(result.successful).toBe(true);
+  });
 });
 
 describe.each([true, false])(
