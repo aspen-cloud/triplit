@@ -108,7 +108,7 @@ describe('schema push', () => {
         }
 
         // push local schema
-        await $shell`yarn triplit schema push --ignoreDestructiveWarning`;
+        await $shell`yarn triplit schema push`;
 
         {
           const { schema: collections } = await readRemoteSchema();
@@ -147,9 +147,7 @@ describe('schema push', () => {
         }
 
         // push local schema
-        await expect(
-          $shell`yarn triplit schema push --ignoreDestructiveWarning`
-        ).resolves.not.toThrow();
+        await expect($shell`yarn triplit schema push`).resolves.not.toThrow();
 
         {
           const { schema: collections } = await readRemoteSchema();
@@ -179,13 +177,11 @@ describe('schema push', () => {
         // removing a relation is backwards incompatible but not corrupting, so it should not throw
         // by default, but will with the flag
         await expect(
-          $shell`yarn triplit schema push --ignoreDestructiveWarning`
+          $shell`yarn triplit schema push --enforceBackwardsCompatibility`
         ).rejects.toThrow();
 
         // without the flag, it shouldn't throw
-        await expect(
-          $shell`yarn triplit schema push --ignoreDestructiveWarning --force`
-        ).resolves.not.toThrow();
+        await expect($shell`yarn triplit schema push`).resolves.not.toThrow();
       });
     },
     { timeout: 20000 }
