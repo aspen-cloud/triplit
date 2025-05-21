@@ -9,7 +9,7 @@ import * as Flag from '../../flags.js';
 export default Command({
   description: 'Apply the local schema to the server',
   middleware: [
-    createServerRequesterMiddleware({ destructive: true }),
+    createServerRequesterMiddleware({ destructive: false }),
     projectSchemaMiddleware,
   ],
   flags: {
@@ -17,8 +17,15 @@ export default Command({
       description:
         'Force push the schema to the server, ignoring backwards incompatible changes',
       required: false,
-      default: false,
       char: 'f',
+      hidden: true,
+    }),
+    enforceBackwardsCompatibility: Flag.Boolean({
+      description:
+        'Enforce backwards compatibility, fail if there are any backwards incompatible changes',
+      required: false,
+      default: false,
+      char: 'e',
     }),
     printIssues: Flag.Boolean({
       description: 'Print issues even if successful',
@@ -29,7 +36,9 @@ export default Command({
   },
   run: async ({ ctx, flags }) => {
     let data;
-    const failOnBackwardsIncompatibleChange = !flags.force;
+    const failOnBackwardsIncompatibleChange = Object.hasOwn(flags, 'force')
+      ? !flags.force
+      : flags.enforceBackwardsCompatibility;
     const localSchema = await ctx.projectSchema.getSchema();
     let pushSpinner: Ora | undefined;
     try {
@@ -43,14 +52,18 @@ export default Command({
         {
           hooks: {
             beforeRequest: () => {
-              pushSpinner = ora('Pushing schema to server').start();
+              pushSpinner = ora(
+                `Pushing schema to ${Colors.blue(ctx.remote.url)}`
+              ).start();
             },
           },
         }
       );
-      pushSpinner?.succeed('Schema pushed to server');
+      pushSpinner?.succeed(`Schema pushed to ${Colors.blue(ctx.remote.url)}`);
     } catch (e) {
-      pushSpinner?.fail('Failed to push schema to server');
+      pushSpinner?.fail(
+        `Failed to push schema to ${Colors.blue(ctx.remote.url)}`
+      );
       data = e;
     }
     if (!Object.hasOwn(data, 'successful') || !Object.hasOwn(data, 'issues')) {

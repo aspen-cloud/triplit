@@ -13,12 +13,15 @@ triplit schema push
 Apply the local schema to the server
 
 Flags:
---failOnBackwardsIncompatibleChange Fail if there is a backwards incompatible change
---printIssues Print all schema warnings regardless of whether the push succeeds or not
+--enforceBackwardsCompatibility, -e Enforce backwards compatibility, fail if there are any backwards incompatible changes
+    Default: false
+--printIssues, -p Print issues even if successful
+    Default: false
 --token, -t Service Token
 --remote, -r Remote URL to connect to
---schemaPath, -P File path to the local schema file
---noSchema, -N Do not load a schema file
+--schemaPath File path to the local schema file
+--requireSchema Throw an error if no local schema file is found
+    Default: false
 ```
 
 ## `triplit schema print`
