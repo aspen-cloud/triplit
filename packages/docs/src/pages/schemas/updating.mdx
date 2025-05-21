@@ -4,13 +4,61 @@ description: Learn how to update a schema for your Triplit server in production.
 
 import { Callout } from 'nextra-theme-docs';
 
-# Safely updating schemas in production
+# Updating your schema
 
-## Client compatibility
+## Introduction
+
+Triplit provides tools that help you update your schema in a way that will:
+
+1. allow clients with the previous version of the schema to continue syncing and
+2. maintain the integrity of data in their caches and on the server
+
+With these goals in mind, Triplit divides schema changes into two categories:
+
+### Backwards compatible changes
+
+These are changes that you can make to your schema that will never corrupt existing data in the database or cause issues with clients that have a local cache. These changes are:
+
+- Adding optional attributes
+- Adding new collections
+
+Triplit will allow you to make these changes to your schema while the server is running, and you can push them to the server using the `triplit schema push` command.
+
+### Backwards incompatible changes
+
+Any other change to the schema is considered backwards incompatible. These include:
+
+- removing an attribute
+- adding a required attribute
+- changing the type of an attribute
+
+These are "backwards incompatible" because even though they may be changed safely on the server, your app may have online client with cached data or offline clients with durable caches that violate the new schema.
+
+This does not mean that you can't make these changes, but it does mean that you will need to account for the fact that clients may have data in their local cache that doesn't match the schema. This may necessitate updating your client code to:
+
+- loosen the assumptions about schema in the client code, e.g. handling attributes that have been removed or changed.
+- run a script on app load that migrates database to match the new schema.
+- clear the local cache on app load.
+
+None of these are ideal solutions, which is why making backwards incompatible changes to the schema is discouraged. However, Triplit will allow you to make backwards incompatible changes to the schema if they do not corrupt existing data in the database e.g. you may remove an attribute from the schema, but only if all of the existing entities in the collection have that attribute set to `undefined`.
+
+In production, it is recommended that you do not make backwards incompatible changes if your client applications have a durable cache, e.g. one using IndexedDB. You can ensure that all backwards incompatible changes are rejected by the server by setting the `triplit schema push --enforceBackwardsCompatibility` flag.
+
+### `triplit schema push`
+
+This command will look at the schema defined at `./triplit/schema.ts` and attempt to apply it to the server while it's still running. If the schema is backwards compatible, it will be applied immediately. If the schema has potentially dangerous changes that do not violate any data integrity constraints, it will also be applied. This behavior is useful for development, but in production, you should always use the `--enforceBackwardsCompatibility` flag to ensure that the schema is backwards compatible.
+
+Read more about the [schema push command](/cli/schema) and its options.
+
+### Client compatibility
 
 When a client connects to a Triplit server, it compares the schema it has stored locally with the schema on the server. If the schemas are incompatible, the client will refuse to connect to the server. This is a safety feature to prevent data corruption. That does not mean that you can't update your schema on the server, but you must do so in a way that is backwards compatible. This page describes the tools Triplit provides to make this process as smooth as possible.
 
-## Getting setup
+## Guided example
+
+In this section, we'll walk through a simple example of how to update a schema in production. We'll start with a simple schema, add an attribute to it, and then push the schema to the server. We'll also cover how to handle backwards incompatible changes.
+
+### Getting setup
 
 Let start with a simple schema, defined at `./triplit/schema.ts` in your project directory.
 
@@ -54,7 +102,7 @@ triplit dev --storage=sqlite
 
 Your database will be saved to `triplit/.data`. You can delete this folder to clear your database.
 
-## Updating your schema
+### Updating your schema
 
 Let's assume you've run some version of `triplit dev` shown above and have a server up and running with a schema. You've also [properly configured your `.env`](/getting-started#syncing-in-local-development) such that Triplit CLI commands will be pointing at it. Let's also assume you've added some initial todos:
 
@@ -154,7 +202,7 @@ await client.transact(async (tx) => {
 
 We've now successfully updated our schema in a backwards compatible way. If you're confident that all clients have been updated to handle the new schema and all existing data has been updated to reflect the target schema, you can then choose to make `tagId` required.
 
-## Handling backwards incompatible changes
+## Curing backwards incompatible changes
 
 ### Adding an attribute where optional is not set
 
