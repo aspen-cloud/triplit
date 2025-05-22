@@ -28,6 +28,9 @@ export const ALL_TYPES_SET = new Set(ALL_TYPES);
 
 export const DEFAULT_FUNCTIONS = Object.freeze([
   'now',
-  'uuid',
+  'nanoid',
+  'uuid', // @deprecated
+  'uuidv4',
+  'uuidv7',
   'Set.empty',
 ] as const);

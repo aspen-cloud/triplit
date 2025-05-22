@@ -109,7 +109,7 @@ describe('Schema diffing', () => {
         attribute: ['id'],
         dataType: {
           type: 'string',
-          config: { nullable: false, default: { args: null, func: 'uuid' } },
+          config: { nullable: false, default: { args: null, func: 'nanoid' } },
         },
       },
     ]);
@@ -125,7 +125,7 @@ describe('Schema diffing', () => {
         attribute: ['id'],
         dataType: {
           type: 'string',
-          config: { nullable: false, default: { args: null, func: 'uuid' } },
+          config: { nullable: false, default: { args: null, func: 'nanoid' } },
         },
         isNewCollection: false,
       },
@@ -185,7 +185,7 @@ describe('Schema diffing', () => {
         type: 'delete',
         attribute: ['id'],
         dataType: {
-          config: { nullable: false, default: { args: null, func: 'uuid' } },
+          config: { nullable: false, default: { args: null, func: 'nanoid' } },
           type: 'string',
         },
       },
@@ -199,7 +199,7 @@ describe('Schema diffing', () => {
         attribute: ['id'],
         dataType: {
           type: 'string',
-          config: { nullable: false, default: { args: null, func: 'uuid' } },
+          config: { nullable: false, default: { args: null, func: 'nanoid' } },
         },
         isNewCollection: true,
       },

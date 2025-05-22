@@ -32,6 +32,7 @@ import {
 } from './operations.js';
 import { DEFAULTABLE_TYPE_KEYS_SET, PRIMITIVE_TYPE_KEYS_SET } from './index.js';
 import { hasNoValue, isDefaultFunction } from '../../utils/value.js';
+import { getOptionalDep } from '../../utils/optional-dep.js';
 
 /**
  * Returns an empty object for the given type
@@ -458,8 +459,12 @@ function calcDefaultValue(config: TypeConfig) {
       // If the default is a non special object, return it as is
       return attributeDefault;
     }
-    if (func === 'uuid') {
+    if (func === 'nanoid' || func === 'uuid') {
       return args && typeof args[0] === 'number' ? nanoid(args[0]) : nanoid();
+    } else if (func === 'uuidv4') {
+      return crypto.randomUUID();
+    } else if (func === 'uuidv7') {
+      return getOptionalDep<typeof import('uuidv7')>('uuidv7').uuidv7();
     } else if (func === 'now') {
       return new Date().toISOString();
     } else if (func === 'Set.empty') {

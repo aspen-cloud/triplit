@@ -62,7 +62,8 @@
     "@triplit/db": "workspace:^",
     "@triplit/logger": "workspace:^",
     "jose": "^4.15.4",
-    "superjson": "^2.2.2"
+    "superjson": "^2.2.2",
+    "uuidv7": "^1.0.2"
   },
   "devDependencies": {
     "@triplit/types": "workspace:^",

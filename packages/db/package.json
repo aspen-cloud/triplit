@@ -69,12 +69,14 @@
     "mitata": "^1.0.27",
     "tinybench": "^3.1.0",
     "typescript": "^5.8.3",
+    "uuidv7": "^1.0.2",
     "vitest": "^3.0.6"
   },
   "peerDependencies": {
     "better-sqlite3": "*",
     "expo-sqlite": "*",
-    "lmdb": "*"
+    "lmdb": "*",
+    "uuidv7": "*"
   },
   "peerDependenciesMeta": {
     "better-sqlite3": {
@@ -84,6 +86,9 @@
       "optional": true
     },
     "lmdb": {
+      "optional": true
+    },
+    "uuidv7": {
       "optional": true
     }
   }

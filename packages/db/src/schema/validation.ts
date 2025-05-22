@@ -294,14 +294,14 @@ function validateDefaultFunction(
     if (!['date', 'string'].includes(type))
       return 'default function "now" is not valid for this type';
   }
-  if (funcId === 'uuid') {
+  if (funcId === 'nanoid' || funcId === 'uuid') {
     if (!hasNoValue(fnObj.args)) {
       if (!Array.isArray(fnObj.args)) {
-        return 'default function "uuid" args is not an array';
+        return `default function "${funcId}" args is not an array`;
       }
       if (fnObj.args.length > 0) {
         if (typeof fnObj.args[0] !== 'number')
-          return 'default function "uuid" arg[0] is not a number';
+          return `default function "${funcId}" arg[0] is not a number`;
       }
     }
     if (!['string'].includes(type))

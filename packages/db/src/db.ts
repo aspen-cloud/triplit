@@ -69,6 +69,7 @@ import {
   WriteModel,
 } from './types/db.js';
 import { validateSchema } from './schema/validation.js';
+import { tryPreloadingOptionalDeps } from './utils/optional-dep.js';
 
 export type DBSchema<M extends Models<M> = Models> = {
   collections: M;
@@ -958,6 +959,7 @@ export async function createDB<
   if (options.kv) {
     savedSchema = await DB.getSchemaFromStorage(options.kv);
   }
+  await tryPreloadingOptionalDeps();
   const db = new DB<M, E>({ ...options, schema: savedSchema as DBSchema<M> });
 
   if (options.schema) {

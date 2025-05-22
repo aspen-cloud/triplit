@@ -140,7 +140,7 @@ export function SchemaAttributeSheet({
           ? new Date(defaultValue)
           : defaultValue;
     if (defaultType === 'now') value = Schema.Default.now();
-    if (defaultType === 'uuid') value = Schema.Default.uuid();
+    if (defaultType === 'uuid') value = Schema.Default.Id.uuidv4();
     return {
       ...baseAttribute,
       config: { ...baseOptions, default: value },
