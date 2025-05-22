@@ -22,14 +22,18 @@ export class Schema {
   /**
    * The Id data type is string that generates a UUID when the `id` field is omitted from an inserted entity.
    */
-  static Id = () =>
-    StringType({ nullable: false, default: this.Default.uuid() });
+  static Id = (
+    options: { format: keyof typeof DEFAULT_ID_BUILDERS } = { format: 'nanoid' }
+  ) => {
+    const idDefault = DEFAULT_ID_BUILDERS[options.format];
+    return StringType({ nullable: false, default: idDefault() });
+  };
   /**
    * The String data type is equivalent to a JavaScript `string`. {@link https://triplit.dev/schemas/types#string Read more in the docs.}
    *
    * @param options - the options object for the field
    * @param options.nullable - whether the value can be set to `null`
-   * @param options.default - the default value for the field. It can be a string literal or the helper function {@link Schema.Default.uuid} to generate a random UUID.
+   * @param options.default - the default value for the field. It can be a string literal or the helper function {@link Schema.Default.Id.uuidv4} to generate a random UUID.
    */
   static String = StringType;
 
@@ -156,27 +160,7 @@ export class Schema {
   }
 
   static get Default() {
-    return {
-      Set: {
-        empty: () => ({
-          func: 'Set.empty',
-          args: null,
-        }),
-      },
-      /**
-       * A helper function to add a randomly generated UUID as the default value for a field.
-       *
-       * @param length - (optional) the length of the UUID
-       */
-      uuid: (length?: string) => ({
-        func: 'uuid',
-        args: length ? [length] : null,
-      }),
-      /**
-       * A helper function to add the current timestamp as the default value for a field.
-       */
-      now: () => ({ func: 'now', args: null }),
-    };
+    return DEFAULT_VALUE_BUILDERS;
   }
 
   /**
@@ -206,3 +190,48 @@ export class Schema {
     return filter;
   }
 }
+const DEFAULT_DATE_BUILDERS = {
+  /**
+   * A helper function to add the current timestamp as the default value for a field.
+   */
+  now: () => ({
+    func: 'now',
+    args: null,
+  }),
+};
+const DEFAULT_ID_BUILDERS = {
+  nanoid: (length?: string) => ({
+    func: 'nanoid',
+    args: length ? [length] : null,
+  }),
+  uuidv4: () => ({
+    func: 'uuidv4',
+    args: null,
+  }),
+  uuidv7: () => ({
+    func: 'uuidv7',
+    args: null,
+  }),
+};
+const DEFAULT_VALUE_BUILDERS = {
+  Set: {
+    empty: () => ({
+      func: 'Set.empty',
+      args: null,
+    }),
+  },
+  /**
+   * A helper function to add a randomly generated UUID as the default value for a field.
+   *
+   * @param length - (optional) the length of the UUID
+   */
+  Id: DEFAULT_ID_BUILDERS,
+  /**
+   * A helper function to add the current timestamp as the default value for a field.
+   */
+  now: DEFAULT_DATE_BUILDERS.now,
+  /**
+   * Date related default generator functions.
+   */
+  Date: DEFAULT_DATE_BUILDERS,
+};

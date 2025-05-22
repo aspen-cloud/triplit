@@ -10650,6 +10650,7 @@ __metadata:
     tsx: "npm:^4.7.1"
     turbo: "npm:^2.0.4"
     typescript: "npm:^5.8.3"
+    uuidv7: "npm:^1.0.2"
     vite: "npm:^5.1.5"
     vite-plugin-dts: "npm:^3.9.1"
     vite-tsconfig-paths: "npm:^4.2.0"
@@ -10683,18 +10684,22 @@ __metadata:
     sorted-btree: "npm:^1.8.1"
     tinybench: "npm:^3.1.0"
     typescript: "npm:^5.8.3"
+    uuidv7: "npm:^1.0.2"
     vitest: "npm:^3.0.6"
     web-worker: "npm:^1.5.0"
   peerDependencies:
     better-sqlite3: "*"
     expo-sqlite: "*"
     lmdb: "*"
+    uuidv7: "*"
   peerDependenciesMeta:
     better-sqlite3:
       optional: true
     expo-sqlite:
       optional: true
     lmdb:
+      optional: true
+    uuidv7:
       optional: true
   languageName: unknown
   linkType: soft
@@ -10749,6 +10754,7 @@ __metadata:
     jose: "npm:^4.15.4"
     superjson: "npm:^2.2.2"
     typescript: "npm:^5.8.3"
+    uuidv7: "npm:^1.0.2"
     vitest: "npm:^1.1.0"
   languageName: unknown
   linkType: soft
@@ -34872,6 +34878,15 @@ __metadata:
   bin:
     uuid: dist/bin/uuid
   checksum: 10/23857699a616d1b48224bc2b8440eae6e57d25463c3a0200e514ba8279dfa3bde7e92ea056122237839cfa32045e57d8f8f4a30e581d720fd72935572853ae2e
+  languageName: node
+  linkType: hard
+
+"uuidv7@npm:^1.0.2":
+  version: 1.0.2
+  resolution: "uuidv7@npm:1.0.2"
+  bin:
+    uuidv7: cli.js
+  checksum: 10/729b4f6af3cff9c2cf018902e4f0c91b40a70c7e7afdf21737f513e120475cf5592e3374e2c397cd9540e7380010b5b09df8d65038390e61446fd4db5b48f1c7
   languageName: node
   linkType: hard
 
