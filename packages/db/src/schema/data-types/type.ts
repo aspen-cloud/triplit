@@ -221,7 +221,11 @@ export function validateEncoded(
         // NOTE: may become == because null is equivalent to undefined
         if (options.partial && !(key in encoded)) continue;
         const validation = validateEncoded(property, encoded[key], options);
-        if (!validation.valid) return validation;
+        if (!validation.valid)
+          return {
+            valid: false,
+            error: `Property ${key} is invalid: ${validation.error}`,
+          };
       }
       return { valid: true };
     case 'string':
@@ -470,7 +474,7 @@ export function isOptional(type: DataType) {
 }
 
 function encodedValueMismatchMessage(type: string, value: any) {
-  return `Encoded value ${value} is not valid for type ${type}`;
+  return `Encoded value ${value} is not valid for type ${type}.`;
 }
 
 function recordEqual(a: RecordType, b: RecordType) {
