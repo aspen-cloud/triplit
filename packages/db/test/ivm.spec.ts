@@ -15,6 +15,8 @@ import { mergeDBChanges } from '../src/memory-write-buffer.js';
 import { DBChanges } from '../dist/types.js';
 import { ViewEntity } from '../dist/query-engine.js';
 import { flattenViewEntity } from '../src/query-engine.js';
+import { or } from '../src/filters.js';
+import { DEFAULT_ROLES } from '../src/index.js';
 
 describe('IVM', () => {
   describe('initial results', async () => {
@@ -209,6 +211,70 @@ describe('IVM', () => {
       ]);
 
       unsubscribe();
+    });
+
+    test('can handle queries with completely locked down permissions', async () => {
+      const collections = S.Collections({
+        organizations: {
+          schema: S.Schema({
+            id: S.Id(),
+          }),
+          relationships: {
+            members: S.RelationMany('members', {
+              where: [['organizationId', '=', '$id']],
+            }),
+          },
+          permissions: {},
+        },
+        members: {
+          schema: S.Schema({
+            id: S.Id(),
+            userId: S.String(),
+            organizationId: S.String(),
+          }),
+          relationships: {
+            organization: S.RelationById('organizations', '$organizationId'),
+          },
+          permissions: {},
+        },
+        applications: {
+          schema: S.Schema({
+            id: S.Id(),
+            userId: S.Optional(S.String()),
+            organizationId: S.Optional(S.String()),
+          }),
+          relationships: {
+            organization: S.RelationById('organizations', '$organizationId'),
+          },
+          permissions: {
+            authenticated: {
+              read: {
+                filter: [
+                  or([
+                    ['userId', '=', '$token.sub'],
+                    ['organization.members.userId', '=', '$token.sub'],
+                  ]),
+                ],
+              },
+            },
+          },
+        },
+      });
+      const db = new DB({ schema: { collections, roles: DEFAULT_ROLES } });
+      const sessionDB = db.withSessionVars({
+        sub: '123',
+      });
+      const spy = vi.fn();
+      const unsub = sessionDB.subscribe(
+        sessionDB.Query('applications'),
+        spy,
+        undefined,
+        { skipRules: false }
+      );
+      await sessionDB.updateQueryViews();
+      sessionDB.broadcastToQuerySubscribers();
+      await db.insert('organizations', { id: '1' }, { skipRules: true });
+      await expect(sessionDB.updateQueryViews()).resolves.toBeUndefined();
     });
 
     test('can handle deletes on simple, non-relational query', async () => {
