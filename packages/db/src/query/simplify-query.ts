@@ -142,10 +142,6 @@ function applyBooleanCollapse(
     if (filters.some((filter) => filter === true)) {
       return [true];
     }
-    if (filters.every((filter) => filter === false)) {
-      return [false];
-    }
-    return filters.filter((filter) => filter !== false);
   }
   return filters;
 }
