@@ -48,18 +48,18 @@ export class Server {
         } else {
           // If we are not backwards compatible, reset the compatibility list
           await this.db.setMetadata(COMPATIBILITY_LIST_KEY, [hash]);
-          // Also disconnect all current clients, they should reconnect with a new schema
-          for (const connection of this.connections) {
-            // Send a close message to actually close the socket
-            // NOTE: this is awkward for a few reasons as noted around the server code
-            connection.sendMessage('CLOSE', {
-              type: 'SCHEMA_MISMATCH',
-              retry: false,
-              message:
-                'A backwards incompatible schema change was made. Please ensure your schema is up to date and reconnect.',
-            });
-            this.closeConnection(connection);
-          }
+          // // Also disconnect all current clients, they should reconnect with a new schema
+          // for (const connection of this.connections) {
+          //   // Send a close message to actually close the socket
+          //   // NOTE: this is awkward for a few reasons as noted around the server code
+          //   connection.sendMessage('CLOSE', {
+          //     type: 'SCHEMA_MISMATCH',
+          //     retry: false,
+          //     message:
+          //       'A backwards incompatible schema change was made. Please ensure your schema is up to date and reconnect.',
+          //   });
+          //   this.closeConnection(connection);
+          // }
         }
       }
     });
