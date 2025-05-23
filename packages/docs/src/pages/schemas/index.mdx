@@ -65,7 +65,41 @@ Passing a schema to the client constructor will override any schema currently st
 
 ### id
 
-Every collection in Triplit must define an `id` field in its schema. The `S.Id()` data type will generate a random `id` by default upon insertion. If you want to specify the `id` for each entity, you may pass it **as a string** in to the `insert` method as shown below.
+Every collection in Triplit must define an `id` field in its schema. The `S.Id()` data type will generate a random `id` by default upon insertion. You can specify the format of the generated ID using the `format` option.
+
+#### ID Generation Formats
+
+Triplit supports three ID generation formats:
+
+- **`nanoid`** (default): Generates a 21-character URL-safe ID. Pre-installed on both client and server.
+- **`uuidv4`**: Generates a standard UUID v4. Uses native functionality, no package required.
+- **`uuidv7`**: Generates a UUID v7 with timestamp ordering. Requires the `uuidv7` package on the client (pre-installed on server).
+
+```typescript
+// Using different ID formats
+const schema = S.Collections({
+  todos: {
+    schema: S.Schema({
+      id: S.Id({ format: 'nanoid' }), // default
+      // ... other fields
+    }),
+  },
+  users: {
+    schema: S.Schema({
+      id: S.Id({ format: 'uuidv4' }),
+      // ... other fields
+    }),
+  },
+  posts: {
+    schema: S.Schema({
+      id: S.Id({ format: 'uuidv7' }),
+      // ... other fields
+    }),
+  },
+});
+```
+
+If you want to specify the `id` for each entity, you may pass it **as a string** in to the `insert` method as shown below.
 
 ```typescript
 // assigning the id automatically
@@ -73,7 +107,7 @@ await client.insert('todos', {
   text: 'get tortillas',
   complete: false,
   created_at: new Date(),
-  tags: new Set([groceries]),
+  tags: new Set(['groceries']),
 })
 
 // assigning the id manually
@@ -82,9 +116,14 @@ await client.insert('todos', {
   text: 'get tortillas',
   complete: false,
   created_at: new Date(),
-  tags: new Set([groceries]),
+  tags: new Set(['groceries']),
 })
 ```
+
+<Callout type="info">
+  For `uuidv7` format, you need to install the `uuidv7` package on the client:
+  ```bash npm install uuidv7 ``` The server has this package pre-installed.
+</Callout>
 
 ### Getting types from your schema
 

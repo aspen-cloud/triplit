@@ -28,6 +28,53 @@ const schema = S.Collections({
 
 Primitive types are basic types for the database.
 
+#### Id
+
+The Id data type is a convenience String type used for entity identifiers. It automatically generates unique IDs when entities are inserted without an explicit `id` value.
+
+```typescript
+import { Schema as S } from '@triplit/client';
+const idType = S.Id({
+  format: 'nanoid', // or 'uuidv4' or 'uuidv7'
+});
+```
+
+Valid options for the Id type include:
+
+- `format`: Specifies the ID generation format. Options are:
+  - `'nanoid'` (default): Generates a 21-character URL-safe ID using nanoid. Pre-installed on both client and server.
+  - `'uuidv4'`: Generates a standard UUID v4. Uses native functionality, no additional package required.
+  - `'uuidv7'`: Generates a UUID v7 with timestamp ordering. Requires the `uuidv7` package on the client (pre-installed on server).
+
+```typescript
+// Examples of different ID formats
+const schema = S.Collections({
+  todos: {
+    schema: S.Schema({
+      id: S.Id(), // defaults to nanoid
+      text: S.String(),
+    }),
+  },
+  users: {
+    schema: S.Schema({
+      id: S.Id({ format: 'uuidv4' }),
+      name: S.String(),
+    }),
+  },
+  posts: {
+    schema: S.Schema({
+      id: S.Id({ format: 'uuidv7' }),
+      title: S.String(),
+    }),
+  },
+});
+```
+
+<Callout type="info">
+  For `uuidv7` format, install the package on the client: e.g. `npm install
+  uuidv7`
+</Callout>
+
 #### String
 
 The string data type is used to store text.
@@ -43,7 +90,9 @@ Valid options for the string type include:
 
 - `nullable`: Indicates the value is optional when used in a `Record`. This is equivalent to wrapping the attribute in [`S.Optional`](#optional-keys).
 - `default`: Provides a default value or function for the attribute. Possible values include:
-  - `S.Default.uuid()`: Generates a random UUID.
+  - `S.Default.Id.nanoid()`: Generates a nanoid (21-character URL-safe ID)
+  - `S.Default.Id.uuidv4()`: Generates a UUID v4
+  - `S.Default.Id.uuidv7()`: Generates a UUID v7 (requires `uuidv7` package on client)
   - `string`: A literal string value.
 - `enum`: An array of strings that restricts the possible values of the attribute. This will perform runtime validation and provide autocomplete in your editor.
 
