@@ -233,7 +233,7 @@ function defaultValueToString(defaultValue: TypeConfig['default']): string {
     if (!DEFAULT_FUNCTIONS.includes(func))
       throw new Error('Invalid default function name');
     const parsedArgs = args ? args.map(valueToJS).join(', ') : '';
-    return `S.Default.${func}(${parsedArgs})`;
+    return `S.Default.${mapFuncIdToFuncPath(func)}(${parsedArgs})`;
   }
 
   return `${valueToJS(defaultValue)}`;
@@ -259,4 +259,20 @@ function subQueryToString(
     .filter((str) => str)
     .join(', ');
   return `{${cleanedString}}`;
+}
+
+function mapFuncIdToFuncPath(func: (typeof DEFAULT_FUNCTIONS)[number]) {
+  switch (func) {
+    case 'uuidv4':
+      return 'Id.uuidv4';
+    case 'uuidv7':
+      return 'Id.uuidv7';
+    case 'uuid':
+    case 'nanoid':
+      return 'Id.nanoid';
+    case 'now':
+      return 'now';
+    default:
+      return func;
+  }
 }
