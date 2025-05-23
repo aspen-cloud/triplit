@@ -24,10 +24,12 @@ export type PrimitiveType =
   | BooleanType<any>
   | DateType<any>;
 
-type HasDefault<T extends DataType> = T extends { config?: { default?: any } }
+type HasConfigurableDefault<T extends DataType> = T extends {
+  config?: { default?: any };
+}
   ? T
   : never;
-export type DefaultableType = HasDefault<DataType>;
+export type DefaultableType = HasConfigurableDefault<DataType>;
 
 /**
  * All data types

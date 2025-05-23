@@ -57,7 +57,7 @@ export function struct(type: DataType) {
  * If the type is a record, it returns an object with the default values for each property
  */
 export function defaultValue(type: DataType) {
-  if (hasDefault(type)) return calcDefaultValue(type.config);
+  if (hasConfigurableDefault(type)) return calcDefaultValue(type.config);
   if (type.type === 'record') {
     const result: any = {};
     for (const key in type.properties) {
@@ -437,7 +437,13 @@ export function supportedOperations(type: DataType): ReadonlyArray<string> {
   );
 }
 
-export function hasDefault(type: DataType): type is DefaultableType {
+/**
+ * Checks if the type has a default value that can be configured
+ * NOT that a default value is provided
+ */
+export function hasConfigurableDefault(
+  type: DataType
+): type is DefaultableType {
   return DEFAULTABLE_TYPE_KEYS_SET.has(type.type as any);
 }
 
