@@ -833,10 +833,11 @@ it('Outbox data is not included in checkpointed fetch payload', async () => {
 
   // Go offline and add an entity to the outbox, prevent syncing on reconnect, then reconnect
   alice.disconnect();
-  await alice.insert('test', { id: 'test2', name: 'test2' });
   // Prevent outbox from syncing
   // @ts-expect-error - this is a private API
   alice.syncEngine.syncInProgress = true;
+  // add an entity to the outbox
+  await alice.insert('test', { id: 'test2', name: 'test2' });
   // Connect to trigger sync process
   await alice.connect();
   await pause(1000);
@@ -852,7 +853,7 @@ it('Outbox data is not included in checkpointed fetch payload', async () => {
     (log) => log.direction === 'SENT' && log.message.type === 'CONNECT_QUERY'
   );
   const didSendOutboxData = sentConnectQueryMessages.some((log) =>
-    log.message.payload.state?.entityIds.includes('test2')
+    log.message.payload.state?.entityIds?.['test']?.includes('test2')
   );
   expect(didSendOutboxData).toBe(false);
 });
