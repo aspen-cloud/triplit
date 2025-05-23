@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { Schema as S, DB } from '../src/index.ts';
-import { tryPreloadingOptionalDeps } from '../src/kv-store/utils/optional-dep.ts';
+import { tryPreloadingOptionalDeps } from '../src/utils/optional-dep.ts';
 
 describe('default id generation', () => {
   it.each(['nanoid', 'uuidv4', 'uuidv7'] as const)(
@@ -26,7 +26,7 @@ describe('default id generation', () => {
   );
   it('legacy "uuid" should generate nanoid for backward compatibility', async () => {
     const schema = S.Schema({
-      id: S.String({ nullable: true, default: 'uuid' }),
+      id: S.String({ nullable: true, default: { func: 'uuid' } }),
     });
     const db = new DB({ schema: { collections: { test: { schema } } } });
     const resp = await db.insert('test', {});

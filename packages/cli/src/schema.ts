@@ -13,6 +13,7 @@ import {
   Relationship,
   isIdFilter,
   CollectionQuery,
+  isDefaultFunction,
 } from '@triplit/db';
 import { blue } from 'ansis/colors';
 
@@ -226,10 +227,12 @@ function parseStringOptions(options: StringTypeOptions<any>) {
 }
 
 function defaultValueToString(defaultValue: TypeConfig['default']): string {
-  if (typeof defaultValue === 'object' && defaultValue !== null) {
+  if (isDefaultFunction(defaultValue)) {
     const { func, args } = defaultValue;
     // TODO: import list from db
-    if (!['now', 'uuid', 'Set.empty'].includes(func))
+    if (
+      !['now', 'nanoid', 'uuid', 'uuidv4', 'uuidv7', 'Set.empty'].includes(func)
+    )
       throw new Error('Invalid default function name');
     const parsedArgs = args ? args.map(valueToJS).join(', ') : '';
     return `S.Default.${func}(${parsedArgs})`;
