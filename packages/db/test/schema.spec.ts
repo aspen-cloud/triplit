@@ -96,4 +96,68 @@ describe('defaults', async () => {
       { id: '2', username: 'test', email: 'test' },
     ]);
   });
+  it('defaults for a record type are based on the defaults of attributes', async () => {
+    const db = new DB({
+      schema: {
+        collections: {
+          users: {
+            schema: S.Schema({
+              id: S.Id(),
+              address: S.Record({
+                street: S.String({ default: '742 Evergreen Terrace' }),
+                city: S.String({ default: 'Springfield' }),
+              }),
+            }),
+          },
+        },
+      },
+    });
+    // insert full defaults
+    await db.insert('users', { id: 'homer', address: {} });
+    await db.insert('users', { id: 'marge', address: {} });
+    // insert partial
+    await db.insert('users', {
+      id: 'flanders',
+      address: { street: '744 Evergreen Terrace' },
+    });
+
+    const results = await db.fetch({ collectionName: 'users' });
+    expect(results).toEqual([
+      {
+        id: 'flanders',
+        address: { street: '744 Evergreen Terrace', city: 'Springfield' },
+      },
+      {
+        id: 'homer',
+        address: { street: '742 Evergreen Terrace', city: 'Springfield' },
+      },
+      {
+        id: 'marge',
+        address: { street: '742 Evergreen Terrace', city: 'Springfield' },
+      },
+    ]);
+  });
+  it('defaults are applied for optional attributes', async () => {
+    const db = new DB({
+      schema: {
+        collections: {
+          users: {
+            schema: S.Schema({
+              id: S.Id(),
+              name: S.String({ nullable: true, default: 'John Doe' }),
+            }),
+          },
+        },
+      },
+    });
+    await db.insert('users', { id: '1' });
+    await db.insert('users', { id: '2', name: null });
+    await db.insert('users', { id: '3', name: 'Alice' });
+    const results = await db.fetch({ collectionName: 'users' });
+    expect(results).toEqual([
+      { id: '1', name: 'John Doe' },
+      { id: '2', name: null },
+      { id: '3', name: 'Alice' },
+    ]);
+  });
 });

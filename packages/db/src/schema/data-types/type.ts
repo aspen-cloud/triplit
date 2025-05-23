@@ -80,8 +80,13 @@ export function assign(type: DataType, target: any, input: any) {
         // TODO: try to get propeties return DataType, not any
         // TODO: play around with default not being {} for TypeConfig, causing type.config: any
         const property = type.properties[key];
-        // If the property is optional and no input is provided, set to undefined so property exists
-        if (isOptional(property) && hasNoValue(input[key])) {
+        // If the property is optional and no input or default is provided, set to undefined so property exists
+        if (
+          isOptional(property) &&
+          hasNoValue(input[key]) &&
+          // If a default is provided, recursively call assign to use it
+          hasNoValue(property.config?.default)
+        ) {
           target[key] = input[key];
           continue;
         }
