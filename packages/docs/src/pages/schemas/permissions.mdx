@@ -334,6 +334,49 @@ const schema = S.Collections({
 export { schema, roles };
 ```
 
+#### `$prev` variable
+
+The `postUpdate` permission has access to the previous value of the document via the `$prev` variable. This allows you to check that the new value is valid in the context of the old value, e.g. that the previous value was unchanged:
+
+```typescript filename="schema.ts" copy
+import { type Roles, Schema as S } from '@triplit/client';
+const roles: Roles = {
+  // Custom role definitions
+};
+const schema = S.Collections({
+  todos: {
+    schema: S.Schema({
+      id: S.Id(),
+      text: S.String(),
+      authorId: S.String(),
+      updatedAt: S.Date(),
+      completed: S.Boolean(),
+    }),
+    permissions: {
+      user: {
+        read: {
+          filter: [true],
+        },
+        insert: {
+          filter: [true],
+        },
+        update: {
+          filter: [['authorId', '=', '$role.userId']],
+        },
+        postUpdate: {
+          // Check that the authorId has not changed
+          // and that the updatedAt date is greater than the previous value
+          filter: [
+            ['authorId', '=', '$prev.authorId'],
+            ['updatedAt', '>', '$prev.updatedAt'],
+          ],
+        },
+      },
+    },
+  },
+});
+```
+
 ### Delete
 
 To allow users to delete data, you must define a `delete` permission that specifies the roles that may delete data and any additional restrictions. The following example allows a `user` to delete todos that they authored and an `admin` to delete any todo:
