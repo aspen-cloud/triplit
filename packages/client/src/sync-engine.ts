@@ -390,8 +390,9 @@ export class SyncEngine {
 
   async getConnectionParams(): Promise<Partial<TransportConnectParams>> {
     if (this.client.awaitReady) await this.client.awaitReady;
-    const collections = this.client.db.getSchema()?.collections;
-    const schemaHash = collections ? hashObject(collections) : undefined;
+    // const collections = this.client.db.getSchema()?.collections;
+    // const schemaHash = collections ? hashObject(collections) : undefined;
+    const schemaHash = undefined;
     return {
       schema: schemaHash,
       syncSchema: this.client.syncSchema,
@@ -667,6 +668,7 @@ export class SyncEngine {
     }
   }
 
+  // TODO: add an onError handler to gracefully handle errors in message handlers
   private async onMessageHandler(evt: any) {
     const message: ServerSyncMessage = JSON.parse(evt.data);
     this.logger.debug('received', message);

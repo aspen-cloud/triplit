@@ -235,6 +235,11 @@ export class TriplitClient<M extends Models<M> = Models> {
     );
   }
 
+  get ready() {
+    if (this.awaitReady) return this.awaitReady;
+    return Promise.resolve();
+  }
+
   /**
    * Gets the schema of the database
    *
