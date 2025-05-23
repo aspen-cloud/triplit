@@ -123,7 +123,7 @@ export class TriplitClient<M extends Models<M> = Models> {
       entityStore: new EntityStoreWithOutbox(storage),
       kv: storage,
       clientId: Math.random().toString(36).substring(7),
-    }).then((db) => {
+    }).then(async ({ db, event }) => {
       // If we have a session set up at this point, use that info
       const decoded = this.token
         ? decodeToken(this.token, this.claimsPath)
@@ -172,6 +172,12 @@ export class TriplitClient<M extends Models<M> = Models> {
           }
         );
       }
+
+      // Wait for a valid db
+      if (options.experimental?.onDatabaseInit) {
+        await options.experimental?.onDatabaseInit(this, event);
+      }
+
       return Promise.resolve().then(() => {
         this.awaitReady = null;
       });

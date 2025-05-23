@@ -121,7 +121,7 @@ export async function createTriplitHonoServer(
         }
       : dbOptions.schema;
 
-  const db = await createDB({
+  const { db, event } = await createDB({
     ...dbOptions,
     schema,
     clientId: 'server',
@@ -131,6 +131,11 @@ export async function createTriplitHonoServer(
         ? await createTriplitStorageProvider(dbSource)
         : dbSource,
   });
+
+  if (event.type !== 'SUCCESS') {
+    captureException?.(event);
+    throw new TriplitError(`Failed to initialize database: ${event.type}`);
+  }
 
   const server = new TriplitServer(db, captureException);
 

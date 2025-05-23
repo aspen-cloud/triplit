@@ -41,6 +41,7 @@ import { Type } from './schema/data-types/index.js';
 import { getCollectionPermissions } from './permissions.js';
 import {
   CollectionNameFromModels,
+  FailedSchemaChange,
   Models,
   PermissionWriteOperations,
   PossibleDataViolation,
@@ -621,7 +622,8 @@ export class DB<
     if (invalid) {
       return {
         successful: false,
-        invalid,
+        code: 'SCHEMA_INVALID',
+        message: invalid,
         issues: [],
         diff: [],
         oldSchema: currentSchema,
@@ -633,7 +635,8 @@ export class DB<
       await this.updateSchema(newSchema);
       return {
         successful: true,
-        invalid: undefined,
+        code: 'SUCCESS',
+        message: 'Schema updated successfully', // TODO: add updates to message?
         issues: [],
         diff: [],
         oldSchema: currentSchema,
@@ -648,7 +651,8 @@ export class DB<
     if (diff.length === 0)
       return {
         successful: true,
-        invalid: undefined,
+        code: 'SUCCESS',
+        message: 'Schema updated successfully.',
         issues,
         diff,
         oldSchema: currentSchema,
@@ -661,27 +665,30 @@ export class DB<
       diff
     );
 
+    if (issues.length > 0 && issues.some((issue) => issue.violatesExistingData))
+      return {
+        successful: false,
+        code: 'EXISTING_DATA_MISMATCH',
+        message: 'Schema update failed due to existing data violations.',
+        issues,
+        diff,
+        oldSchema: currentSchema,
+        newSchema,
+      };
+
     // TODO if `failOnBackwardsIncompatibleChange` is true, we should skip
     // data checks for faster performance
     if (failOnBackwardsIncompatibleChange && issues.length > 0) {
       return {
         successful: false,
-        invalid: undefined,
+        code: 'SCHEMA_COMPATIBILITY_MISMATCH',
+        message: 'Schema update failed due to backwards incompatible changes.',
         issues,
         diff,
         oldSchema: currentSchema,
         newSchema,
       };
     }
-    if (issues.length > 0 && issues.some((issue) => issue.violatesExistingData))
-      return {
-        successful: false,
-        invalid: undefined,
-        issues,
-        diff,
-        oldSchema: currentSchema,
-        newSchema,
-      };
 
     diff.length > 0 &&
       this.logger.info(`applying ${diff.length} changes to schema`);
@@ -690,7 +697,8 @@ export class DB<
 
     return {
       successful: true,
-      invalid: undefined,
+      code: 'SUCCESS',
+      message: 'Schema updated successfully.',
       issues,
       diff,
       oldSchema: currentSchema,
@@ -951,41 +959,67 @@ function recursivelyGetTriplesFromObj(
   return triples;
 }
 
+export type DBInitializationEvent =
+  | { type: 'ERROR'; error: Error }
+  | {
+      type: 'SCHEMA_UPDATE_FAILED';
+      change: FailedSchemaChange;
+    }
+  | { type: 'SUCCESS'; change: SchemaChange | undefined };
+
+/**
+ * Creates a new database instance and performs and necessary async operations as part of the initialization.
+ * It is guaranteed to return a DB instance, however it may throw an error if a DB instance could not be created.
+ * The event parameter will indicate the result of the initialization process, some notable cases include:
+ * - if the provided schema cannot be applied, an instance with the old schema will be returned
+ */
 export async function createDB<
   M extends Models<M> = Models,
   E extends EntitySyncStore = EntitySyncStore,
->(options: DBOptions<M, E>): Promise<DB<M, E>> {
+>(
+  options: DBOptions<M, E> & { failOnBackwardsIncompatibleChange?: boolean }
+): Promise<{ db: DB<M, E>; event: DBInitializationEvent }> {
   let savedSchema = undefined;
-  if (options.kv) {
-    savedSchema = await DB.getSchemaFromStorage(options.kv);
-  }
-  await tryPreloadingOptionalDeps();
-  const db = new DB<M, E>({ ...options, schema: savedSchema as DBSchema<M> });
+  let db: DB<M, E> | undefined = undefined;
+  try {
+    if (options.kv) {
+      savedSchema = await DB.getSchemaFromStorage(options.kv);
+    }
+    await tryPreloadingOptionalDeps();
+    db = new DB<M, E>({ ...options, schema: savedSchema as DBSchema<M> });
+    let schemaChange: SchemaChange | undefined = undefined;
 
-  if (options.schema) {
-    const change = await db.overrideSchema(
-      options.schema as unknown as DBSchema,
-      {
-        failOnBackwardsIncompatibleChange: true,
-      }
-    );
-    // TODO: integrate these into the error somehow?
-    logSchemaChangeViolations(change, { logger: db.logger });
-    if (!change.successful) {
-      throw new Error(
-        `Schema change failed. Review the issues above for more information.`
+    // A schema is provided, attempt to apply it
+    if (options.schema) {
+      schemaChange = await db.overrideSchema(options.schema, {
+        failOnBackwardsIncompatibleChange:
+          options.failOnBackwardsIncompatibleChange,
+      });
+      if (schemaChange.successful)
+        return {
+          db,
+          event: {
+            type: 'SUCCESS',
+            change: schemaChange,
+          },
+        };
+      else
+        return {
+          db,
+          event: { type: 'SCHEMA_UPDATE_FAILED', change: schemaChange },
+        };
+    }
+
+    return { db, event: { type: 'SUCCESS', change: undefined } };
+  } catch (error) {
+    if (db) {
+      return { db, event: { type: 'ERROR', error: error as Error } };
+    } else {
+      throw new TriplitError(
+        `Failed to create a DB instance: ${(error as Error).message}`
       );
     }
-  } else if (savedSchema) {
-    // override schema implicitly handles persisting
-    // but if we don't have a new schema, we need to
-    // persist the old one
-    await db
-      // @ts-expect-error - updateSchema is private
-      .updateSchema(savedSchema);
   }
-
-  return db;
 }
 
 function entityIsInChangeset(
