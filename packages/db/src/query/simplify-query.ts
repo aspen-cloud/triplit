@@ -88,8 +88,16 @@ function simplifyWhereClause(clause: PreparedWhereFilter) {
     return simplifyFilterGroup(clause);
   }
   if (isSubQueryFilter(clause)) {
+    const simplified = simplifyQuery(clause.exists);
+    // An exists clause with a false filter will always be false
+    if (
+      simplified.where &&
+      simplified.where.length === 1 &&
+      simplified.where[0] === false
+    )
+      return false;
     return {
-      exists: simplifyQuery(clause.exists),
+      exists: simplified,
     };
   }
   return clause;
@@ -134,6 +142,10 @@ function applyBooleanCollapse(
     if (filters.some((filter) => filter === true)) {
       return [true];
     }
+    if (filters.every((filter) => filter === false)) {
+      return [false];
+    }
+    return filters.filter((filter) => filter !== false);
   }
   return filters;
 }

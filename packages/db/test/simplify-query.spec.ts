@@ -337,6 +337,57 @@ describe('filter simplification', () => {
       ],
     });
   });
+
+  /**
+   * { exists: { collectionName: 'test2', where: [false] } } === false
+   * { exists: { collectionName: 'test2', where: [true] } } ===> SHOULD NOT COLLAPSE, would be false if empty
+   */
+  it('simplifies subquery filters with a boolean false filter', () => {
+    // A false filter in a subquery will always return empty, so exists will be false
+    {
+      const simplified = simplifyQuery({
+        collectionName: 'test',
+        where: [
+          {
+            exists: {
+              collectionName: 'test2',
+              where: [['id', '=', 1], false],
+            },
+          },
+        ],
+      });
+      expect(simplified).toEqual({
+        collectionName: 'test',
+        where: [false],
+      });
+    }
+    // A true filter in a subquery will not collapse the exists clause, because it could be empty
+    {
+      const simplified = simplifyQuery({
+        collectionName: 'test',
+        where: [
+          {
+            exists: {
+              collectionName: 'test2',
+              where: [true],
+            },
+          },
+        ],
+      });
+      expect(simplified).toEqual({
+        collectionName: 'test',
+        where: [
+          {
+            exists: {
+              collectionName: 'test2',
+              where: [true],
+            },
+          },
+        ],
+      });
+    }
+  });
+
   describe('deduplication', () => {
     it('de-dupes simple filter statements', () => {
       const simplified = simplifyQuery({
