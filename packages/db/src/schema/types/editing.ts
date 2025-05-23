@@ -74,11 +74,23 @@ export type PossibleDataViolation = {
   cure: string;
 } & BackwardsIncompatibleEdit;
 
-export type SchemaChange = {
-  successful: boolean;
-  invalid: string | undefined;
+type SchemaChangeBase = {
+  message: string;
   diff: Diff[];
   issues: PossibleDataViolation[];
   oldSchema: DBSchema | undefined;
   newSchema: DBSchema;
 };
+export type SuccessfulSchemaChange = SchemaChangeBase & {
+  successful: true;
+  code: 'SUCCESS';
+};
+export type FailedSchemaChange = SchemaChangeBase & {
+  successful: false;
+  code:
+    | 'SCHEMA_INVALID'
+    | 'SCHEMA_COMPATIBILITY_MISMATCH'
+    | 'EXISTING_DATA_MISMATCH'
+    | 'ERROR';
+};
+export type SchemaChange = SuccessfulSchemaChange | FailedSchemaChange;

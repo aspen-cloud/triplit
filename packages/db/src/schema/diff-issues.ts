@@ -556,8 +556,8 @@ export function logSchemaChangeViolations(
   }
   const success = 'Schema update failed.';
 
-  if (change.invalid) {
-    log.error([success, change.invalid].join('\n'));
+  if (change.message) {
+    log.error([success, change.message].join('\n'));
     return;
   }
 
