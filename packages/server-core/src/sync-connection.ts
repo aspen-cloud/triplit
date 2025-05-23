@@ -90,7 +90,7 @@ export class SyncConnection {
   sendReadyMsg() {
     return this.sendMessage('READY', {
       clientId: this.options.clientId,
-    })
+    });
   }
 
   async start() {
@@ -359,8 +359,8 @@ export class SyncConnection {
       const innerError = isTriplitError(e)
         ? e
         : new TriplitError(
-          'An unknown error occurred while processing your request.'
-        );
+            'An unknown error occurred while processing your request.'
+          );
       this.sendErrorResponse('CONNECT_QUERY', new QuerySyncError(innerError), {
         queryKey,
         innerError,
@@ -399,8 +399,8 @@ export class SyncConnection {
       const error = isTriplitError(e)
         ? e
         : new TriplitError(
-          'An unknown error occurred while processing your request.'
-        );
+            'An unknown error occurred while processing your request.'
+          );
       // TODO: test error payloads
       this.sendErrorResponse('CHANGES', error, {
         failures: Object.keys(changes).map((collection) => ({
@@ -439,7 +439,7 @@ export class SyncConnection {
     // If client is schemaless, we can sync but will reject invalid changes on server
     if (!clientSchema) {
       this.canSync = true;
-      return this.sendReadyMsg()
+      return this.sendReadyMsg();
     }
 
     const serverSchema = this.db.getSchema();
@@ -525,8 +525,8 @@ export class SyncConnection {
         isTriplitError(e)
           ? e
           : new TriplitError(
-            'An unknown error occurred while processing your request.'
-          )
+              'An unknown error occurred while processing your request.'
+            )
       );
     }
   }
