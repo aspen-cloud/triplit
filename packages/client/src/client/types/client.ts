@@ -1,4 +1,5 @@
 import {
+  DB,
   DBInitializationEvent,
   KVStore,
   Models,
@@ -13,7 +14,6 @@ import {
   SyncTransport,
 } from '../../types.js';
 import { Logger } from '@triplit/logger';
-import type { TriplitClient } from '../triplit-client.js';
 
 export interface ClientOptions<M extends Models<M> = Models> {
   /**
@@ -88,7 +88,7 @@ export interface ClientOptions<M extends Models<M> = Models> {
 
   experimental?: {
     onDatabaseInit?: (
-      client: TriplitClient<M>,
+      client: DB<M>,
       event: DBInitializationEvent
     ) => void | Promise<void>;
   };

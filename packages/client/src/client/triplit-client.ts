@@ -175,7 +175,7 @@ export class TriplitClient<M extends Models<M> = Models> {
 
       // Wait for a valid db
       if (options.experimental?.onDatabaseInit) {
-        await options.experimental?.onDatabaseInit(this, event);
+        await options.experimental?.onDatabaseInit(this.db, event);
       }
 
       return Promise.resolve().then(() => {

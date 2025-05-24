@@ -239,3 +239,56 @@ Triplit will prevent you from changing a string to an enum string or updating an
 ### Removing a relation
 
 Because relations in Triplit are just views on data in other collections, removing a relation will not corrupt data but can still lead to backward-incompatible behavior between client and server. For instance, if the server's schema is updated to remove a relation, but an out-of-date client continues to issues queries with clauses that reference that relation, such as `include`, a relational `where` filter, or an `exists` filter, the server will reject those queries. In production, you may need to deprecate clients that are still using the old relation and force them to update the app with the new schema bundled in.
+
+## Handling schema changes in the client
+
+### `onDatabaseInit` hook
+
+Triplit provides a hook `onDatabaseInit` that runs after your client-side database has initialized and before any client operations are run and syncing begins. It will report any issues related to updating the schema on database initialization through the `event` parameter. In the case of a successful migration, the database in the hook will have the latest schema applied. In the case of a failure, the database will have the currently saved schema applied.
+
+An event may be one of the following `type`:
+
+- `SUCCESS`: The database was initialized successfully and is ready to be used.
+- `SCHEMA_UPDATE_FAILED`: The database was unable to update the schema. This may be due to a backwards incompatible change or a failure to migrate existing data.
+  Alongside this `type`, the event will also have a `change` object that contains information about the schema change that failed. This object has the following properties:
+  - `code`: The code of the error that occurred. This will be one of the following:
+    - `EXISTING_DATA_MISMATCH`: The schema change failed because there was existing data in the database that did not match the new schema.
+    - `SCHEMA_UPDATE_FAILED`: The schema change failed for some other reason.
+  - `newSchema`: The new schema that was attempted to be applied.
+  - `oldSchema`: The old schema that was in place before the update.
+- `ERROR`: An error occurred while initializing the database. The event will have an `error` property that contains the error that occurred.
+
+Below is an example of how to use the `onDatabaseInit` hook to clear data from your local database if the schema cannot be migrated:
+
+```ts
+import { TriplitClient } from '@triplit/client';
+import { Schema as S } from '@triplit/client';
+
+const client = new TriplitClient({
+  schema: S.Collections({
+    // Your schema here
+  }),
+  experimental: {
+    onDatabaseInit: async (db, event) => {
+      if (event.type === 'SUCCESS') return;
+      if (event.type === 'SCHEMA_UPDATE_FAILED') {
+        if (event.change.code === 'EXISTING_DATA_MISMATCH') {
+          // clear local database
+          await db.clear();
+          // retry schema update
+          const nextChange = await db.overrideSchema(event.change.newSchema);
+          // Schema update succeeded!
+          if (nextChange.successful) return;
+        }
+      }
+      // handle other cases...
+
+      // Handle fatal states as you see fit
+      telemetry.reportError('database init failed', {
+        event,
+      });
+      throw new Error('Database init failed');
+    },
+  },
+});
+```

@@ -7,7 +7,7 @@ it('if a database cannot be initialized, methods are not available', async () =>
   const client = new TriplitClient({
     autoConnect: false,
     experimental: {
-      onDatabaseInit: async (client, event) => {
+      onDatabaseInit: async (db, event) => {
         // THIS MOCKS A TRUE DATABASE FAILURE THAT PREVENTS THE DB FROM INITIALIZING
         // IF THE DB COULD NOT INIT, THE SAME PROMISE CHECK WOULD FAIL
         throw new Error('Database initialization failed');
@@ -43,7 +43,7 @@ it('successful schema updates are reported', async () => {
     storage: storage,
     schema: schema1,
     experimental: {
-      onDatabaseInit: async (client, event) => {
+      onDatabaseInit: async (db, event) => {
         if (event.type !== 'SUCCESS')
           throw new Error('FAIL TEST - Database initialization failed');
       },
@@ -60,7 +60,7 @@ it('successful schema updates are reported', async () => {
     storage: storage,
     schema: schema2,
     experimental: {
-      onDatabaseInit: async (client, event) => {
+      onDatabaseInit: async (db, event) => {
         if (event.type === 'SUCCESS') return;
         throw new Error('FAIL TEST - Database initialization unhandled');
       },
@@ -111,7 +111,7 @@ it('invalid schema updates are reported', async () => {
     storage: storage,
     schema: schema1,
     experimental: {
-      onDatabaseInit: async (client, event) => {
+      onDatabaseInit: async (db, event) => {
         if (event.type !== 'SUCCESS')
           throw new Error('FAIL TEST - Database initialization failed');
       },
@@ -129,7 +129,7 @@ it('invalid schema updates are reported', async () => {
     storage: storage,
     schema: schema2,
     experimental: {
-      onDatabaseInit: async (client, event) => {
+      onDatabaseInit: async (db, event) => {
         if (event.type === 'SCHEMA_UPDATE_FAILED') {
           if (event.change.code === 'SCHEMA_INVALID') {
             check = true;
@@ -168,7 +168,7 @@ it('blocked schema updates are reported', async () => {
     storage: storage,
     schema: schema1,
     experimental: {
-      onDatabaseInit: async (client, event) => {
+      onDatabaseInit: async (db, event) => {
         if (event.type !== 'SUCCESS')
           throw new Error('FAIL TEST - Database initialization failed');
       },
@@ -186,7 +186,7 @@ it('blocked schema updates are reported', async () => {
     storage: storage,
     schema: schema2,
     experimental: {
-      onDatabaseInit: async (client, event) => {
+      onDatabaseInit: async (db, event) => {
         if (event.type === 'SCHEMA_UPDATE_FAILED') {
           if (event.change.code === 'EXISTING_DATA_MISMATCH') {
             check = true;
@@ -216,7 +216,7 @@ it('can resolve a schema initialization issue through clearing', async () => {
     storage: storage,
     schema: schema1,
     experimental: {
-      onDatabaseInit: async (client, event) => {
+      onDatabaseInit: async (db, event) => {
         if (event.type !== 'SUCCESS')
           throw new Error('FAIL TEST - Database initialization failed');
       },
@@ -240,14 +240,12 @@ it('can resolve a schema initialization issue through clearing', async () => {
     storage: storage,
     schema: schema2,
     experimental: {
-      onDatabaseInit: async (client, event) => {
+      onDatabaseInit: async (db, event) => {
         if (event.type === 'SUCCESS') return;
         if (event.type === 'SCHEMA_UPDATE_FAILED') {
           // clear and retry
-          await client.db.clear();
-          const nextChange = await client.db.overrideSchema(
-            event.change.newSchema
-          );
+          await db.clear();
+          const nextChange = await db.overrideSchema(event.change.newSchema);
           if (nextChange.successful) return;
         }
         throw new Error('FAIL TEST - Database initialization unhandled');
