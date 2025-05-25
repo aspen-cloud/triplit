@@ -650,6 +650,10 @@ export class SyncEngine {
     this.transport.onOpen(this.onOpenHandler.bind(this));
     this.transport.onClose(this.onCloseHandler.bind(this));
     this.transport.onError(this.onErrorHandler.bind(this));
+    if (typeof this.statusCallback === 'function') {
+        this.statusCallback();
+        this.statusCallback = null;
+    }
     this.statusCallback = this.transport.onConnectionChange(
       this.onConnectionChangeHandler.bind(this)
     );
@@ -1037,7 +1041,6 @@ export class SyncEngine {
   }
 
   private closeConnection(reason?: CloseReason) {
-    if (typeof this.statusCallback === 'function') this.statusCallback();
     this.connectionAbort = true;
     this.transport.close(reason);
   }
