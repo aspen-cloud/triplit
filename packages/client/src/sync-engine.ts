@@ -91,7 +91,7 @@ export class SyncEngine {
   private reconnectTimeoutDelay = 250;
   private reconnectTimeout: any;
   private serverReady: boolean = false;
-  private connectionStatusCallbackClenup: any = null;
+  private connectionStatusCallbackCleanup: any = null;
 
   // Session state - these are used to track the state of the session and should persist across reconnections, but reset on reset()
   private queries: Map<
@@ -650,11 +650,11 @@ export class SyncEngine {
     this.transport.onOpen(this.onOpenHandler.bind(this));
     this.transport.onClose(this.onCloseHandler.bind(this));
     this.transport.onError(this.onErrorHandler.bind(this));
-    if (typeof this.connectionStatusCallbackClenup === 'function') {
-        this.connectionStatusCallbackClenup();
-        this.connectionStatusCallbackClenup = null;
+    if (typeof this.connectionStatusCallbackCleanup === 'function') {
+        this.connectionStatusCallbackCleanup();
+        this.connectionStatusCallbackCleanup = null;
     }
-    this.connectionStatusCallbackClenup = this.transport.onConnectionChange(
+    this.connectionStatusCallbackCleanup = this.transport.onConnectionChange(
       this.onConnectionChangeHandler.bind(this)
     );
   }
