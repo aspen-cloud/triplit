@@ -18,8 +18,6 @@ function webSocketsAreAvailable(): boolean {
 
 export class WebSocketTransport implements SyncTransport {
   ws: WebSocket | undefined = undefined;
-  private connectionListeners: Set<(state: ConnectionStatus) => void> =
-    new Set();
   constructor(private options: WebSocketTransportOptions = {}) {
     this.options.messagePayloadSizeLimit =
       // allow 0 to disable the limit
@@ -97,9 +95,6 @@ export class WebSocketTransport implements SyncTransport {
 
     // Create a new WebSocket connection and set up event listeners
     this.ws = new WebSocket(wsUri);
-    this.ws.onconnectionchange = (status) => {
-      this.connectionListeners.forEach((listener) => listener(status));
-    };
   }
 
   // TODO: feels a bit awkward that these have to be set up after connect()
@@ -132,11 +127,8 @@ export class WebSocketTransport implements SyncTransport {
   onClose(callback: (ev: any) => void): void {
     if (this.ws) this.ws.onclose = callback;
   }
-  onConnectionChange(callback: (state: ConnectionStatus) => void): () => void {
-    this.connectionListeners.add(callback);
-    return () => {
-      this.connectionListeners.delete(callback);
-    };
+  onConnectionChange(callback: (state: ConnectionStatus) => void): void {
+    if (this.ws) this.ws.onconnectionchange = callback;
   }
 }
 

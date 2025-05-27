@@ -130,7 +130,7 @@ export class SyncEngine {
     });
 
     this.transport = options.transport ?? new WebSocketTransport();
-    this.transport.onConnectionChange((status) => {
+    this.onConnectionStatusChange((status) => {
       if (status === 'CLOSING' || status === 'CLOSED') {
         if (this.lastParamsHash !== undefined) {
           this.lastParamsHash = undefined;
