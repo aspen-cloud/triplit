@@ -184,6 +184,9 @@ function schemaItemToString(attribute: DataType): string {
     case 'date':
       result = `S.Date(${typeConfigToString(attribute)})`;
       break;
+    case 'json':
+      result = `S.Json(${typeConfigToString(attribute)})`;
+      break;
     case 'set':
       result = `S.Set(${schemaItemToString(
         attribute.items
