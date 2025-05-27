@@ -29,27 +29,27 @@ Next, install Triplit's packages:
 <Tabs items={['npm', 'pnpm', 'yarn', 'bun']}>
   <Tab>
     ```bash copy
-    npm i @triplit/client @triplit/react @triplit/react-native
+    npm i @triplit/client @triplit/react-native
     npm i @triplit/cli --save-dev
     ```
   </Tab>
   <Tab>
     ```bash copy
-    pnpm add @triplit/client @triplit/react @triplit/react-native
+    pnpm add @triplit/client @triplit/react-native
     pnpm add @triplit/cli --save-dev
     ```
 
   </Tab>
   <Tab>
     ```bash copy
-    yarn add @triplit/client @triplit/react @triplit/react-native
+    yarn add @triplit/client @triplit/react-native
     yarn add @triplit/cli --dev
     ```
 
   </Tab>
   <Tab>
     ```bash copy
-    bun add @triplit/client @triplit/react @triplit/react-native
+    bun add @triplit/client @triplit/react-native
     bun add @triplit/cli --dev
     ```
     
@@ -75,10 +75,10 @@ import 'expo-router/entry';
 
 ### 3. Use React hooks
 
-Triplit's React hooks work just the same in React Native.
+Triplit's [React](/frameworks/react) hooks are also exported via `@triplit/react-native`, so you can use them in your components just like you would in a web app.
 
 ```typescript
-import { useQuery } from '@triplit/react';
+import { useQuery } from '@triplit/react-native';
 
 const { results } = useQuery(client, client.query('todos'));
 ```
