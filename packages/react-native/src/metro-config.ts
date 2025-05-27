@@ -42,11 +42,20 @@ export function triplitMetroResolveRequest(moduleName: string) {
   return undefined;
 }
 
+// Rewrite dependency paths for Triplit packages
+// Annoyingly, we are manually maintaining this list, it could possibly read values from package.json
+// TODO: Go through all package confirm all rewrites are correct
 function rewriteDepPath(dep: string, depPath: string) {
   if (dep === '@triplit/db') {
     if (depPath.startsWith('storage/')) {
       return depPath.replace('storage/', 'kv-store/storage/');
     }
+    if (depPath === 'ivm') {
+      return 'ivm/index.js';
+    }
+  }
+  if (dep === '@triplit/logger') {
+    return `handlers/${depPath}`;
   }
   return depPath;
 }
