@@ -19,6 +19,7 @@ import {
 import {
   BooleanType,
   DateType,
+  JsonType,
   NumberType,
   RecordProps,
   RecordType,
@@ -330,6 +331,7 @@ export function equal(a: DataType, b: DataType) {
   if (a.type === 'record' && b.type === 'record') return recordEqual(a, b);
   if (a.type === 'set' && b.type === 'set') return setEqual(a, b);
   if (a.type === 'string' && b.type === 'string') return stringEqual(a, b);
+  if (a.type === 'json' && b.type === 'json') return jsonEqual(a, b);
   return false;
 }
 
@@ -507,6 +509,10 @@ function dateEqual(a: DateType, b: DateType) {
 }
 
 function numberEqual(a: NumberType, b: NumberType) {
+  return typeConfigEqual(a.config, b.config);
+}
+
+function jsonEqual(a: JsonType, b: JsonType) {
   return typeConfigEqual(a.config, b.config);
 }
 
