@@ -89,13 +89,13 @@ export class ExpoSQLiteKVStore implements KVStore {
     const { statements } = await this.storeReady;
     const fullKey = scope ? [...scope, ...key] : key;
     const encodedKey = encodeTuple(fullKey);
-    const result = await (
+    const row = await (
       await statements.get.executeAsync(encodedKey)
     ).getFirstAsync();
-    if (!result) return undefined;
+    if (!row) return undefined;
     return JSON.parse(
       // @ts-expect-error
-      result
+      row.value
     );
   }
   async set(key: Tuple, value: any, scope?: Tuple): Promise<void> {
