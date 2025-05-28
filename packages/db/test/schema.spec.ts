@@ -23,7 +23,7 @@ describe('schema initialization', () => {
         },
       },
     };
-    const db = await createDB({
+    const { db } = await createDB({
       schema,
     });
     // In memory schema should match
@@ -53,8 +53,12 @@ describe('schema initialization', () => {
         },
       },
     };
-    const db = await createDB({ schema, kv });
-    await db.insert('users', { id: '1', name: 'test' });
+    {
+      const { db, event } = await createDB({ schema, kv });
+      expect(event.type).toBe('SUCCESS');
+      await db.insert('users', { id: '1', name: 'test' });
+    }
+
     const newSchema = {
       collections: {
         users: {
@@ -65,7 +69,14 @@ describe('schema initialization', () => {
         },
       },
     };
-    await expect(createDB({ schema: newSchema, kv })).rejects.toThrowError();
+    {
+      const { db, event } = await createDB({ schema: newSchema, kv });
+      expect(event.type).toBe('SCHEMA_UPDATE_FAILED');
+      // Old schema should still be in place
+      expect(db.schema).toEqual(schema);
+      const storedSchema = await DB.getSchemaFromStorage(kv);
+      expect(storedSchema).toEqual(schema);
+    }
   });
 });
 describe('defaults', async () => {

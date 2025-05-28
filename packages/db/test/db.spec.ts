@@ -1697,7 +1697,7 @@ describe('db.clear()', () => {
         },
       },
     };
-    const db = await createDB({ schema });
+    const { db } = await createDB({ schema });
     await db.insert('test', { id: '1', name: 'alice' });
     await db.insert('test', { id: '2', name: 'bob' });
 
@@ -1737,7 +1737,7 @@ describe('db.clear()', () => {
         },
       },
     };
-    const db = await createDB({ schema });
+    const { db } = await createDB({ schema });
     await db.insert('test', { id: '1', name: 'alice' });
     await db.insert('test', { id: '2', name: 'bob' });
 
