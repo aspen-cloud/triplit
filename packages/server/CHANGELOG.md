@@ -1,5 +1,20 @@
 # @triplit/server
 
+## 1.0.48
+
+### Patch Changes
+
+- ba6e9973: relax schema compat checks
+- Updated dependencies [0cea41b7]
+- Updated dependencies [bada3067]
+- Updated dependencies [3237065b]
+- Updated dependencies [e2fe796f]
+- Updated dependencies [ba6e9973]
+- Updated dependencies [00c2dd14]
+  - @triplit/db@1.1.0
+  - @triplit/server-core@1.0.40
+  - @triplit/client@1.0.38
+
 ## 1.0.47
 
 ### Patch Changes
