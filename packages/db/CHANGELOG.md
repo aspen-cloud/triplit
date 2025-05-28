@@ -1,5 +1,11 @@
 # @triplit/entity-db
 
+## 1.1.1
+
+### Patch Changes
+
+- 1573c075: Fix bundling issue in Expo / React Native / Metro
+
 ## 1.1.0
 
 ### Minor Changes
