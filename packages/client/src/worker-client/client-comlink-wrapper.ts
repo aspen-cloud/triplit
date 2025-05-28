@@ -235,7 +235,7 @@ export class ClientComlinkWrapper<M extends Models<M> = Models>
     // TODO: really need to clean up some of this async state logic
     this.client.ready.then(() => {
       if (unsubscribed) return;
-      callback(this.client.vars);
+      callback(this.client!.vars);
     });
     return ComLink.proxy(() => {
       unsubscribed = true;
