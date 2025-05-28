@@ -1,5 +1,13 @@
 # next-template
 
+## 1.0.41
+
+### Patch Changes
+
+- @triplit/authjs-adapter@1.0.40
+- @triplit/client@1.0.40
+- @triplit/react@1.0.40
+
 ## 1.0.40
 
 ### Patch Changes

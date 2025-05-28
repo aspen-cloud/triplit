@@ -1,5 +1,12 @@
 # @triplit/tanstack
 
+## 3.0.40
+
+### Patch Changes
+
+- @triplit/client@1.0.40
+- @triplit/react@1.0.40
+
 ## 3.0.39
 
 ### Patch Changes

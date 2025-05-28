@@ -1,5 +1,11 @@
 # @triplit/entity-db
 
+## 1.1.2
+
+### Patch Changes
+
+- c0138d32: remove direct better-sqlite3 import from sqlite kv store
+
 ## 1.1.1
 
 ### Patch Changes
