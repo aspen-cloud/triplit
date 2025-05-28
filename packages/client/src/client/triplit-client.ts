@@ -1265,6 +1265,7 @@ export class TriplitClient<M extends Models<M> = Models> {
   }
 
   get vars() {
+    // DANGEROUSLY references this.db without a ready check
     return { ...this.db.systemVars, $token: this.db.systemVars.$session };
   }
 

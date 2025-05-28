@@ -27,7 +27,7 @@ const EXTERNAL_TOKEN_V2 =
 
 it('instantiating a client without a token does not set session variables', async () => {
   const client = new TriplitClient({ autoConnect: false });
-  await pause(10);
+  await pause();
   expect(client.db.session?.vars).toBe(undefined);
 });
 
@@ -36,7 +36,7 @@ it('instantiating a client with a token sets session variables', async () => {
     token: EXTERNAL_TOKEN_V2,
     autoConnect: false,
   });
-  await pause(10);
+  await pause();
   expect(client.db.session?.vars).toStrictEqual({
     hello: 'world',
     'x-triplit-project-id': 'project',
@@ -47,11 +47,11 @@ it('instantiating a client with a token sets session variables', async () => {
 
 it('updating a client with a token sets session variables', async () => {
   const client = new TriplitClient({ autoConnect: false });
-  await pause(10);
+  await pause();
 
   expect(client.db.session?.vars).toBe(undefined);
   await client.startSession(EXTERNAL_TOKEN_V2);
-  await pause(10);
+  await pause();
 
   expect(client.db.session?.vars).toStrictEqual({
     hello: 'world',
@@ -66,7 +66,7 @@ it('instantiating a client with token with claim "x-triplit-user-id" sets SESSIO
     token: EXTERNAL_TOKEN_V1,
     autoConnect: false,
   });
-  await pause(10);
+  await pause();
 
   expect(client.db.session?.vars).toStrictEqual({
     hello: 'world',
@@ -77,6 +77,6 @@ it('instantiating a client with token with claim "x-triplit-user-id" sets SESSIO
   });
 });
 
-async function pause(ms = 0) {
+async function pause(ms = 100) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }

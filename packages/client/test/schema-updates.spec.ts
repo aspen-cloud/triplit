@@ -14,7 +14,7 @@ it('if a database cannot be initialized, methods are not available', async () =>
       },
     },
   });
-  expect(client.fetch({ collectionName: 'users' })).rejects.toThrow(
+  await expect(client.fetch({ collectionName: 'users' })).rejects.toThrow(
     'Database initialization failed'
   );
 });

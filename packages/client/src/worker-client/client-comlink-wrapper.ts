@@ -227,12 +227,18 @@ export class ClientComlinkWrapper<M extends Models<M> = Models>
   }
   onVariablesChange(callback: VariablesChangeHandler) {
     if (!this.client) throw new WorkerInternalClientNotInitializedError();
-    callback(this.client.vars);
     const unsub = this.client.onConnectionOptionsChange(() => {
       callback(this.client!.vars);
     });
     this.variableChangeListeners.add(callback);
+    let unsubscribed = false;
+    // TODO: really need to clean up some of this async state logic
+    this.client.ready.then(() => {
+      if (unsubscribed) return;
+      callback(this.client.vars);
+    });
     return ComLink.proxy(() => {
+      unsubscribed = true;
       this.variableChangeListeners.delete(callback);
       unsub();
     });
