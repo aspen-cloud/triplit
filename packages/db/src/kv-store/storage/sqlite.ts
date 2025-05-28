@@ -13,7 +13,6 @@ import {
   parseSqliteKvStoreOptions,
 } from '../utils/sqlite.js';
 import { ScopedKVStore } from '../utils/scoped-store.js';
-import sqlite from 'better-sqlite3';
 import { walSizeGuard } from '../utils/sqlite-node.js';
 
 type SQLiteKVState = {
@@ -50,15 +49,9 @@ export class SQLiteKVStore implements KVStore {
   db: Database;
   private walGuard?: NodeJS.Timer;
 
-  // NOTE: string constructor is rarely used and MAY be dangerous because it actually brings in sqlite dep
-  constructor(databasePath: string, options?: SQLiteKVStoreOptions);
-  constructor(database: Database, options?: SQLiteKVStoreOptions);
-  constructor(arg0: string | Database, options: SQLiteKVStoreOptions = {}) {
-    if (typeof arg0 === 'string') {
-      this.db = sqlite(arg0);
-    } else {
-      this.db = arg0;
-    }
+  constructor(db: Database, options: SQLiteKVStoreOptions = {}) {
+    this.db = db;
+
     /**
      * Docs: https://github.com/WiseLibs/better-sqlite3/blob/master/docs/unsafe.md#unsafe-mode
      *
