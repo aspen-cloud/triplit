@@ -1,12 +1,5 @@
 const modules: Record<string, any> = {};
 
-export async function preImportDep(moduleName: string) {
-  if (!modules[moduleName]) {
-    const mod = await import(moduleName);
-    modules[moduleName] = mod;
-  }
-}
-
 export function getOptionalDep<T = any>(moduleName: string): T {
   if (!modules[moduleName]) {
     throw new Error(
