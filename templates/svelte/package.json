@@ -1,6 +1,6 @@
 {
   "name": "svelte-template",
-  "version": "1.0.39",
+  "version": "1.0.40",
   "private": true,
   "scripts": {
     "dev": "vite dev",
@@ -14,7 +14,7 @@
     "@sveltejs/adapter-auto": "^4.0.0",
     "@sveltejs/kit": "^2.18.0",
     "@sveltejs/vite-plugin-svelte": "^5.0.3",
-    "@triplit/cli": "1.0.48",
+    "@triplit/cli": "1.0.49",
     "@types/eslint": "^8.56.7",
     "eslint": "^9.0.0",
     "eslint-plugin-svelte": "^2.36.0",
@@ -28,7 +28,7 @@
   },
   "type": "module",
   "dependencies": {
-    "@triplit/client": "1.0.38",
-    "@triplit/svelte": "1.0.38"
+    "@triplit/client": "1.0.39",
+    "@triplit/svelte": "1.0.39"
   }
 }
