@@ -1,5 +1,18 @@
 # @triplit/client
 
+## 1.0.38
+
+### Patch Changes
+
+- e2fe796f: fixup bug with fetchingRemote
+- ba6e9973: relax schema compat checks
+- Updated dependencies [0cea41b7]
+- Updated dependencies [bada3067]
+- Updated dependencies [3237065b]
+- Updated dependencies [ba6e9973]
+- Updated dependencies [00c2dd14]
+  - @triplit/db@1.1.0
+
 ## 1.0.37
 
 ### Patch Changes

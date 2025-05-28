@@ -1,5 +1,18 @@
 # @triplit/entity-db
 
+## 1.1.0
+
+### Minor Changes
+
+- 0cea41b7: Add uuidv4 and uuidv7 default formats for IDs
+
+### Patch Changes
+
+- bada3067: Include failed property in serialization error message
+- 3237065b: fix bug in default application for optional attrs
+- ba6e9973: relax schema compat checks
+- 00c2dd14: fixup expo-sqlite row parsing
+
 ## 1.0.35
 
 ### Patch Changes
