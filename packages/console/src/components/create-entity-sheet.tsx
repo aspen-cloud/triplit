@@ -299,6 +299,7 @@ export function CreateEntitySheet({
             {item.definition.type === 'number' && (
               <Input
                 type="number"
+                step={'any'}
                 required={isRequired}
                 disabled={item.fieldValue === null}
                 {...form.getInputProps(`attributes.${index}.fieldValue`)}
