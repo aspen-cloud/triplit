@@ -611,17 +611,18 @@ function transformAndValidateFilter(
       if (!isVariableScopeRelational(scope)) {
         if (options.replaceStaticVariables) {
           const variable = ValuePointer.Get(variables, components as string[]);
-          if (variable === undefined) {
-            // If we cannot find the variable, assume we cannot fulfil the filter and return false
-            // Previously we threw an error, we could warn, but you may expect the failure and the logging could be confusing / annoying
-            // TODO: handle undefined as a valid variable value? Maybe this should be null explicitly?
-            return false;
-            // throw new SessionVariableNotFoundError(
-            //   val,
-            //   scope,
-            //   variables[scope]
-            // );
-          }
+          /**
+           * We should evaluate the impact of returning an undefined
+           * If you have a filter like where: [['optional', =, '$missingVar']]
+           *
+           * Should a missing var by falsy, or just allow the filter to pass through as ['optional', =, undefined]
+           * If the latter, there is a chance for truthy there which may or not be intended
+           *
+           * Historical note:
+           * - originally threw an error for missing variables
+           * - usage of $query in permissions led us to assume falsy for missing variables
+           * - usage of $prev for permissions led us to assume undefined for missing variables ($prev.optional may be missing or undefined)
+           */
           val = variable;
         }
       }

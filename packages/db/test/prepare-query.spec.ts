@@ -1100,7 +1100,7 @@ describe('where', () => {
         ['name', '=', '$1.var2'],
       ]);
     });
-    it('Transforms filters with undefined variables to falsy', () => {
+    it('Naturally resolves filters with undefined variable paths', () => {
       const query = prepareQuery(
         {
           collectionName: 'users',
@@ -1113,7 +1113,7 @@ describe('where', () => {
           applyPermission: undefined,
         }
       );
-      expect(query.where).toEqual([false]);
+      expect(query.where).toEqual([['name', '=', undefined]]);
     });
     it('rejects filters to nonexistent attributes', () => {
       const schema = USER_SCHEMA;
