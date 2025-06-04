@@ -379,6 +379,7 @@ export class SyncConnection {
     // this.querySyncer.unregisterQuery(internalQueryId);
     if (this.connectedQueries.has(queryKey)) {
       this.connectedQueries.get(queryKey)?.unsubscribe();
+      this.subscriptionDataBuffer.queryEntities.delete(queryKey);
       this.connectedQueries.delete(queryKey);
     }
   }
