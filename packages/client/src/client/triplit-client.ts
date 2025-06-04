@@ -1,11 +1,5 @@
 import { decodeToken, tokenIsExpired } from '../token.js';
-import {
-  NoActiveSessionError,
-  SessionRolesMismatchError,
-  TokenDecodingError,
-  TokenExpiredError,
-  UnrecognizedFetchPolicyError,
-} from '../errors.js';
+import { UnrecognizedFetchPolicyError } from '../errors.js';
 import { SyncEngine } from '../sync-engine.js';
 import {
   ErrorCallback,
@@ -30,9 +24,6 @@ import {
   EntityStoreWithOutbox,
   createDB,
   ValuePointer,
-  normalizeSessionVars,
-  getRolesFromSession,
-  sessionRolesAreEquivalent,
   Models,
   DBSchema,
   WriteModel,
@@ -63,8 +54,6 @@ export type ClientSchema = Models;
 // Could probably make this an option if you want client side validation
 const SKIP_RULES = true;
 
-const SESSION_ROLES_KEY = 'SESSION_ROLES';
-
 // default policy is local-and-remote and no timeout
 const DEFAULT_FETCH_OPTIONS: ClientFetchOptions = {
   policy: 'local-first',
@@ -79,7 +68,6 @@ export class TriplitClient<M extends Models<M> = Models> {
    * The sync engine is responsible for managing the connection to the server and syncing data
    */
   syncEngine: SyncEngine;
-  private tokenRefreshTimer: ReturnType<typeof setTimeout> | null = null;
 
   private _token: string | undefined = undefined;
   private claimsPath: string | undefined = undefined;
@@ -102,7 +90,13 @@ export class TriplitClient<M extends Models<M> = Models> {
   };
   logger: Logger;
 
+  /**
+   * A small bit of state that tracks if we plan to connect (async) on client construction
+   * Once the connection has been attempted, this will be set to false
+   */
   private connectOnInitialization: boolean;
+
+  decodedToken: Record<string, any> | undefined = undefined;
 
   /**
    *
@@ -143,7 +137,6 @@ export class TriplitClient<M extends Models<M> = Models> {
           async (tx) => {
             await this.db.updateQueryViews();
             this.db.broadcastToQuerySubscribers();
-            if (this.syncEngine.connectionStatus !== 'OPEN') return;
             await this.syncEngine.syncWrites();
           },
           20,
@@ -228,8 +221,10 @@ export class TriplitClient<M extends Models<M> = Models> {
     this.startSession(options.token, false, options.refreshOptions).then(
       async () => {
         if (this.connectOnInitialization) {
-          const params = await this.syncEngine.getConnectionParams();
-          this.syncEngine.createConnection(params);
+          // Skipping abort override because its not a user explicit call to connect
+          this.syncEngine.createConnection();
+          // We have connected, set to false for future users
+          this.connectOnInitialization = false;
         }
       }
     );
@@ -583,11 +578,7 @@ export class TriplitClient<M extends Models<M> = Models> {
     return (
       this.connectionStatus === 'OPEN' ||
       this.connectionStatus === 'CONNECTING' ||
-      (!!this.connectOnInitialization &&
-        !!this.token &&
-        !!this.serverUrl &&
-        this.connectionStatus !== 'CLOSED' &&
-        this.connectionStatus !== 'CLOSING')
+      this.connectOnInitialization
     );
   }
   subscribeWithStatus<Q extends SchemaQuery<M>>(
@@ -613,6 +604,7 @@ export class TriplitClient<M extends Models<M> = Models> {
     options?: Partial<SubscriptionOptions>
   ): () => void {
     let results: FetchResult<M, Q, 'many'> | undefined = undefined;
+    // on the first time we see a subscription, check if we are connected or will connect
     let waitingOnRemoteSync =
       this.probablyIntendsToConnect && !options?.localOnly;
     let fetchingLocal = true;
@@ -623,7 +615,6 @@ export class TriplitClient<M extends Models<M> = Models> {
     let isInitialFetch = true;
     const fetching = () =>
       fetchingLocal || (isInitialFetch && waitingOnRemoteSync);
-
     function fireSignal() {
       callback({
         results,
@@ -648,12 +639,13 @@ export class TriplitClient<M extends Models<M> = Models> {
       }
     }
     fireSignal();
-    const unsubConnectionStatus = this.onConnectionStatusChange((status) => {
-      if (status === 'CLOSING' || status === 'CLOSED') {
-        setRemoteStatesToFalseAndFireIfChanged();
-        return;
-      }
-    }, true);
+    // waiting on remote sync: only if its the first time connecting (for this query?)
+    // const unsubConnectionStatus = this.onConnectionStatusChange((status) => {
+    //   if (status === 'CLOSING' || status === 'CLOSED') {
+    //     setRemoteStatesToFalseAndFireIfChanged();
+    //     return;
+    //   }
+    // }, true);
     // This _should_ return faster than the local results
     this.isFirstTimeFetchingQuery(query).then((isFirstTime) => {
       if (isInitialFetch !== isFirstTime) {
@@ -706,7 +698,7 @@ export class TriplitClient<M extends Models<M> = Models> {
     );
     return () => {
       unsub();
-      unsubConnectionStatus();
+      // unsubConnectionStatus();
     };
   }
 
@@ -1075,72 +1067,32 @@ export class TriplitClient<M extends Models<M> = Models> {
     connect = true,
     refreshOptions?: TokenRefreshOptions
   ) {
-    // On any decoding issue, we fall back to no token
-    const decoded = decodeToken(token);
-    // 1. determine the new token
+    let decoded = decodeToken(token);
     if (decoded) {
       if (tokenIsExpired(decoded)) {
-        if (!refreshOptions?.refreshHandler) {
-          // should we centralize this in
-          throw new TokenExpiredError();
+        if (refreshOptions?.refreshHandler) {
+          // Preferably we would keep everything sync until we can assign the new token
+          // However, we should assign the actual token we are going to use, hence need to run the refresh handler
+          // Also preferably this would be a concern of the sync engine because the refresh only matters for sync (not local db "who are you?")
+          const maybeToken = await refreshOptions.refreshHandler();
+          if (!maybeToken) {
+            this.logger.warn(
+              'An expired token was passed to startSession, and the refreshHandler was unable to provide a new token. The expired session token will be used and sync issues should be handled with onSessionError().'
+            );
+          } else {
+            token = maybeToken;
+            decoded = decodeToken(token);
+          }
         }
-        const maybeToken = await refreshOptions.refreshHandler();
-        if (!maybeToken) {
-          this.logger.warn(
-            'An expired token was passed to startSession, and the refreshHandler was unable to provide a new token. Session will not be started'
-          );
-          // TODO: should this end the current session?
-          return;
-        }
-        token = maybeToken;
       }
     }
-
-    // 2. If the new token is already the current token, do nothing
-    if (token === this.token) return;
-
-    // 3. End previous session
-    if (this.token) await this.endSession();
-
-    // 4. Update the client token
+    // 1. Update local db token and session
+    // Handles de-duping of token match
+    this.decodedToken = decoded;
     this.updateToken(token);
 
-    // 5. If we should connect, do that
-    if (connect) await this.connect();
-
-    // 6. Set up a token refresh handler if provided
-    // Setup token refresh handler
-    if (!refreshOptions || !this.token) return;
-    const { interval, refreshHandler } = refreshOptions;
-    const setRefreshTimeoutForToken = (refreshToken: string) => {
-      const decoded = decodeToken(refreshToken);
-      if (!decoded) return;
-      if (!decoded.exp && !interval) return;
-      let delay =
-        interval ?? (decoded.exp as number) * 1000 - Date.now() - 1000;
-      if (delay < 1000) {
-        this.logger.warn(
-          `The minimum allowed refresh interval is 1000ms, the ${interval ? 'provided interval' : 'interval determined from the provided token'} was ${Math.round(delay)}ms.`
-        );
-        delay = 1000;
-      }
-      this.tokenRefreshTimer = setTimeout(async () => {
-        const maybeFreshToken = await refreshHandler();
-        if (!maybeFreshToken) {
-          this.logger.warn(
-            'The token refresh handler did not return a new token, ending the session.'
-          );
-          await this.endSession();
-          return;
-        }
-        await this.updateSessionToken(maybeFreshToken);
-        setRefreshTimeoutForToken(maybeFreshToken);
-      }, delay);
-    };
-    setRefreshTimeoutForToken(this.token);
-    return () => {
-      this.resetTokenRefreshHandler();
-    };
+    // 2. Update the sync engine session
+    return this.syncEngine.assignSessionToken(token, connect, refreshOptions);
   }
 
   /**
@@ -1148,56 +1100,14 @@ export class TriplitClient<M extends Models<M> = Models> {
    */
   // NOTE: this is not synchronous, should we make it so? That would break the current API if you relied on the promise return type
   async endSession() {
-    this.resetTokenRefreshHandler();
-    this.disconnect();
-    this.updateToken(undefined);
-    this.syncEngine.resetQueryState();
+    await this.startSession(undefined);
   }
 
   /**
    * Attempts to update the token of the current session, which re-use the current connection. If the new token does not have the same roles as the current session, an error will be thrown.
    */
   async updateSessionToken(token: string) {
-    if (this.awaitReady) await this.awaitReady;
-    if (!this.token) {
-      throw new NoActiveSessionError();
-    }
-    const decodedToken = decodeToken(token);
-    if (!decodedToken) throw new TokenDecodingError(decodedToken);
-    if (tokenIsExpired(decodedToken)) throw new TokenExpiredError();
-    // probably could just get this from the client constructor options?
-    // if we guarantee that the client is always using that schema
-    const sessionRoles = getRolesFromSession(
-      this.db.schema,
-      normalizeSessionVars(decodedToken)
-    );
-    if (!sessionRolesAreEquivalent(this.db.session?.roles, sessionRoles)) {
-      throw new SessionRolesMismatchError();
-    }
-    this.updateToken(token, true);
-    const didSend = this.syncEngine.updateTokenForSession(token);
-    if (!didSend) {
-      // There is a chance the message to update the token wont send, for safety just try again once more
-      const sentAfterDelay = await new Promise<boolean>((res, rej) =>
-        setTimeout(
-          () => res(this.syncEngine.updateTokenForSession(token)),
-          1000
-        )
-      );
-      if (!sentAfterDelay)
-        // TODO: end session?
-        // If this throws, we should evaluate how to handle different states of our websocket transport and if/when we should queue messages
-        throw new TriplitError(
-          'Failed to update the session token for the current session.'
-        );
-    }
-  }
-
-  resetTokenRefreshHandler() {
-    if (this.tokenRefreshTimer) {
-      clearTimeout(this.tokenRefreshTimer);
-      this.tokenRefreshTimer = null;
-    }
+    return this.syncEngine.updateSessionToken(token);
   }
 
   onSessionError(callback: OnSessionErrorCallback) {
@@ -1223,6 +1133,7 @@ export class TriplitClient<M extends Models<M> = Models> {
    *
    * @param serverUrl
    */
+  // SHOULD BE FOLLOWED BY A CALL TO startSession() with a token for that new server
   updateServerUrl(serverUrl: string | undefined) {
     this.updateConnectionOptions({ serverUrl });
   }

@@ -114,56 +114,52 @@ it('will clear the outbox after syncing', async () => {
   client.disconnect();
 });
 
-it(
-  'client updates should go into the outbox and clear after syncing',
-  { timeout: 500 },
-  async () => {
-    using server = await tempTriplitServer({
-      serverOptions: {
-        dbOptions: { schema: DEFAULT_SCHEMA },
-        jwtSecret: SECRET,
-      },
-    });
-    const { port } = server;
-    const client = new TriplitClient({
-      serverUrl: `http://localhost:${port}`,
-      token: DEFAULT_TOKEN,
-      schema: DEFAULT_SCHEMA.collections,
-      autoConnect: true,
-    });
+it('client updates should go into the outbox and clear after syncing', async () => {
+  using server = await tempTriplitServer({
+    serverOptions: {
+      dbOptions: { schema: DEFAULT_SCHEMA },
+      jwtSecret: SECRET,
+    },
+  });
+  const { port } = server;
+  const client = new TriplitClient({
+    serverUrl: `http://localhost:${port}`,
+    token: DEFAULT_TOKEN,
+    schema: DEFAULT_SCHEMA.collections,
+    autoConnect: true,
+  });
 
-    await pause();
-    await client.insert('users', { id: '1', name: 'test' });
-    await pause();
-    expect(
-      await client.db.entityStore.doubleBuffer.getChangesForEntity(
-        client.db.kv,
-        'users',
-        '1'
-      )
-    ).toStrictEqual(undefined);
-    client.disconnect();
-    await client.update('users', '1', (e) => {
-      e.name = 'updated';
-    });
-    expect(
-      await client.db.entityStore.doubleBuffer.getChangesForEntity(
-        client.db.kv,
-        'users',
-        '1'
-      )
-    ).toEqual({
-      update: { name: 'updated' },
-      delete: false,
-    });
-    expect(await client.fetch({ collectionName: 'users' })).toEqual([
-      {
-        id: '1',
-        name: 'updated',
-      },
-    ]);
-  }
-);
+  await pause();
+  await client.insert('users', { id: '1', name: 'test' });
+  await pause();
+  expect(
+    await client.db.entityStore.doubleBuffer.getChangesForEntity(
+      client.db.kv,
+      'users',
+      '1'
+    )
+  ).toStrictEqual(undefined);
+  client.disconnect();
+  await client.update('users', '1', (e) => {
+    e.name = 'updated';
+  });
+  expect(
+    await client.db.entityStore.doubleBuffer.getChangesForEntity(
+      client.db.kv,
+      'users',
+      '1'
+    )
+  ).toEqual({
+    update: { name: 'updated' },
+    delete: false,
+  });
+  expect(await client.fetch({ collectionName: 'users' })).toEqual([
+    {
+      id: '1',
+      name: 'updated',
+    },
+  ]);
+});
 
 it('should sync all valid changes made offline', async () => {
   using server = await tempTriplitServer({
@@ -273,7 +269,7 @@ it('should sync deletes after reconnecting', async () => {
   await client.insert('users', { id: '2', name: 'Paul' });
   await client.insert('users', { id: '3', name: 'Mary' });
   await client.connect();
-  await pause(30);
+  await pause();
   expect(await client.http.fetch({ collectionName: 'users' })).toEqual([
     { id: '1', name: 'Peter' },
     { id: '2', name: 'Paul' },
@@ -282,7 +278,7 @@ it('should sync deletes after reconnecting', async () => {
   client.disconnect();
   await client.delete('users', '2');
   await client.connect();
-  await pause(30);
+  await pause();
   expect(await client.http.fetch({ collectionName: 'users' })).toEqual([
     { id: '1', name: 'Peter' },
     { id: '3', name: 'Mary' },

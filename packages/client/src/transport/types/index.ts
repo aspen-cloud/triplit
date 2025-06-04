@@ -31,6 +31,9 @@ export interface SyncTransport {
    */
   close(reason?: CloseReason): void;
   onClose(callback: (ev: any) => void): void;
+  /**
+   * @deprecated Triplit Client now manages its own connection state, so this is no longer needed.
+   */
   onConnectionChange(callback: (state: ConnectionStatus) => void): void;
   onError(callback: (ev: any) => void): void;
   onMessage(callback: (message: any) => void): void;

@@ -59,7 +59,13 @@ it('onConnectionStatusChange should reflect the correct connection status', asyn
   expect(statuses).toEqual(['UNINITIALIZED', 'CONNECTING', 'OPEN']);
   client.disconnect();
   await pause(60);
-  expect(statuses).toEqual(['UNINITIALIZED', 'CONNECTING', 'OPEN', 'CLOSED']);
+  expect(statuses).toEqual([
+    'UNINITIALIZED',
+    'CONNECTING',
+    'OPEN',
+    'CLOSING',
+    'CLOSED',
+  ]);
 });
 
 it("if the query hasn't been seen before, subscribeWithStatus.fetching should turn false after a response from the server has occurred", async () => {

@@ -173,7 +173,7 @@ describe('Connecting a client', () => {
       const log = handlerSpy.logs[0];
       expect(log.level).toBe('WARN');
       expect(log.message).toBe(
-        'You are attempting to connect but the connection cannot be opened because the required parameters are missing: [token, serverUrl].'
+        'You are attempting to connect to the server but no session is defined. Please ensure you are providing a token and serverUrl in the TriplitClient constructor or run startSession(token) to setup a session.'
       );
     }
     {
@@ -189,7 +189,7 @@ describe('Connecting a client', () => {
       const log = handlerSpy.logs[0];
       expect(log.level).toBe('WARN');
       expect(log.message).toBe(
-        'You are attempting to connect but the connection cannot be opened because the required parameters are missing: [token].'
+        'You are attempting to connect to the server but no session is defined. Please ensure you are providing a token and serverUrl in the TriplitClient constructor or run startSession(token) to setup a session.'
       );
     }
     {

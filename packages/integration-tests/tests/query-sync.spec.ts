@@ -111,7 +111,7 @@ describe('remote error handling', async () => {
     client.subscribe(query, () => {}, errorCallback);
     // have to add pause here because the query getting assigned
     //  to the syncEngine can be async
-    await pause(10);
+    await pause();
     //@ts-expect-error
     const queryId = client.syncEngine.queries.keys().next().value;
     await pause();

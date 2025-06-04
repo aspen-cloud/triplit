@@ -3,13 +3,13 @@ import { tempTriplitServer } from '../utils/server.js';
 import { TriplitClient } from '@triplit/client';
 import { WorkerClient } from '@triplit/client/worker-client';
 
-import { Roles, Schema as S } from '@triplit/db';
+import { Models, Roles, Schema as S } from '@triplit/db';
 import * as jose from 'jose';
-import WebSocket from 'ws';
 import { pause } from '../utils/async.js';
 
 // @ts-expect-error
 import workerUrl from '@triplit/client/worker-client-operator?url';
+import { spyMessages } from '../utils/client.js';
 
 const initialPayload = {
   'x-triplit-token-type': 'anon',
@@ -47,8 +47,137 @@ const DEFAULT_SCHEMA = {
   },
 };
 
+function isTriplitClient<M extends Models<M>>(
+  client: TriplitClient<M> | WorkerClient<M>
+): client is TriplitClient<M> {
+  return client.constructor.name === 'TriplitClient';
+}
+
 describe.each([TriplitClient, WorkerClient])('%O', (Client) => {
   describe('Session Management', async () => {
+    it('if no token is provided, a session will not start automatically', async () => {
+      using server = await tempTriplitServer();
+      const { port } = server;
+      const client = new Client({
+        workerUrl,
+        serverUrl: `http://localhost:${port}`,
+        autoConnect: false,
+      });
+      const connectionSpy = vi.fn();
+      client.onConnectionStatusChange(connectionSpy, true);
+      await pause(500);
+      if (isTriplitClient(client)) {
+        expect(client.token).toBeUndefined();
+        expect(client.syncEngine.currentSession).toBeUndefined();
+      }
+      expect(client.connectionStatus).toBe('UNINITIALIZED');
+      expect(connectionSpy.mock.calls).toEqual([['UNINITIALIZED']]);
+    });
+    it('providing a token in the constructor will start a session automatically', async () => {
+      using server = await tempTriplitServer();
+      const { port } = server;
+      const token = await encodeToken(initialPayload, '30 min');
+      const client = new Client({
+        workerUrl,
+        serverUrl: `http://localhost:${port}`,
+        token,
+        autoConnect: false,
+      });
+      const connectionSpy = vi.fn();
+      client.onConnectionStatusChange(connectionSpy, true);
+      await pause(500);
+      // TODO: handle additional accessors in WorkerClient
+      if (isTriplitClient(client)) {
+        expect(client.token).toBe(token);
+        expect(client.syncEngine.currentSession).toBeDefined();
+      }
+      expect(client.connectionStatus).toBe('UNINITIALIZED');
+      expect(connectionSpy.mock.calls).toEqual([['UNINITIALIZED']]);
+    });
+    it('providing a token and autoConnect will start a session and connect automatically', async () => {
+      using server = await tempTriplitServer();
+      const { port } = server;
+      const token = await encodeToken(initialPayload, '30 min');
+      const client = new Client({
+        workerUrl,
+        serverUrl: `http://localhost:${port}`,
+        token,
+        autoConnect: true,
+      });
+      const connectionSpy = vi.fn();
+      client.onConnectionStatusChange(connectionSpy, true);
+      await pause(500);
+      if (isTriplitClient(client)) {
+        expect(client.token).toBe(token);
+        expect(client.syncEngine.currentSession).toBeDefined();
+      }
+
+      expect(client.connectionStatus).toBe('OPEN');
+      if (isTriplitClient(client)) {
+        expect(connectionSpy.mock.calls).toEqual([
+          ['UNINITIALIZED'],
+          ['CONNECTING'],
+          ['OPEN'],
+        ]);
+      } else {
+        // Some asynchrony causes us to miss the initial 'UNINITIALIZED' state (by the time we "runImmediately", the connection is CONNECTING)
+        expect(connectionSpy.mock.calls).toEqual([['CONNECTING'], ['OPEN']]);
+      }
+    });
+    it('manually starting a session will connect unless specified otherwise', async () => {
+      using server = await tempTriplitServer();
+      const { port } = server;
+      {
+        const client = new Client({
+          workerUrl,
+          serverUrl: `http://localhost:${port}`,
+          autoConnect: false,
+        });
+        const connectionSpy = vi.fn();
+        client.onConnectionStatusChange(connectionSpy, true);
+        // Worker client taking a bit to pick up the connection status change call
+        await pause(500);
+        expect(client.connectionStatus).toBe('UNINITIALIZED');
+        expect(connectionSpy.mock.calls).toEqual([['UNINITIALIZED']]);
+
+        const token = await encodeToken(initialPayload, '30 min');
+        await client.startSession(token);
+        await pause();
+        if (isTriplitClient(client)) {
+          expect(client.token).toBe(token);
+          expect(client.syncEngine.currentSession).toBeDefined();
+        }
+        expect(client.connectionStatus).toBe('OPEN');
+        expect(connectionSpy.mock.calls).toEqual([
+          ['UNINITIALIZED'],
+          ['CONNECTING'],
+          ['OPEN'],
+        ]);
+      }
+      // Specify `connect: false`
+      {
+        const client = new Client({
+          workerUrl,
+          serverUrl: `http://localhost:${port}`,
+          autoConnect: false,
+        });
+        const connectionSpy = vi.fn();
+        client.onConnectionStatusChange(connectionSpy, true);
+        await pause();
+        expect(client.connectionStatus).toBe('UNINITIALIZED');
+        expect(connectionSpy.mock.calls).toEqual([['UNINITIALIZED']]);
+
+        const token = await encodeToken(initialPayload, '30 min');
+        await client.startSession(token, false);
+        await pause();
+        if (isTriplitClient(client)) {
+          expect(client.token).toBe(token);
+          expect(client.syncEngine.currentSession).toBeDefined();
+        }
+        expect(client.connectionStatus).toBe('UNINITIALIZED');
+        expect(connectionSpy.mock.calls).toEqual([['UNINITIALIZED']]);
+      }
+    });
     it('can start, update, and end a session', async () => {
       using server = await tempTriplitServer({
         serverOptions: { dbOptions: { schema: DEFAULT_SCHEMA } },
@@ -107,7 +236,6 @@ describe.each([TriplitClient, WorkerClient])('%O', (Client) => {
       await pause(200);
       await bob.insert('users', { id: '1', name: 'Alice' });
     });
-
     it('will gracefully end the old session and start another one if you call startSession in succession', async () => {
       using server = await tempTriplitServer({
         serverOptions: { dbOptions: { schema: DEFAULT_SCHEMA } },
@@ -360,6 +488,194 @@ describe.each([TriplitClient, WorkerClient])('%O', (Client) => {
       await pause(100);
       expect(aliceSubSpy.mock.lastCall?.[0]?.length).toBe(1);
     });
+    it('token refreshes occur in the background and do not impact connection status', async () => {
+      using server = await tempTriplitServer();
+      const { port } = server;
+      const initialToken = await encodeToken(initialPayload, '-1 sec');
+      function getToken() {
+        return encodeToken(initialPayload, '1 sec');
+      }
+      let refreshCount = 0;
+      const alice = new Client({
+        workerUrl,
+        serverUrl: `http://localhost:${port}`,
+        token: initialToken,
+        schema: DEFAULT_SCHEMA.collections,
+        refreshOptions: {
+          refreshHandler: async () => {
+            refreshCount++;
+            return await getToken();
+          },
+          interval: 1000,
+        },
+      });
+      const connectionSpy = vi.fn();
+      const sessionErrorSpy = vi.fn();
+      alice.onConnectionStatusChange(connectionSpy, true);
+      alice.onSessionError(sessionErrorSpy);
+      await pause(3000);
+      expect(refreshCount).toBeGreaterThan(0);
+      // Stays open with no thrashing
+      expect(connectionSpy.mock.calls).toEqual([
+        ['UNINITIALIZED'],
+        ['CONNECTING'],
+        ['OPEN'],
+      ]);
+      // no session errors
+      expect(sessionErrorSpy).not.toHaveBeenCalled();
+    });
+    it('server rejects starting a token with an expired session', async () => {
+      using server = await tempTriplitServer({
+        serverOptions: { dbOptions: { schema: DEFAULT_SCHEMA } },
+      });
+      const { port } = server;
+      const sessionErrorSpy = vi.fn();
+      const alice = new Client({
+        clientId: 'alice',
+        onSessionError: sessionErrorSpy,
+        autoConnect: false,
+        serverUrl: `http://localhost:${port}`,
+      });
+      const messageSpy = spyMessages(alice);
+      const expiredToken = await encodeToken(initialPayload, '-1 sec');
+      await alice.startSession(expiredToken, true);
+      await pause();
+      expect(sessionErrorSpy.mock.calls.length).toBe(1);
+      expect(sessionErrorSpy.mock.calls[0][0]).toBe('UNAUTHORIZED');
+      expect(messageSpy.length).toBe(1);
+      const closeMessage = messageSpy[0];
+      expect(closeMessage.direction).toBe('RECEIVED');
+      expect(closeMessage.message.type).toBe('CLOSE');
+      // @ts-expect-error
+      expect(closeMessage.message.payload.type).toBe('UNAUTHORIZED');
+      expect(alice.connectionStatus).toBe('CLOSED');
+    });
+    it('endSession() will disconnect the client and clear the token, state vectors, and saved roles', async () => {
+      const roles: Roles = {
+        admin: {
+          match: {
+            'x-triplit-token-type': 'secret',
+          },
+        },
+      };
+      const collections = {
+        test: {
+          schema: S.Schema({ id: S.Id(), name: S.String() }),
+        },
+      };
+
+      const server = await tempTriplitServer({
+        serverOptions: { dbOptions: { schema: { collections, roles } } },
+      });
+      const { port } = server;
+      const token = await encodeToken(
+        { 'x-triplit-token-type': 'secret' },
+        '30 min'
+      );
+      const bob = new Client({
+        workerUrl,
+        serverUrl: `http://localhost:${port}`,
+        autoConnect: true,
+        token: token,
+        roles,
+        schema: collections,
+      });
+      await pause(500);
+      expect(bob.connectionStatus).toBe('OPEN');
+      if (isTriplitClient(bob)) {
+        expect(bob.token).toBe(token);
+      }
+      const query = bob.query('test');
+      bob.subscribe(query, () => {});
+      await pause();
+      if (isTriplitClient(bob)) {
+        // @ts-expect-error (not exposed)
+        expect(bob.syncEngine.queries.size).toBe(1);
+      }
+      // validate the state after the session ends
+      await bob.endSession();
+      await pause(500);
+      expect(bob.connectionStatus).toBe('UNINITIALIZED');
+      if (isTriplitClient(bob)) {
+        expect(bob.token).toBe(undefined);
+        // @ts-expect-error (not exposed)
+        expect(bob.syncEngine.queries.size).toBe(1);
+      }
+    });
+
+    it('can setup a refresh handler to continuously refresh the session token which will clear when you end session', async () => {
+      const roles: Roles = {
+        admin: {
+          match: {
+            'x-triplit-token-type': 'secret',
+          },
+        },
+      };
+      const collections = {
+        test: {
+          schema: S.Schema({ id: S.Id(), name: S.String() }),
+        },
+      };
+      const server = await tempTriplitServer({
+        serverOptions: { dbOptions: { schema: { collections, roles } } },
+      });
+      const { port } = server;
+      const alice = new Client({
+        workerUrl,
+        serverUrl: `http://localhost:${port}`,
+        autoConnect: false,
+        schema: collections,
+        roles,
+      });
+      // create tokens that expire every 2000ms
+      const EXPIRE_TIME = 2000;
+      function getToken() {
+        return encodeToken(
+          {
+            'x-triplit-token-type': 'secret',
+          },
+          '2 sec'
+        );
+      }
+
+      const refreshTracker = vi.fn();
+
+      await alice.startSession(await getToken(), true, {
+        refreshHandler: () => {
+          refreshTracker();
+          return new Promise((resolve) => {
+            resolve(getToken());
+          });
+        },
+      });
+
+      await pause((EXPIRE_TIME - 950) * 3);
+      expect(refreshTracker).toHaveBeenCalledTimes(3);
+      refreshTracker.mockClear();
+
+      // ending the session should stop the refresh handler
+      await alice.endSession();
+      pause(200);
+      expect(refreshTracker).not.toHaveBeenCalled();
+
+      // you can also pass in a refresh interval
+      const refreshTracker2 = vi.fn();
+      const endRefresh = await alice.startSession(await getToken(), true, {
+        refreshHandler: () => {
+          refreshTracker2();
+          return new Promise((resolve) => {
+            resolve(getToken());
+          });
+        },
+        interval: EXPIRE_TIME,
+      });
+      await pause(EXPIRE_TIME * 3 + 10);
+      expect(refreshTracker2).toHaveBeenCalledTimes(3);
+      refreshTracker2.mockClear();
+      endRefresh?.();
+      await pause(200);
+      expect(refreshTracker2).not.toHaveBeenCalled();
+    }, 30000);
   });
 
   describe('Token checking', () => {
@@ -403,4 +719,109 @@ describe.each([TriplitClient, WorkerClient])('%O', (Client) => {
       }
     });
   });
+
+  describe('updateSessionToken', async () => {
+    it('will throw an error if you attempt to update the session token with a token for a different session', async () => {
+      const roles: Roles = {
+        admin: {
+          match: {
+            'x-triplit-token-type': 'secret',
+          },
+        },
+      };
+      const collections = {
+        test: {
+          schema: S.Schema({ id: S.Id(), name: S.String() }),
+        },
+      };
+      const server = await tempTriplitServer({
+        serverOptions: { dbOptions: { schema: { roles, collections } } },
+      });
+      const { port } = server;
+      const token1 = await encodeToken(
+        { 'x-triplit-token-type': 'secret' },
+        '30 min'
+      );
+      const token2 = await encodeToken(
+        { 'x-triplit-token-type': 'test' },
+        '30 min'
+      );
+      const alice = new Client({
+        schema: collections,
+        roles,
+        token: token1,
+        serverUrl: `http://localhost:${port}`,
+        workerUrl,
+      });
+      // kind of tricky -- this is reliant on some async initialization in the client
+      await pause();
+      await safeExpectError(
+        () => alice.updateSessionToken(token2),
+        'SessionRolesMismatchError'
+      );
+    });
+    it('will throw an error if you attempt to update the session token with an expired token', async () => {
+      const roles: Roles = {
+        admin: {
+          match: {
+            'x-triplit-token-type': 'secret',
+          },
+        },
+      };
+      const collections = {
+        test: {
+          schema: S.Schema({ id: S.Id(), name: S.String() }),
+        },
+      };
+      const server = await tempTriplitServer({
+        serverOptions: { dbOptions: { schema: { roles, collections } } },
+      });
+      const { port } = server;
+      const token = await encodeToken(
+        { 'x-triplit-token-type': 'secret' },
+        '30 min'
+      );
+      const alice = new Client({
+        workerUrl,
+        serverUrl: `http://localhost:${port}`,
+        schema: collections,
+        roles,
+        token,
+      });
+      const expiredToken = await encodeToken(
+        { 'x-triplit-token-type': 'secret' },
+        '-1 sec'
+      );
+      await safeExpectError(
+        () => alice.updateSessionToken(expiredToken),
+        'TokenExpiredError'
+      );
+    });
+    it('will throw an error if you attempt to update the session token while no session is active', async () => {
+      const server = await tempTriplitServer();
+      const token = await encodeToken(initialPayload, '30 min');
+      const alice = new Client({
+        serverUrl: `http://localhost:${server.port}`,
+        workerUrl,
+        autoConnect: false,
+      });
+      await safeExpectError(
+        () => alice.updateSessionToken(token),
+        'NoActiveSessionError'
+      );
+    });
+  });
 });
+
+async function safeExpectError(
+  fn: () => void | Promise<void>,
+  errorName: string
+) {
+  let error;
+  try {
+    await fn();
+  } catch (e) {
+    error = e;
+  }
+  expect(error?.name).toBe(errorName);
+}

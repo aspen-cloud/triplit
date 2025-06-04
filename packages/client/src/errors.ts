@@ -72,7 +72,7 @@ export class WorkerInternalClientNotInitializedError extends TriplitError {
 export class SessionRolesMismatchError extends TriplitError {
   constructor(...args: any[]) {
     super(...args);
-    this.name = 'SessionRoleMismatchError';
+    this.name = 'SessionRolesMismatchError';
     this.baseMessage =
       'Attempted to use `TriplitClient.updateSessionToken` with a token that does not have the same roles as the current session token. `updateSessionToken` should only be used to refresh the session with the server to prevent token expiry. To connect with a new token with new roles, use `TriplitClient.endSession` and then `TriplitClient.startSession(...)` with the new token.';
     this.status = STATUS_CODES['Forbidden'];
