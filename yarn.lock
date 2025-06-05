@@ -10531,7 +10531,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@triplit/cli@npm:1.0.50, @triplit/cli@workspace:^, @triplit/cli@workspace:packages/cli":
+"@triplit/cli@npm:1.0.51, @triplit/cli@workspace:^, @triplit/cli@workspace:packages/cli":
   version: 0.0.0-use.local
   resolution: "@triplit/cli@workspace:packages/cli"
   dependencies:
@@ -10759,7 +10759,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@triplit/server@npm:1.0.50, @triplit/server@workspace:^, @triplit/server@workspace:packages/server":
+"@triplit/server@npm:1.0.51, @triplit/server@workspace:^, @triplit/server@workspace:packages/server":
   version: 0.0.0-use.local
   resolution: "@triplit/server@workspace:packages/server"
   dependencies:
@@ -13956,7 +13956,7 @@ __metadata:
     "@angular/platform-browser-dynamic": "npm:^19.2.1"
     "@angular/router": "npm:^19.2.1"
     "@triplit/angular": "npm:1.0.40"
-    "@triplit/cli": "npm:1.0.50"
+    "@triplit/cli": "npm:1.0.51"
     "@triplit/client": "npm:1.0.40"
     "@types/jasmine": "npm:~5.1.0"
     jasmine-core: "npm:~5.1.0"
@@ -15247,7 +15247,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "bun-server@workspace:packages/bun-server"
   dependencies:
-    "@triplit/server": "npm:1.0.50"
+    "@triplit/server": "npm:1.0.51"
     "@types/bun": "npm:latest"
     "@types/semver": "npm:^7.5.8"
     hono: "npm:4.7.6"
@@ -27119,7 +27119,7 @@ __metadata:
     "@radix-ui/react-slot": "npm:^1.0.2"
     "@tailwindcss/typography": "npm:^0.5.10"
     "@triplit/authjs-adapter": "npm:^1.0.40"
-    "@triplit/cli": "npm:1.0.50"
+    "@triplit/cli": "npm:1.0.51"
     "@triplit/client": "npm:1.0.40"
     "@triplit/react": "npm:1.0.40"
     "@types/bcryptjs": "npm:^2"
@@ -27626,7 +27626,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "node-server@workspace:packages/node-server"
   dependencies:
-    "@triplit/server": "npm:1.0.50"
+    "@triplit/server": "npm:1.0.51"
     "@types/semver": "npm:^7"
     better-sqlite3: "npm:^11.8.1"
     semver: "npm:^7.6.0"
@@ -29728,7 +29728,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "react-template@workspace:templates/react"
   dependencies:
-    "@triplit/cli": "npm:1.0.50"
+    "@triplit/cli": "npm:1.0.51"
     "@triplit/client": "npm:1.0.40"
     "@triplit/react": "npm:1.0.40"
     "@types/react": "npm:^19.0.10"
@@ -31872,7 +31872,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "solid-template@workspace:templates/solid"
   dependencies:
-    "@triplit/cli": "npm:1.0.50"
+    "@triplit/cli": "npm:1.0.51"
     "@triplit/client": "npm:1.0.40"
     "@triplit/solid": "npm:1.0.24"
     solid-js: "npm:^1.9.5"
@@ -32843,7 +32843,7 @@ __metadata:
     "@sveltejs/adapter-auto": "npm:^4.0.0"
     "@sveltejs/kit": "npm:^2.18.0"
     "@sveltejs/vite-plugin-svelte": "npm:^5.0.3"
-    "@triplit/cli": "npm:1.0.50"
+    "@triplit/cli": "npm:1.0.51"
     "@triplit/client": "npm:1.0.40"
     "@triplit/svelte": "npm:1.0.40"
     "@types/eslint": "npm:^8.56.7"
@@ -35786,7 +35786,7 @@ __metadata:
   resolution: "vue-template@workspace:templates/vue"
   dependencies:
     "@rushstack/eslint-patch": "npm:^1.8.0"
-    "@triplit/cli": "npm:1.0.50"
+    "@triplit/cli": "npm:1.0.51"
     "@triplit/client": "npm:1.0.40"
     "@triplit/vue": "npm:1.0.40"
     "@tsconfig/node20": "npm:^20.1.4"
