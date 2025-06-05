@@ -1,5 +1,11 @@
 # @triplit/entity-db
 
+## 1.1.3
+
+### Patch Changes
+
+- 592ee3b2: prevent possible data merging when overriding schema
+
 ## 1.1.2
 
 ### Patch Changes
