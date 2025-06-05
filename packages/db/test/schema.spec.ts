@@ -1,7 +1,8 @@
-import { createDB, DB, DBSchema } from '../src/db.js';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { Schema as S } from '../src/schema/builder.js';
 import { BTreeKVStore } from '../src/kv-store/storage/memory-btree.js';
+import { DBInitializationError, TriplitError } from '../src/errors.js';
+import { createDB, DB, DBSchema } from '../src/db.js';
 
 describe('schema initialization', () => {
   it('should initialize with a schema', async () => {
@@ -41,7 +42,7 @@ describe('schema initialization', () => {
     } = schemaEntity;
     expect(schemaEntityData).toEqual(schema);
   });
-  it('createDB will throw an Error if a backwards incompatible schema is provided', async () => {
+  it('createDB will contain an error event if a backwards incompatible schema is provided', async () => {
     const kv = new BTreeKVStore();
     const schema = {
       collections: {
@@ -76,6 +77,85 @@ describe('schema initialization', () => {
       expect(db.schema).toEqual(schema);
       const storedSchema = await DB.getSchemaFromStorage(kv);
       expect(storedSchema).toEqual(schema);
+    }
+  });
+  it('createDB will throw an error if it cannot create a db instance', async () => {
+    const kv = new BTreeKVStore();
+    const { db } = await createDB({ kv });
+    const invalidSchema = {
+      collections: {
+        users: {
+          schema: S.Schema({
+            id: S.Id(),
+            todos: S.Json(),
+          }),
+          relationships: {
+            todos: S.RelationById('todos', '$1.id'),
+          },
+        },
+        todos: {
+          schema: S.Schema({
+            id: S.Id(),
+          }),
+        },
+      },
+    };
+    // Manually update the schema to an invalid one
+    // @ts-expect-error - private method
+    await db.updateSchema(invalidSchema);
+    // TODO: vitest not accepting DBInitializationError, but it clearly is
+    await expect(createDB({ kv })).rejects.toThrow(TriplitError); // DBInitializationError
+  });
+  it('schemas will full overwrite and not merge on replacement', async () => {
+    const kv = new BTreeKVStore();
+    const schema = {
+      collections: {
+        users: {
+          schema: S.Schema({
+            id: S.Id(),
+            name: S.String(),
+          }),
+          relationships: {
+            todos: S.RelationById('todos', '$1.id'),
+          },
+        },
+        todos: {
+          schema: S.Schema({
+            id: S.Id(),
+            title: S.String(),
+          }),
+        },
+      },
+    };
+    {
+      const { db } = await createDB({ schema, kv });
+      const storedSchema = await DB.getSchemaFromStorage(kv);
+      expect(storedSchema).toEqual(schema);
+    }
+    // Now replace the schema with a new one
+    const newSchema = {
+      collections: {
+        users: {
+          schema: S.Schema({
+            id: S.Id(),
+            // changed attribute
+            username: S.String(),
+            // moved relationship to attribute
+            todos: S.Json(),
+          }),
+        },
+        todos: {
+          schema: S.Schema({
+            id: S.Id(),
+            title: S.String(),
+          }),
+        },
+      },
+    };
+    {
+      const { db } = await createDB({ schema: newSchema, kv });
+      const storedSchema = await DB.getSchemaFromStorage(kv);
+      expect(storedSchema).toEqual(newSchema);
     }
   });
 });

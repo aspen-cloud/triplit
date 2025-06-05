@@ -1,4 +1,5 @@
 import {
+  DBInitializationError,
   DBSerializationError,
   TriplitError,
   WritePermissionError,
@@ -128,7 +129,7 @@ export class DB<
       // Optimally we can fix with schema push --force, but if you cant access the db instance that may not be possible
       // Similar to "await ready", we probably want every operation to fail until you fix the schema
       if (schemaInvalid)
-        throw new TriplitError(
+        throw new DBInitializationError(
           `Failed to start DB because the current schema is invalid: ${schemaInvalid}`
         );
     }
@@ -735,8 +736,9 @@ export class DB<
       storageTx,
       {
         _metadata: {
+          // Perform a set AND delete to ensure a full overwrite and no merging
           sets: new Map([['_schema', { id: '_schema', ...schema } as any]]),
-          deletes: new Set(),
+          deletes: new Set(['_schema']),
         },
       },
       {

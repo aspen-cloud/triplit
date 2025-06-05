@@ -375,3 +375,12 @@ export class InvalidResultCardinalityError extends TriplitError {
     this.status = STATUS_CODES['Internal Server Error'];
   }
 }
+
+export class DBInitializationError extends TriplitError {
+  constructor(...args: any[]) {
+    super(...args);
+    this.name = 'DBInitializationError';
+    this.baseMessage = `An error occurred during the initialization of the database.`;
+    this.status = STATUS_CODES['Internal Server Error'];
+  }
+}
