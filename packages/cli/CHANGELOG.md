@@ -1,5 +1,12 @@
 # @triplit/cli
 
+## 1.0.51
+
+### Patch Changes
+
+- c9878f2a: Automated version bump for @triplit/cli after dependency changes
+- b468432a: Hide timestamps from excluded logs
+
 ## 1.0.50
 
 ### Patch Changes
