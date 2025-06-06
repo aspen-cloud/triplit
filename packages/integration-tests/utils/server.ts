@@ -1,4 +1,4 @@
-import { createServer } from '@triplit/server';
+import { createServer, createTriplitStorageProvider } from '@triplit/server';
 import { ServerOptions } from '@triplit/server/hono';
 
 export async function runServer(
@@ -7,7 +7,7 @@ export async function runServer(
 ) {
   let server: ReturnType<typeof startServer>;
   const startServer = await createServer({
-    storage: 'memory',
+    storage: await createTriplitStorageProvider('memory'),
     jwtSecret: process.env.JWT_SECRET!,
     externalJwtSecret: process.env.EXTERNAL_JWT_SECRET,
     logHandler: options?.logHandler ?? {

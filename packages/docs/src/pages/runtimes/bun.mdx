@@ -25,12 +25,15 @@ You can add the `-s sqlite` flag to use `bun:sqlite` as the storage option.
 ## Example
 
 ```typescript
-import { createBunServer } from '@triplit/server/bun';
+import {
+  createBunServer,
+  createTriplitStorageProvider,
+} from '@triplit/server/bun';
 
 const port = +(process.env.PORT || 8080);
 
 const startServer = await createBunServer({
-  storage: 'sqlite',
+  storage: await createTriplitStorageProvider('sqlite'),
   verboseLogs: !!process.env.VERBOSE_LOGS,
   jwtSecret: process.env.JWT_SECRET!,
   projectId: process.env.PROJECT_ID,

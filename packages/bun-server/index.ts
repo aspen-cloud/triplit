@@ -1,9 +1,10 @@
 import { createBunServer } from '@triplit/server/bun';
+import { createTriplitStorageProvider } from '@triplit/server/storage';
 
 const port = +(process.env.PORT || 8080);
 
 const startServer = await createBunServer({
-  storage: 'sqlite',
+  storage: await createTriplitStorageProvider('sqlite'),
   verboseLogs: !!process.env.VERBOSE_LOGS,
   jwtSecret: process.env.JWT_SECRET!,
   projectId: process.env.PROJECT_ID,

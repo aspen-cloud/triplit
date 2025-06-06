@@ -48,12 +48,12 @@ npm install @triplit/server
 The server also contains the remote Triplit database, which will persist data synced from your clients. The server supports different storage adapters, such as SQLite. Using the `createServer` function, you can create and configure a new server instance:
 
 ```js filename="run.js" copy
-import { createServer } from '@triplit/server';
+import { createServe, createTriplitStorageProvider } from '@triplit/server';
 
 const port = +(process.env.PORT || 8080);
 
 const startServer = createServer({
-  storage: 'sqlite',
+  storage: await createTriplitStorageProvider('sqlite'),
   verboseLogs: true,
 });
 

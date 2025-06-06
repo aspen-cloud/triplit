@@ -1,10 +1,6 @@
 import React from 'react';
 import { Box, Newline, Text } from 'ink';
-import {
-  createServer as createNodeServer,
-  durableStoreKeys,
-  storeKeys,
-} from '@triplit/server';
+import { durableStoreKeys, storeKeys } from '@triplit/server/storage';
 import jwt from 'jsonwebtoken';
 import path from 'path';
 import fs, { existsSync } from 'fs';
@@ -18,6 +14,7 @@ import { validateWebhookStructure } from './webhooks/push.js';
 import { blue } from 'ansis/colors';
 import { logger } from '@triplit/logger';
 import { DevServerLogHandler } from '../log-handlers/dev-server-logs.js';
+import { createTriplitStorageProvider } from '@triplit/server/storage';
 
 export default Command({
   description: 'Starts the Triplit development environment',
@@ -137,13 +134,18 @@ export default Command({
       new DevServerLogHandler({ verbose: flags.verbose }),
       { exclusive: true }
     );
-    let createDBServer = createNodeServer;
+    let createDBServer;
     if (typeof Bun !== 'undefined') {
       const { createBunServer } = await import('@triplit/server/bun');
       createDBServer = createBunServer;
+    } else {
+      const { createServer: createNodeServer } = await import(
+        '@triplit/server'
+      );
+      createDBServer = createNodeServer;
     }
     const startDBServer = await createDBServer({
-      storage: flags.storage || 'memory',
+      storage: await createTriplitStorageProvider(flags.storage || 'memory'),
       jwtSecret: process.env.JWT_SECRET,
       projectId: process.env.PROJECT_ID,
       externalJwtSecret: process.env.EXTERNAL_JWT_SECRET,

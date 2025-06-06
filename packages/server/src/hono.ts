@@ -36,7 +36,6 @@ import { WSContext, type UpgradeWebSocket, WSMessageReceive } from 'hono/ws';
 
 // import { logger as honoLogger } from 'hono/logger';
 import { cors } from 'hono/cors';
-import { createTriplitStorageProvider, StoreKeys } from './storage.js';
 import { bodyLimit } from 'hono/body-limit';
 
 type Variables = {
@@ -46,7 +45,7 @@ type Variables = {
 const MB1 = 1024 * 1024;
 
 export type ServerOptions = {
-  storage?: StoreKeys | KVStore | (() => KVStore);
+  storage?: KVStore | (() => KVStore);
   dbOptions?: DBOptions;
   verboseLogs?: boolean;
   upstream?: {
@@ -126,10 +125,7 @@ export async function createTriplitHonoServer(
     schema,
     clientId: 'server',
     entityStore: new ServerEntityStore(),
-    kv:
-      typeof dbSource === 'string'
-        ? await createTriplitStorageProvider(dbSource)
-        : dbSource,
+    kv: dbSource,
   });
 
   if (event.type !== 'SUCCESS') {
