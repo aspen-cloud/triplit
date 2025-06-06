@@ -1263,7 +1263,7 @@ describe('Sync situations', () => {
     alice.subscribe(query, aliceSub);
     bob.subscribe(query, bobSub);
 
-    await pause(20);
+    await pause();
 
     {
       const aliceResults = Array.from(
@@ -1280,7 +1280,7 @@ describe('Sync situations', () => {
       entity.name = 'z';
     });
 
-    await pause(60);
+    await pause();
 
     {
       const aliceResults = Array.from(
