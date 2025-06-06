@@ -1,5 +1,13 @@
 # @triplit/client
 
+## 1.0.42
+
+### Patch Changes
+
+- d9ec4b1d: refactor connectionStatus changes to fire with more control, add more manual state handling of sync sessions
+- Updated dependencies [d637845a]
+  - @triplit/db@1.1.4
+
 ## 1.0.41
 
 ### Patch Changes

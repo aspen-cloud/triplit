@@ -1,5 +1,11 @@
 # @triplit/react-native
 
+## 1.0.44
+
+### Patch Changes
+
+- @triplit/react@1.0.42
+
 ## 1.0.43
 
 ### Patch Changes

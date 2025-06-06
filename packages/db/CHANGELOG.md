@@ -1,5 +1,11 @@
 # @triplit/entity-db
 
+## 1.1.4
+
+### Patch Changes
+
+- d637845a: relax missing variable check
+
 ## 1.1.3
 
 ### Patch Changes

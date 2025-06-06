@@ -1,5 +1,12 @@
 # @triplit/solid
 
+## 1.0.26
+
+### Patch Changes
+
+- Updated dependencies [d9ec4b1d]
+  - @triplit/client@1.0.42
+
 ## 1.0.25
 
 ### Patch Changes
