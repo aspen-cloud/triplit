@@ -977,12 +977,10 @@ export class SyncEngine {
 
   private onOpenHandler(session: SyncSession) {
     return () => {
-      this.logger.info('sync connection has opened', {
-        status: this.connectionStatus,
-      });
       session.status = 'OPEN';
       this.fireConnectionChangeHandlers(session);
       this.resetReconnectTimeout();
+      this.logger.info('sync connection has opened');
     };
   }
 
