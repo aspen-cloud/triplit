@@ -218,16 +218,13 @@ export class TriplitClient<M extends Models<M> = Models> {
 
     // Asynchronously start a session with the provided token, should safely handle no token
     // Once we have initialized the proper state on the client, we will connect
-    this.startSession(options.token, false, options.refreshOptions).then(
-      async () => {
-        if (this.connectOnInitialization) {
-          // Skipping abort override because its not a user explicit call to connect
-          this.syncEngine.createConnection();
-          // We have connected, set to false for future users
-          this.connectOnInitialization = false;
-        }
-      }
-    );
+    this.startSession(
+      options.token,
+      this.connectOnInitialization,
+      options.refreshOptions
+    ).then(() => {
+      this.connectOnInitialization = false;
+    });
   }
 
   get ready() {

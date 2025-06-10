@@ -221,15 +221,13 @@ export class SyncEngine {
         token,
         status: 'UNINITIALIZED', // will be updated on connect
       };
-      this.fireConnectionChangeHandlers(this.currentSession);
-      if (connect) {
-        // TODO: try to get rid of connectionAbort with improved state
-        await this.connect();
-      }
     } else {
       // If we arent starting a new session, fire in case we ended a previous session
       // Trying to make this smooth so there is only one synchronous fire after updating this.currentSession
-      this.fireConnectionChangeHandlers(this.currentSession);
+    }
+    this.fireConnectionChangeHandlers(this.currentSession);
+    if (connect) {
+      await this.connect();
     }
 
     // 6. Set up a token refresh handler if provided
@@ -769,49 +767,50 @@ export class SyncEngine {
   }
 
   /**
-   * A signal to abort the connection to the server in case it is cancelled while the connection is in progress
-   */
-  private connectionAbort = false;
-
-  /**
    * A hash of the last set of connected params, should not reconnect if the same params are used twice and the connection is already open
    */
   private lastParamsHash: number | undefined = undefined;
 
   async connect() {
-    this.connectionAbort = false;
-    this.createConnection();
+    this.createConnection(this.currentSession);
   }
 
   /**
    * Initiate a sync connection with the server
    */
-  createConnection() {
-    if (!this.validateSessionWithWarning(this.currentSession)) return;
-    if (this.connectionAbort) return;
-    const isOpeningConnection = !(
-      this.currentSession.status === 'OPEN' ||
-      this.currentSession.status === 'CONNECTING'
-    );
-    if (isOpeningConnection) {
-      this.currentSession.status = 'CONNECTING';
-      this.fireConnectionChangeHandlers(this.currentSession);
-      this.lastParamsHash = undefined; // reset lastParamsHash
+  createConnection(session: SyncSession | undefined) {
+    // Validate that there is enough information to connect
+    if (!this.validateSessionWithWarning(session)) return;
+    // If we are creating a connection for a session that is not the current session, we should not proceed
+    if (this.currentSession !== session) return;
+    // If we are already connected, we should not proceed
+    if (session.status === 'OPEN') return;
+    if (session.status === 'CONNECTING') {
+      console.warn('Already connecting, ignoring connect call');
+      return;
     }
+    session.status = 'CONNECTING';
+    this.fireConnectionChangeHandlers(session);
+    // if (isOpeningConnection) {
+    //   console.log('OPENING CONNECTION');
 
-    // TODO: we are sort of double checking this
-    const paramsHash = hashObject({
-      token: this.currentSession.token,
-      server: this.currentSession.serverUrl,
-    });
-    // Dont reconnect with the same parameters
-    if (this.lastParamsHash === paramsHash) return;
+    //   // this.lastParamsHash = undefined; // reset lastParamsHash
+    // }
+
+    // // TODO: we are sort of double checking this
+    // const paramsHash = hashObject({
+    //   token: this.currentSession.token,
+    //   server: this.currentSession.serverUrl,
+    // });
+    // console.log(paramsHash, this.lastParamsHash);
+    // // We can get stuck CONNECTING here in reconnect loop
+    // // Dont reconnect with the same parameters
+    // // if (this.lastParamsHash === paramsHash) return;
 
     // Setup connection
-    this.lastParamsHash = paramsHash;
     this.transport.connect({
-      token: this.currentSession.token,
-      server: this.currentSession.serverUrl,
+      token: session.token,
+      server: session.serverUrl,
       syncSchema: false,
       schema: undefined,
     });
@@ -819,12 +818,10 @@ export class SyncEngine {
     // Setup listeners
     // There is still probably too much "global" state that we should continue to refactor
     // To prevent confusion, we are binding the handlers to the current session so they only update that session
-    this.transport.onMessage(
-      this.onMessageHandler(this.currentSession).bind(this)
-    );
-    this.transport.onOpen(this.onOpenHandler(this.currentSession).bind(this));
-    this.transport.onClose(this.onCloseHandler(this.currentSession).bind(this));
-    this.transport.onError(this.onErrorHandler(this.currentSession).bind(this));
+    this.transport.onMessage(this.onMessageHandler(session).bind(this));
+    this.transport.onOpen(this.onOpenHandler(session).bind(this));
+    this.transport.onClose(this.onCloseHandler(session).bind(this));
+    this.transport.onError(this.onErrorHandler(session).bind(this));
   }
 
   private async initializeSync() {
@@ -1048,9 +1045,11 @@ export class SyncEngine {
           this.fireConnectionChangeHandlers(session);
           return;
         }
-        session.status = 'CONNECTING';
-        this.fireConnectionChangeHandlers(session);
       }
+
+      // TODO: what is the right way to smooth this out?
+      session.status = 'CLOSED';
+      this.fireConnectionChangeHandlers(session);
 
       // Attempt to reconnect with backoff
       const connectionHandler = this.connect.bind(this);
@@ -1242,7 +1241,6 @@ export class SyncEngine {
   }
 
   private closeConnection(reason?: CloseReason) {
-    this.connectionAbort = true;
     this.transport.close(reason);
   }
 

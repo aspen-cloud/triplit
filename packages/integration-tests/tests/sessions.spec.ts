@@ -114,11 +114,7 @@ describe.each([TriplitClient, WorkerClient])('%O', (Client) => {
 
       expect(client.connectionStatus).toBe('OPEN');
       if (isTriplitClient(client)) {
-        expect(connectionSpy.mock.calls).toEqual([
-          ['UNINITIALIZED'],
-          ['CONNECTING'],
-          ['OPEN'],
-        ]);
+        expect(connectionSpy.mock.calls).toEqual([['CONNECTING'], ['OPEN']]);
       } else {
         // Some asynchrony causes us to miss the initial 'UNINITIALIZED' state (by the time we "runImmediately", the connection is CONNECTING)
         expect(connectionSpy.mock.calls).toEqual([['CONNECTING'], ['OPEN']]);
