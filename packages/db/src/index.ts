@@ -7,6 +7,7 @@ export * from './filters.js';
 export * from './variables.js';
 export * from './http.js';
 export * from './types.js';
+export { applyChange } from './entity-data-store.js';
 export * from './entity-store-with-outbox.js';
 export * from './query/index.js';
 export * from './query-engine.js';
