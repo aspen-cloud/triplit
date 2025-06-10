@@ -199,36 +199,36 @@ export default Command({
       );
     }
 
-    const webhooksPath = path.resolve(
-      process.env.TRIPLIT_WEBHOOK_CONFIG_PATH ??
-        path.join(getTriplitDir(), 'webhooks.json')
-    );
+    // const webhooksPath = path.resolve(
+    //   process.env.TRIPLIT_WEBHOOK_CONFIG_PATH ??
+    //     path.join(getTriplitDir(), 'webhooks.json')
+    // );
 
-    if (existsSync(webhooksPath)) {
-      const validJSONWebhooks = validateWebhookStructure(
-        fs.readFileSync(webhooksPath, 'utf8')
-      );
-      if (validJSONWebhooks) {
-        await fetch(dbUrl + '/webhooks-push', {
-          method: 'POST',
-          body: JSON.stringify({
-            webhooks: validJSONWebhooks,
-          }),
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${serviceKey}`,
-          },
-        });
-        console.log(
-          'Webhooks config file found at',
-          blue('./' + path.relative(CWD, webhooksPath))
-        );
-        console.log('Webhooks will not be sent in development mode.');
-        console.log(
-          `You can override this with the ${blue('--enableWebhooks')} flag`
-        );
-      }
-    }
+    // if (existsSync(webhooksPath)) {
+    //   const validJSONWebhooks = validateWebhookStructure(
+    //     fs.readFileSync(webhooksPath, 'utf8')
+    //   );
+    //   if (validJSONWebhooks) {
+    //     await fetch(dbUrl + '/webhooks-push', {
+    //       method: 'POST',
+    //       body: JSON.stringify({
+    //         webhooks: validJSONWebhooks,
+    //       }),
+    //       headers: {
+    //         'Content-Type': 'application/json',
+    //         Authorization: `Bearer ${serviceKey}`,
+    //       },
+    //     });
+    //     console.log(
+    //       'Webhooks config file found at',
+    //       blue('./' + path.relative(CWD, webhooksPath))
+    //     );
+    //     console.log('Webhooks will not be sent in development mode.');
+    //     console.log(
+    //       `You can override this with the ${blue('--enableWebhooks')} flag`
+    //     );
+    //   }
+    // }
     return (
       <>
         <Newline />
