@@ -21,7 +21,7 @@ export function withWebsocketStub(
       await testFn({ ...ctx, openSockets });
     } finally {
       // Cleanup stub on success or failure
-      vi.unstubAllGlobals();
+      vi.stubGlobal('WebSocket', OriginalWebSocket);
     }
   };
 }

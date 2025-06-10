@@ -30,10 +30,11 @@ const usedPorts = new Set<number>();
 export async function tempTriplitServer(
   options: {
     serverOptions?: Partial<ServerOptions>;
+    port?: number;
   } = {}
 ) {
   const { serverOptions } = options;
-  let randomPort = Math.floor(Math.random() * 1000) + 3000;
+  let randomPort = options.port ?? Math.floor(Math.random() * 1000) + 3000;
   while (usedPorts.has(randomPort)) {
     randomPort++;
   }
@@ -41,6 +42,7 @@ export async function tempTriplitServer(
   const server = await runServer(randomPort, serverOptions);
   return {
     port: randomPort,
+    _server: server,
     [Symbol.dispose]: () => {
       server.close();
       // Give it a second for the port to actually free up

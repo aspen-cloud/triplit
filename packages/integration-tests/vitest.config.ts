@@ -4,7 +4,8 @@ import tsconfigPaths from 'vite-tsconfig-paths';
 export default defineConfig({
   plugins: [tsconfigPaths()],
   test: {
-    setupFiles: ['@vitest/web-worker'],
+    environment: 'node',
+    setupFiles: ['./vitest.setup.ts', '@vitest/web-worker'],
     coverage: {
       include: [
         '../db/src/**/*.{js,ts}',
@@ -12,5 +13,6 @@ export default defineConfig({
         '../server-core/src/**/*.{js,ts}',
       ],
     },
+    unstubGlobals: false,
   },
 });

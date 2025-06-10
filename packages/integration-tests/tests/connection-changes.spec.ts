@@ -1,4 +1,4 @@
-import { it, describe, expect } from 'vitest';
+import { it, describe, expect, vi, beforeEach } from 'vitest';
 import { hashQuery, Schema as S } from '@triplit/db';
 import { MessageLogItem, spyMessages } from '../utils/client.js';
 import { pause } from '../utils/async.js';
@@ -275,6 +275,55 @@ describe('Connecting a client', () => {
       spy2.find((m) => sentConnectQueryMessageForQuery(m, qid2))
     ).toBeDefined();
   });
+  it('A client will attempt to reconnect if the server is unreachable', async () => {
+    // NOT STARTING  SERVER YET
+    const port = 2999;
+    const client = new TriplitClient({
+      serverUrl: `http://localhost:${port}`,
+      token: serviceToken,
+      autoConnect: true,
+    });
+    await pause();
+    // Might be better to look at onConnectionStatusChange, but it is very likely the state is CLOSED
+    expect(client.connectionStatus).toBe('CLOSED');
+
+    // Now start the server
+    using server = await tempTriplitServer({
+      serverOptions: {
+        jwtSecret: 'test-secret',
+      },
+      port,
+    });
+    // Give the client enough time to perform its reconnect attempt
+    await pause(3000);
+    expect(client.connectionStatus).toBe('OPEN');
+  });
+  // TOOD: confirm server._server.close() actually closes the server
+  it.todo(
+    'A client will begin attempting to reconnect if the server becomes unreachable after connecting',
+    async () => {
+      using server = await tempTriplitServer({
+        serverOptions: {
+          jwtSecret: 'test-secret',
+        },
+      });
+      const { port } = server;
+      const client = new TriplitClient({
+        serverUrl: `http://localhost:${port}`,
+        token: serviceToken,
+        autoConnect: true,
+      });
+      await pause();
+      expect(client.connectionStatus).toBe('OPEN');
+      // Now close the server
+      // TODO: confirm this works properly
+      server._server.close();
+      await pause(3000);
+      // Client should be disconnected and attempting to reconnect
+      expect(client.connectionStatus).toBe('CLOSED');
+      // TODO: add assertions we are reconnecting
+    }
+  );
 });
 describe('Disconnecting a client', () => {
   it(

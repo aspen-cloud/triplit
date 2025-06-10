@@ -22468,6 +22468,7 @@ __metadata:
     execa: "npm:^8.0.1"
     fs-extra: "npm:^11.1.1"
     jose: "npm:^5.9.6"
+    undici: "npm:^7.10.0"
     vite-tsconfig-paths: "npm:^5.0.1"
     vitest: "npm:^3.0.6"
     ws: "npm:^8.18.0"
@@ -34428,6 +34429,13 @@ __metadata:
   dependencies:
     "@fastify/busboy": "npm:^2.0.0"
   checksum: 10/0ceca8924a32acdcc0cfb8dd2d368c217840970aa3f5e314fc169608474be6341c5b8e50cad7bd257dbe3b4e432bc5d0a0d000f83644b54fa11a48735ec52b93
+  languageName: node
+  linkType: hard
+
+"undici@npm:^7.10.0":
+  version: 7.10.0
+  resolution: "undici@npm:7.10.0"
+  checksum: 10/41d8ccd5b5e35bcd9035a5a640d9020f9ea1a2ef3dffb3e29518ff16ca01957833f1befe141b3a58db09015174681614732f9d322b0bc7f78855f51020bd744e
   languageName: node
   linkType: hard
 
