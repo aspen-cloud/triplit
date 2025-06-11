@@ -1,5 +1,11 @@
 # @triplit/entity-db
 
+## 1.1.5
+
+### Patch Changes
+
+- 2a4a6bde: export applyChange from db
+
 ## 1.1.4
 
 ### Patch Changes

@@ -1,5 +1,13 @@
 # svelte-template
 
+## 1.0.44
+
+### Patch Changes
+
+- Updated dependencies [543f746f]
+  - @triplit/client@1.0.43
+  - @triplit/svelte@1.0.43
+
 ## 1.0.43
 
 ### Patch Changes
