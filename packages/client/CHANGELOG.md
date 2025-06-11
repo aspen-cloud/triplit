@@ -1,5 +1,13 @@
 # @triplit/client
 
+## 1.0.43
+
+### Patch Changes
+
+- 543f746f: fix issue causing reconnection attempts to halt
+- Updated dependencies [2a4a6bde]
+  - @triplit/db@1.1.5
+
 ## 1.0.42
 
 ### Patch Changes
