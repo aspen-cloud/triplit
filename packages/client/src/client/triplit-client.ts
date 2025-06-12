@@ -636,13 +636,13 @@ export class TriplitClient<M extends Models<M> = Models> {
       }
     }
     fireSignal();
-    // waiting on remote sync: only if its the first time connecting (for this query?)
-    // const unsubConnectionStatus = this.onConnectionStatusChange((status) => {
-    //   if (status === 'CLOSING' || status === 'CLOSED') {
-    //     setRemoteStatesToFalseAndFireIfChanged();
-    //     return;
-    //   }
-    // }, true);
+    // If we transition to a closed connection, kill remote fetching states
+    const unsubConnectionStatus = this.onConnectionStatusChange((status) => {
+      if (status === 'CLOSED') {
+        setRemoteStatesToFalseAndFireIfChanged();
+        return;
+      }
+    }, true);
     // This _should_ return faster than the local results
     this.isFirstTimeFetchingQuery(query).then((isFirstTime) => {
       if (isInitialFetch !== isFirstTime) {
@@ -695,7 +695,7 @@ export class TriplitClient<M extends Models<M> = Models> {
     );
     return () => {
       unsub();
-      // unsubConnectionStatus();
+      unsubConnectionStatus();
     };
   }
 
