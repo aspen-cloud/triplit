@@ -21,6 +21,7 @@ import {
   ClientChangesMessage,
   ClientSchemaResponseMessage,
   QueryState,
+  ClientPingMessage,
 } from '@triplit/types/sync';
 import {
   hasAdminAccess,
@@ -483,9 +484,11 @@ export class SyncConnection {
     await allowClientToSync();
   }
 
-  handlePingMessage() {
-    // Helps keep the connection alive
-    // Do nothing, we could respond with PONG
+  handlePingMessage(msgParams: ClientPingMessage['payload']) {
+    this.sendMessage('PONG', {
+      clientTimestamp: msgParams.clientTimestamp,
+      serverTimestamp: Date.now(),
+    });
   }
 
   dispatchCommand(message: ClientSyncMessage) {
@@ -510,7 +513,7 @@ export class SyncConnection {
         case 'CHUNK':
           return this.handleChunkMessage(message.payload);
         case 'PING':
-          return this.handlePingMessage();
+          return this.handlePingMessage(message.payload);
         default:
           return this.sendErrorResponse(
             // @ts-ignore

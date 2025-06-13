@@ -159,14 +159,24 @@ export class SyncEngine {
     });
 
     if (!!options.pingInterval) {
-      const ping = setInterval(() => {
-        if (this.connectionStatus === 'OPEN' && this.serverReady) {
-          this.sendMessage({ type: 'PING', payload: {} });
-        }
-      }, options.pingInterval * 1000);
+      const ping = setInterval(
+        this.ping.bind(this),
+        options.pingInterval * 1000
+      );
       // In Node, unref() the ping so it doesn't block the process from exiting
       // TODO: improve typing of setInteval for better compatibility with browser and node
       if (typeof ping === 'object' && 'unref' in ping) ping.unref();
+    }
+  }
+
+  ping() {
+    if (this.connectionStatus === 'OPEN' && this.serverReady) {
+      this.sendMessage({
+        type: 'PING',
+        payload: {
+          clientTimestamp: Date.now(),
+        },
+      });
     }
   }
 

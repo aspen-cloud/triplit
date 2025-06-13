@@ -1162,6 +1162,13 @@ export class TriplitClient<M extends Models<M> = Models> {
   }
 
   /**
+   * Sends a ping message to the server.
+   */
+  ping() {
+    return this.syncEngine.ping();
+  }
+
+  /**
    * The token used to authenticate with the server
    */
   get token() {
