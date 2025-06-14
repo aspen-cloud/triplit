@@ -1,5 +1,11 @@
 # @triplit/server-core
 
+## 1.0.47
+
+### Patch Changes
+
+- 3e8c0083: respond to ping with pong
+
 ## 1.0.46
 
 ### Patch Changes

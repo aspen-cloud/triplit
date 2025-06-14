@@ -1,5 +1,11 @@
 # cf-worker-server
 
+## 0.0.19
+
+### Patch Changes
+
+- @triplit/server@1.1.2
+
 ## 0.0.18
 
 ### Patch Changes
