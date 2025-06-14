@@ -1,5 +1,12 @@
 # @triplit/cli
 
+## 1.0.55
+
+### Patch Changes
+
+- da1ae46f: Automated version bump for @triplit/cli after dependency changes
+- 3e8c0083: ignore pong logs
+
 ## 1.0.54
 
 ### Patch Changes

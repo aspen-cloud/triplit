@@ -1,5 +1,12 @@
 # @triplit/client
 
+## 1.0.44
+
+### Patch Changes
+
+- 3e8c0083: apply timestamp to ping and allow manual ping send
+- da1ae46f: cleanup remote fetching states on connection close
+
 ## 1.0.43
 
 ### Patch Changes
