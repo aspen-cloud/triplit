@@ -5,9 +5,14 @@ import type {
   FetchResult,
   Models,
   SchemaQuery,
-  SubscriptionOptions,
   SubscriptionSignalPayload,
   TriplitClient,
+  EnabledSubscriptionOptions,
+} from '@triplit/client';
+import {
+  getInitialState,
+  getDisabledSubscriptionState,
+  isSubscriptionEnabled,
 } from '@triplit/client';
 import { WorkerClient } from '@triplit/client/worker-client';
 
@@ -24,15 +29,29 @@ import { WorkerClient } from '@triplit/client/worker-client';
 export function useQuery<M extends Models<M>, Q extends SchemaQuery<M>>(
   client: TriplitClient<M> | WorkerClient<M>,
   query: Q,
-  options?: Partial<SubscriptionOptions>
+  options?: Partial<EnabledSubscriptionOptions>
 ): SubscriptionSignalPayload<M, Q> {
-  let results: SubscriptionSignalPayload<M, Q>['results'] = $state(undefined);
-  let fetching = $state(true);
-  let fetchingLocal = $state(true);
-  let fetchingRemote = $state(false);
-  let error: any = $state(undefined);
+  const initialState = getInitialState<M, Q>(options);
+
+  let results: SubscriptionSignalPayload<M, Q>['results'] = $state(
+    initialState.results
+  );
+  let fetching = $state(initialState.fetching);
+  let fetchingLocal = $state(initialState.fetchingLocal);
+  let fetchingRemote = $state(initialState.fetchingRemote);
+  let error: any = $state(initialState.error);
 
   $effect(() => {
+    if (!isSubscriptionEnabled(options)) {
+      const disabledState = getDisabledSubscriptionState<M, Q>();
+      results = disabledState.results;
+      fetching = disabledState.fetching;
+      fetchingLocal = disabledState.fetchingLocal;
+      fetchingRemote = disabledState.fetchingRemote;
+      error = disabledState.error;
+      return;
+    }
+
     const unsub = client.subscribeWithStatus(
       query,
       (newVal) => {
@@ -105,7 +124,7 @@ export function useConnectionStatus(
 export function useQueryOne<M extends Models<M>, Q extends SchemaQuery<M>>(
   client: TriplitClient<M> | WorkerClient<M>,
   query: Q,
-  options?: Partial<SubscriptionOptions>
+  options?: Partial<EnabledSubscriptionOptions>
 ): Omit<SubscriptionSignalPayload<M, Q>, 'results'> & {
   result: FetchResult<M, Q, 'one'>;
 } {
@@ -145,7 +164,7 @@ export function useEntity<
   client: TriplitClient<M> | WorkerClient<M>,
   collectionName: CN,
   id: string,
-  options?: Partial<SubscriptionOptions>
+  options?: Partial<EnabledSubscriptionOptions>
 ) {
   return useQueryOne(client, client.query(collectionName).Id(id), options);
 }
