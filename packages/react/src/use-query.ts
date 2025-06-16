@@ -9,10 +9,13 @@ import {
 import {
   TriplitClient,
   Models,
-  SubscriptionOptions,
   FetchResult,
   SchemaQuery,
   SubscriptionSignalPayload,
+  EnabledSubscriptionOptions,
+  getDisabledSubscriptionState,
+  isSubscriptionEnabled,
+  getInitialSubscriptionState,
 } from '@triplit/client';
 import { WorkerClient } from '@triplit/client/worker-client';
 
@@ -45,15 +48,15 @@ export function createStateSubscription<
 >(
   client: TriplitClient<M> | WorkerClient<M>,
   query: Q,
-  options?: Partial<SubscriptionOptions>
+  options?: Partial<EnabledSubscriptionOptions>
 ) {
-  let latestValue: SubscriptionSignalPayload<M, Q> = {
-    results: undefined,
-    fetching: true,
-    fetchingLocal: true,
-    fetchingRemote: false,
-    error: undefined,
-  };
+  if (!isSubscriptionEnabled(options)) {
+    const disabledState = getDisabledSubscriptionState<M, Q>();
+    return [() => () => {}, () => disabledState] as const;
+  }
+
+  let latestValue: SubscriptionSignalPayload<M, Q> =
+    getInitialSubscriptionState();
   return [
     (callback: () => void) => {
       return client.subscribeWithStatus(
@@ -82,12 +85,12 @@ export function createStateSubscription<
 export function useQuery<M extends Models<M>, Q extends SchemaQuery<M>>(
   client: TriplitClient<M> | WorkerClient<M>,
   query: Q,
-  options?: Partial<SubscriptionOptions>
-) {
+  options?: Partial<EnabledSubscriptionOptions>
+): SubscriptionSignalPayload<M, Q> {
   const stringifiedQuery = query && JSON.stringify(query);
   const [subscribe, snapshot] = useMemo(
     () => createStateSubscription(client, query, options),
-    [stringifiedQuery, client, options?.localOnly!!]
+    [stringifiedQuery, client, options?.localOnly!!, options?.enabled]
   );
   const getServerSnapshot = useCallback(() => {
     return snapshot();
@@ -110,7 +113,7 @@ export function usePaginatedQuery<
 >(
   client: TriplitClient<M> | WorkerClient<M>,
   query: Q,
-  options?: Partial<SubscriptionOptions>
+  options?: Partial<EnabledSubscriptionOptions>
 ): usePaginatedQueryPayload<M, Q> {
   const [hasNextPage, setHasNextPage] = useState(false);
   const [hasPreviousPage, setHasPreviousPage] = useState(false);
@@ -193,7 +196,7 @@ export function usePaginatedQuery<
 export function useInfiniteQuery<M extends Models<M>, Q extends SchemaQuery<M>>(
   client: TriplitClient<M> | WorkerClient<M>,
   query: Q,
-  options?: Partial<SubscriptionOptions>
+  options?: Partial<EnabledSubscriptionOptions>
 ): useInfiniteQueryPayload<M, Q> {
   const stringifiedQuery = query && JSON.stringify(query);
   const [hasMore, setHasMore] = useState(false);
