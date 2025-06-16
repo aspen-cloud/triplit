@@ -6,3 +6,4 @@ export * from './sync-engine.js';
 export * from './errors.js';
 export type * from './types.js';
 export type * from './@triplit/types/sync.js';
+export * from './subscription-utils.js';
