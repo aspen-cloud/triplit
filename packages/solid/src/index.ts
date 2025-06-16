@@ -1,11 +1,16 @@
 import { createSignal, createEffect, onCleanup, Accessor } from 'solid-js';
-import {
-  TriplitClient,
-  SubscriptionOptions,
+import type {
   ConnectionStatus,
   Models,
   SchemaQuery,
   FetchResult,
+  EnabledSubscriptionOptions,
+} from '@triplit/client';
+import {
+  TriplitClient,
+  getInitialState,
+  getDisabledSubscriptionState,
+  isSubscriptionEnabled,
 } from '@triplit/client';
 import { WorkerClient } from '@triplit/client/worker-client';
 
@@ -24,21 +29,38 @@ import { WorkerClient } from '@triplit/client/worker-client';
 export function useQuery<M extends Models<M>, Q extends SchemaQuery<M>>(
   client: TriplitClient<M> | WorkerClient<M>,
   query: Q,
-  options?: Accessor<Partial<SubscriptionOptions>>
+  options?: Accessor<Partial<EnabledSubscriptionOptions>>
 ) {
+  const currentOptions = options ? options() : undefined;
+  const initialState = getInitialState<M, Q>(currentOptions);
+
   const [results, setResults] = createSignal<
     FetchResult<M, Q, 'many'> | undefined
-  >(undefined);
-  const [fetching, setFetching] = createSignal<boolean>(true);
-  const [fetchingLocal, setFetchingLocal] = createSignal<boolean>(true);
-  const [fetchingRemote, setFetchingRemote] = createSignal<boolean>(false);
-  const [error, setError] = createSignal<Error | undefined>(undefined);
+  >(initialState.results);
+  const [fetching, setFetching] = createSignal<boolean>(initialState.fetching);
+  const [fetchingLocal, setFetchingLocal] = createSignal<boolean>(
+    initialState.fetchingLocal
+  );
+  const [fetchingRemote, setFetchingRemote] = createSignal<boolean>(
+    initialState.fetchingRemote
+  );
+  const [error, setError] = createSignal<Error | undefined>(initialState.error);
   const [querySignal, setQuery] = createSignal<Q>(query); // Ensure we can track query changes
 
   createEffect(() => {
     const currentClient = client;
     const currentQuery = querySignal();
     const currentOptions = options ? options() : undefined;
+
+    if (!isSubscriptionEnabled(currentOptions)) {
+      const disabledState = getDisabledSubscriptionState<M, Q>();
+      setResults(disabledState.results);
+      setFetching(disabledState.fetching);
+      setFetchingLocal(disabledState.fetchingLocal);
+      setFetchingRemote(disabledState.fetchingRemote);
+      setError(disabledState.error);
+      return;
+    }
 
     // Reset state when query/client/options change before subscribing
     setResults(undefined);

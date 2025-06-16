@@ -1,10 +1,15 @@
 import { reactive, watchEffect } from 'vue';
 import type {
   Models,
-  SubscriptionOptions,
   TriplitClient,
   SchemaQuery,
   SubscriptionSignalPayload,
+  EnabledSubscriptionOptions,
+} from '@triplit/client';
+import {
+  getInitialState,
+  getDisabledSubscriptionState,
+  isSubscriptionEnabled,
 } from '@triplit/client';
 import { WorkerClient } from '@triplit/client/worker-client';
 
@@ -20,17 +25,19 @@ import { WorkerClient } from '@triplit/client/worker-client';
 export function useQuery<M extends Models<M>, Q extends SchemaQuery<M>>(
   client: TriplitClient<M> | WorkerClient<M>,
   query: Q,
-  options?: Partial<SubscriptionOptions>
+  options?: Partial<EnabledSubscriptionOptions>
 ) {
-  const state = reactive<SubscriptionSignalPayload<M, Q>>({
-    results: undefined,
-    fetching: true,
-    fetchingLocal: true,
-    fetchingRemote: false,
-    error: undefined,
-  });
+  const initialState = getInitialState<M, Q>(options);
+
+  const state = reactive<SubscriptionSignalPayload<M, Q>>(initialState);
 
   watchEffect((onCleanup) => {
+    if (!isSubscriptionEnabled(options)) {
+      const disabledState = getDisabledSubscriptionState<M, Q>();
+      Object.assign(state, disabledState);
+      return;
+    }
+
     const unsubscribe = client.subscribeWithStatus(
       query,
       (newResults) => {

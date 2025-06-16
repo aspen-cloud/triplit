@@ -1,13 +1,15 @@
 import {
   FetchResult,
   Models,
-  SubscriptionOptions,
   TriplitClient,
   SchemaQuery,
   SubscriptionSignalPayload,
+  EnabledSubscriptionOptions,
+  getDisabledSubscriptionState,
+  isSubscriptionEnabled,
 } from '@triplit/client';
 import { WorkerClient } from '@triplit/client/worker-client';
-import { BehaviorSubject, Observable, switchMap, shareReplay } from 'rxjs';
+import { BehaviorSubject, Observable, switchMap, shareReplay, of } from 'rxjs';
 
 type WrapObservable<T> = {
   [K in keyof T & string as `${K}$`]: Observable<T[K]>;
@@ -17,7 +19,7 @@ export function createQuery<M extends Models<M>, Q extends SchemaQuery<M>>(
   queryFn: () => {
     client: TriplitClient<M> | WorkerClient<M>;
     query: Q;
-    options?: Partial<SubscriptionOptions>;
+    options?: Partial<EnabledSubscriptionOptions>;
   }
 ): WrapObservable<SubscriptionSignalPayload<M, Q>> {
   const queryParams$ = new BehaviorSubject(queryFn());
@@ -30,6 +32,16 @@ export function createQuery<M extends Models<M>, Q extends SchemaQuery<M>>(
   const results$ = queryParams$.pipe(
     switchMap((params) => {
       const { client, query, options } = params;
+      
+      if (!isSubscriptionEnabled(options)) {
+        const disabledState = getDisabledSubscriptionState<M, Q>();
+        fetchingLocalSubject.next(disabledState.fetchingLocal);
+        fetchingRemoteSubject.next(disabledState.fetchingRemote);
+        fetchingSubject.next(disabledState.fetching);
+        errorSubject.next(disabledState.error);
+        return of(disabledState.results);
+      }
+
       fetchingLocalSubject.next(true);
       fetchingRemoteSubject.next(false);
       fetchingSubject.next(true);
@@ -85,7 +97,7 @@ export function createPaginatedQuery<
   queryFn: () => {
     client: TriplitClient<M> | WorkerClient<M>;
     query: Q;
-    options?: Partial<SubscriptionOptions>;
+    options?: Partial<EnabledSubscriptionOptions>;
   }
 ): createPaginatedQueryPayload<M, Q> {
   const queryParams$ = new BehaviorSubject(queryFn());
@@ -172,7 +184,7 @@ export function createInfiniteQuery<
   queryFn: () => {
     client: TriplitClient<M> | WorkerClient<M>;
     query: Q;
-    options?: Partial<SubscriptionOptions>;
+    options?: Partial<EnabledSubscriptionOptions>;
   }
 ): createInfiniteQueryPayload<M, Q> {
   const queryParams$ = new BehaviorSubject(queryFn());
