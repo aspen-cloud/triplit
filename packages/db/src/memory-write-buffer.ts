@@ -92,6 +92,8 @@ export function isEmpty(obj: any) {
   return true;
 }
 
+// TODO: give this a better name, or fix the logic
+// Currently this will return `true` for an object like { a: new Set([1,2,3]) } ... is that correct? Because that doesnt seem empty
 export function deepIsEmpty(obj: any) {
   for (const prop in obj) {
     if (Object.hasOwn(obj, prop)) {

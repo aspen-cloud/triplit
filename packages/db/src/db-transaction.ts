@@ -186,14 +186,7 @@ export class DBTransaction<M extends Models<M> = Models> {
     } else {
       changes = update;
     }
-    // doing this "deeply" because property accessions of
-    // nested objects (including sets) will create empty objects
-    // in the changeset that will be throw errors in the
-    // schema validation process
-    // TODO: is this right if you want to clear an object ... I guess you cant delete the id?
-    if (deepIsEmpty(changes)) {
-      return;
-    }
+
     if ('id' in changes) {
       throw new InvalidOperationError(
         `Attempted to update the id of an entity in the ${collectionName} to ${changes.id}. The 'id' attribute of an entity is immutable and cannot be updated.`
@@ -205,6 +198,16 @@ export class DBTransaction<M extends Models<M> = Models> {
     changes = collectionSchema
       ? Type.encode(collectionSchema, changes)
       : changes;
+
+    // doing this "deeply" because property accessions of
+    // nested objects (including sets) will create empty objects
+    // in the changeset that will be throw errors in the
+    // schema validation process
+    // TODO: is this right if you want to clear an object ... I guess you cant delete the id?
+    if (deepIsEmpty(changes)) {
+      return;
+    }
+
     if (currentUpdate) {
       changes = deepObjectAssign({}, currentUpdate, changes);
     }

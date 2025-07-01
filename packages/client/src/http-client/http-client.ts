@@ -212,6 +212,9 @@ export class HttpClient<M extends Models<M> = Models> {
     } else {
       changes = update;
     }
+    changes = collectionSchema
+      ? Type.encode(collectionSchema, changes)
+      : changes;
     const { data, error } = await this.sendRequest('/update', 'POST', {
       collectionName,
       entityId: id,

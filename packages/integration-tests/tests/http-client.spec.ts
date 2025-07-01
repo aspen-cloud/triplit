@@ -603,7 +603,7 @@ it('fetch can properly deserialize subqueries without schema', async () => {
   expect(relMany.find((e) => e.id === 'rel2')).toEqual(expectedRel2);
 });
 
-it('update properly updates an entity', async () => {
+it('update properly updates an entity (functional api)', async () => {
   const schema = {
     collections: {
       test: {
@@ -640,6 +640,46 @@ it('update properly updates an entity', async () => {
     id: 'test1',
     name: 'b',
     date: new Date(2023, 1, 2),
+  });
+});
+
+it('update properly updates an entity (patch api)', async () => {
+  const schema = {
+    collections: {
+      test: {
+        schema: S.Schema({
+          id: S.Id(),
+          name: S.String(),
+          items: S.Set(S.String()),
+        }),
+      },
+    },
+  };
+  await using server = await tempTriplitServer({
+    serverOptions: { dbOptions: { schema }, jwtSecret: jwtSecret },
+  });
+  const { port } = server;
+  const client = new HttpClient({
+    serverUrl: `http://localhost:${port}`,
+    token: serviceToken,
+    schema: schema.collections,
+  });
+  await client.insert('test', {
+    id: 'test1',
+    name: 'a',
+    items: new Set(['item1', 'item2']),
+  });
+
+  await client.update('test', 'test1', {
+    name: 'b',
+    items: new Set(['item3']),
+  });
+
+  const result = await client.fetchById('test', 'test1');
+  expect(result).toEqual({
+    id: 'test1',
+    name: 'b',
+    items: new Set(['item1', 'item2', 'item3']),
   });
 });
 

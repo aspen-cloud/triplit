@@ -279,6 +279,16 @@ describe('updates', () => {
       })
     ).rejects.toThrowError(DBSerializationError);
   });
+
+  it('can update a set with patch update', async () => {
+    const db = new DB({ schema });
+    await db.insert('Users', defaultUser);
+    await db.update('Users', 'user-1', {
+      friends: new Set(['Diane']),
+    });
+    const result = await db.fetchById('Users', 'user-1');
+    expect([...result!.friends.values()]).toEqual(['Bob', 'Charlie', 'Diane']);
+  });
 });
 
 it('can create sets with different types', async () => {

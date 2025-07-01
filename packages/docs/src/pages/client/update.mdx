@@ -4,14 +4,71 @@ description: How to use the TriplitClient update method to mutate data.
 
 # update
 
-`update()` updates an existing record in a collection. For example:
+`update()` updates an existing record in a collection.
+
+## Functional update
+
+You can perform a functional update by passing a function that receives the current entity as an argument and assign values to it as you would a normal object. This is useful for complex updates:
 
 ```typescript
 await client.update('employee', 'Fry', async (entity) => {
   entity.name = 'Philip J. Fry';
+  entity.age += 1;
+  entity.coworkers.add('Bender');
 });
 ```
 
 If possible, `update` will look at the schema you have provided to provide proper type hints for interacting with you data. If no schema is provided, all fields are treated as `any`.
 
 See [here](/schemas/types) for more information on data types.
+
+## Patch update
+
+You can also perform a patch update by passing an object with the fields you want to update. This is useful for simple updates:
+
+```typescript
+await client.update('employee', 'Fry', {
+  name: 'Philip J. Fry',
+  age: 30,
+  coworkers: new Set(['Bender']),
+});
+```
+
+### Limitaitons
+
+A patch is just a JSON object, which makes it difficult to differentiate between an overwrite and key assignments. Triplit will assume you intend to merge data when using complex types like `Set` or `Record`.
+
+```typescript
+await client.insert('employee', {
+  id: 'Fry',
+  name: 'Philip J. Fry',
+  address: {
+    street: '123 Main St',
+    city: 'New York',
+    state: 'NY',
+  },
+  coworkers: new Set(['Bender']),
+});
+
+await client.update('employee', 'Fry', {
+  address: {
+    street: 'Apartment 00100100',
+    city: 'New New York',
+  },
+  coworkers: new Set(['Leela']),
+});
+
+// The above will result in the following data:
+// {
+//   id: 'Fry',
+//   name: 'Philip J. Fry',
+//   address: {
+//     street: 'Apartment 00100100',
+//     city: 'New New York',
+//     state: 'NY' // This will not be overwritten because it was not included in the patch update
+//   },
+//   coworkers: new Set(['Bender', 'Leela']) // This will merge the two
+// }
+```
+
+For more complex updates, you can use the functional update method, which will properly overwrite data if you assign directly to a property.
