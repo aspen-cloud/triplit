@@ -211,7 +211,10 @@ export class DBTransaction<M extends Models<M> = Models> {
     collectionChanges.sets.set(id, changes);
   }
 
-  async delete(collectionName: string, id: string) {
+  async delete<CN extends CollectionNameFromModels<M>>(
+    collectionName: CN,
+    id: string
+  ) {
     if (!collectionName) {
       throw new InvalidCollectionNameError(collectionName);
     }

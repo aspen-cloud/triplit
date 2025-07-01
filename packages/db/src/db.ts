@@ -486,8 +486,8 @@ export class DB<
     );
   }
 
-  async delete(
-    collectionName: string,
+  async delete<CN extends CollectionNameFromModels<M>>(
+    collectionName: CN,
     id: string,
     options?: EntityWriteOptions
   ): Promise<void> {
