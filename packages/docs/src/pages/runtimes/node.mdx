@@ -42,3 +42,30 @@ process.on('SIGINT', function () {
   });
 });
 ```
+
+## Server side clients
+
+Although the Triplit client is typically used in the browser, it can also be used in Node.js.
+
+### Node websockets
+
+A Triplit client relies on the existence of a [WebSocket API](https://developer.mozilla.org/en-US/docs/Web/API/WebSockets_API) in the environment it is running in. Since Node.js v21, the WebSocket API is available natively. For this reason we recommend using Node.js v21 or later to run the Triplit client in Node.js.
+
+#### Node.js v23 or before
+
+Although the websocket API is available in Node.js after v21, it was released with some [different behavior](https://github.com/nodejs/undici/issues/3546) from browser implementations. However, you can install a newer version of [undici](https://github.com/nodejs/undici) to get a more compliant WebSocket API in Node.js v23 or earlier:
+
+```bash
+npm install undici@^7
+```
+
+And in your app, you can override the global WebSocket with the one from undici:
+
+```javascript
+import { WebSocket as UWebSocket } from 'undici';
+globalThis.WebSocket = UWebSocket;
+```
+
+#### Node.js v24 or later
+
+You can use the native WebSocket API in Node.js v24 or later without any additional setup.

@@ -179,6 +179,16 @@ module.exports = function (api) {
 };
 ```
 
+#### Configure a development build
+
+If you are using Expo Go, you can skip this step. However, if you are building a custom [development build](https://docs.expo.dev/develop/development-builds/introduction/) of your app, you will also need to perform the following steps to ensure Triplit works correctly:
+
+1. Install `expo-crypto`
+
+```bash
+npx expo install expo-crypto
+```
+
 ### Local development
 
 When running a local development server on your machine, it will be running at `localhost`. However if you are running your app on a physical device (ie your phone with the Expo Go app or a custom build) you will need to change the `localhost` to your machine's IP address. You can find your IP address by running `ipconfig getifaddr en0` in your terminal. So a URL `http://localhost:<port>` would become `http://<your-ip>:<port>`.
