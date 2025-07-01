@@ -1762,3 +1762,38 @@ describe('Variable filters', () => {
     });
   });
 });
+
+// Fix for https://github.com/aspen-cloud/triplit/issues/379
+// Ended up being a VAC issue (when a key is null), but we dont have VAC unit tests so putting it here
+it('BUG FIX: null relational keys dont cause misloading relationships', async () => {
+  const schema = S.Collections({
+    branches: {
+      schema: S.Schema({
+        id: S.String(),
+        branch_id: S.String({ nullable: true }),
+      }),
+      relationships: {
+        branches: S.RelationMany('branches', {
+          where: [['branch_id', '=', '$id']],
+        }),
+      },
+    },
+  });
+  const db = new DB({ schema: { collections: schema } });
+  await db.transact(async (tx) => {
+    await tx.insert('branches', { id: 'a', branch_id: null });
+    await tx.insert('branches', { id: 'b', branch_id: 'a' });
+  });
+  const query = db.query('branches').Id('a').Include('branches');
+  const result = await db.fetchOne(query);
+  expect(result).toEqual({
+    id: 'a',
+    branch_id: null,
+    branches: [
+      {
+        id: 'b',
+        branch_id: 'a',
+      },
+    ],
+  });
+});

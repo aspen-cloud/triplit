@@ -3,6 +3,7 @@ import { isIndexableFilter, isStaticFilter } from './filters.js';
 import { OrderStatement, PreparedQuery, PreparedWhere } from './types.js';
 import { FilterStatement } from './query/types/index.js';
 import { ViewEntity } from './query-engine.js';
+import { compareValue } from './codec.js';
 
 export class VariableAwareCache {
   static canCacheQuery(query: PreparedQuery) {
@@ -32,26 +33,14 @@ export class VariableAwareCache {
         val,
         (ent) => ent.data[prop],
         'start',
-        (a, b) => {
-          if (op === '<') return a < b ? 0 : 1;
-          if (op === '<=') return a <= b ? 0 : 1;
-          if (op === '>') return a > b ? 0 : -1;
-          if (op === '>=') return a >= b ? 0 : -1;
-          return a === b ? 0 : a < b ? -1 : 1;
-        }
+        compareValue
       );
       end = binarySearch(
         viewResults,
         val,
         (ent) => ent.data[prop],
         'end',
-        (a, b) => {
-          if (op === '<') return a < b ? 0 : 1;
-          if (op === '<=') return a <= b ? 0 : 1;
-          if (op === '>') return a > b ? 0 : -1;
-          if (op === '>=') return a >= b ? 0 : -1;
-          return a === b ? 0 : a < b ? -1 : 1;
-        }
+        compareValue
       );
     }
     if (op === '!=') {
@@ -60,18 +49,14 @@ export class VariableAwareCache {
         val,
         (ent) => ent.data[prop],
         'start',
-        (a, b) => {
-          return a === b ? 0 : a < b ? -1 : 1;
-        }
+        compareValue
       );
       end = binarySearch(
         viewResults,
         val,
         (ent) => ent.data[prop],
         'end',
-        (a, b) => {
-          return a === b ? 0 : a < b ? -1 : 1;
-        }
+        compareValue
       );
       const resultEntries = [
         ...viewResults.slice(0, start + 1),
