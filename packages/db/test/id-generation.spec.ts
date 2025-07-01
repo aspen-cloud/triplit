@@ -9,7 +9,7 @@ describe('default id generation', () => {
       const schema = S.Schema({
         id: S.Id({ format: idType }),
       });
-      await tryPreloadingOptionalDeps(['uuidv7'], { strict: true });
+      await tryPreloadingOptionalDeps();
       const db = new DB({ schema: { collections: { test: { schema } } } });
       const resp = await db.insert('test', {});
       expect(resp.id).toBeDefined();
