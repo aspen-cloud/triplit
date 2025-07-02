@@ -1,5 +1,14 @@
 # @triplit/entity-db
 
+## 1.1.6
+
+### Patch Changes
+
+- ca79a3e9: Fixup VAC comparisons to handle optional values
+- e2a8f9ca: Handle various environemnts with optional dep loading
+- 2aa7a8c8: Fixup patch update to handle sets and other serialized data
+- 662dbd18: Fixup type inference on delete
+
 ## 1.1.5
 
 ### Patch Changes

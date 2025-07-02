@@ -1,5 +1,13 @@
 # angular-template
 
+## 1.0.46
+
+### Patch Changes
+
+- Updated dependencies [2aa7a8c8]
+  - @triplit/client@1.0.45
+  - @triplit/angular@1.0.45
+
 ## 1.0.45
 
 ### Patch Changes

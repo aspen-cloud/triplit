@@ -1,5 +1,16 @@
 # @triplit/client
 
+## 1.0.45
+
+### Patch Changes
+
+- 2aa7a8c8: Fixup patch update to handle sets and other serialized data
+- Updated dependencies [ca79a3e9]
+- Updated dependencies [e2a8f9ca]
+- Updated dependencies [2aa7a8c8]
+- Updated dependencies [662dbd18]
+  - @triplit/db@1.1.6
+
 ## 1.0.44
 
 ### Patch Changes
