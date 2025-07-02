@@ -3,7 +3,7 @@ import { isIndexableFilter, isStaticFilter } from './filters.js';
 import { OrderStatement, PreparedQuery, PreparedWhere } from './types.js';
 import { FilterStatement } from './query/types/index.js';
 import { ViewEntity } from './query-engine.js';
-import { compareValue } from './codec.js';
+import { compareValue, Value } from './codec.js';
 
 export class VariableAwareCache {
   static canCacheQuery(query: PreparedQuery) {
@@ -33,14 +33,14 @@ export class VariableAwareCache {
         val,
         (ent) => ent.data[prop],
         'start',
-        compareValue
+        safeCompareValue
       );
       end = binarySearch(
         viewResults,
         val,
         (ent) => ent.data[prop],
         'end',
-        compareValue
+        safeCompareValue
       );
     }
     if (op === '!=') {
@@ -49,14 +49,14 @@ export class VariableAwareCache {
         val,
         (ent) => ent.data[prop],
         'start',
-        compareValue
+        safeCompareValue
       );
       end = binarySearch(
         viewResults,
         val,
         (ent) => ent.data[prop],
         'end',
-        compareValue
+        safeCompareValue
       );
       const resultEntries = [
         ...viewResults.slice(0, start + 1),
@@ -149,4 +149,11 @@ function binarySearch<T, V>(
     }
   }
   return result;
+}
+
+function safeCompareValue(a: Value | undefined, b: Value | undefined): number {
+  if (a === undefined && b === undefined) return 0;
+  if (a === undefined) return -1;
+  if (b === undefined) return 1;
+  return compareValue(a, b);
 }
