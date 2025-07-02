@@ -1,5 +1,11 @@
 # @triplit/entity-db
 
+## 1.1.7
+
+### Patch Changes
+
+- bf954205: Handle undefined in VAC comps
+
 ## 1.1.6
 
 ### Patch Changes
