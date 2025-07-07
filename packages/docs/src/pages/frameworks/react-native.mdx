@@ -2,7 +2,7 @@
 description: Learn how configure React Native with Expo to use Triplit in your mobile app.
 ---
 
-import { Tabs, Tab, Callout } from 'nextra-theme-docs';
+import { Tabs, Tab, Callout, Steps } from 'nextra-theme-docs';
 
 # React Native
 
@@ -12,7 +12,8 @@ React Native is the best way to run Triplit on a mobile app. The hooks available
 
 If you are using Expo to setup your React Native project, you can follow these steps to get Triplit up and running.
 
-### 1. Create an Expo project and install Triplit
+<Steps>
+### Create an Expo project and install Triplit
 
 Create your expo project:
 
@@ -56,7 +57,7 @@ Next, install Triplit's packages:
     </Tab>
 </Tabs>
 
-### 2. Configure polyfills
+### Configure polyfills
 
 Triplit was originally built to run in web browsers, so a few APIs are used in some core packages and dependencies that are not in the ECMAScript spec that Hermes implements. So you will need to add some polyfills to your project.
 
@@ -73,7 +74,7 @@ import 'expo-router/entry';
 // The rest of your entry file
 ```
 
-### 3. Use React hooks
+### Use React hooks
 
 Triplit's [React](/frameworks/react) hooks are also exported via `@triplit/react-native`, so you can use them in your components just like you would in a web app.
 
@@ -188,6 +189,8 @@ If you are using Expo Go, you can skip this step. However, if you are building a
 ```bash
 npx expo install expo-crypto
 ```
+
+</Steps>
 
 ### Local development
 

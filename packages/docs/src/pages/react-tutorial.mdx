@@ -105,13 +105,6 @@ npx triplit dev
 
 This will start the sync server at `http://localhost:6543` and a database console at `https://console.triplit.dev/local`. It will also output API tokens that your app will use to connect to the sync server.
 
-<Callout emoji="💡">
-  If you're using our hosted service, Triplit Cloud, you can use the API tokens
-  and url shown on the [dashboard](https://triplit.dev/dashboard) for your
-  project page. The instructions in the rest of this tutorial are the same
-  whether you're using Triplit Cloud or running the sync server locally.
-</Callout>
-
 Now's a good time to set up an `.env` file in the `todos` directory. This file will contain the API tokens that your app will use to connect to the sync server. Create a new file called `.env` in the `todos` directory and add the following:
 
 ```bash filename=".env" copy
@@ -137,8 +130,8 @@ We're basically done setting up Triplit. Now we can start building the app.
 
 <Callout emoji="💡">
   The development server automatically loads your schema on startup. If you're
-  using Triplit Cloud, run `npx triplit schema push` to make the remote server
-  aware of the schema you've defined.
+  not running a local server, run `npx triplit schema push` to make the remote
+  server aware of the schema you've defined.
 </Callout>
 
 ## Building the app
@@ -514,9 +507,10 @@ We've built a simple Todos app with React, Vite and Triplit. We've learned how t
 And there are still a lot of things that we haven't covered.
 
 - The rest of Triplit's [query API](/query) to select, filter and paginate data
-- Triplit's [access control rules](/schemas/rules) to control who can read and write data
+- Triplit's [access control rules](/schemas/permissions) to control who can read and write data
 - Triplit's [transaction API](/client/transact)
 - Triplit's [relational API](/schemas/relations) to establish relationships between collections and then [select data across those relationships](/query/select#selecting-related-entities)
 - The various [storage options](/client/storage) for your Triplit client's cache
+- How to [self-host Triplit](/self-hosting)
 
 If you have any questions, feel free to reach out to us on [Discord](https://discord.gg/q89sGWHqQ5) or [Twitter](https://twitter.com/triplit_dev).

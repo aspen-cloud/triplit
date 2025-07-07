@@ -1,0 +1,11 @@
+# Docker
+
+Triplit publishes the following Docker images that run in the following environments:
+
+- [Node.js](https://hub.docker.com/r/aspencloud/triplit-server/tags)
+- [Bun](https://hub.docker.com/r/aspencloud/triplit-server-bun/tags)
+
+This will run a Triplit server with SQLite as a storage engine at port `8080` within the container. You may also pass in the following environment variables to configure the setup of the server process:
+
+- `NODE_OPTIONS` - Node.js [options](https://nodejs.org/api/cli.html) for the server
+  `docker run -e NODE_OPTIONS="--max-old-space-size=4096" -e LOCAL_DATABASE_URL="./app.db" aspencloud/triplit-server`

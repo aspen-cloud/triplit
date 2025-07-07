@@ -1,0 +1,69 @@
+import { Steps } from 'nextra/components';
+
+# Deploying to Fly.io
+
+Below are the steps to deploy your Triplit server on [Fly.io](https://fly.io/). If there are issues with your deployment, please see the [Fly.io documentation](https://fly.io/docs/languages-and-frameworks/dockerfile/) for the latest information.
+
+## Deploy your app
+
+<Steps>
+### Create a Fly.io account and install the Fly.io CLI
+
+The first thing you'll need is to create a Fly.io account and install the Fly.io CLI. You can create an account from Fly.io's [homepage](https://fly.io/) and you can install it by following the instructions on the [Fly.io installation page](https://fly.io/docs/flyctl/install/).
+
+### Launch your Fly.io application
+
+Now you're ready to deploy your Triplit server on Fly.io. You should create a directory for your application, though this will just be a container for Fly's configuration file. Inside your project folder, run the following command to initialize your Fly.io application:
+
+```bash
+fly launch \
+    --image aspencloud/triplit-server:latest \
+    --volume triplitdb:/mnt/triplitdb \
+    --volume-initial-size 5 \
+    # FILL ME IN, see docs on proper value of JWT_SECRET
+    --secret JWT_SECRET=<your-jwt-secret> \
+    --secret LOCAL_DATABASE_URL=/mnt/triplitdb/app.db
+```
+
+Additional useful options include:
+
+- `--image aspencloud/triplit-server:<version>`: Pin a specific version of the Triplit server. Change the value in your `fly.toml` as needed.
+- `--name <app-name>`: Specify a name for your application.
+- `--region <region>`: Specify a [region](https://fly.io/docs/reference/regions/) to deploy your application in.
+- `--no-deploy`: Prevents the application from being deployed immediately, allowing you to inspect the configuration first.
+
+All launch options can be found in the [Fly.io documentation](https://fly.io/docs/flyctl/launch/).
+
+This will create a `fly.toml` file in your project directory that defines your app [configuration](https://fly.io/docs/reference/configuration/).
+
+### Deploy your application
+
+If you didn't use the `--no-deploy` option, your application will already be deployed. If you did, you can deploy your application by running:
+
+```bash
+fly deploy
+```
+
+This is how you can continue to deploy your app in the future.
+
+### Test the server is up
+
+You can test if your server is up and running by sending a request to the Fly.io application URL. You can use `curl` or any HTTP client to send a request:
+
+```bash
+curl https://<your-app-name>.fly.dev/healthcheck
+```
+
+You should see a response from your Triplit server.
+
+### Configure additional environment variables
+
+Depending on your setup, you may need to configure additional environment variables for Triplit listed [here](/self-hosting#secrets). You can do this by running:
+
+```bash
+fly secrets set SECRET_1=value1 SECRET_2=value2 ...
+```
+
+These secrets will be available the next time you deploy your application. More info can be found in the [Fly.io documentation on secrets](https://fly.io/docs/flyctl/secrets/).
+
+</Steps>

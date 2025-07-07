@@ -1,0 +1,77 @@
+# Key and Token Generation
+
+This page will help you generate the keys needed to run a self-hosted Triplit server. You will need to generate a signing key and a public key, which are used to sign and verify tokens for authentication. This is unopinionated on where you store your keys.
+
+## RSA Key Generation
+
+```bash
+# 1. Create a 2048-bit RSA private key in PKCS#1 PEM
+ssh-keygen -t rsa -b 2048 -m PEM -f <keyname>.key
+
+# 2. Extract the matching public key in SPKI PEM
+ssh-keygen -e -m PKCS8 -f <keyname>.key > <keyname>.key.pub.pem
+```
+
+This creates a private key file `<keyname>.key` and a public key file `<keyname>.key.pub`. The second command will convert the private key to a public key in the SPKI format at `<keyname>.key.pub.pem`, which can be converted to a JSON Web Key.
+
+The value of the `JWT_SECRET` environment variable should be set to the contents of `<keyname>.key.pub.pem`.
+
+To generate a service and anon token, you can run the following script:
+
+```javascript
+// jose is also a servicible library for working with JWTs
+import jwt from 'jsonwebtoken';
+import fs from 'fs';
+
+const signingKey = fs.readFileSync('jwtRS256.key', { encoding: 'utf8' }).trim();
+const anonKey = jwt.sign(
+  {
+    'x-triplit-token-type': 'anon',
+  },
+  signingKey,
+  { algorithm: 'RS256' }
+);
+
+const serviceKey = jwt.sign(
+  {
+    'x-triplit-token-type': 'secret',
+  },
+  signingKey,
+  { algorithm: 'RS256' }
+);
+
+console.log('ANON_KEY:', anonKey);
+console.log('SERVICE_KEY:', serviceKey);
+```
+
+## HS256 Key Generation
+
+```bash
+# 1. Create a 256-bit HMAC key
+openssl rand -base64 32 > hs256.secret
+```
+
+This creates a file `hs256.secret` containing a random 256-bit HMAC key.
+
+The value of the `JWT_SECRET` environment variable should be set to the contents of this file.
+
+To generate a service and anon token, you can run the following script:
+
+```javascript
+// jose is also a servicible library for working with JWTs
+import jwt from 'jsonwebtoken';
+import fs from 'fs';
+
+const signingKey = fs.readFileSync('hs256.secret', { encoding: 'utf8' }).trim();
+const secret = new TextEncoder().encode(signingKey);
+
+const anonKey = jwt.sign({ 'x-triplit-token-type': 'anon' }, secret, {
+  algorithm: 'HS256',
+});
+const serviceKey = jwt.sign({ 'x-triplit-token-type': 'secret' }, secret, {
+  algorithm: 'HS256',
+});
+
+console.log('ANON_KEY:', anonKey);
+console.log('SERVICE_KEY:', serviceKey);
+```

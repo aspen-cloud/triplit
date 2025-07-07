@@ -1,0 +1,56 @@
+import { Steps, Callout } from 'nextra/components';
+
+# Deploying to Railway
+
+Below are the steps to deploy your Triplit server on [Railway](https://railway.app/). If there are issues with your deployment, please see the [Railway documentation](https://docs.railway.com/quick-start) for the latest information.
+
+Railway does have a free tier but it is very limited. We recommend using the Hobby plan at minimum.
+
+## One Click Deploy
+
+You can deploy your Triplit server to Railway with a single click using the following button:
+
+<Callout>
+  Please ensure you set the `JWT_SECRET` to your own secret value. If you forget
+  to, it can be overriden at anytime. More information on generating a JWT
+  secret can be found. [here](/self-hosting/key-gen).
+</Callout>
+
+[![Deploy on Railway](https://railway.app/button.svg)](https://railway.app/template/UnVh5f)
+This will create a new Railway project with the Triplit server pre-configured. You will need at minimum a Hobby plan to deploy from a template. Please ensure you set the `JWT_SECRET` to your own secret value.
+
+## Manual Deployment (Dashboard)
+
+<Steps>
+### Create a Railway account
+
+Go to [Railway](https://railway.app/) and create an account if you don't have one already. Railway does have a free tier but it is very limited. We recommend using the Hobby plan at minimum.
+
+### Create a new service from the Triplit Docker image
+
+Follow the steps to create a service from a docker image in the [Railway documentation](https://docs.railway.com/quick-start#deploying-your-project---from-a-docker-image), using `aspencloud/triplit-server:latest` as the docker image.
+
+### Add a volume to your service
+
+Create a volume by following the steps in the [Railway documentation](https://docs.railway.com/guides/volumes#creating-a-volume). Set the mount path to `/mnt/triplitdb`, or any other path you prefer.
+
+### Configure environment variables
+
+You may see logs that your service is not running or failing, this is expected as you need to configure the environment variables first.
+
+- Set `JWT_SECRET` to your desired JWT secret (see [here](/self-hosting/key-gen) for more information).
+- Set `LOCAL_DATABASE_URL` to `/mnt/triplitdb/app.db` (or any other path you prefer, but make sure it matches the mount path of your volume).
+
+### Expose your service
+
+Expose a public URL by following the steps in the [Railway documentation](https://docs.railway.com/guides/public-networking#railway-provided-domain).
+
+### Test your server is up
+
+Test your server is up by sending a request to the Railway application URL. You can use `curl` or any HTTP client to send a request:
+
+```bash
+curl https://<railway-domain>/healthcheck
+```
+
+</Steps>

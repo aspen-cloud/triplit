@@ -1,0 +1,121 @@
+---
+description: Learn the basics of how to self-host Triplit.
+---
+
+import { Callout } from 'nextra/components';
+
+# Self-hosting Triplit
+
+## Docker Image
+
+Each release of the server is published as a Docker image, which acts as the basis for most self hosted deploys. For more information on the docker image, see the [Docker section](/self-hosting/docker).
+
+## General steps to self-host
+
+To self-host Triplit, you will need to follow these general steps:
+
+1. **Choose a hosting platform**: You can self-host Triplit on any platform that supports Docker, such as AWS, GCP, Azure, DigitalOcean, or even your own server.
+2. **Deploy the Triplit server**: You can deploy the Triplit server using the Docker image `aspencloud/triplit-server:latest`.
+3. **Setup some file storage**: You will need to set up file storage for the server so your data can persist across server restarts. Typically this is done by mounting a volume on the server.
+4. **Configure the server**: You will need to configure the server with the necessary environment variables, such as `JWT_SECRET`, `LOCAL_DATABASE_URL`, and others. See the [configuration section](/self-hosting#configuration) for more information.
+5. **Expose the server**: You will need to expose the server to the internet so that clients can connect to it.
+6. **Test the server**: You can test the server by sending a request to the `/healthcheck` endpoint to ensure it is running and healthy.
+
+Guides for specific platforms are available in the [platform guides](/self-hosting/platform-guides) section.
+
+## Health checks
+
+The server exposes a health check endpoint at `/healthcheck`. This endpoint will return a 200 status code if the server is running and healthy.
+
+## Configuration
+
+There are a few configuration options that you need to provide to the server to enable certain features. These are generally passed as environemnt variables or secrets to your server.
+
+### `JWT_SECRET` (required)
+
+The server uses JWT tokens to authenticate clients, and you need to provide a symmetric secret or public key to verify these tokens that it receives. See the [key generation guide](/self-hosting/key-gen) for more information on how to generate these keys and proper values for the `JWT_SECRET` environment variable.
+
+For external JWTs (ie those issued by a different service like Auth0, etc), refer to our [authentication guide](/auth).
+
+### `LOCAL_DATABASE_URL` (required for durable storage)
+
+An absolute path on the server's file system to the database file where the server will store any database files. This is required for durable storage options: `lmdb`, and `sqlite`. For example, you can set this to `/mnt/triplitdb/app.db` for `sqlite`.
+
+### `EXTERNAL_JWT_SECRET` (optional)
+
+If you want your server to support JWTs signed by a second issuer, you can also set `EXTERNAL_JWT_SECRET` to that signing secret (or public key). For the server to recognize a JWT as "external", it must **not** have the `x-triplit-token-type` claim or if that claim is set, it must **not** have the value of `anon` or `secret`. Those specific combinations of claims are reserved for "internal" JWTs, e.g. the special `anon` and `secret` tokens.
+
+### `CLAIMS_PATH` (optional)
+
+If you are using custom JWTs with nested Triplit-related claims, you can set the `CLAIMS_PATH` environment variable. The server will read the claims at the path specified by `CLAIMS_PATH`. Read the [authentication guide](/auth) for more information.
+
+### `SENTRY_DSN` (optional)
+
+If you want to log errors to Sentry, you can set the `SENTRY_DSN` environment variable. The server will automatically log errors to Sentry.
+
+### `VERBOSE_LOGS` (optional)
+
+If you want to log all incoming and outgoing messages and requests, you can set the `VERBOSE_LOGS` environment variable. This can be useful for debugging.
+
+#### `MAX_BODY_SIZE` (optional)
+
+If you want to increase the maximum body size for incoming requests, you can set the `MAX_BODY_SIZE` environment variable. This is useful if you want to send large payloads to your server. The default value is 100, corresponding to 100MB.
+
+## Building a custom server
+
+The server is published as an NPM package, and you can install it by running:
+
+```bash copy
+npm install @triplit/server
+```
+
+The server also contains the remote Triplit database, which will persist data synced from your clients. The server supports different storage adapters, such as SQLite. Using the `createServer` function, you can create and configure a new server instance:
+
+```js filename="run.js" copy
+import { createServe, createTriplitStorageProvider } from '@triplit/server';
+
+const port = +(process.env.PORT || 8080);
+
+const startServer = createServer({
+  storage: await createTriplitStorageProvider('sqlite'),
+  verboseLogs: true,
+});
+
+const dbServer = startServer(port);
+
+console.log('running on port', port);
+process.on('SIGINT', function () {
+  dbServer.close(() => {
+    console.log('Shutting down server... ');
+    process.exit();
+  });
+});
+```
+
+### Storage
+
+Triplit is designed to support any storage that can implement a key value store. The Docker image runs a SQLite server, but you may specify the storage adapter you want to use by setting the `storage` option with a custom server. Triplit provides some default configurations of our storage adapters, which you can use by setting the `storage` option to the appropriate string value for the adapter. These include:
+
+- `memory` (default) - An in memory storage adapter, which is not durable and will not persist data across server restarts.
+- `sqlite` - An SQLite storage adapter, which requires the installation of the [`better-sqlite3` package](https://github.com/WiseLibs/better-sqlite3)
+- `lmdb` - An LMDB storage adapter, which requires the installation of the [`lmdb` package](https://github.com/kriszyp/lmdb-js)
+
+<Callout type="warning" emoji="⚠️">
+  In-memory storage adapters are not durable and are not recommended for
+  production use. It is the default, so please ensure you set that option if you
+  need durability.
+</Callout>
+
+Typically this will use your `LOCAL_DATABASE_URL` environment variable so you'll want to make sure that's set.
+
+You can also pass in an instance of an adapter or a function that returns an instance of an adapter.
+
+```typescript
+function createAdapter() {
+  return new MyCustomAdapter();
+}
+
+const startServer = createServer({
+  storage: createAdapter,
+});
+```
