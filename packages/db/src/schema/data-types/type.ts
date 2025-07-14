@@ -147,7 +147,19 @@ export function encode(type: DataType, input: any): any {
           // TODO: should we drop if value is undefined?
           if (isOptional(property) && hasNoValue(input[key])) continue;
 
-          input[key] = encode(property, input[key]);
+          try {
+            input[key] = encode(property, input[key]);
+          } catch (e) {
+            if (e instanceof DBSerializationError) {
+              throw new DBSerializationError(
+                'record',
+                input,
+                `Could not encode property: '${key}'. Error: ${e.message}`
+              );
+            }
+
+            throw e;
+          }
         }
 
         return input;
@@ -282,7 +294,19 @@ export function decode(type: DataType, encoded: any): any {
           if (encoded[key] === null) result[key] = null;
           continue;
         }
-        result[key] = decode(property, encoded[key]);
+        try {
+          result[key] = decode(property, encoded[key]);
+        } catch (e) {
+          if (e instanceof DBDeserializationError) {
+            throw new DBDeserializationError(
+              'record',
+              encoded,
+              `Could not decode property: '${key}'. Error: ${e.message}`
+            );
+          }
+
+          throw e;
+        }
       }
       return result;
     case 'string':

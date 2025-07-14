@@ -205,7 +205,7 @@ export class DBDeserializationError extends TriplitError {
   constructor(targetType: string, erroneousValue: any, ...args: any[]) {
     super(...args);
     this.name = 'DBDeserializationError';
-    this.baseMessage = `There was an error deserializing an database value to JS. Could not tranform the data: ${erroneousValue} as type: ${targetType}`;
+    this.baseMessage = `There was an error deserializing a database value to JS. Could not transform the data: ${erroneousValue} as type: ${targetType}`;
     this.status = STATUS_CODES['Bad Request'];
   }
 }
@@ -214,7 +214,7 @@ export class JSONSerializationError extends TriplitError {
   constructor(erroneousValue: any, expectedType: string, ...args: any[]) {
     super(...args);
     this.name = 'JSONSerializationError';
-    this.baseMessage = `There was an error serializing an input to JSON. Could not tranform the data: ${erroneousValue} as type: ${expectedType}`;
+    this.baseMessage = `There was an error serializing an input to JSON. Could not transform the data: ${erroneousValue} as type: ${expectedType}`;
     this.status = STATUS_CODES['Bad Request'];
   }
 }
@@ -223,7 +223,7 @@ export class JSONDeserializationError extends TriplitError {
   constructor(erroneousValue: any, expectedType: string, ...args: any[]) {
     super(...args);
     this.name = 'JSONDeserializationError';
-    this.baseMessage = `There was an error deserializing a JSON value. Could not tranform the data: ${erroneousValue} as type: ${expectedType}`;
+    this.baseMessage = `There was an error deserializing a JSON value. Could not transform the data: ${erroneousValue} as type: ${expectedType}`;
     this.status = STATUS_CODES['Bad Request'];
   }
 }
