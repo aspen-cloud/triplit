@@ -1,5 +1,12 @@
 # react-template
 
+## 1.0.48
+
+### Patch Changes
+
+- @triplit/client@1.0.47
+- @triplit/react@1.0.47
+
 ## 1.0.47
 
 ### Patch Changes
