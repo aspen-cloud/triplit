@@ -1,5 +1,11 @@
 # @triplit/entity-db
 
+## 1.1.8
+
+### Patch Changes
+
+- f5983616: Include property on serialization and deserialization error messages
+
 ## 1.1.7
 
 ### Patch Changes

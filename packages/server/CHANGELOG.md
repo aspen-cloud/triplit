@@ -1,5 +1,14 @@
 # @triplit/server
 
+## 1.1.5
+
+### Patch Changes
+
+- Updated dependencies [f5983616]
+  - @triplit/db@1.1.8
+  - @triplit/client@1.0.47
+  - @triplit/server-core@1.0.50
+
 ## 1.1.4
 
 ### Patch Changes

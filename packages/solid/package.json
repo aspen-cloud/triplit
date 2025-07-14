@@ -1,6 +1,6 @@
 {
   "name": "@triplit/solid",
-  "version": "1.0.30",
+  "version": "1.0.31",
   "packageManager": "yarn@4.2.2",
   "type": "module",
   "files": [
