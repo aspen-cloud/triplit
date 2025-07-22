@@ -2,6 +2,9 @@ import type { SubscriptionSignalPayload, SubscriptionOptions } from './types';
 import type { Models, SchemaQuery } from '@triplit/db';
 
 export type EnabledSubscriptionOptions = SubscriptionOptions & {
+  /**
+   * If false, the subscription will return a disabled state.
+   */
   enabled?: boolean;
 };
 
