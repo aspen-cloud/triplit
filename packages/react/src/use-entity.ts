@@ -4,6 +4,7 @@ import {
   CollectionNameFromModels,
   SubscriptionOptions,
   FetchResult,
+  EnabledSubscriptionOptions,
 } from '@triplit/client';
 import { useQueryOne } from './use-query-one.js';
 import { WorkerClient } from '@triplit/client/worker-client';
@@ -24,7 +25,7 @@ export function useEntity<
   client: TriplitClient<M> | WorkerClient<M>,
   collectionName: CN,
   id: string,
-  options?: Partial<SubscriptionOptions>
+  options?: Partial<EnabledSubscriptionOptions>
 ) {
   let query = client.query(collectionName).Id(id);
   return useQueryOne(client, query, options);

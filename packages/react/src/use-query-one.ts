@@ -5,6 +5,7 @@ import {
   SchemaQuery,
   FetchResult,
   SubscriptionSignalPayload,
+  EnabledSubscriptionOptions,
 } from '@triplit/client';
 import { useMemo } from 'react';
 import { useQuery } from './use-query.js';
@@ -26,7 +27,7 @@ type useQueryOnePayload<M extends Models<M>, Q extends SchemaQuery<M>> = Omit<
 export function useQueryOne<M extends Models<M>, Q extends SchemaQuery<M>>(
   client: TriplitClient<M> | WorkerClient<M>,
   query: Q,
-  options?: Partial<SubscriptionOptions>
+  options?: Partial<EnabledSubscriptionOptions>
 ): useQueryOnePayload<M, Q> {
   const { fetching, fetchingLocal, fetchingRemote, results, error } = useQuery(
     client,
