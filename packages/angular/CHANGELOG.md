@@ -1,5 +1,13 @@
 # @triplit/angular
 
+## 1.0.48
+
+### Patch Changes
+
+- 0c92a165: Add enabled parameter to subscriptions
+- Updated dependencies [0c92a165]
+  - @triplit/client@1.0.48
+
 ## 1.0.47
 
 ### Patch Changes

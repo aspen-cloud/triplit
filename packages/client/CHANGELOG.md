@@ -1,5 +1,11 @@
 # @triplit/client
 
+## 1.0.48
+
+### Patch Changes
+
+- 0c92a165: Add enabled parameter to subscriptions
+
 ## 1.0.47
 
 ### Patch Changes

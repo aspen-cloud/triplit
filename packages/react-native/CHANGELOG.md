@@ -1,5 +1,12 @@
 # @triplit/react-native
 
+## 1.0.50
+
+### Patch Changes
+
+- Updated dependencies [0c92a165]
+  - @triplit/react@1.0.48
+
 ## 1.0.49
 
 ### Patch Changes
