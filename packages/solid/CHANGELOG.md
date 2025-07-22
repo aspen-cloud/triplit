@@ -1,5 +1,13 @@
 # @triplit/solid
 
+## 1.0.32
+
+### Patch Changes
+
+- 0c92a165: Add enabled parameter to subscriptions
+- Updated dependencies [0c92a165]
+  - @triplit/client@1.0.48
+
 ## 1.0.31
 
 ### Patch Changes
