@@ -10731,7 +10731,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@triplit/react@npm:1.0.48, @triplit/react@workspace:^, @triplit/react@workspace:packages/react":
+"@triplit/react@npm:1.0.49, @triplit/react@workspace:^, @triplit/react@workspace:packages/react":
   version: 0.0.0-use.local
   resolution: "@triplit/react@workspace:packages/react"
   dependencies:
@@ -27122,7 +27122,7 @@ __metadata:
     "@triplit/authjs-adapter": "npm:^1.0.48"
     "@triplit/cli": "npm:1.0.59"
     "@triplit/client": "npm:1.0.48"
-    "@triplit/react": "npm:1.0.48"
+    "@triplit/react": "npm:1.0.49"
     "@types/bcryptjs": "npm:^2"
     "@types/jsonwebtoken": "npm:^9.0.2"
     "@types/node": "npm:^17.0.45"
@@ -29731,7 +29731,7 @@ __metadata:
   dependencies:
     "@triplit/cli": "npm:1.0.59"
     "@triplit/client": "npm:1.0.48"
-    "@triplit/react": "npm:1.0.48"
+    "@triplit/react": "npm:1.0.49"
     "@types/react": "npm:^19.0.10"
     "@types/react-dom": "npm:^19.0.4"
     "@typescript-eslint/eslint-plugin": "npm:^6.14.0"
