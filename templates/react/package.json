@@ -1,7 +1,7 @@
 {
   "name": "react-template",
   "private": true,
-  "version": "1.0.49",
+  "version": "1.0.50",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -11,7 +11,7 @@
   },
   "dependencies": {
     "@triplit/client": "1.0.48",
-    "@triplit/react": "1.0.48",
+    "@triplit/react": "1.0.49",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },

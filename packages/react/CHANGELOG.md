@@ -1,5 +1,11 @@
 # @triplit/react
 
+## 1.0.49
+
+### Patch Changes
+
+- 92a4d832: Fixup react hook option types
+
 ## 1.0.48
 
 ### Patch Changes
