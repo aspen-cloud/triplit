@@ -1,5 +1,11 @@
 # @triplit/entity-db
 
+## 1.1.9
+
+### Patch Changes
+
+- 2a4b5fda: Properly handle nested paths in relational filters
+
 ## 1.1.8
 
 ### Patch Changes
