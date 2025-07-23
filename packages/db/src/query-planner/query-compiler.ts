@@ -213,11 +213,8 @@ function whereFiltersToViews(
         // and in the main query, add the filter on the view
         const viewFilters = subqueryVariableFilters.map<FilterStatement>(
           (f) => {
-            return [
-              getVariableComponents(f[2])[1],
-              'in',
-              `$view_${viewId}.${f[0]}`,
-            ];
+            const [_scope, ...varPath] = getVariableComponents(f[2]);
+            return [varPath.join('.'), 'in', `$view_${viewId}.${f[0]}`];
           }
         );
         updatedWhere.push(...viewFilters);
@@ -635,11 +632,8 @@ export function extractedInvertedViewsFromFilters(where: PreparedWhere): {
         // and in the main query, add the filter on the view
         const viewFilters = subqueryVariableFilters.map<FilterStatement>(
           (f) => {
-            return [
-              getVariableComponents(f[2])[1],
-              'in',
-              `$view_${viewId}.${f[0]}`,
-            ];
+            const [_scope, ...varPath] = getVariableComponents(f[2]);
+            return [varPath.join('.'), 'in', `$view_${viewId}.${f[0]}`];
           }
         );
         updatedWhere.push(...viewFilters);
