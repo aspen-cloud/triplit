@@ -1,5 +1,13 @@
 # cf-worker-server
 
+## 0.0.24
+
+### Patch Changes
+
+- Updated dependencies [2a4b5fda]
+  - @triplit/db@1.1.9
+  - @triplit/server@1.1.7
+
 ## 0.0.23
 
 ### Patch Changes

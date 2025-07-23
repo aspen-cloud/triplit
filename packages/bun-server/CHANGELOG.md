@@ -1,5 +1,11 @@
 # bun-server
 
+## 1.0.60
+
+### Patch Changes
+
+- @triplit/server@1.1.7
+
 ## 1.0.59
 
 ### Patch Changes
