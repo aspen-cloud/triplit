@@ -80,3 +80,25 @@ A given entity in the result will look like this:
 }
 */
 ```
+
+## Use with relational queries
+
+The examples above are hardcoded to a specific user ID, however you can use [referential variables](/query/variables#referential-variables) to make the subquery dynamic. For example:
+
+```typescript
+// Fetch all 747 planes that have a flight to an airport newer than the plane
+const query = client.query('planes').Where([
+  ['model', '=', '747']
+  {
+    exists: client.query('flights').Where([
+      ['plane_id', '=', '$1.id'],
+      {
+        exists: client.query('airports').Where([
+          ['id', '=', '$1.destination_id']
+          ['created_at', '>', '$2.created_at'],
+        ]),
+      },
+    ]),
+  },
+]);
+```

@@ -124,4 +124,22 @@ const departmentsQuery = client.query('departments').Include('classes');
 
 ## Defining relations with referential variables
 
-TODO
+You can also define relations ad-hoc in a query using referential variables. This allows you to define relations that are not part of the schema and is equivalent to a `JOIN` you might see in SQL. Under the hood, this is actually what your `RelationMany`, `RelationOne`, and `RelationById` attributes are doing. See usage of referential variables in the [Variables](/query/variables#referential-variables) documentation. For example:
+
+```typescript
+// Fetch all 747 planes that have a flight to an airport newer than the plane
+const query = client.query('planes').Where([
+  ['model', '=', '747']
+  {
+    exists: client.query('flights').Where([
+      ['plane_id', '=', '$1.id'],
+      {
+        exists: client.query('airports').Where([
+          ['id', '=', '$1.destination_id']
+          ['created_at', '>', '$2.created_at'],
+        ]),
+      },
+    ]),
+  },
+]);
+```

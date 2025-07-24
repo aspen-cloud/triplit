@@ -27,30 +27,36 @@ For more information on setting up an Expo project with typescript see the [Expo
 
 Next, install Triplit's packages:
 
+<Callout type="warning">
+  There is currently a bug in how Triplit handles optional dependencies in
+  Metro, so you will need to install `uuidv7` as a dependency in your project.
+  This is a temporary workaround until the bug is fixed.
+</Callout>
+
 <Tabs items={['npm', 'pnpm', 'yarn', 'bun']}>
   <Tab>
     ```bash copy
-    npm i @triplit/client @triplit/react-native
+    npm i @triplit/client @triplit/react-native uuidv7
     npm i @triplit/cli --save-dev
     ```
   </Tab>
   <Tab>
     ```bash copy
-    pnpm add @triplit/client @triplit/react-native
+    pnpm add @triplit/client @triplit/react-native uuidv7
     pnpm add @triplit/cli --save-dev
     ```
 
   </Tab>
   <Tab>
     ```bash copy
-    yarn add @triplit/client @triplit/react-native
+    yarn add @triplit/client @triplit/react-native uuidv7
     yarn add @triplit/cli --dev
     ```
 
   </Tab>
   <Tab>
     ```bash copy
-    bun add @triplit/client @triplit/react-native
+    bun add @triplit/client @triplit/react-native uuidv7
     bun add @triplit/cli --dev
     ```
     

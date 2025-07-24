@@ -1,3 +1,7 @@
+---
+description: How to run Triplit in a Web Worker - useful for multi-tab offline support and reducing main thread workload.
+---
+
 # Web Worker Client
 
 Triplit supports running the client in a Web Worker (specifically, a [`SharedWorker`](https://developer.mozilla.org/en-US/docs/Web/API/SharedWorker), which can connect to multiple tabs running a script from the same domain). While running a Web Worker, data syncs between browser tabs without having to sync with server. This reduces network traffic for Triplit apps running in the multiple tabs, move Triplit local database computation to a separate thread, and allow for robust multi-tab offline support.
