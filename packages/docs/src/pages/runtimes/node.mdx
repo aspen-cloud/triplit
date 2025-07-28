@@ -47,9 +47,9 @@ process.on('SIGINT', function () {
 
 Although the Triplit client is typically used in the browser, it can also be used in Node.js.
 
-### Node websockets
+### Traditional client
 
-A Triplit client relies on the existence of a [WebSocket API](https://developer.mozilla.org/en-US/docs/Web/API/WebSockets_API) in the environment it is running in. Since Node.js v21, the WebSocket API is available natively. For this reason we recommend using Node.js v21 or later to run the Triplit client in Node.js.
+If you need real time updates in Node, you can use the Triplit client in Node.js just like you would in the browser. A Triplit client relies on the existence of a [WebSocket API](https://developer.mozilla.org/en-US/docs/Web/API/WebSockets_API) in the environment it is running in. Since Node.js v21, the WebSocket API is available natively. For this reason we recommend using Node.js v21 or later to run the Triplit client in Node.js.
 
 #### Node.js v23 or before
 
@@ -69,3 +69,7 @@ globalThis.WebSocket = UWebSocket;
 #### Node.js v24 or later
 
 You can use the native WebSocket API in Node.js v24 or later without any additional setup.
+
+### HTTP client
+
+However, in many cases you may just need some CRUD access to your database without the need for real-time updates. In this case, you can use the Triplit [HTTP client](/client/http-client).
