@@ -118,6 +118,16 @@ export class TriplitClient<M extends Models<M> = Models> {
       kv: storage,
       clientId: Math.random().toString(36).substring(7),
     }).then(async ({ db, event }) => {
+      this.logger = options.logger ?? LOGGER;
+      this.logger.registerHandler(clientLogHandler());
+      if (options.logLevel) {
+        this.logger.setLogLevel(options.logLevel);
+      }
+      // With debug logging, store logs for access
+      if (options.logLevel === 'debug') {
+        this.logger.registerHandler(new MemoryHandler());
+      }
+
       // If we have a session set up at this point, use that info
       const decoded = this.token
         ? decodeToken(this.token, this.claimsPath)
@@ -167,6 +177,21 @@ export class TriplitClient<M extends Models<M> = Models> {
       }
 
       // Wait for a valid db
+      if (event.type !== 'SUCCESS') {
+        // TODO: add test for logging
+        if (event.type === 'SCHEMA_UPDATE_FAILED') {
+          this.logger.error(
+            'Schema update failed during initialization. The schema will fallback to the value saved in the database (change.oldSchema). For more control, set a callback in experimental.onDatabaseInit.',
+            event
+          );
+        } else {
+          this.logger.error(
+            'An error occurred during database initialization',
+            event
+          );
+        }
+      }
+
       if (options.experimental?.onDatabaseInit) {
         await options.experimental?.onDatabaseInit(this.db, event);
       }
@@ -175,16 +200,6 @@ export class TriplitClient<M extends Models<M> = Models> {
         this.awaitReady = null;
       });
     });
-
-    this.logger = options.logger ?? LOGGER;
-    this.logger.registerHandler(clientLogHandler());
-    if (options.logLevel) {
-      this.logger.setLogLevel(options.logLevel);
-    }
-    // With debug logging, store logs for access
-    if (options.logLevel === 'debug') {
-      this.logger.registerHandler(new MemoryHandler());
-    }
 
     this.claimsPath = options.claimsPath;
 
