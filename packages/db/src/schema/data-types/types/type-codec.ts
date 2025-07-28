@@ -76,13 +76,13 @@ export type Decoded<T extends DataType> = T extends DataType
 
 type DecodedRecord<T extends RecordType> = T extends RecordType
   ? {
-      [K in StringKey<T['properties']> as IsPropertyReadRequired<
+      [K in keyof T['properties'] as IsPropertyReadRequired<
         T['properties'][K]
       > extends true
         ? K
         : never]: Decoded<T['properties'][K]>;
     } & {
-      [K in StringKey<T['properties']> as IsPropertyReadOptional<
+      [K in keyof T['properties'] as IsPropertyReadOptional<
         T['properties'][K]
       > extends true
         ? K
@@ -114,13 +114,13 @@ export type WriteDecoded<T extends DataType> = T extends DataType
 
 type WriteDecodedRecord<T extends RecordType> = T extends RecordType
   ? {
-      [K in StringKey<T['properties']> as IsPropertyWriteRequired<
+      [K in keyof T['properties'] as IsPropertyWriteRequired<
         T['properties'][K]
       > extends true
         ? K
         : never]: WriteDecoded<T['properties'][K]>;
     } & {
-      [K in StringKey<T['properties']> as IsPropertyWriteOptional<
+      [K in keyof T['properties'] as IsPropertyWriteOptional<
         T['properties'][K]
       > extends true
         ? K

@@ -864,3 +864,42 @@ describe('Nested Properties', () => {
     });
   });
 });
+
+it('allows numeric keys', async () => {
+  const db = new DB({
+    schema: {
+      collections: {
+        test: {
+          schema: S.Schema({
+            id: S.Id(),
+            24: S.String(),
+            nested: S.Record({
+              25: S.String(),
+            }),
+          }),
+        },
+      },
+    },
+  });
+  await db.insert('test', {
+    id: 'item1',
+    24: 'value',
+    nested: { 25: 'nested value' },
+  });
+  const result = await db.fetchById('test', 'item1');
+  expect(result).toEqual({
+    id: 'item1',
+    24: 'value',
+    nested: { 25: 'nested value' },
+  });
+  await db.update('test', 'item1', async (entity) => {
+    entity[24] = 'updated value';
+    entity.nested[25] = 'updated nested value';
+  });
+  const updatedResult = await db.fetchById('test', 'item1');
+  expect(updatedResult).toEqual({
+    id: 'item1',
+    24: 'updated value',
+    nested: { 25: 'updated nested value' },
+  });
+});

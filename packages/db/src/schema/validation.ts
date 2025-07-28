@@ -226,8 +226,6 @@ function validatePropertyName(name: string) {
   if (hasNoValue(name)) return 'property name is not defined';
   if (typeof name !== 'string') return 'property name is not a string';
   if (name.length === 0) return 'property name is empty';
-  if (/^[0-9]/.test(name))
-    return 'property name cannot start with a numeric character';
   if (!/^[a-zA-Z0-9_]+$/.test(name))
     return 'property name contains invalid characters - only alphanumeric characters and underscores are allowed.';
 }

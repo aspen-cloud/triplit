@@ -66,6 +66,8 @@ export type ExhaustiveSchemaSelectAll = {
   defaultString: string;
   enumString: 'a' | 'b' | 'c';
   nullableEnumString?: 'a' | 'b' | 'c' | null | undefined;
+
+  42: string;
 };
 
 export type ExhaustiveSchemaInsert = {
@@ -125,4 +127,6 @@ export type ExhaustiveSchemaInsert = {
   defaultString?: string | null | undefined;
   enumString: 'a' | 'b' | 'c';
   nullableEnumString?: 'a' | 'b' | 'c' | null | undefined;
+
+  42: string;
 };

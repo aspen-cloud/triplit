@@ -316,20 +316,6 @@ describe('collections validation', () => {
               test: {
                 schema: S.Schema({
                   id: S.Id(),
-                  '1name': S.String(),
-                }),
-              },
-            },
-          })
-        ).toBe(
-          'schema collections definition is invalid: "test" is not a valid collection: collection schema is invalid: type record property "1name" is invalid: property name cannot start with a numeric character'
-        );
-        expect(
-          validateSchema({
-            collections: {
-              test: {
-                schema: S.Schema({
-                  id: S.Id(),
                   name$: S.String(),
                 }),
               },

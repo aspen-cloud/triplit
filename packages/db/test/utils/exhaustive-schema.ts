@@ -74,6 +74,9 @@ export const EXHAUSTIVE_SCHEMA = {
           enum: ['a', 'b', 'c'],
           nullable: true,
         }),
+
+        // Numeric key
+        42: S.String(),
       }),
       relationships: {
         subquery: {
