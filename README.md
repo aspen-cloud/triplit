@@ -139,8 +139,6 @@ Read the full getting started guide [here](https://www.triplit.dev/docs/getting-
 
 # Contact us
 
-If you're interested in getting early access to Triplit Cloud (currently in developer preview), sign up [here](https://www.triplit.dev/waitlist) to join the waitlist.
-
 The best way to get in touch is to join our [Discord](https://discord.gg/q89sGWHqQ5)! We're here to answer questions, help developers get started with Triplit and preview new features.
 
 You can follow us on [Twitter/X](https://twitter.com/triplit_dev) to see our latest announcements.
