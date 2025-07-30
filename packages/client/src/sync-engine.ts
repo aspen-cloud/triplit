@@ -1125,6 +1125,7 @@ export class SyncEngine {
    * On the next connection, queries will be re-sent to server as if there is no previous seen data.
    * If the connection is currently open, it will be closed and you will need to call `connect()` again.
    */
+  // TODO: we have a different queryState concept so this is confusing
   resetQueryState() {
     if (this.connectionStatus === 'OPEN') {
       this.logger.warn(
