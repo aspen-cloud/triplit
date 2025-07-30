@@ -118,16 +118,6 @@ export class TriplitClient<M extends Models<M> = Models> {
       kv: storage,
       clientId: Math.random().toString(36).substring(7),
     }).then(async ({ db, event }) => {
-      this.logger = options.logger ?? LOGGER;
-      this.logger.registerHandler(clientLogHandler());
-      if (options.logLevel) {
-        this.logger.setLogLevel(options.logLevel);
-      }
-      // With debug logging, store logs for access
-      if (options.logLevel === 'debug') {
-        this.logger.registerHandler(new MemoryHandler());
-      }
-
       // If we have a session set up at this point, use that info
       const decoded = this.token
         ? decodeToken(this.token, this.claimsPath)
@@ -200,6 +190,16 @@ export class TriplitClient<M extends Models<M> = Models> {
         this.awaitReady = null;
       });
     });
+
+    this.logger = options.logger ?? LOGGER;
+    this.logger.registerHandler(clientLogHandler());
+    if (options.logLevel) {
+      this.logger.setLogLevel(options.logLevel);
+    }
+    // With debug logging, store logs for access
+    if (options.logLevel === 'debug') {
+      this.logger.registerHandler(new MemoryHandler());
+    }
 
     this.claimsPath = options.claimsPath;
 
