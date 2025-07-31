@@ -1,5 +1,16 @@
 # @triplit/server
 
+## 1.1.8
+
+### Patch Changes
+
+- c0b6bc98: Add hibernation websocket handler for cloudflare DO
+- Updated dependencies [3c9d9ed6]
+- Updated dependencies [040e2caf]
+  - @triplit/db@1.1.10
+  - @triplit/client@1.0.50
+  - @triplit/server-core@1.0.52
+
 ## 1.1.7
 
 ### Patch Changes

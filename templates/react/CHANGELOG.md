@@ -1,5 +1,13 @@
 # react-template
 
+## 1.0.52
+
+### Patch Changes
+
+- Updated dependencies [040e2caf]
+  - @triplit/client@1.0.50
+  - @triplit/react@1.0.51
+
 ## 1.0.51
 
 ### Patch Changes

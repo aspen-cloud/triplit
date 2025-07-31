@@ -1,5 +1,11 @@
 # @triplit/entity-db
 
+## 1.1.10
+
+### Patch Changes
+
+- 3c9d9ed6: Relax numeric attribute constraints
+
 ## 1.1.9
 
 ### Patch Changes
