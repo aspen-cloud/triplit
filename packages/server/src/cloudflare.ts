@@ -69,3 +69,51 @@ export const upgradeWebSocket: UpgradeWebSocket<
     webSocket: client,
   });
 });
+
+export function upgradeWebSocketHibernation(
+  ctx: any
+): UpgradeWebSocket<WebSocket, any, Omit<WSEvents<WebSocket>, 'onOpen'>> {
+  return defineWebSocketHelper(async (c, events) => {
+    const upgradeHeader = c.req.header('Upgrade');
+    if (upgradeHeader !== 'websocket') {
+      return;
+    }
+
+    // @ts-expect-error WebSocketPair is not typed
+    const webSocketPair = new WebSocketPair();
+    const client: any = webSocketPair[0];
+    const server: any = webSocketPair[1];
+
+    const wsContext = new WSContext<WebSocket>({
+      close: (code, reason) => server.close(code, reason),
+      get protocol() {
+        return server.protocol;
+      },
+      raw: server,
+      get readyState() {
+        return server.readyState as WSReadyState;
+      },
+      url: server.url ? new URL(server.url) : null,
+      send: (source) => server.send(source),
+    });
+
+    // Add hono content so its accessible by the durable object after initialization
+    ctx.honoWs = {
+      events,
+      wsContext,
+    };
+    // This API allows the durable object to accept the WebSocket connection
+    ctx.acceptWebSocket(server);
+
+    // note: cloudflare workers doesn't support 'open' event
+    if (events.onOpen) {
+      events.onOpen(new Event('open'), wsContext);
+    }
+
+    return new Response(null, {
+      status: 101,
+      // @ts-expect-error - webSocket is not typed
+      webSocket: client,
+    });
+  });
+}
