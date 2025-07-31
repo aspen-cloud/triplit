@@ -1,5 +1,13 @@
 # @triplit/client
 
+## 1.0.50
+
+### Patch Changes
+
+- 040e2caf: Ensure schema failures log for users without need for a callback
+- Updated dependencies [3c9d9ed6]
+  - @triplit/db@1.1.10
+
 ## 1.0.49
 
 ### Patch Changes
