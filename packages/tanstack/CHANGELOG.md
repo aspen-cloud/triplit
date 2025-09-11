@@ -1,5 +1,11 @@
 # @triplit/tanstack
 
+## 3.0.52
+
+### Patch Changes
+
+- d3029ee1: Fixup tanstack query updating
+
 ## 3.0.51
 
 ### Patch Changes
