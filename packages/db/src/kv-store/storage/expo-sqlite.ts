@@ -41,7 +41,7 @@ export class ExpoSQLiteKVStore implements KVStore {
       const createTableStatement = await db.prepareAsync(
         STATEMENTS.createTable
       );
-      createTableStatement.executeAsync();
+      await createTableStatement.executeAsync();
       return {
         db,
         statements: {
