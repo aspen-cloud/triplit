@@ -87,6 +87,9 @@
     "typescript": "^5.8.3"
   },
   "peerDependenciesMeta": {
+    "@supabase/supabase-js": {
+      "optional": true
+    },
     "better-sqlite3": {
       "optional": true
     },
@@ -98,6 +101,7 @@
     }
   },
   "peerDependencies": {
+    "@supabase/supabase-js": "*",
     "better-sqlite3": "*",
     "level": "*",
     "lmdb": "*"

@@ -73,12 +73,16 @@
     "vitest": "^3.0.6"
   },
   "peerDependencies": {
+    "@supabase/supabase-js": "*",
     "better-sqlite3": "*",
     "expo-sqlite": "*",
     "lmdb": "*",
     "uuidv7": "*"
   },
   "peerDependenciesMeta": {
+    "@supabase/supabase-js": {
+      "optional": true
+    },
     "better-sqlite3": {
       "optional": true
     },
