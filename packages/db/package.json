@@ -39,6 +39,7 @@
     "lint:tests": "tsc --noEmit --project tsconfig.test.json",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
+    "bench:tpcc": "node --import tsx/esm bench/tpcc.bench.ts",
     "publish-pkg": "node ../../scripts/npm-check-version-and-publish.js",
     "typecheck": "vitest --typecheck.only --no-watch"
   },
@@ -68,6 +69,7 @@
     "lmdb": "^3.2.6",
     "mitata": "^1.0.27",
     "tinybench": "^3.1.0",
+    "tsx": "^4.21.0",
     "typescript": "^5.8.3",
     "uuidv7": "^1.0.2",
     "vitest": "^3.0.6"
