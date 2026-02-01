@@ -554,9 +554,7 @@ export class DB<
 
     // Trigger subscription updates
     await this.ivm.bufferChanges(changes);
-    for (const listener of this.onCommitListeners) {
-      listener(changes);
-    }
+    await Promise.all([...this.onCommitListeners].map((listener) => listener(changes)));
     return output;
   }
 

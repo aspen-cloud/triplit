@@ -69,6 +69,8 @@ export class TriplitClient<M extends Models<M> = Models> {
    */
   syncEngine: SyncEngine;
 
+  private hasPendingWrites: boolean = false;
+
   private _token: string | undefined = undefined;
   private claimsPath: string | undefined = undefined;
 
@@ -131,17 +133,22 @@ export class TriplitClient<M extends Models<M> = Models> {
           this.db = decoded ? this.db.withSessionVars(decoded) : this.db;
         }
       });
+      let writeTimeout: NodeJS.Timeout | undefined = undefined;
       this.db.onCommit(
-        // @ts-expect-error
-        throttle(
-          async (tx) => {
-            await this.db.updateQueryViews();
-            this.db.broadcastToQuerySubscribers();
-            await this.syncEngine.syncWrites();
-          },
-          20,
-          { leading: false, trailing: true }
-        )
+        async () => {
+            this.hasPendingWrites = true;
+            if (writeTimeout) {
+                clearTimeout(writeTimeout);
+            } else {
+                // on the very first write in a batch, flush without writing to the server
+                await this.flush(false);
+            }
+
+            writeTimeout = setTimeout(() => {
+                this.flush();
+                writeTimeout = undefined;
+            }, 20);
+        }
       );
       this.db.onSchemaChange((change) => {
         if (change.successful) {
@@ -245,6 +252,21 @@ export class TriplitClient<M extends Models<M> = Models> {
   get ready() {
     if (this.awaitReady) return this.awaitReady;
     return Promise.resolve();
+  }
+
+  /**
+   * Flushes updates to the database and syncs with the server. This function may be a no-op if no
+   * writes have been made since the last flush.
+   */
+  async flush(syncWrites = true) {
+    if (!this.hasPendingWrites) return;
+
+    await this.db.updateQueryViews();
+    this.db.broadcastToQuerySubscribers();
+    if (syncWrites) {
+      await this.syncEngine.syncWrites();
+      this.hasPendingWrites = false;
+    }
   }
 
   /**
@@ -1298,35 +1320,6 @@ function mapServerUrlToSyncOptions(serverUrl: string) {
 function flipOrder(order: any) {
   if (!order) return undefined;
   return order.map((o: any) => [o[0], o[1] === 'ASC' ? 'DESC' : 'ASC']);
-}
-
-function throttle<T>(
-  func: (arg: T) => void,
-  limit: number,
-  options?: { leading?: boolean; trailing?: boolean }
-): (arg: T) => void {
-  let inThrottle: boolean;
-  let lastArgs: T | null = null;
-  return function () {
-    const args = arguments as unknown as T;
-    if (!inThrottle) {
-      if (options?.leading !== false) {
-        func(args);
-      } else {
-        lastArgs = args;
-      }
-      inThrottle = true;
-      setTimeout(() => {
-        if (options?.trailing && lastArgs) {
-          func(lastArgs);
-          lastArgs = null;
-        }
-        inThrottle = false;
-      }, limit);
-    } else {
-      lastArgs = args;
-    }
-  };
 }
 
 function validateServerUrl(serverUrl: string | undefined): void {
