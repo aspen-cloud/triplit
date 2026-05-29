@@ -518,9 +518,57 @@ describe.each(TEST_OPTIONS)('$engine', (options) => {
       );
     });
   });
-  // TODO: move over like / nlike tests from db.spec.ts
-  describe.todo('like');
-  describe.todo('nlike');
+  // TODO: move over the remaining like / nlike cases from db.spec.ts
+  describe('like', () => {
+    it('matches newline characters with % and _ (dotall semantics)', async () => {
+      const data = genData(['a\nb', 'axb', 'ab', 'a\nb\nc']);
+      shuffleArray(data);
+      // `%` matches any sequence of characters, including newlines
+      await testFilterOp(
+        'like',
+        requiredSchema,
+        data,
+        { cmp: 'a%b', expected: [0, 1, 2] },
+        options
+      );
+      // `_` matches any single character, including a newline
+      await testFilterOp(
+        'like',
+        requiredSchema,
+        data,
+        { cmp: 'a_b', expected: [0, 1] },
+        options
+      );
+      // `%` alone matches every value, even ones containing newlines
+      await testFilterOp(
+        'like',
+        requiredSchema,
+        data,
+        { cmp: '%', expected: [0, 1, 2, 3] },
+        options
+      );
+    });
+  });
+  describe('nlike', () => {
+    it('matches newline characters with % and _ (dotall semantics)', async () => {
+      const data = genData(['a\nb', 'axb', 'ab']);
+      shuffleArray(data);
+      await testFilterOp(
+        'nlike',
+        requiredSchema,
+        data,
+        { cmp: 'a%b', expected: [] },
+        options
+      );
+      await testFilterOp(
+        'nlike',
+        requiredSchema,
+        data,
+        { cmp: 'a_b', expected: [2] },
+        options
+      );
+    });
+  });
   describe('in', () => {
     it('required', async () => {
       const data = genData(['a', 'b', 'b', 'c', 'd']);

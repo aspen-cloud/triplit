@@ -271,8 +271,11 @@ function ilike(text: string, pattern: string): boolean {
   // Replace SQL LIKE single-character wildcards (_) with equivalent regex wildcards (.)
   pattern = pattern.replace(/_/g, '.');
 
-  // Create a RegExp object from the pattern
-  const regex = new RegExp(`^${pattern}$`, 'i');
+  // Create a RegExp object from the pattern.
+  // The `s` (dotall) flag makes `.` (from `_`) and `.*` (from `%`) match newline
+  // characters too, matching SQL LIKE semantics where `%` matches any sequence of
+  // characters and `_` any single character — newlines included.
+  const regex = new RegExp(`^${pattern}$`, 'is');
 
   // Test the text against the regex
   return regex.test(text);
